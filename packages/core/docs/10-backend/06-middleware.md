@@ -12,14 +12,14 @@ Next.js middleware provides powerful request/response transformation capabilitie
 ┌─────────────────────────────────────────┐
 │ Incoming Request                        │
 ├─────────────────────────────────────────┤
-│ 1. Theme Middleware Check               │
-│    └─ Execute theme override if exists  │
+│ 1. Sanitize + Run Theme Extension       │
+│    └─ Classify redirect/rewrite/next    │
 ├─────────────────────────────────────────┤
-│ 2. Docs URL Redirect                    │
-│    └─ Old 2-level → New 3-level         │
+│ 2. Core Access Checks                   │
+│    └─ Original + internal rewrite path  │
 ├─────────────────────────────────────────┤
-│ 3. Documentation Access Control         │
-│    └─ Check if docs require auth        │
+│ 3. Docs URL Redirect / Access           │
+│    └─ Legacy URL + docs visibility      │
 ├─────────────────────────────────────────┤
 │ 4. Public Path Check                    │
 │    └─ Allow unauthenticated access      │
@@ -40,184 +40,76 @@ Next.js middleware provides powerful request/response transformation capabilitie
 
 ## Implementation
 
-### Main Middleware
+### Shipped Proxy Template
 
-Location: `middleware.ts`
+Location: `packages/core/templates/proxy.ts` (generated projects receive it as
+`proxy.ts` on Next.js 16 or `middleware.ts` on Next.js 15).
+
+The core proxy owns the security boundary. An active theme may extend request
+handling, but its result is composed with the core checks rather than returned
+before them:
 
 ```typescript
-import { betterFetch } from "@better-fetch/fetch";
-import type { auth } from "@/core/lib/auth";
-import { NextRequest, NextResponse } from "next/server";
-import {
-  hasThemeMiddleware,
-  executeThemeMiddleware
-} from "@/core/lib/registries/middleware-registry";
-import { getThemeAppConfig } from "@/core/lib/registries/theme-registry";
+const sanitizedRequest = requestForTheme(
+  request,
+  sanitizeRequestHeaders(request)
+)
+const themeResponse = await executeThemeMiddleware(
+  activeTheme,
+  sanitizedRequest,
+  null
+)
 
-type Session = typeof auth.$Infer.Session;
-
-const publicPaths = [
-  "/",
-  "/login",
-  "/signup",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-email",
-  "/terms",
-  "/privacy",
-  "/api/auth",
-  "/api/test-auth",
-  "/auth-test",
-  "/auth/callback",
-] as const;
-
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // 1. Check for theme middleware override
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME;
-  if (activeTheme && hasThemeMiddleware(activeTheme)) {
-    const themeResponse = await executeThemeMiddleware(activeTheme, request);
-    if (themeResponse) return themeResponse;
-  }
-
-  // 2. Redirect old docs URLs to new structure
-  const oldDocsPattern = /^\/docs\/([^\/]+)\/([^\/]+)$/;
-  const oldDocsMatch = pathname.match(oldDocsPattern);
-
-  if (oldDocsMatch) {
-    const [, sectionSlug, pageSlug] = oldDocsMatch;
-    const themeSections = ['theme-overview', 'theme-features'];
-    const category = themeSections.includes(sectionSlug) ? 'theme' : 'core';
-    const cleanSection = sectionSlug.replace(/^theme-/, '');
-
-    const newUrl = request.nextUrl.clone();
-    newUrl.pathname = `/docs/${category}/${cleanSection}/${pageSlug}`;
-    return NextResponse.redirect(newUrl, 301);
-  }
-
-  // 3. Documentation access control
-  if (pathname.startsWith("/docs")) {
-    const appConfig = getThemeAppConfig(activeTheme as any);
-
-    if (!isDocsPublic(appConfig?.docs)) {
-      try {
-        const { data: session } = await betterFetch<Session>(
-          "/api/auth/get-session",
-          {
-            baseURL: request.nextUrl.origin,
-            headers: { cookie: request.headers.get("cookie") || "" },
-          }
-        );
-
-        if (!session) {
-          const loginUrl = new URL("/login", request.url);
-          loginUrl.searchParams.set("redirect", pathname);
-          return NextResponse.redirect(loginUrl);
-        }
-      } catch (error) {
-        const loginUrl = new URL("/login", request.url);
-        loginUrl.searchParams.set("redirect", pathname);
-        return NextResponse.redirect(loginUrl);
-      }
-    }
-    return NextResponse.next();
-  }
-
-  // 4. Allow public paths
-  if (isPublicPath(pathname)) {
-    return NextResponse.next();
-  }
-
-  // 5. API v1 routes handle their own dual authentication
-  if (pathname.startsWith("/api/v1")) {
-    return NextResponse.next();
-  }
-
-  // 6. Protected routes
-  const isAdminRoute = pathname.startsWith("/admin");
-  const isProtectedRoute =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/profile") ||
-    pathname.startsWith("/update-password") ||
-    isAdminRoute;
-
-  if (isProtectedRoute) {
-    try {
-      const { data: session } = await betterFetch<Session>(
-        "/api/auth/get-session",
-        {
-          baseURL: request.nextUrl.origin,
-          headers: { cookie: request.headers.get("cookie") || "" },
-        }
-      );
-
-      if (!session) {
-        const loginUrl = new URL("/login", request.url);
-        loginUrl.searchParams.set("callbackUrl", pathname);
-        return NextResponse.redirect(loginUrl);
-      }
-
-      // Admin Panel superadmin-only check
-      if (isAdminRoute) {
-        if (!session.user?.role || session.user.role !== 'superadmin') {
-          const dashboardUrl = new URL("/dashboard", request.url);
-          dashboardUrl.searchParams.set("error", "access_denied");
-          return NextResponse.redirect(dashboardUrl);
-        }
-      }
-
-      // Inject user headers for downstream use
-      const requestHeaders = new Headers(request.headers);
-      if (session.user?.id) {
-        requestHeaders.set("x-user-id", session.user.id);
-      }
-      if (session.user?.email) {
-        requestHeaders.set("x-user-email", session.user.email);
-      }
-      requestHeaders.set("x-pathname", pathname);
-
-      return NextResponse.next({
-        request: { headers: requestHeaders },
-      });
-    } catch (error) {
-      console.error('Middleware error:', error);
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-  }
-
-  return NextResponse.next();
-}
-
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
-};
+// The proxy then applies core docs/session/role checks before honoring a
+// continuation, same-origin rewrite, or protected terminal response.
 ```
 
----
+The implementation keeps the session lookup in the core proxy and injects
+`x-user-id`, `x-user-email`, and `x-active-team-id` only from that verified
+session. Layout guards remain defense in depth; they are not the route access
+boundary.
 
 ## Key Features
 
-### 1. Theme Middleware Override
+### 1. Theme Middleware Extension Contract
 
-Allows themes to provide custom middleware logic:
+Themes may add behavior, but cannot replace core access control. The hook
+receives a `NextRequest` with inbound `x-user-id`, `x-user-email`,
+`x-active-team-id`, and `x-pathname` removed; `x-pathname` is then set to the
+actual request pathname.
 
-```typescript
-// Theme can override middleware
-const themeResponse = await executeThemeMiddleware(activeTheme, request);
-if (themeResponse) return themeResponse;
-```
+Supported results:
+
+- `null`: continue with the normal core proxy flow.
+- `NextResponse.next()`: keep response headers/cookies and nonidentity request
+  header overrides, then run the original route through core docs/session/role
+  checks.
+- A same-origin `NextResponse.rewrite()`: keep its destination, query,
+  response headers/cookies, and nonidentity request overrides, but run both the
+  original route and rewritten internal destination through core access
+  checks. The destination pathname becomes the trusted `x-pathname`.
+- A redirect response: return the redirect with its headers/cookies after
+  removing request-override metadata.
+- Another terminal response: return it only after the original route passes
+  its core access check.
+
+External, empty, malformed, and otherwise ambiguous rewrites intentionally fail
+closed with `502`. Ambiguous path encodings include encoded separators,
+malformed percent escapes, and a segment that remains percent-encoded after one
+decode; these are not routed by guessing or repeated decoding. For access
+checks, literal repeated slashes/backslashes are normalized the same way as
+Next routing and ordinary encoded segments are decoded once; the original
+same-origin rewrite URL and query are otherwise preserved. This prevents
+alternate spellings of a protected route from skipping its gate and prevents
+session cookies or core-injected identity from being forwarded to another
+origin. Theme-provided request overrides can never set trusted identity
+headers; those values always come from the core session lookup.
 
 **Use Cases:**
-- Custom authentication flows
+- Locale or tenant-specific same-origin rewrites
 - Theme-specific redirects
-- Special route handling
+- Response cookies and headers
+- Nonidentity request metadata consumed by theme routes
 
 ### 2. Documentation Access Control
 

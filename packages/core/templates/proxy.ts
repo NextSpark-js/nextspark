@@ -10,7 +10,7 @@
  * Note: In Next.js 16, "middleware" was renamed to "proxy" with nodejs runtime.
  *
  * Key responsibilities:
- * 1. Theme middleware override support
+ * 1. Theme middleware extension support without bypassing core access checks
  * 2. Redirecting historical 3-level docs URLs to their current route
  * 3. Documentation access control
  * 4. Protected route authentication, and the roles /superadmin and /devtools need
@@ -82,6 +82,22 @@ function isUnder(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`)
 }
 
+type ProtectedArea = 'authenticated' | 'admin' | 'superadmin' | 'devtools'
+
+/** The single route policy shared by original and rewritten destinations. */
+function protectedArea(pathname: string): ProtectedArea | null {
+  if (isUnder(pathname, '/admin')) return 'admin'
+  if (isUnder(pathname, '/superadmin')) return 'superadmin'
+  if (isUnder(pathname, '/devtools')) return 'devtools'
+  if (
+    isUnder(pathname, '/dashboard') ||
+    isUnder(pathname, '/settings') ||
+    isUnder(pathname, '/profile') ||
+    isUnder(pathname, '/update-password')
+  ) return 'authenticated'
+  return null
+}
+
 /**
  * A URL on this app at `pathname`, keeping the base path and locale the request
  * came in with; one built from `request.url` would lose both.
@@ -126,8 +142,13 @@ function isMissingDocsPage(pathname: string): boolean {
  * after the response head has gone out with a 200. Deciding it here, before
  * anything renders, gives those requests the 404.
  */
-function rewriteToNotFound(request: NextRequest, requestHeaders: Headers): NextResponse {
+function rewriteToNotFound(
+  request: NextRequest,
+  requestHeaders: Headers,
+  themeResponse: NextResponse | null = null
+): NextResponse {
   return syncSessionHint(request, NextResponse.rewrite(appUrl(request, '/_not-found'), {
+    headers: themeResponseHeaders(themeResponse),
     request: { headers: requestHeaders },
   }))
 }
@@ -136,9 +157,18 @@ function rewriteToNotFound(request: NextRequest, requestHeaders: Headers): NextR
  * Send a visitor without a session to login. LoginForm reads `callbackUrl` and
  * returns them to the page they asked for, query included, once signed in.
  */
-function redirectToLogin(request: NextRequest): NextResponse {
+interface RequestTarget {
+  pathname: string
+  search: string
+}
+
+function requestTarget(request: NextRequest): RequestTarget {
+  return { pathname: request.nextUrl.pathname, search: request.nextUrl.search }
+}
+
+function redirectToLogin(request: NextRequest, target: RequestTarget = requestTarget(request)): NextResponse {
   const loginUrl = appUrl(request, '/login')
-  loginUrl.searchParams.set('callbackUrl', `${request.nextUrl.pathname}${request.nextUrl.search}`)
+  loginUrl.searchParams.set('callbackUrl', `${target.pathname}${target.search}`)
   return NextResponse.redirect(loginUrl)
 }
 
@@ -209,14 +239,172 @@ function syncSessionHint(request: NextRequest, response: NextResponse): NextResp
 }
 
 /**
+ * Give theme code a real NextRequest whose forgeable identity headers have
+ * already been removed. Reusing the request as constructor input keeps its
+ * method/body/signal; the explicit nextUrl clone keeps Next's basePath and
+ * locale parsing, which the public Request constructor does not carry over.
+ */
+function requestForTheme(request: NextRequest, requestHeaders: Headers): NextRequest {
+  const themeRequest = new NextRequest(request, { headers: requestHeaders })
+  Object.defineProperty(themeRequest, 'nextUrl', { value: request.nextUrl.clone() })
+  return themeRequest
+}
+
+const THEME_CONTROL_HEADERS = new Set([
+  'location',
+  'x-middleware-next',
+  'x-middleware-refresh',
+  'x-middleware-rewrite',
+  'x-middleware-override-headers',
+])
+
+/** Response headers/cookies a theme may add, without its routing controls. */
+function themeResponseHeaders(themeResponse: NextResponse | null): Headers {
+  const headers = new Headers(themeResponse?.headers)
+  for (const name of [...headers.keys()]) {
+    if (
+      THEME_CONTROL_HEADERS.has(name) ||
+      name.startsWith('x-middleware-request-') ||
+      TRUSTED_IDENTITY_HEADERS.includes(name as typeof TRUSTED_IDENTITY_HEADERS[number])
+    ) {
+      headers.delete(name)
+    }
+  }
+  // A continuation/rewrite has no response body, so a theme response's body
+  // framing metadata must not be copied onto it.
+  headers.delete('content-length')
+  headers.delete('transfer-encoding')
+  return headers
+}
+
+/**
+ * Decode the NextResponse.next/rewrite request override protocol. When the
+ * list is present it is the complete set Next forwards, not a patch over the
+ * incoming request, so omitted headers stay omitted.
+ */
+function themeRequestHeaders(themeResponse: NextResponse | null, fallback: Headers): Headers {
+  const overridden = themeResponse?.headers.get('x-middleware-override-headers')
+  if (overridden === null || overridden === undefined) {
+    return new Headers(fallback)
+  }
+
+  const headers = new Headers()
+  for (const rawName of overridden.split(',')) {
+    const name = rawName.trim().toLowerCase()
+    if (!name || TRUSTED_IDENTITY_HEADERS.includes(name as typeof TRUSTED_IDENTITY_HEADERS[number])) continue
+    const value = themeResponse.headers.get(`x-middleware-request-${name}`)
+    if (value !== null) headers.set(name, value)
+  }
+  return headers
+}
+
+function terminalThemeResponse(request: NextRequest, themeResponse: NextResponse): NextResponse {
+  const response = new NextResponse(themeResponse.body, {
+    status: themeResponse.status,
+    statusText: themeResponse.statusText,
+    headers: themeResponseHeaders(themeResponse),
+  })
+  const location = themeResponse.headers.get('location')
+  if (location) response.headers.set('location', location)
+  return syncSessionHint(request, response)
+}
+
+function mergeThemeHeaders(response: NextResponse, themeResponse: NextResponse | null): NextResponse {
+  themeResponseHeaders(themeResponse).forEach((value, name) => {
+    if (name === 'set-cookie' && response.headers.has(name)) {
+      response.headers.append(name, value)
+    } else if (!response.headers.has(name)) {
+      response.headers.set(name, value)
+    }
+  })
+  return response
+}
+
+function unsupportedThemeRewrite(request: NextRequest): NextResponse {
+  return syncSessionHint(request, new NextResponse('Unsupported or ambiguous theme rewrite destination', { status: 502 }))
+}
+
+/**
+ * The canonical app-relative pathname used for rewrite access checks.
+ *
+ * Next normalizes literal repeated slashes and backslashes while routing. We
+ * mirror that behavior before applying policy, then decode each segment once
+ * so an encoded protected segment cannot evade the same check. Encoded path
+ * separators, malformed escapes and still-encoded output are ambiguous across
+ * routing layers, so they fail closed instead of being decoded repeatedly.
+ */
+function rewritePathname(request: NextRequest, destination: URL): string | null {
+  let pathname = destination.pathname.replace(/\\/g, '/').replace(/\/\/+/g, '/')
+
+  const segments: string[] = []
+  for (const segment of pathname.split('/')) {
+    let decoded: string
+    try {
+      decoded = decodeURIComponent(segment)
+    } catch {
+      return null
+    }
+    if (/[\\/?#%\u0000-\u001F\u007F]/.test(decoded)) {
+      return null
+    }
+    segments.push(decoded)
+  }
+  pathname = segments.join('/')
+
+  const basePath = request.nextUrl.basePath
+  if (basePath && isUnder(pathname, basePath)) {
+    pathname = pathname.slice(basePath.length) || '/'
+  }
+
+  const locale = request.nextUrl.locale
+  if (locale && locale !== 'default') {
+    const localePrefix = `/${locale}`
+    if (isUnder(pathname, localePrefix)) {
+      pathname = pathname.slice(localePrefix.length) || '/'
+    }
+  }
+  return pathname
+}
+
+/** Add only identity established by the core session lookup. */
+function addVerifiedIdentity(
+  request: NextRequest,
+  headers: Headers,
+  session: Session,
+  pathname: string
+): Headers {
+  for (const name of TRUSTED_IDENTITY_HEADERS) headers.delete(name)
+  headers.set('x-pathname', pathname)
+  if (session.user?.id) headers.set('x-user-id', session.user.id)
+  if (session.user?.email) headers.set('x-user-email', session.user.email)
+
+  const activeTeamId = activeTeamIdForSession(
+    request.cookies.get(ACTIVE_TEAM_COOKIE)?.value,
+    session.session?.id
+  )
+  if (activeTeamId) headers.set('x-active-team-id', activeTeamId)
+  return headers
+}
+
+/**
  * Continue to the app with the (sanitized) request headers.
  * Every pass-through in this proxy MUST go through here so the strip applies
  * to public paths, /api/v1 and unmatched routes alike.
  */
-function passThrough(request: NextRequest, requestHeaders: Headers): NextResponse {
-  return syncSessionHint(request, NextResponse.next({
+function passThrough(
+  request: NextRequest,
+  requestHeaders: Headers,
+  themeResponse: NextResponse | null = null,
+  rewriteDestination: URL | null = null
+): NextResponse {
+  const init = {
+    headers: themeResponseHeaders(themeResponse),
     request: { headers: requestHeaders },
-  }))
+  }
+  const response = rewriteDestination
+    ? NextResponse.rewrite(rewriteDestination, init)
+    : NextResponse.next(init)
+  return syncSessionHint(request, response)
 }
 
 let legacyDocsAccessWarned = false
@@ -232,19 +420,134 @@ function warnLegacyDocsAccess(docsConfig: Parameters<typeof legacyDocsAccessMess
 }
 
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  // 0. Strip forgeable identity headers before ANY branching (see #87)
-  const requestHeaders = sanitizeRequestHeaders(request)
-
-  // 1. Check for theme middleware override
+  const originalTarget = requestTarget(request)
+  const sanitizedHeaders = sanitizeRequestHeaders(request)
   const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
+
+  // Theme middleware is an extension hook, not a replacement security
+  // boundary. It sees a sanitized request and its continuations/rewrites are
+  // fed back through the core route checks below.
+  let themeResponse: NextResponse | null = null
   if (activeTheme && hasThemeMiddleware(activeTheme)) {
-    const themeResponse = await executeThemeMiddleware(activeTheme, request, null)
-    if (themeResponse) return themeResponse
+    try {
+      themeResponse = await executeThemeMiddleware(
+        activeTheme,
+        requestForTheme(request, sanitizedHeaders),
+        null
+      )
+    } catch (error) {
+      console.error(`Error executing middleware for theme '${activeTheme}':`, error)
+    }
   }
 
-  // 2. Redirect historical 3-level docs URLs (/docs/<core|theme>/<section>/<page>)
+  const themeLocation = themeResponse?.headers.get('location')
+  const isThemeRedirect = !!themeLocation && [301, 302, 303, 307, 308].includes(themeResponse!.status)
+  if (themeResponse && isThemeRedirect) {
+    return terminalThemeResponse(request, themeResponse)
+  }
+
+  const themeRewrite = themeResponse?.headers.get('x-middleware-rewrite')
+  let rewriteDestination: URL | null = null
+  let target = originalTarget
+  if (themeRewrite !== null && themeRewrite !== undefined) {
+    if (!themeRewrite.trim()) return unsupportedThemeRewrite(request)
+    try {
+      rewriteDestination = new URL(themeRewrite, request.url)
+    } catch {
+      return unsupportedThemeRewrite(request)
+    }
+    if (rewriteDestination.origin !== request.nextUrl.origin) {
+      return unsupportedThemeRewrite(request)
+    }
+    const pathname = rewritePathname(request, rewriteDestination)
+    if (pathname === null) return unsupportedThemeRewrite(request)
+    target = {
+      pathname,
+      search: rewriteDestination.search,
+    }
+  }
+
+  const isThemeContinuation = themeResponse?.headers.get('x-middleware-next') === '1'
+  let requestHeaders = themeRequestHeaders(themeResponse, sanitizedHeaders)
+  for (const name of TRUSTED_IDENTITY_HEADERS) requestHeaders.delete(name)
+  requestHeaders.set('x-pathname', target.pathname)
+
+  let sessionPromise: Promise<Session | null> | undefined
+  let sessionError: unknown
+  const verifiedSession = async (): Promise<Session | null> => {
+    if (!sessionPromise) {
+      sessionPromise = getSession(request)
+        .then(({ data }) => data)
+        .catch(error => {
+          sessionError = error
+          return null
+        })
+    }
+    return sessionPromise
+  }
+
+  const docsConfig = () => {
+    const config = getThemeAppConfig(activeTheme as string)?.docs
+    warnLegacyDocsAccess(config)
+    return config
+  }
+
+  interface AccessResult {
+    response: NextResponse | null
+    session: Session | null
+    injectIdentity: boolean
+  }
+
+  const authorize = async (accessTarget: RequestTarget): Promise<AccessResult> => {
+    const { pathname } = accessTarget
+    const area = protectedArea(pathname)
+    const isProtectedRoute = area !== null
+    const privateDocs = isUnder(pathname, '/docs') && !isDocsPublic(docsConfig())
+
+    if (!privateDocs && !isProtectedRoute) {
+      return { response: null, session: null, injectIdentity: false }
+    }
+
+    const session = await verifiedSession()
+    if (!session) {
+      if (sessionError && isProtectedRoute) console.error('Proxy error:', sessionError)
+      return { response: redirectToLogin(request, accessTarget), session: null, injectIdentity: false }
+    }
+
+    const role = session.user?.role
+    if (
+      (area === 'admin' && role !== 'superadmin') ||
+      (area === 'superadmin' && role !== 'superadmin' && role !== 'developer') ||
+      (area === 'devtools' && role !== 'developer')
+    ) {
+      return { response: redirectAccessDenied(request), session, injectIdentity: false }
+    }
+
+    return { response: null, session, injectIdentity: isProtectedRoute }
+  }
+
+  const finishCoreResponse = (response: NextResponse): NextResponse =>
+    syncSessionHint(request, mergeThemeHeaders(response, themeResponse))
+
+  // Rewriting a protected original route to a public destination must not
+  // discard the original route's boundary. Direct theme responses are also
+  // gated here because they otherwise replace the protected route outright.
+  let originalAccess: AccessResult = { response: null, session: null, injectIdentity: false }
+  if (rewriteDestination || (themeResponse && !isThemeContinuation)) {
+    originalAccess = await authorize(originalTarget)
+    if (originalAccess.response) return finishCoreResponse(originalAccess.response)
+  }
+
+  // A non-routing response is terminal only after the original route's access
+  // checks above. Redirects were handled earlier because they disclose no app
+  // content and are a supported way for themes to customize navigation.
+  if (themeResponse && !isThemeContinuation && !rewriteDestination) {
+    return terminalThemeResponse(request, themeResponse)
+  }
+
+  const { pathname } = target
+
+  // Redirect historical 3-level docs URLs (/docs/<core|theme>/<section>/<page>)
   // to the current route. That split predates this app's history: `core` and
   // `theme` were the only two categories ever generated (a third, `plugins`,
   // was scaffolded but never activated), and both were collapsed into a single
@@ -259,7 +562,8 @@ export async function proxy(request: NextRequest) {
   const oldDocsMatch = pathname.match(/^\/docs\/(?:core|theme)\/([^/]+)\/([^/]+)$/)
   if (oldDocsMatch) {
     const [, sectionSlug, pageSlug] = oldDocsMatch
-    const newUrl = request.nextUrl.clone()
+    const newUrl = appUrl(request, '/docs')
+    newUrl.search = target.search
     const superadminSection = DOCS_REGISTRY.superadmin.find((section) => section.slug === sectionSlug)
     const publicSection = DOCS_REGISTRY.public.find((section) => section.slug === sectionSlug)
 
@@ -273,110 +577,63 @@ export async function proxy(request: NextRequest) {
       // instead of a dead link.
       newUrl.pathname = '/docs'
     }
-    return NextResponse.redirect(newUrl, 301)
+    return finishCoreResponse(NextResponse.redirect(newUrl, 301))
   }
 
-  // 3. Documentation access control: docs.publicAccess, or the older
+  // Documentation access control: docs.publicAccess, or the older
   // docs.public boolean it replaced (see lib/docs/access)
   if (isUnder(pathname, '/docs')) {
-    const docsConfig = getThemeAppConfig(activeTheme as string)?.docs
-    warnLegacyDocsAccess(docsConfig)
-
-    if (!isDocsPublic(docsConfig)) {
-      try {
-        const { data: session } = await getSession(request)
-
-        if (!session) {
-          return redirectToLogin(request)
-        }
-      } catch {
-        return redirectToLogin(request)
-      }
+    const access = await authorize(target)
+    if (access.response) return finishCoreResponse(access.response)
+    if (originalAccess.injectIdentity && originalAccess.session) {
+      requestHeaders = addVerifiedIdentity(request, requestHeaders, originalAccess.session, pathname)
     }
     if (isMissingDocsPage(pathname)) {
-      return rewriteToNotFound(request, requestHeaders)
+      return rewriteToNotFound(request, requestHeaders, themeResponse)
     }
-    return passThrough(request, requestHeaders)
+    return passThrough(request, requestHeaders, themeResponse, rewriteDestination)
   }
 
-  // 4. Allow public paths
+  // Allow public paths
   if (isPublicPath(pathname)) {
-    return passThrough(request, requestHeaders)
+    if (originalAccess.injectIdentity && originalAccess.session) {
+      requestHeaders = addVerifiedIdentity(request, requestHeaders, originalAccess.session, pathname)
+    }
+    return passThrough(request, requestHeaders, themeResponse, rewriteDestination)
   }
 
-  // 5. API v1 routes handle their own dual authentication
+  // API v1 routes handle their own dual authentication
   if (pathname.startsWith('/api/v1')) {
-    return passThrough(request, requestHeaders)
+    if (originalAccess.injectIdentity && originalAccess.session) {
+      requestHeaders = addVerifiedIdentity(request, requestHeaders, originalAccess.session, pathname)
+    }
+    return passThrough(request, requestHeaders, themeResponse, rewriteDestination)
   }
 
-  // 6. Protected routes - require authentication and inject user headers.
+  // Protected routes require authentication and inject user headers.
   // Areas are matched by path segment, so /dashboard-guide is not /dashboard.
   // /superadmin and /devtools also need a role, the same ones SuperAdminGuard
   // and DeveloperGuard let in. The guards decide it again in the browser, but
   // only after the page has been served, so it is decided here first.
-  const isAdminRoute = isUnder(pathname, '/admin')
-  const isSuperadminRoute = isUnder(pathname, '/superadmin')
-  const isDevtoolsRoute = isUnder(pathname, '/devtools')
-  const isProtectedRoute =
-    isUnder(pathname, '/dashboard') ||
-    isUnder(pathname, '/settings') ||
-    isUnder(pathname, '/profile') ||
-    isUnder(pathname, '/update-password') ||
-    isAdminRoute ||
-    isSuperadminRoute ||
-    isDevtoolsRoute
+  const area = protectedArea(pathname)
 
-  if (isProtectedRoute) {
-    try {
-      const { data: session } = await getSession(request)
+  if (area) {
+    const access = await authorize(target)
+    if (access.response) return finishCoreResponse(access.response)
+    const session = access.session ?? originalAccess.session
+    if (session) requestHeaders = addVerifiedIdentity(request, requestHeaders, session, pathname)
 
-      if (!session) {
-        return redirectToLogin(request)
-      }
-
-      const role = session.user?.role
-
-      // Admin Panel superadmin-only check
-      if (isAdminRoute && role !== 'superadmin') {
-        return redirectAccessDenied(request)
-      }
-
-      if (isSuperadminRoute && role !== 'superadmin' && role !== 'developer') {
-        return redirectAccessDenied(request)
-      }
-
-      if (isDevtoolsRoute && role !== 'developer') {
-        return redirectAccessDenied(request)
-      }
-
-      // Inject user headers for downstream use, ONLY from the verified session
-      // (requestHeaders already had any inbound values stripped).
-      // IMPORTANT: EntityPermissionLayout depends on these headers
-      if (session.user?.id) {
-        requestHeaders.set('x-user-id', session.user.id)
-      }
-      if (session.user?.email) {
-        requestHeaders.set('x-user-email', session.user.email)
-      }
-      // The team this session chose, for the dashboard layouts' permission
-      // checks; a cookie another session left behind names no team here.
-      const activeTeamId = activeTeamIdForSession(request.cookies.get(ACTIVE_TEAM_COOKIE)?.value, session.session?.id)
-      if (activeTeamId) {
-        requestHeaders.set('x-active-team-id', activeTeamId)
-      }
-
-      if (isSuperadminRoute && isMissingDocsPage(pathname)) {
-        return rewriteToNotFound(request, requestHeaders)
-      }
-
-      return passThrough(request, requestHeaders)
-    } catch (error) {
-      console.error('Proxy error:', error)
-      return redirectToLogin(request)
+    if (area === 'superadmin' && isMissingDocsPage(pathname)) {
+      return rewriteToNotFound(request, requestHeaders, themeResponse)
     }
+
+    return passThrough(request, requestHeaders, themeResponse, rewriteDestination)
   }
 
-  return passThrough(request, requestHeaders)
+  if (originalAccess.injectIdentity && originalAccess.session) {
+    requestHeaders = addVerifiedIdentity(request, requestHeaders, originalAccess.session, pathname)
+  }
+  return passThrough(request, requestHeaders, themeResponse, rewriteDestination)
 }
 
 /**
