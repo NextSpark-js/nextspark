@@ -170,7 +170,7 @@ test("registry:build, build and dev write nothing and stop with the cause when a
   assert.deepEqual(wrong, [])
 })
 
-test("registry:watch stops before it starts, with the cause and no line saying it started, when a place the registry build writes under isn't safe", { skip: process.platform === 'win32', timeout: 120_000 }, async () => {
+test("registry:watch and prepare --watch stop before they start, with the cause and no misleading running message, when a place the registry build writes under isn't safe", { skip: process.platform === 'win32', timeout: 120_000 }, async () => {
   const { root, cleanup } = await project()
   const outside = await directory('nextspark-write-check-outside-')
   try {
@@ -179,14 +179,15 @@ test("registry:watch stops before it starts, with the cause and no line saying i
     await symlink(join(outside.root, 'index.ts'), join(root, '.nextspark/registries/index.ts'))
     const before = { project: await snapshot(root), outside: await snapshot(outside.root) }
 
-    const { status, output } = runCli(root, ['registry:watch'], join(outside.root, 'next-ran'))
-
-    assert.equal(status, 1, output)
-    assert.deepEqual(await snapshot(outside.root), before.outside, 'nothing outside changed')
-    assert.deepEqual(await snapshot(root), before.project, 'nothing in the project changed')
-    const lines = output.split('\n')
-    assert.ok(lines.some((line) => line.trim().startsWith('.nextspark/registries/index.ts is a symlink')), output)
-    assert.deepEqual(lines.filter((line) => /(?<!not )started|running|✔|Watching/.test(line)), [], 'no line says the watcher started')
+    for (const args of [['registry:watch'], ['prepare', '--watch']]) {
+      const { status, output } = runCli(root, args, join(outside.root, 'next-ran'))
+      assert.equal(status, 1, `${args.join(' ')}: ${output}`)
+      assert.deepEqual(await snapshot(outside.root), before.outside, `${args.join(' ')}: nothing outside changed`)
+      assert.deepEqual(await snapshot(root), before.project, `${args.join(' ')}: nothing in the project changed`)
+      const lines = output.split('\n')
+      assert.ok(lines.some((line) => line.trim().startsWith('.nextspark/registries/index.ts is a symlink')), `${args.join(' ')}: ${output}`)
+      assert.deepEqual(lines.filter((line) => /(?<!not )started|running|✔|Watching/.test(line)), [], `${args.join(' ')}: no line says the watcher started`)
+    }
   } finally {
     await outside.cleanup()
     await cleanup()

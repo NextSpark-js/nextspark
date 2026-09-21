@@ -1,43 +1,12 @@
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
-import { errorLines, errorWithLines } from '../utils/shown-path.js';
-import { captureChildOutput } from '../utils/registry-build.js';
+import { errorLines } from '../utils/shown-path.js';
+import { runPreparation } from '../utils/preparation.js';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import { loadCoreWritePlaces } from '../utils/core-write-places.js';
 import { effectiveBundler, pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
-
-/**
- * Load environment variables from project root .env file
- */
-function loadProjectEnv(projectRoot: string): Record<string, string> {
-  const envPath = join(projectRoot, '.env');
-  const envVars: Record<string, string> = {};
-
-  if (existsSync(envPath)) {
-    const content = readFileSync(envPath, 'utf-8');
-    for (const line of content.split('\n')) {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith('#')) {
-        const [key, ...valueParts] = trimmed.split('=');
-        if (key && valueParts.length > 0) {
-          let value = valueParts.join('=');
-          // Remove surrounding quotes
-          if ((value.startsWith('"') && value.endsWith('"')) ||
-              (value.startsWith("'") && value.endsWith("'"))) {
-            value = value.slice(1, -1);
-          }
-          envVars[key] = value;
-        }
-      }
-    }
-  }
-
-  return envVars;
-}
 
 interface BuildOptions {
   registry: boolean;
@@ -66,43 +35,20 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
       process.exit(1);
     }
 
-    // Load project .env file
-    const projectEnv = loadProjectEnv(projectRoot);
-
     // Step 1: Generate registries if enabled
     if (options.registry) {
       spinner.start('Generating registries...');
 
-      const flagged = await new Promise<string[]>((resolve, reject) => {
-        const registryProcess = spawn('node', ['scripts/build/registry.mjs'], {
-          cwd: coreDir,
-          stdio: 'pipe',
-          env: {
-            ...projectEnv,
-            ...process.env,
-            NEXTSPARK_PROJECT_ROOT: projectRoot,
-          },
-        });
-
-        // core reports a build's failure over stdout as often as over stderr
-        // (only its opt-in verbose stack trace is stderr-only), so the cause is
-        // only complete when both streams are read together, in the order they
-        // arrived
-        const output = captureChildOutput(registryProcess);
-
-        registryProcess.on('close', (code) => {
-          if (code === 0) {
-            resolve(output.successLines);
-          } else {
-            reject(errorWithLines(['Registry generation failed:', ...output.failureLines]));
-          }
-        });
-
-        registryProcess.on('error', reject);
-      });
+      const preparation = await runPreparation(coreDir, projectRoot, { production: true });
+      if (preparation.code !== 0) {
+        spinner.fail('Registry generation failed');
+        for (const line of preparation.failureLines) console.error(chalk.red(line));
+        process.exit(preparation.code);
+        return;
+      }
 
       spinner.succeed('Registries generated');
-      for (const line of flagged) console.log(chalk.gray(line));
+      for (const line of preparation.successLines) console.log(chalk.gray(line));
 
       // What the build rewrites that git tracks stays tracked, whatever its .gitignore says
       const core = await loadCoreWritePlaces(coreDir);
@@ -126,7 +72,6 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
       cwd: projectRoot,
       stdio: 'inherit',
       env: {
-        ...projectEnv,
         ...process.env,
         NEXTSPARK_CORE_DIR: coreDir,
         NODE_ENV: 'production',
