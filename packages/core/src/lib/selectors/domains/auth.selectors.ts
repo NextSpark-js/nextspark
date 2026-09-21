@@ -48,6 +48,10 @@ export const AUTH_SELECTORS = {
     otpSubmit: 'login-otp-submit',
     otpResend: 'login-otp-resend',
     otpChangeEmail: 'login-otp-change-email',
+    // Runtime readiness
+    readinessLoading: 'login-readiness-loading',
+    readinessError: 'login-readiness-error',
+    noMethods: 'login-no-methods',
   },
   signup: {
     form: 'signup-form',
@@ -63,6 +67,13 @@ export const AUTH_SELECTORS = {
     error: 'signup-error',
     termsCheckbox: 'signup-terms-checkbox',
     footer: 'signup-footer',
+    // Readiness: email-OTP-only signup and unavailable invitation registration
+    readinessLoading: 'signup-readiness-loading',
+    readinessError: 'signup-readiness-error',
+    noMethods: 'signup-no-methods',
+    otpOnly: 'signup-otp-only',
+    otpLoginLink: 'signup-otp-login-link',
+    inviteUnavailable: 'signup-invite-unavailable',
   },
   forgotPassword: {
     form: 'forgot-password-form',
@@ -73,6 +84,10 @@ export const AUTH_SELECTORS = {
     successBack: 'forgot-password-success-back',
     retryButton: 'forgot-password-retry',
     error: 'forgot-password-error',
+    // Runtime readiness
+    readinessLoading: 'forgot-password-readiness-loading',
+    readinessError: 'forgot-password-readiness-error',
+    unavailable: 'forgot-password-unavailable',
   },
   resetPassword: {
     form: 'reset-password-form',

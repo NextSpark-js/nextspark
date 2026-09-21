@@ -9,7 +9,8 @@ import {
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
 import type { TeamInvitation, TeamMember } from '@nextsparkjs/core/lib/teams/types'
-import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
+import { AUTH_CONFIG, I18N_CONFIG } from '@nextsparkjs/core/lib/config'
+import { isPasswordLoginEnabled } from '@nextsparkjs/core/lib/auth/auth-methods'
 import { withSignupContext } from '@nextsparkjs/core/lib/auth-context'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
@@ -31,6 +32,16 @@ interface SignupWithInviteBody {
 export const POST = withRateLimitTier(withApiLogging(
   async (req: NextRequest): Promise<NextResponse> => {
     try {
+      if (!isPasswordLoginEnabled(AUTH_CONFIG)) {
+        const response = createApiError(
+          'Password authentication is unavailable',
+          503,
+          null,
+          'AUTH_METHOD_UNAVAILABLE'
+        )
+        return addCorsHeaders(response, req)
+      }
+
       const body: SignupWithInviteBody = await req.json()
       const { email, password, firstName, lastName, inviteToken } = body
 

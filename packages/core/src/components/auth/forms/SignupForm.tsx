@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useAuthActions } from '../../../hooks/useAuth'
+import { useAuthReadiness } from '../../../hooks/useAuthReadiness'
 import { safeCallbackPath } from '../../../lib/auth/callback-url'
 import { withBasePath } from '../../../lib/base-path'
 import { Button } from '../../ui/button'
@@ -22,7 +23,6 @@ import { signupSchema } from '../../../lib/validation'
 import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { AuthTranslationPreloader } from '../../../lib/i18n/AuthTranslationPreloader'
-import { PUBLIC_AUTH_CONFIG } from '../../../lib/config/config-sync'
 import { toast } from 'sonner'
 
 type SignupFormData = z.infer<typeof signupSchema>
@@ -40,6 +40,9 @@ export function SignupForm() {
   const [statusMessage, setStatusMessage] = useState('')
   const { signUp, googleSignIn, resendVerificationEmail } = useAuthActions()
   const t = useTranslations('auth')
+  const readiness = useAuthReadiness()
+  const googleAvailable = readiness.availableMethods.includes('google')
+  const otpAvailable = readiness.availableMethods.includes('email-otp')
 
   // Read invitation-related params from URL
   const searchParams = useSearchParams()
@@ -47,6 +50,12 @@ export function SignupForm() {
   const fromInvite = searchParams.get('fromInvite') === 'true'
   const callbackUrl = safeCallbackPath(searchParams.get('callbackUrl'))
   const inviteToken = searchParams.get('inviteToken')
+  // Invitation registration follows the password backend switch, not the
+  // login UI methods: the passwordless preset keeps inviting with a password.
+  const passwordAvailable = inviteToken
+    ? readiness.capabilities.invitationPasswordSignup
+    : readiness.availableMethods.includes('email-password')
+  const loginHref = callbackUrl ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/login'
 
   const {
     register,
@@ -171,6 +180,56 @@ export function SignupForm() {
     } finally {
       setResendingEmail(false)
     }
+  }
+
+  // An invitation stays usable while login methods are unavailable, as long as
+  // the server reports the invitation password capability.
+  if (
+    readiness.state === 'loading' ||
+    readiness.state === 'error' ||
+    (readiness.state === 'unavailable' && !(inviteToken && passwordAvailable))
+  ) {
+    const isLoading = readiness.state === 'loading'
+    const isError = readiness.state === 'error'
+    return (
+      <>
+        <AuthTranslationPreloader />
+        <Card className="w-full max-w-md" data-cy={sel('auth.signup.form')}>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold" role="heading" aria-level={1}>
+              {t('signup.title')}
+            </CardTitle>
+            <CardDescription>{t('signup.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Alert
+              role={isLoading ? 'status' : 'alert'}
+              aria-live="polite"
+              data-cy={sel(
+                isLoading
+                  ? 'auth.signup.readinessLoading'
+                  : isError
+                    ? 'auth.signup.readinessError'
+                    : 'auth.signup.noMethods'
+              )}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
+              )}
+              <AlertDescription>
+                {isLoading
+                  ? t('login.readiness.loading')
+                  : isError
+                    ? t('login.readiness.error')
+                    : t('login.readiness.unavailable')}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </>
+    )
   }
 
   // Show success message if email was sent
@@ -341,6 +400,7 @@ export function SignupForm() {
             </Alert>
           )}
 
+        {passwordAvailable && (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -489,9 +549,47 @@ export function SignupForm() {
             )}
           </Button>
         </form>
+        )}
 
-        {PUBLIC_AUTH_CONFIG.providers.google.enabled && (
+        {!passwordAvailable && !googleAvailable && (
+          <Alert
+            role="alert"
+            data-cy={sel(
+              inviteToken
+                ? 'auth.signup.inviteUnavailable'
+                : otpAvailable
+                  ? 'auth.signup.otpOnly'
+                  : 'auth.signup.noMethods'
+            )}
+          >
+            <AlertCircle className="h-4 w-4" aria-hidden="true" />
+            <AlertDescription className="space-y-3">
+              <p>
+                {inviteToken
+                  ? t('signup.inviteUnavailable')
+                  : otpAvailable
+                    ? t('signup.otpOnly.message')
+                    : t('login.readiness.unavailable')}
+              </p>
+              {otpAvailable && (
+                <Button asChild className="w-full" data-cy={sel('auth.signup.otpLoginLink')}>
+                  <Link href={loginHref}>{t('signup.otpOnly.loginLink')}</Link>
+                </Button>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {inviteToken && !passwordAvailable && googleAvailable && (
+          <Alert role="alert" className="mb-4" data-cy={sel('auth.signup.inviteUnavailable')}>
+            <AlertCircle className="h-4 w-4" aria-hidden="true" />
+            <AlertDescription>{t('signup.inviteUnavailable')}</AlertDescription>
+          </Alert>
+        )}
+
+        {googleAvailable && (
           <>
+            {passwordAvailable && (
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
                 <Separator className="w-full" />
@@ -502,6 +600,7 @@ export function SignupForm() {
                 </span>
               </div>
             </div>
+            )}
 
             <Button
               type="button"

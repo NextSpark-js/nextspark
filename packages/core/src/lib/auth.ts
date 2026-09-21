@@ -22,6 +22,7 @@ import { registrationGuardPlugin } from './auth/registration-guard-plugin';
 import { resolveSessionConfig } from './auth/session-config';
 import { resolveOtpConfig } from './auth/otp-config';
 import { isPasswordLoginEnabled } from './auth/auth-methods';
+import { isRuntimeEmailAvailable, isRuntimeGoogleAvailable } from './auth/runtime-readiness';
 import { getCorsOrigins, isPrivateLanOrigin, normalizeCorsEnvironment } from './utils/cors';
 import { withBasePath } from './base-path';
 
@@ -81,8 +82,10 @@ interface GoogleProfile {
 const isProd = process.env.NODE_ENV === 'production';
 const baseUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173';
 
-// Use the email factory to get the appropriate provider
-const emailService = EmailFactory.create();
+// Providers are created only inside callbacks that actually send email. This
+// keeps an OAuth-only project independent from unused/bad email configuration.
+const getEmailService = () => EmailFactory.create();
+
 
 // Better Auth reads users/account/session/verification WITHOUT a user GUC during
 // login/verification (the user is not authenticated yet). Under real RLS those
@@ -235,7 +238,7 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     resetPasswordTokenExpiresIn: 60 * 60, // 1 hour
-    sendResetPassword: (params) => sendResetPasswordCallback(params, emailService),
+    sendResetPassword: (params) => sendResetPasswordCallback(params, getEmailService()),
   },
   emailVerification: {
     // Controlled by AUTH_CONFIG.sendVerificationEmailOnSignup (default: true).
@@ -243,33 +246,38 @@ export const auth = betterAuth({
     // in their app.config.ts when they verify email ownership through other
     // means (OTP, invitation token, claim-account flow, etc.).
     sendOnSignUp: AUTH_CONFIG.sendVerificationEmailOnSignup ?? true,
-    sendVerificationEmail: (params) => sendVerificationEmailCallback(params, emailService),
+    // async: a synchronous EmailFactory.create() failure becomes a rejected
+    // promise, which Better Auth's signup background send catches and logs,
+    // instead of a throw that fails signup-with-invite.
+    sendVerificationEmail: async (params) => sendVerificationEmailCallback(params, getEmailService()),
     // Better Auth defaults this to 1 hour; state the valid option explicitly so
     // the effective verification-link lifetime remains unchanged.
     expiresIn: 60 * 60, // 1 hour
   },
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      mapProfileToUser: (profile: GoogleProfile) => {
-        // Google provides given_name and family_name separately
-        const firstName = profile.given_name || profile.name.split(' ')[0] || '';
-        const lastName = profile.family_name || profile.name.split(' ').slice(1).join(' ') || '';
-        
-        return {
-          email: profile.email,
-          name: profile.name, // Better Auth expects 'name' field
-          firstName: firstName, // Use given_name if available, otherwise split name
-          lastName: lastName, // Use family_name if available, otherwise split name
-          language: I18N_CONFIG.defaultLocale, // Assign default language for Google OAuth
-          role: USER_ROLES_CONFIG.defaultRole, // Assign default role for Google OAuth users
-          image: profile.picture,
-          emailVerified: profile.email_verified || false,
-        };
-      },
-    },
-  },
+  socialProviders: isRuntimeGoogleAvailable()
+    ? {
+        google: {
+          clientId: process.env.GOOGLE_CLIENT_ID!,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+          mapProfileToUser: (profile: GoogleProfile) => {
+            // Google provides given_name and family_name separately
+            const firstName = profile.given_name || profile.name.split(' ')[0] || '';
+            const lastName = profile.family_name || profile.name.split(' ').slice(1).join(' ') || '';
+
+            return {
+              email: profile.email,
+              name: profile.name, // Better Auth expects 'name' field
+              firstName: firstName, // Use given_name if available, otherwise split name
+              lastName: lastName, // Use family_name if available, otherwise split name
+              language: I18N_CONFIG.defaultLocale, // Assign default language for Google OAuth users
+              role: USER_ROLES_CONFIG.defaultRole, // Assign default role for Google OAuth users
+              image: profile.picture,
+              emailVerified: profile.email_verified || false,
+            };
+          },
+        },
+      }
+    : {},
   baseURL: baseUrl,
   // Better Auth serves its routes, and builds its OAuth redirect_uri and email
   // links, under baseURL + basePath. Under a Next.js basePath that is
@@ -308,25 +316,27 @@ export const auth = betterAuth({
   plugins: [
     registrationGuardPlugin(), // Intercept OAuth signup attempts
     // Passwordless preset: one-time code by email (AUTH_CONFIG.methods
-    // 'email-otp', on by default). Always registered so a theme can switch
-    // presets without touching the server; the code travels through the
-    // configured email provider (Resend in the default setup).
-    emailOTP({
-      async sendVerificationOTP({ email, otp, type }) {
-        const template = await sendOtpVerificationEmail({
-          email,
-          otp,
-          type,
-          appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App',
+    // 'email-otp', on by default). Registered only when runtime readiness
+    // confirms a usable provider; the route gate independently re-checks each
+    // request before Better Auth can invoke it.
+    ...(isRuntimeEmailAvailable()
+      ? [emailOTP({
+          async sendVerificationOTP({ email, otp, type }) {
+            const template = await sendOtpVerificationEmail({
+              email,
+              otp,
+              type,
+              appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App',
+              expiresIn: otpConfig.expiresIn,
+            }, I18N_CONFIG.defaultLocale);
+            await getEmailService().send({ to: email, ...template });
+          },
+          otpLength: otpConfig.otpLength,
           expiresIn: otpConfig.expiresIn,
-        }, I18N_CONFIG.defaultLocale);
-        await emailService.send({ to: email, ...template });
-      },
-      otpLength: otpConfig.otpLength,
-      expiresIn: otpConfig.expiresIn,
-      sendVerificationOnSignUp: false,
-      disableSignUp: false, // auto-create user on first OTP sign-in
-    }),
+          sendVerificationOnSignUp: false,
+          disableSignUp: false, // auto-create user on first OTP sign-in
+        })]
+      : []),
     nextCookies(), // MUST be the last plugin for Next.js cookie handling
   ],
   session: {
