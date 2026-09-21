@@ -162,3 +162,70 @@ minutes per IP) to every `POST /api/auth/*`, OTP requests included.
   pluralized correctly in every locale.
 - `tests/jest/lib/auth-otp-email-expiry.test.ts` — the emailOTP plugin forwards
   the resolved `expiresIn` to the email template, not a hardcoded value.
+
+## Runtime provider readiness
+
+The auth route evaluates the resolved server `AUTH_CONFIG` together with the runtime environment before invoking Better Auth providers. `GET /api/auth/readiness` returns only a safe status and the methods that can actually be offered (`availableMethods`); it never returns credential values or detailed credential diagnostics. Login screens use this endpoint, including the configured Next.js `basePath`, and render loading, unavailable, or error states instead of buttons that are known to fail.
+
+In production, email OTP requires a valid `RESEND_API_KEY` and a non-placeholder `RESEND_FROM_EMAIL` on a verified domain; the console provider is development-only. Google requires a valid `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Requests for unavailable providers receive a non-secret `503 AUTH_METHOD_UNAVAILABLE` response before provider code runs, while the server log records safe diagnostic codes and remediation messages.
+
+`auth.methods` remains the list of methods advertised by the UI. It does not disable the existing email/password API: use `auth.emailAndPassword.enabled: false` to disable those endpoints, and `auth.providers.google.enabled: false` to disable Google endpoints. Session inspection and sign-out remain available even when no new login method is ready, so existing sessions can still be inspected and ended.
+
+### Invitation registration and password recovery
+
+`GET /api/auth/readiness` also returns two server-derived booleans in `capabilities`. They are computed from the backend switch and email delivery, never from `auth.methods`, so hiding the password field on the login screen does not disable existing invitations or recovery:
+
+| Capability | True when | Used by |
+|---|---|---|
+| `invitationPasswordSignup` | `auth.emailAndPassword.enabled` is not `false` | Signup page opened with an `inviteToken` (`POST /api/v1/auth/signup-with-invite`) |
+| `passwordRecovery` | `auth.emailAndPassword.enabled` is not `false` **and** email delivery is ready | `/forgot-password` (`/request-password-reset`) |
+
+A normal signup page whose only ready method is email OTP shows an explanation and a link to the login page (keeping `callbackUrl`), because the account is created on the first OTP sign-in. Loading, error, and a missing or malformed `capabilities` object all fail closed: the shared UI shows no password action.
+
+### Upgrading existing hosts
+
+Hosts generated from an earlier core version own their copies of `app/api/auth/[...all]/route.ts` and `app/api/v1/auth/signup-with-invite/route.ts`; updating the package does not change them. Add the gate by hand.
+
+`app/api/auth/[...all]/route.ts`:
+
+```ts
+import { getAuthReadinessResponse } from '@nextsparkjs/core/lib/auth/runtime-readiness'
+
+export async function GET(req: NextRequest) {
+  // First statement: also serves GET /api/auth/readiness.
+  const readinessResponse = await getAuthReadinessResponse(req)
+  if (readinessResponse) {
+    return wrapAuthHandlerWithCors(() => Promise.resolve(readinessResponse), req)
+  }
+  // ...existing GET logic, then Better Auth's handler
+}
+
+export async function POST(req: NextRequest) {
+  // ...existing rate limit check (keep it first)
+  const readinessResponse = await getAuthReadinessResponse(req)
+  if (readinessResponse) {
+    return wrapAuthHandlerWithCors(() => Promise.resolve(readinessResponse), req)
+  }
+  // ...existing signup/OAuth handling, then Better Auth's handler
+}
+```
+
+The call must run before any code that invokes Better Auth (`handlers.GET/POST`, `auth.handler`, `auth.api.*`). It returns `null` for everything it does not gate, including `get-session` and `sign-out`, so existing sessions keep working.
+
+`app/api/v1/auth/signup-with-invite/route.ts` calls `auth.handler` directly and does not pass through the catch-all gate. Add this at the top of the `POST` handler, before reading the body:
+
+```ts
+import { AUTH_CONFIG } from '@nextsparkjs/core/lib/config'
+import { isPasswordLoginEnabled } from '@nextsparkjs/core/lib/auth/auth-methods'
+
+if (!isPasswordLoginEnabled(AUTH_CONFIG)) {
+  return addCorsHeaders(
+    createApiError('Password authentication is unavailable', 503, null, 'AUTH_METHOD_UNAVAILABLE'),
+    req,
+  )
+}
+```
+
+> **Warning:** without the catch-all change, `GET /api/auth/readiness` returns 404. Login, signup, and forgot-password then show the error state and offer no sign-in action. There is no permissive fallback. Provider endpoints called directly also stay ungated until the route is updated.
+
+This runtime gate does not replace deployment preflight. Build/start readiness enforcement and wizard provider collection are separate dependent slices; a production environment must still supply its credentials at runtime even if they were present while building.
