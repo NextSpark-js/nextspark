@@ -15,6 +15,7 @@ guardOutput();
 config({ quiet: true });
 import { buildCommand } from './commands/build.js';
 import { generateCommand } from './commands/generate.js';
+import { prepareCommand } from './commands/prepare.js';
 import { registryBuildCommand, registryWatchCommand } from './commands/registry.js';
 import { initCommand } from './commands/init.js';
 import { addPluginCommand } from './commands/add-plugin.js';
@@ -73,6 +74,14 @@ program
   .option('--turbopack', 'Build with Turbopack')
   .allowUnknownOption()
   .action((nextArgs, opts) => buildCommand({ ...opts, nextArgs }));
+
+// Prepare command
+program
+  .command('prepare')
+  .description('Generate the current registry output before development or a build')
+  .option('-w, --watch', 'Watch for changes and prepare again')
+  .option('--production', 'Run the registry compiler with NODE_ENV=production')
+  .action(prepareCommand);
 
 // Generate command
 program
