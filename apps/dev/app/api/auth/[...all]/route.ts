@@ -12,6 +12,7 @@ import { withSignupContext } from "@nextsparkjs/core/lib/auth-context";
 import { dispatchSecurityNotificationsForRequest } from "@nextsparkjs/core/lib/auth/security-notifications";
 import { verifyEmailPageUrl } from "@nextsparkjs/core/lib/auth/verify-email-link";
 import { withBasePathRequest } from "@nextsparkjs/core/lib/base-path";
+import { getAuthReadinessResponse } from "@nextsparkjs/core/lib/auth/runtime-readiness";
 
 const handlers = toNextJsHandler(auth);
 
@@ -23,6 +24,11 @@ export async function OPTIONS(req: NextRequest) {
 // Intercept email verification requests to redirect to UI page
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(req: NextRequest, context: { params: Promise<{ all: string[] }> }) {
+  const readinessResponse = await getAuthReadinessResponse(req);
+  if (readinessResponse) {
+    return wrapAuthHandlerWithCors(() => Promise.resolve(readinessResponse), req);
+  }
+
   const pathname = req.nextUrl.pathname;
 
   // Check if this is an email verification request from an email link
@@ -97,6 +103,11 @@ export async function POST(req: NextRequest) {
         'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
       },
     })
+  }
+
+  const readinessResponse = await getAuthReadinessResponse(req);
+  if (readinessResponse) {
+    return wrapAuthHandlerWithCors(() => Promise.resolve(readinessResponse), req);
   }
 
   const pathname = req.nextUrl.pathname;

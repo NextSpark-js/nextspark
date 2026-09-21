@@ -87,8 +87,8 @@ describe('passwordless preset (#126)', () => {
     expect(typeof otpOptions.sendVerificationOTP).toBe('function')
     expect(betterAuthOptions.plugins).toEqual(expect.arrayContaining([{ id: 'email-otp' }]))
 
-    // Server: Google OAuth provider configured
-    expect(betterAuthOptions.socialProviders.google).toBeDefined()
+    // Server: an unavailable provider is not configured from UI intent alone.
+    expect(betterAuthOptions.socialProviders.google).toBeUndefined()
   })
 
   test('the traditional email + password login keeps working when the theme does not override it', () => {
@@ -104,7 +104,8 @@ describe('passwordless preset (#126)', () => {
 
     expect(publicAuthConfig.methods).toEqual(['email-password', 'google'])
     expect(betterAuthOptions.emailAndPassword.enabled).toBe(true)
-    // OTP plugin still registered — presets are UI-level, the server serves every method
+    // OTP plugin remains registered because methods are UI intent and the
+    // development console email backend is usable.
     expect(mockEmailOTP).toHaveBeenCalledTimes(1)
   })
 
