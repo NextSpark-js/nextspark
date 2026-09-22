@@ -243,7 +243,7 @@ The theme config is loaded with Node's type stripping (Node 22.14 or later), not
 
 ### Startup re-validation
 
-At server start, `logAuthReadinessAtStartup()` evaluates runtime readiness when `NODE_ENV` is `production` and logs one `[auth-readiness]` error with safe diagnostics if no login method can work. It never throws or stops the server; the per-request gates keep refusing unusable methods. New projects call it from `instrumentation.ts`. Existing hosts add this inside the `process.env.NEXT_RUNTIME === 'nodejs'` branch of their `instrumentation.ts` `register()`:
+At server start, `logAuthReadinessAtStartup()` evaluates runtime readiness when `NODE_ENV` is `production` and logs one `[auth-readiness]` error with safe diagnostics if no login method can work. It never throws or stops the server; the per-request gates keep refusing unusable methods. New projects receive an `instrumentation.ts` that calls it. A host without `instrumentation.ts` gets the file from `pnpm exec nextspark sync:app`, which never overwrites a file you customized. Hosts with their own `instrumentation.ts` add this inside the `process.env.NEXT_RUNTIME === 'nodejs'` branch of their `instrumentation.ts` `register()`:
 
 ```ts
 try {
