@@ -13,6 +13,15 @@
 export async function register() {
   // Only run on server (not during build or in edge runtime)
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    // Re-validate login providers at startup: logs one safe error in production when none can work
+    try {
+      const { logAuthReadinessAtStartup } = await import('@nextsparkjs/core/lib/auth/runtime-readiness')
+      logAuthReadinessAtStartup()
+    } catch {
+      // Fixed text only: what failed to load can carry configuration values
+      console.error('[auth-readiness] startup readiness check could not run; per-request gates still apply')
+    }
+
     const {
       initializeScheduledActions,
       initializeRecurringActions,

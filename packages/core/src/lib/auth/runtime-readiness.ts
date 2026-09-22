@@ -4,6 +4,7 @@ import { AUTH_CONFIG } from '../config'
 import type { AuthConfig, AuthLoginMethod } from '../config/types'
 import { isPasswordLoginEnabled } from './auth-methods'
 import {
+  authReadinessConfigurationFromEnv,
   evaluateAuthReadiness,
   type AuthReadinessDiagnostic,
   type AuthReadinessResult,
@@ -42,24 +43,35 @@ function runtimeInput(options: RuntimeAuthReadinessOptions = {}) {
     stage: 'runtime' as const,
     environment: env.NODE_ENV === 'production' ? 'production' as const : 'development' as const,
     authConfig: options.authConfig === undefined ? AUTH_CONFIG : options.authConfig,
-    configuration: {
-      email: {
-        provider: env.EMAIL_PROVIDER,
-        resendApiKey: env.RESEND_API_KEY,
-        resendFromEmail: env.RESEND_FROM_EMAIL,
-        forceResendInDevelopment: Boolean(env.FORCE_RESEND_IN_DEV),
-      },
-      google: {
-        clientId: env.GOOGLE_CLIENT_ID,
-        clientSecret: env.GOOGLE_CLIENT_SECRET,
-      },
-    },
+    configuration: authReadinessConfigurationFromEnv(env),
   }
 }
 
 /** Server-owned runtime adapter for the pure readiness evaluator. */
 export function getRuntimeAuthReadiness(options: RuntimeAuthReadinessOptions = {}): AuthReadinessResult {
   return evaluateAuthReadiness(runtimeInput(options))
+}
+
+/**
+ * Startup re-validation for production servers. The build check may have
+ * deferred runtime-only providers, and the runtime environment can differ from
+ * the build's, so this logs one error with safe diagnostics (codes and
+ * messages, never values) when no login method can work. It never throws or
+ * stops the server: the per-request gates already fail closed.
+ */
+export function logAuthReadinessAtStartup(options: RuntimeAuthReadinessOptions = {}): void {
+  try {
+    const env = options.env ?? process.env
+    if (env.NODE_ENV !== 'production') return
+    const result = getRuntimeAuthReadiness(options)
+    if (result.outcome !== 'invalid') return
+    console.error('[auth-readiness] no login method can authenticate; login requests will be refused until this is fixed', {
+      declaredMethods: result.declaredMethods,
+      diagnostics: result.diagnostics.map(({ method, code, message }) => ({ method, code, message })),
+    })
+  } catch {
+    console.error('[auth-readiness] startup readiness check could not run; per-request gates still apply')
+  }
 }
 
 /** The only readiness representation safe to return to an unauthenticated browser. */

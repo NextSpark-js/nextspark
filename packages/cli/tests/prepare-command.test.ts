@@ -16,6 +16,8 @@ async function fixture(script: string) {
   await mkdir(join(core, 'scripts/build'), { recursive: true })
   await writeFile(join(core, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
   await writeFile(join(core, 'scripts/build/registry.mjs'), script)
+  // A passing auth readiness check: its behavior is covered by auth-readiness-preflight.test.ts
+  await writeFile(join(core, 'scripts/build/auth-readiness.mjs'), '')
   await mkdir(join(core, 'scripts/build/registry/post-build'), { recursive: true })
   await writeFile(join(core, 'scripts/build/registry/write-places.mjs'), `
 export function unsafeWritePlaces() { return [] }

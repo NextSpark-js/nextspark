@@ -54,18 +54,61 @@ export function preparationEnvironment(projectRoot: string, options: Preparation
   };
 }
 
-/** Run the one-shot core registry compiler without changing its inputs or output locations. */
-export function runPreparation(
+/** Core's production auth readiness check, relative to the core directory. */
+export const AUTH_READINESS_SCRIPT = 'scripts/build/auth-readiness.mjs';
+
+/**
+ * Run the one-shot core registry compiler without changing its inputs or
+ * output locations. Production preparation then runs the auth readiness check,
+ * so a build whose environment proves no login method can work stops here.
+ */
+export async function runPreparation(
   coreDir: string,
   projectRoot: string,
   options: PreparationOptions = {},
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<PreparationResult> {
+  const registry = await runCoreScript(coreDir, ['scripts/build/registry.mjs'], preparationEnvironment(projectRoot, options, env));
+  if (registry.code !== 0 || !options.production) return registry;
+  const auth = await runAuthReadiness(coreDir, projectRoot, env);
+  return { ...auth, successLines: [...registry.successLines, ...auth.successLines] };
+}
+
+/**
+ * Check, with the production preparation environment, that at least one login
+ * method of the active theme can authenticate. The theme's app.config.ts is
+ * TypeScript, which core loads with Node's type stripping. A core that doesn't
+ * ship the check fails closed: the only bypass is NEXTSPARK_AUTH_PREFLIGHT=off,
+ * which core itself honors.
+ */
+export function runAuthReadiness(
+  coreDir: string,
+  projectRoot: string,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<PreparationResult> {
+  if (!existsSync(join(coreDir, AUTH_READINESS_SCRIPT))) {
+    return Promise.resolve({
+      code: 1,
+      successLines: [],
+      failureLines: [
+        `The installed @nextsparkjs/core does not provide the production auth readiness check (${AUTH_READINESS_SCRIPT}).`,
+        'Install a @nextsparkjs/core version matching this CLI.',
+      ],
+    });
+  }
+  return runCoreScript(
+    coreDir,
+    ['--experimental-strip-types', '--disable-warning=ExperimentalWarning', AUTH_READINESS_SCRIPT],
+    preparationEnvironment(projectRoot, { production: true }, env),
+  );
+}
+
+function runCoreScript(coreDir: string, args: string[], env: NodeJS.ProcessEnv): Promise<PreparationResult> {
   return new Promise((resolve) => {
-    const child = spawn('node', ['scripts/build/registry.mjs'], {
+    const child = spawn('node', args, {
       cwd: coreDir,
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: preparationEnvironment(projectRoot, options, env),
+      env,
     });
     const output = captureChildOutput(child);
     child.on('error', (error) => resolve({ code: 1, successLines: [], failureLines: [...output.failureLines, error.message] }));

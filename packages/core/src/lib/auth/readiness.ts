@@ -268,6 +268,29 @@ function evaluateGoogleConfiguration(
 }
 
 /**
+ * Maps the provider environment contract (EMAIL_PROVIDER, RESEND_API_KEY,
+ * RESEND_FROM_EMAIL, FORCE_RESEND_IN_DEV, GOOGLE_CLIENT_ID,
+ * GOOGLE_CLIENT_SECRET) onto evaluator configuration. Shared by the runtime
+ * adapter and the production build check so both read the same variables.
+ */
+export function authReadinessConfigurationFromEnv(
+  env: Record<string, string | undefined>
+): NonNullable<AuthReadinessInput['configuration']> {
+  return {
+    email: {
+      provider: env.EMAIL_PROVIDER,
+      resendApiKey: env.RESEND_API_KEY,
+      resendFromEmail: env.RESEND_FROM_EMAIL,
+      forceResendInDevelopment: Boolean(env.FORCE_RESEND_IN_DEV),
+    },
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    },
+  }
+}
+
+/**
  * Evaluates whether at least one method declared by AuthConfig has a
  * syntactically configured server-side provider. This performs no provider or
  * network I/O, reads no environment and does not log. Syntax checks never prove

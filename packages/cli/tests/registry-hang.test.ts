@@ -77,6 +77,8 @@ async function projectWithRegistryBuild(script: string) {
   await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
   await writeFile(join(coreDir, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
   await writeFile(join(coreDir, 'scripts/build/registry.mjs'), `${PRELUDE}\n${script}\n`)
+  // A passing auth readiness check: its behavior is covered by auth-readiness-preflight.test.ts
+  await writeFile(join(coreDir, 'scripts/build/auth-readiness.mjs'), '')
   for (const file of CORE_WRITE_CHECK) {
     await mkdir(dirname(join(coreDir, file)), { recursive: true })
     await copyFile(join(CORE_SOURCE, file), join(coreDir, file))

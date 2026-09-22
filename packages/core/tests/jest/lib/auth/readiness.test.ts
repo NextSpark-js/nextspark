@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, jest, test } from '@jest/globals'
-import { evaluateAuthReadiness } from '@/core/lib/auth/readiness'
+import { authReadinessConfigurationFromEnv, evaluateAuthReadiness } from '@/core/lib/auth/readiness'
+import { DEFAULT_AUTH_METHODS } from '@/core/lib/auth/auth-methods'
+import { DEFAULT_APP_CONFIG } from '@/core/lib/config/app.config'
 
 const productionWeb = {
   profile: 'web-local-auth' as const,
@@ -891,5 +893,37 @@ describe('evaluateAuthReadiness purity', () => {
       expect(serialized).not.toContain(secret)
     }
     expect(result.diagnostics.map((diagnostic) => diagnostic.message).join(' ')).not.toMatch(/leaky|super_secret/)
+  })
+})
+
+describe('build check assumptions', () => {
+  // The production build check passes only the theme's auth overrides and
+  // relies on the evaluator treating unset values as these core defaults.
+  test('core auth defaults match what the evaluator assumes when a theme leaves them unset', () => {
+    expect(DEFAULT_APP_CONFIG.auth?.providers?.google?.enabled).toBe(true)
+    expect(DEFAULT_APP_CONFIG.auth?.emailAndPassword?.enabled).toBe(true)
+    expect(DEFAULT_APP_CONFIG.auth?.methods).toEqual([...DEFAULT_AUTH_METHODS])
+  })
+
+  test('maps the provider environment contract without adding runtime-only declarations', () => {
+    expect(authReadinessConfigurationFromEnv({
+      EMAIL_PROVIDER: 'resend',
+      RESEND_API_KEY: 're_1234567890abcdefghijklmnop',
+      RESEND_FROM_EMAIL: 'auth@example.com',
+      FORCE_RESEND_IN_DEV: '1',
+      GOOGLE_CLIENT_ID: '123456789-abcdef.apps.googleusercontent.com',
+      GOOGLE_CLIENT_SECRET: 'GOCSPX-production-secret',
+    })).toEqual({
+      email: {
+        provider: 'resend',
+        resendApiKey: 're_1234567890abcdefghijklmnop',
+        resendFromEmail: 'auth@example.com',
+        forceResendInDevelopment: true,
+      },
+      google: {
+        clientId: '123456789-abcdef.apps.googleusercontent.com',
+        clientSecret: 'GOCSPX-production-secret',
+      },
+    })
   })
 })

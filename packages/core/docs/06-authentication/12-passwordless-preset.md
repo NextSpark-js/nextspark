@@ -228,4 +228,31 @@ if (!isPasswordLoginEnabled(AUTH_CONFIG)) {
 
 > **Warning:** without the catch-all change, `GET /api/auth/readiness` returns 404. Login, signup, and forgot-password then show the error state and offer no sign-in action. There is no permissive fallback. Provider endpoints called directly also stay ungated until the route is updated.
 
-This runtime gate does not replace deployment preflight. Build/start readiness enforcement and wizard provider collection are separate dependent slices; a production environment must still supply its credentials at runtime even if they were present while building.
+The runtime gate is complemented by the production readiness check below. Wizard provider collection is a separate slice; a production environment must still supply its credentials at runtime even if they were present while building.
+
+## Production readiness check
+
+`pnpm exec nextspark prepare --production`, and therefore `pnpm exec nextspark build` (with or without `--no-registry`), runs core's `scripts/build/auth-readiness.mjs` after the registry step and before `next build`. It loads the active theme's `config/app.config.ts` auth settings, reads the same variables as the runtime gate (`EMAIL_PROVIDER`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) from the build environment overlaid on the project `.env`, and fails the build when no method in `auth.methods` can authenticate. Missing, empty, placeholder, and malformed values do not count, and neither does the console email provider or the `resend.dev` testing sender. Output names diagnostic codes, variables, and methods, never their values. Non-production `prepare`, `dev`, and `--watch` do not run it.
+
+| Variable | Effect |
+|---|---|
+| `NEXTSPARK_AUTH_RUNTIME_ONLY` | Comma-separated `email` and/or `google` (spaces are trimmed). Declares providers whose credentials are injected only at runtime: their missing values pass the build with a warning and are validated again at server startup and on each gated authentication request. A concrete placeholder or malformed value still fails. Any other entry fails the build. |
+| `NEXTSPARK_AUTH_PREFLIGHT=off` | The only bypass. Skips the build check with a warning; runtime gating and the startup check still apply. Any value other than `off` or `on` fails. |
+
+The theme config is loaded with Node's type stripping (Node 22.14 or later), not the Next.js bundler. A config that uses path aliases (`@/...`), extensionless relative imports, or TypeScript syntax Node cannot strip (enums, namespaces) cannot be read, and the check fails closed with `AUTH_CONFIG_UNREADABLE`. Keep the `auth` settings as plain literals, or use the bypass. The config is loaded in a separate process whose output is discarded, so nothing it prints or throws reaches the build log; failures are reported with a fixed reason. A theme without `app.config.ts` is checked against the core defaults. In the monorepo, build `@nextsparkjs/core` first; the check uses its compiled evaluator. If `NEXT_PUBLIC_ACTIVE_THEME` is set in both the build environment and `.env` with different values, the check fails with `AUTH_THEME_CONFLICT`: the registry step compiles the `.env` theme while `next build` uses the environment's. Make them agree, or set it in only one place. Credentials that exist only in `.env.production` or `.env.local` are not read by the check: pass them to the build environment or declare them runtime-only.
+
+### Startup re-validation
+
+At server start, `logAuthReadinessAtStartup()` evaluates runtime readiness when `NODE_ENV` is `production` and logs one `[auth-readiness]` error with safe diagnostics if no login method can work. It never throws or stops the server; the per-request gates keep refusing unusable methods. New projects call it from `instrumentation.ts`. Existing hosts add this inside the `process.env.NEXT_RUNTIME === 'nodejs'` branch of their `instrumentation.ts` `register()`:
+
+```ts
+try {
+  const { logAuthReadinessAtStartup } = await import('@nextsparkjs/core/lib/auth/runtime-readiness')
+  logAuthReadinessAtStartup()
+} catch {
+  // Fixed text only: what failed to load can carry configuration values
+  console.error('[auth-readiness] startup readiness check could not run; per-request gates still apply')
+}
+```
+
+Keep the import inside the `try`: if loading core's config fails, startup continues and the log carries no error details.

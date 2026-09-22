@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 import {
   getPublicAuthReadiness,
   getRuntimeAuthReadiness,
+  logAuthReadinessAtStartup,
   withAuthRequestReadiness,
 } from '@/core/lib/auth/runtime-readiness'
 
@@ -295,5 +296,49 @@ describe('auth request readiness wrapper', () => {
     expect(developmentResponse.status).toBe(200)
     expect(productionResponse.status).toBe(503)
     expect(okHandler).not.toHaveBeenCalled()
+  })
+})
+
+describe('startup auth readiness log', () => {
+  test('logs one safe error in production when no login method can authenticate', () => {
+    const secret = 'GOCSPX-startup-secret-never-logged'
+    logAuthReadinessAtStartup({
+      authConfig: { methods: ['email-otp', 'google'] },
+      env: {
+        ...production,
+        EMAIL_PROVIDER: 'resend',
+        RESEND_API_KEY: 're_your_api_key_here',
+        GOOGLE_CLIENT_ID: 'not-a-client-id',
+        GOOGLE_CLIENT_SECRET: secret,
+      },
+    })
+
+    expect(console.error).toHaveBeenCalledTimes(1)
+    const logged = JSON.stringify((console.error as jest.Mock).mock.calls[0])
+    expect(logged).toContain('RESEND_API_KEY_PLACEHOLDER')
+    expect(logged).toContain('GOOGLE_CLIENT_ID_MALFORMED')
+    expect(logged).toContain('AUTH_NO_AVAILABLE_METHOD')
+    expect(logged).not.toContain(secret)
+    expect(logged).not.toContain('re_your_api_key_here')
+    expect(logged).not.toContain('not-a-client-id')
+  })
+
+  test('is silent when a method is ready', () => {
+    logAuthReadinessAtStartup({ authConfig: { methods: ['email-otp', 'google'] }, env: { ...production, ...validEmail } })
+    expect(console.error).not.toHaveBeenCalled()
+  })
+
+  test('is silent outside production', () => {
+    logAuthReadinessAtStartup({ authConfig: { methods: ['google'] }, env: { NODE_ENV: 'development' } })
+    expect(console.error).not.toHaveBeenCalled()
+  })
+
+  test('never throws, even when readiness cannot be evaluated', () => {
+    const authConfig = Object.defineProperty({}, 'methods', {
+      get() { throw new Error('config exploded') },
+    })
+    expect(() => logAuthReadinessAtStartup({ authConfig, env: production })).not.toThrow()
+    expect(console.error).toHaveBeenCalledTimes(1)
+    expect(JSON.stringify((console.error as jest.Mock).mock.calls[0])).not.toContain('config exploded')
   })
 })

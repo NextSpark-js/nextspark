@@ -74,3 +74,35 @@ export function isInstalledAsPackage(root) {
   }
 }
 
+/**
+ * Where a project's content lives, by mode. Monorepo: themes and plugins are
+ * workspace packages at the repo root. User project (npm or standalone): they
+ * are in contents/. The registry build and the production auth check both
+ * resolve the active theme from here.
+ *
+ * @param {string} root - Project root path
+ */
+export function contentDirectories(root) {
+  const isNpmMode = isInstalledAsPackage(root)
+  const monorepoRoot = detectMonorepoRoot(root)
+  const isMonorepoMode = !isNpmMode && monorepoRoot !== null
+
+  if (isMonorepoMode) {
+    return {
+      isNpmMode,
+      monorepoRoot,
+      isMonorepoMode,
+      contentsDir: join(monorepoRoot, 'contents'), // Legacy, kept for compatibility
+      themesDir: join(monorepoRoot, 'themes'),
+      pluginsDir: join(monorepoRoot, 'plugins'),
+    }
+  }
+  return {
+    isNpmMode,
+    monorepoRoot,
+    isMonorepoMode,
+    contentsDir: join(root, 'contents'),
+    themesDir: join(root, 'contents/themes'),
+    pluginsDir: join(root, 'contents/plugins'),
+  }
+}

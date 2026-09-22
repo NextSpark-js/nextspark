@@ -17,7 +17,7 @@ import { fileURLToPath } from 'url'
 import { existsSync } from 'fs'
 import dotenv from 'dotenv'
 import { loadNextSparkConfigSync } from '../config-loader.mjs'
-import { detectMonorepoRoot, isInstalledAsPackage } from './project-mode.mjs'
+import { contentDirectories, detectMonorepoRoot, isInstalledAsPackage } from './project-mode.mjs'
 import { shownPath } from '../../utils/logging.mjs'
 
 // Load .env from the correct project root
@@ -77,12 +77,7 @@ export function getConfig(projectRoot = null) {
   // Determine project root
   const root = projectRoot || detectProjectRoot()
 
-  // Check if running in npm mode
-  const isNpmMode = isInstalledAsPackage(root)
-
-  // Check if running in monorepo mode
-  const monorepoRoot = detectMonorepoRoot(root)
-  const isMonorepoMode = !isNpmMode && monorepoRoot !== null
+  const { isNpmMode, monorepoRoot, isMonorepoMode, contentsDir, themesDir, pluginsDir } = contentDirectories(root)
 
   // Determine paths based on mode
   // In monorepo mode, core is at monorepoRoot/packages/core
@@ -97,23 +92,6 @@ export function getConfig(projectRoot = null) {
 
   // Load nextspark.config.ts for features and other settings
   const nextsparkConfig = loadNextSparkConfigSync(root)
-
-  // Determine content directories based on mode
-  // Monorepo: themes/plugins at repo root as workspace packages
-  // User project: themes/plugins in contents/ directory
-  let contentsDir, themesDir, pluginsDir
-
-  if (isMonorepoMode) {
-    // Monorepo mode: themes and plugins are at the repo root
-    contentsDir = join(monorepoRoot, 'contents') // Legacy, kept for compatibility
-    themesDir = join(monorepoRoot, 'themes')
-    pluginsDir = join(monorepoRoot, 'plugins')
-  } else {
-    // User project mode (npm or standalone)
-    contentsDir = join(root, 'contents')
-    themesDir = join(root, 'contents/themes')
-    pluginsDir = join(root, 'contents/plugins')
-  }
 
   return {
     projectRoot: root,

@@ -81,13 +81,13 @@ async function snapshot(root: string) {
   return entries
 }
 
-function runCli(root: string, args: string[], nextRan: string) {
+function runCli(root: string, args: string[], nextRan: string, env: NodeJS.ProcessEnv = {}) {
   const result = spawnSync(process.execPath, [CLI_ENTRY, ...args], {
     cwd: root,
     timeout: 60_000,
     killSignal: 'SIGKILL',
     encoding: 'utf-8',
-    env: { ...process.env, NEXT_RAN: nextRan, FORCE_COLOR: '0' },
+    env: { ...process.env, NEXT_RAN: nextRan, FORCE_COLOR: '0', ...env },
   })
   return { status: result.status, output: `${result.stdout}${result.stderr}` }
 }
@@ -206,7 +206,8 @@ test('registry:build, build and dev say when git tracks the registries they rewr
       spawnSync('git', ['add', '-A'], { cwd: root })
       spawnSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'init'], { cwd: root })
 
-      const { output } = runCli(root, [...args], join(outside.root, 'next-ran'))
+      // The project has no login provider: the production auth check (auth-readiness-preflight.test.ts) is not under test here
+      const { output } = runCli(root, [...args], join(outside.root, 'next-ran'), command === 'build' ? { NEXTSPARK_AUTH_PREFLIGHT: 'off' } : {})
       const modified = spawnSync('git', ['status', '--porcelain', '--', '.nextspark/registries'], { cwd: root, encoding: 'utf-8' }).stdout
       const lines = output.split('\n')
       if (!modified.includes('.nextspark/registries/index.ts')) wrong.push(`${command}: the tracked registry is not modified, so there is nothing to warn about: ${modified}`)

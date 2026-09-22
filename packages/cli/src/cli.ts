@@ -80,7 +80,7 @@ program
   .command('prepare')
   .description('Generate the current registry output before development or a build')
   .option('-w, --watch', 'Watch for changes and prepare again')
-  .option('--production', 'Run the registry compiler with NODE_ENV=production')
+  .option('--production', 'Run the registry compiler with NODE_ENV=production, then check a login method can authenticate')
   .action(prepareCommand);
 
 // Generate command

@@ -3,7 +3,7 @@ import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
 import { errorLines } from '../utils/shown-path.js';
-import { runPreparation } from '../utils/preparation.js';
+import { runAuthReadiness, runPreparation } from '../utils/preparation.js';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import { loadCoreWritePlaces } from '../utils/core-write-places.js';
 import { effectiveBundler, pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
@@ -37,17 +37,17 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
 
     // Step 1: Generate registries if enabled
     if (options.registry) {
-      spinner.start('Generating registries...');
+      spinner.start('Generating registries and checking auth readiness...');
 
       const preparation = await runPreparation(coreDir, projectRoot, { production: true });
       if (preparation.code !== 0) {
-        spinner.fail('Registry generation failed');
+        spinner.fail('Production preparation failed');
         for (const line of preparation.failureLines) console.error(chalk.red(line));
         process.exit(preparation.code);
         return;
       }
 
-      spinner.succeed('Registries generated');
+      spinner.succeed('Registries generated, auth readiness checked');
       for (const line of preparation.successLines) console.log(chalk.gray(line));
 
       // What the build rewrites that git tracks stays tracked, whatever its .gitignore says
@@ -58,6 +58,18 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
         console.log(chalk.yellow(`⚠ ${warning}`));
         console.log(chalk.gray(`  ${untrack}`));
       }
+    } else {
+      // Skipping the registry doesn't skip the auth readiness check that production preparation runs
+      spinner.start('Checking production auth readiness...');
+      const readiness = await runAuthReadiness(coreDir, projectRoot);
+      if (readiness.code !== 0) {
+        spinner.fail('Production auth readiness failed');
+        for (const line of readiness.failureLines) console.error(chalk.red(line));
+        process.exit(readiness.code);
+        return;
+      }
+      spinner.succeed('Production auth readiness checked');
+      for (const line of readiness.successLines) console.log(chalk.gray(line));
     }
 
     // Step 2: Run Next.js build
