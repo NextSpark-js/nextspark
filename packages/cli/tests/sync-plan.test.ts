@@ -168,6 +168,32 @@ test('i18n.ts, next.config.mjs and tsconfig.json follow the same rules as app/ f
   assert.equal(actionFor(actions, 'tsconfig.json').kind, 'unchanged')
 })
 
+/**
+ * A project generated before instrumentation.ts existed (beta.191 and
+ * earlier) has no such file at all — `sync:app` must create it, the same way
+ * the wizard's PROJECT_ROOT_ITEMS does for a brand-new project, instead of
+ * silently leaving the startup auth-readiness check and scheduled-actions
+ * init unwired forever.
+ */
+test('instrumentation.ts is created for a project that never had one, kept when the project customized it, and updated when core changed an untouched copy', () => {
+  const missing = actionFor(planSync(input({
+    rootTemplates: files({ 'instrumentation.ts': 'core instrumentation v1' }),
+  })), 'instrumentation.ts')
+  assert.equal(missing.kind, 'create')
+
+  const customized = actionFor(planSync(input({
+    rootTemplates: files({ 'instrumentation.ts': 'core instrumentation v1' }),
+    projectRootFiles: files({ 'instrumentation.ts': 'the project wrote this by hand' }),
+  })), 'instrumentation.ts')
+  assert.equal(customized.kind, 'keep')
+
+  const untouched = actionFor(planSync(input({
+    rootTemplates: files({ 'instrumentation.ts': 'core instrumentation v2' }),
+    projectRootFiles: files({ 'instrumentation.ts': tagged('instrumentation.ts', 'core instrumentation v1') }),
+  })), 'instrumentation.ts')
+  assert.equal(untouched.kind, 'update')
+})
+
 test('a proxy file an earlier release generated is migrated to the tag; a project\'s own is kept', () => {
   const rootTemplates = files({ 'proxy.ts': PROXY })
 

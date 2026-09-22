@@ -34,6 +34,47 @@ function findLocalTarball(packageName: string): string | null {
 }
 
 /**
+ * Every local tarball for `packageName`, across all of findLocalTarball's
+ * search paths -- not just the first match in the first path that has one --
+ * so a caller that needs to choose among them by version can see all of them
+ * instead of silently getting whichever sorted first.
+ */
+function findLocalTarballCandidates(packageName: string): string[] {
+  const tarballPrefix = packageName.replace('@', '').replace('/', '-')
+
+  const searchPaths = [
+    path.join(process.cwd(), '.packages'),
+    path.join(process.cwd(), '..', '.packages'),
+    path.join(process.cwd(), '..', 'repo', '.packages'),
+    path.join(process.cwd(), '..', '..', '.packages'),
+    path.join(process.cwd(), '..', '..', 'repo', '.packages'),
+  ]
+
+  const candidates = new Set<string>()
+  for (const searchPath of searchPaths) {
+    if (!fs.existsSync(searchPath)) continue
+    for (const file of fs.readdirSync(searchPath)) {
+      if (file.startsWith(tarballPrefix) && file.endsWith('.tgz')) {
+        candidates.add(path.join(searchPath, file))
+      }
+    }
+  }
+  return [...candidates]
+}
+
+/**
+ * The version a local tarball's filename declares for `packageName`, the way
+ * `pnpm pack` names it (`<prefix>-<version>.tgz`), or null when the file
+ * doesn't match that pattern for this package.
+ */
+function localTarballVersion(file: string, packageName: string): string | null {
+  const prefix = `${packageName.replace('@', '').replace('/', '-')}-`
+  const name = path.basename(file)
+  if (!name.startsWith(prefix) || !name.endsWith('.tgz')) return null
+  return name.slice(prefix.length, -4)
+}
+
+/**
  * Every package with an install script that a NextSpark project, its themes and
  * its plugins install. pnpm 10 and later run a dependency's install script only
  * when the dependency is listed, and a blocked one installs without what the
@@ -243,6 +284,27 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   let uiPackage = `@nextsparkjs/ui@${ownVersion}`
   const localTarballs: LocalTarball[] = []
 
+  // @nextsparkjs/* packages other than core/cli/ui, found locally alongside
+  // them. None is installed directly, but any can be a plain runtime
+  // dependency of one that is -- @nextsparkjs/testing, for one:
+  // packages/core/package.json depends on it, and `pnpm pack` resolves its
+  // workspace:* range to the exact local version, which the registry does not
+  // have until that release publishes. `pnpm add corePackage` then fails
+  // resolving that nested dependency with ERR_PNPM_NO_MATCHING_VERSION unless
+  // it too is pointed at a local tarball -- so every other @nextsparkjs
+  // package this project could depend on gets the same override when it is
+  // packed locally too.
+  //
+  // Only a tarball whose filename version matches the local core tarball's is
+  // used: a stale one left over from an earlier local pack (e.g. a previous
+  // release's @nextsparkjs/testing sitting in the same .packages/) must never
+  // be installed silently in place of the version packed core actually
+  // requires. When nothing matches, or more than one tarball matches the same
+  // version (an ambiguous choice), the package is left alone -- with a
+  // notice -- and resolves from the registry as it would without any local
+  // tarball.
+  const auxiliaryTarballs: LocalTarball[] = []
+
   if (localCoreTarball && localCliTarball) {
     corePackage = localCoreTarball
     cliPackage = localCliTarball
@@ -254,6 +316,26 @@ export async function createProject(options: ProjectOptions): Promise<void> {
       uiPackage = localUiTarball
       localTarballs.push({ name: '@nextsparkjs/ui', file: localUiTarball })
     }
+
+    const targetVersion = localTarballVersion(localCoreTarball, '@nextsparkjs/core')
+    if (!targetVersion) {
+      console.log(chalk.yellow(`  ⚠ Could not read a version from ${path.basename(localCoreTarball)}; skipping local-tarball overrides for other @nextsparkjs packages.`))
+    } else {
+      for (const name of NEXTSPARK_PACKAGES) {
+        if (name === '@nextsparkjs/core' || name === '@nextsparkjs/cli' || name === '@nextsparkjs/ui') continue
+        const candidates = findLocalTarballCandidates(name)
+        const matching = candidates.filter(file => localTarballVersion(file, name) === targetVersion)
+
+        if (matching.length === 1) {
+          auxiliaryTarballs.push({ name, file: matching[0] })
+          localTarballs.push({ name, file: matching[0] })
+        } else if (matching.length > 1) {
+          console.log(chalk.yellow(`  ⚠ Found more than one local ${name} tarball at ${targetVersion}; not guessing which to use, so it will be installed from the registry instead.`))
+        } else if (candidates.length > 0) {
+          console.log(chalk.yellow(`  ⚠ Ignoring local ${name} tarball(s) not at ${targetVersion} (the local core tarball's version); it will be installed from the registry instead.`))
+        }
+      }
+    }
   }
 
   // Step 3: Create minimal package.json
@@ -262,6 +344,16 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     name: projectName,
     version: '0.1.0',
     private: true,
+  }
+  if (auxiliaryTarballs.length > 0) {
+    packageJson.pnpm = {
+      overrides: Object.fromEntries(
+        auxiliaryTarballs.map(({ name, file }) => [
+          name,
+          `file:${path.relative(projectPath, file).split(path.sep).join('/')}`,
+        ])
+      ),
+    }
   }
   await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
 

@@ -26,8 +26,15 @@ import { readGeneratedTag, readGeneratedTagAt, sameText, tagStyleFor, withGenera
 import { adaptProxySource, isGeneratedProxySource, proxyFileNameFor, type ProxyFileName } from './proxy-file.js';
 import { contentHash, type SyncState, type SyncStateEntry } from './sync-state.js';
 
-/** Root files core ships next to app/. The proxy file is planned apart: its name follows the Next version. */
-export const ROOT_TEMPLATE_FILES: readonly string[] = ['next.config.mjs', 'tsconfig.json', 'i18n.ts'];
+/**
+ * Root files core ships next to app/. The proxy file is planned apart: its
+ * name follows the Next version. instrumentation.ts follows the same rules as
+ * the others here (create it when the project doesn't have one, keep a
+ * customized copy, update an untouched one core changed) so `sync:app` closes
+ * the same gap as the wizard's PROJECT_ROOT_ITEMS for a project generated
+ * before this file existed.
+ */
+export const ROOT_TEMPLATE_FILES: readonly string[] = ['next.config.mjs', 'tsconfig.json', 'i18n.ts', 'instrumentation.ts'];
 
 /**
  * Template files that stand in for another one: on a project that uses PPR,

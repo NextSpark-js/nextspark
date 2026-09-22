@@ -283,8 +283,12 @@ function themeResponseHeaders(themeResponse: NextResponse | null): Headers {
  * incoming request, so omitted headers stay omitted.
  */
 function themeRequestHeaders(themeResponse: NextResponse | null, fallback: Headers): Headers {
-  const overridden = themeResponse?.headers.get('x-middleware-override-headers')
-  if (overridden === null || overridden === undefined) {
+  if (!themeResponse) {
+    return new Headers(fallback)
+  }
+
+  const overridden = themeResponse.headers.get('x-middleware-override-headers')
+  if (overridden === null) {
     return new Headers(fallback)
   }
 

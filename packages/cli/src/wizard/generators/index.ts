@@ -119,6 +119,43 @@ let cachedTemplatesDir: string | null = null;
  * web/ as a workspace of its own first, which pnpm 11 then fails over the build
  * scripts that file does not allow.
  */
+/**
+ * Root-level files and directories copied from packages/core/templates/ into
+ * every generated project (both flat and, for the web app, monorepo layouts —
+ * see generateProject below). `force: true` overwrites whatever is already
+ * there, for files core owns outright; `force: false` writes the file only
+ * when the project doesn't already have one, so a copy the project customized
+ * (or wrote itself) is never overwritten.
+ *
+ * instrumentation.ts calls logAuthReadinessAtStartup() and initializes
+ * scheduled actions at server startup (see packages/core/templates/instrumentation.ts
+ * and packages/core/docs/06-authentication/12-passwordless-preset.md's "Startup
+ * re-validation" section) — force: false so a project's own instrumentation.ts
+ * is left alone.
+ */
+export const PROJECT_ROOT_ITEMS: Array<{ src: string; dest: string; force: boolean }> = [
+  { src: 'app', dest: 'app', force: true },
+  // lib/ ships project-local modules imported by app routes (e.g.
+  // @/lib/billing/{stripe,polar}-webhook-extensions). Without it `next build`
+  // fails to resolve those dynamic imports.
+  { src: 'lib', dest: 'lib', force: true },
+  { src: 'public', dest: 'public', force: true },
+  // proxy.ts is written by writeProxyFile below: Next 15 only loads it under
+  // its old name, so the file name depends on the project's Next version
+  { src: 'next.config.mjs', dest: 'next.config.mjs', force: true },
+  { src: 'tsconfig.json', dest: 'tsconfig.json', force: true },
+  { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },
+  { src: 'i18n.ts', dest: 'i18n.ts', force: true },
+  // pnpm-workspace.yaml is merged, not copied, and only into a web-only project: see mergeWorkspaceYaml below
+  // Note: .npmrc with shamefully-hoist=true is created by create-nextspark-app
+  // For monorepo projects, monorepo-generator.ts creates a more specific .npmrc with expo/react-native patterns
+  { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
+  { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
+  { src: 'eslint.config.mjs', dest: 'eslint.config.mjs', force: false },
+  { src: 'scripts/cy-run-prod.cjs', dest: 'scripts/cy-run-prod.cjs', force: false },
+  { src: 'instrumentation.ts', dest: 'instrumentation.ts', force: false },
+]
+
 async function copyProjectFiles(config: WizardConfig): Promise<void> {
   if (!cachedTemplatesDir) {
     throw new Error('Templates directory not cached. Call cacheTemplatesDir() first.')
@@ -126,33 +163,10 @@ async function copyProjectFiles(config: WizardConfig): Promise<void> {
   const templatesDir = cachedTemplatesDir
   const projectDir = process.cwd()
 
-  // Files and directories to copy
-  const itemsToCopy = [
-    { src: 'app', dest: 'app', force: true },
-    // lib/ ships project-local modules imported by app routes (e.g.
-    // @/lib/billing/{stripe,polar}-webhook-extensions). Without it `next build`
-    // fails to resolve those dynamic imports.
-    { src: 'lib', dest: 'lib', force: true },
-    { src: 'public', dest: 'public', force: true },
-    // proxy.ts is written by writeProxyFile below: Next 15 only loads it under
-    // its old name, so the file name depends on the project's Next version
-    { src: 'next.config.mjs', dest: 'next.config.mjs', force: true },
-    { src: 'tsconfig.json', dest: 'tsconfig.json', force: true },
-    { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },
-    { src: 'i18n.ts', dest: 'i18n.ts', force: true },
-    // pnpm-workspace.yaml is merged, not copied, and only into a web-only project: see mergeWorkspaceYaml below
-    // Note: .npmrc with shamefully-hoist=true is created by create-nextspark-app
-    // For monorepo projects, monorepo-generator.ts creates a more specific .npmrc with expo/react-native patterns
-    { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
-    { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
-    { src: 'eslint.config.mjs', dest: 'eslint.config.mjs', force: false },
-    { src: 'scripts/cy-run-prod.cjs', dest: 'scripts/cy-run-prod.cjs', force: false },
-  ]
-
   // PPR variants stay in core, where sync:app reads them when a project uses PPR
   const pprVariants = new Set(Object.values(PPR_TEMPLATE_VARIANTS).map(file => path.join(templatesDir, 'app', file)))
 
-  for (const item of itemsToCopy) {
+  for (const item of PROJECT_ROOT_ITEMS) {
     const srcPath = path.join(templatesDir, item.src)
     const destPath = path.join(projectDir, item.dest)
 

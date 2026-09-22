@@ -44,6 +44,8 @@ interface Scenario {
   projectPnpm: string
   /** The exit code of `pnpm add`. */
   addExit?: number
+  /** Extra @nextsparkjs/* tarballs dropped in .packages/, beyond the always-present core/cli/ui ones. */
+  extraTarballs?: string[]
 }
 
 interface Created {
@@ -57,6 +59,8 @@ interface Created {
   onlyBuiltDependencies: string[]
   /** What `pnpm add` was asked to install, flags included. */
   added: string[]
+  /** Every line createProject printed with console.log, in order. */
+  printed: string[]
 }
 
 /** The entries of the top-level YAML key `key`, one per line in the form `pattern` matches. */
@@ -73,7 +77,7 @@ function yamlEntries(yaml: string, key: string, pattern: RegExp): string[] {
   return entries
 }
 
-async function create({ callerPnpm, projectPnpm, addExit = 0 }: Scenario): Promise<Created> {
+async function create({ callerPnpm, projectPnpm, addExit = 0, extraTarballs = [] }: Scenario): Promise<Created> {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'create-nextspark-app-')))
   const bin = path.join(root, 'bin')
   const caller = path.join(root, 'caller')
@@ -85,10 +89,13 @@ async function create({ callerPnpm, projectPnpm, addExit = 0 }: Scenario): Promi
   fs.writeFileSync(path.join(bin, 'npx'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
   fs.mkdirSync(path.join(caller, '.packages'), { recursive: true })
   fs.writeFileSync(path.join(caller, 'package.json'), JSON.stringify({ name: 'caller', packageManager: `pnpm@${callerPnpm}` }))
-  for (const tarball of TARBALLS) fs.writeFileSync(path.join(caller, '.packages', tarball), '')
+  for (const tarball of [...TARBALLS, ...extraTarballs]) fs.writeFileSync(path.join(caller, '.packages', tarball), '')
 
   const previousCwd = process.cwd()
   const previousPath = process.env.PATH
+  const previousLog = console.log
+  const printed: string[] = []
+  console.log = (...args: unknown[]) => { printed.push(args.map(String).join(' ')) }
   process.chdir(caller)
   process.env.PATH = `${bin}${path.delimiter}${previousPath}`
   process.env.FAKE_PNPM_DEFAULT_VERSION = projectPnpm
@@ -105,10 +112,12 @@ async function create({ callerPnpm, projectPnpm, addExit = 0 }: Scenario): Promi
       allowBuilds: yamlEntries(workspaceYaml, 'allowBuilds', /^ {2}'([^']+)': true$/),
       onlyBuiltDependencies: yamlEntries(workspaceYaml, 'onlyBuiltDependencies', /^ {2}- '([^']+)'$/),
       added: fs.readFileSync(addLog, 'utf8').trim().split(/\s+/).slice(1),
+      printed,
     }
   } finally {
     process.chdir(previousCwd)
     process.env.PATH = previousPath
+    console.log = previousLog
     delete process.env.FAKE_PNPM_DEFAULT_VERSION
     delete process.env.FAKE_PNPM_ADD_LOG
     delete process.env.FAKE_PNPM_ADD_EXIT
@@ -198,6 +207,117 @@ test('the allowlist names every package with an install script that this reposit
   assert.ok(required.includes('esbuild'), `the scan found no esbuild; is the repository installed? Found: ${required.join(', ')}`)
   const missing = required.filter(name => !allowBuilds.includes(name))
   assert.deepEqual(missing, [], `pnpm 11 fails the install over each of these: ${missing.join(', ')}`)
+})
+
+/**
+ * @nextsparkjs/core lists @nextsparkjs/testing as a plain runtime dependency
+ * (packages/core/package.json), and `pnpm pack` resolves its workspace:*
+ * range to the exact local version, which is not on the registry until that
+ * release publishes. `pnpm add` resolving corePackage from a local tarball
+ * still needs to resolve that nested dependency, and without an override
+ * pointing it at a local tarball too, it fails with
+ * ERR_PNPM_NO_MATCHING_VERSION. Only @nextsparkjs/core, @nextsparkjs/cli and
+ * @nextsparkjs/ui are requested directly; any other @nextsparkjs/* package
+ * found locally (testing here, but the same for ai-workflow or mobile) gets
+ * the same override, since any of them could be a runtime dependency of the
+ * ones actually installed -- but only when its own filename declares the
+ * same version as the local core tarball (0.1.0-beta.189 for every scenario
+ * `create()` builds, from TARBALLS). A stale tarball from an earlier local
+ * pack must never be installed in place of the version packed core actually
+ * requires, and an ambiguous match (more than one tarball at that version)
+ * must never be guessed at either -- both are skipped, with a notice, and
+ * the package resolves from the registry as if no local tarball existed.
+ */
+test('@nextsparkjs/testing is overridden to its local tarball when core, cli and testing are all packed locally', async () => {
+  const withoutTesting = await create({ callerPnpm: '11.17.0', projectPnpm: '11.17.0' })
+  assert.equal(withoutTesting.packageJson.pnpm, undefined, 'no override is written when no local testing tarball exists')
+
+  const withTesting = await create({
+    callerPnpm: '11.17.0',
+    projectPnpm: '11.17.0',
+    extraTarballs: ['nextsparkjs-testing-0.1.0-beta.189.tgz'],
+  })
+  const overrides = (withTesting.packageJson.pnpm as { overrides?: Record<string, string> } | undefined)?.overrides
+  assert.ok(overrides, 'package.json has a pnpm.overrides block')
+  assert.equal(overrides!['@nextsparkjs/testing'], 'file:../../caller/.packages/nextsparkjs-testing-0.1.0-beta.189.tgz')
+})
+
+test('a local testing tarball at a version other than the local core tarball is ignored, with a notice, not installed', async () => {
+  const { packageJson, printed } = await create({
+    callerPnpm: '11.17.0',
+    projectPnpm: '11.17.0',
+    // TARBALLS pins core (and cli/ui) to 0.1.0-beta.189; this is stale next to it.
+    extraTarballs: ['nextsparkjs-testing-0.1.0-beta.150.tgz'],
+  })
+
+  assert.equal(packageJson.pnpm, undefined, 'no override is written for a testing tarball at the wrong version')
+  assert.ok(
+    printed.some(line => line.includes('testing') && line.includes('0.1.0-beta.189')),
+    `expected a notice naming the ignored testing tarball and the expected version; printed:\n${printed.join('\n')}`
+  )
+})
+
+test('when both a stale and a matching local testing tarball exist, the matching one is used and the stale one is ignored', async () => {
+  const { packageJson } = await create({
+    callerPnpm: '11.17.0',
+    projectPnpm: '11.17.0',
+    extraTarballs: ['nextsparkjs-testing-0.1.0-beta.150.tgz', 'nextsparkjs-testing-0.1.0-beta.189.tgz'],
+  })
+
+  const overrides = (packageJson.pnpm as { overrides?: Record<string, string> } | undefined)?.overrides
+  assert.ok(overrides, 'package.json has a pnpm.overrides block')
+  assert.equal(overrides!['@nextsparkjs/testing'], 'file:../../caller/.packages/nextsparkjs-testing-0.1.0-beta.189.tgz')
+})
+
+test('two local testing tarballs at the same, matching version are an ambiguous match: neither is used, and a notice is printed', async () => {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'create-nextspark-app-')))
+  const bin = path.join(root, 'bin')
+  const caller = path.join(root, 'caller')
+  const project = path.join(root, 'projects', 'my-app')
+  const addLog = path.join(root, 'pnpm-add.log')
+
+  fs.mkdirSync(bin)
+  fs.writeFileSync(path.join(bin, 'pnpm'), FAKE_PNPM, { mode: 0o755 })
+  fs.writeFileSync(path.join(bin, 'npx'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+  // Two different directories findLocalTarballCandidates both search, each
+  // holding a same-version testing tarball: a real "which one?" ambiguity
+  // that a single .packages/ directory (where a filename collision is
+  // impossible) can't reproduce.
+  fs.mkdirSync(path.join(caller, '.packages'), { recursive: true })
+  fs.mkdirSync(path.join(root, '.packages'), { recursive: true })
+  fs.writeFileSync(path.join(caller, 'package.json'), JSON.stringify({ name: 'caller', packageManager: 'pnpm@11.17.0' }))
+  for (const tarball of TARBALLS) fs.writeFileSync(path.join(caller, '.packages', tarball), '')
+  fs.writeFileSync(path.join(caller, '.packages', 'nextsparkjs-testing-0.1.0-beta.189.tgz'), '')
+  fs.writeFileSync(path.join(root, '.packages', 'nextsparkjs-testing-0.1.0-beta.189.tgz'), '')
+
+  const previousCwd = process.cwd()
+  const previousPath = process.env.PATH
+  const previousLog = console.log
+  const printed: string[] = []
+  console.log = (...args: unknown[]) => { printed.push(args.map(String).join(' ')) }
+  process.chdir(caller)
+  process.env.PATH = `${bin}${path.delimiter}${previousPath}`
+  process.env.FAKE_PNPM_DEFAULT_VERSION = '11.17.0'
+  process.env.FAKE_PNPM_ADD_LOG = addLog
+  process.env.FAKE_PNPM_ADD_EXIT = '0'
+  try {
+    await createProject({ projectName: 'my-app', projectPath: project })
+    const packageJson = JSON.parse(fs.readFileSync(path.join(project, 'package.json'), 'utf8'))
+
+    assert.equal(packageJson.pnpm, undefined, 'no override is written when the matching version is ambiguous')
+    assert.ok(
+      printed.some(line => line.includes('testing') && line.includes('0.1.0-beta.189')),
+      `expected a notice naming the ambiguous testing match; printed:\n${printed.join('\n')}`
+    )
+  } finally {
+    process.chdir(previousCwd)
+    process.env.PATH = previousPath
+    console.log = previousLog
+    delete process.env.FAKE_PNPM_DEFAULT_VERSION
+    delete process.env.FAKE_PNPM_ADD_LOG
+    delete process.env.FAKE_PNPM_ADD_EXIT
+    fs.rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test('the project pins the @better-fetch/fetch better-auth depends on, which @better-auth/core requires as a peer', async () => {

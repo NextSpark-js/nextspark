@@ -81,3 +81,25 @@ for (const [label, read] of SOURCES) {
     }
   })
 }
+
+/**
+ * "Startup re-validation" carries a second `ts` fence: the full file a host
+ * with no instrumentation.ts at all is told to create. It must be the
+ * current template verbatim -- scheduled-actions initialization included --
+ * not a reduced, auth-readiness-only file that would silently drop that
+ * initialization for a host that copies it. Checked by equality, not by
+ * running it, so the two can never drift apart unnoticed.
+ */
+test('the doc\'s from-scratch instrumentation.ts content is the current template verbatim, scheduled actions included', () => {
+  const doc = fs.readFileSync(path.join(REPO_ROOT, 'packages/core/docs/06-authentication/12-passwordless-preset.md'), 'utf8')
+  const section = doc.slice(doc.indexOf('### Startup re-validation'))
+  const blocks = [...section.matchAll(/```ts\n([\s\S]*?)```/g)].map(match => match[1])
+  assert.equal(
+    blocks.length, 2,
+    `expected the existing-host snippet and the from-scratch file as two separate ts fences in "Startup re-validation", found ${blocks.length}`
+  )
+
+  const template = fs.readFileSync(path.join(REPO_ROOT, 'packages/core/templates/instrumentation.ts'), 'utf8')
+  assert.equal(blocks[1], template, "the doc's from-scratch instrumentation.ts must match packages/core/templates/instrumentation.ts exactly")
+  assert.match(blocks[1], /initializeScheduledActions\(\)/, "the doc's from-scratch file must initialize scheduled actions, not just auth readiness")
+})
