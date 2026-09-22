@@ -175,16 +175,29 @@ test('does not install when pnpm leaves a package out of the enclosing workspace
   await rm(outer, { recursive: true, force: true })
 })
 
+/**
+ * Whether the pnpm that runs in this directory accepts its workspace file.
+ * Extglob patterns are version-dependent: pnpm 9 takes them in, while later
+ * majors reject the whole file with ERR_PNPM_WORKSPACE_INVALID_GLOB. The temp
+ * projects sit outside this repository, so they run the global pnpm, not the
+ * version pinned by packageManager.
+ */
+function pnpmAcceptsWorkspace(root: string): boolean {
+  return spawnSync('pnpm', ['ls', '-r', '--depth', '-1', '--json'], { cwd: root, stdio: 'ignore' }).status === 0
+}
+
 test('pnpm decides which packages a workspace takes in', { skip: !pnpmAvailable && 'pnpm is not installed' }, async () => {
-  const cases: Array<[string, boolean]> = [
+  // 'accepted': installs exactly when this pnpm accepts the workspace file.
+  const cases: Array<[string, boolean | 'accepted']> = [
     [GENERATED_WORKSPACE, true],
     ["packages:\n  - 'contents/themes/*' # themes\n  - 'contents/plugins/*'\n", true],
-    ["packages: ['contents/@(themes|plugins)/*']\n", true],
+    ["packages: ['contents/@(themes|plugins)/*']\n", 'accepted'],
     ["packages:\n  - 'contents/themes/*'\n  - '!contents/themes/blog'\n", false],
     ["packages:\n  - 'contents/plugins/*'\n", false],
   ]
-  for (const [workspace, installs] of cases) {
+  for (const [workspace, expected] of cases) {
     const p = await project(workspace)
+    const installs = expected === 'accepted' ? pnpmAcceptsWorkspace(p.root) : expected
     const calls: string[] = []
     installWorkspaceDependencies(
       [{ name: 'blog', dir: p.theme, dependencies: { dompurify: '^3.2.7' } }],
