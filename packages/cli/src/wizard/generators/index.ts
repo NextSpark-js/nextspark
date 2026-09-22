@@ -39,6 +39,9 @@ import { installThemeAndPlugins } from './theme-plugins-installer.js'
 // DX improvement generators
 import { setupEnvironment } from './env-setup.js'
 import { setupGit } from './git-init.js'
+// Production sign-in provider (Step 202)
+import { writeProductionSignInEnv } from './production-sign-in-env.js'
+import { getDefaultProductionSignIn, type ProductionSignInResult } from '../prompts/production-sign-in.js'
 // Monorepo generator
 import { generateMonorepoStructure, isMonorepoProject, getWebDir } from './monorepo-generator.js'
 import { addPackageEntries } from './workspace-yaml.js'
@@ -94,6 +97,8 @@ export {
   // DX generators
   setupEnvironment,
   setupGit,
+  // Production sign-in provider
+  writeProductionSignInEnv,
   // Monorepo generators
   generateMonorepoStructure,
   isMonorepoProject,
@@ -460,8 +465,15 @@ contents/themes/*/tests/jest/coverage
 /**
  * Generate complete project based on wizard configuration
  * Supports both flat (web-only) and monorepo (web+mobile) structures.
+ *
+ * `signInProvider` defaults to postponed (local-only) — callers that skip
+ * the interactive production sign-in prompt (`--yes`, quick mode, presets)
+ * rely on that default rather than passing their own.
  */
-export async function generateProject(config: WizardConfig): Promise<void> {
+export async function generateProject(
+  config: WizardConfig,
+  signInProvider: ProductionSignInResult = getDefaultProductionSignIn()
+): Promise<void> {
   const projectDir = process.cwd()
 
   // IMPORTANT: Cache templates directory BEFORE changing directories
@@ -549,6 +561,10 @@ export async function generateProject(config: WizardConfig): Promise<void> {
 
     // 11. Setup environment for immediate use
     await copyEnvExampleToEnv()
+    // 11.1 Write the production sign-in provider values (if any) into .env
+    // only — never .env.example — and mark the project local-only when
+    // the step was postponed (#202).
+    await writeProductionSignInEnv(process.cwd(), signInProvider)
     // Note: Registries are built after pnpm install in wizard/index.ts
 
     // 12. Tag the files sync:app manages, now that the wizard's changes to them are done

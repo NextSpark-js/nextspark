@@ -39,6 +39,12 @@ import { installProjectDependencies, setupAIWorkflow } from './install-dependenc
 import { showConfigPreview } from './preview.js'
 import { errorLines } from '../utils/shown-path.js'
 import { writeAiOnboarding } from './generators/ai-onboarding.js'
+import {
+  promptProductionSignIn,
+  getDefaultProductionSignIn,
+  describeProductionSignInReadiness,
+  type ProductionSignInResult,
+} from './prompts/production-sign-in.js'
 
 /**
  * Project info type for non-interactive mode
@@ -50,7 +56,7 @@ interface ProjectInfo {
 }
 
 interface WizardRuntime {
-  generateProject(config: WizardConfig): Promise<void>
+  generateProject(config: WizardConfig, signInProvider?: ProductionSignInResult): Promise<void>
   installProjectDependencies(projectRoot: string): void
   buildRegistries(webDir: string): void
 }
@@ -186,6 +192,15 @@ export async function runWizard(
       selectedPlugins = getRequiredPlugins(selectedTheme)
     }
 
+    // Production sign-in provider (#202): only asked in a genuinely
+    // interactive run (not --yes, not quick mode, not a preset run — those
+    // already promise "no more prompts than project info"). Every skipped
+    // path defaults to postponed/local-only; nothing is ever assumed ready.
+    const signInProvider: ProductionSignInResult =
+      !preset && options.mode !== 'quick' && !options.yes
+        ? await promptProductionSignIn(config.auth)
+        : getDefaultProductionSignIn()
+
     // Show summary before generating
     showConfigSummary(config)
 
@@ -233,7 +248,7 @@ export async function runWizard(
     }).start()
 
     try {
-      await runtime.generateProject(config)
+      await runtime.generateProject(config, signInProvider)
       const onboarding = writeAiOnboarding(getWebDir(process.cwd(), config))
       const preserved = Object.entries(onboarding).filter(([, state]) => state === 'preserved').map(([file]) => file.toUpperCase())
       if (preserved.length) showInfo(`Preserved existing ${preserved.join(' and ')}.`)
@@ -295,7 +310,7 @@ export async function runWizard(
     const aiChoice = options.yes ? 'skip' : await promptAIWorkflowSetup(config)
 
     // Show next steps
-    showNextSteps(config, selectedTheme, aiChoice)
+    showNextSteps(config, selectedTheme, aiChoice, signInProvider)
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('User force closed')) {
@@ -483,7 +498,12 @@ function formatDevTool(tool: string): string {
 /**
  * Display next steps after successful generation
  */
-function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null, aiChoice: string = 'skip'): void {
+function showNextSteps(
+  config: WizardConfig,
+  referenceTheme: ThemeChoice = null,
+  aiChoice: string = 'skip',
+  signInProvider: ProductionSignInResult = getDefaultProductionSignIn()
+): void {
   const isMonorepo = config.projectType === 'web-mobile'
   const aiSetupDone = aiChoice === 'claude'
 
@@ -491,6 +511,15 @@ function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null,
   console.log(chalk.cyan('  ' + '='.repeat(60)))
   console.log(chalk.bold.green('  ✨ NextSpark project ready!'))
   console.log(chalk.cyan('  ' + '='.repeat(60)))
+  console.log('')
+
+  // Production sign-in readiness — always shown, never omits the local-only
+  // warning: password login is never an automatic production fallback (#202).
+  const readinessLines = describeProductionSignInReadiness(signInProvider)
+  const readinessColor = signInProvider.postponed ? chalk.yellow : chalk.green
+  for (const line of readinessLines) {
+    console.log(readinessColor(`  ${line}`))
+  }
   console.log('')
 
   console.log(chalk.bold.white('  Next steps:'))

@@ -23,42 +23,46 @@ pnpm exec nextspark init --preset blog
 pnpm exec nextspark init --preset crm
 ```
 
-## Wizard Steps (9 Steps)
+## Wizard Steps (10 Steps)
 
-### Step 1: Project Info
+### Step 1: Project Type
+- **Web only**: Standard flat Next.js project
+- **Web + Mobile**: pnpm monorepo with a Next.js web app and an Expo mobile app sharing the same backend
+
+### Step 2: Project Info
 - **Project Name**: Display name for your project
 - **Project Slug**: URL-friendly identifier (e.g., `my-app`)
 - **Project Description**: Brief description of your project
 
-### Step 2: Team Configuration
+### Step 3: Team Configuration
 - **Team Mode**: `multi-tenant` | `single-tenant` | `single-user`
 - **Team Roles**: Select roles (owner, admin, member, viewer, or custom)
 
-### Step 3: Internationalization
+### Step 4: Internationalization
 - **Default Locale**: Primary language (en, es, fr, de, it, pt)
 - **Supported Locales**: Additional languages
 
-### Step 4: Billing Configuration
+### Step 5: Billing Configuration
 - **Billing Model**: `free` | `freemium` | `paid`
 - **Currency**: USD, EUR, GBP, CAD, AUD
 
-### Step 5: Features
+### Step 6: Features
 - Analytics Dashboard
 - Team Management
 - Billing & Subscriptions
 - API Access
 - Documentation Site
 
-### Step 6: Content Features (NEW)
+### Step 7: Content Features (NEW)
 - **Pages with Page Builder**: Adds the `page` entity with full page builder support
 - **Blog**: Adds the `post` entity with the Post Content block
 
-### Step 7: Authentication
+### Step 8: Authentication
 - Email & Password
 - Google OAuth
 - Email Verification
 
-### Step 8: Dashboard Features
+### Step 9: Dashboard Features
 - Global Search
 - Notifications
 - Theme Toggle
@@ -67,9 +71,35 @@ pnpm exec nextspark init --preset crm
 - Superadmin Access
 - DevTools Access
 
-### Step 9: Dev Tools
+### Step 10: Dev Tools
 - Dev Keyring (development credentials)
 - Debug Mode
+
+## Production Sign-In Provider
+
+Login is passwordless by default (an emailed one-time code, plus Google
+OAuth) — neither path works in production without a provider, and a
+password is never used as an automatic fallback. After Theme & Plugin
+Selection, a genuinely interactive run (not `--yes`, not `--quick`, not a
+`--preset` run) asks how to handle it:
+
+- **Resend** — a masked prompt for `RESEND_API_KEY` and the sender address
+  (`RESEND_FROM_EMAIL`). Values are validated against the same shape core's
+  auth readiness check expects (e.g. `re_...` keys, no `@resend.dev` /
+  `@yourdomain.com` sender).
+- **Google OAuth** — a masked prompt for `GOOGLE_CLIENT_ID` and
+  `GOOGLE_CLIENT_SECRET`. Only offered when Step 8 (Authentication) enabled Google OAuth.
+- **Both**, or **configure later** — postpones setup. The project still
+  generates, but is marked **LOCAL-ONLY / not production-ready for
+  sign-in** in `.env` and in the wizard's final summary, with instructions
+  to either set the variables above or declare runtime-only injection
+  (`NEXTSPARK_AUTH_RUNTIME_ONLY=email,google`) before `nextspark prepare
+  --production` / `nextspark build`.
+
+Anything entered here is written only to the project's local `.env` — never
+to `.env.example`, never to the console, and never to the wizard summary.
+`--yes`, `--quick`, and `--preset` runs always postpone this step rather
+than prompting, so a non-interactive run never blocks on it.
 
 ## Presets
 
@@ -157,7 +187,7 @@ is invalid.
 
 ### Recent Improvements
 
-1. **Content Features Step (Step 6)**
+1. **Content Features Step (Step 7)**
    - Optional Pages with Page Builder support
    - Optional Blog with Posts entity
    - Intelligent entity/block copying based on selection

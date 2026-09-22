@@ -330,14 +330,20 @@ export async function updateDashboardConfig(config: WizardConfig): Promise<void>
 export async function generateEnvExample(config: WizardConfig): Promise<void> {
   const envExamplePath = path.resolve(process.cwd(), '.env.example')
 
-  // Build OAuth section based on enabled providers
+  // Build OAuth section based on enabled providers. The placeholder values
+  // are documentation, never real credentials, so they stay commented out
+  // either way (matching the Resend placeholder below) — a project is only
+  // production-ready for Google sign-in once the wizard's production
+  // sign-in step (or the project owner) sets real values in `.env` (#202).
   let oauthSection = ''
   if (config.auth.googleOAuth) {
     oauthSection = `# =============================================================================
 # OAUTH PROVIDERS
 # =============================================================================
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
+# Google OAuth is enabled in app.config.ts. Set real credentials in .env to
+# activate "Continue with Google" — this file only documents the shape.
+# GOOGLE_CLIENT_ID="your-google-client-id"
+# GOOGLE_CLIENT_SECRET="your-google-client-secret"
 `
   } else {
     oauthSection = `# =============================================================================
