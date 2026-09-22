@@ -149,7 +149,7 @@ rm -rf dist && pnpm build && rm -f *.tgz && pnpm pack
 cp *.tgz "$PACKAGES_DIR/"
 ```
 
-**Why pnpm pack is required:** The core package uses `workspace:*` references (e.g., `@nextsparkjs/testing`). When using `pnpm pack`, these are automatically converted to actual version numbers (e.g., `0.1.0-beta.93`). Using `npm pack` leaves them as `workspace:*`, which causes `EUNSUPPORTEDPROTOCOL` errors during installation.
+**Why pnpm pack is required:** Some packages use `workspace:*` references (e.g., `@nextsparkjs/cli` depends on `@nextsparkjs/core` that way). When using `pnpm pack`, these are automatically converted to actual version numbers (e.g., `0.1.0-beta.93`). Using `npm pack` leaves them as `workspace:*`, which causes `EUNSUPPORTEDPROTOCOL` errors during installation. `@nextsparkjs/core` itself no longer has any `workspace:*` dependency (it dropped its runtime dependency on `@nextsparkjs/testing` in beta.192 -- see `packages/core/docs/17-updates/03-beta-192-status.md`), but still needs `pnpm pack`, not `npm pack`, for the same reason every other packed workspace package does.
 
 **Why clean builds matter:** Build tools like tsup may cache intermediate results. If source files changed but the cache wasn't invalidated, the packed tarball will contain old code. Always `rm -rf dist` before building to ensure fresh compilation.
 

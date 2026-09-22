@@ -44,6 +44,7 @@ import { writeProductionSignInEnv } from './production-sign-in-env.js'
 import { getDefaultProductionSignIn, type ProductionSignInResult } from '../prompts/production-sign-in.js'
 // Monorepo generator
 import { generateMonorepoStructure, isMonorepoProject, getWebDir } from './monorepo-generator.js'
+import { isLocalPackageRef } from './local-package-refs.js'
 import { addPackageEntries } from './workspace-yaml.js'
 import { writeProxyFile } from './proxy-file-writer.js'
 import { ensureGeneratedPathsIgnored, TEMPLATES_GITIGNORE_ENTRY } from '../../utils/templates-gitignore.js'
@@ -239,18 +240,6 @@ async function patchTurbopackRootForMonorepo(): Promise<void> {
   if (patched !== content) {
     await fs.writeFile(configPath, patched, 'utf-8')
   }
-}
-
-/**
- * True when a package.json dependency spec is an explicit local reference
- * (`file:`, `link:`, or `workspace:`) rather than something pnpm/npm resolved
- * from a registry. Used to protect a deliberately-local `@nextsparkjs/*`
- * install (e.g. from the /do:test-package validation flow) from being
- * silently repinned to a published version by the "coherent install" step
- * below (#130).
- */
-function isLocalPackageRef(spec: string | undefined): boolean {
-  return typeof spec === 'string' && /^(file:|link:|workspace:)/.test(spec)
 }
 
 /**

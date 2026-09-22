@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url'
 import type { WizardConfig } from '../types.js'
 import { setPackageEntries } from './workspace-yaml.js'
 import { errorWithLines } from '../../utils/shown-path.js'
+import { extractLocalNextSparkRefs, rehomeLocalRefSpec, type LocalNextSparkRef } from './local-package-refs.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -711,6 +712,42 @@ eas build --platform android
 // ============================================================================
 
 /**
+ * Pre-seeds web/package.json with the local `@nextsparkjs/*` refs found in
+ * the root package.json before it was overwritten, rewritten so their
+ * `file:`/`link:` paths still resolve from one directory deeper.
+ *
+ * index.ts's updatePackageJson writes exactly this skeleton (name/version/
+ * private/scripts/dependencies/devDependencies) for a project that has no
+ * package.json yet; matched here so seeding this file changes nothing about
+ * what a monorepo's web/package.json normally starts as -- only adds the
+ * refs. Once it exists, updatePackageJson reads and merges into it instead of
+ * starting fresh, and its own isLocalPackageRef check leaves these entries
+ * alone instead of repinning them to a registry version.
+ */
+async function seedWebPackageJsonWithLocalRefs(
+  webDir: string,
+  targetDir: string,
+  refs: LocalNextSparkRef[]
+): Promise<void> {
+  if (refs.length === 0) return
+
+  const webPackageJson = {
+    name: DIRS.WEB,
+    version: '0.1.0',
+    private: true,
+    scripts: {} as Record<string, string>,
+    dependencies: {} as Record<string, string>,
+    devDependencies: {} as Record<string, string>,
+  }
+
+  for (const { name, field, spec } of refs) {
+    webPackageJson[field][name] = rehomeLocalRefSpec(spec, targetDir, webDir)
+  }
+
+  await fs.writeJson(path.join(webDir, FILES.PACKAGE_JSON), webPackageJson, { spaces: 2 })
+}
+
+/**
  * Generate the monorepo project structure.
  *
  * This creates the root structure and mobile app, then delegates
@@ -720,6 +757,20 @@ eas build --platform android
  * @param config - The wizard configuration with project settings
  */
 export async function generateMonorepoStructure(targetDir: string, config: WizardConfig): Promise<void> {
+  // create-nextspark-app's src/create.ts may have already written a root
+  // package.json declaring an @nextsparkjs/* package (e.g. @nextsparkjs/testing)
+  // as an explicit local file:/link:/workspace: reference -- a version-matched
+  // local tarball, when core/cli were also installed from one, so an
+  // unpublished mid-development version resolves from disk instead of the
+  // registry. createRootPackageJson below replaces that file wholesale, and
+  // it belongs in web/package.json anyway (that's where the code importing it
+  // lives), so it is captured here, before the overwrite, and rehomed into
+  // web/package.json further down.
+  const rootPackageJsonPath = path.join(targetDir, FILES.PACKAGE_JSON)
+  const localRefs = await fs.pathExists(rootPackageJsonPath)
+    ? extractLocalNextSparkRefs(await fs.readJson(rootPackageJsonPath))
+    : []
+
   // 1. Create root monorepo files
   await createRootPackageJson(targetDir, config)
   await createPnpmWorkspace(targetDir)
@@ -731,6 +782,7 @@ export async function generateMonorepoStructure(targetDir: string, config: Wizar
   // 2. Create web/ directory
   const webDir = path.join(targetDir, DIRS.WEB)
   await fs.ensureDir(webDir)
+  await seedWebPackageJsonWithLocalRefs(webDir, targetDir, localRefs)
 
   // 3. Copy mobile template
   await copyMobileTemplate(targetDir, config)

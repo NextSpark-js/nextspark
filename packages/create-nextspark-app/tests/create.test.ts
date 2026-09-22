@@ -49,7 +49,7 @@ interface Scenario {
 }
 
 interface Created {
-  packageJson: { pnpm?: unknown }
+  packageJson: { pnpm?: unknown; devDependencies?: Record<string, string> }
   workspaceYaml: string
   /** The globs under `packages:`. */
   packages: string[]
@@ -210,36 +210,41 @@ test('the allowlist names every package with an install script that this reposit
 })
 
 /**
- * @nextsparkjs/core lists @nextsparkjs/testing as a plain runtime dependency
- * (packages/core/package.json), and `pnpm pack` resolves its workspace:*
- * range to the exact local version, which is not on the registry until that
- * release publishes. `pnpm add` resolving corePackage from a local tarball
- * still needs to resolve that nested dependency, and without an override
- * pointing it at a local tarball too, it fails with
- * ERR_PNPM_NO_MATCHING_VERSION. Only @nextsparkjs/core, @nextsparkjs/cli and
- * @nextsparkjs/ui are requested directly; any other @nextsparkjs/* package
- * found locally (testing here, but the same for ai-workflow or mobile) gets
- * the same override, since any of them could be a runtime dependency of the
- * ones actually installed -- but only when its own filename declares the
- * same version as the local core tarball (0.1.0-beta.189 for every scenario
- * `create()` builds, from TARBALLS). A stale tarball from an earlier local
- * pack must never be installed in place of the version packed core actually
- * requires, and an ambiguous match (more than one tarball at that version)
- * must never be guessed at either -- both are skipped, with a notice, and
- * the package resolves from the registry as if no local tarball existed.
+ * @nextsparkjs/testing is a direct devDependency every generated project
+ * declares for itself (packages/cli's wizard pins it once `nextspark init`
+ * runs; the starter theme's Cypress helpers import it) -- not, since
+ * beta.192, a nested runtime dependency of @nextsparkjs/core. It is resolved
+ * the same direct way as @nextsparkjs/core, cli and ui: a local tarball
+ * matching the local core tarball's version, when one exists alongside it, is
+ * written straight into the project's devDependencies as a file: spec, so
+ * the wizard's later registry pin (packages/cli/src/wizard/generators/index.ts)
+ * leaves it alone instead of clobbering it back to an unpublished version.
+ * Only @nextsparkjs/core, @nextsparkjs/cli and @nextsparkjs/ui are requested
+ * directly from `pnpm add`; @nextsparkjs/testing is written into
+ * devDependencies instead, since it is the wizard, not this initial install,
+ * that normally declares it. A tarball is only used when its own filename
+ * declares the same version as the local core tarball (0.1.0-beta.189 for
+ * every scenario `create()` builds, from TARBALLS). A stale tarball from an
+ * earlier local pack must never be installed in place of the version packed
+ * core actually requires, and an ambiguous match (more than one tarball at
+ * that version) must never be guessed at either -- both are skipped, with a
+ * notice, and the package is left for the wizard to pin from the registry as
+ * if no local tarball existed.
  */
-test('@nextsparkjs/testing is overridden to its local tarball when core, cli and testing are all packed locally', async () => {
+test('@nextsparkjs/testing is installed from its local tarball when core, cli and testing are all packed locally', async () => {
   const withoutTesting = await create({ callerPnpm: '11.17.0', projectPnpm: '11.17.0' })
-  assert.equal(withoutTesting.packageJson.pnpm, undefined, 'no override is written when no local testing tarball exists')
+  assert.equal(withoutTesting.packageJson.devDependencies, undefined, 'no devDependencies are written when no local testing tarball exists')
+  assert.equal(withoutTesting.packageJson.pnpm, undefined, 'no override is written for @nextsparkjs/testing any more')
 
   const withTesting = await create({
     callerPnpm: '11.17.0',
     projectPnpm: '11.17.0',
     extraTarballs: ['nextsparkjs-testing-0.1.0-beta.189.tgz'],
   })
-  const overrides = (withTesting.packageJson.pnpm as { overrides?: Record<string, string> } | undefined)?.overrides
-  assert.ok(overrides, 'package.json has a pnpm.overrides block')
-  assert.equal(overrides!['@nextsparkjs/testing'], 'file:../../caller/.packages/nextsparkjs-testing-0.1.0-beta.189.tgz')
+  assert.equal(
+    withTesting.packageJson.devDependencies?.['@nextsparkjs/testing'],
+    'file:../../caller/.packages/nextsparkjs-testing-0.1.0-beta.189.tgz'
+  )
 })
 
 test('a local testing tarball at a version other than the local core tarball is ignored, with a notice, not installed', async () => {
@@ -250,7 +255,7 @@ test('a local testing tarball at a version other than the local core tarball is 
     extraTarballs: ['nextsparkjs-testing-0.1.0-beta.150.tgz'],
   })
 
-  assert.equal(packageJson.pnpm, undefined, 'no override is written for a testing tarball at the wrong version')
+  assert.equal(packageJson.devDependencies, undefined, 'no devDependencies are written for a testing tarball at the wrong version')
   assert.ok(
     printed.some(line => line.includes('testing') && line.includes('0.1.0-beta.189')),
     `expected a notice naming the ignored testing tarball and the expected version; printed:\n${printed.join('\n')}`
@@ -264,9 +269,10 @@ test('when both a stale and a matching local testing tarball exist, the matching
     extraTarballs: ['nextsparkjs-testing-0.1.0-beta.150.tgz', 'nextsparkjs-testing-0.1.0-beta.189.tgz'],
   })
 
-  const overrides = (packageJson.pnpm as { overrides?: Record<string, string> } | undefined)?.overrides
-  assert.ok(overrides, 'package.json has a pnpm.overrides block')
-  assert.equal(overrides!['@nextsparkjs/testing'], 'file:../../caller/.packages/nextsparkjs-testing-0.1.0-beta.189.tgz')
+  assert.equal(
+    packageJson.devDependencies?.['@nextsparkjs/testing'],
+    'file:../../caller/.packages/nextsparkjs-testing-0.1.0-beta.189.tgz'
+  )
 })
 
 test('two local testing tarballs at the same, matching version are an ambiguous match: neither is used, and a notice is printed', async () => {
@@ -304,7 +310,7 @@ test('two local testing tarballs at the same, matching version are an ambiguous 
     await createProject({ projectName: 'my-app', projectPath: project })
     const packageJson = JSON.parse(fs.readFileSync(path.join(project, 'package.json'), 'utf8'))
 
-    assert.equal(packageJson.pnpm, undefined, 'no override is written when the matching version is ambiguous')
+    assert.equal(packageJson.devDependencies, undefined, 'no devDependencies are written when the matching version is ambiguous')
     assert.ok(
       printed.some(line => line.includes('testing') && line.includes('0.1.0-beta.189')),
       `expected a notice naming the ambiguous testing match; printed:\n${printed.join('\n')}`

@@ -75,6 +75,29 @@ function localTarballVersion(file: string, packageName: string): string | null {
 }
 
 /**
+ * The single local tarball for `packageName` whose filename declares
+ * `targetVersion` (the local core tarball's version), among every candidate
+ * `findLocalTarballCandidates` finds -- or null when there is no match, or
+ * more than one (an ambiguous choice). Either case prints a notice naming
+ * what happened, so a stale tarball left over from an earlier local pack is
+ * never installed silently in place of the version packed core actually
+ * requires, and an ambiguous match is never guessed at either; the package
+ * then resolves from the registry as if no local tarball existed.
+ */
+function findVersionMatchedTarball(packageName: string, targetVersion: string): string | null {
+  const candidates = findLocalTarballCandidates(packageName)
+  const matching = candidates.filter(file => localTarballVersion(file, packageName) === targetVersion)
+
+  if (matching.length === 1) return matching[0]
+  if (matching.length > 1) {
+    console.log(chalk.yellow(`  ⚠ Found more than one local ${packageName} tarball at ${targetVersion}; not guessing which to use, so it will be installed from the registry instead.`))
+  } else if (candidates.length > 0) {
+    console.log(chalk.yellow(`  ⚠ Ignoring local ${packageName} tarball(s) not at ${targetVersion} (the local core tarball's version); it will be installed from the registry instead.`))
+  }
+  return null
+}
+
+/**
  * Every package with an install script that a NextSpark project, its themes and
  * its plugins install. pnpm 10 and later run a dependency's install script only
  * when the dependency is listed, and a blocked one installs without what the
@@ -284,25 +307,39 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   let uiPackage = `@nextsparkjs/ui@${ownVersion}`
   const localTarballs: LocalTarball[] = []
 
-  // @nextsparkjs/* packages other than core/cli/ui, found locally alongside
-  // them. None is installed directly, but any can be a plain runtime
-  // dependency of one that is -- @nextsparkjs/testing, for one:
-  // packages/core/package.json depends on it, and `pnpm pack` resolves its
-  // workspace:* range to the exact local version, which the registry does not
-  // have until that release publishes. `pnpm add corePackage` then fails
-  // resolving that nested dependency with ERR_PNPM_NO_MATCHING_VERSION unless
-  // it too is pointed at a local tarball -- so every other @nextsparkjs
-  // package this project could depend on gets the same override when it is
-  // packed locally too.
+  // @nextsparkjs/testing, found locally alongside core/cli, resolved by a
+  // local tarball file: spec -- written directly into the project's
+  // devDependencies below -- or null to leave it to the wizard's own
+  // registry pin (packages/cli/src/wizard/generators/index.ts pins
+  // packageJson.devDependencies['@nextsparkjs/testing'] to this CLI's
+  // version once nextspark init runs).
   //
-  // Only a tarball whose filename version matches the local core tarball's is
-  // used: a stale one left over from an earlier local pack (e.g. a previous
-  // release's @nextsparkjs/testing sitting in the same .packages/) must never
-  // be installed silently in place of the version packed core actually
-  // requires. When nothing matches, or more than one tarball matches the same
-  // version (an ambiguous choice), the package is left alone -- with a
-  // notice -- and resolves from the registry as it would without any local
-  // tarball.
+  // Since beta.192, @nextsparkjs/testing is a direct devDependency every
+  // generated project declares for itself -- the starter theme's Cypress
+  // helpers (BasePOM, DashboardEntityPOM, ApiInterceptor) import it -- not a
+  // nested runtime dependency of @nextsparkjs/core the way it was before:
+  // back then packages/core/package.json listed it under "dependencies",
+  // `pnpm pack` resolved its workspace:* range to the exact local version
+  // (unpublished until that release), and `pnpm add corePackage` failed
+  // resolving that nested dependency with ERR_PNPM_NO_MATCHING_VERSION
+  // without a pnpm.overrides entry pointing it at the same local tarball.
+  // Now that core no longer depends on it, that override is gone for
+  // testing: it is resolved and installed the same direct way as core/cli/ui
+  // instead, protected from the wizard's later registry pin by the
+  // isLocalPackageRef check already in packages/cli/src/wizard/generators/index.ts
+  // (it only overwrites a devDependency spec that isn't already an explicit
+  // file:/link:/workspace: reference).
+  let testingPackage: string | null = null
+
+  // @nextsparkjs/* packages other than core/cli/ui/testing, found locally
+  // alongside them. None of these is installed directly, but any could still
+  // be a plain runtime dependency of one that is -- the same situation
+  // @nextsparkjs/testing used to be in -- so each gets a pnpm.overrides entry
+  // pointing it at its own version-matched local tarball when packed
+  // locally too. Nothing in this monorepo currently needs it (only
+  // @nextsparkjs/testing did, and it no longer goes through this path), but
+  // the mechanism is kept generic for whichever @nextsparkjs package
+  // becomes a nested dependency of core, cli or ui next.
   const auxiliaryTarballs: LocalTarball[] = []
 
   if (localCoreTarball && localCliTarball) {
@@ -319,20 +356,19 @@ export async function createProject(options: ProjectOptions): Promise<void> {
 
     const targetVersion = localTarballVersion(localCoreTarball, '@nextsparkjs/core')
     if (!targetVersion) {
-      console.log(chalk.yellow(`  ⚠ Could not read a version from ${path.basename(localCoreTarball)}; skipping local-tarball overrides for other @nextsparkjs packages.`))
+      console.log(chalk.yellow(`  ⚠ Could not read a version from ${path.basename(localCoreTarball)}; skipping local-tarball resolution for other @nextsparkjs packages.`))
     } else {
-      for (const name of NEXTSPARK_PACKAGES) {
-        if (name === '@nextsparkjs/core' || name === '@nextsparkjs/cli' || name === '@nextsparkjs/ui') continue
-        const candidates = findLocalTarballCandidates(name)
-        const matching = candidates.filter(file => localTarballVersion(file, name) === targetVersion)
+      testingPackage = findVersionMatchedTarball('@nextsparkjs/testing', targetVersion)
+      if (testingPackage) {
+        localTarballs.push({ name: '@nextsparkjs/testing', file: testingPackage })
+      }
 
-        if (matching.length === 1) {
-          auxiliaryTarballs.push({ name, file: matching[0] })
-          localTarballs.push({ name, file: matching[0] })
-        } else if (matching.length > 1) {
-          console.log(chalk.yellow(`  ⚠ Found more than one local ${name} tarball at ${targetVersion}; not guessing which to use, so it will be installed from the registry instead.`))
-        } else if (candidates.length > 0) {
-          console.log(chalk.yellow(`  ⚠ Ignoring local ${name} tarball(s) not at ${targetVersion} (the local core tarball's version); it will be installed from the registry instead.`))
+      for (const name of NEXTSPARK_PACKAGES) {
+        if (name === '@nextsparkjs/core' || name === '@nextsparkjs/cli' || name === '@nextsparkjs/ui' || name === '@nextsparkjs/testing') continue
+        const file = findVersionMatchedTarball(name, targetVersion)
+        if (file) {
+          auxiliaryTarballs.push({ name, file })
+          localTarballs.push({ name, file })
         }
       }
     }
@@ -344,6 +380,11 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     name: projectName,
     version: '0.1.0',
     private: true,
+  }
+  if (testingPackage) {
+    packageJson.devDependencies = {
+      '@nextsparkjs/testing': `file:${path.relative(projectPath, testingPackage).split(path.sep).join('/')}`,
+    }
   }
   if (auxiliaryTarballs.length > 0) {
     packageJson.pnpm = {
