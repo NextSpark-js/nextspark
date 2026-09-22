@@ -10,7 +10,7 @@
     "@langchain/langgraph": "^1.4.15",
     "@langchain/ollama": "^1.3.0",
     "@langchain/openai": "^1.5.13",
-    "handlebars": "^4.7.8",
+    "handlebars": "^4.7.9",
     "ws": "^8.21.0"
   },
   "peerDependencies": {

@@ -24,6 +24,16 @@ A post-commit tarball clean-install and beta.191→beta.192 upgrade validation r
 
 An upgrade from the registry after publication is expected to need only that one hand-added devDependency, never a `pnpm.overrides` entry. This has not been verified, and that check remains pending. This status is not a release certification.
 
+## Dependency security floors (G1)
+
+A dependency audit (#204 gate G1) found vulnerable versions reachable from published packages. The declared minimums are raised, so consumer lockfiles can no longer resolve the vulnerable releases:
+
+- `@nextsparkjs/cli`: `tar` `^7.5.21`. Archive extraction when fetching packages.
+- `@nextsparkjs/core`: `sharp` `^0.35.4`. Uploaded image processing; the `^0.34` range is dropped.
+- `@nextsparkjs/plugin-langchain`: `handlebars` `^4.7.9`. Prompt template compilation.
+
+`@nextsparkjs/core` now depends on `@nextsparkjs/ui` through `workspace:*`. It is therefore published pinned to the same version, instead of the old `^0.1.0-beta.2` range, which let a core release run with an unrelated `ui`. Findings that are not applicable or have low reachability are triaged in the release evidence.
+
 ## Breaking changes: stale package.json exports removed (G3 tarball verification)
 
 The G3 release-gate tarball checker (`pnpm pkg:verify-tarballs`) found several `package.json` entries whose declared build targets were already missing from the published tarball, left behind after earlier, unrelated content moves. Removing them is a consumer-facing API-surface change even though nothing that actually worked stops working — each target was already absent, so importing any of these paths already failed before this release too:
