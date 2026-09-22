@@ -20,11 +20,7 @@
       "types": "./dist/index.native.d.ts",
       "import": "./dist/index.native.js"
     },
-    "./package.json": "./package.json",
-    "./variants/*": {
-      "types": "./dist/variants/*.d.ts",
-      "import": "./dist/variants/*.js"
-    }
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"

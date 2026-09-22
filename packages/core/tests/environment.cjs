@@ -18,9 +18,11 @@ function getTestPaths() {
     coreTests: isMonorepo
       ? '../../packages/core/tests'
       : 'node_modules/@nextsparkjs/core/tests',
-    cypressSupport: isMonorepo
-      ? '../../../../packages/core/tests/cypress/support'
-      : '@nextsparkjs/core/cypress-support',
+    // No cypressSupport here: Cypress infrastructure moved to
+    // @nextsparkjs/testing (see 23a9bef3) and core no longer ships
+    // tests/cypress/support or a "./cypress-support" export. getTestPaths()
+    // has no callers in this repo; if a Cypress support path is ever needed
+    // again from here, point it at @nextsparkjs/testing instead.
   }
 }
 

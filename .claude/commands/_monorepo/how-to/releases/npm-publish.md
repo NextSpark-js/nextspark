@@ -18,8 +18,9 @@ Using `npm publish` directly **BREAKS packages** because:
 The ONLY correct publish flow is:
 
 ```
-pnpm pkg:pack    →  syncs templates + builds ALL packages + creates .tgz files
-pnpm pkg:publish →  validates versions + publishes .tgz in correct order
+pnpm pkg:pack             →  syncs templates + builds ALL packages + creates .tgz files
+pnpm pkg:verify-tarballs  →  verifies the .tgz files are installable and leak nothing maintainer-local
+pnpm pkg:publish          →  validates versions + publishes .tgz in correct order
 ```
 
 `pnpm pkg:pack` uses `pnpm pack` internally which DOES resolve `workspace:*` → real versions.
@@ -95,6 +96,27 @@ pnpm pkg:pack
 | 5 | Build cli, create-app | Depend on core |
 | 6 | Build themes + plugins | Depend on core |
 | 7 | `pnpm pack` each package | Creates .tgz with resolved dependencies |
+
+### Step 3.5: Verify the tarballs (release gate G3)
+
+```bash
+# Checks, for every .tgz in .packages/:
+#   - every path main/module/types/bin/exports (incl. wildcard subpaths)
+#     points at a file that actually exists in the tarball
+#   - workspace:/link:/file: protocols did not survive in the packed
+#     package.json, and internal @nextsparkjs/* dependencies point at the
+#     version being packed in this run
+#   - no maintainer-local absolute path, stray .env file, or
+#     private-key/credential-looking material shipped (matches are masked)
+#   - reports tarball size and file count per package
+pnpm pkg:verify-tarballs
+```
+
+A justified false positive can be silenced with a committed, explicit entry
+(exact package + finding type + match, with a required `reason`) in
+`scripts/packages/verify-tarballs.allowlist.json` — never with a blanket glob.
+The command exits non-zero on any unallowlisted finding, so do not proceed to
+Step 4 until it passes.
 
 ### Step 4: Publish
 
@@ -205,10 +227,11 @@ npm login
 ## Important Rules
 
 1. **NEVER** use `npm publish` directly — it BREAKS packages (workspace:* leak)
-2. **ALWAYS** use `pnpm pkg:pack` → `pnpm pkg:publish` pipeline
+2. **ALWAYS** use `pnpm pkg:pack` → `pnpm pkg:verify-tarballs` → `pnpm pkg:publish` pipeline
 3. **ALWAYS** run version check (Step 1) before publishing
 4. **ALWAYS** verify npm authentication before attempting publish
 5. **ALWAYS** verify ALL 16 packages were published successfully
 6. **ALWAYS** test installation after publish
 7. **NEVER** skip `pnpm pkg:pack` — it handles template sync + build + workspace resolution
-8. **NEVER** publish without explicit user confirmation
+8. **NEVER** skip `pnpm pkg:verify-tarballs` — it is release gate G3 (installable, reproducible, no leaked secrets)
+9. **NEVER** publish without explicit user confirmation

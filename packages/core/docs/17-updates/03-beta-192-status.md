@@ -23,3 +23,14 @@ A post-commit tarball clean-install and beta.191→beta.192 upgrade validation r
 - A beta.191 host upgraded to the tarballs builds and starts after `pnpm exec nextspark sync:app` and the documented route guards. `update-core` only re-pins an `@nextsparkjs/*` package already listed in the project's `dependencies`/`devDependencies`; a beta.191 (or earlier) project never listed `@nextsparkjs/testing` there, since it arrived transitively through core's own dependency. After upgrading, a project whose Cypress tests import it (the starter theme's `BasePOM`, `DashboardEntityPOM`, `ApiInterceptor`, or a project's own tests) must add `@nextsparkjs/testing` to its own `devDependencies` by hand, at the same version as `@nextsparkjs/core` -- from the registry once beta.192 is published, or as a `file:` local tarball while testing against unpublished tarballs.
 
 An upgrade from the registry after publication is expected to need only that one hand-added devDependency, never a `pnpm.overrides` entry. This has not been verified, and that check remains pending. This status is not a release certification.
+
+## Breaking changes: stale package.json exports removed (G3 tarball verification)
+
+The G3 release-gate tarball checker (`pnpm pkg:verify-tarballs`) found several `package.json` entries whose declared build targets were already missing from the published tarball, left behind after earlier, unrelated content moves. Removing them is a consumer-facing API-surface change even though nothing that actually worked stops working — each target was already absent, so importing any of these paths already failed before this release too:
+
+- `@nextsparkjs/core`: removed the `./theme-styles.css` export (the file was deleted from the package in a prior fix; theme CSS is generated per-project, not shipped from core's own root).
+- `@nextsparkjs/core`: removed the bare `./lib/teams` and `./lib/permissions` subpaths (no `index` build output was ever produced for them). Use `./lib/teams/*` and the specific `./lib/permissions/{system,types,check,init}` exports instead.
+- `@nextsparkjs/core`: removed `./presets/*` (the `presets/` directory was fully consolidated into `templates/` in an earlier release).
+- `@nextsparkjs/core`: removed `./cypress-support` (Cypress support code moved to `@nextsparkjs/testing`; import from that package instead).
+- `@nextsparkjs/ui`: removed `./variants/*` (no `src/variants/` source has ever shipped).
+- `@nextsparkjs/cli`: removed `main`/`types` — the package is bin-only (`nextspark` via `bin/`); there is no supported programmatic `import '@nextsparkjs/cli'` entry point.

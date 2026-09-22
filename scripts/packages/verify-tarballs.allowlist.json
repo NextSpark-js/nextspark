@@ -1,0 +1,14 @@
+[
+  {
+    "package": "@nextsparkjs/ai-workflow",
+    "type": "secret-resend",
+    "match": "content:claude/commands/how-to/setup-email-providers.md:152:secret-resend",
+    "reason": "RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx is a documentation placeholder in the Resend setup how-to (masked 'x' filler, not a real key)."
+  },
+  {
+    "package": "@nextsparkjs/core",
+    "type": "maintainer-path-unix",
+    "match": "content:scripts/utils/paths.mjs:25:maintainer-path-unix",
+    "reason": "The @example JSDoc for getBasename() uses 'file:///Users/name/file.txt' as an illustrative cross-platform path sample, not a real maintainer path."
+  }
+]

@@ -16,8 +16,13 @@ This directory contains detailed instructions for managing NextSpark releases.
 
 ```
 /do:npm-version     →  List 16 packages, ask user, bump versions, commit
-/do:npm-publish     →  Calls npm-version first, then: pnpm pkg:pack → pnpm pkg:publish
+/do:npm-publish     →  Calls npm-version first, then: pnpm pkg:pack → pnpm pkg:verify-tarballs → pnpm pkg:publish
 ```
+
+`pnpm pkg:verify-tarballs` is release gate G3: it checks every `.tgz` in `.packages/` for
+missing export/main/types/bin targets, unresolved `workspace:`/`link:`/`file:` protocols,
+internal `@nextsparkjs/*` version drift, and leaked maintainer paths/secrets/`.env` files. See
+[npm-publish.md](./npm-publish.md#step-35-verify-the-tarballs-release-gate-g3).
 
 **CRITICAL:** NEVER use `npm publish` directly. It does NOT resolve `workspace:*` and BREAKS packages.
 
