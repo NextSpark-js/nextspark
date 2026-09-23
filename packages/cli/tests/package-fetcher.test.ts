@@ -55,3 +55,8 @@ test('an unreachable registry is reported as a network error', posixOnly, async 
     assert.equal(await failure('fake-package'), 'Network error. Check your internet connection.')
   })
 })
+
+test('an empty package spec fails closed with an actionable error', async () => {
+  assert.equal(await failure(undefined as unknown as string), 'Package spec is required.')
+  assert.equal(await failure('   '), 'Package spec is required.')
+})

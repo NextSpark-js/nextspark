@@ -34,7 +34,7 @@ function getWizardMode(options: InitOptions): WizardMode {
  * Parse plugins from comma-separated string
  */
 function parsePlugins(pluginsStr: string | undefined): PluginOption[] | undefined {
-  if (!pluginsStr) return undefined;
+  if (pluginsStr === undefined) return undefined;
   return pluginsStr.split(',').map(p => p.trim()) as PluginOption[];
 }
 

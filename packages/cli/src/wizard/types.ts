@@ -95,12 +95,12 @@ export interface DevConfig {
 /**
  * Theme selection options for CLI
  */
-export type ThemeOption = 'default' | 'blog' | 'crm' | 'productivity' | 'none'
+export type ThemeOption = 'starter' | 'default' | 'blog' | 'crm' | 'productivity' | 'none'
 
 /**
  * Plugin selection options for CLI
  */
-export type PluginOption = 'ai' | 'langchain' | 'social-media-publisher'
+export type PluginOption = 'starter' | 'ai' | 'langchain' | 'social-media-publisher'
 
 /**
  * CLI options parsed from command line arguments

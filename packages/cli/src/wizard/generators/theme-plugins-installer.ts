@@ -18,7 +18,7 @@ import { addPlugin } from '../../commands/add-plugin.js'
 /**
  * NPM package names for themes
  */
-const THEME_PACKAGES: Record<string, string> = {
+const THEME_PACKAGES: Record<Exclude<ThemeChoice, 'starter' | null>, string> = {
   'default': '@nextsparkjs/theme-default',
   'blog': '@nextsparkjs/theme-blog',
   'crm': '@nextsparkjs/theme-crm',
@@ -28,10 +28,52 @@ const THEME_PACKAGES: Record<string, string> = {
 /**
  * NPM package names for plugins
  */
-const PLUGIN_PACKAGES: Record<PluginChoice, string> = {
+const PLUGIN_PACKAGES: Record<Exclude<PluginChoice, 'starter'>, string> = {
   'ai': '@nextsparkjs/plugin-ai',
   'langchain': '@nextsparkjs/plugin-langchain',
   'social-media-publisher': '@nextsparkjs/plugin-social-media-publisher',
+}
+
+/** Themes that core includes in the generated project rather than publishing. */
+const BUNDLED_THEMES = ['starter'] as const
+
+/** Plugin templates that core includes rather than publishing as packages. */
+const BUNDLED_PLUGINS = ['starter'] as const
+
+const THEME_OPTIONS = [...BUNDLED_THEMES, ...Object.keys(THEME_PACKAGES)]
+const PLUGIN_OPTIONS = [...BUNDLED_PLUGINS, ...Object.keys(PLUGIN_PACKAGES)]
+
+function choices(options: string[], includeNone = false): string {
+  return [...options, ...(includeNone ? ['none'] : [])].join(', ')
+}
+
+/**
+ * Normalize and validate a CLI theme value before project generation. This is
+ * deliberately separate from package fetching: a bundled theme has no package
+ * spec at all, and an unknown name must fail before the wizard writes files.
+ */
+export function selectTheme(theme: string | null | undefined): ThemeChoice {
+  if (theme === null || theme === 'none') return null
+  if (typeof theme !== 'string' || theme.trim() === '') {
+    throw new Error(`Theme name is required. Valid options: ${choices(THEME_OPTIONS, true)}.`)
+  }
+  if (!THEME_OPTIONS.includes(theme)) {
+    throw new Error(`Unknown theme "${theme}". Valid options: ${choices(THEME_OPTIONS, true)}.`)
+  }
+  return theme as ThemeChoice
+}
+
+/** Validate plugin values from flags, presets, or the interactive prompt. */
+export function selectPlugins(plugins: readonly string[]): PluginChoice[] {
+  return plugins.map(plugin => {
+    if (typeof plugin !== 'string' || plugin.trim() === '') {
+      throw new Error(`Plugin name is required. Valid options: ${choices(PLUGIN_OPTIONS)}.`)
+    }
+    if (!PLUGIN_OPTIONS.includes(plugin)) {
+      throw new Error(`Unknown plugin "${plugin}". Valid options: ${choices(PLUGIN_OPTIONS)}.`)
+    }
+    return plugin as PluginChoice
+  })
 }
 
 /**
@@ -249,7 +291,12 @@ async function withWebCwd<T>(fn: () => Promise<T>): Promise<T> {
  * Install a theme
  */
 export async function installTheme(theme: ThemeChoice): Promise<boolean> {
+  selectTheme(theme)
   if (!theme) {
+    return true
+  }
+
+  if (BUNDLED_THEMES.includes(theme as typeof BUNDLED_THEMES[number])) {
     return true
   }
 
@@ -291,7 +338,7 @@ export async function installTheme(theme: ThemeChoice): Promise<boolean> {
 
     // NPM mode: use CLI command
     spinner.text = `Installing reference theme: ${theme}...`
-    const packageSpec = THEME_PACKAGES[theme]
+    const packageSpec = THEME_PACKAGES[theme as Exclude<ThemeChoice, 'starter' | null>]
     const success = await installThemeViaCli(packageSpec)
 
     if (success) {
@@ -319,9 +366,15 @@ export async function installPlugins(plugins: PluginChoice[]): Promise<boolean> 
     return true
   }
 
+  selectPlugins(plugins)
+
   let allSuccess = true
 
   for (const plugin of plugins) {
+    if (BUNDLED_PLUGINS.includes(plugin as typeof BUNDLED_PLUGINS[number])) {
+      continue
+    }
+
     const spinner = ora({
       text: `Installing plugin: ${plugin}...`,
       prefixText: '  ',
@@ -351,7 +404,7 @@ export async function installPlugins(plugins: PluginChoice[]): Promise<boolean> 
 
       // NPM mode: use CLI command
       spinner.text = `Installing plugin: ${plugin}...`
-      const packageSpec = PLUGIN_PACKAGES[plugin]
+      const packageSpec = PLUGIN_PACKAGES[plugin as Exclude<PluginChoice, 'starter'>]
       const success = await installPluginViaCli(packageSpec)
 
       if (success) {

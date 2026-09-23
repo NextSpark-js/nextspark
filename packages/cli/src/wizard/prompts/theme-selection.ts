@@ -9,7 +9,7 @@
 import { select } from '@inquirer/prompts'
 import chalk from '../../utils/colors.js'
 
-export type ThemeChoice = 'default' | 'blog' | 'crm' | 'productivity' | null
+export type ThemeChoice = 'starter' | 'default' | 'blog' | 'crm' | 'productivity' | null
 
 /**
  * Prompt the user to select a reference theme
@@ -30,6 +30,11 @@ export async function promptThemeSelection(): Promise<ThemeChoice> {
         name: 'None (skip)',
         value: null,
         description: 'Only my custom theme, no reference (add later with add:theme)',
+      },
+      {
+        name: 'Starter (bundled)',
+        value: 'starter',
+        description: 'Use the starter theme already included in the generated project',
       },
       {
         name: 'Default (SaaS boilerplate)',

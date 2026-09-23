@@ -9,6 +9,10 @@ export async function fetchPackage(
   packageSpec: string,
   version?: string
 ): Promise<FetchResult> {
+  if (typeof packageSpec !== 'string' || packageSpec.trim() === '') {
+    throw new Error('Package spec is required.')
+  }
+
   // Detectar si es path local
   if (packageSpec.endsWith('.tgz') || packageSpec.startsWith('./') || packageSpec.startsWith('/') || isAbsolute(packageSpec)) {
     return fetchLocalPackage(packageSpec)

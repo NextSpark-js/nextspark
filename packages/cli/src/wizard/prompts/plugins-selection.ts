@@ -9,7 +9,7 @@ import { checkbox } from '@inquirer/prompts'
 import chalk from '../../utils/colors.js'
 import type { ThemeChoice } from './theme-selection.js'
 
-export type PluginChoice = 'ai' | 'langchain' | 'social-media-publisher'
+export type PluginChoice = 'starter' | 'ai' | 'langchain' | 'social-media-publisher'
 
 /**
  * Plugins required by each theme

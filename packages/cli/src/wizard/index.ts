@@ -34,7 +34,7 @@ import type { WizardConfig, CLIOptions } from './types.js'
 import { promptProjectInfo } from './prompts/project-info.js'
 // Theme & Plugin Selection
 import { promptThemeSelection, promptPluginsSelection, getRequiredPlugins, type ThemeChoice, type PluginChoice } from './prompts/index.js'
-import { installThemeAndPlugins } from './generators/theme-plugins-installer.js'
+import { installThemeAndPlugins, selectPlugins, selectTheme } from './generators/theme-plugins-installer.js'
 import { installProjectDependencies, setupAIWorkflow } from './install-dependencies.js'
 import { showConfigPreview } from './preview.js'
 import { errorLines } from '../utils/shown-path.js'
@@ -171,22 +171,22 @@ export async function runWizard(
     // This ensures we know the project structure before asking about themes
     if (options.theme !== undefined) {
       // Non-interactive mode: use CLI flags
-      selectedTheme = options.theme === 'none' ? null : options.theme as ThemeChoice
+      selectedTheme = selectTheme(options.theme)
       showInfo(`Reference theme: ${selectedTheme || 'None'}`)
     } else if (!preset && options.mode !== 'quick') {
       // Interactive mode: prompt user (only if not using preset)
-      selectedTheme = await promptThemeSelection()
+      selectedTheme = selectTheme(await promptThemeSelection())
     }
 
     // Plugins selection
     if (options.plugins !== undefined) {
-      selectedPlugins = options.plugins as PluginChoice[]
+      selectedPlugins = selectPlugins(options.plugins)
       if (selectedPlugins.length > 0) {
         showInfo(`Selected plugins: ${selectedPlugins.join(', ')}`)
       }
     } else if (!preset && options.mode !== 'quick' && !options.yes) {
       // Interactive mode: prompt user (skip in --yes mode or preset mode)
-      selectedPlugins = await promptPluginsSelection(selectedTheme)
+      selectedPlugins = selectPlugins(await promptPluginsSelection(selectedTheme))
     } else if (selectedTheme) {
       // In quick/yes/preset mode, auto-include required plugins for theme
       selectedPlugins = getRequiredPlugins(selectedTheme)
