@@ -15,3 +15,15 @@ clearly synthetic dashboard row only to exercise verifier integrity checks. The
 verifier never updates or blesses a budget; a separately captured measurement
 must be passed explicitly with
 `pnpm verify:route-js-budget --measurement <capture.json> --budget scripts/performance/apps-dev-route-js-budget.json`.
+
+`pnpm test:template-route-conformance` is the slower, explicit build-level
+check for core route template overrides. It creates a synthetic app under
+`.e2e/`, builds the beta.191-shaped global-registry baseline, the pre-direct
+one-entry scoped shape, the generated direct-scope shape, and a dynamic-family
+scope beside a look-alike literal route, then compares their per-entry chunk counts in
+Next's build manifests, and removes the fixture afterward. Next 16.3.5 writes
+the App Router client graph to per-entry
+`page_client-reference-manifest.js` files rather than the former aggregate
+`.next/app-build-manifest.json`, so the check counts each entry's unique
+reachable client chunks there. It is kept out of the normal unit suite because
+it performs four production Next builds.

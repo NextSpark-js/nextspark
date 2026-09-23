@@ -15,7 +15,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { mkdtemp, mkdir, readdir, readFile, writeFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, readdir, readFile, writeFile, rm, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -50,6 +50,21 @@ const protectedTemplate = {
 
 const config = { outputDir: '/tmp/registries', projectRoot: '/tmp/project' }
 const CORE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..')
+const E2E_DIR = join(CORE_DIR, '..', '..', '.e2e')
+
+async function worktreeFixture(prefix) {
+  await mkdir(E2E_DIR, { recursive: true })
+  return mkdtemp(join(E2E_DIR, prefix))
+}
+
+async function markAsNpmProject(root) {
+  const storePackage = join(root, 'node_modules/.pnpm/local/node_modules/@nextsparkjs/core')
+  await mkdir(dirname(storePackage), { recursive: true })
+  await symlink(CORE_DIR, storePackage, 'dir')
+  const packageLink = join(root, 'node_modules/@nextsparkjs/core')
+  await mkdir(dirname(packageLink), { recursive: true })
+  await symlink('../.pnpm/local/node_modules/@nextsparkjs/core', packageLink, 'dir')
+}
 
 // The registry build parses the templates once, with analyzeTemplates, and
 // hands the same analysis to both registries. These do the same.
@@ -409,23 +424,81 @@ test('route scopes isolate template imports, retain empty fallbacks, and preserv
     const emptyServer = file('/template-scopes/server/(auth)/empty/page.ts')
     const protectedServer = file('/template-scopes/server/layout.ts')
 
-    assert.match(publicServer, /templates\/\(public\)\/page'\)\)/)
+    assert.match(publicServer, /import SelectedTemplate from '@\/contents\/themes\/testtheme\/templates\/\(public\)\/page'/)
     assert.doesNotMatch(publicServer, /templates\/ai\/page/)
-    assert.match(aiServer, /templates\/ai\/page'\)\)/)
+    assert.match(aiServer, /import SelectedTemplate from '@\/contents\/themes\/testtheme\/templates\/ai\/page'/)
     assert.doesNotMatch(aiServer, /templates\/\(public\)\/page/)
-    assert.match(publicClient, /dynamic\(\(\) => import\('@\/contents\/themes\/testtheme\/templates\/\(public\)\/page'\)\)/)
+    assert.match(publicClient, /import SelectedTemplate from '@\/contents\/themes\/testtheme\/templates\/\(public\)\/page'/)
     assert.doesNotMatch(publicClient, /templates\/ai\/page/)
-    assert.match(emptyServer, /TEMPLATE_REGISTRY: Record<string, TemplateRegistryEntry> = \{\s*\}/)
+    assert.doesNotMatch(publicClient, /CLIENT_TEMPLATE_REGISTRY|dynamic\(\(\) => import\(/)
+    assert.match(emptyServer, /const HAS_OVERRIDE = false/)
     assert.match(emptyServer, /export function getTemplateOrDefault/)
-    assert.doesNotMatch(emptyServer, /TemplateService|template-registry'/)
-    assert.match(protectedServer, /component: null/)
-    assert.match(protectedServer, /canOverrideMetadata/)
+    assert.doesNotMatch(emptyServer, /TemplateService|template-registry'|TEMPLATE_REGISTRY/)
+    assert.match(protectedServer, /const TemplateComponent: any = null/)
+    assert.match(protectedServer, /const METADATA_OVERRIDE_ALLOWED = true/)
 
     const full = await generateTemplateRegistry(templates, scopedConfig, analysis)
     assert.match(full, /app\/\(public\)\/page\.tsx/)
     assert.match(full, /app\/ai\/page\.tsx/)
     const client = await generateTemplateRegistryClient(templates, scopedConfig, analysis)
     assert.doesNotMatch(client, /layout\.tsx/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('an exact core route scope imports its override directly without changing any core route exports', async () => {
+  const root = await worktreeFixture('nextspark-template-direct-scope-test-')
+  try {
+    const coreRoute = [
+      "import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/(auth)/login/page'",
+      "export const dynamic = 'force-dynamic'",
+      'export const revalidate = 0',
+      'export const dynamicParams = false',
+      "export const runtime = 'nodejs'",
+      'export async function generateMetadata() { return { title: \'Core\' } }',
+      'export async function generateStaticParams() { return [] }',
+      "export const nonTemplateExport = 'kept'",
+      'function CoreLoginPage() { return null }',
+      "export default getTemplateOrDefault('app/(auth)/login/page.tsx', CoreLoginPage)",
+      '',
+    ].join('\n')
+    await writeAppRoute(root, 'app/(auth)/login/page.tsx', coreRoute)
+    const templatePath = await writeThemeTemplate(
+      root,
+      '(auth)/login/page.tsx',
+      'export default function ThemeLoginPage() { return null }\n'
+    )
+    const template = {
+      ...pageTemplate,
+      name: '(auth)/login/page',
+      relativePath: '(auth)/login/page.tsx',
+      appPath: 'app/(auth)/login/page.tsx',
+      templatePath,
+    }
+    const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
+    const analysis = await analyzeTemplates([template], scopedConfig)
+    const { files } = await generateTemplateScopeRegistries([template], scopedConfig, analysis)
+    const scope = files.find(file => file.path.endsWith('/template-scopes/server/(auth)/login/page.ts')).content
+
+    assert.match(scope, /import SelectedTemplate from '@\/contents\/themes\/testtheme\/templates\/\(auth\)\/login\/page'/)
+    assert.doesNotMatch(scope, /TEMPLATE_REGISTRY|lazyTemplate|\(\) => import\(/)
+    assert.equal(await readFile(join(root, 'app/(auth)/login/page.tsx'), 'utf8'), coreRoute)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('an exact core route scope with no override keeps the default resolver path', async () => {
+  const root = await worktreeFixture('nextspark-template-empty-direct-scope-test-')
+  try {
+    await writeAppRoute(root, 'app/(auth)/login/page.tsx')
+    const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
+    const { files } = await generateTemplateScopeRegistries([], scopedConfig)
+    const scope = files.find(file => file.path.endsWith('/template-scopes/server/(auth)/login/page.ts')).content
+
+    assert.doesNotMatch(scope, /import SelectedTemplate|TEMPLATE_REGISTRY|lazyTemplate|\(\) => import\(/)
+    assert.match(scope, /return defaultComponent/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -451,22 +524,43 @@ function scopedResolvers(scopeContent, registry, canOverrideComponent = () => tr
   )
 }
 
+function directScopeResolvers(scopeContent, selectedTemplate = null) {
+  const start = scopeContent.indexOf('const APP_PATH')
+  assert.notEqual(start, -1, 'scope should contain direct resolver constants')
+  const emitted = scopeContent
+    .slice(start)
+    .replace('const TemplateComponent: any = SelectedTemplate', 'const TemplateComponent = selectedTemplate')
+    .replace('const TemplateComponent: any = null', 'const TemplateComponent = null')
+    .replace('const templateMetadata: any =', 'const templateMetadata =')
+    .replace('export function hasTemplateOverride(candidatePath: string): boolean {', 'function hasTemplateOverride(candidatePath) {')
+    .replace('export function getTemplateComponent(candidatePath: string): any | null {', 'function getTemplateComponent(candidatePath) {')
+    .replace('export function getTemplateOrDefault<T = any>(candidatePath: string, defaultComponent: T): T {', 'function getTemplateOrDefault(candidatePath, defaultComponent) {')
+    .replace('return TemplateComponent as T', 'return TemplateComponent')
+    .replace('export function getMetadataOrDefault(candidatePath: string, defaultMetadata: any): any {', 'function getMetadataOrDefault(candidatePath, defaultMetadata) {')
+  return Function('selectedTemplate', `${emitted}\nreturn { hasTemplateOverride, getTemplateComponent, getTemplateOrDefault, getMetadataOrDefault }`)(selectedTemplate)
+}
+
 test('scoped metadata runtime preserves legacy truthy fallback semantics', async () => {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-template-scopes-test-'))
   try {
     await writeAppRoute(root, 'app/metadata.ts')
+    const templatePath = await writeThemeTemplate(root, 'metadata.ts', 'export default function Template() { return null }\n')
     const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
-    const { files } = await generateTemplateScopeRegistries([], scopedConfig)
-    const scope = files.find(file => file.path.endsWith('/template-scopes/server/metadata.ts')).content
     const fallback = { title: 'application default' }
 
     for (const metadata of [false, 0, '', null, undefined]) {
-      const { getMetadataOrDefault } = scopedResolvers(scope, { 'app/metadata.ts': { template: { metadata } } })
+      const template = { ...pageTemplate, appPath: 'app/metadata.ts', templatePath, metadata }
+      const { files } = await generateTemplateScopeRegistries([template], scopedConfig, await analyzeTemplates([template], scopedConfig))
+      const scope = files.find(file => file.path.endsWith('/template-scopes/server/metadata.ts')).content
+      const { getMetadataOrDefault } = directScopeResolvers(scope)
       assert.equal(getMetadataOrDefault('app/metadata.ts', fallback), fallback)
     }
     const override = { title: 'theme override' }
-    const { getMetadataOrDefault } = scopedResolvers(scope, { 'app/metadata.ts': { template: { metadata: override } } })
-    assert.equal(getMetadataOrDefault('app/metadata.ts', fallback), override)
+    const template = { ...pageTemplate, appPath: 'app/metadata.ts', templatePath, metadata: override }
+    const { files } = await generateTemplateScopeRegistries([template], scopedConfig, await analyzeTemplates([template], scopedConfig))
+    const scope = files.find(file => file.path.endsWith('/template-scopes/server/metadata.ts')).content
+    const { getMetadataOrDefault } = directScopeResolvers(scope)
+    assert.deepEqual(getMetadataOrDefault('app/metadata.ts', fallback), override)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -545,21 +639,25 @@ test('scoped resolver keeps highest template selection while empty and protected
     const highPath = await writeThemeTemplate(root, 'priority/high.tsx', 'export default function High() { return null }\n')
     await writeAppRoute(root, 'app/priority/page.tsx')
     await writeAppRoute(root, 'app/empty/page.tsx')
+    await writeAppRoute(root, 'app/dashboard/layout.tsx')
     const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
     const templates = [
       { ...pageTemplate, appPath: 'app/priority/page.tsx', templatePath: lowPath, priority: 1 },
-      { ...pageTemplate, appPath: 'app/priority/page.tsx', templatePath: highPath, priority: 10 }
+      { ...pageTemplate, appPath: 'app/priority/page.tsx', templatePath: highPath, priority: 10 },
+      { ...pageTemplate, appPath: 'app/dashboard/layout.tsx', templateType: 'layout', templatePath: highPath, priority: 10 }
     ]
     const { files } = await generateTemplateScopeRegistries(templates, scopedConfig, await analyzeTemplates(templates, scopedConfig))
     const priorityScope = files.find(file => file.path.endsWith('/template-scopes/server/priority/page.ts')).content
     const emptyScope = files.find(file => file.path.endsWith('/template-scopes/server/empty/page.ts')).content
-    assert.ok(priorityScope.indexOf(highPath) < priorityScope.indexOf(lowPath), 'highest-priority template is the selected entry')
+    const protectedScope = files.find(file => file.path.endsWith('/template-scopes/server/dashboard/layout.ts')).content
+    assert.match(priorityScope, new RegExp(highPath.replace(/\.(?:tsx|ts)$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    assert.doesNotMatch(priorityScope, new RegExp(lowPath.replace(/\.(?:tsx|ts)$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
 
     const fallback = () => 'fallback'
     const override = () => 'override'
-    assert.equal(scopedResolvers(emptyScope, {}).getTemplateOrDefault('app/empty/page.tsx', fallback), fallback)
-    assert.equal(scopedResolvers(priorityScope, { 'app/priority/page.tsx': { component: override } }).getTemplateOrDefault('app/priority/page.tsx', fallback), override)
-    assert.equal(scopedResolvers(priorityScope, { 'app/priority/page.tsx': { component: override } }, () => false).getTemplateOrDefault('app/priority/page.tsx', fallback), fallback)
+    assert.equal(directScopeResolvers(emptyScope).getTemplateOrDefault('app/empty/page.tsx', fallback), fallback)
+    assert.equal(directScopeResolvers(priorityScope, override).getTemplateOrDefault('app/priority/page.tsx', fallback), override)
+    assert.equal(directScopeResolvers(protectedScope, override).getTemplateOrDefault('app/dashboard/layout.tsx', fallback), fallback)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -569,7 +667,9 @@ test('dynamic route scopes contain only their runtime target family, not the ful
   const root = await mkdtemp(join(tmpdir(), 'nextspark-template-scopes-test-'))
   try {
     await writeAppRoute(root, 'app/(public)/[...slug]/page.tsx')
+    await writeAppRoute(root, 'app/dashboard/(main)/[entity]/page.tsx')
     await writeAppRoute(root, 'app/dashboard/(main)/[entity]/[id]/page.tsx')
+    await writeAppRoute(root, 'app/dashboard/(main)/boards/[id]/[cardId]/page.tsx')
 
     const publicDynamic = await writeThemeTemplate(root, '(public)/blog/[slug]/page.tsx', 'export default function Blog() { return null }\n')
     const dashboardDetail = await writeThemeTemplate(root, 'dashboard/(main)/projects/[id]/page.tsx', 'export default function Project() { return null }\n')
@@ -588,6 +688,7 @@ test('dynamic route scopes contain only their runtime target family, not the ful
     const file = suffix => files.find(candidate => candidate.path.endsWith(suffix))?.content
     const publicServer = file('/template-scopes/server/(public)/[...slug]/page.ts')
     const publicClient = file('/template-scopes/client/(public)/[...slug]/page.ts')
+    const dashboardListServer = file('/template-scopes/server/dashboard/(main)/[entity]/page.ts')
     const dashboardServer = file('/template-scopes/server/dashboard/(main)/[entity]/[id]/page.ts')
 
     assert.match(publicServer, /templates\/\(public\)\/blog\/\[slug\]\/page'\)\)/)
@@ -597,8 +698,105 @@ test('dynamic route scopes contain only their runtime target family, not the ful
     assert.match(publicClient, /templates\/\(public\)\/blog\/\[slug\]\/page'\)\)/)
     assert.doesNotMatch(publicClient, /agent-multi|ai-observability|projects\/\[id\]/)
 
+    assert.match(dashboardListServer, /templates\/dashboard\/\(main\)\/agent-multi\/page'\)\)/)
+    assert.doesNotMatch(dashboardListServer, /\(public\)\/blog|projects\/\[id\]|boards\/\[id\]\/\[cardId\]|ai-observability/)
+
     assert.match(dashboardServer, /templates\/dashboard\/\(main\)\/projects\/\[id\]\/page'\)\)/)
     assert.doesNotMatch(dashboardServer, /\(public\)\/blog|boards\/\[id\]\/\[cardId\]|agent-multi|ai-observability/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a literal dashboard route override keeps its exact scope and stays out of the dynamic entity-list family', async () => {
+  const root = await worktreeFixture('nextspark-template-literal-dashboard-scope-test-')
+  try {
+    await writeAppRoute(root, 'app/dashboard/(main)/[entity]/page.tsx')
+    await writeAppRoute(root, 'app/dashboard/(main)/media/page.tsx')
+
+    const mediaTemplatePath = await writeThemeTemplate(
+      root,
+      'dashboard/(main)/media/page.tsx',
+      'export default function Media() { return null }\n'
+    )
+    const mediaTemplate = {
+      ...pageTemplate,
+      appPath: 'app/dashboard/(main)/media/page.tsx',
+      relativePath: 'dashboard/(main)/media/page.tsx',
+      templatePath: mediaTemplatePath,
+    }
+    const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
+    const analysis = await analyzeTemplates([mediaTemplate], scopedConfig)
+    const { files } = await generateTemplateScopeRegistries([mediaTemplate], scopedConfig, analysis)
+    const file = suffix => files.find(candidate => candidate.path.endsWith(suffix))?.content
+    const dynamicListScope = file('/template-scopes/server/dashboard/(main)/[entity]/page.ts')
+    const dynamicListClientScope = file('/template-scopes/client/dashboard/(main)/[entity]/page.ts')
+    const mediaScope = file('/template-scopes/server/dashboard/(main)/media/page.ts')
+
+    assert.doesNotMatch(dynamicListScope, /templates\/dashboard\/\(main\)\/media\/page/)
+    assert.doesNotMatch(dynamicListClientScope, /templates\/dashboard\/\(main\)\/media\/page/)
+    assert.match(mediaScope, /import SelectedTemplate from '@\/contents\/themes\/testtheme\/templates\/dashboard\/\(main\)\/media\/page'/)
+    assert.match(mediaScope, /const APP_PATH = "app\/dashboard\/\(main\)\/media\/page\.tsx"/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a project-only bracket route builds and gets an exact direct scope before its page is generated', async () => {
+  const root = await worktreeFixture('nextspark-template-project-bracket-scope-test-')
+  try {
+    await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
+    await writeFile(join(root, 'package.json'), '{}\n')
+    await mkdir(join(root, 'app'), { recursive: true })
+    await markAsNpmProject(root)
+    await writeAppRoute(root, 'contents/themes/acme/config/theme.config.ts', 'export const acmeThemeConfig = {}\n')
+    const template = join(root, 'contents/themes/acme/templates/shop/[category]/page.tsx')
+    await mkdir(dirname(template), { recursive: true })
+    await writeFile(template, 'export default function CategoryPage() { return null }\n')
+
+    runRegistryBuild(root)
+
+    assert.equal(
+      existsSync(join(root, 'app/(templates)/shop/[category]/page.tsx')),
+      true,
+      'the project-only bracket route is generated later in the registry pipeline'
+    )
+    const scope = await readFile(
+      join(root, '.nextspark/registries/template-scopes/server/shop/[category]/page.ts'),
+      'utf8'
+    )
+    assert.match(scope, /import SelectedTemplate from '@\/contents\/themes\/acme\/templates\/shop\/\[category\]\/page'/)
+    assert.match(scope, /const APP_PATH = "app\/shop\/\[category\]\/page\.tsx"/)
+    assert.doesNotMatch(scope, /TEMPLATE_REGISTRY|lazyTemplate|\(\) => import\(/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a bracket path orphaned after analysis fails scope generation clearly', async () => {
+  const root = await worktreeFixture('nextspark-template-unknown-dynamic-scope-test-')
+  try {
+    const templatePath = await writeThemeTemplate(
+      root,
+      'custom/[tenant]/page.tsx',
+      'export default function TenantPage() { return null }\n'
+    )
+    const unsupportedTemplate = {
+      ...pageTemplate,
+      appPath: 'app/custom/[tenant]/page.tsx',
+      relativePath: 'custom/[tenant]/page.tsx',
+      templatePath,
+    }
+    const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
+    await writeAppRoute(root, unsupportedTemplate.appPath)
+    const analysis = await analyzeTemplates([unsupportedTemplate], scopedConfig)
+    assert.equal(analysis.get(templatePath).generatesRoute, false)
+    await rm(join(root, unsupportedTemplate.appPath))
+
+    await assert.rejects(
+      generateTemplateScopeRegistries([unsupportedTemplate], scopedConfig, analysis),
+      /Unsupported runtime-templated app path "app\/custom\/\[tenant\]\/page\.tsx".*known dynamic route family/
+    )
   } finally {
     await rm(root, { recursive: true, force: true })
   }

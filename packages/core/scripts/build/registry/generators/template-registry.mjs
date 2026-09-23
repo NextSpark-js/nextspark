@@ -11,7 +11,11 @@ import { join, dirname, relative, sep } from 'path'
 import { fileURLToPath } from 'url'
 
 import { verbose } from '../../../utils/index.mjs'
-import { canOverrideComponent } from '../../../../dist/config/protected-paths.js'
+import {
+  canOverrideComponent,
+  canOverrideMetadata,
+  isProtectedPath
+} from '../../../../dist/config/protected-paths.js'
 import { convertCorePath } from '../config.mjs'
 import { analyzeTemplates, routeFileAction, templateAnalysisFor } from '../post-build/page-generator.mjs'
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
@@ -446,7 +450,7 @@ function scopedServerResolver(outputFilePath, config) {
 import { canOverrideComponent, canOverrideMetadata } from '${protectedPaths}'
 
 /**
- * The two dynamic application routes need to ask about a runtime-generated
+ * The dynamic application routes need to ask about a runtime-generated
  * app path. Keep this small compatibility surface local to their bounded
  * scope instead of importing the global service, whose registry has every
  * template in the application.
@@ -477,14 +481,124 @@ export function getMetadataOrDefault(appPath: string, defaultMetadata: any): any
 }
 
 const PUBLIC_DYNAMIC_CATCH_ALL_PATH = 'app/(public)/[...slug]/page.tsx'
+const DASHBOARD_DYNAMIC_LIST_PATH = 'app/dashboard/(main)/[entity]/page.tsx'
 const DASHBOARD_DYNAMIC_DETAIL_PATH = 'app/dashboard/(main)/[entity]/[id]/page.tsx'
+const DYNAMIC_SCOPE_PATHS = new Set([
+  PUBLIC_DYNAMIC_CATCH_ALL_PATH,
+  DASHBOARD_DYNAMIC_LIST_PATH,
+  DASHBOARD_DYNAMIC_DETAIL_PATH,
+])
+
+function withoutTypeScriptExtension(templatePath) {
+  return templatePath.replace(/\.(?:tsx|ts)$/, '')
+}
+
+/**
+ * Exact route scopes have a compile-time-selected override. Emit that binding
+ * directly instead of carrying even a one-entry runtime registry into the
+ * route graph. The app route itself stays untouched, so every segment config
+ * and arbitrary named export it declares remains exactly where Next.js reads it.
+ */
+async function generateDirectServerScope(templates, appPath, config, analysis) {
+  const [entry] = resolveTemplateEntries(templates, await analysisFor(templates, config, analysis))
+  const selected = entry?.highestPriorityTemplate
+  const hasOverride = Boolean(selected)
+  const hasComponent = Boolean(
+    selected &&
+    canOverrideComponent(appPath) &&
+    !selected.fileName?.endsWith('.meta.ts') &&
+    entry.hasDefaultExport
+  )
+  const componentImport = hasComponent
+    ? `import SelectedTemplate from '${withoutTypeScriptExtension(selected.templatePath)}'\n`
+    : ''
+  const componentValue = hasComponent ? 'SelectedTemplate' : 'null'
+  const metadata = JSON.stringify(selected?.metadata ?? null, null, 2)
+
+  return `${componentImport}
+const APP_PATH = ${JSON.stringify(appPath)}
+const HAS_OVERRIDE = ${hasOverride}
+const COMPONENT_OVERRIDE_ALLOWED = ${canOverrideComponent(appPath)}
+const METADATA_OVERRIDE_ALLOWED = ${canOverrideMetadata(appPath)}
+const TemplateComponent: any = ${componentValue}
+const templateMetadata: any = ${metadata}
+
+export function hasTemplateOverride(candidatePath: string): boolean {
+  return HAS_OVERRIDE && candidatePath === APP_PATH
+}
+
+export function getTemplateComponent(candidatePath: string): any | null {
+  return candidatePath === APP_PATH ? TemplateComponent : null
+}
+
+export function getTemplateOrDefault<T = any>(candidatePath: string, defaultComponent: T): T {
+  if (candidatePath !== APP_PATH || !COMPONENT_OVERRIDE_ALLOWED || !TemplateComponent) return defaultComponent
+  return TemplateComponent as T
+}
+
+export function getMetadataOrDefault(candidatePath: string, defaultMetadata: any): any {
+  if (candidatePath !== APP_PATH || !METADATA_OVERRIDE_ALLOWED || !templateMetadata) return defaultMetadata
+  return templateMetadata
+}
+`
+}
+
+async function generateDirectClientScope(templates, appPath, config, analysis) {
+  const [entry] = resolveTemplateEntries(templates, await analysisFor(templates, config, analysis))
+  const selected = entry?.highestPriorityTemplate
+  let hasComponent = Boolean(
+    selected &&
+    (selected.templateType === 'page' || selected.templateType === 'layout') &&
+    entry.hasDefaultExport &&
+    canOverrideComponent(appPath)
+  )
+
+  if (hasComponent) {
+    let actualFilePath = selected.templatePath.replace('@/', (config.projectRoot || rootDir) + '/')
+    if (!actualFilePath.endsWith('.tsx') && !actualFilePath.endsWith('.ts')) actualFilePath += '.tsx'
+    hasComponent = !(await hasServerOnlyExports(actualFilePath, config.projectRoot || rootDir))
+  }
+
+  const componentImport = hasComponent
+    ? `import SelectedTemplate from '${withoutTypeScriptExtension(selected.templatePath)}'\n`
+    : ''
+  const componentValue = hasComponent ? 'SelectedTemplate' : 'null'
+
+  return `'use client'
+
+import type { ComponentType } from 'react'
+${componentImport}
+const APP_PATH = ${JSON.stringify(appPath)}
+const HAS_OVERRIDE = ${hasComponent}
+const TEMPLATE_OVERRIDE_ALLOWED = ${!isProtectedPath(appPath)}
+const TemplateComponent: ComponentType<any> | null = ${componentValue}
+
+export function hasTemplateOverrideClient(candidatePath: string): boolean {
+  return HAS_OVERRIDE && candidatePath === APP_PATH
+}
+
+export function getTemplateOrDefaultClient<T extends ComponentType<any>>(
+  candidatePath: string,
+  defaultComponent: T
+): T {
+  if (candidatePath !== APP_PATH || !TEMPLATE_OVERRIDE_ALLOWED || !TemplateComponent) return defaultComponent
+  return TemplateComponent as T
+}
+
+export function withTemplateOverrideForClient<P extends object>(appPath: string) {
+  return function<T extends ComponentType<P>>(WrappedComponent: T): T {
+    return getTemplateOrDefaultClient(appPath, WrappedComponent)
+  }
+}
+`
+}
 
 /**
  * The dynamic routes construct their target template path from an entity at
  * runtime. Their scope therefore needs the possible templates for *that
  * route family*, rather than an exact path that cannot be known at build time.
  *
- * These predicates intentionally describe the strings built in the two route
+ * These predicates intentionally describe the strings built in the three route
  * modules. Do not widen them to an area prefix: doing so would recreate the
  * full-registry fan-out this generator exists to avoid.
  */
@@ -496,16 +610,46 @@ function isDashboardDynamicDetailTemplate(appPath) {
   return /^app\/dashboard\/\(main\)\/[^/]+\/\[id\]\/page\.(?:tsx|ts)$/.test(appPath)
 }
 
-function templatesForScope(templates, scopeAppPath) {
+function isDashboardDynamicListTemplate(appPath) {
+  return /^app\/dashboard\/\(main\)\/[^/]+\/page\.(?:tsx|ts)$/.test(appPath)
+}
+
+function dynamicFamilyForTemplate(appPath, discoveredRoutePaths) {
+  // A real app route wins over a dynamic sibling in Next.js routing, so its
+  // override belongs only to that route's exact scope.
+  if (discoveredRoutePaths.has(appPath)) return null
+  if (isPublicDynamicEntityTemplate(appPath)) return PUBLIC_DYNAMIC_CATCH_ALL_PATH
+  if (isDashboardDynamicListTemplate(appPath)) return DASHBOARD_DYNAMIC_LIST_PATH
+  if (isDashboardDynamicDetailTemplate(appPath)) return DASHBOARD_DYNAMIC_DETAIL_PATH
+  return null
+}
+
+function hasBracketSegment(appPath) {
+  return appPath.split('/').some(segment => /^\[[^/]+\]$/.test(segment))
+}
+
+function assertKnownRuntimeTemplatedPaths(templates, discoveredRoutePaths, analysis) {
+  for (const template of templates) {
+    if (
+      hasBracketSegment(template.appPath) &&
+      !discoveredRoutePaths.has(template.appPath) &&
+      // A project-only template is an exact route: generateMissingPages will
+      // materialize it later in this same build.
+      !templateAnalysisFor(analysis, template).generatesRoute &&
+      !dynamicFamilyForTemplate(template.appPath, discoveredRoutePaths)
+    ) {
+      throw new Error(
+        `Unsupported runtime-templated app path "${template.appPath}": it is not an existing app route ` +
+        'or a member of a known dynamic route family. Add explicit family handling before generating its scope.'
+      )
+    }
+  }
+}
+
+function templatesForScope(templates, scopeAppPath, discoveredRoutePaths) {
   return templates.filter(template => {
     if (template.appPath === scopeAppPath) return true
-    if (scopeAppPath === PUBLIC_DYNAMIC_CATCH_ALL_PATH) {
-      return isPublicDynamicEntityTemplate(template.appPath)
-    }
-    if (scopeAppPath === DASHBOARD_DYNAMIC_DETAIL_PATH) {
-      return isDashboardDynamicDetailTemplate(template.appPath)
-    }
-    return false
+    return dynamicFamilyForTemplate(template.appPath, discoveredRoutePaths) === scopeAppPath
   })
 }
 
@@ -538,18 +682,26 @@ function assertUniqueScopeOutputs(appPaths, scopeDirectory) {
  */
 export async function generateTemplateScopeRegistries(templates, config, analysis = null) {
   const scopeDirectory = join(config.outputDir, 'template-scopes')
-  const paths = new Set(await discoverAppRoutePaths(config.projectRoot))
+  const resolvedAnalysis = await analysisFor(templates, config, analysis)
+  const discoveredRoutePaths = new Set(await discoverAppRoutePaths(config.projectRoot))
+  assertKnownRuntimeTemplatedPaths(templates, discoveredRoutePaths, resolvedAnalysis)
+  const paths = new Set(discoveredRoutePaths)
   for (const template of templates) paths.add(template.appPath)
   assertUniqueScopeOutputs(paths, scopeDirectory)
   const files = []
   for (const appPath of [...paths].sort()) {
-    const selected = templatesForScope(templates, appPath)
+    const selected = templatesForScope(templates, appPath, discoveredRoutePaths)
     const serverPath = scopeFileFor(appPath, scopeDirectory)
     const clientPath = scopeFileFor(appPath, scopeDirectory, true)
-    const serverRegistry = await generateTemplateRegistry(selected, config, analysis)
-    const clientRegistry = await generateTemplateRegistryClient(selected, config, analysis)
+    const dynamicScope = DYNAMIC_SCOPE_PATHS.has(appPath)
+    const serverRegistry = dynamicScope
+      ? `${await generateTemplateRegistry(selected, config, resolvedAnalysis)}${scopedServerResolver(serverPath, config)}`
+      : await generateDirectServerScope(selected, appPath, config, resolvedAnalysis)
+    const clientRegistry = dynamicScope
+      ? await generateTemplateRegistryClient(selected, config, resolvedAnalysis)
+      : await generateDirectClientScope(selected, appPath, config, resolvedAnalysis)
     files.push(
-      { path: serverPath, content: `/** ${SCOPE_MARKER}; do not edit. */\nimport 'server-only'\n${serverRegistry}${scopedServerResolver(serverPath, config)}` },
+      { path: serverPath, content: `/** ${SCOPE_MARKER}; do not edit. */\nimport 'server-only'\n${serverRegistry}` },
       { path: clientPath, content: `/** ${SCOPE_MARKER}; do not edit. */\n${clientRegistry}` }
     )
   }

@@ -41,6 +41,7 @@
     "mobile:web": "cd apps/mobile && pnpm run web",
     "mobile:verify": "node scripts/packages/mobile-verify.mjs",
     "test:route-js-budget": "node --test scripts/performance/verify-route-js-budget.test.mjs",
+    "test:template-route-conformance": "pnpm --filter @nextsparkjs/ui build && pnpm --filter @nextsparkjs/core build:js && node scripts/performance/template-route-conformance.mjs",
     "verify:route-js-budget": "node scripts/performance/verify-route-js-budget.mjs"
   },
   "devDependencies": {
