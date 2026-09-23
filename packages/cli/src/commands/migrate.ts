@@ -1,10 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 
 interface MigrateOptions {
   dryRun?: boolean;
   json?: boolean;
+  yes?: boolean;
 }
 
 interface FileChange {
@@ -657,19 +658,386 @@ function printReport(report: MigrateReport): void {
   if (report.warnings.length > 0) section('Warnings', report.warnings.map(warning => `⚠ ${warning}`));
 }
 
-export function migrateCommand(options: MigrateOptions): void {
-  if (!options.dryRun) {
-    console.error('nextspark migrate: only report mode exists yet; run `pnpm exec nextspark migrate --dry-run`.');
-    process.exitCode = 1;
-    return;
+const projectSourceRoots = new Set([
+  'api', 'blocks', 'components', 'config', 'entities', 'lib', 'messages', 'migrations', 'public', 'styles', 'templates', 'tests',
+]);
+
+interface PlannedMove {
+  source: string;
+  destination: string;
+  kind: 'theme' | 'plugin';
+}
+
+interface MovePlan {
+  moves: PlannedMove[];
+  duplicates: PlannedMove[];
+  collisions: PlannedMove[];
+  unknown: string[];
+  unmoved: string[];
+}
+
+function hookDestination(hostRoot: string, relativePath: string): string | null {
+  const name = basename(relativePath);
+  if (/^(?:middleware|proxy)\.[^.]+$/.test(name)) return join(hostRoot, 'config', 'hooks', `proxy.${name.split('.').slice(1).join('.')}`);
+  if (/^instrumentation\.[^.]+$/.test(name)) return join(hostRoot, 'config', 'hooks', `instrumentation.${name.split('.').slice(1).join('.')}`);
+  return null;
+}
+
+function themeDestination(hostRoot: string, relativePath: string): string | null {
+  const hook = hookDestination(hostRoot, relativePath);
+  if (hook) return hook;
+  if (projectSourceRoots.has(relativePath.split('/')[0])) return join(hostRoot, relativePath);
+  return null;
+}
+
+function planMove(hostRoot: string, themeRoot: string, pluginsRoot: string): MovePlan {
+  const moves: PlannedMove[] = [];
+  const duplicates: PlannedMove[] = [];
+  const collisions: PlannedMove[] = [];
+  const unknown: string[] = [];
+  const unmoved: string[] = [];
+  const add = (source: string, destination: string, kind: PlannedMove['kind']) => {
+    const item = { source, destination, kind };
+    if (!existsSync(destination)) moves.push(item);
+    else if (statSync(destination).isFile() && readFileSync(source).equals(readFileSync(destination))) duplicates.push(item);
+    else {
+      collisions.push(item);
+      unmoved.push(source);
+    }
+  };
+
+  for (const source of filesIn(themeRoot)) {
+    const relativePath = pathFrom(themeRoot, source);
+    const destination = themeDestination(hostRoot, relativePath);
+    if (!destination) {
+      unknown.push(`contents/themes/${basename(themeRoot)}/${relativePath}`);
+      unmoved.push(source);
+    }
+    else add(source, destination, 'theme');
   }
+  for (const plugin of childDirectories(pluginsRoot)) {
+    const root = join(pluginsRoot, plugin);
+    for (const source of filesIn(root)) add(source, join(hostRoot, 'plugins', plugin, pathFrom(root, source)), 'plugin');
+  }
+  return { moves, duplicates, collisions, unknown: unknown.sort(), unmoved };
+}
+
+function relativeSpecifier(fromFile: string, toFile: string): string {
+  let value = relative(dirname(fromFile), toFile).split(sep).join('/');
+  if (!value.startsWith('.')) value = `./${value}`;
+  return value;
+}
+
+function isText(buffer: Buffer): boolean {
+  return !buffer.includes(0) && !buffer.toString('utf8').includes('\uFFFD');
+}
+
+const moduleTargetSuffixes = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.css', '/index.ts', '/index.tsx'];
+
+function directMoveDestination(target: string, planned: Map<string, string>): string | null {
+  const exact = planned.get(target);
+  if (exact) return exact;
+  for (const suffix of moduleTargetSuffixes) {
+    const destination = planned.get(`${target}${suffix}`);
+    if (destination) return destination.slice(0, -suffix.length);
+  }
+  return null;
+}
+
+function projectedDirectoryDestination(directory: string, planned: Map<string, string>, unmoved: Set<string>): string | null {
+  if ([...unmoved].some(file => file === directory || file.startsWith(`${directory}${sep}`))) return null;
+  const candidates = new Set<string>();
+  for (const [source, destination] of planned) {
+    if (!source.startsWith(`${directory}${sep}`)) continue;
+    const depth = relative(directory, source).split(sep).length;
+    let candidate = destination;
+    for (let index = 0; index < depth; index++) candidate = dirname(candidate);
+    candidates.add(candidate);
+  }
+  return candidates.size === 1 ? [...candidates][0] : null;
+}
+
+function movedReferenceDestination(target: string, planned: Map<string, string>, unmoved: Set<string>, themeRoot: string, hostRoot: string): string | null {
+  const wildcard = target.search(/[*?[{]/);
+  const literal = wildcard === -1 ? target : target.slice(0, wildcard).replace(/[\\/]$/, '');
+  const wildcardSuffix = wildcard === -1 ? '' : target.slice(literal.length);
+  const direct = directMoveDestination(literal, planned);
+  if (direct) return `${direct}${wildcardSuffix}`;
+
+  let current = literal;
+  while (current === themeRoot || current.startsWith(`${themeRoot}${sep}`) || [...planned.keys()].some(source => source.startsWith(`${current}${sep}`))) {
+    const mapped = current === themeRoot && ![...unmoved].some(file => file === themeRoot || file.startsWith(`${themeRoot}${sep}`))
+      ? hostRoot
+      : projectedDirectoryDestination(current, planned, unmoved);
+    if (mapped) return join(mapped, relative(current, literal)) + wildcardSuffix;
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return null;
+}
+
+/** Rewrites concrete legacy path strings without trying to parse every tool's config language. */
+function rewriteLegacyPaths(content: string, source: string, destination: string, themeRoot: string, pluginsRoot: string, hostRoot: string, theme: string, planned: Map<string, string>, unmoved: Set<string>): string {
+  const escapedTheme = theme.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const themePattern = `contents/themes/${escapedTheme}`;
+  const mapThemeSuffix = (suffix: string): string | null => {
+    const normalized = suffix.replace(/^\//, '');
+    const mapped = movedReferenceDestination(join(themeRoot, normalized), planned, unmoved, themeRoot, hostRoot);
+    return mapped ? pathFrom(hostRoot, mapped) : null;
+  };
+  const mapPluginSuffix = (suffix: string): string | null => {
+    const normalized = suffix.replace(/^\//, '');
+    const mapped = movedReferenceDestination(join(pluginsRoot, normalized), planned, unmoved, themeRoot, hostRoot);
+    return mapped ? pathFrom(hostRoot, mapped) : null;
+  };
+  let next = content
+    .replace(new RegExp(`@/${themePattern}/([^'"\`\\s)]*)`, 'g'), (all, suffix: string) => {
+      const mapped = mapThemeSuffix(suffix);
+      return mapped ? `@/${mapped}` : all;
+    })
+    .replace(/@\/contents\/plugins\/([^'"`\s)]*)/g, (all, suffix: string) => {
+      const mapped = mapPluginSuffix(suffix);
+      return mapped ? `@/${mapped}` : all;
+    });
+
+  // A relative legacy path has to be recalculated from the file's new home;
+  // this covers imports, CSS @import, tsconfig paths, and helper scripts alike.
+  next = next.replace(new RegExp(`((?:\\.\\.?/)+)${themePattern}(/[^'"\`\\s)]*)?`, 'g'), (all, _prefix: string, _suffix = '') => {
+    const oldTarget = resolve(dirname(source), all);
+    if (!(oldTarget === themeRoot || oldTarget.startsWith(`${themeRoot}${sep}`))) return all;
+    const mapped = movedReferenceDestination(oldTarget, planned, unmoved, themeRoot, hostRoot);
+    return mapped ? relativeSpecifier(destination, mapped) : all;
+  });
+  next = next.replace(new RegExp(`${themePattern}/([^'"\`\\s)]*)`, 'g'), (all, suffix: string) => mapThemeSuffix(suffix) ?? all);
+  next = next.replace(new RegExp(`${themePattern}(?=['"\`\\s),]|$)`, 'g'), all => mapThemeSuffix('') ?? all);
+  // Themes stop being workspace members. Keep the host package in a workspace
+  // manifest rather than leaving a glob that points at a removed directory.
+  const themesRoot = dirname(themeRoot);
+  if (childDirectories(themesRoot).every(name => name === theme) && mapThemeSuffix('')) next = next.replace(/contents\/themes\/\*/g, '.');
+  next = next.replace(/contents\/plugins\/([^'"`\s)]*)/g, (all, suffix: string) => mapPluginSuffix(suffix) ?? all);
+  return next;
+}
+
+function rewriteMovedRelativeImports(content: string, source: string, destination: string, planned: Map<string, string>): string {
+  const replace = (_all: string, before: string, quote: string, value: string, after: string) => {
+    if (!value.startsWith('.')) return `${before}${quote}${value}${quote}${after}`;
+    if (quote === '`' && value.includes('${')) return `${before}${quote}${value}${quote}${after}`;
+    const target = resolve(dirname(source), value);
+    const targetDestination = directMoveDestination(target, planned) ?? target;
+    // Only a path whose meaning changes when this file moves needs adjustment.
+    if (dirname(source) === dirname(destination) && targetDestination === target) return `${before}${quote}${value}${quote}${after}`;
+    return `${before}${quote}${relativeSpecifier(destination, targetDestination)}${quote}${after}`;
+  };
+  const cssReplace = (_all: string, before: string, quote: string, value: string) => replace('', before, quote, value, '');
+  return content
+    .replace(/(\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s*)(['"`])(\.[^'"`]*)\2(\s*\)?)/g, replace)
+    .replace(/(@import\s*)(['"])(\.[^'"]*)\2/g, cssReplace);
+}
+
+/** Some test runners encode their root in a relative path rather than naming the theme. */
+function rewriteMovedDepthConfig(content: string, source: string, destination: string, planned: Map<string, string>): string {
+  const replace = (_all: string, before: string, quote: string, value: string, after = '') => {
+    if (!value.startsWith('.')) return `${before}${quote}${value}${quote}${after}`;
+    const oldTarget = resolve(dirname(source), value);
+    const target = planned.get(oldTarget) ?? oldTarget;
+    return `${before}${quote}${relativeSpecifier(destination, target)}${quote}${after}`;
+  };
+  return content
+    .replace(/(\brootDir\s*[:=]\s*)(['"])(\.[^'"]*)\2/g, replace)
+    .replace(/(\bpath\.resolve\(\s*__dirname\s*,\s*)(['"])(\.[^'"]*)\2(\s*\))/g, replace);
+}
+
+function rewriteHookExport(content: string, destination: string): string {
+  if (!/config[\\/]hooks[\\/]proxy\./.test(destination)) return content;
+  let next = content
+    .replace(/export\s+(?:async\s+)?function\s+(?:middleware|proxy)\b/g, match => match.replace(/(?:middleware|proxy)\b/, 'proxyHook'))
+    .replace(/export\s+(const|let|var)\s+(?:middleware|proxy)\b/g, 'export $1 proxyHook')
+    .replace(/export\s+default\s+((?:async\s+)?function)\s*(?:middleware|proxy)?\s*\(/g, 'export $1 proxyHook(')
+    .replace(/export\s+default\s+((?:async\s+)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>)/g, 'export const proxyHook = $1')
+    .replace(/export\s+default\s+(middleware|proxy)\s*;?/g, 'export { $1 as proxyHook };')
+    .replace(/export\s*\{\s*(middleware|proxy)\s*\}/g, 'export { $1 as proxyHook }');
+  if (!/export\s+(?:(?:async\s+)?function|const|let|var)\s+proxyHook\b/.test(next)
+    && !/export\s*\{[^}]*\bproxyHook\b[^}]*\}/.test(next)) {
+    throw new MigrateAnalysisError(`Refusing to rename ${pathFrom(dirname(dirname(dirname(destination))), destination)}: its middleware export shape is not recognized.`);
+  }
+  return next;
+}
+
+function rewriteHookImports(content: string): string {
+  const rewritten = content.replace(/import\s*\{\s*middleware\s*\}(\s*from\s*['"][^'"]*config\/hooks\/proxy[^'"]*['"])/g, 'import { proxyHook }$1');
+  return rewritten.includes('config/hooks/proxy')
+    ? rewritten.replace(/export\s*\{\s*middleware\s*\}/g, 'export { proxyHook }')
+    : rewritten;
+}
+
+function rewriteActiveThemeUse(content: string): string {
+  return content
+    .replace(/process\.env\.NEXT_PUBLIC_ACTIVE_THEME/g, 'undefined')
+    .replace(/NEXT_PUBLIC_ACTIVE_THEME/g, 'ROOT_FIRST_PROJECT');
+}
+
+function removeLegacyThemeProperty(content: string): string {
+  return content.replace(/\btheme\s*:\s*(['"])[^'"\n]+\1\s*,?\s*/g, '');
+}
+
+function removeActiveThemeFromExample(hostRoot: string): boolean {
+  const file = join(hostRoot, '.env.example');
+  if (!existsSync(file)) return false;
+  const original = readFileSync(file, 'utf8');
+  const next = original.replace(/^.*NEXT_PUBLIC_ACTIVE_THEME.*(?:\r?\n|$)/gm, '');
+  if (next === original) return false;
+  writeFileSync(file, next);
+  return true;
+}
+
+function removeEmptyAncestors(directory: string, stop: string): void {
+  let current = directory;
+  while (current !== stop && current.startsWith(`${stop}${sep}`)) {
+    try { rmdirSync(current); } catch { break; }
+    current = dirname(current);
+  }
+}
+
+function assertMoveRootsAreLocal(hostRoot: string, themeRoot: string, pluginsRoot: string): void {
+  const hostReal = realpathSync(hostRoot);
+  const candidates = [dirname(themeRoot), themeRoot, pluginsRoot];
+  if (existsSync(pluginsRoot)) {
+    for (const entry of readdirSync(pluginsRoot, { withFileTypes: true })) {
+      if (entry.isDirectory() || entry.isSymbolicLink()) candidates.push(join(pluginsRoot, entry.name));
+    }
+  }
+  for (const candidate of candidates) {
+    if (!existsSync(candidate)) continue;
+    const label = pathFrom(hostRoot, candidate);
+    const symbolic = lstatSync(candidate).isSymbolicLink();
+    const resolved = realpathSync(candidate);
+    const outside = resolved !== hostReal && !resolved.startsWith(`${hostReal}${sep}`);
+    if (symbolic || outside) {
+      const reason = symbolic ? 'is a symbolic link' : 'resolves outside the host root';
+      throw new MigrateAnalysisError(`Refusing to move ${label}: it ${reason} (${resolved}). Moving it would remove files from outside ${hostReal}.`);
+    }
+  }
+}
+
+function validateHookExports(plan: MovePlan): void {
+  for (const item of [...plan.moves, ...plan.duplicates]) {
+    if (/config[\\/]hooks[\\/]proxy\./.test(item.destination)) rewriteHookExport(readFileSync(item.source, 'utf8'), item.destination);
+  }
+}
+
+function isOtherThemeFile(file: string, themesRoot: string, selected: string): boolean {
+  if (!(file === themesRoot || file.startsWith(`${themesRoot}${sep}`))) return false;
+  const rel = pathFrom(themesRoot, file);
+  return rel !== '.' && rel.split('/')[0] !== selected;
+}
+
+function applyMove(repository: string, hostRoot: string, themeRoot: string, pluginsRoot: string, theme: string, plan: MovePlan): { moved: number; deduplicated: number; rewritten: number; envRemoved: boolean } {
+  const plannedItems = [...plan.moves, ...plan.duplicates];
+  const planned = new Map(plannedItems.map(item => [item.source, item.destination]));
+  const unmoved = new Set(plan.unmoved);
+  const duplicateByDestination = new Map(plan.duplicates.map(item => [item.destination, item]));
+  const files = filesIn(repository).filter(file => !isOtherThemeFile(file, join(hostRoot, 'contents', 'themes'), theme));
+  let rewritten = 0;
+  for (const file of files) {
+    if (plan.duplicates.some(item => item.source === file) || plan.collisions.some(item => item.source === file)) continue;
+    const buffer = readFileSync(file);
+    if (!isText(buffer)) continue;
+    const duplicate = duplicateByDestination.get(file);
+    const source = duplicate?.source ?? file;
+    const destination = planned.get(file) ?? file;
+    let next = rewriteLegacyPaths(buffer.toString('utf8'), source, destination, themeRoot, pluginsRoot, hostRoot, theme, planned, unmoved);
+    if (planned.has(file) || duplicate) {
+      next = rewriteMovedRelativeImports(next, source, destination, planned);
+      next = rewriteMovedDepthConfig(next, source, destination, planned);
+      next = rewriteHookExport(next, destination);
+    }
+    if (destination === file || destination.startsWith(`${hostRoot}${sep}`)) next = rewriteActiveThemeUse(next);
+    if (destination === file || destination.startsWith(`${hostRoot}${sep}`)) next = rewriteHookImports(next);
+    if (destination === join(hostRoot, 'nextspark.config.ts')) next = removeLegacyThemeProperty(next);
+    if (next !== buffer.toString('utf8')) {
+      writeFileSync(file, next);
+      rewritten++;
+    }
+  }
+  const envRemoved = removeActiveThemeFromExample(hostRoot);
+  for (const item of plan.moves) {
+    mkdirSync(dirname(item.destination), { recursive: true });
+    renameSync(item.source, item.destination);
+  }
+  for (const item of plan.duplicates) unlinkSync(item.source);
+  removeEmptyAncestors(themeRoot, dirname(themeRoot));
+  for (const plugin of childDirectories(pluginsRoot)) removeEmptyAncestors(join(pluginsRoot, plugin), pluginsRoot);
+  return { moved: plan.moves.length, deduplicated: plan.duplicates.length, rewritten, envRemoved };
+}
+
+function cleanWorkingTree(repository: string, untracked: string[]): boolean {
+  return gitSucceeds(repository, ['diff', '--quiet'])
+    && gitSucceeds(repository, ['diff', '--cached', '--quiet'])
+    && untracked.length === 0;
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function rollbackCommands(repository: string, plan: MovePlan): string[] {
+  const commands = [`git -C ${shellQuote(repository)} checkout -- .`];
+  const destinations = [...new Set(plan.moves.map(item => pathFrom(repository, item.destination)))].sort();
+  if (destinations.length > 0) commands.push(`git -C ${shellQuote(repository)} clean -fdx -- ${destinations.map(shellQuote).join(' ')}`);
+  return commands;
+}
+
+function printMoveSummary(plan: MovePlan, result: { moved: number; deduplicated: number; rewritten: number; envRemoved: boolean }, report: MigrateReport, hostRoot: string): void {
+  console.log('');
+  console.log('Migration complete.');
+  console.log(`  moved: ${result.moved} owned file(s); verified and deduplicated: ${result.deduplicated}`);
+  console.log(`  rewritten: ${result.rewritten} file(s)${result.envRemoved ? '; removed NEXT_PUBLIC_ACTIVE_THEME from .env.example' : ''}`);
+  console.log(`  did not move unknown files: ${paths(plan.unknown)}`);
+  console.log(`  did not move conflicting files (host source wins): ${paths(plan.collisions.map(item => pathFrom(hostRoot, item.source)) )}`);
+  console.log(`  other themes left untouched: ${report.activeTheme.themes.filter(item => item.name !== report.activeTheme.name).map(item => item.name).join(', ') || 'none'}`);
+  console.log('  Rollback commands were printed in the move plan above.');
+}
+
+export function migrateCommand(options: MigrateOptions): void {
   try {
     const report = reportFor(process.cwd());
-    if (options.json) {
-      const json = JSON.stringify(report).replace(/[\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
-      process.stdout.write(`${json}\n`);
+    if (options.dryRun) {
+      if (options.json) {
+        const json = JSON.stringify(report).replace(/[\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
+        process.stdout.write(`${json}\n`);
+      } else printReport(report);
+      return;
     }
-    else printReport(report);
+    if (options.json) throw new MigrateAnalysisError('--json is available only with --dry-run.');
+    printReport(report);
+    const repository = repositoryRoot(process.cwd());
+    if (!cleanWorkingTree(repository, report.untracked)) throw new MigrateAnalysisError('Refusing to move files on a dirty git tree. Commit, stash, or remove untracked files first.');
+    const theme = report.activeTheme.name;
+    const hostRoot = resolve(repository, report.hostRoot.path);
+    if (!theme) throw new MigrateAnalysisError('No active theme was found; set it in .env.example before migrating.');
+    const themeRoot = join(hostRoot, 'contents', 'themes', theme);
+    if (!existsSync(themeRoot)) throw new MigrateAnalysisError(`Active theme ${theme} was not found under contents/themes/.`);
+    const pluginsRoot = join(hostRoot, 'contents', 'plugins');
+    assertMoveRootsAreLocal(hostRoot, themeRoot, pluginsRoot);
+    const plan = planMove(hostRoot, themeRoot, pluginsRoot);
+    validateHookExports(plan);
+    const rollback = rollbackCommands(repository, plan);
+    section('Move plan', [
+      `owned files to move: ${plan.moves.length}; byte-identical duplicates verified: ${plan.duplicates.length}`,
+      `unknown files left in place: ${paths(plan.unknown)}`,
+      `host collisions left in place: ${paths(plan.collisions.map(item => pathFrom(hostRoot, item.source)) )}`,
+      `Rollback repository root: ${repository}`,
+      ...rollback,
+    ]);
+    if (!options.yes) {
+      if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to perform this move.');
+      process.stdout.write('Perform this move? [y/N] ');
+      const answer = readFileSync(0, 'utf8').trim().toLowerCase();
+      if (answer !== 'y' && answer !== 'yes') throw new MigrateAnalysisError('Migration cancelled.');
+    }
+    const result = applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme, plan);
+    printMoveSummary(plan, result, report, hostRoot);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not analyze this project.';
     console.error(`nextspark migrate: ${message}`);

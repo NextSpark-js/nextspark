@@ -174,12 +174,13 @@ program
   .description('Run health check on NextSpark project')
   .action(doctorCommand);
 
-// 0.x to 1.0 root-first migration. This first slice is intentionally read-only.
+// 0.x to 1.0 root-first migration.
 program
   .command('migrate')
-  .description('Report a 0.x project’s root-first migration risks (report mode only)')
+  .description('Move a 0.x project to the root-first source layout')
   .option('--dry-run', 'Produce the read-only migration report')
   .option('--json', 'Output the report as JSON (requires --dry-run)')
+  .option('-y, --yes', 'Perform the move after printing the report')
   .action(migrateCommand);
 
 // Database commands

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { before, test } from 'node:test'
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { access, lstat, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -343,7 +343,272 @@ test('migrate without --dry-run explains that the moving slice is not available'
   try {
     const result = run(root, [])
     assert.notEqual(result.status, 0)
-    assert.match(result.stderr, /only report mode exists yet/i)
+    assert.match(result.stderr, /rerun with --yes/i)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+async function moveFixture({
+  monorepo = false,
+  unknown = false,
+  collision = false,
+  middleware = 'export function middleware() { return undefined }\n',
+  duplicateImport = false,
+  unknownReference = false,
+}: {
+  monorepo?: boolean
+  unknown?: boolean
+  collision?: boolean
+  middleware?: string
+  duplicateImport?: boolean
+  unknownReference?: boolean
+} = {}): Promise<{ root: string, host: string }> {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-move-'))
+  await startRepository(root)
+  const host = monorepo ? 'web' : '.'
+  const atHost = (file: string) => host === '.' ? file : join(host, file)
+  await write(root, atHost('package.json'), JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '^16.0.0' }, scripts: { check: 'node scripts/check.mjs contents/themes/acme' } }, null, 2))
+  await write(root, atHost('next.config.mjs'), 'export default {}\n')
+  await write(root, atHost('nextspark.config.ts'), "export default { theme: 'acme', plugins: ['local'] }\n")
+  await write(root, atHost('.env.example'), 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
+  await write(root, atHost('tsconfig.json'), '{"include":["contents/themes/acme/**/*.ts"],"compilerOptions":{"paths":{"@/*":["contents/themes/acme/*"]}}}\n')
+  await write(root, atHost('tsconfig.cypress.json'), '{"include":["contents/themes/acme/tests/cypress/**/*.ts"]}\n')
+  await write(root, atHost('pnpm-workspace.yaml'), "packages:\n  - 'contents/themes/*'\n  - 'contents/plugins/*'\n")
+  await write(root, atHost('.gitignore'), 'contents/themes/acme/tests/output\n')
+  await write(root, atHost('scripts/check.mjs'), "const theme = '../../../contents/themes/acme'\n")
+  const buttonSource = duplicateImport
+    ? "import { Icon } from './Icon'\nexport const Button = Icon\n"
+    : unknownReference
+      ? "import notes from '../docs/notes'\nexport const loadNotes = () => import(`../docs/notes`)\nexport const Button = notes\n"
+      : 'export const Button = true\n'
+  await write(root, atHost('contents/themes/acme/components/Button.ts'), buttonSource)
+  await write(root, atHost('contents/themes/acme/templates/page.tsx'), "import { Button } from '../components/Button'\nexport default Button\n")
+  await write(root, atHost('contents/themes/acme/styles/globals.css'), '@import "../components/Button.css";\n')
+  await write(root, atHost('contents/themes/acme/components/Button.css'), '.button {}\n')
+  await write(root, atHost('contents/themes/acme/tests/jest.config.cjs'), "module.exports = { rootDir: '../../../../' }\n")
+  await write(root, atHost('contents/themes/acme/middleware.ts'), middleware)
+  await write(root, atHost('contents/themes/acme/lib/use-hook.ts'), "import { middleware } from '../middleware'\nexport { middleware }\n")
+  await write(root, atHost('contents/plugins/local/index.ts'), "export { default as Plugin } from '@/contents/plugins/local/Plugin'\n")
+  await write(root, atHost('contents/plugins/local/Plugin.ts'), 'export default true\n')
+  if (unknown) await write(root, atHost('contents/themes/acme/keep-me.txt'), 'user-owned unknown\n')
+  if (duplicateImport) {
+    await write(root, atHost('contents/themes/acme/components/Icon.ts'), 'export const Icon = true\n')
+    await write(root, atHost('components/Icon.ts'), 'export const Icon = true\n')
+  }
+  if (unknownReference) {
+    await write(root, atHost('contents/themes/acme/docs/notes.ts'), 'export default "notes"\n')
+    await write(root, atHost('scripts/read-notes.mjs'), "const notes = '@/contents/themes/acme/docs/notes.ts'\n")
+  }
+  if (collision) {
+    await write(root, atHost('contents/themes/acme/public/same.txt'), 'same\n')
+    await write(root, atHost('public/same.txt'), 'same\n')
+    await write(root, atHost('contents/themes/acme/README.md'), 'theme README\n')
+    await write(root, atHost('README.md'), 'host README\n')
+  }
+  if (monorepo) {
+    await write(root, 'package.json', JSON.stringify({ name: 'repo', packageManager: 'pnpm@9.0.0' }))
+    await write(root, 'pnpm-workspace.yaml', "packages:\n  - 'web'\n  - 'packages/*'\n")
+    await write(root, 'packages/tokens/package.json', JSON.stringify({ name: '@fixture/tokens' }))
+    await write(root, 'packages/tokens/scripts/read.mjs', "readFileSync('web/contents/themes/acme/styles/globals.css')\n")
+  }
+  await commitFixture(root)
+  return { root, host: join(root, host) }
+}
+
+async function symlinkedMoveFixture(link: 'themes' | 'plugins'): Promise<{ root: string, host: string, sharedFile: string }> {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-symlink-'))
+  await startRepository(root)
+  const host = join(root, 'apps/dev')
+  await write(root, 'package.json', JSON.stringify({ name: 'repo', packageManager: 'pnpm@9.0.0' }))
+  await write(root, 'apps/dev/package.json', JSON.stringify({ name: 'dev', dependencies: { next: '^16.0.0' } }))
+  await write(root, 'apps/dev/next.config.mjs', 'export default {}\n')
+  await write(root, 'apps/dev/.env.example', 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
+  await write(root, 'themes/acme/components/Button.ts', 'export const Button = true\n')
+  await write(root, 'plugins/local/Plugin.ts', 'export default true\n')
+  await mkdir(join(host, 'contents'), { recursive: true })
+  if (link === 'themes') {
+    await symlink('../../../themes', join(host, 'contents/themes'))
+    await mkdir(join(host, 'contents/plugins/local'), { recursive: true })
+    await write(root, 'apps/dev/contents/plugins/local/Plugin.ts', 'export default true\n')
+  } else {
+    await mkdir(join(host, 'contents/themes/acme/components'), { recursive: true })
+    await write(root, 'apps/dev/contents/themes/acme/components/Button.ts', 'export const Button = true\n')
+    await symlink('../../../plugins', join(host, 'contents/plugins'))
+  }
+  await commitFixture(root)
+  return {
+    root,
+    host,
+    sharedFile: link === 'themes' ? join(root, 'themes/acme/components/Button.ts') : join(root, 'plugins/local/Plugin.ts'),
+  }
+}
+
+test('migrate --yes moves an intact legacy project and rewrites its source and tooling', async () => {
+  const { root } = await moveFixture()
+  try {
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /Migration complete/)
+    assert.match(result.stdout, /git -C .* checkout -- \./)
+    assert.equal(await readFile(join(root, 'components/Button.ts'), 'utf8'), 'export const Button = true\n')
+    assert.match(await readFile(join(root, 'templates/page.tsx'), 'utf8'), /\.\.\/components\/Button/)
+    assert.match(await readFile(join(root, 'config/hooks/proxy.ts'), 'utf8'), /export function proxyHook/)
+    const hookUse = await readFile(join(root, 'lib/use-hook.ts'), 'utf8')
+    assert.match(hookUse, /proxyHook/)
+    assert.doesNotMatch(hookUse, /middleware/)
+    assert.match(await readFile(join(root, 'plugins/local/index.ts'), 'utf8'), /@\/plugins\/local/)
+    assert.doesNotMatch(await readFile(join(root, 'tsconfig.json'), 'utf8'), /contents\/themes/)
+    assert.doesNotMatch(await readFile(join(root, 'tsconfig.cypress.json'), 'utf8'), /contents\/themes/)
+    assert.doesNotMatch(await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8'), /contents\/themes/)
+    assert.doesNotMatch(await readFile(join(root, '.gitignore'), 'utf8'), /contents\/themes/)
+    assert.doesNotMatch(await readFile(join(root, 'package.json'), 'utf8'), /contents\/themes/)
+    assert.doesNotMatch(await readFile(join(root, 'scripts/check.mjs'), 'utf8'), /contents\/themes/)
+    assert.equal((await readFile(join(root, '.env.example'), 'utf8')).includes('NEXT_PUBLIC_ACTIVE_THEME'), false)
+    assert.doesNotMatch(await readFile(join(root, 'nextspark.config.ts'), 'utf8'), /theme:/)
+    assert.match(await readFile(join(root, 'tests/jest.config.cjs'), 'utf8'), /rootDir: '\.\.'/)
+    assert.equal((await lstat(join(root, 'contents/themes'))).isDirectory(), true)
+    assert.equal((await lstat(join(root, 'contents/plugins'))).isDirectory(), true)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+for (const [shape, middleware] of [
+  ['named function', 'export function middleware(req: Request) { return req }\n'],
+  ['named async function', 'export async function middleware(req: Request) { return req }\n'],
+  ['const arrow', 'export const middleware = (req: Request) => req\n'],
+  ['const async arrow', 'export const middleware = async (req: Request) => req\n'],
+  ['const function expression', 'export const middleware = function (req: Request) { return req }\n'],
+  ['let arrow', 'export let middleware = (req: Request) => req\n'],
+  ['let function expression', 'export let middleware = function (req: Request) { return req }\n'],
+  ['default named function', 'export default function middleware(req: Request) { return req }\n'],
+  ['default async named function', 'export default async function middleware(req: Request) { return req }\n'],
+  ['default anonymous function', 'export default function (req: Request) { return req }\n'],
+  ['default arrow', 'export default (req: Request) => req\n'],
+  ['default async arrow', 'export default async (req: Request) => req\n'],
+  ['default identifier', 'const middleware = (req: Request) => req\nexport default middleware\n'],
+] as const) {
+  test(`migrate rewrites the ${shape} middleware export to proxyHook`, async () => {
+    const { root } = await moveFixture({ middleware })
+    try {
+      const result = run(root, ['--yes'])
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+      const proxy = await readFile(join(root, 'config/hooks/proxy.ts'), 'utf8')
+      assert.match(proxy, /export (?:(?:async )?(?:function|const|let) proxyHook\b|\{ middleware as proxyHook \})/)
+      assert.doesNotMatch(proxy, /export\s+default/)
+      assert.doesNotMatch(proxy, /export\s+(?:const|let|function|async function)\s+middleware\b/)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+}
+
+test('migrate refuses an unrecognized middleware export before changing the tree', async () => {
+  const middleware = 'const middleware = withAuth((req: Request) => req)\nexport default withLogging(middleware)\n'
+  const { root } = await moveFixture({ middleware })
+  try {
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /middleware export shape is not recognized/i)
+    assert.equal(await readFile(join(root, 'contents/themes/acme/middleware.ts'), 'utf8'), middleware)
+    await assert.rejects(access(join(root, 'config/hooks/proxy.ts')))
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate resolves relative imports of byte-identical duplicates to the existing destination', async () => {
+  const { root } = await moveFixture({ duplicateImport: true })
+  try {
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(await readFile(join(root, 'components/Button.ts'), 'utf8'), /from '\.\/Icon'/)
+    await assert.rejects(access(join(root, 'contents/themes/acme/components/Icon.ts')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate preserves references to unknown files and fixes moved files imports back to them', async () => {
+  const { root } = await moveFixture({ unknownReference: true })
+  try {
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'scripts/read-notes.mjs'), 'utf8'), "const notes = '@/contents/themes/acme/docs/notes.ts'\n")
+    const button = await readFile(join(root, 'components/Button.ts'), 'utf8')
+    assert.match(button, /from '\.\.\/contents\/themes\/acme\/docs\/notes'/)
+    assert.match(button, /import\(`\.\.\/contents\/themes\/acme\/docs\/notes`\)/)
+    assert.equal(await readFile(join(root, 'contents/themes/acme/docs/notes.ts'), 'utf8'), 'export default "notes"\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate preserves unknown files and verifies byte-identical collisions without deleting host source', async () => {
+  const { root } = await moveFixture({ unknown: true, collision: true })
+  try {
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /keep-me\.txt/)
+    assert.equal(await readFile(join(root, 'contents/themes/acme/keep-me.txt'), 'utf8'), 'user-owned unknown\n')
+    assert.equal(await readFile(join(root, 'public/same.txt'), 'utf8'), 'same\n')
+    await assert.rejects(readFile(join(root, 'contents/themes/acme/public/same.txt'), 'utf8'))
+    assert.equal(await readFile(join(root, 'README.md'), 'utf8'), 'host README\n')
+    assert.equal(await readFile(join(root, 'contents/themes/acme/README.md'), 'utf8'), 'theme README\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+for (const link of ['themes', 'plugins'] as const) {
+  test(`migrate refuses a symlinked contents/${link} tree before moving shared repository files`, async () => {
+    const { root, host, sharedFile } = await symlinkedMoveFixture(link)
+    try {
+      const result = run(host, ['--yes'])
+      assert.notEqual(result.status, 0)
+      assert.match(result.stderr, new RegExp(`contents/${link}.*(?:symbolic link|outside the host root)`, 'i'))
+      await access(sharedFile)
+      await assert.rejects(access(link === 'themes' ? join(host, 'components/Button.ts') : join(host, 'plugins/local/Plugin.ts')))
+      assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+}
+
+test('migrate moves only the selected monorepo host and rewrites sibling helper paths', async () => {
+  const { root, host } = await moveFixture({ monorepo: true })
+  try {
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(host, 'styles/globals.css'), 'utf8'), '@import "../components/Button.css";\n')
+    assert.doesNotMatch(await readFile(join(root, 'packages/tokens/scripts/read.mjs'), 'utf8'), /contents\/themes\/acme/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate refuses a dirty tree and its documented rollback restores tracked and untracked move output', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'untracked.txt', 'dirty\n')
+    const dirty = run(root, ['--yes'])
+    assert.notEqual(dirty.status, 0)
+    assert.match(dirty.stderr, /dirty git tree/)
+    await rm(join(root, 'untracked.txt'))
+    const moved = run(root, ['--yes'])
+    assert.equal(moved.status, 0, `${moved.stdout}\n${moved.stderr}`)
+    const rollbackCommands = moved.stdout
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.startsWith('git -C '))
+    assert.equal(rollbackCommands.length, 2, moved.stdout)
+    execFileSync('/bin/sh', ['-c', rollbackCommands.join('\n')], { cwd: join(root, 'contents/themes/acme'), stdio: 'ignore' })
+    assert.equal(await readFile(join(root, 'contents/themes/acme/components/Button.ts'), 'utf8'), 'export const Button = true\n')
+    await assert.rejects(access(join(root, 'components/Button.ts')))
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
   } finally {
     await rm(root, { recursive: true, force: true })
   }
