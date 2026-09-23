@@ -19,8 +19,14 @@ export * from './config-loader'
 export * from './config-sync'
 
 // NPM Distribution configuration (nextspark.config.ts)
-export { defineConfig } from './nextspark-types'
-export type { NextSparkConfig } from './nextspark-types'
+export { defineConfig, validateNextSparkConfig } from './nextspark-types'
+export type {
+  NextSparkConfig,
+  NextSparkConfigValidationResult,
+  NextSparkFeatureConfig,
+  NextSparkTemplateOrigin,
+  ResolvedNextSparkConfig,
+} from './nextspark-types'
 
 // NOTE: loadConfig is now in core/scripts/build/config-loader.mjs
 // It's a build-time utility (uses dynamic imports), not a runtime export
