@@ -34,6 +34,25 @@ node node_modules/@nextsparkjs/core/scripts/build/update-tsconfig.mjs
 node node_modules/@nextsparkjs/core/scripts/db/run-migrations.mjs
 ```
 
+### 0.x root-first migration report
+
+Before moving a 0.x project to the 1.0 root-first layout, run the read-only
+inventory from the repository root (or any directory inside it):
+
+```bash
+pnpm exec nextspark migrate --dry-run
+pnpm exec nextspark migrate --dry-run --json
+```
+
+The report resolves the Next.js host before scanning, so a web host under
+`web/` is not mistaken for the monorepo root. It inventories version drift,
+the active theme and plugins, template customizations, legacy imports, tooling
+paths, root-name and file collisions, untracked files, and sibling workspace
+references. It reads `NEXT_PUBLIC_ACTIVE_THEME` from the environment or
+`.env.example`; it does not read private `.env` files. The moving mode is not
+available in this release: `pnpm exec nextspark migrate` exits non-zero until a
+later migration slice adds it.
+
 ## CLI Commands
 
 The installed CLI currently exposes:
@@ -53,6 +72,7 @@ Commands:
   db:migrate        Run database migrations
   db:seed           Seed sample data
   sync:app          Sync the generated app directory
+  migrate           Report 0.x root-first migration risks (requires --dry-run)
 
 Options:
   -h, --help    Show help message

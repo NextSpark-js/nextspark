@@ -12,7 +12,9 @@ guardOutput();
 
 // Keep dotenv's banner off stdout: `skills list --json` is a machine-readable
 // contract and must not be prefixed by unrelated startup output.
-config({ quiet: true });
+// Migration reporting deliberately reads only .env.example (or an already-set
+// environment variable), never a project's private .env files.
+if (process.argv[2] !== 'migrate') config({ quiet: true });
 import { buildCommand } from './commands/build.js';
 import { generateCommand } from './commands/generate.js';
 import { prepareCommand } from './commands/prepare.js';
@@ -27,6 +29,7 @@ import { syncAppCommand } from './commands/sync-app.js';
 import { setupAICommand } from './commands/setup-ai.js';
 import { syncAICommand } from './commands/sync-ai.js';
 import { skillsGetCommand, skillsListCommand } from './commands/skills.js';
+import { migrateCommand } from './commands/migrate.js';
 
 // Read version from package.json dynamically
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
@@ -170,6 +173,14 @@ program
   .command('doctor')
   .description('Run health check on NextSpark project')
   .action(doctorCommand);
+
+// 0.x to 1.0 root-first migration. This first slice is intentionally read-only.
+program
+  .command('migrate')
+  .description('Report a 0.x project’s root-first migration risks (report mode only)')
+  .option('--dry-run', 'Produce the read-only migration report')
+  .option('--json', 'Output the report as JSON (requires --dry-run)')
+  .action(migrateCommand);
 
 // Database commands
 const db = program
