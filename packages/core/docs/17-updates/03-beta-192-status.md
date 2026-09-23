@@ -10,8 +10,8 @@ The stable target remains existing web hosts. Generated and mobile hosts remain 
 | --- | --- | --- |
 | [#201](https://github.com/NextSpark-js/nextspark/issues/201) | `pnpm exec nextspark skills` provides an offline bundled catalog with safe list/get commands; generated projects receive small, non-overwriting onboarding pointers, while the legacy AI workflow remains an explicit opt-in. | Full skill discovery and catalog, an evaluation baseline, and legacy ownership/migration remain pending. |
 | [#202](https://github.com/NextSpark-js/nextspark/issues/202) | Runtime readiness gates supported authentication routes without exposing diagnostics; login, signup, invitation signup, and recovery render safe unavailable or fail-closed states when their runtime capability is absent. `pnpm exec nextspark prepare --production` and `pnpm exec nextspark build` fail before `next build` when the build environment proves no login method can authenticate, with explicit runtime-only declarations and one documented bypass; production startup logs a safe error when none can. The interactive project wizard collects a Resend and/or Google provider (validated with the same rules, written only to `.env`) or marks the project local-only; `--yes`, quick mode and presets postpone. A fresh wizard project now receives `instrumentation.ts`, which calls the startup check; `pnpm exec nextspark sync:app` creates it for an existing host that doesn't have one yet. | Validate a real provider end-to-end. Projects whose build script runs `next build` directly skip the build check. Existing hosts must apply the [documented readiness and invitation-route upgrade guards](../06-authentication/12-passwordless-preset.md#upgrading-existing-hosts); a missing route makes the new shared UI fail closed. A host with its own customized `instrumentation.ts` still merges in the [startup check](../06-authentication/12-passwordless-preset.md#startup-re-validation) by hand, since `sync:app` never overwrites a file it did not write. |
-| [#203](https://github.com/NextSpark-js/nextspark/issues/203) | `pnpm exec nextspark prepare` is shared by `pnpm exec nextspark build`, `pnpm exec nextspark registry:build`, and one-shot `pnpm exec nextspark generate`, with startup/failure guards and `pnpm exec nextspark prepare --watch` cancellation handling before downstream work starts. | Experimental generated-host roadmap work, including generated/mobile host validation, remains pending. |
-| [#204](https://github.com/NextSpark-js/nextspark/issues/204) | The merged theme-proxy boundary preserves core access checks around theme results and fails unsafe rewrite targets closed. | Applicable [#204](https://github.com/NextSpark-js/nextspark/issues/204) follow-up gates and broader host validation remain pending. |
+| [#203](https://github.com/NextSpark-js/nextspark/issues/203) | `pnpm exec nextspark prepare` is shared by `pnpm exec nextspark build`, `pnpm exec nextspark registry:build`, and one-shot `pnpm exec nextspark generate`, with startup/failure guards and `pnpm exec nextspark prepare --watch` cancellation handling before downstream work starts. `pnpm exec nextspark migrate --dry-run` reports, without writing anything, what a 0.x project would face when moving to the 1.0 root-first layout: host root, version drift, customized `app/` and root files, tooling configs pointing into `contents/`, collisions with names Next reserves, and untracked files a move would risk. | Experimental generated-host roadmap work, including generated/mobile host validation, remains pending. |
+| [#204](https://github.com/NextSpark-js/nextspark/issues/204) | The merged theme-proxy boundary preserves core access checks around theme results and fails unsafe rewrite targets closed. Gate G3 now has an automated check: `pnpm pkg:verify-tarballs` runs between packing and publishing and fails when a packed package is missing a declared entry point, export target, type or binary, keeps a `workspace:`/`link:`/`file:` protocol or an unparseable internal version, or ships a maintainer-local path, an `.env` file, key material or a cache. A G1 dependency triage is recorded in the release evidence; its applicable findings are fixed below. | Applicable [#204](https://github.com/NextSpark-js/nextspark/issues/204) follow-up gates and broader host validation remain pending. |
 
 ## Upgrade and validation status
 
@@ -23,6 +23,15 @@ A post-commit tarball clean-install and beta.191→beta.192 upgrade validation r
 - A beta.191 host upgraded to the tarballs builds and starts after `pnpm exec nextspark sync:app` and the documented route guards. `update-core` only re-pins an `@nextsparkjs/*` package already listed in the project's `dependencies`/`devDependencies`; a beta.191 (or earlier) project never listed `@nextsparkjs/testing` there, since it arrived transitively through core's own dependency. After upgrading, a project whose Cypress tests import it (the starter theme's `BasePOM`, `DashboardEntityPOM`, `ApiInterceptor`, or a project's own tests) must add `@nextsparkjs/testing` to its own `devDependencies` by hand, at the same version as `@nextsparkjs/core` -- from the registry once beta.192 is published, or as a `file:` local tarball while testing against unpublished tarballs.
 
 An upgrade from the registry after publication is expected to need only that one hand-added devDependency, never a `pnpm.overrides` entry. This has not been verified, and that check remains pending. This status is not a release certification.
+
+## Also in this prerelease
+
+Fixes found while validating the release, each with an independent cross-family review:
+
+- **Client JS per route (#192).** A route a project overrides used to resolve its template at runtime through a registry indexed by a variable, so every template stayed reachable from it. The generator now emits a scope with a direct import, without rewriting core's route file, and routes that genuinely resolve by a computed path keep bounded per-family scopes. Against beta.191 an overridden route reached 5 client chunks against 2 for a project-only route; on this line both are already 2, so this is conformance rather than a further reduction. `pnpm perf:template-routes` asserts each scope's member set.
+- **Calendar remounts (#205).** The calendar passed three components defined inline in its render to DayPicker, so every parent render remounted the whole day grid and re-ran its focus effects. They are module-level now.
+- **Cypress type-checking in generated projects.** The shipped `tsconfig.cypress.json` could not resolve package `exports` subpaths.
+- **Bundled themes and plugins.** Creating a project with the bundled `starter` theme tried to fetch it from the registry and crashed; bundled names are no longer fetched, and an unknown name reports the valid options.
 
 ## Dependency security floors (G1)
 
@@ -44,3 +53,21 @@ The G3 release-gate tarball checker (`pnpm pkg:verify-tarballs`) found several `
 - `@nextsparkjs/core`: removed `./cypress-support` (Cypress support code moved to `@nextsparkjs/testing`; import from that package instead).
 - `@nextsparkjs/ui`: removed `./variants/*` (no `src/variants/` source has ever shipped).
 - `@nextsparkjs/cli`: removed `main`/`types` — the package is bin-only (`nextspark` via `bin/`); there is no supported programmatic `import '@nextsparkjs/cli'` entry point.
+
+## Verification of this line
+
+On the final commit of this prerelease, on this machine:
+
+| Suite | Result |
+| --- | --- |
+| CLI | 331 passing, 1 unchanged skip |
+| Core Node | 272 passing |
+| Core Jest | 3,962 passing, 9 unchanged skips, 196 suites |
+| Registry scripts | 271 passing |
+| `create-nextspark-app` | all passing |
+| Core type-check | clean |
+| Public package versions | all 16 at `0.1.0-beta.192` |
+
+A fresh project created from the packed tarballs installs, migrates, builds and starts without manual steps, and a beta.191 host upgrades after `pnpm exec nextspark sync:app` and the documented route guards.
+
+This is not a release certification: no push, tag or publication has been made, and the pending items above still stand.
