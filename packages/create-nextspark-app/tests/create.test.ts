@@ -32,20 +32,26 @@ while [ "$dir" != "/" ]; do
   dir=$(dirname "$dir")
 done
 case "$1" in
-  --version) echo "$version" ;;
-  add) echo "$@" > "$FAKE_PNPM_ADD_LOG"; mkdir -p node_modules/@nextsparkjs/core; exit "\${FAKE_PNPM_ADD_EXIT:-0}" ;;
+  --version) echo "\${FAKE_PNPM_VERSION_OUTPUT:-$version}" ;;
+  add) echo "$version $@" > "$FAKE_PNPM_ADD_LOG"; mkdir -p node_modules/@nextsparkjs/core; exit "\${FAKE_PNPM_ADD_EXIT:-0}" ;;
 esac
 `
 
 interface Scenario {
   /** The pnpm the directory create-nextspark-app starts from pins with `packageManager`. */
   callerPnpm: string
-  /** The pnpm every other directory resolves, the new project's included. */
+  /** The pnpm resolved from the new project's nearest packageManager ancestor. */
   projectPnpm: string
+  /** Output to return only for `pnpm --version`, to exercise failed version detection. */
+  versionOutput?: string
   /** The exit code of `pnpm add`. */
   addExit?: number
   /** Extra @nextsparkjs/* tarballs dropped in .packages/, beyond the always-present core/cli/ui ones. */
   extraTarballs?: string[]
+  /** Tarballs initially present in .packages/. */
+  tarballs?: string[]
+  /** Inspect files after createProject rejects and before the fixture is removed. */
+  onCreateFailure?: (project: string, addLog: string) => void
 }
 
 interface Created {
@@ -59,6 +65,8 @@ interface Created {
   onlyBuiltDependencies: string[]
   /** What `pnpm add` was asked to install, flags included. */
   added: string[]
+  /** The pnpm version that actually ran `pnpm add`. */
+  installingPnpm: string
   /** Every line createProject printed with console.log, in order. */
   printed: string[]
 }
@@ -77,7 +85,22 @@ function yamlEntries(yaml: string, key: string, pattern: RegExp): string[] {
   return entries
 }
 
-async function create({ callerPnpm, projectPnpm, addExit = 0, extraTarballs = [] }: Scenario): Promise<Created> {
+/** The string values in a top-level YAML mapping whose entries are quoted. */
+function yamlMapping(yaml: string, key: string): Record<string, string> {
+  const lines = yaml.split('\n')
+  const start = lines.indexOf(`${key}:`)
+  if (start === -1) return {}
+  const entries: Record<string, string> = {}
+  for (const line of lines.slice(start + 1)) {
+    if (line === '' || line.startsWith('#')) continue
+    if (!line.startsWith(' ')) break
+    const match = line.match(/^  '([^']+)': '([^']+)'$/)
+    if (match) entries[match[1]] = match[2]
+  }
+  return entries
+}
+
+async function create({ callerPnpm, projectPnpm, versionOutput, addExit = 0, extraTarballs = [], tarballs = TARBALLS, onCreateFailure }: Scenario): Promise<Created> {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'create-nextspark-app-')))
   const bin = path.join(root, 'bin')
   const caller = path.join(root, 'caller')
@@ -89,7 +112,11 @@ async function create({ callerPnpm, projectPnpm, addExit = 0, extraTarballs = []
   fs.writeFileSync(path.join(bin, 'npx'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
   fs.mkdirSync(path.join(caller, '.packages'), { recursive: true })
   fs.writeFileSync(path.join(caller, 'package.json'), JSON.stringify({ name: 'caller', packageManager: `pnpm@${callerPnpm}` }))
-  for (const tarball of [...TARBALLS, ...extraTarballs]) fs.writeFileSync(path.join(caller, '.packages', tarball), '')
+  // The project is a sibling of the caller. Its ancestor intentionally pins a
+  // different pnpm, as Corepack does when an app is created outside a monorepo.
+  fs.mkdirSync(path.dirname(project), { recursive: true })
+  fs.writeFileSync(path.join(path.dirname(project), 'package.json'), JSON.stringify({ name: 'projects', packageManager: `pnpm@${projectPnpm}` }))
+  for (const tarball of [...tarballs, ...extraTarballs]) fs.writeFileSync(path.join(caller, '.packages', tarball), '')
 
   const previousCwd = process.cwd()
   const previousPath = process.env.PATH
@@ -98,11 +125,18 @@ async function create({ callerPnpm, projectPnpm, addExit = 0, extraTarballs = []
   console.log = (...args: unknown[]) => { printed.push(args.map(String).join(' ')) }
   process.chdir(caller)
   process.env.PATH = `${bin}${path.delimiter}${previousPath}`
-  process.env.FAKE_PNPM_DEFAULT_VERSION = projectPnpm
+  process.env.FAKE_PNPM_DEFAULT_VERSION = '0.0.0'
+  if (versionOutput === undefined) delete process.env.FAKE_PNPM_VERSION_OUTPUT
+  else process.env.FAKE_PNPM_VERSION_OUTPUT = versionOutput
   process.env.FAKE_PNPM_ADD_LOG = addLog
   process.env.FAKE_PNPM_ADD_EXIT = String(addExit)
   try {
-    await createProject({ projectName: 'my-app', projectPath: project })
+    try {
+      await createProject({ projectName: 'my-app', projectPath: project })
+    } catch (error) {
+      onCreateFailure?.(project, addLog)
+      throw error
+    }
 
     const workspaceYaml = fs.readFileSync(path.join(project, 'pnpm-workspace.yaml'), 'utf8')
     return {
@@ -111,7 +145,8 @@ async function create({ callerPnpm, projectPnpm, addExit = 0, extraTarballs = []
       packages: yamlEntries(workspaceYaml, 'packages', /^ {2}- '([^']+)'$/),
       allowBuilds: yamlEntries(workspaceYaml, 'allowBuilds', /^ {2}'([^']+)': true$/),
       onlyBuiltDependencies: yamlEntries(workspaceYaml, 'onlyBuiltDependencies', /^ {2}- '([^']+)'$/),
-      added: fs.readFileSync(addLog, 'utf8').trim().split(/\s+/).slice(1),
+      added: fs.readFileSync(addLog, 'utf8').trim().split(/\s+/).slice(2),
+      installingPnpm: fs.readFileSync(addLog, 'utf8').trim().split(/\s+/)[0],
       printed,
     }
   } finally {
@@ -119,6 +154,7 @@ async function create({ callerPnpm, projectPnpm, addExit = 0, extraTarballs = []
     process.env.PATH = previousPath
     console.log = previousLog
     delete process.env.FAKE_PNPM_DEFAULT_VERSION
+    delete process.env.FAKE_PNPM_VERSION_OUTPUT
     delete process.env.FAKE_PNPM_ADD_LOG
     delete process.env.FAKE_PNPM_ADD_EXIT
     fs.rmSync(root, { recursive: true, force: true })
@@ -160,7 +196,7 @@ function packagesWithInstallScripts(): string[] {
   return [...names].sort()
 }
 
-test('the pnpm that creates the project does not change the allowlist it writes', async () => {
+test('the pnpm that installs the project chooses the local ui override placement', async () => {
   const scenarios: Scenario[] = [
     { callerPnpm: '9.0.0', projectPnpm: '9.0.0' },
     { callerPnpm: '9.0.0', projectPnpm: '11.17.0' },
@@ -168,23 +204,79 @@ test('the pnpm that creates the project does not change the allowlist it writes'
     { callerPnpm: '11.17.0', projectPnpm: '10.34.5' },
     { callerPnpm: '11.17.0', projectPnpm: '11.17.0' },
   ]
-  const yamls = new Set<string>()
+  const expectedUiOverride = 'file:../../caller/.packages/nextsparkjs-ui-0.1.0-beta.189.tgz'
 
   for (const scenario of scenarios) {
     const label = `created with pnpm ${scenario.projectPnpm} from a caller on ${scenario.callerPnpm}`
-    const { packageJson, workspaceYaml, packages, allowBuilds, onlyBuiltDependencies } = await create(scenario)
+    const { packageJson, workspaceYaml, packages, allowBuilds, onlyBuiltDependencies, added, installingPnpm } = await create(scenario)
 
-    assert.equal(packageJson.pnpm, undefined, `${label}: pnpm 11 ignores the pnpm field and warns about it on every command`)
+    assert.equal(installingPnpm, scenario.projectPnpm, `${label}: pnpm add runs the pnpm resolved for projectPath, not the caller's pnpm`)
     assert.deepEqual(packages, ['contents/themes/*', 'contents/plugins/*'], `${label}: pnpm 9 refuses a pnpm-workspace.yaml without packages`)
     assert.ok(allowBuilds.includes('@nextsparkjs/core'), `${label}: allowBuilds is ${allowBuilds.join(', ')}`)
     assert.ok(allowBuilds.includes(coreTarballSpec), `${label}: expected ${coreTarballSpec} in allowBuilds`)
     assert.deepEqual(onlyBuiltDependencies, allowBuilds, `${label}: pnpm 10 reads onlyBuiltDependencies`)
+    assert.ok(
+      added.some(entry => entry.endsWith('/nextsparkjs-ui-0.1.0-beta.189.tgz')),
+      `${label}: @nextsparkjs/ui is installed from its local tarball: pnpm add ${added.join(' ')}`
+    )
+    assert.ok(
+      packageJson.pnpm === undefined || typeof packageJson.pnpm === 'object',
+      `${label}: pnpm config is absent or an override object`
+    )
+
+    const packageOverrides = (packageJson.pnpm as { overrides?: Record<string, string> } | undefined)?.overrides
+    const workspaceOverrides = yamlMapping(workspaceYaml, 'overrides')
+    if (Number.parseInt(scenario.projectPnpm, 10) < 11) {
+      assert.deepEqual(packageOverrides, { '@nextsparkjs/ui': expectedUiOverride }, `${label}: pnpm 9 and 10 read overrides from package.json`)
+      assert.deepEqual(workspaceOverrides, {}, `${label}: pnpm 9 does not read workspace overrides`)
+    } else {
+      assert.equal(packageJson.pnpm, undefined, `${label}: pnpm 11 ignores package.json.pnpm and warns about it on every command`)
+      assert.deepEqual(workspaceOverrides, { '@nextsparkjs/ui': expectedUiOverride }, `${label}: pnpm 11 reads overrides from pnpm-workspace.yaml`)
+    }
     assert.match(workspaceYaml, /^minimumReleaseAge: 1440$/m, `${label}: pnpm 11's one-day release-age policy is declared`)
     assert.match(workspaceYaml, /^minimumReleaseAgeStrict: false$/m, `${label}: pnpm 11 keeps the declared policy lenient`)
-    yamls.add(workspaceYaml)
   }
+})
 
-  assert.equal(yamls.size, 1, 'the pnpm that creates the project changes what it writes')
+test('an unparseable pnpm version aborts local-tarball creation instead of guessing an override location', async () => {
+  await assert.rejects(
+    create({
+      callerPnpm: '9.0.0',
+      projectPnpm: '11.17.0',
+      versionOutput: 'not a pnpm version',
+      onCreateFailure(project, addLog) {
+        assert.equal(fs.existsSync(path.join(project, 'package.json')), false, 'no package.json override is written when pnpm is unknown')
+        assert.equal(fs.existsSync(path.join(project, 'pnpm-workspace.yaml')), false, 'no workspace override is written when pnpm is unknown')
+        assert.equal(fs.existsSync(addLog), false, 'pnpm add is not attempted with an unknown pnpm version')
+      },
+    }),
+    /Could not determine the pnpm version that will install this project/
+  )
+})
+
+test('without local tarballs, the project writes no pnpm override configuration', async () => {
+  const { packageJson, workspaceYaml } = await create({
+    callerPnpm: '11.17.0',
+    projectPnpm: '11.17.0',
+    tarballs: [],
+  })
+
+  assert.equal(packageJson.pnpm, undefined, 'no package.json pnpm field is written without a local nested dependency')
+  assert.deepEqual(yamlMapping(workspaceYaml, 'overrides'), {}, 'no empty workspace overrides section is written')
+})
+
+test('every local nested NextSpark package gets an override in the pnpm 11 workspace mapping', async () => {
+  const { packageJson, workspaceYaml } = await create({
+    callerPnpm: '9.0.0',
+    projectPnpm: '11.17.0',
+    extraTarballs: ['nextsparkjs-mobile-0.1.0-beta.189.tgz'],
+  })
+
+  assert.equal(packageJson.pnpm, undefined, 'pnpm 11 does not receive a package.json pnpm field')
+  assert.deepEqual(yamlMapping(workspaceYaml, 'overrides'), {
+    '@nextsparkjs/ui': 'file:../../caller/.packages/nextsparkjs-ui-0.1.0-beta.189.tgz',
+    '@nextsparkjs/mobile': 'file:../../caller/.packages/nextsparkjs-mobile-0.1.0-beta.189.tgz',
+  }, 'the workspace mapping preserves every nested local tarball override')
 })
 
 test('pnpm add adds to the project itself, a workspace root once pnpm-workspace.yaml lists packages', async () => {
@@ -320,6 +412,7 @@ test('two local testing tarballs at the same, matching version are an ambiguous 
     process.env.PATH = previousPath
     console.log = previousLog
     delete process.env.FAKE_PNPM_DEFAULT_VERSION
+    delete process.env.FAKE_PNPM_VERSION_OUTPUT
     delete process.env.FAKE_PNPM_ADD_LOG
     delete process.env.FAKE_PNPM_ADD_EXIT
     fs.rmSync(root, { recursive: true, force: true })

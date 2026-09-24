@@ -2,7 +2,7 @@ import path from 'node:path'
 import fs from 'fs-extra'
 import chalk from 'chalk'
 import ora from 'ora'
-import { execSync, spawnSync } from 'node:child_process'
+import { execFileSync, execSync, spawnSync } from 'node:child_process'
 
 /**
  * Find local tarball for a package (for development testing)
@@ -200,10 +200,18 @@ export function releaseAgeExclusions(version: string): string[] {
  * also makes the project a workspace root, so adding a dependency to the
  * project itself takes `-w`.
  */
-export function buildWorkspaceYaml(allowlist: string[], releaseAgeExclude: string[] = []): string {
+export function buildWorkspaceYaml(
+  allowlist: string[],
+  releaseAgeExclude: string[] = [],
+  overrides: Record<string, string> = {},
+): string {
   const quoted = allowlist.map(entry => `'${entry}'`)
   const exclusions = releaseAgeExclude.length > 0
     ? `minimumReleaseAgeExclude:\n${releaseAgeExclude.map(entry => `  - '${entry}'`).join('\n')}\n`
+    : ''
+  const overrideEntries = Object.entries(overrides)
+  const overrideYaml = overrideEntries.length > 0
+    ? `overrides:\n${overrideEntries.map(([name, spec]) => `  '${name}': '${spec}'`).join('\n')}\n\n`
     : ''
   return `packages:
   - 'contents/themes/*'
@@ -216,12 +224,33 @@ ${quoted.map(entry => `  ${entry}: true`).join('\n')}
 onlyBuiltDependencies:
 ${quoted.map(entry => `  - ${entry}`).join('\n')}
 
-# pnpm 11's own release-age policy, declared so that pnpm 10.16 and later
+${overrideYaml}# pnpm 11's own release-age policy, declared so that pnpm 10.16 and later
 # resolve with it too: pnpm 11 refuses a lockfile holding a version published
 # less than a day before it installs.
 minimumReleaseAge: ${MINIMUM_RELEASE_AGE_MINUTES}
 minimumReleaseAgeStrict: false
 ${exclusions}`
+}
+
+/**
+ * Major version of the pnpm that will install `projectPath`, or null when it
+ * cannot be determined. This runs the same `pnpm` command with the same cwd
+ * as the later `pnpm add`: Corepack therefore resolves packageManager from
+ * projectPath's ancestors, not from the directory that launched this CLI.
+ * A project in a different workspace can consequently use a different pnpm.
+ */
+function getPnpmMajorVersion(projectPath: string): number | null {
+  try {
+    const output = execFileSync('pnpm', ['--version'], {
+      cwd: projectPath,
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    const match = /^(\d+)\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.exec(output.trim())
+    return match ? Number.parseInt(match[1], 10) : null
+  } catch {
+    return null
+  }
 }
 
 export interface ProjectOptions {
@@ -286,7 +315,6 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   // Check for local tarballs (for development testing)
   const localCoreTarball = findLocalTarball('@nextsparkjs/core')
   const localCliTarball = findLocalTarball('@nextsparkjs/cli')
-  const localUiTarball = findLocalTarball('@nextsparkjs/ui')
 
   // Pin @nextsparkjs/* to create-nextspark-app's own version (all NextSpark
   // packages release in lockstep). Without this, the unversioned names resolve
@@ -334,13 +362,15 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   // @nextsparkjs/* packages other than core/cli/ui/testing, found locally
   // alongside them. None of these is installed directly, but any could still
   // be a plain runtime dependency of one that is -- the same situation
-  // @nextsparkjs/testing used to be in -- so each gets a pnpm.overrides entry
-  // pointing it at its own version-matched local tarball when packed
+  // @nextsparkjs/testing used to be in -- so each gets a version-matched pnpm
+  // override pointing it at its own local tarball when packed
   // locally too. Nothing in this monorepo currently needs it (only
   // @nextsparkjs/testing did, and it no longer goes through this path), but
   // the mechanism is kept generic for whichever @nextsparkjs package
   // becomes a nested dependency of core, cli or ui next.
-  const auxiliaryTarballs: LocalTarball[] = []
+  // The local packages that are nested dependencies of another local tarball.
+  // Unlike a direct `pnpm add <tarball>`, those must be redirected explicitly.
+  const nestedTarballs: LocalTarball[] = []
 
   if (localCoreTarball && localCliTarball) {
     corePackage = localCoreTarball
@@ -349,15 +379,21 @@ export async function createProject(options: ProjectOptions): Promise<void> {
       { name: '@nextsparkjs/core', file: localCoreTarball },
       { name: '@nextsparkjs/cli', file: localCliTarball },
     )
-    if (localUiTarball) {
-      uiPackage = localUiTarball
-      localTarballs.push({ name: '@nextsparkjs/ui', file: localUiTarball })
-    }
 
     const targetVersion = localTarballVersion(localCoreTarball, '@nextsparkjs/core')
     if (!targetVersion) {
       console.log(chalk.yellow(`  ⚠ Could not read a version from ${path.basename(localCoreTarball)}; skipping local-tarball resolution for other @nextsparkjs packages.`))
     } else {
+      const uiTarball = findVersionMatchedTarball('@nextsparkjs/ui', targetVersion)
+      if (uiTarball) {
+        uiPackage = uiTarball
+        const localUi = { name: '@nextsparkjs/ui', file: uiTarball }
+        localTarballs.push(localUi)
+        // `pnpm add` installs this tarball directly, but packed core also
+        // requires ui at its exact, possibly unpublished version.
+        nestedTarballs.push(localUi)
+      }
+
       testingPackage = findVersionMatchedTarball('@nextsparkjs/testing', targetVersion)
       if (testingPackage) {
         localTarballs.push({ name: '@nextsparkjs/testing', file: testingPackage })
@@ -367,8 +403,9 @@ export async function createProject(options: ProjectOptions): Promise<void> {
         if (name === '@nextsparkjs/core' || name === '@nextsparkjs/cli' || name === '@nextsparkjs/ui' || name === '@nextsparkjs/testing') continue
         const file = findVersionMatchedTarball(name, targetVersion)
         if (file) {
-          auxiliaryTarballs.push({ name, file })
-          localTarballs.push({ name, file })
+          const auxiliaryTarball = { name, file }
+          nestedTarballs.push(auxiliaryTarball)
+          localTarballs.push(auxiliaryTarball)
         }
       }
     }
@@ -386,14 +423,22 @@ export async function createProject(options: ProjectOptions): Promise<void> {
       '@nextsparkjs/testing': `file:${path.relative(projectPath, testingPackage).split(path.sep).join('/')}`,
     }
   }
-  if (auxiliaryTarballs.length > 0) {
+  const overrides = Object.fromEntries(
+    nestedTarballs.map(({ name, file }) => [
+      name,
+      `file:${path.relative(projectPath, file).split(path.sep).join('/')}`,
+    ])
+  )
+  const pnpmMajor = nestedTarballs.length > 0 ? getPnpmMajorVersion(projectPath) : null
+  if (nestedTarballs.length > 0 && pnpmMajor === null) {
+    // pnpm 9/10 read package.json while pnpm 11 reads pnpm-workspace.yaml.
+    // Guessing one for an unknown version would make a local nested tarball
+    // unresolvable in the other, so fail before writing either configuration.
+    throw new Error('Could not determine the pnpm version that will install this project; cannot safely configure local-tarball overrides.')
+  }
+  if (nestedTarballs.length > 0 && pnpmMajor < 11) {
     packageJson.pnpm = {
-      overrides: Object.fromEntries(
-        auxiliaryTarballs.map(({ name, file }) => [
-          name,
-          `file:${path.relative(projectPath, file).split(path.sep).join('/')}`,
-        ])
-      ),
+      overrides,
     }
   }
   await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
@@ -401,7 +446,11 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   // Written before the install so the allowlist is in place for it
   await fs.writeFile(
     path.join(projectPath, 'pnpm-workspace.yaml'),
-    buildWorkspaceYaml(allowlistEntries(projectPath, localTarballs), releaseAgeExclusions(ownVersion))
+    buildWorkspaceYaml(
+      allowlistEntries(projectPath, localTarballs),
+      releaseAgeExclusions(ownVersion),
+      pnpmMajor !== null && pnpmMajor >= 11 ? overrides : {},
+    )
   )
   pkgSpinner.succeed('  package.json created')
 
