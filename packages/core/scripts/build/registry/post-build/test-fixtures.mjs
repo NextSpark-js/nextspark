@@ -150,7 +150,8 @@ export async function generateTestEntitiesJson(entities, themes, CONFIG = DEFAUL
       entityDir = join(CONFIG.projectSourceDir, 'entities', entity.relativePath)
       configFilePath = join(entityDir, `${entity.name}.config.ts`)
     } else if (entity.pluginContext) {
-      entityDir = join(CONFIG.pluginsDir, entity.pluginContext.pluginName, 'entities', entity.relativePath)
+      const pluginSource = CONFIG.pluginSources?.find(plugin => plugin.name === entity.pluginContext.pluginName)
+      entityDir = join(pluginSource?.sourceDir ?? join(CONFIG.pluginsDir, entity.pluginContext.pluginName), 'entities', entity.relativePath)
       configFilePath = join(entityDir, `${entity.name}.config.ts`)
     }
 

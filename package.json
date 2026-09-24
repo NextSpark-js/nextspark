@@ -18,7 +18,7 @@
     "pkg:validate": "npx tsx scripts/packages/validate-versions.ts",
     "pkg:version": "./scripts/packages/version.sh",
     "pkg:pack": "./scripts/packages/pack.sh --all --clean",
-    "pkg:verify-tarballs": "node scripts/packages/verify-tarballs.mjs",
+    "pkg:verify-tarballs": "node scripts/packages/verify-tarballs.mjs --expect-all",
     "pkg:publish": "./scripts/packages/publish.sh ./.packages",
     "sync:templates": "npx tsx scripts/packages/sync-templates.ts",
     "sync:templates:check": "npx tsx scripts/packages/sync-templates.ts --check",

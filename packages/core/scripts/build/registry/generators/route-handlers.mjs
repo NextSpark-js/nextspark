@@ -53,7 +53,7 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
         const routeKey = route.relativePath === '/' ? '' : route.relativePath
         // No .ts extension - Next.js resolves extensions automatically on all platforms
         const routeFile = route.relativePath === '/' ? '/route' : '/' + route.relativePath + '/route'
-        const filePath = `@/plugins/${plugin.name}/api${routeFile}`
+        const filePath = `${plugin.importBase}/api${routeFile}`
         pluginRoutes.push({
           pluginName: plugin.name,
           routePath: routeKey,

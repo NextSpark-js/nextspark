@@ -65,7 +65,7 @@ export async function discoverNestedEntities(config, basePath, relativePath = ''
           // Determine base import path based on owner context
           let baseImportPath
           if (ownerContext?.type === 'plugin') {
-            baseImportPath = `@/plugins/${ownerContext.name}/entities/${currentRelativePath}`
+            baseImportPath = `${ownerContext.importBase ?? `@/plugins/${ownerContext.name}`}/entities/${currentRelativePath}`
           } else {
             baseImportPath = `@/entities/${currentRelativePath}`
           }
@@ -210,7 +210,7 @@ export async function discoverNestedEntities(config, basePath, relativePath = ''
         // Determine base import path based on owner context
         let baseImportPath
         if (ownerContext?.type === 'plugin') {
-          baseImportPath = `@/plugins/${ownerContext.name}/entities/${currentRelativePath}`
+          baseImportPath = `${ownerContext.importBase ?? `@/plugins/${ownerContext.name}`}/entities/${currentRelativePath}`
         } else {
           baseImportPath = `@/entities/${currentRelativePath}`
         }

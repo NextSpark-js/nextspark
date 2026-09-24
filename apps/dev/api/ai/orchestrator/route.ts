@@ -3,8 +3,8 @@ import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { processMessage } from '@/lib/langchain/orchestrator'
-import { dbMemoryStore } from '@/plugins/langchain/lib/db-memory-store'
-import type { ChatMessage } from '@/plugins/langchain/types/langchain.types'
+import { dbMemoryStore } from '@nextsparkjs/plugin-langchain/lib/db-memory-store'
+import type { ChatMessage } from '@nextsparkjs/plugin-langchain/types/langchain.types'
 
 // Schema for request validation
 const ChatRequestSchema = z.object({

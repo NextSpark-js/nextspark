@@ -619,7 +619,7 @@ export async function discoverIcons(blocks, config) {
   // though a config rarely lives under one, for the same reason call sources
   // exclude them below.
   const isIconSource = filePath => isIconSourcePath(filePath) && !isTestFilePath(filePath)
-  const pluginSourceDirs = (config.plugins ?? []).map(pluginName => join(config.pluginsDir, pluginName))
+  const pluginSourceDirs = (config.pluginSources ?? []).map(plugin => plugin.sourceDir)
   const iconSources = [
     ...(await collectConfigFiles(join(config.coreDir, 'src', 'entities'), isIconSource)),
     ...(await collectConfigFiles(config.projectSourceDir, isIconSource)),

@@ -21,7 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { tokenTracker } from '@/plugins/langchain/lib/token-tracker'
+import { tokenTracker } from '@nextsparkjs/plugin-langchain/lib/token-tracker'
 import { queryOne } from '@nextsparkjs/core/lib/db'
 
 type Period = 'today' | '7d' | '30d' | 'all'

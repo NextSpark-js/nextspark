@@ -13,7 +13,7 @@ const DOCS_DIRS = [
   'packages/core/docs',
   'apps/dev/docs',
   'plugins/ai/docs',
-  'apps/dev/plugins/langchain/docs',
+  'plugins/langchain/docs',
 ]
 
 const README_FILES = [

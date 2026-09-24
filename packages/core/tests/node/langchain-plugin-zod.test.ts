@@ -4,7 +4,7 @@
  * OpenAI; a version that converts through `openai/helpers/zod`, which only reads zod 3, sends an
  * empty schema instead, and the model is asked to call tools without their parameters.
  *
- * Every module resolves from apps/dev/plugins/langchain, as the plugin's own imports do, and the requests
+ * Every module resolves from plugins/langchain, as the plugin's own imports do, and the requests
  * go to a local server standing in for the OpenAI API.
  */
 import { test } from 'node:test'
@@ -14,11 +14,11 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import type { AddressInfo } from 'node:net'
-import { buildTools } from '../../../../apps/dev/plugins/langchain/lib/tools-builder'
-import { createOpenAIModel } from '../../../../apps/dev/plugins/langchain/lib/providers'
+import { buildTools } from '../../../../plugins/langchain/lib/tools-builder'
+import { createOpenAIModel } from '../../../../plugins/langchain/lib/providers'
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
-const requireFromPlugin = createRequire(path.join(REPO, 'apps/dev/plugins/langchain/package.json'))
+const requireFromPlugin = createRequire(path.join(REPO, 'plugins/langchain/package.json'))
 
 const z = requireFromPlugin('zod') as typeof import('zod')
 const { ChatOpenAI } = requireFromPlugin('@langchain/openai') as typeof import('@langchain/openai')
@@ -226,7 +226,7 @@ async function importAgentFactory() {
     ?? originalLoad(request, parent, isMain)
 
   try {
-    return await import('../../../../apps/dev/plugins/langchain/lib/agent-factory')
+    return await import('../../../../plugins/langchain/lib/agent-factory')
   } finally {
     commonJsModule._load = originalLoad
   }

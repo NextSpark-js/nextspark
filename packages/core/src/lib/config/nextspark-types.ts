@@ -21,7 +21,7 @@ export interface NextSparkTemplateOrigin {
 }
 
 export interface NextSparkConfig {
-  /** Local plugin directory names under <projectRoot>/plugins. */
+  /** Local plugin names or scoped package names resolved from the project. */
   plugins?: string[]
 
   /** Compiler feature flags. Omitted flags default to true. */
@@ -112,7 +112,7 @@ function validateOptionalBoolean(value: unknown, path: string, errors: string[])
 function validatePlugins(value: unknown, errors: string[]): void {
   if (value === undefined) return
   if (!Array.isArray(value)) {
-    errors.push(`plugins must be an array of local plugin directory names; received ${receivedType(value)}.`)
+    errors.push(`plugins must be an array of local plugin names or scoped package names; received ${receivedType(value)}.`)
     return
   }
 
@@ -122,10 +122,13 @@ function validatePlugins(value: unknown, errors: string[]): void {
       errors.push(`plugins[${index}] must be a non-empty string; received ${receivedType(plugin)}.`)
       return
     }
-    if (plugin.includes('/') || plugin.includes('\\') || plugin === '.' || plugin === '..') {
+    const isScopedPackage = /^@[^/\\\s]+\/[^/\\\s]+$/.test(plugin)
+    if (plugin.startsWith('@') && !isScopedPackage) {
+      errors.push(`plugins[${index}] must be a complete scoped package name; received "${plugin}".`)
+    } else if ((!isScopedPackage && (plugin.includes('/') || plugin.includes('\\'))) || plugin === '.' || plugin === '..') {
       errors.push(`plugins[${index}] must be a directory name under <projectRoot>/plugins, not a path; received "${plugin}".`)
     }
-    if (seen.has(plugin)) errors.push(`plugins contains duplicate local plugin "${plugin}".`)
+    if (seen.has(plugin)) errors.push(`plugins contains duplicate entry "${plugin}".`)
     seen.add(plugin)
   })
 }

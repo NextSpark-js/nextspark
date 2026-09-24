@@ -1,5 +1,5 @@
 import * as z from 'zod'
-import { defineTool } from '@/plugins/langchain/lib/tools-builder'
+import { defineTool } from '@nextsparkjs/plugin-langchain/lib/tools-builder'
 import { PagesManagementService } from '@/entities/pages/pages-management.service'
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 

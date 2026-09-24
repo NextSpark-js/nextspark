@@ -212,7 +212,7 @@ test('the guard reads the entity migrations and the shipped starter, not only ea
     'packages/core/templates/projects/blog/migrations',
     'packages/core/templates/projects/blog/entities/posts/migrations',
     'packages/core/templates/projects/crm/entities/contacts/migrations',
-    'apps/dev/plugins/langchain/migrations',
+    'plugins/langchain/migrations',
     'plugins/ai/entities/ai-history/migrations',
     'packages/core/templates/projects/starter/entities/pages/migrations',
   ]) {

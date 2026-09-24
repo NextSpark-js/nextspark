@@ -14,12 +14,12 @@
 import {
   TracingCallbackHandler,
   createTracingCallbacks,
-} from '@/plugins/langchain/lib/tracer-callbacks'
-import { tracer } from '@/plugins/langchain/lib/tracer'
+} from '@nextsparkjs/plugin-langchain/lib/tracer-callbacks'
+import { tracer } from '@nextsparkjs/plugin-langchain/lib/tracer'
 import type { Serialized } from '@langchain/core/load/serializable'
 
 // Mock tracer service
-jest.mock('@/plugins/langchain/lib/tracer', () => ({
+jest.mock('@nextsparkjs/plugin-langchain/lib/tracer', () => ({
   tracer: {
     startSpan: jest.fn(),
     endSpan: jest.fn(),

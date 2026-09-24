@@ -42,6 +42,10 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+is_publishable_package() {
+    node -e "const p=require('$1/package.json'); process.exit(p.private === true ? 1 : 0)"
+}
+
 # Parse arguments
 VERSION_TYPE=""
 SKIP_CONFIRM=false
@@ -177,14 +181,14 @@ PACKAGES=()
 
 # All packages in packages/ directory (core, cli, ui, mobile, testing, create-nextspark-app, etc.)
 for pkg in "$REPO_ROOT/packages"/*; do
-    if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then
+    if [ -d "$pkg" ] && [ -f "$pkg/package.json" ] && is_publishable_package "$pkg"; then
         PACKAGES+=("$pkg")
     fi
 done
 
 # All plugins in plugins/ directory
 for plugin in "$REPO_ROOT/plugins"/*; do
-    if [ -d "$plugin" ] && [ -f "$plugin/package.json" ]; then
+    if [ -d "$plugin" ] && [ -f "$plugin/package.json" ] && is_publishable_package "$plugin"; then
         PACKAGES+=("$plugin")
     fi
 done

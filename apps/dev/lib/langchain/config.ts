@@ -10,7 +10,7 @@
  * - No hardcoded entity knowledge in plugin
  */
 
-import type { OrchestratorConfig } from '@/plugins/langchain/lib/graph/types'
+import type { OrchestratorConfig } from '@nextsparkjs/plugin-langchain/lib/graph/types'
 
 // Import handler implementations
 import { taskHandlerNode } from './handlers/task-handler'

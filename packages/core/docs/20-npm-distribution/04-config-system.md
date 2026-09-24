@@ -12,7 +12,7 @@ nested theme.
 import { defineConfig } from '@nextsparkjs/core/lib/config'
 
 export default defineConfig({
-  plugins: ['langchain'],
+  plugins: ['@nextsparkjs/plugin-langchain'],
   features: {
     billing: true,
     teams: true,
@@ -26,7 +26,8 @@ export default defineConfig({
 })
 ```
 
-- `plugins` contains local directory names under `plugins/`.
+- `plugins` contains local directory names under `plugins/` or scoped package
+  names declared by the project, such as `@nextsparkjs/plugin-langchain`.
 - `features` controls build-time inclusion.
 - `template` records scaffold provenance only.
 - `database`, `auth`, and `app` are accepted for runtime/tooling metadata.
@@ -49,9 +50,10 @@ config/
 └── theme.config.ts
 ```
 
-The compiler discovers those files directly from the project root. Local
-plugins are enabled only by the `plugins` list in `nextspark.config.ts`; there
-is no fallback to a theme config.
+The compiler discovers those files directly from the project root. Local and
+packaged plugins are enabled only by the `plugins` list in
+`nextspark.config.ts`; there is no fallback to a theme config and no scan of
+`node_modules`.
 
 ## Validation and discovery
 

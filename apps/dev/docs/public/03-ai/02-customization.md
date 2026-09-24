@@ -17,8 +17,8 @@ Tools are defined with a name, description, schema, and function:
 // lib/langchain/tools/my-entity.ts
 
 import * as z from 'zod'
-import type { ToolDefinition } from '@/plugins/langchain/types/langchain.types'
-import type { ToolContext } from '@/plugins/langchain/types/langchain.types'
+import type { ToolDefinition } from '@nextsparkjs/plugin-langchain/types/langchain.types'
+import type { ToolContext } from '@nextsparkjs/plugin-langchain/types/langchain.types'
 import { MyEntityService } from '@/entities/my-entity/my-entity.service'
 
 export function createMyEntityTools(context: ToolContext): ToolDefinition<any>[] {
@@ -75,7 +75,7 @@ Define agents in the theme's langchain configuration:
 ```typescript
 // lib/langchain/agents.config.ts
 
-import type { AgentDefinition, AgentContext } from '@/plugins/langchain/types/langchain.types'
+import type { AgentDefinition, AgentContext } from '@nextsparkjs/plugin-langchain/types/langchain.types'
 import { createMyEntityTools } from './tools/my-entity'
 
 export const CUSTOM_AGENTS: Record<string, AgentDefinition> = {
@@ -126,7 +126,7 @@ For the graph orchestrator, add custom handlers:
 ```typescript
 // lib/langchain/handlers/my-entity-handler.ts
 
-import type { OrchestratorState, HandlerResult } from '@/plugins/langchain/lib/graph/types'
+import type { OrchestratorState, HandlerResult } from '@nextsparkjs/plugin-langchain/lib/graph/types'
 import { MyEntityService } from '@/entities/my-entity/my-entity.service'
 
 export async function myEntityHandler(
@@ -270,7 +270,7 @@ Provide data for templates:
 ### Using the Chat Hook
 
 ```typescript
-import { useStreamingChat } from '@/plugins/langchain/hooks/useStreamingChat'
+import { useStreamingChat } from '@nextsparkjs/plugin-langchain/hooks/useStreamingChat'
 
 function MyAIChat() {
     const {
@@ -308,7 +308,7 @@ function MyAIChat() {
 ### Token Usage Hook
 
 ```typescript
-import { useTokenUsage } from '@/plugins/langchain/hooks/useTokenUsage'
+import { useTokenUsage } from '@nextsparkjs/plugin-langchain/hooks/useTokenUsage'
 
 function UsageDisplay() {
     const { data, isLoading } = useTokenUsage({ period: '30d' })

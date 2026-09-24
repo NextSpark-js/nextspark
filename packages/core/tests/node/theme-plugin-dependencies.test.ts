@@ -12,6 +12,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { builtinModules } from 'node:module'
+import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { globSync } from 'glob'
 import ts from 'typescript'
@@ -51,10 +52,8 @@ interface Manifest {
 }
 
 function packages(): Manifest[] {
-  const pluginDirs = ['apps/dev/plugins/*', 'plugins/*'].flatMap(pattern =>
-    globSync(pattern, { cwd: REPO, absolute: true, onlyDirectories: true })
-      .filter(dir => fs.existsSync(path.join(dir, 'package.json')))
-  )
+  const pluginDirs = globSync('plugins/*', { cwd: REPO, absolute: true, onlyDirectories: true })
+    .filter(dir => fs.existsSync(path.join(dir, 'package.json')))
   const projectDir = path.join(REPO, 'apps/dev')
   return [
     {
@@ -241,14 +240,32 @@ test('the lockfile records the @nextsparkjs ranges the manifests declare', () =>
   assert.deepEqual(stale, [])
 })
 
-test('every project-local plugin is a workspace member', () => {
-  const localPlugins = globSync('apps/dev/plugins/*/package.json', { cwd: REPO })
-    .map(manifest => path.dirname(manifest))
-    .sort()
-  const workspacePatterns = fs.readFileSync(path.join(REPO, 'pnpm-workspace.yaml'), 'utf8')
-    .split('\n')
-    .map(line => line.match(/^\s*-\s*['"]([^'"]+)['"]/)?.[1])
-    .filter((pattern): pattern is string => Boolean(pattern))
-  const workspaceDirs = new Set(workspacePatterns.flatMap(pattern => globSync(pattern, { cwd: REPO, onlyDirectories: true })))
-  assert.deepEqual(localPlugins.filter(dir => !workspaceDirs.has(dir)), [])
+function misplacedPublishablePlugins(root: string): string[] {
+  return globSync('**/package.json', {
+    cwd: root,
+    ignore: ['**/node_modules/**', '**/.next/**', '**/dist/**'],
+  }).filter(manifestPath => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, manifestPath), 'utf8'))
+    return manifest.private !== true && manifest.nextspark?.type === 'plugin' && !/^plugins\/[^/]+\/package\.json$/.test(manifestPath)
+  }).sort()
+}
+
+test('every publishable plugin lives under root plugins/ where pack.sh and version.sh discover it', () => {
+  assert.deepEqual(misplacedPublishablePlugins(REPO), [])
+})
+
+test('the publishable-plugin location guard rejects a package outside the packed locations', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-misplaced-plugin-'))
+  try {
+    const manifest = path.join(root, 'apps/dev/plugins/acme/package.json')
+    fs.mkdirSync(path.dirname(manifest), { recursive: true })
+    fs.writeFileSync(manifest, JSON.stringify({
+      name: '@example/plugin-acme',
+      private: false,
+      nextspark: { type: 'plugin', name: 'acme' },
+    }))
+    assert.deepEqual(misplacedPublishablePlugins(root), ['apps/dev/plugins/acme/package.json'])
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
 })

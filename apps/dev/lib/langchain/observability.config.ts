@@ -5,7 +5,7 @@
  * Use this in 'use client' components to avoid importing server-only code.
  */
 
-import type { ObservabilityConfig } from '@/plugins/langchain/types/observability.types'
+import type { ObservabilityConfig } from '@nextsparkjs/plugin-langchain/types/observability.types'
 
 // ============================================================================
 // OBSERVABILITY CONFIGURATION (CLIENT-SAFE)

@@ -22,9 +22,9 @@ describe('nextspark.config.ts source contract', () => {
     })
   })
 
-  it('accepts local plugin names and template provenance for the project root', () => {
+  it('accepts local plugin names, packaged plugin names, and template provenance for the project root', () => {
     const config = defineConfig({
-      plugins: ['analytics', 'billing-local'],
+      plugins: ['analytics', 'billing-local', '@nextsparkjs/plugin-langchain'],
       features: { aiChat: false },
       template: { name: 'crm', version: '0.1.0-beta.193' },
     })
@@ -33,7 +33,7 @@ describe('nextspark.config.ts source contract', () => {
 
     expect(result.valid).toBe(true)
     if (!result.valid) return
-    expect(result.config.plugins).toEqual(['analytics', 'billing-local'])
+    expect(result.config.plugins).toEqual(['analytics', 'billing-local', '@nextsparkjs/plugin-langchain'])
     expect(result.config.features).toEqual({
       billing: true,
       teams: true,
@@ -53,7 +53,7 @@ describe('nextspark.config.ts source contract', () => {
     expect(result.errors).toContain('project is not a supported nextspark.config.ts field.')
   })
 
-  it('rejects plugin paths and duplicate local plugin names', () => {
+  it('rejects plugin paths and duplicate plugin entries', () => {
     const result = validateNextSparkConfig({
       plugins: ['analytics', 'plugins/payments', String.raw`C:\plugins\payments`, 'analytics'],
     })
@@ -65,7 +65,14 @@ describe('nextspark.config.ts source contract', () => {
     expect(result.errors).toContain(
       'plugins[2] must be a directory name under <projectRoot>/plugins, not a path; received "C:\\plugins\\payments".'
     )
-    expect(result.errors).toContain('plugins contains duplicate local plugin "analytics".')
+    expect(result.errors).toContain('plugins contains duplicate entry "analytics".')
+  })
+
+  it('rejects an incomplete scoped package name', () => {
+    const result = validateNextSparkConfig({ plugins: ['@nextsparkjs'] })
+
+    expect(result.valid).toBe(false)
+    expect(result.errors).toContain('plugins[0] must be a complete scoped package name; received "@nextsparkjs".')
   })
 
   it('reports nested types and unknown fields by their config paths', () => {

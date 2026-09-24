@@ -15,12 +15,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { createAgent } from '@/plugins/langchain/lib/agent-factory'
+import { createAgent } from '@nextsparkjs/plugin-langchain/lib/agent-factory'
 import {
     dbMemoryStore,
     CONVERSATION_LIMITS,
     generateSessionId,
-} from '@/plugins/langchain/lib/db-memory-store'
+} from '@nextsparkjs/plugin-langchain/lib/db-memory-store'
 import {
     getAgentConfig,
     getAgentModelConfig,
@@ -28,7 +28,7 @@ import {
     getAgentPromptName,
 } from '@/lib/langchain/langchain.config'
 import { loadSystemPrompt, type AgentName } from '@/lib/langchain/agents'
-import type { ChatMessage } from '@/plugins/langchain/types/langchain.types'
+import type { ChatMessage } from '@nextsparkjs/plugin-langchain/types/langchain.types'
 
 // Agent name - matches key in AGENTS config
 const AGENT_NAME = 'single-agent'

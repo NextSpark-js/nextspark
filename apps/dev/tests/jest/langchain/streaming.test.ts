@@ -21,21 +21,21 @@ jest.mock('@langchain/core/messages', () => ({
 }))
 
 // Mock dependencies
-jest.mock('@/plugins/langchain/lib/db-memory-store', () => ({
+jest.mock('@nextsparkjs/plugin-langchain/lib/db-memory-store', () => ({
   dbMemoryStore: {
     getMessages: jest.fn().mockResolvedValue([]),
     addMessages: jest.fn().mockResolvedValue(undefined),
   },
 }))
 
-jest.mock('@/plugins/langchain/lib/token-tracker', () => ({
+jest.mock('@nextsparkjs/plugin-langchain/lib/token-tracker', () => ({
   tokenTracker: {
     trackUsage: jest.fn().mockResolvedValue(undefined),
   },
 }))
 
-import { createSSEEncoder } from '@/plugins/langchain/lib/streaming'
-import type { StreamChunk } from '@/plugins/langchain/lib/streaming'
+import { createSSEEncoder } from '@nextsparkjs/plugin-langchain/lib/streaming'
+import type { StreamChunk } from '@nextsparkjs/plugin-langchain/lib/streaming'
 
 describe('Streaming Service', () => {
   describe('createSSEEncoder', () => {

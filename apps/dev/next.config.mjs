@@ -55,7 +55,7 @@ const nextConfig = {
   basePath,
   // Diagnostic-only: browser source maps remain off unless explicitly requested.
   productionBrowserSourceMaps: process.env.NEXTSPARK_DIAGNOSTIC_SOURCEMAPS === '1',
-  transpilePackages: ['@nextsparkjs/core'],
+  transpilePackages: ['@nextsparkjs/core', '@nextsparkjs/plugin-langchain'],
   experimental: {
     externalDir: true,
   },

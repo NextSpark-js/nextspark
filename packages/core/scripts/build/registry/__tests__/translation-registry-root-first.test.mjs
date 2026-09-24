@@ -23,6 +23,7 @@ test('plugin translations come only from plugins enabled in nextspark.config.ts'
       projectName: 'project',
       pluginsDir,
       plugins: ['enabled'],
+      pluginSources: [{ name: 'enabled', sourceDir: join(pluginsDir, 'enabled'), importBase: '@/plugins/enabled' }],
     })
 
     assert.match(output, /'enabled':/)

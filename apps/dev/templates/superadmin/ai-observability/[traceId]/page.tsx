@@ -9,7 +9,7 @@
 
 import { use } from 'react'
 import { observabilityConfig } from '@/lib/langchain/observability.config'
-import { TraceDetailPagePreset } from '@/plugins/langchain/presets/templates/sector7/ai-observability/[traceId]/page'
+import { TraceDetailPagePreset } from '@nextsparkjs/plugin-langchain/presets/templates/sector7/ai-observability/[traceId]/page'
 
 interface PageProps {
   params: Promise<{ traceId: string }>

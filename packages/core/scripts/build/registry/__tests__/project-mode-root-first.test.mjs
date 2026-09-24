@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import test from 'node:test'
 
-import { resolveProjectPaths } from '../project-mode.mjs'
+import { resolveProjectPaths, resolveProjectPluginSources } from '../project-mode.mjs'
 
 async function project(files = {}) {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-root-first-'))
@@ -57,6 +57,118 @@ test('a project root must declare Next.js', async () => {
   })
   try {
     assert.throws(() => resolveProjectPaths(root), /declare a non-empty "next" dependency/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('an enabled packaged plugin resolves through the project dependency tree', async () => {
+  const root = await project({
+    'package.json': JSON.stringify({
+      dependencies: {
+        next: '16.3.5',
+        '@example/plugin-search': '1.0.0',
+      },
+    }),
+    'nextspark.config.ts': 'export default {}\n',
+    'node_modules/@example/plugin-search/package.json': JSON.stringify({
+      name: '@example/plugin-search',
+      main: './plugin.config.ts',
+      nextspark: { type: 'plugin', name: 'search' },
+    }),
+    'node_modules/@example/plugin-search/plugin.config.ts': 'export const searchPlugin = {}\n',
+  })
+
+  try {
+    const physicalRoot = await realpath(root)
+    assert.deepEqual(resolveProjectPluginSources(root, ['@example/plugin-search']), [{
+      name: 'search',
+      request: '@example/plugin-search',
+      packageName: '@example/plugin-search',
+      sourceDir: join(physicalRoot, 'node_modules', '@example', 'plugin-search'),
+      importBase: '@example/plugin-search',
+      kind: 'packaged',
+    }])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('an enabled packaged plugin that is not installed fails with an actionable error', async () => {
+  const root = await project({
+    'package.json': JSON.stringify({
+      dependencies: {
+        next: '16.3.5',
+        '@example/plugin-search': '1.0.0',
+      },
+    }),
+    'nextspark.config.ts': 'export default {}\n',
+  })
+
+  try {
+    assert.throws(
+      () => resolveProjectPluginSources(root, ['@example/plugin-search']),
+      /Packaged plugin "@example\/plugin-search" is enabled.*not installed.*pnpm install/s,
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a packaged plugin cannot use a path segment as its logical name', async () => {
+  const root = await project({
+    'package.json': JSON.stringify({
+      dependencies: {
+        next: '16.3.5',
+        '@example/plugin-search': '1.0.0',
+      },
+    }),
+    'nextspark.config.ts': 'export default {}\n',
+    'node_modules/@example/plugin-search/package.json': JSON.stringify({
+      name: '@example/plugin-search',
+      main: './plugin.config.ts',
+      nextspark: { type: 'plugin', name: '..' },
+    }),
+    'node_modules/@example/plugin-search/plugin.config.ts': 'export const searchPlugin = {}\n',
+  })
+
+  try {
+    assert.throws(
+      () => resolveProjectPluginSources(root, ['@example/plugin-search']),
+      /directory-safe nextspark\.name/,
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a local plugin shadows an installed packaged plugin with the same NextSpark name', async () => {
+  const root = await project({
+    'package.json': JSON.stringify({
+      dependencies: {
+        next: '16.3.5',
+        '@example/plugin-search': '1.0.0',
+      },
+    }),
+    'nextspark.config.ts': 'export default {}\n',
+    'plugins/search/plugin.config.ts': 'export const localSearchPlugin = {}\n',
+    'node_modules/@example/plugin-search/package.json': JSON.stringify({
+      name: '@example/plugin-search',
+      main: './plugin.config.ts',
+      nextspark: { type: 'plugin', name: 'search' },
+    }),
+    'node_modules/@example/plugin-search/plugin.config.ts': 'export const packagedSearchPlugin = {}\n',
+  })
+
+  try {
+    assert.deepEqual(resolveProjectPluginSources(root, ['@example/plugin-search']), [{
+      name: 'search',
+      request: '@example/plugin-search',
+      packageName: '@example/plugin-search',
+      sourceDir: join(root, 'plugins', 'search'),
+      importBase: '@/plugins/search',
+      kind: 'local',
+    }])
   } finally {
     await rm(root, { recursive: true, force: true })
   }

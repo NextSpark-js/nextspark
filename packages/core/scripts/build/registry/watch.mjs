@@ -18,7 +18,7 @@ import { log } from '../../utils/index.mjs'
 export async function watchContents(buildRegistries, config) {
   log('Starting watch mode...', 'info')
 
-  const watchPaths = [...config.sourceDirs, config.pluginsDir]
+  const watchPaths = [...config.sourceDirs, ...(config.pluginDirs ?? [config.pluginsDir])]
 
   let debounceTimer = null
 

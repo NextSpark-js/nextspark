@@ -88,7 +88,7 @@ test('a project holding everything NextSpark writes lints without errors on Next
     for (const dir of ['api', 'blocks', 'components', 'config', 'entities', 'lib', 'messages', 'styles', 'templates', 'tests']) {
       copyTree(path.join(REPO, 'apps/dev', dir), path.join(root, dir))
     }
-    copyTree(path.join(REPO, 'apps/dev/plugins/langchain'), path.join(root, 'plugins/langchain'))
+    copyTree(path.join(REPO, 'plugins/langchain'), path.join(root, 'plugins/langchain'))
     for (const entry of ['proxy.ts', 'i18n.ts', 'instrumentation.ts', 'next.config.mjs', 'postcss.config.mjs', 'public', 'scripts']) {
       copyTree(path.join(TEMPLATES, entry), path.join(root, entry))
     }

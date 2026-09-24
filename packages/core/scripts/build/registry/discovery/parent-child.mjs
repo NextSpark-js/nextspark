@@ -29,7 +29,7 @@ export async function discoverParentChildRelations(config = DEFAULT_CONFIG) {
   const childTypeMappings = new Map()
 
   // Scan all discovered entities to find parent-child patterns in filesystem
-  const scanDirs = [join(config.projectSourceDir, 'entities'), config.pluginsDir]
+  const scanDirs = [join(config.projectSourceDir, 'entities'), ...(config.pluginDirs ?? [config.pluginsDir])]
 
   for (const baseDir of scanDirs) {
     if (!existsSync(baseDir)) continue

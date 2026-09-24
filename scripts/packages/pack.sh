@@ -63,6 +63,10 @@ node_require_name() {
     node -e "console.log(require('$p').name)"
 }
 
+is_publishable_package() {
+    node -e "const p=require('$1/package.json'); process.exit(p.private === true ? 1 : 0)"
+}
+
 # Default options
 OUTPUT_DIR="$REPO_ROOT/.packages"
 SKIP_BUILD=false
@@ -281,7 +285,7 @@ if [ "$PACK_ALL" = true ]; then
 
     # Add all plugins
     for plugin in "$REPO_ROOT/plugins"/*; do
-        if [ -d "$plugin" ] && [ -f "$plugin/package.json" ]; then
+        if [ -d "$plugin" ] && [ -f "$plugin/package.json" ] && is_publishable_package "$plugin"; then
             FINAL_PACKAGES+=("$plugin")
         fi
     done

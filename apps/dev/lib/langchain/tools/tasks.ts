@@ -1,5 +1,5 @@
 import * as z from 'zod'
-import { defineTool } from '@/plugins/langchain/lib/tools-builder'
+import { defineTool } from '@nextsparkjs/plugin-langchain/lib/tools-builder'
 import { TasksService } from '@/entities/tasks/tasks.service'
 import { TaskStatus, TaskPriority } from '@/entities/tasks/tasks.types'
 

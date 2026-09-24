@@ -10,8 +10,8 @@
  * Focus: Business logic with mocked database calls.
  */
 
-import { tracer } from '@/plugins/langchain/lib/tracer'
-import type { ObservabilityConfig } from '@/plugins/langchain/types/observability.types'
+import { tracer } from '@nextsparkjs/plugin-langchain/lib/tracer'
+import type { ObservabilityConfig } from '@nextsparkjs/plugin-langchain/types/observability.types'
 
 // Mock database functions
 jest.mock('@nextsparkjs/core/lib/db', () => ({

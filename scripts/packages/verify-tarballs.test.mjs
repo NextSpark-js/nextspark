@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { loadAllowlist, parseArgs, verifyDirectory } from './verify-tarballs.mjs'
+import { expectedPublishedPackageNames, loadAllowlist, missingExpectedPackages, parseArgs, verifyDirectory } from './verify-tarballs.mjs'
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'verify-tarballs.mjs')
 
@@ -248,6 +248,23 @@ test('an allowlist entry without a reason is rejected outright (fails closed)', 
 test('parseArgs resolves a relative directory against the current working directory', () => {
   const args = parseArgs(['./some-dir'])
   assert.equal(args.dir, join(process.cwd(), 'some-dir'))
+})
+
+test('parseArgs accepts pnpm\'s argument separator before the directory', () => {
+  const args = parseArgs(['--expect-all', '--', './some-dir'])
+  assert.equal(args.dir, join(process.cwd(), 'some-dir'))
+  assert.equal(args.expectAll, true)
+})
+
+test('the release-set expectation includes the published langchain plugin', () => {
+  assert.ok(expectedPublishedPackageNames().includes('@nextsparkjs/plugin-langchain'))
+})
+
+test('the release-set expectation reports a missing published package tarball', () => {
+  assert.deepEqual(
+    missingExpectedPackages([{ pkgName: '@nextsparkjs/core' }], ['@nextsparkjs/core', '@nextsparkjs/plugin-langchain']),
+    ['@nextsparkjs/plugin-langchain'],
+  )
 })
 
 test('the CLI exits non-zero when it finds a real problem, and zero for a clean directory', () => {

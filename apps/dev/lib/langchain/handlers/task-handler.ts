@@ -7,10 +7,10 @@
 
 import type { Task } from '@/entities/tasks/tasks.types'
 import { TasksService } from '@/entities/tasks/tasks.service'
-import { tracer } from '@/plugins/langchain/lib/tracer'
-import { config as pluginConfig } from '@/plugins/langchain/plugin.config'
-import { createAgentLogger } from '@/plugins/langchain/lib/logger'
-import type { OrchestratorState, TaskHandlerResult, TaskData, IntentType, IntentAction } from '@/plugins/langchain/lib/graph/types'
+import { tracer } from '@nextsparkjs/plugin-langchain/lib/tracer'
+import { config as pluginConfig } from '@nextsparkjs/plugin-langchain/plugin.config'
+import { createAgentLogger } from '@nextsparkjs/plugin-langchain/lib/logger'
+import type { OrchestratorState, TaskHandlerResult, TaskData, IntentType, IntentAction } from '@nextsparkjs/plugin-langchain/lib/graph/types'
 
 /**
  * Map priority strings to valid values

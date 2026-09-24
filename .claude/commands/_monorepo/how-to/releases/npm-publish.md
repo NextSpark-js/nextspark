@@ -1,6 +1,6 @@
 # NPM Publish - Complete Guide
 
-Publish all 11 NextSpark packages to npm registry.
+Publish all 12 NextSpark packages to npm registry.
 
 ---
 
@@ -27,13 +27,13 @@ pnpm pkg:publish          →  validates versions + publishes .tgz in correct or
 
 ---
 
-## Complete Package Registry (11 packages)
+## Complete Package Registry (12 packages)
 
-See `npm-version.md` for the full list. The 11 publishable packages are:
+See `npm-version.md` for the full list. The 12 publishable packages are:
 
 **Core (7):** core, ui, mobile, testing, cli, create-nextspark-app, ai-workflow
 **Project templates:** bundled inside `@nextsparkjs/core`; not published separately
-**Plugins (4):** plugin-ai, plugin-amplitude, plugin-social-media-publisher, plugin-walkme
+**Plugins (5):** plugin-ai, plugin-amplitude, plugin-langchain, plugin-social-media-publisher, plugin-walkme
 
 ---
 
@@ -43,7 +43,7 @@ See `npm-version.md` for the full list. The 11 publishable packages are:
 
 Before publishing, versions MUST be defined. Execute the `npm-version` flow:
 
-1. List all 11 packages with current versions
+1. List all 12 packages with current versions
 2. Ask user interactively: beta bump / release / versions ready / other
 3. If bump needed: update all package.json files and commit
 
@@ -78,7 +78,7 @@ npm view @nextsparkjs/core dist-tags --json 2>/dev/null || echo "Not published y
 # This command does ALL of the following automatically:
 #   1. Syncs templates from apps/dev/ → packages/core/templates/ (CRITICAL)
 #   1b. Syncs .claude/ → packages/ai-workflow/claude/ (CRITICAL)
-#   2. Builds all 11 publishable packages in dependency order
+#   2. Builds all 12 publishable packages in dependency order
 #   3. Creates .tgz files in .packages/ directory
 #   4. Resolves workspace:* → real version numbers
 pnpm pkg:pack

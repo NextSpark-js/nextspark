@@ -10,7 +10,7 @@
  * Focus: Business logic with mocked database calls.
  */
 
-import { tokenTracker } from '@/plugins/langchain/lib/token-tracker'
+import { tokenTracker } from '@nextsparkjs/plugin-langchain/lib/token-tracker'
 
 // Mock database functions
 jest.mock('@nextsparkjs/core/lib/db', () => ({

@@ -82,6 +82,7 @@ test('scans only local plugins enabled by nextspark.config.ts', async () => {
       projectSourceDir: projectRoot,
       pluginsDir,
       plugins: ['enabled'],
+      pluginSources: [{ name: 'enabled', sourceDir: join(pluginsDir, 'enabled'), importBase: '@/plugins/enabled' }],
     })
     assert.ok(icons.includes('Telescope'))
     assert.equal(icons.includes('Satellite'), false)

@@ -7,10 +7,10 @@
 
 import type { Customer } from '@/entities/customers/customers.types'
 import { CustomersService } from '@/entities/customers/customers.service'
-import { tracer } from '@/plugins/langchain/lib/tracer'
-import { config as pluginConfig } from '@/plugins/langchain/plugin.config'
-import { createAgentLogger } from '@/plugins/langchain/lib/logger'
-import type { OrchestratorState, CustomerHandlerResult, CustomerData, IntentType, IntentAction } from '@/plugins/langchain/lib/graph/types'
+import { tracer } from '@nextsparkjs/plugin-langchain/lib/tracer'
+import { config as pluginConfig } from '@nextsparkjs/plugin-langchain/plugin.config'
+import { createAgentLogger } from '@nextsparkjs/plugin-langchain/lib/logger'
+import type { OrchestratorState, CustomerHandlerResult, CustomerData, IntentType, IntentAction } from '@nextsparkjs/plugin-langchain/lib/graph/types'
 
 /**
  * Transform Customer entity to CustomerData for handler result

@@ -31,11 +31,11 @@ Step 2: pnpm pkg:pack       →  Sync templates + build + create .tgz
 Step 3: pnpm pkg:publish    →  Validate + publish to npm in order
 ```
 
-### All 11 Packages
+### All 12 Packages
 
 **Core (7):** core, ui, mobile, testing, cli, create-nextspark-app, ai-workflow
 **Project templates:** bundled inside `@nextsparkjs/core`; not published separately
-**Plugins (4):** plugin-ai, plugin-amplitude, plugin-social-media-publisher, plugin-walkme
+**Plugins (5):** plugin-ai, plugin-amplitude, plugin-langchain, plugin-social-media-publisher, plugin-walkme
 
 ### Process
 
@@ -43,7 +43,7 @@ Step 3: pnpm pkg:publish    →  Validate + publish to npm in order
 2. **Prerequisites**: Verify `npm whoami`, clean git status
 3. **Pack**: Run `pnpm pkg:pack` (syncs templates, builds all, creates .tgz)
 4. **Publish**: Run `pnpm pkg:publish` (validates, publishes in dependency order)
-5. **Verify**: Check all 11 packages on npm
+5. **Verify**: Check all 12 packages on npm
 6. **Test**: Quick smoke test with `pnpm dlx create-nextspark-app@beta`
 
 ### What `pnpm pkg:pack` does automatically
@@ -52,7 +52,7 @@ Step 3: pnpm pkg:publish    →  Validate + publish to npm in order
 |------|--------|
 | 1a | Syncs `apps/dev/src/app/` → `packages/core/templates/app/` |
 | 1b | Syncs `.claude/` → `packages/ai-workflow/claude/` |
-| 2 | Builds all 11 publishable packages in dependency order |
+| 2 | Builds all 12 publishable packages in dependency order |
 | 3 | Creates .tgz files with resolved `workspace:*` → real versions |
 
 ---

@@ -22,13 +22,13 @@
  * ============================================================================
  */
 
-import { createAgent } from '@/plugins/langchain/lib/agent-factory'
-import { invokeOrchestrator as invokeGraphOrchestrator } from '@/plugins/langchain/lib/graph'
-import { memoryStore, createHumanMessage, createAIMessage } from '@/plugins/langchain/lib/memory-store'
-import { compilePrompt, hasTemplateVariables } from '@/plugins/langchain/lib/prompt-renderer'
-import { tracer } from '@/plugins/langchain/lib/tracer'
-import type { AgentContext } from '@/plugins/langchain/types/langchain.types'
-import type { ModelConfig } from '@/plugins/langchain/lib/graph/types'
+import { createAgent } from '@nextsparkjs/plugin-langchain/lib/agent-factory'
+import { invokeOrchestrator as invokeGraphOrchestrator } from '@nextsparkjs/plugin-langchain/lib/graph'
+import { memoryStore, createHumanMessage, createAIMessage } from '@nextsparkjs/plugin-langchain/lib/memory-store'
+import { compilePrompt, hasTemplateVariables } from '@nextsparkjs/plugin-langchain/lib/prompt-renderer'
+import { tracer } from '@nextsparkjs/plugin-langchain/lib/tracer'
+import type { AgentContext } from '@nextsparkjs/plugin-langchain/types/langchain.types'
+import type { ModelConfig } from '@nextsparkjs/plugin-langchain/lib/graph/types'
 import { loadSystemPrompt, type AgentName } from './agents'
 import {
     getAgentConfig,

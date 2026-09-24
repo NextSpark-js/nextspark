@@ -262,9 +262,9 @@ export function generateTranslationRegistry(themes, config) {
   })
 
   // Scan plugin entity translations as fallbacks
-  if (config.pluginsDir && existsSync(config.pluginsDir)) {
-    for (const pluginName of config.plugins ?? []) {
-      const entitiesDir = join(config.pluginsDir, pluginName, 'entities')
+  for (const plugin of config.pluginSources ?? []) {
+      const pluginName = plugin.name
+      const entitiesDir = join(plugin.sourceDir, 'entities')
       if (!existsSync(entitiesDir)) continue
 
       const entityDirs = readdirSync(entitiesDir).filter(entry => {
@@ -281,11 +281,10 @@ export function generateTranslationRegistry(themes, config) {
             pluginName,
             entityName,
             locale,
-            filePath: `@/plugins/${pluginName}/entities/${entityName}/messages/${locale}.json`,
+            filePath: `${plugin.importBase}/entities/${entityName}/messages/${locale}.json`,
           })
         })
       })
-    }
   }
 
   // Generate theme loader functions (lazy-loading for performance)

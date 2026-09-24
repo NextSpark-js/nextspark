@@ -8,7 +8,7 @@
  */
 
 import { observabilityConfig } from '@/lib/langchain/observability.config'
-import { AIObservabilityPagePreset } from '@/plugins/langchain/presets/templates/sector7/ai-observability/page'
+import { AIObservabilityPagePreset } from '@nextsparkjs/plugin-langchain/presets/templates/sector7/ai-observability/page'
 
 export default function AIObservabilityPage() {
   return (

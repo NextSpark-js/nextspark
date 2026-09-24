@@ -1,5 +1,5 @@
 import * as z from 'zod'
-import { defineTool } from '@/plugins/langchain/lib/tools-builder'
+import { defineTool } from '@nextsparkjs/plugin-langchain/lib/tools-builder'
 import { CustomersService } from '@/entities/customers/customers.service'
 import type { DayOfWeek } from '@/entities/customers/customers.types'
 

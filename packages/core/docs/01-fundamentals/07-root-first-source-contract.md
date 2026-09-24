@@ -109,6 +109,19 @@ Plugin names are logical local identifiers. For example, `plugins: ['analytics']
 
 This slice adds the contract type and validator only. It deliberately does not change the beta.192 regex config loader; slice B replaces compiler consumption.
 
+### Packaged plugins
+
+This section supersedes the local-only wording above when a project consumes a published plugin.
+
+- A local plugin is enabled by its directory name, for example `plugins: ['analytics']`, and resolves to `<projectRoot>/plugins/analytics` exactly as before.
+- A packaged plugin is enabled by its scoped npm package name, for example `plugins: ['@nextsparkjs/plugin-langchain']`. The same package must be declared in the project's `dependencies`, `devDependencies`, or `optionalDependencies`.
+- The compiler resolves that package with Node dependency resolution anchored at `<projectRoot>/package.json`. It never scans `node_modules`, a workspace, or sibling directories for packages whose names look like plugins.
+- A packaged plugin's `package.json` must declare `nextspark.type: 'plugin'` and a directory-safe logical `nextspark.name`. Registry keys and route identities use that logical name; generated imports use the configured package name and its exported source paths.
+- If `<projectRoot>/plugins/<nextspark.name>/plugin.config.ts` exists, that local plugin shadows the packaged plugin. The package declaration is still resolved and validated so a stale or missing dependency cannot be hidden accidentally.
+- If an enabled package is undeclared, not installed, not resolvable from the project, or lacks valid NextSpark plugin metadata, compilation fails before generation with an actionable diagnostic naming the package and directing the project to declare it and run `pnpm install`.
+
+Local and packaged plugins expose the same registry contribution surface. This rule changes source discovery only; packaged-plugin migration ownership remains deferred as described under open questions.
+
 ### Removal of active-theme selection
 
 `NEXT_PUBLIC_ACTIVE_THEME` is not part of the root-first contract. The compiler, runtime, CLI, database tooling, generated environment files, tests, and documentation must stop reading, writing, forwarding, or requiring it. The project root is the former active theme's replacement: project source is read directly from that root. The one-shot migration owns its legacy parsing privately and removes the old field; the shared root-first config type does not expose it.

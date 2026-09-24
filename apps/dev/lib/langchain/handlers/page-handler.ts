@@ -7,9 +7,9 @@
 
 import type { PagePublic } from '@/entities/pages/pages.types'
 import { PagesService } from '@/entities/pages/pages.service'
-import { config as pluginConfig } from '@/plugins/langchain/plugin.config'
-import { createAgentLogger } from '@/plugins/langchain/lib/logger'
-import type { OrchestratorState, PageHandlerResult, PageData, IntentType, IntentAction } from '@/plugins/langchain/lib/graph/types'
+import { config as pluginConfig } from '@nextsparkjs/plugin-langchain/plugin.config'
+import { createAgentLogger } from '@nextsparkjs/plugin-langchain/lib/logger'
+import type { OrchestratorState, PageHandlerResult, PageData, IntentType, IntentAction } from '@nextsparkjs/plugin-langchain/lib/graph/types'
 
 /**
  * Transform Page entity to PageData for handler result

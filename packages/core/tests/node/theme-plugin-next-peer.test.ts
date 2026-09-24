@@ -1,5 +1,5 @@
 /**
- * Install-once project templates and local plugins retain package metadata for their standalone
+ * Install-once project templates and published plugins retain package metadata for their standalone
  * test tooling. Any `next` peer they declare must admit both the oldest Next core supports and the
  * pinned Next installed by create-nextspark-app.
  */
@@ -36,7 +36,7 @@ function requiredMajors(): number[] {
 }
 
 function manifests(): string[] {
-  const roots = ['packages/core/templates/projects', 'apps/dev/plugins']
+  const roots = ['packages/core/templates/projects', 'plugins']
   return roots.flatMap((dir) => fs
     .readdirSync(path.join(REPO, dir))
     .map((name) => `${dir}/${name}/package.json`)
@@ -48,10 +48,10 @@ test('the majors to admit are the floor core admits and the one generated projec
   assert.ok(floor < installed, `${floor} < ${installed}`)
 })
 
-test("every project template and local plugin admits the project's Next as a peer", () => {
+test("every project template and published plugin admits the project's Next as a peer", () => {
   const majors = requiredMajors()
   const found = manifests()
-  assert.ok(found.length >= 4, `found ${found.length} project-template and local-plugin manifests`)
+  assert.ok(found.length >= 4, `found ${found.length} project-template and published-plugin manifests`)
 
   const rejecting = found.flatMap((file) => {
     const manifest = JSON.parse(read(file))

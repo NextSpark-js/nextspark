@@ -19,16 +19,16 @@ explicitly requests a narrower release.
 
 - `plugins/ai`
 - `plugins/amplitude`
+- `plugins/langchain`
 - `plugins/social-media-publisher`
 - `plugins/walkme`
 
 Project templates under `packages/core/templates/projects/` are payloads inside
 `@nextsparkjs/core`; they are not independently versioned or published.
-`apps/dev/plugins/langchain` is project-local and is not a published package.
 
 ## Workflow
 
-1. Read the current versions from the 11 package manifests.
+1. Read the current versions from the 12 package manifests.
 2. Inspect changes since the last tag and ask the maintainer for the release
    type when it is not already explicit.
 3. Use `scripts/packages/version.sh <type>` to update publishable packages.

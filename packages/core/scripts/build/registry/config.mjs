@@ -9,7 +9,7 @@
 
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { resolveProjectPaths, detectMonorepoRoot, isInstalledAsPackage } from './project-mode.mjs'
+import { resolveProjectPaths, resolveProjectPluginSources, detectMonorepoRoot, isInstalledAsPackage } from './project-mode.mjs'
 import { loadNextSparkConfigSync } from '../config-loader.mjs'
 
 export { detectMonorepoRoot, isInstalledAsPackage }
@@ -21,6 +21,7 @@ export function detectProjectRoot(startDir = process.cwd()) {
 export function getConfig(projectRoot = null) {
   const paths = resolveProjectPaths(projectRoot || process.cwd())
   const nextsparkConfig = loadNextSparkConfigSync(paths.projectRoot)
+  const pluginSources = resolveProjectPluginSources(paths.projectRoot, nextsparkConfig.plugins)
   const themeConfigPath = join(paths.projectRoot, 'config', 'theme.config.ts')
   const themeConfig = existsSync(themeConfigPath) ? readFileSync(themeConfigPath, 'utf8') : ''
   const projectName = themeConfig.match(/\bname:\s*['"]([^'"]+)['"]/)?.[1] || 'project'
@@ -28,7 +29,10 @@ export function getConfig(projectRoot = null) {
   return {
     ...paths,
     projectName,
-    plugins: nextsparkConfig.plugins,
+    pluginRequests: nextsparkConfig.plugins,
+    pluginSources,
+    pluginDirs: pluginSources.map(plugin => plugin.sourceDir),
+    plugins: pluginSources.map(plugin => plugin.name),
     features: nextsparkConfig.features,
     watchMode: process.argv.includes('--watch') && !process.argv.includes('--build'),
     buildMode: process.argv.includes('--build'),

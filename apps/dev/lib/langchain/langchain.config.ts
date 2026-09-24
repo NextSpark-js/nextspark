@@ -9,13 +9,13 @@
  * ============================================================================
  */
 
-import type { ObservabilityConfig } from '@/plugins/langchain/types/observability.types'
+import type { ObservabilityConfig } from '@nextsparkjs/plugin-langchain/types/observability.types'
 import type {
   ThemeLangChainConfig,
   AgentDefinition,
   AgentContext,
-} from '@/plugins/langchain/types/langchain.types'
-import { createAgentHelpers } from '@/plugins/langchain/lib/agent-helpers'
+} from '@nextsparkjs/plugin-langchain/types/langchain.types'
+import { createAgentHelpers } from '@nextsparkjs/plugin-langchain/lib/agent-helpers'
 
 // Tool factories (relative imports since we're inside lib/langchain/)
 import { createTaskTools } from './tools/tasks'

@@ -10,8 +10,8 @@
  * Focus: Pure function testing WITHOUT database calls.
  */
 
-import { guardrails } from '@/plugins/langchain/lib/guardrails'
-import type { GuardrailsConfig } from '@/plugins/langchain/lib/guardrails'
+import { guardrails } from '@nextsparkjs/plugin-langchain/lib/guardrails'
+import type { GuardrailsConfig } from '@nextsparkjs/plugin-langchain/lib/guardrails'
 
 describe('Guardrails Service', () => {
   describe('checkInjection', () => {

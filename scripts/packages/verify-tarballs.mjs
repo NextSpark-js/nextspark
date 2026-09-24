@@ -24,6 +24,8 @@
  *      message is redacted before it is ever assembled - this script never
  *      prints a secret or maintainer path, even inside an example path.
  *   4. Tarball size and file count are reported per package.
+ *   5. With --expect-all, every publishable package under repository-root
+ *      packages/* and plugins/* must have a tarball in the verified set.
  *
  * A committed, explicit allowlist (see ALLOWLIST) can suppress a specific,
  * justified finding. Every entry requires a `reason` string; there is no
@@ -32,7 +34,7 @@
  * finding it names.
  *
  * Usage:
- *   node scripts/packages/verify-tarballs.mjs [dir] [--allowlist <path>]
+ *   node scripts/packages/verify-tarballs.mjs [dir] [--allowlist <path>] [--expect-all]
  *
  *   dir          Directory of .tgz files to verify (default: <repo>/.packages)
  *   --allowlist  Path to the allowlist JSON file
@@ -68,11 +70,16 @@ const NC = '\x1b[0m'
 export function parseArgs(argv) {
   let dir
   let allowlistPath = DEFAULT_ALLOWLIST
+  let expectAll = false
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
-    if (arg === '--allowlist') {
+    if (arg === '--') {
+      continue
+    } else if (arg === '--allowlist') {
       allowlistPath = argv[++i]
       if (!allowlistPath) throw new Error('--allowlist requires a path')
+    } else if (arg === '--expect-all') {
+      expectAll = true
     } else if (arg === '-h' || arg === '--help') {
       return { help: true }
     } else if (!dir) {
@@ -81,7 +88,7 @@ export function parseArgs(argv) {
       throw new Error(`Unknown argument: ${arg}`)
     }
   }
-  return { dir: dir ? resolvePath(dir) : DEFAULT_OUTPUT_DIR, allowlistPath: resolvePath(allowlistPath) }
+  return { dir: dir ? resolvePath(dir) : DEFAULT_OUTPUT_DIR, allowlistPath: resolvePath(allowlistPath), expectAll }
 }
 
 function resolvePath(p) {
@@ -600,6 +607,25 @@ function readPackedVersion(tgzPath) {
   }
 }
 
+export function expectedPublishedPackageNames(repoRoot = REPO_ROOT) {
+  return ['packages', 'plugins'].flatMap((parent) => {
+    const root = join(repoRoot, parent)
+    if (!existsSync(root)) return []
+    return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+      if (!entry.isDirectory()) return []
+      const manifestPath = join(root, entry.name, 'package.json')
+      if (!existsSync(manifestPath)) return []
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+      return manifest.private === true || typeof manifest.name !== 'string' ? [] : [manifest.name]
+    })
+  }).sort()
+}
+
+export function missingExpectedPackages(results, expectedNames = expectedPublishedPackageNames()) {
+  const packed = new Set(results.map(result => result.pkgName))
+  return expectedNames.filter(name => !packed.has(name))
+}
+
 function verifyTarball(tgzPath, versionMap, allowlist) {
   const tarball = tgzPath.split('/').pop()
   const size = statSync(tgzPath).size
@@ -660,7 +686,7 @@ function verifyTarball(tgzPath, versionMap, allowlist) {
 // Reporting
 // ---------------------------------------------------------------------------
 
-function printReport(results) {
+function printReport(results, missingPackages = []) {
   console.log()
   console.log(`${CYAN}========================================${NC}`)
   console.log(`${CYAN}  NextSpark - Verify Tarballs${NC}`)
@@ -686,6 +712,15 @@ function printReport(results) {
       for (const finding of result.findings) {
         console.log(`    ${RED}- [${finding.type}] ${finding.message}${NC}`)
       }
+    }
+    console.log()
+  }
+
+  if (missingPackages.length > 0) {
+    totalFindings += missingPackages.length
+    console.log(`${RED}[FAIL]${NC} ${CYAN}release package set${NC}`)
+    for (const packageName of missingPackages) {
+      console.log(`    ${RED}- [missing-tarball] ${packageName} was not packed${NC}`)
     }
     console.log()
   }
@@ -736,9 +771,10 @@ async function main() {
     return
   }
   if (args.help) {
-    console.log('Usage: node scripts/packages/verify-tarballs.mjs [dir] [--allowlist <path>]')
+    console.log('Usage: node scripts/packages/verify-tarballs.mjs [dir] [--allowlist <path>] [--expect-all]')
     console.log(`  dir          Directory of .tgz files (default: ${DEFAULT_OUTPUT_DIR})`)
     console.log(`  --allowlist  Allowlist JSON path (default: ${DEFAULT_ALLOWLIST})`)
+    console.log('  --expect-all Verify every publishable root package has a tarball')
     return
   }
 
@@ -751,7 +787,8 @@ async function main() {
     return
   }
 
-  const ok = printReport(results)
+  const missingPackages = args.expectAll ? missingExpectedPackages(results) : []
+  const ok = printReport(results, missingPackages)
   process.exitCode = ok ? 0 : 1
 }
 

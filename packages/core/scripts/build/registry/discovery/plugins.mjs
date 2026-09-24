@@ -2,12 +2,12 @@
  * Plugin Discovery
  *
  * Discovers plugins and their API routes.
- * Reads enabled local plugins from <projectRoot>/plugins/.
+ * Reads the plugin sources resolved by project-mode.mjs.
  *
  * @module core/scripts/build/registry/discovery/plugins
  */
 
-import { readdir, stat, readFile } from 'fs/promises'
+import { readdir, stat } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
 
@@ -15,37 +15,18 @@ import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
 import { log, verbose, extractExportName, extractHttpMethods } from '../../../utils/index.mjs'
 import { discoverNestedEntities } from './entities.mjs'
 
-/** Enabled local plugin directory names come only from nextspark.config.ts. */
-function getActivePlugins(config) {
-  return config.plugins
-}
-
 /**
  * Discover plugins
  * @param {object} config - Optional configuration object (defaults to DEFAULT_CONFIG)
  * @returns {Promise<Array>} Array of discovered plugins
  */
 export async function discoverPlugins(config = DEFAULT_CONFIG) {
-  // Get enabled local plugins from nextspark.config.ts.
-  const allowedPlugins = getActivePlugins(config)
-
-  const pluginsDir = config.pluginsDir
   const plugins = []
 
-  try {
-    const entries = await readdir(pluginsDir, { withFileTypes: true })
-    const pluginDirs = entries.filter(entry => entry.isDirectory())
-
-    for (const dir of pluginDirs) {
-      const pluginName = dir.name
-
-      // Skip plugins not declared by the project.
-      if (allowedPlugins && !allowedPlugins.includes(pluginName)) {
-        verbose(`Skipping plugin '${pluginName}' - not declared in nextspark.config.ts`)
-        continue
-      }
-
-      const configPath = join(pluginsDir, pluginName, 'plugin.config.ts')
+  for (const source of config.pluginSources ?? []) {
+      const pluginName = source.name
+      const pluginDir = source.sourceDir
+      const configPath = join(pluginDir, 'plugin.config.ts')
 
       try {
         await stat(configPath)
@@ -62,20 +43,20 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
         }
 
         // Check for API directory and discover routes
-        const apiPath = join(pluginsDir, pluginName, 'api')
+        const apiPath = join(pluginDir, 'api')
         let hasAPI = false
         let routeFiles = []
 
         try {
           await stat(apiPath)
           hasAPI = true
-          routeFiles = await discoverRouteFiles(apiPath, pluginName)
+          routeFiles = await discoverRouteFiles(apiPath, pluginName, source.importBase)
         } catch {
           // No API directory
         }
 
         // Check for entities within plugin
-        const pluginEntitiesPath = join(pluginsDir, pluginName, 'entities')
+        const pluginEntitiesPath = join(pluginDir, 'entities')
         let pluginEntities = []
 
         try {
@@ -86,7 +67,7 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
             '',
             0,
             null,
-            { type: 'plugin', name: pluginName }
+            { type: 'plugin', name: pluginName, importBase: source.importBase }
           )
           verbose(`Plugin ${pluginName} has ${pluginEntities.length} entities`)
         } catch {
@@ -94,7 +75,7 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
         }
 
         // Check for settings areas (settings/<area>/)
-        const settingsPath = join(pluginsDir, pluginName, 'settings')
+        const settingsPath = join(pluginDir, 'settings')
         let pluginSettings = []
 
         try {
@@ -112,19 +93,23 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
         }
 
         // Check for messages, assets, pages server
-        const messagesPath = join(pluginsDir, pluginName, 'messages')
-        const assetsPath = join(pluginsDir, pluginName, 'assets')
-        const pagesServerPath = join(pluginsDir, pluginName, 'plugin.pages.server.ts')
+        const messagesPath = join(pluginDir, 'messages')
+        const assetsPath = join(pluginDir, 'assets')
+        const pagesServerPath = join(pluginDir, 'plugin.pages.server.ts')
         const hasMessages = existsSync(messagesPath)
         const hasAssets = existsSync(assetsPath)
         const hasPagesServer = existsSync(pagesServerPath)
 
         plugins.push({
           name: pluginName,
+          sourceDir: pluginDir,
+          importBase: source.importBase,
+          sourceKind: source.kind,
+          packageName: source.packageName,
           exportName,
-          configPath: `@/plugins/${pluginName}/plugin.config`,
+          configPath: source.kind === 'packaged' ? source.importBase : `${source.importBase}/plugin.config`,
           hasAPI,
-          apiPath: hasAPI ? `@/plugins/${pluginName}/api` : null,
+          apiPath: hasAPI ? `${source.importBase}/api` : null,
           routeFiles,
           entities: pluginEntities,
           settings: pluginSettings,
@@ -145,11 +130,6 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
       } catch {
         verbose(`${pluginName} (no plugin.config.ts)`)
       }
-    }
-
-  } catch (error) {
-    verbose(`Error scanning plugins directory: ${error.message}`)
-    return []
   }
 
   return plugins
@@ -161,7 +141,7 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
  * @param {string} pluginName - Name of the plugin
  * @returns {Promise<Array>} Array of route file info
  */
-export async function discoverRouteFiles(apiPath, pluginName) {
+export async function discoverRouteFiles(apiPath, pluginName, importBase = `@/plugins/${pluginName}`) {
   const routeFiles = []
 
   async function scanDirectory(dir, relativePath = '') {
@@ -178,7 +158,7 @@ export async function discoverRouteFiles(apiPath, pluginName) {
           const routePath = relativePath || '/'
           const endpoint = {
             path: `/api/v1/plugin/${pluginName}${routePath === '/' ? '' : '/' + routePath}`,
-            filePath: `@/plugins/${pluginName}/api${routePath === '/' ? '/route' : '/' + routePath + '/route'}`,
+            filePath: `${importBase}/api${routePath === '/' ? '/route' : '/' + routePath + '/route'}`,
             relativePath: routePath,
             methods: await extractHttpMethods(fullPath),
             isRouteFile: true

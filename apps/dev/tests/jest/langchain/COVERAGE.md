@@ -287,7 +287,7 @@ jest.mock('@langchain/core/messages', () => ({
 ### Token Tracker Mocks
 
 ```typescript
-jest.mock('@/plugins/langchain/lib/token-tracker', () => ({
+jest.mock('@nextsparkjs/plugin-langchain/lib/token-tracker', () => ({
   tokenTracker: {
     trackUsage: jest.fn().mockResolvedValue(undefined),
   },
