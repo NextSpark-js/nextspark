@@ -10,6 +10,7 @@ import { getEntityConfig } from '../entities/registry';
 import { getChildEntities, getEntity } from '../entities/queries';
 import { CreateMetaPayload } from '../../types/meta.types';
 import { getCorsOrigins, normalizeOrigin, isOriginAllowed } from '../utils/cors';
+import { isValidUUID } from '../utils/uuid';
 import {
   type AuthenticateOptions,
   describeRoute,
@@ -462,10 +463,7 @@ export function withApiLogging<T extends unknown[]>(
 /**
  * Valida que un UUID tenga formato válido
  */
-export function isValidUUID(uuid: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
-}
+export { isValidUUID };
 
 /**
  * Sanitiza parámetros de búsqueda para prevenir inyección SQL

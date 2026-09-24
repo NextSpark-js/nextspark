@@ -1,5 +1,5 @@
 import { Pool, type PoolClient } from 'pg';
-import { isValidUUID } from './api/helpers';
+import { isValidUUID } from './utils/uuid';
 
 // Track active connections for graceful shutdown
 let activeConnections = 0;

@@ -129,8 +129,9 @@ describe('generic handlers — #105 audit logging', () => {
 
   it('never lets an audit write failure change the response', async () => {
     mocks.authenticateRequest.mockResolvedValue(SESSION_AUTH())
+    const auditError = Object.assign(new Error('audit table unavailable'), { code: '42501' })
     mocks.mutateWithRLS.mockImplementation(async (sql: string) => {
-      if (sql.includes('INSERT INTO "api_audit_log"')) throw new Error('audit table unavailable')
+      if (sql.includes('INSERT INTO "api_audit_log"')) throw auditError
       return { rows: [{ id: 'pet-1' }] }
     })
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
@@ -139,7 +140,17 @@ describe('generic handlers — #105 audit logging', () => {
     await flushPromises()
 
     expect(response.status).toBe(200)
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('api_audit_log'), expect.any(Error))
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('api_audit_log'),
+      expect.objectContaining({
+        event: 'generic_handler_audit_write_failed',
+        endpoint: '/api/v1/pets',
+        method: 'GET',
+        statusCode: 200,
+        errorCode: '42501',
+        errorMessage: 'audit table unavailable',
+      })
+    )
     errorSpy.mockRestore()
   })
 

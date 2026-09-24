@@ -51,13 +51,17 @@ export async function logGenericHandlerUsage(
   if (!userId) return
 
   const apiKeyId = auth?.type === 'api-key' ? auth.keyId ?? null : null
+  let endpoint = 'unknown'
+  let method = 'unknown'
 
   try {
-    const endpoint = request.nextUrl.pathname
-    const method = request.method
+    endpoint = request.nextUrl.pathname
+    method = request.method
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
     const userAgent = request.headers.get('user-agent')
 
+    // User-attributed writes deliberately stay on the application pool so the
+    // owner-scoped INSERT policy in migration 028 prevents forged audit rows.
     await mutateWithRLS(
       `INSERT INTO "api_audit_log"
        ("apiKeyId", "userId", endpoint, method, "statusCode", "ipAddress", "userAgent", "requestBody", "responseTime")
@@ -76,7 +80,17 @@ export async function logGenericHandlerUsage(
       userId
     )
   } catch (error) {
-    // Never break the response; never fail silently either.
-    console.error('[generic-handler:audit] failed to write api_audit_log entry:', error)
+    // Audit availability must not break the request, but the stable event and
+    // PostgreSQL code make rejected writes alertable and searchable.
+    console.error('[generic-handler:audit] api_audit_log write failed', {
+      event: 'generic_handler_audit_write_failed',
+      endpoint,
+      method,
+      statusCode,
+      errorCode: typeof error === 'object' && error !== null && 'code' in error
+        ? String(error.code)
+        : undefined,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    })
   }
 }
