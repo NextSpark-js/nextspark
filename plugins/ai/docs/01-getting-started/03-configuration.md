@@ -5,7 +5,7 @@
 The AI plugin uses a dedicated environment file for all configuration:
 
 ```
-contents/plugins/ai/
+plugins/ai/
 ├── .env                  # Your configuration (never commit)
 ├── .env.example          # Template (commit this)
 └── lib/
@@ -177,7 +177,7 @@ ollama pull codellama         # Code generation
 ### Server-Side Configuration
 
 ```typescript
-import { getServerPluginConfig } from '@/contents/plugins/ai/lib/server-env'
+import { getServerPluginConfig } from '@/plugins/ai/lib/server-env'
 
 export async function POST(request: Request) {
   const config = await getServerPluginConfig()
@@ -194,7 +194,7 @@ export async function POST(request: Request) {
 ### Client-Side Configuration
 
 ```typescript
-import { getPluginConfig } from '@/contents/plugins/ai/lib/plugin-env'
+import { getPluginConfig } from '@/plugins/ai/lib/plugin-env'
 
 export function MyComponent() {
   const config = getPluginConfig()
@@ -213,7 +213,7 @@ export function MyComponent() {
 
 ```bash
 # ✅ ALWAYS in .gitignore
-contents/plugins/ai/.env
+plugins/ai/.env
 
 # ❌ NEVER commit .env files
 # ❌ NEVER share API keys in code
@@ -299,7 +299,7 @@ export async function POST(request: Request) {
 ### Development Configuration
 
 ```bash
-# contents/plugins/ai/.env (development)
+# plugins/ai/.env (development)
 
 # Use local Ollama for free development
 AI_PLUGIN_ENABLED=true
@@ -358,7 +358,7 @@ DEFAULT_MODEL=llama3.2:3b
 The plugin validates configuration on startup:
 
 ```typescript
-import { validateServerPluginEnvironment } from '@/contents/plugins/ai/lib/server-env'
+import { validateServerPluginEnvironment } from '@/plugins/ai/lib/server-env'
 
 const validation = await validateServerPluginEnvironment()
 
@@ -376,7 +376,7 @@ if (!validation.valid) {
 
 **Check:**
 ```bash
-grep AI_PLUGIN_ENABLED contents/plugins/ai/.env
+grep AI_PLUGIN_ENABLED plugins/ai/.env
 # Should output: AI_PLUGIN_ENABLED=true
 ```
 
@@ -385,7 +385,7 @@ grep AI_PLUGIN_ENABLED contents/plugins/ai/.env
 **Check:**
 ```bash
 # At least one should be set
-grep -E "(OPENAI|ANTHROPIC)_API_KEY" contents/plugins/ai/.env
+grep -E "(OPENAI|ANTHROPIC)_API_KEY" plugins/ai/.env
 
 # Or Ollama should be running
 curl http://localhost:11434/api/tags

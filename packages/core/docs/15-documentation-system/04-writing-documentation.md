@@ -171,7 +171,7 @@ pnpm dev
 Use backticks for inline code:
 
 ```markdown
-The `DOCS_REGISTRY` constant provides access to active-theme documentation metadata.
+The `DOCS_REGISTRY` constant provides access to project documentation metadata.
 
 Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` from the repository root to regenerate all registries.
 
@@ -334,7 +334,7 @@ Provide context and explanation:
 Fetch entity configuration from the registry:
 
 ```typescript
-import { getEntityConfig } from '@/core/lib/registries/entity-registry'
+import { getEntityConfig } from '@nextsparkjs/registries/entity-registry'
 
 const userConfig = getEntityConfig('user')
 console.log(userConfig.fields) // Array of field definitions
@@ -482,7 +482,7 @@ View [Next.js documentation](https://nextjs.org/docs)
 
 ### Regenerating Registry
 
-For published documentation, add or modify markdown under the active theme's `docs/public/` or `docs/superadmin/` directory. Then regenerate every registry:
+For published documentation, add or modify markdown under the project's `docs/public/` or `docs/superadmin/` directory. Then regenerate every registry:
 
 ```bash
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
@@ -492,7 +492,7 @@ The generated documentation module is written to the consuming project's `.nexts
 
 ### Development Workflow
 
-1. Create or edit active-theme public or superadmin markdown files
+1. Create or edit project public or superadmin markdown files
 2. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 3. Start the development server: `pnpm dev`
 4. Navigate to the corresponding documentation route

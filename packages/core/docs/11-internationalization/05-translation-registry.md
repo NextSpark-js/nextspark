@@ -17,13 +17,13 @@ This document covers how the registry works, performance benefits, and best prac
 **Traditional Approach** (Runtime I/O):
 ```typescript
 // BAD - Runtime filesystem I/O (140ms)
-const messages = await import(`@/contents/themes/${theme}/messages/${locale}.json`)
+const messages = await import(`@/messages/${locale}.json`)
 ```
 
 **Registry Approach** (Build-Time):
 ```typescript
 // GOOD - Build-time registry (6ms)
-import { loadThemeTranslation } from '@/core/lib/registries/translation-registry'
+import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 const messages = await loadThemeTranslation('default', 'en')
 ```
 
@@ -85,12 +85,12 @@ const registry = {
   entities: generateEntityRegistry(entities)
 }
 
-writeFile('core/lib/registries/translation-registry.ts', registry)
+writeFile('.nextspark/registries/translation-registry.ts', registry)
 ```
 
 ### Auto-Generated Registry Structure
 
-**File**: `core/lib/registries/translation-registry.ts` ⚠️ **AUTO-GENERATED**
+**File**: `.nextspark/registries/translation-registry.ts` ⚠️ **AUTO-GENERATED**
 
 ```typescript
 // ⚠️ AUTO-GENERATED - DO NOT EDIT MANUALLY
@@ -109,10 +109,10 @@ export async function loadThemeTranslation(
     case 'default':
       switch (locale) {
         case 'en':
-          return import('@/contents/themes/default/messages/en.json')
+          return import('@/messages/en.json')
             .then(m => m.default)
         case 'es':
-          return import('@/contents/themes/default/messages/es.json')
+          return import('@/messages/es.json')
             .then(m => m.default)
         default:
           throw new Error(`Unsupported locale: ${locale}`)
@@ -255,10 +255,10 @@ export async function loadAllI18nTranslations(
 **3. Registry Access**:
 ```typescript
 async function loadThemeTranslations(locale: SupportedLocale) {
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
+  const projectTheme = 'project'
 
   // Uses auto-generated registry function
-  return await loadThemeTranslation(activeTheme, locale)
+  return await loadThemeTranslation(projectTheme, locale)
 }
 ```
 
@@ -345,7 +345,7 @@ bundle: ~16KB
 **1. Always Use Registry Functions**:
 ```typescript
 // CORRECT
-import { loadThemeTranslation } from '@/core/lib/registries/translation-registry'
+import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 const messages = await loadThemeTranslation('default', 'en')
 ```
 
@@ -382,22 +382,22 @@ const t = useTranslations('common')
 **1. Never Edit Registry Files Manually**:
 ```typescript
 // ❌ NEVER EDIT - Will be overwritten
-// core/lib/registries/translation-registry.ts
+// .nextspark/registries/translation-registry.ts
 ```
 
 **2. Don't Use Dynamic Imports Directly**:
 ```typescript
 // ❌ BAD - Runtime I/O
-const messages = await import(`@/contents/themes/${theme}/messages/${locale}.json`)
+const messages = await import(`@/messages/${locale}.json`)
 
 // ✅ GOOD - Registry
 const messages = await loadThemeTranslation(theme, locale)
 ```
 
-**3. Don't Import from @/contents Directly**:
+**3. Don't Import Project Translation Files Directly**:
 ```typescript
 // ❌ BAD
-import messages from '@/contents/themes/default/messages/en.json'
+import messages from '@/messages/en.json'
 
 // ✅ GOOD
 const messages = await loadThemeTranslation('default', 'en')
@@ -441,7 +441,7 @@ const messages = await loadThemeTranslation('default', locale)
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Verify generation
-ls -la core/lib/registries/translation-registry.ts
+ls -la .nextspark/registries/translation-registry.ts
 
 # Check file timestamp matches recent build
 ```
@@ -471,13 +471,13 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 **Solution**:
 ```bash
 # Ensure all locales have files
-contents/themes/default/messages/en.json  ✅
-contents/themes/default/messages/es.json  ✅
-contents/themes/default/messages/fr.json  ❌ Missing
+messages/en.json  ✅
+messages/es.json  ✅
+messages/fr.json  ❌ Missing
 
 # Create missing file
-touch contents/themes/default/messages/fr.json
-echo '{}' > contents/themes/default/messages/fr.json
+touch messages/fr.json
+echo '{}' > messages/fr.json
 
 # Rebuild registry
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
@@ -553,7 +553,7 @@ if git diff --cached --name-only | grep -q "messages/.*\.json"; then
   cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
   # Stage regenerated registry
-  git add core/lib/registries/translation-registry.ts
+  git add .nextspark/registries/translation-registry.ts
 
   echo "✅ Registry rebuilt and staged"
 fi

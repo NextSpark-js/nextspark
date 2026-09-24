@@ -18,22 +18,18 @@ Hands-on tutorial to make your first customizations. You'll learn how to customi
 **Key directories:**
 ```text
 nextspark/
-├── app/                    # Next.js App Router
-│   ├── (public)/          # Public pages (no auth)
-│   ├── (protected)/       # Protected pages (requires auth)
-│   └── api/               # API routes
-├── core/                   # Core application code
-│   ├── components/        # Reusable components
-│   ├── lib/               # Utilities, registries
-│   └── docs/              # Documentation (you're here!)
-├── contents/              # Your customization layer
-│   ├── themes/           # Theme customizations
-│   └── plugins/          # Plugin integrations
-└── scripts/              # Build scripts
+├── src/app/                # Generated Next.js adapter
+├── components/             # Project React components
+├── config/                 # Project configuration
+├── entities/               # Project entities
+├── plugins/                # Local plugin integrations
+├── styles/                 # Project styles
+├── templates/              # Page and layout source
+└── tests/                  # Project tests
 ```
 
 **Customization philosophy:**
-- ✅ Edit files in `contents/` directory
+- ✅ Edit project-owned root directories
 - ✅ Use theme variables for styling
 - ✅ Compose components upward
 - ❌ Never edit auto-generated files
@@ -48,7 +44,7 @@ nextspark/
 
 ```bash
 # Navigate to theme styles
-cd contents/themes/default/styles/
+cd styles/
 ```
 
 **Files:**
@@ -58,7 +54,7 @@ cd contents/themes/default/styles/
 
 ### Step 2: Edit CSS Variables
 
-**Open:** `contents/themes/default/styles/globals.css`
+**Open:** `styles/globals.css`
 
 **Find the primary color:**
 ```css
@@ -184,7 +180,7 @@ export default function AboutPage() {
 
 ### Step 4: Add Navigation Link
 
-**Edit:** `contents/themes/default/config/app.config.ts`
+**Edit:** `config/app.config.ts`
 
 **Find navigation config:**
 ```typescript
@@ -223,7 +219,7 @@ pnpm dev
 
 **Example entity location:**
 ```text
-contents/themes/default/entities/tasks/
+entities/tasks/
 ├── tasks.config.ts       # Entity configuration
 ├── migrations/           # Database migrations
 │   └── 001_create_tasks.sql
@@ -233,7 +229,7 @@ contents/themes/default/entities/tasks/
 
 ### Step 1: Explore Task Entity
 
-**Open:** `contents/themes/default/entities/tasks/tasks.config.ts`
+**Open:** `entities/tasks/tasks.config.ts`
 
 ```typescript
 export const tasksEntityConfig = {
@@ -337,7 +333,7 @@ curl http://localhost:3010/api/v1/tasks \
 ```typescript
 // app/(protected)/dashboard/page.tsx
 import { EntityList } from '@/core/components/entities/EntityList'
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 export default async function DashboardPage() {
   const taskConfig = ENTITY_REGISTRY.tasks
@@ -388,7 +384,7 @@ function TaskList() {
 
 ### Step 1: Open Theme Config
 
-**File:** `contents/themes/default/config/theme.config.ts`
+**File:** `config/theme.config.ts`
 
 ```typescript
 export const themeConfig = {
@@ -454,7 +450,7 @@ pnpm dev              # Restart server
 
 ### Step 1: Open App Config
 
-**File:** `contents/themes/default/config/app.config.ts`
+**File:** `config/app.config.ts`
 
 ```typescript
 export const appConfig = {
@@ -681,8 +677,8 @@ export function useCustomFeature() {
 - ❌ No runtime dynamic imports for content
 
 **File Organization:**
-- ✅ Custom code in `contents/` or `core/components/custom/`
-- ✅ Page routes in `app/` directory
+- ✅ Custom code in `components/`, `lib/`, or another project-owned root directory
+- ✅ Page route source in `templates/`; generated routes live in `src/app/`
 - ✅ Reusable components in `core/components/`
 - ❌ Never edit auto-generated files
 
@@ -747,7 +743,7 @@ Now that you've made your first customizations:
 - ✅ Follow best practices
 
 **Key takeaways:**
-- Edit files in `contents/` directory
+- Edit project-owned root directories
 - Use theme variables for styling
 - Compose shadcn/ui components upward
 - Never edit auto-generated files
@@ -765,13 +761,13 @@ Now that you've made your first customizations:
 
 **Check plugins directory:**
 ```bash
-ls contents/plugins/
+ls plugins/
 # Should see available plugins (e.g., ai/)
 ```
 
 **View plugin structure:**
 ```text
-contents/plugins/ai/
+plugins/ai/
 ├── plugin.config.ts    # Plugin metadata
 ├── api/               # Plugin API routes
 ├── components/        # Plugin components
@@ -784,7 +780,7 @@ contents/plugins/ai/
 **Copy environment template:**
 ```bash
 # For AI plugin
-cp contents/plugins/ai/.env.example contents/plugins/ai/.env
+cp plugins/ai/.env.example plugins/ai/.env
 ```
 
 **Edit `.env` file:**
@@ -796,7 +792,7 @@ AI_MODEL=gpt-4
 
 ### Step 3: Enable Plugin
 
-**Edit:** `contents/plugins/ai/plugin.config.ts`
+**Edit:** `plugins/ai/plugin.config.ts`
 
 ```typescript
 export const aiPluginConfig = {
@@ -817,7 +813,7 @@ export const aiPluginConfig = {
 
 **Import plugin from registry:**
 ```typescript
-import { PLUGIN_REGISTRY } from '@/core/lib/registries/plugin-registry'
+import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
 
 // Access plugin
 const aiPlugin = PLUGIN_REGISTRY.ai
@@ -831,7 +827,7 @@ const result = await aiPlugin.api.generateText({
 
 **Use plugin component:**
 ```typescript
-import { AIAssistant } from '@/contents/plugins/ai/components/AIAssistant'
+import { AIAssistant } from '@/plugins/ai/components/AIAssistant'
 
 export default function Page() {
   return <AIAssistant placeholder="Ask me anything..." />
@@ -853,7 +849,7 @@ pnpm dev
 
 ### Step 1: Dark Mode Customization
 
-**Edit:** `contents/themes/default/styles/globals.css`
+**Edit:** `styles/globals.css`
 
 ```css
 /* Customize dark mode colors */
@@ -878,7 +874,7 @@ pnpm dev
 **Add font files:**
 ```bash
 # Add fonts to theme public directory
-mkdir -p contents/themes/default/public/fonts/
+mkdir -p public/fonts/
 # Copy .woff2 files there
 ```
 
@@ -909,7 +905,7 @@ mkdir -p contents/themes/default/public/fonts/
 
 **Create layout override:**
 
-**File:** `contents/themes/default/templates/layouts/CustomDashboard.tsx`
+**File:** `templates/layouts/CustomDashboard.tsx`
 
 ```typescript
 import { ReactNode } from 'react'
@@ -938,7 +934,7 @@ export function CustomDashboardLayout({ children }: { children: ReactNode }) {
 
 **Use in page:**
 ```typescript
-import { CustomDashboardLayout } from '@/contents/themes/default/templates/layouts/CustomDashboard'
+import { CustomDashboardLayout } from '@/templates/layouts/CustomDashboard'
 
 export default function Page() {
   return (
@@ -953,7 +949,7 @@ export default function Page() {
 
 **Create component override:**
 
-**File:** `contents/themes/default/components/overrides/Button.tsx`
+**File:** `components/overrides/Button.tsx`
 
 ```typescript
 import * as React from 'react'
@@ -1116,7 +1112,7 @@ function AnalyticsDashboard() {
 
 **Create translation file:**
 
-**File:** `contents/themes/default/messages/fr.json`
+**File:** `messages/fr.json`
 
 ```json
 {
@@ -1162,7 +1158,7 @@ export default function Page() {
 
 ### Step 4: Add Entity Translations
 
-**File:** `contents/themes/default/entities/tasks/messages/fr.json`
+**File:** `entities/tasks/messages/fr.json`
 
 ```json
 {
@@ -1615,7 +1611,7 @@ RESEND_API_KEY=...
 - ~1,840 lines of hands-on guidance
 
 **Key Philosophy:**
-- Edit in `contents/` directory
+- Edit project-owned root directories
 - Use theme variables
 - Compose shadcn/ui upward
 - Never edit auto-generated files

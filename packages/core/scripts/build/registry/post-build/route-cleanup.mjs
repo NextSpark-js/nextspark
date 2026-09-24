@@ -8,11 +8,12 @@
 
 import { existsSync } from 'fs'
 import { readdir, readFile } from 'fs/promises'
-import { join, dirname } from 'path'
+import { join, dirname, relative } from 'path'
 import { fileURLToPath } from 'url'
 
 import { log, verbose } from '../../../utils/index.mjs'
 import { isUnsafeWrite, projectFiles } from '../../safe-fs.mjs'
+import { projectGeneratedAppDir, projectGeneratedTemplatesDir } from '../project-mode.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -23,7 +24,7 @@ const __dirname = dirname(__filename)
  */
 export async function cleanupOldRouteFiles(CONFIG) {
   const rootDir = CONFIG?.projectRoot || process.cwd()
-  const appApiDir = join(rootDir, 'app', 'api', 'v1', 'plugin')
+  const appApiDir = join(CONFIG?.generatedAppDir || projectGeneratedAppDir(rootDir), 'api', 'v1', 'plugin')
 
   try {
     // Only clean up if directory exists
@@ -56,13 +57,13 @@ export async function cleanupOldRouteFiles(CONFIG) {
 
 /**
  * Clean up orphaned template files that no longer have corresponding templates
- * Removes files from app/(templates)/ when their source templates are deleted
+ * Removes files from src/app/(templates)/ when their source templates are deleted
  * @param {object[]} activeTemplates - List of active templates from discovery
  * @param {object} CONFIG - Configuration object from getConfig()
  */
 export async function cleanupOrphanedTemplates(activeTemplates, CONFIG) {
   const rootDir = CONFIG?.projectRoot || process.cwd()
-  const templatesDir = join(rootDir, 'app', '(templates)')
+  const templatesDir = CONFIG?.generatedTemplatesDir || projectGeneratedTemplatesDir(rootDir)
   if (!existsSync(templatesDir)) {
     return
   }
@@ -72,7 +73,7 @@ export async function cleanupOrphanedTemplates(activeTemplates, CONFIG) {
   // Create a Set of all active template paths for quick lookup
   const activeTemplatePaths = new Set(
     activeTemplates.map(template =>
-      join(rootDir, 'app', '(templates)', template.appPath.replace('app/', ''))
+      join(templatesDir, template.appPath.replace('app/', ''))
     )
   )
 
@@ -144,14 +145,10 @@ export async function cleanupOrphanedTemplates(activeTemplates, CONFIG) {
  */
 export function mapTemplateToAppPath(templateFilePath, CONFIG) {
   const rootDir = CONFIG?.projectRoot || process.cwd()
-  // Extract the part after /templates/
-  const templatesMatch = templateFilePath.match(/\/themes\/[^\/]+\/templates\/(.+)$/)
-  if (!templatesMatch) {
-    return null
-  }
-
-  const relativeTemplatePath = templatesMatch[1]
-  return join(rootDir, 'app', '(templates)', relativeTemplatePath)
+  const templatesDir = join(CONFIG?.projectSourceDir || rootDir, 'templates')
+  const relativeTemplatePath = relative(templatesDir, templateFilePath)
+  if (!relativeTemplatePath || relativeTemplatePath.startsWith('..')) return null
+  return join(CONFIG?.generatedTemplatesDir || projectGeneratedTemplatesDir(rootDir), relativeTemplatePath)
 }
 
 /**
@@ -175,7 +172,7 @@ export async function cleanupDeletedTemplate(templateFilePath, CONFIG) {
 
     // Try to remove empty parent directories (but don't fail if they're not empty)
     let parentDir = dirname(appTemplatePath)
-    const templatesDir = join(rootDir, 'app', '(templates)')
+    const templatesDir = CONFIG?.generatedTemplatesDir || projectGeneratedTemplatesDir(rootDir)
 
     while (parentDir !== templatesDir && parentDir !== rootDir) {
       try {

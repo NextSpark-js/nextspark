@@ -545,4 +545,4 @@ const sendWebhook: HookFunction = async (context) => {
 
 ---
 
-> 💡 **Tip**: These patterns are used in production in the project. Check existing entities in `contents/themes/default/entities/` for real implementations.
+> 💡 **Tip**: These patterns are used in production in the project. Check existing entities in `entities/` for real implementations.

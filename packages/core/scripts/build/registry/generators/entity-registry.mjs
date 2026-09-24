@@ -99,7 +99,7 @@ export interface EntityRegistryEntry {
   pluginContext: EntityPluginContext | null
   themeContext: EntityThemeContext | null
   isCore?: boolean
-  source?: 'core' | 'theme' | 'plugin'
+  source?: 'core' | 'project' | 'theme' | 'plugin'
 }
 
 export const ENTITY_REGISTRY = {
@@ -180,7 +180,7 @@ export function generateEntityRegistryClient(entities, config) {
     pluginContext: ${entity.pluginContext ? `{ pluginName: '${entity.pluginContext.pluginName}' }` : 'null'},
     themeContext: ${entity.themeContext ? `{ themeName: '${entity.themeContext.themeName}' }` : 'null'},
     isCore: ${entity.isCore || false},
-    source: ${entity.source ? `'${entity.source}'` : `'theme'`},
+    source: ${entity.source ? `'${entity.source}'` : `'project'`},
     access: ${entity.exportName}.access?.basePath ? {
       basePath: ${entity.exportName}.access.basePath
     } : undefined,
@@ -258,7 +258,7 @@ export interface ClientEntityConfig {
   pluginContext: { pluginName: string } | null
   themeContext: { themeName: string } | null
   isCore: boolean
-  source: 'core' | 'theme' | 'plugin'
+  source: 'core' | 'project' | 'theme' | 'plugin'
   access?: {
     basePath?: string
   }

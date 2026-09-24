@@ -19,14 +19,14 @@ Plugins can expose custom API endpoints for external access, data processing, an
 
 ### Basic Route Handler
 
-**Location**: `contents/plugins/[plugin]/api/[endpoint]/route.ts`
+**Location**: `plugins/[plugin]/api/[endpoint]/route.ts`
 
 **Example**:
 ```typescript
-// contents/plugins/my-plugin/api/process/route.ts
+// plugins/my-plugin/api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export async function POST(request: NextRequest) {
   // 1. Authenticate request
@@ -177,7 +177,7 @@ const response = await fetch('/api/v1/plugin/my-plugin/process', {
 
 **Define Schema**:
 ```typescript
-// contents/plugins/my-plugin/lib/validation.ts
+// plugins/my-plugin/lib/validation.ts
 import * as z from 'zod'
 
 export const ProcessInputSchema = z.object({
@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
 **Route**: `api/[id]/route.ts`
 
 ```typescript
-// contents/plugins/my-plugin/api/items/[id]/route.ts
+// plugins/my-plugin/api/items/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
@@ -362,10 +362,10 @@ return NextResponse.json(
 ## Real-World Example: AI Plugin
 
 ```typescript
-// contents/plugins/ai/api/generate/route.ts
+// plugins/ai/api/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 import * as z from 'zod'
 
 const GenerateSchema = z.object({

@@ -54,7 +54,7 @@ Session duration and renewal are read from the merged app config, so a theme
 tunes them from its own `app.config.ts` — no need to patch the core:
 
 ```typescript
-// contents/themes/my-theme/config/app.config.ts
+// config/app.config.ts
 auth: {
   session: {
     expiresIn: 60 * 60 * 24 * 90, // 90 days — long-lived sessions for an installed PWA

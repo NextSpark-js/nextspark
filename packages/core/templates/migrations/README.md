@@ -206,10 +206,10 @@ Based on your entity requirements, choose the appropriate mode directory.
 ```bash
 # Example: Creating a "products" entity with team isolation
 cp core/templates/migrations/team-mode/001_entity_table.sql.template \
-   contents/themes/{your-theme}/entities/products/migrations/001_products_table.sql
+   entities/products/migrations/001_products_table.sql
 
 cp core/templates/migrations/team-mode/002_entity_metas.sql.template \
-   contents/themes/{your-theme}/entities/products/migrations/002_products_metas.sql
+   entities/products/migrations/002_products_metas.sql
 ```
 
 ### Step 3: Replace Variables

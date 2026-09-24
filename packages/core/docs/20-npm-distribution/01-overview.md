@@ -14,25 +14,26 @@ This section documents the `@nextspark/core` package architecture and how it wor
 - **Templates**: EJS templates for app generation
 - **Migrations**: Database schema migrations
 
-## Dual-Mode Architecture
+## Root-first architecture
 
-NextSpark operates in two modes:
+The repository development app and generated consumer projects use the same
+source contract. The directory containing `nextspark.config.ts` is the project,
+host, and source root.
 
-### Monorepo Mode (Development)
-
-Used during development in the sass-boilerplate monorepo:
+### Repository development project
 
 ```
 sass-boilerplate/
 ├── packages/
-│   └── core/                    # @nextspark/core source
-│       └── src/lib/registries/  # Registries generated here
-├── contents/
-│   └── themes/default/          # Theme source
-└── app/                         # Next.js app
+│   └── core/                    # @nextsparkjs/core source and template catalog
+└── apps/dev/                  # Root-first reference project
+    ├── entities/              # Project source
+    ├── plugins/               # Local plugins
+    ├── src/app/               # Generated Next.js adapter
+    └── .nextspark/registries/ # Generated registries
 ```
 
-### NPM Mode (Consumer Projects)
+### Consumer project
 
 Used when @nextspark/core is installed as a package:
 
@@ -43,9 +44,10 @@ my-saas-app/
 │       └── dist/                # Pre-built code
 ├── .nextspark/
 │   └── registries/              # Registries generated here
-├── contents/
-│   └── themes/default/          # User's theme
-└── app/                         # Generated/user app
+├── entities/                   # Project-owned source
+├── plugins/                    # Enabled local plugins
+├── templates/                  # Project route source
+└── src/app/                    # Generated Next.js adapter
 ```
 
 ## Key Components
@@ -119,7 +121,7 @@ When installed, the package runs:
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │  ┌────────────────────────┐   ┌─────────────────────────────────┐│
-│  │   contents/themes/     │   │   .nextspark/registries/        ││
+│  │   ./     │   │   .nextspark/registries/        ││
 │  │   └── default/         │   │   ├── entity-registry.ts        ││
 │  │       ├── entities/    │   │   ├── template-registry.ts      ││
 │  │       ├── templates/   │   │   ├── permissions-registry.ts   ││

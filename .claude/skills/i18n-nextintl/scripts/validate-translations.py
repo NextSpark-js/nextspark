@@ -6,13 +6,12 @@ Compares translation files between locales to find missing keys.
 Validates EN and ES translation completeness.
 
 Usage:
-    python validate-translations.py [--theme THEME] [--strict]
+    python validate-translations.py [--strict]
 
 Options:
-    --theme THEME   Theme to validate (default: from NEXT_PUBLIC_ACTIVE_THEME or 'default')
     --strict        Exit with error if missing keys found
     --core-only     Only validate core messages
-    --theme-only    Only validate theme messages
+    --project-only  Only validate project messages
 """
 
 import os
@@ -23,9 +22,13 @@ from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
 
-def get_active_theme() -> str:
-    """Get active theme from environment or default."""
-    return os.environ.get('NEXT_PUBLIC_ACTIVE_THEME', 'default')
+def get_repo_root() -> Path:
+    """Find the monorepo root that owns packages/core."""
+    for parent in Path(__file__).resolve().parents:
+        if (parent / 'packages' / 'core').is_dir():
+            return parent
+    raise RuntimeError('Could not find the NextSpark monorepo root')
+
 
 
 def flatten_keys(obj: dict, prefix: str = '') -> Set[str]:
@@ -54,7 +57,7 @@ def load_json_file(file_path: Path) -> dict:
 
 def load_core_messages(locale: str) -> dict:
     """Load core messages for a locale by combining all JSON files."""
-    core_path = Path(f'core/messages/{locale}')
+    core_path = get_repo_root() / 'packages' / 'core' / 'src' / 'messages' / locale
     if not core_path.exists():
         return {}
 
@@ -70,10 +73,16 @@ def load_core_messages(locale: str) -> dict:
     return combined
 
 
-def load_theme_messages(theme: str, locale: str) -> dict:
-    """Load theme messages for a locale."""
-    theme_path = Path(f'contents/themes/{theme}/messages/{locale}.json')
-    return load_json_file(theme_path)
+def load_project_messages(locale: str) -> dict:
+    """Load root-first project messages for a locale."""
+    messages_root = Path('messages')
+    locale_dir = messages_root / locale
+    if locale_dir.is_dir():
+        combined = {}
+        for json_file in locale_dir.glob('*.json'):
+            combined[json_file.stem] = load_json_file(json_file)
+        return combined
+    return load_json_file(messages_root / f'{locale}.json')
 
 
 def compare_translations(
@@ -97,7 +106,7 @@ def validate_core_messages() -> Tuple[int, int]:
     es_messages = load_core_messages('es')
 
     if not en_messages:
-        print("  Warning: No English core messages found at core/messages/en/")
+        print("  Warning: No English core messages found at packages/core/src/messages/en/")
         return 0, 0
 
     en_keys = flatten_keys(en_messages)
@@ -130,48 +139,33 @@ def validate_core_messages() -> Tuple[int, int]:
     return len(missing_in_es), len(missing_in_en)
 
 
-def validate_theme_messages(theme: str) -> Tuple[int, int]:
-    """Validate theme messages between EN and ES."""
+def validate_project_messages() -> Tuple[int, int]:
+    """Validate root-first project messages between EN and ES."""
     print("\n" + "=" * 60)
-    print(f"VALIDATING THEME MESSAGES: {theme}")
+    print("VALIDATING PROJECT MESSAGES")
     print("=" * 60)
 
-    en_messages = load_theme_messages(theme, 'en')
-    es_messages = load_theme_messages(theme, 'es')
+    en_messages = load_project_messages('en')
+    es_messages = load_project_messages('es')
 
     if not en_messages:
-        print(f"  Warning: No English theme messages found for theme '{theme}'")
+        print("  Warning: No English project messages found")
         return 0, 0
 
     en_keys = flatten_keys(en_messages)
     es_keys = flatten_keys(es_messages)
-
     print(f"  EN keys: {len(en_keys)}")
     print(f"  ES keys: {len(es_keys)}")
-
-    missing_in_es, missing_in_en = compare_translations(en_keys, es_keys, f"theme-{theme}")
-
+    missing_in_es, missing_in_en = compare_translations(en_keys, es_keys, "project")
     total_missing = len(missing_in_es) + len(missing_in_en)
-
     if missing_in_es:
         print(f"\n  Missing in ES ({len(missing_in_es)}):")
-        for key in sorted(missing_in_es)[:20]:
-            print(f"    - {key}")
-        if len(missing_in_es) > 20:
-            print(f"    ... and {len(missing_in_es) - 20} more")
-
+        for key in sorted(missing_in_es)[:20]: print(f"    - {key}")
     if missing_in_en:
         print(f"\n  Extra in ES (not in EN) ({len(missing_in_en)}):")
-        for key in sorted(missing_in_en)[:10]:
-            print(f"    - {key}")
-        if len(missing_in_en) > 10:
-            print(f"    ... and {len(missing_in_en) - 10} more")
-
-    if total_missing == 0:
-        print("\n  Theme messages: COMPLETE")
-
+        for key in sorted(missing_in_en)[:10]: print(f"    - {key}")
+    if total_missing == 0: print("\n  Project messages: COMPLETE")
     return len(missing_in_es), len(missing_in_en)
-
 
 def check_custom_roles_in_core() -> List[str]:
     """Check if custom roles are incorrectly defined in core messages."""
@@ -192,8 +186,8 @@ def check_custom_roles_in_core() -> List[str]:
             violations.append(f"teams.roles.{role}")
 
     if violations:
-        print(f"\n  VIOLATION: Custom roles found in core/messages/")
-        print(f"  These should be in theme messages only:")
+        print(f"\n  VIOLATION: Custom roles found in packages/core/src/messages/")
+        print(f"  These should be in project messages only:")
         for v in violations:
             print(f"    - {v}")
     else:
@@ -204,26 +198,22 @@ def check_custom_roles_in_core() -> List[str]:
 
 def main():
     parser = argparse.ArgumentParser(description='Validate translations')
-    parser.add_argument('--theme', default=None, help='Theme to validate')
     parser.add_argument('--strict', action='store_true', help='Exit with error if issues found')
     parser.add_argument('--core-only', action='store_true', help='Only validate core messages')
-    parser.add_argument('--theme-only', action='store_true', help='Only validate theme messages')
+    parser.add_argument('--project-only', action='store_true', help='Only validate project messages')
 
     args = parser.parse_args()
-
-    theme = args.theme or get_active_theme()
 
     print(f"\n{'=' * 60}")
     print(f"TRANSLATION VALIDATION")
     print(f"{'=' * 60}")
-    print(f"Theme: {theme}")
     print(f"Strict mode: {args.strict}")
     print(f"{'=' * 60}")
 
     total_issues = 0
 
     # Validate core messages
-    if not args.theme_only:
+    if not args.project_only:
         missing_es, extra_es = validate_core_messages()
         total_issues += missing_es
 
@@ -231,9 +221,9 @@ def main():
         role_violations = check_custom_roles_in_core()
         total_issues += len(role_violations)
 
-    # Validate theme messages
+    # Validate project messages
     if not args.core_only:
-        missing_es, extra_es = validate_theme_messages(theme)
+        missing_es, extra_es = validate_project_messages()
         total_issues += missing_es
 
     # Summary

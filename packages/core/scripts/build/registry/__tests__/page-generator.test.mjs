@@ -44,10 +44,10 @@ async function generatePage(template, outputPath, root) {
 }
 
 async function writeThemeTemplate(root, relativePath, content) {
-  const absolutePath = join(root, 'contents/themes/testtheme/templates', relativePath)
+  const absolutePath = join(root, 'templates', relativePath)
   await mkdir(dirname(absolutePath), { recursive: true })
   await writeFile(absolutePath, content, 'utf8')
-  return `@/contents/themes/testtheme/templates/${relativePath}`
+  return `@/templates/${relativePath}`
 }
 
 // --- the two exported export-name tables ------------------------------------
@@ -204,7 +204,7 @@ test('the generated page re-declares segment config as a literal and forwards mo
       "export async function generateMetadata() { return {} }\nexport const revalidate = 3600\nexport default function Page() { return null }\n"
     )
 
-    const outputPath = join(root, 'app/(templates)/(public)/blog/[slug]/page.tsx')
+    const outputPath = join(root, 'src/app/(templates)/(public)/blog/[slug]/page.tsx')
     await generatePage(
       { appPath: 'app/(public)/blog/[slug]/page.tsx', templateType: 'page', name: '(public)/blog/[slug]/page', templatePath },
       outputPath,
@@ -213,7 +213,7 @@ test('the generated page re-declares segment config as a literal and forwards mo
 
     const generated = await readFile(outputPath, 'utf8')
     assert.match(generated, /export const revalidate = 3600/)
-    assert.match(generated, /export \{ generateMetadata \} from '@\/contents\/themes\/testtheme\/templates\/\(public\)\/blog\/\[slug\]\/page'/)
+    assert.match(generated, /export \{ generateMetadata \} from '@\/templates\/\(public\)\/blog\/\[slug\]\/page'/)
 
     const exportBlockLine = generated.split('\n').find(line => line.startsWith('export {'))
     assert.ok(exportBlockLine, 'expected an export {} re-export line')
@@ -230,7 +230,7 @@ test('a page with no route-level exports is generated unchanged (no forwarded-ex
   try {
     const templatePath = await writeThemeTemplate(root, 'plain/page.tsx', 'export default function Page() { return null }\n')
 
-    const outputPath = join(root, 'app/(templates)/plain/page.tsx')
+    const outputPath = join(root, 'src/app/(templates)/plain/page.tsx')
     await generatePage(
       { appPath: 'app/plain/page.tsx', templateType: 'page', name: 'plain/page', templatePath },
       outputPath,
@@ -255,7 +255,7 @@ test('an invalid segment config value fails page generation instead of being sil
       'export const revalidate = process.env.REVALIDATE\nexport default function Page() { return null }\n'
     )
 
-    const outputPath = join(root, 'app/(templates)/broken/page.tsx')
+    const outputPath = join(root, 'src/app/(templates)/broken/page.tsx')
     await assert.rejects(
       () =>
         generatePage(
@@ -279,7 +279,7 @@ test('a layout with a default export and metadata forwards both, unlike the prev
       "export const metadata = { title: 'Dashboard' }\nexport default function Layout({ children }) { return children }\n"
     )
 
-    const outputPath = join(root, 'app/(templates)/dashboard/layout.tsx')
+    const outputPath = join(root, 'src/app/(templates)/dashboard/layout.tsx')
     await generatePage(
       { appPath: 'app/dashboard/layout.tsx', templateType: 'layout', name: 'dashboard/layout', templatePath },
       outputPath,
@@ -299,7 +299,7 @@ test('a layout template with no exports at all still gets the plain pass-through
   try {
     const templatePath = await writeThemeTemplate(root, 'empty/layout.tsx', '')
 
-    const outputPath = join(root, 'app/(templates)/empty/layout.tsx')
+    const outputPath = join(root, 'src/app/(templates)/empty/layout.tsx')
     await generatePage(
       { appPath: 'app/empty/layout.tsx', templateType: 'layout', name: 'empty/layout', templatePath },
       outputPath,
@@ -341,7 +341,7 @@ test('a metadata-only layout whose comment mentions export default gets the pass
       "// Intentionally no export default: metadata-only layout.\nexport const metadata = { title: 'Docs' }\n"
     )
 
-    const outputPath = join(root, 'app/(templates)/docs/layout.tsx')
+    const outputPath = join(root, 'src/app/(templates)/docs/layout.tsx')
     await generatePage(
       { appPath: 'app/docs/layout.tsx', templateType: 'layout', name: 'docs/layout', templatePath },
       outputPath,
@@ -362,7 +362,7 @@ test('a pass-through layout on an unprotected path does not claim to be PROTECTE
   try {
     const templatePath = await writeThemeTemplate(root, '(public)/docs/layout.tsx', "export const viewport = { themeColor: 'black' }\n")
 
-    const outputPath = join(root, 'app/(templates)/(public)/docs/layout.tsx')
+    const outputPath = join(root, 'src/app/(templates)/(public)/docs/layout.tsx')
     await generatePage(
       { appPath: 'app/(public)/docs/layout.tsx', templateType: 'layout', name: '(public)/docs/layout', templatePath },
       outputPath,
@@ -382,7 +382,7 @@ test('a pass-through layout on a PROTECTED_RENDER path is labeled as one', async
   try {
     const templatePath = await writeThemeTemplate(root, 'layout.tsx', "export const metadata = { title: 'App' }\n")
 
-    const outputPath = join(root, 'app/(templates)/layout.tsx')
+    const outputPath = join(root, 'src/app/(templates)/layout.tsx')
     await generatePage({ appPath: 'app/layout.tsx', templateType: 'layout', name: 'layout', templatePath }, outputPath, root)
 
     const generated = await readFile(outputPath, 'utf8')
@@ -402,7 +402,7 @@ test('a layout exported through `export { X as default }` imports the theme comp
       'function DashboardLayout({ children }) { return children }\nexport { DashboardLayout as default }\n'
     )
 
-    const outputPath = join(root, 'app/(templates)/dashboard/layout.tsx')
+    const outputPath = join(root, 'src/app/(templates)/dashboard/layout.tsx')
     await generatePage(
       { appPath: 'app/dashboard/layout.tsx', templateType: 'layout', name: 'dashboard/layout', templatePath },
       outputPath,
@@ -434,7 +434,7 @@ test('a .ts layout with TypeScript-only syntax imports the theme component inste
       "import type { ReactNode } from 'react'\nconst ReportsLayout = <T>({ children }: T & { children: ReactNode }) => children\nexport default ReportsLayout\n"
     )
 
-    const outputPath = join(root, 'app/(templates)/reports/layout.ts')
+    const outputPath = join(root, 'src/app/(templates)/reports/layout.ts')
     await generatePage(
       { appPath: 'app/reports/layout.ts', templateType: 'layout', name: 'reports/layout', templatePath },
       outputPath,
@@ -536,8 +536,8 @@ test('willGenerateRoute is always true for a layout, whether or not the app alre
   try {
     assert.equal(willGenerateRoute('app/dashboard/layout.tsx', 'layout', root), true)
 
-    await mkdir(join(root, 'app/dashboard'), { recursive: true })
-    await writeFile(join(root, 'app/dashboard/layout.tsx'), 'export default function Layout({ children }) { return children }\n', 'utf8')
+    await mkdir(join(root, 'src/app/dashboard'), { recursive: true })
+    await writeFile(join(root, 'src/app/dashboard/layout.tsx'), 'export default function Layout({ children }) { return children }\n', 'utf8')
     assert.equal(willGenerateRoute('app/dashboard/layout.tsx', 'layout', root), true)
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -551,8 +551,8 @@ test('analyzeTemplates records, per template path, its route-level exports, whet
   try {
     const layoutPath = await writeThemeTemplate(root, 'docs/layout.tsx', "export const revalidate = 60\nexport const viewport = { themeColor: 'black' }\n")
     const pagePath = await writeThemeTemplate(root, 'pricing/page.tsx', 'export default function Page() { return null }\n')
-    await mkdir(join(root, 'app/pricing'), { recursive: true })
-    await writeFile(join(root, 'app/pricing/page.tsx'), 'export default function Page() { return null }\n', 'utf8')
+    await mkdir(join(root, 'src/app/pricing'), { recursive: true })
+    await writeFile(join(root, 'src/app/pricing/page.tsx'), 'export default function Page() { return null }\n', 'utf8')
     const layout = { appPath: 'app/docs/layout.tsx', templateType: 'layout', name: 'docs/layout', templatePath: layoutPath }
     const page = { appPath: 'app/pricing/page.tsx', templateType: 'page', name: 'pricing/page', templatePath: pagePath }
 
@@ -580,7 +580,7 @@ test('generating a page from an analysis that never read its template fails inst
       () =>
         generateTemplatePage(
           { appPath: 'app/plain/page.tsx', templateType: 'page', name: 'plain/page', templatePath },
-          join(root, 'app/(templates)/plain/page.tsx'),
+          join(root, 'src/app/(templates)/plain/page.tsx'),
           new Map()
         ),
       /was not read by analyzeTemplates/
@@ -595,8 +595,8 @@ test('willGenerateRoute is true for a page only when the app has no file there y
   try {
     assert.equal(willGenerateRoute('app/docs/page.tsx', 'page', root), true)
 
-    await mkdir(join(root, 'app/docs'), { recursive: true })
-    await writeFile(join(root, 'app/docs/page.tsx'), 'export default function Page() { return null }\n', 'utf8')
+    await mkdir(join(root, 'src/app/docs'), { recursive: true })
+    await writeFile(join(root, 'src/app/docs/page.tsx'), 'export default function Page() { return null }\n', 'utf8')
     assert.equal(willGenerateRoute('app/docs/page.tsx', 'page', root), false)
   } finally {
     await rm(root, { recursive: true, force: true })

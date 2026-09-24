@@ -2,8 +2,7 @@
   "$schema": "./workspace.schema.json",
 
   "project": {
-    "name": "My Project",
-    "activeTheme": "default"
+    "name": "My Project"
   },
 
   "preferences": {

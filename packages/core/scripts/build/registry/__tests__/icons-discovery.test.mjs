@@ -11,8 +11,12 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import {
+  discoverIcons,
   findUnresolvedIconRefs,
   extractIconNames,
   isIconSourcePath,
@@ -21,6 +25,71 @@ import {
   extractLiteralIconCallNames
 } from '../discovery/icons.mjs'
 
+test('discovers core entity icons through the resolution owner coreDir', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-icons-core-dir-'))
+  const coreDir = join(root, 'installed-core')
+  const projectRoot = join(root, 'project')
+  const projectSourceDir = join(root, 'source')
+  const pluginsDir = join(root, 'plugins')
+
+  await mkdir(join(coreDir, 'src', 'entities', 'probe'), { recursive: true })
+  await mkdir(projectSourceDir, { recursive: true })
+  await mkdir(pluginsDir, { recursive: true })
+  await mkdir(projectRoot, { recursive: true })
+  await writeFile(join(projectRoot, 'package.json'), '{}\n')
+  await writeFile(
+    join(coreDir, 'src', 'entities', 'probe', 'probe.config.ts'),
+    "export default { icon: 'Telescope' }\n"
+  )
+
+  try {
+    const icons = await discoverIcons([], {
+      coreDir,
+      projectRoot,
+      projectSourceDir,
+      pluginsDir,
+    })
+    assert.ok(icons.includes('Telescope'))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('scans only local plugins enabled by nextspark.config.ts', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-icons-enabled-plugins-'))
+  const coreDir = join(root, 'core')
+  const projectRoot = join(root, 'project')
+  const pluginsDir = join(root, 'plugins')
+
+  await mkdir(join(coreDir, 'src', 'entities'), { recursive: true })
+  await mkdir(projectRoot, { recursive: true })
+  await mkdir(join(pluginsDir, 'enabled', 'components'), { recursive: true })
+  await mkdir(join(pluginsDir, 'disabled', 'components'), { recursive: true })
+  await writeFile(join(projectRoot, 'package.json'), '{}\n')
+  await writeFile(
+    join(pluginsDir, 'enabled', 'components', 'probe.tsx'),
+    `${DYNAMIC_ICON_IMPORT}<DynamicIcon name="Telescope" />\n`
+  )
+  await writeFile(
+    join(pluginsDir, 'disabled', 'components', 'probe.tsx'),
+    `${DYNAMIC_ICON_IMPORT}<DynamicIcon name="Satellite" />\n`
+  )
+
+  try {
+    const icons = await discoverIcons([], {
+      coreDir,
+      projectRoot,
+      projectSourceDir: projectRoot,
+      pluginsDir,
+      plugins: ['enabled'],
+    })
+    assert.ok(icons.includes('Telescope'))
+    assert.equal(icons.includes('Satellite'), false)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 // extractLiteralIconCallNames matches a call site by its real import binding,
 // so every snippet exercising a real DynamicIcon or resolveIcon call needs
 // one of these in scope, the same way real theme and plugin source does.
@@ -28,54 +97,54 @@ const DYNAMIC_ICON_IMPORT = "import { DynamicIcon } from '@nextsparkjs/core/comp
 const RESOLVE_ICON_IMPORT = "import { resolveIcon } from '@nextsparkjs/core/lib/icons'\n"
 
 test('matches entity, block and app configs', () => {
-  assert.ok(isIconSourcePath('/p/contents/themes/default/entities/tasks/tasks.config.ts'))
-  assert.ok(isIconSourcePath('/p/themes/default/blocks/hero/config.ts'))
-  assert.ok(isIconSourcePath('/p/themes/default/config/app.config.ts'))
+  assert.ok(isIconSourcePath('/p/entities/tasks/tasks.config.ts'))
+  assert.ok(isIconSourcePath('/p/blocks/hero/config.ts'))
+  assert.ok(isIconSourcePath('/p/config/app.config.ts'))
 })
 
 test('matches the same paths with Windows separators', () => {
-  assert.ok(isIconSourcePath('C:\\p\\contents\\themes\\default\\entities\\tasks\\tasks.config.ts'))
-  assert.ok(isIconSourcePath('C:\\p\\themes\\default\\blocks\\hero\\config.ts'))
-  assert.ok(isIconSourcePath('C:\\p\\themes\\default\\config\\app.config.ts'))
+  assert.ok(isIconSourcePath('C:\\p\\entities\\tasks\\tasks.config.ts'))
+  assert.ok(isIconSourcePath('C:\\p\\blocks\\hero\\config.ts'))
+  assert.ok(isIconSourcePath('C:\\p\\config\\app.config.ts'))
 })
 
 test('matches every config/*.config.ts of a theme or plugin, not only app.config.ts', () => {
-  assert.ok(isIconSourcePath('/p/themes/crm/config/dashboard.config.ts'))
-  assert.ok(isIconSourcePath('/p/themes/crm/config/features.config.ts'))
-  assert.ok(isIconSourcePath('/p/themes/crm/config/flows.config.ts'))
-  assert.ok(isIconSourcePath('/p/themes/default/config/theme.config.ts'))
-  assert.ok(isIconSourcePath('C:\\p\\themes\\crm\\config\\features.config.ts'))
+  assert.ok(isIconSourcePath('/p/config/dashboard.config.ts'))
+  assert.ok(isIconSourcePath('/p/config/features.config.ts'))
+  assert.ok(isIconSourcePath('/p/config/flows.config.ts'))
+  assert.ok(isIconSourcePath('/p/config/theme.config.ts'))
+  assert.ok(isIconSourcePath('C:\\p\\config\\features.config.ts'))
 })
 
 test('ignores a config.ts nested deeper than a direct child of config/', () => {
-  assert.equal(isIconSourcePath('/p/themes/default/config/sub/nested.config.ts'), false)
+  assert.equal(isIconSourcePath('/p/config/sub/nested.config.ts'), false)
 })
 
 test('ignores files outside entities, blocks and config directories', () => {
-  assert.equal(isIconSourcePath('/p/themes/default/entities/tasks/messages/en.ts'), false)
+  assert.equal(isIconSourcePath('/p/entities/tasks/messages/en.ts'), false)
 })
 
 test('does not match a file that merely ends in config.ts', () => {
-  assert.equal(isIconSourcePath('/p/themes/default/blocks/hero/notconfig.ts'), false)
+  assert.equal(isIconSourcePath('/p/blocks/hero/notconfig.ts'), false)
 })
 
 // --- isTestFilePath: test code is excluded from discovery entirely --------
 
 test('flags .test. and .spec. files, ts and tsx', () => {
-  assert.ok(isTestFilePath('/p/themes/default/components/wallet-badge.test.tsx'))
-  assert.ok(isTestFilePath('/p/themes/default/components/wallet-badge.spec.ts'))
+  assert.ok(isTestFilePath('/p/components/wallet-badge.test.tsx'))
+  assert.ok(isTestFilePath('/p/components/wallet-badge.spec.ts'))
 })
 
 test('flags anything under __tests__, tests or cypress directories', () => {
-  assert.ok(isTestFilePath('/p/themes/default/__tests__/wallet-badge.tsx'))
-  assert.ok(isTestFilePath('/p/themes/default/tests/wallet-badge.tsx'))
-  assert.ok(isTestFilePath('/p/themes/default/tests/cypress/e2e/wallet.cy.ts'))
-  assert.ok(isTestFilePath('C:\\p\\themes\\default\\__tests__\\wallet-badge.tsx'))
+  assert.ok(isTestFilePath('/p/__tests__/wallet-badge.tsx'))
+  assert.ok(isTestFilePath('/p/tests/wallet-badge.tsx'))
+  assert.ok(isTestFilePath('/p/tests/cypress/e2e/wallet.cy.ts'))
+  assert.ok(isTestFilePath('C:\\p\\__tests__\\wallet-badge.tsx'))
 })
 
 test('does not flag ordinary component source', () => {
-  assert.equal(isTestFilePath('/p/themes/default/components/wallet-badge.tsx'), false)
-  assert.equal(isTestFilePath('/p/themes/default/entities/tasks/tasks.config.ts'), false)
+  assert.equal(isTestFilePath('/p/components/wallet-badge.tsx'), false)
+  assert.equal(isTestFilePath('/p/entities/tasks/tasks.config.ts'), false)
 })
 
 test('reads an icon under a quoted key', async () => {
@@ -308,11 +377,11 @@ test('extracts a literal name through a non-null-asserted callee', async () => {
 })
 
 test('matches .ts and .tsx component files, with Windows separators too', () => {
-  assert.ok(isIconCallSourcePath('/p/themes/default/components/wallet-badge.tsx'))
-  assert.ok(isIconCallSourcePath('/p/themes/default/lib/format.ts'))
-  assert.ok(isIconCallSourcePath('C:\\p\\themes\\default\\components\\wallet-badge.tsx'))
-  assert.equal(isIconCallSourcePath('/p/themes/default/messages/en.json'), false)
-  assert.equal(isIconCallSourcePath('/p/themes/default/README.md'), false)
+  assert.ok(isIconCallSourcePath('/p/components/wallet-badge.tsx'))
+  assert.ok(isIconCallSourcePath('/p/lib/format.ts'))
+  assert.ok(isIconCallSourcePath('C:\\p\\components\\wallet-badge.tsx'))
+  assert.equal(isIconCallSourcePath('/p/messages/en.json'), false)
+  assert.equal(isIconCallSourcePath('/p/README.md'), false)
 })
 
 test('extracts a literal name from DynamicIcon, either quoting style', async () => {
@@ -626,6 +695,6 @@ test('decoy: `resolveIcon(...)` in a test file is excluded by path, not by conte
   // the call-source scan entirely.
   const source = `${RESOLVE_ICON_IMPORT}resolveIcon('Citrus')`
   assert.deepEqual(await extractLiteralIconCallNames(source, 'widget.tsx'), ['Citrus'])
-  assert.ok(isIconCallSourcePath('/p/themes/default/components/widget.test.tsx'))
-  assert.ok(isTestFilePath('/p/themes/default/components/widget.test.tsx'))
+  assert.ok(isIconCallSourcePath('/p/components/widget.test.tsx'))
+  assert.ok(isTestFilePath('/p/components/widget.test.tsx'))
 })

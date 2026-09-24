@@ -221,7 +221,7 @@ await AskUserQuestion({
 #### When Blocks = Yes
 
 The `block-developer` agent (Phase 10) will:
-1. Create new blocks in `contents/themes/{theme}/blocks/`
+1. Create new blocks in `blocks/`
 2. Define block schema and configuration
 3. Implement React components
 4. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
@@ -282,7 +282,7 @@ if (devType === 'New Plugin' || devType === 'Plugin + Theme') {
 
 **Utility Plugin:**
 ```text
-contents/plugins/my-plugin/
+plugins/my-plugin/
 ├── plugin.config.ts
 ├── lib/
 │   ├── core.ts
@@ -292,7 +292,7 @@ contents/plugins/my-plugin/
 
 **Service Plugin:**
 ```text
-contents/plugins/my-plugin/
+plugins/my-plugin/
 ├── plugin.config.ts
 ├── lib/
 │   ├── core.ts
@@ -311,7 +311,7 @@ contents/plugins/my-plugin/
 
 **Full-featured Plugin:**
 ```text
-contents/plugins/my-plugin/
+plugins/my-plugin/
 ├── plugin.config.ts
 ├── lib/
 │   ├── core.ts

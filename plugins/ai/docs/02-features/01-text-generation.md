@@ -401,7 +401,7 @@ Solution: Include session cookie or API key
 ```json
 {
   "error": "OpenAI authentication failed",
-  "message": "Check your OPENAI_API_KEY in contents/plugins/ai/.env"
+  "message": "Check your OPENAI_API_KEY in plugins/ai/.env"
 }
 ```
 Solution: Add API key to `.env` file

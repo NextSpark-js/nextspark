@@ -15,7 +15,7 @@ Patterns for creating and managing page builder blocks in this Next.js applicati
 ## Architecture Overview
 
 ```
-contents/themes/{THEME}/blocks/
+blocks/
 ├── hero/                     # Example block
 │   ├── config.ts            # Metadata (slug, name, category, icon)
 │   ├── schema.ts            # Zod validation (extends baseBlockSchema)
@@ -27,7 +27,7 @@ contents/themes/{THEME}/blocks/
 └── ...
 
 core/types/blocks.ts          # Base schemas, types, helpers
-core/lib/registries/block-registry.ts  # Auto-generated registry
+.nextspark/registries/block-registry.ts  # Auto-generated registry
 ```
 
 ## When to Use This Skill
@@ -40,7 +40,7 @@ core/lib/registries/block-registry.ts  # Auto-generated registry
 
 ## Block Structure (5 Required Files)
 
-Every block requires exactly 5 files in `contents/themes/{THEME}/blocks/{slug}/`:
+Every block requires exactly 5 files in `blocks/{slug}/`:
 
 ### File 1: config.ts
 
@@ -369,7 +369,7 @@ type BlockCategory =
 ## BLOCK_SELECTORS Pattern
 
 ```typescript
-// contents/themes/{theme}/lib/selectors.ts
+// lib/selectors.ts
 
 export const BLOCK_SELECTORS = {
   hero: {
@@ -405,7 +405,7 @@ import { sel } from '../../lib/selectors'
 ## BLOCK_REGISTRY
 
 ```typescript
-// core/lib/registries/block-registry.ts (AUTO-GENERATED)
+// .nextspark/registries/block-registry.ts (AUTO-GENERATED)
 
 export const BLOCK_REGISTRY: Record<string, BlockConfig> = {
   hero: {

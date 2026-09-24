@@ -6,20 +6,21 @@
 # Creates a test project using LOCAL .tgz packages for testing before npm publish.
 #
 # IMPORTANT: This script uses LOCAL packages exclusively, NOT npm packages.
-# The CLI, core, themes, and plugins are all installed from local .tgz files.
+# The CLI, core, and plugins are installed from local .tgz files. Project
+# templates are bundled inside core and extracted once by the wizard.
 #
 # Usage:
 #   ./setup.sh [OPTIONS]
 #
 # Options:
 #   --preset <name>     Preset to use (default: saas)
-#   --theme <name>      Theme to use (default: default)
+#   --template <name>   Project template to extract (default: starter)
 #   --help              Show this help message
 #
 # Examples:
 #   ./setup.sh                          # Full setup with defaults
 #   ./setup.sh --preset blog            # Use blog preset
-#   ./setup.sh --preset saas --theme productivity
+#   ./setup.sh --preset saas --template productivity
 # =============================================================================
 
 set -e
@@ -47,7 +48,7 @@ PROJECT_PATH="$PROJECTS_DIR/$PROJECT_NAME"
 # Default values
 # -----------------------------------------------------------------------------
 PRESET="saas"
-THEME="default"
+TEMPLATE="starter"
 
 # -----------------------------------------------------------------------------
 # Functions
@@ -90,8 +91,8 @@ while [[ $# -gt 0 ]]; do
       PRESET="$2"
       shift 2
       ;;
-    --theme)
-      THEME="$2"
+    --template)
+      TEMPLATE="$2"
       shift 2
       ;;
     --help|-h)
@@ -115,7 +116,7 @@ echo "  Repo root:      $REPO_ROOT"
 echo "  Projects dir:   $PROJECTS_DIR"
 echo "  Project path:   $PROJECT_PATH"
 echo "  Preset:         $PRESET"
-echo "  Theme:          $THEME"
+echo "  Template:       $TEMPLATE"
 echo ""
 
 # Step 1: Clean existing project (always)
@@ -161,25 +162,13 @@ if [ -z "$CLI_TGZ" ]; then
 fi
 print_success "Found: $(basename "$CLI_TGZ")"
 
-# Count themes and plugins
-THEME_COUNT=$(ls -1 "$PROJECT_PATH/.packages"/nextsparkjs-theme-*.tgz 2>/dev/null | wc -l | tr -d ' ')
+# Count plugins
 PLUGIN_COUNT=$(ls -1 "$PROJECT_PATH/.packages"/nextsparkjs-plugin-*.tgz 2>/dev/null | wc -l | tr -d ' ')
-print_success "Found: $THEME_COUNT themes, $PLUGIN_COUNT plugins"
+print_success "Found: $PLUGIN_COUNT plugins"
 
 # Step 5: Create package.json with LOCAL package references
 print_step "5" "Creating package.json with local package references..."
 cd "$PROJECT_PATH"
-
-# Determine theme package name
-THEME_PKG_NAME="@nextsparkjs/theme-$THEME"
-THEME_TGZ=$(ls -1 .packages/nextsparkjs-theme-${THEME}-*.tgz 2>/dev/null | head -1)
-
-if [ -z "$THEME_TGZ" ]; then
-  print_warning "Theme '$THEME' not found in local packages, using 'default'"
-  THEME="default"
-  THEME_PKG_NAME="@nextsparkjs/theme-default"
-  THEME_TGZ=$(ls -1 .packages/nextsparkjs-theme-default-*.tgz 2>/dev/null | head -1)
-fi
 
 # Create package.json using node to handle all local packages
 node -e "
@@ -222,7 +211,6 @@ const pkg = {
   dependencies: {
     '@nextsparkjs/core': packageMap['@nextsparkjs/core'],
     '@nextsparkjs/cli': packageMap['@nextsparkjs/cli'],
-    '$THEME_PKG_NAME': packageMap['$THEME_PKG_NAME'] || packageMap['@nextsparkjs/theme-default'],
     'next': '^15.1.0',
     'react': '^19.0.0',
     'react-dom': '^19.0.0'
@@ -239,7 +227,6 @@ fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\\n');
 console.log('Created package.json with local packages:');
 console.log('  - @nextsparkjs/core: file:./.packages/...');
 console.log('  - @nextsparkjs/cli: file:./.packages/...');
-console.log('  - $THEME_PKG_NAME: file:./.packages/...');
 "
 print_success "package.json created with local package references"
 
@@ -253,12 +240,12 @@ print_step "7" "Running NextSpark wizard (using LOCAL CLI)..."
 echo ""
 
 # The CLI is now installed from local .tgz, so it has all our new flags
-npx nextspark init \
+pnpm exec nextspark init \
   --preset "$PRESET" \
   --name "Test Local Packages" \
   --slug "test-local" \
   --description "Testing with local .tgz packages before npm publish" \
-  --theme "$THEME" \
+  --theme "$TEMPLATE" \
   --yes
 
 print_success "Wizard completed successfully"
@@ -276,8 +263,6 @@ DATABASE_URL="file:./data.db"
 # Authentication
 BETTER_AUTH_SECRET="test-secret-for-local-development-only-32chars"
 
-# Theme configuration
-NEXT_PUBLIC_ACTIVE_THEME=test-local
 
 # App URLs
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -291,7 +276,7 @@ SKIP_EMAIL_VERIFICATION=true
 # Node environment for build
 NODE_ENV=development
 EOF
-print_success ".env file created with NEXT_PUBLIC_ACTIVE_THEME=test-local"
+print_success ".env file created for the root-first apps/dev project"
 
 # Step 9: Re-install to pick up any new dependencies from wizard
 print_step "9" "Re-installing dependencies after wizard..."
@@ -316,7 +301,6 @@ echo ""
 echo -e "${CYAN}All packages are LOCAL .tgz files:${NC}"
 echo "  - @nextsparkjs/core (local)"
 echo "  - @nextsparkjs/cli (local)"
-echo "  - $THEME_PKG_NAME (local)"
 echo ""
 echo "Next steps:"
 echo "  cd $PROJECT_PATH"

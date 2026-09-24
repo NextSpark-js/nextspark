@@ -22,32 +22,8 @@
  * @returns {string} Generated TypeScript content
  */
 export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], entities = [], config) {
-  // Filter themes by activeTheme if set (monorepo optimization)
-  let filteredThemes = themes
-  let filteredPlugins = plugins
-  let requiredPluginNames = []
-
-  if (config.activeTheme) {
-    // Only include the active theme
-    filteredThemes = themes.filter(t => t.name === config.activeTheme)
-
-    // Get required plugins from the active theme's plugins array
-    const activeTheme = filteredThemes[0]
-    if (activeTheme && activeTheme.plugins && activeTheme.plugins.length > 0) {
-      // plugins can be full names like '@nextsparkjs/plugin-langchain' or just 'langchain'
-      requiredPluginNames = activeTheme.plugins.map(p =>
-        p.replace('@nextsparkjs/plugin-', '').replace(/['"]/g, '')
-      )
-    }
-
-    // Filter plugins to only include required ones by the active theme
-    if (requiredPluginNames.length > 0) {
-      filteredPlugins = plugins.filter(p => requiredPluginNames.includes(p.name))
-    } else {
-      // If no required plugins specified, don't include any plugin routes
-      filteredPlugins = []
-    }
-  }
+  const filteredThemes = themes
+  const filteredPlugins = plugins
 
   // Collect all route handlers from themes
   const themeRoutes = []
@@ -57,7 +33,7 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
         const routeKey = route.relativePath === '/' ? '' : route.relativePath
         // No .ts extension - Next.js resolves extensions automatically on all platforms
         const routeFile = route.relativePath === '/' ? '/route' : '/' + route.relativePath + '/route'
-        const filePath = `@/contents/themes/${theme.name}/api${routeFile}`
+        const filePath = `@/api${routeFile}`
         themeRoutes.push({
           themeName: theme.name,
           routePath: routeKey,
@@ -77,7 +53,7 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
         const routeKey = route.relativePath === '/' ? '' : route.relativePath
         // No .ts extension - Next.js resolves extensions automatically on all platforms
         const routeFile = route.relativePath === '/' ? '/route' : '/' + route.relativePath + '/route'
-        const filePath = `@/contents/plugins/${plugin.name}/api${routeFile}`
+        const filePath = `@/plugins/${plugin.name}/api${routeFile}`
         pluginRoutes.push({
           pluginName: plugin.name,
           routePath: routeKey,

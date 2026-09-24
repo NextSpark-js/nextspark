@@ -1,5 +1,5 @@
 /**
- * The verify-email page (apps/dev/app/(auth)/verify-email): once the token is
+ * The verify-email page (apps/dev/src/app/(auth)/verify-email): once the token is
  * verified, it reads the session from Better Auth's get-session and creates
  * the default metadata for that user. Every call goes under the app's base
  * path.

@@ -24,8 +24,8 @@ import type { ProjectType } from '../src/wizard/types.js'
 
 /** What create-nextspark-app leaves before the wizard runs, reduced to the fixture's allowlist. */
 const CREATED_WORKSPACE_YAML = `packages:
-  - 'contents/themes/*'
-  - 'contents/plugins/*'
+  - 'packages/widgets/*'
+  - 'packages/extensions/*'
 
 allowBuilds:
   'fixture-built': true
@@ -66,25 +66,25 @@ function packageGlobs(yaml: string): string[] {
   return globs
 }
 
-test('a web-mobile project keeps its pnpm settings in the root pnpm-workspace.yaml only', async () => {
+test('a web-mobile project keeps only its applications in the root pnpm-workspace.yaml', async () => {
   const root = await generate('web-mobile')
   try {
     assert.equal(fs.existsSync(path.join(root, 'web', 'package.json')), true, 'the generator did not write web/')
     assert.equal(fs.existsSync(path.join(root, 'web', 'pnpm-workspace.yaml')), false, 'web/ has a pnpm-workspace.yaml of its own')
 
     const yaml = fs.readFileSync(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
-    assert.deepEqual(packageGlobs(yaml), ['web', 'web/contents/themes/*', 'web/contents/plugins/*', 'mobile'])
+    assert.deepEqual(packageGlobs(yaml), ['web', 'mobile'])
     assert.match(yaml, /^allowBuilds:\n {2}'fixture-built': true$/m)
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }
 })
 
-test('a web-only project still gets its themes and plugins into the pnpm-workspace.yaml it started with', async () => {
+test('a web-only project removes obsolete package workspace globs', async () => {
   const root = await generate('web')
   try {
     const yaml = fs.readFileSync(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
-    assert.deepEqual(packageGlobs(yaml), ['contents/themes/*', 'contents/plugins/*'])
+    assert.deepEqual(packageGlobs(yaml), [])
     assert.match(yaml, /^allowBuilds:\n {2}'fixture-built': true$/m)
   } finally {
     fs.rmSync(root, { recursive: true, force: true })

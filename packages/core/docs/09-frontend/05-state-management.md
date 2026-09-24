@@ -1188,7 +1188,7 @@ export function useEntityConfig(slug: string) {
 
   useEffect(() => {
     // Dynamically import entity registry
-    import('@/core/lib/registries/entity-registry')
+    import('@nextsparkjs/registries/entity-registry')
       .then(({ ENTITY_REGISTRY }) => {
         const entityConfig = ENTITY_REGISTRY[slug]
         setConfig(entityConfig || null)

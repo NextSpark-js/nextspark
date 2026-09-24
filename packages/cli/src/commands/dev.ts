@@ -1,4 +1,5 @@
 import { spawn, ChildProcess } from 'node:child_process';
+import { join } from 'node:path';
 import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
@@ -19,7 +20,7 @@ interface DevOptions {
  * Build the registries before Next starts.
  *
  * On every start, not only when a registry is missing: the build also
- * regenerates `app/(templates)/`, which has to follow the app layouts and theme
+ * regenerates `src/app/(templates)/`, which has to follow the app layouts and theme
  * templates the project has now. Whatever it replaces or removes there is backed
  * up, and the lines saying so are printed.
  *
@@ -102,15 +103,11 @@ export async function devCommand(options: DevOptions): Promise<void> {
     if (options.registry) {
       console.log(chalk.blue('\n[Registry] Starting registry builder with watch mode...'));
 
-      // Use the unified registry builder with watch mode
-      // It loads .env internally via dotenv, so NEXT_PUBLIC_ACTIVE_THEME is available
-      const registryProcess = spawn('node', ['scripts/build/registry.mjs', '--watch'], {
-        cwd: coreDir,
+      // Use the unified root-first registry builder with watch mode.
+      const registryProcess = spawn('node', [join(coreDir, 'scripts/build/registry.mjs'), '--watch'], {
+        cwd: projectRoot,
         stdio: 'inherit',
-        env: {
-          ...process.env,
-          NEXTSPARK_PROJECT_ROOT: projectRoot,
-        },
+        env: process.env,
       });
 
       processes.push(registryProcess);

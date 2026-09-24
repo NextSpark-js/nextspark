@@ -46,10 +46,10 @@ This comprehensive tutorial guides you through creating a custom plugin from scr
 
 ```bash
 # Create plugin directory
-mkdir -p contents/plugins/weather
+mkdir -p plugins/weather
 
 # Navigate to plugin directory
-cd contents/plugins/weather
+cd plugins/weather
 ```
 
 ### Create Basic Structure
@@ -64,7 +64,7 @@ mkdir -p types lib api components
 
 **Resulting Structure:**
 ```text
-contents/plugins/weather/
+plugins/weather/
 ├── plugin.config.ts
 ├── README.md
 ├── .env.example
@@ -82,7 +82,7 @@ contents/plugins/weather/
 ### Create `.env.example`
 
 ```bash
-# contents/plugins/weather/.env.example
+# plugins/weather/.env.example
 # ============================================
 # WEATHER PLUGIN ENVIRONMENT VARIABLES
 # ============================================
@@ -114,7 +114,7 @@ WEATHER_PLUGIN_DEBUG=false
 ### Create `.gitignore`
 
 ```bash
-# contents/plugins/weather/.gitignore
+# plugins/weather/.gitignore
 .env
 node_modules/
 *.log
@@ -139,7 +139,7 @@ cp .env.example .env
 ### Create Type Definitions
 
 ```typescript
-// contents/plugins/weather/types/weather.types.ts
+// plugins/weather/types/weather.types.ts
 export interface WeatherData {
   readonly city: string
   readonly country: string
@@ -198,7 +198,7 @@ export interface WeatherError {
 ### Create Environment Loader
 
 ```typescript
-// contents/plugins/weather/lib/server-env.ts
+// plugins/weather/lib/server-env.ts
 import { config } from 'dotenv'
 import { join } from 'path'
 import type { WeatherPluginConfig } from '../types/weather.types'
@@ -229,7 +229,7 @@ export function validateEnvironment(): void {
 ### Create Core Utilities
 
 ```typescript
-// contents/plugins/weather/lib/core-utils.ts
+// plugins/weather/lib/core-utils.ts
 import type {
   WeatherData,
   WeatherAPIResponse,
@@ -319,7 +319,7 @@ export function validateCity(city: string): boolean {
 ### Create `plugin.config.ts`
 
 ```typescript
-// contents/plugins/weather/plugin.config.ts
+// plugins/weather/plugin.config.ts
 import type { PluginConfig } from '@/core/types/plugin'
 import { weatherEnv, validateEnvironment } from './lib/server-env'
 import {
@@ -385,10 +385,10 @@ export default weatherPluginConfig
 ### Create Weather API Route
 
 ```typescript
-// contents/plugins/weather/api/current/route.ts
+// plugins/weather/api/current/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 import * as z from 'zod'
 
 const WeatherQuerySchema = z.object({
@@ -451,7 +451,7 @@ export async function GET(request: NextRequest) {
 ### Create Weather Widget Component
 
 ```typescript
-// contents/plugins/weather/components/WeatherWidget.tsx
+// plugins/weather/components/WeatherWidget.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -590,7 +590,7 @@ export function WeatherWidget() {
 ### Unit Tests
 
 ```typescript
-// themes/default/tests/jest/plugins/weather/core-utils.test.ts
+// tests/jest/plugins/weather/core-utils.test.ts
 import { validateCity, transformWeatherData } from '../core-utils'
 import type { WeatherAPIResponse } from '../../types/weather.types'
 
@@ -635,7 +635,7 @@ describe('Weather Plugin Core Utils', () => {
 ### E2E Tests
 
 ```typescript
-// themes/default/tests/cypress/e2e/plugins/weather-widget.cy.ts
+// tests/cypress/e2e/plugins/weather-widget.cy.ts
 describe('Weather Widget', () => {
   beforeEach(() => {
     cy.session('user-session', () => {
@@ -716,7 +716,7 @@ Fetch and display weather data from OpenWeather API.
 
 1. Copy environment variables:
    ```bash
-   cp contents/plugins/weather/.env.example contents/plugins/weather/.env
+   cp plugins/weather/.env.example plugins/weather/.env
    ```
 
 2. Get free API key from [OpenWeather](https://openweathermap.org/api)
@@ -736,7 +736,7 @@ Fetch and display weather data from OpenWeather API.
 ### In Server Components
 
 ```typescript
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export default async function Page() {
   const { fetchWeather } = usePlugin('weather')
@@ -749,7 +749,7 @@ export default async function Page() {
 ### In Client Components
 
 ```typescript
-import { WeatherWidget } from '@/contents/plugins/weather/components/WeatherWidget'
+import { WeatherWidget } from '@/plugins/weather/components/WeatherWidget'
 
 export function Dashboard() {
   return <WeatherWidget />
@@ -769,8 +769,8 @@ See `.env.example` for all configuration options.
 ## Testing
 
 ```bash
-# This plugin's active-theme unit test
-pnpm test:theme plugins/weather/core-utils.test.ts
+# This plugin's project unit test
+pnpm --dir apps/dev exec jest --watchman=false plugins/weather/core-utils.test.ts
 
 # E2E tests
 pnpm cy:run --spec plugins/weather-widget.cy.ts
@@ -793,13 +793,13 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **Registry will generate**:
-- `core/lib/registries/plugin-registry.ts` (server-only)
-- `core/lib/registries/plugin-registry.client.ts` (client-safe)
+- `.nextspark/registries/plugin-registry.ts` (server-only)
+- `.nextspark/registries/plugin-registry.client.ts` (client-safe)
 
 **Verify Registration**:
 ```bash
 # Check plugin is registered
-cat core/lib/registries/plugin-registry.ts | grep weather
+cat .nextspark/registries/plugin-registry.ts | grep weather
 ```
 
 ---
@@ -809,14 +809,14 @@ cat core/lib/registries/plugin-registry.ts | grep weather
 ### Run Tests
 
 ```bash
-# Run this plugin's active-theme unit test
-pnpm test:theme plugins/weather/core-utils.test.ts
+# Run this plugin's project unit test
+pnpm --dir apps/dev exec jest --watchman=false plugins/weather/core-utils.test.ts
 
 # Run E2E tests
 pnpm cy:run
 
-# Run this plugin's active-theme unit test with coverage
-pnpm test:theme --coverage plugins/weather/core-utils.test.ts
+# Run this plugin's project unit test with coverage
+pnpm --dir apps/dev exec jest --watchman=false --coverage plugins/weather/core-utils.test.ts
 ```
 
 ### Manual Testing

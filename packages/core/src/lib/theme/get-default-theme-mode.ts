@@ -27,9 +27,8 @@ export interface ThemeSettings {
  * Server-side only function
  */
 export async function getThemeSettings(): Promise<ThemeSettings> {
-  const activeThemeName = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
-  const themeConfig = ThemeService.getByName(activeThemeName)
-  const appConfig = ThemeService.getAppConfig(activeThemeName)
+  const themeConfig = ThemeService.getCurrent()
+  const appConfig = ThemeService.getCurrentAppConfig()
 
   // Get allowUserToggle from app.config.ts (ui.theme.allowUserToggle)
   // Default to true if not specified

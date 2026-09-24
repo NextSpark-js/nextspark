@@ -2,7 +2,7 @@
  * What `sync:app` does to a project, decided from file contents alone. The
  * command reads core's templates and the project's files into a SyncInput,
  * planSync turns them into one action per file, and only then is anything
- * written - or, with --dry-run, only described. app/(templates) is the registry
+ * written - or, with --dry-run, only described. src/app/(templates) is the registry
  * build's, and core plans it apart (registry-build.ts).
  *
  * Which files are core's to replace:
@@ -18,8 +18,7 @@
  *   on this machine wrote. With no record of that sync, one that differs may be
  *   an older version of core's as much as the project's change: it is kept, and
  *   the report says so until a sync is recorded.
- * - A file whose content for this project can't be worked out - app/globals.css
- *   while the active theme is unknown - is left as it is, and the report says why.
+ * - src/app/globals.css always imports the project-owned root stylesheet.
  */
 
 import { readGeneratedTag, readGeneratedTagAt, sameText, tagStyleFor, withGeneratedTag } from './generated-tag.js';
@@ -27,7 +26,7 @@ import { adaptProxySource, isGeneratedProxySource, proxyFileNameFor, type ProxyF
 import { contentHash, type SyncState, type SyncStateEntry } from './sync-state.js';
 
 /**
- * Root files core ships next to app/. The proxy file is planned apart: its
+ * Root files core ships next to src/app/. The proxy file is planned apart: its
  * name follows the Next version. instrumentation.ts follows the same rules as
  * the others here (create it when the project doesn't have one, keep a
  * customized copy, update an untouched one core changed) so `sync:app` closes
@@ -43,7 +42,7 @@ export const ROOT_TEMPLATE_FILES: readonly string[] = ['next.config.mjs', 'tscon
  */
 export const PPR_TEMPLATE_VARIANTS: Readonly<Record<string, string>> = { 'layout.tsx': 'layout.ppr.tsx' };
 
-/** The part of app/ the registry build generates; sync:app leaves it to that build. */
+/** The part of src/app/ the registry build generates; sync:app leaves it to that build. */
 const GENERATED_APP_PREFIX = '(templates)';
 
 export type SyncActionKind = 'create' | 'update' | 'adopt' | 'unchanged' | 'keep' | 'delete';
@@ -52,9 +51,9 @@ export type SyncActionKind = 'create' | 'update' | 'adopt' | 'unchanged' | 'keep
  * - `app`: a file core ships under templates/app, or tagged there by an earlier sync
  * - `root`: one of ROOT_TEMPLATE_FILES
  * - `proxy`: proxy.ts or middleware.ts
- * - `generated`: a file under app/(templates)
- * - `variant`: a PPR variant in the project's app/
- * - `project`: a file in app/ that core doesn't ship and never wrote
+ * - `generated`: a file under src/app/(templates)
+ * - `variant`: a PPR variant in the project's src/app/
+ * - `project`: a file in src/app/ that core doesn't ship and never wrote
  */
 export type SyncCategory = 'app' | 'root' | 'proxy' | 'generated' | 'variant' | 'project';
 
@@ -92,7 +91,7 @@ export interface SyncInput {
   coreVersion: string;
   /** Core's templates/app, by path relative to it. */
   appTemplates: ReadonlyMap<string, Buffer>;
-  /** The project's app/, by path relative to it. */
+  /** The project's src/app/, by path relative to it. */
   projectApp: ReadonlyMap<string, Buffer>;
   /** Core's root templates (ROOT_TEMPLATE_FILES and proxy.ts), by name. */
   rootTemplates: ReadonlyMap<string, Buffer>;
@@ -102,8 +101,6 @@ export interface SyncInput {
   usePprVariants: boolean;
   /** The project's Next major version, which names its proxy file; null when unknown. */
   nextMajor: number | null;
-  /** The active theme, whose stylesheet app/globals.css imports. */
-  activeTheme?: string;
   /** What the last sync on this machine recorded, or null when there is no record. */
   state: SyncState | null;
   /** Paths, from the project root, of customized files to replace with core's version. */
@@ -122,17 +119,17 @@ function isVariant(file: string): boolean {
   return Object.values(PPR_TEMPLATE_VARIANTS).includes(file);
 }
 
-/** Point app/globals.css's theme stylesheet import at the project's active theme, the way the registry build does. */
-export function withActiveThemeStyles(css: string, activeTheme: string): string {
+/** Point src/app/globals.css at the project-owned root stylesheet. */
+export function withProjectStyles(css: string): string {
   return css.replace(
-    /@import\s+["'][^"']*themes\/[^"']*\/styles\/globals\.css["'];?/,
-    `@import "../contents/themes/${activeTheme}/styles/globals.css";`
+    /@import\s+["'][^"']*styles\/globals\.css["'];?/,
+    '@import "../../styles/globals.css";'
   );
 }
 
 type AppFileContent = { content: Buffer; reason: string } | { blockedBy: string };
 
-/** What core writes at app/<file>, after the substitutions this project needs, or why one of them can't be worked out. */
+/** What core writes at src/app/<file>, after the substitutions this project needs, or why one of them can't be worked out. */
 function appFileContent(file: string, template: Buffer, input: SyncInput): AppFileContent {
   const variant = PPR_TEMPLATE_VARIANTS[file];
   const variantContent = variant ? input.appTemplates.get(variant) : undefined;
@@ -141,12 +138,9 @@ function appFileContent(file: string, template: Buffer, input: SyncInput): AppFi
   }
 
   if (file === 'globals.css') {
-    if (!input.activeTheme) {
-      return { blockedBy: "the theme whose styles it imports is unknown: NEXT_PUBLIC_ACTIVE_THEME is set neither in the environment nor in .env" };
-    }
     return {
-      content: Buffer.from(withActiveThemeStyles(template.toString('utf-8'), input.activeTheme)),
-      reason: `core's file, importing the ${input.activeTheme} theme's styles`,
+      content: Buffer.from(withProjectStyles(template.toString('utf-8'))),
+      reason: "core's file, importing the project's styles",
     };
   }
 
@@ -236,7 +230,7 @@ function planManagedFile(file: ManagedFile, input: SyncInput): SyncAction {
 }
 
 /**
- * A file in the project's app/ that core doesn't ship. Core's once - tagged for
+ * A file in the project's src/app/ that core doesn't ship. Core's once - tagged for
  * this path, or with no tag style and still what the last sync wrote - and
  * untouched, it is removed; changed by the project, it is kept and reported.
  * Anything else, a copy of a generated file included, is the project's own file.
@@ -270,12 +264,12 @@ function planRetiredFile(path: string, current: Buffer, input: SyncInput): SyncA
 }
 
 /**
- * A PPR variant in the project's app/, which sync:app reads from core instead:
+ * A PPR variant in the project's src/app/, which sync:app reads from core instead:
  * removed when it is what core ships or what sync wrote at that path, kept and
  * reported otherwise.
  */
 function planVariant(file: string, current: Buffer, input: SyncInput): SyncAction {
-  const path = `app/${file}`;
+  const path = `src/app/${file}`;
   const core = input.appTemplates.get(file);
   const coreHash = core ? contentHash(core) : undefined;
   const tag = readGeneratedTag(current);
@@ -308,7 +302,7 @@ function planAppFiles(input: SyncInput): SyncAction[] {
   for (const [file, template] of input.appTemplates) {
     if (isGenerated(file) || isVariant(file)) continue;
     synced.add(file);
-    const path = `app/${file}`;
+    const path = `src/app/${file}`;
     const planned = appFileContent(file, template, input);
     actions.push(
       'blockedBy' in planned
@@ -320,11 +314,11 @@ function planAppFiles(input: SyncInput): SyncAction[] {
   for (const [file, current] of input.projectApp) {
     if (synced.has(file)) continue;
     if (isGenerated(file)) {
-      actions.push({ path: `app/${file}`, kind: 'keep', category: 'generated', reason: 'generated by the registry build' });
+      actions.push({ path: `src/app/${file}`, kind: 'keep', category: 'generated', reason: 'generated by the registry build' });
     } else if (isVariant(file)) {
       actions.push(planVariant(file, current, input));
     } else {
-      actions.push(planRetiredFile(`app/${file}`, current, input));
+      actions.push(planRetiredFile(`src/app/${file}`, current, input));
     }
   }
 
@@ -410,18 +404,19 @@ export function nextSyncState(actions: readonly SyncAction[], input: SyncInput):
 }
 
 /**
- * The files under app/ that applying `actions` writes or removes, by path from
+ * The files under src/app/ that applying `actions` writes or removes, by path from
  * the project root: the content written, or null for a file removed.
  */
 export function plannedAppFiles(actions: readonly SyncAction[]): Record<string, string | null> {
   const files: Record<string, string | null> = {};
 
   for (const { path, kind, content } of actions) {
-    if (!path.startsWith('app/')) continue;
+    if (!path.startsWith('src/app/')) continue;
+    const appPath = path.replace(/^src\//, '');
     if (kind === 'delete') {
-      files[path] = null;
+      files[appPath] = null;
     } else if (content && (kind === 'create' || kind === 'update' || kind === 'adopt')) {
-      files[path] = content.toString('utf-8');
+      files[appPath] = content.toString('utf-8');
     }
   }
 
@@ -514,14 +509,14 @@ export function describeSyncPlan(
   }
 
   if (project.length > 0) {
-    lines.push({ tone: 'muted', text: `Left ${project.length} file(s) in app/ that core doesn't ship` });
+    lines.push({ tone: 'muted', text: `Left ${project.length} file(s) in src/app/ that core doesn't ship` });
     if (verbose) {
       for (const action of project) lines.push({ tone: 'muted', text: `  . ${action.path}` });
     }
   }
 
   if (generated.length > 0) {
-    lines.push({ tone: 'muted', text: `Left ${generated.length} file(s) in app/(templates) to the registry build` });
+    lines.push({ tone: 'muted', text: `Left ${generated.length} file(s) in src/app/(templates) to the registry build` });
   }
 
   return lines;

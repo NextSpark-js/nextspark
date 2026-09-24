@@ -4,7 +4,7 @@
  * it imports, puts every block and all their dependencies into the browser
  * bundle of its route. Client code reads configs from block-registry.client and
  * renders blocks through block-registry.lazy; this walks the static imports of
- * core's source and of apps/dev/app to keep it that way.
+ * core's source and of apps/dev/src/app to keep it that way.
  *
  * Run: cd packages/core && npx tsx --test tests/node/block-registry-client-boundary.test.ts
  */
@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 
 const CORE_SRC = resolve(HERE, '../../src')
-const APP_DIR = resolve(HERE, '../../../../apps/dev/app')
+const APP_DIR = resolve(HERE, '../../../../apps/dev/src/app')
 const REPO = resolve(HERE, '../../../..')
 const HEAVY = '@nextsparkjs/registries/block-registry'
 

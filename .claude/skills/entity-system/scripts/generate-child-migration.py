@@ -5,12 +5,11 @@ Generate Child Entity Migration Script
 Generates SQL migration for child entity table with parent reference.
 
 Usage:
-    python generate-child-migration.py --parent PARENT --child CHILD [--theme THEME]
+    python generate-child-migration.py --parent PARENT --child CHILD
 
 Options:
     --parent PARENT     Parent entity name (kebab-case, e.g., 'orders')
     --child CHILD       Child entity name (kebab-case, e.g., 'items')
-    --theme THEME       Theme name (default: from NEXT_PUBLIC_ACTIVE_THEME or 'default')
     --output FILE       Output file path
     --fields FIELDS     Comma-separated field:type pairs (e.g., 'name:text,quantity:number')
     --with-rls          Include RLS policies (default: true)
@@ -26,10 +25,6 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Tuple
 
-
-def get_active_theme() -> str:
-    """Get active theme from environment or default."""
-    return os.environ.get('NEXT_PUBLIC_ACTIVE_THEME', 'default')
 
 
 def to_snake_case(name: str) -> str:
@@ -226,7 +221,6 @@ def main():
     parser = argparse.ArgumentParser(description='Generate child entity migration')
     parser.add_argument('--parent', required=True, help='Parent entity name (kebab-case)')
     parser.add_argument('--child', required=True, help='Child entity name (kebab-case)')
-    parser.add_argument('--theme', default=None, help='Theme name')
     parser.add_argument('--output', help='Output file path')
     parser.add_argument('--fields', help='Comma-separated field:type pairs')
     parser.add_argument('--with-rls', action='store_true', default=True)
@@ -235,7 +229,6 @@ def main():
 
     args = parser.parse_args()
 
-    theme = args.theme or get_active_theme()
     parent_slug = args.parent.lower()
     child_slug = args.child.lower()
     with_rls = not args.no_rls
@@ -247,7 +240,6 @@ def main():
     print(f"Generating child entity migration")
     print(f"Parent: {parent_slug}")
     print(f"Child: {child_slug}")
-    print(f"Theme: {theme}")
     print(f"With RLS: {with_rls}")
     print(f"Fields: {len(fields)}")
     print(f"{'='*60}")
@@ -266,7 +258,7 @@ def main():
         output_path = Path(args.output)
     else:
         # Auto-generate path in parent entity's migrations folder
-        entity_dir = Path(f'contents/themes/{theme}/entities/{parent_slug}')
+        entity_dir = Path(f'entities/{parent_slug}')
         migrations_dir = entity_dir / 'migrations'
 
         if not entity_dir.exists():

@@ -3,7 +3,7 @@
  *
  * Extracts string literals and JSX text (comments stripped first, since
  * comments are allowed to be in any language) from packages/core/src and
- * apps/dev/app, and flags anything that looks like Spanish: ñ, inverted
+ * apps/dev/src/app, and flags anything that looks like Spanish: ñ, inverted
  * punctuation, an accented -ción/-sión, or a Spanish word with no English
  * reading, after resolving the escapes and entities a literal may be written in. The word list stays conservative — every entry
  * must be unambiguously Spanish-only — to keep the false-positive rate low
@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CORE_SRC = path.resolve(__dirname, '../../src')
-const APPS_DEV_APP = path.resolve(__dirname, '../../../../apps/dev/app')
+const APPS_DEV_APP = path.resolve(__dirname, '../../../../apps/dev/src/app')
 
 // Spanish shows through ñ, ¿ or ¡, an accented -ción/-sión, or a word with no
 // English reading. An accent alone is not enough: "Renée" or "Café" are English
@@ -199,7 +199,7 @@ describe('no hardcoded Spanish in shipped code', () => {
     assert.equal(findings.length, 0, `Found hardcoded Spanish:\n${formatFindings(findings)}`)
   })
 
-  test('apps/dev/app has no hardcoded Spanish', () => {
+  test('apps/dev/src/app has no hardcoded Spanish', () => {
     if (!fs.existsSync(APPS_DEV_APP)) return
     const findings = findSpanish(APPS_DEV_APP)
     assert.equal(findings.length, 0, `Found hardcoded Spanish:\n${formatFindings(findings)}`)

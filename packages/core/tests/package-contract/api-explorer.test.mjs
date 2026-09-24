@@ -51,7 +51,7 @@ async function createConsumer({ removeApiExplorerExport = false } = {}) {
   await mkdir(registryPackage, { recursive: true });
   const registryConfig = {
     outputDir: registryPackage,
-    activeTheme: 'contract',
+    projectName: 'contract',
     projectRoot: directory,
   };
   const registryData = { presets: [], docs: [] };

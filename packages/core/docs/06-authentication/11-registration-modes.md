@@ -82,7 +82,7 @@ auth: {
 ## Configuration Reference
 
 ```typescript
-// contents/themes/my-theme/config/app.config.ts
+// config/app.config.ts
 auth: {
   registration: {
     /**

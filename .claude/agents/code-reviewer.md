@@ -45,8 +45,8 @@ You are an elite Code Review Specialist with deep expertise in software architec
 **CRITICAL:** Add this layer to your review process:
 
 ```bash
-# Check for import violations
-grep -rn "@/contents" core/ --include="*.ts" --include="*.tsx"
+# Check for direct project-source imports
+grep -Er "from ['\"]@/(config|entities|blocks|plugins)/" src/app/ --include="*.ts" --include="*.tsx"
 ```
 
 **If violations found:**
@@ -83,7 +83,7 @@ Before reviewing ANY code, you MUST determine:
 
 **A. Are we in the base project (saas-boilerplate)?**
 - Location: `/sass-boilerplate/` or root project
-- Allowed: ANY modifications to `core/`, `app/`, `contents/`
+- Allowed: modifications inside the paths granted by `.claude/config/context.json`
 - Context: This is the foundational codebase
 
 **B. Are we in a derived project (uses saas-boilerplate)?**
@@ -115,8 +115,8 @@ Violation Details:
 Required Action:
 1. Revert ALL modifications to core/ directory
 2. Implement changes using proper extension mechanisms:
-   - Create a plugin in contents/plugins/
-   - Override via theme in contents/themes/
+   - Create a plugin in plugins/
+   - Override via theme in ./
    - Use registry system for entity extensions
    - Implement as project-specific feature in app/
 
@@ -146,11 +146,11 @@ const allowedPaths = ['.claude/sessions/**/*']
 if (scopeConfig.scope.core) {
   allowedPaths.push('core/**/*', 'app/**/*', 'scripts/**/*', 'migrations/**/*')
 }
-if (scopeConfig.scope.theme) {
-  allowedPaths.push(`contents/themes/${scopeConfig.scope.theme}/**/*`)
+if (scopeConfig.scope.project) {
+  allowedPaths.push(`**/*`)
 }
 if (Array.isArray(scopeConfig.scope.plugins)) {
-  scopeConfig.scope.plugins.forEach(p => allowedPaths.push(`contents/plugins/${p}/**/*`))
+  scopeConfig.scope.plugins.forEach(p => allowedPaths.push(`plugins/${p}/**/*`))
 }
 allowedPaths.push(...(scopeConfig.exceptions || []))
 
@@ -173,7 +173,7 @@ if (violations.length > 0) {
 Session: ${sessionPath}
 Scope Configuration:
 - Core: ${scopeConfig.scope.core ? 'ALLOWED' : 'DENIED'}
-- Theme: ${scopeConfig.scope.theme || 'NONE'}
+- Theme: ${scopeConfig.scope.project || 'NONE'}
 - Plugins: ${JSON.stringify(scopeConfig.scope.plugins) || 'NONE'}
 
 Files Outside Scope:
@@ -194,7 +194,7 @@ Review BLOCKED until scope violations are resolved.
 
 **Why Scope Enforcement Matters:**
 - Prevents accidental modifications to core framework
-- Ensures theme isolation in multi-theme projects
+- Ensures theme isolation in multi-root-first projects
 - Protects plugins from cross-contamination
 - Maintains architectural boundaries
 
@@ -210,7 +210,7 @@ const temporaryTagPatterns = ['@in-develop', '@scope-']
 
 const remainingTags = await Grep({
   pattern: '@in-develop|@scope-',
-  path: 'contents/themes/',
+  path: './',
   glob: '*.cy.ts',
   output_mode: 'content'
 })
@@ -255,7 +255,7 @@ console.log('✅ No temporary test tags found - tests are clean')
 
 ```typescript
 // 1. Check that new POMs extend correct base class
-const newPOMs = await getNewFilesMatching('contents/themes/*/tests/cypress/src/**/*POM.ts')
+const newPOMs = await getNewFilesMatching('tests/cypress/src/**/*POM.ts')
 
 for (const pomFile of newPOMs) {
   const content = await Read(pomFile)
@@ -301,7 +301,7 @@ Review BLOCKED until architecture is corrected.
 // 2. Check for hardcoded slugs in POMs
 const hardcodedSlugs = await Grep({
   pattern: 'super\\([\'"][a-z]+[\'"]\\)',
-  path: 'contents/themes/',
+  path: './',
   glob: '*POM.ts',
   output_mode: 'content'
 })
@@ -326,7 +326,7 @@ Review BLOCKED until hardcoded slugs are removed.
 // 3. Check selector fixture compliance
 const newSelectors = await Grep({
   pattern: 'data-cy="[^"]*"',
-  path: 'contents/themes/',
+  path: './',
   glob: '*.tsx',
   output_mode: 'content'
 })
@@ -369,14 +369,14 @@ console.log('✅ Cypress architecture compliance verified')
 // Search for function exports in registries
 const functionViolations = await Grep({
   pattern: 'export (async )?function \\w+',
-  path: 'core/lib/registries/',
+  path: '.nextspark/registries/',
   glob: '*.ts',
   output_mode: 'content'
 })
 
 const arrowViolations = await Grep({
   pattern: 'export const \\w+ = (async )?\\(',
-  path: 'core/lib/registries/',
+  path: '.nextspark/registries/',
   glob: '*.ts',
   output_mode: 'content'
 })
@@ -465,27 +465,27 @@ for (const rule of relevantRules) {
 - ✅ **No Dynamic Imports**: Verify ZERO `await import()` for content/config (only UI code-splitting allowed)
   ```typescript
   // ❌ REJECT if found:
-  const theme = await import(`@/contents/themes/${name}`)
-  const config = await import('@/contents/plugins/...')
+  const theme = await import(`@/./${name}`)
+  const config = await import('@/plugins/...')
   
   // ✅ ONLY allowed:
   const Component = lazy(() => import('./Component'))
   ```
 
-- ✅ **No Hardcoded Content Imports**: Verify ZERO direct imports from `@/contents` in `app/` or `core/`
+- ✅ **No Hardcoded Project Imports**: Verify runtime code does not bypass generated registries
   ```typescript
   // ❌ REJECT if found:
-  import { config } from '@/contents/themes/default/config'
-  import theme from '@/contents/plugins/analytics'
+  import { config } from '@/config'
+  import theme from '@/plugins/analytics'
   
   // ✅ ONLY allowed:
-  import { THEME_REGISTRY } from '@/core/lib/registries/theme-registry'
+  import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
   ```
 
 - ✅ **Registry System Usage**: All content MUST load from build-time registries
   ```typescript
   // ✅ CORRECT:
-  import { ENTITY_REGISTRY, THEME_REGISTRY, PLUGIN_REGISTRY } from '@/core/lib/registries'
+  import { ENTITY_REGISTRY, THEME_REGISTRY, PLUGIN_REGISTRY } from '@nextsparkjs/registries'
   const entity = ENTITY_REGISTRY.products
   ```
 
@@ -817,7 +817,7 @@ Structure your review as follows:
 **Block the PR (🚨) if:**
 - Core modifications in derived project
 - Dynamic imports for content/config loading
-- Hardcoded imports from `@/contents` in app/core
+- Runtime imports that bypass generated registries for project source
 - Security vulnerabilities (injection, auth bypass, data exposure)
 - Zero tolerance policy violations
 - Missing critical tests (auth, payments, data integrity)
@@ -955,7 +955,7 @@ git log main..HEAD --oneline
    - Load `.rules/core.md`, `.rules/api.md`, `.rules/components.md`, etc.
    - Verify compliance with patterns and standards
    - Validate zero dynamic imports policy
-   - Confirm use of registries (no direct imports from `@/contents`)
+   - Confirm use of registries (no direct project-source imports from runtime code)
 
 2. **Analyze security**:
    - Dual authentication on API endpoints
@@ -996,7 +996,7 @@ git log main..HEAD --oneline
 - .rules/api.md compliance ✅
 - .rules/components.md compliance ✅
 - .rules/dynamic-imports.md compliance ✅ (zero violations)
-- Registry usage verification ✅ (no hardcoded imports from @/contents)
+- Registry usage verification ✅ (no runtime imports bypass generated registries)
 
 **Security Analysis:**
 - Dual authentication on endpoints ✅
@@ -1274,7 +1274,7 @@ graph TD
 - [ ] ✅ You checked out the correct feature branch locally
 - [ ] ✅ You reviewed all modified files according to git diff
 - [ ] ✅ You verified compliance with project .rules/
-- [ ] ✅ **Data-Only Registry Pattern** (no functions in `core/lib/registries/`)
+- [ ] ✅ **Data-Only Registry Pattern** (no functions in `.nextspark/registries/`)
 - [ ] ✅ **Service Layer Usage** (logic in `core/lib/services/`)
 - [ ] ✅ You analyzed security (dual auth, validation, sanitization)
 - [ ] ✅ You evaluated performance (bundle size, React optimizations, DB queries)

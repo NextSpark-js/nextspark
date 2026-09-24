@@ -86,7 +86,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 📋 Auth Configuration:
 
 ```typescript
-// contents/themes/your-theme/config/auth.config.ts
+// config/auth.config.ts
 import type { AuthConfig } from '@/core/types/auth'
 
 export const authConfig: AuthConfig = {
@@ -189,7 +189,7 @@ await auth.api.resetPassword({
 Configure test users for development:
 
 ```typescript
-// contents/themes/your-theme/config/app.config.ts
+// config/app.config.ts
 export const appConfig = {
   devKeyring: [
     {
@@ -257,7 +257,7 @@ GITHUB_CLIENT_SECRET="xxx"
 📋 Enable Providers in Config:
 
 ```typescript
-// contents/themes/your-theme/config/auth.config.ts
+// config/auth.config.ts
 export const authConfig: AuthConfig = {
   providers: {
     google: {

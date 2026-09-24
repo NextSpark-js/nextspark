@@ -46,7 +46,7 @@ The Tag Validation System ensures that Cypress test tags are consistent and trac
 
 ## Output: testing-registry.ts
 
-The registry builder generates `core/lib/registries/testing-registry.ts` with:
+The registry builder generates `.nextspark/registries/testing-registry.ts` with:
 
 ```typescript
 // Features with test coverage
@@ -114,7 +114,7 @@ If validation fails, the build exits with an error:
 ```text
 ❌ Feature/Flow tag validation errors:
    ❌ Unknown feature tag @feat-unknown
-      → contents/themes/default/tests/cypress/e2e/some-test.cy.ts
+      → tests/cypress/e2e/some-test.cy.ts
 ```
 
 ---
@@ -146,7 +146,7 @@ pnpm cy:run --env grepTags=-@slow
 
 ### For Features
 
-1. Add the feature to `contents/themes/{theme}/config/features.config.ts`
+1. Add the feature to `config/features.config.ts`
 2. Use the tag in your test: `{ tags: ['@feat-new-feature'] }`
 3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` - validation happens automatically
 
@@ -183,7 +183,7 @@ import {
   FEATURE_REGISTRY,
   TAGS_REGISTRY,
   COVERAGE_SUMMARY
-} from '@/core/lib/registries/testing-registry'
+} from '@nextsparkjs/registries/testing-registry'
 
 // Check if a feature has tests
 const hasTests = FEATURE_REGISTRY.customers.testing.hasTests

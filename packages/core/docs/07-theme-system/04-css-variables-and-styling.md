@@ -289,7 +289,7 @@ styles: {
 
 ### CSS Import
 
-The monorepo does not expose a standalone theme-build script. `apps/dev/app/globals.css` imports the active theme's `styles/globals.css`, and Next.js compiles that dependency.
+The monorepo does not expose a standalone theme-build script. `apps/dev/src/app/globals.css` imports the project's `styles/globals.css`, and Next.js compiles that dependency.
 
 Run these commands from the monorepo root:
 
@@ -311,7 +311,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 ### globals.css
 
-**Location:** `contents/themes/[theme]/styles/globals.css`
+**Location:** `styles/globals.css`
 
 **Purpose:** CSS variable overrides for theming.
 
@@ -342,7 +342,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 ### components.css
 
-**Location:** `contents/themes/[theme]/styles/components.css`
+**Location:** `styles/components.css`
 
 **Purpose:** Component-specific style additions.
 

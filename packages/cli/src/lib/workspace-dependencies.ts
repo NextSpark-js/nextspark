@@ -16,7 +16,7 @@ export interface DependencyInstallResult {
 export interface DependencyInstallOptions {
   /** Set by --no-deps. */
   skipDeps?: boolean
-  /** Where the command runs: the directory that holds contents/. Defaults to the cwd. */
+  /** Where the command runs: the project root. Defaults to the cwd. */
   projectRoot?: string
   /** Runs the install command; tests replace it. */
   run?: (command: string, cwd: string) => void
@@ -30,11 +30,9 @@ const RUN_COMMAND = 'pnpm install --no-frozen-lockfile'
 const LIST_PROJECTS_COMMAND = 'pnpm ls -r --depth -1 --json'
 
 /**
- * Install the dependencies declared by themes and plugins copied into the project.
+ * Install dependencies declared by local plugins copied into the project.
  *
- * contents/themes/* and contents/plugins/* are packages of the project's pnpm
- * workspace, so one install at the workspace root links each one's
- * dependencies into its own node_modules. Copying one in does not, and until
+ * Plugin dependencies are merged into the root project manifest, so one install at the workspace root provides them to project source. Copying one in does not, and until
  * that install runs its imports fail to resolve. The workspace root is the
  * nearest pnpm-workspace.yaml going up (the project itself, or the repository
  * root when the project is the web/ app of a monorepo), climbing past one that

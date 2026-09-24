@@ -3,7 +3,7 @@
 /**
  * Documentation Registry Builder
  *
- * Scans contents/themes/{THEME}/docs/public/ and docs/superadmin/ directories
+ * Scans project-root docs/public/ and docs/superadmin/ directories
  * Generates static registry at .nextspark/registries/docs-registry.ts
  *
  * Structure:
@@ -18,86 +18,14 @@
 
 import { existsSync, readdirSync } from 'fs'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import { projectFiles } from './safe-fs.mjs'
+import { resolveProjectPaths } from './registry/project-mode.mjs'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-/**
- * Detect project root by searching for nextspark.config.ts or apps/dev
- * Excludes node_modules paths to avoid finding pnpm internal workspaces
- */
-function detectProjectRoot() {
-  // Check for explicit project root from CLI
-  if (process.env.NEXTSPARK_PROJECT_ROOT) {
-    return process.env.NEXTSPARK_PROJECT_ROOT
-  }
-
-  let dir = process.cwd()
-  const maxDepth = 10
-  let depth = 0
-
-  // Search upward for nextspark.config.ts (NPM mode) or apps/dev (monorepo)
-  while (dir !== '/' && depth < maxDepth) {
-    // Skip if we're inside node_modules
-    if (dir.includes('node_modules')) {
-      dir = path.dirname(dir)
-      depth++
-      continue
-    }
-
-    // Primary: nextspark.config.ts (NPM mode projects)
-    if (existsSync(path.join(dir, 'nextspark.config.ts'))) {
-      return dir
-    }
-    // Secondary: monorepo with apps/dev (development mode)
-    if (existsSync(path.join(dir, 'apps/dev'))) {
-      return path.join(dir, 'apps/dev')
-    }
-    // Tertiary: pnpm-workspace.yaml at root (monorepo without apps/dev)
-    if (existsSync(path.join(dir, 'pnpm-workspace.yaml'))) {
-      return dir
-    }
-    dir = path.dirname(dir)
-    depth++
-  }
-
-  // Fallback: from packages/core/scripts/build/ to project root (4 levels up)
-  return path.join(__dirname, '../../../..')
-}
-
-/**
- * Check if NextSpark is installed as a package
- */
-function isInstalledAsPackage(root) {
-  return existsSync(path.join(root, 'node_modules/@nextsparkjs/core'))
-}
-
-// Get project root from environment or detect it
-const PROJECT_ROOT = process.env.NEXTSPARK_PROJECT_ROOT || detectProjectRoot()
-const IS_NPM_MODE = isInstalledAsPackage(PROJECT_ROOT)
+const { projectRoot: PROJECT_ROOT, outputDir: OUTPUT_DIR } = resolveProjectPaths(process.cwd())
+const ROOT_DIR = PROJECT_ROOT
 
 console.log(`📚 Building docs registry...`)
 console.log(`   Project root: ${PROJECT_ROOT}`)
-console.log(`   Mode: ${IS_NPM_MODE ? 'NPM' : 'Monorepo'}`)
-
-// Paths - themes directory
-// In NPM mode: contents/themes
-// In Monorepo mode: themes/ (directly in root)
-const THEMES_DIR = IS_NPM_MODE
-  ? path.join(PROJECT_ROOT, 'contents/themes')
-  : path.join(PROJECT_ROOT, 'themes')
-
-const OUTPUT_DIR = path.join(PROJECT_ROOT, '.nextspark/registries')
-
-// For backward compatibility, ROOT_DIR is the project root
-const ROOT_DIR = PROJECT_ROOT
-
-// Path prefix for registry entries
-// In monorepo mode, registry is consumed from apps/dev, so paths need ../../ prefix
-// In NPM mode, registry is consumed from project root, so paths start with /
-const PATH_PREFIX = IS_NPM_MODE ? '' : '../..'
 
 /**
  * Scan a documentation directory and build registry metadata
@@ -134,10 +62,7 @@ function scanDocsDirectory(docsPath, source) {
       const pageSlug = cleanName(file)
       const pageTitle = slugToTitle(pageSlug)
 
-      // Get relative path from consuming app directory
-      // In monorepo: apps/dev needs ../../themes/... to reach themes/
-      // In NPM: project root uses /contents/themes/... directly
-      const relativePath = PATH_PREFIX + filePath.replace(ROOT_DIR, '')
+      const relativePath = path.relative(ROOT_DIR, filePath)
 
       pages.push({
         slug: pageSlug,
@@ -194,10 +119,7 @@ function slugToTitle(slug) {
  * Build the documentation registry
  */
 async function buildDocsRegistry() {
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
-  console.log(`   Active theme: ${activeTheme}`)
-
-  const themeDocsDir = path.join(THEMES_DIR, activeTheme, 'docs')
+  const themeDocsDir = path.join(PROJECT_ROOT, 'docs')
 
   // Scan public docs (user-facing → /docs)
   const publicDocs = scanDocsDirectory(

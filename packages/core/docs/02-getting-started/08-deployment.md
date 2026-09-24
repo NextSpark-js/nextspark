@@ -202,11 +202,6 @@ https://your-domain.vercel.app
 
 **Application:**
 ```text
-NEXT_PUBLIC_ACTIVE_THEME
-default
-```
-
-```text
 NEXT_PUBLIC_APP_URL
 https://your-domain.vercel.app
 ```

@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 }
 
 // ✅ NEW WAY - Dynamic endpoint from entity config (ZERO lines!)
-// Just define entity config in contents/entities/products/products.config.ts
+// Just define entity config in entities/products/products.config.ts
 // GET /api/v1/products automatically available with:
 // - Pagination, filtering, sorting
 // - Metadata integration
@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
 - Per-key/user rate limiting
 - Configurable limits per scope
 
-**4. Entity Registry (`core/lib/registries/entity-registry.ts`)**
+**4. Entity Registry (`.nextspark/registries/entity-registry.ts`)**
 - Build-time entity configuration
 - Zero runtime I/O (pre-loaded)
 
@@ -327,13 +327,13 @@ const response = await fetch('/api/v1/products', {
 
 ### What Are Dynamic Endpoints?
 
-Dynamic endpoints are **auto-generated CRUD APIs** based on entity configuration from the registry system. When you define an entity in `contents/entities/[entity]/`, the API automatically provides full CRUD operations.
+Dynamic endpoints are **auto-generated CRUD APIs** based on entity configuration from the registry system. When you define an entity in `entities/[entity]/`, the API automatically provides full CRUD operations.
 
 ### How It Works
 
 **1. Define Entity Config:**
 ```typescript
-// contents/entities/products/products.config.ts
+// entities/products/products.config.ts
 export const productEntityConfig = {
   name: 'products',
   tableName: 'products',

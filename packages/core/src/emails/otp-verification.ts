@@ -1,7 +1,7 @@
 /**
  * Core default: OTP Verification template.
  *
- * Themes can override by creating `themes/<theme>/emails/otp-verification.ts`
+ * Projects can override by creating `emails/otp-verification.ts`
  * with a default export matching this contract.
  */
 

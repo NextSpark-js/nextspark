@@ -145,7 +145,7 @@ async function postinstall() {
     console.log('   ✅ Theme built')
 
     // 3. Generate app structure (solo si no existe o está vacío)
-    const appDir = join(projectRoot, 'app')
+    const appDir = join(projectRoot, 'src', 'app')
     if (!existsSync(appDir)) {
       console.log('')
       console.log('📁 Generating app structure...')
@@ -154,7 +154,7 @@ async function postinstall() {
       console.log('   ✅ App structure generated')
     } else {
       console.log('')
-      console.log('📁 App directory exists, skipping generation')
+      console.log('📁 src/app directory exists, skipping generation')
     }
 
     console.log('')

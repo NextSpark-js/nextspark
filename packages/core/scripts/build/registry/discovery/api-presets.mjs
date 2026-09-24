@@ -4,8 +4,8 @@
  * Discovers API preset and documentation files from multiple sources:
  *
  * Priority (highest to lowest):
- * 1. Theme custom routes: {theme}/app/api/**\/docs.md and presets.ts
- * 2. Entity folders: {theme}/entities/*\/api/docs.md and presets.ts
+ * 1. Project custom routes: api/**\/docs.md and presets.ts
+ * 2. Entity folders: entities/*\/api/docs.md and presets.ts
  * 3. Core routes: packages/core/templates/app/api/**\/docs.md and presets.ts
  *
  * @module core/scripts/build/registry/discovery/api-presets
@@ -291,16 +291,7 @@ function deriveEndpointFromRoute(routePath) {
  * @returns {string} Path to store in registry (with forward slashes)
  */
 function getStoragePath(absolutePath, config) {
-  let result
-  if (config.isMonorepoMode) {
-    // In monorepo, use path relative to monorepo root
-    result = relative(config.monorepoRoot, absolutePath)
-  } else {
-    // In npm mode, use path relative to project root with contents/ prefix
-    result = relative(config.projectRoot, absolutePath)
-  }
-  // Always normalize to forward slashes (Windows uses backslashes)
-  return normalizePath(result)
+  return normalizePath(relative(config.projectRoot, absolutePath))
 }
 
 /**
@@ -349,8 +340,8 @@ async function findFilesRecursive(dir, filename) {
  * @param {Set} processedEndpoints - Set of already processed endpoints
  */
 async function discoverEntityFolders(config, results, processedEndpoints) {
-  const themeName = config.activeTheme
-  const entitiesDir = join(config.themesDir, themeName, 'entities')
+  const themeName = config.projectName
+  const entitiesDir = join(config.projectSourceDir, 'entities')
 
   if (!existsSync(entitiesDir)) {
     verbose(`No entities directory found for theme "${themeName}"`)
@@ -432,13 +423,13 @@ async function discoverEntityFolders(config, results, processedEndpoints) {
 }
 
 /**
- * Discover docs and presets from theme custom routes
+ * Discover docs and presets from project custom routes
  * @param {object} config - Configuration object
  * @param {object} results - Results accumulator
  * @param {Set} processedEndpoints - Set of already processed endpoints
  */
 async function discoverThemeRoutes(config, results, processedEndpoints) {
-  const themeName = config.activeTheme
+  const themeName = config.projectName
 
   // Process every docs.md / presets.ts under `baseDir`, mapping each route
   // directory to an endpoint via `endpointForDir(routeDir)`.
@@ -516,14 +507,9 @@ async function discoverThemeRoutes(config, results, processedEndpoints) {
 
   // Legacy tree: {theme}/app/api/** — the docs path mirrors the full request URL
   // under `app/` (e.g. app/api/v1/theme/{theme}/foo -> /api/v1/theme/{theme}/foo).
-  const appDir = join(config.themesDir, themeName, 'app')
-  await processTree(join(appDir, 'api'), (routeDir) =>
-    '/' + normalizePath(relative(appDir, routeDir))
-  )
-
-  // Colocated tree: {theme}/api/** — docs/presets live next to the route handler,
+  // Root-first route source: api/** — docs/presets live next to the route handler,
   // mapped the same way the handlers are (api/foo -> /api/v1/theme/{theme}/foo).
-  const apiDir = join(config.themesDir, themeName, 'api')
+  const apiDir = join(config.projectSourceDir, 'api')
   await processTree(apiDir, (routeDir) =>
     '/api/v1/theme/' + themeName + '/' + normalizePath(relative(apiDir, routeDir))
   )
@@ -620,7 +606,7 @@ async function discoverCoreRoutes(config, results, processedEndpoints) {
  * Discover all API presets and docs from multiple sources
  *
  * Priority (highest to lowest):
- * 1. Theme custom routes
+ * 1. Project custom routes
  * 2. Entity folders
  * 3. Core routes
  *
@@ -633,19 +619,8 @@ export async function discoverApiPresets(config = DEFAULT_CONFIG) {
   const results = { presets: [], docs: [] }
   const processedEndpoints = new Set()
 
-  if (!config.activeTheme) {
-    verbose('Warning: NEXT_PUBLIC_ACTIVE_THEME not set, skipping theme-based discovery')
-    // Still discover core routes
-    await discoverCoreRoutes(config, results, processedEndpoints)
-
-    if (results.presets.length > 0 || results.docs.length > 0) {
-      log(`Found ${results.presets.length} preset files and ${results.docs.length} doc files (core only)`, 'success')
-    }
-    return results
-  }
-
-  // 1. Theme custom routes (highest priority)
-  verbose('Checking theme custom routes...')
+  // 1. Project custom routes (highest priority)
+  verbose('Checking project custom routes...')
   await discoverThemeRoutes(config, results, processedEndpoints)
 
   // 2. Entity folders (second priority)

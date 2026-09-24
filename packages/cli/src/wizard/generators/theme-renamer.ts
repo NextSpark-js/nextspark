@@ -12,8 +12,8 @@ import { getTemplatesDir } from './templates-dir.js'
 /**
  * Get the target themes directory in the user's project
  */
-function getTargetThemesDir(): string {
-  return path.resolve(process.cwd(), 'contents', 'themes')
+function getProjectRoot(): string {
+  return path.resolve(process.cwd())
 }
 
 /**
@@ -25,34 +25,34 @@ function getTargetThemesDir(): string {
  */
 export async function copyStarterTheme(
   config: WizardConfig,
-  templatesDir: string = getTemplatesDir()
+  templatesDir: string = getTemplatesDir(),
+  templateName = 'starter'
 ): Promise<void> {
-  const starterThemePath = path.join(templatesDir, 'contents', 'themes', 'starter')
-  const targetThemesDir = getTargetThemesDir()
-  const newThemePath = path.join(targetThemesDir, config.projectSlug)
+  const starterThemePath = path.join(templatesDir, 'projects', templateName)
+  const newThemePath = getProjectRoot()
 
   // Check if starter theme exists
   if (!await fs.pathExists(starterThemePath)) {
-    throw new Error(`Starter theme not found at: ${starterThemePath}`)
+    throw new Error(`Project template not found at: ${starterThemePath}`)
   }
 
-  // Check if target theme already exists
-  if (await fs.pathExists(newThemePath)) {
-    throw new Error(`Theme already exists at: ${newThemePath}. Please choose a different name or remove the existing theme.`)
+  if (await fs.pathExists(path.join(newThemePath, 'config', 'theme.config.ts'))) {
+    throw new Error(`Project source already exists at: ${newThemePath}`)
   }
 
-  // Ensure themes directory exists
-  await fs.ensureDir(targetThemesDir)
-
-  // Copy the entire starter theme
-  await fs.copy(starterThemePath, newThemePath)
+  await fs.copy(starterThemePath, newThemePath, {
+    filter: source => {
+      const relative = path.relative(starterThemePath, source)
+      return !['package.json', '.npmignore', 'README.md'].includes(relative)
+    },
+  })
 }
 
 /**
  * Update theme.config.ts with new name and display name
  */
 export async function updateThemeConfig(config: WizardConfig): Promise<void> {
-  const themeConfigPath = path.join(getTargetThemesDir(), config.projectSlug, 'config', 'theme.config.ts')
+  const themeConfigPath = path.join(getProjectRoot(), 'config', 'theme.config.ts')
 
   if (!await fs.pathExists(themeConfigPath)) {
     throw new Error(`theme.config.ts not found at: ${themeConfigPath}`)
@@ -101,7 +101,7 @@ export async function updateThemeConfig(config: WizardConfig): Promise<void> {
  * as they are the only users that exist at init time.
  */
 export async function updateDevConfig(config: WizardConfig): Promise<void> {
-  const devConfigPath = path.join(getTargetThemesDir(), config.projectSlug, 'config', 'dev.config.ts')
+  const devConfigPath = path.join(getProjectRoot(), 'config', 'dev.config.ts')
 
   if (!await fs.pathExists(devConfigPath)) {
     // dev.config.ts is optional, skip if not found
@@ -122,7 +122,7 @@ export async function updateDevConfig(config: WizardConfig): Promise<void> {
  * Update app.config.ts with project settings
  */
 export async function updateAppConfig(config: WizardConfig): Promise<void> {
-  const appConfigPath = path.join(getTargetThemesDir(), config.projectSlug, 'config', 'app.config.ts')
+  const appConfigPath = path.join(getProjectRoot(), 'config', 'app.config.ts')
 
   if (!await fs.pathExists(appConfigPath)) {
     throw new Error(`app.config.ts not found at: ${appConfigPath}`)
@@ -168,7 +168,7 @@ export async function updateAppConfig(config: WizardConfig): Promise<void> {
  * Update app.config.ts with selected team roles
  */
 export async function updateRolesConfig(config: WizardConfig): Promise<void> {
-  const appConfigPath = path.join(getTargetThemesDir(), config.projectSlug, 'config', 'app.config.ts')
+  const appConfigPath = path.join(getProjectRoot(), 'config', 'app.config.ts')
 
   if (!await fs.pathExists(appConfigPath)) {
     return
@@ -190,7 +190,7 @@ export async function updateRolesConfig(config: WizardConfig): Promise<void> {
  * Update billing.config.ts with billing settings and generate plans
  */
 export async function updateBillingConfig(config: WizardConfig): Promise<void> {
-  const billingConfigPath = path.join(getTargetThemesDir(), config.projectSlug, 'config', 'billing.config.ts')
+  const billingConfigPath = path.join(getProjectRoot(), 'config', 'billing.config.ts')
 
   if (!await fs.pathExists(billingConfigPath)) {
     // billing.config.ts is optional, skip if not found
@@ -368,7 +368,7 @@ function generateBillingPlans(billingModel: string, currency: string): string {
  * Update SQL migration files with new email domain
  */
 export async function updateMigrations(config: WizardConfig): Promise<void> {
-  const migrationsDir = path.join(getTargetThemesDir(), config.projectSlug, 'migrations')
+  const migrationsDir = path.join(getProjectRoot(), 'migrations')
 
   if (!await fs.pathExists(migrationsDir)) {
     return
@@ -394,10 +394,10 @@ export async function updateMigrations(config: WizardConfig): Promise<void> {
 
 /**
  * Update test files with new theme name
- * Replace @/contents/themes/starter/ with @/contents/themes/{projectSlug}/
+ * Normalize any stale starter-template imports to project-root aliases.
  */
 export async function updateTestFiles(config: WizardConfig): Promise<void> {
-  const testsDir = path.join(getTargetThemesDir(), config.projectSlug, 'tests')
+  const testsDir = path.join(getProjectRoot(), 'tests')
 
   if (!await fs.pathExists(testsDir)) {
     return
@@ -417,14 +417,8 @@ export async function updateTestFiles(config: WizardConfig): Promise<void> {
         let content = await fs.readFile(itemPath, 'utf-8')
 
         // Replace theme path references
-        const hasChanges = content.includes('@/contents/themes/starter/')
-        if (hasChanges) {
-          content = content.replace(
-            /@\/contents\/themes\/starter\//g,
-            `@/contents/themes/${config.projectSlug}/`
-          )
-          await fs.writeFile(itemPath, content, 'utf-8')
-        }
+        const updated = content.replace(/@\/contents\/themes\/starter\//g, '@/')
+        if (updated !== content) await fs.writeFile(itemPath, updated, 'utf-8')
       }
     }
   }

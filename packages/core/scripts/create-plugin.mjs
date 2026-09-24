@@ -24,6 +24,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { resolveProjectPaths } from './build/registry/project-mode.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -32,9 +33,10 @@ const __dirname = path.dirname(__filename)
 // CONFIGURATION
 // =============================================================================
 
-const ROOT_DIR = path.resolve(__dirname, '..')
-const PRESET_DIR = path.join(ROOT_DIR, 'core', 'presets', 'plugin')
-const PLUGINS_DIR = path.join(ROOT_DIR, 'contents', 'plugins')
+const CORE_DIR = path.resolve(__dirname, '..')
+const { projectRoot: ROOT_DIR } = resolveProjectPaths(process.cwd())
+const PRESET_DIR = path.join(CORE_DIR, 'templates', 'plugins', 'starter', 'plugin')
+const PLUGINS_DIR = path.join(ROOT_DIR, 'plugins')
 
 // Files/patterns to process for placeholder replacement
 const FILES_TO_PROCESS = [
@@ -272,7 +274,7 @@ Scaffolds a new plugin from the preset template.
   pnpm create:plugin notifications --complexity utility --display-name "Push Notifications"
 
 \x1b[1mOutput:\x1b[0m
-  Creates a new plugin directory at: contents/plugins/<plugin-name>/
+  Creates a new plugin directory at: plugins/<plugin-name>/
 `)
 }
 
@@ -342,7 +344,7 @@ function main() {
 
     console.log('\x1b[32m✓ Plugin created successfully!\x1b[0m\n')
     console.log('\x1b[1mNext steps:\x1b[0m')
-    console.log(`  1. Edit \x1b[33mcontents/plugins/${slug}/plugin.config.ts\x1b[0m to configure exports`)
+    console.log(`  1. Edit \x1b[33mplugins/${slug}/plugin.config.ts\x1b[0m to configure exports`)
     console.log(`  2. Implement your plugin logic in \x1b[33mlib/core.ts\x1b[0m`)
     console.log(`  3. Copy \x1b[33m.env.example\x1b[0m to \x1b[33m.env\x1b[0m and configure variables`)
     console.log(`  4. Run \x1b[33mnode scripts/build-registry.mjs\x1b[0m to register the plugin`)
@@ -357,9 +359,9 @@ function main() {
     console.log(`  • \x1b[33mhooks/\x1b[0m            - Custom React hooks`)
     console.log(`  • \x1b[33mmessages/\x1b[0m         - i18n translations\n`)
 
-    console.log('\x1b[1mTesting in plugin-sandbox theme:\x1b[0m')
-    console.log(`  Add your plugin to the sandbox theme's plugins array:`)
-    console.log(`  \x1b[33mcontents/themes/plugin-sandbox/theme.config.ts\x1b[0m`)
+    console.log('\x1b[1mEnable the local plugin:\x1b[0m')
+    console.log('  Add the plugin directory name to nextspark.config.ts:')
+    console.log('  \x1b[33mnextspark.config.ts\x1b[0m')
     console.log(`  \x1b[90mplugins: ['${slug}']\x1b[0m\n`)
   } catch (error) {
     console.error(`\x1b[31mError creating plugin: ${error.message}\x1b[0m`)

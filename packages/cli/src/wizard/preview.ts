@@ -26,7 +26,7 @@ const BOX = {
  */
 export function getFileTree(config: WizardConfig): string[] {
   const files: string[] = []
-  const themeDir = `contents/themes/${config.projectSlug}`
+  const themeDir = '.'
 
   // Config files
   files.push(`${themeDir}/config/app.config.ts`)
@@ -125,10 +125,10 @@ function formatFilePath(file: string, themeDir: string): string {
 export function showConfigPreview(config: WizardConfig): void {
   const files = getFileTree(config)
   const groups = groupFilesByCategory(files)
-  const themeDir = `contents/themes/${config.projectSlug}`
+  const themeDir = '.'
 
   console.log('')
-  console.log(chalk.cyan.bold('  Theme Preview'))
+  console.log(chalk.cyan.bold('  Project Preview'))
   console.log(chalk.gray('  ' + '='.repeat(50)))
   console.log('')
 

@@ -21,11 +21,11 @@ Comprehensive testing ensures plugin reliability and prevents regressions. This 
 
 ### Testing Plugin Functions
 
-**Test File**: `contents/plugins/[plugin]/lib/__tests__/core-utils.test.ts`
+**Test File**: `plugins/[plugin]/lib/__tests__/core-utils.test.ts`
 
 **Example**:
 ```typescript
-// contents/plugins/my-plugin/lib/__tests__/core-utils.test.ts
+// plugins/my-plugin/lib/__tests__/core-utils.test.ts
 import { processData, validateInput } from '../core-utils'
 
 describe('My Plugin Core Utils', () => {
@@ -76,7 +76,7 @@ describe('My Plugin Core Utils', () => {
 import { processData } from '../core-utils'
 
 // Mock external dependencies
-jest.mock('@/core/lib/registries/plugin-registry', () => ({
+jest.mock('@nextsparkjs/registries/plugin-registry', () => ({
   usePlugin: jest.fn(() => ({
     generateText: jest.fn().mockResolvedValue({ text: 'mocked response' }),
     calculateCost: jest.fn().mockReturnValue(0.05)
@@ -99,11 +99,11 @@ describe('Plugin with Dependencies', () => {
 
 ### Testing Plugin API Endpoints
 
-**Test File**: `contents/plugins/[plugin]/api/__tests__/process.test.ts`
+**Test File**: `plugins/[plugin]/api/__tests__/process.test.ts`
 
 **Example**:
 ```typescript
-// contents/plugins/my-plugin/api/__tests__/process.test.ts
+// plugins/my-plugin/api/__tests__/process.test.ts
 import { POST, GET } from '../process/route'
 import { NextRequest } from 'next/server'
 
@@ -118,7 +118,7 @@ jest.mock('@/core/lib/api/auth/dual-auth', () => ({
 }))
 
 // Mock plugin registry
-jest.mock('@/core/lib/registries/plugin-registry', () => ({
+jest.mock('@nextsparkjs/registries/plugin-registry', () => ({
   usePlugin: jest.fn(() => ({
     processData: jest.fn().mockResolvedValue({ success: true, data: 'processed' })
   }))
@@ -347,7 +347,7 @@ describe('Plugin Tests', () => {
 ## Testing Plugin Lifecycle Hooks
 
 ```typescript
-// contents/plugins/my-plugin/__tests__/plugin.config.test.ts
+// plugins/my-plugin/__tests__/plugin.config.test.ts
 import { myPluginConfig } from '../plugin.config'
 
 describe('Plugin Lifecycle Hooks', () => {
@@ -398,8 +398,8 @@ describe('Plugin Lifecycle Hooks', () => {
 ### Running Coverage Reports
 
 ```bash
-# Run active-theme unit tests with coverage
-pnpm test:theme --coverage
+# Run project unit tests with coverage
+pnpm --dir apps/dev exec jest --watchman=false --coverage
 
 # Run E2E tests
 pnpm cy:run
@@ -421,7 +421,7 @@ module.exports = {
       statements: 80
     },
     // Higher threshold for critical plugin files
-    './contents/plugins/*/lib/core-utils.ts': {
+    './plugins/*/lib/core-utils.ts': {
       branches: 90,
       functions: 90,
       lines: 90,
@@ -437,7 +437,7 @@ module.exports = {
 
 **Unit Test**:
 ```typescript
-// contents/plugins/ai/lib/__tests__/core-utils.test.ts
+// plugins/ai/lib/__tests__/core-utils.test.ts
 import { selectModel, calculateCost } from '../core-utils'
 
 describe('AI Plugin Core Utils', () => {

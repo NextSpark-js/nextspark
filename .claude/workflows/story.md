@@ -180,7 +180,7 @@ When `context.context === "monorepo"`:
 
 When `context.context === "consumer"`:
 - **FULL** 15-phase workflow but **CORE-RESTRICTED**
-- **Phase 3 (db-developer):** Use theme migrations only (`contents/themes/{theme}/migrations/`)
+- **Phase 3 (db-developer):** Use theme migrations only (`migrations/`)
 - **Phase 5 (backend-developer):** Create in theme/plugins only
 - **FORBIDDEN:** Never create/modify files in `core/` (read-only in node_modules)
 
@@ -217,8 +217,8 @@ if (context.context === 'consumer' && targetPath.startsWith('core/')) {
     This file is in core/, which is read-only in your project.
 
     Alternatives:
-    1. Create theme-specific entity in contents/themes/${activeTheme}/entities/
-    2. Create plugin entity in contents/plugins/{plugin}/entities/
+    1. Create theme-specific entity in entities/
+    2. Create plugin entity in plugins/{plugin}/entities/
     3. Document as "Core Enhancement Request" for upstream
   `
 }

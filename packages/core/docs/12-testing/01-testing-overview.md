@@ -100,12 +100,12 @@ core/tests/cypress/
 - Shared Page Object Models (POMs)
 - Session management utilities
 
-### Theme (`contents/themes/{theme}/tests/`)
+### Theme (`tests/`)
 
 Theme-specific test configuration and specs:
 
 ```text
-contents/themes/{theme}/tests/
+tests/
 ├── cypress.config.ts          # Theme-level Cypress config
 └── cypress/
     ├── e2e/                   # Test specifications

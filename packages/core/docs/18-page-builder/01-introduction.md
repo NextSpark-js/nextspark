@@ -121,9 +121,9 @@ Structure documentation with consistent layouts using reusable blocks.
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | Block Types | `core/types/blocks.ts` | TypeScript definitions and Zod schemas |
-| Block Registry | `core/lib/registries/block-registry.ts` | Auto-generated block catalog |
+| Block Registry | `.nextspark/registries/block-registry.ts` | Auto-generated block catalog |
 | Block Editor | `core/components/dashboard/block-editor/` | Visual editor components |
-| Block Implementations | `contents/themes/{theme}/blocks/` | Actual block components |
+| Block Implementations | `blocks/` | Actual block components |
 | System Fields | `core/lib/entities/system-fields.ts` | Builder system fields (blocks) |
 | Generic Handler | `core/lib/api/entity/generic-handler.ts` | API CRUD with builder support |
 | Schema Generator | `core/lib/entities/schema-generator.ts` | Zod schemas with blocks |
@@ -164,7 +164,7 @@ See [Claude Workflow - Block Developer Agent](../16-claude-workflow/03-agents.md
 
 ### Dynamic Block Auto-Discovery
 Block components are now **automatically loaded** from `BLOCK_REGISTRY`. No need to manually edit `page-renderer.tsx` when creating new blocks:
-- Create block in `contents/themes/{theme}/blocks/`
+- Create block in `blocks/`
 - Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 - Block is immediately available in editor and public pages
 

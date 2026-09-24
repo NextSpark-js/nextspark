@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Route-scoped template registries (#192):**
   - Re-architected template registry generation to produce route-scoped registries under `@nextsparkjs/registries/template-scopes/server/` and `template-scopes/client/`, replacing the monolithic flat template registry.
-  - Resolved the source-structure cause of cross-area template fan-out in the tested `apps/dev` scopes: generated `app/(templates)` artifacts are excluded during scope discovery for idempotent builds, while server scopes are explicitly marked `server-only`. This does not establish blanket closure of the original Shendo issue; consuming-app validation remains pending.
+  - Resolved the source-structure cause of cross-area template fan-out in the tested `apps/dev` scopes: generated `src/app/(templates)` artifacts are excluded during scope discovery for idempotent builds, while server scopes are explicitly marked `server-only`. This does not establish blanket closure of the original Shendo issue; consuming-app validation remains pending.
   - Eliminated namespace collisions between server and client route scopes (`foo.ts` vs `foo.client.ts`), added robust detection for `server-only` imports (including side-effect `import 'server-only'`), and preserved metadata truthy-fallback parity with `template-resolver.ts`.
   - The temporary causal experiment in `scripts/performance/fixtures/registry-causal-comparison.json` reports root allowed-mode decoded JavaScript of `1,346,001 B` before and `1,119,973 B` after, a `226,028 B` saving. The experiment used an unauthenticated dashboard; these are not final production before/after measurements. Source maps remain opt-in.
   - The entire registry test suite reports 266 tests (the focused scope test has 22); the initial registry baseline was 264 tests.
@@ -76,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the bundled themes and plugins changed; code that uses `z` stays the same.
   - `sync:app` doesn't touch `contents/`. In a project, replace the import in your theme
     and plugin files, starting with the block schemas
-    (`contents/themes/<theme>/blocks/*/schema.ts`): `import { z } from 'zod'` →
+    (`blocks/*/schema.ts`): `import { z } from 'zod'` →
     `import * as z from 'zod'`, and `import type { z } from 'zod'` →
     `import type * as z from 'zod'`.
   - New projects get an `eslint.config.mjs` with a `no-restricted-syntax` rule that rejects
@@ -138,7 +138,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `zod ^3.23.8`, whose zod helpers 0.6 only calls for zod 3 schemas; the default install is
     unaffected. `.describe()` texts still don't reach the model: `@langchain/core` 0.3 converts
     with its own zod 3.25, whose registry doesn't hold zod 4's metadata. An existing project keeps
-    the old dependencies in `contents/plugins/langchain` until it re-adds the plugin with
+    the old dependencies in `plugins/langchain` until it re-adds the plugin with
     `--force`.
 
 - **`generateTemplateRegistry()` returns `Promise<string>` (#197).** It reads each theme

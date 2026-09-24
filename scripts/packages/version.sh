@@ -3,7 +3,7 @@
 # increment-version.sh - Increment version across ALL packages in the NextSpark monorepo
 #
 # This script updates the version in all package.json files across the monorepo,
-# including core packages, themes, and plugins. It uses semver for proper version
+# including core packages and plugins. It uses semver for proper version
 # calculation and supports standard semver increments as well as prerelease tags.
 #
 # USAGE:
@@ -26,7 +26,6 @@
 #
 # PACKAGES UPDATED (auto-discovered):
 #   - packages/* (all packages: core, cli, ui, mobile, testing, create-nextspark-app, etc.)
-#   - themes/* (all themes)
 #   - plugins/* (all plugins)
 #
 
@@ -180,13 +179,6 @@ PACKAGES=()
 for pkg in "$REPO_ROOT/packages"/*; do
     if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then
         PACKAGES+=("$pkg")
-    fi
-done
-
-# All themes in themes/ directory
-for theme in "$REPO_ROOT/themes"/*; do
-    if [ -d "$theme" ] && [ -f "$theme/package.json" ]; then
-        PACKAGES+=("$theme")
     fi
 done
 

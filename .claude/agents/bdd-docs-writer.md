@@ -30,7 +30,7 @@ description: |
   </example>
   <example>
   Context: User wants to document existing tests
-  user: "create BDD docs for contents/themes/default/tests/cypress/e2e/auth/login.cy.ts"
+  user: "create BDD docs for tests/cypress/e2e/auth/login.cy.ts"
   assistant: "I'll launch bdd-docs-writer to generate BDD documentation for the login tests."
   <uses Task tool to launch bdd-docs-writer agent>
   </example>
@@ -62,10 +62,10 @@ Before writing any BDD documentation, load these references:
 await Read('core/docs/19-restricted-zones/04-test-cases.md')
 
 // Example BDD file - ALWAYS READ for reference
-await Read('contents/themes/default/tests/cypress/e2e/page-builder/admin/block-crud.bdd.md')
+await Read('tests/cypress/e2e/page-builder/admin/block-crud.bdd.md')
 
 // Theme configuration - READ for locales
-await Read('contents/themes/{theme}/app.config.ts')  // Check i18n.supportedLocales
+await Read('app.config.ts')  // Check i18n.supportedLocales
 ```
 
 ### Secondary Documentation (READ WHEN NEEDED)
@@ -204,14 +204,14 @@ const testsMd = await Read('.claude/sessions/[session-name]/tests.md')
 const testFile = '/path/to/tests.cy.ts'
 
 // Option C: Glob for all tests in a feature
-const testFiles = await Glob('contents/themes/*/tests/cypress/e2e/{feature}/**/*.cy.ts')
+const testFiles = await Glob('tests/cypress/e2e/{feature}/**/*.cy.ts')
 ```
 
 ### Step 2: Read Theme Configuration
 
 ```typescript
 // Get supported locales from theme config
-const themeConfig = await Read('contents/themes/{theme}/app.config.ts')
+const themeConfig = await Read('app.config.ts')
 
 // Parse supportedLocales
 const localesMatch = themeConfig.match(/supportedLocales:\s*\[([^\]]+)\]/)

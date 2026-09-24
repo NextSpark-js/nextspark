@@ -98,7 +98,7 @@ supportedLocales: ['en', 'es', 'fr', 'de']
 1. Add the locale code to `supportedLocales`
 2. Create translation files for the locale:
    - `core/messages/{locale}/` - Core namespaces
-   - `contents/themes/{theme}/messages/{locale}.json` - Theme translations
+   - `messages/{locale}.json` - Theme translations
 3. Rebuild the registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 ### Default Locale
@@ -396,84 +396,26 @@ export function LocaleSelector() {
 
 Choosing namespaces from the request's pathname would mean reading request headers, which makes every page dynamic, so the request config does not do it.
 
-## Middleware Integration
+## Request-hook integration
 
-The middleware system supports locale handling and theme-specific overrides.
-
-**Location**: `middleware.ts`
+A project may extend request handling with the optional root-first hook at
+`config/hooks/proxy.ts`. It must export a named `proxyHook`; the framework-owned
+root `proxy.ts` composes it with authentication, route protection, and locale
+handling.
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
-import { hasThemeMiddleware, executeThemeMiddleware } from '@/core/lib/registries/middleware-registry'
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  // 1. Check for theme middleware override
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
-  if (activeTheme && hasThemeMiddleware(activeTheme)) {
-    const themeResponse = await executeThemeMiddleware(activeTheme, request)
-    if (themeResponse) {
-      return themeResponse
-    }
-  }
-
-  // 2. Core middleware logic
-  // (authentication, route protection, etc.)
-
-  // 3. Continue to page
-  return NextResponse.next()
-}
-```
-
-### Pathname Injection
-
-The middleware injects pathname into headers for namespace optimization:
-
-```typescript
-export async function middleware(request: NextRequest) {
+export async function proxyHook(request: NextRequest) {
   const response = NextResponse.next()
-
-  // Inject pathname for i18n optimization
   response.headers.set('x-pathname', request.nextUrl.pathname)
-
   return response
 }
 ```
 
-**Usage in i18n.ts**:
-```typescript
-const headersList = await headers()
-const pathname = headersList.get('x-pathname') || ''
-
-// Use pathname for namespace optimization
-const namespaces = getPageNamespaces(pathname)
-```
-
-### Theme Middleware Override
-
-Themes can provide custom middleware for locale handling:
-
-**Location**: `contents/themes/{theme}/middleware.ts`
-
-```typescript
-import { NextRequest, NextResponse } from 'next/server'
-
-export async function middleware(request: NextRequest) {
-  // Custom locale detection logic
-  const locale = detectCustomLocale(request)
-
-  // Set custom headers or cookies
-  const response = NextResponse.next()
-  response.cookies.set('theme-locale', locale)
-
-  return response
-}
-
-export default middleware
-```
-
----
+The project hook is an extension point, not a replacement security boundary.
+Do not create a project-root `middleware.ts` or replace the framework proxy to
+customize locale handling.
 
 ## Environment Variables
 
@@ -483,16 +425,7 @@ None required - i18n system works with default configuration.
 
 ### Optional Variables
 
-**NEXT_PUBLIC_ACTIVE_THEME**:
-```bash
-# .env.local
-NEXT_PUBLIC_ACTIVE_THEME=default
-```
-
-Controls which theme is active, affecting:
-- Theme-specific translations
-- Theme configuration overrides
-- Theme middleware overrides
+No project-selection variable exists. Locale behavior comes from root-level project configuration.
 
 ### Build-Time Variables
 
@@ -506,7 +439,7 @@ Controls which theme is active, affecting:
 
 Themes can override i18n configuration:
 
-**Location**: `contents/themes/{theme}/app.config.ts`
+**Location**: `app.config.ts`
 
 ```typescript
 import type { AppConfig } from '@/core/lib/config/types'
@@ -660,7 +593,7 @@ touch core/messages/fr/validation.json
 
 **4. Add Theme Translations**:
 ```json
-// contents/themes/default/messages/fr.json
+// messages/fr.json
 {
   "home": {
     "hero": {
@@ -814,7 +747,7 @@ console.log('[i18n] Pathname:', pathname)
 - Use dynamic imports for translations (use registry)
 - Load unused namespaces
 - Skip registry rebuild after changes
-- Import directly from `@/contents` (use registry)
+- Import project translation files directly (use the generated registry)
 
 ---
 

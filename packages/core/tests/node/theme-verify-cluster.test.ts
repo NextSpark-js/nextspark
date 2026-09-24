@@ -1,5 +1,5 @@
 /**
- * `db:verify-theme` runs migrations that reach past the database it is given:
+ * the project-template migration verifier runs migrations that reach past the database it is given:
  * they create and alter cluster-wide roles, which every database on the same
  * Postgres server shares. An empty database is therefore not enough of a check
  * — a fresh database on a server in use still gets `nextspark_app` altered
@@ -185,7 +185,7 @@ test('long lists of databases are cut short, and say how many are left', () => {
  * in the same cluster, so the output has to name it.
  */
 function migrationsIn(root: string): string[] {
-  return ['packages/core', 'themes', 'plugins'].flatMap(tree => migrationFiles(path.join(root, tree)))
+  return ['packages/core', 'apps/dev', 'plugins'].flatMap(tree => migrationFiles(path.join(root, tree)))
 }
 
 test('every role any migration creates, alters or grants to is named in the output', () => {
@@ -209,12 +209,12 @@ test('the guard reads the entity migrations and the shipped starter, not only ea
 
   for (const dir of [
     'packages/core/migrations',
-    'themes/blog/migrations',
-    'themes/blog/entities/posts/migrations',
-    'themes/crm/entities/contacts/migrations',
-    'plugins/langchain/migrations',
+    'packages/core/templates/projects/blog/migrations',
+    'packages/core/templates/projects/blog/entities/posts/migrations',
+    'packages/core/templates/projects/crm/entities/contacts/migrations',
+    'apps/dev/plugins/langchain/migrations',
     'plugins/ai/entities/ai-history/migrations',
-    'packages/core/templates/contents/themes/starter/entities/pages/migrations',
+    'packages/core/templates/projects/starter/entities/pages/migrations',
   ]) {
     assert.ok(dirs.has(dir), `${dir} is not read`)
   }
@@ -222,24 +222,24 @@ test('the guard reads the entity migrations and the shipped starter, not only ea
 
 test('migrations are found at any depth under a migrations directory, and nowhere else', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-theme-migrations-'))
-  const write = (file: string) => {
+  const write = (file: string, content = 'SELECT 1;') => {
     fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true })
-    fs.writeFileSync(path.join(root, file), 'SELECT 1;')
+    fs.writeFileSync(path.join(root, file), content)
   }
   const expected = [
     'packages/core/migrations/001_core.sql',
-    'packages/core/templates/contents/themes/starter/entities/pages/migrations/001_pages.sql',
-    'themes/shop/migrations/001_theme.sql',
-    'themes/shop/entities/orders/migrations/001_orders.sql',
-    'themes/shop/entities/orders/children/lines/migrations/001_lines.sql',
-    'themes/shop/settings/billing/migrations/001_billing.sql',
-    'plugins/crm-sync/entities/syncs/migrations/001_syncs.sql',
+    'packages/core/templates/projects/starter/entities/pages/migrations/001_pages.sql',
+    'apps/dev/migrations/001_project.sql',
+    'apps/dev/entities/orders/migrations/001_orders.sql',
+    'apps/dev/entities/orders/children/lines/migrations/001_lines.sql',
+    'apps/dev/settings/billing/migrations/001_billing.sql',
+    'apps/dev/plugins/crm-sync/entities/syncs/migrations/001_syncs.sql',
   ]
   try {
     for (const file of expected) write(file)
-    write('themes/shop/docs/example.sql')
-    write('themes/shop/migrations/README.md')
-    write('plugins/crm-sync/node_modules/some-lib/migrations/001_vendor.sql')
+    write('apps/dev/docs/example.sql')
+    write('apps/dev/migrations/README.md')
+    write('apps/dev/plugins/crm-sync/node_modules/some-lib/migrations/001_vendor.sql')
 
     assert.deepEqual(migrationsIn(root).map(file => path.relative(root, file)).sort(), [...expected].sort())
   } finally {
@@ -255,7 +255,7 @@ function workflowThemes(): string[] {
   return matrix![1].split(',').map(theme => theme.trim())
 }
 
-test('every theme the workflow verifies is a theme with migrations, and starter is the one core ships', () => {
+test('every catalog entry the workflow verifies has migrations, and starter is the one core ships', () => {
   const themes = workflowThemes()
   assert.ok(themes.includes('starter'))
 
@@ -266,17 +266,17 @@ test('every theme the workflow verifies is a theme with migrations, and starter 
   }
 
   const starter = findTheme(REPO_ROOT, 'starter')
-  assert.equal(path.relative(REPO_ROOT, starter.themeDir), 'packages/core/templates/contents/themes/starter')
-  assert.equal(path.relative(REPO_ROOT, starter.projectDir), 'packages/core/templates')
+  assert.equal(path.relative(REPO_ROOT, starter.themeDir), 'packages/core/templates/projects/starter')
+  assert.equal(path.relative(REPO_ROOT, starter.projectDir), 'packages/core/templates/projects/starter')
   assert.ok(starter.migrations.some((file: string) => file.includes('/entities/')))
 })
 
-test('the workflow runs when a migration of any theme it verifies changes', () => {
+test('the workflow runs when a migration of any project source it verifies changes', () => {
   const globs = [...fs.readFileSync(WORKFLOW, 'utf8').matchAll(/^\s*-\s*'([^']+)'\s*$/gm)].map(([, glob]) => glob)
   const matchers = globs.map(glob => new RegExp(`^${glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\0').replace(/\*/g, '[^/]*').replace(/\0/g, '.*')}$`))
 
   // The shipped starter is named on its own, so the check does not rest on the lookup it covers.
-  const starter = migrationFiles(path.join(REPO_ROOT, 'packages/core/templates/contents/themes/starter'))
+  const starter = migrationFiles(path.join(REPO_ROOT, 'packages/core/templates/projects/starter'))
   assert.ok(starter.length > 0)
   const untriggered = [...workflowThemes().flatMap(theme => findTheme(REPO_ROOT, theme).migrations ?? []), ...starter]
     .map((file: string) => path.relative(REPO_ROOT, fs.realpathSync(file)))
@@ -285,33 +285,32 @@ test('the workflow runs when a migration of any theme it verifies changes', () =
   assert.deepEqual([...new Set(untriggered)], [])
 })
 
-test('a directory named like a theme is not one without a theme config, nor one without migrations', () => {
+test('a catalog directory is not a project template without config or migrations', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-theme-location-'))
-  const write = (file: string) => {
+  const write = (file: string, content = '') => {
     fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true })
-    fs.writeFileSync(path.join(root, file), '')
+    fs.writeFileSync(path.join(root, file), content)
   }
   try {
-    // what themes/starter is in the repo: tests, no theme
-    write('apps/dev/contents/themes/starter/tests/jest/starter.test.ts')
-    write('packages/core/templates/contents/themes/starter/config/theme.config.ts')
-    write('packages/core/templates/contents/themes/starter/entities/pages/migrations/001_pages.sql')
-    write('apps/dev/contents/themes/bare/config/theme.config.ts')
-    write('apps/dev/contents/themes/twice/config/theme.config.ts')
-    write('apps/dev/contents/themes/twice/migrations/001.sql')
-    write('packages/core/templates/contents/themes/twice/config/theme.config.ts')
-    write('packages/core/templates/contents/themes/twice/migrations/001.sql')
+    write('apps/dev/tests/jest/starter.test.ts')
+    write('packages/core/templates/projects/starter/config/theme.config.ts', "export const config = { name: 'starter' }")
+    write('packages/core/templates/projects/starter/entities/pages/migrations/001_pages.sql')
+    write('packages/core/templates/projects/bare/config/theme.config.ts', "export const config = { name: 'bare' }")
+    write('apps/dev/config/theme.config.ts', "export const config = { name: 'twice' }")
+    write('apps/dev/migrations/001.sql')
+    write('packages/core/templates/projects/twice/config/theme.config.ts', "export const config = { name: 'twice' }")
+    write('packages/core/templates/projects/twice/migrations/001.sql')
 
-    assert.equal(path.relative(root, findTheme(root, 'starter').projectDir), 'packages/core/templates')
-    assert.match(findTheme(root, 'bare').error, /theme "bare" at apps\/dev\/contents\/themes\/bare has no migrations/)
-    assert.match(findTheme(root, 'twice').error, /"twice" is a theme in more than one place/)
-    assert.match(findTheme(root, 'missing').error, /no theme "missing": none of .* has a theme config/)
+    assert.equal(path.relative(root, findTheme(root, 'starter').projectDir), 'packages/core/templates/projects/starter')
+    assert.match(findTheme(root, 'bare').error, /template "bare" at packages\/core\/templates\/projects\/bare has no migrations/)
+    assert.match(findTheme(root, 'twice').error, /"twice" exists as more than one project source/)
+    assert.match(findTheme(root, 'missing').error, /no root-first project or project template named "missing"/)
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }
 })
 
-test('db:verify-theme refuses a name that is not a theme before it connects to anything', () => {
+test('the project-template verifier refuses an unknown name before it connects to anything', () => {
   const run = spawnSync(process.execPath, [path.join(CORE, 'scripts/db/verify-theme-migrations.mjs'), 'no-such-theme'], {
     env: { ...process.env, VERIFY_THEME_DATABASE_URL: 'postgresql://nobody@127.0.0.1:1/nextspark_verify?sslmode=disable' },
     encoding: 'utf8',
@@ -319,7 +318,7 @@ test('db:verify-theme refuses a name that is not a theme before it connects to a
   })
 
   assert.equal(run.status, 1)
-  assert.match(run.stderr, /no theme "no-such-theme"/)
+  assert.match(run.stderr, /no root-first project or project template named "no-such-theme"/)
   assert.doesNotMatch(run.stdout, /Verifying/)
 })
 

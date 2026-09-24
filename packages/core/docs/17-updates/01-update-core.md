@@ -4,7 +4,7 @@
 
 `update-core` moves a NextSpark project to another release of the `@nextsparkjs` packages.
 
-A project takes NextSpark from npm: `package.json` pins `@nextsparkjs/core`, `@nextsparkjs/cli` and the other `@nextsparkjs` packages to one version, `app/` is kept in step with core's templates by `nextspark sync:app`, and `contents/` holds your own themes and plugins. An update sets those pins to the new version, installs it, and syncs `app/`. No framework source is copied into the project, and the files core generates that you customized are kept.
+A project takes NextSpark from npm: `package.json` pins `@nextsparkjs/core`, `@nextsparkjs/cli` and the other `@nextsparkjs` packages to one version, `src/app/` is kept in step with core's templates by `nextspark sync:app`. Project-owned source stays in the root-first directories such as `entities/`, `plugins/`, and `templates/`. An update sets those pins to the new version, installs it, and syncs `src/app/`; it does not replace project-owned source.
 
 ---
 
@@ -42,7 +42,7 @@ pnpm install
 |------|-----|
 | `package.json` | Only the versions of the `@nextsparkjs` packages, all set to exactly the target. A `^` or `~` range is replaced by the exact version: with a range, `pnpm install` takes the newest published version the range allows, which can be newer than the target. |
 | `pnpm-lock.yaml`, `node_modules/` | `pnpm install`, run where `pnpm-lock.yaml` is |
-| `app/` | `nextspark sync:app --force`, which updates the files core generates, keeps the ones you customized, and rebuilds the registries |
+| `src/app/` | `nextspark sync:app --force`, which updates the files core generates, keeps the ones you customized, and rebuilds the registries |
 | `next.config.mjs`, `tsconfig.json`, `i18n.ts`, `proxy.ts` or `middleware.ts` | Also `sync:app`, with the same rule: a file you customized is kept |
 | `.next/` | Removed, so the next build starts clean |
 | `core.version.json` | Written last, only when everything above succeeded |
@@ -50,7 +50,7 @@ pnpm install
 ### What `update-core` Itself Never Writes
 
 - The rest of `package.json`: name, scripts, other dependencies
-- `contents/`: your themes and plugins
+- `api/`, `blocks/`, `components/`, `config/`, `entities/`, `lib/`, `messages/`, `migrations/`, `plugins/`, `public/`, `styles/`, `templates/`, and `tests/`: project-owned root-first source
 - `.env*`: environment files
 
 The lifecycle scripts `pnpm install` runs are not bound by this list: they can write anywhere in the project. That is why a run that stops partway is rolled back through git, as a whole (see [When a Run Stops Partway](#when-a-run-stops-partway)).
@@ -65,17 +65,17 @@ The update stops, says why and leaves the project as it was when:
 - `pnpm-lock.yaml` (in a web-mobile project, the one above `web/`) is missing or isn't committed: the rollback installs exactly what the lockfile of the commit it returns to records
 - the project has uncommitted changes, including untracked files that aren't ignored and changes inside submodules (also when `.gitmodules` or your git config tells `git status` to ignore them). Commit or stash them first: the rollback returns to the commit the update started from and removes untracked files, so it would discard them. There are no exceptions, not even for changes an earlier run of `update-core` left
 - a `@nextsparkjs` package in `package.json` isn't published at the target version
-- the target is older than the installed version (`app/` would be synced back, and applied migrations can't be undone)
+- the target is older than the installed version (`src/app/` would be synced back, and applied migrations can't be undone)
 - `package.json` takes a `@nextsparkjs` package from somewhere other than the registry (`file:`, `link:`, `workspace:`, a git URL)
 - `@nextsparkjs/core` isn't installed yet (run `pnpm install` first) or `@nextsparkjs/cli` isn't a dependency
-- `.env` doesn't set `NEXT_PUBLIC_ACTIVE_THEME`: without it `sync:app` skips the registry build, and `app/(templates)` would stay on the old core
+- the command is not running inside the project tree containing `nextspark.config.ts`
 - the project has submodules and git can't list the branch each checked-out one is on (`git submodule foreach` fails), which the rollback needs to put them back on their branches
 - `--branch` is given and `update/<version>` already exists
 - the project keeps the framework in `core/`, the layout from before NextSpark shipped as npm packages
 
 If you set the `@nextsparkjs` versions in `package.json` by hand and didn't install them, pnpm 11 installs them before it runs any script, `update-core` included: those changes to the lockfile and `node_modules` happen before `update-core` starts, and it then refuses the uncommitted `package.json`. To run it without that install, use `pnpm --config.verify-deps-before-run=false update-core`.
 
-When every `@nextsparkjs` package in `package.json` is already pinned exactly to the target and `node_modules` holds the target for each of them, there is nothing to update: it says `Already on <version>`, exits 0 and changes nothing. That is decided from `package.json` and `node_modules`, not from `core.version.json`. A `^` or `~` range is not taken for the target, even one starting at it with the target installed: the update runs, sets it to the exact version, installs (which updates the lockfile to match) and syncs `app/`, as for any other version.
+When every `@nextsparkjs` package in `package.json` is already pinned exactly to the target and `node_modules` holds the target for each of them, there is nothing to update: it says `Already on <version>`, exits 0 and changes nothing. That is decided from `package.json` and `node_modules`, not from `core.version.json`. A `^` or `~` range is not taken for the target, even one starting at it with the target installed: the update runs, sets it to the exact version, installs (which updates the lockfile to match) and syncs `src/app/`, as for any other version.
 
 Files `.gitignore` ignores don't make the tree unclean, and the rollback can't restore them (see [What the Rollback Can't Restore](#what-the-rollback-cant-restore)): if you keep files that matter there, like `.env`, back them up before updating.
 

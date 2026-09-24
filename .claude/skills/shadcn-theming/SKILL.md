@@ -14,12 +14,12 @@ Patterns for customizing shadcn/ui themes in NextSpark using CSS variables and t
 
 ## Fundamental Principle
 
-**THE THEME IS THE SINGLE SOURCE OF TRUTH FOR DESIGN TOKENS.**
+**PROJECT STYLES ARE THE SINGLE SOURCE OF TRUTH FOR DESIGN TOKENS.**
 
-All visual customization happens in the theme's `globals.css`. No inline colors, no hardcoded values.
+All visual customization happens in the project's `styles/globals.css`. No inline colors, no hardcoded values.
 
 ```
-themes/{THEME}/styles/globals.css → BUILD → core/theme-styles.css → App
+styles/globals.css → BUILD → src/app/globals.css + .next/theme-generated.css → App
 ```
 
 ## When to Use This Skill
@@ -34,7 +34,7 @@ themes/{THEME}/styles/globals.css → BUILD → core/theme-styles.css → App
 ```
 THEME CSS STRUCTURE:
 
-themes/{THEME}/styles/
+styles/
 ├── globals.css      # CSS variables (THE DESIGN SYSTEM)
 │   ├── :root        # Light mode tokens
 │   ├── .dark        # Dark mode tokens
@@ -43,7 +43,8 @@ themes/{THEME}/styles/
 └── components.css   # Component-specific styles (optional)
 
 BUILD OUTPUT:
-└── core/theme-styles.css  # Auto-generated (DO NOT EDIT)
+├── src/app/globals.css       # Generated import adapter (DO NOT EDIT)
+└── .next/theme-generated.css # Generated compiled CSS (DO NOT EDIT)
 ```
 
 ## Using tweakcn.com
@@ -317,7 +318,7 @@ The command will:
 1. Parse the CSS file
 2. Validate required variables
 3. Add missing `@theme inline` mappings if needed
-4. Write to active theme's `globals.css`
+4. Write to project's `globals.css`
 5. Run `pnpm theme:build`
 
 ### Path 2: From Mock Analysis
@@ -334,7 +335,7 @@ The process will:
 2. Extract color palette from mock's Tailwind config
 3. Convert HEX to OKLCH format
 4. Generate dark mode by inverting lightness
-5. Write to active theme's `globals.css`
+5. Write to project's `globals.css`
 6. Run `pnpm theme:build`
 
 ## Theme Build Process
@@ -350,10 +351,10 @@ pnpm theme:build --watch
 ```
 
 **What Build Does:**
-1. Reads `NEXT_PUBLIC_ACTIVE_THEME` from `.env`
-2. Finds theme at `themes/{THEME}/styles/`
+1. Finds the nearest project root from `nextspark.config.ts`
+2. Reads `styles/` directly from that project root
 3. Concatenates `globals.css` + `components.css`
-4. Writes to `core/theme-styles.css`
+4. Writes the generated adapter/output under `src/app/` and `.next/`
 5. Copies assets to `public/theme/`
 
 ## Validation Checklist
@@ -433,10 +434,10 @@ Before finalizing theme customization:
   /* ... all mappings */
 }
 
-/* ❌ NEVER: Edit core/theme-styles.css */
+/* ❌ NEVER: Edit src/app/globals.css or .next/theme-generated.css */
 /* (Will be overwritten on next build) */
 
-/* ✅ CORRECT: Edit themes/{THEME}/styles/globals.css */
+/* ✅ CORRECT: Edit styles/globals.css */
 ```
 
 ## Related Skills

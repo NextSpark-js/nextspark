@@ -234,7 +234,7 @@ export class TasksPOM extends DashboardEntityPOM {
 ### Project Test Structure
 
 ```
-contents/themes/{theme}/tests/cypress/
+tests/cypress/
 ├── cypress.config.ts              # Cypress configuration
 ├── e2e/
 │   ├── api/                        # API tests
@@ -559,7 +559,7 @@ async function scanForDataCyAttributes(): Promise<string[]> {
   // Use Grep to find all data-cy attributes in theme components
   const results = await Grep({
     pattern: 'data-cy="[^"]*"',
-    path: 'contents/themes/',
+    path: './',
     glob: '*.{tsx,jsx}'
   })
 
@@ -676,7 +676,7 @@ const selectors = {
 **Using BaseAPIController Pattern:**
 
 ```typescript
-// contents/themes/{theme}/tests/cypress/support/api/ProductsController.ts
+// tests/cypress/support/api/ProductsController.ts
 
 import { BaseAPIController } from './BaseAPIController'
 
@@ -708,7 +708,7 @@ export class ProductsController extends BaseAPIController {
 **API Test File:**
 
 ```typescript
-// contents/themes/{theme}/tests/cypress/e2e/api/products.cy.ts
+// tests/cypress/e2e/api/products.cy.ts
 
 import { ProductsController } from '../../support/api/ProductsController'
 
@@ -795,9 +795,9 @@ BasePOM
 **Step 1: Check existing POMs:**
 ```typescript
 // Search for existing POMs in the theme
-const entityPOMs = await Glob('contents/themes/*/tests/cypress/src/entities/*POM.ts')
-const featurePOMs = await Glob('contents/themes/*/tests/cypress/src/features/*POM.ts')
-const corePOMs = await Glob('contents/themes/*/tests/cypress/src/core/*.ts')
+const entityPOMs = await Glob('tests/cypress/src/entities/*POM.ts')
+const featurePOMs = await Glob('tests/cypress/src/features/*POM.ts')
+const corePOMs = await Glob('tests/cypress/src/core/*.ts')
 
 console.log(`\n📦 Core base classes: ${corePOMs.length}`)
 corePOMs.forEach(pom => console.log(`  - ${pom}`))
@@ -976,10 +976,10 @@ async function updateExistingPOM(pomPath: string, newSelectors: string[]): Promi
 **If it's a THEME-SPECIFIC selector** (feature unique to this theme):
 ```typescript
 // Register in theme's selectors.ts file
-// Location: contents/themes/{theme}/tests/cypress/src/selectors.ts
+// Location: tests/cypress/src/selectors.ts
 
 await Edit({
-  file_path: 'contents/themes/default/tests/cypress/src/selectors.ts',
+  file_path: 'tests/cypress/src/selectors.ts',
   old_string: 'const THEME_SELECTORS = {\n  ...CORE_SELECTORS,',
   new_string: `const THEME_SELECTORS = {
   ...CORE_SELECTORS,
@@ -1030,7 +1030,7 @@ export class TasksPOM extends DashboardEntityPOM {
 **Using Page Object Model (POM) with cySelector:**
 
 ```typescript
-// contents/themes/{theme}/tests/cypress/src/entities/ProductsPOM.ts
+// tests/cypress/src/entities/ProductsPOM.ts
 
 import { DashboardEntityPOM } from '../core/DashboardEntityPOM'
 import { cySelector } from '../selectors'
@@ -1105,7 +1105,7 @@ export class ProductsPOM extends DashboardEntityPOM {
 **UAT Test File (using cySelector):**
 
 ```typescript
-// contents/themes/{theme}/tests/cypress/e2e/uat/products.cy.ts
+// tests/cypress/e2e/uat/products.cy.ts
 
 import { ProductsPOM } from '../../src/entities/ProductsPOM'
 import { cySelector } from '../../src/selectors'
@@ -1371,7 +1371,7 @@ for (const testFile of testFiles) {
 // Verify cleanup
 const remainingTags = await Grep({
   pattern: '@in-develop|@scope-',
-  path: 'contents/themes/',
+  path: './',
   glob: '*.cy.ts'
 })
 

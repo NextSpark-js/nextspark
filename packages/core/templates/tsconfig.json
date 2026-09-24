@@ -30,14 +30,11 @@
       "@nextsparkjs/registries/*": [
         "./.nextspark/registries/*"
       ],
-      "@/contents/*": [
-        "./contents/*"
-      ],
-      "@/themes/*": [
-        "./contents/themes/*"
-      ],
       "@/plugins/*": [
-        "./contents/plugins/*"
+        "./plugins/*"
+      ],
+      "@/app/*": [
+        "./src/app/*"
       ],
       "@/*": [
         "./*"
@@ -48,8 +45,6 @@
     "**/*.ts",
     "**/*.tsx",
     ".nextspark",
-    "app",
-    "contents",
     "next-env.d.ts",
     "src",
     ".next/types/**/*.ts"
@@ -68,10 +63,6 @@
     "**/jest.setup.ts",
     "**/jest.config.ts",
     "**/cypress/**",
-    "**/tests/**",
-    "contents/themes/blog/**",
-    "contents/themes/crm/**",
-    "contents/themes/productivity/**",
-    "contents/themes/plugin-sandbox/**"
+    "**/tests/**"
   ]
 }

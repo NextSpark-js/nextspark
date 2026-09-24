@@ -2,7 +2,7 @@
 """
 Scaffold API Endpoint Script
 
-Creates the file structure for a new API endpoint following Next.js 15 App Router patterns.
+Creates root-first API source consumed by the NextSpark route generator.
 
 Usage:
     python scaffold-endpoint.py --name ENDPOINT_NAME [--methods METHODS] [--auth AUTH_TYPE]
@@ -11,7 +11,6 @@ Options:
     --name ENDPOINT_NAME   Name of the endpoint (kebab-case)
     --methods METHODS      Comma-separated HTTP methods (default: GET,POST)
     --auth AUTH_TYPE       Authentication type: required, optional, none (default: required)
-    --override             Create in (contents)/ folder for custom logic
     --with-id              Include [id] route for single resource operations
 """
 
@@ -47,7 +46,7 @@ def generate_list_route(name: str, methods: list, auth_type: str) -> str:
     # Build imports
     imports = [
         "import { NextRequest, NextResponse } from 'next/server'",
-        "import { queryWithRLS, mutateWithRLS } from '@/core/lib/db'",
+        "import { queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'",
     ]
 
     helper_imports = [
@@ -60,10 +59,10 @@ def generate_list_route(name: str, methods: list, auth_type: str) -> str:
     if 'GET' in methods:
         helper_imports.extend(["createPaginationMeta", "parsePaginationParams"])
 
-    imports.append(f"import {{ {', '.join(helper_imports)} }} from '@/core/lib/api/helpers'")
+    imports.append(f"import {{ {', '.join(helper_imports)} }} from '@nextsparkjs/core/lib/api/helpers'")
 
     if auth_type == 'required':
-        imports.append("import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'")
+        imports.append("import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'")
 
     if 'POST' in methods or 'PATCH' in methods:
         imports.append("import * as z from 'zod'")
@@ -198,7 +197,7 @@ def generate_id_route(name: str, methods: list, auth_type: str) -> str:
     # Build imports
     imports = [
         "import { NextRequest, NextResponse } from 'next/server'",
-        "import { queryWithRLS, mutateWithRLS } from '@/core/lib/db'",
+        "import { queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'",
     ]
 
     helper_imports = [
@@ -209,10 +208,10 @@ def generate_id_route(name: str, methods: list, auth_type: str) -> str:
         "addCorsHeaders",
     ]
 
-    imports.append(f"import {{ {', '.join(helper_imports)} }} from '@/core/lib/api/helpers'")
+    imports.append(f"import {{ {', '.join(helper_imports)} }} from '@nextsparkjs/core/lib/api/helpers'")
 
     if auth_type == 'required':
-        imports.append("import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'")
+        imports.append("import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'")
 
     if 'PATCH' in methods:
         imports.append("import * as z from 'zod'")
@@ -396,7 +395,6 @@ def main():
     parser.add_argument('--name', required=True, help='Endpoint name (kebab-case)')
     parser.add_argument('--methods', default='GET,POST', help='HTTP methods (comma-separated)')
     parser.add_argument('--auth', choices=['required', 'optional', 'none'], default='required')
-    parser.add_argument('--override', action='store_true', help='Create in (contents)/ folder')
     parser.add_argument('--with-id', action='store_true', help='Include [id] route')
     parser.add_argument('--dry-run', action='store_true', help='Show what would be created')
 
@@ -405,18 +403,15 @@ def main():
     name = args.name.lower()
     methods = [m.strip().upper() for m in args.methods.split(',')]
 
-    # Determine base path
-    if args.override:
-        base_path = Path(f'app/api/v1/(contents)/{name}')
-    else:
-        base_path = Path(f'app/api/v1/{name}')
+    # Project route-handler source lives at the project root. The compiler
+    # materializes the corresponding Next.js adapter under src/app/.
+    base_path = Path(f'api/{name}')
 
     print(f"\n{'=' * 60}")
     print(f"SCAFFOLDING API ENDPOINT: {name}")
     print(f"{'=' * 60}")
     print(f"Methods: {', '.join(methods)}")
     print(f"Auth: {args.auth}")
-    print(f"Override: {args.override}")
     print(f"Path: {base_path}")
     print(f"{'=' * 60}\n")
 

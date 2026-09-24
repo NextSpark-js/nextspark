@@ -21,12 +21,6 @@ export interface NextSparkTemplateOrigin {
 }
 
 export interface NextSparkConfig {
-  /**
-   * Legacy 0.x theme selector. The root-first compiler does not read it; it is
-   * retained so slice A does not change the existing config reader.
-   */
-  theme?: string
-
   /** Local plugin directory names under <projectRoot>/plugins. */
   plugins?: string[]
 
@@ -72,7 +66,6 @@ const DEFAULT_FEATURES: Required<NextSparkFeatureConfig> = {
 }
 
 const ROOT_FIELDS = new Set([
-  'theme',
   'plugins',
   'features',
   'template',
@@ -219,7 +212,6 @@ export function validateNextSparkConfig(value: unknown): NextSparkConfigValidati
     if (!ROOT_FIELDS.has(field)) errors.push(`${field} is not a supported nextspark.config.ts field.`)
   }
 
-  validateOptionalString(value.theme, 'theme', errors)
   validatePlugins(value.plugins, errors)
   validateFeatures(value.features, errors)
   validateTemplate(value.template, errors)

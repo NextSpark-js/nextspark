@@ -36,7 +36,7 @@ Before executing, read these skills for context:
 
 Claude:
 1. **[MANDATORY]** Analyzes the description
-2. **[MANDATORY]** Reads `/about/` from active theme (if exists)
+2. **[MANDATORY]** Reads `/about/` from project (if exists)
 3. **[MANDATORY]** Evaluates technical and business risk
 4. **[MANDATORY]** Determines T-Shirt size
 5. **[MANDATORY]** Suggests appropriate workflow

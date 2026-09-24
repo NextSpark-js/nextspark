@@ -27,7 +27,9 @@ export function unsafeWritePlacesLines() { return [] }
 export const BACKUPS_GITIGNORE = '.nextspark/backups/.gitignore'
 export const REGISTRIES_GITIGNORE = '.nextspark/registries/.gitignore'
 `)
-  await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME=from-file\nNODE_ENV=file-value\n')
+  await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
+  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.5' } }))
+  await writeFile(join(root, '.env'), 'NODE_ENV=file-value\n')
   return { root, cleanup: () => rm(root, { recursive: true, force: true }) }
 }
 
@@ -52,20 +54,19 @@ test('built CLI exposes prepare and rejects unsupported freshness checks', () =>
   assert.match(unsupported.stderr, /unknown option '--check'/)
 })
 
-test('prepare invokes the core registry script once from its core directory with project resolution and production precedence', async () => {
+test('prepare invokes the core registry script once from the project root without root override forwarding and with production precedence', async () => {
   const project = await fixture(`
 import { appendFileSync } from 'node:fs'
-appendFileSync(process.env.NEXTSPARK_PROJECT_ROOT + '/runs.txt', JSON.stringify({ cwd: process.cwd(), root: process.env.NEXTSPARK_PROJECT_ROOT, theme: process.env.NEXT_PUBLIC_ACTIVE_THEME, nodeEnv: process.env.NODE_ENV }) + '\\n')
+appendFileSync(process.cwd() + '/runs.txt', JSON.stringify({ cwd: process.cwd(), hasRoot: 'NEXTSPARK_PROJECT_ROOT' in process.env, nodeEnv: process.env.NODE_ENV }) + '\\n')
 `)
   try {
-    const runResult = run(project.root, ['prepare', '--production'], { NEXT_PUBLIC_ACTIVE_THEME: 'from-process', NODE_ENV: 'development' })
+    const runResult = run(project.root, ['prepare', '--production'], { NODE_ENV: 'development' })
     assert.equal(runResult.status, 0, `${runResult.stdout}\n${runResult.stderr}`)
     const runs = (await readFile(join(project.root, 'runs.txt'), 'utf8')).trim().split('\n').map(JSON.parse)
     const resolvedRoot = await realpath(project.root)
     assert.deepEqual(runs, [{
-      cwd: join(resolvedRoot, 'node_modules/@nextsparkjs/core'),
-      root: resolvedRoot,
-      theme: 'from-process',
+      cwd: resolvedRoot,
+      hasRoot: false,
       nodeEnv: 'production',
     }])
   } finally {
@@ -75,7 +76,7 @@ appendFileSync(process.env.NEXTSPARK_PROJECT_ROOT + '/runs.txt', JSON.stringify(
 
 test('a failed prepare reports bounded diagnostics and prevents build from launching Next', async () => {
   const project = await fixture(`
-console.log('❌ registry failed at contents/themes/example/templates/page.tsx')
+console.log('❌ registry failed at templates/page.tsx')
 process.exitCode = 7
 `)
   await mkdir(join(project.root, 'node_modules/.bin'), { recursive: true })

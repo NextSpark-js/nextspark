@@ -1,6 +1,6 @@
 # Preparing registry output
 
-`nextspark prepare` runs the same registry/discovery compiler used by the current NextSpark host. It preserves the existing source resolution and writes the current generated registry layout, including `.nextspark/registries` and the generated `app/(templates)` integration owned by the legacy host.
+`nextspark prepare` runs the same registry/discovery compiler used by the current NextSpark host. It preserves the existing source resolution and writes the current generated registry layout, including `.nextspark/registries` and the generated `src/app/(templates)` integration owned by the legacy host.
 
 ```sh
 nextspark prepare

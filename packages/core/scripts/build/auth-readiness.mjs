@@ -5,7 +5,7 @@
  *
  * Run by `nextspark prepare --production` (and so `nextspark build`) after the
  * registry build, before `next build`. It fails the build when the build
- * environment proves that no login method of the active theme can
+ * environment proves that no login method of the current project can
  * authenticate. It reuses core's pure evaluator from dist/, fed the same
  * variables the runtime adapter reads, and prints only diagnostic codes,
  * messages and method names - never a configuration value.
@@ -17,30 +17,26 @@
  * - NEXTSPARK_AUTH_PREFLIGHT=off: the one bypass. Skips this check with a
  *   warning; the runtime gates and the startup check still apply.
  *
- * The theme's app.config.ts is loaded with Node's type stripping in a child
+ * The project's config/app.config.ts is loaded with Node's type stripping in a child
  * (auth-readiness-load.mjs) whose output is discarded. A config Node can't
  * load that way (path aliases, extensionless imports, non-strippable syntax)
  * fails closed with a fixed reason.
- *
- * NEXT_PUBLIC_ACTIVE_THEME set in both the environment and .env with different
- * values fails: the registry build prefers .env, next build the environment.
  *
  * @module core/scripts/build/auth-readiness
  */
 
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { parse } from 'dotenv'
-import { contentDirectories } from './registry/project-mode.mjs'
+import { findProjectRoot } from './registry/project-mode.mjs'
 import { extractExportName } from '../utils/file-utils.mjs'
 import { shownPath } from '../utils/logging.mjs'
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url))
 const coreDir = join(scriptsDir, '../..')
 const env = process.env
-const projectRoot = env.NEXTSPARK_PROJECT_ROOT || process.cwd()
+const projectRoot = findProjectRoot(process.cwd())
 const LOAD_TIMEOUT_MS = 15_000
 
 const RUNTIME_ONLY_PROVIDERS = ['email', 'google']
@@ -59,18 +55,10 @@ function runtimeOnlyProviders(value) {
   return new Set(tokens)
 }
 
-/** The active theme's auth overrides; exits when they can't be read. */
-async function themeAuthConfig(themeName) {
-  const { themesDir } = contentDirectories(projectRoot)
-  const themeDir = join(themesDir, themeName)
-  if (!existsSync(themeDir)) {
-    fail('AUTH_THEME_NOT_FOUND', `the active theme ${shownPath(themeName)} was not found, so its login methods can't be checked.`, [
-      'Set NEXT_PUBLIC_ACTIVE_THEME to an installed theme.',
-    ])
-  }
-
-  const appConfigPath = join(themeDir, 'config', 'app.config.ts')
-  // A theme without app.config.ts runs on core defaults, which the evaluator assumes when unset
+/** The current project's auth overrides; exits when they can't be read. */
+async function projectAuthConfig() {
+  const appConfigPath = join(projectRoot, 'config', 'app.config.ts')
+  // A project without app.config.ts runs on core defaults, which the evaluator assumes when unset
   if (!existsSync(appConfigPath)) return null
 
   // The same export the registry imports for the theme's app config
@@ -87,12 +75,12 @@ async function themeAuthConfig(themeName) {
   const loaded = await loadThemeAuth(appConfigPath, exportName)
   if (!loaded.ok) {
     const reason = Object.hasOwn(LOAD_FAILURES, loaded.reason) ? LOAD_FAILURES[loaded.reason] : LOAD_FAILURES.other
-    fail('AUTH_CONFIG_UNREADABLE', `config/app.config.ts of theme ${shownPath(themeName)} could not be read for its auth settings: ${reason}.`, unreadable)
+    fail('AUTH_CONFIG_UNREADABLE', `the project's config/app.config.ts could not be read for its auth settings: ${reason}.`, unreadable)
   }
   if (loaded.auth === null) return null
   const auth = validAuthSubset(loaded.auth)
   if (!auth) {
-    fail('AUTH_CONFIG_UNREADABLE', `config/app.config.ts of theme ${shownPath(themeName)} has auth settings of an unsupported shape.`, [
+    fail('AUTH_CONFIG_UNREADABLE', `the project's config/app.config.ts has auth settings of an unsupported shape.`, [
       'auth.methods must be an array of method names; auth.providers.google.enabled and auth.emailAndPassword.enabled must be true or false.',
     ])
   }
@@ -152,20 +140,6 @@ function validAuthSubset(subset) {
   }
 }
 
-/**
- * The registry build reloads the project .env over the environment it is
- * given, so there the .env's NEXT_PUBLIC_ACTIVE_THEME wins, while this check
- * and `next build` see the environment's. When both set it and disagree, the
- * build would check a theme other than the one it compiles.
- */
-function activeThemeConflict() {
-  const envPath = join(projectRoot, '.env')
-  if (!existsSync(envPath)) return null
-  const fileTheme = parse(readFileSync(envPath)).NEXT_PUBLIC_ACTIVE_THEME?.replace(/'/g, '')
-  const theme = env.NEXT_PUBLIC_ACTIVE_THEME?.replace(/'/g, '')
-  return fileTheme && theme && fileTheme !== theme ? { fileTheme, theme } : null
-}
-
 async function main() {
   const preflight = env.NEXTSPARK_AUTH_PREFLIGHT ?? ''
   if (preflight === 'off') {
@@ -184,20 +158,6 @@ async function main() {
     ])
   }
 
-  const themeName = env.NEXT_PUBLIC_ACTIVE_THEME?.replace(/'/g, '')
-  if (!themeName) {
-    fail('AUTH_THEME_UNSET', 'NEXT_PUBLIC_ACTIVE_THEME is not set, so the login methods to check are unknown.', [
-      'Set NEXT_PUBLIC_ACTIVE_THEME in .env or the build environment.',
-    ])
-  }
-
-  const conflict = activeThemeConflict()
-  if (conflict) {
-    fail('AUTH_THEME_CONFLICT', `NEXT_PUBLIC_ACTIVE_THEME is ${shownPath(conflict.theme)} in the environment but ${shownPath(conflict.fileTheme)} in .env: the registry build would compile ${shownPath(conflict.fileTheme)} while this check and next build use ${shownPath(conflict.theme)}.`, [
-      'Make them agree: set the same NEXT_PUBLIC_ACTIVE_THEME in .env and the build environment, or set it in only one of them.',
-    ])
-  }
-
   let evaluator
   try {
     evaluator = await import(pathToFileURL(join(coreDir, 'dist/lib/auth/readiness.js')).href)
@@ -210,7 +170,7 @@ async function main() {
     ])
   }
 
-  const authConfig = await themeAuthConfig(themeName)
+  const authConfig = await projectAuthConfig()
   const configuration = evaluator.authReadinessConfigurationFromEnv(env)
   configuration.email.runtimeOnly = runtimeOnly.has('email')
   configuration.google.runtimeOnly = runtimeOnly.has('google')
@@ -225,7 +185,7 @@ async function main() {
   const diagnosticLine = ({ method, code, message }) => `[${method}] ${code}: ${message}`
 
   if (result.outcome === 'invalid') {
-    console.log(`❌ Production auth readiness failed: no login method of theme ${shownPath(themeName)} can authenticate with this build environment.`)
+    console.log('❌ Production auth readiness failed: no login method of the project can authenticate with this build environment.')
     console.log(`   Login methods: ${result.declaredMethods.join(', ')}`)
     for (const diagnostic of result.diagnostics) console.log(`❌ ${diagnosticLine(diagnostic)}`)
     console.log('   Fix: set the variables named above in .env or the build environment (email: EMAIL_PROVIDER=resend,')

@@ -3,7 +3,7 @@
  * version-matched local tarball, written as a `file:` devDependency straight
  * into the root package.json it creates -- so a mid-development, unpublished
  * version installs from disk instead of failing against the registry (see
- * create-nextspark-app/tests/create.test.ts).
+ * create-nextspark-src/app/tests/create.test.ts).
  *
  * For a web-mobile (monorepo) project, generateMonorepoStructure then
  * replaces that root package.json wholesale (createRootPackageJson), and
@@ -75,7 +75,7 @@ test('extractLocalNextSparkRefs finds nothing when there is no local ref, or no 
 /**
  * generateMonorepoStructure also copies the mobile app template
  * (copyMobileTemplate), which this repo checkout's packages/mobile/templates/
- * does not carry a populated app/ for (it is synced separately, the way core's
+ * does not carry a populated src/app/ for (it is synced separately, the way core's
  * templates/app is -- see scripts/packages/pack.sh). getMobileTemplatesDir()
  * checks `<cwd>/node_modules/@nextsparkjs/mobile/templates` first, so a
  * throwaway one there, with just the files validateMobileTemplate requires,

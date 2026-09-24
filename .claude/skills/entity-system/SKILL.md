@@ -18,7 +18,7 @@ Config-driven system for defining entities with automatic CRUDs, similar to Word
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                          ENTITY CONFIGURATION                            │
 │                                                                          │
-│  contents/themes/{theme}/entities/{entity}/                              │
+│  entities/{entity}/                              │
 │  ├── {entity}.config.ts    ← Main configuration                          │
 │  ├── {entity}.fields.ts    ← Field definitions                           │
 │  ├── {entity}.types.ts     ← TypeScript types                            │
@@ -34,7 +34,7 @@ Config-driven system for defining entities with automatic CRUDs, similar to Word
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-> **📍 Context-Aware Paths:** Entity configs go in `contents/themes/{theme}/entities/` in both contexts.
+> **📍 Context-Aware Paths:** Entity configs go in `entities/` in both contexts.
 > Core entities are read-only in consumer projects.
 > See `core-theme-responsibilities` skill for complete rules.
 
@@ -552,22 +552,22 @@ DELETE /api/v1/orders/{id}/child/items/{itemId}
 
 ### Scaffold New Entity
 ```bash
-python .claude/skills/entity-system/scripts/scaffold-entity.py --entity products --theme default
+python .claude/skills/entity-system/scripts/scaffold-entity.py --entity products
 ```
 
 ### Generate Migration
 ```bash
-python .claude/skills/entity-system/scripts/generate-migration.py --entity products --theme default
+python .claude/skills/entity-system/scripts/generate-migration.py --entity products
 ```
 
 ### Generate Metas Migration
 ```bash
-python .claude/skills/entity-system/scripts/generate-metas-migration.py --entity products --theme default
+python .claude/skills/entity-system/scripts/generate-metas-migration.py --entity products
 ```
 
 ### Generate Child Entity Migration
 ```bash
-python .claude/skills/entity-system/scripts/generate-child-migration.py --parent orders --child items --theme default
+python .claude/skills/entity-system/scripts/generate-child-migration.py --parent orders --child items
 ```
 
 ### Generate Sample Data
@@ -605,7 +605,7 @@ fields: [
 ]
 
 // ❌ NEVER: Use dynamic imports for entity configs
-const config = await import(`@/contents/entities/${slug}`)
+const config = await import(`@/entities/${slug}`)
 
 // ❌ NEVER: Define tableName explicitly (derived from slug)
 tableName: 'my_custom_table'

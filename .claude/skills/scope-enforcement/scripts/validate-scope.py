@@ -7,7 +7,7 @@ Part of the scope-enforcement skill.
 
 Usage:
     python validate-scope.py --session ".claude/sessions/2025-12-30-feature-v1"
-    python validate-scope.py -s ".claude/sessions/2025-12-30-feature-v1" --files "core/lib/x.ts,app/api/y/route.ts"
+    python validate-scope.py -s ".claude/sessions/2025-12-30-feature-v1" --files "packages/core/src/lib/x.ts,apps/dev/api/y/route.ts"
     python validate-scope.py -s ".claude/sessions/2025-12-30-feature-v1" --git  # Check git changes
 """
 
@@ -64,23 +64,22 @@ def build_allowed_paths(scope_config: Dict[str, Any]) -> List[str]:
     # Core paths
     if scope.get("core", False):
         allowed_paths.extend([
-            "core/**/*",
-            "app/**/*",
+            "packages/core/**/*",
+            "apps/dev/src/app/**/*",
             "scripts/**/*",
-            "migrations/**/*",
-            "core/migrations/**/*"
+            "apps/dev/migrations/**/*"
         ])
 
-    # Theme paths
-    theme = scope.get("theme")
-    if theme and theme != False:
-        allowed_paths.append(f"contents/themes/{theme}/**/*")
+    # Root-first project source paths
+    if scope.get("project", False):
+        allowed_paths.extend([f"apps/dev/{name}/**/*" for name in ["api", "blocks", "components", "config", "entities", "lib", "messages", "migrations", "public", "styles", "templates", "tests"]])
+        allowed_paths.append("apps/dev/nextspark.config.ts")
 
     # Plugin paths
     plugins = scope.get("plugins")
     if isinstance(plugins, list):
         for plugin in plugins:
-            allowed_paths.append(f"contents/plugins/{plugin}/**/*")
+            allowed_paths.append(f"apps/dev/plugins/{plugin}/**/*")
 
     # Exceptions
     exceptions = scope_config.get("exceptions", [])
@@ -209,7 +208,7 @@ def print_scope_summary(scope_config: Dict[str, Any]) -> None:
 
     print("\nScope Settings:")
     print(f"  Core:    {'ALLOWED' if scope.get('core') else 'DENIED'}")
-    print(f"  Theme:   {scope.get('theme') or 'NONE'}")
+    print(f"  Project: {'ALLOWED' if scope.get('project') else 'DENIED'}")
     print(f"  Plugins: {scope.get('plugins') if isinstance(scope.get('plugins'), list) else 'NONE'}")
 
     exceptions = scope_config.get("exceptions", [])
@@ -259,7 +258,7 @@ def main():
         epilog="""
 Examples:
   python validate-scope.py --session ".claude/sessions/2025-12-30-feature-v1"
-  python validate-scope.py -s ".claude/sessions/2025-12-30-feature-v1" --files "core/lib/x.ts"
+  python validate-scope.py -s ".claude/sessions/2025-12-30-feature-v1" --files "packages/core/src/lib/x.ts,apps/dev/api/y/route.ts"
   python validate-scope.py -s ".claude/sessions/2025-12-30-feature-v1" --git
         """
     )

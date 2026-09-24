@@ -44,7 +44,7 @@ core/docs/
     └── 02-authentication.md
 ```
 
-### Theme Documentation (`contents/themes/[theme]/docs/`)
+### Theme Documentation (`docs/`)
 
 **Purpose:** Theme-specific documentation for customization, branding, and features
 
@@ -66,7 +66,7 @@ core/docs/
 
 **Example Topics:**
 ```text
-contents/themes/custom-theme/docs/
+docs/
 ├── 01-overview/
 │   ├── 01-introduction.md
 │   └── 02-getting-started.md
@@ -77,7 +77,7 @@ contents/themes/custom-theme/docs/
     └── 01-custom-dashboard.md
 ```
 
-### Plugin Documentation (`contents/plugins/[plugin]/docs/`)
+### Plugin Documentation (`plugins/[plugin]/docs/`)
 
 **Purpose:** Plugin-specific documentation for features and integration
 
@@ -98,7 +98,7 @@ contents/themes/custom-theme/docs/
 
 **Example Topics:**
 ```text
-contents/plugins/ai/docs/
+plugins/ai/docs/
 ├── 01-overview/
 │   ├── 01-introduction.md
 │   └── 02-capabilities.md
@@ -192,19 +192,19 @@ contents/plugins/ai/docs/
 
 ### Navigation Organization
 
-Only the **active theme's** own docs are ever rendered. The docs registry
+Only the **project's** own docs are ever rendered. The docs registry
 (`core/scripts/build/registry/generators/docs-registry.mjs`) scans
-`contents/themes/<active theme>/docs/public/` and
+`docs/public/` and
 `.../docs/superadmin/`; nothing else feeds it. Core's own `core/docs/` (this
-directory tree) and any plugin's `contents/plugins/<plugin>/docs/` are never
+directory tree) and any plugin's `plugins/<plugin>/docs/` are never
 scanned, so they have no page, no route, and no entry in either sidebar -
 they exist purely as reference material for someone reading the source tree.
 
 ### URL Structure
 
 ```text
-/docs/[section]/[page]                → active theme's docs/public/
-/superadmin/docs/[section]/[page]     → active theme's docs/superadmin/
+/docs/[section]/[page]                → project's docs/public/
+/superadmin/docs/[section]/[page]     → project's docs/superadmin/
 ```
 
 Core and plugin docs have no URL at all.
@@ -291,11 +291,11 @@ core/docs/
 └── 04-entities/
     └── 01-introduction.md
 
-contents/themes/custom/docs/
+docs/
 └── 03-custom-entities/
     └── 01-overview.md       ← Different name to avoid confusion
 
-contents/plugins/ai/docs/
+plugins/ai/docs/
 └── 01-ai-entities/
     └── 01-introduction.md   ← Prefixed with plugin context
 ```
@@ -329,7 +329,7 @@ This theme provides custom styling for...
 
 ### Documentation Visibility Configuration
 
-Since only the active theme's own `docs/public/` and `docs/superadmin/` are
+Since only the project's own `docs/public/` and `docs/superadmin/` are
 ever served, the `docs` block of `app.config.ts` (`DocsConfig` in
 `core/lib/config/types.ts`) only controls those two categories - there is no
 `theme`/`plugins`/`core` split to configure, because core and plugin docs
@@ -343,10 +343,10 @@ export const appConfig = {
     searchEnabled: true,
     breadcrumbs: true,
 
-    // /docs - the active theme's docs/public/
+    // /docs - the project's docs/public/
     public: { enabled: true, open: true, label: 'Help Center' },
 
-    // /superadmin/docs - the active theme's docs/superadmin/
+    // /superadmin/docs - the project's docs/superadmin/
     superadmin: { enabled: true, open: false, label: 'Admin Docs' },
   },
 }

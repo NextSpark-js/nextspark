@@ -9,7 +9,7 @@ Copy-paste templates for plugin components, hooks, and API endpoints.
 Every plugin MUST have a `lib/plugin-env.ts` using core's centralized env-loader:
 
 ```typescript
-// contents/plugins/my-plugin/lib/plugin-env.ts
+// plugins/my-plugin/lib/plugin-env.ts
 import { getPluginEnv } from '@nextsparkjs/core/lib/plugins/env-loader'
 
 interface MyPluginEnvConfig {
@@ -106,7 +106,7 @@ export const getTimeout = () => pluginEnv.getTimeout()
 ## Type Definitions
 
 ```typescript
-// contents/plugins/my-plugin/types/my-plugin.types.ts
+// plugins/my-plugin/types/my-plugin.types.ts
 
 // Configuration types
 export interface MyPluginConfig {
@@ -144,7 +144,7 @@ export interface MyPluginOptions {
 ## Component Template
 
 ```typescript
-// contents/plugins/my-plugin/components/MyWidget.tsx
+// plugins/my-plugin/components/MyWidget.tsx
 'use client'
 
 import { useMyPlugin } from '../hooks/useMyPlugin'
@@ -191,7 +191,7 @@ export function MyWidget({ title, onAction }: MyWidgetProps) {
 ### Query Hook
 
 ```typescript
-// contents/plugins/my-plugin/hooks/useMyPlugin.ts
+// plugins/my-plugin/hooks/useMyPlugin.ts
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -241,7 +241,7 @@ export function useMyPluginMutation() {
 ### POST Endpoint with Validation
 
 ```typescript
-// contents/plugins/my-plugin/api/process/route.ts
+// plugins/my-plugin/api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
@@ -298,7 +298,7 @@ export async function POST(request: NextRequest) {
 ### GET Endpoint with Query Params
 
 ```typescript
-// contents/plugins/my-plugin/api/data/route.ts
+// plugins/my-plugin/api/data/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
@@ -341,7 +341,7 @@ export async function GET(request: NextRequest) {
 ## Provider Template
 
 ```typescript
-// contents/plugins/my-plugin/providers/MyPluginProvider.tsx
+// plugins/my-plugin/providers/MyPluginProvider.tsx
 'use client'
 
 import { createContext, useContext, useState, ReactNode } from 'react'

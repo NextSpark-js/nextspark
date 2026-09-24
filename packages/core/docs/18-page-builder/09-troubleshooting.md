@@ -31,13 +31,13 @@ This guide helps you diagnose and fix common issues with the Page Builder system
 
 3. **Block in wrong directory**
    ```text
-   ✅ contents/themes/default/blocks/my-block/
+   ✅ blocks/my-block/
    ❌ core/blocks/my-block/
-   ❌ contents/blocks/my-block/
+   ❌ src/app/blocks/my-block/ (generated output)
    ```
 
-4. **Theme not active**
-   - Check `NEXT_PUBLIC_ACTIVE_THEME` in `.env`
+4. **Project registry is stale**
+   - Run the registry build from the directory containing `nextspark.config.ts`
 
 ---
 
@@ -60,7 +60,7 @@ This guide helps you diagnose and fix common issues with the Page Builder system
    ```typescript
    // Check the import path
    const MyBlock = lazy(() =>
-     import('@/contents/themes/default/blocks/my-block/component')
+     import('@/blocks/my-block/component')
        .then(m => ({ default: m.MyBlock }))  // Named export
    )
    ```
@@ -289,7 +289,7 @@ This guide helps you diagnose and fix common issues with the Page Builder system
 JSON.parse(localStorage.getItem('page-blocks-debug'))
 
 // Check block registry
-import { BLOCK_REGISTRY } from '@/core/lib/registries/block-registry'
+import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 console.log(Object.keys(BLOCK_REGISTRY))
 ```
 

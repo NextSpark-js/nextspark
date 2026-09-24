@@ -57,18 +57,11 @@ export async function dbMigrateCommand(): Promise<void> {
     // Load project .env file, falling back to process.env (e.g. Vercel/CI)
     const projectEnv = loadProjectEnv(projectRoot);
     const DATABASE_URL = projectEnv.DATABASE_URL || process.env.DATABASE_URL;
-    const ACTIVE_THEME = projectEnv.NEXT_PUBLIC_ACTIVE_THEME || process.env.NEXT_PUBLIC_ACTIVE_THEME;
 
     // Validate required environment variables
     if (!DATABASE_URL) {
       spinner.fail('DATABASE_URL not found in environment');
       console.error(chalk.red('Please configure DATABASE_URL in your .env file or environment variables'));
-      process.exit(1);
-    }
-
-    if (!ACTIVE_THEME) {
-      spinner.fail('NEXT_PUBLIC_ACTIVE_THEME not found in environment');
-      console.error(chalk.red('Please configure NEXT_PUBLIC_ACTIVE_THEME in your .env file or environment variables'));
       process.exit(1);
     }
 
@@ -81,8 +74,6 @@ export async function dbMigrateCommand(): Promise<void> {
         ...process.env,
         ...projectEnv,
         DATABASE_URL,
-        NEXT_PUBLIC_ACTIVE_THEME: ACTIVE_THEME,
-        NEXTSPARK_PROJECT_ROOT: projectRoot,
         NEXTSPARK_CORE_DIR: coreDir,
       },
     });

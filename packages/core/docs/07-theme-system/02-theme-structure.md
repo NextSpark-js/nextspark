@@ -5,7 +5,7 @@ This guide provides a complete reference for the theme directory structure, expl
 ## Complete Directory Structure
 
 ```text
-contents/themes/[theme-name]/
+
 ├── config/                      # All configuration files
 │   ├── theme.config.ts         # Theme metadata and configuration
 │   ├── app.config.ts           # Application-level overrides
@@ -318,7 +318,7 @@ export const DASHBOARD_CONFIG_OVERRIDES = {
 
 ## Public Directory
 
-Theme assets are automatically copied from `contents/themes/[theme]/public/` to `public/theme/` during the build process.
+Theme assets are automatically copied from `public/` to `public/theme/` during the build process.
 
 ### brand/
 

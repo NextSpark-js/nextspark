@@ -92,7 +92,7 @@ First, let's determine your project type.
 📋 CONSUMER (Application Development)
    - You're building an app WITH NextSpark
    - Core is READ-ONLY (via npm packages)
-   - You can only modify your active theme
+   - You can only modify your project
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -232,8 +232,7 @@ Do you use a task manager?
 {
   "$schema": "./workspace.schema.json",
   "project": {
-    "name": "My NextSpark App",
-    "activeTheme": "default"
+    "name": "My NextSpark App"
   },
   "activeUser": "Pablo Capello",
   "preferences": {

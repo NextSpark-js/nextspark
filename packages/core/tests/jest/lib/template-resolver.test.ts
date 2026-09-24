@@ -53,7 +53,7 @@ describe('getTemplateOrDefault with a metadata-only override', () => {
         fileName: 'layout.tsx',
         relativePath: 'docs/layout.tsx',
         appPath,
-        templatePath: '@/contents/themes/testtheme/templates/docs/layout.tsx',
+        templatePath: '@/templates/docs/layout.tsx',
         priority: 10,
         metadata: { title: 'Docs' }
       },

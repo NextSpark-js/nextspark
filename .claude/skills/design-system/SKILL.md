@@ -20,17 +20,16 @@ All values in this skill are EXAMPLES from the default theme.
 You MUST read the actual theme's `globals.css` to get real values.
 
 ```bash
-# Determine active theme
-grep "NEXT_PUBLIC_ACTIVE_THEME" .env .env.local
+# Determine project
 
 # Read theme tokens
-cat contents/themes/{THEME}/styles/globals.css
+cat styles/globals.css
 ```
 
 ## Theme Token Locations
 
 ```
-contents/themes/{THEME}/
+
 ├── styles/
 │   ├── globals.css      # CSS variables (:root and .dark)
 │   └── components.css   # Component-specific styles
@@ -178,7 +177,7 @@ const mockTokens = {
 
 ```bash
 # Extract all CSS variables
-grep -E "^\s*--" contents/themes/{theme}/styles/globals.css
+grep -E "^\s*--" styles/globals.css
 ```
 
 ### Step 3: Create Mapping
@@ -209,8 +208,8 @@ For each mock token:
 
 ```json
 {
-  "theme": "default",
-  "themeGlobalsPath": "contents/themes/default/styles/globals.css",
+  "project": true,
+  "themeGlobalsPath": "styles/globals.css",
   "analyzedAt": "2025-01-09T12:00:00Z",
 
   "themeTokens": {

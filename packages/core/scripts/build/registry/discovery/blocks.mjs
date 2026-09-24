@@ -14,7 +14,7 @@ import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
 import { log, verbose } from '../../../utils/index.mjs'
 
 /**
- * Discover all blocks in the active theme
+ * Discover all blocks in the project root.
  * @param {object} config - Optional configuration object (defaults to DEFAULT_CONFIG)
  * @returns {Promise<Array>} Array of discovered blocks
  */
@@ -22,13 +22,8 @@ export async function discoverBlocks(config = DEFAULT_CONFIG) {
   log('Discovering blocks...', 'info')
   const blocks = []
 
-  if (!config.activeTheme) {
-    verbose('Warning: NEXT_PUBLIC_ACTIVE_THEME not set, skipping block discovery')
-    return blocks
-  }
-
-  const themeName = config.activeTheme
-  const blocksDir = join(config.themesDir, themeName, 'blocks')
+  const themeName = config.projectName
+  const blocksDir = join(config.projectSourceDir, 'blocks')
 
   // Check if blocks directory exists
   try {
@@ -111,11 +106,11 @@ export async function discoverBlocks(config = DEFAULT_CONFIG) {
           themeName,
           hasExamples,
           paths: {
-            config: `@/contents/themes/${themeName}/blocks/${blockSlug}/config`,
-            schema: `@/contents/themes/${themeName}/blocks/${blockSlug}/schema`,
-            fields: `@/contents/themes/${themeName}/blocks/${blockSlug}/fields`,
-            component: `@/contents/themes/${themeName}/blocks/${blockSlug}/component`,
-            examples: `@/contents/themes/${themeName}/blocks/${blockSlug}/examples`,
+            config: `@/blocks/${blockSlug}/config`,
+            schema: `@/blocks/${blockSlug}/schema`,
+            fields: `@/blocks/${blockSlug}/fields`,
+            component: `@/blocks/${blockSlug}/component`,
+            examples: `@/blocks/${blockSlug}/examples`,
             thumbnail: existsSync(join(blockPath, 'thumbnail.png'))
               ? `/theme/blocks/${blockSlug}/thumbnail.png`
               : null

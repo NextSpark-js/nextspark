@@ -18,9 +18,9 @@ Read `.claude/skills/scheduled-actions/SKILL.md` completely before proceeding.
 
 | File | Purpose |
 |------|---------|
-| `contents/themes/{theme}/lib/scheduled-actions/handlers/` | Handler implementations |
-| `contents/themes/{theme}/lib/scheduled-actions/index.ts` | Handler registration |
-| `contents/themes/{theme}/config/app.config.ts` | Configuration |
+| `lib/scheduled-actions/handlers/` | Handler implementations |
+| `lib/scheduled-actions/index.ts` | Handler registration |
+| `config/app.config.ts` | Configuration |
 
 ---
 

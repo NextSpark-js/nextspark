@@ -1,10 +1,7 @@
 /**
- * Themes and plugins reach a project as workspace packages under contents/, and pnpm installs the
- * peers they declare. A `next` range that leaves out the project's own Next makes pnpm install a
- * second Next inside the theme or plugin, or abort with ERR_PNPM_PEER_DEP_ISSUES when peers are
- * strict. A generated project runs the Next that `create-nextspark-app` installs, and a project
- * that predates it runs the lowest Next core admits, so every range must admit both majors. The
- * skills that scaffold a theme or a plugin hand out the same range.
+ * Install-once project templates and local plugins retain package metadata for their standalone
+ * test tooling. Any `next` peer they declare must admit both the oldest Next core supports and the
+ * pinned Next installed by create-nextspark-app.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -39,12 +36,11 @@ function requiredMajors(): number[] {
 }
 
 function manifests(): string[] {
-  return ['themes', 'plugins'].flatMap((dir) =>
-    fs
-      .readdirSync(path.join(REPO, dir))
-      .map((name) => `${dir}/${name}/package.json`)
-      .filter((file) => fs.existsSync(path.join(REPO, file))),
-  )
+  const roots = ['packages/core/templates/projects', 'apps/dev/plugins']
+  return roots.flatMap((dir) => fs
+    .readdirSync(path.join(REPO, dir))
+    .map((name) => `${dir}/${name}/package.json`)
+    .filter((file) => fs.existsSync(path.join(REPO, file))))
 }
 
 test('the majors to admit are the floor core admits and the one generated projects install', () => {
@@ -52,10 +48,10 @@ test('the majors to admit are the floor core admits and the one generated projec
   assert.ok(floor < installed, `${floor} < ${installed}`)
 })
 
-test("every theme and plugin admits the project's Next as a peer", () => {
+test("every project template and local plugin admits the project's Next as a peer", () => {
   const majors = requiredMajors()
   const found = manifests()
-  assert.ok(found.length >= 9, `found ${found.length} theme and plugin manifests`)
+  assert.ok(found.length >= 4, `found ${found.length} project-template and local-plugin manifests`)
 
   const rejecting = found.flatMap((file) => {
     const manifest = JSON.parse(read(file))

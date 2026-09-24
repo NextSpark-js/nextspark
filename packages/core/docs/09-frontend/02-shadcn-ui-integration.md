@@ -105,7 +105,7 @@ const config: Config = {
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './core/**/*.{js,ts,jsx,tsx,mdx}',
-    './contents/**/*.{js,ts,jsx,tsx,mdx}',
+    './{api,blocks,components,config,entities,lib,plugins,templates}/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {

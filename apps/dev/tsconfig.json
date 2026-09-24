@@ -37,12 +37,6 @@
       "@nextsparkjs/plugin-ai/*": [
         "../../plugins/ai/*"
       ],
-      "@nextsparkjs/plugin-langchain": [
-        "../../plugins/langchain/index.ts"
-      ],
-      "@nextsparkjs/plugin-langchain/*": [
-        "../../plugins/langchain/*"
-      ],
       "@nextsparkjs/plugin-amplitude": [
         "../../plugins/amplitude/index.ts"
       ],
@@ -55,30 +49,6 @@
       "@nextsparkjs/plugin-social-media-publisher/*": [
         "../../plugins/social-media-publisher/*"
       ],
-      "@nextsparkjs/theme-default": [
-        "../../themes/default/index.ts"
-      ],
-      "@nextsparkjs/theme-default/*": [
-        "../../themes/default/*"
-      ],
-      "@nextsparkjs/theme-blog": [
-        "../../themes/blog/index.ts"
-      ],
-      "@nextsparkjs/theme-blog/*": [
-        "../../themes/blog/*"
-      ],
-      "@nextsparkjs/theme-crm": [
-        "../../themes/crm/index.ts"
-      ],
-      "@nextsparkjs/theme-crm/*": [
-        "../../themes/crm/*"
-      ],
-      "@nextsparkjs/theme-productivity": [
-        "../../themes/productivity/index.ts"
-      ],
-      "@nextsparkjs/theme-productivity/*": [
-        "../../themes/productivity/*"
-      ],
       "@nextsparkjs/registries": [
         "./.nextspark/registries/index.ts"
       ],
@@ -88,14 +58,11 @@
       "@/core/*": [
         "../../packages/core/src/*"
       ],
-      "@/contents/*": [
-        "./contents/*"
-      ],
-      "@/themes/*": [
-        "./contents/themes/*"
-      ],
       "@/plugins/*": [
-        "./contents/plugins/*"
+        "./plugins/*"
+      ],
+      "@/app/*": [
+        "./src/app/*"
       ],
       "@/*": [
         "./*"
@@ -106,8 +73,6 @@
     "**/*.ts",
     "**/*.tsx",
     ".nextspark",
-    "app",
-    "contents",
     "next-env.d.ts",
     "src",
     ".next/types/**/*.ts",
@@ -128,10 +93,6 @@
     "**/jest.config.ts",
     "**/cypress/**",
     "**/tests/**",
-    "cypress.config.ts",
-    "contents/themes/blog/**",
-    "contents/themes/crm/**",
-    "contents/themes/productivity/**",
-    "contents/themes/plugin-sandbox/**"
+    "cypress.config.ts"
   ]
 }

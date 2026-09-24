@@ -129,7 +129,7 @@ Core provides 4 team roles with fixed hierarchy:
 Configure core permissions in your theme:
 
 ```typescript
-// contents/themes/default/config/permissions.config.ts
+// config/permissions.config.ts
 import type { ThemePermissionsConfig } from '@/core/lib/permissions/types'
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
@@ -186,7 +186,7 @@ STEP 3 OF 5: Add Custom Team Roles
 Themes can add custom roles between core roles:
 
 ```typescript
-// contents/themes/default/config/permissions.config.ts
+// config/permissions.config.ts
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   // 1. Define custom roles
@@ -256,7 +256,7 @@ viewer (1)
 3️⃣  Add Translations:
 
 ```json
-// contents/themes/default/messages/en.json
+// messages/en.json
 {
   "common": {
     "teamRoles": {
@@ -289,7 +289,7 @@ STEP 4 OF 5: Define Entity Permissions
 Define which roles can perform which actions on each entity:
 
 ```typescript
-// contents/themes/default/config/permissions.config.ts
+// config/permissions.config.ts
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   // ... roles config ...

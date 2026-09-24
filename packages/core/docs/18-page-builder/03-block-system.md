@@ -209,9 +209,9 @@ interface FieldDefinition {
 The block registry is auto-generated at build time by `packages/core/scripts/build/registry.mjs`:
 
 ```typescript
-// core/lib/registries/block-registry.ts (auto-generated)
+// .nextspark/registries/block-registry.ts (auto-generated)
 
-import { fieldDefinitions as hero_fields } from '@/contents/themes/default/blocks/hero/fields'
+import { fieldDefinitions as hero_fields } from '@/blocks/hero/fields'
 // ... other imports
 
 export const BLOCK_REGISTRY: Record<string, BlockConfig> = {
@@ -222,7 +222,7 @@ export const BLOCK_REGISTRY: Record<string, BlockConfig> = {
     category: 'hero',
     icon: 'Rocket',
     fieldDefinitions: hero_fields,
-    componentPath: '@/contents/themes/default/blocks/hero/component',
+    componentPath: '@/blocks/hero/component',
     // ...
   },
   // ... other blocks
@@ -232,7 +232,7 @@ export const BLOCK_REGISTRY: Record<string, BlockConfig> = {
 ### Using the Registry
 
 ```typescript
-import { BLOCK_REGISTRY, getAllBlocks, getBlock, getBlocksByCategory } from '@/core/lib/registries/block-registry'
+import { BLOCK_REGISTRY, getAllBlocks, getBlock, getBlocksByCategory } from '@nextsparkjs/registries/block-registry'
 
 // Get all blocks
 const allBlocks = getAllBlocks()
@@ -252,7 +252,7 @@ const exists = hasBlock('hero')  // true
 A complete block consists of these files:
 
 ```text
-contents/themes/{theme}/blocks/{block-slug}/
+blocks/{block-slug}/
 ├── config.ts      # Metadata (name, description, category, icon)
 ├── fields.ts      # Field definitions for admin UI
 ├── schema.ts      # Zod validation schema

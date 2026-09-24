@@ -129,7 +129,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
 
     /**
      * Role display names (translation keys)
-     * The actual translations are in contents/messages/[locale]/common.json
+     * The actual translations are in messages/[locale]/common.json
      */
     displayNames: {
       member: 'common.userRoles.member',
@@ -586,4 +586,3 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
     ],
   },
 }
-

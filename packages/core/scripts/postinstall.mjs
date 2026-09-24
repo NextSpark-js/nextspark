@@ -67,7 +67,7 @@ function validateProjectRoot(projectRoot) {
 
 /**
  * Detect if we're in the NextSpark development monorepo.
- * Consumer projects may also have pnpm-workspace.yaml (for themes/plugins),
+ * Consumer projects may also have pnpm-workspace.yaml (for their own packages),
  * so we check for packages/core/ which only exists in the dev monorepo.
  */
 function isDevMonorepo(projectRoot) {
@@ -110,12 +110,12 @@ function isNextSparkProject(projectRoot) {
 }
 
 /**
- * Check if the project has an /app folder (already initialized)
+ * Check if the project has a generated /src/app folder (already initialized)
  */
 function hasAppFolder(projectRoot) {
-  const hasApp = existsSync(join(projectRoot, 'app'));
+  const hasApp = existsSync(join(projectRoot, 'src', 'app'));
   if (!hasApp) {
-    debug('Skipping: no /app folder found (project not initialized)');
+    debug('Skipping: no /src/app folder found (project not initialized)');
   }
   return hasApp;
 }

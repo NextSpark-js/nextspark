@@ -100,7 +100,7 @@ const TREES = [
   'packages/ui/src',
   'themes',
   'plugins',
-  'apps/dev/app',
+  'apps/dev/src/app',
   'apps/dev/lib',
   'apps/dev/src',
 ]
@@ -180,7 +180,7 @@ const CSS_URL_WITH_PATH = /url\(\s*['"]?\/(?!\/)/i
 const HELPERS = new Set(['withBasePath', 'withBasePathIfInApp', 'withBasePathInHtml', 'withBasePathInSrcset'])
 
 /** Helpers that hand back markup with its in-app URLs already prefixed. */
-const HTML_HELPERS = new Set(['sanitizeBlockHtml', 'withBasePathInHtml'])
+const HTML_HELPERS = new Set(['sanitizeBlockHtml', 'sanitizePostHtml', 'withBasePathInHtml'])
 
 /** A URL of its own, not one this app serves. */
 const ALLOWED = [
@@ -190,17 +190,17 @@ const ALLOWED = [
     why: 'a request handed straight to a route handler, which is given its URL without the base path',
   },
   {
-    file: 'apps/dev/app/layout.tsx',
+    file: 'apps/dev/src/app/layout.tsx',
     text: 'domain',
     why: 'preconnect and dns-prefetch name the billing provider’s origin, not a path this app serves',
   },
   {
-    file: 'apps/dev/app/layout.ppr.tsx',
+    file: 'apps/dev/src/app/layout.ppr.tsx',
     text: 'domain',
     why: 'preconnect and dns-prefetch name the billing provider’s origin, not a path this app serves',
   },
   {
-    file: 'themes/default/blocks/video-hero/component.tsx',
+    file: 'apps/dev/blocks/video-hero/component.tsx',
     text: 'embedUrl',
     why: 'getEmbedUrl() returns a full YouTube or Vimeo URL, or null',
   },
@@ -235,7 +235,7 @@ const ALLOWED = [
     why: 'a string src goes through withBasePathIfInApp where resolvedSrc is built; an imported image is passed through',
   },
   {
-    file: 'themes/blog/components/editor/WysiwygEditor.tsx',
+    file: 'packages/core/templates/projects/blog/components/editor/WysiwygEditor.tsx',
     text: 'sanitizePostHtml',
     why: 'the editable body is what gets stored, so it shows the URLs as written',
   },
@@ -570,11 +570,11 @@ function offendersIn(file: string): string[] {
   const pathVariables = new Map<string, string>()
   const found: string[] = []
 
-  // packages/core/templates/app holds the copy sync writes from apps/dev/app, so an exception
-  // named on the file under apps/dev/app covers that copy as well.
+  // packages/core/templates/app holds the copy sync writes from apps/dev/src/app, so an exception
+  // named on the file under apps/dev/src/app covers that copy as well.
   const isAllowedFile = (allowedFile: string) =>
     allowedFile === relativePath ||
-    allowedFile.replace(/^apps\/dev\/app\//, 'packages/core/templates/app/') === relativePath
+    allowedFile.replace(/^apps\/dev\/src\/app\//, 'packages/core/templates/app/') === relativePath
 
   const report = (node: ts.Node, kind: string, text: string) => {
     const shown = text.replace(/\s+/g, ' ').slice(0, 90)

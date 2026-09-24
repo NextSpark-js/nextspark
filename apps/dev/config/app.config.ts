@@ -1,0 +1,418 @@
+/**
+ * boilerplate Theme- Application Configuration Overrides
+ *
+ * This file allows the theme to override core application configuration values.
+ * Only include properties you want to override - missing properties will use core defaults.
+ */
+
+// Partial configuration type - all properties are optional
+export const APP_CONFIG_OVERRIDES = {
+  // =============================================================================
+  // APPLICATION METADATA OVERRIDES
+  // =============================================================================
+  app: {
+    name: 'Boilerplate',
+    version: '1.0.0',
+  },
+
+  // =============================================================================
+  // TEAMS CONFIGURATION - MULTI-TENANT MODE
+  // =============================================================================
+  /**
+   * Multi-tenant mode:
+   * - Multiple work teams (workspaces)
+   * - Team switching enabled
+   * - Invitations enabled
+   * - Can create new teams
+   */
+  teams: {
+    mode: 'multi-tenant' as const,
+    options: {
+      maxMembersPerTeam: 50,
+      allowLeaveTeam: true,
+      allowCreateTeams: true,
+    },
+
+    // Declarative, AUTHORITATIVE set of non-owner team roles (REPLACE model).
+    // 'owner' is always force-included and cannot be removed. Whatever you list
+    // here is exactly the active set — omitting `roles` entirely falls back to the
+    // core base (admin/member/viewer) + custom roles from permissions.config.
+    // Role DEFINITIONS (hierarchy, labels, permissions) live in permissions.config.ts;
+    // here you declare which of them are ACTIVE. 'editor' is a theme custom role.
+    roles: ['admin', 'member', 'viewer', 'editor'],
+    defaultTeamRole: 'member',
+  },
+
+  // =============================================================================
+  // AUTHENTICATION CONFIGURATION
+  // =============================================================================
+  /**
+   * Registration modes:
+   * - 'open': Anyone can register (email+password and Google OAuth) - DEFAULT
+   * - 'domain-restricted': Only Google OAuth for specific email domains
+   * - 'invitation-only': Registration only via invitation link
+   */
+  auth: {
+    registration: {
+      mode: 'domain-restricted' as const,
+      allowedDomains: ['nextspark.dev'],
+    },
+    providers: {
+      google: {
+        enabled: true,
+      },
+    },
+    /**
+     * Login methods. The core default is the passwordless preset
+     * (['email-otp', 'google']). This theme is the regression test-bed for the
+     * classic flow (Cypress + DevKeyring log in with email + password), so it
+     * keeps the password form first and exposes the one-time-code form as the
+     * secondary option.
+     */
+    methods: ['email-password', 'email-otp', 'google'],
+    /**
+     * Whether Better Auth automatically sends the verification email on signup.
+     *
+     * - `true` (default): users get a "Verify Your Email Address" link email
+     *   immediately when they sign up via `/api/auth/sign-up/email`.
+     * - `false`: suppress the automatic email. Use this when your project
+     *   verifies email ownership through other means (OTP code, invitation
+     *   token, claim-account flow). The `sendVerificationEmail` function
+     *   remains available — you can still trigger link-based verification
+     *   explicitly when you need to.
+     *
+     * `requireEmailVerification: true` is enforced regardless: users with
+     * `emailVerified: false` cannot sign in.
+     */
+    sendVerificationEmailOnSignup: true,
+  },
+
+  // =============================================================================
+  // INTERNATIONALIZATION OVERRIDES
+  // =============================================================================
+  i18n: {
+    /**
+     * Supported locales for your project
+     * Add/remove locales as needed
+     */
+    supportedLocales: ['en', 'es'],
+
+    /**
+     * Default locale for your project
+     * Override to change the primary language
+     */
+    defaultLocale: 'es' as const,
+
+    /**
+     * Additional namespaces specific to Boilerplate
+     */
+    namespaces: [
+      'common',
+      'dashboard',
+      'settings',
+      'auth',
+      'public',
+      'validation',
+
+      // Project specific
+      'tasks',
+      'clients',
+    ],
+  },
+
+  // =============================================================================
+  // API CONFIGURATION OVERRIDES
+  // =============================================================================
+  api: {
+    // API-key scopes this theme's routes enforce (#93). Core merges them into the
+    // scope vocabulary so keys can be minted with them and the key UI offers them.
+    scopes: {
+      'ai:read': 'Read AI conversations and usage',
+      'ai:write': 'Run AI chat/agents and manage conversations',
+      'social:read': 'Read connected social accounts',
+      'social:write': 'Connect, assign and publish to social accounts',
+    },
+    cors: {
+      // Theme-specific CORS origins (extends core defaults, does not replace)
+      // Core already includes: localhost:3000, localhost:5173, and their 127.0.0.1 variants
+      additionalOrigins: {
+        development: [
+          'http://localhost:8081', // Expo mobile web
+          'http://localhost:8082', // Expo alternate port
+          'http://localhost:19006', // Expo web (legacy)
+          'http://192.168.68.106:8081', // Local network Expo
+          // Add theme-specific development origins here
+        ],
+        production: [
+          // Add theme-specific production domains
+          // 'https://mobile.boilerplate-themoneyteam.xyz',
+        ],
+      },
+    },
+  },
+
+  // =============================================================================
+  // DOCUMENTATION CONFIGURATION
+  // =============================================================================
+  /**
+   * Documentation system configuration
+   *
+   * Structure:
+   * - public: User-facing documentation at /docs
+   * - superadmin: Admin documentation at /superadmin/docs
+   *
+   * NOTE: Plugin docs are NOT in the registry - they are for developer reference only (IDE/LLM).
+   */
+  docs: {
+    /** No component, route, or proxy currently reads this setting. */
+    enabled: true,
+
+    /** The proxy serves /docs without a session unless this is false. */
+    publicAccess: true,
+
+    /** No component currently reads this setting. */
+    searchEnabled: true,
+
+    /** No component currently reads this setting. */
+    breadcrumbs: true,
+
+    /** Sidebar settings for /docs. */
+    public: {
+      /** false prevents DocsSidebar from rendering. */
+      enabled: true,
+      /** No component currently reads this setting. */
+      open: true,
+      /** DocsSidebar renders this as its heading. */
+      label: "Documentation",
+    },
+
+    /** No component or route currently reads these /superadmin/docs settings. */
+    superadmin: {
+      /** No component currently reads this setting. */
+      enabled: true,
+      /** No component currently reads this setting. */
+      label: "Admin Docs",
+    },
+  },
+
+  // =============================================================================
+  // TEAM ROLES - TWO LAYERS
+  // =============================================================================
+  // 1. ACTIVE SET: declared above in `teams.roles` (REPLACE model). This decides
+  //    which team roles exist besides 'owner' (which is always force-included).
+  // 2. DEFINITIONS: hierarchy, display names, descriptions and per-action
+  //    permissions live in permissions.config.ts under the `roles`/`teams` sections.
+  //    This is the SINGLE SOURCE OF TRUTH for permissions.
+  //
+  // See: config/permissions.config.ts
+  //
+  // To add a custom role: DEFINE it in permissions.config.ts AND list it in
+  // `teams.roles` above so it becomes active.
+  // ```
+  // // permissions.config.ts
+  // roles: {
+  //   additionalRoles: ['editor'],
+  //   hierarchy: { editor: 5 },
+  //   displayNames: { editor: 'common.teamRoles.editor' },
+  //   descriptions: { editor: 'Can view team content...' },
+  // },
+  // ```
+
+  // =============================================================================
+  // USER ROLES EXTENSION
+  // =============================================================================
+  // User roles (member, superadmin, developer) are system-level roles.
+  // For team roles configuration, see permissions.config.ts
+  //
+  // Uncomment to extend user roles:
+  // userRoles: {
+  //   additionalRoles: ['moderator'] as const,
+  //   hierarchy: { moderator: 50 },
+  //   displayNames: { moderator: 'common.userRoles.moderator' },
+  //   descriptions: { moderator: 'Can moderate content' },
+  // },
+
+  // =============================================================================
+  // MOBILE NAVIGATION OVERRIDES
+  // =============================================================================
+  // Uncomment and modify to customize mobile navigation items
+  // You can add/remove/reorder items, change icons, or disable items
+  //
+  mobileNav: {
+    /**
+     * Mobile bottom navigation items
+     * Configure which items appear in the mobile navigation bar
+     *
+     * Icon names use lucide-react icons (https://lucide.dev)
+     * Set isCentral: true for the highlighted center button (only one should have this)
+     */
+    items: [
+      {
+        id: 'home',
+        labelKey: 'common.mobileNav.home',
+        href: '/dashboard',
+        icon: 'Home',
+        enabled: true,
+      },
+      {
+        id: 'tasks',
+        labelKey: 'common.mobileNav.tasks',
+        href: '/dashboard/tasks',
+        icon: 'CheckSquare',
+        enabled: true,
+      },
+      {
+        id: 'create',
+        labelKey: 'common.mobileNav.create',
+        icon: 'Plus',
+        isCentral: true,
+        action: 'quickCreate',
+        enabled: true,
+      },
+      {
+        id: 'settings',
+        labelKey: 'common.mobileNav.settings',
+        href: '/dashboard/settings',
+        icon: 'Settings',
+        enabled: true,
+      },
+      {
+        id: 'more',
+        labelKey: 'common.mobileNav.more',
+        icon: 'Menu',
+        action: 'moreSheet',
+        enabled: true,
+      },
+    ],
+
+    /**
+     * More Sheet items
+     * Configure which items appear in the "More" sheet
+     *
+     * These are secondary navigation items that appear when the user taps "More"
+     * Typical use: Settings subpages, help, support, profile, etc.
+     */
+    moreSheetItems: [
+      {
+        id: 'profile',
+        labelKey: 'common.navigation.profile',
+        href: '/dashboard/settings/profile',
+        icon: 'User',
+        enabled: true,
+      },
+      {
+        id: 'billing',
+        labelKey: 'common.navigation.billing',
+        href: '/dashboard/settings/billing',
+        icon: 'CreditCard',
+        enabled: true,
+      },
+      {
+        id: 'api-keys',
+        labelKey: 'common.navigation.apiKeys',
+        href: '/dashboard/settings/api-keys',
+        icon: 'Key',
+        enabled: true,
+      },
+      {
+        id: 'help',
+        labelKey: 'common.navigation.help',
+        href: '/support',
+        icon: 'HelpCircle',
+        enabled: false,
+        external: true,
+      },
+    ],
+  },
+
+  // =============================================================================
+  // SCHEDULED ACTIONS CONFIGURATION
+  // =============================================================================
+  /**
+   * Scheduled Actions System
+   * Background task processing via external cron
+   */
+  scheduledActions: {
+    /** Enable/disable scheduled actions system */
+    enabled: true,
+
+    /** Retention period for completed/failed actions (days) */
+    retentionDays: 7,
+
+    /** Maximum number of actions to process per cron run */
+    batchSize: 10,
+
+    /** Default timeout per action (milliseconds) */
+    defaultTimeout: 30000,
+
+    /**
+     * Multi-endpoint Webhook Configuration
+     *
+     * Each webhook endpoint is identified by a key and reads its URL from an env variable.
+     * Webhooks can auto-match by event pattern or be explicitly called by key.
+     */
+    webhooks: {
+      endpoints: {
+        // Default catch-all webhook (disabled by default)
+        default: {
+          envVar: 'WEBHOOK_URL_DEFAULT',
+          description: 'Default webhook for general notifications',
+          patterns: ['*:*'],
+          enabled: false,
+        },
+        // Task lifecycle webhook
+        tasks: {
+          envVar: 'WEBHOOK_URL_TASKS',
+          description: 'Task create/update/delete notifications',
+          patterns: ['task:created', 'task:updated', 'task:deleted'],
+          enabled: true,
+        },
+        // Subscription lifecycle webhook
+        subscriptions: {
+          envVar: 'WEBHOOK_URL_SUBSCRIPTIONS',
+          description: 'Subscription lifecycle notifications (create, update, cancel, renewal, expiring)',
+          patterns: ['subscription:created', 'subscription:updated', 'subscription:renewed', 'subscription:cancelled', 'subscription:expiring_soon'],
+          enabled: true,
+        },
+      },
+      defaultEndpoint: 'default',
+    },
+
+    /**
+     * Deduplication Settings
+     *
+     * Prevents duplicate scheduled actions within a time window.
+     * Behavior:
+     * - windowSeconds > 0: Updates existing action's payload (always keeps latest)
+     * - windowSeconds = 0: Disables deduplication (track all changes)
+     */
+    deduplication: {
+      /** Time window in seconds (same entityId within window = duplicate). Set to 0 to disable. */
+      windowSeconds: 30,
+    },
+  },
+
+  // =============================================================================
+  // MEDIA LIBRARY OVERRIDES
+  // =============================================================================
+  // Uncomment and modify to customize media upload limits and accepted file types.
+  //
+  // media: {
+  //   maxSizeMB: 10,           // General fallback max size
+  //   maxSizeImageMB: 10,      // Max size for image/* files (overrides maxSizeMB)
+  //   maxSizeVideoMB: 50,      // Max size for video/* files (overrides maxSizeMB)
+  //   acceptedTypes: ['image/*', 'video/*', 'application/pdf'],
+  //   allowedMimeTypes: [
+  //     'image/jpeg', 'image/png', 'image/webp',
+  //     'video/mp4', 'video/webm',
+  //     'application/pdf',
+  //   ],
+  // },
+
+  // =============================================================================
+  // DEV KEYRING - MOVED TO dev.config.ts
+  // =============================================================================
+  // DevKeyring configuration has been moved to dev.config.ts
+  // This separates development-only settings from production configuration.
+  // See: config/dev.config.ts
+}

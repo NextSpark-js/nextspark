@@ -22,10 +22,6 @@ from pathlib import Path
 from typing import List, Dict, Tuple
 
 
-def get_active_theme() -> str:
-    """Get active theme from environment or default."""
-    return os.environ.get('NEXT_PUBLIC_ACTIVE_THEME', 'default')
-
 
 def should_ignore_file(file_path: str, ignore_tests: bool) -> bool:
     """Check if file should be ignored."""
@@ -235,7 +231,7 @@ def main():
     print(f"{'=' * 60}")
     print("\nTo fix:")
     print("  1. Import useTranslations: import { useTranslations } from 'next-intl'")
-    print("  2. Add translations to core/messages/{locale}/ or theme messages")
+    print("  2. Add translations to packages/core/src/messages/{locale}/ or project messages")
     print("  3. Replace hardcoded text with t('key')")
     print()
 

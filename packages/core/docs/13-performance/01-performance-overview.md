@@ -69,7 +69,7 @@ async function getEntityConfig(entityName: string) {
 **After Registries (6ms total):**
 ```typescript
 // ✅ Registry System (ultra-fast)
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 function getEntityConfig(entityName: string) {
   return ENTITY_REGISTRY[entityName]  // Zero I/O - instant O(1) lookup

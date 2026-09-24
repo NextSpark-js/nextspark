@@ -5,7 +5,7 @@ Theme assets (logos, images, fonts, icons) are served from the Next.js app's pub
 ## Asset Directory Structure
 
 ```text
-contents/themes/[theme]/public/
+public/
 ├── brand/              # Brand identity assets
 │   ├── logo.svg
 │   ├── logo-dark.svg
@@ -44,7 +44,7 @@ contents/themes/[theme]/public/
 The root `pnpm dev` and `pnpm build` commands do not run a theme asset copier. Source assets live with the theme, while the copies served by `apps/dev` live under its public directory:
 
 ```text
-Source: themes/[theme]/public/
+Source: public/
 Served: apps/dev/public/theme/
 ```
 
@@ -235,7 +235,7 @@ public/fonts/
 **Method 1: In CSS**
 
 ```css
-/* contents/themes/my-theme/styles/globals.css */
+/* styles/globals.css */
 
 @font-face {
   font-family: 'My Custom Font';
@@ -595,7 +595,7 @@ export const ASSET_REQUIREMENTS = {
 
 ```bash
 # Check the theme source directory
-ls -la themes/my-theme/public/
+ls -la public/
 
 # Check the app-served directory
 ls -la apps/dev/public/theme/
@@ -608,7 +608,7 @@ ls -la apps/dev/public/theme/
 <Image src="/theme/brand/logo.svg" />
 
 // ❌ Wrong paths
-<Image src="/contents/themes/my-theme/public/brand/logo.svg" />
+<Image src="/public/brand/logo.svg" />
 <Image src="theme/brand/logo.svg" />  // Missing leading slash
 ```
 

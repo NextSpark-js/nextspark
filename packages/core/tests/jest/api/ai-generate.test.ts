@@ -5,7 +5,7 @@
 
 import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals'
 import { NextRequest } from 'next/server'
-import { POST, GET } from '@/contents/plugins/ai/api/generate/route'
+import { POST, GET } from '../../../../../plugins/ai/api/generate/route'
 
 // Mock dual authentication
 jest.mock('@/core/lib/api/auth/dual-auth', () => ({
@@ -18,7 +18,7 @@ jest.mock('ai', () => ({
 }))
 
 // Mock plugin utils
-jest.mock('@/contents/plugins/ai/lib/core-utils', () => ({
+jest.mock('../../../../../plugins/ai/lib/core-utils', () => ({
   selectModel: jest.fn(),
   calculateCost: jest.fn(),
   validatePlugin: jest.fn(),
@@ -27,12 +27,12 @@ jest.mock('@/contents/plugins/ai/lib/core-utils', () => ({
 }))
 
 // Mock server env
-jest.mock('@/contents/plugins/ai/lib/server-env', () => ({
+jest.mock('../../../../../plugins/ai/lib/server-env', () => ({
   getServerPluginConfig: jest.fn()
 }))
 
 // Mock save example
-jest.mock('@/contents/plugins/ai/lib/save-example', () => ({
+jest.mock('../../../../../plugins/ai/lib/save-example', () => ({
   saveExampleSafely: jest.fn()
 }))
 
@@ -44,9 +44,9 @@ import {
   validatePlugin,
   extractTokens,
   handleAIError
-} from '@/contents/plugins/ai/lib/core-utils'
-import { getServerPluginConfig } from '@/contents/plugins/ai/lib/server-env'
-import { saveExampleSafely } from '@/contents/plugins/ai/lib/save-example'
+} from '../../../../../plugins/ai/lib/core-utils'
+import { getServerPluginConfig } from '../../../../../plugins/ai/lib/server-env'
+import { saveExampleSafely } from '../../../../../plugins/ai/lib/save-example'
 
 const mockAuthenticateRequest = authenticateRequest as jest.MockedFunction<typeof authenticateRequest>
 const mockGenerateText = generateText as jest.MockedFunction<typeof generateText>

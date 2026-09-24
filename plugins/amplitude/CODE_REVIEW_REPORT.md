@@ -31,7 +31,7 @@ El plugin de Amplitude **CUMPLE Y SUPERA** todas las expectativas del plan origi
 
 | Objetivo | Status | Evidencia |
 |----------|--------|-----------|
-| ✅ Implementar Amplitude como primer plugin real | COMPLETO | Plugin funcional en `/contents/plugins/amplitude/` |
+| ✅ Implementar Amplitude como primer plugin real | COMPLETO | Plugin funcional en `/plugins/amplitude/` |
 | ✅ Validar arquitectura de plugins | COMPLETO | Configuración enterprise en `plugin.config.ts` |
 | ✅ Analytics enterprise-grade | COMPLETO | 25+ archivos implementados |
 | ✅ Plugin loading/theme/hook integration | COMPLETO | Provider system + theme CSS |

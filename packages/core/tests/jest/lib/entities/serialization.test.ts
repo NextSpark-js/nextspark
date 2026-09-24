@@ -2,7 +2,7 @@
  * Regression test for the entity-config serialization boundary.
  *
  * `serializeEntityConfig`/`serializeChildEntityConfig` feed the `entities`
- * prop that `apps/dev/app/dashboard/(main)/layout.tsx` passes into
+ * prop that `apps/dev/src/app/dashboard/(main)/layout.tsx` passes into
  * `DashboardShell` ('use client'). `EntityConfig.hooks` / ChildEntityDefinition's
  * `hooks` hold live functions — if either serializer forwards them, React
  * throws "Functions cannot be passed directly to Client Components" the

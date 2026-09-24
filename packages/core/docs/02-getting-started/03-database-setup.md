@@ -163,8 +163,8 @@ DATABASE_URL="postgresql://postgres:yourpassword@localhost:5432/nextspark_dev"
 
 **3 types of migrations:**
 1. **Core migrations** (`core/migrations/`) - Core schema
-2. **Entity migrations** (`contents/themes/*/entities/*/migrations/`) - Entity-specific
-3. **Plugin migrations** (`contents/plugins/*/migrations/`) - Plugin-specific
+2. **Entity migrations** (`entities/*/migrations/`) - Entity-specific
+3. **Plugin migrations** (`plugins/*/migrations/`) - Plugin-specific
 
 ### Run Migrations
 
@@ -180,7 +180,7 @@ Running migrations from: core/migrations/
 ...
 
 Running entity migrations...
-✓ contents/themes/default/entities/tasks/migrations/001_create_tasks.sql
+✓ entities/tasks/migrations/001_create_tasks.sql
 
 All migrations completed!
 ```

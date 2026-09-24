@@ -146,7 +146,7 @@ await scheduleAction('webhook:send', {
 ### Automatic Webhook Scheduling
 
 ```typescript
-// contents/themes/default/lib/scheduled-actions/entity-hooks.ts
+// lib/scheduled-actions/entity-hooks.ts
 import { scheduleAction } from '@/core/lib/scheduled-actions'
 import { hookSystem } from '@/core/lib/plugins/hook-system'
 
@@ -186,7 +186,7 @@ export function registerEntityWebhookHooks() {
 ### Subscription Webhooks
 
 ```typescript
-// contents/themes/default/lib/scheduled-actions/subscription-hooks.ts
+// lib/scheduled-actions/subscription-hooks.ts
 import { scheduleAction } from '@/core/lib/scheduled-actions'
 import { hookSystem } from '@/core/lib/plugins/hook-system'
 

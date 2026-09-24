@@ -513,7 +513,7 @@ import { ConfigViewer } from '@/core/components/devtools'
 | Entities | Registered entities |
 | Teams | Team mode, roles |
 | Billing | Plans, features |
-| Theme | Active theme, settings |
+| Theme | project, settings |
 
 **📋 Security Note:**
 

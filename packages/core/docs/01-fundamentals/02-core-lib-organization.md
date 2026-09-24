@@ -47,7 +47,7 @@ registries/
 ├── translation-registry.ts         # i18n message loaders
 ├── route-handlers.ts               # API route handlers
 ├── permissions-registry.ts         # Permission configurations
-├── docs-registry.ts                # Active theme's documentation index
+├── docs-registry.ts                # project's documentation index
 └── index.ts                        # Unified exports
 ```
 
@@ -63,11 +63,11 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch  # Wa
 **Usage:**
 ```typescript
 // ✅ CORRECT - Access via registry
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 const taskConfig = ENTITY_REGISTRY.tasks
 
 // ❌ WRONG - Direct import from contents
-import { taskConfig } from '@/contents/themes/default/entities/tasks/tasks.config'
+import { taskConfig } from '@/entities/tasks/tasks.config'
 ```
 
 **Performance Impact:**
@@ -227,7 +227,7 @@ entities/
 import type { EntityConfig, FieldDefinition } from '@/core/lib/entities/types'
 
 // Access core entities via registry (not direct import)
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 const userConfig = ENTITY_REGISTRY.users // isCore: true
 ```
@@ -282,7 +282,7 @@ import { locales, defaultLocale } from '@/core/lib/i18n/locale'
 
 **Usage:**
 ```typescript
-import { THEME_REGISTRY } from '@/core/lib/registries/theme-registry'
+import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 import { generateCSSVariables } from '@/core/lib/theme/css-variables'
 ```
 
@@ -298,7 +298,7 @@ import { generateCSSVariables } from '@/core/lib/theme/css-variables'
 
 **Usage:**
 ```typescript
-import { PLUGIN_REGISTRY } from '@/core/lib/registries/plugin-registry'
+import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
 import { executePluginHook } from '@/core/lib/plugins/hook-system'
 ```
 
@@ -396,8 +396,8 @@ const price = formatCurrency(1234.56, 'USD') // "$1,234.56"
 
 ```typescript
 // Registries
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
-import { THEME_REGISTRY } from '@/core/lib/registries/theme-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
+import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 
 // Services
 import { UserService } from '@/core/lib/services/user.service'
@@ -417,14 +417,14 @@ import type { EntityConfig } from '@/core/lib/entities/types'
 ### ❌ Incorrect Patterns
 
 ```typescript
-// ❌ Never import from @/contents
-import { config } from '@/contents/themes/default/config/theme.config'
+// ❌ Never bypass the generated registry with a direct project-source import
+import { config } from '@/config/theme.config'
 
 // ❌ Never edit registry files
-import { generateRegistry } from '@/core/lib/registries/entity-registry'
+import { generateRegistry } from '@nextsparkjs/registries/entity-registry'
 
 // ❌ Never use dynamic imports for config
-const config = await import(`@/contents/${path}`)
+const config = await import(`@/entities/${path}`)
 ```
 
 ---
@@ -466,7 +466,7 @@ const config = await import(`@/contents/${path}`)
 
 ```typescript
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { EntityApiClient } from '@/core/lib/api/entities'
 
 export async function GET(request: NextRequest) {
@@ -486,7 +486,7 @@ export async function GET(request: NextRequest) {
 ### Pattern 2: Server Component with Registry
 
 ```typescript
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 export default async function EntityPage({ params }) {
   const entityConfig = ENTITY_REGISTRY[params.entity]
@@ -540,7 +540,7 @@ export async function updateUserPreferences(userId, preferences) {
 - **utils/** - General utilities
 
 **Key Principles:**
-- Always use registries (never import from `@/contents`)
+- Always use registries instead of importing project source directly
 - Use services for business logic (includes RLS)
 - Never edit auto-generated files
 - Follow import best practices

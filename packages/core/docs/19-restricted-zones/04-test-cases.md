@@ -457,12 +457,12 @@ core/components/devtools/
 
 core/hooks/useTreeNavigation.ts              # URL sync hook
 
-contents/themes/default/tests/cypress/e2e/   # Test documentation location
+tests/cypress/e2e/   # Test documentation location
 ```
 
 ## Example BDD Document
 
-See `contents/themes/default/tests/cypress/e2e/page-builder/admin/block-crud.bdd.md` for a complete example with:
+See `tests/cypress/e2e/page-builder/admin/block-crud.bdd.md` for a complete example with:
 - 14 test cases
 - Bilingual scenarios (EN/ES)
 - Various priority levels

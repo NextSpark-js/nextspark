@@ -12,7 +12,7 @@ Action handlers implement the business logic for scheduled actions. Each handler
 ### Basic Handler
 
 ```typescript
-// contents/themes/default/lib/scheduled-actions/handlers/my-handler.ts
+// lib/scheduled-actions/handlers/my-handler.ts
 import { registerScheduledAction } from '@/core/lib/scheduled-actions'
 
 export function registerMyAction() {
@@ -120,7 +120,7 @@ registerScheduledAction('webhook:send', async (payload) => {
 ### Step 1: Create Handler File
 
 ```typescript
-// contents/themes/default/lib/scheduled-actions/handlers/email.ts
+// lib/scheduled-actions/handlers/email.ts
 import { registerScheduledAction } from '@/core/lib/scheduled-actions'
 
 interface EmailPayload {
@@ -149,7 +149,7 @@ export function registerEmailHandler() {
 ### Step 2: Register in Theme Index
 
 ```typescript
-// contents/themes/default/lib/scheduled-actions/index.ts
+// lib/scheduled-actions/index.ts
 import { registerEmailHandler } from './handlers/email'
 import { registerWebhookAction } from './handlers/webhook'
 
@@ -225,7 +225,7 @@ export function clearActionRegistry(): void  // For testing
 Schedule actions from entity lifecycle hooks:
 
 ```typescript
-// contents/themes/default/lib/scheduled-actions/entity-hooks.ts
+// lib/scheduled-actions/entity-hooks.ts
 import { scheduleAction } from '@/core/lib/scheduled-actions'
 import { hookSystem } from '@/core/lib/plugins/hook-system'
 

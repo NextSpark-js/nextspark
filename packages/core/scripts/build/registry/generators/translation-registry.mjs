@@ -4,31 +4,28 @@
  * Generates translation-registry.ts
  *
  * Dynamically discovers available locales by scanning messages/ directories
- * and filtering against supportedLocales from the active theme's app.config.ts
+ * and filtering against supportedLocales from the project's app.config.ts
  *
  * @module core/scripts/build/registry/generators/translation-registry
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
-import { join, dirname } from 'path'
+import { join } from 'path'
 
 /**
  * Extract supportedLocales from a theme's app.config.ts file
  * Uses regex to parse the TypeScript file without requiring transpilation
  *
- * @param {string} themesDir - Path to themes directory
- * @param {string} activeTheme - Name of the active theme
+ * @param {string} projectRoot - Path to the project root
  * @returns {string[]} Array of supported locale codes, or empty array if not found
  */
 /**
  * Extract defaultLocale from a theme's app.config.ts file
- * @param {string} themesDir
- * @param {string} activeTheme
+ * @param {string} projectRoot
  * @returns {string} Default locale code, or 'en' if not found
  */
-function getDefaultLocale(themesDir, activeTheme) {
-  if (!activeTheme) return 'en'
-  const appConfigPath = join(themesDir, activeTheme, 'config', 'app.config.ts')
+function getDefaultLocale(projectRoot) {
+  const appConfigPath = join(projectRoot, 'config', 'app.config.ts')
   if (!existsSync(appConfigPath)) return 'en'
   try {
     const content = readFileSync(appConfigPath, 'utf8')
@@ -42,12 +39,11 @@ function getDefaultLocale(themesDir, activeTheme) {
 /**
  * Extract defaultMode from a theme's theme.config.ts file
  * @param {string} themesDir
- * @param {string} activeTheme
+ * @param {string} projectRoot
  * @returns {'light' | 'dark' | 'system'} Default theme mode
  */
-function getDefaultThemeMode(themesDir, activeTheme) {
-  if (!activeTheme) return 'system'
-  const themeConfigPath = join(themesDir, activeTheme, 'config', 'theme.config.ts')
+function getDefaultThemeMode(projectRoot) {
+  const themeConfigPath = join(projectRoot, 'config', 'theme.config.ts')
   if (!existsSync(themeConfigPath)) return 'system'
   try {
     const content = readFileSync(themeConfigPath, 'utf8')
@@ -86,41 +82,18 @@ export function detectPPREnabled(projectRoot) {
   return false
 }
 
-function getSupportedLocales(themesDir, activeTheme) {
-  if (!activeTheme) {
-    return []
-  }
-
-  const appConfigPath = join(themesDir, activeTheme, 'config', 'app.config.ts')
-
-  if (!existsSync(appConfigPath)) {
-    return []
-  }
+function getSupportedLocales(projectRoot) {
+  const appConfigPath = join(projectRoot, 'config', 'app.config.ts')
+  if (!existsSync(appConfigPath)) return []
 
   try {
     const content = readFileSync(appConfigPath, 'utf8')
-
-    // Match supportedLocales array using regex
-    // Handles formats like: supportedLocales: ['en', 'es', 'fr']
-    // or: supportedLocales: ["en", "es", "fr"]
     const match = content.match(/supportedLocales\s*:\s*\[([\s\S]*?)\]/)
-
-    if (!match) {
-      return []
-    }
-
-    // Extract individual locale strings from the matched array content
-    const arrayContent = match[1]
-    const localeMatches = arrayContent.match(/['"]([a-zA-Z-]+)['"]/g)
-
-    if (!localeMatches) {
-      return []
-    }
-
-    // Clean up the matches (remove quotes)
-    return localeMatches.map(m => m.replace(/['"]/g, ''))
+    if (!match) return []
+    const localeMatches = match[1].match(/['"]([a-zA-Z-]+)['"]/g)
+    return localeMatches ? localeMatches.map(value => value.replace(/['"]/g, '')) : []
   } catch (error) {
-    console.warn(`Warning: Could not read app.config.ts for theme ${activeTheme}: ${error.message}`)
+    console.warn(`Warning: Could not read app.config.ts for project: ${error.message}`)
     return []
   }
 }
@@ -212,7 +185,7 @@ function detectLocales(messagesDir) {
  * Ensures ZERO runtime string interpolation in dynamic imports
  *
  * Dynamically discovers available locales by:
- * 1. Reading supportedLocales from active theme's app.config.ts
+ * 1. Reading supportedLocales from the project's app.config.ts
  * 2. Scanning each entity's messages/ directory for .json files
  * 3. Only generating loaders for locales that exist AND are supported
  *
@@ -221,10 +194,10 @@ function detectLocales(messagesDir) {
  * @returns {string} Generated TypeScript content
  */
 export function generateTranslationRegistry(themes, config) {
-  // Get supported locales and default locale from active theme's app.config.ts
-  const supportedLocales = getSupportedLocales(config.themesDir, config.activeTheme)
-  const defaultLocale = getDefaultLocale(config.themesDir, config.activeTheme)
-  const defaultThemeMode = getDefaultThemeMode(config.themesDir, config.activeTheme)
+  // Get supported locales and default locale from the project's app.config.ts
+  const supportedLocales = getSupportedLocales(config.projectSourceDir)
+  const defaultLocale = getDefaultLocale(config.projectSourceDir)
+  const defaultThemeMode = getDefaultThemeMode(config.projectSourceDir)
 
   // Discover all translation files from themes
   const themeTranslations = []
@@ -234,8 +207,8 @@ export function generateTranslationRegistry(themes, config) {
   const pluginEntityTranslations = []
 
   themes.forEach(theme => {
-    const messagesDir = join(config.themesDir, theme.name, 'messages')
-    const entitiesDir = join(config.themesDir, theme.name, 'entities')
+    const messagesDir = join(config.projectSourceDir, 'messages')
+    const entitiesDir = join(config.projectSourceDir, 'entities')
 
     // Scan theme-level translations
     const locales = detectLocales(messagesDir)
@@ -248,8 +221,8 @@ export function generateTranslationRegistry(themes, config) {
       // For directory pattern, import from the directory (index.ts)
       // For flat file pattern, import the .json file
       const filePath = isDirectory
-        ? `@/contents/themes/${theme.name}/messages/${locale}`
-        : `@/contents/themes/${theme.name}/messages/${locale}.json`
+        ? `@/messages/${locale}`
+        : `@/messages/${locale}.json`
 
       themeTranslations.push({
         themeName: theme.name,
@@ -280,7 +253,7 @@ export function generateTranslationRegistry(themes, config) {
             themeName: theme.name,
             entityName,
             locale,
-            filePath: `@/contents/themes/${theme.name}/entities/${entityName}/messages/${locale}.json`,
+            filePath: `@/entities/${entityName}/messages/${locale}.json`,
             importKey: `entity_${theme.name.replace(/-/g, '_')}_${entityName.replace(/-/g, '_')}_${locale.replace(/-/g, '_')}`
           })
         })
@@ -290,14 +263,9 @@ export function generateTranslationRegistry(themes, config) {
 
   // Scan plugin entity translations as fallbacks
   if (config.pluginsDir && existsSync(config.pluginsDir)) {
-    const pluginDirs = readdirSync(config.pluginsDir).filter(entry => {
-      const entryPath = join(config.pluginsDir, entry)
-      return statSync(entryPath).isDirectory()
-    })
-
-    pluginDirs.forEach(pluginName => {
+    for (const pluginName of config.plugins ?? []) {
       const entitiesDir = join(config.pluginsDir, pluginName, 'entities')
-      if (!existsSync(entitiesDir)) return
+      if (!existsSync(entitiesDir)) continue
 
       const entityDirs = readdirSync(entitiesDir).filter(entry => {
         const entryPath = join(entitiesDir, entry)
@@ -313,11 +281,11 @@ export function generateTranslationRegistry(themes, config) {
             pluginName,
             entityName,
             locale,
-            filePath: `@/contents/plugins/${pluginName}/entities/${entityName}/messages/${locale}.json`,
+            filePath: `@/plugins/${pluginName}/entities/${entityName}/messages/${locale}.json`,
           })
         })
       })
-    })
+    }
   }
 
   // Generate theme loader functions (lazy-loading for performance)
@@ -400,7 +368,7 @@ export function generateTranslationRegistry(themes, config) {
  * Auto-generated Translation Registry
  *
  * Generated at: ${new Date().toISOString()}
- * Active theme: ${config.activeTheme || 'none'}
+ * Project source: ${config.projectName}
  * Supported locales: ${supportedLocales.length > 0 ? supportedLocales.join(', ') : 'all (no filter)'}
  * Themes with translations: ${Object.keys(loaderEntries).length}
  * Total theme translation files: ${themeTranslations.length}
@@ -462,7 +430,7 @@ export const TRANSLATION_METADATA = {
   totalEntityTranslations: ${entityTranslations.length},
   totalEntitiesWithTranslations: ${uniqueEntities.size},
   generatedAt: '${new Date().toISOString()}',
-  activeTheme: ${config.activeTheme ? `'${config.activeTheme}'` : 'null'},
+  projectName: '${config.projectName}',
   supportedLocales: [${supportedLocales.map(l => `'${l}'`).join(', ')}],
   themes: [${Object.keys(loaderEntries).map(t => `'${t}'`).join(', ')}],
   entities: [${Array.from(uniqueEntities).map(e => `'${e}'`).join(', ')}],
@@ -478,18 +446,18 @@ ${(() => {
   //
   // Projects on Next.js 15 (without cacheComponents) skip this entirely.
   // To enable: add cacheComponents: true to next.config and use layout.ppr.tsx.
-  const projectRoot = config.projectRoot || (config.themesDir ? dirname(dirname(config.themesDir)) : process.cwd())
+  const projectRoot = config.projectRoot || process.cwd()
   const pprEnabled = detectPPREnabled(projectRoot)
 
   if (!pprEnabled) {
     return `// PPR static exports disabled — cacheComponents: true not found in next.config.
 // To enable PPR, add cacheComponents: true to your next.config and copy
-// layout.ppr.tsx from @nextsparkjs/core/templates/app/ to your app/ directory.
+// layout.ppr.tsx from @nextsparkjs/core/templates/app/ to your src/app/ directory.
 // See docs/migration-ppr.md for the full migration guide.`
   }
 
   const defaultThemeTranslation = themeTranslations.find(
-    t => t.themeName === config.activeTheme && t.locale === defaultLocale
+    t => t.themeName === config.projectName && t.locale === defaultLocale
   )
   if (!defaultThemeTranslation) return '// PPR: No static messages generated (no theme translation found for default locale)'
 

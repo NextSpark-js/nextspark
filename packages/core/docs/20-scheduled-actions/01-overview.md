@@ -226,7 +226,7 @@ Priority: handler timeout > config `defaultTimeout` > 30000ms fallback.
 | Layer | Location | Responsibility |
 |-------|----------|----------------|
 | **Core** | `core/lib/scheduled-actions/` | Infrastructure (processor, scheduler, registry, initializer) |
-| **Theme** | `contents/themes/*/lib/scheduled-actions/` | Handlers, entity hooks, recurring action registration |
+| **Theme** | `lib/scheduled-actions/` | Handlers, entity hooks, recurring action registration |
 
 **Core provides:** Database schema, scheduler functions, processor logic, action registry, type definitions, initializer.
 
@@ -238,7 +238,7 @@ The Scheduled Actions system uses an auto-generated registry (`SCHEDULED_ACTIONS
 
 ```typescript
 // .nextspark/registries/scheduled-actions-registry.ts (AUTO-GENERATED)
-import * as myThemeScheduledActions from '@/contents/themes/my-theme/lib/scheduled-actions'
+import * as myThemeScheduledActions from '@/lib/scheduled-actions'
 
 export const SCHEDULED_ACTIONS_REGISTRY: Record<string, ScheduledActionsModule> = {
   'my-theme': {

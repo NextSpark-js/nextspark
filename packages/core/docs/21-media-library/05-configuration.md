@@ -138,7 +138,7 @@ import { MEDIA_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 Themes can override the default media configuration in their `app.config.ts`:
 
 ```typescript
-// themes/my-theme/app.config.ts
+// app.config.ts
 import type { AppConfig } from '@nextsparkjs/core/lib/config/types'
 
 const config: Partial<AppConfig> = {

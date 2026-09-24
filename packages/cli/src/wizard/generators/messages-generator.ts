@@ -13,15 +13,15 @@ import { AVAILABLE_LOCALES } from '../types.js'
 /**
  * Get the target themes directory in the user's project
  */
-function getTargetThemesDir(): string {
-  return path.resolve(process.cwd(), 'contents', 'themes')
+function getProjectRoot(): string {
+  return path.resolve(process.cwd())
 }
 
 /**
  * Remove unused language folders from messages directory
  */
 export async function removeUnusedLanguages(config: WizardConfig): Promise<void> {
-  const messagesDir = path.join(getTargetThemesDir(), config.projectSlug, 'messages')
+  const messagesDir = path.join(getProjectRoot(), 'messages')
 
   if (!await fs.pathExists(messagesDir)) {
     return
@@ -46,7 +46,7 @@ export async function removeUnusedLanguages(config: WizardConfig): Promise<void>
  * Remove unused language files from entity messages
  */
 export async function removeUnusedEntityMessages(config: WizardConfig): Promise<void> {
-  const entitiesDir = path.join(getTargetThemesDir(), config.projectSlug, 'entities')
+  const entitiesDir = path.join(getProjectRoot(), 'entities')
 
   if (!await fs.pathExists(entitiesDir)) {
     return
@@ -81,7 +81,7 @@ export async function removeUnusedEntityMessages(config: WizardConfig): Promise<
  * Create missing language folders with copied translations from default locale
  */
 export async function ensureLanguageFolders(config: WizardConfig): Promise<void> {
-  const messagesDir = path.join(getTargetThemesDir(), config.projectSlug, 'messages')
+  const messagesDir = path.join(getProjectRoot(), 'messages')
 
   if (!await fs.pathExists(messagesDir)) {
     return
@@ -113,7 +113,7 @@ export async function ensureLanguageFolders(config: WizardConfig): Promise<void>
  * Update message files with project-specific values
  */
 export async function updateMessageFiles(config: WizardConfig): Promise<void> {
-  const messagesDir = path.join(getTargetThemesDir(), config.projectSlug, 'messages')
+  const messagesDir = path.join(getProjectRoot(), 'messages')
 
   if (!await fs.pathExists(messagesDir)) {
     return

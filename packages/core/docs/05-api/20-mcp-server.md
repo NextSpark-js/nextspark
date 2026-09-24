@@ -89,7 +89,7 @@ modes of the underlying API:
 
 MCP is delivered the same way the generic entity REST routes are: a small route file your app
 owns, wiring the core engine to the generated registries. Add
-`app/api/mcp/route.ts` — see `apps/dev/app/api/mcp/route.ts` in this monorepo for the complete,
+`app/api/mcp/route.ts` — see `apps/dev/src/app/api/mcp/route.ts` in this monorepo for the complete,
 working reference implementation. The shape is:
 
 ```ts
@@ -176,7 +176,7 @@ and exposed as `MCP_OVERRIDES[slug]` in the generated `mcp-registry.ts` — no m
 import list to maintain.
 
 ```ts
-// themes/<theme>/entities/tasks/mcp.ts
+// entities/tasks/mcp.ts
 import type { McpEntityOverride } from '@nextsparkjs/core/lib/mcp'
 
 const tasksMcpOverride: McpEntityOverride = {
@@ -215,13 +215,13 @@ export default tasksMcpOverride
 | `transformOutput`     | Mutate output after every read/write — applies to generated tools *and* `extraTools`. |
 | `extraTools`           | Add non-CRUD "workflow" tools (batch operations, multi-step merges, etc.). |
 
-A real, working example ships in this repo: `themes/default/entities/tasks/mcp.ts`.
+A real, working example ships in this repo: `apps/dev/entities/tasks/mcp.ts`.
 
 ---
 
 ## Tool Naming and Descriptions
 
-- `toolPrefix` comes from `MCP_TOOL_PREFIX`, falling back to a sanitized `NEXT_PUBLIC_ACTIVE_THEME`.
+- `toolPrefix` comes from `MCP_TOOL_PREFIX`, falling back to `app`.
 - The plural segment of list-tool names (`{prefix}_list_{plural}`) is derived from the entity
   **slug**, not `names.plural` — a display name like "Meal Plans" would otherwise produce
   `acme_list_meal_plans` next to `acme_get_mealplan`, a mismatch that makes the tool set harder

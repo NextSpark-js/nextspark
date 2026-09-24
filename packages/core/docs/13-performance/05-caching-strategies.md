@@ -607,7 +607,7 @@ The **Registry System** provides the ultimate cache—data computed at build tim
 
 ```typescript
 // ✅ Zero runtime I/O - instant access
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 function getEntityConfig(entityName: string) {
   return ENTITY_REGISTRY[entityName]  // O(1) lookup, ~6ms total
@@ -759,7 +759,7 @@ revalidatePath('/', 'layout')
 
 ```typescript
 // Static config (Registry)
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 const config = ENTITY_REGISTRY.tasks  // Instant
 
 // Rarely-changing (CDN + Browser)
@@ -799,7 +799,7 @@ queryKey: ['tasks', { userId, filters, sort }]
 onSuccess: () => queryClient.invalidateQueries(['tasks'])
 
 // Use Registry System for static configs
-import { ENTITY_REGISTRY } from '@/core/lib/registries'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries'
 
 // Add Cache-Control headers to API routes
 headers: { 'Cache-Control': 'private, max-age=300' }

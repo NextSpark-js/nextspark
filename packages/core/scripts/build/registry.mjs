@@ -22,15 +22,6 @@ import { join, dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { existsSync } from 'fs'
 import { lstat, readdir, readFile } from 'fs/promises'
-import dotenv from 'dotenv'
-
-// Load .env from the correct project root
-// Priority: NEXTSPARK_PROJECT_ROOT env var > cwd
-// This is critical for npm mode where cwd might be node_modules/@nextsparkjs/core
-const envPath = process.env.NEXTSPARK_PROJECT_ROOT
-  ? join(process.env.NEXTSPARK_PROJECT_ROOT, '.env')
-  : undefined
-dotenv.config({ path: envPath, override: true })
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -147,13 +138,13 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'block-registry.client.ts', content: generateBlockRegistryClient(blocks, CONFIG) },
       { name: 'block-registry.lazy.ts', content: generateBlockRegistryLazy(blocks) },
       { name: 'icon-registry.ts', content: generateIconRegistry(iconNames, CONFIG) },
-      { name: 'billing-registry.ts', content: await generateBillingRegistry(CONFIG.activeTheme, CONFIG.contentsDir, CONFIG) },
+      { name: 'billing-registry.ts', content: await generateBillingRegistry(CONFIG) },
       { name: 'middleware-registry.ts', content: generateMiddlewareRegistry(middlewares, CONFIG) },
       { name: 'scope-registry.ts', content: generateScopeRegistry(entities, CONFIG) },
       { name: 'namespace-registry.ts', content: generateNamespaceRegistry(entities, CONFIG) },
       { name: 'permissions-registry.ts', content: await generatePermissionsRegistry(permissionsConfig, entities, CONFIG) },
       { name: 'scheduled-actions-registry.ts', content: generateScheduledActionsRegistry(themes, CONFIG) },
-      { name: 'docs-registry.ts', content: generateDocsRegistry() },
+      { name: 'docs-registry.ts', content: generateDocsRegistry(CONFIG) },
       { name: 'api-presets-registry.ts', content: generateApiPresetsRegistry(apiPresetsData, CONFIG) },
       { name: 'api-docs-registry.ts', content: generateApiDocsRegistry(apiPresetsData, CONFIG) },
       { name: 'mcp-registry.ts', content: generateMcpRegistry(mcpOverridesData, CONFIG) },
@@ -270,11 +261,8 @@ export async function buildRegistries(projectRoot = null) {
   const startTime = Date.now()
 
   try {
-    // Sync app/globals.css to import from active theme
-    // This ensures the import path matches NEXT_PUBLIC_ACTIVE_THEME
-    if (CONFIG.activeTheme) {
-      syncAppGlobalsCss(CONFIG, CONFIG.activeTheme)
-    }
+    // Keep the generated host stylesheet pointed at project-owned styles.
+    syncAppGlobalsCss(CONFIG)
 
     // Initialize parent-child discovery FIRST (needed for dynamic parseChildEntity)
     log('→ Initializing dynamic parent-child discovery...', 'info')
@@ -331,7 +319,7 @@ export async function buildRegistries(projectRoot = null) {
     const allEntities = Array.from(entityMap.values())
 
     // PHASE 3 VALIDATION: Ensure all entities have access.shared defined
-    await validateEntityConfigurations(allEntities)
+    await validateEntityConfigurations(allEntities, CONFIG)
 
     const totalContents = plugins.length + allEntities.length + themes.length + templates.length + middlewares.length + blocks.length
 
@@ -359,16 +347,16 @@ export async function buildRegistries(projectRoot = null) {
     // Generate missing pages for templates that don't have core app pages
     await generateMissingPages(templates, CONFIG, templateAnalysis)
 
-    // Generate test fixtures for the active theme
+    // Generate test fixtures for the root-first project.
     await generateTestEntitiesJson(allEntities, themes, CONFIG)
     await generateTestBlocksJson(blocks, CONFIG)
 
     // Generate feature registry (features, flows, tags)
-    if (CONFIG.activeTheme) {
+    {
       log('Generating feature registry...', 'build')
       const featureResult = await generateFeatureRegistryFull(
-        CONFIG.activeTheme,
-        CONFIG.contentsDir,
+        CONFIG.projectName,
+        CONFIG.projectSourceDir,
         CONFIG.outputDir,
         CONFIG
       )
@@ -456,7 +444,7 @@ async function main() {
     await buildRegistries()
 
     // Start watching
-    await watchContents(buildRegistries)
+    await watchContents(buildRegistries, getConfig())
   } else {
     log('Running in ONE-TIME mode', 'info')
     // One-time build
@@ -477,7 +465,7 @@ process.on('SIGINT', () => {
 const isMainScript = process.argv[1] && import.meta.url.endsWith(getBasename(process.argv[1]))
 if (isMainScript) {
   main().catch(error => {
-    logFailure('Fatal error', error, getConfig().verbose)
+    logFailure('Fatal error', error, process.argv.includes('--verbose') || process.argv.includes('-v'))
     process.exit(1)
   })
 }

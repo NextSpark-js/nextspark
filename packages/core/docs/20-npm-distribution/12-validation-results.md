@@ -130,12 +130,12 @@ IntlError: MISSING_MESSAGE: Could not resolve `common.userRoles.developer` in me
 ```
 
 **Impact:** Cosmetic only. Some UI labels show keys instead of translated text.
-**Fix:** Add missing translation keys to `contents/themes/default/messages/en/`
+**Fix:** Add missing translation keys to `messages/en/`
 
 ### Watch Mode Warnings
 
 ```
-Error: ENOENT: no such file or directory, stat '.../contents/themes/...'
+Error: ENOENT: no such file or directory, stat '..././...'
 ```
 
 **Impact:** None. Expected in NPM mode where theme source files aren't watched.

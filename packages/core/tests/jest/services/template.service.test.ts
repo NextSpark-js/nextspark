@@ -35,7 +35,7 @@ jest.mock('@/core/lib/registries/template-registry', () => ({
         fileName: 'page.tsx',
         relativePath: '(public)/page.tsx',
         appPath: 'app/(public)/page.tsx',
-        templatePath: '@/contents/themes/default/templates/(public)/page.tsx',
+        templatePath: '@/templates/(public)/page.tsx',
         priority: 107,
         metadata: null
       },
@@ -51,7 +51,7 @@ jest.mock('@/core/lib/registries/template-registry', () => ({
         fileName: 'page.tsx',
         relativePath: '(public)/blog/[slug]/page.tsx',
         appPath: 'app/(public)/blog/[slug]/page.tsx',
-        templatePath: '@/contents/themes/default/templates/(public)/blog/[slug]/page.tsx',
+        templatePath: '@/templates/(public)/blog/[slug]/page.tsx',
         priority: 111,
         metadata: null
       },
@@ -67,7 +67,7 @@ jest.mock('@/core/lib/registries/template-registry', () => ({
         fileName: 'layout.tsx',
         relativePath: '(public)/layout.tsx',
         appPath: 'app/(public)/layout.tsx',
-        templatePath: '@/contents/themes/default/templates/(public)/layout.tsx',
+        templatePath: '@/templates/(public)/layout.tsx',
         priority: 112,
         metadata: null
       },
@@ -83,7 +83,7 @@ jest.mock('@/core/lib/registries/template-registry', () => ({
         fileName: 'page.tsx',
         relativePath: '(public)/support/page.tsx',
         appPath: 'app/(public)/support/page.tsx',
-        templatePath: '@/contents/themes/default/templates/(public)/support/page.tsx',
+        templatePath: '@/templates/(public)/support/page.tsx',
         priority: 109,
         metadata: null
       },

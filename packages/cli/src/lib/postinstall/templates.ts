@@ -68,9 +68,6 @@ export async function processTemplates(
 function resolveVariables(path: string, context: PostinstallContext): string {
   let resolved = path
 
-  if (context.activeTheme) {
-    resolved = resolved.replace(/\$\{activeTheme\}/g, context.activeTheme)
-  }
   resolved = resolved.replace(/\$\{projectRoot\}/g, context.projectRoot)
   resolved = resolved.replace(/\$\{timestamp\}/g, context.timestamp.toString())
   resolved = resolved.replace(/\$\{coreVersion\}/g, context.coreVersion)

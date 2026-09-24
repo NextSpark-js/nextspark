@@ -182,7 +182,7 @@ Seven blocks in the default theme use the `media-library` field type:
 
 ### 1. Hero Block
 
-**File:** `themes/default/blocks/hero/fields.ts`
+**File:** `blocks/hero/fields.ts`
 
 ```typescript
 {
@@ -197,7 +197,7 @@ Seven blocks in the default theme use the `media-library` field type:
 
 ### 2. Hero with Form Block
 
-**File:** `themes/default/blocks/hero-with-form/fields.ts`
+**File:** `blocks/hero-with-form/fields.ts`
 
 ```typescript
 {
@@ -212,7 +212,7 @@ Seven blocks in the default theme use the `media-library` field type:
 
 ### 3. Jumbotron Block
 
-**File:** `themes/default/blocks/jumbotron/fields.ts`
+**File:** `blocks/jumbotron/fields.ts`
 
 ```typescript
 {
@@ -227,7 +227,7 @@ Seven blocks in the default theme use the `media-library` field type:
 
 ### 4. Video Hero Block
 
-**File:** `themes/default/blocks/video-hero/fields.ts`
+**File:** `blocks/video-hero/fields.ts`
 
 ```typescript
 {
@@ -242,7 +242,7 @@ Seven blocks in the default theme use the `media-library` field type:
 
 ### 5. Split Content Block
 
-**File:** `themes/default/blocks/split-content/fields.ts`
+**File:** `blocks/split-content/fields.ts`
 
 ```typescript
 {
@@ -257,7 +257,7 @@ Seven blocks in the default theme use the `media-library` field type:
 
 ### 6. Logo Cloud Block (Array Item)
 
-**File:** `themes/default/blocks/logo-cloud/fields.ts`
+**File:** `blocks/logo-cloud/fields.ts`
 
 Used inside an array field where each logo item has an image:
 
@@ -274,7 +274,7 @@ Used inside an array field where each logo item has an image:
 
 ### 7. Testimonials Block (Array Item)
 
-**File:** `themes/default/blocks/testimonials/fields.ts`
+**File:** `blocks/testimonials/fields.ts`
 
 Used inside an array field where each testimonial has an avatar:
 
@@ -300,7 +300,7 @@ Since both field types store URL strings, migration requires only a field defini
 **Before:**
 
 ```typescript
-// themes/default/blocks/my-block/fields.ts
+// blocks/my-block/fields.ts
 export const fieldDefinitions: FieldDefinition[] = [
   {
     name: 'heroImage',
@@ -315,7 +315,7 @@ export const fieldDefinitions: FieldDefinition[] = [
 **After:**
 
 ```typescript
-// themes/default/blocks/my-block/fields.ts
+// blocks/my-block/fields.ts
 export const fieldDefinitions: FieldDefinition[] = [
   {
     name: 'heroImage',
@@ -408,7 +408,7 @@ export const fieldDefinitions: FieldDefinition[] = [
 ### Using the Image in a Block Component
 
 ```tsx
-// themes/default/blocks/my-block/component.tsx
+// blocks/my-block/component.tsx
 interface MyBlockProps {
   backgroundImage?: string
   title: string

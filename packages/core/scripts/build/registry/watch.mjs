@@ -7,25 +7,18 @@
  */
 
 import { existsSync, watch } from 'fs'
-import { join } from 'path'
 
 import { log } from '../../utils/index.mjs'
-import { CONFIG } from './config.mjs'
 
 /**
  * Start watching contents directory for changes
  * @param {Function} buildRegistries - The build function to call on changes
  * @returns {Promise<void>}
  */
-export async function watchContents(buildRegistries) {
+export async function watchContents(buildRegistries, config) {
   log('Starting watch mode...', 'info')
 
-  const watchPaths = [
-    CONFIG.pluginsDir,
-    join(CONFIG.contentsDir, 'entities'),
-    CONFIG.themesDir,
-    join(CONFIG.contentsDir, 'config')
-  ]
+  const watchPaths = [...config.sourceDirs, config.pluginsDir]
 
   let debounceTimer = null
 
@@ -52,7 +45,7 @@ export async function watchContents(buildRegistries) {
         }
 
         // A deleted template needs nothing of its own here: the rebuild leaves its
-        // route out of app/(templates) and backs the old file up.
+        // route out of src/app/(templates) and backs the old file up.
         const shouldRebuild = !filename || // Always rebuild if filename is null (deletions)
           filename.endsWith('.config.ts') ||
           filename.endsWith('route.ts') ||

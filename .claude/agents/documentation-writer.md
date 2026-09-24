@@ -61,8 +61,8 @@ Session files (`.claude/sessions/`) are managed by development agents (backend-d
 2. **READ** actual implementation code to validate and extract examples
 3. **WRITE** documentation in the app's documentation system:
    - `core/docs/` - For core functionality
-   - `contents/themes/{theme}/docs/` - For theme-specific features
-   - `contents/plugins/{plugin}/docs/` - For plugin-specific features
+   - `docs/` - For theme-specific features
+   - `plugins/{plugin}/docs/` - For plugin-specific features
 
 **Files you can READ (but NEVER modify):**
 - `.claude/sessions/{feature}/clickup_task_{feature}.md`
@@ -72,8 +72,8 @@ Session files (`.claude/sessions/`) are managed by development agents (backend-d
 
 **Files you can CREATE/MODIFY:**
 - `core/docs/**/*.md`
-- `contents/themes/{theme}/docs/**/*.md`
-- `contents/plugins/{plugin}/docs/**/*.md`
+- `docs/**/*.md`
+- `plugins/{plugin}/docs/**/*.md`
 
 ---
 
@@ -168,8 +168,8 @@ You are responsible for:
 
 3. **Determining Documentation Tier(s)**
    - **Core**: Generic, reusable functionality in `core/`
-   - **Theme**: Theme-specific features in `contents/themes/{theme}/`
-   - **Plugin**: Plugin-specific features in `contents/plugins/{plugin}/`
+   - **Theme**: Theme-specific features in ``
+   - **Plugin**: Plugin-specific features in `plugins/{plugin}/`
    - **A feature may require documentation in MULTIPLE tiers**
 
 4. **Generating Comprehensive Documentation**
@@ -207,13 +207,13 @@ You are responsible for:
 
 3. **ALWAYS Follow 3-Tier Documentation System**
    - **Core docs** (`core/docs/`): Generic functionality that applies to all projects
-   - **Theme docs** (`contents/themes/{theme}/docs/`): Theme-specific features
-   - **Plugin docs** (`contents/plugins/{plugin}/docs/`): Plugin-specific features
+   - **Theme docs** (`docs/`): Theme-specific features
+   - **Plugin docs** (`plugins/{plugin}/docs/`): Plugin-specific features
 
 4. **ALWAYS Use Numbered Hierarchical Structure**
    - Format: `{section-number}-{topic}/{file-number}-{subtopic}.md`
    - Example: `core/docs/05-api/03-authentication.md`
-   - Example: `contents/plugins/ai/docs/02-usage/01-prompts.md`
+   - Example: `plugins/ai/docs/02-usage/01-prompts.md`
 
 5. **ALWAYS Include Required Frontmatter**
    ```markdown
@@ -410,21 +410,21 @@ if (implementationFiles.some(file => file.startsWith('core/'))) {
   })
 }
 
-if (implementationFiles.some(file => file.includes('contents/themes/'))) {
+if (implementationFiles.some(file => file.includes('./'))) {
   // Theme documentation needed
   const themeName = /* extract from file path */
   tiers.push({
     type: 'THEME',
-    path: `contents/themes/${themeName}/docs/{section}/{number}-{topic}.md`
+    path: `docs/{section}/{number}-{topic}.md`
   })
 }
 
-if (implementationFiles.some(file => file.includes('contents/plugins/'))) {
+if (implementationFiles.some(file => file.includes('plugins/'))) {
   // Plugin documentation needed
   const pluginName = /* extract from file path */
   tiers.push({
     type: 'PLUGIN',
-    path: `contents/plugins/${pluginName}/docs/{section}/{number}-{topic}.md`
+    path: `plugins/${pluginName}/docs/{section}/{number}-{topic}.md`
   })
 }
 
@@ -608,10 +608,10 @@ For each implementation location, determine documentation tier:
 ```typescript
 // Step 3.1: Analyze implementation files
 const implementationAnalysis = {
-  coreFiles: [],     // Files in core/
-  themeFiles: [],    // Files in contents/themes/{theme}/
-  pluginFiles: [],   // Files in contents/plugins/{plugin}/
-  appFiles: []       // Files in app/ (determine core vs theme)
+  coreFiles: [],       // Files in packages/core/
+  projectFiles: [],    // Files in apps/dev root-first source directories
+  pluginFiles: [],     // Files in apps/dev/plugins/{plugin}/
+  generatedFiles: []  // Files in apps/dev/src/app/ or .nextspark/registries/
 }
 
 // Step 3.2: Determine documentation tiers
@@ -630,7 +630,7 @@ if (themeFiles.length > 0) {
   const themeName = extractThemeName(themeFiles)
   documentationPlan.push({
     tier: 'THEME',
-    basePath: `contents/themes/${themeName}/docs/`,
+    basePath: `docs/`,
     section: determineSection(themeFiles),
     action: determineAction(existingDocs)
   })
@@ -640,7 +640,7 @@ if (pluginFiles.length > 0) {
   const pluginName = extractPluginName(pluginFiles)
   documentationPlan.push({
     tier: 'PLUGIN',
-    basePath: `contents/plugins/${pluginName}/docs/`,
+    basePath: `plugins/${pluginName}/docs/`,
     section: determineSection(pluginFiles),
     action: determineAction(existingDocs)
   })
@@ -666,10 +666,10 @@ For EACH tier in the documentation plan:
 documentationPath = 'core/docs/04-api/06-profile-management.md'
 
 // Example for Theme documentation:
-documentationPath = 'contents/themes/default/docs/03-features/02-user-profiles.md'
+documentationPath = 'docs/03-features/02-user-profiles.md'
 
 // Example for Plugin documentation:
-documentationPath = 'contents/plugins/ai/docs/02-usage/03-prompt-templates.md'
+documentationPath = 'plugins/ai/docs/02-usage/03-prompt-templates.md'
 ```
 
 **Step 4.2: Check Existing Documentation**
@@ -990,7 +990,7 @@ After generating all documentation, report to the user:
 - [x] \`core/docs/05-authentication/03-team-permissions.md\` (UPDATED)
 
 **Theme Documentation:**
-- [x] \`contents/themes/default/docs/03-features/05-team-dashboard.md\` (NEW)
+- [x] \`docs/03-features/05-team-dashboard.md\` (NEW)
 
 **Plugin Documentation:**
 - N/A (no plugin code in this feature)
@@ -1222,11 +1222,11 @@ If a feature spans multiple tiers, create documentation in EACH relevant locatio
 ```typescript
 // Feature: AI-powered team suggestions
 // - Core API: core/docs/04-api/09-ai-suggestions.md
-// - Plugin docs: contents/plugins/ai/docs/03-integrations/01-team-suggestions.md
+// - Plugin docs: plugins/ai/docs/03-integrations/01-team-suggestions.md
 
 // Create both:
 await Write('core/docs/04-api/09-ai-suggestions.md', coreApiDocs)
-await Write('contents/plugins/ai/docs/03-integrations/01-team-suggestions.md', pluginDocs)
+await Write('plugins/ai/docs/03-integrations/01-team-suggestions.md', pluginDocs)
 
 // Cross-reference between them
 // In core docs: "For AI-specific configuration, see [AI Plugin Docs](...)
@@ -1265,4 +1265,4 @@ await Write(documentationPath, newDocumentationContent)
 
 **Your documentation is the first thing developers will read. Make it comprehensive, accurate, and helpful.**
 
-**OUTPUT ONLY GOES TO: `core/docs/`, `contents/themes/{theme}/docs/`, or `contents/plugins/{plugin}/docs/`**
+**OUTPUT ONLY GOES TO: `core/docs/`, `docs/`, or `plugins/{plugin}/docs/`**

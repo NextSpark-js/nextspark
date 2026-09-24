@@ -12,15 +12,15 @@ Este directorio contiene las migraciones principales del sistema de autenticaci�
 5. `005_create_contents_entity.sql` - Entidad Contents (tabla + metas + RLS)
 6. `006_sample_data_contents.sql` - Datos de ejemplo para Contents
 
-### Migraciones de Entidades (`contents/entities/*/migrations/`)
+### Migraciones de Entidades (`<project-root>/entities/*/migrations/`)
 Las migraciones de entidades están organizadas por entidad:
-- `contents/entities/clients/migrations/001_clients_table.sql`
-- `contents/entities/orders/migrations/001_orders_table.sql`
-- `contents/entities/products/migrations/001_products_table.sql`
-- `contents/entities/tasks/migrations/001_tasks_table.sql`
+- `entities/clients/migrations/001_clients_table.sql`
+- `entities/orders/migrations/001_orders_table.sql`
+- `entities/products/migrations/001_products_table.sql`
+- `entities/tasks/migrations/001_tasks_table.sql`
 
 Cada entidad incluye también sus datos de muestra:
-- `contents/entities/*/migrations/002_sample_data_*.sql`
+- `entities/*/migrations/002_sample_data_*.sql`
 
 ## How to Run Migrations
 

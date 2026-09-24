@@ -1,5 +1,5 @@
 /**
- * Active-theme proxy composition (#204)
+ * Project-hook proxy composition (#204)
  *
  * These tests deliberately use Next's real NextRequest/NextResponse classes.
  * In particular, request overrides are asserted through the
@@ -16,9 +16,9 @@ jest.mock('@better-fetch/fetch', () => ({
 }))
 
 jest.mock('@nextsparkjs/core/lib/middleware', () => ({
-  hasThemeMiddleware: mockHasThemeMiddleware,
-  executeThemeMiddleware: mockExecuteThemeMiddleware,
-  getThemeAppConfig: mockGetThemeAppConfig,
+  hasProjectMiddleware: mockHasThemeMiddleware,
+  executeProjectMiddleware: (...args: unknown[]) => mockExecuteThemeMiddleware('test-theme', ...args),
+  getProjectAppConfig: mockGetThemeAppConfig,
 }))
 
 // The core Jest configuration maps next/server to a lightweight mock. This
@@ -85,9 +85,8 @@ const memberSession = {
   },
 }
 
-describe('active-theme proxy composition (#204)', () => {
+describe('project-hook proxy composition (#204)', () => {
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_ACTIVE_THEME = 'test-theme'
     mockHasThemeMiddleware.mockReset().mockReturnValue(true)
     mockExecuteThemeMiddleware.mockReset()
     mockGetThemeAppConfig.mockReset().mockReturnValue(undefined)
@@ -397,7 +396,7 @@ describe('active-theme proxy composition (#204)', () => {
       expect(nullResponse.status).toBe(307)
       expect(thrownResponse.status).toBe(307)
       expect(consoleError).toHaveBeenCalledWith(
-        "Error executing middleware for theme 'test-theme':",
+        'Error executing the project request hook:',
         expect.any(Error)
       )
     } finally {

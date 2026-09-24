@@ -20,13 +20,9 @@ export async function updateTsConfig(name: string, type: 'plugin' | 'theme'): Pr
       tsconfig.compilerOptions.paths = {}
     }
 
-    const pathKey = type === 'plugin'
-      ? `@plugins/${name}/*`
-      : `@themes/${name}/*`
-
-    const pathValue = type === 'plugin'
-      ? [`./contents/plugins/${name}/*`]
-      : [`./contents/themes/${name}/*`]
+    if (type === 'theme') return
+    const pathKey = '@/plugins/*'
+    const pathValue = ['./plugins/*']
 
     // Solo añadir si no existe
     if (!tsconfig.compilerOptions.paths[pathKey]) {

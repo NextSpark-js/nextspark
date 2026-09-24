@@ -23,7 +23,7 @@ The plugin registry system provides **build-time discovery** and **zero-runtime-
 ```text
 1. Build script runs: `packages/core/scripts/build/registry.mjs`
    ↓
-2. Scans: `contents/plugins/` directory
+2. Scans: `plugins/` directory
    ↓
 3. Checks each subdirectory for: `plugin.config.ts`
    ↓
@@ -32,15 +32,15 @@ The plugin registry system provides **build-time discovery** and **zero-runtime-
 5. Generates: Server and client registries
    ↓
 6. Outputs:
-   - core/lib/registries/plugin-registry.ts (server-only)
-   - core/lib/registries/plugin-registry.client.ts (client-safe)
+   - .nextspark/registries/plugin-registry.ts (server-only)
+   - .nextspark/registries/plugin-registry.client.ts (client-safe)
 ```
 
 **Build Script Logic**:
 ```mjs
 // packages/core/scripts/build/registry.mjs (simplified)
 async function discoverPlugins() {
-  const pluginsDir = join(CONFIG.contentsDir, 'plugins')
+  const pluginsDir = CONFIG.pluginsDir
   const discovered = new Map()
 
   const entries = await readdir(pluginsDir, { withFileTypes: true })
@@ -73,7 +73,7 @@ async function discoverPlugins() {
 
 ### Server-Only Registry
 
-**File**: `core/lib/registries/plugin-registry.ts`
+**File**: `.nextspark/registries/plugin-registry.ts`
 
 **Features**:
 - ✅ Full plugin configuration
@@ -86,20 +86,20 @@ async function discoverPlugins() {
 ```typescript
 import 'server-only' // ⚠️ Prevents client usage
 
-import { aiPluginConfig } from '@/contents/plugins/ai/plugin.config'
-import { billingPluginConfig } from '@/contents/plugins/billing/plugin.config'
+import { aiPluginConfig } from '@/plugins/ai/plugin.config'
+import { billingPluginConfig } from '@/plugins/billing/plugin.config'
 
 export const PLUGIN_REGISTRY = {
   'ai': {
     name: 'ai',
     config: aiPluginConfig,
     hasAPI: true,
-    apiPath: '@/contents/plugins/ai/api',
+    apiPath: '@/plugins/ai/api',
     routeFiles: [
       {
         path: '/api/v1/plugin/ai/generate',
         methods: ['POST', 'GET'],
-        filePath: '../../../contents/plugins/ai/api/generate/route'
+        filePath: '../../../plugins/ai/api/generate/route'
       }
     ],
     entities: ['ai-history'],
@@ -110,7 +110,7 @@ export const PLUGIN_REGISTRY = {
     name: 'billing',
     config: billingPluginConfig,
     hasAPI: true,
-    apiPath: '@/contents/plugins/billing/api',
+    apiPath: '@/plugins/billing/api',
     routeFiles: [...],
     entities: ['subscriptions', 'invoices'],
     hasMessages: true,
@@ -123,7 +123,7 @@ export const PLUGIN_REGISTRY = {
 
 ### Client-Safe Registry
 
-**File**: `core/lib/registries/plugin-registry.client.ts`
+**File**: `.nextspark/registries/plugin-registry.client.ts`
 
 **Features**:
 - ✅ Plugin names and metadata
@@ -141,7 +141,7 @@ export const PLUGIN_REGISTRY: ClientPluginRegistry = {
   'ai': {
     name: 'ai',
     hasAPI: true,        // Boolean only
-    apiPath: '@/contents/plugins/ai/api',
+    apiPath: '@/plugins/ai/api',
     entities: ['ai-history'], // Names only
     hasMessages: false,
     hasAssets: false
@@ -149,7 +149,7 @@ export const PLUGIN_REGISTRY: ClientPluginRegistry = {
   'billing': {
     name: 'billing',
     hasAPI: true,
-    apiPath: '@/contents/plugins/billing/api',
+    apiPath: '@/plugins/billing/api',
     entities: ['subscriptions', 'invoices'],
     hasMessages: true,
     hasAssets: false
@@ -166,7 +166,7 @@ export const PLUGIN_REGISTRY: ClientPluginRegistry = {
 **Import from server registry**:
 ```typescript
 // app/page.tsx (Server Component)
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export default async function Page() {
   // ✅ Access all plugin functions
@@ -193,7 +193,7 @@ export default async function Page() {
 ```typescript
 // app/api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
@@ -223,7 +223,7 @@ export async function POST(request: NextRequest) {
 // components/PluginStatus.tsx
 'use client'
 
-import { getAllPlugins, hasPlugin } from '@/core/lib/registries/plugin-registry.client'
+import { getAllPlugins, hasPlugin } from '@nextsparkjs/registries/plugin-registry.client'
 
 export function PluginStatus() {
   const plugins = getAllPlugins()
@@ -257,7 +257,7 @@ export function PluginStatus() {
 Get all registered plugin configurations.
 
 ```typescript
-import { getRegisteredPlugins } from '@/core/lib/registries/plugin-registry'
+import { getRegisteredPlugins } from '@nextsparkjs/registries/plugin-registry'
 
 const plugins = getRegisteredPlugins()
 // Returns: PluginConfig[]
@@ -269,7 +269,7 @@ const plugins = getRegisteredPlugins()
 Get specific plugin configuration.
 
 ```typescript
-import { getPlugin } from '@/core/lib/registries/plugin-registry'
+import { getPlugin } from '@nextsparkjs/registries/plugin-registry'
 
 const aiPlugin = getPlugin('ai')
 if (aiPlugin) {
@@ -283,7 +283,7 @@ if (aiPlugin) {
 **Recommended API** for accessing plugin functions.
 
 ```typescript
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 const { generateText, enhanceText } = usePlugin('ai')
 const result = await generateText('prompt')
@@ -308,7 +308,7 @@ const result = await generateText('prompt')
 Get all plugins that have API capabilities.
 
 ```typescript
-import { getPluginsWithAPI } from '@/core/lib/registries/plugin-registry'
+import { getPluginsWithAPI } from '@nextsparkjs/registries/plugin-registry'
 
 const apiPlugins = getPluginsWithAPI()
 apiPlugins.forEach(plugin => {
@@ -322,7 +322,7 @@ apiPlugins.forEach(plugin => {
 Get all plugins that define entities.
 
 ```typescript
-import { getPluginsWithEntities } from '@/core/lib/registries/plugin-registry'
+import { getPluginsWithEntities } from '@nextsparkjs/registries/plugin-registry'
 
 const entityPlugins = getPluginsWithEntities()
 console.log(`Found ${entityPlugins.length} plugins with entities`)
@@ -334,7 +334,7 @@ console.log(`Found ${entityPlugins.length} plugins with entities`)
 Get all route file endpoints across all plugins.
 
 ```typescript
-import { getAllRouteEndpoints } from '@/core/lib/registries/plugin-registry'
+import { getAllRouteEndpoints } from '@nextsparkjs/registries/plugin-registry'
 
 const routes = getAllRouteEndpoints()
 routes.forEach(route => {
@@ -355,7 +355,7 @@ Get client-safe plugin metadata.
 ```typescript
 'use client'
 
-import { getPlugin } from '@/core/lib/registries/plugin-registry.client'
+import { getPlugin } from '@nextsparkjs/registries/plugin-registry.client'
 
 const plugin = getPlugin('ai')
 // Returns: { name, hasAPI, entities, hasMessages, hasAssets }
@@ -369,7 +369,7 @@ Get all client-safe plugin metadata.
 ```typescript
 'use client'
 
-import { getAllPlugins } from '@/core/lib/registries/plugin-registry.client'
+import { getAllPlugins } from '@nextsparkjs/registries/plugin-registry.client'
 
 const plugins = getAllPlugins()
 ```
@@ -382,7 +382,7 @@ Check if plugin exists.
 ```typescript
 'use client'
 
-import { hasPlugin } from '@/core/lib/registries/plugin-registry.client'
+import { hasPlugin } from '@nextsparkjs/registries/plugin-registry.client'
 
 if (hasPlugin('ai')) {
   console.log('AI plugin available')
@@ -397,7 +397,7 @@ if (hasPlugin('ai')) {
 
 **Protection Mechanism**:
 ```typescript
-// core/lib/registries/plugin-registry.ts
+// .nextspark/registries/plugin-registry.ts
 import 'server-only' // ⚠️ Throws error if imported in client
 
 // This registry can ONLY be imported in:
@@ -420,7 +420,7 @@ It should only be used from a Server Component.
 **❌ WRONG - Exposes server functions to client**:
 ```typescript
 'use client'
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export function ClientComponent() {
   const { generateText } = usePlugin('ai') // ❌ Error: server-only
@@ -430,7 +430,7 @@ export function ClientComponent() {
 **✅ CORRECT - Server component passes data to client**:
 ```typescript
 // app/ai/page.tsx (Server Component)
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export default async function AIPage() {
   const { generateText } = usePlugin('ai')
@@ -457,7 +457,7 @@ export function ClientDisplay({ result }: { result: string }) {
 
 ```typescript
 // core/lib/plugins/plugin-loader.ts
-import { PLUGIN_REGISTRY } from '@/core/lib/registries/plugin-registry'
+import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
 
 export async function initializePlugins() {
   const plugins = Object.values(PLUGIN_REGISTRY)
@@ -475,7 +475,7 @@ export async function initializePlugins() {
 **Manual initialization**:
 ```typescript
 // app/api/init/route.ts
-import { initializeAllPlugins } from '@/core/lib/registries/plugin-registry'
+import { initializeAllPlugins } from '@nextsparkjs/registries/plugin-registry'
 
 export async function POST() {
   await initializeAllPlugins()
@@ -544,7 +544,7 @@ running when plugin registry inputs are changing.
 ### Pattern 1: Conditional Plugin Loading
 
 ```typescript
-import { hasPlugin, usePlugin } from '@/core/lib/registries/plugin-registry'
+import { hasPlugin, usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export async function processWithAI(text: string) {
   if (!hasPlugin('ai')) {
@@ -562,7 +562,7 @@ export async function processWithAI(text: string) {
 ### Pattern 2: Plugin Feature Detection
 
 ```typescript
-import { getPlugin } from '@/core/lib/registries/plugin-registry'
+import { getPlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export function checkPluginFeatures() {
   const aiPlugin = getPlugin('ai')
@@ -581,7 +581,7 @@ export function checkPluginFeatures() {
 ### Pattern 3: List All Plugin Routes
 
 ```typescript
-import { getAllRouteEndpoints } from '@/core/lib/registries/plugin-registry'
+import { getAllRouteEndpoints } from '@nextsparkjs/registries/plugin-registry'
 
 export default async function RoutesPage() {
   const routes = getAllRouteEndpoints()
@@ -613,11 +613,11 @@ export default async function RoutesPage() {
 ```typescript
 // ❌ Wrong
 'use client'
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 // ✅ Correct
 'use client'
-import { getPlugin } from '@/core/lib/registries/plugin-registry.client'
+import { getPlugin } from '@nextsparkjs/registries/plugin-registry.client'
 ```
 
 ---
@@ -630,7 +630,7 @@ import { getPlugin } from '@/core/lib/registries/plugin-registry.client'
 
 **Solution**: Check if function exists first
 ```typescript
-import { hasPluginFunction, getPluginFunction } from '@/core/lib/registries/plugin-registry'
+import { hasPluginFunction, getPluginFunction } from '@nextsparkjs/registries/plugin-registry'
 
 if (hasPluginFunction('ai', 'generateText')) {
   const generateText = getPluginFunction('ai', 'generateText')
@@ -651,13 +651,13 @@ if (hasPluginFunction('ai', 'generateText')) {
 **Solution**: Rebuild registry
 ```bash
 # Check plugin.config.ts exists
-ls contents/plugins/my-plugin/plugin.config.ts
+ls plugins/my-plugin/plugin.config.ts
 
 # Rebuild registry
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Verify plugin in generated registry
-cat core/lib/registries/plugin-registry.ts | grep "'my-plugin'"
+cat .nextspark/registries/plugin-registry.ts | grep "'my-plugin'"
 ```
 
 ---

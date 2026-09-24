@@ -56,7 +56,6 @@ async function processEnvTemplate(
     .replace(/\{\{PROJECT_NAME\}\}/g, projectName)
     .replace(/\{\{DATABASE_URL\}\}/g, databaseUrl)
     .replace(/\{\{BETTER_AUTH_SECRET\}\}/g, authSecret)
-    .replace(/\{\{ACTIVE_THEME\}\}/g, config.projectSlug)
 
   return content
 }
@@ -113,10 +112,6 @@ async function updateExistingEnv(
 ): Promise<void> {
   let content = await fs.readFile(envPath, 'utf-8')
 
-  // Update NEXT_PUBLIC_ACTIVE_THEME
-  content = updateEnvVar(content, 'NEXT_PUBLIC_ACTIVE_THEME', config.projectSlug)
-  showSuccess(`Set NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)
-
   // Generate and set secrets if requested
   if (answers.generateSecrets) {
     const authSecret = generateSecret()
@@ -142,10 +137,6 @@ async function updateEnvFile(
   config: WizardConfig
 ): Promise<void> {
   let content = await fs.readFile(envPath, 'utf-8')
-
-  // Update NEXT_PUBLIC_ACTIVE_THEME with project slug
-  content = updateEnvVar(content, 'NEXT_PUBLIC_ACTIVE_THEME', config.projectSlug)
-  showSuccess(`Set NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)
 
   // Generate and set secrets if requested
   if (answers.generateSecrets) {
@@ -227,7 +218,6 @@ DATABASE_URL=${databaseUrl}
 BETTER_AUTH_SECRET=${authSecret}
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_NAME="${projectName}"
-NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}
 `
 
   await fs.writeFile(envPath, content, 'utf-8')

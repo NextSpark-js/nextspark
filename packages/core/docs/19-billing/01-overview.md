@@ -113,7 +113,7 @@ The billing system follows the framework's Core/Theme separation:
 | Layer | Location | Responsibility |
 |-------|----------|----------------|
 | **Core** | `core/lib/billing/` | Infrastructure (actions, hooks, types) |
-| **Theme** | `contents/themes/*/billing/` | Configuration (plans, features, limits) |
+| **Theme** | `billing/` | Configuration (plans, features, limits) |
 
 **Core provides:**
 - Database schema and actions
@@ -134,7 +134,7 @@ Configuration is loaded via the registry pattern (no dynamic imports):
 
 ```typescript
 // Generated at build time
-import { BILLING_REGISTRY } from '@/core/lib/registries/billing-registry'
+import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 
 // Access configuration
 const plans = BILLING_REGISTRY.plans

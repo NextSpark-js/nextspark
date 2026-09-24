@@ -5,11 +5,10 @@ Generate UAT Test Script
 Generates a UAT test file and optional BDD documentation for an entity.
 
 Usage:
-    python generate-uat-test.py --entity ENTITY --role ROLE [--theme THEME] [--with-bdd]
+    python generate-uat-test.py --entity ENTITY --role ROLE [--with-bdd]
 
 Options:
     --entity ENTITY   Entity name (e.g., tasks, customers)
-    --theme THEME     Theme name (default: default)
     --role ROLE       Role name (owner, admin, member, editor, viewer)
     --session SESSION Session name for @scope tag (optional)
     --with-bdd        Generate BDD documentation file
@@ -706,7 +705,6 @@ And "{pascal_singular} a Eliminar" ya no deberia aparecer en la lista
 def main():
     parser = argparse.ArgumentParser(description='Generate UAT test file')
     parser.add_argument('--entity', required=True, help='Entity name (e.g., tasks)')
-    parser.add_argument('--theme', default='default', help='Theme name')
     parser.add_argument('--role', required=True, help='Role name (owner, admin, member, editor, viewer)')
     parser.add_argument('--session', default=None, help='Session name for @scope tag')
     parser.add_argument('--with-bdd', action='store_true', help='Generate BDD documentation')
@@ -717,14 +715,13 @@ def main():
 
     entity = args.entity.lower()
     role = args.role.lower()
-    theme = args.theme
+    theme = 'project'
 
     print(f"\n{'=' * 60}")
     print("GENERATING UAT TEST")
     print(f"{'=' * 60}")
     print(f"Entity: {entity}")
     print(f"Role: {role}")
-    print(f"Theme: {theme}")
     print(f"Session: {args.session or '(none)'}")
     print(f"With BDD: {args.with_bdd}")
     print(f"{'=' * 60}\n")
@@ -736,7 +733,7 @@ def main():
     if args.output:
         output_dir = Path(args.output)
     else:
-        output_dir = Path(f'contents/themes/{theme}/tests/cypress/e2e/uat/{entity}')
+        output_dir = Path(f'tests/cypress/e2e/uat/{entity}')
 
     test_file = output_dir / f'{entity}-{role}.cy.ts'
     bdd_file = output_dir / f'{entity}-{role}.bdd.md'

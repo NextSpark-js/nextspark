@@ -235,7 +235,7 @@ nextspark/
 │       ├── sortable-block.tsx    # Draggable block wrapper
 │       └── page-settings-panel.tsx   # SEO settings
 │
-├── contents/themes/{theme}/blocks/
+├── blocks/
 │   └── {block-slug}/
 │       ├── config.ts             # Block metadata
 │       ├── fields.ts             # Field definitions for admin
@@ -296,7 +296,7 @@ Instead of loading block definitions at runtime:
 const blocks = await loadBlocksFromFileSystem()
 
 // ✅ Fast: Build-time static registry (~6ms)
-import { BLOCK_REGISTRY } from '@/core/lib/registries/block-registry'
+import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 const blocks = Object.values(BLOCK_REGISTRY)
 ```
 
@@ -307,7 +307,7 @@ const blocks = Object.values(BLOCK_REGISTRY)
 ```typescript
 // Code-split block components
 const HeroBlock = lazy(() =>
-  import('@/contents/themes/default/blocks/hero/component')
+  import('@/blocks/hero/component')
     .then(m => ({ default: m.HeroBlock }))
 )
 ```
@@ -358,7 +358,7 @@ const resolution = await resolvePublicEntityFromUrl(`/${slug}`)
 
 ### Theme System
 
-Blocks are defined per-theme in `contents/themes/{theme}/blocks/`. The build registry discovers and registers all blocks from the active theme.
+Blocks are defined per-theme in `blocks/`. The build registry discovers and registers all blocks from the project.
 
 ### Registry System
 

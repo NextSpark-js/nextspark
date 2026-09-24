@@ -130,7 +130,7 @@ if (context === 'monorepo' && aiWorkflowExists) {
 | Project type (monorepo/consumer) | `.claude/config/context.json` → `context` |
 | Task manager settings | `.claude/config/workspace.json` → `taskManager` |
 | Active user & team members | `.claude/config/workspace.json` → `activeUser` + `.claude/config/team.json` |
-| Test credentials & API keys | Active theme `dev.config.ts` → `devKeyring` |
+| Test credentials & API keys | project `dev.config.ts` → `devKeyring` |
 | Git workflow conventions | `.claude/config/github.json` |
 
 ### Reference Patterns in Agents
@@ -143,7 +143,7 @@ if (context === 'monorepo' && aiWorkflowExists) {
 # ✅ ALWAYS DO THIS - JSON path references
 - **Task Manager Config**: `workspace.json → taskManager.config`
 - **Active User**: `workspace.json → activeUser` + `team.json → members[].ids`
-- **Test Credentials**: Active theme `dev.config.ts` → `devKeyring`
+- **Test Credentials**: project `dev.config.ts` → `devKeyring`
 ```
 
 ---

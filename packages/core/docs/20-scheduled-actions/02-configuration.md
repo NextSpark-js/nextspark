@@ -10,7 +10,7 @@ All Scheduled Actions settings are configured in `app.config.ts` under the `sche
 ## Full Configuration Example
 
 ```typescript
-// contents/themes/default/config/app.config.ts
+// config/app.config.ts
 export const APP_CONFIG_OVERRIDES = {
   scheduledActions: {
     // Enable/disable the entire system

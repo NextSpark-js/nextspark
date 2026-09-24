@@ -67,7 +67,7 @@ NextSpark uses **Model B Distribution**:
 │       │                                     │
 │       ↓  (nextspark install)                │
 │                                             │
-│  contents/plugins/plugin-ai/                │
+│  plugins/plugin-ai/                │
 │                                             │
 └─────────────────────────────────────────────┘
 
@@ -102,15 +102,15 @@ STEP 2 OF 4: Install the Plugin Package
 
 ```bash
 # Install a plugin
-npx nextspark install plugin-ai
+pnpm exec nextspark install plugin-ai
 
 # Install multiple plugins
-npx nextspark install plugin-ai plugin-analytics
+pnpm exec nextspark install plugin-ai plugin-analytics
 ```
 
 This will:
 1. Download the plugin from NPM
-2. Copy to contents/plugins/
+2. Copy to plugins/
 3. Add dependencies to your package.json
 4. Create .env.example entries
 
@@ -123,7 +123,7 @@ This will:
 pnpm add @nextsparkjs/plugin-ai --save-dev
 
 # 2. Copy to plugins directory
-cp -r node_modules/@nextsparkjs/plugin-ai contents/plugins/plugin-ai
+cp -r node_modules/@nextsparkjs/plugin-ai plugins/plugin-ai
 
 # 3. Remove from node_modules (optional)
 pnpm remove @nextsparkjs/plugin-ai
@@ -137,16 +137,13 @@ pnpm install
 📋 After Installation, Your Structure:
 
 ```
-contents/
-├── plugins/
-│   ├── plugin-ai/           ← Installed plugin
-│   │   ├── package.json
-│   │   ├── plugin.config.ts
-│   │   ├── .env.example
-│   │   └── ...
-│   └── plugin-analytics/    ← Another plugin
-└── themes/
-    └── your-theme/
+plugins/
+├── plugin-ai/           ← Installed plugin
+│   ├── package.json
+│   ├── plugin.config.ts
+│   ├── .env.example
+│   └── ...
+└── plugin-analytics/    ← Another plugin
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -171,7 +168,7 @@ Each plugin has an .env.example file with required variables:
 
 ```bash
 # Check what variables are needed
-cat contents/plugins/plugin-ai/.env.example
+cat plugins/plugin-ai/.env.example
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -179,7 +176,7 @@ cat contents/plugins/plugin-ai/.env.example
 📋 Example: plugin-ai Environment Variables
 
 ```env
-# contents/plugins/plugin-ai/.env.example
+# plugins/plugin-ai/.env.example
 
 # ============================================
 # AI PLUGIN ENVIRONMENT VARIABLES
@@ -201,7 +198,7 @@ AI_PLUGIN_DEBUG=false
 
 ```bash
 # Copy to root .env file
-cat contents/plugins/plugin-ai/.env.example >> .env
+cat plugins/plugin-ai/.env.example >> .env
 
 # Edit .env with your actual values
 code .env
@@ -255,7 +252,7 @@ node core/scripts/build/registry.mjs
 2️⃣  Use Plugin Components in Your Theme:
 
 ```typescript
-// contents/themes/your-theme/app/dashboard/page.tsx
+// app/dashboard/page.tsx
 import { AIAssistant } from '@/plugins/plugin-ai/components'
 
 export default function DashboardPage() {
@@ -312,7 +309,7 @@ pnpm dev
 After rebuild, the plugin appears in the registry:
 
 ```typescript
-// core/lib/registries/plugin-registry.ts (auto-generated)
+// .nextspark/registries/plugin-registry.ts (auto-generated)
 export const PLUGIN_REGISTRY = {
   'plugin-ai': {
     name: 'plugin-ai',

@@ -27,10 +27,10 @@ dist/
 .nextspark/
 
 # Auto-generated templates (from theme templates at build time)
-app/(templates)/
+src/app/(templates)/
 
 # Mocks
-app/(public)/mock-demo/
+src/app/(public)/mock-demo/
 _tmp/
 
 # Claude Code
@@ -39,14 +39,14 @@ _tmp/
 # Playwright MCP
 .playwright-mcp/
 
-# Cypress (theme-based)
-contents/themes/*/tests/cypress/videos
-contents/themes/*/tests/cypress/screenshots
-contents/themes/*/tests/cypress/allure-results
-contents/themes/*/tests/cypress/allure-report
+# Cypress
+tests/cypress/videos
+tests/cypress/screenshots
+tests/cypress/allure-results
+tests/cypress/allure-report
 
-# Jest (theme-based)
-contents/themes/*/tests/jest/coverage
+# Jest
+tests/jest/coverage
 
 # Environment
 .env

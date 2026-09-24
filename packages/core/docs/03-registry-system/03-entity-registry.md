@@ -5,8 +5,8 @@
 The Entity Registry is the **most frequently used registry** in the system. It provides instant, zero-I/O access to all entities (from core, themes, and plugins). Following the **data-only pattern**, the registry exports pure data, while helper functions are available in the client registry.
 
 **Files:**
-- `core/lib/registries/entity-registry.ts` - Server-side data-only registry
-- `core/lib/registries/entity-registry.client.ts` - Client-safe registry with 8 helper functions
+- `.nextspark/registries/entity-registry.ts` - Server-side data-only registry
+- `.nextspark/registries/entity-registry.client.ts` - Client-safe registry with 8 helper functions
 
 **Pattern:** Data-only (query functions in client registry)
 **Performance:** <1ms for all operations
@@ -63,7 +63,7 @@ export const ENTITY_REGISTRY = {
     hasMigrations: true,
     hasMessages: true,
     hasAssets: false,
-    messagesPath: '@/contents/plugins/ai/entities/ai-history/messages',
+    messagesPath: '@/plugins/ai/entities/ai-history/messages',
     pluginContext: { pluginName: 'ai' },
     themeContext: null,
     isCore: false,
@@ -82,7 +82,7 @@ export const ENTITY_REGISTRY = {
     hasMigrations: true,
     hasMessages: true,
     hasAssets: false,
-    messagesPath: '@/contents/themes/default/entities/tasks/messages',
+    messagesPath: '@/entities/tasks/messages',
     pluginContext: null,
     themeContext: { themeName: 'default' },
     isCore: false,
@@ -140,7 +140,7 @@ export interface EntityRegistryEntry {
 | `hasMigrations` | Entity has database migrations | `true`/`false` |
 | `hasMessages` | Entity has translations | `true`/`false` |
 | `hasAssets` | Entity has static assets | `true`/`false` |
-| `messagesPath` | Translation file path | `'@/contents/.../messages'` |
+| `messagesPath` | Translation file path | `'@/entities/.../messages'` |
 | `pluginContext` | Owner plugin info | `{ pluginName: 'ai' }` |
 | `themeContext` | Owner theme info | `{ themeName: 'default' }` |
 | `isCore` | Core entity (protected) | `true`/`false` |
@@ -152,12 +152,12 @@ export interface EntityRegistryEntry {
 
 ### entity-registry.ts (Server-Only)
 
-**Location:** `core/lib/registries/entity-registry.ts`
+**Location:** `.nextspark/registries/entity-registry.ts`
 **Usage:** Server Components, API routes, services
 **Features:** Full registry with all metadata
 
 ```typescript
-import { ENTITY_REGISTRY, getEntity } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY, getEntity } from '@nextsparkjs/registries/entity-registry'
 
 // Server Component
 export default async function Page() {
@@ -168,14 +168,14 @@ export default async function Page() {
 
 ### entity-registry.client.ts (Client-Safe)
 
-**Location:** `core/lib/registries/entity-registry.client.ts`
+**Location:** `.nextspark/registries/entity-registry.client.ts`
 **Usage:** Client Components (`'use client'`)
 **Features:** Subset of registry (no server-only data)
 
 ```typescript
 'use client'
 
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry.client'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry.client'
 
 export function EntityCard({ entityName }: { entityName: string }) {
   const config = ENTITY_REGISTRY[entityName] // Client-safe access
@@ -187,7 +187,7 @@ export function EntityCard({ entityName }: { entityName: string }) {
 
 ```typescript
 // Server Component (parent)
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { ClientComponent } from './ClientComponent'
 
 export default async function ServerPage() {
@@ -222,7 +222,7 @@ export function getRegisteredEntities(): (EntityConfig | ChildEntityDefinition)[
 **Usage:**
 
 ```typescript
-import { getRegisteredEntities } from '@/core/lib/registries/entity-registry'
+import { getRegisteredEntities } from '@nextsparkjs/registries/entity-registry'
 
 // Get all entities
 const entities = getRegisteredEntities()
@@ -249,7 +249,7 @@ export function getEntity(name: EntityName): EntityConfig | ChildEntityDefinitio
 **Usage:**
 
 ```typescript
-import { getEntity } from '@/core/lib/registries/entity-registry'
+import { getEntity } from '@nextsparkjs/registries/entity-registry'
 
 // Get specific entity
 const taskConfig = getEntity('tasks')
@@ -274,7 +274,7 @@ export function getEntityMetadata(name: EntityName): EntityRegistryEntry | undef
 **Usage:**
 
 ```typescript
-import { getEntityMetadata } from '@/core/lib/registries/entity-registry'
+import { getEntityMetadata } from '@nextsparkjs/registries/entity-registry'
 
 // Get full metadata
 const taskMeta = getEntityMetadata('tasks')
@@ -314,7 +314,7 @@ export function getRootEntities(): EntityRegistryEntry[]
 **Usage:**
 
 ```typescript
-import { getRootEntities } from '@/core/lib/registries/entity-registry'
+import { getRootEntities } from '@nextsparkjs/registries/entity-registry'
 
 // Get only root-level entities
 const roots = getRootEntities()
@@ -341,7 +341,7 @@ export function getChildEntities(parentName: EntityName): EntityRegistryEntry[]
 **Usage:**
 
 ```typescript
-import { getChildEntities } from '@/core/lib/registries/entity-registry'
+import { getChildEntities } from '@nextsparkjs/registries/entity-registry'
 
 // Get children of 'products'
 const variants = getChildEntities('products')
@@ -379,7 +379,7 @@ export function getEntityTree(): EntityRegistryEntry[]
 **Usage:**
 
 ```typescript
-import { getEntityTree } from '@/core/lib/registries/entity-registry'
+import { getEntityTree } from '@nextsparkjs/registries/entity-registry'
 
 // Get full tree (roots with nested children)
 const tree = getEntityTree()
@@ -427,7 +427,7 @@ export function getEntitiesByDepth(depth: number): EntityRegistryEntry[]
 **Usage:**
 
 ```typescript
-import { getEntitiesByDepth } from '@/core/lib/registries/entity-registry'
+import { getEntitiesByDepth } from '@nextsparkjs/registries/entity-registry'
 
 // Get all root entities (depth 0)
 const roots = getEntitiesByDepth(0)
@@ -454,7 +454,7 @@ export function getEntityTableName(name: EntityName): string | undefined
 **Usage:**
 
 ```typescript
-import { getEntityTableName } from '@/core/lib/registries/entity-registry'
+import { getEntityTableName } from '@nextsparkjs/registries/entity-registry'
 
 // Get table name
 const tableName = getEntityTableName('tasks')
@@ -479,7 +479,7 @@ export function getEntityByTableName(tableName: string): EntityRegistryEntry | u
 **Usage:**
 
 ```typescript
-import { getEntityByTableName } from '@/core/lib/registries/entity-registry'
+import { getEntityByTableName } from '@nextsparkjs/registries/entity-registry'
 
 // Reverse lookup from table name
 const entity = getEntityByTableName('tasks')
@@ -509,7 +509,7 @@ export function getPluginEntities(pluginName: string): EntityRegistryEntry[]
 **Usage:**
 
 ```typescript
-import { getPluginEntities } from '@/core/lib/registries/entity-registry'
+import { getPluginEntities } from '@nextsparkjs/registries/entity-registry'
 
 // Get all AI plugin entities
 const aiEntities = getPluginEntities('ai')
@@ -547,7 +547,7 @@ export function getThemeEntities(themeName: string): EntityRegistryEntry[]
 **Usage:**
 
 ```typescript
-import { getThemeEntities } from '@/core/lib/registries/entity-registry'
+import { getThemeEntities } from '@nextsparkjs/registries/entity-registry'
 
 // Get all theme entities
 const themeEntities = getThemeEntities('default')
@@ -581,7 +581,7 @@ export function getEntityOwner(entityName: EntityName): { type: 'plugin' | 'them
 **Usage:**
 
 ```typescript
-import { getEntityOwner } from '@/core/lib/registries/entity-registry'
+import { getEntityOwner } from '@nextsparkjs/registries/entity-registry'
 
 // Get owner info
 const owner = getEntityOwner('tasks')
@@ -617,7 +617,7 @@ export function getEntityBySlug(slug: string): EntityConfig | ChildEntityDefinit
 **Usage:**
 
 ```typescript
-import { getEntityBySlug } from '@/core/lib/registries/entity-registry'
+import { getEntityBySlug } from '@nextsparkjs/registries/entity-registry'
 
 // Get entity by slug
 const entity = getEntityBySlug('tasks')
@@ -665,7 +665,7 @@ export const ENTITY_METADATA = {
 **Usage:**
 
 ```typescript
-import { ENTITY_METADATA } from '@/core/lib/registries/entity-registry'
+import { ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
 
 // Display statistics
 console.log(`Total entities: ${ENTITY_METADATA.totalEntities}`)
@@ -692,7 +692,7 @@ function EntityStats() {
 
 ```typescript
 // app/(protected)/entities/page.tsx
-import { getRootEntities } from '@/core/lib/registries/entity-registry'
+import { getRootEntities } from '@nextsparkjs/registries/entity-registry'
 import { EntityCard } from '@/core/components/entities/EntityCard'
 
 export default async function EntitiesPage() {
@@ -712,7 +712,7 @@ export default async function EntitiesPage() {
 
 ```typescript
 // app/(protected)/entities/[slug]/page.tsx
-import { getEntityBySlug } from '@/core/lib/registries/entity-registry'
+import { getEntityBySlug } from '@nextsparkjs/registries/entity-registry'
 import { notFound } from 'next/navigation'
 
 export default async function EntityPage({ params }: { params: { slug: string } }) {
@@ -735,7 +735,7 @@ export default async function EntityPage({ params }: { params: { slug: string } 
 
 ```typescript
 // app/api/v1/[entity]/route.ts
-import { getEntity, getEntityTableName } from '@/core/lib/registries/entity-registry'
+import { getEntity, getEntityTableName } from '@nextsparkjs/registries/entity-registry'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
@@ -758,8 +758,8 @@ export async function GET(
 
 ```typescript
 // core/components/EntityNav.tsx
-import { getEntityTree } from '@/core/lib/registries/entity-registry'
-import type { EntityRegistryEntry } from '@/core/lib/registries/entity-registry'
+import { getEntityTree } from '@nextsparkjs/registries/entity-registry'
+import type { EntityRegistryEntry } from '@nextsparkjs/registries/entity-registry'
 
 export async function EntityNav() {
   const tree = getEntityTree()
@@ -797,7 +797,7 @@ function TreeLevel({ nodes }: { nodes: EntityRegistryEntry[] }) {
 // __tests__/components/EntityList.test.tsx
 jest.mock('server-only', () => ({})) // Allow testing server components
 
-import { getRegisteredEntities } from '@/core/lib/registries/entity-registry'
+import { getRegisteredEntities } from '@nextsparkjs/registries/entity-registry'
 import { EntityList } from '@/components/EntityList'
 
 describe('EntityList', () => {
@@ -818,7 +818,7 @@ import {
   getRootEntities,
   getChildEntities,
   getPluginEntities
-} from '@/core/lib/registries/entity-registry'
+} from '@nextsparkjs/registries/entity-registry'
 
 describe('Entity Registry', () => {
   it('should get entity by name', () => {

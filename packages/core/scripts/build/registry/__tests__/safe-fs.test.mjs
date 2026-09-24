@@ -246,35 +246,35 @@ test("the build's steps that write refuse through safe-fs even when the check be
   const outside = await directory()
   try {
     const root = project.root
-    const config = { projectRoot: root, monorepoRoot: null, isMonorepoMode: false, activeTheme: 'acme', themesDir: join(root, 'contents/themes'), pluginsDir: join(root, 'contents/plugins') }
+    const config = { projectRoot: root, projectSourceDir: root, projectName: 'acme', monorepoRoot: null, isMonorepoMode: false, pluginsDir: join(root, 'plugins') }
 
     // app/api linked outside, holding an old generated plugin route and a file of its own
     await writeIn(outside.root, 'api/v1/plugin/legacy/route.ts', '// Auto-generated Plugin Route Proxy\n')
     await writeIn(outside.root, 'api/v1/plugin/legacy/other.ts', 'export const other = 1\n')
-    await mkdir(join(root, 'app'), { recursive: true })
-    await symlink(join(outside.root, 'api'), join(root, 'app/api'))
+    await mkdir(join(root, 'src', 'app'), { recursive: true })
+    await symlink(join(outside.root, 'api'), join(root, 'src/app/api'))
 
     // The theme's fixtures linked outside
     await writeIn(outside.root, 'fixtures/entities.json', '{"outside":true}\n')
     await writeIn(outside.root, 'fixtures/blocks.json', '{"outside":true}\n')
-    await mkdir(join(root, 'contents/themes/acme/tests/cypress'), { recursive: true })
-    await symlink(join(outside.root, 'fixtures'), join(root, 'contents/themes/acme/tests/cypress/fixtures'))
+    await mkdir(join(root, 'tests/cypress'), { recursive: true })
+    await symlink(join(outside.root, 'fixtures'), join(root, 'tests/cypress/fixtures'))
 
-    // app/(templates) linked outside, and app/globals.css linked to a file outside
+    // src/app/(templates) linked outside, and app/globals.css linked to a file outside
     await writeIn(outside.root, 'templates/(public)/orphan/page.tsx', 'export default function Orphan() { return null }\n')
-    await symlink(join(outside.root, 'templates'), join(root, 'app/(templates)'))
+    await symlink(join(outside.root, 'templates'), join(root, 'src/app/(templates)'))
     await writeIn(outside.root, 'globals.css', '@import "../elsewhere.css";\n')
-    await symlink(join(outside.root, 'globals.css'), join(root, 'app/globals.css'))
+    await symlink(join(outside.root, 'globals.css'), join(root, 'src/app/globals.css'))
 
     const before = await snapshot(outside.root)
     const steps = [
-      ['cleanupOldRouteFiles', () => cleanupOldRouteFiles(config), 'app/api'],
-      ['generateTestEntitiesJson', () => generateTestEntitiesJson([], [{ name: 'acme' }], config), 'contents/themes/acme/tests/cypress/fixtures'],
-      ['generateTestBlocksJson', () => generateTestBlocksJson([], config), 'contents/themes/acme/tests/cypress/fixtures'],
-      ['cleanupOrphanedTemplates', () => cleanupOrphanedTemplates([], config), 'app/(templates)'],
-      ['cleanupDeletedTemplate', () => cleanupDeletedTemplate(join(root, 'contents/themes/acme/templates/(public)/orphan/page.tsx'), config), 'app/(templates)'],
-      ['generateMissingPages', () => generateMissingPages([], config, new Map()), 'app/(templates)'],
-      ['syncAppGlobalsCss', () => syncAppGlobalsCss(config, 'acme'), 'app/globals.css'],
+      ['cleanupOldRouteFiles', () => cleanupOldRouteFiles(config), 'src/app/api'],
+      ['generateTestEntitiesJson', () => generateTestEntitiesJson([], [{ name: 'acme' }], config), 'tests/cypress/fixtures'],
+      ['generateTestBlocksJson', () => generateTestBlocksJson([], config), 'tests/cypress/fixtures'],
+      ['cleanupOrphanedTemplates', () => cleanupOrphanedTemplates([], config), 'src/app/(templates)'],
+      ['cleanupDeletedTemplate', () => cleanupDeletedTemplate(join(root, 'templates/(public)/orphan/page.tsx'), config), 'src/app/(templates)'],
+      ['generateMissingPages', () => generateMissingPages([], config, new Map()), 'src/app/(templates)'],
+      ['syncAppGlobalsCss', () => syncAppGlobalsCss(config, 'acme'), 'src/app/globals.css'],
     ]
     const wrong = []
     for (const [label, step, path] of steps) {

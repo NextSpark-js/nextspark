@@ -5,14 +5,7 @@ on:
     # Run at 2 AM UTC daily
     - cron: '0 2 * * *'
   workflow_dispatch:
-    inputs:
-      theme:
-        description: 'Theme to test'
-        required: false
-        default: 'default'
 
-env:
-  NEXT_PUBLIC_ACTIVE_THEME: ${{ inputs.theme || vars.ACTIVE_THEME || 'default' }}
 
 jobs:
   regression-tests:
@@ -84,7 +77,7 @@ jobs:
           start: pnpm start
           wait-on: 'http://localhost:5173'
           wait-on-timeout: 120
-          config-file: contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress.config.ts
+          config-file: tests/cypress.config.ts
           env: grepTags=@regression
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
@@ -93,8 +86,8 @@ jobs:
         if: always()
         run: |
           npx allure generate \
-            contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/allure-results \
-            -o contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/allure-report \
+            tests/cypress/allure-results \
+            -o tests/cypress/allure-report \
             --clean
 
       - name: Upload Allure Report
@@ -102,7 +95,7 @@ jobs:
         if: always()
         with:
           name: allure-report
-          path: contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/allure-report
+          path: tests/cypress/allure-report
           retention-days: 14
 
       - name: Upload screenshots on failure
@@ -110,7 +103,7 @@ jobs:
         if: failure()
         with:
           name: cypress-screenshots
-          path: contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/screenshots
+          path: tests/cypress/screenshots
           retention-days: 7
 
       - name: Upload videos
@@ -118,7 +111,7 @@ jobs:
         if: always()
         with:
           name: cypress-videos
-          path: contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/videos
+          path: tests/cypress/videos
           retention-days: 7
 
       - name: Notify on failure
@@ -131,6 +124,6 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `Nightly Regression Failed - ${date}`,
-              body: `## Regression Test Failure\n\n**Date:** ${date}\n**Theme:** ${{ env.NEXT_PUBLIC_ACTIVE_THEME }}\n**Workflow:** [${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n\nPlease investigate the test failures.`,
+              body: `## Regression Test Failure\n\n**Date:** ${date}\n**Workflow:** [${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n\nPlease investigate the test failures.`,
               labels: ['bug', 'regression', 'automated']
             })

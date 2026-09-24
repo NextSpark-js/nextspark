@@ -17,7 +17,7 @@ export type OwnGitignoreState = 'missing' | 'in place' | 'symlink' | 'not a file
  * in the project.
  */
 export interface CoreWritePlaces {
-  unsafeWritePlaces(projectRoot: string, written?: readonly string[], options?: { activeTheme?: string }): UnsafeWritePlace[];
+  unsafeWritePlaces(projectRoot: string, written?: readonly string[]): UnsafeWritePlace[];
   unsafeWritePlacesLines(unsafe: UnsafeWritePlace[]): string[];
   BACKUPS_GITIGNORE: string;
   REGISTRIES_GITIGNORE: string;

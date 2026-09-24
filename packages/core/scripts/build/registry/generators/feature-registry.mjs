@@ -213,7 +213,7 @@ function loadFlowsConfig(themePath) {
  * @param {Object} features - Features config
  * @param {Object} flows - Flows config
  * @param {Object} discoveredTags - Tags from test scan
- * @param {string} themeName - Active theme name
+ * @param {string} themeName - Project registry name
  * @returns {string} TypeScript content
  */
 export function generateFeatureRegistry(features, flows, discoveredTags, themeName) {
@@ -375,16 +375,14 @@ export type FlowCategory = FlowEntry['category']
 
 /**
  * Main generator function - orchestrates the full generation
- * @param {string} themeName - Active theme name
- * @param {string} contentsDir - Path to contents directory (legacy, use config.themesDir instead)
+ * @param {string} themeName - Project registry name
+ * @param {string} contentsDir - Project source directory
  * @param {string} outputDir - Path for registry output
  * @param {object} config - Optional configuration object from getConfig()
  * @returns {Object} Generation result
  */
 export async function generateFeatureRegistryFull(themeName, contentsDir, outputDir, config = null) {
-  // Use config.themesDir for monorepo support, fall back to contentsDir/themes
-  const themesDir = config?.themesDir || join(contentsDir, 'themes')
-  const themePath = join(themesDir, themeName)
+  const themePath = config?.projectSourceDir || contentsDir
   const testsDir = join(themePath, 'tests', 'cypress', 'e2e')
 
   // Load configs
@@ -395,7 +393,7 @@ export async function generateFeatureRegistryFull(themeName, contentsDir, output
   const blocks = loadBlockSlugs(outputDir)
 
   // Discover tags from tests
-  const rootDir = config?.monorepoRoot || join(contentsDir, '..')
+  const rootDir = config?.projectRoot || contentsDir
   const discoveredTags = discoverTestTags(testsDir, rootDir)
 
   // Validate (includes block tag validation)

@@ -8,7 +8,7 @@
  *
  * The replacement is the build-time `EMAIL_REGISTRY` in
  * `@nextsparkjs/registries/email-registry`, with theme overrides at
- * `themes/<active-theme>/emails/<slug>.ts`. Typed convenience helpers live in
+ * root-level `emails/<slug>.ts`. Typed convenience helpers live in
  * `@nextsparkjs/core/lib/email/send` (`sendVerifyEmail`, `sendResetPasswordEmail`,
  * `sendOtpVerificationEmail`, `sendTeamInvitationEmail`).
  *

@@ -22,7 +22,7 @@ Read these skills completely before proceeding:
 Each block must have:
 
 ```
-contents/themes/{theme}/blocks/{block-name}/
+blocks/{block-name}/
 ├── config.ts       # Block configuration
 ├── schema.ts       # Zod validation schema
 ├── fields.ts       # Field definitions
@@ -49,7 +49,7 @@ contents/themes/{theme}/blocks/{block-name}/
 node core/scripts/build/registry.mjs
 
 # Verify block is registered
-grep "{block-name}" core/lib/registries/block-registry.ts
+grep "{block-name}" .nextspark/registries/block-registry.ts
 ```
 
 ---

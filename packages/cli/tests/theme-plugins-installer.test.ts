@@ -4,19 +4,19 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { installPlugins, installTheme, selectPlugins } from '../src/wizard/generators/theme-plugins-installer.js'
+import { installPlugins, installTheme, selectPlugins, selectTheme } from '../src/wizard/generators/theme-plugins-installer.js'
 import { addPluginCommand } from '../src/commands/add-plugin.js'
 import { addThemeCommand } from '../src/commands/add-theme.js'
 import { runWizard } from '../src/wizard/index.js'
 
-// A web + mobile project keeps its app in web/, so a reference theme's required
-// plugin lands in web/contents/plugins. The wizard then installs the selected
+// A web + mobile project keeps its app in web/, so its local plugins live in
+// web/plugins. The wizard then installs the selected
 // plugins from the project root; one already under web/ must count as installed
 // instead of being downloaded again and reported as a failed install.
 test('in a web + mobile project, a theme or plugin already under web/ counts as installed', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-installer-'))
-  fs.mkdirSync(path.join(root, 'web/contents/themes/default'), { recursive: true })
-  fs.mkdirSync(path.join(root, 'web/contents/plugins/langchain'), { recursive: true })
+  fs.mkdirSync(path.join(root, 'web/plugins/langchain'), { recursive: true })
+  fs.writeFileSync(path.join(root, 'web/nextspark.config.ts'), 'export default { plugins: ["langchain"] }\n')
   const previous = process.cwd()
   process.chdir(root)
   try {
@@ -36,7 +36,7 @@ test('the bundled starter theme completes without fetching a package', async () 
   const bin = path.join(root, 'bin')
   const fetched = path.join(root, 'npm-was-called')
   fs.mkdirSync(bin)
-  fs.mkdirSync(path.join(root, 'contents/themes/my-app'), { recursive: true })
+  fs.mkdirSync(path.join(root, 'config'), { recursive: true })
   fs.writeFileSync(path.join(bin, 'npm'), `#!/bin/sh\ntouch "${fetched}"\nexit 1\n`, { mode: 0o755 })
 
   const previousCwd = process.cwd()
@@ -80,14 +80,14 @@ test('the --yes wizard generates a project when bundled theme and plugin flags a
     }, {
       async generateProject(config) {
         generated = true
-        fs.mkdirSync(path.join(root, 'contents/themes', config.projectSlug), { recursive: true })
+        fs.mkdirSync(path.join(root, 'config'), { recursive: true })
       },
       installProjectDependencies() {},
       buildRegistries() {},
     })
 
     assert.equal(generated, true)
-    assert.equal(fs.existsSync(path.join(root, 'contents/themes/my-app')), true)
+    assert.equal(fs.existsSync(path.join(root, 'config')), true)
     assert.equal(fs.existsSync(fetched), false, 'bundled starter must not invoke npm pack')
   } finally {
     process.chdir(previousCwd)
@@ -101,7 +101,7 @@ test('a bundled starter plugin completes without fetching a package', async () =
   const bin = path.join(root, 'bin')
   const fetched = path.join(root, 'npm-was-called')
   fs.mkdirSync(bin)
-  fs.mkdirSync(path.join(root, 'contents/plugins'), { recursive: true })
+  fs.mkdirSync(path.join(root, 'plugins'), { recursive: true })
   fs.writeFileSync(path.join(bin, 'npm'), `#!/bin/sh\ntouch "${fetched}"\nexit 1\n`, { mode: 0o755 })
 
   const previousCwd = process.cwd()
@@ -119,12 +119,9 @@ test('a bundled starter plugin completes without fetching a package', async () =
 })
 
 test('an unknown or missing theme names the invalid choice and all valid options', async () => {
-  const expected = /Theme name is required\. Valid options: starter, default, blog, crm, productivity, none\./
-  await assert.rejects(installTheme(undefined as never), expected)
-  await assert.rejects(
-    installTheme('not-a-theme' as never),
-    /Unknown theme "not-a-theme"\. Valid options: starter, default, blog, crm, productivity, none\./
-  )
+  const expected = /Project template is required\. Valid options: starter, blog, crm, productivity, none\./
+  assert.throws(() => selectTheme(undefined), expected)
+  assert.throws(() => selectTheme('not-a-theme'), /Unknown project template "not-a-theme"\. Valid options: starter, blog, crm, productivity, none\./)
 })
 
 test('selectPlugins names empty and unknown plugin choices with all valid options', () => {
@@ -151,15 +148,15 @@ test('installPlugins rejects empty and unknown plugin choices before fetching', 
   )
 })
 
-// Outside the monorepo a reference theme or plugin is downloaded with `npm pack`. An `npm` first on
-// PATH hands back a package without the config file a theme or plugin must have; the install has
-// to count as failed rather than be reported as installed.
-test('a theme or plugin that downloads but is not valid counts as a failed install', { skip: process.platform === 'win32' }, async () => {
+// Outside the monorepo a plugin is downloaded. A package without the plugin config must
+// count as failed rather than be reported as installed.
+test('a plugin that downloads but is not valid counts as a failed install', { skip: process.platform === 'win32' }, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-installer-'))
   const bin = path.join(root, 'bin')
   const project = path.join(root, 'project')
   fs.mkdirSync(bin)
-  fs.mkdirSync(path.join(project, 'contents'), { recursive: true })
+  fs.mkdirSync(path.join(project, 'plugins'), { recursive: true })
+  fs.writeFileSync(path.join(project, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
   fs.writeFileSync(path.join(bin, 'npm'), `#!/bin/sh
 # npm pack <spec> --pack-destination <dir>
 work=$(mktemp -d)
@@ -173,10 +170,8 @@ tar -czf "$4/not-a-nextspark-package-0.0.0.tgz" -C "$work" package
   process.chdir(project)
   process.env.PATH = `${bin}${path.delimiter}${previousPath}`
   try {
-    assert.equal(await installTheme('default'), false)
-    assert.equal(fs.existsSync(path.join(project, 'contents/themes/default')), false)
     assert.equal(await installPlugins(['langchain']), false)
-    assert.equal(fs.existsSync(path.join(project, 'contents/plugins/langchain')), false)
+    assert.equal(fs.existsSync(path.join(project, 'plugins/langchain')), false)
   } finally {
     process.chdir(previousCwd)
     process.env.PATH = previousPath
@@ -194,7 +189,7 @@ test('add:theme and add:plugin set a failing exit code when the add fails', asyn
   try {
     for (const command of [addThemeCommand, addPluginCommand]) {
       process.exitCode = undefined
-      // No contents/ directory: the add fails before it fetches anything.
+      // No root-first project marker: the add fails before it fetches anything.
       await command('./missing.tgz', {})
       assert.equal(process.exitCode, 1, `${command.name} left exit code ${process.exitCode}`)
     }

@@ -42,13 +42,13 @@ async function loadEntity(name: string) {
   const startTime = performance.now()
 
   // 1. File system scan (~50ms)
-  const entityDirs = await fs.readdir('contents/themes/default/entities')
+  const entityDirs = await fs.readdir('entities')
 
   // 2. Find matching directory (~20ms)
   const entityDir = entityDirs.find(dir => dir === name)
 
   // 3. Read config file (~30ms)
-  const configPath = `contents/themes/default/entities/${entityDir}/${name}.config.ts`
+  const configPath = `entities/${entityDir}/${name}.config.ts`
   const config = await import(configPath)
 
   // 4. Check for additional files (~40ms)
@@ -75,7 +75,7 @@ async function loadEntity(name: string) {
 
 ```typescript
 // ✅ NEW WAY - Registry lookup (~6ms)
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 function loadEntity(name: string) {
   const startTime = performance.now()

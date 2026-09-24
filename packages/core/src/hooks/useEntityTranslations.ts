@@ -10,6 +10,7 @@ import { TranslationService } from '../lib/services/translation.service'
 import { loadMergedTranslations } from '../lib/translations/registry'
 import { useEnabledEntities } from './useEnabledEntities'
 import type { SupportedLocale } from '../lib/entities/types'
+import { ThemeService } from '../lib/services/theme.service'
 
 /**
  * Hook to get translations for a specific entity
@@ -33,8 +34,7 @@ export function useEntityTranslations(entityName: string) {
       }
 
       // Load entity translations directly from TranslationService
-      const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
-      const entityTranslations = await TranslationService.loadEntity(activeTheme, entityName, locale)
+      const entityTranslations = await TranslationService.loadEntity(ThemeService.getCurrentName(), entityName, locale)
 
       setTranslations(entityTranslations)
     } catch (err) {

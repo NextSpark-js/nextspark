@@ -4,7 +4,6 @@ import { fetchPackage } from '../lib/package-fetcher.js'
 import { validatePlugin } from '../lib/validator.js'
 import { installPlugin } from '../lib/installer.js'
 import { runPostinstall } from '../lib/postinstall/index.js'
-import { detectActiveTheme } from '../lib/theme-detector.js'
 import { installWorkspaceDependencies, dependencyInstallNotice } from '../lib/workspace-dependencies.js'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
@@ -30,9 +29,8 @@ export async function addPlugin(
 
   try {
     // Pre-checks
-    const contentsDir = join(process.cwd(), 'contents')
-    if (!existsSync(contentsDir)) {
-      throw new Error('contents/ directory not found. Run "nextspark init" first.')
+    if (!existsSync(join(process.cwd(), 'nextspark.config.ts'))) {
+      throw new Error('nextspark.config.ts not found. Run "nextspark init" first.')
     }
 
     // Fetch package
@@ -65,7 +63,6 @@ export async function addPlugin(
     if (!options.skipPostinstall) {
       const coreVersion = getCoreVersion()
       const context: PostinstallContext = {
-        activeTheme: detectActiveTheme(),
         projectRoot: process.cwd(),
         pluginName: result.name,
         coreVersion,
@@ -80,7 +77,7 @@ export async function addPlugin(
     if (!options.dryRun) {
       pendingDependencies.push({
         name: result.name,
-        dir: result.installedPath,
+        dir: process.cwd(),
         dependencies: packageJson.dependencies,
       })
       if (!options.pendingDependencies) {
@@ -92,7 +89,7 @@ export async function addPlugin(
     }
 
     console.log(chalk.green(`\n  ✓ Plugin ${result.name} installed successfully!`))
-    console.log(chalk.gray(`    Location: contents/plugins/${result.name}/`))
+    console.log(chalk.gray(`    Location: plugins/${result.name}/`))
 
   } catch (error) {
     spinner.fail('Failed to add plugin')

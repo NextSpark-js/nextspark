@@ -41,7 +41,7 @@ From the skill, remember:
 ## Migration Location
 
 - Core migrations: `core/migrations/XXX_*.sql`
-- Theme migrations: `contents/themes/{theme}/migrations/XXX_*.sql`
+- Theme migrations: `migrations/XXX_*.sql`
 
 ---
 

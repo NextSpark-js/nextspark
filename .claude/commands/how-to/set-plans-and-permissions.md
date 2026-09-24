@@ -112,7 +112,7 @@ STEP 2 OF 6: Define Features
 Features are boolean flags that enable functionality per plan:
 
 ```typescript
-// contents/themes/default/config/billing.config.ts
+// config/billing.config.ts
 import type { BillingConfig } from '@/core/lib/billing/config-types'
 
 export const billingConfig: BillingConfig = {
@@ -206,7 +206,7 @@ STEP 3 OF 6: Define Usage Limits (Quotas)
 Quotas track and limit resource usage per team:
 
 ```typescript
-// contents/themes/default/config/billing.config.ts
+// config/billing.config.ts
 
 export const billingConfig: BillingConfig = {
   // ... features ...
@@ -302,7 +302,7 @@ STEP 4 OF 6: Configure Plans
 Define your subscription plans:
 
 ```typescript
-// contents/themes/default/config/billing.config.ts
+// config/billing.config.ts
 
 export const billingConfig: BillingConfig = {
   // ... features, limits ...
@@ -497,7 +497,7 @@ STEP 6 OF 6: Test the Checkout Flow
 1️⃣  Add Translations:
 
 ```json
-// contents/themes/default/messages/en.json
+// messages/en.json
 {
   "billing": {
     "plans": {

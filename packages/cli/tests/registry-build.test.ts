@@ -15,37 +15,34 @@ async function projectWithCore(exitCode: number) {
   await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
   await writeFile(
     join(coreDir, 'scripts/build/registry.mjs'),
-    `console.log('✅ app/(templates): built for ' + process.env.NEXTSPARK_PROJECT_ROOT)\n` +
-      `console.error('⚠️  app/(templates): warning on stderr')\n` +
+    `console.log('✅ src/app/(templates): built for ' + process.cwd())\n` +
+      `console.error('⚠️  src/app/(templates): warning on stderr')\n` +
       `process.exit(${exitCode})\n`
   )
   const projectRoot = join(root, 'project')
   await mkdir(projectRoot)
+  await writeFile(join(projectRoot, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
   return { coreDir, projectRoot, cleanup: () => rm(root, { recursive: true, force: true }) }
 }
 
-test('the active theme can come from .env or from the environment', async () => {
+test('the project marker controls whether the compiler can run', async () => {
   const { projectRoot, cleanup } = await projectWithCore(0)
   try {
-    assert.match(registryBuildBlocker(projectRoot, {}) ?? '', /no \.env file/)
-    assert.equal(registryBuildBlocker(projectRoot, { NEXT_PUBLIC_ACTIVE_THEME: 'default' }), null)
-
-    await writeFile(join(projectRoot, '.env'), 'DATABASE_URL=postgres://x\n')
-    assert.match(registryBuildBlocker(projectRoot, {}) ?? '', /not set in \.env/)
-
-    await writeFile(join(projectRoot, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="default"\n')
     assert.equal(registryBuildBlocker(projectRoot, {}), null)
+    await rm(join(projectRoot, 'nextspark.config.ts'))
+    assert.match(registryBuildBlocker(projectRoot, {}) ?? '', /no nextspark\.config\.ts/)
   } finally {
     await cleanup()
   }
 })
 
-test('without an active theme the build is skipped, not run', async () => {
+test('without a project marker the build is skipped, not run', async () => {
   const { coreDir, projectRoot, cleanup } = await projectWithCore(0)
   try {
+    await rm(join(projectRoot, 'nextspark.config.ts'))
     const result = await runRegistryBuild(coreDir, projectRoot, {})
     assert.equal(result.status, 'skipped')
-    assert.match(result.reason ?? '', /NEXT_PUBLIC_ACTIVE_THEME/)
+    assert.match(result.reason ?? '', /nextspark\.config\.ts/)
     assert.deepEqual(result.failureLines, [])
     assert.deepEqual(result.templatesLines, [])
   } finally {
@@ -57,11 +54,11 @@ test('the build runs for the project, reading both streams, and its exit code de
   const built = await projectWithCore(0)
   const failed = await projectWithCore(1)
   try {
-    const env = { ...process.env, NEXT_PUBLIC_ACTIVE_THEME: 'default' }
+    const env = { ...process.env }
 
     const ok = await runRegistryBuild(built.coreDir, built.projectRoot, env)
     assert.equal(ok.status, 'built')
-    assert.ok(ok.templatesLines.some((line) => line.includes(built.projectRoot)), `NEXTSPARK_PROJECT_ROOT reached the build:\n${ok.templatesLines.join('\n')}`)
+    assert.ok(ok.templatesLines.some((line) => line.includes(built.projectRoot)), `the project cwd reached the build:\n${ok.templatesLines.join('\n')}`)
     assert.ok(ok.templatesLines.some((line) => line.includes('warning on stderr')), `stderr is read too:\n${ok.templatesLines.join('\n')}`)
 
     assert.equal((await runRegistryBuild(failed.coreDir, failed.projectRoot, env)).status, 'failed')
@@ -71,26 +68,26 @@ test('the build runs for the project, reading both streams, and its exit code de
   }
 })
 
-test('only the lines about app/(templates) are picked out of what the build printed', async () => {
+test('only the lines about src/app/(templates) are picked out of what the build printed', async () => {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-templates-'))
   const coreDir = join(root, 'core')
   await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
   await writeFile(
     join(coreDir, 'scripts/build/registry.mjs'),
     `console.log('🔍 Discovering templates...')\n` +
-      `console.log('✅ app/(templates): 1 new, 1 updated, 0 removed')\n` +
-      `console.error('⚠️  app/(templates): backed up app/(templates)/x/layout.tsx to .nextspark/backups/t/app/(templates)/x/layout.tsx')\n` +
+      `console.log('✅ src/app/(templates): 1 new, 1 updated, 0 removed')\n` +
+      `console.error('⚠️  src/app/(templates): backed up src/app/(templates)/x/layout.tsx to .nextspark/backups/t/src/app/(templates)/x/layout.tsx')\n` +
       `console.log('📊 Stats:')\n` +
       `process.exit(0)\n`
   )
   const projectRoot = join(root, 'project')
   await mkdir(projectRoot)
-  await writeFile(join(projectRoot, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="default"\n')
+  await writeFile(join(projectRoot, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
   try {
     const result = await runRegistryBuild(coreDir, projectRoot, process.env)
     assert.deepEqual(result.templatesLines, [
-      '✅ app/(templates): 1 new, 1 updated, 0 removed',
-      '⚠️  app/(templates): backed up app/(templates)/x/layout.tsx to .nextspark/backups/t/app/(templates)/x/layout.tsx',
+      '✅ src/app/(templates): 1 new, 1 updated, 0 removed',
+      '⚠️  src/app/(templates): backed up src/app/(templates)/x/layout.tsx to .nextspark/backups/t/src/app/(templates)/x/layout.tsx',
     ])
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -113,8 +110,8 @@ function writeLines(output: Writable, stream: 'stdout' | 'stderr', lines: string
 const bytesOf = (text: string) => Buffer.byteLength(text, 'utf8')
 
 test('a cause printed once the head is full stays ahead of the thousands of warnings that follow it', () => {
-  const cause = '❌ Build failed: contents/themes/acme/templates/shop/page.tsx has no default export'
-  const warning = '⚠️ app/(templates): backed up app/(templates)/shop/page.tsx to .nextspark/backups/t0/app/(templates)/shop/page.tsx'
+  const cause = '❌ Build failed: templates/shop/page.tsx has no default export'
+  const warning = '⚠️ src/app/(templates): backed up src/app/(templates)/shop/page.tsx to .nextspark/backups/t0/src/app/(templates)/shop/page.tsx'
 
   const output = captureOutput({ head: { lines: 2, bytes: 1024 }, tail: { lines: 2, bytes: 1024 } })
   writeLines(output, 'stdout', ['progress 0', 'progress 1', 'progress 2', cause])
@@ -322,10 +319,10 @@ test('only the marker a line starts with flags it: 🏗️ progress is not a war
     'Build failed without a marker',
   ]
   const flagged = [
-    '\u26A0 app/(templates): a warning with no variation selector',
+    '\u26A0 src/app/(templates): a warning with no variation selector',
     '   ⚠️  Coverage: flow checkout has no tests',
     '\x1b[33m⚠️ a colored warning\x1b[39m',
-    '"❌ Build failed: app/(templates)/a\\u000ab/page.tsx"',
+    '"❌ Build failed: src/app/(templates)/a\\u000ab/page.tsx"',
     'TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string',
   ]
 
@@ -456,36 +453,36 @@ test('lines are ordered by when they end, so a line one stream is partway throug
 })
 
 test('captureLinesContaining keeps only the matching lines, wherever they arrive, and counts what the cap drops', () => {
-  const matches = captureLinesContaining('app/(templates)', { lines: 2, bytes: 1024 })
-  writeLines(matches, 'stdout', ['🔍 discovering', 'app/(templates)/a.tsx created'])
-  writeLines(matches, 'stderr', ['app/(templates)/b.tsx replaced', '📊 done'])
-  writeLines(matches, 'stdout', ['app/(templates)/c.tsx removed'])
+  const matches = captureLinesContaining('src/app/(templates)', { lines: 2, bytes: 1024 })
+  writeLines(matches, 'stdout', ['🔍 discovering', 'src/app/(templates)/a.tsx created'])
+  writeLines(matches, 'stderr', ['src/app/(templates)/b.tsx replaced', '📊 done'])
+  writeLines(matches, 'stdout', ['src/app/(templates)/c.tsx removed'])
   matches.finish()
 
   assert.deepEqual(matches.lines, [
-    'app/(templates)/a.tsx created',
-    'app/(templates)/b.tsx replaced',
-    `... and 1 more line(s), ${bytesOf('app/(templates)/c.tsx removed')} byte(s)`,
+    'src/app/(templates)/a.tsx created',
+    'src/app/(templates)/b.tsx replaced',
+    `... and 1 more line(s), ${bytesOf('src/app/(templates)/c.tsx removed')} byte(s)`,
   ])
 })
 
 test('a character split across writes arrives whole in a matched line, on either stream', () => {
-  const byWrite = captureLinesContaining('app/(templates)', { lines: 10, bytes: 1024 })
-  writeByteByByte(byWrite, 'stdout', 'app/(templates)/café 😀.tsx created\n')
-  assert.deepEqual(byWrite.lines, ['app/(templates)/café 😀.tsx created'])
+  const byWrite = captureLinesContaining('src/app/(templates)', { lines: 10, bytes: 1024 })
+  writeByteByByte(byWrite, 'stdout', 'src/app/(templates)/café 😀.tsx created\n')
+  assert.deepEqual(byWrite.lines, ['src/app/(templates)/café 😀.tsx created'])
 
-  const twoStreams = captureLinesContaining('app/(templates)', { lines: 10, bytes: 1024 })
-  const stdout = Buffer.from('app/(templates)/café.tsx replaced\n', 'utf8')
-  const stderr = Buffer.from('app/(templates)/😀.tsx removed\n', 'utf8')
+  const twoStreams = captureLinesContaining('src/app/(templates)', { lines: 10, bytes: 1024 })
+  const stdout = Buffer.from('src/app/(templates)/café.tsx replaced\n', 'utf8')
+  const stderr = Buffer.from('src/app/(templates)/😀.tsx removed\n', 'utf8')
   for (let index = 0; index < Math.max(stdout.length, stderr.length); index++) {
     if (index < stdout.length) twoStreams.write('stdout', stdout.subarray(index, index + 1))
     if (index < stderr.length) twoStreams.write('stderr', stderr.subarray(index, index + 1))
   }
-  assert.deepEqual(twoStreams.lines.slice().sort(), ['app/(templates)/café.tsx replaced', 'app/(templates)/😀.tsx removed'].sort())
+  assert.deepEqual(twoStreams.lines.slice().sort(), ['src/app/(templates)/café.tsx replaced', 'src/app/(templates)/😀.tsx removed'].sort())
 })
 
 test('a matched line cut at the cap is shown with the same omitted-bytes marker captureOutput uses, and a match past the cap still counts', () => {
-  const needle = 'app/(templates)'
+  const needle = 'src/app/(templates)'
   const filler = 'x'.repeat(20)
   const rest = `${needle}/late.tsx created`
   const fullLine = `${filler}${rest}`
@@ -497,7 +494,7 @@ test('a matched line cut at the cap is shown with the same omitted-bytes marker 
 })
 
 test('a match split across two writes right at the line cap still counts', () => {
-  const needle = 'app/(templates)'
+  const needle = 'src/app/(templates)'
   const cap = 16
   const filler = 'x'.repeat(10)
   const firstPart = needle.slice(0, 6)
@@ -514,7 +511,7 @@ test('a match split across two writes right at the line cap still counts', () =>
 /**
  * `captureChildOutput` and `captureLinesContaining` both cap what they keep
  * regardless of how much comes through, so a build that prints hundreds of MB
- * - many app/(templates) lines, as a real project with a lot of routes would
+ * - many src/app/(templates) lines, as a real project with a lot of routes would
  * - runs `runRegistryBuild` in bounded memory.
  */
 test('runRegistryBuild does not run a 64 MB heap out on a build that prints hundreds of MB', { skip: process.platform === 'win32', timeout: 60_000 }, async () => {
@@ -525,13 +522,13 @@ test('runRegistryBuild does not run a 64 MB heap out on a build that prints hund
     await writeFile(
       join(coreDir, 'scripts/build/registry.mjs'),
       // No process.exit: it would cut the writes still queued on the pipe short of the parent
-      `const line = '⚠️  app/(templates): backed up app/(templates)/page-' + 'x'.repeat(8000) + '.tsx\\n'
+      `const line = '⚠️  src/app/(templates): backed up src/app/(templates)/page-' + 'x'.repeat(8000) + '.tsx\\n'
 for (let i = 0; i < 30000; i++) process.stdout.write(line)
 `
     )
     const projectRoot = join(root, 'project')
     await mkdir(projectRoot)
-    await writeFile(join(projectRoot, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="default"\n')
+    await writeFile(join(projectRoot, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
 
     const script = join(root, 'run.mts')
     await writeFile(script, `import { runRegistryBuild } from ${JSON.stringify(pathToFileURL(join(PKG_ROOT, 'src/utils/registry-build.ts')).href)}

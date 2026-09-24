@@ -26,7 +26,7 @@ core/migrations/
 ```
 
 > **📍 Context-Aware Paths:** Paths shown assume monorepo development. In consumer projects,
-> create migrations in `contents/themes/{theme}/migrations/` instead (use sequence 1001+). Core is read-only.
+> create migrations in `migrations/` instead (use sequence 1001+). Core is read-only.
 > See `core-theme-responsibilities` skill for complete rules.
 
 ## When to Use This Skill

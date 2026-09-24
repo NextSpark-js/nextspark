@@ -29,7 +29,7 @@
  * for the one import (`@nextsparkjs/registries/docs-registry`) a real project
  * only has after its own registry build runs; diagnostics from anywhere else
  * (core's src/, the stub, imported .d.ts files) are deliberately filtered
- * out. A real generated project's app/, contents/, themes/ and plugins/ are
+ * out. A real generated project's root source, src/app/, and plugins/ are
  * not part of this program at all, so this test proves nothing about whether
  * a complete generated host type-checks -- only that these specific template
  * files, on their own, do not carry a diagnostic like TS18047 into every

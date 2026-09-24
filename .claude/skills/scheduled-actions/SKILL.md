@@ -23,7 +23,7 @@ Core Layer (core/lib/scheduled-actions/):
 ├── registry.ts         # Handler registration
 └── types.ts            # TypeScript interfaces
 
-Theme Layer (contents/themes/{theme}/lib/scheduled-actions/):
+Theme Layer (lib/scheduled-actions/):
 ├── index.ts            # Handler initialization + registerAllHandlers()
 ├── entity-hooks.ts     # Entity event → action mapping
 └── handlers/           # Handler implementations
@@ -31,7 +31,7 @@ Theme Layer (contents/themes/{theme}/lib/scheduled-actions/):
     ├── email.ts        # Email sender (if configured)
     └── {custom}.ts     # Custom handlers
 
-Configuration (contents/themes/{theme}/config/app.config.ts):
+Configuration (config/app.config.ts):
 └── scheduledActions: {
       enabled: true,
       deduplication: { windowSeconds: 10 },
@@ -43,7 +43,7 @@ Entity Event → Entity Hook → scheduleAction() → DB Table → Cron → Hand
 ```
 
 > **📍 Context-Aware Paths:** Core layer (`core/lib/scheduled-actions/`) is read-only in consumer projects.
-> Create handlers in `contents/themes/{theme}/lib/scheduled-actions/handlers/`.
+> Create handlers in `lib/scheduled-actions/handlers/`.
 > See `core-theme-responsibilities` skill for complete rules.
 
 ## Initialization Flow
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 ### Theme Registration Functions
 
 ```typescript
-// contents/themes/{theme}/lib/scheduled-actions/index.ts
+// lib/scheduled-actions/index.ts
 
 // Called by initializeScheduledActions() - registers handlers
 export function registerAllHandlers() {
@@ -169,16 +169,16 @@ export async function registerRecurringActions(): Promise<void> {
 | `core/lib/scheduled-actions/scheduler.ts` | `scheduleAction()`, `scheduleRecurringAction()` |
 | `core/lib/scheduled-actions/processor.ts` | Cron processing logic |
 | `core/lib/scheduled-actions/registry.ts` | Handler registration |
-| `contents/themes/{theme}/lib/scheduled-actions/index.ts` | Handler initialization |
-| `contents/themes/{theme}/lib/scheduled-actions/handlers/` | Handler implementations |
-| `contents/themes/{theme}/config/app.config.ts` | Configuration section |
+| `lib/scheduled-actions/index.ts` | Handler initialization |
+| `lib/scheduled-actions/handlers/` | Handler implementations |
+| `config/app.config.ts` | Configuration section |
 
 ## Creating Action Handlers
 
 ### Handler Template
 
 ```typescript
-// contents/themes/{theme}/lib/scheduled-actions/handlers/{name}.ts
+// lib/scheduled-actions/handlers/{name}.ts
 import { registerScheduledAction } from '@/core/lib/scheduled-actions'
 
 interface MyPayload {
@@ -212,7 +212,7 @@ export function registerMyHandler() {
 ### Registering Handler
 
 ```typescript
-// contents/themes/{theme}/lib/scheduled-actions/index.ts
+// lib/scheduled-actions/index.ts
 import { registerMyHandler } from './handlers/my-handler'
 
 let initialized = false
@@ -241,7 +241,7 @@ export function registerAllHandlers() {
 ### Entity Hook Pattern
 
 ```typescript
-// contents/themes/{theme}/lib/scheduled-actions/entity-hooks.ts
+// lib/scheduled-actions/entity-hooks.ts
 import { scheduleAction } from '@/core/lib/scheduled-actions'
 import { hookSystem } from '@/core/lib/hooks'
 
@@ -279,7 +279,7 @@ export function registerEntityHooks() {
 ### Webhook Configuration in app.config.ts
 
 ```typescript
-// contents/themes/{theme}/config/app.config.ts
+// config/app.config.ts
 export const appConfig = {
   // ... other config
 

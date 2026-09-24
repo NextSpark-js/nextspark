@@ -40,14 +40,14 @@ core/docs/
 └── 19-appendix/          # Reference materials
 
 Theme Documentation:
-contents/themes/{theme}/docs/
+docs/
 ├── 01-overview/
 ├── 02-configuration/
 ├── 03-customization/
 └── ...
 
 Plugin Documentation:
-contents/plugins/{plugin}/docs/
+plugins/{plugin}/docs/
 └── ...
 
 Development Rules:
@@ -189,7 +189,7 @@ Guidelines for Claude Code development.
 - [ ] [Verification item 2]
 ```
 
-### 3. Theme Documentation (contents/themes/{theme}/docs/)
+### 3. Theme Documentation (docs/)
 
 Theme-specific documentation.
 
@@ -472,7 +472,7 @@ if (userRequestsDocumentation) {
 const isActive = true
 
 # NEVER: Include auto-generated files in docs
-# core/lib/registries/*.ts - DO NOT DOCUMENT
+# .nextspark/registries/*.ts - DO NOT DOCUMENT
 
 # NEVER: Create documentation without explicit request
 # Only create when user asks

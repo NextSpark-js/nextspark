@@ -15,7 +15,7 @@ This document explains how to add documentation to themes and plugins, the addit
 Create a `docs/` directory within your theme:
 
 ```text
-contents/themes/my-theme/
+
 ├── config/                       # Configuration files
 │   ├── theme.config.ts
 │   └── app.config.ts
@@ -58,25 +58,23 @@ Examples:
 
 ### Build-Time Discovery
 
-Theme documentation is automatically discovered during build:
+Project documentation is automatically discovered during build:
 
 ```javascript
 // packages/core/scripts/build/registry/generators/docs-registry.mjs
-const theme = CONFIG.activeTheme || 'default'
-const themeDocsDir = path.join(THEMES_DIR, theme, 'docs')
+const projectDocsDir = path.join(CONFIG.projectSourceDir, 'docs')
 
 const publicDocs = scanDocsDirectory(
-  path.join(themeDocsDir, 'public'),
+  path.join(projectDocsDir, 'public'),
   'public'
 )
 ```
 
-`CONFIG.activeTheme` is `NEXT_PUBLIC_ACTIVE_THEME`. The registry build checks
-that variable before it generates anything and exits with an environment error
-when it is missing, so the `'default'` above is never used by a build.
+`CONFIG.projectSourceDir` is resolved by the shared project-path module from the
+nearest `nextspark.config.ts`.
 
 **Key Points:**
-- Only the **active theme's** documentation is included
+- Only the **project's** documentation is included
 - Automatic discovery (no manual registration)
 - Appears in the docs sidebar (no separate "Theme Documentation" category -
   it is the only thing the sidebar ever shows)
@@ -84,7 +82,7 @@ when it is missing, so the `'default'` above is never used by a build.
 
 ### Example Theme Documentation
 
-**File:** `contents/themes/my-theme/docs/01-overview/01-introduction.md`
+**File:** `docs/01-overview/01-introduction.md`
 
 ```markdown
 ---
@@ -123,7 +121,7 @@ with the rest of the monorepo.
 Create a `docs/` directory within your plugin:
 
 ```text
-contents/plugins/my-plugin/
+plugins/my-plugin/
 ├── plugin.config.ts
 ├── docs/                          ← Plugin documentation
 │   ├── 01-getting-started/
@@ -141,15 +139,15 @@ contents/plugins/my-plugin/
 ### Not Discovered at Build Time
 
 Unlike theme docs, a plugin's own `docs/` directory is **never scanned** by
-`docs-registry.mjs` - only `contents/themes/[ACTIVE_THEME]/docs/public/` and
+`docs-registry.mjs` - only `docs/public/` and
 `.../docs/superadmin/` are. Activating a plugin (adding it to
 `theme.config.ts`) has no effect on the docs registry: writing
-`contents/plugins/my-plugin/docs/01-getting-started/01-installation.md`
+`plugins/my-plugin/docs/01-getting-started/01-installation.md`
 keeps that file as source-tree reference material, not a served page - it
 has no route at all.
 
 If a plugin's documentation needs to reach an actual reader, write it into
-the active theme's own `docs/public/` (or `docs/superadmin/`) instead, where
+the project's own `docs/public/` (or `docs/superadmin/`) instead, where
 it will be scanned and served like any other theme page.
 
 ### Production Visibility
@@ -160,7 +158,7 @@ only knows the two categories that actually get served, `public` (`/docs`)
 and `superadmin` (`/superadmin/docs`):
 
 ```typescript
-// contents/themes/my-theme/config/app.config.ts
+// config/app.config.ts
 export const appConfig = {
   docs: {
     enabled: true,
@@ -198,7 +196,7 @@ today; see [What each property does today](./02-architecture.md#what-each-proper
 
 ### Example Plugin Documentation
 
-**File:** `contents/plugins/ai/docs/01-getting-started/01-installation.md`
+**File:** `plugins/ai/docs/01-getting-started/01-installation.md`
 
 ```markdown
 ---
@@ -216,14 +214,14 @@ Before installing, ensure you have:
 
 - API key from OpenAI
 - Node.js 22.14+
-- Active theme with plugin support
+- project with plugin support
 
 ## Installation
 
 1. Add plugin to your theme configuration:
 
 ```typescript
-// contents/themes/my-theme/config/theme.config.ts
+// config/theme.config.ts
 export const themeConfig = {
   plugins: ['ai']  // ← Add plugin
 }
@@ -252,14 +250,14 @@ See [Configuration](./02-configuration.md) for detailed setup options.
 ### Nothing to Merge
 
 There is no merge: `/docs` and `/superadmin/docs` each show exactly one
-source, the active theme's own `docs/public/` and `docs/superadmin/`. Core
+source, the project's own `docs/public/` and `docs/superadmin/`. Core
 docs and plugin docs are never scanned in the first place, so they cannot
 appear alongside a theme's docs, cannot override them, and there is no
 "additive" combination to reason about.
 
 ### Independent Sections
 
-The docs sidebar only ever shows the active theme's own sections - see
+The docs sidebar only ever shows the project's own sections - see
 [DocsSidebar](./02-architecture.md#docssidebar):
 
 ```text
@@ -401,9 +399,9 @@ its place; see [Who can read /docs](./02-architecture.md#who-can-read-docs).
 
 Rebuild the documentation registry when:
 
-- Adding new documentation files to the active theme's `docs/public/` or `docs/superadmin/`
+- Adding new documentation files to the project's `docs/public/` or `docs/superadmin/`
 - Renaming or reordering sections/pages
-- Changing active theme
+- Changing project
 - Modifying file/directory names
 
 Activating or deactivating a plugin does **not** affect the docs registry -
@@ -430,7 +428,7 @@ pnpm dev
 **Scenario:** Multi-tenant SaaS, `/docs` open to visitors
 
 **Strategy:** Write end-user customization and feature guides directly into
-the active theme's `docs/public/` (feature guides that happen to cover a
+the project's `docs/public/` (feature guides that happen to cover a
 plugin's functionality belong here too, since that is the only place
 they'll ever be read). Keep `docs.publicAccess: true` and `docs.public.enabled: true`.
 
@@ -480,16 +478,16 @@ Documentation
 **This is expected, not a bug.** Plugin docs are never scanned into the
 registry and have no route at any level (development or production) - see
 [Adding Plugin Documentation](#adding-plugin-documentation). To make a
-plugin's guide reachable, write it into the active theme's `docs/public/`
+plugin's guide reachable, write it into the project's `docs/public/`
 instead.
 
-### Wrong Theme Docs Showing
+### Wrong Project Docs Showing
 
-**Problem:** Seeing another theme's documentation
+**Problem:** Seeing documentation from another project root
 
 **Solution:**
-1. Check `NEXT_PUBLIC_ACTIVE_THEME` environment variable
-2. Verify theme name matches directory name
+1. Confirm the command is running under the intended `nextspark.config.ts`
+2. Verify the documents are under that project's `docs/` directory
 3. Rebuild registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 ## Next Steps

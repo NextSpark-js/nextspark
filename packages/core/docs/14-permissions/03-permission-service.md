@@ -296,7 +296,7 @@ The permission matrix is pre-computed at build time by `packages/core/scripts/bu
 
 ### Permission Sources (Single File)
 
-All permissions are defined in `contents/themes/[theme]/config/permissions.config.ts`:
+All permissions are defined in `config/permissions.config.ts`:
 
 ```typescript
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {

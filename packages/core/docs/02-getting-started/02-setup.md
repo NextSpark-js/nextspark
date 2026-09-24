@@ -61,10 +61,11 @@ ls node_modules | grep -E "(next|react|typescript|better-auth)"
 ```bash
 ls -la
 # Should see:
-# - app/
-# - contents/
-# - core/
-# - scripts/
+# - src/app/
+# - config/
+# - entities/
+# - plugins/
+# - templates/
 # - package.json
 # - tsconfig.json
 # - .env.local
@@ -76,7 +77,7 @@ After running `pnpm dev` for the first time, several artifacts should have been 
 
 **Registry files (auto-generated):**
 ```bash
-ls core/lib/registries/
+ls .nextspark/registries/
 # Should see:
 # - entity-registry.ts
 # - entity-registry.client.ts
@@ -88,8 +89,8 @@ ls core/lib/registries/
 
 **Theme CSS and served assets:**
 ```bash
-grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
-# Should print the active theme import
+grep -F 'styles/globals.css' apps/dev/src/app/globals.css
+# Should print the project import
 
 ls apps/dev/public/theme/
 # Should see app-served theme assets:
@@ -143,7 +144,6 @@ const requiredVars = [
   'BETTER_AUTH_SECRET',
   'BETTER_AUTH_URL',
   'NEXT_PUBLIC_APP_URL',
-  'NEXT_PUBLIC_ACTIVE_THEME',
   'RESEND_API_KEY'
 ];
 
@@ -161,7 +161,7 @@ if (missing.length > 0) {
 - ❌ DATABASE_URL using wrong port (:5432 instead of :6543 for Supabase pooler)
 - ❌ BETTER_AUTH_SECRET not set or too short
 - ❌ URLs with trailing slashes
-- ❌ NEXT_PUBLIC_ACTIVE_THEME not matching actual theme directory
+- ❌ running project commands outside the tree containing `nextspark.config.ts`
 
 ---
 
@@ -339,75 +339,23 @@ nextspark setup:ai
 
 ## 3. Understanding Your Project Structure
 
-### 3.1 Core vs Contents Separation
+### 3.1 Framework vs project source
 
-This is the **most important concept** to understand:
-
-**Core (`core/` directory):**
-```text
-core/
-├── components/        # Reusable UI components
-├── lib/              # Core business logic
-│   ├── registries/   # ⚠️ AUTO-GENERATED - NEVER EDIT
-│   ├── entities/     # Entity system
-│   ├── services/     # Database services
-│   └── utils/        # Utility functions
-└── types/            # TypeScript type definitions
-```
-
-**Rules for core/:**
-- ✅ **READ** from core/ in your code
-- ❌ **NEVER** edit files in `core/lib/registries/` (auto-generated)
-- ❌ **AVOID** editing core/ unless fixing bugs or adding features
-- ✅ Import from `@/core/lib/registries/` for content access
-
-**Contents (`contents/` directory):**
-```text
-contents/
-├── themes/
-│   └── default/           # YOUR ACTIVE THEME
-│       ├── config/        # ✅ Edit here: all config files
-│       │   ├── theme.config.ts
-│       │   └── app.config.ts
-│       ├── entities/      # ✅ Edit here: your entities
-│       ├── messages/      # ✅ Edit here: translations
-│       ├── public/        # ✅ Edit here: theme assets
-│       └── styles/        # ✅ Edit here: theme CSS
-└── plugins/
-    ├── ai/               # ✅ Edit here: plugin configs
-    └── ...
-```
-
-**Rules for contents/:**
-- ✅ **EDIT** files in contents/ for customization
-- ✅ **ADD** entities, plugins, themes here
-- ❌ **NEVER** import directly from `@/contents` in app code
-- ✅ Use registries to access contents at runtime
-
-**App (`app/` directory):**
-```text
-app/
-├── (public)/         # Public routes (no auth)
-├── (protected)/      # Protected routes (auth required)
-├── api/             # API routes
-├── globals.css      # Global styles
-└── layout.tsx       # Root layout
-```
-
-**Rules for app/:**
-- ✅ **CREATE** pages and routes here
-- ✅ **USE** components from core/
-- ✅ **ACCESS** content via registries
-- ❌ **NEVER** import from `@/contents` directly
+Installed `@nextsparkjs/*` packages provide framework code. The named root
+directories (`config/`, `entities/`, `plugins/`, `styles/`, `templates/`, and
+the other directories in the root-first contract) are project-owned source.
+`.nextspark/registries/` and `src/app/` are generated and must not be edited.
+Runtime application code consumes project contributions through generated
+registries rather than discovering source files dynamically.
 
 ### 3.2 Key Directories Deep Dive
 
-**`contents/themes/default/` - Your Active Theme:**
+**`` - Your project:**
 
 This is where **all your customization** happens:
 
 ```text
-contents/themes/default/
+
 ├── entities/
 │   └── tasks/              # Example entity
 │       ├── tasks.config.ts # Entity configuration
@@ -439,10 +387,10 @@ contents/themes/default/
     └── billing.config.ts  # Billing/plans
 ```
 
-**`contents/plugins/` - Plugin Ecosystem:**
+**`plugins/` - Plugin Ecosystem:**
 
 ```text
-contents/plugins/
+plugins/
 └── ai/                    # Example: AI plugin
     ├── plugin.config.ts   # Plugin metadata
     ├── api/              # Plugin API routes
@@ -470,10 +418,10 @@ core/components/
     └── ...
 ```
 
-**`core/lib/registries/` - Auto-Generated (⚠️ NEVER EDIT):**
+**`.nextspark/registries/` - Auto-Generated (⚠️ NEVER EDIT):**
 
 ```text
-core/lib/registries/
+.nextspark/registries/
 ├── entity-registry.ts           # ⚠️ AUTO-GENERATED
 ├── entity-registry.client.ts    # ⚠️ AUTO-GENERATED
 ├── plugin-registry.ts           # ⚠️ AUTO-GENERATED
@@ -489,7 +437,7 @@ core/lib/registries/
 
 **`theme.config.ts` - Theme Metadata:**
 ```typescript
-// contents/themes/default/config/theme.config.ts
+// config/theme.config.ts
 export const themeConfig = {
   id: 'default',
   name: 'Default Theme',
@@ -509,7 +457,7 @@ export const themeConfig = {
 
 **`app.config.ts` - Application Settings:**
 ```typescript
-// contents/themes/default/config/app.config.ts
+// config/app.config.ts
 export const appConfig = {
   name: 'My SaaS App',
   description: 'Built with NextSpark',
@@ -524,9 +472,9 @@ export const appConfig = {
 
 **`tsconfig.json` - TypeScript Configuration:**
 - Strict mode enabled
-- Path aliases configured (`@/*`, `@/core/*`, `@/contents/*`)
+- Path aliases configured (`@/*`, `@/plugins/*`, `@/app/*`, `@nextsparkjs/registries`)
 - Next.js plugin included
-- Auto-updated to exclude inactive themes
+- Auto-updated to exclude inprojects
 
 **`package.json` - Dependencies and Scripts:**
 - Dependencies: Next.js, React, TypeScript, Better Auth, etc.
@@ -684,16 +632,16 @@ With registries, everything is pre-compiled:
 BUILD TIME (once):
   packages/core/scripts/build/registry.mjs
     ↓
-  Scans contents/themes/default/entities/
-  Scans contents/plugins/*/entities/
+  Scans entities/
+  Scans plugins/*/entities/
   Scans core/lib/entities/core/
     ↓
   Generates static TypeScript files
     ↓
-  core/lib/registries/*.ts (16 files)
+  .nextspark/registries/*.ts (16 files)
 
 RUNTIME (every request):
-  import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+  import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
   const config = ENTITY_REGISTRY.tasks  // <1ms lookup
 ```
 
@@ -728,13 +676,13 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 **Verify registry files created:**
 ```bash
-ls -lh core/lib/registries/
+ls -lh .nextspark/registries/
 # Should see 16 .ts files, all recently modified
 ```
 
 **Check a registry file (DO NOT EDIT):**
 ```bash
-head -20 core/lib/registries/entity-registry.ts
+head -20 .nextspark/registries/entity-registry.ts
 # Should see auto-generated TypeScript code
 # ⚠️ WARNING at top: "AUTO-GENERATED - DO NOT EDIT"
 ```
@@ -751,14 +699,14 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 ```text
 🔍 Initial build completed
 👀 Watching for changes in:
-  - contents/themes/default/entities/
-  - contents/plugins/
+  - entities/
+  - plugins/
   - core/lib/entities/core/
 
 [waiting for changes...]
 
 # When you edit a file:
-📝 Change detected: contents/themes/default/entities/tasks/tasks.config.ts
+📝 Change detected: entities/tasks/tasks.config.ts
 🔄 Rebuilding registries... (1.2s)
 ✅ Registry rebuilt successfully
 ⚠️  RESTART DEV SERVER to apply changes
@@ -772,7 +720,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 **Workflow:**
 1. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch` in terminal 1
 2. Run `pnpm dev` in terminal 2
-3. Edit entity/plugin/theme files
+3. Edit project or plugin source files
 4. Registry rebuilds automatically
 5. See "⚠️ RESTART DEV SERVER" message
 6. Stop dev server (Ctrl+C in terminal 2)
@@ -781,22 +729,18 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 
 ---
 
-## 6. Theme Activation and Verification
+## 6. Project presentation verification
 
-### 6.1 Active Theme Setup
-
-**Verify the active theme setting:**
-```bash
-grep NEXT_PUBLIC_ACTIVE_THEME apps/dev/.env
-```
+### 6.1 Project setup
 
 **Check the monorepo theme and CSS import:**
 ```bash
-test -d themes/default
-grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
+test -f apps/dev/nextspark.config.ts
+test -d apps/dev/styles
+grep -F 'styles/globals.css' apps/dev/src/app/globals.css
 ```
 
-The root `pnpm dev` command starts Next.js only. Next.js compiles the stylesheet imported by `apps/dev/app/globals.css`; there is no separate theme-build process.
+The root `pnpm dev` command starts Next.js only. Next.js compiles the stylesheet imported by `apps/dev/src/app/globals.css`; there is no separate theme-build process.
 
 ### 6.2 Verify Theme Assets
 
@@ -835,7 +779,7 @@ getComputedStyle(document.documentElement).getPropertyValue('--color-primary')
 1. Go to Network tab
 2. Refresh page
 3. Inspect the loaded CSS chunks
-4. Check that the active theme variables are present
+4. Check that the project variables are present
 
 ---
 
@@ -986,7 +930,7 @@ dist/                 # Build artifacts
 ```bash
 git status
 # Should show clean working directory after initial commit
-# If you see core/lib/registries/ files, they should be committed
+# If you see .nextspark/registries/ files, they should be committed
 ```
 
 **Create feature branch:**
@@ -1005,9 +949,9 @@ git checkout -b feature/my-first-feature
 pnpm test:core
 ```
 
-**Run active-theme unit tests:**
+**Run project unit tests:**
 ```bash
-pnpm test:theme
+pnpm --dir apps/dev exec jest --watchman=false
 # Uses Jest
 # Tests: *.test.ts, *.test.tsx files
 ```
@@ -1110,12 +1054,12 @@ Each theme has its own Cypress config. If your theme doesn't have one, create it
 **Create theme Cypress config:**
 ```bash
 # Copy from default theme as template
-cp contents/themes/default/tests/cypress.config.ts contents/themes/YOUR_THEME/tests/
+cp tests/cypress.config.ts tests/
 ```
 
 **Run tests for specific theme:**
 ```bash
-NEXT_PUBLIC_ACTIVE_THEME=YOUR_THEME pnpm cy:run
+pnpm cy:run
 ```
 
 ### 8.5 Tag System
@@ -1140,7 +1084,7 @@ The build generates `testing-registry.ts` with all discovered tags organized by 
 {
   "scripts": {
     "test:core": "pnpm --filter @nextsparkjs/core test",
-    "test:theme": "node packages/core/scripts/test/jest-theme.mjs",
+    "test:project": "pnpm --dir apps/dev exec jest --watchman=false",
     "cy:run": "node packages/core/scripts/test/cy.mjs run",
     "cy:open": "node packages/core/scripts/test/cy.mjs open"
   }
@@ -1151,7 +1095,7 @@ The build generates `testing-registry.ts` with all discovered tags organized by 
 1. `pnpm --dir apps/dev exec tsc --noEmit` (application TypeScript errors)
 2. `pnpm lint` (ESLint errors)
 3. `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (Registry build with tag validation)
-4. `pnpm test:core` and `pnpm test:theme` (unit tests)
+4. `pnpm test:core` and `pnpm --dir apps/dev exec jest --watchman=false` (unit tests)
 5. `pnpm cy:run` (E2E tests)
 6. `pnpm build` (Production build)
 
@@ -1167,11 +1111,11 @@ Go through this checklist to verify everything is set up correctly:
 - [ ] Node.js 22.14+ installed (`node -v`)
 - [ ] pnpm 9.0.0 installed (`pnpm -v`)
 - [ ] Dependencies installed (800+ packages in node_modules/)
-- [ ] Project structure created (app/, core/, contents/, scripts/)
+- [ ] Root-first project structure created (`src/app/`, `config/`, `entities/`, `plugins/`, `templates/`)
 
 ### Build Artifacts
-- [ ] Registry files generated (16 files in core/lib/registries/)
-- [ ] `apps/dev/app/globals.css` imports the active theme stylesheet
+- [ ] Registry files generated (16 files in .nextspark/registries/)
+- [ ] `apps/dev/src/app/globals.css` imports the project stylesheet
 - [ ] App-served theme assets exist under `apps/dev/public/theme/`
 - [ ] Next.js cache created (.next/ directory exists)
 
@@ -1186,7 +1130,6 @@ Go through this checklist to verify everything is set up correctly:
 - [ ] All required environment variables set
 - [ ] DATABASE_URL uses pooler connection (:6543)
 - [ ] BETTER_AUTH_SECRET is set (32+ characters)
-- [ ] NEXT_PUBLIC_ACTIVE_THEME="default"
 
 ### Database
 - [ ] Better Auth table metadata inspected with `cd apps/dev && node ../../packages/core/scripts/db/verify-tables.mjs`
@@ -1207,9 +1150,8 @@ Go through this checklist to verify everything is set up correctly:
 - [ ] Understand registry rebuild requires server restart
 
 ### Theme
-- [ ] Active theme set (NEXT_PUBLIC_ACTIVE_THEME="default")
-- [ ] Theme directory exists (`themes/default/`)
-- [ ] `apps/dev/app/globals.css` imports the active theme stylesheet
+- [ ] Theme directory exists (``)
+- [ ] `apps/dev/src/app/globals.css` imports the project stylesheet
 - [ ] Theme assets are present under `apps/dev/public/theme/`
 - [ ] CSS variables applied in browser (check DevTools)
 
@@ -1221,12 +1163,12 @@ Go through this checklist to verify everything is set up correctly:
 - [ ] Feature branch created (optional)
 
 ### Testing
-- [ ] Core and active-theme unit tests run (`pnpm test:core` and `pnpm test:theme` pass)
+- [ ] Core and project unit tests run (`pnpm test:core` and `pnpm --dir apps/dev exec jest --watchman=false` pass)
 - [ ] E2E tests run (`pnpm cy:run` passes)
 - [ ] Test coverage acceptable (80%+ overall)
 - [ ] Cypress opens (`pnpm cy:open` works)
 - [ ] CI workflows installed (`pnpm setup:ci` run)
-- [ ] Theme Cypress config exists (contents/themes/{theme}/tests/cypress.config.ts)
+- [ ] Theme Cypress config exists (tests/cypress.config.ts)
 - [ ] Tag registry created (optional, for tag validation)
 
 ### Success Criteria
@@ -1315,7 +1257,7 @@ kill "$pid"
 
 **Error:**
 ```text
-Error: Cannot find module '@/contents/themes/default/entities/tasks/tasks.config'
+Error: Cannot find module '@/entities/tasks/tasks.config'
 ```
 
 **Solution:**
@@ -1340,8 +1282,8 @@ pnpm dev
 **Solution:**
 ```bash
 # Verify the theme and its app import exist
-test -f themes/default/styles/globals.css
-grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
+test -f styles/globals.css
+grep -F 'styles/globals.css' apps/dev/src/app/globals.css
 
 # Restart dev server
 pnpm dev
@@ -1407,7 +1349,7 @@ pnpm test:core -- path/to/test.test.ts
 **What we accomplished:**
 - ✅ Verified installation successful
 - ✅ Configured development tools (VS Code, debugging, git hooks)
-- ✅ Understood project structure (core vs contents separation)
+- ✅ Understood framework versus project-source ownership
 - ✅ Verified database connection and seeded data
 - ✅ Learned registry system (17,255x performance improvement)
 - ✅ Activated and verified theme
@@ -1418,7 +1360,7 @@ pnpm test:core -- path/to/test.test.ts
 - ✅ Completed verification checklist
 
 **Key concepts learned:**
-- **Core vs Contents:** Never edit registries, customize in contents/
+- **Ownership:** Never edit generated registries; customize project-owned root directories
 - **Registry System:** Build-time generation for ultra-fast runtime
 - **Theme System:** CSS compilation + asset copying
 - **Testing Architecture:** Core provides infrastructure, themes provide specs

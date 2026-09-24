@@ -83,7 +83,7 @@ IMPORT RULES:
 const context = await Read('.claude/config/context.json')
 
 if (context.context === 'monorepo') {
-  // Full access to core/, themes/, plugins/
+  // Full access to packages/core/, project templates, apps/dev/, and plugins/
   // You ARE developing the NextSpark framework
 } else if (context.context === 'consumer') {
   // Core is READ-ONLY (installed via npm)
@@ -111,9 +111,9 @@ if (context.context === 'monorepo') {
 ├─────────────────────────────────────────────────────────────────┤
 │  • context.json: { "context": "consumer" }                     │
 │  • Core is READ-ONLY (in node_modules/)                        │
-│  • CAN ONLY create in active theme and plugins                 │
+│  • CAN ONLY create in project and plugins                 │
 │  • Focus: Project-specific features                            │
-│  • Examples: contents/themes/{theme}/services/                 │
+│  • Examples: services/                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -123,12 +123,12 @@ When a skill or pattern shows a `core/` path, translate based on context:
 
 | Pattern Shows | Monorepo Creates In | Consumer Creates In |
 |---------------|--------------------|--------------------|
-| `core/lib/services/` | `core/lib/services/` | `contents/themes/{theme}/services/` |
-| `core/migrations/` | `core/migrations/` | `contents/themes/{theme}/migrations/` |
-| `core/entities/` | `core/entities/` | `contents/themes/{theme}/entities/` |
-| `core/components/` | `core/components/` | `contents/themes/{theme}/components/` |
-| `core/hooks/` | `core/hooks/` | `contents/themes/{theme}/hooks/` |
-| `core/lib/` | `core/lib/` | `contents/themes/{theme}/lib/` |
+| `core/lib/services/` | `core/lib/services/` | `services/` |
+| `core/migrations/` | `core/migrations/` | `migrations/` |
+| `core/entities/` | `core/entities/` | `entities/` |
+| `core/components/` | `core/components/` | `components/` |
+| `core/hooks/` | `core/hooks/` | `hooks/` |
+| `core/lib/` | `core/lib/` | `lib/` |
 
 ### Consumer Context Rules
 
@@ -198,19 +198,19 @@ Document this and either:
 
 ```typescript
 // ❌ INCORRECT - Initialization in Theme
-// contents/themes/default/scheduled-actions/init.ts
+// scheduled-actions/init.ts
 export function initializeScheduledActions() {
   const actions = loadThemeActions()
   actions.forEach(action => schedule(action))
 }
 
 // core/lib/startup.ts
-import { initializeScheduledActions } from '@/contents/themes/default/...'
+import { initializeScheduledActions } from '@/...'
 // ^^^ PROHIBITED - Core cannot import from Theme
 
 // ✅ CORRECT - Initialization in Core
 // core/lib/scheduled-actions/init.ts
-import { SCHEDULED_ACTIONS_REGISTRY } from '@/core/lib/registries'
+import { SCHEDULED_ACTIONS_REGISTRY } from '@nextsparkjs/registries'
 
 export function initializeScheduledActions() {
   // Core reads from registry (data-only)
@@ -218,7 +218,7 @@ export function initializeScheduledActions() {
   actions.forEach(action => scheduleAction(action))
 }
 
-// contents/themes/default/config/scheduled-actions.ts
+// config/scheduled-actions.ts
 export const THEME_SCHEDULED_ACTIONS = [
   { slug: 'daily-report', cron: '0 9 * * *' }
 ]
@@ -248,7 +248,7 @@ export const HANDLERS_REGISTRY = {
 
 // Service (logic)
 // core/lib/services/handler.service.ts
-import { HANDLER_IMPLEMENTATIONS } from '@/core/lib/registries/handler-implementations'
+import { HANDLER_IMPLEMENTATIONS } from '@nextsparkjs/registries/handler-implementations'
 
 export class HandlerService {
   static async execute(slug: string, data: unknown) {
@@ -263,7 +263,7 @@ export class HandlerService {
 ```typescript
 // ❌ INCORRECT - Core importing from Theme
 // core/lib/billing/plans.ts
-import { CUSTOM_PLANS } from '@/contents/themes/default/config/plans'
+import { CUSTOM_PLANS } from '@/config/plans'
 
 export function getPlan(slug: string) {
   return PLANS[slug] || CUSTOM_PLANS[slug]
@@ -271,7 +271,7 @@ export function getPlan(slug: string) {
 
 // ✅ CORRECT - Core reads from unified registry
 // core/lib/billing/plans.ts
-import { BILLING_REGISTRY } from '@/core/lib/registries/billing-registry'
+import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 
 export function getPlan(slug: string) {
   return BILLING_REGISTRY.plans[slug]
@@ -284,7 +284,7 @@ export function getPlan(slug: string) {
 
 ```typescript
 // ❌ INCORRECT - Theme processing data
-// contents/themes/default/lib/scheduled-actions/processor.ts
+// lib/scheduled-actions/processor.ts
 export async function processScheduledActions() {
   const actions = await db.query.scheduledActions.findMany()
   for (const action of actions) {
@@ -301,7 +301,7 @@ export async function processScheduledActions() {
   }
 }
 
-// contents/themes/default/config/scheduled-actions.ts (THEME - data only)
+// config/scheduled-actions.ts (THEME - data only)
 export const themeScheduledActions = {
   'cleanup-expired': { cron: '0 0 * * *', enabled: true }
 }
@@ -323,7 +323,7 @@ export interface HookDefinition {
 }
 
 // core/lib/hooks/service.ts
-import { HOOKS_REGISTRY } from '@/core/lib/registries/hooks-registry'
+import { HOOKS_REGISTRY } from '@nextsparkjs/registries/hooks-registry'
 
 export class HooksService {
   static trigger(event: string, data: unknown) {
@@ -339,13 +339,13 @@ export class HooksService {
 }
 
 // 2. Theme registers hooks (DATA)
-// contents/themes/default/config/hooks.ts
+// config/hooks.ts
 export const THEME_HOOKS: HookDefinition[] = [
   { slug: 'log-user-login', event: 'user.login', priority: 10 }
 ]
 
 // 3. Theme provides handlers (registered via registry)
-// contents/themes/default/handlers/hooks/log-user-login.ts
+// handlers/hooks/log-user-login.ts
 export const logUserLoginHandler = async (data: UserLoginEvent) => {
   console.log(`User logged in: ${data.userId}`)
 }
@@ -359,7 +359,7 @@ export const logUserLoginHandler = async (data: UserLoginEvent) => {
 
 // 1. Core defines the feature with defaults
 // core/lib/features/notifications.ts
-import { NOTIFICATIONS_CONFIG_REGISTRY } from '@/core/lib/registries'
+import { NOTIFICATIONS_CONFIG_REGISTRY } from '@nextsparkjs/registries'
 
 const DEFAULT_CONFIG = {
   emailEnabled: true,
@@ -376,7 +376,7 @@ export function getNotificationConfig() {
 }
 
 // 2. Theme provides specific configuration
-// contents/themes/default/config/notifications.ts
+// config/notifications.ts
 export const themeNotificationsConfig = {
   pushEnabled: true,
   channels: ['email', 'push', 'sms']
@@ -389,7 +389,7 @@ export const themeNotificationsConfig = {
 // PATTERN: Theme provides handlers, Core executes them
 
 // 1. Theme defines handlers (functions, but registered)
-// contents/themes/default/handlers/scheduled/send-daily-report.ts
+// handlers/scheduled/send-daily-report.ts
 import type { ScheduledHandler } from '@/core/lib/scheduled-actions/types'
 
 export const sendDailyReportHandler: ScheduledHandler = async (context) => {
@@ -400,8 +400,8 @@ export const sendDailyReportHandler: ScheduledHandler = async (context) => {
 }
 
 // 2. Build script generates implementations registry
-// core/lib/registries/scheduled-handler-implementations.ts (AUTO-GENERATED)
-import { sendDailyReportHandler } from '@/contents/themes/default/handlers/scheduled/send-daily-report'
+// .nextspark/registries/scheduled-handler-implementations.ts (AUTO-GENERATED)
+import { sendDailyReportHandler } from '@/handlers/scheduled/send-daily-report'
 
 export const SCHEDULED_HANDLER_IMPLEMENTATIONS = {
   'send-daily-report': sendDailyReportHandler
@@ -409,7 +409,7 @@ export const SCHEDULED_HANDLER_IMPLEMENTATIONS = {
 
 // 3. Core executes handlers from registry
 // core/lib/scheduled-actions/executor.ts
-import { SCHEDULED_HANDLER_IMPLEMENTATIONS } from '@/core/lib/registries'
+import { SCHEDULED_HANDLER_IMPLEMENTATIONS } from '@nextsparkjs/registries'
 
 export async function executeScheduledAction(action: ScheduledAction) {
   const handler = SCHEDULED_HANDLER_IMPLEMENTATIONS[action.handlerSlug]
@@ -474,7 +474,7 @@ Before finalizing any architectural plan:
 - [ ] Orchestration is in Core
 - [ ] Registries are DATA-ONLY
 - [ ] Theme/Plugin only provide configuration and registered handlers
-- [ ] Build script is the only one that imports from contents/
+- [ ] Runtime code imports generated registries rather than scanning project source
 
 ## Related Skills
 

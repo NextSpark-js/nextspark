@@ -20,9 +20,9 @@ Patterns for developing plugins in this Next.js application.
 | Context | Plugin Location | Reason |
 |---------|-----------------|--------|
 | **Monorepo** (development) | `plugins/<plugin-name>/` | Workspace package |
-| **Consumer project** | `contents/plugins/<plugin-name>/` | Copied by CLI (not node_modules) |
+| **Consumer project** | `plugins/<plugin-name>/` | Copied by CLI (not node_modules) |
 
-> **CRITICAL**: NPM packages are for DISTRIBUTION. In consumer projects, code is COPIED to `/contents/plugins/`, NOT kept in `node_modules`.
+> **CRITICAL**: NPM packages are for DISTRIBUTION. In consumer projects, code is COPIED to `/plugins/`, NOT kept in `node_modules`.
 
 ```
 Plugin Structure (Monorepo):
@@ -182,7 +182,7 @@ export default myPluginConfig
 Use the core's centralized env-loader for automatic plugin `.env` loading:
 
 ```typescript
-// contents/plugins/my-plugin/lib/plugin-env.ts
+// plugins/my-plugin/lib/plugin-env.ts
 import { getPluginEnv } from '@nextsparkjs/core/lib/plugins/env-loader'
 
 const env = getPluginEnv('my-plugin')
@@ -192,7 +192,7 @@ const enabled = env.MY_PLUGIN_ENABLED === 'true'
 
 ### Priority System
 
-1. **Plugin `.env`** (`contents/plugins/my-plugin/.env`) - Highest priority
+1. **Plugin `.env`** (`plugins/my-plugin/.env`) - Highest priority
 2. **Root `.env`** (project root) - Fallback
 3. **Built-in defaults** - Lowest priority
 
@@ -206,7 +206,7 @@ const enabled = env.MY_PLUGIN_ENABLED === 'true'
 - All plugin-specific variables MUST use `MY_PLUGIN_*` namespace
 
 ```bash
-# contents/plugins/my-plugin/.env.example
+# plugins/my-plugin/.env.example
 # Plugin-specific configuration
 MY_PLUGIN_ENABLED=true
 MY_PLUGIN_DEBUG=false
@@ -228,7 +228,7 @@ MY_PLUGIN_TIMEOUT=5000
 ### Auto-Generated Registry
 
 ```typescript
-// core/lib/registries/plugin-registry.ts (AUTO-GENERATED)
+// .nextspark/registries/plugin-registry.ts (AUTO-GENERATED)
 export const PLUGIN_REGISTRY: Record<string, PluginRegistryEntry> = {
   'my-plugin': {
     name: 'my-plugin',

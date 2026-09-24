@@ -29,11 +29,7 @@ export async function discoverParentChildRelations(config = DEFAULT_CONFIG) {
   const childTypeMappings = new Map()
 
   // Scan all discovered entities to find parent-child patterns in filesystem
-  const scanDirs = [
-    config.themesDir,
-    config.pluginsDir,
-    join(config.contentsDir, 'entities')
-  ]
+  const scanDirs = [join(config.projectSourceDir, 'entities'), config.pluginsDir]
 
   for (const baseDir of scanDirs) {
     if (!existsSync(baseDir)) continue
@@ -81,7 +77,7 @@ export async function scanForParentChildPatterns(baseDir, discoveredParents, chi
         // Continue even if child discovery fails
       }
     } else {
-      // Recursively scan subdirectories (for themes/plugins/etc)
+      // Recursively scan nested project/plugin entity directories.
       try {
         await scanForParentChildPatterns(entityPath, discoveredParents, childTypeMappings)
       } catch (error) {

@@ -181,7 +181,7 @@ Foundation phases set up the infrastructure: themes, plugins, and database.
 6. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 **Outputs:**
-- Complete plugin structure in `contents/plugins/{name}/`
+- Complete plugin structure in `plugins/{name}/`
 - Plugin registered in `plugin-sandbox`
 
 ---
@@ -201,7 +201,7 @@ Foundation phases set up the infrastructure: themes, plugins, and database.
 6. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 **Outputs:**
-- Complete theme structure in `contents/themes/{name}/`
+- Complete theme structure in ``
 - Theme registered in `THEME_REGISTRY`
 
 ---
@@ -385,7 +385,7 @@ Page builder block development phase.
 **Status:** SKIP if no blocks needed
 
 **Responsibilities:**
-1. Determine active theme
+1. Determine project
 2. Analyze existing blocks for patterns
 3. Create block files:
    - `config.ts` - Block configuration
@@ -398,7 +398,7 @@ Page builder block development phase.
 6. Test block in page builder
 
 **Outputs:**
-- Complete block in `contents/themes/{theme}/blocks/{name}/`
+- Complete block in `blocks/{name}/`
 - Block registered in registry
 
 ---
@@ -572,7 +572,7 @@ Final phases for review, testing, and documentation.
 // BLOCKS if temporary tags found
 const remainingTags = await Grep({
   pattern: '@in-develop|@scope-',
-  path: 'contents/themes/',
+  path: './',
   glob: '*.cy.ts'
 })
 

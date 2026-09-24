@@ -6,7 +6,7 @@ module.exports = {
   testMatch: ['**/*.test.ts', '**/*.test.tsx'],
   testPathIgnorePatterns: [
     '/node_modules/',
-    // Tests that require generated project files (@/app, @/contents)
+    // Tests that require generated or project-owned files (@/app, @/plugins)
     'tests/jest/api/ai-generate.test.ts',
     'tests/jest/lib/ai-sanitize.test.ts',
     // Tests that require @testing-library/user-event (not installed)
@@ -40,7 +40,7 @@ module.exports = {
     '^@/core/(.*)$': '<rootDir>/src/$1',
     '^@/core$': '<rootDir>/src',
     // apps/dev routes and pages (the source of a generated project's app/)
-    '^@/app/(.*)$': '<rootDir>/../../apps/dev/app/$1',
+    '^@/app/(.*)$': '<rootDir>/../../apps/dev/src/app/$1',
     '^@nextsparkjs/registries/template-scopes/client/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/template-scopes/client.ts',
     '^@nextsparkjs/registries/template-scopes/server/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/template-scopes/server.ts',
     '^@nextsparkjs/registries/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/$1',

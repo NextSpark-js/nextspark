@@ -8,9 +8,9 @@ The documentation system architecture is built around **build-time registry gene
 
 ## Architecture Overview
 
-Only the **active theme's** own docs are scanned, built, or served. Core's
+Only the **project's** own docs are scanned, built, or served. Core's
 own `core/docs/` (this directory tree) and any plugin's
-`contents/plugins/[plugin]/docs/` are conventions for organizing reference
+`plugins/[plugin]/docs/` are conventions for organizing reference
 material in the source tree - the build never reads them and no route ever
 serves them.
 
@@ -21,8 +21,8 @@ serves them.
 │                                                               │
 │  1. core/scripts/build/registry/generators/docs-registry.mjs│
 │     │                                                         │
-│     ├─> Scan contents/themes/[ACTIVE_THEME]/docs/public/    │
-│     └─> Scan contents/themes/[ACTIVE_THEME]/docs/superadmin/│
+│     ├─> Scan docs/public/    │
+│     └─> Scan docs/superadmin/│
 │                                                               │
 │  2. Extract Metadata                                         │
 │     │                                                         │
@@ -69,7 +69,7 @@ serves them.
 
 **Location:** `core/scripts/build/registry/generators/docs-registry.mjs`, invoked by `core/scripts/build/registry.mjs` alongside every other registry
 
-**Purpose:** Scans the active theme's `docs/public/` and `docs/superadmin/` directories and generates a static registry
+**Purpose:** Scans the project's `docs/public/` and `docs/superadmin/` directories and generates a static registry
 
 **Execution:**
 ```bash
@@ -85,7 +85,7 @@ In a generated project, `pnpm dev` and `pnpm build` (`nextspark dev` and
 
 **1. Directory Scanning:**
 ```typescript
-// Scans docs/public/ and docs/superadmin/ of the active theme
+// Scans docs/public/ and docs/superadmin/ of the project
 scanDocsDirectory(docsPath, source) {
   - Read all subdirectories (sections)
   - Extract order from directory name (01-fundamentals)
@@ -102,7 +102,7 @@ scanDocsDirectory(docsPath, source) {
   slug: "directory-structure",
   title: "Directory Structure",  // Auto-generated from slug
   order: 3,                       // From numeric prefix
-  path: "../../themes/default/docs/public/01-overview/03-directory-structure.md",
+  path: "../../docs/public/01-overview/03-directory-structure.md",
   source: "public"
 }
 ```
@@ -110,8 +110,8 @@ scanDocsDirectory(docsPath, source) {
 **3. Registry Shape:**
 ```typescript
 const registry = {
-  public: scanDocsDirectory('contents/themes/default/docs/public/', 'public'),
-  superadmin: scanDocsDirectory('contents/themes/default/docs/superadmin/', 'superadmin'),
+  public: scanDocsDirectory('docs/public/', 'public'),
+  superadmin: scanDocsDirectory('docs/superadmin/', 'superadmin'),
   all: [...public, ...superadmin].sort(by order)
 }
 ```
@@ -126,17 +126,17 @@ export const DOCS_REGISTRY: DocsRegistryStructure = {
 } as const
 ```
 
-### Active Theme Detection
+### Project detection
 
-The build script reads the active theme from the required environment variable:
+The build script resolves the nearest project root:
 
 ```javascript
-const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME?.replace(/'/g, '')
+const projectRoot = findProjectRoot(process.cwd())
 ```
 
-`validateEnvironment()` rejects a missing or empty `NEXT_PUBLIC_ACTIVE_THEME`.
+Project resolution rejects a directory tree with no `nextspark.config.ts` or no declared `next` dependency.
 `buildRegistries()` prints the validation errors and exits with code `1` before
-writing registry files. Only the selected theme's documentation is included in
+writing registry files. Only that project's documentation is included in
 the registry. Core's own docs and any plugin's docs are never scanned - see
 [Core vs Theme Documentation](./03-core-vs-theme-docs.md) for what that
 means for cross-referencing between them.
@@ -154,14 +154,14 @@ export const appConfig = {
     searchEnabled: true,
     breadcrumbs: true,
 
-    // Sidebar settings of /docs - the active theme's docs/public/
+    // Sidebar settings of /docs - the project's docs/public/
     public: {
       enabled: true,           // false: the /docs sidebar renders nothing
       open: true,
       label: "Documentation",  // Heading of the /docs sidebar
     },
 
-    // /superadmin/docs - the active theme's docs/superadmin/
+    // /superadmin/docs - the project's docs/superadmin/
     superadmin: {
       enabled: true,
       open: false,
@@ -212,8 +212,8 @@ migrate, write `publicAccess: false` and turn `public` into its
 ### URL Structure
 
 ```text
-/docs/[section]/[page]              → active theme's docs/public/
-/superadmin/docs/[section]/[page]   → active theme's docs/superadmin/
+/docs/[section]/[page]              → project's docs/public/
+/superadmin/docs/[section]/[page]   → project's docs/superadmin/
 
 Example:
 /docs/overview/introduction
@@ -277,7 +277,7 @@ return (
 **File:** `core/components/docs/docs-sidebar.tsx`
 
 **Responsibilities:**
-- Renders a collapsible navigation tree of the active theme's own sections
+- Renders a collapsible navigation tree of the project's own sections
   (no categories - only public documentation is shown, per the component's
   own docstring: "Only shows public documentation (no plugins, no
   categories)")
@@ -383,16 +383,16 @@ The docs system integrates with the core registry architecture:
 
 ### Theme System
 
-The active theme's own docs are automatically discovered - and are the only
+The project's own docs are automatically discovered - and are the only
 docs served at all:
 
-- **Location:** `contents/themes/[ACTIVE_THEME]/docs/public/` and `docs/superadmin/`
-- **Detection:** Via `NEXT_PUBLIC_ACTIVE_THEME` environment variable
+- **Location:** `docs/public/` and `docs/superadmin/`
+- **Detection:** Root-level `docs/public/` and `docs/superadmin/` under the discovered project
 - **Access and sidebar:** `docs.publicAccess`, `docs.public.enabled` and `docs.public.label` - see [Documentation Configuration](#documentation-configuration)
 
 ### Core and Plugin Docs
 
-`core/docs/` (this tree) and any `contents/plugins/[plugin]/docs/` are never
+`core/docs/` (this tree) and any `plugins/[plugin]/docs/` are never
 scanned by the registry builder and have no route - see
 [Core vs Theme Documentation](./03-core-vs-theme-docs.md) for what that means
 in practice.

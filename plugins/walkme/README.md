@@ -14,14 +14,14 @@ pnpm add @nextsparkjs/plugin-walkme
 
 ### Manual
 
-Copy the `plugins/walkme/` directory to `contents/plugins/walkme/` in your NextSpark project.
+Copy the `plugins/walkme/` directory to `plugins/walkme/` in your NextSpark project.
 
 ### Register the plugin
 
 Add `'walkme'` to your theme configuration:
 
 ```typescript
-// contents/themes/<your-theme>/config/theme.config.ts
+// config/theme.config.ts
 export const themeConfig: ThemeConfig = {
   plugins: ['walkme'],
 }

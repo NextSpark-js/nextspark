@@ -243,12 +243,12 @@ git log --oneline -10
 git diff HEAD~5..HEAD --stat
 
 # Get detailed changes for key files (if needed)
-git diff HEAD~5..HEAD core/ contents/plugins/ contents/themes/
+git diff HEAD~5..HEAD core/ plugins/ ./
 ```
 
 Analyze:
 - Number of commits
-- Files changed (core/, plugins/, themes/, docs/)
+- Files changed (packages/, plugins/, project templates, docs/)
 - Nature of changes (new files, modifications, deletions)
 - Commit messages for clues about change type
 
@@ -301,7 +301,7 @@ Changes Detected:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Category 1: NEW FEATURES]
-  ✓ Added email plugin (contents/plugins/email/)
+  ✓ Added email plugin (plugins/email/)
   ✓ New API endpoints: /api/v1/email/*
   ✓ Email templates and components
 
@@ -526,7 +526,7 @@ Session found: .claude/sessions/email-plugin/
 
 From plan_[feature].md:
   - Goal: Add new email plugin with SendGrid integration
-  - New plugin structure in contents/plugins/email/
+  - New plugin structure in plugins/email/
   - New API endpoints for sending emails
   
 From progress_[feature].md:
@@ -574,7 +574,7 @@ Analysis: This is a NEW FEATURE → MINOR version bump
 
 **Analysis:**
 - Session: email-plugin
-- Files: New plugin in contents/plugins/email/
+- Files: New plugin in plugins/email/
 - Commits: "feat: add email plugin", "feat: add email API"
 - No breaking changes
 
@@ -631,4 +631,3 @@ Analysis: This is a NEW FEATURE → MINOR version bump
 - Respect user overrides and expertise
 - Document your reasoning clearly
 - Verify success at every step
-

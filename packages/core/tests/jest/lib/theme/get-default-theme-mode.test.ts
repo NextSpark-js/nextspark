@@ -8,6 +8,8 @@ const mockGetByName = jest.fn<(name: string) => unknown>()
 const mockGetAppConfig = jest.fn<(name: string) => unknown>()
 jest.mock('@/core/lib/services/theme.service', () => ({
   ThemeService: {
+    getCurrent: () => mockGetByName('project'),
+    getCurrentAppConfig: () => mockGetAppConfig('project'),
     getByName: (name: string) => mockGetByName(name),
     getAppConfig: (name: string) => mockGetAppConfig(name),
   },

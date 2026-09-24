@@ -78,14 +78,14 @@ You are the Architecture Supervisor, an elite software architect specializing in
 
 ```typescript
 // ❌ WRONG - Agents placed initialization in theme
-// contents/themes/default/scheduled-actions/init.ts
+// scheduled-actions/init.ts
 export function initializeScheduledActions() {
   // Registers and processes actions
 }
 
 // Problem: How does Core call this function?
 // core/lib/startup.ts
-import { initializeScheduledActions } from '@/contents/themes/default/...'  // ❌ FORBIDDEN
+import { initializeScheduledActions } from '@/...'  // ❌ FORBIDDEN
 ```
 
 **THE CORRECT WAY:**
@@ -93,7 +93,7 @@ import { initializeScheduledActions } from '@/contents/themes/default/...'  // �
 ```typescript
 // ✅ CORRECT - Core provides orchestration
 // core/lib/scheduled-actions/init.ts
-import { SCHEDULED_ACTIONS_REGISTRY } from '@/core/lib/registries/scheduled-actions-registry'
+import { SCHEDULED_ACTIONS_REGISTRY } from '@nextsparkjs/registries/scheduled-actions-registry'
 
 export function initializeScheduledActions() {
   // Reads actions from registry (DATA-ONLY)
@@ -103,7 +103,7 @@ export function initializeScheduledActions() {
 }
 
 // ✅ CORRECT - Theme provides ONLY data
-// contents/themes/default/config/scheduled-actions.ts
+// config/scheduled-actions.ts
 export const themeScheduledActions = {
   actions: [
     { slug: 'send-reminder', cron: '0 9 * * *' },
@@ -169,7 +169,7 @@ export interface ScheduledAction {
 }
 
 // core/lib/scheduled-actions/service.ts
-import { SCHEDULED_ACTIONS_REGISTRY } from '@/core/lib/registries/scheduled-actions-registry'
+import { SCHEDULED_ACTIONS_REGISTRY } from '@nextsparkjs/registries/scheduled-actions-registry'
 
 export class ScheduledActionsService {
   static initialize() {
@@ -185,14 +185,14 @@ export class ScheduledActionsService {
 }
 
 // 2. Theme provides ONLY configuration (data-only)
-// contents/themes/default/config/scheduled-actions.ts
+// config/scheduled-actions.ts
 export const THEME_SCHEDULED_ACTIONS: ScheduledAction[] = [
   { slug: 'daily-report', cron: '0 9 * * *', handler: 'send-daily-report' },
 ]
 // This is imported by build script → generates registry
 
 // 3. Theme can provide handlers (but registered, not executed directly)
-// contents/themes/default/handlers/scheduled/send-daily-report.ts
+// handlers/scheduled/send-daily-report.ts
 export const sendDailyReportHandler = async () => {
   // Implementation
 }
@@ -243,7 +243,7 @@ Consult these for comprehensive system understanding:
 await Read('core/docs/01-introduction/02-architecture.md')
 
 // Core/Plugin/Theme architecture
-await Read('core/docs/11-themes/01-theme-overview.md')
+await Read('packages/core/docs/07-theme-system/01-introduction.md')
 await Read('core/docs/13-plugins/01-plugin-overview.md')
 
 // Entity system (CRITICAL for planning)
@@ -277,7 +277,7 @@ await Read('core/docs/18-page-builder/01-introduction.md')
 
 **CRITICAL: When planning entity features, reference the presets.**
 
-Location: `core/templates/contents/themes/starter/entities/tasks/`
+Location: `core/templates/entities/tasks/`
 
 ### Required Files (4-File Structure)
 
@@ -299,7 +299,7 @@ Location: `core/templates/contents/themes/starter/entities/tasks/`
 **Include in plan.md when planning entity features:**
 ```markdown
 ## Entity Structure Reference
-Use `core/templates/contents/themes/starter/entities/tasks/` as reference for:
+Use `core/templates/entities/tasks/` as reference for:
 - Entity config structure (5 sections) - `tasks.config.ts`
 - Field definitions pattern - `tasks.fields.ts`
 - TypeScript types - `tasks.types.ts`
@@ -391,7 +391,7 @@ const context = await Read('.claude/config/context.json')
 if (context.context === 'monorepo') {
   // Full access to core/, all themes, all plugins
 } else if (context.context === 'consumer') {
-  // Restricted to active theme and plugins only
+  // Restricted to project and plugins only
 }
 ```
 
@@ -408,8 +408,8 @@ When working in the NextSpark framework repository:
 
 When working in a project that installed NextSpark via npm:
 - **FORBIDDEN:** Never plan changes to `core/` (read-only in node_modules)
-- **ONLY** plan changes in active theme: `contents/themes/${NEXT_PUBLIC_ACTIVE_THEME}/`
-- **CAN** plan new plugins in `contents/plugins/`
+- **ONLY** plan changes in project: `./`
+- **CAN** plan new plugins in `plugins/`
 - If feature requires core changes → Document as **"Core Enhancement Request"** for upstream
 - Focus on project-specific solutions, not platform reusability
 
@@ -485,14 +485,14 @@ You have mastery over the three-tier system:
 - Lives in source code, not content directories
 - Principle: "Core provides the unbreakable foundation"
 
-**PLUGINS (`contents/plugins/`):**
+**PLUGINS (`plugins/`):**
 - Modular feature extensions with isolated dependencies
 - Self-contained functionality (entities, components, API routes)
 - WordPress-like plugin architecture with lifecycle hooks
 - Build-time registry optimization (~17,255x performance improvement)
 - Principle: "Plugins extend functionality without modifying core"
 
-**THEMES (`contents/themes/`):**
+**THEMES (`./`):**
 - Visual and UX layer with complete design systems
 - Theme-specific entities, styles, components, and assets
 - Auto-transpiled CSS and asset copying via build-theme.mjs
@@ -504,8 +504,8 @@ You have mastery over the three-tier system:
 **Registry-Based Architecture (ABSOLUTE):**
 - ALL entity/theme/plugin access MUST go through build-time registries
 - ZERO dynamic imports (`await import()`) for content/config loading
-- ZERO hardcoded imports from `@/contents` in app/core code
-- Only `core/scripts/build/registry.mjs` may import from contents/
+- ZERO runtime imports that bypass generated registries for project source
+- Runtime code consumes generated registries; compiler discovery alone reads project source
 - Performance: <5ms entity loading vs 140ms runtime I/O
 
 **Build-Time Optimization:**
@@ -679,9 +679,9 @@ Your execution plans must be:
 
 ## Critical Rules You Enforce
 
-1. **Registry-Based Access:** ALL entity/theme/plugin access through registries, NO direct imports from contents/
+1. **Registry-Based Access:** Runtime entity/project/plugin metadata comes through generated registries
 2. **Zero Dynamic Imports:** NO `await import()` for content/config, ONLY for UI code-splitting
-3. **Core Protection:** Core entities CANNOT be overridden by themes/plugins
+3. **Core Protection:** Protected core entities cannot be overridden by project or plugin source
 4. **TodoWrite for Complexity:** Complex tasks (3+ steps) MUST use TodoWrite
 5. **Testing Integration:** test-writer-fixer MUST run after code changes
 6. **TypeScript Strictness:** Strict mode enabled, comprehensive type safety
@@ -703,7 +703,7 @@ Before finalizing any architectural decision or plan, ask yourself:
 
 ### Layer 1: Architecture Patterns
 - [ ] Does this respect core/plugin/theme boundaries?
-- [ ] Are we using registry-based access (no direct imports from contents/)?
+- [ ] Are runtime metadata reads using generated registries?
 - [ ] Have we avoided prohibited dynamic imports?
 - [ ] Is the solution aligned with Next.js 15 best practices?
 - [ ] Does this maintain TypeScript type safety?
@@ -847,11 +847,11 @@ if (!scope.scope || typeof scope.scope.core !== 'boolean') {
 }
 
 // 4. Validate theme exists (if defined)
-if (scope.scope.theme && scope.scope.theme !== false) {
+if (scope.scope.project && scope.scope.project !== false) {
   // Verify theme exists in THEME_REGISTRY
-  const themeExists = await checkThemeExists(scope.scope.theme)
+  const themeExists = await checkThemeExists(scope.scope.project)
   if (!themeExists) {
-    throw new Error(`Theme "${scope.scope.theme}" does not exist in THEME_REGISTRY`)
+    throw new Error(`Theme "${scope.scope.project}" does not exist in THEME_REGISTRY`)
   }
 }
 
@@ -874,7 +874,7 @@ if (Array.isArray(scope.scope.plugins)) {
 
 **Scope Validation:**
 - ✅ scope.json exists and is valid
-- Scope: core=${scope.core}, theme="${scope.theme}", plugins=${JSON.stringify(scope.plugins)}
+- Scope: core=${scope.core}, theme="${scope.project}", plugins=${JSON.stringify(scope.plugins)}
 - All agents will respect these scope limits
 ```
 
@@ -1038,10 +1038,10 @@ CREATE INDEX idx_table_field ON table_name(field);
 
 ```typescript
 // ❌ FORBIDDEN
-const theme = await import(`@/contents/themes/${name}`)
+const theme = await import(`@/./${name}`)
 
 // ✅ CORRECT
-import { ENTITY_REGISTRY } from '@/core/lib/registries'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries'
 const entity = ENTITY_REGISTRY[name]
 ```
 

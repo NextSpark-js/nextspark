@@ -15,14 +15,14 @@ Complete guide for scaffolding and configuring new plugins from the preset templ
 
 ## ⚠️ MANDATORY: Model B Distribution
 
-> **Los paquetes NPM son para DISTRIBUCIÓN. En proyectos de usuario, el código se COPIA a `/contents/plugins/`.**
+> **Los paquetes NPM son para DISTRIBUCIÓN. En proyectos de usuario, el código se COPIA a `/plugins/`.**
 
 ### Estructura según contexto:
 
 | Contexto | Plugin Location |
 |----------|-----------------|
 | **Monorepo** (desarrollo) | `plugins/<plugin-name>/` |
-| **Proyecto usuario** | `contents/plugins/<plugin-name>/` (copiado por CLI) |
+| **Proyecto usuario** | `plugins/<plugin-name>/` (copiado por CLI) |
 
 ---
 
@@ -57,9 +57,9 @@ Cada plugin DEBE tener un `package.json` con esta estructura:
 ## Prerequisites
 
 - **Command:** `pnpm create:plugin <plugin-name>`
-- **Preset Location:** `core/templates/contents/plugins/starter/`
+- **Preset Location:** `core/templates/plugins/starter/`
 - **Output Location (monorepo):** `plugins/<plugin-name>/`
-- **Output Location (user project):** `contents/plugins/<plugin-name>/`
+- **Output Location (user project):** `plugins/<plugin-name>/`
 
 ---
 
@@ -306,7 +306,7 @@ export const pluginEnv = PluginEnvironment.getInstance()
 **Critical Step**: Add the plugin to the plugin-sandbox theme for testing.
 
 ```typescript
-// contents/themes/plugin-sandbox/config/theme.config.ts
+// config/theme.config.ts
 export const pluginSandboxThemeConfig: ThemeConfig = {
   plugins: [
     'my-plugin',  // <-- Add your new plugin here
@@ -335,7 +335,7 @@ cat plugins/<plugin-name>/package.json
 node core/scripts/build/registry.mjs
 
 # 4. Verify plugin appears in registry
-grep "<plugin-name>" core/lib/registries/plugin-registry.ts
+grep "<plugin-name>" .nextspark/registries/plugin-registry.ts
 
 # 5. Verify no duplicate dependencies
 pnpm ls zod  # Should show ONE version
@@ -343,8 +343,8 @@ pnpm ls zod  # Should show ONE version
 # 6. Verify no TypeScript errors
 pnpm tsc --noEmit
 
-# 7. Test plugin activation (optional)
-# Set NEXT_PUBLIC_ACTIVE_THEME=plugin-sandbox in .env.local
+# 7. Enable and test the local plugin
+# Add 'plugin-sandbox' to plugins in nextspark.config.ts
 # Run: pnpm dev
 ```
 
@@ -361,7 +361,7 @@ Each entity requires 4 files:
 | `[entity].types.ts` | TypeScript types |
 | `[entity].service.ts` | Data access service |
 
-**Reference:** `core/templates/contents/themes/starter/entities/tasks/`
+**Reference:** `core/templates/entities/tasks/`
 
 ---
 
@@ -396,7 +396,7 @@ Each entity requires 4 files:
 | Manual file creation | Missing files, wrong structure | Use `pnpm create:plugin` |
 | Skipping sandbox registration | Can't test plugin | Add to plugin-sandbox theme |
 | Skipping registry rebuild | Plugin won't be recognized | Run `node core/scripts/build/registry.mjs` |
-| Modifying core files | Architecture violation | Only work in `contents/plugins/` |
+| Modifying core files | Architecture violation | Only work in `plugins/` |
 
 ---
 
@@ -412,7 +412,6 @@ After scaffolding the plugin, continue with implementation:
 
 ### Environment Setup
 ```bash
-NEXT_PUBLIC_ACTIVE_THEME='plugin-sandbox'
 ```
 
 ---

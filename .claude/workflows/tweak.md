@@ -115,8 +115,8 @@ if (context.context === 'consumer') {
       This file is in core/, which is read-only in your project.
 
       Alternatives:
-      1. Create theme-specific override in contents/themes/${activeTheme}/
-      2. Create utility in contents/plugins/
+      1. Create a project-specific implementation in the appropriate root directory
+      2. Create a utility in plugins/<name>/
       3. If core change is truly needed → Document as "Core Enhancement Request"
     `
   }
@@ -134,7 +134,7 @@ When context is `monorepo`:
 ### Consumer TWEAK
 
 When context is `consumer`:
-- **LIMITED** to active theme and plugins only
+- **LIMITED** to project and plugins only
 - Core files are **READ-ONLY** (in node_modules)
 - If fix requires core change → Suggest workaround
 - Document core issues for upstream maintainers
@@ -427,7 +427,7 @@ Claude's process:
    - T-Shirt: XS → TWEAK
 
 2. IMPLEMENT
-   - Read contents/themes/default/messages/es.json
+   - Read messages/es.json
    - Change "Submti" to "Enviar" (correct Spanish)
    - Save file
 

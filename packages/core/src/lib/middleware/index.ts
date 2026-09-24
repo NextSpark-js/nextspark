@@ -83,6 +83,26 @@ export async function executeThemeMiddleware(
   }
 }
 
+/** Check whether the current root-first project contributes a request hook. */
+export function hasProjectMiddleware(): boolean {
+  return Object.values(MIDDLEWARE_REGISTRY).some(entry => entry.exists)
+}
+
+/** Execute the sole current project's request hook, when present. */
+export async function executeProjectMiddleware(
+  request: NextRequest,
+  coreSession?: Parameters<MiddlewareRegistryEntry['middleware']>[1]
+): Promise<NextResponse | null> {
+  const entry = Object.values(MIDDLEWARE_REGISTRY).find(candidate => candidate.exists)
+  if (!entry) return null
+  try {
+    return await entry.middleware(request, coreSession)
+  } catch (error) {
+    console.error('Error executing the project request hook:', error)
+    return null
+  }
+}
+
 // ============== Theme Config Functions ==============
 
 /**
@@ -91,6 +111,11 @@ export async function executeThemeMiddleware(
  */
 export function getThemeAppConfig(themeName: string): any | undefined {
   return THEME_REGISTRY[themeName]?.appConfig
+}
+
+/** Get the app config contributed by the current root-first project. */
+export function getProjectAppConfig(): any | undefined {
+  return Object.values(THEME_REGISTRY)[0]?.appConfig
 }
 
 // ============== Middleware Helper Functions ==============

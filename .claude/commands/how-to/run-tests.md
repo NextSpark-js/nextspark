@@ -81,7 +81,7 @@ NextSpark uses three types of tests:
 **📂 Test File Locations:**
 
 ```
-contents/themes/your-theme/tests/
+tests/
 ├── cypress/
 │   ├── e2e/
 │   │   ├── api/           # API tests
@@ -145,7 +145,7 @@ pnpm test:api --env grepTags="@P0"
 **📋 API Test Example:**
 
 ```typescript
-// contents/themes/default/tests/cypress/e2e/api/products.cy.ts
+// tests/cypress/e2e/api/products.cy.ts
 describe('Products API', { tags: ['@api', '@products'] }, () => {
   beforeEach(() => {
     cy.getApiKey().as('apiKey')
@@ -224,7 +224,7 @@ pnpm test:e2e --browser chrome
 **📋 E2E Test Example:**
 
 ```typescript
-// contents/themes/default/tests/cypress/e2e/uat/products.cy.ts
+// tests/cypress/e2e/uat/products.cy.ts
 import { ProductsPOM } from '../../support/pom/ProductsPOM'
 
 describe('Products Management', { tags: ['@uat', '@products'] }, () => {
@@ -326,7 +326,7 @@ pnpm test:unit -- services/
 **📋 Unit Test Example:**
 
 ```typescript
-// contents/themes/default/tests/jest/unit/services/products.test.ts
+// tests/jest/unit/services/products.test.ts
 import { ProductsService } from '@/core/lib/services/products.service'
 
 describe('ProductsService', () => {

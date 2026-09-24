@@ -153,12 +153,12 @@ test('registry build and watch commands name a runnable context', () => {
   }
 })
 
-test('the documentation-system docs promise no theme fallback and no effect from settings nothing reads', () => {
+test('the documentation-system docs do not teach removed selector fallbacks or inert settings', () => {
   for (const file of docFiles(DOCUMENTATION_SYSTEM_DIR)) {
     const content = fs.readFileSync(path.join(CORE_DOCS_ROOT, file), 'utf8')
     assert.doesNotMatch(
       content,
-      /NEXT_PUBLIC_ACTIVE_THEME\s*\|\|\s*['"]default['"]/,
+      /ACTIVE_(?:THEME|PROJECT)\s*\|\|\s*['"]default['"]/,
       `${file} shows a default theme the registry build does not fall back to`
     )
   }
@@ -203,6 +203,6 @@ test("troubleshooting-and-debugging.md's --trace-warnings command runs from apps
   assert.match(
     content,
     /cd apps\/dev && node --trace-warnings \.\.\/\.\.\/packages\/core\/scripts\/build\/registry\.mjs/,
-    `${file} runs --trace-warnings without cd apps/dev, so it fails on Missing NEXT_PUBLIC_ACTIVE_THEME`
+    `${file} runs --trace-warnings without cd apps/dev, so it cannot discover the project root`
   )
 })

@@ -1,25 +1,19 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
-import { parse } from 'dotenv';
 
 /**
  * Why core's registry build can't run in this project, or null when it can.
  *
- * The build exits with an error when NEXT_PUBLIC_ACTIVE_THEME is set neither in
- * the environment nor in the project's .env. Commands that run it as a side step
- * (`dev`, and `sync:app`, which core's postinstall runs before a project has a
- * .env) check first, so they can skip it with a reason instead of failing.
+ * The build exits with an error when the root-first project marker is absent.
+ * Commands that run it as a side step check first so they can skip it with a
+ * reason instead of starting a compiler that cannot resolve a project.
  */
 export function registryBuildBlocker(projectRoot: string, env: NodeJS.ProcessEnv = process.env): string | null {
-  const envPath = join(projectRoot, '.env');
-  const fileTheme = existsSync(envPath) ? parse(readFileSync(envPath)).NEXT_PUBLIC_ACTIVE_THEME : undefined;
-
-  if (fileTheme || env.NEXT_PUBLIC_ACTIVE_THEME) return null;
-  return existsSync(envPath)
-    ? 'NEXT_PUBLIC_ACTIVE_THEME is not set in .env'
-    : 'the project has no .env file with NEXT_PUBLIC_ACTIVE_THEME';
+  return existsSync(join(projectRoot, 'nextspark.config.ts'))
+    ? null
+    : 'the project has no nextspark.config.ts';
 }
 
 /** How many lines a pool of captured output holds at most, and how many UTF-8 bytes of them. */
@@ -521,7 +515,7 @@ export function captureLinesContaining(needle: string, caps: PoolCaps, line = DE
   };
 }
 
-/** How many lines reporting what the build did to app/(templates) are kept: generous, since each one names a file a project's dev or sync:app run touched. */
+/** How many lines reporting what the build did to src/app/(templates) are kept: generous, since each one names a file a project's dev or sync:app run touched. */
 const TEMPLATES_LINES_CAPS: PoolCaps = { lines: 2000, bytes: 256 * 1024 };
 
 export interface RegistryBuildResult {
@@ -530,13 +524,13 @@ export interface RegistryBuildResult {
   reason?: string;
   /** What a failed build printed worth showing: the same lines `build` and `registry:build` show. */
   failureLines: string[];
-  /** The lines reporting what the build did to app/(templates): files written, replaced or removed. */
+  /** The lines reporting what the build did to src/app/(templates): files written, replaced or removed. */
   templatesLines: string[];
 }
 
 /**
  * Run core's registry build for a project: it regenerates `.nextspark/registries`
- * and `app/(templates)`.
+ * and `src/app/(templates)`.
  */
 export function runRegistryBuild(
   coreDir: string,
@@ -547,17 +541,17 @@ export function runRegistryBuild(
   if (reason) return Promise.resolve({ status: 'skipped', reason, failureLines: [], templatesLines: [] });
 
   return new Promise((resolve) => {
-    const build = spawn('node', ['scripts/build/registry.mjs'], {
-      cwd: coreDir,
+    const build = spawn('node', [join(coreDir, 'scripts/build/registry.mjs')], {
+      cwd: projectRoot,
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...env, NEXTSPARK_PROJECT_ROOT: projectRoot },
+      env,
     });
 
     // core reports a build's failure over stdout as often as over stderr, so the
     // cause is only complete when both streams are read together, in the order
     // they arrived - the same capture build and registry:build read theirs from
     const output = captureChildOutput(build);
-    const templates = captureLinesContaining('app/(templates)', TEMPLATES_LINES_CAPS);
+    const templates = captureLinesContaining('src/app/(templates)', TEMPLATES_LINES_CAPS);
     build.stdout?.on('data', (chunk: Buffer) => templates.write('stdout', chunk));
     build.stderr?.on('data', (chunk: Buffer) => templates.write('stderr', chunk));
 
@@ -576,7 +570,7 @@ export function runRegistryBuild(
   });
 }
 
-/** What the registry build would change in `app/(templates)`, as paths from the project root. */
+/** What the registry build would change in `src/app/(templates)`, as paths from the project root. */
 export interface TemplatesChanges {
   create: string[];
   /** Files it would give other content, backing up what they hold first. */
@@ -598,7 +592,7 @@ export interface TemplatesPlanResult {
 const TEMPLATES_PLAN_MARKER = 'nextspark-templates-plan:';
 
 /**
- * Ask core what its registry build would change in `app/(templates)`, with
+ * Ask core what its registry build would change in `src/app/(templates)`, with
  * nothing written. The build copies app/ layouts into that tree, so the plan is
  * made against `appFiles` - the files under app/ that the sync about to run
  * writes (their content) or removes (null) - rather than app/ as it is now.
@@ -618,10 +612,10 @@ export function planTemplatesChanges(
   return new Promise((resolve) => {
     let stdout = '';
     let output = '';
-    const plan = spawn('node', ['scripts/build/templates-plan.mjs'], {
-      cwd: coreDir,
+    const plan = spawn('node', [join(coreDir, 'scripts/build/templates-plan.mjs')], {
+      cwd: projectRoot,
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...env, NEXTSPARK_PROJECT_ROOT: projectRoot },
+      env,
     });
 
     plan.stdout?.on('data', (chunk) => { stdout += chunk.toString(); output += chunk.toString(); });
@@ -646,7 +640,7 @@ export function planTemplatesChanges(
   });
 }
 
-/** One line per file in a plan of `app/(templates)`, marked the way sync:app's report marks its own. */
+/** One line per file in a plan of `src/app/(templates)`, marked the way sync:app's report marks its own. */
 export function describeTemplatesChanges(changes: TemplatesChanges): string[] {
   return [
     ...changes.create.map((path) => `+ ${path}`),
@@ -654,4 +648,3 @@ export function describeTemplatesChanges(changes: TemplatesChanges): string[] {
     ...changes.remove.map((path) => `- ${path} (removed; backed up first)`),
   ];
 }
-

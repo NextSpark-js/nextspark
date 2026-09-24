@@ -17,6 +17,7 @@ import {
   isProtectedPath
 } from '../../../../dist/config/protected-paths.js'
 import { convertCorePath } from '../config.mjs'
+import { projectGeneratedAppDir } from '../project-mode.mjs'
 import { analyzeTemplates, routeFileAction, templateAnalysisFor } from '../post-build/page-generator.mjs'
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 
@@ -413,7 +414,7 @@ function scopeFileFor(appPath, scopeDirectory, client = false) {
 
 /** Read actual route modules without following symlinks or descending into node_modules. */
 async function discoverAppRoutePaths(projectRoot) {
-  const appDirectory = join(projectRoot, 'app')
+  const appDirectory = projectGeneratedAppDir(projectRoot)
   const routePaths = []
   async function visit(directory) {
     let entries

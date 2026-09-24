@@ -28,7 +28,7 @@ import { analyzeTemplates, generateMissingPages, generateTemplatePage } from '..
 
 const PAGE = 'export default function Page() { return null }\n'
 const METADATA_ONLY = "export const metadata = { title: 'Docs' }\n"
-const ROUTE_FILE = 'app/(templates)/docs/page.tsx'
+const ROUTE_FILE = 'src/app/(templates)/docs/page.tsx'
 
 /**
  * - `route`: what the page generator does with the template's route file
@@ -53,9 +53,9 @@ async function writeProjectFile(root, relativePath, content) {
 async function projectFor(testCase) {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-route-file-rule-test-'))
   const relativePath = `docs/${testCase.file}`
-  await writeProjectFile(root, join('contents/themes/testtheme/templates', relativePath), testCase.content)
+  await writeProjectFile(root, join('templates', relativePath), testCase.content)
   if (testCase.appPage) {
-    await writeProjectFile(root, 'app/docs/page.tsx', PAGE)
+    await writeProjectFile(root, 'src/app/docs/page.tsx', PAGE)
   }
 
   const template = {
@@ -65,7 +65,7 @@ async function projectFor(testCase) {
     fileName: testCase.file,
     relativePath,
     appPath: 'app/docs/page.tsx',
-    templatePath: `@/contents/themes/testtheme/templates/${relativePath}`,
+    templatePath: `@/templates/${relativePath}`,
     priority: 10
   }
   const config = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
@@ -129,7 +129,7 @@ test('generateMissingPages writes a route file only where one is generated, and 
   await forEachCase(async ({ testCase, label, analysis, root, template, config }) => {
     if (testCase.route === 'reject') {
       await assert.rejects(() => generateMissingPages([template], config, analysis), /has no default export/, label)
-      assert.equal(existsSync(join(root, 'app/(templates)')), false, label)
+      assert.equal(existsSync(join(root, 'src/app/(templates)')), false, label)
       return
     }
 

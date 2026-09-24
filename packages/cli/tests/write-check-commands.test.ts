@@ -39,17 +39,17 @@ async function writeIn(root: string, path: string, content = '') {
 }
 
 /**
- * A project with the real core installed, a theme template and a stale file in
- * app/(templates) for the build to back up, and a stand-in for Next that only
+ * A project with the real core installed, a project template and a stale file in
+ * src/app/(templates) for the build to back up, and a stand-in for Next that only
  * records, outside the project, that it ran.
  */
 async function project() {
   const { root, cleanup } = await directory('nextspark-write-check-')
-  await writeIn(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
-  await writeIn(root, 'package.json', '{}')
-  await writeIn(root, 'app/layout.tsx', 'export default function Layout({ children }) { return children }\n')
-  await writeIn(root, 'app/(templates)/stale/page.tsx', 'export default function Stale() { return null }\n')
-  await writeIn(root, 'contents/themes/acme/templates/pricing/page.tsx', 'export default function Pricing() { return null }\n')
+  await writeIn(root, 'nextspark.config.ts', 'export default { plugins: [] }\n')
+  await writeIn(root, 'package.json', JSON.stringify({ dependencies: { next: '16.3.5' } }))
+  await writeIn(root, 'src/app/layout.tsx', 'export default function Layout({ children }) { return children }\n')
+  await writeIn(root, 'src/app/(templates)/stale/page.tsx', 'export default function Stale() { return null }\n')
+  await writeIn(root, 'templates/pricing/page.tsx', 'export default function Pricing() { return null }\n')
   await mkdir(join(root, 'node_modules/@nextsparkjs'), { recursive: true })
   await symlink(CORE_SOURCE, join(root, 'node_modules/@nextsparkjs/core'))
   await writeIn(root, 'node_modules/.bin/next', '#!/bin/sh\necho ran >> "$NEXT_RAN"\n')
@@ -98,21 +98,21 @@ const CASES: [string, (root: string, outside: string) => Promise<void>, string][
     await mkdir(join(root, '.nextspark/registries'), { recursive: true })
     await symlink(join(outside, 'index.ts'), join(root, '.nextspark/registries/index.ts'))
   }, '.nextspark/registries/index.ts is a symlink'],
-  ['app/(templates) a symlink to a directory outside', async (root, outside) => {
-    await rm(join(root, 'app/(templates)'), { recursive: true })
-    await symlink(outside, join(root, 'app/(templates)'))
-  }, 'app/(templates) is a symlink'],
-  ['app/api a symlink to a directory outside holding an old generated plugin route and another file', async (root, outside) => {
+  ['src/app/(templates) a symlink to a directory outside', async (root, outside) => {
+    await rm(join(root, 'src/app/(templates)'), { recursive: true })
+    await symlink(outside, join(root, 'src/app/(templates)'))
+  }, 'src/app/(templates) is a symlink'],
+  ['src/app/api a symlink to a directory outside holding an old generated plugin route and another file', async (root, outside) => {
     await writeIn(outside, 'v1/plugin/legacy/route.ts', '// Auto-generated Plugin Route Proxy\n')
     await writeIn(outside, 'v1/plugin/legacy/other.ts', 'export const other = 1\n')
-    await symlink(outside, join(root, 'app/api'))
-  }, 'app/api is a symlink'],
-  ["the active theme's fixtures directory a symlink to one outside", async (root, outside) => {
+    await symlink(outside, join(root, 'src/app/api'))
+  }, 'src/app/api is a symlink'],
+  ["the project's fixtures directory a symlink to one outside", async (root, outside) => {
     await writeIn(outside, 'entities.json', '{"outside":true}\n')
     await writeIn(outside, 'blocks.json', '{"outside":true}\n')
-    await mkdir(join(root, 'contents/themes/acme/tests/cypress'), { recursive: true })
-    await symlink(outside, join(root, 'contents/themes/acme/tests/cypress/fixtures'))
-  }, 'contents/themes/acme/tests/cypress/fixtures is a symlink'],
+    await mkdir(join(root, 'tests/cypress'), { recursive: true })
+    await symlink(outside, join(root, 'tests/cypress/fixtures'))
+  }, 'tests/cypress/fixtures is a symlink'],
   ['a backups .gitignore that takes the backups back', async (root) => {
     await writeIn(root, BACKUPS_GITIGNORE, '*\n!*/\n')
   }, `${BACKUPS_GITIGNORE} has patterns other than *`],
@@ -200,7 +200,7 @@ test('registry:build, build and dev say when git tracks the registries they rewr
     const { root, cleanup } = await project()
     const outside = await directory('nextspark-write-check-outside-')
     try {
-      await writeIn(root, '.gitignore', 'node_modules/\n.env\napp/(templates)/\n.nextspark/backups/\n')
+      await writeIn(root, '.gitignore', 'node_modules/\n.env\nsrc/app/(templates)/\n.nextspark/backups/\n')
       await writeIn(root, '.nextspark/registries/index.ts', '// committed before\n')
       spawnSync('git', ['init', '-q'], { cwd: root })
       spawnSync('git', ['add', '-A'], { cwd: root })

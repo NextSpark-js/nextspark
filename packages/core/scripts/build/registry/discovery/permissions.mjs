@@ -1,7 +1,7 @@
 /**
  * Permissions Discovery
  *
- * Discovers permissions configuration from active theme
+ * Discovers permissions configuration from the project root
  *
  * @module core/scripts/build/registry/discovery/permissions
  */
@@ -372,26 +372,21 @@ export function parseTeamRolesFromAppConfig(content) {
 }
 
 /**
- * Discover permissions configuration from active theme
+ * Discover permissions configuration from the project root
  * Returns null if theme doesn't have a permissions.config.ts
  * @param {object} config - Optional configuration object (defaults to DEFAULT_CONFIG)
  * @returns {Promise<{path: string, importPath: string, themeName: string, entities: Object}|null>}
  */
 export async function discoverPermissionsConfig(config = DEFAULT_CONFIG) {
-  const themeName = config.activeTheme
-  if (!themeName) {
-    log('No active theme set, skipping permissions config discovery', 'warning')
-    return null
-  }
-
-  const permissionsPath = join(config.themesDir, themeName, 'config', 'permissions.config.ts')
+  const themeName = config.projectName
+  const permissionsPath = join(config.projectSourceDir, 'config', 'permissions.config.ts')
 
   if (!existsSync(permissionsPath)) {
-    log(`No permissions.config.ts found for theme ${themeName}`, 'info')
+    log(`No permissions.config.ts found for project ${themeName}`, 'info')
     return null
   }
 
-  log(`Found permissions.config.ts for theme ${themeName}`, 'success')
+  log(`Found permissions.config.ts for project ${themeName}`, 'success')
 
   // Parse entities, roles, teams, and features from the config file
   let entities = {}
@@ -421,7 +416,7 @@ export async function discoverPermissionsConfig(config = DEFAULT_CONFIG) {
       log(`  👥 Parsed ${roles.additionalRoles.length} custom roles: ${roles.additionalRoles.join(', ')}`, 'info')
     }
 
-    const appConfigPath = join(config.themesDir, themeName, 'config', 'app.config.ts')
+    const appConfigPath = join(config.projectSourceDir, 'config', 'app.config.ts')
     if (existsSync(appConfigPath)) {
       const appConfigContent = readFileSync(appConfigPath, 'utf8')
       teamRoles = parseTeamRolesFromAppConfig(appConfigContent)
@@ -438,7 +433,7 @@ export async function discoverPermissionsConfig(config = DEFAULT_CONFIG) {
 
   return {
     path: permissionsPath,
-    importPath: `@/contents/themes/${themeName}/config/permissions.config`,
+    importPath: `@/config/permissions.config`,
     themeName,
     entities,
     roles,

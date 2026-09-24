@@ -5,7 +5,7 @@
 --
 -- NOTE: This file contains ONLY core test users.
 -- Theme-specific demo data (TMT.dev users, companies, invoices) is in:
--- contents/themes/default/migrations/090_demo_users_teams.sql
+-- migrations/090_demo_users_teams.sql
 
 -- ============================================
 -- STEP 1: CREATE CORE TEST USERS
@@ -289,7 +289,7 @@ BEGIN
   RAISE NOTICE '     Members can use x-admin-bypass header for cross-team access';
   RAISE NOTICE '';
   RAISE NOTICE '  📝 NOTE: Theme demo data is in theme migrations:';
-  RAISE NOTICE '     contents/themes/default/migrations/090_demo_users_teams.sql';
+  RAISE NOTICE '     migrations/090_demo_users_teams.sql';
   RAISE NOTICE '';
   RAISE NOTICE '════════════════════════════════════════════════════════════';
 END $$;

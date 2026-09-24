@@ -13,7 +13,7 @@ The Social Media Publisher plugin provides two comprehensive API wrappers for in
 ### Import
 
 ```typescript
-import { FacebookAPI } from '@/contents/plugins/social-media-publisher/lib/providers/facebook'
+import { FacebookAPI } from '@/plugins/social-media-publisher/lib/providers/facebook'
 ```
 
 ### Publishing Methods
@@ -360,7 +360,7 @@ if (validation.missing.includes('pages_manage_posts')) {
 ### Import
 
 ```typescript
-import { InstagramAPI } from '@/contents/plugins/social-media-publisher/lib/providers/instagram'
+import { InstagramAPI } from '@/plugins/social-media-publisher/lib/providers/instagram'
 ```
 
 ### Publishing Methods

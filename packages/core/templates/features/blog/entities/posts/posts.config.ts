@@ -63,7 +63,7 @@ export const postsEntityConfig: EntityConfig = {
   // 4. PERMISSIONS SYSTEM
   // ==========================================
   // Permissions are now centralized in permissions.config.ts
-  // See: contents/themes/default/permissions.config.ts -> entities.posts
+  // See: config/permissions.config.ts -> entities.posts
 
   // ==========================================
   // 5. INTERNATIONALIZATION

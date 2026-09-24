@@ -127,7 +127,7 @@ type TeamRole = CoreTeamRole | 'editor' | 'contributor' | 'moderator' | string
 ### Complete Example: Adding Custom Team Roles
 
 ```typescript
-// contents/themes/your-theme/config/permissions.config.ts
+// config/permissions.config.ts
 import type { ThemePermissionsConfig } from '@/core/lib/permissions/types'
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
@@ -177,7 +177,7 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
 ### Translations for Custom Roles
 
 ```json
-// contents/themes/your-theme/messages/en.json
+// messages/en.json
 {
   "common": {
     "teamRoles": {
@@ -188,7 +188,7 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   }
 }
 
-// contents/themes/your-theme/messages/es.json
+// messages/es.json
 {
   "common": {
     "teamRoles": {
@@ -232,7 +232,7 @@ type Permission = `${string}.${string}`
 ### permissions.config.ts
 
 ```typescript
-// contents/themes/default/config/permissions.config.ts
+// config/permissions.config.ts
 import type { ThemePermissionsConfig } from '@/core/lib/permissions/types'
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
@@ -565,7 +565,7 @@ roles via config, not `ALTER TYPE`). For the runtime RLS model see the **rls-enf
 ## Build-Time Registry
 
 ```typescript
-// core/lib/registries/permissions-registry.ts (AUTO-GENERATED)
+// .nextspark/registries/permissions-registry.ts (AUTO-GENERATED)
 
 // Pre-computed at build time for O(1) lookups
 export const ALL_PERMISSIONS: Permission[]

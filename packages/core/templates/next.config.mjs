@@ -65,9 +65,9 @@ const nextConfig = {
   // Include markdown files in Vercel deployment for dynamic file reads
   // Required because fs.readFileSync() reads are not automatically traced
   outputFileTracingIncludes: {
-    '/docs/**/*': ['./contents/**/docs/**/*'],
-    '/superadmin/docs/**/*': ['./contents/**/docs/**/*'],
-    '/devtools/tests/**/*': ['./contents/**/tests/**/*'],
+    '/docs/**/*': ['./docs/**/*', './plugins/*/docs/**/*'],
+    '/superadmin/docs/**/*': ['./docs/**/*', './plugins/*/docs/**/*'],
+    '/devtools/tests/**/*': ['./tests/**/*', './plugins/*/tests/**/*'],
   },
   // Optimize imports from @nextsparkjs/core to reduce bundle size and improve tree-shaking
   modularizeImports: {

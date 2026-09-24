@@ -18,7 +18,7 @@ Patterns for working with the Tailwind CSS v4 theming system, CSS variables, and
 TAILWIND THEMING (v4):
 
 Source Files:
-contents/themes/{THEME}/
+
 ├── styles/
 │   ├── globals.css         # CSS variables (light + dark)
 │   └── components.css      # Component-specific styles
@@ -28,8 +28,8 @@ contents/themes/{THEME}/
     └── theme-assets/       # Images, fonts
 
 Generated Files (DO NOT EDIT):
-├── core/theme-styles.css   # Compiled theme CSS
-└── public/theme/           # Copied assets
+├── src/app/globals.css       # Import adapter
+└── .next/theme-generated.css # Compiled project CSS
 
 Build Script:
 └── core/scripts/build/theme.mjs
@@ -375,12 +375,12 @@ node core/scripts/build/theme.mjs --watch
 
 ### What Build Does
 
-1. **Reads** `NEXT_PUBLIC_ACTIVE_THEME` from `.env`
-2. **Finds** `contents/themes/{theme}/styles/globals.css`
-3. **Finds** `contents/themes/{theme}/styles/components.css`
-4. **Copies** assets from `contents/themes/{theme}/public/` → `public/theme/`
-5. **Copies** block thumbnails → `public/theme/blocks/{slug}/`
-6. **Generates** `core/theme-styles.css`
+1. **Finds** the project root from `nextspark.config.ts`
+2. **Finds** `styles/globals.css`
+3. **Finds** `styles/components.css`
+4. **Keeps** project-owned assets in `public/`
+5. **Generates** the `src/app/globals.css` import adapter
+6. **Generates** `.next/theme-generated.css`
 
 ### Generated File
 
@@ -434,7 +434,7 @@ node core/scripts/build/theme.mjs --watch
 ## Theme File Structure
 
 ```
-contents/themes/default/
+
 ├── config/
 │   ├── theme.config.ts       # Theme metadata
 │   ├── app.config.ts         # App settings
@@ -481,10 +481,10 @@ contents/themes/default/
 <section className={buildSectionClasses('py-16', { backgroundColor })}>
 
 // NEVER: Modify generated CSS files
-// core/theme-styles.css - DO NOT EDIT
+// src/app/globals.css and .next/theme-generated.css - DO NOT EDIT
 
 // CORRECT: Modify source files and rebuild
-// contents/themes/default/styles/globals.css
+// styles/globals.css
 ```
 
 ## Checklist

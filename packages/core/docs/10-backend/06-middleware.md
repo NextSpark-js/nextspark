@@ -45,7 +45,7 @@ Next.js middleware provides powerful request/response transformation capabilitie
 Location: `packages/core/templates/proxy.ts` (generated projects receive it as
 `proxy.ts` on Next.js 16 or `middleware.ts` on Next.js 15).
 
-The core proxy owns the security boundary. An active theme may extend request
+The core proxy owns the security boundary. An project may extend request
 handling, but its result is composed with the core checks rather than returned
 before them:
 
@@ -55,7 +55,7 @@ const sanitizedRequest = requestForTheme(
   sanitizeRequestHeaders(request)
 )
 const themeResponse = await executeThemeMiddleware(
-  activeTheme,
+  projectTheme,
   sanitizedRequest,
   null
 )
@@ -127,7 +127,7 @@ if (!isDocsPublic(appConfig?.docs)) {
 
 **Configuration:**
 ```typescript
-// contents/themes/[theme]/app.config.ts
+// app.config.ts
 export const appConfig = {
   docs: {
     publicAccess: false // Require auth for docs

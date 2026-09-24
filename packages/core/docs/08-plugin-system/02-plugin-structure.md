@@ -20,7 +20,7 @@ This document provides a complete reference for plugin directory structure and o
 ### Complete Directory Layout
 
 ```text
-contents/plugins/[plugin-name]/
+plugins/[plugin-name]/
 ├── plugin.config.ts        # ✅ REQUIRED - Plugin configuration
 ├── README.md               # ✅ REQUIRED - Plugin documentation
 ├── .env.example            # ✅ REQUIRED - Environment variable template
@@ -88,7 +88,7 @@ contents/plugins/[plugin-name]/
 
 **Example:**
 ```typescript
-// contents/plugins/my-plugin/plugin.config.ts
+// plugins/my-plugin/plugin.config.ts
 import type { PluginConfig } from '@/core/types/plugin'
 
 export const myPluginConfig: PluginConfig = {
@@ -150,7 +150,7 @@ Brief description of what the plugin does.
 
 1. Copy environment variables:
    ```bash
-   cp contents/plugins/my-plugin/.env.example contents/plugins/my-plugin/.env
+   cp plugins/my-plugin/.env.example plugins/my-plugin/.env
    ```
 
 2. Configure your API keys in `.env`
@@ -164,7 +164,7 @@ Brief description of what the plugin does.
 
 ### Basic Usage
 ```typescript
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 const { processData } = usePlugin('my-plugin')
 const result = await processData({ input: 'test' })
@@ -202,7 +202,7 @@ See `.env.example` for all available configuration options.
 
 **Example:**
 ```bash
-# contents/plugins/my-plugin/.env.example
+# plugins/my-plugin/.env.example
 # ============================================
 # MY PLUGIN ENVIRONMENT VARIABLES
 # ============================================
@@ -257,7 +257,7 @@ types/
 
 **Example:**
 ```typescript
-// contents/plugins/my-plugin/types/my-plugin.types.ts
+// plugins/my-plugin/types/my-plugin.types.ts
 export interface MyPluginOptions {
   readonly apiKey: string
   readonly timeout: number
@@ -308,7 +308,7 @@ lib/
 
 **Example - Core Utilities:**
 ```typescript
-// contents/plugins/my-plugin/lib/core-utils.ts
+// plugins/my-plugin/lib/core-utils.ts
 import type { MyPluginOptions, MyPluginResult } from '../types/my-plugin.types'
 
 /**
@@ -353,7 +353,7 @@ export function validateInput(input: unknown): boolean {
 
 **Example - Environment Configuration:**
 ```typescript
-// contents/plugins/my-plugin/lib/server-env.ts
+// plugins/my-plugin/lib/server-env.ts
 import { config } from 'dotenv'
 import { join } from 'path'
 import type { MyPluginConfig } from '../types/my-plugin.types'
@@ -405,10 +405,10 @@ api/
 
 **Example API Route:**
 ```typescript
-// contents/plugins/my-plugin/api/process/route.ts
+// plugins/my-plugin/api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export async function POST(request: NextRequest) {
   // Authenticate request
@@ -486,7 +486,7 @@ components/
 
 **Example Component:**
 ```typescript
-// contents/plugins/my-plugin/components/MyWidget.tsx
+// plugins/my-plugin/components/MyWidget.tsx
 'use client'
 
 import { useState } from 'react'
@@ -567,7 +567,7 @@ hooks/
 
 **Example Hook:**
 ```typescript
-// contents/plugins/my-plugin/hooks/useMyPlugin.ts
+// plugins/my-plugin/hooks/useMyPlugin.ts
 'use client'
 
 import { useState, useCallback } from 'react'
@@ -643,7 +643,7 @@ entities/
 
 **Example Entity Configuration:**
 ```typescript
-// contents/plugins/my-plugin/entities/my-records/my-records.config.ts
+// plugins/my-plugin/entities/my-records/my-records.config.ts
 import type { EntityConfig } from '@/core/types/entity'
 
 export const myRecordsConfig: EntityConfig = {
@@ -675,7 +675,7 @@ export const myRecordsConfig: EntityConfig = {
 
 **Example Field Definitions:**
 ```typescript
-// contents/plugins/my-plugin/entities/my-records/my-records.fields.ts
+// plugins/my-plugin/entities/my-records/my-records.fields.ts
 import type { FieldDefinition } from '@/core/types/entity'
 
 export const myRecordsFields: FieldDefinition[] = [
@@ -737,7 +737,7 @@ The data processing feature allows you to transform input data using AI-powered 
 
 ### Basic Example
 ```typescript
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 const { processData } = usePlugin('my-plugin')
 const result = await processData({ input: 'test data' })
@@ -775,7 +775,7 @@ Processes input data and returns a result.
 
 ## Examples
 
-See the [examples directory](/contents/plugins/my-plugin/examples) for more use cases.
+See the [examples directory](/plugins/my-plugin/examples) for more use cases.
 ```
 
 **Format**: Markdown with code examples, English preferred
@@ -945,7 +945,7 @@ export function MyComponent() {
 ### AI Plugin Structure
 
 ```text
-contents/plugins/ai/
+plugins/ai/
 ├── plugin.config.ts        # ✅ Plugin configuration
 ├── README.md               # ✅ Comprehensive docs (Spanish)
 ├── .env.example            # ✅ Environment template
@@ -993,7 +993,7 @@ contents/plugins/ai/
 ### Billing Plugin Structure
 
 ```text
-contents/plugins/billing/
+plugins/billing/
 ├── plugin.config.ts        # ✅ Plugin configuration
 ├── .env.example            # ✅ Environment template
 ├── package.json

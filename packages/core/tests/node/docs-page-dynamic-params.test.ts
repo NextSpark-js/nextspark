@@ -10,7 +10,7 @@
  * check; the proxy answers 404 for those requests instead
  * (tests/jest/templates/proxy.test.ts), in apps/dev as in a generated project
  * (tests/node/apps-dev-proxy.test.ts).
- * apps/dev/app is the source packages/core/templates/app is synced from.
+ * apps/dev/src/app is the source packages/core/templates/app is synced from.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -19,7 +19,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
-const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../apps/dev/app')
+const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../apps/dev/src/app')
 
 const DOCS_PAGES = [
   ['public', path.join(APP_DIR, '(public)/docs/[section]/[page]/page.tsx'), 'DOCS_REGISTRY.public'],

@@ -109,7 +109,6 @@ export interface InstallResult {
  * Context passed to postinstall handlers
  */
 export interface PostinstallContext {
-  activeTheme: string | null
   projectRoot: string
   pluginName?: string
   themeName?: string

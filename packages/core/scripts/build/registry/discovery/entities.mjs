@@ -1,7 +1,7 @@
 /**
  * Entity Discovery
  *
- * Discovers entities from themes, plugins, and standalone entities directory
+ * Discovers entities from the project root and enabled local plugins
  *
  * @module core/scripts/build/registry/discovery/entities
  */
@@ -16,13 +16,13 @@ import { extractExportName } from '../../../utils/index.mjs'
 
 /**
  * Recursively discover nested entities within a base directory
- * Supports both plugin and theme contexts
+ * Supports project and plugin contexts
  * @param {object} config - Configuration object
  * @param {string} basePath - Base path to scan
  * @param {string} relativePath - Relative path from base
  * @param {number} depth - Current recursion depth
  * @param {string|null} parentName - Parent entity name
- * @param {object|null} ownerContext - Owner context { type: 'plugin'|'theme', name: string }
+ * @param {object|null} ownerContext - Owner context { type: 'plugin'|'project', name: string }
  * @returns {Promise<Array>} Array of discovered entities
  */
 export async function discoverNestedEntities(config, basePath, relativePath = '', depth = 0, parentName = null, ownerContext = null) {
@@ -65,17 +65,15 @@ export async function discoverNestedEntities(config, basePath, relativePath = ''
           // Determine base import path based on owner context
           let baseImportPath
           if (ownerContext?.type === 'plugin') {
-            baseImportPath = `@/contents/plugins/${ownerContext.name}/entities/${currentRelativePath}`
-          } else if (ownerContext?.type === 'theme') {
-            baseImportPath = `@/contents/themes/${ownerContext.name}/entities/${currentRelativePath}`
+            baseImportPath = `@/plugins/${ownerContext.name}/entities/${currentRelativePath}`
           } else {
-            baseImportPath = `@/contents/entities/${currentRelativePath}`
+            baseImportPath = `@/entities/${currentRelativePath}`
           }
 
           entities.push({
             name: entityName,
             exportName,
-            configPath: join(basePath, configFile.name).replace(config.contentsDir + '/', '@/contents/'),
+            configPath: `${baseImportPath}/${configFile.name.replace(/\.ts$/, '')}`,
             actualConfigFile: configFile.name,
             relativePath: currentRelativePath,
             depth,
@@ -88,8 +86,8 @@ export async function discoverNestedEntities(config, basePath, relativePath = ''
             hasAssets: false,
             messagesPath: `${baseImportPath}/messages`,
             pluginContext: ownerContext?.type === 'plugin' ? { pluginName: ownerContext.name } : null,
-            themeContext: ownerContext?.type === 'theme' ? { themeName: ownerContext.name } : null,
-            source: ownerContext?.type || 'theme'
+            themeContext: ownerContext?.type === 'project' ? { themeName: ownerContext.name } : null,
+            source: ownerContext?.type || 'project'
           })
 
           const contextLabel = ownerContext ? `[${ownerContext.name}] ` : ''
@@ -212,11 +210,9 @@ export async function discoverNestedEntities(config, basePath, relativePath = ''
         // Determine base import path based on owner context
         let baseImportPath
         if (ownerContext?.type === 'plugin') {
-          baseImportPath = `@/contents/plugins/${ownerContext.name}/entities/${currentRelativePath}`
-        } else if (ownerContext?.type === 'theme') {
-          baseImportPath = `@/contents/themes/${ownerContext.name}/entities/${currentRelativePath}`
+          baseImportPath = `@/plugins/${ownerContext.name}/entities/${currentRelativePath}`
         } else {
-          baseImportPath = `@/contents/entities/${currentRelativePath}`
+          baseImportPath = `@/entities/${currentRelativePath}`
         }
 
         entities.push({
@@ -235,8 +231,8 @@ export async function discoverNestedEntities(config, basePath, relativePath = ''
           hasAssets,
           messagesPath: `${baseImportPath}/messages`,
           pluginContext: ownerContext?.type === 'plugin' ? { pluginName: ownerContext.name } : null,
-          themeContext: ownerContext?.type === 'theme' ? { themeName: ownerContext.name } : null,
-          source: ownerContext?.type || 'theme'
+          themeContext: ownerContext?.type === 'project' ? { themeName: ownerContext.name } : null,
+          source: ownerContext?.type || 'project'
         })
 
         const features = [
@@ -264,12 +260,12 @@ export async function discoverNestedEntities(config, basePath, relativePath = ''
 }
 
 /**
- * Discover all entities (standalone entities in contents/entities)
+ * Discover all project entities
  * @param {object} config - Optional configuration object (defaults to DEFAULT_CONFIG)
  * @returns {Promise<Array>} Array of discovered entities
  */
 export async function discoverEntities(config = DEFAULT_CONFIG) {
-  const entitiesDir = join(config.contentsDir, 'entities')
+  const entitiesDir = join(config.projectSourceDir, 'entities')
 
   try {
     const entities = await discoverNestedEntities(config, entitiesDir)

@@ -42,12 +42,12 @@ core/tests/cypress/
 - Shared Page Object Models (POMs)
 - Session management utilities
 
-### Theme (`contents/themes/{theme}/tests/`)
+### Theme (`tests/`)
 
 Theme-specific test configuration and specs:
 
 ```text
-contents/themes/{theme}/tests/
+tests/
 ├── cypress.config.ts          # Theme-level Cypress config
 └── cypress/
     ├── e2e/                   # Test specifications
@@ -73,7 +73,7 @@ contents/themes/{theme}/tests/
 Each theme has its own Cypress config:
 
 ```typescript
-// contents/themes/{theme}/tests/cypress.config.ts
+// tests/cypress.config.ts
 import { defineConfig } from 'cypress'
 import path from 'path'
 
@@ -127,8 +127,8 @@ pnpm cy:run --spec "uat/_core/auth/login-logout.cy.ts"
 pnpm cy:run --browser chrome
 ```
 
-The root wrapper already loads the active theme's Cypress configuration. Do not
-pass `contents/themes/default/tests/cypress.config.ts`: that path is not a
+The root wrapper already loads the project's Cypress configuration. Do not
+pass `tests/cypress.config.ts`: that path is not a
 configuration file in the monorepo.
 
 ---
@@ -321,7 +321,7 @@ core/tests/cypress/src/classes/
 └── shared/
     └── session-helpers.ts
 
-contents/themes/{theme}/tests/cypress/src/
+tests/cypress/src/
 ├── components/           # Theme-specific POMs
 │   ├── CustomersPOM.ts
 │   ├── TasksPOM.ts
@@ -339,7 +339,7 @@ contents/themes/{theme}/tests/cypress/src/
 POMs use `cySelector()` from the centralized selector system instead of hardcoded selectors:
 
 ```typescript
-// contents/themes/{theme}/tests/cypress/src/entities/CustomersPOM.ts
+// tests/cypress/src/entities/CustomersPOM.ts
 import { DashboardEntityPOM } from '../core/DashboardEntityPOM'
 import { cySelector } from '../selectors'
 import entitiesConfig from '../../fixtures/entities.json'
@@ -402,7 +402,7 @@ export const { cySelector, sel, SELECTORS } = createSelectorHelpers(THEME_SELECT
 ### Using POMs in Tests
 
 ```typescript
-// contents/themes/{theme}/tests/cypress/e2e/customers/customers-owner.cy.ts
+// tests/cypress/e2e/customers/customers-owner.cy.ts
 import { CustomersPOM } from '../../src/components'
 import { ensureLoggedInAs, getThemeUsers } from '../../src/session-helpers'
 
@@ -430,7 +430,7 @@ describe('Customers - Owner Role', {
 ### API Controller Pattern
 
 ```typescript
-// contents/themes/{theme}/tests/cypress/src/controllers/CustomerAPIController.ts
+// tests/cypress/src/controllers/CustomerAPIController.ts
 export class CustomerAPIController {
   private baseUrl = '/api/v1/customers'
 

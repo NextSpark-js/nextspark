@@ -22,9 +22,9 @@
 import { betterFetch } from '@better-fetch/fetch'
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  hasThemeMiddleware,
-  executeThemeMiddleware,
-  getThemeAppConfig
+  hasProjectMiddleware,
+  executeProjectMiddleware,
+  getProjectAppConfig
 } from '@nextsparkjs/core/lib/middleware'
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '@nextsparkjs/core/lib/teams/active-team-cookie'
 import { SESSION_HINT_COOKIE, SESSION_HINT_MAX_AGE, hasSessionCookie } from '@nextsparkjs/core/lib/auth/session-hint'
@@ -426,21 +426,18 @@ function warnLegacyDocsAccess(docsConfig: Parameters<typeof legacyDocsAccessMess
 export async function proxy(request: NextRequest) {
   const originalTarget = requestTarget(request)
   const sanitizedHeaders = sanitizeRequestHeaders(request)
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
-
-  // Theme middleware is an extension hook, not a replacement security
+  // The project hook is an extension hook, not a replacement security
   // boundary. It sees a sanitized request and its continuations/rewrites are
   // fed back through the core route checks below.
   let themeResponse: NextResponse | null = null
-  if (activeTheme && hasThemeMiddleware(activeTheme)) {
+  if (hasProjectMiddleware()) {
     try {
-      themeResponse = await executeThemeMiddleware(
-        activeTheme,
+      themeResponse = await executeProjectMiddleware(
         requestForTheme(request, sanitizedHeaders),
         null
       )
     } catch (error) {
-      console.error(`Error executing middleware for theme '${activeTheme}':`, error)
+      console.error('Error executing the project request hook:', error)
     }
   }
 
@@ -491,7 +488,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const docsConfig = () => {
-    const config = getThemeAppConfig(activeTheme as string)?.docs
+    const config = getProjectAppConfig()?.docs
     warnLegacyDocsAccess(config)
     return config
   }

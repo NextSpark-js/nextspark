@@ -4,7 +4,7 @@
 
 - Node.js 22.14.0 or later and pnpm installed
 - NextSpark project set up
-- Active theme with plugin support
+- project with plugin support
 
 ## Step 1: Enable the Plugin
 
@@ -13,7 +13,7 @@
 The AI plugin is enabled by default in the default theme. To enable it in your custom theme:
 
 ```typescript
-// contents/themes/[your-theme]/theme.config.ts
+// theme.config.ts
 export const yourThemeConfig: ThemeConfig = {
   name: 'your-theme',
   // ... other config
@@ -69,7 +69,7 @@ You can use one or multiple providers simultaneously. Choose based on your needs
 
 4. **Configure Base URL** (optional, defaults to `http://localhost:11434`)
    ```bash
-   # contents/plugins/ai/.env
+   # plugins/ai/.env
    OLLAMA_BASE_URL=http://localhost:11434
    ```
 
@@ -96,19 +96,19 @@ You can use one or multiple providers simultaneously. Choose based on your needs
 2. **Create Plugin Environment File**
    ```bash
    # Create .env file in plugin directory
-   touch contents/plugins/ai/.env
+   touch plugins/ai/.env
    ```
 
 3. **Add API Key**
    ```bash
-   # contents/plugins/ai/.env
+   # plugins/ai/.env
    OPENAI_API_KEY=sk-your-openai-api-key-here
    AI_PLUGIN_ENABLED=true
    ```
 
 4. **Set Default Model** (optional)
    ```bash
-   # contents/plugins/ai/.env
+   # plugins/ai/.env
    DEFAULT_MODEL=gpt-4o-mini
    MAX_TOKENS=2000
    DEFAULT_TEMPERATURE=0.7
@@ -136,14 +136,14 @@ You can use one or multiple providers simultaneously. Choose based on your needs
 
 2. **Add API Key to Plugin Environment**
    ```bash
-   # contents/plugins/ai/.env
+   # plugins/ai/.env
    ANTHROPIC_API_KEY=sk-ant-your-anthropic-api-key-here
    AI_PLUGIN_ENABLED=true
    ```
 
 3. **Set Default Model** (optional)
    ```bash
-   # contents/plugins/ai/.env
+   # plugins/ai/.env
    DEFAULT_MODEL=claude-3-5-haiku-20241022
    ```
 
@@ -160,7 +160,7 @@ You can use one or multiple providers simultaneously. Choose based on your needs
 
 ### Environment Variables Reference
 
-Create `contents/plugins/ai/.env` with your configuration:
+Create `plugins/ai/.env` with your configuration:
 
 ```bash
 # ==========================================
@@ -333,8 +333,8 @@ WHERE table_name IN ('ai_history', 'ai_history_metas');
 pnpm db:migrate
 
 # Or apply specific migration
-psql $DATABASE_URL -f contents/plugins/ai/entities/ai-history/migrations/001_ai_history_table.sql
-psql $DATABASE_URL -f contents/plugins/ai/entities/ai-history/migrations/002_ai_history_metas.sql
+psql $DATABASE_URL -f plugins/ai/entities/ai-history/migrations/001_ai_history_table.sql
+psql $DATABASE_URL -f plugins/ai/entities/ai-history/migrations/002_ai_history_metas.sql
 ```
 
 ## Troubleshooting
@@ -346,7 +346,7 @@ psql $DATABASE_URL -f contents/plugins/ai/entities/ai-history/migrations/002_ai_
 **Solution:**
 ```bash
 # Check AI_PLUGIN_ENABLED in .env
-cat contents/plugins/ai/.env | grep AI_PLUGIN_ENABLED
+cat plugins/ai/.env | grep AI_PLUGIN_ENABLED
 
 # Should be: AI_PLUGIN_ENABLED=true
 
@@ -367,7 +367,7 @@ curl http://localhost:11434/api/tags
 ollama serve
 
 # Check base URL in .env
-cat contents/plugins/ai/.env | grep OLLAMA_BASE_URL
+cat plugins/ai/.env | grep OLLAMA_BASE_URL
 ```
 
 ### OpenAI Authentication Failed
@@ -377,7 +377,7 @@ cat contents/plugins/ai/.env | grep OLLAMA_BASE_URL
 **Solution:**
 ```bash
 # Verify API key format (should start with sk-)
-cat contents/plugins/ai/.env | grep OPENAI_API_KEY
+cat plugins/ai/.env | grep OPENAI_API_KEY
 
 # Test key directly
 curl https://api.openai.com/v1/models \
@@ -393,7 +393,7 @@ curl https://api.openai.com/v1/models \
 **Solution:**
 ```bash
 # Verify API key format (should start with sk-ant-)
-cat contents/plugins/ai/.env | grep ANTHROPIC_API_KEY
+cat plugins/ai/.env | grep ANTHROPIC_API_KEY
 
 # Test key directly
 curl https://api.anthropic.com/v1/messages \
@@ -413,7 +413,7 @@ curl https://api.anthropic.com/v1/messages \
 pnpm db:migrate
 
 # Or check migration files exist
-ls contents/plugins/ai/entities/ai-history/migrations/
+ls plugins/ai/entities/ai-history/migrations/
 ```
 
 ### Authentication Required Error

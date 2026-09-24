@@ -17,7 +17,6 @@ nextspark/
 │   └── mobile/        # App móvil (FUERA del workspace)
 ├── packages/
 ├── plugins/
-├── themes/
 └── pnpm-workspace.yaml
 ```
 
@@ -91,7 +90,6 @@ packages:
   - 'packages/*'
   - 'apps/dev'          # Explícito, solo dev
   - 'plugins/*'
-  - 'themes/*'
   # apps/mobile queda FUERA del workspace intencionalmente
   # Ver: apps/mobile/.docs/09-monorepo-integration-plan.md
 ```
@@ -220,7 +218,6 @@ nextspark/
 │   ├── core/
 │   └── cli/
 ├── plugins/
-├── themes/
 ├── package.json
 ├── pnpm-workspace.yaml
 └── README.md

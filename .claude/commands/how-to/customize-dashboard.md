@@ -72,7 +72,7 @@ The dashboard is composed of configurable components:
 **📂 Dashboard Configuration Files:**
 
 ```
-contents/themes/your-theme/config/
+config/
 ├── dashboard.config.ts    # Dashboard layout
 ├── navigation.config.ts   # Sidebar menus
 └── widgets.config.ts      # Dashboard widgets
@@ -103,7 +103,7 @@ Configure sidebar menu items:
 **📋 navigation.config.ts Example:**
 
 ```typescript
-// contents/themes/your-theme/config/navigation.config.ts
+// config/navigation.config.ts
 import type { NavigationConfig } from '@/core/types/navigation'
 import {
   Home,
@@ -246,7 +246,7 @@ Configure the main dashboard home page:
 **📋 widgets.config.ts Example:**
 
 ```typescript
-// contents/themes/your-theme/config/widgets.config.ts
+// config/widgets.config.ts
 import type { WidgetsConfig } from '@/core/types/widgets'
 
 export const widgetsConfig: WidgetsConfig = {
@@ -365,7 +365,7 @@ export const widgetsConfig: WidgetsConfig = {
 **📋 Create Custom Widget:**
 
 ```typescript
-// contents/themes/your-theme/components/widgets/MyCustomWidget.tsx
+// components/widgets/MyCustomWidget.tsx
 'use client'
 
 import { Card, CardHeader, CardContent } from '@/core/components/ui/card'
@@ -422,7 +422,7 @@ Configure dashboard appearance:
 **📋 dashboard.config.ts Example:**
 
 ```typescript
-// contents/themes/your-theme/config/dashboard.config.ts
+// config/dashboard.config.ts
 import type { DashboardConfig } from '@/core/types/dashboard'
 
 export const dashboardConfig: DashboardConfig = {
@@ -515,7 +515,7 @@ export const dashboardConfig: DashboardConfig = {
 Configure in your theme's globals.css:
 
 ```css
-/* contents/themes/your-theme/styles/globals.css */
+/* styles/globals.css */
 :root {
   /* Dashboard-specific colors */
   --dashboard-sidebar-bg: var(--background);

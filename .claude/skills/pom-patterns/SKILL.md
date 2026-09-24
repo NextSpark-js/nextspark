@@ -15,7 +15,7 @@ Patterns and tools for creating Page Object Models (POMs) for Cypress tests.
 ## Architecture Overview
 
 ```
-contents/themes/{theme}/tests/cypress/src/
+tests/cypress/src/
 ├── core/
 │   ├── BasePOM.ts                # Base class for all POMs
 │   └── DashboardEntityPOM.ts     # Entity POM base (CRUD operations)
@@ -58,7 +58,7 @@ BasePOM
 
 ### 1. BasePOM
 
-**Location:** `contents/themes/{theme}/tests/cypress/src/core/BasePOM.ts`
+**Location:** `tests/cypress/src/core/BasePOM.ts`
 
 Provides:
 - Selector pattern replacement (`{index}`, `{id}`)
@@ -86,7 +86,7 @@ export abstract class BasePOM {
 
 ### 2. DashboardEntityPOM
 
-**Location:** `contents/themes/{theme}/tests/cypress/src/core/DashboardEntityPOM.ts`
+**Location:** `tests/cypress/src/core/DashboardEntityPOM.ts`
 
 Extends BasePOM with:
 - Standard CRUD navigation (`visitList()`, `visitCreate()`, `visitEdit()`)
@@ -125,7 +125,7 @@ export class DashboardEntityPOM extends BasePOM {
 
 ### 3. Entity POM Pattern
 
-**Location:** `contents/themes/{theme}/tests/cypress/src/entities/{Entity}POM.ts`
+**Location:** `tests/cypress/src/entities/{Entity}POM.ts`
 
 ```typescript
 import { DashboardEntityPOM } from '../core/DashboardEntityPOM'
@@ -286,7 +286,7 @@ TasksPOM.create()
 
 ## entities.json Fixture
 
-**Location:** `contents/themes/{theme}/tests/cypress/fixtures/entities.json`
+**Location:** `tests/cypress/fixtures/entities.json`
 
 Auto-generated fixture containing entity configurations:
 
@@ -334,18 +334,15 @@ class TasksPOM extends DashboardEntityPOM {
 # Generate a new entity POM
 python3 .claude/skills/pom-patterns/scripts/generate-pom.py \
   --entity products \
-  --theme default
 
 # Preview without writing
 python3 .claude/skills/pom-patterns/scripts/generate-pom.py \
   --entity products \
-  --theme default \
   --dry-run
 
 # Specify custom fields
 python3 .claude/skills/pom-patterns/scripts/generate-pom.py \
   --entity products \
-  --theme default \
   --fields "title,description,price,category,status"
 ```
 

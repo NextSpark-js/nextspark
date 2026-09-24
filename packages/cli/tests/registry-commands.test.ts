@@ -40,13 +40,13 @@ async function projectWithBuild(code: number) {
   await writeFile(
     join(coreDir, 'scripts/build/registry.mjs'),
     `for (const name of ${JSON.stringify(NAMES.map(([name]) => name))}) {
-  console.log('⚠️ app/(templates): backed up app/(templates)/' + name + ' to .nextspark/backups/x')
-  console.error('Build failed: could not read app/(templates)/' + name)
+  console.log('⚠️ src/app/(templates): backed up src/app/(templates)/' + name + ' to .nextspark/backups/x')
+  console.error('Build failed: could not read src/app/(templates)/' + name)
 }
 process.exit(${code})
 `
   )
-  await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+  await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
   return { root, coreDir, cleanup: () => rm(root, { recursive: true, force: true }) }
 }
 
@@ -90,8 +90,8 @@ function wrongOutput(label: string, printed: string, line: (shown: string) => st
   ]
 }
 
-const backedUpLine = (shown: string, prefix = '') => `"${prefix}⚠️ app/(templates): backed up app/(templates)/${shown} to .nextspark/backups/x"`
-const failedLine = (shown: string) => `"Build failed: could not read app/(templates)/${shown}"`
+const backedUpLine = (shown: string, prefix = '') => `"${prefix}⚠️ src/app/(templates): backed up src/app/(templates)/${shown} to .nextspark/backups/x"`
+const failedLine = (shown: string) => `"Build failed: could not read src/app/(templates)/${shown}"`
 
 /**
  * A successful build shows the first five warnings it printed and counts the
@@ -154,16 +154,16 @@ test('dev still shows the cause once a flood of stdout follows it', { skip: proc
   await writeFile(join(coreDir, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
   await writeFile(
     join(coreDir, 'scripts/build/registry.mjs'),
-    `console.error('❌ Build failed: contents/themes/acme/templates/shop/page.tsx has no default export')
+    `console.error('❌ Build failed: templates/shop/page.tsx has no default export')
 for (let i = 0; i < 5000; i++) console.log('progress ' + i)
 process.exit(1)
 `
   )
-  await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+  await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
   try {
     const printed = await runCommand(root, () => buildRegistries(coreDir, root), false)
     assert.ok(
-      printed.includes('Build failed: contents/themes/acme/templates/shop/page.tsx has no default export'),
+      printed.includes('Build failed: templates/shop/page.tsx has no default export'),
       `the cause survives 5000 lines of stdout printed after it:\n${printed.slice(0, 500)}`
     )
   } finally {
@@ -171,7 +171,7 @@ process.exit(1)
   }
 })
 
-test('dev shows a long app/(templates) line cut at the cap with the same omitted-bytes marker as everything else it prints', { skip: process.platform === 'win32' }, async () => {
+test('dev shows a long src/app/(templates) line cut at the cap with the same omitted-bytes marker as everything else it prints', { skip: process.platform === 'win32' }, async () => {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-commands-longline-'))
   const coreDir = join(root, 'node_modules/@nextsparkjs/core')
   await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
@@ -179,12 +179,12 @@ test('dev shows a long app/(templates) line cut at the cap with the same omitted
   const longSuffix = 'x'.repeat(14000)
   await writeFile(
     join(coreDir, 'scripts/build/registry.mjs'),
-    `console.log('app/(templates)/' + ${JSON.stringify(longSuffix)} + '.tsx created')\n`
+    `console.log('src/app/(templates)/' + ${JSON.stringify(longSuffix)} + '.tsx created')\n`
   )
-  await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+  await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
   try {
     const printed = await runCommand(root, () => buildRegistries(coreDir, root), false)
-    const fullLine = `app/(templates)/${longSuffix}.tsx created`
+    const fullLine = `src/app/(templates)/${longSuffix}.tsx created`
     const kept = Buffer.from(fullLine, 'utf8').subarray(0, 4096).toString('utf8')
     const omitted = Buffer.byteLength(fullLine, 'utf8') - Buffer.byteLength(kept, 'utf8')
     assert.ok(
@@ -198,7 +198,7 @@ test('dev shows a long app/(templates) line cut at the cap with the same omitted
 
 /**
  * A build that prints hundreds of MB - as a real project with a lot of
- * routes would, one app/(templates) line per file - runs `dev` in bounded
+ * routes would, one src/app/(templates) line per file - runs `dev` in bounded
  * memory.
  */
 test('dev does not run a 64 MB heap out on a build that prints hundreds of MB', { skip: process.platform === 'win32', timeout: 60_000 }, async () => {
@@ -209,13 +209,13 @@ test('dev does not run a 64 MB heap out on a build that prints hundreds of MB', 
     await writeFile(
       join(coreDir, 'scripts/build/registry.mjs'),
       // No process.exit: it would cut the writes still queued on the pipe short of the parent
-      `const line = '⚠️  app/(templates): backed up app/(templates)/page-' + 'x'.repeat(8000) + '.tsx\\n'
+      `const line = '⚠️  src/app/(templates): backed up src/app/(templates)/page-' + 'x'.repeat(8000) + '.tsx\\n'
 for (let i = 0; i < 30000; i++) process.stdout.write(line)
 `
     )
     const projectRoot = join(root, 'project')
     await mkdir(projectRoot)
-    await writeFile(join(projectRoot, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="default"\n')
+    await writeFile(join(projectRoot, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
 
     const script = join(root, 'run.mts')
     await writeFile(script, `import { buildRegistries } from ${JSON.stringify(pathToFileURL(join(PKG_ROOT, 'src/commands/dev.ts')).href)}

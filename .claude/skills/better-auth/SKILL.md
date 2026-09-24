@@ -371,7 +371,7 @@ Registration behavior is configurable at the theme level via `auth` in `app.conf
 ### Theme Configuration
 
 ```typescript
-// contents/themes/my-theme/config/app.config.ts
+// config/app.config.ts
 
 // Option 1: Open registration (default, no config needed)
 auth: {

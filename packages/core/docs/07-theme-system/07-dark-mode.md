@@ -91,7 +91,7 @@ export default async function RootLayout({ children }) {
 ### Light Mode Variables
 
 ```css
-/* contents/themes/my-theme/styles/globals.css */
+/* styles/globals.css */
 
 :root {
   /* Background & Foreground */
@@ -313,8 +313,8 @@ async function handleThemeChange(newTheme: string) {
 
 ```typescript
 export async function getThemeSettings(): Promise<ThemeSettings> {
-  const themeConfig = ThemeService.getByName(activeThemeName)
-  const appConfig = ThemeService.getAppConfig(activeThemeName)
+  const themeConfig = ThemeService.getByName(projectThemeName)
+  const appConfig = ThemeService.getAppConfig(projectThemeName)
 
   // app.config.ts → ui.theme.allowUserToggle (default: true)
   const allowUserToggle = appConfig?.ui?.theme?.allowUserToggle ?? true
@@ -360,7 +360,7 @@ export const myThemeConfig: ThemeConfig = {
 - The longest matching prefix wins, so `'/embed/preview': 'light'` can override `'/embed': 'dark'`.
 - Query strings, hashes and trailing slashes are ignored.
 
-**How it works:** `getThemeSettings()` reads the map from the active theme and the root layout passes it to `NextThemeProvider` as `forcedThemeRoutes`. The provider (`core/providers/theme-provider.tsx`) resolves it against `usePathname()` on every render and feeds the result to next-themes' `forcedTheme` on the **single root instance**. Because the same provider renders the blocking script and hydrates, there is no light → dark → light flash, and client-side navigations into or out of a forced route switch themes without a reload.
+**How it works:** `getThemeSettings()` reads the map from the project theme and the root layout passes it to `NextThemeProvider` as `forcedThemeRoutes`. The provider (`core/providers/theme-provider.tsx`) resolves it against `usePathname()` on every render and feeds the result to next-themes' `forcedTheme` on the **single root instance**. Because the same provider renders the blocking script and hydrates, there is no light → dark → light flash, and client-side navigations into or out of a forced route switch themes without a reload.
 
 Do **not** nest a second `ThemeProvider` or inject your own `<script>` in a nested layout for this: both fight the root provider over the same `<html>` element and produce exactly that flash.
 

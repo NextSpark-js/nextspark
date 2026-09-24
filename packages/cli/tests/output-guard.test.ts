@@ -182,12 +182,12 @@ async function forgedProject(parent: string) {
   await mkdir(join(root, 'node_modules/.bin'), { recursive: true })
   await writeFile(join(root, 'node_modules/.bin/next'), '#!/bin/sh\necho ran >> "$NEXT_RAN"\necho "Resolved from: $PWD"\nexit 1\n')
   await chmod(join(root, 'node_modules/.bin/next'), 0o755)
-  await mkdir(join(root, 'app'), { recursive: true })
-  await writeFile(join(root, 'app/layout.tsx'), 'export default function RootLayout({ children }) { return children }\n')
-  await mkdir(join(root, 'contents/themes/acme/templates/pricing'), { recursive: true })
-  await writeFile(join(root, 'contents/themes/acme/templates/pricing/page.tsx'), 'export default function Pricing() { return null }\n')
-  await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
-  await writeFile(join(root, 'package.json'), '{}')
+  await mkdir(join(root, 'src', 'app'), { recursive: true })
+  await writeFile(join(root, 'src/app/layout.tsx'), 'export default function RootLayout({ children }) { return children }\n')
+  await mkdir(join(root, 'templates/pricing'), { recursive: true })
+  await writeFile(join(root, 'templates/pricing/page.tsx'), 'export default function Pricing() { return null }\n')
+  await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
+  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '15.5.24' } }))
   return root
 }
 

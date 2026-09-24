@@ -1,5 +1,5 @@
 /**
- * A migration that never finishes has to end `db:verify-theme` by itself, with
+ * A migration that never finishes has to end `the project-template migration verifier` by itself, with
  * the migration's name, and have its session on the server ended; a migration
  * that is only slow has to pass; and one still running at
  * MIGRATION_TIMEOUT_SECONDS fails there, even one that switches
@@ -289,7 +289,7 @@ interface Run {
 /**
  * Runs a script to its end, or kills it after `killAfterMs` and reports a null
  * status. The script runs in a process group of its own, which is what gets
- * killed: db:verify-theme runs the migrations in a child that would otherwise
+ * killed: the project-template migration verifier runs the migrations in a child that would otherwise
  * outlive it and hold the output open.
  */
 function run(t: TestContext, script: string, args: string[], options: { cwd: string; env: NodeJS.ProcessEnv; killAfterMs: number }) {
@@ -326,7 +326,6 @@ function cleanEnv(extra: Record<string, string>): NodeJS.ProcessEnv {
     VERIFY_THEME_DATABASE_URL: _verify,
     VERIFY_THEME_ALLOW_CLUSTER_CHANGES: _allow,
     MIGRATION_TIMEOUT_SECONDS: _limit,
-    NEXT_PUBLIC_ACTIVE_THEME: _theme,
     ...env
   } = process.env
   return { ...env, ...extra }
@@ -337,6 +336,11 @@ function projectWith(t: TestContext, migrations: Record<string, string>) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'migration-time-limit-'))
   t.after(() => fs.rmSync(root, { recursive: true, force: true }))
   fs.mkdirSync(path.join(root, 'packages/core/migrations'), { recursive: true })
+  fs.writeFileSync(path.join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.3.5' } }))
+  fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'packages: []\n')
+  fs.mkdirSync(path.join(root, 'config'), { recursive: true })
+  fs.writeFileSync(path.join(root, 'config/theme.config.ts'), "export const themeConfig = { name: 'fixture' }\n")
   for (const [file, sql] of Object.entries(migrations)) {
     fs.writeFileSync(path.join(root, 'packages/core/migrations', file), sql)
   }
@@ -367,7 +371,7 @@ test('a migration still running at the limit fails the run with its name, and it
 
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd,
-    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+    env: cleanEnv({ DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '0.5' }),
     killAfterMs: 10000,
   })
 
@@ -392,7 +396,7 @@ test('a statement the server cancels under a limit the migration sets itself is 
 
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd,
-    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '5' }),
+    env: cleanEnv({ DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '5' }),
     killAfterMs: 10000,
   })
 
@@ -484,7 +488,7 @@ test('a migration the server never answers is given up on, and its session ended
 
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd,
-    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+    env: cleanEnv({ DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '0.5' }),
     killAfterMs: 10000,
   })
 
@@ -505,7 +509,7 @@ test('a migration that is slow but within the limit runs, and so does the rest',
 
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd,
-    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '1' }),
+    env: cleanEnv({ DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '1' }),
     killAfterMs: 10000,
   })
 
@@ -518,7 +522,7 @@ test('a migration that is slow but within the limit runs, and so does the rest',
 /** A project whose core, theme and theme entity migrations are the given files, for the theme `fixture`. */
 function projectWithTheme(t: TestContext, { core, theme, widgets }: Record<'core' | 'theme' | 'widgets', Record<string, string>>) {
   const root = projectWith(t, core)
-  const themeDir = path.join(root, 'apps/dev/contents/themes/fixture')
+  const themeDir = root
   for (const [dir, files] of [
     [path.join(themeDir, 'migrations'), theme],
     [path.join(themeDir, 'entities/widgets/migrations'), widgets],
@@ -545,7 +549,7 @@ test('recording a migration that ran to the end is not held to the limit, in any
 
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd,
-    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+    env: cleanEnv({ DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '0.5' }),
     killAfterMs: 20000,
   })
 
@@ -576,14 +580,14 @@ test('a migration that ran to the end but could not be recorded says so, and giv
       table: '_content_migrations',
       error: ['42501', 'permission denied for table _content_migrations'] as [string, string],
       file: '001_theme.sql',
-      insert: `INSERT INTO "_content_migrations" ("source_type", "source_name", "filename") VALUES ('theme', 'fixture', '001_theme.sql') ON CONFLICT DO NOTHING;`,
+      insert: `INSERT INTO "_content_migrations" ("source_type", "source_name", "filename") VALUES ('project', 'fixture', '001_theme.sql') ON CONFLICT DO NOTHING;`,
       notRun: TRACKED.widgets['001_widgets.sql'],
     },
     {
       table: '_entity_migrations',
       error: ['55P03', 'canceling statement due to lock timeout'] as [string, string],
       file: '001_widgets.sql',
-      insert: `INSERT INTO "_entity_migrations" ("entity_name", "source_type", "source_name", "filename") VALUES ('widgets', 'theme', 'fixture', '001_widgets.sql') ON CONFLICT DO NOTHING;`,
+      insert: `INSERT INTO "_entity_migrations" ("entity_name", "source_type", "source_name", "filename") VALUES ('widgets', 'project', 'fixture', '001_widgets.sql') ON CONFLICT DO NOTHING;`,
       notRun: undefined,
     },
   ]
@@ -593,7 +597,7 @@ test('a migration that ran to the end but could not be recorded says so, and giv
 
     const result = await run(t, RUNNER, ['--no-env-file'], {
       cwd,
-      env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+      env: cleanEnv({ DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '0.5' }),
       killAfterMs: 10000,
     })
 
@@ -636,7 +640,7 @@ async function runTrackedWith(t: TestContext, table: string, sql: string, treatm
   const { files, file, next } = trackedWith(table, sql)
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd: projectWithTheme(t, files),
-    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', ...limit }),
+    env: cleanEnv({ DATABASE_URL: server.url, ...limit }),
     killAfterMs: 10000,
   })
   const session = sessionThatRan(server.sessions, sql)
@@ -1292,7 +1296,7 @@ test('a database URL that switches the limits off does not lift them', { timeout
 
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd,
-    env: cleanEnv({ DATABASE_URL: server.url + LIMITS_OFF, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+    env: cleanEnv({ DATABASE_URL: server.url + LIMITS_OFF, MIGRATION_TIMEOUT_SECONDS: '0.5' }),
     killAfterMs: 10000,
   })
 
@@ -1314,7 +1318,7 @@ test('a database URL that switches the limits off still leaves a server that nev
 
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd,
-    env: cleanEnv({ DATABASE_URL: server.url + LIMITS_OFF, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+    env: cleanEnv({ DATABASE_URL: server.url + LIMITS_OFF, MIGRATION_TIMEOUT_SECONDS: '0.5' }),
     killAfterMs: 10000,
   })
 
@@ -1333,7 +1337,7 @@ test('a database URL that switches the limits off does not fail a migration that
 
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd,
-    env: cleanEnv({ DATABASE_URL: server.url + LIMITS_OFF, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '1' }),
+    env: cleanEnv({ DATABASE_URL: server.url + LIMITS_OFF, MIGRATION_TIMEOUT_SECONDS: '1' }),
     killAfterMs: 10000,
   })
 
@@ -1349,7 +1353,7 @@ test('without a limit, the time limits a database URL sets are the ones that app
 
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd,
-    env: cleanEnv({ DATABASE_URL: `${server.url}&statement_timeout=90000`, NEXT_PUBLIC_ACTIVE_THEME: 'fixture' }),
+    env: cleanEnv({ DATABASE_URL: `${server.url}&statement_timeout=90000` }),
     killAfterMs: 10000,
   })
 
@@ -1385,7 +1389,7 @@ test('a migration that switches statement_timeout off for itself still stops at 
 
     const result = await run(t, RUNNER, ['--no-env-file'], {
       cwd,
-      env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '1' }),
+      env: cleanEnv({ DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '1' }),
       killAfterMs: 15000,
     })
 
@@ -1410,7 +1414,7 @@ test('a migration that switches statement_timeout off for the ones after it does
 
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd,
-    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '1' }),
+    env: cleanEnv({ DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '1' }),
     killAfterMs: 15000,
   })
 
@@ -1428,7 +1432,7 @@ test('db:migrate takes the limit from the project .env, as it takes the database
   const cwd = projectWith(t, MIGRATIONS)
   fs.writeFileSync(
     path.join(cwd, '.env'),
-    `DATABASE_URL="${server.url}"\nNEXT_PUBLIC_ACTIVE_THEME=fixture\nMIGRATION_TIMEOUT_SECONDS=0.5\n`
+    `DATABASE_URL="${server.url}"\nMIGRATION_TIMEOUT_SECONDS=0.5\n`
   )
 
   const result = await run(t, RUNNER, [], { cwd, env: cleanEnv({}), killAfterMs: 10000 })
@@ -1444,7 +1448,7 @@ test('db:migrate sets no limit unless it is asked for one', { timeout: 20000 }, 
 
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd,
-    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture' }),
+    env: cleanEnv({ DATABASE_URL: server.url }),
     killAfterMs: 10000,
   })
 
@@ -1459,7 +1463,7 @@ const FIRST_CORE_MIGRATION = (() => {
   return { file, sql: fs.readFileSync(path.join(dir, file), 'utf8') }
 })()
 
-test('db:verify-theme ends by itself when a migration hangs, naming it', { timeout: 30000 }, async t => {
+test('the project-template migration verifier ends by itself when a migration hangs, naming it', { timeout: 30000 }, async t => {
   const server = await standInPostgres(t, sql => (sql === FIRST_CORE_MIGRATION.sql ? 'stuck' : 'ok'))
 
   const result = await run(t, VERIFY, ['default'], {
@@ -1477,7 +1481,7 @@ test('db:verify-theme ends by itself when a migration hangs, naming it', { timeo
   assert.match(result.output, /Theme "default" migrations failed \(exit code 1\)/)
 })
 
-test('db:verify-theme gives every migration 30 s unless told otherwise', { timeout: 60000 }, async t => {
+test('the project-template migration verifier gives every migration 30 s unless told otherwise', { timeout: 60000 }, async t => {
   const server = await standInPostgres(t, () => 'ok')
 
   const result = await run(t, VERIFY, ['default'], {
@@ -1492,7 +1496,7 @@ test('db:verify-theme gives every migration 30 s unless told otherwise', { timeo
   assert.equal(migrating?.startup.statement_timeout, '30000')
 })
 
-test('db:verify-theme refuses a limit that is not a number of seconds before it connects', { timeout: 20000 }, async t => {
+test('the project-template migration verifier refuses a limit that is not a number of seconds before it connects', { timeout: 20000 }, async t => {
   const server = await standInPostgres(t, () => 'ok')
 
   const result = await run(t, VERIFY, ['default'], {

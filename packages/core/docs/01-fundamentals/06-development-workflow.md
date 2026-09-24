@@ -249,8 +249,8 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 # Core unit tests (Jest)
 pnpm test:core
 
-# Active-theme unit tests (Jest)
-pnpm test:theme
+# Project unit tests (Jest)
+pnpm --dir apps/dev exec jest --watchman=false
 
 # E2E tests (Cypress)
 pnpm cy:run
@@ -317,7 +317,7 @@ await TodoWrite({
 ```typescript
 await TodoWrite({
   todos: [
-    { content: "Create entity config in contents/themes/default/entities/[entity]/", status: "pending", activeForm: "Creating entity config" },
+    { content: "Create entity config in entities/[entity]/", status: "pending", activeForm: "Creating entity config" },
     { content: "Define field definitions with validation", status: "pending", activeForm: "Defining fields" },
     { content: "Create database migration", status: "pending", activeForm: "Creating migration" },
     { content: "Add translations (en.json + es.json)", status: "pending", activeForm: "Adding translations" },
@@ -591,7 +591,7 @@ git checkout -b feature/my-feature
 
 # Run tests
 pnpm test:core
-pnpm test:theme
+pnpm --dir apps/dev exec jest --watchman=false
 pnpm cy:run
 
 # Type check
@@ -678,10 +678,10 @@ gh pr merge --squash
 **❌ Import violations:**
 ```typescript
 // REJECT - Direct import from contents
-import { config } from '@/contents/themes/default/config/theme.config'
+import { config } from '@/config/theme.config'
 
 // ACCEPT - Registry-based access
-import { THEME_REGISTRY } from '@/core/lib/registries/theme-registry'
+import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 ```
 
 **❌ Type safety violations:**

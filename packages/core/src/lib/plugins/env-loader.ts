@@ -1,7 +1,7 @@
 /**
  * Centralized Plugin Environment Loader
  *
- * Automatically loads .env files from all plugins in contents/plugins/
+ * Automatically loads .env files from all local plugins in plugins/
  * No need to duplicate env loading code in each plugin
  *
  * Usage:
@@ -49,7 +49,7 @@ class PluginEnvLoader {
     if (this.loaded) return
 
     try {
-      const pluginsDir = join(process.cwd(), 'contents/plugins')
+      const pluginsDir = join(process.cwd(), 'plugins')
 
       if (!existsSync(pluginsDir)) {
         console.warn('[Plugin Env Loader] No plugins directory found')

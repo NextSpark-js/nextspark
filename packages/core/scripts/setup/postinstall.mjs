@@ -89,8 +89,7 @@ function ensureEnvFile() {
       fs.copyFileSync(envExamplePath, envPath)
       console.log('   ⚠️  Please update .env with your configuration')
     } else {
-      console.log('⚠️  No .env file found. Some scripts may not work correctly.')
-      console.log('   Create a .env file with NEXT_PUBLIC_ACTIVE_THEME=default')
+      console.log('⚠️  No .env file found. Runtime integrations may need environment configuration.')
     }
   }
 }

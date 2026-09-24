@@ -5,11 +5,10 @@ Scaffold Entity Script
 Creates the complete file structure for a new entity.
 
 Usage:
-    python scaffold-entity.py --entity ENTITY_NAME [--theme THEME]
+    python scaffold-entity.py --entity ENTITY_NAME
 
 Options:
     --entity ENTITY_NAME  Name of the entity in kebab-case (e.g., blog-posts)
-    --theme THEME         Theme name (default: from NEXT_PUBLIC_ACTIVE_THEME or 'default')
     --with-metas          Include metadata table migration
     --with-builder        Enable page builder for this entity
 """
@@ -49,10 +48,6 @@ def to_singular(name: str) -> str:
     return name
 
 
-def get_active_theme() -> str:
-    """Get active theme from environment or default."""
-    return os.environ.get('NEXT_PUBLIC_ACTIVE_THEME', 'default')
-
 
 def generate_config_file(entity_slug: str, singular: str, pascal: str) -> str:
     """Generate entity config TypeScript file."""
@@ -64,7 +59,7 @@ def generate_config_file(entity_slug: str, singular: str, pascal: str) -> str:
  */
 
 import {{ FileText }} from 'lucide-react'
-import type {{ EntityConfig }} from '@/core/lib/entities/types'
+import type {{ EntityConfig }} from '@nextsparkjs/core/lib/entities/types'
 import {{ {to_camel_case(entity_slug)}Fields }} from './{entity_slug}.fields'
 
 export const {to_camel_case(singular)}EntityConfig: EntityConfig = {{
@@ -117,7 +112,7 @@ export const {to_camel_case(singular)}EntityConfig: EntityConfig = {{
   // 4. PERMISSIONS SYSTEM
   // ==========================================
   // Permissions are centralized in permissions.config.ts
-  // See: contents/themes/{{theme}}/permissions.config.ts
+  // See: config/permissions.config.ts
 
   // ==========================================
   // 5. INTERNATIONALIZATION
@@ -147,7 +142,7 @@ def generate_fields_file(entity_slug: str, singular: str, pascal: str) -> str:
  * Contains all field definitions for the {entity_slug} entity.
  */
 
-import type {{ EntityField }} from '@/core/lib/entities/types'
+import type {{ EntityField }} from '@nextsparkjs/core/lib/entities/types'
 
 export const {to_camel_case(entity_slug)}Fields: EntityField[] = [
   {{
@@ -285,7 +280,7 @@ def generate_service_file(entity_slug: str, singular: str, pascal: str) -> str:
  * @module {pascal}Service
  */
 
-import {{ BaseEntityService }} from '@/core/lib/services/base-entity.service'
+import {{ BaseEntityService }} from '@nextsparkjs/core/lib/services/base-entity.service'
 import type {{ {pascal}, Create{pascal}Input, Update{pascal}Input }} from './{entity_slug}.types'
 
 class {pascal}ServiceClass extends BaseEntityService<{pascal}, Create{pascal}Input, Update{pascal}Input> {{
@@ -586,25 +581,22 @@ WITH CHECK (
 def main():
     parser = argparse.ArgumentParser(description='Scaffold a new entity')
     parser.add_argument('--entity', required=True, help='Entity name in kebab-case (plural)')
-    parser.add_argument('--theme', default=None, help='Theme name')
     parser.add_argument('--with-metas', action='store_true', help='Include metadata table')
     parser.add_argument('--with-builder', action='store_true', help='Enable page builder')
     parser.add_argument('--dry-run', action='store_true', help='Show what would be created')
 
     args = parser.parse_args()
 
-    theme = args.theme or get_active_theme()
     entity_slug = args.entity.lower()
     singular = to_singular(entity_slug)
     pascal = to_pascal_case(entity_slug)
 
     # Base path
-    base_path = Path(f'contents/themes/{theme}/entities/{entity_slug}')
+    base_path = Path(f'entities/{entity_slug}')
 
     print(f"\n{'=' * 60}")
     print(f"SCAFFOLDING ENTITY: {entity_slug}")
     print(f"{'=' * 60}")
-    print(f"Theme: {theme}")
     print(f"Singular: {singular}")
     print(f"Pascal: {pascal}")
     print(f"Base path: {base_path}")
@@ -651,7 +643,7 @@ def main():
     print(f"2. Add/modify fields in {entity_slug}.fields.ts")
     print(f"3. Update translations in messages/en.json and es.json")
     print(f"4. Run migration: pnpm db:migrate")
-    print(f"5. Regenerate registry: node core/scripts/build/registry.mjs")
+    print(f"5. Regenerate registry: pnpm exec nextspark registry:build")
     print("=" * 60 + "\n")
 
     return 0

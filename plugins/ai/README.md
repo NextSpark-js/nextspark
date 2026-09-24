@@ -42,7 +42,7 @@ Plugin empresarial de IA con soporte multi-modelo, generación de contenido, y c
 
 1. **Copia el archivo de ejemplo:**
    ```bash
-   cp contents/plugins/ai/.env.example contents/plugins/ai/.env
+   cp plugins/ai/.env.example plugins/ai/.env
    ```
 
 2. **Configura tus claves API:**
@@ -97,7 +97,7 @@ LM_STUDIO_BASE_URL=http://localhost:1234
 
 El plugin se registra automáticamente en el sistema y carga su configuración desde:
 
-1. **Primera prioridad**: `contents/plugins/ai/.env` (archivo específico del plugin)
+1. **Primera prioridad**: `plugins/ai/.env` (archivo específico del plugin)
 2. **Segunda prioridad**: Variables de entorno del sistema (`process.env`)
 3. **Tercera prioridad**: Valores por defecto incorporados
 
@@ -109,7 +109,7 @@ El plugin se registra automáticamente en el sistema y carga su configuración d
 Proveedor de contexto para toda la funcionalidad de IA:
 
 \`\`\`tsx
-import { AIProvider } from '@/contents/plugins/ai/components/AIProvider'
+import { AIProvider } from '@/plugins/ai/components/AIProvider'
 
 function App() {
   return (
@@ -128,7 +128,7 @@ function App() {
 Interfaz de chat con IA integrada:
 
 \`\`\`tsx
-import { AIChat } from '@/contents/plugins/ai/components/AIChat'
+import { AIChat } from '@/plugins/ai/components/AIChat'
 
 function ChatPage() {
   return (
@@ -152,7 +152,7 @@ function ChatPage() {
 Generador de contenido con templates:
 
 \`\`\`tsx
-import { ContentGenerator } from '@/contents/plugins/ai/components/ContentGenerator'
+import { ContentGenerator } from '@/plugins/ai/components/ContentGenerator'
 
 function ContentPage() {
   return (
@@ -174,7 +174,7 @@ function ContentPage() {
 Hook principal para funcionalidad de IA:
 
 \`\`\`tsx
-import { useAI } from '@/contents/plugins/ai/hooks/useAI'
+import { useAI } from '@/plugins/ai/hooks/useAI'
 
 function MyComponent() {
   const ai = useAI({
@@ -205,7 +205,7 @@ function MyComponent() {
 Hook especializado para generación de contenido:
 
 \`\`\`tsx
-import { useContentGeneration } from '@/contents/plugins/ai/hooks/useContentGeneration'
+import { useContentGeneration } from '@/plugins/ai/hooks/useContentGeneration'
 
 function ContentComponent() {
   const content = useContentGeneration({
@@ -346,7 +346,7 @@ Content-Type: application/json
 Para uso directo desde el código del servidor:
 
 \`\`\`tsx
-import { AIAPI } from '@/contents/plugins/ai/lib/ai-api'
+import { AIAPI } from '@/plugins/ai/lib/ai-api'
 
 // Generación simple
 const text = await AIAPI.generateText('Hola mundo')
@@ -376,7 +376,7 @@ const safety = await AIAPI.isContentSafe('Este contenido')
 
 ### Estructura de Archivos
 \`\`\`
-contents/plugins/ai/
+plugins/ai/
 ├── plugin.config.ts          # Configuración principal del plugin
 ├── types/
 │   └── ai.types.ts           # Definiciones de tipos TypeScript

@@ -563,7 +563,7 @@ STEP 6 OF 6: Test and Register
 packages:
   - 'core'
   - 'plugins/*'
-  - 'contents/themes/*'
+  - './*'
 ```
 
 **2️⃣ Install Dependencies:**

@@ -6,33 +6,24 @@
  * Auto-generates entities.json for Cypress E2E tests from entity configs.
  * This ensures Cypress POMs always stay in sync with entity configurations.
  *
- * Output: contents/themes/{theme}/tests/cypress/fixtures/entities.json
+ * Output: tests/cypress/fixtures/entities.json
  *
  * Usage:
- *   node scripts/build-test-entities.mjs           # Generate for active theme
+ *   node scripts/build-test-entities.mjs           # Generate for the current project
  *   node scripts/build-test-entities.mjs --watch   # Watch mode
- *   node scripts/build-test-entities.mjs --all     # Generate for all themes
  */
 
 import { readdir, writeFile, mkdir, readFile, stat } from 'fs/promises'
-import { join, dirname, basename } from 'path'
-import { fileURLToPath } from 'url'
+import { join } from 'path'
 import { existsSync, watch } from 'fs'
-import dotenv from 'dotenv'
+import { resolveProjectPaths } from '../build/registry/project-mode.mjs'
 
-dotenv.config({ override: true })
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-// Path from packages/core/scripts/test/ to project root (4 levels up)
-const rootDir = join(__dirname, '../../../..')
+const { projectRoot } = resolveProjectPaths(process.cwd())
 
 // Configuration
 const CONFIG = {
-  contentsDir: join(rootDir, 'contents', 'themes'),
-  activeTheme: process.env.NEXT_PUBLIC_ACTIVE_THEME?.replace(/'/g, '') || 'team-manager',
+  projectRoot,
   watchMode: process.argv.includes('--watch'),
-  allThemes: process.argv.includes('--all'),
   verbose: process.argv.includes('--verbose') || process.argv.includes('-v'),
 }
 
@@ -158,11 +149,11 @@ async function parseEntityFields(fieldsPath) {
 /**
  * Generate entities.json for a specific theme
  */
-async function generateEntitiesJson(themePath, themeName) {
-  const entities = await discoverEntities(themePath)
+async function generateEntitiesJson(projectPath) {
+  const entities = await discoverEntities(projectPath)
 
   if (entities.length === 0) {
-    log(`No entities found in theme: ${themeName}`, 'warning')
+    log('No entities found in the project', 'warning')
     return null
   }
 
@@ -252,114 +243,43 @@ async function generateEntitiesJson(themePath, themeName) {
   return output
 }
 
-/**
- * Write entities.json to the theme's Cypress fixtures directory
- *
- * New location (theme-level testing):
- *   contents/themes/{theme}/tests/cypress/fixtures/entities.json
- *
- * Legacy location (for backwards compatibility):
- *   core/tests/cypress/fixtures/themes/{theme}/entities.json
- */
-async function writeEntitiesJson(themePath, themeName, data) {
-  // New location: theme-level Cypress fixtures
-  const themeFixturesDir = join(themePath, 'tests', 'cypress', 'fixtures')
-  // Legacy location: central Cypress fixtures (for backwards compatibility)
-  const centralFixturesDir = join(rootDir, 'core', 'tests', 'cypress', 'fixtures', 'themes', themeName)
-
-  // Ensure directories exist
-  if (!existsSync(themeFixturesDir)) {
-    await mkdir(themeFixturesDir, { recursive: true })
-  }
-  if (!existsSync(centralFixturesDir)) {
-    await mkdir(centralFixturesDir, { recursive: true })
-  }
-
-  const jsonContent = JSON.stringify(data, null, 2) + '\n'
-
-  // Primary location: theme-level
-  const outputPath = join(themeFixturesDir, 'entities.json')
-  // Secondary location: central (backwards compatibility)
-  const legacyOutputPath = join(centralFixturesDir, 'entities.json')
-
-  await writeFile(outputPath, jsonContent)
-  await writeFile(legacyOutputPath, jsonContent)
-
-  verbose(`  Primary: ${outputPath}`)
-  verbose(`  Legacy:  ${legacyOutputPath}`)
-
+/** Write entities.json to the project's Cypress fixtures directory. */
+async function writeEntitiesJson(projectPath, data) {
+  const fixturesDir = join(projectPath, 'tests', 'cypress', 'fixtures')
+  if (!existsSync(fixturesDir)) await mkdir(fixturesDir, { recursive: true })
+  const outputPath = join(fixturesDir, 'entities.json')
+  await writeFile(outputPath, JSON.stringify(data, null, 2) + '\n')
+  verbose(`  Output: ${outputPath}`)
   return outputPath
 }
 
-/**
- * Process a single theme
- */
-async function processTheme(themeName) {
-  const themePath = join(CONFIG.contentsDir, themeName)
-
-  if (!existsSync(themePath)) {
-    log(`Theme not found: ${themeName}`, 'error')
-    return false
-  }
-
-  log(`Processing theme: ${themeName}`, 'build')
-
-  const data = await generateEntitiesJson(themePath, themeName)
-
-  if (!data) {
-    return false
-  }
-
-  const outputPath = await writeEntitiesJson(themePath, themeName, data)
-  const entityCount = Object.keys(data.entities).length
-
-  log(`Generated ${outputPath} (${entityCount} entities)`, 'success')
+async function processProject() {
+  log('Processing current project', 'build')
+  const data = await generateEntitiesJson(CONFIG.projectRoot)
+  if (!data) return false
+  const outputPath = await writeEntitiesJson(CONFIG.projectRoot, data)
+  log(`Generated ${outputPath} (${Object.keys(data.entities).length} entities)`, 'success')
   return true
 }
 
-/**
- * Main execution
- */
 async function main() {
   log('Test Entities JSON Generator', 'build')
   log('============================')
-
   const startTime = Date.now()
+  await processProject()
+  log(`Completed in ${Date.now() - startTime}ms`, 'success')
 
-  if (CONFIG.allThemes) {
-    // Process all themes
-    const themes = await readdir(CONFIG.contentsDir, { withFileTypes: true })
-
-    for (const theme of themes) {
-      if (theme.isDirectory()) {
-        await processTheme(theme.name)
-      }
-    }
-  } else {
-    // Process only active theme
-    await processTheme(CONFIG.activeTheme)
-  }
-
-  const elapsed = Date.now() - startTime
-  log(`Completed in ${elapsed}ms`, 'success')
-
-  // Watch mode
   if (CONFIG.watchMode) {
     log('Watching for changes...', 'info')
-
-    const watchPath = join(CONFIG.contentsDir, CONFIG.activeTheme, 'entities')
-
+    const watchPath = join(CONFIG.projectRoot, 'entities')
     if (existsSync(watchPath)) {
       let debounceTimer = null
-
-      watch(watchPath, { recursive: true }, (eventType, filename) => {
+      watch(watchPath, { recursive: true }, (_eventType, filename) => {
         if (!filename || !filename.endsWith('.ts')) return
-
-        // Debounce rebuilds
         if (debounceTimer) clearTimeout(debounceTimer)
         debounceTimer = setTimeout(async () => {
           log(`Change detected: ${filename}`, 'info')
-          await processTheme(CONFIG.activeTheme)
+          await processProject()
         }, 500)
       })
     }

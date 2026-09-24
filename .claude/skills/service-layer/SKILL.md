@@ -36,7 +36,7 @@ core/lib/db.ts                # RLS query functions
 ```
 
 > **📍 Context-Aware Paths:** Paths shown assume monorepo development. In consumer projects,
-> create in `contents/themes/{theme}/services/` instead. Core is read-only.
+> create in `services/` instead. Core is read-only.
 > See `core-theme-responsibilities` skill for complete rules.
 
 ## When to Use This Skill

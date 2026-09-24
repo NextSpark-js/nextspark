@@ -1,16 +1,16 @@
 /**
  * Tree Display
  *
- * Displays discovered content structure in console
+ * Displays the discovered root-first project structure in the console.
  *
  * @module core/scripts/build/registry/post-build/tree-display
  */
 
 /**
- * Display discovered contents in a beautiful tree structure
+ * Display discovered project inputs in a tree structure.
  */
 export function displayTreeStructure(plugins, themes, coreEntities = []) {
-  console.log('Discovered Contents Structure:')
+  console.log('Discovered Project Structure:')
   console.log()
 
   // Display core entities first if any
@@ -32,7 +32,7 @@ export function displayTreeStructure(plugins, themes, coreEntities = []) {
     console.log()
   }
 
-  console.log('contents/')
+  console.log('project root/')
 
   // Helper function to get tree characters
   const getTreeChars = (isLast, hasItems) => {
@@ -229,11 +229,11 @@ export function displayTreeStructure(plugins, themes, coreEntities = []) {
     }
   }
 
-  // Themes section
+  // Project theme section
   if (hasThemes || themes.length === 0) {
     sectionIndex++
     const isLastSection = sectionIndex === totalSections
-    console.log(`${getTreeChars(isLastSection && !hasThemes, hasThemes)} themes/`)
+    console.log(`${getTreeChars(isLastSection && !hasThemes, hasThemes)} project/`)
 
     themes.forEach((theme, index) => {
       const isLastTheme = index === themes.length - 1

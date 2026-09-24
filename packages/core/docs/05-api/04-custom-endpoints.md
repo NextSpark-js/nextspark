@@ -223,7 +223,7 @@ export async function GET(
 
 **1. Define route handler:**
 ```typescript
-// contents/plugins/ai-assistant/routes/generate.ts
+// plugins/ai-assistant/routes/generate.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { RouteHandler } from '@/core/types/plugin'
 
@@ -260,7 +260,7 @@ export const generateRouteHandler: RouteHandler = {
 
 **2. Register in plugin config:**
 ```typescript
-// contents/plugins/ai-assistant/ai-assistant.config.ts
+// plugins/ai-assistant/ai-assistant.config.ts
 import { PluginConfig } from '@/core/types/plugin'
 import { generateRouteHandler } from './routes/generate'
 

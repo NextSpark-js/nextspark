@@ -347,13 +347,11 @@ body {
 }
 
 /* =============================================
-   THEME SYSTEM - BUILD-TIME LOADING
-   Custom theme CSS is automatically injected based on activeTheme config
+   PROJECT STYLES - BUILD-TIME LOADING
+   Project CSS is imported by the generated host adapter
    ============================================= */
 
 /*
- * NOTE: To change theme, modify activeTheme in contents/themes/theme.config.ts
- * and run: npm run theme:build
- *
- * CSS from custom themes is injected at build-time for optimal performance
- */ 
+ * NOTE: Customize project tokens in styles/globals.css.
+ * Next.js compiles the imported project stylesheet during its build.
+ */

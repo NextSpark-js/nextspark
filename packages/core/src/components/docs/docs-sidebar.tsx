@@ -8,7 +8,7 @@ import { useState } from 'react'
 import type { DocSectionMeta } from '@nextsparkjs/registries/docs-registry'
 import { useTranslations } from 'next-intl'
 import { Input } from '../ui/input'
-import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
+import { ThemeService } from '../../lib/services/theme.service'
 import { getPublicDocsCategory } from '../../lib/docs/access'
 
 interface DocsSidebarProps {
@@ -37,9 +37,7 @@ export function DocsSidebar({ sections }: DocsSidebarProps) {
 
   const activeSection = getActiveSection()
 
-  // Extract theme configuration
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
-  const themeAppConfig = THEME_REGISTRY[activeTheme]?.appConfig
+  const themeAppConfig = ThemeService.getCurrentAppConfig()
   const publicConfig = getPublicDocsCategory(themeAppConfig?.docs) ?? { enabled: true, open: true, label: 'Documentation' }
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {

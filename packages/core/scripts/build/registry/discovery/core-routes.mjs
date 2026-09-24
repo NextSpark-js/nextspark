@@ -9,6 +9,7 @@
 
 import { join } from 'path'
 import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
+import { projectGeneratedAppDir } from '../project-mode.mjs'
 import { verbose, extractHttpMethods, scanDirectory } from '../../../utils/index.mjs'
 
 /**
@@ -45,7 +46,7 @@ function isExcludedDirectory(name) {
  * @returns {Promise<Array>} Array of discovered core routes
  */
 export async function discoverCoreRoutes(config = DEFAULT_CONFIG) {
-  const apiDir = join(config.projectRoot, 'app', 'api', 'v1')
+  const apiDir = join(config.generatedAppDir || projectGeneratedAppDir(config.projectRoot), 'api', 'v1')
   const routes = []
 
   verbose(`[Core Routes] Scanning ${apiDir}`)

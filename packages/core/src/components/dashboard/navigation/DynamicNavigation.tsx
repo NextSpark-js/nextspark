@@ -9,7 +9,7 @@ import { sel } from '../../../lib/test'
 import { Home, Camera, FileText, LucideIcon, ChevronDown, Box, Circle, Folder } from 'lucide-react'
 import { resolveIcon } from '../../../lib/icons'
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
-import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
+import { ThemeService } from '../../../lib/services/theme.service'
 import { usePermission } from '../../../lib/permissions/hooks'
 import type { Permission } from '../../../lib/permissions/types'
 
@@ -45,9 +45,7 @@ interface DynamicNavigationProps {
   entities: SerializableEntityConfig[]
 }
 
-// Get active theme from environment
-const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
-const themeConfig = THEME_REGISTRY[activeTheme as keyof typeof THEME_REGISTRY]
+const themeConfig = ThemeService.getCurrentEntry()
 const customSidebarSections: CustomSidebarSection[] = themeConfig?.appConfig?.customSidebarSections || []
 
 // Core navigation items that are always present (static)

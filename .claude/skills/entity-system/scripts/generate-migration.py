@@ -5,11 +5,10 @@ Generate Migration Script
 Generates SQL migration from entity configuration.
 
 Usage:
-    python generate-migration.py --entity ENTITY_NAME [--theme THEME] [--type TYPE]
+    python generate-migration.py --entity ENTITY_NAME [--type TYPE]
 
 Options:
     --entity ENTITY_NAME  Name of the entity (kebab-case)
-    --theme THEME         Theme name (default: from NEXT_PUBLIC_ACTIVE_THEME or 'default')
     --type TYPE           Migration type: table, metas, index, rls (default: table)
     --output OUTPUT       Output file (default: stdout)
     --with-rls            Include RLS policies
@@ -25,10 +24,6 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 
-
-def get_active_theme() -> str:
-    """Get active theme from environment or default."""
-    return os.environ.get('NEXT_PUBLIC_ACTIVE_THEME', 'default')
 
 
 def to_snake_case(name: str) -> str:
@@ -332,7 +327,6 @@ BEGIN;
 def main():
     parser = argparse.ArgumentParser(description='Generate entity migration')
     parser.add_argument('--entity', required=True, help='Entity name (kebab-case)')
-    parser.add_argument('--theme', default=None, help='Theme name')
     parser.add_argument('--type', choices=['table', 'metas', 'index', 'rls'], default='table')
     parser.add_argument('--output', help='Output file (default: stdout)')
     parser.add_argument('--with-rls', action='store_true', default=True)
@@ -341,14 +335,12 @@ def main():
 
     args = parser.parse_args()
 
-    theme = args.theme or get_active_theme()
     entity_slug = args.entity.lower()
 
     # Find fields file
-    fields_path = Path(f'contents/themes/{theme}/entities/{entity_slug}/{entity_slug}.fields.ts')
+    fields_path = Path(f'entities/{entity_slug}/{entity_slug}.fields.ts')
 
     print(f"\nGenerating migration for: {entity_slug}")
-    print(f"Theme: {theme}")
     print(f"Type: {args.type}")
     print(f"Fields file: {fields_path}")
 

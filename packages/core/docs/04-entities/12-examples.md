@@ -9,7 +9,7 @@ The tasks entity is a complete example currently in production.
 ### Main Configuration
 
 ```typescript
-// contents/themes/default/entities/tasks/tasks.config.ts
+// entities/tasks/tasks.config.ts
 import { CheckSquare } from 'lucide-react'
 import type { EntityConfig } from '@/core/lib/entities/types'
 import { taskFields } from './tasks.fields'
@@ -888,4 +888,4 @@ export const contactConfig: EntityConfig = {
 
 ---
 
-> 💡 **Tip**: All these examples are based on real project patterns. The `tasks` entity in `contents/themes/default/entities/tasks/` is particularly complete and in production.
+> 💡 **Tip**: All these examples are based on real project patterns. The `tasks` entity in `entities/tasks/` is particularly complete and in production.

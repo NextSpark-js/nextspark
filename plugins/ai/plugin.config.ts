@@ -41,7 +41,7 @@ export const aiPluginConfig: PluginConfig = {
   },
 
   // TypeScript types available for import
-  // Import from: '@/contents/plugins/ai/types/ai.types'
+  // Import from: '@/plugins/ai/types/ai.types'
 
   // Plugin lifecycle hooks
   hooks: {

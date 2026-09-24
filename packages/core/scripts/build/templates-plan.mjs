@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * What the registry build would change in a project's app/(templates), worked
+ * What the registry build would change in a project's src/app/(templates), worked
  * out without writing anything. `nextspark sync:app` runs it to name those
  * changes in --dry-run, and to count them before asking for confirmation.
  *
- * The project comes from NEXTSPARK_PROJECT_ROOT, as for registry.mjs. Stdin
+ * The project is the nearest root above the command's working directory. Stdin
  * carries a JSON object of files under app/, by path from the project root, to
  * read as having that content (null: removed) instead of what is on disk: what
  * the sync about to run leaves there, since the build copies app/ layouts into

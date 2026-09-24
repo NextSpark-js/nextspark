@@ -32,7 +32,7 @@ The root script delegates to `apps/dev` and starts one Next.js process. It reads
 
 **1. APP (`pnpm dev`)**
 - Starts Next.js with Turbopack.
-- Watches application code and the theme CSS imported by `apps/dev/app/globals.css`.
+- Watches application code and the theme CSS imported by `apps/dev/src/app/globals.css`.
 - Uses `PORT` from `apps/dev/.env`.
 
 **2. REGISTRY (optional, separate terminal)**
@@ -41,9 +41,9 @@ The root script delegates to `apps/dev` and starts one Next.js process. It reads
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 ```
 
-- Watches: `CONFIG.pluginsDir`, `<contentsDir>/entities`, `CONFIG.themesDir`, and `<contentsDir>/config`
+- Watches: root-level project source and enabled `plugins/<name>/` directories
 - Rebuilds: `.nextspark/registries/*.ts`, including `docs-registry.ts`
-- Documentation metadata comes from the active theme's `docs/public/` and `docs/superadmin/` directories
+- Documentation metadata comes from the project's `docs/public/` and `docs/superadmin/` directories
 - Triggers: Server restart needed
 
 ---
@@ -75,9 +75,9 @@ pnpm dev
 
 ### Theme CSS
 
-`apps/dev/app/globals.css` imports the active theme stylesheet. Next.js watches that dependency directly:
+`apps/dev/src/app/globals.css` imports the project stylesheet. Next.js watches that dependency directly:
 ```text
-themes/default/styles/
+styles/
 ├── globals.css
 ├── components.css
 └── utilities.css
@@ -89,10 +89,12 @@ There is no separate `theme:build` or theme watcher script at the monorepo root.
 
 **Watches:**
 ```text
-CONFIG.pluginsDir
-<contentsDir>/entities
-CONFIG.themesDir
-<contentsDir>/config
+plugins/<enabled-plugin>/
+entities/
+config/
+blocks/
+messages/
+templates/
 ```
 
 **On change:**
@@ -135,7 +137,7 @@ cd apps/dev && node ../../packages/core/scripts/db/verify-tables.mjs            
 **Testing:**
 ```bash
 pnpm test:core             # Core unit tests
-pnpm test:theme            # Active-theme unit tests
+pnpm --dir apps/dev exec jest --watchman=false            # Project unit tests
 pnpm cy:run                # E2E tests
 pnpm cy:open               # Cypress UI
 ```
@@ -161,13 +163,13 @@ pnpm --dir apps/dev exec tsc --noEmit          # Application TypeScript
 
 **2. CSS changes:**
 ```css
-/* Edit themes/default/styles/globals.css */
+/* Edit styles/globals.css */
 /* → Next.js recompiles the imported CSS */
 ```
 
 **3. Entity changes:**
 ```typescript
-// Edit contents/themes/default/entities/tasks/tasks.config.ts
+// Edit entities/tasks/tasks.config.ts
 // → Registry watcher rebuilds
 // → MUST restart server
 ```
@@ -193,7 +195,7 @@ pnpm dev
 ```bash
 # Stop server
 # Verify the stylesheet import, then restart
-grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
+grep -F 'styles/globals.css' apps/dev/src/app/globals.css
 pnpm dev
 ```
 
@@ -237,8 +239,8 @@ pnpm dev
 ```
 
 **To make changes:**
-- **Registries:** Edit source in `themes/` or `plugins/`, then rebuild registries.
-- **Theme CSS:** Edit in `themes/*/styles/`; Next.js follows the import from `apps/dev/app/globals.css`.
+- **Registries:** Edit root-first project source or `plugins/`, then rebuild registries.
+- **Theme CSS:** Edit in `styles/`; Next.js follows the import from `apps/dev/src/app/globals.css`.
 - **Served assets:** Update the files under `apps/dev/public/theme/` used by the app.
 
 ---

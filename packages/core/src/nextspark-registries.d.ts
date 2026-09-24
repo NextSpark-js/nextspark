@@ -161,7 +161,7 @@ declare module '@nextsparkjs/registries/block-registry' {
     schemaType?: string
     tags?: string[]
     isCore?: boolean
-    source?: 'core' | 'theme' | 'plugin'
+    source?: 'core' | 'project' | 'theme' | 'plugin'
     sourceId?: string
     version?: string
     deprecated?: boolean
@@ -244,7 +244,7 @@ declare module '@nextsparkjs/registries/entity-registry' {
 
   export interface EntityRegistryEntry {
     config: EntityConfig
-    source: 'core' | 'theme' | 'plugin'
+    source: 'core' | 'project' | 'theme' | 'plugin'
     pluginName?: string
   }
 
@@ -258,7 +258,7 @@ declare module '@nextsparkjs/registries/entity-registry' {
 
   export function getEntity(name: string): EntityRegistryEntry | undefined
   export function getAllEntities(): EntityRegistryEntry[]
-  export function getEntitiesBySource(source: 'core' | 'theme' | 'plugin'): EntityRegistryEntry[]
+  export function getEntitiesBySource(source: 'core' | 'project' | 'theme' | 'plugin'): EntityRegistryEntry[]
 }
 
 // ============================================================================
@@ -414,7 +414,6 @@ declare module '@nextsparkjs/registries/theme-registry' {
 
   export const THEME_METADATA: {
     generatedAt: string
-    activeTheme: string
     themes: string[]
     totalThemes: number
   }

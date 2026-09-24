@@ -164,7 +164,7 @@ a new entity in NextSpark with full CRUD capabilities.
 Prerequisites:
    ✓ NextSpark project set up
    ✓ Database running
-   ✓ Active theme configured
+   ✓ project configured
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

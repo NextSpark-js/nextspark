@@ -65,7 +65,7 @@ NextSpark uses SQL migrations with automatic execution:
 │     → Auth tables, base schema              │
 │                                             │
 │  2. ENTITY MIGRATIONS                       │
-│     themes/{theme}/entities/*/migrations/   │
+│     entities/*/migrations/                  │
 │     → Entity tables with RLS                │
 │                                             │
 │  3. PLUGIN MIGRATIONS                       │
@@ -92,7 +92,7 @@ Examples:
 **📂 Migration Location:**
 
 ```
-contents/themes/your-theme/entities/products/
+entities/products/
 └── migrations/
     ├── 20240115100000_create_products.sql
     ├── 20240115100001_add_products_meta.sql

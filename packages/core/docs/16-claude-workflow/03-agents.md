@@ -138,7 +138,7 @@ Agents are specialized AI assistants with defined roles, tools, and responsibili
 5. Configure plugin in `plugin-sandbox` theme
 6. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
-**Output:** Complete plugin in `contents/plugins/{name}/`
+**Output:** Complete plugin in `plugins/{name}/`
 
 **Tools:** Bash, Glob, Grep, Read, Edit, Write, TodoWrite, AskUserQuestion
 
@@ -184,7 +184,7 @@ Agents are specialized AI assistants with defined roles, tools, and responsibili
 5. Configure `permissions.config.ts`
 6. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
-**Output:** Complete theme in `contents/themes/{name}/`
+**Output:** Complete theme in ``
 
 **Tools:** Bash, Glob, Grep, Read, Edit, Write, TodoWrite, AskUserQuestion
 
@@ -381,7 +381,7 @@ for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
 **Purpose:** Create or modify page builder blocks.
 
 **Responsibilities:**
-1. Determine active theme
+1. Determine project
 2. Analyze existing blocks for patterns
 3. Create block files:
    - `config.ts` - Block configuration
@@ -393,7 +393,7 @@ for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
 5. Verify block in `BLOCK_REGISTRY`
 6. Test block in page builder
 
-**Output:** Block in `contents/themes/{theme}/blocks/{name}/`
+**Output:** Block in `blocks/{name}/`
 
 **Tools:** Bash, Glob, Grep, Read, Edit, Write, TodoWrite, AskUserQuestion
 
@@ -579,7 +579,7 @@ const developTag = '@in-develop'
 // BLOCKS if temporary tags found
 const remainingTags = await Grep({
   pattern: '@in-develop|@scope-',
-  path: 'contents/themes/',
+  path: './',
   glob: '*.cy.ts'
 })
 

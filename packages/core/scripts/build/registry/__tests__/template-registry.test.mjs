@@ -34,7 +34,7 @@ const pageTemplate = {
   fileName: 'page.tsx',
   relativePath: '(public)/page.tsx',
   appPath: 'app/(public)/page.tsx',
-  templatePath: '@/contents/themes/default/templates/(public)/page.tsx',
+  templatePath: '@/templates/(public)/page.tsx',
   priority: 10
 }
 
@@ -45,7 +45,7 @@ const protectedTemplate = {
   fileName: 'layout.meta.ts',
   relativePath: 'dashboard/layout.meta.ts',
   appPath: 'app/dashboard/layout.tsx',
-  templatePath: '@/contents/themes/default/templates/dashboard/layout.meta.ts'
+  templatePath: '@/templates/dashboard/layout.meta.ts'
 }
 
 const config = { outputDir: '/tmp/registries', projectRoot: '/tmp/project' }
@@ -81,7 +81,7 @@ test('server registry defers the import instead of hoisting a static one', async
 
   assert.match(
     out,
-    /component: lazyTemplate\('app\/\(public\)\/page\.tsx', \(\) => import\('@\/contents\/themes\/default\/templates\/\(public\)\/page'\)\)/
+    /component: lazyTemplate\('app\/\(public\)\/page\.tsx', \(\) => import\('@\/templates\/\(public\)\/page'\)\)/
   )
   assert.doesNotMatch(out, /^import Template_\d+ from/m)
 })
@@ -117,7 +117,7 @@ test('client registry defers the import through next/dynamic', async () => {
   assert.match(out, /import dynamic from 'next\/dynamic'/)
   assert.match(
     out,
-    /'app\/\(public\)\/page\.tsx': dynamic\(\(\) => import\('@\/contents\/themes\/default\/templates\/\(public\)\/page'\)\)/
+    /'app\/\(public\)\/page\.tsx': dynamic\(\(\) => import\('@\/templates\/\(public\)\/page'\)\)/
   )
   assert.doesNotMatch(out, /^import ClientTemplate_\d+ from/m)
 })
@@ -125,14 +125,14 @@ test('client registry defers the import through next/dynamic', async () => {
 // --- a template file with no default export registers as metadata-only (#197) --
 
 async function writeThemeTemplate(root, relativePath, content) {
-  const absolutePath = join(root, 'contents/themes/testtheme/templates', relativePath)
+  const absolutePath = join(root, 'templates', relativePath)
   await mkdir(dirname(absolutePath), { recursive: true })
   await writeFile(absolutePath, content, 'utf8')
-  return `@/contents/themes/testtheme/templates/${relativePath}`
+  return `@/templates/${relativePath}`
 }
 
 async function writeAppRoute(root, appPath, content = 'export default function Page() { return null }\n') {
-  const absolutePath = join(root, appPath)
+  const absolutePath = join(root, appPath.replace(/^app\//, 'src/app/'))
   await mkdir(dirname(absolutePath), { recursive: true })
   await writeFile(absolutePath, content, 'utf8')
 }
@@ -188,7 +188,7 @@ test('a layout template exported through `export { X as default }` is registered
 
     assert.match(
       out,
-      /component: lazyTemplate\('app\/docs\/layout\.tsx', \(\) => import\('@\/contents\/themes\/testtheme\/templates\/docs\/layout'\)\)/
+      /component: lazyTemplate\('app\/docs\/layout\.tsx', \(\) => import\('@\/templates\/docs\/layout'\)\)/
     )
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -282,7 +282,7 @@ test('a page template with a default export and an invalid segment config export
 
     assert.match(
       out,
-      /component: lazyTemplate\('app\/pricing\/page\.tsx', \(\) => import\('@\/contents\/themes\/testtheme\/templates\/pricing\/page'\)\)/
+      /component: lazyTemplate\('app\/pricing\/page\.tsx', \(\) => import\('@\/templates\/pricing\/page'\)\)/
     )
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -424,11 +424,11 @@ test('route scopes isolate template imports, retain empty fallbacks, and preserv
     const emptyServer = file('/template-scopes/server/(auth)/empty/page.ts')
     const protectedServer = file('/template-scopes/server/layout.ts')
 
-    assert.match(publicServer, /import SelectedTemplate from '@\/contents\/themes\/testtheme\/templates\/\(public\)\/page'/)
+    assert.match(publicServer, /import SelectedTemplate from '@\/templates\/\(public\)\/page'/)
     assert.doesNotMatch(publicServer, /templates\/ai\/page/)
-    assert.match(aiServer, /import SelectedTemplate from '@\/contents\/themes\/testtheme\/templates\/ai\/page'/)
+    assert.match(aiServer, /import SelectedTemplate from '@\/templates\/ai\/page'/)
     assert.doesNotMatch(aiServer, /templates\/\(public\)\/page/)
-    assert.match(publicClient, /import SelectedTemplate from '@\/contents\/themes\/testtheme\/templates\/\(public\)\/page'/)
+    assert.match(publicClient, /import SelectedTemplate from '@\/templates\/\(public\)\/page'/)
     assert.doesNotMatch(publicClient, /templates\/ai\/page/)
     assert.doesNotMatch(publicClient, /CLIENT_TEMPLATE_REGISTRY|dynamic\(\(\) => import\(/)
     assert.match(emptyServer, /const HAS_OVERRIDE = false/)
@@ -481,9 +481,9 @@ test('an exact core route scope imports its override directly without changing a
     const { files } = await generateTemplateScopeRegistries([template], scopedConfig, analysis)
     const scope = files.find(file => file.path.endsWith('/template-scopes/server/(auth)/login/page.ts')).content
 
-    assert.match(scope, /import SelectedTemplate from '@\/contents\/themes\/testtheme\/templates\/\(auth\)\/login\/page'/)
+    assert.match(scope, /import SelectedTemplate from '@\/templates\/\(auth\)\/login\/page'/)
     assert.doesNotMatch(scope, /TEMPLATE_REGISTRY|lazyTemplate|\(\) => import\(/)
-    assert.equal(await readFile(join(root, 'app/(auth)/login/page.tsx'), 'utf8'), coreRoute)
+    assert.equal(await readFile(join(root, 'src/app/(auth)/login/page.tsx'), 'utf8'), coreRoute)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -735,7 +735,7 @@ test('a literal dashboard route override keeps its exact scope and stays out of 
 
     assert.doesNotMatch(dynamicListScope, /templates\/dashboard\/\(main\)\/media\/page/)
     assert.doesNotMatch(dynamicListClientScope, /templates\/dashboard\/\(main\)\/media\/page/)
-    assert.match(mediaScope, /import SelectedTemplate from '@\/contents\/themes\/testtheme\/templates\/dashboard\/\(main\)\/media\/page'/)
+    assert.match(mediaScope, /import SelectedTemplate from '@\/templates\/dashboard\/\(main\)\/media\/page'/)
     assert.match(mediaScope, /const APP_PATH = "app\/dashboard\/\(main\)\/media\/page\.tsx"/)
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -745,19 +745,19 @@ test('a literal dashboard route override keeps its exact scope and stays out of 
 test('a project-only bracket route builds and gets an exact direct scope before its page is generated', async () => {
   const root = await worktreeFixture('nextspark-template-project-bracket-scope-test-')
   try {
-    await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
-    await writeFile(join(root, 'package.json'), '{}\n')
-    await mkdir(join(root, 'app'), { recursive: true })
+    await writeFile(join(root, 'nextspark.config.ts'), 'export default {}\n')
+    await writeFile(join(root, 'package.json'), '{"dependencies":{"next":"16.3.5"}}\n')
+    await mkdir(join(root, 'src', 'app'), { recursive: true })
     await markAsNpmProject(root)
-    await writeAppRoute(root, 'contents/themes/acme/config/theme.config.ts', 'export const acmeThemeConfig = {}\n')
-    const template = join(root, 'contents/themes/acme/templates/shop/[category]/page.tsx')
+    await writeAppRoute(root, 'config/theme.config.ts', 'export const acmeThemeConfig = {}\n')
+    const template = join(root, 'templates/shop/[category]/page.tsx')
     await mkdir(dirname(template), { recursive: true })
     await writeFile(template, 'export default function CategoryPage() { return null }\n')
 
     runRegistryBuild(root)
 
     assert.equal(
-      existsSync(join(root, 'app/(templates)/shop/[category]/page.tsx')),
+      existsSync(join(root, 'src/app/(templates)/shop/[category]/page.tsx')),
       true,
       'the project-only bracket route is generated later in the registry pipeline'
     )
@@ -765,7 +765,7 @@ test('a project-only bracket route builds and gets an exact direct scope before 
       join(root, '.nextspark/registries/template-scopes/server/shop/[category]/page.ts'),
       'utf8'
     )
-    assert.match(scope, /import SelectedTemplate from '@\/contents\/themes\/acme\/templates\/shop\/\[category\]\/page'/)
+    assert.match(scope, /import SelectedTemplate from '@\/templates\/shop\/\[category\]\/page'/)
     assert.match(scope, /const APP_PATH = "app\/shop\/\[category\]\/page\.tsx"/)
     assert.doesNotMatch(scope, /TEMPLATE_REGISTRY|lazyTemplate|\(\) => import\(/)
   } finally {
@@ -791,7 +791,7 @@ test('a bracket path orphaned after analysis fails scope generation clearly', as
     await writeAppRoute(root, unsupportedTemplate.appPath)
     const analysis = await analyzeTemplates([unsupportedTemplate], scopedConfig)
     assert.equal(analysis.get(templatePath).generatesRoute, false)
-    await rm(join(root, unsupportedTemplate.appPath))
+    await rm(join(root, unsupportedTemplate.appPath.replace(/^app\//, 'src/app/')))
 
     await assert.rejects(
       generateTemplateScopeRegistries([unsupportedTemplate], scopedConfig, analysis),
@@ -818,9 +818,9 @@ async function scopedFiles(root) {
 }
 
 function runRegistryBuild(root) {
-  const result = spawnSync('node', ['scripts/build/registry.mjs'], {
-    cwd: CORE_DIR,
-    env: { ...process.env, NEXTSPARK_PROJECT_ROOT: root },
+  const result = spawnSync('node', [join(CORE_DIR, 'scripts/build/registry.mjs')], {
+    cwd: root,
+    env: process.env,
     encoding: 'utf8',
   })
   assert.equal(result.status, 0, `${result.stdout}${result.stderr}`)
@@ -833,18 +833,18 @@ function withoutBuildTimestamps(content) {
 test('complete builds exclude generated template pages and layout copies from route scopes, then prune both in one build', async () => {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-template-scopes-build-test-'))
   try {
-    await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
-    await writeFile(join(root, 'package.json'), '{}\n')
+    await writeFile(join(root, 'nextspark.config.ts'), 'export default {}\n')
+    await writeFile(join(root, 'package.json'), '{"dependencies":{"next":"16.3.5"}}\n')
     await writeAppRoute(root, 'app/shop/layout.tsx', 'export default function ShopLayout({ children }) { return children }\n')
-    await writeAppRoute(root, 'contents/themes/acme/config/theme.config.ts', 'export const acmeThemeConfig = {}\n')
-    const template = join(root, 'contents/themes/acme/templates/shop/page.tsx')
+    await writeAppRoute(root, 'config/theme.config.ts', 'export const acmeThemeConfig = {}\n')
+    const template = join(root, 'templates/shop/page.tsx')
     await mkdir(dirname(template), { recursive: true })
     await writeFile(template, 'export default function ShopPage() { return null }\n')
 
     runRegistryBuild(root)
     const firstScopes = await scopedFiles(root)
-    assert.equal(existsSync(join(root, 'app/(templates)/shop/page.tsx')), true, 'the generated template page exists')
-    const generatedLayout = await readFile(join(root, 'app/(templates)/shop/layout.tsx'), 'utf8')
+    assert.equal(existsSync(join(root, 'src/app/(templates)/shop/page.tsx')), true, 'the generated template page exists')
+    const generatedLayout = await readFile(join(root, 'src/app/(templates)/shop/layout.tsx'), 'utf8')
     assert.match(generatedLayout, /copy of app\/shop\/layout\.tsx/)
 
     runRegistryBuild(root)
@@ -862,8 +862,8 @@ test('complete builds exclude generated template pages and layout copies from ro
     await rm(template)
     runRegistryBuild(root)
     const prunedScopes = await scopedFiles(root)
-    assert.equal(existsSync(join(root, 'app/(templates)/shop/page.tsx')), false, 'the removed template page is pruned in the same build')
-    assert.equal(existsSync(join(root, 'app/(templates)/shop/layout.tsx')), false, 'the generated layout copy is pruned in the same build')
+    assert.equal(existsSync(join(root, 'src/app/(templates)/shop/page.tsx')), false, 'the removed template page is pruned in the same build')
+    assert.equal(existsSync(join(root, 'src/app/(templates)/shop/layout.tsx')), false, 'the generated layout copy is pruned in the same build')
     assert.deepEqual(
       prunedScopes.map(([path]) => path),
       ['client/shop/layout.ts', 'server/shop/layout.ts'],

@@ -25,7 +25,7 @@ pnpm create:theme {theme-name}
 ## Theme Structure
 
 ```
-contents/themes/{theme-name}/
+
 ├── theme.config.ts       # Theme configuration
 ├── config/
 │   ├── app.config.ts     # Application config
@@ -56,9 +56,8 @@ contents/themes/{theme-name}/
    node core/scripts/build/registry.mjs
    ```
 
-2. Set as active theme in `.env`:
+2. Set as project in `.env`:
    ```
-   NEXT_PUBLIC_ACTIVE_THEME={theme-name}
    ```
 
 3. Verify theme appears in THEME_REGISTRY

@@ -1,6 +1,5 @@
 import { constants, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
-import { parse } from 'dotenv';
 import { loadCoreProjectFiles, type ProjectFiles } from './core-write-places.js';
 import { getNextMajorVersion } from './next-bundler.js';
 import { nextSyncState, planSync, ROOT_TEMPLATE_FILES, type SyncAction, type SyncInput } from './sync-plan.js';
@@ -51,12 +50,6 @@ function usesCacheComponents(projectRoot: string): boolean {
   });
 }
 
-function activeTheme(projectRoot: string, env: NodeJS.ProcessEnv): string | undefined {
-  if (env.NEXT_PUBLIC_ACTIVE_THEME) return env.NEXT_PUBLIC_ACTIVE_THEME;
-  const envPath = join(projectRoot, '.env');
-  return existsSync(envPath) ? parse(readFileSync(envPath)).NEXT_PUBLIC_ACTIVE_THEME : undefined;
-}
-
 /** The version in core's package.json, or 'unknown'. */
 export function readCoreVersion(coreDir: string): string {
   try {
@@ -84,12 +77,11 @@ export function readSyncInput(coreDir: string, projectRoot: string, { env = proc
   return {
     coreVersion: readCoreVersion(coreDir),
     appTemplates: readTree(join(coreDir, 'templates', 'app')),
-    projectApp: readTree(join(projectRoot, 'app')),
+    projectApp: readTree(join(projectRoot, 'src', 'app')),
     rootTemplates: readNamedFiles(join(coreDir, 'templates'), [...ROOT_TEMPLATE_FILES, 'proxy.ts']),
     projectRootFiles: readNamedFiles(projectRoot, [...ROOT_TEMPLATE_FILES, 'proxy.ts', 'middleware.ts']),
     usePprVariants: usesCacheComponents(projectRoot) && (nextMajor ?? 0) >= 16,
     nextMajor,
-    activeTheme: activeTheme(projectRoot, env),
     state: readSyncState(projectRoot),
     overwrite: new Set(overwrite.map(toPlanPath)),
   };

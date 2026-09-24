@@ -142,16 +142,18 @@ cd nextspark
 
 # Verify structure
 ls -la
-# Should see: app/, core/, contents/, scripts/, package.json, etc.
+# Should see: src/app/, config/, entities/, templates/, package.json, etc.
 ```
 
 **Expected structure:**
 ```text
 nextspark/
 ├── .rules/                  # Claude Code development rules
-├── app/                     # Next.js App Router
-├── contents/                # Themes, plugins, entities
-├── core/                    # Core application code
+├── src/app/                 # Generated Next.js adapter
+├── config/                  # Project configuration
+├── entities/                # Project entities
+├── plugins/                 # Enabled local plugins
+├── templates/               # Page and layout source
 ├── core/migrations/         # Database migrations
 ├── scripts/                 # Build scripts
 ├── test/                    # Test suites
@@ -208,7 +210,6 @@ BETTER_AUTH_SECRET="your-generated-32-character-secret"
 BETTER_AUTH_URL="http://localhost:3010"
 
 # === APPLICATION (REQUIRED) ===
-NEXT_PUBLIC_ACTIVE_THEME="default"
 NEXT_PUBLIC_APP_URL="http://localhost:3010"
 
 # === EMAIL SERVICE (REQUIRED) ===
@@ -248,8 +249,8 @@ pnpm db:migrate
 **What happens:**
 - Connects to database using `DATABASE_URL`
 - Runs core migrations from `core/migrations/`
-- Runs entity migrations from `contents/themes/*/entities/*/migrations/`
-- Runs plugin migrations from `contents/plugins/*/migrations/`
+- Runs entity migrations from `entities/*/migrations/`
+- Runs plugin migrations from `plugins/*/migrations/`
 - Creates migration tracking table (`_migrations`)
 - Applies RLS policies
 
@@ -265,7 +266,7 @@ Running migrations from: core/migrations/
 ✓ 007_add_audit_logs.sql
 
 Running entity migrations...
-✓ contents/themes/default/entities/tasks/migrations/001_create_tasks.sql
+✓ entities/tasks/migrations/001_create_tasks.sql
 
 All migrations completed successfully!
 ```
@@ -307,8 +308,8 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **What happens:**
-- Scans `contents/themes/` for entities, messages, configs
-- Scans `contents/plugins/` for plugin configs
+- Scans `./` for entities, messages, configs
+- Scans `plugins/` for plugin configs
 - Generates static registry files in `.nextspark/registries/`
 - Creates server and client versions
 - Builds route handlers for dynamic routes
@@ -342,14 +343,14 @@ Registry build completed in 5.2s
 
 ### Step 6: Verify Theme CSS
 
-The monorepo has no separate theme-build package script. Verify the active theme stylesheet and the app import before starting Next.js:
+The monorepo has no separate theme-build package script. Verify the project stylesheet and the app import before starting Next.js:
 ```bash
-test -f themes/default/styles/globals.css
-grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
+test -f styles/globals.css
+grep -F 'styles/globals.css' apps/dev/src/app/globals.css
 ```
 
 **What happens:**
-- `apps/dev/app/globals.css` imports the active theme stylesheet.
+- `apps/dev/src/app/globals.css` imports the project stylesheet.
 - Next.js compiles that CSS during `pnpm dev` and `pnpm build`.
 - Theme assets used by the monorepo are present under `apps/dev/public/theme/`.
 
@@ -361,7 +362,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **What happens:**
-- Reads the active theme's `docs/public/` and `docs/superadmin/` directories
+- Reads the project's `docs/public/` and `docs/superadmin/` directories
 - Derives navigation metadata from numbered sections and markdown files
 - Outputs `.nextspark/registries/docs-registry.ts`
 - Supports imports through `@nextsparkjs/registries/docs-registry`
@@ -437,7 +438,6 @@ test -f .env.local && echo "✅ .env.local exists" || echo "❌ .env.local missi
 # Validate required variables (minimal check)
 grep -q "DATABASE_URL" .env.local && echo "✅ DATABASE_URL set" || echo "❌ DATABASE_URL missing"
 grep -q "BETTER_AUTH_SECRET" .env.local && echo "✅ BETTER_AUTH_SECRET set" || echo "❌ BETTER_AUTH_SECRET missing"
-grep -q "NEXT_PUBLIC_ACTIVE_THEME" .env.local && echo "✅ NEXT_PUBLIC_ACTIVE_THEME set" || echo "❌ NEXT_PUBLIC_ACTIVE_THEME missing"
 ```
 
 ### 3. Database
@@ -457,8 +457,8 @@ test -d .nextspark/registries && echo "✅ Registries directory exists" || echo 
 test -f .nextspark/registries/entity-registry.ts && echo "✅ Entity registry exists" || echo "❌ Entity registry missing"
 test -f .nextspark/registries/docs-registry.ts && echo "✅ Docs registry exists" || echo "❌ Docs registry missing"
 
-# Check the app imports the active theme CSS
-grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
+# Check the app imports the project CSS
+grep -F 'styles/globals.css' apps/dev/src/app/globals.css
 
 # Check app-served theme assets
 test -d apps/dev/public/theme && echo "✅ Theme assets exist" || echo "❌ Theme assets missing"
@@ -542,16 +542,16 @@ pnpm dev
 Example for billing plugin:
 ```bash
 # Create plugin .env file
-cp contents/plugins/billing/.env.example contents/plugins/billing/.env
+cp plugins/billing/.env.example plugins/billing/.env
 
 # Edit with your credentials
-nano contents/plugins/billing/.env
+nano plugins/billing/.env
 ```
 
 **Plugins with .env files:**
-- `contents/plugins/billing/.env` - Payment provider credentials
-- `contents/plugins/ai/.env` - OpenAI/Anthropic API keys
-- `contents/plugins/amplitude/.env` - Analytics tracking
+- `plugins/billing/.env` - Payment provider credentials
+- `plugins/ai/.env` - OpenAI/Anthropic API keys
+- `plugins/amplitude/.env` - Analytics tracking
 
 #### 3. VS Code Setup
 
@@ -667,10 +667,9 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 **Verify:**
 ```bash
 # Check theme directory exists
-ls contents/themes/default
+ls ./default
 
 # Check .env.local
-grep NEXT_PUBLIC_ACTIVE_THEME .env.local
 
 # Should match directory name exactly (case-sensitive)
 ```

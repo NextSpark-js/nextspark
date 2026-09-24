@@ -1,7 +1,6 @@
 {
   "context": "consumer",
-  "description": "NextSpark application development - Build your app using themes and plugins",
-
+  "description": "NextSpark consumer project - root-first source and local plugins",
   "capabilities": {
     "modifyCore": false,
     "allThemes": false,
@@ -9,21 +8,26 @@
     "createReleases": false,
     "maintainWorkflows": false
   },
-
   "allowedPaths": [
-    "contents/themes/${NEXT_PUBLIC_ACTIVE_THEME}/**/*",
-    "contents/plugins/**/*",
+    "api/**/*",
+    "blocks/**/*",
+    "components/**/*",
+    "config/**/*",
+    "entities/**/*",
+    "lib/**/*",
+    "messages/**/*",
+    "migrations/**/*",
+    "public/**/*",
+    "styles/**/*",
+    "templates/**/*",
+    "tests/**/*",
+    "plugins/**/*",
     ".claude/sessions/**/*"
   ],
-
   "restrictions": {
     "core": {
       "level": "forbidden",
       "message": "Core is installed via npm (node_modules/) and cannot be modified. To customize behavior, create a theme override or plugin instead."
-    },
-    "otherThemes": {
-      "level": "forbidden",
-      "message": "Only the active theme (NEXT_PUBLIC_ACTIVE_THEME) can be modified. To work on a different theme, update your .env file."
     },
     "app": {
       "level": "discouraged",
@@ -31,10 +35,9 @@
       "message": "Modifying /app directly is discouraged as it reduces portability. Use theme page overrides when possible. Only proceed if user explicitly requests and understands the trade-offs."
     }
   },
-
   "notes": {
-    "gettingStarted": "Your active theme is defined in .env (NEXT_PUBLIC_ACTIVE_THEME). All customizations should go there.",
-    "creatingPlugins": "Use /create:plugin to scaffold a new plugin in contents/plugins/.",
+    "gettingStarted": "The directory containing nextspark.config.ts is the project and source root.",
+    "creatingPlugins": "Use /create:plugin to scaffold a local plugin under plugins/.",
     "needCoreChanges": "If you need functionality not available in core, create a plugin or request the feature in NextSpark repository."
   }
 }

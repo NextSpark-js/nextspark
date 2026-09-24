@@ -18,7 +18,6 @@ const RUNNER = join(__dirname, 'fixtures', 'discover-emails-runner.mjs')
 
 function runDiscovery(opts: {
   fixtureRoot: string
-  activeTheme: string | null
 }): {
   emails: Array<{ slug: string; source: 'core' | 'theme'; importPath: string; importName: string }>
   generated: string
@@ -26,7 +25,7 @@ function runDiscovery(opts: {
   const outputPath = join(opts.fixtureRoot, 'discovery-result.json')
   execFileSync(
     'node',
-    [RUNNER, opts.fixtureRoot, opts.activeTheme ?? '', outputPath],
+    [RUNNER, opts.fixtureRoot, outputPath],
     {
       cwd: REPO_ROOT,
       // Discard runner stdout/stderr — the result is in outputPath.
@@ -44,7 +43,7 @@ describe('email discovery + registry generation', () => {
   beforeEach(() => {
     tmpRoot = mkdtempSync(join(tmpdir(), 'nextspark-email-test-'))
     coreSrcEmails = join(tmpRoot, 'core', 'src', 'emails')
-    themeEmails = join(tmpRoot, 'themes', 'demo', 'emails')
+    themeEmails = join(tmpRoot, 'emails')
     mkdirSync(coreSrcEmails, { recursive: true })
     mkdirSync(themeEmails, { recursive: true })
   })
@@ -56,7 +55,7 @@ describe('email discovery + registry generation', () => {
   it('discovers core defaults when no theme override exists', () => {
     writeFileSync(join(coreSrcEmails, 'verify-email.ts'), 'export default () => ({})')
     writeFileSync(join(coreSrcEmails, 'reset-password.ts'), 'export default () => ({})')
-    const { emails } = runDiscovery({ fixtureRoot: tmpRoot, activeTheme: 'demo' })
+    const { emails } = runDiscovery({ fixtureRoot: tmpRoot })
     expect(emails).toHaveLength(2)
     expect(emails.map(e => e.slug).sort()).toEqual(['reset-password', 'verify-email'])
     expect(emails.every(e => e.source === 'core')).toBe(true)
@@ -65,18 +64,18 @@ describe('email discovery + registry generation', () => {
   it('theme file overrides core at the same slug', () => {
     writeFileSync(join(coreSrcEmails, 'verify-email.ts'), 'export default () => ({})')
     writeFileSync(join(themeEmails, 'verify-email.ts'), 'export default () => ({})')
-    const { emails } = runDiscovery({ fixtureRoot: tmpRoot, activeTheme: 'demo' })
+    const { emails } = runDiscovery({ fixtureRoot: tmpRoot })
     expect(emails).toHaveLength(1)
     expect(emails[0].slug).toBe('verify-email')
     expect(emails[0].source).toBe('theme')
-    expect(emails[0].importPath).toBe('@/contents/themes/demo/emails/verify-email')
+    expect(emails[0].importPath).toBe('@/emails/verify-email')
   })
 
   it('theme can add new slugs that core does not know about', () => {
     writeFileSync(join(coreSrcEmails, 'verify-email.ts'), 'export default () => ({})')
     writeFileSync(join(themeEmails, 'welcome.ts'), 'export default () => ({})')
     writeFileSync(join(themeEmails, 'purchase-confirmation.ts'), 'export default () => ({})')
-    const { emails } = runDiscovery({ fixtureRoot: tmpRoot, activeTheme: 'demo' })
+    const { emails } = runDiscovery({ fixtureRoot: tmpRoot })
     expect(emails.map(e => e.slug).sort()).toEqual([
       'purchase-confirmation',
       'verify-email',
@@ -94,7 +93,7 @@ describe('email discovery + registry generation', () => {
     writeFileSync(join(coreSrcEmails, 'verify-email.test.ts'), 'export {}')
     writeFileSync(join(coreSrcEmails, 'verify-email.d.ts'), 'export {}')
     writeFileSync(join(coreSrcEmails, 'verify-email.ts'), 'export default () => ({})')
-    const { emails } = runDiscovery({ fixtureRoot: tmpRoot, activeTheme: 'demo' })
+    const { emails } = runDiscovery({ fixtureRoot: tmpRoot })
     expect(emails).toHaveLength(1)
     expect(emails[0].slug).toBe('verify-email')
   })
@@ -102,7 +101,7 @@ describe('email discovery + registry generation', () => {
   it('handles missing theme directory gracefully', () => {
     writeFileSync(join(coreSrcEmails, 'verify-email.ts'), 'export default () => ({})')
     rmSync(themeEmails, { recursive: true, force: true })
-    const { emails } = runDiscovery({ fixtureRoot: tmpRoot, activeTheme: 'demo' })
+    const { emails } = runDiscovery({ fixtureRoot: tmpRoot })
     expect(emails).toHaveLength(1)
     expect(emails[0].source).toBe('core')
   })
@@ -110,7 +109,7 @@ describe('email discovery + registry generation', () => {
   it('generator emits `as const` literal without Record annotation', () => {
     writeFileSync(join(coreSrcEmails, 'verify-email.ts'), 'export default () => ({})')
     writeFileSync(join(themeEmails, 'welcome.ts'), 'export default () => ({})')
-    const { generated } = runDiscovery({ fixtureRoot: tmpRoot, activeTheme: 'demo' })
+    const { generated } = runDiscovery({ fixtureRoot: tmpRoot })
 
     // Critical: no Record<…> annotation (would erase per-slug type inference)
     expect(generated).not.toMatch(/EMAIL_REGISTRY:\s*Record</)
@@ -121,16 +120,16 @@ describe('email discovery + registry generation', () => {
 
     // Verify import paths look right per source
     expect(generated).toContain("'@/core/emails/verify-email'")
-    expect(generated).toContain("'@/contents/themes/demo/emails/welcome'")
+    expect(generated).toContain("'@/emails/welcome'")
 
     // Metadata reflects override status
     expect(generated).toContain("'verify-email': { source: 'core'")
     expect(generated).toContain("'welcome': { source: 'theme'")
   })
 
-  it('still discovers core when activeTheme is null', () => {
+  it('still discovers core when the project has no email overrides', () => {
     writeFileSync(join(coreSrcEmails, 'verify-email.ts'), 'export default () => ({})')
-    const { emails } = runDiscovery({ fixtureRoot: tmpRoot, activeTheme: null })
+    const { emails } = runDiscovery({ fixtureRoot: tmpRoot })
     expect(emails).toHaveLength(1)
     expect(emails[0].source).toBe('core')
   })

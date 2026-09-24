@@ -17,11 +17,11 @@ Plugins can export React components that integrate seamlessly with the applicati
 
 ### Basic Plugin Component
 
-**Location**: `contents/plugins/[plugin]/components/MyComponent.tsx`
+**Location**: `plugins/[plugin]/components/MyComponent.tsx`
 
 **Example**:
 ```typescript
-// contents/plugins/my-plugin/components/MyWidget.tsx
+// plugins/my-plugin/components/MyWidget.tsx
 'use client'
 
 import { useState } from 'react'
@@ -157,7 +157,7 @@ export function ThemedCard() {
         Themed Component
       </h3>
       <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-        This component adapts to the active theme
+        This component adapts to the project
       </p>
     </div>
   )
@@ -175,7 +175,7 @@ export function ThemedCard() {
         Themed Component
       </h3>
       <p className="text-sm text-muted-foreground">
-        This component adapts to the active theme
+        This component adapts to the project
       </p>
     </div>
   )
@@ -329,7 +329,7 @@ describe('Plugin Form', () => {
 ### Exporting from Plugin Config
 
 ```typescript
-// contents/plugins/my-plugin/plugin.config.ts
+// plugins/my-plugin/plugin.config.ts
 export const myPluginConfig: PluginConfig = {
   name: 'my-plugin',
   version: '1.0.0',
@@ -347,7 +347,7 @@ export const myPluginConfig: PluginConfig = {
 ## Real-World Example: AI Plugin Component
 
 ```typescript
-// contents/plugins/ai/components/AIChat.tsx
+// plugins/ai/components/AIChat.tsx
 'use client'
 
 import { useState } from 'react'
@@ -468,7 +468,7 @@ export function AIChat() {
 **Theming:**
 - Use Tailwind classes with theme variables
 - Avoid hardcoded colors
-- Components adapt to active theme
+- Components adapt to project
 
 **Accessibility:**
 - ARIA attributes for screen readers

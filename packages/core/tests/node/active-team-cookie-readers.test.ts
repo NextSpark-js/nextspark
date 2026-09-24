@@ -11,7 +11,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
-const ROOTS = ['apps/dev/app', 'packages/core/src', 'packages/core/templates/proxy.ts', 'themes', 'plugins']
+const ROOTS = ['apps/dev/src/app', 'packages/core/src', 'packages/core/templates/proxy.ts', 'themes', 'plugins']
 const SKIPPED_DIRS = new Set(['node_modules', '.next', 'dist', 'tests', '__tests__', 'cypress'])
 /** A cookie accessor called with the literal name; localStorage's getItem/setItem is not a cookie. */
 const DIRECT_COOKIE_ACCESS = /\.(?:get|set|delete|has)\(\s*['"`]activeTeamId['"`]/
@@ -41,7 +41,7 @@ test('app code takes the dashboard team from getDashboardTeamId, not from the he
   // Reading x-active-team-id alone skips the permission check whenever the
   // session has not chosen a team yet; getDashboardTeamId falls back to the
   // user's default team instead.
-  const direct = ['apps/dev/app', 'themes', 'plugins'].flatMap(sourceFiles).flatMap(file =>
+  const direct = ['apps/dev/src/app', 'themes', 'plugins'].flatMap(sourceFiles).flatMap(file =>
     fs.readFileSync(file, 'utf8').split('\n')
       .map((line, index) => ({ line, index }))
       .filter(({ line }) => line.includes('x-active-team-id'))

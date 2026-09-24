@@ -28,7 +28,7 @@
 Error: This module cannot be imported from a Client Component module.
 It should only be used from a Server Component.
 
-core/lib/registries/plugin-registry.ts
+.nextspark/registries/plugin-registry.ts
 ```
 
 **Cause:** Importing server-only registry in client component
@@ -37,11 +37,11 @@ core/lib/registries/plugin-registry.ts
 ```typescript
 // ❌ Wrong - Server-only registry in client component
 'use client'
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 // ✅ Correct - Use client-safe registry
 'use client'
-import { usePlugin } from '@/core/lib/registries/plugin-registry.client'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry.client'
 ```
 
 ---
@@ -65,7 +65,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --verbose
 
 # Verify entity exists
-cat core/lib/registries/entity-registry.ts | grep "tasks"
+cat .nextspark/registries/entity-registry.ts | grep "tasks"
 ```
 
 ---
@@ -89,7 +89,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 # Cmd/Ctrl + Shift + P → "TypeScript: Restart TS Server"
 
 # 3. Verify type is generated
-cat core/lib/registries/entity-registry.ts | grep "export type EntityName"
+cat .nextspark/registries/entity-registry.ts | grep "export type EntityName"
 ```
 
 ---
@@ -99,7 +99,7 @@ cat core/lib/registries/entity-registry.ts | grep "export type EntityName"
 **Symptom:**
 ```bash
 ❌ DYNAMIC IMPORT VIOLATIONS FOUND:
-core/lib/loaders/entity-loader.ts:15: const config = await import(`@/contents/...`)
+core/lib/loaders/entity-loader.ts:15: const config = await import(`@/entities/...`)
 ```
 
 **Cause:** Using runtime dynamic imports instead of registry
@@ -107,10 +107,10 @@ core/lib/loaders/entity-loader.ts:15: const config = await import(`@/contents/..
 **Solution:**
 ```typescript
 // ❌ Wrong - Dynamic import
-const config = await import(`@/contents/themes/${theme}/entities/${entity}/config.ts`)
+const config = await import(`@/entities/${entity}/config.ts`)
 
 // ✅ Correct - Registry lookup
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 const entity = ENTITY_REGISTRY[entityName]
 ```
 
@@ -121,18 +121,18 @@ const entity = ENTITY_REGISTRY[entityName]
 **Symptom:**
 ```bash
 ❌ HARDCODED IMPORTS FROM CONTENTS FOUND:
-app/entities/tasks/page.tsx:3: import { taskConfig } from '@/contents/themes/default/...'
+app/entities/tasks/page.tsx:3: import { taskConfig } from '@/...'
 ```
 
-**Cause:** Direct import from contents/ instead of registry
+**Cause:** Direct import from project source instead of a registry
 
 **Solution:**
 ```typescript
 // ❌ Wrong - Hardcoded import
-import { taskConfig } from '@/contents/themes/default/entities/tasks/tasks.config'
+import { taskConfig } from '@/entities/tasks/tasks.config'
 
 // ✅ Correct - Registry import
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 const taskConfig = ENTITY_REGISTRY.tasks?.config
 ```
 
@@ -142,7 +142,7 @@ const taskConfig = ENTITY_REGISTRY.tasks?.config
 
 **Symptom:**
 ```text
-Module not found: Can't resolve '@/core/lib/registries/entity-registry'
+Module not found: Can't resolve '@nextsparkjs/registries/entity-registry'
 ```
 
 **Cause:** Registry file not generated
@@ -153,7 +153,7 @@ Module not found: Can't resolve '@/core/lib/registries/entity-registry'
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Check file exists
-ls core/lib/registries/entity-registry.ts
+ls .nextspark/registries/entity-registry.ts
 
 # If still missing, check build script for errors
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs 2>&1 | tee build.log
@@ -194,7 +194,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs -v
 **Output:**
 ```text
 [Registry] Starting build process...
-[Registry] Discovering entities in contents/themes/default/entities...
+[Registry] Discovering entities in entities...
 [Registry] Found entity: tasks
 [Registry] - Config: tasks.config.ts
 [Registry] - Migrations: ✓
@@ -210,18 +210,18 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs -v
 **Inspect generated registry:**
 ```bash
 # View entire registry
-cat core/lib/registries/entity-registry.ts
+cat .nextspark/registries/entity-registry.ts
 
 # Search for specific entity
-grep -A 20 "'tasks'" core/lib/registries/entity-registry.ts
+grep -A 20 "'tasks'" .nextspark/registries/entity-registry.ts
 
 # Check metadata
-grep "ENTITY_METADATA" core/lib/registries/entity-registry.ts
+grep "ENTITY_METADATA" .nextspark/registries/entity-registry.ts
 ```
 
 **Inspect in code:**
 ```typescript
-import { ENTITY_REGISTRY, ENTITY_METADATA } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
 
 console.log('Total entities:', ENTITY_METADATA.totalEntities)
 console.log('Entities:', ENTITY_METADATA.entities)
@@ -265,7 +265,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 **Verify registry types:**
 ```bash
 # Check for type errors in generated registry
-npx tsc --noEmit core/lib/registries/entity-registry.ts
+npx tsc --noEmit .nextspark/registries/entity-registry.ts
 
 # Check types in consuming code
 npx tsc --noEmit app/entities/page.tsx
@@ -282,7 +282,7 @@ npx tsc --noEmit app/entities/page.tsx
 // ❌ Old pattern - Dynamic imports
 export async function loadEntityConfig(name: string) {
   const config = await import(
-    `@/contents/themes/default/entities/${name}/${name}.config`
+    `@/entities/${name}/${name}.config`
   )
   return config.default
 }
@@ -291,7 +291,7 @@ export async function loadEntityConfig(name: string) {
 **After:**
 ```typescript
 // ✅ New pattern - Registry lookup
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 export function loadEntityConfig(name: string) {
   return ENTITY_REGISTRY[name]?.config
@@ -311,7 +311,7 @@ export function loadEntityConfig(name: EntityName) {
 ```typescript
 // ❌ Old pattern - Runtime file system access
 export async function getAllEntities() {
-  const entitiesDir = 'contents/themes/default/entities'
+  const entitiesDir = 'entities'
   const dirs = await fs.readdir(entitiesDir)
 
   return Promise.all(
@@ -326,7 +326,7 @@ export async function getAllEntities() {
 **After:**
 ```typescript
 // ✅ New pattern - Registry access
-import { getRegisteredEntities } from '@/core/lib/registries/entity-registry'
+import { getRegisteredEntities } from '@nextsparkjs/registries/entity-registry'
 
 export function getAllEntities() {
   return getRegisteredEntities()
@@ -340,8 +340,8 @@ export function getAllEntities() {
 **Before:**
 ```typescript
 // ❌ Old pattern - Plugin-specific generated hooks
-import { useAIPlugin } from '@/core/lib/registries/plugin-registry'
-import { useAnalyticsPlugin } from '@/core/lib/registries/plugin-registry'
+import { useAIPlugin } from '@nextsparkjs/registries/plugin-registry'
+import { useAnalyticsPlugin } from '@nextsparkjs/registries/plugin-registry'
 
 const { generateText } = useAIPlugin()
 const { trackEvent } = useAnalyticsPlugin()
@@ -350,7 +350,7 @@ const { trackEvent } = useAnalyticsPlugin()
 **After:**
 ```typescript
 // ✅ New pattern - Generic usePlugin hook
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 const { generateText } = usePlugin('ai')
 const { trackEvent } = usePlugin('analytics')
@@ -365,14 +365,14 @@ const { trackEvent } = usePlugin('analytics')
 // ❌ Old pattern - String interpolation in dynamic imports
 const locale = getUserLocale()
 const translations = await import(
-  `@/contents/themes/default/messages/${locale}.json`
+  `@/messages/${locale}.json`
 )
 ```
 
 **After:**
 ```typescript
 // ✅ New pattern - Registry with lazy loading
-import { loadThemeTranslation } from '@/core/lib/registries/translation-registry'
+import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 
 const locale = getUserLocale()
 const translations = await loadThemeTranslation('default', locale)
@@ -387,9 +387,9 @@ const translations = await loadThemeTranslation('default', locale)
 **Create validation utility:**
 ```typescript
 // scripts/validate-registries.ts
-import { ENTITY_REGISTRY, ENTITY_METADATA } from '@/core/lib/registries/entity-registry'
-import { PLUGIN_REGISTRY, PLUGIN_METADATA } from '@/core/lib/registries/plugin-registry'
-import { THEME_REGISTRY, THEME_METADATA } from '@/core/lib/registries/theme-registry'
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
+import { PLUGIN_REGISTRY, PLUGIN_METADATA } from '@nextsparkjs/registries/plugin-registry'
+import { THEME_REGISTRY, THEME_METADATA } from '@nextsparkjs/registries/theme-registry'
 
 function validateEntityRegistry() {
   const errors: string[] = []
@@ -533,7 +533,7 @@ const entity = getEntity(name) // Returns EntityConfig | undefined
 
 **Symptom:**
 ```typescript
-import { EntityName } from '@/core/lib/registries/entity-registry'
+import { EntityName } from '@nextsparkjs/registries/entity-registry'
 // Error: Module has no exported member 'EntityName'
 ```
 
@@ -543,7 +543,7 @@ import { EntityName } from '@/core/lib/registries/entity-registry'
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Verify export exists
-grep "export type EntityName" core/lib/registries/entity-registry.ts
+grep "export type EntityName" .nextspark/registries/entity-registry.ts
 ```
 
 ---
@@ -578,7 +578,7 @@ console.log(`Lookup took ${end - start}ms`) // Should be <10ms
 grep -r "ENTITY_REGISTRY" app/
 
 # 2. Check registry size
-ls -lh core/lib/registries/*.ts
+ls -lh .nextspark/registries/*.ts
 
 # 3. Build the application and inspect the emitted bundle sizes
 pnpm build
@@ -595,7 +595,7 @@ pnpm build
 **Debugging:**
 ```bash
 # Check registry file sizes
-du -sh core/lib/registries/*
+du -sh .nextspark/registries/*
 
 # Build the application before inspecting its emitted bundles
 pnpm build
@@ -605,13 +605,13 @@ pnpm build
 ```typescript
 // 1. Split server/client registries
 // Server: Full registry
-import { PLUGIN_REGISTRY } from '@/core/lib/registries/plugin-registry'
+import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
 
 // Client: Metadata only
-import { PLUGIN_REGISTRY } from '@/core/lib/registries/plugin-registry.client'
+import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry.client'
 
 // 2. Lazy load heavy registries
-const EntityRegistry = lazy(() => import('@/core/lib/registries/entity-registry'))
+const EntityRegistry = lazy(() => import('@nextsparkjs/registries/entity-registry'))
 ```
 
 ---
@@ -624,7 +624,7 @@ const EntityRegistry = lazy(() => import('@/core/lib/registries/entity-registry'
 # Add to git hooks
 # .husky/pre-commit
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
-git add core/lib/registries/
+git add .nextspark/registries/
 ```
 
 ---
@@ -633,7 +633,7 @@ git add core/lib/registries/
 
 ```typescript
 // ✅ Good - Type-safe
-import type { EntityName } from '@/core/lib/registries/entity-registry'
+import type { EntityName } from '@nextsparkjs/registries/entity-registry'
 
 function loadEntity(name: EntityName) {
   return ENTITY_REGISTRY[name] // Autocomplete + type checking

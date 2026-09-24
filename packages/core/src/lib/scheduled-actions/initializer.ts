@@ -1,9 +1,9 @@
 /**
  * Scheduled Actions - Initializer
  *
- * Core service that initializes scheduled action handlers from the active theme.
+ * Core service that initializes scheduled action handlers from the project.
  * This module reads from the auto-generated scheduled-actions-registry and
- * calls the theme's registration functions.
+ * calls the project's registration functions.
  *
  * @module core/lib/scheduled-actions/initializer
  */
@@ -20,17 +20,10 @@ const globalForInit = globalThis as typeof globalThis & {
 }
 
 /**
- * Get the active theme name from environment
- */
-function getActiveTheme(): string {
-  return process.env.NEXT_PUBLIC_ACTIVE_THEME?.replace(/'/g, '') || 'default'
-}
-
-/**
- * Initialize scheduled action handlers for the active theme
+ * Initialize scheduled action handlers for the project
  *
  * This function reads from the auto-generated registry and calls
- * the theme's registerAllHandlers function to register action handlers.
+ * the project's registerAllHandlers function to register action handlers.
  *
  * Should be called at server startup (typically in instrumentation.ts)
  *
@@ -45,27 +38,26 @@ export function initializeScheduledActions(): void {
     return
   }
 
-  const themeName = getActiveTheme()
-  const module = SCHEDULED_ACTIONS_REGISTRY[themeName]
+  const [projectName, module] = Object.entries(SCHEDULED_ACTIONS_REGISTRY)[0] ?? []
 
   if (module) {
-    console.log(`[ScheduledActions] Initializing handlers for theme: ${themeName}`)
+    console.log(`[ScheduledActions] Initializing handlers for project: ${projectName}`)
     module.registerAllHandlers()
     globalForInit.__scheduledActionsHandlersInitialized = true
     console.log(`[ScheduledActions] ✅ Handlers initialized successfully`)
   } else {
-    console.warn(`[ScheduledActions] No handlers found for theme: ${themeName}`)
+    console.warn('[ScheduledActions] No project scheduled-action handlers found')
   }
 }
 
 /**
- * Initialize recurring scheduled actions for the active theme
+ * Initialize recurring scheduled actions for the project
  *
  * This async function reads from the auto-generated registry and calls
- * the theme's registerRecurringActions function to schedule recurring tasks.
+ * the project's registerRecurringActions function to schedule recurring tasks.
  *
  * Includes guard to prevent duplicate DB queries in same server instance.
- * Theme's registerRecurringActions should also check DB for existing actions.
+ * The project's registerRecurringActions should also check DB for existing actions.
  *
  * Should be called after handlers are registered.
  *
@@ -81,15 +73,14 @@ export async function initializeRecurringActions(): Promise<void> {
     return
   }
 
-  const themeName = getActiveTheme()
-  const module = SCHEDULED_ACTIONS_REGISTRY[themeName]
+  const [projectName, module] = Object.entries(SCHEDULED_ACTIONS_REGISTRY)[0] ?? []
 
   if (module) {
-    console.log(`[ScheduledActions] Initializing recurring actions for theme: ${themeName}`)
+    console.log(`[ScheduledActions] Initializing recurring actions for project: ${projectName}`)
     await module.registerRecurringActions()
     globalForInit.__scheduledActionsRecurringInitialized = true
     console.log(`[ScheduledActions] ✅ Recurring actions initialized successfully`)
   } else {
-    console.warn(`[ScheduledActions] No recurring actions found for theme: ${themeName}`)
+    console.warn('[ScheduledActions] No recurring project actions found')
   }
 }

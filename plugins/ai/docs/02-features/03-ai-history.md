@@ -71,7 +71,7 @@ CREATE TABLE ai_history_metas (
 ### Import
 
 ```typescript
-import { AIHistoryService } from '@/contents/plugins/ai/lib/ai-history-service'
+import { AIHistoryService } from '@/plugins/ai/lib/ai-history-service'
 ```
 
 ### Operation Lifecycle

@@ -5,8 +5,6 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
-env:
-  NEXT_PUBLIC_ACTIVE_THEME: ${{ vars.ACTIVE_THEME || 'default' }}
 
 jobs:
   smoke-tests:
@@ -72,7 +70,7 @@ jobs:
           start: pnpm start
           wait-on: 'http://localhost:5173'
           wait-on-timeout: 120
-          config-file: contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress.config.ts
+          config-file: tests/cypress.config.ts
           env: grepTags=@smoke
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
@@ -82,7 +80,7 @@ jobs:
         if: failure()
         with:
           name: cypress-screenshots
-          path: contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/screenshots
+          path: tests/cypress/screenshots
           retention-days: 7
 
       - name: Upload videos
@@ -90,5 +88,5 @@ jobs:
         if: always()
         with:
           name: cypress-videos
-          path: contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/videos
+          path: tests/cypress/videos
           retention-days: 3

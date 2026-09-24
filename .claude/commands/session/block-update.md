@@ -14,7 +14,7 @@ Modify an existing page builder block.
 ## Syntax
 
 ```
-/session:block:update <block-name> [--theme <name>]
+/session:block:update <block-name>
 ```
 
 ---
@@ -68,7 +68,7 @@ Updates an existing block while maintaining backward compatibility.
 
 Block: hero-banner
 Theme: default
-Location: contents/themes/default/blocks/hero-banner/
+Location: blocks/hero-banner/
 
 ─────────────────────────────────────────
 
@@ -178,7 +178,6 @@ Running pnpm build:blocks...
 
 | Option | Description |
 |--------|-------------|
-| `--theme <name>` | Target theme |
 | `--add-field <name>` | Directly add field |
 | `--no-validate` | Skip validation |
 

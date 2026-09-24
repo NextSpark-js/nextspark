@@ -174,7 +174,7 @@ import { Card, CardHeader, CardContent } from '@/core/components/ui/card'
 import { Dialog } from '@/core/components/ui/dialog'
 
 // Registries are exceptions (pre-compiled at build time)
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 ```
 
 ---
@@ -369,7 +369,7 @@ const config: Config = {
   content: [
     './app/**/*.{ts,tsx}',
     './core/**/*.{ts,tsx}',
-    './contents/**/*.{ts,tsx}',
+    './{api,blocks,components,config,entities,lib,plugins,templates}/**/*.{ts,tsx}',
   ],
   // ✅ Tailwind automatically:
   // - Purges unused classes (tree shaking for CSS)

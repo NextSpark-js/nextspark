@@ -82,9 +82,8 @@ describe('nextspark.config.ts source contract', () => {
     ]))
   })
 
-  it('keeps legacy and runtime-only fields valid without making them compiler defaults', () => {
+  it('keeps runtime-only fields valid without making them compiler defaults', () => {
     const result = validateNextSparkConfig({
-      theme: 'legacy-theme',
       database: { provider: 'postgres', runMigrations: false },
       auth: { providers: ['email', 'google'], requireEmailVerification: true },
       app: { name: 'Example', description: 'Synthetic fixture' },
@@ -92,9 +91,15 @@ describe('nextspark.config.ts source contract', () => {
 
     expect(result.valid).toBe(true)
     if (!result.valid) return
-    expect(result.config.theme).toBe('legacy-theme')
     expect(result.config.database).toEqual({ provider: 'postgres', runMigrations: false })
     expect(result.config.auth).toEqual({ providers: ['email', 'google'], requireEmailVerification: true })
     expect(result.config.app).toEqual({ name: 'Example', description: 'Synthetic fixture' })
+  })
+
+  it('rejects the legacy theme selector', () => {
+    const result = validateNextSparkConfig({ theme: 'legacy-theme' })
+
+    expect(result.valid).toBe(false)
+    expect(result.errors).toContain('theme is not a supported nextspark.config.ts field.')
   })
 })

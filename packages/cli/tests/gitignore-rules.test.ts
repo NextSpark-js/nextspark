@@ -15,23 +15,23 @@ import {
 
 /** Patterns aimed at the places sync:app writes, and at how git reads a glob. */
 const PATTERNS = [
-  'app/(templates)/', 'app/(templates)', '/app/(templates)/', 'app/(templates)/**', 'app/(templates)/*', 'app/**', 'app/*',
+  'src/app/(templates)/', 'src/app/(templates)', '/src/app/(templates)/', 'src/app/(templates)/**', 'src/app/(templates)/*', 'src/app/**', 'src/app/*',
   '**/(templates)', '**/(templates)/', '(templates)/', '(templates)', '(TEMPLATES)/', 'App/(Templates)/',
-  'app/(templates)/middleware.ts', 'app/(templates)/dashboard/layout.tsx', '*.tsx', '**/*.tsx', 'app/**/layout.tsx', 'app/**/',
-  '[a]pp/', '[!b]pp/(templates)/', '[^b]pp/', '[[:alpha:]]pp/', '[[:upper:]]pp/', '[[:lower:]]pp/', '[A-Z]pp/', 'ap?/', 'app\\/(templates)', '\\app/',
-  'app/(temp*)/', 'app/(templates', 'app/[(]templates[)]/', 'app/[[:foo:]]/', 'app/[]', 'app/[]]', 'app/**(templates)/',
-  'app**/(templates)/', 'app/***/', 'a**/', '**', '*', '*/', '/*', '/*/', '**/', 'app/\\(templates)/', 'app/(templates)\\',
+  'src/app/(templates)/middleware.ts', 'src/app/(templates)/dashboard/layout.tsx', '*.tsx', '**/*.tsx', 'src/app/**/layout.tsx', 'src/app/**/',
+  '[a]pp/', '[!b]pp/(templates)/', '[^b]pp/', '[[:alpha:]]pp/', '[[:upper:]]pp/', '[[:lower:]]pp/', '[A-Z]pp/', 'ap?/', 'app\\/(templates)', '\\src/app/',
+  'src/app/(temp*)/', 'src/app/(templates', 'src/app/[(]templates[)]/', 'src/app/[[:foo:]]/', 'src/app/[]', 'src/app/[]]', 'src/app/**(templates)/',
+  'app**/(templates)/', 'src/app/***/', 'a**/', '**', '*', '*/', '/*', '/*/', '**/', 'src/app/\\(templates)/', 'src/app/(templates)\\',
   '.nextspark/', '.nextspark', '.nextspark/backups/', '.nextspark/*', '.nextspark/sync-state.json', '/.nextspark/sync-state.json/',
   'sync-state.json', '*.json', '.nextspark/**/', '.next*/', '.nextspark/backups', 'backups/', '/backups/',
   'app.backup.v*/', 'app.backup.*', 'app.backup.v[0-9]*/', '*-XXXXXX/', '*-a1b2c3/', 'app.backup.v?/', 'APP.BACKUP.V*/',
-  '\\#app/', 'app/ ', 'app/\\ ', ' app/', 'app/\t', '[[:space:]]app/', 'app[[:punct:]]backup.v1/', 'app.backup.v[!0-9]/',
+  '\\#src/app/', 'src/app/ ', 'src/app/\\ ', ' src/app/', 'src/app/\t', '[[:space:]]src/app/', 'app[[:punct:]]backup.v1/', 'app.backup.v[!0-9]/',
   'app.backup.v??/', '!app.backup.v?', 'app.backup.v\u00e9/', '[[:alpha:]]pp.backup.v1', 'app.backup.v1\\', 'app.backup.v**/',
 ]
 
 /** Probes from a case directory: [path, is a directory]. */
 const PROBES: [string, boolean][] = [
-  ['app', true], ['app/(templates)', true], ['app/(templates)/dashboard', true], ['app/(templates)/middleware.ts', false],
-  ['app/(templates)/dashboard/layout.tsx', false], ['app/layout.tsx', false], ['.nextspark', true], ['.nextspark/backups', true],
+  ['app', true], ['src/app/(templates)', true], ['src/app/(templates)/dashboard', true], ['src/app/(templates)/middleware.ts', false],
+  ['src/app/(templates)/dashboard/layout.tsx', false], ['src/app/layout.tsx', false], ['.nextspark', true], ['.nextspark/backups', true],
   ['.nextspark/sync-state.json', false], ['app.backup.v1', true], ['app.backup.vX', true], ['app.backup.v0.1.0-beta.190.2026-09-16T18-27-46-049Z-xUXIjT', true],
   ['app.backup.v[', true], ['app.backup.v\u00e9', true], [' app', true], ['app\t', true],
 ]
@@ -43,10 +43,10 @@ function cases(): Case[] {
   for (const pattern of PATTERNS) {
     all.push({ root: [pattern] })
     all.push({ root: ['*', `!${pattern}`] })
-    all.push({ root: [pattern, '!app/(templates)/', '!.nextspark/'] })
-    all.push({ root: ['app/', '.nextspark/', `!${pattern}`] })
-    all.push({ root: ['app/(templates)/'], app: [`!${pattern}`] })
-    all.push({ root: ['app/(templates)/', '.nextspark/sync-state.json'], app: [pattern], nextspark: [`!${pattern}`] })
+    all.push({ root: [pattern, '!src/app/(templates)/', '!.nextspark/'] })
+    all.push({ root: ['src/app/', '.nextspark/', `!${pattern}`] })
+    all.push({ root: ['src/app/(templates)/'], app: [`!${pattern}`] })
+    all.push({ root: ['src/app/(templates)/', '.nextspark/sync-state.json'], app: [pattern], nextspark: [`!${pattern}`] })
   }
   return all
 }
@@ -71,7 +71,7 @@ async function askGit(ignoreCase: boolean): Promise<{ top: string; caseList: Cas
       asked.push(`${dir}/${path}`)
     }
     await writeFile(join(top, dir, '.gitignore'), `${root.join('\n')}\n`)
-    if (app) await writeFile(join(top, dir, 'app/.gitignore'), `${app.join('\n')}\n`)
+    if (app) await writeFile(join(top, dir, 'src/app/.gitignore'), `${app.join('\n')}\n`)
     if (nextspark) await writeFile(join(top, dir, '.nextspark/.gitignore'), `${nextspark.join('\n')}\n`)
   }
 
@@ -92,7 +92,7 @@ function sourcesOf(index: number, { root, app, nextspark }: Case, ignoreCase: bo
   const byDirectory = new Map()
   const dir = `case-${index}/`
   byDirectory.set(dir, parseIgnoreFile(asBytes(`${root.join('\n')}\n`), dir, '.gitignore'))
-  if (app) byDirectory.set(`${dir}app/`, parseIgnoreFile(asBytes(`${app.join('\n')}\n`), `${dir}app/`, 'app/.gitignore'))
+  if (app) byDirectory.set(`${dir}src/app/`, parseIgnoreFile(asBytes(`${app.join('\n')}\n`), `${dir}src/app/`, 'src/app/.gitignore'))
   if (nextspark) byDirectory.set(`${dir}.nextspark/`, parseIgnoreFile(asBytes(`${nextspark.join('\n')}\n`), `${dir}.nextspark/`, '.nextspark/.gitignore'))
   return { byDirectory, excludeFiles: [], ignoreCase }
 }

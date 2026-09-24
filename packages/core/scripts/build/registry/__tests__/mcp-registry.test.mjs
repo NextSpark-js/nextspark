@@ -19,10 +19,10 @@ test('emits an empty MCP_OVERRIDES map when no overrides were discovered', () =>
 
 test('emits one literal import + map entry per discovered override', () => {
   const out = generateMcpRegistry(
-    [{ slug: 'customers', importPath: '@/contents/themes/default/entities/customers/mcp', themeName: 'default' }],
+    [{ slug: 'customers', importPath: '@/entities/customers/mcp', themeName: 'default' }],
     CONFIG
   )
-  assert.match(out, /import CustomersMcpOverride from '@\/contents\/themes\/default\/entities\/customers\/mcp'/)
+  assert.match(out, /import CustomersMcpOverride from '@\/entities\/customers\/mcp'/)
   assert.match(out, /'customers': CustomersMcpOverride,/)
 })
 
@@ -39,8 +39,8 @@ test('converts @/core/lib/mcp to @nextsparkjs/core/lib/mcp in npm mode', () => {
 test('PascalCases hyphenated/underscored/nested slugs into a valid identifier', () => {
   const out = generateMcpRegistry(
     [
-      { slug: 'meal-plans', importPath: '@/contents/themes/default/entities/meal-plans/mcp' },
-      { slug: 'pantry_items', importPath: '@/contents/themes/default/entities/pantry_items/mcp' },
+      { slug: 'meal-plans', importPath: '@/entities/meal-plans/mcp' },
+      { slug: 'pantry_items', importPath: '@/entities/pantry_items/mcp' },
     ],
     CONFIG
   )
@@ -53,8 +53,8 @@ test('PascalCases hyphenated/underscored/nested slugs into a valid identifier', 
 test('handles multiple overrides, one import + entry each, in discovery order', () => {
   const out = generateMcpRegistry(
     [
-      { slug: 'customers', importPath: '@/contents/themes/default/entities/customers/mcp' },
-      { slug: 'tasks', importPath: '@/contents/themes/default/entities/tasks/mcp' },
+      { slug: 'customers', importPath: '@/entities/customers/mcp' },
+      { slug: 'tasks', importPath: '@/entities/tasks/mcp' },
     ],
     CONFIG
   )

@@ -5,7 +5,7 @@
  * authenticated areas need, and those get both through DashboardProviders.
  * Both root layouts mount SessionCookieRefresher, which renews the session and
  * keeps the locale cookie and the theme in line with the account.
- * apps/dev/app is the source packages/core/templates/app is synced from.
+ * apps/dev/src/app is the source packages/core/templates/app is synced from.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -14,7 +14,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
-const APP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../apps/dev/app')
+const APP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../apps/dev/src/app')
 
 /** The JSX elements a file renders; a name in a comment or a string does not count. */
 function renderedElements(file: string): Set<string> {

@@ -28,7 +28,7 @@ function syncAllTemplates() {
 
 /**
  * packages/core/templates/app and packages/mobile/templates/app are
- * gitignored, generated at pack time from apps/dev/app and apps/mobile/app
+ * gitignored, generated at pack time from apps/dev/src/app and apps/mobile/app
  * (see .gitignore). Without --sync each sync script runs in dry-run mode: it
  * prints the diff, exits 0 and still creates a missing target directory
  * empty, so a run that copied nothing only shows in how many files landed.

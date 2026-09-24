@@ -1,7 +1,7 @@
 /**
  * Auth Discovery
  *
- * Discovers authentication configuration files from contents/auth
+ * Discovers authentication configuration files from the project auth directory
  *
  * @module core/scripts/build/registry/discovery/auth
  */
@@ -10,7 +10,6 @@ import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
 
-import { CONFIG } from '../config.mjs'
 import { verbose } from '../../../utils/index.mjs'
 
 /**
@@ -18,8 +17,8 @@ import { verbose } from '../../../utils/index.mjs'
  * Looks for roles.json in the auth directory
  * @returns {Promise<Array<{type: string, path: string, data: object, relativePath: string}>>}
  */
-export async function discoverAuthConfig() {
-  const authDir = join(CONFIG.contentsDir, 'auth')
+export async function discoverAuthConfig(config) {
+  const authDir = join(config.projectSourceDir, 'auth')
   const authConfig = []
 
   try {

@@ -1,22 +1,8 @@
-// Where db:verify-theme finds a theme, and the directory run-migrations.mjs has
-// to run in to migrate it.
-//
-// run-migrations.mjs reads the active theme from `<cwd>/contents/themes/<theme>`.
-// The monorepo's themes reach it through apps/dev/contents, which links to
-// themes/. The starter a generated project ships is not among them: it lives in
-// packages/core/templates/contents/themes/starter, and themes/starter holds only
-// its tests. packages/core/templates has the same contents/ layout a generated
-// project has, so the runner reads the starter from there.
+// Root-first project/template lookup used only by the repository migration-verification harness.
+// The migration runner itself always reads the project in its cwd and never selects a theme.
 
 import fs from 'fs';
 import path from 'path';
-
-/** The directories the runner can run in, each with its own contents/themes. */
-export const THEME_PROJECTS = ['apps/dev', 'packages/core/templates'];
-
-// The runner reads a theme's plugins from one of these; a directory with
-// neither is not a theme, and migrating it migrates core alone.
-const THEME_CONFIGS = ['config/theme.config.ts', 'theme.config.ts'];
 
 const SKIP_DIRS = new Set(['node_modules', '.next', 'dist']);
 
@@ -35,35 +21,28 @@ export function migrationFiles(dir, insideMigrations = false, found = []) {
   return found;
 }
 
-/**
- * The theme called `theme`: its directory, the directory to run the runner in,
- * and the migration files it holds. `{ error }` when there is no such theme,
- * when the name is a theme in more than one place, or when it has no
- * migrations, since a run over none of them proves nothing about it.
- */
-export function findTheme(repoRoot, theme) {
-  const candidates = THEME_PROJECTS.map(project => ({
-    projectDir: path.join(repoRoot, project),
-    themeDir: path.join(repoRoot, project, 'contents', 'themes', theme),
-  }));
-  // A theme reached through a link is shown where it really lives: themes/blog, not apps/dev/contents/themes/blog.
-  const shown = dir =>
-    fs.existsSync(dir) ? path.relative(fs.realpathSync(repoRoot), fs.realpathSync(dir)) : path.relative(repoRoot, dir);
-  const found = candidates.filter(({ themeDir }) => THEME_CONFIGS.some(config => fs.existsSync(path.join(themeDir, config))));
+function configuredName(projectDir) {
+  const config = path.join(projectDir, 'config/theme.config.ts');
+  if (!fs.existsSync(config)) return null;
+  return fs.readFileSync(config, 'utf8').match(/\bname:\s*['"]([^'"]+)['"]/)?.[1] ?? null;
+}
 
-  if (found.length === 0) {
-    return {
-      error: `no theme "${theme}": none of ${candidates.map(({ themeDir }) => shown(themeDir)).join(', ')} has a theme config`,
-    };
-  }
-  if (found.length > 1) {
-    return { error: `"${theme}" is a theme in more than one place: ${found.map(({ themeDir }) => shown(themeDir)).join(', ')}` };
+/** Locate apps/dev or one core-owned install-once project template by catalog name. */
+export function findTheme(repoRoot, name) {
+  const devDir = path.join(repoRoot, 'apps/dev');
+  const templateDir = path.join(repoRoot, 'packages/core/templates/projects', name);
+  const candidates = [];
+  if (configuredName(devDir) === name) candidates.push({ projectDir: devDir, sourceDir: devDir, kind: 'project' });
+  if (configuredName(templateDir) === name) candidates.push({ projectDir: templateDir, sourceDir: templateDir, kind: 'template' });
+
+  const shown = dir => path.relative(repoRoot, dir);
+  if (candidates.length === 0) return { error: `no root-first project or project template named "${name}"` };
+  if (candidates.length > 1) {
+    return { error: `"${name}" exists as more than one project source: ${candidates.map(({ sourceDir }) => shown(sourceDir)).join(', ')}` };
   }
 
-  const [{ projectDir, themeDir }] = found;
-  const migrations = migrationFiles(themeDir);
-  if (migrations.length === 0) {
-    return { error: `theme "${theme}" at ${shown(themeDir)} has no migrations to verify` };
-  }
-  return { projectDir, themeDir, shownDir: shown(themeDir), migrations };
+  const [found] = candidates;
+  const migrations = migrationFiles(found.sourceDir);
+  if (migrations.length === 0) return { error: `${found.kind} "${name}" at ${shown(found.sourceDir)} has no migrations to verify` };
+  return { ...found, themeDir: found.sourceDir, shownDir: shown(found.sourceDir), migrations };
 }

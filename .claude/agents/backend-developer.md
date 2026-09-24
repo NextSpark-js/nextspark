@@ -84,7 +84,7 @@ At the start of task:execute, scope is documented in context.md showing allowed 
 
 **When creating or modifying entities, use presets as reference:**
 
-Location: `core/templates/contents/themes/starter/entities/tasks/`
+Location: `core/templates/entities/tasks/`
 
 ### Required Files (4-File Structure)
 
@@ -108,7 +108,7 @@ Location: `core/templates/contents/themes/starter/entities/tasks/`
 
 ```typescript
 // Import the service
-import { TasksService } from '@/contents/themes/[theme]/entities/tasks/tasks.service'
+import { TasksService } from '@/entities/tasks/tasks.service'
 
 // Use typed methods with RLS
 const task = await TasksService.getById(taskId, userId)
@@ -169,7 +169,7 @@ const context = await Read('.claude/config/context.json')
 if (context.context === 'monorepo') {
   // Full access to core/, all themes, all plugins
 } else if (context.context === 'consumer') {
-  // Restricted to active theme and plugins only
+  // Restricted to project and plugins only
 }
 ```
 
@@ -186,9 +186,9 @@ When working in the NextSpark framework repository:
 
 When working in a project that installed NextSpark via npm:
 - **FORBIDDEN:** Never create/modify files in `core/` or `node_modules/`
-- **CREATE** theme-specific services in `contents/themes/{theme}/services/`
-- **CREATE** API routes in `contents/themes/{theme}/app/api/`
-- **CREATE** plugin services in `contents/plugins/{plugin}/`
+- **CREATE** theme-specific services in `services/`
+- **CREATE** API routes in `app/api/`
+- **CREATE** plugin services in `plugins/{plugin}/`
 - If core functionality needed → Use existing core services, don't duplicate
 
 ### Path Validation Before Any File Operation
@@ -203,8 +203,8 @@ if (context.context === 'consumer' && targetPath.startsWith('core/')) {
     ❌ Cannot create ${targetPath} in consumer context.
 
     Alternative locations:
-    - contents/themes/${activeTheme}/services/
-    - contents/plugins/{plugin}/services/
+    - services/
+    - plugins/{plugin}/services/
   `)
 }
 ```
@@ -366,7 +366,7 @@ await launchAgent('test-writer-fixer', {
 ### Entity-Based API Structure
 ```typescript
 // /app/api/v1/[entity]/route.ts
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { NextRequest, NextResponse } from 'next/server'
 
 const entity = ENTITY_REGISTRY.products // Use registry, never direct imports
@@ -395,21 +395,21 @@ export async function GET(request: NextRequest) {
 
 ### Registry Access Rules (CRITICAL)
 
-**NEVER import from `@/contents` directly:**
+**NEVER bypass generated registries with direct project-source imports:**
 ```typescript
 // ❌ ABSOLUTELY FORBIDDEN
-import config from '@/contents/themes/...'
-import entity from '@/contents/plugins/...'
+import config from '@/./...'
+import entity from '@/plugins/...'
 
 // ✅ CORRECT - Use auto-generated registries
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
-import { THEME_REGISTRY } from '@/core/lib/registries/theme-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
+import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 ```
 
 **NEVER use dynamic imports for configs:**
 ```typescript
 // ❌ FORBIDDEN - Runtime I/O
-const config = await import(`@/contents/themes/${theme}/config`)
+const config = await import(`@/config`)
 
 // ✅ CORRECT - Build-time registry
 const config = THEME_REGISTRY[theme]
@@ -419,12 +419,12 @@ const config = THEME_REGISTRY[theme]
 
 ## Data-Only Registry Pattern (CRITICAL - ZERO TOLERANCE)
 
-**FUNDAMENTAL PRINCIPLE:** Files in `core/lib/registries/` are AUTO-GENERATED. NEVER add functions or business logic to these files.
+**FUNDAMENTAL PRINCIPLE:** Files in `.nextspark/registries/` are AUTO-GENERATED. NEVER add functions or business logic to these files.
 
 ### CORRECT Pattern
 
 ```typescript
-// core/lib/registries/some-registry.ts (AUTO-GENERATED)
+// .nextspark/registries/some-registry.ts (AUTO-GENERATED)
 // ================================================
 // ONLY static data and types - NO FUNCTIONS
 // ================================================
@@ -446,7 +446,7 @@ export type SomeKey = keyof typeof SOME_REGISTRY
 // Business logic goes HERE
 // ================================================
 
-import { SOME_REGISTRY, type SomeKey } from '@/core/lib/registries/some-registry'
+import { SOME_REGISTRY, type SomeKey } from '@nextsparkjs/registries/some-registry'
 
 export class SomeService {
   static get(key: SomeKey) {
@@ -463,7 +463,7 @@ export class SomeService {
 
 ```typescript
 // ❌ PROHIBITED - Functions in auto-generated files
-// core/lib/registries/some-registry.ts
+// .nextspark/registries/some-registry.ts
 export function getSomething(key: string) {
   // THIS IS A VIOLATION
   return SOME_REGISTRY[key]
@@ -532,7 +532,7 @@ try {
 
 Before completing any task, verify:
 - [ ] Project context determined (core vs theme)
-- [ ] No prohibited core modifications in theme projects
+- [ ] No prohibited core modifications in root-first projects
 - [ ] Relevant .rules/ files loaded and followed
 - [ ] TodoWrite used for complex tasks (3+ steps)
 - [ ] Database migrations tested and working
@@ -697,8 +697,8 @@ ${sessionPath}/progress.md
 **After implementing each endpoint, you MUST test it:**
 
 ```bash
-# Use super admin API key from active theme dev.config → devKeyring
-API_KEY="<from active theme dev.config → devKeyring>"
+# Use super admin API key from project dev.config → devKeyring
+API_KEY="<from project dev.config → devKeyring>"
 
 # Test GET
 curl -X GET http://localhost:5173/api/v1/users/USER_ID \

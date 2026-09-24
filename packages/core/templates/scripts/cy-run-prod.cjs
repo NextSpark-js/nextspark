@@ -35,39 +35,11 @@ const HEALTH_CHECK_INTERVAL = 1000 // Check every 1 second
 // Get arguments after script name
 const args = process.argv.slice(2)
 
-// Find the active theme's cypress config
+// Resolve the root-first project's Cypress configuration.
 function findCypressConfig() {
-  const contentsDir = path.join(process.cwd(), 'contents', 'themes')
-
-  if (!fs.existsSync(contentsDir)) {
-    console.error('Error: contents/themes directory not found')
-    process.exit(1)
-  }
-
-  const themes = fs.readdirSync(contentsDir).filter((name) => {
-    const themePath = path.join(contentsDir, name)
-    return fs.statSync(themePath).isDirectory()
-  })
-
-  // Check NEXT_PUBLIC_ACTIVE_THEME env var first
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
-
-  if (activeTheme && themes.includes(activeTheme)) {
-    const configPath = path.join(contentsDir, activeTheme, 'tests', 'cypress.config.ts')
-    if (fs.existsSync(configPath)) {
-      return configPath
-    }
-  }
-
-  // Otherwise use the first theme found
-  for (const theme of themes) {
-    const configPath = path.join(contentsDir, theme, 'tests', 'cypress.config.ts')
-    if (fs.existsSync(configPath)) {
-      return configPath
-    }
-  }
-
-  console.error('Error: No cypress.config.ts found in any theme')
+  const configPath = path.join(process.cwd(), 'tests', 'cypress.config.ts')
+  if (fs.existsSync(configPath)) return configPath
+  console.error('Error: tests/cypress.config.ts not found in the project root')
   process.exit(1)
 }
 
@@ -182,9 +154,9 @@ function waitForServer() {
 function runCypress(configFile) {
   const cypressArgs = ['cypress', 'run', '--config-file', configFile, ...args]
 
-  console.log(`\n[cy:run:prod] Running: npx ${cypressArgs.join(' ')}`)
+  console.log(`\n[cy:run:prod] Running: pnpm exec ${cypressArgs.join(' ')}`)
 
-  const result = spawnSync('npx', cypressArgs, {
+  const result = spawnSync('pnpm', ['exec', ...cypressArgs], {
     stdio: 'inherit',
     shell: true,
     cwd: process.cwd(),

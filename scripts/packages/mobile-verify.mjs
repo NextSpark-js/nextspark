@@ -10,7 +10,7 @@
  *
  *   1. runs every node:test suite next to it, one step each: this script's
  *      own process-group teardown and entrypoint guard, the check that
- *      sync:all-templates copies apps/dev/app and apps/mobile/app into the
+ *      sync:all-templates copies apps/dev/src/app and apps/mobile/app into the
  *      generated templates, the packaging-boundary regression that
  *      repopulates an empty core template before archiving, and the tarball
  *      installability/secret-leak checker (verify-tarballs.mjs),

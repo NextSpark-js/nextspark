@@ -152,7 +152,7 @@ const scopeSection = `
 ## Task Scope
 
 **Context:** ${context.context}
-${context.context === 'consumer' ? `**Active Theme:** \${NEXT_PUBLIC_ACTIVE_THEME}` : ''}
+${context.context === 'consumer' ? `**project:** \project root` : ''}
 
 **Allowed Paths:**
 ${context.allowedPaths.map(p => `- ${p}`).join('\n')}
@@ -174,7 +174,7 @@ When context is `monorepo`:
 ### Consumer TASK
 
 When context is `consumer`:
-- **RESTRICTED** to active theme only
+- **RESTRICTED** to project only
 - **CANNOT** modify other themes (even if they exist locally)
 - **CANNOT** modify `core/` (read-only in node_modules)
 - If multi-theme needed → Escalate to STORY with explicit approval
@@ -211,17 +211,17 @@ Always include this section in requirements.md:
 ## Context Validation
 
 **Context:** consumer
-**Active Theme:** default
+**project:** default
 **Core Version:** 0.x.x (from package.json)
 
 ### Allowed Paths
-- contents/themes/default/**/*
-- contents/plugins/**/*
+- **/*
+- plugins/**/*
 - .claude/sessions/**/*
 
 ### Forbidden
 - core/**/* (read-only)
-- Other themes (e.g., contents/themes/blog)
+- Other themes (e.g., ./blog)
 
 ### Core Dependencies
 - [ ] No core changes needed

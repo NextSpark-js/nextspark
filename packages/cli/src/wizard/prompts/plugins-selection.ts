@@ -2,7 +2,7 @@
  * Plugins Selection Prompt
  *
  * Asks the user which additional plugins they want to install.
- * Some plugins may be required by the selected theme and will be pre-selected.
+ * Plugins are copied under the project's plugins/ directory.
  */
 
 import { checkbox } from '@inquirer/prompts'
@@ -16,7 +16,6 @@ export type PluginChoice = 'starter' | 'ai' | 'langchain' | 'social-media-publis
  * These will be pre-selected and marked as required
  */
 const THEME_REQUIRED_PLUGINS: Record<string, PluginChoice[]> = {
-  'default': ['langchain'],
   'blog': [],
   'crm': [],
   'productivity': [],

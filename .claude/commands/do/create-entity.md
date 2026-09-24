@@ -34,7 +34,7 @@ Common scripts:
 ## Files to Create
 
 ```
-contents/themes/{theme}/entities/{entity}/
+entities/{entity}/
 ├── {entity}.config.ts    # Entity configuration
 ├── {entity}.fields.ts    # Field definitions
 ├── {entity}.types.ts     # TypeScript types

@@ -38,7 +38,7 @@ This is a fundamental architectural principle:
 | `core/lib/` | ✅ Can reference | ❌ Must NOT reference |
 | `core/components/` | ✅ Can reference | ❌ Must use fallbacks |
 | `core/messages/` | ✅ Must define | ❌ Must NOT define |
-| `contents/themes/*/` | ✅ Can reference | ✅ Must define here |
+| `` | ✅ Can reference | ✅ Must define here |
 
 **Why this matters:**
 1. Core is theme-agnostic - it doesn't know what custom roles exist
@@ -87,7 +87,7 @@ const getRoleIcon = (role: TeamRole) => roleIconsMap[role] ?? Eye
 Themes extend roles in their `app.config.ts`:
 
 ```typescript
-// contents/themes/your-theme/config/app.config.ts
+// config/app.config.ts
 export const APP_CONFIG_OVERRIDES = {
   userRoles: {
     // Add custom roles
@@ -361,7 +361,7 @@ In addition to global user roles, the boilerplate implements a separate **Team R
 **IMPORTANT:** Team roles and their permissions are now defined in `permissions.config.ts`, the **single source of truth** for all permissions.
 
 ```typescript
-// contents/themes/your-theme/config/permissions.config.ts
+// config/permissions.config.ts
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   // ==========================================
   // CUSTOM ROLES
@@ -512,7 +512,7 @@ Final USER_ROLES_CONFIG
 | `core/lib/config/config-sync.ts` | Config merge integration |
 | `core/lib/config/types.ts` | TeamRolesConfig interface |
 | `core/types/user.types.ts` | UserRole, CoreRole types and helpers |
-| `contents/themes/*/app.config.ts` | Theme role extensions |
+| `app.config.ts` | Theme role extensions |
 
 ## Troubleshooting
 

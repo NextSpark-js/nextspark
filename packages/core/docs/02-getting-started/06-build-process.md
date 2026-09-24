@@ -20,7 +20,7 @@ The root script delegates to the app package, which starts a single process:
 dotenv -e .env -- sh -c 'next dev --turbopack -p $PORT'
 ```
 
-`PORT` comes from `apps/dev/.env`. The measured checkout used port 3010. Next.js watches application code and the theme CSS imported by `apps/dev/app/globals.css`.
+`PORT` comes from `apps/dev/.env`. The measured checkout used port 3010. Next.js watches application code and the theme CSS imported by `apps/dev/src/app/globals.css`.
 
 ---
 
@@ -44,11 +44,11 @@ The registry builder writes `.nextspark/registries/`, including `docs-registry.t
 
 ## Theme CSS and Assets
 
-The monorepo has no `theme:build` or `theme:build-watch` package script. `apps/dev/app/globals.css` imports the active theme stylesheet directly, so Next.js compiles it during development and production builds.
+The monorepo has no `theme:build` or `theme:build-watch` package script. `apps/dev/src/app/globals.css` imports the project stylesheet directly, so Next.js compiles it during development and production builds.
 
 ```bash
-test -f themes/default/styles/globals.css
-grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
+test -f styles/globals.css
+grep -F 'styles/globals.css' apps/dev/src/app/globals.css
 ```
 
 Files served under `/theme/` live in `apps/dev/public/theme/`; they are not copied by `pnpm dev`.
@@ -90,7 +90,7 @@ pnpm build
 
 - `pnpm dev` starts one Next.js development process.
 - Registry generation is a separate command in the monorepo.
-- Next.js compiles the theme CSS imported by `apps/dev/app/globals.css`.
+- Next.js compiles the theme CSS imported by `apps/dev/src/app/globals.css`.
 - `pnpm build` builds the app but does not replace the explicit registry step.
 
 **Next:** [Running Locally](./07-running-locally.md)

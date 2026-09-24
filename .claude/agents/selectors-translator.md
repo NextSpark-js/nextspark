@@ -223,8 +223,8 @@ From `scope.json`, determine where selectors and translations go:
 | Scope | Selectors Location | Messages Location |
 |-------|-------------------|-------------------|
 | `core` | `core/lib/test/core-selectors.ts` | `core/messages/*.json` |
-| `theme:{name}` | `contents/themes/{name}/tests/cypress/src/selectors.ts` | `contents/themes/{name}/messages/*.json` |
-| `plugin:{name}` | `contents/plugins/{name}/tests/selectors.ts` | `contents/plugins/{name}/messages/*.json` |
+| `theme:{name}` | `tests/cypress/src/selectors.ts` | `messages/*.json` |
+| `plugin:{name}` | `plugins/{name}/tests/selectors.ts` | `plugins/{name}/messages/*.json` |
 
 ## Quality Standards
 

@@ -228,14 +228,14 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@nextspark/core'],
   turbopack: {
     resolveAlias: {
-      '@nextspark/core/lib/registries/*': './.nextspark/registries/*',
+      '@nextspark/.nextspark/registries/*': './.nextspark/registries/*',
       '@nextspark/registries/*': './.nextspark/registries/*',
     }
   },
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@nextspark/core/lib/registries': path.resolve(__dirname, '.nextspark/registries'),
+      '@nextspark/.nextspark/registries': path.resolve(__dirname, '.nextspark/registries'),
       '@nextspark/registries': path.resolve(__dirname, '.nextspark/registries'),
     }
     return config
@@ -266,7 +266,7 @@ We use `bundle: false` to **preserve module structure**:
 ### Why External Registries?
 
 Registries are project-specific:
-- They index the consumer's themes/entities/plugins
+- They index the consumer project's root entities and enabled local plugins
 - Generated at `npm install` time in the consumer project
 - Cannot be bundled into the package
 

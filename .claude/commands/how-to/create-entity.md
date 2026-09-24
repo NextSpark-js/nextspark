@@ -78,7 +78,7 @@ In NextSpark, an **entity** is a data type that automatically gets:
 
 📂 Entity Files Structure:
 
-contents/themes/{theme}/entities/{entity}/
+entities/{entity}/
 ├── config.ts           # Entity configuration (REQUIRED)
 ├── messages/
 │   ├── en.json         # English translations
@@ -118,7 +118,7 @@ The config.ts file defines your entity's structure:
 **📋 Entity Config Example:**
 
 ```typescript
-// contents/themes/default/entities/products/config.ts
+// entities/products/config.ts
 import type { EntityConfig } from '@/core/types/entity'
 import * as z from 'zod'
 import { Package } from 'lucide-react'
@@ -244,7 +244,7 @@ The migration creates your database table with RLS:
 **📋 Migration Example:**
 
 ```sql
--- contents/themes/default/entities/products/migrations/001_products.sql
+-- entities/products/migrations/001_products.sql
 -- ============================================================================
 -- Entity: products
 -- Description: Products catalog for the store
@@ -360,7 +360,7 @@ Add sample data for development and testing:
 **📋 Sample Data Migration:**
 
 ```sql
--- contents/themes/default/entities/products/migrations/002_products_sample.sql
+-- entities/products/migrations/002_products_sample.sql
 -- ============================================================================
 -- Sample Data: products
 -- ============================================================================
@@ -426,7 +426,7 @@ Add i18n translations for your entity:
 **📋 English Translations (en.json):**
 
 ```json
-// contents/themes/default/entities/products/messages/en.json
+// entities/products/messages/en.json
 {
   "entities": {
     "products": {
@@ -469,7 +469,7 @@ Add i18n translations for your entity:
 **📋 Spanish Translations (es.json):**
 
 ```json
-// contents/themes/default/entities/products/messages/es.json
+// entities/products/messages/es.json
 {
   "entities": {
     "products": {

@@ -15,7 +15,6 @@ Complete reference for all environment variables used in NextSpark. This guide c
 | `DATABASE_URL` | ✅ | `postgresql://user:pass@host:6543/db` | PostgreSQL connection (pooler) |
 | `BETTER_AUTH_SECRET` | ✅ | `Zx8Kp2...` (32 chars) | Session encryption key |
 | `BETTER_AUTH_URL` | ✅ | `http://localhost:3010` | App URL for auth |
-| `NEXT_PUBLIC_ACTIVE_THEME` | ✅ | `default` | Active theme name |
 | `NEXT_PUBLIC_APP_URL` | ✅ | `http://localhost:3010` | Public app URL |
 | `RESEND_API_KEY` | ✅ | `re_xxxxx` | Email service key |
 | `RESEND_FROM_EMAIL` | ✅ | `noreply@domain.com` | Sender email |
@@ -39,7 +38,6 @@ BETTER_AUTH_SECRET="your-generated-32-character-secret"
 BETTER_AUTH_URL="http://localhost:3010"
 
 # === APPLICATION (REQUIRED) ===
-NEXT_PUBLIC_ACTIVE_THEME="default"
 NEXT_PUBLIC_APP_URL="http://localhost:3010"
 
 # === EMAIL SERVICE (REQUIRED) ===
@@ -137,19 +135,9 @@ BETTER_AUTH_URL="https://yourdomain.com"
 NEXT_PUBLIC_APP_URL="https://yourdomain.com"
 ```
 
-### NEXT_PUBLIC_ACTIVE_THEME
+### Project discovery
 
-**Purpose:** Active theme name
-
-**Format:**
-```bash
-NEXT_PUBLIC_ACTIVE_THEME="default"
-```
-
-**Important:**
-- Must match theme directory: `contents/themes/default/`
-- Case-sensitive
-- Changes require registry rebuild
+Project selection is not configured through the environment. Commands discover the nearest `nextspark.config.ts`.
 
 ### RESEND Variables
 
@@ -199,7 +187,7 @@ NEXT_PUBLIC_APP_NAME="Your SaaS App"
 BILLING_PROVIDER="stripe"  # or "polar" or "mercadopago"
 ```
 
-**Plugin config:** `contents/plugins/billing/.env`
+**Plugin config:** `plugins/billing/.env`
 
 ---
 
@@ -208,14 +196,14 @@ BILLING_PROVIDER="stripe"  # or "polar" or "mercadopago"
 **Each plugin can have separate `.env` file:**
 
 ```text
-contents/plugins/billing/.env
-contents/plugins/ai/.env
-contents/plugins/amplitude/.env
+plugins/billing/.env
+plugins/ai/.env
+plugins/amplitude/.env
 ```
 
 **Example (billing):**
 ```bash
-# contents/plugins/billing/.env
+# plugins/billing/.env
 STRIPE_SECRET_KEY="sk_test_xxxxx"
 STRIPE_PUBLISHABLE_KEY="pk_test_xxxxx"
 STRIPE_WEBHOOK_SECRET="whsec_xxxxx"
@@ -281,7 +269,6 @@ DATABASE_URL="postgresql://user:my%40pass%3Aword@host:port/db"
 
 **8 Required Variables:**
 - DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL
-- NEXT_PUBLIC_ACTIVE_THEME, NEXT_PUBLIC_APP_URL
 - RESEND_API_KEY, RESEND_FROM_EMAIL, RESEND_FROM_NAME
 
 **Best Practices:**

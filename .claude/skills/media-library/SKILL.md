@@ -48,7 +48,7 @@ Core Layer (packages/core/):
 ├── migrations/
 │   └── 021_media.sql             # Media + media_tags + media_tag_relations
 
-API Layer (apps/dev/app/api/v1/):
+API Layer (apps/dev/src/app/api/v1/):
 ├── media/
 │   ├── route.ts                  # GET (list), POST (create)
 │   ├── upload/route.ts           # POST (file upload)
@@ -59,7 +59,7 @@ API Layer (apps/dev/app/api/v1/):
 └── media-tags/
     └── route.ts                  # GET all tags
 
-Dashboard (apps/dev/app/dashboard/(main)/media/):
+Dashboard (apps/dev/src/app/dashboard/(main)/media/):
 └── page.tsx                      # Dashboard media page
 
 Flow:
@@ -346,7 +346,7 @@ import { MediaSelector } from '@/core/components/media'
 In block field definitions, use `type: 'media-library'` to open the full MediaLibrary modal instead of a simple file input:
 
 ```typescript
-// contents/themes/{theme}/blocks/hero/fields.ts
+// blocks/hero/fields.ts
 import type { FieldDefinition } from '@/core/types/blocks'
 
 const customDesignFields: FieldDefinition[] = [
@@ -390,7 +390,7 @@ Media library fields also work inside array (repeatable) items:
 ### Block Schema with Media
 
 ```typescript
-// contents/themes/{theme}/blocks/hero/schema.ts
+// blocks/hero/schema.ts
 import * as z from 'zod'
 import { baseBlockSchema } from '@/core/types/blocks'
 
@@ -405,7 +405,7 @@ export const schema = baseBlockSchema.merge(z.object({
 ### app.config.ts
 
 ```typescript
-// contents/themes/{theme}/config/app.config.ts
+// config/app.config.ts
 export const appConfig = {
   // ... other config
 
@@ -625,12 +625,12 @@ export const BLOCK_EDITOR_SELECTORS = {
 | `core/src/lib/services/media.service.ts` | MediaService (CRUD, tags, duplicates) |
 | `core/src/types/blocks.ts` | FieldType with `'media-library'` |
 | `core/migrations/021_media.sql` | Database migration |
-| `apps/dev/app/api/v1/media/route.ts` | List + create endpoints |
-| `apps/dev/app/api/v1/media/upload/route.ts` | File upload endpoint |
-| `apps/dev/app/api/v1/media/[id]/route.ts` | Single item CRUD |
-| `apps/dev/app/api/v1/media/[id]/tags/route.ts` | Media tag management |
-| `apps/dev/app/api/v1/media-tags/route.ts` | All tags endpoint |
-| `apps/dev/app/dashboard/(main)/media/page.tsx` | Dashboard page |
+| `apps/dev/src/app/api/v1/media/route.ts` | List + create endpoints |
+| `apps/dev/src/app/api/v1/media/upload/route.ts` | File upload endpoint |
+| `apps/dev/src/app/api/v1/media/[id]/route.ts` | Single item CRUD |
+| `apps/dev/src/app/api/v1/media/[id]/tags/route.ts` | Media tag management |
+| `apps/dev/src/app/api/v1/media-tags/route.ts` | All tags endpoint |
+| `apps/dev/src/app/dashboard/(main)/media/page.tsx` | Dashboard page |
 
 ## Anti-Patterns
 
@@ -674,7 +674,7 @@ const result = await upload(file)
 if (file.size > 10 * 1024 * 1024) { ... }
 
 // CORRECT: Read from app.config.ts
-import { appConfig } from '@/contents/themes/{theme}/config/app.config'
+import { appConfig } from '@/config/app.config'
 if (file.size > appConfig.media.maxSizeImageMB * 1024 * 1024) { ... }
 
 // NEVER: Skip i18n for media UI strings

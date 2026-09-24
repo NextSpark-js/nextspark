@@ -22,7 +22,7 @@ core/lib/
 
 packages/core/templates/app/api/  # All template routes use rate limiting
 plugins/*/api/                    # Plugin API routes
-themes/*/api/                     # Theme API routes
+api/                              # Project API routes
 ```
 
 ## When to Use This Skill

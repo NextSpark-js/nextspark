@@ -336,7 +336,7 @@ Document features in your theme's about/ folder.
 **📋 File Structure:**
 
 ```
-contents/themes/{your-theme}/about/
+about/
 ├── features.json      # Feature & flow definitions
 ├── business.md        # Business context
 └── team.md            # Team information
@@ -544,9 +544,9 @@ When user asks for help, Claude should:
 
 ```typescript
 // Look for:
-// - contents/themes/{theme}/about/business.md
-// - contents/themes/{theme}/about/features.json (existing)
-// - Entity configs in contents/themes/{theme}/config/entities/
+// - about/business.md
+// - about/features.json (existing)
+// - Entity configs in config/entities/
 ```
 
 2. **Ask clarifying questions:**

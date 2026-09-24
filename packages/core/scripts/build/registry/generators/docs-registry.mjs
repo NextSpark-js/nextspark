@@ -2,23 +2,13 @@
  * Docs Registry Generator
  *
  * Generates docs-registry.ts with actual documentation content.
- * Scans themes/{THEME}/docs/public/ and docs/superadmin/ directories.
+ * Scans project-root docs/public/ and docs/superadmin/ directories.
  *
  * @module core/scripts/build/registry/generators/docs-registry
  */
 
 import { existsSync, readdirSync } from 'fs'
 import path from 'path'
-import { CONFIG } from '../config.mjs'
-
-// Get config values - use themesDir which correctly handles monorepo mode
-const projectRoot = CONFIG.projectRoot
-const monorepoRoot = CONFIG.monorepoRoot
-const isNpmMode = CONFIG.isNpmMode
-const isMonorepoMode = CONFIG.isMonorepoMode
-
-// Themes directory - use CONFIG.themesDir for correct monorepo/npm mode handling
-const THEMES_DIR = CONFIG.themesDir
 
 /**
  * Extract order number from filename (01-example -> 1)
@@ -52,7 +42,7 @@ function slugToTitle(slug) {
  * @param {'public' | 'superadmin'} source - Source type
  * @returns {Array} Array of section metadata
  */
-function scanDocsDirectory(docsPath, source) {
+function scanDocsDirectory(docsPath, source, projectRoot) {
   if (!existsSync(docsPath)) {
     return []
   }
@@ -79,19 +69,7 @@ function scanDocsDirectory(docsPath, source) {
       const pageSlug = cleanName(file)
       const pageTitle = slugToTitle(pageSlug)
 
-      // Get relative path from consuming app directory
-      // In monorepo mode: calculate relative from projectRoot (apps/dev) to file in themes/
-      // In npm mode: calculate relative from projectRoot to file in contents/themes/
-      let relativePath
-      if (isMonorepoMode && monorepoRoot) {
-        // In monorepo, themes are at monorepoRoot/themes/
-        // projectRoot is apps/dev, so we need ../../themes/...
-        const themeRelativePath = filePath.replace(monorepoRoot, '')
-        relativePath = '../..' + themeRelativePath
-      } else {
-        // In npm mode, themes are at projectRoot/contents/themes/
-        relativePath = filePath.replace(projectRoot, '')
-      }
+      const relativePath = path.relative(projectRoot, filePath)
 
       pages.push({
         slug: pageSlug,
@@ -123,20 +101,23 @@ function scanDocsDirectory(docsPath, source) {
  *
  * @returns {string} Generated TypeScript content
  */
-export function generateDocsRegistry() {
-  const theme = CONFIG.activeTheme || 'default'
-  const themeDocsDir = path.join(THEMES_DIR, theme, 'docs')
+export function generateDocsRegistry(config) {
+  const projectRoot = config.projectRoot
+  const theme = config.projectName
+  const themeDocsDir = path.join(config.projectSourceDir, 'docs')
 
   // Scan public docs (user-facing → /docs)
   const publicDocs = scanDocsDirectory(
     path.join(themeDocsDir, 'public'),
-    'public'
+    'public',
+    projectRoot
   )
 
   // Scan superadmin docs (admin-facing → /superadmin/docs)
   const superadminDocs = scanDocsDirectory(
     path.join(themeDocsDir, 'superadmin'),
-    'superadmin'
+    'superadmin',
+    projectRoot
   )
 
   // Create registry

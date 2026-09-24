@@ -29,10 +29,10 @@ core/tests/jest/
 │   └── next-server.js
 └── setup.ts             # Global configuration
 
-contents/themes/default/tests/jest/
+tests/jest/
 └── ...                  # Theme-specific tests
 
-contents/plugins/*/__tests__/
+plugins/*/__tests__/
 └── ...                  # Plugin-specific tests
 ```
 
@@ -113,7 +113,7 @@ export const baseConfig: Partial<Config> = {
 
 ```bash
 pnpm test              # Run all core tests
-pnpm test:theme        # Run theme-specific tests
+pnpm --dir apps/dev exec jest --watchman=false        # Run theme-specific tests
 pnpm test:coverage     # Generate coverage reports
 pnpm test:watch        # Watch mode
 ```

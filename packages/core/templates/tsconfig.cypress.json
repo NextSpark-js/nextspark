@@ -15,14 +15,13 @@
     "types": ["cypress", "node"],
     "baseUrl": ".",
     "paths": {
-      "@/contents/*": ["./contents/*"],
       "@/*": ["./*"]
     }
   },
   "include": [
     "cypress.d.ts",
-    "contents/themes/*/tests/cypress/**/*.ts",
-    "contents/plugins/*/tests/cypress/**/*.ts"
+    "tests/cypress/**/*.ts",
+    "plugins/*/tests/cypress/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

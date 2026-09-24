@@ -21,7 +21,7 @@ function projectWithInstalledCore(): { root: string; web: string } {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-templates-'))
   const templates = path.join(root, 'node_modules/@nextsparkjs/core/templates')
   for (const [file, text] of [
-    ['contents/themes/starter/marker.txt', 'starter'],
+    ['projects/starter/marker.txt', 'starter'],
     ['features/pages/entities/pages/marker.txt', 'pages'],
     ['features/blog/blocks/post-content/marker.txt', 'post-content'],
   ]) {
@@ -44,9 +44,8 @@ async function generateThemeFrom(cwd: string, copy: () => Promise<void>): Promis
 }
 
 function copiedMarkers(projectDir: string): string[] {
-  const theme = path.join(projectDir, 'contents/themes/acme')
   return ['marker.txt', 'entities/pages/marker.txt', 'blocks/post-content/marker.txt'].map(file =>
-    fs.existsSync(path.join(theme, file)) ? fs.readFileSync(path.join(theme, file), 'utf8') : `missing ${file}`
+    fs.existsSync(path.join(projectDir, file)) ? fs.readFileSync(path.join(projectDir, file), 'utf8') : `missing ${file}`
   )
 }
 

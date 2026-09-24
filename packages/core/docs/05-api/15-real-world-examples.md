@@ -36,7 +36,7 @@ This guide provides **complete, production-ready examples** of real-world applic
 ### Backend: Entity Configuration
 
 ```typescript
-// contents/themes/default/entities/tasks/config.ts
+// entities/tasks/config.ts
 import { EntityConfig } from '@/core/types/registry'
 
 export const tasksEntity: EntityConfig = {
@@ -325,7 +325,7 @@ function TaskCard({
 ### Backend: Product Entity
 
 ```typescript
-// contents/plugins/ecommerce/entities/products/config.ts
+// plugins/ecommerce/entities/products/config.ts
 export const productsEntity: EntityConfig = {
   name: 'products',
   label: 'Product',

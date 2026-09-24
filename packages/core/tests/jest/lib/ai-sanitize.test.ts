@@ -10,7 +10,7 @@ import {
   sanitizeResponse,
   containsSensitiveInfo,
   getSanitizationReport
-} from '@/contents/plugins/ai/lib/sanitize'
+} from '../../../../../plugins/ai/lib/sanitize'
 
 describe('AI Sanitization Utility', () => {
   describe('sanitizeText', () => {

@@ -5,11 +5,10 @@ Generate Sample Data Script
 Generates coherent sample data for an entity based on its field configuration.
 
 Usage:
-    python generate-sample-data.py --entity ENTITY_NAME [--theme THEME] [--count COUNT]
+    python generate-sample-data.py --entity ENTITY_NAME [--count COUNT]
 
 Options:
     --entity ENTITY_NAME  Name of the entity (kebab-case)
-    --theme THEME         Theme name (default: from NEXT_PUBLIC_ACTIVE_THEME or 'default')
     --count COUNT         Number of records to generate (default: 10)
     --output OUTPUT       Output file (default: migrations/sample_data.json)
     --format FORMAT       Output format: json, sql, csv (default: json)
@@ -26,10 +25,6 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 
-
-def get_active_theme() -> str:
-    """Get active theme from environment or default."""
-    return os.environ.get('NEXT_PUBLIC_ACTIVE_THEME', 'default')
 
 
 def to_snake_case(name: str) -> str:
@@ -304,8 +299,9 @@ def format_sql(entity_slug: str, records: List[Dict]) -> str:
                 escaped = str(val).replace("'", "''")
                 values.append(f"'{escaped}'")
 
+        quoted_columns = ", ".join('"{}"'.format(column) for column in columns)
         sql_lines.append(
-            f'INSERT INTO "{table_name}" ({", ".join(f\'"{c}\'" for c in columns)}) '
+            f'INSERT INTO "{table_name}" ({quoted_columns}) '
             f'VALUES ({", ".join(values)});'
         )
 
@@ -342,7 +338,6 @@ def format_csv(records: List[Dict]) -> str:
 def main():
     parser = argparse.ArgumentParser(description='Generate sample data for entity')
     parser.add_argument('--entity', required=True, help='Entity name (kebab-case)')
-    parser.add_argument('--theme', default=None, help='Theme name')
     parser.add_argument('--count', type=int, default=10, help='Number of records')
     parser.add_argument('--output', help='Output file')
     parser.add_argument('--format', choices=['json', 'sql', 'csv'], default='json')
@@ -354,14 +349,12 @@ def main():
     if args.seed:
         random.seed(args.seed)
 
-    theme = args.theme or get_active_theme()
     entity_slug = args.entity.lower()
 
     # Find fields file
-    fields_path = Path(f'contents/themes/{theme}/entities/{entity_slug}/{entity_slug}.fields.ts')
+    fields_path = Path(f'entities/{entity_slug}/{entity_slug}.fields.ts')
 
     print(f"\nGenerating sample data for: {entity_slug}")
-    print(f"Theme: {theme}")
     print(f"Count: {args.count}")
     print(f"Format: {args.format}")
 
@@ -399,7 +392,7 @@ def main():
         print(f"\nSample data written to: {output_path}")
     else:
         # Default output location
-        default_output = Path(f'contents/themes/{theme}/entities/{entity_slug}/migrations/sample_data.json')
+        default_output = Path(f'entities/{entity_slug}/migrations/sample_data.json')
         if args.format != 'json':
             ext = args.format
             default_output = default_output.with_suffix(f'.{ext}')

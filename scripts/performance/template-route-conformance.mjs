@@ -43,7 +43,7 @@ function template(relativePath, overrides = {}) {
     fileName,
     relativePath,
     appPath,
-    templatePath: `@/contents/themes/fixture/templates/${relativePath}`,
+    templatePath: `@/templates/${relativePath}`,
     priority: 100,
     metadata: null,
     ...overrides,
@@ -160,33 +160,33 @@ export default function ClientBoundary() {
   return <button type="button">template client boundary</button>
 }
 `
-  await write('contents/themes/fixture/templates/core/page.tsx', sharedTemplate)
-  await write('contents/themes/fixture/templates/core/client.tsx', sharedClient)
-  await write('contents/themes/fixture/templates/project/page.tsx', sharedTemplate)
-  await write('contents/themes/fixture/templates/project/client.tsx', sharedClient)
-  await write('contents/themes/fixture/templates/shop/[category]/page.tsx', sharedTemplate)
-  await write('contents/themes/fixture/templates/shop/[category]/client.tsx', sharedClient)
+  await write('templates/core/page.tsx', sharedTemplate)
+  await write('templates/core/client.tsx', sharedClient)
+  await write('templates/project/page.tsx', sharedTemplate)
+  await write('templates/project/client.tsx', sharedClient)
+  await write('templates/shop/[category]/page.tsx', sharedTemplate)
+  await write('templates/shop/[category]/client.tsx', sharedClient)
   await write(
-    `contents/themes/fixture/templates/${DASHBOARD_MEMBER_TEMPLATE}`,
+    `templates/${DASHBOARD_MEMBER_TEMPLATE}`,
     `import ClientBoundary from './client'
 export default function AgentMultiTemplate() { return <ClientBoundary /> }
 `,
   )
   await write(
-    'contents/themes/fixture/templates/dashboard/(main)/agent-multi/client.tsx',
+    'templates/dashboard/(main)/agent-multi/client.tsx',
     `'use client'
 import { format } from 'date-fns'
 export default function ClientBoundary() { return <p>{typeof format}</p> }
 `,
   )
   await write(
-    `contents/themes/fixture/templates/${DASHBOARD_LITERAL_TEMPLATE}`,
+    `templates/${DASHBOARD_LITERAL_TEMPLATE}`,
     `import ClientBoundary from './client'
 export default function MediaTemplate() { return <ClientBoundary /> }
 `,
   )
   await write(
-    'contents/themes/fixture/templates/dashboard/(main)/media/client.tsx',
+    'templates/dashboard/(main)/media/client.tsx',
     `'use client'
 import { z } from 'zod'
 export default function ClientBoundary() { return <p>{typeof z}</p> }
@@ -222,11 +222,11 @@ export default function ClientBoundary() { return <p>{typeof z}</p> }
     const relativePath = `unrelated-${index}/page.tsx`
     const [clientImport, importedName] = clientImports[index % clientImports.length]
     await write(
-      `contents/themes/fixture/templates/${relativePath}`,
+      `templates/${relativePath}`,
       `import ClientBoundary from './client'\nexport default function Unrelated() { return <ClientBoundary /> }\n`,
     )
     await write(
-      `contents/themes/fixture/templates/unrelated-${index}/client.tsx`,
+      `templates/unrelated-${index}/client.tsx`,
       `'use client'\n${clientImport}\nexport default function ClientBoundary() { return <p>{typeof ${importedName}}</p> }\n`,
     )
     templates.push(template(relativePath))

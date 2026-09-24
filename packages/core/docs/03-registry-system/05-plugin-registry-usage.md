@@ -21,17 +21,17 @@ The Plugin Registry provides **ultra-fast, zero-I/O access** to plugin configura
 ### Server-Only Registry
 
 ```typescript
-// core/lib/registries/plugin-registry.ts
+// .nextspark/registries/plugin-registry.ts
 import 'server-only'  // Prevents client-side usage
 
-import { aiPluginConfig } from '@/contents/plugins/ai/plugin.config'
+import { aiPluginConfig } from '@/plugins/ai/plugin.config'
 
 export const PLUGIN_REGISTRY = {
   'ai': {
     name: 'ai',
     config: aiPluginConfig,          // Full config with API functions
     hasAPI: true,
-    apiPath: '@/contents/plugins/ai/api',
+    apiPath: '@/plugins/ai/api',
     routeFiles: [...],               // API route handlers
     entities: [...],                 // Plugin entities
     hasMessages: false,
@@ -49,7 +49,7 @@ export const PLUGIN_REGISTRY = {
 ### Client-Safe Registry
 
 ```typescript
-// core/lib/registries/plugin-registry.client.ts
+// .nextspark/registries/plugin-registry.client.ts
 // NO 'server-only' import
 
 export const PLUGIN_REGISTRY_CLIENT = {
@@ -80,7 +80,7 @@ export const PLUGIN_REGISTRY_CLIENT = {
 
 1. **Plugin Directory Structure:**
 ```text
-contents/plugins/
+plugins/
 └── ai/                           # Plugin name
     ├── plugin.config.ts          # Main config (required)
     ├── api/                      # API functions (optional)
@@ -106,7 +106,7 @@ contents/plugins/
 ```typescript
 // From packages/core/scripts/build/registry.mjs
 async function discoverPlugins() {
-  const pluginsDir = join(contentsDir, 'plugins')
+  const pluginsDir = join(projectRoot, 'plugins')
   const plugins = []
 
   for (const pluginDir of await readdir(pluginsDir)) {
@@ -120,8 +120,8 @@ async function discoverPlugins() {
     const pluginEntry = {
       name: pluginDir,
       hasAPI: existsSync(join(pluginPath, 'api')),
-      apiPath: existsSync(join(pluginPath, 'api')) 
-        ? `@/contents/plugins/${pluginDir}/api` 
+      apiPath: existsSync(join(pluginPath, 'api'))
+        ? `@/plugins/${pluginDir}/api`
         : null,
       routeFiles: await discoverPluginRoutes(pluginPath),
       entities: await discoverPluginEntities(pluginPath),
@@ -198,7 +198,7 @@ export interface PluginEntity {
 ### Direct Registry Access
 
 ```typescript
-import { PLUGIN_REGISTRY } from '@/core/lib/registries/plugin-registry'
+import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
 
 // Get plugin entry (instant, zero I/O)
 const aiPlugin = PLUGIN_REGISTRY.ai
@@ -217,7 +217,7 @@ import {
   getPlugin,
   getPluginsWithAPI,
   getPluginsWithEntities
-} from '@/core/lib/registries/plugin-registry'
+} from '@nextsparkjs/registries/plugin-registry'
 
 // Get all plugin configs
 const allPlugins = getRegisteredPlugins()
@@ -241,7 +241,7 @@ const entityPlugins = getPluginsWithEntities()
 **Recommended approach** for accessing plugin functions:
 
 ```typescript
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 // Get AI plugin API functions
 const ai = usePlugin('ai')
@@ -272,10 +272,10 @@ console.log(status)
 **Type-safe direct access** to specific functions:
 
 ```typescript
-import { getPluginFunction } from '@/core/lib/registries/plugin-registry'
+import { getPluginFunction } from '@nextsparkjs/registries/plugin-registry'
 
 // Get specific function from plugin
-const generateText = getPluginFunction<typeof import('@/contents/plugins/ai/api').generateText>(
+const generateText = getPluginFunction<typeof import('@/plugins/ai/api').generateText>(
   'ai',
   'generateText'
 )
@@ -291,7 +291,7 @@ if (generateText) {
 ### getPluginFunctions() - List Available Functions
 
 ```typescript
-import { getPluginFunctions } from '@/core/lib/registries/plugin-registry'
+import { getPluginFunctions } from '@nextsparkjs/registries/plugin-registry'
 
 // Get all function names from plugin
 const aiFunctions = getPluginFunctions('ai')
@@ -303,7 +303,7 @@ console.log(aiFunctions)
 ### hasPluginFunction() - Check Function Availability
 
 ```typescript
-import { hasPluginFunction } from '@/core/lib/registries/plugin-registry'
+import { hasPluginFunction } from '@nextsparkjs/registries/plugin-registry'
 
 if (hasPluginFunction('ai', 'generateText')) {
   // Function exists, safe to use
@@ -322,7 +322,7 @@ if (hasPluginFunction('ai', 'generateText')) {
 import {
   getAllPluginEntities,
   getPluginEntitiesByName
-} from '@/core/lib/registries/plugin-registry'
+} from '@nextsparkjs/registries/plugin-registry'
 
 // Get all entities across all plugins
 const allEntities = getAllPluginEntities()
@@ -345,8 +345,8 @@ console.log(aiEntities)
 ### Entity Integration Example
 
 ```typescript
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
-import { getPluginEntitiesByName } from '@/core/lib/registries/plugin-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
+import { getPluginEntitiesByName } from '@nextsparkjs/registries/plugin-registry'
 
 // Plugin entities are also in entity registry
 const aiHistory = ENTITY_REGISTRY['ai-history']
@@ -370,7 +370,7 @@ import {
   getAllRouteEndpoints,
   findRouteEndpoint,
   getPluginRouteEndpoints
-} from '@/core/lib/registries/plugin-registry'
+} from '@nextsparkjs/registries/plugin-registry'
 
 // Get all plugin route endpoints
 const allRoutes = getAllRouteEndpoints()
@@ -382,7 +382,7 @@ console.log(generateEndpoint)
 // {
 //   path: '/api/v1/plugin/ai/generate',
 //   methods: ['POST', 'GET'],
-//   filePath: '../../../contents/plugins/ai/api/generate/route',
+//   filePath: '../../../plugins/ai/api/generate/route',
 //   relativePath: 'generate',
 //   isRouteFile: true
 // }
@@ -394,7 +394,7 @@ const pluginRoutes = getPluginRouteEndpoints()
 ### Route Metadata Access
 
 ```typescript
-import { getRouteMetadata, hasRoute } from '@/core/lib/registries/plugin-registry'
+import { getRouteMetadata, hasRoute } from '@nextsparkjs/registries/plugin-registry'
 
 // Get route metadata
 const metadata = getRouteMetadata('/api/v1/plugin/ai/generate')
@@ -403,7 +403,7 @@ console.log(metadata)
 // {
 //   plugin: 'ai',
 //   methods: ['POST', 'GET'],
-//   filePath: '../../../contents/plugins/ai/api/generate/route'
+//   filePath: '../../../plugins/ai/api/generate/route'
 // }
 
 // Check if route exists
@@ -419,17 +419,17 @@ export const ROUTE_METADATA = {
   '/api/v1/plugin/ai/ai-history/[id]': {
     plugin: 'ai',
     methods: ['PATCH'],
-    filePath: '../../../contents/plugins/ai/api/ai-history/[id]/route'
+    filePath: '../../../plugins/ai/api/ai-history/[id]/route'
   },
   '/api/v1/plugin/ai/embeddings': {
     plugin: 'ai',
     methods: ['POST', 'GET'],
-    filePath: '../../../contents/plugins/ai/api/embeddings/route'
+    filePath: '../../../plugins/ai/api/embeddings/route'
   },
   '/api/v1/plugin/ai/generate': {
     plugin: 'ai',
     methods: ['POST', 'GET'],
-    filePath: '../../../contents/plugins/ai/api/generate/route'
+    filePath: '../../../plugins/ai/api/generate/route'
   }
 }
 ```
@@ -441,7 +441,7 @@ export const ROUTE_METADATA = {
 ### Plugin Initialization
 
 ```typescript
-import { initializeAllPlugins } from '@/core/lib/registries/plugin-registry'
+import { initializeAllPlugins } from '@nextsparkjs/registries/plugin-registry'
 
 // Called at app startup (server-side only)
 await initializeAllPlugins()
@@ -458,7 +458,7 @@ await initializeAllPlugins()
 ### Plugin Hooks (plugin.config.ts)
 
 ```typescript
-// contents/plugins/ai/plugin.config.ts
+// plugins/ai/plugin.config.ts
 import type { PluginConfig } from '@/core/types/plugin'
 
 export const aiPluginConfig: PluginConfig = {
@@ -498,7 +498,7 @@ export const aiPluginConfig: PluginConfig = {
 ```typescript
 'use client'
 
-import { PLUGIN_REGISTRY_CLIENT } from '@/core/lib/registries/plugin-registry.client'
+import { PLUGIN_REGISTRY_CLIENT } from '@nextsparkjs/registries/plugin-registry.client'
 
 export function PluginList() {
   // ✅ Safe to use in client components
@@ -525,7 +525,7 @@ import {
   getPluginClient,
   hasPluginClient,
   getPluginEntitiesClient
-} from '@/core/lib/registries/plugin-registry.client'
+} from '@nextsparkjs/registries/plugin-registry.client'
 
 // Get plugin metadata (client-safe)
 const aiPlugin = getPluginClient('ai')
@@ -545,7 +545,7 @@ const aiEntities = getPluginEntitiesClient('ai')
 
 ```typescript
 // app/api/generate/route.ts
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -576,7 +576,7 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 // app/(protected)/dashboard/page.tsx
-import { hasPluginFunction } from '@/core/lib/registries/plugin-registry'
+import { hasPluginFunction } from '@nextsparkjs/registries/plugin-registry'
 
 export default async function DashboardPage() {
   // Check if AI features are available
@@ -610,7 +610,7 @@ export default async function DashboardPage() {
 ```typescript
 'use client'
 
-import { PLUGIN_REGISTRY_CLIENT } from '@/core/lib/registries/plugin-registry.client'
+import { PLUGIN_REGISTRY_CLIENT } from '@nextsparkjs/registries/plugin-registry.client'
 
 export function PluginMenu() {
   const plugins = Object.values(PLUGIN_REGISTRY_CLIENT)
@@ -639,7 +639,7 @@ export function PluginMenu() {
 ### Example 4: Plugin Status Dashboard
 
 ```typescript
-import { getRegisteredPlugins, getPluginFunctions } from '@/core/lib/registries/plugin-registry'
+import { getRegisteredPlugins, getPluginFunctions } from '@nextsparkjs/registries/plugin-registry'
 
 export async function PluginStatusPage() {
   const plugins = getRegisteredPlugins()
@@ -698,7 +698,7 @@ export const PLUGIN_METADATA = {
 ### Usage in Application
 
 ```typescript
-import { PLUGIN_METADATA } from '@/core/lib/registries/plugin-registry'
+import { PLUGIN_METADATA } from '@nextsparkjs/registries/plugin-registry'
 
 console.log(`Total plugins: ${PLUGIN_METADATA.totalPlugins}`)
 console.log(`Plugins with API: ${PLUGIN_METADATA.pluginsWithAPI}`)
@@ -723,11 +723,11 @@ console.log(`Total route files: ${PLUGIN_METADATA.totalRouteFiles}`)
 ```typescript
 // ❌ FORBIDDEN - Exposes server-only code
 'use client'
-import { PLUGIN_REGISTRY } from '@/core/lib/registries/plugin-registry'
+import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
 
 // ✅ CORRECT - Use client-safe registry
 'use client'
-import { PLUGIN_REGISTRY_CLIENT } from '@/core/lib/registries/plugin-registry.client'
+import { PLUGIN_REGISTRY_CLIENT } from '@nextsparkjs/registries/plugin-registry.client'
 ```
 
 ### 'server-only' Import
@@ -735,7 +735,7 @@ import { PLUGIN_REGISTRY_CLIENT } from '@/core/lib/registries/plugin-registry.cl
 The server registry uses `import 'server-only'` to enforce security:
 
 ```typescript
-// core/lib/registries/plugin-registry.ts
+// .nextspark/registries/plugin-registry.ts
 import 'server-only'  // Prevents usage in 'use client' components
 
 // Attempting to import in client component will error:
@@ -746,7 +746,7 @@ import 'server-only'  // Prevents usage in 'use client' components
 
 ```typescript
 // ✅ Server Component: Direct access
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export default async function ServerPage() {
   const ai = usePlugin('ai')
@@ -805,7 +805,7 @@ const functions = getPluginFunctions('ai')
 const generateText = usePlugin('ai').generateText
 
 // Compared to dynamic import: ~40ms
-const generateText = (await import(`@/contents/plugins/ai/api`)).generateText
+const generateText = (await import(`@/plugins/ai/api`)).generateText
 ```
 
 ---
@@ -827,8 +827,8 @@ if (plugin.isAvailable()) {
 ### ✅ DO: Type Plugin Functions
 
 ```typescript
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
-import type { AIPlugin } from '@/contents/plugins/ai/types'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
+import type { AIPlugin } from '@/plugins/ai/types'
 
 const ai = usePlugin('ai') as AIPlugin
 
@@ -857,10 +857,10 @@ const result = await ai.generateText({...})
 
 ```typescript
 // ❌ FORBIDDEN
-import { aiPluginConfig } from '@/contents/plugins/ai/plugin.config'
+import { aiPluginConfig } from '@/plugins/ai/plugin.config'
 
 // ✅ CORRECT
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 const ai = usePlugin('ai')
 ```
 
@@ -869,11 +869,11 @@ const ai = usePlugin('ai')
 ```typescript
 // ❌ FORBIDDEN
 'use client'
-import { PLUGIN_REGISTRY } from '@/core/lib/registries/plugin-registry'
+import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
 
 // ✅ CORRECT
 'use client'
-import { PLUGIN_REGISTRY_CLIENT } from '@/core/lib/registries/plugin-registry.client'
+import { PLUGIN_REGISTRY_CLIENT } from '@nextsparkjs/registries/plugin-registry.client'
 ```
 
 ---
@@ -885,7 +885,7 @@ import { PLUGIN_REGISTRY_CLIENT } from '@/core/lib/registries/plugin-registry.cl
 **Problem:** `usePlugin('my-plugin')` returns unavailable status
 
 **Solutions:**
-1. Check plugin exists in `contents/plugins/my-plugin/`
+1. Check plugin exists in `plugins/my-plugin/`
 2. Verify `plugin.config.ts` file exists
 3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` to regenerate
 4. Restart dev server
@@ -919,7 +919,7 @@ import type {
   PluginEntity,
   RouteFileEndpoint,
   PluginName
-} from '@/core/lib/registries/plugin-registry'
+} from '@nextsparkjs/registries/plugin-registry'
 
 // Strongly typed plugin access
 const plugin: PluginRegistryEntry = PLUGIN_REGISTRY.ai
@@ -947,5 +947,5 @@ const entities: PluginEntity[] = plugin.entities
 **Status**: Complete  
 **Auto-Generated**: Yes (by packages/core/scripts/build/registry.mjs)
 **Registry Files**:
-- `core/lib/registries/plugin-registry.ts` (server-only)
-- `core/lib/registries/plugin-registry.client.ts` (client-safe)
+- `.nextspark/registries/plugin-registry.ts` (server-only)
+- `.nextspark/registries/plugin-registry.client.ts` (client-safe)

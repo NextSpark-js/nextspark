@@ -52,7 +52,7 @@ const postHandler = async (request: NextRequest) => {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({
         error: 'OpenAI API key not configured',
-        message: 'Add OPENAI_API_KEY to contents/plugins/ai/.env'
+        message: 'Add OPENAI_API_KEY to plugins/ai/.env'
       }, { status: 503 })
     }
 
@@ -127,7 +127,7 @@ const getHandler = async (): Promise<NextResponse> => {
     },
 
     setup: {
-      required: 'Add OPENAI_API_KEY to contents/plugins/ai/.env'
+      required: 'Add OPENAI_API_KEY to plugins/ai/.env'
     }
   })
 }

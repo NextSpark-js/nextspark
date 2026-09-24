@@ -1,9 +1,9 @@
 #!/usr/bin/env npx tsx
 /**
- * sync-templates.ts - Sync apps/dev/app with packages/core/templates/app
+ * sync-templates.ts - Sync apps/dev/src/app with packages/core/templates/app
  *
  * Source of Truth:
- *   apps/dev/app/           <- SOURCE (development)
+ *   apps/dev/src/app/           <- SOURCE (development)
  *   packages/core/templates/app/ <- DISTRIBUTION (packaged)
  *
  * Usage:
@@ -25,7 +25,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(__dirname, '../..')
 
 // Paths
-const SOURCE_DIR = join(REPO_ROOT, 'apps/dev/app')
+const SOURCE_DIR = join(REPO_ROOT, 'apps/dev/src/app')
 const TARGET_DIR = join(REPO_ROOT, 'packages/core/templates/app')
 
 // ANSI colors
@@ -257,7 +257,7 @@ async function main() {
   console.log(`${CYAN}========================================${NC}`)
   console.log()
 
-  console.log(`${DIM}Source:${NC} apps/dev/app/`)
+  console.log(`${DIM}Source:${NC} apps/dev/src/app/`)
   console.log(`${DIM}Target:${NC} packages/core/templates/app/`)
   console.log()
 

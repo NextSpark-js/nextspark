@@ -6,7 +6,7 @@ Before installing the Social Media Publisher plugin, ensure you have:
 
 - ✅ NextSpark project set up and running
 - ✅ PostgreSQL database configured
-- ✅ Active theme with plugin support
+- ✅ project with plugin support
 - ✅ Facebook Developer account (free)
 - ✅ Instagram Business Account (for Instagram publishing)
 - ✅ Facebook Page (for Instagram Business connection or Facebook publishing)
@@ -173,7 +173,7 @@ DATABASE_URL=postgresql://user:password@localhost:5432/database
 Edit your theme's `theme.config.ts`:
 
 ```typescript
-// contents/themes/[your-theme]/theme.config.ts
+// theme.config.ts
 export const yourThemeConfig: ThemeConfig = {
   name: 'your-theme',
   // ... other config
@@ -206,7 +206,7 @@ The plugin includes migrations for the required tables:
 pnpm db:migrate
 
 # Or specifically for social media publisher:
-psql $DATABASE_URL -f contents/plugins/social-media-publisher/migrations/001_social_media_tables.sql
+psql $DATABASE_URL -f plugins/social-media-publisher/migrations/001_social_media_tables.sql
 ```
 
 ### 4.2 Verify Tables Created
@@ -437,7 +437,7 @@ pnpm dev
 pnpm db:migrate
 
 # Or manually:
-psql $DATABASE_URL -f contents/plugins/social-media-publisher/migrations/001_social_media_tables.sql
+psql $DATABASE_URL -f plugins/social-media-publisher/migrations/001_social_media_tables.sql
 ```
 
 ## Security Checklist

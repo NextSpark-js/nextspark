@@ -12,7 +12,7 @@ The billing system is configured via a `billing.config.ts` file in your theme di
 ## Configuration File Location
 
 ```
-contents/themes/{your-theme}/config/billing.config.ts
+config/billing.config.ts
 ```
 
 ## Configuration Interface
@@ -47,7 +47,7 @@ interface BillingConfig {
 ## Complete Example
 
 ```typescript
-// contents/themes/default/config/billing.config.ts
+// config/billing.config.ts
 
 import type { BillingConfig } from '@/core/lib/billing/config-types'
 

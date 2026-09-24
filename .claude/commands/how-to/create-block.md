@@ -65,7 +65,7 @@ STEP 1 OF 5: Understanding Block Structure
 
 Every page builder block in NextSpark consists of 5 files:
 
-contents/themes/{theme}/blocks/{block-name}/
+blocks/{block-name}/
 ├── config.ts       # Block metadata (name, category, icon)
 ├── schema.ts       # Zod schema for data validation
 ├── fields.ts       # Form fields for the editor UI
@@ -106,7 +106,7 @@ The config.ts file defines your block's identity:
 **📋 config.ts Example:**
 
 ```typescript
-// contents/themes/default/blocks/hero-banner/config.ts
+// blocks/hero-banner/config.ts
 import type { BlockConfig } from '@/core/types/block'
 import { LayoutTemplate } from 'lucide-react'
 
@@ -169,7 +169,7 @@ The schema.ts file validates block data with Zod:
 **📋 schema.ts Example:**
 
 ```typescript
-// contents/themes/default/blocks/hero-banner/schema.ts
+// blocks/hero-banner/schema.ts
 import * as z from 'zod'
 import { baseBlockSchema } from '@/core/lib/blocks/base-schema'
 
@@ -238,7 +238,7 @@ The fields.ts file defines the editor form UI:
 **📋 fields.ts Example:**
 
 ```typescript
-// contents/themes/default/blocks/hero-banner/fields.ts
+// blocks/hero-banner/fields.ts
 import type { BlockFieldDefinition } from '@/core/types/block'
 
 export const fields: BlockFieldDefinition[] = [
@@ -348,7 +348,7 @@ The component.tsx file renders your block:
 **📋 component.tsx Example:**
 
 ```typescript
-// contents/themes/default/blocks/hero-banner/component.tsx
+// blocks/hero-banner/component.tsx
 import type { HeroBannerData } from './schema'
 import { cn } from '@/core/lib/utils'
 import { Button } from '@/core/components/ui/button'
@@ -443,7 +443,7 @@ BONUS: Register and Test Your Block
 **1️⃣ Create the index.ts barrel file:**
 
 ```typescript
-// contents/themes/default/blocks/hero-banner/index.ts
+// blocks/hero-banner/index.ts
 export { config } from './config'
 export { heroBannerSchema as schema } from './schema'
 export { fields, fieldGroups } from './fields'

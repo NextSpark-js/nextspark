@@ -167,7 +167,7 @@ pnpm db:migrate
 
 # This executes:
 # 1. Core migrations (core/migrations/)
-# 2. Theme entity migrations (themes/*/entities/*/migrations/)
+# 2. Project entity migrations (entities/*/migrations/)
 # 3. Plugin migrations (plugins/*/migrations/)
 ```
 

@@ -290,7 +290,7 @@ export interface EntityConfig {
   /** Core entity flag - true for system fundamental entities that cannot be overridden */
   isCore?: boolean
   /** Entity origin - tracks where the entity was defined */
-  source?: 'core' | 'theme' | 'plugin'
+  source?: 'core' | 'project' | 'theme' | 'plugin'
   /** Child entities configuration (optional) */
   childEntities?: ChildEntityConfig
 

@@ -63,7 +63,8 @@ This document defines the TypeScript standards and conventions used throughout t
     "paths": {
       "@/*": ["./*"],
       "@/core/*": ["./core/*"],
-      "@/contents/*": ["./contents/*"]
+      "@/plugins/*": ["./plugins/*"],
+      "@/app/*": ["./src/app/*"]
     },
 
     // Next.js specific

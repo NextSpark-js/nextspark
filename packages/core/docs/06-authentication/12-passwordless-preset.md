@@ -32,7 +32,7 @@ form the login opens with. Arrays replace (they do not merge), so a theme that
 wants something else lists everything it needs:
 
 ```typescript
-// contents/themes/my-theme/config/app.config.ts
+// config/app.config.ts
 auth: {
   methods: ['email-password', 'google'],               // classic preset
   // methods: ['email-otp', 'email-password', 'google'], // both, code first
@@ -232,14 +232,14 @@ The runtime gate is complemented by the production readiness check below. Wizard
 
 ## Production readiness check
 
-`pnpm exec nextspark prepare --production`, and therefore `pnpm exec nextspark build` (with or without `--no-registry`), runs core's `scripts/build/auth-readiness.mjs` after the registry step and before `next build`. It loads the active theme's `config/app.config.ts` auth settings, reads the same variables as the runtime gate (`EMAIL_PROVIDER`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) from the build environment overlaid on the project `.env`, and fails the build when no method in `auth.methods` can authenticate. Missing, empty, placeholder, and malformed values do not count, and neither does the console email provider or the `resend.dev` testing sender. Output names diagnostic codes, variables, and methods, never their values. Non-production `prepare`, `dev`, and `--watch` do not run it.
+`pnpm exec nextspark prepare --production`, and therefore `pnpm exec nextspark build` (with or without `--no-registry`), runs core's `scripts/build/auth-readiness.mjs` after the registry step and before `next build`. It loads the project's `config/app.config.ts` auth settings, reads the same variables as the runtime gate (`EMAIL_PROVIDER`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) from the build environment overlaid on the project `.env`, and fails the build when no method in `auth.methods` can authenticate. Missing, empty, placeholder, and malformed values do not count, and neither does the console email provider or the `resend.dev` testing sender. Output names diagnostic codes, variables, and methods, never their values. Non-production `prepare`, `dev`, and `--watch` do not run it.
 
 | Variable | Effect |
 |---|---|
 | `NEXTSPARK_AUTH_RUNTIME_ONLY` | Comma-separated `email` and/or `google` (spaces are trimmed). Declares providers whose credentials are injected only at runtime: their missing values pass the build with a warning and are validated again at server startup and on each gated authentication request. A concrete placeholder or malformed value still fails. Any other entry fails the build. |
 | `NEXTSPARK_AUTH_PREFLIGHT=off` | The only bypass. Skips the build check with a warning; runtime gating and the startup check still apply. Any value other than `off` or `on` fails. |
 
-The theme config is loaded with Node's type stripping (Node 22.14 or later), not the Next.js bundler. A config that uses path aliases (`@/...`), extensionless relative imports, or TypeScript syntax Node cannot strip (enums, namespaces) cannot be read, and the check fails closed with `AUTH_CONFIG_UNREADABLE`. Keep the `auth` settings as plain literals, or use the bypass. The config is loaded in a separate process whose output is discarded, so nothing it prints or throws reaches the build log; failures are reported with a fixed reason. A theme without `app.config.ts` is checked against the core defaults. In the monorepo, build `@nextsparkjs/core` first; the check uses its compiled evaluator. If `NEXT_PUBLIC_ACTIVE_THEME` is set in both the build environment and `.env` with different values, the check fails with `AUTH_THEME_CONFLICT`: the registry step compiles the `.env` theme while `next build` uses the environment's. Make them agree, or set it in only one place. Credentials that exist only in `.env.production` or `.env.local` are not read by the check: pass them to the build environment or declare them runtime-only.
+The project config is loaded with Node's type stripping (Node 22.14 or later), not the Next.js bundler. A config that uses path aliases (`@/...`), extensionless relative imports, or TypeScript syntax Node cannot strip (enums, namespaces) cannot be read, and the check fails closed with `AUTH_CONFIG_UNREADABLE`. Keep the `auth` settings as plain literals, or use the bypass. The config is loaded in a separate process whose output is discarded, so nothing it prints or throws reaches the build log; failures are reported with a fixed reason. A project without `config/app.config.ts` is checked against the core defaults. In the monorepo, build `@nextsparkjs/core` first; the check uses its compiled evaluator. Credentials that exist only in `.env.production` or `.env.local` are not read by the check: pass them to the build environment or declare them runtime-only.
 
 ### Startup re-validation
 

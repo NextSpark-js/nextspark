@@ -587,4 +587,4 @@ const clientOptions = useRelationOptions('clients', user.id)
 
 ---
 
-> 💡 **Tip**: Check `contents/themes/default/entities/tasks/tasks.fields.ts` to see real examples of all relationship types in use.
+> 💡 **Tip**: Check `entities/tasks/tasks.fields.ts` to see real examples of all relationship types in use.

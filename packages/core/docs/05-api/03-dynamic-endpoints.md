@@ -27,7 +27,7 @@
 
 ## Overview
 
-**Dynamic endpoints** are automatically generated CRUD APIs based on entity configuration from the registry system. When you define an entity in `contents/entities/[entity]/`, the API instantly provides full CRUD operations without writing a single line of endpoint code.
+**Dynamic endpoints** are automatically generated CRUD APIs based on entity configuration from the registry system. When you define an entity in `entities/[entity]/`, the API instantly provides full CRUD operations without writing a single line of endpoint code.
 
 **Key Features:**
 - ✅ **Zero Boilerplate** - Define entity config, get API automatically
@@ -61,7 +61,7 @@
 ```text
 1. Define Entity Config
    ↓
-   contents/entities/products/products.config.ts
+   entities/products/products.config.ts
    ↓
 2. Build Registry
    ↓
@@ -69,7 +69,7 @@
    ↓
 3. Registry Generated
    ↓
-   core/lib/registries/entity-registry.ts
+   .nextspark/registries/entity-registry.ts
    {
      products: { name, tableName, fields, permissions, ... }
    }
@@ -868,7 +868,7 @@ instead of a generic `500`:
 ### Entity Config Structure
 
 ```typescript
-// contents/entities/products/products.config.ts
+// entities/products/products.config.ts
 export const productEntityConfig = {
   name: 'products',
   slug: 'products',
@@ -1112,10 +1112,10 @@ Authorization: Bearer sk_live_abc123...
 **Solutions:**
 ```bash
 # 1. Check entity exists
-ls contents/entities/products/
+ls entities/products/
 
 # 2. Check registry includes entity
-grep "products" core/lib/registries/entity-registry.ts
+grep "products" .nextspark/registries/entity-registry.ts
 
 # 3. Rebuild registry
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs

@@ -1,4 +1,4 @@
-name: Theme migrations
+name: Project template migrations
 
 on:
   push:
@@ -6,17 +6,19 @@ on:
     paths:
       - 'packages/core/migrations/**'
       - 'packages/core/scripts/db/**'
-      - 'packages/core/templates/contents/**/migrations/**'
-      - 'themes/**/migrations/**'
-      - 'plugins/**/migrations/**'
+      - 'packages/core/templates/projects/**/migrations/**'
+      - 'apps/dev/migrations/**'
+      - 'apps/dev/**/migrations/**'
+      - 'apps/dev/plugins/**/migrations/**'
       - '.github/workflows/theme-migrations.yml'
   pull_request:
     paths:
       - 'packages/core/migrations/**'
       - 'packages/core/scripts/db/**'
-      - 'packages/core/templates/contents/**/migrations/**'
-      - 'themes/**/migrations/**'
-      - 'plugins/**/migrations/**'
+      - 'packages/core/templates/projects/**/migrations/**'
+      - 'apps/dev/migrations/**'
+      - 'apps/dev/**/migrations/**'
+      - 'apps/dev/plugins/**/migrations/**'
       - '.github/workflows/theme-migrations.yml'
   workflow_dispatch:
 
@@ -26,10 +28,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # `starter` is the theme generated projects start from, in
-        # packages/core/templates/contents/themes/starter; themes/starter holds
-        # only its tests. db:verify-theme looks in both places and refuses a
-        # name that is not a theme with migrations.
+        # Install-once templates are extracted into clean root-first projects;
+        # default verifies the repository's root-first apps/dev project.
         theme: [blog, crm, default, productivity, starter]
     services:
       postgres:
@@ -66,7 +66,7 @@ jobs:
         env:
           CYPRESS_INSTALL_BINARY: 0
 
-      - name: Verify ${{ matrix.theme }} theme migrations against a fresh database
+      - name: Verify ${{ matrix.theme }} project migrations against a fresh database
         run: pnpm db:verify-theme ${{ matrix.theme }}
         env:
           VERIFY_THEME_DATABASE_URL: postgresql://dbuser:postgres@localhost:5432/nextspark_verify?sslmode=disable

@@ -103,7 +103,7 @@ function generatePresetCode(preset, indent = '      ') {
 export function generateApiPresetsRegistry(data, config) {
   const { presets } = data
   const outputFilePath = join(config.outputDir, 'api-presets-registry.ts')
-  const themeName = config.activeTheme || 'unknown'
+  const themeName = config.projectName || 'project'
 
   // Calculate totals
   const totalPresets = presets.reduce((sum, p) => sum + (p.presets?.length || 0), 0)
@@ -121,7 +121,7 @@ export function generateApiPresetsRegistry(data, config) {
  * Total presets: 0
  *
  * To add presets, create files in:
- * contents/themes/${themeName}/devtools/api/*.presets.ts
+ * api/**/presets.ts
  *
  * DO NOT EDIT - This file is auto-generated
  */
@@ -279,7 +279,7 @@ export function hasPresets(endpoint: string): boolean {
 export function generateApiDocsRegistry(data, config) {
   const { docs } = data
   const outputFilePath = join(config.outputDir, 'api-docs-registry.ts')
-  const themeName = config.activeTheme || 'unknown'
+  const themeName = config.projectName || 'project'
 
   // Type import path
   const typesImportPath = convertCorePath('@/core/types/api-presets', outputFilePath, config)
@@ -293,7 +293,7 @@ export function generateApiDocsRegistry(data, config) {
  * Total docs: 0
  *
  * To add documentation, create files in:
- * contents/themes/${themeName}/devtools/api/*.md
+ * api/**/docs.md
  *
  * DO NOT EDIT - This file is auto-generated
  */

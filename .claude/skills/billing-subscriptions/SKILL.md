@@ -19,7 +19,7 @@ Multi-provider billing system with Gateway Factory pattern. Supports Stripe, Pol
 BILLING ARCHITECTURE:
 
 Configuration Layer:
-contents/themes/{theme}/config/billing.config.ts
+config/billing.config.ts
 ├── provider: 'stripe' | 'polar'  # (paddle, lemonsqueezy, mercadopago: type defined, not yet implemented)
 ├── currency: 'usd' | 'eur' | ...
 ├── defaultPlan: 'free'
@@ -642,7 +642,7 @@ actionMappings: {
 ### Plan Definition Structure
 
 ```typescript
-// contents/themes/default/config/billing.config.ts
+// config/billing.config.ts
 import type { BillingConfig } from '@/core/lib/billing/config-types'
 
 export const billingConfig: BillingConfig = {

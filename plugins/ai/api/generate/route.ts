@@ -162,8 +162,8 @@ const getHandler = async (): Promise<NextResponse> => {
 
     setup: {
       local: `ollama serve && ollama pull ${config.ollamaDefaultModel}`,
-      openai: 'Add OPENAI_API_KEY to contents/plugins/ai/.env',
-      anthropic: 'Add ANTHROPIC_API_KEY to contents/plugins/ai/.env'
+      openai: 'Add OPENAI_API_KEY to plugins/ai/.env',
+      anthropic: 'Add ANTHROPIC_API_KEY to plugins/ai/.env'
     }
   })
 }

@@ -15,7 +15,7 @@ Control the user role display in the topbar:
 
 ```typescript
 // core/lib/config/dashboard.config.ts
-// or contents/themes/default/config/dashboard.config.ts
+// or config/dashboard.config.ts
 
 export const DASHBOARD_CONFIG = {
   topbar: {
@@ -275,7 +275,7 @@ async function handleSignup(userData) {
 In `multi-tenant` mode, you can control whether users can create additional teams beyond their signup team:
 
 ```typescript
-// contents/themes/[theme]/app.config.ts
+// app.config.ts
 export const themeAppConfig: DeepPartial<AppConfig> = {
   teams: {
     mode: 'multi-tenant',

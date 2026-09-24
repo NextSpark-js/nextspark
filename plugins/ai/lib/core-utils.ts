@@ -80,7 +80,7 @@ export async function selectModel(
       // Prefer BYOK key when provided, fall back to global config
       const openaiApiKey = userApiKey || config.openaiApiKey
       if (!openaiApiKey) {
-        throw new Error('OpenAI API key not configured. Set OPENAI_API_KEY in contents/plugins/ai/.env')
+        throw new Error('OpenAI API key not configured. Set OPENAI_API_KEY in plugins/ai/.env')
       }
       const openaiProvider = createOpenAI({
         apiKey: openaiApiKey,
@@ -99,7 +99,7 @@ export async function selectModel(
       const anthropicAuth = userApiKey || (config.anthropicAuth ?? config.anthropicApiKey)
       if (!anthropicAuth) {
         throw new Error(
-          'Anthropic not configured. Set ANTHROPIC_API_KEY in contents/plugins/ai/.env, or in dev set CLAUDE_CODE_OAUTH_TOKEN (e.g. from Cursor/Claude Code).'
+          'Anthropic not configured. Set ANTHROPIC_API_KEY in plugins/ai/.env, or in dev set CLAUDE_CODE_OAUTH_TOKEN (e.g. from Cursor/Claude Code).'
         )
       }
       if (!userApiKey && anthropicAuth.startsWith('sk-ant-oat01-') && process.env.NODE_ENV === 'development') {
@@ -360,7 +360,7 @@ export async function validatePlugin(): Promise<{ valid: boolean; error?: string
     if (!(await isServerPluginEnabled())) {
       return {
         valid: false,
-        error: 'AI plugin disabled. Set AI_PLUGIN_ENABLED=true in contents/plugins/ai/.env'
+        error: 'AI plugin disabled. Set AI_PLUGIN_ENABLED=true in plugins/ai/.env'
       }
     }
 
@@ -402,7 +402,7 @@ export function handleAIError(error: Error): { error: string; message: string; s
   if (errorMessage.includes('openai') || errorMessage.includes('api key')) {
     return {
       error: 'OpenAI authentication failed',
-      message: 'Check your OPENAI_API_KEY in contents/plugins/ai/.env',
+      message: 'Check your OPENAI_API_KEY in plugins/ai/.env',
       status: 401
     }
   }
@@ -410,7 +410,7 @@ export function handleAIError(error: Error): { error: string; message: string; s
   if (errorMessage.includes('anthropic') || errorMessage.includes('claude')) {
     return {
       error: 'Anthropic authentication failed',
-      message: 'Check your ANTHROPIC_API_KEY in contents/plugins/ai/.env',
+      message: 'Check your ANTHROPIC_API_KEY in plugins/ai/.env',
       status: 401
     }
   }

@@ -9,7 +9,7 @@ Usage:
     python validate-selectors.py [--path PATH] [--fix]
 
 Options:
-    --path PATH    Directory to scan (default: contents/themes/)
+    --path PATH    Directory to scan (default: tests/cypress/)
     --fix          Attempt to auto-fix simple violations
 """
 
@@ -117,7 +117,7 @@ def convert_to_path(selector: str) -> str:
 
 def main():
     parser = argparse.ArgumentParser(description='Validate Cypress selectors')
-    parser.add_argument('--path', default='contents/themes/', help='Directory to scan')
+    parser.add_argument('--path', default='tests/cypress/', help='Directory to scan')
     parser.add_argument('--verbose', '-v', action='store_true', help='Show context')
     parser.add_argument('--exit-code', action='store_true', help='Exit with error if violations found')
 

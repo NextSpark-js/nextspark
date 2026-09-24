@@ -179,7 +179,7 @@ Block components are **dynamically generated** from `BLOCK_REGISTRY` at build ti
 ```typescript
 // core/lib/blocks/loader.ts
 
-import { BLOCK_REGISTRY } from '@/core/lib/registries/block-registry'
+import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 
 // Singleton cache - initialized once on first access
 let _blockComponents: Record<string, BlockComponent> | null = null
@@ -196,7 +196,7 @@ function createBlockComponents(): Record<string, BlockComponent> {
 
       // Lazy load with code splitting
       components[slug] = lazy(() =>
-        import(`@/contents/themes/${theme}/blocks/${blockSlug}/component`).then(m => {
+        import(`@/blocks/${blockSlug}/component`).then(m => {
           const componentName = Object.keys(m).find(key =>
             key.endsWith('Block') || key === 'default'
           )

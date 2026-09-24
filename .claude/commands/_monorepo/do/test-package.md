@@ -227,30 +227,7 @@ ls "$TEST_DIR/app/layout.tsx"
 ls "$TEST_DIR/.nextspark/registries/"
 ```
 
-**If create-nextspark-app doesn't handle all steps**, complete manually:
-
-```bash
-cd "$TEST_DIR"
-
-# Install UI (dependency of core) if not already installed
-npm install "${PACKAGES_DIR}/nextsparkjs-ui-"*.tgz 2>/dev/null || true
-
-# Install testing as devDependency
-npm install -D "${PACKAGES_DIR}/nextsparkjs-testing-"*.tgz
-
-# Install required peer dependency
-npm install better-auth
-
-# If init didn't run, do it manually:
-npx nextspark init --registries-only
-npx nextspark sync:app --force
-
-# Copy starter theme if not already present
-if [ ! -d "contents/themes/starter" ]; then
-  mkdir -p contents/themes
-  cp -r node_modules/@nextsparkjs/core/templates/contents/themes/starter contents/themes/starter
-fi
-```
+**If project generation fails, stop and report the failed command; do not reconstruct a legacy layout manually.**
 
 ---
 
@@ -266,7 +243,6 @@ DATABASE_URL="<USER_PROVIDED_DATABASE_URL>"
 BETTER_AUTH_SECRET=test_secret_2e205f79e4b0b8a061e79af9da52f1010ffe923a
 
 # Theme
-NEXT_PUBLIC_ACTIVE_THEME="starter"
 
 # Application
 NEXT_PUBLIC_APP_URL="http://localhost:3005"

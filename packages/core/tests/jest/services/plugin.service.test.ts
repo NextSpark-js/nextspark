@@ -63,7 +63,7 @@ jest.mock('@/core/lib/registries/plugin-registry', () => ({
       routeFiles: [
         {
           path: '/api/plugins/test/endpoint',
-          filePath: 'contents/plugins/test-plugin/api/endpoint.ts',
+          filePath: 'plugins/test-plugin/api/endpoint.ts',
           relativePath: 'api/endpoint.ts',
           methods: ['GET', 'POST'],
           isRouteFile: true,
@@ -73,8 +73,8 @@ jest.mock('@/core/lib/registries/plugin-registry', () => ({
         {
           name: 'TestEntity',
           exportName: 'TestEntity',
-          configPath: 'contents/plugins/test-plugin/entities/TestEntity/config.ts',
-          actualConfigFile: 'contents/plugins/test-plugin/entities/TestEntity/config.ts',
+          configPath: 'plugins/test-plugin/entities/TestEntity/config.ts',
+          actualConfigFile: 'plugins/test-plugin/entities/TestEntity/config.ts',
           relativePath: 'entities/TestEntity',
           depth: 0,
           parent: null,
@@ -119,8 +119,8 @@ jest.mock('@/core/lib/registries/plugin-registry', () => ({
         {
           name: 'EntityOne',
           exportName: 'EntityOne',
-          configPath: 'contents/plugins/plugin-with-entities/entities/EntityOne/config.ts',
-          actualConfigFile: 'contents/plugins/plugin-with-entities/entities/EntityOne/config.ts',
+          configPath: 'plugins/plugin-with-entities/entities/EntityOne/config.ts',
+          actualConfigFile: 'plugins/plugin-with-entities/entities/EntityOne/config.ts',
           relativePath: 'entities/EntityOne',
           depth: 0,
           parent: null,
@@ -136,8 +136,8 @@ jest.mock('@/core/lib/registries/plugin-registry', () => ({
         {
           name: 'EntityTwo',
           exportName: 'EntityTwo',
-          configPath: 'contents/plugins/plugin-with-entities/entities/EntityTwo/config.ts',
-          actualConfigFile: 'contents/plugins/plugin-with-entities/entities/EntityTwo/config.ts',
+          configPath: 'plugins/plugin-with-entities/entities/EntityTwo/config.ts',
+          actualConfigFile: 'plugins/plugin-with-entities/entities/EntityTwo/config.ts',
           relativePath: 'entities/EntityTwo',
           depth: 0,
           parent: null,
@@ -159,7 +159,7 @@ jest.mock('@/core/lib/registries/plugin-registry', () => ({
     '/api/plugins/test/endpoint': {
       plugin: 'test-plugin',
       methods: ['GET', 'POST'],
-      filePath: 'contents/plugins/test-plugin/api/endpoint.ts',
+      filePath: 'plugins/test-plugin/api/endpoint.ts',
     },
   },
   PLUGIN_METADATA: {
@@ -451,7 +451,7 @@ describe('PluginService', () => {
     it('should include filePath in metadata', () => {
       const metadata = PluginService.getRouteMetadata('/api/plugins/test/endpoint')
 
-      expect(metadata?.filePath).toBe('contents/plugins/test-plugin/api/endpoint.ts')
+      expect(metadata?.filePath).toBe('plugins/test-plugin/api/endpoint.ts')
     })
   })
 

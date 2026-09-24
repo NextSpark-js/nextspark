@@ -158,7 +158,7 @@ pnpm add -D allure-cypress
 Each theme configures Allure in its Cypress config:
 
 ```typescript
-// contents/themes/{theme}/tests/cypress.config.ts
+// tests/cypress.config.ts
 import { defineConfig } from 'cypress'
 import path from 'path'
 
@@ -283,20 +283,20 @@ After running tests:
 
 ```bash
 # Generate HTML report from results
-npx allure generate contents/themes/default/tests/cypress/allure-results \
-  -o contents/themes/default/tests/cypress/allure-report --clean
+npx allure generate tests/cypress/allure-results \
+  -o tests/cypress/allure-report --clean
 
 # Open report in browser
-npx allure open contents/themes/default/tests/cypress/allure-report
+npx allure open tests/cypress/allure-report
 ```
 
 ### One-liner
 
 ```bash
-NEXT_PUBLIC_ACTIVE_THEME=default pnpm cy:run && \
-npx allure generate contents/themes/default/tests/cypress/allure-results \
-  -o contents/themes/default/tests/cypress/allure-report --clean && \
-npx allure open contents/themes/default/tests/cypress/allure-report
+pnpm cy:run && \
+npx allure generate tests/cypress/allure-results \
+  -o tests/cypress/allure-report --clean && \
+npx allure open tests/cypress/allure-report
 ```
 
 ### CI Integration
@@ -307,20 +307,20 @@ In GitHub Actions (from `cypress-regression.yml`):
 - name: Run Cypress tests
   uses: cypress-io/github-action@v6
   with:
-    config-file: contents/themes/default/tests/cypress.config.ts
+    config-file: tests/cypress.config.ts
 
 - name: Generate Allure Report
   if: always()
   run: |
-    npx allure generate contents/themes/default/tests/cypress/allure-results \
-      -o contents/themes/default/tests/cypress/allure-report --clean
+    npx allure generate tests/cypress/allure-results \
+      -o tests/cypress/allure-report --clean
 
 - name: Upload Allure Report
   if: always()
   uses: actions/upload-artifact@v4
   with:
     name: allure-report
-    path: contents/themes/default/tests/cypress/allure-report
+    path: tests/cypress/allure-report
 ```
 
 ---
@@ -328,7 +328,7 @@ In GitHub Actions (from `cypress-regression.yml`):
 ## Output Directories
 
 ```text
-contents/themes/{theme}/tests/cypress/
+tests/cypress/
 ├── allure-results/        # Raw data (gitignored)
 │   ├── {uuid}-result.json
 │   ├── {uuid}-container.json
@@ -437,7 +437,7 @@ it('should complete checkout flow', () => {
 
 ```bash
 # Verify results exist
-ls contents/themes/default/tests/cypress/allure-results/
+ls tests/cypress/allure-results/
 # Should see *.json files
 ```
 
@@ -461,7 +461,7 @@ describe('Test', () => { ... })
 
 ```bash
 # Remove old results
-rm -rf contents/themes/default/tests/cypress/allure-results/*
+rm -rf tests/cypress/allure-results/*
 
 # Run tests fresh
 pnpm cy:run

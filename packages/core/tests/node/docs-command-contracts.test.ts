@@ -11,9 +11,9 @@ const SOURCE_ROOT = process.env.DOCS_CONTRACT_ROOT
 
 const DOCS_DIRS = [
   'packages/core/docs',
-  'themes/default/docs',
+  'apps/dev/docs',
   'plugins/ai/docs',
-  'plugins/langchain/docs',
+  'apps/dev/plugins/langchain/docs',
 ]
 
 const README_FILES = [
@@ -220,7 +220,7 @@ test('Cypress wrapper examples pass supported paths and flags', () => {
       assert.doesNotMatch(
         content,
         /pnpm\s+cy:run\s+--config-file\b/,
-        `${file} bypasses the wrapper's active-theme Cypress configuration`
+        `${file} bypasses the wrapper's project-root Cypress configuration`
       )
       assert.doesNotMatch(
         content,
@@ -249,7 +249,8 @@ test('generated-project docs use the generated config paths and current CLI surf
   assert.match(wizard, /doctor[\s\S]{0,400}JSONC comments/i, `${wizardFile} does not explain the fresh-project doctor limitation`)
   assert.doesNotMatch(packageDoc, /@nextspark\/core\b/, `${packageFile} uses the historical package scope`)
   assert.doesNotMatch(packageDoc, /nextspark\s+generate:app\b/, `${packageFile} recommends a removed CLI command`)
-  assert.match(configDoc, /does not create a root `nextspark\.config\.ts`/, `${configFile} claims the optional root config is generated`)
+  assert.match(configDoc, /required `nextspark\.config\.ts`/, `${configFile} does not describe the required root config`)
+  assert.doesNotMatch(configDoc, /optional root `nextspark\.config\.ts`/, `${configFile} still describes the root config as optional`)
 
   for (const staleCommand of [
     /cat\s+nextspark\.config\.ts/,

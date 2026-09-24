@@ -1,9 +1,8 @@
 /**
  * `nextspark init` gives a project packages/core/templates/eslint.config.mjs and a `lint` script
- * that runs `eslint .`. That walks everything NextSpark writes into the project -- app/ from core,
- * every theme and plugin under contents/, their tests and fixtures -- so the project must lint
- * without errors out of the box, while Next's presets still fail the project's code, contents/
- * included, and the zod rule keeps reaching the block schemas under contents/themes/. Tests and
+ * that runs `eslint .`. That walks the generated src/app host, root-first project source, local
+ * plugins, tests, and fixtures, so the project must lint without errors out of the box. Next's
+ * presets still fail project and plugin code, and the zod rule reaches their block schemas. Tests and
  * fixtures get the zod rule alone. The same file reaches Next 15 projects, whose eslint-config-next
  * publishes eslintrc presets instead of flat ones.
  */
@@ -85,14 +84,11 @@ test('a project holding everything NextSpark writes lints without errors on Next
     linkFromRepo(root, 'eslint')
     linkFromRepo(root, 'eslint-config-next')
 
-    copyTree(path.join(REPO, 'apps/dev/app'), path.join(root, 'app'))
-    for (const theme of fs.readdirSync(path.join(REPO, 'themes'))) {
-      copyTree(path.join(REPO, 'themes', theme), path.join(root, 'contents/themes', theme))
+    copyTree(path.join(REPO, 'apps/dev/src/app'), path.join(root, 'src', 'app'))
+    for (const dir of ['api', 'blocks', 'components', 'config', 'entities', 'lib', 'messages', 'styles', 'templates', 'tests']) {
+      copyTree(path.join(REPO, 'apps/dev', dir), path.join(root, dir))
     }
-    copyTree(path.join(TEMPLATES, 'contents/themes/starter'), path.join(root, 'contents/themes/my-app'))
-    for (const plugin of fs.readdirSync(path.join(REPO, 'plugins'))) {
-      copyTree(path.join(REPO, 'plugins', plugin), path.join(root, 'contents/plugins', plugin))
-    }
+    copyTree(path.join(REPO, 'apps/dev/plugins/langchain'), path.join(root, 'plugins/langchain'))
     for (const entry of ['proxy.ts', 'i18n.ts', 'instrumentation.ts', 'next.config.mjs', 'postcss.config.mjs', 'public', 'scripts']) {
       copyTree(path.join(TEMPLATES, entry), path.join(root, entry))
     }
@@ -105,27 +101,27 @@ test('a project holding everything NextSpark writes lints without errors on Next
   }
 })
 
-test('on Next 16 an `any` or an <img> fails the project\'s code, contents/ included, and the zod rule reaches a theme schema', async () => {
+test('on Next 16 an `any` or an <img> fails project and plugin code, and the zod rule reaches both schemas', async () => {
   const root = tempProject()
   try {
     linkFromRepo(root, 'eslint')
     linkFromRepo(root, 'eslint-config-next')
-    writeProbes(root, 'contents/themes/my-app')
-    writeProbes(root, 'contents/plugins/langchain')
+    writeProbes(root, '.')
+    writeProbes(root, 'plugins/langchain')
     writeProbes(root, 'src')
-    writeTestProbes(root, 'contents/plugins/langchain')
-    write(root, 'contents/plugins/langchain/components/avatar.tsx', 'export const Avatar = ({ src }: { src: string }) => <img src={src} alt="" />\n')
-    write(root, 'app/page.tsx', 'export default function Page() {\n  return <main>ok</main>\n}\n')
+    writeTestProbes(root, 'plugins/langchain')
+    write(root, 'plugins/langchain/components/avatar.tsx', 'export const Avatar = ({ src }: { src: string }) => <img src={src} alt="" />\n')
+    write(root, 'src/app/page.tsx', 'export default function Page() {\n  return <main>ok</main>\n}\n')
 
     const messages = await lint(root, ['.'])
     const summary = messages.map((m) => `${m.file} ${m.ruleId} ${m.severity === 2 ? 'error' : 'warning'}`).sort()
 
     assert.deepEqual(summary, [
-      'contents/plugins/langchain/blocks/probe/schema.ts no-restricted-syntax error',
-      'contents/plugins/langchain/components/avatar.tsx @next/next/no-img-element error',
-      'contents/plugins/langchain/lib/loose.ts @typescript-eslint/no-explicit-any error',
-      'contents/themes/my-app/blocks/probe/schema.ts no-restricted-syntax error',
-      'contents/themes/my-app/lib/loose.ts @typescript-eslint/no-explicit-any error',
+      'blocks/probe/schema.ts no-restricted-syntax error',
+      'lib/loose.ts @typescript-eslint/no-explicit-any error',
+      'plugins/langchain/blocks/probe/schema.ts no-restricted-syntax error',
+      'plugins/langchain/components/avatar.tsx @next/next/no-img-element error',
+      'plugins/langchain/lib/loose.ts @typescript-eslint/no-explicit-any error',
       'src/blocks/probe/schema.ts no-restricted-syntax error',
       'src/lib/loose.ts @typescript-eslint/no-explicit-any error',
     ], format(messages))
@@ -140,7 +136,7 @@ test('on Next 16 a rule the React Compiler needs warns instead of failing, and t
   try {
     linkFromRepo(root, 'eslint')
     linkFromRepo(root, 'eslint-config-next')
-    write(root, 'contents/themes/my-app/components/counter.tsx', `import { useEffect, useState } from 'react'
+    write(root, 'components/counter.tsx', `import { useEffect, useState } from 'react'
 
 export function Counter({ start }: { start: number }) {
   const [count, setCount] = useState(0)
@@ -193,18 +189,18 @@ test('a Next 15 project parses TypeScript and JSX, with Next\'s presets and the 
   try {
     linkFromRepo(root, 'eslint')
     installEslintConfigNext15(root)
-    writeProbes(root, 'contents/themes/my-app')
+    writeProbes(root, '.')
     writeProbes(root, 'src')
-    writeTestProbes(root, 'contents/themes/my-app')
-    write(root, 'app/page.tsx', 'export default function Page(): JSX.Element {\n  return <main>ok</main>\n}\n')
+    writeTestProbes(root, '.')
+    write(root, 'src/app/page.tsx', 'export default function Page(): JSX.Element {\n  return <main>ok</main>\n}\n')
     write(root, 'src/components/card.tsx', 'export const Card = ({ title }: { title: string }) => <h2>{title}</h2>\n')
 
     const messages = await lint(root, ['.'])
     const summary = messages.map((m) => `${m.file} ${m.ruleId}`).sort()
 
     assert.deepEqual(summary, [
-      'contents/themes/my-app/blocks/probe/schema.ts no-restricted-syntax',
-      'contents/themes/my-app/lib/loose.ts @typescript-eslint/no-explicit-any',
+      'blocks/probe/schema.ts no-restricted-syntax',
+      'lib/loose.ts @typescript-eslint/no-explicit-any',
       'src/blocks/probe/schema.ts no-restricted-syntax',
       'src/lib/loose.ts @typescript-eslint/no-explicit-any',
     ], format(messages))

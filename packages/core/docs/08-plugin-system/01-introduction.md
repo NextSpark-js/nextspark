@@ -69,7 +69,7 @@ The plugin system draws inspiration from WordPress's successful plugin architect
 ```mjs
 // packages/core/scripts/build/registry.mjs
 async function discoverPlugins() {
-  const pluginsDir = join(CONFIG.contentsDir, 'plugins')
+  const pluginsDir = CONFIG.pluginsDir
   const discovered = new Map()
 
   // Scan directory for plugin folders
@@ -110,21 +110,21 @@ const capabilities = await analyzePluginCapabilities(pluginName)
 
 **Step 3: Registry Generation**
 ```typescript
-// core/lib/registries/plugin-registry.ts (auto-generated)
+// .nextspark/registries/plugin-registry.ts (auto-generated)
 import 'server-only'
-import { aiPluginConfig } from '@/contents/plugins/ai/plugin.config'
+import { aiPluginConfig } from '@/plugins/ai/plugin.config'
 
 export const PLUGIN_REGISTRY = {
   'ai': {
     name: 'ai',
     config: aiPluginConfig,
     hasAPI: true,
-    apiPath: '@/contents/plugins/ai/api',
+    apiPath: '@/plugins/ai/api',
     routeFiles: [
       {
         path: '/api/v1/plugin/ai/generate',
         methods: ['POST', 'GET'],
-        filePath: '../../../contents/plugins/ai/api/generate/route'
+        filePath: '../../../plugins/ai/api/generate/route'
       }
     ],
     entities: ['ai-history'],
@@ -136,14 +136,14 @@ export const PLUGIN_REGISTRY = {
 
 **Step 4: Client Registry Generation**
 ```typescript
-// core/lib/registries/plugin-registry.client.ts (auto-generated)
+// .nextspark/registries/plugin-registry.client.ts (auto-generated)
 // NO server-only import - safe for client
 
 export const PLUGIN_REGISTRY: ClientPluginRegistry = {
   'ai': {
     name: 'ai',
     hasAPI: true, // Boolean only, no actual API functions
-    apiPath: '@/contents/plugins/ai/api',
+    apiPath: '@/plugins/ai/api',
     entities: ['ai-history'], // Names only, no configurations
     hasMessages: false,
     hasAssets: false
@@ -161,9 +161,9 @@ export const PLUGIN_REGISTRY: ClientPluginRegistry = {
 ```typescript
 // Runtime plugin discovery - SLOW
 async function discoverPluginsAtRuntime() {
-  const pluginPaths = await fs.readdir('contents/plugins') // 400ms I/O
+  const pluginPaths = await fs.readdir('plugins') // 400ms I/O
   const plugins = await Promise.all(
-    pluginPaths.map(path => import(`@/contents/plugins/${path}/plugin.config`)) // 140ms per plugin
+    pluginPaths.map(path => import(`@/plugins/${path}/plugin.config`)) // 140ms per plugin
   )
   return plugins // Total: ~1,750ms for 10 plugins
 }
@@ -172,7 +172,7 @@ async function discoverPluginsAtRuntime() {
 **✅ Build-Time Registry (Our Approach):**
 ```typescript
 // Build-time plugin registry - FAST
-import { PLUGIN_REGISTRY } from '@/core/lib/registries/plugin-registry'
+import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
 
 function getPlugins() {
   return Object.values(PLUGIN_REGISTRY) // ~0.1ms object access
@@ -222,13 +222,13 @@ DATABASE_URL=postgresql://...
 
 **PLUGIN Variables (plugin `.env` with namespacing):**
 ```bash
-# contents/plugins/ai/.env
+# plugins/ai/.env
 AI_PLUGIN_ENABLED=true
 AI_PLUGIN_DEBUG=false
 AI_PLUGIN_DEFAULT_PROVIDER=anthropic
 AI_PLUGIN_MAX_TOKENS=4000
 
-# contents/plugins/amplitude/.env
+# plugins/amplitude/.env
 AMPLITUDE_PLUGIN_ENABLED=true
 AMPLITUDE_API_KEY=...
 AMPLITUDE_DEBUG=false
@@ -292,7 +292,7 @@ export interface PluginLifecycle {
 **Example Plugin with Lifecycle Hooks:**
 
 ```typescript
-// contents/plugins/ai/plugin.config.ts
+// plugins/ai/plugin.config.ts
 export const aiPluginConfig: PluginConfig = {
   name: 'ai',
   displayName: 'AI Assistant',
@@ -355,7 +355,7 @@ The plugin system enforces strict server/client separation to prevent security v
 
 **Server-Only Registry:**
 ```typescript
-// core/lib/registries/plugin-registry.ts
+// .nextspark/registries/plugin-registry.ts
 import 'server-only' // ⚠️ Prevents client usage
 
 export const PLUGIN_REGISTRY = {
@@ -373,7 +373,7 @@ export const PLUGIN_REGISTRY = {
 
 **Client-Safe Registry:**
 ```typescript
-// core/lib/registries/plugin-registry.client.ts
+// .nextspark/registries/plugin-registry.client.ts
 // NO server-only import - safe for browser
 
 export const PLUGIN_REGISTRY: ClientPluginRegistry = {
@@ -395,7 +395,7 @@ export const PLUGIN_REGISTRY: ClientPluginRegistry = {
 ```typescript
 // ❌ WRONG - Exposes server functions to client
 'use client'
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export function ClientComponent() {
   const { generateText } = usePlugin('ai') // ❌ Error: server-only
@@ -403,7 +403,7 @@ export function ClientComponent() {
 
 // ✅ CORRECT - Server component calls API, passes data to client
 // app/ai/page.tsx (Server Component)
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export default async function AIPage() {
   const { generateText } = usePlugin('ai')
@@ -519,31 +519,31 @@ export function ClientDisplay({ result }: { result: string }) {
 
 ### Active Plugins in the System
 
-**AI Plugin** (`contents/plugins/ai/`)
+**AI Plugin** (`plugins/ai/`)
 - **Purpose**: Core AI utilities for custom endpoints and integrations
 - **Features**: OpenAI, Anthropic, Ollama support
 - **API**: `selectModel`, `calculateCost`, `validatePlugin`, `handleAIError`
 - **Entities**: `ai-history` (track AI usage and costs)
 
-**Amplitude Plugin** (`contents/plugins/amplitude/`)
+**Amplitude Plugin** (`plugins/amplitude/`)
 - **Purpose**: Analytics tracking and user behavior analysis
 - **Features**: Event tracking, user properties, revenue tracking
 - **API**: Custom analytics endpoints
 - **Entities**: None
 
-**Billing Plugin** (`contents/plugins/billing/`)
+**Billing Plugin** (`plugins/billing/`)
 - **Purpose**: Subscription and payment management
 - **Features**: Stripe integration, subscription lifecycle
 - **API**: Payment processing, subscription management
 - **Entities**: `subscriptions`, `invoices`
 
-**Social Media Publisher Plugin** (`contents/plugins/social-media-publisher/`)
+**Social Media Publisher Plugin** (`plugins/social-media-publisher/`)
 - **Purpose**: Multi-platform social media posting
 - **Features**: Twitter, LinkedIn, Facebook integration
 - **API**: Post scheduling, media upload
 - **Entities**: `social-posts`, `social-accounts`
 
-**WalkMe Plugin** (`contents/plugins/walkme/`)
+**WalkMe Plugin** (`plugins/walkme/`)
 - **Purpose**: Guided tours and onboarding flows
 - **Features**: Step-by-step product tours, contextual tooltips, onboarding checklists
 - **API**: Tour management, progress tracking
@@ -574,10 +574,10 @@ export function ClientDisplay({ result }: { result: string }) {
 - [Creating Custom Plugins](./09-creating-custom-plugins.md) - Step-by-step tutorial
 
 **Code References:**
-- Plugin registry: `core/lib/registries/plugin-registry.ts:1-1153`
+- Plugin registry: `.nextspark/registries/plugin-registry.ts:1-1153`
 - Build script: `packages/core/scripts/build/registry.mjs:1300-1842`
 - Plugin types: `core/types/plugin.ts:1-50`
-- Example plugins: `contents/plugins/ai/`, `contents/plugins/billing/`
+- Example plugins: `plugins/ai/`, `plugins/billing/`
 
 ---
 

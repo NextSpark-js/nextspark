@@ -5,11 +5,10 @@ Generate POM Script
 Generates a Page Object Model (POM) for a Cypress entity.
 
 Usage:
-    python generate-pom.py --entity ENTITY [--theme THEME] [--fields FIELDS]
+    python generate-pom.py --entity ENTITY [--fields FIELDS]
 
 Options:
     --entity ENTITY   Entity name (e.g., products, clients)
-    --theme THEME     Theme name (default: default)
     --fields FIELDS   Comma-separated field names (auto-detected if not provided)
     --dry-run         Preview without writing to file
     --output FILE     Output file path (default: auto-generated)
@@ -48,7 +47,7 @@ def to_singular(name: str) -> str:
 
 def get_entities_config(theme: str) -> dict:
     """Load entities.json fixture if it exists."""
-    fixture_path = Path(f'contents/themes/{theme}/tests/cypress/fixtures/entities.json')
+    fixture_path = Path('tests/cypress/fixtures/entities.json')
     if fixture_path.exists():
         try:
             with open(fixture_path, 'r', encoding='utf-8') as f:
@@ -306,7 +305,6 @@ export class {pascal_plural}POM extends DashboardEntityPOM {{
 def main():
     parser = argparse.ArgumentParser(description='Generate entity POM')
     parser.add_argument('--entity', required=True, help='Entity name (e.g., products)')
-    parser.add_argument('--theme', default='default', help='Theme name')
     parser.add_argument('--fields', default=None, help='Comma-separated field names')
     parser.add_argument('--dry-run', action='store_true', help='Preview without writing')
     parser.add_argument('--output', default=None, help='Output file path')
@@ -314,14 +312,13 @@ def main():
     args = parser.parse_args()
 
     entity = args.entity.lower()
-    theme = args.theme
+    theme = 'project'
     pascal_plural = to_pascal_case(entity)
 
     print(f"\n{'=' * 60}")
     print("GENERATING POM")
     print(f"{'=' * 60}")
     print(f"Entity: {entity}")
-    print(f"Theme: {theme}")
 
     # Determine fields
     if args.fields:
@@ -354,7 +351,7 @@ def main():
     if args.output:
         output_path = Path(args.output)
     else:
-        output_path = Path(f'contents/themes/{theme}/tests/cypress/src/entities/{pascal_plural}POM.ts')
+        output_path = Path(f'tests/cypress/src/entities/{pascal_plural}POM.ts')
 
     # Check if file already exists
     if output_path.exists():

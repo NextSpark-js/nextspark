@@ -44,10 +44,10 @@ before(() => {
   evaluatorBundle = join(out, 'readiness.js')
 })
 
-/** `null`: no active theme directory; THEME_WITHOUT_CONFIG: the directory without config/app.config.ts. */
-const THEME_WITHOUT_CONFIG = Symbol('theme without app.config.ts')
+/** `null`: no project config; PROJECT_WITHOUT_CONFIG: an otherwise valid project without config/app.config.ts. */
+const PROJECT_WITHOUT_CONFIG = Symbol('project without app.config.ts')
 
-async function fixture(appConfig: string | null | typeof THEME_WITHOUT_CONFIG, dotEnv = '') {
+async function fixture(appConfig: string | null | typeof PROJECT_WITHOUT_CONFIG, dotEnv = '') {
   const root = await mkdtemp(join(tmpdir(), 'nextspark auth readiness '))
   const core = join(root, 'node_modules/@nextsparkjs/core')
   for (const file of CORE_FILES) {
@@ -62,15 +62,15 @@ async function fixture(appConfig: string | null | typeof THEME_WITHOUT_CONFIG, d
   await symlink(realpathSync(join(CORE_ROOT, 'node_modules/dotenv')), join(core, 'node_modules/dotenv'))
   await writeFile(join(core, 'scripts/build/registry.mjs'), `
 import { appendFileSync } from 'node:fs'
-appendFileSync(process.env.NEXTSPARK_PROJECT_ROOT + '/registry-ran.txt', 'ran\\n')
+appendFileSync(process.cwd() + '/registry-ran.txt', 'ran\\n')
 `)
-  if (appConfig === THEME_WITHOUT_CONFIG) {
-    await mkdir(join(root, 'contents/themes/demo'), { recursive: true })
-  } else if (appConfig !== null) {
-    await mkdir(join(root, 'contents/themes/demo/config'), { recursive: true })
-    await writeFile(join(root, 'contents/themes/demo/config/app.config.ts'), appConfig)
+  await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
+  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.5' } }))
+  if (appConfig !== null && appConfig !== PROJECT_WITHOUT_CONFIG) {
+    await mkdir(join(root, 'config'), { recursive: true })
+    await writeFile(join(root, 'config/app.config.ts'), appConfig)
   }
-  await writeFile(join(root, '.env'), `NEXT_PUBLIC_ACTIVE_THEME=demo\n${dotEnv}`)
+  await writeFile(join(root, '.env'), dotEnv)
   await mkdir(join(root, 'node_modules/.bin'), { recursive: true })
   await writeFile(join(root, 'node_modules/.bin/next'), '#!/bin/sh\necho next-was-run > next-ran.txt\n', { mode: 0o755 })
   return { root, cleanup: () => rm(root, { recursive: true, force: true }) }
@@ -217,8 +217,8 @@ test('an unknown runtime-only token fails', async () => {
   }
 })
 
-test('an unreadable theme config fails closed; NEXTSPARK_AUTH_PREFLIGHT=off is the one bypass', async () => {
-  const project = await fixture(`import { base } from '@/contents/themes/demo/config/base'\nexport const APP_CONFIG_OVERRIDES = { ...base }\n`)
+test('an unreadable project config fails closed; NEXTSPARK_AUTH_PREFLIGHT=off is the one bypass', async () => {
+  const project = await fixture(`import { base } from '@/config/base'\nexport const APP_CONFIG_OVERRIDES = { ...base }\n`)
   try {
     const failed = run(project.root, ['prepare', '--production'])
     assert.equal(failed.status, 1, failed.output)
@@ -238,19 +238,22 @@ test('an unreadable theme config fails closed; NEXTSPARK_AUTH_PREFLIGHT=off is t
   }
 })
 
-test('a missing active theme fails closed', async () => {
+test('a project without app.config.ts is checked against the core defaults', async () => {
   const project = await fixture(null)
   try {
-    const result = run(project.root, ['prepare', '--production'], VALID_EMAIL)
-    assert.equal(result.status, 1, result.output)
-    assert.match(result.output, /AUTH_THEME_NOT_FOUND/)
+    const invalid = run(project.root, ['prepare', '--production'])
+    assert.equal(invalid.status, 1, invalid.output)
+    assert.match(invalid.output, /Login methods: email-otp, google/)
+
+    const ready = run(project.root, ['prepare', '--production'], VALID_EMAIL)
+    assert.equal(ready.status, 0, ready.output)
   } finally {
     await project.cleanup()
   }
 })
 
 test('non-production prepare does not run the check', async () => {
-  const project = await fixture(`import { base } from '@/contents/themes/demo/config/base'\nexport const APP_CONFIG_OVERRIDES = { ...base }\n`)
+  const project = await fixture(`import { base } from '@/config/base'\nexport const APP_CONFIG_OVERRIDES = { ...base }\n`)
   try {
     const result = run(project.root, ['prepare'])
     assert.equal(result.status, 0, result.output)
@@ -310,7 +313,7 @@ throw error
   ['exports a non-boolean switch holding it', `export const APP_CONFIG_OVERRIDES = { auth: { methods: ['${SENTINEL}'], emailAndPassword: { enabled: '${SENTINEL}' } } }\n`],
 ]
 
-test('nothing a theme config prints or throws reaches the output, and the check fails closed', async () => {
+test('nothing a project config prints or throws reaches the output, and the check fails closed', async () => {
   for (const [label, config] of LEAKING_CONFIGS) {
     const project = await fixture(config)
     try {
@@ -339,28 +342,8 @@ export const APP_CONFIG_OVERRIDES = { auth: { methods: ['google', '${SENTINEL}']
   }
 })
 
-test('NEXT_PUBLIC_ACTIVE_THEME set differently in the environment and .env fails closed', async () => {
-  const project = await fixture(methods(['google']))
-  try {
-    const conflict = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, NEXT_PUBLIC_ACTIVE_THEME: 'other' })
-    assert.equal(conflict.status, 1, conflict.output)
-    assert.match(conflict.output, /AUTH_THEME_CONFLICT/)
-    assert.match(conflict.output, /NEXT_PUBLIC_ACTIVE_THEME is other in the environment but demo in \.env/)
-    assert.match(conflict.output, /Make them agree/)
-
-    const agreeing = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, NEXT_PUBLIC_ACTIVE_THEME: 'demo' })
-    assert.equal(agreeing.status, 0, agreeing.output)
-
-    await writeFile(join(project.root, '.env'), '')
-    const environmentOnly = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, NEXT_PUBLIC_ACTIVE_THEME: 'demo' })
-    assert.equal(environmentOnly.status, 0, environmentOnly.output)
-  } finally {
-    await project.cleanup()
-  }
-})
-
-test('an active theme without app.config.ts is checked against the core defaults', async () => {
-  const project = await fixture(THEME_WITHOUT_CONFIG)
+test('a project without app.config.ts is checked against the core defaults when explicitly represented', async () => {
+  const project = await fixture(PROJECT_WITHOUT_CONFIG)
   try {
     const invalid = run(project.root, ['prepare', '--production'])
     assert.equal(invalid.status, 1, invalid.output)

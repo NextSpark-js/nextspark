@@ -162,7 +162,7 @@ if (membership.hasMinHierarchy(50)) {
 | `core/lib/services/membership.service.ts` | MembershipService + TeamMembership |
 | `core/lib/services/permission.service.ts` | PermissionService |
 | `core/lib/permissions/types.ts` | TypeScript types |
-| `core/lib/registries/permissions-registry.ts` | Pre-computed permission matrix |
+| `.nextspark/registries/permissions-registry.ts` | Pre-computed permission matrix |
 | `core/lib/permissions/core.permissions.ts` | Core permission definitions |
 
 ## Next Steps

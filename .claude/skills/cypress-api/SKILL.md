@@ -15,7 +15,7 @@ Patterns and tools for writing API tests with Cypress.
 ## Architecture Overview
 
 ```
-contents/themes/{theme}/tests/cypress/
+tests/cypress/
 ├── e2e/
 │   └── api/                          # API tests (this skill)
 │       ├── entities/
@@ -402,12 +402,10 @@ And los datos deberían contener resultados paginados
 # Generate API controller from template
 python3 .claude/skills/cypress-api/scripts/generate-api-controller.py \
   --entity tasks \
-  --theme default
 
 # Preview without writing
 python3 .claude/skills/cypress-api/scripts/generate-api-controller.py \
   --entity tasks \
-  --theme default \
   --dry-run
 ```
 
@@ -417,13 +415,11 @@ python3 .claude/skills/cypress-api/scripts/generate-api-controller.py \
 # Generate API test file + BDD documentation
 python3 .claude/skills/cypress-api/scripts/generate-api-test.py \
   --entity tasks \
-  --theme default \
   --with-bdd
 
 # Preview without writing
 python3 .claude/skills/cypress-api/scripts/generate-api-test.py \
   --entity tasks \
-  --theme default \
   --with-bdd \
   --dry-run
 ```
@@ -432,7 +428,7 @@ python3 .claude/skills/cypress-api/scripts/generate-api-test.py \
 
 ```bash
 # Run specific API test file
-pnpm cy:run --spec "contents/themes/default/tests/cypress/e2e/api/entities/tasks-crud.cy.ts"
+pnpm cy:run --spec "tests/cypress/e2e/api/entities/tasks-crud.cy.ts"
 
 # Run all API tests
 pnpm cy:run --env grepTags="@api"

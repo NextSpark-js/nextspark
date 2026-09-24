@@ -64,7 +64,7 @@ export const socialMediaPublisherPluginConfig: PluginConfig = {
   enabled: true,
   dependencies: [], // No plugin dependencies (uses core OAuth infrastructure)
 
-  // Plugin API - exports metadata for themes/plugins to use
+  // Plugin API - exports metadata for projects and plugins to use
   api: {
     providers: OAUTH_PROVIDERS,
     features: PLUGIN_FEATURES,

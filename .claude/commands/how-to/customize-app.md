@@ -58,7 +58,7 @@ NextSpark uses layered configuration:
 │     → Base settings, always available       │
 │                                             │
 │  2. THEME OVERRIDES                         │
-│     themes/{theme}/config/*.ts              │
+│     config/*.ts                             │
 │     → Theme-specific customizations         │
 │                                             │
 │  3. ENVIRONMENT                             │
@@ -73,7 +73,7 @@ Theme config overrides core. Env overrides both.
 **📂 Configuration Files:**
 
 ```
-contents/themes/your-theme/config/
+config/
 ├── app.config.ts           # Core app settings
 ├── auth.config.ts          # Authentication settings
 ├── dashboard.config.ts     # Dashboard layout
@@ -108,7 +108,7 @@ Core application settings:
 **📋 app.config.ts Example:**
 
 ```typescript
-// contents/themes/your-theme/config/app.config.ts
+// config/app.config.ts
 import type { AppConfig } from '@/core/types/app'
 
 export const appConfig: AppConfig = {
@@ -272,8 +272,7 @@ GITHUB_CLIENT_SECRET=""
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_NAME="My SaaS App"
 
-# Active theme
-NEXT_PUBLIC_ACTIVE_THEME="default"
+# project
 
 # ============================================
 # EMAIL (Resend)
@@ -378,7 +377,7 @@ teamMode: {
 **📋 Custom Onboarding Flow:**
 
 ```typescript
-// contents/themes/your-theme/config/onboarding.config.ts
+// config/onboarding.config.ts
 export const onboardingConfig = {
   enabled: true,
 

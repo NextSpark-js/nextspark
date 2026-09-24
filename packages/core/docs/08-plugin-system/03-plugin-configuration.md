@@ -656,7 +656,7 @@ export const fullLifecyclePluginConfig: PluginConfig = {
 
 **Direct Function Export**:
 ```typescript
-// contents/plugins/ai/plugin.config.ts
+// plugins/ai/plugin.config.ts
 import {
   selectModel,
   calculateCost,
@@ -702,7 +702,7 @@ export const myPluginConfig: PluginConfig = {
 **Usage in Server Components**:
 ```typescript
 // app/page.tsx (Server Component)
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export default async function Page() {
   // Get all plugin functions
@@ -721,7 +721,7 @@ export default async function Page() {
 ```typescript
 // app/api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { usePlugin } from '@/core/lib/registries/plugin-registry'
+import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export async function POST(request: NextRequest) {
   const { processData } = usePlugin('my-plugin')
@@ -764,7 +764,7 @@ export const myPluginConfig: PluginConfig = {
 **Usage**:
 ```typescript
 // Import component directly
-import { MyWidget } from '@/contents/plugins/my-plugin/components/MyWidget'
+import { MyWidget } from '@/plugins/my-plugin/components/MyWidget'
 
 export function Page() {
   return <MyWidget />
@@ -773,7 +773,7 @@ export function Page() {
 // Or use lazy loading
 import { lazy } from 'react'
 
-const MyWidget = lazy(() => import('@/contents/plugins/my-plugin/components/MyWidget'))
+const MyWidget = lazy(() => import('@/plugins/my-plugin/components/MyWidget'))
 
 export function Page() {
   return (
@@ -826,7 +826,7 @@ DATABASE_URL=postgresql://...
 
 **Plugin Variables (Plugin `.env` with Namespacing)**:
 ```bash
-# contents/plugins/my-plugin/.env
+# plugins/my-plugin/.env
 # ⚠️ ONLY MY_PLUGIN_* variables allowed here
 
 MY_PLUGIN_ENABLED=true
@@ -838,7 +838,7 @@ MY_PLUGIN_TIMEOUT=5000
 
 **Loading Environment in Plugin Config**:
 ```typescript
-// contents/plugins/my-plugin/lib/server-env.ts
+// plugins/my-plugin/lib/server-env.ts
 import { config } from 'dotenv'
 import { join } from 'path'
 
@@ -863,7 +863,7 @@ export function validateEnvironment(): void {
 
 **Using Environment in Plugin Config**:
 ```typescript
-// contents/plugins/my-plugin/plugin.config.ts
+// plugins/my-plugin/plugin.config.ts
 import { pluginEnv, validateEnvironment } from './lib/server-env'
 
 export const myPluginConfig: PluginConfig = {
@@ -888,7 +888,7 @@ export const myPluginConfig: PluginConfig = {
 ### Minimal Plugin Configuration
 
 ```typescript
-// contents/plugins/minimal/plugin.config.ts
+// plugins/minimal/plugin.config.ts
 import type { PluginConfig } from '@/core/types/plugin'
 
 export const minimalPluginConfig: PluginConfig = {
@@ -906,7 +906,7 @@ export default minimalPluginConfig
 ### Utility Plugin Configuration
 
 ```typescript
-// contents/plugins/utils/plugin.config.ts
+// plugins/utils/plugin.config.ts
 import type { PluginConfig } from '@/core/types/plugin'
 import {
   formatDate,
@@ -942,7 +942,7 @@ export default utilsPluginConfig
 ### Service Plugin Configuration
 
 ```typescript
-// contents/plugins/billing/plugin.config.ts
+// plugins/billing/plugin.config.ts
 import type { PluginConfig } from '@/core/types/plugin'
 
 export const billingPluginConfig: PluginConfig = {
@@ -1012,7 +1012,7 @@ export default billingPluginConfig
 ### Complex Plugin with Dependencies
 
 ```typescript
-// contents/plugins/advanced-ai/plugin.config.ts
+// plugins/advanced-ai/plugin.config.ts
 import type { PluginConfig } from '@/core/types/plugin'
 
 export const advancedAIConfig: PluginConfig = {

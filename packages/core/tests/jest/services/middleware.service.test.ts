@@ -54,21 +54,21 @@ jest.mock('@/core/lib/registries/middleware-registry', () => {
       'test-theme': {
         themeName: 'test-theme',
         middleware: mockMiddlewareSuccess,
-        middlewarePath: '@/contents/themes/test-theme/middleware.ts',
+        middlewarePath: '@/config/hooks/proxy.ts',
         middlewareExportName: 'default',
         exists: true
       },
       'error-theme': {
         themeName: 'error-theme',
         middleware: mockMiddlewareError,
-        middlewarePath: '@/contents/themes/error-theme/middleware.ts',
+        middlewarePath: '@/config/hooks/proxy.ts',
         middlewareExportName: 'default',
         exists: true
       },
       'no-middleware-theme': {
         themeName: 'no-middleware-theme',
         middleware: mockMiddlewareSuccess,
-        middlewarePath: '@/contents/themes/no-middleware-theme/middleware.ts',
+        middlewarePath: '@/config/hooks/proxy.ts',
         middlewareExportName: 'default',
         exists: false
       }

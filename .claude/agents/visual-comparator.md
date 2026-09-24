@@ -183,7 +183,7 @@ Create comparison result:
   "metadata": {
     "comparedAt": "2025-01-09T12:00:00Z",
     "viewport": "1280x720",
-    "theme": "default"
+    "project": true
   }
 }
 ```

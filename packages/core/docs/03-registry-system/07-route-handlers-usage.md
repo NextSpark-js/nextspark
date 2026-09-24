@@ -8,7 +8,7 @@
 
 ## Overview
 
-The Route Handlers Registry (`core/lib/registries/route-handlers.ts`) provides **zero-dynamic-import access** to API route handlers for themes and plugins. It eliminates runtime path resolution by generating static imports at build time, resulting in ~17,255x performance improvement for route discovery.
+The Route Handlers Registry (`.nextspark/registries/route-handlers.ts`) provides **zero-dynamic-import access** to API route handlers for themes and plugins. It eliminates runtime path resolution by generating static imports at build time, resulting in ~17,255x performance improvement for route discovery.
 
 **Key Features:**
 - ✅ Zero dynamic imports at runtime
@@ -26,8 +26,8 @@ The Route Handlers Registry (`core/lib/registries/route-handlers.ts`) provides *
 
 ```typescript
 // Generated at build time by packages/core/scripts/build/registry.mjs
-import * as plugin_ai_generate from '@/contents/plugins/ai/api/generate/route'
-import * as plugin_ai_embeddings from '@/contents/plugins/ai/api/embeddings/route'
+import * as plugin_ai_generate from '@/plugins/ai/api/generate/route'
+import * as plugin_ai_embeddings from '@/plugins/ai/api/embeddings/route'
 
 export const PLUGIN_ROUTE_HANDLERS: Record<string, Record<string, RouteHandler | undefined>> = {
   'ai/generate': {
@@ -70,7 +70,7 @@ if (handler) {
 
 1. **Theme Routes:**
 ```text
-contents/themes/default/
+
 └── api/                          # Theme API routes
     ├── custom/
     │   └── route.ts              # GET /api/custom
@@ -80,7 +80,7 @@ contents/themes/default/
 
 2. **Plugin Routes:**
 ```text
-contents/plugins/ai/
+plugins/ai/
 └── api/                          # Plugin API routes
     ├── generate/
     │   └── route.ts              # POST /api/v1/plugin/ai/generate
@@ -175,7 +175,7 @@ export type RouteHandler = (
 **Get plugin route handler** by route key and method:
 
 ```typescript
-import { getPluginRouteHandler } from '@/core/lib/registries/route-handlers'
+import { getPluginRouteHandler } from '@nextsparkjs/registries/route-handlers'
 
 // Get POST handler for AI generate route
 const handler = getPluginRouteHandler('ai/generate', 'POST')
@@ -191,7 +191,7 @@ if (handler) {
 **Get theme route handler** by route key and method:
 
 ```typescript
-import { getThemeRouteHandler } from '@/core/lib/registries/route-handlers'
+import { getThemeRouteHandler } from '@nextsparkjs/registries/route-handlers'
 
 // Get handler for custom theme route
 const handler = getThemeRouteHandler('custom/webhook', 'POST')
@@ -207,7 +207,7 @@ if (handler) {
 **Get all plugin route keys**:
 
 ```typescript
-import { getPluginRouteKeys } from '@/core/lib/registries/route-handlers'
+import { getPluginRouteKeys } from '@nextsparkjs/registries/route-handlers'
 
 const routeKeys = getPluginRouteKeys()
 console.log(routeKeys)
@@ -219,7 +219,7 @@ console.log(routeKeys)
 **Get all theme route keys**:
 
 ```typescript
-import { getThemeRouteKeys } from '@/core/lib/registries/route-handlers'
+import { getThemeRouteKeys } from '@nextsparkjs/registries/route-handlers'
 
 const routeKeys = getThemeRouteKeys()
 console.log(routeKeys)
@@ -236,7 +236,7 @@ console.log(routeKeys)
 
 ```typescript
 // app/api/v1/plugin/[plugin]/[...path]/route.ts
-import { getPluginRouteHandler } from '@/core/lib/registries/route-handlers'
+import { getPluginRouteHandler } from '@nextsparkjs/registries/route-handlers'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
@@ -287,7 +287,7 @@ async function handlePluginRoute(
 **Add custom route** to theme:
 
 ```typescript
-// contents/themes/default/api/webhook/route.ts
+// api/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -314,7 +314,7 @@ POST /api/webhook
 **Add custom route** to plugin:
 
 ```typescript
-// contents/plugins/ai/api/generate/route.ts
+// plugins/ai/api/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from '../../lib/ai'
 
@@ -359,7 +359,7 @@ GET /api/v1/plugin/ai/generate
 ### Route with Parameters
 
 ```typescript
-// contents/plugins/ai/api/ai-history/[id]/route.ts
+// plugins/ai/api/ai-history/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
@@ -428,7 +428,7 @@ Examples:
 
 ```typescript
 // Override auto-generated entity route
-// contents/themes/default/api/tasks/route.ts
+// api/tasks/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -450,7 +450,7 @@ export async function GET(request: NextRequest) {
 import {
   getPluginRouteKeys,
   getThemeRouteKeys
-} from '@/core/lib/registries/route-handlers'
+} from '@nextsparkjs/registries/route-handlers'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -468,7 +468,7 @@ export async function GET() {
 
 ```typescript
 // middleware.ts
-import { hasRoute } from '@/core/lib/registries/plugin-registry'
+import { hasRoute } from '@nextsparkjs/registries/plugin-registry'
 import { NextRequest, NextResponse } from 'next/server'
 
 export function middleware(request: NextRequest) {
@@ -495,7 +495,7 @@ export function middleware(request: NextRequest) {
 
 ```typescript
 // test/routes/plugin-routes.test.ts
-import { getPluginRouteHandler, getPluginRouteKeys } from '@/core/lib/registries/route-handlers'
+import { getPluginRouteHandler, getPluginRouteKeys } from '@nextsparkjs/registries/route-handlers'
 import { NextRequest } from 'next/server'
 
 describe('Plugin Routes', () => {
@@ -530,7 +530,7 @@ describe('Plugin Routes', () => {
 import {
   getPluginRouteKeys,
   PLUGIN_ROUTE_HANDLERS
-} from '@/core/lib/registries/route-handlers'
+} from '@nextsparkjs/registries/route-handlers'
 
 async function generateAPIDocs() {
   const routes = getPluginRouteKeys()
@@ -560,7 +560,7 @@ async function generateAPIDocs() {
 
 ```typescript
 // ❌ BAD: Runtime dynamic import (~40ms)
-const routeModule = await import(`@/contents/plugins/${plugin}/api/${path}/route`)
+const routeModule = await import(`@/plugins/${plugin}/api/${path}/route`)
 const handler = routeModule.POST
 
 // ✅ GOOD: Static import from registry (<1ms)
@@ -583,7 +583,7 @@ const handler3 = getPluginRouteHandler('ai/ai-history/[id]', 'PATCH') // <1ms
 ### ✅ DO: Use Helper Functions
 
 ```typescript
-import { getPluginRouteHandler } from '@/core/lib/registries/route-handlers'
+import { getPluginRouteHandler } from '@nextsparkjs/registries/route-handlers'
 
 const handler = getPluginRouteHandler('ai/generate', 'POST')
 ```
@@ -603,7 +603,7 @@ return handler(request, { params })
 ### ✅ DO: Use TypeScript Types
 
 ```typescript
-import type { RouteHandler } from '@/core/lib/registries/route-handlers'
+import type { RouteHandler } from '@nextsparkjs/registries/route-handlers'
 
 const handler: RouteHandler | null = getPluginRouteHandler('ai/generate', 'POST')
 ```
@@ -612,7 +612,7 @@ const handler: RouteHandler | null = getPluginRouteHandler('ai/generate', 'POST'
 
 ```typescript
 // ❌ FORBIDDEN
-const handler = await import(`@/contents/plugins/${plugin}/api/${path}/route`)
+const handler = await import(`@/plugins/${plugin}/api/${path}/route`)
 
 // ✅ CORRECT
 const handler = getPluginRouteHandler(`${plugin}/${path}`, method)
@@ -622,10 +622,10 @@ const handler = getPluginRouteHandler(`${plugin}/${path}`, method)
 
 ```typescript
 // ❌ FORBIDDEN
-import * as generateRoute from '@/contents/plugins/ai/api/generate/route'
+import * as generateRoute from '@/plugins/ai/api/generate/route'
 
 // ✅ CORRECT
-import { getPluginRouteHandler } from '@/core/lib/registries/route-handlers'
+import { getPluginRouteHandler } from '@nextsparkjs/registries/route-handlers'
 const handler = getPluginRouteHandler('ai/generate', 'POST')
 ```
 
@@ -638,7 +638,7 @@ const handler = getPluginRouteHandler('ai/generate', 'POST')
 **Problem:** `getPluginRouteHandler('my-route', 'POST')` returns null
 
 **Solutions:**
-1. Check route file exists: `contents/plugins/[plugin]/api/[path]/route.ts`
+1. Check route file exists: `plugins/[plugin]/api/[path]/route.ts`
 2. Verify POST method is exported in route file
 3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` to regenerate
 4. Restart dev server
@@ -670,7 +670,7 @@ const handler = getPluginRouteHandler('ai/generate', 'POST')
 ```typescript
 import type {
   RouteHandler
-} from '@/core/lib/registries/route-handlers'
+} from '@nextsparkjs/registries/route-handlers'
 
 // Strongly typed handler
 const handler: RouteHandler | null = getPluginRouteHandler('ai/generate', 'POST')
@@ -694,5 +694,5 @@ const routeKeys: string[] = getPluginRouteKeys()
 **Version**: 1.0.0  
 **Status**: Complete  
 **Auto-Generated**: Yes (by packages/core/scripts/build/registry.mjs)
-**Registry File**: `core/lib/registries/route-handlers.ts`  
+**Registry File**: `.nextspark/registries/route-handlers.ts`
 **Integration**: Next.js App Router 14.x

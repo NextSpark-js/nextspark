@@ -5,6 +5,7 @@
  */
 
 import { TranslationService } from '../services/translation.service'
+import { ThemeService } from '../services/theme.service'
 import { loadMergedTranslations } from './registry'
 import { getAllEntityConfigs, ensureInitialized } from '../entities/registry'
 import type { SupportedLocale } from '../entities/types'
@@ -163,8 +164,7 @@ export async function loadOptimizedTranslations(
 
     // For dashboard and entity pages, also include entity translations
     if (strategy === 'DASHBOARD_AUTHENTICATED' || pathname.includes('[entity]')) {
-      const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
-      const entityTranslations = await TranslationService.loadAllEntities(activeTheme, locale)
+      const entityTranslations = await TranslationService.loadAllEntities(ThemeService.getCurrentName(), locale)
 
       for (const [entityName, translations] of Object.entries(entityTranslations)) {
         if (Object.keys(translations).length > 0) {

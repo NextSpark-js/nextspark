@@ -195,10 +195,8 @@ export function releaseAgeExclusions(version: string): string[] {
  * which lets `pnpm install` resolve the project again under the policy.
  *
  * `packages:` is there because pnpm 9 refuses to run in a directory whose
- * pnpm-workspace.yaml has none. It lists the globs `nextspark init` adds for
- * themes and plugins; init merges into this file rather than replacing it. It
- * also makes the project a workspace root, so adding a dependency to the
- * project itself takes `-w`.
+ * pnpm-workspace.yaml has none. Root-first source and local plugins are owned
+ * by the project rather than separate workspace packages.
  */
 export function buildWorkspaceYaml(
   allowlist: string[],
@@ -213,9 +211,7 @@ export function buildWorkspaceYaml(
   const overrideYaml = overrideEntries.length > 0
     ? `overrides:\n${overrideEntries.map(([name, spec]) => `  '${name}': '${spec}'`).join('\n')}\n\n`
     : ''
-  return `packages:
-  - 'contents/themes/*'
-  - 'contents/plugins/*'
+  return `packages: []
 
 # Dependencies allowed to run their install scripts: pnpm 11 reads allowBuilds,
 # pnpm 10 onlyBuiltDependencies, and pnpm 9 runs them all.

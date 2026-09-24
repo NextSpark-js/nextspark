@@ -297,13 +297,13 @@ PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install
 **Error message:**
 ```text
 SyntaxError: Unexpected token in entity config
-Error in: contents/themes/default/entities/tasks/tasks.config.ts
+Error in: entities/tasks/tasks.config.ts
 ```
 
 **Solution:**
 ```bash
 # Check TypeScript syntax in config file
-code contents/themes/default/entities/tasks/tasks.config.ts
+code entities/tasks/tasks.config.ts
 
 # Run TypeScript checker
 pnpm --dir apps/dev exec tsc --noEmit
@@ -329,7 +329,7 @@ Plugin config validation failed
 **Solution:**
 ```bash
 # Check plugin config structure
-code contents/plugins/ai/plugin.config.ts
+code plugins/ai/plugin.config.ts
 
 # Verify required fields:
 # - id
@@ -393,13 +393,13 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --build --ver
 **Error message:**
 ```text
 Error compiling CSS: Unexpected token
-File: contents/themes/default/styles/globals.css
+File: styles/globals.css
 ```
 
 **Solution:**
 ```bash
 # Check CSS syntax
-code contents/themes/default/styles/globals.css
+code styles/globals.css
 
 # Common errors:
 # - Missing semicolon
@@ -415,21 +415,13 @@ pnpm build
 
 **Error message:**
 ```text
-Theme not found: default
-Required files missing in: contents/themes/default/
+No NextSpark project found
 ```
 
 **Solution:**
 ```bash
-# Verify theme structure
-ls -la contents/themes/default/
-
-# Required files:
-# - theme.config.ts
-# - styles/ (directory)
-
-# If missing, create theme structure
-# or check NEXT_PUBLIC_ACTIVE_THEME matches directory name
+# Run from the project root and verify required files
+ls nextspark.config.ts package.json config/theme.config.ts styles/
 ```
 
 #### 3. Invalid CSS variables
@@ -526,54 +518,15 @@ Cannot find module '@/core/lib/...'
 
 ## Runtime Issues
 
-### "Theme not found"
+### "No NextSpark project found"
 
-**Problem:** App fails to load with theme error
-
-**Error in console:**
-```text
-Error: Theme not found: default
-Theme directory does not exist: contents/themes/default
-```
-
-**Solution:**
-
-#### 1. Check NEXT_PUBLIC_ACTIVE_THEME
+Run the command from the directory containing `nextspark.config.ts`, or from
+one of its descendants. Confirm that directory also contains `package.json`,
+declares `next`, and has the expected root-level source directories.
 
 ```bash
-# Check .env.local
-grep NEXT_PUBLIC_ACTIVE_THEME .env.local
-
-# Should match directory name exactly (case-sensitive)
-NEXT_PUBLIC_ACTIVE_THEME="default"
-```
-
-#### 2. Verify theme directory exists
-
-```bash
-# List themes
-ls contents/themes/
-
-# Should show: default/
-
-# If missing, check if you renamed it
-# Or create new theme structure
-```
-
-#### 3. Rebuild registries
-
-```bash
-# Clear and rebuild
-rm -rf .nextspark/registries
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
-```
-
-#### 4. Restart dev server
-
-```bash
-# Stop server (Ctrl+C)
-# Restart
-pnpm dev
+ls nextspark.config.ts package.json config/theme.config.ts styles/
+pnpm exec nextspark registry:build
 ```
 
 ---
@@ -593,7 +546,7 @@ EntityError: Entity 'tasks' not found in registry
 
 ```bash
 # Verify entity directory
-ls contents/themes/default/entities/tasks/
+ls entities/tasks/
 
 # Should contain:
 # - tasks.config.ts
@@ -629,7 +582,7 @@ export const taskConfig: EntityConfig = {
 **Error:**
 ```text
 Error: Failed to load registries
-Module not found: core/lib/registries/entity-registry
+Module not found: .nextspark/registries/entity-registry
 ```
 
 **Solution:**
@@ -645,7 +598,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 ```bash
 # Verify files exist
-ls core/lib/registries/
+ls .nextspark/registries/
 
 # Should show:
 # - entity-registry.ts
@@ -975,7 +928,6 @@ Error: Required environment variable not set
   - `BETTER_AUTH_SECRET`
   - `BETTER_AUTH_URL`
   - `NEXT_PUBLIC_APP_URL`
-  - `NEXT_PUBLIC_ACTIVE_THEME`
   - `RESEND_API_KEY`
   - etc.
 
@@ -1161,7 +1113,7 @@ vercel logs <deployment-url> --follow
 5. **Configuration:**
    - `.env.local` (without secrets)
    - `package.json` versions
-   - Active theme name
+   - project name
 
 ### Support Channels
 

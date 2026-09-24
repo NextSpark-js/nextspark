@@ -54,7 +54,7 @@ The plugin is **entity-agnostic**. Themes provide an **Adapter** that tells the 
 Create a class that extends `SocialPlatformAdapter`:
 
 ```typescript
-// contents/themes/{your-theme}/lib/social-media/my-adapter.ts
+// lib/social-media/my-adapter.ts
 import {
   SocialPlatformAdapter,
   type SocialPlatformAdapterConfig,
@@ -104,7 +104,7 @@ export class ProjectsSocialPlatformAdapter extends SocialPlatformAdapter {
 Create the module index that the plugin auto-discovers:
 
 ```typescript
-// contents/themes/{your-theme}/lib/social-media/index.ts
+// lib/social-media/index.ts
 import { ProjectsSocialPlatformAdapter } from './my-adapter'
 import type { SocialPlatformAdapter } from '@/plugins/social-media-publisher/lib/adapter'
 
@@ -114,7 +114,7 @@ export { ProjectsSocialPlatformAdapter } from './my-adapter'
 /**
  * Factory function - REQUIRED for plugin auto-discovery.
  * The plugin looks for this function in:
- * `contents/themes/{NEXT_PUBLIC_ACTIVE_THEME}/lib/social-media/index.ts`
+ * `lib/social-media/index.ts`
  */
 export function createAdapter(): SocialPlatformAdapter {
   return new ProjectsSocialPlatformAdapter()
@@ -124,7 +124,7 @@ export function createAdapter(): SocialPlatformAdapter {
 ### Step 3: Create the Assignment Table Migration
 
 ```sql
--- contents/themes/{your-theme}/migrations/XXX_projects_social_platforms.sql
+-- migrations/XXX_projects_social_platforms.sql
 
 CREATE TABLE IF NOT EXISTS "projects_social_platforms" (
   id                  TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -150,7 +150,7 @@ CREATE TABLE IF NOT EXISTS "projects_social_platforms" (
 The plugin automatically discovers your adapter using:
 
 ```
-NEXT_PUBLIC_ACTIVE_THEME → contents/themes/{theme}/lib/social-media/index.ts
+project root → lib/social-media/index.ts
                                                           ↓
                                               createAdapter() → Your adapter instance
 ```
@@ -186,7 +186,7 @@ The content-buddy theme uses this plugin with clients as the parent entity:
 ## Directory Structure
 
 ```
-contents/plugins/social-media-publisher/
+plugins/social-media-publisher/
 ├── plugin.config.ts              # Plugin metadata
 ├── types/
 │   └── social.types.ts          # TypeScript interfaces
@@ -383,7 +383,7 @@ async function getClientSocialPlatforms(clientId: string) {
 ### Publishing to Social Media
 
 ```typescript
-import { FacebookAPI, InstagramAPI } from '@/contents/plugins/social-media-publisher/lib/providers'
+import { FacebookAPI, InstagramAPI } from '@/plugins/social-media-publisher/lib/providers'
 import { TokenEncryption } from '@/core/lib/oauth/encryption'
 
 async function publishToInstagram(account: any, imageUrl: string, caption: string) {
@@ -417,7 +417,7 @@ The Social Media Publisher plugin supports **plugin-level `.env` files** that ta
 
 1. **Copy the example file:**
    ```bash
-   cp contents/plugins/social-media-publisher/.env.example contents/plugins/social-media-publisher/.env
+   cp plugins/social-media-publisher/.env.example plugins/social-media-publisher/.env
    ```
 
 2. **Configure your credentials:**
@@ -434,7 +434,7 @@ The Social Media Publisher plugin supports **plugin-level `.env` files** that ta
 
 The plugin environment loader uses this priority:
 
-1. **Plugin `.env`** (`contents/plugins/social-media-publisher/.env`) - Highest priority
+1. **Plugin `.env`** (`plugins/social-media-publisher/.env`) - Highest priority
 2. **Root `.env`** (`/.env`) - Fallback for variables not in plugin .env
 3. **Built-in defaults** - Lowest priority
 
@@ -568,7 +568,7 @@ The `clients_social_platforms` table is created as part of the social-platforms 
 ### Unit Tests (TODO)
 
 ```bash
-npm test contents/plugins/social-media-publisher
+npm test plugins/social-media-publisher
 ```
 
 ## Troubleshooting

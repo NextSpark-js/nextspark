@@ -36,7 +36,7 @@ When the same translation key exists in multiple sources, the higher-priority so
   }
 }
 
-// contents/themes/default/messages/en.json
+// messages/en.json
 {
   "buttons": {
     "submit": "Send"
@@ -248,7 +248,7 @@ Don't add to core when:
 
 Theme translations provide theme-specific content and branding, allowing complete UI customization without modifying core translations.
 
-**Location**: `contents/themes/{theme}/messages/{locale}.json`
+**Location**: `messages/{locale}.json`
 
 **Purpose**:
 - Theme-specific pages
@@ -261,7 +261,7 @@ Theme translations provide theme-specific content and branding, allowing complet
 ### Directory Structure
 
 ```text
-contents/themes/default/messages/
+messages/
 ├── en.json                      # English theme translations (~15KB)
 ├── es.json                      # Spanish theme translations (~15KB)
 └── README.md                    # Optional: translation guidelines
@@ -269,7 +269,7 @@ contents/themes/default/messages/
 
 ### Theme Translation Example
 
-**File**: `contents/themes/default/messages/en.json`
+**File**: `messages/en.json`
 
 ```json
 {
@@ -364,7 +364,7 @@ contents/themes/default/messages/
 Theme translations use the auto-generated registry:
 
 ```typescript
-import { loadThemeTranslation } from '@/core/lib/registries/translation-registry'
+import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 
 const translations = await loadThemeTranslation('default', 'en')
 ```
@@ -385,7 +385,7 @@ Themes can override specific core translations:
   }
 }
 
-// contents/themes/custom/messages/en.json
+// messages/en.json
 {
   "buttons": {
     "submit": "Send Now"  // Overrides core translation
@@ -418,7 +418,7 @@ Don't add to theme when:
 
 Plugin translations provide localized content for plugin-specific features and UI elements.
 
-**Location**: `contents/plugins/{plugin}/messages/{locale}.json`
+**Location**: `plugins/{plugin}/messages/{locale}.json`
 
 **Purpose**:
 - Plugin-specific UI
@@ -430,7 +430,7 @@ Plugin translations provide localized content for plugin-specific features and U
 ### Directory Structure
 
 ```text
-contents/plugins/ai/messages/
+plugins/ai/messages/
 ├── en.json                      # English plugin translations
 ├── es.json                      # Spanish plugin translations
 └── README.md                    # Optional: translation guidelines
@@ -438,7 +438,7 @@ contents/plugins/ai/messages/
 
 ### Plugin Translation Example
 
-**File**: `contents/plugins/ai/messages/en.json`
+**File**: `plugins/ai/messages/en.json`
 
 ```json
 {
@@ -521,14 +521,14 @@ Plugins have the highest priority and can override both theme and core translati
   }
 }
 
-// contents/themes/default/messages/en.json
+// messages/en.json
 {
   "buttons": {
     "save": "Save Changes"
   }
 }
 
-// contents/plugins/custom-workflow/messages/en.json
+// plugins/custom-workflow/messages/en.json
 {
   "buttons": {
     "save": "Apply Workflow"  // Highest priority
@@ -574,7 +574,7 @@ Entities can include inline translations for field labels, descriptions, and UI 
 Entities define translations directly in their configuration:
 
 ```typescript
-// contents/themes/default/entities/tasks/tasks.config.ts
+// entities/tasks/tasks.config.ts
 export const taskConfig: EntityConfig = {
   slug: 'tasks',
 
@@ -807,7 +807,7 @@ plugin: "Process"
 
 **2. Use Theme for Branding**:
 ```json
-// contents/themes/custom/messages/en.json
+// messages/en.json
 {
   "home": {
     "hero": {
@@ -819,7 +819,7 @@ plugin: "Process"
 
 **3. Use Plugin for Feature-Specific Text**:
 ```json
-// contents/plugins/analytics/messages/en.json
+// plugins/analytics/messages/en.json
 {
   "analytics": {
     "dashboard": {
@@ -859,7 +859,7 @@ plugin: "Process"
 // core/messages/en/common.json
 { "buttons": { "save": "Save" } }
 
-// contents/themes/default/messages/en.json
+// messages/en.json
 { "buttons": { "save": "Save" } }  // Unnecessary duplication
 ```
 
@@ -939,7 +939,7 @@ core/messages/
 ### Theme Translations Structure
 
 ```text
-contents/themes/[theme]/messages/
+messages/
 ├── en.json                      # All theme translations
 ├── es.json                      # Spanish translations
 └── README.md                    # Translation guidelines
@@ -948,7 +948,7 @@ contents/themes/[theme]/messages/
 ### Plugin Translations Structure
 
 ```text
-contents/plugins/[plugin]/messages/
+plugins/[plugin]/messages/
 ├── en.json                      # Plugin translations
 ├── es.json                      # Spanish translations
 └── README.md                    # Translation guidelines
@@ -1001,7 +1001,7 @@ const t = useTranslations('newFeature')
 ```bash
 # Search for existing key
 grep -r "oldTranslationKey" core/messages/
-grep -r "oldTranslationKey" contents/themes/
+grep -r "oldTranslationKey" ./
 ```
 
 **2. Update All Locales**:
@@ -1016,7 +1016,7 @@ grep -r "oldTranslationKey" contents/themes/
 **3. Verify No Duplicates**:
 ```bash
 # Check if key exists in multiple sources
-grep -r "translationKey" core/ contents/
+grep -r "translationKey" messages/ entities/ plugins/
 ```
 
 ---

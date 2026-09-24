@@ -82,8 +82,8 @@ void invalid
   }))
 })
 
-test("the default theme's app.config.ts docs comments do not attribute effects to settings nothing reads", () => {
-  const file = 'themes/default/config/app.config.ts'
+test("the default project's app.config.ts docs comments do not attribute effects to settings nothing reads", () => {
+  const file = 'apps/dev/config/app.config.ts'
   const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8')
   const blockStart = content.indexOf('  docs: {')
   assert.ok(blockStart >= 0, `${file} has no top-level docs: {...} block`)

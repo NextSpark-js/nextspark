@@ -495,9 +495,9 @@ export interface BlockConfig {
 
   // Optional metadata
   tags?: string[]
-  isCore?: boolean // True if from core, false if from theme/plugin
-  source?: 'core' | 'theme' | 'plugin'
-  sourceId?: string // Theme or plugin ID
+  isCore?: boolean // True if from core, false if from project/theme/plugin
+  source?: 'core' | 'project' | 'theme' | 'plugin'
+  sourceId?: string // Project, theme, or plugin ID
   version?: string
   deprecated?: boolean
   replacedBy?: string // Slug of replacement block

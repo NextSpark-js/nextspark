@@ -51,7 +51,7 @@
 ### **1. Configuración Básica**
 
 ```typescript
-// contents/plugins/amplitude/plugin.config.ts
+// plugins/amplitude/plugin.config.ts
 import { amplitudePlugin } from './plugin.config';
 
 const config = {
@@ -68,7 +68,7 @@ const config = {
 
 ```tsx
 // app/layout.tsx
-import { AmplitudeProvider } from '@/contents/plugins/amplitude/providers/AmplitudeProvider';
+import { AmplitudeProvider } from '@/plugins/amplitude/providers/AmplitudeProvider';
 
 export default function RootLayout({ children }) {
   return (
@@ -87,7 +87,7 @@ export default function RootLayout({ children }) {
 
 ```tsx
 // components/YourComponent.tsx
-import { useAmplitude } from '@/contents/plugins/amplitude/hooks/useAmplitude';
+import { useAmplitude } from '@/plugins/amplitude/hooks/useAmplitude';
 
 export function YourComponent() {
   const { track, identify, isInitialized } = useAmplitude();
@@ -207,7 +207,7 @@ registerExperiment(experimentConfig);
 
 ```tsx
 // Declarative A/B Testing
-import { ExperimentWrapper, ABTest, FeatureFlag } from '@/contents/plugins/amplitude/components/ExperimentWrapper';
+import { ExperimentWrapper, ABTest, FeatureFlag } from '@/plugins/amplitude/components/ExperimentWrapper';
 
 // Wrapper básico
 <ExperimentWrapper 
@@ -275,7 +275,7 @@ const sessionReplayConfig = {
 ### **Control Programático**
 
 ```tsx
-import { useSessionReplay } from '@/contents/plugins/amplitude/hooks/useSessionReplay';
+import { useSessionReplay } from '@/plugins/amplitude/hooks/useSessionReplay';
 
 function SessionControls() {
   const { 
@@ -303,7 +303,7 @@ function SessionControls() {
 ### **ConsentManager Component**
 
 ```tsx
-import { ConsentManager, useConsent } from '@/contents/plugins/amplitude/components/ConsentManager';
+import { ConsentManager, useConsent } from '@/plugins/amplitude/components/ConsentManager';
 
 function App() {
   const { 
@@ -357,7 +357,7 @@ console.log(`${status.percentage}% de consentimiento`);
 ### **Analytics Dashboard**
 
 ```tsx
-import { AnalyticsDashboard } from '@/contents/plugins/amplitude/components/AnalyticsDashboard';
+import { AnalyticsDashboard } from '@/plugins/amplitude/components/AnalyticsDashboard';
 
 <AnalyticsDashboard
   refreshInterval={30000}  // 30 segundos
@@ -370,7 +370,7 @@ import { AnalyticsDashboard } from '@/contents/plugins/amplitude/components/Anal
 ### **Performance Monitor**
 
 ```tsx
-import { PerformanceMonitor } from '@/contents/plugins/amplitude/components/PerformanceMonitor';
+import { PerformanceMonitor } from '@/plugins/amplitude/components/PerformanceMonitor';
 
 <PerformanceMonitor
   refreshInterval={5000}   // 5 segundos
@@ -411,7 +411,7 @@ npm run type-check
 
 ```typescript
 // __tests__/setup.ts
-jest.mock('@/contents/plugins/amplitude/hooks/useAmplitude', () => ({
+jest.mock('@/plugins/amplitude/hooks/useAmplitude', () => ({
   useAmplitude: () => ({
     track: jest.fn().mockResolvedValue(undefined),
     identify: jest.fn().mockResolvedValue(undefined),
@@ -531,14 +531,14 @@ const { consent } = useAmplitudeContext();
 console.log('Analytics consent:', consent.analytics);
 
 // Verificar rate limiting
-import { rateLimiter } from '@/contents/plugins/amplitude/lib/security';
+import { rateLimiter } from '@/plugins/amplitude/lib/security';
 console.log('Rate limit OK:', rateLimiter.checkRateLimit('user-id'));
 ```
 
 #### **Performance Issues**
 ```typescript
 // Verificar métricas
-import { getPerformanceStats } from '@/contents/plugins/amplitude/lib/performance';
+import { getPerformanceStats } from '@/plugins/amplitude/lib/performance';
 const stats = getPerformanceStats();
 console.log('Memory usage:', stats.amplitudeCore.memoryUsage);
 console.log('Queue size:', stats.amplitudeCore.eventQueueSize);
@@ -578,7 +578,7 @@ const debugConfig = {
 ## 🏗️ **Arquitectura**
 
 ```
-contents/plugins/amplitude/
+plugins/amplitude/
 ├── plugin.config.ts          # Configuración principal
 ├── types/amplitude.types.ts   # Tipos TypeScript
 ├── providers/                 # React Providers

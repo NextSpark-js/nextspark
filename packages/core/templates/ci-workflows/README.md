@@ -52,7 +52,7 @@ Full test suite run nightly for comprehensive coverage.
 
 After installation, you can customize workflows in `.github/workflows/`:
 
-1. **Change theme**: Set `NEXT_PUBLIC_ACTIVE_THEME` environment variable
+1. **Change project template**: regenerate or extract a separate root-first project; CI never switches a running project by environment variable
 2. **Modify tags**: Adjust `grepTags` in test commands
 3. **Add notifications**: Add Slack/Discord notifications on failure
 4. **Parallel execution**: Configure matrix strategy for faster runs
@@ -61,11 +61,10 @@ After installation, you can customize workflows in `.github/workflows/`:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `NEXT_PUBLIC_ACTIVE_THEME` | Active theme for tests | `default` |
 | `CYPRESS_BASE_URL` | Application URL | `http://localhost:5173` |
 
 ## Related Files
 
 - `core/scripts/build/registry.mjs` - Registry build with tag validation
-- `core/lib/registries/testing-registry.ts` - Auto-generated tag registry
+- `.nextspark/registries/testing-registry.ts` - Auto-generated tag registry
 - `scripts/setup-ci.mjs` - Workflow installation script

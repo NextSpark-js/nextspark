@@ -12,8 +12,8 @@ import ts from 'typescript'
  */
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
-const agentFactoryFile = path.join(REPO, 'plugins/langchain/lib/agent-factory.ts')
-const streamingFile = path.join(REPO, 'plugins/langchain/lib/streaming.ts')
+const agentFactoryFile = path.join(REPO, 'apps/dev/plugins/langchain/lib/agent-factory.ts')
+const streamingFile = path.join(REPO, 'apps/dev/plugins/langchain/lib/streaming.ts')
 
 function formatDiagnostics(diagnostics: readonly ts.Diagnostic[]): string {
   return ts.formatDiagnosticsWithColorAndContext(diagnostics, {

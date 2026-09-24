@@ -238,11 +238,11 @@ if (scope.core === true) {
   // Selectors defined in core/lib/test/core-selectors.ts
   searchPath = "core/components/"
   selectorFile = "core/lib/test/core-selectors.ts"
-} else if (scope.theme) {
+} else if (scope.project) {
   // THEME project: components import from theme's selectors.ts
-  // Selectors defined in contents/themes/{theme}/tests/cypress/src/selectors.ts
-  searchPath = `contents/themes/${scope.theme}/`
-  selectorFile = `contents/themes/${scope.theme}/tests/cypress/src/selectors.ts`
+  // Selectors defined in tests/cypress/src/selectors.ts
+  searchPath = ``
+  selectorFile = `tests/cypress/src/selectors.ts`
 }
 ```
 
@@ -257,7 +257,7 @@ if (scope.core === true) {
    <button data-cy={sel('auth.login.submit')}>
    ```
 
-   **For THEME scope:**
+   **For PROJECT scope:**
    ```typescript
    // ✅ APPROVED - Theme project imports from theme's selectors.ts
    import { sel } from '@theme/tests/cypress/src/selectors'
@@ -275,7 +275,7 @@ if (scope.core === true) {
 
 2. **Selectors are defined in CORRECT location before use:**
    - **CORE scope**: Check `core/lib/test/core-selectors.ts`
-   - **THEME scope**: Check `contents/themes/{theme}/tests/cypress/src/selectors.ts`
+   - **PROJECT scope**: Check `tests/cypress/src/selectors.ts`
 
 3. **tests.md has documented selectors:**
    - frontend-validator should have documented selector paths in tests.md
@@ -295,19 +295,19 @@ if (scope.core === true) {
   })
 }
 
-// For THEME scope:
-if (scope.theme) {
+// For PROJECT scope:
+if (scope.project) {
   // Search in theme components
   await Grep({
     pattern: 'data-cy="[^"]*"',  // Hardcoded strings (VIOLATIONS)
-    path: `contents/themes/${scope.theme}/`,
+    path: `./components/`,
     glob: "*.tsx"
   })
 
   // ALSO check for wrong imports (theme importing from core)
   await Grep({
     pattern: "from '@/core/lib/test'",  // Wrong import in theme!
-    path: `contents/themes/${scope.theme}/components/`,
+    path: `components/`,
     glob: "*.tsx"
   })
 }
@@ -337,10 +337,10 @@ if (scope.core === true) {
   // Ensure import exists: import { sel } from '@/core/lib/test'
 }
 
-// For THEME scope:
-if (scope.theme) {
+// For PROJECT scope:
+if (scope.project) {
   await Edit({
-    file_path: `contents/themes/${scope.theme}/components/InvoiceForm.tsx`,
+    file_path: `components/InvoiceForm.tsx`,
     old_string: `<button data-cy="invoice-submit" type="submit">`,
     new_string: `<button data-cy={sel('invoicing.submitBtn')} type="submit">`
   })
@@ -599,15 +599,15 @@ Before marking complete, verify:
 - [ ] Read session `scope.json` to determine CORE vs THEME context
 - [ ] Searched for hardcoded `data-cy="..."` strings in correct path:
   - Core scope: `core/components/`
-  - Theme scope: `contents/themes/{theme}/`
+  - Project scope: `./`
 - [ ] Verified components import `sel()` from CORRECT location:
   - Core scope: `@/core/lib/test`
-  - Theme scope: `@theme/tests/cypress/src/selectors`
+  - Project scope: `@theme/tests/cypress/src/selectors`
 - [ ] Verified theme components do NOT import from `@/core/lib/test`
 - [ ] Verified dynamic selectors use placeholder syntax: `sel('path', { id, slug })`
 - [ ] Confirmed selectors are defined in CORRECT location:
   - Core scope: `core/lib/test/core-selectors.ts`
-  - Theme scope: `contents/themes/{theme}/tests/cypress/src/selectors.ts`
+  - Project scope: `tests/cypress/src/selectors.ts`
 - [ ] Checked tests.md has documented selector paths with LOCATION (CORE/THEME)
 - [ ] Fixed minor selector violations directly (1-2 occurrences) using SCOPE-AWARE pattern
 - [ ] Reported major selector violations (3+) to frontend-developer

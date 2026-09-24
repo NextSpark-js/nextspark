@@ -3,16 +3,16 @@
 Add Translation Script
 
 Adds a translation key to both EN and ES locales.
-Supports both core messages and theme messages.
+Supports both core messages and root-first project messages.
 
 Usage:
-    python add-translation.py --key KEY --en VALUE --es VALUE [--theme THEME]
+    python add-translation.py --key KEY --en VALUE --es VALUE [--core] [--namespace NS]
 
 Options:
     --key KEY       Dot-notation key (e.g., "settings.profile.title")
     --en VALUE      English translation value
     --es VALUE      Spanish translation value
-    --theme THEME   Add to theme messages instead of core
+    --core          Add to framework core messages instead of project messages
     --namespace NS  Core namespace file (e.g., "dashboard", "common")
     --dry-run       Preview without writing files
 """
@@ -25,9 +25,13 @@ from pathlib import Path
 from typing import Dict, Any
 
 
-def get_active_theme() -> str:
-    """Get active theme from environment or default."""
-    return os.environ.get('NEXT_PUBLIC_ACTIVE_THEME', 'default')
+def get_repo_root() -> Path:
+    """Find the monorepo root that owns packages/core."""
+    for parent in Path(__file__).resolve().parents:
+        if (parent / 'packages' / 'core').is_dir():
+            return parent
+    raise RuntimeError('Could not find the NextSpark monorepo root')
+
 
 
 def load_json_file(file_path: Path) -> dict:
@@ -100,8 +104,9 @@ def infer_namespace(key: str) -> str:
 def add_to_core(key: str, en_value: str, es_value: str, namespace: str, dry_run: bool) -> bool:
     """Add translation to core messages."""
     # Determine file paths
-    en_path = Path(f'core/messages/en/{namespace}.json')
-    es_path = Path(f'core/messages/es/{namespace}.json')
+    messages_root = get_repo_root() / 'packages' / 'core' / 'src' / 'messages'
+    en_path = messages_root / 'en' / f'{namespace}.json'
+    es_path = messages_root / 'es' / f'{namespace}.json'
 
     # Load existing data
     en_data = load_json_file(en_path)
@@ -127,28 +132,33 @@ def add_to_core(key: str, en_value: str, es_value: str, namespace: str, dry_run:
     return True
 
 
-def add_to_theme(key: str, en_value: str, es_value: str, theme: str, dry_run: bool) -> bool:
-    """Add translation to theme messages."""
-    en_path = Path(f'contents/themes/{theme}/messages/en.json')
-    es_path = Path(f'contents/themes/{theme}/messages/es.json')
-
-    # Check if theme exists
-    theme_path = Path(f'contents/themes/{theme}')
-    if not theme_path.exists():
-        print(f"  Error: Theme '{theme}' not found at {theme_path}")
+def add_to_project(key: str, en_value: str, es_value: str, namespace: str, dry_run: bool) -> bool:
+    """Add translation to root-first project messages."""
+    if not Path('nextspark.config.ts').exists():
+        print('  Error: nextspark.config.ts not found in the current project root')
         return False
+
+    messages_root = Path('messages')
+    if (messages_root / 'en').is_dir() or (messages_root / 'es').is_dir():
+        en_path = messages_root / 'en' / f'{namespace}.json'
+        es_path = messages_root / 'es' / f'{namespace}.json'
+        key_without_ns = key[len(namespace) + 1:] if key.startswith(f'{namespace}.') else key
+    else:
+        en_path = messages_root / 'en.json'
+        es_path = messages_root / 'es.json'
+        key_without_ns = key
 
     # Load existing data
     en_data = load_json_file(en_path)
     es_data = load_json_file(es_path)
 
     # Check if key already exists
-    if get_nested_value(en_data, key) is not None:
+    if get_nested_value(en_data, key_without_ns) is not None:
         print(f"  Warning: Key '{key}' already exists in EN")
 
     # Set values
-    en_data = set_nested_value(en_data, key, en_value)
-    es_data = set_nested_value(es_data, key, es_value)
+    en_data = set_nested_value(en_data, key_without_ns, en_value)
+    es_data = set_nested_value(es_data, key_without_ns, es_value)
 
     # Save files
     save_json_file(en_path, en_data, dry_run)
@@ -162,7 +172,7 @@ def main():
     parser.add_argument('--key', required=True, help='Dot-notation key path')
     parser.add_argument('--en', required=True, help='English value')
     parser.add_argument('--es', required=True, help='Spanish value')
-    parser.add_argument('--theme', default=None, help='Add to theme instead of core')
+    parser.add_argument('--core', action='store_true', help='Add to framework core messages instead of project messages')
     parser.add_argument('--namespace', default=None, help='Core namespace file')
     parser.add_argument('--dry-run', action='store_true', help='Preview without writing')
 
@@ -175,23 +185,22 @@ def main():
     print(f"EN: {args.en}")
     print(f"ES: {args.es}")
 
-    if args.theme:
-        print(f"Target: Theme ({args.theme})")
-    else:
+    if args.core:
         namespace = args.namespace or infer_namespace(args.key)
         print(f"Target: Core (namespace: {namespace})")
-
+    else:
+        print("Target: Project messages")
     print(f"Dry run: {args.dry_run}")
     print(f"{'=' * 60}\n")
 
     try:
-        if args.theme:
-            # Add to theme messages
-            success = add_to_theme(args.key, args.en, args.es, args.theme, args.dry_run)
-        else:
+        if args.core:
             # Add to core messages
             namespace = args.namespace or infer_namespace(args.key)
             success = add_to_core(args.key, args.en, args.es, namespace, args.dry_run)
+        else:
+            namespace = args.namespace or infer_namespace(args.key)
+            success = add_to_project(args.key, args.en, args.es, namespace, args.dry_run)
 
         if success:
             if args.dry_run:

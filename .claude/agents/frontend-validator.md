@@ -183,9 +183,9 @@ const scopeJson = await Read('.claude/sessions/[session-name]/scope.json')
 if (scope.core === true) {
   // CORE project: components import from @/core/lib/test
   // Selectors defined in core/lib/test/core-selectors.ts
-} else if (scope.theme) {
+} else if (scope.project) {
   // THEME project: components import from theme's selectors.ts
-  // Selectors defined in contents/themes/{theme}/tests/cypress/src/selectors.ts
+  // Selectors defined in tests/cypress/src/selectors.ts
 }
 ```
 
@@ -227,7 +227,7 @@ if (scope.core === true) {
 
 3. **New selectors MUST be defined in correct location BEFORE use:**
    - **CORE scope**: `core/lib/test/core-selectors.ts`
-   - **THEME scope**: `contents/themes/{theme}/tests/cypress/src/selectors.ts`
+   - **PROJECT scope**: `tests/cypress/src/selectors.ts`
 
 **Validation Criteria for Tests/POMs (cySelector):**
 
@@ -281,7 +281,7 @@ await Grep({
 // Search for forbidden patterns in tests
 await Grep({
   pattern: '\\[data-cy="[^"]*"\\]',  // Hardcoded selector strings (REJECTED)
-  path: "contents/themes/",
+  path: "./",
   glob: "*.cy.ts"
 })
 
@@ -303,7 +303,7 @@ await Grep({
 // Verify cySelector() usage in tests
 await Grep({
   pattern: 'cySelector\\(',  // Correct pattern
-  path: "contents/themes/",
+  path: "./",
   glob: "*.cy.ts"
 })
 ```
@@ -336,16 +336,16 @@ if (scope.core === true) {
   })
 }
 
-// If THEME scope (scope.theme === "themeName"):
-if (scope.theme) {
-  const themeName = scope.theme
+// If PROJECT scope (scope.project === "themeName"):
+if (scope.project) {
+  const themeName = scope.project
 
   // Step 1: Verify selector exists in THEME_SELECTORS
-  await Read(`contents/themes/${themeName}/tests/cypress/src/selectors.ts`)
+  await Read(`tests/cypress/src/selectors.ts`)
 
   // Step 2: If selector doesn't exist, add it to THEME (not core!)
   await Edit({
-    file_path: `contents/themes/${themeName}/tests/cypress/src/selectors.ts`,
+    file_path: `tests/cypress/src/selectors.ts`,
     old_string: "const THEME_SELECTORS = {\n  ...CORE_SELECTORS,",
     new_string: `const THEME_SELECTORS = {
   ...CORE_SELECTORS,
@@ -357,7 +357,7 @@ if (scope.theme) {
 
   // Step 3: Fix theme component to import from theme's selectors.ts
   await Edit({
-    file_path: `contents/themes/${themeName}/components/InvoiceList.tsx`,
+    file_path: `components/InvoiceList.tsx`,
     old_string: '<Button data-cy="invoicing-new-btn" onClick={handleCreate}>',
     new_string: `import { sel } from '@theme/tests/cypress/src/selectors'
 // ...
@@ -367,14 +367,14 @@ if (scope.theme) {
 
 // Step 4: Fix hardcoded selectors in Cypress tests (always theme context)
 await Edit({
-  file_path: `contents/themes/${themeName}/tests/cypress/e2e/uat/invoice.cy.ts`,
+  file_path: `tests/cypress/e2e/uat/invoice.cy.ts`,
   old_string: "cy.get('[data-cy=\"invoicing-new-btn\"]')",
   new_string: "cy.get(cySelector('invoicing.newButton'))"
 })
 
 // Step 5: Verify import exists in test file
 await Edit({
-  file_path: `contents/themes/${themeName}/tests/cypress/e2e/uat/invoice.cy.ts`,
+  file_path: `tests/cypress/e2e/uat/invoice.cy.ts`,
   old_string: "describe('Invoice UAT'",
   new_string: `import { cySelector } from '../../src/selectors'
 
@@ -388,7 +388,7 @@ describe('Invoice UAT'`
 // Check for deprecated JSON selector fixtures - these should NOT exist
 const jsonFixtures = await Glob({
   pattern: 'fixtures/selectors/*.json',
-  path: `contents/themes/${themeName}/tests/cypress/`
+  path: `tests/cypress/`
 })
 
 if (jsonFixtures.length > 0) {
@@ -429,8 +429,8 @@ await Grep({
 
 ```typescript
 // Read translation files
-await Read('contents/themes/[ACTIVE_THEME]/messages/en.json')
-await Read('contents/themes/[ACTIVE_THEME]/messages/es.json')
+await Read('messages/en.json')
+await Read('messages/es.json')
 
 // Verify all keys used in components exist in BOTH files
 // If missing, ADD them
@@ -440,8 +440,8 @@ await Read('contents/themes/[ACTIVE_THEME]/messages/es.json')
 
 ```typescript
 // Translations should be in the correct location:
-// - Theme features: contents/themes/{theme}/messages/
-// - Plugin features: contents/plugins/{plugin}/messages/
+// - Theme features: messages/
+// - Plugin features: plugins/{plugin}/messages/
 // - NEVER duplicate core translations
 // - NEVER use core namespace for theme/plugin features
 ```
@@ -553,7 +553,7 @@ cy.get(cySelector('entities.table.row', { slug: 'products', id: '123' }))
 
 2. **If requiresNewSelectors = yes, create selector test file:**
    ```typescript
-   // Location: contents/themes/{theme}/tests/cypress/e2e/selectors/{feature}-selectors.cy.ts
+   // Location: tests/cypress/e2e/selectors/{feature}-selectors.cy.ts
 
    describe('UI Selectors Validation: {Feature}', { tags: ['@ui-selectors'] }, () => {
      beforeEach(() => {
@@ -719,7 +719,7 @@ Before marking complete, verify:
 **Step 0: Scope Context (CRITICAL - read first!):**
 - [ ] Read session `scope.json` to determine CORE vs THEME context
 - [ ] If `core: true` - validate against `core/lib/test/core-selectors.ts`
-- [ ] If `theme: "name"` - validate against `contents/themes/{name}/tests/cypress/src/selectors.ts`
+- [ ] If `theme: "name"` - validate against `tests/cypress/src/selectors.ts`
 
 **Centralized Selector Validation (v2.0 - see `.rules/selectors.md`):**
 - [ ] ALL components use `sel()` function (NOT hardcoded `data-cy="..."` strings)
@@ -730,7 +730,7 @@ Before marking complete, verify:
 - [ ] Dynamic selectors use placeholder syntax: `sel('path', { id, slug })`
 - [ ] New selectors are defined in CORRECT location BEFORE use:
   - Core scope: `core/lib/test/core-selectors.ts`
-  - Theme scope: `contents/themes/{theme}/tests/cypress/src/selectors.ts`
+  - Project scope: `tests/cypress/src/selectors.ts`
 - [ ] tests.md is updated with selector PATHS and LOCATION (CORE/THEME)
 
 **Cypress Test Selector Validation (v2.0):**

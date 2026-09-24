@@ -8,7 +8,7 @@ Usage:
     python validate-api.py [--path PATH] [--fix]
 
 Options:
-    --path PATH    Directory to scan (default: app/api/v1/)
+    --path PATH    Directory to scan (default: api/)
     --strict       Exit with error if violations found
     --json         Output results as JSON
 """
@@ -69,7 +69,7 @@ def analyze_route(file_path: Path) -> Dict:
     has_auth = bool(PATTERNS['has_auth'].search(content))
     if not has_auth and methods:
         # Check if it's a public endpoint
-        if '/auth/' not in str(file_path) and '(contents)' not in str(file_path):
+        if '/auth/' not in str(file_path):
             issues.append({
                 'type': 'missing_auth',
                 'message': 'No authentication found',
@@ -247,7 +247,7 @@ def print_json_report(results: List[Dict]):
 
 def main():
     parser = argparse.ArgumentParser(description='Validate API structure')
-    parser.add_argument('--path', default='app/api/v1/', help='Directory to scan')
+    parser.add_argument('--path', default='api/', help='Directory to scan')
     parser.add_argument('--strict', action='store_true', help='Exit with error if violations found')
     parser.add_argument('--json', action='store_true', help='Output as JSON')
 

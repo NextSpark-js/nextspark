@@ -263,14 +263,8 @@ async function createRootPackageJson(targetDir: string, config: WizardConfig): P
  * Create the pnpm-workspace.yaml file
  */
 async function createPnpmWorkspace(targetDir: string): Promise<void> {
-  // Include the web app's themes/plugins as workspace members so their own
-  // package.json dependencies (e.g. an AI plugin's @ai-sdk/* packages) get
-  // installed. Without these globs the plugin is copied but its deps never
-  // install, and `next build` fails with "Module not found".
   const entries = [
     DIRS.WEB,
-    `${DIRS.WEB}/contents/themes/*`,
-    `${DIRS.WEB}/contents/plugins/*`,
     DIRS.MOBILE,
   ]
 
@@ -338,14 +332,14 @@ Thumbs.db
 coverage/
 .nyc_output/
 
-# Cypress (theme-based in web/)
-${DIRS.WEB}/contents/themes/*/tests/cypress/videos
-${DIRS.WEB}/contents/themes/*/tests/cypress/screenshots
-${DIRS.WEB}/contents/themes/*/tests/cypress/allure-results
-${DIRS.WEB}/contents/themes/*/tests/cypress/allure-report
+# Cypress (web project)
+${DIRS.WEB}/tests/cypress/videos
+${DIRS.WEB}/tests/cypress/screenshots
+${DIRS.WEB}/tests/cypress/allure-results
+${DIRS.WEB}/tests/cypress/allure-report
 
-# Jest (theme-based in web/)
-${DIRS.WEB}/contents/themes/*/tests/jest/coverage
+# Jest (web project)
+${DIRS.WEB}/tests/jest/coverage
 
 # Mobile specific
 ${DIRS.MOBILE}/.expo/
@@ -613,8 +607,11 @@ This is a monorepo containing both web and mobile applications:
 \`\`\`
 ${config.projectSlug}/
 ├── ${DIRS.WEB}/                    # Next.js web application
-│   ├── app/                # Next.js App Router
-│   ├── contents/           # Themes and plugins
+│   ├── src/app/            # Generated Next.js adapter
+│   ├── entities/           # Project entity definitions
+│   ├── plugins/            # Enabled local plugins
+│   ├── templates/          # Project route templates
+│   ├── nextspark.config.ts # Project marker and configuration
 │   └── package.json
 ├── ${DIRS.MOBILE}/                 # Expo mobile application
 │   ├── app/                # Expo Router screens

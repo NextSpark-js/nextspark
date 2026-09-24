@@ -47,29 +47,29 @@ function actionFor(actions: SyncAction[], path: string): SyncAction {
 test('a tagged file that still matches its tag is updated when core changed it, and left alone when not', () => {
   const actions = planSync(input({
     appTemplates: files({ 'page.tsx': 'page v2', 'layout.tsx': 'layout', 'dashboard/page.tsx': 'dashboard' }),
-    projectApp: files({ 'page.tsx': tagged('app/page.tsx', 'page v1'), 'layout.tsx': tagged('app/layout.tsx', 'layout') }),
+    projectApp: files({ 'page.tsx': tagged('src/app/page.tsx', 'page v1'), 'layout.tsx': tagged('src/app/layout.tsx', 'layout') }),
   }))
 
-  const page = actionFor(actions, 'app/page.tsx')
+  const page = actionFor(actions, 'src/app/page.tsx')
   assert.equal(page.kind, 'update')
-  assert.ok(page.content?.equals(withGeneratedTag('app/page.tsx', Buffer.from('page v2'), VERSION)))
-  assert.equal(actionFor(actions, 'app/layout.tsx').kind, 'unchanged')
-  assert.ok(actionFor(actions, 'app/dashboard/page.tsx').content?.equals(withGeneratedTag('app/dashboard/page.tsx', Buffer.from('dashboard'), VERSION)))
+  assert.ok(page.content?.equals(withGeneratedTag('src/app/page.tsx', Buffer.from('page v2'), VERSION)))
+  assert.equal(actionFor(actions, 'src/app/layout.tsx').kind, 'unchanged')
+  assert.ok(actionFor(actions, 'src/app/dashboard/page.tsx').content?.equals(withGeneratedTag('src/app/dashboard/page.tsx', Buffer.from('dashboard'), VERSION)))
 })
 
 test('a tagged file changed since sync wrote it is kept, and replaced after a backup only with --overwrite', () => {
   const appTemplates = files({ 'page.tsx': 'page v2' })
-  const projectApp = files({ 'page.tsx': edited('app/page.tsx', 'page v1', ['v1', 'mine']) })
+  const projectApp = files({ 'page.tsx': edited('src/app/page.tsx', 'page v1', ['v1', 'mine']) })
 
-  const kept = actionFor(planSync(input({ appTemplates, projectApp })), 'app/page.tsx')
+  const kept = actionFor(planSync(input({ appTemplates, projectApp })), 'src/app/page.tsx')
   assert.equal(kept.kind, 'keep')
   assert.equal(kept.customized, true)
   assert.equal(kept.content, undefined)
 
-  const replaced = actionFor(planSync(input({ appTemplates, projectApp, overwrite: new Set(['app/page.tsx']) })), 'app/page.tsx')
+  const replaced = actionFor(planSync(input({ appTemplates, projectApp, overwrite: new Set(['src/app/page.tsx']) })), 'src/app/page.tsx')
   assert.equal(replaced.kind, 'update')
   assert.equal(replaced.backup, true)
-  assert.ok(replaced.content?.equals(withGeneratedTag('app/page.tsx', Buffer.from('page v2'), VERSION)))
+  assert.ok(replaced.content?.equals(withGeneratedTag('src/app/page.tsx', Buffer.from('page v2'), VERSION)))
 })
 
 test('an untagged file is tagged when identical to core, and kept as customized when it differs', () => {
@@ -78,18 +78,18 @@ test('an untagged file is tagged when identical to core, and kept as customized 
     projectApp: files({ 'layout.tsx': 'layout\n', 'page.tsx': 'page v1' }),
   }))
 
-  const layout = actionFor(actions, 'app/layout.tsx')
+  const layout = actionFor(actions, 'src/app/layout.tsx')
   assert.equal(layout.kind, 'adopt')
-  assert.match(layout.content!.toString(), /^\/\/ @nextspark-generated core@0\.2\.0 path=app\/layout\.tsx sha256=[0-9a-f]{64}\nlayout\r\n$/)
+  assert.match(layout.content!.toString(), /^\/\/ @nextspark-generated core@0\.2\.0 path=src\/app\/layout\.tsx sha256=[0-9a-f]{64}\nlayout\r\n$/)
 
-  const page = actionFor(actions, 'app/page.tsx')
+  const page = actionFor(actions, 'src/app/page.tsx')
   assert.equal(page.kind, 'keep')
   assert.equal(page.customized, true)
 })
 
 test('a file that cannot carry the tag is core\'s while it matches core, or what the last sync wrote', () => {
   const icon = Buffer.from([0, 1, 2])
-  const state: SyncState = { coreVersion: '0.1.0', files: { 'app/favicon.ico': { core: contentHash(icon), written: contentHash(icon) } } }
+  const state: SyncState = { coreVersion: '0.1.0', files: { 'src/app/favicon.ico': { core: contentHash(icon), written: contentHash(icon) } } }
 
   const actions = planSync(input({
     appTemplates: files({ 'favicon.ico': Buffer.from([3, 4, 5]), 'api/users/docs.md': '# Users API v2\n', 'icon.png': Buffer.from([7]) }),
@@ -97,46 +97,45 @@ test('a file that cannot carry the tag is core\'s while it matches core, or what
     state,
   }))
 
-  assert.equal(actionFor(actions, 'app/favicon.ico').kind, 'update')
-  assert.deepEqual([...actionFor(actions, 'app/favicon.ico').content!], [3, 4, 5])
-  assert.equal(actionFor(actions, 'app/api/users/docs.md').kind, 'keep')
-  assert.equal(actionFor(actions, 'app/icon.png').kind, 'unchanged')
+  assert.equal(actionFor(actions, 'src/app/favicon.ico').kind, 'update')
+  assert.deepEqual([...actionFor(actions, 'src/app/favicon.ico').content!], [3, 4, 5])
+  assert.equal(actionFor(actions, 'src/app/api/users/docs.md').kind, 'keep')
+  assert.equal(actionFor(actions, 'src/app/icon.png').kind, 'unchanged')
 })
 
-test('globals.css is compared after the active theme\'s import is put in', () => {
+test('globals.css is compared after the project stylesheet import is put in', () => {
   const actions = planSync(input({
-    appTemplates: files({ 'globals.css': '@import "../../../themes/default/styles/globals.css";\n' }),
-    projectApp: files({ 'globals.css': '@import "../contents/themes/default/styles/globals.css";\n' }),
-    activeTheme: 'default',
+    appTemplates: files({ 'globals.css': '@import "../../../old-project/styles/globals.css";\n' }),
+    projectApp: files({ 'globals.css': '@import "../../styles/globals.css";\n' }),
   }))
 
-  const globals = actionFor(actions, 'app/globals.css')
+  const globals = actionFor(actions, 'src/app/globals.css')
   assert.equal(globals.kind, 'adopt')
-  assert.match(globals.content!.toString(), /^\/\* @nextspark-generated core@0\.2\.0 path=app\/globals\.css sha256=[0-9a-f]{64} \*\/\n@import "\.\.\/contents\/themes\/default\/styles\/globals\.css";\n$/)
+  assert.match(globals.content!.toString(), /^\/\* @nextspark-generated core@0\.2\.0 path=src\/app\/globals\.css sha256=[0-9a-f]{64} \*\/\n@import "\.\.\/\.\.\/styles\/globals\.css";\n$/)
 })
 
 test('a project that uses PPR has its layout.tsx compared with the PPR variant', () => {
   const appTemplates = files({ 'layout.tsx': 'layout', 'layout.ppr.tsx': 'ppr layout' })
   const projectApp = files({ 'layout.tsx': 'ppr layout' })
 
-  assert.equal(actionFor(planSync(input({ appTemplates, projectApp, usePprVariants: true })), 'app/layout.tsx').kind, 'adopt')
-  assert.equal(actionFor(planSync(input({ appTemplates, projectApp })), 'app/layout.tsx').kind, 'keep')
+  assert.equal(actionFor(planSync(input({ appTemplates, projectApp, usePprVariants: true })), 'src/app/layout.tsx').kind, 'adopt')
+  assert.equal(actionFor(planSync(input({ appTemplates, projectApp })), 'src/app/layout.tsx').kind, 'keep')
 })
 
 test('a PPR variant in the project is removed when it is core\'s, and kept and reported when customized', () => {
   const appTemplates = files({ 'layout.tsx': 'layout', 'layout.ppr.tsx': 'ppr layout' })
   const variant = (content: string | Buffer, overwrite: string[] = []) =>
-    actionFor(planSync(input({ appTemplates, projectApp: files({ 'layout.tsx': 'layout', 'layout.ppr.tsx': content }), overwrite: new Set(overwrite) })), 'app/layout.ppr.tsx')
+    actionFor(planSync(input({ appTemplates, projectApp: files({ 'layout.tsx': 'layout', 'layout.ppr.tsx': content }), overwrite: new Set(overwrite) })), 'src/app/layout.ppr.tsx')
 
   assert.equal(variant('ppr layout').kind, 'delete')
-  assert.equal(variant(tagged('app/layout.ppr.tsx', 'an older ppr layout')).kind, 'delete')
+  assert.equal(variant(tagged('src/app/layout.ppr.tsx', 'an older ppr layout')).kind, 'delete')
 
   const customized = variant('my ppr layout')
   assert.equal(customized.kind, 'keep')
   assert.equal(customized.customized, true)
   assert.equal(customized.coreChanged, true)
 
-  const overwritten = variant('my ppr layout', ['app/layout.ppr.tsx'])
+  const overwritten = variant('my ppr layout', ['src/app/layout.ppr.tsx'])
   assert.equal(overwritten.kind, 'delete')
   assert.equal(overwritten.backup, true)
 })
@@ -144,20 +143,20 @@ test('a PPR variant in the project is removed when it is core\'s, and kept and r
 test('a file core no longer ships is removed when core wrote it and nobody changed it since; otherwise it stays', () => {
   const actions = planSync(input({
     projectApp: files({
-      'old/page.tsx': tagged('app/old/page.tsx', 'retired page'),
-      'edited/page.tsx': edited('app/edited/page.tsx', 'retired page', ['retired', 'my']),
+      'old/page.tsx': tagged('src/app/old/page.tsx', 'retired page'),
+      'edited/page.tsx': edited('src/app/edited/page.tsx', 'retired page', ['retired', 'my']),
       'mine/page.tsx': 'my page',
     }),
   }))
 
-  assert.equal(actionFor(actions, 'app/old/page.tsx').kind, 'delete')
-  const editedRetired = actionFor(actions, 'app/edited/page.tsx')
+  assert.equal(actionFor(actions, 'src/app/old/page.tsx').kind, 'delete')
+  const editedRetired = actionFor(actions, 'src/app/edited/page.tsx')
   assert.equal(editedRetired.kind, 'keep')
   assert.equal(editedRetired.customized, true)
-  assert.equal(actionFor(actions, 'app/mine/page.tsx').category, 'project')
+  assert.equal(actionFor(actions, 'src/app/mine/page.tsx').category, 'project')
 })
 
-test('i18n.ts, next.config.mjs and tsconfig.json follow the same rules as app/ files', () => {
+test('i18n.ts, next.config.mjs and tsconfig.json follow the same rules as src/app/ files', () => {
   const actions = planSync(input({
     rootTemplates: files({ 'i18n.ts': 'core i18n v2', 'next.config.mjs': 'core config', 'tsconfig.json': '{}\n' }),
     projectRootFiles: files({ 'i18n.ts': tagged('i18n.ts', 'core i18n v1'), 'next.config.mjs': 'my config', 'tsconfig.json': '{}\n' }),
@@ -215,30 +214,30 @@ test('a customized file is listed while core changed it since the last sync on t
   const first = input({ appTemplates: files({ 'page.tsx': 'page v2' }), projectApp })
   const firstReport = describeSyncPlan(planSync(first)).map(({ text }) => text)
   assert.ok(firstReport.includes('Kept 1 customized file(s); core changed 1 of them since the last sync'))
-  assert.ok(firstReport.includes('  ! app/page.tsx (differs from core)'))
+  assert.ok(firstReport.includes('  ! src/app/page.tsx (differs from core)'))
 
   const second = input({ appTemplates: files({ 'page.tsx': 'page v2' }), projectApp, state: nextSyncState(planSync(first), first) })
   const secondReport = describeSyncPlan(planSync(second)).map(({ text }) => text)
   assert.ok(secondReport.includes('Kept 1 customized file(s); core changed none of them since the last sync'))
-  assert.equal(secondReport.some((line) => line.includes('! app/page.tsx')), false)
+  assert.equal(secondReport.some((line) => line.includes('! src/app/page.tsx')), false)
 
   const third = input({ appTemplates: files({ 'page.tsx': 'page v3' }), projectApp, state: nextSyncState(planSync(second), second) })
-  assert.ok(describeSyncPlan(planSync(third)).some(({ text }) => text === '  ! app/page.tsx (differs from core)'))
+  assert.ok(describeSyncPlan(planSync(third)).some(({ text }) => text === '  ! src/app/page.tsx (differs from core)'))
 })
 
 test('a dry run reports in the future tense, with every file core would write named', () => {
   const actions = planSync(input({
     appTemplates: files({ 'layout.tsx': 'layout', 'page.tsx': 'page v2' }),
-    projectApp: files({ 'layout.tsx': 'layout', 'page.tsx': tagged('app/page.tsx', 'page v1'), 'mine/page.tsx': 'mine' }),
+    projectApp: files({ 'layout.tsx': 'layout', 'page.tsx': tagged('src/app/page.tsx', 'page v1'), 'mine/page.tsx': 'mine' }),
     rootTemplates: files({ 'i18n.ts': 'core i18n' }),
   }))
 
   assert.deepEqual(describeSyncPlan(actions, { dryRun: true }).map(({ text }) => text), [
     'Would write 2 file(s) from core; 0 already match core',
-    "  ~ app/page.tsx (core's file, changed by core)",
+    "  ~ src/app/page.tsx (core's file, changed by core)",
     "  + i18n.ts (core's file)",
     'Would tag 1 file(s) identical to core, so later releases can update them',
-    "Left 1 file(s) in app/ that core doesn't ship",
+    "Left 1 file(s) in src/app/ that core doesn't ship",
   ])
 })
 
@@ -261,29 +260,28 @@ test('a proxy file with the header an earlier release published is migrated, and
 })
 
 test('a generated file copied to another path is the project\'s there, and never removed', () => {
-  const layout = tagged('app/layout.tsx', 'layout')
+  const layout = tagged('src/app/layout.tsx', 'layout')
   const actions = planSync(input({
     appTemplates: files({ 'layout.tsx': 'layout', 'layout.ppr.tsx': 'ppr layout' }),
     projectApp: files({ 'layout.tsx': layout, 'custom-copy/page.tsx': Buffer.from(layout), 'layout.ppr.tsx': Buffer.from(layout) }),
   }))
 
-  assert.equal(actionFor(actions, 'app/layout.tsx').kind, 'unchanged')
-  assert.equal(actionFor(actions, 'app/custom-copy/page.tsx').kind, 'keep')
-  assert.equal(actionFor(actions, 'app/custom-copy/page.tsx').category, 'project')
-  assert.notEqual(actionFor(actions, 'app/layout.ppr.tsx').kind, 'delete')
+  assert.equal(actionFor(actions, 'src/app/layout.tsx').kind, 'unchanged')
+  assert.equal(actionFor(actions, 'src/app/custom-copy/page.tsx').kind, 'keep')
+  assert.equal(actionFor(actions, 'src/app/custom-copy/page.tsx').category, 'project')
+  assert.notEqual(actionFor(actions, 'src/app/layout.ppr.tsx').kind, 'delete')
 })
 
-test('globals.css is left alone when the active theme it has to import is unknown, and the report says why', () => {
-  const themed = tagged('app/globals.css', '@import "../contents/themes/acme/styles/globals.css";\n')
+test('globals.css with a stale stylesheet import is updated to the root project stylesheet', () => {
+  const themed = tagged('src/app/globals.css', '@import "../../../styles/globals.css";\n')
   const actions = planSync(input({
-    appTemplates: files({ 'globals.css': '@import "../../../themes/default/styles/globals.css";\n' }),
+    appTemplates: files({ 'globals.css': '@import "../../../old-project/styles/globals.css";\n' }),
     projectApp: files({ 'globals.css': themed }),
   }))
 
-  const globals = actionFor(actions, 'app/globals.css')
-  assert.equal(globals.kind, 'keep')
-  assert.equal(globals.content, undefined)
-  assert.ok(describeSyncPlan(actions).some(({ text }) => text.includes('app/globals.css') && text.includes('NEXT_PUBLIC_ACTIVE_THEME')))
+  const globals = actionFor(actions, 'src/app/globals.css')
+  assert.equal(globals.kind, 'update')
+  assert.match(globals.content!.toString(), /@import "\.\.\/\.\.\/styles\/globals\.css";/)
 })
 
 test('with no record of an earlier sync, a file that cannot carry the tag and differs from core is reported once as undecidable', () => {

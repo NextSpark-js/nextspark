@@ -19,8 +19,8 @@ The Page Builder is not limited to a "pages" entity. **Any entity** can be build
 
 | Entity | Location | Use Case |
 |--------|----------|----------|
-| **Pages** | `contents/themes/default/entities/pages/` | Landing pages, marketing pages |
-| **Posts** | `contents/themes/default/entities/posts/` | Blog posts with rich content |
+| **Pages** | `entities/pages/` | Landing pages, marketing pages |
+| **Posts** | `entities/posts/` | Blog posts with rich content |
 
 ### How It Works
 
@@ -36,7 +36,7 @@ When an entity has `builder.enabled: true`:
 ### Enabling Builder for an Entity
 
 ```typescript
-// contents/themes/{theme}/entities/{entity}/{entity}.config.ts
+// entities/{entity}/{entity}.config.ts
 import type { EntityConfig } from '@/core/lib/entities/types'
 
 export const postsConfig: EntityConfig = {
@@ -106,7 +106,7 @@ export const BUILDER_SYSTEM_FIELD_NAMES = ['blocks']
 **Important**: Do NOT define `blocks` in your entity's `fields` array. It's automatic.
 
 ```typescript
-// contents/themes/default/entities/posts/posts.fields.ts
+// entities/posts/posts.fields.ts
 
 export const postsFields: EntityField[] = [
   { name: 'title', type: 'text', ... },
@@ -337,7 +337,7 @@ CREATE INDEX IF NOT EXISTS idx_posts_blocks_gin ON posts USING GIN (blocks);
 ### Step 1: Entity Config
 
 ```typescript
-// contents/themes/default/entities/tutorials/tutorials.config.ts
+// entities/tutorials/tutorials.config.ts
 export const tutorialsConfig: EntityConfig = {
   slug: 'tutorials',
   name: 'Tutorials',
@@ -366,7 +366,7 @@ export const tutorialsConfig: EntityConfig = {
 ### Step 2: Entity Fields (Sidebar Only)
 
 ```typescript
-// contents/themes/default/entities/tutorials/tutorials.fields.ts
+// entities/tutorials/tutorials.fields.ts
 export const tutorialsFields: EntityField[] = [
   { name: 'title', type: 'text', required: true, ... },
   { name: 'slug', type: 'text', required: true, ... },
@@ -409,7 +409,7 @@ Block availability is controlled at the **block level**, not the entity level. E
 
 ```typescript
 // Block config - defines where this block is available
-// contents/themes/{theme}/blocks/{block}/config.ts
+// blocks/{block}/config.ts
 
 export const config: BlockConfig = {
   slug: 'post-hero',
@@ -472,7 +472,7 @@ scope: undefined                    // Block is hidden
 When creating blocks for a specific entity type:
 
 ```typescript
-// contents/themes/default/blocks/post-hero/config.ts
+// blocks/post-hero/config.ts
 export const config: BlockConfig = {
   slug: 'post-hero',
   name: 'Post Hero',
@@ -526,7 +526,7 @@ Create blocks tailored to your entity:
 Always define explicit scope for your blocks:
 
 ```typescript
-// contents/themes/default/blocks/my-block/config.ts
+// blocks/my-block/config.ts
 export const config: BlockConfig = {
   slug: 'my-block',
   // ...
@@ -792,7 +792,7 @@ function isBuilderRequest(request: NextRequest): boolean {
 The block registry provides fast, zero-I/O access to block configurations:
 
 ```typescript
-// core/lib/registries/block-registry.ts
+// .nextspark/registries/block-registry.ts
 
 // Get all blocks (used by builder for scope filtering)
 export function getAllBlocks(): BlockConfig[] {

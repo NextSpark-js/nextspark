@@ -59,7 +59,7 @@ export interface DocPageMeta {
 ## Directory Structure
 
 ```
-themes/{theme}/docs/
+docs/
 ├── public/              # User-facing documentation → /docs
 │   ├── 01-getting-started/
 │   │   ├── 01-introduction.md

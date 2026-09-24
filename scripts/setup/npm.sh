@@ -11,7 +11,7 @@
 # Options:
 #   --version <ver>     Package version to use (default: latest)
 #   --preset <name>     Preset to use (default: saas)
-#   --theme <name>      Theme to use (default: default)
+#   --template <name>   Project template to extract (default: starter)
 #   --clean             Remove existing test project before creating
 #   --help              Show this help message
 #
@@ -46,7 +46,7 @@ PROJECT_PATH="$PROJECTS_DIR/$PROJECT_NAME"
 # -----------------------------------------------------------------------------
 VERSION="latest"
 PRESET="saas"
-THEME="default"
+TEMPLATE="starter"
 CLEAN=false
 
 # -----------------------------------------------------------------------------
@@ -94,8 +94,8 @@ while [[ $# -gt 0 ]]; do
       PRESET="$2"
       shift 2
       ;;
-    --theme)
-      THEME="$2"
+    --template)
+      TEMPLATE="$2"
       shift 2
       ;;
     --clean)
@@ -124,7 +124,7 @@ echo "  Projects dir:  $PROJECTS_DIR"
 echo "  Project path:  $PROJECT_PATH"
 echo "  Version:       $VERSION"
 echo "  Preset:        $PRESET"
-echo "  Theme:         $THEME"
+echo "  Template:      $TEMPLATE"
 echo "  Clean install: $CLEAN"
 echo ""
 
@@ -155,27 +155,27 @@ fi
 
 # Step 4: Check npm package availability
 print_step "3" "Checking npm package availability..."
-if ! npm view "create-nextspark-app@$VERSION" version >/dev/null 2>&1; then
+if ! pnpm view "create-nextspark-app@$VERSION" version >/dev/null 2>&1; then
   print_error "Package create-nextspark-app@$VERSION not found on npm"
   echo ""
   echo "Available versions:"
-  npm view create-nextspark-app versions 2>/dev/null || echo "  Package not published yet"
+  pnpm view create-nextspark-app versions 2>/dev/null || echo "  Package not published yet"
   exit 1
 fi
 
-ACTUAL_VERSION=$(npm view "create-nextspark-app@$VERSION" version 2>/dev/null)
+ACTUAL_VERSION=$(pnpm view "create-nextspark-app@$VERSION" version 2>/dev/null)
 print_success "Found create-nextspark-app@$ACTUAL_VERSION on npm"
 
 # Step 5: Create project with create-nextspark-app from npm
 print_step "4" "Creating project with create-nextspark-app@$VERSION..."
 cd "$PROJECTS_DIR"
 
-npx "create-nextspark-app@$VERSION" "$PROJECT_NAME" \
+pnpm dlx "create-nextspark-app@$VERSION" "$PROJECT_NAME" \
   --preset "$PRESET" \
   --name "Test NPM Packages" \
   --slug "test-npm" \
   --description "Testing with npm packages" \
-  --theme "$THEME" \
+  --theme "$TEMPLATE" \
   --yes
 
 if [ ! -d "$PROJECT_PATH" ]; then

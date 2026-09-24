@@ -361,7 +361,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 The theme uses OKLCH color space for perceptually uniform colors:
 
 ```css
-/* contents/themes/default/styles/globals.css */
+/* styles/globals.css */
 :root {
   /* High contrast pairs */
   --primary: oklch(0.2050 0 0);           /* Dark */

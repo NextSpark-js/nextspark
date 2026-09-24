@@ -29,41 +29,37 @@ interface ThemeProviderProps {
   defaultTheme?: string
 }
 
-export function ThemeProvider({ children, defaultTheme = 'default' }: ThemeProviderProps) {
+export function ThemeProvider({ children }: ThemeProviderProps) {
   const [currentTheme, setCurrentTheme] = useState<ThemeConfig | null>(null)
   const [availableThemes, setAvailableThemes] = useState<ThemeConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | undefined>()
 
-  const loadTheme = React.useCallback((themeName?: string) => {
+  const loadTheme = React.useCallback(() => {
     try {
       setLoading(true)
       setError(undefined)
 
-      // Get theme name from parameter or env only (no hardcoded fallback)
-      const activeThemeName = themeName || process.env.NEXT_PUBLIC_ACTIVE_THEME
+      const projectTheme = ThemeService.getCurrent()
 
-      // Load theme from registry (ultra-fast, zero I/O)
-      const activeTheme = ThemeService.getByName(activeThemeName || '')
-
-      if (!activeTheme) {
-        throw new Error(`Theme not found: ${activeThemeName}`)
+      if (!projectTheme) {
+        throw new Error('Project theme was not generated')
       }
 
-      setCurrentTheme(activeTheme)
+      setCurrentTheme(projectTheme)
 
       // Apply theme styles synchronously
-      if (activeTheme.styles?.globals) {
-        applyThemeStyles(activeTheme)
+      if (projectTheme.styles?.globals) {
+        applyThemeStyles(projectTheme)
       }
 
-      console.log(`[ThemeProvider] Loaded theme: ${activeTheme.name} (build-time registry)`)
+      console.log(`[ThemeProvider] Loaded project theme: ${projectTheme.name} (build-time registry)`)
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error'
       console.error('[ThemeProvider] Error loading theme:', error)
       setError(errorMsg)
 
-      // No fallback - theme must be specified in ENV
+      // No fallback: the root-first project theme must be present in the registry.
     } finally {
       setLoading(false)
     }
@@ -85,7 +81,10 @@ export function ThemeProvider({ children, defaultTheme = 'default' }: ThemeProvi
     return new Promise((resolve) => {
       try {
         setLoading(true)
-        loadTheme(themeName)
+        if (themeName !== ThemeService.getCurrentName()) {
+          throw new Error('Root-first projects do not support switching project templates at runtime')
+        }
+        loadTheme()
 
         // Persist theme preference
         if (typeof window !== 'undefined') {
@@ -105,7 +104,7 @@ export function ThemeProvider({ children, defaultTheme = 'default' }: ThemeProvi
     return new Promise((resolve) => {
       if (currentTheme) {
         console.log(`[ThemeProvider] Reloading theme: ${currentTheme.name}`)
-        loadTheme(currentTheme.name)
+        loadTheme()
       }
       resolve()
     })
@@ -122,18 +121,9 @@ export function ThemeProvider({ children, defaultTheme = 'default' }: ThemeProvi
   // Load initial theme and discover available themes
   useEffect(() => {
     const initTheme = async () => {
-      // Only use ENV variable - ignore defaultTheme prop and localStorage
-      const themeToLoad = process.env.NEXT_PUBLIC_ACTIVE_THEME
-
-      if (themeToLoad) {
-        console.log(`[ThemeProvider] Using ENV theme: ${themeToLoad}`)
-      } else {
-        console.warn('[ThemeProvider] No NEXT_PUBLIC_ACTIVE_THEME set in ENV')
-      }
-
       // Load themes and initial theme synchronously
       loadAvailableThemes()
-      loadTheme(themeToLoad)
+      loadTheme()
     }
 
     initTheme()

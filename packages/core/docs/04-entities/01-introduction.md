@@ -342,11 +342,11 @@ El sistema genera automáticamente:
 
 El proyecto incluye una implementación completa de referencia en:
 
-- **Configuración**: `contents/themes/default/entities/tasks/tasks.config.ts`
-- **Campos**: `contents/themes/default/entities/tasks/tasks.fields.ts`
-- **Tipos**: `contents/themes/default/entities/tasks/tasks.types.ts`
-- **Service**: `contents/themes/default/entities/tasks/tasks.service.ts`
-- **Traducciones**: `contents/themes/default/entities/tasks/messages/`
+- **Configuración**: `entities/tasks/tasks.config.ts`
+- **Campos**: `entities/tasks/tasks.fields.ts`
+- **Tipos**: `entities/tasks/tasks.types.ts`
+- **Service**: `entities/tasks/tasks.service.ts`
+- **Traducciones**: `entities/tasks/messages/`
 - **UI en Dashboard**: `app/dashboard/(main)/tasks/`
 
 Esta entidad de tareas demuestra:
@@ -389,7 +389,7 @@ Estos campos:
 Cada entidad del tema tiene una estructura estándar de **4 archivos principales**:
 
 ```text
-contents/themes/[theme]/entities/[entity]/
+entities/[entity]/
 ├── [entity].config.ts      # Configuración principal (slug, access, ui, permissions, i18n)
 ├── [entity].fields.ts      # Definición de campos (name, type, display, api)
 ├── [entity].types.ts       # Tipos TypeScript específicos de la entidad
@@ -432,7 +432,7 @@ Los **Entity Services** son clases estáticas que encapsulan la lógica de acces
 ### Patrón de Service
 
 ```typescript
-// contents/themes/default/entities/posts/posts.service.ts
+// entities/posts/posts.service.ts
 
 import { query, queryOne, queryOneWithRLS } from '@/core/lib/db'
 import type { PostPublic, PostMetadata } from './posts.types'
@@ -463,9 +463,9 @@ export class PostsService {
 ### Uso en Templates
 
 ```typescript
-// contents/themes/default/templates/(public)/blog/[slug]/page.tsx
+// templates/(public)/blog/[slug]/page.tsx
 
-import { PostsService } from '@/contents/themes/default/entities/posts/posts.service'
+import { PostsService } from '@/entities/posts/posts.service'
 
 export default async function BlogPost({ params }: PageProps) {
   const post = await PostsService.getPublishedBySlug((await params).slug)

@@ -20,7 +20,7 @@ import {
 } from '../generators/block-registry.mjs'
 
 function block(slug, category) {
-  const base = `@/contents/themes/default/blocks/${slug}`
+  const base = `@/blocks/${slug}`
   return {
     slug,
     name: slug,
@@ -46,8 +46,8 @@ const staticComponentImport = /^import .* from '[^']*\/component'/m
 test('the lazy registry loads each component on demand and imports none statically', () => {
   const out = generateBlockRegistryLazy(blocks)
   assert.doesNotMatch(out, staticComponentImport)
-  assert.match(out, /'hero': React\.lazy\(\(\) => import\('@\/contents\/themes\/default\/blocks\/hero\/component'\)/)
-  assert.match(out, /'cta-section': React\.lazy\(\(\) => import\('@\/contents\/themes\/default\/blocks\/cta-section\/component'\)/)
+  assert.match(out, /'hero': React\.lazy\(\(\) => import\('@\/blocks\/hero\/component'\)/)
+  assert.match(out, /'cta-section': React\.lazy\(\(\) => import\('@\/blocks\/cta-section\/component'\)/)
 })
 
 test('the client registry imports no component', () => {

@@ -102,7 +102,7 @@ I'll convert it to the NextSpark format and update your theme.
 1. Parse the tweakcn CSS
 2. Convert to OKLCH if needed
 3. Generate complete globals.css
-4. Write to `contents/themes/{activeTheme}/styles/globals.css`
+4. Write to `styles/globals.css`
 
 ---
 
@@ -169,7 +169,7 @@ STEP 1 OF 4: Understanding the Structure
 
 📂 Single File to Edit:
 
-contents/themes/{your-theme}/styles/globals.css
+styles/globals.css
 
 This file contains EVERYTHING:
 ├── @import "tailwindcss"
@@ -183,7 +183,7 @@ This file contains EVERYTHING:
 **📋 File Structure:**
 
 ```css
-/* contents/themes/{theme}/styles/globals.css */
+/* styles/globals.css */
 
 /* =============================================
    IMPORTS
@@ -406,7 +406,7 @@ You've learned:
 • Tailwind v4 @theme mapping
 
 📝 REMEMBER:
-   Edit ONE file: contents/themes/{theme}/styles/globals.css
+   Edit ONE file: styles/globals.css
    Changes are visible immediately (no build required)
 
 📚 Related tutorials:

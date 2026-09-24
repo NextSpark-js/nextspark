@@ -30,7 +30,7 @@ describe('PluginEnvLoader', () => {
   beforeEach(() => {
     // Create unique test directory
     testDir = path.join(tmpdir(), `nextspark-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
-    pluginsDir = path.join(testDir, 'contents', 'plugins')
+    pluginsDir = path.join(testDir, 'plugins')
 
     // Create directory structure
     fs.mkdirSync(pluginsDir, { recursive: true })

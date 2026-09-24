@@ -1,7 +1,7 @@
 /**
  * Core default: Team Invitation template.
  *
- * Themes can override by creating `themes/<theme>/emails/team-invitation.ts`
+ * Projects can override by creating `emails/team-invitation.ts`
  * with a default export matching this contract.
  */
 

@@ -1,23 +1,16 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from 'url';
 import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runMigrationSql, recordMigration, migrationFailure } from './migration-time-limit.mjs';
+import { getConfig } from '../build/registry/config.mjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Project root is where the user runs the command (process.cwd())
-// Package root is where @nextsparkjs/core is installed (relative to this script)
-const projectRoot = process.cwd();
-const packageRoot = path.join(__dirname, '..', '..'); // scripts/db/ -> core/
-
-// Legacy: support old monorepo structure
-const isMonorepoMode = fs.existsSync(path.join(projectRoot, 'packages', 'core'));
-const rootDir = projectRoot; // For backward compatibility with code below
+const projectConfig = getConfig();
+const projectRoot = projectConfig.projectRoot;
+const packageRoot = projectConfig.coreDir;
+const PROJECT_NAME = projectConfig.projectName;
 
 // Read environment variables: prefer .env file if it exists, fallback to process.env (e.g. Vercel/CI).
-// `--no-env-file` skips the .env file, so the connection and theme come only from the
-// environment this process was started with (db:verify-theme runs it that way).
+// `--no-env-file` skips the .env file, so the connection comes only from the
+// environment this process was started with (the template verifier uses it that way).
 const envPath = path.join(projectRoot, '.env');
 const readEnvFile = !process.argv.includes('--no-env-file');
 
@@ -27,7 +20,6 @@ let DATABASE_URL = process.env.DATABASE_URL ?? null;
 // credential for migrations is provided separately via MIGRATE_DATABASE_URL.
 // Falls back to DATABASE_URL when unset (pre-cutover: same owner connection).
 let MIGRATE_DATABASE_URL = process.env.MIGRATE_DATABASE_URL ?? null;
-let ACTIVE_THEME = process.env.NEXT_PUBLIC_ACTIVE_THEME ?? null;
 let MIGRATION_TIMEOUT_SECONDS = process.env.MIGRATION_TIMEOUT_SECONDS;
 
 if (readEnvFile && fs.existsSync(envPath)) {
@@ -45,9 +37,6 @@ if (readEnvFile && fs.existsSync(envPath)) {
       if (key?.trim() === 'MIGRATE_DATABASE_URL' && valueParts.length > 0) {
         MIGRATE_DATABASE_URL = value;
       }
-      if (key?.trim() === 'NEXT_PUBLIC_ACTIVE_THEME' && valueParts.length > 0) {
-        ACTIVE_THEME = value;
-      }
       if (key?.trim() === 'MIGRATION_TIMEOUT_SECONDS' && valueParts.length > 0) {
         MIGRATION_TIMEOUT_SECONDS = value;
       }
@@ -62,11 +51,6 @@ if (!DATABASE_URL) {
 
 // The URL used for the actual migration connection (owner credential).
 const MIGRATION_URL = MIGRATE_DATABASE_URL || DATABASE_URL;
-
-if (!ACTIVE_THEME) {
-  console.error("❌ NEXT_PUBLIC_ACTIVE_THEME not found in environment variables");
-  process.exit(1);
-}
 
 // How long each migration may run, when MIGRATION_TIMEOUT_SECONDS asks for a limit
 // (see migration-time-limit.mjs). Without it, a migration runs for as long as it takes.
@@ -98,9 +82,7 @@ async function runMigrations() {
     `);
     
     // Get list of migration files (from package, not project root)
-    const migrationsDir = isMonorepoMode
-      ? path.join(projectRoot, 'packages', 'core', 'migrations')
-      : path.join(packageRoot, 'migrations');
+    const migrationsDir = path.join(packageRoot, 'migrations');
     const files = fs.readdirSync(migrationsDir)
       .filter(f => f.endsWith('.sql'))
       .sort();
@@ -154,47 +136,9 @@ async function runMigrations() {
   }
 }
 
-// Get active plugins from theme config
+// Read enabled local plugins from nextspark.config.ts.
 async function getActivePlugins() {
-  try {
-    // Determine contents directory based on mode
-    const contentsDir = isMonorepoMode
-      ? path.join(projectRoot, 'apps', 'dev', 'contents')
-      : path.join(projectRoot, 'contents');
-
-    // Try both locations: config/theme.config.ts (new) and theme.config.ts (legacy)
-    let themeConfigPath = path.join(contentsDir, 'themes', ACTIVE_THEME, 'config', 'theme.config.ts');
-
-    if (!fs.existsSync(themeConfigPath)) {
-      // Fallback to legacy location
-      themeConfigPath = path.join(contentsDir, 'themes', ACTIVE_THEME, 'theme.config.ts');
-    }
-
-    if (!fs.existsSync(themeConfigPath)) {
-      console.warn(`⚠️  Theme config not found in either config/theme.config.ts or theme.config.ts`);
-      return [];
-    }
-
-    // Read and parse theme config
-    const configContent = fs.readFileSync(themeConfigPath, 'utf8');
-    const pluginsMatch = configContent.match(/plugins:\s*\[([^\]]*)\]/);
-
-    if (!pluginsMatch) {
-      console.warn(`⚠️  No plugins found in theme config`);
-      return [];
-    }
-
-    const pluginsStr = pluginsMatch[1];
-    const plugins = pluginsStr
-      .split(',')
-      .map(p => p.trim().replace(/['"`]/g, ''))
-      .filter(Boolean);
-
-    return plugins;
-  } catch (error) {
-    console.error(`❌ Error reading theme config:`, error.message);
-    return [];
-  }
+  return projectConfig.plugins;
 }
 
 // Run content-level migrations (theme/plugin root-level, not entity-specific)
@@ -386,7 +330,7 @@ async function runEntityMigrations() {
   try {
     await client.connect();
     console.log("🔄 Running content & entity migrations (sample_data deferred)...\n");
-    console.log(`📌 Active theme: ${ACTIVE_THEME}\n`);
+    console.log(`📌 Project: ${PROJECT_NAME}\n`);
 
     // Create tracking tables
     await client.query(`
@@ -460,34 +404,28 @@ async function runEntityMigrations() {
     const allContentMigrations = [];
     const allEntityMigrations = [];
 
-    // Determine contents directory based on mode
-    const contentsDir = isMonorepoMode
-      ? path.join(projectRoot, 'apps', 'dev', 'contents')
-      : path.join(projectRoot, 'contents');
+    const projectMigrationsDir = path.join(projectRoot, 'migrations');
+    allContentMigrations.push(...collectContentMigrations(projectMigrationsDir, 'project', PROJECT_NAME));
 
-    // Collect theme-level migrations
-    const themeMigrationsDir = path.join(contentsDir, 'themes', ACTIVE_THEME, 'migrations');
-    allContentMigrations.push(...collectContentMigrations(themeMigrationsDir, 'theme', ACTIVE_THEME));
+    // Collect project entity migrations
+    const projectEntitiesDir = path.join(projectRoot, 'entities');
+    allEntityMigrations.push(...collectEntityMigrations(projectEntitiesDir, 'project', PROJECT_NAME));
 
-    // Collect theme entity migrations
-    const themeEntitiesDir = path.join(contentsDir, 'themes', ACTIVE_THEME, 'entities');
-    allEntityMigrations.push(...collectEntityMigrations(themeEntitiesDir, 'theme', ACTIVE_THEME));
-
-    // Collect theme settings migrations (settings/<area>/migrations/)
-    const themeSettingsDir = path.join(contentsDir, 'themes', ACTIVE_THEME, 'settings');
-    if (fs.existsSync(themeSettingsDir)) {
-      const settingAreas = fs.readdirSync(themeSettingsDir, { withFileTypes: true })
+    // Collect project settings migrations (settings/<area>/migrations/)
+    const projectSettingsDir = path.join(projectRoot, 'settings');
+    if (fs.existsSync(projectSettingsDir)) {
+      const settingAreas = fs.readdirSync(projectSettingsDir, { withFileTypes: true })
         .filter(e => e.isDirectory()).map(e => e.name);
       for (const area of settingAreas) {
-        const settingsMigrationsDir = path.join(themeSettingsDir, area, 'migrations');
+        const settingsMigrationsDir = path.join(projectSettingsDir, area, 'migrations');
         allContentMigrations.push(...collectContentMigrations(
-          settingsMigrationsDir, 'theme-settings', `${ACTIVE_THEME}/settings/${area}`
+          settingsMigrationsDir, 'project-settings', `${PROJECT_NAME}/settings/${area}`
         ));
       }
     }
 
     // Collect plugin migrations
-    const pluginsDir = path.join(contentsDir, 'plugins');
+    const pluginsDir = path.join(projectRoot, 'plugins');
     if (fs.existsSync(pluginsDir) && activePlugins.length > 0) {
       for (const pluginName of activePlugins) {
         const pluginDir = path.join(pluginsDir, pluginName);

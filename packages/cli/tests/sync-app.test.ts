@@ -35,8 +35,8 @@ async function write(root: string, file: string, content: string) {
 /**
  * A project on Next 15 with a fake @nextsparkjs/core installed at its root,
  * which is where the CLI looks for core. None of its files carry the generated
- * tag yet: app/layout.tsx, app/layout.ppr.tsx and tsconfig.json are identical
- * to core's, app/dashboard/page.tsx is older than core's, and i18n.ts and
+ * tag yet: src/app/layout.tsx, src/app/layout.ppr.tsx and tsconfig.json are identical
+ * to core's, src/app/dashboard/page.tsx is older than core's, and i18n.ts and
  * next.config.mjs have the project's own changes.
  */
 async function project() {
@@ -52,12 +52,13 @@ async function project() {
   await write(root, `${CORE}/templates/tsconfig.json`, '{}\n')
   await write(root, `${CORE}/templates/proxy.ts`, CORE_PROXY)
   await write(root, 'node_modules/next/package.json', JSON.stringify({ name: 'next', version: '15.5.24' }))
-  await write(root, 'package.json', '{}')
+  await write(root, 'package.json', JSON.stringify({ dependencies: { next: '15.5.24' } }))
+  await write(root, 'nextspark.config.ts', 'export default { plugins: [] }\n')
 
-  await write(root, 'app/layout.tsx', ROOT_LAYOUT)
-  await write(root, 'app/layout.ppr.tsx', PPR_LAYOUT)
-  await write(root, 'app/dashboard/page.tsx', 'export default function OldDashboard() { return null }\n')
-  await write(root, 'app/reports/page.tsx', 'export default function Reports() { return null }\n')
+  await write(root, 'src/app/layout.tsx', ROOT_LAYOUT)
+  await write(root, 'src/app/layout.ppr.tsx', PPR_LAYOUT)
+  await write(root, 'src/app/dashboard/page.tsx', 'export default function OldDashboard() { return null }\n')
+  await write(root, 'src/app/reports/page.tsx', 'export default function Reports() { return null }\n')
   await write(root, 'i18n.ts', `${CORE_I18N}export const locales = ['es']\n`)
   await write(root, 'next.config.mjs', 'export default { reactStrictMode: true }\n')
   await write(root, 'tsconfig.json', '{}\n')
@@ -91,9 +92,7 @@ async function runSyncForExit(root: string, options: SyncOptions) {
   const original = { log: console.log, warn: console.warn, error: console.error, exit: process.exit }
   const capture = (...args: unknown[]) => { printed.push(args.map(String).join(' ')) }
   const previousCwd = process.cwd()
-  const previousTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
   const previousExitCode = process.exitCode
-  delete process.env.NEXT_PUBLIC_ACTIVE_THEME
   process.exitCode = 0
 
   console.log = capture
@@ -115,7 +114,6 @@ async function runSyncForExit(root: string, options: SyncOptions) {
     process.exitCode = previousExitCode
     process.chdir(previousCwd)
     Object.assign(console, { log: original.log, warn: original.warn, error: original.error })
-    if (previousTheme !== undefined) process.env.NEXT_PUBLIC_ACTIVE_THEME = previousTheme
   }
 
   return { printed: printed.join('\n').replace(/\x1b\[[0-9;]*m/g, ''), exitCode }
@@ -133,16 +131,16 @@ test('--dry-run writes nothing and names each file it would write, remove or kee
   try {
     const printed = await runSync(root, { dryRun: true })
 
-    assert.equal(await readFile(join(root, 'app/layout.tsx'), 'utf-8'), ROOT_LAYOUT)
+    assert.equal(await readFile(join(root, 'src/app/layout.tsx'), 'utf-8'), ROOT_LAYOUT)
     assert.equal(existsSync(join(root, 'middleware.ts')), false)
-    assert.equal(existsSync(join(root, 'app/layout.ppr.tsx')), true)
+    assert.equal(existsSync(join(root, 'src/app/layout.ppr.tsx')), true)
 
     assert.match(printed, /\+ middleware\.ts \(core's proxy, under the name Next loads in this project\)/)
     assert.match(printed, /Would tag 1 file\(s\) identical to core/)
-    assert.match(printed, /- app\/layout\.ppr\.tsx \(PPR variants stay in core/)
+    assert.match(printed, /- src\/app\/layout\.ppr\.tsx \(PPR variants stay in core/)
     assert.match(printed, /! i18n\.ts \(differs from core\)/)
-    assert.match(printed, /! app\/dashboard\/page\.tsx \(differs from core\)/)
-    assert.match(printed, /Would add app\/\(templates\)\/, \.nextspark\/registries\/, \.nextspark\/backups\/, \.nextspark\/sync-state\.json, app\.backup\.v\*\/ to \.gitignore/)
+    assert.match(printed, /! src\/app\/dashboard\/page\.tsx \(differs from core\)/)
+    assert.match(printed, /Would add src\/app\/\(templates\)\/, \.nextspark\/registries\/, \.nextspark\/backups\/, \.nextspark\/sync-state\.json, app\.backup\.v\*\/ to \.gitignore/)
   } finally {
     await cleanup()
   }
@@ -189,12 +187,12 @@ test('an intact layout.ppr.tsx is removed, and a customized one is kept and list
   const customized = await project()
   try {
     await runSync(intact.root, { force: true })
-    assert.equal(existsSync(join(intact.root, 'app/layout.ppr.tsx')), false)
+    assert.equal(existsSync(join(intact.root, 'src/app/layout.ppr.tsx')), false)
 
-    await write(customized.root, 'app/layout.ppr.tsx', `${PPR_LAYOUT}// my change\n`)
+    await write(customized.root, 'src/app/layout.ppr.tsx', `${PPR_LAYOUT}// my change\n`)
     const printed = await runSync(customized.root, { force: true })
-    assert.equal(existsSync(join(customized.root, 'app/layout.ppr.tsx')), true)
-    assert.match(printed, /! app\/layout\.ppr\.tsx \(PPR variants stay in core, where sync:app reads them when a project uses PPR, but this one differs from core's\)/)
+    assert.equal(existsSync(join(customized.root, 'src/app/layout.ppr.tsx')), true)
+    assert.match(printed, /! src\/app\/layout\.ppr\.tsx \(PPR variants stay in core, where sync:app reads them when a project uses PPR, but this one differs from core's\)/)
   } finally {
     await intact.cleanup()
     await customized.cleanup()
@@ -205,15 +203,15 @@ test('a file identical to core is tagged once, and not rewritten after that', as
   const { root, cleanup } = await project()
   try {
     await runSync(root, { force: true })
-    const layout = await readFile(join(root, 'app/layout.tsx'), 'utf-8')
+    const layout = await readFile(join(root, 'src/app/layout.tsx'), 'utf-8')
     assert.match(layout, TAG_LINE)
     assert.ok(layout.endsWith(ROOT_LAYOUT))
 
-    const before = (await stat(join(root, 'app/layout.tsx'))).mtimeMs
+    const before = (await stat(join(root, 'src/app/layout.tsx'))).mtimeMs
     await new Promise((resolve) => setTimeout(resolve, 20))
     await runSync(root, { force: true })
 
-    assert.equal((await stat(join(root, 'app/layout.tsx'))).mtimeMs, before)
+    assert.equal((await stat(join(root, 'src/app/layout.tsx'))).mtimeMs, before)
   } finally {
     await cleanup()
   }
@@ -221,7 +219,7 @@ test('a file identical to core is tagged once, and not rewritten after that', as
 
 /**
  * A stand-in for core's templates-plan.mjs: the registry build would remove
- * app/(templates)/no-confirm.txt, and replace the copy of app/layout.tsx when
+ * src/app/(templates)/no-confirm.txt, and replace the copy of src/app/layout.tsx when
  * the sync about to run writes that layout.
  */
 const TEMPLATES_PLAN = `let input = ''
@@ -231,35 +229,34 @@ process.stdin.on('end', () => {
   console.log('Discovering template overrides...')
   console.log('nextspark-templates-plan:' + JSON.stringify({
     create: [],
-    replace: 'app/layout.tsx' in appFiles ? ['app/(templates)/layout.tsx'] : [],
-    remove: ['app/(templates)/no-confirm.txt'],
+    replace: 'app/layout.tsx' in appFiles ? ['src/app/(templates)/layout.tsx'] : [],
+    remove: ['src/app/(templates)/no-confirm.txt'],
   }))
 })
 `
 
 async function withTemplatesTree(root: string) {
-  await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
   await write(root, `${CORE}/scripts/build/templates-plan.mjs`, TEMPLATES_PLAN)
-  await write(root, 'app/(templates)/no-confirm.txt', 'mine\n')
+  await write(root, 'src/app/(templates)/no-confirm.txt', 'mine\n')
 }
 
-test('--dry-run names what the registry build would replace or remove in app/(templates), planned on what the sync writes', async () => {
+test('--dry-run names what the registry build would replace or remove in src/app/(templates), planned on what the sync writes', async () => {
   const { root, cleanup } = await project()
   try {
     await withTemplatesTree(root)
 
     const printed = await runSync(root, { dryRun: true })
 
-    assert.match(printed, /Would regenerate \.nextspark\/registries and app\/\(templates\) with the registry build, which would write every registry again, and write or remove 2 file\(s\) in app\/\(templates\)/)
-    assert.match(printed, /~ app\/\(templates\)\/layout\.tsx \(replaced; what it holds is backed up first\)/)
-    assert.match(printed, /- app\/\(templates\)\/no-confirm\.txt \(removed; backed up first\)/)
-    assert.equal(await readFile(join(root, 'app/(templates)/no-confirm.txt'), 'utf-8'), 'mine\n')
+    assert.match(printed, /Would regenerate \.nextspark\/registries and src\/app\/\(templates\) with the registry build, which would write every registry again, and write or remove 2 file\(s\) in src\/app\/\(templates\)/)
+    assert.match(printed, /~ src\/app\/\(templates\)\/layout\.tsx \(replaced; what it holds is backed up first\)/)
+    assert.match(printed, /- src\/app\/\(templates\)\/no-confirm\.txt \(removed; backed up first\)/)
+    assert.equal(await readFile(join(root, 'src/app/(templates)/no-confirm.txt'), 'utf-8'), 'mine\n')
   } finally {
     await cleanup()
   }
 })
 
-test('without --force, a sync whose only change is in app/(templates) still asks first, and counts those files', async () => {
+test('without --force, a sync whose only change is in src/app/(templates) still asks first, and counts those files', async () => {
   const { root, cleanup } = await project()
   try {
     await runSync(root, { force: true })
@@ -269,7 +266,7 @@ test('without --force, a sync whose only change is in app/(templates) still asks
     const printed = await runSync(root, { confirm: async (message) => { asked.push(message); return true } })
 
     assert.equal(asked.length, 1)
-    assert.match(printed, /This will have the registry build write or remove 1 file\(s\) in app\/\(templates\), backing up the 1 it replaces or removes\./)
+    assert.match(printed, /This will have the registry build write or remove 1 file\(s\) in src\/app\/\(templates\), backing up the 1 it replaces or removes\./)
   } finally {
     await cleanup()
   }
@@ -296,7 +293,7 @@ test('in a clone with no sync state, a tsconfig.json that differs from core is k
 
 /** A stand-in for core's registry build that fails the way a template with no default export makes it fail. */
 const FAILING_REGISTRY_BUILD = `console.log('Discovering template overrides...')
-console.error('@/contents/themes/acme/templates/shop/page.tsx has no default export, and the app has no existing route at "app/shop/page.tsx"')
+console.error('@/templates/shop/page.tsx has no default export, and the app has no existing route at "src/app/shop/page.tsx"')
 process.exit(1)
 `
 
@@ -311,7 +308,7 @@ test('a registry build that fails is reported as such, with a non-zero exit code
     assert.equal(exitCode, 1)
     assert.doesNotMatch(printed, /Sync complete/)
     assert.match(printed, /has no default export/)
-    assert.match(printed, /Sync incomplete: \/app now matches core, but \.nextspark\/registries and app\/\(templates\) were not regenerated\./)
+    assert.match(printed, /Sync incomplete: \/src\/app now matches core, but \.nextspark\/registries and src\/app\/\(templates\) were not regenerated\./)
   } finally {
     await cleanup()
   }
@@ -326,8 +323,7 @@ test('a registry build that fails is reported as such, with a non-zero exit code
 test('a registry build that fails still names the cause once a flood of stdout follows it', async () => {
   const { root, cleanup } = await project()
   try {
-    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
-    await write(root, `${CORE}/scripts/build/registry.mjs`, `console.error('❌ Build failed: contents/themes/acme/templates/shop/page.tsx has no default export')
+    await write(root, `${CORE}/scripts/build/registry.mjs`, `console.error('❌ Build failed: templates/shop/page.tsx has no default export')
 for (let i = 0; i < 5000; i++) console.log('progress ' + i)
 process.exit(1)
 `)
@@ -336,7 +332,7 @@ process.exit(1)
 
     assert.equal(exitCode, 1)
     assert.ok(
-      printed.includes('Build failed: contents/themes/acme/templates/shop/page.tsx has no default export'),
+      printed.includes('Build failed: templates/shop/page.tsx has no default export'),
       `the cause survives 5000 lines of stdout printed after it:\n${printed.slice(0, 500)}`
     )
   } finally {
@@ -344,17 +340,16 @@ process.exit(1)
   }
 })
 
-test('sync:app shows a long app/(templates) line cut at the cap with the same omitted-bytes marker as everything else it prints', async () => {
+test('sync:app shows a long src/app/(templates) line cut at the cap with the same omitted-bytes marker as everything else it prints', async () => {
   const { root, cleanup } = await project()
   try {
-    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
     const longSuffix = 'x'.repeat(14000)
-    await write(root, `${CORE}/scripts/build/registry.mjs`, `console.log('app/(templates)/' + ${JSON.stringify(longSuffix)} + '.tsx created')\n`)
+    await write(root, `${CORE}/scripts/build/registry.mjs`, `console.log('src/app/(templates)/' + ${JSON.stringify(longSuffix)} + '.tsx created')\n`)
 
     const { printed, exitCode } = await runSyncForExit(root, { force: true })
 
     assert.equal(exitCode, 0)
-    const fullLine = `app/(templates)/${longSuffix}.tsx created`
+    const fullLine = `src/app/(templates)/${longSuffix}.tsx created`
     const kept = Buffer.from(fullLine, 'utf8').subarray(0, 4096).toString('utf8')
     const omitted = Buffer.byteLength(fullLine, 'utf8') - Buffer.byteLength(kept, 'utf8')
     assert.ok(
@@ -368,15 +363,14 @@ test('sync:app shows a long app/(templates) line cut at the cap with the same om
 
 /**
  * A build that prints hundreds of MB - as a real project with a lot of
- * routes would, one app/(templates) line per file - runs `sync:app` in
+ * routes would, one src/app/(templates) line per file - runs `sync:app` in
  * bounded memory.
  */
 test('sync:app does not run a 64 MB heap out on a build that prints hundreds of MB', { timeout: 60_000 }, async () => {
   const { root, cleanup } = await project()
   try {
-    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
     // No process.exit: it would cut the writes still queued on the pipe short of the parent
-    await write(root, `${CORE}/scripts/build/registry.mjs`, `const line = '⚠️  app/(templates): backed up app/(templates)/page-' + 'x'.repeat(8000) + '.tsx\\n'
+    await write(root, `${CORE}/scripts/build/registry.mjs`, `const line = '⚠️  src/app/(templates): backed up src/app/(templates)/page-' + 'x'.repeat(8000) + '.tsx\\n'
 for (let i = 0; i < 30000; i++) process.stdout.write(line)
 `)
 
@@ -394,13 +388,15 @@ await syncAppCommand({ force: true })
   }
 })
 
-test('a registry build that is skipped for want of a theme leaves the sync complete, and its exit code zero', async () => {
+test('a root-first registry build runs without a theme selector and leaves the sync complete', async () => {
   const { root, cleanup } = await project()
   try {
+    await write(root, `${CORE}/scripts/build/registry.mjs`, "import { writeFileSync } from 'node:fs'\nwriteFileSync('registry-ran.txt', 'yes\\n')\n")
     const { printed, exitCode } = await runSyncForExit(root, { force: true })
 
     assert.equal(exitCode, 0)
     assert.match(printed, /Sync complete/)
+    assert.equal(await readFile(join(root, 'registry-ran.txt'), 'utf8'), 'yes\n')
   } finally {
     await cleanup()
   }
@@ -443,10 +439,10 @@ test('--backup gives each run a backup of its own, never written over, and adds 
   const unfreeze = freezeClock(1_700_000_000_000)
   try {
     execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
-    await write(root, 'app/own.tsx', 'export default function Own() { return null }\n')
+    await write(root, 'src/app/own.tsx', 'export default function Own() { return null }\n')
 
     await runSync(root, { force: true, backup: true })
-    await write(root, 'app/own.tsx', 'export default function Changed() { return null }\n')
+    await write(root, 'src/app/own.tsx', 'export default function Changed() { return null }\n')
     await runSync(root, { force: true, backup: true })
 
     const backups = (await readdir(root)).filter((name) => name.startsWith('app.backup.')).sort()
@@ -476,13 +472,13 @@ test('--backup gives each run a backup of its own, never written over, and adds 
 test("--backup's own directory and the tree it regenerates end up ignored whatever rule stood in for them", async () => {
   const rest = '.nextspark/\n'
   const cases: { name: string; gitignore: string; nested?: [string, string] }[] = [
-    { name: "a rule that names another version's backup", gitignore: `${rest}app/(templates)/\napp.backup.v0.1.0-beta.190.*/\n` },
+    { name: "a rule that names another version's backup", gitignore: `${rest}src/app/(templates)/\napp.backup.v0.1.0-beta.190.*/\n` },
     { name: 'a rule under **', gitignore: `${rest}**/dashboard/layout.tsx\n**/app.backup.v0.1.0-beta.190.*/**\n` },
-    { name: "a negation that un-ignores this version's backups", gitignore: `${rest}app/(templates)/\napp.backup.*/\n!app.backup.v${CORE_VERSION}.*/\n` },
+    { name: "a negation that un-ignores this version's backups", gitignore: `${rest}src/app/(templates)/\napp.backup.*/\n!app.backup.v${CORE_VERSION}.*/\n` },
     {
       name: 'a .gitignore inside the generated tree',
       gitignore: `${rest}app.backup.v0.1.0-beta.190.*/\n`,
-      nested: ['app/(templates)/dashboard/.gitignore', 'layout.tsx\n'],
+      nested: ['src/app/(templates)/dashboard/.gitignore', 'layout.tsx\n'],
     },
   ]
 
@@ -493,21 +489,21 @@ test("--backup's own directory and the tree it regenerates end up ignored whatev
     try {
       execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
       await write(root, '.gitignore', gitignore)
-      await write(root, 'app/(templates)/dashboard/layout.tsx', 'export default function L({ children }) { return children }\n')
-      await write(root, 'app/(templates)/(auth)/login/page.tsx', 'export default function Login() { return null }\n')
+      await write(root, 'src/app/(templates)/dashboard/layout.tsx', 'export default function L({ children }) { return children }\n')
+      await write(root, 'src/app/(templates)/(auth)/login/page.tsx', 'export default function Login() { return null }\n')
       if (nested) await write(root, nested[0], nested[1])
 
       await runSync(root, { force: true, backup: true })
 
       const [backup] = (await readdir(root)).filter((entry) => entry.startsWith('app.backup.'))
       assert.ok(backup, `${name}: a backup was taken`)
-      for (const file of [`${backup}/layout.tsx`, `${backup}/reports/page.tsx`, 'app/(templates)/(auth)/login/page.tsx']) {
+      for (const file of [`${backup}/layout.tsx`, `${backup}/reports/page.tsx`, 'src/app/(templates)/(auth)/login/page.tsx']) {
         assert.ok(existsSync(join(root, file)), `${name}: ${file} is on disk`)
         if (!gitIgnores(root, file)) leftOut.push(`${name}: ${file}`)
       }
       const untracked = execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf-8' })
         .split('\n')
-        .filter((line) => line.includes('app.backup.') || line.includes('app/(templates)/'))
+        .filter((line) => line.includes('app.backup.') || line.includes('src/app/(templates)/'))
       leftOut.push(...untracked.map((line) => `${name}: untracked ${line.slice(3)}`))
     } finally {
       await cleanup()
@@ -525,21 +521,21 @@ test("--backup's own directory and the tree it regenerates end up ignored whatev
 function treeRegistryBuild(count: number): string {
   return `import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-const root = process.env.NEXTSPARK_PROJECT_ROOT
+const root = process.cwd()
 const write = (file, content) => {
   mkdirSync(dirname(join(root, file)), { recursive: true })
   writeFileSync(join(root, file), content)
 }
 const backupDir = '.nextspark/backups/' + new Date().toISOString().replace(/[:.]/g, '-') + '-r3g1st'
-for (const file of ['app/(templates)/(public)/page.tsx', 'app/(templates)/dashboard/layout.tsx']) {
+for (const file of ['src/app/(templates)/(public)/page.tsx', 'src/app/(templates)/dashboard/layout.tsx']) {
   if (!existsSync(join(root, file))) continue
   mkdirSync(dirname(join(root, backupDir, file)), { recursive: true })
   copyFileSync(join(root, file), join(root, backupDir, file))
 }
 for (let i = 0; i < ${count}; i++) {
-  write('app/(templates)/deep/with spaces/área/(group ' + (i % 7) + ')/"quoted" page ' + i + '.tsx', 'export default function P() { return null }\\n')
+  write('src/app/(templates)/deep/with spaces/área/(group ' + (i % 7) + ')/"quoted" page ' + i + '.tsx', 'export default function P() { return null }\\n')
 }
-for (const file of ['app/(templates)/middleware.ts', 'app/(templates)/dashboard/layout.tsx', 'app/(templates)/(public)/page.tsx', 'app/(templates)/new\\nline.tsx']) {
+for (const file of ['src/app/(templates)/middleware.ts', 'src/app/(templates)/dashboard/layout.tsx', 'src/app/(templates)/(public)/page.tsx', 'src/app/(templates)/new\\nline.tsx']) {
   write(file, 'export default function Generated() { return null }\\n')
 }
 console.log('Registry build complete')
@@ -552,26 +548,25 @@ function untrackedGenerated(root: string): string[] {
     .split('\0')
     .filter((entry) => entry.startsWith('?? '))
     .map((entry) => entry.slice(3))
-    .filter((path) => path.startsWith('app/(templates)/') || path.startsWith('.nextspark/') || path.startsWith('app.backup.'))
+    .filter((path) => path.startsWith('src/app/(templates)/') || path.startsWith('.nextspark/') || path.startsWith('app.backup.'))
 }
 
 test('nothing a sync writes is left for git, however many files it writes and whatever they are named', { skip: process.platform === 'win32' }, async () => {
   const { root, cleanup } = await project()
   try {
     execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
-    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
     await write(root, `${CORE}/scripts/build/registry.mjs`, treeRegistryBuild(260))
     await write(root, `${CORE}/templates/app/dashboard/layout.tsx`, 'export default function DashboardLayout({ children }) { return children }\n')
     await write(root, `${CORE}/templates/app/(public)/page.tsx`, 'export default function Home() { return null }\n')
     await write(root, 'middleware.ts', 'export function middleware() { return undefined }\n')
-    await write(root, 'app/dashboard/layout.tsx', 'export default function MyLayout({ children }) { return children }\n')
-    await write(root, 'app/(public)/page.tsx', 'export default function MyHome() { return null }\n')
-    await write(root, 'app/(templates)/(public)/page.tsx', 'export default function Earlier() { return null }\n')
-    await write(root, 'app/(templates)/dashboard/layout.tsx', 'export default function Earlier({ children }) { return children }\n')
-    await write(root, 'app/(marketing)/área "quoted" (2)/page.tsx', 'export default function Page() { return null }\n')
+    await write(root, 'src/app/dashboard/layout.tsx', 'export default function MyLayout({ children }) { return children }\n')
+    await write(root, 'src/app/(public)/page.tsx', 'export default function MyHome() { return null }\n')
+    await write(root, 'src/app/(templates)/(public)/page.tsx', 'export default function Earlier() { return null }\n')
+    await write(root, 'src/app/(templates)/dashboard/layout.tsx', 'export default function Earlier({ children }) { return children }\n')
+    await write(root, 'src/app/(marketing)/área "quoted" (2)/page.tsx', 'export default function Page() { return null }\n')
     // Rules that cover a file of each shape under every place a sync writes, and nothing else there
     const shapes = ['middleware.ts', 'dashboard/layout.tsx', '(public)/page.tsx']
-    await write(root, '.gitignore', ['app/(templates)', '.nextspark/backups/*', 'app.backup.v*']
+    await write(root, '.gitignore', ['src/app/(templates)', '.nextspark/backups/*', 'app.backup.v*']
       .flatMap((dir) => shapes.map((shape) => `${dir}/${shape}`))
       .concat('.nextspark/sync-state.json', '')
       .join('\n'))
@@ -579,7 +574,7 @@ test('nothing a sync writes is left for git, however many files it writes and wh
     await runSync(root, {
       force: true,
       backup: true,
-      overwrite: ['i18n.ts', 'middleware.ts', 'app/dashboard/layout.tsx', 'app/(public)/page.tsx'],
+      overwrite: ['i18n.ts', 'middleware.ts', 'src/app/dashboard/layout.tsx', 'src/app/(public)/page.tsx'],
     })
 
     const [appBackup] = (await readdir(root)).filter((entry) => entry.startsWith('app.backup.'))
@@ -588,16 +583,16 @@ test('nothing a sync writes is left for git, however many files it writes and wh
       .map((entry) => entry.name)
       .sort((a, b) => Number(a.endsWith('r3g1st')) - Number(b.endsWith('r3g1st')))
     const written = [
-      'app/(templates)/deep/with spaces/área/(group 0)/"quoted" page 259.tsx',
+      'src/app/(templates)/deep/with spaces/área/(group 0)/"quoted" page 259.tsx',
       `${appBackup}/(marketing)/área "quoted" (2)/page.tsx`,
       `${appBackup}/(templates)/dashboard/layout.tsx`,
-      ...['i18n.ts', 'middleware.ts', 'app/dashboard/layout.tsx', 'app/(public)/page.tsx'].map((file) => `.nextspark/backups/${ownBackup}/${file}`),
-      `.nextspark/backups/${buildBackup}/app/(templates)/(public)/page.tsx`,
+      ...['i18n.ts', 'middleware.ts', 'src/app/dashboard/layout.tsx', 'src/app/(public)/page.tsx'].map((file) => `.nextspark/backups/${ownBackup}/${file}`),
+      `.nextspark/backups/${buildBackup}/src/app/(templates)/(public)/page.tsx`,
     ]
     for (const file of written) {
       assert.ok(existsSync(join(root, file)), `${file} is on disk`)
     }
-    assert.ok((await readdir(join(root, 'app/(templates)/deep/with spaces/área/(group 0)'))).length > 30)
+    assert.ok((await readdir(join(root, 'src/app/(templates)/deep/with spaces/área/(group 0)'))).length > 30)
 
     assert.deepEqual(untrackedGenerated(root), [])
   } finally {
@@ -606,25 +601,25 @@ test('nothing a sync writes is left for git, however many files it writes and wh
 })
 
 /**
- * A stand-in for core's registry build that removes app/(templates)/no-confirm.txt
+ * A stand-in for core's registry build that removes src/app/(templates)/no-confirm.txt
  * as templates-plan.mjs plans it to, backing the file up first the way core does.
  */
 const REMOVING_REGISTRY_BUILD = `import { copyFileSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-const root = process.env.NEXTSPARK_PROJECT_ROOT
-const backup = join(root, '.nextspark/backups', new Date().toISOString().replace(/[:.]/g, '-') + '-r3g1st', 'app/(templates)')
+const root = process.cwd()
+const backup = join(root, '.nextspark/backups', new Date().toISOString().replace(/[:.]/g, '-') + '-r3g1st', 'src/app/(templates)')
 mkdirSync(backup, { recursive: true })
-copyFileSync(join(root, 'app/(templates)/no-confirm.txt'), join(backup, 'no-confirm.txt'))
-rmSync(join(root, 'app/(templates)/no-confirm.txt'))
+copyFileSync(join(root, 'src/app/(templates)/no-confirm.txt'), join(backup, 'no-confirm.txt'))
+rmSync(join(root, 'src/app/(templates)/no-confirm.txt'))
 `
 
 test('--dry-run names the .gitignore lines for the backups a run takes, as the run itself adds them', async () => {
-  const backupsByShape = 'app/(templates)/\napp.backup.v*/\n.nextspark/sync-state.json\n' +
+  const backupsByShape = 'src/app/(templates)/\napp.backup.v*/\n.nextspark/sync-state.json\n' +
     '.nextspark/backups/*/middleware.ts\n.nextspark/backups/*/dashboard/layout.tsx\n.nextspark/backups/*/(public)/page.tsx\n'
   const cases: { name: string; gitignore: string; options: SyncOptions; line: string; registry?: boolean }[] = [
     {
-      name: "--backup's copy of app/ under the installed core",
-      gitignore: 'app/(templates)/\n.nextspark/\napp.backup.v0.1.0-beta.190.*/\n',
+      name: "--backup's copy of src/app/ under the installed core",
+      gitignore: 'src/app/(templates)/\n.nextspark/\napp.backup.v0.1.0-beta.190.*/\n',
       options: { backup: true },
       line: 'app.backup.v*/',
     },
@@ -711,7 +706,7 @@ test("a sync writes nothing while .nextspark/backups/.gitignore is a symlink, ha
     const { root, cleanup } = await project()
     try {
       execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
-      await write(root, '.gitignore', 'app/(templates)/\n.nextspark/sync-state.json\napp.backup.v*/\n')
+      await write(root, '.gitignore', 'src/app/(templates)/\n.nextspark/sync-state.json\napp.backup.v*/\n')
       await write(root, 'rules', '*\n')
       await setUp(root)
       const before = await snapshot(root)
@@ -736,20 +731,19 @@ test("a sync writes nothing while .nextspark/backups/.gitignore is a symlink, ha
 /** A stand-in for core's registry build that writes git status to $GIT_STATUS and nothing else. */
 const STATUS_TAKING_REGISTRY_BUILD = `import { writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
-writeFileSync(process.env.GIT_STATUS, execFileSync('git', ['status', '--porcelain', '-z', '--untracked-files=all'], { cwd: process.env.NEXTSPARK_PROJECT_ROOT, encoding: 'utf-8' }))
+writeFileSync(process.env.GIT_STATUS, execFileSync('git', ['status', '--porcelain', '-z', '--untracked-files=all'], { cwd: process.cwd(), encoding: 'utf-8' }))
 `
 
-test("--backup's copy of app/ is ignored before it is written, whatever .gitignore files it copies from app/", async () => {
+test("--backup's copy of src/app/ is ignored before it is written, whatever .gitignore files it copies from src/app/", async () => {
   const { root, cleanup } = await project()
   const gitStatus = join(tmpdir(), `nextspark-sync-app-status-${process.pid}-${Date.now()}`)
   const previous = process.env.GIT_STATUS
   try {
     execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
     // A rule for every file under the copies, but not for their directories
-    await write(root, '.gitignore', 'app/(templates)/\n.nextspark/\napp.backup.v*/**\n')
-    await write(root, 'app/.gitignore', '!visible.txt\n')
-    await write(root, 'app/visible.txt', 'SECRET=1\n')
-    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    await write(root, '.gitignore', 'src/app/(templates)/\n.nextspark/\napp.backup.v*/**\n')
+    await write(root, 'src/app/.gitignore', '!visible.txt\n')
+    await write(root, 'src/app/visible.txt', 'SECRET=1\n')
     await write(root, `${CORE}/scripts/build/registry.mjs`, STATUS_TAKING_REGISTRY_BUILD)
     process.env.GIT_STATUS = gitStatus
 
@@ -771,7 +765,7 @@ test("--backup's copy of app/ is ignored before it is written, whatever .gitigno
 
 test("--dry-run names the line for --backup's copy exactly when the run adds it, whatever suffix each draws", async () => {
   // A rule for the copies whose suffix starts with A to M: half the names mkdtemp draws
-  const gitignore = 'app/(templates)/\n.nextspark/\napp.backup.v*-[A-M]*/\n'
+  const gitignore = 'src/app/(templates)/\n.nextspark/\napp.backup.v*-[A-M]*/\n'
 
   // Every attempt runs before anything is asserted; with a suffix drawn apart for each, a name-dependent answer disagrees in some
   const differ: string[] = []
@@ -794,24 +788,24 @@ test("--dry-run names the line for --backup's copy exactly when the run adds it,
 
 /**
  * A stand-in for core's registry build that writes files it doesn't usually
- * write in app/(templates), one with a .gitignore of its own that takes it back,
+ * write in src/app/(templates), one with a .gitignore of its own that takes it back,
  * and then writes git status to $GIT_STATUS.
  */
 const NEW_FILES_REGISTRY_BUILD = `import { mkdirSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
-const root = process.env.NEXTSPARK_PROJECT_ROOT
-mkdirSync(join(root, 'app/(templates)/custom'), { recursive: true })
-writeFileSync(join(root, 'app/(templates)/custom/new.tsx'), 'export default function New() { return null }\\n')
-writeFileSync(join(root, 'app/(templates)/custom/.gitignore'), '!*\\n')
+const root = process.cwd()
+mkdirSync(join(root, 'src/app/(templates)/custom'), { recursive: true })
+writeFileSync(join(root, 'src/app/(templates)/custom/new.tsx'), 'export default function New() { return null }\\n')
+writeFileSync(join(root, 'src/app/(templates)/custom/.gitignore'), '!*\\n')
 writeFileSync(process.env.GIT_STATUS, execFileSync('git', ['status', '--porcelain', '-z', '--untracked-files=all'], { cwd: root, encoding: 'utf-8' }))
 `
 
-test('app/(templates) is out of git as a whole directory before the registry build writes there, whatever rules name the files builds usually write', { skip: process.platform === 'win32' }, async () => {
+test('src/app/(templates) is out of git as a whole directory before the registry build writes there, whatever rules name the files builds usually write', { skip: process.platform === 'win32' }, async () => {
   const cases: { name: string; rules: string }[] = [
-    { name: 'the three shapes', rules: 'app/(templates)/middleware.ts\napp/(templates)/dashboard/layout.tsx\napp/(templates)/(public)/page.tsx\n' },
-    { name: 'every file under it', rules: 'app/(templates)/**\n' },
-    { name: 'what is right under it and deeper', rules: 'app/(templates)/*\napp/(templates)/*/**\n' },
+    { name: 'the three shapes', rules: 'src/app/(templates)/middleware.ts\nsrc/app/(templates)/dashboard/layout.tsx\nsrc/app/(templates)/(public)/page.tsx\n' },
+    { name: 'every file under it', rules: 'src/app/(templates)/**\n' },
+    { name: 'what is right under it and deeper', rules: 'src/app/(templates)/*\nsrc/app/(templates)/*/**\n' },
   ]
 
   // Every case runs before anything is asserted, so a failure names each file git picks up
@@ -825,17 +819,16 @@ test('app/(templates) is out of git as a whole directory before the registry bui
       try {
         execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
         await write(root, '.gitignore', `${rules}.nextspark/\napp.backup.v*/\n`)
-        await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
-        await write(root, `${CORE}/scripts/build/registry.mjs`, NEW_FILES_REGISTRY_BUILD)
+            await write(root, `${CORE}/scripts/build/registry.mjs`, NEW_FILES_REGISTRY_BUILD)
         process.env.GIT_STATUS = gitStatus
 
         const planned = gitignoreAdditions(await runSync(root, { dryRun: true }), 'Would add')
         const { printed, exitCode } = await runSyncForExit(root, args)
 
-        if (!planned.includes('app/(templates)/')) wrong.push(`${name}, ${mode}: the dry run names ${JSON.stringify(planned)}`)
-        if (!gitignoreAdditions(printed, 'Added').includes('app/(templates)/')) wrong.push(`${name}, ${mode}: the run adds ${JSON.stringify(gitignoreAdditions(printed, 'Added'))}`)
+        if (!planned.includes('src/app/(templates)/')) wrong.push(`${name}, ${mode}: the dry run names ${JSON.stringify(planned)}`)
+        if (!gitignoreAdditions(printed, 'Added').includes('src/app/(templates)/')) wrong.push(`${name}, ${mode}: the run adds ${JSON.stringify(gitignoreAdditions(printed, 'Added'))}`)
         if (exitCode !== 0) wrong.push(`${name}, ${mode}: exit code ${exitCode}`)
-        const whileTheBuildRan = (await readFile(gitStatus, 'utf-8')).split('\0').filter((entry) => entry.startsWith('?? app/(templates)/'))
+        const whileTheBuildRan = (await readFile(gitStatus, 'utf-8')).split('\0').filter((entry) => entry.startsWith('?? src/app/(templates)/'))
         wrong.push(...whileTheBuildRan.map((entry) => `${name}, ${mode}: ${entry.slice(3)} while the build ran`))
         wrong.push(...untrackedGenerated(root).map((path) => `${name}, ${mode}: ${path} after the run`))
       } finally {
@@ -872,10 +865,10 @@ test('a .gitignore that is a symlink, which git does not read, is not written th
 
 test('a sync stops before it writes anything, in a dry run too, when a .gitignore further down takes back a place it writes, and names the rule', async () => {
   const cases: { name: string; nested: [string, string]; stops: RegExp | null }[] = [
-    { name: 'app/.gitignore takes app/(templates) back', nested: ['app/.gitignore', '!(templates)/\n'], stops: /app\/\(templates\)\/: app\/\.gitignore line 1 \(!\(templates\)\/\) takes it back/ },
-    { name: 'app/.gitignore takes it back anchored', nested: ['app/.gitignore', '# ours\n!/(templates)\n'], stops: /app\/\(templates\)\/: app\/\.gitignore line 2 \(!\/\(templates\)\) takes it back/ },
+    { name: 'src/app/.gitignore takes src/app/(templates) back', nested: ['src/app/.gitignore', '!(templates)/\n'], stops: /src\/app\/\(templates\)\/: src\/app\/\.gitignore line 1 \(!\(templates\)\/\) takes it back/ },
+    { name: 'src/app/.gitignore takes it back anchored', nested: ['src/app/.gitignore', '# ours\n!/(templates)\n'], stops: /src\/app\/\(templates\)\/: src\/app\/\.gitignore line 2 \(!\/\(templates\)\) takes it back/ },
     { name: '.nextspark/.gitignore takes the sync state back', nested: ['.nextspark/.gitignore', '!sync-state.json\n'], stops: /\.nextspark\/sync-state\.json: \.nextspark\/\.gitignore line 1 \(!sync-state\.json\) takes it back/ },
-    { name: 'app/.gitignore takes back a file inside app/(templates), which git never looks into', nested: ['app/.gitignore', '!(templates)/dashboard/page.tsx\n'], stops: null },
+    { name: 'src/app/.gitignore takes back a file inside src/app/(templates), which git never looks into', nested: ['src/app/.gitignore', '!(templates)/dashboard/page.tsx\n'], stops: null },
   ]
 
   // Every case runs before anything is asserted, so a failure names each one
@@ -884,8 +877,7 @@ test('a sync stops before it writes anything, in a dry run too, when a .gitignor
     const { root, cleanup } = await project()
     try {
       execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
-      await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
-      await write(root, `${CORE}/scripts/build/registry.mjs`, treeRegistryBuild(9))
+        await write(root, `${CORE}/scripts/build/registry.mjs`, treeRegistryBuild(9))
       await write(root, nested[0], nested[1])
       const before = await snapshot(root)
 
@@ -914,13 +906,14 @@ test('a place a .gitignore further down takes back is only warned about when the
   const { root, cleanup } = await project()
   try {
     execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
-    await write(root, 'app/.gitignore', '!(templates)/\n')
+    await write(root, 'src/app/.gitignore', '!(templates)/\n')
 
-    // With no theme set, the registry build is skipped and writes nothing in app/(templates)
+    // Without the root marker, the registry build is skipped and writes nothing in src/app/(templates).
+    await rm(join(root, 'nextspark.config.ts'))
     const { printed, exitCode } = await runSyncForExit(root, { force: true })
 
     assert.equal(exitCode, 0)
-    assert.match(printed, /Did not add app\/\(templates\)\/ to \.gitignore, and git would pick up what goes under it: app\/\.gitignore line 1 \(!\(templates\)\/\) takes it back/)
+    assert.match(printed, /Did not add src\/app\/\(templates\)\/ to \.gitignore, and git would pick up what goes under it: src\/app\/\.gitignore line 1 \(!\(templates\)\/\) takes it back/)
     assert.match(printed, /Sync complete/)
   } finally {
     await cleanup()
@@ -928,7 +921,7 @@ test('a place a .gitignore further down takes back is only warned about when the
 })
 
 /**
- * A stand-in for core's registry build that backs up app/(templates)/(public)/page.tsx
+ * A stand-in for core's registry build that backs up src/app/(templates)/(public)/page.tsx
  * before replacing it, into a directory under .nextspark/backups named the way
  * core names it - or with `suffix` in place of mkdtemp's - and then, with the
  * backup on disk, writes git status to $GIT_STATUS and kills sync:app.
@@ -937,12 +930,12 @@ function interruptingRegistryBuild(suffix?: string): string {
   return `import { copyFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
-const root = process.env.NEXTSPARK_PROJECT_ROOT
+const root = process.cwd()
 const backups = join(root, '.nextspark/backups')
 mkdirSync(backups, { recursive: true })
 const prefix = join(backups, new Date().toISOString().replace(/[:.]/g, '-') + '-')
 const dir = ${suffix ? `prefix + ${JSON.stringify(suffix)}` : 'mkdtempSync(prefix)'}
-const file = 'app/(templates)/(public)/page.tsx'
+const file = 'src/app/(templates)/(public)/page.tsx'
 mkdirSync(dirname(join(dir, file)), { recursive: true })
 copyFileSync(join(root, file), join(dir, file))
 writeFileSync(join(root, file), 'export default function Regenerated() { return null }\\n')
@@ -958,14 +951,14 @@ test('a sync:app --force killed while the registry build writes leaves no backup
   const cases: { name: string; gitignore: string; args: string[]; suffix?: string }[] = [
     {
       name: 'rules for a file of each shape and for the stand-in suffix, with --backup and --overwrite',
-      gitignore: 'app/(templates)/\napp.backup.v*/\n.nextspark/sync-state.json\n' +
+      gitignore: 'src/app/(templates)/\napp.backup.v*/\n.nextspark/sync-state.json\n' +
         shapes.map((shape) => `.nextspark/backups/*/${shape}`).join('\n') + '\n.nextspark/backups/*-XXXXXX/\n',
       args: ['--force', '--backup', '--overwrite', 'i18n.ts'],
     },
     {
       name: 'a rule that takes back the backups of a directory only the registry build names',
-      gitignore: 'app/(templates)/\napp.backup.v*/\n.nextspark/sync-state.json\n' +
-        shapes.map((shape) => `.nextspark/backups/*/${shape}`).join('\n') + '\n.nextspark/backups/*/app/\n!.nextspark/backups/*-r3g1st/**\n',
+      gitignore: 'src/app/(templates)/\napp.backup.v*/\n.nextspark/sync-state.json\n' +
+        shapes.map((shape) => `.nextspark/backups/*/${shape}`).join('\n') + '\n.nextspark/backups/*/src/app/\n!.nextspark/backups/*-r3g1st/**\n',
       args: ['--force'],
       suffix: 'r3g1st',
     },
@@ -979,14 +972,12 @@ test('a sync:app --force killed while the registry build writes leaves no backup
     try {
       execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
       await write(root, '.gitignore', gitignore)
-      await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
-      await write(root, 'app/(templates)/(public)/page.tsx', 'export default function Mine() { return null }\n')
+        await write(root, 'src/app/(templates)/(public)/page.tsx', 'export default function Mine() { return null }\n')
       await write(root, `${CORE}/scripts/build/registry.mjs`, interruptingRegistryBuild(suffix))
 
-      const { NEXT_PUBLIC_ACTIVE_THEME: _, ...env } = process.env
       const run = spawnSync(process.execPath, [...process.execArgv, CLI, 'sync:app', ...args], {
         cwd: root,
-        env: { ...env, GIT_STATUS: gitStatus },
+        env: { ...process.env, GIT_STATUS: gitStatus },
         encoding: 'utf-8',
         timeout: 60_000,
       })
@@ -995,7 +986,7 @@ test('a sync:app --force killed while the registry build writes leaves no backup
       const backupsBeforeTheKill = (await readFile(gitStatus, 'utf-8')).split('\0').filter((entry) => /^\?\? (\.nextspark\/backups\/|app\.backup\.)/.test(entry))
       assert.ok((await readdir(join(root, '.nextspark/backups'), { recursive: true })).some((path) => String(path).endsWith('page.tsx')), `${name}: the registry build backed up page.tsx`)
       visible.push(...backupsBeforeTheKill.map((entry) => `${name}: ${entry.slice(3)} while the build ran`))
-      visible.push(...untrackedGenerated(root).filter((path) => !path.startsWith('app/(templates)/')).map((path) => `${name}: ${path} after the kill`))
+      visible.push(...untrackedGenerated(root).filter((path) => !path.startsWith('src/app/(templates)/')).map((path) => `${name}: ${path} after the kill`))
     } finally {
       await rm(gitStatus, { force: true })
       await cleanup()
@@ -1006,9 +997,9 @@ test('a sync:app --force killed while the registry build writes leaves no backup
 })
 
 test('--dry-run names the .gitignore lines a run adds for its backups when the rules name a stand-in for their directories', async () => {
-  const standIns = 'app/(templates)/\n.nextspark/sync-state.json\n*-XXXXXX/\n*-a1b2c3/\n'
+  const standIns = 'src/app/(templates)/\n.nextspark/sync-state.json\n*-XXXXXX/\n*-a1b2c3/\n'
   const cases: { name: string; options: SyncOptions; lines: string[]; registry?: boolean }[] = [
-    { name: "--backup's copy of app/", options: { backup: true }, lines: ['.nextspark/registries/', '.nextspark/backups/', 'app.backup.v*/'] },
+    { name: "--backup's copy of src/app/", options: { backup: true }, lines: ['.nextspark/registries/', '.nextspark/backups/', 'app.backup.v*/', '.nextspark/backups/.gitignore'] },
     { name: 'the backup --overwrite takes of a customized file', options: { overwrite: ['i18n.ts'] }, lines: ['.nextspark/registries/', '.nextspark/backups/', 'app.backup.v*/', '.nextspark/backups/.gitignore'] },
     { name: "the registry build's backups, unplanned under --force", options: {}, lines: ['.nextspark/registries/', '.nextspark/backups/', 'app.backup.v*/', '.nextspark/backups/.gitignore'], registry: true },
   ]
@@ -1041,7 +1032,7 @@ test('--dry-run names the .gitignore lines a run adds for its backups when the r
 })
 
 test('outside a repository, or without git on PATH, nothing a sync writes is left for git once the project is a repository, whatever negations the .gitignore chains', { skip: process.platform === 'win32' }, async () => {
-  const chained = 'app/(templates)/\n!app/(templates)/\n.nextspark/backups/\n!.nextspark/backups/\n' +
+  const chained = 'src/app/(templates)/\n!src/app/(templates)/\n.nextspark/backups/\n!.nextspark/backups/\n' +
     '.nextspark/sync-state.json\n!/.nextspark/sync-state.json\napp.backup.*/\n!app.backup.v*/\n'
 
   // Every mode runs before anything is asserted, so a failure names what each one leaves
@@ -1050,9 +1041,8 @@ test('outside a repository, or without git on PATH, nothing a sync writes is lef
     const { root, cleanup } = await project()
     try {
       await write(root, '.gitignore', chained)
-      await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
-      await write(root, `${CORE}/scripts/build/registry.mjs`, treeRegistryBuild(20))
-      await write(root, 'app/(templates)/(public)/page.tsx', 'export default function Earlier() { return null }\n')
+        await write(root, `${CORE}/scripts/build/registry.mjs`, treeRegistryBuild(20))
+      await write(root, 'src/app/(templates)/(public)/page.tsx', 'export default function Earlier() { return null }\n')
 
       const path = process.env.PATH
       if (mode === 'without git on PATH') {
@@ -1069,12 +1059,12 @@ test('outside a repository, or without git on PATH, nothing a sync writes is lef
         process.env.PATH = path
       }
 
-      assert.ok(existsSync(join(root, 'app/(templates)/middleware.ts')), `${mode}: the registry build ran`)
+      assert.ok(existsSync(join(root, 'src/app/(templates)/middleware.ts')), `${mode}: the registry build ran`)
       assert.ok(existsSync(join(root, '.nextspark/backups')), `${mode}: backups were taken`)
       execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
       leftOut.push(...untrackedGenerated(root).map((file) => `${mode}: ${file}`))
       const added = printed.match(/^  Added (.+) to \.gitignore$/m)?.[1].split(', ') ?? []
-      for (const line of ['app/(templates)/', '.nextspark/backups/', '.nextspark/sync-state.json', 'app.backup.v*/']) {
+      for (const line of ['src/app/(templates)/', '.nextspark/backups/', '.nextspark/sync-state.json', 'app.backup.v*/']) {
         if (!added.includes(line)) leftOut.push(`${mode}: ${line} is not added`)
       }
     } finally {
@@ -1088,12 +1078,12 @@ test('outside a repository, or without git on PATH, nothing a sync writes is lef
 test('a sync writes nothing where it can\'t write safely, a symlink or something else in the way, and fails, in a dry run too', { skip: process.platform === 'win32' }, async () => {
   // Each case puts `path` in the way, pointing at `outside` when it is a symlink
   const cases: { path: string; problem: string; args: SyncOptions; setUp: (root: string, outside: string) => Promise<void> }[] = [
-    { path: 'app/(templates)', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
-      await rm(join(root, 'app/(templates)'), { recursive: true })
-      await symlink(outside, join(root, 'app/(templates)'))
+    { path: 'src/app/(templates)', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
+      await rm(join(root, 'src/app/(templates)'), { recursive: true })
+      await symlink(outside, join(root, 'src/app/(templates)'))
     } },
-    { path: 'app/(templates)/dashboard', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
-      await symlink(outside, join(root, 'app/(templates)/dashboard'))
+    { path: 'src/app/(templates)/dashboard', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
+      await symlink(outside, join(root, 'src/app/(templates)/dashboard'))
     } },
     { path: '.nextspark/backups', problem: 'is a symlink', args: { overwrite: ['i18n.ts'] }, setUp: async (root, outside) => {
       await mkdir(join(root, '.nextspark'), { recursive: true })
@@ -1108,28 +1098,28 @@ test('a sync writes nothing where it can\'t write safely, a symlink or something
       await mkdir(join(root, '.nextspark/registries'), { recursive: true })
       await symlink(join(outside, 'index.ts'), join(root, '.nextspark/registries/index.ts'))
     } },
-    { path: 'app/dashboard', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
-      // Core's dashboard page is newer than the project's, so a sync writes app/dashboard/page.tsx
+    { path: 'src/app/dashboard', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
+      // Core's dashboard page is newer than the project's, so a sync writes src/app/dashboard/page.tsx
       await write(outside, 'page.tsx', 'export default function Theirs() { return null }\n')
-      await rm(join(root, 'app/dashboard'), { recursive: true })
-      await symlink(outside, join(root, 'app/dashboard'))
+      await rm(join(root, 'src/app/dashboard'), { recursive: true })
+      await symlink(outside, join(root, 'src/app/dashboard'))
     } },
     { path: 'i18n.ts', problem: 'is a symlink', args: { overwrite: ['i18n.ts'] }, setUp: async (root, outside) => {
       await rename(join(root, 'i18n.ts'), join(outside, 'i18n.ts'))
       await symlink(join(outside, 'i18n.ts'), join(root, 'i18n.ts'))
     } },
-    { path: 'app', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
+    { path: 'src/app', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
       await rm(outside, { recursive: true })
-      await rename(join(root, 'app'), outside)
-      await symlink(outside, join(root, 'app'))
+      await rename(join(root, 'src', 'app'), outside)
+      await symlink(outside, join(root, 'src', 'app'))
     } },
     { path: '.nextspark', problem: 'is not a directory', args: { overwrite: ['i18n.ts'] }, setUp: async (root) => {
       await write(root, '.nextspark', '')
     } },
-    { path: 'app/dashboard', problem: 'is not a directory', args: {}, setUp: async (root) => {
-      // Core's dashboard page is newer than the project's, so a sync writes app/dashboard/page.tsx
-      await rm(join(root, 'app/dashboard'), { recursive: true })
-      await write(root, 'app/dashboard', 'a file where a directory goes\n')
+    { path: 'src/app/dashboard', problem: 'is not a directory', args: {}, setUp: async (root) => {
+      // Core's dashboard page is newer than the project's, so a sync writes src/app/dashboard/page.tsx
+      await rm(join(root, 'src/app/dashboard'), { recursive: true })
+      await write(root, 'src/app/dashboard', 'a file where a directory goes\n')
     } },
     { path: 'i18n.ts', problem: 'is not a file', args: {}, setUp: async (root) => {
       await rm(join(root, 'i18n.ts'))
@@ -1152,10 +1142,9 @@ test('a sync writes nothing where it can\'t write safely, a symlink or something
     const outside = await mkdtemp(join(tmpdir(), 'nextspark-sync-app-outside-'))
     try {
       execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
-      await write(root, '.gitignore', 'app/(templates)/\n.nextspark/\napp.backup.v*/\n')
-      await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
-      await write(outside, 'dashboard/layout.tsx', 'export default function Theirs({ children }) { return children }\n')
-      await write(root, 'app/(templates)/(public)/page.tsx', 'export default function Earlier() { return null }\n')
+      await write(root, '.gitignore', 'src/app/(templates)/\n.nextspark/\napp.backup.v*/\n')
+        await write(outside, 'dashboard/layout.tsx', 'export default function Theirs({ children }) { return children }\n')
+      await write(root, 'src/app/(templates)/(public)/page.tsx', 'export default function Earlier() { return null }\n')
       await setUp(root, outside)
       await write(root, `${CORE}/scripts/build/registry.mjs`, treeRegistryBuild(3))
       const before = { project: await snapshot(root), outside: await snapshot(outside) }
@@ -1183,7 +1172,7 @@ test("--backup stops before it writes anything when the project's .gitignore is 
   const { root, cleanup } = await project()
   try {
     execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
-    await write(root, 'rules', 'app/(templates)/\n.nextspark/\napp.backup.v*/\n')
+    await write(root, 'rules', 'src/app/(templates)/\n.nextspark/\napp.backup.v*/\n')
     await symlink('rules', join(root, '.gitignore'))
     const before = await snapshot(root)
 
@@ -1203,7 +1192,6 @@ test('a path git picks up once the sync has written it fails the sync, and is na
   const { root, cleanup } = await project()
   try {
     execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
-    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
     // Each name, and how the report shows it
     const names: [string, string][] = [
       ['line\u2028separator.tsx', 'line\\u2028separator.tsx'],
@@ -1214,17 +1202,17 @@ test('a path git picks up once the sync has written it fails the sync, and is na
       ['isolate\u2066d.tsx', 'isolate\\u2066d.tsx'],
       ['delete\u007f.tsx', 'delete\\u007f.tsx'],
     ]
-    // The build takes app/(templates) back itself, after sync:app decided its .gitignore lines
+    // The build takes src/app/(templates) back itself, after sync:app decided its .gitignore lines
     await write(root, `${CORE}/scripts/build/registry.mjs`, `import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-const root = process.env.NEXTSPARK_PROJECT_ROOT
-writeFileSync(join(root, 'app/.gitignore'), '!(templates)/\\n')
-mkdirSync(join(root, 'app/(templates)'), { recursive: true })
-for (const name of ${JSON.stringify(names.map(([name]) => name))}) writeFileSync(join(root, 'app/(templates)', name), '')
+const root = process.cwd()
+writeFileSync(join(root, 'src/app/.gitignore'), '!(templates)/\\n')
+mkdirSync(join(root, 'src/app/(templates)'), { recursive: true })
+for (const name of ${JSON.stringify(names.map(([name]) => name))}) writeFileSync(join(root, 'src/app/(templates)', name), '')
 `)
 
     for (const verbose of [false, true]) {
-      await rm(join(root, 'app/.gitignore'), { force: true })
+      await rm(join(root, 'src/app/.gitignore'), { force: true })
       const { printed, exitCode } = await runSyncForExit(root, { force: true, verbose })
       assert.equal(exitCode, 1, `verbose: ${verbose}`)
       assert.match(printed, /Sync incomplete: git picks up 7 file\(s\) sync:app and the registry build wrote/)
@@ -1232,7 +1220,7 @@ for (const name of ${JSON.stringify(names.map(([name]) => name))}) writeFileSync
       assert.doesNotMatch(printed, /[\u007f-\u009f\u061c\u2028\u2029\u202a-\u202e\u2066-\u2069]/, `verbose: ${verbose}`)
       const lines = printed.split('\n').map((line) => line.trim())
       for (const [, shown] of names) {
-        assert.ok(lines.includes(`"app/(templates)/${shown}"`), `verbose: ${verbose}: ${shown} is named on a line of its own`)
+        assert.ok(lines.includes(`"src/app/(templates)/${shown}"`), `verbose: ${verbose}: ${shown} is named on a line of its own`)
       }
     }
   } finally {
@@ -1256,9 +1244,9 @@ const FORGING_NAMES: [string, string][] = [
 /** What breaks a line or reorders it, a newline aside. */
 const RAW_CONTROL = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/
 
-/** A stand-in for core's templates-plan.mjs that plans to create, replace and remove a file of each name in app/(templates). */
+/** A stand-in for core's templates-plan.mjs that plans to create, replace and remove a file of each name in src/app/(templates). */
 function forgingTemplatesPlan(): string {
-  const tree = FORGING_NAMES.map(([name]) => `app/(templates)/${name}`)
+  const tree = FORGING_NAMES.map(([name]) => `src/app/(templates)/${name}`)
   return `console.log('nextspark-templates-plan:' + JSON.stringify(${JSON.stringify({ create: tree, replace: tree, remove: tree })}))
 `
 }
@@ -1266,9 +1254,9 @@ function forgingTemplatesPlan(): string {
 /** A stand-in for core's registry build that prints a line naming each name, as core's does, and exits with `code`. */
 function forgingRegistryBuild(code: number): string {
   return `for (const name of ${JSON.stringify(FORGING_NAMES.map(([name]) => name))}) {
-  console.log('⚠️ app/(templates): backed up app/(templates)/' + name.split(String.fromCharCode(10)).join(' ') + ' to .nextspark/backups/x')
+  console.log('⚠️ src/app/(templates): backed up src/app/(templates)/' + name.split(String.fromCharCode(10)).join(' ') + ' to .nextspark/backups/x')
 }
-console.error('Build failed: could not read app/(templates)/' + ${JSON.stringify(FORGING_NAMES[1][0])})
+console.error('Build failed: could not read src/app/(templates)/' + ${JSON.stringify(FORGING_NAMES[1][0])})
 process.exit(${code})
 `
 }
@@ -1278,19 +1266,18 @@ test('every path sync:app prints is named on a line of its own, whatever its nam
   const { root, cleanup } = await project()
   try {
     execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
-    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
     await write(root, `${CORE}/scripts/build/templates-plan.mjs`, forgingTemplatesPlan())
     for (const [name] of FORGING_NAMES) {
       // A file core doesn't ship
-      await write(root, `app/(project)/${name}`, 'export default 1\n')
+      await write(root, `src/app/(project)/${name}`, 'export default 1\n')
     }
     // Files sync wrote once and core no longer ships, one untouched and one changed; a tag names no path with whitespace in it
     const tagged = FORGING_NAMES.map(([name]) => name).filter((name) => !/\s/.test(name))
     for (const name of tagged) {
-      await write(root, `app/(retired)/${name}`, withGeneratedTag(`app/(retired)/${name}`, Buffer.from('export default 1\n'), CORE_VERSION).toString())
-      await write(root, `app/(changed)/${name}`, `${withGeneratedTag(`app/(changed)/${name}`, Buffer.from('export default 1\n'), CORE_VERSION).toString()}export const changed = true\n`)
+      await write(root, `src/app/(retired)/${name}`, withGeneratedTag(`src/app/(retired)/${name}`, Buffer.from('export default 1\n'), CORE_VERSION).toString())
+      await write(root, `src/app/(changed)/${name}`, `${withGeneratedTag(`src/app/(changed)/${name}`, Buffer.from('export default 1\n'), CORE_VERSION).toString()}export const changed = true\n`)
     }
-    const overwrite = [...tagged.map((name) => `app/(changed)/${name}`), ...FORGING_NAMES.map(([name]) => `nowhere/${name}`)]
+    const overwrite = [...tagged.map((name) => `src/app/(changed)/${name}`), ...FORGING_NAMES.map(([name]) => `nowhere/${name}`)]
 
     const runs: [string, SyncOptions, string][] = []
     await write(root, `${CORE}/scripts/build/registry.mjs`, forgingRegistryBuild(0))
@@ -1310,17 +1297,17 @@ test('every path sync:app prints is named on a line of its own, whatever its nam
     for (const [name, shown] of FORGING_NAMES) {
       // A line naming one is escaped whole, between quotes
       const named = (printed: string, text: string) => printed.split('\n').some((line) => line.trim().startsWith('"') && line.includes(text))
-      if (!named(dryRun, `. app/(project)/${shown}"`)) wrong.push(`dry run: app/(project)/${shown} is not listed`)
-      if (!named(dryRun, `+ app/(templates)/${shown}"`)) wrong.push(`dry run: app/(templates)/${shown} is not planned`)
+      if (!named(dryRun, `. src/app/(project)/${shown}"`)) wrong.push(`dry run: src/app/(project)/${shown} is not listed`)
+      if (!named(dryRun, `+ src/app/(templates)/${shown}"`)) wrong.push(`dry run: src/app/(templates)/${shown} is not planned`)
       if (!named(dryRun, `--overwrite nowhere/${shown}:`)) wrong.push(`dry run: --overwrite nowhere/${shown} is not warned about`)
       if (tagged.includes(name)) {
-        if (!named(run, `- app/(retired)/${shown} (`)) wrong.push(`run: app/(retired)/${shown} is not listed as removed`)
-        if (!named(run, `app/(changed)/${shown}`)) wrong.push(`run: app/(changed)/${shown} is not named as backed up`)
+        if (!named(run, `- src/app/(retired)/${shown} (`)) wrong.push(`run: src/app/(retired)/${shown} is not listed as removed`)
+        if (!named(run, `src/app/(changed)/${shown}`)) wrong.push(`run: src/app/(changed)/${shown} is not named as backed up`)
       }
     }
     if (!/Sync complete/.test(run)) wrong.push('run: the build does not complete')
-    if (!run.includes('"⚠️ app/(templates): backed up app/(templates)/erase' + '\\' + 'u001b[2Kline.tsx to .nextspark/backups/x"')) wrong.push('run: the build lines are not repeated, escaped')
-    if (!failed.includes('"Build failed: could not read app/(templates)/erase' + '\\' + 'u001b[2Kline.tsx"')) wrong.push('failed build: the failure is not repeated, escaped')
+    if (!run.includes('"⚠️ src/app/(templates): backed up src/app/(templates)/erase' + '\\' + 'u001b[2Kline.tsx to .nextspark/backups/x"')) wrong.push('run: the build lines are not repeated, escaped')
+    if (!failed.includes('"Build failed: could not read src/app/(templates)/erase' + '\\' + 'u001b[2Kline.tsx"')) wrong.push('failed build: the failure is not repeated, escaped')
     if (tagged.length < 2) wrong.push(`only ${tagged.length} names could be tagged`)
 
     assert.deepEqual(wrong, [])
@@ -1333,8 +1320,8 @@ test("a sync that stops on a file it can't read names it escaped, in the error a
   const [name, shown] = FORGING_NAMES[0]
   const { root, cleanup } = await project()
   try {
-    await write(root, `app/${name}`, 'export default 1\n')
-    await chmod(join(root, 'app', name), 0)
+    await write(root, `src/app/${name}`, 'export default 1\n')
+    await chmod(join(root, 'src', 'app', name), 0)
 
     const { printed, exitCode } = await runSyncForExit(root, { dryRun: true, verbose: true })
 
@@ -1342,21 +1329,21 @@ test("a sync that stops on a file it can't read names it escaped, in the error a
     assert.equal(exitCode, 1)
     assert.deepEqual(lines.filter((line) => RAW_CONTROL.test(line)), [])
     assert.deepEqual(lines.filter((line) => line.trim() === '✅ Sync complete!'), [])
-    const naming = lines.filter((line) => /^\s*"Error: EACCES: permission denied, open '/.test(line) && line.endsWith(`/app/${shown}'"`))
+    const naming = lines.filter((line) => /^\s*"Error: EACCES: permission denied, open '/.test(line) && line.endsWith(`/src/app/${shown}'"`))
     assert.equal(naming.length, 2, `the error and the first line of its stack name the file escaped:\n${printed}`)
   } finally {
-    await chmod(join(root, 'app', name), 0o644).catch(() => {})
+    await chmod(join(root, 'src', 'app', name), 0o644).catch(() => {})
     await cleanup()
   }
 })
 
 test(".nextspark/registries is kept out of git like the rest of what the registry build writes, while the build runs and after, and is left to the .gitignore core's build keeps there when a rule takes it back", { skip: process.platform === 'win32' }, async () => {
-  const managedBefore = 'node_modules/\napp/(templates)/\n.nextspark/backups/\n.nextspark/sync-state.json\napp.backup.v*/\n'
+  const managedBefore = 'node_modules/\nsrc/app/(templates)/\n.nextspark/backups/\n.nextspark/sync-state.json\napp.backup.v*/\n'
   // Writes as many registries as core's build does, and records git's view from inside the build
   const registryBuild = `import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-const root = process.env.NEXTSPARK_PROJECT_ROOT
+const root = process.cwd()
 mkdirSync(join(root, '.nextspark/registries'), { recursive: true })
 for (let index = 0; index < 27; index++) writeFileSync(join(root, '.nextspark/registries', 'registry-' + index + '.ts'), '')
 writeFileSync(process.env.NEXTSPARK_TEST_STATUS, execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf-8' }))
@@ -1369,14 +1356,13 @@ writeFileSync(process.env.NEXTSPARK_TEST_STATUS, execFileSync('git', ['status', 
   process.env.NEXTSPARK_TEST_STATUS = statusFile
   try {
     execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
-    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
     await write(root, '.gitignore', managedBefore)
     await write(root, `${CORE}/scripts/build/registry.mjs`, registryBuild)
 
     const planned = await runSyncForExit(root, { dryRun: true })
     if (planned.exitCode !== 0) wrong.push(`dry run: exit code ${planned.exitCode}`)
     if (!gitignoreAdditions(planned.printed, 'Would add').includes('.nextspark/registries/')) wrong.push('dry run: does not name the .gitignore line for the registries')
-    if (!/Would regenerate \.nextspark\/registries and app\/\(templates\)/.test(planned.printed)) wrong.push('dry run: does not name the registries it regenerates')
+    if (!/Would regenerate \.nextspark\/registries and src\/app\/\(templates\)/.test(planned.printed)) wrong.push('dry run: does not name the registries it regenerates')
     if (!planned.printed.includes('Would have the registry build add .nextspark/registries/.gitignore, which keeps every registry there that git does not track yet out of git')) wrong.push("dry run: does not name the registries' own .gitignore")
 
     const done = await runSyncForExit(root, { force: true })
@@ -1395,7 +1381,6 @@ writeFileSync(process.env.NEXTSPARK_TEST_STATUS, execFileSync('git', ['status', 
   const takenBack = await project()
   try {
     execFileSync('git', ['init', '-q'], { cwd: takenBack.root, stdio: 'ignore' })
-    await write(takenBack.root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
     await write(takenBack.root, '.gitignore', managedBefore)
     await write(takenBack.root, '.nextspark/.gitignore', '!registries/\n')
     await write(takenBack.root, `${CORE}/scripts/build/registry.mjs`, 'process.exit(0)\n')
@@ -1417,12 +1402,11 @@ writeFileSync(process.env.NEXTSPARK_TEST_STATUS, execFileSync('git', ['status', 
 test('a sync says when git tracks the registries the registry build rewrites, and how to stop tracking them', async () => {
   const { root, cleanup } = await project()
   try {
-    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
     await write(root, '.gitignore', 'node_modules/\n.env\n')
     await write(root, '.nextspark/registries/index.ts', '// committed before\n')
     await write(root, `${CORE}/scripts/build/registry.mjs`, `import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-writeFileSync(join(process.env.NEXTSPARK_PROJECT_ROOT, '.nextspark/registries/index.ts'), '// rewritten\\n')
+writeFileSync(join(process.cwd(), '.nextspark/registries/index.ts'), '// rewritten\\n')
 console.log('Registry build complete')
 `)
     execFileSync('git', ['init', '-q'], { cwd: root })

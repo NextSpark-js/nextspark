@@ -11,10 +11,12 @@ jest.mock('@better-fetch/fetch', () => ({
   betterFetch: jest.fn(),
 }))
 
+const mockGetAppConfig = jest.fn(() => undefined)
 jest.mock('@nextsparkjs/core/lib/middleware', () => ({
-  hasThemeMiddleware: () => false,
-  executeThemeMiddleware: jest.fn(),
-  getThemeAppConfig: jest.fn(() => undefined),
+  hasProjectMiddleware: () => false,
+  executeProjectMiddleware: jest.fn(),
+  getProjectAppConfig: mockGetAppConfig,
+  getThemeAppConfig: mockGetAppConfig,
 }))
 
 import { betterFetch } from '@better-fetch/fetch'
@@ -49,7 +51,6 @@ const mockedFetch = betterFetch as unknown as jest.Mock
 describe('proxy identity headers (#87)', () => {
   beforeEach(() => {
     mockedFetch.mockReset()
-    delete process.env.NEXT_PUBLIC_ACTIVE_THEME
   })
 
   test.each([
@@ -100,7 +101,6 @@ describe('proxy identity headers (#87)', () => {
 describe('proxy role-gated areas', () => {
   beforeEach(() => {
     mockedFetch.mockReset()
-    delete process.env.NEXT_PUBLIC_ACTIVE_THEME
   })
 
   const signedInAs = (role: string) => ({ data: { user: { id: 'user-1', email: 'user-1@example.com', role } } })
@@ -153,7 +153,6 @@ describe('proxy path boundaries and redirect targets', () => {
     mockedFetch.mockReset()
     mockedAppConfig.mockReset()
     mockedAppConfig.mockReturnValue(undefined)
-    delete process.env.NEXT_PUBLIC_ACTIVE_THEME
   })
 
   test.each(['/administrator', '/dashboard-guide', '/settings-icon.svg', '/profile-photo.jpg', '/update-password-help.png'])(
@@ -403,7 +402,6 @@ describe('proxy docs pages the registry lacks', () => {
     mockedFetch.mockReset()
     mockedAppConfig.mockReset()
     mockedAppConfig.mockReturnValue(undefined)
-    delete process.env.NEXT_PUBLIC_ACTIVE_THEME
   })
 
   test.each([
@@ -497,7 +495,6 @@ describe('proxy docs pages the registry lacks', () => {
 describe('proxy active team header', () => {
   beforeEach(() => {
     mockedFetch.mockReset()
-    delete process.env.NEXT_PUBLIC_ACTIVE_THEME
   })
 
   const session = { data: { user: { id: 'user-1', email: 'user-1@example.com', role: 'member' }, session: { id: 'session-1' } } }
@@ -528,7 +525,6 @@ describe('proxy active team header', () => {
 describe('proxy session hint', () => {
   beforeEach(() => {
     mockedFetch.mockReset()
-    delete process.env.NEXT_PUBLIC_ACTIVE_THEME
   })
 
   const hintCookie = (response: PassThrough) => response.setCookies?.find(cookie => cookie.name === 'nextspark.signed_in')

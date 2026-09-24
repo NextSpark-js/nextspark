@@ -1,9 +1,9 @@
 /**
  * Core default: Verify Email template.
  *
- * Themes can override by creating `themes/<theme>/emails/verify-email.ts` with
+ * Projects can override by creating `emails/verify-email.ts` with
  * a default export matching this contract. The build-time email registry will
- * pick the theme version over this one when the active theme has the file.
+ * pick the project version over this core default when the project has the file.
  *
  * @see packages/core/scripts/build/registry/discovery/emails.mjs
  * @see packages/core/scripts/build/registry/generators/email-registry.mjs

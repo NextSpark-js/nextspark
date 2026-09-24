@@ -43,8 +43,7 @@ function parsePlugins(pluginsStr: string | undefined): PluginOption[] | undefine
  */
 function hasExistingProject(): boolean {
   const projectRoot = process.cwd();
-  // Check for contents/ directory or .nextspark/ directory
-  return existsSync(join(projectRoot, 'contents')) ||
+  return existsSync(join(projectRoot, 'nextspark.config.ts')) ||
          existsSync(join(projectRoot, '.nextspark'));
 }
 

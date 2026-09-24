@@ -1,7 +1,7 @@
 /**
  * Core default: Reset Password template.
  *
- * Themes can override by creating `themes/<theme>/emails/reset-password.ts`
+ * Projects can override by creating `emails/reset-password.ts`
  * with a default export matching this contract.
  */
 

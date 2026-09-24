@@ -83,7 +83,7 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@nextsparkjs/core'],
   turbopack: {
     resolveAlias: {
-      '@nextsparkjs/core/lib/registries/*': './.nextspark/registries/*',
+      '@nextsparkjs/.nextspark/registries/*': './.nextspark/registries/*',
       '@nextsparkjs/registries/*': './.nextspark/registries/*',
     }
   },
@@ -103,11 +103,11 @@ const nextConfig: NextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       'pg-native': false,
-      '@nextsparkjs/core/lib/registries': path.resolve(__dirname, '.nextspark/registries'),
+      '@nextsparkjs/.nextspark/registries': path.resolve(__dirname, '.nextspark/registries'),
       '@nextsparkjs/registries': path.resolve(__dirname, '.nextspark/registries'),
       '@/core': path.resolve(__dirname, 'node_modules/@nextsparkjs/core/dist'),
-      '@/themes': path.resolve(__dirname, 'contents/themes'),
-      '@/plugins': path.resolve(__dirname, 'contents/plugins'),
+      '@': path.resolve(__dirname, '.'),
+      '@/plugins': path.resolve(__dirname, 'plugins'),
     }
 
     return config
@@ -120,10 +120,10 @@ export default nextConfig;
 ### 5. Create Contents Directory
 
 ```bash
-mkdir -p contents/themes/default
+mkdir -p ./default
 ```
 
-**contents/themes/default/theme.config.ts**:
+**theme.config.ts**:
 ```typescript
 import { defineTheme } from '@nextsparkjs/core/lib/config'
 
@@ -146,7 +146,6 @@ BETTER_AUTH_SECRET=your-secret-here-at-least-32-characters
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 # Theme
-NEXT_PUBLIC_ACTIVE_THEME=default
 ```
 
 ### 7. Run Setup
@@ -184,18 +183,16 @@ Visit http://localhost:3000
 ```
 my-saas-app/
 ├── .nextspark/              # Auto-generated (gitignored)
-│   └── registries/          # Theme/entity registries
-├── app/                     # Next.js app router
-│   ├── (auth)/              # Auth routes
-│   ├── (public)/            # Public routes
-│   ├── dashboard/           # Protected dashboard
-│   └── api/                 # API routes
-├── contents/                # Your customizations
-│   └── themes/
-│       └── default/         # Your theme
-│           ├── theme.config.ts
-│           ├── entities/    # Custom entities
-│           └── templates/   # Page overrides
+│   └── registries/          # Generated registries
+├── src/app/                 # Generated Next.js adapter
+├── api/                     # Project route handlers
+├── blocks/                  # Page-builder blocks
+├── config/                  # Project configuration
+├── entities/                # Project entities
+├── messages/                # Project translations
+├── plugins/                 # Enabled local plugins
+├── styles/                  # Project styles
+├── templates/               # Page and layout source
 ├── node_modules/
 │   └── @nextspark/
 │       └── core/            # The package
@@ -230,7 +227,7 @@ Auto-generated TypeScript files that index your themes, entities, and plugins:
 ### tsconfig.json
 
 Auto-generated from `tsconfig.base.json` with:
-- Dynamic exclusions for inactive themes/plugins
+- Dynamic exclusions for inprojects/plugins
 - @nextspark/* path aliases for registry resolution
 
 ---

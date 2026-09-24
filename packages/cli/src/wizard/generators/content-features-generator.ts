@@ -22,8 +22,8 @@ function getFeaturesDir(templatesDir: string): string {
 /**
  * Get the target theme directory in the user's project
  */
-function getTargetThemeDir(projectSlug: string): string {
-  return path.resolve(process.cwd(), 'contents', 'themes', projectSlug)
+function getProjectRoot(): string {
+  return path.resolve(process.cwd())
 }
 
 /**
@@ -31,7 +31,7 @@ function getTargetThemeDir(projectSlug: string): string {
  */
 async function copyPagesFeature(config: WizardConfig, templatesDir: string): Promise<void> {
   const featuresDir = getFeaturesDir(templatesDir)
-  const targetThemeDir = getTargetThemeDir(config.projectSlug)
+  const targetThemeDir = getProjectRoot()
 
   // Copy pages entity
   const sourcePagesEntity = path.join(featuresDir, 'pages', 'entities', 'pages')
@@ -59,7 +59,7 @@ async function copyPagesFeature(config: WizardConfig, templatesDir: string): Pro
  */
 async function copyBlogFeature(config: WizardConfig, templatesDir: string): Promise<void> {
   const featuresDir = getFeaturesDir(templatesDir)
-  const targetThemeDir = getTargetThemeDir(config.projectSlug)
+  const targetThemeDir = getProjectRoot()
 
   // Copy posts entity
   const sourcePostsEntity = path.join(featuresDir, 'blog', 'entities', 'posts')

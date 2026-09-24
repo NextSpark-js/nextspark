@@ -259,7 +259,6 @@ BETTER_AUTH_TRUST_HOST="true"
 # ============================================
 NEXT_PUBLIC_APP_URL="https://your-domain.com"
 NEXT_PUBLIC_APP_NAME="Your App Name"
-NEXT_PUBLIC_ACTIVE_THEME="your-theme"
 
 # ============================================
 # EMAIL (Resend)

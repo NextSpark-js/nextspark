@@ -846,7 +846,7 @@ on:
   pull_request:
     paths:
       - 'core/messages/**'
-      - 'contents/**/messages/**'
+      - '{entities,plugins}/**/messages/**'
 
 jobs:
   test-translations:

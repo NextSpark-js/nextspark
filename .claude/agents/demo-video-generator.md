@@ -400,7 +400,7 @@ const commandDelay = Math.floor(availableForCommands / analysis.numCommands)
 ### Step 5: Run Test and Report
 
 ```bash
-NEXT_PUBLIC_ACTIVE_THEME=default pnpm cy:run --spec "**/[feature].doc.cy.ts"
+pnpm cy:run --spec "**/[feature].doc.cy.ts"
 ```
 
 Report:
@@ -441,9 +441,9 @@ Report:
 
 ## File Locations
 
-- **Tests:** `contents/themes/default/tests/cypress/e2e/docs/tutorials/`
-- **Videos:** `contents/themes/default/tests/cypress/videos/`
-- **Narrations:** `contents/themes/default/tests/cypress/docs-output/narrations/`
+- **Tests:** `tests/cypress/e2e/docs/tutorials/`
+- **Videos:** `tests/cypress/videos/`
+- **Narrations:** `tests/cypress/docs-output/narrations/`
 
 ---
 

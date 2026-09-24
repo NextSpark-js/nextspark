@@ -5,11 +5,10 @@ Generate Block Selectors Script
 Generates BLOCK_SELECTORS entry for a new page builder block.
 
 Usage:
-    python generate-block-selectors.py --block BLOCK_NAME [--theme THEME]
+    python generate-block-selectors.py --block BLOCK_NAME
 
 Options:
     --block BLOCK_NAME  Name of the block (e.g., hero, faq-accordion)
-    --theme THEME       Theme name (default: from NEXT_PUBLIC_ACTIVE_THEME or 'default')
     --analyze           Analyze existing block component for elements
     --full              Generate full example with component and test usage
     --dry-run           Print output without instructions
@@ -33,10 +32,6 @@ def to_pascal_case(name: str) -> str:
     """Convert kebab-case to PascalCase."""
     return ''.join(x.title() for x in name.split('-'))
 
-
-def get_active_theme() -> str:
-    """Get active theme from environment or default."""
-    return os.environ.get('NEXT_PUBLIC_ACTIVE_THEME', 'default')
 
 
 def analyze_block_component(block_path: Path) -> List[Dict]:
@@ -135,7 +130,7 @@ BLOCK SELECTORS: {block_name}
 ================================================================================
 
 1. ADD TO BLOCK_SELECTORS
-   File: contents/themes/{theme}/lib/selectors.ts
+   File: lib/selectors.ts
 
    Find the BLOCK_SELECTORS constant and add:
 
@@ -144,7 +139,7 @@ BLOCK SELECTORS: {block_name}
 --------------------------------------------------------------------------------
 
 2. COMPONENT USAGE
-   File: contents/themes/{theme}/blocks/{block_name}/component.tsx
+   File: blocks/{block_name}/component.tsx
 
    Import:
    ```typescript
@@ -172,7 +167,7 @@ BLOCK SELECTORS: {block_name}
 --------------------------------------------------------------------------------
 
 3. CYPRESS TEST USAGE
-   File: contents/themes/{theme}/tests/cypress/e2e/blocks/{block_name}.cy.ts
+   File: tests/cypress/e2e/blocks/{block_name}.cy.ts
 
    ```typescript
    import {{ cySelector }} from '../../src/selectors'
@@ -196,7 +191,7 @@ BLOCK SELECTORS: {block_name}
 --------------------------------------------------------------------------------
 
 4. POM USAGE (Optional - for complex blocks)
-   File: contents/themes/{theme}/tests/cypress/src/blocks/{pascal_name}POM.ts
+   File: tests/cypress/src/blocks/{pascal_name}POM.ts
 
    ```typescript
    import {{ BasePOM }} from '../core/BasePOM'
@@ -230,24 +225,22 @@ BLOCK SELECTORS: {block_name}
 def main():
     parser = argparse.ArgumentParser(description='Generate block selectors')
     parser.add_argument('--block', required=True, help='Block name (kebab-case)')
-    parser.add_argument('--theme', default=None, help='Theme name')
     parser.add_argument('--analyze', action='store_true', help='Analyze existing block')
     parser.add_argument('--full', action='store_true', help='Generate full example')
     parser.add_argument('--dry-run', action='store_true', help='Print only selector entry')
 
     args = parser.parse_args()
 
-    theme = args.theme or get_active_theme()
+    theme = 'project'
     block_name = args.block.lower()
 
     print(f"\n{'='*60}")
     print(f"Generating selectors for block: {block_name}")
-    print(f"Theme: {theme}")
     print(f"{'='*60}")
 
     elements = None
     if args.analyze:
-        block_path = Path(f'contents/themes/{theme}/blocks/{block_name}')
+        block_path = Path(f'blocks/{block_name}')
         if block_path.exists():
             elements = analyze_block_component(block_path)
             if elements:

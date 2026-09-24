@@ -16,8 +16,8 @@ The application uses a robust migration system to manage database schema changes
 │ Tracking: _migrations table             │
 ├─────────────────────────────────────────┤
 │ Tier 2: Content Migrations              │
-│ Location: contents/themes/[theme]/      │
-│          contents/plugins/[plugin]/     │
+│ Location:       │
+│          plugins/[plugin]/     │
 │ Purpose: Theme/Plugin schema            │
 │ Tracking: _content_migrations table     │
 ├─────────────────────────────────────────┤
@@ -32,7 +32,7 @@ The application uses a robust migration system to manage database schema changes
 1. Core migrations (system tables, functions)
 2. Theme-level migrations (theme-specific schema)
 3. Plugin-level migrations (plugin-specific schema)
-4. Entity migrations (entity tables from themes/plugins)
+4. Entity migrations (project and enabled local-plugin entity tables)
 
 ---
 
@@ -54,25 +54,25 @@ The application uses a robust migration system to manage database schema changes
 
 **Theme Migrations:**
 ```text
-contents/themes/[theme-name]/
+
 └── migrations/
     └── 001_theme_specific.sql
 ```
 
 **Plugin Migrations:**
 ```text
-contents/plugins/[plugin-name]/
+plugins/[plugin-name]/
 └── migrations/
     └── 001_plugin_specific.sql
 ```
 
 **Entity Migrations:**
 ```text
-contents/themes/[theme]/entities/[entity]/
+entities/[entity]/
 └── migrations/
     └── 001_create_table.sql
 
-contents/plugins/[plugin]/entities/[entity]/
+plugins/[plugin]/entities/[entity]/
 └── migrations/
     └── 001_create_table.sql
 ```
@@ -251,12 +251,11 @@ CREATE TRIGGER users_metas_set_updated_at
 ```bash
 # .env
 DATABASE_URL=postgresql://user:pass@host:5432/database
-NEXT_PUBLIC_ACTIVE_THEME=default
 ```
 
 **Required:**
 - PostgreSQL connection string
-- Active theme configured
+- project configured
 - Node.js installed
 
 ### Execute Migrations
@@ -284,7 +283,7 @@ Found 7 migration file(s)
 ⏭️  Skipping 003_user_metas.sql (already executed)
 
 📋 PHASE 2: Entity migrations
-📌 Active theme: default
+📌 project: default
 
 🎨 Theme migrations: default
   🔄 001_theme_setup.sql...
@@ -388,12 +387,12 @@ pnpm db:migrate
 
 **1. Create Theme Migrations Directory:**
 ```bash
-mkdir -p contents/themes/default/migrations
+mkdir -p migrations
 ```
 
 **2. Create Migration File:**
 ```bash
-touch contents/themes/default/migrations/001_theme_feature.sql
+touch migrations/001_theme_feature.sql
 ```
 
 **3. Write Migration:**
@@ -410,12 +409,12 @@ CREATE TABLE IF NOT EXISTS "theme_specific_table" (
 
 **1. Create Entity Migrations Directory:**
 ```bash
-mkdir -p contents/themes/default/entities/tasks/migrations
+mkdir -p entities/tasks/migrations
 ```
 
 **2. Create Migration File:**
 ```bash
-touch contents/themes/default/entities/tasks/migrations/001_create_tasks.sql
+touch entities/tasks/migrations/001_create_tasks.sql
 ```
 
 **3. Write Migration:**
@@ -756,8 +755,8 @@ pnpm db:migrate
 ### Entity Migrations Not Running
 
 **Solution:**
-1. Verify theme is active: `NEXT_PUBLIC_ACTIVE_THEME=default`
-2. Check plugin is listed in theme config
+1. Run from the directory containing `nextspark.config.ts`
+2. Check the plugin is listed in that file
 3. Verify migrations folder exists: `entities/[entity]/migrations/`
 4. Check file naming: `001_migration_name.sql`
 

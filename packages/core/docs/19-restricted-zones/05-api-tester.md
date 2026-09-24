@@ -477,7 +477,7 @@ pnpm test:core -- --testPathPattern="api-tester"
 
 ### E2E Tests
 
-**Ubicación:** `contents/themes/default/tests/cypress/e2e/uat/devtools/api-tester.cy.ts`
+**Ubicación:** `tests/cypress/e2e/uat/devtools/api-tester.cy.ts`
 
 **Ejecutar:**
 

@@ -19,15 +19,15 @@ SCOPE ENFORCEMENT SYSTEM:
 
 Scope Configuration:
 .claude/sessions/{session-name}/scope.json
-├── scope.core     # boolean - Core/app/scripts/migrations access
-├── scope.theme    # string|false - Theme name or disabled
+├── scope.core     # boolean - packages/core, generated host, and scripts access
+├── scope.project  # boolean - apps/dev root-first project source access
 ├── scope.plugins  # array|false - Plugin names or disabled
 └── exceptions     # array - Override paths
 
 Path Mapping:
-scope.core = true  → core/**/* + app/**/* + scripts/**/* + migrations/**/*
-scope.theme = "x"  → contents/themes/x/**/*
-scope.plugins = [] → contents/plugins/{name}/**/*
+scope.core = true  → packages/core/**/* + apps/dev/src/app/**/* + scripts/**/*
+scope.project = true → apps/dev/{api,blocks,components,config,entities,lib,messages,migrations,public,styles,templates,tests}/**/*
+scope.plugins = [] → apps/dev/plugins/{name}/**/*
 
 Always Allowed:
 .claude/sessions/**/*  # Session files always accessible
@@ -65,7 +65,7 @@ Integration Points:
   "date": "YYYY-MM-DD",
   "scope": {
     "core": false,
-    "theme": "theme-name",
+    "project": true,
     "plugins": false
   },
   "exceptions": [],
@@ -79,7 +79,7 @@ Integration Points:
 | Field | Type | Description |
 |-------|------|-------------|
 | `scope.core` | `boolean` | Access to core/, app/, scripts/, migrations/ |
-| `scope.theme` | `string\|false` | Theme name or disabled |
+| `scope.project` | `boolean` | Access to root-first project source under `apps/dev/` |
 | `scope.plugins` | `array\|false` | Array of plugin names or disabled |
 | `exceptions` | `array` | Specific paths to allow/deny |
 
@@ -88,21 +88,23 @@ Integration Points:
 ```typescript
 // scope.core = true
 const corePaths = [
-  'core/**/*',
-  'app/**/*',
+  'packages/core/**/*',
+  'apps/dev/src/app/**/*',
   'scripts/**/*',
-  'migrations/**/*'
+  'apps/dev/migrations/**/*'
 ]
 
-// scope.theme = "default"
-const themePaths = [
-  'contents/themes/default/**/*'
+// scope.project = true
+const projectPaths = [
+  'apps/dev/entities/**/*',
+  'apps/dev/templates/**/*',
+  'apps/dev/config/**/*'
 ]
 
 // scope.plugins = ["analytics", "payment"]
 const pluginPaths = [
-  'contents/plugins/analytics/**/*',
-  'contents/plugins/payment/**/*'
+  'apps/dev/plugins/analytics/**/*',
+  'apps/dev/plugins/payment/**/*'
 ]
 
 // Always allowed
@@ -113,15 +115,15 @@ const alwaysAllowed = [
 
 ## Common Scope Patterns
 
-### 1. Feature in Existing Theme
+### 1. Feature in the Root-First Project
 
-Most common: Adding a feature to an existing theme.
+Most common: Adding a feature to the repository development project.
 
 ```json
 {
   "scope": {
     "core": false,
-    "theme": "default",
+    "project": true,
     "plugins": false
   },
   "exceptions": []
@@ -130,7 +132,7 @@ Most common: Adding a feature to an existing theme.
 
 **Allowed paths:**
 - `.claude/sessions/**/*`
-- `contents/themes/default/**/*`
+- `apps/dev/{api,blocks,components,config,entities,lib,messages,migrations,public,styles,templates,tests}/**/*`
 
 ### 2. Core Framework Change
 
@@ -140,7 +142,7 @@ Modifying core framework, migrations, or app routes.
 {
   "scope": {
     "core": true,
-    "theme": false,
+    "project": false,
     "plugins": false
   },
   "exceptions": []
@@ -149,20 +151,20 @@ Modifying core framework, migrations, or app routes.
 
 **Allowed paths:**
 - `.claude/sessions/**/*`
-- `core/**/*`
-- `app/**/*`
+- `packages/core/**/*`
+- `apps/dev/src/app/**/*`
 - `scripts/**/*`
-- `migrations/**/*`
+- `apps/dev/migrations/**/*`
 
-### 3. Core + Theme Development
+### 3. Core + Project Development
 
-Full feature requiring both core changes and theme UI.
+Full feature requiring both core changes and project UI.
 
 ```json
 {
   "scope": {
     "core": true,
-    "theme": "default",
+    "project": true,
     "plugins": false
   },
   "exceptions": []
@@ -171,11 +173,11 @@ Full feature requiring both core changes and theme UI.
 
 **Allowed paths:**
 - `.claude/sessions/**/*`
-- `core/**/*`
-- `app/**/*`
+- `packages/core/**/*`
+- `apps/dev/src/app/**/*`
 - `scripts/**/*`
-- `migrations/**/*`
-- `contents/themes/default/**/*`
+- `apps/dev/migrations/**/*`
+- `apps/dev/{api,blocks,components,config,entities,lib,messages,migrations,public,styles,templates,tests}/**/*`
 
 ### 4. Plugin Development
 
@@ -185,7 +187,7 @@ Creating or modifying a specific plugin.
 {
   "scope": {
     "core": false,
-    "theme": "plugin-sandbox",
+    "project": true,
     "plugins": ["my-plugin"]
   },
   "exceptions": []
@@ -194,8 +196,8 @@ Creating or modifying a specific plugin.
 
 **Allowed paths:**
 - `.claude/sessions/**/*`
-- `contents/themes/plugin-sandbox/**/*`
-- `contents/plugins/my-plugin/**/*`
+- `apps/dev/{api,blocks,components,config,entities,lib,messages,migrations,public,styles,templates,tests}/**/*`
+- `apps/dev/plugins/my-plugin/**/*`
 
 ### 5. Full Access (Rare)
 
@@ -205,22 +207,22 @@ Maximum access for complex multi-area features.
 {
   "scope": {
     "core": true,
-    "theme": "default",
+    "project": true,
     "plugins": ["analytics", "payment"]
   },
   "exceptions": []
 }
 ```
 
-### 6. Theme + Plugins (No Core)
+### 6. Project + Plugins (No Core)
 
-Theme feature that uses plugins but doesn't modify core.
+Project feature that uses local plugins but does not modify core.
 
 ```json
 {
   "scope": {
     "core": false,
-    "theme": "default",
+    "project": true,
     "plugins": ["ai", "social-media-publisher"]
   },
   "exceptions": []
@@ -239,22 +241,22 @@ function validateScope(
 
   if (scopeConfig.scope.core) {
     allowedPaths.push(
-      'core/**/*',
-      'app/**/*',
+      'packages/core/**/*',
+      'apps/dev/src/app/**/*',
       'scripts/**/*',
-      'migrations/**/*'
+      'apps/dev/migrations/**/*'
     )
   }
 
-  if (scopeConfig.scope.theme) {
+  if (scopeConfig.scope.project) {
     allowedPaths.push(
-      `contents/themes/${scopeConfig.scope.theme}/**/*`
+      `**/*`
     )
   }
 
   if (Array.isArray(scopeConfig.scope.plugins)) {
     scopeConfig.scope.plugins.forEach(plugin => {
-      allowedPaths.push(`contents/plugins/${plugin}/**/*`)
+      allowedPaths.push(`apps/dev/plugins/${plugin}/**/*`)
     })
   }
 
@@ -317,7 +319,7 @@ if (violations.length > 0) {
 Session: ${sessionPath}
 Scope Configuration:
 - Core: ${scopeConfig.scope.core ? 'ALLOWED' : 'DENIED'}
-- Theme: ${scopeConfig.scope.theme || 'NONE'}
+- Project source: ${scopeConfig.scope.project ? 'ALLOWED' : 'NONE'}
 - Plugins: ${JSON.stringify(scopeConfig.scope.plugins) || 'NONE'}
 
 Files Outside Scope:
@@ -368,8 +370,8 @@ Refactor to place logic in allowed paths.
 
 ```typescript
 // Instead of modifying core/lib/utils.ts
-// Create theme-specific utility:
-// contents/themes/default/lib/utils/my-utility.ts
+// Create a project-specific utility:
+// lib/utils/my-utility.ts
 ```
 
 ## /task:scope-change Workflow
@@ -410,7 +412,7 @@ Exceptions allow specific paths regardless of scope rules:
 {
   "scope": {
     "core": false,
-    "theme": "default",
+    "project": true,
     "plugins": false
   },
   "exceptions": [
@@ -435,14 +437,14 @@ Exceptions allow specific paths regardless of scope rules:
 # Validate files against session scope
 python .claude/skills/scope-enforcement/scripts/validate-scope.py \
   --session ".claude/sessions/2025-12-30-feature-v1" \
-  --files "core/lib/services/x.ts,contents/themes/default/lib/y.ts"
+  --files "core/lib/services/x.ts,lib/y.ts"
 ```
 
 ## Why Scope Enforcement Matters
 
 1. **Prevents Accidental Modifications**
    - Core framework stays stable
-   - Theme isolation maintained
+   - Project ownership maintained
    - Plugin boundaries respected
 
 2. **Architectural Integrity**
@@ -450,25 +452,25 @@ python .claude/skills/scope-enforcement/scripts/validate-scope.py \
    - Predictable code organization
    - Easier maintenance
 
-3. **Multi-Theme/Plugin Safety**
-   - Changes don't leak across themes
+3. **Project/Plugin Safety**
+   - Changes do not leak outside the project
    - Plugins remain independent
    - No cross-contamination
 
 4. **Future Updates**
    - Core updates can apply cleanly
-   - Theme upgrades isolated
+   - Install-once template source remains project-owned
    - Plugin updates predictable
 
 ## Development Types
 
 Scope is typically set based on development type:
 
-| Development Type | core | theme | plugins |
+| Development Type | core | project | plugins |
 |-----------------|------|-------|---------|
-| Theme Feature | false | "name" | false |
+| Project Feature | false | true | false |
 | Core Feature | true | false | false |
-| Core + Theme | true | "name" | false |
+| Core + Project | true | true | false |
 | Plugin Only | false | "sandbox" | ["name"] |
 | Full Feature | true | "name" | [...] |
 
@@ -501,7 +503,7 @@ if (scopeViolation) {
 
 // NEVER: Use exceptions for broad access
 {
-  "exceptions": ["core/**/*"]  // WRONG - Use scope.core = true
+  "exceptions": ["packages/core/**/*"]  // WRONG - Use scope.core = true
 }
 
 // NEVER: Modify files then check scope

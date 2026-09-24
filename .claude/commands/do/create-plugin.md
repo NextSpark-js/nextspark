@@ -28,7 +28,7 @@ pnpm create:plugin {plugin-name} --complexity {simple|medium|complex}
 ## Plugin Structure
 
 ```
-contents/plugins/{plugin-name}/
+plugins/{plugin-name}/
 ├── plugin.config.ts      # Plugin configuration
 ├── package.json          # Plugin metadata
 ├── README.md             # Documentation

@@ -56,7 +56,7 @@ export async function promptContentFeaturesConfig(
   })
 
   console.log('')
-  showInfo('You can add more blocks later in contents/themes/[your-theme]/blocks/')
+  showInfo('You can add more blocks later in blocks/.')
 
   // Convert to content features config object
   const contentFeatures: ContentFeaturesConfig = {

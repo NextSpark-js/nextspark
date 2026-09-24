@@ -369,7 +369,7 @@ const REFRESH_THRESHOLD_MINUTES = 10
 
 To customize, edit:
 ```typescript
-// contents/plugins/social-media-publisher/api/social/publish/route.ts
+// plugins/social-media-publisher/api/social/publish/route.ts
 const REFRESH_THRESHOLD_MINUTES = 60 // Refresh 1 hour before expiration
 ```
 

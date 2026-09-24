@@ -518,7 +518,7 @@ In addition to core services, **each theme entity should have its own service** 
 ### Location
 
 ```text
-contents/themes/[theme]/entities/[entity]/
+entities/[entity]/
 ├── [entity].types.ts       # TypeScript interfaces
 └── [entity].service.ts     # Data access service
 ```
@@ -526,7 +526,7 @@ contents/themes/[theme]/entities/[entity]/
 ### Pattern: Entity Service
 
 ```typescript
-// contents/themes/default/entities/posts/posts.service.ts
+// entities/posts/posts.service.ts
 
 import { query, queryOne, queryOneWithRLS, queryWithRLS } from '@/core/lib/db'
 import type { PostPublic, PostMetadata, PostListResult } from './posts.types'
@@ -601,9 +601,9 @@ export class PostsService {
 ### Usage in Templates
 
 ```typescript
-// contents/themes/default/templates/(public)/blog/[slug]/page.tsx
+// templates/(public)/blog/[slug]/page.tsx
 
-import { PostsService } from '@/contents/themes/default/entities/posts/posts.service'
+import { PostsService } from '@/entities/posts/posts.service'
 
 // Lightweight metadata query
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -638,10 +638,10 @@ The default theme includes services for all entities:
 
 | Entity | Service Location |
 |--------|------------------|
-| Posts | `contents/themes/default/entities/posts/posts.service.ts` |
-| Pages | `contents/themes/default/entities/pages/pages.service.ts` |
-| Customers | `contents/themes/default/entities/customers/customers.service.ts` |
-| Tasks | `contents/themes/default/entities/tasks/tasks.service.ts` |
+| Posts | `entities/posts/posts.service.ts` |
+| Pages | `entities/pages/pages.service.ts` |
+| Customers | `entities/customers/customers.service.ts` |
+| Tasks | `entities/tasks/tasks.service.ts` |
 
 ---
 
@@ -651,7 +651,7 @@ In addition to data-access services, the codebase includes **Registry Services**
 
 ### Purpose
 
-Registry Services encapsulate queries against auto-generated registries (located in `core/lib/registries/`). This follows the data-only registry pattern:
+Registry Services encapsulate queries against auto-generated registries (located in `.nextspark/registries/`). This follows the data-only registry pattern:
 
 - **Registries** export only data constants and types
 - **Services** provide query functions with proper typing
@@ -676,7 +676,7 @@ import {
   MIDDLEWARE_REGISTRY,
   MIDDLEWARE_METADATA,
   type MiddlewareRegistryEntry
-} from '@/core/lib/registries/middleware-registry'
+} from '@nextsparkjs/registries/middleware-registry'
 
 export class MiddlewareService {
   // ============== Lookup Methods ==============
@@ -728,8 +728,8 @@ const dashboard = ThemeService.getDashboardConfig('default')
 const themesWithEntities = ThemeService.getThemesWithEntities()
 
 // Middleware queries
-if (MiddlewareService.hasMiddleware(activeTheme)) {
-  const response = await MiddlewareService.execute(activeTheme, request)
+if (MiddlewareService.hasMiddleware(projectTheme)) {
+  const response = await MiddlewareService.execute(projectTheme, request)
 }
 
 // Entity type queries
@@ -756,7 +756,7 @@ When theme or entity configurations change:
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
-This regenerates all `core/lib/registries/*.ts` files.
+This regenerates all `.nextspark/registries/*.ts` files.
 
 ---
 

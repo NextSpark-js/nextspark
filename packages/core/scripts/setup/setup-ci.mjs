@@ -166,9 +166,8 @@ if (results.copied.length > 0 || results.overwritten.length > 0) {
   console.log('\n✅ CI workflows setup complete!')
   console.log('   Review and customize workflows in .github/workflows/')
   console.log('\n📝 Recommended next steps:')
-  console.log('   1. Set repository variable: ACTIVE_THEME (if not using default)')
-  console.log('   2. Review workflow triggers and adjust as needed')
-  console.log('   3. Configure required secrets (DATABASE_URL, etc.)')
+  console.log('   1. Review workflow triggers and adjust as needed')
+  console.log('   2. Configure required secrets (DATABASE_URL, etc.)')
 }
 
 console.log('')

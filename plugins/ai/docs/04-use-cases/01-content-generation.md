@@ -23,7 +23,7 @@ One of the most common and proven use cases for the AI plugin is **automated con
 // app/api/content/product-description/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
-import { selectModel, calculateCost, extractTokens } from '@/contents/plugins/ai/lib/core-utils'
+import { selectModel, calculateCost, extractTokens } from '@/plugins/ai/lib/core-utils'
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
@@ -332,7 +332,7 @@ Provide the refined version with improvements in:
 **Link Generated Content to Products:**
 
 ```typescript
-import { AIHistoryService } from '@/contents/plugins/ai/lib/ai-history-service'
+import { AIHistoryService } from '@/plugins/ai/lib/ai-history-service'
 
 export async function generateAndSaveDescription(productId: string) {
   // Start operation tracking

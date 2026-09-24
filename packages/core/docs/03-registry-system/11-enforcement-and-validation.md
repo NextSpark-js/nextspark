@@ -15,8 +15,8 @@ The Registry System's ~17,255x performance improvement **depends entirely** on z
 **ZERO TOLERANCE for:**
 
 1. ❌ Runtime dynamic imports outside approved exceptions
-2. ❌ Direct imports from `@/contents` directory (except in `packages/core/scripts/build/registry.mjs`)
-3. ❌ Manual edits to `core/lib/registries/` files
+2. ❌ Runtime code importing project source directly instead of a generated registry
+3. ❌ Manual edits to `.nextspark/registries/` files
 
 **Severity:** CRITICAL - Pre-commit and CI/CD must validate compliance
 
@@ -31,11 +31,11 @@ The Registry System's ~17,255x performance improvement **depends entirely** on z
 
 ```typescript
 // ❌ ONE violation destroys performance
-const config = await import('@/contents/themes/default/entities/tasks/tasks.config')
+const config = await import('@/entities/tasks/tasks.config')
 // Cost: +140ms runtime I/O
 
 // ✅ Registry access (correct)
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 const config = ENTITY_REGISTRY.tasks
 // Cost: <1ms (in-memory lookup)
 ```
@@ -171,17 +171,17 @@ export async function extractTextFromDOCX(file: File): Promise<string> {
 
 ```typescript
 // ❌ Defeats registry performance
-const { ENTITY_REGISTRY } = await import('@/core/lib/registries/entity-registry')
-const { THEME_REGISTRY } = await import('@/core/lib/registries/theme-registry')
-const entityConfig = await import('@/contents/entities/products/product.config')
+const { ENTITY_REGISTRY } = await import('@nextsparkjs/registries/entity-registry')
+const { THEME_REGISTRY } = await import('@nextsparkjs/registries/theme-registry')
+const entityConfig = await import('@/entities/products/product.config')
 ```
 
 **✅ CORRECT:**
 
 ```typescript
 // ✅ Static imports at module level
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
-import { THEME_REGISTRY } from '@/core/lib/registries/theme-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
+import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 
 const entityConfig = ENTITY_REGISTRY.products // <1ms lookup
 ```
@@ -222,15 +222,15 @@ import { queryOne } from '@/core/lib/db'
 
 ```typescript
 // ❌ Runtime route loading
-const themeRoute = await import(`@/contents/themes/${theme}/api/${path}/route`)
-const pluginRoute = await import(`@/contents/plugins/${plugin}/api/${path}/route`)
+const themeRoute = await import(`@/api/${path}/route`)
+const pluginRoute = await import(`@/plugins/${plugin}/api/${path}/route`)
 ```
 
 **✅ CORRECT:**
 
 ```typescript
 // ✅ Use registry-based route resolution
-import { getThemeRouteHandler, getPluginRouteHandler } from '@/core/lib/registries/route-handlers'
+import { getThemeRouteHandler, getPluginRouteHandler } from '@nextsparkjs/registries/route-handlers'
 
 const themeHandler = getThemeRouteHandler(path, method) // <1ms
 const pluginHandler = getPluginRouteHandler(path, method) // <1ms
@@ -302,8 +302,8 @@ const fn = new Function('path', 'return import(path)')
    - Excludes React.lazy patterns
    - Reports violations with file paths
 
-2. **Hardcoded content imports:**
-   - Searches for `from '@/contents'` patterns
+2. **Hardcoded project-source imports:**
+   - Searches for direct `@/config`, `@/entities`, `@/blocks`, and `@/plugins` imports
    - Excludes auto-generated files (registries)
    - Excludes type-only imports
    - Reports direct content imports
@@ -326,13 +326,13 @@ VIOLATIONS=$(grep -r "await import(" --include="*.ts" --include="*.tsx" \
   grep -v "\.test\." | \        # Exclude tests
   grep -v "\.spec\." || true)   # Exclude tests
 
-# Check for hardcoded imports from contents/ (except allowed locations)
-HARDCODED=$(grep -r "from '@/contents" --include="*.ts" --include="*.tsx" \
-  core/ app/ 2>/dev/null | \
+# Check for hardcoded imports from project source (except allowed locations)
+HARDCODED=$(grep -Er "from ['\"]@/(config|entities|blocks|plugins)/" --include="*.ts" --include="*.tsx" \
+  src/app/ 2>/dev/null | \
   grep -v "node_modules" | \
   grep -v ".next" | \
-  grep -v "core/lib/registries/" | \  # Exclude auto-generated
-  grep -v "app/(templates)/" | \      # Exclude template overrides
+  grep -v ".nextspark/registries/" | \  # Exclude auto-generated
+  grep -v "src/app/(templates)/" | \      # Exclude template overrides
   grep -v "app/api/v1/theme/" | \     # Exclude theme API
   grep -v "app/api/v1/plugin/" | \    # Exclude plugin API
   grep -v "types" | \                 # Exclude type imports
@@ -378,7 +378,7 @@ exit 0
 # Output if violations:
 # 🔍 Checking for dynamic import violations...
 # ❌ DYNAMIC IMPORT VIOLATIONS FOUND:
-# core/lib/bad-file.ts:15: const config = await import('@/contents/...')
+# core/lib/bad-file.ts:15: const config = await import('@/entities/...')
 # See .rules/dynamic-imports.md for allowed patterns
 ```
 
@@ -563,14 +563,14 @@ module.exports = {
         message: 'Dynamic imports are restricted. See .rules/dynamic-imports.md for allowed patterns.',
       },
     ],
-    // Restrict imports from @/contents
+    // Restrict direct imports from project-owned compiler inputs
     'no-restricted-imports': [
       'error',
       {
         patterns: [
           {
-            group: ['@/contents/*'],
-            message: 'Direct imports from @/contents are prohibited. Use registries instead.',
+            group: ['@/entities/*'],
+            message: 'Direct imports from project source are prohibited. Use registries instead.',
           },
         ],
       },
@@ -589,10 +589,10 @@ module.exports = {
         'no-restricted-syntax': 'off',
       },
     },
-    // Allow @/contents imports in auto-generated files
+    // Allow direct project-source imports in auto-generated registry files
     {
       files: [
-        'core/lib/registries/**/*',
+        '.nextspark/registries/**/*',
         'packages/core/scripts/build/registry.mjs',
       ],
       rules: {
@@ -633,7 +633,7 @@ module.exports = {
 ```typescript
 // core/lib/api/dynamic-loader.ts
 export async function loadEntityConfig(entityName: string) {
-  const { ENTITY_REGISTRY } = await import('@/core/lib/registries/entity-registry')
+  const { ENTITY_REGISTRY } = await import('@nextsparkjs/registries/entity-registry')
   return ENTITY_REGISTRY[entityName]
 }
 ```
@@ -642,7 +642,7 @@ export async function loadEntityConfig(entityName: string) {
 
 ```typescript
 // core/lib/api/static-loader.ts
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 export function loadEntityConfig(entityName: string) {
   return ENTITY_REGISTRY[entityName] // <1ms
@@ -655,7 +655,7 @@ export function loadEntityConfig(entityName: string) {
 
 ```typescript
 // app/api/v1/tasks/route.ts
-import { taskEntityConfig } from '@/contents/themes/default/entities/tasks/tasks.config'
+import { taskEntityConfig } from '@/entities/tasks/tasks.config'
 
 export async function GET() {
   // Use taskEntityConfig...
@@ -666,7 +666,7 @@ export async function GET() {
 
 ```typescript
 // app/api/v1/tasks/route.ts
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 export async function GET() {
   const taskConfig = ENTITY_REGISTRY.tasks // Use registry
@@ -681,7 +681,7 @@ export async function GET() {
 ```typescript
 // core/lib/api/route-resolver.ts
 export async function resolvePluginRoute(plugin: string, path: string) {
-  const route = await import(`@/contents/plugins/${plugin}/routes/${path}/route`)
+  const route = await import(`@/plugins/${plugin}/routes/${path}/route`)
   return route
 }
 ```
@@ -690,7 +690,7 @@ export async function resolvePluginRoute(plugin: string, path: string) {
 
 ```typescript
 // core/lib/api/route-resolver.ts
-import { getPluginRouteHandler } from '@/core/lib/registries/route-handlers'
+import { getPluginRouteHandler } from '@nextsparkjs/registries/route-handlers'
 
 export function resolvePluginRoute(plugin: string, path: string, method: string) {
   const routeKey = `${plugin}/${path}`
@@ -768,10 +768,10 @@ grep -r "await import(" core/ app/ | grep -v "lazy(" | grep -v "messages/"
 ```typescript
 // ❌ Disguised dynamic import
 const importFn = (path) => import(path)
-await importFn('@/contents/...')
+await importFn('@/entities/...')
 
 // ❌ eval workaround
-await eval('import("@/contents/...")')
+await eval('import("@/entities/...")')
 ```
 
 **Solution:** These are caught by:
@@ -793,7 +793,7 @@ export async function getEntityList() {
   const entities = []
 
   for (const entityName of ['tasks', 'products', 'users']) {
-    const config = await import(`@/contents/entities/${entityName}/${entityName}.config`)
+    const config = await import(`@/entities/${entityName}/${entityName}.config`)
     entities.push(config.default)
   }
 
@@ -805,7 +805,7 @@ export async function getEntityList() {
 
 ```typescript
 // New pattern
-import { getRegisteredEntities } from '@/core/lib/registries/entity-registry'
+import { getRegisteredEntities } from '@nextsparkjs/registries/entity-registry'
 
 export function getEntityList() {
   return getRegisteredEntities() // <1ms for all entities
@@ -820,8 +820,8 @@ export function getEntityList() {
 
 ```typescript
 // Old pattern
-import { taskEntityConfig } from '@/contents/themes/default/entities/tasks/tasks.config'
-import { productEntityConfig } from '@/contents/themes/default/entities/products/products.config'
+import { taskEntityConfig } from '@/entities/tasks/tasks.config'
+import { productEntityConfig } from '@/entities/products/products.config'
 
 export function getConfigs() {
   return [taskEntityConfig, productEntityConfig]
@@ -832,7 +832,7 @@ export function getConfigs() {
 
 ```typescript
 // New pattern
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 export function getConfigs() {
   return [
@@ -872,7 +872,7 @@ describe('Dynamic Import Enforcement', () => {
   })
 
   it('should block content imports', () => {
-    const code = `const config = await import('@/contents/entities/tasks/tasks.config')`
+    const code = `const config = await import('@/entities/tasks/tasks.config')`
     expect(isAllowedPattern(code)).toBe(false)
   })
 })
@@ -888,7 +888,7 @@ describe('Registry System Enforcement', () => {
     expect(violations).toHaveLength(0)
   })
 
-  it('should have no direct @/contents imports', () => {
+  it('should have no direct project-source imports', () => {
     const violations = scanForContentImports('core/', 'app/')
     expect(violations).toHaveLength(0)
   })
@@ -909,7 +909,7 @@ describe('Registry System Enforcement', () => {
 
 **Zero tolerance violations:**
 - ❌ Dynamic imports for content/config
-- ❌ Direct imports from `@/contents`
+- ❌ Runtime imports that bypass generated registries and read project source directly
 - ❌ Manual edits to registry files
 
 **Allowed exceptions:**

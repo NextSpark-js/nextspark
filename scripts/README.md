@@ -46,7 +46,7 @@ Este es el flujo estándar para desarrollar y probar cambios en modo monorepo Y 
 ```bash
 # === PASO 1: Desarrollar en monorepo ===
 cd repo
-# Hacer cambios en packages/core, packages/cli, themes/, plugins/
+# Hacer cambios en packages/core, packages/cli, packages/core/templates/projects/, plugins/
 pnpm dev                            # Probar en puerto 5173
 
 # === PASO 2: Probar en proyecto npm existente (my-app) ===
@@ -111,7 +111,7 @@ cd ../projects
 rm -rf my-app
 npx --yes create-nextspark-app@latest my-app
 cd my-app
-pnpm nextspark add:theme @nextsparkjs/theme-default
+pnpm create nextspark-app my-app --template starter
 pnpm dev
 ```
 
@@ -310,10 +310,9 @@ Publica `.tgz` a npm.
 EMAIL_PROVIDER=console  # En .env
 ```
 
-### Error: "NEXT_PUBLIC_ACTIVE_THEME is not set"
-```bash
-NEXT_PUBLIC_ACTIVE_THEME=<slug>  # En .env
-```
+### Error: "No NextSpark project found"
+Run the command from the directory containing `nextspark.config.ts`, or from one
+of its descendants.
 
 ### Error: "npm login required"
 ```bash

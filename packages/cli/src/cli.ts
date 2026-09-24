@@ -128,7 +128,7 @@ program
   .option('--quick', 'Quick wizard mode (essential steps only)')
   .option('--expert', 'Expert wizard mode (all options)')
   .option('--preset <name>', 'Use preset configuration (saas, blog, crm)')
-  .option('--theme <name>', 'Pre-select theme (starter, default, blog, crm, productivity, none)')
+  .option('--theme <name>', 'Pre-select project template (starter, blog, crm, productivity)')
   .option('--plugins <list>', 'Pre-select plugins (starter, ai, langchain, social-media-publisher; comma-separated)')
   .option('-y, --yes', 'Skip confirmations')
   .option('--registries-only', 'Only create registries (no wizard)')
@@ -152,7 +152,7 @@ program
 // Add theme command
 program
   .command('add:theme <package>')
-  .description('Add a theme to your project')
+  .description('Explain the install-once project-template workflow')
   .option('-v, --version <version>', 'Specific version to install')
   .option('-f, --force', 'Overwrite if already exists')
   .option('--skip-postinstall', 'Skip postinstall hooks')

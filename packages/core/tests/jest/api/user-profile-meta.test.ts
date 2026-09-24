@@ -19,7 +19,7 @@
  * on the same answer, a different clause lands on its own, and a clause the
  * double cannot read fails the test instead of passing it.
  *
- * apps/dev/app is the source of the app/ a project is generated with
+ * apps/dev/src/app is the source of the app/ a project is generated with
  * (packages/core/templates/app, written at pack time), so this covers the
  * route the template ships.
  */

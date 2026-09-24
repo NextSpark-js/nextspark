@@ -15,7 +15,7 @@ Patterns and tools for writing End-to-End UAT tests with Cypress.
 ## Architecture Overview
 
 ```
-contents/themes/{theme}/tests/cypress/
+tests/cypress/
 ├── e2e/
 │   ├── api/                       # API tests (see cypress-api skill)
 │   │   └── entities/
@@ -407,14 +407,12 @@ And deberia ver "Test {Entidad}" en la lista
 # Generate test file + BDD documentation
 python3 .claude/skills/cypress-e2e/scripts/generate-uat-test.py \
   --entity tasks \
-  --theme default \
   --role owner \
   --with-bdd
 
 # Preview without writing
 python3 .claude/skills/cypress-e2e/scripts/generate-uat-test.py \
   --entity tasks \
-  --theme default \
   --role owner \
   --with-bdd \
   --dry-run
@@ -428,12 +426,10 @@ Uses the `pom-patterns` skill script (shared, not duplicated):
 # Generate POM from template
 python3 .claude/skills/pom-patterns/scripts/generate-pom.py \
   --entity tasks \
-  --theme default
 
 # With custom fields
 python3 .claude/skills/pom-patterns/scripts/generate-pom.py \
   --entity products \
-  --theme default \
   --fields "name,description,price,category,status"
 ```
 
@@ -444,14 +440,14 @@ See `pom-patterns` skill for full documentation.
 ```bash
 # Scan component for data-cy attributes
 python3 .claude/skills/cypress-e2e/scripts/extract-selectors.py \
-  --component contents/themes/default/components/TaskList.tsx
+  --component components/TaskList.tsx
 ```
 
 ## Test Execution Commands
 
 ```bash
 # Run specific test file
-pnpm cy:run --spec "contents/themes/default/tests/cypress/e2e/uat/tasks/tasks-owner.cy.ts"
+pnpm cy:run --spec "tests/cypress/e2e/uat/tasks/tasks-owner.cy.ts"
 
 # Run by tag
 pnpm cy:run --env grepTags="@feat-tasks"

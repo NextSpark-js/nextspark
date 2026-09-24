@@ -33,8 +33,8 @@ before(() => {
   CLI_ENTRY = buildCli()
 })
 
-const CAUSE = '❌ Build failed: could not read contents/themes/acme/templates/shop/page.tsx'
-const WARNING = '⚠️ app/(templates): backed up app/(templates)/shop/page.tsx to .nextspark/backups/t0/app/(templates)/shop/page.tsx'
+const CAUSE = '❌ Build failed: could not read templates/shop/page.tsx'
+const WARNING = '⚠️ src/app/(templates): backed up src/app/(templates)/shop/page.tsx to .nextspark/backups/t0/src/app/(templates)/shop/page.tsx'
 
 /**
  * What the stand-in registry build has in scope. core itself never checks a
@@ -85,7 +85,7 @@ async function projectWithRegistryBuild(script: string) {
   }
   await mkdir(join(root, 'node_modules/.bin'), { recursive: true })
   await writeFile(join(root, 'node_modules/.bin/next'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
-  await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+  await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
   return { root, cleanup: () => rm(root, { recursive: true, force: true }) }
 }
 
@@ -310,7 +310,7 @@ process.exitCode = 1`))
   }
 })
 
-const HEADING = 'Error: could not read contents/themes/acme/templates/shop/page.tsx'
+const HEADING = 'Error: could not read templates/shop/page.tsx'
 const FRAMES = Array.from({ length: 5 }, (_, index) => `    at step${index} (file:///core/scripts/build/registry.mjs:${index + 10}:5)`)
 
 testEachCommand('shows an error heading with the stack lines under it, printed before megabytes of output', 30_000, async (command) => {
@@ -343,7 +343,7 @@ process.exitCode = 0`)
 })
 
 testEachCommand('shows a warning whole when the registry build writes é, 😀 and ⚠️ a byte at a time', 30_000, async (command) => {
-  const warning = '⚠️ app/(templates): backed up café 😀'
+  const warning = '⚠️ src/app/(templates): backed up café 😀'
   const ok = await projectWithRegistryBuild(`await writeByteByByte(process.stdout, ${JSON.stringify(warning)} + '\\n')
 process.exitCode = 0`)
   try {
@@ -369,7 +369,7 @@ process.exitCode = 1`)
 })
 
 testEachCommand('shows the first few of the thousands of warnings a successful build prints, and none of its 🏗️ progress', 30_000, async (command) => {
-  const backups = Array.from({ length: 2000 }, (_, index) => `⚠️ app/(templates): backed up app/(templates)/p${index}/page.tsx to .nextspark/backups/t0/app/(templates)/p${index}/page.tsx`)
+  const backups = Array.from({ length: 2000 }, (_, index) => `⚠️ src/app/(templates): backed up src/app/(templates)/p${index}/page.tsx to .nextspark/backups/t0/src/app/(templates)/p${index}/page.tsx`)
   const ok = await projectWithRegistryBuild(`for (let index = 0; index < 200; index++) await writeAll(process.stdout, '🏗️  Generating registry ' + index + '...\\n')
 for (const line of ${JSON.stringify(backups)}) await writeAll(process.stdout, line + '\\n')
 process.exitCode = 0`)

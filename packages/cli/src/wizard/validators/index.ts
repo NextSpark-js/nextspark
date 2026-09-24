@@ -59,7 +59,7 @@ export interface ValidationResult {
  * @example
  * ```typescript
  * const result = await validateGeneratedTheme(
- *   '/path/to/contents/themes/my-app',
+ *   '/path/to/my-app',
  *   wizardConfig
  * )
  *

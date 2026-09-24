@@ -2,7 +2,7 @@
 
 ## Introduction
 
-NextSpark builds a documentation registry for the active theme. The registry provides navigation metadata without runtime discovery; `packages/core/docs/` and plugin documentation remain internal source reference and are not published routes.
+NextSpark builds a documentation registry for the project. The registry provides navigation metadata without runtime discovery; `packages/core/docs/` and plugin documentation remain internal source reference and are not published routes.
 
 This system follows the same **registry-based philosophy** as other core features, resolving documentation metadata at build time rather than during request handling.
 
@@ -10,18 +10,18 @@ This system follows the same **registry-based philosophy** as other core feature
 
 ### 1. **Theme Documentation Sources**
 
-The active theme contributes two documentation trees:
+The project contributes two documentation trees:
 
-- **Public docs** (`themes/[theme]/docs/public/`) → `/docs/[section]/[page]`
-- **Superadmin docs** (`themes/[theme]/docs/superadmin/`) → `/superadmin/docs/[section]/[page]`
+- **Public docs** (`docs/public/`) → `/docs/[section]/[page]`
+- **Superadmin docs** (`docs/superadmin/`) → `/superadmin/docs/[section]/[page]`
 
-The active theme comes from `NEXT_PUBLIC_ACTIVE_THEME`, which the registry build requires. Core and plugin documentation are internal reference material and do not contribute entries to `DOCS_REGISTRY`.
+The registry build discovers the project from the nearest `nextspark.config.ts` and scans its root-level documentation directories. Core and plugin documentation are internal reference material and do not contribute entries to `DOCS_REGISTRY`.
 
 ### 2. **Build-Time Registry Generation**
 
 `packages/core/scripts/build/registry.mjs` calls `generateDocsRegistry()` with the other registry generators. It:
 
-- scans the active theme's `docs/public/` and `docs/superadmin/` directories;
+- scans the project's `docs/public/` and `docs/superadmin/` directories;
 - derives section and page metadata from numbered directory and file names;
 - writes `.nextspark/registries/docs-registry.ts` in the consuming project; and
 - enables lookup without runtime directory scanning.
@@ -39,7 +39,7 @@ All navigation is derived from the docs registry structure, requiring no manual 
 
 ### 4. **Documentation Routes**
 
-The active theme's documentation is available through these route patterns:
+The project's documentation is available through these route patterns:
 
 ```text
 /docs/[section]/[page]                 → A public doc page
@@ -53,7 +53,7 @@ For documentation configuration, see [Architecture](./02-architecture.md#documen
 ### Directory Organization
 
 ```text
-themes/[active-theme]/docs/
+docs/
 ├── public/
 │   └── 01-getting-started/
 │       └── 01-introduction.md
@@ -79,7 +79,7 @@ themes/[active-theme]/docs/
 ### Build Time (Development & Production)
 
 1. **Documentation Discovery**
-   - `generateDocsRegistry()` scans the active theme's public and superadmin documentation directories.
+   - `generateDocsRegistry()` scans the project's public and superadmin documentation directories.
    - It extracts metadata from file and directory names.
 
 2. **Registry Generation**

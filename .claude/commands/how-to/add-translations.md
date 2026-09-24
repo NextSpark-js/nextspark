@@ -61,11 +61,11 @@ NextSpark uses next-intl with layered messages:
 │  ─────────────────────────────────────────  │
 │                                             │
 │  1. THEME MESSAGES (highest priority)       │
-│     themes/{theme}/messages/{locale}.json   │
+│     messages/{locale}.json                  │
 │     → Theme-specific overrides              │
 │                                             │
 │  2. ENTITY MESSAGES                         │
-│     themes/{theme}/entities/*/messages/     │
+│     entities/*/messages/                    │
 │     → Auto-generated from entity config     │
 │                                             │
 │  3. CORE MESSAGES (lowest priority)         │
@@ -80,7 +80,7 @@ Theme messages override core. Entity messages auto-register.
 **📂 Message Structure:**
 
 ```
-contents/themes/your-theme/
+
 ├── messages/
 │   ├── en.json           # Theme messages (English)
 │   ├── es.json           # Theme messages (Spanish)
@@ -131,7 +131,7 @@ Entity translations are stored per-entity:
 **📋 Create Entity Messages:**
 
 ```
-contents/themes/your-theme/entities/products/messages/
+entities/products/messages/
 ├── en.json
 ├── es.json
 └── pt.json
@@ -436,7 +436,7 @@ To add a new language to your app:
 **📋 Step 1: Update App Config**
 
 ```typescript
-// contents/themes/your-theme/config/app.config.ts
+// config/app.config.ts
 export const appConfig: AppConfig = {
   defaultLocale: 'en',
   locales: ['en', 'es', 'pt', 'fr'],  // Add 'fr' for French
@@ -453,8 +453,8 @@ export const appConfig: AppConfig = {
 
 ```bash
 # Copy from English as base
-cp contents/themes/your-theme/messages/en.json \
-   contents/themes/your-theme/messages/fr.json
+cp messages/en.json \
+   messages/fr.json
 ```
 
 Then translate fr.json:
@@ -482,8 +482,8 @@ For each entity:
 
 ```bash
 # Copy entity messages
-cp contents/themes/your-theme/entities/products/messages/en.json \
-   contents/themes/your-theme/entities/products/messages/fr.json
+cp entities/products/messages/en.json \
+   entities/products/messages/fr.json
 ```
 
 **📋 Step 4: Rebuild and Test**

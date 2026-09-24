@@ -43,7 +43,7 @@ New projects receive small `AGENTS.md` and `CLAUDE.md` pointers only. The legacy
 ### Development
 
 ```bash
-nextspark dev       # Start dev server with active theme
+nextspark dev       # Start dev server with project
 nextspark build     # Production build
 nextspark registry  # Build component registries
 ```

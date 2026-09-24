@@ -5,11 +5,10 @@ Generate API Test Script
 Generates an API test file and optional BDD documentation for an entity.
 
 Usage:
-    python generate-api-test.py --entity ENTITY [--theme THEME] [--session SESSION] [--with-bdd]
+    python generate-api-test.py --entity ENTITY [--session SESSION] [--with-bdd]
 
 Options:
     --entity ENTITY   Entity name (e.g., tasks, customers)
-    --theme THEME     Theme name (default: default)
     --session SESSION Session name for @scope tag
     --with-bdd        Generate BDD documentation file
     --dry-run         Preview without writing to file
@@ -847,7 +846,6 @@ Then deberia obtener una respuesta 404
 def main():
     parser = argparse.ArgumentParser(description='Generate API test file')
     parser.add_argument('--entity', required=True, help='Entity name (e.g., tasks)')
-    parser.add_argument('--theme', default='default', help='Theme name')
     parser.add_argument('--session', default=None, help='Session name for @scope tag')
     parser.add_argument('--with-bdd', action='store_true', help='Generate BDD documentation')
     parser.add_argument('--dry-run', action='store_true', help='Preview without writing')
@@ -856,13 +854,12 @@ def main():
     args = parser.parse_args()
 
     entity = args.entity.lower()
-    theme = args.theme
+    theme = 'project'
 
     print(f"\n{'=' * 60}")
     print("GENERATING API TEST")
     print(f"{'=' * 60}")
     print(f"Entity: {entity}")
-    print(f"Theme: {theme}")
     print(f"Session: {args.session or '(none)'}")
     print(f"With BDD: {args.with_bdd}")
     print(f"{'=' * 60}\n")
@@ -874,7 +871,7 @@ def main():
     if args.output:
         output_dir = Path(args.output)
     else:
-        output_dir = Path(f'contents/themes/{theme}/tests/cypress/e2e/api/entities')
+        output_dir = Path('tests/cypress/e2e/api/entities')
 
     test_file = output_dir / f'{entity}-crud.cy.ts'
     bdd_file = output_dir / f'{entity}-crud.bdd.md'

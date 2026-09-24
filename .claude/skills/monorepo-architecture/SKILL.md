@@ -10,16 +10,11 @@ NextSpark uses a pnpm monorepo with strict separation of concerns between packag
 repo/
 ├── packages/
 │   ├── core/           # @nextsparkjs/core - Library only (no CLI)
+│   │   └── templates/projects/ # Install-once project template catalog
 │   ├── cli/            # @nextsparkjs/cli - All CLI commands, wizard
 │   └── create-nextspark-app/  # Wrapper that installs CLI + runs init
-├── themes/
-│   ├── default/        # @nextsparkjs/theme-default
-│   ├── blog/           # @nextsparkjs/theme-blog
-│   ├── crm/            # @nextsparkjs/theme-crm
-│   └── productivity/   # @nextsparkjs/theme-productivity
 ├── plugins/
 │   ├── ai/             # @nextsparkjs/plugin-ai
-│   ├── langchain/      # @nextsparkjs/plugin-langchain
 │   ├── walkme/         # @nextsparkjs/plugin-walkme
 │   └── ...
 └── apps/
@@ -34,7 +29,7 @@ repo/
 │  └── @nextsparkjs/cli (has wizard, commands)                   │
 │      └── @nextsparkjs/core (library, components, hooks)        │
 ├─────────────────────────────────────────────────────────────────┤
-│  Themes depend on: @nextsparkjs/core (peerDependency)          │
+│  Project templates ship inside @nextsparkjs/core               │
 │  Plugins depend on: @nextsparkjs/core (peerDependency)         │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -93,55 +88,25 @@ Is this dependency...?
 3. **dependencies ARE auto-installed** - pnpm handles hoisting
 4. **apps/dev should NOT duplicate theme/plugin deps** - pnpm resolves through workspace
 
-## Build-Time Filtering
+## Root-first compilation
 
-### NEXT_PUBLIC_ACTIVE_THEME
-
-When set, the registry build filters to only include:
-- The active theme
-- Plugins required by that theme (from `requiredPlugins` in theme config)
-
-```bash
-# Only includes blog theme and its plugins
-NEXT_PUBLIC_ACTIVE_THEME=blog pnpm build
-
-# Without this, ALL themes/plugins are included (development mode)
-pnpm build
-```
-
-### How Filtering Works
-
-1. `discoverThemes()` - Only discovers active theme when env is set
-2. `discoverPlugins()` - Already scoped, but route-handlers filters further
-3. `generateRouteHandlersRegistry()` - Filters based on theme's `plugins` array
-
-```javascript
-// In route-handlers.mjs
-if (config.activeTheme) {
-  filteredThemes = themes.filter(t => t.name === config.activeTheme)
-  // Get required plugins from theme's plugins array
-  const activeTheme = filteredThemes[0]
-  if (activeTheme?.plugins?.length > 0) {
-    requiredPluginNames = activeTheme.plugins.map(p =>
-      p.replace('@nextsparkjs/plugin-', '')
-    )
-    filteredPlugins = plugins.filter(p => requiredPluginNames.includes(p.name))
-  } else {
-    filteredPlugins = []
-  }
-}
-```
+The directory containing `nextspark.config.ts` is the project, host, and
+source root. Registry commands search upward for that marker and never select
+among sibling themes or projects. Project source is discovered from root
+directories such as `entities/`, `templates/`, and `messages/`; enabled local
+plugins come only from the `plugins` list in `nextspark.config.ts` and live at
+`plugins/<name>/`.
 
 ## Registry Generation
 
 Before `next build`, registries must be regenerated:
 
 ```bash
-# Regenerate with active theme filtering
-NEXT_PUBLIC_ACTIVE_THEME=blog node packages/core/scripts/build/registry.mjs
+# Run from the project root
+pnpm exec nextspark registry:build
 
 # Then build
-NEXT_PUBLIC_ACTIVE_THEME=blog pnpm build
+pnpm build
 ```
 
 The registries are written to: `apps/dev/.nextspark/registries/`

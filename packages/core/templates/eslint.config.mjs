@@ -48,9 +48,9 @@ const typescriptParser = presets
 
 const SOURCE_FILES = "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}";
 
-// Tests and fixtures, the project's own and those every theme and plugin brings under contents/:
+// Tests and fixtures, the project's own and those local plugins bring:
 // they mock, stub and cast by design, so Next's presets skip them and only the zod rule reaches
-// them. Everything else -- app/, contents/ and what the project adds -- gets the presets.
+// them. Everything else -- src/app, root project source and plugins -- gets the presets.
 const TEST_FILES = [
   "**/tests/**",
   "**/__tests__/**",
@@ -72,7 +72,7 @@ const isError = (setting) => [setting, setting?.[0]].some((level) => level === "
  *
  * eslint-plugin-react-hooks 7, which Next 16's presets load, adds to rules-of-hooks and
  * exhaustive-deps the rules that flag code the React Compiler cannot compile. A NextSpark project
- * does not build with the React Compiler, and the components NextSpark ships in app/ and its themes
+ * does not build with the React Compiler, and the components NextSpark ships in src/app, root project source,
  * and plugins break several of those rules, so they report as warnings. Version 5, which Next 15
  * loads, has none of them.
  */

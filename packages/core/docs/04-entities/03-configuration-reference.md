@@ -462,7 +462,7 @@ Features funcionales de la entidad.
 
 > **Importante:** Los permisos de entidades se definen **exclusivamente** en `permissions.config.ts`. Definir permisos directamente en `entity.config.ts` ya **no está soportado**.
 
-**Ubicación:** `contents/themes/{theme}/config/permissions.config.ts`
+**Ubicación:** `config/permissions.config.ts`
 
 ```typescript
 // permissions.config.ts - ÚNICO LUGAR PARA DEFINIR PERMISOS
@@ -714,7 +714,7 @@ Indica si es una entidad del sistema core.
 ```
 
 **Efecto:**
-- Entidades core no pueden ser sobrescritas por themes/plugins
+- Las entidades core no pueden ser sobrescritas por el proyecto ni por plugins
 - Proteción contra modificaciones accidentales
 
 ### `source`
@@ -810,7 +810,7 @@ export const taskEntityConfig: EntityConfig = {
 
   // 4. PERMISOS (definidos centralmente)
   // Los permisos de esta entidad se definen en:
-  // contents/themes/{theme}/config/permissions.config.ts → entities.tasks
+  // config/permissions.config.ts → entities.tasks
 
   // 5. I18N
   i18n: {
@@ -892,4 +892,4 @@ export const taskEntityConfig: EntityConfig = {
 
 ---
 
-> 💡 **Tip**: Usa la configuración de `tasks` en `contents/themes/default/entities/tasks/tasks.config.ts` como referencia para ver una implementación completa.
+> 💡 **Tip**: Usa la configuración de `tasks` en `entities/tasks/tasks.config.ts` como referencia para ver una implementación completa.

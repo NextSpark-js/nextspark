@@ -17,7 +17,7 @@ Patterns for working with the auto-generated registry system that provides O(1) 
 ```
 REGISTRY SYSTEM (Pre-built at build time):
 
-core/lib/registries/
+.nextspark/registries/
 ├── block-registry.ts        # BLOCK_REGISTRY - Page builder blocks
 ├── entity-registry.ts       # ENTITY_REGISTRY - Entity configurations
 ├── entity-registry.client.ts # Client-safe entity registry
@@ -39,7 +39,7 @@ Build script: node core/scripts/build/registry.mjs
 ```
 
 > **📍 Context-Aware Paths:** Registries are auto-generated from core + theme. In consumer projects,
-> theme configs go in `contents/themes/{theme}/config/`. Core registries are read-only.
+> theme configs go in `config/`. Core registries are read-only.
 > See `core-theme-responsibilities` skill for complete rules.
 
 ## When to Use This Skill
@@ -84,9 +84,9 @@ Services = Logic (methods that use registries)
 
 ```typescript
 // ✅ CORRECT - Import from registries
-import { BLOCK_REGISTRY } from '@/core/lib/registries/block-registry'
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
-import { THEME_REGISTRY } from '@/core/lib/registries/theme-registry'
+import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
+import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 
 // Access by key
 const heroBlock = BLOCK_REGISTRY['hero']
@@ -103,17 +103,17 @@ const allEntities = EntityTypeService.getAll()
 ### Forbidden Patterns
 
 ```typescript
-// ❌ FORBIDDEN - Direct imports from @/contents
-import { hero } from '@/contents/themes/default/blocks/hero'
-import { customerEntityConfig } from '@/contents/themes/default/entities/customers'
-import * as theme from '@/contents/themes/default'
+// ❌ FORBIDDEN - Direct imports from project source in runtime code
+import { hero } from '@/blocks/hero'
+import { customerEntityConfig } from '@/entities/customers'
+import * as theme from '@/./default'
 
-// ❌ FORBIDDEN - Dynamic imports from @/contents
-const module = await import('@/contents/themes/default/blocks/hero')
-const config = await import(`@/contents/themes/${themeName}/config`)
+// ❌ FORBIDDEN - Dynamic imports from project source in runtime code
+const module = await import('@/blocks/hero')
+const config = await import(`@/config`)
 
 // ❌ FORBIDDEN - Dynamic registry imports
-const { ENTITY_REGISTRY } = await import('@/core/lib/registries/entity-registry')
+const { ENTITY_REGISTRY } = await import('@nextsparkjs/registries/entity-registry')
 ```
 
 ## Available Registries
@@ -162,8 +162,8 @@ few that render a block.
  */
 
 // 1. Static imports (generated)
-import { customerEntityConfig } from '@/contents/themes/default/entities/customers/customers.config'
-import { taskEntityConfig } from '@/contents/themes/default/entities/tasks/tasks.config'
+import { customerEntityConfig } from '@/entities/customers/customers.config'
+import { taskEntityConfig } from '@/entities/tasks/tasks.config'
 
 // 2. TypeScript interface
 export interface EntityRegistryEntry {
@@ -299,14 +299,14 @@ const exists = EntityTypeService.exists('customers')
 
 ```typescript
 // NEVER: Import directly from contents
-import { hero } from '@/contents/themes/default/blocks/hero'
+import { hero } from '@/blocks/hero'
 
 // CORRECT: Use registry
-import { BLOCK_REGISTRY } from '@/core/lib/registries/block-registry'
+import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 const hero = BLOCK_REGISTRY['hero']
 
 // NEVER: Dynamic import from contents
-const block = await import(`@/contents/themes/${theme}/blocks/${slug}`)
+const block = await import(`@/blocks/${slug}`)
 
 // CORRECT: Use service
 import { BlockService } from '@/core/lib/services/block.service'
@@ -335,7 +335,7 @@ export class CustomerService {
 
 Before working with registries:
 
-- [ ] Importing from `@/core/lib/registries/` not `@/contents/`
+- [ ] Importing generated data from `@nextsparkjs/registries/`
 - [ ] Using services for logic, registries for data
 - [ ] Rebuilding after config changes (`node core/scripts/build/registry.mjs`)
 - [ ] Not modifying auto-generated registry files

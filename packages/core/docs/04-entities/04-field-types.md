@@ -1169,4 +1169,4 @@ import * as z from 'zod'
 
 ---
 
-> 💡 **Tip**: Review `contents/themes/default/entities/tasks/tasks.fields.ts` to see real examples of multiple field types in action.
+> 💡 **Tip**: Review `entities/tasks/tasks.fields.ts` to see real examples of multiple field types in action.

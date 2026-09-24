@@ -27,12 +27,16 @@ test("generateBillingRegistry's jiti import writes nothing under TMPDIR, even wh
   const originalTmpdir = process.env.TMPDIR
   try {
     process.env.TMPDIR = cacheRoot.root
-    const themesDir = join(REPO_ROOT, 'themes')
-    const config = { themesDir, outputDir: join(cacheRoot.root, 'lib/registries') }
+    const config = {
+      projectRoot: join(REPO_ROOT, 'apps/dev'),
+      projectSourceDir: join(REPO_ROOT, 'apps/dev'),
+      projectName: 'default',
+      outputDir: join(cacheRoot.root, 'lib/registries'),
+    }
 
-    const output = await generateBillingRegistry('default', join(REPO_ROOT, 'contents'), config)
+    const output = await generateBillingRegistry(config)
 
-    assert.match(output, /Active theme: default/)
+    assert.match(output, /Project: default/)
     const strayEntries = await readdir(cacheRoot.root)
     assert.deepEqual(strayEntries, [], `jiti must not write a module cache under TMPDIR, found: ${strayEntries.join(', ')}`)
   } finally {

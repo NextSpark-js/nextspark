@@ -68,7 +68,7 @@ function validateProjectRoot(projectRoot) {
 
 /**
  * Detect if we're in the NextSpark development monorepo.
- * Consumer projects may also have pnpm-workspace.yaml (for themes/plugins),
+ * Consumer projects may also have pnpm-workspace.yaml (for their own packages),
  * so we check for packages/core/ which only exists in the dev monorepo.
  */
 function isDevMonorepo(projectRoot) {

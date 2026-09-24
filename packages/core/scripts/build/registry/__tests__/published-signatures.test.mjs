@@ -31,9 +31,9 @@ async function writeProjectFile(root, relativePath, content) {
   await writeFile(absolutePath, content, 'utf8')
 }
 
-/** A theme template at `contents/themes/testtheme/templates/<relativePath>`, overriding `app/<relativePath>`. */
+/** A theme template at `templates/<relativePath>`, overriding `app/<relativePath>`. */
 async function writeTemplate(root, relativePath, templateType, content) {
-  await writeProjectFile(root, join('contents/themes/testtheme/templates', relativePath), content)
+  await writeProjectFile(root, join('templates', relativePath), content)
   return {
     name: relativePath.replace(/\.(tsx|ts)$/, ''),
     themeName: 'testtheme',
@@ -41,7 +41,7 @@ async function writeTemplate(root, relativePath, templateType, content) {
     fileName: relativePath.split('/').pop(),
     relativePath,
     appPath: `app/${relativePath}`,
-    templatePath: `@/contents/themes/testtheme/templates/${relativePath}`,
+    templatePath: `@/templates/${relativePath}`,
     priority: 10
   }
 }
@@ -58,7 +58,7 @@ test('generateTemplateRegistry(templates, config) decides component vs metadata-
     const out = await generateTemplateRegistry([layout, page], { outputDir: join(root, '.nextspark/registries'), projectRoot: root })
 
     assert.match(out, /'app\/docs\/layout\.tsx': \{\n\s*appPath: 'app\/docs\/layout\.tsx',\n\s*component: null,/)
-    assert.match(out, /component: lazyTemplate\('app\/pricing\/page\.tsx', \(\) => import\('@\/contents\/themes\/testtheme\/templates\/pricing\/page'\)\)/)
+    assert.match(out, /component: lazyTemplate\('app\/pricing\/page\.tsx', \(\) => import\('@\/templates\/pricing\/page'\)\)/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -73,7 +73,7 @@ test('generateTemplateRegistryClient(templates, config) leaves out a template wi
     const out = await generateTemplateRegistryClient([layout, page], { outputDir: join(root, '.nextspark/registries'), projectRoot: root })
 
     assert.doesNotMatch(out, /app\/docs\/layout\.tsx/)
-    assert.match(out, /'app\/pricing\/page\.tsx': dynamic\(\(\) => import\('@\/contents\/themes\/testtheme\/templates\/pricing\/page'\)\)/)
+    assert.match(out, /'app\/pricing\/page\.tsx': dynamic\(\(\) => import\('@\/templates\/pricing\/page'\)\)/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -87,12 +87,12 @@ test('generateMissingPages(templates, config) writes the same routes the registr
 
     await generateMissingPages([layout, page], { projectRoot: root })
 
-    const generatedLayout = await readFile(join(root, 'app/(templates)/docs/layout.tsx'), 'utf8')
+    const generatedLayout = await readFile(join(root, 'src/app/(templates)/docs/layout.tsx'), 'utf8')
     assert.match(generatedLayout, /Pass-through component/)
-    assert.match(generatedLayout, /export \{ viewport \} from '@\/contents\/themes\/testtheme\/templates\/docs\/layout'/)
+    assert.match(generatedLayout, /export \{ viewport \} from '@\/templates\/docs\/layout'/)
 
-    const generatedPage = await readFile(join(root, 'app/(templates)/pricing/page.tsx'), 'utf8')
-    assert.match(generatedPage, /import TemplateComponent from '@\/contents\/themes\/testtheme\/templates\/pricing\/page'/)
+    const generatedPage = await readFile(join(root, 'src/app/(templates)/pricing/page.tsx'), 'utf8')
+    assert.match(generatedPage, /import TemplateComponent from '@\/templates\/pricing\/page'/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -105,12 +105,12 @@ test('generateTemplatePage(template, outputPath) writes a route file without bei
     // generateMissingPages call was given.
     await generateMissingPages([], { projectRoot: root })
     const page = await writeTemplate(root, 'blog/page.tsx', 'page', `export const revalidate = 3600\n${PAGE_WITH_COMPONENT}`)
-    const outputPath = join(root, 'app/(templates)/blog/page.tsx')
+    const outputPath = join(root, 'src/app/(templates)/blog/page.tsx')
 
     await generateTemplatePage(page, outputPath)
 
     const generated = await readFile(outputPath, 'utf8')
-    assert.match(generated, /import TemplateComponent from '@\/contents\/themes\/testtheme\/templates\/blog\/page'/)
+    assert.match(generated, /import TemplateComponent from '@\/templates\/blog\/page'/)
     assert.match(generated, /export const revalidate = 3600/)
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -122,7 +122,7 @@ test('generateTemplatePage(template, outputPath) still rejects segment config Ne
   try {
     await generateMissingPages([], { projectRoot: root })
     const page = await writeTemplate(root, 'broken/page.tsx', 'page', `export const revalidate = 60 * 60\n${PAGE_WITH_COMPONENT}`)
-    const outputPath = join(root, 'app/(templates)/broken/page.tsx')
+    const outputPath = join(root, 'src/app/(templates)/broken/page.tsx')
 
     await assert.rejects(() => generateTemplatePage(page, outputPath), /segment config export "revalidate" is not a literal/)
     assert.equal(existsSync(outputPath), false)
@@ -134,12 +134,12 @@ test('generateTemplatePage(template, outputPath) still rejects segment config Ne
 test('generateMissingPages(templates, config) rejects a template it cannot generate before deleting anything', async () => {
   const root = await createProject()
   try {
-    await writeProjectFile(root, 'app/(templates)/old/page.tsx', PAGE_WITH_COMPONENT)
+    await writeProjectFile(root, 'src/app/(templates)/old/page.tsx', PAGE_WITH_COMPONENT)
     const page = await writeTemplate(root, 'docs/page.tsx', 'page', "export const metadata = { title: 'Docs' }\n")
 
     await assert.rejects(() => generateMissingPages([page], { projectRoot: root }), /has no default export/)
 
-    assert.equal(existsSync(join(root, 'app/(templates)/old/page.tsx')), true)
+    assert.equal(existsSync(join(root, 'src/app/(templates)/old/page.tsx')), true)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -148,12 +148,12 @@ test('generateMissingPages(templates, config) rejects a template it cannot gener
 test('generateMissingPages rejects an analysis that is missing one of its templates before deleting anything', async () => {
   const root = await createProject()
   try {
-    await writeProjectFile(root, 'app/(templates)/old/page.tsx', PAGE_WITH_COMPONENT)
+    await writeProjectFile(root, 'src/app/(templates)/old/page.tsx', PAGE_WITH_COMPONENT)
     const page = await writeTemplate(root, 'pricing/page.tsx', 'page', PAGE_WITH_COMPONENT)
 
     await assert.rejects(() => generateMissingPages([page], { projectRoot: root }, new Map()), /was not read by analyzeTemplates/)
 
-    assert.equal(existsSync(join(root, 'app/(templates)/old/page.tsx')), true)
+    assert.equal(existsSync(join(root, 'src/app/(templates)/old/page.tsx')), true)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -162,7 +162,7 @@ test('generateMissingPages rejects an analysis that is missing one of its templa
 /** A standalone `page.meta.ts` - which never has a default export - overriding `app/<route>/page.tsx`. */
 async function writeMetaTemplate(root, route) {
   const relativePath = `${route}/page.meta.ts`
-  await writeProjectFile(root, join('contents/themes/testtheme/templates', relativePath), "export const metadata = { title: 'Docs' }\n")
+  await writeProjectFile(root, join('templates', relativePath), "export const metadata = { title: 'Docs' }\n")
   return {
     name: `${route}/page`,
     themeName: 'testtheme',
@@ -170,7 +170,7 @@ async function writeMetaTemplate(root, route) {
     fileName: 'page.meta.ts',
     relativePath,
     appPath: `app/${route}/page.tsx`,
-    templatePath: `@/contents/themes/testtheme/templates/${relativePath}`,
+    templatePath: `@/templates/${relativePath}`,
     priority: 10
   }
 }
@@ -180,7 +180,7 @@ test('generateTemplatePage(template, outputPath) rejects a page.meta.ts for a ro
   try {
     await generateMissingPages([], { projectRoot: root })
     const meta = await writeMetaTemplate(root, 'docs')
-    const outputPath = join(root, 'app/(templates)/docs/page.tsx')
+    const outputPath = join(root, 'src/app/(templates)/docs/page.tsx')
 
     await assert.rejects(
       () => generateTemplatePage(meta, outputPath),
@@ -197,7 +197,7 @@ test('generateTemplatePage(template, outputPath) rejects a page.tsx with no defa
   try {
     await generateMissingPages([], { projectRoot: root })
     const page = await writeTemplate(root, 'docs/page.tsx', 'page', "export const metadata = { title: 'Docs' }\n")
-    const outputPath = join(root, 'app/(templates)/docs/page.tsx')
+    const outputPath = join(root, 'src/app/(templates)/docs/page.tsx')
 
     await assert.rejects(
       () => generateTemplatePage(page, outputPath),
@@ -216,7 +216,7 @@ test('generateMissingPages(templates, config) rejects a page.meta.ts for a route
 
     await assert.rejects(() => generateMissingPages([meta], { projectRoot: root }), /page\.meta\.ts has no default export/)
 
-    assert.equal(existsSync(join(root, 'app/(templates)')), false)
+    assert.equal(existsSync(join(root, 'src/app/(templates)')), false)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -225,11 +225,11 @@ test('generateMissingPages(templates, config) rejects a page.meta.ts for a route
 test('a page.meta.ts over a page the app already has is accepted, and no route file is written for it', async () => {
   const root = await createProject()
   try {
-    await writeProjectFile(root, 'app/docs/page.tsx', PAGE_WITH_COMPONENT)
+    await writeProjectFile(root, 'src/app/docs/page.tsx', PAGE_WITH_COMPONENT)
     const meta = await writeMetaTemplate(root, 'docs')
 
     await generateMissingPages([meta], { projectRoot: root })
-    assert.equal(existsSync(join(root, 'app/(templates)/docs/page.tsx')), false)
+    assert.equal(existsSync(join(root, 'src/app/(templates)/docs/page.tsx')), false)
 
     const out = await generateTemplateRegistry([meta], { outputDir: join(root, '.nextspark/registries'), projectRoot: root })
     assert.match(out, /'app\/docs\/page\.tsx': \{\n\s*appPath: 'app\/docs\/page\.tsx',\n\s*component: null,/)

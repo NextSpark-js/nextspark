@@ -16,7 +16,7 @@ import {
   extractTokens,
   handleAIError,
   COST_CONFIG
-} from '@/contents/plugins/ai/lib/core-utils'
+} from '@/plugins/ai/lib/core-utils'
 ```
 
 ## Core Functions
@@ -339,7 +339,7 @@ import {
   validatePlugin,
   extractTokens,
   handleAIError
-} from '@/contents/plugins/ai/lib/core-utils'
+} from '@/plugins/ai/lib/core-utils'
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
@@ -411,7 +411,7 @@ import type {
   TokenUsage,
   PluginValidation,
   AIErrorResult
-} from '@/contents/plugins/ai/types/ai.types'
+} from '@/plugins/ai/types/ai.types'
 
 // Use in function signatures
 async function myCustomFunction(

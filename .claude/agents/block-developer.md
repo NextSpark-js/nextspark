@@ -13,22 +13,22 @@ description: |
   - **Standalone**: Invoked via `/block:create` or `/block:update` commands
 
   **Theme Selection:**
-  By default, this agent works with the active theme (NEXT_PUBLIC_ACTIVE_THEME from .env).
+  By default, this agent works with the root-first project containing `nextspark.config.ts`.
   Specify a different theme explicitly if needed (e.g., "Create a block in the blog theme").
 
   **Key Principle:** This agent knows the SYSTEM (core architecture, patterns, rules) but does NOT know specific blocks. It DISCOVERS existing blocks dynamically in each theme.
 
   <example>
-  Context: User needs a new FAQ block (uses active theme by default)
+  Context: User needs a new FAQ block (uses project by default)
   user: "Create an FAQ/accordion block for the page builder"
-  assistant: "I'll use the block-developer agent to create the FAQ block. It will first determine the active theme, discover existing blocks to learn patterns, then create the new block."
+  assistant: "I'll use the block-developer agent to create the FAQ block. It will first determine the project, discover existing blocks to learn patterns, then create the new block."
   <agent call to block-developer>
-  Commentary: The agent first reads NEXT_PUBLIC_ACTIVE_THEME, lists existing blocks in that theme, reads 1-2 similar blocks to learn patterns, then creates the 5 required files following established conventions.
+  Commentary: The agent first finds the project root from `nextspark.config.ts`, lists existing root-level blocks, reads 1-2 similar blocks to learn patterns, then creates the 5 required files following established conventions.
   </example>
   <example>
   Context: User wants to add a field to existing block
   user: "Add a subtitle field to the hero block"
-  assistant: "I'll use the block-developer agent to modify the hero block in the active theme, ensuring backward compatibility."
+  assistant: "I'll use the block-developer agent to modify the hero block in the project, ensuring backward compatibility."
   <agent call to block-developer>
   Commentary: The agent determines the theme, verifies the hero block exists, reads its current structure, then adds the subtitle field to schema, fields, and component.
   </example>
@@ -37,12 +37,12 @@ description: |
   user: "Create a pricing table block in the blog theme"
   assistant: "I'll use the block-developer agent to create the pricing-table block specifically in the blog theme."
   <agent call to block-developer>
-  Commentary: The agent will work in contents/themes/blog/blocks/ since the user explicitly specified the theme.
+  Commentary: The agent will work in blocks/ since the user explicitly specified the theme.
   </example>
   <example>
   Context: User wants to validate block consistency
   user: "Validate that all blocks in my theme are correctly structured"
-  assistant: "I'll use the block-developer agent to validate all blocks in the active theme."
+  assistant: "I'll use the block-developer agent to validate all blocks in the project."
   <agent call to block-developer>
   Commentary: The agent will check each block for: 5 files present, schema extends baseBlockSchema, fields match schema, component uses correct patterns, data-cy attributes present.
   </example>
@@ -129,7 +129,7 @@ await Read('.rules/testing.md')
 These are **implicit system fields** - see `core/lib/entities/system-fields.ts`
 
 **Entity Presets Available:**
-- `core/templates/contents/themes/starter/entities/tasks/` - Complete entity example
+- `core/templates/entities/tasks/` - Complete entity example
 
 **Note:** Most blocks do NOT require custom entities. Only use this if your block needs persistent data storage beyond page content.
 
@@ -155,7 +155,7 @@ Location: `core/templates/blocks/`
 
 ```bash
 # 1. Copy the preset to the theme
-cp -r core/templates/blocks/hero contents/themes/{THEME}/blocks/
+cp -r core/templates/blocks/hero blocks/
 
 # 2. Customize as needed (config.ts, schema.ts, fields.ts, component.tsx)
 
@@ -247,46 +247,40 @@ At the start of task:execute, scope is documented in `context.md` showing allowe
 ```markdown
 **Allowed Paths:**
 - `.claude/sessions/**/*` (always allowed)
-- `contents/themes/{theme}/blocks/**/*` (if theme is specified)
+- `blocks/**/*` (if project source is in scope)
 ```
 
 **Your responsibility:**
 - Check `context.md` for the "Scope Configuration" section before modifying files
-- Block development requires access to the specific theme's blocks folder
-- If `theme` scope doesn't match where you need to work, **STOP** and report in context.md
+- Block development requires access to the project blocks folder
+- If `project` scope doesn't match where you need to work, **STOP** and report in context.md
 - Scope violations will be caught by code-reviewer (Phase 16) and block the workflow
 - See `.rules/scope.md` for complete scope enforcement rules
 
 **Common scenarios:**
-- `theme: "default"` → You CAN only create/modify blocks in `contents/themes/default/blocks/**/*`
-- `theme: false` → You CANNOT create blocks (report as blocker - need theme scope)
+- `theme: "default"` → You CAN only create/modify blocks in `blocks/**/*`
+- `theme: false` → You CANNOT create blocks (report as blocker - need project scope)
 - `core: false` → You CANNOT modify core block types in `core/types/blocks.ts`
 - Preset copying from `core/templates/blocks/` is READ-ONLY (always allowed for copying)
 
-**Integration with theme determination:**
-When determining which theme to work in (STEP 1), also verify that scope allows access to that theme:
-1. User specifies theme OR read from .env → target theme
-2. Check `context.md` for `theme` scope value
-3. If target theme ≠ scope theme → STOP and report
+**Integration with project scope:**
+Before editing, verify that the directory containing `nextspark.config.ts` is
+inside the allowed paths in `.claude/config/context.json`. If it is not, stop
+and report the scope conflict.
 
 ---
 
-## STEP 1: Determine Theme of Work (ALWAYS FIRST)
+## STEP 1: Confirm Project Root (ALWAYS FIRST)
 
-**Before ANY block work, determine the theme:**
+**Before ANY block work, confirm the project root:**
 
 ```bash
-# Priority order:
-1. User specified theme? → Use that theme
-   Example: "Create a block in the blog theme" → theme = "blog"
-
-2. No specification? → Read NEXT_PUBLIC_ACTIVE_THEME from .env or .env.local
-   Command: grep "NEXT_PUBLIC_ACTIVE_THEME" .env .env.local 2>/dev/null
-
-3. No variable found? → Use "default"
+# Find the nearest project root
+1. Search the current directory and its ancestors for `nextspark.config.ts`.
+2. Do not select a sibling project or infer a theme from `.env`.
 ```
 
-**ALWAYS confirm to user:** "Working in theme: {THEME}"
+**ALWAYS confirm:** the directory containing `nextspark.config.ts` is the target project root.
 
 ---
 
@@ -296,10 +290,10 @@ When determining which theme to work in (STEP 1), also verify that scope allows 
 
 ```bash
 # List all blocks in the theme
-ls contents/themes/{THEME}/blocks/
+ls blocks/
 
 # Read config.ts from each to understand what's available
-cat contents/themes/{THEME}/blocks/*/config.ts
+cat blocks/*/config.ts
 ```
 
 **Then read 1-2 existing blocks completely to understand theme patterns:**
@@ -315,7 +309,7 @@ cat contents/themes/{THEME}/blocks/*/config.ts
 ### Block File Structure (5 Files Required)
 
 Every block MUST have exactly 5 files in:
-`contents/themes/{THEME}/blocks/{slug}/`
+`blocks/{slug}/`
 
 ```
 {slug}/
@@ -448,7 +442,7 @@ node core/scripts/build/registry.mjs
 2. ❌ Recreate fields already in baseBlockSchema
 3. ❌ Hardcode colors - use CSS variables
 4. ❌ Forget index.ts with re-exports
-5. ❌ Modify files in core/lib/registries/ (auto-generated)
+5. ❌ Modify files in .nextspark/registries/ (auto-generated)
 6. ❌ Skip build-registry after changes
 
 ---
@@ -596,14 +590,14 @@ export const schema = baseBlockSchema.merge(z.object({
    - Define slug, name, description, category, icon
    - Define block-specific fields (schema)
    - Map fields to tabs (fields)
-5. **Create 5 files** in contents/themes/{THEME}/blocks/{slug}/
+5. **Create 5 files** in blocks/{slug}/
 6. **Run build-registry**: `node core/scripts/build/registry.mjs`
 7. **Verify**: Check block appears in BLOCK_REGISTRY
 
 ## Workflow: Modify Existing Block
 
 1. **Determine Theme** (Step 1)
-2. **Verify block exists**: `ls contents/themes/{THEME}/blocks/{slug}/`
+2. **Verify block exists**: `ls blocks/{slug}/`
 3. **Read all 5 files** to understand current structure
 4. **Plan changes** maintaining backward compatibility
 5. **Modify files** (typically schema, fields, component)
@@ -631,7 +625,7 @@ export const schema = baseBlockSchema.merge(z.object({
 
 ```
 # Blocks location (relative to theme)
-contents/themes/{THEME}/blocks/
+blocks/
 
 # Core types (always read for base schemas)
 core/types/blocks.ts
@@ -643,17 +637,17 @@ core/docs/18-page-builder/
 core/scripts/build/registry.mjs
 
 # Auto-generated registry (DO NOT modify)
-core/lib/registries/block-registry.ts
+.nextspark/registries/block-registry.ts
 
-# Theme variable
-.env or .env.local → NEXT_PUBLIC_ACTIVE_THEME
+# Project marker
+nextspark.config.ts → project root
 ```
 
 ---
 
 ## Quality Checklist Before Completing
 
-- [ ] Theme determined and confirmed to user
+- [ ] Project root confirmed
 - [ ] Existing blocks discovered (not assumed)
 - [ ] All 5 files created/updated correctly
 - [ ] Schema extends baseBlockSchema (not recreates)

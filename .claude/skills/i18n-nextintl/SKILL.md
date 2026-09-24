@@ -28,12 +28,12 @@ Internationalization patterns for Next.js 15 using next-intl with auto-generated
 │     └── ...                                                     │
 │                                                                 │
 │  2. THEME MESSAGES (Theme-specific overrides)                   │
-│     contents/themes/{theme}/messages/{locale}.json              │
+│     messages/{locale}.json              │
 │     - Extends/overrides core translations                       │
 │     - Custom roles (editor, moderator) ONLY here                │
 │                                                                 │
 │  3. ENTITY MESSAGES (Entity-specific)                           │
-│     contents/themes/{theme}/entities/{entity}/messages/         │
+│     entities/{entity}/messages/         │
 │     - Field labels, placeholders, descriptions                  │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -76,16 +76,16 @@ const NAMESPACE_GROUPS = {
 
 ### Translation Registry
 
-Auto-generated at `core/lib/registries/translation-registry.ts`:
+Auto-generated at `.nextspark/registries/translation-registry.ts`:
 
 ```typescript
 // ✅ CORRECT - Use registry functions
-import { loadThemeTranslation } from '@/core/lib/registries/translation-registry'
+import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 
 const translations = await loadThemeTranslation(themeName, locale)
 
 // ❌ NEVER - Runtime string interpolation
-const translations = await import(`@/contents/themes/${theme}/messages/${locale}.json`)
+const translations = await import(`@/messages/${locale}.json`)
 ```
 
 ## Component Patterns
@@ -146,7 +146,7 @@ const t = useTranslations('welcome')
 
 **Custom role translations MUST NEVER be in core/messages/. They belong ONLY in theme messages.**
 
-| Translation Key | Core (`core/messages/`) | Theme (`contents/themes/*/messages/`) |
+| Translation Key | Core (`core/messages/`) | Theme (`messages/`) |
 |-----------------|-------------------------|---------------------------------------|
 | `teams.roles.owner` | MUST define here | Can override |
 | `teams.roles.admin` | MUST define here | Can override |
@@ -158,7 +158,7 @@ const t = useTranslations('welcome')
 ### Correct Pattern
 
 ```json
-// core/messages/en/teams.json - ONLY core roles
+// packages/core/src/messages/en/teams.json - ONLY core roles
 {
   "teams": {
     "roles": {
@@ -170,7 +170,7 @@ const t = useTranslations('welcome')
   }
 }
 
-// contents/themes/default/messages/en.json - Theme extends
+// messages/en.json - Theme extends
 {
   "teams": {
     "roles": {
@@ -210,7 +210,7 @@ const t = useTranslations('welcome')
 ```bash
 # Find hardcoded strings in components
 python .claude/skills/i18n-nextintl/scripts/extract-hardcoded.py \
-  --path contents/themes/default/components/
+  --path components/
 
 # Preview without file details
 python .claude/skills/i18n-nextintl/scripts/extract-hardcoded.py \
@@ -225,7 +225,6 @@ python .claude/skills/i18n-nextintl/scripts/validate-translations.py
 
 # Check theme-specific translations
 python .claude/skills/i18n-nextintl/scripts/validate-translations.py \
-  --theme default
 
 # Strict mode (exit with error if missing keys)
 python .claude/skills/i18n-nextintl/scripts/validate-translations.py \
@@ -245,7 +244,6 @@ python .claude/skills/i18n-nextintl/scripts/add-translation.py \
   --key "teams.roles.editor" \
   --en "Editor" \
   --es "Editor" \
-  --theme default
 
 # Preview without writing
 python .claude/skills/i18n-nextintl/scripts/add-translation.py \
@@ -284,9 +282,9 @@ const message = t('greeting', { name: userName })
 | Type | Location | Who Modifies |
 |------|----------|--------------|
 | Core translations | `core/messages/{locale}/` | Core maintainers |
-| Theme translations | `contents/themes/{theme}/messages/{locale}.json` | Theme developers |
+| Theme translations | `messages/{locale}.json` | Theme developers |
 | Entity translations | Entity config `i18n.loaders` | Entity developers |
-| Translation registry | `core/lib/registries/translation-registry.ts` | Auto-generated |
+| Translation registry | `.nextspark/registries/translation-registry.ts` | Auto-generated |
 | i18n config | `core/i18n.ts` | Core maintainers |
 
 ## Checklist

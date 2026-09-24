@@ -70,8 +70,8 @@ curl -s http://localhost:5173/api/health || echo "Server not ready"
 ### 2. Read Test Credentials
 
 ```typescript
-// Read test credentials from active theme's dev config
-// Located in: contents/themes/{activeTheme}/config/dev.config.ts → devKeyring
+// Read test credentials from project's dev config
+// Located in: config/dev.config.ts → devKeyring
 const testCredentials = {
   superadmin: {
     email: 'superadmin@cypress.com',
@@ -262,7 +262,7 @@ await Read(`${sessionPath}/plan.md`)          // For expected endpoints
 await Read(`${sessionPath}/context.md`)       // For backend status
 await Read(`${sessionPath}/progress.md`)      // For current progress
 await Read(`${sessionPath}/tests.md`)         // For existing test documentation
-// Read test credentials from active theme's dev.config.ts → devKeyring
+// Read test credentials from project's dev.config.ts → devKeyring
 ```
 
 ### Step 2: Execute Tests
@@ -596,7 +596,7 @@ export async function GET(request: Request) {
 
 ```typescript
 // ❌ INCORRECT - Direct registry function calls (if functions exist in registries)
-import { getSomething } from '@/core/lib/registries/some-registry'
+import { getSomething } from '@nextsparkjs/registries/some-registry'
 
 export async function GET(request: Request) {
   const data = getSomething(id) // This should be EntityService.get(id)

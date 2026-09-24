@@ -7,15 +7,9 @@
  */
 
 import { readFile } from 'fs/promises'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { join } from 'path'
 
 import { errorWithLines, log, verbose } from '../../../utils/index.mjs'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-// Path from packages/core/scripts/build/registry/generators/ to project root (6 levels up)
-const rootDir = join(__dirname, '../../../../../..')
 
 import { convertCorePath } from '../config.mjs'
 
@@ -111,11 +105,11 @@ export async function generatePermissionsRegistry(permissionsConfig, entities, c
 
   // Helper to convert TypeScript path aliases to actual file paths
   const resolveAliasPath = (aliasPath) => {
-    if (aliasPath.startsWith('@/contents/')) {
-      return join(rootDir, aliasPath.replace('@/contents/', 'contents/') + '.ts')
-    }
     if (aliasPath.startsWith('@/core/')) {
-      return join(rootDir, aliasPath.replace('@/core/', 'packages/core/') + '.ts')
+      return join(config.coreDir, 'src', aliasPath.replace('@/core/', '') + '.ts')
+    }
+    if (aliasPath.startsWith('@/')) {
+      return join(config.projectRoot, aliasPath.slice(2) + '.ts')
     }
     return aliasPath
   }

@@ -18,7 +18,7 @@ const TEMPLATES = join(__dirname, '../../../templates')
 /** Every directory holding block sources that ships to a generated project. */
 const BLOCK_ROOTS = [
   join(TEMPLATES, 'blocks'),
-  join(TEMPLATES, 'contents/themes/starter/blocks'),
+  join(TEMPLATES, 'projects/starter/blocks'),
 ]
 
 function blockDirs(root: string): string[] {

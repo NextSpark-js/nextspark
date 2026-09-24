@@ -5,11 +5,10 @@ Generate Metas Migration Script
 Generates SQL migration for entity metadata table.
 
 Usage:
-    python generate-metas-migration.py --entity ENTITY_NAME [--theme THEME] [--output FILE]
+    python generate-metas-migration.py --entity ENTITY_NAME [--output FILE]
 
 Options:
     --entity ENTITY_NAME  Name of the entity (kebab-case, e.g., 'products', 'blog-posts')
-    --theme THEME         Theme name (default: from NEXT_PUBLIC_ACTIVE_THEME or 'default')
     --output FILE         Output file (default: auto-generate path)
     --with-rls            Include RLS policies (default: true)
     --dry-run             Print SQL without writing file
@@ -21,10 +20,6 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 
-
-def get_active_theme() -> str:
-    """Get active theme from environment or default."""
-    return os.environ.get('NEXT_PUBLIC_ACTIVE_THEME', 'default')
 
 
 def to_camel_case(name: str) -> str:
@@ -170,7 +165,6 @@ def find_next_migration_number(migrations_dir: Path) -> int:
 def main():
     parser = argparse.ArgumentParser(description='Generate entity metas migration')
     parser.add_argument('--entity', required=True, help='Entity name (kebab-case)')
-    parser.add_argument('--theme', default=None, help='Theme name')
     parser.add_argument('--output', help='Output file path')
     parser.add_argument('--with-rls', action='store_true', default=True, help='Include RLS policies')
     parser.add_argument('--no-rls', action='store_true', help='Exclude RLS policies')
@@ -178,13 +172,11 @@ def main():
 
     args = parser.parse_args()
 
-    theme = args.theme or get_active_theme()
     entity_slug = args.entity.lower()
     with_rls = not args.no_rls
 
     print(f"\n{'='*60}")
     print(f"Generating metas migration for: {entity_slug}")
-    print(f"Theme: {theme}")
     print(f"With RLS: {with_rls}")
     print(f"{'='*60}")
 
@@ -202,7 +194,7 @@ def main():
         output_path = Path(args.output)
     else:
         # Auto-generate path in entity's migrations folder
-        entity_dir = Path(f'contents/themes/{theme}/entities/{entity_slug}')
+        entity_dir = Path(f'entities/{entity_slug}')
         migrations_dir = entity_dir / 'migrations'
 
         if not entity_dir.exists():

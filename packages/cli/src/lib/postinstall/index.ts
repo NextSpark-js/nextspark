@@ -45,17 +45,7 @@ export async function runPostinstall(
 
   // 2. Procesar templates
   if (postinstall.templates?.length) {
-    const needsTheme = postinstall.templates.some(t =>
-      t.to.includes('${activeTheme}')
-    )
-
-    if (needsTheme && !context.activeTheme) {
-      console.log(chalk.yellow('\n  Warning: Templates require an active theme but none detected.'))
-      console.log(chalk.gray('  Set NEXT_PUBLIC_ACTIVE_THEME or install a theme first.'))
-      console.log(chalk.gray('  Skipping template installation.\n'))
-    } else {
-      await processTemplates(postinstall.templates, installedPath, context)
-    }
+    await processTemplates(postinstall.templates, installedPath, context)
   }
 
   // 3. Variables de entorno
@@ -97,7 +87,7 @@ async function checkPluginExists(pluginName: string): Promise<boolean> {
     .replace(/^nextspark-plugin-/, '')
     .replace(/^plugin-/, '')
 
-  return existsSync(join(process.cwd(), 'contents', 'plugins', name))
+  return existsSync(join(process.cwd(), 'plugins', name))
 }
 
 export { PostinstallContext }

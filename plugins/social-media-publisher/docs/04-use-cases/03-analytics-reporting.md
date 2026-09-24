@@ -18,7 +18,7 @@ This guide covers how to leverage the Social Media Publisher plugin's analytics 
 
 **Fetch Account Metrics:**
 ```typescript
-import { InstagramAPI } from '@/contents/plugins/social-media-publisher/lib/providers/instagram'
+import { InstagramAPI } from '@/plugins/social-media-publisher/lib/providers/instagram'
 import { TokenEncryption } from '@/core/lib/oauth/encryption'
 
 export async function getInstagramAnalytics(accountId: string) {

@@ -2,11 +2,11 @@
  * Updates a NextSpark project to another release of the @nextsparkjs packages.
  *
  * A project takes NextSpark from npm: its package.json pins @nextsparkjs/core,
- * @nextsparkjs/cli and the other @nextsparkjs packages to one version, app/ is
- * kept in step with core's templates by `nextspark sync:app`, and contents/
- * holds the project's own themes and plugins. So an update sets those pins to
- * the new version, installs, and syncs app/. No framework source is copied into
- * the project, and of package.json only the @nextsparkjs versions change.
+ * @nextsparkjs/cli and the other @nextsparkjs packages to one version, src/app/
+ * is kept in step with core's templates by `nextspark sync:app`, and the named
+ * root directories hold project-owned source. So an update sets those pins to
+ * the new version, installs, and syncs src/app/. No framework source is copied
+ * into the project, and of package.json only the @nextsparkjs versions change.
  *
  * What can be checked without changing anything is checked before the first
  * write, so a run that can't start says why and leaves the project as it was.
@@ -66,7 +66,7 @@ What gets updated:
                           the newest version the range allows instead of the target
   pnpm-lock.yaml, node_modules   Through pnpm install, run where pnpm-lock.yaml is (in a
                           web-mobile project, the directory above web/)
-  app/                    Synced with core's templates by nextspark sync:app, which keeps
+  src/app/                Synced with core's templates by nextspark sync:app, which keeps
                           files the project customized and rebuilds the registries
   next.config.mjs, tsconfig.json, i18n.ts, proxy.ts or middleware.ts
                           Also synced by sync:app, which keeps them when customized
@@ -74,7 +74,8 @@ What gets updated:
 
 What update-core itself never writes:
   The rest of package.json (name, scripts, other dependencies)
-  contents/               The project's themes and plugins
+  api/, blocks/, components/, config/, entities/, lib/, messages/, migrations/, plugins/, styles/, templates/, tests/
+                          Project-owned root-first source
   .env*                   Environment files
 Lifecycle scripts that pnpm install runs are not bound by this list.
 
@@ -82,8 +83,8 @@ The update stops before changing anything when the project isn't in a git
 repository with a commit, when it has uncommitted changes or no committed
 pnpm-lock.yaml, when a @nextsparkjs package isn't published at the target
 version, when the target is older than the installed version, when package.json
-takes a @nextsparkjs package from somewhere other than the registry, or when .env
-doesn't set NEXT_PUBLIC_ACTIVE_THEME, which the registry build needs. When every
+takes a @nextsparkjs package from somewhere other than the registry, or when
+nextspark.config.ts is absent. When every
 @nextsparkjs package is already installed and pinned exactly to the target, there
 is nothing to do and nothing is changed; a ^ or ~ range is set to the exact
 target like any other pin.
@@ -259,7 +260,7 @@ function readProject(cwd) {
     if (fs.existsSync(path.join(cwd, 'core'))) {
       return {
         problem: 'This project keeps the framework in core/, the layout from before NextSpark shipped as npm packages, and update-core only updates projects that install @nextsparkjs/core. Nothing was changed.\n' +
-          '  To move it over, create a project with create-nextspark-app and bring your contents/ across.',
+          '  To move it over, create a root-first project with create-nextspark-app and bring your project-owned source across.',
       }
     }
     return { problem: `package.json doesn't depend on ${CORE_PACKAGE}, so there is nothing for update-core to update.` }
@@ -444,19 +445,10 @@ function installedCli(cwd) {
 }
 
 /**
- * Whether the registry build sync:app runs has a theme to build: it reads
- * NEXT_PUBLIC_ACTIVE_THEME from the project's .env or the environment, and
- * without one it skips the build and still exits 0.
+ * Whether sync:app can resolve the root-first project it must rebuild.
  */
-function hasActiveTheme(cwd, env) {
-  if (env.NEXT_PUBLIC_ACTIVE_THEME) return true
-  const text = readOptional(path.join(cwd, '.env'))?.toString('utf8') ?? ''
-  const lines = text.split(/\r?\n/).filter((line) => /^\s*(?:export\s+)?NEXT_PUBLIC_ACTIVE_THEME\s*=/.test(line))
-  if (lines.length === 0) return false
-  const raw = lines.at(-1).slice(lines.at(-1).indexOf('=') + 1).trim()
-  const quoted = raw.match(/^(["'`])(.*?)\1/)
-  const value = quoted ? quoted[2] : raw.replace(/\s+#.*$/, '').trim()
-  return value !== ''
+function hasProjectConfig(cwd) {
+  return fs.existsSync(path.join(cwd, 'nextspark.config.ts'))
 }
 
 function coreMigrations(cwd) {
@@ -802,7 +794,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
   }
 
   if (!packages.some(({ name }) => name === CLI_PACKAGE)) {
-    err(`   update-core syncs app/ through the nextspark CLI, and package.json doesn't depend on ${CLI_PACKAGE}. Nothing was changed.`)
+    err(`   update-core syncs src/app/ through the nextspark CLI, and package.json doesn't depend on ${CLI_PACKAGE}. Nothing was changed.`)
     return 1
   }
 
@@ -833,8 +825,8 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     return 1
   }
 
-  if (!hasActiveTheme(cwd, env)) {
-    err('   NEXT_PUBLIC_ACTIVE_THEME is not set in .env, and sync:app skips the registry build without it, so app/(templates) would stay on the old core. Set it and run update-core again. Nothing was changed.')
+  if (!hasProjectConfig(cwd)) {
+    err('   nextspark.config.ts is missing, so sync:app cannot resolve the root-first project. Restore it and run update-core again. Nothing was changed.')
     return 1
   }
   out(`   Installed: ${CORE_PACKAGE} ${installed}`)
@@ -851,7 +843,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
   out(`   Target:    ${target}`)
 
   if (compareVersions(target, installed) < 0) {
-    err(`   ${target} is older than the installed ${installed}. update-core doesn't downgrade: app/ would be synced back and applied migrations can't be undone. Nothing was changed.`)
+    err(`   ${target} is older than the installed ${installed}. update-core doesn't downgrade: src/app/ would be synced back and applied migrations can't be undone. Nothing was changed.`)
     return 1
   }
 
@@ -959,7 +951,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     done.push(`pnpm install: every @nextsparkjs package installed at ${target}`)
     current++
 
-    out('\n[4/5] Syncing app/ with core and rebuilding the registries...')
+    out('\n[4/5] Syncing src/app/ with core and rebuilding the registries...')
     const cli = installedCli(cwd)
     if (!cli) return stopped({ reason: `node_modules has no nextspark CLI from ${CLI_PACKAGE}` })
     fs.rmSync(path.join(cwd, '.next'), { recursive: true, force: true })
@@ -970,7 +962,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     if (sync.status !== 0) return stopped({ reason: `${describeExit(sync)}${sync.started ? '; what it reported is above' : ''}`, started: sync.started, stop: sync.stop, leftRunning: sync.leftRunning })
     if (sync.leftRunning) return stopped({ reason: 'it exited 0, but processes it started were still running after being killed', stop: sync.stop, leftRunning: true })
     if (sync.stop) out(`   Processes nextspark sync:app started were still running after it exited, and were ${sync.stop === 'killed' ? 'killed' : 'stopped with SIGTERM'}.`)
-    done.push('app/ synced with core and registries rebuilt by nextspark sync:app')
+    done.push('src/app/ synced with core and registries rebuilt by nextspark sync:app')
     current++
 
     if (await signalled()) return stopped({ started: false })

@@ -13,11 +13,11 @@ Use the `/block:create` command for the fastest approach:
 /block:create FAQ accordion block con preguntas y respuestas
 
 # Create a pricing table in a specific theme
-/block:create --theme=blog Pricing table with monthly/yearly toggle
+/block:create Pricing table with monthly/yearly toggle
 ```
 
 The command will:
-1. Determine the active theme (or use `--theme=X`)
+1. Determine the project (the current project root)
 2. Discover existing blocks to learn patterns
 3. Generate all 5 required files
 4. Run `packages/core/scripts/build/registry.mjs` automatically
@@ -39,10 +39,10 @@ The core includes ready-to-use block presets at `core/templates/blocks/`. Simply
 
 ```bash
 # Copy a single block
-cp -r core/templates/blocks/testimonials contents/themes/YOUR_THEME/blocks/
+cp -r core/templates/blocks/testimonials blocks/
 
 # Copy multiple blocks
-cp -r core/templates/blocks/{hero,cta-section,features-grid} contents/themes/YOUR_THEME/blocks/
+cp -r core/templates/blocks/{hero,cta-section,features-grid} blocks/
 
 # Rebuild registry
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
@@ -81,10 +81,10 @@ Create a new block in under 5 minutes:
 
 ```bash
 # 1. Create the block directory
-mkdir -p contents/themes/default/blocks/my-block
+mkdir -p blocks/my-block
 
 # 2. Create required files
-touch contents/themes/default/blocks/my-block/{config,fields,schema,component,index}.ts
+touch blocks/my-block/{config,fields,schema,component,index}.ts
 mv component.ts component.tsx
 
 # 3. Rebuild the registry
@@ -96,7 +96,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 Every block requires these files:
 
 ```text
-contents/themes/{theme}/blocks/{block-slug}/
+blocks/{block-slug}/
 ├── config.ts        # Block metadata
 ├── fields.ts        # Admin form field definitions
 ├── schema.ts        # Zod validation schema
@@ -112,7 +112,7 @@ contents/themes/{theme}/blocks/{block-slug}/
 Define block metadata:
 
 ```typescript
-// contents/themes/default/blocks/pricing-table/config.ts
+// blocks/pricing-table/config.ts
 import type { BlockConfig } from '@/core/types/blocks'
 
 export const config: Omit<BlockConfig, 'fieldDefinitions'> = {
@@ -160,7 +160,7 @@ scope: ['tutorials', 'courses']
 Define form fields for the admin UI:
 
 ```typescript
-// contents/themes/default/blocks/pricing-table/fields.ts
+// blocks/pricing-table/fields.ts
 import type { FieldDefinition } from '@/core/types/blocks'
 import {
   baseContentFields,
@@ -308,7 +308,7 @@ The `media-library` field stores a **URL string** in the block data, so no schem
 Define validation schema with Zod:
 
 ```typescript
-// contents/themes/default/blocks/pricing-table/schema.ts
+// blocks/pricing-table/schema.ts
 import * as z from 'zod'
 import { baseBlockSchema, type BaseBlockProps } from '@/core/types/blocks'
 
@@ -343,7 +343,7 @@ export type { BaseBlockProps }
 Create the React component:
 
 ```typescript
-// contents/themes/default/blocks/pricing-table/component.tsx
+// blocks/pricing-table/component.tsx
 import React from 'react'
 import { Button } from '@/core/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/core/components/ui/card'
@@ -470,7 +470,7 @@ export function PricingTableBlock({
 Create re-exports:
 
 ```typescript
-// contents/themes/default/blocks/pricing-table/index.ts
+// blocks/pricing-table/index.ts
 export { config } from './config'
 export { fieldDefinitions, fields } from './fields'
 export { schema, type PricingTableBlockProps, type PlanConfig } from './schema'

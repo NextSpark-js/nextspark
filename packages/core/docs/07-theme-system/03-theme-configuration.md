@@ -34,7 +34,7 @@ export interface ThemeConfig {
 
 ### theme.config.ts
 
-**Location:** `contents/themes/[theme-name]/theme.config.ts`
+**Location:** `theme.config.ts`
 
 **Minimal Example:**
 
@@ -340,7 +340,7 @@ export const myThemeConfig: ThemeConfig = {
 
 ### app.config.ts
 
-**Location:** `contents/themes/[theme-name]/app.config.ts`
+**Location:** `app.config.ts`
 
 **Purpose:** Override core application configuration for this theme.
 
@@ -444,7 +444,7 @@ const finalConfig = {
 
 ### permissions.config.ts
 
-**Location:** `contents/themes/[theme-name]/config/permissions.config.ts`
+**Location:** `config/permissions.config.ts`
 
 **Purpose:** Single source of truth for all permissions and custom roles.
 
@@ -562,7 +562,7 @@ PermissionService.canDoAction('owner', 'anything') // Always true
 
 ### dev.config.ts
 
-**Location:** `contents/themes/[theme-name]/config/dev.config.ts`
+**Location:** `config/dev.config.ts`
 
 **Purpose:** Contains development-only settings that should never affect production. This file is specifically designed to keep development tools and test configurations separate from production configuration.
 
@@ -701,7 +701,7 @@ export const DEV_CONFIG_OVERRIDES: DevConfig = {
 
 ### dashboard.config.ts
 
-**Location:** `contents/themes/[theme-name]/config/dashboard.config.ts`
+**Location:** `config/dashboard.config.ts`
 
 **Purpose:** Customize dashboard navigation and layout.
 

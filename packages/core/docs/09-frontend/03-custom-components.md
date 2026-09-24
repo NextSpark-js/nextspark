@@ -1175,7 +1175,7 @@ const handleGeocode = async (fullAddress: string) => {
 
 Run tests with:
 \`\`\`bash
-pnpm test:theme
+pnpm --dir apps/dev exec jest --watchman=false
 \`\`\`
 ```
 

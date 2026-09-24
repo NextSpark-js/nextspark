@@ -783,7 +783,7 @@ export interface AppConfig {
  *
  * @example
  * ```typescript
- * // contents/themes/my-theme/config/dev.config.ts
+ * // config/dev.config.ts
  * export const DEV_CONFIG_OVERRIDES: DevConfig = {
  *   devKeyring: {
  *     enabled: true,

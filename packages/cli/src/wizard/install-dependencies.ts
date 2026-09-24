@@ -48,7 +48,7 @@ export interface AIWorkflowSetup {
  * landed in node_modules, and its setup script is not run.
  */
 export function setupAIWorkflow({ projectRoot, choice, isMonorepo, version }: AIWorkflowSetup): string {
-  // All generated projects use pnpm workspaces (web-only for themes/plugins,
+  // All generated projects use pnpm workspaces (web-only for project packages,
   // monorepo for web/ + mobile/), so -w flag is always required
   try {
     // Pin to the CLI's exact version (not `latest`) so it matches the rest of

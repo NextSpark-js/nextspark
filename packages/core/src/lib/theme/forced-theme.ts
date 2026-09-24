@@ -47,7 +47,7 @@ function normalizePath(value: string): string {
  * components and in unit tests.
  *
  * @param pathname - Current pathname (e.g. from `usePathname()` or the `x-pathname` header)
- * @param routes - `forcedThemeRoutes` from the active theme config
+ * @param routes - `forcedThemeRoutes` from the project theme config
  * @returns The theme to force, or `undefined` when the route is not forced
  */
 export function resolveForcedTheme(

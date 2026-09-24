@@ -1,7 +1,7 @@
 /**
  * Template Discovery
  *
- * Discovers template overrides from themes
+ * Discovers template overrides from the project root
  *
  * @module core/scripts/build/registry/discovery/templates
  */
@@ -22,60 +22,23 @@ import {
  * @returns {Promise<Array>} Array of discovered templates
  */
 export async function discoverTemplates(config = DEFAULT_CONFIG) {
-  log('Discovering template overrides...', 'info')
-  const themesDir = config.themesDir
-  const templates = []
-
-  // REQUIRED: Active theme must be specified
-  if (!config.activeTheme) {
-    const errorMsg = `
-╔══════════════════════════════════════════════════════════════════════════════╗
-║  ERROR: NEXT_PUBLIC_ACTIVE_THEME is not set                                  ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║  The template registry requires an active theme to be specified.             ║
-║  Without this, templates from ALL themes would be registered, which          ║
-║  causes incorrect behavior (e.g., CRM layout used for default theme).        ║
-║                                                                              ║
-║  To fix this, run the registry build with the theme specified:               ║
-║                                                                              ║
-║    NEXT_PUBLIC_ACTIVE_THEME=default node core/scripts/build/registry.mjs    ║
-║                                                                              ║
-║  Or ensure your .env file has NEXT_PUBLIC_ACTIVE_THEME set correctly.        ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-`
-    for (const line of errorMsg.split('\n')) console.error(line)
-    throw new Error('NEXT_PUBLIC_ACTIVE_THEME environment variable is required for template discovery')
-  }
-
-  // Process only the active theme templates
-  verbose(`Processing templates only for active theme: ${config.activeTheme}`)
-
-  const themeName = config.activeTheme
-  const templatesPath = join(themesDir, themeName, 'templates')
-
-  // Check if active theme has templates directory
+  log('Discovering project template overrides...', 'info')
+  const templatesPath = join(config.projectSourceDir, 'templates')
   try {
     await stat(templatesPath)
-    verbose(`Scanning templates in theme: ${themeName}`)
-
-    const themeTemplates = await discoverThemeTemplates(templatesPath, themeName)
-    templates.push(...themeTemplates)
-
-    if (themeTemplates.length > 0) {
-      verbose(`Found ${themeTemplates.length} templates in active theme ${themeName}`)
-    }
   } catch {
-    // No templates directory in active theme
-    verbose(`No templates directory in active theme: ${themeName}`)
+    verbose('No templates directory in project root')
+    return []
   }
-
+  const templates = await discoverThemeTemplates(templatesPath, config.projectName)
+  verbose(`Found ${templates.length} project templates`)
   return templates
 }
 
 /**
  * Recursively discover template files within a theme's templates directory
  * @param {string} templatesPath - Path to the templates directory
- * @param {string} themeName - Name of the theme
+ * @param {string} themeName - Stable project source name used in registry metadata
  * @param {string} relativePath - Relative path from templates root
  * @returns {Promise<Array>} Array of discovered templates
  */
@@ -116,7 +79,7 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
           // Standalone .meta.ts — register as metadata-only template
           const baseFileName = entry.name.replace('.meta.ts', '.tsx')
           const appPath = relativePath ? `app/${relativePath}/${baseFileName}` : `app/${baseFileName}`
-          const templatePath = `@/contents/themes/${themeName}/templates/${currentRelativePath}`
+          const templatePath = `@/templates/${currentRelativePath}`
           const templateMetadata = await extractTemplateMetadata(currentPath)
 
           if (templateMetadata) {
@@ -139,7 +102,7 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
         // Found a template file
         const templateType = entry.name.replace(/\.(tsx|ts)$/, '')
         const appPath = relativePath ? `app/${relativePath}/${entry.name}` : `app/${entry.name}`
-        const templatePath = `@/contents/themes/${themeName}/templates/${currentRelativePath}`
+        const templatePath = `@/templates/${currentRelativePath}`
 
         // Check if this path is protected
         if (getProtectionLevel(appPath) === ProtectionLevel.PROTECTED_ALL) {
@@ -227,7 +190,7 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
 /**
  * Calculate template priority for override resolution
  * Higher priority templates override lower priority ones
- * @param {string} themeName - Name of the theme
+ * @param {string} themeName - Stable project source name used in registry metadata
  * @param {string} relativePath - Relative path of the template
  * @param {string} templateType - Type of template (page, layout, error, etc.)
  * @returns {number} Priority value

@@ -7,6 +7,7 @@
 
 import type { SupportedLocale } from '../entities/types'
 import { TranslationService } from '../services/translation.service'
+import { ThemeService } from '../services/theme.service'
 
 // Debug flag - only log if explicitly enabled
 const DEBUG_I18N = process.env.NEXTSPARK_DEBUG_I18N === 'true'
@@ -107,7 +108,7 @@ let registeredThemeMessages: Record<string, Record<string, unknown>> = {}
  * @example
  * // In your app's initialization
  * import { registerThemeMessages } from '@nextsparkjs/core/lib/translations/registry'
- * import enMessages from './contents/themes/my-theme/messages/en'
+ * import enMessages from './messages/en'
  * registerThemeMessages('en', enMessages)
  */
 export function registerThemeMessages(locale: string, messages: Record<string, unknown>): void {
@@ -121,15 +122,9 @@ export function registerThemeMessages(locale: string, messages: Record<string, u
 async function loadThemeTranslations(
   locale: SupportedLocale
 ): Promise<Record<string, unknown>> {
-  // Get the active theme from environment
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
-
-  if (activeTheme) {
-    // Try to load from auto-generated registry first (NO runtime string interpolation)
-    const registryMessages = await TranslationService.load(activeTheme, locale)
-    if (Object.keys(registryMessages).length > 0) {
-      return registryMessages
-    }
+  const registryMessages = await TranslationService.load(ThemeService.getCurrentName(), locale)
+  if (Object.keys(registryMessages).length > 0) {
+    return registryMessages
   }
 
   // Fallback: check if theme messages were registered (npm install pattern)
@@ -148,12 +143,9 @@ async function loadThemeTranslations(
 async function loadEntityTranslationsFromRegistry(
   locale: SupportedLocale
 ): Promise<Record<string, unknown>> {
-  // Get the active theme from environment
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
-
   try {
     // Load all entity translations from the auto-generated registry
-    const entityTranslations = await TranslationService.loadAllEntities(activeTheme, locale)
+    const entityTranslations = await TranslationService.loadAllEntities(ThemeService.getCurrentName(), locale)
     return entityTranslations
   } catch (error) {
     if (DEBUG_I18N) {
@@ -177,9 +169,7 @@ async function loadEntityTranslationsFromRegistry(
 export async function loadMergedTranslations(
   locale: SupportedLocale
 ): Promise<Record<string, unknown>> {
-  // Generate cache key based on locale and theme
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
-  const cacheKey = `${locale}-${activeTheme}`
+  const cacheKey = `${locale}-${ThemeService.getCurrentName()}`
 
   // Check cache first
   const cache = getTranslationCache()

@@ -22,7 +22,7 @@ permissions.config.ts  →  Registry Generator  →  permissions-registry.ts  �
 All entity permissions are defined in the theme's `permissions.config.ts`:
 
 ```typescript
-// contents/themes/{theme}/permissions.config.ts
+// permissions.config.ts
 import type { ThemePermissionsConfig } from '@/core/lib/permissions/types'
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
@@ -219,7 +219,7 @@ Permissions are pre-computed during build for O(1) runtime:
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
-This generates `core/lib/registries/permissions-registry.ts` with:
+This generates `.nextspark/registries/permissions-registry.ts` with:
 
 - Pre-computed role matrices
 - Category indices for UI

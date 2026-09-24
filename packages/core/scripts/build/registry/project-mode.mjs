@@ -1,108 +1,128 @@
 /**
- * How core is installed in a project, told from the project alone: from npm, or
- * as a package of the NextSpark monorepo. Nothing here reads configuration or
- * loads a .env, so a check that runs before the build - in the build itself or
- * in `nextspark` - can ask it.
+ * The single owner of compiler path resolution.
+ *
+ * A NextSpark project is the nearest ancestor containing nextspark.config.ts.
+ * Its host, source, configuration, plugins, and generated output all live
+ * under that same root; no theme or sibling project is selected.
  *
  * @module core/scripts/build/registry/project-mode
  */
 
-import { existsSync, lstatSync, readlinkSync } from 'fs'
-import { dirname, join } from 'path'
+import { existsSync, lstatSync, readFileSync, readlinkSync } from 'fs'
+import { dirname, join, posix, resolve } from 'path'
+import { fileURLToPath } from 'url'
 
-/**
- * Detect monorepo root by searching for pnpm-workspace.yaml
- * @param {string} startDir - Directory to start searching from
- * @returns {string|null} Monorepo root path or null if not in monorepo
- */
+const CORE_PACKAGE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
+
+export const GENERATED_APP_RELATIVE = 'src/app'
+export const GENERATED_TEMPLATES_RELATIVE = `${GENERATED_APP_RELATIVE}/(templates)`
+export const REGISTRIES_RELATIVE = '.nextspark/registries'
+export const BACKUPS_RELATIVE = '.nextspark/backups'
+export const TEST_FIXTURES_RELATIVE = 'tests/cypress/fixtures'
+
 export function detectMonorepoRoot(startDir = process.cwd()) {
-  let dir = startDir
-  const maxDepth = 10
-  let depth = 0
-
-  while (dir !== '/' && depth < maxDepth) {
-    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) {
-      return dir
-    }
-    dir = dirname(dir)
-    depth++
+  let dir = resolve(startDir)
+  while (true) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir
+    const parent = dirname(dir)
+    if (parent === dir) return null
+    dir = parent
   }
-
-  return null
 }
 
-/**
- * Check if NextSpark is installed as a package (from npm registry)
- *
- * This handles both traditional npm/yarn AND pnpm:
- * - npm/yarn: packages are copied to node_modules (not symlinks)
- * - pnpm: ALL packages are symlinks, but npm packages point to .pnpm/ store
- * - pnpm workspace: local packages symlink to the actual package path
- *
- * @param {string} root - Project root path
- * @returns {boolean} True if installed from npm registry
- */
 export function isInstalledAsPackage(root) {
   const corePath = join(root, 'node_modules/@nextsparkjs/core')
-  if (!existsSync(corePath)) {
-    return false
-  }
+  if (!existsSync(corePath)) return false
 
   try {
     const stat = lstatSync(corePath)
-
-    // If not a symlink, it's a traditional npm/yarn install
-    if (!stat.isSymbolicLink()) {
-      return true
-    }
-
-    // For symlinks (pnpm), check WHERE it points to:
-    // - npm install: points to .pnpm/@nextsparkjs+core@version.../node_modules/@nextsparkjs/core
-    // - workspace: points to ../../packages/core or similar
-    const linkTarget = readlinkSync(corePath)
-
-    // If symlink points to .pnpm/ or .pnpmN/ directory, it's a real npm installation via pnpm
-    // The .pnpm/.pnpm2/etc directory is pnpm's content-addressable store
-    if (/\.pnpm\d?[/\\]/.test(linkTarget)) {
-      return true
-    }
-
-    // Otherwise it's a workspace symlink (monorepo development)
-    return false
+    if (!stat.isSymbolicLink()) return true
+    return /\.pnpm\d?[/\\]/.test(readlinkSync(corePath))
   } catch {
     return false
   }
 }
 
-/**
- * Where a project's content lives, by mode. Monorepo: themes and plugins are
- * workspace packages at the repo root. User project (npm or standalone): they
- * are in contents/. The registry build and the production auth check both
- * resolve the active theme from here.
- *
- * @param {string} root - Project root path
- */
-export function contentDirectories(root) {
-  const isNpmMode = isInstalledAsPackage(root)
-  const monorepoRoot = detectMonorepoRoot(root)
-  const isMonorepoMode = !isNpmMode && monorepoRoot !== null
-
-  if (isMonorepoMode) {
-    return {
-      isNpmMode,
-      monorepoRoot,
-      isMonorepoMode,
-      contentsDir: join(monorepoRoot, 'contents'), // Legacy, kept for compatibility
-      themesDir: join(monorepoRoot, 'themes'),
-      pluginsDir: join(monorepoRoot, 'plugins'),
+export function findProjectRoot(startDir = process.cwd()) {
+  let dir = resolve(startDir)
+  while (true) {
+    if (existsSync(join(dir, 'nextspark.config.ts'))) return dir
+    const parent = dirname(dir)
+    if (parent === dir) {
+      throw new Error(`No NextSpark project found from ${startDir}: expected nextspark.config.ts in this directory or an ancestor.`)
     }
+    dir = parent
   }
+}
+
+function assertNextDependency(projectRoot) {
+  const packagePath = join(projectRoot, 'package.json')
+  let manifest
+  try {
+    manifest = JSON.parse(readFileSync(packagePath, 'utf8'))
+  } catch (error) {
+    throw new Error(`Invalid NextSpark project at ${projectRoot}: could not read package.json (${error.message}).`)
+  }
+  const next = manifest.dependencies?.next ?? manifest.devDependencies?.next
+  if (typeof next !== 'string' || next.trim() === '') {
+    throw new Error(`Invalid NextSpark project at ${projectRoot}: package.json must declare a non-empty "next" dependency.`)
+  }
+}
+
+export function projectImport(relativePath) {
+  return `@/${posix.normalize(relativePath).replace(/^\.\//, '')}`
+}
+
+export function pluginImport(pluginName, relativePath = '') {
+  return projectImport(posix.join('plugins', pluginName, relativePath))
+}
+
+export function projectGeneratedAppDir(projectRoot) {
+  return join(projectRoot, GENERATED_APP_RELATIVE)
+}
+
+export function projectGeneratedTemplatesDir(projectRoot) {
+  return join(projectRoot, GENERATED_TEMPLATES_RELATIVE)
+}
+
+export function projectRegistriesDir(projectRoot) {
+  return join(projectRoot, REGISTRIES_RELATIVE)
+}
+
+export function projectBackupsDir(projectRoot) {
+  return join(projectRoot, BACKUPS_RELATIVE)
+}
+
+export function projectTestFixturesDir(projectRoot) {
+  return join(projectRoot, TEST_FIXTURES_RELATIVE)
+}
+
+export function resolveProjectPaths(startDir = process.cwd()) {
+  const projectRoot = findProjectRoot(startDir)
+  assertNextDependency(projectRoot)
+
+  const isNpmMode = isInstalledAsPackage(projectRoot)
+  const monorepoRoot = detectMonorepoRoot(projectRoot)
+  const isMonorepoMode = !isNpmMode && monorepoRoot !== null
+  const coreDir = isNpmMode
+    ? join(projectRoot, 'node_modules/@nextsparkjs/core')
+    : isMonorepoMode
+      ? join(monorepoRoot, 'packages/core')
+      : CORE_PACKAGE_DIR
+
   return {
-    isNpmMode,
+    projectRoot,
+    projectSourceDir: projectRoot,
+    sourceDirs: ['api', 'blocks', 'components', 'config', 'entities', 'lib', 'messages', 'styles', 'templates'].map(name => join(projectRoot, name)),
+    pluginsDir: join(projectRoot, 'plugins'),
+    generatedAppDir: projectGeneratedAppDir(projectRoot),
+    generatedTemplatesDir: projectGeneratedTemplatesDir(projectRoot),
+    outputDir: projectRegistriesDir(projectRoot),
+    backupsDir: projectBackupsDir(projectRoot),
+    testFixturesDir: projectTestFixturesDir(projectRoot),
+    coreDir,
     monorepoRoot,
+    isNpmMode,
     isMonorepoMode,
-    contentsDir: join(root, 'contents'),
-    themesDir: join(root, 'contents/themes'),
-    pluginsDir: join(root, 'contents/plugins'),
   }
 }

@@ -23,7 +23,7 @@ export interface PreparationResult {
  */
 export async function preparationWatchWriteGuard(coreDir: string, projectRoot: string, env: NodeJS.ProcessEnv = process.env): Promise<string[]> {
   const core = await loadCoreWritePlaces(coreDir);
-  const unsafe = core.unsafeWritePlaces(projectRoot, [], { activeTheme: env.NEXT_PUBLIC_ACTIVE_THEME });
+  const unsafe = core.unsafeWritePlaces(projectRoot);
   return core.unsafeWritePlacesLines(unsafe);
 }
 
@@ -49,7 +49,6 @@ export function preparationEnvironment(projectRoot: string, options: Preparation
   return {
     ...projectEnv,
     ...env,
-    NEXTSPARK_PROJECT_ROOT: projectRoot,
     ...(options.production ? { NODE_ENV: 'production' } : {}),
   };
 }
@@ -68,7 +67,7 @@ export async function runPreparation(
   options: PreparationOptions = {},
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<PreparationResult> {
-  const registry = await runCoreScript(coreDir, ['scripts/build/registry.mjs'], preparationEnvironment(projectRoot, options, env));
+  const registry = await runCoreScript(coreDir, projectRoot, ['scripts/build/registry.mjs'], preparationEnvironment(projectRoot, options, env));
   if (registry.code !== 0 || !options.production) return registry;
   const auth = await runAuthReadiness(coreDir, projectRoot, env);
   return { ...auth, successLines: [...registry.successLines, ...auth.successLines] };
@@ -76,7 +75,7 @@ export async function runPreparation(
 
 /**
  * Check, with the production preparation environment, that at least one login
- * method of the active theme can authenticate. The theme's app.config.ts is
+ * method of the project can authenticate. The project's app.config.ts is
  * TypeScript, which core loads with Node's type stripping. A core that doesn't
  * ship the check fails closed: the only bypass is NEXTSPARK_AUTH_PREFLIGHT=off,
  * which core itself honors.
@@ -98,15 +97,17 @@ export function runAuthReadiness(
   }
   return runCoreScript(
     coreDir,
+    projectRoot,
     ['--experimental-strip-types', '--disable-warning=ExperimentalWarning', AUTH_READINESS_SCRIPT],
     preparationEnvironment(projectRoot, { production: true }, env),
   );
 }
 
-function runCoreScript(coreDir: string, args: string[], env: NodeJS.ProcessEnv): Promise<PreparationResult> {
+function runCoreScript(coreDir: string, projectRoot: string, args: string[], env: NodeJS.ProcessEnv): Promise<PreparationResult> {
   return new Promise((resolve) => {
-    const child = spawn('node', args, {
-      cwd: coreDir,
+    const scriptArgs = args.map((arg) => arg.startsWith('scripts/') ? join(coreDir, arg) : arg);
+    const child = spawn('node', scriptArgs, {
+      cwd: projectRoot,
       stdio: ['ignore', 'pipe', 'pipe'],
       env,
     });
@@ -127,8 +128,8 @@ export function startPreparationWatch(
   options: PreparationOptions = {},
   env: NodeJS.ProcessEnv = process.env,
 ): ChildProcess {
-  return spawn('node', ['scripts/build/registry.mjs', '--watch'], {
-    cwd: coreDir,
+  return spawn('node', [join(coreDir, 'scripts/build/registry.mjs'), '--watch'], {
+    cwd: projectRoot,
     stdio: 'inherit',
     env: preparationEnvironment(projectRoot, { ...options, watch: true }, env),
   });

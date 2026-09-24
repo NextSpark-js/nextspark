@@ -84,10 +84,10 @@ Quality Gates are validation checkpoints that **BLOCK workflow progress** if con
 pnpm --dir apps/dev exec tsc --noEmit
 
 # Build with plugin-sandbox
-NEXT_PUBLIC_ACTIVE_THEME=plugin-sandbox pnpm build
+pnpm build
 
 # Verify registry
-grep -l "plugin-name" core/lib/registries/plugin-registry.ts
+grep -l "plugin-name" .nextspark/registries/plugin-registry.ts
 ```
 
 ### On Failure
@@ -121,16 +121,16 @@ grep -l "plugin-name" core/lib/registries/plugin-registry.ts
 
 ```bash
 # Build with new theme
-NEXT_PUBLIC_ACTIVE_THEME=new-theme pnpm build
+pnpm build
 
 # Verify config files exist
-ls contents/themes/new-theme/config/theme.config.ts
-ls contents/themes/new-theme/config/app.config.ts
-ls contents/themes/new-theme/config/dashboard.config.ts
-ls contents/themes/new-theme/config/permissions.config.ts
+ls config/theme.config.ts
+ls config/app.config.ts
+ls config/dashboard.config.ts
+ls config/permissions.config.ts
 
 # Verify registry
-grep -l "new-theme" core/lib/registries/theme-registry.ts
+grep -l "new-theme" .nextspark/registries/theme-registry.ts
 ```
 
 ### On Failure
@@ -347,8 +347,8 @@ data-cy="closeBtn"
 grep -r "className.*>" --include="*.tsx" | grep -v "t("
 
 # Verify translation files
-cat contents/themes/*/messages/en.json | jq '.namespace'
-cat contents/themes/*/messages/es.json | jq '.namespace'
+cat messages/en.json | jq '.namespace'
+cat messages/es.json | jq '.namespace'
 
 # Build to catch next-intl errors
 pnpm build

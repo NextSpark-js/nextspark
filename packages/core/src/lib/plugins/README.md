@@ -4,7 +4,7 @@ Automatically loads `.env` files from all plugins without duplicating code.
 
 ## How It Works
 
-1. **Automatic Discovery**: Scans `contents/plugins/` directory
+1. **Automatic Discovery**: Scans `plugins/` directory
 2. **Auto-Load**: Loads `.env` file from each plugin directory
 3. **Zero Config**: Just create `.env` file - it works automatically
 
@@ -15,7 +15,7 @@ Automatically loads `.env` files from all plugins without duplicating code.
 **Step 1:** Create your plugin `.env` file
 
 ```bash
-# contents/plugins/amplitude/.env
+# plugins/amplitude/.env
 AMPLITUDE_API_KEY=your-key-here
 AMPLITUDE_SECRET_KEY=your-secret-here
 AMPLITUDE_ENABLED=true
@@ -36,7 +36,7 @@ const enabled = env.AMPLITUDE_ENABLED === 'true'
 The AI plugin uses this centralized loader:
 
 ```typescript
-// contents/plugins/ai/lib/plugin-env.ts
+// plugins/ai/lib/plugin-env.ts
 import { getPluginEnv } from '@/core/lib/plugins/env-loader'
 
 const env = getPluginEnv('ai')
@@ -48,7 +48,7 @@ const useLocal = env.USE_LOCAL_AI === 'true'
 
 The env-loader follows this priority order:
 
-1. **Plugin `.env`** (`contents/plugins/{plugin}/.env`) - Highest priority
+1. **Plugin `.env`** (`plugins/{plugin}/.env`) - Highest priority
 2. **Root `.env`** (project root) - Fallback for variables not in plugin .env
 3. **Built-in defaults** - Lowest priority
 
@@ -116,12 +116,12 @@ reloadPluginEnvs()
 
 ## Creating a New Plugin
 
-1. Create plugin directory: `contents/plugins/my-plugin/`
-2. Create `.env` file: `contents/plugins/my-plugin/.env`
+1. Create plugin directory: `plugins/my-plugin/`
+2. Create `.env` file: `plugins/my-plugin/.env`
 3. Add your configuration:
 
 ```bash
-# contents/plugins/my-plugin/.env
+# plugins/my-plugin/.env
 MY_PLUGIN_API_KEY=xxx
 MY_PLUGIN_ENABLED=true
 ```
@@ -142,11 +142,11 @@ That's it! No additional setup required.
 ### Before (each plugin had duplicate env loading code)
 
 ```typescript
-// contents/plugins/ai/lib/plugin-env.ts
+// plugins/ai/lib/plugin-env.ts
 import { config } from 'dotenv'
 import { join } from 'path'
 
-const pluginEnvPath = join(process.cwd(), 'contents/plugins/ai/.env')
+const pluginEnvPath = join(process.cwd(), 'plugins/ai/.env')
 config({ path: pluginEnvPath })
 // ... lots of boilerplate
 ```
@@ -154,7 +154,7 @@ config({ path: pluginEnvPath })
 ### After (use centralized loader)
 
 ```typescript
-// contents/plugins/ai/lib/plugin-env.ts
+// plugins/ai/lib/plugin-env.ts
 import { getPluginEnv } from '@/core/lib/plugins/env-loader'
 
 const env = getPluginEnv('ai')
@@ -189,7 +189,7 @@ const env = getPluginEnv('ai')
 
 4. **Document variables**: Use `.env.example` files
    ```bash
-   # contents/plugins/my-plugin/.env.example
+   # plugins/my-plugin/.env.example
    MY_PLUGIN_API_KEY=your-api-key-here
    MY_PLUGIN_ENABLED=true
    ```

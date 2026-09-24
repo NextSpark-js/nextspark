@@ -44,7 +44,7 @@ export interface EntityRegistryEntry {
   hasAssets?: boolean
   messagesPath?: string
   isCore?: boolean
-  source?: 'core' | 'theme' | 'plugin'
+  source?: 'core' | 'project' | 'theme' | 'plugin'
 }
 
 export interface EntityRegistryMetadata {
@@ -65,7 +65,7 @@ export interface EntityRegistryMetadata {
 }
 
 export interface EntityOwner {
-  type: 'plugin' | 'theme'
+  type: 'plugin' | 'project' | 'theme'
   name: string
 }
 

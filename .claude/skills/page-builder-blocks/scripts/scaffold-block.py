@@ -10,7 +10,7 @@ Creates the 5 required files for a new page builder block:
 - index.ts
 
 Usage:
-    python scaffold-block.py [--theme THEME] [--slug SLUG] [--name NAME]
+    python scaffold-block.py [--slug SLUG] [--name NAME]
 
 Interactive mode if no arguments provided.
 """
@@ -56,25 +56,17 @@ def to_camel_case(s: str) -> str:
 
 
 def get_project_root() -> Path:
-    """Get project root directory."""
-    # Look for package.json or .env
-    current = Path.cwd()
-    while current != current.parent:
-        if (current / 'package.json').exists():
-            return current
-        current = current.parent
-    return Path.cwd()
+    """Find the nearest root-first project, with apps/dev as the repo default."""
+    current = Path.cwd().resolve()
+    for candidate in (current, *current.parents):
+        if (candidate / 'nextspark.config.ts').is_file():
+            return candidate
+        dev_project = candidate / 'apps' / 'dev'
+        if (candidate / '.claude').is_dir() and (dev_project / 'nextspark.config.ts').is_file():
+            return dev_project
+    print('Error: Could not find a root-first project (nextspark.config.ts)')
+    sys.exit(1)
 
-
-def get_active_theme(project_root: Path) -> str:
-    """Get active theme from .env file."""
-    env_file = project_root / '.env'
-    if env_file.exists():
-        with open(env_file, 'r') as f:
-            for line in f:
-                if line.startswith('NEXT_PUBLIC_ACTIVE_THEME='):
-                    return line.split('=', 1)[1].strip().strip('"\'')
-    return 'default'
 
 
 def prompt_input(prompt: str, default: str = None, choices: list = None) -> str:
@@ -109,7 +101,7 @@ def validate_slug(slug: str, blocks_dir: Path) -> bool:
 def generate_config(slug: str, name: str, description: str, category: str, icon: str, scope: list) -> str:
     """Generate config.ts content."""
     scope_str = str(scope).replace("'", '"')
-    return f'''import type {{ BlockConfig, BlockCategory }} from '@/core/types/blocks'
+    return f'''import type {{ BlockConfig, BlockCategory }} from '@nextsparkjs/core/types/blocks'
 
 export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Component' | 'examples'> = {{
   slug: '{slug}',
@@ -127,7 +119,7 @@ def generate_schema(slug: str) -> str:
     """Generate schema.ts content."""
     pascal = to_pascal_case(slug)
     return f'''import * as z from 'zod'
-import {{ baseBlockSchema }} from '@/core/types/blocks'
+import {{ baseBlockSchema }} from '@nextsparkjs/core/types/blocks'
 
 // Extend baseBlockSchema with block-specific fields
 // baseBlockSchema already includes: title, content, cta, backgroundColor, className, id
@@ -142,12 +134,12 @@ export type {pascal}Props = z.infer<typeof schema>
 
 def generate_fields(slug: str) -> str:
     """Generate fields.ts content."""
-    return '''import type { FieldDefinition } from '@/core/types/blocks'
+    return '''import type { FieldDefinition } from '@nextsparkjs/core/types/blocks'
 import {
   baseContentFields,
   baseDesignFields,
   baseAdvancedFields,
-} from '@/core/types/blocks'
+} from '@nextsparkjs/core/types/blocks'
 
 // Custom content fields
 const customContentFields: FieldDefinition[] = [
@@ -195,7 +187,7 @@ def generate_component(slug: str, name: str) -> str:
     """Generate component.tsx content."""
     pascal = to_pascal_case(slug)
     camel = to_camel_case(slug)
-    return f'''import {{ buildSectionClasses }} from '@/core/types/blocks'
+    return f'''import {{ buildSectionClasses }} from '@nextsparkjs/core/types/blocks'
 import {{ sel }} from '../../lib/selectors'
 import type {{ {pascal}Props }} from './schema'
 
@@ -307,7 +299,7 @@ def run_registry_build(project_root: Path) -> bool:
     print("\nRebuilding block registry...")
     try:
         result = subprocess.run(
-            ['node', 'core/scripts/build/registry.mjs'],
+            ['pnpm', 'exec', 'nextspark', 'registry:build'],
             cwd=project_root,
             capture_output=True,
             text=True
@@ -325,7 +317,7 @@ def run_registry_build(project_root: Path) -> bool:
 
 def verify_block_in_registry(project_root: Path, slug: str) -> bool:
     """Verify block was added to registry."""
-    registry_path = project_root / 'core' / 'lib' / 'registries' / 'block-registry.ts'
+    registry_path = project_root / '.nextspark' / 'registries' / 'block-registry.ts'
     if registry_path.exists():
         with open(registry_path, 'r') as f:
             content = f.read()
@@ -338,29 +330,25 @@ def verify_block_in_registry(project_root: Path, slug: str) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(description='Scaffold a new page builder block')
-    parser.add_argument('--theme', help='Theme name (default: from .env)')
     parser.add_argument('--slug', help='Block slug (kebab-case)')
     parser.add_argument('--name', help='Block display name')
     parser.add_argument('--description', help='Block description')
     parser.add_argument('--category', help='Block category', choices=CATEGORIES)
     parser.add_argument('--icon', help='Lucide icon name')
     parser.add_argument('--scope', help='Scope: pages, posts, or both', default='pages')
+    parser.add_argument('--dry-run', action='store_true', help='Show root-first output paths without writing')
     args = parser.parse_args()
 
     project_root = get_project_root()
     print(f"Project root: {project_root}")
 
     # Check if all required args provided (non-interactive mode)
-    non_interactive = all([args.theme or get_active_theme(project_root), args.slug, args.name])
+    non_interactive = all([args.slug, args.name])
 
-    # Get theme
-    theme = args.theme or get_active_theme(project_root)
-    if not non_interactive:
-        theme = prompt_input("Theme", default=theme)
 
-    blocks_dir = project_root / 'contents' / 'themes' / theme / 'blocks'
+    blocks_dir = project_root / 'blocks'
     if not blocks_dir.exists():
-        print(f"Error: Theme blocks directory not found: {blocks_dir}")
+        print(f"Error: Project blocks directory not found: {blocks_dir}")
         sys.exit(1)
 
     # Get block metadata
@@ -399,6 +387,14 @@ def main():
     else:
         scope = [scope_input]
 
+    if args.dry_run:
+        print(f"\nDRY RUN - Files that would be created in {blocks_dir / slug}:")
+        for filename in ['config.ts', 'schema.ts', 'fields.ts', 'component.tsx', 'index.ts']:
+            print(f"  {blocks_dir / slug / filename}")
+        print(f"  update {project_root / 'lib' / 'selectors.ts'}")
+        print("  run pnpm exec nextspark registry:build")
+        return
+
     # Create block directory
     block_dir = blocks_dir / slug
     block_dir.mkdir(parents=True, exist_ok=True)
@@ -420,14 +416,16 @@ def main():
         print(f"  Created: {filename}")
 
     # Update selectors
-    selectors_path = project_root / 'contents' / 'themes' / theme / 'lib' / 'selectors.ts'
+    selectors_path = project_root / 'lib' / 'selectors.ts'
     update_selectors(selectors_path, slug)
 
     # Run registry build
-    run_registry_build(project_root)
+    if not run_registry_build(project_root):
+        sys.exit(1)
 
     # Verify
-    verify_block_in_registry(project_root, slug)
+    if not verify_block_in_registry(project_root, slug):
+        sys.exit(1)
 
     print(f"\n{'='*50}")
     print(f"Block '{slug}' created successfully!")
@@ -435,7 +433,7 @@ def main():
     print(f"  1. Edit schema.ts to add custom fields")
     print(f"  2. Edit fields.ts to add field definitions")
     print(f"  3. Edit component.tsx to implement rendering")
-    print(f"  4. Run: node core/scripts/build/registry.mjs")
+    print(f"  4. Run: pnpm exec nextspark registry:build")
     print(f"  5. Test block in page builder")
     print(f"{'='*50}")
 

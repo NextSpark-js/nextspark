@@ -22,7 +22,7 @@ Component overrides allow you to:
 
 ### Declaring Overrides
 
-**Location:** `contents/themes/[theme]/theme.config.ts`
+**Location:** `theme.config.ts`
 
 ```typescript
 import type { ThemeConfig } from '@/core/types/theme'
@@ -103,7 +103,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 **Theme Override:**
 
 ```typescript
-// contents/themes/my-theme/components/overrides/Button.tsx
+// components/overrides/Button.tsx
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
@@ -191,7 +191,7 @@ export const CardHeader, CardTitle, CardDescription, CardContent, CardFooter
 **Theme Override:**
 
 ```typescript
-// contents/themes/my-theme/components/overrides/Card.tsx
+// components/overrides/Card.tsx
 import * as React from 'react'
 import { cn } from '@/core/lib/utils'
 
@@ -278,7 +278,7 @@ export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
 ### Example 3: Input Component
 
 ```typescript
-// contents/themes/my-theme/components/overrides/Input.tsx
+// components/overrides/Input.tsx
 import * as React from 'react'
 import { cn } from '@/core/lib/utils'
 
@@ -336,7 +336,7 @@ export { Input }
 **Example: BrandLogo Component**
 
 ```typescript
-// contents/themes/my-theme/components/custom/BrandLogo.tsx
+// components/custom/BrandLogo.tsx
 'use client'
 
 import Image from 'next/image'
@@ -398,7 +398,7 @@ export function BrandLogo({
 **Usage:**
 
 ```tsx
-import { BrandLogo } from '@/contents/themes/my-theme/components/custom/BrandLogo'
+import { BrandLogo } from '@/components/custom/BrandLogo'
 
 <BrandLogo size="lg" showText={true} />
 ```
@@ -406,7 +406,7 @@ import { BrandLogo } from '@/contents/themes/my-theme/components/custom/BrandLog
 ### Custom Header Component
 
 ```typescript
-// contents/themes/my-theme/components/custom/CustomHeader.tsx
+// components/custom/CustomHeader.tsx
 'use client'
 
 import { BrandLogo } from './BrandLogo'
@@ -587,7 +587,7 @@ export const Button = // ...
 ```typescript
 // tests/components/Button.test.tsx
 import { render, screen } from '@testing-library/react'
-import { Button } from '@/contents/themes/my-theme/components/overrides/Button'
+import { Button } from '@/components/overrides/Button'
 
 describe('Theme Button Override', () => {
   it('renders with gradient variant', () => {

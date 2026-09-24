@@ -24,7 +24,7 @@ Centralized `data-cy` selector system for Cypress testing.
                   ▼
 ┌─────────────────────────────────────────┐
 │         THEME (Editable)                │
-│  contents/themes/{theme}/lib/selectors.ts│
+│  lib/selectors.ts│
 │  ├── BLOCK_SELECTORS                    │
 │  ├── DEVTOOLS_SELECTORS                 │
 │  ├── THEME_SELECTORS = {                │
@@ -64,7 +64,7 @@ Centralized `data-cy` selector system for Cypress testing.
 Use in **components** to get the selector string for `data-cy`:
 
 ```typescript
-// In block component: contents/themes/{theme}/blocks/{block-name}/component.tsx
+// In block component: blocks/{block-name}/component.tsx
 import { sel } from '../../lib/selectors'
 
 // Static selector - note the 'blocks.' prefix for block selectors
@@ -88,7 +88,7 @@ import { sel } from '../../lib/selectors'
 Use in **POMs and Cypress tests** to get the CSS selector `[data-cy="..."]`:
 
 ```typescript
-// In POM: contents/themes/{theme}/tests/cypress/src/features/MyPOM.ts
+// In POM: tests/cypress/src/features/MyPOM.ts
 import { BasePOM } from '../core/BasePOM'
 import { cySelector } from '../selectors'
 
@@ -113,7 +113,7 @@ export class HeroPOM extends BasePOM {
 ```
 
 ```typescript
-// In test file: contents/themes/{theme}/tests/cypress/e2e/blocks/hero.cy.ts
+// In test file: tests/cypress/e2e/blocks/hero.cy.ts
 import { cySelector } from '../../src/selectors'
 
 describe('Hero Block', () => {
@@ -185,15 +185,15 @@ Examples:
 |------|----------|--------------|
 | Core selectors | `core/lib/test/core-selectors.ts` | Core maintainers only |
 | Selector factory | `core/lib/test/selector-factory.ts` | Core maintainers only |
-| Block selectors | `contents/themes/{theme}/lib/selectors.ts` | Theme developers |
-| Test re-exports | `contents/themes/{theme}/tests/cypress/src/selectors.ts` | Auto (re-exports) |
-| POMs | `contents/themes/{theme}/tests/cypress/src/features/*POM.ts` | Test developers |
+| Block selectors | `lib/selectors.ts` | Theme developers |
+| Test re-exports | `tests/cypress/src/selectors.ts` | Auto (re-exports) |
+| POMs | `tests/cypress/src/features/*POM.ts` | Test developers |
 
 ## Adding New Selectors
 
 ### For Block Components
 
-Edit `contents/themes/{theme}/lib/selectors.ts`, add to BLOCK_SELECTORS:
+Edit `lib/selectors.ts`, add to BLOCK_SELECTORS:
 
 ```typescript
 export const BLOCK_SELECTORS = {
@@ -208,7 +208,7 @@ export const BLOCK_SELECTORS = {
 
 Then use in component with `blocks.` prefix:
 ```tsx
-// contents/themes/{theme}/blocks/my-new-block/component.tsx
+// blocks/my-new-block/component.tsx
 import { sel } from '../../lib/selectors'
 
 <section data-cy={sel('blocks.myNewBlock.container')}>
@@ -233,7 +233,7 @@ export const CORE_SELECTORS = {
 
 ### For DevTools Components
 
-Edit `contents/themes/{theme}/lib/selectors.ts`, add to DEVTOOLS_SELECTORS:
+Edit `lib/selectors.ts`, add to DEVTOOLS_SELECTORS:
 
 ```typescript
 export const DEVTOOLS_SELECTORS = {
@@ -275,7 +275,7 @@ python .claude/skills/cypress-selectors/scripts/validate-selectors.py
 
 ### Find elements missing data-cy
 ```bash
-python .claude/skills/cypress-selectors/scripts/extract-missing.py --path contents/themes/default/blocks/
+python .claude/skills/cypress-selectors/scripts/extract-missing.py --path blocks/
 ```
 
 ### Generate block selectors for new block

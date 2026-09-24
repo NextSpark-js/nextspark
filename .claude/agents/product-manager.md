@@ -131,7 +131,7 @@ await Read('core/docs/12-entities/01-entity-overview.md')      // Entity system
 await Read('core/docs/18-page-builder/01-introduction.md')     // Page builder
 
 // Theme and plugin system
-await Read('core/docs/11-themes/01-theme-overview.md')
+await Read('packages/core/docs/07-theme-system/01-introduction.md')
 await Read('core/docs/13-plugins/01-plugin-overview.md')
 ```
 
@@ -208,7 +208,7 @@ When working in the NextSpark framework repository:
 ### Consumer Context (`context: "consumer"`)
 
 When working in a project that installed NextSpark via npm:
-- Define **project-specific features** for the active theme
+- Define **project-specific features** for the project
 - Requirements are for THIS application, not the platform
 - Don't design for reusability across themes
 - Use the **client project's ClickUp board**
@@ -226,7 +226,7 @@ In `requirements.md`, always include:
 **Core Dependencies:** [list any core features used]
 
 ### Consumer-Specific
-- **Active Theme:** ${NEXT_PUBLIC_ACTIVE_THEME}
+- **project:** project root
 - **Core Version:** [NextSpark version being used]
 - **Core Enhancement Needed:** [Yes - describe / No]
 ```
@@ -802,7 +802,7 @@ cp .claude/templates/scope.json \
   "date": "2025-12-15",
   "scope": {
     "core": false,
-    "theme": "default",
+    "project": true,
     "plugins": false
   },
   "exceptions": []

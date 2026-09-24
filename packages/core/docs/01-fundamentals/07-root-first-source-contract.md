@@ -12,7 +12,9 @@ This contract defines source locations and ownership. The generated-host impleme
 
 - **Workspace root:** the package-manager workspace and shared-package boundary. It may contain one or more independent project roots.
 - **Project root:** the directory containing `nextspark.config.ts`, the runnable Next.js host, and the NextSpark product source. These are one directory and cannot be selected independently.
-- **Generated roots:** `<projectRoot>/src/app` and `<projectRoot>/.nextspark/generated`.
+- **Generated roots:** `<projectRoot>/src/app` and `<projectRoot>/.nextspark/registries`.
+
+The registry directory keeps its existing name because renaming dozens of consumers has no user-visible benefit, and this cutover is already large.
 
 A monorepo may contain several project roots, but each is self-contained and compiled independently. There is no active-project setting, `project.root` field, `--project` flag, or sibling-project selection algorithm.
 
@@ -48,7 +50,7 @@ my-project/
 ├── src/
 │   └── app/                     # GENERATED Next.js adapter; never edit
 └── .nextspark/
-    └── generated/               # GENERATED registries and manifests; never edit
+    └── registries/              # GENERATED registries and manifests; never edit
 ```
 
 The compiler must not search for a theme directory. It discovers project contributions directly from the root directories above and local plugin contributions from `plugins/<plugin>/`.
@@ -96,7 +98,6 @@ Plugin names are logical local identifiers. For example, `plugins: ['analytics']
 | Field | Type | Default | Required | Ownership |
 | --- | --- | --- | --- | --- |
 | `template` | `{ name: string; version: string }` | absent | No | Informational scaffold origin only; it never triggers synchronization or updates. Both nested fields are required when present. |
-| `theme` | `string` | absent | No | Legacy 0.x compatibility in the TypeScript surface. The beta.193 compiler ignores it. Slice C rewrites each migrated project's `nextspark.config.ts` to remove this property; it does not delete the `theme` field from the beta.193 TypeScript interface. |
 | `database` | `{ provider: 'postgres' \| 'mysql' \| 'sqlite'; runMigrations?: boolean }` | absent | No | Runtime/tooling configuration outside source discovery. |
 | `auth` | `{ providers: ('email' \| 'google')[]; requireEmailVerification?: boolean }` | absent | No | Runtime authentication configuration outside source discovery. |
 | `app` | `{ name?: string; description?: string }` | absent | No | Runtime application metadata outside source discovery. |
@@ -105,7 +106,7 @@ This slice adds the contract type and validator only. It deliberately does not c
 
 ### Removal of active-theme selection
 
-`NEXT_PUBLIC_ACTIVE_THEME` is not part of the root-first contract. The compiler, runtime, CLI, database tooling, generated environment files, tests, and documentation must stop reading, writing, forwarding, or requiring it. The project root is the former active theme's replacement: project source is read directly from that root. The retained `theme` property above exists only so the one-shot migration can read and remove old configuration; it is not a selector or a fallback.
+`NEXT_PUBLIC_ACTIVE_THEME` is not part of the root-first contract. The compiler, runtime, CLI, database tooling, generated environment files, tests, and documentation must stop reading, writing, forwarding, or requiring it. The project root is the former active theme's replacement: project source is read directly from that root. The one-shot migration owns its legacy parsing privately and removes the old field; the shared root-first config type does not expose it.
 
 ### Tooling and scaffold configuration
 
@@ -157,7 +158,7 @@ This ordering does not authorize replacing migration history, authentication inv
 The framework may create, replace, and remove only manifest-owned files under:
 
 - `<projectRoot>/src/app/`
-- `<projectRoot>/.nextspark/generated/`
+- `<projectRoot>/.nextspark/registries/`
 
 Everything else is source or host configuration. The compiler must not overwrite it. A migration may move or rewrite project files only as an explicit user-invoked operation with its report, cleanliness check, and rollback guarantees.
 

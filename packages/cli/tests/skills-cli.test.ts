@@ -34,7 +34,7 @@ test('built CLI exposes a deterministic, versioned skills catalog away from the 
 
     const guide = run(['skills', 'get', 'nextspark-blocks'], project)
     assert.match(guide, /NextSpark blocks/)
-    assert.match(guide, /contents\/themes\/\{theme\}\/blocks\/\{slug\}\//)
+    assert.match(guide, /blocks\/\{slug\}\//)
     assert.match(guide, /config\.ts`.*, `schema\.ts`.*, `fields\.ts`.*, `component\.tsx`.*, and `index\.ts/)
     assert.match(guide, /baseBlockSchema/)
     const guideJson = JSON.parse(run(['skills', 'get', 'nextspark-blocks', '--json'], project))
@@ -51,7 +51,7 @@ test('built guides name current NextSpark APIs and CLI commands', () => {
     const auth = run(['skills', 'get', 'nextspark-auth'], project)
     assert.match(auth, /authenticateRequest\(request, \{ requiredScope/)
     assert.match(auth, /createAuthFailureResponse/)
-    assert.match(auth, /contents\/themes\/\{theme\}\/config\/permissions\.config\.ts/)
+    assert.match(auth, /config\/permissions\.config\.ts/)
 
     const cliGuide = run(['skills', 'get', 'nextspark-cli'], project)
     assert.match(cliGuide, /pnpm nextspark generate/)

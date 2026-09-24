@@ -16,7 +16,7 @@ Create a new page builder block with complete file structure.
 ## Syntax
 
 ```
-/session:block:create <block-name> [--theme <name>]
+/session:block:create <block-name>
 ```
 
 ---
@@ -34,8 +34,8 @@ Creates a new block with all 5 required files following project patterns.
 │  /session:block:create                                           │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│  1. Determine target theme                                      │
-│     - Use --theme or NEXT_PUBLIC_ACTIVE_THEME                   │
+│  1. Determine project root                                      │
+│     - Use the current project root                      │
 │     ↓                                                           │
 │  2. Discover existing blocks                                    │
 │     - Read 1-2 similar blocks for patterns                      │
@@ -98,7 +98,7 @@ Reading existing blocks...
 
 📁 CREATING FILES
 
-contents/themes/default/blocks/hero-banner/
+blocks/hero-banner/
 ├─ config.ts    ✓ Created
 ├─ schema.ts    ✓ Created
 ├─ fields.ts    ✓ Created
@@ -175,7 +175,6 @@ export type HeroBannerProps = z.infer<typeof schema>;
 
 | Option | Description |
 |--------|-------------|
-| `--theme <name>` | Target theme (default: active theme) |
 | `--from-mock <path>` | Generate from mock HTML |
 | `--minimal` | Create minimal structure |
 

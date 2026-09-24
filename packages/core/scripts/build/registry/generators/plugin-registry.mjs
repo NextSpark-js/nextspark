@@ -28,7 +28,7 @@ export function generatePluginRegistry(plugins, config) {
   const pagesServerImports = plugins
     .filter(p => p.hasPagesServer)
     .map(plugin =>
-      `import { devtoolsPage as ${toSafeIdentifier(plugin.name)}DevtoolsPage, superadminPage as ${toSafeIdentifier(plugin.name)}SuperadminPage } from '@/contents/plugins/${plugin.name}/plugin.pages.server'`
+      `import { devtoolsPage as ${toSafeIdentifier(plugin.name)}DevtoolsPage, superadminPage as ${toSafeIdentifier(plugin.name)}SuperadminPage } from '@/plugins/${plugin.name}/plugin.pages.server'`
     )
     .join('\n')
 

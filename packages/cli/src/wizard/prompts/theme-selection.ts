@@ -1,46 +1,34 @@
 /**
  * Theme Selection Prompt
  *
- * Asks the user which reference theme they want to install.
- * The reference theme provides a complete example to learn from,
- * while the user's custom theme (based on starter) is the active theme.
+ * Asks which install-once project template to extract.
  */
 
 import { select } from '@inquirer/prompts'
 import chalk from '../../utils/colors.js'
 
-export type ThemeChoice = 'starter' | 'default' | 'blog' | 'crm' | 'productivity' | null
+export type ThemeChoice = 'starter' | 'blog' | 'crm' | 'productivity' | null
 
 /**
- * Prompt the user to select a reference theme
+ * Prompt the user to select a project template.
  */
 export async function promptThemeSelection(): Promise<ThemeChoice> {
   console.log('')
-  console.log(chalk.cyan('  Reference Theme Installation'))
+  console.log(chalk.cyan('  Project Template'))
   console.log(chalk.gray('  ' + '-'.repeat(40)))
   console.log('')
-  console.log(chalk.gray('  A reference theme provides a complete example to learn from.'))
-  console.log(chalk.gray('  Your custom theme (based on starter) will be your active theme.'))
+  console.log(chalk.gray('  The selected template is extracted once and becomes project-owned source.'))
   console.log('')
 
   const theme = await select<ThemeChoice>({
-    message: 'Which reference theme would you like to install?',
+    message: 'Which project template would you like to use?',
     choices: [
       {
-        name: 'None (skip)',
+        name: 'Starter (default)',
         value: null,
-        description: 'Only my custom theme, no reference (add later with add:theme)',
+        description: 'Start from the minimal bundled project template',
       },
-      {
-        name: 'Starter (bundled)',
-        value: 'starter',
-        description: 'Use the starter theme already included in the generated project',
-      },
-      {
-        name: 'Default (SaaS boilerplate)',
-        value: 'default',
-        description: 'Full-featured SaaS with dashboard, billing, AI chat',
-      },
+      { name: 'Starter', value: 'starter', description: 'Minimal bundled project template' },
       {
         name: 'Blog',
         value: 'blog',

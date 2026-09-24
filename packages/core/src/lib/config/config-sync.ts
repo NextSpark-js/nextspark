@@ -16,7 +16,7 @@
 // Direct imports for synchronous access
 import { DEFAULT_APP_CONFIG } from './app.config'
 import { DEFAULT_DASHBOARD_CONFIG } from './dashboard.config'
-import { ThemeService, type ThemeName } from '../services/theme.service'
+import { ThemeService } from '../services/theme.service'
 import { mergeConfigs } from '../utils/config-merge'
 import { mergeRolesConfig } from './roles-merge'
 import { resolveAuthMethods } from '../auth/auth-methods'
@@ -55,22 +55,7 @@ const globalCache = globalThis as unknown as NextSparkConfigCache
  * Uses build-time registry for zero I/O operations
  */
 function loadAppConfigInternal() {
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
-
-  if (DEBUG_CONFIG) {
-    console.log('[config-sync] Loading app config for theme:', activeTheme)
-  }
-
-  // If no theme is active, return default config
-  if (!activeTheme) {
-    if (DEBUG_CONFIG) {
-      console.log('[config-sync] No active theme, using default app config')
-    }
-    return DEFAULT_APP_CONFIG
-  }
-
-  // Load theme-specific config overrides from build-time registry
-  const themeConfigOverrides = ThemeService.getAppConfig(activeTheme)
+  const themeConfigOverrides = ThemeService.getCurrentAppConfig()
 
   // If theme has no app config overrides, return default
   if (!themeConfigOverrides) {
@@ -140,22 +125,7 @@ function loadAppConfig() {
  * Merge default dashboard config with theme-specific config
  */
 function loadDashboardConfigInternal() {
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
-
-  if (DEBUG_CONFIG) {
-    console.log('[config-sync] activeTheme:', activeTheme)
-  }
-
-  // If no theme is active, return default config
-  if (!activeTheme) {
-    if (DEBUG_CONFIG) {
-      console.log('[config-sync] No active theme, using default config')
-    }
-    return DEFAULT_DASHBOARD_CONFIG
-  }
-
-  // Load theme-specific config
-  const themeConfig = ThemeService.getDashboardConfig(activeTheme)
+  const themeConfig = ThemeService.getCurrentDashboardConfig()
 
   // If theme has no dashboard config, return default
   if (!themeConfig) {
@@ -205,18 +175,10 @@ function loadDashboardConfig() {
  * Contains settings like DevKeyring that should never affect production
  */
 function loadDevConfigInternal() {
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
-
-  // If no theme is active, return null
-  if (!activeTheme) {
-    return null
-  }
-
-  // Load theme-specific dev config from build-time registry
-  const devConfig = ThemeService.getDevConfig(activeTheme)
+  const devConfig = ThemeService.getCurrentDevConfig()
 
   if (DEBUG_CONFIG && devConfig) {
-    console.log('[config-sync] Dev config loaded for theme:', activeTheme)
+    console.log('[config-sync] Project dev config loaded')
   }
 
   return devConfig

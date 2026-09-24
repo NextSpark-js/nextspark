@@ -57,7 +57,7 @@ core/
 └── lib/registries/
     └── billing-registry.ts   # Generated data-only registry
 
-contents/themes/{theme}/
+
 └── billing/
     └── billing.config.ts      # Theme configuration
 
@@ -175,7 +175,7 @@ const plans = getPublicPlans()
 
 > **Note:** For data-only access (BILLING_REGISTRY, BILLING_MATRIX, etc.), import directly from the registry:
 > ```typescript
-> import { BILLING_REGISTRY } from '@/core/lib/registries/billing-registry'
+> import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 > ```
 
 ---

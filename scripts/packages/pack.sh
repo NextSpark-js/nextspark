@@ -10,9 +10,9 @@
 #   ./repackage.sh [options]
 #
 # OPTIONS:
-#   --all              Package all packages (core, cli, create-app, themes, plugins)
+#   --all              Package all packages (core, cli, create-app, plugins)
 #   --package <name>   Package a specific package (can be used multiple times)
-#                      Valid names: core, cli, create-app, theme-*, plugin-*
+#                      Valid names: core, cli, create-app, plugin-*
 #   --output <path>    Output directory for .tgz files (default: ./.packages)
 #   --skip-build       Skip building packages before packing
 #   --clean            Clean output directory before packing
@@ -25,22 +25,19 @@
 #   ./repackage.sh --package core --package cli    # Package core and cli
 #   ./repackage.sh --all --skip-build              # Package without rebuilding
 #   ./repackage.sh --all --output ./my-dist        # Custom output directory
-#   ./repackage.sh --package theme-default         # Package a specific theme
 #   ./repackage.sh --package plugin-ai             # Package a specific plugin
 #
 # PACKAGE NAMES:
 #   Core packages: core, testing, cli, create-app, ai-workflow
-#   Themes:        theme-default, theme-blog, theme-crm, theme-productivity, etc.
 #   Plugins:       plugin-ai, plugin-amplitude, plugin-langchain, plugin-social-media-publisher, etc.
 #
 # BUILD ORDER:
 #   When building, packages are built in dependency order:
 #   1. core (other packages depend on this)
-#   2. testing (themes depend on this for selectors)
+#   2. testing
 #   3. cli
 #   4. create-app
-#   5. themes
-#   6. plugins
+#   5. plugins
 #
 
 set -e
@@ -118,7 +115,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --skip-build       Skip building before packing"
             echo "  --clean            Clean output directory first"
             echo ""
-            echo "Package names: core, testing, cli, create-app, ai-workflow, theme-*, plugin-*"
+            echo "Package names: core, testing, cli, create-app, ai-workflow, plugin-*"
             echo ""
             echo "Examples:"
             echo "  $0 --all"
@@ -165,10 +162,6 @@ resolve_package_path() {
             ;;
         ai-workflow)
             echo "$REPO_ROOT/packages/ai-workflow"
-            ;;
-        theme-*)
-            local theme_name="${name#theme-}"
-            echo "$REPO_ROOT/themes/$theme_name"
             ;;
         plugin-*)
             local plugin_name="${name#plugin-}"
@@ -286,13 +279,6 @@ if [ "$PACK_ALL" = true ]; then
     FINAL_PACKAGES+=("$REPO_ROOT/packages/create-nextspark-app")
     FINAL_PACKAGES+=("$REPO_ROOT/packages/ai-workflow")
 
-    # Add all themes
-    for theme in "$REPO_ROOT/themes"/*; do
-        if [ -d "$theme" ] && [ -f "$theme/package.json" ]; then
-            FINAL_PACKAGES+=("$theme")
-        fi
-    done
-
     # Add all plugins
     for plugin in "$REPO_ROOT/plugins"/*; do
         if [ -d "$plugin" ] && [ -f "$plugin/package.json" ]; then
@@ -305,7 +291,7 @@ else
         pkg_path=$(resolve_package_path "$pkg_name")
         if [ -z "$pkg_path" ]; then
             echo -e "${RED}Error: Unknown package name '$pkg_name'${NC}"
-            echo "Valid names: core, cli, create-app, theme-*, plugin-*"
+            echo "Valid names: core, testing, cli, create-app, ai-workflow, plugin-*"
             exit 1
         fi
         if [ ! -d "$pkg_path" ] || [ ! -f "$pkg_path/package.json" ]; then

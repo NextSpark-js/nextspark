@@ -313,17 +313,17 @@ SELECT id, name, status, priority FROM projects;
 **Create the entity structure:**
 
 ```bash
-mkdir -p contents/themes/default/entities/projects/messages
-touch contents/themes/default/entities/projects/projects.config.ts
-touch contents/themes/default/entities/projects/projects.fields.ts
-touch contents/themes/default/entities/projects/messages/en.json
-touch contents/themes/default/entities/projects/messages/es.json
+mkdir -p entities/projects/messages
+touch entities/projects/projects.config.ts
+touch entities/projects/projects.fields.ts
+touch entities/projects/messages/en.json
+touch entities/projects/messages/es.json
 ```
 
 **Directory structure:**
 
 ```text
-contents/themes/default/entities/projects/
+entities/projects/
 ├── projects.config.ts      # Entity configuration
 ├── projects.fields.ts      # Field definitions
 ├── messages/
@@ -335,7 +335,7 @@ contents/themes/default/entities/projects/
 
 ### 3.2 Field Definitions
 
-**Edit `contents/themes/default/entities/projects/projects.fields.ts`:**
+**Edit `entities/projects/projects.fields.ts`:**
 
 ```typescript
 import type { FieldDefinition } from '@/core/lib/entities/types'
@@ -546,7 +546,7 @@ export const projectFields: FieldDefinition[] = [
 
 ### 3.3 Entity Configuration
 
-**Edit `contents/themes/default/entities/projects/projects.config.ts`:**
+**Edit `entities/projects/projects.config.ts`:**
 
 ```typescript
 import { FolderKanban } from 'lucide-react'
@@ -644,7 +644,7 @@ export const projectEntityConfig: EntityConfig = {
 
 ### 3.4 Translations
 
-**Edit `contents/themes/default/entities/projects/messages/en.json`:**
+**Edit `entities/projects/messages/en.json`:**
 
 ```json
 {
@@ -707,7 +707,7 @@ export const projectEntityConfig: EntityConfig = {
 }
 ```
 
-**Edit `contents/themes/default/entities/projects/messages/es.json`:**
+**Edit `entities/projects/messages/es.json`:**
 
 ```json
 {
@@ -1002,7 +1002,7 @@ curl http://localhost:3010/api/v1/projects/stats \
 
 ```typescript
 import { Suspense } from 'react'
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { EntityListWrapper } from '@/core/components/entities/wrappers/EntityListWrapper'
 import { Skeleton } from '@/core/components/ui/skeleton'
 
@@ -1057,7 +1057,7 @@ function ProjectsListSkeleton() {
 **Create `app/(protected)/dashboard/projects/new/page.tsx`:**
 
 ```typescript
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { EntityFormWrapper } from '@/core/components/entities/wrappers/EntityFormWrapper'
 
 export const metadata = {
@@ -1099,7 +1099,7 @@ export default async function NewProjectPage() {
 
 ```typescript
 import { notFound } from 'next/navigation'
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { EntityDetailWrapper } from '@/core/components/entities/wrappers/EntityDetailWrapper'
 import { EntityFormWrapper } from '@/core/components/entities/wrappers/EntityFormWrapper'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/core/components/ui/tabs'
@@ -1163,7 +1163,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
 ### 5.4 Add Navigation Link
 
-**Edit `contents/themes/default/config/app.config.ts`:**
+**Edit `config/app.config.ts`:**
 
 ```typescript
 export const appConfig = {
@@ -1231,7 +1231,7 @@ border-color: var(--color-border);
 .status-completed { background: var(--color-purple-500); }
 ```
 
-**Customize if needed in `contents/themes/default/styles/globals.css`:**
+**Customize if needed in `styles/globals.css`:**
 
 ```css
 .project-card {
@@ -1305,12 +1305,12 @@ export function ProjectsEmptyState() {
 
 ### 7.1 Unit Tests
 
-**Create `themes/default/tests/jest/entities/projects.test.ts`:**
+**Create `tests/jest/entities/projects.test.ts`:**
 
 ```typescript
 import { describe, it, expect } from '@jest/globals'
-import { projectFields } from '@/contents/themes/default/entities/projects/projects.fields'
-import { projectEntityConfig } from '@/contents/themes/default/entities/projects/projects.config'
+import { projectFields } from '@/entities/projects/projects.fields'
+import { projectEntityConfig } from '@/entities/projects/projects.config'
 
 describe('Projects Entity', () => {
   describe('Field Definitions', () => {
@@ -1380,12 +1380,12 @@ describe('Projects Entity', () => {
 **Run unit tests:**
 
 ```bash
-pnpm test:theme entities/projects.test.ts
+pnpm --dir apps/dev exec jest --watchman=false entities/projects.test.ts
 ```
 
 ### 7.2 E2E Tests
 
-**Create `themes/default/tests/cypress/e2e/projects.cy.ts`:**
+**Create `tests/cypress/e2e/projects.cy.ts`:**
 
 ```typescript
 describe('Projects Feature', () => {
@@ -1539,7 +1539,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 ```bash
 # Check entity-registry.ts
-grep -A 5 "projects" core/lib/registries/entity-registry.ts
+grep -A 5 "projects" .nextspark/registries/entity-registry.ts
 
 # Should see:
 # projects: {

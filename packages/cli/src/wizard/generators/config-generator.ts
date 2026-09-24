@@ -8,13 +8,13 @@ import crypto from 'crypto'
 import fs from 'fs-extra'
 import path from 'path'
 import type { WizardConfig } from '../types.js'
-import { withActiveThemeStyles } from '../../utils/sync-plan.js'
+import { withProjectStyles } from '../../utils/sync-plan.js'
 
 /**
  * Get the target themes directory in the user's project
  */
-function getTargetThemesDir(): string {
-  return path.resolve(process.cwd(), 'contents', 'themes')
+function getProjectRoot(): string {
+  return path.resolve(process.cwd())
 }
 
 /**
@@ -26,8 +26,7 @@ function getTargetThemesDir(): string {
  */
 export async function updateAuthConfig(config: WizardConfig): Promise<void> {
   const appConfigPath = path.join(
-    getTargetThemesDir(),
-    config.projectSlug,
+    getProjectRoot(),
     'config',
     'app.config.ts'
   )
@@ -69,8 +68,7 @@ export async function updateAuthConfig(config: WizardConfig): Promise<void> {
  */
 export async function updateDashboardUIConfig(config: WizardConfig): Promise<void> {
   const dashboardConfigPath = path.join(
-    getTargetThemesDir(),
-    config.projectSlug,
+    getProjectRoot(),
     'config',
     'dashboard.config.ts'
   )
@@ -137,8 +135,7 @@ export async function updateDashboardUIConfig(config: WizardConfig): Promise<voi
  */
 export async function updateDevToolsConfig(config: WizardConfig): Promise<void> {
   const devConfigPath = path.join(
-    getTargetThemesDir(),
-    config.projectSlug,
+    getProjectRoot(),
     'config',
     'dev.config.ts'
   )
@@ -169,8 +166,7 @@ export async function updateDevToolsConfig(config: WizardConfig): Promise<void> 
  */
 export async function updatePermissionsConfig(config: WizardConfig): Promise<void> {
   const permissionsConfigPath = path.join(
-    getTargetThemesDir(),
-    config.projectSlug,
+    getProjectRoot(),
     'config',
     'permissions.config.ts'
   )
@@ -215,8 +211,7 @@ export async function updatePermissionsConfig(config: WizardConfig): Promise<voi
  */
 export async function updateEntityPermissions(config: WizardConfig): Promise<void> {
   const permissionsConfigPath = path.join(
-    getTargetThemesDir(),
-    config.projectSlug,
+    getProjectRoot(),
     'config',
     'permissions.config.ts'
   )
@@ -280,8 +275,7 @@ function uncommentPermissionBlock(content: string, markerName: string): string {
  */
 export async function updateDashboardConfig(config: WizardConfig): Promise<void> {
   const dashboardConfigPath = path.join(
-    getTargetThemesDir(),
-    config.projectSlug,
+    getProjectRoot(),
     'config',
     'dashboard.config.ts'
   )
@@ -369,11 +363,6 @@ DATABASE_URL="postgresql://user:password@localhost:5432/database"
 BETTER_AUTH_SECRET="your-secret-key-here"
 
 # =============================================================================
-# THEME
-# =============================================================================
-NEXT_PUBLIC_ACTIVE_THEME="${config.projectSlug}"
-
-# =============================================================================
 # APPLICATION
 # =============================================================================
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
@@ -406,7 +395,7 @@ ${oauthSection}`
  * Update README.md with project-specific information
  */
 export async function updateReadme(config: WizardConfig): Promise<void> {
-  const readmePath = path.join(getTargetThemesDir(), config.projectSlug, 'README.md')
+  const readmePath = path.join(getProjectRoot(), 'README.md')
 
   if (!await fs.pathExists(readmePath)) {
     return
@@ -455,11 +444,10 @@ export async function copyEnvExampleToEnv(): Promise<void> {
 }
 
 /**
- * Update app/globals.css to import from the correct theme
- * The template has "default" hardcoded, this updates it to the project's theme
+ * Update app/globals.css to import the project-owned root stylesheet.
  */
 export async function updateGlobalsCss(config: WizardConfig): Promise<void> {
-  const globalsCssPath = path.resolve(process.cwd(), 'app', 'globals.css')
+  const globalsCssPath = path.resolve(process.cwd(), 'src', 'app', 'globals.css')
 
   if (!await fs.pathExists(globalsCssPath)) {
     return
@@ -467,9 +455,7 @@ export async function updateGlobalsCss(config: WizardConfig): Promise<void> {
 
   let content = await fs.readFile(globalsCssPath, 'utf-8')
 
-  // Point the theme stylesheet import at the project's theme the way sync:app
-  // does, so the file is what sync:app writes there and gets its generated tag
-  content = withActiveThemeStyles(content, config.projectSlug)
+  content = withProjectStyles(content)
 
   await fs.writeFile(globalsCssPath, content, 'utf-8')
 }

@@ -496,18 +496,18 @@ Create a new page builder block with complete file structure
 
 ```bash
 /block:create [block description]
-/block:create --theme=blog [block description]
+/block:create [block description]
 ```
 
 **Example:**
 ```bash
 /block:create FAQ accordion with questions and answers
-/block:create --theme=crm Pricing table with monthly/yearly toggle
+/block:create Pricing table with monthly/yearly toggle
 ```
 
 **What It Does:**
 1. Launches `block-developer` agent
-2. Determines theme (--theme flag or active theme)
+2. Determines theme (the current project root)
 3. Creates 5-file structure:
    - `config.ts` - Block metadata
    - `schema.ts` - Zod validation
@@ -519,7 +519,7 @@ Create a new page builder block with complete file structure
 
 **Output:**
 ```text
-contents/themes/default/blocks/faq-accordion/
+blocks/faq-accordion/
 ├── config.ts     ✅
 ├── schema.ts     ✅
 ├── fields.ts     ✅
@@ -537,13 +537,13 @@ Modify an existing page builder block
 
 ```bash
 /block:update [slug] [changes]
-/block:update --theme=blog [slug] [changes]
+/block:update [slug] [changes]
 ```
 
 **Example:**
 ```bash
 /block:update hero Add subtitle field
-/block:update --theme=crm features-grid Allow up to 6 columns
+/block:update features-grid Allow up to 6 columns
 ```
 
 **What It Does:**
@@ -564,14 +564,14 @@ Validate block structure and consistency
 
 ```bash
 /block:validate [slug|all]
-/block:validate --theme=blog [slug|all]
+/block:validate [slug|all]
 ```
 
 **Example:**
 ```bash
 /block:validate hero        # Validate single block
 /block:validate all         # Validate all blocks
-/block:validate --theme=blog all
+/block:validate all
 ```
 
 **Validation Checks:**
@@ -605,7 +605,7 @@ List available blocks in the page builder
 
 ```bash
 /block:list
-/block:list --theme=blog
+/block:list
 /block:list --all
 ```
 
@@ -635,7 +635,7 @@ Generate documentation for a page builder block
 
 ```bash
 /block:docs [slug]
-/block:docs --theme=blog [slug]
+/block:docs [slug]
 ```
 
 **Example:**

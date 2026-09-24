@@ -239,7 +239,7 @@ export async function middleware(request: NextRequest) {
 Entity permissions are defined centrally in the theme's `permissions.config.ts`:
 
 ```typescript
-// contents/themes/{theme}/permissions.config.ts
+// permissions.config.ts
 entities: {
   customers: [
     { action: 'create', roles: ['owner', 'admin'] },
@@ -448,7 +448,7 @@ Always implement multiple security layers:
 All permissions and custom roles are defined in `permissions.config.ts`:
 
 ```typescript
-// contents/themes/{theme}/config/permissions.config.ts
+// config/permissions.config.ts
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   roles: { ... },      // Custom roles (e.g., editor)
   teams: [ ... ],      // Team permissions (team.view, team.edit, etc.)

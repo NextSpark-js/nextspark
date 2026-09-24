@@ -603,16 +603,6 @@ async function collectConfigFiles(dir, matcher, found = []) {
   return found
 }
 
-function coreEntitiesDir(config) {
-  if (config.isNpmMode) {
-    return join(config.projectRoot, 'node_modules/@nextsparkjs/core/src/entities')
-  }
-  if (config.isMonorepoMode && config.monorepoRoot) {
-    return join(config.monorepoRoot, 'packages/core/src/entities')
-  }
-  return join(config.projectRoot, 'packages/core/src/entities')
-}
-
 /**
  * Discover every icon name the runtime can look up by string.
  * @param {Array} blocks - Blocks from block discovery (each with an `icon` name)
@@ -629,10 +619,11 @@ export async function discoverIcons(blocks, config) {
   // though a config rarely lives under one, for the same reason call sources
   // exclude them below.
   const isIconSource = filePath => isIconSourcePath(filePath) && !isTestFilePath(filePath)
+  const pluginSourceDirs = (config.plugins ?? []).map(pluginName => join(config.pluginsDir, pluginName))
   const iconSources = [
-    ...(await collectConfigFiles(coreEntitiesDir(config), isIconSource)),
-    ...(await collectConfigFiles(config.themesDir, isIconSource)),
-    ...(await collectConfigFiles(config.pluginsDir, isIconSource))
+    ...(await collectConfigFiles(join(config.coreDir, 'src', 'entities'), isIconSource)),
+    ...(await collectConfigFiles(config.projectSourceDir, isIconSource)),
+    ...(await Promise.all(pluginSourceDirs.map(dir => collectConfigFiles(dir, isIconSource)))).flat()
   ]
 
   const unresolved = []
@@ -666,8 +657,8 @@ export async function discoverIcons(blocks, config) {
   // with a literal name isn't a real call site the production bundle needs.
   const isIconCallSource = filePath => isIconCallSourcePath(filePath) && !isTestFilePath(filePath)
   const callSources = [
-    ...(await collectConfigFiles(config.themesDir, isIconCallSource)),
-    ...(await collectConfigFiles(config.pluginsDir, isIconCallSource))
+    ...(await collectConfigFiles(config.projectSourceDir, isIconCallSource)),
+    ...(await Promise.all(pluginSourceDirs.map(dir => collectConfigFiles(dir, isIconCallSource)))).flat()
   ]
 
   for (const sourcePath of callSources) {

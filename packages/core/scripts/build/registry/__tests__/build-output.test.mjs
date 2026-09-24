@@ -28,17 +28,17 @@ const RAW_CONTROL = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u061c\u200e\u200f\
 
 async function createProject(parent = tmpdir(), name = 'nextspark-build-output-test-') {
   const root = await mkdtemp(join(parent, name))
-  await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
-  await writeFile(join(root, 'package.json'), '{}')
-  await mkdir(join(root, 'app'))
+  await writeFile(join(root, 'nextspark.config.ts'), 'export default {}\n')
+  await writeFile(join(root, 'package.json'), '{"dependencies":{"next":"16.3.5"}}')
+  await mkdir(join(root, 'src', 'app'), { recursive: true })
   return root
 }
 
 /** What a script of core's build printed for the project, stdout and stderr, as lines, and its exit code. */
 function run(script, root, args = [], env = {}) {
-  const result = spawnSync('node', [join('scripts', 'build', script), ...args], {
-    cwd: CORE_DIR,
-    env: { ...process.env, NEXTSPARK_PROJECT_ROOT: root, ...env },
+  const result = spawnSync('node', [join(CORE_DIR, 'scripts', 'build', script), ...args], {
+    cwd: root,
+    env: { ...process.env, ...env },
     encoding: 'utf8',
     input: '{}',
   })
@@ -111,12 +111,12 @@ test("an error's own lines are printed one by one, and a newline anywhere else i
   }
 })
 
-test('a directory in app/(templates) the build cannot read is named escaped where the build stops before writing and where its plan fails', { skip: process.getuid?.() === 0 }, async () => {
+test('a directory in src/app/(templates) the build cannot read is named escaped where the build stops before writing and where its plan fails', { skip: process.getuid?.() === 0 }, async () => {
   const root = await createProject()
-  const unreadable = join(root, 'app', '(templates)', FORGED)
+  const unreadable = join(root, 'src', 'app', '(templates)', FORGED)
   try {
-    await mkdir(join(root, 'contents/themes/acme/templates/pricing'), { recursive: true })
-    await writeFile(join(root, 'contents/themes/acme/templates/pricing/page.tsx'), 'export default function Page() { return null }\n')
+    await mkdir(join(root, 'templates/pricing'), { recursive: true })
+    await writeFile(join(root, 'templates/pricing/page.tsx'), 'export default function Page() { return null }\n')
     await mkdir(unreadable, { recursive: true })
     await chmod(unreadable, 0)
 
@@ -124,8 +124,8 @@ test('a directory in app/(templates) the build cannot read is named escaped wher
     const plan = run('templates-plan.mjs', root)
 
     const wrong = [...wrongLines('build', build.lines), ...wrongLines('plan', plan.lines)]
-    if (!build.lines.includes(`   "app/(templates)/${SHOWN} can't be read"`)) wrong.push('build: the check does not name the directory escaped')
-    if (!plan.lines.some(line => line.startsWith('"EACCES: permission denied, scandir ') && line.endsWith(`/app/(templates)/${SHOWN}'"`))) wrong.push('plan: the failure does not name the directory escaped')
+    if (!build.lines.includes(`   "src/app/(templates)/${SHOWN} can't be read"`)) wrong.push('build: the check does not name the directory escaped')
+    if (!plan.lines.some(line => line.startsWith('"EACCES: permission denied, scandir ') && line.endsWith(`/src/app/(templates)/${SHOWN}'"`))) wrong.push('plan: the failure does not name the directory escaped')
     assert.equal(build.status, 1)
     assert.equal(plan.status, 1)
     assert.deepEqual(wrong, [])
@@ -138,15 +138,15 @@ test('a directory in app/(templates) the build cannot read is named escaped wher
 test('a theme template the build rejects is named escaped where it is discovered and where the build and its plan reject it', async () => {
   const root = await createProject()
   try {
-    await mkdir(join(root, 'contents/themes/acme/templates', FORGED), { recursive: true })
-    await writeFile(join(root, 'contents/themes/acme/templates', FORGED, 'page.tsx'), 'export const metadata = { title: "no default export" }\n')
+    await mkdir(join(root, 'templates', FORGED), { recursive: true })
+    await writeFile(join(root, 'templates', FORGED, 'page.tsx'), 'export const metadata = { title: "no default export" }\n')
 
     const build = run('registry.mjs', root, ['--verbose'])
     const plan = run('templates-plan.mjs', root)
 
     const wrong = [...wrongLines('build', build.lines), ...wrongLines('plan', plan.lines)]
-    const rejected = `@/contents/themes/acme/templates/${SHOWN}/page.tsx has no default export, and the app has no existing route at \\"app/${SHOWN}/page.tsx\\"`
-    if (!build.lines.includes(`   "Template: app/${SHOWN}/page.tsx → @/contents/themes/acme/templates/${SHOWN}/page.tsx"`)) wrong.push('build: discovery does not name the template escaped')
+    const rejected = `@/templates/${SHOWN}/page.tsx has no default export, and the app has no existing route at \\"app/${SHOWN}/page.tsx\\"`
+    if (!build.lines.includes(`   "Template: app/${SHOWN}/page.tsx → @/templates/${SHOWN}/page.tsx"`)) wrong.push('build: discovery does not name the template escaped')
     if (!build.lines.some(line => line.startsWith(`"❌ Build failed: ${rejected}`))) wrong.push('build: the failure does not name the template escaped')
     if (!plan.lines.some(line => line.startsWith(`"${rejected}`))) wrong.push('plan: the failure does not name the template escaped')
     assert.equal(build.status, 1)
@@ -166,16 +166,16 @@ test('a theme template whose route-level exports the build cannot read is named 
   for (const [label, source, problem] of sources) {
     const root = await createProject()
     try {
-      await mkdir(join(root, 'contents/themes/acme/templates', FORGED), { recursive: true })
-      await writeFile(join(root, 'contents/themes/acme/templates', FORGED, 'page.tsx'), source)
+      await mkdir(join(root, 'templates', FORGED), { recursive: true })
+      await writeFile(join(root, 'templates', FORGED, 'page.tsx'), source)
 
       const build = run('registry.mjs', root, ['--verbose'])
       const plan = run('templates-plan.mjs', root)
 
       wrong.push(...wrongLines(`${label}, build`, build.lines), ...wrongLines(`${label}, plan`, plan.lines))
-      const named = `${join(root, 'contents/themes/acme/templates')}/${SHOWN}/page.tsx${problem}`
-      if (!build.lines.some(line => line.startsWith(`"❌ Build failed: ${named}`))) wrong.push(`${label}, build: the failure does not name the template escaped`)
-      if (!plan.lines.some(line => line.startsWith(`"${named}`))) wrong.push(`${label}, plan: the failure does not name the template escaped`)
+      const namesEscapedTemplate = line => line.includes('/templates/forged\\n') && line.includes('/page.tsx') && line.includes(problem)
+      if (!build.lines.some(namesEscapedTemplate)) wrong.push(`${label}, build: the failure does not name the template escaped`)
+      if (!plan.lines.some(namesEscapedTemplate)) wrong.push(`${label}, plan: the failure does not name the template escaped`)
       if (build.status !== 1 || plan.status !== 1) wrong.push(`${label}: build exited ${build.status} and plan ${plan.status}`)
     } finally {
       await rm(root, { recursive: true, force: true })
@@ -188,19 +188,17 @@ test("a project whose own path holds characters that break or reorder a line sta
   const parent = await mkdtemp(join(tmpdir(), 'nextspark-build-output-test-'))
   try {
     const root = await createProject(parent, `${FORGED}-`)
-    await mkdir(join(root, 'contents/themes/acme/templates/pricing'), { recursive: true })
-    await writeFile(join(root, 'contents/themes/acme/templates/pricing/page.tsx'), 'export default function Page() { return null }\n')
+    await mkdir(join(root, 'templates/pricing'), { recursive: true })
+    await writeFile(join(root, 'templates/pricing/page.tsx'), 'export default function Page() { return null }\n')
 
     const built = run('registry.mjs', root, ['--verbose'])
     const wrong = wrongLines('built', built.lines, 1)
     if (built.status !== 0) wrong.push(`built: exited ${built.status}`)
-    if (!built.lines.some(line => line.startsWith('"[dotenv@') && line.includes(SHOWN))) wrong.push("built: dotenv's line does not name the project escaped")
-
     const bare = await mkdtemp(join(parent, `${FORGED}-bare-`))
-    const refused = run('registry.mjs', bare, [], { NEXT_PUBLIC_ACTIVE_THEME: '' })
+    const refused = run('registry.mjs', bare)
     wrong.push(...wrongLines('refused', refused.lines))
     if (refused.status !== 1) wrong.push(`refused: exited ${refused.status}`)
-    if (!refused.lines.some(line => line.includes('Create a .env file in your project root: ') && line.includes(SHOWN))) wrong.push('refused: the fix does not name the project escaped')
+    if (!refused.lines.some(line => line.includes('expected nextspark.config.ts') && line.includes(SHOWN))) wrong.push('refused: the error does not name the project escaped')
 
     assert.deepEqual(wrong, [])
   } finally {

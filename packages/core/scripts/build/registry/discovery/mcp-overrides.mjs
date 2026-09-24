@@ -1,14 +1,14 @@
 /**
  * MCP Override Discovery
  *
- * Discovers `entities/<slug>/mcp.ts` files for the active theme — the
+ * Discovers `entities/<slug>/mcp.ts` files from the project root — the
  * extension point a theme uses to customize how one entity is exposed by the
  * MCP engine (@nextsparkjs/core/lib/mcp): exclude it, exclude specific
  * operations, relax required fields, transform input/output, or add extra
  * (non-CRUD) tools.
  *
  * Mirrors discoverApiPresets's discoverEntityFolders (same
- * `{theme}/entities/<slug>/` scan, same theme-only scope) with one
+ * `entities/<slug>/` scan, same theme-only scope) with one
  * difference: `mcp.ts` sits at the entity folder root (a sibling of `api/`,
  * `migrations/`, `messages/`), not nested under `api/` like `presets.ts`.
  *
@@ -29,20 +29,14 @@ import { existsSync } from 'fs'
 import { log, verbose } from '../../../utils/index.mjs'
 
 /**
- * Discover MCP entity overrides for the active theme.
+ * Discover MCP entity overrides from the project root.
  * @param {object} config - Configuration object from getConfig()
  * @returns {Promise<Array<{slug: string, importPath: string, themeName: string}>>}
  */
 export async function discoverMcpOverrides(config) {
   const overrides = []
-  const themeName = config.activeTheme
-
-  if (!themeName) {
-    verbose('[mcp-overrides] No active theme configured — skipping MCP override discovery')
-    return overrides
-  }
-
-  const entitiesDir = join(config.themesDir, themeName, 'entities')
+  const themeName = config.projectName
+  const entitiesDir = join(config.projectSourceDir, 'entities')
   if (!existsSync(entitiesDir)) {
     verbose(`[mcp-overrides] No entities directory found for theme "${themeName}"`)
     return overrides
@@ -59,7 +53,7 @@ export async function discoverMcpOverrides(config) {
 
       overrides.push({
         slug: entityName,
-        importPath: `@/contents/themes/${themeName}/entities/${entityName}/mcp`,
+        importPath: `@/entities/${entityName}/mcp`,
         themeName,
       })
       verbose(`[mcp-overrides] MCP override discovered: ${entityName} -> ${mcpPath}`)

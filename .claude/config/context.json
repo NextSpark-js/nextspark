@@ -1,7 +1,6 @@
 {
   "context": "monorepo",
-  "description": "NextSpark framework development - Full access to core, themes, and plugins",
-
+  "description": "NextSpark framework development - core, root-first apps/dev project, templates, and plugins",
   "capabilities": {
     "modifyCore": true,
     "allThemes": true,
@@ -9,25 +8,21 @@
     "createReleases": true,
     "maintainWorkflows": true
   },
-
   "allowedPaths": [
-    "core/**/*",
-    "contents/themes/**/*",
-    "contents/plugins/**/*",
-    "app/**/*",
+    "packages/core/**/*",
+    "apps/dev/**/*",
+    "plugins/**/*",
     ".claude/sessions/**/*"
   ],
-
   "restrictions": {
-    "app": {
+    "generatedHost": {
       "level": "discouraged",
-      "message": "Prefer core/ for shared functionality or themes/ for UI. Direct app/ modifications reduce reusability across themes."
+      "message": "Do not hand-edit apps/dev/src/app; change root project source or the generator."
     }
   },
-
   "notes": {
-    "coreGuidelines": "When adding functionality to core/, ensure it's abstract and reusable across themes/plugins.",
-    "themeGuidelines": "Theme-specific UI and customizations go in contents/themes/.",
-    "pluginGuidelines": "Reusable features that can be enabled/disabled go in contents/plugins/."
+    "coreGuidelines": "Framework code belongs in packages/core/.",
+    "projectGuidelines": "Project source lives directly under apps/dev in named root directories such as components/, config/, entities/, messages/, migrations/, styles/, templates/, and tests/.",
+    "pluginGuidelines": "Local project plugins live under apps/dev/plugins/<name>/; distributable plugin packages live under plugins/."
   }
 }

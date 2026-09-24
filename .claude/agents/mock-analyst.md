@@ -41,7 +41,7 @@ interface MockAnalystInput {
   // Optional
   blockType?: string;         // For BLOCKS: hero, features, cta, etc.
   blockDecision?: string;     // For BLOCKS: new, variant, modify
-  themePath?: string;         // Active theme for token mapping
+  themePath?: string;         // project for token mapping
 }
 ```
 
@@ -103,8 +103,8 @@ interface MockAnalystInput {
 **ds-mapping.json** - Design token mapping
 ```json
 {
-  "theme": "default",
-  "themeGlobalsPath": "contents/themes/default/styles/globals.css",
+  "project": true,
+  "themeGlobalsPath": "styles/globals.css",
   "analyzedAt": "2026-01-12T12:00:00Z",
 
   "colorMapping": [
@@ -224,7 +224,7 @@ From Tailwind config:
 ### Step 4: Map to Theme Tokens
 
 ```
-Read active theme globals.css:
+Read project globals.css:
 ├── Extract :root variables
 ├── Extract .dark variables
 ├── Compare mock values to theme values

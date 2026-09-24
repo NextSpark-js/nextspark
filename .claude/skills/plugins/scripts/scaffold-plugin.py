@@ -18,18 +18,16 @@ from pathlib import Path
 
 
 def get_project_root() -> Path:
-    """Find the project root by looking for .claude directory."""
-    current = Path(__file__).resolve()
+    """Find the nearest root-first project, with apps/dev as the repo default."""
+    cwd = Path.cwd().resolve()
+    for candidate in (cwd, *cwd.parents):
+        if (candidate / "nextspark.config.ts").is_file():
+            return candidate
+        dev_project = candidate / "apps" / "dev"
+        if (candidate / ".claude").is_dir() and (dev_project / "nextspark.config.ts").is_file():
+            return dev_project
 
-    for parent in current.parents:
-        if (parent / ".claude").is_dir():
-            return parent
-
-    cwd = Path.cwd()
-    if (cwd / ".claude").is_dir():
-        return cwd
-
-    print("Error: Could not find project root (.claude directory)")
+    print("Error: Could not find a root-first project (nextspark.config.ts)")
     sys.exit(1)
 
 
@@ -69,7 +67,7 @@ def to_upper_snake(name: str) -> str:
 def create_plugin(name: str, plugin_type: str, features: list) -> None:
     """Create a new plugin with complete file structure."""
     project_root = get_project_root()
-    plugins_dir = project_root / "contents" / "plugins"
+    plugins_dir = project_root / "plugins"
     plugin_name = validate_name(name)
     plugin_path = plugins_dir / plugin_name
 
@@ -89,7 +87,7 @@ def create_plugin(name: str, plugin_type: str, features: list) -> None:
 
     # 1. plugin.config.ts
     config_content = f"""import * as z from 'zod'
-import type {{ PluginConfig }} from '@/core/types/plugin'
+import type {{ PluginConfig }} from '@nextsparkjs/core/types/plugin'
 
 const {P}ConfigSchema = z.object({{
   enabled: z.boolean().default(true),
@@ -128,7 +126,7 @@ export default {c}Config
 
 ## Installation
 
-Automatically registered when placed in `contents/plugins/{plugin_name}/`.
+Automatically registered when placed in `plugins/{plugin_name}/`.
 
 ## Configuration
 
@@ -140,7 +138,7 @@ Automatically registered when placed in `contents/plugins/{plugin_name}/`.
 ## Usage
 
 ```typescript
-import {{ use{P} }} from '@/contents/plugins/{plugin_name}/hooks/use{P}'
+import {{ use{P} }} from '@/plugins/{plugin_name}/hooks/use{P}'
 
 function MyComponent() {{
   const {{ data, isLoading }} = use{P}()
@@ -313,8 +311,8 @@ export function use{P}Mutation() {{
         components_dir.mkdir(exist_ok=True)
         component_content = f"""'use client'
 
-import {{ Card, CardHeader, CardContent }} from '@/core/components/ui/card'
-import {{ Button }} from '@/core/components/ui/button'
+import {{ Card, CardHeader, CardContent }} from '@nextsparkjs/core/components/ui/card'
+import {{ Button }} from '@nextsparkjs/core/components/ui/button'
 import {{ use{P} }} from '../hooks/use{P}'
 
 interface {P}WidgetProps {{
@@ -347,7 +345,7 @@ export function {P}Widget({{ title = '{P}', onAction }}: {P}WidgetProps) {{
         api_dir.mkdir(parents=True, exist_ok=True)
         api_content = f"""import {{ NextRequest, NextResponse }} from 'next/server'
 import * as z from 'zod'
-import {{ authenticateRequest }} from '@/core/lib/auth/authenticateRequest'
+import {{ authenticateRequest }} from '@nextsparkjs/core/lib/auth/authenticateRequest'
 import {{ {P}Core }} from '../../lib/core'
 
 const ProcessInputSchema = z.object({{
@@ -393,7 +391,7 @@ export async function POST(request: NextRequest) {{
 ## Quick Start
 
 ```typescript
-import {{ use{P} }} from '@/contents/plugins/{plugin_name}/hooks/use{P}'
+import {{ use{P} }} from '@/plugins/{plugin_name}/hooks/use{P}'
 
 function MyComponent() {{
   const {{ data, isLoading }} = use{P}()
@@ -414,7 +412,7 @@ function MyComponent() {{
     print("\nNext steps:")
     print("  1. Configure environment variables")
     print("  2. Implement core logic in lib/core.ts")
-    print("  3. Run: node core/scripts/build/registry.mjs")
+    print("  3. Run: pnpm exec nextspark registry:build")
     print("  4. Test with: pnpm build")
 
 

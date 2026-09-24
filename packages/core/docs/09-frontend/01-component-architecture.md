@@ -315,7 +315,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/components/ui/table'
 import { Button } from '@/core/components/ui/button'
 
@@ -693,8 +693,8 @@ import Button from '@/core/components/ui/button'
     "paths": {
       "@/*": ["./*"],
       "@/core/*": ["./core/*"],
-      "@/app/*": ["./app/*"],
-      "@/contents/*": ["./contents/*"]
+      "@/app/*": ["./src/app/*"],
+      "@/plugins/*": ["./plugins/*"]
     }
   }
 }
@@ -705,7 +705,7 @@ import Button from '@/core/components/ui/button'
 ```typescript
 // ✅ CORRECT - Path aliases
 import { Button } from '@/core/components/ui/button'
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { cn } from '@/core/lib/utils'
 
 // ❌ WRONG - Relative paths
@@ -894,7 +894,7 @@ export function PageHeader({ title, description, actions, breadcrumbs }: PageHea
 - ✅ **DO** support theme customization via props
 - ✅ **DO** provide sensible defaults
 - ❌ **DON'T** hardcode theme-specific values
-- ❌ **DON'T** import from `@/contents/themes/`
+- ❌ **DON'T** import from `@/./`
 
 ```typescript
 // ✅ CORRECT - Core component (theme-agnostic)
@@ -922,18 +922,18 @@ export function Button() {
 
 ### 6.2 Theme Components
 
-**Location:** `contents/themes/[theme]/components/`
+**Location:** `components/`
 
 **Purpose:** Theme-specific component overrides or extensions
 
 **Example:**
 
 ```typescript
-// contents/themes/default/components/Hero.tsx
+// components/Hero.tsx
 'use client'
 
 import { Button } from '@/core/components/ui/button'
-import { THEME_REGISTRY } from '@/core/lib/registries/theme-registry'
+import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 
 export function Hero() {
   const theme = THEME_REGISTRY.default
@@ -1024,7 +1024,7 @@ export function Button(props: ButtonProps) {
 ```typescript
 // ✅ CORRECT - Server component (default)
 // No 'use client' directive
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 export function EntityMetadata({ entityType }: { entityType: string }) {
   const config = ENTITY_REGISTRY[entityType]
@@ -1208,7 +1208,7 @@ describe('EntityList Component', () => {
 **Related Files:**
 - `core/components/ui/` - UI component library
 - `core/components/entities/` - Entity components
-- `core/lib/registries/entity-registry.ts` - Entity registry (auto-generated)
+- `.nextspark/registries/entity-registry.ts` - Entity registry (auto-generated)
 - `.rules/components.md` - Component development rules
 
 **External Resources:**

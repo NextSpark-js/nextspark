@@ -1,77 +1,45 @@
 /**
- * NextSpark Config Loader
- *
- * Synchronous loader for nextspark.config.ts
- * Used by build scripts to read project-level configuration
+ * Synchronous, validated loader for the required project-root
+ * nextspark.config.ts file.
  *
  * @module core/scripts/build/config-loader
  */
 
-import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import { createRequire } from 'module'
+import { existsSync } from 'fs'
+import { dirname, join } from 'path'
+import { fileURLToPath } from 'url'
 
-/**
- * Parse nextspark.config.ts synchronously
- * Simple regex-based parser for config values
- *
- * @param {string} projectRoot - Project root path
- * @returns {object|null} Parsed config or null if not found
- */
+const require = createRequire(import.meta.url)
+const { createJiti } = require('jiti')
+const coreRoot = join(dirname(fileURLToPath(import.meta.url)), '../..')
+const sourceContract = join(coreRoot, 'src/lib/config/nextspark-types.ts')
+const builtContract = join(coreRoot, 'dist/lib/config/nextspark-types.js')
+const contractPath = existsSync(sourceContract) ? sourceContract : builtContract
+const jiti = createJiti(import.meta.url, {
+  interopDefault: true,
+  fsCache: false,
+  alias: { '@nextsparkjs/core/lib/config': contractPath },
+})
+
 export function loadNextSparkConfigSync(projectRoot) {
   const configPath = join(projectRoot, 'nextspark.config.ts')
-
   if (!existsSync(configPath)) {
-    return null
+    throw new Error(`NextSpark project root ${projectRoot} is missing required nextspark.config.ts.`)
   }
 
+  let loaded
   try {
-    const content = readFileSync(configPath, 'utf8')
-
-    // Extract plugins array
-    const pluginsMatch = content.match(/plugins:\s*\[([^\]]+)\]/)
-    const plugins = pluginsMatch
-      ? pluginsMatch[1]
-          .split(',')
-          .map(p => p.trim().replace(/['"]/g, ''))
-          .filter(Boolean)
-      : null
-
-    // Extract features object
-    const featuresMatch = content.match(/features:\s*\{([^}]+)\}/)
-    const features = featuresMatch
-      ? parseFeaturesObject(featuresMatch[1])
-      : null
-
-    // Extract theme (though it should be in .env)
-    const themeMatch = content.match(/theme:\s*['"]([^'"]+)['"]/)
-    const theme = themeMatch ? themeMatch[1] : null
-
-    return {
-      theme,
-      plugins,
-      features
-    }
+    loaded = jiti(configPath)
   } catch (error) {
-    console.warn(`Warning: Could not parse nextspark.config.ts: ${error.message}`)
-    return null
-  }
-}
-
-/**
- * Parse features object from string
- * @param {string} featuresStr - Features object string
- * @returns {object} Parsed features
- */
-function parseFeaturesObject(featuresStr) {
-  const features = {}
-
-  // Parse each feature flag (e.g., "billing: true")
-  const featurePattern = /(\w+):\s*(true|false)/g
-  let match
-
-  while ((match = featurePattern.exec(featuresStr)) !== null) {
-    features[match[1]] = match[2] === 'true'
+    throw new Error(`Could not load ${configPath}: ${error.message}`, { cause: error })
   }
 
-  return features
+  const value = loaded?.default ?? loaded
+  const contract = jiti(contractPath)
+  const validation = contract.validateNextSparkConfig(value)
+  if (!validation.valid) {
+    throw new Error(`Invalid nextspark.config.ts:\n- ${validation.errors.join('\n- ')}`)
+  }
+  return validation.config
 }

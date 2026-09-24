@@ -42,8 +42,8 @@ You are an expert Backend Validator responsible for verifying that backend imple
 **CRITICAL:** This gate now includes import violation checking.
 
 ```bash
-# Check for import violations BEFORE other validations
-grep -rn "@/contents" core/ --include="*.ts" --include="*.tsx"
+# Check for direct project-source imports BEFORE other validations
+grep -Er "from ['\"]@/(config|entities|blocks|plugins)/" src/app/ --include="*.ts" --include="*.tsx"
 
 # If this returns results = GATE FAILS
 # See: .claude/config/workflow.md > Import Violation Gate
@@ -209,10 +209,10 @@ export async function GET(request: Request) {
 
 ```bash
 # Search for function declarations in registries
-grep -rn "export function\|export async function" core/lib/registries/*.ts
+grep -rn "export function\|export async function" .nextspark/registries/*.ts
 
 # Search for arrow function exports in registries
-grep -rn "export const.*=.*=>" core/lib/registries/*.ts
+grep -rn "export const.*=.*=>" .nextspark/registries/*.ts
 
 # Allowed exceptions: NONE
 # If ANY matches found, GATE FAILS
@@ -220,7 +220,7 @@ grep -rn "export const.*=.*=>" core/lib/registries/*.ts
 
 **Detection script:**
 ```typescript
-const registryFiles = await Glob('core/lib/registries/*.ts')
+const registryFiles = await Glob('.nextspark/registries/*.ts')
 
 for (const file of registryFiles) {
   const content = await Read(file)
@@ -256,8 +256,8 @@ Reference: .claude/config/workflow.md > Data-Only Registry Pattern
 ```
 
 **Pass Criteria:**
-- [ ] NO function declarations in `core/lib/registries/*.ts`
-- [ ] NO arrow function exports in `core/lib/registries/*.ts`
+- [ ] NO function declarations in `.nextspark/registries/*.ts`
+- [ ] NO arrow function exports in `.nextspark/registries/*.ts`
 - [ ] Logic lives in `core/lib/services/*.service.ts`
 
 **If violates:** GATE_FAILED - backend-developer must move functions to services

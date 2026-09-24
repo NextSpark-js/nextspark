@@ -54,7 +54,7 @@
       "entities": "Entities"
     },
     "themeTitle": "Theme Configuration",
-    "themeDescription": "Current active theme settings and overrides",
+    "themeDescription": "Current project theme settings and overrides",
     "entitiesTitle": "Entity Registry",
     "entitiesDescription": "{count} registered entities",
     "copied": "Copied!",

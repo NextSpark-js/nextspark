@@ -73,11 +73,11 @@ console.timeEnd('registry-lookup')
 // ❌ Runtime I/O (140ms per entity)
 async function getEntityRuntime(name: string) {
   // 1. Scan filesystem (20ms)
-  const entityDir = await fs.readdir('./contents/entities')
+  const entityDir = await fs.readdir('./entities')
   const found = entityDir.find(dir => dir === name)
   
   // 2. Read config file (40ms)
-  const configPath = `./contents/entities/${name}/${name}.config.ts`
+  const configPath = `./entities/${name}/${name}.config.ts`
   const configModule = await import(configPath)
   
   // 3. Process configuration (15ms)
@@ -180,9 +180,9 @@ export const ENTITY_REGISTRY = {
 // Lazy-load only active locale
 export const THEME_TRANSLATION_LOADERS = {
   'default': {
-    'en': () => import('@/contents/themes/default/messages/en.json'),
-    'es': () => import('@/contents/themes/default/messages/es.json'),
-    'fr': () => import('@/contents/themes/default/messages/fr.json')
+    'en': () => import('@/messages/en.json'),
+    'es': () => import('@/messages/es.json'),
+    'fr': () => import('@/messages/fr.json')
   }
 }
 
@@ -202,8 +202,8 @@ const translations = await loader()  // Loads only en.json
 
 ```typescript
 // All route handlers imported at build time
-import * as plugin_ai_generate from '@/contents/plugins/ai/api/generate/route'
-import * as plugin_ai_embeddings from '@/contents/plugins/ai/api/embeddings/route'
+import * as plugin_ai_generate from '@/plugins/ai/api/generate/route'
+import * as plugin_ai_embeddings from '@/plugins/ai/api/embeddings/route'
 
 export const PLUGIN_ROUTE_HANDLERS = {
   'ai/generate': {
@@ -245,7 +245,7 @@ pnpm dev
 [REGISTRY] Watching for content changes...
 
 # File change detected
-[REGISTRY] Change detected: contents/themes/default/entities/tasks/tasks.config.ts
+[REGISTRY] Change detected: entities/tasks/tasks.config.ts
 [REGISTRY] Rebuilding registries...
 [REGISTRY] ✓ Registry rebuilt (1.2s)
 [REGISTRY] ⚠️  RESTART DEV SERVER to apply changes
@@ -311,14 +311,14 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 
 # Output:
 [REGISTRY] Watch mode enabled
-[REGISTRY] Monitoring: contents/
+[REGISTRY] Monitoring: project source and plugins/
 [REGISTRY] Press Ctrl+C to stop
 
-[REGISTRY] File changed: contents/themes/default/entities/tasks/tasks.fields.ts
+[REGISTRY] File changed: entities/tasks/tasks.fields.ts
 [REGISTRY] Rebuilding... (1.1s)
 [REGISTRY] ✓ Build complete
 
-[REGISTRY] File changed: contents/plugins/ai/plugin.config.ts
+[REGISTRY] File changed: plugins/ai/plugin.config.ts
 [REGISTRY] Rebuilding... (1.3s)
 [REGISTRY] ✓ Build complete
 ```
@@ -369,7 +369,7 @@ const entity = ENTITY_REGISTRY.tasks  // Always valid, no staleness
 
 ```typescript
 // Content change flow
-1. Edit: contents/themes/default/entities/tasks/tasks.config.ts
+1. Edit: entities/tasks/tasks.config.ts
 2. Rebuild: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs (or auto in watch mode)
 3. Restart: pnpm dev (restart dev server)
 4. Access: ENTITY_REGISTRY.tasks (now up-to-date)
@@ -541,12 +541,12 @@ export const ENTITY_REGISTRY = {
 
 ```typescript
 // ✅ GOOD: Lazy load translations
-'en': () => import('@/contents/themes/default/messages/en.json')
+'en': () => import('@/messages/en.json')
 
 // ❌ BAD: Import all translations upfront
-import en from '@/contents/themes/default/messages/en.json'
-import es from '@/contents/themes/default/messages/es.json'
-import fr from '@/contents/themes/default/messages/fr.json'
+import en from '@/messages/en.json'
+import es from '@/messages/es.json'
+import fr from '@/messages/fr.json'
 // Bundle bloat!
 ```
 
@@ -556,7 +556,7 @@ import fr from '@/contents/themes/default/messages/fr.json'
 
 ```typescript
 // ❌ BAD: Dynamic import (defeats entire system)
-const entity = await import(`@/contents/entities/${name}/config`)
+const entity = await import(`@/entities/${name}/config`)
 
 // ✅ GOOD: Registry access
 const entity = ENTITY_REGISTRY[name]
@@ -586,10 +586,10 @@ for (let i = 0; i < 1000; i++) {
 
 ```typescript
 // ✅ GOOD: Named imports (tree-shakeable)
-import { getEntity, getRegisteredEntities } from '@/core/lib/registries/entity-registry'
+import { getEntity, getRegisteredEntities } from '@nextsparkjs/registries/entity-registry'
 
 // ❌ BAD: Import entire registry
-import * as EntityRegistry from '@/core/lib/registries/entity-registry'
+import * as EntityRegistry from '@nextsparkjs/registries/entity-registry'
 ```
 
 ---
@@ -653,7 +653,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 **Problem:** Build takes >30 seconds
 
 **Solutions:**
-1. Check for large files in contents/ directory
+1. Check for large files in project source directories
 2. Review filesystem performance (SSD vs HDD)
 3. Reduce number of entities/plugins temporarily
 4. Profile build script with `--verbose` flag

@@ -1,7 +1,7 @@
 /**
  * Email Discovery
  *
- * Discovers email template files from core defaults and the active theme.
+ * Discovers email template files from core defaults and the project root.
  * Theme files override core defaults at the same slug; new theme slugs are
  * additive (themes can ship templates that core doesn't know about).
  *
@@ -94,7 +94,7 @@ async function listEmailFiles(dir, options = {}) {
 }
 
 /**
- * Discover all email templates: core defaults first, then active theme overrides
+ * Discover all email templates: core defaults first, then project overrides
  * and additions. Theme entries take precedence per slug.
  *
  * @param {object} config - Configuration object from getConfig() (defaults to DEFAULT_CONFIG)
@@ -140,24 +140,19 @@ export async function discoverEmails(config = DEFAULT_CONFIG) {
     verbose(`No core email templates found in: ${coreEmailsDir}`)
   }
 
-  // Theme overrides + additions.
-  if (config.activeTheme && config.themesDir) {
-    const themeEmailsDir = join(config.themesDir, config.activeTheme, 'emails')
-    const themeFiles = await listEmailFiles(themeEmailsDir)
-
-    if (themeFiles.length > 0) {
-      verbose(`Found ${themeFiles.length} theme email override(s) in: ${themeEmailsDir}`)
-      for (const { slug } of themeFiles) {
-        merged.set(slug, {
-          slug,
-          source: 'theme',
-          importPath: `@/contents/themes/${config.activeTheme}/emails/${slug}`,
-          importName: `${slugToIdentifier(slug)}_theme`,
-        })
-      }
+  // Project overrides + additions.
+  const projectEmailsDir = join(config.projectSourceDir, 'emails')
+  const projectFiles = await listEmailFiles(projectEmailsDir)
+  if (projectFiles.length > 0) {
+    verbose(`Found ${projectFiles.length} project email override(s) in: ${projectEmailsDir}`)
+    for (const { slug } of projectFiles) {
+      merged.set(slug, {
+        slug,
+        source: 'theme',
+        importPath: `@/emails/${slug}`,
+        importName: `${slugToIdentifier(slug)}_theme`,
+      })
     }
-  } else if (!config.activeTheme) {
-    verbose('No active theme — only core email templates will be registered.')
   }
 
   const result = Array.from(merged.values()).sort((a, b) => a.slug.localeCompare(b.slug))

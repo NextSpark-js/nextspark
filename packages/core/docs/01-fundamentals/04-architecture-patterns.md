@@ -30,9 +30,9 @@ The registry pattern is the foundation of the architecture. Instead of loading c
 
 **Build Script (`packages/core/scripts/build/registry.mjs`):**
 ```typescript
-// This is the ONLY place that can import from @/contents
-import { taskConfig } from '@/contents/themes/default/entities/tasks/tasks.config.ts'
-import { themeConfig } from '@/contents/themes/default/config/theme.config.ts'
+// Compiler discovery resolves project-root source into registry imports.
+import { taskConfig } from '@/entities/tasks/tasks.config.ts'
+import { themeConfig } from '@/config/theme.config.ts'
 
 // Generate static registries
 const ENTITY_REGISTRY = {
@@ -40,33 +40,33 @@ const ENTITY_REGISTRY = {
   // ... all entities
 }
 
-// Write to core/lib/registries/entity-registry.ts
-fs.writeFileSync('core/lib/registries/entity-registry.ts', generatedCode)
+// Write to .nextspark/registries/entity-registry.ts
+fs.writeFileSync('.nextspark/registries/entity-registry.ts', generatedCode)
 ```
 
 **Server-Side Usage:**
 ```typescript
 // ✅ CORRECT - Import from build-time registry
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 const taskConfig = ENTITY_REGISTRY.tasks
 // Instant access, zero I/O
 
 // ❌ WRONG - Runtime dynamic import
-const taskConfig = await import('@/contents/themes/default/entities/tasks/tasks.config')
+const taskConfig = await import('@/entities/tasks/tasks.config')
 // 140ms I/O operation, defeats registry architecture
 ```
 
 **Client-Side Usage:**
 ```typescript
 // ✅ CORRECT - Use client-safe registry
-import { ENTITY_REGISTRY_CLIENT } from '@/core/lib/registries/entity-registry.client'
+import { ENTITY_REGISTRY_CLIENT } from '@nextsparkjs/registries/entity-registry.client'
 
 // Only public, client-safe data included
 const entityName = ENTITY_REGISTRY_CLIENT.tasks.name
 
 // ❌ WRONG - Using server registry in client
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 // Will fail - contains server-only code
 ```
 
@@ -91,9 +91,9 @@ import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
 
 ### Rules
 
-1. **NEVER** import from `@/contents` in application code
+1. **NEVER** bypass registries with direct project-source imports in runtime code
 2. **ALWAYS** use registries for content access
-3. **ONLY** `packages/core/scripts/build/registry.mjs` can import from `@/contents`
+3. **ONLY** generated registry modules may reference compiler-discovered project source directly
 4. **Server vs Client** - Use appropriate registry version
 5. **Regenerate** - Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` after content changes
 
@@ -109,11 +109,11 @@ The build-time generation pattern pre-compiles all dynamic content into static c
 
 **1. Registries** (`packages/core/scripts/build/registry.mjs`)
 ```bash
-# Input: Contents from themes/plugins/entities and active-theme documentation
-contents/themes/default/entities/tasks/tasks.config.ts
-contents/plugins/ai/plugin.config.ts
-contents/themes/default/docs/public/**/*.md
-contents/themes/default/docs/superadmin/**/*.md
+# Input: Project entities, plugins, templates, and documentation
+entities/tasks/tasks.config.ts
+plugins/ai/plugin.config.ts
+docs/public/**/*.md
+docs/superadmin/**/*.md
 
 # Output: Static registries
 .nextspark/registries/entity-registry.ts
@@ -124,17 +124,17 @@ contents/themes/default/docs/superadmin/**/*.md
 **2. Theme CSS**
 ```bash
 # Source imported by the app
-themes/default/styles/globals.css
+styles/globals.css
 
 # Import site
-apps/dev/app/globals.css
+apps/dev/src/app/globals.css
 ```
 
 **3. Theme Assets**
 ```bash
 # Theme source
-themes/default/public/brand/
-themes/default/public/images/
+public/brand/
+public/images/
 
 # App-served copies in the monorepo
 apps/dev/public/theme/brand/
@@ -161,11 +161,11 @@ cd ../.. && pnpm dev       # Next.js recompiles imported theme CSS on changes
 ### Rules
 
 1. **Auto-Generated Files** - Never edit manually:
-   - `core/lib/registries/*` (except `index.ts` exports)
+   - `.nextspark/registries/*` (except `index.ts` exports)
    - `.next/*`
 
 2. **Source of Truth** - Edit these instead:
-   - `themes/` and `plugins/` - Monorepo content
+   - Root `entities/`, `plugins/`, and `templates/` - project source
    - `packages/core/scripts/build/*.mjs` - Generation logic
 
 3. **Build Order** - Regenerate registries before `pnpm build` when their inputs changed. Next.js compiles the imported theme CSS during its own build.
@@ -180,7 +180,7 @@ Entities, plugins, and themes are defined declaratively through configuration fi
 
 ### Entity Configuration
 
-**Config File (`contents/themes/default/entities/tasks/tasks.config.ts`):**
+**Config File (`entities/tasks/tasks.config.ts`):**
 ```typescript
 import type { EntityConfig } from '@/core/lib/entities/types'
 
@@ -268,7 +268,7 @@ export const taskFields: FieldDefinition[] = [
 
 ### Plugin Configuration
 
-**Plugin Config (`contents/plugins/ai/plugin.config.ts`):**
+**Plugin Config (`plugins/ai/plugin.config.ts`):**
 ```typescript
 import type { PluginConfig } from '@/core/lib/plugins/types'
 
@@ -297,7 +297,7 @@ export const aiPluginConfig: PluginConfig = {
 
 ### Theme Configuration
 
-**Theme Config (`contents/themes/default/config/theme.config.ts`):**
+**Theme Config (`config/theme.config.ts`):**
 ```typescript
 import type { ThemeConfig } from '@/core/lib/theme/types'
 
@@ -350,7 +350,7 @@ const entities = await Promise.all(
 // Total: 140ms × 10 entities = 1,400ms
 
 // ✅ Build-time registry (6ms total)
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 const entities = Object.values(ENTITY_REGISTRY)
 // Total: 6ms for all entities
 ```
@@ -360,14 +360,14 @@ const entities = Object.values(ENTITY_REGISTRY)
 **❌ Dynamic Imports:**
 ```typescript
 // NEVER do this for config/content loading
-const config = await import(`@/contents/themes/${themeName}/theme.config`)
-const entity = await import(`@/contents/entities/${entityName}/config`)
+const config = await import(`@/theme.config`)
+const entity = await import(`@/entities/${entityName}/config`)
 ```
 
 **❌ File System Operations:**
 ```typescript
 // NEVER do this at runtime
-const files = fs.readdirSync('contents/themes')
+const files = fs.readdirSync('entities')
 const config = JSON.parse(fs.readFileSync('config.json'))
 ```
 
@@ -382,8 +382,8 @@ const entities = await db.query('SELECT * FROM entity_configs')
 **✅ Static Imports:**
 ```typescript
 // Build-time registry imports (zero runtime overhead)
-import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
-import { THEME_REGISTRY } from '@/core/lib/registries/theme-registry'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
+import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 ```
 
 **✅ UI Code-Splitting:**
@@ -794,7 +794,7 @@ export interface PluginLifecycle {
 ### Plugin Implementation
 
 ```typescript
-// contents/plugins/ai/plugin.config.ts
+// plugins/ai/plugin.config.ts
 import type { PluginConfig } from '@/core/lib/plugins/types'
 
 export const aiPlugin: PluginConfig = {
@@ -843,7 +843,7 @@ export const aiPlugin: PluginConfig = {
 
 ```typescript
 // core/lib/plugins/plugin-loader.ts
-import { PLUGIN_REGISTRY } from '@/core/lib/registries/plugin-registry'
+import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
 
 export async function initializePlugins() {
   const plugins = Object.values(PLUGIN_REGISTRY)
@@ -878,7 +878,7 @@ Themes customize the application's appearance through CSS variables, brand asset
 ### Theme Structure
 
 ```text
-contents/themes/default/
+
 ├── config/                # All configuration files
 │   ├── theme.config.ts    # Theme metadata and config
 │   ├── app.config.ts      # App-level overrides (optional)
@@ -901,7 +901,7 @@ contents/themes/default/
 ### Theme Configuration
 
 ```typescript
-// contents/themes/default/config/theme.config.ts
+// config/theme.config.ts
 import type { ThemeConfig } from '@/core/lib/theme/types'
 
 export const defaultTheme: ThemeConfig = {
@@ -945,12 +945,11 @@ export const defaultTheme: ThemeConfig = {
 
 ```bash
 # .env.local
-NEXT_PUBLIC_ACTIVE_THEME=default
 ```
 
 **Build Process:**
 ```bash
-# Compiles apps/dev/app/globals.css and its active-theme import
+# Compiles apps/dev/src/app/globals.css and its project import
 pnpm build
 ```
 
@@ -958,7 +957,7 @@ pnpm build
 
 **Generated CSS:**
 ```css
-/* Source variables imported through apps/dev/app/globals.css */
+/* Source variables imported through apps/dev/src/app/globals.css */
 :root {
   --color-primary: #3b82f6;
   --color-secondary: #8b5cf6;

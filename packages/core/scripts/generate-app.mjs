@@ -1,7 +1,7 @@
 /**
  * App Structure Generator
  *
- * Generates the /app directory from templates in core/templates/app/
+ * Generates the /src/app directory from templates in core/templates/app/
  * Supports EJS templating with nextspark.config.ts values
  *
  * @module core/scripts/generate-app
@@ -11,22 +11,23 @@ import { readFile, writeFile, mkdir, copyFile, readdir, stat } from 'fs/promises
 import { join, dirname, relative } from 'path'
 import { existsSync } from 'fs'
 import { fileURLToPath } from 'url'
+import { projectGeneratedAppDir } from './build/registry/project-mode.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 /**
- * Generate /app directory from templates
+ * Generate /src/app directory from templates
  *
- * Theme templates have priority over core templates.
- * To customize: create templates in contents/themes/[theme]/templates/app/
+ * Project templates have priority over core templates.
+ * To customize: create templates in templates/app/.
  *
  * @param {string} projectRoot - Project root directory
  * @param {object} config - NextSpark configuration (from nextspark.config.ts)
  */
 export async function generateApp(projectRoot, config = null) {
   const coreTemplatesDir = join(__dirname, '../templates/app')
-  const outputDir = join(projectRoot, 'app')
+  const outputDir = projectGeneratedAppDir(projectRoot)
 
   console.log('📁 Generating app structure...')
   console.log(`  Core Templates: ${coreTemplatesDir}`)
@@ -47,7 +48,6 @@ export async function generateApp(projectRoot, config = null) {
   // Use default config if none exists
   const templateData = {
     config: config || {
-      theme: 'default',
       plugins: [],
       features: {},
       app: {
@@ -57,12 +57,10 @@ export async function generateApp(projectRoot, config = null) {
     }
   }
 
-  // Get active theme for theme template priority
-  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME?.replace(/'/g, '') || config?.theme || 'default'
-  const themeTemplatesDir = join(projectRoot, 'contents/themes', activeTheme, 'templates/app')
+  const projectTemplatesDir = join(projectRoot, 'templates', 'app')
 
   // Process all templates (theme templates have priority)
-  await processDirectory(coreTemplatesDir, outputDir, templateData, themeTemplatesDir)
+  await processDirectory(coreTemplatesDir, outputDir, templateData, projectTemplatesDir)
 
   console.log('✅ App generated successfully')
 }
@@ -70,15 +68,15 @@ export async function generateApp(projectRoot, config = null) {
 /**
  * Process a directory recursively
  *
- * Theme templates have priority: if a file exists in themeTemplatesDir,
+ * Project templates have priority: if a file exists in projectTemplatesDir,
  * use that instead of the core template.
  *
  * @param {string} srcDir - Source core template directory
  * @param {string} destDir - Destination output directory
  * @param {object} templateData - Data for EJS templates
- * @param {string} themeTemplatesDir - Theme templates directory (for override priority)
+ * @param {string} projectTemplatesDir - Project templates directory (for override priority)
  */
-async function processDirectory(srcDir, destDir, templateData, themeTemplatesDir) {
+async function processDirectory(srcDir, destDir, templateData, projectTemplatesDir) {
   // Ensure destination directory exists
   await mkdir(destDir, { recursive: true })
 
@@ -95,17 +93,17 @@ async function processDirectory(srcDir, destDir, templateData, themeTemplatesDir
 
     if (entry.isDirectory()) {
       // Recursively process subdirectories
-      const themeSubdir = join(themeTemplatesDir, entry.name)
-      await processDirectory(srcPath, destPath, templateData, themeSubdir)
+      const projectSubdir = join(projectTemplatesDir, entry.name)
+      await processDirectory(srcPath, destPath, templateData, projectSubdir)
     } else {
       const relativePath = relative(destDir, destPath)
 
       // Check if theme has an override for this template
-      const themeTemplatePath = join(themeTemplatesDir, entry.name)
-      const templateSource = existsSync(themeTemplatePath) ? themeTemplatePath : srcPath
+      const projectTemplatePath = join(projectTemplatesDir, entry.name)
+      const templateSource = existsSync(projectTemplatePath) ? projectTemplatePath : srcPath
 
-      if (templateSource === themeTemplatePath) {
-        console.log(`  🎨 Theme override: ${relativePath}`)
+      if (templateSource === projectTemplatePath) {
+        console.log(`  🎨 Project override: ${relativePath}`)
       }
 
       // Process file

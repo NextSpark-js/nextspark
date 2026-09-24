@@ -7,7 +7,7 @@ Validate block structure and consistency.
 ## Syntax
 
 ```
-/session:block:validate [block-name] [--theme <name>]
+/session:block:validate [block-name]
 ```
 
 ---
@@ -203,7 +203,6 @@ Run '/session:block:update features-grid' to fix issues.
 
 | Option | Description |
 |--------|-------------|
-| `--theme <name>` | Validate in specific theme |
 | `--fix` | Attempt to auto-fix issues |
 | `--strict` | Treat warnings as errors |
 

@@ -34,8 +34,7 @@
 #   1. @nextsparkjs/core
 #   2. @nextsparkjs/cli
 #   3. create-nextspark-app
-#   4. Themes (@nextsparkjs/theme-*)
-#   5. Plugins (@nextsparkjs/plugin-*)
+#   4. Plugins (@nextsparkjs/plugin-*)
 #
 # REQUIREMENTS:
 #   - npm must be installed and authenticated (npm login)
@@ -218,7 +217,6 @@ PUBLISH_ORDER=(
 get_ordered_packages() {
     local dir="$1"
     declare -a ordered=()
-    declare -a themes=()
     declare -a plugins=()
     declare -a others=()
 
@@ -231,7 +229,7 @@ get_ordered_packages() {
         done
     done
 
-    # Then collect themes, plugins, and others
+    # Then collect plugins and others
     for tgz in "$dir"/*.tgz; do
         local basename=$(basename "$tgz")
         local already_added=false
@@ -245,9 +243,7 @@ get_ordered_packages() {
         done
 
         if [ "$already_added" = false ]; then
-            if [[ "$basename" == *"-theme-"* ]] || [[ "$basename" == "nextsparkjs-theme-"* ]]; then
-                themes+=("$tgz")
-            elif [[ "$basename" == *"-plugin-"* ]] || [[ "$basename" == "nextsparkjs-plugin-"* ]]; then
+            if [[ "$basename" == *"-plugin-"* ]] || [[ "$basename" == "nextsparkjs-plugin-"* ]]; then
                 plugins+=("$tgz")
             else
                 others+=("$tgz")
@@ -255,9 +251,8 @@ get_ordered_packages() {
         fi
     done
 
-    # Combine: ordered -> themes -> plugins -> others
+    # Combine: ordered -> plugins -> others
     for tgz in "${ordered[@]}"; do echo "$tgz"; done
-    for tgz in "${themes[@]}"; do echo "$tgz"; done
     for tgz in "${plugins[@]}"; do echo "$tgz"; done
     for tgz in "${others[@]}"; do echo "$tgz"; done
 }

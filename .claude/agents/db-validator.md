@@ -55,19 +55,19 @@ Validate that the database is **100% ready for development** by checking:
 
 ```bash
 # Check for snake_case violations (should return nothing)
-grep -r "user_id\|team_id\|created_at\|updated_at" core/migrations/ contents/**/migrations/ 2>/dev/null
+grep -r "user_id\|team_id\|created_at\|updated_at" packages/core/migrations/ migrations/ plugins/*/migrations/ 2>/dev/null
 
 # Check for UUID type instead of TEXT (should return nothing)
-grep -r "UUID PRIMARY KEY DEFAULT uuid_generate" core/migrations/ contents/**/migrations/ 2>/dev/null
+grep -r "UUID PRIMARY KEY DEFAULT uuid_generate" packages/core/migrations/ migrations/ plugins/*/migrations/ 2>/dev/null
 
 # Check for plain TIMESTAMP instead of TIMESTAMPTZ (should return nothing)
-grep -r "TIMESTAMP.*DEFAULT" core/migrations/ contents/**/migrations/ | grep -v TIMESTAMPTZ
+grep -r "TIMESTAMP.*DEFAULT" packages/core/migrations/ migrations/ plugins/*/migrations/ | grep -v TIMESTAMPTZ
 
 # Check for wrong meta FK naming (should return nothing)
-grep -r '"productId"\|"customerId"\|"orderId"' core/migrations/ contents/**/migrations/ | grep metas
+grep -r '"productId"\|"customerId"\|"orderId"' packages/core/migrations/ migrations/ plugins/*/migrations/ | grep metas
 
 # Check for wrong child FK naming (should return nothing)
-grep -r '"clientId"\|"invoiceId"' core/migrations/ contents/**/migrations/ | grep -v "public.\"users\"\|public.\"teams\""
+grep -r '"clientId"\|"invoiceId"' packages/core/migrations/ migrations/ plugins/*/migrations/ | grep -v "public.\"users\"\|public.\"teams\""
 ```
 
 **Pass Criteria:**
@@ -225,7 +225,7 @@ WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = p."userId");
 
 ```typescript
 // Check app.config.ts has devKeyring
-await Read(`contents/themes/${themeName}/app.config.ts`)
+await Read(`app.config.ts`)
 
 // Verify devKeyring structure
 const hasDevKeyring = appConfig.devKeyring?.enabled

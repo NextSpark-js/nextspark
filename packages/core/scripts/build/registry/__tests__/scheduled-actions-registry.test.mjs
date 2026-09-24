@@ -6,13 +6,13 @@ import { generateScheduledActionsRegistry } from '../generators/scheduled-action
 const theme = (name) => ({
   name,
   hasScheduledActions: true,
-  scheduledActionsPath: `@/contents/themes/${name}/lib/scheduled-actions`,
+  scheduledActionsPath: '@/lib/scheduled-actions',
 })
 
 test('generates a registry for a theme with scheduled actions', () => {
   const out = generateScheduledActionsRegistry([theme('default')], {})
 
-  assert.match(out, /import \* as defaultScheduledActions from '@\/contents\/themes\/default\/lib\/scheduled-actions'/)
+  assert.match(out, /import \* as defaultScheduledActions from '@\/lib\/scheduled-actions'/)
   assert.match(out, /'default': \{/)
   assert.match(out, /registerAllHandlers: defaultScheduledActions\.registerAllHandlers/)
 })

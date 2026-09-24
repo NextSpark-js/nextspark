@@ -171,7 +171,7 @@ nextspark/
 │   │   ├── core/            # @nextsparkjs/core
 │   │   ├── cli/             # @nextsparkjs/cli
 │   │   └── create-nextspark-app/
-│   ├── themes/              # @nextsparkjs/theme-*
+│   ├── packages/core/templates/projects/ # bundled project templates
 │   ├── plugins/             # @nextsparkjs/plugin-*
 │   ├── apps/dev/            # Development app
 │   └── .packages/           # Packed .tgz files
@@ -198,7 +198,7 @@ nextspark/
 ```bash
 cd repo
 
-# Make changes to packages/core, packages/cli, themes/, plugins/
+# Make changes to packages/core, packages/cli, project templates, and plugins/
 # ...
 
 # Start dev server

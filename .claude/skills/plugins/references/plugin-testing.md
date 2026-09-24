@@ -7,7 +7,7 @@ Testing patterns for plugins: unit tests, E2E tests, and Page Object Models.
 ### Core Plugin Logic
 
 ```typescript
-// contents/plugins/my-plugin/__tests__/my-plugin.test.ts
+// plugins/my-plugin/__tests__/my-plugin.test.ts
 import { MyPluginCore } from '../lib/core'
 
 describe('MyPluginCore', () => {
@@ -52,7 +52,7 @@ describe('MyPluginCore', () => {
 ### Hook Testing
 
 ```typescript
-// contents/plugins/my-plugin/__tests__/hooks.test.ts
+// plugins/my-plugin/__tests__/hooks.test.ts
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useMyPlugin } from '../hooks/useMyPlugin'
@@ -109,7 +109,7 @@ describe('useMyPlugin', () => {
 ### Component Testing
 
 ```typescript
-// contents/plugins/my-plugin/__tests__/MyWidget.test.tsx
+// plugins/my-plugin/__tests__/MyWidget.test.tsx
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MyWidget } from '../components/MyWidget'
 
@@ -150,7 +150,7 @@ describe('MyWidget', () => {
 ### Basic E2E Test
 
 ```typescript
-// contents/themes/default/tests/cypress/e2e/uat/my-plugin.cy.ts
+// tests/cypress/e2e/uat/my-plugin.cy.ts
 import { MyPluginPOM } from '../../src/features/MyPluginPOM'
 
 describe('My Plugin E2E', {
@@ -189,7 +189,7 @@ describe('My Plugin E2E', {
 ### Page Object Model
 
 ```typescript
-// contents/themes/default/tests/cypress/src/features/MyPluginPOM.ts
+// tests/cypress/src/features/MyPluginPOM.ts
 import { BasePOM } from '../BasePOM'
 
 export class MyPluginPOM extends BasePOM {
@@ -261,7 +261,7 @@ export class MyPluginPOM extends BasePOM {
 ## API Tests (Cypress)
 
 ```typescript
-// contents/themes/default/tests/cypress/e2e/api/my-plugin-api.cy.ts
+// tests/cypress/e2e/api/my-plugin-api.cy.ts
 import { BaseAPIController } from '../../src/controllers/BaseAPIController'
 
 describe('My Plugin API', {

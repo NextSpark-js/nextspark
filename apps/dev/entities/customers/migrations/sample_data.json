@@ -1,0 +1,15 @@
+[
+  {
+    "id": "8cb99a63-e94d-451e-b19b-c757ba4675f5",
+    "userId": "6b03cb3a-7af1-4195-a390-a09a878818e0",
+    "name": "Quarterly Review #1",
+    "account": 57.35,
+    "office": "Sample text value 1",
+    "phone": "Sample text value 1",
+    "salesRep": "Sample text value 1",
+    "visitDays": "value_1",
+    "contactDays": "value_1",
+    "created_at": "2026-08-04T00:33:15.758780",
+    "updated_at": "2026-08-07T00:33:15.758967"
+  }
+]

@@ -95,7 +95,7 @@ export interface DevConfig {
 /**
  * Theme selection options for CLI
  */
-export type ThemeOption = 'starter' | 'default' | 'blog' | 'crm' | 'productivity' | 'none'
+export type ThemeOption = 'starter' | 'blog' | 'crm' | 'productivity' | 'none'
 
 /**
  * Plugin selection options for CLI

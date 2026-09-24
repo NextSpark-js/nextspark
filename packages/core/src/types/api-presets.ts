@@ -144,7 +144,7 @@ export interface ApiDocsRegistryStructure {
  *
  * @example
  * ```typescript
- * // contents/themes/default/devtools/api/customers.presets.ts
+ * // devtools/api/customers.presets.ts
  * import { defineApiEndpoint } from '@nextsparkjs/core/types/api-presets'
  *
  * export default defineApiEndpoint({

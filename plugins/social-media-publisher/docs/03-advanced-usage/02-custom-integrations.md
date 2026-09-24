@@ -22,7 +22,7 @@ Create a custom endpoint with additional business logic:
 // app/api/v1/custom/publish-with-approval/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
-import { InstagramAPI, FacebookAPI } from '@/contents/plugins/social-media-publisher/lib/providers'
+import { InstagramAPI, FacebookAPI } from '@/plugins/social-media-publisher/lib/providers'
 import { TokenEncryption } from '@/core/lib/oauth/encryption'
 import { query } from '@/core/lib/db'
 

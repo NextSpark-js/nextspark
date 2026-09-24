@@ -2,8 +2,7 @@
  * Plugin Discovery
  *
  * Discovers plugins and their API routes.
- * In monorepo mode: plugins/ at repo root
- * In user project mode: contents/plugins/
+ * Reads enabled local plugins from <projectRoot>/plugins/.
  *
  * @module core/scripts/build/registry/discovery/plugins
  */
@@ -15,53 +14,10 @@ import { existsSync } from 'fs'
 import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
 import { log, verbose, extractExportName, extractHttpMethods } from '../../../utils/index.mjs'
 import { discoverNestedEntities } from './entities.mjs'
-import { loadNextSparkConfigSync } from '../../config-loader.mjs'
 
-/**
- * Get plugins from nextspark.config.ts or theme config (fallback)
- * @param {object} config - Configuration object
- * @returns {Promise<string[]|null>} Array of plugin names or null if no filtering
- */
-async function getActivePlugins(config) {
-  // 1. Try to read from nextspark.config.ts FIRST
-  const nextsparkConfig = loadNextSparkConfigSync(config.projectRoot)
-  if (nextsparkConfig?.plugins) {
-    verbose(`nextspark.config.ts declares plugins: [${nextsparkConfig.plugins.join(', ')}]`)
-    return nextsparkConfig.plugins
-  }
-
-  // 2. Fallback: Read from theme config (backward compatibility)
-  return await getActiveThemePlugins(config)
-}
-
-/**
- * Get plugins declared in the active theme config (FALLBACK)
- * @param {object} config - Configuration object
- * @returns {Promise<string[]|null>} Array of plugin names or null if no filtering
- */
-async function getActiveThemePlugins(config) {
-  if (!config.activeTheme) {
-    verbose(`Warning: NEXT_PUBLIC_ACTIVE_THEME not set, allowing all plugins`)
-    return null // null means no filtering
-  }
-
-  const themeConfigPath = join(config.themesDir, config.activeTheme, 'config', 'theme.config.ts')
-
-  try {
-    const configContent = await readFile(themeConfigPath, 'utf8')
-
-    // Extract plugin dependencies from theme config
-    const pluginsMatch = configContent.match(/plugins:\s*\[([^\]]+)\]/)
-    const plugins = pluginsMatch
-      ? pluginsMatch[1].split(',').map(p => p.trim().replace(/['"]/g, '')).filter(Boolean)
-      : []
-
-    verbose(`Active theme '${config.activeTheme}' declares plugins: [${plugins.join(', ')}]`)
-    return plugins
-  } catch (error) {
-    log(`Warning: Could not read theme config for '${config.activeTheme}': ${error.message}`, 'warning')
-    return null // Fall back to no filtering
-  }
+/** Enabled local plugin directory names come only from nextspark.config.ts. */
+function getActivePlugins(config) {
+  return config.plugins
 }
 
 /**
@@ -70,8 +26,8 @@ async function getActiveThemePlugins(config) {
  * @returns {Promise<Array>} Array of discovered plugins
  */
 export async function discoverPlugins(config = DEFAULT_CONFIG) {
-  // Get plugins from nextspark.config.ts or theme config
-  const allowedPlugins = await getActivePlugins(config)
+  // Get enabled local plugins from nextspark.config.ts.
+  const allowedPlugins = getActivePlugins(config)
 
   const pluginsDir = config.pluginsDir
   const plugins = []
@@ -83,9 +39,9 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
     for (const dir of pluginDirs) {
       const pluginName = dir.name
 
-      // Skip plugins not declared in active theme
+      // Skip plugins not declared by the project.
       if (allowedPlugins && !allowedPlugins.includes(pluginName)) {
-        verbose(`Skipping plugin '${pluginName}' - not declared in theme '${config.activeTheme}'`)
+        verbose(`Skipping plugin '${pluginName}' - not declared in nextspark.config.ts`)
         continue
       }
 
@@ -166,9 +122,9 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
         plugins.push({
           name: pluginName,
           exportName,
-          configPath: `@/contents/plugins/${pluginName}/plugin.config`,
+          configPath: `@/plugins/${pluginName}/plugin.config`,
           hasAPI,
-          apiPath: hasAPI ? `@/contents/plugins/${pluginName}/api` : null,
+          apiPath: hasAPI ? `@/plugins/${pluginName}/api` : null,
           routeFiles,
           entities: pluginEntities,
           settings: pluginSettings,
@@ -222,7 +178,7 @@ export async function discoverRouteFiles(apiPath, pluginName) {
           const routePath = relativePath || '/'
           const endpoint = {
             path: `/api/v1/plugin/${pluginName}${routePath === '/' ? '' : '/' + routePath}`,
-            filePath: `../../../contents/plugins/${pluginName}/api${routePath === '/' ? '/route' : '/' + routePath + '/route'}`,
+            filePath: `@/plugins/${pluginName}/api${routePath === '/' ? '/route' : '/' + routePath + '/route'}`,
             relativePath: routePath,
             methods: await extractHttpMethods(fullPath),
             isRouteFile: true

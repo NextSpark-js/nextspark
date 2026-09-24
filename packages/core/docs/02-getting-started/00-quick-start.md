@@ -94,8 +94,7 @@ BETTER_AUTH_SECRET="your-generated-32-character-secret"
 BETTER_AUTH_URL="http://localhost:3010"
 NEXT_PUBLIC_APP_URL="http://localhost:3010"
 
-# 4. Theme selection (use 'default' for now)
-NEXT_PUBLIC_ACTIVE_THEME="default"
+# 4. Project-template provenance (the wizard writes nextspark.config.ts)
 
 # 5. Email service (for auth emails - get free API key from resend.com)
 RESEND_API_KEY="re_xxxxx"
@@ -108,7 +107,6 @@ RESEND_FROM_NAME="Your App Name"
 - [ ] BETTER_AUTH_SECRET - Generate with `openssl rand -base64 32`
 - [ ] BETTER_AUTH_URL - Use `http://localhost:3010` for local dev
 - [ ] NEXT_PUBLIC_APP_URL - Same as BETTER_AUTH_URL
-- [ ] NEXT_PUBLIC_ACTIVE_THEME - Set to `default`
 - [ ] RESEND_API_KEY - Get free key from [resend.com](https://resend.com)
 - [ ] RESEND_FROM_EMAIL - Your verified email domain
 - [ ] RESEND_FROM_NAME - Display name for emails
@@ -218,7 +216,7 @@ The root command delegates to `apps/dev` and starts one Next.js process:
 - Missing environment variables for optional features
 
 **Errors to fix:**
-- "Theme not found" → Check `NEXT_PUBLIC_ACTIVE_THEME=default`
+- "No NextSpark project found" → Run from the directory containing `nextspark.config.ts`
 - "Failed to fetch" → Check API routes are running
 - "Database error" → Check `DATABASE_URL` is correct
 
@@ -284,7 +282,7 @@ psql "postgresql://postgres.xxxxx:password@aws-0-region.pooler.supabase.com:6543
 **Verify:**
 ```bash
 # Check theme directory exists
-ls -la contents/themes/default
+ls -la ./default
 
 # Should show:
 # theme.config.ts
@@ -294,9 +292,8 @@ ls -la contents/themes/default
 # entities/
 # messages/
 
-# Check .env.local
-grep NEXT_PUBLIC_ACTIVE_THEME .env.local
-# Should show: NEXT_PUBLIC_ACTIVE_THEME="default"
+# Check project discovery
+ls nextspark.config.ts
 ```
 
 ### Registry Build Fails
@@ -349,7 +346,7 @@ Run the registry builder separately when registry inputs change:
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 ```
 
-That script generates every registry, including the active theme's documentation registry. It is not started by the monorepo's root `pnpm dev` script.
+That script generates every registry, including the project's documentation registry. It is not started by the monorepo's root `pnpm dev` script.
 
 ---
 
@@ -372,9 +369,9 @@ That script generates every registry, including the active theme's documentation
 ```
 
 **To make changes:**
-- **Entities:** Edit files in `contents/themes/default/entities/[entity]/`
-- **Plugins:** Edit files in `contents/plugins/[plugin]/`
-- **Themes:** Edit files in `contents/themes/default/`
+- **Entities:** Edit files in `entities/[entity]/`
+- **Plugins:** Edit files in `plugins/[plugin]/`
+- **Themes:** Edit files in ``
 - **Rebuild:** In the monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`. Root `pnpm dev` starts `apps/dev` without rebuilding registries; in a generated project, `pnpm dev` builds registries on startup.
 
 ---

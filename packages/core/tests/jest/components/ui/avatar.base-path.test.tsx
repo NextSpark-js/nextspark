@@ -10,8 +10,8 @@
 import { render, screen } from '@testing-library/react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/core/components/ui/avatar'
 import { TestimonialsBlock as CoreTemplateTestimonials } from '../../../../templates/blocks/testimonials/component'
-import { TestimonialsBlock as StarterTestimonials } from '../../../../templates/contents/themes/starter/blocks/testimonials/component'
-import { TestimonialsBlock as DefaultThemeTestimonials } from '../../../../../../themes/default/blocks/testimonials/component'
+import { TestimonialsBlock as StarterTestimonials } from '../../../../templates/projects/starter/blocks/testimonials/component'
+import { TestimonialsBlock as DefaultThemeTestimonials } from '../../../../../../apps/dev/blocks/testimonials/component'
 
 const ORIGINAL_BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH
 const ORIGINAL_IMAGE = window.Image

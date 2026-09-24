@@ -10,18 +10,18 @@ Esta guía te llevará paso a paso para crear tu primera entidad completamente f
 
 ## Paso 1: Crear la Estructura de Directorios
 
-Las entidades se definen dentro del tema activo. Por defecto: `contents/themes/default/entities/`
+Las entidades se definen dentro del tema activo. Por defecto: `entities/`
 
 ```bash
 # Crear directorio para tu entidad (ejemplo: products)
-mkdir -p contents/themes/default/entities/products
-mkdir -p contents/themes/default/entities/products/messages
+mkdir -p entities/products
+mkdir -p entities/products/messages
 ```
 
 Tu estructura debe verse así:
 
 ```text
-contents/themes/default/entities/
+entities/
 └── products/
     ├── products.config.ts      # Configuración principal
     ├── products.fields.ts      # Definición de campos
@@ -37,7 +37,7 @@ contents/themes/default/entities/
 Crea `products.fields.ts`:
 
 ```typescript
-// contents/themes/default/entities/products/products.fields.ts
+// entities/products/products.fields.ts
 
 import type { EntityField } from '@/core/lib/entities/types'
 
@@ -137,7 +137,7 @@ export const productFields: EntityField[] = [
 Crea `products.config.ts`:
 
 ```typescript
-// contents/themes/default/entities/products/products.config.ts
+// entities/products/products.config.ts
 
 import { ShoppingBag } from 'lucide-react'
 import type { EntityConfig } from '@/core/lib/entities/types'
@@ -215,7 +215,7 @@ export const productEntityConfig: EntityConfig = {
 Crea `products.types.ts`:
 
 ```typescript
-// contents/themes/default/entities/products/products.types.ts
+// entities/products/products.types.ts
 
 /**
  * Product Service Types
@@ -252,7 +252,7 @@ export interface ProductListResult {
 Crea `products.service.ts`:
 
 ```typescript
-// contents/themes/default/entities/products/products.service.ts
+// entities/products/products.service.ts
 
 import { queryOneWithRLS, queryWithRLS } from '@/core/lib/db'
 import type { Product, ProductListOptions, ProductListResult } from './products.types'
@@ -388,7 +388,7 @@ Crea `messages/es.json`:
 Edita el archivo de registro de entidades del tema:
 
 ```typescript
-// contents/themes/default/entities/index.ts
+// entities/index.ts
 
 import { taskEntityConfig } from './tasks/tasks.config'
 import { productEntityConfig } from './products/products.config'  // ← Agregar
@@ -652,7 +652,7 @@ DELETE /api/v1/products/{id}
 ## Estructura de Archivos Final
 
 ```text
-contents/themes/default/entities/products/
+entities/products/
 ├── products.config.ts              # ✅ Configuración principal
 ├── products.fields.ts              # ✅ Definición de campos
 ├── products.types.ts               # ✅ Tipos TypeScript
@@ -749,7 +749,7 @@ Agrega un campo de relación en `products.fields.ts`:
 
 ### Error: "Entity not found"
 
-- Verifica que registraste la entidad en `contents/themes/default/entities/index.ts`
+- Verifica que registraste la entidad en `entities/index.ts`
 - Reinicia el servidor de desarrollo
 
 ### Error: "Table does not exist"
@@ -777,4 +777,4 @@ Agrega un campo de relación en `products.fields.ts`:
 
 ---
 
-> 💡 **Tip**: Revisa la entidad `tasks` en `contents/themes/default/entities/tasks/` para ver un ejemplo completo con más características avanzadas.
+> 💡 **Tip**: Revisa la entidad `tasks` en `entities/tasks/` para ver un ejemplo completo con más características avanzadas.

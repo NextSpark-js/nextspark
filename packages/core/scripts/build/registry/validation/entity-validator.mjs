@@ -6,7 +6,6 @@
  * @module core/scripts/build/registry/validation/entity-validator
  */
 
-import { CONFIG } from '../config.mjs'
 import { verbose } from '../../../utils/index.mjs'
 import { validateBuilderEntityConfig, validateTaxonomiesConfig } from '../../../../dist/lib/entities/schema-generator.js'
 
@@ -16,7 +15,7 @@ import { validateBuilderEntityConfig, validateTaxonomiesConfig } from '../../../
  * @param {Array} entities - All discovered entities
  * @returns {Promise<void>}
  */
-export async function validateEntityConfigurations(entities) {
+export async function validateEntityConfigurations(entities, buildConfig = {}) {
   for (const entity of entities) {
     // Load the actual config to check access.shared
     try {
@@ -53,7 +52,7 @@ export async function validateEntityConfigurations(entities) {
           process.exit(1) // Fail the build
         }
 
-        if (CONFIG.verbose) {
+        if (buildConfig.verbose) {
           verbose(`   [builder] Entity "${entity.name}" - Page builder enabled`)
         }
       }
@@ -71,14 +70,14 @@ export async function validateEntityConfigurations(entities) {
           process.exit(1) // Fail the build
         }
 
-        if (CONFIG.verbose) {
+        if (buildConfig.verbose) {
           const typesList = config.taxonomies.types.map(t => t.type).join(', ')
           verbose(`   [taxonomies] Entity "${entity.name}" - Types: ${typesList}`)
         }
       }
 
       // Log informative message about entity access mode
-      if (CONFIG.verbose) {
+      if (buildConfig.verbose) {
         const sharedLabel = config.access.shared === true ? 'shared' : 'private'
         const description = config.access.shared === true
           ? 'Data visible to all team members'
@@ -87,7 +86,7 @@ export async function validateEntityConfigurations(entities) {
       }
 
     } catch (error) {
-      if (CONFIG.verbose) {
+      if (buildConfig.verbose) {
         verbose(`   Could not validate entity "${entity.name}": ${error.message}`)
       }
     }

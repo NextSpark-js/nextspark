@@ -18,7 +18,7 @@ All permissions are processed at **build time** and merged into a pre-computed r
 ## File Location
 
 ```
-contents/themes/{theme-name}/config/permissions.config.ts
+config/permissions.config.ts
 ```
 
 ## Complete Configuration Structure
@@ -230,7 +230,7 @@ All permissions are pre-computed during build:
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
-This generates `core/lib/registries/permissions-registry.ts` with:
+This generates `.nextspark/registries/permissions-registry.ts` with:
 
 - `ALL_RESOLVED_PERMISSIONS` - All merged permissions
 - `PERMISSIONS_BY_ROLE` - Role → permissions lookup (Set for O(1))
@@ -304,7 +304,7 @@ if (checkTeamPermission('admin', 'team.members.invite')) {
 ### Getting Full Matrix (for UI)
 
 ```typescript
-import { FULL_MATRIX, UI_SECTIONS } from '@/core/lib/registries/permissions-registry'
+import { FULL_MATRIX, UI_SECTIONS } from '@nextsparkjs/registries/permissions-registry'
 
 // Use for building permissions matrix UI in Admin Panel
 ```

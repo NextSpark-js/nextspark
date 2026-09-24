@@ -211,7 +211,7 @@ test('the pnpm that installs the project chooses the local ui override placement
     const { packageJson, workspaceYaml, packages, allowBuilds, onlyBuiltDependencies, added, installingPnpm } = await create(scenario)
 
     assert.equal(installingPnpm, scenario.projectPnpm, `${label}: pnpm add runs the pnpm resolved for projectPath, not the caller's pnpm`)
-    assert.deepEqual(packages, ['contents/themes/*', 'contents/plugins/*'], `${label}: pnpm 9 refuses a pnpm-workspace.yaml without packages`)
+    assert.deepEqual(packages, [], `${label}: pnpm 9 refuses a pnpm-workspace.yaml without packages`)
     assert.ok(allowBuilds.includes('@nextsparkjs/core'), `${label}: allowBuilds is ${allowBuilds.join(', ')}`)
     assert.ok(allowBuilds.includes(coreTarballSpec), `${label}: expected ${coreTarballSpec} in allowBuilds`)
     assert.deepEqual(onlyBuiltDependencies, allowBuilds, `${label}: pnpm 10 reads onlyBuiltDependencies`)

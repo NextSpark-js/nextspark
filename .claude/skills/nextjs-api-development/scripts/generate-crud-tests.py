@@ -10,7 +10,6 @@ Usage:
 
 Options:
     --entity ENTITY_NAME   Name of the entity (kebab-case)
-    --theme THEME          Theme name for theme-specific tests
     --with-controller      Also generate the API Controller class
     --dry-run              Preview without creating files
 """
@@ -32,10 +31,6 @@ def to_pascal_case(name: str) -> str:
     """Convert kebab-case to PascalCase."""
     return ''.join(x.title() for x in name.split('-'))
 
-
-def get_active_theme() -> str:
-    """Get active theme from environment or default."""
-    return os.environ.get('NEXT_PUBLIC_ACTIVE_THEME', 'default')
 
 
 def generate_api_controller(entity: str) -> str:
@@ -387,25 +382,22 @@ describe('{pascal} API - CRUD Operations', {{
 def main():
     parser = argparse.ArgumentParser(description='Generate CRUD API tests')
     parser.add_argument('--entity', required=True, help='Entity name (kebab-case)')
-    parser.add_argument('--theme', default=None, help='Theme name')
     parser.add_argument('--with-controller', action='store_true', help='Also generate API Controller')
     parser.add_argument('--dry-run', action='store_true', help='Preview without creating files')
 
     args = parser.parse_args()
 
-    theme = args.theme or get_active_theme()
     entity = args.entity.lower()
     pascal = to_pascal_case(entity)
 
     print(f"\n{'=' * 60}")
     print(f"GENERATING CRUD TESTS: {entity}")
     print(f"{'=' * 60}")
-    print(f"Theme: {theme}")
     print(f"With Controller: {args.with_controller}")
     print(f"{'=' * 60}\n")
 
     # Files to generate
-    base_path = Path(f'contents/themes/{theme}/tests/cypress')
+    base_path = Path('tests/cypress')
     files = {
         f'e2e/api/entities/{entity}-crud.cy.ts': generate_api_test(entity)
     }
@@ -446,7 +438,7 @@ def main():
     print("1. Update the API Controller with entity-specific fields")
     print("2. Add entity to fixtures/entities.json if not present")
     print("3. Update test data generators with real field requirements")
-    print("4. Run: pnpm cypress run --spec 'contents/themes/{}/tests/cypress/e2e/api/entities/{}-crud.cy.ts'".format(theme, entity))
+    print("4. Run: pnpm cypress run --spec 'tests/cypress/e2e/api/entities/{}-crud.cy.ts'".format(entity))
     print("=" * 60 + "\n")
 
     return 0

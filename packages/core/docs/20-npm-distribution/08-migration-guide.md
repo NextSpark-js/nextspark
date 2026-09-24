@@ -165,7 +165,7 @@ export default defineConfig({
 })
 
 // AFTER (use theme template overrides instead)
-// Create: contents/themes/{theme}/templates/custom-page.tsx
+// Create: templates/custom-page.tsx
 // The registry will map it to the correct app path
 ```
 
@@ -222,14 +222,14 @@ const ROOT_DIR = join(__dirname, '..', '..', '..', '..')  // 4 levels
 
 ### Registry Generation Fails
 
-1. Check `packages/core/lib/registries/` directory exists
+1. Check `.nextspark/registries/` directory exists
 2. Verify write permissions
 3. Check for TypeScript errors in discovered entities
 
 ### Theme Not Loading
 
-1. Verify `NEXT_PUBLIC_ACTIVE_THEME` is set
-2. Check theme exists in `contents/themes/`
+1. Verify `nextspark.config.ts` exists at the project root
+2. Check the migrated root-level source directories exist
 3. Check that `app/globals.css` imports that theme's stylesheet
 4. Run `pnpm build` to compile the import
 

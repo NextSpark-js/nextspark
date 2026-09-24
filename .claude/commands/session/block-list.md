@@ -7,7 +7,7 @@ List available blocks in the page builder.
 ## Syntax
 
 ```
-/session:block:list [--theme <name>] [--category <name>]
+/session:block:list [--category <name>]
 ```
 
 ---
@@ -46,7 +46,7 @@ Shows all available blocks in a theme, organized by category.
 🧱 AVAILABLE BLOCKS
 
 Theme: default
-Location: contents/themes/default/blocks/
+Location: blocks/
 
 ─────────────────────────────────────────
 
@@ -164,7 +164,6 @@ Total: 3 blocks in 'hero' category
 
 | Option | Description |
 |--------|-------------|
-| `--theme <name>` | List blocks from specific theme |
 | `--category <name>` | Filter by category |
 | `--json` | Output as JSON |
 | `--detailed` | Show all fields and types |

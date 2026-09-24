@@ -203,7 +203,7 @@ NextSpark has two types of Cypress tests:
 **📋 Test File Structure:**
 
 ```
-contents/themes/{theme}/tests/cypress/
+tests/cypress/
 ├── e2e/
 │   ├── uat/              # User acceptance tests
 │   │   ├── auth/
@@ -226,7 +226,7 @@ contents/themes/{theme}/tests/cypress/
 **📋 UAT Test Example:**
 
 ```typescript
-// contents/themes/default/tests/cypress/e2e/uat/auth/login.cy.ts
+// tests/cypress/e2e/uat/auth/login.cy.ts
 import { CORE_SELECTORS } from '@nextsparkjs/testing'
 import { LoginPOM } from '@/tests/cypress/support/pom/auth/login.pom'
 
@@ -303,7 +303,7 @@ export class LoginPOM extends BasePOM {
 **📋 API Test Example:**
 
 ```typescript
-// contents/themes/default/tests/cypress/e2e/api/entities/tasks.cy.ts
+// tests/cypress/e2e/api/entities/tasks.cy.ts
 import { BaseAPIController } from '@/tests/cypress/support/api/base.controller'
 
 describe('@api @feat-tasks Tasks API', () => {
@@ -945,7 +945,7 @@ EXAMPLE COMBINATIONS:
    Add to block component, follows block-{name}-{element}
 
    For THEME-SPECIFIC:
-   contents/themes/{theme}/tests/selectors.ts
+   tests/selectors.ts
 
 3. Rebuild:
    pnpm build:registries

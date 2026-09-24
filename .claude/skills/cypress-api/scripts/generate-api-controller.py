@@ -5,11 +5,10 @@ Generate API Controller Script
 Generates an API controller for a Cypress entity.
 
 Usage:
-    python generate-api-controller.py --entity ENTITY [--theme THEME] [--session SESSION]
+    python generate-api-controller.py --entity ENTITY [--session SESSION]
 
 Options:
     --entity ENTITY   Entity name (e.g., tasks, customers)
-    --theme THEME     Theme name (default: default)
     --session SESSION Session name for comments
     --dry-run         Preview without writing to file
 """
@@ -259,7 +258,6 @@ if (typeof window !== 'undefined') {{
 def main():
     parser = argparse.ArgumentParser(description='Generate API controller')
     parser.add_argument('--entity', required=True, help='Entity name (e.g., tasks)')
-    parser.add_argument('--theme', default='default', help='Theme name')
     parser.add_argument('--session', default=None, help='Session name for comments')
     parser.add_argument('--dry-run', action='store_true', help='Preview without writing')
     parser.add_argument('--output', default=None, help='Output file path')
@@ -267,14 +265,13 @@ def main():
     args = parser.parse_args()
 
     entity = args.entity.lower()
-    theme = args.theme
+    theme = 'project'
     pascal_plural = to_pascal_case(entity)
 
     print(f"\n{'=' * 60}")
     print("GENERATING API CONTROLLER")
     print(f"{'=' * 60}")
     print(f"Entity: {entity}")
-    print(f"Theme: {theme}")
     print(f"Session: {args.session or '(none)'}")
     print(f"{'=' * 60}\n")
 
@@ -293,7 +290,7 @@ def main():
     if args.output:
         output_path = Path(args.output)
     else:
-        output_path = Path(f'contents/themes/{theme}/tests/cypress/src/controllers/{pascal_plural}APIController.js')
+        output_path = Path(f'tests/cypress/src/controllers/{pascal_plural}APIController.js')
 
     # Check if file already exists
     if output_path.exists():

@@ -22,7 +22,7 @@ core/lib/config/
 - Proporciona la **estructura y lógica**
 - Define **cómo** funciona la configuración
 
-### **✅ SÍ modificar `contents/config/`**
+### **✅ SÍ modificar `config/`**
 - Contiene los **valores específicos** de tu proyecto
 - Define **qué valores** tiene tu configuración
 - Tu personalización está protegida de actualizaciones
@@ -125,7 +125,7 @@ import type {
 ## ⚠️ Importante
 
 1. **No modificar archivos aquí** - Son parte del core inmutable
-2. **Usar `contents/config/`** para valores específicos del proyecto
+2. **Usar `config/`** para valores específicos del proyecto
 3. **El loader automático** maneja la carga y validación
 4. **Cache incorporado** evita cargas repetidas
 5. **Fallback automático** en caso de errores de configuración

@@ -68,7 +68,7 @@ NextSpark uses next-intl with a layered message system:
 │     → Common UI, errors, auth               │
 │                                             │
 │  2. THEME MESSAGES                          │
-│     themes/{theme}/messages/{locale}.json   │
+│     messages/{locale}.json                  │
 │     → Theme-specific text                   │
 │                                             │
 │  3. ENTITY MESSAGES                         │
@@ -118,7 +118,7 @@ Configure languages in your theme's app config:
 **📋 app.config.ts Example:**
 
 ```typescript
-// contents/themes/your-theme/config/app.config.ts
+// config/app.config.ts
 import type { AppConfig } from '@/core/types/app'
 
 export const appConfig: AppConfig = {
@@ -195,7 +195,7 @@ STEP 3 OF 5: Create Translation Files
 **📂 Theme Messages Structure:**
 
 ```
-contents/themes/your-theme/messages/
+messages/
 ├── en.json    # English (required)
 ├── es.json    # Spanish
 ├── pt.json    # Portuguese
@@ -459,7 +459,7 @@ Entities have their own translation files:
 **📂 Entity Messages Structure:**
 
 ```
-contents/themes/your-theme/entities/products/messages/
+entities/products/messages/
 ├── en.json
 └── es.json
 ```

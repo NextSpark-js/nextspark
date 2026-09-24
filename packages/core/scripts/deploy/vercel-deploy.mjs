@@ -150,18 +150,16 @@ function readDeploymentConfig() {
     process.exit(1)
   }
 
-  // Extract VERCEL_PROJECT (optional - falls back to theme name)
+  // Extract VERCEL_PROJECT (optional - falls back to package name)
   const projectMatch = envContent.match(/^VERCEL_PROJECT\s*=\s*['"]?([^'"\n]+)['"]?/m)
-
-  // Extract NEXT_PUBLIC_ACTIVE_THEME (fallback if VERCEL_PROJECT not set)
-  const themeMatch = envContent.match(/^NEXT_PUBLIC_ACTIVE_THEME\s*=\s*['"]?([^'"\n]+)['"]?/m)
-
-  // Use VERCEL_PROJECT if available, otherwise fallback to theme
-  const project = projectMatch ? projectMatch[1].trim() : (themeMatch ? themeMatch[1].trim() : null)
+  let packageName = null
+  try {
+    packageName = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf8')).name
+  } catch {}
+  const project = projectMatch ? projectMatch[1].trim() : packageName?.replace(/^@[^/]+\//, '')
 
   if (!project) {
-    console.error('❌ Error: Neither VERCEL_PROJECT nor NEXT_PUBLIC_ACTIVE_THEME found in .env')
-    console.error('   At least one is required to determine the Vercel project name')
+    console.error('❌ Error: VERCEL_PROJECT is absent and package.json has no project name')
     console.error('   Add to .env: VERCEL_PROJECT=your-project-name')
     process.exit(1)
   }
@@ -780,7 +778,7 @@ function sanitizeDebugVariables(vars, target, explicitOverrides = {}) {
 }
 
 function findPluginEnvFiles() {
-  const pluginsDir = join(projectRoot, 'contents/plugins')
+  const pluginsDir = join(projectRoot, 'plugins')
   const pluginEnvFiles = []
 
   if (!existsSync(pluginsDir)) return pluginEnvFiles

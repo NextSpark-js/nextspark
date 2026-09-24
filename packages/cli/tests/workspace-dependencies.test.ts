@@ -8,7 +8,7 @@ import { join } from 'node:path'
 
 import { installWorkspaceDependencies, dependencyInstallNotice } from '../src/lib/workspace-dependencies.js'
 
-const GENERATED_WORKSPACE = "packages:\n  - 'contents/themes/*'\n  - 'contents/plugins/*'\n"
+const GENERATED_WORKSPACE = "packages:\n  - 'packages/widgets/*'\n  - 'packages/extensions/*'\n"
 
 const pnpmAvailable = spawnSync('pnpm', ['--version'], { stdio: 'ignore' }).status === 0
 
@@ -25,8 +25,8 @@ async function project(workspace: string | null = GENERATED_WORKSPACE) {
   if (workspace !== null) {
     await writeFile(join(root, 'pnpm-workspace.yaml'), workspace)
   }
-  const theme = join(root, 'contents', 'themes', 'blog')
-  const plugin = join(root, 'contents', 'plugins', 'ai')
+  const theme = join(root, 'packages', 'widgets', 'blog')
+  const plugin = join(root, 'packages', 'extensions', 'ai')
   await pkg(theme, 'theme-blog')
   await pkg(plugin, 'plugin-ai')
   return { root, theme, plugin, cleanup: () => rm(root, { recursive: true, force: true }) }
@@ -112,9 +112,9 @@ test("a copy at the project root does not stand in for the package's own", async
 
 test('installs from the repository root when the project is the web/ app of a monorepo', async () => {
   const root = await mkdtemp(join(tmpdir(), 'ns-deps-mono-'))
-  await writeFile(join(root, 'pnpm-workspace.yaml'), "packages:\n  - 'web'\n  - 'web/contents/themes/*'\n")
+  await writeFile(join(root, 'pnpm-workspace.yaml'), "packages:\n  - 'web'\n  - 'packages/widgets/*'\n")
   const web = join(root, 'web')
-  const theme = join(web, 'contents', 'themes', 'blog')
+  const theme = join(web, 'packages', 'widgets', 'blog')
   await pkg(theme, 'theme-blog')
   const calls: Array<[string, string]> = []
   const asked: string[] = []
@@ -163,7 +163,7 @@ test('does not install when pnpm leaves a package out of the enclosing workspace
   const outer = await mkdtemp(join(tmpdir(), 'ns-deps-foreign-'))
   await writeFile(join(outer, 'pnpm-workspace.yaml'), "packages:\n  - 'actual-member'\n")
   const app = join(outer, 'unrelated', 'my-nextspark-app')
-  const theme = join(app, 'contents', 'themes', 'blog')
+  const theme = join(app, 'packages', 'widgets', 'blog')
   await pkg(theme, 'theme-blog')
   const calls: string[] = []
   const result = installWorkspaceDependencies(
@@ -190,10 +190,10 @@ test('pnpm decides which packages a workspace takes in', { skip: !pnpmAvailable 
   // 'accepted': installs exactly when this pnpm accepts the workspace file.
   const cases: Array<[string, boolean | 'accepted']> = [
     [GENERATED_WORKSPACE, true],
-    ["packages:\n  - 'contents/themes/*' # themes\n  - 'contents/plugins/*'\n", true],
-    ["packages: ['contents/@(themes|plugins)/*']\n", 'accepted'],
-    ["packages:\n  - 'contents/themes/*'\n  - '!contents/themes/blog'\n", false],
-    ["packages:\n  - 'contents/plugins/*'\n", false],
+    ["packages:\n  - 'packages/widgets/*' # themes\n  - 'packages/extensions/*'\n", true],
+    ["packages: ['packages/@(widgets|extensions)/*']\n", 'accepted'],
+    ["packages:\n  - 'packages/widgets/*'\n  - '!packages/widgets/blog'\n", false],
+    ["packages:\n  - 'packages/extensions/*'\n", false],
   ]
   for (const [workspace, expected] of cases) {
     const p = await project(workspace)
@@ -220,7 +220,7 @@ test('a project inside another repository does not install into its workspace', 
     await pkg(join(outer, 'actual-member'), 'actual-member')
     const app = join(outer, ...appPath)
     await pkg(app, 'my-nextspark-app')
-    const theme = join(app, 'contents', 'themes', 'blog')
+    const theme = join(app, 'packages', 'widgets', 'blog')
     await pkg(theme, 'theme-blog')
     const calls: string[] = []
     const result = installWorkspaceDependencies(
@@ -249,11 +249,11 @@ test('what a .pnpmfile.cjs prints ahead of the listing does not hide it', { skip
 async function monorepo() {
   const root = await mkdtemp(join(tmpdir(), 'ns-deps-nested-'))
   await writeFile(join(root, 'package.json'), JSON.stringify({ name: 'mono', private: true }))
-  await writeFile(join(root, 'pnpm-workspace.yaml'), "packages:\n  - 'web'\n  - 'web/contents/themes/*'\n  - 'web/contents/plugins/*'\n")
+  await writeFile(join(root, 'pnpm-workspace.yaml'), "packages:\n  - 'web'\n  - 'web/packages/widgets/*'\n  - 'web/packages/extensions/*'\n")
   const web = join(root, 'web')
   await pkg(web, 'web')
   await writeFile(join(web, 'pnpm-workspace.yaml'), GENERATED_WORKSPACE)
-  const theme = join(web, 'contents', 'themes', 'blog')
+  const theme = join(web, 'packages', 'widgets', 'blog')
   await pkg(theme, 'theme-blog')
   return { root, web, theme, cleanup: () => rm(root, { recursive: true, force: true }) }
 }
@@ -326,7 +326,7 @@ test('does not climb into a repository whose broad glob matches a project it nev
   const app = join(outer, 'unrelated', 'web')
   await pkg(app, 'web')
   await writeFile(join(app, 'pnpm-workspace.yaml'), GENERATED_WORKSPACE)
-  const theme = join(app, 'contents', 'themes', 'blog')
+  const theme = join(app, 'packages', 'widgets', 'blog')
   await pkg(theme, 'theme-blog')
   const calls: Array<[string, string]> = []
   installWorkspaceDependencies(

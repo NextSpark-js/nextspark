@@ -25,9 +25,8 @@
 // URL carries the password. The output names only the host and the database.
 //
 // The migrations run through run-migrations.mjs, the same script
-// `pnpm db:migrate` uses, with `--no-env-file` and the theme and database in
-// its environment. No file is read or written for that: no .env is touched,
-// even if this process is killed mid-run.
+// `pnpm db:migrate` uses. Templates are first extracted into a clean temporary
+// root-first project; apps/dev already is one. No .env is read or written.
 //
 // MIGRATE_DATABASE_URL is removed from the child's environment because
 // run-migrations.mjs connects to it in preference to DATABASE_URL, which
@@ -39,6 +38,8 @@
 // ended, instead of leaving the command waiting.
 
 import path from 'path';
+import fs from 'fs';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
 import { GLOBAL_OBJECTS, inspectCluster } from './cluster-changes.mjs';
@@ -146,16 +147,26 @@ async function main() {
 
   const { MIGRATE_DATABASE_URL: _migrateUrl, VERIFY_THEME_DATABASE_URL: _verifyUrl, ...inheritedEnv } = process.env;
 
+  let runDir = located.projectDir;
+  let extracted = null;
+  if (located.kind === 'template') {
+    extracted = fs.mkdtempSync(path.join(os.tmpdir(), `nextspark-template-${theme}-`));
+    fs.cpSync(located.sourceDir, extracted, { recursive: true });
+    fs.writeFileSync(path.join(extracted, 'nextspark.config.ts'), `export default { plugins: [], template: { name: ${JSON.stringify(theme)}, version: 'test' } }\n`);
+    fs.writeFileSync(path.join(extracted, 'package.json'), JSON.stringify({ name: `nextspark-template-${theme}`, private: true, dependencies: { next: '16.3.5' } }, null, 2));
+    runDir = extracted;
+  }
+
   const result = spawnSync(process.execPath, [runnerPath, '--no-env-file'], {
-    cwd: located.projectDir,
+    cwd: runDir,
     stdio: 'inherit',
     env: {
       ...inheritedEnv,
       DATABASE_URL: databaseUrl,
-      NEXT_PUBLIC_ACTIVE_THEME: theme,
       [TIME_LIMIT_VARIABLE]: timeLimitSetting,
     },
   });
+  if (extracted) fs.rmSync(extracted, { recursive: true, force: true });
 
   if (result.status !== 0) {
     const reason = result.signal ? `signal ${result.signal}` : `exit code ${result.status}`;

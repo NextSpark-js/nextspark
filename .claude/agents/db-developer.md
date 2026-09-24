@@ -132,28 +132,28 @@ At the start of task:execute, scope is documented in `context.md` showing allowe
 ```markdown
 **Allowed Paths:**
 - `.claude/sessions/**/*` (always allowed)
-- `contents/themes/{theme}/migrations/**/*` (if theme is specified)
-- `contents/themes/{theme}/**/*` (if theme is specified)
+- `migrations/**/*` (if project source is in scope)
+- `**/*` (if project source is in scope)
 ```
 
 **Your responsibility:**
 - Check `context.md` for the "Scope Configuration" section before modifying files
 - Root `/core/migrations/` folder requires `core: true` (it's part of the boilerplate core)
 - Theme/plugin migrations go in their respective folders (covered by theme/plugin scope)
-- Entity configs in themes require theme scope access
+- Entity configs in themes require project scope access
 - Scope violations will be caught by code-reviewer (Phase 16) and block the workflow
 - See `.rules/scope.md` for complete scope enforcement rules
 
 **Common scenarios:**
 - `core: true` → You CAN create/modify files in `/core/migrations/**/*` (core migrations)
-- `theme: "default"` → You CAN create migrations in `contents/themes/default/migrations/**/*`
+- `theme: "default"` → You CAN create migrations in `migrations/**/*`
 - `core: false` → You CANNOT modify `/core/migrations/` but CAN use theme migrations
 
 ## Entity Presets (USE AS REFERENCE)
 
 **CRITICAL: Use entity presets as reference when creating new entities.**
 
-Location: `core/templates/contents/themes/starter/entities/tasks/`
+Location: `core/templates/entities/tasks/`
 
 ### Required Files (4-File Structure)
 
@@ -176,10 +176,10 @@ Location: `core/templates/contents/themes/starter/entities/tasks/`
 **Usage:**
 ```bash
 # Inspect preset for patterns before creating new entity
-cat core/templates/contents/themes/starter/entities/tasks/tasks.config.ts   # Entity config
-cat core/templates/contents/themes/starter/entities/tasks/tasks.fields.ts   # Field definitions
-cat core/templates/contents/themes/starter/entities/tasks/tasks.types.ts    # TypeScript types
-cat core/templates/contents/themes/starter/entities/tasks/tasks.service.ts  # Service pattern
+cat core/templates/entities/tasks/tasks.config.ts   # Entity config
+cat core/templates/entities/tasks/tasks.fields.ts   # Field definitions
+cat core/templates/entities/tasks/tasks.types.ts    # TypeScript types
+cat core/templates/entities/tasks/tasks.service.ts  # Service pattern
 ```
 
 ### Entity Service Pattern
@@ -268,9 +268,9 @@ Create database infrastructure that enables comprehensive testing:
 const context = await Read('.claude/config/context.json')
 
 if (context.context === 'monorepo') {
-  // Can create migrations in core/ or themes/
+  // Can create migrations in packages/core/ or the root-first apps/dev project
 } else if (context.context === 'consumer') {
-  // Can ONLY create migrations in themes/ or plugins/
+  // Can ONLY create migrations in the project root or local plugins/
 }
 ```
 
@@ -287,8 +287,8 @@ When working in the NextSpark framework repository:
 
 When working in a project that installed NextSpark via npm:
 - **FORBIDDEN:** Never create migrations in `core/` (read-only in node_modules)
-- **CREATE** migrations in `contents/themes/{theme}/migrations/`
-- **CREATE** plugin migrations in `contents/plugins/{plugin}/migrations/`
+- **CREATE** migrations in `migrations/`
+- **CREATE** plugin migrations in `plugins/{plugin}/migrations/`
 - Migration numbering: `1001_`, `1002_`, etc. (ensures theme runs AFTER core)
 - If schema extends core entity → Use theme overlay pattern, don't modify core
 
@@ -299,12 +299,12 @@ const context = await Read('.claude/config/context.json')
 
 if (context.context === 'monorepo') {
   // Core migrations: core/migrations/0XXX_*.sql
-  // Theme migrations: contents/themes/{theme}/migrations/0XXX_*.sql
+  // Theme migrations: migrations/0XXX_*.sql
   // Choice depends on: Is this entity shared across themes?
 } else {
   // ONLY theme/plugin migrations allowed
-  // contents/themes/{theme}/migrations/1XXX_*.sql
-  // contents/plugins/{plugin}/migrations/1XXX_*.sql
+  // migrations/1XXX_*.sql
+  // plugins/{plugin}/migrations/1XXX_*.sql
 }
 ```
 
@@ -312,8 +312,8 @@ if (context.context === 'monorepo') {
 
 | Context | Core Entities | Theme Entities |
 |---------|---------------|----------------|
-| Monorepo | `core/migrations/*_sample.sql` | `contents/themes/{theme}/migrations/*_sample.sql` |
-| Consumer | N/A (core read-only) | `contents/themes/{theme}/migrations/*_sample.sql` |
+| Monorepo | `core/migrations/*_sample.sql` | `migrations/*_sample.sql` |
+| Consumer | N/A (core read-only) | `migrations/*_sample.sql` |
 
 ---
 
@@ -413,7 +413,7 @@ ON CONFLICT DO NOTHING;
 ### Configure in app.config.ts
 
 ```typescript
-// contents/themes/{themeName}/app.config.ts
+// app.config.ts
 
 export const appConfig: AppConfig = {
   appName: 'Theme Name',

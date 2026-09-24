@@ -53,7 +53,7 @@ The teams system supports **3 different operational modes** configured via `app.
 ### Configuration Example
 
 ```typescript
-// contents/themes/[theme]/app.config.ts
+// app.config.ts
 export const themeAppConfig: DeepPartial<AppConfig> = {
   teams: {
     mode: 'multi-tenant', // Choose your mode

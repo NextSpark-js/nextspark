@@ -69,7 +69,7 @@ function generateEmptyBillingRegistry(config) {
 
   return `// AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
 // No billing config found - empty registry generated
-// To add billing: create contents/themes/{theme}/config/billing.config.ts
+// To add billing: create config/billing.config.ts
 
 import type { BillingConfig, FeatureDefinition, LimitDefinition, PlanDefinition } from '${typesImport}'
 
@@ -102,41 +102,18 @@ export type { BillingConfig, PlanDefinition, FeatureDefinition, LimitDefinition 
 `
 }
 
-/**
- * Generate billing registry from active theme's billing config
- * Pre-computes features matrix, public plans, and metadata at build time
- *
- * PATTERN: Data-only registry (consistent with entity-registry)
- * - Only imports the active theme's billing config
- * - All matrices and metadata are pre-computed as JSON literals
- * - No functions in generated code
- *
- * @param {string} activeTheme - Active theme name
- * @param {string} contentsDir - Contents directory path
- * @param {object} config - Configuration object from getConfig()
- * @returns {Promise<string>} Generated TypeScript content
- */
-export async function generateBillingRegistry(activeTheme, contentsDir, config) {
-  const themeName = activeTheme || 'default'
-  // Use config.themesDir for monorepo support (contentsDir kept for backward compatibility)
-  const themesDir = config.themesDir || join(contentsDir, 'themes')
-  const billingConfigPath = join(themesDir, themeName, 'config', 'billing.config.ts')
+/** Generate the billing registry from project config/billing.config.ts. */
+export async function generateBillingRegistry(configOrName, _legacyContentsDir, legacyConfig) {
+  const config = legacyConfig || configOrName
+  const themeName = config.projectName || 'project'
+  const absolutePath = join(config.projectSourceDir || config.projectRoot, 'config', 'billing.config.ts')
 
-  // Check if billing config exists for active theme
-  if (!existsSync(billingConfigPath)) {
-    log(`No billing config found for theme '${themeName}', using default`, 'warning')
-    // Fall back to default theme
-    const defaultPath = join(themesDir, 'default', 'config', 'billing.config.ts')
-    if (!existsSync(defaultPath)) {
-      log('No billing config found for default theme either!', 'error')
-      return generateEmptyBillingRegistry(config)
-    }
+  if (!existsSync(absolutePath)) {
+    log('No project billing config found; using the empty registry', 'warning')
+    return generateEmptyBillingRegistry(config)
   }
 
   // Dynamically import the billing config at build time
-  const themePath = existsSync(billingConfigPath) ? themeName : 'default'
-  const absolutePath = join(themesDir, themePath, 'config', 'billing.config.ts')
-
   let billingConfig
   try {
     // Use jiti to import .ts files at build time (Node.js can't import .ts natively)
@@ -157,7 +134,7 @@ export async function generateBillingRegistry(activeTheme, contentsDir, config) 
     publicPlans: publicPlans.length,
     totalFeatures: Object.keys(billingConfig.features).length,
     totalLimits: Object.keys(billingConfig.limits).length,
-    theme: themePath,
+    theme: themeName,
   }
 
   // Generate static output with JSON literals
@@ -166,10 +143,10 @@ export async function generateBillingRegistry(activeTheme, contentsDir, config) 
 
   return `// AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
 // Generated at: ${new Date().toISOString()}
-// Active theme: ${themePath}
+// Project: ${themeName}
 // To regenerate: node scripts/build-registry.mjs
 //
-// This file contains the billing config for the active theme.
+// This file contains the billing config for the project.
 // All matrices and metadata are pre-computed at build time.
 //
 // Query functions: @nextsparkjs/core/lib/billing/queries
@@ -177,10 +154,10 @@ export async function generateBillingRegistry(activeTheme, contentsDir, config) 
 
 import type { BillingConfig, FeatureDefinition, LimitDefinition, PlanDefinition } from '${typesImport}'
 
-// Import only the active theme's billing config
-import { billingConfig } from '@/contents/themes/${themePath}/config/billing.config'
+// Import only the project's billing config
+import { billingConfig } from '@/config/billing.config'
 
-// Export the active theme's billing config
+// Export the project's billing config
 export const BILLING_REGISTRY: BillingConfig = billingConfig
 
 // ============================================================================
@@ -218,7 +195,7 @@ export const PUBLIC_PLANS: readonly PlanDefinition[] = BILLING_REGISTRY.plans.fi
 // ============================================================================
 
 /**
- * Billing metadata for the active theme
+ * Billing metadata for the project
  */
 export const BILLING_METADATA = ${JSON.stringify(metadata, null, 2)} as const
 

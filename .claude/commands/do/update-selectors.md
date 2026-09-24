@@ -70,8 +70,8 @@ sortableBlockGeneric: '[data-cy^="sortable-block-"]',  // OK - needed for prefix
 |-------|--------------|
 | Core Selectors | `packages/core/src/lib/selectors/domains/*.selectors.ts` |
 | Component Usage | `packages/core/src/components/**/*.tsx` |
-| POM Classes | `themes/*/tests/cypress/src/core/*POM.ts` |
-| POM Presets | `packages/core/templates/contents/themes/starter/tests/cypress/src/core/*POM.ts` |
+| POM Classes | `tests/cypress/src/core/*POM.ts` |
+| POM Presets | `packages/core/templates/tests/cypress/src/core/*POM.ts` |
 
 ---
 
@@ -84,7 +84,7 @@ sortableBlockGeneric: '[data-cy^="sortable-block-"]',  // OK - needed for prefix
 
 2. **Find hardcoded selectors in POMs:**
    ```bash
-   grep -n "data-cy=" themes/default/tests/cypress/src/core/*.ts
+   grep -n "data-cy=" tests/cypress/src/core/*.ts
    ```
 
 3. **Find hardcoded selectors in components:**
@@ -93,8 +93,8 @@ sortableBlockGeneric: '[data-cy^="sortable-block-"]',  // OK - needed for prefix
    ```
 
 4. **After sync, update presets:**
-   - `packages/core/templates/contents/themes/starter/tests/cypress/src/core/`
-   - `packages/core/templates/contents/themes/starter/tests/cypress/src/core/`
+   - `packages/core/templates/tests/cypress/src/core/`
+   - `packages/core/templates/tests/cypress/src/core/`
 
 ---
 
@@ -108,5 +108,5 @@ pnpm build
 # Navigate to affected pages and check DevTools console
 
 # Grep should show only defined properties, not method bodies with hardcoded strings
-grep -n "data-cy=" themes/default/tests/cypress/src/core/BlockEditorBasePOM.ts
+grep -n "data-cy=" tests/cypress/src/core/BlockEditorBasePOM.ts
 ```

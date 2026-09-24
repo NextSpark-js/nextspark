@@ -88,7 +88,7 @@ async function monorepoFixture(): Promise<string> {
   await write(root, 'web/pnpm-lock.yaml', 'lockfileVersion: 9\n')
   await write(root, 'web/.env.example', 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
   await write(root, 'web/next.config.mjs', "const rewrite = (source) => source.replace('generated layout import', 'theme layout import')\nexport default { webpack(config) { return config } }\n")
-  await write(root, 'web/next.config.cjs', "module.exports = { webpack(config) { config.resolve.alias['@/app/(templates)/layout.tsx'] = '@/contents/themes/acme/templates/layout.tsx'; return config } }\n")
+  await write(root, 'web/next.config.cjs', "module.exports = { webpack(config) { config.resolve.alias['@/src/app/(templates)/layout.tsx'] = '@/contents/themes/acme/templates/layout.tsx'; return config } }\n")
   await write(root, 'web/app/layout.tsx', 'export default function Layout() { return <main /> }\n')
   await write(root, 'web/app/page.tsx', 'export default function Changed() { return null }\n')
   await write(root, 'web/app/project-only.tsx', 'export default function ProjectOnly() { return null }\n')
@@ -222,7 +222,7 @@ for (const [shape, config] of [
 }
 
 test('migrate --dry-run detects a generated-route resolveAlias rewrite in turbopack config', async () => {
-  const root = await generatedRewriteFixture("export default { turbopack: { resolveAlias: { '@/app/(templates)/layout.tsx': '@/contents/themes/acme/templates/layout.tsx' } } }\n")
+  const root = await generatedRewriteFixture("export default { turbopack: { resolveAlias: { '@/src/app/(templates)/layout.tsx': '@/contents/themes/acme/templates/layout.tsx' } } }\n")
   try {
     const result = run(root, ['--dry-run', '--json'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)

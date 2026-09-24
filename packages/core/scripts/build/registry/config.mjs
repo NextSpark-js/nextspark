@@ -1,170 +1,47 @@
 /**
- * Registry Build Configuration
+ * Root-first registry build configuration.
  *
- * Central configuration for the registry build process.
- * Contains paths, flags, and content type definitions.
- *
- * Supports three modes:
- * 1. Monorepo mode: themes/plugins at repo root as workspace packages
- * 2. NPM mode: @nextsparkjs/core installed in node_modules
- * 3. User project mode: themes/plugins in contents/ directory
+ * All filesystem paths come from project-mode.mjs. Discovery modules consume
+ * the resolved project root and never select or search for a theme.
  *
  * @module core/scripts/build/registry/config
  */
 
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
-import { existsSync } from 'fs'
-import dotenv from 'dotenv'
+import { existsSync, readFileSync } from 'fs'
+import { join } from 'path'
+import { resolveProjectPaths, detectMonorepoRoot, isInstalledAsPackage } from './project-mode.mjs'
 import { loadNextSparkConfigSync } from '../config-loader.mjs'
-import { contentDirectories, detectMonorepoRoot, isInstalledAsPackage } from './project-mode.mjs'
-import { shownPath } from '../../utils/logging.mjs'
-
-// Load .env from the correct project root
-// Priority: NEXTSPARK_PROJECT_ROOT env var > cwd
-// This is critical for npm mode where cwd might be node_modules/@nextsparkjs/core
-const envPath = process.env.NEXTSPARK_PROJECT_ROOT
-  ? join(process.env.NEXTSPARK_PROJECT_ROOT, '.env')
-  : undefined
-dotenv.config({ path: envPath, override: true })
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-// Root directory (5 levels up from packages/core/scripts/build/registry/)
-export const rootDir = join(__dirname, '../../../../..')
 
 export { detectMonorepoRoot, isInstalledAsPackage }
 
-/**
- * Detect project root by searching for nextspark.config.ts or apps/dev in monorepo
- * @returns {string} Project root path
- */
-export function detectProjectRoot() {
-  // Check for explicit project root from CLI
-  if (process.env.NEXTSPARK_PROJECT_ROOT) {
-    return process.env.NEXTSPARK_PROJECT_ROOT
-  }
-
-  let dir = process.cwd()
-  const maxDepth = 10
-  let depth = 0
-
-  // Search upward for nextspark.config.ts
-  while (dir !== '/' && depth < maxDepth) {
-    // Primary: nextspark.config.ts
-    if (existsSync(join(dir, 'nextspark.config.ts'))) {
-      return dir
-    }
-    // Secondary: monorepo with apps/dev (development mode)
-    if (existsSync(join(dir, 'apps/dev'))) {
-      return join(dir, 'apps/dev')
-    }
-    dir = dirname(dir)
-    depth++
-  }
-
-  // If not found, use current working directory
-  return process.cwd()
+export function detectProjectRoot(startDir = process.cwd()) {
+  return resolveProjectPaths(startDir).projectRoot
 }
 
-/**
- * Get dynamic configuration based on project root
- * @param {string|null} projectRoot - Optional project root path
- * @returns {object} Configuration object
- */
 export function getConfig(projectRoot = null) {
-  // Determine project root
-  const root = projectRoot || detectProjectRoot()
-
-  const { isNpmMode, monorepoRoot, isMonorepoMode, contentsDir, themesDir, pluginsDir } = contentDirectories(root)
-
-  // Determine paths based on mode
-  // In monorepo mode, core is at monorepoRoot/packages/core
-  // In npm mode, core is at projectRoot/node_modules/@nextsparkjs/core
-  const coreDir = isNpmMode
-    ? join(root, 'node_modules/@nextsparkjs/core')
-    : join(isMonorepoMode ? monorepoRoot : root, 'packages/core')
-
-  // ALWAYS generate in .nextspark/registries/ of the project
-  // This unifies npm mode and monorepo mode to use the same location
-  const outputDir = join(root, '.nextspark/registries')
-
-  // Load nextspark.config.ts for features and other settings
-  const nextsparkConfig = loadNextSparkConfigSync(root)
+  const paths = resolveProjectPaths(projectRoot || process.cwd())
+  const nextsparkConfig = loadNextSparkConfigSync(paths.projectRoot)
+  const themeConfigPath = join(paths.projectRoot, 'config', 'theme.config.ts')
+  const themeConfig = existsSync(themeConfigPath) ? readFileSync(themeConfigPath, 'utf8') : ''
+  const projectName = themeConfig.match(/\bname:\s*['"]([^'"]+)['"]/)?.[1] || 'project'
 
   return {
-    projectRoot: root,
-    monorepoRoot,
-    isNpmMode,
-    isMonorepoMode,
-    coreDir,
-    outputDir,
-    contentsDir,
-    themesDir,
-    pluginsDir,
+    ...paths,
+    projectName,
+    plugins: nextsparkConfig.plugins,
+    features: nextsparkConfig.features,
     watchMode: process.argv.includes('--watch') && !process.argv.includes('--build'),
     buildMode: process.argv.includes('--build'),
     verbose: process.argv.includes('--verbose') || process.argv.includes('-v'),
-    activeTheme: process.env.NEXT_PUBLIC_ACTIVE_THEME?.replace(/'/g, ''),
-    features: nextsparkConfig?.features || {
-      billing: true,
-      teams: true,
-      superadmin: true,
-      aiChat: true
-    }
   }
 }
 
-/**
- * Validate that required environment variables are present.
- * This should be called early in the build process to fail fast
- * with clear, actionable error messages.
- *
- * @param {object} config - Configuration object from getConfig()
- * @returns {{ valid: boolean, errors: string[] }} Validation result
- */
-export function validateEnvironment(config) {
-  const errors = []
-
-  // Check if .env file exists at the project root
-  // Skip this check in CI/Vercel environments where env vars are injected directly
-  const envFilePath = join(config.projectRoot, '.env')
-  const envExamplePath = join(config.projectRoot, '.env.example')
-  const hasEnvVarsFromProcess = !!process.env.NEXT_PUBLIC_ACTIVE_THEME
-
-  if (!existsSync(envFilePath) && !hasEnvVarsFromProcess) {
-    // The error spans lines, printed one per call: the path is shown on the one line it is on
-    let fix = `Create a .env file in your project root: ${shownPath(config.projectRoot)}`
-    if (existsSync(envExamplePath)) {
-      fix = `Copy the example file:\n   cp .env.example .env\n   Then update it with your configuration.`
-    }
-    errors.push(
-      `Missing .env file.\n` +
-      `   The .env file is required to configure your NextSpark application.\n` +
-      `   Fix: ${fix}\n` +
-      `   Required variable: NEXT_PUBLIC_ACTIVE_THEME (e.g., "default")`
-    )
-  }
-
-  // Check for NEXT_PUBLIC_ACTIVE_THEME
-  if (!config.activeTheme) {
-    errors.push(
-      `Missing NEXT_PUBLIC_ACTIVE_THEME environment variable.\n` +
-      `   This variable tells NextSpark which theme to use.\n` +
-      `   Fix: Add the following line to your .env file:\n` +
-      `   NEXT_PUBLIC_ACTIVE_THEME=default`
-    )
-  }
-
-  return { valid: errors.length === 0, errors }
+export function validateEnvironment() {
+  return { valid: true, errors: [] }
 }
 
-/**
- * Build configuration (legacy - for backward compatibility)
- * Uses getConfig() with no projectRoot (auto-detect)
- */
-export const CONFIG = getConfig()
+// Legacy named export for modules that accept an explicit config; compiler entrypoints call getConfig().
+export const CONFIG = null
 
 /**
  * Convert @/core/ import paths based on NPM mode

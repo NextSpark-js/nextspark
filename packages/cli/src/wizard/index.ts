@@ -56,7 +56,7 @@ interface ProjectInfo {
 }
 
 interface WizardRuntime {
-  generateProject(config: WizardConfig, signInProvider?: ProductionSignInResult): Promise<void>
+  generateProject(config: WizardConfig, signInProvider?: ProductionSignInResult, projectTemplate?: string, plugins?: readonly string[]): Promise<void>
   installProjectDependencies(projectRoot: string): void
   buildRegistries(webDir: string): void
 }
@@ -72,10 +72,7 @@ function buildRegistries(webDir: string): void {
   execSync(`node "${registryScript}" --build`, {
     cwd: webDir,
     stdio: 'inherit',
-    env: {
-      ...process.env,
-      NEXTSPARK_PROJECT_ROOT: webDir,
-    },
+    env: process.env,
   })
 }
 
@@ -248,7 +245,7 @@ export async function runWizard(
     }).start()
 
     try {
-      await runtime.generateProject(config, signInProvider)
+      await runtime.generateProject(config, signInProvider, selectedTheme || 'starter', selectedPlugins)
       const onboarding = writeAiOnboarding(getWebDir(process.cwd(), config))
       const preserved = Object.entries(onboarding).filter(([, state]) => state === 'preserved').map(([file]) => file.toUpperCase())
       if (preserved.length) showInfo(`Preserved existing ${preserved.join(' and ')}.`)
@@ -258,11 +255,9 @@ export async function runWizard(
       throw error
     }
 
-    // Install theme and plugins after project generation
-    if (selectedTheme || selectedPlugins.length > 0) {
-      if (!await installThemeAndPlugins(selectedTheme, selectedPlugins)) {
-        throw new Error('The theme or a plugin did not install; the messages above say which.')
-      }
+    // Project templates were extracted during generation; install local plugins now.
+    if (!await installThemeAndPlugins(null, selectedPlugins)) {
+      throw new Error('A plugin did not install; the messages above say which.')
     }
 
     // Determine the web directory for monorepo projects
@@ -577,17 +572,14 @@ function showNextSteps(
 
   if (isMonorepo) {
     console.log(chalk.gray(`  Structure: ${chalk.white('Monorepo (web/ + mobile/)')}`))
-    console.log(chalk.gray(`  Web theme: ${chalk.white(`web/contents/themes/${config.projectSlug}/`)}`))
+    console.log(chalk.gray(`  Web project: ${chalk.white('web/')}`))
     console.log(chalk.gray(`  Mobile app: ${chalk.white('mobile/')}`))
-    console.log(chalk.gray(`  Active theme: ${chalk.green(`NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)}`))
   } else {
-    console.log(chalk.gray(`  Theme: ${chalk.white(`contents/themes/${config.projectSlug}/`)}`))
-    console.log(chalk.gray(`  Active theme: ${chalk.green(`NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)}`))
+    console.log(chalk.gray(`  Project source: ${chalk.white('./')}`))
   }
 
   if (referenceTheme) {
-    const refPath = isMonorepo ? `web/contents/themes/${referenceTheme}/` : `contents/themes/${referenceTheme}/`
-    console.log(chalk.gray(`  Reference: ${chalk.white(refPath)}`))
+    console.log(chalk.gray(`  Template origin: ${chalk.white(referenceTheme)}`))
   }
 
   console.log(chalk.gray(`  Docs: ${chalk.cyan('https://nextspark.dev/docs')}`))

@@ -21,12 +21,12 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..', '..', '.
 function realPublicRoutes(): Set<string> {
   const routes = new Set<string>(['/', '/docs'])
 
-  const pagesSql = fs.readFileSync(path.join(REPO_ROOT, 'themes/default/migrations/093_pages_sample_data.sql'), 'utf8')
+  const pagesSql = fs.readFileSync(path.join(REPO_ROOT, 'apps/dev/migrations/093_pages_sample_data.sql'), 'utf8')
   for (const match of pagesSql.matchAll(/VALUES\s*\(\s*'[^']*',\s*'[^']*',\s*'[^']*',\s*'([^']*)'/g)) {
     routes.add(match[1] === 'home' ? '/' : `/${match[1]}`)
   }
 
-  const templatesDir = path.join(REPO_ROOT, 'apps/dev/app/(templates)/(public)')
+  const templatesDir = path.join(REPO_ROOT, 'apps/dev/src/app/(templates)/(public)')
   for (const entry of fs.readdirSync(templatesDir, { withFileTypes: true })) {
     if (entry.isDirectory()) routes.add(`/${entry.name}`)
   }

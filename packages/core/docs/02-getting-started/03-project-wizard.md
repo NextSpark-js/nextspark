@@ -117,41 +117,29 @@ The wizard generates:
 
 ```
 your-project/
-├── app/                          # Next.js app directory
+├── src/app/                      # Generated Next.js adapter
 ├── .nextspark/
-│   └── registries/                  # Generated registries
-├── contents/
-│   └── themes/
-│       └── [your-slug]/          # Your custom theme
-│           ├── config/           # Configuration files
-│           │   ├── app.config.ts
-│           │   ├── billing.config.ts
-│           │   ├── dashboard.config.ts
-│           │   ├── dev.config.ts
-│           │   ├── features.config.ts
-│           │   ├── permissions.config.ts
-│           │   └── theme.config.ts
-│           ├── entities/         # Entities copied by the starter/features
-│           │   └── ...
-│           ├── blocks/           # Page builder blocks
-│           │   └── ...
-│           ├── messages/         # i18n translations
-│           ├── templates/        # Page templates
-│           ├── tests/            # Cypress & Jest tests
-│           └── migrations/       # Database migrations
+│   └── registries/               # Generated registries
+├── blocks/                       # Page-builder blocks
+├── config/                       # Application configuration
+├── entities/                     # Entity definitions
+├── messages/                     # i18n translations
+├── migrations/                   # Database migrations
+├── plugins/                      # Enabled local plugins
+├── styles/                       # Project styles
+├── templates/                    # Page and layout source
+├── tests/                        # Cypress and Jest tests
 ├── public/                       # Static assets
 ├── .env                          # Generated local environment
 ├── .env.example                  # Environment template
 ├── next.config.mjs
-├── proxy.ts
+├── nextspark.config.ts
 ├── tsconfig.json
 ├── pnpm-workspace.yaml
 └── package.json                  # Dependencies & scripts
 ```
 
-The wizard does not create a root `nextspark.config.ts`. The active theme is
-selected with `NEXT_PUBLIC_ACTIVE_THEME` in `.env`, and the generated
-TypeScript configuration lives under `contents/themes/[your-slug]/config/`.
+The wizard creates `nextspark.config.ts` at the project root, extracts the selected template into root-level source directories, and keeps application configuration under `config/`.
 
 ## DX Features
 
@@ -168,7 +156,7 @@ After configuration, the wizard shows a preview of files to be created before ge
 ### Environment Setup
 The wizard can automatically:
 - Copy `.env.example` to `.env`
-- Set your theme as active (`NEXT_PUBLIC_ACTIVE_THEME`)
+- Write `nextspark.config.ts` with template provenance and enabled local plugins
 - Generate secure `BETTER_AUTH_SECRET`
 - Configure database URL
 

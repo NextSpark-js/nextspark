@@ -74,7 +74,7 @@ Build specialized AI features:
 ### Core Components
 
 ```
-contents/plugins/ai/
+plugins/ai/
 ├── lib/
 │   ├── core-utils.ts           # Core utility functions
 │   ├── ai-history-service.ts   # History tracking
@@ -152,7 +152,7 @@ Built on the [Vercel AI SDK](https://sdk.vercel.ai/):
 
 ```typescript
 // Your custom endpoint using plugin utilities
-import { selectModel, calculateCost, extractTokens } from '@/contents/plugins/ai/lib/core-utils'
+import { selectModel, calculateCost, extractTokens } from '@/plugins/ai/lib/core-utils'
 import { generateText } from 'ai'
 
 export async function POST(request: Request) {

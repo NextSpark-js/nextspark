@@ -82,7 +82,7 @@ const context = await Read('.claude/config/context.json')
 if (context.context === 'monorepo') {
   // Can create components in core/ OR theme/
 } else if (context.context === 'consumer') {
-  // Can ONLY create components in active theme/
+  // Can ONLY create components in project/
 }
 ```
 
@@ -101,9 +101,9 @@ When working in the NextSpark framework repository:
 When working in a project that installed NextSpark via npm:
 - **FORBIDDEN:** Never create/modify files in `core/` (read-only in node_modules)
 - **FORBIDDEN:** Never modify `app/` directory core files
-- **CREATE** components in `contents/themes/${NEXT_PUBLIC_ACTIVE_THEME}/components/`
-- **CREATE** hooks in `contents/themes/${NEXT_PUBLIC_ACTIVE_THEME}/hooks/`
-- **CREATE** pages in `contents/themes/${NEXT_PUBLIC_ACTIVE_THEME}/app/`
+- **CREATE** components in `components/`
+- **CREATE** hooks in `hooks/`
+- **CREATE** pages in `app/`
 - If core functionality needed → Use existing core components, don't duplicate
 
 ### Component Location Decision
@@ -116,13 +116,13 @@ function getComponentPath(componentName: string): string {
   if (context.context === 'monorepo') {
     // Choice: Is this component reusable across themes?
     // YES → core/components/{feature}/{componentName}.tsx
-    // NO  → contents/themes/{theme}/components/{componentName}.tsx
+    // NO  → components/{componentName}.tsx
     return isReusableAcrossThemes
       ? `core/components/${feature}/${componentName}.tsx`
-      : `contents/themes/${theme}/components/${componentName}.tsx`
+      : `components/${componentName}.tsx`
   } else {
-    // Consumer: ALWAYS in active theme
-    return `contents/themes/${process.env.NEXT_PUBLIC_ACTIVE_THEME}/components/${componentName}.tsx`
+    // Consumer: ALWAYS in project
+    return `components/${componentName}.tsx`
   }
 }
 ```
@@ -131,7 +131,7 @@ function getComponentPath(componentName: string): string {
 
 | Context | Shared Component Import | Theme Component Import |
 |---------|------------------------|------------------------|
-| Monorepo | `@/core/components/...` | `@/contents/themes/{theme}/...` |
+| Monorepo | `@/core/components/...` | `@/...` |
 | Consumer | `@core/components/...` (from npm) | `@theme/components/...` |
 
 ### Path Validation
@@ -149,7 +149,7 @@ if (context.context === 'consumer' && targetPath.startsWith('core/')) {
     Core is installed via npm and is read-only.
 
     Alternatives:
-    1. Create theme-specific component in contents/themes/${activeTheme}/components/
+    1. Create theme-specific component in components/
     2. Use existing core component and compose/extend it
     3. If core component is truly needed → Document as "Core Enhancement Request"
   `
@@ -182,7 +182,7 @@ if (context.context === 'consumer' && targetPath.startsWith('core/')) {
 
 **BEFORE creating ANY new component:**
 1. Search existing component library in `app/components/ui/` and `core/components/`
-2. Check active theme's component directory: `contents/themes/[ACTIVE_THEME]/components/`
+2. Check project's component directory: `components/`
 3. Review shadcn/ui available components
 4. Only create new components if existing ones cannot be composed or extended
 
@@ -262,23 +262,20 @@ function MyComponent() {
 **When working on a project USING the core:**
 - ❌ You CANNOT modify anything in `core/` directory
 - ❌ You CANNOT modify anything in `plugins/` directory
-- ✅ You MUST work within the active theme: `contents/themes/[ACTIVE_THEME]/`
+- ✅ You MUST work within the project: `./`
 - ✅ You CAN create theme-specific components, pages, and styles
 - ⚠️ If you encounter core limitations, propose improvements to the user (only if they make sense as generic functionality)
 
 **Directory structure awareness:**
 ```
-core/                    # ❌ Read-only in theme projects
-  components/
-  lib/
-contents/
-  themes/
-    [ACTIVE_THEME]/       # ✅ Your workspace in theme projects
-      components/
-      templates/
-      styles/
-  plugins/               # ❌ Read-only in theme projects
-app/                     # ❌ Read-only in theme projects (core only)
+node_modules/@nextsparkjs/core/ # ❌ Installed framework code is read-only
+components/                    # ✅ Project-owned UI
+config/                        # ✅ Project-owned configuration
+entities/                      # ✅ Project-owned entity definitions
+plugins/                       # ✅ Project-local plugins
+styles/                        # ✅ Project-owned styles
+templates/                     # ✅ Project route templates
+src/app/                       # ❌ Generated host adapter; change sources/generator
 ```
 
 ### 4. Session Scope Awareness
@@ -289,7 +286,7 @@ At the start of task:execute, scope is documented in `context.md` showing allowe
 ```markdown
 **Allowed Paths:**
 - `.claude/sessions/**/*` (always allowed)
-- `contents/themes/default/**/*` (if theme: "default")
+- `**/*` (if theme: "default")
 - etc.
 ```
 
@@ -300,7 +297,7 @@ At the start of task:execute, scope is documented in `context.md` showing allowe
 - See `.rules/scope.md` for complete scope enforcement rules
 
 **Common scenarios:**
-- `theme: "default"` → You can only modify files in `contents/themes/default/**/*`
+- `theme: "default"` → You can only modify files in `**/*`
 - `core: false` → You CANNOT modify files in `core/**/*`, `app/**/*`, or `scripts/**/*`
 - If you discover you need to modify core, document this as a blocker in context.md
 
@@ -363,7 +360,7 @@ function MyComponent() {
 }
 ```
 
-**For THEME project components** (when `scope.theme: "themeName"`):
+**For THEME project components** (when `scope.project: "themeName"`):
 ```typescript
 // ✅ CORRECT - Import sel from theme's selectors.ts
 import { sel } from '@theme/tests/cypress/src/selectors'
@@ -415,9 +412,9 @@ function EntityRow({ id, slug }: { id: string; slug: string }) {
    }
    ```
 
-3. **For THEME scope (`scope.theme: "themeName"`):**
+3. **For PROJECT scope (`scope.project: "themeName"`):**
    ```typescript
-   // Add to contents/themes/{theme}/tests/cypress/src/selectors.ts
+   // Add to tests/cypress/src/selectors.ts
    import { createSelectorHelpers } from '@/core/lib/test/selector-factory'
    import { CORE_SELECTORS } from '@/core/lib/test/core-selectors'
 
@@ -664,7 +661,7 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL
 
 ### Step 1: Understand Context
 1. Identify if working on core project or theme project
-2. Determine active theme if applicable
+2. Determine project if applicable
 3. Review task requirements and user goals
 4. Check `.rules/` for relevant patterns (components.md, i18n.md, performance.md)
 
@@ -672,7 +669,7 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL
 1. Search existing components in order:
    - `app/components/ui/` (shadcn/ui base)
    - `core/components/` (shared core components)
-   - `contents/themes/[ACTIVE_THEME]/components/` (theme-specific)
+   - `components/` (theme-specific)
 2. Evaluate if existing components can be composed or extended
 3. Decide: reuse, compose, or create new
 
@@ -726,7 +723,7 @@ pnpm build
 - Client-only code in server components ('use client' directive missing)
 - Server-only code in client components
 - Invalid dynamic imports (see `.rules/dynamic-imports.md`)
-- Registry access violations (imports from `@/contents`)
+- Registry access violations (runtime imports that bypass generated registries)
 - Missing translation keys causing build warnings
 - CSS/Tailwind class conflicts
 
@@ -750,7 +747,7 @@ pnpm build
 
 1. **Question suboptimal approaches**: If a requirement seems to compromise performance, accessibility, or maintainability, propose better alternatives with clear reasoning
 
-2. **Core limitation encountered (theme projects only)**:
+2. **Core limitation encountered (root-first projects only)**:
    - Assess if limitation is fundamental or workaround exists
    - If fundamental AND makes sense as generic functionality:
      - Clearly explain the limitation
@@ -793,7 +790,7 @@ Your responses should:
 
 Before completing any task, verify:
 - [ ] Project context determined (core vs theme)
-- [ ] No prohibited core modifications in theme projects
+- [ ] No prohibited core modifications in root-first projects
 - [ ] Relevant .rules/ files loaded and followed
 - [ ] Existing components searched before creating new ones
 - [ ] All text uses translations (ZERO hardcoded strings)
@@ -815,7 +812,7 @@ Before completing any task, verify:
   - Theme project: `@theme/tests/cypress/src/selectors`
 - [ ] New selectors added to correct location BEFORE using:
   - Core scope: `core/lib/test/core-selectors.ts`
-  - Theme scope: `contents/themes/{theme}/tests/cypress/src/selectors.ts`
+  - Project scope: `tests/cypress/src/selectors.ts`
 - [ ] Dynamic selectors use proper placeholder syntax: `sel('path', { id, slug })`
 - [ ] New selectors documented in session `tests.md` with location (CORE/THEME)
 

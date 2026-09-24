@@ -29,10 +29,10 @@ async function createProject() {
 }
 
 async function writeThemeTemplate(root, relativePath, content) {
-  const absolutePath = join(root, 'contents/themes/testtheme/templates', relativePath)
+  const absolutePath = join(root, 'templates', relativePath)
   await mkdir(dirname(absolutePath), { recursive: true })
   await writeFile(absolutePath, content, 'utf8')
-  return `@/contents/themes/testtheme/templates/${relativePath}`
+  return `@/templates/${relativePath}`
 }
 
 /**
@@ -66,7 +66,7 @@ test('the server registry takes the default export from the analysis, not from t
 
     assert.match(
       out,
-      /component: lazyTemplate\('app\/docs\/layout\.tsx', \(\) => import\('@\/contents\/themes\/testtheme\/templates\/docs\/layout'\)\)/
+      /component: lazyTemplate\('app\/docs\/layout\.tsx', \(\) => import\('@\/templates\/docs\/layout'\)\)/
     )
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -80,7 +80,7 @@ test('the client registry takes the default export from the analysis, not from t
 
     const out = await generateTemplateRegistryClient([template], config, analysis)
 
-    assert.match(out, /'app\/docs\/layout\.tsx': dynamic\(\(\) => import\('@\/contents\/themes\/testtheme\/templates\/docs\/layout'\)\)/)
+    assert.match(out, /'app\/docs\/layout\.tsx': dynamic\(\(\) => import\('@\/templates\/docs\/layout'\)\)/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -93,8 +93,8 @@ test('the page generator takes the default export and route-level exports from t
 
     await generateMissingPages([template], config, analysis)
 
-    const generated = await readFile(join(root, 'app/(templates)/docs/layout.tsx'), 'utf8')
-    assert.match(generated, /import TemplateComponent from '@\/contents\/themes\/testtheme\/templates\/docs\/layout'/)
+    const generated = await readFile(join(root, 'src/app/(templates)/docs/layout.tsx'), 'utf8')
+    assert.match(generated, /import TemplateComponent from '@\/templates\/docs\/layout'/)
     assert.match(generated, /export \{ viewport \} from/)
     assert.doesNotMatch(generated, /Pass-through component/)
   } finally {
@@ -123,7 +123,7 @@ test('the page generator takes whether to write a route file from the analysis, 
 
     await generateMissingPages([template], { projectRoot: root }, analysis)
 
-    assert.equal(existsSync(join(root, 'app/(templates)/pricing/page.tsx')), false)
+    assert.equal(existsSync(join(root, 'src/app/(templates)/pricing/page.tsx')), false)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
