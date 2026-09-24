@@ -1,9 +1,9 @@
 /**
- * Themes and plugins are copied into a project as workspace packages, and
- * `nextspark add:theme` / `add:plugin` install what their package.json declares.
- * A module one of them loads without declaring it, from code or from CSS,
- * resolves only where some other package happens to be hoisted, which a pnpm
- * project does not do: the page or the stylesheet loading it fails to build.
+ * The repository's root-first development project and every plugin package
+ * must declare what their code and styles load. A module they load without
+ * declaring it resolves only when another package happens to provide it,
+ * which a clean pnpm install does not guarantee: the page or stylesheet fails
+ * to build.
  * And an @nextsparkjs range that does not admit the release's own prereleases
  * produces a lockfile that fails `pnpm install --frozen-lockfile`.
  */
@@ -13,6 +13,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { builtinModules } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import { globSync } from 'glob'
 import ts from 'typescript'
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
@@ -24,7 +25,7 @@ const BUILD_ALIASES = new Set(['@nextsparkjs/registries'])
  * resolves them from the project root whether or not it declares them.
  */
 const PROJECT_DEPENDENCIES = new Set(['@nextsparkjs/core', 'tailwindcss'])
-const SKIPPED_DIRS = new Set(['node_modules', '.next', 'dist', 'tests', 'test', '__tests__', 'cypress'])
+const SKIPPED_DIRS = new Set(['node_modules', '.next', '.nextspark', 'dist', 'tests', 'test', '__tests__', 'cypress'])
 const TOOLING_FILE = /(^jest\.(config|setup)\.|\.(test|spec|cy)\.[cm]?[jt]sx?$)/
 const SCRIPT_FILE = /\.[cm]?[jt]sx?$/
 const STYLE_FILE = /\.css$/
@@ -42,24 +43,34 @@ const PACKAGE_NAME = /^(@[a-z0-9._~-]+\/)?[a-z0-9._~-]+$/i
 
 interface Manifest {
   dir: string
+  skippedDirs?: Set<string>
+  projectDependencies?: Set<string>
   dependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
   devDependencies?: Record<string, string>
 }
 
 function packages(): Manifest[] {
-  return ['themes', 'plugins'].flatMap(group =>
-    fs.readdirSync(path.join(REPO, group))
-      .map(entry => path.join(REPO, group, entry))
+  const pluginDirs = ['apps/dev/plugins/*', 'plugins/*'].flatMap(pattern =>
+    globSync(pattern, { cwd: REPO, absolute: true, onlyDirectories: true })
       .filter(dir => fs.existsSync(path.join(dir, 'package.json')))
-      .map(dir => ({ dir, ...JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')) }))
   )
+  const projectDir = path.join(REPO, 'apps/dev')
+  return [
+    {
+      dir: projectDir,
+      skippedDirs: new Set([...SKIPPED_DIRS, 'plugins', 'src']),
+      projectDependencies: new Set(),
+      ...JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf8')),
+    },
+    ...pluginDirs.map(dir => ({ dir, projectDependencies: PROJECT_DEPENDENCIES, ...JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')) })),
+  ]
 }
 
-function sourceFiles(dir: string): string[] {
+function sourceFiles(dir: string, skippedDirs = SKIPPED_DIRS): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
     const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) return SKIPPED_DIRS.has(entry.name) ? [] : sourceFiles(full)
+    if (entry.isDirectory()) return skippedDirs.has(entry.name) ? [] : sourceFiles(full, skippedDirs)
     if (TOOLING_FILE.test(entry.name)) return []
     return SCRIPT_FILE.test(entry.name) || STYLE_FILE.test(entry.name) ? [full] : []
   })
@@ -139,11 +150,11 @@ export function specifiersOf(text: string, style: boolean): string[] {
 }
 
 /** The package a bare specifier names, or null for a path, a URL, an alias or a Node builtin. */
-function packageName(specifier: string): string | null {
+function packageName(specifier: string, projectDependencies = PROJECT_DEPENDENCIES): string | null {
   if (/^[./~]|^@\/|^[a-z]+:/i.test(specifier)) return null
   const name = specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/') : specifier.split('/')[0]
   if (!PACKAGE_NAME.test(name)) return null
-  return builtinModules.includes(name) || BUILD_ALIASES.has(name) || PROJECT_DEPENDENCIES.has(name) ? null : name
+  return builtinModules.includes(name) || BUILD_ALIASES.has(name) || projectDependencies.has(name) ? null : name
 }
 
 test('the scanner sees every way a file loads a package, and nothing a comment or a string says', () => {
@@ -180,14 +191,14 @@ test('the scanner sees every way a file loads a package, and nothing a comment o
   assert.deepEqual(specifiersOf(code, false).sort(), ['pkg-dynamic', 'pkg-resolve', 'pkg-type'])
 })
 
-test('themes and plugins declare every package their code and styles load', () => {
+test('the project and plugins declare every package their code and styles load', () => {
   const undeclared: string[] = []
   for (const pkg of packages()) {
-    const declared = new Set(Object.keys({ ...pkg.dependencies, ...pkg.peerDependencies }))
+    const declared = new Set(Object.keys({ ...pkg.dependencies, ...pkg.peerDependencies, ...pkg.devDependencies }))
     const seen = new Set<string>()
-    for (const file of sourceFiles(pkg.dir)) {
+    for (const file of sourceFiles(pkg.dir, pkg.skippedDirs)) {
       for (const specifier of specifiersOf(fs.readFileSync(file, 'utf8'), STYLE_FILE.test(file))) {
-        const name = packageName(specifier)
+        const name = packageName(specifier, pkg.projectDependencies)
         if (!name || declared.has(name) || seen.has(name)) continue
         seen.add(name)
         undeclared.push(`${path.relative(REPO, pkg.dir)} loads ${name} (${path.relative(pkg.dir, file)})`)
@@ -197,7 +208,7 @@ test('themes and plugins declare every package their code and styles load', () =
   assert.deepEqual(undeclared, [])
 })
 
-test('@nextsparkjs ranges in themes and plugins admit the release they ship in', () => {
+test('@nextsparkjs ranges in the project and plugins admit the release they ship in', () => {
   const { version } = JSON.parse(fs.readFileSync(path.join(REPO, 'packages/core/package.json'), 'utf8'))
   // A range admits prereleases only for its own X.Y.Z, so it follows the
   // release's; scripts/packages/version.sh rewrites it when the version moves.
@@ -228,4 +239,16 @@ test('the lockfile records the @nextsparkjs ranges the manifests declare', () =>
     }
   }
   assert.deepEqual(stale, [])
+})
+
+test('every project-local plugin is a workspace member', () => {
+  const localPlugins = globSync('apps/dev/plugins/*/package.json', { cwd: REPO })
+    .map(manifest => path.dirname(manifest))
+    .sort()
+  const workspacePatterns = fs.readFileSync(path.join(REPO, 'pnpm-workspace.yaml'), 'utf8')
+    .split('\n')
+    .map(line => line.match(/^\s*-\s*['"]([^'"]+)['"]/)?.[1])
+    .filter((pattern): pattern is string => Boolean(pattern))
+  const workspaceDirs = new Set(workspacePatterns.flatMap(pattern => globSync(pattern, { cwd: REPO, onlyDirectories: true })))
+  assert.deepEqual(localPlugins.filter(dir => !workspaceDirs.has(dir)), [])
 })

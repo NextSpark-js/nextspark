@@ -1,6 +1,7 @@
 packages:
   - 'packages/*'
   - 'apps/dev'          # Explicit - only dev app
+  - 'apps/dev/plugins/*'
   - 'plugins/*'
   # apps/mobile is intentionally OUTSIDE the pnpm workspace
   # to avoid conflicts with Tailwind v4 and other web dependencies
