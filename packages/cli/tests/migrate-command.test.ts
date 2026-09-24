@@ -351,18 +351,22 @@ test('migrate without --dry-run explains that the moving slice is not available'
 
 async function moveFixture({
   monorepo = false,
-  unknown = false,
   collision = false,
   middleware = 'export function middleware() { return undefined }\n',
   duplicateImport = false,
   unknownReference = false,
+  brokenImport = false,
+  preexistingBrokenImport = false,
+  aliases = false,
 }: {
   monorepo?: boolean
-  unknown?: boolean
   collision?: boolean
   middleware?: string
   duplicateImport?: boolean
   unknownReference?: boolean
+  brokenImport?: boolean
+  preexistingBrokenImport?: boolean
+  aliases?: boolean
 } = {}): Promise<{ root: string, host: string }> {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-move-'))
   await startRepository(root)
@@ -372,8 +376,14 @@ async function moveFixture({
   await write(root, atHost('next.config.mjs'), 'export default {}\n')
   await write(root, atHost('nextspark.config.ts'), "export default { theme: 'acme', plugins: ['local'] }\n")
   await write(root, atHost('.env.example'), 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
-  await write(root, atHost('tsconfig.json'), '{"include":["contents/themes/acme/**/*.ts"],"compilerOptions":{"paths":{"@/*":["contents/themes/acme/*"]}}}\n')
-  await write(root, atHost('tsconfig.cypress.json'), '{"include":["contents/themes/acme/tests/cypress/**/*.ts"]}\n')
+  const tsconfigPaths = aliases
+    ? { '@/*': ['./*'], '@/contents/*': ['./contents/*'], '@/themes/*': ['./contents/themes/*'], '@/plugins/*': ['./contents/plugins/*'], '@legacy-theme/*': ['./contents/themes/acme/*'] }
+    : { '@/*': ['contents/themes/acme/*'] }
+  const cypressPaths = aliases
+    ? { '@/*': ['./*'], '@cypress-theme/*': ['./contents/themes/acme/*'] }
+    : undefined
+  await write(root, atHost('tsconfig.json'), `${JSON.stringify({ include: ['contents/themes/acme/**/*.ts'], compilerOptions: { paths: tsconfigPaths } })}\n`)
+  await write(root, atHost('tsconfig.cypress.json'), `${JSON.stringify({ include: ['contents/themes/acme/tests/cypress/**/*.ts'], compilerOptions: cypressPaths ? { paths: cypressPaths } : {} })}\n`)
   await write(root, atHost('pnpm-workspace.yaml'), "packages:\n  - 'contents/themes/*'\n  - 'contents/plugins/*'\n")
   await write(root, atHost('.gitignore'), 'contents/themes/acme/tests/output\n')
   await write(root, atHost('scripts/check.mjs'), "const theme = '../../../contents/themes/acme'\n")
@@ -381,17 +391,24 @@ async function moveFixture({
     ? "import { Icon } from './Icon'\nexport const Button = Icon\n"
     : unknownReference
       ? "import notes from '../docs/notes'\nexport const loadNotes = () => import(`../docs/notes`)\nexport const Button = notes\n"
-      : 'export const Button = true\n'
+      : brokenImport
+        ? "import missing from '../app/missing'\nconst resolved = require.resolve('../app/missing')\nexport const Button = missing ?? resolved\n"
+        : preexistingBrokenImport
+          ? "import missing from '../missing'\nexport const Button = missing\n"
+        : 'export const Button = true\n'
   await write(root, atHost('contents/themes/acme/components/Button.ts'), buttonSource)
   await write(root, atHost('contents/themes/acme/templates/page.tsx'), "import { Button } from '../components/Button'\nexport default Button\n")
-  await write(root, atHost('contents/themes/acme/styles/globals.css'), '@import "../components/Button.css";\n')
+  await write(root, atHost('contents/themes/acme/styles/globals.css'), brokenImport ? '@import url("../app/missing.css");\n' : '@import "../components/Button.css";\n')
   await write(root, atHost('contents/themes/acme/components/Button.css'), '.button {}\n')
   await write(root, atHost('contents/themes/acme/tests/jest.config.cjs'), "module.exports = { rootDir: '../../../../' }\n")
   await write(root, atHost('contents/themes/acme/middleware.ts'), middleware)
   await write(root, atHost('contents/themes/acme/lib/use-hook.ts'), "import { middleware } from '../middleware'\nexport { middleware }\n")
   await write(root, atHost('contents/plugins/local/index.ts'), "export { default as Plugin } from '@/contents/plugins/local/Plugin'\n")
   await write(root, atHost('contents/plugins/local/Plugin.ts'), 'export default true\n')
-  if (unknown) await write(root, atHost('contents/themes/acme/keep-me.txt'), 'user-owned unknown\n')
+  if (aliases) {
+    await write(root, atHost('contents/themes/acme/tests/alias-imports.ts'), "import { Button as themeButton } from '@/themes/acme/components/Button'\nimport plugin from '@/plugins/local/Plugin'\nimport { Button as customButton } from '@legacy-theme/components/Button'\nexport { themeButton, plugin, customButton }\n")
+    await write(root, atHost('contents/themes/acme/tests/cypress/alias-imports.cy.ts'), "import { Button } from '@cypress-theme/components/Button'\nexport { Button }\n")
+  }
   if (duplicateImport) {
     await write(root, atHost('contents/themes/acme/components/Icon.ts'), 'export const Icon = true\n')
     await write(root, atHost('components/Icon.ts'), 'export const Icon = true\n')
@@ -399,6 +416,10 @@ async function moveFixture({
   if (unknownReference) {
     await write(root, atHost('contents/themes/acme/docs/notes.ts'), 'export default "notes"\n')
     await write(root, atHost('scripts/read-notes.mjs'), "const notes = '@/contents/themes/acme/docs/notes.ts'\n")
+  }
+  if (brokenImport) {
+    await write(root, atHost('contents/themes/acme/app/missing.ts'), 'export default true\n')
+    await write(root, atHost('contents/themes/acme/app/missing.css'), '.missing {}\n')
   }
   if (collision) {
     await write(root, atHost('contents/themes/acme/public/same.txt'), 'same\n')
@@ -444,6 +465,19 @@ async function symlinkedMoveFixture(link: 'themes' | 'plugins'): Promise<{ root:
   }
 }
 
+async function customRootDirectoriesFixture(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-custom-roots-'))
+  await startRepository(root)
+  await write(root, 'package.json', JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '^16.0.0' } }))
+  await write(root, 'next.config.mjs', 'export default {}\n')
+  await write(root, '.env.example', 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
+  await write(root, 'contents/themes/acme/services/load.ts', "import { run } from '@/contents/themes/acme/workers/run'\nexport const load = run\n")
+  await write(root, 'contents/themes/acme/hooks/use-run.ts', "import { run } from '../workers/run'\nexport const useRun = run\n")
+  await write(root, 'contents/themes/acme/workers/run.ts', 'export const run = true\n')
+  await commitFixture(root)
+  return root
+}
+
 test('migrate --yes moves an intact legacy project and rewrites its source and tooling', async () => {
   const { root } = await moveFixture()
   try {
@@ -469,6 +503,92 @@ test('migrate --yes moves an intact legacy project and rewrites its source and t
     assert.match(await readFile(join(root, 'tests/jest.config.cjs'), 'utf8'), /rootDir: '\.\.'/)
     assert.equal((await lstat(join(root, 'contents/themes'))).isDirectory(), true)
     assert.equal((await lstat(join(root, 'contents/plugins'))).isDirectory(), true)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate moves explicit and custom top-level source directories and rewrites their imports', async () => {
+  const root = await customRootDirectoriesFixture()
+  try {
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /legacy contents\/ imports in moved output: 0/)
+    assert.equal(await readFile(join(root, 'services/load.ts'), 'utf8'), "import { run } from '@/workers/run'\nexport const load = run\n")
+    assert.equal(await readFile(join(root, 'hooks/use-run.ts'), 'utf8'), "import { run } from '../workers/run'\nexport const useRun = run\n")
+    assert.equal(await readFile(join(root, 'workers/run.ts'), 'utf8'), 'export const run = true\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate derives legacy theme and plugin aliases from every project tsconfig', async () => {
+  const { root } = await moveFixture({ aliases: true })
+  try {
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(
+      await readFile(join(root, 'tests/alias-imports.ts'), 'utf8'),
+      "import { Button as themeButton } from '@/components/Button'\nimport plugin from '@/plugins/local/Plugin'\nimport { Button as customButton } from '@/components/Button'\nexport { themeButton, plugin, customButton }\n",
+    )
+    assert.equal(await readFile(join(root, 'tests/cypress/alias-imports.cy.ts'), 'utf8'), "import { Button } from '@/components/Button'\nexport { Button }\n")
+    const tsconfig = JSON.parse(await readFile(join(root, 'tsconfig.json'), 'utf8'))
+    assert.deepEqual(tsconfig.compilerOptions.paths, { '@/*': ['./*'], '@/contents/*': ['./contents/*'] })
+    const cypress = JSON.parse(await readFile(join(root, 'tsconfig.cypress.json'), 'utf8'))
+    assert.deepEqual(cypress.compilerOptions.paths, { '@/*': ['./*'] })
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+for (const legacyTargetExists of [false, true]) {
+  test(`migrate does not apply a nested tsconfig alias to an unrelated host import${legacyTargetExists ? ' when the corrupted target exists' : ''}`, async () => {
+    const { root } = await moveFixture()
+    try {
+      await write(root, 'tsconfig.json', JSON.stringify({ compilerOptions: { paths: { '@/*': ['./*'] } } }))
+      await write(root, 'lib/consumer.ts', "import { helper } from '@/lib/helper'\nexport const consumer = helper\n")
+      await write(root, 'lib/helper.ts', 'export const helper = true\n')
+      await write(root, 'contents/themes/acme/widgets/tsconfig.json', JSON.stringify({ compilerOptions: { paths: { '@/*': ['./src/*'] } } }))
+      if (legacyTargetExists) await write(root, 'contents/themes/acme/widgets/src/lib/helper.ts', 'export const helper = false\n')
+      await commitFixture(root)
+
+      const result = run(root, ['--yes'])
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+      assert.equal(await readFile(join(root, 'lib/consumer.ts'), 'utf8'), "import { helper } from '@/lib/helper'\nexport const consumer = helper\n")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+}
+
+test('migrate reads JSONC aliases through relative and package extends chains using the defining config baseUrl', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'tsconfig.json', '{\n  // TypeScript permits comments and trailing commas here.\n  "extends": "@fixture/tsconfig/base.json",\n}\n')
+    await write(root, 'node_modules/@fixture/tsconfig/base.json', '{ "extends": "../../../config/base.json" }\n')
+    await write(root, 'config/base.json', JSON.stringify({ compilerOptions: { baseUrl: '..', paths: { '@legacy/*': ['contents/themes/acme/*'] } } }))
+    await write(root, 'contents/themes/acme/tests/extends-alias.ts', "import { Button } from '@legacy/components/Button'\nexport { Button }\n")
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'tests/extends-alias.ts'), 'utf8'), "import { Button } from '@/components/Button'\nexport { Button }\n")
+    const base = JSON.parse(await readFile(join(root, 'config/base.json'), 'utf8'))
+    assert.deepEqual(base.compilerOptions.paths, {})
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate names an unparseable tsconfig in its alias report instead of silently skipping it', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'tsconfig.invalid.json', '{ // missing closing brace\n  "compilerOptions": {\n')
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /Alias configuration warnings/)
+    assert.match(result.stdout, /tsconfig\.invalid\.json/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -531,32 +651,65 @@ test('migrate resolves relative imports of byte-identical duplicates to the exis
   }
 })
 
-test('migrate preserves references to unknown files and fixes moved files imports back to them', async () => {
+test('migrate moves the recognized docs root and rewrites imports to it', async () => {
   const { root } = await moveFixture({ unknownReference: true })
   try {
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
-    assert.equal(await readFile(join(root, 'scripts/read-notes.mjs'), 'utf8'), "const notes = '@/contents/themes/acme/docs/notes.ts'\n")
+    assert.equal(await readFile(join(root, 'scripts/read-notes.mjs'), 'utf8'), "const notes = '@/docs/notes.ts'\n")
     const button = await readFile(join(root, 'components/Button.ts'), 'utf8')
-    assert.match(button, /from '\.\.\/contents\/themes\/acme\/docs\/notes'/)
-    assert.match(button, /import\(`\.\.\/contents\/themes\/acme\/docs\/notes`\)/)
-    assert.equal(await readFile(join(root, 'contents/themes/acme/docs/notes.ts'), 'utf8'), 'export default "notes"\n')
+    assert.match(button, /from '\.\.\/docs\/notes'/)
+    assert.match(button, /import\(`\.\.\/docs\/notes`\)/)
+    assert.equal(await readFile(join(root, 'docs/notes.ts'), 'utf8'), 'export default "notes"\n')
   } finally {
     await rm(root, { recursive: true, force: true })
   }
 })
 
-test('migrate preserves unknown files and verifies byte-identical collisions without deleting host source', async () => {
-  const { root } = await moveFixture({ unknown: true, collision: true })
+test('migrate stops before writes on a different-content host collision', async () => {
+  const { root } = await moveFixture({ collision: true })
+  try {
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /Refusing to overwrite different host files: README\.md/)
+    assert.doesNotMatch(result.stdout, /Migration complete/)
+    assert.equal(await readFile(join(root, 'public/same.txt'), 'utf8'), 'same\n')
+    assert.equal(await readFile(join(root, 'contents/themes/acme/public/same.txt'), 'utf8'), 'same\n')
+    assert.equal(await readFile(join(root, 'README.md'), 'utf8'), 'host README\n')
+    assert.equal(await readFile(join(root, 'contents/themes/acme/README.md'), 'utf8'), 'theme README\n')
+    await assert.rejects(access(join(root, 'components/Button.ts')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate ends non-zero and lists a moved file import whose reserved target was not moved', async () => {
+  const { root } = await moveFixture({ brokenImport: true })
+  try {
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    assert.doesNotMatch(result.stdout, /Migration complete/)
+    assert.match(result.stdout, /MIGRATION FAILED: migration introduced broken imports/)
+    assert.match(result.stdout, /components\/Button\.ts:1 → \.\.\/app\/missing/)
+    assert.match(result.stdout, /components\/Button\.ts:2 → \.\.\/app\/missing/)
+    assert.match(result.stdout, /styles\/globals\.css:1 → \.\.\/app\/missing\.css/)
+    const tsconfig = JSON.parse(await readFile(join(root, 'tsconfig.json'), 'utf8'))
+    assert.deepEqual(tsconfig.compilerOptions.paths, { '@/*': ['contents/themes/acme/*'] })
+    await access(join(root, 'components/Button.ts'))
+    await access(join(root, 'contents/themes/acme/app/missing.ts'))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate reports broken imports that predate the move as warnings and exits zero', async () => {
+  const { root } = await moveFixture({ preexistingBrokenImport: true })
   try {
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
-    assert.match(result.stdout, /keep-me\.txt/)
-    assert.equal(await readFile(join(root, 'contents/themes/acme/keep-me.txt'), 'utf8'), 'user-owned unknown\n')
-    assert.equal(await readFile(join(root, 'public/same.txt'), 'utf8'), 'same\n')
-    await assert.rejects(readFile(join(root, 'contents/themes/acme/public/same.txt'), 'utf8'))
-    assert.equal(await readFile(join(root, 'README.md'), 'utf8'), 'host README\n')
-    assert.equal(await readFile(join(root, 'contents/themes/acme/README.md'), 'utf8'), 'theme README\n')
+    assert.match(result.stdout, /Migration complete/)
+    assert.match(result.stdout, /WARNING: migration completed; these imports were already broken before migration \(exit 0\)/)
+    assert.match(result.stdout, /components\/Button\.ts:1 → \.\.\/missing/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

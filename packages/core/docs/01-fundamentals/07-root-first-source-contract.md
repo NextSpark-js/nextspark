@@ -38,14 +38,19 @@ my-project/
 │       ├── proxy.ts             # optional project request hook
 │       └── instrumentation.ts   # optional project instrumentation hook
 ├── entities/                    # project entity definitions
+├── hooks/                       # project React and application hooks
 ├── lib/                         # project services and other application code
 ├── messages/                    # project translations
 ├── migrations/                  # project-owned migration history
 ├── plugins/                     # local runtime plugins, one directory per plugin
 ├── public/                      # project static assets
+├── services/                    # project service modules
+├── scripts/                     # project-owned helper scripts
 ├── styles/                      # project styles, including globals.css
 ├── templates/                   # page, layout and route-template source
 ├── tests/                       # project tests and fixtures
+├── docs/                        # project documentation and documentation source
+├── about/                       # project-owned about content
 │
 ├── src/
 │   └── app/                     # GENERATED Next.js adapter; never edit
@@ -139,7 +144,17 @@ Project-template source may not provide these names at the project root:
 | `src/` | Reserved for generated host integration, beginning with `src/app/`. Project modules use the named root directories. |
 | `next.config.*` | Single host integration file. Template copies are not project source; migration must preserve and report existing host customizations for explicit integration. |
 
-The migration command must report every reserved-name collision before writing and use an explicit rename table. It must not copy a theme's `middleware.ts`, `proxy.ts`, `instrumentation.ts`, `app/`, `pages/`, `src/`, or `next.config.*` directly to the project root.
+## Migration source extraction
+
+The named directories in the layout are recognized project source roots. In particular, `services/`, `hooks/`, `scripts/`, `docs/`, and `about/` are recognized alongside the original named roots.
+
+The migration is intentionally not a fixed-root allowlist: it moves every top-level theme directory and file to the same path under the project root, including a project-specific directory that is not named above. The exceptions are only the reserved project-root names in the table above. The explicit reserved-name mapping is:
+
+- `middleware.*` and `proxy.*` move to `config/hooks/proxy.*`; the migrated module must export the named `proxyHook` hook.
+- `instrumentation.*` moves to `config/hooks/instrumentation.*`.
+- `app/`, `pages/`, `src/`, and `next.config.*` are reported and are never copied directly to the project root.
+
+Before writing, the migration reports reserved-name exceptions and its move plan. It stops without changing the tree if a destination already exists with different bytes; byte-identical source/destination pairs are verified and deduplicated. It must never delete a source it has not recognized as owned by the migration.
 
 ## Precedence and ownership
 

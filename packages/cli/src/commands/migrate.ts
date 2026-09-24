@@ -500,11 +500,12 @@ function collisions(hostRoot: string, themeDirectory: string | null): MigrateRep
   const fileCollisions: { path: string; identical: boolean }[] = [];
   for (const file of filesIn(themeDirectory)) {
     const themePath = pathFrom(themeDirectory, file);
-    const first = themePath.split('/')[0];
-    if (['app', 'pages', 'src'].includes(first)) reserved.push({ path: `${first}/`, reason: 'Next reserves this root directory' });
-    else if (/^(?:middleware|proxy|instrumentation)(?:\..+)?$/.test(first)) reserved.push({ path: first, reason: 'Next reserves this root file name' });
-    else if (/^next\.config\..+$/.test(first)) reserved.push({ path: first, reason: 'Next reserves next.config.* at the root' });
-    const destination = join(hostRoot, themePath);
+    const hook = hookDestination(hostRoot, themePath);
+    const reservation = reservedThemePath(themePath);
+    if (hook) reserved.push({ path: themePath, reason: 'Next reserves this root file name; migration maps it to config/hooks/' });
+    else if (reservation) reserved.push(reservation);
+    const destination = themeDestination(hostRoot, themePath);
+    if (!destination) continue;
     if (existsSync(destination) && statSync(destination).isFile()) {
       fileCollisions.push({ path: themePath, identical: readFileSync(file).equals(readFileSync(destination)) });
     }
@@ -658,10 +659,6 @@ function printReport(report: MigrateReport): void {
   if (report.warnings.length > 0) section('Warnings', report.warnings.map(warning => `⚠ ${warning}`));
 }
 
-const projectSourceRoots = new Set([
-  'api', 'blocks', 'components', 'config', 'entities', 'lib', 'messages', 'migrations', 'public', 'styles', 'templates', 'tests',
-]);
-
 interface PlannedMove {
   source: string;
   destination: string;
@@ -672,54 +669,374 @@ interface MovePlan {
   moves: PlannedMove[];
   duplicates: PlannedMove[];
   collisions: PlannedMove[];
-  unknown: string[];
+  reserved: { path: string; reason: string }[];
   unmoved: string[];
 }
 
+interface LegacyPathAlias {
+  key: string;
+  target: string;
+  baseUrl: string;
+}
+
+interface TsconfigPathAliases {
+  file: string;
+  directory: string;
+  aliases: LegacyPathAlias[];
+  /** Path targets defined in this file that become legacy after this move. */
+  deadTargets: Map<string, Set<number>>;
+  include: string[] | null;
+  exclude: string[];
+  files: string[] | null;
+}
+
+interface AliasCatalog {
+  configs: Map<string, TsconfigPathAliases>;
+  warnings: string[];
+}
+
 function hookDestination(hostRoot: string, relativePath: string): string | null {
+  if (relativePath.includes('/')) return null;
   const name = basename(relativePath);
   if (/^(?:middleware|proxy)\.[^.]+$/.test(name)) return join(hostRoot, 'config', 'hooks', `proxy.${name.split('.').slice(1).join('.')}`);
   if (/^instrumentation\.[^.]+$/.test(name)) return join(hostRoot, 'config', 'hooks', `instrumentation.${name.split('.').slice(1).join('.')}`);
   return null;
 }
 
+function reservedThemePath(relativePath: string): { path: string; reason: string } | null {
+  const first = relativePath.split('/')[0];
+  if (['app', 'pages', 'src'].includes(first)) return { path: `${first}/`, reason: 'Next reserves this root directory' };
+  if (/^next\.config\.[^.]+$/.test(first)) return { path: first, reason: 'Next reserves next.config.* at the root' };
+  return null;
+}
+
 function themeDestination(hostRoot: string, relativePath: string): string | null {
   const hook = hookDestination(hostRoot, relativePath);
   if (hook) return hook;
-  if (projectSourceRoots.has(relativePath.split('/')[0])) return join(hostRoot, relativePath);
-  return null;
+  if (reservedThemePath(relativePath)) return null;
+  // Project source is root-first: named roots document common surfaces, while
+  // every non-reserved top-level file or directory remains project-owned.
+  return join(hostRoot, relativePath);
 }
 
 function planMove(hostRoot: string, themeRoot: string, pluginsRoot: string): MovePlan {
   const moves: PlannedMove[] = [];
   const duplicates: PlannedMove[] = [];
   const collisions: PlannedMove[] = [];
-  const unknown: string[] = [];
+  const reserved: { path: string; reason: string }[] = [];
   const unmoved: string[] = [];
+  const plannedByDestination = new Map<string, PlannedMove>();
   const add = (source: string, destination: string, kind: PlannedMove['kind']) => {
     const item = { source, destination, kind };
+    const prior = plannedByDestination.get(destination);
+    if (prior) {
+      if (readFileSync(source).equals(readFileSync(prior.source))) duplicates.push(item);
+      else {
+        collisions.push(item);
+        unmoved.push(source);
+      }
+      return;
+    }
     if (!existsSync(destination)) moves.push(item);
     else if (statSync(destination).isFile() && readFileSync(source).equals(readFileSync(destination))) duplicates.push(item);
     else {
       collisions.push(item);
       unmoved.push(source);
     }
+    plannedByDestination.set(destination, item);
   };
 
   for (const source of filesIn(themeRoot)) {
     const relativePath = pathFrom(themeRoot, source);
-    const destination = themeDestination(hostRoot, relativePath);
-    if (!destination) {
-      unknown.push(`contents/themes/${basename(themeRoot)}/${relativePath}`);
+    const reservation = reservedThemePath(relativePath);
+    if (reservation) {
+      reserved.push(reservation);
       unmoved.push(source);
+      continue;
     }
+    const destination = themeDestination(hostRoot, relativePath);
+    if (!destination) unmoved.push(source);
     else add(source, destination, 'theme');
   }
   for (const plugin of childDirectories(pluginsRoot)) {
     const root = join(pluginsRoot, plugin);
     for (const source of filesIn(root)) add(source, join(hostRoot, 'plugins', plugin, pathFrom(root, source)), 'plugin');
   }
-  return { moves, duplicates, collisions, unknown: unknown.sort(), unmoved };
+  const uniqueReserved = [...new Map(reserved.map(item => [item.path, item])).values()];
+  return { moves, duplicates, collisions, reserved: uniqueReserved.sort((left, right) => left.path.localeCompare(right.path)), unmoved };
+}
+
+/** Parse the JSONC form TypeScript accepts without loading its dev-only runtime package. */
+function parseJsonc(content: string): Record<string, unknown> | null {
+  let output = '';
+  let quote = '';
+  for (let index = 0; index < content.length; index++) {
+    const character = content[index];
+    if (quote) {
+      output += character;
+      if (character === '\\') output += content[++index] ?? '';
+      else if (character === quote) quote = '';
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      output += character;
+      continue;
+    }
+    if (character === '/' && content[index + 1] === '/') {
+      while (index < content.length && content[index] !== '\n') index++;
+      output += content[index] ?? '';
+      continue;
+    }
+    if (character === '/' && content[index + 1] === '*') {
+      index += 2;
+      while (index < content.length && !(content[index] === '*' && content[index + 1] === '/')) {
+        output += content[index] === '\n' ? '\n' : ' ';
+        index++;
+      }
+      index++;
+      continue;
+    }
+    output += character;
+  }
+  // JSONC permits a trailing comma before a closing object or array. Do this
+  // while tracking strings so a comma-shaped path inside a string is untouched.
+  let withoutTrailingCommas = '';
+  quote = '';
+  for (let index = 0; index < output.length; index++) {
+    const character = output[index];
+    if (quote) {
+      withoutTrailingCommas += character;
+      if (character === '\\') withoutTrailingCommas += output[++index] ?? '';
+      else if (character === quote) quote = '';
+      continue;
+    }
+    if (character === '"') {
+      quote = character;
+      withoutTrailingCommas += character;
+      continue;
+    }
+    if (character === ',') {
+      let next = index + 1;
+      while (/\s/.test(output[next] ?? '')) next++;
+      if (output[next] === '}' || output[next] === ']') continue;
+    }
+    withoutTrailingCommas += character;
+  }
+  try {
+    const value = JSON.parse(withoutTrailingCommas);
+    return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
+
+function pathAliasMatch(key: string, value: string): string | null {
+  const wildcard = key.indexOf('*');
+  if (wildcard === -1) return key === value ? '' : null;
+  const prefix = key.slice(0, wildcard);
+  const suffix = key.slice(wildcard + 1);
+  if (!value.startsWith(prefix) || !value.endsWith(suffix)) return null;
+  return value.slice(prefix.length, value.length - suffix.length);
+}
+
+function pathAliasTarget(alias: LegacyPathAlias, value: string): string | null {
+  const wildcard = pathAliasMatch(alias.key, value);
+  if (wildcard === null) return null;
+  return resolve(alias.baseUrl, alias.target.replace(/\*/g, wildcard));
+}
+
+function staticPathAliasTarget(alias: LegacyPathAlias): string {
+  return resolve(alias.baseUrl, alias.target.slice(0, alias.target.indexOf('*') === -1 ? alias.target.length : alias.target.indexOf('*')));
+}
+
+function isWithin(file: string, directory: string): boolean {
+  return file === directory || file.startsWith(`${directory}${sep}`);
+}
+
+function tsconfigFile(value: string): string | null {
+  if (existsSync(value) && statSync(value).isFile()) return value;
+  if (existsSync(`${value}.json`) && statSync(`${value}.json`).isFile()) return `${value}.json`;
+  if (existsSync(join(value, 'tsconfig.json')) && statSync(join(value, 'tsconfig.json')).isFile()) return join(value, 'tsconfig.json');
+  return null;
+}
+
+/** Resolve both relative and package-name extends without importing TypeScript at runtime. */
+function resolveTsconfigExtends(file: string, value: string): string | null {
+  if (value.startsWith('.') || value.startsWith('/')) return tsconfigFile(resolve(dirname(file), value));
+  let directory = dirname(file);
+  while (true) {
+    const packageName = value.startsWith('@') ? value.split('/').slice(0, 2).join('/') : value.split('/')[0];
+    const packageDirectory = join(directory, 'node_modules', packageName);
+    const subpath = value.slice(packageName.length).replace(/^\//, '');
+    if (subpath) {
+      const direct = tsconfigFile(join(packageDirectory, subpath));
+      if (direct) return direct;
+    }
+    const manifest = readJson(join(packageDirectory, 'package.json'));
+    const configured = typeof manifest?.tsconfig === 'string' ? tsconfigFile(join(packageDirectory, manifest.tsconfig)) : null;
+    if (configured) return configured;
+    const fallback = tsconfigFile(packageDirectory);
+    if (fallback) return fallback;
+    const parent = dirname(directory);
+    if (parent === directory) return null;
+    directory = parent;
+  }
+}
+
+function stringArray(value: unknown): string[] | null {
+  return Array.isArray(value) && value.every(item => typeof item === 'string') ? value as string[] : null;
+}
+
+function globExpression(pattern: string): RegExp {
+  let expression = '^';
+  for (let index = 0; index < pattern.length; index++) {
+    const character = pattern[index];
+    if (character === '*' && pattern[index + 1] === '*') {
+      if (pattern[index + 2] === '/') {
+        expression += '(?:.*/)?';
+        index += 2;
+      } else {
+        expression += '.*';
+        index++;
+      }
+    } else if (character === '*') expression += '[^/]*';
+    else if (character === '?') expression += '[^/]';
+    else expression += escapeRegExp(character);
+  }
+  return new RegExp(`${expression}$`);
+}
+
+function matchesTsconfigPattern(file: string, pattern: string): boolean {
+  const normalized = pattern.replace(/^\.\//, '').replace(/\\/g, '/');
+  return globExpression(normalized).test(file) || (!/[?*]/.test(normalized) && file.startsWith(`${normalized}/`));
+}
+
+function configAppliesToFile(config: TsconfigPathAliases, file: string): number | null {
+  if (!isWithin(file, config.directory)) return null;
+  const relativeFile = pathFrom(config.directory, file);
+  if (config.files) {
+    const exact = config.files.some(item => relativeFile === item.replace(/^\.\//, ''));
+    return exact ? 10_000 : null;
+  }
+  if (config.exclude.some(pattern => matchesTsconfigPattern(relativeFile, pattern))) return null;
+  if (config.include === null) return 0;
+  const scores = config.include
+    .filter(pattern => matchesTsconfigPattern(relativeFile, pattern))
+    .map(pattern => pattern.replace(/[?*]/g, '').length);
+  return scores.length ? Math.max(...scores) + 1 : null;
+}
+
+function configForFile(file: string, catalog: AliasCatalog): TsconfigPathAliases | null {
+  const candidates = [...catalog.configs.values()]
+    .map(config => ({ config, score: configAppliesToFile(config, file) }))
+    .filter((item): item is { config: TsconfigPathAliases; score: number } => item.score !== null)
+    .sort((left, right) => right.config.directory.length - left.config.directory.length || right.score - left.score || left.config.file.localeCompare(right.config.file));
+  return candidates[0]?.config ?? null;
+}
+
+/**
+ * Read effective path aliases through extends. Alias targets retain the baseUrl
+ * of the configuration file that declared them, matching TypeScript's paths
+ * semantics even when a child config changes its own baseUrl.
+ */
+function legacyPathAliases(hostRoot: string, themeRoot: string, pluginsRoot: string, plan: MovePlan): AliasCatalog {
+  const configs = new Map<string, TsconfigPathAliases>();
+  const warnings = new Set<string>();
+  const loading = new Set<string>();
+  const fullyMoved = (directory: string): boolean => {
+    if (isWithin(directory, pluginsRoot)) return ![...plan.unmoved].some(file => isWithin(file, directory));
+    if (isWithin(directory, themeRoot)) return ![...plan.unmoved].some(file => isWithin(file, directory));
+    const themesRoot = dirname(themeRoot);
+    return directory === themesRoot
+      && childDirectories(themesRoot).every(name => name === basename(themeRoot))
+      && ![...plan.unmoved].some(file => isWithin(file, themesRoot));
+  };
+  const load = (file: string): TsconfigPathAliases | null => {
+    const cached = configs.get(file);
+    if (cached) return cached;
+    if (loading.has(file)) {
+      warnings.add(`${pathFrom(hostRoot, file)} (extends cycle)`);
+      return null;
+    }
+    loading.add(file);
+    const parsed = parseJsonc(readFileSync(file, 'utf8'));
+    if (!parsed) {
+      warnings.add(pathFrom(hostRoot, file));
+      loading.delete(file);
+      return null;
+    }
+    const compilerOptions = typeof parsed.compilerOptions === 'object' && parsed.compilerOptions !== null && !Array.isArray(parsed.compilerOptions)
+      ? parsed.compilerOptions as Record<string, unknown> : {};
+    const inherited: LegacyPathAlias[] = [];
+    const extendsValue = parsed.extends;
+    if (typeof extendsValue === 'string') {
+      const parentFile = resolveTsconfigExtends(file, extendsValue);
+      if (!parentFile) warnings.add(`${pathFrom(hostRoot, file)} (cannot resolve extends ${extendsValue})`);
+      else inherited.push(...(load(parentFile)?.aliases ?? []));
+    }
+    const paths = typeof compilerOptions.paths === 'object' && compilerOptions.paths !== null && !Array.isArray(compilerOptions.paths)
+      ? compilerOptions.paths as Record<string, unknown> : {};
+    const localAliases: LegacyPathAlias[] = [];
+    const deadTargets = new Map<string, Set<number>>();
+    const baseUrl = resolve(dirname(file), typeof compilerOptions.baseUrl === 'string' ? compilerOptions.baseUrl : '.');
+    for (const [key, values] of Object.entries(paths)) {
+      if (!Array.isArray(values)) continue;
+      for (let index = 0; index < values.length; index++) {
+        const target = values[index];
+        if (typeof target !== 'string') continue;
+        const alias = { key, target, baseUrl };
+        localAliases.push(alias);
+        const staticTarget = staticPathAliasTarget(alias);
+        if ((isWithin(staticTarget, dirname(themeRoot)) || isWithin(staticTarget, pluginsRoot)) && fullyMoved(staticTarget)) {
+          const targets = deadTargets.get(key) ?? new Set<number>();
+          targets.add(index);
+          deadTargets.set(key, targets);
+        }
+      }
+    }
+    // A child paths entry replaces the inherited entry for the same key.
+    const localKeys = new Set(localAliases.map(alias => alias.key));
+    const aliases = [...inherited.filter(alias => !localKeys.has(alias.key)), ...localAliases];
+    const config: TsconfigPathAliases = {
+      file,
+      directory: dirname(file),
+      aliases,
+      deadTargets,
+      include: stringArray(parsed.include),
+      exclude: stringArray(parsed.exclude) ?? [],
+      files: stringArray(parsed.files),
+    };
+    configs.set(file, config);
+    loading.delete(file);
+    return config;
+  };
+
+  for (const file of filesIn(hostRoot).filter(item => /^tsconfig(?:\.[^.]+)*\.json$/.test(basename(item)))) load(file);
+  return { configs, warnings: [...warnings].sort() };
+}
+
+function rewriteDeadTsconfigAliases(content: string, config: TsconfigPathAliases): string {
+  if (config.deadTargets.size === 0) return content;
+  const parsed = parseJsonc(content);
+  if (!parsed) return content;
+  const compilerOptions = parsed.compilerOptions;
+  if (typeof compilerOptions !== 'object' || compilerOptions === null || Array.isArray(compilerOptions)) return content;
+  const paths = (compilerOptions as Record<string, unknown>).paths;
+  if (typeof paths !== 'object' || paths === null || Array.isArray(paths)) return content;
+  let changed = false;
+  for (const [key, indexes] of config.deadTargets) {
+    const values = (paths as Record<string, unknown>)[key];
+    if (!Array.isArray(values)) continue;
+    const kept = values.filter((_value, index) => !indexes.has(index));
+    if (kept.length === values.length) continue;
+    changed = true;
+    if (kept.length === 0) delete (paths as Record<string, unknown>)[key];
+    else (paths as Record<string, unknown>)[key] = kept;
+  }
+  if (!changed) return content;
+  const indentation = content.match(/\n([ \t]+)"/)?.[1] ?? '  ';
+  return `${JSON.stringify(parsed, null, indentation)}${content.endsWith('\n') ? '\n' : ''}`;
 }
 
 function relativeSpecifier(fromFile: string, toFile: string): string {
@@ -777,8 +1094,50 @@ function movedReferenceDestination(target: string, planned: Map<string, string>,
   return null;
 }
 
-/** Rewrites concrete legacy path strings without trying to parse every tool's config language. */
-function rewriteLegacyPaths(content: string, source: string, destination: string, themeRoot: string, pluginsRoot: string, hostRoot: string, theme: string, planned: Map<string, string>, unmoved: Set<string>): string {
+/** Resolve a specifier using the aliases of the tsconfig that governs its file. */
+function aliasResolution(value: string, aliases: LegacyPathAlias[]): { alias: LegacyPathAlias; target: string } | null {
+  const keys = [...new Set(aliases.map(alias => alias.key))]
+    .filter(key => pathAliasMatch(key, value) !== null)
+    .sort((left, right) => right.length - left.length || left.localeCompare(right));
+  for (const key of keys) {
+    const candidates = aliases.filter(alias => alias.key === key)
+      .map(alias => ({ alias, target: pathAliasTarget(alias, value) }))
+      .filter((item): item is { alias: LegacyPathAlias; target: string } => item.target !== null);
+    const current = candidates.find(candidate => importTargetExists(candidate.target)) ?? candidates[0];
+    if (current) return current;
+  }
+  return null;
+}
+
+/** Rewrites only aliases whose current TypeScript resolution is legacy source. */
+function rewriteLegacyAliasImports(content: string, source: string, catalog: AliasCatalog, themeRoot: string, pluginsRoot: string, hostRoot: string, planned: Map<string, string>, unmoved: Set<string>): string {
+  const aliases = configForFile(source, catalog)?.aliases ?? [];
+  let next = content;
+  for (const key of [...new Set(aliases.map(alias => alias.key))].sort((left, right) => right.length - left.length)) {
+    const wildcard = key.indexOf('*');
+    // The quote following a tsconfig property name is followed by a colon;
+    // import specifiers and ordinary string values are not.
+    const boundary = "(?=(?:['\"`](?!\\s*:)|\\s|\\)|,|$))";
+    const pattern = wildcard === -1
+      ? new RegExp(`${escapeRegExp(key)}${boundary}`, 'g')
+      : new RegExp(`${escapeRegExp(key.slice(0, wildcard))}([^'\"\`\\s)]*)${escapeRegExp(key.slice(wildcard + 1))}${boundary}`, 'g');
+    next = next.replace(pattern, (match, captured = '') => {
+      const value = wildcard === -1 ? key : `${key.slice(0, wildcard)}${captured}${key.slice(wildcard + 1)}`;
+      const current = aliasResolution(value, aliases);
+      // A textual match is never enough: do not rewrite a valid non-legacy import.
+      if (!current || current.alias.key !== key || (!isWithin(current.target, themeRoot) && !isWithin(current.target, pluginsRoot))) return match;
+      const mapped = movedReferenceDestination(current.target, planned, unmoved, themeRoot, hostRoot);
+      return mapped ? `@/${pathFrom(hostRoot, mapped)}` : match;
+    });
+  }
+  return next;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function rewriteLegacyPaths(content: string, source: string, destination: string, themeRoot: string, pluginsRoot: string, hostRoot: string, theme: string, planned: Map<string, string>, unmoved: Set<string>, catalog: AliasCatalog): string {
   const escapedTheme = theme.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const themePattern = `contents/themes/${escapedTheme}`;
   const mapThemeSuffix = (suffix: string): string | null => {
@@ -816,7 +1175,7 @@ function rewriteLegacyPaths(content: string, source: string, destination: string
   const themesRoot = dirname(themeRoot);
   if (childDirectories(themesRoot).every(name => name === theme) && mapThemeSuffix('')) next = next.replace(/contents\/themes\/\*/g, '.');
   next = next.replace(/contents\/plugins\/([^'"`\s)]*)/g, (all, suffix: string) => mapPluginSuffix(suffix) ?? all);
-  return next;
+  return rewriteLegacyAliasImports(next, source, catalog, themeRoot, pluginsRoot, hostRoot, planned, unmoved);
 }
 
 function rewriteMovedRelativeImports(content: string, source: string, destination: string, planned: Map<string, string>): string {
@@ -824,7 +1183,10 @@ function rewriteMovedRelativeImports(content: string, source: string, destinatio
     if (!value.startsWith('.')) return `${before}${quote}${value}${quote}${after}`;
     if (quote === '`' && value.includes('${')) return `${before}${quote}${value}${quote}${after}`;
     const target = resolve(dirname(source), value);
-    const targetDestination = directMoveDestination(target, planned) ?? target;
+    const targetDestination = directMoveDestination(target, planned);
+    // Do not manufacture a new import when the old target is absent from the
+    // move. The post-move check reports it as a broken import instead.
+    if (!targetDestination) return `${before}${quote}${value}${quote}${after}`;
     // Only a path whose meaning changes when this file moves needs adjustment.
     if (dirname(source) === dirname(destination) && targetDestination === target) return `${before}${quote}${value}${quote}${after}`;
     return `${before}${quote}${relativeSpecifier(destination, targetDestination)}${quote}${after}`;
@@ -932,7 +1294,7 @@ function isOtherThemeFile(file: string, themesRoot: string, selected: string): b
   return rel !== '.' && rel.split('/')[0] !== selected;
 }
 
-function applyMove(repository: string, hostRoot: string, themeRoot: string, pluginsRoot: string, theme: string, plan: MovePlan): { moved: number; deduplicated: number; rewritten: number; envRemoved: boolean } {
+function applyMove(repository: string, hostRoot: string, themeRoot: string, pluginsRoot: string, theme: string, plan: MovePlan, tsconfigAliases: AliasCatalog): { moved: number; deduplicated: number; rewritten: number; envRemoved: boolean } {
   const plannedItems = [...plan.moves, ...plan.duplicates];
   const planned = new Map(plannedItems.map(item => [item.source, item.destination]));
   const unmoved = new Set(plan.unmoved);
@@ -946,7 +1308,9 @@ function applyMove(repository: string, hostRoot: string, themeRoot: string, plug
     const duplicate = duplicateByDestination.get(file);
     const source = duplicate?.source ?? file;
     const destination = planned.get(file) ?? file;
-    let next = rewriteLegacyPaths(buffer.toString('utf8'), source, destination, themeRoot, pluginsRoot, hostRoot, theme, planned, unmoved);
+    let next = rewriteLegacyPaths(buffer.toString('utf8'), source, destination, themeRoot, pluginsRoot, hostRoot, theme, planned, unmoved, tsconfigAliases);
+    const tsconfig = tsconfigAliases.configs.get(file);
+    if (tsconfig) next = rewriteDeadTsconfigAliases(next, tsconfig);
     if (planned.has(file) || duplicate) {
       next = rewriteMovedRelativeImports(next, source, destination, planned);
       next = rewriteMovedDepthConfig(next, source, destination, planned);
@@ -988,13 +1352,106 @@ function rollbackCommands(repository: string, plan: MovePlan): string[] {
   return commands;
 }
 
-function printMoveSummary(plan: MovePlan, result: { moved: number; deduplicated: number; rewritten: number; envRemoved: boolean }, report: MigrateReport, hostRoot: string): void {
+interface BrokenImport {
+  file: string;
+  source: string;
+  line: number;
+  target: string;
+}
+
+const importTargetSuffixes = ['', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.css', '.json', '/index.ts', '/index.tsx', '/index.js', '/index.jsx', '/index.mjs', '/index.cjs'];
+const importExpression = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire(?:\.resolve)?\s*\(\s*|\bimport\s*)(['"])([^'"`]+)\1|@import\s+(?:url\(\s*)?(['"])([^'"]+)\3\s*\)?/g;
+
+function importReferences(content: string): { line: number; target: string }[] {
+  const view = sourceView(content);
+  const imports: { line: number; target: string }[] = [];
+  for (const match of content.matchAll(importExpression)) {
+    const syntax = view.code.slice(match.index ?? 0, (match.index ?? 0) + match[0].length);
+    if (!/\b(?:from|import|require)\b|@import/.test(syntax)) continue;
+    const target = match[2] ?? match[4];
+    if (target) imports.push({ line: content.slice(0, match.index ?? 0).split(/\r?\n/).length, target });
+  }
+  return imports;
+}
+
+function importTargetExists(target: string): boolean {
+  return importTargetSuffixes.some(suffix => {
+    const candidate = `${target}${suffix}`;
+    return existsSync(candidate) && statSync(candidate).isFile();
+  });
+}
+
+function aliasImportTarget(target: string, file: string, catalog: AliasCatalog): string | null {
+  return aliasResolution(target, configForFile(file, catalog)?.aliases ?? [])?.target ?? null;
+}
+
+function resolvedImportTarget(target: string, file: string, hostRoot: string, catalog: AliasCatalog, preferCanonical = false): string | null {
+  if (target.startsWith('.')) return resolve(dirname(file), target);
+  const canonical = target.startsWith('@/') ? join(hostRoot, target.slice(2)) : null;
+  // @/contents/... is the explicit legacy spelling handled independently of a
+  // broad @/* catch-all alias.
+  if (target.startsWith('@/contents/')) return canonical;
+  if (preferCanonical && canonical && importTargetExists(canonical)) return canonical;
+  return aliasImportTarget(target, file, catalog) ?? canonical;
+}
+
+interface ImportScanFile {
+  file: string;
+  source: string;
+  display: string;
+}
+
+/** Scan local module references using the tsconfig that applies at this phase. */
+function brokenImports(hostRoot: string, files: ImportScanFile[], catalog: AliasCatalog): BrokenImport[] {
+  const broken: BrokenImport[] = [];
+  for (const entry of files) {
+    if (!existsSync(entry.file)) continue;
+    const content = readFileSync(entry.file, 'utf8');
+    for (const reference of importReferences(content)) {
+      const target = reference.target;
+      const aliasTarget = aliasImportTarget(target, entry.file, catalog);
+      if (!target || (!target.startsWith('.') && !target.startsWith('@/') && !aliasTarget)) continue;
+      const resolved = resolvedImportTarget(target, entry.file, hostRoot, catalog, true);
+      if (!resolved || importTargetExists(resolved)) continue;
+      broken.push({ file: entry.display, source: entry.source, line: reference.line, target });
+    }
+  }
+  return broken.sort((left, right) => left.file.localeCompare(right.file) || left.line - right.line || left.target.localeCompare(right.target));
+}
+
+function printBrokenImports(introduced: BrokenImport[], preExisting: BrokenImport[]): void {
+  if (introduced.length > 0) {
+    console.log('');
+    console.log('MIGRATION FAILED: migration introduced broken imports.');
+    for (const item of introduced) console.log(`  ${item.file}:${item.line} → ${item.target}`);
+    if (preExisting.length > 0) {
+      console.log('Pre-existing broken imports (not caused by this migration):');
+      for (const item of preExisting) console.log(`  ${item.file}:${item.line} → ${item.target}`);
+    }
+    console.log('  Rollback commands were printed in the move plan above.');
+    return;
+  }
+  if (preExisting.length > 0) {
+    console.log('');
+    console.log('WARNING: migration completed; these imports were already broken before migration (exit 0):');
+    for (const item of preExisting) console.log(`  ${item.file}:${item.line} → ${item.target}`);
+  }
+}
+
+function legacyContentsImportCount(plan: MovePlan): number {
+  return [...new Set([...plan.moves, ...plan.duplicates].map(item => item.destination))]
+    .filter(existsSync)
+    .flatMap(file => importReferences(readFileSync(file, 'utf8')))
+    .filter(reference => reference.target.includes('contents/')).length;
+}
+
+function printMoveSummary(plan: MovePlan, result: { moved: number; deduplicated: number; rewritten: number; envRemoved: boolean }, report: MigrateReport, hostRoot: string, remainingContentsImports: number): void {
   console.log('');
   console.log('Migration complete.');
   console.log(`  moved: ${result.moved} owned file(s); verified and deduplicated: ${result.deduplicated}`);
   console.log(`  rewritten: ${result.rewritten} file(s)${result.envRemoved ? '; removed NEXT_PUBLIC_ACTIVE_THEME from .env.example' : ''}`);
-  console.log(`  did not move unknown files: ${paths(plan.unknown)}`);
-  console.log(`  did not move conflicting files (host source wins): ${paths(plan.collisions.map(item => pathFrom(hostRoot, item.source)) )}`);
+  console.log(`  legacy contents/ imports in moved output: ${remainingContentsImports}`);
+  console.log(`  reserved source left in place: ${paths(plan.reserved.map(item => item.path))}`);
   console.log(`  other themes left untouched: ${report.activeTheme.themes.filter(item => item.name !== report.activeTheme.name).map(item => item.name).join(', ') || 'none'}`);
   console.log('  Rollback commands were printed in the move plan above.');
 }
@@ -1025,19 +1482,41 @@ export function migrateCommand(options: MigrateOptions): void {
     const rollback = rollbackCommands(repository, plan);
     section('Move plan', [
       `owned files to move: ${plan.moves.length}; byte-identical duplicates verified: ${plan.duplicates.length}`,
-      `unknown files left in place: ${paths(plan.unknown)}`,
-      `host collisions left in place: ${paths(plan.collisions.map(item => pathFrom(hostRoot, item.source)) )}`,
+      `reserved source left in place: ${paths(plan.reserved.map(item => item.path))}`,
+      `host collisions: ${paths(plan.collisions.map(item => pathFrom(hostRoot, item.source)) )}`,
       `Rollback repository root: ${repository}`,
       ...rollback,
     ]);
+    if (plan.collisions.length > 0) {
+      throw new MigrateAnalysisError(`Refusing to overwrite different host files: ${paths(plan.collisions.map(item => pathFrom(hostRoot, item.destination)))}`);
+    }
     if (!options.yes) {
       if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to perform this move.');
       process.stdout.write('Perform this move? [y/N] ');
       const answer = readFileSync(0, 'utf8').trim().toLowerCase();
       if (answer !== 'y' && answer !== 'yes') throw new MigrateAnalysisError('Migration cancelled.');
     }
-    const result = applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme, plan);
-    printMoveSummary(plan, result, report, hostRoot);
+    const aliasesBeforeMove = legacyPathAliases(hostRoot, themeRoot, pluginsRoot, plan);
+    if (aliasesBeforeMove.warnings.length > 0) {
+      section('Alias configuration warnings', aliasesBeforeMove.warnings.map(file => `could not parse or resolve ${file}; aliases from it were not derived`));
+    }
+    const plannedItems = [...plan.moves, ...plan.duplicates];
+    const beforeFiles = plannedItems.map(item => ({ file: item.source, source: item.source, display: pathFrom(hostRoot, item.destination) }));
+    const brokenBeforeMove = brokenImports(hostRoot, beforeFiles, aliasesBeforeMove);
+    const result = applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme, plan, aliasesBeforeMove);
+    const aliasesAfterMove = legacyPathAliases(hostRoot, themeRoot, pluginsRoot, plan);
+    const afterFiles = plannedItems.map(item => ({ file: item.destination, source: item.source, display: pathFrom(hostRoot, item.destination) }));
+    const brokenAfterMove = brokenImports(hostRoot, afterFiles, aliasesAfterMove);
+    const brokenBeforeKeys = new Set(brokenBeforeMove.map(item => `${item.source}:${item.line}`));
+    const preExisting = brokenAfterMove.filter(item => brokenBeforeKeys.has(`${item.source}:${item.line}`));
+    const introduced = brokenAfterMove.filter(item => !brokenBeforeKeys.has(`${item.source}:${item.line}`));
+    if (introduced.length > 0) {
+      printBrokenImports(introduced, preExisting);
+      process.exitCode = 1;
+      return;
+    }
+    printMoveSummary(plan, result, report, hostRoot, legacyContentsImportCount(plan));
+    if (preExisting.length > 0) printBrokenImports([], preExisting);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not analyze this project.';
     console.error(`nextspark migrate: ${message}`);
