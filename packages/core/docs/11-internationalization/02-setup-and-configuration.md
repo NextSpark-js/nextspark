@@ -400,8 +400,8 @@ Choosing namespaces from the request's pathname would mean reading request heade
 
 A project may extend request handling with the optional root-first hook at
 `config/hooks/proxy.ts`. It must export a named `proxyHook`; the framework-owned
-root `proxy.ts` composes it with authentication, route protection, and locale
-handling.
+`src/proxy.ts` (or `src/middleware.ts` on Next.js 15) composes it with
+authentication, route protection, and locale handling.
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
@@ -414,7 +414,7 @@ export async function proxyHook(request: NextRequest) {
 ```
 
 The project hook is an extension point, not a replacement security boundary.
-Do not create a project-root `middleware.ts` or replace the framework proxy to
+Do not create a separate `middleware.ts` or replace the framework proxy to
 customize locale handling.
 
 ## Environment Variables

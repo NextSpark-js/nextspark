@@ -1,8 +1,9 @@
 /**
- * The root-level .ts files under packages/core/templates/ (proxy.ts, i18n.ts,
- * instrumentation.ts) are copied verbatim into every generated project by the
- * wizard (packages/cli/src/wizard/generators/index.ts's PROJECT_ROOT_ITEMS and
- * writeProxyFile), so `next build`'s mandatory type-check runs each of them
+ * The integration .ts files under packages/core/templates/ (proxy.ts, i18n.ts,
+ * instrumentation.ts) are copied into every generated project by the wizard
+ * (packages/cli/src/wizard/generators/index.ts's PROJECT_ROOT_ITEMS and
+ * writeProxyFile; the proxy lands beside src/app), so `next build`'s mandatory
+ * type-check runs each of them
  * with the strict TypeScript config the template tsconfig.json ships
  * (packages/core/templates/tsconfig.json). None of the existing template
  * checks (proxy-matcher.test.ts parses the AST only; docs-access-contract.test.ts
@@ -10,7 +11,7 @@
  * type-checks these files, so a strict-null error like TS18047 in a themeResponse
  * access (see themeRequestHeaders in proxy.ts) reaches every generated project
  * and fails its build without failing anything in this repo's own CI, since
- * apps/dev/proxy.ts only re-exports the already-compiled function and its own
+ * apps/dev/src/proxy.ts only re-exports the already-compiled function and its own
  * tsc run does not re-diagnose the template source under the generated
  * project's `@nextsparkjs/core/*` package-boundary resolution.
  *
@@ -44,7 +45,7 @@ import ts from 'typescript'
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const TEMPLATES = path.join(CORE, 'templates')
 
-/** Root-level template .ts files the wizard copies into every generated project. */
+/** Integration template .ts files the wizard copies into every generated project. */
 const ROOT_TEMPLATE_TS_FILES = ['proxy.ts', 'i18n.ts', 'instrumentation.ts']
 
 /** A virtual path standing in for the per-project generated registry module. */

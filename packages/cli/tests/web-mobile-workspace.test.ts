@@ -91,6 +91,28 @@ test('a web-only project removes obsolete package workspace globs', async () => 
   }
 })
 
+test('a root proxy preserved after src/app generation is returned as inactive', async () => {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-root-proxy-')))
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'acme', private: true }))
+  fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), CREATED_WORKSPACE_YAML)
+  fs.writeFileSync(path.join(root, 'proxy.ts'), 'export function proxy() { return new Response("mine") }\n')
+
+  const config = applyPreset({ projectName: 'Acme', projectSlug: 'acme', projectDescription: 'Acme' }, 'saas', 'web')
+  const previous = process.cwd()
+  process.chdir(root)
+  try {
+    const result = await generateProject(config)
+
+    assert.equal(result.proxyFile?.path, 'src/proxy.ts')
+    assert.deepEqual(result.proxyFile?.preserved, ['proxy.ts'])
+    assert.equal(fs.existsSync(path.join(root, 'src', 'proxy.ts')), true)
+    assert.match(fs.readFileSync(path.join(root, 'proxy.ts'), 'utf8'), /Response\("mine"\)/)
+  } finally {
+    process.chdir(previous)
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
 /** A registry serving `fixture-built`, whose postinstall writes a file named `built`. */
 async function serveFixtureRegistry(root: string) {
   const pack = path.join(root, 'fixture-built')

@@ -37,16 +37,15 @@
    classes with that conflicting strategy, so they stop following
    next-themes' `.dark`/`.light` class and instead silently track the
    visitor's OS/browser color-scheme preference (issue #110). The @source
-   globs below already scan core's source (monorepo) and its compiled dist
-   output (npm) directly into THIS compilation, so they pick up the same
+   globs below scan this root-first project and core's compiled dist directly
+   into THIS compilation, so they pick up the same
    classes correctly scoped to `@custom-variant dark` — the separate ui.css
    import is redundant. */
 @import "@nextsparkjs/core/styles/utilities.css";
 @import "@nextsparkjs/core/styles/docs.css";
-@source "../../../**/*.{js,ts,jsx,tsx}";
-/* Core package: monorepo (short path) + npm projects (long path) */
+@source "../**/*.{js,ts,jsx,tsx}";
+/* Core package installed in the project */
 @source "../node_modules/@nextsparkjs/core/dist/**/*.js";
-@source "../../../../node_modules/@nextsparkjs/core/dist/**/*.js";
 
 /* =============================================
    BLOG THEME - LIGHT MODE

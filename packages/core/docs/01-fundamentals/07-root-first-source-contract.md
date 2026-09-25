@@ -53,7 +53,8 @@ my-project/
 ├── about/                       # project-owned about content
 │
 ├── src/
-│   └── app/                     # GENERATED Next.js adapter; never edit
+│   ├── app/                     # GENERATED Next.js adapter; never edit
+│   └── proxy.ts                 # GENERATED Next.js 16 request entry (middleware.ts on Next.js 15)
 └── .nextspark/
     └── registries/              # GENERATED registries and manifests; never edit
 ```
@@ -149,8 +150,8 @@ Project-template source may not provide these names at the project root:
 
 | Reserved name | Owner and replacement |
 | --- | --- |
-| `middleware.*` | Reserved by Next.js. A migrated theme middleware hook moves to `config/hooks/proxy.ts` and is composed by the framework proxy contract. |
-| `proxy.*` | Reserved for the Next.js/framework request entry. Project request behavior belongs in `config/hooks/proxy.ts`. |
+| `middleware.*` | Reserved by Next.js. A migrated theme middleware hook moves to `config/hooks/proxy.ts` and is composed by the framework request entry under `src/`. |
+| `proxy.*` | Reserved for the Next.js/framework request entry under `src/`. Project request behavior belongs in `config/hooks/proxy.ts`. |
 | `instrumentation.*` | Reserved for the Next.js/framework instrumentation entry. Project instrumentation behavior belongs in `config/hooks/instrumentation.ts`. |
 | `app/` | Must not coexist with generated `src/app/`. Route source belongs in `templates/` or `api/`. |
 | `pages/` | Unsupported Pages Router root. Route source belongs in `templates/` or `api/`. |

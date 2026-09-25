@@ -22,12 +22,19 @@
  */
 
 import { readGeneratedTag, readGeneratedTagAt, sameText, tagStyleFor, withGeneratedTag } from './generated-tag.js';
-import { adaptProxySource, isGeneratedProxySource, proxyFileNameFor, type ProxyFileName } from './proxy-file.js';
+import {
+  adaptProxySource,
+  isGeneratedProxySource,
+  proxyFileNameFor,
+  proxyPath,
+  type ProxyDirectory,
+} from './proxy-file.js';
 import { contentHash, type SyncState, type SyncStateEntry } from './sync-state.js';
 
 /**
- * Root files core ships next to src/app/. The proxy file is planned apart: its
- * name follows the Next version. instrumentation.ts follows the same rules as
+ * Root files core ships beside src/. The proxy file is planned apart: its name
+ * follows the Next version and its directory follows the app/pages convention.
+ * instrumentation.ts follows the same rules as
  * the others here (create it when the project doesn't have one, keep a
  * customized copy, update an untouched one core changed) so `sync:app` closes
  * the same gap as the wizard's PROJECT_ROOT_ITEMS for a project generated
@@ -50,7 +57,7 @@ export type SyncActionKind = 'create' | 'update' | 'adopt' | 'unchanged' | 'keep
 /**
  * - `app`: a file core ships under templates/app, or tagged there by an earlier sync
  * - `root`: one of ROOT_TEMPLATE_FILES
- * - `proxy`: proxy.ts or middleware.ts
+ * - `proxy`: proxy.ts or middleware.ts at the convention level Next loads
  * - `generated`: a file under src/app/(templates)
  * - `variant`: a PPR variant in the project's src/app/
  * - `project`: a file in src/app/ that core doesn't ship and never wrote
@@ -95,12 +102,14 @@ export interface SyncInput {
   projectApp: ReadonlyMap<string, Buffer>;
   /** Core's root templates (ROOT_TEMPLATE_FILES and proxy.ts), by name. */
   rootTemplates: ReadonlyMap<string, Buffer>;
-  /** The project's files with those names, and its middleware.ts, by name. */
+  /** Root integration files plus proxy/middleware candidates at root and src/. */
   projectRootFiles: ReadonlyMap<string, Buffer>;
   /** Whether PPR variants replace the files they stand in for (cacheComponents on Next 16+). */
   usePprVariants: boolean;
   /** The project's Next major version, which names its proxy file; null when unknown. */
   nextMajor: number | null;
+  /** Directory containing app/pages and therefore the proxy convention. */
+  proxyDirectory: ProxyDirectory;
   /** What the last sync on this machine recorded, or null when there is no record. */
   state: SyncState | null;
   /** Paths, from the project root, of customized files to replace with core's version. */
@@ -343,15 +352,15 @@ function planProxy(input: SyncInput): SyncAction[] {
 
   const source = template.toString('utf-8');
   const fileName = proxyFileNameFor(input.nextMajor);
-  const other: ProxyFileName = fileName === 'proxy.ts' ? 'middleware.ts' : 'proxy.ts';
+  const targetPath = proxyPath(input.proxyDirectory, fileName);
   const generatedEarlier = (current: Buffer) => isGeneratedProxySource(current.toString('utf-8'), source);
 
   const actions = [
     planManagedFile(
       {
-        path: fileName,
+        path: targetPath,
         category: 'proxy',
-        current: input.projectRootFiles.get(fileName),
+        current: input.projectRootFiles.get(targetPath),
         expected: Buffer.from(adaptProxySource(source, fileName)),
         reason: "core's proxy, under the name Next loads in this project",
         generatedEarlier,
@@ -360,20 +369,25 @@ function planProxy(input: SyncInput): SyncAction[] {
     ),
   ];
 
-  const otherContent = input.projectRootFiles.get(other);
-  if (otherContent !== undefined) {
-    const tag = readGeneratedTagAt(other, otherContent);
+  const candidates = (['', 'src'] as const)
+    .flatMap(directory => (['proxy.ts', 'middleware.ts'] as const).map(name => proxyPath(directory, name)))
+    .filter(path => path !== targetPath);
+
+  for (const candidate of candidates) {
+    const otherContent = input.projectRootFiles.get(candidate);
+    if (otherContent === undefined) continue;
+    const tag = readGeneratedTagAt(candidate, otherContent);
     if (tag ? tag.intact : generatedEarlier(otherContent)) {
       // Only a tag naming this path shows sync wrote exactly this file here; anything else is backed up first
-      actions.push({ path: other, kind: 'delete', category: 'proxy', reason: `Next loads ${fileName} in this project instead`, ...(tag?.path ? {} : { backup: true }) });
+      actions.push({ path: candidate, kind: 'delete', category: 'proxy', reason: `Next loads ${targetPath} in this project instead`, ...(tag?.path ? {} : { backup: true }) });
     } else {
       actions.push({
-        path: other,
+        path: candidate,
         kind: 'keep',
         category: 'proxy',
-        reason: `not core's; Next loads ${fileName} in this project, not this file`,
+        reason: `not core's; Next loads ${targetPath} in this project, not this file`,
         customized: true,
-        coreChanged: input.state === null || input.state.files[other] !== undefined,
+        coreChanged: input.state === null || input.state.files[candidate] !== undefined,
       });
     }
   }

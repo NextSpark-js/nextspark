@@ -43,7 +43,8 @@ Next.js middleware provides powerful request/response transformation capabilitie
 ### Shipped Proxy Template
 
 Location: `packages/core/templates/proxy.ts` (generated projects receive it as
-`proxy.ts` on Next.js 16 or `middleware.ts` on Next.js 15).
+`src/proxy.ts` on Next.js 16 or `src/middleware.ts` on Next.js 15, beside the
+generated `src/app`; Next ignores a project-root proxy when the app uses `src/`).
 
 The core proxy owns the security boundary. An project may extend request
 handling, but its result is composed with the core checks rather than returned

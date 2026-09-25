@@ -76,7 +76,18 @@ test('built CLI rejects unknown and path-like skill names without reading projec
   }
 })
 
-async function runSyntheticWizard(projectRoot: string, projectType: WizardConfig['projectType']): Promise<void> {
+async function runSyntheticWizard(
+  projectRoot: string,
+  projectType: WizardConfig['projectType'],
+  generationResult?: {
+    proxyFile: {
+      fileName: 'proxy.ts' | 'middleware.ts'
+      path: string
+      written: boolean
+      preserved: string[]
+    } | null
+  },
+): Promise<void> {
   const originalCwd = process.cwd()
   mkdirSync(join(projectRoot, 'node_modules', '@nextsparkjs', 'core'), { recursive: true })
   if (projectType === 'web-mobile') {
@@ -98,6 +109,7 @@ async function runSyntheticWizard(projectRoot: string, projectType: WizardConfig
       async generateProject(config: WizardConfig) {
         assert.equal(config.projectType, projectType)
         if (config.projectType === 'web-mobile') mkdirSync(join(projectRoot, 'web'), { recursive: true })
+        return generationResult
       },
       installProjectDependencies() {},
       buildRegistries() {},
@@ -135,6 +147,36 @@ test('runWizard --yes writes onboarding to web targets, preserves both files, an
       join(monorepo, 'web', '.claude'),
     ].some(existsSync), false)
   } finally {
+    rmSync(project, { recursive: true, force: true })
+  }
+})
+
+test('runWizard reports every preserved proxy file accurately', async () => {
+  const project = mkdtempSync(join(tmpdir(), 'nextspark-wizard-proxy-warning-'))
+  const originalLog = console.log
+  const logged: string[] = []
+  console.log = (...args: unknown[]) => logged.push(args.join(' '))
+
+  try {
+    await runSyntheticWizard(project, 'web', {
+      proxyFile: {
+        fileName: 'proxy.ts',
+        path: 'src/proxy.ts',
+        written: false,
+        preserved: ['proxy.ts', 'middleware.ts', 'src/proxy.ts'],
+      },
+    })
+
+    for (const file of ['proxy.ts', 'middleware.ts']) {
+      assert.ok(logged.some(line => line.includes(
+        `${file} was kept, but Next loads src/proxy.ts in this project, so this file will not run; move its logic into config/hooks/proxy.ts or src/proxy.ts`
+      )), `missing inactive-proxy warning for ${file}`)
+    }
+    assert.ok(logged.some(line => line.includes(
+      "src/proxy.ts was kept and is the file Next loads in this project; core's proxy was not written or replaced."
+    )), 'missing active-proxy warning')
+  } finally {
+    console.log = originalLog
     rmSync(project, { recursive: true, force: true })
   }
 })

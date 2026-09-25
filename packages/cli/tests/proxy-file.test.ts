@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { proxyFileNameFor, adaptProxySource } from '../src/utils/proxy-file.js'
+import { withGeneratedTag } from '../src/utils/generated-tag.js'
 import { writeProxyFile } from '../src/wizard/generators/proxy-file-writer.js'
 
 const TEMPLATE = `/**\n * @nextspark-generated\n */\nexport async function proxy(request: NextRequest) {\n  return NextResponse.next()\n}\n`
@@ -43,8 +44,89 @@ test('a project on Next 15 gets middleware.ts', async () => {
   const result = await writeProxyFile(templates, root)
 
   assert.equal(result?.fileName, 'middleware.ts')
+  assert.equal(result?.path, 'middleware.ts')
   assert.equal(result?.written, true)
   assert.match(await readFile(join(root, 'middleware.ts'), 'utf-8'), /export async function middleware\(/)
+  await cleanup()
+})
+
+test('a src-directory project gets the proxy beside its app directory', async () => {
+  const { root, templates, cleanup } = await project('16.0.1')
+  await mkdir(join(root, 'src', 'app'), { recursive: true })
+
+  const result = await writeProxyFile(templates, root)
+
+  assert.equal(result?.fileName, 'proxy.ts')
+  assert.equal(result?.path, 'src/proxy.ts')
+  assert.equal(result?.written, true)
+  assert.equal(existsSync(join(root, 'proxy.ts')), false)
+  assert.match(await readFile(join(root, 'src', 'proxy.ts'), 'utf-8'), /export async function proxy\(/)
+  await cleanup()
+})
+
+test('moving to a src-directory project removes the generated root proxy', async () => {
+  const { root, templates, cleanup } = await project('16.0.1')
+  await writeFile(join(root, 'proxy.ts'), TEMPLATE)
+  await mkdir(join(root, 'src', 'app'), { recursive: true })
+
+  const result = await writeProxyFile(templates, root)
+
+  assert.equal(result?.path, 'src/proxy.ts')
+  assert.equal(existsSync(join(root, 'proxy.ts')), false)
+  assert.equal(existsSync(join(root, 'src', 'proxy.ts')), true)
+  await cleanup()
+})
+
+test('moving to a src-directory project removes a current intact tagged root proxy', async () => {
+  const { root, templates, cleanup } = await project('16.0.1')
+  await writeFile(join(root, 'proxy.ts'), withGeneratedTag('proxy.ts', Buffer.from(TEMPLATE), '0.1.0').toString())
+  await mkdir(join(root, 'src', 'app'), { recursive: true })
+
+  const result = await writeProxyFile(templates, root)
+
+  assert.equal(result?.path, 'src/proxy.ts')
+  assert.equal(existsSync(join(root, 'proxy.ts')), false)
+  assert.deepEqual(result?.preserved, [])
+  await cleanup()
+})
+
+test('a copied generated proxy at the wrong convention level is preserved', async () => {
+  const { root, templates, cleanup } = await project('16.0.1')
+  const copied = withGeneratedTag('src/proxy.ts', Buffer.from(TEMPLATE), '0.1.0').toString()
+  await writeFile(join(root, 'proxy.ts'), copied)
+  await mkdir(join(root, 'src', 'app'), { recursive: true })
+
+  const result = await writeProxyFile(templates, root)
+
+  assert.equal(await readFile(join(root, 'proxy.ts'), 'utf-8'), copied)
+  assert.deepEqual(result?.preserved, ['proxy.ts'])
+  await cleanup()
+})
+
+test('a customized tagged proxy at the wrong convention level is preserved', async () => {
+  const { root, templates, cleanup } = await project('16.0.1')
+  const customized = `${withGeneratedTag('proxy.ts', Buffer.from(TEMPLATE), '0.1.0').toString()}// customized\n`
+  await writeFile(join(root, 'proxy.ts'), customized)
+  await mkdir(join(root, 'src', 'app'), { recursive: true })
+
+  const result = await writeProxyFile(templates, root)
+
+  assert.equal(await readFile(join(root, 'proxy.ts'), 'utf-8'), customized)
+  assert.deepEqual(result?.preserved, ['proxy.ts'])
+  await cleanup()
+})
+
+test('a project-owned proxy at the wrong convention level is preserved and reported by path', async () => {
+  const { root, templates, cleanup } = await project('16.0.1')
+  const mine = 'export function proxy() { return new Response("mine") }\n'
+  await writeFile(join(root, 'proxy.ts'), mine)
+  await mkdir(join(root, 'src', 'app'), { recursive: true })
+
+  const result = await writeProxyFile(templates, root)
+
+  assert.equal(await readFile(join(root, 'proxy.ts'), 'utf-8'), mine)
+  assert.deepEqual(result?.preserved, ['proxy.ts'])
+  assert.equal(existsSync(join(root, 'src', 'proxy.ts')), true)
   await cleanup()
 })
 

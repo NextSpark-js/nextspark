@@ -761,7 +761,8 @@ test('migrate ends non-zero and lists a moved file import whose reserved target 
     assert.match(result.stdout, /MIGRATION FAILED: migration introduced broken imports/)
     assert.match(result.stdout, /components\/Button\.ts:1 → \.\.\/app\/missing/)
     assert.match(result.stdout, /components\/Button\.ts:2 → \.\.\/app\/missing/)
-    assert.match(result.stdout, /styles\/globals\.css:1 → \.\.\/app\/missing\.css/)
+    assert.doesNotMatch(result.stdout, /styles\/globals\.css:1/)
+    assert.equal(await readFile(join(root, 'styles/globals.css'), 'utf8'), '@import url("../contents/themes/acme/app/missing.css");\n')
     const tsconfig = JSON.parse(await readFile(join(root, 'tsconfig.json'), 'utf8'))
     assert.deepEqual(tsconfig.compilerOptions.paths, { '@/*': ['contents/themes/acme/*'] })
     await access(join(root, 'components/Button.ts'))
@@ -807,6 +808,89 @@ test('migrate moves only the selected monorepo host and rewrites sibling helper 
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.equal(await readFile(join(host, 'styles/globals.css'), 'utf8'), '@import "../components/Button.css";\n')
     assert.doesNotMatch(await readFile(join(root, 'packages/tokens/scripts/read.mjs'), 'utf8'), /contents\/themes\/acme/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate rebases and deduplicates relative stylesheet references from a legacy theme', async () => {
+  const { root } = await moveFixture()
+  const originalCss = [
+    '@source "../../../**/*.{js,ts,jsx,tsx}";',
+    '@source "../node_modules/@nextsparkjs/core/dist/**/*.js";',
+    '@source "../../../../node_modules/@nextsparkjs/core/dist/**/*.js";',
+    '@import "./components.css";',
+    '.logo { background-image: url("../public/logo.svg"); }',
+    '',
+  ].join('\n')
+  try {
+    await write(root, 'contents/themes/acme/styles/globals.css', originalCss)
+    await write(root, 'contents/themes/acme/styles/components.css', '@import "./tokens.pcss";\n')
+    await write(root, 'contents/themes/acme/styles/tokens.pcss', ':root { --logo: url(../public/logo.svg); }\n')
+    await write(root, 'contents/themes/acme/styles/theme.scss', '@import "./components.css";\n')
+    await write(root, 'contents/themes/acme/public/logo.svg', '<svg/>\n')
+    await write(root, 'contents/themes/acme/package.json', '{"name":"@fixture/theme-acme"}\n')
+    await write(root, 'node_modules/@nextsparkjs/core/dist/index.js', 'export {}\n')
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'styles/globals.css'), 'utf8'), [
+      '@source "../**/*.{js,ts,jsx,tsx}";',
+      '@source "../node_modules/@nextsparkjs/core/dist/**/*.js";',
+      '@import "./components.css";',
+      '.logo { background-image: url("../public/logo.svg"); }',
+      '',
+    ].join('\n'))
+    assert.equal(await readFile(join(root, 'styles/components.css'), 'utf8'), '@import "./tokens.pcss";\n')
+    assert.equal(await readFile(join(root, 'styles/tokens.pcss'), 'utf8'), ':root { --logo: url(../public/logo.svg); }\n')
+    assert.equal(await readFile(join(root, 'styles/theme.scss'), 'utf8'), '@import "./components.css";\n')
+
+    const rollbackCommands = result.stdout
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.startsWith('git -C '))
+    execFileSync('/bin/sh', ['-c', rollbackCommands.join('\n')], { cwd: root, stdio: 'ignore' })
+    assert.equal(await readFile(join(root, 'contents/themes/acme/styles/globals.css'), 'utf8'), originalCss)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate refuses to write a moved stylesheet reference outside the project root', async () => {
+  const { root } = await moveFixture()
+  const originalCss = '@source "../../../../../outside/**/*.js";\n'
+  try {
+    await write(root, 'contents/themes/acme/styles/globals.css', originalCss)
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /Cannot safely rebase relative stylesheet reference in contents\/themes\/acme\/styles\/globals\.css:1/)
+    assert.match(result.stderr, /would point outside the project root/)
+    assert.match(result.stdout, /Rollback after migration failure/)
+    assert.equal(await readFile(join(root, 'contents/themes/acme/styles/globals.css'), 'utf8'), originalCss)
+    await assert.rejects(access(join(root, 'styles/globals.css')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate refuses a moved stylesheet dependency absent from the project package', async () => {
+  const { root } = await moveFixture()
+  const originalCss = '@source "../node_modules/@fixture/legacy-theme-dependency/dist/**/*.js";\n'
+  try {
+    await write(root, 'contents/themes/acme/styles/globals.css', originalCss)
+    await write(root, 'contents/themes/acme/node_modules/@fixture/legacy-theme-dependency/dist/index.js', 'export {}\n')
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /Cannot safely rebase relative stylesheet reference in contents\/themes\/acme\/styles\/globals\.css:1: \.\.\/node_modules\/@fixture\/legacy-theme-dependency\/dist\/\*\*\/\*\.js/)
+    assert.match(result.stderr, /Add @fixture\/legacy-theme-dependency to the project package\.json/)
+    assert.equal(await readFile(join(root, 'contents/themes/acme/styles/globals.css'), 'utf8'), originalCss)
+    await assert.rejects(access(join(root, 'styles/globals.css')))
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
   } finally {
     await rm(root, { recursive: true, force: true })
   }

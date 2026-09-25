@@ -10,7 +10,7 @@
  * this file's source rather than from its imports, so the matcher is written
  * here; tests/node/apps-dev-proxy.test.ts keeps it equal to the template's.
  */
-export { proxy } from '../../packages/core/templates/proxy'
+export { proxy } from '../../../packages/core/templates/proxy'
 
 export const config = {
   matcher: [

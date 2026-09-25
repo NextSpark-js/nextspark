@@ -75,6 +75,16 @@ function sourceFiles(dir: string, skippedDirs = SKIPPED_DIRS): string[] {
   })
 }
 
+function projectRoots(): string[] {
+  const templateRoot = path.join(REPO, 'packages/core/templates/projects')
+  return [
+    path.join(REPO, 'apps/dev'),
+    ...fs.readdirSync(templateRoot, { withFileTypes: true })
+      .filter(entry => entry.isDirectory())
+      .map(entry => path.join(templateRoot, entry.name)),
+  ]
+}
+
 /**
  * The package a `@source` path reaches into. Only a path through node_modules
  * names one; any other path is a directory relative to the stylesheet.
@@ -205,6 +215,32 @@ test('the project and plugins declare every package their code and styles load',
     }
   }
   assert.deepEqual(undeclared, [])
+})
+
+test('root-first project styles keep every Tailwind source inside the project root', () => {
+  const escaping: string[] = []
+  for (const root of projectRoots()) {
+    const stylesheet = path.join(root, 'styles/globals.css')
+    const css = fs.readFileSync(stylesheet, 'utf8')
+    const sources = cssStatements(css)
+      .map(statement => statement.match(CSS_SOURCE)?.[1])
+      .filter((source): source is string => source !== undefined)
+
+    assert.ok(sources.includes('../**/*.{js,ts,jsx,tsx}'), `${path.relative(REPO, stylesheet)} scans its root-first project`)
+    assert.ok(sources.includes('../node_modules/@nextsparkjs/core/dist/**/*.js'), `${path.relative(REPO, stylesheet)} scans installed core`)
+
+    for (const source of sources) {
+      const wildcard = source.search(/[*!?{\[]/)
+      const staticPrefix = wildcard === -1 ? source : source.slice(0, wildcard)
+      const resolved = path.resolve(path.dirname(stylesheet), staticPrefix)
+      const relative = path.relative(root, resolved)
+      if (relative === '..' || relative.startsWith(`..${path.sep}`)) {
+        escaping.push(`${path.relative(REPO, stylesheet)}: ${source}`)
+      }
+    }
+  }
+
+  assert.deepEqual(escaping, [])
 })
 
 test('@nextsparkjs ranges in the project and plugins admit the release they ship in', () => {

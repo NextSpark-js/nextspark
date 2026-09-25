@@ -86,6 +86,7 @@ interface MigrateReport {
 }
 
 class MigrateAnalysisError extends Error {}
+class MissingThemeStylesheetDependencyError extends MigrateAnalysisError {}
 
 function pathFrom(root: string, file: string): string {
   const value = relative(root, file).split(sep).join('/');
@@ -1906,10 +1907,93 @@ function rewriteMovedRelativeImports(content: string, source: string, destinatio
     if (dirname(source) === dirname(destination) && targetDestination === target) return `${before}${quote}${value}${quote}${after}`;
     return `${before}${quote}${relativeSpecifier(destination, targetDestination)}${quote}${after}`;
   };
-  const cssReplace = (_all: string, before: string, quote: string, value: string) => replace('', before, quote, value, '');
   return content
-    .replace(/(\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s*)(['"`])(\.[^'"`]*)\2(\s*\)?)/g, replace)
-    .replace(/(@import\s*)(['"])(\.[^'"]*)\2/g, cssReplace);
+    .replace(/(\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s*)(['"`])(\.[^'"`]*)\2(\s*\)?)/g, replace);
+}
+
+function stylesheetReferenceParts(value: string, glob: boolean): { path: string; suffix: string } {
+  if (glob) return { path: value, suffix: '' };
+  const suffix = value.search(/[?#]/);
+  return suffix === -1
+    ? { path: value, suffix: '' }
+    : { path: value.slice(0, suffix), suffix: value.slice(suffix) };
+}
+
+function stylesheetLiteralTarget(target: string): string {
+  const wildcard = target.search(/[*[{]/);
+  return (wildcard === -1 ? target : target.slice(0, wildcard)).replace(/[\\/]$/, '');
+}
+
+function stylesheetDependencyName(target: string, themeNodeModules: string): string {
+  const segments = relative(themeNodeModules, target).split(sep).filter(Boolean);
+  if (segments[0]?.startsWith('@') && segments[1]) return `${segments[0]}/${segments[1]}`;
+  return segments[0] ?? 'the dependency';
+}
+
+/** Remove repeated Tailwind source directives after two legacy paths converge. */
+function deduplicateStylesheetSources(content: string): string {
+  const seen = new Set<string>();
+  return content.replace(/^[ \t]*@source\s+(['"])([^'"]+)\1\s*;?[ \t]*(?:\r\n|\n|\r|$)/gm, line => {
+    const match = /^[ \t]*@source\s+(['"])([^'"]+)\1/.exec(line);
+    if (!match || !seen.has(match[2])) {
+      if (match) seen.add(match[2]);
+      return line;
+    }
+    return '';
+  });
+}
+
+/** Keep relative CSS references attached to their old target when a theme file moves. */
+function rewriteMovedStylesheetReferences(content: string, source: string, destination: string, planned: Map<string, string>, unmoved: Set<string>, themeRoot: string, pluginsRoot: string, hostRoot: string): string {
+  if (!/\.(?:css|scss|pcss)$/i.test(source)) return content;
+  const contentsRoot = join(hostRoot, 'contents');
+  const themeNodeModules = join(themeRoot, 'node_modules');
+  const rebase = (value: string, index: number, glob = false): string => {
+    if (!value.startsWith('.')) return value;
+    const parts = stylesheetReferenceParts(value, glob);
+    const oldTarget = resolve(dirname(source), parts.path);
+    const oldLiteral = stylesheetLiteralTarget(oldTarget);
+    let target = isWithin(oldLiteral, themeRoot) || isWithin(oldLiteral, pluginsRoot)
+      ? movedReferenceDestination(oldTarget, planned, unmoved, themeRoot, hostRoot)
+      : directMoveDestination(oldTarget, planned);
+    // Legacy theme styles scanned contents/ because that was the source root.
+    // Once the selected theme becomes root-first, that scan root is the host.
+    if (!target && glob && oldLiteral === contentsRoot) {
+      target = `${hostRoot}${oldTarget.slice(oldLiteral.length)}`;
+    }
+    // A legacy theme package can leave its manifest behind while its CSS is
+    // promoted to the host. Its dependencies must resolve from the project,
+    // never by retaining an old theme-local node_modules reference.
+    if (isWithin(oldLiteral, themeNodeModules)) {
+      const hostTarget = `${join(hostRoot, 'node_modules')}${oldTarget.slice(themeNodeModules.length)}`;
+      if (existsSync(stylesheetLiteralTarget(hostTarget))) {
+        target = hostTarget;
+      } else {
+        const line = content.slice(0, index).split(/\r?\n/).length;
+        const dependency = stylesheetDependencyName(oldLiteral, themeNodeModules);
+        throw new MissingThemeStylesheetDependencyError(`Cannot safely rebase relative stylesheet reference in ${pathFrom(hostRoot, source)}:${line}: ${value} requires ${dependency}, which is unavailable from the project node_modules. Add ${dependency} to the project package.json and install it, then rerun.`);
+      }
+    }
+    target ??= oldTarget;
+    const targetLiteral = stylesheetLiteralTarget(target);
+    if (!isWithin(targetLiteral, hostRoot)) {
+      const line = content.slice(0, index).split(/\r?\n/).length;
+      throw new MigrateAnalysisError(`Cannot safely rebase relative stylesheet reference in ${pathFrom(hostRoot, source)}:${line}: ${value} would point outside the project root.`);
+    }
+    return `${relativeSpecifier(destination, target)}${parts.suffix}`;
+  };
+
+  let next = content
+    .replace(/(@source\s+)(['"])(\.[^'"]*)\2/g, (all, before: string, quote: string, value: string, index: number) => `${before}${quote}${rebase(value, index, true)}${quote}`)
+    .replace(/(@import\s+)(['"])(\.[^'"]*)\2/g, (all, before: string, quote: string, value: string, index: number) => `${before}${quote}${rebase(value, index)}${quote}`)
+    .replace(/url\(\s*(?:(['"])(\.[^'"]*)\1|(\.[^)'"\s]+))\s*\)/g, (all, quote: string | undefined, quoted: string | undefined, bare: string | undefined, index: number) => {
+      const value = quoted ?? bare;
+      if (!value) return all;
+      const rewritten = rebase(value, index);
+      return `url(${quote ?? ''}${rewritten}${quote ?? ''})`;
+    });
+  next = deduplicateStylesheetSources(next);
+  return next;
 }
 
 /** Some test runners encode their root in a relative path rather than naming the theme. */
@@ -2330,6 +2414,7 @@ function applyMove(repository: string, hostRoot: string, themeRoot: string, plug
     if (tsconfig) next = rewriteDeadTsconfigAliases(next, tsconfig);
     if (planned.has(file) || duplicate) {
       next = rewriteMovedRelativeImports(next, source, destination, planned);
+      next = rewriteMovedStylesheetReferences(next, source, destination, planned, unmoved, themeRoot, pluginsRoot, hostRoot);
       next = rewriteMovedDepthConfig(next, source, destination, planned, unmoved, themeRoot, hostRoot);
       next = rewriteHookExport(next, destination);
     }
@@ -2365,6 +2450,23 @@ function applyMove(repository: string, hostRoot: string, themeRoot: string, plug
     contentsRemoved: !existsSync(join(hostRoot, 'contents')),
     remainingContents: leftovers,
   };
+}
+
+/** Reject unavailable legacy theme stylesheet dependencies before migration writes. */
+function preflightMovedStylesheetDependencies(hostRoot: string, themeRoot: string, pluginsRoot: string, plan: MovePlan): void {
+  const plannedItems = [...plan.moves, ...plan.duplicates];
+  const planned = new Map(plannedItems.map(item => [item.source, item.destination]));
+  const unmoved = new Set(plan.unmoved);
+  for (const item of plannedItems) {
+    if (!/\.(?:css|scss|pcss)$/i.test(item.source)) continue;
+    try {
+      rewriteMovedStylesheetReferences(readFileSync(item.source, 'utf8'), item.source, item.destination, planned, unmoved, themeRoot, pluginsRoot, hostRoot);
+    } catch (error) {
+      if (error instanceof MissingThemeStylesheetDependencyError) throw error;
+      if (!(error instanceof MigrateAnalysisError)) throw error;
+      // Other rebase analysis errors retain their existing failure-and-rollback path.
+    }
+  }
 }
 
 function cleanWorkingTree(repository: string, untracked: string[]): boolean {
@@ -2430,6 +2532,8 @@ function migrationRollbackPaths(hostRoot: string, plan: MovePlan, report: Migrat
     ...ROOT_TEMPLATE_FILES,
     'proxy.ts',
     'middleware.ts',
+    'src/proxy.ts',
+    'src/middleware.ts',
     ...GENERATED_HOST_ROLLBACK_PATHS,
   ]);
   if (!hadLegacyApp) paths.delete('app');
@@ -2505,9 +2609,9 @@ function rollbackCommands(repository: string, hostRoot: string, plan: MovePlan, 
   // `checkout` restores tracked sources and edits.  Clean every path this
   // migration can newly create as well, including sync:app's generated state.
   const destinations = new Set(plan.moves.map(item => pathFrom(repository, item.destination)));
-  // sync:app can create these root files before it creates its state.  Only
-  // clean names that did not exist before migration, never user-owned files.
-  for (const path of [...ROOT_TEMPLATE_FILES, 'proxy.ts', 'middleware.ts', 'src/app/globals.css', '.gitignore']) {
+  // sync:app can create these integration files before it creates its state.
+  // Only clean names that did not exist before migration, never user-owned files.
+  for (const path of [...ROOT_TEMPLATE_FILES, 'proxy.ts', 'middleware.ts', 'src/proxy.ts', 'src/middleware.ts', 'src/app/globals.css', '.gitignore']) {
     if (!existsSync(join(hostRoot, path))) destinations.add(pathFrom(repository, join(hostRoot, path)));
   }
   if (report.config.plannedCreation) destinations.add(pathFrom(repository, join(hostRoot, 'nextspark.config.ts')));
@@ -2722,6 +2826,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     const sourceFiles = plannedItems.filter(item => !isEnvironmentFile(basename(item.source)));
     const beforeFiles = sourceFiles.map(item => ({ file: item.source, source: item.source, display: pathFrom(hostRoot, item.destination) }));
     const brokenBeforeMove = brokenImports(hostRoot, beforeFiles, aliasesBeforeMove);
+    preflightMovedStylesheetDependencies(hostRoot, themeRoot, pluginsRoot, plan);
     snapshotMigrationRollback(hostRoot, plan, report, hadLegacyApp);
     writesStarted = true;
     const result = applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme, plan, aliasesBeforeMove, report.envExample, report.config.plugins);

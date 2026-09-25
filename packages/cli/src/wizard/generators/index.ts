@@ -46,7 +46,7 @@ import { getDefaultProductionSignIn, type ProductionSignInResult } from '../prom
 // Monorepo generator
 import { generateMonorepoStructure, isMonorepoProject, getWebDir } from './monorepo-generator.js'
 import { isLocalPackageRef } from './local-package-refs.js'
-import { writeProxyFile } from './proxy-file-writer.js'
+import { writeProxyFile, type ProxyFileResult } from './proxy-file-writer.js'
 import { ensureGeneratedPathsIgnored, TEMPLATES_GITIGNORE_ENTRY } from '../../utils/templates-gitignore.js'
 import { tagGeneratedFiles } from '../../utils/sync-files.js'
 import { PPR_TEMPLATE_VARIANTS } from '../../utils/sync-plan.js'
@@ -157,7 +157,7 @@ export const PROJECT_ROOT_ITEMS: Array<{ src: string; dest: string; force: boole
   { src: 'instrumentation.ts', dest: 'instrumentation.ts', force: false },
 ]
 
-async function copyProjectFiles(config: WizardConfig): Promise<void> {
+async function copyProjectFiles(config: WizardConfig): Promise<ProxyFileResult | null> {
   if (!cachedTemplatesDir) {
     throw new Error('Templates directory not cached. Call cacheTemplatesDir() first.')
   }
@@ -178,7 +178,7 @@ async function copyProjectFiles(config: WizardConfig): Promise<void> {
     }
   }
 
-  await writeProxyFile(templatesDir, projectDir)
+  const proxyFile = await writeProxyFile(templatesDir, projectDir)
 
   if (!isMonorepoProject(config)) {
     await mergeWorkspaceYaml(
@@ -186,6 +186,8 @@ async function copyProjectFiles(config: WizardConfig): Promise<void> {
       path.join(projectDir, 'pnpm-workspace.yaml')
     )
   }
+
+  return proxyFile
 }
 
 /**
@@ -470,13 +472,18 @@ tests/jest/coverage
  * the interactive production sign-in prompt (`--yes`, quick mode, presets)
  * rely on that default rather than passing their own.
  */
+export interface ProjectGenerationResult {
+  proxyFile: ProxyFileResult | null
+}
+
 export async function generateProject(
   config: WizardConfig,
   signInProvider: ProductionSignInResult = getDefaultProductionSignIn(),
   projectTemplate = 'starter',
   plugins: readonly string[] = [],
-): Promise<void> {
+): Promise<ProjectGenerationResult> {
   const projectDir = process.cwd()
+  let proxyFile: ProxyFileResult | null = null
 
   // IMPORTANT: Cache templates directory BEFORE changing directories
   // This ensures we can find templates even after chdir for monorepo
@@ -499,7 +506,7 @@ export async function generateProject(
 
   try {
     // 1. Copy core project files
-    await copyProjectFiles(config)
+    proxyFile = await copyProjectFiles(config)
 
     // 1.05 In a monorepo, dependencies are hoisted to the repo root, so
     // Turbopack's root must point at the parent (repo root) — otherwise the
@@ -582,4 +589,6 @@ export async function generateProject(
     // Clear cache
     cachedTemplatesDir = null
   }
+
+  return { proxyFile }
 }

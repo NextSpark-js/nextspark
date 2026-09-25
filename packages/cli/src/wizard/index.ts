@@ -26,9 +26,9 @@ function getCliVersion(): string {
     return 'latest'
   }
 }
-import { showBanner, showSection, showError, showInfo } from './banner.js'
+import { showBanner, showSection, showError, showInfo, showWarning } from './banner.js'
 import { runAllPrompts, runQuickPrompts, runExpertPrompts } from './prompts/index.js'
-import { generateProject, isMonorepoProject, getWebDir } from './generators/index.js'
+import { generateProject, isMonorepoProject, getWebDir, type ProjectGenerationResult } from './generators/index.js'
 import { getPreset, applyPreset, PRESET_DESCRIPTIONS, DEFAULT_PRESET } from './presets.js'
 import type { WizardConfig, CLIOptions } from './types.js'
 import { promptProjectInfo } from './prompts/project-info.js'
@@ -56,7 +56,7 @@ interface ProjectInfo {
 }
 
 interface WizardRuntime {
-  generateProject(config: WizardConfig, signInProvider?: ProductionSignInResult, projectTemplate?: string, plugins?: readonly string[]): Promise<void>
+  generateProject(config: WizardConfig, signInProvider?: ProductionSignInResult, projectTemplate?: string, plugins?: readonly string[]): Promise<ProjectGenerationResult | void>
   installProjectDependencies(projectRoot: string): void
   buildRegistries(webDir: string): void
 }
@@ -245,7 +245,17 @@ export async function runWizard(
     }).start()
 
     try {
-      await runtime.generateProject(config, signInProvider, selectedTheme || 'starter', selectedPlugins)
+      const generation = await runtime.generateProject(config, signInProvider, selectedTheme || 'starter', selectedPlugins)
+      const proxyFile = generation?.proxyFile
+      if (proxyFile) {
+        for (const file of proxyFile.preserved) {
+          if (file === proxyFile.path) {
+            showWarning(`${file} was kept and is the file Next loads in this project; core's proxy was not written or replaced.`)
+          } else {
+            showWarning(`${file} was kept, but Next loads ${proxyFile.path} in this project, so this file will not run; move its logic into config/hooks/proxy.ts or ${proxyFile.path}`)
+          }
+        }
+      }
       const onboarding = writeAiOnboarding(getWebDir(process.cwd(), config))
       const preserved = Object.entries(onboarding).filter(([, state]) => state === 'preserved').map(([file]) => file.toUpperCase())
       if (preserved.length) showInfo(`Preserved existing ${preserved.join(' and ')}.`)

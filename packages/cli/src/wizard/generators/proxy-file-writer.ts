@@ -1,14 +1,22 @@
 import { join } from 'node:path';
 import fs from 'fs-extra';
+import { readGeneratedTagAt } from '../../utils/generated-tag.js';
 import { getNextMajorVersion } from '../../utils/next-bundler.js';
-import { planProxyFile, type ProxyFileName } from '../../utils/proxy-file.js';
+import {
+  isGeneratedProxySource,
+  planProxyFile,
+  proxyDirectoryFor,
+  type ProxyFileName,
+} from '../../utils/proxy-file.js';
 
 export interface ProxyFileResult {
   /** The file name that Next will load for this project. */
   fileName: 'proxy.ts' | 'middleware.ts';
+  /** Path from the project root, including src/ when that is Next's convention root. */
+  path: string;
   /** False when the project's own file was left in place instead. */
   written: boolean;
-  /** Files left alone because their content is not ours to replace. */
+  /** Project-relative paths left alone because their content is not ours to replace. */
   preserved: string[];
 }
 
@@ -21,7 +29,7 @@ export interface ProxyFileResult {
  * belongs to the project, and this reports it so the caller can say so.
  *
  * @param templatesDir - The core package's templates directory.
- * @param projectRoot - Where the file should land.
+ * @param projectRoot - The Next project whose app/pages convention decides where the file lands.
  * @returns What happened, or null when the template has no proxy.ts.
  */
 export async function writeProxyFile(
@@ -31,19 +39,43 @@ export async function writeProxyFile(
   const sourcePath = join(templatesDir, 'proxy.ts');
   if (!await fs.pathExists(sourcePath)) return null;
 
+  const source = await fs.readFile(sourcePath, 'utf-8');
+  const directory = proxyDirectoryFor(projectRoot);
+  const destinationDir = join(projectRoot, directory);
+
   const existing: Partial<Record<ProxyFileName, string>> = {};
   for (const name of ['proxy.ts', 'middleware.ts'] as const) {
-    const path = join(projectRoot, name);
+    const path = join(destinationDir, name);
     if (await fs.pathExists(path)) existing[name] = await fs.readFile(path, 'utf-8');
   }
 
-  const plan = planProxyFile(await fs.readFile(sourcePath, 'utf-8'), getNextMajorVersion(projectRoot), existing);
+  const plan = planProxyFile(source, getNextMajorVersion(projectRoot), existing);
   if (plan.content !== null) {
-    await fs.writeFile(join(projectRoot, plan.fileName), plan.content, 'utf-8');
+    await fs.writeFile(join(destinationDir, plan.fileName), plan.content, 'utf-8');
   }
   if (plan.remove) {
-    await fs.remove(join(projectRoot, plan.remove));
+    await fs.remove(join(destinationDir, plan.remove));
   }
 
-  return { fileName: plan.fileName, written: plan.content !== null, preserved: plan.preserved };
+  const preserved = plan.preserved.map(name => directory ? `${directory}/${name}` : name);
+  const otherDirectory = directory ? '' : 'src';
+  for (const name of ['proxy.ts', 'middleware.ts'] as const) {
+    const relativePath = otherDirectory ? `${otherDirectory}/${name}` : name;
+    const path = join(projectRoot, relativePath);
+    if (!await fs.pathExists(path)) continue;
+    const content = await fs.readFile(path, 'utf-8');
+    const tag = readGeneratedTagAt(relativePath, Buffer.from(content));
+    if (tag ? tag.intact : isGeneratedProxySource(content, source)) {
+      await fs.remove(path);
+    } else {
+      preserved.push(relativePath);
+    }
+  }
+
+  return {
+    fileName: plan.fileName,
+    path: directory ? `${directory}/${plan.fileName}` : plan.fileName,
+    written: plan.content !== null,
+    preserved,
+  };
 }

@@ -132,15 +132,32 @@ test('--dry-run writes nothing and names each file it would write, remove or kee
     const printed = await runSync(root, { dryRun: true })
 
     assert.equal(await readFile(join(root, 'src/app/layout.tsx'), 'utf-8'), ROOT_LAYOUT)
-    assert.equal(existsSync(join(root, 'middleware.ts')), false)
+    assert.equal(existsSync(join(root, 'src/middleware.ts')), false)
     assert.equal(existsSync(join(root, 'src/app/layout.ppr.tsx')), true)
 
-    assert.match(printed, /\+ middleware\.ts \(core's proxy, under the name Next loads in this project\)/)
+    assert.match(printed, /\+ src\/middleware\.ts \(core's proxy, under the name Next loads in this project\)/)
     assert.match(printed, /Would tag 1 file\(s\) identical to core/)
     assert.match(printed, /- src\/app\/layout\.ppr\.tsx \(PPR variants stay in core/)
     assert.match(printed, /! i18n\.ts \(differs from core\)/)
     assert.match(printed, /! src\/app\/dashboard\/page\.tsx \(differs from core\)/)
     assert.match(printed, /Would add src\/app\/\(templates\)\/, \.nextspark\/registries\/, \.nextspark\/backups\/, \.nextspark\/sync-state\.json, app\.backup\.v\*\/ to \.gitignore/)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('sync moves an untouched generated root middleware beside src/app', async () => {
+  const { root, cleanup } = await project()
+  try {
+    const oldGenerated = CORE_PROXY.replace('function proxy(', 'function middleware(')
+    await write(root, 'middleware.ts', oldGenerated)
+
+    const printed = await runSync(root, { force: true })
+
+    assert.equal(existsSync(join(root, 'middleware.ts')), false)
+    assert.match(await readFile(join(root, 'src/middleware.ts'), 'utf-8'), TAG_LINE)
+    assert.match(printed, /\+ src\/middleware\.ts \(core's proxy, under the name Next loads in this project\)/)
+    assert.match(printed, /- middleware\.ts \(Next loads src\/middleware\.ts in this project instead\)/)
   } finally {
     await cleanup()
   }
@@ -574,7 +591,7 @@ test('nothing a sync writes is left for git, however many files it writes and wh
     await write(root, `${CORE}/scripts/build/registry.mjs`, treeRegistryBuild(260))
     await write(root, `${CORE}/templates/app/dashboard/layout.tsx`, 'export default function DashboardLayout({ children }) { return children }\n')
     await write(root, `${CORE}/templates/app/(public)/page.tsx`, 'export default function Home() { return null }\n')
-    await write(root, 'middleware.ts', 'export function middleware() { return undefined }\n')
+    await write(root, 'src/middleware.ts', 'export function middleware() { return undefined }\n')
     await write(root, 'src/app/dashboard/layout.tsx', 'export default function MyLayout({ children }) { return children }\n')
     await write(root, 'src/app/(public)/page.tsx', 'export default function MyHome() { return null }\n')
     await write(root, 'src/app/(templates)/(public)/page.tsx', 'export default function Earlier() { return null }\n')
@@ -584,13 +601,13 @@ test('nothing a sync writes is left for git, however many files it writes and wh
     const shapes = ['middleware.ts', 'dashboard/layout.tsx', '(public)/page.tsx']
     await write(root, '.gitignore', ['src/app/(templates)', '.nextspark/backups/*', 'app.backup.v*']
       .flatMap((dir) => shapes.map((shape) => `${dir}/${shape}`))
-      .concat('.nextspark/sync-state.json', '')
+      .concat('.nextspark/backups/*/src/middleware.ts', '.nextspark/sync-state.json', '')
       .join('\n'))
 
     await runSync(root, {
       force: true,
       backup: true,
-      overwrite: ['i18n.ts', 'middleware.ts', 'src/app/dashboard/layout.tsx', 'src/app/(public)/page.tsx'],
+      overwrite: ['i18n.ts', 'src/middleware.ts', 'src/app/dashboard/layout.tsx', 'src/app/(public)/page.tsx'],
     })
 
     const [appBackup] = (await readdir(root)).filter((entry) => entry.startsWith('app.backup.'))
@@ -602,7 +619,7 @@ test('nothing a sync writes is left for git, however many files it writes and wh
       'src/app/(templates)/deep/with spaces/área/(group 0)/"quoted" page 259.tsx',
       `${appBackup}/(marketing)/área "quoted" (2)/page.tsx`,
       `${appBackup}/(templates)/dashboard/layout.tsx`,
-      ...['i18n.ts', 'middleware.ts', 'src/app/dashboard/layout.tsx', 'src/app/(public)/page.tsx'].map((file) => `.nextspark/backups/${ownBackup}/${file}`),
+      ...['i18n.ts', 'src/middleware.ts', 'src/app/dashboard/layout.tsx', 'src/app/(public)/page.tsx'].map((file) => `.nextspark/backups/${ownBackup}/${file}`),
       `.nextspark/backups/${buildBackup}/src/app/(templates)/(public)/page.tsx`,
     ]
     for (const file of written) {

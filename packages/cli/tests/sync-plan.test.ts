@@ -22,6 +22,7 @@ function input(overrides: Partial<SyncInput> = {}): SyncInput {
     projectRootFiles: files({}),
     usePprVariants: false,
     nextMajor: 15,
+    proxyDirectory: '',
     state: null,
     overwrite: new Set(),
     ...overrides,
@@ -206,6 +207,42 @@ test('a proxy file an earlier release generated is migrated to the tag; a projec
   const stale = planSync(input({ rootTemplates, projectRootFiles: files({ 'proxy.ts': tagged('proxy.ts', PROXY) }) }))
   assert.equal(actionFor(stale, 'proxy.ts').kind, 'delete')
   assert.equal(actionFor(stale, 'middleware.ts').kind, 'create')
+})
+
+test('the proxy is planned under src when the application uses src/app', () => {
+  const actions = planSync(input({
+    rootTemplates: files({ 'proxy.ts': PROXY }),
+    nextMajor: 16,
+    proxyDirectory: 'src',
+  }))
+
+  assert.equal(actionFor(actions, 'src/proxy.ts').kind, 'create')
+})
+
+test('sync moves an untouched generated root proxy to the src convention level', () => {
+  const actions = planSync(input({
+    rootTemplates: files({ 'proxy.ts': PROXY }),
+    projectRootFiles: files({ 'proxy.ts': tagged('proxy.ts', PROXY) }),
+    nextMajor: 16,
+    proxyDirectory: 'src',
+  }))
+
+  assert.equal(actionFor(actions, 'src/proxy.ts').kind, 'create')
+  assert.equal(actionFor(actions, 'proxy.ts').kind, 'delete')
+})
+
+test('sync preserves a project-owned proxy at the wrong convention level and reports its path', () => {
+  const actions = planSync(input({
+    rootTemplates: files({ 'proxy.ts': PROXY }),
+    projectRootFiles: files({ 'proxy.ts': 'export function proxy() { return new Response("mine") }\n' }),
+    nextMajor: 16,
+    proxyDirectory: 'src',
+  }))
+
+  assert.equal(actionFor(actions, 'src/proxy.ts').kind, 'create')
+  const preserved = actionFor(actions, 'proxy.ts')
+  assert.equal(preserved.kind, 'keep')
+  assert.match(preserved.reason, /Next loads src\/proxy\.ts/)
 })
 
 test('a customized file is listed while core changed it since the last sync on this machine, and not again after', () => {

@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
 /**
  * Write the request-interception file under the name the project's Next.js
  * actually looks for.
@@ -55,6 +58,19 @@ export function isGeneratedProxySource(existing: string, source: string): boolea
 }
 
 export type ProxyFileName = 'proxy.ts' | 'middleware.ts';
+export type ProxyDirectory = '' | 'src';
+
+/** Next resolves the convention beside src/app or src/pages when either exists. */
+export function proxyDirectoryFor(projectRoot: string): ProxyDirectory {
+  return existsSync(join(projectRoot, 'src', 'app')) || existsSync(join(projectRoot, 'src', 'pages'))
+    ? 'src'
+    : '';
+}
+
+/** Path from the project root to the request-interception file Next loads. */
+export function proxyPath(directory: ProxyDirectory, fileName: ProxyFileName): string {
+  return directory ? `${directory}/${fileName}` : fileName;
+}
 
 export interface ProxyFilePlan {
   /** The file name that Next will load for this project. */

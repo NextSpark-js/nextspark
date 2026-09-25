@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Generated and synced request interception now lives beside `src/app`
+  (`src/proxy.ts` on Next.js 16, `src/middleware.ts` on Next.js 15), so Next
+  discovers the authentication boundary and unauthenticated dashboard requests
+  redirect to login. Untouched generated files at the old root location are
+  removed during sync; project-owned files are preserved and reported.
+
 ## [0.1.0-beta.191] - 2026-09-18
 
 ### Fixed

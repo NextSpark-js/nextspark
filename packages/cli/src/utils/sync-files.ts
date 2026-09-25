@@ -2,6 +2,7 @@ import { constants, existsSync, readdirSync, readFileSync, statSync } from 'node
 import { dirname, join, relative, sep } from 'node:path';
 import { loadCoreProjectFiles, type ProjectFiles } from './core-write-places.js';
 import { getNextMajorVersion } from './next-bundler.js';
+import { proxyDirectoryFor } from './proxy-file.js';
 import { nextSyncState, planSync, ROOT_TEMPLATE_FILES, type SyncAction, type SyncInput } from './sync-plan.js';
 import { readSyncState, writeSyncState } from './sync-state.js';
 
@@ -73,15 +74,20 @@ export interface ReadSyncInputOptions {
 /** Read what planSync needs from core's templates, the project and the last sync on this machine. */
 export function readSyncInput(coreDir: string, projectRoot: string, { env = process.env, overwrite = [] }: ReadSyncInputOptions = {}): SyncInput {
   const nextMajor = getNextMajorVersion(projectRoot);
+  const projectRootFiles = readNamedFiles(projectRoot, [...ROOT_TEMPLATE_FILES, 'proxy.ts', 'middleware.ts']);
+  for (const [name, content] of readNamedFiles(join(projectRoot, 'src'), ['proxy.ts', 'middleware.ts'])) {
+    projectRootFiles.set(`src/${name}`, content);
+  }
 
   return {
     coreVersion: readCoreVersion(coreDir),
     appTemplates: readTree(join(coreDir, 'templates', 'app')),
     projectApp: readTree(join(projectRoot, 'src', 'app')),
     rootTemplates: readNamedFiles(join(coreDir, 'templates'), [...ROOT_TEMPLATE_FILES, 'proxy.ts']),
-    projectRootFiles: readNamedFiles(projectRoot, [...ROOT_TEMPLATE_FILES, 'proxy.ts', 'middleware.ts']),
+    projectRootFiles,
     usePprVariants: usesCacheComponents(projectRoot) && (nextMajor ?? 0) >= 16,
     nextMajor,
+    proxyDirectory: proxyDirectoryFor(projectRoot),
     state: readSyncState(projectRoot),
     overwrite: new Set(overwrite.map(toPlanPath)),
   };
