@@ -533,9 +533,13 @@ function scanFileContent(relPath, buf, report) {
 
 const EXCLUDED_DIR_NAMES = new Map([
   ['.git', 'excluded-dir-git'],
-  ['node_modules', 'excluded-dir-node-modules'],
+  ['.cache', 'excluded-dir-cache'],
   ['.next', 'excluded-dir-next'],
+  ['.nyc_output', 'excluded-dir-nyc-output'],
+  ['.turbo', 'excluded-dir-turbo'],
+  ['node_modules', 'excluded-dir-node-modules'],
   ['.nextspark', 'excluded-dir-nextspark'],
+  ['coverage', 'excluded-dir-coverage'],
 ])
 
 function scanFilePaths(fileSet, report) {
@@ -618,6 +622,60 @@ export function expectedPublishedPackageNames(repoRoot = REPO_ROOT) {
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
       return manifest.private === true || typeof manifest.name !== 'string' ? [] : [manifest.name]
     })
+  }).sort()
+}
+
+/**
+ * Returns publishable package manifests that do not use a non-empty `files`
+ * allowlist.  Keep this separate from tarball inspection: package managers
+ * always include a few metadata files, so inspecting a clean tarball cannot
+ * prove that a local scratch file would be excluded on a maintainer's machine.
+ */
+export function publishablePackagesMissingFiles(repoRoot = REPO_ROOT) {
+  return ['packages', 'plugins'].flatMap((parent) => {
+    const root = join(repoRoot, parent)
+    if (!existsSync(root)) return []
+    return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+      if (!entry.isDirectory()) return []
+      const manifestPath = join(root, entry.name, 'package.json')
+      if (!existsSync(manifestPath)) return []
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+      if (manifest.private === true || typeof manifest.name !== 'string') return []
+      return Array.isArray(manifest.files) && manifest.files.length > 0 ? [] : [join(parent, entry.name, 'package.json')]
+    })
+  }).sort()
+}
+
+/**
+ * Top-level plugin directories that are deliberately kept out of the tarball.
+ * Every other directory must be named in the plugin's `files` allowlist: the
+ * compiler reads api/, entities/, presets/ and friends straight from the
+ * installed package, so an allowlist that forgets one ships a plugin that
+ * installs cleanly and silently loses its routes or entities.
+ */
+export const PLUGIN_DIRS_NEVER_SHIPPED = new Set([
+  '__tests__', 'tests', 'test', ...EXCLUDED_DIR_NAMES.keys(),
+])
+
+/**
+ * Returns `plugins/<name>/<dir>` for every top-level directory of a publishable
+ * plugin that is neither listed in its `files` allowlist nor in
+ * PLUGIN_DIRS_NEVER_SHIPPED.
+ */
+export function pluginDirectoriesOutsideFiles(repoRoot = REPO_ROOT) {
+  const root = join(repoRoot, 'plugins')
+  if (!existsSync(root)) return []
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    if (!entry.isDirectory()) return []
+    const pluginDir = join(root, entry.name)
+    const manifestPath = join(pluginDir, 'package.json')
+    if (!existsSync(manifestPath)) return []
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+    if (manifest.private === true || typeof manifest.name !== 'string' || !Array.isArray(manifest.files)) return []
+    const listed = new Set(manifest.files.map(item => String(item).replace(/^\.\//, '').split('/')[0]))
+    return readdirSync(pluginDir, { withFileTypes: true })
+      .filter(child => child.isDirectory() && !listed.has(child.name) && !PLUGIN_DIRS_NEVER_SHIPPED.has(child.name))
+      .map(child => join('plugins', entry.name, child.name))
   }).sort()
 }
 
@@ -774,7 +832,7 @@ async function main() {
     console.log('Usage: node scripts/packages/verify-tarballs.mjs [dir] [--allowlist <path>] [--expect-all]')
     console.log(`  dir          Directory of .tgz files (default: ${DEFAULT_OUTPUT_DIR})`)
     console.log(`  --allowlist  Allowlist JSON path (default: ${DEFAULT_ALLOWLIST})`)
-    console.log('  --expect-all Verify every publishable root package has a tarball')
+    console.log('  --expect-all Verify every publishable root package has a tarball, and that its files allowlist covers it')
     return
   }
 
@@ -789,7 +847,23 @@ async function main() {
 
   const missingPackages = args.expectAll ? missingExpectedPackages(results) : []
   const ok = printReport(results, missingPackages)
-  process.exitCode = ok ? 0 : 1
+  const manifestsOk = args.expectAll ? printManifestFindings() : true
+  process.exitCode = ok && manifestsOk ? 0 : 1
+}
+
+// A tarball can only show what was packed, not what a missing allowlist would
+// let slip in on another machine or what a too-narrow one dropped, so the
+// release-set run also checks the manifests behind the tarballs.
+function printManifestFindings() {
+  const withoutFiles = publishablePackagesMissingFiles()
+  const unshippedDirs = pluginDirectoriesOutsideFiles()
+  for (const manifest of withoutFiles) {
+    console.error(`${RED}[FAIL]${NC} ${manifest} has no "files" allowlist; local artifacts would be packed`)
+  }
+  for (const dir of unshippedDirs) {
+    console.error(`${RED}[FAIL]${NC} ${dir} is neither in its plugin's "files" allowlist nor a never-shipped directory`)
+  }
+  return withoutFiles.length === 0 && unshippedDirs.length === 0
 }
 
 // Run only when invoked directly (so tests can import the helpers above

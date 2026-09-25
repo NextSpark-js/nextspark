@@ -1,6 +1,18 @@
 {
   "name": "@nextsparkjs/plugin-langchain",
   "version": "0.1.0-beta.192",
+  "files": [
+    "plugin.config.ts",
+    "api",
+    "components",
+    "docs",
+    "hooks",
+    "lib",
+    "migrations",
+    "presets",
+    "types",
+    ".env.example"
+  ],
   "private": false,
   "main": "./plugin.config.ts",
   "requiredPlugins": [],

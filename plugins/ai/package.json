@@ -1,6 +1,17 @@
 {
   "name": "@nextsparkjs/plugin-ai",
   "version": "0.1.0-beta.192",
+  "files": [
+    "plugin.config.ts",
+    "api",
+    "docs",
+    "entities",
+    "lib",
+    "public",
+    "types",
+    ".env.example",
+    "README.md"
+  ],
   "private": false,
   "main": "./plugin.config.ts",
   "requiredPlugins": [],

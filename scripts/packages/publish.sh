@@ -172,6 +172,15 @@ if ! pnpm pkg:validate; then
 fi
 echo ""
 
+# Verify what is about to be published: tarball contents, the release set and
+# the files allowlists behind them
+echo -e "${CYAN}Verifying tarballs...${NC}"
+if ! node "$REPO_ROOT/scripts/packages/verify-tarballs.mjs" --expect-all "$PACKAGES_DIR"; then
+    echo -e "${RED}Tarball verification failed. Fix errors before publishing.${NC}"
+    exit 1
+fi
+echo ""
+
 # Verify npm authentication
 echo -e "${CYAN}Verifying npm authentication...${NC}"
 REGISTRY_ARGS=""

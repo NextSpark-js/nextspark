@@ -6,7 +6,15 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { expectedPublishedPackageNames, loadAllowlist, missingExpectedPackages, parseArgs, verifyDirectory } from './verify-tarballs.mjs'
+import {
+  expectedPublishedPackageNames,
+  loadAllowlist,
+  missingExpectedPackages,
+  parseArgs,
+  publishablePackagesMissingFiles,
+  pluginDirectoriesOutsideFiles,
+  verifyDirectory,
+} from './verify-tarballs.mjs'
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'verify-tarballs.mjs')
 
@@ -205,6 +213,28 @@ test('a stray .env file fails but .env.example is allowed', () => {
   })
 })
 
+test('local build and test artifact directories fail', () => {
+  withFixtureDir((dir) => {
+    buildFixtureTarball(dir, 'nextsparkjs-fixture-0.1.0-beta.192.tgz', {
+      'package.json': VALID_PKG_JSON(),
+      'dist/index.js': 'export const x = 1;\n',
+      'dist/index.d.ts': 'export declare const x: number;\n',
+      'dist/lib/foo.js': 'export const foo = 1;\n',
+      'dist/lib/foo.d.ts': 'export declare const foo: number;\n',
+      'coverage/clover.xml': '<file name="/Users/maintainer/project.ts" />\n',
+      'node_modules/example/index.js': 'module.exports = {}\n',
+      '.next/cache/build': 'cache\n',
+      '.turbo/turbo-build.log': 'cache\n',
+    })
+
+    const results = verifyDirectory(dir, join(dir, 'missing-allowlist.json'))
+    assert.deepEqual(
+      results[0].findings.filter((finding) => finding.type.startsWith('excluded-dir-')).map((finding) => finding.type).sort(),
+      ['excluded-dir-coverage', 'excluded-dir-next', 'excluded-dir-node-modules', 'excluded-dir-turbo'],
+    )
+  })
+})
+
 test('an allowlisted finding with a reason is suppressed but still visible in the report', () => {
   withFixtureDir((dir) => {
     buildFixtureTarball(dir, 'nextsparkjs-fixture-0.1.0-beta.192.tgz', {
@@ -258,6 +288,26 @@ test('parseArgs accepts pnpm\'s argument separator before the directory', () => 
 
 test('the release-set expectation includes the published langchain plugin', () => {
   assert.ok(expectedPublishedPackageNames().includes('@nextsparkjs/plugin-langchain'))
+})
+
+test('every publishable package declares an explicit files allowlist', () => {
+  assert.deepEqual(publishablePackagesMissingFiles(), [])
+})
+
+test('every top-level plugin directory is either shipped or deliberately excluded', () => {
+  assert.deepEqual(pluginDirectoriesOutsideFiles(), [])
+})
+
+test('a plugin directory missing from files is reported, excluded ones are not', () => {
+  const repo = mkdtempSync(join(tmpdir(), 'plugin-files-'))
+  try {
+    const plugin = join(repo, 'plugins', 'demo')
+    for (const dir of ['api', 'entities', 'lib', 'tests', 'coverage']) mkdirSync(join(plugin, dir), { recursive: true })
+    writeFileSync(join(plugin, 'package.json'), JSON.stringify({ name: '@x/plugin-demo', files: ['plugin.config.ts', 'lib', './api/**'] }))
+    assert.deepEqual(pluginDirectoriesOutsideFiles(repo), [join('plugins', 'demo', 'entities')])
+  } finally {
+    rmSync(repo, { recursive: true, force: true })
+  }
 })
 
 test('the release-set expectation reports a missing published package tarball', () => {
