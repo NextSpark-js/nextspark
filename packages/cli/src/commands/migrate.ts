@@ -305,6 +305,19 @@ function changedLines(left: Buffer, right: Buffer): number {
   return leftLines.length + rightLines.length - 2 * previous[rightLines.length];
 }
 
+/** Template output may cross a platform boundary; only newline encoding is immaterial. */
+function matchesTemplateBytes(content: Buffer, template: Buffer): boolean {
+  const normalizeLineEndings = (bytes: Buffer): Buffer => {
+    const normalized: number[] = [];
+    for (let index = 0; index < bytes.length; index++) {
+      if (bytes[index] === 13 && bytes[index + 1] === 10) continue;
+      normalized.push(bytes[index]);
+    }
+    return Buffer.from(normalized);
+  };
+  return content.equals(template) || normalizeLineEndings(content).equals(normalizeLineEndings(template));
+}
+
 function templateDirectory(hostRoot: string, repositoryRoot: string): string | null {
   let directory = hostRoot;
   while (true) {
@@ -653,8 +666,8 @@ function compareApp(hostRoot: string, templates: string | null, previous: Previo
       // that an untaggable file is still exactly what sync left on disk.
       return entry?.written === hash;
     })) generatedBySyncState.push(file);
-    else if (existsSync(coreFile) && readFileSync(coreFile).equals(content)) identical.push(file);
-    else if (previousTemplateCandidates(previous, file, activeTheme, usePpr).some(candidate => candidate.equals(content))) generatedByPreviousTemplate.push(file);
+    else if (existsSync(coreFile) && matchesTemplateBytes(content, readFileSync(coreFile))) identical.push(file);
+    else if (previousTemplateCandidates(previous, file, activeTheme, usePpr).some(candidate => matchesTemplateBytes(content, candidate))) generatedByPreviousTemplate.push(file);
     else if (!existsSync(coreFile)) projectOnly.push(file);
     else {
       const count = changedLines(content, readFileSync(coreFile));
@@ -1009,14 +1022,20 @@ const coreScriptRenames: Readonly<Record<string, string>> = {
   'scripts/test/jest-theme.mjs': 'scripts/test/jest.mjs',
 };
 
-function canRunGeneratedHostSync(templates: string | null): boolean {
+function missingGeneratedHostSyncSupport(templates: string | null): string[] {
   const coreDir = templates ? dirname(templates) : null;
-  return coreDir !== null
-    && existsSync(join(coreDir, 'templates', 'app'))
-    && existsSync(join(coreDir, 'scripts', 'build', 'registry.mjs'))
-    && existsSync(join(coreDir, 'scripts', 'build', 'registry', 'write-places.mjs'))
-    && existsSync(join(coreDir, 'scripts', 'build', 'registry', 'post-build', 'own-gitignores.mjs'))
-    && existsSync(join(coreDir, 'scripts', 'build', 'safe-fs.mjs'));
+  if (!coreDir) return ['templates/app', 'scripts/build/registry.mjs', 'scripts/build/registry/write-places.mjs', 'scripts/build/registry/post-build/own-gitignores.mjs', 'scripts/build/safe-fs.mjs'];
+  return [
+    'templates/app',
+    'scripts/build/registry.mjs',
+    'scripts/build/registry/write-places.mjs',
+    'scripts/build/registry/post-build/own-gitignores.mjs',
+    'scripts/build/safe-fs.mjs',
+  ].filter(path => !existsSync(join(coreDir, path)));
+}
+
+function canRunGeneratedHostSync(templates: string | null): boolean {
+  return missingGeneratedHostSyncSupport(templates).length === 0;
 }
 
 function coreScripts(hostRoot: string, coreTemplates: string | null): MigrateReport['coreScripts'] {
@@ -1983,14 +2002,51 @@ function rewriteHookExport(content: string, destination: string): string {
 }
 
 function rewriteHookImports(content: string, destination: string, hostRoot: string): string {
-  // Preserve the local binding. Project code and tests may still call the
-  // imported identifier `middleware`; only the root-first hook's exported
-  // name changed.
-  const importName = isWithin(destination, join(hostRoot, 'tests')) ? 'proxyHook as middleware' : 'proxyHook';
-  const rewritten = content.replace(/import\s*\{\s*middleware\s*\}(\s*from\s*['"][^'"]*config\/hooks\/proxy[^'"]*['"])/g, `import { ${importName} }$1`);
-  return rewritten.includes('config/hooks/proxy')
+  let importedLocalBinding: string | null = null;
+  const rewritten = content.replace(/import\s*(\{[^}]*\})(\s*from\s*['"][^'"]*config\/hooks\/proxy[^'"]*['"])/g, (all, clause: string, from: string) => {
+    const local = hookMiddlewareImportLocalBinding(clause);
+    if (!local) return all;
+    importedLocalBinding = local;
+    const preserveTestBinding = isWithin(destination, join(hostRoot, 'tests')) && local === 'middleware';
+    const importName = preserveTestBinding || local !== 'middleware' ? `proxyHook as ${local}` : 'proxyHook';
+    return `import { ${importName} }${from}`;
+  });
+  // A test's imported local is deliberately still named `middleware`. Its
+  // re-export must retain that local binding, rather than exporting an
+  // unbound `proxyHook` identifier.
+  return importedLocalBinding === 'middleware' && !isWithin(destination, join(hostRoot, 'tests'))
     ? rewritten.replace(/export\s*\{\s*middleware\s*\}/g, 'export { proxyHook }')
     : rewritten;
+}
+
+/** The only legacy hook import shape whose export rename is unambiguous. */
+function hookMiddlewareImportLocalBinding(clause: string): string | null {
+  const match = /^\{\s*middleware\s*(?:as\s+([A-Za-z_$][\w$]*))?\s*\}$/.exec(clause);
+  return match?.[1] ?? (match ? 'middleware' : null);
+}
+
+/** Refuse default, namespace, side-effect, type, and mixed legacy hook imports before writes. */
+function validateLegacyHookImportShapes(hostRoot: string, hookSource: string, catalog: AliasCatalog): void {
+  const staticImport = /\bimport\s+([^;]*?)\s+from\s*(['"])([^'"]+)\2/g;
+  const sideEffectImport = /\bimport\s*(['"])([^'"]+)\1/g;
+  const validate = (file: string, target: string, clause: string | null, index: number) => {
+    const resolved = resolvedImportTarget(target, file, hostRoot, catalog, true);
+    if (!resolved || !importTargetSuffixes.some(suffix => `${resolved}${suffix}` === hookSource)) return;
+    if (clause !== null && hookMiddlewareImportLocalBinding(clause.trim())) return;
+    const line = readFileSync(file, 'utf8').slice(0, index).split(/\r?\n/).length;
+    throw new MigrateAnalysisError(`Cannot safely rewrite legacy middleware import in ${pathFrom(hostRoot, file)}:${line}; only named middleware imports are supported.`);
+  };
+  for (const file of filesIn(hostRoot)) {
+    const content = readFileSync(file, 'utf8');
+    const view = sourceView(content);
+    const isCodeImport = (index: number) => view.code.slice(index, index + 'import'.length) === 'import';
+    for (const match of content.matchAll(staticImport)) {
+      if (isCodeImport(match.index ?? 0)) validate(file, match[3], match[1], match.index ?? 0);
+    }
+    for (const match of content.matchAll(sideEffectImport)) {
+      if (isCodeImport(match.index ?? 0)) validate(file, match[2], null, match.index ?? 0);
+    }
+  }
 }
 
 /** Rehome filesystem and regex references used by tests that inspect the old theme host. */
@@ -2599,6 +2655,7 @@ function printMoveSummary(plan: MovePlan, result: { moved: number; deduplicated:
 export async function migrateCommand(options: MigrateOptions): Promise<void> {
   let rollback: string[] | null = null;
   let writesStarted = false;
+  let printRollbackOnFailure = false;
   try {
     const report = await reportFor(process.cwd());
     if (options.dryRun) {
@@ -2647,10 +2704,18 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       const answer = readFileSync(0, 'utf8').trim().toLowerCase();
       if (answer !== 'y' && answer !== 'yes') throw new MigrateAnalysisError('Migration cancelled.');
     }
+    const templates = templateDirectory(hostRoot, repository);
+    if (hadLegacyApp && !canRunGeneratedHostSync(templates)) {
+      printRollbackOnFailure = true;
+      const missing = missingGeneratedHostSyncSupport(templates);
+      throw new MigrateAnalysisError(`Cannot migrate legacy app/: installed @nextsparkjs/core is missing guarded sync support: ${missing.join(', ')}. Upgrade @nextsparkjs/core to the same version as the CLI, then rerun nextspark migrate.`);
+    }
     const aliasesBeforeMove = legacyPathAliases(hostRoot, themeRoot, pluginsRoot, plan);
     if (aliasesBeforeMove.warnings.length > 0) {
       section('Alias configuration warnings', aliasesBeforeMove.warnings.map(file => `could not parse or resolve ${file}; aliases from it were not derived`));
     }
+    const legacyHook = [...plan.moves, ...plan.duplicates].find(item => /config[\\/]hooks[\\/]proxy\.[^.]+$/.test(item.destination));
+    if (legacyHook) validateLegacyHookImportShapes(hostRoot, legacyHook.source, aliasesBeforeMove);
     const plannedItems = [...plan.moves, ...plan.duplicates];
     // Environment-shaped files are moved as opaque bytes, never parsed as
     // source or inspected by the import validator.
@@ -2693,7 +2758,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not analyze this project.';
     console.error(`nextspark migrate: ${message}`);
-    if (writesStarted && rollback) printRollback(rollback);
+    if ((writesStarted || printRollbackOnFailure) && rollback) printRollback(rollback);
     process.exitCode = 1;
   }
 }

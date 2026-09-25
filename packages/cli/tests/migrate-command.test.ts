@@ -533,6 +533,50 @@ test('migrate --yes moves an intact legacy project and rewrites its source and t
   }
 })
 
+test('migrate rewrites an aliased legacy middleware import to the proxy hook export', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'contents/themes/acme/lib/use-hook.ts', "import { middleware as mw } from '../middleware'\nexport { mw }\n")
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'lib/use-hook.ts'), 'utf8'), "import { proxyHook as mw } from '../config/hooks/proxy'\nexport { mw }\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate refuses an unsupported legacy middleware import shape before moving files', async () => {
+  const { root } = await moveFixture()
+  try {
+    const source = "import middleware from '../middleware'\nexport { middleware }\n"
+    await write(root, 'contents/themes/acme/lib/use-hook.ts', source)
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /Cannot safely rewrite legacy middleware import in contents\/themes\/acme\/lib\/use-hook\.ts:1/)
+    assert.equal(await readFile(join(root, 'contents/themes/acme/lib/use-hook.ts'), 'utf8'), source)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate preserves a test re-export of its locally aliased middleware binding', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'contents/themes/acme/tests/re-export-hook.test.ts', "import { middleware } from '../middleware'\nexport { middleware }\n")
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'tests/re-export-hook.test.ts'), 'utf8'), "import { proxyHook as middleware } from '../config/hooks/proxy'\nexport { middleware }\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate moves explicit and custom top-level source directories and rewrites their imports', async () => {
   const root = await customRootDirectoriesFixture()
   try {
@@ -1030,6 +1074,7 @@ test('migrate renames known removed core scripts and warns for unknown core scri
 test('migrate archives custom legacy app files, removes generated ones, and prepares src/app', async () => {
   const { root } = await moveFixture()
   try {
+    await installSyncableCore(root, "console.log('src/app/(templates) generated')\n")
     await write(root, 'node_modules/@nextsparkjs/core/templates/app/layout.tsx', 'export default function Layout() { return null }\n')
     await write(root, 'app/layout.tsx', 'export default function Layout() { return null }\n')
     await write(root, 'app/page.tsx', 'export default function CustomizedPage() { return null }\n')
@@ -1039,7 +1084,7 @@ test('migrate archives custom legacy app files, removes generated ones, and prep
     const report = JSON.parse(dryRun.stdout)
     assert.deepEqual(report.generatedHost.customizations, ['page.tsx'])
     assert.equal(report.generatedHost.customizationsDestination, 'legacy-app-customizations')
-    assert.equal(report.generatedHost.nextStep, 'nextspark sync:app --force')
+    assert.equal(report.generatedHost.nextStep, null)
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     await assert.rejects(access(join(root, 'app/layout.tsx')))
@@ -1048,7 +1093,28 @@ test('migrate archives custom legacy app files, removes generated ones, and prep
     const tsconfig = JSON.parse(await readFile(join(root, 'tsconfig.json'), 'utf8'))
     assert.ok(tsconfig.exclude.includes('legacy-app-customizations'))
     assert.match(result.stdout, /excluded legacy-app-customizations from tsconfig/)
-    assert.match(result.stdout, /nextspark sync:app --force/)
+    assert.doesNotMatch(result.stdout, /nextspark sync:app --force/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate stops before touching a legacy app when core lacks guarded sync support', async () => {
+  const { root } = await moveFixture()
+  try {
+    const app = 'export default function Layout() { return null }\n'
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/layout.tsx', app)
+    await write(root, 'app/layout.tsx', app)
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /missing guarded sync support: scripts\/build\/registry\.mjs/)
+    assert.match(result.stderr, /Upgrade @nextsparkjs\/core to the same version as the CLI/)
+    assert.match(result.stdout, /Rollback after migration failure/)
+    assert.equal(await readFile(join(root, 'app/layout.tsx'), 'utf8'), app)
+    await assert.rejects(access(join(root, 'src/app')))
+    assert.equal(await readFile(join(root, 'contents/themes/acme/middleware.ts'), 'utf8'), 'export function middleware() { return undefined }\n')
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -1242,6 +1308,7 @@ test('migrate late-failure rollback restores ignored sync state and in-place con
 test('migrate preserves JSONC exclude comments containing brackets while archiving legacy app customizations', async () => {
   const { root } = await moveFixture()
   try {
+    await installSyncableCore(root, "console.log('src/app/(templates) generated')\n")
     await write(root, 'app/custom.tsx', 'export default function Custom() { return null }\n')
     await write(root, 'tsconfig.json', '{\n  "exclude": [\n    // ] remains part of this comment\n    "old-output]",\n  ],\n}\n')
     await commitFixture(root)
@@ -1404,11 +1471,29 @@ test('migrate keeps taggable files when their tag was removed or names src/app i
   }
 })
 
+test('migrate treats a CRLF-only difference from the current app template as generated', async () => {
+  const { root } = await moveFixture()
+  try {
+    const template = 'export default function Layout() { return null }\n'
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/layout.tsx', template)
+    await write(root, 'app/layout.tsx', template.replace(/\n/g, '\r\n'))
+    await commitFixture(root)
+
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.appTemplates.identical, ['layout.tsx'])
+    assert.deepEqual(report.generatedHost.customizations, [])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate byte-matches an unmodified beta.183 app file from the version in git history', async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-old-core-'))
   try {
-    const oldTemplate = 'export default function Page() { return <main>beta.183</main> }\n'
+    const oldTemplate = 'export default function Page() { return <main>beta.183</main> }\r\n'
     const currentTemplate = 'export default function Page() { return <main>beta.192</main> }\n'
     const oldPprLayout = 'export default function Layout() { return <main>beta.183 PPR</main> }\n'
     const oldGlobals = '@import "../../../themes/default/styles/globals.css";\n'
@@ -1432,7 +1517,7 @@ test('migrate byte-matches an unmodified beta.183 app file from the version in g
     await commitFixture(root)
 
     await write(support, 'package/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.183' }))
-    await write(support, 'package/templates/app/page.tsx', oldTemplate)
+    await write(support, 'package/templates/app/page.tsx', oldTemplate.replace(/\r\n/g, '\n'))
     await write(support, 'package/templates/app/layout.tsx', 'export default function Layout() { return <main>beta.183</main> }\n')
     await write(support, 'package/templates/app/layout.ppr.tsx', oldPprLayout)
     await write(support, 'package/templates/app/globals.css', oldGlobals)
