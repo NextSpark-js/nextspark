@@ -229,6 +229,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   them. A project that compares against or persists the Spanish values has to
   update them.
 
+- **Docs access follows `docs.publicAccess`, and missing docs pages answer 404.**
+  The docs area read only the `publicAccess` setting, so a project that had set
+  the older `docs.public: false` exposed its docs; it is now read as private. The
+  proxy answers 404 for `/docs` and `/superadmin/docs` pages the docs registry
+  lacks, instead of rendering a "Page Not Found" page with status 200. A
+  project's tests that assert the old status code need updating.
+  - `proxy.ts` / `middleware.ts` is rewritten by `sync:app`.
+
 ### Security
 
 - **The generated proxy enforces the roles `/superadmin` and `/devtools` need.**
