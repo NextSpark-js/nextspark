@@ -18,15 +18,10 @@ import semver from 'semver'
 import { updatePackageJson } from '../src/wizard/generators/index.js'
 import { VERSIONS } from '../src/wizard/generators/monorepo-generator.js'
 import type { WizardConfig } from '../src/wizard/types.js'
+import { incompatibleResolutions, type RegistryDocument } from './dependency-engines.js'
 
-const ONE_DAY_MS = 24 * 60 * 60 * 1000
 const manifest = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 const OLDEST_NODE = semver.minVersion(manifest.engines.node)!.version
-
-interface RegistryDocument {
-  time: Record<string, string>
-  versions: Record<string, { engines?: { node?: string } }>
-}
 
 async function registry(name: string): Promise<RegistryDocument> {
   const response = await fetch(`https://registry.npmjs.org/${name.replace('/', '%2f')}`)
@@ -49,25 +44,87 @@ async function webDependencies(): Promise<Record<string, string>> {
   }
 }
 
-/** The versions a new project can resolve for `range`: the newest, and the newest a day old. */
-function resolvable(document: RegistryDocument, range: string): string[] {
-  const versions = Object.keys(document.versions)
-  const mature = versions.filter(version => Date.parse(document.time[version]) <= Date.now() - ONE_DAY_MS)
-  const picked = [semver.maxSatisfying(versions, range), semver.maxSatisfying(mature, range)]
-  assert.ok(picked.every(Boolean), `no published version satisfies ${range}`)
-  return [...new Set(picked as string[])]
-}
-
 test(`the dependencies the wizard writes for the web app and the monorepo root install on Node ${OLDEST_NODE}`, { skip: process.env.NEXTSPARK_OFFLINE_TESTS === '1' }, async () => {
   const ranges = Object.entries({ ...await webDependencies(), typescript: VERSIONS.TYPESCRIPT })
     .filter(([name]) => !name.startsWith('@nextsparkjs/'))
   const documents = await Promise.all(ranges.map(([name]) => registry(name)))
 
   const incompatible = ranges.flatMap(([name, range], index) =>
-    resolvable(documents[index], range)
-      .map(version => ({ version, node: documents[index].versions[version].engines?.node }))
-      .filter(({ node }) => node && !semver.satisfies(OLDEST_NODE, node))
-      .map(({ version, node }) => `${name}@${version} requires Node ${node}`)
+    incompatibleResolutions(documents[index], range, OLDEST_NODE).map(message => `${name}@${message}`)
   )
   assert.deepEqual(incompatible, [])
+})
+
+const NOW = Date.parse('2026-01-03T00:00:00.000Z')
+const OLD = '2025-12-31T00:00:00.000Z'
+const RECENT = '2026-01-02T12:00:00.000Z'
+
+function document(versions: RegistryDocument['versions'], time: Record<string, string>): RegistryDocument {
+  return { versions, time }
+}
+
+test('checks every version that the configured resolution policies can select', () => {
+  const registryDocument = document(
+    {
+      '1.0.0': { engines: { node: '>=22.14.0' } },
+      '1.1.0': { engines: { node: '>=23.0.0' } },
+    },
+    { '1.0.0': OLD, '1.1.0': RECENT },
+  )
+
+  assert.deepEqual(incompatibleResolutions(registryDocument, '^1.0.0', '22.14.0', NOW), [
+    '1.1.0 requires Node >=23.0.0',
+  ])
+})
+
+test('reports a range for which no resolvable version accepts the oldest Node', () => {
+  const registryDocument = document(
+    {
+      '2.0.0': { engines: { node: '>=23' } },
+      '2.1.0': { engines: { node: '>=24' } },
+    },
+    { '2.0.0': OLD, '2.1.0': RECENT },
+  )
+
+  assert.deepEqual(incompatibleResolutions(registryDocument, '^2.0.0', '22.14.0', NOW), [
+    '2.1.0 requires Node >=24',
+    '2.0.0 requires Node >=23',
+  ])
+})
+
+test('allows missing engines and reports malformed engine ranges', () => {
+  const registryDocument = document(
+    {
+      '3.0.0': {},
+      '3.1.0': { engines: { node: 'this is not a range' } },
+    },
+    { '3.0.0': OLD, '3.1.0': RECENT },
+  )
+
+  assert.deepEqual(incompatibleResolutions(registryDocument, '^3.0.0', '22.14.0', NOW), [
+    '3.1.0 requires Node this is not a range',
+  ])
+})
+
+test('handles prerelease versions when the range admits them', () => {
+  const registryDocument = document(
+    {
+      '4.0.0-beta.1': { engines: { node: '>=22.14.0' } },
+      '4.0.0-beta.2': { engines: { node: '>=23' } },
+    },
+    { '4.0.0-beta.1': OLD, '4.0.0-beta.2': RECENT },
+  )
+
+  assert.deepEqual(incompatibleResolutions(registryDocument, '>=4.0.0-beta.1 <4.0.0', '22.14.0', NOW), [
+    '4.0.0-beta.2 requires Node >=23',
+  ])
+})
+
+test('fails clearly when a range matches no published version', () => {
+  const registryDocument = document({ '1.0.0': {} }, { '1.0.0': OLD })
+
+  assert.throws(
+    () => incompatibleResolutions(registryDocument, '^2.0.0', '22.14.0', NOW),
+    /no published version satisfies \^2\.0\.0/,
+  )
 })
