@@ -74,9 +74,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     }
 
     const formData = await request.formData()
-    const files = formData.getAll('files') as File[]
+    const files = Array.from(formData.getAll('files') as unknown[])
+      .filter((value): value is File => value instanceof File)
 
-    if (!files || files.length === 0) {
+    if (files.length === 0) {
       return createApiError('No files uploaded', 400)
     }
 
