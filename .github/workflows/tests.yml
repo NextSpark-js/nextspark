@@ -1,0 +1,65 @@
+name: Fast test suites
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          CYPRESS_INSTALL_BINARY: '0'
+
+      # CLI and registry tests import @nextsparkjs/core's JavaScript output.
+      - name: Build packages used by the fast suites
+        run: |
+          pnpm --filter @nextsparkjs/ui build
+          pnpm --filter @nextsparkjs/core build:js
+
+      - name: Test CLI
+        run: pnpm --filter @nextsparkjs/cli test
+        env:
+          # dependency-engines.test.ts deliberately queries registry.npmjs.org;
+          # keep that release-age check out of this offline fast suite.
+          NEXTSPARK_OFFLINE_TESTS: '1'
+          npm_config_registry: http://127.0.0.1:9
+
+      - name: Test core Node tests
+        run: pnpm exec tsx --test packages/core/tests/node/*.test.ts
+        env:
+          npm_config_registry: http://127.0.0.1:9
+
+      - name: Test registry build scripts
+        run: node --test $(find packages/core/scripts/build/registry -type f -name '*.test.mjs' -print)
+        env:
+          npm_config_registry: http://127.0.0.1:9
+
+      - name: Test package, performance, and security scripts
+        run: node --test scripts/packages/*.test.mjs scripts/performance/*.test.mjs scripts/security/*.test.mjs
+        env:
+          npm_config_registry: http://127.0.0.1:9

@@ -58,7 +58,7 @@ function resolvable(document: RegistryDocument, range: string): string[] {
   return [...new Set(picked as string[])]
 }
 
-test(`the dependencies the wizard writes for the web app and the monorepo root install on Node ${OLDEST_NODE}`, async () => {
+test(`the dependencies the wizard writes for the web app and the monorepo root install on Node ${OLDEST_NODE}`, { skip: process.env.NEXTSPARK_OFFLINE_TESTS === '1' }, async () => {
   const ranges = Object.entries({ ...await webDependencies(), typescript: VERSIONS.TYPESCRIPT })
     .filter(([name]) => !name.startsWith('@nextsparkjs/'))
   const documents = await Promise.all(ranges.map(([name]) => registry(name)))
