@@ -680,7 +680,17 @@ pnpm release --patch
 # Manually editing core.version.json
 ```
 
-### 2. Commit Before Release
+### 2. Verify Production Static Assets
+
+After building a NextSpark project, verify that development credentials were not emitted to browser assets:
+
+```bash
+node scripts/security/verify-no-dev-credentials.mjs apps/dev
+```
+
+The command reads `config/dev.config.ts` and fails if a dev-keyring email, password, or other credential-like value appears under `.next/static`.
+
+### 3. Commit Before Release
 
 Ensure all changes are committed before creating a release:
 
@@ -693,7 +703,7 @@ git commit -m "feat: add new feature"
 pnpm release --minor
 ```
 
-### 3. Review Before Push
+### 4. Review Before Push
 
 Always review the commit and tag before pushing:
 
@@ -711,7 +721,7 @@ git show v0.2.0
 git push origin main --tags
 ```
 
-### 4. Write Release Notes
+### 5. Write Release Notes
 
 For significant releases, document changes:
 
@@ -728,7 +738,7 @@ gh release create v0.2.0 \
   --notes-file CHANGELOG.md
 ```
 
-### 5. Keep Changelog
+### 6. Keep Changelog
 
 Maintain a `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com/):
 

@@ -3,23 +3,28 @@
 /**
  * Enhanced Theme Provider for WordPress-like Theme System
  * 
- * Manages theme loading, component overrides, hot swapping, and integrates with import resolver
+ * Applies the root-first project's theme and integrates component overrides.
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { ThemeConfig } from '../../types/theme'
-import { ThemeService } from '../services/theme.service'
+// Client-safe: holds only each theme's own ThemeConfig, not the full server
+// THEME_REGISTRY (which also carries dashboardConfig/appConfig/devConfig and
+// used to ship all of it to every page - #207).
+import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry.client'
 import { ImportResolverProvider } from './import-resolver'
-import { applyThemeStyles } from './theme-loader'
+import { applyThemeStyles } from './theme-styles'
+
+/** The root-first compiler emits exactly one project entry. */
+function getCurrentClientTheme(): ThemeConfig | undefined {
+  return Object.values(THEME_REGISTRY)[0]
+}
 
 interface ThemeContextType {
   currentTheme: ThemeConfig | null
-  availableThemes: ThemeConfig[]
   loading: boolean
   error?: string
-  switchTheme: (themeName: string) => Promise<boolean>
   reloadTheme: () => Promise<void>
-  refreshThemes: () => Promise<void>
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null)
@@ -31,7 +36,6 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [currentTheme, setCurrentTheme] = useState<ThemeConfig | null>(null)
-  const [availableThemes, setAvailableThemes] = useState<ThemeConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | undefined>()
 
@@ -40,7 +44,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       setLoading(true)
       setError(undefined)
 
-      const projectTheme = ThemeService.getCurrent()
+      const projectTheme = getCurrentClientTheme()
 
       if (!projectTheme) {
         throw new Error('Project theme was not generated')
@@ -53,7 +57,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         applyThemeStyles(projectTheme)
       }
 
-      console.log(`[ThemeProvider] Loaded project theme: ${projectTheme.name} (build-time registry)`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[ThemeProvider] Loaded project theme: ${projectTheme.name} (build-time registry)`)
+      }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error'
       console.error('[ThemeProvider] Error loading theme:', error)
@@ -65,76 +71,25 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
   }, [])
 
-  const loadAvailableThemes = React.useCallback(() => {
-    try {
-      // Load themes from registry (ultra-fast, zero I/O)
-      const themes = ThemeService.getAll()
-      setAvailableThemes(themes)
-      console.log(`[ThemeProvider] Loaded ${themes.length} themes from registry`)
-    } catch (error) {
-      console.error('[ThemeProvider] Error loading themes:', error)
-      setAvailableThemes([])
-    }
-  }, [])
-
-  const switchTheme = (themeName: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      try {
-        setLoading(true)
-        if (themeName !== ThemeService.getCurrentName()) {
-          throw new Error('Root-first projects do not support switching project templates at runtime')
-        }
-        loadTheme()
-
-        // Persist theme preference
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('selected-theme', themeName)
-          console.log(`[ThemeProvider] Persisted theme preference: ${themeName}`)
-        }
-
-        resolve(true)
-      } catch (error) {
-        console.error('[ThemeProvider] Failed to switch theme:', error)
-        resolve(false)
-      }
-    })
-  }
-
   const reloadTheme = React.useCallback((): Promise<void> => {
     return new Promise((resolve) => {
       if (currentTheme) {
-        console.log(`[ThemeProvider] Reloading theme: ${currentTheme.name}`)
         loadTheme()
       }
       resolve()
     })
   }, [currentTheme, loadTheme])
 
-  const refreshThemes = React.useCallback((): Promise<void> => {
-    return new Promise((resolve) => {
-      console.log('[ThemeProvider] Refreshing available themes')
-      loadAvailableThemes()
-      resolve()
-    })
-  }, [loadAvailableThemes])
-
-  // Load initial theme and discover available themes
+  // Load the sole root-first project theme.
   useEffect(() => {
-    const initTheme = async () => {
-      // Load themes and initial theme synchronously
-      loadAvailableThemes()
-      loadTheme()
-    }
-
-    initTheme()
-  }, [loadAvailableThemes, loadTheme])
+    loadTheme()
+  }, [loadTheme])
 
   // Hot reload support in development
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       const handleHotReload = () => {
         console.log('[ThemeProvider] Hot reload detected, refreshing themes')
-        refreshThemes()
         if (currentTheme) {
           reloadTheme()
         }
@@ -152,16 +107,13 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         }
       }
     }
-  }, [currentTheme, refreshThemes, reloadTheme])
+  }, [currentTheme, reloadTheme])
 
   const contextValue: ThemeContextType = {
     currentTheme,
-    availableThemes,
     loading,
     error,
-    switchTheme,
     reloadTheme,
-    refreshThemes
   }
 
   return (

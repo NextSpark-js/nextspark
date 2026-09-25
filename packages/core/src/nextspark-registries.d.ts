@@ -420,6 +420,39 @@ declare module '@nextsparkjs/registries/theme-registry' {
 }
 
 // ============================================================================
+// Theme Registry (Client-Safe)
+//
+// Holds only each theme's own ThemeConfig - no dashboardConfig, appConfig,
+// devConfig, entities or routeFiles. See theme-registry.client.mjs (#207).
+// ============================================================================
+declare module '@nextsparkjs/registries/theme-registry.client' {
+  // Mirrors packages/core/src/types/theme.ts's ThemeConfig — inlined rather
+  // than imported, like theme-registry above: a nested `import type` inside a
+  // `declare module` block silently degrades every consumer's inferred types
+  // to `any` in this TS setup (isolatedModules + bundler resolution).
+  export interface ThemeConfig {
+    name: string
+    displayName: string
+    version: string
+    description?: string
+    author?: string
+    [key: string]: any
+  }
+
+  export const THEME_REGISTRY: Record<string, ThemeConfig>
+}
+
+// ============================================================================
+// Application Config (Client-Safe)
+// ============================================================================
+declare module '@nextsparkjs/registries/app-config.client' {
+  // Project app overrides are intentionally open-ended. This declaration is
+  // enough for the client config adapter; the generated module contains the
+  // concrete project's type-checked value.
+  export const APP_CONFIG_OVERRIDES: Record<string, any>
+}
+
+// ============================================================================
 // Permissions Registry
 //
 // Real shape is entirely different from the old ambient declaration (which
@@ -923,4 +956,19 @@ declare module '@nextsparkjs/registries/icon-registry' {
     totalIcons: number
     generatedAt: string
   }
+}
+
+// ============================================================================
+// Development-only DevKeyring input
+//
+// The generated implementation guards its dev.config.ts require with
+// NODE_ENV, so production browser builds receive undefined and never include
+// development test credentials.
+// ============================================================================
+declare module '@nextsparkjs/registries/dev-keyring.client' {
+  export const DEV_KEYRING_CONFIG: import('./lib/config/types').DevKeyringConfig | undefined
+}
+
+declare module '@nextsparkjs/registries/dashboard-config.client' {
+  export const DASHBOARD_CONFIG_OVERRIDES: Partial<import('./lib/config/dashboard.config').DashboardConfig>
 }

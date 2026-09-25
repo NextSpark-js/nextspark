@@ -29,9 +29,7 @@ export interface ThemeContextType {
   currentTheme: ThemeConfig | null
   loading: boolean
   error?: string
-  switchTheme: (themeName: string) => Promise<boolean>
   reloadTheme: () => Promise<void>
-  availableThemes: ThemeConfig[]
 }
 
 /**

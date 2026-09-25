@@ -9,7 +9,7 @@ import { sel } from '../../../lib/test'
 import { Home, Camera, FileText, LucideIcon, ChevronDown, Box, Circle, Folder } from 'lucide-react'
 import { resolveIcon } from '../../../lib/icons'
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
-import { ThemeService } from '../../../lib/services/theme.service'
+import { APP_CONFIG_MERGED } from '../../../lib/config/config-client'
 import { usePermission } from '../../../lib/permissions/hooks'
 import type { Permission } from '../../../lib/permissions/types'
 
@@ -45,8 +45,9 @@ interface DynamicNavigationProps {
   entities: SerializableEntityConfig[]
 }
 
-const themeConfig = ThemeService.getCurrentEntry()
-const customSidebarSections: CustomSidebarSection[] = themeConfig?.appConfig?.customSidebarSections || []
+// App configuration is emitted separately for client UI. It has no dependency
+// on theme-registry.ts, unlike ThemeService.
+const customSidebarSections: CustomSidebarSection[] = APP_CONFIG_MERGED.customSidebarSections || []
 
 // Core navigation items that are always present (static)
 // Note: Entity-based items (like "pages") are handled dynamically via entityItems

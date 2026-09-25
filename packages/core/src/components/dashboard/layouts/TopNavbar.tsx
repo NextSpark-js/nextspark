@@ -27,7 +27,7 @@ import { useTranslations } from 'next-intl'
 import { useIsSuperAdmin } from '../../app/guards/SuperAdminGuard'
 import { useIsDeveloper } from '../../app/guards/DeveloperGuard'
 import { DynamicNavigation } from '../navigation/DynamicNavigation'
-import { isTopbarFeatureEnabled, getTopbarFeatureConfig, TOPBAR_CONFIG, APP_NAME } from '../../../lib/config'
+import { isTopbarFeatureEnabled, getTopbarFeatureConfig, TOPBAR_CONFIG, APP_NAME } from '../../../lib/config/config-client'
 
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
 

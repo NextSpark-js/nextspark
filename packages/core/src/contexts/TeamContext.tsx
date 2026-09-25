@@ -6,7 +6,7 @@ import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-quer
 import { Team, UserTeamMembership } from '../lib/teams/types'
 import { useAuth } from '../hooks/useAuth'
 import { TeamSwitchModal } from '../components/teams/TeamSwitchModal'
-import { APP_CONFIG_MERGED } from '../lib/config/config-sync'
+import { APP_CONFIG_MERGED } from '../lib/config/config-client'
 import { canUserCreateTeam } from '../lib/teams/helpers'
 import { withBasePath } from '../lib/base-path'
 

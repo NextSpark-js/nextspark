@@ -34,6 +34,8 @@ export {
   generateEntityRegistry,
   generateEntityRegistryClient,
   generateThemeRegistry,
+  generateThemeRegistryClient,
+  generateAppConfigClient,
   generateTemplateRegistry,
   generateTemplateRegistryClient,
   generateBlockRegistry,

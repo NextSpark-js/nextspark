@@ -23,7 +23,7 @@ import {
 import { useTeamMembers } from '../../hooks/useTeamMembers'
 import { TeamRole } from '../../lib/teams/types'
 import { toast } from 'sonner'
-import { APP_CONFIG_MERGED } from '../../lib/config/config-sync'
+import { APP_CONFIG_MERGED } from '../../lib/config/config-client'
 import { getInvitableRoles } from '../../lib/teams/permissions'
 
 // Get roles that a user can invite to (same level or below)

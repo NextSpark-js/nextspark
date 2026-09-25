@@ -4,7 +4,8 @@ import { useState, useCallback } from 'react'
 
 import { useUserProfile } from './useUserProfile'
 import { setUserLocaleClient } from '../lib/locale-client'
-import { I18N_CONFIG, type SupportedLocale } from '../lib/config'
+import { I18N_CONFIG } from '../lib/config/config-client'
+type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 
 export function useLocale() {
   const { profile, updateProfile } = useUserProfile()

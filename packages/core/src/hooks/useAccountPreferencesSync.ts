@@ -3,7 +3,8 @@
 import { useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { I18N_CONFIG, type SupportedLocale } from '../lib/config'
+import { I18N_CONFIG } from '../lib/config/config-client'
+type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 import { setUserLocaleClient } from '../lib/locale-client'
 import { setSessionHint } from '../lib/auth/session-hint'
 import type { SessionRefreshContext, SessionRefreshResult } from './useSessionCookieRefresh'

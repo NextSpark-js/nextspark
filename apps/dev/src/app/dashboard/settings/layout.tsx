@@ -12,7 +12,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { sel } from '@nextsparkjs/core/selectors'
 import { useTranslations } from 'next-intl'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/layout'
-import { isSettingsPageEnabled } from '@nextsparkjs/core/lib/config/config-sync'
+import { isSettingsPageEnabled } from '@nextsparkjs/core/lib/config/config-client'
 
 /**
  * Map of URL paths to settings page keys for validation

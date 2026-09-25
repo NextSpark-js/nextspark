@@ -16,11 +16,10 @@ jest.mock('@nextsparkjs/core/lib/middleware', () => ({
   hasProjectMiddleware: () => false,
   executeProjectMiddleware: jest.fn(),
   getProjectAppConfig: mockGetAppConfig,
-  getThemeAppConfig: mockGetAppConfig,
 }))
 
 import { betterFetch } from '@better-fetch/fetch'
-import { getThemeAppConfig } from '@nextsparkjs/core/lib/middleware'
+import { getProjectAppConfig } from '@nextsparkjs/core/lib/middleware'
 import { NextRequest } from 'next/server'
 import { proxy } from '../../../templates/proxy'
 
@@ -147,7 +146,7 @@ describe('proxy role-gated areas', () => {
 })
 
 describe('proxy path boundaries and redirect targets', () => {
-  const mockedAppConfig = getThemeAppConfig as unknown as jest.Mock
+  const mockedAppConfig = getProjectAppConfig as unknown as jest.Mock
 
   beforeEach(() => {
     mockedFetch.mockReset()
@@ -232,7 +231,7 @@ describe('proxy path boundaries and redirect targets', () => {
       await jest.isolateModulesAsync(async () => {
         const middleware = await import('@nextsparkjs/core/lib/middleware')
         const fetchModule = await import('@better-fetch/fetch')
-        ;(middleware.getThemeAppConfig as unknown as jest.Mock).mockReturnValue({ docs: { public: false } })
+        ;(middleware.getProjectAppConfig as unknown as jest.Mock).mockReturnValue({ docs: { public: false } })
         ;(fetchModule.betterFetch as unknown as jest.Mock).mockResolvedValue({ data: null })
         const { proxy: freshProxy } = await import('../../../templates/proxy')
 
@@ -395,7 +394,7 @@ describe('proxy path boundaries and redirect targets', () => {
 // features/{components,styling} under public, setup/{configuration,deployment}
 // and management/users under superadmin.
 describe('proxy docs pages the registry lacks', () => {
-  const mockedAppConfig = getThemeAppConfig as unknown as jest.Mock
+  const mockedAppConfig = getProjectAppConfig as unknown as jest.Mock
   const superadmin = { data: { user: { id: 'user-1', email: 'user-1@example.com', role: 'superadmin' }, session: { id: 'session-1' } } }
 
   beforeEach(() => {

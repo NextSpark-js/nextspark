@@ -10,7 +10,11 @@ import { TranslationService } from '../lib/services/translation.service'
 import { loadMergedTranslations } from '../lib/translations/registry'
 import { useEnabledEntities } from './useEnabledEntities'
 import type { SupportedLocale } from '../lib/entities/types'
-import { ThemeService } from '../lib/services/theme.service'
+import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry.client'
+
+function getCurrentThemeName(): string {
+  return Object.values(THEME_REGISTRY)[0]?.name ?? 'default'
+}
 
 /**
  * Hook to get translations for a specific entity
@@ -34,7 +38,7 @@ export function useEntityTranslations(entityName: string) {
       }
 
       // Load entity translations directly from TranslationService
-      const entityTranslations = await TranslationService.loadEntity(ThemeService.getCurrentName(), entityName, locale)
+      const entityTranslations = await TranslationService.loadEntity(getCurrentThemeName(), entityName, locale)
 
       setTranslations(entityTranslations)
     } catch (err) {

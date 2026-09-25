@@ -470,7 +470,7 @@ Combine multiple services for complex operations:
 | `EntityTypeService` | Registry | Entity registry queries |
 | `NamespaceService` | Registry | Route namespaces |
 | `ScopeService` | Registry | API scopes |
-| `MiddlewareService` | Registry | Middleware execution |
+| Edge middleware helpers | Registry | Project middleware execution (`hasProjectMiddleware`, `executeProjectMiddleware`) |
 | `RouteHandlerService` | Registry | Route handlers |
 | `PluginService` | Registry | Plugin configuration |
 | `ApiRoutesService` | Registry | API route discovery |

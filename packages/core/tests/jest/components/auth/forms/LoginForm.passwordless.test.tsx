@@ -64,7 +64,8 @@ jest.mock('@/core/lib/i18n/AuthTranslationPreloader', () => ({
 }))
 
 jest.mock('@/core/components/auth/DevKeyring', () => ({
-  DevKeyring: () => null,
+  DevKeyring: ({ config }: { config: { enabled: boolean } }) =>
+    config.enabled ? <div data-testid="dev-keyring" /> : null,
 }))
 
 // Selector helper: pass the path through so assertions can target data-cy by path
@@ -73,25 +74,33 @@ jest.mock('@/core/lib/test', () => ({
 }))
 
 // Mutable auth config — each test sets the preset it needs before rendering
-const mockConfig: { PUBLIC_AUTH_CONFIG: any; DEV_CONFIG: any } = {
+const mockConfig: { PUBLIC_AUTH_CONFIG: any; DEV_KEYRING_CONFIG: any } = {
   PUBLIC_AUTH_CONFIG: {
     registration: { mode: 'open' },
     providers: { google: { enabled: true } },
     methods: ['email-otp', 'google'],
     otp: { expiresIn: 300, otpLength: 6 },
   },
-  DEV_CONFIG: undefined,
+  DEV_KEYRING_CONFIG: undefined,
 }
-jest.mock('@/core/lib/config/config-sync', () => ({
+jest.mock('@/core/lib/config/config-client', () => ({
   get PUBLIC_AUTH_CONFIG() {
     return mockConfig.PUBLIC_AUTH_CONFIG
   },
-  get DEV_CONFIG() {
-    return mockConfig.DEV_CONFIG
+}))
+jest.mock('@nextsparkjs/registries/dev-keyring.client', () => ({
+  get DEV_KEYRING_CONFIG() {
+    return mockConfig.DEV_KEYRING_CONFIG
   },
 }))
 
-import { LoginForm } from '@/core/components/auth/forms/LoginForm'
+// The production build must erase the guarded DevKeyring requires. Load this
+// test module under development explicitly so its quick-login behavior remains
+// covered even when the parent Jest process sets NODE_ENV=production.
+const nodeEnvBeforeLoginFormImport = process.env.NODE_ENV
+process.env.NODE_ENV = 'development'
+const { LoginForm } = require('@/core/components/auth/forms/LoginForm')
+process.env.NODE_ENV = nodeEnvBeforeLoginFormImport
 
 const byCy = (path: string) => document.querySelector(`[data-cy="${path}"]`) as HTMLElement | null
 
@@ -108,7 +117,7 @@ function setPreset(methods: string[], extra: Partial<typeof mockConfig.PUBLIC_AU
 describe('LoginForm — passwordless preset (default: email OTP + Google)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockConfig.DEV_CONFIG = undefined
+    mockConfig.DEV_KEYRING_CONFIG = undefined
     setPreset(['email-otp', 'google'])
     mockSendOtp.mockResolvedValue({ success: true })
     mockSignInWithOtp.mockResolvedValue({ token: 't', user: { id: 'u1' } })
@@ -311,7 +320,7 @@ describe('LoginForm — passwordless preset (default: email OTP + Google)', () =
 describe('LoginForm — theme overrides the preset', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockConfig.DEV_CONFIG = undefined
+    mockConfig.DEV_KEYRING_CONFIG = undefined
   })
 
   test("classic preset ['email-password', 'google']: password form, signup link, no OTP", () => {
@@ -357,8 +366,9 @@ describe('LoginForm — theme overrides the preset', () => {
 
   test('dev-only: DevKeyring keeps the password form reachable under the passwordless preset', () => {
     setPreset(['email-otp', 'google'])
-    mockConfig.DEV_CONFIG = { devKeyring: { enabled: true, users: [] } }
+    mockConfig.DEV_KEYRING_CONFIG = { enabled: true, users: [] }
     render(<LoginForm />)
+    expect(screen.getByTestId('dev-keyring')).toBeInTheDocument()
     fireEvent.click(byCy('auth.login.showEmail')!)
 
     expect(byCy('auth.login.otpForm')).toBeInTheDocument()

@@ -660,59 +660,41 @@ Registry Services encapsulate queries against auto-generated registries (located
 
 | Service | Registry | Purpose |
 |---------|----------|---------|
-| `ThemeService` | `theme-registry.ts` | Theme configs, entities, routes |
-| `MiddlewareService` | `middleware-registry.ts` | Theme middleware handlers |
+| `ThemeService` | `theme-registry.ts` | Current root project theme config |
+| Edge middleware helpers | `middleware-registry.ts` | Current project request hook (`hasProjectMiddleware`, `executeProjectMiddleware`) |
 | `EntityTypeService` | `entity-registry.ts` | Entity configs, search types |
 | `NamespaceService` | `namespace-registry.ts` | Route namespaces |
 | `ScopeService` | `scope-registry.ts` | API scopes, restrictions |
-| `RouteHandlerService` | `route-registry.ts` | Route handlers |
+| `RouteHandlerService` | `route-handlers.ts` | Route handlers |
 
 ### Pattern: Registry Service
 
 ```typescript
-// core/lib/services/middleware.service.ts
+// core/lib/middleware/index.ts
 
 import {
   MIDDLEWARE_REGISTRY,
-  MIDDLEWARE_METADATA,
   type MiddlewareRegistryEntry
 } from '@nextsparkjs/registries/middleware-registry'
 
-export class MiddlewareService {
-  // ============== Lookup Methods ==============
+/** Is there a request hook for the root project? */
+export function hasProjectMiddleware(): boolean {
+  return Object.values(MIDDLEWARE_REGISTRY).some(entry => entry.exists)
+}
 
-  /** Get middleware for specific theme - O(1) */
-  static getByTheme(themeName: string): MiddlewareRegistryEntry | undefined {
-    return MIDDLEWARE_REGISTRY[themeName]
-  }
+/** Execute the root project's hook, preserving core access checks in proxy.ts. */
+export async function executeProjectMiddleware(
+  request: NextRequest,
+  coreSession?: Parameters<MiddlewareRegistryEntry['middleware']>[1]
+): Promise<NextResponse | null> {
+  const entry = Object.values(MIDDLEWARE_REGISTRY).find(candidate => candidate.exists)
+  if (!entry) return null
 
-  /** Get all registered middlewares */
-  static getAll(): MiddlewareRegistryEntry[] {
-    return Object.values(MIDDLEWARE_REGISTRY)
-  }
-
-  /** Check if theme has middleware - O(1) */
-  static hasMiddleware(themeName: string): boolean {
-    return themeName in MIDDLEWARE_REGISTRY && MIDDLEWARE_REGISTRY[themeName].exists
-  }
-
-  // ============== Execution Methods ==============
-
-  /** Execute theme middleware with error handling */
-  static async execute(
-    themeName: string,
-    request: NextRequest,
-    coreSession?: SessionUser | null
-  ): Promise<NextResponse | null> {
-    const entry = MIDDLEWARE_REGISTRY[themeName]
-    if (!entry?.exists) return null
-
-    try {
-      return await entry.middleware(request, coreSession)
-    } catch (error) {
-      console.error(`Error executing middleware for theme '${themeName}':`, error)
-      return null
-    }
+  try {
+    return await entry.middleware(request, coreSession)
+  } catch (error) {
+    console.error('Error executing the project request hook:', error)
+    return null
   }
 }
 ```
@@ -720,16 +702,16 @@ export class MiddlewareService {
 ### Usage Examples
 
 ```typescript
-import { ThemeService, MiddlewareService } from '@/core/lib/services'
+import { ThemeService } from '@/core/lib/services'
+import { executeProjectMiddleware, hasProjectMiddleware } from '@/core/lib/middleware'
 
-// Theme queries
-const theme = ThemeService.getTheme('default')
-const dashboard = ThemeService.getDashboardConfig('default')
-const themesWithEntities = ThemeService.getThemesWithEntities()
+// The root-first compiler emits one project theme.
+const theme = ThemeService.getCurrent()
+const dashboard = ThemeService.getCurrentDashboardConfig()
 
-// Middleware queries
-if (MiddlewareService.hasMiddleware(projectTheme)) {
-  const response = await MiddlewareService.execute(projectTheme, request)
+// Middleware extension (the sole root project's hook)
+if (hasProjectMiddleware()) {
+  const response = await executeProjectMiddleware(request, coreSession)
 }
 
 // Entity type queries

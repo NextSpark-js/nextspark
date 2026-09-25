@@ -7,7 +7,11 @@
 
 import type { SupportedLocale } from '../entities/types'
 import { TranslationService } from '../services/translation.service'
-import { ThemeService } from '../services/theme.service'
+import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry.client'
+
+function getCurrentThemeName(): string {
+  return Object.values(THEME_REGISTRY)[0]?.name ?? 'default'
+}
 
 // Debug flag - only log if explicitly enabled
 const DEBUG_I18N = process.env.NEXTSPARK_DEBUG_I18N === 'true'
@@ -122,7 +126,7 @@ export function registerThemeMessages(locale: string, messages: Record<string, u
 async function loadThemeTranslations(
   locale: SupportedLocale
 ): Promise<Record<string, unknown>> {
-  const registryMessages = await TranslationService.load(ThemeService.getCurrentName(), locale)
+  const registryMessages = await TranslationService.load(getCurrentThemeName(), locale)
   if (Object.keys(registryMessages).length > 0) {
     return registryMessages
   }
@@ -145,7 +149,7 @@ async function loadEntityTranslationsFromRegistry(
 ): Promise<Record<string, unknown>> {
   try {
     // Load all entity translations from the auto-generated registry
-    const entityTranslations = await TranslationService.loadAllEntities(ThemeService.getCurrentName(), locale)
+    const entityTranslations = await TranslationService.loadAllEntities(getCurrentThemeName(), locale)
     return entityTranslations
   } catch (error) {
     if (DEBUG_I18N) {
@@ -169,7 +173,7 @@ async function loadEntityTranslationsFromRegistry(
 export async function loadMergedTranslations(
   locale: SupportedLocale
 ): Promise<Record<string, unknown>> {
-  const cacheKey = `${locale}-${ThemeService.getCurrentName()}`
+  const cacheKey = `${locale}-${getCurrentThemeName()}`
 
   // Check cache first
   const cache = getTranslationCache()

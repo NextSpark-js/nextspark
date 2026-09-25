@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 import { createAriaLabel, sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
-import { getEnabledSettingsPages } from '../../../lib/config'
+import { getEnabledSettingsPages } from '../../../lib/config/config-client'
 
 // Icon mapping for settings pages
 const settingsIcons = {

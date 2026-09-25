@@ -3,14 +3,14 @@
  * All role configuration is centralized in app.config.ts
  */
 
-import { USER_ROLES_CONFIG } from '../lib/config';
+import { APP_CONFIG_MERGED } from '../lib/config/config-client';
 import type { UserFlag } from '../lib/entities/types';
 
 // Derive user role type from app configuration (includes core + theme roles)
-export type UserRole = typeof USER_ROLES_CONFIG.availableRoles[number];
+export type UserRole = typeof APP_CONFIG_MERGED.userRoles.availableRoles[number];
 
 // Derive core role type from app configuration (only protected core roles)
-export type CoreRole = typeof USER_ROLES_CONFIG.coreRoles[number];
+export type CoreRole = typeof APP_CONFIG_MERGED.userRoles.coreRoles[number];
 
 // Helper function to create USER_ROLES constants dynamically
 function createUserRolesConstants<T extends readonly string[]>(availableRoles: T) {
@@ -30,10 +30,10 @@ function createUserRolesConstants<T extends readonly string[]>(availableRoles: T
  * It is used to check user roles and permissions.
  */
 // Generate USER_ROLES dynamically from app config (zero duplication)
-export const USER_ROLES = createUserRolesConstants(USER_ROLES_CONFIG.availableRoles);
+export const USER_ROLES = createUserRolesConstants(APP_CONFIG_MERGED.userRoles.availableRoles);
 
 // Role hierarchy - sourced from app config
-export const ROLE_HIERARCHY = USER_ROLES_CONFIG.hierarchy;
+export const ROLE_HIERARCHY = APP_CONFIG_MERGED.userRoles.hierarchy;
 
 /**
  * Type guard to check if a role is a core role
@@ -58,7 +58,7 @@ export const ROLE_HIERARCHY = USER_ROLES_CONFIG.hierarchy;
  * ```
  */
 export const isCoreRole = (role: UserRole): role is CoreRole => {
-  return (USER_ROLES_CONFIG.coreRoles as readonly string[]).includes(role);
+  return (APP_CONFIG_MERGED.userRoles.coreRoles as readonly string[]).includes(role);
 };
 
 /**
@@ -127,14 +127,14 @@ export const roleHelpers = {
    * Use with i18n: t(getRoleDisplayKey(role))
    */
   getRoleDisplayKey: (role: UserRole): string => {
-    return USER_ROLES_CONFIG.displayNames[role];
+    return APP_CONFIG_MERGED.userRoles.displayNames[role];
   },
 
   /**
    * Get all roles ordered by hierarchy (highest permissions first)
    */
   getAllRolesByHierarchy: (): UserRole[] => {
-    return USER_ROLES_CONFIG.availableRoles.slice().sort(
+    return APP_CONFIG_MERGED.userRoles.availableRoles.slice().sort(
       (a: UserRole, b: UserRole) => ROLE_HIERARCHY[b] - ROLE_HIERARCHY[a]
     );
   }

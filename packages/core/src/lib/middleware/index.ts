@@ -48,41 +48,6 @@ export interface SessionUser {
 
 // ============== Theme Middleware Functions ==============
 
-/**
- * Check if a theme has middleware defined
- * @complexity O(1)
- */
-export function hasThemeMiddleware(themeName: string): boolean {
-  return themeName in MIDDLEWARE_REGISTRY && MIDDLEWARE_REGISTRY[themeName]?.exists === true
-}
-
-/**
- * Execute theme middleware with error handling
- *
- * `coreSession` has the type the generated middleware registry gives a theme
- * middleware's session argument, which is auth's full session user rather
- * than the minimal SessionUser above.
- * @complexity O(1) + async execution time
- */
-export async function executeThemeMiddleware(
-  themeName: string,
-  request: NextRequest,
-  coreSession?: Parameters<MiddlewareRegistryEntry['middleware']>[1]
-): Promise<NextResponse | null> {
-  const entry = MIDDLEWARE_REGISTRY[themeName]
-
-  if (!entry || !entry.exists) {
-    return null
-  }
-
-  try {
-    return await entry.middleware(request, coreSession)
-  } catch (error) {
-    console.error(`Error executing middleware for theme '${themeName}':`, error)
-    return null
-  }
-}
-
 /** Check whether the current root-first project contributes a request hook. */
 export function hasProjectMiddleware(): boolean {
   return Object.values(MIDDLEWARE_REGISTRY).some(entry => entry.exists)
@@ -104,14 +69,6 @@ export async function executeProjectMiddleware(
 }
 
 // ============== Theme Config Functions ==============
-
-/**
- * Get app config for a theme
- * @complexity O(1)
- */
-export function getThemeAppConfig(themeName: string): any | undefined {
-  return THEME_REGISTRY[themeName]?.appConfig
-}
 
 /** Get the app config contributed by the current root-first project. */
 export function getProjectAppConfig(): any | undefined {

@@ -9,9 +9,9 @@
 
 let mockThemeAppConfig: Record<string, unknown> | undefined
 
-jest.mock('@nextsparkjs/registries/theme-registry', () => ({
-  get THEME_REGISTRY() {
-    return { default: { appConfig: mockThemeAppConfig } }
+jest.mock('@/core/lib/config/config-client', () => ({
+  get APP_CONFIG_MERGED() {
+    return { docs: mockThemeAppConfig?.docs }
   },
 }))
 

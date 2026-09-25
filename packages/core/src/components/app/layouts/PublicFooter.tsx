@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Separator } from '../../ui/separator'
 import { useTranslations } from 'next-intl'
 import { sel } from '../../../lib/test'
-import { APP_NAME } from '../../../lib/config'
+import { APP_NAME } from '../../../lib/config/config-client'
 
 export function PublicFooter() {
   const currentYear = new Date().getFullYear()

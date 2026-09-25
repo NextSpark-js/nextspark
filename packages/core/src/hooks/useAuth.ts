@@ -11,7 +11,8 @@ import { safeCallbackPath } from '../lib/auth/callback-url'
 import { withBasePath } from '../lib/base-path'
 import { setSessionHint } from '../lib/auth/session-hint'
 import { setUserLocaleClient } from '../lib/locale-client'
-import { I18N_CONFIG, type SupportedLocale } from '../lib/config'
+import { I18N_CONFIG } from '../lib/config/config-client'
+type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 
 // Esta función ya no se usa directamente aquí
 // La creación de metadata se maneja en:

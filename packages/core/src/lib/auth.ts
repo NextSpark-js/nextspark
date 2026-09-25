@@ -10,7 +10,7 @@ import {
 import { sendResetPasswordCallback, sendVerificationEmailCallback } from './auth-email-callbacks';
 import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, AUTH_CONFIG, APP_CONFIG_MERGED, type UserRole } from './config';
 import { getUserFlags } from './services/user-flags.service';
-// Direct imports to avoid circular dependency: auth -> services/index -> middleware.service -> auth
+// Direct imports avoid a circular dependency through the services barrel.
 import { TeamService } from './services/team.service';
 import { TeamMemberService } from './services/team-member.service';
 import { shouldSkipTeamCreation, getSignupContext } from './auth-context';

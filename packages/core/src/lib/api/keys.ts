@@ -1,4 +1,4 @@
-import { API_CONFIG } from '../config/config-sync';
+import { API_CONFIG } from '../config/config-client';
 
 /**
  * Gestión de API Keys para acceso externo

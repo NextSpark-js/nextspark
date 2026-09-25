@@ -26,7 +26,7 @@ import { useTeam } from '../../hooks/useTeam'
 import { useAuth } from '../../hooks/useAuth'
 import { InviteMemberDialog } from './InviteMemberDialog'
 import { TeamRole } from '../../lib/teams/types'
-import { APP_CONFIG_MERGED } from '../../lib/config/config-sync'
+import { APP_CONFIG_MERGED } from '../../lib/config/config-client'
 import { canManageRole } from '../../lib/teams/permissions'
 
 // Role icons map - core roles only, custom roles use fallback

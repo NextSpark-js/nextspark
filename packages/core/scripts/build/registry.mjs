@@ -58,7 +58,7 @@ import { validateEntityConfigurations } from './registry/validation/entity-valid
 import { generatePluginRegistry, generatePluginRegistryClient } from './registry/generators/plugin-registry.mjs'
 import { generateEntityRegistry, generateEntityRegistryClient } from './registry/generators/entity-registry.mjs'
 import { generateEntityTypes } from './registry/generators/entity-types.mjs'
-import { generateThemeRegistry } from './registry/generators/theme-registry.mjs'
+import { generateThemeRegistry, generateThemeRegistryClient, generateAppConfigClient, generateDashboardConfigClient, generateDevKeyringClient } from './registry/generators/theme-registry.mjs'
 import {
   generateTemplateRegistry,
   generateTemplateRegistryClient,
@@ -129,6 +129,10 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'entity-registry.client.ts', content: generateEntityRegistryClient(entities, CONFIG) },
       { name: 'entity-types.ts', content: generateEntityTypes(entities, CONFIG) },
       { name: 'theme-registry.ts', content: generateThemeRegistry(themes, CONFIG) },
+      { name: 'theme-registry.client.ts', content: generateThemeRegistryClient(themes, CONFIG) },
+      { name: 'app-config.client.ts', content: generateAppConfigClient(themes, CONFIG) },
+      { name: 'dashboard-config.client.ts', content: generateDashboardConfigClient(themes, CONFIG) },
+      { name: 'dev-keyring.client.ts', content: generateDevKeyringClient(themes, CONFIG) },
       { name: 'route-handlers.ts', content: generateRouteHandlersRegistry(plugins, themes, coreRoutes, entities, CONFIG) },
       { name: 'translation-registry.ts', content: generateTranslationRegistry(themes, CONFIG) },
       { name: 'template-registry.ts', content: await generateTemplateRegistry(templates, CONFIG, templateAnalysis) },

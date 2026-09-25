@@ -9,7 +9,7 @@ import { sel } from '../../../lib/test'
 import { DynamicNavigation } from '../navigation/DynamicNavigation'
 import { TeamSwitcherCompact } from '../../teams/TeamSwitcherCompact'
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
-import { APP_NAME } from '../../../lib/config'
+import { APP_NAME } from '../../../lib/config/config-client'
 
 interface SidebarProps {
   className?: string

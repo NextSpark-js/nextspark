@@ -3,7 +3,7 @@
 import { useUserProfile } from '@nextsparkjs/core/hooks/useUserProfile'
 import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
 import { setUserLocaleClient } from '@nextsparkjs/core/lib/locale-client'
-import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
+import { I18N_CONFIG } from '@nextsparkjs/core/lib/config/config-client'
 import { useEffect, useState, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'

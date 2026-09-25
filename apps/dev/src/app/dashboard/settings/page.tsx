@@ -4,7 +4,7 @@ import { sel } from '@nextsparkjs/core/selectors'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useMemo } from 'react'
-import { getEnabledSettingsPages } from '@nextsparkjs/core/lib/config'
+import { getEnabledSettingsPages } from '@nextsparkjs/core/lib/config/config-client'
 import {
   User,
   Lock,

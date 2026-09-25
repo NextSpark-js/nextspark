@@ -67,7 +67,7 @@ describe('ApiKeyManager', () => {
     // people end up handing out broad ones.
     test('a scope the app declared in api.scopes is valid', () => {
       jest.isolateModules(() => {
-        jest.doMock('@/core/lib/config/config-sync', () => ({
+        jest.doMock('@/core/lib/config/config-client', () => ({
           API_CONFIG: { scopes: { 'integrations:write': 'Provision from an external system' } },
         }));
         const { ApiKeyManager: Manager } = require('@/core/lib/api/keys');
@@ -81,7 +81,7 @@ describe('ApiKeyManager', () => {
 
     test('core scopes keep working, and an unknown one is still refused', () => {
       jest.isolateModules(() => {
-        jest.doMock('@/core/lib/config/config-sync', () => ({
+        jest.doMock('@/core/lib/config/config-client', () => ({
           API_CONFIG: { scopes: { 'integrations:write': 'Provision from an external system' } },
         }));
         const { ApiKeyManager: Manager } = require('@/core/lib/api/keys');
@@ -99,7 +99,7 @@ describe('ApiKeyManager', () => {
 
     test('an app cannot redefine what a core scope means', () => {
       jest.isolateModules(() => {
-        jest.doMock('@/core/lib/config/config-sync', () => ({
+        jest.doMock('@/core/lib/config/config-client', () => ({
           API_CONFIG: { scopes: { 'admin:api-keys': 'Something else entirely' } },
         }));
         const { getApiScopes } = require('@/core/lib/api/keys');
@@ -110,7 +110,7 @@ describe('ApiKeyManager', () => {
 
     test('no declared scopes leaves the catalogue exactly as core ships it', () => {
       jest.isolateModules(() => {
-        jest.doMock('@/core/lib/config/config-sync', () => ({ API_CONFIG: {} }));
+        jest.doMock('@/core/lib/config/config-client', () => ({ API_CONFIG: {} }));
         const { getApiScopes, getAppApiScopes, API_SCOPES } = require('@/core/lib/api/keys');
 
         expect(getApiScopes()).toEqual(API_SCOPES);

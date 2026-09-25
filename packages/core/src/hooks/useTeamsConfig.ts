@@ -7,7 +7,7 @@ import {
   canSwitchTeams,
   canCreateTeams
 } from '../lib/teams/helpers'
-import { APP_CONFIG_MERGED } from '../lib/config/config-sync'
+import { APP_CONFIG_MERGED } from '../lib/config/config-client'
 
 export interface UseTeamsConfigReturn {
   mode: TeamsMode

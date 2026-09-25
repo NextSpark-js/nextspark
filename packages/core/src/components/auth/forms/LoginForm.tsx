@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import type { ComponentType } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -23,12 +24,24 @@ import { GoogleIcon } from '../../ui/google-icon'
 import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { AuthTranslationPreloader } from '../../../lib/i18n/AuthTranslationPreloader'
-import { DevKeyring } from '../DevKeyring'
-import { DEV_CONFIG, PUBLIC_AUTH_CONFIG } from '../../../lib/config/config-sync'
+import { PUBLIC_AUTH_CONFIG } from '../../../lib/config/config-client'
+import type { DevKeyringConfig } from '../../../lib/config/types'
 import { getPrimaryEmailMethod } from '../../../lib/auth/auth-methods'
 import { DEFAULT_OTP_CONFIG, formatOtpCountdown, getOtpSecondsRemaining } from '../../../lib/auth/otp-config'
 import type { AuthProviderWithNull, AuthErrorCode, AuthError } from '../../../types/auth'
 import type { AuthLoginMethod } from '../../../lib/config/types'
+
+// Keep DevKeyring and its Radix UI dependencies out of production login chunks.
+// Next substitutes NODE_ENV at build time, making both requires unreachable in
+// production while preserving the development quick-login behavior.
+function getDevKeyringConfig(): DevKeyringConfig | undefined {
+  return process.env.NODE_ENV !== 'production'
+    ? require('@nextsparkjs/registries/dev-keyring.client').DEV_KEYRING_CONFIG
+    : undefined
+}
+const DevKeyring: ComponentType<{ config: DevKeyringConfig }> | null = process.env.NODE_ENV !== 'production'
+  ? require('../DevKeyring').DevKeyring
+  : null
 
 /**
  * Maps error codes to internationalization keys for better user experience
@@ -199,14 +212,14 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
   const otpConfig = PUBLIC_AUTH_CONFIG.otp ?? DEFAULT_OTP_CONFIG
   const otpLength = otpConfig.otpLength
   const otpExpiresIn = otpConfig.expiresIn
-  // In dev mode with DevKeyring, always allow email login regardless of registration mode
-  const devKeyringActive = process.env.NODE_ENV !== 'production' && !!DEV_CONFIG?.devKeyring?.enabled
-  // DevKeyring autofills email + password, so it keeps the password form reachable in dev
+  // DevKeyring autofills a password, so it keeps the password form reachable
+  // for development quick-login even under the passwordless preset.
+  const devKeyringConfig = getDevKeyringConfig()
+  const devKeyringActive = !!devKeyringConfig?.enabled
   const passwordEnabled = methods.includes('email-password') || devKeyringActive
   // The signup page only exists for the password flow (OTP creates the account on first sign-in)
   const signupVisible =
     (registrationMode === 'open' || registrationMode === 'domain-open') && methods.includes('email-password')
-  // In domain-restricted mode, hide email login UNLESS DevKeyring is active (dev mode)
   const emailLoginAllowed =
     (registrationMode !== 'domain-restricted' || devKeyringActive) && (otpEnabled || passwordEnabled)
   // Which email form opens first: the first email method in the configured order
@@ -934,10 +947,8 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
         )}
       </Card>
 
-      {/* DevKeyring - Development quick login (only if theme defines it in dev.config.ts) */}
-      {DEV_CONFIG?.devKeyring && (
-        <DevKeyring config={DEV_CONFIG.devKeyring} />
-      )}
+      {DevKeyring && devKeyringConfig && <DevKeyring config={devKeyringConfig} />}
+
     </>
   )
 }

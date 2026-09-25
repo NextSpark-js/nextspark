@@ -54,11 +54,7 @@ const sanitizedRequest = requestForTheme(
   request,
   sanitizeRequestHeaders(request)
 )
-const themeResponse = await executeThemeMiddleware(
-  projectTheme,
-  sanitizedRequest,
-  null
-)
+const themeResponse = await executeProjectMiddleware(sanitizedRequest, null)
 
 // The proxy then applies core docs/session/role checks before honoring a
 // continuation, same-origin rewrite, or protected terminal response.

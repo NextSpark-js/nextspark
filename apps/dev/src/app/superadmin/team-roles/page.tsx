@@ -22,7 +22,7 @@ import {
   Layers,
   Zap,
 } from "lucide-react";
-import { APP_CONFIG_MERGED } from "@nextsparkjs/core/lib/config/config-sync";
+import { APP_CONFIG_MERGED } from "@nextsparkjs/core/lib/config/config-client";
 import { PermissionService } from "@nextsparkjs/core/lib/services/permission.service";
 import { PERMISSIONS_METADATA } from "@nextsparkjs/registries/permissions-registry";
 import { getFullBillingMatrix } from "@nextsparkjs/core/lib/billing/queries";

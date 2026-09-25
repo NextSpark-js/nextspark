@@ -1,6 +1,7 @@
 'use client'
 
-import { I18N_CONFIG, type SupportedLocale } from './config'
+import { I18N_CONFIG } from './config/config-client'
+type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 
 // Client-side function to set locale cookie
 export function setUserLocaleClient(locale: string) {
@@ -21,4 +22,3 @@ export function setUserLocaleClient(locale: string) {
 // Re-export types from config for backward compatibility
 // Note: SUPPORTED_LOCALES is exported from locale.ts to avoid duplicate exports
 export { I18N_CONFIG }
-export type { SupportedLocale }

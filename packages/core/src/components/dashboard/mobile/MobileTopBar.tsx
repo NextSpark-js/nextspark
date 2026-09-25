@@ -8,7 +8,7 @@ import { Button } from '../../ui/button'
 import { ThemeToggle } from '../../app/misc/ThemeToggle'
 import { NotificationsDropdown } from '../misc/NotificationsDropdown'
 import { sel } from '../../../lib/test'
-import { isTopbarFeatureEnabled } from '../../../lib/config'
+import { isTopbarFeatureEnabled } from '../../../lib/config/config-client'
 import { withBasePathIfInApp } from '../../../lib/base-path'
 import { useTranslations } from 'next-intl'
 
