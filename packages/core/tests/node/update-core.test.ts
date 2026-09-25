@@ -306,7 +306,7 @@ function createProject(t: { after: (fn: () => void) => void }, { pins, files = {
     if (lockfile !== 'none') fs.writeFileSync(path.join(repo, 'node_modules', '.fake-last-install'), workspace['pnpm-lock.yaml'])
   }
 
-  if (gitMode !== 'none') git(repo, 'init', '-q')
+  if (gitMode !== 'none') git(repo, 'init', '-q', '-b', 'main')
   if (gitMode === 'commit') {
     git(repo, 'add', '-A')
     git(repo, 'commit', '-q', '-m', 'Generated project')

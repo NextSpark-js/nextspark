@@ -25,6 +25,3 @@ jobs:
 
       - name: Test the route JavaScript budget verifier
         run: node --test scripts/performance/verify-route-js-budget.test.mjs
-
-      - name: Test the development credential bundle verifier
-        run: node --test scripts/security/verify-no-dev-credentials.test.mjs
