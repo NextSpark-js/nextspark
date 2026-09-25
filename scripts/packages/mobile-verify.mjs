@@ -68,6 +68,16 @@ const TEMPLATES_DIR = join(MOBILE_PACKAGE_DIR, 'templates')
 const MOBILE_SRC_DIR = join(MOBILE_APP_DIR, 'src')
 const TEMPLATE_SRC_DIR = join(TEMPLATES_DIR, 'src')
 
+// `pnpm install` can otherwise pause to ask before replacing an incompatible
+// apps/mobile/node_modules. Package verification is deliberately unattended;
+// this explicit pnpm setting is the confirmation for the install it performs.
+const MOBILE_INSTALL_ARGS = [
+  'install',
+  '--ignore-workspace',
+  '--frozen-lockfile',
+  '--config.confirmModulesPurge=false',
+]
+
 // Paths (relative to src/) where apps/mobile/src is allowed to keep its own
 // copy instead of importing @nextsparkjs/mobile. Empty: apps/mobile/src
 // ships identical to the template today.
@@ -698,7 +708,7 @@ async function main() {
       // pnpm still calls legacy url.parse() internally. Node 24 reports that
       // upstream call as DEP0169, so suppress only that code for pnpm's own
       // install process while leaving every other Node warning visible.
-      exec('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile'], MOBILE_APP_DIR, {
+      exec('pnpm', MOBILE_INSTALL_ARGS, MOBILE_APP_DIR, {
         env: {
           NODE_OPTIONS: nodeOptionsWithDisabledWarning(process.env.NODE_OPTIONS, 'DEP0169'),
         },
@@ -746,6 +756,7 @@ export {
   killProcessGroup,
   cancelActiveChildrenAndExit,
   isMainModule,
+  MOBILE_INSTALL_ARGS,
   nodeOptionsWithDisabledWarning,
 }
 

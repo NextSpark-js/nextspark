@@ -8,7 +8,10 @@ import type { ThemeChoice } from '../prompts/theme-selection.js'
 import type { PluginChoice } from '../prompts/plugins-selection.js'
 import { addPlugin } from '../../commands/add-plugin.js'
 
-const TEMPLATE_OPTIONS = ['starter', 'blog', 'crm', 'productivity'] as const
+export const PROJECT_TEMPLATE_NAMES = ['starter', 'blog', 'crm', 'productivity'] as const
+// `none` is a valid CLI value too and is handled specially by selectTheme.
+// Keep this alongside the validator so command help cannot advertise a different set.
+export const PROJECT_TEMPLATE_OPTIONS = [...PROJECT_TEMPLATE_NAMES, 'none'] as const
 const PLUGIN_PACKAGES: Record<Exclude<PluginChoice, 'starter'>, string> = {
   ai: '@nextsparkjs/plugin-ai',
   langchain: '@nextsparkjs/plugin-langchain',
@@ -23,10 +26,10 @@ function choices(options: readonly string[], includeNone = false): string {
 export function selectTheme(theme: string | null | undefined): ThemeChoice {
   if (theme === null || theme === 'none') return null
   if (typeof theme !== 'string' || theme.trim() === '') {
-    throw new Error(`Project template is required. Valid options: ${choices(TEMPLATE_OPTIONS, true)}.`)
+    throw new Error(`Project template is required. Valid options: ${choices(PROJECT_TEMPLATE_OPTIONS)}.`)
   }
-  if (!(TEMPLATE_OPTIONS as readonly string[]).includes(theme)) {
-    throw new Error(`Unknown project template "${theme}". Valid options: ${choices(TEMPLATE_OPTIONS, true)}.`)
+  if (!(PROJECT_TEMPLATE_NAMES as readonly string[]).includes(theme)) {
+    throw new Error(`Unknown project template "${theme}". Valid options: ${choices(PROJECT_TEMPLATE_OPTIONS)}.`)
   }
   return theme as ThemeChoice
 }

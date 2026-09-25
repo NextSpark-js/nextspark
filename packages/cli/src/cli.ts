@@ -20,6 +20,7 @@ import { generateCommand } from './commands/generate.js';
 import { prepareCommand } from './commands/prepare.js';
 import { registryBuildCommand, registryWatchCommand } from './commands/registry.js';
 import { initCommand } from './commands/init.js';
+import { PROJECT_TEMPLATE_OPTIONS } from './wizard/generators/theme-plugins-installer.js';
 import { addPluginCommand } from './commands/add-plugin.js';
 import { addThemeCommand } from './commands/add-theme.js';
 import { addMobileCommand } from './commands/add-mobile.js';
@@ -128,7 +129,7 @@ program
   .option('--quick', 'Quick wizard mode (essential steps only)')
   .option('--expert', 'Expert wizard mode (all options)')
   .option('--preset <name>', 'Use preset configuration (saas, blog, crm)')
-  .option('--theme <name>', 'Pre-select project template (starter, blog, crm, productivity)')
+  .option('--theme <name>', `Pre-select project template (${PROJECT_TEMPLATE_OPTIONS.join(', ')})`)
   .option('--plugins <list>', 'Pre-select plugins (starter, ai, langchain, social-media-publisher; comma-separated)')
   .option('-y, --yes', 'Skip confirmations')
   .option('--registries-only', 'Only create registries (no wizard)')

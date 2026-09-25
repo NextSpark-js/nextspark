@@ -11,6 +11,7 @@ import {
   step,
   killProcessGroup,
   cancelActiveChildrenAndExit,
+  MOBILE_INSTALL_ARGS,
   nodeOptionsWithDisabledWarning,
 } from './mobile-verify.mjs'
 
@@ -27,6 +28,15 @@ test('nodeOptionsWithDisabledWarning disables only the requested warning', () =>
     nodeOptionsWithDisabledWarning('--trace-warnings', 'DEP0169'),
     '--trace-warnings --disable-warning=DEP0169',
   )
+})
+
+test('the isolated mobile install explicitly suppresses pnpm module-purge prompts', () => {
+  assert.deepEqual(MOBILE_INSTALL_ARGS, [
+    'install',
+    '--ignore-workspace',
+    '--frozen-lockfile',
+    '--config.confirmModulesPurge=false',
+  ])
 })
 
 /**
