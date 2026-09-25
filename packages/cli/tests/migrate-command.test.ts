@@ -1,14 +1,26 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { before, test } from 'node:test'
-import { access, lstat, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { access, chmod, lstat, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
 
 let cliEntry: string
 before(() => { cliEntry = buildCli() })
+
+const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const CORE_SOURCE = join(PKG_ROOT, '../core')
+const CORE_SYNC_SUPPORT = [
+  'scripts/build/registry/write-places.mjs',
+  'scripts/build/registry/project-mode.mjs',
+  'scripts/build/registry/post-build/own-gitignores.mjs',
+  'scripts/build/safe-fs.mjs',
+]
 
 async function write(root: string, file: string, content: string): Promise<void> {
   const target = join(root, file)
@@ -31,12 +43,25 @@ async function commitFixture(root: string): Promise<void> {
   git(root, ['commit', '--quiet', '-m', 'fixture'])
 }
 
+/** Install the same guarded sync prerequisites a production core provides. */
+async function installSyncableCore(root: string, registry: string, version = '0.0.0-test'): Promise<void> {
+  const core = 'node_modules/@nextsparkjs/core'
+  await write(root, `${core}/package.json`, JSON.stringify({ name: '@nextsparkjs/core', version }))
+  for (const file of CORE_SYNC_SUPPORT) await write(root, `${core}/${file}`, await readFile(join(CORE_SOURCE, file), 'utf8'))
+  await write(root, `${core}/templates/app/layout.tsx`, 'export default function Layout() { return null }\n')
+  await write(root, `${core}/templates/app/page.tsx`, 'export default function Page() { return null }\n')
+  await write(root, `${core}/scripts/build/registry.mjs`, registry)
+  await write(root, 'node_modules/next/package.json', JSON.stringify({ name: 'next', version: '16.0.0' }))
+}
+
 function run(root: string, args: string[], env: NodeJS.ProcessEnv = {}) {
   return spawnSync(process.execPath, [cliEntry, 'migrate', ...args], {
     cwd: root,
     encoding: 'utf8',
     timeout: 15_000,
-    env: { ...process.env, ...env },
+    // The migrate command may inspect an older published core. Tests must
+    // never let an accidental lookup escape to the real npm registry.
+    env: { ...process.env, npm_config_registry: 'http://127.0.0.1:9', ...env },
   })
 }
 
@@ -47,7 +72,7 @@ function runWithoutActiveTheme(root: string, args: string[]) {
     cwd: root,
     encoding: 'utf8',
     timeout: 15_000,
-    env,
+    env: { ...env, npm_config_registry: 'http://127.0.0.1:9' },
   })
 }
 
@@ -499,10 +524,10 @@ test('migrate --yes moves an intact legacy project and rewrites its source and t
     assert.doesNotMatch(await readFile(join(root, 'package.json'), 'utf8'), /contents\/themes/)
     assert.doesNotMatch(await readFile(join(root, 'scripts/check.mjs'), 'utf8'), /contents\/themes/)
     assert.equal((await readFile(join(root, '.env.example'), 'utf8')).includes('NEXT_PUBLIC_ACTIVE_THEME'), false)
-    assert.doesNotMatch(await readFile(join(root, 'nextspark.config.ts'), 'utf8'), /theme:/)
+    assert.equal(await readFile(join(root, 'nextspark.config.ts'), 'utf8'), "export default { theme: 'acme', plugins: ['local'] }\n")
     assert.match(await readFile(join(root, 'tests/jest.config.cjs'), 'utf8'), /rootDir: '\.\.'/)
-    assert.equal((await lstat(join(root, 'contents/themes'))).isDirectory(), true)
-    assert.equal((await lstat(join(root, 'contents/plugins'))).isDirectory(), true)
+    await assert.rejects(access(join(root, 'contents')))
+    assert.match(result.stdout, /contents\/: removed/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -758,10 +783,790 @@ test('migrate refuses a dirty tree and its documented rollback restores tracked 
       .map(line => line.trim())
       .filter(line => line.startsWith('git -C '))
     assert.equal(rollbackCommands.length, 2, moved.stdout)
-    execFileSync('/bin/sh', ['-c', rollbackCommands.join('\n')], { cwd: join(root, 'contents/themes/acme'), stdio: 'ignore' })
+    execFileSync('/bin/sh', ['-c', rollbackCommands.join('\n')], { cwd: root, stdio: 'ignore' })
     assert.equal(await readFile(join(root, 'contents/themes/acme/components/Button.ts'), 'utf8'), 'export const Button = true\n')
     await assert.rejects(access(join(root, 'components/Button.ts')))
     assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate creates a missing root-first config from required local and packaged plugins', async () => {
+  const { root } = await moveFixture()
+  try {
+    await rm(join(root, 'nextspark.config.ts'))
+    await write(root, 'package.json', JSON.stringify({
+      name: 'fixture', packageManager: 'pnpm@9.0.0',
+      dependencies: { next: '^16.0.0', '@nextsparkjs/plugin-langchain': '^1.0.0' },
+    }))
+    await write(root, 'contents/themes/acme/package.json', JSON.stringify({ requiredPlugins: ['local', '@nextsparkjs/plugin-langchain', 'missing'] }))
+    await commitFixture(root)
+
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    assert.deepEqual(JSON.parse(dryRun.stdout).config, { plannedCreation: true, plugins: ['@nextsparkjs/plugin-langchain', 'local'] })
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'nextspark.config.ts'), 'utf8'), "import { defineConfig } from '@nextsparkjs/core/lib/config'\n\nexport default defineConfig({\n  plugins: [\"@nextsparkjs/plugin-langchain\",\"local\"],\n})\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate reads plugins from the legacy config/theme.config.ts shape', async () => {
+  const { root } = await moveFixture()
+  try {
+    await rm(join(root, 'nextspark.config.ts'))
+    await write(root, 'contents/plugins/amplitude/index.ts', 'export default true\n')
+    await write(root, 'contents/themes/acme/config/theme.config.ts', "export const themeConfig = { requiredPlugins: ['local'], plugins: ['amplitude'] }\n")
+    await commitFixture(root)
+
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    assert.deepEqual(JSON.parse(dryRun.stdout).config.plugins, ['amplitude', 'local'])
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(await readFile(join(root, 'nextspark.config.ts'), 'utf8'), /plugins: \["amplitude","local"\]/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate handles a nested real-shape workspace with only historical previous-core evidence', async () => {
+  const { root, host } = await moveFixture({ monorepo: true })
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-real-shape-'))
+  try {
+    await rm(join(root, 'web/nextspark.config.ts'))
+    await rm(join(root, 'web/contents/plugins/local'), { recursive: true, force: true })
+    await write(root, '.gitignore', 'web/node_modules/\nweb/contents/themes/acme/tests/output\n')
+    await write(root, 'pnpm-workspace.yaml', "packages:\n  - 'web'\n  - 'web/contents/themes/*'\n  - 'web/contents/plugins/*'\n")
+    await write(root, 'web/contents/plugins/amplitude/index.ts', 'export default true\n')
+    await write(root, 'web/contents/plugins/amplitude/.env.example', 'AMPLITUDE_KEY=synthetic\n')
+    await write(root, 'web/contents/themes/acme/config/theme.config.ts', `import type { ThemeConfig } from '@nextsparkjs/core/types/theme'
+
+export const acmeThemeConfig: ThemeConfig = {
+  name: 'acme',
+  displayName: 'Acme',
+  version: '1.0.0',
+  // The real legacy project declared plugins inside config/theme.config.ts,
+  // not in the theme package.json or a top-level nextspark config.
+  plugins: ['amplitude'],
+  defaultMode: 'light',
+}
+
+export default acmeThemeConfig
+`)
+    const hostPackage = JSON.parse(await readFile(join(host, 'package.json'), 'utf8'))
+    hostPackage.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+    await write(root, 'web/package.json', `${JSON.stringify(hostPackage, null, 2)}\n`)
+    await write(root, 'web/app/layout.tsx', 'export default function Layout() { return null }\n')
+    await write(root, 'web/app/page.tsx', 'export default function Page() { return <main>beta.183</main> }\n')
+    await write(root, 'pnpm-lock.yaml', "lockfileVersion: '9.0'\nimporters:\n  web:\n    dependencies:\n      '@nextsparkjs/core':\n        specifier: 0.1.0-beta.183\n        version: 0.1.0-beta.183\n")
+    await commitFixture(root)
+
+    hostPackage.dependencies['@nextsparkjs/core'] = 'file:/tmp/nextsparkjs-core-0.1.0-beta.192.tgz'
+    await write(root, 'web/package.json', `${JSON.stringify(hostPackage, null, 2)}\n`)
+    await write(root, 'pnpm-lock.yaml', "lockfileVersion: '9.0'\nimporters:\n  web:\n    dependencies:\n      '@nextsparkjs/core':\n        specifier: file:/tmp/nextsparkjs-core-0.1.0-beta.192.tgz\n        version: file:../../tmp/nextsparkjs-core-0.1.0-beta.192.tgz(react@19.2.7)\n")
+    await commitFixture(root)
+
+    await installSyncableCore(host, "console.log('src/app/(templates) generated')\n", '0.1.0-beta.192')
+    await write(root, 'web/node_modules/@nextsparkjs/core/templates/app/page.tsx', 'export default function Page() { return <main>beta.192</main> }\n')
+    await write(support, 'package/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.183' }))
+    await write(support, 'package/templates/app/page.tsx', 'export default function Page() { return <main>beta.183</main> }\n')
+    const archive = join(support, 'core.tgz')
+    await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', `#!/usr/bin/env node\nconst { copyFileSync } = require('node:fs')\nconst { join } = require('node:path')\nconst destination = process.argv[process.argv.indexOf('--pack-destination') + 1]\ncopyFileSync(process.env.FAKE_CORE_TARBALL, join(destination, 'core.tgz'))\n`)
+    await chmod(join(bin, 'pnpm'), 0o755)
+    const env = { PATH: `${bin}:${process.env.PATH}`, FAKE_CORE_TARBALL: archive }
+
+    const dryRun = run(host, ['--dry-run', '--json'], env)
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.equal(report.hostRoot.path, 'web')
+    assert.equal(report.appTemplates.previousTemplateVersion, '0.1.0-beta.183')
+    assert.match(report.appTemplates.previousTemplateVersionSource, /^git [0-9a-f]{8}:(?:web\/package\.json|pnpm-lock\.yaml)$/)
+    assert.deepEqual(report.appTemplates.identical, ['layout.tsx'])
+    assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['page.tsx'])
+    assert.deepEqual(report.config.plugins, ['amplitude'])
+
+    const result = run(host, ['--yes'], env)
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    await assert.rejects(access(join(host, 'app')))
+    await assert.rejects(access(join(host, 'contents')))
+    assert.equal(await readFile(join(host, 'plugins/amplitude/.env.example'), 'utf8'), 'AMPLITUDE_KEY=synthetic\n')
+    assert.match(await readFile(join(host, 'nextspark.config.ts'), 'utf8'), /plugins: \["amplitude"\]/)
+    assert.match(result.stdout, /post-migration route-root guard: passed/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('migrate rebases nested theme tsconfig and jest roots after moving tests to the project root', async () => {
+  const { root } = await moveFixture({ aliases: true })
+  try {
+    await write(root, 'cypress.d.ts', 'declare namespace Cypress {}\n')
+    await write(root, 'tsconfig.cypress.json', '{}\n')
+    await write(root, 'contents/themes/acme/tests/tsconfig.json', JSON.stringify({
+      extends: '../../../../tsconfig.cypress.json',
+      compilerOptions: {
+        baseUrl: '../../../..',
+        paths: {
+          '@/*': ['./*'],
+          '@/core/*': ['./core/*'],
+          '@/contents/*': ['./contents/*'],
+        },
+      },
+      include: ['../../../../cypress.d.ts', 'cypress/**/*.ts'],
+    }, null, 2) + '\n')
+    await write(root, 'contents/themes/acme/tests/jest/tsconfig.jest.json', JSON.stringify({
+      extends: '../../../../../tsconfig.json',
+    }, null, 2) + '\n')
+    await write(root, 'contents/themes/acme/tests/jest/jest.config.cjs', "const path = require('path')\nconst projectRoot = path.resolve(__dirname, '../../../../..')\nmodule.exports = {\n  rootDir: projectRoot,\n  moduleNameMapper: {\n    '^@/contents/(.*)$': '<rootDir>/contents/$1',\n    '^@/entities/(.*)$': '<rootDir>/contents/entities/$1',\n    '^@/plugins/(.*)$': '<rootDir>/contents/plugins/$1',\n    '^@/themes/(.*)$': '<rootDir>/contents/themes/$1',\n  },\n}\n")
+    await write(root, 'contents/themes/acme/tests/cypress/smoke.cy.ts', 'export {}\n')
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const testConfig = JSON.parse(await readFile(join(root, 'tests/tsconfig.json'), 'utf8'))
+    assert.equal(testConfig.extends, '../tsconfig.cypress.json')
+    assert.equal(testConfig.compilerOptions.baseUrl, '..')
+    assert.deepEqual(testConfig.compilerOptions.paths, {
+      '@/*': ['./*'],
+      '@/core/*': ['./core/*'],
+      '@/contents/*': ['./*'],
+    })
+    assert.deepEqual(testConfig.include, ['../cypress.d.ts', 'cypress/**/*.ts'])
+    const jestTsconfig = JSON.parse(await readFile(join(root, 'tests/jest/tsconfig.jest.json'), 'utf8'))
+    assert.equal(jestTsconfig.extends, '../../tsconfig.json')
+    const jestConfig = await readFile(join(root, 'tests/jest/jest.config.cjs'), 'utf8')
+    assert.match(jestConfig, /path\.resolve\(__dirname, '\.\.\/\.\.'\)/)
+    assert.match(jestConfig, /'\^@\/contents\/\(\.\*\)\$': '<rootDir>\/\$1'/)
+    assert.match(jestConfig, /'\^@\/entities\/\(\.\*\)\$': '<rootDir>\/entities\/\$1'/)
+    assert.match(jestConfig, /'\^@\/plugins\/\(\.\*\)\$': '<rootDir>\/plugins\/\$1'/)
+    assert.match(jestConfig, /'\^@\/themes\/acme\/\(\.\*\)\$': '<rootDir>\/\$1'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate rebases root-inspecting tests and preserves their local middleware binding', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'contents/themes/acme/tests/jest/lib/i18n/root-first-contracts.test.ts', `import { join, resolve } from 'path'
+import { middleware } from '@/contents/themes/acme/middleware'
+
+const APP_ROOT = resolve(__dirname, '../../../../../../..')
+const THEME_ROOT = resolve(__dirname, '../../../..')
+const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
+const proxyPath = join(APP_ROOT, 'proxy.ts')
+const authGroup = join(APP_ROOT, 'app', '(auth)')
+const graph = ['middleware.ts']
+const registryImport = /from '@\\/contents\\/themes\\/acme\\/middleware'/
+
+void [middleware, APP_ROOT, THEME_ROOT, activeTheme, proxyPath, authGroup, graph, registryImport]
+`)
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const migrated = await readFile(join(root, 'tests/jest/lib/i18n/root-first-contracts.test.ts'), 'utf8')
+    assert.match(migrated, /import \{ proxyHook as middleware \} from '@\/config\/hooks\/proxy'/)
+    assert.match(migrated, /const APP_ROOT = resolve\(__dirname, '\.\.\/\.\.\/\.\.\/\.\.'\)/)
+    assert.match(migrated, /const THEME_ROOT = resolve\(__dirname, '\.\.\/\.\.\/\.\.\/\.\.'\)/)
+    assert.match(migrated, /const activeTheme = "acme"/)
+    assert.match(migrated, /join\(APP_ROOT, 'proxy\.ts'\)/)
+    assert.match(migrated, /join\(APP_ROOT, 'src', 'app', '\(auth\)'\)/)
+    assert.match(migrated, /const graph = \['config\/hooks\/proxy\.ts'\]/)
+    assert.match(migrated, /\/from '@\\\/config\\\/hooks\\\/proxy'\//)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate replaces the removed theme middleware predicate with the root-first project predicate', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'proxy.ts', "import { hasThemeMiddleware, executeThemeMiddleware, getThemeAppConfig } from '@nextsparkjs/core/lib/middleware'\nexport async function proxy(request: unknown) {\n  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME\n  if (activeTheme && hasThemeMiddleware(activeTheme)) {\n    const response = await executeThemeMiddleware(activeTheme, request, null)\n    if (response) return response\n  }\n  return getThemeAppConfig(activeTheme as string)\n}\n")
+    await write(root, 'contents/themes/acme/lib/boot.ts', "import { hasThemeMiddleware } from '@nextsparkjs/core/lib/middleware'\nexport function assertHook() {\n  if (!hasThemeMiddleware('acme')) throw new Error('missing hook')\n}\n")
+    await write(root, 'contents/themes/acme/tests/jest/boot.test.ts', "jest.mock('@nextsparkjs/core/lib/middleware', () => ({ hasThemeMiddleware: () => true }))\n")
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'proxy.ts'), 'utf8'), "import { hasProjectMiddleware, executeProjectMiddleware, getProjectAppConfig } from '@nextsparkjs/core/lib/middleware'\nexport async function proxy(request: unknown) {\n  const activeTheme = undefined\n  if (hasProjectMiddleware()) {\n    const response = await executeProjectMiddleware(request, null)\n    if (response) return response\n  }\n  return getProjectAppConfig()\n}\n")
+    assert.equal(await readFile(join(root, 'lib/boot.ts'), 'utf8'), "import { hasProjectMiddleware } from '@nextsparkjs/core/lib/middleware'\nexport function assertHook() {\n  if (!hasProjectMiddleware()) throw new Error('missing hook')\n}\n")
+    assert.equal(await readFile(join(root, 'tests/jest/boot.test.ts'), 'utf8'), "jest.mock('@nextsparkjs/core/lib/middleware', () => ({ hasProjectMiddleware: () => true }))\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate renames known removed core scripts and warns for unknown core script references', async () => {
+  const { root } = await moveFixture()
+  try {
+    const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    pkg.scripts = {
+      jest: 'node node_modules/@nextsparkjs/core/scripts/test/jest-theme.mjs',
+      old: 'node node_modules/@nextsparkjs/core/scripts/test/no-longer-there.mjs',
+    }
+    await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+    await commitFixture(root)
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.coreScripts.renamed, ['jest'])
+    assert.match(report.coreScripts.warnings.join('\n'), /no-longer-there/)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).scripts.jest, 'node node_modules/@nextsparkjs/core/scripts/test/jest.mjs')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate archives custom legacy app files, removes generated ones, and prepares src/app', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/layout.tsx', 'export default function Layout() { return null }\n')
+    await write(root, 'app/layout.tsx', 'export default function Layout() { return null }\n')
+    await write(root, 'app/page.tsx', 'export default function CustomizedPage() { return null }\n')
+    await commitFixture(root)
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.generatedHost.customizations, ['page.tsx'])
+    assert.equal(report.generatedHost.customizationsDestination, 'legacy-app-customizations')
+    assert.equal(report.generatedHost.nextStep, 'nextspark sync:app --force')
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    await assert.rejects(access(join(root, 'app/layout.tsx')))
+    assert.equal(await readFile(join(root, 'legacy-app-customizations/page.tsx'), 'utf8'), 'export default function CustomizedPage() { return null }\n')
+    assert.equal((await lstat(join(root, 'src/app'))).isDirectory(), true)
+    const tsconfig = JSON.parse(await readFile(join(root, 'tsconfig.json'), 'utf8'))
+    assert.ok(tsconfig.exclude.includes('legacy-app-customizations'))
+    assert.match(result.stdout, /excluded legacy-app-customizations from tsconfig/)
+    assert.match(result.stdout, /nextspark sync:app --force/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate runs the guarded sync path before removing the legacy app host', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installSyncableCore(root, "console.log('src/app/(templates) generated')\n")
+    await write(root, 'app/layout.tsx', 'export default function Layout() { return null }\n')
+    await mkdir(join(root, 'app/nested/empty'), { recursive: true })
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /Sync complete/)
+    assert.match(result.stdout, /Generated host: removed 1 generated file/)
+    await assert.rejects(access(join(root, 'app/layout.tsx')))
+    assert.match(await readFile(join(root, 'src/app/layout.tsx'), 'utf8'), /@nextspark-generated/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate removes the emptied legacy app root and records the route-root guard', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installSyncableCore(root, "console.log('src/app/(templates) generated')\n")
+    await write(root, 'app/layout.tsx', 'export default function Layout() { return null }\n')
+    await write(root, 'app/(templates)/generated.tsx', '/* Generated by: scripts/build-registry.mjs */\nexport default null\n')
+    await mkdir(join(root, 'app/nested/empty'), { recursive: true })
+    await write(root, '.gitignore', 'contents/themes/acme/tests/output\napp/(templates)/\n')
+    await commitFixture(root)
+
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.routeRootGuard, { currentRoots: ['app'], checkedAfterMigration: true })
+    assert.deepEqual(report.appTemplates.generatedByLegacyRegistry, ['(templates)/generated.tsx'])
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    await assert.rejects(access(join(root, 'app')))
+    assert.match(result.stdout, /post-migration route-root guard: passed/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate fails the post-migration route-root guard and its rollback restores app', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installSyncableCore(root, "console.log('src/app/(templates) generated')\n")
+    await write(root, 'app/layout.tsx', 'export default function Layout() { return null }\n')
+    await write(root, 'pages/legacy.tsx', 'export default function Legacy() { return null }\n')
+    await commitFixture(root)
+
+    const failed = run(root, ['--yes'])
+    assert.notEqual(failed.status, 0)
+    assert.match(failed.stderr, /Post-migration route-root check failed: pages remains next to src\/app/)
+    const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
+    assert.equal(commands.length, 2, failed.stdout)
+    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    assert.equal(await readFile(join(root, 'app/layout.tsx'), 'utf8'), 'export default function Layout() { return null }\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate stops loudly and preserves app when guarded sync fails', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installSyncableCore(root, "console.error('registry generation failed')\nprocess.exit(1)\n")
+    await write(root, 'app/layout.tsx', 'export default function Layout() { return null }\n')
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    assert.doesNotMatch(result.stdout, /Migration complete/)
+    assert.match(result.stderr, /MIGRATION FAILED: sync:app did not generate the new src\/app host/)
+    assert.match(result.stdout, /Rollback after migration failure/)
+    assert.equal(await readFile(join(root, 'app/layout.tsx'), 'utf8'), 'export default function Layout() { return null }\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate late failure rollback restores all newly-created migration paths to git HEAD', async () => {
+  const { root } = await moveFixture({ brokenImport: true })
+  try {
+    await installSyncableCore(root, "console.log('src/app/(templates) generated')\n")
+    await rm(join(root, 'nextspark.config.ts'))
+    await rm(join(root, '.env.example'))
+    await write(root, 'contents/themes/acme/.env.example', 'THEME_VALUE=yes\n')
+    await write(root, 'app/layout.tsx', 'export default function Layout() { return null }\n')
+    await write(root, 'app/page.tsx', 'export default function Custom() { return null }\n')
+    await commitFixture(root)
+
+    const failed = run(root, ['--yes'], { NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
+    assert.notEqual(failed.status, 0)
+    assert.match(failed.stdout, /MIGRATION FAILED: migration introduced broken imports/)
+    const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
+    assert.equal(commands.length, 2, failed.stdout)
+    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+    assert.equal(execFileSync('git', ['diff', '--exit-code', 'HEAD'], { cwd: root, encoding: 'utf8' }), '')
+    await assert.rejects(access(join(root, 'nextspark.config.ts')))
+    assert.equal(await readFile(join(root, 'contents/themes/acme/.env.example'), 'utf8'), 'THEME_VALUE=yes\n')
+    await assert.rejects(access(join(root, 'legacy-app-customizations')))
+    assert.match(await readFile(join(root, 'app/page.tsx'), 'utf8'), /Custom/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+for (const trackedKeep of [false, true]) {
+  test(`migrate late failure rollback preserves pre-existing ${trackedKeep ? 'tracked' : 'untracked'} generated-host files`, async () => {
+    const { root } = await moveFixture({ brokenImport: true })
+    try {
+      await installSyncableCore(root, "console.log('src/app/(templates) generated')\n")
+      await write(root, '.gitignore', 'src/app/keep.ts\n.nextspark/something\n')
+      await write(root, 'app/layout.tsx', 'export default function Layout() { return null }\n')
+      await write(root, 'app/page.tsx', 'export default function Custom() { return null }\n')
+      await write(root, 'src/app/keep.ts', 'export const userOwned = true\n')
+      await write(root, '.nextspark/something', 'user-owned state\n')
+      if (trackedKeep) await commitFixture(root)
+      else {
+        await rm(join(root, 'src/app/keep.ts'))
+        await rm(join(root, '.nextspark/something'))
+        await commitFixture(root)
+        await write(root, 'src/app/keep.ts', 'export const userOwned = true\n')
+        await write(root, '.nextspark/something', 'user-owned state\n')
+      }
+
+      const failed = run(root, ['--yes'], { NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
+      assert.notEqual(failed.status, 0)
+      assert.match(failed.stdout, /MIGRATION FAILED: migration introduced broken imports/)
+      const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
+      assert.equal(commands.length, 2, failed.stdout)
+      execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+
+      assert.equal(await readFile(join(root, 'src/app/keep.ts'), 'utf8'), 'export const userOwned = true\n')
+      assert.equal(await readFile(join(root, '.nextspark/something'), 'utf8'), 'user-owned state\n')
+      await assert.rejects(access(join(root, 'src/app/layout.tsx')))
+      await assert.rejects(access(join(root, 'src/app/page.tsx')))
+      await assert.rejects(access(join(root, '.nextspark/sync-state.json')))
+      assert.equal(execFileSync('git', ['diff', '--exit-code', 'HEAD'], { cwd: root, encoding: 'utf8' }), '')
+      assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+}
+
+test('migrate late-failure rollback restores ignored sync state and in-place config edits byte-for-byte', async () => {
+  const { root } = await moveFixture({ brokenImport: true })
+  try {
+    await installSyncableCore(root, "console.log('src/app/(templates) generated')\n")
+    await write(root, 'app/layout.tsx', 'export default function Layout() { return null }\n')
+    await write(root, 'app/page.tsx', 'export default function Custom() { return null }\n')
+    await rm(join(root, '.gitignore'))
+    await rm(join(root, 'tsconfig.json'))
+    await commitFixture(root)
+    await write(root, '.git/info/exclude', '.gitignore\ntsconfig.json\n.nextspark/sync-state.json\n')
+
+    const originalGitignore = '# ignored user rules\n'
+    const originalTsconfig = '{\n  "exclude": [\n    "pre-existing"\n  ]\n}\n'
+    const originalState = Buffer.from('{"machine":"before-migrate"}\n')
+    await write(root, '.gitignore', originalGitignore)
+    await write(root, 'tsconfig.json', originalTsconfig)
+    await mkdir(join(root, '.nextspark'), { recursive: true })
+    await writeFile(join(root, '.nextspark/sync-state.json'), originalState)
+
+    const failed = run(root, ['--yes'], { NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
+    assert.notEqual(failed.status, 0)
+    assert.match(failed.stdout, /MIGRATION FAILED: migration introduced broken imports/)
+    const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
+    assert.equal(commands.length, 2, failed.stdout)
+    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+
+    assert.equal(await readFile(join(root, '.gitignore'), 'utf8'), originalGitignore)
+    assert.equal(await readFile(join(root, 'tsconfig.json'), 'utf8'), originalTsconfig)
+    assert.deepEqual(await readFile(join(root, '.nextspark/sync-state.json')), originalState)
+    await assert.rejects(access(join(root, '.nextspark/migrate-rollback')))
+    assert.equal(execFileSync('git', ['diff', '--exit-code', 'HEAD'], { cwd: root, encoding: 'utf8' }), '')
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate preserves JSONC exclude comments containing brackets while archiving legacy app customizations', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'app/custom.tsx', 'export default function Custom() { return null }\n')
+    await write(root, 'tsconfig.json', '{\n  "exclude": [\n    // ] remains part of this comment\n    "old-output]",\n  ],\n}\n')
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const tsconfig = await readFile(join(root, 'tsconfig.json'), 'utf8')
+    assert.match(tsconfig, /\/\/ \] remains part of this comment/)
+    assert.match(tsconfig, /"old-output\]",/)
+    assert.match(tsconfig, /"old-output\]",\n    "legacy-app-customizations"\n  \],/)
+    const parsed = JSON.parse(tsconfig.replace(/\/\/.*$/gm, '').replace(/,\s*([}\]])/g, '$1'))
+    assert.deepEqual(parsed.exclude, ['old-output]', 'legacy-app-customizations'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate moves a theme env example and plugin examples without reading their values', async () => {
+  const { root } = await moveFixture()
+  try {
+    await rm(join(root, '.env.example'))
+    await write(root, 'contents/themes/acme/.env.example', 'NEXT_PUBLIC_ACTIVE_THEME=acme\nPUBLIC_VALUE=yes\n')
+    await write(root, 'contents/plugins/local/.env.example', 'PLUGIN_VALUE=yes\n')
+    await commitFixture(root)
+    const result = run(root, ['--yes'], { NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, '.env.example'), 'utf8'), 'PUBLIC_VALUE=yes\n')
+    assert.equal(await readFile(join(root, 'plugins/local/.env.example'), 'utf8'), 'PLUGIN_VALUE=yes\n')
+    await assert.rejects(access(join(root, 'contents')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate names every entry that prevents contents from being removed', async () => {
+  const { root } = await moveFixture()
+  try {
+    await symlink('../README.md', join(root, 'contents/leftover-link'))
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal((await lstat(join(root, 'contents/leftover-link'))).isSymbolicLink(), true)
+    assert.match(result.stdout, /contents\/: contents\/leftover-link \(not moved because its destination conflicts or is reserved\)/)
+    assert.doesNotMatch(result.stdout, /contents\/: removed/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate reports rather than merges a differing theme env example', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, '.env.example', 'NEXT_PUBLIC_ACTIVE_THEME=acme\nROOT_VALUE=yes\n')
+    await write(root, 'contents/themes/acme/.env.example', 'NEXT_PUBLIC_ACTIVE_THEME=acme\nTHEME_VALUE=yes\n')
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /differs from the root \.env\.example and will not be merged/)
+    assert.equal(await readFile(join(root, '.env.example'), 'utf8'), 'ROOT_VALUE=yes\n')
+    assert.equal(await readFile(join(root, 'contents/themes/acme/.env.example'), 'utf8'), 'NEXT_PUBLIC_ACTIVE_THEME=acme\nTHEME_VALUE=yes\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate alias rewrites omit TypeScript extensions and trailing index', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'tsconfig.json', JSON.stringify({ compilerOptions: { paths: { '@ds': ['contents/themes/acme/components/DS/index.ts'] } } }))
+    await write(root, 'contents/themes/acme/components/DS/index.ts', 'export const DS = true\n')
+    await write(root, 'contents/themes/acme/tests/ds.ts', "import { DS } from '@ds'\nexport { DS }\n")
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'tests/ds.ts'), 'utf8'), "import { DS } from '@/components/DS'\nexport { DS }\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate keeps an alias trailing index when a sibling module would change resolution', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'tsconfig.json', JSON.stringify({ compilerOptions: { paths: { '@ds': ['contents/themes/acme/components/DS/index.ts'] } } }))
+    await write(root, 'contents/themes/acme/components/DS/index.ts', 'export const DS = true\n')
+    await write(root, 'contents/themes/acme/components/DS.ts', 'export const DS = false\n')
+    await write(root, 'contents/themes/acme/tests/ds.ts', "import { DS } from '@ds'\nexport { DS }\n")
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'tests/ds.ts'), 'utf8'), "import { DS } from '@/components/DS/index'\nexport { DS }\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate warns when legacy theme config plugins are not literal strings', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'contents/themes/acme/nextspark.config.ts', "export default { plugins: getThemePlugins() }\n")
+    await commitFixture(root)
+    const result = run(root, ['--dry-run', '--json'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const report = JSON.parse(result.stdout)
+    assert.ok(report.warnings.some((warning: string) => /nextspark\.config\.ts plugins may be incomplete/.test(warning)), result.stdout)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate does not fetch an old core when every legacy app file is already classified', async () => {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-no-fetch-'))
+  try {
+    const oldTemplate = '# old core docs\n'
+    await write(root, 'app/api/docs.md', oldTemplate)
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/api/docs.md', '# current core docs\n')
+    const hash = createHash('sha256').update(oldTemplate).digest('hex')
+    await write(root, '.nextspark/sync-state.json', JSON.stringify({ coreVersion: '0.1.0-beta.190', files: { 'app/api/docs.md': { core: 'different-template-hash', written: hash } } }))
+    await commitFixture(root)
+
+    const bin = join(support, 'bin')
+    const calls = join(support, 'pnpm-calls')
+    await write(bin, 'pnpm', '#!/bin/sh\nprintf invoked > "$PNPM_CALL_LOG"\nexit 1\n')
+    await chmod(join(bin, 'pnpm'), 0o755)
+    const dryRun = run(root, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}`, PNPM_CALL_LOG: calls })
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.appTemplates.generatedBySyncState, ['api/docs.md'])
+    assert.deepEqual(report.generatedHost.customizations, [])
+    await assert.rejects(access(calls))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('migrate keeps taggable files when their tag was removed or names src/app instead', async () => {
+  const { root } = await moveFixture()
+  try {
+    const page = 'export default function Page() { return <main>project owns this</main> }\n'
+    const layoutBody = 'export default function Layout() { return <main>copied</main> }\n'
+    const layoutHash = createHash('sha256').update(layoutBody).digest('hex')
+    await write(root, 'app/page.tsx', page)
+    await write(root, 'app/layout.tsx', `// @nextspark-generated core@0.1.0-beta.190 path=src/app/layout.tsx sha256=${layoutHash}\n${layoutBody}`)
+    await write(root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.190' }))
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/page.tsx', 'export default function Page() { return null }\n')
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/layout.tsx', 'export default function Layout() { return null }\n')
+    await write(root, '.nextspark/sync-state.json', JSON.stringify({
+      coreVersion: '0.1.0-beta.190',
+      files: { 'app/page.tsx': { core: createHash('sha256').update(page).digest('hex') } },
+    }))
+    await commitFixture(root)
+
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    assert.deepEqual(JSON.parse(dryRun.stdout).generatedHost.customizations, ['layout.tsx', 'page.tsx'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate byte-matches an unmodified beta.183 app file from the version in git history', async () => {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-old-core-'))
+  try {
+    const oldTemplate = 'export default function Page() { return <main>beta.183</main> }\n'
+    const currentTemplate = 'export default function Page() { return <main>beta.192</main> }\n'
+    const oldPprLayout = 'export default function Layout() { return <main>beta.183 PPR</main> }\n'
+    const oldGlobals = '@import "../../../themes/default/styles/globals.css";\n'
+    const migratedGlobals = '@import "../contents/themes/acme/styles/globals.css";\n'
+    const packageFile = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await write(root, 'app/page.tsx', oldTemplate)
+    await write(root, 'app/layout.tsx', oldPprLayout)
+    await write(root, 'app/globals.css', migratedGlobals)
+    await commitFixture(root)
+
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await write(root, 'next.config.mjs', 'export default { cacheComponents: true }\n')
+    await write(root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192' }))
+    await write(root, 'node_modules/next/package.json', JSON.stringify({ name: 'next', version: '16.2.0' }))
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/page.tsx', currentTemplate)
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/layout.tsx', 'export default function Layout() { return <main>beta.192</main> }\n')
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/globals.css', '@import "../styles/globals.css";\n')
+    await commitFixture(root)
+
+    await write(support, 'package/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.183' }))
+    await write(support, 'package/templates/app/page.tsx', oldTemplate)
+    await write(support, 'package/templates/app/layout.tsx', 'export default function Layout() { return <main>beta.183</main> }\n')
+    await write(support, 'package/templates/app/layout.ppr.tsx', oldPprLayout)
+    await write(support, 'package/templates/app/globals.css', oldGlobals)
+    const archive = join(support, 'nextsparkjs-core-0.1.0-beta.183.tgz')
+    await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', `#!/usr/bin/env node\nconst { copyFileSync } = require('node:fs')\nconst { join } = require('node:path')\nconst destination = process.argv[process.argv.indexOf('--pack-destination') + 1]\ncopyFileSync(process.env.FAKE_CORE_TARBALL, join(destination, 'nextsparkjs-core-0.1.0-beta.183.tgz'))\n`)
+    await chmod(join(bin, 'pnpm'), 0o755)
+
+    const dryRun = run(root, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}`, FAKE_CORE_TARBALL: archive })
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.equal(report.appTemplates.previousTemplateVersion, '0.1.0-beta.183')
+    assert.match(report.appTemplates.previousTemplateVersionSource, /^git [0-9a-f]{8}:package\.json$/)
+    assert.equal(report.appTemplates.previousTemplateMethod, 'pnpm pack')
+    assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['globals.css', 'layout.tsx', 'page.tsx'])
+    assert.deepEqual(report.generatedHost.customizations, [])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('migrate keeps unmatched files as customizations and reports when the previous core cannot be fetched', async () => {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-no-network-'))
+  try {
+    const packageFile = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await write(root, 'app/page.tsx', 'export default function Page() { return <main>old core</main> }\n')
+    await commitFixture(root)
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await write(root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192' }))
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/page.tsx', 'export default function Page() { return null }\n')
+    await commitFixture(root)
+
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', '#!/bin/sh\nexit 1\n')
+    await chmod(join(bin, 'pnpm'), 0o755)
+    const dryRun = run(root, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}` })
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.equal(report.appTemplates.previousTemplateUnavailableReason, 'pnpm could not retrieve or unpack the package')
+    assert.deepEqual(report.generatedHost.customizations, ['page.tsx'])
+    assert.ok(report.warnings.some((warning: string) => /Could not fetch @nextsparkjs\/core@0\.1\.0-beta\.183/.test(warning)))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('migrate falls back conservatively when fetching the previous core times out', async () => {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-timeout-'))
+  try {
+    const packageFile = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await write(root, 'app/page.tsx', 'export default function Page() { return <main>old core</main> }\n')
+    await commitFixture(root)
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await write(root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192' }))
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/page.tsx', 'export default function Page() { return null }\n')
+    await commitFixture(root)
+
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', '#!/bin/sh\nwhile :; do :; done\n')
+    await chmod(join(bin, 'pnpm'), 0o755)
+    const dryRun = run(root, ['--dry-run', '--json'], {
+      PATH: `${bin}:${process.env.PATH}`,
+      NEXTSPARK_MIGRATE_NETWORK_TIMEOUT_MS: '100',
+    })
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.match(report.appTemplates.previousTemplateUnavailableReason, /timed out after 100ms while running pnpm pack/)
+    assert.deepEqual(report.generatedHost.customizations, ['page.tsx'])
+    assert.ok(report.warnings.some((warning: string) => /timed out after 100ms while running pnpm pack/.test(warning)))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('migrate finds the previous core in the repository lockfile host importer', async () => {
+  const { root, host } = await moveFixture({ monorepo: true })
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-lock-core-'))
+  try {
+    const oldTemplate = 'export default function Page() { return <main>locked old core</main> }\n'
+    const hostPackage = JSON.parse(await readFile(join(host, 'package.json'), 'utf8'))
+    hostPackage.dependencies['@nextsparkjs/core'] = '^0.1.0-beta.180'
+    await write(root, 'web/package.json', `${JSON.stringify(hostPackage, null, 2)}\n`)
+    await write(root, 'pnpm-lock.yaml', "lockfileVersion: '9.0'\nimporters:\n  web:\n    dependencies:\n      '@nextsparkjs/core':\n        specifier: ^0.1.0-beta.180\n        version: 0.1.0-beta.183\n")
+    await write(root, 'web/app/page.tsx', oldTemplate)
+    await commitFixture(root)
+
+    hostPackage.dependencies['@nextsparkjs/core'] = 'file:/tmp/nextsparkjs-core-0.1.0-beta.192.tgz'
+    await write(root, 'web/package.json', `${JSON.stringify(hostPackage, null, 2)}\n`)
+    await write(root, 'pnpm-lock.yaml', "lockfileVersion: '9.0'\nimporters:\n  web:\n    dependencies:\n      '@nextsparkjs/core':\n        specifier: file:/tmp/nextsparkjs-core-0.1.0-beta.192.tgz\n        version: file:../../tmp/nextsparkjs-core-0.1.0-beta.192.tgz(react@19.2.7)\n")
+    await write(root, 'web/node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192' }))
+    await write(root, 'web/node_modules/@nextsparkjs/core/templates/app/page.tsx', 'export default function Page() { return null }\n')
+    await commitFixture(root)
+
+    await write(support, 'package/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.183' }))
+    await write(support, 'package/templates/app/page.tsx', oldTemplate)
+    const archive = join(support, 'core.tgz')
+    await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', `#!/usr/bin/env node\nconst { copyFileSync } = require('node:fs')\nconst { join } = require('node:path')\nconst destination = process.argv[process.argv.indexOf('--pack-destination') + 1]\ncopyFileSync(process.env.FAKE_CORE_TARBALL, join(destination, 'core.tgz'))\n`)
+    await chmod(join(bin, 'pnpm'), 0o755)
+
+    const dryRun = run(host, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}`, FAKE_CORE_TARBALL: archive })
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.equal(report.appTemplates.previousTemplateVersion, '0.1.0-beta.183')
+    assert.match(report.appTemplates.previousTemplateVersionSource, /^git [0-9a-f]{8}:pnpm-lock\.yaml$/)
+    assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['page.tsx'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('migrate accepts aliases that resolve to generated registries during broken-import checks', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'tsconfig.json', JSON.stringify({ compilerOptions: { paths: { '@nextsparkjs/registries/*': ['.nextspark/registries/*'] } } }))
+    await write(root, 'contents/themes/acme/components/registry.ts', "import registry from '@nextsparkjs/registries/generated'\nexport default registry\n")
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.doesNotMatch(result.stdout, /broken imports/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

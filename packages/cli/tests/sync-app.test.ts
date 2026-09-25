@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { syncAppCommand } from '../src/commands/sync-app.js'
+import { SyncAppError, syncApp, syncAppCommand } from '../src/commands/sync-app.js'
 import { guardConsole } from '../src/utils/shown-path.js'
 
 const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -142,6 +142,22 @@ test('--dry-run writes nothing and names each file it would write, remove or kee
     assert.match(printed, /! src\/app\/dashboard\/page\.tsx \(differs from core\)/)
     assert.match(printed, /Would add src\/app\/\(templates\)\/, \.nextspark\/registries\/, \.nextspark\/backups\/, \.nextspark\/sync-state\.json, app\.backup\.v\*\/ to \.gitignore/)
   } finally {
+    await cleanup()
+  }
+})
+
+test('shared sync throws for a missing src/app while the command wrapper still exits non-zero', async () => {
+  const { root, cleanup } = await project()
+  const previousCwd = process.cwd()
+  try {
+    await rm(join(root, 'src', 'app'), { recursive: true, force: true })
+    process.chdir(root)
+    await assert.rejects(syncApp({ force: true }), SyncAppError)
+    const command = await runSyncForExit(root, { force: true })
+    assert.equal(command.exitCode, 1)
+    assert.match(command.printed, /does not have a \/src\/app folder/)
+  } finally {
+    process.chdir(previousCwd)
     await cleanup()
   }
 })

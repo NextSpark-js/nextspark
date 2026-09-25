@@ -26,7 +26,7 @@ import { describeSyncPlan, nextSyncState, plannedAppFiles, planSync, type Report
 import { SYNC_STATE_FILE, writeSyncState } from '../utils/sync-state.js';
 import { stackLines } from '../utils/shown-path.js';
 
-interface SyncAppOptions {
+export interface SyncAppOptions {
   dryRun?: boolean;
   force?: boolean;
   backup?: boolean;
@@ -36,6 +36,11 @@ interface SyncAppOptions {
   /** Asks whether to go ahead; the interactive prompt when absent. */
   confirm?: (message: string) => Promise<boolean>;
 }
+
+export type SyncAppResult = { status: 'success' | 'cancelled' };
+
+/** A failure the shared sync implementation has already described to the user. */
+export class SyncAppError extends Error {}
 
 const REPORT_TONES: Record<ReportLine['tone'], (text: string) => string> = {
   change: chalk.white,
@@ -113,7 +118,11 @@ async function promptToConfirm(): Promise<boolean> {
   return confirm({ message: 'Proceed with sync?', default: true });
 }
 
-export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
+/**
+ * Perform a sync without deciding the process exit code.  Commands use the
+ * wrapper below; callers such as migrate can catch a failure and roll back.
+ */
+export async function syncApp(options: SyncAppOptions): Promise<SyncAppResult> {
   const spinner = ora({ text: 'Preparing sync...', isSilent: options.dryRun }).start();
 
   try {
@@ -131,7 +140,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     if (!existsSync(templatesDir)) {
       spinner.fail('Templates directory not found in @nextsparkjs/core');
       console.error(chalk.red(`\n  Expected path: ${templatesDir}`));
-      process.exit(1);
+      throw new SyncAppError('Templates directory not found in @nextsparkjs/core');
     }
 
     // Verify app directory exists (project must be initialized)
@@ -139,7 +148,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       spinner.fail('No /src/app directory found');
       console.error(chalk.red('\n  This project does not have a /src/app folder.'));
       console.error(chalk.yellow('  Run "nextspark init" first to initialize your project.\n'));
-      process.exit(1);
+      throw new SyncAppError('No /src/app directory found');
     }
 
     spinner.text = 'Scanning template files...';
@@ -166,8 +175,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       console.error(chalk.red('\n  sync:app and the registry build write under these paths:'));
       for (const line of core.unsafeWritePlacesLines(unsafe)) console.error(chalk.red(`    ${line}`));
       console.error('');
-      process.exitCode = 1;
-      return;
+      throw new SyncAppError("Sync not started: sync:app can't write safely under these paths");
     }
 
     // The backups sync and the registry build take under .nextspark/backups, and
@@ -199,8 +207,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       console.error(chalk.red('\n  With the lines sync:app adds to .gitignore, git would still pick up what goes under:'));
       for (const { entry, why } of leftForGit) console.error(chalk.red(`    ${entry}: ${why}`));
       console.error(chalk.yellow('  Make git leave each one out - drop the rule that takes it back, or make .gitignore a file of its own - and run sync:app again.\n'));
-      process.exitCode = 1;
-      return;
+      throw new SyncAppError('Sync not started: git would pick up what sync:app writes');
     }
     const notAdded = gitignorePlan.leftForGit.filter(({ entry }) => !writtenThisRun(entry) && !OWN_GITIGNORE_ENTRIES.includes(entry));
 
@@ -242,12 +249,12 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         confirmed = options.confirm ? await options.confirm('Proceed with sync?') : await promptToConfirm();
       } catch {
         console.error(chalk.red('\n  Failed to load confirmation prompt. Use --force to skip.\n'));
-        process.exit(1);
+        throw new SyncAppError('Failed to load confirmation prompt.');
       }
 
       if (!confirmed) {
         console.log(chalk.yellow('\n  Sync cancelled.\n'));
-        process.exit(0);
+        return { status: 'cancelled' };
       }
     }
 
@@ -361,7 +368,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
           console.error(chalk.red(`    ... and ${unignored.length - shown.length} more; --verbose names every one`));
         }
         console.error(chalk.yellow('  A .gitignore changed while the sync ran. Make git leave them out, and run sync:app again.\n'));
-        process.exitCode = 1;
+        throw new SyncAppError('Sync incomplete: git picks up files written by sync:app');
       }
 
       // src/app/(templates) is the registry build's half of the sync: with it stale,
@@ -373,15 +380,15 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         }
         console.error(chalk.red('\n  Sync incomplete: /src/app now matches core, but .nextspark/registries and src/app/(templates) were not regenerated.'));
         console.error(chalk.red('  Fix what the registry build reports above and run "nextspark registry:build".\n'));
-        process.exitCode = 1;
-        return;
+        throw new SyncAppError('Sync incomplete: registry build failed');
       }
-      if (unignored.length > 0) return;
     }
 
     // Success message
     console.log(chalk.green('\n  ✅ Sync complete!\n'));
+    return { status: 'success' };
   } catch (error) {
+    if (error instanceof SyncAppError) throw error;
     spinner.fail('Sync failed');
     if (error instanceof Error) {
       console.error(chalk.red(`\n  Error: ${error.message}\n`));
@@ -391,6 +398,15 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         console.error('');
       }
     }
-    process.exit(1);
+    throw error;
+  }
+}
+
+/** Keep the standalone command's output and non-zero exit behavior unchanged. */
+export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
+  try {
+    await syncApp(options);
+  } catch {
+    process.exitCode = 1;
   }
 }

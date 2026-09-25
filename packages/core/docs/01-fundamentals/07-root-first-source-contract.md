@@ -167,6 +167,12 @@ The migration is intentionally not a fixed-root allowlist: it moves every top-le
 - `instrumentation.*` moves to `config/hooks/instrumentation.*`.
 - `app/`, `pages/`, `src/`, and `next.config.*` are reported and are never copied directly to the project root.
 
+### Legacy generated `app/` host
+
+The former root `app/` host is generated output, not root-first source. Migration compares it with the installed core host templates. Where the installed core can run the guarded sync, it generates and verifies `src/app/` through `nextspark sync:app --force` **before** removing the old `app/`; a sync failure stops migration, preserves the old host, and prints rollback commands. Byte-identical files (and intact generated-tag files) are then removed. A file that differs from core or is absent from its template set is treated as a customization: migration reports its path and moves it to `legacy-app-customizations/` at the project root. When it archives a customization, migration adds `legacy-app-customizations` to the root `tsconfig.json` `exclude`; migration scans ignore that directory as well, and its root location is not a Next route root. The customization therefore remains available for manual porting without typechecking, registry scanning, or participating in the build. If the installed core cannot run the sync path, migration creates `src/app/` and reports the exact `nextspark sync:app --force` follow-up command instead.
+
+Migration creates `nextspark.config.ts` only when it is absent. Its plugin list retains required local plugins that exist under `plugins/` and required packaged plugins declared by the project. If a legacy theme config declares plugins dynamically rather than as string literals, migration warns that the generated list may be incomplete. A theme `.env.example` moves to the project root only if no root example exists; differing root and theme examples are reported and never merged. Plugin `.env.example` files stay with their plugins.
+
 Before writing, the migration reports reserved-name exceptions and its move plan. It stops without changing the tree if a destination already exists with different bytes; byte-identical source/destination pairs are verified and deduplicated. It must never delete a source it has not recognized as owned by the migration.
 
 ## Precedence and ownership
