@@ -93,7 +93,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateRegistryEntry> = {
     component: Template_0, // Actual React component
     template: {
       name: '(public)/features/page',
-      themeName: 'default',
+      themeName: 'starter',
       templateType: 'page',
       fileName: 'page.tsx',
       relativePath: '(public)/features/page.tsx',
@@ -110,7 +110,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateRegistryEntry> = {
     component: Template_1,
     template: {
       name: '(public)/layout',
-      themeName: 'default',
+      themeName: 'starter',
       templateType: 'layout',
       fileName: 'layout.tsx',
       relativePath: '(public)/layout.tsx',
@@ -127,7 +127,7 @@ export const TEMPLATE_METADATA = {
   totalTemplates: 5,
   uniquePaths: 5,
   templateTypes: ['page', 'layout'],
-  themeDistribution: { 'default': 5 },
+  themeDistribution: { 'starter': 5 },
   generatedAt: '2025-11-19T23:12:36.332Z',
   paths: [
     'app/(public)/features/page.tsx',
@@ -356,7 +356,7 @@ static getByTheme(themeName: string): TemplateRegistryEntry[]
 ```
 
 **Parameters:**
-- `themeName` - Theme name (e.g., `'default'`)
+- `themeName` - Theme name (e.g., `'starter'`)
 
 **Returns:** Array of template entries from the theme
 
@@ -364,8 +364,8 @@ static getByTheme(themeName: string): TemplateRegistryEntry[]
 ```typescript
 import { TemplateService } from '@/core/lib/services/template.service'
 
-const templates = TemplateService.getByTheme('default')
-console.log(`Default theme provides ${templates.length} templates`)
+const templates = TemplateService.getByTheme('starter')
+console.log(`Starter project template provides ${templates.length} templates`)
 
 templates.forEach(({ appPath, template }) => {
   console.log(`  ${appPath} (priority: ${template.priority})`)
@@ -955,7 +955,7 @@ jest.mock('@nextsparkjs/registries/template-registry', () => ({
       component: () => null,
       template: {
         name: '(public)/page',
-        themeName: 'default',
+        themeName: 'starter',
         templateType: 'page',
         priority: 102
       },
@@ -966,7 +966,7 @@ jest.mock('@nextsparkjs/registries/template-registry', () => ({
     totalTemplates: 1,
     uniquePaths: 1,
     templateTypes: ['page'],
-    themeDistribution: { default: 1 },
+    themeDistribution: { starter: 1 },
     generatedAt: '2025-01-01T00:00:00.000Z',
     paths: ['app/(public)/page.tsx']
   }
@@ -998,7 +998,7 @@ describe('TemplateService', () => {
     it('should return entry with metadata', () => {
       const entry = TemplateService.getEntry('app/(public)/page.tsx')
       expect(entry).toBeDefined()
-      expect(entry?.template.themeName).toBe('default')
+      expect(entry?.template.themeName).toBe('starter')
       expect(entry?.template.templateType).toBe('page')
     })
   })

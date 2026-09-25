@@ -438,7 +438,7 @@ const availableBlocks = useMemo(() => {
 }, [entitySlug])
 ```
 
-### Current Block Scopes (Default Theme)
+### Current Block Scopes (Starter)
 
 | Block | Scope | Available In |
 |-------|-------|--------------|

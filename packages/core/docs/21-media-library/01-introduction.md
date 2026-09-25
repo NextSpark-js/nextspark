@@ -63,7 +63,7 @@ Before uploading, the system checks for existing files with the same filename an
 
 ### Block Editor Integration
 
-The `media-library` field type in block definitions opens the Media Library modal for selecting images in the page builder. Seven default theme blocks use this field type for background images, thumbnails, avatars, and logos.
+The `media-library` field type in block definitions opens the Media Library modal for selecting images in the page builder. The bundled starter project template currently has five blocks and none uses this field type; its Hero background and testimonial avatars use `image` fields.
 
 ---
 

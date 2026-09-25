@@ -283,13 +283,13 @@ Found 7 migration file(s)
 ⏭️  Skipping 003_user_metas.sql (already executed)
 
 📋 PHASE 2: Entity migrations
-📌 project: default
+📌 project: starter
 
-🎨 Theme migrations: default
+🎨 Theme migrations: starter
   🔄 001_theme_setup.sql...
   ✅ 001_theme_setup.sql executed successfully
 
-🎨 Theme entities: default
+🎨 Theme entities: starter
   📁 tasks (2 migration(s))
     🔄 001_create_tasks.sql...
     ✅ 001_create_tasks.sql executed successfully

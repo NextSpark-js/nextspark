@@ -634,7 +634,7 @@ export default async function BlogPost({ params }: PageProps) {
 
 ### Entity Service Examples
 
-The default theme includes services for all entities:
+The starter project template includes services for all entities:
 
 | Entity | Service Location |
 |--------|------------------|
@@ -716,7 +716,7 @@ if (hasProjectMiddleware()) {
 
 // Entity type queries
 import { EntityTypeService } from '@/core/lib/services'
-const searchTypes = EntityTypeService.getSearchTypes('default')
+const searchTypes = EntityTypeService.getSearchTypes('starter')
 const entities = EntityTypeService.getEntitiesByCapability('hasBlocks')
 ```
 

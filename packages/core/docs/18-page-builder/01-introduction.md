@@ -132,14 +132,13 @@ Structure documentation with consistent layouts using reusable blocks.
 
 ## Available Blocks
 
-The default theme includes these blocks:
+The starter project template includes these blocks:
 
 | Block | Category | Description |
 |-------|----------|-------------|
-| **Hero** | hero | Full-width hero with title, subtitle, CTA, and background image |
+| **Hero Section** | hero | Full-width hero with title, subtitle, CTA, and background image |
 | **Features Grid** | content | Grid of features with icons, titles, and descriptions |
-| **Benefits Grid** | features | 3-column grid showcasing benefits with optional colored top borders |
-| **CTA Section** | cta | Call-to-action with title, description, and buttons |
+| **CTA Section** | cta | Call-to-action with title, description, and action buttons |
 | **Testimonials** | testimonials | Customer quotes with author and avatar |
 | **Text Content** | content | Rich text content block |
 

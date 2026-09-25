@@ -178,41 +178,12 @@ Storing URLs means that if a media file's URL changes (e.g., re-upload), blocks 
 
 ## Blocks Using media-library
 
-Seven blocks in the default theme use the `media-library` field type:
+`media-library` is available for custom block fields. The bundled starter project
+template has five blocks (`cta-section`, `features-grid`, `hero`,
+`testimonials`, and `text-content`), and none currently uses this field type.
+Its Hero background and testimonial avatars use the `image` field type instead.
 
-### 1. Hero Block
-
-**File:** `blocks/hero/fields.ts`
-
-```typescript
-{
-  name: 'backgroundImage',
-  label: 'Background Image',
-  type: 'media-library',
-  tab: 'design',
-  required: false,
-  helpText: 'Optional background image (recommended: 1920x1080px minimum)',
-}
-```
-
-### 2. Hero with Form Block
-
-**File:** `blocks/hero-with-form/fields.ts`
-
-```typescript
-{
-  name: 'backgroundImage',
-  label: 'Background Image',
-  type: 'media-library',
-  tab: 'content',
-  required: true,
-  helpText: 'Full-width background image (recommended: 1920x1080px minimum)',
-}
-```
-
-### 3. Jumbotron Block
-
-**File:** `blocks/jumbotron/fields.ts`
+For a custom block, add a field such as:
 
 ```typescript
 {
@@ -222,70 +193,6 @@ Seven blocks in the default theme use the `media-library` field type:
   tab: 'design',
   required: false,
   helpText: 'Optional background image (recommended: 1920x1080px minimum)',
-}
-```
-
-### 4. Video Hero Block
-
-**File:** `blocks/video-hero/fields.ts`
-
-```typescript
-{
-  name: 'videoThumbnail',
-  label: 'Custom Thumbnail',
-  type: 'media-library',
-  tab: 'content',
-  required: false,
-  helpText: 'Optional custom thumbnail shown before video plays (recommended: 1920x1080px)',
-}
-```
-
-### 5. Split Content Block
-
-**File:** `blocks/split-content/fields.ts`
-
-```typescript
-{
-  name: 'image',
-  label: 'Image',
-  type: 'media-library',
-  tab: 'content',
-  required: true,
-  helpText: 'Featured image (recommended: 800x600px minimum)',
-}
-```
-
-### 6. Logo Cloud Block (Array Item)
-
-**File:** `blocks/logo-cloud/fields.ts`
-
-Used inside an array field where each logo item has an image:
-
-```typescript
-{
-  name: 'image',
-  label: 'Logo Image',
-  type: 'media-library',
-  tab: 'content',
-  required: true,
-  helpText: 'Logo image URL (recommended: transparent PNG, 200x100px)',
-}
-```
-
-### 7. Testimonials Block (Array Item)
-
-**File:** `blocks/testimonials/fields.ts`
-
-Used inside an array field where each testimonial has an avatar:
-
-```typescript
-{
-  name: 'avatar',
-  label: 'Avatar Image',
-  type: 'media-library',
-  tab: 'content',
-  required: false,
-  description: 'Profile picture of the person',
 }
 ```
 

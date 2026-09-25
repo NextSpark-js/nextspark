@@ -325,7 +325,7 @@ export async function GET(request: NextRequest) {
 New core scopes added alongside this change: `teams:read`, `teams:write`,
 `teams:delete`, `billing:read`, `billing:write`, `admin:devtools`. Themes and
 plugins can add their own by declaring `api.scopes` in `app.config.ts` — the
-default theme adds `ai:read`, `ai:write`, `social:read`, `social:write` this
+starter project template adds `ai:read`, `ai:write`, `social:read`, `social:write` this
 way.
 
 `hasRequiredScope(authResult, scope)` still exists for a second, finer check

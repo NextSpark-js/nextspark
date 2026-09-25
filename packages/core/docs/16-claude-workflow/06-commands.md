@@ -550,7 +550,7 @@ Modify an existing page builder block
 1. Launches `block-developer` agent
 2. Locates block in theme
 3. Updates files:
-   - `schema.ts` - Add new field with `.optional().default()`
+   - `schema.ts` - Add new field with `.optional().starter()`
    - `fields.ts` - Add field definition
    - `component.tsx` - Use new prop safely
 4. Maintains backward compatibility
@@ -611,7 +611,7 @@ List available blocks in the page builder
 
 **Output:**
 ```text
-Blocks in Theme: default
+Blocks in Theme: starter
 
 Category: hero
 | Slug | Name | Icon |

@@ -81,7 +81,7 @@ async function getEntityRuntime(name: string) {
   const configModule = await import(configPath)
   
   // 3. Process configuration (15ms)
-  const config = await processConfig(configModule.default)
+  const config = await processConfig(configModule.starter)
   
   // 4. Discover resources (35ms)
   const migrations = await discoverMigrations(entityDir)
@@ -179,7 +179,7 @@ export const ENTITY_REGISTRY = {
 ```typescript
 // Lazy-load only active locale
 export const THEME_TRANSLATION_LOADERS = {
-  'default': {
+  'starter': {
     'en': () => import('@/messages/en.json'),
     'es': () => import('@/messages/es.json'),
     'fr': () => import('@/messages/fr.json')
@@ -187,7 +187,7 @@ export const THEME_TRANSLATION_LOADERS = {
 }
 
 // Only loads when called
-const loader = THEME_TRANSLATION_LOADERS.default.en
+const loader = THEME_TRANSLATION_LOADERS.starter.en
 const translations = await loader()  // Loads only en.json
 
 // Benefits:

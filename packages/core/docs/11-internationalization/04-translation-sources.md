@@ -366,7 +366,7 @@ Theme translations use the auto-generated registry:
 ```typescript
 import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 
-const translations = await loadThemeTranslation('default', 'en')
+const translations = await loadThemeTranslation('starter', 'en')
 ```
 
 **Automatic Integration**:

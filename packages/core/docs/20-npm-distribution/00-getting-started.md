@@ -34,7 +34,7 @@ pnpm add @nextsparkjs/core @nextsparkjs/cli
 import { defineConfig } from '@nextsparkjs/core/lib/config'
 
 export default defineConfig({
-  theme: 'default',
+  template: { name: 'starter', version: '0.1.0-beta.193' },
   features: {
     billing: true,
     teams: true,
@@ -117,18 +117,14 @@ const nextConfig: NextConfig = {
 export default nextConfig;
 ```
 
-### 5. Create Contents Directory
+### 5. Configure the Project Theme
 
-```bash
-mkdir -p ./default
-```
-
-**theme.config.ts**:
+**`config/theme.config.ts`**:
 ```typescript
 import { defineTheme } from '@nextsparkjs/core/lib/config'
 
 export default defineTheme({
-  name: 'default',
+  name: 'my-theme',
   displayName: 'My SaaS Theme',
   plugins: []
 })

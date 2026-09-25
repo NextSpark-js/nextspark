@@ -558,7 +558,7 @@ nano plugins/billing/.env
 **Recommended settings (.vscode/settings.json):**
 ```json
 {
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.starterFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true
@@ -662,7 +662,7 @@ rm -rf .nextspark/registries
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
-### "Theme not found: default"
+### "Theme not found: starter"
 
 **Verify:**
 ```bash

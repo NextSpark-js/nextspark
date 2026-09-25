@@ -471,7 +471,7 @@ export function ClientDisplay({ result }: { result: string }) {
 ✅ **Page templates** - Custom layouts for different page types
 
 **Examples:**
-- Default theme (standard layout and colors)
+- Starter project template (standard layout and colors)
 - Dark mode theme (dark color scheme)
 - Corporate theme (company branding)
 

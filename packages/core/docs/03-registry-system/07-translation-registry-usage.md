@@ -65,7 +65,7 @@ A lazy-loading function that returns a Promise resolving to translation data.
  */
 
 export const THEME_TRANSLATION_LOADERS: Record<string, Record<string, TranslationLoader>> = {
-  'default': {
+  'starter': {
     'en': () => import('@/messages/en.json'),
     'es': () => import('@/messages/es.json'),
     'fr': () => import('@/messages/fr.json')
@@ -80,12 +80,12 @@ export const TRANSLATION_METADATA = {
   totalThemes: 2,
   totalTranslations: 5,
   generatedAt: '2025-11-19T20:33:45.810Z',
-  themes: ['default', 'custom-theme']
+  themes: ['starter', 'custom-theme']
 }
 ```
 
 **Key Structure:**
-- First level: Theme name (`'default'`, `'custom-theme'`)
+- First level: Theme name (`'starter'`, `'custom-theme'`)
 - Second level: Locale code (`'en'`, `'es'`, `'fr'`)
 - Value: Lazy-loading function (`() => import(...)`)
 
@@ -106,7 +106,7 @@ function getThemeTranslationLoader(
 ```
 
 **Parameters:**
-- `theme` - Theme name (e.g., `'default'`)
+- `theme` - Theme name (e.g., `'starter'`)
 - `locale` - Locale code (e.g., `'en'`, `'es'`)
 
 **Returns:** Lazy-loading function or `null` if not found
@@ -116,7 +116,7 @@ function getThemeTranslationLoader(
 import { getThemeTranslationLoader } from '@nextsparkjs/registries/translation-registry'
 
 // Get loader function (doesn't load yet)
-const loader = getThemeTranslationLoader('default', 'en')
+const loader = getThemeTranslationLoader('starter', 'en')
 
 if (loader) {
   // Now load the translation when needed
@@ -149,8 +149,8 @@ async function loadThemeTranslation(
 ```typescript
 import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 
-// Load English translations for default theme
-const translations = await loadThemeTranslation('default', 'en')
+// Load English translations for starter project template
+const translations = await loadThemeTranslation('starter', 'en')
 
 console.log(translations['common.welcome'])
 // "Welcome to our application"
@@ -182,7 +182,7 @@ function getThemeLocales(theme: string): string[]
 ```typescript
 import { getThemeLocales } from '@nextsparkjs/registries/translation-registry'
 
-const locales = getThemeLocales('default')
+const locales = getThemeLocales('starter')
 console.log(locales) // ['en', 'es', 'fr']
 ```
 
@@ -204,7 +204,7 @@ function getThemesWithTranslations(): string[]
 import { getThemesWithTranslations } from '@nextsparkjs/registries/translation-registry'
 
 const themes = getThemesWithTranslations()
-console.log(themes) // ['default', 'custom-theme']
+console.log(themes) // ['starter', 'custom-theme']
 ```
 
 ---
@@ -228,11 +228,11 @@ function hasThemeTranslation(theme: string, locale: string): boolean
 ```typescript
 import { hasThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 
-if (hasThemeTranslation('default', 'en')) {
+if (hasThemeTranslation('starter', 'en')) {
   console.log('English translation available')
 }
 
-if (!hasThemeTranslation('default', 'de')) {
+if (!hasThemeTranslation('starter', 'de')) {
   console.warn('German translation not available')
 }
 ```
@@ -259,7 +259,7 @@ import ptTranslations from '@/messages/pt.json'
 **Solution with lazy-loading:**
 ```typescript
 // ✅ GOOD - Only loads active locale (fast)
-const loader = getThemeTranslationLoader('default', userLocale)
+const loader = getThemeTranslationLoader('starter', userLocale)
 const translations = await loader()
 
 // User needs 'en', loaded only 'en' = 100KB bundle
@@ -283,7 +283,7 @@ const translations = await import(`@/messages/${locale}.json`)
 // Problem: Dynamic path prevents build-time optimization
 
 // ✅ CORRECT - Build-time path resolution
-const loader = getThemeTranslationLoader('default', locale)
+const loader = getThemeTranslationLoader('starter', locale)
 const translations = await loader()
 // Solution: All paths known at build time, optimal code splitting
 ```
@@ -435,11 +435,11 @@ export function LocaleSelector() {
 // lib/i18n/check-locale.ts
 import { hasThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 
-export function isLocaleSupported(locale: string, theme: string = 'default'): boolean {
+export function isLocaleSupported(locale: string, theme: string = 'starter'): boolean {
   return hasThemeTranslation(theme, locale)
 }
 
-export function getDefaultLocale(theme: string = 'default'): string {
+export function getDefaultLocale(theme: string = 'starter'): string {
   // Try common locales in order of preference
   const preferredLocales = ['en', 'es', 'fr', 'de']
 
@@ -473,7 +473,7 @@ export async function loadTranslationsWithFallback(
     return await loadThemeTranslation(preferredTheme, locale)
   }
 
-  // Fallback to default theme
+  // Fallback to starter project template
   if (hasThemeTranslation(fallbackTheme, locale)) {
     console.warn(
       `Locale ${locale} not found in ${preferredTheme}, using ${fallbackTheme}`
@@ -489,7 +489,7 @@ export async function loadTranslationsWithFallback(
 // Usage
 const translations = await loadTranslationsWithFallback(
   'custom-theme',
-  'default',
+  'starter',
   'en'
 )
 ```
@@ -610,13 +610,13 @@ import {
 
 describe('Translation Registry', () => {
   it('should get translation loader', () => {
-    const loader = getThemeTranslationLoader('default', 'en')
+    const loader = getThemeTranslationLoader('starter', 'en')
     expect(loader).toBeDefined()
     expect(typeof loader).toBe('function')
   })
 
   it('should load translation data', async () => {
-    const translations = await loadThemeTranslation('default', 'en')
+    const translations = await loadThemeTranslation('starter', 'en')
     expect(translations).toBeDefined()
     expect(typeof translations).toBe('object')
   })
@@ -627,19 +627,19 @@ describe('Translation Registry', () => {
   })
 
   it('should list theme locales', () => {
-    const locales = getThemeLocales('default')
+    const locales = getThemeLocales('starter')
     expect(locales.length).toBeGreaterThan(0)
     expect(locales).toContain('en')
   })
 
   it('should check translation existence', () => {
-    expect(hasThemeTranslation('default', 'en')).toBe(true)
-    expect(hasThemeTranslation('default', 'nonexistent')).toBe(false)
+    expect(hasThemeTranslation('starter', 'en')).toBe(true)
+    expect(hasThemeTranslation('starter', 'nonexistent')).toBe(false)
   })
 
   it('should provide metadata', () => {
     expect(TRANSLATION_METADATA.totalThemes).toBeGreaterThan(0)
-    expect(TRANSLATION_METADATA.themes).toContain('default')
+    expect(TRANSLATION_METADATA.themes).toContain('starter')
   })
 })
 ```
@@ -700,7 +700,7 @@ ls messages/
 import translations from '@/messages/en.json'
 
 // ✅ Correct - Lazy loading
-const loader = getThemeTranslationLoader('default', 'en')
+const loader = getThemeTranslationLoader('starter', 'en')
 const translations = await loader()
 ```
 

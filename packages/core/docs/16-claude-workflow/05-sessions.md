@@ -192,7 +192,7 @@ Core functionality needed for MVP launch.
   "date": "2025-12-15",
   "scope": {
     "core": false,
-    "theme": "default",
+    "theme": "starter",
     "plugins": false
   },
   "exceptions": []
@@ -211,11 +211,11 @@ Core functionality needed for MVP launch.
 **Common Configurations:**
 
 ```json
-// Feature in existing theme (default)
+// Feature in the starter project template
 {
   "scope": {
     "core": false,
-    "theme": "default",
+    "theme": "starter",
     "plugins": false
   }
 }
@@ -242,7 +242,7 @@ Core functionality needed for MVP launch.
 {
   "scope": {
     "core": true,
-    "theme": "default",
+    "theme": "starter",
     "plugins": ["analytics", "payment"]
   }
 }
@@ -454,7 +454,7 @@ None currently.
 **Work Summary:**
 - Created requirements.md with 10 ACs
 - Classified ACs: 6 [AUTO], 3 [MANUAL], 1 [REVIEW]
-- Defined scope: Feature in default theme
+- Defined scope: Feature in starter project template
 - Created scope.json
 
 **Decisions:**

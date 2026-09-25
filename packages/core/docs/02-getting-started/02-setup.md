@@ -192,7 +192,7 @@ Create `.vscode/extensions.json`:
 Create `.vscode/settings.json`:
 ```json
 {
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.starterFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true,
@@ -439,8 +439,8 @@ core/components/
 ```typescript
 // config/theme.config.ts
 export const themeConfig = {
-  id: 'default',
-  name: 'Default Theme',
+  name: 'starter',
+  displayName: 'Starter',
   version: '1.0.0',
 
   colors: {
@@ -1053,7 +1053,7 @@ Each theme has its own Cypress config. If your theme doesn't have one, create it
 
 **Create theme Cypress config:**
 ```bash
-# Copy from default theme as template
+# The starter project template includes this configuration
 cp tests/cypress.config.ts tests/
 ```
 

@@ -301,9 +301,9 @@ export const aiPluginConfig: PluginConfig = {
 ```typescript
 import type { ThemeConfig } from '@/core/lib/theme/types'
 
-export const defaultTheme: ThemeConfig = {
-  id: 'default',
-  name: 'Default Theme',
+export const starterTheme: ThemeConfig = {
+  name: 'starter',
+  displayName: 'Starter',
 
   // CSS variables (auto-injected)
   colors: {
@@ -904,9 +904,9 @@ Themes customize the application's appearance through CSS variables, brand asset
 // config/theme.config.ts
 import type { ThemeConfig } from '@/core/lib/theme/types'
 
-export const defaultTheme: ThemeConfig = {
-  id: 'default',
-  name: 'Default Theme',
+export const starterTheme: ThemeConfig = {
+  name: 'starter',
+  displayName: 'Starter',
   version: '1.0.0',
 
   // CSS variables (injected into :root)

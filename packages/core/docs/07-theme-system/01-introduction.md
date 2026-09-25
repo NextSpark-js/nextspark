@@ -40,7 +40,7 @@ packages/core/templates/projects/crm/
 packages/core/templates/projects/productivity/
 ```
 
-`create-nextspark-app --template <name>` extracts one payload into the new
+`create-nextspark-app --theme <name>` extracts one payload into the new
 project root. Later framework upgrades do not merge or restore template files.
 The optional `template` field in `nextspark.config.ts` records provenance only.
 

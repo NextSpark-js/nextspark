@@ -73,7 +73,7 @@ import {
 
 const task = ENTITY_REGISTRY.tasks
 const enabledPlugins = PLUGIN_REGISTRY
-const projectPresentation = THEME_REGISTRY.default
+const projectPresentation = THEME_REGISTRY.starter
 ```
 
 `THEME_REGISTRY` remains a runtime compatibility name for the single compiled

@@ -78,7 +78,7 @@ export const TAGS_REGISTRY = {
 
 // Coverage summary
 export const COVERAGE_SUMMARY = {
-  theme: 'default',
+  theme: 'starter',
   features: { total: 13, withTests: 11, withoutTests: 2 },
   flows: { total: 3, withTests: 0, withoutTests: 3 },
   tags: { total: 59, testFiles: 87 }

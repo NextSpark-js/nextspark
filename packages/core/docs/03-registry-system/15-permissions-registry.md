@@ -173,7 +173,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
  * Auto-generated Permissions Registry
  *
  * Generated at: 2025-12-29T15:36:49.817Z
- * Theme: default
+ * Theme: starter
  * Team permissions: 11
  * Feature permissions: 7
  * Entity permissions: 23

@@ -983,7 +983,7 @@ Authorization for them is enforced at the API/action layer, not by RLS.
   Admin-bypass and API-key (scope-based) paths are unaffected.
 - A **thrown error** during the permission check returns **`500 PERMISSION_CHECK_FAILED`**
   (fail-closed) — never "allow". Themes must declare `list`/`read` permissions per
-  entity (the convention `default`/`starter` already follow).
+  entity (the starter convention already follows).
 
 ### `ownershipFilter` (entity access config)
 

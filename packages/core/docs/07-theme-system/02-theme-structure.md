@@ -692,7 +692,7 @@ export function BrandLogo() {
 1. **Keep files flat** - Avoid deep nesting
 2. **Use index files** - For clean imports
 3. **Group related files** - Co-locate related functionality
-4. **Follow conventions** - Match the default theme structure
+4. **Follow conventions** - Match the starter project template structure
 
 ### File Size
 
@@ -721,4 +721,4 @@ export function BrandLogo() {
 
 ---
 
-> 💡 **Tip**: Use the default theme as a template. Copy its structure and modify as needed rather than building from scratch.
+> 💡 **Tip**: Use the starter project template as a template. Copy its structure and modify as needed rather than building from scratch.

@@ -106,7 +106,7 @@ await AskUserQuestion({
     header: "Dev Type",
     question: "What type of development is this task?",
     options: [
-      { label: "Feature", description: "Feature in existing theme (default)" },
+      { label: "Feature", description: "Feature in the starter project template" },
       { label: "New Theme", description: "Create a new theme from scratch" },
       { label: "New Plugin", description: "Create a reusable plugin" },
       { label: "Plugin + Theme", description: "Create plugin AND new theme for testing" },

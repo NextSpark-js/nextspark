@@ -5,7 +5,7 @@
 NextSpark has two different template layers:
 
 1. **Project templates** under `packages/core/templates/projects/<name>/` are
-   install-once source payloads selected by `create-nextspark-app --template`.
+   install-once source payloads selected by `create-nextspark-app --theme`.
 2. **Host templates** under `packages/core/templates/app/` are framework inputs
    used to generate `src/app/`.
 

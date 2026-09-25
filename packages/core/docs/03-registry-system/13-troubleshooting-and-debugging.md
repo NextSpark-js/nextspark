@@ -284,7 +284,7 @@ export async function loadEntityConfig(name: string) {
   const config = await import(
     `@/entities/${name}/${name}.config`
   )
-  return config.default
+  return config.starter
 }
 ```
 
@@ -317,7 +317,7 @@ export async function getAllEntities() {
   return Promise.all(
     dirs.map(async dir => {
       const config = await import(`${entitiesDir}/${dir}/${dir}.config`)
-      return config.default
+      return config.starter
     })
   )
 }
@@ -375,7 +375,7 @@ const translations = await import(
 import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 
 const locale = getUserLocale()
-const translations = await loadThemeTranslation('default', locale)
+const translations = await loadThemeTranslation('starter', locale)
 ```
 
 ---

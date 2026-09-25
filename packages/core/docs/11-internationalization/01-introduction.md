@@ -710,7 +710,7 @@ The i18n system follows the project's zero runtime I/O philosophy:
 // CORRECT - Using auto-generated registry
 import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 
-const translations = await loadThemeTranslation('default', 'en')
+const translations = await loadThemeTranslation('starter', 'en')
 ```
 
 ✅ **Core Namespace Dynamic Import** (approved exception):

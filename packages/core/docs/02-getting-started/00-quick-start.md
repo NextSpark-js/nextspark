@@ -277,7 +277,7 @@ sudo apt install postgresql-client  # Linux
 psql "postgresql://postgres.xxxxx:password@aws-0-region.pooler.supabase.com:6543/postgres"
 ```
 
-### "Theme not found: default"
+### "Theme not found: starter"
 
 **Verify:**
 ```bash
@@ -398,7 +398,7 @@ nextspark setup:ai
 ### Explore the Application
 
 **Landing Page:** http://localhost:3010
-- See default theme
+- See starter project template
 - Test navigation
 - Check responsive design
 

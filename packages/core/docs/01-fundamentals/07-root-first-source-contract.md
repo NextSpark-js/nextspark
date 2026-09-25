@@ -198,7 +198,7 @@ Everything else is source or host configuration. The compiler must not overwrite
 
 ## Install-once templates
 
-`create-nextspark-app --template <name>` extracts a template into the root-first source tree once. The extracted files immediately become project source. Upgrading NextSpark does not compare, merge, or restore them from the original template. `template.name` and `template.version` are provenance for documentation and upgrade guidance only.
+`create-nextspark-app --theme <name>` extracts a template into the root-first source tree once. The extracted files immediately become project source. Upgrading NextSpark does not compare, merge, or restore them from the original template. `template.name` and `template.version` are provenance for documentation and upgrade guidance only.
 
 The repository's `blog`, `crm`, and `productivity` trees move from runnable workspace themes to the core-owned catalog at `packages/core/templates/projects/<name>/`. They are payloads, not compiler inputs or independently selected projects.
 
@@ -207,7 +207,7 @@ Their test suites have this explicit fate:
 - The blog Jest tests and all blog, CRM, and productivity Cypress behavior suites are kept with their template payloads.
 - CI extracts each template into a clean temporary project root and runs the retained suite against that generated root-first project. No suite runs by selecting a theme inside `apps/dev`.
 - Theme-selection harnesses and empty suite scaffolding are retired: `NEXT_PUBLIC_ACTIVE_THEME`, the `test:theme` selector, `jest-theme.mjs`, theme-path Cypress selection, and CRM/productivity Jest config/setup trees that contain no tests do not survive merely to preserve the old package shape.
-- Tests of the default product run against `apps/dev`, which becomes a root-first project rather than a host that selects `themes/default`.
+- Tests of the default product run against `apps/dev`, which becomes a root-first project rather than a host that selects a workspace theme.
 
 Runtime product packages are deferred. In particular, this contract does not decide whether a plugin or future product package may own database migrations.
 

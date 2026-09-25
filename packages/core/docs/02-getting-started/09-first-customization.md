@@ -389,9 +389,9 @@ function TaskList() {
 ```typescript
 export const themeConfig = {
   // Theme metadata
-  name: 'default',
-  displayName: 'Default Theme',
-  description: 'Clean and modern default theme',
+  name: 'starter',
+  displayName: 'Starter',
+  description: 'Clean and modern starter project template',
   version: '1.0.0',
 
   // Author info
@@ -1429,7 +1429,7 @@ export const projectEntityConfig = {
 const isProd = process.env.NODE_ENV === 'production'
 
 export const themeConfig = {
-  name: 'default',
+  name: 'starter',
   features: {
     analytics: isProd,           // Only in production
     debugMode: !isProd,          // Only in development

@@ -936,7 +936,7 @@ import { Button } from '@/core/components/ui/button'
 import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 
 export function Hero() {
-  const theme = THEME_REGISTRY.default
+  const theme = THEME_REGISTRY.starter
 
   return (
     <section

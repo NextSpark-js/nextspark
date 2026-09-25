@@ -135,7 +135,7 @@ PLUGIN_ROUTE_HANDLERS['plugin-name/route-path']['HTTP_METHOD']
 **Examples:**
 ```typescript
 // Theme route: api/custom/route.ts
-THEME_ROUTE_HANDLERS['default/custom']['GET']
+THEME_ROUTE_HANDLERS['starter/custom']['GET']
 
 // Plugin route: plugins/ai/api/generate/route.ts
 PLUGIN_ROUTE_HANDLERS['ai/generate']['POST']
@@ -176,7 +176,7 @@ import { RouteHandlerService } from '@/core/lib/services'
 Get a theme route handler by route key and HTTP method.
 
 ```typescript
-const handler = RouteHandlerService.getThemeHandler('default/custom', 'GET')
+const handler = RouteHandlerService.getThemeHandler('starter/custom', 'GET')
 if (handler) {
   const response = await handler(request, { params: Promise.resolve({}) })
 }
@@ -188,7 +188,7 @@ Get all registered theme route keys.
 
 ```typescript
 const routes = RouteHandlerService.getThemeKeys()
-// ['default/custom', 'default/analytics', ...]
+// ['starter/custom', 'starter/analytics', ...]
 ```
 
 #### `hasThemeRoute(routeKey, method?)`
@@ -196,7 +196,7 @@ const routes = RouteHandlerService.getThemeKeys()
 Check if a theme route exists.
 
 ```typescript
-if (RouteHandlerService.hasThemeRoute('default/custom', 'POST')) {
+if (RouteHandlerService.hasThemeRoute('starter/custom', 'POST')) {
   // Route exists with POST method
 }
 ```
@@ -452,10 +452,10 @@ export async function GET(
 }
 
 // Registry key: 'default/analytics/[[...filters]]'
-// URL: /api/theme/default/analytics
+// URL: /api/theme/starter/analytics
 // Params: { filters: [] }
 
-// URL: /api/theme/default/analytics/users/active
+// URL: /api/theme/starter/analytics/users/active
 // Params: { filters: ['users', 'active'] }
 ```
 

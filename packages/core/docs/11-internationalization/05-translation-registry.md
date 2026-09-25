@@ -24,7 +24,7 @@ const messages = await import(`@/messages/${locale}.json`)
 ```typescript
 // GOOD - Build-time registry (6ms)
 import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
-const messages = await loadThemeTranslation('default', 'en')
+const messages = await loadThemeTranslation('starter', 'en')
 ```
 
 ### Performance Comparison
@@ -102,11 +102,11 @@ export type TranslationLoader = () => Promise<Record<string, unknown>>
  * Theme translation loaders
  */
 export async function loadThemeTranslation(
-  themeName: 'default',
+  themeName: 'starter',
   locale: 'en' | 'es'
 ): Promise<Record<string, unknown>> {
   switch (themeName) {
-    case 'default':
+    case 'starter':
       switch (locale) {
         case 'en':
           return import('@/messages/en.json')
@@ -271,7 +271,7 @@ The registry provides full TypeScript support:
 type SupportedLocale = 'en' | 'es'
 
 // Type-safe theme names
-type ThemeName = 'default'
+type ThemeName = 'starter'
 
 // Type-safe function signature
 function loadThemeTranslation(
@@ -283,7 +283,7 @@ function loadThemeTranslation(
 **Usage**:
 ```typescript
 // TypeScript error - invalid locale
-await loadThemeTranslation('default', 'fr')
+await loadThemeTranslation('starter', 'fr')
 //                                    ^^^^ Type error
 
 // TypeScript error - invalid theme
@@ -346,7 +346,7 @@ bundle: ~16KB
 ```typescript
 // CORRECT
 import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
-const messages = await loadThemeTranslation('default', 'en')
+const messages = await loadThemeTranslation('starter', 'en')
 ```
 
 **2. Rebuild Registry After Changes**:
@@ -400,7 +400,7 @@ const messages = await loadThemeTranslation(theme, locale)
 import messages from '@/messages/en.json'
 
 // ✅ GOOD
-const messages = await loadThemeTranslation('default', 'en')
+const messages = await loadThemeTranslation('starter', 'en')
 ```
 
 **4. Don't Skip Registry Rebuild**:
@@ -418,11 +418,11 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 **5. Don't Hardcode Locale Values**:
 ```typescript
 // ❌ BAD
-const messages = await loadThemeTranslation('default', 'en')
+const messages = await loadThemeTranslation('starter', 'en')
 
 // ✅ GOOD
 const locale = await getUserLocale()
-const messages = await loadThemeTranslation('default', locale)
+const messages = await loadThemeTranslation('starter', locale)
 ```
 
 ---

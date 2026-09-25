@@ -905,4 +905,4 @@ export const badConfig: ThemeConfig = {
 
 ---
 
-> 💡 **Tip**: Start with minimal configuration and add features incrementally. The default theme configuration serves as an excellent reference.
+> 💡 **Tip**: Start with minimal configuration and add features incrementally. The starter project template configuration serves as an excellent reference.

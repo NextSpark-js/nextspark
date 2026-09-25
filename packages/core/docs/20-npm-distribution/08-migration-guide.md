@@ -169,12 +169,12 @@ export default defineConfig({
 // The registry will map it to the correct app path
 ```
 
-#### Added: theme (required) and features
+#### Added: starter template metadata and features
 
 ```typescript
 export default defineConfig({
-  // Theme is now required
-  theme: 'default',
+  // Record the bundled template used to create the project
+  template: { name: 'starter', version: '0.1.0-beta.193' },
 
   // Feature flags
   features: {
@@ -193,7 +193,7 @@ Plugins now read from `nextspark.config.ts` first:
 ```typescript
 // nextspark.config.ts (preferred)
 export default defineConfig({
-  theme: 'default',
+  template: { name: 'starter', version: '0.1.0-beta.193' },
   plugins: ['langchain', 'stripe']
 })
 

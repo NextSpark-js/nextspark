@@ -84,7 +84,7 @@ export const ENTITY_REGISTRY = {
     hasAssets: false,
     messagesPath: '@/entities/tasks/messages',
     pluginContext: null,
-    themeContext: { themeName: 'default' },
+    themeContext: { themeName: 'starter' },
     isCore: false,
     source: 'theme' as const
   }
@@ -142,7 +142,7 @@ export interface EntityRegistryEntry {
 | `hasAssets` | Entity has static assets | `true`/`false` |
 | `messagesPath` | Translation file path | `'@/entities/.../messages'` |
 | `pluginContext` | Owner plugin info | `{ pluginName: 'ai' }` |
-| `themeContext` | Owner theme info | `{ themeName: 'default' }` |
+| `themeContext` | Owner theme info | `{ themeName: 'starter' }` |
 | `isCore` | Core entity (protected) | `true`/`false` |
 | `source` | Where entity is defined | `'core'`, `'theme'`, `'plugin'` |
 
@@ -550,8 +550,8 @@ export function getThemeEntities(themeName: string): EntityRegistryEntry[]
 import { getThemeEntities } from '@nextsparkjs/registries/entity-registry'
 
 // Get all theme entities
-const themeEntities = getThemeEntities('default')
-// Returns: [{ name: 'tasks', themeContext: { themeName: 'default' }, ... }]
+const themeEntities = getThemeEntities('starter')
+// Returns: [{ name: 'tasks', themeContext: { themeName: 'starter' }, ... }]
 
 // Theme configuration
 function ThemeConfig({ themeName }: { themeName: string }) {
@@ -585,7 +585,7 @@ import { getEntityOwner } from '@nextsparkjs/registries/entity-registry'
 
 // Get owner info
 const owner = getEntityOwner('tasks')
-// Returns: { type: 'theme', name: 'default' }
+// Returns: { type: 'theme', name: 'starter' }
 
 const aiOwner = getEntityOwner('ai-history')
 // Returns: { type: 'plugin', name: 'ai' }
