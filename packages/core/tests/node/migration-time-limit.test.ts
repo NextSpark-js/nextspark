@@ -420,11 +420,14 @@ function cancelledAfter(afterMs: number, reason = 'canceling statement due to st
 
 test('a cancellation says after how long it came, and that the limit had not run out when it came sooner', { timeout: 20000 }, async () => {
   const limit = { seconds: 0.4, statementMs: 400, queryMs: 400 }
+  // A generous limit for the early cancellation: on a loaded CI runner a 50 ms timer can fire
+  // hundreds of ms late, which would turn "before the limit" into "after it".
+  const roomyLimit = { seconds: 5, statementMs: 5000, queryMs: 5000 }
 
   await assert.rejects(
-    runMigrationSql(cancelledAfter(50), { sql: 'SELECT 1', limit, connectionString: '' }),
+    runMigrationSql(cancelledAfter(50), { sql: 'SELECT 1', limit: roomyLimit, connectionString: '' }),
     (error: Error) => {
-      assert.match(error.message, /^the server cancelled it after \d+ ms, before MIGRATION_TIMEOUT_SECONDS \(0\.4 s\) ran out: canceling statement due to statement timeout\./)
+      assert.match(error.message, /^the server cancelled it after \d+ ms, before MIGRATION_TIMEOUT_SECONDS \(5 s\) ran out: canceling statement due to statement timeout\./)
       assert.doesNotMatch(error.message, /did not finish/)
       assert.match(error.message, COMMITTED_STAYS)
       return true

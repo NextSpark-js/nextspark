@@ -41,6 +41,11 @@ jobs:
           pnpm --filter @nextsparkjs/ui build
           pnpm --filter @nextsparkjs/core build:js
 
+      # packages/core/templates/app is generated from apps/dev/src/app and gitignored; the
+      # wizard tests generate projects from it, as pack.sh does before packing.
+      - name: Generate core's app templates
+        run: pnpm sync:templates:sync
+
       - name: Test CLI
         run: pnpm --filter @nextsparkjs/cli test
         env:
