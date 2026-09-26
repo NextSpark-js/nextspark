@@ -1,6 +1,6 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useEntityTranslation } from '../../../hooks/useContentTranslation'
 import { Layers, Plus } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
@@ -12,7 +12,7 @@ interface PatternCardProps {
 }
 
 export function PatternCard({ pattern, onSelect }: PatternCardProps) {
-  const t = useTranslations('patterns')
+  const { t } = useEntityTranslation('patterns')
 
   return (
     <div

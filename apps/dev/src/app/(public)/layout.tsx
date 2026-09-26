@@ -2,6 +2,9 @@ import { Suspense } from "react"
 import type { Metadata } from "next"
 import { PublicNavbar } from '@nextsparkjs/core/components/app/layouts/PublicNavbar'
 import { PublicFooter } from '@nextsparkjs/core/components/app/layouts/PublicFooter'
+import { NextIntlClientProvider } from 'next-intl'
+import { getMessages } from 'next-intl/server'
+import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { getTemplateOrDefault, getMetadataOrDefault } from "@nextsparkjs/registries/template-scopes/server/(public)/layout"
 
 // ✅ MINIMAL GENERIC METADATA (cliente puede override con template)
@@ -18,7 +21,7 @@ export const metadata: Metadata = getMetadataOrDefault(
   defaultMetadata
 )
 
-function PublicLayout({
+function DefaultPublicLayout({
   children
 }: {
   children: React.ReactNode
@@ -41,4 +44,13 @@ function PublicLayout({
   )
 }
 
-export default getTemplateOrDefault('app/(public)/layout.tsx', PublicLayout)
+const PublicLayout = getTemplateOrDefault('app/(public)/layout.tsx', DefaultPublicLayout)
+
+export default async function PublicLayoutWithMessages({ children }: { children: React.ReactNode }) {
+  const messages = await getMessages()
+  return (
+    <NextIntlClientProvider messages={selectMessages(messages, 'public')}>
+      <PublicLayout>{children}</PublicLayout>
+    </NextIntlClientProvider>
+  )
+}

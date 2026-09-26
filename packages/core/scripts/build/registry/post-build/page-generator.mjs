@@ -424,6 +424,37 @@ export default TemplateComponent
 ${segmentConfigSection}${moduleExportsSection}`
 }
 
+/** The generated template route groups that own a client message boundary. */
+function clientMessageGroupForLayout(appPath) {
+  if (appPath.startsWith('app/(public)/')) return 'public'
+  if (appPath.startsWith('app/(auth)/')) return 'auth'
+  if (appPath.startsWith('app/dashboard/')) return 'dashboard'
+  if (appPath.startsWith('app/superadmin/')) return 'superadmin'
+  if (appPath.startsWith('app/devtools/')) return 'devtools'
+  return null
+}
+
+function generatedLayoutComponentExport(group) {
+  if (!group) return `// Direct export of the theme template (no fallback)
+export default TemplateComponent`
+
+  return `import { NextIntlClientProvider } from 'next-intl'
+import { getMessages } from 'next-intl/server'
+import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+
+// The template is allowed to be a client component; this server wrapper owns
+// the route group's small RSC message boundary and forwards normal layout props.
+export default async function GeneratedTemplateLayout(props: { children: React.ReactNode }) {
+  const messages = await getMessages()
+  const Template = TemplateComponent as React.ComponentType<{ children: React.ReactNode }>
+  return (
+    <NextIntlClientProvider messages={selectMessages(messages, '${group}')}>
+      <Template {...props} />
+    </NextIntlClientProvider>
+  )
+}`
+}
+
 /**
  * Generate content for a layout page
  */
@@ -452,8 +483,7 @@ function generateLayoutPageContent(appPath, componentName, templatePath, routeEx
  */
 import TemplateComponent from '${templatePathWithoutExtension}'
 
-// Direct export of the theme template (no fallback)
-export default TemplateComponent
+${generatedLayoutComponentExport(clientMessageGroupForLayout(appPath))}
 ${forwardedExportsSection}`
     } else if (segmentConfigBlock || moduleExportsBlock) {
       // No component, but the template still defines segment config and/or metadata -

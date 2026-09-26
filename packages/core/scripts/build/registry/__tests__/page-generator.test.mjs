@@ -294,6 +294,30 @@ test('a layout with a default export and metadata forwards both, unlike the prev
   }
 })
 
+test('a generated public template layout owns the public message boundary', async () => {
+  const root = await createProjectRoot()
+  try {
+    const templatePath = await writeThemeTemplate(
+      root,
+      '(public)/layout.tsx',
+      'export default function Layout({ children }) { return children }\n',
+    )
+
+    const outputPath = join(root, 'src/app/(templates)/(public)/layout.tsx')
+    await generatePage(
+      { appPath: 'app/(public)/layout.tsx', templateType: 'layout', name: '(public)/layout', templatePath },
+      outputPath,
+      root,
+    )
+
+    const generated = await readFile(outputPath, 'utf8')
+    assert.match(generated, /NextIntlClientProvider/)
+    assert.match(generated, /selectMessages\(messages, 'public'\)/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('a layout template with no exports at all still gets the plain pass-through wrapper', async () => {
   const root = await createProjectRoot()
   try {

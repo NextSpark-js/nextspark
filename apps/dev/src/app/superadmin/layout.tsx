@@ -1,6 +1,8 @@
 import { Suspense } from 'react'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
+import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
+import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { SuperAdminGuard } from "@nextsparkjs/core/components/app/guards/SuperAdminGuard";
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
 import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar";
@@ -25,20 +27,14 @@ interface SuperadminLayoutProps {
 }
 
 /**
- * Inner async component that loads translations server-side.
  * Wrapped in Suspense so PPR doesn't fail during prerender.
- *
- * Loads ALL translations (core + theme + entity + plugin) via getMessages()
- * so plugin settings pages can use useTranslations() for their namespaces.
  */
-async function SuperadminWithTranslations({ children }: SuperadminLayoutProps) {
-  const messages = await getMessages()
+function SuperadminContent({ children }: SuperadminLayoutProps) {
   const pluginNavItems = getPluginNavItems('superadmin')
 
   return (
     <DashboardProviders>
-      <NextIntlClientProvider messages={messages}>
-        <SuperAdminGuard>
+      <SuperAdminGuard>
           <div className="flex h-screen bg-background" data-cy="superadmin-container">
             {/* Sidebar - Hidden on mobile, visible on desktop */}
             <div className="hidden lg:block">
@@ -68,8 +64,7 @@ async function SuperadminWithTranslations({ children }: SuperadminLayoutProps) {
               </main>
             </div>
           </div>
-        </SuperAdminGuard>
-      </NextIntlClientProvider>
+      </SuperAdminGuard>
     </DashboardProviders>
   )
 }
@@ -78,8 +73,7 @@ async function SuperadminWithTranslations({ children }: SuperadminLayoutProps) {
  * Superadmin Layout
  *
  * Protected layout for superadmin-only sections with dedicated sidebar navigation.
- * Loads ALL translations (core + theme + entity + plugin) server-side via
- * NextIntlClientProvider so plugin settings pages can use useTranslations().
+ * Owns the narrowly scoped client catalog for superadmin routes.
  */
 function SuperadminLayout({ children }: SuperadminLayoutProps) {
   return (
@@ -88,9 +82,19 @@ function SuperadminLayout({ children }: SuperadminLayoutProps) {
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     }>
-      <SuperadminWithTranslations>{children}</SuperadminWithTranslations>
+      <SuperadminContent>{children}</SuperadminContent>
     </Suspense>
   )
 }
 
-export default getTemplateOrDefault('app/superadmin/layout.tsx', SuperadminLayout)
+const ResolvedSuperadminLayout = getTemplateOrDefault('app/superadmin/layout.tsx', SuperadminLayout)
+
+export default async function SuperadminLayoutWithMessages({ children }: SuperadminLayoutProps) {
+  const messages = await getMessages()
+  const configuredNamespaces = getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED })
+  return (
+    <NextIntlClientProvider messages={selectMessages(messages, 'superadmin', configuredNamespaces.superadmin)}>
+      <ResolvedSuperadminLayout>{children}</ResolvedSuperadminLayout>
+    </NextIntlClientProvider>
+  )
+}

@@ -3,102 +3,29 @@ import {I18N_CONFIG} from './lib/config';
 import { loadMergedTranslations } from './lib/translations/registry';
 import { getUserLocale } from './lib/locale';
 import type { SupportedLocale } from './lib/entities/types';
+import { APP_CONFIG_MERGED } from './lib/config/config-client';
+import { getConfiguredClientNamespaces, NAMESPACE_GROUPS } from './lib/i18n/client-messages';
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry';
 
 // Debug flag - only log if explicitly enabled
 const DEBUG_I18N = process.env.NEXTSPARK_DEBUG_I18N === 'true';
 
-/**
- * @deprecated Not used to load translations: every request gets the merged
- * catalog. Kept for code that imports it.
- */
-const NAMESPACE_GROUPS = {
-  // Páginas públicas iniciales: incluye auth para login/signup
-  PUBLIC_INITIAL: ['common', 'public', 'auth'],
-  
-  // Dashboard: incluye public para navegación pero no auth (ya autenticado)
-  DASHBOARD_AUTHENTICATED: ['common', 'dashboard', 'settings', 'public', 'teams'],
-  
-  // Solo autenticación: para páginas específicas de auth
-  AUTH_ONLY: ['common', 'auth', 'validation'],
-  
-  // Fallback completo para casos edge
-  ALL: ['common', 'dashboard', 'settings', 'auth', 'public', 'validation', 'teams']
-};
-
-/**
- * @deprecated Not used to load translations: every request gets the merged
- * catalog. Kept for code that imports it.
- */
 function getPageNamespaces(pathname: string): string[] {
-  if (DEBUG_I18N) {
-    console.log(`[i18n] Analyzing pathname: "${pathname}"`);
-  }
+  const group = pathname.startsWith('/dashboard') ? 'dashboard'
+    : pathname.startsWith('/superadmin') ? 'superadmin'
+    : pathname.startsWith('/devtools') ? 'devtools'
+    : pathname.startsWith('/auth') || /\/(login|signup|forgot-password|reset-password|verify-email)$/.test(pathname) ? 'auth'
+    : 'public'
 
-  // Strategy 1: Dashboard pages - usuario autenticado
-  if (pathname.startsWith('/dashboard')) {
-    if (DEBUG_I18N) {
-      console.log(`[i18n] Dashboard detected → Loading authenticated user namespaces`);
-    }
-    return NAMESPACE_GROUPS.DASHBOARD_AUTHENTICATED;
-  }
-
-  // Strategy 2: Auth pages específicas (solo auth, sin public para optimizar)
-  const isAuthPage = pathname.startsWith('/auth') ||
-                     pathname === '/login' ||
-                     pathname === '/signup' ||
-                     pathname === '/forgot-password' ||
-                     pathname === '/reset-password' ||
-                     pathname === '/verify-email' ||
-                     pathname.includes('login') ||
-                     pathname.includes('signup') ||
-                     pathname.includes('auth');
-
-  if (isAuthPage) {
-    if (DEBUG_I18N) {
-      console.log(`[i18n] Auth page detected → Loading auth-only namespaces`);
-    }
-    return NAMESPACE_GROUPS.AUTH_ONLY;
-  }
-
-  // Strategy 3: Páginas públicas (incluye auth para botones login/signup)
-  if (pathname === '/' || pathname.startsWith('/pricing') || pathname.startsWith('/docs') ||
-      pathname.startsWith('/support') || pathname.startsWith('/features')) {
-    if (DEBUG_I18N) {
-      console.log(`[i18n] Public page detected → Loading public + auth namespaces`);
-    }
-    return NAMESPACE_GROUPS.PUBLIC_INITIAL;
-  }
-
-  // Strategy 4: Pathname vacío - estrategia inteligente según contexto
-  if (!pathname || pathname === '') {
-    if (DEBUG_I18N) {
-      console.log(`[i18n] Empty pathname → Using context-aware fallback`);
-    }
-
-    // Intentar inferir desde window.location (cliente)
-    if (typeof window !== 'undefined') {
-      const currentPath = window.location.pathname;
-      if (DEBUG_I18N) {
-        console.log(`[i18n] Client-side pathname detected: "${currentPath}"`);
-      }
-
-      if (currentPath.startsWith('/dashboard')) {
-        return NAMESPACE_GROUPS.DASHBOARD_AUTHENTICATED;
-      }
-      if (currentPath.includes('login') || currentPath.includes('signup') || currentPath.includes('auth')) {
-        return NAMESPACE_GROUPS.AUTH_ONLY;
-      }
-      if (currentPath === '/' || currentPath.startsWith('/pricing') || currentPath.startsWith('/features')) {
-        return NAMESPACE_GROUPS.PUBLIC_INITIAL;
-      }
-    }
-
-    // Para server-side, defaultear a público (más común en primera carga)
-    return NAMESPACE_GROUPS.PUBLIC_INITIAL;
-  }
-
-  // Strategy 5: Rutas desconocidas - cargar públicas por defecto
-  return NAMESPACE_GROUPS.PUBLIC_INITIAL;
+  if (DEBUG_I18N) console.log(`[i18n] ${pathname || '/'} → ${group}`)
+  const configuredNamespaces = getConfiguredClientNamespaces({
+    entityRegistry: ENTITY_REGISTRY,
+    appConfig: APP_CONFIG_MERGED,
+  })
+  return [...new Set([
+    ...NAMESPACE_GROUPS[group],
+    ...(group === 'dashboard' || group === 'superadmin' ? configuredNamespaces[group] : []),
+  ])]
 }
 
 // Server-side locale detection (safe for server-only contexts)

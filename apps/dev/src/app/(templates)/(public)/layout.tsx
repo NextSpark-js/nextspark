@@ -5,5 +5,18 @@
  */
 import TemplateComponent from '@/templates/(public)/layout'
 
-// Direct export of the theme template (no fallback)
-export default TemplateComponent
+import { NextIntlClientProvider } from 'next-intl'
+import { getMessages } from 'next-intl/server'
+import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+
+// The template is allowed to be a client component; this server wrapper owns
+// the route group's small RSC message boundary and forwards normal layout props.
+export default async function GeneratedTemplateLayout(props: { children: React.ReactNode }) {
+  const messages = await getMessages()
+  const Template = TemplateComponent as React.ComponentType<{ children: React.ReactNode }>
+  return (
+    <NextIntlClientProvider messages={selectMessages(messages, 'public')}>
+      <Template {...props} />
+    </NextIntlClientProvider>
+  )
+}

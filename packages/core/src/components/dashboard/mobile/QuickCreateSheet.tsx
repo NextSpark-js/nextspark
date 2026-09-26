@@ -19,7 +19,7 @@ interface QuickCreateSheetProps {
 }
 
 export function QuickCreateSheet({ isOpen, onOpenChange }: QuickCreateSheetProps) {
-  const t = useTranslations()
+  const t = useTranslations('common')
   const { entities: availableEntities, isLoading, hasEntities } = useQuickCreateEntities()
 
   const handleLinkClick = () => {
@@ -34,9 +34,9 @@ export function QuickCreateSheet({ isOpen, onOpenChange }: QuickCreateSheetProps
         data-cy={sel('dashboard.mobile.quickCreateSheet.container')}
       >
         <SheetHeader>
-          <SheetTitle>{t('common.mobileNav.create')}</SheetTitle>
+          <SheetTitle>{t('mobileNav.create')}</SheetTitle>
           <SheetDescription>
-            {t('common.mobileNav.quickCreateDescription')}
+            {t('mobileNav.quickCreateDescription')}
           </SheetDescription>
         </SheetHeader>
 
@@ -51,7 +51,7 @@ export function QuickCreateSheet({ isOpen, onOpenChange }: QuickCreateSheetProps
           {/* No Entities State */}
           {!isLoading && !hasEntities && (
             <div className="py-8 text-center text-sm text-muted-foreground">
-              {t('common.mobileNav.noEntitiesAvailable')}
+              {t('mobileNav.noEntitiesAvailable')}
             </div>
           )}
 
@@ -70,7 +70,7 @@ export function QuickCreateSheet({ isOpen, onOpenChange }: QuickCreateSheetProps
                 <div className="flex flex-col">
                   <span className="text-sm font-medium">{entity.names?.singular || entity.slug}</span>
                   <span className="text-xs text-muted-foreground">
-                    {t('common.mobileNav.createNew')} {(entity.names?.singular || entity.slug).toLowerCase()}
+                    {t('mobileNav.createNew')} {(entity.names?.singular || entity.slug).toLowerCase()}
                   </span>
                 </div>
               </Link>

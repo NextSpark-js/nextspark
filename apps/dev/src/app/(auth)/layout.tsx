@@ -1,6 +1,9 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { AuthWrapper } from '@nextsparkjs/core/components/auth/layouts/AuthWrapper'
+import { NextIntlClientProvider } from 'next-intl'
+import { getMessages } from 'next-intl/server'
+import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/registries/template-scopes/server/(auth)/layout'
 
 const defaultMetadata: Metadata = {
@@ -20,7 +23,7 @@ export const metadata: Metadata = getMetadataOrDefault(
   defaultMetadata
 )
 
-function AuthLayout({ children }: { children: React.ReactNode }) {
+function DefaultAuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -51,4 +54,13 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default getTemplateOrDefault('app/(auth)/layout.tsx', AuthLayout)
+const AuthLayout = getTemplateOrDefault('app/(auth)/layout.tsx', DefaultAuthLayout)
+
+export default async function AuthLayoutWithMessages({ children }: { children: React.ReactNode }) {
+  const messages = await getMessages()
+  return (
+    <NextIntlClientProvider messages={selectMessages(messages, 'auth')}>
+      <AuthLayout>{children}</AuthLayout>
+    </NextIntlClientProvider>
+  )
+}

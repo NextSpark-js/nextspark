@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { useEntityTranslation } from '../../../hooks/useContentTranslation'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Plus, LayoutGrid, LayoutList, Layers, ClipboardPaste } from 'lucide-react'
 import { Input } from '../../ui/input'
@@ -83,7 +84,7 @@ export function BlockPicker({
   clipboardCount = 0,
 }: BlockPickerProps) {
   const t = useTranslations('admin.builder')
-  const tPatterns = useTranslations('patterns')
+  const { t: tPatterns } = useEntityTranslation('patterns')
   const [activeTab, setActiveTab] = useState<TabValue>('blocks')
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)

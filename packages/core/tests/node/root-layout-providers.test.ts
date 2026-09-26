@@ -44,8 +44,49 @@ test('both root layouts mount SessionCookieRefresher', () => {
   }
 })
 
+test('root layouts serialize only their shared client-message group', () => {
+  const root = fs.readFileSync(path.join(APP, 'layout.tsx'), 'utf8')
+  const ppr = fs.readFileSync(path.join(APP, 'layout.ppr.tsx'), 'utf8')
+
+  assert.match(root, /selectMessages\(messages, 'root'\)/,
+    'the request layout narrows getMessages() before crossing the RSC boundary')
+  assert.doesNotMatch(root, /<NextIntlClientProvider[^>]*messages=\{messages\}/,
+    'the request layout must not pass the complete catalog to the root provider')
+  assert.match(ppr, /selectMessages\(STATIC_MESSAGES, 'root'\)/,
+    'the PPR layout narrows STATIC_MESSAGES before crossing the RSC boundary')
+})
+
+test('route-group layouts own the client namespaces beneath them', () => {
+  const layouts: Array<[string, string]> = [
+    ['(public)/layout.tsx', 'public'],
+    ['(auth)/layout.tsx', 'auth'],
+    ['dashboard/layout.tsx', 'dashboard'],
+    ['superadmin/layout.tsx', 'superadmin'],
+    ['devtools/layout.tsx', 'devtools'],
+  ]
+
+  for (const [relativePath, group] of layouts) {
+    const source = fs.readFileSync(path.join(APP, relativePath), 'utf8')
+    assert.match(source, new RegExp(`selectMessages\\(messages, '${group}'(?:, configuredNamespaces\\.${group})?\\)`), relativePath)
+    assert.match(source, /NextIntlClientProvider/, `${relativePath} mounts a group provider`)
+  }
+
+  const dashboard = fs.readFileSync(path.join(APP, 'dashboard/layout.tsx'), 'utf8')
+  assert.match(dashboard, /ENTITY_REGISTRY/, 'dashboard derives entity namespaces from the generated registry')
+  assert.match(dashboard, /configuredNamespaces\.dashboard/, 'dashboard passes derived namespaces to its client provider')
+
+  const superadmin = fs.readFileSync(path.join(APP, 'superadmin/layout.tsx'), 'utf8')
+  assert.match(superadmin, /APP_CONFIG_MERGED/, 'superadmin derives role namespaces from merged project config')
+  assert.match(superadmin, /configuredNamespaces\.superadmin/, 'superadmin passes derived namespaces to its client provider')
+})
+
 test('every authenticated area mounts DashboardProviders', () => {
-  for (const area of ['dashboard', 'superadmin', 'devtools']) {
+  for (const area of ['superadmin', 'devtools']) {
     assert.ok(renderedElements(path.join(APP, area, 'layout.tsx')).has('DashboardProviders'), area)
   }
+  assert.match(
+    fs.readFileSync(path.join(APP, 'dashboard', 'layout.tsx'), 'utf8'),
+    /AuthenticatedDashboardLayout/,
+    'dashboard delegates its client shell (and DashboardProviders) to core',
+  )
 })

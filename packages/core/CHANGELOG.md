@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Geist faces no longer preload; projects using `var(--font-geist-sans)` load
+  them through normal CSS discovery with `font-display: swap`.
 - Generated and synced request interception now lives beside `src/app`
   (`src/proxy.ts` on Next.js 16, `src/middleware.ts` on Next.js 15), so Next
   discovers the authentication boundary and unauthenticated dashboard requests

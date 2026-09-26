@@ -390,11 +390,57 @@ export function LocaleSelector() {
 
 ---
 
-## Namespace Groups (not applied)
+## Namespace groups
 
-`core/i18n.ts` still exports `NAMESPACE_GROUPS` and `getPageNamespaces(pathname)`, and `loadOptimizedTranslations(locale, pathname)` exists in `core/lib/translations/i18n-integration.ts`, but none of them decides what a request loads: every request gets the merged catalog (core → theme → entities) for its locale, and the root layout passes it to `NextIntlClientProvider`. They are deprecated and kept only for code that imports them.
+The request config always loads the complete merged catalog (core → theme →
+entities). This is deliberate: server components can continue to call
+`getTranslations` for any namespace. Generated layouts only serialize the
+namespaces used by their **client** subtree:
 
-Choosing namespaces from the request's pathname would mean reading request headers, which makes every page dynamic, so the request config does not do it.
+- the root layout: the shared `permissions` namespace used by `QueryProvider`;
+- `(public)`, `(auth)`, `dashboard`, `superadmin` and `devtools`: their own
+  group from `NAMESPACE_GROUPS` in `core/lib/i18n/client-messages`;
+- generated `(templates)` route groups copy those layouts, so they retain the
+  same boundary.
+
+Dashboard also adds every generated entity-registry namespace (and configured
+mobile-navigation key namespace); superadmin adds the namespace of each
+configured user-role display key.
+
+`getPageNamespaces(pathname)` remains available for code that needs the
+route-to-group lookup, but layouts do not inspect headers or a pathname to
+choose messages. That keeps routes prerenderable.
+
+The Geist faces no longer preload; a project using `var(--font-geist-sans)`
+loads them through normal CSS discovery with `font-display: swap`.
+
+### Project template namespace outside its route group
+
+When a project-owned template needs a namespace that is not part of its route
+group, add a server layout next to that template and explicitly extend the
+group. This makes the extra browser payload visible in the template diff while
+leaving unrelated routes small:
+
+```tsx
+// templates/(public)/blog/layout.tsx
+import { NextIntlClientProvider } from 'next-intl'
+import { getMessages } from 'next-intl/server'
+import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+
+export default async function BlogLayout({children}: {children: React.ReactNode}) {
+  const messages = await getMessages()
+  return (
+    <NextIntlClientProvider messages={selectMessages(messages, 'public', ['customBlog'])}>
+      {children}
+    </NextIntlClientProvider>
+  )
+}
+```
+
+Use a nested server layout even when the page itself is a client component.
+Do not move `getMessages` to a client component and do not read headers to
+infer a group. Add the namespace to the matching group in core only when the
+component is framework-owned and renders across every project using that group.
 
 ## Request-hook integration
 

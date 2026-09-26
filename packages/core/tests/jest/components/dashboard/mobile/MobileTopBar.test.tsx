@@ -57,7 +57,7 @@ describe('MobileTopBar profile link prefetch (#178)', () => {
 
     render(<MobileTopBar />)
 
-    expect(mockTranslate).toHaveBeenCalledWith('common.mobileNav.greeting', { name: 'u1' })
+    expect(mockTranslate).toHaveBeenCalledWith('mobileNav.greeting', { name: 'u1' })
   })
 
   test('forwards prefetch={false} to the profile link', () => {

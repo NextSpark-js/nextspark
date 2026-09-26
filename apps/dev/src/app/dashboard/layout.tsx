@@ -1,87 +1,25 @@
-'use client'
-
-import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
-import { useRouter } from 'next/navigation'
-import { useEffect, Suspense } from 'react'
-import { DashboardAuthSkeleton } from '@nextsparkjs/core/components/dashboard/layouts/DashboardAuthSkeleton'
-import { DashboardProviders } from '@nextsparkjs/core/providers/DashboardProviders'
-import { DashboardTranslationPreloader } from '@nextsparkjs/core/lib/i18n/DashboardTranslationPreloader'
-import { TranslationDebugger } from '@nextsparkjs/core/utils/dev/TranslationDebugger'
-import { useEnsureUserMetadata } from '@nextsparkjs/core/hooks/useEnsureUserMetadata'
-import { useAuthMethodDetector } from '@nextsparkjs/core/hooks/useAuthMethodDetector'
+import { NextIntlClientProvider } from 'next-intl'
+import { getMessages } from 'next-intl/server'
+import { AuthenticatedDashboardLayout } from '@nextsparkjs/core/components/dashboard/layouts/AuthenticatedDashboardLayout'
+import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
+import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 /**
- * Auth Method Detector Wrapper (uses useSearchParams internally)
+ * The data boundary belongs in this server layout. Keeping the client
+ * authentication shell in core lets generated (templates)/dashboard layouts
+ * use the same narrowly scoped catalog.
  */
-function AuthMethodDetectorWrapper() {
-  useAuthMethodDetector()
-  return null
-}
-
-/**
- * Dashboard Layout Content
- */
-function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth()
-  const router = useRouter()
-
-  // Asegurar que el usuario tenga metadata default
-  useEnsureUserMetadata()
-
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login')
-    }
-  }, [user, isLoading, router])
-
-  if (isLoading) {
-    return <DashboardAuthSkeleton />
-  }
-
-  if (!user) {
-    return null
-  }
+export default async function CoreDashboardLayout({ children }: { children: React.ReactNode }) {
+  const messages = await getMessages()
+  const configuredNamespaces = getConfiguredClientNamespaces({
+    entityRegistry: ENTITY_REGISTRY,
+    appConfig: APP_CONFIG_MERGED,
+  })
 
   return (
-    <>
-      {/* Precargar traducciones del dashboard para mejorar UX de navegación */}
-      <DashboardTranslationPreloader key="dashboard-translation-preloader" />
-
-      {/* Debugger de traducciones (solo en desarrollo con ?debug-i18n=true) */}
-      <TranslationDebugger key="translation-debugger" />
-
-      {/* Detect and save auth method from OAuth redirects (wrapped in Suspense) */}
-      <Suspense key="auth-method-detector" fallback={null}>
-        <AuthMethodDetectorWrapper />
-      </Suspense>
-
-      {/*
-        Children run within authenticated boundary -
-        nested layouts CAN be themed but security is guaranteed
-      */}
-      <div key="dashboard-children" id="dashboard-container" data-cy="dashboard-container" data-testid="dashboard-container">{children}</div>
-    </>
-  )
-}
-
-/**
- * CORE SECURITY LAYOUT - NOT OVERRIDEABLE BY THEMES
- *
- * This layout provides essential authentication and security measures
- * that cannot be bypassed by theme overrides. All dashboard routes
- * run within this authenticated boundary.
- *
- * SECURITY: This layout is intentionally NOT using template resolver
- * to prevent themes from bypassing authentication.
- */
-export default function CoreDashboardLayout({
-  children
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <DashboardProviders>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
-    </DashboardProviders>
+    <NextIntlClientProvider messages={selectMessages(messages, 'dashboard', configuredNamespaces.dashboard)}>
+      <AuthenticatedDashboardLayout>{children}</AuthenticatedDashboardLayout>
+    </NextIntlClientProvider>
   )
 }

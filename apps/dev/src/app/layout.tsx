@@ -9,6 +9,7 @@ import { Suspense } from "react"
 import { Geist, Geist_Mono } from "next/font/google"
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
+import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 
 import "./globals.css"
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
@@ -26,11 +27,13 @@ import { getThemeSettings } from '@nextsparkjs/core/lib/theme/get-default-theme-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  preload: false,
 })
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 })
 
 const defaultMetadata: Metadata = {
@@ -73,7 +76,7 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <NextIntlClientProvider locale={locale} messages={selectMessages(messages, 'root')}>
           <NextThemeProvider
             attribute="class"
             defaultTheme={defaultMode}

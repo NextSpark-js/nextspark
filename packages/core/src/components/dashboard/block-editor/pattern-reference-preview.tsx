@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react'
 import { Layers, X } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useEntityTranslation } from '../../../hooks/useContentTranslation'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Button } from '../../ui/button'
@@ -70,7 +70,7 @@ export function PatternReferencePreview({
   onSelect,
   onRemove,
 }: PatternReferencePreviewProps) {
-  const t = useTranslations('patterns')
+  const { t } = useEntityTranslation('patterns')
 
   // Fetch pattern data
   const { data: patternData, isLoading, isError } = useQuery({

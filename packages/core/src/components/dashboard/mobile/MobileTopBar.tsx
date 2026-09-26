@@ -23,7 +23,7 @@ interface MobileTopBarProps {
 
 export function MobileTopBar({ prefetch }: MobileTopBarProps = {}) {
   const { user } = useAuth()
-  const t = useTranslations()
+  const t = useTranslations('common')
 
   if (!user) return null
 
@@ -55,7 +55,7 @@ export function MobileTopBar({ prefetch }: MobileTopBarProps = {}) {
     <header
       className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-background border-b border-border"
       role="banner"
-      aria-label={t('common.a11y.mobileTopBar')}
+      aria-label={t('a11y.mobileTopBar')}
       data-cy={sel('dashboard.mobile.topbar.container')}
     >
       <div className="flex items-center justify-between px-4 h-14">
@@ -64,7 +64,7 @@ export function MobileTopBar({ prefetch }: MobileTopBarProps = {}) {
           href="/dashboard/settings/profile"
           prefetch={prefetch}
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-          aria-label={t('common.a11y.goToProfileOf', { name: user.firstName || user.email })}
+          aria-label={t('a11y.goToProfileOf', { name: user.firstName || user.email })}
           data-cy={sel('dashboard.mobile.topbar.userProfile')}
         >
           {/* Avatar */}
@@ -89,7 +89,7 @@ export function MobileTopBar({ prefetch }: MobileTopBarProps = {}) {
           {/* User Name */}
           <div className="flex flex-col">
             <span className="text-sm font-medium text-foreground">
-              {t('common.mobileNav.greeting', {
+              {t('mobileNav.greeting', {
                 name: user.firstName || user.email?.split('@')[0] || user.name || user.id
               })}
             </span>

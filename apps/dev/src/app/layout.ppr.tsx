@@ -26,6 +26,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { StaticIntlProvider } from "@nextsparkjs/core/providers/static-intl-provider"
+import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
 import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
@@ -37,11 +38,13 @@ import { DEFAULT_LOCALE, DEFAULT_THEME_MODE, STATIC_MESSAGES } from '@nextsparkj
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  preload: false,
 })
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 })
 
 const defaultMetadata: Metadata = {
@@ -74,7 +77,7 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <StaticIntlProvider locale={DEFAULT_LOCALE} messages={STATIC_MESSAGES}>
+        <StaticIntlProvider locale={DEFAULT_LOCALE} messages={selectMessages(STATIC_MESSAGES, 'root')}>
           <NextThemeProvider
             attribute="class"
             defaultTheme={DEFAULT_THEME_MODE}

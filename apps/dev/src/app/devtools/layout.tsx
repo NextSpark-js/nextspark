@@ -5,6 +5,9 @@ import { DevtoolsMobileHeader } from "@nextsparkjs/core/components/devtools/Devt
 import { Metadata } from "next";
 import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/registries/template-scopes/server/devtools/layout'
 import { getPluginNavItems } from '@nextsparkjs/registries/plugin-registry'
+import { NextIntlClientProvider } from 'next-intl'
+import { getMessages } from 'next-intl/server'
+import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 
 const defaultMetadata: Metadata = {
   title: "DevTools",
@@ -33,8 +36,8 @@ function DevLayout({ children }: DevLayoutProps) {
   const pluginNavItems = getPluginNavItems('devtools')
   return (
     <DashboardProviders>
-    <DeveloperGuard>
-      <div className="flex h-screen bg-background">
+      <DeveloperGuard>
+        <div className="flex h-screen bg-background">
         {/* Sidebar - Hidden on mobile, visible on desktop */}
         <div className="hidden lg:block">
           <DevtoolsSidebar pluginItems={pluginNavItems} />
@@ -57,10 +60,19 @@ function DevLayout({ children }: DevLayoutProps) {
 
         {/* Mobile sidebar overlay (future enhancement) */}
         {/* Could add a mobile drawer/overlay sidebar here if needed */}
-      </div>
-    </DeveloperGuard>
+        </div>
+      </DeveloperGuard>
     </DashboardProviders>
   );
 }
 
-export default getTemplateOrDefault('app/devtools/layout.tsx', DevLayout)
+const ResolvedDevLayout = getTemplateOrDefault('app/devtools/layout.tsx', DevLayout)
+
+export default async function DevLayoutWithMessages({ children }: DevLayoutProps) {
+  const messages = await getMessages()
+  return (
+    <NextIntlClientProvider messages={selectMessages(messages, 'devtools')}>
+      <ResolvedDevLayout>{children}</ResolvedDevLayout>
+    </NextIntlClientProvider>
+  )
+}
