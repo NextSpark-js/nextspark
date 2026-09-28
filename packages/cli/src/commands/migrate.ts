@@ -52,7 +52,7 @@ interface MigrateReport {
     generatedByPreviousTemplate: string[];
     previousTemplateVersion: string | null;
     previousTemplateVersionSource: string | null;
-    previousTemplateMethod: 'pnpm pack' | 'pnpm view tarball' | null;
+    previousTemplateMethod: 'pnpm view tarball' | null;
     previousTemplateUnavailableReason: string | null;
     modified: FileChange[];
     projectOnly: string[];
@@ -339,7 +339,7 @@ function templateDirectory(hostRoot: string, repositoryRoot: string): string | n
 
 interface PreviousTemplates {
   version: string;
-  method: 'pnpm pack' | 'pnpm view tarball';
+  method: 'pnpm view tarball';
   files: Map<string, Buffer>;
   rootFiles: Map<string, Buffer>;
 }
@@ -503,13 +503,11 @@ function templateFiles(root: string): Map<string, Buffer> {
 }
 
 async function templatesFromCoreArchive(archive: string, directory: string, version: string, method: PreviousTemplates['method']): Promise<PreviousTemplates | null> {
-  const unpack = join(directory, method === 'pnpm pack' ? 'packed' : 'downloaded');
+  const unpack = join(directory, 'downloaded');
   mkdirSync(unpack, { recursive: true });
   await tar.x({ file: archive, cwd: unpack });
   const packageRoot = join(unpack, 'package');
   const manifest = readJson(join(packageRoot, 'package.json'));
-  // pnpm 11/12 accepts the extra package argument to `pnpm pack` but silently
-  // packs the current directory instead. Never classify against that archive.
   if (manifest?.name !== '@nextsparkjs/core' || manifest.version !== version) return null;
   const templatesRoot = [join(packageRoot, 'templates'), join(packageRoot, 'dist', 'templates')]
     .find(candidate => existsSync(candidate));
@@ -524,11 +522,69 @@ async function templatesFromCoreArchive(archive: string, directory: string, vers
   return files.size > 0 ? { version, method, files, rootFiles } : null;
 }
 
+function pnpmConfigValue(key: string, directory: string, environment: NodeJS.ProcessEnv, timeoutMs: number): string | null {
+  try {
+    const value = execFileSync('pnpm', ['config', 'get', key, '--ignore-workspace'], {
+      cwd: directory,
+      env: environment,
+      encoding: 'utf8',
+      stdio: 'pipe',
+      timeout: timeoutMs,
+    }).trim();
+    return value === '' || value === 'undefined' || value === 'null' ? null : value;
+  } catch (error) {
+    if (didProcessTimeOut(error)) throw new PreviousTemplateTimeoutError('reading pnpm configuration', timeoutMs);
+    return null;
+  }
+}
+
+function configuredCoreRegistry(directory: string, environment: NodeJS.ProcessEnv, timeoutMs: number): URL | null {
+  const configured = pnpmConfigValue('@nextsparkjs:registry', directory, environment, timeoutMs)
+    ?? pnpmConfigValue('registry', directory, environment, timeoutMs);
+  if (!configured) return null;
+  try {
+    return new URL(configured);
+  } catch {
+    return null;
+  }
+}
+
+function approvedTarballUrl(value: string, directory: string, environment: NodeJS.ProcessEnv, timeoutMs: number): URL {
+  let tarball: URL;
+  try {
+    tarball = new URL(value);
+  } catch {
+    throw new Error('pnpm did not return a valid tarball URL');
+  }
+  if (tarball.protocol === 'https:') return tarball;
+  const registry = configuredCoreRegistry(directory, environment, timeoutMs);
+  if (tarball.protocol !== 'http:' || registry?.protocol !== 'http:' || registry.host !== tarball.host) {
+    throw new Error('pnpm did not return an HTTPS tarball URL or an HTTP URL from the configured registry host');
+  }
+  return tarball;
+}
+
+function tarballAuthorization(tarball: URL, directory: string, environment: NodeJS.ProcessEnv, timeoutMs: number): string | null {
+  const prefix = `//${tarball.host}/:`;
+  const token = pnpmConfigValue(`${prefix}_authToken`, directory, environment, timeoutMs);
+  if (token) return `Bearer ${token}`;
+  const auth = pnpmConfigValue(`${prefix}_auth`, directory, environment, timeoutMs);
+  if (auth) return `Basic ${auth}`;
+  const username = pnpmConfigValue(`${prefix}username`, directory, environment, timeoutMs);
+  const encodedPassword = pnpmConfigValue(`${prefix}_password`, directory, environment, timeoutMs);
+  if (!username || !encodedPassword) return null;
+  try {
+    return `Basic ${Buffer.from(`${username}:${Buffer.from(encodedPassword, 'base64').toString('utf8')}`).toString('base64')}`;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Look up an earlier core after the cheap local evidence has left a legacy
- * app file unclassified. `pnpm pack` is preferred. Older pnpm releases reject
- * a remote package argument, so use pnpm to resolve its tarball as a
- * compatible fallback. Failure is deliberately non-fatal: old files remain
+ * app file unclassified. pnpm pack only creates an archive for the current
+ * directory; it does not retrieve a remote package. Resolve the exact tarball
+ * with pnpm instead. Failure is deliberately non-fatal: old files remain
  * conservative customizations and the report says why.
  */
 async function previousCoreTemplates(version: string | null, currentVersion: string | null): Promise<PreviousTemplateLookup> {
@@ -550,51 +606,36 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
       npm_config_ignore_workspace: 'true',
       NPM_CONFIG_IGNORE_WORKSPACE: 'true',
     };
-    let templates: PreviousTemplates | null = null;
+    let url: string;
     try {
-      execFileSync('pnpm', ['pack', `@nextsparkjs/core@${version}`, '--pack-destination', directory, '--ignore-workspace'], {
+      url = execFileSync('pnpm', ['view', `@nextsparkjs/core@${version}`, 'dist.tarball', '--ignore-workspace'], {
         cwd: directory,
         env: environment,
         encoding: 'utf8',
         stdio: 'pipe',
         timeout: timeoutMs,
-      });
-      const archive = readdirSync(directory).find(file => file.endsWith('.tgz'));
-      if (archive) templates = await templatesFromCoreArchive(join(directory, archive), directory, version, 'pnpm pack');
-    } catch (error) {
-      if (didProcessTimeOut(error)) throw new PreviousTemplateTimeoutError('running pnpm pack', timeoutMs);
+      }).trim();
+    } catch (viewError) {
+      if (didProcessTimeOut(viewError)) throw new PreviousTemplateTimeoutError('running pnpm view', timeoutMs);
+      throw viewError;
     }
-    if (!templates) {
-      // Some pnpm releases reject a remote package argument; newer ones may
-      // ignore it and pack cwd. Resolve the exact tarball URL with pnpm, then
-      // validate its package identity before using any template bytes.
-      let url: string;
-      try {
-        url = execFileSync('pnpm', ['view', `@nextsparkjs/core@${version}`, 'dist.tarball', '--ignore-workspace'], {
-          cwd: directory,
-          env: environment,
-          encoding: 'utf8',
-          stdio: 'pipe',
-          timeout: timeoutMs,
-        }).trim();
-      } catch (viewError) {
-        if (didProcessTimeOut(viewError)) throw new PreviousTemplateTimeoutError('running pnpm view', timeoutMs);
-        throw viewError;
-      }
-      if (!/^https:\/\//.test(url)) throw new Error('pnpm did not return an HTTPS tarball URL');
-      const signal = AbortSignal.timeout(timeoutMs);
-      let response: Response;
-      try {
-        response = await fetch(url, { signal });
-      } catch (fetchError) {
-        if (signal.aborted) throw new PreviousTemplateTimeoutError('fetching the core tarball', timeoutMs);
-        throw fetchError;
-      }
-      if (!response.ok) throw new Error(`tarball request failed (${response.status})`);
-      const archive = join(directory, 'core.tgz');
-      writeFileSync(archive, Buffer.from(await response.arrayBuffer()));
-      templates = await templatesFromCoreArchive(archive, directory, version, 'pnpm view tarball');
+    const tarball = approvedTarballUrl(url, directory, environment, timeoutMs);
+    const authorization = tarballAuthorization(tarball, directory, environment, timeoutMs);
+    const signal = AbortSignal.timeout(timeoutMs);
+    let response: Response;
+    try {
+      // The URL came from pnpm's configured registry. Reuse credentials only
+      // for that exact URL host so private-registry tarballs work without
+      // leaking an npm token to another host.
+      response = await fetch(tarball, { signal, headers: authorization ? { authorization } : undefined });
+    } catch (fetchError) {
+      if (signal.aborted) throw new PreviousTemplateTimeoutError('fetching the core tarball', timeoutMs);
+      throw fetchError;
     }
+    if (!response.ok) throw new Error(`tarball request failed (${response.status})`);
+    const archive = join(directory, 'core.tgz');
+    writeFileSync(archive, Buffer.from(await response.arrayBuffer()));
+    const templates = await templatesFromCoreArchive(archive, directory, version, 'pnpm view tarball');
     const result = {
       templates,
       unavailableReason: templates ? null : 'downloaded package identity or templates/app did not match the requested core release',

@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { before, test } from 'node:test'
+import { createServer } from 'node:http'
 import { access, chmod, lstat, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { AddressInfo } from 'node:net'
 import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
@@ -63,6 +65,45 @@ function run(root: string, args: string[], env: NodeJS.ProcessEnv = {}) {
     // never let an accidental lookup escape to the real npm registry.
     env: { ...process.env, npm_config_registry: 'http://127.0.0.1:9', ...env },
   })
+}
+
+async function runAsync(root: string, args: string[], env: NodeJS.ProcessEnv = {}): Promise<{ status: number, stdout: string, stderr: string }> {
+  return new Promise((resolveResult) => {
+    const child = spawn(process.execPath, [cliEntry, 'migrate', ...args], {
+      cwd: root,
+      env: { ...process.env, npm_config_registry: 'http://127.0.0.1:9', ...env },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    let stdout = ''
+    let stderr = ''
+    child.stdout.on('data', chunk => { stdout += chunk })
+    child.stderr.on('data', chunk => { stderr += chunk })
+    const timeout = setTimeout(() => child.kill('SIGTERM'), 15_000)
+    child.on('close', (code) => {
+      clearTimeout(timeout)
+      resolveResult({ status: code ?? 1, stdout, stderr })
+    })
+  })
+}
+
+async function tarballServer(archive: string): Promise<{
+  url: string
+  requests: { host: string | undefined, authorization: string | undefined }[]
+  close: () => Promise<void>
+}> {
+  const requests: { host: string | undefined, authorization: string | undefined }[] = []
+  const server = createServer(async (request, response) => {
+    requests.push({ host: request.headers.host, authorization: request.headers.authorization })
+    response.writeHead(200, { 'content-type': 'application/octet-stream' })
+    response.end(await readFile(archive))
+  })
+  await new Promise<void>((resolveListen) => server.listen(0, '127.0.0.1', resolveListen))
+  const { port } = server.address() as AddressInfo
+  return {
+    url: `http://127.0.0.1:${port}/@nextsparkjs/core/-/core.tgz`,
+    requests,
+    close: () => new Promise((resolveClose, rejectClose) => server.close(error => error ? rejectClose(error) : resolveClose())),
+  }
 }
 
 function runWithoutActiveTheme(root: string, args: string[]) {
@@ -460,6 +501,29 @@ async function moveFixture({
   }
   await commitFixture(root)
   return { root, host: join(root, host) }
+}
+
+async function historicalCoreFixture(): Promise<{ root: string, support: string, archive: string, oldTemplate: string }> {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-auth-core-'))
+  const oldTemplate = 'export default function Page() { return <main>beta.183</main> }\n'
+  const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+  pkg.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+  await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+  await write(root, 'app/page.tsx', oldTemplate)
+  await commitFixture(root)
+
+  pkg.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+  await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+  await installSyncableCore(root, "console.log('src/app generated')\n", '0.1.0-beta.192')
+  await write(root, 'node_modules/@nextsparkjs/core/templates/app/page.tsx', 'export default function Page() { return <main>beta.192</main> }\n')
+  await commitFixture(root)
+
+  await write(support, 'package/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.183' }))
+  await write(support, 'package/templates/app/page.tsx', oldTemplate)
+  const archive = join(support, 'core.tgz')
+  await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+  return { root, support, archive, oldTemplate }
 }
 
 async function symlinkedMoveFixture(link: 'themes' | 'plugins'): Promise<{ root: string, host: string, sharedFile: string }> {
@@ -964,6 +1028,7 @@ test('migrate reads plugins from the legacy config/theme.config.ts shape', async
 test('migrate handles a nested real-shape workspace with only historical previous-core evidence', async () => {
   const { root, host } = await moveFixture({ monorepo: true })
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-real-shape-'))
+  let server: Awaited<ReturnType<typeof tarballServer>> | null = null
   try {
     await rm(join(root, 'web/nextspark.config.ts'))
     await rm(join(root, 'web/contents/plugins/local'), { recursive: true, force: true })
@@ -1004,12 +1069,18 @@ export default acmeThemeConfig
     await write(support, 'package/templates/app/page.tsx', 'export default function Page() { return <main>beta.183</main> }\n')
     const archive = join(support, 'core.tgz')
     await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    server = await tarballServer(archive)
     const bin = join(support, 'bin')
-    await write(bin, 'pnpm', `#!/usr/bin/env node\nconst { copyFileSync } = require('node:fs')\nconst { join } = require('node:path')\nconst destination = process.argv[process.argv.indexOf('--pack-destination') + 1]\ncopyFileSync(process.env.FAKE_CORE_TARBALL, join(destination, 'core.tgz'))\n`)
+    await write(bin, 'pnpm', `#!/usr/bin/env node
+const args = process.argv.slice(2)
+if (args[0] === 'view') process.stdout.write(process.env.FAKE_TARBALL_URL)
+else if (args[0] === 'config') process.stdout.write(args[2] === '@nextsparkjs:registry' ? process.env.FAKE_REGISTRY : 'undefined')
+else process.exit(2)
+`)
     await chmod(join(bin, 'pnpm'), 0o755)
-    const env = { PATH: `${bin}:${process.env.PATH}`, FAKE_CORE_TARBALL: archive }
+    const env = { PATH: `${bin}:${process.env.PATH}`, FAKE_TARBALL_URL: server.url, FAKE_REGISTRY: new URL(server.url).origin, npm_config_registry: new URL(server.url).origin }
 
-    const dryRun = run(host, ['--dry-run', '--json'], env)
+    const dryRun = await runAsync(host, ['--dry-run', '--json'], env)
     assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
     const report = JSON.parse(dryRun.stdout)
     assert.equal(report.hostRoot.path, 'web')
@@ -1019,7 +1090,7 @@ export default acmeThemeConfig
     assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['page.tsx'])
     assert.deepEqual(report.config.plugins, ['amplitude'])
 
-    const result = run(host, ['--yes'], env)
+    const result = await runAsync(host, ['--yes'], env)
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     await assert.rejects(access(join(host, 'app')))
     await assert.rejects(access(join(host, 'contents')))
@@ -1027,6 +1098,7 @@ export default acmeThemeConfig
     assert.match(await readFile(join(host, 'nextspark.config.ts'), 'utf8'), /plugins: \["amplitude"\]/)
     assert.match(result.stdout, /post-migration route-root guard: passed/)
   } finally {
+    await server?.close()
     await rm(root, { recursive: true, force: true })
     await rm(support, { recursive: true, force: true })
   }
@@ -1576,6 +1648,7 @@ test('migrate treats a CRLF-only difference from the current app template as gen
 test('migrate byte-matches an unmodified beta.183 app file from the version in git history', async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-old-core-'))
+  let server: Awaited<ReturnType<typeof tarballServer>> | null = null
   try {
     const oldTemplate = 'export default function Page() { return <main>beta.183</main> }\r\n'
     const currentTemplate = 'export default function Page() { return <main>beta.192</main> }\n'
@@ -1607,21 +1680,160 @@ test('migrate byte-matches an unmodified beta.183 app file from the version in g
     await write(support, 'package/templates/app/globals.css', oldGlobals)
     const archive = join(support, 'nextsparkjs-core-0.1.0-beta.183.tgz')
     await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    server = await tarballServer(archive)
     const bin = join(support, 'bin')
-    await write(bin, 'pnpm', `#!/usr/bin/env node\nconst { copyFileSync } = require('node:fs')\nconst { join } = require('node:path')\nconst destination = process.argv[process.argv.indexOf('--pack-destination') + 1]\ncopyFileSync(process.env.FAKE_CORE_TARBALL, join(destination, 'nextsparkjs-core-0.1.0-beta.183.tgz'))\n`)
+    await write(bin, 'pnpm', `#!/usr/bin/env node
+const args = process.argv.slice(2)
+if (args[0] === 'view') process.stdout.write(process.env.FAKE_TARBALL_URL)
+else if (args[0] === 'config') process.stdout.write(args[2] === '@nextsparkjs:registry' ? process.env.FAKE_REGISTRY : 'undefined')
+else process.exit(2)
+`)
     await chmod(join(bin, 'pnpm'), 0o755)
 
-    const dryRun = run(root, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}`, FAKE_CORE_TARBALL: archive })
+    const dryRun = await runAsync(root, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}`, FAKE_TARBALL_URL: server.url, FAKE_REGISTRY: new URL(server.url).origin, npm_config_registry: new URL(server.url).origin })
     assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
     const report = JSON.parse(dryRun.stdout)
     assert.equal(report.appTemplates.previousTemplateVersion, '0.1.0-beta.183')
     assert.match(report.appTemplates.previousTemplateVersionSource, /^git [0-9a-f]{8}:package\.json$/)
-    assert.equal(report.appTemplates.previousTemplateMethod, 'pnpm pack')
+    assert.equal(report.appTemplates.previousTemplateMethod, 'pnpm view tarball')
     assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['globals.css', 'layout.tsx', 'page.tsx'])
     assert.deepEqual(report.generatedHost.customizations, [])
   } finally {
+    await server?.close()
     await rm(root, { recursive: true, force: true })
     await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('migrate sends host-scoped tarball auth without exposing the token', async () => {
+  const { root, support, archive } = await historicalCoreFixture()
+  const server = await tarballServer(archive)
+  const token = 'token-that-must-never-appear-in-output'
+  try {
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', `#!/usr/bin/env node
+const args = process.argv.slice(2)
+const key = args[2]
+if (args[0] === 'pack') process.exit(9)
+if (args[0] === 'view') process.stdout.write(process.env.FAKE_TARBALL_URL)
+else if (args[0] === 'config' && key === '//'+process.env.FAKE_TARBALL_HOST+'/:_authToken') process.stdout.write(process.env.FAKE_TOKEN)
+else if (args[0] === 'config' && (key === '@nextsparkjs:registry' || key === 'registry')) process.stdout.write(process.env.FAKE_REGISTRY)
+else if (args[0] === 'config') process.stdout.write('undefined')
+else process.exit(2)
+`)
+    await chmod(join(bin, 'pnpm'), 0o755)
+    const registry = new URL(server.url).origin
+    const result = await runAsync(root, ['--dry-run', '--json'], {
+      PATH: `${bin}:${process.env.PATH}`,
+      FAKE_TARBALL_URL: server.url,
+      FAKE_TARBALL_HOST: new URL(server.url).host,
+      FAKE_TOKEN: token,
+      FAKE_REGISTRY: registry,
+      npm_config_registry: registry,
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.deepEqual(JSON.parse(result.stdout).appTemplates.generatedByPreviousTemplate, ['page.tsx'])
+    assert.equal(server.requests.length, 1)
+    assert.equal(server.requests[0].authorization, `Bearer ${token}`)
+    assert.equal(result.stdout.includes(token), false)
+    assert.equal(result.stderr.includes(token), false)
+  } finally {
+    await server.close()
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('migrate does not send a configured tarball token to a different host', async () => {
+  const { root, support, archive } = await historicalCoreFixture()
+  const tokenServer = await tarballServer(archive)
+  const tarballServerForDifferentHost = await tarballServer(archive)
+  const token = 'token-that-must-never-reach-another-host'
+  try {
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', `#!/usr/bin/env node
+const args = process.argv.slice(2)
+const key = args[2]
+if (args[0] === 'pack') process.exit(9)
+if (args[0] === 'view') process.stdout.write(process.env.FAKE_TARBALL_URL)
+else if (args[0] === 'config' && key === '//'+process.env.FAKE_TOKEN_HOST+'/:_authToken') process.stdout.write(process.env.FAKE_TOKEN)
+else if (args[0] === 'config' && (key === '@nextsparkjs:registry' || key === 'registry')) process.stdout.write(process.env.FAKE_REGISTRY)
+else if (args[0] === 'config') process.stdout.write('undefined')
+else process.exit(2)
+`)
+    await chmod(join(bin, 'pnpm'), 0o755)
+    const registry = new URL(tarballServerForDifferentHost.url).origin
+    const result = await runAsync(root, ['--dry-run', '--json'], {
+      PATH: `${bin}:${process.env.PATH}`,
+      FAKE_TARBALL_URL: tarballServerForDifferentHost.url,
+      FAKE_TOKEN_HOST: new URL(tokenServer.url).host,
+      FAKE_TOKEN: token,
+      FAKE_REGISTRY: registry,
+      npm_config_registry: registry,
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(tarballServerForDifferentHost.requests.length, 1)
+    assert.equal(tarballServerForDifferentHost.requests[0].authorization, undefined)
+    assert.equal(result.stdout.includes(token), false)
+    assert.equal(result.stderr.includes(token), false)
+  } finally {
+    await tokenServer.close()
+    await tarballServerForDifferentHost.close()
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('migrate accepts only an http tarball whose host matches the configured registry', async () => {
+  const matching = await historicalCoreFixture()
+  const matchingServer = await tarballServer(matching.archive)
+  const mismatched = await historicalCoreFixture()
+  const configuredServer = await tarballServer(mismatched.archive)
+  const mismatchedServer = await tarballServer(mismatched.archive)
+  const fakePnpm = `#!/usr/bin/env node
+const args = process.argv.slice(2)
+if (args[0] === 'pack') process.exit(9)
+if (args[0] === 'view') process.stdout.write(process.env.FAKE_TARBALL_URL)
+else if (args[0] === 'config' && (args[2] === '@nextsparkjs:registry' || args[2] === 'registry')) process.stdout.write(process.env.FAKE_REGISTRY)
+else if (args[0] === 'config') process.stdout.write('undefined')
+else process.exit(2)
+`
+  try {
+    for (const fixture of [matching, mismatched]) {
+      const bin = join(fixture.support, 'bin')
+      await write(bin, 'pnpm', fakePnpm)
+      await chmod(join(bin, 'pnpm'), 0o755)
+    }
+    const matchingRegistry = new URL(matchingServer.url).origin
+    const accepted = await runAsync(matching.root, ['--dry-run', '--json'], {
+      PATH: `${join(matching.support, 'bin')}:${process.env.PATH}`,
+      FAKE_TARBALL_URL: matchingServer.url,
+      FAKE_REGISTRY: matchingRegistry,
+      npm_config_registry: matchingRegistry,
+    })
+    assert.equal(accepted.status, 0, `${accepted.stdout}\n${accepted.stderr}`)
+    assert.equal(matchingServer.requests.length, 1)
+    assert.deepEqual(JSON.parse(accepted.stdout).appTemplates.generatedByPreviousTemplate, ['page.tsx'])
+
+    const mismatchedRegistry = new URL(configuredServer.url).origin
+    const rejected = await runAsync(mismatched.root, ['--dry-run', '--json'], {
+      PATH: `${join(mismatched.support, 'bin')}:${process.env.PATH}`,
+      FAKE_TARBALL_URL: mismatchedServer.url,
+      FAKE_REGISTRY: mismatchedRegistry,
+      npm_config_registry: mismatchedRegistry,
+    })
+    assert.equal(rejected.status, 0, `${rejected.stdout}\n${rejected.stderr}`)
+    const report = JSON.parse(rejected.stdout)
+    assert.equal(report.appTemplates.previousTemplateUnavailableReason, 'pnpm could not retrieve or unpack the package')
+    assert.equal(mismatchedServer.requests.length, 0)
+  } finally {
+    await matchingServer.close()
+    await configuredServer.close()
+    await mismatchedServer.close()
+    await rm(matching.root, { recursive: true, force: true })
+    await rm(matching.support, { recursive: true, force: true })
+    await rm(mismatched.root, { recursive: true, force: true })
+    await rm(mismatched.support, { recursive: true, force: true })
   }
 })
 
@@ -1679,9 +1891,9 @@ test('migrate falls back conservatively when fetching the previous core times ou
     })
     assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
     const report = JSON.parse(dryRun.stdout)
-    assert.match(report.appTemplates.previousTemplateUnavailableReason, /timed out after 100ms while running pnpm pack/)
+    assert.match(report.appTemplates.previousTemplateUnavailableReason, /timed out after 100ms while running pnpm view/)
     assert.deepEqual(report.generatedHost.customizations, ['page.tsx'])
-    assert.ok(report.warnings.some((warning: string) => /timed out after 100ms while running pnpm pack/.test(warning)))
+    assert.ok(report.warnings.some((warning: string) => /timed out after 100ms while running pnpm view/.test(warning)))
   } finally {
     await rm(root, { recursive: true, force: true })
     await rm(support, { recursive: true, force: true })
@@ -1691,6 +1903,7 @@ test('migrate falls back conservatively when fetching the previous core times ou
 test('migrate finds the previous core in the repository lockfile host importer', async () => {
   const { root, host } = await moveFixture({ monorepo: true })
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-lock-core-'))
+  let server: Awaited<ReturnType<typeof tarballServer>> | null = null
   try {
     const oldTemplate = 'export default function Page() { return <main>locked old core</main> }\n'
     const hostPackage = JSON.parse(await readFile(join(host, 'package.json'), 'utf8'))
@@ -1711,17 +1924,24 @@ test('migrate finds the previous core in the repository lockfile host importer',
     await write(support, 'package/templates/app/page.tsx', oldTemplate)
     const archive = join(support, 'core.tgz')
     await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    server = await tarballServer(archive)
     const bin = join(support, 'bin')
-    await write(bin, 'pnpm', `#!/usr/bin/env node\nconst { copyFileSync } = require('node:fs')\nconst { join } = require('node:path')\nconst destination = process.argv[process.argv.indexOf('--pack-destination') + 1]\ncopyFileSync(process.env.FAKE_CORE_TARBALL, join(destination, 'core.tgz'))\n`)
+    await write(bin, 'pnpm', `#!/usr/bin/env node
+const args = process.argv.slice(2)
+if (args[0] === 'view') process.stdout.write(process.env.FAKE_TARBALL_URL)
+else if (args[0] === 'config') process.stdout.write(args[2] === '@nextsparkjs:registry' ? process.env.FAKE_REGISTRY : 'undefined')
+else process.exit(2)
+`)
     await chmod(join(bin, 'pnpm'), 0o755)
 
-    const dryRun = run(host, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}`, FAKE_CORE_TARBALL: archive })
+    const dryRun = await runAsync(host, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}`, FAKE_TARBALL_URL: server.url, FAKE_REGISTRY: new URL(server.url).origin, npm_config_registry: new URL(server.url).origin })
     assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
     const report = JSON.parse(dryRun.stdout)
     assert.equal(report.appTemplates.previousTemplateVersion, '0.1.0-beta.183')
     assert.match(report.appTemplates.previousTemplateVersionSource, /^git [0-9a-f]{8}:pnpm-lock\.yaml$/)
     assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['page.tsx'])
   } finally {
+    await server?.close()
     await rm(root, { recursive: true, force: true })
     await rm(support, { recursive: true, force: true })
   }
@@ -1730,6 +1950,7 @@ test('migrate finds the previous core in the repository lockfile host importer',
 test('migrate uses the dry-run previous-core classification during --yes with an isolated pnpm invocation', async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-isolated-core-'))
+  let server: Awaited<ReturnType<typeof tarballServer>> | null = null
   try {
     const oldTemplate = 'export default function Page() { return <main>old core</main> }\n'
     const currentTemplate = 'export default function Page() { return <main>current core</main> }\n'
@@ -1749,31 +1970,35 @@ test('migrate uses the dry-run previous-core classification during --yes with an
     await write(support, 'package/templates/app/page.tsx', oldTemplate)
     const archive = join(support, 'core.tgz')
     await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    server = await tarballServer(archive)
     const bin = join(support, 'bin')
     const calls = join(support, 'pnpm-calls')
     await write(bin, 'pnpm', `#!/usr/bin/env node
-const { appendFileSync, copyFileSync } = require('node:fs')
-const { join } = require('node:path')
+const { appendFileSync } = require('node:fs')
 const args = process.argv.slice(2)
-if (args[0] !== 'pack' || !args.includes('--ignore-workspace') || args.some(arg => arg.startsWith('--registry=')) || process.cwd() === process.env.PROJECT_ROOT) process.exit(2)
-appendFileSync(process.env.PNPM_CALL_LOG, process.cwd() + '\\t' + args.join(' ') + '\\n')
-copyFileSync(process.env.FAKE_CORE_TARBALL, join(args[args.indexOf('--pack-destination') + 1], 'core.tgz'))
+if (!args.includes('--ignore-workspace') || args.some(arg => arg.startsWith('--registry=')) || process.cwd() === process.env.PROJECT_ROOT) process.exit(2)
+if (args[0] === 'view') {
+  appendFileSync(process.env.PNPM_CALL_LOG, process.cwd() + '\\t' + args.join(' ') + '\\n')
+  process.stdout.write(process.env.FAKE_TARBALL_URL)
+} else if (args[0] === 'config') process.stdout.write(args[2] === '@nextsparkjs:registry' ? process.env.FAKE_REGISTRY : 'undefined')
+else process.exit(2)
 `)
     await chmod(join(bin, 'pnpm'), 0o755)
 
-    const env = { PATH: `${bin}:${process.env.PATH}`, FAKE_CORE_TARBALL: archive, PNPM_CALL_LOG: calls, PROJECT_ROOT: root }
-    const dryRun = run(root, ['--dry-run', '--json'], env)
+    const env = { PATH: `${bin}:${process.env.PATH}`, FAKE_TARBALL_URL: server.url, FAKE_REGISTRY: new URL(server.url).origin, npm_config_registry: new URL(server.url).origin, PNPM_CALL_LOG: calls, PROJECT_ROOT: root }
+    const dryRun = await runAsync(root, ['--dry-run', '--json'], env)
     assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
     const report = JSON.parse(dryRun.stdout)
     assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['page.tsx'])
     assert.deepEqual(report.generatedHost.customizations, [])
 
-    const migrated = run(root, ['--yes'], env)
+    const migrated = await runAsync(root, ['--yes'], env)
     assert.equal(migrated.status, 0, `${migrated.stdout}\n${migrated.stderr}`)
     await assert.rejects(access(join(root, 'app/page.tsx')))
     await assert.rejects(access(join(root, 'legacy-app-customizations/page.tsx')))
     assert.equal((await readFile(calls, 'utf8')).trim().split('\n').length, 2)
   } finally {
+    await server?.close()
     await rm(root, { recursive: true, force: true })
     await rm(support, { recursive: true, force: true })
   }
@@ -1783,6 +2008,7 @@ copyFileSync(process.env.FAKE_CORE_TARBALL, join(args[args.indexOf('--pack-desti
 test('migrate preserves npm_config_registry for the isolated previous-core pnpm lookup', async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-custom-registry-'))
+  let server: Awaited<ReturnType<typeof tarballServer>> | null = null
   try {
     const oldTemplate = 'export default function Page() { return <main>custom registry old core</main> }\n'
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
@@ -1800,20 +2026,22 @@ test('migrate preserves npm_config_registry for the isolated previous-core pnpm 
     await write(support, 'package/templates/app/page.tsx', oldTemplate)
     const archive = join(support, 'core.tgz')
     await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    server = await tarballServer(archive)
     const bin = join(support, 'bin')
     await write(bin, 'pnpm', `#!/usr/bin/env node
-const { copyFileSync } = require('node:fs')
-const { join } = require('node:path')
 const args = process.argv.slice(2)
-if (args[0] !== 'pack' || !args.includes('--ignore-workspace') || args.some(arg => arg.startsWith('--registry=')) || process.env.npm_config_registry !== process.env.EXPECTED_NPM_CONFIG_REGISTRY) process.exit(2)
-copyFileSync(process.env.FAKE_CORE_TARBALL, join(args[args.indexOf('--pack-destination') + 1], 'core.tgz'))
+if (!args.includes('--ignore-workspace') || args.some(arg => arg.startsWith('--registry=')) || process.env.npm_config_registry !== process.env.EXPECTED_NPM_CONFIG_REGISTRY) process.exit(2)
+if (args[0] === 'view') process.stdout.write(process.env.FAKE_TARBALL_URL)
+else if (args[0] === 'config') process.stdout.write(args[2] === '@nextsparkjs:registry' ? process.env.FAKE_REGISTRY : 'undefined')
+else process.exit(2)
 `)
     await chmod(join(bin, 'pnpm'), 0o755)
 
     const registry = 'https://registry.corporate.example/npm/'
-    const dryRun = run(root, ['--dry-run', '--json'], {
+    const dryRun = await runAsync(root, ['--dry-run', '--json'], {
       PATH: `${bin}:${process.env.PATH}`,
-      FAKE_CORE_TARBALL: archive,
+      FAKE_TARBALL_URL: server.url,
+      FAKE_REGISTRY: new URL(server.url).origin,
       EXPECTED_NPM_CONFIG_REGISTRY: registry,
       npm_config_registry: registry,
     })
@@ -1821,6 +2049,7 @@ copyFileSync(process.env.FAKE_CORE_TARBALL, join(args[args.indexOf('--pack-desti
     const report = JSON.parse(dryRun.stdout)
     assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['page.tsx'])
   } finally {
+    await server?.close()
     await rm(root, { recursive: true, force: true })
     await rm(support, { recursive: true, force: true })
   }
@@ -1829,6 +2058,7 @@ copyFileSync(process.env.FAKE_CORE_TARBALL, join(args[args.indexOf('--pack-desti
 test('migrate removes root proxy files proven by the previous core and rollback restores them', async () => {
   const { root } = await moveFixture({ brokenImport: true })
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-root-proxy-'))
+  let server: Awaited<ReturnType<typeof tarballServer>> | null = null
   try {
     const oldProxy = "import { hasThemeMiddleware } from '@nextsparkjs/core/lib/middleware'\nexport function proxy() { return hasThemeMiddleware('acme') }\n"
     const oldMiddleware = oldProxy.replace('function proxy', 'function middleware')
@@ -1850,17 +2080,18 @@ test('migrate removes root proxy files proven by the previous core and rollback 
     await write(support, 'package/templates/proxy.ts', oldProxy)
     const archive = join(support, 'core.tgz')
     await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    server = await tarballServer(archive)
     const bin = join(support, 'bin')
     await write(bin, 'pnpm', `#!/usr/bin/env node
-const { copyFileSync } = require('node:fs')
-const { join } = require('node:path')
 const args = process.argv.slice(2)
 if (!args.includes('--ignore-workspace') || args.some(arg => arg.startsWith('--registry='))) process.exit(2)
-copyFileSync(process.env.FAKE_CORE_TARBALL, join(args[args.indexOf('--pack-destination') + 1], 'core.tgz'))
+if (args[0] === 'view') process.stdout.write(process.env.FAKE_TARBALL_URL)
+else if (args[0] === 'config') process.stdout.write(args[2] === '@nextsparkjs:registry' ? process.env.FAKE_REGISTRY : 'undefined')
+else process.exit(2)
 `)
     await chmod(join(bin, 'pnpm'), 0o755)
 
-    const failed = run(root, ['--yes'], { PATH: `${bin}:${process.env.PATH}`, FAKE_CORE_TARBALL: archive })
+    const failed = await runAsync(root, ['--yes'], { PATH: `${bin}:${process.env.PATH}`, FAKE_TARBALL_URL: server.url, FAKE_REGISTRY: new URL(server.url).origin, npm_config_registry: new URL(server.url).origin })
     assert.notEqual(failed.status, 0)
     assert.match(failed.stdout, /MIGRATION FAILED: migration introduced broken imports/)
     assert.match(failed.stdout, /proven generated and will remove: middleware\.ts, proxy\.ts/)
@@ -1873,6 +2104,7 @@ copyFileSync(process.env.FAKE_CORE_TARBALL, join(args[args.indexOf('--pack-desti
     assert.equal(await readFile(join(root, 'proxy.ts'), 'utf8'), oldProxy)
     assert.equal(await readFile(join(root, 'middleware.ts'), 'utf8'), oldMiddleware)
   } finally {
+    await server?.close()
     await rm(root, { recursive: true, force: true })
     await rm(support, { recursive: true, force: true })
   }
