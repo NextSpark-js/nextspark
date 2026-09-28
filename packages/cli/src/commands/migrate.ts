@@ -5,6 +5,7 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import * as tar from 'tar';
 import { syncApp, SyncAppError } from './sync-app.js';
 import { readGeneratedTagAt } from '../utils/generated-tag.js';
+import { adaptProxySource } from '../utils/proxy-file.js';
 import { ROOT_TEMPLATE_FILES } from '../utils/sync-plan.js';
 import { contentHash, readSyncState } from '../utils/sync-state.js';
 
@@ -60,6 +61,10 @@ interface MigrateReport {
     customizations: string[];
     customizationsDestination: string;
     nextStep: string | null;
+  };
+  rootProxyFiles: {
+    generated: string[];
+    customizations: string[];
   };
   routeRootGuard: {
     currentRoots: string[];
@@ -336,6 +341,7 @@ interface PreviousTemplates {
   version: string;
   method: 'pnpm pack' | 'pnpm view tarball';
   files: Map<string, Buffer>;
+  rootFiles: Map<string, Buffer>;
 }
 
 interface PreviousTemplateLookup {
@@ -505,11 +511,17 @@ async function templatesFromCoreArchive(archive: string, directory: string, vers
   // pnpm 11/12 accepts the extra package argument to `pnpm pack` but silently
   // packs the current directory instead. Never classify against that archive.
   if (manifest?.name !== '@nextsparkjs/core' || manifest.version !== version) return null;
-  const appRoot = [join(packageRoot, 'templates', 'app'), join(packageRoot, 'dist', 'templates', 'app')]
+  const templatesRoot = [join(packageRoot, 'templates'), join(packageRoot, 'dist', 'templates')]
     .find(candidate => existsSync(candidate));
+  const appRoot = templatesRoot && join(templatesRoot, 'app');
   if (!appRoot) return null;
   const files = templateFiles(appRoot);
-  return files.size > 0 ? { version, method, files } : null;
+  const rootFiles = new Map<string, Buffer>();
+  for (const name of ['proxy.ts'] as const) {
+    const file = join(templatesRoot, name);
+    if (existsSync(file)) rootFiles.set(name, readFileSync(file));
+  }
+  return files.size > 0 ? { version, method, files, rootFiles } : null;
 }
 
 /**
@@ -527,10 +539,20 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
   const directory = mkdtempSync(join(tmpdir(), 'nextspark-migrate-core-'));
   const timeoutMs = previousCoreNetworkTimeoutMs();
   try {
-    const environment = { ...process.env, npm_config_cache: join(directory, '.npm-cache') };
+    // Never let a project's workspace policies influence this historical
+    // lookup. In particular, pnpm 12 can apply minimumReleaseAge and build
+    // policies to pack even though view succeeded a moment earlier.
+    const environment = {
+      ...process.env,
+      // Keep the caller's registry, auth, and HOME/.npmrc configuration.
+      // Only the workspace policy is deliberately bypassed for this isolated
+      // historical-package lookup.
+      npm_config_ignore_workspace: 'true',
+      NPM_CONFIG_IGNORE_WORKSPACE: 'true',
+    };
     let templates: PreviousTemplates | null = null;
     try {
-      execFileSync('pnpm', ['pack', `@nextsparkjs/core@${version}`, '--pack-destination', directory], {
+      execFileSync('pnpm', ['pack', `@nextsparkjs/core@${version}`, '--pack-destination', directory, '--ignore-workspace'], {
         cwd: directory,
         env: environment,
         encoding: 'utf8',
@@ -548,7 +570,7 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
       // validate its package identity before using any template bytes.
       let url: string;
       try {
-        url = execFileSync('pnpm', ['view', `@nextsparkjs/core@${version}`, 'dist.tarball'], {
+        url = execFileSync('pnpm', ['view', `@nextsparkjs/core@${version}`, 'dist.tarball', '--ignore-workspace'], {
           cwd: directory,
           env: environment,
           encoding: 'utf8',
@@ -603,6 +625,56 @@ function hasUnclassifiedLegacyAppFiles(hostRoot: string): boolean {
     if (file.startsWith('(templates)/') || readGeneratedTagAt(`app/${file}`, content)?.intact) return false;
     return state?.files[`app/${file}`]?.written !== contentHash(content);
   });
+}
+
+const ROOT_PROXY_FILES = ['proxy.ts', 'middleware.ts'] as const;
+
+/** Whether an old root interception file needs previous-core evidence. */
+function hasUnclassifiedRootProxyFiles(hostRoot: string): boolean {
+  const state = readSyncState(hostRoot);
+  return ROOT_PROXY_FILES.some(file => {
+    const source = join(hostRoot, file);
+    if (!existsSync(source)) return false;
+    const content = readFileSync(source);
+    return !readGeneratedTagAt(file, content)?.intact
+      && state?.files[file]?.written !== contentHash(content);
+  });
+}
+
+function migratedProxyTemplate(source: Buffer, file: typeof ROOT_PROXY_FILES[number], hostRoot: string): Buffer | null {
+  try {
+    return Buffer.from(rewriteRemovedMiddlewareApi(adaptProxySource(source.toString('utf8'), file), join(hostRoot, file), hostRoot));
+  } catch (error) {
+    // An old template whose middleware API cannot be rewritten is not proof
+    // that a project-owned file is safe to remove.
+    if (error instanceof MigrateAnalysisError) return null;
+    throw error;
+  }
+}
+
+/** Classify root files that Next 16 will stop loading once sync creates src/. */
+function compareRootProxyFiles(hostRoot: string, templates: string | null, previous: PreviousTemplates | null): MigrateReport['rootProxyFiles'] {
+  const state = readSyncState(hostRoot);
+  const generated: string[] = [];
+  const customizations: string[] = [];
+  for (const file of ROOT_PROXY_FILES) {
+    const source = join(hostRoot, file);
+    if (!existsSync(source)) continue;
+    const content = readFileSync(source);
+    const tagged = readGeneratedTagAt(file, content)?.intact;
+    const stateMatch = state?.files[file]?.written === contentHash(content);
+    // applyMove runs this same codemod on root proxy files before removal, so
+    // compare the bytes that migration will actually leave on disk.
+    const migratedContent = migratedProxyTemplate(content, file, hostRoot);
+    const candidates = [
+      templates && existsSync(join(templates, 'proxy.ts')) ? readFileSync(join(templates, 'proxy.ts')) : undefined,
+      previous?.rootFiles.get('proxy.ts'),
+    ].flatMap(candidate => candidate ? [migratedProxyTemplate(candidate, file, hostRoot)] : [])
+      .filter((candidate): candidate is Buffer => candidate !== null);
+    if (tagged || stateMatch || (migratedContent !== null && candidates.some(candidate => matchesTemplateBytes(migratedContent, candidate)))) generated.push(file);
+    else customizations.push(file);
+  }
+  return { generated: generated.sort(), customizations: customizations.sort() };
 }
 
 function legacyProjectUsedPpr(hostRoot: string): boolean {
@@ -1088,10 +1160,13 @@ async function reportFor(cwd: string): Promise<MigrateReport> {
   const previousEvidence = (syncStateVersion && syncStateVersion !== currentCore ? { version: syncStateVersion, source: '.nextspark/sync-state.json' } : null)
     ?? previousCoreVersion(repository, host.root, currentCore)
     ?? (declaredCore && declaredCore !== currentCore ? { version: declaredCore, source: 'package.json' } : null);
-  const previousLookup = hasUnclassifiedLegacyAppFiles(host.root)
+  // The report is the one pre-write classification used by --yes below; do
+  // not look up previous templates again after the tree starts changing.
+  const previousLookup = hasUnclassifiedLegacyAppFiles(host.root) || hasUnclassifiedRootProxyFiles(host.root)
     ? await previousCoreTemplates(previousEvidence?.version ?? null, currentCore)
     : { templates: null, unavailableReason: null };
   const appTemplates = compareApp(host.root, templates, previousLookup.templates, previousEvidence, previousLookup.unavailableReason, selectedTheme.name);
+  const rootProxyFiles = compareRootProxyFiles(host.root, templates, previousLookup.templates);
   const appCustomizations = [...appTemplates.modified.map(file => file.path), ...appTemplates.projectOnly].sort();
   const configPlugins = themeDirectory ? requiredPlugins(themeDirectory, hostPackage, pluginsDirectory) : { plugins: [], warnings: [] };
   const envExample = themeDirectory ? envExamplePlan(host.root, themeDirectory) : { action: 'none' as const, path: null };
@@ -1117,7 +1192,10 @@ async function reportFor(cwd: string): Promise<MigrateReport> {
   if (!selectedTheme.name) warnings.push('No active theme was found in NEXT_PUBLIC_ACTIVE_THEME or .env.example.');
   if (appCustomizations.length > 0) warnings.push(`Legacy app customizations will move to legacy-app-customizations/: ${appCustomizations.join(', ')}`);
   if (previousEvidence && !previousLookup.templates) {
-    warnings.push(`Could not fetch @nextsparkjs/core@${previousEvidence.version} (${previousLookup.unavailableReason}) to classify old generated app files; unmatched files remain customizations.`);
+    warnings.push(`Could not fetch @nextsparkjs/core@${previousEvidence.version} (${previousLookup.unavailableReason}) to classify old generated files; unmatched files remain customizations.`);
+  }
+  for (const file of rootProxyFiles.customizations) {
+    warnings.push(`WARNING: root ${file} was kept but Next loads src/proxy.ts; it will not run. Move its logic into config/hooks/proxy.ts.`);
   }
   if (envExample.action === 'conflict') warnings.push(`${envExample.path} differs from the root .env.example and will not be merged.`);
   warnings.push(...configPlugins.warnings);
@@ -1135,6 +1213,7 @@ async function reportFor(cwd: string): Promise<MigrateReport> {
         ? 'nextspark sync:app --force'
         : null,
     },
+    rootProxyFiles,
     routeRootGuard: {
       currentRoots: ['app', 'pages'].filter(path => existsSync(join(host.root, path))),
       checkedAfterMigration: true,
@@ -1187,6 +1266,10 @@ function printReport(report: MigrateReport): void {
     `customizations: ${paths(report.generatedHost.customizations)}`,
     `customization destination: ${report.generatedHost.customizationsDestination}/`,
     report.generatedHost.nextStep ? `next step: ${report.generatedHost.nextStep}` : 'next step: sync:app will run during migration',
+  ]);
+  section('Root proxy files', [
+    `proven generated and will remove: ${paths(report.rootProxyFiles.generated)}`,
+    `kept customizations: ${paths(report.rootProxyFiles.customizations)}`,
   ]);
   section('Post-migration route-root guard', [
     `current root(s): ${paths(report.routeRootGuard.currentRoots)}`,
@@ -2331,6 +2414,14 @@ function moveLegacyApp(hostRoot: string, app: MigrateReport['appTemplates']): { 
   return { removed: generated.size, customized: custom.size, tsconfigExcluded: custom.size > 0 && excludeLegacyAppCustomizations(hostRoot) };
 }
 
+/** Remove only root interception files the pre-write report proved generated. */
+function removeGeneratedRootProxyFiles(hostRoot: string, files: string[]): void {
+  for (const file of files) {
+    const source = join(hostRoot, file);
+    if (existsSync(source)) unlinkSync(source);
+  }
+}
+
 async function syncGeneratedHost(hostRoot: string, templates: string | null): Promise<boolean> {
   // Tests and incomplete installations can compare templates but cannot run the
   // full sync path. Leave an exact command rather than pretending it ran.
@@ -2395,7 +2486,7 @@ function legacyRouteRoots(hostRoot: string): string[] {
   return ['app', 'pages'].filter(path => existsSync(join(hostRoot, path)));
 }
 
-function applyMove(repository: string, hostRoot: string, themeRoot: string, pluginsRoot: string, theme: string, plan: MovePlan, tsconfigAliases: AliasCatalog, envPlan: MigrateReport['envExample'], configPlugins: string[]): { moved: number; deduplicated: number; rewritten: number; envRemoved: boolean; configCreated: boolean; scriptsRenamed: number; contentsRemoved: boolean; remainingContents: RemainingContents[] } {
+function applyMove(repository: string, hostRoot: string, themeRoot: string, pluginsRoot: string, theme: string, plan: MovePlan, tsconfigAliases: AliasCatalog, envPlan: MigrateReport['envExample'], configPlugins: string[], rootProxyCustomizations: string[]): { moved: number; deduplicated: number; rewritten: number; envRemoved: boolean; configCreated: boolean; scriptsRenamed: number; contentsRemoved: boolean; remainingContents: RemainingContents[] } {
   const plannedItems = [...plan.moves, ...plan.duplicates];
   const planned = new Map(plannedItems.map(item => [item.source, item.destination]));
   const unmoved = new Set(plan.unmoved);
@@ -2409,6 +2500,7 @@ function applyMove(repository: string, hostRoot: string, themeRoot: string, plug
     const duplicate = duplicateByDestination.get(file);
     const source = duplicate?.source ?? file;
     const destination = planned.get(file) ?? file;
+    const preservedRootProxy = rootProxyCustomizations.some(path => destination === join(hostRoot, path));
     let next = rewriteLegacyPaths(buffer.toString('utf8'), source, destination, themeRoot, pluginsRoot, hostRoot, theme, planned, unmoved, tsconfigAliases);
     const tsconfig = tsconfigAliases.configs.get(file);
     if (tsconfig) next = rewriteDeadTsconfigAliases(next, tsconfig);
@@ -2421,7 +2513,7 @@ function applyMove(repository: string, hostRoot: string, themeRoot: string, plug
     if (destination === file || destination.startsWith(`${hostRoot}${sep}`)) next = rewriteActiveThemeUse(next, destination, hostRoot, theme);
     if (destination === file || destination.startsWith(`${hostRoot}${sep}`)) next = rewriteHookImports(next, destination, hostRoot);
     if (destination === file || destination.startsWith(`${hostRoot}${sep}`)) next = rewriteRootFirstTestContracts(next, destination, hostRoot, theme);
-    if (destination === file || destination.startsWith(`${hostRoot}${sep}`)) next = rewriteRemovedMiddlewareApi(next, destination, hostRoot);
+    if (!preservedRootProxy && (destination === file || destination.startsWith(`${hostRoot}${sep}`))) next = rewriteRemovedMiddlewareApi(next, destination, hostRoot);
     if (next !== buffer.toString('utf8')) {
       writeFileSync(file, next);
       rewritten++;
@@ -2829,7 +2921,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     preflightMovedStylesheetDependencies(hostRoot, themeRoot, pluginsRoot, plan);
     snapshotMigrationRollback(hostRoot, plan, report, hadLegacyApp);
     writesStarted = true;
-    const result = applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme, plan, aliasesBeforeMove, report.envExample, report.config.plugins);
+    const result = applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme, plan, aliasesBeforeMove, report.envExample, report.config.plugins, hadLegacyApp ? report.rootProxyFiles.customizations : []);
     if (hadLegacyApp) {
       let synced: boolean;
       try {
@@ -2842,6 +2934,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       const legacySummary = `Generated host: removed ${legacyApp.removed} generated file(s); moved ${legacyApp.customized} customization(s)${legacyApp.tsconfigExcluded ? '; excluded legacy-app-customizations from tsconfig' : ''}.`;
       if (!synced) console.log(`  ${legacySummary} Run "nextspark sync:app --force" to finish generating src/app.`);
       else console.log(`  ${legacySummary}`);
+      removeGeneratedRootProxyFiles(hostRoot, report.rootProxyFiles.generated);
     }
     const routeRoots = legacyRouteRoots(hostRoot);
     if (routeRoots.length > 0) {

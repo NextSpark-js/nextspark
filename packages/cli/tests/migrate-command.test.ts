@@ -1727,6 +1727,184 @@ test('migrate finds the previous core in the repository lockfile host importer',
   }
 })
 
+test('migrate uses the dry-run previous-core classification during --yes with an isolated pnpm invocation', async () => {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-isolated-core-'))
+  try {
+    const oldTemplate = 'export default function Page() { return <main>old core</main> }\n'
+    const currentTemplate = 'export default function Page() { return <main>current core</main> }\n'
+    const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    pkg.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+    await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+    await write(root, 'app/page.tsx', oldTemplate)
+    await commitFixture(root)
+
+    pkg.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+    await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+    await installSyncableCore(root, "console.log('src/app generated')\n", '0.1.0-beta.192')
+    await write(root, 'node_modules/@nextsparkjs/core/templates/app/page.tsx', currentTemplate)
+    await commitFixture(root)
+
+    await write(support, 'package/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.183' }))
+    await write(support, 'package/templates/app/page.tsx', oldTemplate)
+    const archive = join(support, 'core.tgz')
+    await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    const bin = join(support, 'bin')
+    const calls = join(support, 'pnpm-calls')
+    await write(bin, 'pnpm', `#!/usr/bin/env node
+const { appendFileSync, copyFileSync } = require('node:fs')
+const { join } = require('node:path')
+const args = process.argv.slice(2)
+if (args[0] !== 'pack' || !args.includes('--ignore-workspace') || args.some(arg => arg.startsWith('--registry=')) || process.cwd() === process.env.PROJECT_ROOT) process.exit(2)
+appendFileSync(process.env.PNPM_CALL_LOG, process.cwd() + '\\t' + args.join(' ') + '\\n')
+copyFileSync(process.env.FAKE_CORE_TARBALL, join(args[args.indexOf('--pack-destination') + 1], 'core.tgz'))
+`)
+    await chmod(join(bin, 'pnpm'), 0o755)
+
+    const env = { PATH: `${bin}:${process.env.PATH}`, FAKE_CORE_TARBALL: archive, PNPM_CALL_LOG: calls, PROJECT_ROOT: root }
+    const dryRun = run(root, ['--dry-run', '--json'], env)
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['page.tsx'])
+    assert.deepEqual(report.generatedHost.customizations, [])
+
+    const migrated = run(root, ['--yes'], env)
+    assert.equal(migrated.status, 0, `${migrated.stdout}\n${migrated.stderr}`)
+    await assert.rejects(access(join(root, 'app/page.tsx')))
+    await assert.rejects(access(join(root, 'legacy-app-customizations/page.tsx')))
+    assert.equal((await readFile(calls, 'utf8')).trim().split('\n').length, 2)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+
+test('migrate preserves npm_config_registry for the isolated previous-core pnpm lookup', async () => {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-custom-registry-'))
+  try {
+    const oldTemplate = 'export default function Page() { return <main>custom registry old core</main> }\n'
+    const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    pkg.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+    await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+    await write(root, 'app/page.tsx', oldTemplate)
+    await commitFixture(root)
+
+    pkg.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+    await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+    await installSyncableCore(root, "console.log('src/app generated')\n", '0.1.0-beta.192')
+    await commitFixture(root)
+
+    await write(support, 'package/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.183' }))
+    await write(support, 'package/templates/app/page.tsx', oldTemplate)
+    const archive = join(support, 'core.tgz')
+    await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', `#!/usr/bin/env node
+const { copyFileSync } = require('node:fs')
+const { join } = require('node:path')
+const args = process.argv.slice(2)
+if (args[0] !== 'pack' || !args.includes('--ignore-workspace') || args.some(arg => arg.startsWith('--registry=')) || process.env.npm_config_registry !== process.env.EXPECTED_NPM_CONFIG_REGISTRY) process.exit(2)
+copyFileSync(process.env.FAKE_CORE_TARBALL, join(args[args.indexOf('--pack-destination') + 1], 'core.tgz'))
+`)
+    await chmod(join(bin, 'pnpm'), 0o755)
+
+    const registry = 'https://registry.corporate.example/npm/'
+    const dryRun = run(root, ['--dry-run', '--json'], {
+      PATH: `${bin}:${process.env.PATH}`,
+      FAKE_CORE_TARBALL: archive,
+      EXPECTED_NPM_CONFIG_REGISTRY: registry,
+      npm_config_registry: registry,
+    })
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['page.tsx'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('migrate removes root proxy files proven by the previous core and rollback restores them', async () => {
+  const { root } = await moveFixture({ brokenImport: true })
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-root-proxy-'))
+  try {
+    const oldProxy = "import { hasThemeMiddleware } from '@nextsparkjs/core/lib/middleware'\nexport function proxy() { return hasThemeMiddleware('acme') }\n"
+    const oldMiddleware = oldProxy.replace('function proxy', 'function middleware')
+    const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    pkg.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+    await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+    await commitFixture(root)
+
+    pkg.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+    await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+    await installSyncableCore(root, "console.log('src/app generated')\n", '0.1.0-beta.192')
+    await write(root, 'app/layout.tsx', 'export default function Layout() { return null }\n')
+    await write(root, 'proxy.ts', oldProxy)
+    await write(root, 'middleware.ts', oldMiddleware)
+    await commitFixture(root)
+
+    await write(support, 'package/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.183' }))
+    await write(support, 'package/templates/app/layout.tsx', 'export default function Layout() { return null }\n')
+    await write(support, 'package/templates/proxy.ts', oldProxy)
+    const archive = join(support, 'core.tgz')
+    await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', `#!/usr/bin/env node
+const { copyFileSync } = require('node:fs')
+const { join } = require('node:path')
+const args = process.argv.slice(2)
+if (!args.includes('--ignore-workspace') || args.some(arg => arg.startsWith('--registry='))) process.exit(2)
+copyFileSync(process.env.FAKE_CORE_TARBALL, join(args[args.indexOf('--pack-destination') + 1], 'core.tgz'))
+`)
+    await chmod(join(bin, 'pnpm'), 0o755)
+
+    const failed = run(root, ['--yes'], { PATH: `${bin}:${process.env.PATH}`, FAKE_CORE_TARBALL: archive })
+    assert.notEqual(failed.status, 0)
+    assert.match(failed.stdout, /MIGRATION FAILED: migration introduced broken imports/)
+    assert.match(failed.stdout, /proven generated and will remove: middleware\.ts, proxy\.ts/)
+    await assert.rejects(access(join(root, 'proxy.ts')))
+    await assert.rejects(access(join(root, 'middleware.ts')))
+
+    const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
+    assert.equal(commands.length, 2, failed.stdout)
+    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    assert.equal(await readFile(join(root, 'proxy.ts'), 'utf8'), oldProxy)
+    assert.equal(await readFile(join(root, 'middleware.ts'), 'utf8'), oldMiddleware)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('migrate loudly preserves unproven root proxy files beside the generated src proxy', async () => {
+  const { root } = await moveFixture()
+  try {
+    // This nested argument is deliberately outside migrate's conservative
+    // middleware-API codemod. A dead, project-owned root file must warn and
+    // survive rather than turning that unsupported shape into a migration failure.
+    const rootProxy = "import { hasThemeMiddleware } from '@nextsparkjs/core/lib/middleware'\nexport function proxy() { return hasThemeMiddleware(getProjectTheme()) }\n"
+    const rootMiddleware = rootProxy.replace('function proxy', 'function middleware')
+    await installSyncableCore(root, "console.log('src/app generated')\n", '0.1.0-beta.192')
+    await write(root, 'node_modules/@nextsparkjs/core/templates/proxy.ts', 'export function proxy() { return new Response("core proxy") }\n')
+    await write(root, 'app/layout.tsx', 'export default function Layout() { return null }\n')
+    await write(root, 'proxy.ts', rootProxy)
+    await write(root, 'middleware.ts', rootMiddleware)
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'proxy.ts'), 'utf8'), rootProxy)
+    assert.equal(await readFile(join(root, 'middleware.ts'), 'utf8'), rootMiddleware)
+    await access(join(root, 'src/proxy.ts'))
+    assert.match(result.stdout, /WARNING: root proxy\.ts was kept but Next loads src\/proxy\.ts; it will not run\. Move its logic into config\/hooks\/proxy\.ts\./)
+    assert.match(result.stdout, /WARNING: root middleware\.ts was kept but Next loads src\/proxy\.ts; it will not run\. Move its logic into config\/hooks\/proxy\.ts\./)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate accepts aliases that resolve to generated registries during broken-import checks', async () => {
   const { root } = await moveFixture()
   try {
