@@ -8,7 +8,7 @@
  */
 
 import { existsSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { resolveProjectPaths, resolveProjectPluginSources, detectMonorepoRoot, isInstalledAsPackage } from './project-mode.mjs'
 import { loadNextSparkConfigSync } from '../config-loader.mjs'
 
@@ -28,6 +28,10 @@ export function getConfig(projectRoot = null) {
 
   return {
     ...paths,
+    // `nextspark prepare` for a generated host stages the registries before publishing them
+    // (host/prepare.mjs): it points the build at its staging directory inside .nextspark/.
+    ...(process.env.NEXTSPARK_REGISTRIES_OUT ? { outputDir: resolve(paths.projectRoot, process.env.NEXTSPARK_REGISTRIES_OUT) } : {}),
+    generatedHost: process.env.NEXTSPARK_GENERATED_HOST === '1',
     projectName,
     pluginRequests: nextsparkConfig.plugins,
     pluginSources,

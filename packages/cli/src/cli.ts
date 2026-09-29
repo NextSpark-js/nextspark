@@ -35,6 +35,9 @@ import { migrateCommand } from './commands/migrate.js';
 // Read version from package.json dynamically
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
 
+// Core records the CLI version that prepared a generated host (.nextspark/generation.json)
+process.env.NEXTSPARK_CLI_VERSION ??= pkg.version;
+
 const program = new Command();
 
 program
@@ -82,9 +85,11 @@ program
 // Prepare command
 program
   .command('prepare')
-  .description('Generate the current registry output before development or a build')
+  .description('Generate src/app and the current registry output before development or a build')
   .option('-w, --watch', 'Watch for changes and prepare again')
   .option('--production', 'Run the registry compiler with NODE_ENV=production, then check a login method can authenticate')
+  .option('--check', 'Write nothing; exit 1 when src/app or the registries differ from what prepare would generate')
+  .option('--dev', 'With --check: compare with the development host nextspark dev writes')
   .action(prepareCommand);
 
 // Generate command

@@ -312,6 +312,8 @@ build/
 
 # NextSpark
 .nextspark/
+# Generated Next.js host of the web project: nextspark prepare writes all of it; never edit
+${DIRS.WEB}/src/app/
 
 # Environment
 .env

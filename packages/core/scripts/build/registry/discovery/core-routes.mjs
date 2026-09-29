@@ -10,6 +10,7 @@
 import { join } from 'path'
 import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
 import { projectGeneratedAppDir } from '../project-mode.mjs'
+import { loadCoreRouteManifest } from '../host/core-routes.mjs'
 import { verbose, extractHttpMethods, scanDirectory } from '../../../utils/index.mjs'
 
 /**
@@ -46,6 +47,7 @@ function isExcludedDirectory(name) {
  * @returns {Promise<Array>} Array of discovered core routes
  */
 export async function discoverCoreRoutes(config = DEFAULT_CONFIG) {
+  if (config.generatedHost) return discoverManifestCoreRoutes(config)
   const apiDir = join(config.generatedAppDir || projectGeneratedAppDir(config.projectRoot), 'api', 'v1')
   const routes = []
 
@@ -103,6 +105,32 @@ export async function discoverCoreRoutes(config = DEFAULT_CONFIG) {
   verbose(`[Core Routes] Discovered ${routes.length} core routes`)
 
   return routes
+}
+
+/**
+ * A generated host's src/app is output of nextspark prepare, never an input of the registries:
+ * core's api/v1 routes come from core's route manifest, each read from the core module that
+ * implements it (what src/app/api/v1 holds a facade of).
+ * @param {object} config
+ * @returns {Promise<Array>} the same entries as the src/app scan
+ */
+async function discoverManifestCoreRoutes(config) {
+  const manifest = await loadCoreRouteManifest({ coreRoot: config.coreDir })
+  const routes = []
+  for (const route of manifest?.routes ?? []) {
+    if (route.kind !== 'route' || !route.target.startsWith('api/v1/')) continue
+    const relativePath = route.target.slice('api/v1/'.length).split('/').slice(0, -1).join('/')
+    if (relativePath.split('/').some(isExcludedDirectory)) continue
+    routes.push({
+      path: relativePath ? `/api/v1/${relativePath}` : '/api/v1',
+      methods: await extractHttpMethods(route.file),
+      relativePath: relativePath || '/',
+      category: getCategoryFromPath(relativePath),
+      filePath: `@/app/api/v1${relativePath ? '/' + relativePath : ''}/route`
+    })
+  }
+  verbose(`[Core Routes] ${routes.length} core routes from the core route manifest`)
+  return routes.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
 }
 
 /**

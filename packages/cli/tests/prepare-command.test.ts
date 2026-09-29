@@ -42,16 +42,23 @@ function run(root: string, args: string[], env: NodeJS.ProcessEnv = {}) {
   })
 }
 
-test('built CLI exposes prepare and rejects unsupported freshness checks', () => {
+test('built CLI exposes prepare --check, which needs a core that generates src/app', async () => {
   const help = spawnSync(process.execPath, [cliEntry, 'prepare', '--help'], { encoding: 'utf8' })
   assert.equal(help.status, 0, help.stderr)
-  assert.match(help.stdout, /Generate the current registry output/)
+  assert.match(help.stdout, /Generate src\/app and the current registry output/)
   assert.match(help.stdout, /--production/)
   assert.match(help.stdout, /--watch/)
+  assert.match(help.stdout, /--check/)
 
-  const unsupported = spawnSync(process.execPath, [cliEntry, 'prepare', '--check'], { encoding: 'utf8' })
-  assert.notEqual(unsupported.status, 0)
-  assert.match(unsupported.stderr, /unknown option '--check'/)
+  // A core without the generated host (no route manifest) has nothing to check against
+  const project = await fixture(`throw new Error('registry should not run')`)
+  try {
+    const checked = run(project.root, ['prepare', '--check'])
+    assert.equal(checked.status, 1, `${checked.stdout}\n${checked.stderr}`)
+    assert.match(`${checked.stdout}\n${checked.stderr}`, /does not generate src\/app/)
+  } finally {
+    await project.cleanup()
+  }
 })
 
 test('prepare invokes the core registry script once from the project root without root override forwarding and with production precedence', async () => {

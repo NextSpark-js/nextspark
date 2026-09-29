@@ -21,6 +21,14 @@ const jiti = createJiti(import.meta.url, {
   fsCache: false,
   alias: { '@nextsparkjs/core/lib/config': contractPath },
 })
+// The project's config is read afresh on every call: a long-lived process (the nextspark dev
+// watcher) must see an edited nextspark.config.ts, not the module jiti cached the first time.
+const freshJiti = createJiti(import.meta.url, {
+  interopDefault: true,
+  fsCache: false,
+  moduleCache: false,
+  alias: { '@nextsparkjs/core/lib/config': contractPath },
+})
 
 export function loadNextSparkConfigSync(projectRoot) {
   const configPath = join(projectRoot, 'nextspark.config.ts')
@@ -30,7 +38,7 @@ export function loadNextSparkConfigSync(projectRoot) {
 
   let loaded
   try {
-    loaded = jiti(configPath)
+    loaded = freshJiti(configPath)
   } catch (error) {
     throw new Error(`Could not load ${configPath}: ${error.message}`, { cause: error })
   }

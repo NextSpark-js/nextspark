@@ -684,8 +684,11 @@ function assertUniqueScopeOutputs(appPaths, scopeDirectory) {
 export async function generateTemplateScopeRegistries(templates, config, analysis = null) {
   const scopeDirectory = join(config.outputDir, 'template-scopes')
   const resolvedAnalysis = await analysisFor(templates, config, analysis)
-  const discoveredRoutePaths = new Set(await discoverAppRoutePaths(config.projectRoot))
-  assertKnownRuntimeTemplatedPaths(templates, discoveredRoutePaths, resolvedAnalysis)
+  // A generated host's src/app is output of nextspark prepare, planned from these same templates
+  // and core's routes, never an input: reading it would make the registries depend on the
+  // previous generation. Its routes resolve templates at generation time, not at runtime.
+  const discoveredRoutePaths = new Set(config.generatedHost ? [] : await discoverAppRoutePaths(config.projectRoot))
+  if (!config.generatedHost) assertKnownRuntimeTemplatedPaths(templates, discoveredRoutePaths, resolvedAnalysis)
   const paths = new Set(discoveredRoutePaths)
   for (const template of templates) paths.add(template.appPath)
   assertUniqueScopeOutputs(paths, scopeDirectory)

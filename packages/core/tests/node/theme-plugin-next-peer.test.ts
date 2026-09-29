@@ -1,7 +1,8 @@
 /**
  * Install-once project templates and published plugins retain package metadata for their standalone
- * test tooling. Any `next` peer they declare must admit both the oldest Next core supports and the
- * pinned Next installed by create-nextspark-app.
+ * test tooling. Any `next` peer they declare must admit the Next core pins (`~X.Y.Z`: the generated
+ * host's route export table is verified against that minor, RFC #203) and the pinned Next installed
+ * by create-nextspark-app, which must be one core admits.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -24,15 +25,20 @@ function admits(range: string, major: number): boolean {
   })
 }
 
-function requiredMajors(): number[] {
-  const installed = read('packages/create-nextspark-app/src/create.ts').match(/'next@(\d+)\.\d+\.\d+'/)
+function pins() {
+  const installed = read('packages/create-nextspark-app/src/create.ts').match(/'next@(\d+)\.(\d+)\.(\d+)'/)
   assert.ok(installed, 'create-nextspark-app installs a pinned next@X.Y.Z')
 
   const corePeer = JSON.parse(read('packages/core/package.json')).peerDependencies.next as string
-  const floor = corePeer.match(/^>=(\d+)\.\d+\.\d+$/)
-  assert.ok(floor, `core's next peer is a floor: ${corePeer}`)
+  const pinned = corePeer.match(/^~(\d+)\.(\d+)\.(\d+)$/)
+  assert.ok(pinned, `core pins its next peer to one minor (~X.Y.Z): ${corePeer}`)
 
-  return [Number(floor[1]), Number(installed[1])]
+  return { core: pinned.slice(1).map(Number), installed: installed.slice(1).map(Number) }
+}
+
+function requiredMajors(): number[] {
+  const { core, installed } = pins()
+  return [...new Set([core[0], installed[0]])]
 }
 
 function manifests(): string[] {
@@ -43,9 +49,9 @@ function manifests(): string[] {
     .filter((file) => fs.existsSync(path.join(REPO, file))))
 }
 
-test('the majors to admit are the floor core admits and the one generated projects install', () => {
-  const [floor, installed] = requiredMajors()
-  assert.ok(floor < installed, `${floor} < ${installed}`)
+test('generated projects install a Next that core\'s pinned peer admits', () => {
+  const { core, installed } = pins()
+  assert.ok(installed[0] === core[0] && installed[1] === core[1] && installed[2] >= core[2], `next@${installed.join('.')} is inside ~${core.join('.')}`)
 })
 
 test("every project template and published plugin admits the project's Next as a peer", () => {

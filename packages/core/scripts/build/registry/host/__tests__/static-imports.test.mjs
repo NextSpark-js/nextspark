@@ -116,3 +116,25 @@ test('registry grammar: literal nesting and imported leaves are fine, anything c
 test('an unparseable file is itself a violation', async () => {
   assert.equal((await check('export const = ;', 'facade'))[0].kind, 'parse-error')
 })
+
+test('dev-facade grammar: the facade grammar plus exactly one composition with the dev status wrapper', async () => {
+  const layout =
+    '// Generated\nimport NextSparkSourceLayout from "@nextsparkjs/core/routes/layout"\n' +
+    "import { withGenerationStatus } from './_nextspark/generation-status'\n" +
+    'export default withGenerationStatus(NextSparkSourceLayout)\nexport { metadata } from "@nextsparkjs/core/routes/layout"\n'
+  assert.deepEqual(await check(layout, 'dev-facade'), [])
+  assert.deepEqual((await check(layout, 'facade')).map(v => v.kind), ['statement'], 'production facades never carry it')
+  const base = 'import Source from "@/templates/layout"\n'
+  for (const bad of [
+    "import './_nextspark/generation-status'\n",
+    `${base}import { withGenerationStatus } from './other'\nexport default withGenerationStatus(Source)\n`,
+    `${base}import { other } from './_nextspark/generation-status'\nexport default other(Source)\n`,
+    `${base}import { withGenerationStatus } from './_nextspark/generation-status'\nexport default withGenerationStatus(Source, 1)\n`,
+    `${base}import { withGenerationStatus } from './_nextspark/generation-status'\nexport default withGenerationStatus(process.env.X)\n`,
+    `${base}import { withGenerationStatus } from './_nextspark/generation-status'\nexport default withGenerationStatus(Source)\nexport default withGenerationStatus(Source)\n`,
+    `import { Source } from "@/templates/layout"\nimport { withGenerationStatus } from './_nextspark/generation-status'\nexport default withGenerationStatus(Source)\n`,
+    "import { a } from '@/a'\nexport const R = a.b\n",
+  ]) {
+    assert.ok((await check(bad, 'dev-facade')).length > 0, bad)
+  }
+})

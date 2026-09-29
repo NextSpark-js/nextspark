@@ -9,11 +9,10 @@ dist/
 # NextSpark
 .nextspark/
 
-# Auto-generated templates (from theme templates at build time)
-src/app/(templates)/
+# Generated Next.js host: nextspark prepare (and dev, build) writes all of it; never edit
+src/app/
 
 # Mocks
-src/app/(public)/mock-demo/
 _tmp/
 
 # Claude Code

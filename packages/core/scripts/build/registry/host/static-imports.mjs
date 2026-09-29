@@ -15,6 +15,12 @@
  *   - `export const name = <literal>` where the literal is exactly what `evaluateNextLiteral`
  *     (Next's extract-const-value) accepts
  *
+ * Grammar `dev-facade` (the root layout of a `nextspark dev` generation, render.mjs): the `facade`
+ * grammar plus exactly one `export default withGenerationStatus(Source)`, where
+ * `withGenerationStatus` is imported from './_nextspark/generation-status' and `Source` is a
+ * default import - a fixed composition of two fixed modules, never emitted by a production
+ * preparation.
+ *
  * Grammar `registry` (`.nextspark/registries`):
  *   - the same imports
  *   - `export const NAME = <value>` where value is an object or array literal (optionally
@@ -29,7 +35,12 @@
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 import { evaluateNextLiteral } from './next-literal.mjs'
 
-export const GRAMMARS = ['facade', 'registry']
+export const GRAMMARS = ['facade', 'dev-facade', 'registry']
+
+/** The module the `dev-facade` grammar's composition imports its wrapper from. */
+export const DEV_STATUS_SPECIFIER = './_nextspark/generation-status'
+/** The wrapper a dev root layout composes with. */
+export const DEV_STATUS_WRAPPER = 'withGenerationStatus'
 
 const ALLOWED_DIRECTIVES = new Set(['use client'])
 
@@ -43,6 +54,7 @@ function hasModifier(node, kind) {
  */
 export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
   if (!GRAMMARS.includes(grammar)) throw new Error(`Unknown generated-module grammar "${grammar}"`)
+  const facade = grammar === 'facade' || grammar === 'dev-facade'
   const K = ts.SyntaxKind
   const violations = []
   const report = (kind, node, detail) =>
@@ -55,6 +67,9 @@ export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
   // Pass 1: imports (they may appear anywhere at top level; their names are what exports and
   // registry leaves may reference).
   const imported = new Set()
+  const defaultImports = new Set()
+  const devWrappers = new Set()
+  let composed = 0
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement)) continue
     const clause = statement.importClause
@@ -67,7 +82,15 @@ export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
       continue
     }
     if (clause.isTypeOnly) continue
-    if (clause.name) imported.add(clause.name.text)
+    if (clause.name) {
+      imported.add(clause.name.text)
+      defaultImports.add(clause.name.text)
+    }
+    if (statement.moduleSpecifier.text === DEV_STATUS_SPECIFIER) {
+      for (const element of clause.namedBindings?.elements ?? []) {
+        if (!element.isTypeOnly && (element.propertyName ?? element.name).text === DEV_STATUS_WRAPPER) devWrappers.add(element.name.text)
+      }
+    }
     for (const element of clause.namedBindings?.elements ?? []) {
       if (!element.isTypeOnly) imported.add(element.name.text)
     }
@@ -76,12 +99,29 @@ export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
   let prologue = true
   for (const statement of sourceFile.statements) {
     if (ts.isExpressionStatement(statement) && ts.isStringLiteral(statement.expression) && prologue) {
-      if (grammar !== 'facade' || !ALLOWED_DIRECTIVES.has(statement.expression.text)) report('directive', statement, 'directive not allowed')
+      if (!facade || !ALLOWED_DIRECTIVES.has(statement.expression.text)) report('directive', statement, 'directive not allowed')
       continue
     }
     prologue = false
 
     if (ts.isImportDeclaration(statement)) continue
+
+    // dev-facade: `export default withGenerationStatus(Source)`, once.
+    if (grammar === 'dev-facade' && ts.isExportAssignment(statement) && !statement.isExportEquals) {
+      const call = statement.expression
+      const ok =
+        ts.isCallExpression(call) &&
+        !call.typeArguments &&
+        ts.isIdentifier(call.expression) &&
+        devWrappers.has(call.expression.text) &&
+        call.arguments.length === 1 &&
+        ts.isIdentifier(call.arguments[0]) &&
+        defaultImports.has(call.arguments[0].text) &&
+        composed === 0
+      composed += 1
+      if (!ok) report('composition', statement, `only \`export default ${DEV_STATUS_WRAPPER}(<default import>)\` once`)
+      continue
+    }
 
     if (ts.isExportDeclaration(statement)) {
       if (!statement.exportClause || !ts.isNamedExports(statement.exportClause)) {
@@ -89,7 +129,7 @@ export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
         continue
       }
       if (statement.moduleSpecifier) {
-        if (grammar !== 'facade') report('re-export', statement, 'registries do not re-export')
+        if (!facade) report('re-export', statement, 'registries do not re-export')
         continue
       }
       if (statement.isTypeOnly) continue
@@ -111,7 +151,7 @@ export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
           report('declaration', declaration, 'expected `export const name = value`')
           continue
         }
-        if (grammar === 'facade') {
+        if (facade) {
           const literal = evaluateNextLiteral(declaration.initializer, ts)
           if ('unsupported' in literal) report('non-literal', declaration.initializer, literal.unsupported)
         } else {

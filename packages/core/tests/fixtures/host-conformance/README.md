@@ -8,8 +8,8 @@ generated facades behaves exactly like a hand-written app.
 | `source/` | The root-first project source (`templates/`, `api/`, `plugins/<name>/api/`, `entities/`, `lib/`, `actions/`, `components/`), imported as `@/*`. |
 | `fake-core/` | Stand-in for the `@nextsparkjs/core` package (`@fixture-core/*`): core default routes (`routes.mjs`) and their modules. |
 | `manual/` | The reference: a hand-written Next.js app whose `src/app` files are the source modules placed at their route (byte-identical; the conformance script checks it) and hand-written registries. |
-| `generated/` | `src/app` facades and `.nextspark/registries` written by `generate.mjs` through `packages/core/scripts/build/registry/host/facade-emitter.mjs`. Git-ignored. |
-| `plan.mjs` | Route resolution shared by both: core defaults < project `templates/` overrides, plus `api/` and plugin route handlers. |
+| `generated/` | `src/app` facades, `.nextspark/registries` and `.nextspark/generation.json` written by `generate.mjs` with the production generator (`nextspark prepare`'s pipeline, `packages/core/scripts/build/registry/host/prepare.mjs`). Git-ignored. |
+| `plan.mjs` | The fixture's host config for that generator (fake core manifest through `loadCoreRouteManifest`, `source/` as the project, both cache modes) and the route plan shared by both hosts: core defaults < project `templates/` overrides, plus `api/` and plugin route handlers. |
 | `host-config.mjs` | `next.config` of both hosts. `HOST_CACHE_MODE=isr\|cc` switches `cacheComponents`; `HOST_BUNDLER` names the `distDir` (`.next-<bundler>-<mode>`) and the type-check config (`tsconfig.<bundler>-<mode>.json`). |
 
 Routes that only make sense with one cache model are named `page.isr.tsx` / `page.cc.tsx` /

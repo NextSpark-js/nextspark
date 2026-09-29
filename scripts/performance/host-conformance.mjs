@@ -146,7 +146,8 @@ async function checkNoLookups() {
   const ts = await loadTypeScriptFor(join(REPO_ROOT, 'packages/core'))
   const grammars = [
     [join(FIXTURE, 'generated/src'), 'facade'],
-    [join(FIXTURE, 'generated/.nextspark'), 'registry'],
+    // The registries; .nextspark/generation.json is prepare's ownership record, not a module.
+    [join(FIXTURE, 'generated/.nextspark/registries'), 'registry'],
   ]
   const findings = []
   let files = 0
@@ -768,7 +769,7 @@ function renderReport({ variants, buildInfo, lookup, startedAt }) {
 async function main() {
   const startedAt = new Date()
   await generate()
-  const plan = resolveRoutePlan()
+  const plan = await resolveRoutePlan()
   checkManualHost(plan)
   const lookup = await checkNoLookups()
   const routeDirectives = new Map()

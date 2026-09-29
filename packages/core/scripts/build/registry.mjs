@@ -106,13 +106,16 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
 
     // The registries git doesn't track yet are kept out of git by a .gitignore
     // of their own, in place before the first one is written, whatever the
-    // project's rules say; the ones it tracks stay tracked, and that is said
-    if (await ensureRegistriesGitignore(CONFIG.projectRoot)) {
-      log('.gitignore', 'success')
-    }
-    const trackedRegistries = trackedFilesUnder(CONFIG.projectRoot, '.nextspark/registries')
-    if (trackedRegistries.length > 0) {
-      for (const line of trackedRegistriesLines(trackedRegistries.length)) log(line, 'warning')
+    // project's rules say; the ones it tracks stay tracked, and that is said.
+    // A generated host's prepare publishes the staged registries itself.
+    if (!CONFIG.generatedHost) {
+      if (await ensureRegistriesGitignore(CONFIG.projectRoot)) {
+        log('.gitignore', 'success')
+      }
+      const trackedRegistries = trackedFilesUnder(CONFIG.projectRoot, '.nextspark/registries')
+      if (trackedRegistries.length > 0) {
+        for (const line of trackedRegistriesLines(trackedRegistries.length)) log(line, 'warning')
+      }
     }
 
     // Generate client template registry (async - needs to check for server exports)
@@ -266,8 +269,9 @@ export async function buildRegistries(projectRoot = null) {
   const startTime = Date.now()
 
   try {
-    // Keep the generated host stylesheet pointed at project-owned styles.
-    syncAppGlobalsCss(CONFIG)
+    // Keep the generated host stylesheet pointed at project-owned styles. A generated host
+    // (NEXTSPARK_GENERATED_HOST=1) owns src/app through nextspark prepare: nothing here writes there.
+    if (!CONFIG.generatedHost) syncAppGlobalsCss(CONFIG)
 
     // Initialize parent-child discovery FIRST (needed for dynamic parseChildEntity)
     log('→ Initializing dynamic parent-child discovery...', 'info')
@@ -343,14 +347,14 @@ export async function buildRegistries(projectRoot = null) {
     const templateAnalysis = await analyzeTemplates(templates, CONFIG)
 
     // Clean up old generated route files first
-    await cleanupOldRouteFiles(CONFIG)
+    if (!CONFIG.generatedHost) await cleanupOldRouteFiles(CONFIG)
 
     // Hoist plugin dependencies to root workspace for proper resolution
     // Generate all registry files (use aggregated entities for entity registry + blocks)
     await generateRegistryFiles(CONFIG, plugins, allEntities, themes, templates, templateAnalysis, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData)
 
     // Generate missing pages for templates that don't have core app pages
-    await generateMissingPages(templates, CONFIG, templateAnalysis)
+    if (!CONFIG.generatedHost) await generateMissingPages(templates, CONFIG, templateAnalysis)
 
     // Generate test fixtures for the root-first project.
     await generateTestEntitiesJson(allEntities, themes, CONFIG)
