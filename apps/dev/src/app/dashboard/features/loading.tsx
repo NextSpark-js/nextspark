@@ -1,8 +1,6 @@
-import { SkeletonFeaturePlaceholder } from '@nextsparkjs/core/components/ui/skeleton-features'
-import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/features/loading'
+// Implementation: @nextsparkjs/core/routes/dashboard/features/loading (#203). The project's template override for this route is
+// still resolved here at runtime, until the generated host replaces this file.
+import FeaturesLoading from "@nextsparkjs/core/routes/dashboard/features/loading"
+import { getTemplateOrDefault } from "@nextsparkjs/registries/template-scopes/server/dashboard/features/loading"
 
-function FeaturesLoading() {
-  return <SkeletonFeaturePlaceholder />
-}
-
-export default getTemplateOrDefault('app/dashboard/features/loading.tsx', FeaturesLoading)
+export default getTemplateOrDefault("app/dashboard/features/loading.tsx", FeaturesLoading)

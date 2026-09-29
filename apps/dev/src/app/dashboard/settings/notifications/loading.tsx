@@ -1,8 +1,6 @@
-import { SkeletonNotificationsPage } from '@nextsparkjs/core/components/ui/skeleton-settings'
-import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/settings/notifications/loading'
+// Implementation: @nextsparkjs/core/routes/dashboard/settings/notifications/loading (#203). The project's template override for this route is
+// still resolved here at runtime, until the generated host replaces this file.
+import NotificationsLoading from "@nextsparkjs/core/routes/dashboard/settings/notifications/loading"
+import { getTemplateOrDefault } from "@nextsparkjs/registries/template-scopes/server/dashboard/settings/notifications/loading"
 
-function NotificationsLoading() {
-  return <SkeletonNotificationsPage />
-}
-
-export default getTemplateOrDefault('app/dashboard/settings/notifications/loading.tsx', NotificationsLoading)
+export default getTemplateOrDefault("app/dashboard/settings/notifications/loading.tsx", NotificationsLoading)

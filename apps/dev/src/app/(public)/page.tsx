@@ -1,19 +1,6 @@
-import { redirect } from 'next/navigation'
+// Implementation: @nextsparkjs/core/routes/(public)/page (#203). The project's template override for this route is
+// still resolved here at runtime, until the generated host replaces this file.
+import DefaultPublicHome from "@nextsparkjs/core/routes/(public)/page"
 import { getTemplateOrDefault } from "@nextsparkjs/registries/template-scopes/server/(public)/page"
 
-/**
- * Default Public Home Page (CORE)
- *
- * This is the minimal CORE version that redirects to dashboard if no theme template override exists.
- * Theme templates can override this to provide custom landing pages.
- *
- * Location: app/(public)/page.tsx (CORE)
- * Override: templates/(public)/page.tsx (THEME)
- */
-function DefaultPublicHome() {
-  // Si no hay template override, redirect to dashboard
-  // (Theme provides the actual landing page)
-  redirect('/dashboard')
-}
-
-export default getTemplateOrDefault('app/(public)/page.tsx', DefaultPublicHome)
+export default getTemplateOrDefault("app/(public)/page.tsx", DefaultPublicHome)

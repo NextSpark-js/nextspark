@@ -1,38 +1,8 @@
+// Implementation: @nextsparkjs/core/routes/dashboard/features/analytics/page (#203). The project's template override for this route is
+// still resolved here at runtime, until the generated host replaces this file.
 'use client'
 
-import { FeatureGate } from '@nextsparkjs/core/components/billing/FeatureGate'
-import { FeaturePlaceholder } from '@nextsparkjs/core/components/billing/FeaturePlaceholder'
-import { BarChart3 } from 'lucide-react'
-import { useTranslations } from 'next-intl'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/features/analytics/page'
+import AdvancedAnalyticsPage from "@nextsparkjs/core/routes/dashboard/features/analytics/page"
+import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-scopes/client/dashboard/features/analytics/page"
 
-function AdvancedAnalyticsPage() {
-  const t = useTranslations('features')
-
-  return (
-    <div data-cy="feature-analytics-page">
-      <FeatureGate
-        feature="advanced_analytics"
-        fallback={
-          <FeaturePlaceholder
-            feature="advanced_analytics"
-            icon={<BarChart3 className="h-8 w-8" />}
-            benefits={[
-              t('analytics.benefit1'),
-              t('analytics.benefit2'),
-              t('analytics.benefit3'),
-            ]}
-          />
-        }
-      >
-        {/* Contenido real cuando se implemente */}
-        <div data-cy="analytics-content">
-          <h1 className="text-2xl font-bold">{t('analytics.title')}</h1>
-          <p className="text-muted-foreground mt-2">Analytics dashboard coming soon...</p>
-        </div>
-      </FeatureGate>
-    </div>
-  )
-}
-
-export default getTemplateOrDefaultClient('app/dashboard/features/analytics/page.tsx', AdvancedAnalyticsPage)
+export default getTemplateOrDefaultClient("app/dashboard/features/analytics/page.tsx", AdvancedAnalyticsPage)

@@ -1,8 +1,6 @@
-import { SkeletonSettingsOverview } from '@nextsparkjs/core/components/ui/skeleton-settings'
-import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/settings/loading'
+// Implementation: @nextsparkjs/core/routes/dashboard/settings/loading (#203). The project's template override for this route is
+// still resolved here at runtime, until the generated host replaces this file.
+import SettingsLoading from "@nextsparkjs/core/routes/dashboard/settings/loading"
+import { getTemplateOrDefault } from "@nextsparkjs/registries/template-scopes/server/dashboard/settings/loading"
 
-function SettingsLoading() {
-  return <SkeletonSettingsOverview />
-}
-
-export default getTemplateOrDefault('app/dashboard/settings/loading.tsx', SettingsLoading)
+export default getTemplateOrDefault("app/dashboard/settings/loading.tsx", SettingsLoading)

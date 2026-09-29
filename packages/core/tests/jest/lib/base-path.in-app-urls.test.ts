@@ -190,12 +190,12 @@ const ALLOWED = [
     why: 'a request handed straight to a route handler, which is given its URL without the base path',
   },
   {
-    file: 'apps/dev/src/app/layout.tsx',
+    file: 'packages/core/src/routes/layout.tsx',
     text: 'domain',
     why: 'preconnect and dns-prefetch name the billing provider’s origin, not a path this app serves',
   },
   {
-    file: 'apps/dev/src/app/layout.ppr.tsx',
+    file: 'packages/core/src/routes/layout.ppr.tsx',
     text: 'domain',
     why: 'preconnect and dns-prefetch name the billing provider’s origin, not a path this app serves',
   },

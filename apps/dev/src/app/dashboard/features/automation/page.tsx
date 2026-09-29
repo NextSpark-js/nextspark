@@ -1,38 +1,8 @@
+// Implementation: @nextsparkjs/core/routes/dashboard/features/automation/page (#203). The project's template override for this route is
+// still resolved here at runtime, until the generated host replaces this file.
 'use client'
 
-import { FeatureGate } from '@nextsparkjs/core/components/billing/FeatureGate'
-import { FeaturePlaceholder } from '@nextsparkjs/core/components/billing/FeaturePlaceholder'
-import { Zap } from 'lucide-react'
-import { useTranslations } from 'next-intl'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/features/automation/page'
+import TaskAutomationPage from "@nextsparkjs/core/routes/dashboard/features/automation/page"
+import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-scopes/client/dashboard/features/automation/page"
 
-function TaskAutomationPage() {
-  const t = useTranslations('features')
-
-  return (
-    <div data-cy="feature-automation-page">
-      <FeatureGate
-        feature="task_automation"
-        fallback={
-          <FeaturePlaceholder
-            feature="task_automation"
-            icon={<Zap className="h-8 w-8" />}
-            benefits={[
-              t('automation.benefit1'),
-              t('automation.benefit2'),
-              t('automation.benefit3'),
-            ]}
-          />
-        }
-      >
-        {/* Contenido real cuando se implemente */}
-        <div data-cy="automation-content">
-          <h1 className="text-2xl font-bold">{t('automation.title')}</h1>
-          <p className="text-muted-foreground mt-2">Task automation coming soon...</p>
-        </div>
-      </FeatureGate>
-    </div>
-  )
-}
-
-export default getTemplateOrDefaultClient('app/dashboard/features/automation/page.tsx', TaskAutomationPage)
+export default getTemplateOrDefaultClient("app/dashboard/features/automation/page.tsx", TaskAutomationPage)

@@ -1,16 +1,6 @@
-import { type ReactNode } from 'react'
-import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/features/layout'
+// Implementation: @nextsparkjs/core/routes/dashboard/features/layout (#203). The project's template override for this route is
+// still resolved here at runtime, until the generated host replaces this file.
+import FeaturesLayout from "@nextsparkjs/core/routes/dashboard/features/layout"
+import { getTemplateOrDefault } from "@nextsparkjs/registries/template-scopes/server/dashboard/features/layout"
 
-interface FeaturesLayoutProps {
-  children: ReactNode
-}
-
-function FeaturesLayout({ children }: FeaturesLayoutProps) {
-  return (
-    <div className="container py-8" data-cy="features-layout">
-      {children}
-    </div>
-  )
-}
-
-export default getTemplateOrDefault('app/dashboard/features/layout.tsx', FeaturesLayout)
+export default getTemplateOrDefault("app/dashboard/features/layout.tsx", FeaturesLayout)

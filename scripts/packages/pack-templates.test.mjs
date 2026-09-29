@@ -49,22 +49,19 @@ test('pack.sh restores an empty core templates/app before it creates the tarball
     const unpacked = spawnSync('tar', ['xzf', join(outputDir, archive), '-C', outputDir], { encoding: 'utf8' })
     assert.equal(unpacked.status, 0, unpacked.stderr || unpacked.stdout)
 
-    const authRoute = readFileSync(
-      join(outputDir, 'package/templates/app/api/auth/[...all]/route.ts'),
-      'utf8',
-    )
+    // The app files are facades of core route modules (#203); the tarball ships both.
+    const shippedRoute = (route) => {
+      const template = readFileSync(join(outputDir, `package/templates/app/${route}.ts`), 'utf8')
+      assert.match(template, new RegExp(`from "@nextsparkjs/core/routes/${route.replace(/[[\].]/g, '\\$&')}"`), `templates/app/${route}.ts imports its core module`)
+      return readFileSync(join(outputDir, `package/dist/routes/${route}.js`), 'utf8')
+    }
     assert.match(
-      authRoute,
+      shippedRoute('api/auth/[...all]/route'),
       /getAuthReadinessResponse/,
       'the shipped auth route must enforce runtime provider readiness',
     )
-
-    const inviteRoute = readFileSync(
-      join(outputDir, 'package/templates/app/api/v1/auth/signup-with-invite/route.ts'),
-      'utf8',
-    )
     assert.match(
-      inviteRoute,
+      shippedRoute('api/v1/auth/signup-with-invite/route'),
       /isPasswordLoginEnabled/,
       'the shipped invite signup route must enforce the password backend switch',
     )

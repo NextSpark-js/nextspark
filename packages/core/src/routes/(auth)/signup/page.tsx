@@ -1,0 +1,59 @@
+import { Suspense } from 'react'
+import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
+import { SignupForm } from '@nextsparkjs/core/components/auth/forms/SignupForm'
+import { AUTH_CONFIG } from '@nextsparkjs/core/lib/config'
+import { resolveAuthMethods } from '@nextsparkjs/core/lib/auth/auth-methods'
+import { TeamService } from '@nextsparkjs/core/lib/services'
+
+// This page reads DB state (TeamService.hasGlobal) and redirect()s during render,
+// so it must render per-request and never be statically prerendered at build time.
+export const dynamic = 'force-dynamic'
+
+const defaultMetadata: Metadata = {
+  title: 'Create Account',
+  description: 'Create your account to start using our platform',
+}
+
+export const metadata: Metadata = defaultMetadata
+
+async function SignupPageContent() {
+  const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open'
+
+  // Passwordless preset (no 'email-password' in auth.methods): the account is
+  // created by the first one-time-code sign-in, so there is no password signup
+  // form to show — send people to /login instead.
+  if (!resolveAuthMethods(AUTH_CONFIG).includes('email-password')) {
+    redirect('/login')
+  }
+
+  // In invitation-only mode, allow the first user to register
+  // (when no global team exists yet). Subsequent users need invitations.
+  if (registrationMode === 'invitation-only') {
+    const hasGlobalTeam = await TeamService.hasGlobal()
+    if (hasGlobalTeam) {
+      // A team exists, so this is not the first user - redirect to login
+      // Invitation links use /accept-invite/[token] route, not /signup
+      redirect('/login')
+    }
+    // No team exists yet - allow first user to register
+  }
+
+  // In domain-restricted mode, always redirect to login
+  if (registrationMode === 'domain-restricted') {
+    redirect('/login')
+  }
+
+  return <SignupForm />
+}
+
+function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupPageContent />
+    </Suspense>
+  )
+}
+
+
+export default SignupPage

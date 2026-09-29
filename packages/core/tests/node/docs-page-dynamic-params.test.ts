@@ -10,7 +10,8 @@
  * check; the proxy answers 404 for those requests instead
  * (tests/jest/templates/proxy.test.ts), in apps/dev as in a generated project
  * (tests/node/apps-dev-proxy.test.ts).
- * apps/dev/src/app is the source packages/core/templates/app is synced from.
+ * The pages are core route modules (packages/core/src/routes, #203); the app
+ * files are facades that copy `dynamicParams` as a literal.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -19,11 +20,11 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
-const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../apps/dev/src/app')
+const ROUTES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/routes')
 
 const DOCS_PAGES = [
-  ['public', path.join(APP_DIR, '(public)/docs/[section]/[page]/page.tsx'), 'DOCS_REGISTRY.public'],
-  ['superadmin', path.join(APP_DIR, 'superadmin/docs/[section]/[page]/page.tsx'), 'DOCS_REGISTRY.superadmin'],
+  ['public', path.join(ROUTES_DIR, '(public)/docs/[section]/[page]/page.tsx'), 'DOCS_REGISTRY.public'],
+  ['superadmin', path.join(ROUTES_DIR, 'superadmin/docs/[section]/[page]/page.tsx'), 'DOCS_REGISTRY.superadmin'],
 ] as const
 
 function isExported(node: ts.Node): boolean {

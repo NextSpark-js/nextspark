@@ -330,6 +330,12 @@
       "types": "./dist/utils/*.d.ts",
       "import": "./dist/utils/*.js"
     },
+    "./routes/manifest.json": "./dist/routes/manifest.json",
+    "./routes/variants.json": "./dist/routes/variants.json",
+    "./routes/*": {
+      "types": "./dist/routes/*.d.ts",
+      "import": "./dist/routes/*.js"
+    },
     "./messages/*": "./dist/messages/*",
     "./templates/*": "./dist/templates/*",
     "./migrations/*": "./dist/migrations/*",
@@ -382,8 +388,8 @@
     "postinstall": "node scripts/postinstall.mjs || true",
     "build": "tsup && pnpm build:dts",
     "build:js": "tsup",
-    "build:dts": "tsc -p tsconfig.dts.json",
-    "dev": "tsup --watch",
+    "build:dts": "tsc -p tsconfig.dts.json && tsc -p tsconfig.dts.routes.json",
+    "dev": "tsup --watch src",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

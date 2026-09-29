@@ -1,0 +1,51 @@
+/**
+ * Team Subscription API
+ *
+ * GET /api/v1/teams/[teamId]/subscription - Get team's active subscription
+ */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { validateAndAuthenticateRequest, createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
+
+interface RouteParams {
+  params: Promise<{ teamId: string }>
+}
+
+export const GET = withRateLimitTier(async function GET(request: NextRequest, props: RouteParams) {
+  // Authenticate request; the API-key scope is declared at the entry point,
+  // which fails closed for keys that lack it (#93).
+  const { auth, rateLimitResponse, errorResponse } = await validateAndAuthenticateRequest(request, { requiredScope: 'billing:read' })
+  if (rateLimitResponse) return rateLimitResponse
+  if (!auth) return errorResponse ?? createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_REQUIRED')
+
+  const { teamId } = await props.params
+
+  try {
+    // Check if user has permission to view subscription using MembershipService
+    const membership = await MembershipService.get(auth.userId, teamId)
+    const actionResult = membership.canPerformAction('team.billing.view')
+
+    if (!actionResult.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: actionResult.message,
+          reason: actionResult.reason,
+          meta: actionResult.meta,
+        },
+        { status: 403 }
+      )
+    }
+
+    const subscription = await SubscriptionService.getActive(teamId)
+
+    // A team can legitimately have no subscription yet. Keep that normal state
+    // in the successful response so dashboard loads do not log a 404.
+    return createApiResponse({ subscription: subscription ?? null })
+  } catch (error) {
+    console.error('[Billing API] Error fetching subscription:', error)
+    return createApiError('Failed to fetch subscription', 500)
+  }
+}, 'read')

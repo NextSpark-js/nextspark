@@ -3,7 +3,7 @@ import { cp, readFile, writeFile, readdir, stat, mkdir } from 'fs/promises'
 import { join, resolve, dirname } from 'path'
 import { glob } from 'glob'
 import { existsSync } from 'fs'
-import { build as esbuild } from 'esbuild'
+import { build as esbuild, transform } from 'esbuild'
 
 /**
  * Safe copy that ensures parent directories exist
@@ -164,6 +164,34 @@ async function inlineUiPackage(distDir: string): Promise<void> {
   console.log(`✅ Inlined @nextsparkjs/ui in ${inlinedCount} files`)
 }
 
+/**
+ * Transpile the route modules (#203) under src/routes one file at a time.
+ *
+ * Without an output format, esbuild keeps every `export const` where it is; with
+ * one, as tsup builds, it moves all exports into one `export { }` clause. The
+ * facade emitter reads a route's segment config (`export const dynamic = ...`)
+ * from dist when a project installs core, and only takes it as `export const`.
+ * tsup can't take these files as entries either: it globs its entry list again,
+ * and route paths hold glob syntax: (group), [param], [...slug].
+ */
+async function buildRouteModules(srcDir: string, distDir: string): Promise<void> {
+  const files = await glob('**/*.{ts,tsx}', { cwd: srcDir, ignore: ['**/*.test.ts', '**/*.test.tsx', '**/*.d.ts'] })
+  for (const file of files) {
+    const source = await readFile(join(srcDir, file), 'utf-8')
+    const { code } = await transform(source, {
+      loader: file.endsWith('.tsx') ? 'tsx' : 'ts',
+      jsx: 'automatic',
+      jsxImportSource: 'react',
+      target: 'node16',
+      sourcefile: file,
+    })
+    const out = join(distDir, file.replace(/\.tsx?$/, '.js'))
+    await mkdir(dirname(out), { recursive: true })
+    await writeFile(out, code)
+  }
+  console.log(`✅ Built ${files.length} route modules`)
+}
+
 // Normalize paths to forward slashes (Windows compatibility)
 const normalizePathSeparators = (paths: string[]): string[] =>
   paths.map(p => p.replace(/\\/g, '/'))
@@ -181,6 +209,8 @@ export default defineConfig({
       'src/lib/user-data-client.ts',
       // Jest test helpers (not needed at runtime)
       'src/testing/**',
+      // Route modules: built by buildRouteModules in onSuccess
+      'src/routes/**',
     ],
   })),
 
@@ -218,6 +248,8 @@ export default defineConfig({
   async onSuccess() {
     const distDir = join(process.cwd(), 'dist')
 
+    await buildRouteModules(join(process.cwd(), 'src/routes'), join(distDir, 'routes'))
+
     // Fix ESM imports by adding .js extensions
     console.log('🔧 Fixing ESM imports...')
     await fixEsmImports(distDir)
@@ -225,6 +257,11 @@ export default defineConfig({
 
     // Inline @nextsparkjs/ui code so Tailwind v4 can discover CSS classes in npm projects
     await inlineUiPackage(distDir)
+
+    // Route manifest (#203): the list of core routes `nextspark prepare` emits facades for
+    for (const manifest of ['manifest.json', 'variants.json']) {
+      await safeCopy(join(process.cwd(), 'src/routes', manifest), join(distDir, 'routes', manifest))
+    }
 
     // Copy messages/ directory
     await cp(

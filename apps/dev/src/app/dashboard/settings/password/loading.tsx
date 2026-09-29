@@ -1,8 +1,6 @@
-import { SkeletonPasswordPage } from '@nextsparkjs/core/components/ui/skeleton-settings'
-import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/settings/password/loading'
+// Implementation: @nextsparkjs/core/routes/dashboard/settings/password/loading (#203). The project's template override for this route is
+// still resolved here at runtime, until the generated host replaces this file.
+import PasswordLoading from "@nextsparkjs/core/routes/dashboard/settings/password/loading"
+import { getTemplateOrDefault } from "@nextsparkjs/registries/template-scopes/server/dashboard/settings/password/loading"
 
-function PasswordLoading() {
-  return <SkeletonPasswordPage />
-}
-
-export default getTemplateOrDefault('app/dashboard/settings/password/loading.tsx', PasswordLoading)
+export default getTemplateOrDefault("app/dashboard/settings/password/loading.tsx", PasswordLoading)

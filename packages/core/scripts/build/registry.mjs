@@ -66,7 +66,7 @@ import {
   SCOPE_MARKER
 } from './registry/generators/template-registry.mjs'
 import { generateEmailRegistry } from './registry/generators/email-registry.mjs'
-import { generateBlockRegistry, generateBlockRegistryClient, generateBlockRegistryLazy } from './registry/generators/block-registry.mjs'
+import { generateBlockRegistry, generateBlockRegistryClient, generateBlockRegistryLazy, generateBlockSchemas } from './registry/generators/block-registry.mjs'
 import { generateIconRegistry } from './registry/generators/icon-registry.mjs'
 import { generateMiddlewareRegistry } from './registry/generators/middleware-registry.mjs'
 import { generateRouteHandlersRegistry } from './registry/generators/route-handlers.mjs'
@@ -141,6 +141,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'block-registry.ts', content: generateBlockRegistry(blocks, CONFIG) },
       { name: 'block-registry.client.ts', content: generateBlockRegistryClient(blocks, CONFIG) },
       { name: 'block-registry.lazy.ts', content: generateBlockRegistryLazy(blocks) },
+      { name: 'block-schemas.ts', content: generateBlockSchemas(blocks) },
       { name: 'icon-registry.ts', content: generateIconRegistry(iconNames, CONFIG) },
       { name: 'billing-registry.ts', content: await generateBillingRegistry(CONFIG) },
       { name: 'middleware-registry.ts', content: generateMiddlewareRegistry(middlewares, CONFIG) },

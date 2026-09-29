@@ -15,7 +15,8 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-const ROUTES_DIR = join(__dirname, '../../../../../apps/dev/src/app/api/v1/teams/[teamId]')
+// The handlers are core route modules (#203); apps/dev/src/app re-exports them.
+const ROUTES_DIR = join(__dirname, '../../../src/routes/api/v1/teams/[teamId]')
 
 describe('GHSA-rw2j-9mxg-rx98 — team members/invitations GET authorization', () => {
   it('invitations route selects an explicit column list and never selects the bearer token', () => {

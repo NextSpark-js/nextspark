@@ -29,7 +29,8 @@ function walk(directory: string): string[] {
 }
 
 function renderedGroups(file: string): TranslationGroup[] {
-  const relative = path.relative(ROOT, file).replaceAll(path.sep, '/')
+  // A core route module (#203) renders where its app route does: routes/<path> is src/app/<path>.
+  const relative = path.relative(ROOT, file).replaceAll(path.sep, '/').replace(/^packages\/core\/src\/routes\//, 'apps/dev/src/app/')
   if (relative.startsWith('apps/dev/src/app/(auth)/')) return ['auth']
   if (relative.startsWith('apps/dev/src/app/dashboard/') || relative.startsWith('apps/dev/templates/dashboard/')) return ['dashboard']
   if (relative.startsWith('apps/dev/src/app/superadmin/') || relative.startsWith('apps/dev/templates/superadmin/')) return ['superadmin']

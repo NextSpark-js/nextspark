@@ -1,0 +1,66 @@
+import type { ComponentType } from 'react'
+import { Suspense } from 'react'
+import type { Metadata } from 'next'
+import { AuthWrapper } from '@nextsparkjs/core/components/auth/layouts/AuthWrapper'
+import { NextIntlClientProvider } from 'next-intl'
+import { getMessages } from 'next-intl/server'
+import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+
+export const defaultMetadata: Metadata = {
+  title: {
+    default: 'Authentication | Boilerplate',
+    template: '%s | Boilerplate',
+  },
+  description: 'Sign in or create an account to access our platform',
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
+
+export function DefaultAuthLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-card rounded-lg shadow-lg border border-border p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Boilerplate
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Modern Full-Stack Application
+            </p>
+          </div>
+
+          <AuthWrapper>
+            <Suspense fallback={null}>
+              {children}
+            </Suspense>
+          </AuthWrapper>
+        </div>
+
+        <div className="mt-6 text-center">
+          <p className="text-xs text-muted-foreground">
+            Protected with enterprise-grade encryption
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Wraps a layout for this route group in the group's client messages. The route's
+ * default is `withAuthMessages(DefaultAuthLayout)`; a host that resolves a project override of the
+ * layout wraps that instead, so the override gets the same messages.
+ */
+export function withAuthMessages(AuthLayout: ComponentType<{ children: React.ReactNode }>) {
+  return async function AuthLayoutWithMessages({ children }: { children: React.ReactNode }) {
+    const messages = await getMessages()
+    return (
+      <NextIntlClientProvider messages={selectMessages(messages, 'auth')}>
+        <AuthLayout>{children}</AuthLayout>
+      </NextIntlClientProvider>
+    )
+  }
+}

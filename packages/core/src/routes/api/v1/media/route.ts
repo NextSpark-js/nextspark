@@ -1,0 +1,64 @@
+import { NextRequest } from 'next/server'
+import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
+import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
+import { mediaListQuerySchema } from '@nextsparkjs/core/lib/media/schemas'
+
+/**
+ * GET /api/v1/media
+ *
+ * List media files with pagination, filtering, and search.
+ * Supports filtering by type (image/video), searching by filename, and sorting.
+ *
+ * Query Parameters:
+ * - limit: Number of items per page (default: 20, max: 100)
+ * - offset: Number of items to skip (default: 0)
+ * - orderBy: Sort field (createdAt|filename|fileSize, default: createdAt)
+ * - orderDir: Sort direction (asc|desc, default: desc)
+ * - type: Filter by type (image|video|all, default: all)
+ * - search: Search by filename (case-insensitive)
+ *
+ * Authentication: Requires valid session or API key with media:read scope
+ * RLS: Returns only media from teams the user is a member of
+ */
+export const GET = withRateLimitTier(async (request: NextRequest) => {
+  try {
+    // 1. Authenticate; the API-key scope is declared at the entry point,
+    // which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(request, { requiredScope: 'media:read' })
+    if (!authResult.success) {
+      return createAuthFailureResponse(authResult)
+    }
+
+    // 3. Resolve and validate team context
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
+
+    // 3b. Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.read')) {
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
+    }
+
+    // 4. Parse and validate query parameters
+    const { searchParams } = new URL(request.url)
+    const parsed = mediaListQuerySchema.safeParse(Object.fromEntries(searchParams))
+
+    if (!parsed.success) {
+      return createApiError('Invalid query parameters', 400, {
+        errors: parsed.error.issues,
+      })
+    }
+
+    // 5. Query media list with team isolation
+    const result = await MediaService.list(authResult.user!.id, teamId, parsed.data)
+
+    return createApiResponse(result)
+  } catch (error) {
+    console.error('[Media API] Error listing media:', error)
+    return createApiError('Failed to list media', 500)
+  }
+}, 'read')

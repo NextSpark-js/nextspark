@@ -1,0 +1,93 @@
+/**
+ * Billing Management Portal Endpoint
+ *
+ * Creates a billing portal session for self-service billing management.
+ * Users can update payment methods, view invoices, and cancel subscriptions.
+ *
+ * P6: Customer Portal
+ */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
+import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+
+export const POST = withRateLimitTier(async (request: NextRequest) => {
+  // 1. Dual authentication; the API-key scope is declared at the entry
+  // point, which fails closed for keys that lack it (#93).
+  const authResult = await authenticateRequest(request, { requiredScope: 'billing:write' })
+
+  if (!authResult.success || !authResult.user) {
+    return createAuthFailureResponse(authResult)
+  }
+
+  // 2. Get team context
+  const teamId =
+    request.headers.get('x-team-id') ||
+    authResult.user.defaultTeamId
+
+  if (!teamId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'No team context available. Please provide x-team-id header.'
+      },
+      { status: 400 }
+    )
+  }
+
+  // 3. Permission check using MembershipService
+  const membership = await MembershipService.get(authResult.user.id, teamId)
+  const actionResult = membership.canPerformAction('team.billing.manage')
+
+  if (!actionResult.allowed) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: actionResult.message,
+        reason: actionResult.reason,
+        meta: actionResult.meta,
+      },
+      { status: 403 }
+    )
+  }
+
+  // 4. Get subscription with payment provider customer ID
+  try {
+    const subscription = await SubscriptionService.getActive(teamId)
+
+    if (!subscription?.externalCustomerId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'No billing account found. Please upgrade to a paid plan first.'
+        },
+        { status: 400 }
+      )
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
+    const returnUrl = `${appUrl}/dashboard/settings/billing`
+
+    const gateway = await getBillingGateway()
+    const session = await gateway.createPortalSession({
+      customerId: subscription.externalCustomerId,
+      returnUrl
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: { url: session.url }
+    })
+  } catch (error) {
+    console.error('[portal] Error creating portal session:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create portal session'
+      },
+      { status: 500 }
+    )
+  }
+}, 'write');

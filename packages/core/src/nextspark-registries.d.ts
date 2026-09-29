@@ -216,6 +216,11 @@ declare module '@nextsparkjs/registries/block-registry.client' {
   }
 }
 
+declare module '@nextsparkjs/registries/block-schemas' {
+  // Each block's zod `schema` by slug (generators/block-registry.mjs, generateBlockSchemas).
+  export const BLOCK_SCHEMAS: Record<string, import('zod').ZodType>
+}
+
 declare module '@nextsparkjs/registries/block-registry.lazy' {
   export const BLOCK_COMPONENTS: Record<string, React.LazyExoticComponent<React.ComponentType<any>> | React.ComponentType<any>>
 }

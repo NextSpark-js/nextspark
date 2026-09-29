@@ -1,8 +1,6 @@
-import { SkeletonDashboardHome } from '@nextsparkjs/core/components/ui/skeleton-dashboard'
-import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/(main)/loading'
+// Implementation: @nextsparkjs/core/routes/dashboard/(main)/loading (#203). The project's template override for this route is
+// still resolved here at runtime, until the generated host replaces this file.
+import DashboardLoading from "@nextsparkjs/core/routes/dashboard/(main)/loading"
+import { getTemplateOrDefault } from "@nextsparkjs/registries/template-scopes/server/dashboard/(main)/loading"
 
-function DashboardLoading() {
-  return <SkeletonDashboardHome />
-}
-
-export default getTemplateOrDefault('app/dashboard/(main)/loading.tsx', DashboardLoading)
+export default getTemplateOrDefault("app/dashboard/(main)/loading.tsx", DashboardLoading)

@@ -1,0 +1,12 @@
+{
+  // Declarations for the route modules under src/routes (#203). Their code reads the
+  // registries a project generates (@nextsparkjs/registries/*), which core only declares
+  // loosely, so they are type-checked where those exist - the host app (apps/dev tsc) -
+  // and here only emitted.
+  "extends": "./tsconfig.dts.json",
+  "compilerOptions": {
+    "noCheck": true
+  },
+  "include": ["src/routes/**/*.ts", "src/routes/**/*.tsx", "src/nextspark-registries.d.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
+}

@@ -1,25 +1,7 @@
-import type { Metadata } from 'next'
-import { Suspense } from 'react'
-import { AuthErrorPage } from '@nextsparkjs/core/components/auth/pages/AuthErrorPage'
-import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/registries/template-scopes/server/(auth)/auth-error/page'
+// Implementation: @nextsparkjs/core/routes/(auth)/auth-error/page (#203). The project's template override for this route is
+// still resolved here at runtime, until the generated host replaces this file.
+import AuthErrorPageWrapper, { metadata as defaultMetadata } from "@nextsparkjs/core/routes/(auth)/auth-error/page"
+import { getTemplateOrDefault, getMetadataOrDefault } from "@nextsparkjs/registries/template-scopes/server/(auth)/auth-error/page"
 
-const defaultMetadata: Metadata = {
-  title: 'Authentication Error',
-  description: 'There was a problem with authentication',
-}
-
-export const metadata: Metadata = getMetadataOrDefault(
-  'app/(auth)/auth-error/page.tsx',
-  defaultMetadata
-)
-
-function AuthErrorPageWrapper() {
-  return (
-    <Suspense>
-      <AuthErrorPage />
-    </Suspense>
-  )
-}
-
-
-export default getTemplateOrDefault('app/(auth)/auth-error/page.tsx', AuthErrorPageWrapper)
+export const metadata = getMetadataOrDefault("app/(auth)/auth-error/page.tsx", defaultMetadata)
+export default getTemplateOrDefault("app/(auth)/auth-error/page.tsx", AuthErrorPageWrapper)

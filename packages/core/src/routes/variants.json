@@ -1,0 +1,9 @@
+{
+  "cacheComponents": [
+    {
+      "kind": "layout",
+      "target": "layout.tsx",
+      "specifier": "@nextsparkjs/core/routes/layout.ppr"
+    }
+  ]
+}

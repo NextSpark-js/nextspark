@@ -1,17 +1,2 @@
-import { notFound } from 'next/navigation'
-import { PLUGIN_DEVTOOLS_PAGES } from '@/.nextspark/registries/plugin-registry'
-
-interface PluginPageProps {
-  params: Promise<{ plugin: string }>
-}
-
-export default async function PluginDevtoolsPage({ params }: PluginPageProps) {
-  const { plugin } = await params
-  const PageComponent = PLUGIN_DEVTOOLS_PAGES[plugin]
-
-  if (!PageComponent) {
-    notFound()
-  }
-
-  return <PageComponent />
-}
+// Implementation: @nextsparkjs/core/routes/devtools/plugins/[plugin]/page (#203). The generated host emits this same facade.
+export { default } from "@nextsparkjs/core/routes/devtools/plugins/[plugin]/page"

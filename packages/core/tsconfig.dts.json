@@ -29,6 +29,9 @@
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",
-    "**/*.spec.tsx"
+    "**/*.spec.tsx",
+    // Route modules (#203) import the project's generated registries, whose types only the
+    // host has; tsconfig.dts.routes.json emits their declarations without checking them here.
+    "src/routes/**"
   ]
 }

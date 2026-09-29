@@ -1,0 +1,812 @@
+[
+  {
+    "kind": "page",
+    "target": "(auth)/accept-invite/[token]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(auth)/accept-invite/[token]/page"
+  },
+  {
+    "kind": "page",
+    "target": "(auth)/auth-error/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(auth)/auth-error/page"
+  },
+  {
+    "kind": "page",
+    "target": "(auth)/forgot-password/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(auth)/forgot-password/page"
+  },
+  {
+    "kind": "layout",
+    "target": "(auth)/layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/(auth)/layout"
+  },
+  {
+    "kind": "page",
+    "target": "(auth)/login/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(auth)/login/page"
+  },
+  {
+    "kind": "page",
+    "target": "(auth)/reset-password/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(auth)/reset-password/page"
+  },
+  {
+    "kind": "page",
+    "target": "(auth)/signup/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(auth)/signup/page"
+  },
+  {
+    "kind": "page",
+    "target": "(auth)/verify-email/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(auth)/verify-email/page"
+  },
+  {
+    "kind": "page",
+    "target": "(public)/[...slug]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(public)/[...slug]/page"
+  },
+  {
+    "kind": "page",
+    "target": "(public)/docs/[section]/[page]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(public)/docs/[section]/[page]/page"
+  },
+  {
+    "kind": "layout",
+    "target": "(public)/docs/layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/(public)/docs/layout"
+  },
+  {
+    "kind": "page",
+    "target": "(public)/docs/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(public)/docs/page"
+  },
+  {
+    "kind": "layout",
+    "target": "(public)/layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/(public)/layout"
+  },
+  {
+    "kind": "page",
+    "target": "(public)/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(public)/page"
+  },
+  {
+    "kind": "page",
+    "target": "403/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/403/page"
+  },
+  {
+    "kind": "route",
+    "target": "api/auth/[...all]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/auth/[...all]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/cron/billing/lifecycle/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/cron/billing/lifecycle/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/csp-report/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/csp-report/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/devtools/config/entities/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/devtools/config/entities/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/devtools/config/theme/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/devtools/config/theme/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/devtools/tests/[...path]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/devtools/tests/[...path]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/devtools/tests/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/devtools/tests/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/health/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/health/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/internal/user-metadata/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/internal/user-metadata/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/mcp/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/mcp/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/superadmin/subscriptions/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/superadmin/subscriptions/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/superadmin/teams/[teamId]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/superadmin/teams/[teamId]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/superadmin/teams/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/superadmin/teams/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/superadmin/users/[userId]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/superadmin/users/[userId]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/superadmin/users/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/superadmin/users/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/user/delete-account/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/user/delete-account/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/user/plan-flags/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/user/plan-flags/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/user/profile/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/user/profile/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/[entity]/[id]/child/[childType]/[childId]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/[entity]/[id]/child/[childType]/[childId]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/[entity]/[id]/child/[childType]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/[entity]/[id]/child/[childType]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/[entity]/[id]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/[entity]/[id]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/[entity]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/[entity]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/api-keys/[id]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/api-keys/[id]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/api-keys/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/api-keys/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/auth/signup-with-invite/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/auth/signup-with-invite/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/billing/cancel/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/billing/cancel/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/billing/change-plan/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/billing/change-plan/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/billing/check-action/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/billing/check-action/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/billing/checkout/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/billing/checkout/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/billing/plans/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/billing/plans/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/billing/portal/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/billing/portal/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/billing/webhooks/polar/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/billing/webhooks/polar/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/billing/webhooks/stripe/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/billing/webhooks/stripe/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/blocks/[slug]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/blocks/[slug]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/blocks/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/blocks/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/blocks/validate/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/blocks/validate/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/cron/process/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/cron/process/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/devtools/blocks/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/devtools/blocks/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/devtools/docs/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/devtools/docs/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/devtools/features/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/devtools/features/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/devtools/flows/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/devtools/flows/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/devtools/scheduled-actions/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/devtools/scheduled-actions/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/devtools/scheduled-actions/run/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/devtools/scheduled-actions/run/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/devtools/testing/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/devtools/testing/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/media-tags/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/media-tags/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/media/[id]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/media/[id]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/media/[id]/tags/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/media/[id]/tags/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/media/check-duplicates/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/media/check-duplicates/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/media/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/media/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/media/upload/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/media/upload/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/patterns/[id]/usages/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/patterns/[id]/usages/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/plugin/[...path]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/plugin/[...path]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/plugin/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/plugin/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/post-categories/[id]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/post-categories/[id]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/post-categories/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/post-categories/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/team-invitations/[token]/accept/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/team-invitations/[token]/accept/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/team-invitations/[token]/decline/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/team-invitations/[token]/decline/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/team-invitations/[token]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/team-invitations/[token]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/team-invitations/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/team-invitations/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/teams/[teamId]/invitations/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/invitations/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/teams/[teamId]/invoices/[invoiceNumber]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/invoices/[invoiceNumber]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/teams/[teamId]/invoices/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/invoices/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/teams/[teamId]/members/[memberId]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/members/[memberId]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/teams/[teamId]/members/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/members/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/teams/[teamId]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/teams/[teamId]/subscription/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/subscription/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/teams/[teamId]/usage/[limitSlug]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/usage/[limitSlug]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/teams/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/teams/switch/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/switch/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/theme/[...path]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/theme/[...path]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/theme/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/theme/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/users/[id]/meta/[key]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/users/[id]/meta/[key]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/users/[id]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/users/[id]/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/users/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/users/route"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/(main)/[entity]/[id]/edit/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/[id]/edit/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/(main)/[entity]/[id]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/[id]/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/(main)/[entity]/create/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/create/page"
+  },
+  {
+    "kind": "error",
+    "target": "dashboard/(main)/[entity]/error.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/error"
+  },
+  {
+    "kind": "layout",
+    "target": "dashboard/(main)/[entity]/layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/layout"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/(main)/[entity]/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/(main)/[entity]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/page"
+  },
+  {
+    "kind": "layout",
+    "target": "dashboard/(main)/layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/layout"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/(main)/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/(main)/media/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/media/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/(main)/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/(main)/patterns/[id]/edit/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/patterns/[id]/edit/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/(main)/patterns/[id]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/patterns/[id]/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/(main)/patterns/[id]/reports/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/patterns/[id]/reports/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/(main)/patterns/create/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/patterns/create/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/(main)/patterns/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/patterns/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/features/analytics/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/features/analytics/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/features/automation/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/features/automation/page"
+  },
+  {
+    "kind": "layout",
+    "target": "dashboard/features/layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/features/layout"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/features/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/features/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/features/webhooks/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/features/webhooks/page"
+  },
+  {
+    "kind": "layout",
+    "target": "dashboard/layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/layout"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/permission-denied/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/permission-denied/page"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/settings/api-keys/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/api-keys/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/api-keys/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/api-keys/page"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/settings/billing/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/billing/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/billing/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/billing/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/invoices/[invoiceNumber]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/invoices/[invoiceNumber]/page"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/settings/invoices/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/invoices/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/invoices/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/invoices/page"
+  },
+  {
+    "kind": "layout",
+    "target": "dashboard/settings/layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/layout"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/settings/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/loading"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/settings/notifications/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/notifications/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/notifications/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/notifications/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/page"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/settings/password/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/password/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/password/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/password/page"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/settings/plans/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/plans/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/plans/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/plans/page"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/settings/profile/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/profile/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/profile/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/profile/page"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/settings/security/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/security/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/security/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/security/page"
+  },
+  {
+    "kind": "loading",
+    "target": "dashboard/settings/teams/loading.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/teams/loading"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/teams/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/teams/page"
+  },
+  {
+    "kind": "page",
+    "target": "dashboard/settings/teams/permissions/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/dashboard/settings/teams/permissions/page"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/api/[[...endpoint]]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/api/[[...endpoint]]/page"
+  },
+  {
+    "kind": "layout",
+    "target": "devtools/api/layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/api/layout"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/blocks/[slug]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/blocks/[slug]/page"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/blocks/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/blocks/page"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/config/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/config/page"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/features/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/features/page"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/flows/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/flows/page"
+  },
+  {
+    "kind": "layout",
+    "target": "devtools/layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/layout"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/page"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/plugins/[plugin]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/plugins/[plugin]/page"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/scheduled-actions/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/scheduled-actions/page"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/style/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/style/page"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/tags/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/tags/page"
+  },
+  {
+    "kind": "page",
+    "target": "devtools/tests/[[...path]]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/tests/[[...path]]/page"
+  },
+  {
+    "kind": "layout",
+    "target": "layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/layout"
+  },
+  {
+    "kind": "page",
+    "target": "public/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/public/page"
+  },
+  {
+    "kind": "page",
+    "target": "superadmin/docs/[section]/[page]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/docs/[section]/[page]/page"
+  },
+  {
+    "kind": "page",
+    "target": "superadmin/docs/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/docs/page"
+  },
+  {
+    "kind": "layout",
+    "target": "superadmin/layout.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/layout"
+  },
+  {
+    "kind": "page",
+    "target": "superadmin/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/page"
+  },
+  {
+    "kind": "page",
+    "target": "superadmin/plugins/[plugin]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/plugins/[plugin]/page"
+  },
+  {
+    "kind": "page",
+    "target": "superadmin/subscriptions/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/subscriptions/page"
+  },
+  {
+    "kind": "page",
+    "target": "superadmin/team-roles/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/team-roles/page"
+  },
+  {
+    "kind": "page",
+    "target": "superadmin/teams/[teamId]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/teams/[teamId]/page"
+  },
+  {
+    "kind": "page",
+    "target": "superadmin/teams/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/teams/page"
+  },
+  {
+    "kind": "page",
+    "target": "superadmin/users/[userId]/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/users/[userId]/page"
+  },
+  {
+    "kind": "page",
+    "target": "superadmin/users/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/users/page"
+  }
+]

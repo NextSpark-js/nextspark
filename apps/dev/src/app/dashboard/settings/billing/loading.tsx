@@ -1,8 +1,6 @@
-import { SkeletonBillingPage } from '@nextsparkjs/core/components/ui/skeleton-settings'
-import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/settings/billing/loading'
+// Implementation: @nextsparkjs/core/routes/dashboard/settings/billing/loading (#203). The project's template override for this route is
+// still resolved here at runtime, until the generated host replaces this file.
+import BillingLoading from "@nextsparkjs/core/routes/dashboard/settings/billing/loading"
+import { getTemplateOrDefault } from "@nextsparkjs/registries/template-scopes/server/dashboard/settings/billing/loading"
 
-function BillingLoading() {
-  return <SkeletonBillingPage />
-}
-
-export default getTemplateOrDefault('app/dashboard/settings/billing/loading.tsx', BillingLoading)
+export default getTemplateOrDefault("app/dashboard/settings/billing/loading.tsx", BillingLoading)
