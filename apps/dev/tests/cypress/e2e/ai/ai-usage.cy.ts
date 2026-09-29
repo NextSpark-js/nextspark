@@ -149,7 +149,7 @@ describe('AI Usage Dashboard', {
   describe('AI_USAGE_05: Loading state visible', () => {
     it('should show loading state before data loads', () => {
       // Intercept API call to delay response
-      cy.intercept('GET', '/api/v1/theme/default/ai/usage*', (req) => {
+      cy.intercept('GET', '/api/ai/usage*', (req) => {
         req.reply((res) => {
           // Delay response to ensure loading state is visible
           res.delay = 1000

@@ -271,3 +271,78 @@ test("readCacheComponents reads only a literal next.config setting", async () =>
     }
   }
 })
+
+// ---------------------------------------------------------------------------
+// Stage 4: composed layouts in the core manifest
+// ---------------------------------------------------------------------------
+
+test('a manifest layout may declare the wrapper its overrides are composed with; anything else about compose is a problem', async () => {
+  const { root, cleanup } = project({ 'src/routes/layout.tsx': 'export default function L() {}\n', 'src/routes/_internal/root-layout.tsx': 'export function withRootLayout() {}\n', 'src/routes/page.tsx': PAGE })
+  try {
+    const compose = { wrapper: 'withRootLayout', specifier: '@nextsparkjs/core/routes/_internal/root-layout' }
+    const manifest = await loadCoreRouteManifest({
+      coreRoot: root,
+      entries: [{ kind: 'layout', target: 'layout.tsx', specifier: '@nextsparkjs/core/routes/layout', compose }],
+      isProtected: () => false,
+    })
+    assert.deepEqual(manifest.routes[0].compose, { ...compose, file: join(root, 'src/routes/_internal/root-layout.tsx') })
+
+    const bad = entries => assert.rejects(loadCoreRouteManifest({ coreRoot: root, entries, isProtected: () => false }), CoreRouteManifestError)
+    const layout = extra => ({ kind: 'layout', target: 'layout.tsx', specifier: '@nextsparkjs/core/routes/layout', ...extra })
+    await bad([{ kind: 'page', target: 'page.tsx', specifier: '@nextsparkjs/core/routes/page', compose }])
+    await bad([layout({ compose: 'withRootLayout' })])
+    await bad([layout({ compose: { ...compose, wrapper: 'with Root' } })])
+    await bad([layout({ compose: { ...compose, specifier: '../_internal/root-layout' } })])
+    await bad([layout({ compose: { ...compose, specifier: './root-layout' } })])
+    await bad([layout({ compose: { ...compose, specifier: '@x/pkg/../../etc' } })])
+    await bad([layout({ compose: { ...compose, specifier: '@x/pkg/a b' } })])
+    await bad([layout({ compose: { ...compose, extra: 1 } })])
+    await assert.rejects(
+      loadCoreRouteManifest({ coreRoot: root, entries: [layout({ compose: { ...compose, specifier: '@nextsparkjs/core/routes/_internal/nowhere' } })], isProtected: () => false }),
+      /no module found for @nextsparkjs\/core\/routes\/_internal\/nowhere/
+    )
+  } finally {
+    cleanup()
+  }
+})
+
+test('core\'s routes carry their protection level, so a composed layout can be told from a replaceable one', async () => {
+  const coreRoot = join(import.meta.dirname, '../../../../..')
+  const isProtected = await loadProtectedTargets(coreRoot)
+  assert.equal(isProtected.level('layout.tsx'), 'protected_render')
+  assert.equal(isProtected.level('dashboard/layout.tsx'), 'protected_all')
+  assert.equal(isProtected.level('about/page.tsx'), null)
+  const manifest = await loadCoreRouteManifest({ coreRoot })
+  const level = target => manifest.routes.find(route => route.target === target)
+  assert.equal(level('layout.tsx').protectionLevel, 'protected_render')
+  assert.equal(level('dashboard/layout.tsx').protectionLevel, 'protected_all')
+  assert.equal(level('(auth)/login/page.tsx').protected, false)
+  assert.equal('protectionLevel' in level('(auth)/login/page.tsx'), false)
+  // The five wrapped layouts declare their wrapper, and every wrapper module resolves
+  assert.deepEqual(manifest.routes.filter(route => route.compose).map(route => [route.target, route.compose.wrapper]), [
+    ['(auth)/layout.tsx', 'withAuthMessages'],
+    ['(public)/layout.tsx', 'withPublicMessages'],
+    ['devtools/layout.tsx', 'withDevtoolsGuard'],
+    ['layout.tsx', 'withRootLayout'],
+    ['superadmin/layout.tsx', 'withSuperadminGuard'],
+  ])
+  const withCc = await loadCoreRouteManifest({ coreRoot, cacheComponents: true })
+  assert.equal(withCc.routes.find(route => route.target === 'layout.tsx').compose.specifier, '@nextsparkjs/core/routes/_internal/root-layout.ppr')
+  assert.equal(withCc.routes.find(route => route.target === '(auth)/login/page.tsx').specifier, '@nextsparkjs/core/routes/(auth)/login/page.cc')
+  assert.deepEqual(withCc.variantsApplied.sort(), ['(auth)/login/page.tsx', '(auth)/signup/page.tsx', '(public)/docs/[section]/[page]/page.tsx', 'layout.tsx', 'superadmin/docs/[section]/[page]/page.tsx'])
+})
+
+test('planHost without a project (or a project without a root) plans core and the plugins only, without throwing', () => {
+  const routes = [core('layout.tsx', 'layout'), core('about/page.tsx')]
+  const only = ({ routes: planned, diagnostics }) => [planned.map(route => route.target), diagnostics]
+  assert.deepEqual(only(planHost({ coreRoutes: routes })), [['about/page.tsx', 'layout.tsx'], []])
+  assert.deepEqual(only(planHost({ coreRoutes: routes, project: undefined })), [['about/page.tsx', 'layout.tsx'], []])
+  assert.deepEqual(only(planHost({ coreRoutes: routes, project: {} })), [['about/page.tsx', 'layout.tsx'], []])
+  const { root, cleanup } = project({ 'plugins/blog/api/posts/route.ts': ROUTE })
+  try {
+    const planned = planHost({ coreRoutes: routes, plugins: [{ name: 'blog', root: join(root, 'plugins/blog'), importBase: '@/plugins/blog' }] })
+    assert.deepEqual(planned.routes.map(route => route.target), ['about/page.tsx', 'api/plugins/blog/posts/route.ts', 'layout.tsx'])
+  } finally {
+    cleanup()
+  }
+})

@@ -109,4 +109,36 @@ describe('nextspark.config.ts source contract', () => {
     expect(result.valid).toBe(false)
     expect(result.errors).toContain('theme is not a supported nextspark.config.ts field.')
   })
+
+  it('accepts billing webhook extension modules, one path per provider', () => {
+    const result = validateNextSparkConfig({
+      billing: { webhookExtensions: { stripe: './lib/billing/stripe-webhook-extensions', polar: './lib/billing/polar-webhook-extensions' } },
+    })
+
+    expect(result.valid).toBe(true)
+    if (!result.valid) return
+    expect(result.config.billing).toEqual({
+      webhookExtensions: { stripe: './lib/billing/stripe-webhook-extensions', polar: './lib/billing/polar-webhook-extensions' },
+    })
+    expect(validateNextSparkConfig({ billing: {} }).valid).toBe(true)
+    expect(validateNextSparkConfig({ billing: { webhookExtensions: {} } }).valid).toBe(true)
+  })
+
+  it('rejects malformed billing settings, naming each', () => {
+    const result = validateNextSparkConfig({
+      billing: { webhookExtensions: { stripe: '', paypal: './x' }, other: true },
+    })
+
+    expect(result.valid).toBe(false)
+    expect(result.errors).toEqual(expect.arrayContaining([
+      'billing.other is not supported.',
+      'billing.webhookExtensions.paypal is not supported.',
+      'billing.webhookExtensions.stripe must be a non-empty string; received string.',
+    ]))
+    expect(validateNextSparkConfig({ billing: 'stripe' })).toEqual({ valid: false, errors: ['billing must be an object; received string.'] })
+    expect(validateNextSparkConfig({ billing: { webhookExtensions: ['./x'] } })).toEqual({
+      valid: false,
+      errors: ['billing.webhookExtensions must be an object; received array.'],
+    })
+  })
 })

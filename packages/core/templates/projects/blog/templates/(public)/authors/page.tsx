@@ -32,7 +32,7 @@ export default function AuthorsPage() {
         setLoading(true)
         setError(null)
 
-        const response = await fetch(withBasePath('/api/v1/theme/blog/authors'), {
+        const response = await fetch(withBasePath('/api/authors'), {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

@@ -2,7 +2,7 @@
  * OAuth Callback Handler for Social Media Publishing
  *
  * GET endpoint that receives the OAuth redirect from Facebook
- * Accessible via: /api/v1/plugin/social-media-publisher/social/connect/callback
+ * Accessible via: /api/plugins/social-media-publisher/social/connect/callback
  *
  * Query params:
  * - code: Authorization code from Facebook

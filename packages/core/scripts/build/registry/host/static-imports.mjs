@@ -15,11 +15,25 @@
  *   - `export const name = <literal>` where the literal is exactly what `evaluateNextLiteral`
  *     (Next's extract-const-value) accepts
  *
- * Grammar `dev-facade` (the root layout of a `nextspark dev` generation, render.mjs): the `facade`
- * grammar plus exactly one `export default withGenerationStatus(Source)`, where
- * `withGenerationStatus` is imported from './_nextspark/generation-status' and `Source` is a
- * default import - a fixed composition of two fixed modules, never emitted by a production
- * preparation.
+ * The `facade` grammar also allows a fixed stylesheet import, `import '<string>.css'`: the root layout
+ * imports the project's global stylesheet. It selects no module by a runtime value: the specifier is a
+ * string literal, and only a `.css` one is accepted.
+ *
+ * Grammar `composed-facade` (a route whose default export or Route Handler methods are a fixed
+ * composition, render.mjs / entity-routes.mjs): the `facade` grammar plus
+ *   - at most one `export default <composition>`, and
+ *   - any number of `export const NAME = <composition>`,
+ * where a composition is `wrapper(arg, ...)`: the callee is a name imported in the same file, each argument
+ * is an imported name, a string literal, an array of string literals, or a nested composition. No other
+ * call, member access, spread or expression is accepted, so a composition can only apply fixed, statically
+ * imported modules to each other: `export default withPublicMessages(Template)`,
+ * `export default createEntityListPage(taskEntityConfig, Template)`,
+ * `export const POST = createStripeWebhookRoute(stripeWebhookExtensions)`.
+ *
+ * Grammar `dev-facade` (the root layout of a `nextspark dev` generation, render.mjs): the
+ * `composed-facade` grammar, except that the only composition is exactly one `export default` whose
+ * outermost callee is `withGenerationStatus`, imported from './_nextspark/generation-status' - a fixed
+ * composition of fixed modules, never emitted by a production preparation.
  *
  * Grammar `registry` (`.nextspark/registries`):
  *   - the same imports
@@ -35,7 +49,7 @@
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 import { evaluateNextLiteral } from './next-literal.mjs'
 
-export const GRAMMARS = ['facade', 'dev-facade', 'registry']
+export const GRAMMARS = ['facade', 'composed-facade', 'dev-facade', 'registry']
 
 /** The module the `dev-facade` grammar's composition imports its wrapper from. */
 export const DEV_STATUS_SPECIFIER = './_nextspark/generation-status'
@@ -43,6 +57,34 @@ export const DEV_STATUS_SPECIFIER = './_nextspark/generation-status'
 export const DEV_STATUS_WRAPPER = 'withGenerationStatus'
 
 const ALLOWED_DIRECTIVES = new Set(['use client'])
+
+const INTERNAL = '@nextsparkjs/core/routes/_internal/'
+
+/**
+ * The composition wrappers of core the generator writes calls of, by the exact module specifier that exports them.
+ * `withSuperadminMessages` / `withDevtoolsMessages` are deliberately absent: a protected group's override is composed only
+ * with the guard wrappers, which put core's role check around the project's layout.
+ */
+export const CORE_COMPOSITION_WRAPPERS = Object.freeze({
+  [`${INTERNAL}root-layout`]: ['withRootLayout'],
+  [`${INTERNAL}root-layout.ppr`]: ['withRootLayout'],
+  [`${INTERNAL}auth-layout`]: ['withAuthMessages'],
+  [`${INTERNAL}public-layout`]: ['withPublicMessages'],
+  [`${INTERNAL}superadmin-layout`]: ['withSuperadminGuard'],
+  [`${INTERNAL}devtools-layout`]: ['withDevtoolsGuard'],
+  [`${INTERNAL}entity-layout-route`]: ['createEntityLayoutRoute'],
+  [`${INTERNAL}entity-list-route`]: ['createEntityListRoute'],
+  [`${INTERNAL}entity-detail-route`]: ['createEntityDetailRoute'],
+  [`${INTERNAL}entity-create-route`]: ['createEntityCreateRoute'],
+  [`${INTERNAL}entity-edit-route`]: ['createEntityEditRoute'],
+  [`${INTERNAL}public-item-route`]: ['createPublicItemRoute', 'createPublicItemMetadata'],
+  [`${INTERNAL}public-archive-route`]: ['createPublicArchiveRoute', 'createPublicArchiveMetadata'],
+  [`${INTERNAL}billing-webhooks`]: ['createStripeWebhookRoute', 'createPolarWebhookRoute'],
+  [DEV_STATUS_SPECIFIER]: [DEV_STATUS_WRAPPER],
+})
+
+/** The callees that take the array of child entity names as their second argument. */
+const CHILD_NAMES_CALLEES = new Set(['createEntityDetailRoute'])
 
 function hasModifier(node, kind) {
   return Boolean(node.modifiers?.some(modifier => modifier.kind === kind))
@@ -52,9 +94,10 @@ function hasModifier(node, kind) {
  * Violations of `grammar` in a parsed generated module.
  * @returns {{ kind: string, line: number, text: string }[]}
  */
-export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
+export function validateGeneratedSourceFile(sourceFile, ts, grammar, wrappers = CORE_COMPOSITION_WRAPPERS) {
   if (!GRAMMARS.includes(grammar)) throw new Error(`Unknown generated-module grammar "${grammar}"`)
-  const facade = grammar === 'facade' || grammar === 'dev-facade'
+  const facade = grammar !== 'registry'
+  const composing = grammar === 'composed-facade' || grammar === 'dev-facade'
   const K = ts.SyntaxKind
   const violations = []
   const report = (kind, node, detail) =>
@@ -67,6 +110,8 @@ export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
   // Pass 1: imports (they may appear anywhere at top level; their names are what exports and
   // registry leaves may reference).
   const imported = new Set()
+  // local name -> where a named import comes from (a composition callee must be an allowlisted wrapper)
+  const importedFrom = new Map()
   const defaultImports = new Set()
   const devWrappers = new Set()
   let composed = 0
@@ -74,7 +119,8 @@ export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
     if (!ts.isImportDeclaration(statement)) continue
     const clause = statement.importClause
     if (!clause) {
-      report('side-effect-import', statement)
+      // Only a fixed stylesheet: `import '@/styles/globals.css'`.
+      if (!(facade && ts.isStringLiteral(statement.moduleSpecifier) && /\.css$/.test(statement.moduleSpecifier.text))) report('side-effect-import', statement)
       continue
     }
     if (clause.namedBindings && !ts.isNamedImports(clause.namedBindings)) {
@@ -92,7 +138,9 @@ export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
       }
     }
     for (const element of clause.namedBindings?.elements ?? []) {
-      if (!element.isTypeOnly) imported.add(element.name.text)
+      if (element.isTypeOnly) continue
+      imported.add(element.name.text)
+      importedFrom.set(element.name.text, { specifier: statement.moduleSpecifier.text, name: (element.propertyName ?? element.name).text })
     }
   }
 
@@ -106,20 +154,23 @@ export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
 
     if (ts.isImportDeclaration(statement)) continue
 
-    // dev-facade: `export default withGenerationStatus(Source)`, once.
-    if (grammar === 'dev-facade' && ts.isExportAssignment(statement) && !statement.isExportEquals) {
-      const call = statement.expression
-      const ok =
-        ts.isCallExpression(call) &&
-        !call.typeArguments &&
-        ts.isIdentifier(call.expression) &&
-        devWrappers.has(call.expression.text) &&
-        call.arguments.length === 1 &&
-        ts.isIdentifier(call.arguments[0]) &&
-        defaultImports.has(call.arguments[0].text) &&
-        composed === 0
+    // composed-facade: `export default wrapper(...)`, once; dev-facade: once, outermost `withGenerationStatus`.
+    if (ts.isExportAssignment(statement) && !statement.isExportEquals && composing) {
       composed += 1
-      if (!ok) report('composition', statement, `only \`export default ${DEV_STATUS_WRAPPER}(<default import>)\` once`)
+      const problem = compositionProblem(statement.expression, ts, imported, importedFrom, wrappers)
+      if (composed > 1) report('composition', statement, 'only one composed `export default`')
+      else if (problem) report('composition', statement, problem)
+      else if (grammar === 'dev-facade') {
+        // `withGenerationStatus(<default import | composition>)`, nothing else.
+        const call = statement.expression
+        const [argument] = call.arguments
+        const ok =
+          ts.isIdentifier(call.expression) &&
+          devWrappers.has(call.expression.text) &&
+          call.arguments.length === 1 &&
+          (ts.isCallExpression(argument) || (ts.isIdentifier(argument) && defaultImports.has(argument.text)))
+        if (!ok) report('composition', statement, `only \`export default ${DEV_STATUS_WRAPPER}(<default import or composition>)\``)
+      }
       continue
     }
 
@@ -153,7 +204,12 @@ export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
         }
         if (facade) {
           const literal = evaluateNextLiteral(declaration.initializer, ts)
-          if ('unsupported' in literal) report('non-literal', declaration.initializer, literal.unsupported)
+          if ('unsupported' in literal) {
+            // `export const POST = wrapper(...)`: a composition instead of a literal (composed-facade only).
+            const problem = grammar === 'composed-facade' && ts.isCallExpression(declaration.initializer) ? compositionProblem(declaration.initializer, ts, imported, importedFrom, wrappers) : null
+            if (grammar !== 'composed-facade' || !ts.isCallExpression(declaration.initializer)) report('non-literal', declaration.initializer, literal.unsupported)
+            else if (problem) report('composition', declaration.initializer, problem)
+          }
         } else {
           validateRegistryValue(declaration.initializer, ts, imported, report, true)
         }
@@ -164,6 +220,35 @@ export function validateGeneratedSourceFile(sourceFile, ts, grammar) {
     report('statement', statement, `${K[statement.kind]} is not allowed in a generated ${grammar}`)
   }
   return violations
+}
+
+
+/**
+ * Why `node` is not a composition (`wrapper(arg, ...)` where `wrapper` is an allowlisted core wrapper imported from the exact
+ * specifier that exports it, and each argument an imported name or a nested composition), or null when it is one.
+ */
+function compositionProblem(node, ts, imported, importedFrom, wrappers) {
+  if (!ts.isCallExpression(node)) return 'expected a call of a core composition wrapper'
+  if (node.typeArguments || node.questionDotToken) return 'no type arguments or optional calls'
+  if (!ts.isIdentifier(node.expression) || !imported.has(node.expression.text)) return 'the callee must be a name imported in this file'
+  const origin = importedFrom.get(node.expression.text)
+  if (!origin || !wrappers[origin.specifier]?.includes(origin.name)) {
+    return `"${node.expression.text}" is not a core composition wrapper (allowed: the wrappers of CORE_COMPOSITION_WRAPPERS, imported from the module that exports them)`
+  }
+  const callee = origin.name
+  for (const [index, argument] of node.arguments.entries()) {
+    if (ts.isIdentifier(argument)) {
+      if (!imported.has(argument.text)) return `"${argument.text}" is not an imported name`
+    } else if (ts.isArrayLiteralExpression(argument) && index === 1 && CHILD_NAMES_CALLEES.has(callee)) {
+      if (!argument.elements.every(element => ts.isStringLiteral(element))) return 'the child entity names are string literals'
+    } else if (ts.isCallExpression(argument)) {
+      const nested = compositionProblem(argument, ts, imported, importedFrom, wrappers)
+      if (nested) return nested
+    } else {
+      return 'arguments are imported names or nested compositions (only createEntityDetailRoute takes a second argument that is an array of child entity names)'
+    }
+  }
+  return null
 }
 
 /** A registry value: object/array literals whose leaves are literals or imported identifiers. */
@@ -207,17 +292,17 @@ function validateRegistryValue(node, ts, imported, report, root = false) {
  * Parse `source` (TS/TSX/JS by its file name) and validate it against `grammar`. A file that
  * does not parse is itself a violation.
  */
-export function validateGeneratedModule({ ts, source, file, grammar }) {
+export function validateGeneratedModule({ ts, source, file, grammar, wrappers }) {
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.getScriptKindFromFileName(file))
   const [parseError] = sourceFile.parseDiagnostics ?? []
   if (parseError) {
     const { line } = sourceFile.getLineAndCharacterOfPosition(parseError.start ?? 0)
     return [{ kind: 'parse-error', line: line + 1, text: ts.flattenDiagnosticMessageText(parseError.messageText, ' ') }]
   }
-  return validateGeneratedSourceFile(sourceFile, ts, grammar)
+  return validateGeneratedSourceFile(sourceFile, ts, grammar, wrappers)
 }
 
 /** `validateGeneratedModule` with the registry build's TypeScript compiler. */
-export async function checkGeneratedModule({ source, file, grammar, projectRoot = process.cwd() }) {
-  return validateGeneratedModule({ ts: await loadTypeScriptFor(projectRoot), source, file, grammar })
+export async function checkGeneratedModule({ source, file, grammar, projectRoot = process.cwd(), wrappers }) {
+  return validateGeneratedModule({ ts: await loadTypeScriptFor(projectRoot), source, file, grammar, wrappers })
 }

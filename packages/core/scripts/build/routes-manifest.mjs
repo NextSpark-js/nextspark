@@ -12,7 +12,13 @@
  *   implements it. Sorted by target.
  * - `src/routes/variants.json`: routes that replace a manifest entry when the host
  *   enables a Next.js mode. Today only `cacheComponents`: the root layout
- *   `layout.ppr.tsx`.
+ *   `layout.ppr.tsx` and the `page.cc.tsx` files of the routes whose segment config Next.js
+ *   rejects under Cache Components (login, signup, both docs pages).
+ * - A layout that wraps whatever layout the host resolves (the root layout and the four group
+ *   layouts) carries `compose: { wrapper, specifier }` (`COMPOSED_ROUTES`): a project override
+ *   of it is composed with that wrapper by the generated host instead of replacing it.
+ * - A module that stays in the package for apps that still resolve routes at runtime but that
+ *   the generated host must not emit is listed in `RETIRED_FROM_MANIFEST` with the reason.
  *
  * A file is a route when its name is `<kind stem>.{tsx,ts}` (`page.tsx`,
  * `route.ts`, `icon2.tsx`, ...). Directories starting with `_` hold route
@@ -49,8 +55,52 @@ const ROUTE_EXTENSIONS = ['tsx', 'ts']
  * The variant must exist and the target must be a manifest entry.
  */
 export const VARIANT_FILES = Object.freeze({
-  cacheComponents: Object.freeze({ 'layout.ppr.tsx': 'layout.tsx' }),
+  cacheComponents: Object.freeze({
+    'layout.ppr.tsx': 'layout.tsx',
+    '(auth)/login/page.cc.tsx': '(auth)/login/page.tsx',
+    '(auth)/signup/page.cc.tsx': '(auth)/signup/page.tsx',
+    '(public)/docs/[section]/[page]/page.cc.tsx': '(public)/docs/[section]/[page]/page.tsx',
+    'superadmin/docs/[section]/[page]/page.cc.tsx': 'superadmin/docs/[section]/[page]/page.tsx',
+  }),
 })
+
+/**
+ * Layouts that a project override is composed with (target -> wrapper): the generated host writes
+ * `export default wrapper(Template)` for a project layout at that target, so the override renders
+ * inside what core's layout provides (providers, message scopes) instead of replacing it.
+ */
+export const COMPOSED_ROUTES = Object.freeze({
+  'layout.tsx': { wrapper: 'withRootLayout', specifier: `${ROUTES_SUBPATH}/_internal/root-layout` },
+  '(auth)/layout.tsx': { wrapper: 'withAuthMessages', specifier: `${ROUTES_SUBPATH}/_internal/auth-layout` },
+  '(public)/layout.tsx': { wrapper: 'withPublicMessages', specifier: `${ROUTES_SUBPATH}/_internal/public-layout` },
+  'superadmin/layout.tsx': { wrapper: 'withSuperadminGuard', specifier: `${ROUTES_SUBPATH}/_internal/superadmin-layout` },
+  'devtools/layout.tsx': { wrapper: 'withDevtoolsGuard', specifier: `${ROUTES_SUBPATH}/_internal/devtools-layout` },
+})
+
+/** The composition of a variant, when it differs from its base route's. */
+export const VARIANT_COMPOSE = Object.freeze({
+  'layout.ppr.tsx': { wrapper: 'withRootLayout', specifier: `${ROUTES_SUBPATH}/_internal/root-layout.ppr` },
+})
+
+/**
+ * Route modules the generated host does not emit. They stay in the package because apps whose
+ * src/app still resolves routes at runtime import them; each entry is a directory prefix (ending in
+ * `/`) or a file, with the reason.
+ */
+export const RETIRED_FROM_MANIFEST = Object.freeze([
+  { path: 'dashboard/(main)/[entity]/', reason: 'the generated host writes one concrete route per entity (host/entity-routes.mjs)' },
+  { path: '(public)/[...slug]/', reason: 'the generated host writes one concrete public route per entity (host/entity-routes.mjs)' },
+  { path: 'api/v1/theme/', reason: 'runtime dispatcher: the project api/ is served at /api/<path>' },
+  { path: 'api/v1/plugin/', reason: 'runtime dispatcher: plugins are served at /api/plugins/<plugin>/**' },
+])
+
+/**
+ * Files that live next to a route without being one: the API explorer's presets, read as text by the
+ * registry build (registry/discovery/api-presets.mjs), and its docs.md.
+ */
+const ROUTE_DATA_FILES = Object.freeze(['presets.ts'])
+
+const isRetired = file => RETIRED_FROM_MANIFEST.some(({ path }) => (path.endsWith('/') ? file.startsWith(path) : file === path))
 
 function listFiles(dir, base = dir) {
   const files = []
@@ -96,7 +146,9 @@ export function buildRoutesManifest(routesDir = ROUTES_DIR) {
       throw new Error(`Two route files for one route: ${seenTargets.get(routeKey)} and ${file}; keep one extension`)
     }
     seenTargets.set(routeKey, file)
-    manifest.push({ kind, target: file, specifier: specifierForRouteFile(file) })
+    if (isRetired(file)) continue
+    const compose = COMPOSED_ROUTES[file]
+    manifest.push({ kind, target: file, specifier: specifierForRouteFile(file), ...(compose ? { compose } : {}) })
   }
   manifest.sort((a, b) => (a.target < b.target ? -1 : a.target > b.target ? 1 : 0))
 
@@ -106,7 +158,8 @@ export function buildRoutesManifest(routesDir = ROUTES_DIR) {
       if (!files.includes(file)) throw new Error(`Variant ${file} (${mode}) is missing from ${routesDir}`)
       const replaced = manifest.find(entry => entry.target === target)
       if (!replaced) throw new Error(`Variant ${file} (${mode}) replaces ${target}, which is not a core route`)
-      return { kind: replaced.kind, target, specifier: specifierForRouteFile(file) }
+      const compose = VARIANT_COMPOSE[file] ?? replaced.compose
+      return { kind: replaced.kind, target, specifier: specifierForRouteFile(file), ...(compose ? { compose } : {}) }
     })
   }
   return { manifest, variants }
@@ -117,7 +170,7 @@ export function unlistedRouteLikeFiles(routesDir = ROUTES_DIR) {
   const { manifest } = buildRoutesManifest(routesDir)
   const listed = new Set(manifest.map(entry => entry.target))
   for (const byFile of Object.values(VARIANT_FILES)) for (const file of Object.keys(byFile)) listed.add(file)
-  return listFiles(routesDir).filter(file => splitRouteFile(file) && !listed.has(file))
+  return listFiles(routesDir).filter(file => splitRouteFile(file) && !listed.has(file) && !isRetired(file) && !ROUTE_DATA_FILES.includes(posix.basename(file)))
 }
 
 export function renderJson(value) {

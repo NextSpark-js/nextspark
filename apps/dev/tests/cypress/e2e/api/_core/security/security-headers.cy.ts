@@ -117,7 +117,7 @@ describe('Security Headers', {
       allure.severity('critical')
       cy.request({
         method: 'GET',
-        url: `${BASE_URL}/api/v1/theme`,
+        url: `${BASE_URL}/api/v1/billing/plans`,
         failOnStatusCode: false
       }).then((response) => {
         expect(response.headers).to.have.property('x-content-type-options', 'nosniff')
@@ -128,7 +128,7 @@ describe('Security Headers', {
       allure.severity('critical')
       cy.request({
         method: 'GET',
-        url: `${BASE_URL}/api/v1/theme`,
+        url: `${BASE_URL}/api/v1/billing/plans`,
         failOnStatusCode: false
       }).then((response) => {
         expect(response.headers).to.have.property('x-frame-options', 'DENY')
@@ -139,7 +139,7 @@ describe('Security Headers', {
       allure.severity('normal')
       cy.request({
         method: 'GET',
-        url: `${BASE_URL}/api/v1/theme`,
+        url: `${BASE_URL}/api/v1/billing/plans`,
         failOnStatusCode: false
       }).then((response) => {
         expect(response.headers).to.have.property('content-security-policy')
@@ -301,7 +301,7 @@ describe('Security Headers', {
       allure.severity('normal')
       cy.request({
         method: 'GET',
-        url: `${BASE_URL}/api/v1/theme`,
+        url: `${BASE_URL}/api/v1/billing/plans`,
         failOnStatusCode: false
       }).then((response) => {
         expect(response.headers).to.have.property('access-control-allow-origin')
@@ -571,7 +571,7 @@ describe('Security Headers', {
       allure.severity('critical')
       cy.request({
         method: 'GET',
-        url: `${BASE_URL}/api/v1/theme`,
+        url: `${BASE_URL}/api/v1/billing/plans`,
         failOnStatusCode: false
       }).then((response) => {
         expect(response.headers).to.have.property('access-control-allow-headers')
@@ -584,7 +584,7 @@ describe('Security Headers', {
       allure.severity('normal')
       cy.request({
         method: 'GET',
-        url: `${BASE_URL}/api/v1/theme`,
+        url: `${BASE_URL}/api/v1/billing/plans`,
         failOnStatusCode: false
       }).then((response) => {
         expect(response.headers).to.have.property('access-control-allow-headers')

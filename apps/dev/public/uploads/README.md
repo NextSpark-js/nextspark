@@ -60,7 +60,7 @@ Example: `1704067200000_k9x2m4p.jpg`
 - No filesystem writes (Vercel serverless is read-only)
 
 ## Usage in AI Content Generation
-The generate-content endpoint (`/api/v1/theme/content-buddy/generate-content`) automatically processes images for AI analysis.
+The generate-content endpoint (`/api/content-buddy/generate-content`) automatically processes images for AI analysis.
 
 **Supported URL formats:**
 - Vercel Blob URLs: `https://xxxxx.public.blob.vercel-storage.com/uploads/temp/image.jpg`

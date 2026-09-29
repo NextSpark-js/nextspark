@@ -4,7 +4,7 @@
 
 Plugins can expose custom API endpoints for external access, data processing, and third-party integrations. This document covers API route patterns, authentication, handler structure, and best practices.
 
-**URL Pattern**: `/api/v1/plugin/[plugin-name]/[endpoint]`
+**URL Pattern**: `/api/plugins/[plugin-name]/[endpoint]`
 
 **Key Features:**
 - **Dual Authentication** - Sessions + API keys
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 }
 ```
 
-**URL**: `POST /api/v1/plugin/my-plugin/process`
+**URL**: `POST /api/plugins/my-plugin/process`
 
 ---
 
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 **Example Request**:
 ```typescript
 // Client-side fetch with credentials
-const response = await fetch('/api/v1/plugin/my-plugin/process', {
+const response = await fetch('/api/plugins/my-plugin/process', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -151,7 +151,7 @@ const response = await fetch('/api/v1/plugin/my-plugin/process', {
 **Example Request**:
 ```bash
 curl -X POST \
-  https://api.example.com/api/v1/plugin/my-plugin/process \
+  https://api.example.com/api/plugins/my-plugin/process \
   -H 'Authorization: Bearer sk-...' \
   -H 'Content-Type: application/json' \
   -d '{"input": "data"}'
@@ -159,7 +159,7 @@ curl -X POST \
 
 **Client Code**:
 ```typescript
-const response = await fetch('/api/v1/plugin/my-plugin/process', {
+const response = await fetch('/api/plugins/my-plugin/process', {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${apiKey}`,
@@ -277,7 +277,7 @@ export async function DELETE(
 }
 ```
 
-**URL**: `/api/v1/plugin/my-plugin/items/123`
+**URL**: `/api/plugins/my-plugin/items/123`
 
 ---
 
@@ -311,7 +311,7 @@ export async function GET(request: NextRequest) {
 }
 ```
 
-**URL**: `/api/v1/plugin/my-plugin/items?page=2&limit=10&filter=active`
+**URL**: `/api/plugins/my-plugin/items?page=2&limit=10&filter=active`
 
 ---
 
@@ -428,7 +428,7 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-**URL**: `POST /api/v1/plugin/ai/generate`
+**URL**: `POST /api/plugins/ai/generate`
 
 ---
 
@@ -442,7 +442,7 @@ export async function POST(request: NextRequest) {
 - ✅ Handle errors gracefully
 
 **URL Pattern**:
-- `/api/v1/plugin/[plugin]/[endpoint]`
+- `/api/plugins/[plugin]/[endpoint]`
 
 **Authentication Methods**:
 - Session cookies (web clients)

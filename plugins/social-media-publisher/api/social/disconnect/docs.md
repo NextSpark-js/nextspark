@@ -5,8 +5,8 @@ Disconnect (deactivate) a social media account.
 ## Endpoint
 
 ```
-POST   /api/v1/plugin/social-media-publisher/social/disconnect
-DELETE /api/v1/plugin/social-media-publisher/social/disconnect/:accountId
+POST   /api/plugins/social-media-publisher/social/disconnect
+DELETE /api/plugins/social-media-publisher/social/disconnect/:accountId
 ```
 
 ## Authentication
@@ -56,7 +56,7 @@ Alternative method using account ID in URL path.
 ### Example Request
 
 ```
-DELETE /api/v1/plugin/social-media-publisher/social/disconnect/123e4567-e89b-12d3-a456-426614174000
+DELETE /api/plugins/social-media-publisher/social/disconnect/123e4567-e89b-12d3-a456-426614174000
 ```
 
 ### Success Response (200)
@@ -109,11 +109,11 @@ Disconnect events are logged:
 ## Reconnecting
 
 To reconnect a disconnected account:
-1. Use the [Connect](/api/v1/plugin/social-media-publisher/social/connect) endpoint
+1. Use the [Connect](/api/plugins/social-media-publisher/social/connect) endpoint
 2. OAuth flow will update the existing record
 3. Account becomes active again with fresh tokens
 
 ## Related APIs
 
-- [Connect](/api/v1/plugin/social-media-publisher/social/connect) - Connect accounts
-- [Publish](/api/v1/plugin/social-media-publisher/social/publish) - Publish content
+- [Connect](/api/plugins/social-media-publisher/social/connect) - Connect accounts
+- [Publish](/api/plugins/social-media-publisher/social/publish) - Publish content

@@ -4,7 +4,7 @@
 
 The Social Media Publisher plugin provides a unified endpoint for publishing content to Instagram Business and Facebook Pages. Publishing includes automatic token validation, token refresh if needed, and comprehensive audit logging.
 
-**Endpoint:** `POST /api/v1/plugin/social-media-publisher/social/publish`
+**Endpoint:** `POST /api/plugins/social-media-publisher/social/publish`
 
 **Supported Platforms:**
 - Instagram Business (photos and videos)
@@ -87,7 +87,7 @@ Instagram uses a **2-step container process**:
 **Code Example:**
 ```typescript
 // Using fetch API
-const response = await fetch('/api/v1/plugin/social-media-publisher/social/publish', {
+const response = await fetch('/api/plugins/social-media-publisher/social/publish', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -345,7 +345,7 @@ export function PublishForm({ accountId, platform }: {
     setResult(null)
 
     try {
-      const response = await fetch('/api/v1/plugin/social-media-publisher/social/publish', {
+      const response = await fetch('/api/plugins/social-media-publisher/social/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -420,7 +420,7 @@ async function publishToMultipleAccounts(
 ) {
   const results = await Promise.allSettled(
     accounts.map(account =>
-      fetch('/api/v1/plugin/social-media-publisher/social/publish', {
+      fetch('/api/plugins/social-media-publisher/social/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

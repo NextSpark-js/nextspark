@@ -4,7 +4,7 @@
  * Returns public author profile with published posts.
  * NO authentication required.
  *
- * URL: /api/v1/theme/blog/authors/{username}
+ * URL: /api/authors/{username}
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -136,7 +136,7 @@ const getHandler = async (
     })
 
   } catch (error) {
-    console.error(`[API] /api/v1/theme/blog/authors/[username] - Error:`, error)
+    console.error(`[API] /api/authors/[username] - Error:`, error)
 
     return NextResponse.json(
       {

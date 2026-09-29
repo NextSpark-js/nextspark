@@ -11,7 +11,7 @@ The plugin follows a layered architecture with clear responsibilities:
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                           API LAYER                                  │
-│  Theme API endpoints (e.g., /api/v1/theme/ai/chat)                  │
+│  Theme API endpoints (e.g., /api/ai/chat)                  │
 ├─────────────────────────────────────────────────────────────────────┤
 │                        THEME LAYER                                   │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │

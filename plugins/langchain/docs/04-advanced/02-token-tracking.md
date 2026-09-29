@@ -183,7 +183,7 @@ console.log(teamStats)
 ### Get User Usage
 
 ```
-GET /api/v1/theme/default/ai/usage
+GET /api/ai/usage
 ```
 
 **Query Parameters**:
@@ -209,7 +209,7 @@ GET /api/v1/theme/default/ai/usage
 ### Get Team Usage (Admin)
 
 ```
-GET /api/v1/theme/default/ai/usage/team
+GET /api/ai/usage/team
 ```
 
 **Query Parameters**:

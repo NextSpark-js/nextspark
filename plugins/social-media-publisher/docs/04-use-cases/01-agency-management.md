@@ -59,7 +59,7 @@ export async function createClient(data: {
 export function ClientSocialAccounts({ clientId }: { clientId: string }) {
   const handleConnectInstagram = () => {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-    const oauthUrl = `${baseUrl}/api/v1/plugin/social-media-publisher/social/connect?platform=instagram_business&clientId=${clientId}`
+    const oauthUrl = `${baseUrl}/api/plugins/social-media-publisher/social/connect?platform=instagram_business&clientId=${clientId}`
     
     const popup = window.open(oauthUrl, 'oauth-popup', 'width=600,height=700')
     

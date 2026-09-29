@@ -7,7 +7,7 @@
 import { defineApiEndpoint } from '@nextsparkjs/core/types/api-presets'
 
 export default defineApiEndpoint({
-  endpoint: '/api/v1/plugin/ai/ai-history/:id',
+  endpoint: '/api/plugins/ai/ai-history/:id',
   summary: 'Link AI history records to related entities',
   presets: [
     {

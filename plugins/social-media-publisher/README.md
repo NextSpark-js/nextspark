@@ -262,7 +262,7 @@ CREATE TABLE "audit_logs" (
 ### 1. OAuth Callback (Connect Social Account)
 
 ```http
-GET /api/v1/plugin/social-media-publisher/social/connect/callback
+GET /api/plugins/social-media-publisher/social/connect/callback
 ```
 
 This endpoint receives the OAuth redirect from Facebook/Instagram and:
@@ -298,7 +298,7 @@ Returns HTML page with:
 ### 2. Initiate OAuth Flow
 
 ```http
-GET /api/v1/plugin/social-media-publisher/social/connect
+GET /api/plugins/social-media-publisher/social/connect
 ```
 
 **Query Parameters:**
@@ -326,7 +326,7 @@ export function SocialPlatformOAuthForm({ clientId }: { clientId: string }) {
   const handleConnect = (platform: 'instagram_business' | 'facebook_page') => {
     // Build OAuth URL with clientId in state
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-    const oauthUrl = `${baseUrl}/api/v1/plugin/social-media-publisher/social/connect?platform=${platform}&clientId=${clientId}`
+    const oauthUrl = `${baseUrl}/api/plugins/social-media-publisher/social/connect?platform=${platform}&clientId=${clientId}`
 
     // Open OAuth popup
     const popup = window.open(

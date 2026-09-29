@@ -2,7 +2,7 @@
  * Social Media Publish Endpoint
  *
  * Publishes content to connected Instagram Business or Facebook Page accounts
- * Accessible via: /api/v1/plugin/social-media-publisher/social/publish
+ * Accessible via: /api/plugins/social-media-publisher/social/publish
  *
  * Token Refresh Strategy:
  * - Checks token expiry before publishing

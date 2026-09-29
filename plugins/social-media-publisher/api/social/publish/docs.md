@@ -5,7 +5,7 @@ Publish content to connected Instagram Business or Facebook Page accounts.
 ## Endpoint
 
 ```
-POST /api/v1/plugin/social-media-publisher/social/publish
+POST /api/plugins/social-media-publisher/social/publish
 ```
 
 ## Authentication
@@ -165,5 +165,5 @@ Image URLs must be:
 
 ## Related APIs
 
-- [Connect](/api/v1/plugin/social-media-publisher/social/connect) - Connect accounts
-- [Disconnect](/api/v1/plugin/social-media-publisher/social/disconnect) - Disconnect accounts
+- [Connect](/api/plugins/social-media-publisher/social/connect) - Connect accounts
+- [Disconnect](/api/plugins/social-media-publisher/social/disconnect) - Disconnect accounts

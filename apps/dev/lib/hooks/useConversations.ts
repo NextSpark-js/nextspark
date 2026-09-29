@@ -129,7 +129,7 @@ export function useConversations() {
                 'x-team-id': teamId,
             }
 
-            const response = await fetch(withBasePath('/api/v1/plugin/langchain/sessions'), {
+            const response = await fetch(withBasePath('/api/plugins/langchain/sessions'), {
                 method: 'GET',
                 headers,
             })
@@ -184,7 +184,7 @@ export function useConversations() {
                 'x-team-id': teamId,
             }
 
-            const response = await fetch(withBasePath('/api/v1/plugin/langchain/sessions'), {
+            const response = await fetch(withBasePath('/api/plugins/langchain/sessions'), {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ name }),
@@ -220,7 +220,7 @@ export function useConversations() {
                 'x-team-id': teamId,
             }
 
-            const response = await fetch(withBasePath('/api/v1/plugin/langchain/sessions'), {
+            const response = await fetch(withBasePath('/api/plugins/langchain/sessions'), {
                 method: 'DELETE',
                 headers,
                 body: JSON.stringify({ sessionId }),
@@ -261,7 +261,7 @@ export function useConversations() {
                 'x-team-id': teamId,
             }
 
-            const response = await fetch(withBasePath('/api/v1/plugin/langchain/sessions'), {
+            const response = await fetch(withBasePath('/api/plugins/langchain/sessions'), {
                 method: 'PATCH',
                 headers,
                 body: JSON.stringify({ sessionId, name }),
@@ -297,7 +297,7 @@ export function useConversations() {
                 'x-team-id': teamId,
             }
 
-            const response = await fetch(withBasePath('/api/v1/plugin/langchain/sessions'), {
+            const response = await fetch(withBasePath('/api/plugins/langchain/sessions'), {
                 method: 'PATCH',
                 headers,
                 body: JSON.stringify({ sessionId, isPinned: !conversation.isPinned }),

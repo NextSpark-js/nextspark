@@ -163,7 +163,7 @@ export interface PluginRegistryEntry {
 }
 
 export interface RouteFileEndpoint {
-  path: string // Full API path (e.g., '/api/v1/plugin/ai/generate')
+  path: string // Full API path (e.g., '/api/plugins/ai/generate')
   filePath: string // Relative file path
   relativePath: string // Route path (e.g., 'generate')
   methods: string[] // ['GET', 'POST', etc.]
@@ -196,7 +196,7 @@ export const PLUGIN_REGISTRY = {
     apiPath: '@/plugins/ai/api',
     routeFiles: [
       {
-        path: '/api/v1/plugin/ai/generate',
+        path: '/api/plugins/ai/generate',
         filePath: '../../../plugins/ai/api/generate/route',
         relativePath: 'generate',
         methods: ['POST', 'GET'],
@@ -224,7 +224,7 @@ export const PLUGIN_REGISTRY = {
 }
 
 export const ROUTE_METADATA = {
-  '/api/v1/plugin/ai/generate': {
+  '/api/plugins/ai/generate': {
     plugin: 'ai',
     methods: ['POST', 'GET'],
     filePath: '../../../plugins/ai/api/generate/route'
@@ -424,7 +424,7 @@ function findRouteEndpoint(path: string): RouteFileEndpoint | undefined
 ```typescript
 import { findRouteEndpoint } from '@nextsparkjs/registries/plugin-registry'
 
-const endpoint = findRouteEndpoint('/api/v1/plugin/ai/generate')
+const endpoint = findRouteEndpoint('/api/plugins/ai/generate')
 console.log(endpoint?.methods) // ['POST', 'GET']
 ```
 

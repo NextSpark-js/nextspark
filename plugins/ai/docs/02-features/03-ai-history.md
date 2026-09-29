@@ -238,7 +238,7 @@ const historyId = await AIHistoryService.startOperation({
 
 **After Creation (via API):**
 ```bash
-PATCH /api/v1/plugin/ai/ai-history/:id
+PATCH /api/plugins/ai/ai-history/:id
 
 {
   "relatedEntityType": "products",

@@ -122,7 +122,7 @@ export const PLUGIN_REGISTRY = {
     apiPath: '@/plugins/ai/api',
     routeFiles: [
       {
-        path: '/api/v1/plugin/ai/generate',
+        path: '/api/plugins/ai/generate',
         methods: ['POST', 'GET'],
         filePath: '../../../plugins/ai/api/generate/route'
       }

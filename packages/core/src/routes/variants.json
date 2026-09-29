@@ -3,7 +3,31 @@
     {
       "kind": "layout",
       "target": "layout.tsx",
-      "specifier": "@nextsparkjs/core/routes/layout.ppr"
+      "specifier": "@nextsparkjs/core/routes/layout.ppr",
+      "compose": {
+        "wrapper": "withRootLayout",
+        "specifier": "@nextsparkjs/core/routes/_internal/root-layout.ppr"
+      }
+    },
+    {
+      "kind": "page",
+      "target": "(auth)/login/page.tsx",
+      "specifier": "@nextsparkjs/core/routes/(auth)/login/page.cc"
+    },
+    {
+      "kind": "page",
+      "target": "(auth)/signup/page.tsx",
+      "specifier": "@nextsparkjs/core/routes/(auth)/signup/page.cc"
+    },
+    {
+      "kind": "page",
+      "target": "(public)/docs/[section]/[page]/page.tsx",
+      "specifier": "@nextsparkjs/core/routes/(public)/docs/[section]/[page]/page.cc"
+    },
+    {
+      "kind": "page",
+      "target": "superadmin/docs/[section]/[page]/page.tsx",
+      "specifier": "@nextsparkjs/core/routes/superadmin/docs/[section]/[page]/page.cc"
     }
   ]
 }

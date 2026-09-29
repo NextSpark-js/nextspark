@@ -29,13 +29,13 @@ test('a real project: the registry build is staged and published with the host, 
     const config = { ...projectHostConfig({ projectRoot: root }), loadCoreRoutes: loadFixtureCoreRoutes }
     const first = await prepareHost(config)
     const app = first.files.filter(file => file.path.startsWith('src/app/')).map(file => file.path)
-    assert.deepEqual(app, ['src/app/about/page.tsx', 'src/app/api/ping/route.ts', 'src/app/error.tsx', 'src/app/global-error.tsx', 'src/app/layout.tsx', 'src/app/page.tsx', 'src/app/pricing/page.tsx'])
+    assert.deepEqual(app, ['src/app/(shell)/layout.tsx', 'src/app/(shell)/shell/page.tsx', 'src/app/about/page.tsx', 'src/app/api/ping/route.ts', 'src/app/error.tsx', 'src/app/global-error.tsx', 'src/app/layout.tsx', 'src/app/page.tsx', 'src/app/pricing/page.tsx'])
     const registries = first.files.filter(file => file.path.startsWith('.nextspark/registries/'))
     assert.ok(registries.some(file => file.path === '.nextspark/registries/index.ts'), 'the registry build output is published')
     assert.ok(registries.every(file => !/Generated at: (?!1970)/.test(file.content)), `registries carry ${DETERMINISTIC_BUILD_TIME}, not the build time`)
 
     // The registry build wrote nothing of its own into src/app (no (templates) pages, no globals.css) and left no staging behind
-    assert.deepEqual(readdirSync(join(root, 'src/app')).sort(), ['about', 'api', 'error.tsx', 'global-error.tsx', 'layout.tsx', 'page.tsx', 'pricing'])
+    assert.deepEqual(readdirSync(join(root, 'src/app')).sort(), ['(shell)', 'about', 'api', 'error.tsx', 'global-error.tsx', 'layout.tsx', 'page.tsx', 'pricing'])
     assert.deepEqual(readdirSync(join(root, '.nextspark')).sort(), ['generation.json', 'registries'])
 
     const record = readGeneration(root)

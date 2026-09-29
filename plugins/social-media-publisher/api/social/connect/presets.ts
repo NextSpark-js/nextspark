@@ -7,7 +7,7 @@
 import { defineApiEndpoint } from '@nextsparkjs/core/types/api-presets'
 
 export default defineApiEndpoint({
-  endpoint: '/api/v1/plugin/social-media-publisher/social/connect',
+  endpoint: '/api/plugins/social-media-publisher/social/connect',
   summary: 'Connect Facebook Pages and Instagram Business accounts via OAuth',
   presets: [
     {

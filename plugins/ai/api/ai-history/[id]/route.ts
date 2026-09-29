@@ -1,7 +1,7 @@
 /**
  * AI History Entity Linking Endpoint
  *
- * PATCH /api/v1/plugin/ai/ai-history/:id
+ * PATCH /api/plugins/ai/ai-history/:id
  *
  * Updates the relatedEntityType and relatedEntityId for an AI history record.
  * Used to link AI operations (e.g., analyze-brief) to entities created afterward (e.g., clients).
@@ -19,7 +19,7 @@ interface RouteParams {
 }
 
 /**
- * PATCH /api/v1/plugin/ai/ai-history/:id
+ * PATCH /api/plugins/ai/ai-history/:id
  * Update related entity information for an AI history record
  */
 const patchHandler = async (

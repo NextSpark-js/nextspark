@@ -203,13 +203,13 @@ OAUTH_ENCRYPTION_KEY=a7f9b2c8d1e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e
 **Valid OAuth Redirect URIs:**
 ```
 Development:
-http://localhost:5173/api/v1/plugin/social-media-publisher/social/connect/callback
+http://localhost:5173/api/plugins/social-media-publisher/social/connect/callback
 
 Staging:
-https://staging.yourapp.com/api/v1/plugin/social-media-publisher/social/connect/callback
+https://staging.yourapp.com/api/plugins/social-media-publisher/social/connect/callback
 
 Production:
-https://yourapp.com/api/v1/plugin/social-media-publisher/social/connect/callback
+https://yourapp.com/api/plugins/social-media-publisher/social/connect/callback
 ```
 
 **Client OAuth Login:** ON  

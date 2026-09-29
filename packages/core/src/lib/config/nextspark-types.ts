@@ -47,6 +47,19 @@ export interface NextSparkConfig {
     name?: string
     description?: string
   }
+
+  /** Billing hooks the generated host wires (`nextspark prepare`). */
+  billing?: {
+    /**
+     * Modules extending core's billing webhooks, as paths from the project root. The generated host imports
+     * each one statically into its webhook route: `stripe` must export `stripeWebhookExtensions` and `polar`
+     * `polarWebhookExtensions` (one-time payments: credit packs, lifetime deals, upsells).
+     */
+    webhookExtensions?: {
+      stripe?: string
+      polar?: string
+    }
+  }
 }
 
 export interface ResolvedNextSparkConfig extends Omit<NextSparkConfig, 'plugins' | 'features'> {
@@ -72,6 +85,7 @@ const ROOT_FIELDS = new Set([
   'database',
   'auth',
   'app',
+  'billing',
 ])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -201,6 +215,24 @@ function validateApp(value: unknown, errors: string[]): void {
   validateOptionalString(value.description, 'app.description', errors)
 }
 
+function validateBilling(value: unknown, errors: string[]): void {
+  if (value === undefined) return
+  if (!isRecord(value)) {
+    errors.push(`billing must be an object; received ${receivedType(value)}.`)
+    return
+  }
+  validateKnownFields(value, ['webhookExtensions'], 'billing.', errors)
+  const extensions = value.webhookExtensions
+  if (extensions === undefined) return
+  if (!isRecord(extensions)) {
+    errors.push(`billing.webhookExtensions must be an object; received ${receivedType(extensions)}.`)
+    return
+  }
+  validateKnownFields(extensions, ['stripe', 'polar'], 'billing.webhookExtensions.', errors)
+  validateOptionalString(extensions.stripe, 'billing.webhookExtensions.stripe', errors)
+  validateOptionalString(extensions.polar, 'billing.webhookExtensions.polar', errors)
+}
+
 /** Validate and normalize a nextspark.config.ts value without loading the file. */
 export function validateNextSparkConfig(value: unknown): NextSparkConfigValidationResult {
   if (!isRecord(value)) {
@@ -221,6 +253,7 @@ export function validateNextSparkConfig(value: unknown): NextSparkConfigValidati
   validateDatabase(value.database, errors)
   validateAuth(value.auth, errors)
   validateApp(value.app, errors)
+  validateBilling(value.billing, errors)
 
   if (errors.length > 0) return { valid: false, errors }
 

@@ -7,7 +7,7 @@
 import { defineApiEndpoint } from '@nextsparkjs/core/types/api-presets'
 
 export default defineApiEndpoint({
-  endpoint: '/api/v1/plugin/ai/generate',
+  endpoint: '/api/plugins/ai/generate',
   summary: 'Generate AI text responses using OpenAI, Anthropic, or Ollama',
   presets: [
     {

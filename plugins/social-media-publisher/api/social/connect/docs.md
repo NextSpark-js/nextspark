@@ -5,8 +5,8 @@ Initiate OAuth flow and connect Facebook Pages or Instagram Business accounts.
 ## Endpoints
 
 ```
-GET  /api/v1/plugin/social-media-publisher/social/connect
-POST /api/v1/plugin/social-media-publisher/social/connect (deprecated)
+GET  /api/plugins/social-media-publisher/social/connect
+POST /api/plugins/social-media-publisher/social/connect (deprecated)
 ```
 
 ## GET - Initiate OAuth Flow
@@ -30,7 +30,7 @@ Redirects user to Facebook OAuth authorization page to connect their social medi
 ### Example Request
 
 ```
-GET /api/v1/plugin/social-media-publisher/social/connect?platform=instagram_business&clientId=client_123&state=abc123
+GET /api/plugins/social-media-publisher/social/connect?platform=instagram_business&clientId=client_123&state=abc123
 ```
 
 ### Response
@@ -56,7 +56,7 @@ https://www.facebook.com/v18.0/dialog/oauth?client_id=...&redirect_uri=...&scope
 
 ## POST - Handle OAuth Callback (Deprecated)
 
-Use `/api/v1/plugin/social-media-publisher/social/connect/callback` instead.
+Use `/api/plugins/social-media-publisher/social/connect/callback` instead.
 
 This endpoint receives the authorization code and exchanges it for access tokens.
 
@@ -130,6 +130,6 @@ NEXT_PUBLIC_APP_URL=https://your-app.com
 
 ## Related APIs
 
-- [OAuth Callback](/api/v1/plugin/social-media-publisher/social/connect/callback) - OAuth redirect handler
-- [Publish](/api/v1/plugin/social-media-publisher/social/publish) - Publish content
-- [Disconnect](/api/v1/plugin/social-media-publisher/social/disconnect) - Disconnect account
+- [OAuth Callback](/api/plugins/social-media-publisher/social/connect/callback) - OAuth redirect handler
+- [Publish](/api/plugins/social-media-publisher/social/publish) - Publish content
+- [Disconnect](/api/plugins/social-media-publisher/social/disconnect) - Disconnect account

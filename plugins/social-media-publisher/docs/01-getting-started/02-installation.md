@@ -45,10 +45,10 @@ Before installing the Social Media Publisher plugin, ensure you have:
 
 ```
 Development:
-http://localhost:5173/api/v1/plugin/social-media-publisher/social/connect/callback
+http://localhost:5173/api/plugins/social-media-publisher/social/connect/callback
 
 Production:
-https://yourdomain.com/api/v1/plugin/social-media-publisher/social/connect/callback
+https://yourdomain.com/api/plugins/social-media-publisher/social/connect/callback
 ```
 
 3. **Client OAuth Login:** ON
@@ -357,7 +357,7 @@ FROM "clients_social_platforms";
 
 ```bash
 # Test publish endpoint
-curl -X POST http://localhost:5173/api/v1/plugin/social-media-publisher/social/publish \
+curl -X POST http://localhost:5173/api/plugins/social-media-publisher/social/publish \
   -H "Content-Type: application/json" \
   -H "Cookie: your-session-cookie" \
   -d '{
@@ -377,7 +377,7 @@ curl -X POST http://localhost:5173/api/v1/plugin/social-media-publisher/social/p
 **Solution:**
 1. Go to Facebook App → Facebook Login → Settings
 2. Add exact callback URL to "Valid OAuth Redirect URIs"
-3. Format: `https://yourdomain.com/api/v1/plugin/social-media-publisher/social/connect/callback`
+3. Format: `https://yourdomain.com/api/plugins/social-media-publisher/social/connect/callback`
 4. Save changes
 
 ### Issue: "OAUTH_ENCRYPTION_KEY validation failed"

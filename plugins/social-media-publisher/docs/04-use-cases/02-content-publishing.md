@@ -51,7 +51,7 @@ export function SinglePostPublisher({
     setLoading(true)
 
     try {
-      const response = await fetch('/api/v1/plugin/social-media-publisher/social/publish', {
+      const response = await fetch('/api/plugins/social-media-publisher/social/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -608,7 +608,7 @@ export async function uploadAndPublish(
   const { url: imageUrl } = await uploadResponse.json()
 
   // 2. Publish with CDN URL
-  const publishResponse = await fetch('/api/v1/plugin/social-media-publisher/social/publish', {
+  const publishResponse = await fetch('/api/plugins/social-media-publisher/social/publish', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

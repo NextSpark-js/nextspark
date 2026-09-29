@@ -892,7 +892,7 @@ Delete a conversation.
 
 Real-time token-by-token responses via Server-Sent Events (SSE).
 
-### POST /api/v1/theme/default/ai/chat/stream
+### POST /api/ai/chat/stream
 
 Stream chat responses.
 
@@ -949,7 +949,7 @@ data: [DONE]
 
 Tracing and metrics endpoints. **Requires superadmin authentication.**
 
-### GET /api/v1/theme/default/observability/traces
+### GET /api/plugins/langchain/observability/traces
 
 List traces with filtering and pagination.
 
@@ -987,7 +987,7 @@ List traces with filtering and pagination.
 }
 ```
 
-### GET /api/v1/theme/default/observability/traces/[traceId]
+### GET /api/plugins/langchain/observability/traces/[traceId]
 
 Get single trace with all spans.
 
@@ -1025,7 +1025,7 @@ Get single trace with all spans.
 }
 ```
 
-### GET /api/v1/theme/default/observability/metrics
+### GET /api/plugins/langchain/observability/metrics
 
 Get aggregate metrics.
 
@@ -1069,7 +1069,7 @@ Get aggregate metrics.
 
 Token usage and cost tracking endpoints.
 
-### GET /api/v1/theme/default/ai/usage
+### GET /api/ai/usage
 
 Get current user's usage stats.
 
@@ -1094,7 +1094,7 @@ Get current user's usage stats.
 }
 ```
 
-### GET /api/v1/theme/default/ai/usage/team
+### GET /api/ai/usage/team
 
 Get team-wide usage stats. **Requires admin permission.**
 

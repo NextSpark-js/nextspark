@@ -44,6 +44,7 @@ import { ensureRegistriesGitignore, trackedFilesUnder, trackedRegistriesLines } 
 import { discoverParentChildRelations } from './registry/discovery/parent-child.mjs'
 import { discoverPermissionsConfig } from './registry/discovery/permissions.mjs'
 import { discoverCoreEntities } from './registry/discovery/core-entities.mjs'
+import { mergeEntities } from './registry/discovery/all-entities.mjs'
 import { discoverPlugins } from './registry/discovery/plugins.mjs'
 import { discoverThemes } from './registry/discovery/themes.mjs'
 import { discoverMiddlewares } from './registry/discovery/middlewares.mjs'
@@ -292,40 +293,14 @@ export async function buildRegistries(projectRoot = null) {
       discoverMcpOverrides(CONFIG)
     ])
 
-    // Aggregate all entities with proper priority: plugin < core < theme
-    // Start with plugin entities (lowest priority)
-    const pluginEntities = []
-    plugins.forEach(plugin => {
-      if (plugin.entities && plugin.entities.length > 0) {
-        pluginEntities.push(...plugin.entities)
-      }
+    // Aggregate all entities with proper priority: plugin < core < project (a project entity can
+    // override core's with the same slug, e.g. patterns)
+    const allEntities = mergeEntities({
+      plugins,
+      coreEntities,
+      themes,
+      onOverride: (entity, replaced) => log(`  ↳ Theme override: "${entity.name}" (${entity.source || 'theme'} replaces ${replaced.source || 'core'})`, 'info'),
     })
-
-    // Add theme entities (highest priority - can override core)
-    const themeEntities = []
-    themes.forEach(theme => {
-      if (theme.entities && theme.entities.length > 0) {
-        themeEntities.push(...theme.entities)
-      }
-    })
-
-    // Merge all entities with priority: plugins < core < themes
-    // Theme entities override core entities with the same slug (e.g., patterns)
-    const mergedEntities = [
-      ...pluginEntities,      // Lowest priority
-      ...coreEntities,        // Core framework entities
-      ...themeEntities        // Highest priority (can override core)
-    ]
-
-    // Deduplicate: later entries (theme) win over earlier (core/plugin) with same name
-    const entityMap = new Map()
-    for (const entity of mergedEntities) {
-      if (entityMap.has(entity.name)) {
-        log(`  ↳ Theme override: "${entity.name}" (${entity.source || 'theme'} replaces ${entityMap.get(entity.name).source || 'core'})`, 'info')
-      }
-      entityMap.set(entity.name, entity)
-    }
-    const allEntities = Array.from(entityMap.values())
 
     // PHASE 3 VALIDATION: Ensure all entities have access.shared defined
     await validateEntityConfigurations(allEntities, CONFIG)

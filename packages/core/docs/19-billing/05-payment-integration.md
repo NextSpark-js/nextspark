@@ -377,13 +377,32 @@ The extension pattern lets project code handle one-time payment events without m
 
 ### Extension Files
 
-These files are **optional**. The webhook routes use dynamic imports with a fallback — if the files don't exist, webhooks work normally without one-time payment handling. Create them only when you need to handle one-time purchases (credit packs, LTD, upsells):
+These files are **optional**. Without them, webhooks work normally without one-time payment handling. Create them only when you need to handle one-time purchases (credit packs, LTD, upsells):
 
 ```
 lib/billing/
 ├── stripe-webhook-extensions.ts   # Handles Stripe one-time checkout.session.completed
 └── polar-webhook-extensions.ts    # Handles Polar one-time order.paid
 ```
+
+Declare each module in `nextspark.config.ts`. The generated `src/app` (`nextspark prepare`) then writes the webhook route as a
+composed facade that imports your module statically and hands it to core's handler; nothing is loaded by a path chosen at
+runtime, and a project without the setting keeps core's route with no extensions:
+
+```typescript
+// nextspark.config.ts
+export default defineConfig({
+  billing: {
+    webhookExtensions: {
+      stripe: './lib/billing/stripe-webhook-extensions', // must export `stripeWebhookExtensions`
+      polar: './lib/billing/polar-webhook-extensions',   // must export `polarWebhookExtensions`
+    },
+  },
+})
+```
+
+The generated route is `export const POST = createStripeWebhookRoute(stripeWebhookExtensions)` (or `createPolarWebhookRoute`).
+The dynamic-import routes shown above are the legacy form, for apps that still commit their own `src/app`.
 
 ### Stripe Extension
 

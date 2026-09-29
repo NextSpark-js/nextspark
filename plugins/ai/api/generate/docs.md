@@ -5,8 +5,8 @@ Simple AI assistant endpoint for generating text responses using multiple provid
 ## Endpoint
 
 ```
-POST /api/v1/plugin/ai/generate
-GET  /api/v1/plugin/ai/generate
+POST /api/plugins/ai/generate
+GET  /api/plugins/ai/generate
 ```
 
 ## Authentication
@@ -153,5 +153,5 @@ The plugin tracks costs based on model pricing:
 
 ## Related APIs
 
-- [AI Embeddings](/api/v1/plugin/ai/embeddings) - Generate text embeddings
-- [AI History](/api/v1/plugin/ai/ai-history) - Track AI operations
+- [AI Embeddings](/api/plugins/ai/embeddings) - Generate text embeddings
+- [AI History](/api/plugins/ai/ai-history) - Track AI operations

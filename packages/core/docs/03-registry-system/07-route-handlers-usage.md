@@ -6,6 +6,13 @@
 > Import from `@/core/lib/services/route-handler.service` instead of the registry.
 > See [RouteHandlerService API](./06-route-handlers-architecture.md#routehandlerservice-api) for details.
 
+> **Generated host (`nextspark prepare`, #203):** there is no dispatcher and the registry imports no handler. Every project
+> route (`api/**/route.ts`) and plugin route (`plugins/<name>/api/**/route.ts`) is a route file of its own in the generated
+> `src/app`, served at `/api/<path>` and `/api/plugins/<plugin>/<path>`. `/api/v1/**` belongs to core: a project route there
+> stops generation, and replacing a core route on purpose goes through `templates/api/v1/...`. The registry then lists the
+> routes as documentation metadata only (`API_ROUTES_METADATA`), at those URLs. The handler lookups described below are the
+> legacy behavior of apps that still commit their own `src/app`.
+
 ## Overview
 
 The Route Handlers Registry (`.nextspark/registries/route-handlers.ts`) provides **zero-dynamic-import access** to API route handlers for themes and plugins. It eliminates runtime path resolution by generating static imports at build time, resulting in ~17,255x performance improvement for route discovery.
@@ -83,12 +90,12 @@ if (handler) {
 plugins/ai/
 └── api/                          # Plugin API routes
     ├── generate/
-    │   └── route.ts              # POST /api/v1/plugin/ai/generate
+    │   └── route.ts              # POST /api/plugins/ai/generate
     ├── embeddings/
-    │   └── route.ts              # GET/POST /api/v1/plugin/ai/embeddings
+    │   └── route.ts              # GET/POST /api/plugins/ai/embeddings
     └── ai-history/
         └── [id]/
-            └── route.ts          # PATCH /api/v1/plugin/ai/ai-history/[id]
+            └── route.ts          # PATCH /api/plugins/ai/ai-history/[id]
 ```
 
 ### Discovery Logic
@@ -235,7 +242,7 @@ console.log(routeKeys)
 **Next.js dynamic route** that proxies to registry:
 
 ```typescript
-// app/api/v1/plugin/[plugin]/[...path]/route.ts
+// app/api/plugins/[plugin]/[...path]/route.ts
 import { getPluginRouteHandler } from '@nextsparkjs/registries/route-handlers'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -338,7 +345,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   // Return API info
   return NextResponse.json({
-    endpoint: '/api/v1/plugin/ai/generate',
+    endpoint: '/api/plugins/ai/generate',
     methods: ['POST'],
     description: 'Generate text using AI'
   })
@@ -348,8 +355,8 @@ export async function GET(request: NextRequest) {
 **Access custom route:**
 
 ```bash
-POST /api/v1/plugin/ai/generate
-GET /api/v1/plugin/ai/generate
+POST /api/plugins/ai/generate
+GET /api/plugins/ai/generate
 ```
 
 ---
@@ -398,8 +405,8 @@ export async function PATCH(
 **Access dynamic route:**
 
 ```bash
-GET /api/v1/plugin/ai/ai-history/123
-PATCH /api/v1/plugin/ai/ai-history/123
+GET /api/plugins/ai/ai-history/123
+PATCH /api/plugins/ai/ai-history/123
 ```
 
 ---
@@ -416,7 +423,7 @@ Theme > Plugin > Entity (Auto-generated)
 Examples:
 - Route '/api/tasks' in theme AND entity → Theme wins
 - Route '/api/custom' in theme → Theme route used
-- Route '/api/v1/plugin/ai/generate' → Plugin route used
+- Route '/api/plugins/ai/generate' → Plugin route used
 ```
 
 **Why this order?**
@@ -458,7 +465,7 @@ export async function GET() {
   const themeRoutes = getThemeRouteKeys()
   
   return NextResponse.json({
-    plugin: pluginRoutes.map(key => `/api/v1/plugin/${key}`),
+    plugin: pluginRoutes.map(key => `/api/plugins/${key}`),
     theme: themeRoutes.map(key => `/api/${key}`)
   })
 }
@@ -476,8 +483,8 @@ export function middleware(request: NextRequest) {
   const method = request.method
   
   // Check if plugin route exists
-  if (path.startsWith('/api/v1/plugin/')) {
-    const routeKey = path.replace('/api/v1/plugin/', '')
+  if (path.startsWith('/api/plugins/')) {
+    const routeKey = path.replace('/api/plugins/', '')
     
     if (!hasRoute(routeKey, method)) {
       return NextResponse.json(
@@ -512,7 +519,7 @@ describe('Plugin Routes', () => {
     const handler = getPluginRouteHandler('ai/generate', 'POST')
     expect(handler).toBeDefined()
     
-    const request = new NextRequest('http://localhost/api/v1/plugin/ai/generate', {
+    const request = new NextRequest('http://localhost/api/plugins/ai/generate', {
       method: 'POST',
       body: JSON.stringify({ prompt: 'Test' })
     })
@@ -541,7 +548,7 @@ async function generateAPIDocs() {
     const methods = Object.keys(handlers)
     
     docs.push({
-      path: `/api/v1/plugin/${routeKey}`,
+      path: `/api/plugins/${routeKey}`,
       methods,
       description: `Plugin route: ${routeKey}`
     })

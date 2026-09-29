@@ -136,7 +136,7 @@ export function getOAuthConfig(): OAuthConfig {
   return {
     facebookClientId,
     facebookClientSecret,
-    redirectUri: `${baseUrl}/api/v1/plugin/social-media-publisher/social/connect/callback`,
+    redirectUri: `${baseUrl}/api/plugins/social-media-publisher/social/connect/callback`,
   }
 }
 

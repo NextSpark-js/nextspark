@@ -4,7 +4,7 @@
  * Centralized API client for entity CRUD operations
  */
 
-import { clientMetaSystemAdapter } from '@nextsparkjs/registries/entity-registry.client'
+import { getClientEntityApiPath, getClientEntityConfigs } from '../entities/client-entity-meta'
 import { withBasePath, withBasePathIfInApp } from '../base-path'
 
 export interface EntityData {
@@ -121,7 +121,7 @@ export class EntityApiClient {
   private async getEndpointPath(entityType: string): Promise<string> {
     try {
       // Primary method: Use client-safe config directly (most reliable)
-      const apiPath = clientMetaSystemAdapter.getApiPath(entityType)
+      const apiPath = getClientEntityApiPath(entityType)
 
       if (apiPath) {
         return apiPath
@@ -129,7 +129,7 @@ export class EntityApiClient {
 
       // Secondary method: Try client-only registry
       try {
-        const entities = clientMetaSystemAdapter.getAllEntityConfigs()
+        const entities = getClientEntityConfigs()
 
         // Find entity by name and return its apiPath
         const entity = entities.find(config => config.name === entityType)
@@ -477,7 +477,7 @@ export class EntityApiClient {
   async getBulkOperations(entityType: string): Promise<BulkOperation[]> {
     try {
       // Import entity config to check available operations
-      const entities = clientMetaSystemAdapter.getAllEntityConfigs()
+      const entities = getClientEntityConfigs()
       const entityConfig = entities.find(config => config.name === entityType)
 
       if (!entityConfig?.features?.enabled) {
@@ -645,7 +645,7 @@ export const getEntityChildren = async (
   params: EntityListParams = {}
 ): Promise<EntityData[]> => {
   // Get endpoint path using the same method as other functions
-  const apiPath = clientMetaSystemAdapter.getApiPath(parentEntityType)
+  const apiPath = getClientEntityApiPath(parentEntityType)
   const endpointPath = apiPath || (parentEntityType.endsWith('s') ? parentEntityType : `${parentEntityType}s`)
 
   const baseUrl = withBasePath('/api/v1')

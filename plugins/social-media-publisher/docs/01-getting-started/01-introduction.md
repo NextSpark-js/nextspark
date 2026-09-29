@@ -182,7 +182,7 @@ clients_social_platforms
 ```
 User clicks "Connect Instagram"
   ↓
-/api/v1/plugin/social-media-publisher/social/connect?platform=instagram_business&clientId={uuid}
+/api/plugins/social-media-publisher/social/connect?platform=instagram_business&clientId={uuid}
   ↓
 Redirect to Facebook OAuth with state parameter
 ```
@@ -198,7 +198,7 @@ Facebook redirects to callback URL
 
 **3. Callback Processing:**
 ```
-/api/v1/plugin/social-media-publisher/social/connect/callback?code={code}&state={state}
+/api/plugins/social-media-publisher/social/connect/callback?code={code}&state={state}
   ↓
 Exchange code for access token
   ↓
@@ -229,7 +229,7 @@ Popup auto-closes after 2 seconds
 1. User selects client
 2. User chooses social account (from client's accounts)
 3. User uploads image and writes caption
-4. POST /api/v1/plugin/social-media-publisher/social/publish
+4. POST /api/plugins/social-media-publisher/social/publish
 5. Plugin checks token expiration
 6. Auto-refresh if needed (< 10 min)
 7. Decrypt token

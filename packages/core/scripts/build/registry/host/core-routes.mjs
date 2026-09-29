@@ -5,9 +5,10 @@
  * as `@nextsparkjs/core/routes/manifest.json` (`dist/routes/manifest.json` in the npm package,
  * `src/routes/manifest.json` in a source checkout): an array of
  * `{ kind, target, specifier }` - the facade emitter's route kind, the path under `src/app`, and
- * the core subpath that implements it. Every consumer (prepare, --check, the dev watcher, the
- * conformance fixture) reads it through `loadCoreRouteManifest`, so its location and validation
- * live in one place.
+ * the core subpath that implements it. A layout may also carry `compose: { wrapper, specifier }`:
+ * a project layout that overrides it is composed with that wrapper (see plan.mjs, render.mjs).
+ * Every consumer (prepare, --check, the dev watcher, the conformance fixture) reads it through
+ * `loadCoreRouteManifest`, so its location and validation live in one place.
  *
  * @module core/scripts/build/registry/host/core-routes
  */
@@ -145,13 +146,19 @@ export function resolveCoreRouteFile(coreRoot, specifier) {
  */
 export async function loadProtectedTargets(coreRoot) {
   const module = join(coreRoot, 'dist/config/protected-paths.js')
-  if (!existsSync(module)) return () => false
+  const none = () => false
+  none.level = () => null
+  if (!existsSync(module)) return none
   const { PROTECTED_PATHS = {}, ProtectionLevel = {} } = await import(pathToFileURL(module).href)
-  const none = ProtectionLevel.NONE ?? 'none'
+  const noneLevel = ProtectionLevel.NONE ?? 'none'
   const entries = Object.entries(PROTECTED_PATHS)
-    .filter(([, level]) => level !== none)
-    .map(([path]) => path.replace(/^app\//, ''))
-  return target => entries.some(path => (path.endsWith('/') ? target.startsWith(path) : target === path))
+    .filter(([, level]) => level !== noneLevel)
+    .map(([path, level]) => [path.replace(/^app\//, ''), level])
+  const levelOf = target => entries.find(([path]) => (path.endsWith('/') ? target.startsWith(path) : target === path))?.[1] ?? null
+  const isProtected = target => levelOf(target) !== null
+  /** The protection level of a target (`protected_all`, `protected_render`, `protected_metadata`), or null. */
+  isProtected.level = levelOf
+  return isProtected
 }
 
 function validateEntries(entries) {
@@ -174,6 +181,21 @@ function validateEntries(entries) {
     }
     if (typeof entry.specifier !== 'string' || entry.specifier === '') problems.push(`${at}: specifier must be a non-empty string`)
     if ('protected' in entry && typeof entry.protected !== 'boolean') problems.push(`${at}: protected must be a boolean`)
+    if ('compose' in entry) {
+      const { compose } = entry
+      if (entry.kind !== 'layout') problems.push(`${at}: only a layout can be composed`)
+      if (!compose || typeof compose !== 'object' || Array.isArray(compose)) {
+        problems.push(`${at}: compose must be { wrapper, specifier }`)
+      } else {
+        if (typeof compose.wrapper !== 'string' || !/^[A-Za-z_$][\w$]*$/.test(compose.wrapper)) problems.push(`${at}: compose.wrapper must be an identifier`)
+        // A package subpath (core's `@nextsparkjs/core/routes/...`, or a fixture core's own alias), never a path
+        if (typeof compose.specifier !== 'string' || !/^@?[A-Za-z0-9][^\s'"`\\]*$/.test(compose.specifier) || compose.specifier.split('/').includes('..')) {
+          problems.push(`${at}: compose.specifier must be a package subpath (such as ${CORE_ROUTES_SPECIFIER}_internal/root-layout)`)
+        }
+        const unknown = Object.keys(compose).filter(key => key !== 'wrapper' && key !== 'specifier')
+        if (unknown.length > 0) problems.push(`${at}: compose has unknown keys ${unknown.join(', ')}`)
+      }
+    }
   })
   return problems
 }
@@ -252,12 +274,18 @@ export async function loadCoreRouteManifest({ coreRoot, entries, manifestPath, r
   for (const entry of entries) {
     const file = resolve(entry.specifier)
     if (!file) problems.push(`${entry.target}: no module found for ${entry.specifier}`)
+    const composeFile = entry.compose ? resolve(entry.compose.specifier) : null
+    if (entry.compose && !composeFile) problems.push(`${entry.target}: no module found for ${entry.compose.specifier}`)
     routes.push({
       kind: entry.kind,
       target: entry.target,
       specifier: entry.specifier,
       file,
       protected: entry.protected === true || protectedTarget(entry.target),
+      ...(entry.protected === true || protectedTarget(entry.target)
+        ? { protectionLevel: entry.protected === true ? 'protected_all' : protectedTarget.level?.(entry.target) ?? 'protected_all' }
+        : {}),
+      ...(entry.compose ? { compose: { ...entry.compose, file: composeFile } } : {}),
     })
   }
   if (problems.length > 0) throw new CoreRouteManifestError(path, problems)

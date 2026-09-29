@@ -48,7 +48,7 @@ export function useTokenUsage(period: Period = '30d', type: 'user' | 'team' = 'u
                 headers['x-team-id'] = currentTeam.id
             }
 
-            const response = await fetch(withBasePath(`/api/v1/theme/default/ai/usage?period=${period}&type=${type}`), {
+            const response = await fetch(withBasePath(`/api/ai/usage?period=${period}&type=${type}`), {
                 headers
             })
 

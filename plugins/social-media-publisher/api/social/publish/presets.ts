@@ -7,7 +7,7 @@
 import { defineApiEndpoint } from '@nextsparkjs/core/types/api-presets'
 
 export default defineApiEndpoint({
-  endpoint: '/api/v1/plugin/social-media-publisher/social/publish',
+  endpoint: '/api/plugins/social-media-publisher/social/publish',
   summary: 'Publish photos, carousels, and text posts to social media',
   presets: [
     {

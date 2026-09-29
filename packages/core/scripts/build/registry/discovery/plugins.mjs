@@ -50,7 +50,7 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
         try {
           await stat(apiPath)
           hasAPI = true
-          routeFiles = await discoverRouteFiles(apiPath, pluginName, source.importBase)
+          routeFiles = await discoverRouteFiles(apiPath, pluginName, source.importBase, { generatedHost: config.generatedHost })
         } catch {
           // No API directory
         }
@@ -141,7 +141,7 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
  * @param {string} pluginName - Name of the plugin
  * @returns {Promise<Array>} Array of route file info
  */
-export async function discoverRouteFiles(apiPath, pluginName, importBase = `@/plugins/${pluginName}`) {
+export async function discoverRouteFiles(apiPath, pluginName, importBase = `@/plugins/${pluginName}`, { generatedHost = false } = {}) {
   const routeFiles = []
 
   async function scanDirectory(dir, relativePath = '') {
@@ -157,7 +157,8 @@ export async function discoverRouteFiles(apiPath, pluginName, importBase = `@/pl
         } else if (entry.name === 'route.ts') {
           const routePath = relativePath || '/'
           const endpoint = {
-            path: `/api/v1/plugin/${pluginName}${routePath === '/' ? '' : '/' + routePath}`,
+            // The generated host serves a plugin at /api/plugins/<plugin>/**; the legacy dispatcher at /api/v1/plugin/<plugin>/**.
+            path: `${generatedHost ? '/api/plugins' : '/api/v1/plugin'}/${pluginName}${routePath === '/' ? '' : '/' + routePath}`,
             filePath: `${importBase}/api${routePath === '/' ? '/route' : '/' + routePath + '/route'}`,
             relativePath: routePath,
             methods: await extractHttpMethods(fullPath),

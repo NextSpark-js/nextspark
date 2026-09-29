@@ -134,7 +134,7 @@ export function usePersistentChat(externalSessionId?: string | null) {
             }
 
             const response = await fetch(
-                withBasePath(`/api/v1/theme/default/ai/single-agent?sessionId=${encodeURIComponent(sid)}`),
+                withBasePath(`/api/ai/single-agent?sessionId=${encodeURIComponent(sid)}`),
                 { method: 'GET', headers }
             )
 
@@ -180,7 +180,7 @@ export function usePersistentChat(externalSessionId?: string | null) {
                 headers['x-team-id'] = teamId
             }
 
-            const response = await fetch(withBasePath('/api/v1/theme/default/ai/single-agent'), {
+            const response = await fetch(withBasePath('/api/ai/single-agent'), {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ message, sessionId }),
@@ -244,7 +244,7 @@ export function usePersistentChat(externalSessionId?: string | null) {
                 headers['x-team-id'] = teamId
             }
 
-            const response = await fetch(withBasePath('/api/v1/theme/default/ai/single-agent'), {
+            const response = await fetch(withBasePath('/api/ai/single-agent'), {
                 method: 'DELETE',
                 headers,
                 body: JSON.stringify({ sessionId }),

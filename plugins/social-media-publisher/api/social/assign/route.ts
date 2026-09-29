@@ -4,7 +4,7 @@
  * POST endpoint that saves OAuth tokens to social_accounts (user level)
  * and creates links via the adapter (entity level).
  *
- * Accessible via: /api/v1/plugin/social-media-publisher/social/assign
+ * Accessible via: /api/plugins/social-media-publisher/social/assign
  *
  * Body:
  * - entityId: Target entity ID (e.g., client ID)

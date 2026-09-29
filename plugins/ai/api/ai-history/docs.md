@@ -5,7 +5,7 @@ Manage AI operation history and link AI interactions to entities.
 ## Endpoint
 
 ```
-PATCH /api/v1/plugin/ai/ai-history/:id
+PATCH /api/plugins/ai/ai-history/:id
 ```
 
 ## Authentication
@@ -37,7 +37,7 @@ Update the related entity information for an AI history record. Used to link AI 
 ### Example Request
 
 ```
-PATCH /api/v1/plugin/ai/ai-history/hist_abc123
+PATCH /api/plugins/ai/ai-history/hist_abc123
 ```
 
 ```json
@@ -99,7 +99,7 @@ PATCH /api/v1/plugin/ai/ai-history/hist_abc123
 
 ```typescript
 // 1. Generate AI analysis
-const analysis = await fetch('/api/v1/plugin/ai/generate', {
+const analysis = await fetch('/api/plugins/ai/generate', {
   method: 'POST',
   body: JSON.stringify({
     prompt: 'Analyze this client brief...',
@@ -114,7 +114,7 @@ const client = await fetch('/api/v1/clients', {
 })
 
 // 3. Link AI history to created entity
-await fetch(`/api/v1/plugin/ai/ai-history/${analysis.historyId}`, {
+await fetch(`/api/plugins/ai/ai-history/${analysis.historyId}`, {
   method: 'PATCH',
   body: JSON.stringify({
     relatedEntityType: 'clients',
@@ -131,5 +131,5 @@ await fetch(`/api/v1/plugin/ai/ai-history/${analysis.historyId}`, {
 
 ## Related APIs
 
-- [AI Generate](/api/v1/plugin/ai/generate) - Generate AI responses
-- [AI Embeddings](/api/v1/plugin/ai/embeddings) - Generate text embeddings
+- [AI Generate](/api/plugins/ai/generate) - Generate AI responses
+- [AI Embeddings](/api/plugins/ai/embeddings) - Generate text embeddings

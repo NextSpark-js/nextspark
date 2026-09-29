@@ -174,10 +174,66 @@ still reach Next directly (a facade re-exports the module, it does not copy it),
   dev indicator lists as an issue; the panel is what stays reliable, since Next clears its issue list on every Fast Refresh
   rebuild) and `generation-status.tsx`
   (`withGenerationStatus(Layout)`, the root layout with the reporter rendered before its children);
-- the dev root layout facade is `export default withGenerationStatus(Source)` (`dev-facade` grammar);
+- the dev root layout facade is `export default withGenerationStatus(<the layout>)` (`dev-facade` grammar; `<the layout>` is the
+  root layout's default import, or its composition with a project layout, see below);
 - on failure the watcher rewrites only `generation-diagnostic.ts`; Next's HMR re-renders and the reporter shows the
   diagnostic. The next successful regeneration empties it and the panel goes away, with no reload.
 
 A production preparation never emits these files or the composition: zero bytes and zero code in production builds.
+
+## Composition, per-entity routes, API namespaces (stage 4)
+
+A facade forwards one module. Four things are not that, and the host writes them as **composed facades**
+(`composed-facade` grammar, `static-imports.mjs`): the facade grammar plus a fixed `.css` import and at most one
+`export default wrapper(...)` / any number of `export const NAME = wrapper(...)`, where the callee is one of an explicit
+allowlist of core composition wrappers (`CORE_COMPOSITION_WRAPPERS`: each imported from the exact `@nextsparkjs/core/routes/_internal/...`
+module that exports it) and each argument is an imported name or a nested allowed call. The one literal is the array of child entity
+names that is `createEntityDetailRoute`'s second argument. A runtime resolver (`getTemplateOrDefault(...)`, a registry accessor,
+a wrapper name imported from anywhere else) is never a callee, however it is spelled; there is no member access, no other call, no
+spread and no expression. A host with another core (the conformance fixture) passes its own wrappers (`compositionWrappers`).
+
+- **The root layout** always imports the project stylesheet (`import "@/styles/globals.css"`, when `styles/globals.css`
+  exists). A project `templates/layout.tsx` is composed, never a replacement:
+  `export default withRootLayout(NextSparkTemplate)`, core's providers and protections around the project's layout. The
+  project's `metadata` is forwarded (the root layout is protected at the render level, which allows it); without one, core's.
+- **Group layouts** `(auth)`, `(public)`, `superadmin`, `devtools`: a project override is composed with core's
+  `with<Group>Messages` wrapper, so it cannot drop the group's message provider; **core's protection is always the outer layer**:
+  the role-guarded groups (`superadmin`, `devtools`) are composed with `withSuperadminGuard` / `withDevtoolsGuard`, which put the
+  messages, the dashboard providers and the role guard around the project's layout (and `with...Messages` alone is not callable from a
+  facade). A core layout declares the wrapper as `compose: { wrapper, specifier }` in the core route manifest
+  (`routes-manifest.mjs`, `COMPOSED_ROUTES`); a route protected at `protected_all` is never composed.
+- **One route per entity** (`entity-routes.mjs`). For every entity of the project and of enabled plugins, the host writes
+  `dashboard/(main)/<entity>/{layout,error,loading,page,create/page,[id]/page,[id]/edit/page}` and, for builder entities with
+  `access.basePath`, the public item route (`(public)<basePath>/[...slug]`, `[slug]` at `/`) and archive route; a public
+  entity with an archive page and no basePath gets `(public)/<entity>/[[...rest]]`. Each is a facade over the entity's config and
+  one factory of its own core module (`routes/_internal/entity-*-route`, `public-*-route`): a route's module graph holds one
+  entity config and only the client components its page renders, and nothing looks an entity or a template up by a key.
+  A project template for an entity page (`templates/dashboard/(main)/<entity>/{page,create/page,[id]/page,[id]/edit/page}.tsx`; a public
+  item's `templates/(public)<basePath>/[slug]/page.tsx`) is composed into that route as its `Template` argument, and runs only after
+  core's checks (the entity is enabled and shown in the dashboard): the generated factory is never discarded. The client code these
+  routes carry does not depend on how many entities the project has: the create/edit views and the shared client modules read the
+  dashboard's own registry (hydrated from server props), never the generated client registry that imports every entity's config. `[entity]/**` and `(public)/[...slug]` are no longer core routes (`RETIRED_FROM_MANIFEST`).
+  What decides the routes is read from the config's source as literals (`enabled`, `ui.dashboard.showInMenu`,
+  `access.basePath`, `access.allowNestedSlugs`, `access.public`, `builder.enabled`, `ui.public.hasArchivePage`; the config
+  object must be an object literal): a flag that cannot be read keeps the dashboard route (core's checks answer notFound()),
+  and one that decides a public route is a diagnostic. An entity's `slug` must equal its directory name.
+- **Billing webhooks** (`webhooks.mjs`): `nextspark.config.ts` `billing.webhookExtensions: { stripe: './lib/...', polar: './lib/...' }`
+  replaces core's webhook route with `export const POST = createStripeWebhookRoute(stripeWebhookExtensions)`, the module
+  imported statically (it must export `stripeWebhookExtensions` / `polarWebhookExtensions`).
+
+**API namespaces** are enforced by the plan (`plan.mjs`): core owns `/api/v1/**`, the project's `api/` is served at `/api/<path>`,
+each plugin's `api/` at `/api/plugins/<plugin>/**`. Stops generation (`NS_HOST_API_NAMESPACE`): a project `api/` route in `/api/v1/**` or
+`/api/plugins/**`; a project `templates/api/v1/...` route that replaces no route core has, or `templates/api/plugins/<plugin>/...` route that
+replaces no route that plugin serves (a project may override an existing route there, never create one); a plugin route (from `api/` or
+`templates/`) outside `/api/plugins/<its-name>/**`. There are no dispatchers: `/api/v1/theme/**` and `/api/v1/plugin/**` are not routes of the host, and the
+route-handlers registry of a generated host imports no handler.
+
+The plan also refuses what Next.js would fail on later, with the routes named: two pages for one URL in different route
+groups (`NS_HOST_URL_CONFLICT`) and dynamic segments it cannot tell apart at one level (`[slug]` and `[entity]`, `[...a]`
+and `[[...a]]`: `NS_HOST_DYNAMIC_SEGMENT_CONFLICT`).
+
+**Cache Components** variants of the routes whose segment config Next.js rejects with it (login, signup and both docs pages:
+`dynamic`, `dynamicParams`) are core's `page.cc.tsx` files, listed in `routes/variants.json` and used when the project's
+next.config says `cacheComponents: true`, like the PPR root layout. The public item routes omit `revalidate` in that mode.
 
 Tests: `node --test packages/core/scripts/build/registry/host/__tests__/*.test.mjs`.

@@ -39,7 +39,7 @@ export function useAiChat() {
                 headers['x-team-id'] = currentTeam.id
             }
 
-            const response = await fetch(withBasePath('/api/v1/theme/default/ai/chat'), {
+            const response = await fetch(withBasePath('/api/ai/chat'), {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ message, sessionId })

@@ -282,7 +282,7 @@ export function foreignFilesDiagnostic(foreign) {
 // ---------------------------------------------------------------------------
 
 /** Every file with a grammar must parse and stay inside it. */
-export async function validateFiles(files, { projectRoot }) {
+export async function validateFiles(files, { projectRoot, wrappers }) {
   const diagnostics = []
   const ts = await loadTypeScriptFor(projectRoot)
   for (const file of files) {
@@ -296,7 +296,7 @@ export async function validateFiles(files, { projectRoot }) {
       if (DEV_RUNTIME_FILES[file.path] !== file.content) diagnostics.push({ code: GENERATION_DIAGNOSTICS.GRAMMAR, file: file.path, message: `${file.path} is not the fixed development file NextSpark generates` })
       continue
     }
-    for (const violation of validateGeneratedModule({ ts, source: file.content, file: file.path, grammar: file.grammar })) {
+    for (const violation of validateGeneratedModule({ ts, source: file.content, file: file.path, grammar: file.grammar, wrappers })) {
       diagnostics.push({ code: GENERATION_DIAGNOSTICS.GRAMMAR, file: file.path, line: violation.line, message: `${file.path}:${violation.line} leaves the allowed ${file.grammar} grammar (${violation.kind}): ${violation.text}` })
     }
   }

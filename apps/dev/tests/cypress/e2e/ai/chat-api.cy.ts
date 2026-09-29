@@ -1,7 +1,7 @@
 /**
  * AI Chat Streaming API Tests
  *
- * Tests the streaming chat endpoint at /api/v1/theme/default/ai/chat/stream
+ * Tests the streaming chat endpoint at /api/ai/chat/stream
  * This endpoint uses Server-Sent Events (SSE) for streaming responses.
  *
  * Note: Some tests check for JSON error responses before SSE streaming begins.
@@ -13,7 +13,7 @@ describe('AI Chat Streaming API', {
     const API_KEY = 'test_api_key_for_testing_purposes_only_not_a_real_secret_key_abc123'
     const TEAM_ID = 'team-personal-superadmin-003'
     // Updated to use the correct streaming endpoint
-    const API_URL = '/api/v1/theme/default/ai/chat/stream'
+    const API_URL = '/api/ai/chat/stream'
 
     const getHeaders = () => ({
         'Content-Type': 'application/json',

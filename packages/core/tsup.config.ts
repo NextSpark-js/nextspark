@@ -175,7 +175,8 @@ async function inlineUiPackage(distDir: string): Promise<void> {
  * and route paths hold glob syntax: (group), [param], [...slug].
  */
 async function buildRouteModules(srcDir: string, distDir: string): Promise<void> {
-  const files = await glob('**/*.{ts,tsx}', { cwd: srcDir, ignore: ['**/*.test.ts', '**/*.test.tsx', '**/*.d.ts'] })
+  // presets.ts is data the registry build reads as text (copied below), not a module
+  const files = await glob('**/*.{ts,tsx}', { cwd: srcDir, ignore: ['**/*.test.ts', '**/*.test.tsx', '**/*.d.ts', '**/presets.ts'] })
   for (const file of files) {
     const source = await readFile(join(srcDir, file), 'utf-8')
     const { code } = await transform(source, {
@@ -190,6 +191,14 @@ async function buildRouteModules(srcDir: string, distDir: string): Promise<void>
     await writeFile(out, code)
   }
   console.log(`✅ Built ${files.length} route modules`)
+
+  // The API explorer's presets.ts and docs.md stay beside the route they document, verbatim: the registry
+  // build of a project that installs core reads them from dist/routes/api.
+  const data = await glob('**/{presets.ts,docs.md}', { cwd: srcDir })
+  for (const file of data) {
+    await safeCopy(join(srcDir, file), join(distDir, file))
+  }
+  console.log(`✅ Copied ${data.length} API docs and presets`)
 }
 
 // Normalize paths to forward slashes (Windows compatibility)

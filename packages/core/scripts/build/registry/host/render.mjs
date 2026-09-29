@@ -26,13 +26,19 @@
  * Nothing throws, so every route keeps rendering. A production preparation never passes
  * `devStatus`: production builds carry none of these files and no composition.
  *
+ * Composed routes (stage 4): a route the plan marks `compose` (a project layout over one of core's wrapped
+ * layouts), `entityRoute` (a per-entity route: its config, factory and optional template) or `webhook` (a
+ * billing webhook with the project's extensions) is written as a `composed-facade`: static imports of the
+ * modules and one call of a core wrapper/factory over them, never a lookup (static-imports.mjs). The root
+ * layout also imports the project's global stylesheet when the host has one (`stylesheet`).
+ *
  * @module core/scripts/build/registry/host/render
  */
 
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 
-import { FacadeEmitError, analyzeRouteSource, emitFacade, loadNextSegmentConfig, planFacade } from './facade-emitter.mjs'
+import { COMPOSED_TEMPLATE, FacadeEmitError, analyzeRouteSource, emitFacade, loadNextSegmentConfig, planFacade } from './facade-emitter.mjs'
 import { DEV_STATUS_SPECIFIER, validateGeneratedModule } from './static-imports.mjs'
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 
@@ -121,49 +127,200 @@ export function devFailureDiagnostic(message) {
 }
 
 /**
- * The dev root layout: the emitted facade with its default re-export replaced by the composition.
- * Null when the facade has no plain default re-export (a client root layout cannot be composed).
+ * The dev root layout: the emitted facade with its default export wrapped by the status wrapper. Null when
+ * the facade has neither a plain default re-export nor a composed default (a client root layout cannot be
+ * composed).
  */
 function composeDevRootLayout(content) {
-  const line = /^export \{ default \} from ("[^"\n]+")$/m
-  const match = line.exec(content)
-  if (!match || content.includes("'use client'")) return null
-  return content.replace(
-    line,
-    `import NextSparkSourceLayout from ${match[1]}\nimport { withGenerationStatus } from '${DEV_STATUS_SPECIFIER}'\nexport default withGenerationStatus(NextSparkSourceLayout)`
-  )
+  if (content.includes("'use client'")) return null
+  const imports = `import { withGenerationStatus } from '${DEV_STATUS_SPECIFIER}'\n`
+  const plain = /^export \{ default \} from ("[^"\n]+")$/m.exec(content)
+  if (plain) {
+    return content.replace(plain[0], `import NextSparkSourceLayout from ${plain[1]}\n${imports}export default withGenerationStatus(NextSparkSourceLayout)`)
+  }
+  const composed = /^export default (.+)$/m.exec(content)
+  if (composed) return content.replace(composed[0], `${imports}export default withGenerationStatus(${composed[1]})`)
+  return null
 }
 
 const sha256 = text => createHash('sha256').update(text).digest('hex')
+
+const METADATA_EXPORTS = ['metadata', 'generateMetadata']
+const IDENTIFIER = /^[A-Za-z_$][\w$]*$/
+
+/** The runtime export names of a core module (what a composed facade imports from it), memoized by content. */
+async function moduleExports(file, { projectRoot, memo }) {
+  const source = await readFile(file, 'utf8')
+  const key = `exports\0${file}\0${sha256(source)}`
+  if (!memo.has(key)) {
+    const analysis = await analyzeRouteSource({ source, file, projectRoot })
+    memo.set(key, analysis.parseError ? null : new Set(analysis.exports.map(entry => entry.name)))
+  }
+  return memo.get(key)
+}
+
+/** Diagnostics for names a composed facade imports from a core module that does not export them. */
+async function checkExports({ file, specifier, names, route, ctx }) {
+  if (!file) return [{ code: 'NS_HOST_CORE_MODULE_MISSING', target: route.target, source: route.source, message: `no module found for ${specifier}` }]
+  let exported
+  try {
+    exported = await moduleExports(file, ctx)
+  } catch (error) {
+    return [{ code: 'NS_HOST_SOURCE_UNREADABLE', target: route.target, source: route.source, file, message: `${specifier}: cannot be read (${error.code ?? error.message})` }]
+  }
+  if (!exported) return [{ code: 'NS_HOST_PARSE_ERROR', target: route.target, source: route.source, file, message: `${specifier} does not parse, so its exports cannot be read` }]
+  return names
+    .filter(name => !exported.has(name))
+    .map(name => ({ code: 'NS_HOST_CORE_EXPORT_MISSING', target: route.target, source: route.source, file, message: `${specifier} does not export "${name}", which the generated ${route.target} imports from it` }))
+}
+
+/** A template that composes into a per-entity route needs a default export it can render. */
+async function checkTemplate(template, route, ctx) {
+  let source
+  try {
+    source = await readFile(template.file, 'utf8')
+  } catch (error) {
+    return [{ code: 'NS_HOST_SOURCE_UNREADABLE', target: route.target, source: template.source, file: template.file, message: `${template.source}: cannot be read (${error.code ?? error.message})` }]
+  }
+  const analysis = await analyzeRouteSource({ source, file: template.file, projectRoot: ctx.projectRoot })
+  if (analysis.parseError) {
+    return [{ code: 'NS_HOST_PARSE_ERROR', target: route.target, source: template.source, file: template.file, line: analysis.parseError.line, message: `${template.source}: the module does not parse (${analysis.parseError.message}), so its exports cannot be read` }]
+  }
+  const problems = []
+  if (!analysis.exports.some(entry => entry.name === 'default')) {
+    problems.push({ code: 'NS_HOST_MISSING_DEFAULT', target: route.target, source: template.source, file: template.file, message: `${template.source}: a template needs a default export and the module has none` })
+  }
+  if (analysis.directives.includes('use server')) {
+    problems.push({ code: 'NS_HOST_SERVER_ACTIONS_MODULE', target: route.target, source: template.source, file: template.file, message: `${template.source}: a 'use server' module only exports Server Actions and cannot render a route` })
+  }
+  return problems
+}
+
+/**
+ * A per-entity route (`route.entityRoute`): imports of the entity config, the template when there is one and the
+ * core factories, then the composed default export, composed named exports, forwarded exports and literals.
+ */
+async function renderEntityRoute(route, ctx) {
+  const spec = route.entityRoute
+  const diagnostics = []
+  const imports = new Map() // specifier -> Set(names); the entity config and factories are named imports
+  const add = (specifier, name) => {
+    if (!imports.has(specifier)) imports.set(specifier, new Set())
+    imports.get(specifier).add(name)
+  }
+  const taken = new Map() // local name -> what claims it
+  const claim = (name, what) => {
+    if (taken.has(name) && taken.get(name) !== what) diagnostics.push({ code: 'NS_HOST_NAME_CLASH', target: route.target, source: route.source, message: `${route.target}: "${name}" would name both ${taken.get(name)} and ${what} in the generated file` })
+    taken.set(name, what)
+  }
+  claim(COMPOSED_TEMPLATE, 'the project template')
+
+  const argSource = (arg, factory) => {
+    if ('import' in arg) {
+      if (!IDENTIFIER.test(arg.import.name)) diagnostics.push({ code: 'NS_HOST_INVALID_SPECIFIER', target: route.target, source: route.source, message: `${route.target}: "${arg.import.name}" is not an identifier` })
+      add(arg.import.specifier, arg.import.name)
+      claim(arg.import.name, arg.import.specifier)
+      return arg.import.name
+    }
+    if ('template' in arg) return route.template ? COMPOSED_TEMPLATE : null
+    return JSON.stringify(arg.literal)
+  }
+  const call = ({ factory, args }) => {
+    add(factory.specifier, factory.name)
+    claim(factory.name, factory.specifier)
+    const rendered = args.map(arg => argSource(arg, factory))
+    // A missing template is only ever the last argument.
+    while (rendered.length > 0 && rendered.at(-1) === null) rendered.pop()
+    return `${factory.name}(${rendered.map(value => (value === null ? 'undefined' : value)).join(', ')})`
+  }
+
+  const lines = [`// Generated by NextSpark for ${spec.source}. Do not edit: regenerated on every build.`]
+  const body = []
+  if (spec.default) body.push(`export default ${call(spec.default)}`)
+  for (const named of spec.named ?? []) body.push(`export const ${named.name} = ${call(named)}`)
+  for (const { names, specifier } of spec.reexport ?? []) body.push(`export { ${names.join(', ')} } from ${JSON.stringify(specifier)}`)
+  for (const { name, value } of spec.literals ?? []) body.push(`export const ${name} = ${JSON.stringify(value)}`)
+
+  if (route.template) {
+    diagnostics.push(...(await checkTemplate(route.template, route, ctx)))
+    lines.push(`import ${COMPOSED_TEMPLATE} from ${JSON.stringify(route.template.specifier)}`)
+  }
+  for (const [specifier, names] of [...imports].sort(([a], [b]) => (a < b ? -1 : 1))) lines.push(`import { ${[...names].sort().join(', ')} } from ${JSON.stringify(specifier)}`)
+  lines.push(...body)
+
+  // The core modules the file imports from must export what it imports.
+  const factories = [...(spec.default ? [spec.default] : []), ...(spec.named ?? [])].map(entry => entry.factory)
+  for (const factory of factories) diagnostics.push(...(await checkExports({ file: factory.file, specifier: factory.specifier, names: [factory.name], route, ctx })))
+  for (const { names, specifier, file } of spec.reexport ?? []) diagnostics.push(...(await checkExports({ file, specifier, names, route, ctx })))
+  return { content: lines.join('\n') + '\n', diagnostics }
+}
+
+/** A billing webhook route with the project's extensions module (`route.webhook`). */
+async function renderWebhookRoute(route, ctx) {
+  const { webhook } = route
+  const content =
+    `// Generated by NextSpark for ${webhook.source}. Do not edit: regenerated on every build.\n` +
+    `import { ${webhook.exportName} } from ${JSON.stringify(webhook.extensionsSpecifier)}\n` +
+    `import { ${webhook.wrapper.name} } from ${JSON.stringify(webhook.wrapper.specifier)}\n` +
+    `export const POST = ${webhook.wrapper.name}(${webhook.exportName})\n`
+  const diagnostics = [
+    ...(await checkExports({ file: webhook.wrapper.file, specifier: webhook.wrapper.specifier, names: [webhook.wrapper.name], route, ctx })),
+    ...(await checkExports({ file: webhook.file, specifier: webhook.extensionsSpecifier, names: [webhook.exportName], route, ctx })),
+  ]
+  return { content, diagnostics }
+}
 
 /**
  * Emit one route: prevalidated against every cache mode it serves, then written by `emitFacade`
  * (which applies the facade grammar gate to its own output).
  */
-async function emitRoute(route, source, { projectRoot, modes, cacheComponents, pageExtensions }) {
+async function emitRoute(route, source, { projectRoot, modes, cacheComponents, pageExtensions, stylesheet, wrappers, memo }) {
   const routeModes = route.mode ? [route.mode] : modes
-  if (routeModes.length > 0) {
+  const isRootLayout = route.kind === 'layout' && route.target === 'layout.tsx'
+  const ctx = { projectRoot, memo }
+
+  let composition
+  if (route.compose && route.origin !== 'core') {
+    const problems = await checkExports({ file: route.compose.file, specifier: route.compose.specifier, names: [route.compose.wrapper], route, ctx })
+    if (problems.length > 0) throw new FacadeEmitError(problems.map(problem => ({ ...problem, file: problem.file ?? route.file })))
+    const coreExports = route.composeOfFile ? await moduleExports(route.composeOfFile, ctx) : null
+    composition = {
+      wrapper: { name: route.compose.wrapper, specifier: route.compose.specifier },
+      fallback: { specifier: route.composeOf, names: coreExports ? METADATA_EXPORTS.filter(name => coreExports.has(name)) : [] },
+    }
+  }
+
+  const needsAnalysis = routeModes.length > 0 || route.composeProtection === 'protected_metadata'
+  if (needsAnalysis) {
     const analysis = await analyzeRouteSource({ source, file: route.file, projectRoot })
-    // A problem every mode has is reported once; one only some modes have names them.
-    const byProblem = new Map()
-    for (const mode of routeModes) {
-      const { diagnostics: found } = planFacade({
-        ...route,
-        analysis,
-        cacheComponents: mode === 'cc',
-        pageExtensions,
-        nextSegmentConfig: loadNextSegmentConfig(projectRoot),
-      })
-      for (const diagnostic of found) {
-        const key = JSON.stringify([diagnostic.code, diagnostic.line, diagnostic.exportName, diagnostic.message])
-        if (!byProblem.has(key)) byProblem.set(key, { diagnostic, modes: [] })
-        byProblem.get(key).modes.push(mode)
+    if (route.composeProtection === 'protected_metadata') {
+      const claimed = analysis.exports.filter(entry => METADATA_EXPORTS.includes(entry.name))
+      if (claimed.length > 0) {
+        throw new FacadeEmitError(claimed.map(entry => ({ code: 'NS_HOST_PROTECTED_ROUTE', file: route.file, line: entry.line, exportName: entry.name, message: `the metadata of src/app/${route.target} is protected by core; ${route.source} exports "${entry.name}"` })))
       }
     }
-    const diagnostics = [...byProblem.values()].map(({ diagnostic, modes: found }) =>
-      found.length === routeModes.length ? diagnostic : { ...diagnostic, message: `[${found.join(', ')} host] ${diagnostic.message}` }
-    )
-    if (diagnostics.length > 0) throw new FacadeEmitError(diagnostics)
+    if (routeModes.length > 0) {
+      // A problem every mode has is reported once; one only some modes have names them.
+      const byProblem = new Map()
+      for (const mode of routeModes) {
+        const { diagnostics: found } = planFacade({
+          ...route,
+          analysis,
+          cacheComponents: mode === 'cc',
+          pageExtensions,
+          nextSegmentConfig: loadNextSegmentConfig(projectRoot),
+        })
+        for (const diagnostic of found) {
+          const key = JSON.stringify([diagnostic.code, diagnostic.line, diagnostic.exportName, diagnostic.message])
+          if (!byProblem.has(key)) byProblem.set(key, { diagnostic, modes: [] })
+          byProblem.get(key).modes.push(mode)
+        }
+      }
+      const diagnostics = [...byProblem.values()].map(({ diagnostic, modes: found }) =>
+        found.length === routeModes.length ? diagnostic : { ...diagnostic, message: `[${found.join(', ')} host] ${diagnostic.message}` }
+      )
+      if (diagnostics.length > 0) throw new FacadeEmitError(diagnostics)
+    }
   }
   const emitted = await emitFacade({
     ...route,
@@ -171,8 +328,11 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
     projectRoot,
     cacheComponents: routeModes.length === 1 ? routeModes[0] === 'cc' : routeModes.length > 1 ? undefined : cacheComponents,
     pageExtensions,
+    stylesheet: isRootLayout ? stylesheet : undefined,
+    composition,
+    wrappers,
   })
-  return { content: emitted.content, sourceHash: sha256(source) }
+  return { content: emitted.content, grammar: emitted.grammar, sourceHash: sha256(source) }
 }
 
 /**
@@ -184,17 +344,30 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
  * @param {string[]} [input.modes] - see the module comment
  * @param {boolean} [input.cacheComponents] - the host's value, when known
  * @param {string[]} [input.pageExtensions] - the host's pageExtensions
+ * @param {string} [input.stylesheet] - specifier of the project's global stylesheet the root layout imports
+ * @param {Record<string, string[]>} [input.wrappers] - the composition wrappers a composed facade may call (`CORE_COMPOSITION_WRAPPERS` by default)
  * @param {Map} [input.cache] - reused across calls by the watcher: unchanged sources are not re-parsed
  * @param {boolean} [input.devStatus] - add the development status module (see the module comment)
  * @returns {Promise<{ files: { path: string, content: string, grammar: string }[], diagnostics: object[] }>}
  */
-export async function renderHost({ routes, projectRoot, modes = [], cacheComponents, pageExtensions, cache = new Map(), devStatus = false }) {
+export async function renderHost({ routes, projectRoot, modes = [], cacheComponents, pageExtensions, stylesheet, wrappers, cache = new Map(), devStatus = false }) {
   const files = []
   const diagnostics = []
-  const options = { projectRoot, modes, cacheComponents, pageExtensions }
-  const optionsKey = JSON.stringify({ modes, cacheComponents, pageExtensions })
+  const options = { projectRoot, modes, cacheComponents, pageExtensions, stylesheet, wrappers, memo: cache }
+  const optionsKey = JSON.stringify({ modes, cacheComponents, pageExtensions, stylesheet })
 
   for (const route of routes) {
+    // Routes made of imports and one composition, not of a module's exports.
+    if (route.entityRoute || route.webhook) {
+      const rendered = route.entityRoute ? await renderEntityRoute(route, options) : await renderWebhookRoute(route, options)
+      if (rendered.diagnostics.length > 0) {
+        for (const diagnostic of rendered.diagnostics) diagnostics.push({ target: route.target, source: route.source, ...diagnostic })
+        continue
+      }
+      files.push({ path: `${APP_DIR}/${route.target}`, content: rendered.content, grammar: 'composed-facade' })
+      continue
+    }
+
     let source
     try {
       source = await readFile(route.file, 'utf8')
@@ -202,16 +375,16 @@ export async function renderHost({ routes, projectRoot, modes = [], cacheCompone
       diagnostics.push({ code: 'NS_HOST_SOURCE_UNREADABLE', file: route.file, message: `${route.source ?? route.file}: cannot be read (${error.code ?? error.message})` })
       continue
     }
-    const key = `${route.target}\0${route.specifier}\0${route.mode ?? ''}\0${optionsKey}`
+    const compositionKey = JSON.stringify([route.compose, route.composeOf, route.composeProtection])
+    const key = `${route.target}\0${route.specifier}\0${route.mode ?? ''}\0${optionsKey}\0${compositionKey}`
     const hit = cache.get(key)
-    let content
+    let emitted
     if (hit && hit.sourceHash === sha256(source)) {
-      content = hit.content
+      emitted = hit
     } else {
       try {
-        const emitted = await emitRoute(route, source, options)
+        emitted = await emitRoute(route, source, options)
         cache.set(key, emitted)
-        content = emitted.content
       } catch (error) {
         if (!(error instanceof FacadeEmitError)) throw error
         cache.delete(key)
@@ -219,8 +392,8 @@ export async function renderHost({ routes, projectRoot, modes = [], cacheCompone
         continue
       }
     }
-    const devLayout = devStatus && ROOT_LAYOUT.test(route.target) ? composeDevRootLayout(content) : null
-    files.push({ path: `${APP_DIR}/${route.target}`, content: devLayout ?? content, grammar: devLayout ? 'dev-facade' : 'facade' })
+    const devLayout = devStatus && ROOT_LAYOUT.test(route.target) ? composeDevRootLayout(emitted.content) : null
+    files.push({ path: `${APP_DIR}/${route.target}`, content: devLayout ?? emitted.content, grammar: devLayout ? 'dev-facade' : emitted.grammar ?? 'facade' })
   }
 
   if (devStatus) {
@@ -234,7 +407,7 @@ export async function renderHost({ routes, projectRoot, modes = [], cacheCompone
   if (devStatus && diagnostics.length === 0) {
     const ts = await loadTypeScriptFor(projectRoot)
     for (const file of files.filter(file => file.grammar === 'dev-facade' || file.path === DEV_DIAGNOSTIC_FILE)) {
-      for (const violation of validateGeneratedModule({ ts, source: file.content, file: file.path, grammar: file.grammar })) {
+      for (const violation of validateGeneratedModule({ ts, source: file.content, file: file.path, grammar: file.grammar, wrappers })) {
         diagnostics.push({ code: 'NS_HOST_VARIABLE_LOOKUP', file: file.path, line: violation.line, message: `${file.path} leaves the allowed grammar (${violation.kind}): ${violation.text}` })
       }
     }

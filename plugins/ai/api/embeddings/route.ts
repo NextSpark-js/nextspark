@@ -2,7 +2,7 @@
  * AI Embeddings Endpoint
  *
  * Generate text embeddings using OpenAI's text-embedding-3-small model
- * Accessible via: /api/v1/plugin/ai/embeddings
+ * Accessible via: /api/plugins/ai/embeddings
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -89,7 +89,7 @@ export const POST = withRateLimitTier(postHandler, 'write')
  */
 const getHandler = async (): Promise<NextResponse> => {
   return NextResponse.json({
-    endpoint: '/api/v1/plugin/ai/embeddings',
+    endpoint: '/api/plugins/ai/embeddings',
     description: 'Generate text embeddings using OpenAI',
 
     usage: {

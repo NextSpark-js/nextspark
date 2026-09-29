@@ -254,7 +254,7 @@ All endpoints require **superadmin** authentication.
 ### List Traces
 
 ```
-GET /api/v1/theme/default/observability/traces
+GET /api/plugins/langchain/observability/traces
 ```
 
 **Query Parameters**:
@@ -294,7 +294,7 @@ GET /api/v1/theme/default/observability/traces
 ### Get Trace Detail
 
 ```
-GET /api/v1/theme/default/observability/traces/[traceId]
+GET /api/plugins/langchain/observability/traces/[traceId]
 ```
 
 **Response**:
@@ -334,7 +334,7 @@ GET /api/v1/theme/default/observability/traces/[traceId]
 ### Get Metrics
 
 ```
-GET /api/v1/theme/default/observability/metrics
+GET /api/plugins/langchain/observability/metrics
 ```
 
 **Query Parameters**:

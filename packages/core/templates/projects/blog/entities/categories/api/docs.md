@@ -90,7 +90,7 @@ Delete a category record. This will remove the category from all associated post
 
 Categories are linked to posts through a `post_categories` pivot table. When filtering posts by category:
 
-1. Use the [Public Posts API](/api/v1/theme/blog/posts/public) with `category` query parameter
+1. Use the [Public Posts API](/api/posts/public) with `category` query parameter
 2. Query the pivot table directly for advanced filtering
 
 ## Features
@@ -116,4 +116,4 @@ Categories are linked to posts through a `post_categories` pivot table. When fil
 ## Related APIs
 
 - **[Posts](/api/v1/posts)** - Blog posts
-- **[Public Posts](/api/v1/theme/blog/posts/public)** - Filter by category
+- **[Public Posts](/api/posts/public)** - Filter by category

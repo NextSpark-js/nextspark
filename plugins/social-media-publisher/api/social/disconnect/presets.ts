@@ -7,7 +7,7 @@
 import { defineApiEndpoint } from '@nextsparkjs/core/types/api-presets'
 
 export default defineApiEndpoint({
-  endpoint: '/api/v1/plugin/social-media-publisher/social/disconnect',
+  endpoint: '/api/plugins/social-media-publisher/social/disconnect',
   summary: 'Disconnect and deactivate social media accounts',
   presets: [
     {

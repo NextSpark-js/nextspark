@@ -193,7 +193,7 @@ const getHandler = async (req: NextRequest) => {
     if (!sessionId) {
         const agentConfig = getAgentConfig(AGENT_NAME)
         return NextResponse.json({
-            endpoint: '/api/v1/theme/default/ai/single-agent',
+            endpoint: '/api/ai/single-agent',
             description: agentConfig?.description || 'Single agent chat endpoint',
             agent: AGENT_NAME,
             methods: {

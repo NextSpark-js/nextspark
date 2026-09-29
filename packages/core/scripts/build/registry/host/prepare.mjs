@@ -11,6 +11,9 @@
  *   loadCoreRoutes,    // async () => loadCoreRouteManifest(...) (null: the core ships none)
  *   plugins,           // [{ name, root, importBase }]
  *   project,           // { root, importBase, label }
+ *   entities,          // async ({ manifest }) => ({ routes, diagnostics }) - per-entity routes (entity-routes.mjs)
+ *   webhooks,          // () => ({ routes, diagnostics }) - composed billing webhook routes (webhooks.mjs)
+ *   stylesheet,        // the project's global stylesheet specifier the root layout imports
  *   modes, pageExtensions, cacheComponents,   // see render.mjs
  *   registries,        // async ({ mode }) => [{ path, content, grammar }] - staged registry files
  *   inputs,            // () => hashInputs(...)
@@ -33,7 +36,10 @@ import { fileURLToPath } from 'node:url'
 import { projectFiles } from '../../safe-fs.mjs'
 import { getConfig } from '../config.mjs'
 import { resolveNextPackage } from './facade-emitter.mjs'
-import { coreRouteManifestPath, coreRouteVariantsPath, hasCoreRouteManifest, loadCoreRouteManifest } from './core-routes.mjs'
+import { coreRouteManifestPath, coreRouteVariantsPath, hasCoreRouteManifest, loadCoreRouteManifest, resolveCoreRouteFile } from './core-routes.mjs'
+import { discoverAllEntities } from '../discovery/all-entities.mjs'
+import { planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
+import { webhookRoutes } from './webhooks.mjs'
 import { HostPlanError, compareTargets, planHost } from './plan.mjs'
 import { DEV_DIAGNOSTIC_FILE, DEV_STATUS_FILE, devDiagnosticModule, devFailureDiagnostic, renderHost } from './render.mjs'
 import {
@@ -82,13 +88,19 @@ function describeDiagnostic(diagnostic) {
 export async function renderHostFiles(config, { devStatus = false, cache } = {}) {
   const manifest = await config.loadCoreRoutes()
   if (!manifest) throw new NoCoreRouteManifestError(config.coreRoot ?? '(unknown core)')
-  const { routes, diagnostics } = planHost({
+  const entityPlan = config.entities ? await config.entities({ manifest }) : { routes: [], diagnostics: [] }
+  const webhookPlan = config.webhooks ? config.webhooks() : { routes: {}, diagnostics: [] }
+  const planned = planHost({
     coreRoutes: manifest.routes,
+    entityRoutes: entityPlan.routes,
+    webhooks: webhookPlan.routes,
     plugins: config.plugins ?? [],
     project: config.project,
     modes: config.modes ?? [],
     extensions: config.extensions,
   })
+  const { routes } = planned
+  const diagnostics = [...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics]
   if (diagnostics.length > 0) throw new PrepareError(diagnostics)
   const rendered = await renderHost({
     routes,
@@ -96,6 +108,8 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     modes: config.modes ?? [],
     cacheComponents: config.cacheComponents,
     pageExtensions: config.pageExtensions,
+    stylesheet: config.stylesheet,
+    wrappers: config.compositionWrappers,
     cache,
     devStatus,
   })
@@ -138,7 +152,7 @@ async function generateAndPublish(config, { mode, devStatus, cache }) {
     const { routes, manifest, appFiles } = await renderHostFiles(config, { devStatus, cache })
     const registryFiles = config.registries ? await config.registries({ mode, hostRoot: config.hostRoot }) : []
     const files = [...appFiles, ...registryFiles]
-    const invalid = await validateFiles(files, { projectRoot: config.projectRoot })
+    const invalid = await validateFiles(files, { projectRoot: config.projectRoot, wrappers: config.compositionWrappers })
     if (invalid.length > 0) throw new PrepareError(invalid)
 
     const previous = readGeneration(config.hostRoot)
@@ -315,15 +329,14 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
   const pluginsOf = loaded => (loaded.pluginSources ?? []).map(source => ({ name: source.name, root: source.sourceDir, importBase: source.importBase, kind: source.kind, packageName: source.packageName }))
   // nextspark.config.ts is read again for every generation, so a long-lived watcher follows an
   // edit (a plugin enabled or removed) instead of the config it started with.
-  const currentPlugins = () => {
-    let loaded
+  const currentConfig = () => {
     try {
-      loaded = getConfig(config.projectRoot)
+      return getConfig(config.projectRoot)
     } catch (error) {
       throw new PrepareError([{ code: 'NS_HOST_PROJECT_CONFIG', message: error.message }])
     }
-    return pluginsOf(loaded)
   }
+  const currentPlugins = () => pluginsOf(currentConfig())
   const plugins = pluginsOf(config)
   const next = resolveNextPackage(config.projectRoot)
   return {
@@ -339,6 +352,29 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
       return currentPlugins()
     },
     project: { root: config.projectRoot, importBase: '@', label: '.' },
+    // The project's global stylesheet: the root layout imports it (a project without one has none to import).
+    get stylesheet() {
+      return existsSync(join(config.projectRoot, 'styles', 'globals.css')) ? '@/styles/globals.css' : undefined
+    },
+    // One concrete set of routes per entity, from the entities discovered now (a watcher follows a new entity).
+    entities: async ({ manifest }) => {
+      const current = currentConfig()
+      const entities = await discoverAllEntities(current, { includeCore: false })
+      const facts = await readAllEntityFacts({ entities, projectRoot: config.projectRoot, plugins: pluginsOf(current) })
+      return planEntityRoutes({
+        entities,
+        facts,
+        coreRoutes: manifest.routes,
+        resolveFile: specifier => resolveCoreRouteFile(coreRoot, specifier),
+        cacheComponents: readCacheComponents(config.projectRoot),
+      })
+    },
+    webhooks: () =>
+      webhookRoutes({
+        webhookExtensions: currentConfig().billing?.webhookExtensions,
+        projectRoot: config.projectRoot,
+        resolveFile: specifier => resolveCoreRouteFile(coreRoot, specifier),
+      }),
     registries: stagedRegistryBuild({ projectRoot: config.projectRoot, coreRoot, env }),
     inputs: ({ manifest } = {}) => {
       const enabled = currentPlugins()

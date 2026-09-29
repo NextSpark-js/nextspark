@@ -47,7 +47,7 @@ export function use{{PLUGIN_VAR_NAME}}(): Use{{PLUGIN_VAR_NAME}}Return {
     setError(null)
 
     try {
-      const response = await fetch('/api/v1/plugin/{{PLUGIN_SLUG}}/example', {
+      const response = await fetch('/api/plugins/{{PLUGIN_SLUG}}/example', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

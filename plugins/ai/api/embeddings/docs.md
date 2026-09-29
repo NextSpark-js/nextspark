@@ -5,8 +5,8 @@ Generate text embeddings using OpenAI's text-embedding-3-small model.
 ## Endpoint
 
 ```
-POST /api/v1/plugin/ai/embeddings
-GET  /api/v1/plugin/ai/embeddings
+POST /api/plugins/ai/embeddings
+GET  /api/plugins/ai/embeddings
 ```
 
 ## Authentication
@@ -70,7 +70,7 @@ Returns endpoint documentation and usage information.
 
 ```json
 {
-  "endpoint": "/api/v1/plugin/ai/embeddings",
+  "endpoint": "/api/plugins/ai/embeddings",
   "description": "Generate text embeddings using OpenAI",
   "usage": { ... },
   "response": { ... },
@@ -133,5 +133,5 @@ OPENAI_API_KEY=sk-...
 
 ## Related APIs
 
-- [AI Generate](/api/v1/plugin/ai/generate) - Generate AI text responses
-- [AI History](/api/v1/plugin/ai/ai-history) - Track AI operations
+- [AI Generate](/api/plugins/ai/generate) - Generate AI text responses
+- [AI History](/api/plugins/ai/ai-history) - Track AI operations

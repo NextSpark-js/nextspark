@@ -92,6 +92,7 @@ export default defineConfig({
 | `features.teams` | `boolean` | `true` | No | Include team contributions. |
 | `features.superadmin` | `boolean` | `true` | No | Include superadmin contributions. |
 | `features.aiChat` | `boolean` | `true` | No | Include AI chat contributions. |
+| `billing.webhookExtensions` | `{ stripe?: string; polar?: string }` | absent | No | Paths (from the project root) of the modules that extend core's billing webhooks. `nextspark prepare` imports each one statically into the generated webhook route: `stripe` must export `stripeWebhookExtensions`, `polar` must export `polarWebhookExtensions`. |
 
 No compiler-read field is required because the root-first defaults are complete. The file itself is required so root discovery is deterministic and invalid configuration can fail before generation.
 

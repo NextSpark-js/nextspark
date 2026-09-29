@@ -374,7 +374,7 @@ export function AIChat() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/v1/plugin/ai/generate', {
+      const response = await fetch('/api/plugins/ai/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

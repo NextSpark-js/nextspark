@@ -7,7 +7,7 @@
 import { defineApiEndpoint } from '@nextsparkjs/core/types/api-presets'
 
 export default defineApiEndpoint({
-  endpoint: '/api/v1/theme/blog/authors',
+  endpoint: '/api/authors',
   summary: 'Public author profiles with published posts',
   presets: [
     {

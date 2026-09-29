@@ -45,7 +45,7 @@ export function useOrchestratorChat() {
                 headers['x-team-id'] = currentTeam.id
             }
 
-            const response = await fetch(withBasePath('/api/v1/theme/default/ai/orchestrator'), {
+            const response = await fetch(withBasePath('/api/ai/orchestrator'), {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ message, sessionId })

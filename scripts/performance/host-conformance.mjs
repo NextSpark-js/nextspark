@@ -42,7 +42,7 @@ const { loadTypeScriptFor } = await import(join(REPO_ROOT, 'packages/core/script
 const { canonicalText, compareArtifacts: compareArtifactLists, cssDigests, labelModules, normalizedBytes, scanChunk } = await import(join(REPO_ROOT, 'scripts/performance/host-conformance-bytes.mjs'))
 const EXPECTED_ARTIFACTS = JSON.parse(readFileSync(join(REPO_ROOT, 'scripts/performance/host-conformance-expected.json'), 'utf8'))
 const { ROUTE_EXPORT_TABLE, analyzeRouteSource } = await import(join(REPO_ROOT, 'packages/core/scripts/build/registry/host/facade-emitter.mjs'))
-const { BUNDLERS, HOSTS, MODES, resolveRoutePlan } = await import(join(FIXTURE, 'plan.mjs'))
+const { BUNDLERS, FIXTURE_COMPOSITION_WRAPPERS, HOSTS, MODES, resolveRoutePlan } = await import(join(FIXTURE, 'plan.mjs'))
 
 const args = process.argv.slice(2)
 const option = (name, fallback) => {
@@ -68,6 +68,7 @@ const CASES = {
   6: 'plugin route handler',
   7: 'generated server + client-safe registries',
   8: 'generateMetadata + sitemap.ts + icon, icon1, opengraph-image2',
+  9: 'composed facades: a project layout composed with core\'s wrapper; one route per entity (+ its project template)',
   shell: 'root layout, not-found, error, global-error',
 }
 
@@ -81,6 +82,7 @@ function caseOf(route) {
   if (path.startsWith('/api/plugins')) return '6'
   if (path === '/registry') return '7'
   if (/^\/(sitemap\.xml|icon|opengraph-image)/.test(path)) return '8'
+  if (/^\/(shell|dashboard\/widgets)/.test(path)) return '9'
   return 'shell'
 }
 
@@ -108,19 +110,35 @@ function listFiles(dir) {
 
 const toPosix = path => path.split(sep).join('/')
 
+/**
+ * A route the generator writes as a composition (a project layout over a wrapped core layout, a per-entity route,
+ * a webhook) rather than as a facade of one module: the manual host has a hand-written composition there.
+ */
+const isComposed = route => Boolean(route.entityRoute || route.webhook || (route.compose && route.origin !== 'core'))
+
 function checkManualHost(plan) {
   const appDir = join(FIXTURE, 'manual/src/app')
+  const stripHeader = text => text.split('\n').filter(line => !line.startsWith('//')).join('\n')
   const expected = new Map(plan.map(route => [route.target, route]))
   const actual = listFiles(appDir).map(file => toPosix(relative(appDir, file)))
   for (const target of actual) {
     const route = expected.get(target)
+    const composed = route && isComposed(route)
     record({
       variant: 'fixture',
-      section: 'manual host = source placed at its route',
+      section: composed ? 'manual host = hand-written composition (equals the generated file)' : 'manual host = source placed at its route',
       subject: `src/app/${target}`,
       caseId: caseOf(`/${target}`),
       manual: route ? 'present' : 'extra file',
-      generated: route && readFileSync(join(appDir, target), 'utf8') === readFileSync(route.file, 'utf8') ? 'present' : 'differs from source',
+      generated:
+        route &&
+        (composed
+          ? stripHeader(readFileSync(join(appDir, target), 'utf8')) === stripHeader(readFileSync(join(FIXTURE, 'generated/src/app', target), 'utf8'))
+          : readFileSync(join(appDir, target), 'utf8') === readFileSync(route.file, 'utf8'))
+          ? 'present'
+          : composed
+            ? 'differs from the generated composition'
+            : 'differs from source',
     })
   }
   for (const target of expected.keys()) {
@@ -128,7 +146,6 @@ function checkManualHost(plan) {
       record({ variant: 'fixture', section: 'manual host = source placed at its route', subject: `src/app/${target}`, manual: 'missing', generated: 'present' })
     }
   }
-  const stripHeader = text => text.split('\n').filter(line => !line.startsWith('//')).join('\n')
   for (const name of ['entities.server.ts', 'entities.client.ts']) {
     const manual = stripHeader(readFileSync(join(FIXTURE, 'manual/registries', name), 'utf8'))
     const generated = stripHeader(readFileSync(join(FIXTURE, 'generated/.nextspark/registries', name), 'utf8'))
@@ -142,7 +159,7 @@ function checkManualHost(plan) {
  * registry generator apply): route files as `facade`, registries as `registry`. Any statement or
  * expression outside it is reported.
  */
-async function checkNoLookups() {
+async function checkNoLookups(plan) {
   const ts = await loadTypeScriptFor(join(REPO_ROOT, 'packages/core'))
   const grammars = [
     [join(FIXTURE, 'generated/src'), 'facade'],
@@ -151,18 +168,21 @@ async function checkNoLookups() {
   ]
   const findings = []
   let files = 0
+  // A composed route is validated against the composed-facade grammar, every other route file against the plain one.
+  const composedTargets = new Set(plan.filter(isComposed).map(route => `src/app/${route.target}`))
   for (const [root, grammar] of grammars) {
     for (const file of listFiles(root)) {
       files += 1
-      for (const violation of validateGeneratedModule({ ts, source: readFileSync(file, 'utf8'), file, grammar })) {
-        findings.push(`${toPosix(relative(FIXTURE, file))}:${violation.line}: ${grammar} ${violation.kind}: ${violation.text}`)
+      const fileGrammar = grammar === 'facade' && composedTargets.has(toPosix(relative(join(FIXTURE, 'generated'), file))) ? 'composed-facade' : grammar
+      for (const violation of validateGeneratedModule({ ts, source: readFileSync(file, 'utf8'), file, grammar: fileGrammar, wrappers: FIXTURE_COMPOSITION_WRAPPERS })) {
+        findings.push(`${toPosix(relative(FIXTURE, file))}:${violation.line}: ${fileGrammar} ${violation.kind}: ${violation.text}`)
       }
     }
   }
   record({
     variant: 'fixture',
     section: 'generated files inside the allowed grammar',
-    subject: `${files} generated files (facade and registry grammars)`,
+    subject: `${files} generated files (facade, composed-facade and registry grammars)`,
     caseId: '7',
     manual: [],
     generated: findings,
@@ -227,7 +247,7 @@ function moduleIdentity(host, path, plan) {
     const target = toPosix(clean.slice(appDir.length))
     const route = plan.find(candidate => candidate.target === target)
     // The manual host's route file is a byte-identical copy of the source module (checked).
-    return route ? toPosix(relative(FIXTURE, route.file)) : `${host}-only:src/app/${target}`
+    return route ? (route.file ? toPosix(relative(FIXTURE, route.file)) : `composed:${target}`) : `${host}-only:src/app/${target}`
   }
   const pnpmNext = clean.indexOf('/node_modules/next/')
   if (pnpmNext !== -1) return `next/${clean.slice(pnpmNext + '/node_modules/next/'.length).replace(/^dist\/esm\//, 'dist/')}`
@@ -467,6 +487,12 @@ function probesFor(mode) {
     { path: '/icon' },
     { path: '/icon1' },
     { path: '/opengraph-image2' },
+    { path: '/shell' },
+    { path: '/dashboard/widgets' },
+    { path: '/dashboard/widgets/7' },
+    { path: '/dashboard/widgets/create' },
+    { path: '/dashboard/widgets/7/edit' },
+    { path: '/dashboard/nothing' },
     { path: '/does-not-exist' },
   ]
   if (mode === 'isr') probes.push({ path: '/isr' }, { path: '/legacy-dynamic' })
@@ -771,9 +797,14 @@ async function main() {
   await generate()
   const plan = await resolveRoutePlan()
   checkManualHost(plan)
-  const lookup = await checkNoLookups()
+  const lookup = await checkNoLookups(plan)
   const routeDirectives = new Map()
   for (const route of plan) {
+    // A route made of imports and one composition has no module of its own to read a directive from.
+    if (!route.file || isComposed(route)) {
+      routeDirectives.set(route.target, [])
+      continue
+    }
     const analysis = await analyzeRouteSource({ source: readFileSync(route.file, 'utf8'), file: route.file, projectRoot: join(REPO_ROOT, 'packages/core') })
     routeDirectives.set(route.target, analysis.directives)
   }

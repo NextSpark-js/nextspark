@@ -97,7 +97,7 @@ export const PLUGIN_REGISTRY = {
     apiPath: '@/plugins/ai/api',
     routeFiles: [
       {
-        path: '/api/v1/plugin/ai/generate',
+        path: '/api/plugins/ai/generate',
         methods: ['POST', 'GET'],
         filePath: '../../../plugins/ai/api/generate/route'
       }
@@ -341,8 +341,8 @@ routes.forEach(route => {
   console.log(`${route.methods.join('|')} ${route.path}`)
 })
 // Output:
-// POST|GET /api/v1/plugin/ai/generate
-// POST /api/v1/plugin/billing/subscriptions
+// POST|GET /api/plugins/ai/generate
+// POST /api/plugins/billing/subscriptions
 ```
 
 ---

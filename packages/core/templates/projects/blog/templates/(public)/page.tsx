@@ -66,7 +66,7 @@ export default function BlogHomePage() {
 
       // Fetch published posts from ALL authors via public endpoint
       // This endpoint does not require authentication and aggregates posts cross-team
-      const response = await fetch(withBasePath('/api/v1/theme/blog/posts/public?limit=20'), {
+      const response = await fetch(withBasePath('/api/posts/public?limit=20'), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

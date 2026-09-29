@@ -5,7 +5,7 @@ Handles OAuth redirect from Facebook after user authorization.
 ## Endpoint
 
 ```
-GET /api/v1/plugin/social-media-publisher/social/connect/callback
+GET /api/plugins/social-media-publisher/social/connect/callback
 ```
 
 ## Description
@@ -130,7 +130,7 @@ Accounts stored in `clients_social_platforms` table:
 ```typescript
 // Open OAuth popup
 const popup = window.open(
-  '/api/v1/plugin/social-media-publisher/social/connect?platform=instagram_business&clientId=xxx',
+  '/api/plugins/social-media-publisher/social/connect?platform=instagram_business&clientId=xxx',
   'oauth',
   'width=600,height=700'
 )
@@ -150,6 +150,6 @@ window.addEventListener('message', (event) => {
 
 ## Related APIs
 
-- [Connect](/api/v1/plugin/social-media-publisher/social/connect) - Initiate OAuth flow
-- [Publish](/api/v1/plugin/social-media-publisher/social/publish) - Publish content
-- [Disconnect](/api/v1/plugin/social-media-publisher/social/disconnect) - Disconnect account
+- [Connect](/api/plugins/social-media-publisher/social/connect) - Initiate OAuth flow
+- [Publish](/api/plugins/social-media-publisher/social/publish) - Publish content
+- [Disconnect](/api/plugins/social-media-publisher/social/disconnect) - Disconnect account

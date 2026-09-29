@@ -23,7 +23,7 @@ The Social Media Publisher plugin uses **Facebook OAuth 2.0** to connect Instagr
        │ 1. Clicks "Connect Instagram"
        ↓
 ┌──────────────────────────────┐
-│  /api/v1/plugin/social-      │
+│  /api/plugins/social-      │
 │   media-publisher/social/    │
 │   connect?platform=          │
 │   instagram_business&        │
@@ -38,7 +38,7 @@ The Social Media Publisher plugin uses **Facebook OAuth 2.0** to connect Instagr
        │ 3. User authorizes
        ↓
 ┌──────────────────────────────┐
-│  /api/v1/plugin/social-      │
+│  /api/plugins/social-      │
 │   media-publisher/social/    │
 │   connect/callback?          │
 │   code={code}&state={state}  │
@@ -99,7 +99,7 @@ export function ConnectSocialButton({
   const handleConnect = () => {
     // Build OAuth initiation URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-    const oauthUrl = `${baseUrl}/api/v1/plugin/social-media-publisher/social/connect?platform=${platform}&clientId=${clientId}`
+    const oauthUrl = `${baseUrl}/api/plugins/social-media-publisher/social/connect?platform=${platform}&clientId=${clientId}`
 
     // Open popup window
     const popup = window.open(
@@ -145,7 +145,7 @@ export function ConnectSocialButton({
 
 ### Step 2: Generate OAuth URL
 
-**Endpoint:** `GET /api/v1/plugin/social-media-publisher/social/connect`
+**Endpoint:** `GET /api/plugins/social-media-publisher/social/connect`
 
 **Query Parameters:**
 - `platform` - `'instagram_business'` or `'facebook_page'`
@@ -191,7 +191,7 @@ pages_show_list,pages_manage_posts,pages_read_engagement,read_insights
 
 ### Step 4: OAuth Callback
 
-**Endpoint:** `GET /api/v1/plugin/social-media-publisher/social/connect/callback`
+**Endpoint:** `GET /api/plugins/social-media-publisher/social/connect/callback`
 
 **Success Parameters:**
 ```

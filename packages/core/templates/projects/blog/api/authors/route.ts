@@ -4,7 +4,7 @@
  * Returns list of all authors with published posts.
  * NO authentication required.
  *
- * URL: /api/v1/theme/blog/authors
+ * URL: /api/authors
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -49,7 +49,7 @@ const getHandler = async (request: NextRequest) => {
     })
 
   } catch (error) {
-    console.error(`[API] /api/v1/theme/blog/authors - Error:`, error)
+    console.error(`[API] /api/authors - Error:`, error)
 
     return NextResponse.json(
       {

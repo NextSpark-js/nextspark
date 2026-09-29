@@ -159,7 +159,7 @@ export interface PluginRegistryEntry {
 
 ```typescript
 export interface RouteFileEndpoint {
-  path: string                    // API path (e.g., '/api/v1/plugin/ai/generate')
+  path: string                    // API path (e.g., '/api/plugins/ai/generate')
   filePath: string                // Actual file path
   relativePath: string            // Relative to plugin
   methods: string[]               // HTTP methods ['GET', 'POST']
@@ -376,11 +376,11 @@ import {
 const allRoutes = getAllRouteEndpoints()
 
 // Find specific endpoint
-const generateEndpoint = findRouteEndpoint('/api/v1/plugin/ai/generate')
+const generateEndpoint = findRouteEndpoint('/api/plugins/ai/generate')
 
 console.log(generateEndpoint)
 // {
-//   path: '/api/v1/plugin/ai/generate',
+//   path: '/api/plugins/ai/generate',
 //   methods: ['POST', 'GET'],
 //   filePath: '../../../plugins/ai/api/generate/route',
 //   relativePath: 'generate',
@@ -397,7 +397,7 @@ const pluginRoutes = getPluginRouteEndpoints()
 import { getRouteMetadata, hasRoute } from '@nextsparkjs/registries/plugin-registry'
 
 // Get route metadata
-const metadata = getRouteMetadata('/api/v1/plugin/ai/generate')
+const metadata = getRouteMetadata('/api/plugins/ai/generate')
 
 console.log(metadata)
 // {
@@ -407,7 +407,7 @@ console.log(metadata)
 // }
 
 // Check if route exists
-if (hasRoute('/api/v1/plugin/ai/generate', 'POST')) {
+if (hasRoute('/api/plugins/ai/generate', 'POST')) {
   // Route is available
 }
 ```
@@ -416,17 +416,17 @@ if (hasRoute('/api/v1/plugin/ai/generate', 'POST')) {
 
 ```typescript
 export const ROUTE_METADATA = {
-  '/api/v1/plugin/ai/ai-history/[id]': {
+  '/api/plugins/ai/ai-history/[id]': {
     plugin: 'ai',
     methods: ['PATCH'],
     filePath: '../../../plugins/ai/api/ai-history/[id]/route'
   },
-  '/api/v1/plugin/ai/embeddings': {
+  '/api/plugins/ai/embeddings': {
     plugin: 'ai',
     methods: ['POST', 'GET'],
     filePath: '../../../plugins/ai/api/embeddings/route'
   },
-  '/api/v1/plugin/ai/generate': {
+  '/api/plugins/ai/generate': {
     plugin: 'ai',
     methods: ['POST', 'GET'],
     filePath: '../../../plugins/ai/api/generate/route'

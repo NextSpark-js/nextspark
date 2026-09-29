@@ -29,7 +29,7 @@ interface TraceDetailResponse {
 }
 
 async function fetchTraceDetail(traceId: string): Promise<TraceDetailResponse> {
-  const response = await fetch(withBasePath(`/api/v1/plugin/langchain/observability/traces/${traceId}`))
+  const response = await fetch(withBasePath(`/api/plugins/langchain/observability/traces/${traceId}`))
 
   if (!response.ok) {
     throw new Error('Failed to fetch trace detail')

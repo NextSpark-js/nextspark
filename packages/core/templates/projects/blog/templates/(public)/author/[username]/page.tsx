@@ -61,7 +61,7 @@ export default function AuthorPage({ params }: PageProps) {
         setLoading(true)
         setError(null)
 
-        const response = await fetch(withBasePath(`/api/v1/theme/blog/authors/${username}`), {
+        const response = await fetch(withBasePath(`/api/authors/${username}`), {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

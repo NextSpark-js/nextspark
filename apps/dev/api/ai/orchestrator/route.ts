@@ -130,7 +130,7 @@ const getHandler = async (req: NextRequest) => {
     // Return API documentation if no sessionId
     if (!sessionId) {
         return NextResponse.json({
-            endpoint: '/api/v1/theme/default/ai/orchestrator',
+            endpoint: '/api/ai/orchestrator',
             description: 'Multi-agent orchestrator - routes to specialized sub-agents',
             methods: {
                 POST: {

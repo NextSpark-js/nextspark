@@ -7,7 +7,7 @@
 import { defineApiEndpoint } from '@nextsparkjs/core/types/api-presets'
 
 export default defineApiEndpoint({
-  endpoint: '/api/v1/plugin/social-media-publisher/social/connect/callback',
+  endpoint: '/api/plugins/social-media-publisher/social/connect/callback',
   summary: 'OAuth callback handler for social media connections (browser redirect)',
   presets: [
     {

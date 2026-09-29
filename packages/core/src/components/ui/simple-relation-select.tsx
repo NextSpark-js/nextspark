@@ -4,7 +4,7 @@ import * as React from "react"
 import { Button } from './button'
 import { Badge } from './badge'
 import { X } from "lucide-react"
-import { parseChildEntity, getEntityApiPath } from '@nextsparkjs/registries/entity-registry.client'
+import { parseClientChildEntity as parseChildEntity, getClientEntityApiPath as getEntityApiPath } from '../../lib/entities/client-entity-meta'
 import { fetchWithTeam } from '../../lib/api/entities'
 
 import {

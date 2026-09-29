@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { parseChildEntity, getEntityApiPath } from '@nextsparkjs/registries/entity-registry.client'
+import { parseClientChildEntity as parseChildEntity, getClientEntityApiPath as getEntityApiPath } from '../../lib/entities/client-entity-meta'
 import { withBasePath } from '../../lib/base-path'
 
 interface RelationDisplayProps {

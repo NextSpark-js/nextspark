@@ -6,7 +6,8 @@
  * Priority (highest to lowest):
  * 1. Project custom routes: api/**\/docs.md and presets.ts
  * 2. Entity folders: entities/*\/api/docs.md and presets.ts
- * 3. Core routes: packages/core/templates/app/api/**\/docs.md and presets.ts
+ * 3. Core routes: next to core's route modules, packages/core/src/routes/api/**\/docs.md and presets.ts
+ *    (dist/routes/api in the published package)
  *
  * @module core/scripts/build/registry/discovery/api-presets
  */
@@ -505,13 +506,11 @@ async function discoverThemeRoutes(config, results, processedEndpoints) {
     }
   }
 
-  // Legacy tree: {theme}/app/api/** — the docs path mirrors the full request URL
-  // under `app/` (e.g. app/api/v1/theme/{theme}/foo -> /api/v1/theme/{theme}/foo).
-  // Root-first route source: api/** — docs/presets live next to the route handler,
-  // mapped the same way the handlers are (api/foo -> /api/v1/theme/{theme}/foo).
+  // Root-first route source: api/** — docs/presets live next to the route handler and follow it to
+  // its URL: the project's api/ is served at /api/<path> (api/ai/usage -> /api/ai/usage).
   const apiDir = join(config.projectSourceDir, 'api')
   await processTree(apiDir, (routeDir) =>
-    '/api/v1/theme/' + themeName + '/' + normalizePath(relative(apiDir, routeDir))
+    '/api/' + normalizePath(relative(apiDir, routeDir))
   )
 }
 
@@ -522,9 +521,12 @@ async function discoverThemeRoutes(config, results, processedEndpoints) {
  * @param {Set} processedEndpoints - Set of already processed endpoints
  */
 async function discoverCoreRoutes(config, results, processedEndpoints) {
-  const coreApiDir = join(config.coreDir, 'templates', 'app', 'api')
+  // Core's docs and presets sit next to its route modules: src/routes in a source checkout, dist/routes in
+  // the published package. The route path under them is the URL (routes/api/v1/billing -> /api/v1/billing).
+  const routesDir = ['src/routes', 'dist/routes'].map(dir => join(config.coreDir, dir)).find(dir => existsSync(join(dir, 'api')))
+  const coreApiDir = routesDir ? join(routesDir, 'api') : join(config.coreDir, 'src', 'routes', 'api')
 
-  if (!existsSync(coreApiDir)) {
+  if (!routesDir) {
     verbose('No core API routes found')
     return
   }
@@ -537,7 +539,7 @@ async function discoverCoreRoutes(config, results, processedEndpoints) {
   for (const docsPath of docFiles) {
     try {
       const routeDir = dirname(docsPath)
-      const relativeDir = relative(join(config.coreDir, 'templates', 'app'), routeDir)
+      const relativeDir = relative(routesDir, routeDir)
       const endpoint = '/' + normalizePath(relativeDir)
 
       // Skip if already processed by theme or entity
@@ -569,7 +571,7 @@ async function discoverCoreRoutes(config, results, processedEndpoints) {
   for (const presetsPath of presetFiles) {
     try {
       const routeDir = dirname(presetsPath)
-      const relativeDir = relative(join(config.coreDir, 'templates', 'app'), routeDir)
+      const relativeDir = relative(routesDir, routeDir)
       const endpoint = '/' + normalizePath(relativeDir)
 
       // Skip if already processed by theme or entity

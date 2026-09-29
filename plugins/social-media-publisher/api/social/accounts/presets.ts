@@ -1,7 +1,7 @@
 /**
  * API Presets for Social Accounts Endpoint
  *
- * Endpoint: GET /api/v1/plugin/social-media-publisher/social/accounts
+ * Endpoint: GET /api/plugins/social-media-publisher/social/accounts
  * Purpose: Fetch available accounts from existing OAuth tokens
  */
 

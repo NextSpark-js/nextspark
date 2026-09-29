@@ -2,7 +2,7 @@
  * Social Media Connect Endpoint
  *
  * OAuth initiator and callback handler for connecting Facebook Pages and Instagram Business Accounts
- * Accessible via: /api/v1/plugin/social-media-publisher/social/connect
+ * Accessible via: /api/plugins/social-media-publisher/social/connect
  */
 
 import { NextRequest, NextResponse } from 'next/server'

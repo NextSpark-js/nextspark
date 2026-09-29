@@ -2,7 +2,7 @@
  * Social Media Disconnect Endpoint
  *
  * Disconnects a social media account (marks as inactive)
- * Accessible via: /api/v1/plugin/social-media-publisher/social/disconnect
+ * Accessible via: /api/plugins/social-media-publisher/social/disconnect
  */
 
 import { NextRequest, NextResponse } from 'next/server'

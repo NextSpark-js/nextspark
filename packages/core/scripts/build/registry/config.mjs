@@ -38,6 +38,7 @@ export function getConfig(projectRoot = null) {
     pluginDirs: pluginSources.map(plugin => plugin.sourceDir),
     plugins: pluginSources.map(plugin => plugin.name),
     features: nextsparkConfig.features,
+    billing: nextsparkConfig.billing,
     watchMode: process.argv.includes('--watch') && !process.argv.includes('--build'),
     buildMode: process.argv.includes('--build'),
     verbose: process.argv.includes('--verbose') || process.argv.includes('-v'),

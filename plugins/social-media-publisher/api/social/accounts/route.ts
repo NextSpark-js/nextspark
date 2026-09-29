@@ -4,7 +4,7 @@
  * GET endpoint that returns all social accounts owned by the user
  * that can be assigned to an entity (e.g., client, project).
  *
- * Accessible via: /api/v1/plugin/social-media-publisher/social/accounts
+ * Accessible via: /api/plugins/social-media-publisher/social/accounts
  *
  * Query params:
  * - entityId: The entity ID to check which accounts are already assigned

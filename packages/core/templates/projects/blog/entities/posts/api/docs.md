@@ -12,7 +12,7 @@ All endpoints require authentication via:
 - **Session cookie** (for browser-based requests)
 - **API Key** header (for server-to-server requests)
 
-**Note:** For public access to published posts, use the [Public Posts API](/api/v1/theme/blog/posts/public) instead.
+**Note:** For public access to published posts, use the [Public Posts API](/api/posts/public) instead.
 
 ## Endpoints
 
@@ -170,5 +170,5 @@ To filter posts by category, use the Public Posts API with the `category` query 
 ## Related APIs
 
 - **[Categories](/api/v1/categories)** - Post categorization
-- **[Public Posts](/api/v1/theme/blog/posts/public)** - Public feed (no auth required)
-- **[Authors](/api/v1/theme/blog/authors)** - Author profiles
+- **[Public Posts](/api/posts/public)** - Public feed (no auth required)
+- **[Authors](/api/authors)** - Author profiles

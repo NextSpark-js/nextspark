@@ -13,7 +13,7 @@ The Public Posts API provides read-only access to published blog posts. This end
 ## Endpoints
 
 ### List Published Posts
-`GET /api/v1/theme/blog/posts/public`
+`GET /api/posts/public`
 
 Returns a paginated list of published posts.
 
@@ -24,7 +24,7 @@ Returns a paginated list of published posts.
 
 **Example Request:**
 ```bash
-curl https://example.com/api/v1/theme/blog/posts/public?limit=10&category=technology
+curl https://example.com/api/posts/public?limit=10&category=technology
 ```
 
 **Example Response:**
@@ -105,7 +105,7 @@ The API uses offset-based pagination:
 
 To get the next page:
 ```
-GET /api/v1/theme/blog/posts/public?offset=20&limit=20
+GET /api/posts/public?offset=20&limit=20
 ```
 
 ## Error Responses
@@ -120,5 +120,5 @@ GET /api/v1/theme/blog/posts/public?offset=20&limit=20
 ## Related APIs
 
 - **[Posts](/api/v1/posts)** - Authenticated CRUD operations
-- **[Authors](/api/v1/theme/blog/authors)** - Author profiles
+- **[Authors](/api/authors)** - Author profiles
 - **[Categories](/api/v1/categories)** - Category management

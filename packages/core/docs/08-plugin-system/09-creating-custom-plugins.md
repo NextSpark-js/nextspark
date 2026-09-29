@@ -442,7 +442,7 @@ export async function GET(request: NextRequest) {
 }
 ```
 
-**URL**: `GET /api/v1/plugin/weather/current?city=London&units=metric`
+**URL**: `GET /api/plugins/weather/current?city=London&units=metric`
 
 ---
 
@@ -482,7 +482,7 @@ export function WeatherWidget() {
 
     try {
       const response = await fetch(
-        `/api/v1/plugin/weather/current?city=${encodeURIComponent(cityName)}&units=metric`,
+        `/api/plugins/weather/current?city=${encodeURIComponent(cityName)}&units=metric`,
         { credentials: 'include' }
       )
 
@@ -654,7 +654,7 @@ describe('Weather Widget', () => {
   })
 
   it('fetches and displays weather data', () => {
-    cy.intercept('GET', '/api/v1/plugin/weather/current*', {
+    cy.intercept('GET', '/api/plugins/weather/current*', {
       body: {
         success: true,
         data: {
@@ -680,7 +680,7 @@ describe('Weather Widget', () => {
   })
 
   it('handles errors gracefully', () => {
-    cy.intercept('GET', '/api/v1/plugin/weather/current*', {
+    cy.intercept('GET', '/api/plugins/weather/current*', {
       statusCode: 500,
       body: { error: 'Failed to fetch weather data' }
     })
@@ -759,7 +759,7 @@ export function Dashboard() {
 ### API Endpoint
 
 ```bash
-GET /api/v1/plugin/weather/current?city=London&units=metric
+GET /api/plugins/weather/current?city=London&units=metric
 ```
 
 ## Configuration
@@ -830,7 +830,7 @@ pnpm dev
 
 # Test API endpoint:
 curl -H "Authorization: Bearer your_api_key" \
-  "http://localhost:3010/api/v1/plugin/weather/current?city=London"
+  "http://localhost:3010/api/plugins/weather/current?city=London"
 ```
 
 ---

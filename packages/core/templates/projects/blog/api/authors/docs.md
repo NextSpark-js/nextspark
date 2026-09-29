@@ -13,13 +13,13 @@ The Authors API provides read-only access to author profiles and their published
 ## Endpoints
 
 ### List Authors
-`GET /api/v1/theme/blog/authors`
+`GET /api/authors`
 
 Returns a list of all authors who have published posts.
 
 **Example Request:**
 ```bash
-curl https://example.com/api/v1/theme/blog/authors
+curl https://example.com/api/authors
 ```
 
 **Example Response:**
@@ -47,7 +47,7 @@ curl https://example.com/api/v1/theme/blog/authors
 ```
 
 ### Get Author Profile
-`GET /api/v1/theme/blog/authors/[username]`
+`GET /api/authors/[username]`
 
 Returns an author's profile with their published posts.
 
@@ -56,7 +56,7 @@ Returns an author's profile with their published posts.
 
 **Example Request:**
 ```bash
-curl https://example.com/api/v1/theme/blog/authors/johndoe
+curl https://example.com/api/authors/johndoe
 ```
 
 **Example Response:**
@@ -131,5 +131,5 @@ curl https://example.com/api/v1/theme/blog/authors/johndoe
 
 ## Related APIs
 
-- **[Public Posts](/api/v1/theme/blog/posts/public)** - Public post feed
+- **[Public Posts](/api/posts/public)** - Public post feed
 - **[Posts](/api/v1/posts)** - Authenticated CRUD operations

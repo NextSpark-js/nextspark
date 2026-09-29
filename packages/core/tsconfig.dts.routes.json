@@ -8,5 +8,5 @@
     "noCheck": true
   },
   "include": ["src/routes/**/*.ts", "src/routes/**/*.tsx", "src/nextspark-registries.d.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx", "src/routes/**/presets.ts"]
 }

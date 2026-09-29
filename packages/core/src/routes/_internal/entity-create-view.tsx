@@ -1,0 +1,95 @@
+'use client'
+
+import { notFound, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import type { ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
+import { clientEntityRegistry } from '@nextsparkjs/core/lib/entities/registry.client'
+import { toClientEntityConfig } from '@nextsparkjs/core/lib/entities/client-config'
+import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityFormWrapper'
+import { BuilderEditorView } from '@nextsparkjs/core/components/dashboard/block-editor/builder-editor-view'
+
+/**
+ * The create form of one entity's dashboard. Core's `[entity]` route passes the `entity` route
+ * param; the generated host's per-entity routes pass their entity's slug.
+ */
+export function EntityCreateView({ entity }: { entity: string }) {
+  const router = useRouter()
+  const [entityConfig, setEntityConfig] = useState<ClientEntityConfig | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const entitySlug = entity
+
+  useEffect(() => {
+    async function loadEntityConfig() {
+      if (!entitySlug) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        // The dashboard shell has hydrated the registry with this entity's config (no other entity's code is imported here)
+        const config = clientEntityRegistry.get(entitySlug)
+        setEntityConfig(config ? toClientEntityConfig(config) : null)
+      } catch (error) {
+        console.error('Error loading entity config:', error)
+        setEntityConfig(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadEntityConfig()
+  }, [entitySlug])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    )
+  }
+
+  if (!entityConfig) {
+    notFound()
+  }
+
+  if (!entityConfig.features?.enabled) {
+    notFound()
+  }
+
+  // Check if entity should be accessible via dashboard route
+  // Entities with showInMenu: false are managed elsewhere (e.g., settings)
+  if (!entityConfig.features?.showInMenu) {
+    notFound()
+  }
+
+  // Use BuilderEditorView for builder-enabled entities
+  if (entityConfig.builder?.enabled) {
+    return (
+      <BuilderEditorView
+        entitySlug={entitySlug}
+        entityConfig={entityConfig}
+        mode="create"
+      />
+    )
+  }
+
+  // Use EntityFormWrapper for regular entities
+  return (
+    <EntityFormWrapper
+      entityType={entitySlug}
+      mode="create"
+      onSuccess={(createdId) => {
+        // For create, redirect to the entity detail view if we have the ID, otherwise to list
+        if (createdId) {
+          router.push(`/dashboard/${entitySlug}/${createdId}`)
+        } else {
+          router.push(`/dashboard/${entitySlug}`)
+        }
+      }}
+      onError={(error) => {
+        console.error(`Error creating ${entityConfig.displayName}:`, error)
+      }}
+    />
+  )
+}

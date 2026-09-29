@@ -76,3 +76,20 @@ export function withDevtoolsMessages(ResolvedDevLayout: ComponentType<DevLayoutP
     )
   }
 }
+
+/**
+ * The composition of a project's devtools layout with core (the generated host): core's protection is
+ * always the outer layer - messages, then the dashboard providers and the DeveloperGuard, and only inside
+ * them the project's layout.
+ */
+export function withDevtoolsGuard(ProjectLayout: ComponentType<DevLayoutProps>) {
+  return withDevtoolsMessages(function GuardedDevLayout({ children }: DevLayoutProps) {
+    return (
+      <DashboardProviders>
+        <DeveloperGuard>
+          <ProjectLayout>{children}</ProjectLayout>
+        </DeveloperGuard>
+      </DashboardProviders>
+    )
+  })
+}

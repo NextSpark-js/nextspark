@@ -455,12 +455,12 @@ export async function GET(request: NextRequest) {
 }
 ```
 
-**URL Pattern**: `/api/v1/plugin/[plugin-name]/[endpoint]`
+**URL Pattern**: `/api/plugins/[plugin-name]/[endpoint]`
 
 **Example URLs**:
-- `/api/v1/plugin/my-plugin/process`
-- `/api/v1/plugin/ai/generate`
-- `/api/v1/plugin/billing/subscriptions`
+- `/api/plugins/my-plugin/process`
+- `/api/plugins/ai/generate`
+- `/api/plugins/billing/subscriptions`
 
 **Best Practices**:
 - Always authenticate requests using `authenticateRequest`
@@ -504,7 +504,7 @@ export function MyWidget({ initialValue = '', onProcess }: MyWidgetProps) {
   const handleProcess = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/v1/plugin/my-plugin/process', {
+      const response = await fetch('/api/plugins/my-plugin/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ input: value })
@@ -586,7 +586,7 @@ export function useMyPlugin(options: UseMyPluginOptions = {}) {
     setError(null)
 
     try {
-      const response = await fetch('/api/v1/plugin/my-plugin/process', {
+      const response = await fetch('/api/plugins/my-plugin/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ input })
@@ -967,7 +967,7 @@ plugins/ai/
 ├── api/
 │   ├── README.md
 │   ├── generate/
-│   │   └── route.ts        # POST /api/v1/plugin/ai/generate
+│   │   └── route.ts        # POST /api/plugins/ai/generate
 │   ├── embeddings/
 │   │   └── route.ts
 │   └── ai-history/[id]/
@@ -999,7 +999,7 @@ plugins/billing/
 ├── package.json
 ├── api/
 │   ├── subscriptions/
-│   │   └── route.ts        # POST /api/v1/plugin/billing/subscriptions
+│   │   └── route.ts        # POST /api/plugins/billing/subscriptions
 │   ├── invoices/
 │   │   └── route.ts
 │   └── webhooks/

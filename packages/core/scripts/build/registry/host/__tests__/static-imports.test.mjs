@@ -138,3 +138,117 @@ test('dev-facade grammar: the facade grammar plus exactly one composition with t
     assert.ok((await check(bad, 'dev-facade')).length > 0, bad)
   }
 })
+
+// ---------------------------------------------------------------------------
+// Stage 4: fixed stylesheet import and the composed-facade grammar
+// ---------------------------------------------------------------------------
+
+const checkComposed = (source, grammar = 'composed-facade') => check(source, grammar, '/virtual/src/app/page.tsx')
+
+test('facade grammars accept a fixed stylesheet import and nothing else side-effecting', async () => {
+  for (const grammar of ['facade', 'composed-facade', 'dev-facade']) {
+    assert.deepEqual(await checkComposed("import '@/styles/globals.css'\nexport { default } from '@/x'", grammar), [], grammar)
+  }
+  for (const bad of ["import '@/styles/globals.css.js'", "import '@/polyfill'", "import 'server-only'", "import '../x.ts'"]) {
+    assert.ok((await checkComposed(bad, 'facade')).length > 0, bad)
+    assert.ok((await checkComposed(bad, 'composed-facade')).length > 0, bad)
+  }
+  assert.ok((await check("import '@/styles/globals.css'", 'registry')).length > 0, 'registries import no stylesheet')
+})
+
+const CORE = '@nextsparkjs/core/routes/_internal/'
+const imp = (names, file) => `import { ${names} } from '${CORE}${file}'\n`
+
+test('composed-facade accepts exactly the compositions of core wrappers over imported modules', async () => {
+  for (const source of [
+    `import Template from '@/templates/(public)/layout'\n${imp('withPublicMessages', 'public-layout')}export default withPublicMessages(Template)`,
+    `import { taskEntityConfig } from '@/entities/tasks/tasks.config'\nimport Template from '@/templates/dashboard/(main)/tasks/page'\n${imp('createEntityListRoute', 'entity-list-route')}export default createEntityListRoute(taskEntityConfig, Template)\nexport { metadata } from '@/templates/dashboard/(main)/tasks/page'`,
+    `import { taskEntityConfig } from '@/entities/tasks/tasks.config'\n${imp('createEntityDetailRoute', 'entity-detail-route')}export default createEntityDetailRoute(taskEntityConfig, ['comments', 'notes'])`,
+    `import Template from '@/t'\n${imp('withRootLayout', 'root-layout')}${imp('withPublicMessages', 'public-layout')}export default withRootLayout(withPublicMessages(Template))`,
+    `import { stripeWebhookExtensions } from '@/lib/billing/stripe-webhook-extensions'\n${imp('createStripeWebhookRoute', 'billing-webhooks')}export const POST = createStripeWebhookRoute(stripeWebhookExtensions)`,
+    `import { c } from '@/c'\n${imp('createPublicItemMetadata', 'public-item-route')}export const generateMetadata = createPublicItemMetadata(c)\nexport const revalidate = 3600`,
+    `import { widgets } from '@/w'\nimport { createEntityListRoute as list } from '${CORE}entity-list-route'\nexport default list(widgets)`,
+  ]) {
+    assert.deepEqual(await checkComposed(source), [], source)
+  }
+})
+
+// Every one of these has a callee that is an imported name, so a grammar that only asked "is it imported" accepts them.
+const RESOLVERS = {
+  'the reviewer\'s probe: an imported runtime resolver': "import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/page'\nimport Registry from '@/r'\nexport default getTemplateOrDefault('app/page.tsx', Registry)",
+  'a resolver from a core module': `import { getTemplateOrDefault } from '@nextsparkjs/core/lib/templates'\nimport T from '@/t'\nexport default getTemplateOrDefault(T)`,
+  'a resolver with an identifier argument': "import { getTemplateOrDefault } from '@/r'\nimport T from '@/t'\nexport default getTemplateOrDefault(T)",
+  'getTemplateComponent': "import { getTemplateComponent } from '@/r'\nimport T from '@/t'\nexport default getTemplateComponent(T)",
+  'an entity lookup by key': "import { getEntity } from '@nextsparkjs/core/lib/entities/queries'\nimport { slug } from '@/s'\nexport default getEntity(slug)",
+  'a registry accessor': "import { lookup } from '@/registry'\nimport { key } from '@/k'\nexport default lookup(key)",
+  'a wrapper name from the wrong module': `import { withRootLayout } from '@/lib/anything'\nimport T from '@/t'\nexport default withRootLayout(T)`,
+  'an allowlisted name from a look-alike specifier': `import { withRootLayout } from '@nextsparkjs/core/routes/_internal/root-layout-x'\nimport T from '@/t'\nexport default withRootLayout(T)`,
+  'an allowlisted name from a project path': `import { withRootLayout } from '@/routes/_internal/root-layout'\nimport T from '@/t'\nexport default withRootLayout(T)`,
+  'an allowlisted module, another export': `${imp('somethingElse', 'root-layout')}import T from '@/t'\nexport default somethingElse(T)`,
+  'a protected group\'s messages-only wrapper': `${imp('withSuperadminMessages', 'superadmin-layout')}import T from '@/t'\nexport default withSuperadminMessages(T)`,
+  'the devtools messages-only wrapper': `${imp('withDevtoolsMessages', 'devtools-layout')}import T from '@/t'\nexport default withDevtoolsMessages(T)`,
+  'a wrapper renamed on import to look like another': `import { getTemplateOrDefault as withRootLayout } from '@/r'\nimport T from '@/t'\nexport default withRootLayout(T)`,
+  'a resolver nested inside an allowed wrapper': `${imp('withRootLayout', 'root-layout')}import { getTemplateOrDefault } from '@/r'\nimport T from '@/t'\nexport default withRootLayout(getTemplateOrDefault(T))`,
+}
+for (const [label, source] of Object.entries(RESOLVERS)) {
+  test(`composed-facade rejects ${label}`, async () => {
+    assert.ok((await checkComposed(source)).length > 0, `accepted: ${source}`)
+  })
+}
+
+const COMPOSITION_REJECTS = {
+  'a plain facade never composes': [`${imp('withPublicMessages', 'public-layout')}import T from '@/t'\nexport default withPublicMessages(T)`, 'facade'],
+  'the callee is not imported': "import T from '@/t'\nexport default wrap(T)",
+  'a namespace member call': `import * as m from '${CORE}public-layout'\nimport T from '@/t'\nexport default m.withPublicMessages(T)`,
+  'a member callee': `${imp('withPublicMessages', 'public-layout')}import T from '@/t'\nexport default withPublicMessages.wrap(T)`,
+  'a computed callee': `${imp('withPublicMessages', 'public-layout')}import T from '@/t'\nexport default withPublicMessages['x'](T)`,
+  'a non-imported argument': `${imp('withPublicMessages', 'public-layout')}export default withPublicMessages(routeName)`,
+  'a string literal naming a route': `${imp('withPublicMessages', 'public-layout')}export default withPublicMessages('app/page.tsx')`,
+  'a string literal argument to a layout wrapper': `${imp('withRootLayout', 'root-layout')}import T from '@/t'\nexport default withRootLayout(T, 'app/layout.tsx')`,
+  'a string literal for the entity list wrapper': `${imp('createEntityListRoute', 'entity-list-route')}import { c } from '@/c'\nexport default createEntityListRoute(c, 'tasks')`,
+  'a child-names array where it is not the second argument': `${imp('createEntityDetailRoute', 'entity-detail-route')}import { c } from '@/c'\nexport default createEntityDetailRoute(['a'], c)`,
+  'a child-names array for another wrapper': `${imp('createEntityListRoute', 'entity-list-route')}import { c } from '@/c'\nexport default createEntityListRoute(c, ['a'])`,
+  'a non-string in the child names': `${imp('createEntityDetailRoute', 'entity-detail-route')}import { c, x } from '@/c'\nexport default createEntityDetailRoute(c, [x])`,
+  'a numeric argument': `${imp('withRootLayout', 'root-layout')}export default withRootLayout(1)`,
+  'a member argument': `${imp('withRootLayout', 'root-layout')}import { R } from '@/w'\nexport default withRootLayout(R.a)`,
+  'a computed argument': `${imp('withRootLayout', 'root-layout')}import { R } from '@/w'\nexport default withRootLayout(R[name])`,
+  'a spread argument': `${imp('withRootLayout', 'root-layout')}import { xs } from '@/w'\nexport default withRootLayout(...xs)`,
+  'a template with substitutions': `${imp('withRootLayout', 'root-layout')}export default withRootLayout(\`a\${b}\`)`,
+  'an object argument': `${imp('withRootLayout', 'root-layout')}export default withRootLayout({ a: 1 })`,
+  'an arrow argument': `${imp('withRootLayout', 'root-layout')}export default withRootLayout(() => null)`,
+  'a dynamic import': `${imp('withRootLayout', 'root-layout')}export default withRootLayout(import('@/x'))`,
+  'a type argument': `${imp('withRootLayout', 'root-layout')}import T from '@/t'\nexport default withRootLayout<string>(T)`,
+  'an optional call': `${imp('withRootLayout', 'root-layout')}import T from '@/t'\nexport default withRootLayout?.(T)`,
+  'a bare identifier': "import T from '@/t'\nexport default T",
+  'a non-call expression': "import T from '@/t'\nexport default (T)",
+  'two default compositions': `${imp('withRootLayout', 'root-layout')}import T from '@/t'\nexport default withRootLayout(T)\nexport default withRootLayout(T)`,
+  'an unimported nested call': `${imp('withRootLayout', 'root-layout')}export default withRootLayout(other('a'))`,
+  'a call in a segment config': `${imp('withRootLayout', 'root-layout')}export const revalidate = withRootLayout(1)\nexport const dynamic = Number(1)`,
+  'a let composition': `${imp('createStripeWebhookRoute', 'billing-webhooks')}import { e } from '@/e'\nexport let POST = createStripeWebhookRoute(e)`,
+  'a function declaration': `${imp('createStripeWebhookRoute', 'billing-webhooks')}import { e } from '@/e'\nexport function GET() { return createStripeWebhookRoute(e) }`,
+  'an IIFE': `${imp('createStripeWebhookRoute', 'billing-webhooks')}import { e } from '@/e'\nexport const POST = (() => createStripeWebhookRoute(e))()`,
+}
+for (const [label, spec] of Object.entries(COMPOSITION_REJECTS)) {
+  const [source, grammar] = Array.isArray(spec) ? spec : [spec, 'composed-facade']
+  test(`composed-facade rejects ${label}`, async () => {
+    assert.ok((await checkComposed(source, grammar)).length > 0, `accepted: ${source}`)
+  })
+}
+
+test('a host with another core names its own wrappers; the default list still rules', async () => {
+  const source = "import T from '@/t'\nimport { withShell } from '@fixture-core/app/shell-layout'\nexport default withShell(T)"
+  assert.ok((await checkComposed(source)).length > 0, 'not core\'s')
+  const check = wrappers => checkGeneratedModule({ source, file: '/virtual/src/app/page.tsx', grammar: 'composed-facade', projectRoot: CORE_ROOT, wrappers })
+  assert.deepEqual(await check({ '@fixture-core/app/shell-layout': ['withShell'] }), [])
+  assert.ok((await check({ '@fixture-core/app/shell-layout': ['other'] })).length > 0)
+})
+
+test('dev-facade composes a composed root layout with the generation status wrapper', async () => {
+  const dev =
+    `import Template from '@/templates/layout'\n${imp('withRootLayout', 'root-layout')}` +
+    "import { withGenerationStatus } from './_nextspark/generation-status'\nexport default withGenerationStatus(withRootLayout(Template))\n"
+  assert.deepEqual(await checkComposed(dev, 'dev-facade'), [])
+  assert.ok((await checkComposed(dev.replace('withGenerationStatus(withRootLayout(Template))', 'withRootLayout(withGenerationStatus(Template))'), 'dev-facade')).length > 0, 'the status wrapper must be outermost')
+  assert.ok((await checkComposed(dev.replace('withGenerationStatus(withRootLayout(Template))', 'withGenerationStatus(withRootLayout(Template), 1)'), 'dev-facade')).length > 0)
+  assert.ok((await checkComposed(dev.replace('export default', 'export const POST ='), 'dev-facade')).length > 0, 'dev-facade composes only the default export')
+})

@@ -65,22 +65,27 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
     }
   })
 
+  // A generated host serves every project and plugin route as a route file of its own (`nextspark prepare`
+  // writes them): nothing here executes a handler, so nothing imports one - the registry is documentation
+  // metadata only, at the URLs the routes are served at. The legacy dispatchers keep the handlers.
+  const generatedHost = config?.generatedHost === true
+
   // Generate imports for executable handlers
   const imports = []
-  const allRoutes = [...themeRoutes, ...pluginRoutes]
+  const allRoutes = generatedHost ? [] : [...themeRoutes, ...pluginRoutes]
   allRoutes.forEach(route => {
     imports.push(`import * as ${route.importKey} from '${route.filePath}'`)
   })
 
   // Generate theme handlers
-  const themeHandlersCode = themeRoutes.map(route => {
+  const themeHandlersCode = (generatedHost ? [] : themeRoutes).map(route => {
     const routeKey = `${route.themeName}/${route.routePath}`
     const methodsCode = route.methods.map(method => `    ${method}: ${route.importKey}.${method} as RouteHandler`).join(',\n')
     return `  '${routeKey}': {\n${methodsCode}\n  }`
   }).join(',\n')
 
   // Generate plugin handlers
-  const pluginHandlersCode = pluginRoutes.map(route => {
+  const pluginHandlersCode = (generatedHost ? [] : pluginRoutes).map(route => {
     const routeKey = `${route.pluginName}/${route.routePath}`
     const methodsCode = route.methods.map(method => `    ${method}: ${route.importKey}.${method} as RouteHandler`).join(',\n')
     return `  '${routeKey}': {\n${methodsCode}\n  }`
@@ -119,7 +124,7 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
 
   // Generate theme routes metadata
   const themeRoutesMetadata = themeRoutes.map(route => ({
-    path: `/api/v1/theme/${route.themeName}${route.routePath ? '/' + route.routePath : ''}`,
+    path: generatedHost ? `/api${route.routePath ? '/' + route.routePath : ''}` : `/api/v1/theme/${route.themeName}${route.routePath ? '/' + route.routePath : ''}`,
     methods: route.methods,
     category: 'theme',
     source: route.themeName
@@ -127,7 +132,7 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
 
   // Generate plugin routes metadata
   const pluginRoutesMetadata = pluginRoutes.map(route => ({
-    path: `/api/v1/plugin/${route.pluginName}${route.routePath ? '/' + route.routePath : ''}`,
+    path: `${generatedHost ? '/api/plugins' : '/api/v1/plugin'}/${route.pluginName}${route.routePath ? '/' + route.routePath : ''}`,
     methods: route.methods,
     category: 'plugin',
     source: route.pluginName
@@ -201,7 +206,7 @@ export interface ApiRouteEntry {
  * Access: THEME_ROUTE_HANDLERS['theme-name/route-path'][HTTP_METHOD]
  */
 export const THEME_ROUTE_HANDLERS: Record<string, Record<string, RouteHandler | undefined>> = {
-${themeHandlersCode || '  // No theme routes discovered'}
+${themeHandlersCode || (generatedHost ? '  // The generated host serves project routes as route files of their own' : '  // No theme routes discovered')}
 }
 
 /**
@@ -209,7 +214,7 @@ ${themeHandlersCode || '  // No theme routes discovered'}
  * Access: PLUGIN_ROUTE_HANDLERS['plugin-name/route-path'][HTTP_METHOD]
  */
 export const PLUGIN_ROUTE_HANDLERS: Record<string, Record<string, RouteHandler | undefined>> = {
-${pluginHandlersCode || '  // No plugin routes discovered'}
+${pluginHandlersCode || (generatedHost ? '  // The generated host serves plugin routes as route files of their own' : '  // No plugin routes discovered')}
 }
 
 // ==================== API ROUTES METADATA ====================

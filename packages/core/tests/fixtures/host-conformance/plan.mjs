@@ -9,11 +9,14 @@ import { readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { CORE_ROUTES } from './fake-core/routes.mjs'
+import { CORE_ROUTES, ENTITY_MODULES } from './fake-core/routes.mjs'
 import { loadCoreRouteManifest } from '../../../scripts/build/registry/host/core-routes.mjs'
+import { planEntityRoutes, readAllEntityFacts } from '../../../scripts/build/registry/host/entity-routes.mjs'
+import { CORE_COMPOSITION_WRAPPERS } from '../../../scripts/build/registry/host/static-imports.mjs'
 import { resolveNextPackage } from '../../../scripts/build/registry/host/facade-emitter.mjs'
 import { hashInputs } from '../../../scripts/build/registry/host/generation.mjs'
 import { resolveHostPlan } from '../../../scripts/build/registry/host/plan.mjs'
+import { existsSync } from 'node:fs'
 
 export const FIXTURE_ROOT = dirname(fileURLToPath(import.meta.url))
 export const SOURCE_ROOT = join(FIXTURE_ROOT, 'source')
@@ -31,9 +34,51 @@ export function loadFixtureCoreRoutes() {
     coreRoot: FAKE_CORE_ROOT,
     entries: CORE_ROUTES,
     manifestPath: join(FAKE_CORE_ROOT, 'routes.mjs'),
-    resolveFile: specifier => join(FAKE_CORE_ROOT, `${specifier.replace('@fixture-core/', '')}.tsx`),
+    resolveFile: fixtureCoreFile,
     isProtected: () => false,
   })
+}
+
+/** The composition wrappers of the fake core, next to core's own (what a composed facade of the fixture may call). */
+export const FIXTURE_COMPOSITION_WRAPPERS = Object.freeze({
+  ...CORE_COMPOSITION_WRAPPERS,
+  '@fixture-core/app/shell-layout': ['withShell'],
+  [ENTITY_MODULES.layout]: ['createEntityLayoutRoute'],
+  [ENTITY_MODULES.list]: ['createEntityListRoute'],
+  [ENTITY_MODULES.detail]: ['createEntityDetailRoute'],
+  [ENTITY_MODULES.create]: ['createEntityCreateRoute'],
+  [ENTITY_MODULES.edit]: ['createEntityEditRoute'],
+})
+
+/** The fake core's module of a `@fixture-core/...` specifier. */
+export function fixtureCoreFile(specifier) {
+  const base = join(FAKE_CORE_ROOT, specifier.replace('@fixture-core/', ''))
+  return ['.tsx', '.ts'].map(extension => `${base}${extension}`).find(candidate => existsSync(candidate)) ?? null
+}
+
+/**
+ * The entities the fixture writes routes for: the ones with a config the host can read (`<name>.config.ts`
+ * exporting `<name>EntityConfig`). The others (notes, posts) have registry entries only.
+ */
+export function fixtureEntities(sourceRoot = SOURCE_ROOT) {
+  return readdirSync(join(sourceRoot, 'entities'), { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && existsSync(join(sourceRoot, 'entities', entry.name, `${entry.name}.config.ts`)))
+    .map(entry => ({
+      name: entry.name,
+      exportName: `${entry.name}EntityConfig`,
+      configPath: `@/entities/${entry.name}/${entry.name}.config`,
+      relativePath: entry.name,
+      parent: null,
+      children: [],
+      source: 'project',
+    }))
+}
+
+/** The per-entity routes of the fixture (host/entity-routes.mjs, with the fake core's factory modules). */
+export async function fixtureEntityPlan({ manifest, sourceRoot = SOURCE_ROOT } = {}) {
+  const entities = fixtureEntities(sourceRoot)
+  const facts = await readAllEntityFacts({ entities, projectRoot: CORE_ROOT, sourceRoot })
+  return planEntityRoutes({ entities, facts, coreRoutes: manifest.routes, resolveFile: fixtureCoreFile, modes: MODES, modules: ENTITY_MODULES })
 }
 
 /** Every plugin directory under source/plugins (the fixture enables them all). */
@@ -71,6 +116,8 @@ export function fixtureHostConfig({ hostRoot = GENERATED_ROOT, sourceRoot = SOUR
     loadCoreRoutes,
     plugins: sourceRoot === SOURCE_ROOT ? fixturePlugins() : [],
     project: { root: sourceRoot, importBase: '@', label: 'source' },
+    entities: ({ manifest }) => fixtureEntityPlan({ manifest, sourceRoot }),
+    compositionWrappers: FIXTURE_COMPOSITION_WRAPPERS,
     modes: MODES,
     pageExtensions: PAGE_EXTENSIONS,
     // Registries get the same guarantee as facades: nothing outside the registry grammar.
@@ -97,6 +144,8 @@ export function fixtureHostConfig({ hostRoot = GENERATED_ROOT, sourceRoot = SOUR
  */
 export async function resolveRoutePlan() {
   const config = fixtureHostConfig()
-  const { routes } = await config.loadCoreRoutes()
-  return resolveHostPlan({ coreRoutes: routes, plugins: config.plugins, project: config.project, modes: MODES })
+  const manifest = await config.loadCoreRoutes()
+  const entityPlan = await config.entities({ manifest })
+  if (entityPlan.diagnostics.length > 0) throw new Error(entityPlan.diagnostics.map(d => d.message).join('\n'))
+  return resolveHostPlan({ coreRoutes: manifest.routes, entityRoutes: entityPlan.routes, plugins: config.plugins, project: config.project, modes: MODES })
 }

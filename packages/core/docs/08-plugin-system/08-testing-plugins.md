@@ -124,9 +124,9 @@ jest.mock('@nextsparkjs/registries/plugin-registry', () => ({
   }))
 }))
 
-describe('POST /api/v1/plugin/my-plugin/process', () => {
+describe('POST /api/plugins/my-plugin/process', () => {
   it('processes valid request', async () => {
-    const request = new NextRequest('http://localhost/api/v1/plugin/my-plugin/process', {
+    const request = new NextRequest('http://localhost/api/plugins/my-plugin/process', {
       method: 'POST',
       body: JSON.stringify({ input: 'test' })
     })
@@ -145,7 +145,7 @@ describe('POST /api/v1/plugin/my-plugin/process', () => {
       authenticated: false
     })
 
-    const request = new NextRequest('http://localhost/api/v1/plugin/my-plugin/process', {
+    const request = new NextRequest('http://localhost/api/plugins/my-plugin/process', {
       method: 'POST',
       body: JSON.stringify({ input: 'test' })
     })
@@ -158,7 +158,7 @@ describe('POST /api/v1/plugin/my-plugin/process', () => {
   })
 
   it('validates request body', async () => {
-    const request = new NextRequest('http://localhost/api/v1/plugin/my-plugin/process', {
+    const request = new NextRequest('http://localhost/api/plugins/my-plugin/process', {
       method: 'POST',
       body: JSON.stringify({}) // Missing 'input'
     })
@@ -171,9 +171,9 @@ describe('POST /api/v1/plugin/my-plugin/process', () => {
   })
 })
 
-describe('GET /api/v1/plugin/my-plugin/process', () => {
+describe('GET /api/plugins/my-plugin/process', () => {
   it('returns health check', async () => {
-    const request = new NextRequest('http://localhost/api/v1/plugin/my-plugin/process', {
+    const request = new NextRequest('http://localhost/api/plugins/my-plugin/process', {
       method: 'GET'
     })
 
@@ -285,7 +285,7 @@ describe('My Plugin Widget', () => {
 
   it('shows loading state during processing', () => {
     // Intercept API call to add delay
-    cy.intercept('POST', '/api/v1/plugin/my-plugin/process', {
+    cy.intercept('POST', '/api/plugins/my-plugin/process', {
       delay: 1000,
       body: { success: true, data: 'processed' }
     })
@@ -297,7 +297,7 @@ describe('My Plugin Widget', () => {
 
   it('handles errors gracefully', () => {
     // Intercept API call to return error
-    cy.intercept('POST', '/api/v1/plugin/my-plugin/process', {
+    cy.intercept('POST', '/api/plugins/my-plugin/process', {
       statusCode: 500,
       body: { error: 'Processing failed' }
     })
@@ -479,7 +479,7 @@ describe('AI Chat Plugin', () => {
   })
 
   it('sends message and receives response', () => {
-    cy.intercept('POST', '/api/v1/plugin/ai/generate', {
+    cy.intercept('POST', '/api/plugins/ai/generate', {
       body: {
         success: true,
         data: {

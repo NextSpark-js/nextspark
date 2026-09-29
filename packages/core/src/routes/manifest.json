@@ -17,7 +17,11 @@
   {
     "kind": "layout",
     "target": "(auth)/layout.tsx",
-    "specifier": "@nextsparkjs/core/routes/(auth)/layout"
+    "specifier": "@nextsparkjs/core/routes/(auth)/layout",
+    "compose": {
+      "wrapper": "withAuthMessages",
+      "specifier": "@nextsparkjs/core/routes/_internal/auth-layout"
+    }
   },
   {
     "kind": "page",
@@ -41,11 +45,6 @@
   },
   {
     "kind": "page",
-    "target": "(public)/[...slug]/page.tsx",
-    "specifier": "@nextsparkjs/core/routes/(public)/[...slug]/page"
-  },
-  {
-    "kind": "page",
     "target": "(public)/docs/[section]/[page]/page.tsx",
     "specifier": "@nextsparkjs/core/routes/(public)/docs/[section]/[page]/page"
   },
@@ -62,7 +61,11 @@
   {
     "kind": "layout",
     "target": "(public)/layout.tsx",
-    "specifier": "@nextsparkjs/core/routes/(public)/layout"
+    "specifier": "@nextsparkjs/core/routes/(public)/layout",
+    "compose": {
+      "wrapper": "withPublicMessages",
+      "specifier": "@nextsparkjs/core/routes/_internal/public-layout"
+    }
   },
   {
     "kind": "page",
@@ -331,16 +334,6 @@
   },
   {
     "kind": "route",
-    "target": "api/v1/plugin/[...path]/route.ts",
-    "specifier": "@nextsparkjs/core/routes/api/v1/plugin/[...path]/route"
-  },
-  {
-    "kind": "route",
-    "target": "api/v1/plugin/route.ts",
-    "specifier": "@nextsparkjs/core/routes/api/v1/plugin/route"
-  },
-  {
-    "kind": "route",
     "target": "api/v1/post-categories/[id]/route.ts",
     "specifier": "@nextsparkjs/core/routes/api/v1/post-categories/[id]/route"
   },
@@ -421,16 +414,6 @@
   },
   {
     "kind": "route",
-    "target": "api/v1/theme/[...path]/route.ts",
-    "specifier": "@nextsparkjs/core/routes/api/v1/theme/[...path]/route"
-  },
-  {
-    "kind": "route",
-    "target": "api/v1/theme/route.ts",
-    "specifier": "@nextsparkjs/core/routes/api/v1/theme/route"
-  },
-  {
-    "kind": "route",
     "target": "api/v1/users/[id]/meta/[key]/route.ts",
     "specifier": "@nextsparkjs/core/routes/api/v1/users/[id]/meta/[key]/route"
   },
@@ -443,41 +426,6 @@
     "kind": "route",
     "target": "api/v1/users/route.ts",
     "specifier": "@nextsparkjs/core/routes/api/v1/users/route"
-  },
-  {
-    "kind": "page",
-    "target": "dashboard/(main)/[entity]/[id]/edit/page.tsx",
-    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/[id]/edit/page"
-  },
-  {
-    "kind": "page",
-    "target": "dashboard/(main)/[entity]/[id]/page.tsx",
-    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/[id]/page"
-  },
-  {
-    "kind": "page",
-    "target": "dashboard/(main)/[entity]/create/page.tsx",
-    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/create/page"
-  },
-  {
-    "kind": "error",
-    "target": "dashboard/(main)/[entity]/error.tsx",
-    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/error"
-  },
-  {
-    "kind": "layout",
-    "target": "dashboard/(main)/[entity]/layout.tsx",
-    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/layout"
-  },
-  {
-    "kind": "loading",
-    "target": "dashboard/(main)/[entity]/loading.tsx",
-    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/loading"
-  },
-  {
-    "kind": "page",
-    "target": "dashboard/(main)/[entity]/page.tsx",
-    "specifier": "@nextsparkjs/core/routes/dashboard/(main)/[entity]/page"
   },
   {
     "kind": "layout",
@@ -712,7 +660,11 @@
   {
     "kind": "layout",
     "target": "devtools/layout.tsx",
-    "specifier": "@nextsparkjs/core/routes/devtools/layout"
+    "specifier": "@nextsparkjs/core/routes/devtools/layout",
+    "compose": {
+      "wrapper": "withDevtoolsGuard",
+      "specifier": "@nextsparkjs/core/routes/_internal/devtools-layout"
+    }
   },
   {
     "kind": "page",
@@ -747,7 +699,11 @@
   {
     "kind": "layout",
     "target": "layout.tsx",
-    "specifier": "@nextsparkjs/core/routes/layout"
+    "specifier": "@nextsparkjs/core/routes/layout",
+    "compose": {
+      "wrapper": "withRootLayout",
+      "specifier": "@nextsparkjs/core/routes/_internal/root-layout"
+    }
   },
   {
     "kind": "page",
@@ -767,7 +723,11 @@
   {
     "kind": "layout",
     "target": "superadmin/layout.tsx",
-    "specifier": "@nextsparkjs/core/routes/superadmin/layout"
+    "specifier": "@nextsparkjs/core/routes/superadmin/layout",
+    "compose": {
+      "wrapper": "withSuperadminGuard",
+      "specifier": "@nextsparkjs/core/routes/_internal/superadmin-layout"
+    }
   },
   {
     "kind": "page",

@@ -7,7 +7,7 @@
 import { defineApiEndpoint } from '@nextsparkjs/core/types/api-presets'
 
 export default defineApiEndpoint({
-  endpoint: '/api/v1/plugin/ai/embeddings',
+  endpoint: '/api/plugins/ai/embeddings',
   summary: 'Generate text embeddings using OpenAI text-embedding-3-small model',
   presets: [
     {

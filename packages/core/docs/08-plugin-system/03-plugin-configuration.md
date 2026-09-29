@@ -87,9 +87,9 @@ name: 'ai@helper'          // ❌ Special characters not allowed
 
 **Usage in URLs**:
 ```text
-/api/v1/plugin/[name]/[endpoint]
-/api/v1/plugin/ai/generate
-/api/v1/plugin/billing/subscriptions
+/api/plugins/[name]/[endpoint]
+/api/plugins/ai/generate
+/api/plugins/billing/subscriptions
 ```
 
 ---

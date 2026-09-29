@@ -5,7 +5,7 @@
  * NO authentication required.
  * NO team_id filtering - shows posts cross-team.
  *
- * URL: /api/v1/theme/blog/posts/public
+ * URL: /api/posts/public
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -137,7 +137,7 @@ const getHandler = async (request: NextRequest) => {
     })
 
   } catch (error) {
-    console.error('[API] /api/v1/theme/blog/posts/public - Error:', error)
+    console.error('[API] /api/posts/public - Error:', error)
 
     return NextResponse.json(
       {

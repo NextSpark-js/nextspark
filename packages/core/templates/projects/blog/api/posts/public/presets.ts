@@ -7,7 +7,7 @@
 import { defineApiEndpoint } from '@nextsparkjs/core/types/api-presets'
 
 export default defineApiEndpoint({
-  endpoint: '/api/v1/theme/blog/posts/public',
+  endpoint: '/api/posts/public',
   summary: 'Public feed of published blog posts',
   presets: [
     {
