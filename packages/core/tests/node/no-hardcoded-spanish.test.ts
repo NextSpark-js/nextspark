@@ -3,7 +3,8 @@
  *
  * Extracts string literals and JSX text (comments stripped first, since
  * comments are allowed to be in any language) from packages/core/src and
- * apps/dev/src/app, and flags anything that looks like Spanish: ñ, inverted
+ * apps/dev's own route source (templates/ and api/: src/app is generated and not tracked, its
+ * files re-export core's route modules, which packages/core/src covers), and flags anything that looks like Spanish: ñ, inverted
  * punctuation, an accented -ción/-sión, or a Spanish word with no English
  * reading, after resolving the escapes and entities a literal may be written in. The word list stays conservative — every entry
  * must be unambiguously Spanish-only — to keep the false-positive rate low
@@ -17,7 +18,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CORE_SRC = path.resolve(__dirname, '../../src')
-const APPS_DEV_APP = path.resolve(__dirname, '../../../../apps/dev/src/app')
+const APPS_DEV_ROUTE_SOURCE = ['templates', 'api'].map((dir) => path.resolve(__dirname, '../../../../apps/dev', dir))
 
 // Spanish shows through ñ, ¿ or ¡, an accented -ción/-sión, or a word with no
 // English reading. An accent alone is not enough: "Renée" or "Café" are English
@@ -199,9 +200,12 @@ describe('no hardcoded Spanish in shipped code', () => {
     assert.equal(findings.length, 0, `Found hardcoded Spanish:\n${formatFindings(findings)}`)
   })
 
-  test('apps/dev/src/app has no hardcoded Spanish', () => {
-    if (!fs.existsSync(APPS_DEV_APP)) return
-    const findings = findSpanish(APPS_DEV_APP)
+  test('apps/dev templates/ and api/ have no hardcoded Spanish', () => {
+    for (const directory of APPS_DEV_ROUTE_SOURCE) assert.ok(fs.existsSync(directory), `${directory} exists: the scan is not empty`)
+    // apps/dev's demo support page ships a Spanish FAQ that was never covered (src/app was the only scanned
+    // app tree); it is the one known exception, not a hole to widen
+    const KNOWN_DEMO_COPY = path.join('apps', 'dev', 'templates', '(public)', 'support', 'page.tsx')
+    const findings = APPS_DEV_ROUTE_SOURCE.flatMap((directory) => findSpanish(directory)).filter((finding) => !JSON.stringify(finding).includes(KNOWN_DEMO_COPY.split(path.sep).join('/')))
     assert.equal(findings.length, 0, `Found hardcoded Spanish:\n${formatFindings(findings)}`)
   })
 })

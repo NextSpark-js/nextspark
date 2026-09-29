@@ -11,6 +11,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
@@ -46,6 +47,32 @@ function copyTree(from: string, to: string): void {
 function write(root: string, file: string, contents: string): void {
   fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true })
   fs.writeFileSync(path.join(root, file), contents)
+}
+
+/**
+ * src/app is generated and not tracked: write the host `nextspark prepare` writes for this project,
+ * with the production generator (facades, composed facades, per-entity routes), so what is linted is
+ * what a project's `eslint .` walks. Core's own dist and route modules are the installed core here.
+ */
+function generateHost(root: string): void {
+  write(root, 'package.json', JSON.stringify({ name: 'eslint-host-probe', private: true, dependencies: { next: '~16.3.5' } }))
+  write(root, 'nextspark.config.ts', fs.readFileSync(path.join(REPO, 'apps/dev/nextspark.config.ts'), 'utf8').replace("'@nextsparkjs/plugin-langchain'", "'langchain'"))
+  const core = path.join(root, 'node_modules/@nextsparkjs/core')
+  fs.mkdirSync(path.dirname(core), { recursive: true })
+  fs.symlinkSync(path.join(REPO, 'packages/core'), core, 'dir')
+  // Core's own entities (patterns, ...) are found beside the project when it is not installed as a package
+  fs.mkdirSync(path.join(root, 'packages'), { recursive: true })
+  fs.symlinkSync(path.join(REPO, 'packages/core'), path.join(root, 'packages/core'), 'dir')
+  for (const name of ['next', 'typescript']) linkFromRepo(root, name)
+  const result = spawnSync(process.execPath, [path.join(REPO, 'packages/core/scripts/build/registry/host/prepare-cli.mjs')], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 240_000,
+    env: { ...process.env, NEXT_PUBLIC_APP_URL: 'http://localhost:3000' },
+  })
+  assert.equal(result.status, 0, `nextspark prepare failed:\n${result.stdout}\n${result.stderr}`)
+  assert.ok(fs.existsSync(path.join(root, 'src/app/layout.tsx')), 'the generated host has a root layout')
+  assert.ok(fs.readdirSync(path.join(root, 'src/app'), { recursive: true }).length > 100, 'the generated host holds the framework routes')
 }
 
 async function lint(root: string, patterns: string[]): Promise<LintMessage[]> {
@@ -84,7 +111,6 @@ test('a project holding everything NextSpark writes lints without errors on Next
     linkFromRepo(root, 'eslint')
     linkFromRepo(root, 'eslint-config-next')
 
-    copyTree(path.join(REPO, 'apps/dev/src/app'), path.join(root, 'src', 'app'))
     for (const dir of ['api', 'blocks', 'components', 'config', 'entities', 'lib', 'messages', 'styles', 'templates', 'tests']) {
       copyTree(path.join(REPO, 'apps/dev', dir), path.join(root, dir))
     }
@@ -93,6 +119,7 @@ test('a project holding everything NextSpark writes lints without errors on Next
       copyTree(path.join(TEMPLATES, entry), path.join(root, entry))
     }
     write(root, 'next-env.d.ts', '/// <reference types="next" />\n/// <reference path="./.next/types/routes.d.ts" />\n')
+    generateHost(root)
 
     const messages = errors(await lint(root, ['.']))
     assert.equal(messages.length, 0, `expected no errors, got ${messages.length}:\n${format(messages)}`)
