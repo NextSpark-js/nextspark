@@ -6,7 +6,10 @@
  *
  * - core: the routes of the core route manifest (`core-routes.mjs`);
  * - plugin: `plugins/<name>/templates/**` (same target as the file's path) and
- *   `plugins/<name>/api/**` (target `api/plugins/<name>/**`);
+ *   `plugins/<name>/api/**` (target `api/plugins/<name>/**`), only for the capabilities the plugin declares
+ *   (`definePlugin({ capabilities })`, see discovery/plugin-capabilities.mjs): pages and layouts need
+ *   'web', Route Handlers need 'server'; a file in a surface the plugin did not declare is a diagnostic
+ *   naming the plugin, the capability and the file;
  * - project: `templates/**` (same path) and `api/**` (target `api/**`).
  *
  * A higher layer replaces a lower one at the same route file (same directory, file stem and
@@ -44,6 +47,7 @@ import { readdirSync } from 'node:fs'
 import { join, posix, relative, sep } from 'node:path'
 
 import { kindForFileStem } from './facade-emitter.mjs'
+import { PLUGIN_DIAGNOSTICS, capabilitiesOf } from '../discovery/plugin-capabilities.mjs'
 
 export const PLAN_DIAGNOSTICS = Object.freeze({
   COLLISION: 'NS_HOST_ROUTE_COLLISION',
@@ -177,7 +181,8 @@ function dynamicKind(segment) {
  * @param {object} input
  * @param {object[]} input.coreRoutes - `loadCoreRouteManifest(...).routes`
  * @param {object[]} [input.entityRoutes] - `planEntityRoutes(...).routes`: per-entity route candidates
- * @param {{ name: string, root: string, importBase: string }[]} [input.plugins] - enabled plugins
+ * @param {{ name: string, root: string, importBase: string, capabilities?: string[] }[]} [input.plugins] - enabled plugins; a plugin
+ *   that declares no `capabilities` is legacy (server + web + build)
  * @param {{ root: string, importBase?: string, label?: string }} input.project - project source root
  * @param {string[]} [input.modes] - cache-mode file suffixes the host understands (`page.isr.tsx`)
  * @param {string[]} [input.extensions] - source extensions
@@ -196,10 +201,28 @@ export function planHost({ coreRoutes, entityRoutes = [], plugins = [], project,
 
   for (const plugin of [...plugins].sort((a, b) => compareTargets(a.name, b.name))) {
     const label = `plugins/${plugin.name}`
-    candidates.push(
+    const capabilities = capabilitiesOf(plugin)
+    const contributed = [
       ...surfaceRoutes({ dir: join(plugin.root, 'templates'), importBase: plugin.importBase, surface: 'templates', toTarget: path => path, layer: 'plugin', label, pattern, diagnostics, namespace: target => (target.startsWith('api/') && !target.startsWith(`api/plugins/${plugin.name}/`) ? pluginApiHint(plugin.name) : null) }),
-      ...surfaceRoutes({ dir: join(plugin.root, 'api'), importBase: plugin.importBase, surface: 'api', toTarget: path => `api/plugins/${plugin.name}/${path}`, layer: 'plugin', label, pattern, diagnostics })
-    )
+      ...surfaceRoutes({ dir: join(plugin.root, 'api'), importBase: plugin.importBase, surface: 'api', toTarget: path => `api/plugins/${plugin.name}/${path}`, layer: 'plugin', label, pattern, diagnostics }),
+    ]
+    // The host takes only what the plugin declares: pages and layouts need 'web', Route Handlers need 'server'.
+    for (const route of contributed) {
+      const capability = route.source.startsWith(`${label}/api/`) || route.kind === 'route' ? 'server' : 'web'
+      if (capabilities.includes(capability)) {
+        candidates.push(route)
+        continue
+      }
+      diagnostics.push({
+        code: PLUGIN_DIAGNOSTICS.UNDECLARED,
+        target: route.target,
+        plugin: plugin.name,
+        capability,
+        file: route.source,
+        sources: [route.source],
+        message: `${route.source}: contributes src/app/${route.target}, so plugin "${plugin.name}" needs the "${capability}" capability, but it declares [${capabilities.join(', ')}]`,
+      })
+    }
   }
   // The routes core and the plugins already serve: what a project's templates/api/... may replace, never add to
   const servedSlots = new Set(candidates.map(route => slotOf(route)))

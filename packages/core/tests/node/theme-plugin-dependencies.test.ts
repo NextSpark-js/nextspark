@@ -7,6 +7,7 @@
  * And an @nextsparkjs range that does not admit the release's own prereleases
  * produces a lockfile that fails `pnpm install --frozen-lockfile`.
  */
+import { compareVersions, parseVersion } from '../../../../scripts/packages/plugin-core-peer.mjs'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -253,6 +254,10 @@ test('@nextsparkjs ranges in the project and plugins admit the release they ship
     for (const section of ['dependencies', 'peerDependencies', 'devDependencies'] as const) {
       for (const [name, range] of Object.entries(pkg[section] ?? {})) {
         if (!name.startsWith('@nextsparkjs/') || range.startsWith('workspace:') || range === expected) continue
+        // A fixed floor (">=0.1.0-beta.192", the first core with definePlugin) is not rewritten by version.sh:
+        // it stays valid while the release that ships is at or above it.
+        const floor = /^>=\d+\.\d+\.\d+-[0-9A-Za-z.]+$/.test(range) ? parseVersion(range.slice(2)) : null
+        if (floor && compareVersions(floor, parseVersion(String(version))!) <= 0) continue
         mismatched.push(`${path.relative(REPO, pkg.dir)} ${section} ${name}: "${range}" (expected "${expected}")`)
       }
     }
@@ -266,7 +271,8 @@ test('the lockfile records the @nextsparkjs ranges the manifests declare', () =>
   for (const pkg of packages()) {
     const importer = path.relative(REPO, pkg.dir)
     const block = lockfile.match(new RegExp(`^  ${importer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\n((?:(?:    |\\n).*\\n?)*)`, 'm'))?.[1] ?? ''
-    const declared = { ...pkg.devDependencies, ...pkg.peerDependencies, ...pkg.dependencies }
+    // pnpm records a package once per importer: a workspace devDependency stands for the peer it satisfies.
+    const declared = { ...pkg.peerDependencies, ...pkg.dependencies, ...pkg.devDependencies }
     for (const [name, range] of Object.entries(declared)) {
       if (!name.startsWith('@nextsparkjs/')) continue
       const recorded = block.match(new RegExp(`'${name.replace('/', '\\/')}':\\n\\s+specifier: '?([^'\\n]+)'?`))?.[1]

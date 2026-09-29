@@ -5,6 +5,7 @@
  * Users create their own endpoints, components, and hooks
  */
 
+import { definePlugin } from '@nextsparkjs/core/types/plugin'
 import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
 // Core utilities for user endpoints
@@ -22,8 +23,9 @@ import {
 /**
  * Ultra-dynamic AI plugin configuration
  */
-export const aiPluginConfig: PluginConfig = {
+export const aiPluginConfig: PluginConfig = definePlugin({
   name: 'ai',
+  capabilities: ['server'],
   displayName: 'AI Core Utilities',
   version: '1.0.0',
   description: 'Core AI utilities for building custom endpoints and integrations',
@@ -49,7 +51,7 @@ export const aiPluginConfig: PluginConfig = {
       console.log('[AI Plugin] Core utilities loaded - ready for custom endpoints')
     }
   }
-}
+})
 
 // Default export for compatibility
 export default aiPluginConfig

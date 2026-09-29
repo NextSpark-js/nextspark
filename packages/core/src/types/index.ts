@@ -114,3 +114,7 @@ export { defineApiEndpoint } from './api-presets'
 // Future type exports can be added here:
 // export type { SearchResult, SearchOptions } from './search.types'
 // export type { Notification } from './notification.types'
+
+// Plugin model (#203): capabilities a runtime plugin declares
+export { definePlugin, PLUGIN_CAPABILITIES } from './plugin'
+export type { PluginCapability, PluginConfig, PluginDefinition } from './plugin'

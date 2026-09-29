@@ -4,7 +4,7 @@ import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProvide
 import { DevtoolsSidebar } from "@nextsparkjs/core/components/devtools/DevtoolsSidebar";
 import { DevtoolsMobileHeader } from "@nextsparkjs/core/components/devtools/DevtoolsMobileHeader";
 import { Metadata } from "next";
-import { getPluginNavItems } from '@nextsparkjs/registries/plugin-registry'
+import { getAllPluginNavItems } from '@nextsparkjs/core/lib/plugins/nav-items'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
@@ -28,7 +28,7 @@ export interface DevLayoutProps {
  * Uses purple/violet color scheme to differentiate from Admin Panel (red).
  */
 export function DevLayout({ children }: DevLayoutProps) {
-  const pluginNavItems = getPluginNavItems('devtools')
+  const pluginNavItems = getAllPluginNavItems('devtools')
   return (
     <DashboardProviders>
       <DeveloperGuard>

@@ -14,10 +14,22 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import type { AddressInfo } from 'node:net'
-import { buildTools } from '../../../../plugins/langchain/lib/tools-builder'
-import { createOpenAIModel } from '../../../../plugins/langchain/lib/providers'
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
+const CORE_SRC = path.join(REPO, 'packages/core/src')
+
+// plugin.config.ts imports `definePlugin` from @nextsparkjs/core/types/plugin at run time. The plugin is
+// not `type: module`, so tsx loads it through Node's CJS resolver, and core's subpath exports only declare
+// the `import` condition (a bundler resolves them; `require` does not). The workspace source stands in for
+// that one specifier. The plugin's core peer (>=0.1.0-beta.192, the first with definePlugin) and its
+// workspace link are checked separately, by scripts/packages/plugin-core-peer.test.mjs.
+const nodeModule = createRequire(import.meta.url)('node:module') as { _resolveFilename: (request: string, ...rest: unknown[]) => string }
+const resolveFilename = nodeModule._resolveFilename
+nodeModule._resolveFilename = function (request: string, ...rest: unknown[]) {
+  return resolveFilename.call(this, request.startsWith('@nextsparkjs/core/') ? path.join(CORE_SRC, request.slice('@nextsparkjs/core/'.length)) : request, ...rest)
+}
+const { buildTools } = await import('../../../../plugins/langchain/lib/tools-builder')
+const { createOpenAIModel } = await import('../../../../plugins/langchain/lib/providers')
 const requireFromPlugin = createRequire(path.join(REPO, 'plugins/langchain/package.json'))
 
 const z = requireFromPlugin('zod') as typeof import('zod')

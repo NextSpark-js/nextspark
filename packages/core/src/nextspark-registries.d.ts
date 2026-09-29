@@ -536,6 +536,7 @@ declare module '@nextsparkjs/registries/plugin-registry' {
   }
 
   export const PLUGIN_REGISTRY: Record<string, PluginRegistryEntry>
+  export function getPluginNavItems(area: 'devtools' | 'superadmin'): Array<{ href: string; label: string; [key: string]: unknown }>
   export const ROUTE_METADATA: {
     generatedAt: string
     handlerCount: number
@@ -545,6 +546,29 @@ declare module '@nextsparkjs/registries/plugin-registry' {
     pluginCount: number
     enabledCount: number
   }
+}
+
+// ============================================================================
+// Plugin Catalog (capability-neutral)
+// ============================================================================
+declare module '@nextsparkjs/registries/plugin-catalog' {
+  export type PluginCatalogCapability = 'server' | 'web' | 'build' | 'mobile'
+
+  export interface PluginCatalogEntry {
+    name: string
+    displayName: string
+    version: string | null
+    description: string | null
+    enabled: boolean | null
+    capabilities: PluginCatalogCapability[]
+    hasAPI: boolean
+    apiPath: string | null
+    entities: string[]
+    hasMessages: boolean
+    hasAssets: boolean
+  }
+
+  export const PLUGIN_CATALOG: Record<string, PluginCatalogEntry>
 }
 
 // ============================================================================

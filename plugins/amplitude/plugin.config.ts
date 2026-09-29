@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { definePlugin } from '@nextsparkjs/core/types/plugin';
 import type { PluginConfig } from '@nextsparkjs/core/types/plugin';
 
 const AmplitudePluginConfigSchema = z.object({
@@ -17,8 +18,9 @@ const AmplitudePluginConfigSchema = z.object({
   errorRetryDelayMs: z.number().min(100).max(10000).default(1000).describe("Delay in ms between retry attempts"),
 });
 
-export const amplitudePlugin: PluginConfig = {
+export const amplitudePlugin: PluginConfig = definePlugin({
   name: 'amplitude',
+  capabilities: ['web'],
   version: '1.0.0',
   displayName: 'Amplitude Analytics',
   description: 'Advanced user analytics and behavioral tracking plugin for SaaS applications.',
@@ -53,6 +55,6 @@ export const amplitudePlugin: PluginConfig = {
       console.log('[Amplitude Plugin] Unloaded');
     }
   }
-};
+});
 
 export default amplitudePlugin;

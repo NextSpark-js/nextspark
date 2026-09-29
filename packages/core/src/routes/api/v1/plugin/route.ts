@@ -19,23 +19,28 @@ export const GET = withRateLimitTier(async () => {
  */
 async function listPluginsWithAPI(): Promise<NextResponse> {
   try {
-    const plugins = PluginService.getAll()
+    // Every enabled plugin, from the capability-neutral catalog; the config and the API files exist only for
+    // the plugins that declare 'server'.
+    const plugins = PluginService.getCatalog()
 
-    const pluginsWithAPI = plugins.map((plugin) => {
-        const hasAPIFiles = hasPluginAPIFiles(plugin.name)
-        const endpoints = getPluginEndpoints(plugin.name)
+    const pluginsWithAPI = plugins.map((entry) => {
+        const config = PluginService.get(entry.name)
+        const hasAPIFiles = hasPluginAPIFiles(entry.name)
+        const endpoints = getPluginEndpoints(entry.name)
 
         return {
-          name: plugin.name,
-          displayName: plugin.displayName,
-          version: plugin.version,
-          description: plugin.description,
-          enabled: plugin.enabled,
-          hasAPI: !!plugin.api || hasAPIFiles,
+          name: entry.name,
+          displayName: config?.displayName ?? entry.displayName,
+          version: config?.version ?? entry.version,
+          description: config?.description ?? entry.description,
+          capabilities: entry.capabilities,
+          // The executable config when the plugin declares 'server', else the catalog's literal; null = unknown.
+          enabled: PluginService.isEnabled(entry.name),
+          hasAPI: !!config?.api || hasAPIFiles,
           apiEndpoints: endpoints,
-          baseUrl: `/api/v1/plugins/${plugin.name}`,
-          components: plugin.components ? Object.keys(plugin.components) : [],
-          services: plugin.services ? Object.keys(plugin.services) : []
+          baseUrl: `/api/v1/plugins/${entry.name}`,
+          components: config?.components ? Object.keys(config.components) : [],
+          services: config?.services ? Object.keys(config.services) : []
         }
       })
 
@@ -43,7 +48,7 @@ async function listPluginsWithAPI(): Promise<NextResponse> {
       success: true,
       plugins: pluginsWithAPI,
       totalPlugins: plugins.length,
-      enabledPlugins: plugins.filter(p => p.enabled).length,
+      enabledPlugins: pluginsWithAPI.filter(p => p.enabled === true).length,
       pluginsWithAPI: pluginsWithAPI.filter(p => p.hasAPI).length
     })
 

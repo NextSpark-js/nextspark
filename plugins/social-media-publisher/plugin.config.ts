@@ -5,6 +5,7 @@
  * with OAuth token management and multi-account support
  */
 
+import { definePlugin } from '@nextsparkjs/core/types/plugin'
 import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
 // OAuth Providers configuration (plugin-specific metadata)
@@ -56,8 +57,9 @@ const PLUGIN_FEATURES = {
  * Social Media Publisher Plugin Configuration
  * Follows PluginConfig interface for registry compatibility
  */
-export const socialMediaPublisherPluginConfig: PluginConfig = {
+export const socialMediaPublisherPluginConfig: PluginConfig = definePlugin({
   name: 'social-media-publisher',
+  capabilities: ['server'],
   displayName: 'Social Media Publisher',
   version: '1.0.0',
   description: 'Publish content to Instagram Business & Facebook Pages with OAuth integration',
@@ -77,7 +79,7 @@ export const socialMediaPublisherPluginConfig: PluginConfig = {
       console.log('[Social Media Publisher] Plugin loaded - OAuth publishing ready')
     }
   }
-}
+})
 
 // Default export for compatibility
 export default socialMediaPublisherPluginConfig

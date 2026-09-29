@@ -9,7 +9,7 @@ import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProvide
 import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar";
 import { Loader2 } from 'lucide-react'
 import { Metadata } from "next";
-import { getPluginNavItems } from '@nextsparkjs/registries/plugin-registry'
+import { getAllPluginNavItems } from '@nextsparkjs/core/lib/plugins/nav-items'
 
 export const defaultMetadata: Metadata = {
   title: "Super Admin | Super Admin Panel",
@@ -25,7 +25,7 @@ export interface SuperadminLayoutProps {
  * Wrapped in Suspense so PPR doesn't fail during prerender.
  */
 function SuperadminContent({ children }: SuperadminLayoutProps) {
-  const pluginNavItems = getPluginNavItems('superadmin')
+  const pluginNavItems = getAllPluginNavItems('superadmin')
 
   return (
     <DashboardProviders>

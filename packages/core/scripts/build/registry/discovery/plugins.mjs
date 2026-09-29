@@ -4,16 +4,22 @@
  * Discovers plugins and their API routes.
  * Reads the plugin sources resolved by project-mode.mjs.
  *
+ * Each plugin carries the `capabilities` it declares (plugin-capabilities.mjs); discovery throws a
+ * PluginCapabilityError when a plugin contributes to a surface it did not declare, reaches server or
+ * build-only code from a web/mobile/runtime entry, or collides with another plugin.
+ *
  * @module core/scripts/build/registry/discovery/plugins
  */
 
-import { readdir, stat } from 'fs/promises'
+import { readFile, readdir, stat } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
 
 import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
 import { log, verbose, extractExportName, extractHttpMethods } from '../../../utils/index.mjs'
 import { discoverNestedEntities } from './entities.mjs'
+import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
+import { LEGACY_CAPABILITIES, PLUGIN_EXPORT_PATTERNS, PluginCapabilityError, checkPluginContributions, pluginCollisions, readPluginDeclaration, readPluginMetadata } from './plugin-capabilities.mjs'
 
 /**
  * Discover plugins
@@ -22,6 +28,8 @@ import { discoverNestedEntities } from './entities.mjs'
  */
 export async function discoverPlugins(config = DEFAULT_CONFIG) {
   const plugins = []
+  const diagnostics = []
+  const ts = (config.pluginSources ?? []).length > 0 ? await loadTypeScriptFor(config.projectRoot ?? process.cwd()) : null
 
   for (const source of config.pluginSources ?? []) {
       const pluginName = source.name
@@ -32,10 +40,7 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
         await stat(configPath)
 
         // Extract export name
-        const exportName = await extractExportName(configPath, [
-          /export\s+const\s+([a-zA-Z]+(?:PluginConfig|Plugin))\s*[:=]/,
-          /export\s+default\s+([a-zA-Z]+(?:PluginConfig|Plugin))/
-        ])
+        const exportName = await extractExportName(configPath, PLUGIN_EXPORT_PATTERNS)
 
         if (!exportName) {
           log(`${pluginName} (no valid PluginConfig export found)`, 'warning')
@@ -100,8 +105,24 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
         const hasAssets = existsSync(assetsPath)
         const hasPagesServer = existsSync(pagesServerPath)
 
+        const declaration = readPluginDeclaration(ts, { plugin: pluginName, configFile: configPath, exportName })
+        diagnostics.push(...declaration.diagnostics)
+
+        // Capability-neutral facts for the catalog: literal config fields, then the package's own version.
+        const metadata = readPluginMetadata(ts, { configFile: configPath, exportName })
+        if (!metadata.version) {
+          try {
+            metadata.version = JSON.parse(await readFile(join(pluginDir, 'package.json'), 'utf8')).version
+          } catch {
+            // no package.json
+          }
+        }
+
         plugins.push({
           name: pluginName,
+          metadata,
+          capabilities: declaration.capabilities ?? [...LEGACY_CAPABILITIES],
+          capabilitiesDeclared: declaration.declared && declaration.capabilities !== null,
           sourceDir: pluginDir,
           importBase: source.importBase,
           sourceKind: source.kind,
@@ -131,6 +152,13 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
         verbose(`${pluginName} (no plugin.config.ts)`)
       }
   }
+
+  const invalid = new Set(diagnostics.map(d => d.plugin))
+  for (const plugin of plugins) {
+    if (!invalid.has(plugin.name)) diagnostics.push(...checkPluginContributions(ts, { plugin, plugins, projectRoot: config.projectRoot }))
+  }
+  diagnostics.push(...pluginCollisions(plugins))
+  if (diagnostics.length > 0) throw new PluginCapabilityError(diagnostics)
 
   return plugins
 }

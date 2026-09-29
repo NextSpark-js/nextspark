@@ -46,6 +46,7 @@ import { discoverPermissionsConfig } from './registry/discovery/permissions.mjs'
 import { discoverCoreEntities } from './registry/discovery/core-entities.mjs'
 import { mergeEntities } from './registry/discovery/all-entities.mjs'
 import { discoverPlugins } from './registry/discovery/plugins.mjs'
+import { pluginsFor } from './registry/discovery/plugin-capabilities.mjs'
 import { discoverThemes } from './registry/discovery/themes.mjs'
 import { discoverMiddlewares } from './registry/discovery/middlewares.mjs'
 import { discoverTemplates } from './registry/discovery/templates.mjs'
@@ -57,6 +58,7 @@ import { discoverApiPresets } from './registry/discovery/api-presets.mjs'
 import { discoverMcpOverrides } from './registry/discovery/mcp-overrides.mjs'
 import { validateEntityConfigurations } from './registry/validation/entity-validator.mjs'
 import { generatePluginRegistry, generatePluginRegistryClient } from './registry/generators/plugin-registry.mjs'
+import { generatePluginCatalog } from './registry/generators/plugin-catalog.mjs'
 import { generateEntityRegistry, generateEntityRegistryClient } from './registry/generators/entity-registry.mjs'
 import { generateEntityTypes } from './registry/generators/entity-types.mjs'
 import { generateThemeRegistry, generateThemeRegistryClient, generateAppConfigClient, generateDashboardConfigClient, generateDevKeyringClient } from './registry/generators/theme-registry.mjs'
@@ -125,10 +127,16 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
     // Collect the icon names configs can ask for by string (async - reads configs)
     const iconNames = await discoverIcons(blocks, CONFIG)
 
+    // Each registry takes only the plugins that declare its surface: the server registries the
+    // 'server' plugins, the client registry the 'web' ones (a build-only or mobile-only plugin is in neither).
+    const serverPlugins = pluginsFor(plugins, 'server')
+    const webPlugins = pluginsFor(plugins, 'web')
+
     // Generate individual registries (pass CONFIG to all generators)
     const registries = [
-      { name: 'plugin-registry.ts', content: generatePluginRegistry(plugins, CONFIG) },
-      { name: 'plugin-registry.client.ts', content: generatePluginRegistryClient(plugins, CONFIG) },
+      { name: 'plugin-registry.ts', content: generatePluginRegistry(serverPlugins, CONFIG) },
+      { name: 'plugin-registry.client.ts', content: generatePluginRegistryClient(webPlugins, CONFIG) },
+      { name: 'plugin-catalog.ts', content: generatePluginCatalog(plugins) },
       { name: 'entity-registry.ts', content: generateEntityRegistry(entities, CONFIG) },
       { name: 'entity-registry.client.ts', content: generateEntityRegistryClient(entities, CONFIG) },
       { name: 'entity-types.ts', content: generateEntityTypes(entities, CONFIG) },
@@ -137,7 +145,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'app-config.client.ts', content: generateAppConfigClient(themes, CONFIG) },
       { name: 'dashboard-config.client.ts', content: generateDashboardConfigClient(themes, CONFIG) },
       { name: 'dev-keyring.client.ts', content: generateDevKeyringClient(themes, CONFIG) },
-      { name: 'route-handlers.ts', content: generateRouteHandlersRegistry(plugins, themes, coreRoutes, entities, CONFIG) },
+      { name: 'route-handlers.ts', content: generateRouteHandlersRegistry(serverPlugins, themes, coreRoutes, entities, CONFIG) },
       { name: 'translation-registry.ts', content: generateTranslationRegistry(themes, CONFIG) },
       { name: 'template-registry.ts', content: await generateTemplateRegistry(templates, CONFIG, templateAnalysis) },
       { name: 'template-registry.client.ts', content: templateRegistryClientContent },
@@ -157,7 +165,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'api-presets-registry.ts', content: generateApiPresetsRegistry(apiPresetsData, CONFIG) },
       { name: 'api-docs-registry.ts', content: generateApiDocsRegistry(apiPresetsData, CONFIG) },
       { name: 'mcp-registry.ts', content: generateMcpRegistry(mcpOverridesData, CONFIG) },
-      { name: 'index.ts', content: generateUnifiedRegistry(plugins, entities, themes, templates, middlewares, CONFIG) }
+      { name: 'index.ts', content: generateUnifiedRegistry(serverPlugins, entities, themes, templates, middlewares, CONFIG) }
     ]
 
     for (const file of registries) {

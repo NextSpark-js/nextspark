@@ -31,6 +31,7 @@ export {
 export {
   generatePluginRegistry,
   generatePluginRegistryClient,
+  generatePluginCatalog,
   generateEntityRegistry,
   generateEntityRegistryClient,
   generateThemeRegistry,

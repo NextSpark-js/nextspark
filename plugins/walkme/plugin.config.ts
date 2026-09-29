@@ -6,10 +6,12 @@
  * spotlights, beacons, cross-page navigation, and full persistence.
  */
 
+import { definePlugin } from '@nextsparkjs/core/types/plugin'
 import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
-export const walkmePluginConfig: PluginConfig = {
+export const walkmePluginConfig: PluginConfig = definePlugin({
   name: 'walkme',
+  capabilities: ['web'],
   displayName: 'WalkMe',
   version: '1.0.0',
   description: 'Guided tours and onboarding system for NextSpark applications',
@@ -21,6 +23,6 @@ export const walkmePluginConfig: PluginConfig = {
       console.log('[WalkMe Plugin] Loaded - guided tours system ready')
     },
   },
-}
+})
 
 export default walkmePluginConfig

@@ -38,6 +38,10 @@ export interface PluginConfig {
   // Dependencies
   dependencies?: string[]
 
+  // Declared surfaces: 'server' | 'web' | 'build' | 'mobile' (see 10-plugin-capabilities.md).
+  // Write the config with definePlugin({ name, capabilities: [...] }).
+  capabilities?: readonly PluginCapability[]
+
   // Lifecycle hooks
   hooks?: PluginHooks
 

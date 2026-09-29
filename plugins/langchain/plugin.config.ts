@@ -1,3 +1,4 @@
+import { definePlugin } from '@nextsparkjs/core/types/plugin'
 import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 import type { LLMProvider } from './types/langchain.types'
 
@@ -145,8 +146,9 @@ export function getAvailableProviders(): LLMProvider[] {
  * const response = await agent.chat('Hello!')
  * ```
  */
-export const langchainPluginConfig: PluginConfig = {
+export const langchainPluginConfig: PluginConfig = definePlugin({
     name: 'langchain',
+    capabilities: ['server', 'web'],
     displayName: 'LangChain Agent Framework',
     version: '2.0.0',
     description: 'Create AI agents with tools, memory, and customizable behavior. Supports OpenAI, Anthropic, and Ollama.',
@@ -165,6 +167,6 @@ export const langchainPluginConfig: PluginConfig = {
             }
         }
     }
-}
+})
 
 export default langchainPluginConfig

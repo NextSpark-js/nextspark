@@ -38,6 +38,7 @@ import { getConfig } from '../config.mjs'
 import { resolveNextPackage } from './facade-emitter.mjs'
 import { coreRouteManifestPath, coreRouteVariantsPath, hasCoreRouteManifest, loadCoreRouteManifest, resolveCoreRouteFile } from './core-routes.mjs'
 import { discoverAllEntities } from '../discovery/all-entities.mjs'
+import { PluginCapabilityError, withDeclaredCapabilities } from '../discovery/plugin-capabilities.mjs'
 import { planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
 import { webhookRoutes } from './webhooks.mjs'
 import { HostPlanError, compareTargets, planHost } from './plan.mjs'
@@ -88,19 +89,26 @@ function describeDiagnostic(diagnostic) {
 export async function renderHostFiles(config, { devStatus = false, cache } = {}) {
   const manifest = await config.loadCoreRoutes()
   if (!manifest) throw new NoCoreRouteManifestError(config.coreRoot ?? '(unknown core)')
-  const entityPlan = config.entities ? await config.entities({ manifest }) : { routes: [], diagnostics: [] }
+  const declared = await withDeclaredCapabilities(config.plugins ?? [], { projectRoot: config.projectRoot })
+  let entityPlan
+  try {
+    entityPlan = config.entities ? await config.entities({ manifest }) : { routes: [], diagnostics: [] }
+  } catch (error) {
+    if (error instanceof PluginCapabilityError) throw new PrepareError(error.diagnostics)
+    throw error
+  }
   const webhookPlan = config.webhooks ? config.webhooks() : { routes: {}, diagnostics: [] }
   const planned = planHost({
     coreRoutes: manifest.routes,
     entityRoutes: entityPlan.routes,
     webhooks: webhookPlan.routes,
-    plugins: config.plugins ?? [],
+    plugins: declared.plugins,
     project: config.project,
     modes: config.modes ?? [],
     extensions: config.extensions,
   })
   const { routes } = planned
-  const diagnostics = [...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics]
+  const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics]
   if (diagnostics.length > 0) throw new PrepareError(diagnostics)
   const rendered = await renderHost({
     routes,

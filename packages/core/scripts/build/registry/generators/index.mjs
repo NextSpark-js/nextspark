@@ -8,6 +8,7 @@
 
 // Re-export individual generators
 export { generatePluginRegistry, generatePluginRegistryClient } from './plugin-registry.mjs'
+export { generatePluginCatalog } from './plugin-catalog.mjs'
 export { generateEntityRegistry, generateEntityRegistryClient } from './entity-registry.mjs'
 export { generateThemeRegistry, generateThemeRegistryClient, generateAppConfigClient, generateDashboardConfigClient, generateDevKeyringClient } from './theme-registry.mjs'
 export { generateTemplateRegistry, generateTemplateRegistryClient } from './template-registry.mjs'

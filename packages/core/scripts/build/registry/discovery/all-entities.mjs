@@ -12,6 +12,7 @@
 
 import { discoverCoreEntities } from './core-entities.mjs'
 import { discoverPlugins } from './plugins.mjs'
+import { assertNoPluginCollisions } from './plugin-capabilities.mjs'
 import { discoverThemes } from './themes.mjs'
 
 /**
@@ -25,6 +26,8 @@ import { discoverThemes } from './themes.mjs'
  * @returns {object[]}
  */
 export function mergeEntities({ plugins, coreEntities, themes, onOverride }) {
+  // Core and the project may replace a plugin's entity; two plugins providing one is a collision, whatever their order.
+  assertNoPluginCollisions(plugins)
   const merged = [
     ...plugins.flatMap(plugin => plugin.entities ?? []), // lowest priority
     ...coreEntities, // core framework entities

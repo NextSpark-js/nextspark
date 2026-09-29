@@ -30,6 +30,7 @@ import {
   type PluginEntity,
   type PluginName,
 } from '@nextsparkjs/registries/plugin-registry'
+import { PLUGIN_CATALOG, type PluginCatalogEntry } from '@nextsparkjs/registries/plugin-catalog'
 import type { PluginConfig } from '../../types/plugin'
 
 // Debug flag - only log if explicitly enabled
@@ -46,7 +47,7 @@ interface PluginInitCache {
 const globalCache = globalThis as unknown as PluginInitCache
 
 // Re-export types for convenience
-export type { PluginRegistryEntry, RouteFileEndpoint, PluginEntity, PluginName, PluginConfig }
+export type { PluginRegistryEntry, RouteFileEndpoint, PluginEntity, PluginName, PluginConfig, PluginCatalogEntry }
 
 /**
  * Route metadata structure
@@ -90,8 +91,45 @@ export class PluginService {
   // Core Query Methods (14)
   // ============================================================================
 
+  // ============================================================================
+  // Catalog (capability-neutral)
+  // ============================================================================
+  // The registry below holds the plugins that declare 'server' (their code runs here). The catalog is static
+  // metadata of EVERY enabled plugin, including web-only ones: listings and counts read it.
+
   /**
-   * Get all registered plugins
+   * Static metadata of every enabled plugin, sorted by name, whatever capabilities it declares
+   *
+   * @example
+   * ```typescript
+   * PluginService.getCatalog().map((p) => [p.name, p.capabilities])
+   * // [['amplitude', ['web']], ['langchain', ['server', 'web']]]
+   * ```
+   */
+  static getCatalog(): PluginCatalogEntry[] {
+    return Object.values(PLUGIN_CATALOG).sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+  }
+
+  /**
+   * Catalog entry of one plugin, or undefined
+   */
+  static getCatalogEntry(name: string): PluginCatalogEntry | undefined {
+    return PLUGIN_CATALOG[name]
+  }
+
+  /**
+   * Whether a plugin is enabled: the executable config's value for a 'server' plugin, else the catalog's literal.
+   * null when it is unknown (computed at run time, or no such plugin): never assumed true.
+   */
+  static isEnabled(name: string): boolean | null {
+    const config = (PLUGIN_REGISTRY as any)[name]?.config as PluginConfig | undefined
+    return config?.enabled ?? PLUGIN_CATALOG[name]?.enabled ?? null
+  }
+
+  /**
+   * Get the plugins that run on the server (declare 'server'): the registered ones
+   *
+   * For a listing of all plugins use getCatalog().
    *
    * @returns Array of PluginConfig objects
    *
@@ -271,7 +309,7 @@ export class PluginService {
   /**
    * Get all plugin names
    *
-   * @returns Array of plugin name strings
+   * @returns Array of plugin name strings (every enabled plugin, whatever it declares)
    *
    * @example
    * ```typescript
@@ -280,7 +318,7 @@ export class PluginService {
    * ```
    */
   static getNames(): string[] {
-    return Object.keys(PLUGIN_REGISTRY)
+    return [...new Set([...Object.keys(PLUGIN_CATALOG), ...Object.keys(PLUGIN_REGISTRY)])].sort()
   }
 
   /**
@@ -295,7 +333,7 @@ export class PluginService {
    * ```
    */
   static getCount(): number {
-    return Object.keys(PLUGIN_REGISTRY).length
+    return this.getNames().length
   }
 
   /**
@@ -311,7 +349,7 @@ export class PluginService {
    * ```
    */
   static exists(name: string): boolean {
-    return name in PLUGIN_REGISTRY
+    return name in PLUGIN_CATALOG || name in PLUGIN_REGISTRY
   }
 
   // ============================================================================
