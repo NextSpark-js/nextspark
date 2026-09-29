@@ -103,6 +103,7 @@ async function installConversionCore(root: string, { version = '0.1.0-beta.192',
 // A migrate run plans and emits a whole host; GitHub runners need well over the
 // ~5 s it takes locally, so the child gets a generous budget before it is killed.
 const MIGRATE_CHILD_TIMEOUT_MS = 60_000
+const OFFLINE_MIGRATE_ENV = { npm_config_registry: 'http://127.0.0.1:9', NEXTSPARK_MIGRATE_NETWORK_TIMEOUT_MS: '5000' }
 
 function run(root: string, args: string[], env: NodeJS.ProcessEnv = {}) {
   return spawnSync(process.execPath, [cliEntry, 'migrate', ...args], {
@@ -110,8 +111,10 @@ function run(root: string, args: string[], env: NodeJS.ProcessEnv = {}) {
     encoding: 'utf8',
     timeout: MIGRATE_CHILD_TIMEOUT_MS,
     // The migrate command may inspect an older published core. Tests must
-    // never let an accidental lookup escape to the real npm registry.
-    env: { ...process.env, npm_config_registry: 'http://127.0.0.1:9', ...env },
+    // never let an accidental lookup escape to the real npm registry, nor
+    // wait on pnpm's retries against the dead one: without a cached packument
+    // (a CI runner) `pnpm view` retries for about a minute.
+    env: { ...process.env, ...OFFLINE_MIGRATE_ENV, ...env },
   })
 }
 
@@ -119,7 +122,7 @@ async function runAsync(root: string, args: string[], env: NodeJS.ProcessEnv = {
   return new Promise((resolveResult) => {
     const child = spawn(process.execPath, [cliEntry, 'migrate', ...args], {
       cwd: root,
-      env: { ...process.env, npm_config_registry: 'http://127.0.0.1:9', ...env },
+      env: { ...process.env, ...OFFLINE_MIGRATE_ENV, ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     let stdout = ''
@@ -161,7 +164,7 @@ function runWithoutActiveTheme(root: string, args: string[]) {
     cwd: root,
     encoding: 'utf8',
     timeout: MIGRATE_CHILD_TIMEOUT_MS,
-    env: { ...env, npm_config_registry: 'http://127.0.0.1:9' },
+    env: { ...env, ...OFFLINE_MIGRATE_ENV },
   })
 }
 
