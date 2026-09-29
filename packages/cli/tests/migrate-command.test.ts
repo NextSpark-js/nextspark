@@ -100,11 +100,15 @@ async function installConversionCore(root: string, { version = '0.1.0-beta.192',
   }
 }
 
+// A migrate run plans and emits a whole host; GitHub runners need well over the
+// ~5 s it takes locally, so the child gets a generous budget before it is killed.
+const MIGRATE_CHILD_TIMEOUT_MS = 60_000
+
 function run(root: string, args: string[], env: NodeJS.ProcessEnv = {}) {
   return spawnSync(process.execPath, [cliEntry, 'migrate', ...args], {
     cwd: root,
     encoding: 'utf8',
-    timeout: 15_000,
+    timeout: MIGRATE_CHILD_TIMEOUT_MS,
     // The migrate command may inspect an older published core. Tests must
     // never let an accidental lookup escape to the real npm registry.
     env: { ...process.env, npm_config_registry: 'http://127.0.0.1:9', ...env },
@@ -122,7 +126,7 @@ async function runAsync(root: string, args: string[], env: NodeJS.ProcessEnv = {
     let stderr = ''
     child.stdout.on('data', chunk => { stdout += chunk })
     child.stderr.on('data', chunk => { stderr += chunk })
-    const timeout = setTimeout(() => child.kill('SIGTERM'), 15_000)
+    const timeout = setTimeout(() => child.kill('SIGTERM'), MIGRATE_CHILD_TIMEOUT_MS)
     child.on('close', (code) => {
       clearTimeout(timeout)
       resolveResult({ status: code ?? 1, stdout, stderr })
@@ -156,7 +160,7 @@ function runWithoutActiveTheme(root: string, args: string[]) {
   return spawnSync(process.execPath, [cliEntry, 'migrate', ...args], {
     cwd: root,
     encoding: 'utf8',
-    timeout: 15_000,
+    timeout: MIGRATE_CHILD_TIMEOUT_MS,
     env: { ...env, npm_config_registry: 'http://127.0.0.1:9' },
   })
 }
