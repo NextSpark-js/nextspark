@@ -88,7 +88,7 @@ pnpm pkg:pack
 
 | Step | Action | Why |
 |------|--------|-----|
-| 1a | `sync:templates --sync` | Copies `apps/dev/src/app/` → `packages/core/templates/app/` so generated projects have all files |
+| 1a | (removed in beta.192) | Core ships no `templates/app`: `pack.sh` refuses to pack while one exists and `pkg:verify-tarballs` fails a core tarball that has it |
 | 1b | `ai-workflow/scripts/sync.mjs` | Copies `.claude/` → `packages/ai-workflow/claude/` so agents/commands/skills are up-to-date |
 | 2 | Build ui | Other packages depend on it |
 | 3 | Build mobile | Core depends on it |
@@ -202,7 +202,7 @@ The `publish.sh` script publishes in this order:
 > **Fix**: Unpublish broken version, re-publish using the correct scripts.
 
 ### Missing template files in generated project
-> **Root cause**: `sync:templates` was not run before build.
+> **Root cause**: (historical) `sync:templates` was not run before build; it no longer exists.
 > **Fix**: `pnpm pkg:pack` runs sync automatically. Never use `--skip-build`.
 
 ### Version mismatch

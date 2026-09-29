@@ -17,7 +17,7 @@
   "restrictions": {
     "generatedHost": {
       "level": "discouraged",
-      "message": "Do not hand-edit apps/dev/src/app; change root project source or the generator."
+      "message": "Do not hand-edit apps/dev/src/app (generated and git-ignored); change core's route modules in packages/core/src/routes, the root project source, or the generator."
     }
   },
   "notes": {

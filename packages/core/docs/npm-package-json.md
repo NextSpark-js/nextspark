@@ -40,7 +40,7 @@ package.json que defina cómo se consume el paquete.
     "nextspark": "./bin/nextspark.mjs"
   },
   "scripts": {
-    "postinstall": "node ./scripts/setup/npm-postinstall.mjs",
+    "postinstall": "node scripts/postinstall.mjs || true",
     "build": "tsc",
     "prepublishOnly": "pnpm build"
   },
@@ -141,20 +141,14 @@ El campo `bin.nextspark` apunta a `./bin/nextspark.mjs`.
 
 ### `scripts.postinstall`
 
-Se ejecuta automáticamente después de `npm install @nextspark/core`.
+Se ejecuta después de instalar `@nextspark/core`, y **no escribe nada** en el proyecto (desde 0.1.0-beta.192):
 
 ```bash
-# Cuando un usuario ejecuta:
-npm install @nextspark/core
-
-# npm ejecuta automáticamente:
-node ./scripts/setup/npm-postinstall.mjs
+# npm ejecuta:
+node scripts/postinstall.mjs
 ```
 
-Este script:
-1. Detecta si existe `nextspark.config.ts` en el proyecto
-2. Si existe, ejecuta setup automático (registries, theme, app generation)
-3. Si no existe, no hace nada (instalación como dependencia transitiva)
+Este script solo imprime un aviso (`nextspark migrate`) cuando el proyecto todavía tiene un `src/app` o `app/` commiteado que ninguna generación posee. Los registries y `src/app` los genera `nextspark dev`, `build` o `prepare`; ver [el host generado](./01-fundamentals/08-generated-host.md).
 
 ### `files`
 
@@ -222,11 +216,9 @@ Cuando un usuario instala NextSpark:
 npm install @nextspark/core
 
 # 2. npm instala el paquete + dependencies
-# 3. npm ejecuta postinstall hook automáticamente
-# 4. postinstall hook:
-#    - Busca nextspark.config.ts
-#    - Si existe: genera registries, theme, app structure
-#    - Si no existe: sale silenciosamente
+# 3. npm ejecuta el postinstall hook, que no escribe nada: solo imprime un aviso
+#    si el proyecto tiene un src/app o app/ commiteado (nextspark migrate)
+# 4. nextspark dev / build / prepare generan src/app y los registries
 ```
 
 ## Ubicación en Monorepo

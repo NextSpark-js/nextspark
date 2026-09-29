@@ -1,6 +1,6 @@
 /**
  * update-core.mjs run for real against a project on disk. A stand-in `pnpm` on
- * PATH answers the registry lookups, the install and `nextspark sync:app` the
+ * PATH answers the registry lookups, the install and `nextspark prepare` the
  * way the real ones touch a project, and logs every call, so each test sees
  * which steps ran and what the project looks like afterwards.
  */
@@ -26,10 +26,10 @@ const state = JSON.parse(fs.readFileSync(process.env.FAKE_PNPM_STATE, 'utf8'))
 const args = process.argv.slice(2)
 `
 
-/** The nextspark CLI the stand-in install puts in node_modules: it logs the call and plays sync:app. */
+/** The nextspark CLI the stand-in install puts in node_modules: it logs the call and plays prepare. */
 const FAKE_CLI = `${FAKE_HEADER}
 fs.appendFileSync(process.env.FAKE_PNPM_LOG, ['nextspark', ...args].join(' ') + '\\n')
-if (args.join(' ') !== 'sync:app --force') {
+if (args.join(' ') !== 'prepare') {
   process.stderr.write('fake nextspark: unexpected call: ' + args.join(' ') + '\\n')
   process.exit(99)
 }
@@ -511,7 +511,7 @@ test('updates the @nextsparkjs pins of a generated project and leaves the rest o
   }
 
   assert.ok(result.calls.includes('install'), result.calls.join('\n'))
-  assert.ok(result.calls.includes('nextspark sync:app --force'), result.calls.join('\n'))
+  assert.ok(result.calls.includes('nextspark prepare'), result.calls.join('\n'))
   assert.equal(fs.readFileSync(path.join(root, 'src/app/synced-with-core.txt'), 'utf8'), 'synced\n')
 
   const record = JSON.parse(fs.readFileSync(path.join(root, 'core.version.json'), 'utf8'))
@@ -614,7 +614,7 @@ const REFUSALS: Array<{
     message: /needs the project in a git repository with a commit/,
   },
   {
-    name: 'nextspark.config.ts is missing, so sync:app cannot resolve the project root',
+    name: 'nextspark.config.ts is missing, so nextspark prepare cannot resolve the project root',
     project: { nextsparkConfig: false },
     message: /nextspark\.config\.ts is missing/,
   },
@@ -682,7 +682,7 @@ test('uncommitted edits alongside @nextsparkjs pins already set to the target by
   assert.equal(gitRefs(root), refs)
 })
 
-test('a failed sync:app exits non-zero, records no version, undoes nothing and prints a rollback that restores the project', (t) => {
+test('a failed prepare exits non-zero, records no version, undoes nothing and prints a rollback that restores the project', (t) => {
   const record = `${JSON.stringify({ version: FROM }, null, 2)}\n`
   const root = createProject(t, { files: { 'core.version.json': record } })
   const before = stateOf(root)
@@ -691,12 +691,12 @@ test('a failed sync:app exits non-zero, records no version, undoes nothing and p
   const result = runUpdateCore(root, ['--version', TO], { syncExit: 23 })
 
   assert.equal(result.status, 1, result.output)
-  assert.ok(result.calls.includes('nextspark sync:app --force'), 'the sync step never ran')
+  assert.ok(result.calls.includes('nextspark prepare'), 'the prepare step never ran')
   assert.doesNotMatch(result.output, /Update Complete|Next steps/)
   assert.equal(fs.readFileSync(path.join(root, 'core.version.json'), 'utf8'), record)
 
   assert.match(result.stderr, /Update to 0\.1\.0-beta\.189 did not finish/)
-  assert.match(result.stderr, /Failed during: nextspark sync:app --force \(exit 23; what it reported is above\)/)
+  assert.match(result.stderr, /Failed during: nextspark prepare \(exit 23; what it reported is above\)/)
   assert.match(result.stderr, /Done before that:[\s\S]*package\.json: @nextsparkjs\/core 0\.1\.0-beta\.188 -> 0\.1\.0-beta\.189/)
   assert.match(result.stderr, /Done before that:[\s\S]*pnpm install: every @nextsparkjs package installed at 0\.1\.0-beta\.189/)
   assert.match(result.stderr, /Not reached:\n {4}- write core\.version\.json\n/)
@@ -708,7 +708,7 @@ test('a failed sync:app exits non-zero, records no version, undoes nothing and p
   assertRollbackRestores(root, result.stderr, before)
 })
 
-test('after a failed sync:app, running update-core again without rolling back is refused', (t) => {
+test('after a failed prepare, running update-core again without rolling back is refused', (t) => {
   const root = createProject(t)
   assert.notEqual(runUpdateCore(root, ['--version', TO], { syncExit: 1 }).status, 0)
   const files = snapshot(root)
@@ -735,10 +735,10 @@ test('a failed install whose lifecycle scripts wrote src/app is left as it faile
   })
 
   assert.equal(result.status, 1, result.output)
-  assert.equal(result.calls.includes('nextspark sync:app --force'), false)
+  assert.equal(result.calls.includes('nextspark prepare'), false)
   assert.equal(fs.existsSync(path.join(root, 'core.version.json')), false)
   assert.match(result.stderr, /Failed during: pnpm install \(exit 1\)/)
-  assert.match(result.stderr, /Not reached:\n {4}- nextspark sync:app --force\n {4}- write core\.version\.json\n/)
+  assert.match(result.stderr, /Not reached:\n {4}- nextspark prepare\n {4}- write core\.version\.json\n/)
   assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} M src\/app\/page\.tsx\n/)
   assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} M pnpm-lock\.yaml\n/)
   assert.doesNotMatch(result.output, /put back as they were|picks up/)
@@ -793,7 +793,7 @@ test('a core.version.json that can\'t be written fails through the same report a
   assert.equal(result.status, 1, result.output)
   assert.match(result.stderr, /Update to 0\.1\.0-beta\.189 did not finish/)
   assert.match(result.stderr, /Failed during: write core\.version\.json \(EISDIR/)
-  assert.match(result.stderr, /Done before that:[\s\S]*app\/ synced with core/)
+  assert.match(result.stderr, /Done before that:[\s\S]*app\/ generated and registries rebuilt/)
   assert.doesNotMatch(result.output, /Update Complete|Update failed:/)
   assertRollbackRestores(root, result.stderr, before)
 })
@@ -1037,7 +1037,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     assert.match(stderr, /Done before that:\n {4}- package\.json: /)
     assert.match(stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} M src\/app\/page\.tsx\n/)
     assert.doesNotMatch(`${stdout}${stderr}`, /Update Complete/)
-    assert.equal(pnpm.calls().includes('nextspark sync:app --force'), false)
+    assert.equal(pnpm.calls().includes('nextspark prepare'), false)
 
     assert.equal(running(installPid), false, 'the install was still running after update-core exited')
     assert.equal(running(lifecyclePid), false, 'the install\'s lifecycle script was still running after update-core exited')

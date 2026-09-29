@@ -1,7 +1,6 @@
 /**
- * apps/dev is the integration app the root scripts build and run, and the
- * source packages/core/templates/app is synced from, so it runs the proxy a
- * generated project gets: packages/core/templates/proxy.ts. Next.js takes the
+ * apps/dev is the integration app the root scripts build and run, and it
+ * runs the proxy a generated project gets: packages/core/templates/proxy.ts. Next.js takes the
  * proxy function from the module at run time but reads `config` from the proxy
  * file's own source, so apps/dev/src/proxy.ts re-exports the function and
  * repeats the matcher, which has to stay what the template exports.

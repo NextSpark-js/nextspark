@@ -10,10 +10,10 @@
  *
  *   1. runs every node:test suite next to it, one step each: this script's
  *      own process-group teardown and entrypoint guard, the check that
- *      sync:all-templates copies apps/dev/src/app and apps/mobile/app into the
- *      generated templates, the packaging-boundary regression that
- *      repopulates an empty core template before archiving, and the tarball
- *      installability/secret-leak checker (verify-tarballs.mjs),
+ *      sync:mobile-templates copies apps/mobile/app into the generated
+ *      template, the check that the core tarball ships its route modules and
+ *      no app tree, and the tarball installability/secret-leak checker
+ *      (verify-tarballs.mjs),
  *   2. compares apps/mobile/src against packages/mobile/templates/src file
  *      by file, so the copy cannot drift from the package silently,
  *   3. installs apps/mobile on its own (it is outside the pnpm workspace),
@@ -700,8 +700,8 @@ async function main() {
   const steps = [
     ['This script\'s process-group teardown (node:test)', nodeTest('mobile-verify.test.mjs')],
     ['This script\'s entrypoint guard (node:test)', nodeTest('mobile-verify-guard.test.mjs')],
-    ['sync:all-templates fills both generated template directories (node:test)', nodeTest('sync-all-templates.test.mjs')],
-    ['pack.sh restores an empty core template before archiving (node:test)', nodeTest('pack-templates.test.mjs')],
+    ['sync:mobile-templates fills the generated mobile template directory (node:test)', nodeTest('sync-mobile-templates.test.mjs')],
+    ['The core tarball ships its routes and no app tree (node:test)', nodeTest('pack-templates.test.mjs')],
     ['pack.sh tarballs are installable and leak nothing maintainer-local (node:test)', nodeTest('verify-tarballs.test.mjs')],
     ['apps/mobile/src matches packages/mobile/templates/src', verifyMobileSrcMatchesTemplate],
     ['Install apps/mobile (isolated, frozen lockfile)', () =>

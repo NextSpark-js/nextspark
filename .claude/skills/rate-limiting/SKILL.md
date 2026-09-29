@@ -20,7 +20,7 @@ core/lib/
 │   └── rate-limit.ts          # withRateLimitTier HOC, checkDistributedRateLimit
 └── rate-limit-redis.ts        # Redis/Upstash distributed rate limiting
 
-packages/core/templates/app/api/  # All template routes use rate limiting
+packages/core/src/routes/api/  # All template routes use rate limiting
 plugins/*/api/                    # Plugin API routes
 api/                              # Project API routes
 ```
@@ -294,14 +294,14 @@ Before finalizing any API endpoint:
 
 ```bash
 # Check if a route has rate limiting
-grep -l "withRateLimitTier" packages/core/templates/app/api/**/route.ts
+grep -l "withRateLimitTier" packages/core/src/routes/api/**/route.ts
 
 # Find routes WITHOUT rate limiting (potential vulnerabilities)
-grep -L "withRateLimitTier" packages/core/templates/app/api/**/route.ts
+grep -L "withRateLimitTier" packages/core/src/routes/api/**/route.ts
 
 # Count rate-limited vs unprotected routes
-echo "Protected:"; grep -l "withRateLimitTier" packages/core/templates/app/api/**/route.ts | wc -l
-echo "Unprotected:"; grep -L "withRateLimitTier" packages/core/templates/app/api/**/route.ts | wc -l
+echo "Protected:"; grep -l "withRateLimitTier" packages/core/src/routes/api/**/route.ts | wc -l
+echo "Unprotected:"; grep -L "withRateLimitTier" packages/core/src/routes/api/**/route.ts | wc -l
 ```
 
 ## Testing Rate Limits

@@ -477,7 +477,7 @@ fetch('/api/v1/tasks/task-123/child/subtasks', {
 **📋 API Handler Implementation:**
 
 ```typescript
-// From core/templates/app/api/v1/[entity]/[id]/child/[childType]/route.ts
+// From packages/core/src/routes/api/v1/[entity]/[id]/child/[childType]/route.ts
 
 export async function GET(request, { params }) {
   const { entity, id, childType } = params

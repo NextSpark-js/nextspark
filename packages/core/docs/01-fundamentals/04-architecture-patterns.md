@@ -127,7 +127,7 @@ docs/superadmin/**/*.md
 styles/globals.css
 
 # Import site
-apps/dev/src/app/globals.css
+the generated apps/dev/src/app/layout.tsx
 ```
 
 **3. Theme Assets**
@@ -949,7 +949,7 @@ export const starterTheme: ThemeConfig = {
 
 **Build Process:**
 ```bash
-# Compiles apps/dev/src/app/globals.css and its project import
+# Compiles the stylesheet imported by the generated apps/dev/src/app/layout.tsx and its project import
 pnpm build
 ```
 
@@ -957,7 +957,7 @@ pnpm build
 
 **Generated CSS:**
 ```css
-/* Source variables imported through apps/dev/src/app/globals.css */
+/* Source variables imported through the generated apps/dev/src/app/layout.tsx */
 :root {
   --color-primary: #3b82f6;
   --color-secondary: #8b5cf6;

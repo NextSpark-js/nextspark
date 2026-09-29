@@ -1,7 +1,15 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { readCoreVersion } from './sync-files.js';
+
+/** The version in core's package.json, or 'unknown'. */
+export function readCoreVersion(coreDir: string): string {
+  try {
+    return JSON.parse(readFileSync(join(coreDir, 'package.json'), 'utf-8')).version || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
 
 export interface UnsafeWritePlace {
   path: string;
@@ -30,8 +38,7 @@ export interface CoreWritePlaces {
 }
 
 /**
- * The calls through which what changes a project - core's generator and
- * sync:app - writes, creates directories, renames and removes, bound to a root:
+ * The calls through which what changes a project - core's generator - writes, creates directories, renames and removes, bound to a root:
  * core's `projectFiles`. Each refuses, throwing an error with the code
  * UNSAFE_WRITE before touching anything, a path outside the root, through a
  * symlink inside it, or into a file with other hard links. Paths are absolute,
@@ -51,7 +58,6 @@ export interface ProjectFiles {
 
 const WRITE_PLACES_MODULE = join('scripts', 'build', 'registry', 'write-places.mjs');
 const OWN_GITIGNORES_MODULE = join('scripts', 'build', 'registry', 'post-build', 'own-gitignores.mjs');
-const SAFE_FS_MODULE = join('scripts', 'build', 'safe-fs.mjs');
 
 /**
  * Load core's check of the places its registry build writes under - the check
@@ -86,22 +92,4 @@ export async function loadCoreWritePlaces(coreDir: string): Promise<CoreWritePla
     trackedFilesUnder: gitignores.trackedFilesUnder,
     trackedRegistriesLines: gitignores.trackedRegistriesLines,
   };
-}
-
-/**
- * The calls sync:app writes through in the project at `root`, from the core
- * installed there: the same ones core's generator writes through. A core
- * without them is one whose generator doesn't write that way either: this
- * throws, and the command stops before writing anything.
- */
-export async function loadCoreProjectFiles(coreDir: string, root: string): Promise<ProjectFiles> {
-  const safeFs = join(coreDir, SAFE_FS_MODULE);
-  if (!existsSync(safeFs)) {
-    throw new Error(
-      `@nextsparkjs/core ${readCoreVersion(coreDir)} has no guarded way to write in a project, which this version of the CLI writes through. ` +
-        'Install the @nextsparkjs/core that matches @nextsparkjs/cli.'
-    );
-  }
-  const { projectFiles } = await import(pathToFileURL(safeFs).href);
-  return projectFiles(root) as ProjectFiles;
 }

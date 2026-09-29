@@ -223,7 +223,7 @@ npx --yes "${PACKAGES_DIR}/create-nextspark-app-"*.tgz test-package \
 ls "$TEST_DIR/package.json"
 ls "$TEST_DIR/node_modules/@nextsparkjs/core"
 ls "$TEST_DIR/node_modules/@nextsparkjs/cli"
-ls "$TEST_DIR/app/layout.tsx"
+ls "$TEST_DIR/templates"   # no src/app yet: nextspark dev/build generates it
 ls "$TEST_DIR/.nextspark/registries/"
 ```
 
@@ -678,7 +678,7 @@ Summarize all results:
 - [ ] @nextsparkjs/core installed from local tarball
 - [ ] @nextsparkjs/cli installed from local tarball
 - [ ] nextspark init completed
-- [ ] sync:app synced all template files
+- [ ] `nextspark build` generated src/app (no src/app in the new project before it)
 - [ ] Starter theme available
 
 ### Configuration Phase
@@ -777,7 +777,7 @@ pnpm pkg:publish
 | `workspace:*` resolution (pnpm pack) | Yes | Local |
 | Local tarball discovery (.packages/) | Yes | Local |
 | `nextspark init` CLI command | Yes | Local CLI |
-| `nextspark sync:app` CLI command | Yes | Local CLI |
+| `nextspark prepare` CLI command | Yes | Local CLI |
 | `nextspark db:migrate` CLI command | Yes | Local CLI |
 | `nextspark registry:build` CLI command | Yes | Local CLI |
 | Theme copying | Yes | Local templates |

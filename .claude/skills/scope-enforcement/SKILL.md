@@ -25,7 +25,7 @@ Scope Configuration:
 └── exceptions     # array - Override paths
 
 Path Mapping:
-scope.core = true  → packages/core/**/* + apps/dev/src/app/**/* + scripts/**/*
+scope.core = true  → packages/core/**/* + packages/core/src/routes/**/* + scripts/**/*
 scope.project = true → apps/dev/{api,blocks,components,config,entities,lib,messages,migrations,public,styles,templates,tests}/**/*
 scope.plugins = [] → apps/dev/plugins/{name}/**/*
 
@@ -89,7 +89,7 @@ Integration Points:
 // scope.core = true
 const corePaths = [
   'packages/core/**/*',
-  'apps/dev/src/app/**/*',
+  'packages/core/src/routes/**/*',
   'scripts/**/*',
   'apps/dev/migrations/**/*'
 ]
@@ -152,7 +152,7 @@ Modifying core framework, migrations, or app routes.
 **Allowed paths:**
 - `.claude/sessions/**/*`
 - `packages/core/**/*`
-- `apps/dev/src/app/**/*`
+- `packages/core/src/routes/**/*`
 - `scripts/**/*`
 - `apps/dev/migrations/**/*`
 
@@ -174,7 +174,7 @@ Full feature requiring both core changes and project UI.
 **Allowed paths:**
 - `.claude/sessions/**/*`
 - `packages/core/**/*`
-- `apps/dev/src/app/**/*`
+- `packages/core/src/routes/**/*`
 - `scripts/**/*`
 - `apps/dev/migrations/**/*`
 - `apps/dev/{api,blocks,components,config,entities,lib,messages,migrations,public,styles,templates,tests}/**/*`
@@ -242,7 +242,7 @@ function validateScope(
   if (scopeConfig.scope.core) {
     allowedPaths.push(
       'packages/core/**/*',
-      'apps/dev/src/app/**/*',
+      'packages/core/src/routes/**/*',
       'scripts/**/*',
       'apps/dev/migrations/**/*'
     )

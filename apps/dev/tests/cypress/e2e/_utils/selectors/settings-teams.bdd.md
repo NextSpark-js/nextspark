@@ -111,7 +111,7 @@ This test documents the selectors for cross-reference with teams.cy.ts.
 
 | Component | File | Selectors |
 |-----------|------|-----------|
-| TeamsSettings | `packages/core/templates/app/dashboard/settings/teams/page.tsx` | teams-settings-main, teams-settings-header, teams-settings-teams-list, teams-settings-team-details, team-item-{id} |
+| TeamsSettings | `packages/core/src/routes/dashboard/settings/teams/page.tsx` | teams-settings-main, teams-settings-header, teams-settings-teams-list, teams-settings-team-details, team-item-{id} |
 | CreateTeamDialog | `packages/core/src/components/teams/CreateTeamDialog.tsx` | create-team-dialog, cancel-create-team, submit-create-team |
 
 ## Related POMs

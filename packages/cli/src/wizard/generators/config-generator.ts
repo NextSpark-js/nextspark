@@ -8,7 +8,6 @@ import crypto from 'crypto'
 import fs from 'fs-extra'
 import path from 'path'
 import type { WizardConfig } from '../types.js'
-import { withProjectStyles } from '../../utils/sync-plan.js'
 
 /**
  * Get the target themes directory in the user's project
@@ -441,21 +440,4 @@ export async function copyEnvExampleToEnv(): Promise<void> {
     )
     await fs.writeFile(envPath, content, 'utf-8')
   }
-}
-
-/**
- * Update app/globals.css to import the project-owned root stylesheet.
- */
-export async function updateGlobalsCss(config: WizardConfig): Promise<void> {
-  const globalsCssPath = path.resolve(process.cwd(), 'src', 'app', 'globals.css')
-
-  if (!await fs.pathExists(globalsCssPath)) {
-    return
-  }
-
-  let content = await fs.readFile(globalsCssPath, 'utf-8')
-
-  content = withProjectStyles(content)
-
-  await fs.writeFile(globalsCssPath, content, 'utf-8')
 }

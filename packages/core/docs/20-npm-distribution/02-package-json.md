@@ -134,7 +134,7 @@ pnpm exec nextspark init --help
 - **build**: Build JavaScript and then generate declarations
 - **build:js**: Build JavaScript only
 - **build:dts**: Generate declarations; the current script permits partial DTS output
-- **postinstall**: Run the package's best-effort setup hook after installation
+- **postinstall**: Run the package's notice-only hook after installation (it writes nothing into the project)
 
 ### Peer Dependencies
 

@@ -245,12 +245,12 @@ These tests validate that dynamic selector functions (those that accept paramete
 
 | Component | File | Selectors |
 |-----------|------|-----------|
-| SuperadminLayout | `packages/core/templates/app/superadmin/layout.tsx` | superadmin-container |
+| SuperadminLayout | `packages/core/src/routes/superadmin/layout.tsx` | superadmin-container |
 | SuperadminSidebar | `packages/core/src/components/superadmin/layouts/SuperadminSidebar.tsx` | superadmin-nav-* |
-| SuperadminDashboard | `packages/core/templates/app/superadmin/page.tsx` | superadmin-dashboard |
-| UsersPage | `packages/core/templates/app/superadmin/users/page.tsx` | superadmin-users-* |
-| TeamsPage | `packages/core/templates/app/superadmin/teams/page.tsx` | superadmin-teams-* |
-| SubscriptionsPage | `packages/core/templates/app/superadmin/subscriptions/page.tsx` | superadmin-subscriptions-* |
+| SuperadminDashboard | `packages/core/src/routes/superadmin/page.tsx` | superadmin-dashboard |
+| UsersPage | `packages/core/src/routes/superadmin/users/page.tsx` | superadmin-users-* |
+| TeamsPage | `packages/core/src/routes/superadmin/teams/page.tsx` | superadmin-teams-* |
+| SubscriptionsPage | `packages/core/src/routes/superadmin/subscriptions/page.tsx` | superadmin-subscriptions-* |
 | UsersTable | `packages/core/src/components/users/tables/UsersTable.tsx` | superadmin-users-table, superadmin-user-row-{id} |
 | TeamsTable | `packages/core/src/components/superadmin/tables/TeamsTable.tsx` | superadmin-teams-table, superadmin-team-row-{id} |
 

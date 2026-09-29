@@ -267,6 +267,14 @@ export default defineConfig({
     // Inline @nextsparkjs/ui code so Tailwind v4 can discover CSS classes in npm projects
     await inlineUiPackage(distDir)
 
+    // Each core route's API docs and presets stay next to its module, as source: the registry
+    // build reads docs.md and parses presets.ts as text (the transpiled presets.js is no use to it)
+    const apiDocs = await glob('api/**/{docs.md,presets.ts}', { cwd: join(process.cwd(), 'src/routes') })
+    for (const file of apiDocs) {
+      await safeCopy(join(process.cwd(), 'src/routes', file), join(distDir, 'routes', file))
+    }
+    console.log(`✅ Copied ${apiDocs.length} route docs and presets`)
+
     // Route manifest (#203): the list of core routes `nextspark prepare` emits facades for
     for (const manifest of ['manifest.json', 'variants.json']) {
       await safeCopy(join(process.cwd(), 'src/routes', manifest), join(distDir, 'routes', manifest))
@@ -314,8 +322,6 @@ export default defineConfig({
     ).catch(() => console.log('No presets directory to copy'))
 
     // Copy templates/ directory
-    // Note: Templates are synced from apps/dev by pack.sh before building
-    // In dev mode, templates may be out of sync - this is expected
     await cp(
       join(process.cwd(), 'templates'),
       join(distDir, 'templates'),

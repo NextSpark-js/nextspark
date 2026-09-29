@@ -50,7 +50,7 @@ Step 3: pnpm pkg:publish    →  Validate + publish to npm in order
 
 | Step | Action |
 |------|--------|
-| 1a | Syncs `apps/dev/src/app/` → `packages/core/templates/app/` |
+| 1a | (removed in beta.192: core ships no `templates/app`; `src/app` is generated in each project) |
 | 1b | Syncs `.claude/` → `packages/ai-workflow/claude/` |
 | 2 | Builds all 12 publishable packages in dependency order |
 | 3 | Creates .tgz files with resolved `workspace:*` → real versions |

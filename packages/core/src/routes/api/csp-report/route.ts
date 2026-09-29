@@ -29,10 +29,8 @@ async function ensureRateLimitLoaded() {
  * Rate limiting: Uses 'api' tier (100 requests/minute per IP) to prevent abuse.
  * Falls back gracefully if rate limiting is not available.
  *
- * NOTE: This file exists in both apps/dev/src/app/api/csp-report/ and
- * packages/core/templates/app/api/csp-report/. The template version
- * is used when creating new projects from the core package.
- * Changes should be synchronized between both files.
+ * NOTE: This is the only copy: the generated host's src/app/api/csp-report/route.ts
+ * re-exports it.
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP#violation_report_syntax
  */

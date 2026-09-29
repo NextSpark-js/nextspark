@@ -1,17 +1,12 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import type { ProjectFiles } from './core-write-places.js';
+import { join } from 'node:path';
 
 /**
- * What the last `sync:app` on this machine saw, in `.nextspark/` - which
- * projects don't commit, so each machine keeps its own. For each file sync:app
- * manages it records the hash of core's version at the time and, for a file
- * that can't carry the generated tag, the hash of what sync left on disk.
- *
- * The first is how the report lists only the customized files core changed
- * since then. The second is how a file with no tag keeps receiving core's
- * changes while nobody has touched it since sync wrote it.
+ * What the last `sync:app` on this machine saw, in `.nextspark/`. `sync:app` is
+ * gone (removed in 0.1.0-beta.192), but projects it managed still carry this
+ * record, and `nextspark migrate` reads it - never writes it - as evidence of
+ * which src/app files were core's untouched output.
  */
 export const SYNC_STATE_FILE = join('.nextspark', 'sync-state.json');
 
@@ -42,10 +37,4 @@ export function readSyncState(projectRoot: string): SyncState | null {
   } catch {
     return null;
   }
-}
-
-export function writeSyncState(projectRoot: string, state: SyncState, files: ProjectFiles): void {
-  const path = join(projectRoot, SYNC_STATE_FILE);
-  files.mkdirSync(dirname(path), { recursive: true });
-  files.writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`);
 }

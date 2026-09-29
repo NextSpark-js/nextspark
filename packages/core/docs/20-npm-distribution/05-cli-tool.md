@@ -12,11 +12,14 @@ the command through `node_modules/.bin/nextspark`.
 
 ## What Works Now
 
-### Postinstall Hook (Automatic)
+### Postinstall Hook (Notice Only)
 
-When `@nextsparkjs/core` is updated in an initialized consumer project, its
-best-effort postinstall hook invokes `nextspark sync:app --force` if the CLI is
-already available. Registry generation remains an explicit CLI command.
+Installing `@nextsparkjs/core` never writes into a project. Its postinstall hook
+only prints a notice when the project still carries a committed `src/app` (or
+`app/`): run `pnpm exec nextspark migrate` to move to the generated host.
+`nextspark sync:app` and the hook that ran it were removed in
+`0.1.0-beta.192` ([timeline](../17-updates/05-sync-app-removal)).
+`nextspark dev`, `build` and `prepare` generate `src/app` and the registries.
 
 ### Manual Commands
 
@@ -70,8 +73,8 @@ Commands:
   doctor            Run project health checks
   db:migrate        Run database migrations
   db:seed           Seed sample data
-  sync:app          Sync the generated app directory
-  migrate           Report 0.x root-first migration risks (requires --dry-run)
+  prepare           Generate src/app and the registries (--check compares, --watch watches)
+  migrate           Move a 0.x project to the root-first layout and the generated src/app
 
 Options:
   -h, --help    Show help message

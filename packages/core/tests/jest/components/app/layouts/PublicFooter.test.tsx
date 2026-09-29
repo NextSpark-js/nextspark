@@ -26,7 +26,7 @@ function realPublicRoutes(): Set<string> {
     routes.add(match[1] === 'home' ? '/' : `/${match[1]}`)
   }
 
-  const templatesDir = path.join(REPO_ROOT, 'apps/dev/src/app/(templates)/(public)')
+  const templatesDir = path.join(REPO_ROOT, 'apps/dev/templates/(public)')
   for (const entry of fs.readdirSync(templatesDir, { withFileTypes: true })) {
     if (entry.isDirectory()) routes.add(`/${entry.name}`)
   }

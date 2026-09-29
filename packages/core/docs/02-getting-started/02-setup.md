@@ -89,7 +89,7 @@ ls .nextspark/registries/
 
 **Theme CSS and served assets:**
 ```bash
-grep -F 'styles/globals.css' apps/dev/src/app/globals.css
+grep -F 'styles/globals.css' apps/dev/src/app/layout.tsx
 # Should print the project import
 
 ls apps/dev/public/theme/
@@ -737,10 +737,10 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 ```bash
 test -f apps/dev/nextspark.config.ts
 test -d apps/dev/styles
-grep -F 'styles/globals.css' apps/dev/src/app/globals.css
+grep -F 'styles/globals.css' apps/dev/src/app/layout.tsx
 ```
 
-The root `pnpm dev` command starts Next.js only. Next.js compiles the stylesheet imported by `apps/dev/src/app/globals.css`; there is no separate theme-build process.
+The root `pnpm dev` command starts Next.js only. Next.js compiles the stylesheet imported by the generated root layout (`apps/dev/src/app/layout.tsx`); there is no separate theme-build process.
 
 ### 6.2 Verify Theme Assets
 
@@ -1115,7 +1115,7 @@ Go through this checklist to verify everything is set up correctly:
 
 ### Build Artifacts
 - [ ] Registry files generated (16 files in .nextspark/registries/)
-- [ ] `apps/dev/src/app/globals.css` imports the project stylesheet
+- [ ] the generated root layout (`apps/dev/src/app/layout.tsx`, written by `nextspark prepare`) imports the project stylesheet
 - [ ] App-served theme assets exist under `apps/dev/public/theme/`
 - [ ] Next.js cache created (.next/ directory exists)
 
@@ -1151,7 +1151,7 @@ Go through this checklist to verify everything is set up correctly:
 
 ### Theme
 - [ ] Theme directory exists (``)
-- [ ] `apps/dev/src/app/globals.css` imports the project stylesheet
+- [ ] the generated root layout (`apps/dev/src/app/layout.tsx`, written by `nextspark prepare`) imports the project stylesheet
 - [ ] Theme assets are present under `apps/dev/public/theme/`
 - [ ] CSS variables applied in browser (check DevTools)
 
@@ -1283,7 +1283,7 @@ pnpm dev
 ```bash
 # Verify the theme and its app import exist
 test -f styles/globals.css
-grep -F 'styles/globals.css' apps/dev/src/app/globals.css
+grep -F 'styles/globals.css' apps/dev/src/app/layout.tsx
 
 # Restart dev server
 pnpm dev

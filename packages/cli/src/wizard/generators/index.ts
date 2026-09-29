@@ -29,7 +29,6 @@ import {
   updateDashboardUIConfig,
   updateDevToolsConfig,
   copyEnvExampleToEnv,
-  updateGlobalsCss,
 } from './config-generator.js'
 import { processI18n } from './messages-generator.js'
 import { copyContentFeatures } from './content-features-generator.js'
@@ -48,8 +47,6 @@ import { generateMonorepoStructure, isMonorepoProject, getWebDir } from './monor
 import { isLocalPackageRef } from './local-package-refs.js'
 import { writeProxyFile, type ProxyFileResult } from './proxy-file-writer.js'
 import { ensureGeneratedPathsIgnored } from '../../utils/templates-gitignore.js'
-import { tagGeneratedFiles } from '../../utils/sync-files.js'
-import { PPR_TEMPLATE_VARIANTS } from '../../utils/sync-plan.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -92,7 +89,6 @@ export {
   updateDevToolsConfig,
   copyContentFeatures,
   copyEnvExampleToEnv,
-  updateGlobalsCss,
   // Theme & Plugin installation
   installThemeAndPlugins,
   // DX generators
@@ -135,8 +131,7 @@ let cachedTemplatesDir: string | null = null;
  * is left alone.
  */
 export const PROJECT_ROOT_ITEMS: Array<{ src: string; dest: string; force: boolean }> = [
-  { src: 'app', dest: 'src/app', force: true },
-  // lib/ ships project-local modules imported by app routes (e.g.
+  // lib/ ships project-local modules the generated routes load (e.g.
   // @/lib/billing/{stripe,polar}-webhook-extensions). Without it `next build`
   // fails to resolve those dynamic imports.
   { src: 'lib', dest: 'lib', force: true },
@@ -164,21 +159,18 @@ async function copyProjectFiles(config: WizardConfig): Promise<ProxyFileResult |
   const templatesDir = cachedTemplatesDir
   const projectDir = process.cwd()
 
-  // PPR variants stay in core, where sync:app reads them when a project uses PPR
-  const pprVariants = new Set(Object.values(PPR_TEMPLATE_VARIANTS).map(file => path.join(templatesDir, 'app', file)))
-
   for (const item of PROJECT_ROOT_ITEMS) {
     const srcPath = path.join(templatesDir, item.src)
     const destPath = path.join(projectDir, item.dest)
 
     if (await fs.pathExists(srcPath)) {
       if (item.force || !await fs.pathExists(destPath)) {
-        await fs.copy(srcPath, destPath, { filter: source => !pprVariants.has(source) })
+        await fs.copy(srcPath, destPath)
       }
     }
   }
 
-  const proxyFile = await writeProxyFile(templatesDir, projectDir)
+  const proxyFile = await writeProxyFile(templatesDir, projectDir, 'src')
 
   if (!isMonorepoProject(config)) {
     await mergeWorkspaceYaml(
@@ -518,9 +510,6 @@ export async function generateProject(
       await patchTurbopackRootForMonorepo()
     }
 
-    // 1.1 Update globals.css to use the correct theme path
-    await updateGlobalsCss(config)
-
     // 2. Extract the selected project template once into the project root.
     await copyStarterTheme(config, templatesDir, projectTemplate)
     await fs.ensureDir(path.join(process.cwd(), 'plugins'))
@@ -580,9 +569,6 @@ export async function generateProject(
     // the step was postponed (#202).
     await writeProductionSignInEnv(process.cwd(), signInProvider)
     // Note: Registries are built after pnpm install in wizard/index.ts
-
-    // 12. Tag the files sync:app manages, now that the wizard's changes to them are done
-    await tagGeneratedFiles(path.dirname(templatesDir), process.cwd())
   } finally {
     // Restore original directory
     if (isMonorepoProject(config)) {

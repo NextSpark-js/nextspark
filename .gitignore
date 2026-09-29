@@ -10,10 +10,9 @@ build/
 !packages/core/scripts/build/
 .packages/
 
-# Generated templates (synced at pack time)
-# Source of truth: apps/dev/src/app/ and apps/mobile/app/
-# Only /app/ folders are synced - config files are intentionally different for standalone projects
-packages/core/templates/app/
+# Generated template (synced at pack time)
+# Source of truth: apps/mobile/app/
+# Only the /app/ folder is synced - config files are intentionally different for standalone projects
 packages/mobile/templates/app/
 
 # Package tarballs

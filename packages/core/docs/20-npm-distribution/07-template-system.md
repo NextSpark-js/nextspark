@@ -6,8 +6,9 @@ NextSpark has two different template layers:
 
 1. **Project templates** under `packages/core/templates/projects/<name>/` are
    install-once source payloads selected by `create-nextspark-app --theme`.
-2. **Host templates** under `packages/core/templates/app/` are framework inputs
-   used to generate `src/app/`.
+2. **Core route modules** under `@nextsparkjs/core/routes/*` are what the
+   generated `src/app/` re-exports. Core ships no app tree: `templates/app/` was
+   removed in `0.1.0-beta.192`, and nothing copies a route file into a project.
 
 ## Project-template extraction
 

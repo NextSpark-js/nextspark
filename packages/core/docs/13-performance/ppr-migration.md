@@ -63,13 +63,10 @@ With `cacheComponents: true` detected, the translation registry will now generat
 - `DEFAULT_THEME_MODE` — build-time theme mode from theme config
 - `STATIC_MESSAGES` — pre-merged core + theme translations
 
-### 5. Copy PPR layout
+### 5. PPR layout
 
-Replace your `app/layout.tsx` with the PPR-compatible version:
-
-```bash
-cp node_modules/@nextsparkjs/core/templates/app/layout.ppr.tsx app/layout.tsx
-```
+Nothing to copy: with `cacheComponents: true` the generated host uses core's PPR layout
+(`@nextsparkjs/core/routes/layout.ppr`) for the root layout by itself.
 
 Key differences from the default layout:
 - **Sync function** (not async) — enables PPR static shell
@@ -143,5 +140,4 @@ export default function Page(props) {
 To disable PPR and revert to the default layout:
 
 1. Remove `cacheComponents: true` from next.config
-2. Restore the default layout: `npx nextspark sync:app --force`
-3. Regenerate registries: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+2. Regenerate the host and the registries: `pnpm exec nextspark prepare` (the root layout is core's default again)

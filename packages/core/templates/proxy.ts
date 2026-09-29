@@ -1,8 +1,7 @@
 /**
- * `nextspark sync:app` keeps this file up to date while its first line is the
- * generated tag sync writes and the rest of the file is unchanged since then,
- * which is how a release ships changes to it. Edit the file, or delete that
- * line, to own it: from then on sync reports it and leaves it alone.
+ * This file is yours: the project wizard wrote it once and nothing updates it
+ * (`nextspark sync:app` was removed in 0.1.0-beta.192). A release that changes
+ * the template says so in its notes.
  *
  * NextSpark Proxy (Next.js 16+)
  *

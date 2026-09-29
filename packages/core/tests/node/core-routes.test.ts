@@ -6,9 +6,9 @@
  * - the manifest is what scripts/build/routes-manifest.mjs writes from the files,
  *   in the shape of the host-conformance fixture's CORE_ROUTES (a layout may also
  *   carry `compose`, the wrapper a project override of it is composed with);
- * - it lists exactly the framework routes of apps/dev/src/app (everything outside
- *   the build-generated (templates) group), less the routes the generated host
- *   writes itself: per-entity routes and the runtime API dispatchers (retired);
+ * - it lists exactly the route files under src/routes, less the routes the generated host
+ *   writes itself (per-entity routes) and the runtime API dispatchers (retired); apps/dev no
+ *   longer commits an app tree: its src/app is generated from this manifest;
  * - the emitter emits a facade for every entry with zero diagnostics, inside the
  *   static-imports facade grammar;
  * - no core route module resolves a template at runtime, or loads a module by a runtime
@@ -24,10 +24,8 @@ import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-const REPO = path.resolve(CORE, '../..')
 const ROUTES = path.join(CORE, 'src/routes')
 const DIST_ROUTES = path.join(CORE, 'dist/routes')
-const DEV_APP = path.join(REPO, 'apps/dev/src/app')
 
 const { buildRoutesManifest, renderJson, unlistedRouteLikeFiles, specifierForRouteFile, ROUTES_SUBPATH, RETIRED_FROM_MANIFEST, COMPOSED_ROUTES, VARIANT_FILES } = await import(
   path.join(CORE, 'scripts/build/routes-manifest.mjs')
@@ -79,14 +77,16 @@ test('entries have the shape of the conformance fixture: kind, target, specifier
   assert.equal(new Set(manifest.map(entry => entry.target)).size, manifest.length, 'one entry per target')
 })
 
-test('the manifest lists exactly the framework routes of apps/dev/src/app, less the retired ones', () => {
-  // (templates)/ is written by the registry build from the project's templates/: project routes, not core's.
+test('the manifest lists exactly the route files under src/routes, less the retired ones, and every variant is one of them', () => {
+  // _ folders hold helpers, variants replace a manifest route, presets.ts belongs to the API Explorer
   const routeLike = /(^|\/)(page|layout|loading|error|not-found|template|default|route|global-error|global-not-found|forbidden|unauthorized)\.(tsx|ts)$/
   const retired = (file: string) => RETIRED_FROM_MANIFEST.some(({ path: prefix }: { path: string }) => file.startsWith(prefix))
-  const devRoutes = walk(DEV_APP).filter(file => !file.startsWith('(templates)/') && routeLike.test(file) && !retired(file)).sort()
-  assert.deepEqual(manifest.map(entry => entry.target), devRoutes)
-  // apps/dev still commits the PPR root layout copy; the page.cc variants exist only in core (the generated host emits them).
-  for (const entry of variantEntries.filter(variant => variant.specifier.endsWith('/layout.ppr'))) assert.ok(fs.existsSync(path.join(DEV_APP, entry.specifier.slice(`${ROUTES_SUBPATH}/`.length) + '.tsx')))
+  const isVariant = (file: string) => variantEntries.some(variant => variant.specifier === `${ROUTES_SUBPATH}/${file.replace(/\.(tsx|ts)$/, '')}`)
+  const files = walk(ROUTES)
+    .filter(file => !file.split('/').some(part => part.startsWith('_')) && routeLike.test(file) && !retired(file) && !isVariant(file))
+    .sort()
+  assert.deepEqual(manifest.map(entry => entry.target), files)
+  for (const entry of variantEntries) assert.ok(fs.existsSync(path.join(ROUTES, entry.specifier.slice(`${ROUTES_SUBPATH}/`.length) + '.tsx')))
 })
 
 test('the facade emitter emits every manifest entry with zero diagnostics, inside the facade grammar', async () => {
@@ -105,29 +105,6 @@ test('the facade emitter emits every manifest entry with zero diagnostics, insid
   for (const entry of manifest) await emit(entry, false)
   for (const { mode, ...entry } of variantEntries) await emit(entry, mode === 'cacheComponents')
   assert.deepEqual(failures, [])
-})
-
-/**
- * Until the generated host writes src/app (#203 stage 3), apps/dev commits it: a file with
- * no runtime template lookup is exactly the emitter's facade, and one that still resolves a
- * project override at runtime keeps every literal segment config the facade would carry.
- */
-test('apps/dev route files are the facades of their core modules, or wrappers that keep their segment config', async () => {
-  // The project's own handler: it loads lib/billing/stripe-webhook-extensions.ts, which core's default doesn't.
-  const PROJECT_OWNED = new Set(['api/v1/billing/webhooks/stripe/route.ts'])
-  const problems: string[] = []
-  for (const entry of manifest) {
-    const dev = fs.readFileSync(path.join(DEV_APP, entry.target), 'utf8')
-    const { content } = await emitFacade({ ...entry, file: sourceOf(entry.specifier), projectRoot: CORE, cacheComponents: false })
-    const [, ...facadeBody] = content.split('\n')
-    const literals = facadeBody.filter(line => line.startsWith('export const '))
-    for (const literal of literals) if (!dev.split('\n').includes(literal)) problems.push(`${entry.target}: lost \`${literal}\``)
-    if (PROJECT_OWNED.has(entry.target)) continue
-    if (!dev.includes('@nextsparkjs/core/routes/')) problems.push(`${entry.target}: does not import its core module`)
-    const resolvesAtRuntime = dev.includes('@nextsparkjs/registries/template-scopes/') || dev.includes("import('@/")
-    if (!resolvesAtRuntime && dev.split('\n').slice(1).join('\n') !== facadeBody.join('\n')) problems.push(`${entry.target}: differs from the emitted facade`)
-  }
-  assert.deepEqual(problems, [])
 })
 
 test('no core route module resolves a template or a module at runtime by key', () => {

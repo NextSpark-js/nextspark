@@ -1,5 +1,5 @@
 /**
- * Runs one step of update-core (pnpm install, nextspark sync:app) and kills it
+ * Runs one step of update-core (pnpm install, nextspark prepare) and kills it
  * if update-core goes away before it is done with the step, however
  * update-core ended.
  *

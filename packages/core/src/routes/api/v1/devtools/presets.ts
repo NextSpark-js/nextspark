@@ -18,7 +18,7 @@ export default defineApiEndpoint({
       method: 'GET',
       path: '/docs',
       queryParams: {
-        path: 'packages/core/templates/app/api/v1/teams/docs.md'
+        path: 'packages/core/src/routes/api/v1/teams/docs.md'
       },
       tags: ['read', 'docs']
     },
@@ -29,7 +29,7 @@ export default defineApiEndpoint({
       method: 'GET',
       path: '/docs',
       queryParams: {
-        path: 'packages/core/templates/app/api/v1/billing/docs.md'
+        path: 'packages/core/src/routes/api/v1/billing/docs.md'
       },
       tags: ['read', 'docs']
     },

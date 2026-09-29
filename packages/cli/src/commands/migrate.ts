@@ -3,14 +3,18 @@ import { copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSyn
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import * as tar from 'tar';
-import { syncApp, SyncAppError } from './sync-app.js';
 import { readGeneratedTagAt } from '../utils/generated-tag.js';
-import { adaptProxySource } from '../utils/proxy-file.js';
-import { ROOT_TEMPLATE_FILES } from '../utils/sync-plan.js';
+import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensions, loadCoreHost, planAppConversion, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
+import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
+import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
+import { getNextMajorVersion } from '../utils/next-bundler.js';
+import { adaptProxySource, planProxyFile, type ProxyFileName } from '../utils/proxy-file.js';
 import { contentHash, readSyncState } from '../utils/sync-state.js';
 
 interface MigrateOptions {
   dryRun?: boolean;
+  /** `--no-prepare` sets this to false: convert the files, but do not run nextspark prepare afterwards. */
+  prepare?: boolean;
   json?: boolean;
   yes?: boolean;
 }
@@ -44,8 +48,8 @@ interface MigrateReport {
     plugins: { name: string; files: number }[];
   };
   appTemplates: {
-    available: boolean;
-    identical: string[];
+    /** The app tree that is converted, when there is one no generation owns. */
+    root: 'app' | 'src/app' | null;
     generated: string[];
     generatedBySyncState: string[];
     generatedByLegacyRegistry: string[];
@@ -54,14 +58,20 @@ interface MigrateReport {
     previousTemplateVersionSource: string | null;
     previousTemplateMethod: 'pnpm view tarball' | null;
     previousTemplateUnavailableReason: string | null;
-    modified: FileChange[];
-    projectOnly: string[];
+    /** Files no evidence proves generated: the conversion decides what each one is. */
+    unproven: number;
   };
-  generatedHost: {
-    customizations: string[];
-    customizationsDestination: string;
-    nextStep: string | null;
+  appConversion: {
+    root: 'app' | 'src/app' | null;
+    removed: { path: string; evidence: string }[];
+    loaders: { path: string; template: string | null }[];
+    overrides: { path: string; destination: string; core: string; baseline: string | null; diffLines: number; diff: string }[];
+    projectFiles: { path: string; destination: string }[];
+    webhookExtensions: { provider: string; module: string }[];
+    /** What stops the migration before it writes anything. */
+    blockers: string[];
   };
+  apiUrlMoves: ApiUrlMove[];
   rootProxyFiles: {
     generated: string[];
     customizations: string[];
@@ -155,6 +165,23 @@ function legacyAppFilesIn(root: string): string[] {
   };
   visit(root);
   return files;
+}
+
+/** Symbolic links (file or directory) anywhere in an app tree, from the project root: nothing can move them safely. */
+function symlinksIn(root: string): string[] {
+  if (!existsSync(root)) return [];
+  const found: string[] = [];
+  const skipped = new Set(['.git', 'node_modules', '.next', '.nextspark', 'dist', 'build', 'out', '.turbo', 'coverage']);
+  const visit = (directory: string) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (skipped.has(entry.name)) continue;
+      const file = join(directory, entry.name);
+      if (entry.isSymbolicLink()) found.push(file);
+      else if (entry.isDirectory()) visit(file);
+    }
+  };
+  visit(root);
+  return found;
 }
 
 /** Ask git about a small batch without reading the contents of ignored files. */
@@ -656,17 +683,39 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
   }
 }
 
+/**
+ * The app tree the migration converts: `app/` (before the src/ layout) or `src/app/` (what the
+ * wizard and `sync:app` wrote), unless a generation owns `src/app` (`.nextspark/generation.json`)
+ * or it holds nothing. Both at once is ambiguous: Next.js would take `app/` and ignore `src/app`.
+ */
+async function appRootFor(hostRoot: string, coreDirectory: string | null): Promise<'app' | 'src/app' | null> {
+  const legacy = existsSync(join(hostRoot, 'app'));
+  const hasFiles = legacyAppFilesIn(join(hostRoot, 'src', 'app')).length > 0;
+  // Ownership is core's decision: a record it validates, not the mere presence of a file. Without a
+  // core that decides (an old one), an existing record is the best evidence there is.
+  const mode = coreDirectory ? (await coreHostMode(coreDirectory, hostRoot)).mode : 'no-manifest';
+  const source = mode === 'no-manifest'
+    ? hasFiles && !existsSync(join(hostRoot, '.nextspark', 'generation.json'))
+    : mode === 'legacy-app';
+  if (legacy && source) throw new MigrateAnalysisError('Both app/ and src/app/ hold files; Next.js only reads app/. Remove or merge one of them, then run migrate again.');
+  return legacy ? 'app' : source ? 'src/app' : null;
+}
+
 /** The expensive old-template lookup is only useful for files local evidence cannot classify. */
-function hasUnclassifiedLegacyAppFiles(hostRoot: string): boolean {
-  const appRoot = join(hostRoot, 'app');
+function hasUnclassifiedLegacyAppFiles(hostRoot: string, root: 'app' | 'src/app' | null): boolean {
+  if (!root) return false;
+  const appRoot = join(hostRoot, root);
   const state = readSyncState(hostRoot);
   return legacyAppFilesIn(appRoot).some(projectFile => {
     const file = pathFrom(appRoot, projectFile);
     const content = readFileSync(projectFile);
-    if (file.startsWith('(templates)/') || readGeneratedTagAt(`app/${file}`, content)?.intact) return false;
-    return state?.files[`app/${file}`]?.written !== contentHash(content);
+    if (file.startsWith('(templates)/') || readGeneratedTagAt(`${root}/${file}`, content)?.intact) return false;
+    return state?.files[`${root}/${file}`]?.written !== contentHash(content);
   });
 }
+
+/** Root files the removed sync:app kept in step with core's templates. */
+const ROOT_TEMPLATE_FILES: readonly string[] = ['next.config.mjs', 'tsconfig.json', 'i18n.ts', 'instrumentation.ts'];
 
 const ROOT_PROXY_FILES = ['proxy.ts', 'middleware.ts'] as const;
 
@@ -741,60 +790,55 @@ function previousTemplateCandidates(previous: PreviousTemplates | null, file: st
   return candidates.filter((candidate): candidate is Buffer => candidate !== undefined);
 }
 
-function compareApp(hostRoot: string, templates: string | null, previous: PreviousTemplates | null, previousEvidence: CoreVersionEvidence | null, unavailableReason: string | null, activeTheme: string | null): MigrateReport['appTemplates'] {
-  const appRoot = join(hostRoot, 'app');
-  const projectFiles = legacyAppFilesIn(appRoot);
-  if (!templates || !existsSync(join(templates, 'app'))) {
-    const generatedByLegacyRegistry = projectFiles.map(file => pathFrom(appRoot, file)).filter(file => file.startsWith('(templates)/')).sort();
-    const generatedSet = new Set(generatedByLegacyRegistry);
-    return {
-      available: false, identical: [], generated: [], generatedBySyncState: [], generatedByLegacyRegistry, generatedByPreviousTemplate: [],
-      previousTemplateVersion: previousEvidence?.version ?? null, previousTemplateVersionSource: previousEvidence?.source ?? null,
-      previousTemplateMethod: previous?.method ?? null, previousTemplateUnavailableReason: unavailableReason,
-      modified: [], projectOnly: projectFiles.map(file => pathFrom(appRoot, file)).filter(file => !generatedSet.has(file)).sort(),
-    };
-  }
-  const coreRoot = join(templates, 'app');
-  const identical: string[] = [];
+/**
+ * Which files of the app tree earlier evidence proves are untouched output of core: the generated
+ * tag, what `sync:app` recorded, the registry's own `(templates)` output, or the previous core's
+ * template. Everything else is for the conversion to place.
+ */
+function classifyApp(hostRoot: string, root: 'app' | 'src/app' | null, previous: PreviousTemplates | null, previousEvidence: CoreVersionEvidence | null, unavailableReason: string | null, activeTheme: string | null): { evidence: Map<string, string>; appTemplates: MigrateReport['appTemplates'] } {
+  const appRoot = root ? join(hostRoot, root) : null;
+  const projectFiles = appRoot ? legacyAppFilesIn(appRoot) : [];
   const generated: string[] = [];
   const generatedBySyncState: string[] = [];
   const generatedByLegacyRegistry: string[] = [];
   const generatedByPreviousTemplate: string[] = [];
-  const modified: FileChange[] = [];
-  const projectOnly: string[] = [];
+  const evidence = new Map<string, string>();
   const state = readSyncState(hostRoot);
   const usePpr = legacyProjectUsedPpr(hostRoot);
+  let unproven = 0;
   for (const projectFile of projectFiles) {
-    const file = pathFrom(appRoot, projectFile);
-    const coreFile = join(coreRoot, file);
+    const file = pathFrom(appRoot as string, projectFile);
     const content = readFileSync(projectFile);
     // A valid generated tag identifies an untouched generated host file even
     // when it came from an older core template revision.
-    if (file.startsWith('(templates)/')) generatedByLegacyRegistry.push(file);
-    else if (readGeneratedTagAt(`app/${file}`, content)?.intact) generated.push(file);
-    else if ([`app/${file}`].some(path => {
-      const entry = state?.files[path];
-      const hash = contentHash(content);
+    if (file.startsWith('(templates)/')) {
+      generatedByLegacyRegistry.push(file);
+      evidence.set(file, 'output of the legacy registry build');
+    } else if (readGeneratedTagAt(`${root}/${file}`, content)?.intact) {
+      generated.push(file);
+      evidence.set(file, 'intact generated tag');
+    } else if (state?.files[`${root}/${file}`]?.written === contentHash(content)) {
       // `core` is the old template hash. For taggable files, removing the tag
       // deliberately hands ownership to the project; only `written` proves
       // that an untaggable file is still exactly what sync left on disk.
-      return entry?.written === hash;
-    })) generatedBySyncState.push(file);
-    else if (existsSync(coreFile) && matchesTemplateBytes(content, readFileSync(coreFile))) identical.push(file);
-    else if (previousTemplateCandidates(previous, file, activeTheme, usePpr).some(candidate => matchesTemplateBytes(content, candidate))) generatedByPreviousTemplate.push(file);
-    else if (!existsSync(coreFile)) projectOnly.push(file);
-    else {
-      const count = changedLines(content, readFileSync(coreFile));
-      modified.push({ path: file, changedLines: count });
+      generatedBySyncState.push(file);
+      evidence.set(file, 'sync-state hash');
+    } else if (previousTemplateCandidates(previous, file, activeTheme, usePpr).some(candidate => matchesTemplateBytes(content, candidate))) {
+      generatedByPreviousTemplate.push(file);
+      evidence.set(file, `previous core template${previousEvidence?.version ? ` ${previousEvidence.version}` : ''}`);
+    } else {
+      unproven++;
     }
   }
   return {
-    available: true, identical: identical.sort(), generated: generated.sort(), generatedBySyncState: generatedBySyncState.sort(),
-    generatedByLegacyRegistry: generatedByLegacyRegistry.sort(),
-    generatedByPreviousTemplate: generatedByPreviousTemplate.sort(), previousTemplateVersion: previousEvidence?.version ?? null,
-    previousTemplateVersionSource: previousEvidence?.source ?? null, previousTemplateMethod: previous?.method ?? null,
-    previousTemplateUnavailableReason: unavailableReason,
-    modified: modified.sort((left, right) => left.path.localeCompare(right.path)), projectOnly: projectOnly.sort(),
+    evidence,
+    appTemplates: {
+      root, generated: generated.sort(), generatedBySyncState: generatedBySyncState.sort(),
+      generatedByLegacyRegistry: generatedByLegacyRegistry.sort(),
+      generatedByPreviousTemplate: generatedByPreviousTemplate.sort(), previousTemplateVersion: previousEvidence?.version ?? null,
+      previousTemplateVersionSource: previousEvidence?.source ?? null, previousTemplateMethod: previous?.method ?? null,
+      previousTemplateUnavailableReason: unavailableReason, unproven,
+    },
   };
 }
 
@@ -823,64 +867,6 @@ function compareRoot(hostRoot: string, templates: string | null): MigrateReport[
     }
   }
   return { available: true, identical: identical.sort(), modified: modified.sort((left, right) => left.path.localeCompare(right.path)), missing: missing.sort(), generatorImportRewriteWarnings: generatorImportRewriteWarnings.sort() };
-}
-
-interface SourceString {
-  start: number;
-  end: number;
-  value: string;
-}
-
-interface SourceView {
-  code: string;
-  strings: SourceString[];
-}
-
-/** Mask comments and string contents so config syntax is never found in prose. */
-function sourceView(source: string): SourceView {
-  const code = source.split('');
-  const strings: SourceString[] = [];
-  const mask = (start: number, end: number) => {
-    for (let index = start; index < end; index++) code[index] = ' ';
-  };
-  for (let index = 0; index < source.length;) {
-    if (source[index] === '/' && source[index + 1] === '/') {
-      const end = source.indexOf('\n', index);
-      mask(index, end === -1 ? source.length : end);
-      index = end === -1 ? source.length : end;
-      continue;
-    }
-    if (source[index] === '/' && source[index + 1] === '*') {
-      const close = source.indexOf('*/', index + 2);
-      const end = close === -1 ? source.length : close + 2;
-      mask(index, end);
-      index = end;
-      continue;
-    }
-    if (!['"', "'", '`'].includes(source[index])) {
-      index++;
-      continue;
-    }
-    const start = index;
-    const quote = source[index++];
-    while (index < source.length && source[index] !== quote) {
-      index += source[index] === '\\' ? 2 : 1;
-    }
-    const end = Math.min(index + 1, source.length);
-    strings.push({ start, end, value: source.slice(start + 1, index) });
-    mask(start, end);
-    index = end;
-  }
-  return { code: code.join(''), strings };
-}
-
-function closingBrace(code: string, openingBrace: number): number | null {
-  let depth = 0;
-  for (let index = openingBrace; index < code.length; index++) {
-    if (code[index] === '{') depth++;
-    else if (code[index] === '}' && --depth === 0) return index;
-  }
-  return null;
 }
 
 function isGeneratedRoute(value: string): boolean {
@@ -1049,10 +1035,18 @@ function gitSucceeds(cwd: string, args: string[]): boolean {
 
 function repositoryRoot(cwd: string): string {
   try {
-    return gitOutput(cwd, ['rev-parse', '--show-toplevel']).trim();
+    const top = gitOutput(cwd, ['rev-parse', '--show-toplevel']).trim();
+    // Every write is checked against this root: it must be the physical directory, not a path through a link
+    return realpathSync(top);
   } catch {
     throw new MigrateAnalysisError('This command must run inside a git repository.');
   }
+}
+
+/** The root every write is checked against is the physical (real) directory: nothing below it can be reached through a link above. */
+function assertPhysicalRoot(repository: string, hostRoot: string): void {
+  if (realpathSync(repository) !== repository) throw new MigrateAnalysisError(`The git toplevel ${repository} is not a physical path (${realpathSync(repository)}); run migrate from the real directory.`);
+  if (realpathSync(hostRoot) !== hostRoot) throw new MigrateAnalysisError(`The host root ${hostRoot} is not a physical path (${realpathSync(hostRoot)}); it or a directory above it is a symbolic link.`);
 }
 
 function untrackedFiles(repositoryRoot: string): string[] {
@@ -1136,22 +1130,6 @@ const coreScriptRenames: Readonly<Record<string, string>> = {
   'scripts/test/jest-theme.mjs': 'scripts/test/jest.mjs',
 };
 
-function missingGeneratedHostSyncSupport(templates: string | null): string[] {
-  const coreDir = templates ? dirname(templates) : null;
-  if (!coreDir) return ['templates/app', 'scripts/build/registry.mjs', 'scripts/build/registry/write-places.mjs', 'scripts/build/registry/post-build/own-gitignores.mjs', 'scripts/build/safe-fs.mjs'];
-  return [
-    'templates/app',
-    'scripts/build/registry.mjs',
-    'scripts/build/registry/write-places.mjs',
-    'scripts/build/registry/post-build/own-gitignores.mjs',
-    'scripts/build/safe-fs.mjs',
-  ].filter(path => !existsSync(join(coreDir, path)));
-}
-
-function canRunGeneratedHostSync(templates: string | null): boolean {
-  return missingGeneratedHostSyncSupport(templates).length === 0;
-}
-
 function coreScripts(hostRoot: string, coreTemplates: string | null): MigrateReport['coreScripts'] {
   const packageFile = join(hostRoot, 'package.json');
   const scripts = readJson(packageFile)?.scripts;
@@ -1173,7 +1151,7 @@ function coreScripts(hostRoot: string, coreTemplates: string | null): MigrateRep
   return { renamed: [...new Set(renamed)].sort(), warnings: [...new Set(warnings)].sort() };
 }
 
-async function reportFor(cwd: string): Promise<MigrateReport> {
+async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppConversionPlan | null }> {
   const repository = repositoryRoot(cwd);
   const host = resolveHostRoot(repository, cwd);
   const packageManifests = packageFiles(repository).map(file => ({ file, pkg: readJson(file) })).filter((entry): entry is { file: string; pkg: Record<string, unknown> } => entry.pkg !== null);
@@ -1203,16 +1181,58 @@ async function reportFor(cwd: string): Promise<MigrateReport> {
     ?? (declaredCore && declaredCore !== currentCore ? { version: declaredCore, source: 'package.json' } : null);
   // The report is the one pre-write classification used by --yes below; do
   // not look up previous templates again after the tree starts changing.
-  const previousLookup = hasUnclassifiedLegacyAppFiles(host.root) || hasUnclassifiedRootProxyFiles(host.root)
+  const appRoot = await appRootFor(host.root, templates ? dirname(templates) : null);
+  const previousLookup = hasUnclassifiedLegacyAppFiles(host.root, appRoot) || hasUnclassifiedRootProxyFiles(host.root)
     ? await previousCoreTemplates(previousEvidence?.version ?? null, currentCore)
     : { templates: null, unavailableReason: null };
-  const appTemplates = compareApp(host.root, templates, previousLookup.templates, previousEvidence, previousLookup.unavailableReason, selectedTheme.name);
+  const { evidence: generatedEvidence, appTemplates } = classifyApp(host.root, appRoot, previousLookup.templates, previousEvidence, previousLookup.unavailableReason, selectedTheme.name);
   const rootProxyFiles = compareRootProxyFiles(host.root, templates, previousLookup.templates);
-  const appCustomizations = [...appTemplates.modified.map(file => file.path), ...appTemplates.projectOnly].sort();
   const configPlugins = themeDirectory ? requiredPlugins(themeDirectory, hostPackage, pluginsDirectory) : { plugins: [], warnings: [] };
   const envExample = themeDirectory ? envExamplePlan(host.root, themeDirectory) : { action: 'none' as const, path: null };
   const scripts = coreScripts(host.root, templates);
   const hostFiles = filesIn(host.root);
+  const movePlan = themeDirectory ? planMove(host.root, themeDirectory, pluginsDirectory) : null;
+  const usePpr = legacyProjectUsedPpr(host.root);
+  // The app root, or a directory above it, being a symbolic link would carry every delete outside the project
+  const rootLink = appRoot ? appRoot.split('/').reduce<{ path: string; link: string | null }>((state, part) => {
+    const path = join(state.path, part);
+    return { path, link: state.link ?? (existsSync(path) && lstatSync(path).isSymbolicLink() ? path : null) };
+  }, { path: host.root, link: null }).link : null;
+  const appPlan = appRoot && !rootLink
+    ? await planAppConversion({
+      hostRoot: host.root,
+      root: appRoot,
+      files: legacyAppFilesIn(join(host.root, appRoot)).map(file => pathFrom(join(host.root, appRoot), file)),
+      generated: generatedEvidence,
+      baselineFor: path => previousTemplateCandidates(previousLookup.templates, path, selectedTheme.name, usePpr)[0],
+      core: await loadCoreHost(templates ? dirname(templates) : null),
+      reserved: new Set(movePlan ? [...movePlan.moves, ...movePlan.duplicates].map(item => item.destination) : []),
+      coreTemplates: templates,
+    })
+    : null;
+  const blockers = appPlan ? unrecognizedLines(appPlan) : [];
+  if (rootLink) blockers.push(`${pathFrom(host.root, rootLink)}: it is a symbolic link (the app tree, or a directory above it); migrate would follow it and change files outside the project. Replace it with a real directory and run migrate again`);
+  if (appRoot && !rootLink) {
+    for (const link of symlinksIn(join(host.root, appRoot))) {
+      blockers.push(`${pathFrom(host.root, link)}: it is a symbolic link, which migrate cannot move or reproduce faithfully; replace it with a real file or directory (or import the target from where it lives) and run migrate again`);
+    }
+  }
+  const configFile = join(host.root, 'nextspark.config.ts');
+  if (appPlan && appPlan.webhookExtensions.length > 0 && existsSync(configFile)) {
+    const declared = declareWebhookExtensions(readFileSync(configFile, 'utf8'), appPlan.webhookExtensions);
+    if ('error' in declared) blockers.push(declared.error);
+  }
+  const appConversion: MigrateReport['appConversion'] = {
+    root: appRoot,
+    removed: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'remove' ? [{ path: file.path, evidence: file.fate.evidence }] : []),
+    loaders: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'loader' ? [{ path: file.path, template: file.fate.template }] : []),
+    overrides: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'override'
+      ? [{ path: file.path, destination: file.fate.destination, core: file.fate.core, baseline: file.fate.baseline, diffLines: file.fate.diffLines, diff: file.fate.diff }]
+      : []),
+    projectFiles: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'project' ? [{ path: file.path, destination: file.fate.destination }] : []),
+    webhookExtensions: appPlan?.webhookExtensions ?? [],
+    blockers,
+  };
   const themeNeedle = selectedTheme.name ? new RegExp(`@/contents/themes/${selectedTheme.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/`, 'g') : null;
   const pluginNeedle = /@\/contents\/plugins\//g;
   const imports = hostFiles.reduce((counts, file) => {
@@ -1231,7 +1251,7 @@ async function reportFor(cwd: string): Promise<MigrateReport> {
   if (!gitSucceeds(repository, ['diff', '--quiet']) || !gitSucceeds(repository, ['diff', '--cached', '--quiet']) || untracked.length > 0) warnings.push('Git working tree is dirty; report mode does not modify it.');
   if (!templates) warnings.push('Installed @nextsparkjs/core templates were not found; template comparisons are unavailable.');
   if (!selectedTheme.name) warnings.push('No active theme was found in NEXT_PUBLIC_ACTIVE_THEME or .env.example.');
-  if (appCustomizations.length > 0) warnings.push(`Legacy app customizations will move to legacy-app-customizations/: ${appCustomizations.join(', ')}`);
+  if (appConversion.blockers.length > 0) warnings.push(`BLOCKED: migration will not write anything until ${appConversion.blockers.length} app file(s) are placed by hand (see "App tree conversion").`);
   if (previousEvidence && !previousLookup.templates) {
     warnings.push(`Could not fetch @nextsparkjs/core@${previousEvidence.version} (${previousLookup.unavailableReason}) to classify old generated files; unmatched files remain customizations.`);
   }
@@ -1241,19 +1261,14 @@ async function reportFor(cwd: string): Promise<MigrateReport> {
   if (envExample.action === 'conflict') warnings.push(`${envExample.path} differs from the root .env.example and will not be merged.`);
   warnings.push(...configPlugins.warnings);
   warnings.push(...scripts.warnings);
-  return {
+  const report: MigrateReport = {
     hostRoot: { path: pathFrom(repository, host.root), reason: host.reason },
     warnings,
     versions: { packageManager, members, drift: declaredVersions.length > 1, driftVersions: declaredVersions },
     activeTheme: { ...selectedTheme, themes, plugins },
     appTemplates,
-    generatedHost: {
-      customizations: appCustomizations,
-      customizationsDestination: 'legacy-app-customizations',
-      nextStep: existsSync(join(host.root, 'app')) && !canRunGeneratedHostSync(templates)
-        ? 'nextspark sync:app --force'
-        : null,
-    },
+    appConversion,
+    apiUrlMoves: apiUrlMoves(hostFiles, host.root),
     rootProxyFiles,
     routeRootGuard: {
       currentRoots: ['app', 'pages'].filter(path => existsSync(join(host.root, path))),
@@ -1269,6 +1284,7 @@ async function reportFor(cwd: string): Promise<MigrateReport> {
     untracked,
     siblingThemeReferences: siblingReferences(repository, host.root, selectedTheme.name),
   };
+  return { report, plan: appPlan };
 }
 
 function paths(items: string[]): string {
@@ -1294,20 +1310,30 @@ function printReport(report: MigrateReport): void {
     `themes: ${report.activeTheme.themes.map(theme => `${theme.name} (${theme.files} files)`).join(', ') || 'none'}`,
     `plugins: ${report.activeTheme.plugins.map(plugin => `${plugin.name} (${plugin.files} files)`).join(', ') || 'none'}`,
   ]);
-  section('App vs core templates', [
-    `identical current template (${report.appTemplates.identical.length}): ${paths(report.appTemplates.identical)}`,
-    `known generated by intact tag (${report.appTemplates.generated.length}): ${paths(report.appTemplates.generated)}`,
-    `known generated by sync-state hash (${report.appTemplates.generatedBySyncState.length}): ${paths(report.appTemplates.generatedBySyncState)}`,
-    `known generated by legacy app/(templates) output (${report.appTemplates.generatedByLegacyRegistry.length}): ${paths(report.appTemplates.generatedByLegacyRegistry)}`,
-    `known generated by previous core template${report.appTemplates.previousTemplateVersion ? ` ${report.appTemplates.previousTemplateVersion} (${report.appTemplates.previousTemplateVersionSource}; ${report.appTemplates.previousTemplateMethod ?? report.appTemplates.previousTemplateUnavailableReason})` : ''} (${report.appTemplates.generatedByPreviousTemplate.length}): ${paths(report.appTemplates.generatedByPreviousTemplate)}`,
-    `modified customization (${report.appTemplates.modified.length}): ${report.appTemplates.modified.map(file => `${file.path} (${file.changedLines} changed lines)`).join(', ') || 'none'}`,
-    `project-only customization (${report.appTemplates.projectOnly.length}): ${paths(report.appTemplates.projectOnly)}`,
+  section('App tree evidence', [
+    `app tree: ${report.appTemplates.root ?? 'none (nothing to convert)'}`,
+    `proven generated by intact tag (${report.appTemplates.generated.length}): ${paths(report.appTemplates.generated)}`,
+    `proven generated by sync-state hash (${report.appTemplates.generatedBySyncState.length}): ${paths(report.appTemplates.generatedBySyncState)}`,
+    `proven generated by legacy app/(templates) output (${report.appTemplates.generatedByLegacyRegistry.length}): ${paths(report.appTemplates.generatedByLegacyRegistry)}`,
+    `proven generated by previous core template${report.appTemplates.previousTemplateVersion ? ` ${report.appTemplates.previousTemplateVersion} (${report.appTemplates.previousTemplateVersionSource}; ${report.appTemplates.previousTemplateMethod ?? report.appTemplates.previousTemplateUnavailableReason})` : ''} (${report.appTemplates.generatedByPreviousTemplate.length}): ${paths(report.appTemplates.generatedByPreviousTemplate)}`,
+    `not proven by that evidence: ${report.appTemplates.unproven} (placed below)`,
   ]);
-  section('Generated app host', [
-    `customizations: ${paths(report.generatedHost.customizations)}`,
-    `customization destination: ${report.generatedHost.customizationsDestination}/`,
-    report.generatedHost.nextStep ? `next step: ${report.generatedHost.nextStep}` : 'next step: sync:app will run during migration',
+  const conversion = report.appConversion;
+  section('App tree conversion (src/app is generated and git-ignored from now on)', [
+    `removed, the generator emits them again (${conversion.removed.length}): ${paths(conversion.removed.map(file => file.path))}`,
+    `runtime template lookups dropped, the project's template is a static override (${conversion.loaders.length}): ${paths(conversion.loaders.map(file => `${file.path}${file.template ? ` -> ${file.template}` : ' (no project template)'}`))}`,
+    `customized core files converted into overrides (${conversion.overrides.length}): ${paths(conversion.overrides.map(file => `${file.path} -> ${file.destination}`))}`,
+    `project-only files moved (${conversion.projectFiles.length}): ${paths(conversion.projectFiles.map(file => `${file.path} -> ${file.destination}`))}`,
+    `billing webhook extensions declared in nextspark.config.ts (${conversion.webhookExtensions.length}): ${paths(conversion.webhookExtensions.map(item => `${item.provider}: ${item.module}`))}`,
+    `unrecognized, migrate stops before writing (${conversion.blockers.length}): ${conversion.blockers.length ? '' : 'none'}`,
+    ...conversion.blockers.map(line => `  - ${line}`),
   ]);
+  for (const override of conversion.overrides) {
+    section(`Override ${override.destination}: the project's ${conversion.root}/${override.path} against ${override.baseline ?? override.core} (${override.diffLines >= 0 ? `${override.diffLines} changed lines` : 'no baseline'})`, override.diff.split('\n'));
+  }
+  section('Project URLs that change (core dispatchers under /api/v1/theme/** and /api/v1/plugin/** are gone)', report.apiUrlMoves.length
+    ? report.apiUrlMoves.map(move => `${move.file}:${move.line}: ${move.from} -> ${move.to}`)
+    : ['none found in the project source']);
   section('Root proxy files', [
     `proven generated and will remove: ${paths(report.rootProxyFiles.generated)}`,
     `kept customizations: ${paths(report.rootProxyFiles.customizations)}`,
@@ -2310,6 +2336,7 @@ function rewriteActiveThemeUse(content: string, destination: string, hostRoot: s
 function removeActiveThemeFromExample(hostRoot: string): boolean {
   const file = join(hostRoot, '.env.example');
   if (!existsSync(file)) return false;
+  assertContained(hostRoot, file);
   const original = readFileSync(file, 'utf8');
   const next = original.replace(/^.*NEXT_PUBLIC_ACTIVE_THEME.*(?:\r?\n|$)/gm, '');
   if (next === original) return false;
@@ -2355,6 +2382,7 @@ function validateHookExports(plan: MovePlan): void {
 function writeRootFirstConfig(hostRoot: string, plugins: string[]): boolean {
   const file = join(hostRoot, 'nextspark.config.ts');
   if (existsSync(file)) return false;
+  assertContained(hostRoot, file);
   writeFileSync(file, `import { defineConfig } from '@nextsparkjs/core/lib/config'\n\nexport default defineConfig({\n  plugins: ${JSON.stringify(plugins)},\n})\n`);
   return true;
 }
@@ -2363,6 +2391,8 @@ function moveThemeEnvExample(hostRoot: string, themeRoot: string, plan: MigrateR
   if (!plan.path) return false;
   const source = join(hostRoot, plan.path);
   const destination = join(hostRoot, '.env.example');
+  assertContained(hostRoot, source);
+  assertContained(hostRoot, destination);
   if (plan.action === 'move') {
     renameSync(source, destination);
     return true;
@@ -2392,6 +2422,7 @@ function rewriteCoreScripts(hostRoot: string): number {
     }
   }
   if (changed > 0) {
+    assertContained(hostRoot, file);
     const original = readFileSync(file, 'utf8');
     const indentation = original.match(/\n([ \t]+)"/)?.[1] ?? '  ';
     writeFileSync(file, `${JSON.stringify(pkg, null, indentation)}${original.endsWith('\n') ? '\n' : ''}`);
@@ -2400,83 +2431,34 @@ function rewriteCoreScripts(hostRoot: string): number {
 }
 
 /** Keep archived root-app source out of the template's broad TypeScript include. */
-function excludeLegacyAppCustomizations(hostRoot: string): boolean {
-  const file = join(hostRoot, 'tsconfig.json');
-  if (!existsSync(file)) return false;
-  const content = readFileSync(file, 'utf8');
-  const parsed = parseJsonc(content);
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return false;
-  const current = stringArray((parsed as Record<string, unknown>).exclude) ?? [];
-  if (current.includes('legacy-app-customizations')) return false;
-
-  // Retain comments and formatting in the common JSONC form used by the
-  // shipped template.  Falling back to the formatter is only for unusual
-  // valid JSONC shapes where a surgical array edit cannot be located.
-  const array = jsoncPropertyArray(content, 'exclude');
-  if (array) {
-    const body = content.slice(array.open + 1, array.close);
-    const elementMatches = [...body.matchAll(/\n([ \t]+)"/g)];
-    const elementIndent = elementMatches.length > 0 ? elementMatches[elementMatches.length - 1][1] : '  ';
-    const closingIndent = body.match(/\n([ \t]*)$/)?.[1];
-    const bodyBeforeClosingIndent = closingIndent === undefined ? body : body.slice(0, -closingIndent.length);
-    const comma = current.length > 0 && !jsoncArrayHasTrailingComma(body) ? ',' : '';
-    const insertion = `${comma}${bodyBeforeClosingIndent.endsWith('\n') ? '' : '\n'}${elementIndent}"legacy-app-customizations"\n`;
-    writeFileSync(file, `${content.slice(0, array.open + 1)}${bodyBeforeClosingIndent}${insertion}${closingIndent ?? ''}${content.slice(array.close)}`);
-    return true;
+/**
+ * With src/app in place Next loads the request-interception file from src/ only. `sync:app` used to
+ * put core's template there; it is gone, so migrate writes it once when the project has none.
+ */
+function ensureSourceProxy(hostRoot: string, templates: string | null): string | null {
+  const source = templates ? join(templates, 'proxy.ts') : null;
+  if (!source || !existsSync(source)) return null;
+  const existing: Partial<Record<ProxyFileName, string>> = {};
+  for (const name of ['proxy.ts', 'middleware.ts'] as const) {
+    const file = join(hostRoot, 'src', name);
+    if (existsSync(file)) existing[name] = readFileSync(file, 'utf8');
   }
-  (parsed as Record<string, unknown>).exclude = [...current, 'legacy-app-customizations'];
-  const indentation = content.match(/\n([ \t]+)"/)?.[1] ?? '  ';
-  writeFileSync(file, `${JSON.stringify(parsed, null, indentation)}${content.endsWith('\n') ? '\n' : ''}`);
-  return true;
-}
-
-function moveLegacyApp(hostRoot: string, app: MigrateReport['appTemplates']): { removed: number; customized: number; tsconfigExcluded: boolean } {
-  const sourceRoot = join(hostRoot, 'app');
-  if (!existsSync(sourceRoot)) return { removed: 0, customized: 0, tsconfigExcluded: false };
-  const custom = new Set([...app.modified.map(file => file.path), ...app.projectOnly]);
-  const generated = new Set([...app.identical, ...app.generated, ...app.generatedBySyncState, ...app.generatedByLegacyRegistry, ...app.generatedByPreviousTemplate]);
-  const destinationRoot = join(hostRoot, 'legacy-app-customizations');
-  for (const file of custom) {
-    const destination = join(destinationRoot, file);
-    if (existsSync(destination)) throw new MigrateAnalysisError(`Refusing to overwrite legacy app customization: ${pathFrom(hostRoot, destination)}`);
-  }
-  for (const file of custom) {
-    const source = join(sourceRoot, file);
-    const destination = join(destinationRoot, file);
-    mkdirSync(dirname(destination), { recursive: true });
-    renameSync(source, destination);
-  }
-  for (const file of generated) {
-    const source = join(sourceRoot, file);
-    if (existsSync(source)) unlinkSync(source);
-  }
-  removeEmptyDirectories(sourceRoot);
-  removeEmptyAncestors(sourceRoot, hostRoot);
-  return { removed: generated.size, customized: custom.size, tsconfigExcluded: custom.size > 0 && excludeLegacyAppCustomizations(hostRoot) };
+  if (Object.keys(existing).length > 0) return null;
+  const plan = planProxyFile(readFileSync(source, 'utf8'), getNextMajorVersion(hostRoot), existing);
+  if (plan.content === null) return null;
+  assertContained(hostRoot, join(hostRoot, 'src', plan.fileName));
+  mkdirSync(join(hostRoot, 'src'), { recursive: true });
+  writeFileSync(join(hostRoot, 'src', plan.fileName), plan.content);
+  return `src/${plan.fileName}`;
 }
 
 /** Remove only root interception files the pre-write report proved generated. */
 function removeGeneratedRootProxyFiles(hostRoot: string, files: string[]): void {
   for (const file of files) {
     const source = join(hostRoot, file);
+    assertContained(hostRoot, source);
     if (existsSync(source)) unlinkSync(source);
   }
-}
-
-async function syncGeneratedHost(hostRoot: string, templates: string | null): Promise<boolean> {
-  // Tests and incomplete installations can compare templates but cannot run the
-  // full sync path. Leave an exact command rather than pretending it ran.
-  mkdirSync(join(hostRoot, 'src', 'app'), { recursive: true });
-  if (!canRunGeneratedHostSync(templates)) return false;
-  const cwd = process.cwd();
-  try {
-    process.chdir(hostRoot);
-    const result = await syncApp({ force: true });
-    if (result.status !== 'success') throw new SyncAppError('sync:app did not complete');
-  } finally {
-    process.chdir(cwd);
-  }
-  return true;
 }
 
 function isOtherThemeFile(file: string, themesRoot: string, selected: string): boolean {
@@ -2522,8 +2504,8 @@ function removeEmptyDirectories(root: string): void {
   remove(root);
 }
 
+/** Roots Next.js reads before src/app: while one exists, the generated src/app is ignored. */
 function legacyRouteRoots(hostRoot: string): string[] {
-  if (!existsSync(join(hostRoot, 'src', 'app'))) return [];
   return ['app', 'pages'].filter(path => existsSync(join(hostRoot, path)));
 }
 
@@ -2556,6 +2538,7 @@ function applyMove(repository: string, hostRoot: string, themeRoot: string, plug
     if (destination === file || destination.startsWith(`${hostRoot}${sep}`)) next = rewriteRootFirstTestContracts(next, destination, hostRoot, theme);
     if (!preservedRootProxy && (destination === file || destination.startsWith(`${hostRoot}${sep}`))) next = rewriteRemovedMiddlewareApi(next, destination, hostRoot);
     if (next !== buffer.toString('utf8')) {
+      assertContained(repository, file);
       writeFileSync(file, next);
       rewritten++;
     }
@@ -2563,10 +2546,15 @@ function applyMove(repository: string, hostRoot: string, themeRoot: string, plug
   moveThemeEnvExample(hostRoot, themeRoot, envPlan);
   const envRemoved = removeActiveThemeFromExample(hostRoot);
   for (const item of plan.moves) {
+    assertContained(repository, item.source);
+    assertContained(repository, item.destination);
     mkdirSync(dirname(item.destination), { recursive: true });
     renameSync(item.source, item.destination);
   }
-  for (const item of plan.duplicates) unlinkSync(item.source);
+  for (const item of plan.duplicates) {
+    assertContained(repository, item.source);
+    unlinkSync(item.source);
+  }
   removeEmptyAncestors(themeRoot, hostRoot);
   for (const plugin of childDirectories(pluginsRoot)) removeEmptyAncestors(join(pluginsRoot, plugin), hostRoot);
   removeEmptyDirectories(join(hostRoot, 'contents'));
@@ -2615,8 +2603,9 @@ function shellQuote(value: string): string {
 const GENERATED_HOST_ROLLBACK_PATHS = [
   'src/app',
   'src/app/(templates)',
-  'legacy-app-customizations',
   '.nextspark/sync-state.json',
+  '.nextspark/generation.json',
+  '.nextspark/generation.lock',
   '.nextspark/registries',
   '.nextspark/backups',
 ] as const;
@@ -2629,12 +2618,16 @@ function migrationRollbackBackup(hostRoot: string): string {
 }
 
 /** Copy a pre-existing path without following links, so rollback can put it back byte-for-byte. */
-function copyForMigrationRollback(source: string, destination: string): void {
+function copyForMigrationRollback(root: string, source: string, destination: string): void {
+  // The source is read without following links (a link is copied as a link); where it lives, and
+  // where the copy goes, must be inside the project with no link on the way
+  assertContained(root, dirname(source));
+  assertContained(root, destination);
   const entry = lstatSync(source);
   if (entry.isDirectory()) {
     mkdirSync(destination, { recursive: true });
     for (const child of readdirSync(source, { withFileTypes: true })) {
-      copyForMigrationRollback(join(source, child.name), join(destination, child.name));
+      copyForMigrationRollback(root, join(source, child.name), join(destination, child.name));
     }
     return;
   }
@@ -2659,6 +2652,7 @@ function migrationRollbackPaths(hostRoot: string, plan: MovePlan, report: Migrat
   const paths = new Set<string>([
     'package.json',
     'tsconfig.json',
+    'nextspark.config.ts',
     '.gitignore',
     '.env.example',
     'app',
@@ -2677,6 +2671,9 @@ function migrationRollbackPaths(hostRoot: string, plan: MovePlan, report: Migrat
 
 function snapshotMigrationRollback(hostRoot: string, plan: MovePlan, report: MigrateReport, hadLegacyApp: boolean): void {
   const backup = migrationRollbackBackup(hostRoot);
+  // A link at .nextspark or at the backup would carry the copies (and their cleanup) outside the project
+  assertContained(hostRoot, join(hostRoot, '.nextspark'));
+  assertContained(hostRoot, backup);
   if (existsSync(backup)) {
     throw new MigrateAnalysisError(`Refusing to overwrite migration rollback backup: ${MIGRATION_ROLLBACK_BACKUP_PATH}. Run the prior migration's printed rollback first.`);
   }
@@ -2684,16 +2681,27 @@ function snapshotMigrationRollback(hostRoot: string, plan: MovePlan, report: Mig
     const files = join(backup, 'files');
     for (const path of migrationRollbackPaths(hostRoot, plan, report, hadLegacyApp)) {
       const source = join(hostRoot, path);
-      if (existsSync(source)) copyForMigrationRollback(source, join(files, path));
+      if (existsSync(source) || isLink(source)) copyForMigrationRollback(hostRoot, source, join(files, path));
     }
   } catch (error) {
-    rmSync(backup, { recursive: true, force: true });
+    removeMigrationRollbackBackup(hostRoot);
     throw error;
   }
 }
 
+function isLink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
 function removeMigrationRollbackBackup(hostRoot: string): void {
-  rmSync(migrationRollbackBackup(hostRoot), { recursive: true, force: true });
+  const backup = migrationRollbackBackup(hostRoot);
+  // rm never follows a link inside the backup, but a link at .nextspark or at the backup itself is refused
+  assertContained(hostRoot, backup);
+  rmSync(backup, { recursive: true, force: true });
 }
 
 /**
@@ -2748,6 +2756,8 @@ function rollbackCommands(repository: string, hostRoot: string, plan: MovePlan, 
     if (!existsSync(join(hostRoot, path))) destinations.add(pathFrom(repository, join(hostRoot, path)));
   }
   if (report.config.plannedCreation) destinations.add(pathFrom(repository, join(hostRoot, 'nextspark.config.ts')));
+  // Overrides and moved project files created from the app tree
+  for (const file of [...report.appConversion.overrides, ...report.appConversion.projectFiles]) destinations.add(pathFrom(repository, join(hostRoot, file.destination)));
   if (report.envExample.action === 'move') destinations.add(pathFrom(repository, join(hostRoot, '.env.example')));
   const selectiveCleanup: string[] = [];
   if (hadLegacyApp) {
@@ -2889,37 +2899,68 @@ function printMoveSummary(plan: MovePlan, result: { moved: number; deduplicated:
   console.log('  Rollback commands were printed in the move plan above.');
 }
 
+/** Add `.nextspark/` and `src/app/` to the project's .gitignore: both are generated from now on. */
+function ignoreGeneratedPaths(hostRoot: string): boolean {
+  const file = join(hostRoot, '.gitignore');
+  assertContained(hostRoot, file);
+  const current = existsSync(file) ? readFileSync(file, 'utf8') : '';
+  const lines = new Set(current.split(/\r?\n/).map(line => line.trim()));
+  const missing = ['.nextspark/', 'src/app/'].filter(entry => !lines.has(entry) && !lines.has(entry.replace(/\/$/, '')) && !lines.has(`/${entry}`));
+  if (missing.length === 0) return false;
+  writeFileSync(file, `${current}${current === '' || current.endsWith('\n') ? '' : '\n'}\n# Generated by NextSpark (nextspark dev, build and prepare write all of it; never edit)\n${missing.join('\n')}\n`);
+  return true;
+}
+
+/** Which of src/app's files git tracks: they stay in the index until the project removes them from it. */
+function trackedGeneratedFiles(repository: string, hostRoot: string): number {
+  try {
+    const output = execFileSync('git', ['ls-files', '-z', '--', pathFrom(repository, join(hostRoot, 'src', 'app'))], { cwd: repository, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    return output.split('\0').filter(Boolean).length;
+  } catch {
+    return 0;
+  }
+}
+
 export async function migrateCommand(options: MigrateOptions): Promise<void> {
   let rollback: string[] | null = null;
   let writesStarted = false;
   let printRollbackOnFailure = false;
   try {
-    const report = await reportFor(process.cwd());
+    const { report, plan: appPlan } = await analyze(process.cwd());
     if (options.dryRun) {
       if (options.json) {
         const json = JSON.stringify(report).replace(/[\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
         process.stdout.write(`${json}\n`);
       } else printReport(report);
+      // A dry run is a report; it exits 1 only when the migration would refuse to run
+      if (report.appConversion.blockers.length > 0) process.exitCode = 1;
       return;
     }
     if (options.json) throw new MigrateAnalysisError('--json is available only with --dry-run.');
     printReport(report);
+    if (report.appConversion.blockers.length > 0) {
+      throw new MigrateAnalysisError(`Refusing to migrate: ${report.appConversion.blockers.length} app file(s) cannot be placed with certainty. Nothing was written. Fix them as described above, then rerun nextspark migrate.\n${report.appConversion.blockers.map(line => `  - ${line}`).join('\n')}`);
+    }
     const repository = repositoryRoot(process.cwd());
     if (!cleanWorkingTree(repository, report.untracked)) throw new MigrateAnalysisError('Refusing to move files on a dirty git tree. Commit, stash, or remove untracked files first.');
     const theme = report.activeTheme.name;
     const hostRoot = resolve(repository, report.hostRoot.path);
-    if (!theme) throw new MigrateAnalysisError('No active theme was found; set it in .env.example before migrating.');
-    const themeRoot = join(hostRoot, 'contents', 'themes', theme);
-    if (!existsSync(themeRoot)) throw new MigrateAnalysisError(`Active theme ${theme} was not found under contents/themes/.`);
+    // A project that is root-first already (no contents/) only has an app tree left to convert
+    const appTreeOnly = !existsSync(join(hostRoot, 'contents')) && appPlan !== null;
+    if (!theme && !appTreeOnly) throw new MigrateAnalysisError('No active theme was found; set it in .env.example before migrating.');
+    const themeRoot = join(hostRoot, 'contents', 'themes', theme ?? '');
+    if (!appTreeOnly && !existsSync(themeRoot)) throw new MigrateAnalysisError(`Active theme ${theme} was not found under contents/themes/.`);
     const pluginsRoot = join(hostRoot, 'contents', 'plugins');
-    assertMoveRootsAreLocal(hostRoot, themeRoot, pluginsRoot);
-    const plan = planMove(hostRoot, themeRoot, pluginsRoot);
+    if (!appTreeOnly) assertMoveRootsAreLocal(hostRoot, themeRoot, pluginsRoot);
+    const plan: MovePlan = appTreeOnly ? { moves: [], duplicates: [], collisions: [], reserved: [], unmoved: [] } : planMove(hostRoot, themeRoot, pluginsRoot);
     validateHookExports(plan);
-    for (const file of report.generatedHost.customizations) {
-      const destination = join(hostRoot, report.generatedHost.customizationsDestination, file);
-      if (existsSync(destination)) throw new MigrateAnalysisError(`Refusing to overwrite legacy app customization: ${pathFrom(hostRoot, destination)}`);
+    assertPhysicalRoot(repository, hostRoot);
+    // Every path the move will read, write or remove is inside the project with no link on the way, before anything is written
+    for (const item of [...plan.moves, ...plan.duplicates]) {
+      assertContained(repository, item.source);
+      assertContained(repository, item.destination);
     }
-    const hadLegacyApp = existsSync(join(hostRoot, 'app'));
+    const hadLegacyApp = appPlan !== null;
     if (existsSync(migrationRollbackBackup(hostRoot))) {
       throw new MigrateAnalysisError(`Refusing to overwrite migration rollback backup: ${MIGRATION_ROLLBACK_BACKUP_PATH}. Run the prior migration's printed rollback first.`);
     }
@@ -2942,57 +2983,77 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       if (answer !== 'y' && answer !== 'yes') throw new MigrateAnalysisError('Migration cancelled.');
     }
     const templates = templateDirectory(hostRoot, repository);
-    if (hadLegacyApp && !canRunGeneratedHostSync(templates)) {
-      printRollbackOnFailure = true;
-      const missing = missingGeneratedHostSyncSupport(templates);
-      throw new MigrateAnalysisError(`Cannot migrate legacy app/: installed @nextsparkjs/core is missing guarded sync support: ${missing.join(', ')}. Upgrade @nextsparkjs/core to the same version as the CLI, then rerun nextspark migrate.`);
-    }
-    const aliasesBeforeMove = legacyPathAliases(hostRoot, themeRoot, pluginsRoot, plan);
-    if (aliasesBeforeMove.warnings.length > 0) {
+    const coreDirectory = templates ? dirname(templates) : null;
+    const aliasesBeforeMove = appTreeOnly ? null : legacyPathAliases(hostRoot, themeRoot, pluginsRoot, plan);
+    if (aliasesBeforeMove && aliasesBeforeMove.warnings.length > 0) {
       section('Alias configuration warnings', aliasesBeforeMove.warnings.map(file => `could not parse or resolve ${file}; aliases from it were not derived`));
     }
     const legacyHook = [...plan.moves, ...plan.duplicates].find(item => /config[\\/]hooks[\\/]proxy\.[^.]+$/.test(item.destination));
-    if (legacyHook) validateLegacyHookImportShapes(hostRoot, legacyHook.source, aliasesBeforeMove);
+    if (legacyHook && aliasesBeforeMove) validateLegacyHookImportShapes(hostRoot, legacyHook.source, aliasesBeforeMove);
     const plannedItems = [...plan.moves, ...plan.duplicates];
     // Environment-shaped files are moved as opaque bytes, never parsed as
     // source or inspected by the import validator.
     const sourceFiles = plannedItems.filter(item => !isEnvironmentFile(basename(item.source)));
     const beforeFiles = sourceFiles.map(item => ({ file: item.source, source: item.source, display: pathFrom(hostRoot, item.destination) }));
-    const brokenBeforeMove = brokenImports(hostRoot, beforeFiles, aliasesBeforeMove);
-    preflightMovedStylesheetDependencies(hostRoot, themeRoot, pluginsRoot, plan);
+    const brokenBeforeMove = aliasesBeforeMove ? brokenImports(hostRoot, beforeFiles, aliasesBeforeMove) : [];
+    if (!appTreeOnly) preflightMovedStylesheetDependencies(hostRoot, themeRoot, pluginsRoot, plan);
     snapshotMigrationRollback(hostRoot, plan, report, hadLegacyApp);
     writesStarted = true;
-    const result = applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme, plan, aliasesBeforeMove, report.envExample, report.config.plugins, hadLegacyApp ? report.rootProxyFiles.customizations : []);
-    if (hadLegacyApp) {
-      let synced: boolean;
-      try {
-        synced = await syncGeneratedHost(hostRoot, templateDirectory(hostRoot, repository));
-      } catch (error) {
-        console.error('MIGRATION FAILED: sync:app did not generate the new src/app host. The legacy app/ has been preserved.');
-        throw error;
+    const result = appTreeOnly
+      ? null
+      : applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme as string, plan, aliasesBeforeMove as AliasCatalog, report.envExample, report.config.plugins, hadLegacyApp ? report.rootProxyFiles.customizations : []);
+    if (appPlan) {
+      const converted = applyAppConversion(hostRoot, appPlan);
+      console.log(`  App tree: removed ${converted.removed} generated file(s); converted ${converted.overrides} customized core file(s) into overrides and moved ${converted.moved - converted.overrides} project file(s).`);
+      if (appPlan.webhookExtensions.length > 0) {
+        const configFile = join(hostRoot, 'nextspark.config.ts');
+        const declared = declareWebhookExtensions(readFileSync(configFile, 'utf8'), appPlan.webhookExtensions);
+        if ('error' in declared) throw new MigrateAnalysisError(declared.error);
+        assertContained(hostRoot, configFile);
+        writeFileSync(configFile, declared.source);
+        console.log(`  nextspark.config.ts: billing.webhookExtensions declared for ${appPlan.webhookExtensions.map(item => item.provider).join(', ')}.`);
       }
-      const legacyApp = moveLegacyApp(hostRoot, report.appTemplates);
-      const legacySummary = `Generated host: removed ${legacyApp.removed} generated file(s); moved ${legacyApp.customized} customization(s)${legacyApp.tsconfigExcluded ? '; excluded legacy-app-customizations from tsconfig' : ''}.`;
-      if (!synced) console.log(`  ${legacySummary} Run "nextspark sync:app --force" to finish generating src/app.`);
-      else console.log(`  ${legacySummary}`);
+      if (ignoreGeneratedPaths(hostRoot)) console.log('  .gitignore: added .nextspark/ and src/app/ (generated).');
       removeGeneratedRootProxyFiles(hostRoot, report.rootProxyFiles.generated);
+      const proxy = ensureSourceProxy(hostRoot, templates);
+      if (proxy) console.log(`  ${proxy}: written from core's template (Next loads the request proxy from src/ next to src/app).`);
+      const routeRoots = legacyRouteRoots(hostRoot);
+      if (routeRoots.length > 0) {
+        throw new MigrateAnalysisError(`Post-migration route-root check failed: ${routeRoots.join(', ')} remains next to src/app. Remove it before Next.js can use src/app.`);
+      }
+      if (options.prepare === false) {
+        console.log('  Skipped generating src/app (--no-prepare). Run "nextspark prepare" to generate it.');
+      } else if (coreDirectory && (await coreHostMode(coreDirectory, hostRoot)).mode === 'host') {
+        const generation = await runHostPreparation(coreDirectory, hostRoot, {});
+        if (generation.code !== 0) {
+          console.error('MIGRATION FAILED: nextspark prepare did not generate the new src/app from the converted project.');
+          for (const line of generation.failureLines) console.error(`  ${line}`);
+          throw new MigrateAnalysisError('The project was converted but its generated host could not be built; roll back with the commands printed below, fix the reported route, and rerun.');
+        }
+        console.log('  src/app and the registries generated by nextspark prepare.');
+      } else {
+        console.log('  Run "nextspark prepare" to generate src/app.');
+      }
+      const tracked = trackedGeneratedFiles(repository, hostRoot);
+      if (tracked > 0) console.log(`  Git still tracks ${tracked} file(s) under src/app: remove them from the index with  git rm -r -q --cached ${pathFrom(repository, join(hostRoot, 'src', 'app'))}  and commit.`);
     }
-    const routeRoots = legacyRouteRoots(hostRoot);
-    if (routeRoots.length > 0) {
-      throw new MigrateAnalysisError(`Post-migration route-root check failed: ${routeRoots.join(', ')} remains next to src/app. Remove it before Next.js can use src/app.`);
+    const aliasesAfterMove = appTreeOnly ? null : legacyPathAliases(hostRoot, themeRoot, pluginsRoot, plan);
+    if (aliasesAfterMove && result) {
+      const afterFiles = sourceFiles.map(item => ({ file: item.destination, source: item.source, display: pathFrom(hostRoot, item.destination) }));
+      const brokenAfterMove = brokenImports(hostRoot, afterFiles, aliasesAfterMove);
+      const brokenBeforeKeys = new Set(brokenBeforeMove.map(item => `${item.source}:${item.line}`));
+      const preExisting = brokenAfterMove.filter(item => brokenBeforeKeys.has(`${item.source}:${item.line}`));
+      const introduced = brokenAfterMove.filter(item => !brokenBeforeKeys.has(`${item.source}:${item.line}`));
+      if (introduced.length > 0) {
+        printBrokenImports(introduced, preExisting);
+        throw new MigrateAnalysisError('Migration introduced broken imports.');
+      }
+      printMoveSummary(plan, result, report, hostRoot, legacyContentsImportCount(plan));
+      if (preExisting.length > 0) printBrokenImports([], preExisting);
     }
-    const aliasesAfterMove = legacyPathAliases(hostRoot, themeRoot, pluginsRoot, plan);
-    const afterFiles = sourceFiles.map(item => ({ file: item.destination, source: item.source, display: pathFrom(hostRoot, item.destination) }));
-    const brokenAfterMove = brokenImports(hostRoot, afterFiles, aliasesAfterMove);
-    const brokenBeforeKeys = new Set(brokenBeforeMove.map(item => `${item.source}:${item.line}`));
-    const preExisting = brokenAfterMove.filter(item => brokenBeforeKeys.has(`${item.source}:${item.line}`));
-    const introduced = brokenAfterMove.filter(item => !brokenBeforeKeys.has(`${item.source}:${item.line}`));
-    if (introduced.length > 0) {
-      printBrokenImports(introduced, preExisting);
-      throw new MigrateAnalysisError('Migration introduced broken imports.');
+    if (report.apiUrlMoves.length > 0) {
+      section('Project URLs that changed (update their callers)', report.apiUrlMoves.map(move => `${move.file}:${move.line}: ${move.from} -> ${move.to}`));
     }
-    printMoveSummary(plan, result, report, hostRoot, legacyContentsImportCount(plan));
-    if (preExisting.length > 0) printBrokenImports([], preExisting);
     removeMigrationRollbackBackup(hostRoot);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not analyze this project.';

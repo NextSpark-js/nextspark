@@ -146,14 +146,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ### 7. Run Setup
 
-The postinstall hook runs automatically, but you can trigger it manually:
+Installing the package writes nothing into your project: core's postinstall hook only prints a notice when the project still has a committed `src/app`. `nextspark dev`, `nextspark build` and `nextspark prepare` generate `src/app` and the registries:
 
 ```bash
-# Reinstall to trigger postinstall
-pnpm install
-
-# Or run scripts directly
-pnpm build:registries
+pnpm exec nextspark prepare
+# or just start working: pnpm dev generates them first
 ```
 
 ### 8. Run Database Migrations
@@ -271,9 +268,9 @@ Add to tsconfig.json:
 }
 ```
 
-### Postinstall not running
+### `src/app` or the registries are missing
 
-Ensure `nextspark.config.ts` exists in your project root before installing.
+Nothing generates them at install time. Run `pnpm exec nextspark prepare` (or `pnpm dev` / `pnpm build`, which do it first), from the project root where `nextspark.config.ts` is.
 
 ---
 

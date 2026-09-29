@@ -611,7 +611,7 @@ const implementationAnalysis = {
   coreFiles: [],       // Files in packages/core/
   projectFiles: [],    // Files in apps/dev root-first source directories
   pluginFiles: [],     // Files in apps/dev/plugins/{plugin}/
-  generatedFiles: []  // Files in apps/dev/src/app/ or .nextspark/registries/
+  generatedFiles: []  // Files in the generated (git-ignored) src/app/ or .nextspark/registries/
 }
 
 // Step 3.2: Determine documentation tiers

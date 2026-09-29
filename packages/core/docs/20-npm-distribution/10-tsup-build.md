@@ -180,7 +180,7 @@ See [11-alias-system.md](./11-alias-system.md) for complete alias resolution det
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "postinstall": "node scripts/setup/npm-postinstall.mjs"
+    "postinstall": "node scripts/postinstall.mjs || true"
   }
 }
 ```

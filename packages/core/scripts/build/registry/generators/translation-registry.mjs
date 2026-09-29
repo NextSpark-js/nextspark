@@ -450,9 +450,8 @@ ${(() => {
 
   if (!pprEnabled) {
     return `// PPR static exports disabled — cacheComponents: true not found in next.config.
-// To enable PPR, add cacheComponents: true to your next.config and copy
-// layout.ppr.tsx from @nextsparkjs/core/templates/app/ to your src/app/ directory.
-// See docs/migration-ppr.md for the full migration guide.`
+// To enable PPR, add cacheComponents: true to your next.config: the generated host
+// then uses core's layout.ppr. See docs/migration-ppr.md for the full migration guide.`
   }
 
   const defaultThemeTranslation = themeTranslations.find(

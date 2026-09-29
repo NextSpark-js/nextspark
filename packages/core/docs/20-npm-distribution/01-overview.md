@@ -105,13 +105,14 @@ import { ENTITY_REGISTRY } from '@nextspark/registries/entity-registry'
 
 See [11-alias-system.md](./11-alias-system.md) for complete alias documentation.
 
-### 4. Postinstall Hook
+### 4. Postinstall Hook (notice only)
 
-When installed, the package runs:
+The package's postinstall writes nothing. It prints a notice when the project still carries a committed `src/app` (run `nextspark migrate`). Generation happens in `nextspark dev`, `build` and `prepare`:
 
-1. **Registry Generation** - Creates `.nextspark/registries/`
-2. **Theme Build** - Compiles theme CSS
-3. **TSConfig Generation** - Adds @nextspark/* paths
+1. **Host Generation** - Writes `src/app` (git-ignored)
+2. **Registry Generation** - Creates `.nextspark/registries/`
+
+The wizard writes `tsconfig.json` once; installs never touch it.
 
 ## Architecture Diagram
 
@@ -150,10 +151,10 @@ When installed, the package runs:
    ├── Resolves relative imports
    └── Marks @nextspark/registries/* as external
 
-2. postinstall runs in consumer project
-   ├── Generates .nextspark/registries/
-   ├── Builds theme CSS
-   └── Updates tsconfig.json
+2. install in the consumer project (postinstall only prints a notice);
+   nextspark dev / build / prepare then generate
+   ├── src/app (the generated host)
+   └── .nextspark/registries/
 
 3. Consumer's bundler (Turbopack/webpack)
    ├── Resolves @nextspark/registries/* → .nextspark/registries/

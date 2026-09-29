@@ -167,7 +167,7 @@ Compiled Package Code
 ### Registry Generation
 
 ```
-postinstall hook
+postinstall hook (historical run: it no longer writes; generation is nextspark prepare)
     │
     ├── Detects NPM mode (node_modules/@nextspark/core exists)
     │

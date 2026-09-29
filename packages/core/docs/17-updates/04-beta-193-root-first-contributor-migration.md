@@ -4,8 +4,12 @@ The repository development project no longer selects `themes/default` through
 `apps/dev/contents`. Its project-owned source now lives directly under
 `apps/dev/` (`api`, `blocks`, `components`, `config`, `entities`, `lib`,
 `messages`, `migrations`, `plugins`, `public`, `styles`, `templates`, and
-`tests`). The generated Next.js host lives under `apps/dev/src/app`; do not edit
-that tree by hand.
+`tests`). The generated Next.js host lives under `apps/dev/src/app`: it is
+git-ignored, `pnpm dev` and `pnpm build` (through `nextspark dev` and
+`nextspark build`, which build the CLI first) generate it, and nothing edits it
+by hand. A branch that changed files there moves the change to core's route
+modules (`packages/core/src/routes/**`) or to `apps/dev/templates/` or
+`apps/dev/api/`.
 
 The former runnable `blog`, `crm`, and `productivity` themes are install-once
 catalog payloads under `packages/core/templates/projects/<name>/`. The starter

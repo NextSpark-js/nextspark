@@ -65,7 +65,7 @@ def build_allowed_paths(scope_config: Dict[str, Any]) -> List[str]:
     if scope.get("core", False):
         allowed_paths.extend([
             "packages/core/**/*",
-            "apps/dev/src/app/**/*",
+            "packages/core/src/routes/**/*",
             "scripts/**/*",
             "apps/dev/migrations/**/*"
         ])

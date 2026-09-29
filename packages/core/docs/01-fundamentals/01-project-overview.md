@@ -168,7 +168,7 @@ The theme system allows complete UI customization without modifying core code. T
 - Theme assets served from the app's `public/theme/` directory
 - Theme-specific entities
 - Theme-specific translations
-- CSS compilation by Next.js from the import in `apps/dev/src/app/globals.css`
+- CSS compilation by Next.js from the import in the generated `apps/dev/src/app/layout.tsx`
 
 **Theme Structure:**
 ```text
@@ -179,7 +179,7 @@ The theme system allows complete UI customization without modifying core code. T
 │   ├── dashboard.config.ts  # Dashboard configuration
 │   ├── permissions.config.ts # Permissions
 │   └── billing.config.ts    # Billing/plans
-├── styles/                  # Theme CSS imported by apps/dev/src/app/globals.css
+├── styles/                  # Theme CSS imported by the generated apps/dev/src/app/layout.tsx
 ├── public/                  # Source assets mirrored in apps/dev/public/theme/
 │   ├── brand/              # Logos, brand assets
 │   ├── images/             # Theme images

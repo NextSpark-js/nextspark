@@ -26,7 +26,6 @@ import { addThemeCommand } from './commands/add-theme.js';
 import { addMobileCommand } from './commands/add-mobile.js';
 import { doctorCommand } from './commands/doctor.js';
 import { dbMigrateCommand, dbSeedCommand } from './commands/db.js';
-import { syncAppCommand } from './commands/sync-app.js';
 import { setupAICommand } from './commands/setup-ai.js';
 import { syncAICommand } from './commands/sync-ai.js';
 import { skillsGetCommand, skillsListCommand } from './commands/skills.js';
@@ -183,10 +182,11 @@ program
 // 0.x to 1.0 root-first migration.
 program
   .command('migrate')
-  .description('Move a 0.x project to the root-first source layout')
+  .description('Move a 0.x project to the root-first source layout and the generated src/app')
   .option('--dry-run', 'Produce the read-only migration report')
   .option('--json', 'Output the report as JSON (requires --dry-run)')
   .option('-y, --yes', 'Perform the move after printing the report')
+  .option('--no-prepare', 'Convert the files but do not run nextspark prepare afterwards')
   .action(migrateCommand);
 
 // Database commands
@@ -214,17 +214,6 @@ program
   .command('db:seed')
   .description('Seed database with sample data (alias)')
   .action(dbSeedCommand);
-
-// Sync app command
-program
-  .command('sync:app')
-  .description('Sync /app folder with @nextsparkjs/core templates')
-  .option('--dry-run', 'Preview changes without applying')
-  .option('-f, --force', 'Skip confirmation prompt')
-  .option('--backup', 'Backup existing files before overwriting')
-  .option('--overwrite <paths...>', "Replace these customized files with core's version, backing each one up first")
-  .option('-v, --verbose', 'Show detailed file operations')
-  .action(syncAppCommand);
 
 // Setup AI workflow
 program

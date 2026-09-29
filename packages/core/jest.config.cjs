@@ -39,8 +39,8 @@ module.exports = {
     '^@/core/lib/registries/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/$1',
     '^@/core/(.*)$': '<rootDir>/src/$1',
     '^@/core$': '<rootDir>/src',
-    // apps/dev routes and pages (the source of a generated project's app/)
-    '^@/app/(.*)$': '<rootDir>/../../apps/dev/src/app/$1',
+    // core's route modules: what the generated src/app of a project re-exports
+    '^@/app/(.*)$': '<rootDir>/src/routes/$1',
     '^@nextsparkjs/registries/template-scopes/client/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/template-scopes/client.ts',
     '^@nextsparkjs/registries/template-scopes/server/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/template-scopes/server.ts',
     '^@nextsparkjs/registries/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/$1',

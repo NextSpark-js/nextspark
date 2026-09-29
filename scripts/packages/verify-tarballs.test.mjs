@@ -213,6 +213,35 @@ test('a stray .env file fails but .env.example is allowed', () => {
   })
 })
 
+test('a core tarball that ships an app tree fails, and any other package with a templates/app is left alone', () => {
+  withFixtureDir((dir) => {
+    const core = { ...JSON.parse(VALID_PKG_JSON()), name: '@nextsparkjs/core' }
+    const files = {
+      'dist/index.js': 'export const x = 1;\n',
+      'dist/index.d.ts': 'export declare const x: number;\n',
+      'dist/lib/foo.js': 'export const foo = 1;\n',
+      'dist/lib/foo.d.ts': 'export declare const foo: number;\n',
+    }
+    buildFixtureTarball(dir, 'nextsparkjs-core-0.1.0-beta.192.tgz', {
+      ...files,
+      'package.json': JSON.stringify(core),
+      'templates/app/page.tsx': 'export default function Page() { return null }\n',
+      'dist/templates/app/page.tsx': 'export default function Page() { return null }\n',
+    })
+    buildFixtureTarball(dir, 'nextsparkjs-fixture-0.1.0-beta.192.tgz', {
+      ...files,
+      'package.json': VALID_PKG_JSON(),
+      'templates/app/page.tsx': 'export default function Page() { return null }\n',
+    })
+
+    const results = verifyDirectory(dir, join(dir, 'missing-allowlist.json'))
+    const coreFindings = results.find((r) => r.pkgName === '@nextsparkjs/core').findings.filter((f) => f.type === 'core-app-tree')
+    assert.equal(coreFindings.length, 1)
+    assert.match(coreFindings[0].message, /2 files/)
+    assert.equal(results.find((r) => r.pkgName === '@nextsparkjs/fixture').findings.filter((f) => f.type === 'core-app-tree').length, 0)
+  })
+})
+
 test('local build and test artifact directories fail', () => {
   withFixtureDir((dir) => {
     buildFixtureTarball(dir, 'nextsparkjs-fixture-0.1.0-beta.192.tgz', {

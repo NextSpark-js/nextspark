@@ -32,7 +32,7 @@ The root script delegates to `apps/dev` and starts one Next.js process. It reads
 
 **1. APP (`pnpm dev`)**
 - Starts Next.js with Turbopack.
-- Watches application code and the theme CSS imported by `apps/dev/src/app/globals.css`.
+- Watches application code and the theme CSS imported by the generated root layout (`apps/dev/src/app/layout.tsx`).
 - Uses `PORT` from `apps/dev/.env`.
 
 **2. REGISTRY (optional, separate terminal)**
@@ -75,7 +75,7 @@ pnpm dev
 
 ### Theme CSS
 
-`apps/dev/src/app/globals.css` imports the project stylesheet. Next.js watches that dependency directly:
+the generated root layout (`apps/dev/src/app/layout.tsx`, written by `nextspark prepare`) imports the project stylesheet. Next.js watches that dependency directly:
 ```text
 styles/
 ├── globals.css
@@ -195,7 +195,7 @@ pnpm dev
 ```bash
 # Stop server
 # Verify the stylesheet import, then restart
-grep -F 'styles/globals.css' apps/dev/src/app/globals.css
+grep -F 'styles/globals.css' apps/dev/src/app/layout.tsx
 pnpm dev
 ```
 
@@ -240,7 +240,7 @@ pnpm dev
 
 **To make changes:**
 - **Registries:** Edit root-first project source or `plugins/`, then rebuild registries.
-- **Theme CSS:** Edit in `styles/`; Next.js follows the import from `apps/dev/src/app/globals.css`.
+- **Theme CSS:** Edit in `styles/`; Next.js follows the import from the generated `apps/dev/src/app/layout.tsx`.
 - **Served assets:** Update the files under `apps/dev/public/theme/` used by the app.
 
 ---

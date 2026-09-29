@@ -89,7 +89,7 @@ modes of the underlying API:
 
 MCP is delivered the same way the generic entity REST routes are: a small route file your app
 owns, wiring the core engine to the generated registries. Add
-`app/api/mcp/route.ts` — see `apps/dev/src/app/api/mcp/route.ts` in this monorepo for the complete,
+`app/api/mcp/route.ts` — see `packages/core/src/routes/api/mcp/route.ts` in this monorepo (the generated `src/app/api/mcp/route.ts` re-exports it) for the complete,
 working reference implementation. The shape is:
 
 ```ts

@@ -346,11 +346,11 @@ Registry build completed in 5.2s
 The monorepo has no separate theme-build package script. Verify the project stylesheet and the app import before starting Next.js:
 ```bash
 test -f styles/globals.css
-grep -F 'styles/globals.css' apps/dev/src/app/globals.css
+grep -F 'styles/globals.css' apps/dev/src/app/layout.tsx
 ```
 
 **What happens:**
-- `apps/dev/src/app/globals.css` imports the project stylesheet.
+- the generated root layout (`apps/dev/src/app/layout.tsx`, written by `nextspark prepare`) imports the project stylesheet.
 - Next.js compiles that CSS during `pnpm dev` and `pnpm build`.
 - Theme assets used by the monorepo are present under `apps/dev/public/theme/`.
 
@@ -458,7 +458,7 @@ test -f .nextspark/registries/entity-registry.ts && echo "✅ Entity registry ex
 test -f .nextspark/registries/docs-registry.ts && echo "✅ Docs registry exists" || echo "❌ Docs registry missing"
 
 # Check the app imports the project CSS
-grep -F 'styles/globals.css' apps/dev/src/app/globals.css
+grep -F 'styles/globals.css' apps/dev/src/app/layout.tsx
 
 # Check app-served theme assets
 test -d apps/dev/public/theme && echo "✅ Theme assets exist" || echo "❌ Theme assets missing"

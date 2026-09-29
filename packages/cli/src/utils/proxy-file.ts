@@ -46,7 +46,8 @@ const PUBLISHED_TAG_HEADER = /^\/\*\*\r?\n \* @nextspark-generated\r?\n/;
  *
  * `middleware.ts` is the conventional Next file name, so a project may well
  * have its own there. Overwriting or deleting it is silent code loss, and this
- * runs unattended: core's postinstall calls `sync:app --force`.
+ * ran unattended (core's postinstall called `sync:app --force`, removed in beta.192);
+ * the wizard and `migrate` still replace only what they can prove is theirs.
  */
 export function isGeneratedProxySource(existing: string, source: string): boolean {
   if (PUBLISHED_TAG_HEADER.test(existing)) return true;

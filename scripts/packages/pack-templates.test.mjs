@@ -6,55 +6,42 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { withTemplateAppTestLock } from './template-app-test-lock.mjs'
-
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..')
 const CORE_TEMPLATE_APP = join(REPO_ROOT, 'packages/core/templates/app')
 const PACK_SCRIPT = join(REPO_ROOT, 'scripts/packages/pack.sh')
 
-function countFiles(dir) {
-  if (!existsSync(dir)) return 0
-  let count = 0
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    count += entry.isDirectory() ? countFiles(join(dir, entry.name)) : 1
-  }
-  return count
+function packCore(outputDir) {
+  return spawnSync('bash', [PACK_SCRIPT, '--package', 'core', '--skip-build', '--output', outputDir], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  })
 }
 
-function syncCoreTemplates() {
-  return spawnSync('pnpm', ['sync:templates', '--sync'], { cwd: REPO_ROOT, encoding: 'utf8' })
-}
-
-test('pack.sh restores an empty core templates/app before it creates the tarball', async () => withTemplateAppTestLock(REPO_ROOT, () => {
+/**
+ * Core ships no app tree (#203): src/app is generated in each project by `nextspark prepare`, so
+ * the tarball carries the route modules the generated facades import, and pack.sh refuses to pack
+ * when a templates/app left by the removed sync:templates is lying around.
+ */
+test('the core tarball ships the route modules and no templates/app', () => {
+  assert.equal(existsSync(CORE_TEMPLATE_APP), false, 'packages/core/templates/app must not exist; delete the generated leftover')
   const outputDir = mkdtempSync(join(tmpdir(), 'pack-templates-test-'))
-
-  let originalError
   try {
-    rmSync(CORE_TEMPLATE_APP, { recursive: true, force: true })
-
-    const result = spawnSync('bash', [PACK_SCRIPT, '--package', 'core', '--skip-build', '--output', outputDir], {
-      cwd: REPO_ROOT,
-      encoding: 'utf8',
-    })
+    const result = packCore(outputDir)
     assert.equal(result.status, 0, result.stderr || result.stdout)
-    assert.ok(countFiles(CORE_TEMPLATE_APP) > 0, 'pack.sh should restore core templates/app before packing')
 
     const archive = readdirSync(outputDir).find((file) => /^nextsparkjs-core-.*\.tgz$/.test(file))
     assert.ok(archive, `expected a core tarball in ${outputDir}`)
-    const listed = spawnSync('tar', ['tzf', join(outputDir, archive)], { encoding: 'utf8' })
+    const listed = spawnSync('tar', ['tzf', join(outputDir, archive)], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
     assert.equal(listed.status, 0, listed.stderr || listed.stdout)
-    assert.match(listed.stdout, /package\/templates\/app\//, 'the core tarball must include templates/app')
-
+    assert.doesNotMatch(listed.stdout, /package\/(dist\/)?templates\/app\//, 'the core tarball must not include templates/app')
 
     const unpacked = spawnSync('tar', ['xzf', join(outputDir, archive), '-C', outputDir], { encoding: 'utf8' })
     assert.equal(unpacked.status, 0, unpacked.stderr || unpacked.stdout)
 
-    // The app files are facades of core route modules (#203). With --skip-build there is no
-    // dist to ship, so the route logic is read from the module core builds it from.
+    // With --skip-build there may be no dist to ship, so the route logic is read from the module
+    // core builds it from.
     const builtRoutes = existsSync(join(REPO_ROOT, 'packages/core/dist/routes'))
     const shippedRoute = (route) => {
-      const template = readFileSync(join(outputDir, `package/templates/app/${route}.ts`), 'utf8')
-      assert.match(template, new RegExp(`from "@nextsparkjs/core/routes/${route.replace(/[[\].]/g, '\\$&')}"`), `templates/app/${route}.ts imports its core module`)
       const shipped = join(outputDir, `package/dist/routes/${route}.js`)
       if (builtRoutes) {
         assert.ok(existsSync(shipped), `the core tarball must ship dist/routes/${route}.js`)
@@ -72,21 +59,13 @@ test('pack.sh restores an empty core templates/app before it creates the tarball
       /isPasswordLoginEnabled/,
       'the shipped invite signup route must enforce the password backend switch',
     )
-  } catch (error) {
-    originalError = error
-    throw error
-  } finally {
-    const restore = syncCoreTemplates()
-    rmSync(outputDir, { recursive: true, force: true })
-    const restorationFailure = restore.status !== 0
-      ? restore.stderr || restore.stdout || `sync:templates exited ${restore.status}`
-      : countFiles(CORE_TEMPLATE_APP) === 0
-        ? 'sync:templates completed but left core templates/app empty'
-        : null
-
-    if (restorationFailure) {
-      console.error(`Could not restore core template app: ${restorationFailure}`)
-      if (!originalError) assert.fail(restorationFailure)
+    assert.ok(existsSync(join(outputDir, 'package/dist/routes/manifest.json')) || !builtRoutes, 'the core tarball must ship the route manifest')
+    if (builtRoutes) {
+      // The registry build reads each core route's docs and presets next to its module
+      assert.ok(existsSync(join(outputDir, 'package/dist/routes/api/v1/teams/docs.md')), 'core route docs ship next to their route')
+      assert.ok(existsSync(join(outputDir, 'package/dist/routes/api/v1/teams/presets.ts')), 'core route presets ship as source')
     }
+  } finally {
+    rmSync(outputDir, { recursive: true, force: true })
   }
-}))
+})

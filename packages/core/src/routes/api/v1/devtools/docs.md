@@ -27,12 +27,12 @@ Serves markdown documentation files for API endpoints. Used by the API Explorer 
 **Valid Path Patterns:**
 - `entities/{entity}/api/docs.md`
 - `api/.../docs.md`
-- `packages/core/templates/app/api/.../docs.md`
-- `node_modules/@nextsparkjs/core/templates/app/api/.../docs.md`
+- `packages/core/src/routes/api/.../docs.md`
+- `node_modules/@nextsparkjs/core/dist/routes/api/.../docs.md`
 
 **Example Request:**
 ```
-GET /api/v1/devtools/docs?path=packages/core/templates/app/api/v1/teams/docs.md
+GET /api/v1/devtools/docs?path=packages/core/src/routes/api/v1/teams/docs.md
 ```
 
 **Response:**

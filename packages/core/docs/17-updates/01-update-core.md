@@ -4,7 +4,7 @@
 
 `update-core` moves a NextSpark project to another release of the `@nextsparkjs` packages.
 
-A project takes NextSpark from npm: `package.json` pins `@nextsparkjs/core`, `@nextsparkjs/cli` and the other `@nextsparkjs` packages to one version, `src/app/` is kept in step with core's templates by `nextspark sync:app`. Project-owned source stays in the root-first directories such as `entities/`, `plugins/`, and `templates/`. An update sets those pins to the new version, installs it, and syncs `src/app/`; it does not replace project-owned source.
+A project takes NextSpark from npm: `package.json` pins `@nextsparkjs/core`, `@nextsparkjs/cli` and the other `@nextsparkjs` packages to one version, `src/app/` is generated from the installed core by `nextspark prepare` (`dev` and `build` run it too) and is git-ignored. Project-owned source stays in the root-first directories such as `entities/`, `plugins/`, `api/`, and `templates/`. An update sets those pins to the new version, installs it, and regenerates `src/app/`; it does not replace project-owned source.
 
 ---
 
@@ -42,8 +42,7 @@ pnpm install
 |------|-----|
 | `package.json` | Only the versions of the `@nextsparkjs` packages, all set to exactly the target. A `^` or `~` range is replaced by the exact version: with a range, `pnpm install` takes the newest published version the range allows, which can be newer than the target. |
 | `pnpm-lock.yaml`, `node_modules/` | `pnpm install`, run where `pnpm-lock.yaml` is |
-| `src/app/` | `nextspark sync:app --force`, which updates the files core generates, keeps the ones you customized, and rebuilds the registries |
-| `next.config.mjs`, `tsconfig.json`, `i18n.ts`, `proxy.ts` or `middleware.ts` | Also `sync:app`, with the same rule: a file you customized is kept |
+| `src/app/`, `.nextspark/` | `nextspark prepare`, which regenerates the host and the registries from the new core (both are git-ignored) |
 | `.next/` | Removed, so the next build starts clean |
 | `core.version.json` | Written last, only when everything above succeeded |
 
@@ -51,6 +50,7 @@ pnpm install
 
 - The rest of `package.json`: name, scripts, other dependencies
 - `api/`, `blocks/`, `components/`, `config/`, `entities/`, `lib/`, `messages/`, `migrations/`, `plugins/`, `public/`, `styles/`, `templates/`, and `tests/`: project-owned root-first source
+- `next.config.mjs`, `tsconfig.json`, `i18n.ts`, `instrumentation.ts`, `proxy.ts` or `middleware.ts`: project files. `nextspark sync:app`, which used to update them, was [removed in 0.1.0-beta.192](./05-sync-app-removal); a change a new release needs in one of them is in its release notes
 - `.env*`: environment files
 
 The lifecycle scripts `pnpm install` runs are not bound by this list: they can write anywhere in the project. That is why a run that stops partway is rolled back through git, as a whole (see [When a Run Stops Partway](#when-a-run-stops-partway)).
@@ -104,7 +104,7 @@ From there on, if a step fails, anything else goes wrong (for example, creating 
     - package.json: @nextsparkjs/core 0.1.0-beta.188 -> 0.1.0-beta.189, ...
 
   Not reached:
-    - nextspark sync:app --force
+    - nextspark prepare
     - write core.version.json
 
   Nothing was undone. A step that stopped may have written part of its work, and the
@@ -119,7 +119,7 @@ From there on, if a step fails, anything else goes wrong (for example, creating 
 
 If the step's processes were still running 5 seconds after the signal, the second line reads `Processes in the process group of pnpm install were still running 5 s after the signal, and were killed with SIGKILL.`, followed by a warning if any of them was still running after that. The first line says `before` instead of `during`, as in `Failed before: pnpm install (its guard process exited (SIGKILL))`, when `update-core` never let the step's command start: the signal came, or the step's guard process died, before `update-core` had the step's process group (see [When the Run Is Killed](#when-the-run-is-killed)). `during` means the command may have started, not that it did: `update-core` knows it let the command start, not whether the guard had acted on that yet.
 
-The rollback is always the whole thing, never a list of files to put back: `pnpm install` runs lifecycle scripts (core's own `postinstall` runs `sync:app`), and those can have written anywhere before the step stopped. Since the update only starts from a clean tree, `git reset --hard` to that commit and `git clean -fd` undo every change to tracked files and remove the untracked files and directories the run created (not a nested git repository, which `git clean` leaves unless given `-f` twice). The rest of the command depends on the project:
+The rollback is always the whole thing, never a list of files to put back: `pnpm install` runs lifecycle scripts (core's own `postinstall` only prints a notice, but a dependency's can run anything), and those can have written anywhere before the step stopped. Since the update only starts from a clean tree, `git reset --hard` to that commit and `git clean -fd` undo every change to tracked files and remove the untracked files and directories the run created (not a nested git repository, which `git clean` leaves unless given `-f` twice). The rest of the command depends on the project:
 
 - **Web-mobile, run from `web/`:** it reads `git clean -fd :/`, so it cleans the whole repository and not just `web/`, removes the workspace root's `node_modules` too and installs from there: `rm -rf ../node_modules node_modules && pnpm --dir .. install --frozen-lockfile`.
 - **Submodules:** when the commit has a `.gitmodules`, `git reset --hard` and `git clean` don't reach inside submodules, so the command adds `git submodule foreach --recursive git reset --hard && git submodule update --checkout --recursive` after the reset and `git submodule foreach --recursive git clean -fd` after the clean. `git submodule update --checkout` checks a submodule out again, detached, at the commit your project records for it when a script moved it to another commit or deleted its worktree; `--checkout` makes it do that also for a submodule whose `update` setting is `merge`, `rebase` or `none`. So for each checked-out submodule (nested ones included) that was on a branch when the update started, the command also has a step like `sh -c 'if test -e vendor/sub/.git && test "$(git -C vendor/sub rev-parse --quiet --verify refs/heads/main)" = <commit>; then git -C vendor/sub symbolic-ref HEAD refs/heads/main; fi'`: it puts the submodule back on that branch if the branch still points at the recorded commit, as after a script deleted the worktree. It does nothing where the submodule has no `.git`, as after a script deinitialized it, since `git -C` would then act on your project's repository. If the branch moved, say because a script committed inside the submodule, the submodule stays detached at the recorded commit and the branch is left where the script put it.
@@ -133,7 +133,7 @@ The rollback is a POSIX shell command: run it in a shell like the ones on macOS 
 
 A run killed with `SIGKILL`, or whose machine goes down, can't print the report: use the rollback it printed before its first change.
 
-`pnpm install` and `sync:app` run under a small guard process of their own, outside the terminal's process group, which kills the step's process group as soon as `update-core` exits before it is done with the step, however `update-core` ended: killed alone with `SIGKILL`, or together with the rest of the terminal's process group. It can't reach a process a lifecycle script moved out of that process group (with `setsid`, or by starting a daemon), and if the guard is killed too, nothing kills the step; the note printed before the first change says both.
+`pnpm install` and `nextspark prepare` run under a small guard process of their own, outside the terminal's process group, which kills the step's process group as soon as `update-core` exits before it is done with the step, however `update-core` ended: killed alone with `SIGKILL`, or together with the rest of the terminal's process group. It can't reach a process a lifecycle script moved out of that process group (with `setsid`, or by starting a daemon), and if the guard is killed too, nothing kills the step; the note printed before the first change says both.
 
 The guard starts the step's process group with a shell that waits for the guard to let it go, and tells `update-core` that group's id; `update-core` lets the command start only once it has the id and no signal has come, and the shell then runs the command in its own place. So a guard that dies before `update-core` has the group's id leaves no command running: the shell exits without running it, and the report says `Failed before: pnpm install (its guard process exited (…))`. A signal that comes before the id is passed on to the waiting shell, and the command never starts.
 
@@ -238,7 +238,7 @@ If `pnpm update-core` answers `Command "update-core" not found`, the installed c
 
 1. Set every `@nextsparkjs/*` package in `package.json` to the new version.
 2. Run `pnpm install`.
-3. Run `pnpm exec nextspark sync:app --force`.
+3. Run `pnpm exec nextspark prepare`. A project that still has a committed `src/app` (or `app/`) runs `pnpm exec nextspark migrate` first: see [Upgrading a 0.x project](./06-upgrade-0x-projects).
 
 ---
 

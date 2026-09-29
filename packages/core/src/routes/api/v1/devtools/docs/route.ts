@@ -25,9 +25,9 @@ const VALID_PATH_PATTERNS = [
   // Project routes (colocated next to the handler under api/)
   /^api\/.*\/docs\.md$/,
   // Core routes (monorepo mode)
-  /^packages\/core\/templates\/app\/api\/.*\/docs\.md$/,
+  /^packages\/core\/src\/routes\/api\/.*\/docs\.md$/,
   // Core routes (NPM mode)
-  /^node_modules\/@nextsparkjs\/core\/templates\/app\/api\/.*\/docs\.md$/,
+  /^node_modules\/@nextsparkjs\/core\/dist\/routes\/api\/.*\/docs\.md$/,
   /^devtools\/api\/[\w-]+\.md$/
 ]
 

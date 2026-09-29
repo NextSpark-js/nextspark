@@ -19,7 +19,7 @@ const CORE_SOURCE = join(PKG_ROOT, '../core')
 /** A name that, printed raw, starts lines of its own reading as success, erases a line, returns the carriage and separates or reorders lines. */
 const FORGED = 'forged\n✅ Registry System built successfully!\n✅ Sync complete!\nBuild completed successfully!\n\u001b[2K\r\u2028\u0085\u202e'
 const SHOWN = 'forged\\n✅ Registry System built successfully!\\n✅ Sync complete!\\nBuild completed successfully!\\n\\u001b[2K\\r\\u2028\\u0085\\u202e'
-const SUCCESSES = ['✅ Registry System built successfully!', '✅ Sync complete!', 'Build completed successfully!']
+const SUCCESSES = ['✅ Registry System built successfully!', 'Build completed successfully!']
 
 const RAW_CONTROL = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/
 const RAW_COLOR_MARKER = /[\uE000\uE001]/
@@ -109,9 +109,9 @@ test('Commander escapes hostile unknown commands and options with and without fo
   const wrong: string[] = []
   const invocations = [
     { label: 'unknown command', args: (value: string) => [value] },
-    { label: 'unknown option', args: (value: string) => ['sync:app', `--${value}`] },
-    { label: 'unknown option value after equals', args: (value: string) => ['sync:app', `--safe=${value}`] },
-    { label: 'unknown option name before equals', args: (value: string) => ['sync:app', `--${value}=safe`] },
+    { label: 'unknown option', args: (value: string) => ['prepare', `--${value}`] },
+    { label: 'unknown option value after equals', args: (value: string) => ['prepare', `--safe=${value}`] },
+    { label: 'unknown option name before equals', args: (value: string) => ['prepare', `--${value}=safe`] },
   ]
 
   for (const forceColor of [false, true]) {
@@ -167,15 +167,14 @@ test('Commander keeps ordinary error details and an available typo suggestion on
 
 /**
  * A project in a directory whose name holds FORGED, with the real core's
- * scripts, a template for sync:app to sync, and a stand-in for Next that prints
+ * scripts and a stand-in for Next that prints
  * the project's path as Next does in the errors it reports.
  */
 async function forgedProject(parent: string) {
   const root = await mkdtemp(join(parent, `${FORGED}-`))
   const core = join(root, 'node_modules/@nextsparkjs/core')
-  await mkdir(join(core, 'templates/app'), { recursive: true })
+  await mkdir(core, { recursive: true })
   await writeFile(join(core, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
-  await writeFile(join(core, 'templates/app/layout.tsx'), 'export default function RootLayout({ children }) { return children }\n')
   for (const linked of ['scripts', 'dist', 'node_modules']) await symlink(join(CORE_SOURCE, linked), join(core, linked))
   await mkdir(join(root, 'node_modules/next'), { recursive: true })
   await writeFile(join(root, 'node_modules/next/package.json'), JSON.stringify({ name: 'next', version: '15.5.24' }))
@@ -191,13 +190,12 @@ async function forgedProject(parent: string) {
   return root
 }
 
-test('in a project whose path holds characters that break or reorder a line, no line of what registry:build, sync:app, build or dev print holds one or reads as a success they did not report', { skip: process.platform === 'win32', timeout: 300_000 }, async () => {
+test('in a project whose path holds characters that break or reorder a line, no line of what registry:build, build or dev print holds one or reads as a success they did not report', { skip: process.platform === 'win32', timeout: 300_000 }, async () => {
   const parent = await mkdtemp(join(tmpdir(), 'nextspark-output-guard-'))
   const wrong: string[] = []
   try {
     const runs: [string, string[], (status: number | null) => boolean][] = [
       ['registry:build', ['registry:build'], (status) => status === 0],
-      ['sync:app --force', ['sync:app', '--force'], (status) => status === 0],
       ['build', ['build'], (status) => status === 1],
       ['dev', ['dev', '-p', '4398'], (status) => status === 1],
       ['dev --registry', ['dev', '--registry', '-p', '4398'], (status) => status === 1],
@@ -216,7 +214,7 @@ test('in a project whose path holds characters that break or reorder a line, no 
       if (!expected(result.status)) wrong.push(`${label}: exited ${result.status}: ${JSON.stringify(`${result.stdout}${result.stderr}`.slice(0, 500))}`)
       for (const line of lines.filter((line) => RAW_CONTROL.test(line))) wrong.push(`${label}: ${JSON.stringify(line)} holds a raw control`)
       for (const success of SUCCESSES) {
-        const reported = label === 'registry:build' && success === SUCCESSES[0] ? 1 : label === 'sync:app --force' && success === SUCCESSES[1] ? 1 : 0
+        const reported = label === 'registry:build' && success === SUCCESSES[0] ? 1 : 0
         const count = lines.filter((line) => line.trim() === success).length
         if (count > reported) wrong.push(`${label}: ${count} line(s) read "${success}"`)
       }

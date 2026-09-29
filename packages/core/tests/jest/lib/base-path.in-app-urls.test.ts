@@ -100,7 +100,8 @@ const TREES = [
   'packages/ui/src',
   'themes',
   'plugins',
-  'apps/dev/src/app',
+  'apps/dev/templates',
+  'apps/dev/api',
   'apps/dev/lib',
   'apps/dev/src',
 ]
@@ -570,11 +571,7 @@ function offendersIn(file: string): string[] {
   const pathVariables = new Map<string, string>()
   const found: string[] = []
 
-  // packages/core/templates/app holds the copy sync writes from apps/dev/src/app, so an exception
-  // named on the file under apps/dev/src/app covers that copy as well.
-  const isAllowedFile = (allowedFile: string) =>
-    allowedFile === relativePath ||
-    allowedFile.replace(/^apps\/dev\/src\/app\//, 'packages/core/templates/app/') === relativePath
+  const isAllowedFile = (allowedFile: string) => allowedFile === relativePath
 
   const report = (node: ts.Node, kind: string, text: string) => {
     const shown = text.replace(/\s+/g, ' ').slice(0, 90)

@@ -6,6 +6,7 @@ import {
   isGeneratedProxySource,
   planProxyFile,
   proxyDirectoryFor,
+  type ProxyDirectory,
   type ProxyFileName,
 } from '../../utils/proxy-file.js';
 
@@ -34,14 +35,17 @@ export interface ProxyFileResult {
  */
 export async function writeProxyFile(
   templatesDir: string,
-  projectRoot: string
+  projectRoot: string,
+  // The generated src/app does not exist yet when the wizard runs, but it will: Next then loads the
+  // proxy from src/ only, so the wizard says where instead of asking whether src/app is there.
+  directory: ProxyDirectory = proxyDirectoryFor(projectRoot)
 ): Promise<ProxyFileResult | null> {
   const sourcePath = join(templatesDir, 'proxy.ts');
   if (!await fs.pathExists(sourcePath)) return null;
 
   const source = await fs.readFile(sourcePath, 'utf-8');
-  const directory = proxyDirectoryFor(projectRoot);
   const destinationDir = join(projectRoot, directory);
+  await fs.ensureDir(destinationDir);
 
   const existing: Partial<Record<ProxyFileName, string>> = {};
   for (const name of ['proxy.ts', 'middleware.ts'] as const) {

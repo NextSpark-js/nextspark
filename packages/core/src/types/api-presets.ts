@@ -7,7 +7,7 @@
  * Sources (by priority):
  * 1. Theme custom routes: {theme}/app/api/**\/presets.ts and docs.md
  * 2. Entity folders: {theme}/entities/*\/api/presets.ts and docs.md
- * 3. Core routes: packages/core/templates/app/api/**\/presets.ts and docs.md
+ * 3. Core routes: packages/core/src/routes/api/**\/presets.ts and docs.md
  *
  * Registry generates:
  * - api-presets-registry.ts - Presets organized by endpoint

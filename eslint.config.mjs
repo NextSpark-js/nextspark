@@ -9,7 +9,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 // The parser and plugins resolve from the root because pnpm hoists `*eslint*` packages there.
 export default [
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/coverage/**', 'packages/core/templates/app/**'],
+    ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/coverage/**'],
   },
   {
     files: ['**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'],

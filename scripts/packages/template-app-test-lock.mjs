@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-// The two package tests below deliberately empty generated templates in the
+// The mobile template test below deliberately empties a generated template in the
 // real checkout. node --test gives files separate processes, so serialize that
 // destructive setup and its restoration with a lock outside the checkout.
 const lockPath = (repoRoot) => join(

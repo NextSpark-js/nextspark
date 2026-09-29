@@ -48,7 +48,7 @@ Core Layer (packages/core/):
 ├── migrations/
 │   └── 021_media.sql             # Media + media_tags + media_tag_relations
 
-API Layer (apps/dev/src/app/api/v1/):
+API Layer (packages/core/src/routes/api/v1/):
 ├── media/
 │   ├── route.ts                  # GET (list), POST (create)
 │   ├── upload/route.ts           # POST (file upload)
@@ -59,7 +59,7 @@ API Layer (apps/dev/src/app/api/v1/):
 └── media-tags/
     └── route.ts                  # GET all tags
 
-Dashboard (apps/dev/src/app/dashboard/(main)/media/):
+Dashboard (packages/core/src/routes/dashboard/(main)/media/):
 └── page.tsx                      # Dashboard media page
 
 Flow:
@@ -625,12 +625,12 @@ export const BLOCK_EDITOR_SELECTORS = {
 | `core/src/lib/services/media.service.ts` | MediaService (CRUD, tags, duplicates) |
 | `core/src/types/blocks.ts` | FieldType with `'media-library'` |
 | `core/migrations/021_media.sql` | Database migration |
-| `apps/dev/src/app/api/v1/media/route.ts` | List + create endpoints |
-| `apps/dev/src/app/api/v1/media/upload/route.ts` | File upload endpoint |
-| `apps/dev/src/app/api/v1/media/[id]/route.ts` | Single item CRUD |
-| `apps/dev/src/app/api/v1/media/[id]/tags/route.ts` | Media tag management |
-| `apps/dev/src/app/api/v1/media-tags/route.ts` | All tags endpoint |
-| `apps/dev/src/app/dashboard/(main)/media/page.tsx` | Dashboard page |
+| `packages/core/src/routes/api/v1/media/route.ts` | List + create endpoints |
+| `packages/core/src/routes/api/v1/media/upload/route.ts` | File upload endpoint |
+| `packages/core/src/routes/api/v1/media/[id]/route.ts` | Single item CRUD |
+| `packages/core/src/routes/api/v1/media/[id]/tags/route.ts` | Media tag management |
+| `packages/core/src/routes/api/v1/media-tags/route.ts` | All tags endpoint |
+| `packages/core/src/routes/dashboard/(main)/media/page.tsx` | Dashboard page |
 
 ## Anti-Patterns
 
