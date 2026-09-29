@@ -49,11 +49,18 @@ test('pack.sh restores an empty core templates/app before it creates the tarball
     const unpacked = spawnSync('tar', ['xzf', join(outputDir, archive), '-C', outputDir], { encoding: 'utf8' })
     assert.equal(unpacked.status, 0, unpacked.stderr || unpacked.stdout)
 
-    // The app files are facades of core route modules (#203); the tarball ships both.
+    // The app files are facades of core route modules (#203). With --skip-build there is no
+    // dist to ship, so the route logic is read from the module core builds it from.
+    const builtRoutes = existsSync(join(REPO_ROOT, 'packages/core/dist/routes'))
     const shippedRoute = (route) => {
       const template = readFileSync(join(outputDir, `package/templates/app/${route}.ts`), 'utf8')
       assert.match(template, new RegExp(`from "@nextsparkjs/core/routes/${route.replace(/[[\].]/g, '\\$&')}"`), `templates/app/${route}.ts imports its core module`)
-      return readFileSync(join(outputDir, `package/dist/routes/${route}.js`), 'utf8')
+      const shipped = join(outputDir, `package/dist/routes/${route}.js`)
+      if (builtRoutes) {
+        assert.ok(existsSync(shipped), `the core tarball must ship dist/routes/${route}.js`)
+        return readFileSync(shipped, 'utf8')
+      }
+      return readFileSync(join(REPO_ROOT, `packages/core/src/routes/${route}.ts`), 'utf8')
     }
     assert.match(
       shippedRoute('api/auth/[...all]/route'),
