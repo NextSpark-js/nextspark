@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    ".nextspark/registries/**/*.ts",
+    "../source/**/*.ts",
+    "../source/**/*.tsx",
+    "../fake-core/**/*.tsx",
+    ".next-turbopack-isr/types/**/*.ts",
+    ".next-turbopack-isr/dev/types/**/*.ts"
+  ]
+}

@@ -1,0 +1,10 @@
+/* Global stylesheet of the fake core shell: gives every route a CSS file to compare by content. */
+[data-probe='core-shell'] nav {
+  display: flex;
+  gap: 0.75rem;
+  color: #1f4e79;
+}
+
+[data-probe='core-shell'] main {
+  padding: 1rem;
+}

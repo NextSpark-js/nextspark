@@ -1,0 +1,366 @@
+{
+  "$comment": "Route file kinds x exports x emitted facade form, for the generated host (#203). Source of truth for host/facade-emitter.mjs; README.md renders it. Verified against the installed Next.js source listed in verifiedAgainst and by the probe builds recorded in README.md. Re-verify and bump `next` when upgrading Next.js: host/__tests__/facade-emitter.test.mjs fails when the installed version differs.",
+  "next": "16.3.5",
+  "supportedNext": "~16.3.5 (same major.minor, stable patch >= the verified baseline in \"next\"; enforced by isSupportedNextVersion)",
+  "verifiedAgainst": [
+    "next/dist/build/segment-config/app/app-segment-config.js (AppSegmentConfigSchemaKeys, parseAppSegmentConfig)",
+    "next/dist/build/analysis/get-page-static-info.js (checkExports, getAppPageStaticInfo)",
+    "next/dist/build/analysis/extract-const-value.js (extractExportedConstValue)",
+    "next/dist/build/segment-config/app/app-segments.js (collectAppPageSegments, collectAppRouteSegments)",
+    "next/dist/server/web/http.js (HTTP_METHODS)",
+    "next/dist/server/route-modules/app-route/module.js (default export / no method diagnostics)",
+    "next/dist/build/webpack/loaders/next-metadata-route-loader.js (createReExportsCode, generateSitemaps, generateImageMetadata)",
+    "next/dist/build/webpack/loaders/next-metadata-image-loader.js (size, alt, contentType, generateImageMetadata)",
+    "next/dist/server/lib/router-utils/typegen.js (AppPageConfig, LayoutConfig, RouteHandlerConfig)",
+    "next/dist/docs/01-app/03-api-reference/03-file-conventions (error.md, not-found.md, route-segment-config/*)",
+    "next/dist/lib/metadata/is-metadata-route.js (one-digit variants \\\\d? for icon, apple-icon, opengraph-image, twitter-image)"
+  ],
+  "segmentConfig": {
+    "keys": [
+      "revalidate",
+      "dynamicParams",
+      "dynamic",
+      "fetchCache",
+      "instant",
+      "prefetch",
+      "unstable_dynamicStaleTime",
+      "preferredRegion",
+      "runtime",
+      "maxDuration"
+    ],
+    "legacyKeys": [
+      "config"
+    ],
+    "invalidWithCacheComponents": [
+      "dynamic",
+      "dynamicParams",
+      "fetchCache",
+      "revalidate",
+      "runtime"
+    ],
+    "requireCacheComponents": [
+      "instant",
+      "prefetch"
+    ]
+  },
+  "forms": {
+    "default": "export { default } from '<source>'",
+    "reexport": "export { <name> } from '<source>' under the same name (never export *, which Next does not see). Exception for generateStaticParams, generateSitemaps and generateImageMetadata when the source exports them under an alias: Next reads these statically through specifier.orig, so the facade keeps the source local name with an import/export pair, import { <name> as <local> } from '<source>' + export { <local> as <name> }, and is read exactly like the source",
+    "literal": "export const <name> = <literal copied from the source> (Next reads segment config only as a literal export const in the route file itself)"
+  },
+  "kinds": {
+    "page": {
+      "file": "page",
+      "numberedVariants": false,
+      "serverOnly": false,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default",
+        "generateMetadata": "reexport",
+        "metadata": "reexport",
+        "generateViewport": "reexport",
+        "viewport": "reexport",
+        "generateStaticParams": "reexport",
+        "revalidate": "literal",
+        "dynamicParams": "literal",
+        "dynamic": "literal",
+        "fetchCache": "literal",
+        "instant": "literal",
+        "prefetch": "literal",
+        "unstable_dynamicStaleTime": "literal",
+        "preferredRegion": "literal",
+        "runtime": "literal",
+        "maxDuration": "literal",
+        "config": "literal"
+      }
+    },
+    "layout": {
+      "file": "layout",
+      "numberedVariants": false,
+      "serverOnly": false,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default",
+        "generateMetadata": "reexport",
+        "metadata": "reexport",
+        "generateViewport": "reexport",
+        "viewport": "reexport",
+        "generateStaticParams": "reexport",
+        "revalidate": "literal",
+        "dynamicParams": "literal",
+        "dynamic": "literal",
+        "fetchCache": "literal",
+        "instant": "literal",
+        "prefetch": "literal",
+        "preferredRegion": "literal",
+        "runtime": "literal",
+        "maxDuration": "literal"
+      }
+    },
+    "template": {
+      "file": "template",
+      "numberedVariants": false,
+      "serverOnly": false,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default"
+      }
+    },
+    "loading": {
+      "file": "loading",
+      "numberedVariants": false,
+      "serverOnly": false,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default"
+      }
+    },
+    "error": {
+      "file": "error",
+      "numberedVariants": false,
+      "serverOnly": false,
+      "facadeDirective": "use client",
+      "sourceMustBeClient": true,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default"
+      }
+    },
+    "global-error": {
+      "file": "global-error",
+      "numberedVariants": false,
+      "serverOnly": false,
+      "facadeDirective": "use client",
+      "sourceMustBeClient": true,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default"
+      }
+    },
+    "not-found": {
+      "file": "not-found",
+      "numberedVariants": false,
+      "serverOnly": false,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default"
+      }
+    },
+    "global-not-found": {
+      "file": "global-not-found",
+      "numberedVariants": false,
+      "serverOnly": false,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default",
+        "metadata": "reexport",
+        "generateMetadata": "reexport"
+      }
+    },
+    "forbidden": {
+      "file": "forbidden",
+      "numberedVariants": false,
+      "serverOnly": false,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default"
+      }
+    },
+    "unauthorized": {
+      "file": "unauthorized",
+      "numberedVariants": false,
+      "serverOnly": false,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default"
+      }
+    },
+    "default": {
+      "file": "default",
+      "numberedVariants": false,
+      "serverOnly": false,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default"
+      }
+    },
+    "route": {
+      "file": "route",
+      "numberedVariants": false,
+      "serverOnly": true,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": false,
+      "exports": {
+        "GET": "reexport",
+        "HEAD": "reexport",
+        "OPTIONS": "reexport",
+        "POST": "reexport",
+        "PUT": "reexport",
+        "DELETE": "reexport",
+        "PATCH": "reexport",
+        "generateStaticParams": "reexport",
+        "revalidate": "literal",
+        "dynamicParams": "literal",
+        "dynamic": "literal",
+        "fetchCache": "literal",
+        "preferredRegion": "literal",
+        "runtime": "literal",
+        "maxDuration": "literal",
+        "config": "literal"
+      }
+    },
+    "sitemap": {
+      "file": "sitemap",
+      "numberedVariants": false,
+      "serverOnly": true,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default",
+        "generateSitemaps": "reexport",
+        "revalidate": "literal",
+        "dynamic": "literal",
+        "fetchCache": "literal",
+        "preferredRegion": "literal",
+        "runtime": "literal",
+        "maxDuration": "literal"
+      }
+    },
+    "robots": {
+      "file": "robots",
+      "numberedVariants": false,
+      "serverOnly": true,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default",
+        "revalidate": "literal",
+        "dynamic": "literal",
+        "fetchCache": "literal",
+        "preferredRegion": "literal",
+        "runtime": "literal",
+        "maxDuration": "literal"
+      }
+    },
+    "manifest": {
+      "file": "manifest",
+      "numberedVariants": false,
+      "serverOnly": true,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default",
+        "revalidate": "literal",
+        "dynamic": "literal",
+        "fetchCache": "literal",
+        "preferredRegion": "literal",
+        "runtime": "literal",
+        "maxDuration": "literal"
+      }
+    },
+    "icon": {
+      "file": "icon",
+      "numberedVariants": true,
+      "serverOnly": true,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default",
+        "generateImageMetadata": "reexport",
+        "size": "reexport",
+        "contentType": "reexport",
+        "revalidate": "literal",
+        "dynamic": "literal",
+        "fetchCache": "literal",
+        "preferredRegion": "literal",
+        "runtime": "literal",
+        "maxDuration": "literal"
+      }
+    },
+    "apple-icon": {
+      "file": "apple-icon",
+      "numberedVariants": true,
+      "serverOnly": true,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default",
+        "generateImageMetadata": "reexport",
+        "size": "reexport",
+        "contentType": "reexport",
+        "revalidate": "literal",
+        "dynamic": "literal",
+        "fetchCache": "literal",
+        "preferredRegion": "literal",
+        "runtime": "literal",
+        "maxDuration": "literal"
+      }
+    },
+    "opengraph-image": {
+      "file": "opengraph-image",
+      "numberedVariants": true,
+      "serverOnly": true,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default",
+        "generateImageMetadata": "reexport",
+        "size": "reexport",
+        "contentType": "reexport",
+        "alt": "reexport",
+        "revalidate": "literal",
+        "dynamic": "literal",
+        "fetchCache": "literal",
+        "preferredRegion": "literal",
+        "runtime": "literal",
+        "maxDuration": "literal"
+      }
+    },
+    "twitter-image": {
+      "file": "twitter-image",
+      "numberedVariants": true,
+      "serverOnly": true,
+      "facadeDirective": null,
+      "sourceMustBeClient": false,
+      "requiresDefault": true,
+      "exports": {
+        "default": "default",
+        "generateImageMetadata": "reexport",
+        "size": "reexport",
+        "contentType": "reexport",
+        "alt": "reexport",
+        "revalidate": "literal",
+        "dynamic": "literal",
+        "fetchCache": "literal",
+        "preferredRegion": "literal",
+        "runtime": "literal",
+        "maxDuration": "literal"
+      }
+    }
+  }
+}

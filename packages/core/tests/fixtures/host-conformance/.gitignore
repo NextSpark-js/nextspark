@@ -1,0 +1,8 @@
+# Generated host output (rewritten by generate.mjs on every run)
+generated/src/
+generated/.nextspark/
+# Build output of the four host variants, Next's generated env types, reports, probes
+.next-*/
+next-env.d.ts
+.report/
+.probe/
