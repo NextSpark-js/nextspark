@@ -425,7 +425,8 @@ test('publishing: only files the record owns are replaced or deleted, a foreign 
     assert.deepEqual(checkContracts({ root, files }), { ok: true, problems: [] })
 
     // Nothing changed: nothing is touched
-    const past = new Date(Date.now() - 60_000)
+    // Whole seconds: a fractional millisecond does not survive utimes/stat on every filesystem
+    const past = new Date(Math.floor((Date.now() - 60_000) / 1000) * 1000)
     for (const path of ['src/index.ts', 'src/entities/a.ts', 'contracts.generation.json']) utimesSync(join(root, path), past, past)
     const second = publishContracts({ root, files })
     assert.deepEqual([second.written, second.deleted, second.unchanged], [[], [], 2])
