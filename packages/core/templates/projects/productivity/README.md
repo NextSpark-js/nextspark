@@ -1,18 +1,16 @@
 # Productivity Theme
 
-## Activación
+## Uso
 
-Para usar este theme, configura en `.env`:
-
-```bash
-```
-
-Luego regenera el registry y reinicia el servidor:
+Este template se copia una sola vez al crear el proyecto; después todos sus archivos son del proyecto:
 
 ```bash
-npx tsx scripts/build-registry.mjs --build
+pnpm dlx create-nextspark-app@latest mi-proyecto --theme productivity
+cd mi-proyecto
 pnpm dev
 ```
+
+`pnpm dev` genera `src/app` y los registries (`pnpm build:registries` lo hace sin arrancar el servidor).
 
 ## Funcionalidades
 
@@ -45,7 +43,7 @@ components/
 
 ```
 templates/
-└── app/dashboard/(main)/boards/
+└── templates/dashboard/(main)/boards/
     ├── page.tsx           # Grid de boards
     └── [id]/
         └── page.tsx       # Vista Kanban del board

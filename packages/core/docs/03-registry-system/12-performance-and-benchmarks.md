@@ -168,19 +168,6 @@ await measureAsync('Runtime batch discovery', async () => {
 }) // ~7,000ms (7 seconds!)
 ```
 
-**3. Plugin Route Handler Resolution**
-```typescript
-// Registry
-measureSync('Route handler lookup', () => {
-  return getPluginRouteHandler('ai/generate', 'POST')
-}) // ~6ms
-
-// Runtime Discovery
-await measureAsync('Runtime route discovery', async () => {
-  return await discoverRouteHandler('ai', 'generate', 'POST')
-}) // ~120ms
-```
-
 ---
 
 ## Performance Results
@@ -192,7 +179,6 @@ await measureAsync('Runtime route discovery', async () => {
 | **Entity** | **~6ms** | ~140ms | **~17,255x** |
 | **Plugin** | **~6ms** | ~140ms | **~17,255x** |
 | **Theme** | **~6ms** | ~140ms | **~17,255x** |
-| **Route Handler** | **~6ms** | ~120ms | **~20x** |
 | **Translation** | **<1ms** (loader), ~50ms (load) | ~140ms | **~2.8x** |
 | **Template** | **~6ms** | ~140ms | **~17,255x** |
 | **Config** | **~6ms** | ~140ms | **~17,255x** |

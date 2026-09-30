@@ -8,13 +8,13 @@ Always mock database functions in unit tests.
 
 ```typescript
 // Setup mock at top of test file
-jest.mock('@/core/lib/db', () => ({
+jest.mock('@nextsparkjs/core/lib/db', () => ({
   queryWithRLS: jest.fn(),
   queryOneWithRLS: jest.fn(),
   mutateWithRLS: jest.fn(),
 }))
 
-import { queryWithRLS, queryOneWithRLS, mutateWithRLS } from '@/core/lib/db'
+import { queryWithRLS, queryOneWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
 
 // Type the mocks for TypeScript
 const mockQueryWithRLS = queryWithRLS as jest.MockedFunction<typeof queryWithRLS>
@@ -166,7 +166,7 @@ const mockUseAuth = {
   isAuthenticated: false,
 }
 
-jest.mock('@/core/hooks/useAuth', () => ({
+jest.mock('@nextsparkjs/core/hooks/useAuth', () => ({
   useAuth: () => mockUseAuth
 }))
 

@@ -27,7 +27,7 @@ if (session.user?.role !== 'developer') {
 ### Helper Hook
 
 ```typescript
-import { useIsDeveloper } from "@/core/components/app/guards/DeveloperGuard";
+import { useIsDeveloper } from "@nextsparkjs/core/components/app/guards/DeveloperGuard";
 
 const isDeveloper = useIsDeveloper();
 ```
@@ -186,4 +186,4 @@ DevTools is restricted to developers because:
 - Layout: `app/devtools/layout.tsx`
 - Guard: `core/components/app/guards/DeveloperGuard.tsx`
 - Sidebar: `core/components/devtools/DevtoolsSidebar.tsx`
-- Test API: `app/api/devtools/tests/route.ts`
+- Test API: `packages/core/src/routes/api/devtools/tests/route.ts`

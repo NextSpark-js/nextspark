@@ -1,6 +1,6 @@
 # Internationalization Introduction
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -133,7 +133,7 @@ User-friendly locale switching with persistence:
 Built-in utilities prevent runtime errors:
 
 ```typescript
-import { validateTranslationKey } from '@/core/lib/i18n-utils'
+import { validateTranslationKey } from '@nextsparkjs/core/lib/i18n-utils'
 
 // Validates key exists before use
 const isValid = validateTranslationKey(messages, 'auth.login.title', 'en')
@@ -145,7 +145,7 @@ const isValid = validateTranslationKey(messages, 'auth.login.title', 'en')
 Development helpers identify incomplete translations:
 
 ```typescript
-import { detectMissingTranslations } from '@/core/lib/i18n-utils'
+import { detectMissingTranslations } from '@nextsparkjs/core/lib/i18n-utils'
 
 // Compare English and Spanish translations
 const missing = detectMissingTranslations(enMessages, esMessages)
@@ -794,17 +794,17 @@ plugins/[plugin]/messages/es.json
 **4. Rebuild Registry**:
 ```bash
 # Regenerate translation registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Or watch mode during development
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
 ### Translation Validation
 
 **Check for Missing Keys**:
 ```typescript
-import { detectMissingTranslations } from '@/core/lib/i18n-utils'
+import { detectMissingTranslations } from '@nextsparkjs/core/lib/i18n-utils'
 
 const enMessages = await import('./messages/en/common.json')
 const esMessages = await import('./messages/es/common.json')
@@ -816,7 +816,7 @@ console.log('Missing ES translations:', missing)
 
 **Validate Key Existence**:
 ```typescript
-import { validateTranslationKey } from '@/core/lib/i18n-utils'
+import { validateTranslationKey } from '@nextsparkjs/core/lib/i18n-utils'
 
 const messages = await import('./messages/en/common.json')
 

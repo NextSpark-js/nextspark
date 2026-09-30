@@ -1,6 +1,6 @@
 # Component Overrides
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 Themes can override core components to customize appearance and behavior while maintaining interface compatibility. This guide covers component override patterns, implementation, and best practices.
 
@@ -25,7 +25,7 @@ Component overrides allow you to:
 **Location:** `theme.config.ts`
 
 ```typescript
-import type { ThemeConfig } from '@/core/types/theme'
+import type { ThemeConfig } from '@nextsparkjs/core/types/theme'
 
 export const myThemeConfig: ThemeConfig = {
   name: 'my-theme',
@@ -107,7 +107,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { cn } from '@/core/lib/utils'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 const buttonVariants = cva(
   // Base styles
@@ -193,7 +193,7 @@ export const CardHeader, CardTitle, CardDescription, CardContent, CardFooter
 ```typescript
 // components/overrides/Card.tsx
 import * as React from 'react'
-import { cn } from '@/core/lib/utils'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 const Card = React.forwardRef<
   HTMLDivElement,
@@ -280,7 +280,7 @@ export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
 ```typescript
 // components/overrides/Input.tsx
 import * as React from 'react'
-import { cn } from '@/core/lib/utils'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -410,7 +410,7 @@ import { BrandLogo } from '@/components/custom/BrandLogo'
 'use client'
 
 import { BrandLogo } from './BrandLogo'
-import { ThemeToggle } from '@/core/components/app/misc/ThemeToggle'
+import { ThemeToggle } from '@nextsparkjs/core/components/app/misc/ThemeToggle'
 import { Button } from '@/core/components/ui/button'
 import Link from 'next/link'
 
@@ -610,7 +610,7 @@ describe('Theme Button Override', () => {
 
 ```bash
 # Rebuild registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Build the application and imported theme CSS
 pnpm build

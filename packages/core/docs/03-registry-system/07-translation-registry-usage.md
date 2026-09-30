@@ -1,6 +1,6 @@
 # Translation Registry
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 **Auto-generated at build time • Lazy-loading i18n • Zero runtime string interpolation**
 
@@ -660,7 +660,7 @@ describe('Translation Registry', () => {
 ls messages/en.json
 
 # 2. Rebuild registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # 3. Verify translation in generated registry
 cat .nextspark/registries/translation-registry.ts | grep "'en'"
@@ -731,7 +731,7 @@ const translations = await loader()
 
 **Next steps:**
 - [Config Registry](./09-config-registry.md) - Configuration management
-- [Theme Registry](./05-theme-registry.md) - Theme system
+- [Theme Registry](./05-theme-registry-usage.md) - Theme system
 
 **Documentation:** `core/docs/03-registry-system/07-translation-registry.md`
 **Source:** `.nextspark/registries/translation-registry.ts` (auto-generated)

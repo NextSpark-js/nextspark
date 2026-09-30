@@ -723,7 +723,7 @@ export default async function Page() {
 
 **Usage in API Routes**:
 ```typescript
-// app/api/process/route.ts
+// api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
@@ -893,7 +893,7 @@ export const myPluginConfig: PluginConfig = {
 
 ```typescript
 // plugins/minimal/plugin.config.ts
-import type { PluginConfig } from '@/core/types/plugin'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
 export const minimalPluginConfig: PluginConfig = {
   name: 'minimal',
@@ -911,7 +911,7 @@ export default minimalPluginConfig
 
 ```typescript
 // plugins/utils/plugin.config.ts
-import type { PluginConfig } from '@/core/types/plugin'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 import {
   formatDate,
   parseJSON,
@@ -947,7 +947,7 @@ export default utilsPluginConfig
 
 ```typescript
 // plugins/billing/plugin.config.ts
-import type { PluginConfig } from '@/core/types/plugin'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
 export const billingPluginConfig: PluginConfig = {
   name: 'billing',
@@ -1017,7 +1017,7 @@ export default billingPluginConfig
 
 ```typescript
 // plugins/advanced-ai/plugin.config.ts
-import type { PluginConfig } from '@/core/types/plugin'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
 export const advancedAIConfig: PluginConfig = {
   name: 'advanced-ai',
@@ -1063,7 +1063,7 @@ export default advancedAIConfig
 
 **✅ Good:**
 ```typescript
-import type { PluginConfig } from '@/core/types/plugin'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
 export const myPluginConfig: PluginConfig = {
   name: 'my-plugin',

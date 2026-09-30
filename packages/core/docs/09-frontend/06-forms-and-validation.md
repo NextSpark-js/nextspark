@@ -65,9 +65,9 @@ Our form management uses a battle-tested stack:
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { Button } from '@/core/components/ui/button'
-import { Input } from '@/core/components/ui/input'
-import { Label } from '@/core/components/ui/label'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { Input } from '@nextsparkjs/core/components/ui/input'
+import { Label } from '@nextsparkjs/core/components/ui/label'
 
 // Define validation schema
 const loginSchema = z.object({

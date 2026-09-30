@@ -275,7 +275,7 @@ order: 1
 ```markdown
 ```typescript
 // ✅ CORRECT: Include imports when relevant
-import { useAuth } from '@/core/hooks/useAuth'
+import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
 
 // ✅ CORRECT: Add comments for complex logic
 const { user, isAuthenticated } = useAuth()

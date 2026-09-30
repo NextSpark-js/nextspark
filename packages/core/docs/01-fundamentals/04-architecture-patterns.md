@@ -1,6 +1,6 @@
 # Architecture Patterns
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -95,7 +95,7 @@ import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 2. **ALWAYS** use registries for content access
 3. **ONLY** generated registry modules may reference compiler-discovered project source directly
 4. **Server vs Client** - Use appropriate registry version
-5. **Regenerate** - Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` after content changes
+5. **Regenerate** - Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` after content changes
 
 ---
 
@@ -145,14 +145,14 @@ apps/dev/public/theme/images/
 
 ```bash
 # Rebuild generated registries before a production app build
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 cd ../.. && pnpm build
 ```
 
 **Watch Mode:**
 ```bash
 # Run this separately when registry inputs change
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch  # Rebuilds registries on content changes
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch  # Rebuilds registries on content changes
 
 # From the repository root, run the single Next.js development process
 cd ../.. && pnpm dev       # Next.js recompiles imported theme CSS on changes
@@ -182,7 +182,7 @@ Entities, plugins, and themes are defined declaratively through configuration fi
 
 **Config File (`entities/tasks/tasks.config.ts`):**
 ```typescript
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
 export const taskConfig: EntityConfig = {
   name: 'tasks',
@@ -222,7 +222,7 @@ export const taskConfig: EntityConfig = {
 
 **Fields File (`tasks.fields.ts`):**
 ```typescript
-import type { FieldDefinition } from '@/core/lib/entities/types'
+import type { FieldDefinition } from '@nextsparkjs/core/lib/entities/types'
 
 export const taskFields: FieldDefinition[] = [
   {
@@ -270,7 +270,7 @@ export const taskFields: FieldDefinition[] = [
 
 **Plugin Config (`plugins/ai/plugin.config.ts`):**
 ```typescript
-import type { PluginConfig } from '@/core/lib/plugins/types'
+import type { PluginConfig } from '@nextsparkjs/core/lib/plugins/types'
 
 export const aiPluginConfig: PluginConfig = {
   id: 'ai',
@@ -299,7 +299,7 @@ export const aiPluginConfig: PluginConfig = {
 
 **Theme Config (`config/theme.config.ts`):**
 ```typescript
-import type { ThemeConfig } from '@/core/lib/theme/types'
+import type { ThemeConfig } from '@nextsparkjs/core/lib/theme/types'
 
 export const starterTheme: ThemeConfig = {
   name: 'starter',
@@ -437,8 +437,8 @@ The application supports two authentication modes simultaneously:
 **Dual Auth Middleware:**
 ```typescript
 // core/lib/api/auth/dual-auth.ts
-import { auth } from '@/core/lib/auth/auth'
-import { validateApiKey } from '@/core/lib/services/api-key.service'
+import { auth } from '@nextsparkjs/core/lib/auth/auth'
+import { validateApiKey } from '@nextsparkjs/core/lib/services/api-key.service'
 
 export async function authenticateRequest(request: NextRequest, options: AuthenticateOptions = {}) {
   // Try session auth first (Better Auth) — sessions are never scope-gated
@@ -484,8 +484,8 @@ export async function authenticateRequest(request: NextRequest, options: Authent
 
 **API Route Usage:**
 ```typescript
-// app/api/v1/tasks/route.ts
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+// api/tasks/route.ts
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   // The scope is declared here; a key without it never reaches the checks below
@@ -633,8 +633,8 @@ export class EntityService {
 
 ```typescript
 // core/lib/services/task.service.ts
-import { queryWithRLS } from '@/core/lib/security/rls-helpers'
-import type { Task, CreateTaskInput, UpdateTaskInput } from '@/core/types/entities'
+import { queryWithRLS } from '@nextsparkjs/core/lib/security/rls-helpers'
+import type { Task, CreateTaskInput, UpdateTaskInput } from '@nextsparkjs/core/types/entities'
 
 export class TaskService {
   static async list(userId: string, filters?: TaskFilters): Promise<Task[]> {
@@ -727,9 +727,9 @@ export class TaskService {
 ### API Route Integration
 
 ```typescript
-// app/api/v1/tasks/route.ts
-import { TaskService } from '@/core/lib/services/task.service'
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+// api/tasks/route.ts
+import { TaskService } from '@nextsparkjs/core/lib/services/task.service'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   const authResult = await authenticateRequest(request, { requiredScope: 'tasks:read' })
@@ -795,7 +795,7 @@ export interface PluginLifecycle {
 
 ```typescript
 // plugins/ai/plugin.config.ts
-import type { PluginConfig } from '@/core/lib/plugins/types'
+import type { PluginConfig } from '@nextsparkjs/core/lib/plugins/types'
 
 export const aiPlugin: PluginConfig = {
   id: 'ai',
@@ -902,7 +902,7 @@ Themes customize the application's appearance through CSS variables, brand asset
 
 ```typescript
 // config/theme.config.ts
-import type { ThemeConfig } from '@/core/lib/theme/types'
+import type { ThemeConfig } from '@nextsparkjs/core/lib/theme/types'
 
 export const starterTheme: ThemeConfig = {
   name: 'starter',

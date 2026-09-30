@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Generate Endpoint** (`/api/plugin/ai/generate`) provides flexible text generation capabilities using any configured AI provider. It's a general-purpose endpoint for creating content, answering questions, analyzing text, and more.
+The **Generate Endpoint** (`/api/plugins/ai/generate`) provides flexible text generation capabilities using any configured AI provider. It's a general-purpose endpoint for creating content, answering questions, analyzing text, and more.
 
 **Key Features:**
 - Multi-provider support (OpenAI, Anthropic, Ollama)
@@ -16,7 +16,7 @@ The **Generate Endpoint** (`/api/plugin/ai/generate`) provides flexible text gen
 ## Endpoint
 
 ```
-POST /api/plugin/ai/generate
+POST /api/plugins/ai/generate
 ```
 
 **Authentication:** Required (session or API key)
@@ -146,7 +146,7 @@ POST /api/plugin/ai/generate
 ### Example 1: Basic Text Generation
 
 ```bash
-curl -X POST http://localhost:5173/api/plugin/ai/generate \
+curl -X POST http://localhost:5173/api/plugins/ai/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: your-session-cookie" \
   -d '{
@@ -174,7 +174,7 @@ curl -X POST http://localhost:5173/api/plugin/ai/generate \
 ### Example 2: With Specific Model
 
 ```bash
-curl -X POST http://localhost:5173/api/plugin/ai/generate \
+curl -X POST http://localhost:5173/api/plugins/ai/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: your-session-cookie" \
   -d '{
@@ -188,7 +188,7 @@ curl -X POST http://localhost:5173/api/plugin/ai/generate \
 ### Example 3: Creative Writing
 
 ```bash
-curl -X POST http://localhost:5173/api/plugin/ai/generate \
+curl -X POST http://localhost:5173/api/plugins/ai/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: your-session-cookie" \
   -d '{
@@ -201,7 +201,7 @@ curl -X POST http://localhost:5173/api/plugin/ai/generate \
 ### Example 4: Deterministic Analysis
 
 ```bash
-curl -X POST http://localhost:5173/api/plugin/ai/generate \
+curl -X POST http://localhost:5173/api/plugins/ai/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: your-session-cookie" \
   -d '{
@@ -214,7 +214,7 @@ curl -X POST http://localhost:5173/api/plugin/ai/generate \
 ### Example 5: Save to History
 
 ```bash
-curl -X POST http://localhost:5173/api/plugin/ai/generate \
+curl -X POST http://localhost:5173/api/plugins/ai/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: your-session-cookie" \
   -d '{
@@ -229,7 +229,7 @@ curl -X POST http://localhost:5173/api/plugin/ai/generate \
 
 ```typescript
 async function generateText(prompt: string, model?: string) {
-  const response = await fetch('/api/plugin/ai/generate', {
+  const response = await fetch('/api/plugins/ai/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -274,7 +274,7 @@ export function useAIGenerate() {
     setError(null)
 
     try {
-      const response = await fetch('/api/plugin/ai/generate', {
+      const response = await fetch('/api/plugins/ai/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, ...options })
@@ -493,7 +493,7 @@ const prodPrompt = {
 
 ```typescript
 try {
-  const result = await fetch('/api/plugin/ai/generate', {
+  const result = await fetch('/api/plugins/ai/generate', {
     method: 'POST',
     body: JSON.stringify({ prompt })
   })

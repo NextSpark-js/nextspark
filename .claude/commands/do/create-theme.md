@@ -1,10 +1,10 @@
 ---
-description: "Create a new theme"
+description: "Create a new project template (formerly \"theme\")"
 ---
 
 # do:create-theme
 
-**Theme Name:** {{{ input }}}
+**Template Name:** {{{ input }}}
 
 ---
 
@@ -12,58 +12,18 @@ description: "Create a new theme"
 
 Read `.claude/skills/create-theme/SKILL.md` completely before proceeding.
 
----
-
-## Theme Scaffold Command
-
-```bash
-pnpm create:theme {theme-name}
-```
-
----
-
-## Theme Structure
-
-```
-
-├── theme.config.ts       # Theme configuration
-├── config/
-│   ├── app.config.ts     # Application config
-│   ├── dashboard.config.ts
-│   └── permissions.config.ts
-├── components/           # Theme components
-├── entities/             # Theme entities
-├── styles/
-│   └── globals.css       # Theme styles
-└── lib/                  # Theme utilities
-```
-
----
-
-## Configuration Files
-
-1. `theme.config.ts` - Theme metadata
-2. `app.config.ts` - Team Mode, features
-3. `dashboard.config.ts` - Dashboard layout
-4. `permissions.config.ts` - Role permissions
+There is no theme scaffold command and no theme directory: the project root is the
+product source, and a template in `packages/core/templates/projects/<name>/` is copied
+there once at project creation. Copy the closest existing template and follow the skill's
+workflow.
 
 ---
 
 ## After Creation
 
-1. Rebuild registry:
+1. Regenerate the host and registries from a project extracted from the template:
    ```bash
-   node core/scripts/build/registry.mjs
+   pnpm build:registries
    ```
 
-2. Set as project in `.env`:
-   ```
-   ```
-
-3. Verify theme appears in THEME_REGISTRY
-
----
-
-## Verification
-
-Use the checklist from `create-theme/SKILL.md` to verify compliance.
+2. Verify with the checklist in `create-theme/SKILL.md`.

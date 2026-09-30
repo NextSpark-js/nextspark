@@ -1,6 +1,6 @@
 # API Introduction
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 **API v1 architecture • RESTful design • Dual authentication • Auto-generated endpoints**
 
@@ -58,7 +58,7 @@ Traditional API implementations suffer from:
 
 ```typescript
 // ❌ OLD WAY - Manual endpoint for every entity (200+ lines per entity)
-// app/api/products/route.ts
+// api/products/route.ts
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
 
 ### Key Components
 
-**1. Route Resolution (`app/api/v1/[entity]/route.ts`)**
+**1. Route Resolution (`packages/core/src/routes/api/v1/[entity]/route.ts`)**
 - Next.js dynamic routes match incoming requests
 - Priority: Core paths → Overrides → Dynamic → 404
 
@@ -354,7 +354,7 @@ export const productEntityConfig = {
 
 **2. Build Registry:**
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 **3. Endpoints Auto-Available:**
@@ -392,16 +392,11 @@ Every dynamic endpoint automatically supports:
 ### Complete Route Hierarchy
 
 ```text
-app/api/v1/
+@nextsparkjs/core/routes/api/v1/   (core-owned; served at /api/v1/**)
 ├── [entity]/                    # 🔥 Dynamic entity endpoints (most entities)
 │   ├── route.ts                 # GET (list) / POST (create)
 │   └── [id]/
 │       └── route.ts             # GET (read) / PATCH (update) / DELETE
-│
-├── (contents)/                  # 🎯 Custom overrides (special business logic)
-│   └── tasks/                   # Example: custom task implementation
-│       ├── route.ts
-│       └── [id]/route.ts
 │
 ├── users/                       # 🔒 Core user management (not dynamic)
 │   ├── route.ts                 # GET /api/v1/users, POST /api/v1/users
@@ -415,7 +410,12 @@ app/api/v1/
 │
 └── auth/                        # 🛡️ Authentication endpoints (not dynamic)
     └── route.ts                 # POST /api/v1/auth (token refresh, etc.)
+
+your project
+└── api/<path>/route.ts          # 🎯 Your own endpoints, served at /api/<path>
 ```
+
+`/api/v1/**` belongs to core: a project route there is refused when `nextspark prepare` generates the host. A project adds endpoints in `api/` (at `/api/<path>`), and a plugin in its own `api/` (at `/api/plugins/<plugin>/<path>`).
 
 ### Resolution Priority
 
@@ -425,15 +425,11 @@ When a request comes in for `/api/v1/products/`, the router checks in this order
 - Is it `users`, `api-keys`, or `auth`?
 - If yes → Use core implementation
 
-**2. Custom Overrides (High Priority)**
-- Does `/api/v1/(contents)/products/` exist?
-- If yes → Use custom override logic
-
-**3. Dynamic Endpoints (Standard)**
+**2. Dynamic Endpoints (Standard)**
 - Is `products` in ENTITY_REGISTRY?
 - If yes → Use generic handler with entity config
 
-**4. Not Found (404)**
+**3. Not Found (404)**
 - Entity not registered
 - Return 404 error
 
@@ -446,11 +442,7 @@ When a request comes in for `/api/v1/products/`, the router checks in this order
 # 'products' !== 'users' && 'products' !== 'api-keys' && 'products' !== 'auth'
 # ❌ Not a core path
 
-# Step 2: Check custom overrides
-# Check if app/api/v1/(contents)/products/route.ts exists
-# ❌ File doesn't exist (using dynamic)
-
-# Step 3: Check entity registry
+# Step 2: Check entity registry
 # ENTITY_REGISTRY.products → Found!
 # ✅ Use generic handler with products entity config
 

@@ -1,6 +1,6 @@
 # First Customization
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -113,7 +113,7 @@ Visit http://localhost:3010 and check:
 
 **Public page (no auth required):**
 ```text
-app/(public)/about/page.tsx
+templates/(public)/about/page.tsx
 ```
 
 **Protected page (auth required):**
@@ -125,11 +125,11 @@ We'll create a public page.
 
 ### Step 2: Create Page File
 
-**Create:** `app/(public)/about/page.tsx`
+**Create:** `templates/(public)/about/page.tsx`
 
 ```typescript
 import type { Metadata } from 'next'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/core/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 
 export const metadata: Metadata = {
   title: 'About',
@@ -332,7 +332,7 @@ curl http://localhost:3010/api/v1/tasks \
 
 ```typescript
 // app/(protected)/dashboard/page.tsx
-import { EntityList } from '@/core/components/entities/EntityList'
+import { EntityList } from '@nextsparkjs/core/components/entities/EntityList'
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 export default async function DashboardPage() {
@@ -438,7 +438,7 @@ features: {
 
 ```bash
 # Ctrl+C to stop server
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs   # Rebuild registries
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare   # Rebuild registries
 pnpm dev              # Restart server
 ```
 
@@ -518,8 +518,8 @@ pnpm dev
 **✅ Recommended: Wrap shadcn/ui components**
 ```typescript
 // core/components/custom/BrandButton.tsx
-import { Button } from '@/core/components/ui/button'
-import { cn } from '@/core/lib/utils'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 export function BrandButton({ className, ...props }: React.ComponentProps<typeof Button>) {
   return (
@@ -539,7 +539,7 @@ export function BrandButton({ className, ...props }: React.ComponentProps<typeof
 
 **Usage:**
 ```typescript
-import { BrandButton } from '@/core/components/custom/BrandButton'
+import { BrandButton } from '@nextsparkjs/core/components/custom/BrandButton'
 
 export default function Page() {
   return (
@@ -583,7 +583,7 @@ className={cn(
 ### Pattern 1: Adding a Hero Section
 
 ```typescript
-// app/(public)/page.tsx
+// templates/(public)/page.tsx
 export default function HomePage() {
   return (
     <div className="relative">
@@ -609,9 +609,9 @@ export default function HomePage() {
 ### Pattern 2: Custom Layout
 
 ```typescript
-// app/(public)/layout.tsx
-import { Header } from '@/core/components/layout/Header'
-import { Footer } from '@/core/components/layout/Footer'
+// templates/(public)/layout.tsx
+import { Header } from '@nextsparkjs/core/components/layout/Header'
+import { Footer } from '@nextsparkjs/core/components/layout/Footer'
 
 export default function PublicLayout({
   children,
@@ -712,12 +712,12 @@ export function useCustomFeature() {
 4. Check `tsconfig.json` paths
 
 **Build errors:**
-1. Check registry build: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+1. Check registry build: `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 2. Verify entity config syntax
 3. Check for circular imports
 4. Clear build cache: `rm -rf .next`
 
-**See:** [Troubleshooting Guide](./08-troubleshooting.md)
+**See:** [Troubleshooting Guide](./10-troubleshooting.md)
 
 ---
 
@@ -726,9 +726,9 @@ export function useCustomFeature() {
 Now that you've made your first customizations:
 
 1. **Explore Entities**: [Core Concepts → Entity System](../01-fundamentals/01-core-concepts.md#entity-system)
-2. **Advanced Theming**: [Customization → Theme System](../03-customization/02-theme-system.md)
-3. **API Development**: [API Development → Creating Endpoints](../04-api-development/02-creating-endpoints.md)
-4. **Deploy**: [Deployment Guide](./07-deployment.md)
+2. **Advanced Theming**: [Customization → Theme System](../07-theme-system/01-introduction.md)
+3. **API Development**: [API Development → Creating Endpoints](../05-api/04-custom-endpoints.md)
+4. **Deploy**: [Deployment Guide](./08-deployment.md)
 
 ---
 
@@ -837,7 +837,7 @@ export default function Page() {
 ### Step 5: Rebuild and Restart
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 pnpm dev
 ```
 
@@ -909,8 +909,8 @@ mkdir -p public/fonts/
 
 ```typescript
 import { ReactNode } from 'react'
-import { Header } from '@/core/components/layout/Header'
-import { Sidebar } from '@/core/components/layout/Sidebar'
+import { Header } from '@nextsparkjs/core/components/layout/Header'
+import { Sidebar } from '@nextsparkjs/core/components/layout/Sidebar'
 
 export function CustomDashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -953,8 +953,8 @@ export default function Page() {
 
 ```typescript
 import * as React from 'react'
-import { Button as BaseButton } from '@/core/components/ui/button'
-import { cn } from '@/core/lib/utils'
+import { Button as BaseButton } from '@nextsparkjs/core/components/ui/button'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 // Custom Button that extends base Button
 export const Button = React.forwardRef<
@@ -986,11 +986,11 @@ Button.displayName = 'Button'
 
 ### Step 1: Create Custom Route
 
-**File:** `app/api/custom/analytics/route.ts`
+**File:** `api/custom/analytics/route.ts`
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/core/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 
 export async function GET(request: NextRequest) {
   // 1. Authenticate request
@@ -1026,7 +1026,7 @@ export async function GET(request: NextRequest) {
 ### Step 2: Add Database Queries
 
 ```typescript
-import { db } from '@/core/lib/db'
+import { db } from '@nextsparkjs/core/lib/db'
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers })
@@ -1455,7 +1455,7 @@ module.exports = {
 
   // Tree-shaking
   experimental: {
-    optimizePackageImports: ['@/core/components/ui']
+    optimizePackageImports: ['@nextsparkjs/core/components/ui']
   },
 
   // Bundle analyzer (when needed)
@@ -1480,7 +1480,7 @@ module.exports = {
 
 - [ ] Environment variables configured
 - [ ] Database migrations run
-- [ ] Registry built (`cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`)
+- [ ] Registry built (`cd apps/dev && node ../../packages/cli/dist/cli.js prepare`)
 - [ ] Tests passing (`pnpm test:core`)
 - [ ] Build successful (`pnpm build`)
 - [ ] Bundle size checked (`ANALYZE=true pnpm build`)
@@ -1572,9 +1572,9 @@ RESEND_API_KEY=...
    - [Plugin Development](../08-plugin-system/01-introduction.md)
 
 3. **Advanced Patterns:**
-   - [Performance Optimization](../13-performance/01-overview.md)
-   - [Testing Strategy](../12-testing/01-overview.md)
-   - [Deployment Guide](../14-deployment/01-overview.md)
+   - [Performance Optimization](../13-performance/01-performance-overview.md)
+   - [Testing Strategy](../12-testing/01-testing-overview.md)
+   - [Deployment Guide](../14-deployment/01-deployment-overview.md)
 
 4. **Production Ready:**
    - Security best practices

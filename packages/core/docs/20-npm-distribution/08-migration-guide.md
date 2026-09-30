@@ -1,6 +1,6 @@
 # Migration Guide
 
-> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (add `--watch` to watch).
 
 This guide covers migrating from the old `core/` structure to the new `packages/core/` structure.
 
@@ -121,7 +121,7 @@ rm -rf core/
 From the NextSpark monorepo root:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ### Step 8: Verify Build

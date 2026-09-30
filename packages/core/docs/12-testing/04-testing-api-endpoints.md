@@ -14,7 +14,7 @@ API endpoint testing validates that your REST APIs work correctly, handle errors
 
 ```typescript
 // core/tests/jest/api/tasks.test.ts
-import { GET, POST } from '@/app/api/v1/tasks/route'
+import { GET, POST } from '@/api/tasks/route'
 import { NextRequest } from 'next/server'
 
 describe('Tasks API', () => {

@@ -8,7 +8,7 @@
 
 import { readdir, stat, readFile } from 'fs/promises'
 import { join } from 'path'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 
 import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
 import { log, verbose } from '../../../utils/index.mjs'
@@ -90,6 +90,30 @@ export function readSchemaExport(source, fileName, ts) {
     }
   }
   return rejected('schema.ts does not export `schema`')
+}
+
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+
+/**
+ * The block's thumbnail import specifier, only when thumbnail.png really is a PNG: Next fails the
+ * build on an image it cannot decode (older scaffolds shipped text placeholders with that name).
+ */
+export function thumbnailImport(blockPath, blockSlug) {
+  const file = join(blockPath, 'thumbnail.png')
+  if (!existsSync(file)) return null
+  let head
+  try {
+    // The whole file is read: the registry build may not use fd-level fs calls (see safe-fs.test.mjs), and a thumbnail is small
+    head = readFileSync(file).subarray(0, 8)
+  } catch (error) {
+    log(`WARNING: Block "${blockSlug}": blocks/${blockSlug}/thumbnail.png cannot be read (${error.code ?? error.message}); it is ignored (no thumbnail)`, 'warning')
+    return null
+  }
+  if (!head.equals(PNG_SIGNATURE)) {
+    log(`WARNING: Block "${blockSlug}": blocks/${blockSlug}/thumbnail.png is not a PNG image; it is ignored (no thumbnail)`, 'warning')
+    return null
+  }
+  return `@/blocks/${blockSlug}/thumbnail.png`
 }
 
 /**
@@ -202,9 +226,8 @@ export async function discoverBlocks(config = DEFAULT_CONFIG) {
             fields: `@/blocks/${blockSlug}/fields`,
             component: `@/blocks/${blockSlug}/component`,
             examples: `@/blocks/${blockSlug}/examples`,
-            thumbnail: existsSync(join(blockPath, 'thumbnail.png'))
-              ? `/theme/blocks/${blockSlug}/thumbnail.png`
-              : null
+            // Imported statically by the registry, so Next processes the file as an asset
+            thumbnail: thumbnailImport(blockPath, blockSlug)
           }
         })
 

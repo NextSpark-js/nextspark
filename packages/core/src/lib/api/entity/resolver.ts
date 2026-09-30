@@ -1,19 +1,15 @@
 /**
  * Entity Resolver
  * 
- * Resolves entity configurations from URLs and determines if custom
- * overrides exist in (contents) folders.
+ * Resolves entity configurations from URLs.
  */
 
 import { entityRegistry, ensureInitialized } from '../../entities/registry'
 import type { EntityConfig } from '../../entities/types'
-import { existsSync } from 'fs'
-import { join } from 'path'
 
 export interface EntityResolution {
   entityName: string
   entityConfig: EntityConfig | null
-  hasCustomOverride: boolean
   isValidEntity: boolean
 }
 
@@ -31,7 +27,6 @@ export async function resolveEntityFromUrl(pathname: string): Promise<EntityReso
     return {
       entityName: '',
       entityConfig: null,
-      hasCustomOverride: false,
       isValidEntity: false
     }
   }
@@ -43,7 +38,6 @@ export async function resolveEntityFromUrl(pathname: string): Promise<EntityReso
     return {
       entityName: entitySlug,
       entityConfig: null,
-      hasCustomOverride: true, // Treat core as override
       isValidEntity: false
     }
   }
@@ -56,42 +50,14 @@ export async function resolveEntityFromUrl(pathname: string): Promise<EntityReso
     return {
       entityName: entitySlug,
       entityConfig: null,
-      hasCustomOverride: false,
       isValidEntity: false
     }
   }
 
-  // Check if custom override exists (using slug for path)
-  const hasCustomOverride = await checkCustomOverride(entitySlug)
-
   return {
     entityName: entityConfig.slug, // Use slug as entityName for new structure
     entityConfig,
-    hasCustomOverride,
     isValidEntity: true
-  }
-}
-
-/**
- * Check if entity has custom override in (contents) folder
- */
-async function checkCustomOverride(entityName: string): Promise<boolean> {
-  try {
-    // Check if custom route file exists
-    const customRoutePath = join(
-      process.cwd(), 
-      'app', 
-      'api', 
-      'v1', 
-      '(contents)', 
-      entityName, 
-      'route.ts'
-    )
-    
-    return existsSync(customRoutePath)
-  } catch (error) {
-    console.warn(`Error checking custom override for ${entityName}:`, error)
-    return false
   }
 }
 

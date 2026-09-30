@@ -1,6 +1,6 @@
 # Dynamic API Endpoints
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 **Auto-generated CRUD • Entity registry • Zero boilerplate • Type-safe**
 
@@ -65,7 +65,7 @@
    ↓
 2. Build Registry
    ↓
-   cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+   cd apps/dev && node ../../packages/cli/dist/cli.js prepare
    ↓
 3. Registry Generated
    ↓
@@ -80,7 +80,7 @@
    ↓
 5. Route Resolution (Next.js App Router)
    ↓
-   app/api/v1/[entity]/route.ts → handleGenericList
+   packages/core/src/routes/api/v1/[entity]/route.ts → handleGenericList
    ↓
 6. Entity Resolution (from URL)
    ↓
@@ -104,12 +104,12 @@
 
 **List/Create Route:**
 ```typescript
-// app/api/v1/[entity]/route.ts
+// packages/core/src/routes/api/v1/[entity]/route.ts
 import {
   handleGenericList,
   handleGenericCreate,
   handleGenericOptions
-} from '@/core/lib/api/entity/generic-handler'
+} from '@nextsparkjs/core/lib/api/entity/generic-handler'
 
 export const GET = handleGenericList      // LIST operation
 export const POST = handleGenericCreate   // CREATE operation
@@ -118,13 +118,13 @@ export const OPTIONS = handleGenericOptions // CORS
 
 **Read/Update/Delete Route:**
 ```typescript
-// app/api/v1/[entity]/[id]/route.ts
+// packages/core/src/routes/api/v1/[entity]/[id]/route.ts
 import {
   handleGenericRead,
   handleGenericUpdate,
   handleGenericDelete,
   handleGenericOptions
-} from '@/core/lib/api/entity/generic-handler'
+} from '@nextsparkjs/core/lib/api/entity/generic-handler'
 
 export const GET = handleGenericRead       // READ operation
 export const PATCH = handleGenericUpdate   // UPDATE operation
@@ -1118,7 +1118,7 @@ ls entities/products/
 grep "products" .nextspark/registries/entity-registry.ts
 
 # 3. Rebuild registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # 4. Verify entity name matches slug
 # URL: /api/v1/products

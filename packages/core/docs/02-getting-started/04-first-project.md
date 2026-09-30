@@ -1,6 +1,6 @@
 # Building Your First Feature
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -338,7 +338,7 @@ entities/projects/
 **Edit `entities/projects/projects.fields.ts`:**
 
 ```typescript
-import type { FieldDefinition } from '@/core/lib/entities/types'
+import type { FieldDefinition } from '@nextsparkjs/core/lib/entities/types'
 
 export const projectFields: FieldDefinition[] = [
   {
@@ -550,7 +550,7 @@ export const projectFields: FieldDefinition[] = [
 
 ```typescript
 import { FolderKanban } from 'lucide-react'
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import { projectFields } from './projects.fields'
 
 export const projectEntityConfig: EntityConfig = {
@@ -791,7 +791,7 @@ DELETE /api/v1/projects/:id   - Delete project
 **How it works:**
 
 1. **Registry system** loads your entity config at build time
-2. **Dynamic route handler** in `app/api/v1/[entity]/route.ts` handles all requests
+2. **Dynamic route handler** in `packages/core/src/routes/api/v1/[entity]/route.ts` handles all requests
 3. **Route handlers registry** maps entity slugs to operations
 4. **Service layer** performs database operations with RLS
 5. **Validation** happens automatically based on field definitions
@@ -804,7 +804,7 @@ DELETE /api/v1/projects/:id   - Delete project
 
 ```bash
 # Stop dev server (Ctrl+C)
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Restart dev server
 pnpm dev
@@ -931,12 +931,12 @@ curl -X DELETE http://localhost:3010/api/v1/projects/PROJECT_ID \
 
 If you need custom logic beyond CRUD, create a custom endpoint:
 
-**Create `app/api/v1/projects/stats/route.ts`:**
+**Create `api/projects/stats/route.ts`:**
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/core/lib/auth'
-import { db } from '@/core/lib/db'
+import { auth } from '@nextsparkjs/core/lib/auth'
+import { db } from '@nextsparkjs/core/lib/db'
 
 export async function GET(request: NextRequest) {
   // Authenticate request
@@ -973,7 +973,7 @@ export async function GET(request: NextRequest) {
 **Test custom endpoint:**
 
 ```bash
-curl http://localhost:3010/api/v1/projects/stats \
+curl http://localhost:3010/api/projects/stats \
   -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN"
 ```
 
@@ -1003,8 +1003,8 @@ curl http://localhost:3010/api/v1/projects/stats \
 ```typescript
 import { Suspense } from 'react'
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
-import { EntityListWrapper } from '@/core/components/entities/wrappers/EntityListWrapper'
-import { Skeleton } from '@/core/components/ui/skeleton'
+import { EntityListWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityListWrapper'
+import { Skeleton } from '@nextsparkjs/core/components/ui/skeleton'
 
 export const metadata = {
   title: 'Projects',
@@ -1058,7 +1058,7 @@ function ProjectsListSkeleton() {
 
 ```typescript
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
-import { EntityFormWrapper } from '@/core/components/entities/wrappers/EntityFormWrapper'
+import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityFormWrapper'
 
 export const metadata = {
   title: 'Create Project',
@@ -1100,9 +1100,9 @@ export default async function NewProjectPage() {
 ```typescript
 import { notFound } from 'next/navigation'
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
-import { EntityDetailWrapper } from '@/core/components/entities/wrappers/EntityDetailWrapper'
-import { EntityFormWrapper } from '@/core/components/entities/wrappers/EntityFormWrapper'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/core/components/ui/tabs'
+import { EntityDetailWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityDetailWrapper'
+import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityFormWrapper'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nextsparkjs/core/components/ui/tabs'
 
 interface ProjectDetailPageProps {
   params: {
@@ -1201,7 +1201,7 @@ export const appConfig = {
 **Rebuild registries and restart:**
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 # Restart pnpm dev
 ```
 
@@ -1278,7 +1278,7 @@ export function ProjectCardSkeleton() {
 ```typescript
 // components/projects/ProjectsEmptyState.tsx
 import { FolderKanban } from 'lucide-react'
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 import Link from 'next/link'
 
 export function ProjectsEmptyState() {
@@ -1532,7 +1532,7 @@ projects.fields.ts  |   100   |   100    |   100   |   100   |
 # Stop dev server (Ctrl+C)
 
 # Rebuild registries
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 **Verify projects entity registered:**
@@ -1783,7 +1783,7 @@ DROP TABLE IF EXISTS projects CASCADE;
 3. **Clear registry cache:**
 ```bash
 rm -rf .next
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 4. **Restart services**
@@ -1869,13 +1869,13 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 **Explore advanced topics:**
 
-- [Entity Relationships](../04-entities/06-entity-relationships.md)
+- [Entity Relationships](../04-entities/05-relationships.md)
 - [Metadata System](../04-entities/07-metadata-system.md)
 - [Custom Validation](../04-entities/10-validation.md)
 - [Lifecycle Hooks](../04-entities/08-hooks-and-lifecycle.md)
 - [Advanced API Patterns](../05-api/12-advanced-features.md)
-- [Performance Optimization](../13-performance/01-overview.md)
-- [Deployment Guide](../14-deployment/01-overview.md)
+- [Performance Optimization](../13-performance/01-performance-overview.md)
+- [Deployment Guide](../14-deployment/01-deployment-overview.md)
 
 ---
 
@@ -1902,7 +1902,7 @@ Then re-run migration.
 **Solution:**
 ```bash
 rm -rf .nextspark/registries
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 # Restart dev server
 ```
 

@@ -87,7 +87,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ```typescript
 // config/auth.config.ts
-import type { AuthConfig } from '@/core/types/auth'
+import type { AuthConfig } from '@nextsparkjs/core/types/auth'
 
 export const authConfig: AuthConfig = {
   // Session settings
@@ -281,7 +281,7 @@ export const authConfig: AuthConfig = {
 ```typescript
 'use client'
 
-import { signIn } from '@/core/lib/auth/client'
+import { signIn } from '@nextsparkjs/core/lib/auth/client'
 
 function LoginPage() {
   return (
@@ -342,14 +342,14 @@ pnpm dev
 
 ```typescript
 // Server-side
-import { auth } from '@/core/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 
 const session = await auth.api.getSession({
   headers: request.headers,
 })
 
 // Client-side
-import { useSession } from '@/core/lib/auth/client'
+import { useSession } from '@nextsparkjs/core/lib/auth/client'
 
 function MyComponent() {
   const { data: session, isPending } = useSession()

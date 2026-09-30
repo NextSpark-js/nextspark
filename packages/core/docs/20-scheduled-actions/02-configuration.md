@@ -189,7 +189,7 @@ export interface WebhookEndpointConfig {
 Configuration is accessed via `APP_CONFIG_MERGED`:
 
 ```typescript
-import { APP_CONFIG_MERGED } from '@/core/lib/config/config-sync'
+import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-sync'
 
 // Check if enabled
 if (APP_CONFIG_MERGED.scheduledActions?.enabled) {

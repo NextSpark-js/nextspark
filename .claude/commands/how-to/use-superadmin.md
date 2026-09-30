@@ -276,7 +276,7 @@ in your application.
 
 ```typescript
 // Usage in page
-import { TeamsTable } from '@/core/components/superadmin'
+import { TeamsTable } from '@nextsparkjs/core/components/superadmin'
 
 <TeamsTable
   teams={teams}
@@ -375,7 +375,7 @@ information.
 **📋 Plan Features Matrix:**
 
 ```typescript
-import { PlanFeaturesMatrix } from '@/core/components/superadmin'
+import { PlanFeaturesMatrix } from '@nextsparkjs/core/components/superadmin'
 
 // Shows all plans and their features
 <PlanFeaturesMatrix />
@@ -450,7 +450,7 @@ Configure team roles and their permissions.
 **📋 Roles Permissions Matrix:**
 
 ```typescript
-import { RolesPermissionsMatrix } from '@/core/components/superadmin'
+import { RolesPermissionsMatrix } from '@nextsparkjs/core/components/superadmin'
 
 // View all roles and their permissions
 <RolesPermissionsMatrix />

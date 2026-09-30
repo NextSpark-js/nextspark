@@ -4,7 +4,7 @@ Simple AI assistant endpoint for general assistance.
 
 ## Usage
 
-**Endpoint:** `POST /api/plugin/ai/generate`
+**Endpoint:** `POST /api/plugins/ai/generate`
 
 **Body:**
 ```json
@@ -34,14 +34,14 @@ Simple AI assistant endpoint for general assistance.
 
 ### Basic Chat
 ```bash
-curl -X POST /api/plugin/ai/generate \
+curl -X POST /api/plugins/ai/generate \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Explain machine learning in simple terms"}'
 ```
 
 ### With Custom Model
 ```bash
-curl -X POST /api/plugin/ai/generate \
+curl -X POST /api/plugins/ai/generate \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "Write a short poem about coding",

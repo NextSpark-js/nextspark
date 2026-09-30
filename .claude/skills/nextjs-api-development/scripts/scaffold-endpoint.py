@@ -70,7 +70,7 @@ def generate_list_route(name: str, methods: list, auth_type: str) -> str:
     # Build endpoint comments
     endpoint_lines = []
     for m in methods:
-        endpoint_lines.append(f" * {m} /api/v1/{name}")
+        endpoint_lines.append(f" * {m} /api/{name}")
 
     code = f'''/**
  * {pascal} API Route
@@ -106,7 +106,7 @@ export async function OPTIONS() {
     # GET handler
     if 'GET' in methods:
         code += f'''
-// GET /api/v1/{name} - List {name}
+// GET /api/{name} - List {name}
 export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {{
   try {{
 '''
@@ -146,7 +146,7 @@ export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse
     # POST handler
     if 'POST' in methods:
         code += f'''
-// POST /api/v1/{name} - Create {singular}
+// POST /api/{name} - Create {singular}
 export const POST = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {{
   try {{
 '''
@@ -222,9 +222,9 @@ def generate_id_route(name: str, methods: list, auth_type: str) -> str:
  * Handles read, update, and delete operations for a single {singular}.
  *
  * Endpoints:
- * GET    /api/v1/{name}/[id]
- * PATCH  /api/v1/{name}/[id]
- * DELETE /api/v1/{name}/[id]
+ * GET    /api/{name}/[id]
+ * PATCH  /api/{name}/[id]
+ * DELETE /api/{name}/[id]
  */
 
 {chr(10).join(imports)}
@@ -256,7 +256,7 @@ export async function OPTIONS() {
     # GET handler
     if 'GET' in methods:
         code += f'''
-// GET /api/v1/{name}/[id] - Get single {singular}
+// GET /api/{name}/[id] - Get single {singular}
 export const GET = withApiLogging(async (
   req: NextRequest,
   {{ params }}: RouteParams
@@ -302,7 +302,7 @@ export const GET = withApiLogging(async (
     # PATCH handler
     if 'PATCH' in methods:
         code += f'''
-// PATCH /api/v1/{name}/[id] - Update {singular}
+// PATCH /api/{name}/[id] - Update {singular}
 export const PATCH = withApiLogging(async (
   req: NextRequest,
   {{ params }}: RouteParams
@@ -350,7 +350,7 @@ export const PATCH = withApiLogging(async (
     # DELETE handler
     if 'DELETE' in methods:
         code += f'''
-// DELETE /api/v1/{name}/[id] - Delete {singular}
+// DELETE /api/{name}/[id] - Delete {singular}
 export const DELETE = withApiLogging(async (
   req: NextRequest,
   {{ params }}: RouteParams

@@ -1,6 +1,6 @@
 # Entity Permission System
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 The permission system controls which users can perform which actions on each entity, integrating role-based control with the centralized permissions registry.
 
@@ -23,7 +23,7 @@ All entity permissions are defined in the theme's `permissions.config.ts`:
 
 ```typescript
 // permissions.config.ts
-import type { ThemePermissionsConfig } from '@/core/lib/permissions/types'
+import type { ThemePermissionsConfig } from '@nextsparkjs/core/lib/permissions/types'
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   // Entity permissions - centralized definition
@@ -116,7 +116,7 @@ entities: {
 ### In API Routes
 
 ```typescript
-import { MembershipService } from '@/core/lib/services'
+import { MembershipService } from '@nextsparkjs/core/lib/services'
 
 export async function POST(request: Request) {
   const membership = await MembershipService.get(userId, teamId)
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
 ```typescript
 'use client'
 
-import { usePermission, usePermissions } from '@/core/lib/permissions/hooks'
+import { usePermission, usePermissions } from '@nextsparkjs/core/lib/permissions/hooks'
 
 export function CustomerActions({ customer }) {
   const canUpdate = usePermission('customers.update')
@@ -161,7 +161,7 @@ export function CustomerActions({ customer }) {
 ### Using PermissionService Directly
 
 ```typescript
-import { PermissionService } from '@/core/lib/services'
+import { PermissionService } from '@nextsparkjs/core/lib/services'
 
 // O(1) lookup - pre-computed at build time
 const canCreate = PermissionService.hasPermission('admin', 'customers.create')
@@ -216,7 +216,7 @@ CREATE POLICY "posts_select_public" ON "posts"
 Permissions are pre-computed during build for O(1) runtime:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 This generates `.nextspark/registries/permissions-registry.ts` with:

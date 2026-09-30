@@ -6,6 +6,5 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'A rich text content block designed for long-form blog posts with editorial styling similar to Medium. Features beautiful typography, proper spacing, and optional elements like drop caps, pull quotes, and images.',
   category: 'content',
   icon: 'FileText',
-  thumbnail: '/theme/blocks/post-content/thumbnail.png',
   scope: ['posts']
 }

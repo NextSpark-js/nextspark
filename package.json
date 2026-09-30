@@ -7,6 +7,7 @@
     "dev": "pnpm build:cli && pnpm --filter @nextsparkjs/dev dev",
     "build": "pnpm build:cli && pnpm --filter @nextsparkjs/dev build",
     "build:core": "pnpm --filter @nextsparkjs/core build",
+    "build:registries": "cd apps/dev && node ../../packages/cli/dist/cli.js prepare",
     "build:cli": "pnpm --filter @nextsparkjs/cli build",
     "lint": "eslint .",
     "clean": "pnpm -r exec rm -rf node_modules dist .next",

@@ -133,7 +133,7 @@ minutes per IP) to every `POST /api/auth/*`, OTP requests included.
 
 - **Web**: `components/auth/forms/LoginForm.tsx` renders Google + the OTP form
   (`data-cy="login-otp-*"` selectors) and switches to the password form only when
-  `'email-password'` is configured. `app/(auth)/signup/page.tsx` redirects to
+  `'email-password'` is configured. `packages/core/src/routes/(auth)/signup/page.tsx` redirects to
   `/login` under the passwordless preset.
 - **Mobile**: `apps/mobile/app/login.tsx` reads `APP_CONFIG.auth.methods`
   (`src/config/app.config.ts`) and uses `useAuth().requestOtp` /
@@ -184,9 +184,9 @@ A normal signup page whose only ready method is email OTP shows an explanation a
 
 ### Upgrading existing hosts
 
-Hosts generated from an earlier core version own their copies of `app/api/auth/[...all]/route.ts` and `app/api/v1/auth/signup-with-invite/route.ts`; updating the package does not change them. Add the gate by hand.
+Core's own auth routes (`@nextsparkjs/core/routes/api/auth/[...all]/route` and `@nextsparkjs/core/routes/api/v1/auth/signup-with-invite/route`) carry the gate, and a project on the generated host gets it with the package: there is nothing to add. `nextspark migrate` removes an untouched copy of them from a committed app tree. The rest of this section is only for a project that **overrode** one of these routes (`templates/api/auth/[...all]/route.ts`, `templates/api/v1/auth/signup-with-invite/route.ts`): an override replaces core's route, gate included, so add the gate to it by hand.
 
-`app/api/auth/[...all]/route.ts`:
+`templates/api/auth/[...all]/route.ts`:
 
 ```ts
 import { getAuthReadinessResponse } from '@nextsparkjs/core/lib/auth/runtime-readiness'
@@ -212,7 +212,7 @@ export async function POST(req: NextRequest) {
 
 The call must run before any code that invokes Better Auth (`handlers.GET/POST`, `auth.handler`, `auth.api.*`). It returns `null` for everything it does not gate, including `get-session` and `sign-out`, so existing sessions keep working.
 
-`app/api/v1/auth/signup-with-invite/route.ts` calls `auth.handler` directly and does not pass through the catch-all gate. Its `POST` export is HOC-wrapped (`withRateLimitTier(withApiLogging(async (req) => { try { ... } catch { ... } }), 'auth')`), so there is no top-level `POST` function to prepend a statement to. Add this as the first statement inside that innermost callback's `try` block, before it reads the request body:
+`templates/api/v1/auth/signup-with-invite/route.ts` (an override of core's route) calls `auth.handler` directly and does not pass through the catch-all gate. Its `POST` export is HOC-wrapped (`withRateLimitTier(withApiLogging(async (req) => { try { ... } catch { ... } }), 'auth')`), so there is no top-level `POST` function to prepend a statement to. Add this as the first statement inside that innermost callback's `try` block, before it reads the request body:
 
 ```ts
 import { AUTH_CONFIG } from '@nextsparkjs/core/lib/config'

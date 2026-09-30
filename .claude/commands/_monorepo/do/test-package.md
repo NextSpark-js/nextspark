@@ -279,7 +279,7 @@ npx nextspark db:migrate
 
 ```bash
 cd "$TEST_DIR"
-npx nextspark registry:build
+npx nextspark prepare
 ```
 
 **Verify:**
@@ -779,7 +779,7 @@ pnpm pkg:publish
 | `nextspark init` CLI command | Yes | Local CLI |
 | `nextspark prepare` CLI command | Yes | Local CLI |
 | `nextspark db:migrate` CLI command | Yes | Local CLI |
-| `nextspark registry:build` CLI command | Yes | Local CLI |
+| `nextspark prepare` CLI command | Yes | Local CLI |
 | Theme copying | Yes | Local templates |
 | Database migrations | Yes | Local SQL files |
 | Registry generation | Yes | Local generators |

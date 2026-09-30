@@ -116,7 +116,7 @@ DELETE /api/v1/tasks/:id      // Delete task
 
 **❌ DON'T: Use header versioning (less explicit)**
 ```typescript
-❌ GET /api/tasks
+❌ GET /api/v1/tasks
    Accept: application/vnd.api+json;version=2
 ```
 
@@ -281,7 +281,7 @@ runs, so there's no separate scope check to write by hand (see
 [Scope Enforcement Fails Closed](./02-authentication.md#scope-enforcement-fails-closed)).
 
 ```typescript
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function DELETE(
   request: NextRequest,
@@ -631,7 +631,7 @@ GET /api/v2/tasks
 
 **Maintain v1 while rolling out v2:**
 ```typescript
-// app/api/v1/tasks/route.ts
+// api/tasks/route.ts
 export async function GET() {
   const tasks = await getTasks()
   return NextResponse.json({
@@ -640,7 +640,7 @@ export async function GET() {
   })
 }
 
-// app/api/v2/tasks/route.ts
+// api/v2/tasks/route.ts
 export async function GET() {
   const tasks = await getTasks()
   return NextResponse.json({

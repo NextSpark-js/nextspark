@@ -119,7 +119,7 @@ Configure languages in your theme's app config:
 
 ```typescript
 // config/app.config.ts
-import type { AppConfig } from '@/core/types/app'
+import type { AppConfig } from '@nextsparkjs/core/types/app'
 
 export const appConfig: AppConfig = {
   // Default language for new users
@@ -570,7 +570,7 @@ export const productsEntity: EntityConfig = {
 **📋 Rebuild Translation Registry:**
 
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ```

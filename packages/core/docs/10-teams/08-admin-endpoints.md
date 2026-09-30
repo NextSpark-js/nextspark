@@ -15,7 +15,7 @@ Algunos endpoints están diseñados exclusivamente para superadmins (dueños del
 
 **Validación de permisos:**
 ```typescript
-import { hasAdminPermission } from '@/core/lib/api/auth/permissions'
+import { hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions'
 
 // En el endpoint:
 if (!hasAdminPermission(authResult, 'users:read')) {
@@ -50,8 +50,8 @@ El endpoint `/api/v1/api-keys` **NO es admin-only**. Cada usuario gestiona sus p
 ### Helper Function
 
 ```typescript
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
-import { hasAdminPermission } from '@/core/lib/api/auth/permissions'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions'
 
 // En el endpoint:
 export async function GET(request: NextRequest) {
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
 ### Unit Tests
 
 ```typescript
-import { isSuperAdmin, hasAdminPermission } from '@/core/lib/api/auth/permissions'
+import { isSuperAdmin, hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions'
 
 describe('Admin Authentication', () => {
   it('should allow superadmin session', () => {

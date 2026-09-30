@@ -1,6 +1,6 @@
 # Config Registry
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 > **DEPRECATED - REGISTRY REMOVED (2025-12-26)**
 >
@@ -550,7 +550,7 @@ ls config/feature-flags.config.ts
 # ❌ featureFlags.config.ts (use kebab-case)
 
 # 3. Rebuild registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # 4. Verify config in generated registry
 cat .nextspark/registries/config-registry.ts | grep "'feature-flags'"
@@ -603,7 +603,7 @@ ls .env.local
 # ✅ Any name for server-side only
 
 # Rebuild with fresh environment
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ---
@@ -639,7 +639,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 **Next steps:**
 - [Docs Registry](./10-docs-registry.md) - Documentation metadata system
 - [Performance and Benchmarks](./12-performance-and-benchmarks.md) - Performance analysis
-- [Theme Registry](./05-theme-registry.md) - Theme configurations
+- [Theme Registry](./05-theme-registry-usage.md) - Theme configurations
 
 **Documentation:** `core/docs/03-registry-system/09-config-registry.md`
 **Source:** `.nextspark/registries/config-registry.ts` (auto-generated)

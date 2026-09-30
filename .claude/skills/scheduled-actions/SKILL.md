@@ -98,7 +98,7 @@ export async function register() {
 ### Cron Endpoint (Simplified)
 
 ```typescript
-// app/api/v1/cron/process/route.ts
+// packages/core/src/routes/api/v1/cron/process/route.ts
 import {
   processPendingActions,
   cleanupOldActions
@@ -179,7 +179,7 @@ export async function registerRecurringActions(): Promise<void> {
 
 ```typescript
 // lib/scheduled-actions/handlers/{name}.ts
-import { registerScheduledAction } from '@/core/lib/scheduled-actions'
+import { registerScheduledAction } from '@nextsparkjs/core/lib/scheduled-actions'
 
 interface MyPayload {
   entityId: string
@@ -242,8 +242,8 @@ export function registerAllHandlers() {
 
 ```typescript
 // lib/scheduled-actions/entity-hooks.ts
-import { scheduleAction } from '@/core/lib/scheduled-actions'
-import { hookSystem } from '@/core/lib/hooks'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions'
+import { hookSystem } from '@nextsparkjs/core/lib/hooks'
 
 export function registerEntityHooks() {
   // Hook for task creation
@@ -325,7 +325,7 @@ WEBHOOK_URL_DEFAULT=https://fallback-url
 ### Immediate Action
 
 ```typescript
-import { scheduleAction } from '@/core/lib/scheduled-actions'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions'
 
 await scheduleAction({
   type: 'my-action:type',
@@ -635,7 +635,7 @@ export async function register() {
 - [ ] Handler registered in `index.ts` `registerAllHandlers()`
 - [ ] Handler returns `{ success, message }` object
 - [ ] Error handling with try/catch
-- [ ] Registry rebuilt: `node core/scripts/build/registry.mjs`
+- [ ] Registry rebuilt: `pnpm build:registries`
 
 ### Adding Webhook
 

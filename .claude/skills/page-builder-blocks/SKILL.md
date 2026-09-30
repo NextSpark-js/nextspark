@@ -45,7 +45,7 @@ Every block requires exactly 5 files in `blocks/{slug}/`:
 ### File 1: config.ts
 
 ```typescript
-import type { BlockConfig, BlockCategory } from '@/core/types/blocks'
+import type { BlockConfig, BlockCategory } from '@nextsparkjs/core/types/blocks'
 
 export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Component' | 'examples'> = {
   slug: 'hero',                              // kebab-case, matches folder name
@@ -53,7 +53,6 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'Full-width hero with title, subtitle, and CTA',
   category: 'hero' as BlockCategory,         // From 15 categories
   icon: 'LayoutTemplate',                    // Lucide icon name
-  thumbnail: '/theme/blocks/hero/thumbnail.png',  // Optional preview
   scope: ['pages'],                          // 'pages', 'posts', or both
 }
 ```
@@ -62,7 +61,7 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
 
 ```typescript
 import * as z from 'zod'
-import { baseBlockSchema } from '@/core/types/blocks'
+import { baseBlockSchema } from '@nextsparkjs/core/types/blocks'
 
 // For array fields, define item schema first
 const featureItemSchema = z.object({
@@ -96,12 +95,12 @@ export type HeroProps = z.infer<typeof schema>
 ### File 3: fields.ts
 
 ```typescript
-import type { FieldDefinition } from '@/core/types/blocks'
+import type { FieldDefinition } from '@nextsparkjs/core/types/blocks'
 import {
   baseContentFields,
   baseDesignFields,
   baseAdvancedFields,
-} from '@/core/types/blocks'
+} from '@nextsparkjs/core/types/blocks'
 
 // Custom content fields
 const customContentFields: FieldDefinition[] = [
@@ -161,7 +160,7 @@ export const fields = fieldDefinitions
 ### File 4: component.tsx
 
 ```typescript
-import { buildSectionClasses } from '@/core/types/blocks'
+import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import { sel } from '../../lib/selectors'
 import type { HeroProps } from './schema'
 
@@ -422,13 +421,13 @@ export const BLOCK_REGISTRY: Record<string, BlockConfig> = {
 
 **Rebuild registry after creating/modifying blocks:**
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ## buildSectionClasses Helper
 
 ```typescript
-import { buildSectionClasses } from '@/core/types/blocks'
+import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 
 // Returns combined class string with background color and custom classes
 const classes = buildSectionClasses('py-16 px-4', {
@@ -491,7 +490,7 @@ export const fieldDefinitions = [
 // Block won't appear in admin UI without registry entry
 
 // CORRECT: Always rebuild after changes
-// node core/scripts/build/registry.mjs
+// pnpm build:registries
 ```
 
 ## Checklist
@@ -505,7 +504,7 @@ Before finalizing a block:
 - [ ] Component has data-cy selectors
 - [ ] Block selectors added to BLOCK_SELECTORS
 - [ ] index.ts exports all required items
-- [ ] Registry rebuilt (`node core/scripts/build/registry.mjs`)
+- [ ] Registry rebuilt (`pnpm build:registries`)
 - [ ] Block appears in BLOCK_REGISTRY
 - [ ] No hardcoded colors
 - [ ] TypeScript compiles without errors

@@ -39,7 +39,7 @@ Crea `products.fields.ts`:
 ```typescript
 // entities/products/products.fields.ts
 
-import type { EntityField } from '@/core/lib/entities/types'
+import type { EntityField } from '@nextsparkjs/core/lib/entities/types'
 
 export const productFields: EntityField[] = [
   {
@@ -140,7 +140,7 @@ Crea `products.config.ts`:
 // entities/products/products.config.ts
 
 import { ShoppingBag } from 'lucide-react'
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import { productFields } from './products.fields'
 
 export const productEntityConfig: EntityConfig = {
@@ -254,7 +254,7 @@ Crea `products.service.ts`:
 ```typescript
 // entities/products/products.service.ts
 
-import { queryOneWithRLS, queryWithRLS } from '@/core/lib/db'
+import { queryOneWithRLS, queryWithRLS } from '@nextsparkjs/core/lib/db'
 import type { Product, ProductListOptions, ProductListResult } from './products.types'
 
 export class ProductsService {
@@ -489,12 +489,12 @@ pnpm db:migrate
 
 ### Página de Listado
 
-Crea `app/dashboard/(main)/products/page.tsx`:
+Crea `templates/dashboard/(main)/products/page.tsx`:
 
 ```typescript
 'use client'
 
-import { EntityListWrapper } from '@/core/components/entities/wrappers'
+import { EntityListWrapper } from '@nextsparkjs/core/components/entities/wrappers'
 
 export default function ProductsPage() {
   return (
@@ -509,12 +509,12 @@ export default function ProductsPage() {
 
 ### Página de Creación
 
-Crea `app/dashboard/(main)/products/create/page.tsx`:
+Crea `templates/dashboard/(main)/products/create/page.tsx`:
 
 ```typescript
 'use client'
 
-import { EntityFormWrapper } from '@/core/components/entities/wrappers'
+import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrappers'
 import { useRouter } from 'next/navigation'
 
 export default function CreateProductPage() {
@@ -539,12 +539,12 @@ export default function CreateProductPage() {
 
 ### Página de Edición
 
-Crea `app/dashboard/(main)/products/[id]/edit/page.tsx`:
+Crea `templates/dashboard/(main)/products/[id]/edit/page.tsx`:
 
 ```typescript
 'use client'
 
-import { EntityFormWrapper } from '@/core/components/entities/wrappers'
+import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrappers'
 import { useRouter } from 'next/navigation'
 
 export default function EditProductPage({ 
@@ -574,12 +574,12 @@ export default function EditProductPage({
 
 ### Página de Detalle
 
-Crea `app/dashboard/(main)/products/[id]/page.tsx`:
+Crea `templates/dashboard/(main)/products/[id]/page.tsx`:
 
 ```typescript
 'use client'
 
-import { EntityDetailWrapper } from '@/core/components/entities/wrappers'
+import { EntityDetailWrapper } from '@nextsparkjs/core/components/entities/wrappers'
 
 export default function ProductDetailPage({ 
   params 
@@ -661,7 +661,7 @@ entities/products/
     ├── en.json                     # ✅ Traducciones inglés
     └── es.json                     # ✅ Traducciones español
 
-app/dashboard/(main)/products/
+templates/dashboard/(main)/products/
 ├── page.tsx                        # ✅ Lista de productos
 ├── create/
 │   └── page.tsx                    # ✅ Crear producto

@@ -489,7 +489,7 @@ export default function RootLayout({ children }) {
 ### API Route for Web Vitals
 
 ```typescript
-// app/api/analytics/web-vitals/route.ts
+// api/analytics/web-vitals/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {

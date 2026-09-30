@@ -43,7 +43,7 @@ Usage is tracked per period based on reset configuration:
 ### UsageService.track()
 
 ```typescript
-import { UsageService } from '@/core/lib/services'
+import { UsageService } from '@nextsparkjs/core/lib/services'
 
 // When user creates a project
 await UsageService.track({
@@ -104,7 +104,7 @@ await UsageService.track({
 ### SubscriptionService.checkQuota()
 
 ```typescript
-import { SubscriptionService } from '@/core/lib/services'
+import { SubscriptionService } from '@nextsparkjs/core/lib/services'
 
 const quota = await SubscriptionService.checkQuota(teamId, 'projects')
 
@@ -127,7 +127,7 @@ if (!quota.allowed) {
 For most cases, use `MembershipService` which provides the quota along with role and subscription context:
 
 ```typescript
-import { MembershipService } from '@/core/lib/services'
+import { MembershipService } from '@nextsparkjs/core/lib/services'
 
 const membership = await MembershipService.get(userId, teamId)
 const quota = membership.checkQuota('projects')
@@ -168,7 +168,7 @@ When `max: -1`:
 ### Team Usage Summary
 
 ```typescript
-import { UsageService } from '@/core/lib/services'
+import { UsageService } from '@nextsparkjs/core/lib/services'
 
 const summary = await UsageService.getTeamSummary(teamId, '2024-01')
 
@@ -191,7 +191,7 @@ console.log(summary)
 ### Usage by User
 
 ```typescript
-import { UsageService } from '@/core/lib/services'
+import { UsageService } from '@nextsparkjs/core/lib/services'
 
 const breakdown = await UsageService.getTeamUsageByUser(teamId, '2024-01')
 // Returns UserUsageSummary[]
@@ -200,7 +200,7 @@ const breakdown = await UsageService.getTeamUsageByUser(teamId, '2024-01')
 ### Top Consumers
 
 ```typescript
-import { UsageService } from '@/core/lib/services'
+import { UsageService } from '@nextsparkjs/core/lib/services'
 
 const top = await UsageService.getTopConsumers(teamId, 'api_calls', '2024-01', 5)
 // Returns TopConsumer[]
@@ -209,7 +209,7 @@ const top = await UsageService.getTopConsumers(teamId, 'api_calls', '2024-01', 5
 ### User Timeline
 
 ```typescript
-import { UsageService } from '@/core/lib/services'
+import { UsageService } from '@nextsparkjs/core/lib/services'
 
 const events = await UsageService.getUserTimeline(userId, {
   limitSlug: 'api_calls',
@@ -227,7 +227,7 @@ const events = await UsageService.getUserTimeline(userId, {
 Display usage progress:
 
 ```tsx
-import { UsageBar } from '@/core/components/billing/UsageBar'
+import { UsageBar } from '@nextsparkjs/core/components/billing/UsageBar'
 
 <UsageBar
   current={12}
@@ -242,7 +242,7 @@ import { UsageBar } from '@/core/components/billing/UsageBar'
 Full usage overview:
 
 ```tsx
-import { UsageDashboard } from '@/core/components/billing/UsageDashboard'
+import { UsageDashboard } from '@nextsparkjs/core/components/billing/UsageDashboard'
 
 <UsageDashboard teamId={teamId} />
 ```
@@ -293,7 +293,7 @@ When a team downgrades and exceeds new limits:
 3. **New resources blocked** until under limit
 
 ```typescript
-import { checkDowngrade, checkQuotaWithEnforcement } from '@/core/lib/billing/enforcement'
+import { checkDowngrade, checkQuotaWithEnforcement } from '@nextsparkjs/core/lib/billing/enforcement'
 
 // Check before downgrade
 const check = await checkDowngrade(teamId, 'free')
@@ -317,7 +317,7 @@ const quota = await checkQuotaWithEnforcement(teamId, 'projects')
 ### DowngradeWarning Component
 
 ```tsx
-import { DowngradeWarning } from '@/core/components/billing/DowngradeWarning'
+import { DowngradeWarning } from '@nextsparkjs/core/components/billing/DowngradeWarning'
 
 <DowngradeWarning
   overLimitResources={[

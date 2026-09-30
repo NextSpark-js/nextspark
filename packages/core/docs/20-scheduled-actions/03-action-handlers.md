@@ -13,7 +13,7 @@ Action handlers implement the business logic for scheduled actions. Each handler
 
 ```typescript
 // lib/scheduled-actions/handlers/my-handler.ts
-import { registerScheduledAction } from '@/core/lib/scheduled-actions'
+import { registerScheduledAction } from '@nextsparkjs/core/lib/scheduled-actions'
 
 export function registerMyAction() {
   registerScheduledAction('my-action:type', async (payload) => {
@@ -121,7 +121,7 @@ registerScheduledAction('webhook:send', async (payload) => {
 
 ```typescript
 // lib/scheduled-actions/handlers/email.ts
-import { registerScheduledAction } from '@/core/lib/scheduled-actions'
+import { registerScheduledAction } from '@nextsparkjs/core/lib/scheduled-actions'
 
 interface EmailPayload {
   to: string
@@ -170,7 +170,7 @@ export function registerAllHandlers(): void {
 ### Step 3: Schedule Actions
 
 ```typescript
-import { scheduleAction } from '@/core/lib/scheduled-actions'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions'
 
 // Immediate
 await scheduleAction('email:send', {
@@ -226,8 +226,8 @@ Schedule actions from entity lifecycle hooks:
 
 ```typescript
 // lib/scheduled-actions/entity-hooks.ts
-import { scheduleAction } from '@/core/lib/scheduled-actions'
-import { hookSystem } from '@/core/lib/plugins/hook-system'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions'
+import { hookSystem } from '@nextsparkjs/core/lib/plugins/hook-system'
 
 export function registerEntityWebhookHooks() {
   // Task created webhook
@@ -331,7 +331,7 @@ registerScheduledAction('slow:api-call', async (payload) => {
 ```typescript
 // __tests__/handlers/email.test.ts
 import { registerEmailHandler } from '../handlers/email'
-import { getActionHandler } from '@/core/lib/scheduled-actions/registry'
+import { getActionHandler } from '@nextsparkjs/core/lib/scheduled-actions/registry'
 
 describe('Email Handler', () => {
   beforeAll(() => {

@@ -1,6 +1,6 @@
 # Performance and Caching
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Overview
 
@@ -262,7 +262,7 @@ pnpm build
 
 ```bash
 # Rebuild all registries
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Output:
 🔍 Discovering content...
@@ -285,7 +285,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 ```bash
 # Enable watch mode
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 
 # Output:
 [REGISTRY] Watch mode enabled
@@ -348,7 +348,7 @@ const entity = ENTITY_REGISTRY.tasks  // Always valid, no staleness
 ```typescript
 // Content change flow
 1. Edit: entities/tasks/tasks.config.ts
-2. Rebuild: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs (or auto in watch mode)
+2. Rebuild: cd apps/dev && node ../../packages/cli/dist/cli.js prepare (or auto in watch mode)
 3. Restart: pnpm dev (restart dev server)
 4. Access: ENTITY_REGISTRY.tasks (now up-to-date)
 
@@ -606,7 +606,7 @@ console.log(`  Heap Used: ${(used.heapUsed / 1024 / 1024).toFixed(2)} MB`)
 
 ```bash
 # Track build time over time
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Output:
 🔍 Discovering content... (2.1s)

@@ -96,7 +96,7 @@ beforeEach(() => {
 })
 
 describe.each(CASES)('the contract of $name is what the real handlers return', ({ config, schema, taxonomies }) => {
-  const useEntity = () => mocks.resolveEntityFromUrl.mockResolvedValue({ isValidEntity: true, entityConfig: config, entityName: config.slug, hasCustomOverride: false })
+  const useEntity = () => mocks.resolveEntityFromUrl.mockResolvedValue({ isValidEntity: true, entityConfig: config, entityName: config.slug })
   const idParams = { params: Promise.resolve({ entity: config.slug, id: 'row-1' }) }
 
   it('list: the SELECT lists the contract columns, and the response parses without losing a key', async () => {

@@ -199,7 +199,7 @@ export default async function ServerPage() {
 // Client Component (child)
 'use client'
 
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
 export function ClientComponent({ config }: { config: EntityConfig }) {
   // Use config passed from server
@@ -693,7 +693,7 @@ function EntityStats() {
 ```typescript
 // app/(protected)/entities/page.tsx
 import { getRootEntities } from '@nextsparkjs/registries/entity-registry'
-import { EntityCard } from '@/core/components/entities/EntityCard'
+import { EntityCard } from '@nextsparkjs/core/components/entities/EntityCard'
 
 export default async function EntitiesPage() {
   const entities = getRootEntities()
@@ -734,7 +734,7 @@ export default async function EntityPage({ params }: { params: { slug: string } 
 ### Pattern 3: API Route with Entity
 
 ```typescript
-// app/api/v1/[entity]/route.ts
+// packages/core/src/routes/api/v1/[entity]/route.ts
 import { getEntity, getEntityTableName } from '@nextsparkjs/registries/entity-registry'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -897,7 +897,7 @@ describe('Entity Registry', () => {
 - Hierarchical navigation
 - Plugin/theme management
 
-**Next:** [Route Handlers Registry](./06-route-handlers-registry.md) - Zero dynamic imports for API routes
+**Next:** [Route Handlers Registry](./06-route-handlers-architecture.md) - Zero dynamic imports for API routes
 
 ---
 

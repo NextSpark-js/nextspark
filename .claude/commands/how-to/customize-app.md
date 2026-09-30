@@ -109,7 +109,7 @@ Core application settings:
 
 ```typescript
 // config/app.config.ts
-import type { AppConfig } from '@/core/types/app'
+import type { AppConfig } from '@nextsparkjs/core/types/app'
 
 export const appConfig: AppConfig = {
   // App Identity
@@ -205,7 +205,7 @@ export default appConfig
 
 ```typescript
 // Server-side
-import { getAppConfig } from '@/core/lib/config'
+import { getAppConfig } from '@nextsparkjs/core/lib/config'
 
 const config = getAppConfig()
 if (config.teamMode.enabled) {
@@ -213,7 +213,7 @@ if (config.teamMode.enabled) {
 }
 
 // Client-side
-import { useAppConfig } from '@/core/lib/hooks/useAppConfig'
+import { useAppConfig } from '@nextsparkjs/core/lib/hooks/useAppConfig'
 
 function MyComponent() {
   const config = useAppConfig()

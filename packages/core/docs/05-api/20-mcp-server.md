@@ -87,10 +87,7 @@ modes of the underlying API:
 
 ## Enabling MCP in Your App
 
-MCP is delivered the same way the generic entity REST routes are: a small route file your app
-owns, wiring the core engine to the generated registries. Add
-`app/api/mcp/route.ts` — see `packages/core/src/routes/api/mcp/route.ts` in this monorepo (the generated `src/app/api/mcp/route.ts` re-exports it) for the complete,
-working reference implementation. The shape is:
+MCP is served by core: `@nextsparkjs/core/routes/api/mcp/route` (`packages/core/src/routes/api/mcp/route.ts` in this monorepo) wires the core engine to the generated registries, and `nextspark prepare` generates `src/app/api/mcp/route.ts` re-exporting it. There is nothing to add to your project. The shape of that route is:
 
 ```ts
 import { createMcpEngine } from '@nextsparkjs/core/lib/mcp'

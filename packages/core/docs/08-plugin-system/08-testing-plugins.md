@@ -108,7 +108,7 @@ import { POST, GET } from '../process/route'
 import { NextRequest } from 'next/server'
 
 // Mock authentication
-jest.mock('@/core/lib/api/auth/dual-auth', () => ({
+jest.mock('@nextsparkjs/core/lib/api/auth/dual-auth', () => ({
   authenticateRequest: jest.fn().mockResolvedValue({
     authenticated: true,
     session: {

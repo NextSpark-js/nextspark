@@ -6,6 +6,5 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'A vertical or horizontal timeline showing chronological events, process steps, or history',
   category: 'content',
   icon: 'GitBranch',
-  thumbnail: '/theme/blocks/timeline/thumbnail.png',
   scope: ['pages', 'posts']
 }

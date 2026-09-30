@@ -44,8 +44,8 @@ From the skill, remember:
 
 ## Endpoint Location
 
-- Custom endpoints: `app/api/v1/(contents)/{endpoint}/route.ts`
-- Core endpoints: `app/api/v1/{endpoint}/route.ts`
+- Custom endpoints: `api/{endpoint}/route.ts` (served at `/api/{endpoint}`)
+- Core endpoints (`/api/v1/**`): read-only in `@nextsparkjs/core/routes/api/v1/`; a deliberate override goes in `templates/api/v1/{endpoint}/route.ts`
 
 ---
 

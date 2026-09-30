@@ -315,8 +315,8 @@ in your application.
 **📋 Basic Email Sending:**
 
 ```typescript
-import { EmailFactory } from '@/core/lib/email'
-import { emailTemplates } from '@/core/lib/email/templates'
+import { EmailFactory } from '@nextsparkjs/core/lib/email'
+import { emailTemplates } from '@nextsparkjs/core/lib/email/templates'
 
 // 1. Get the email service instance (singleton)
 const emailService = EmailFactory.getInstance()
@@ -365,8 +365,8 @@ interface EmailOptions {
 ```typescript
 // From: /api/v1/teams/[teamId]/members/route.ts
 
-import { EmailFactory } from '@/core/lib/email'
-import { createTeamInvitationEmail } from '@/core/lib/email/templates'
+import { EmailFactory } from '@nextsparkjs/core/lib/email'
+import { createTeamInvitationEmail } from '@nextsparkjs/core/lib/email/templates'
 
 // In your API handler:
 const emailProvider = EmailFactory.getInstance()

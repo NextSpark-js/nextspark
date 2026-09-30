@@ -79,7 +79,7 @@ export async function setUserLocale(locale: string) {
 // In a Server Action
 'use server'
 
-import { setUserLocale } from '@/core/lib/locale'
+import { setUserLocale } from '@nextsparkjs/core/lib/locale'
 
 export async function changeUserLocale(locale: string) {
   await setUserLocale(locale)
@@ -98,7 +98,7 @@ Located in `core/lib/locale-client.ts`:
 ```typescript
 'use client'
 
-import { I18N_CONFIG, type SupportedLocale } from '@/core/lib/config'
+import { I18N_CONFIG, type SupportedLocale } from '@nextsparkjs/core/lib/config'
 
 export function setUserLocaleClient(locale: string) {
   // Validate input locale
@@ -131,8 +131,8 @@ Located in `core/hooks/useLocale.ts`:
 
 import { useState, useCallback } from 'react'
 import { useUserProfile } from './useUserProfile'
-import { setUserLocaleClient } from '@/core/lib/locale-client'
-import { I18N_CONFIG, type SupportedLocale } from '@/core/lib/config'
+import { setUserLocaleClient } from '@nextsparkjs/core/lib/locale-client'
+import { I18N_CONFIG, type SupportedLocale } from '@nextsparkjs/core/lib/config'
 
 export function useLocale() {
   const { profile, updateProfile } = useUserProfile()
@@ -195,7 +195,7 @@ export function useLocale() {
 ```typescript
 'use client'
 
-import { useLocale } from '@/core/hooks/useLocale'
+import { useLocale } from '@nextsparkjs/core/hooks/useLocale'
 import { useTranslations } from 'next-intl'
 import {
   Select,
@@ -203,7 +203,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/core/components/ui/select'
+} from '@nextsparkjs/core/components/ui/select'
 import { Globe } from 'lucide-react'
 
 const LOCALE_NAMES = {
@@ -244,8 +244,8 @@ export function LanguageSwitcher() {
 ```typescript
 'use client'
 
-import { useLocale } from '@/core/hooks/useLocale'
-import { Button } from '@/core/components/ui/button'
+import { useLocale } from '@nextsparkjs/core/hooks/useLocale'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Languages } from 'lucide-react'
 
 export function LanguageToggle() {
@@ -276,10 +276,10 @@ export function LanguageToggle() {
 ```typescript
 'use client'
 
-import { useLocale } from '@/core/hooks/useLocale'
+import { useLocale } from '@nextsparkjs/core/hooks/useLocale'
 import { useTranslations } from 'next-intl'
-import { Label } from '@/core/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/core/components/ui/radio-group'
+import { Label } from '@nextsparkjs/core/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@nextsparkjs/core/components/ui/radio-group'
 
 const LOCALE_OPTIONS = [
   { value: 'en', label: 'English', flag: '🇺🇸' },
@@ -420,7 +420,7 @@ For a smoother experience, you can implement locale switching without full reloa
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useLocale } from '@/core/hooks/useLocale'
+import { useLocale } from '@nextsparkjs/core/hooks/useLocale'
 
 export function SmoothLanguageSwitcher() {
   const router = useRouter()
@@ -453,7 +453,7 @@ Set default locale during user signup:
 
 ```typescript
 // In signup flow
-import { I18N_CONFIG } from '@/core/lib/config'
+import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
 
 const newUser = await auth.api.signUp({
   email: data.email,
@@ -493,8 +493,8 @@ export const auth = betterAuth({
 Return localized API responses:
 
 ```typescript
-// app/api/data/route.ts
-import { getUserLocale } from '@/core/lib/locale'
+// api/data/route.ts
+import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { getTranslations } from 'next-intl/server'
 
 export async function GET(request: Request) {
@@ -526,7 +526,7 @@ You can implement URL-based locale routing:
 ```typescript
 // middleware.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserLocale } from '@/core/lib/locale'
+import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -585,7 +585,7 @@ export const config = {
 ```typescript
 // test/locale-switching.test.ts
 import { describe, it, expect } from '@jest/globals'
-import { setUserLocaleClient } from '@/core/lib/locale-client'
+import { setUserLocaleClient } from '@nextsparkjs/core/lib/locale-client'
 
 describe('Locale Switching', () => {
   it('should set locale cookie', () => {

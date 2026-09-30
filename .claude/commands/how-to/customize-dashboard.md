@@ -104,7 +104,7 @@ Configure sidebar menu items:
 
 ```typescript
 // config/navigation.config.ts
-import type { NavigationConfig } from '@/core/types/navigation'
+import type { NavigationConfig } from '@nextsparkjs/core/types/navigation'
 import {
   Home,
   Package,
@@ -247,7 +247,7 @@ Configure the main dashboard home page:
 
 ```typescript
 // config/widgets.config.ts
-import type { WidgetsConfig } from '@/core/types/widgets'
+import type { WidgetsConfig } from '@nextsparkjs/core/types/widgets'
 
 export const widgetsConfig: WidgetsConfig = {
   // Dashboard home layout
@@ -368,8 +368,8 @@ export const widgetsConfig: WidgetsConfig = {
 // components/widgets/MyCustomWidget.tsx
 'use client'
 
-import { Card, CardHeader, CardContent } from '@/core/components/ui/card'
-import type { WidgetProps } from '@/core/types/widgets'
+import { Card, CardHeader, CardContent } from '@nextsparkjs/core/components/ui/card'
+import type { WidgetProps } from '@nextsparkjs/core/types/widgets'
 
 export function MyCustomWidget({ config }: WidgetProps) {
   return (
@@ -423,7 +423,7 @@ Configure dashboard appearance:
 
 ```typescript
 // config/dashboard.config.ts
-import type { DashboardConfig } from '@/core/types/dashboard'
+import type { DashboardConfig } from '@nextsparkjs/core/types/dashboard'
 
 export const dashboardConfig: DashboardConfig = {
   // Layout settings

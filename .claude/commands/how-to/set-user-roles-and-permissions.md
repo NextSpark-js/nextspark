@@ -130,7 +130,7 @@ Configure core permissions in your theme:
 
 ```typescript
 // config/permissions.config.ts
-import type { ThemePermissionsConfig } from '@/core/lib/permissions/types'
+import type { ThemePermissionsConfig } from '@nextsparkjs/core/lib/permissions/types'
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   // Team-level permissions
@@ -390,8 +390,8 @@ STEP 5 OF 5: Use Permissions in Code
 
 ```typescript
 // In API route or server action
-import { checkPermission } from '@/core/lib/permissions/check'
-import { MembershipService } from '@/core/lib/services/membership.service'
+import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
+import { MembershipService } from '@nextsparkjs/core/lib/services/membership.service'
 
 export async function DELETE(request: NextRequest, { params }) {
   const { userId, teamId } = await getAuthContext(request)
@@ -426,7 +426,7 @@ export async function DELETE(request: NextRequest, { params }) {
 
 ```typescript
 // In React component
-import { usePermission, usePermissions, useTeamRole } from '@/core/lib/permissions/hooks'
+import { usePermission, usePermissions, useTeamRole } from '@nextsparkjs/core/lib/permissions/hooks'
 
 function ProductActions({ productId }: Props) {
   // Single permission check
@@ -457,7 +457,7 @@ function ProductActions({ productId }: Props) {
 📋 User Role Checks (App-Level):
 
 ```typescript
-import { roleHelpers } from '@/core/lib/role-helpers'
+import { roleHelpers } from '@nextsparkjs/core/lib/role-helpers'
 
 // Check user roles (NOT team roles)
 if (roleHelpers.isDeveloper(user.role)) {
@@ -478,7 +478,7 @@ if (membership.hasRole('superadmin')) {}  // This checks TEAM role!
 4️⃣  Rebuild Registry:
 
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

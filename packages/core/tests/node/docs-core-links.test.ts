@@ -115,11 +115,11 @@ test('the AI plugin install doc does not recommend a registry:build:<type> scrip
 })
 
 test('registry build and watch commands name a runnable context', () => {
-  const monorepoCommand = 'cd apps/dev && node ../../packages/core/scripts/build/registry.mjs'
+  const monorepoCommand = 'cd apps/dev && node ../../packages/cli/dist/cli.js prepare'
   const generatedBuild = 'pnpm build:registries'
-  const generatedWatch = 'pnpm exec nextspark registry:watch'
-  const monorepoContext = '> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.'
-  const generatedProjectContext = '> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).'
+  const generatedWatch = 'pnpm exec nextspark prepare --watch'
+  const monorepoContext = '> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.'
+  const generatedProjectContext = '> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (add `--watch` to watch).'
 
   for (const file of coreDocFiles()) {
     const content = fs.readFileSync(path.join(CORE_DOCS_ROOT, file), 'utf8')
@@ -168,16 +168,16 @@ test('the documentation-system docs do not teach removed selector fallbacks or i
   assert.doesNotMatch(extending, /\|\s*`enabled`\s*\|\s*boolean\s*\|\s*Show\/hide this category/i, '07-extending-overriding.md says `enabled` hides any category, and only the public sidebar reads it')
 })
 
-test('installation.md builds Core before invoking the registry script', () => {
+test('installation.md builds Core and the CLI before invoking prepare', () => {
   const file = '02-getting-started/01-installation.md'
   const content = fs.readFileSync(path.join(CORE_DOCS_ROOT, file), 'utf8')
   const stepFive = content.slice(content.indexOf('### Step 5: Build Registries'))
-  const prerequisiteIndex = stepFive.indexOf('pnpm build:core')
-  const registryCallIndex = stepFive.indexOf('node ../../packages/core/scripts/build/registry.mjs')
-  assert.ok(prerequisiteIndex >= 0, `${file} Step 5 does not mention building Core first`)
+  const prerequisiteIndex = stepFive.indexOf('pnpm build:core && pnpm build:cli')
+  const registryCallIndex = stepFive.indexOf('node ../../packages/cli/dist/cli.js prepare')
+  assert.ok(prerequisiteIndex >= 0, `${file} Step 5 does not mention building Core and the CLI first`)
   assert.ok(
     prerequisiteIndex < registryCallIndex,
-    `${file} Step 5 invokes the registry script before telling the reader to build Core, which the script imports from packages/core/dist`
+    `${file} Step 5 invokes prepare before telling the reader to build Core and the CLI, which prepare runs from packages/*/dist`
   )
 })
 

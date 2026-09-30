@@ -376,9 +376,9 @@ And deberia encontrar links de ver en filas de uso (si el patron tiene usos)
 
 | Component | File | Key Selectors |
 |-----------|------|---------------|
-| PatternsListPage | `packages/core/src/app/[locale]/(auth)/dashboard/patterns/page.tsx` | page, title, addBtn, table |
+| PatternsListPage | `packages/core/src/routes/dashboard/(main)/patterns/page.tsx` | page, title, addBtn, table |
 | PatternEditor | `packages/core/src/components/page-builder/PageBuilder.tsx` | header.*, blockPicker.* |
-| PatternUsagesPage | `packages/core/src/app/[locale]/(auth)/dashboard/patterns/[id]/usages/page.tsx` | usageReport.*, usageStats.* |
+| PatternUsagesPage | `packages/core/src/routes/dashboard/(main)/patterns/[id]/reports/page.tsx` | usageReport.*, usageStats.* |
 
 ## Related POMs
 

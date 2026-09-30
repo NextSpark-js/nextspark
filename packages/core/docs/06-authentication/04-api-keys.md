@@ -133,7 +133,7 @@ console.log('API Key (save this!):', data.key)
 
 ```typescript
 // core/lib/api/keys.ts
-import { ApiKeyManager } from '@/core/lib/api/keys'
+import { ApiKeyManager } from '@nextsparkjs/core/lib/api/keys'
 
 const result = await ApiKeyManager.createKey({
   userId: 'user-id',
@@ -303,7 +303,7 @@ handler to remember:
 access, exactly as before this change.
 
 ```typescript
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   const authResult = await authenticateRequest(request, { requiredScope: 'tasks:read' })

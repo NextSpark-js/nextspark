@@ -117,7 +117,7 @@ The core handles it in two steps:
    `refreshSessionCookie()` (`lib/auth-client.ts`) — Better Auth's own
    `GET /api/auth/get-session` with the cookie cache bypassed — on app open,
    when the tab becomes visible again and when the device comes back online,
-   throttled to once every 5 minutes. Served by `app/api/auth/[...all]`, that
+   throttled to once every 5 minutes. Served by `packages/core/src/routes/api/auth/[...all]`, that
    request can set cookies, so the renewed cookie actually reaches the browser.
    It only asks in a browser last seen signed in: the readable
    `nextspark.signed_in` cookie (`lib/auth/session-hint.ts`) records that, so an
@@ -145,7 +145,7 @@ Need your own endpoint (custom path, service worker, native shell)? Return
 `refreshSessionResponse(request.headers)` from any Route Handler:
 
 ```ts
-// app/api/session/refresh/route.ts
+// api/session/refresh/route.ts
 import { refreshSessionResponse } from '@nextsparkjs/core/lib/auth/session-refresh'
 
 export const GET = (req: Request) => refreshSessionResponse(req.headers)
@@ -239,7 +239,7 @@ CORS_ADDITIONAL_ORIGINS=https://*.example.com
 ### In Server Components
 
 ```typescript
-import { auth } from '@/core/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { headers } from 'next/headers'
 
 export default async function DashboardPage() {
@@ -264,8 +264,8 @@ export default async function DashboardPage() {
 ### In API Routes
 
 ```typescript
-// app/api/tasks/route.ts
-import { auth } from '@/core/lib/auth'
+// api/tasks/route.ts
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -291,7 +291,7 @@ export async function GET(request: NextRequest) {
 ```typescript
 'use client'
 
-import { useSession } from '@/core/lib/auth-client'
+import { useSession } from '@nextsparkjs/core/lib/auth-client'
 
 export function UserProfile() {
   const { data: session, isPending } = useSession()
@@ -318,7 +318,7 @@ export function UserProfile() {
 
 ```typescript
 // middleware.ts
-import { auth } from '@/core/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -418,7 +418,7 @@ async function createSession(userId: string) {
 ```typescript
 'use client'
 
-import { signOut } from '@/core/lib/auth-client'
+import { signOut } from '@nextsparkjs/core/lib/auth-client'
 
 export function SignOutButton() {
   const handleSignOut = async () => {

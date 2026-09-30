@@ -57,7 +57,7 @@ This guide helps migrate from legacy permission patterns to the new unified `Mem
 **Before:**
 
 ```typescript
-import { TeamMemberService } from '@/core/lib/services'
+import { TeamMemberService } from '@nextsparkjs/core/lib/services'
 
 const isAdmin = await TeamMemberService.isAdminOrOwner(teamId, userId)
 if (!isAdmin) {
@@ -68,7 +68,7 @@ if (!isAdmin) {
 **After:**
 
 ```typescript
-import { MembershipService } from '@/core/lib/services'
+import { MembershipService } from '@nextsparkjs/core/lib/services'
 
 const membership = await MembershipService.get(userId, teamId)
 const result = membership.canPerformAction('teams.update')
@@ -205,10 +205,10 @@ if (!result.allowed) {
 
 ```typescript
 // Remove
-import { TeamMemberService, SubscriptionService } from '@/core/lib/services'
+import { TeamMemberService, SubscriptionService } from '@nextsparkjs/core/lib/services'
 
 // Add
-import { MembershipService } from '@/core/lib/services'
+import { MembershipService } from '@nextsparkjs/core/lib/services'
 ```
 
 ### Step 2: Get Membership Context
@@ -299,11 +299,11 @@ Run these commands to verify migration:
 
 ```bash
 # Check for legacy patterns
-grep -r "isOwner\|isAdminOrOwner" app/api/
+grep -r "isOwner\|isAdminOrOwner" api/
 # Should return 0 results
 
 # Check MembershipService usage
-grep -r "MembershipService.get" app/api/
+grep -r "MembershipService.get" api/
 # Should show all migrated routes
 
 # Verify build

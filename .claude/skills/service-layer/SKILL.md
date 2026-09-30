@@ -82,7 +82,7 @@ export class CustomerService {
 
 **Usage (no instantiation):**
 ```typescript
-import { CustomerService } from '@/core/lib/services/customer.service'
+import { CustomerService } from '@nextsparkjs/core/lib/services/customer.service'
 
 // Direct static method calls
 const customer = await CustomerService.getById('cust-123', userId)
@@ -216,7 +216,7 @@ export async function mutateWithRLS<T>(
 ### Service Implementation with RLS
 
 ```typescript
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@/core/lib/db'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
 
 export class CustomerService {
   static async getById(id: string, userId: string): Promise<Customer | null> {
@@ -320,7 +320,7 @@ export class CustomerService {
 ## Transaction Pattern
 
 ```typescript
-import { getTransactionClient } from '@/core/lib/db'
+import { getTransactionClient } from '@nextsparkjs/core/lib/db'
 
 export class TeamService {
   static async createWithOwner(

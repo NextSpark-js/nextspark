@@ -1,6 +1,6 @@
 # Creating Custom Plugins
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -320,7 +320,7 @@ export function validateCity(city: string): boolean {
 
 ```typescript
 // plugins/weather/plugin.config.ts
-import type { PluginConfig } from '@/core/types/plugin'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 import { weatherEnv, validateEnvironment } from './lib/server-env'
 import {
   fetchWeather,
@@ -387,7 +387,7 @@ export default weatherPluginConfig
 ```typescript
 // plugins/weather/api/current/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 import * as z from 'zod'
 
@@ -455,9 +455,9 @@ export async function GET(request: NextRequest) {
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/core/components/ui/card'
-import { Button } from '@/core/components/ui/button'
-import { Input } from '@/core/components/ui/input'
+import { Card, CardHeader, CardTitle, CardContent } from '@nextsparkjs/core/components/ui/card'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { Input } from '@nextsparkjs/core/components/ui/input'
 
 interface WeatherData {
   city: string
@@ -728,7 +728,7 @@ Fetch and display weather data from OpenWeather API.
 
 4. Rebuild registry:
    ```bash
-   cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+   cd apps/dev && node ../../packages/cli/dist/cli.js prepare
    ```
 
 ## Usage
@@ -789,7 +789,7 @@ MIT
 
 ```bash
 # Rebuild plugin registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 **Registry will generate**:

@@ -69,20 +69,20 @@ This document tracks pending UI/UX components and customizations needed for the 
 ## 3. Template Overrides (Priority: Medium)
 
 ### 3.1 Entity List Views
-- [ ] `templates/app/dashboard/(main)/leads/page.tsx`
+- [ ] `templates/dashboard/(main)/leads/page.tsx`
   - Custom columns: score badge, source icon, status chip
   - Quick convert action
 
-- [ ] `templates/app/dashboard/(main)/opportunities/page.tsx`
+- [ ] `templates/dashboard/(main)/opportunities/page.tsx`
   - Toggle between list and Kanban view
   - Quick stage change
 
-- [ ] `templates/app/dashboard/(main)/activities/page.tsx`
+- [ ] `templates/dashboard/(main)/activities/page.tsx`
   - Calendar view option
   - Due date highlighting
 
 ### 3.2 Entity Detail Views
-- [ ] `templates/app/dashboard/(main)/[entity]/[id]/page.tsx`
+- [ ] `templates/dashboard/(main)/[entity]/[id]/page.tsx`
   - Related entities sidebar
   - Activity timeline
   - Quick actions based on entity type
@@ -97,14 +97,14 @@ This document tracks pending UI/UX components and customizations needed for the 
 ## 4. Settings Pages (Priority: Medium)
 
 ### 4.1 Pipeline Configuration
-- [ ] `templates/app/dashboard/settings/pipelines/page.tsx`
+- [ ] `templates/dashboard/settings/pipelines/page.tsx`
 - [ ] CRUD for pipelines (owner only)
 - [ ] Stage editor with drag reorder
 - [ ] Probability per stage configuration
 - [ ] Default pipeline selection
 
 ### 4.2 Product Catalog
-- [ ] `templates/app/dashboard/settings/products/page.tsx`
+- [ ] `templates/dashboard/settings/products/page.tsx`
 - [ ] Product CRUD (owner only)
 - [ ] Categories and pricing tiers
 - [ ] Product-opportunity association
@@ -171,15 +171,14 @@ This document tracks pending UI/UX components and customizations needed for the 
 │       ├── MarketingDashboard.tsx
 │       └── TeamPerformance.tsx
 ├── templates/
-│   └── app/
-│       └── dashboard/
-│           ├── (main)/
-│           │   ├── leads/
-│           │   ├── opportunities/
-│           │   └── activities/
-│           └── settings/
-│               ├── pipelines/
-│               └── products/
+│   └── dashboard/
+│       ├── (main)/
+│       │   ├── leads/
+│       │   ├── opportunities/
+│       │   └── activities/
+│       └── settings/
+│           ├── pipelines/
+│           └── products/
 └── styles/
     ├── globals.css
     └── components.css

@@ -72,7 +72,7 @@ describe('handleGenericList — #96 distinct field name is validated against ent
       fields: PETS_ENTITY.fields.filter(f => f.name !== 'hashtags'),
     } as EntityConfig
     mocks.resolveEntityFromUrl.mockResolvedValue({
-      isValidEntity: true, entityConfig: noTagsEntity, entityName: 'pets', hasCustomOverride: false,
+      isValidEntity: true, entityConfig: noTagsEntity, entityName: 'pets',
     })
     const badRequest = makeRequest({ url: listUrl({ fields: 'hashtags', distinct: 'true' }), headers: TEAM_HEADERS })
     const badResponse = await handleGenericList(badRequest) as unknown as { status: number; body: { code?: string } }

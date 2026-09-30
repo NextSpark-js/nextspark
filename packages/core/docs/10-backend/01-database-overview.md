@@ -621,7 +621,7 @@ Monitor database health via Supabase Dashboard:
 ### Pattern 1: Query with RLS
 
 ```typescript
-import { queryWithRLS } from '@/core/lib/db'
+import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 
 // Automatically filtered by userId
 const userTasks = await queryWithRLS(
@@ -634,7 +634,7 @@ const userTasks = await queryWithRLS(
 ### Pattern 2: Transaction with RLS
 
 ```typescript
-import { getTransactionClient } from '@/core/lib/db'
+import { getTransactionClient } from '@nextsparkjs/core/lib/db'
 
 const client = await getTransactionClient(userId)
 try {
@@ -656,7 +656,7 @@ try {
 ### Pattern 3: Metadata Storage
 
 ```typescript
-import { MetaService } from '@/core/lib/services/meta.service'
+import { MetaService } from '@nextsparkjs/core/lib/services/meta.service'
 
 // Store flexible data without migrations
 await MetaService.createMeta({

@@ -181,7 +181,7 @@ const scopeJson = await Read('.claude/sessions/[session-name]/scope.json')
 // Determine: core: true/false, theme: "themeName" or null
 
 if (scope.core === true) {
-  // CORE project: components import from @/core/lib/test
+  // CORE project: components import from @nextsparkjs/core/lib/test
   // Selectors defined in core/lib/test/core-selectors.ts
 } else if (scope.project) {
   // THEME project: components import from theme's selectors.ts
@@ -195,8 +195,8 @@ if (scope.core === true) {
 
    **For CORE project:**
    ```typescript
-   // ✅ APPROVED - Core project imports from @/core/lib/test
-   import { sel } from '@/core/lib/test'
+   // ✅ APPROVED - Core project imports from @nextsparkjs/core/lib/test
+   import { sel } from '@nextsparkjs/core/lib/test'
    <button data-cy={sel('auth.login.submit')}>
    ```
 
@@ -207,7 +207,7 @@ if (scope.core === true) {
    <button data-cy={sel('invoicing.createBtn')}>
 
    // ❌ REJECTED - Theme importing directly from core
-   import { sel } from '@/core/lib/test'  // Wrong for theme components!
+   import { sel } from '@nextsparkjs/core/lib/test'  // Wrong for theme components!
    ```
 
    **Always REJECTED:**
@@ -239,7 +239,7 @@ if (scope.core === true) {
    cy.get(cySelector('entities.table.row', { slug: 'tasks', id: '123' }))
 
    // ❌ REJECTED - Import from core in tests (theme project)
-   import { cySelector } from '@/core/lib/test'  // Wrong!
+   import { cySelector } from '@nextsparkjs/core/lib/test'  // Wrong!
 
    // ❌ REJECTED - Hardcoded data-cy in tests
    cy.get('[data-cy="login-submit"]')
@@ -256,7 +256,7 @@ if (scope.core === true) {
 | `cy.get(cySelector('path', { id }))` | APPROVED | Cypress POMs/tests (dynamic) | Theme tests |
 | `data-cy="hardcoded"` | REJECTED | - | - |
 | `cy.get('[data-cy="..."]')` | REJECTED | - | - |
-| Theme component importing from `@/core/lib/test` | REJECTED | - | Theme project |
+| Theme component importing from `@nextsparkjs/core/lib/test` | REJECTED | - | Theme project |
 
 ### Step 4: Check for Selector Violations
 
@@ -330,7 +330,7 @@ if (scope.core === true) {
   await Edit({
     file_path: "path/to/component.tsx",
     old_string: '<Button data-cy="my-feature-new-btn" onClick={handleCreate}>',
-    new_string: `import { sel } from '@/core/lib/test'
+    new_string: `import { sel } from '@nextsparkjs/core/lib/test'
 // ...
 <Button data-cy={sel('myFeature.newButton')} onClick={handleCreate}>`
   })
@@ -485,7 +485,7 @@ await Edit({
 
 | Component | File Path | Selector Base Path | Description |
 |-----------|-----------|-------------------|-------------|
-| ProductList | \`app/(dashboard)/products/page.tsx\` | \`entities.*\` | Uses entity selectors |
+| ProductList | \`templates/dashboard/products/page.tsx\` | \`entities.*\` | Uses entity selectors |
 | ProductCard | \`core/components/products/ProductCard.tsx\` | \`entities.table.*\` | Uses entity table selectors |
 | ProductForm | \`core/components/products/ProductForm.tsx\` | \`entities.form.*\` | Uses entity form selectors |
 
@@ -724,9 +724,9 @@ Before marking complete, verify:
 **Centralized Selector Validation (v2.0 - see `.rules/selectors.md`):**
 - [ ] ALL components use `sel()` function (NOT hardcoded `data-cy="..."` strings)
 - [ ] Components import `sel()` from CORRECT location:
-  - Core project: `@/core/lib/test`
+  - Core project: `@nextsparkjs/core/lib/test`
   - Theme project: `@theme/tests/cypress/src/selectors`
-- [ ] Theme components do NOT import directly from `@/core/lib/test`
+- [ ] Theme components do NOT import directly from `@nextsparkjs/core/lib/test`
 - [ ] Dynamic selectors use placeholder syntax: `sel('path', { id, slug })`
 - [ ] New selectors are defined in CORRECT location BEFORE use:
   - Core scope: `core/lib/test/core-selectors.ts`
@@ -737,7 +737,7 @@ Before marking complete, verify:
 - [ ] ALL Cypress tests/POMs use `cySelector()` function (NOT hardcoded strings)
 - [ ] NO `cy.get('[data-cy="..."]')` hardcoded strings found in tests
 - [ ] Import from theme's selectors.ts: `import { cySelector } from '../selectors'`
-- [ ] Tests do NOT import `cySelector` from `@/core/lib/test`
+- [ ] Tests do NOT import `cySelector` from `@nextsparkjs/core/lib/test`
 - [ ] Dynamic test selectors use placeholder syntax: `cySelector('path', { id, slug })`
 
 **@ui-selectors Gate (NEW v4.1):**

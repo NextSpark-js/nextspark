@@ -304,7 +304,7 @@ pnpm build
 In the monorepo, if a theme switch changes registry metadata, regenerate the registries separately:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ## Theme CSS Files

@@ -6,6 +6,5 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'A frequently asked questions section with expandable/collapsible accordion items',
   category: 'faq',
   icon: 'HelpCircle',
-  thumbnail: '/theme/blocks/faq-accordion/thumbnail.png',
   scope: ['pages']
 }

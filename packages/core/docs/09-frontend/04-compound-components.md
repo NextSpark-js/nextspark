@@ -146,8 +146,8 @@ function useAccordion() {
 
 import * as React from 'react'
 import { useFormContext, Controller, FormProvider } from 'react-hook-form'
-import { Label } from '@/core/components/ui/label'
-import { cn } from '@/core/lib/utils'
+import { Label } from '@nextsparkjs/core/components/ui/label'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 // 1. Context for form field state
 type FormFieldContextValue = {
@@ -324,9 +324,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/core/components/ui/form'
-import { Input } from '@/core/components/ui/input'
-import { Button } from '@/core/components/ui/button'
+} from '@nextsparkjs/core/components/ui/form'
+import { Input } from '@nextsparkjs/core/components/ui/input'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 const formSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -394,7 +394,7 @@ export function ProfileForm() {
 ```typescript
 // core/components/ui/card.tsx
 import * as React from 'react'
-import { cn } from '@/core/lib/utils'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
@@ -471,8 +471,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/core/components/ui/card'
-import { Button } from '@/core/components/ui/button'
+} from '@nextsparkjs/core/components/ui/card'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 export function ProductCard({ product }: { product: Product }) {
   return (
@@ -504,7 +504,7 @@ export function ProductCard({ product }: { product: Product }) {
 
 import * as React from 'react'
 import * as TabsPrimitive from '@radix-ui/react-tabs'
-import { cn } from '@/core/lib/utils'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 const Tabs = TabsPrimitive.Root
 
@@ -559,8 +559,8 @@ export { Tabs, TabsList, TabsTrigger, TabsContent }
 **Usage:**
 
 ```typescript
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/core/components/ui/tabs'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/core/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nextsparkjs/core/components/ui/tabs'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 
 export function SettingsTabs() {
   return (

@@ -1,6 +1,6 @@
 # Development Workflow
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -225,7 +225,7 @@ cp .env.example .env.local
 pnpm db:migrate
 
 # Build registries (REQUIRED before dev)
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ### Development
@@ -235,10 +235,10 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 pnpm dev
 
 # Build registries (manually)
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Build registries (watch mode)
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
 `pnpm dev` starts one Next.js process. Run the registry watcher in a separate terminal when registry inputs change; Next.js watches the imported theme CSS itself.
@@ -321,7 +321,7 @@ await TodoWrite({
     { content: "Define field definitions with validation", status: "pending", activeForm: "Defining fields" },
     { content: "Create database migration", status: "pending", activeForm: "Creating migration" },
     { content: "Add translations (en.json + es.json)", status: "pending", activeForm: "Adding translations" },
-    { content: "Rebuild registries (cd apps/dev && node ../../packages/core/scripts/build/registry.mjs)", status: "pending", activeForm: "Rebuilding registries" },
+    { content: "Rebuild registries (cd apps/dev && node ../../packages/cli/dist/cli.js prepare)", status: "pending", activeForm: "Rebuilding registries" },
     { content: "Test CRUD operations via API", status: "pending", activeForm: "Testing CRUD" },
     { content: "Write unit tests for service layer", status: "pending", activeForm: "Writing unit tests" },
     { content: "Write E2E tests for dashboard", status: "pending", activeForm: "Writing E2E tests" }
@@ -334,7 +334,7 @@ await TodoWrite({
 await TodoWrite({
   todos: [
     { content: "Review API standards in .rules/api.md", status: "pending", activeForm: "Reviewing API standards" },
-    { content: "Create route handler in app/api/v1/[endpoint]/route.ts", status: "pending", activeForm: "Creating route handler" },
+    { content: "Create route handler in api/[endpoint]/route.ts", status: "pending", activeForm: "Creating route handler" },
     { content: "Implement dual authentication (session + API key)", status: "pending", activeForm: "Implementing auth" },
     { content: "Add service layer methods with RLS", status: "pending", activeForm: "Adding service methods" },
     { content: "Write API tests (unit + integration)", status: "pending", activeForm: "Writing tests" },
@@ -744,7 +744,7 @@ jobs:
         run: pnpm install
 
       - name: Build registries
-        run: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+        run: cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
       - name: Type check
         run: pnpm --dir apps/dev exec tsc --noEmit

@@ -25,9 +25,9 @@ Background jobs enable asynchronous task processing outside the request/response
 For simple async operations without complex scheduling:
 
 ```typescript
-// app/api/jobs/send-email/route.ts
+// api/jobs/send-email/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { emailService } from '@/core/lib/email';
+import { emailService } from '@nextsparkjs/core/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -85,7 +85,7 @@ For scheduled tasks on Vercel platform:
 
 **Implementation:**
 ```typescript
-// app/api/cron/daily-cleanup/route.ts
+// api/cron/daily-cleanup/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -227,7 +227,7 @@ await emailQueue.add(
 ```typescript
 // core/lib/jobs/email-jobs.ts
 import { emailQueue } from './queue';
-import { emailTemplates } from '@/core/lib/email';
+import { emailTemplates } from '@nextsparkjs/core/lib/email';
 
 export class EmailJobs {
   static async sendVerificationEmail(userId: string, email: string, verificationUrl: string) {
@@ -422,11 +422,11 @@ pnpm add @bull-board/api @bull-board/nextjs
 ```
 
 ```typescript
-// app/api/admin/queues/route.ts
+// api/admin/queues/route.ts
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { NextAdapter } from '@bull-board/nextjs';
-import { emailQueue, exportQueue } from '@/core/lib/jobs/queue';
+import { emailQueue, exportQueue } from '@nextsparkjs/core/lib/jobs/queue';
 
 const serverAdapter = new NextAdapter();
 
@@ -593,7 +593,7 @@ The Scheduled Actions system provides:
 **See:** [Scheduled Actions Documentation](../20-scheduled-actions/01-overview.md)
 
 ```typescript
-import { scheduleAction } from '@/core/lib/scheduled-actions'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions'
 
 // Schedule a webhook delivery
 await scheduleAction('webhook:send', {

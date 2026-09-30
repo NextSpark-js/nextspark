@@ -96,7 +96,7 @@ core/components/
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/core/lib/utils"
+import { cn } from "@nextsparkjs/core/lib/utils"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50",
@@ -149,7 +149,7 @@ Button.displayName = "Button"
 
 ```typescript
 // ✅ CORRECT - Variant-based styling
-import { Button } from "@/core/components/ui/button"
+import { Button } from "@nextsparkjs/core/components/ui/button"
 
 <Button variant="default">Primary Action</Button>
 <Button variant="outline" size="sm">Secondary Action</Button>
@@ -259,7 +259,7 @@ export { Form, FormField, FormItem, FormLabel, FormControl, FormMessage }
 
 ```typescript
 // ✅ CORRECT - Compound component composition
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/core/components/ui/form"
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@nextsparkjs/core/components/ui/form"
 
 <Form {...form}>
   <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -316,8 +316,8 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 
 import { useQuery } from '@tanstack/react-query'
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/components/ui/table'
-import { Button } from '@/core/components/ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@nextsparkjs/core/components/ui/table'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 interface EntityListProps {
   entityType: string
@@ -426,9 +426,9 @@ function ProductList() {
 
 ```typescript
 // core/components/dashboard/layouts/DashboardLayout.tsx
-import { Sidebar } from '@/core/components/dashboard/navigation/Sidebar'
-import { Header } from '@/core/components/dashboard/navigation/Header'
-import { MobileNav } from '@/core/components/dashboard/mobile/MobileNav'
+import { Sidebar } from '@nextsparkjs/core/components/dashboard/navigation/Sidebar'
+import { Header } from '@nextsparkjs/core/components/dashboard/navigation/Header'
+import { MobileNav } from '@nextsparkjs/core/components/dashboard/mobile/MobileNav'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -460,7 +460,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
 
 ```typescript
 // ✅ CORRECT - Layout composition
-import { DashboardLayout } from '@/core/components/dashboard/layouts/DashboardLayout'
+import { DashboardLayout } from '@nextsparkjs/core/components/dashboard/layouts/DashboardLayout'
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -502,11 +502,11 @@ export default function DashboardPage() {
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { loginSchema } from '@/core/lib/validation/auth'
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/core/components/ui/form'
-import { Input } from '@/core/components/ui/input'
-import { Button } from '@/core/components/ui/button'
-import { PasswordInput } from '@/core/components/ui/password-input'
+import { loginSchema } from '@nextsparkjs/core/lib/validation/auth'
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@nextsparkjs/core/components/ui/form'
+import { Input } from '@nextsparkjs/core/components/ui/input'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { PasswordInput } from '@nextsparkjs/core/components/ui/password-input'
 
 export function LoginForm() {
   const form = useForm({
@@ -570,7 +570,7 @@ export function LoginForm() {
 ```typescript
 // core/components/docs/navigation/DocsSidebar.tsx
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
-import { cn } from '@/core/lib/utils'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 interface DocsSidebarProps {
   currentPath: string
@@ -640,10 +640,10 @@ export { EntityList } from './EntityList'
 export type { EntityListProps } from './EntityList'
 
 // Enables clean imports
-import { EntityList } from '@/core/components/entities/EntityList'
+import { EntityList } from '@nextsparkjs/core/components/entities/EntityList'
 
 // ❌ WRONG - Direct file imports
-import { EntityList } from '@/core/components/entities/EntityList/EntityList'
+import { EntityList } from '@nextsparkjs/core/components/entities/EntityList/EntityList'
 ```
 
 ### 3.3 Test Files
@@ -676,11 +676,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(...)
 export type ButtonProps = { ... }
 
 // Import
-import { Button, type ButtonProps } from '@/core/components/ui/button'
+import { Button, type ButtonProps } from '@nextsparkjs/core/components/ui/button'
 
 // ❌ WRONG - Default exports
 export default Button
-import Button from '@/core/components/ui/button'
+import Button from '@nextsparkjs/core/components/ui/button'
 ```
 
 ### 4.2 Path Aliases
@@ -704,9 +704,9 @@ import Button from '@/core/components/ui/button'
 
 ```typescript
 // ✅ CORRECT - Path aliases
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
-import { cn } from '@/core/lib/utils'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 // ❌ WRONG - Relative paths
 import { Button } from '../../../core/components/ui/button'
@@ -726,12 +726,12 @@ export { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card'
 
 // Clean import
-import { Button, Input, Form, FormField, Card } from '@/core/components/ui'
+import { Button, Input, Form, FormField, Card } from '@nextsparkjs/core/components/ui'
 
 // ❌ WRONG - Individual imports
-import { Button } from '@/core/components/ui/button'
-import { Input } from '@/core/components/ui/input'
-import { Form } from '@/core/components/ui/form'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { Input } from '@nextsparkjs/core/components/ui/input'
+import { Form } from '@nextsparkjs/core/components/ui/form'
 ```
 
 ---
@@ -932,7 +932,7 @@ export function Button() {
 // components/Hero.tsx
 'use client'
 
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 
 export function Hero() {
@@ -1041,7 +1041,7 @@ export function EntityMetadata({ entityType }: { entityType: string }) {
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 export function Counter() {
   const [count, setCount] = useState(0)
@@ -1074,8 +1074,8 @@ export function StaticCard({ title, description }: CardProps) {
 'use client'
 
 import React from 'react'
-import { Alert, AlertTitle, AlertDescription } from '@/core/components/ui/alert'
-import { Button } from '@/core/components/ui/button'
+import { Alert, AlertTitle, AlertDescription } from '@nextsparkjs/core/components/ui/alert'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 interface ErrorBoundaryProps {
   children: React.ReactNode

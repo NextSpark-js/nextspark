@@ -585,7 +585,7 @@ GET /api/v1/tenants/tenant_abc123?includeMetadata=true
 
 **Server-side validation:**
 ```typescript
-import { TENANT_METADATA } from '@/core/lib/metadata'
+import { TENANT_METADATA } from '@nextsparkjs/core/lib/metadata'
 
 export async function createUser(tenantId: string, userData: any) {
   const tenant = await getTenant(tenantId)

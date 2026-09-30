@@ -107,7 +107,7 @@ The config.ts file defines your block's identity:
 
 ```typescript
 // blocks/hero-banner/config.ts
-import type { BlockConfig } from '@/core/types/block'
+import type { BlockConfig } from '@nextsparkjs/core/types/block'
 import { LayoutTemplate } from 'lucide-react'
 
 export const config: BlockConfig = {
@@ -171,7 +171,7 @@ The schema.ts file validates block data with Zod:
 ```typescript
 // blocks/hero-banner/schema.ts
 import * as z from 'zod'
-import { baseBlockSchema } from '@/core/lib/blocks/base-schema'
+import { baseBlockSchema } from '@nextsparkjs/core/lib/blocks/base-schema'
 
 // CRITICAL: Always extend baseBlockSchema
 export const heroBannerSchema = baseBlockSchema.extend({
@@ -239,7 +239,7 @@ The fields.ts file defines the editor form UI:
 
 ```typescript
 // blocks/hero-banner/fields.ts
-import type { BlockFieldDefinition } from '@/core/types/block'
+import type { BlockFieldDefinition } from '@nextsparkjs/core/types/block'
 
 export const fields: BlockFieldDefinition[] = [
   // Text input field
@@ -350,8 +350,8 @@ The component.tsx file renders your block:
 ```typescript
 // blocks/hero-banner/component.tsx
 import type { HeroBannerData } from './schema'
-import { cn } from '@/core/lib/utils'
-import { Button } from '@/core/components/ui/button'
+import { cn } from '@nextsparkjs/core/lib/utils'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 interface HeroBannerProps {
   data: HeroBannerData
@@ -477,7 +477,7 @@ export { HeroBanner as Component } from './component'
 **3️⃣ Rebuild the registry:**
 
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 **4️⃣ Test your block:**

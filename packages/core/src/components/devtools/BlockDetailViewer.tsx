@@ -155,7 +155,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
         <div className="w-32 h-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
           {block.thumbnail ? (
             <img
-              src={withBasePathIfInApp(block.thumbnail)}
+              src={withBasePathIfInApp(block.thumbnail.src)}
               alt={block.name}
               className="w-full h-full object-cover"
             />

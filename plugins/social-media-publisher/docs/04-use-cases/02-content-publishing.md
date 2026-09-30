@@ -165,7 +165,7 @@ export function BatchPublisher() {
 
   useEffect(() => {
     // Fetch clients and their accounts
-    fetch('/api/v1/custom/clients-with-accounts')
+    fetch('/api/custom/clients-with-accounts')
       .then(r => r.json())
       .then(data => setClients(data.clients))
   }, [])
@@ -179,7 +179,7 @@ export function BatchPublisher() {
     setPublishing(true)
     setResults([])
 
-    const response = await fetch('/api/v1/custom/cross-post', {
+    const response = await fetch('/api/custom/cross-post', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -377,7 +377,7 @@ export async function submitForApproval(data: {
 
 **Approval Interface:**
 ```typescript
-// app/dashboard/approvals/page.tsx
+// templates/dashboard/approvals/page.tsx
 export default async function ApprovalsPage() {
   const pendingPosts = await query(`
     SELECT 
@@ -457,7 +457,7 @@ export function ContentCalendar() {
 
   useEffect(() => {
     // Fetch scheduled posts for selected month
-    fetch(`/api/v1/custom/scheduled-posts?month=${selectedDate.toISOString()}`)
+    fetch(`/api/custom/scheduled-posts?month=${selectedDate.toISOString()}`)
       .then(r => r.json())
       .then(data => setScheduledPosts(data.posts))
   }, [selectedDate])
@@ -540,7 +540,7 @@ export function TemplateLibrary() {
   const [templates, setTemplates] = useState([])
 
   const useTemplate = async (template: any, accountId: string) => {
-    const response = await fetch(`/api/v1/custom/templates/publish/${template.id}`, {
+    const response = await fetch(`/api/custom/templates/publish/${template.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId })

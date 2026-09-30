@@ -15,7 +15,7 @@ Patterns for consuming the dynamic entity API system.
 ## Architecture Overview
 
 ```
-app/api/v1/
+@nextsparkjs/core/routes/api/v1/   (core-owned, served at /api/v1/**)
 ├── [entity]/route.ts                              # LIST (GET), CREATE (POST)
 ├── [entity]/[id]/route.ts                         # READ (GET), UPDATE (PATCH), DELETE
 ├── [entity]/[id]/child/[childType]/route.ts       # Child LIST/CREATE
@@ -42,15 +42,9 @@ When a request hits `/api/v1/{entity}`:
 1. **Extract slug** - `/api/v1/products` → `products`
 2. **Check core path** - Skip if: users, api-keys, auth, system, health, internal, admin, debug
 3. **Registry lookup** - `entityRegistry.getBySlug('products')`
-4. **Custom override check** - Look for `app/api/v1/(contents)/products/route.ts`
-5. **Return resolution** - `{ entityConfig, hasCustomOverride, isValidEntity }`
+4. **Return resolution** - `{ entityConfig, isValidEntity }`
 
-```typescript
-// If custom override exists, generic handler is skipped
-if (existsSync('app/api/v1/(contents)/products/route.ts')) {
-  return { hasCustomOverride: true, isValidEntity: false }
-}
-```
+There is no per-entity override file: `/api/v1/**` is owned by core. Extra behavior for an entity goes in a new endpoint in the project's `api/<path>/route.ts` (served at `/api/<path>`).
 
 ## Query Parameters
 

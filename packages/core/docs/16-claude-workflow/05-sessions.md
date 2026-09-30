@@ -656,8 +656,8 @@ Users requested ability to import products from CSV.
 4. Implement validation with error report
 
 **Archivos Relacionados:**
-- `app/api/v1/products/import/route.ts` - New endpoint
-- `app/dashboard/products/ImportModal.tsx` - UI component
+- `api/products/import/route.ts` - New endpoint
+- `templates/dashboard/products/ImportModal.tsx` - UI component
 
 ---
 

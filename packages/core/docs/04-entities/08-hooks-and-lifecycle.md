@@ -105,7 +105,7 @@ export const taskEntityConfig: EntityConfig = {
 
 ```typescript
 // hooks/validateTaskData.ts
-import type { HookContext, HookResult } from '@/core/lib/entities/types'
+import type { HookContext, HookResult } from '@nextsparkjs/core/lib/entities/types'
 
 export async function validateTaskData(context: HookContext): Promise<HookResult> {
   const { data } = context
@@ -344,7 +344,7 @@ Besides entity-specific hooks, you can register global hooks for all entities:
 
 ```typescript
 // In a plugin
-import { getGlobalHooks } from '@/core/lib/plugins/hook-system'
+import { getGlobalHooks } from '@nextsparkjs/core/lib/plugins/hook-system'
 
 const hooks = getGlobalHooks()
 
@@ -479,8 +479,8 @@ export async function betterHook(context: HookContext): Promise<HookResult> {
 Use the **Scheduled Actions** system to defer webhook delivery and external notifications:
 
 ```typescript
-import { scheduleAction } from '@/core/lib/scheduled-actions'
-import { hookSystem } from '@/core/lib/plugins/hook-system'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions'
+import { hookSystem } from '@nextsparkjs/core/lib/plugins/hook-system'
 
 // Schedule webhook when entity is created
 hookSystem.register('entity.tasks.created', async ({ entity, teamId }) => {

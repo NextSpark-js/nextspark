@@ -1,6 +1,6 @@
 # Quick Start
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -144,7 +144,7 @@ All migrations completed successfully!
 **If migration fails:**
 - Check DATABASE_URL is correct
 - Verify database is accessible
-- See [Troubleshooting](./08-troubleshooting.md#database-connection-errors)
+- See [Troubleshooting](./10-troubleshooting.md#database-connection-errors)
 
 ---
 
@@ -227,7 +227,7 @@ The root command delegates to `apps/dev` and starts one Next.js process:
 pnpm update-core --current
 ```
 
-For updating to newer versions, see [Core Updates](../updates/update-core).
+For updating to newer versions, see [Core Updates](../17-updates/01-update-core.md).
 
 ---
 
@@ -306,7 +306,7 @@ ls nextspark.config.ts
 rm -rf .next .nextspark/registries
 
 # Rebuild every registry manually
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Restart dev server
 pnpm dev
@@ -343,7 +343,7 @@ pnpm dev
 Run the registry builder separately when registry inputs change:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
 That script generates every registry, including the project's documentation registry. It is not started by the monorepo's root `pnpm dev` script.
@@ -372,7 +372,7 @@ That script generates every registry, including the project's documentation regi
 - **Entities:** Edit files in `entities/[entity]/`
 - **Plugins:** Edit files in `plugins/[plugin]/`
 - **Themes:** Edit files in ``
-- **Rebuild:** In the monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`. Root `pnpm dev` starts `apps/dev` without rebuilding registries; in a generated project, `pnpm dev` builds registries on startup.
+- **Rebuild:** In the monorepo, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`. Root `pnpm dev` starts `apps/dev` without rebuilding registries; in a generated project, `pnpm dev` builds registries on startup.
 
 ---
 
@@ -391,7 +391,7 @@ nextspark setup:ai
 - Sets up AI-assisted development workflow for Claude Code
 - Preserves your custom configurations
 
-**Learn more:** See [Claude Workflow Documentation](../16-claude-workflow/01-overview.md)
+**Learn more:** See [Claude Workflow Documentation](../16-claude-workflow/01-introduction.md)
 
 ---
 
@@ -430,7 +430,7 @@ nextspark setup:ai
 ### Make Your First Customization
 
 **Follow this guide:**
-- [First Customization Tutorial](./06-first-customization.md)
+- [First Customization Tutorial](./09-first-customization.md)
 
 **Quick wins:**
 1. Change theme colors (CSS variables)
@@ -442,9 +442,9 @@ nextspark setup:ai
 
 **For production-ready setup:**
 - [Complete Installation Guide](./01-installation.md)
-- [Database Setup](./02-database-setup.md)
-- [Environment Configuration](./03-environment-configuration.md)
-- [Deployment Guide](./07-deployment.md)
+- [Database Setup](./03-database-setup.md)
+- [Environment Configuration](./05-environment-configuration.md)
+- [Deployment Guide](./08-deployment.md)
 
 ---
 
@@ -455,8 +455,8 @@ nextspark setup:ai
 pnpm dev                    # Start the development server
 
 # Build
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs          # Build registries once
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch  # Rebuild registries when files change
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare          # Build registries once
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch  # Rebuild registries when files change
 pnpm build                  # Create a production build
 
 # Database
@@ -477,7 +477,7 @@ pnpm lint                   # Check code quality
 ## Getting Help
 
 **Troubleshooting:**
-- [Troubleshooting Guide](./08-troubleshooting.md)
+- [Troubleshooting Guide](./10-troubleshooting.md)
 
 **Documentation:**
 - [Full Documentation](../README.md)
@@ -506,8 +506,8 @@ pnpm lint                   # Check code quality
 **Next recommended:**
 1. **Explore:** Browse the application and test features
 2. **Learn:** Read [Architecture Patterns](../01-fundamentals/04-architecture-patterns.md)
-3. **Customize:** Follow [First Customization](./06-first-customization.md)
-4. **Deploy:** See [Deployment Guide](./07-deployment.md) when ready
+3. **Customize:** Follow [First Customization](./09-first-customization.md)
+4. **Deploy:** See [Deployment Guide](./08-deployment.md) when ready
 
 **Welcome to NextSpark!**
 

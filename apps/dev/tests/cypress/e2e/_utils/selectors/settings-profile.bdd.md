@@ -68,7 +68,7 @@ And deberia encontrar el boton de enviar perfil
 
 | Component | File | Selectors |
 |-----------|------|-----------|
-| ProfilePage | `apps/dev/src/app/dashboard/settings/profile/page.tsx` | settings-profile, profile-form, profile-first-name, profile-last-name, profile-email, profile-submit, profile-success |
+| ProfilePage | `packages/core/src/routes/dashboard/settings/profile/page.tsx` | settings-profile, profile-form, profile-first-name, profile-last-name, profile-email, profile-submit, profile-success |
 
 ## Related POMs
 

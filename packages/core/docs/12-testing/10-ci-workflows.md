@@ -11,7 +11,7 @@ For the repository development project:
 ```yaml
 - name: Build registries
   working-directory: apps/dev
-  run: node ../../packages/core/scripts/build/registry.mjs --build
+  run: node ../../packages/cli/dist/cli.js prepare
 
 - name: Type-check
   working-directory: apps/dev

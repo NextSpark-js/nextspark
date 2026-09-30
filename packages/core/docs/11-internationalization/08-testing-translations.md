@@ -51,10 +51,10 @@ Validate that all translation keys exist across all locales:
 ```typescript
 // test/i18n/translation-keys.test.ts
 import { describe, it, expect } from '@jest/globals'
-import enCommon from '@/core/messages/en/common.json'
-import esCommon from '@/core/messages/es/common.json'
-import enAuth from '@/core/messages/en/auth.json'
-import esAuth from '@/core/messages/es/auth.json'
+import enCommon from '@nextsparkjs/core/messages/en/common.json'
+import esCommon from '@nextsparkjs/core/messages/es/common.json'
+import enAuth from '@nextsparkjs/core/messages/en/auth.json'
+import esAuth from '@nextsparkjs/core/messages/es/auth.json'
 
 describe('Translation Keys', () => {
   describe('Common namespace', () => {
@@ -107,7 +107,7 @@ Check that all namespaces have translations in all locales:
 ```typescript
 // test/i18n/translation-completeness.test.ts
 import { describe, it, expect } from '@jest/globals'
-import { I18N_CONFIG } from '@/core/lib/config'
+import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
 import fs from 'fs'
 import path from 'path'
 
@@ -144,7 +144,7 @@ Test date, number, and currency formatting:
 ```typescript
 // test/i18n/formatters.test.ts
 import { describe, it, expect } from '@jest/globals'
-import { formatDate, formatNumber, formatCurrency } from '@/core/lib/formatters'
+import { formatDate, formatNumber, formatCurrency } from '@nextsparkjs/core/lib/formatters'
 
 describe('Formatters', () => {
   describe('formatDate', () => {
@@ -264,7 +264,7 @@ jest.mock('next-intl', () => ({
 ```typescript
 // core/tests/jest/components/LanguageSwitcher.test.tsx
 import { render, screen, fireEvent } from '@testing-library/react'
-import { LanguageSwitcher } from '@/core/components/LanguageSwitcher'
+import { LanguageSwitcher } from '@nextsparkjs/core/components/LanguageSwitcher'
 
 describe('LanguageSwitcher', () => {
   it('should render language options', () => {
@@ -277,7 +277,7 @@ describe('LanguageSwitcher', () => {
   
   it('should call changeLanguage when option selected', async () => {
     const mockChangeLanguage = jest.fn()
-    jest.mock('@/core/hooks/useLocale', () => ({
+    jest.mock('@nextsparkjs/core/hooks/useLocale', () => ({
       useLocale: () => ({
         locale: 'en',
         changeLanguage: mockChangeLanguage,
@@ -301,7 +301,7 @@ describe('LanguageSwitcher', () => {
 ```typescript
 // core/tests/jest/components/UserGreeting.test.tsx
 import { render, screen } from '@testing-library/react'
-import { UserGreeting } from '@/core/components/UserGreeting'
+import { UserGreeting } from '@nextsparkjs/core/components/UserGreeting'
 
 describe('UserGreeting', () => {
   it('should interpolate username correctly', () => {
@@ -329,7 +329,7 @@ describe('UserGreeting', () => {
 ```typescript
 // core/tests/jest/hooks/useLocale.test.tsx
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useLocale } from '@/core/hooks/useLocale'
+import { useLocale } from '@nextsparkjs/core/hooks/useLocale'
 
 describe('useLocale', () => {
   it('should return current locale', () => {
@@ -372,7 +372,7 @@ describe('useLocale', () => {
 
 ```typescript
 // core/tests/jest/lib/locale.test.ts
-import { getUserLocale, setUserLocale } from '@/core/lib/locale'
+import { getUserLocale, setUserLocale } from '@nextsparkjs/core/lib/locale'
 import { cookies, headers } from 'next/headers'
 
 jest.mock('next/headers')
@@ -609,7 +609,7 @@ describe('Locale-Aware Formatting', () => {
 ```typescript
 // test/i18n/missing-translations.test.ts
 import { describe, it, expect } from '@jest/globals'
-import { I18N_CONFIG } from '@/core/lib/config'
+import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
 import fs from 'fs'
 import path from 'path'
 

@@ -396,14 +396,14 @@ GET /api/cron/billing/lifecycle
 
 ## Server-Side Services
 
-The billing system uses a service layer for all server-side operations. Import from `@/core/lib/services`.
+The billing system uses a service layer for all server-side operations. Import from `@nextsparkjs/core/lib/services`.
 
 ### MembershipService
 
 Unified membership context combining role, subscription, features, and quotas.
 
 ```typescript
-import { MembershipService } from '@/core/lib/services'
+import { MembershipService } from '@nextsparkjs/core/lib/services'
 
 // Get complete membership context
 const membership = await MembershipService.get(userId, teamId)
@@ -439,7 +439,7 @@ const result = membership.canPerformAction('projects.create')
 Subscription management operations.
 
 ```typescript
-import { SubscriptionService } from '@/core/lib/services'
+import { SubscriptionService } from '@nextsparkjs/core/lib/services'
 
 // Get active subscription
 const subscription = await SubscriptionService.getActive(teamId)
@@ -460,7 +460,7 @@ const result = await SubscriptionService.changePlan(teamId, 'pro', 'monthly')
 Plan configuration and queries.
 
 ```typescript
-import { PlanService } from '@/core/lib/services'
+import { PlanService } from '@nextsparkjs/core/lib/services'
 
 // Get all public plans
 const plans = await PlanService.list()
@@ -477,7 +477,7 @@ const config = PlanService.getConfig('pro')
 Usage tracking and reporting.
 
 ```typescript
-import { UsageService } from '@/core/lib/services'
+import { UsageService } from '@nextsparkjs/core/lib/services'
 
 // Track usage
 await UsageService.track({

@@ -12,7 +12,7 @@
 ## Import
 
 ```typescript
-import { MembershipService, TeamMembership } from '@/core/lib/services'
+import { MembershipService, TeamMembership } from '@nextsparkjs/core/lib/services'
 ```
 
 ---
@@ -262,7 +262,7 @@ type ActionDeniedReason =
 ## Complete Example
 
 ```typescript
-import { MembershipService } from '@/core/lib/services'
+import { MembershipService } from '@nextsparkjs/core/lib/services'
 
 export async function POST(req: Request) {
   const { userId, teamId } = await getAuthContext(req)

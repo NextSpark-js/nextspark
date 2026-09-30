@@ -25,8 +25,8 @@ Plugins can export React components that integrate seamlessly with the applicati
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/core/components/ui/button'
-import { Input } from '@/core/components/ui/input'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { Input } from '@nextsparkjs/core/components/ui/input'
 
 interface MyWidgetProps {
   initialValue?: string
@@ -84,9 +84,9 @@ export function MyWidget({ initialValue = '', onSubmit }: MyWidgetProps) {
 ```typescript
 'use client'
 
-import { Button } from '@/core/components/ui/button'
-import { Card, CardHeader, CardTitle, CardContent } from '@/core/components/ui/card'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/core/components/ui/select'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@nextsparkjs/core/components/ui/card'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@nextsparkjs/core/components/ui/select'
 
 export function PluginDashboard() {
   return (
@@ -351,9 +351,9 @@ export const myPluginConfig: PluginConfig = {
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/core/components/ui/button'
-import { Textarea } from '@/core/components/ui/textarea'
-import { Card, CardHeader, CardTitle, CardContent } from '@/core/components/ui/card'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { Textarea } from '@nextsparkjs/core/components/ui/textarea'
+import { Card, CardHeader, CardTitle, CardContent } from '@nextsparkjs/core/components/ui/card'
 
 interface Message {
   role: 'user' | 'assistant'

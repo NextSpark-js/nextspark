@@ -1,6 +1,6 @@
 # Plugin Registry
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 **Auto-generated at build time • Server-only patterns • Type-safe plugin system**
 
@@ -549,7 +549,7 @@ async function initializeAllPlugins(): Promise<void>
 
 **Example:**
 ```typescript
-// app/api/init/route.ts
+// api/init/route.ts
 import { initializeAllPlugins } from '@nextsparkjs/registries/plugin-registry'
 
 export async function POST() {
@@ -770,7 +770,7 @@ Route handlers discovered by the registry should always validate authentication:
 ```typescript
 // plugins/ai/api/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
   // ✅ ALWAYS authenticate first
@@ -872,10 +872,10 @@ export default async function GeneratePage() {
 ### Pattern 2: API Route with Plugin Functions
 
 ```typescript
-// app/api/ai/generate/route.ts
+// api/ai/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
   const authResult = await authenticateRequest(request)
@@ -1111,7 +1111,7 @@ if (hasPluginFunction('ai', 'generateText')) {
 ls plugins/ai/plugin.config.ts
 
 # 2. Rebuild registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # 3. Verify plugin in generated registry
 cat .nextspark/registries/plugin-registry.ts | grep "'ai'"
@@ -1145,9 +1145,9 @@ cat .nextspark/registries/plugin-registry.ts | grep "'ai'"
 - ✅ Validate all inputs before processing
 
 **Next steps:**
-- [Theme Registry](./05-theme-registry.md) - Theme configuration system
-- [Translation Registry](./07-translation-registry.md) - i18n optimization
-- [Route Handlers Registry](./06-route-handlers-registry.md) - Zero-import API routing
+- [Theme Registry](./05-theme-registry-usage.md) - Theme configuration system
+- [Translation Registry](./06-translation-registry-architecture.md) - i18n optimization
+- [Route Handlers Registry](./06-route-handlers-architecture.md) - Zero-import API routing
 
 **Documentation:** `core/docs/03-registry-system/04-plugin-registry.md`
 **Server Source:** `.nextspark/registries/plugin-registry.ts` (auto-generated)

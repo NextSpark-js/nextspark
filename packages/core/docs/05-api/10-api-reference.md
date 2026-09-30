@@ -589,7 +589,7 @@ Plugins can register custom endpoints that extend the API beyond auto-generated 
 ### Example: AI Text Generation
 
 ```http
-POST /api/v1/ai/generate
+POST /api/plugins/ai/generate
 ```
 
 **Description:** Generate text using AI (custom plugin endpoint).
@@ -605,7 +605,7 @@ POST /api/v1/ai/generate
 
 **Example Request:**
 ```bash
-curl -X POST "https://yourdomain.com/api/v1/ai/generate" \
+curl -X POST "https://yourdomain.com/api/plugins/ai/generate" \
   -H "Authorization: Bearer sk_live_abc123..." \
   -H "Content-Type: application/json" \
   -d '{

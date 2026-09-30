@@ -169,9 +169,9 @@ import { Button } from '@/components/ui/button'
 **Our Pattern:**
 ```typescript
 // We use direct imports for UI components
-import { Button } from '@/core/components/ui/button'
-import { Card, CardHeader, CardContent } from '@/core/components/ui/card'
-import { Dialog } from '@/core/components/ui/dialog'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { Card, CardHeader, CardContent } from '@nextsparkjs/core/components/ui/card'
+import { Dialog } from '@nextsparkjs/core/components/ui/dialog'
 
 // Registries are exceptions (pre-compiled at build time)
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
@@ -226,7 +226,7 @@ export default function BlogPostPage() {
 
 // ✅ CORRECT - Lazy load with React.lazy()
 import { lazy, Suspense } from 'react'
-import { Skeleton } from '@/core/components/ui/skeleton'
+import { Skeleton } from '@nextsparkjs/core/components/ui/skeleton'
 
 const RichTextEditor = lazy(() => import('@/components/RichTextEditor'))
 
@@ -249,7 +249,7 @@ export default function BlogPostPage() {
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 export default function AnalyticsPage() {
   const [showChart, setShowChart] = useState(false)
@@ -394,7 +394,7 @@ const Button = styled.button`
 `
 
 // ✅ PREFER - Utility classes or CSS modules
-import { cn } from '@/core/lib/utils'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 function Button({ className, ...props }) {
   return (
@@ -609,7 +609,7 @@ const ourBundles = {
 
 ```typescript
 // Import specific components
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 // Use dynamic imports for heavy code
 const Chart = lazy(() => import('./Chart'))

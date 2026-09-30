@@ -227,7 +227,7 @@ export function BlocksViewer() {
             <div className="h-32 bg-muted flex items-center justify-center rounded-t-lg overflow-hidden">
               {block.thumbnail ? (
                 <img
-                  src={withBasePathIfInApp(block.thumbnail)}
+                  src={withBasePathIfInApp(block.thumbnail.src)}
                   alt={block.name}
                   className="w-full h-full object-cover"
                 />

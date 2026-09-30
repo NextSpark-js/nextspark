@@ -32,18 +32,12 @@ cp -r core/templates/blocks/features-grid blocks/
 After copying blocks, rebuild the registry:
 
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
-### 3. Rebuild Theme (for thumbnails)
+### 3. Thumbnails
 
-The theme build process automatically copies block thumbnails:
-
-```bash
-node core/scripts/build/theme.mjs
-```
-
-Or if using dev server, thumbnails are copied automatically.
+Nothing to copy: the generated block registry imports each block's `thumbnail.png` statically, so Next.js serves it as an asset (`BLOCK_REGISTRY[slug].thumbnail.src`).
 
 ## Block Structure
 

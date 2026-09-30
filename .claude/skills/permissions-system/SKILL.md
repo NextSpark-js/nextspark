@@ -90,7 +90,7 @@ type UserRole = 'member' | 'superadmin' | 'developer'
 
 **Check user role:**
 ```typescript
-import { roleHelpers } from '@/core/lib/role-helpers'
+import { roleHelpers } from '@nextsparkjs/core/lib/role-helpers'
 
 // CORRECT: Use roleHelpers for user roles
 if (roleHelpers.isDeveloper(user.role)) {
@@ -128,7 +128,7 @@ type TeamRole = CoreTeamRole | 'editor' | 'contributor' | 'moderator' | string
 
 ```typescript
 // config/permissions.config.ts
-import type { ThemePermissionsConfig } from '@/core/lib/permissions/types'
+import type { ThemePermissionsConfig } from '@nextsparkjs/core/lib/permissions/types'
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   // 1. Define custom team roles
@@ -233,7 +233,7 @@ type Permission = `${string}.${string}`
 
 ```typescript
 // config/permissions.config.ts
-import type { ThemePermissionsConfig } from '@/core/lib/permissions/types'
+import type { ThemePermissionsConfig } from '@nextsparkjs/core/lib/permissions/types'
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   // 1. Add custom team roles
@@ -331,7 +331,7 @@ export class PermissionService {
 
 **Usage:**
 ```typescript
-import { PermissionService } from '@/core/lib/services/permission.service'
+import { PermissionService } from '@nextsparkjs/core/lib/services/permission.service'
 
 // Check if admin can create customers
 PermissionService.hasPermission('admin', 'customers.create')  // true
@@ -371,7 +371,7 @@ export class MembershipService {
 
 **Usage:**
 ```typescript
-import { MembershipService } from '@/core/lib/services/membership.service'
+import { MembershipService } from '@nextsparkjs/core/lib/services/membership.service'
 
 const membership = await MembershipService.get(userId, teamId)
 
@@ -434,8 +434,8 @@ export function hasPermissionSync(
 
 **API Route Usage:**
 ```typescript
-import { checkPermission } from '@/core/lib/permissions/check'
-import { createApiError } from '@/core/lib/api/response'
+import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
+import { createApiError } from '@nextsparkjs/core/lib/api/response'
 
 export async function DELETE(request: NextRequest, { params }) {
   const { userId, teamId } = await getAuthContext(request)
@@ -475,7 +475,7 @@ export function useTeamRole(): TeamRole | null
 
 **Component Usage:**
 ```typescript
-import { usePermission, usePermissions, useTeamRole } from '@/core/lib/permissions/hooks'
+import { usePermission, usePermissions, useTeamRole } from '@nextsparkjs/core/lib/permissions/hooks'
 
 function CustomerActions({ customerId }) {
   // Single permission
@@ -545,7 +545,7 @@ USING (
 
 **Service layer sets RLS context:**
 ```typescript
-import { queryWithRLS } from '@/core/lib/db'
+import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 
 // userId passed to set app.user_id for RLS
 const customers = await queryWithRLS(
@@ -576,7 +576,7 @@ export const TEAM_PERMISSIONS_BY_ROLE: Record<TeamRole, Permission[]>
 
 **Rebuild registry:**
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ## Anti-Patterns

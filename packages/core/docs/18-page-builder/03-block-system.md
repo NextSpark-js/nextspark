@@ -264,7 +264,7 @@ blocks/{block-slug}/
 ### config.ts
 
 ```typescript
-import type { BlockConfig } from '@/core/types/blocks'
+import type { BlockConfig } from '@nextsparkjs/core/types/blocks'
 
 export const config: Omit<BlockConfig, 'fieldDefinitions'> = {
   slug: 'hero',
@@ -272,15 +272,14 @@ export const config: Omit<BlockConfig, 'fieldDefinitions'> = {
   description: 'Full-width hero with title, subtitle, and CTA',
   category: 'hero',
   icon: 'Rocket',
-  thumbnail: '/theme/blocks/hero/thumbnail.png'
 }
 ```
 
 ### fields.ts
 
 ```typescript
-import type { FieldDefinition } from '@/core/types/blocks'
-import { baseContentFields, baseDesignFields, baseAdvancedFields } from '@/core/types/blocks'
+import type { FieldDefinition } from '@nextsparkjs/core/types/blocks'
+import { baseContentFields, baseDesignFields, baseAdvancedFields } from '@nextsparkjs/core/types/blocks'
 
 // Block-specific fields
 const heroDesignFields: FieldDefinition[] = [
@@ -314,7 +313,7 @@ export const fieldDefinitions: FieldDefinition[] = [
 
 ```typescript
 import * as z from 'zod'
-import { baseBlockSchema } from '@/core/types/blocks'
+import { baseBlockSchema } from '@nextsparkjs/core/types/blocks'
 
 export const heroSpecificSchema = z.object({
   backgroundImage: z.string().url().optional(),
@@ -329,7 +328,7 @@ export type HeroBlockProps = z.infer<typeof schema>
 
 ```typescript
 import React from 'react'
-import { buildSectionClasses } from '@/core/types/blocks'
+import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import type { HeroBlockProps } from './schema'
 
 export function HeroBlock({

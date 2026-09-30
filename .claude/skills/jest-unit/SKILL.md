@@ -59,7 +59,7 @@ plugins/*/__tests__/
 
 ```typescript
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals'
-import { functionToTest } from '@/core/lib/module'
+import { functionToTest } from '@nextsparkjs/core/lib/module'
 
 describe('ModuleName', () => {
   beforeEach(() => {
@@ -100,7 +100,7 @@ export const baseConfig: Partial<Config> = {
 
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '^@/core/(.*)$': '<rootDir>/core/$1',
+    '^@nextsparkjs/core/(.*)$': '<rootDir>/core/$1',
     'next/server': '<rootDir>/core/tests/jest/__mocks__/next-server.js',
   },
 
@@ -125,7 +125,7 @@ pnpm test:watch        # Watch mode
 ### Database (MANDATORY)
 
 ```typescript
-jest.mock('@/core/lib/db', () => ({
+jest.mock('@nextsparkjs/core/lib/db', () => ({
   queryWithRLS: jest.fn(),
   queryOneWithRLS: jest.fn(),
   mutateWithRLS: jest.fn(),

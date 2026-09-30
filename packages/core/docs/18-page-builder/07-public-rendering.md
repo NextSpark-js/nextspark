@@ -152,7 +152,7 @@ export function normalizeBlockProps(props: Record<string, unknown>): Record<stri
 Individual blocks are rendered with error boundaries:
 
 ```typescript
-import { getBlockComponent, normalizeBlockProps } from '@/core/lib/blocks/loader'
+import { getBlockComponent, normalizeBlockProps } from '@nextsparkjs/core/lib/blocks/loader'
 
 function BlockRenderer({ block }: { block: BlockInstance }) {
   const BlockComponent = getBlockComponent(block.blockSlug)
@@ -230,7 +230,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 ## Incremental Static Regeneration (ISR)
 
-Pages use ISR with a 1-hour revalidation period:
+Public pages are cached for 1 hour. In the default Cache Components mode the generated route omits `revalidate` and the cached read uses `cacheLife` with the same duration; with ISR (`cacheComponents` off) the route sets `revalidate`:
 
 ```typescript
 // At the top of the route file
@@ -247,7 +247,7 @@ This means:
 
 The Pages API automatically triggers revalidation when saving pages, so changes appear immediately on the public site.
 
-**Implementation in `app/api/v1/pages/[id]/route.ts`:**
+**Implementation in `api/pages/[id]/route.ts`:**
 
 ```typescript
 import { revalidatePath } from 'next/cache'

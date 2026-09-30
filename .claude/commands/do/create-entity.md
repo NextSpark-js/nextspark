@@ -51,7 +51,7 @@ entities/{entity}/
 
 1. Run registry rebuild:
    ```bash
-   node core/scripts/build/registry.mjs
+   pnpm build:registries
    ```
 
 2. Run migrations:

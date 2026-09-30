@@ -211,7 +211,7 @@ function SimpleComponent({ firstName, lastName }: UserProps) {
 
 ```typescript
 import { lazy, Suspense } from 'react'
-import { Skeleton } from '@/core/components/ui/skeleton'
+import { Skeleton } from '@nextsparkjs/core/components/ui/skeleton'
 
 // ✅ CORRECT - Lazy load heavy components
 const HeavyChart = lazy(() => import('@/components/charts/HeavyChart'))
@@ -239,7 +239,7 @@ function Dashboard() {
 ### Route-Based Code Splitting
 
 ```typescript
-// app/dashboard/analytics/page.tsx
+// templates/dashboard/analytics/page.tsx
 import { lazy, Suspense } from 'react'
 
 // Lazy load entire page sections
@@ -440,10 +440,10 @@ import { format } from 'date-fns'
 import * as dateFns from 'date-fns'
 
 // ✅ CORRECT - Named imports
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 // ❌ WRONG - Imports entire module
-import * as UI from '@/core/components/ui'
+import * as UI from '@nextsparkjs/core/components/ui'
 ```
 
 ### Remove Unused Dependencies

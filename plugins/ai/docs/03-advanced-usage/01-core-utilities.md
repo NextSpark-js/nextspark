@@ -330,7 +330,7 @@ console.log(`Output: $${modelCosts.output}/1K tokens`)
 ## Complete Example: Custom Endpoint
 
 ```typescript
-// app/api/custom/summarize/route.ts
+// api/custom/summarize/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
 import {

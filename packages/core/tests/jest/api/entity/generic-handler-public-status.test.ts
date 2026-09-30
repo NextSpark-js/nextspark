@@ -29,7 +29,7 @@ const ANONYMOUS = { success: false, type: 'none', user: null }
 
 function useEntity(entity: EntityConfig) {
   mocks.resolveEntityFromUrl.mockResolvedValue({
-    isValidEntity: true, entityConfig: entity, entityName: entity.slug, hasCustomOverride: false,
+    isValidEntity: true, entityConfig: entity, entityName: entity.slug,
   })
 }
 

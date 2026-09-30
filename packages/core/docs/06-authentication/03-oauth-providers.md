@@ -142,7 +142,7 @@ The `mapProfileToUser` function transforms Google's profile data to match your u
 ```typescript
 'use client'
 
-import { authClient } from '@/core/lib/auth-client'
+import { authClient } from '@nextsparkjs/core/lib/auth-client'
 
 export function GoogleSignInButton() {
   const handleGoogleSignIn = async () => {
@@ -382,7 +382,7 @@ advanced: {
 
 ```typescript
 // Create debug endpoint to inspect callback data
-// app/api/auth/debug/callback/route.ts
+// api/auth/debug/callback/route.ts
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const params = Object.fromEntries(url.searchParams)

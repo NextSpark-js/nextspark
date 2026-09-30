@@ -244,7 +244,7 @@ STEP 4 OF 4: Enable and Use the Plugin
 1️⃣  Rebuild the Plugin Registry:
 
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -252,7 +252,7 @@ node core/scripts/build/registry.mjs
 2️⃣  Use Plugin Components in Your Theme:
 
 ```typescript
-// app/dashboard/page.tsx
+// templates/dashboard/page.tsx
 import { AIAssistant } from '@/plugins/plugin-ai/components'
 
 export default function DashboardPage() {

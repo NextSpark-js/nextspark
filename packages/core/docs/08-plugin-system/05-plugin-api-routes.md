@@ -25,7 +25,7 @@ Plugins can expose custom API endpoints for external access, data processing, an
 ```typescript
 // plugins/my-plugin/api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export async function POST(request: NextRequest) {
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
 
 **Implementation**:
 ```typescript
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
   const authResult = await authenticateRequest(request)
@@ -364,7 +364,7 @@ return NextResponse.json(
 ```typescript
 // plugins/ai/api/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 import * as z from 'zod'
 

@@ -17,7 +17,7 @@ The provider should wrap your authenticated routes:
 
 ```tsx
 // Already mounted by DashboardProviders in the dashboard, superadmin and devtools layouts
-import { SubscriptionProvider } from '@/core/contexts/SubscriptionContext'
+import { SubscriptionProvider } from '@nextsparkjs/core/contexts/SubscriptionContext'
 
 function AuthenticatedLayout({ children }) {
   return (
@@ -66,7 +66,7 @@ interface SubscriptionContextValue {
 Access subscription data directly:
 
 ```tsx
-import { useSubscription } from '@/core/hooks/useSubscription'
+import { useSubscription } from '@nextsparkjs/core/hooks/useSubscription'
 
 function SubscriptionStatus() {
   const {
@@ -96,7 +96,7 @@ function SubscriptionStatus() {
 Check if a feature is available (sync, uses cached data):
 
 ```tsx
-import { useFeature } from '@/core/hooks/useFeature'
+import { useFeature } from '@nextsparkjs/core/hooks/useFeature'
 
 function AdvancedAnalytics() {
   const hasAdvanced = useFeature('advanced_analytics')
@@ -114,7 +114,7 @@ function AdvancedAnalytics() {
 Check quota usage for a specific limit (async, TanStack Query):
 
 ```tsx
-import { useQuota } from '@/core/hooks/useQuota'
+import { useQuota } from '@nextsparkjs/core/hooks/useQuota'
 
 function ProjectsSection() {
   const { allowed, current, max, remaining, percentUsed, isLoading, refetch } = useQuota('projects')
@@ -162,7 +162,7 @@ function ProjectsSection() {
 Unified hook combining subscription, features, limits, and permission checks:
 
 ```tsx
-import { useMembership } from '@/core/hooks/useMembership'
+import { useMembership } from '@nextsparkjs/core/hooks/useMembership'
 
 function ProjectCreator() {
   const membership = useMembership()
@@ -295,7 +295,7 @@ membership.refetch()
 Declarative feature gating component:
 
 ```tsx
-import { FeatureGate } from '@/core/components/billing/FeatureGate'
+import { FeatureGate } from '@nextsparkjs/core/components/billing/FeatureGate'
 
 function Settings() {
   return (
@@ -380,7 +380,7 @@ membership.refetch()
 For server-side checks, use the `MembershipService` which provides unified access to role, subscription, features, and quotas:
 
 ```typescript
-import { MembershipService } from '@/core/lib/services'
+import { MembershipService } from '@nextsparkjs/core/lib/services'
 
 // In API route
 export async function POST(request: NextRequest) {

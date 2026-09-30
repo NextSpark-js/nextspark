@@ -1,6 +1,6 @@
 # PM Decisions & AC Classification (v4.0)
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 > **Version 4.0** - 4 mandatory PM decisions and acceptance criteria classification system.
 
@@ -224,7 +224,7 @@ The `block-developer` agent (Phase 10) will:
 1. Create new blocks in `blocks/`
 2. Define block schema and configuration
 3. Implement React components
-4. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+4. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 5. Update block registry
 
 ---

@@ -51,7 +51,7 @@ core/lib/services/
 └── usage.service.ts         # Usage tracking
 
 API Endpoints:
-app/api/v1/billing/
+packages/core/src/routes/api/v1/billing/
 ├── checkout/route.ts        # Create checkout session (via factory)
 ├── portal/route.ts          # Customer portal access (via factory)
 ├── plans/route.ts           # List available plans
@@ -243,7 +243,7 @@ export class StripeGateway implements BillingGateway {
 ### Stripe Webhook Route (Provider-Specific)
 
 ```typescript
-// app/api/v1/billing/webhooks/stripe/route.ts
+// packages/core/src/routes/api/v1/billing/webhooks/stripe/route.ts
 // NOTE: Webhook routes stay provider-specific by design.
 // They need raw provider types for proper type narrowing.
 import Stripe from 'stripe'
@@ -412,7 +412,7 @@ export class PolarGateway implements BillingGateway {
 ### Polar Webhook Route (Provider-Specific)
 
 ```typescript
-// app/api/v1/billing/webhooks/polar/route.ts
+// packages/core/src/routes/api/v1/billing/webhooks/polar/route.ts
 import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks'
 
 export async function POST(request: NextRequest) {
@@ -455,7 +455,7 @@ export async function POST(request: NextRequest) {
 Pre-built route handlers for simple setups:
 
 ```typescript
-// app/api/polar/checkout/route.ts
+// api/polar/checkout/route.ts
 import { Checkout } from '@polar-sh/nextjs'
 
 export const GET = Checkout({
@@ -464,7 +464,7 @@ export const GET = Checkout({
   server: 'sandbox',
 })
 
-// app/api/polar/portal/route.ts
+// api/polar/portal/route.ts
 import { CustomerPortal } from '@polar-sh/nextjs'
 
 export const GET = CustomerPortal({
@@ -473,7 +473,7 @@ export const GET = CustomerPortal({
   returnUrl: process.env.NEXT_PUBLIC_APP_URL + '/dashboard/settings/billing',
 })
 
-// app/api/polar/webhooks/route.ts
+// api/polar/webhooks/route.ts
 import { Webhooks } from '@polar-sh/nextjs'
 
 export const POST = Webhooks({
@@ -643,7 +643,7 @@ actionMappings: {
 
 ```typescript
 // config/billing.config.ts
-import type { BillingConfig } from '@/core/lib/billing/config-types'
+import type { BillingConfig } from '@nextsparkjs/core/lib/billing/config-types'
 
 export const billingConfig: BillingConfig = {
   provider: 'stripe',  // or 'polar'
@@ -712,7 +712,7 @@ Subscriptions are tied to teams, not users (provider-agnostic DB schema):
 ## Checkout Flow (Provider-Agnostic)
 
 ```typescript
-// app/api/v1/billing/checkout/route.ts
+// packages/core/src/routes/api/v1/billing/checkout/route.ts
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 
 export async function POST(request: NextRequest) {
@@ -740,7 +740,7 @@ export async function POST(request: NextRequest) {
 ## Customer Portal (Provider-Agnostic)
 
 ```typescript
-// app/api/v1/billing/portal/route.ts
+// packages/core/src/routes/api/v1/billing/portal/route.ts
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 
 const session = await getBillingGateway().createPortalSession({
@@ -951,7 +951,7 @@ jest.mock('@polar-sh/sdk/webhooks', () => ({
   WebhookVerificationError: MockWebhookVerificationError,
 }))
 
-jest.mock('@/core/lib/services/plan.service', () => ({
+jest.mock('@nextsparkjs/core/lib/services/plan.service', () => ({
   PlanService: { getPriceId: mockGetPriceId }
 }))
 ```

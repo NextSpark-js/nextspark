@@ -351,7 +351,7 @@ DELETE /api/v1/orders/{orderId}/child/items/{itemId}
 ```typescript
 'use client'
 
-import { EntityDetailWrapper } from '@/core/components/entities/wrappers'
+import { EntityDetailWrapper } from '@nextsparkjs/core/components/entities/wrappers'
 
 export default function OrderDetailPage({ params }: { params: { id: string } }) {
   return (
@@ -369,7 +369,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 If you need more control:
 
 ```typescript
-import { EntityChildManager } from '@/core/components/entities/EntityChildManager'
+import { EntityChildManager } from '@nextsparkjs/core/components/entities/EntityChildManager'
 
 <EntityChildManager
   parentEntityConfig={orderConfig}

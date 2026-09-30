@@ -153,7 +153,7 @@ declare module '@nextsparkjs/registries/block-registry' {
     componentPath?: string
     schemaPath?: string
     fieldsPath?: string
-    thumbnail?: string
+    thumbnail?: { src: string }
     fieldDefinitions: FieldDefinition[]
     examples: BlockExample[]
     scope?: Array<'pages' | 'posts' | string>

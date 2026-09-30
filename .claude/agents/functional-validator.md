@@ -156,8 +156,8 @@ await Read('.claude/sessions/[session-name]/tests.md')
 // Update it yourself based on code review
 await Edit({
   file_path: ".claude/sessions/[session-name]/progress.md",
-  old_string: "- [ ] Create route handler `app/api/v1/products/route.ts`",
-  new_string: "- [x] Create route handler `app/api/v1/products/route.ts`"
+  old_string: "- [ ] Create route handler `api/products/route.ts`",
+  new_string: "- [x] Create route handler `api/products/route.ts`"
 })
 ```
 
@@ -194,7 +194,7 @@ const acValidation = {
 ```typescript
 // AC1: User can create product
 // Check: API route exists
-await Read('app/api/v1/products/route.ts')
+await Read('api/products/route.ts')
 // Check: Form component exists
 await Read('core/components/products/ProductForm.tsx')
 // Check: Validation schema exists
@@ -202,7 +202,7 @@ await Read('core/lib/validation/products.ts')
 
 // AC2: List ordered by date
 // Check: Query has ORDER BY
-await Grep({ pattern: "ORDER BY", path: "app/api/v1/products/" })
+await Grep({ pattern: "ORDER BY", path: "api/products/" })
 
 // AC3: Edit confirmation
 // Check: Confirmation dialog component used
@@ -234,7 +234,7 @@ Before validating, check session `scope.json`:
 const scope = await Read('.claude/sessions/[session-name]/scope.json')
 
 if (scope.core === true) {
-  // CORE project: components import from @/core/lib/test
+  // CORE project: components import from @nextsparkjs/core/lib/test
   // Selectors defined in core/lib/test/core-selectors.ts
   searchPath = "core/components/"
   selectorFile = "core/lib/test/core-selectors.ts"
@@ -252,8 +252,8 @@ if (scope.core === true) {
 
    **For CORE scope:**
    ```typescript
-   // ✅ APPROVED - Core project imports from @/core/lib/test
-   import { sel } from '@/core/lib/test'
+   // ✅ APPROVED - Core project imports from @nextsparkjs/core/lib/test
+   import { sel } from '@nextsparkjs/core/lib/test'
    <button data-cy={sel('auth.login.submit')}>
    ```
 
@@ -264,7 +264,7 @@ if (scope.core === true) {
    <button data-cy={sel('invoicing.createBtn')}>
 
    // ❌ REJECTED - Theme importing directly from core
-   import { sel } from '@/core/lib/test'  // Wrong for theme components!
+   import { sel } from '@nextsparkjs/core/lib/test'  // Wrong for theme components!
    ```
 
    **Always REJECTED:**
@@ -306,7 +306,7 @@ if (scope.project) {
 
   // ALSO check for wrong imports (theme importing from core)
   await Grep({
-    pattern: "from '@/core/lib/test'",  // Wrong import in theme!
+    pattern: "from '@nextsparkjs/core/lib/test'",  // Wrong import in theme!
     path: `components/`,
     glob: "*.tsx"
   })
@@ -334,7 +334,7 @@ if (scope.core === true) {
     old_string: `<button data-cy="login-submit" type="submit">`,
     new_string: `<button data-cy={sel('auth.login.submit')} type="submit">`
   })
-  // Ensure import exists: import { sel } from '@/core/lib/test'
+  // Ensure import exists: import { sel } from '@nextsparkjs/core/lib/test'
 }
 
 // For PROJECT scope:
@@ -544,7 +544,7 @@ await Edit({
 | AC5 | Field validation | ✅ | OK |
 
 **Corrections Made:**
-1. `app/api/v1/products/route.ts:45` - Changed ORDER BY to DESC
+1. `api/products/route.ts:45` - Changed ORDER BY to DESC
 2. `core/components/products/ProductEditForm.tsx:78` - Added ConfirmDialog
 
 **Major Issues (Not corrected):**
@@ -601,9 +601,9 @@ Before marking complete, verify:
   - Core scope: `core/components/`
   - Project scope: `./`
 - [ ] Verified components import `sel()` from CORRECT location:
-  - Core scope: `@/core/lib/test`
+  - Core scope: `@nextsparkjs/core/lib/test`
   - Project scope: `@theme/tests/cypress/src/selectors`
-- [ ] Verified theme components do NOT import from `@/core/lib/test`
+- [ ] Verified theme components do NOT import from `@nextsparkjs/core/lib/test`
 - [ ] Verified dynamic selectors use placeholder syntax: `sel('path', { id, slug })`
 - [ ] Confirmed selectors are defined in CORRECT location:
   - Core scope: `core/lib/test/core-selectors.ts`

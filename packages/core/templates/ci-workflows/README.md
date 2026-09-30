@@ -15,7 +15,7 @@ The workflow system follows the **core-as-provider** pattern:
 | `cypress-smoke.yml` | Runs smoke tests on PRs | Pull requests |
 | `cypress-regression.yml` | Full regression suite | Nightly schedule |
 
-> **Note:** Tag validation happens automatically during the registry build (`node core/scripts/build/registry.mjs`). No separate workflow needed.
+> **Note:** Tag validation happens automatically during the registry build (`pnpm build:registries`). No separate workflow needed.
 
 ## Installation
 
@@ -65,6 +65,6 @@ After installation, you can customize workflows in `.github/workflows/`:
 
 ## Related Files
 
-- `core/scripts/build/registry.mjs` - Registry build with tag validation
+- `packages/core/scripts/build/registry.mjs` - Registry build with tag validation
 - `.nextspark/registries/testing-registry.ts` - Auto-generated tag registry
 - `scripts/setup-ci.mjs` - Workflow installation script

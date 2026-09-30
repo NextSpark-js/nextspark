@@ -103,8 +103,8 @@ Before checking team-level permissions, the system enforces mode-level restricti
 The primary function for checking team permissions. Combines global role (superadmin bypass) with team role checks:
 
 ```typescript
-import { checkTeamPermission, type UserRole, type TeamPermission } from '@/core/lib/teams/permissions'
-import type { TeamRole } from '@/core/lib/teams/types'
+import { checkTeamPermission, type UserRole, type TeamPermission } from '@nextsparkjs/core/lib/teams/permissions'
+import type { TeamRole } from '@nextsparkjs/core/lib/teams/types'
 
 // Check if user can edit the team
 const canEdit = checkTeamPermission(
@@ -133,8 +133,8 @@ const superadminCanDelete = checkTeamPermission(
 Check if a specific team role has a permission:
 
 ```typescript
-import { hasPermission, type TeamPermission } from '@/core/lib/teams/permissions'
-import type { TeamRole } from '@/core/lib/teams/types'
+import { hasPermission, type TeamPermission } from '@nextsparkjs/core/lib/teams/permissions'
+import type { TeamRole } from '@nextsparkjs/core/lib/teams/types'
 
 // Check role permission
 const canInvite = hasPermission('admin', 'team.members.invite')  // true
@@ -174,7 +174,7 @@ import {
   isInvitableRole,
   getInvitableRoles,
   validateRoleTransition
-} from '@/core/lib/teams/permissions'
+} from '@nextsparkjs/core/lib/teams/permissions'
 
 // Check if user is superadmin
 isSuperadmin('superadmin') // true
@@ -199,8 +199,8 @@ validateRoleTransition('member', 'admin', 'owner')
 ### API Endpoint Pattern
 
 ```typescript
-// app/api/v1/teams/[teamId]/members/route.ts
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+// packages/core/src/routes/api/v1/teams/[teamId]/members/route.ts
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function POST(req: NextRequest, { params }) {
   // Declares 'teams:write'; an API key without it is rejected here, before
@@ -228,7 +228,7 @@ export async function POST(req: NextRequest, { params }) {
 ### React Hook Pattern
 
 ```typescript
-import { useTeamContext } from '@/core/contexts/TeamContext'
+import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 
 function TeamSettings() {
   const { currentTeam, userTeams } = useTeamContext()
@@ -467,8 +467,8 @@ For UI-level permission checks (hiding buttons, disabling actions), use the perm
 Check a single permission:
 
 ```typescript
-import { usePermission } from '@/core/lib/permissions/hooks'
-import type { Permission } from '@/core/lib/permissions/types'
+import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
+import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 
 function CreateButton({ entitySlug }: { entitySlug: string }) {
   const canCreate = usePermission(`${entitySlug}.create` as Permission)
@@ -484,8 +484,8 @@ function CreateButton({ entitySlug }: { entitySlug: string }) {
 Check multiple permissions at once:
 
 ```typescript
-import { usePermissions } from '@/core/lib/permissions/hooks'
-import type { Permission } from '@/core/lib/permissions/types'
+import { usePermissions } from '@nextsparkjs/core/lib/permissions/hooks'
+import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 
 function EntityActions({ entitySlug }: { entitySlug: string }) {
   const { canUpdate, canDelete } = usePermissions({

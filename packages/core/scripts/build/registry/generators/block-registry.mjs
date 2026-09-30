@@ -44,7 +44,7 @@ function buildRegistryEntries(blocks) {
     componentPath: '${block.paths.component}',
     schemaPath: '${block.paths.schema}',
     fieldsPath: '${block.paths.fields}',
-    thumbnail: ${block.paths.thumbnail ? `'${block.paths.thumbnail}'` : 'undefined'},
+    thumbnail: ${block.paths.thumbnail ? `${slugVar}_thumbnail` : 'undefined'},
     fieldDefinitions: ${slugVar}_fields,
     examples: ${examplesValue},
     scope: ${scopeValue},
@@ -88,7 +88,7 @@ type BlockConfig = {
   componentPath?: string
   schemaPath?: string
   fieldsPath?: string
-  thumbnail?: string
+  thumbnail?: { src: string }
   fieldDefinitions: unknown[]
   examples: unknown[]
   scope?: string[]
@@ -235,7 +235,7 @@ type BlockConfig = {
   componentPath?: string
   schemaPath?: string
   fieldsPath?: string
-  thumbnail?: string
+  thumbnail?: { src: string }
   fieldDefinitions: unknown[]
   examples: unknown[]
   scope?: string[]
@@ -270,6 +270,10 @@ export const BLOCK_METADATA = {
     imports.push(`import { fieldDefinitions as ${slugVar}_fields } from '${block.paths.fields}'`)
     if (block.hasExamples) {
       imports.push(`import { examples as ${slugVar}_examples } from '${block.paths.examples}'`)
+    }
+    // Static import: Next processes the image as an asset (StaticImageData; `.src` is its URL)
+    if (block.paths.thumbnail) {
+      imports.push(`import ${slugVar}_thumbnail from '${block.paths.thumbnail}'`)
     }
   })
 

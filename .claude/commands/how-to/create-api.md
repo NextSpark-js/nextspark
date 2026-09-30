@@ -97,13 +97,8 @@ NextSpark has two types of API endpoints:
 
 📂 File Structure:
 
-app/api/v1/
-├── entities/              # Auto-generated entity APIs
-│   └── [entity]/
-│       └── route.ts
-├── billing/               # Custom: Billing endpoints
-│   ├── checkout/route.ts
-│   └── portal/route.ts
+/api/v1/**  (core, read-only)     # entity CRUD, billing, teams, ...
+api/                       # your endpoints, served at /api/<path>
 ├── reports/               # Custom: Reporting endpoints
 │   └── sales/route.ts
 └── integrations/          # Custom: External integrations
@@ -133,12 +128,12 @@ Create a new API route in Next.js App Router:
 **📋 Route Handler Example:**
 
 ```typescript
-// app/api/v1/reports/sales/route.ts
+// api/reports/sales/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
-import { checkPermission } from '@/core/lib/permissions/check'
-import { createApiResponse, createApiError } from '@/core/lib/api/response'
-import { SalesReportService } from '@/core/lib/services/sales-report.service'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
+import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/response'
+import { SalesReportService } from '@nextsparkjs/core/lib/services/sales-report.service'
 import * as z from 'zod'
 
 // Query parameters schema
@@ -286,7 +281,7 @@ const auth = await authenticateRequest(request, { requiredScope: 'reports:read' 
 **📋 Using Authentication in Your Endpoint:**
 
 ```typescript
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   // Declare the scope this route needs; a key without it is rejected
@@ -413,7 +408,7 @@ export async function POST(request: NextRequest) {
 **📋 Response Helpers:**
 
 ```typescript
-import { createApiResponse, createApiError } from '@/core/lib/api/response'
+import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/response'
 
 // Success responses
 createApiResponse({ data: result })                    // 200
@@ -482,11 +477,11 @@ STEP 5 OF 5: Test Your Endpoint
 
 ```bash
 # GET request with session cookie
-curl http://localhost:3000/api/v1/reports/sales \
+curl http://localhost:3000/api/reports/sales \
   -H "Cookie: better-auth.session_token=xxx"
 
 # GET request with API key
-curl http://localhost:3000/api/v1/reports/sales \
+curl http://localhost:3000/api/reports/sales \
   -H "Authorization: Bearer sk_xxx"
 
 # POST request with body

@@ -277,7 +277,7 @@ const webhook = await fetch(`${BASE_URL}/webhooks`, {
 Asana requires a handshake to verify webhook endpoint:
 
 ```typescript
-// app/api/webhooks/asana/route.ts
+// api/webhooks/asana/route.ts
 export async function POST(request: Request) {
   // Handle handshake
   const hookSecret = request.headers.get('X-Hook-Secret');

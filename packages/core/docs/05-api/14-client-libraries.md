@@ -1023,7 +1023,7 @@ import { zodToTs } from 'zod-to-ts'
 import { writeFileSync } from 'fs'
 
 // Import entity schemas
-import { taskSchema } from '@/core/lib/entities/tasks/schema'
+import { taskSchema } from '@nextsparkjs/core/lib/entities/tasks/schema'
 
 // Generate TypeScript types
 const { node } = zodToTs(taskSchema)

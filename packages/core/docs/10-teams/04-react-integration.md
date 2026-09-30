@@ -59,8 +59,8 @@ interface TeamContextValue {
 ```tsx
 'use client'
 
-import { useTeamContext } from '@/core/contexts/TeamContext'
-import { useTeamsConfig } from '@/core/hooks/useTeamsConfig'
+import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
+import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 
 function MyComponent() {
   const {
@@ -155,7 +155,7 @@ useEffect(() => {
 Fetches all teams for the current user using TanStack Query.
 
 ```tsx
-import { useTeams } from '@/core/hooks/useTeams'
+import { useTeams } from '@nextsparkjs/core/hooks/useTeams'
 
 function TeamList() {
   const { data: teams, isLoading, error, refetch } = useTeams()
@@ -187,7 +187,7 @@ const { data } = useTeams({
 Fetches a single team by ID.
 
 ```tsx
-import { useTeam } from '@/core/hooks/useTeam'
+import { useTeam } from '@nextsparkjs/core/hooks/useTeam'
 
 function TeamDetail({ teamId }: { teamId: string }) {
   const { data: team, isLoading } = useTeam(teamId)
@@ -209,7 +209,7 @@ function TeamDetail({ teamId }: { teamId: string }) {
 Fetches and manages team members.
 
 ```tsx
-import { useTeamMembers } from '@/core/hooks/useTeamMembers'
+import { useTeamMembers } from '@nextsparkjs/core/hooks/useTeamMembers'
 
 function MembersList({ teamId }: { teamId: string }) {
   const {
@@ -280,7 +280,7 @@ function MembersList({ teamId }: { teamId: string }) {
 Manages team invitations.
 
 ```tsx
-import { useTeamInvitations } from '@/core/hooks/useTeamInvitations'
+import { useTeamInvitations } from '@nextsparkjs/core/hooks/useTeamInvitations'
 
 function InvitationsManager({ teamId }: { teamId: string }) {
   const {
@@ -465,7 +465,7 @@ return <TeamDashboard team={currentTeam} />
 > **Important**: Always use `useTeamsConfig()` to check mode capabilities before rendering team-related UI. This prevents showing disabled features in restricted modes.
 
 ```tsx
-import { useTeamsConfig } from '@/core/hooks/useTeamsConfig'
+import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 
 function TeamFeatures() {
   const { mode, canSwitch, canCreate, canInvite } = useTeamsConfig()

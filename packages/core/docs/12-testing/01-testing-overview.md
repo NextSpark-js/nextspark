@@ -217,7 +217,7 @@ test/
 
 ```typescript
 // core/tests/jest/lib/utils.test.ts
-import { myFunction } from '@/core/lib/utils'
+import { myFunction } from '@nextsparkjs/core/lib/utils'
 
 describe('myFunction', () => {
   it('should handle valid input', () => {

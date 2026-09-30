@@ -1,6 +1,6 @@
 # Builder Integration with Entity System
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 This document explains how the Page Builder integrates with the generic entity system, enabling any entity to have visual block-based editing.
 
@@ -37,7 +37,7 @@ When an entity has `builder.enabled: true`:
 
 ```typescript
 // entities/{entity}/{entity}.config.ts
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
 export const postsConfig: EntityConfig = {
   slug: 'posts',
@@ -277,7 +277,7 @@ The route renders core's `EntityEditView`, which shows the 3-panel `BuilderEdito
 Public pages check for builder content:
 
 ```typescript
-// app/(public)/[entity]/page.tsx
+// templates/(public)/[entity]/page.tsx
 
 async function PublicDynamicPage({ params }) {
   const slug = params.entity
@@ -301,7 +301,7 @@ async function PublicDynamicPage({ params }) {
 Posts have a dedicated route at `/blog/[slug]`:
 
 ```typescript
-// app/(public)/blog/[slug]/page.tsx
+// templates/(public)/blog/[slug]/page.tsx
 
 async function BlogPost({ params }) {
   const postResult = await query(
@@ -395,7 +395,7 @@ CREATE INDEX idx_tutorials_blocks_gin ON tutorials USING GIN (blocks);
 ### Step 4: Rebuild Registry
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ## Block Scope
@@ -972,7 +972,7 @@ Builder operations respect entity-level permissions:
 
 ### Block Component Not Found
 
-1. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+1. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 2. Check block is in correct theme folder
 3. Verify export name ends with `Block`
 
@@ -996,7 +996,7 @@ Builder operations respect entity-level permissions:
 - **[Introduction](./01-introduction.md)** - Page Builder overview
 - **[Architecture](./02-architecture.md)** - System architecture
 - **[Creating Blocks](./04-creating-blocks.md)** - Custom block development
-- **[Entity System](../04-entities/01-overview.md)** - Core entity documentation
+- **[Entity System](../04-entities/01-introduction.md)** - Core entity documentation
 
 ---
 

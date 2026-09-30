@@ -166,7 +166,7 @@ User visits /about-us
          │
          ▼
 ┌──────────────────────────────┐
-│ app/(public)/[entity]/page   │
+│ templates/(public)/[entity]/page   │
 │ Check: Is this a page?       │
 └────────────┬─────────────────┘
              │
@@ -200,8 +200,8 @@ User visits /about-us
 ## Directory Structure
 
 ```text
-nextspark/
-├── app/
+nextspark/                        # core's route modules: packages/core/src/routes (src/app is generated from them)
+├── routes/
 │   ├── api/v1/pages/
 │   │   ├── route.ts              # GET (list), POST (create)
 │   │   ├── [id]/route.ts         # GET, PATCH, DELETE single page

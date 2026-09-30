@@ -382,7 +382,7 @@ interface JiraWebhook {
 ### Handling Webhooks
 
 ```typescript
-// app/api/webhooks/jira/route.ts
+// api/webhooks/jira/route.ts
 export async function POST(request: Request) {
   const payload: JiraWebhook = await request.json();
 

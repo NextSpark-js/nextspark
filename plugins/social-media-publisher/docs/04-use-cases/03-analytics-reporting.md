@@ -75,7 +75,7 @@ export async function getInstagramAnalytics(accountId: string) {
 
 **Display in Dashboard:**
 ```typescript
-// app/dashboard/analytics/[accountId]/page.tsx
+// templates/dashboard/analytics/[accountId]/page.tsx
 export default async function AccountAnalyticsPage({
   params
 }: {
@@ -293,7 +293,7 @@ export async function getPostPerformance(clientId: string, days: number = 30) {
 
 **Display Top Performing Posts:**
 ```typescript
-// app/dashboard/analytics/top-posts/page.tsx
+// templates/dashboard/analytics/top-posts/page.tsx
 export default async function TopPostsPage({
   searchParams
 }: {

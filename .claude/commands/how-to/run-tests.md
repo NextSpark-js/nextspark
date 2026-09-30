@@ -327,7 +327,7 @@ pnpm test:unit -- services/
 
 ```typescript
 // tests/jest/unit/services/products.test.ts
-import { ProductsService } from '@/core/lib/services/products.service'
+import { ProductsService } from '@nextsparkjs/core/lib/services/products.service'
 
 describe('ProductsService', () => {
   describe('calculateDiscount', () => {

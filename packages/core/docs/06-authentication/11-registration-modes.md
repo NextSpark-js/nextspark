@@ -113,13 +113,13 @@ auth: {
 
 Registration mode restrictions are enforced at multiple layers:
 
-1. **Route handler** (`app/api/auth/[...all]/route.ts`): Blocks email signup for `domain-restricted` and `invitation-only` modes at the API level.
+1. **Route handler** (`packages/core/src/routes/api/auth/[...all]/route.ts`): Blocks email signup for `domain-restricted` and `invitation-only` modes at the API level.
 
 2. **Database hook — user create** (`lib/auth.ts` → `databaseHooks.user.create.before`): Validates email domain for `domain-restricted` and `domain-open` modes before user creation. Blocks signup in `invitation-only` when a team already exists.
 
 3. **Database hook — session create** (`lib/auth.ts` → `databaseHooks.session.create.before`): Validates email domain on every login attempt for `domain-restricted` and `domain-open` modes, preventing existing users outside allowed domains from logging in.
 
-4. **Signup page** (`app/(auth)/signup/page.tsx`): Redirects to `/login` for `domain-restricted` and `invitation-only` modes.
+4. **Signup page** (`packages/core/src/routes/(auth)/signup/page.tsx`): Redirects to `/login` for `domain-restricted` and `invitation-only` modes.
 
 5. **LoginForm** (`components/auth/forms/LoginForm.tsx`): Hides the email login option for `domain-restricted` mode. Shows signup link for `open` and `domain-open` modes.
 

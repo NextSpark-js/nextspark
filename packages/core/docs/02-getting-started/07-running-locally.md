@@ -1,6 +1,6 @@
 # Running Locally
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -38,7 +38,7 @@ The root script delegates to `apps/dev` and starts one Next.js process. It reads
 **2. REGISTRY (optional, separate terminal)**
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
 - Watches: root-level project source and enabled `plugins/<name>/` directories
@@ -124,7 +124,7 @@ pnpm dev                   # One Next.js development process
 
 **Build manually:**
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs  # Registries only, including docs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare  # Registries only, including docs
 pnpm build                 # Production app build, including imported theme CSS
 ```
 
@@ -176,7 +176,7 @@ pnpm --dir apps/dev exec tsc --noEmit          # Application TypeScript
 
 **4. API route changes:**
 ```typescript
-// Edit app/api/v1/tasks/route.ts
+// Edit api/tasks/route.ts
 // → Server restarts automatically
 // → Test in browser/Postman
 ```
@@ -187,7 +187,7 @@ pnpm --dir apps/dev exec tsc --noEmit          # Application TypeScript
 ```bash
 # Stop server
 rm -rf .nextspark/registries
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 pnpm dev
 ```
 
@@ -306,7 +306,7 @@ pnpm dev
 3. Manually rebuild if needed
 4. Restart server
 
-**See:** [Troubleshooting Guide](./08-troubleshooting.md)
+**See:** [Troubleshooting Guide](./10-troubleshooting.md)
 
 ---
 
@@ -322,7 +322,7 @@ pnpm dev
 - Next.js: Hot module replacement
 
 **Manual commands:**
-- `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` - Rebuild registries
+- `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` - Rebuild registries
 - `pnpm build` - Build the application and imported theme CSS
 - `pnpm lint` - Check code quality
 
@@ -330,7 +330,7 @@ pnpm dev
 - `.next/`
 - `.nextspark/registries/`
 
-**Next:** [First Customization](./06-first-customization.md)
+**Next:** [First Customization](./09-first-customization.md)
 
 ---
 

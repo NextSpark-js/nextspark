@@ -158,7 +158,7 @@ plugins/<plugin-name>/              # Monorepo location
 ### 4.1 plugin.config.ts - Plugin Identity
 
 ```typescript
-import type { PluginConfig } from '@/core/types/plugins'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugins'
 import { exampleFunction } from './lib/core'
 
 export const myPluginConfig: PluginConfig = {
@@ -317,7 +317,7 @@ export const pluginSandboxThemeConfig: ThemeConfig = {
 Then rebuild the registry:
 
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ---
@@ -332,7 +332,7 @@ ls -la plugins/<plugin-name>/
 cat plugins/<plugin-name>/package.json
 
 # 3. Build registry to include new plugin
-node core/scripts/build/registry.mjs
+pnpm build:registries
 
 # 4. Verify plugin appears in registry
 grep "<plugin-name>" .nextspark/registries/plugin-registry.ts
@@ -382,7 +382,7 @@ Each entity requires 4 files:
 - [ ] **lib/plugin-env.ts** uses core's env-loader
 - [ ] .env.example documents all environment variables
 - [ ] Plugin registered in plugin-sandbox theme
-- [ ] Registry rebuilt: `node core/scripts/build/registry.mjs`
+- [ ] Registry rebuilt: `pnpm build:registries`
 - [ ] Plugin appears in PLUGIN_REGISTRY
 - [ ] No duplicate dependencies: `pnpm ls zod` shows ONE version
 - [ ] No TypeScript errors: `pnpm tsc --noEmit`
@@ -395,7 +395,7 @@ Each entity requires 4 files:
 |---------|----------------|------------------|
 | Manual file creation | Missing files, wrong structure | Use `pnpm create:plugin` |
 | Skipping sandbox registration | Can't test plugin | Add to plugin-sandbox theme |
-| Skipping registry rebuild | Plugin won't be recognized | Run `node core/scripts/build/registry.mjs` |
+| Skipping registry rebuild | Plugin won't be recognized | Run `pnpm build:registries` |
 | Modifying core files | Architecture violation | Only work in `plugins/` |
 
 ---

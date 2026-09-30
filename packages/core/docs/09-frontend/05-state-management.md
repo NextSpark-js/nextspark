@@ -73,7 +73,7 @@ TanStack Query v5.85 is our primary solution for server state management, provid
 // core/hooks/useEntityQuery.ts
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
 export function useEntityQuery(options: UseEntityQueryOptions) {
   const {
@@ -817,7 +817,7 @@ Use Context API for global UI state that needs to be shared across multiple comp
 'use client'
 
 import { createContext, useContext, ReactNode } from 'react'
-import { useSidebarState } from '@/core/hooks/useSidebarState'
+import { useSidebarState } from '@nextsparkjs/core/hooks/useSidebarState'
 
 interface SidebarContextType {
   isCollapsed: boolean
@@ -1180,7 +1180,7 @@ Our state management integrates seamlessly with the entity registry system.
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
 export function useEntityConfig(slug: string) {
   const [config, setConfig] = useState<EntityConfig | null>(null)

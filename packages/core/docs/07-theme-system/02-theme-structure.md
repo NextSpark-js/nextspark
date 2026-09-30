@@ -97,7 +97,7 @@ This guide provides a complete reference for the theme directory structure, expl
 **Example:**
 
 ```typescript
-import type { ThemeConfig } from '@/core/types/theme'
+import type { ThemeConfig } from '@nextsparkjs/core/types/theme'
 
 export const myThemeConfig: ThemeConfig = {
   name: 'my-theme',
@@ -318,7 +318,7 @@ export const DASHBOARD_CONFIG_OVERRIDES = {
 
 ## Public Directory
 
-Theme assets are automatically copied from `public/` to `public/theme/` during the build process.
+Project assets live in `public/`, which Next.js serves from `/`. Nothing copies them: files under `public/theme/` are served from `/theme/`. (Block thumbnails are not there: the block registry imports them.)
 
 ### brand/
 
@@ -454,7 +454,7 @@ entities/
 ### Example: tasks.config.ts
 
 ```typescript
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import { tasksFields } from './tasks.fields'
 
 export const tasksConfig: EntityConfig = {
@@ -617,7 +617,7 @@ components/
 ```tsx
 // components/overrides/Button.tsx
 import { ButtonHTMLAttributes } from 'react'
-import { cn } from '@/core/lib/utils'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 export function Button({ 
   className, 

@@ -65,7 +65,7 @@ lib/billing/
 ├── stripe-webhook-extensions.ts   # Project-level one-time payment handler (Stripe)
 └── polar-webhook-extensions.ts    # Project-level one-time payment handler (Polar)
 
-app/api/
+@nextsparkjs/core/routes/api/     # core-owned (packages/core/src/routes/api/)
 ├── v1/billing/
 │   ├── check-action/route.ts  # Permission check endpoint
 │   ├── checkout/route.ts      # Create checkout session
@@ -106,7 +106,7 @@ import {
   SubscriptionService,
   UsageService,
   InvoiceService
-} from '@/core/lib/services'
+} from '@nextsparkjs/core/lib/services'
 
 // Get subscription with plan
 const subscription = await SubscriptionService.getByTeamId(teamId)
@@ -143,7 +143,7 @@ import {
   getFullBillingMatrix,
   getPlan,
   getPublicPlans
-} from '@/core/lib/billing/queries'
+} from '@nextsparkjs/core/lib/billing/queries'
 ```
 
 **Functions:**
@@ -161,7 +161,7 @@ import {
 **Example:**
 
 ```typescript
-import { planHasFeature, getPlanLimit, getPublicPlans } from '@/core/lib/billing/queries'
+import { planHasFeature, getPlanLimit, getPublicPlans } from '@nextsparkjs/core/lib/billing/queries'
 
 // Check feature access
 const hasAnalytics = planHasFeature('pro', 'analytics')  // true
@@ -204,7 +204,7 @@ const plans = getPublicPlans()
 **Usage:**
 
 ```typescript
-import type { Plan, Subscription, QuotaInfo } from '@/core/lib/billing/types'
+import type { Plan, Subscription, QuotaInfo } from '@nextsparkjs/core/lib/billing/types'
 ```
 
 ---
@@ -226,7 +226,7 @@ import type { Plan, Subscription, QuotaInfo } from '@/core/lib/billing/types'
 **Usage:**
 
 ```typescript
-import type { BillingConfig } from '@/core/lib/billing/config-types'
+import type { BillingConfig } from '@nextsparkjs/core/lib/billing/config-types'
 
 export const billingConfig: BillingConfig = { ... }
 ```
@@ -251,7 +251,7 @@ export const billingConfig: BillingConfig = { ... }
 **Usage:**
 
 ```typescript
-import { trackUsageSchema } from '@/core/lib/billing/schema'
+import { trackUsageSchema } from '@nextsparkjs/core/lib/billing/schema'
 
 const validated = trackUsageSchema.parse(body)
 ```

@@ -218,7 +218,7 @@ const CURRENT_COVERAGE = {
     'core/lib/db': '45%',
     'core/hooks': '40%',
     'core/components': '20%',
-    'app/api': '50%',
+    'api': '50%',
   },
   
   priority: [

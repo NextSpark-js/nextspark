@@ -417,7 +417,7 @@ Exceptions allow specific paths regardless of scope rules:
   },
   "exceptions": [
     "core/lib/constants.ts",
-    "app/api/v1/custom-endpoint/**/*"
+    "api/custom-endpoint/**/*"
   ]
 }
 ```

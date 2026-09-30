@@ -27,7 +27,7 @@ if (session.user?.role !== 'superadmin' && session.user?.role !== 'developer') {
 ### Helper Hooks
 
 ```typescript
-import { useIsSuperAdmin, useCanAccessAdmin } from "@/core/components/app/guards/SuperAdminGuard";
+import { useIsSuperAdmin, useCanAccessAdmin } from "@nextsparkjs/core/components/app/guards/SuperAdminGuard";
 
 // Check if user is specifically superadmin
 const isSuperAdmin = useIsSuperAdmin();

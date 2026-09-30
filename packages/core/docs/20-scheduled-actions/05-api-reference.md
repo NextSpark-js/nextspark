@@ -343,7 +343,7 @@ import {
   scheduleAction,
   scheduleRecurringAction,
   cancelScheduledAction
-} from '@/core/lib/scheduled-actions'
+} from '@nextsparkjs/core/lib/scheduled-actions'
 
 // Schedule one-time action
 const actionId = await scheduleAction('webhook:send', {

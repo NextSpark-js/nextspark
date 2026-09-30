@@ -1,6 +1,6 @@
 # Translation Registry
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -49,10 +49,10 @@ The registry is generated automatically during the build process:
 
 ```bash
 # Generate registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Watch mode (development)
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
 ### Generation Process
@@ -352,12 +352,12 @@ const messages = await loadThemeTranslation('starter', 'en')
 **2. Rebuild Registry After Changes**:
 ```bash
 # After adding/modifying translations
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 **3. Use Type-Safe Imports**:
 ```typescript
-import type { SupportedLocale } from '@/core/lib/config'
+import type { SupportedLocale } from '@nextsparkjs/core/lib/config'
 
 function loadMessages(locale: SupportedLocale) {
   // Type-safe locale parameter
@@ -367,7 +367,7 @@ function loadMessages(locale: SupportedLocale) {
 **4. Leverage Build-Time Validation**:
 ```bash
 # Registry build catches errors early
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 # Error: Missing translation file for locale 'es'
 ```
 
@@ -411,7 +411,7 @@ const messages = await loadThemeTranslation('starter', 'en')
 
 # ✅ GOOD
 # Add new translation file
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 # Commit both translation file AND regenerated registry
 ```
 
@@ -438,7 +438,7 @@ const messages = await loadThemeTranslation('starter', locale)
 **Solution**:
 ```bash
 # Rebuild registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Verify generation
 ls -la .nextspark/registries/translation-registry.ts
@@ -459,7 +459,7 @@ supportedLocales: ['en', 'es', 'fr']
 
 2. Rebuild registry:
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 3. Restart TypeScript server in IDE
@@ -480,7 +480,7 @@ touch messages/fr.json
 echo '{}' > messages/fr.json
 
 # Rebuild registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 #### Issue: Slow Translation Loading
@@ -507,10 +507,10 @@ console.timeEnd('translation-load')
 
 ```bash
 # Watch mode - auto-rebuild on changes
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 
 # Manual rebuild
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ### CI/CD Integration
@@ -532,7 +532,7 @@ jobs:
         run: pnpm install
 
       - name: Build registry
-        run: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+        run: cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
       - name: Validate translations
         run: pnpm lint:i18n
@@ -550,7 +550,7 @@ jobs:
 # Check if translation files changed
 if git diff --cached --name-only | grep -q "messages/.*\.json"; then
   echo "Translation files changed - rebuilding registry..."
-  cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+  cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
   # Stage regenerated registry
   git add .nextspark/registries/translation-registry.ts

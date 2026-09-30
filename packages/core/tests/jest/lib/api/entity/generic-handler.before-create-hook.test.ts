@@ -165,7 +165,6 @@ describe('handleGenericCreate - beforeEntityCreate hook wiring', () => {
     mockResolveEntityFromUrl.mockResolvedValue({
       entityName: 'items',
       entityConfig: mockEntityConfig,
-      hasCustomOverride: false,
       isValidEntity: true,
     })
     mockValidateEntityOperation.mockReturnValue(true)

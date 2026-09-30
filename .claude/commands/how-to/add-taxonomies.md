@@ -544,7 +544,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/core/components/ui/select'
+} from '@nextsparkjs/core/components/ui/select'
 
 interface Props {
   value: string
@@ -585,7 +585,7 @@ export function CategorySelect({ value, onChange, type, teamId }: Props) {
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Badge } from '@/core/components/ui/badge'
+import { Badge } from '@nextsparkjs/core/components/ui/badge'
 import { X } from 'lucide-react'
 
 interface Props {

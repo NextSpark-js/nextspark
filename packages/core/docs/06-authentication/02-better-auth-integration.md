@@ -452,7 +452,7 @@ export const {
 ```typescript
 'use client'
 
-import { useSession, signIn, signOut } from '@/core/lib/auth-client'
+import { useSession, signIn, signOut } from '@nextsparkjs/core/lib/auth-client'
 
 export function UserProfile() {
   const { data: session, isPending } = useSession()
@@ -532,7 +532,7 @@ openssl rand -base64 32
 ### In Server Components
 
 ```typescript
-import { auth } from '@/core/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 
 export default async function ServerPage() {
   const session = await auth.api.getSession({
@@ -550,7 +550,7 @@ export default async function ServerPage() {
 ### In API Routes
 
 ```typescript
-import { auth } from '@/core/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -570,7 +570,7 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 // middleware.ts
-import { auth } from '@/core/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 

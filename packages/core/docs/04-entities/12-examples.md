@@ -11,7 +11,7 @@ The tasks entity is a complete example currently in production.
 ```typescript
 // entities/tasks/tasks.config.ts
 import { CheckSquare } from 'lucide-react'
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import { taskFields } from './tasks.fields'
 
 export const taskEntityConfig: EntityConfig = {
@@ -74,7 +74,7 @@ export const taskEntityConfig: EntityConfig = {
 ### Fields (tasks.fields.ts)
 
 ```typescript
-import type { EntityField } from '@/core/lib/entities/types'
+import type { EntityField } from '@nextsparkjs/core/lib/entities/types'
 
 export const taskFields: EntityField[] = [
   {
@@ -229,7 +229,7 @@ Blog entity with public access.
 ```typescript
 // blog-posts.config.ts
 import { FileText } from 'lucide-react'
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
 export const blogPostConfig: EntityConfig = {
   slug: 'blog-posts',

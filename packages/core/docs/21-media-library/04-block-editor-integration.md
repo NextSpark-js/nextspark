@@ -241,7 +241,7 @@ export const fieldDefinitions: FieldDefinition[] = [
 2. Change `type: 'image'` to `type: 'media-library'`
 3. Optionally add `helpText` for user guidance
 4. No changes needed to `schema.ts`, `component.tsx`, or block data
-5. Rebuild registries from the monorepo root: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+5. Rebuild registries from the monorepo root: `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 
 ### For Array Fields
 

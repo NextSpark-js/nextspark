@@ -6,6 +6,5 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'Call-to-action section with title, description, and action buttons',
   category: 'cta',
   icon: 'Megaphone',
-  thumbnail: '/theme/blocks/cta-section/thumbnail.png',
   scope: ['pages']
 }

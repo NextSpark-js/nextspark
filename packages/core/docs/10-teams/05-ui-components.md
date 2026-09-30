@@ -14,7 +14,7 @@ Full-featured team switcher dropdown.
 > **Conditional Rendering**: This component returns `null` when team switching is disabled. It's only visible in `multi-tenant` mode. The component internally checks `canSwitchTeams()` from `useTeamsConfig`.
 
 ```tsx
-import { TeamSwitcher } from '@/core/components/teams/TeamSwitcher'
+import { TeamSwitcher } from '@nextsparkjs/core/components/teams/TeamSwitcher'
 
 function Header() {
   return (
@@ -49,7 +49,7 @@ Compact version for sidebar footer.
 > **Conditional Rendering**: Like `TeamSwitcher`, this component returns `null` when team switching is disabled. It's only visible in `multi-tenant` mode. Uses the same `canSwitchTeams()` check internally.
 
 ```tsx
-import { TeamSwitcherCompact } from '@/core/components/teams/TeamSwitcherCompact'
+import { TeamSwitcherCompact } from '@nextsparkjs/core/components/teams/TeamSwitcherCompact'
 
 function Sidebar() {
   return (
@@ -93,7 +93,7 @@ function Sidebar() {
 Animated modal shown during team switching.
 
 ```tsx
-import { TeamSwitchModal } from '@/core/components/teams/TeamSwitchModal'
+import { TeamSwitchModal } from '@nextsparkjs/core/components/teams/TeamSwitchModal'
 
 // Usually used internally by TeamContext, but can be used standalone:
 <TeamSwitchModal
@@ -127,7 +127,7 @@ import { TeamSwitchModal } from '@/core/components/teams/TeamSwitchModal'
 Badge component for displaying team roles.
 
 ```tsx
-import { TeamBadge } from '@/core/components/teams/TeamBadge'
+import { TeamBadge } from '@nextsparkjs/core/components/teams/TeamBadge'
 
 // Role badge
 <TeamBadge role="owner" />     // Shows "Owner" badge
@@ -148,7 +148,7 @@ import { TeamBadge } from '@/core/components/teams/TeamBadge'
 Table component for displaying and managing team members.
 
 ```tsx
-import { TeamMembersList } from '@/core/components/teams/TeamMembersList'
+import { TeamMembersList } from '@nextsparkjs/core/components/teams/TeamMembersList'
 
 function TeamSettings({ teamId }) {
   return (
@@ -188,8 +188,8 @@ Modal dialog for creating new teams.
 > **Mode Restriction**: Team creation is only available in `multi-tenant` mode. Always check `canCreateTeams()` before rendering the create button. Additionally, the `allowCreateTeams` option in `app.config.ts` controls whether users can create additional teams beyond their signup team.
 
 ```tsx
-import { CreateTeamDialog } from '@/core/components/teams/CreateTeamDialog'
-import { useTeamsConfig } from '@/core/hooks/useTeamsConfig'
+import { CreateTeamDialog } from '@nextsparkjs/core/components/teams/CreateTeamDialog'
+import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 
 function TeamsPage() {
   const [open, setOpen] = useState(false)
@@ -254,7 +254,7 @@ Modal dialog for inviting new members.
 > **Mode Restriction**: Invitations are disabled in `single-user` mode. All other modes support invitations.
 
 ```tsx
-import { InviteMemberDialog } from '@/core/components/teams/InviteMemberDialog'
+import { InviteMemberDialog } from '@nextsparkjs/core/components/teams/InviteMemberDialog'
 
 function MembersSection({ teamId }) {
   const [open, setOpen] = useState(false)
@@ -301,7 +301,7 @@ The TeamSwitcherCompact is integrated into the mobile navigation:
 
 ```tsx
 // In MobileMoreSheet.tsx
-import { TeamSwitcherCompact } from '@/core/components/teams/TeamSwitcherCompact'
+import { TeamSwitcherCompact } from '@nextsparkjs/core/components/teams/TeamSwitcherCompact'
 
 export function MobileMoreSheet({ isOpen, onOpenChange }) {
   return (

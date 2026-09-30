@@ -158,7 +158,7 @@ The `media-library` field type in block definitions opens the Media Library moda
 - Static class with RLS-scoped database operations
 - All queries pass through `queryWithRLS` / `mutateWithRLS`
 
-**4. API Routes** (`app/api/v1/media/`)
+**4. API Routes** (`packages/core/src/routes/api/v1/media/`)
 - RESTful endpoints with dual authentication
 - Rate limiting via `withRateLimitTier`
 - Zod schema validation for inputs

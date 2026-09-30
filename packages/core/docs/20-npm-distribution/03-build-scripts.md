@@ -1,6 +1,6 @@
 # Build Scripts
 
-> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (add `--watch` to watch).
 
 ## Root-first execution
 
@@ -19,14 +19,14 @@ plugins, generated output, test fixtures, and the core package.
 
 ```bash
 pnpm build:registries
-pnpm exec nextspark registry:watch
+pnpm exec nextspark prepare --watch
 ```
 
 In this repository:
 
 ```bash
 cd apps/dev
-node ../../packages/core/scripts/build/registry.mjs --build
+node ../../packages/cli/dist/cli.js prepare
 ```
 
 The build reads root-level source and enabled `plugins/<name>/` directories,

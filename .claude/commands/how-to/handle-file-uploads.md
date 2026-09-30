@@ -223,7 +223,7 @@ different media types.
 **📋 1. FileUpload (Generic):**
 
 ```typescript
-import { FileUpload } from '@/core/components/ui/file-upload'
+import { FileUpload } from '@nextsparkjs/core/components/ui/file-upload'
 
 interface FileUploadProps {
   value: UploadedFile[]
@@ -249,7 +249,7 @@ interface FileUploadProps {
 **📋 2. ImageUpload (Images with Preview):**
 
 ```typescript
-import { ImageUpload } from '@/core/components/ui/image-upload'
+import { ImageUpload } from '@nextsparkjs/core/components/ui/image-upload'
 
 interface ImageUploadProps {
   value: UploadedImage[]
@@ -273,7 +273,7 @@ interface ImageUploadProps {
 **📋 3. VideoUpload (Videos with Thumbnails):**
 
 ```typescript
-import { VideoUpload } from '@/core/components/ui/video-upload'
+import { VideoUpload } from '@nextsparkjs/core/components/ui/video-upload'
 
 interface VideoUploadProps {
   value: UploadedVideo[]
@@ -295,7 +295,7 @@ interface VideoUploadProps {
 **📋 4. AudioUpload (Audio with Player):**
 
 ```typescript
-import { AudioUpload } from '@/core/components/ui/audio-upload'
+import { AudioUpload } from '@nextsparkjs/core/components/ui/audio-upload'
 
 interface AudioUploadProps {
   value: UploadedAudio[]
@@ -345,7 +345,7 @@ interface UploadedAudio extends UploadedFile {
 **📋 5. MediaLibrary Modal (Browse + Upload):**
 
 ```typescript
-import { MediaLibrary } from '@/core/components/media/MediaLibrary'
+import { MediaLibrary } from '@nextsparkjs/core/components/media/MediaLibrary'
 
 // Opens a full-screen modal to browse, search, filter, and upload media
 <MediaLibrary
@@ -365,7 +365,7 @@ import { MediaLibrary } from '@/core/components/media/MediaLibrary'
 **📋 6. MediaSelector (Entity Form Field):**
 
 ```typescript
-import { MediaSelector } from '@/core/components/media/MediaSelector'
+import { MediaSelector } from '@nextsparkjs/core/components/media/MediaSelector'
 
 // Compact form field that opens MediaLibrary on click
 <MediaSelector
@@ -644,7 +644,7 @@ You've learned:
 Currently, NextSpark uses Vercel Blob. To use S3 or Cloudinary:
 
 1. Create a custom upload endpoint:
-   /app/api/v1/media/upload-s3/route.ts
+   api/media/upload-s3/route.ts
 
 2. Implement your provider:
 
@@ -677,9 +677,9 @@ Currently, NextSpark uses Vercel Blob. To use S3 or Cloudinary:
 'use client'
 
 import { useState } from 'react'
-import { ImageUpload } from '@/core/components/ui/image-upload'
-import { FileUpload } from '@/core/components/ui/file-upload'
-import { Button } from '@/core/components/ui/button'
+import { ImageUpload } from '@nextsparkjs/core/components/ui/image-upload'
+import { FileUpload } from '@nextsparkjs/core/components/ui/file-upload'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 export function ProductForm() {
   const [images, setImages] = useState([])

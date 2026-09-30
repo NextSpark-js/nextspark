@@ -189,7 +189,7 @@ import {
   useMediaItem,
   useMediaTags,
   useMediaItemTags,
-} from '@/core/hooks/useMedia'
+} from '@nextsparkjs/core/hooks/useMedia'
 
 // List media with filters (paginated)
 const { data, isLoading, error } = useMediaList({
@@ -221,7 +221,7 @@ import {
   useDeleteMedia,
   useAddMediaTag,
   useRemoveMediaTag,
-} from '@/core/hooks/useMedia'
+} from '@nextsparkjs/core/hooks/useMedia'
 
 // Create media record
 const createMutation = useCreateMedia()
@@ -246,7 +246,7 @@ await removeTagMutation.mutateAsync({ mediaId: 'media-123', tagId: 'tag-456' })
 ### Upload Hook
 
 ```typescript
-import { useMediaUpload } from '@/core/hooks/useMediaUpload'
+import { useMediaUpload } from '@nextsparkjs/core/hooks/useMediaUpload'
 
 const { upload, progress, isUploading, error } = useMediaUpload()
 
@@ -272,7 +272,7 @@ console.log(`Upload progress: ${progress}%`)
 Full-featured modal for browsing, uploading, and selecting media:
 
 ```typescript
-import { MediaLibrary } from '@/core/components/media'
+import { MediaLibrary } from '@nextsparkjs/core/components/media'
 
 // Single selection mode
 <MediaLibrary
@@ -314,7 +314,7 @@ import { MediaLibrary } from '@/core/components/media'
 Drop-in form component for entity fields:
 
 ```typescript
-import { MediaSelector } from '@/core/components/media'
+import { MediaSelector } from '@nextsparkjs/core/components/media'
 
 // In an entity form
 <MediaSelector
@@ -347,7 +347,7 @@ In block field definitions, use `type: 'media-library'` to open the full MediaLi
 
 ```typescript
 // blocks/hero/fields.ts
-import type { FieldDefinition } from '@/core/types/blocks'
+import type { FieldDefinition } from '@nextsparkjs/core/types/blocks'
 
 const customDesignFields: FieldDefinition[] = [
   {
@@ -392,7 +392,7 @@ Media library fields also work inside array (repeatable) items:
 ```typescript
 // blocks/hero/schema.ts
 import * as z from 'zod'
-import { baseBlockSchema } from '@/core/types/blocks'
+import { baseBlockSchema } from '@nextsparkjs/core/types/blocks'
 
 export const schema = baseBlockSchema.merge(z.object({
   backgroundImage: z.string().url().optional(),   // URL from MediaLibrary
@@ -696,7 +696,7 @@ if (file.size > appConfig.media.maxSizeImageMB * 1024 * 1024) { ... }
 
 ### Adding Media Selection to an Entity
 
-- [ ] Import `MediaSelector` from `@/core/components/media`
+- [ ] Import `MediaSelector` from `@nextsparkjs/core/components/media`
 - [ ] Add media field to entity form with proper `value` and `onChange`
 - [ ] Add corresponding database column (TEXT for media ID or URL)
 - [ ] Add i18n keys for the field label and description

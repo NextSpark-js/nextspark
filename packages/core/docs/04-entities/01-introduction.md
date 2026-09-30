@@ -22,8 +22,8 @@ interface Product {
 }
 
 // 2. Crear endpoints API (2-3 horas)
-// app/api/products/route.ts
-// app/api/products/[id]/route.ts
+// api/products/route.ts
+// api/products/[id]/route.ts
 
 // 3. Implementar componentes UI (3-4 horas)
 // ProductList.tsx, ProductForm.tsx, ProductDetail.tsx
@@ -48,7 +48,7 @@ Con el sistema de entidades, todo esto se reduce a un archivo de configuración:
 // ✅ Enfoque Config-Driven: ~15 minutos
 
 import { CheckSquare } from 'lucide-react'
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
 export const productEntityConfig: EntityConfig = {
   // Identificación básica
@@ -347,7 +347,7 @@ El proyecto incluye una implementación completa de referencia en:
 - **Tipos**: `entities/tasks/tasks.types.ts`
 - **Service**: `entities/tasks/tasks.service.ts`
 - **Traducciones**: `entities/tasks/messages/`
-- **UI en Dashboard**: `app/dashboard/(main)/tasks/`
+- **UI en Dashboard**: `templates/dashboard/(main)/tasks/`
 
 Esta entidad de tareas demuestra:
 - Configuración completa de 5 secciones
@@ -434,7 +434,7 @@ Los **Entity Services** son clases estáticas que encapsulan la lógica de acces
 ```typescript
 // entities/posts/posts.service.ts
 
-import { query, queryOne, queryOneWithRLS } from '@/core/lib/db'
+import { query, queryOne, queryOneWithRLS } from '@nextsparkjs/core/lib/db'
 import type { PostPublic, PostMetadata } from './posts.types'
 
 export class PostsService {

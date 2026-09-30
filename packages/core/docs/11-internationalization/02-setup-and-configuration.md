@@ -1,6 +1,6 @@
 # Setup and Configuration
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -70,7 +70,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
 **Access Configuration**:
 ```typescript
 // Import merged configuration (includes theme overrides)
-import { I18N_CONFIG, type SupportedLocale } from '@/core/lib/config'
+import { I18N_CONFIG, type SupportedLocale } from '@nextsparkjs/core/lib/config'
 
 // Use in your code
 const defaultLocale = I18N_CONFIG.defaultLocale // 'en'
@@ -99,7 +99,7 @@ supportedLocales: ['en', 'es', 'fr', 'de']
 2. Create translation files for the locale:
    - `core/messages/{locale}/` - Core namespaces
    - `messages/{locale}.json` - Theme translations
-3. Rebuild the registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+3. Rebuild the registry: `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 
 ### Default Locale
 
@@ -352,7 +352,7 @@ Accept-Language: fr;q=0.9, es-AR, es;q=0.8
 Sets the locale cookie with proper configuration:
 
 ```typescript
-import { setUserLocale } from '@/core/lib/locale'
+import { setUserLocale } from '@nextsparkjs/core/lib/locale'
 
 // Set locale to Spanish
 await setUserLocale('es')
@@ -488,7 +488,7 @@ Themes can override i18n configuration:
 **Location**: `app.config.ts`
 
 ```typescript
-import type { AppConfig } from '@/core/lib/config/types'
+import type { AppConfig } from '@nextsparkjs/core/lib/config/types'
 
 export const themeAppConfig: Partial<AppConfig> = {
   i18n: {
@@ -529,7 +529,7 @@ defaultLocale: 'es'  // Theme wins
 
 **Access Merged Config**:
 ```typescript
-import { I18N_CONFIG } from '@/core/lib/config'
+import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
 
 // Automatically includes theme overrides
 const locale = I18N_CONFIG.defaultLocale // 'es' (from theme)
@@ -544,7 +544,7 @@ const locale = I18N_CONFIG.defaultLocale // 'es' (from theme)
 Type representing supported locale codes:
 
 ```typescript
-import type { SupportedLocale } from '@/core/lib/config'
+import type { SupportedLocale } from '@nextsparkjs/core/lib/config'
 
 // Type: 'en' | 'es'
 const locale: SupportedLocale = 'en'
@@ -560,7 +560,7 @@ function loadMessages(locale: SupportedLocale) {
 Type representing valid namespace names:
 
 ```typescript
-import type { TranslationNamespace } from '@/core/lib/config'
+import type { TranslationNamespace } from '@nextsparkjs/core/lib/config'
 
 // Type: 'common' | 'dashboard' | 'settings' | 'auth' | 'public' | 'validation'
 const namespace: TranslationNamespace = 'common'
@@ -574,7 +574,7 @@ const t = useTranslations<TranslationNamespace>('dashboard')
 Complete application configuration type:
 
 ```typescript
-import type { AppConfig } from '@/core/lib/config/types'
+import type { AppConfig } from '@nextsparkjs/core/lib/config/types'
 
 const config: AppConfig = {
   app: {
@@ -652,7 +652,7 @@ touch core/messages/fr/validation.json
 
 **5. Rebuild Registry**:
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 **6. Update Locale Selector**:
@@ -690,7 +690,7 @@ Error: Locale 'fr' not found in supported locales
 **Solution**:
 1. Verify locale is in `I18N_CONFIG.supportedLocales`
 2. Check spelling matches exactly (`'fr'` not `'FR'`)
-3. Rebuild registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+3. Rebuild registry: `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 
 #### Issue: Missing Translations
 

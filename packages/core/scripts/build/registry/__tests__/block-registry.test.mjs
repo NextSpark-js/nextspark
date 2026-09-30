@@ -12,6 +12,9 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtempSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import {
   generateBlockRegistry,
@@ -19,7 +22,7 @@ import {
   generateBlockRegistryLazy,
   generateBlockSchemas
 } from '../generators/block-registry.mjs'
-import { readSchemaExport } from '../discovery/blocks.mjs'
+import { readSchemaExport, thumbnailImport } from '../discovery/blocks.mjs'
 import { validateGeneratedModule } from '../host/static-imports.mjs'
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 
@@ -38,7 +41,7 @@ function block(slug, category) {
       component: `${base}/component`,
       schema: `${base}/schema`,
       fields: `${base}/fields`,
-      thumbnail: `/theme/blocks/${slug}/thumbnail.png`,
+      thumbnail: `@/blocks/${slug}/thumbnail.png`,
     },
   }
 }
@@ -58,6 +61,15 @@ test('the client registry imports no component', () => {
   const out = generateBlockRegistryClient(blocks, config)
   assert.doesNotMatch(out, staticComponentImport)
   assert.doesNotMatch(out, /import\('[^']*\/component'\)/)
+})
+
+test('a block with a thumbnail file gets it through a static image import; one without keeps `undefined`', () => {
+  const out = generateBlockRegistryClient([block('hero', 'hero'), { ...block('benefits', 'content'), paths: { ...block('benefits', 'content').paths, thumbnail: null } }], config)
+  assert.match(out, /^import hero_thumbnail from '@\/blocks\/hero\/thumbnail\.png'$/m)
+  assert.match(out, /thumbnail: hero_thumbnail,/)
+  assert.doesNotMatch(out, /benefits_thumbnail/)
+  assert.match(out, /thumbnail: undefined,/)
+  assert.doesNotMatch(out, /\/theme\/blocks/)
 })
 
 test('the server registry imports components statically and re-exports the other halves', () => {
@@ -135,4 +147,23 @@ test('a block schema.ts discovery rejects gets no map entry, so the app still bu
   const content = generateBlockSchemas([{ ...block('legacy', 'content'), exportsSchema: commented.exportsSchema }])
   assert.doesNotMatch(content, /legacy/)
   assert.match(content, /^export const BLOCK_SCHEMAS = \{\}$/m)
+})
+
+test('a thumbnail is imported only when the file is a PNG; a placeholder is ignored', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'block-thumb-'))
+  assert.equal(thumbnailImport(dir, 'hero'), null, 'no file, no import')
+  writeFileSync(join(dir, 'thumbnail.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]))
+  assert.equal(thumbnailImport(dir, 'hero'), '@/blocks/hero/thumbnail.png')
+  writeFileSync(join(dir, 'thumbnail.png'), 'Placeholder thumbnail')
+  assert.equal(thumbnailImport(dir, 'hero'), null, 'text placeholder is not imported')
+})
+
+test('an unreadable thumbnail.png (a directory, no permission) gives no thumbnail instead of dropping the block', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'block-thumb-'))
+  mkdirSync(join(dir, 'thumbnail.png'))
+  assert.equal(thumbnailImport(dir, 'hero'), null, 'EISDIR')
+  const locked = mkdtempSync(join(tmpdir(), 'block-thumb-'))
+  writeFileSync(join(locked, 'thumbnail.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+  chmodSync(join(locked, 'thumbnail.png'), 0)
+  if (process.getuid?.() !== 0) assert.equal(thumbnailImport(locked, 'hero'), null, 'EACCES')
 })

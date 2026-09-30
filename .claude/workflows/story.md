@@ -672,7 +672,7 @@ TDD Completo:
 
 Entregables:
 ├── __tests__/api/[entity].test.ts
-├── app/api/v1/[entity]/route.ts
+├── packages/core/src/routes/api/v1/[entity]/route.ts
 ├── Dual auth (session + API key)
 ├── Zod validation schemas
 ├── Response format con metadata

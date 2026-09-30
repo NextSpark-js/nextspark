@@ -98,7 +98,7 @@ Returns endpoint documentation with available models and setup instructions.
 
 ```json
 {
-  "endpoint": "/api/plugin/ai/generate",
+  "endpoint": "/api/plugins/ai/generate",
   "description": "Simple AI assistant endpoint",
   "usage": { ... },
   "example": { ... },

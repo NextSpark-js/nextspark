@@ -113,7 +113,7 @@ Features are boolean flags that enable functionality per plan:
 
 ```typescript
 // config/billing.config.ts
-import type { BillingConfig } from '@/core/lib/billing/config-types'
+import type { BillingConfig } from '@nextsparkjs/core/lib/billing/config-types'
 
 export const billingConfig: BillingConfig = {
   provider: 'stripe',
@@ -176,7 +176,7 @@ if (membership.hasFeature('advanced_analytics')) {
 }
 
 // Client-side (React)
-import { useHasFeature } from '@/core/lib/billing/hooks'
+import { useHasFeature } from '@nextsparkjs/core/lib/billing/hooks'
 
 function AnalyticsDashboard() {
   const hasAdvanced = useHasFeature('advanced_analytics')
@@ -534,7 +534,7 @@ STEP 6 OF 6: Test the Checkout Flow
 2️⃣  Rebuild Registry:
 
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

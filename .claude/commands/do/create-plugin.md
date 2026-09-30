@@ -45,7 +45,7 @@ plugins/{plugin-name}/
 1. Register plugin in test theme
 2. Rebuild registry:
    ```bash
-   node core/scripts/build/registry.mjs
+   pnpm build:registries
    ```
 3. Verify plugin appears in PLUGIN_REGISTRY
 

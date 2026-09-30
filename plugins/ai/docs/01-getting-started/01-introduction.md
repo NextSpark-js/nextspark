@@ -106,13 +106,13 @@ plugins/ai/
 
 ### Example Endpoints
 
-**`/api/plugin/ai/generate`**
+**`/api/plugins/ai/generate`**
 - General-purpose text generation
 - Supports all providers and models
 - Includes cost tracking and history
 - Flexible system prompts and parameters
 
-**`/api/plugin/ai/embeddings`**
+**`/api/plugins/ai/embeddings`**
 - Generate semantic embeddings
 - Uses OpenAI text-embedding-3-small (1536 dimensions)
 - Optimized for search and recommendations

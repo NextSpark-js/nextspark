@@ -1,6 +1,6 @@
 # Translation Keys
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -691,7 +691,7 @@ const t = useTranslations('auth.signup')
 Validates that a translation key exists in the messages object:
 
 ```typescript
-import { validateTranslationKey } from '@/core/lib/i18n-utils'
+import { validateTranslationKey } from '@nextsparkjs/core/lib/i18n-utils'
 
 const messages = await import('./messages/en/common.json')
 
@@ -740,7 +740,7 @@ export function validateTranslationKey(
 Compares two locale message sets to find missing translations:
 
 ```typescript
-import { detectMissingTranslations } from '@/core/lib/i18n-utils'
+import { detectMissingTranslations } from '@nextsparkjs/core/lib/i18n-utils'
 
 const enMessages = await import('./messages/en/common.json')
 const esMessages = await import('./messages/es/common.json')
@@ -992,7 +992,7 @@ t('login.title')
 
 **3. Run validation**:
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 # Check for missing key warnings
 ```
 

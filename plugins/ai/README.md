@@ -235,7 +235,7 @@ function ContentComponent() {
 
 **Usando Anthropic Claude (configuración del plugin):**
 \`\`\`bash
-POST /api/plugin/ai/generate
+POST /api/plugins/ai/generate
 Content-Type: application/json
 
 {
@@ -248,7 +248,7 @@ Content-Type: application/json
 
 **Usando OpenAI GPT (configuración del plugin):**
 \`\`\`bash
-POST /api/plugin/ai/generate
+POST /api/plugins/ai/generate
 Content-Type: application/json
 
 {
@@ -261,7 +261,7 @@ Content-Type: application/json
 
 **Usando Ollama Local (sin clave API requerida):**
 \`\`\`bash
-POST /api/plugin/ai/generate
+POST /api/plugins/ai/generate
 Content-Type: application/json
 
 {
@@ -301,12 +301,12 @@ Content-Type: application/json
 
 #### Información de Capacidades
 \`\`\`bash
-GET /api/plugin/ai/generate
+GET /api/plugins/ai/generate
 \`\`\`
 
 #### Generar Contenido (Método Anterior)
 \`\`\`bash
-POST /api/v1/ai/generate
+POST /api/plugins/ai/generate
 Content-Type: application/json
 
 {
@@ -314,30 +314,6 @@ Content-Type: application/json
   "contentType": "social",
   "platform": "twitter",
   "tone": "casual"
-}
-\`\`\`
-
-#### Analizar Contenido
-\`\`\`bash
-POST /api/v1/ai/analyze
-Content-Type: application/json
-
-{
-  "content": "Este es mi contenido para analizar",
-  "analysisType": "comprehensive"
-}
-\`\`\`
-
-#### Procesar Entidad
-\`\`\`bash
-POST /api/v1/ai/entity
-Content-Type: application/json
-
-{
-  "entityType": "task",
-  "entityId": "task_123",
-  "action": "analyze",
-  "prompt": "Analiza esta tarea y sugiere mejoras"
 }
 \`\`\`
 
@@ -434,16 +410,11 @@ await AIAPI.processEntity('project', projectData, 'suggest')
 
 ### Endpoints Dinámicos
 
-El sistema de endpoints se adapta automáticamente:
+Endpoints que sirve el plugin (`plugins/ai/api/`):
 
-- \`/api/v1/ai/\` → Info del plugin
-- \`/api/v1/ai/generate\` → Generación de contenido
-- \`/api/v1/ai/analyze\` → Análisis de contenido
-- \`/api/v1/ai/enhance\` → Mejora de contenido
-- \`/api/v1/ai/entity\` → Procesamiento de entidades
-- \`/api/v1/ai/models\` → Modelos disponibles
-- \`/api/v1/ai/usage\` → Estadísticas de uso
-- \`/api/v1/ai/health\` → Estado del plugin
+- \`/api/plugins/ai/generate\` → Generación de contenido
+- \`/api/plugins/ai/embeddings\` → Embeddings de texto
+- \`/api/plugins/ai/ai-history/[id]\` → Actualizar una entrada del historial (PATCH)
 
 ## Casos de Uso
 

@@ -438,8 +438,8 @@ Required translation keys in `messages/{locale}.json`:
 
 ```text
 app/devtools/tests/[[...path]]/page.tsx      # Route page
-app/api/devtools/tests/route.ts              # Tree API
-app/api/devtools/tests/[...path]/route.ts    # File content API
+packages/core/src/routes/api/devtools/tests/route.ts              # Tree API
+packages/core/src/routes/api/devtools/tests/[...path]/route.ts    # File content API
 
 core/components/devtools/
 ├── TestCasesViewer.tsx                      # Main viewer component

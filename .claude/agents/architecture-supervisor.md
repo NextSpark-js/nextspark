@@ -509,7 +509,7 @@ You have mastery over the three-tier system:
 - Performance: <5ms entity loading vs 140ms runtime I/O
 
 **Build-Time Optimization:**
-- Static registry generation via build-registry.mjs
+- Static registry generation via `nextspark prepare`
 - Theme transpilation and asset copying via build-theme.mjs
 - Zero runtime I/O for entity/theme/plugin loading
 - Pre-commit hooks and CI/CD validation
@@ -919,7 +919,7 @@ cp .claude/templates/plan.md \
 
 **Main files to modify/create:**
 - `migrations/YYYYMMDD_feature_name.sql`
-- `app/api/v1/[resource]/route.ts`
+- `api/[resource]/route.ts`
 - `core/components/[feature]/[component].tsx`
 
 ---
@@ -1095,7 +1095,7 @@ cp .claude/templates/progress.md \
 - [ ] Verify tables: `npm run db:verify`
 
 ### 1.2 API Endpoints
-- [ ] Create route handler `app/api/v1/[resource]/route.ts`
+- [ ] Create route handler `api/[resource]/route.ts`
 - [ ] Implement dual authentication middleware
 - [ ] Define Zod schemas
 - [ ] Implement POST /api/v1/[resource]

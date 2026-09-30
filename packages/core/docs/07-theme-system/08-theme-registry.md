@@ -49,7 +49,7 @@ pnpm build:registries
 
 # Repository reference project
 cd apps/dev
-node ../../packages/core/scripts/build/registry.mjs --build
+node ../../packages/cli/dist/cli.js prepare
 ```
 
 Never edit `.nextspark/registries/theme-registry.ts` directly.

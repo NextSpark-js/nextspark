@@ -265,7 +265,7 @@ export function WelcomeCard() {
 const message = "Welcome, " + userName + "!"
 
 // ❌ NEVER: Runtime string interpolation in imports
-const translations = await import(`@/core/messages/${locale}/`)
+const translations = await import(`@nextsparkjs/core/messages/${locale}/`)
 
 // ✅ CORRECT: Use translations
 export function WelcomeCard() {

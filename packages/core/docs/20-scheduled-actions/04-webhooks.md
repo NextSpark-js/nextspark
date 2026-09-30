@@ -147,8 +147,8 @@ await scheduleAction('webhook:send', {
 
 ```typescript
 // lib/scheduled-actions/entity-hooks.ts
-import { scheduleAction } from '@/core/lib/scheduled-actions'
-import { hookSystem } from '@/core/lib/plugins/hook-system'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions'
+import { hookSystem } from '@nextsparkjs/core/lib/plugins/hook-system'
 
 export function registerEntityWebhookHooks() {
   // Task created
@@ -187,8 +187,8 @@ export function registerEntityWebhookHooks() {
 
 ```typescript
 // lib/scheduled-actions/subscription-hooks.ts
-import { scheduleAction } from '@/core/lib/scheduled-actions'
-import { hookSystem } from '@/core/lib/plugins/hook-system'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions'
+import { hookSystem } from '@nextsparkjs/core/lib/plugins/hook-system'
 
 export function registerSubscriptionWebhooks() {
   hookSystem.register('subscription.created', async ({ subscription, teamId }) => {
@@ -226,7 +226,7 @@ export function registerSubscriptionWebhooks() {
 ```typescript
 // core/lib/scheduled-actions/handlers/webhook.ts
 import { registerScheduledAction } from '../registry'
-import { APP_CONFIG_MERGED } from '@/core/lib/config/config-sync'
+import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-sync'
 
 interface WebhookPayload {
   eventType: string

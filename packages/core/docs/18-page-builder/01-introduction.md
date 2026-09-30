@@ -1,6 +1,6 @@
 # Page Builder System
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 The Page Builder is a visual editor that enables users to create dynamic content by composing reusable blocks. Inspired by WordPress and Webflow, it provides a no-code interface for content editors while maintaining full type safety and developer extensibility.
 
@@ -74,7 +74,7 @@ See **[Entity Integration](./10-entity-integration.md)** for detailed configurat
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        PUBLIC RENDERING                              │
-│  app/(public)/[entity]/page.tsx → PageRenderer → Block Components   │
+│  templates/(public)/[entity]/page.tsx → PageRenderer → Block Components   │
 │  Priority: Pages first → Entity Archives second                      │
 │  Features: ISR (1 hour), SEO metadata, Lazy loading                 │
 └─────────────────────────────────────────────────────────────────────┘
@@ -128,7 +128,7 @@ Structure documentation with consistent layouts using reusable blocks.
 | Generic Handler | `core/lib/api/entity/generic-handler.ts` | API CRUD with builder support |
 | Schema Generator | `core/lib/entities/schema-generator.ts` | Zod schemas with blocks |
 | Public Renderer | `app/components/page-renderer.tsx` | Frontend page display |
-| Public Route | `app/(public)/[entity]/page.tsx` | Dynamic routing |
+| Public Route | `templates/(public)/[entity]/page.tsx` | Dynamic routing |
 
 ## Available Blocks
 
@@ -142,7 +142,7 @@ The starter project template includes these blocks:
 | **Testimonials** | testimonials | Customer quotes with author and avatar |
 | **Text Content** | content | Rich text content block |
 
-> **Tip**: New blocks are auto-discovered from `BLOCK_REGISTRY`. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` after creating a block.
+> **Tip**: New blocks are auto-discovered from `BLOCK_REGISTRY`. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` after creating a block.
 
 ## Developer Tools
 
@@ -164,7 +164,7 @@ See [Claude Workflow - Block Developer Agent](../16-claude-workflow/03-agents.md
 ### Dynamic Block Auto-Discovery
 Block components are now **automatically loaded** from `BLOCK_REGISTRY`. No need to manually edit `page-renderer.tsx` when creating new blocks:
 - Create block in `blocks/`
-- Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+- Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 - Block is immediately available in editor and public pages
 
 ### Complete Field Types

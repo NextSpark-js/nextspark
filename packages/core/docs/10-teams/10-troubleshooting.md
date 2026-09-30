@@ -88,7 +88,7 @@ const { data } = useQuery({
 
 ```typescript
 // Check mode
-import { TEAMS_CONFIG } from '@/core/lib/config/config-sync'
+import { TEAMS_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 console.log('Teams Mode:', TEAMS_CONFIG.mode)
 ```
 
@@ -210,7 +210,7 @@ CREATE POLICY "policy_name" ON public."your_table"
 1. **Missing authentication:**
 ```typescript
 // Ensure dual auth is implemented and declares the scope it needs
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 const authResult = await authenticateRequest(req, { requiredScope: 'teams:read' })
 if (!authResult.success) {
@@ -325,7 +325,7 @@ RESEND_FROM_EMAIL=noreply@yourdomain.com
 
 ```tsx
 // core/components/dashboard/mobile/MobileMoreSheet.tsx
-import { TeamSwitcherCompact } from '@/core/components/teams/TeamSwitcherCompact'
+import { TeamSwitcherCompact } from '@nextsparkjs/core/components/teams/TeamSwitcherCompact'
 
 // Inside the sheet
 <TeamSwitcherCompact className="border-0 p-0" />

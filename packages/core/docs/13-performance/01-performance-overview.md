@@ -241,7 +241,7 @@ app/
 **2. React Server Components (RSC)**
 ```typescript
 // Server components = zero client JavaScript
-// app/dashboard/page.tsx
+// templates/dashboard/page.tsx
 export default async function DashboardPage() {
   const data = await fetchDashboardData()  // Runs on server
   

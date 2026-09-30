@@ -47,7 +47,7 @@ import { db } from '@/lib/db'
 
 // Mock dependencies
 vi.mock('@/lib/db')
-vi.mock('@/lib/auth')
+vi.mock('@nextsparkjs/core/lib/auth')
 
 describe('handleGenericList', () => {
   beforeEach(() => {
@@ -309,7 +309,7 @@ describe('checkRateLimit', () => {
 ### Testing Complete API Routes
 
 ```typescript
-// app/api/v1/tasks/route.test.ts
+// api/tasks/route.test.ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { GET, POST } from './route'

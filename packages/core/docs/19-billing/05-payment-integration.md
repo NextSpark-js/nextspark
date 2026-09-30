@@ -137,7 +137,7 @@ plans: [
 ### Frontend
 
 ```tsx
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -185,7 +185,7 @@ function UpgradeButton({ planSlug, billingPeriod }) {
 ### Backend (Checkout Session)
 
 ```typescript
-// app/api/v1/billing/checkout/route.ts
+// packages/core/src/routes/api/v1/billing/checkout/route.ts
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 
 export async function POST(request: NextRequest) {
@@ -219,7 +219,7 @@ Webhook routes are **provider-specific by design** — they need raw provider ty
 The Stripe webhook handler uses `StripeWebhookExtensions` to delegate one-time payment handling to project-level code:
 
 ```typescript
-// app/api/v1/billing/webhooks/stripe/route.ts
+// packages/core/src/routes/api/v1/billing/webhooks/stripe/route.ts
 import { handleStripeWebhook } from '@nextsparkjs/core/lib/billing/stripe-webhook'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
@@ -299,7 +299,7 @@ Production:
 Polar requires **ALL request headers** for webhook verification (not just a signature header):
 
 ```typescript
-// app/api/v1/billing/webhooks/polar/route.ts
+// packages/core/src/routes/api/v1/billing/webhooks/polar/route.ts
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/polar-webhook'
 
@@ -625,7 +625,7 @@ Allow users to manage their billing:
 ### Frontend
 
 ```tsx
-import { ManageBillingButton } from '@/core/components/billing/ManageBillingButton'
+import { ManageBillingButton } from '@nextsparkjs/core/components/billing/ManageBillingButton'
 
 function BillingSettings() {
   return (
@@ -640,7 +640,7 @@ function BillingSettings() {
 ### Backend
 
 ```typescript
-// app/api/v1/billing/portal/route.ts
+// packages/core/src/routes/api/v1/billing/portal/route.ts
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 
 const session = await getBillingGateway().createPortalSession({

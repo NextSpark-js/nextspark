@@ -1,6 +1,6 @@
 # Extending and Overriding Documentation
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -236,7 +236,7 @@ OPENAI_API_KEY=your_api_key_here
 3. Rebuild registry:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 pnpm dev
 ```
 
@@ -411,7 +411,7 @@ plugin docs are never scanned into it.
 
 ```bash
 # Rebuild docs registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Restart dev server
 pnpm dev
@@ -419,7 +419,7 @@ pnpm dev
 
 **When the registry is rebuilt:**
 - In a generated project, when `pnpm dev` or `pnpm build` starts (`nextspark dev`, `nextspark build`)
-- In the monorepo, only when `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` runs: root `pnpm dev` and `pnpm build` do not rebuild it
+- In the monorepo, only when `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` runs: root `pnpm dev` and `pnpm build` do not rebuild it
 
 ## Use Cases
 
@@ -470,7 +470,7 @@ Documentation
 1. Check file naming: `{order}-{slug}.md`
 2. Check directory naming: `{order}-{slug}/`
 3. Verify docs are in correct location
-4. Rebuild registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+4. Rebuild registry: `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 5. Restart dev server
 
 ### Plugin Docs Missing
@@ -488,7 +488,7 @@ instead.
 **Solution:**
 1. Confirm the command is running under the intended `nextspark.config.ts`
 2. Verify the documents are under that project's `docs/` directory
-3. Rebuild registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+3. Rebuild registry: `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 
 ## Next Steps
 

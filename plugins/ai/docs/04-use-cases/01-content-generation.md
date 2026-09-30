@@ -20,7 +20,7 @@ One of the most common and proven use cases for the AI plugin is **automated con
 **Example Implementation:**
 
 ```typescript
-// app/api/content/product-description/route.ts
+// api/content/product-description/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
 import { selectModel, calculateCost, extractTokens } from '@/plugins/ai/lib/core-utils'
@@ -94,7 +94,7 @@ curl -X POST /api/content/product-description \
 **Example Implementation:**
 
 ```typescript
-// app/api/content/blog-post/route.ts
+// api/content/blog-post/route.ts
 export async function POST(request: NextRequest) {
   const { topic, keywords, tone = 'professional', length = 'medium' } = await request.json()
 
@@ -155,7 +155,7 @@ Include keywords naturally and maintain ${tone} tone throughout.
 **Example - Email Subject Lines:**
 
 ```typescript
-// app/api/content/email-subject/route.ts
+// api/content/email-subject/route.ts
 export async function POST(request: NextRequest) {
   const { campaign, offer, audience } = await request.json()
 
@@ -202,7 +202,7 @@ Format: One per line, numbered
 **Example - Multi-Platform Posts:**
 
 ```typescript
-// app/api/content/social-post/route.ts
+// api/content/social-post/route.ts
 export async function POST(request: NextRequest) {
   const { topic, platforms = ['twitter', 'linkedin', 'facebook'] } = await request.json()
 
@@ -252,7 +252,7 @@ ${platform === 'linkedin' ? '- Professional tone' : ''}
 **Generate Multiple Items at Once:**
 
 ```typescript
-// app/api/content/batch-descriptions/route.ts
+// api/content/batch-descriptions/route.ts
 export async function POST(request: NextRequest) {
   const { products } = await request.json()  // Array of products
 
@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
 **Improve Existing Content:**
 
 ```typescript
-// app/api/content/refine/route.ts
+// api/content/refine/route.ts
 export async function POST(request: NextRequest) {
   const { content, instructions = 'Improve clarity and engagement' } = await request.json()
 

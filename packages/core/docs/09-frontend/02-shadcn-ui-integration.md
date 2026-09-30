@@ -29,7 +29,7 @@ import { Button } from 'ui-library'  # Import from node_modules
 **shadcn/ui Approach:**
 ```bash
 npx shadcn@latest add button  # Copies component to your project
-import { Button } from '@/core/components/ui/button'  # Import from your code
+import { Button } from '@nextsparkjs/core/components/ui/button'  # Import from your code
 ```
 
 ### Architecture
@@ -329,7 +329,7 @@ npx shadcn@latest add badge
 // core/components/ui/badge.tsx (created)
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/core/lib/utils"
+import { cn } from "@nextsparkjs/core/lib/utils"
 
 const badgeVariants = cva(
   "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
@@ -439,7 +439,7 @@ The project includes **60+ shadcn/ui components**:
 ```typescript
 // core/components/ui/card.tsx
 import * as React from "react"
-import { cn } from "@/core/lib/utils"
+import { cn } from "@nextsparkjs/core/lib/utils"
 
 const Card = React.forwardRef<
   HTMLDivElement,
@@ -779,9 +779,9 @@ const buttonVariants = cva(
 
 ```typescript
 // ✅ CORRECT - Combine shadcn with custom logic
-import { Card, CardHeader, CardTitle, CardContent } from '@/core/components/ui/card'
-import { Button } from '@/core/components/ui/button'
-import { useEntityQuery } from '@/core/hooks/useEntityQuery'
+import { Card, CardHeader, CardTitle, CardContent } from '@nextsparkjs/core/components/ui/card'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { useEntityQuery } from '@nextsparkjs/core/hooks/useEntityQuery'
 
 export function ProductCard({ productId }: { productId: string }) {
   const { data: product, isLoading } = useEntityQuery('products', productId)
@@ -883,7 +883,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
 ```typescript
 // ✅ CORRECT - Compose Card with subcomponents
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/core/components/ui/card'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@nextsparkjs/core/components/ui/card'
 
 <Card>
   <CardHeader>
@@ -948,9 +948,9 @@ import { FormProvider, useFormContext } from 'react-hook-form'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/core/components/ui/form'
-import { Input } from '@/core/components/ui/input'
-import { Button } from '@/core/components/ui/button'
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@nextsparkjs/core/components/ui/form'
+import { Input } from '@nextsparkjs/core/components/ui/input'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 const formSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -1024,9 +1024,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/core/components/ui/dialog'
-import { Button } from '@/core/components/ui/button'
-import { Input } from '@/core/components/ui/input'
+} from '@nextsparkjs/core/components/ui/dialog'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { Input } from '@nextsparkjs/core/components/ui/input'
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false)
@@ -1073,9 +1073,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/core/components/ui/table'
-import { Badge } from '@/core/components/ui/badge'
-import { Button } from '@/core/components/ui/button'
+} from '@nextsparkjs/core/components/ui/table'
+import { Badge } from '@nextsparkjs/core/components/ui/badge'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 interface User {
   id: string

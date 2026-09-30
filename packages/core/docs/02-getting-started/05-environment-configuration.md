@@ -98,7 +98,7 @@ MIGRATE_DATABASE_URL="postgresql://owner:password@host:5432/database"
 ```
 - Optional — **falls back to `DATABASE_URL`** when unset.
 
-**See:** [Database Setup Guide](./02-database-setup.md)
+**See:** [Database Setup Guide](./03-database-setup.md)
 
 ### BETTER_AUTH_SECRET
 
@@ -276,7 +276,7 @@ DATABASE_URL="postgresql://user:my%40pass%3Aword@host:port/db"
 - Use different secrets per environment
 - Keep `.env.example` updated
 
-**Next:** [Build Process](./04-build-process.md)
+**Next:** [Build Process](./06-build-process.md)
 
 ---
 

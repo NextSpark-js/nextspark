@@ -46,7 +46,7 @@ blocks/{block-name}/
 
 ```bash
 # Rebuild registry
-node core/scripts/build/registry.mjs
+pnpm build:registries
 
 # Verify block is registered
 grep "{block-name}" .nextspark/registries/block-registry.ts

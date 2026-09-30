@@ -216,10 +216,10 @@ Input.displayName = "Input"
 
 ### 4. cn() Utility
 
-All components use `cn()` from `@/core/lib/utils` for class merging:
+All components use `cn()` from `@nextsparkjs/core/lib/utils` for class merging:
 
 ```typescript
-import { cn } from '@/core/lib/utils'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 // Merges classes with Tailwind conflict resolution
 className={cn(
@@ -260,9 +260,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/core/components/ui/form'
-import { Input } from '@/core/components/ui/input'
-import { Button } from '@/core/components/ui/button'
+} from '@nextsparkjs/core/components/ui/form'
+import { Input } from '@nextsparkjs/core/components/ui/input'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),

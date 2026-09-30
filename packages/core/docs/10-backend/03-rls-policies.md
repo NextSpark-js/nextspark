@@ -475,7 +475,7 @@ CREATE POLICY "team_access" ON "projects"
 
 **For Better Auth Tables (No RLS):**
 ```typescript
-import { query, queryOne, queryRows } from '@/core/lib/db'
+import { query, queryOne, queryRows } from '@nextsparkjs/core/lib/db'
 
 // Direct queries (Better Auth tables)
 const user = await queryOne(
@@ -491,7 +491,7 @@ const sessions = await queryRows(
 
 **For Application Tables (With RLS):**
 ```typescript
-import { queryWithRLS, queryOneWithRLS, mutateWithRLS } from '@/core/lib/db'
+import { queryWithRLS, queryOneWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
 
 // Query with RLS context
 const tasks = await queryWithRLS(
@@ -518,10 +518,10 @@ await mutateWithRLS(
 ### API Route Example
 
 ```typescript
-// app/api/v1/tasks/route.ts
+// api/tasks/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { queryWithRLS, mutateWithRLS } from '@/core/lib/db'
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   // Authenticate request — declares the scope it needs; a key without it
@@ -564,7 +564,7 @@ export async function POST(request: NextRequest) {
 ### Transaction with RLS
 
 ```typescript
-import { getTransactionClient } from '@/core/lib/db'
+import { getTransactionClient } from '@nextsparkjs/core/lib/db'
 
 export async function updateTaskWithHistory(taskId: string, updates: any, userId: string) {
   const client = await getTransactionClient(userId)
@@ -726,7 +726,7 @@ const allTasks = await queryWithRLS(
 
 ```typescript
 // test/integration/rls.test.ts
-import { queryWithRLS, mutateWithRLS } from '@/core/lib/db';
+import { queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db';
 
 describe('RLS Policies', () => {
   it('isolates user data', async () => {

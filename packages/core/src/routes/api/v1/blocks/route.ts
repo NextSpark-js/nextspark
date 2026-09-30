@@ -26,7 +26,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       description: block.description,
       category: block.category,
       icon: block.icon,
-      thumbnail: block.thumbnail,
+      thumbnail: block.thumbnail?.src,
       fieldDefinitions: block.fieldDefinitions,
       scope: block.scope
     }))

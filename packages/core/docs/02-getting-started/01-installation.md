@@ -1,6 +1,6 @@
 # Installation
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -88,7 +88,7 @@ docker run -d \
   postgres:16
 ```
 
-**See:** [Database Setup Guide](./02-database-setup.md) for detailed instructions
+**See:** [Database Setup Guide](./03-database-setup.md) for detailed instructions
 
 #### 4. Git
 
@@ -127,7 +127,7 @@ pnpm update-core --current
 
 After each update it completes, `update-core` also records the version in `core.version.json`.
 
-**For updating to newer versions:** See [Core Updates](../updates/update-core)
+**For updating to newer versions:** See [Core Updates](../17-updates/01-update-core.md)
 
 ---
 
@@ -237,7 +237,7 @@ openssl rand -base64 32
 3. Create new key
 4. Copy and paste into `.env.local`
 
-**See:** [Environment Configuration Guide](./03-environment-configuration.md) for complete reference
+**See:** [Environment Configuration Guide](./05-environment-configuration.md) for complete reference
 
 ### Step 4: Database Setup
 
@@ -290,21 +290,21 @@ Verification complete!
 - Check `DATABASE_URL` is correct
 - Verify database is accessible
 - Check network/firewall settings
-- See [Troubleshooting → Database](./08-troubleshooting.md#database-connection-errors)
+- See [Troubleshooting → Database](./10-troubleshooting.md#database-connection-errors)
 
-**See:** [Database Setup Guide](./02-database-setup.md) for detailed instructions
+**See:** [Database Setup Guide](./03-database-setup.md) for detailed instructions
 
 ### Step 5: Build Registries
 
-**Prerequisite:** From the monorepo root, build Core once before running the registry script. This creates the `packages/core/dist` modules that the script imports.
+**Prerequisite:** From the monorepo root, build Core and the CLI once before running `prepare`. This creates the `packages/core/dist` and `packages/cli/dist` modules it runs.
 
 ```bash
-pnpm build:core
+pnpm build:core && pnpm build:cli
 ```
 
 **Generate static registries:**
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 **What happens:**
@@ -339,7 +339,7 @@ Registry build completed in 5.2s
 - Static type checking for all configurations
 - Faster cold starts and page loads
 
-**See:** [Build Process Guide](./04-build-process.md) for detailed explanation
+**See:** [Build Process Guide](./06-build-process.md) for detailed explanation
 
 ### Step 6: Verify Theme CSS
 
@@ -358,7 +358,7 @@ grep -F 'styles/globals.css' apps/dev/src/app/layout.tsx
 
 **Generate documentation metadata with every registry:**
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 **What happens:**
@@ -392,7 +392,7 @@ The root script delegates to `apps/dev`, which starts one Next.js process with T
 Next.js handles application and imported CSS changes. If registry inputs change, run the registry watcher separately:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
 **Open browser:** use the local URL printed by Next.js (port 3010 in the measured `apps/dev/.env`).
@@ -403,7 +403,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 - ✅ No console errors
 - ✅ Navigation works
 
-**See:** [Running Locally Guide](./05-running-locally.md) for detailed development workflow
+**See:** [Running Locally Guide](./07-running-locally.md) for detailed development workflow
 
 ---
 
@@ -533,7 +533,7 @@ pnpm dev
    GOOGLE_CLIENT_SECRET="xxxxx"
    ```
 
-**See:** [Environment Configuration → Google OAuth](./03-environment-configuration.md#google-oauth)
+**See:** [Environment Configuration → Google OAuth](./05-environment-configuration.md#google-oauth)
 
 #### 2. Plugin Configuration
 
@@ -640,7 +640,7 @@ sudo apt install postgresql-client  # Linux
 psql "$(grep DATABASE_URL .env.local | cut -d'=' -f2-)"
 ```
 
-**See:** [Troubleshooting → Database](./08-troubleshooting.md#database-connection-errors)
+**See:** [Troubleshooting → Database](./10-troubleshooting.md#database-connection-errors)
 
 ### "Registry build fails"
 
@@ -652,14 +652,14 @@ psql "$(grep DATABASE_URL .env.local | cut -d'=' -f2-)"
 **Debug:**
 ```bash
 # Check entity configs
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --build --verbose
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --verbose
 
 # Check TypeScript
 pnpm --dir apps/dev exec tsc --noEmit
 
 # Clear and rebuild
 rm -rf .nextspark/registries
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ### "Theme not found: starter"
@@ -715,7 +715,7 @@ kill "$pid"
 ### 3. Make Your First Customization
 
 **Follow tutorial:**
-- [First Customization Guide](./06-first-customization.md)
+- [First Customization Guide](./09-first-customization.md)
 
 **Quick customizations:**
 1. Change theme colors
@@ -739,8 +739,8 @@ pnpm cy:run
 ### 5. Prepare for Deployment
 
 **When ready for production:**
-- [Deployment Guide](./07-deployment.md)
-- [Environment Configuration](./03-environment-configuration.md)
+- [Deployment Guide](./08-deployment.md)
+- [Environment Configuration](./05-environment-configuration.md)
 
 ---
 
@@ -759,11 +759,11 @@ pnpm cy:run
 **Time to complete:** 15-30 minutes (depending on download speeds and database setup)
 
 **Next recommended:**
-1. [Running Locally Guide](./05-running-locally.md) - Understand dev workflow
-2. [Build Process Guide](./04-build-process.md) - Learn what happens during builds
-3. [First Customization](./06-first-customization.md) - Make the app your own
+1. [Running Locally Guide](./07-running-locally.md) - Understand dev workflow
+2. [Build Process Guide](./06-build-process.md) - Learn what happens during builds
+3. [First Customization](./09-first-customization.md) - Make the app your own
 
-**Need help?** See [Troubleshooting Guide](./08-troubleshooting.md)
+**Need help?** See [Troubleshooting Guide](./10-troubleshooting.md)
 
 ---
 

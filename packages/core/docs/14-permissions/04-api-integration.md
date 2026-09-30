@@ -12,8 +12,8 @@ This guide shows how to integrate the permission system into API routes.
 ## Basic Pattern
 
 ```typescript
-import { MembershipService } from '@/core/lib/services'
-import { requireAuth } from '@/core/lib/api/auth'
+import { MembershipService } from '@nextsparkjs/core/lib/services'
+import { requireAuth } from '@nextsparkjs/core/lib/api/auth'
 
 export async function POST(req: Request) {
   // 1. Get authenticated user and team
@@ -47,9 +47,9 @@ export async function POST(req: Request) {
 ### Example 1: Simple Permission Check
 
 ```typescript
-// app/api/v1/customers/route.ts
-import { MembershipService } from '@/core/lib/services'
-import { requireAuth } from '@/core/lib/api/auth'
+// api/customers/route.ts
+import { MembershipService } from '@nextsparkjs/core/lib/services'
+import { requireAuth } from '@nextsparkjs/core/lib/api/auth'
 
 export async function POST(req: Request) {
   const { userId, teamId } = await requireAuth(req)
@@ -78,9 +78,9 @@ export async function POST(req: Request) {
 ### Example 2: Hierarchy Check for Admin Actions
 
 ```typescript
-// app/api/v1/teams/[teamId]/members/[memberId]/route.ts
-import { MembershipService } from '@/core/lib/services'
-import { requireAuth } from '@/core/lib/api/auth'
+// packages/core/src/routes/api/v1/teams/[teamId]/members/[memberId]/route.ts
+import { MembershipService } from '@nextsparkjs/core/lib/services'
+import { requireAuth } from '@nextsparkjs/core/lib/api/auth'
 
 export async function DELETE(
   req: Request,
@@ -121,9 +121,9 @@ export async function DELETE(
 ### Example 3: Feature + Quota Check
 
 ```typescript
-// app/api/v1/teams/[teamId]/projects/route.ts
-import { MembershipService } from '@/core/lib/services'
-import { requireAuth } from '@/core/lib/api/auth'
+// api/teams/[teamId]/projects/route.ts
+import { MembershipService } from '@nextsparkjs/core/lib/services'
+import { requireAuth } from '@nextsparkjs/core/lib/api/auth'
 
 export async function POST(
   req: Request,
@@ -180,9 +180,9 @@ export async function POST(
 ### Example 4: Billing Routes
 
 ```typescript
-// app/api/v1/billing/checkout/route.ts
-import { MembershipService } from '@/core/lib/services'
-import { requireAuth } from '@/core/lib/api/auth'
+// packages/core/src/routes/api/v1/billing/checkout/route.ts
+import { MembershipService } from '@nextsparkjs/core/lib/services'
+import { requireAuth } from '@nextsparkjs/core/lib/api/auth'
 
 export async function POST(req: Request) {
   const { userId, teamId } = await requireAuth(req)

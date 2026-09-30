@@ -235,7 +235,6 @@ function reset() {
     isValidEntity: true,
     entityConfig: PETS_ENTITY,
     entityName: 'pets',
-    hasCustomOverride: false,
   })
   mockValidateEntityOperation.mockReturnValue(true)
   mockQueryWithRLS.mockResolvedValue([])

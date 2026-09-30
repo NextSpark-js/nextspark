@@ -1,6 +1,6 @@
 # Plugin Structure
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -89,7 +89,7 @@ plugins/[plugin-name]/
 **Example:**
 ```typescript
 // plugins/my-plugin/plugin.config.ts
-import type { PluginConfig } from '@/core/types/plugin'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
 export const myPluginConfig: PluginConfig = {
   name: 'my-plugin',
@@ -157,7 +157,7 @@ Brief description of what the plugin does.
 
 3. Rebuild registry:
    ```bash
-   cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+   cd apps/dev && node ../../packages/cli/dist/cli.js prepare
    ```
 
 ## Usage
@@ -407,7 +407,7 @@ api/
 ```typescript
 // plugins/my-plugin/api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export async function POST(request: NextRequest) {
@@ -490,7 +490,7 @@ components/
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 interface MyWidgetProps {
   initialValue?: string
@@ -644,7 +644,7 @@ entities/
 **Example Entity Configuration:**
 ```typescript
 // plugins/my-plugin/entities/my-records/my-records.config.ts
-import type { EntityConfig } from '@/core/types/entity'
+import type { EntityConfig } from '@nextsparkjs/core/types/entity'
 
 export const myRecordsConfig: EntityConfig = {
   name: 'my-records',
@@ -676,7 +676,7 @@ export const myRecordsConfig: EntityConfig = {
 **Example Field Definitions:**
 ```typescript
 // plugins/my-plugin/entities/my-records/my-records.fields.ts
-import type { FieldDefinition } from '@/core/types/entity'
+import type { FieldDefinition } from '@nextsparkjs/core/types/entity'
 
 export const myRecordsFields: FieldDefinition[] = [
   {

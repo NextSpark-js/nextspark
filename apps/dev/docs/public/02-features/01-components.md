@@ -126,13 +126,8 @@ The layout adapts automatically to different screen sizes:
 Images can be added to documentation by placing them in the appropriate directory:
 
 ```bash
-# 1. Place image in theme's public/docs/ directory
-public/docs/your-image.png
-
-# 2. Run theme build (or automatic in dev mode)
-npm run theme:build
-
-# 3. Image is automatically copied to public/theme/docs/
+# Place the image in the project's public/theme/docs/ directory
+public/theme/docs/your-image.png
 ```
 
 Then reference it in markdown using its absolute path:
@@ -141,4 +136,4 @@ Then reference it in markdown using its absolute path:
 ![Alt text description](/theme/docs/your-image.png)
 ```
 
-**Important:** All theme public assets (including documentation images) must stay within `public/`. The build system automatically copies the entire `public/` directory to `/theme/`. This ensures all assets are theme-specific and change when switching themes.
+**Important:** Project public assets (including documentation images) stay within `public/`, which Next.js serves from `/`; files under `public/theme/` are served from `/theme/`. Nothing copies them: there is no build step to run.

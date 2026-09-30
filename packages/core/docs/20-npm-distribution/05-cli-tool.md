@@ -1,6 +1,6 @@
 # CLI Tool
 
-> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (add `--watch` to watch).
 
 NextSpark provides a CLI tool for common development tasks.
 
@@ -18,7 +18,7 @@ Installing `@nextsparkjs/core` never writes into a project. Its postinstall hook
 only prints a notice when the project still carries a committed `src/app` (or
 `app/`): run `pnpm exec nextspark migrate` to move to the generated host.
 `nextspark sync:app` and the hook that ran it were removed in
-`0.1.0-beta.192` ([timeline](../17-updates/05-sync-app-removal)).
+`0.1.0-beta.192` ([timeline](../17-updates/05-sync-app-removal.md)).
 `nextspark dev`, `build` and `prepare` generate `src/app` and the registries.
 
 ### Manual Commands
@@ -37,10 +37,11 @@ node node_modules/@nextsparkjs/core/scripts/build/update-tsconfig.mjs
 node node_modules/@nextsparkjs/core/scripts/db/run-migrations.mjs
 ```
 
-### 0.x root-first migration report
+### 0.x root-first migration
 
-Before moving a 0.x project to the 1.0 root-first layout, run the read-only
-inventory from the repository root (or any directory inside it):
+`nextspark migrate` moves a 0.x project to the root-first layout and converts a
+committed `app/` or `src/app` tree (see [Upgrading a 0.x project](../17-updates/06-upgrade-0x-projects.md)).
+Start with the read-only inventory, from the repository root (or any directory inside it):
 
 ```bash
 pnpm exec nextspark migrate --dry-run
@@ -51,9 +52,9 @@ The report resolves the Next.js host before scanning, so a web host under
 `web/` is not mistaken for the monorepo root. It inventories version drift,
 the project and plugins, template customizations, legacy imports, tooling
 paths, root-name and file collisions, untracked files, and sibling workspace
-references. For legacy projects only, it reads the selected theme from `NEXT_PUBLIC_ACTIVE_THEME` or `.env.example`; it does not read private `.env` files. The moving mode is not
-available in this release: `pnpm exec nextspark migrate` exits non-zero until a
-later migration slice adds it.
+references. For legacy projects only, it reads the selected theme from `NEXT_PUBLIC_ACTIVE_THEME` or `.env.example`; it does not read private `.env` files. Once the report is clean,
+`pnpm exec nextspark migrate --yes` performs the move (`--no-prepare` skips the
+`nextspark prepare` it runs at the end).
 
 ## CLI Commands
 
@@ -96,8 +97,9 @@ Consumer projects can invoke the locally installed CLI explicitly through pnpm:
 }
 ```
 
-There is no separate supported theme-build command. Next.js compiles the theme
-stylesheet imported by `app/globals.css` during `pnpm dev` and `pnpm build`.
+There is no separate supported theme-build command. Next.js compiles the
+stylesheet that the generated root layout imports (`@/styles/globals.css`) during
+`pnpm dev` and `pnpm build`.
 
 ## Environment Variables
 

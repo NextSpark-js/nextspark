@@ -47,16 +47,16 @@ generators consume its resolved paths rather than reconstructing layouts.
 From a generated project:
 
 ```bash
-pnpm exec nextspark registry:build
-pnpm exec nextspark registry:watch
+pnpm exec nextspark prepare
+pnpm exec nextspark prepare --watch
 ```
 
 From the repository development project:
 
 ```bash
 cd apps/dev
-node ../../packages/core/scripts/build/registry.mjs --build
-node ../../packages/core/scripts/build/registry.mjs --watch
+node ../../packages/cli/dist/cli.js prepare
+node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
 Registry inputs require regeneration. Restart the development server when a

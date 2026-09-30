@@ -2,7 +2,7 @@
  * AI Generate Endpoint
  *
  * Simple AI assistant endpoint - generic and helpful
- * Accessible via: /api/plugin/ai/generate
+ * Accessible via: /api/plugins/ai/generate
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -135,7 +135,7 @@ const getHandler = async (): Promise<NextResponse> => {
   const config = await getServerPluginConfig()
 
   return NextResponse.json({
-    endpoint: '/api/plugin/ai/generate',
+    endpoint: '/api/plugins/ai/generate',
     description: 'Simple AI assistant endpoint',
 
     usage: {

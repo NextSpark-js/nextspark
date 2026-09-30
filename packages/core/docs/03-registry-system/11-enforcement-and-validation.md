@@ -56,8 +56,8 @@ const config = ENTITY_REGISTRY.tasks
 
 ```typescript
 // ✅ ALLOWED - Reduces initial bundle by ~80%
-const messages = await import(`@/core/messages/${locale}/${namespace}.json`)
-const translations = await import(`@/core/messages/${locale}/index.ts`)
+const messages = await import(`@nextsparkjs/core/messages/${locale}/${namespace}.json`)
+const translations = await import(`@nextsparkjs/core/messages/${locale}/index.ts`)
 ```
 
 **Justification:**
@@ -108,7 +108,7 @@ export function Dashboard() {
 ```typescript
 // ✅ ALLOWED - Compile-time only, erased during build
 export type Messages = typeof import('./es/index.ts').default
-flags?: import('@/core/lib/entities/types').UserFlag[]
+flags?: import('@nextsparkjs/core/lib/entities/types').UserFlag[]
 ```
 
 **Justification:**
@@ -197,18 +197,18 @@ const entityConfig = ENTITY_REGISTRY.products // <1ms lookup
 
 ```typescript
 // ❌ Unnecessary runtime overhead
-const { MetaService } = await import('@/core/lib/services/meta.service')
-const { auth } = await import('@/core/lib/auth')
-const { queryOne } = await import('@/core/lib/db')
+const { MetaService } = await import('@nextsparkjs/core/lib/services/meta.service')
+const { auth } = await import('@nextsparkjs/core/lib/auth')
+const { queryOne } = await import('@nextsparkjs/core/lib/db')
 ```
 
 **✅ CORRECT:**
 
 ```typescript
 // ✅ Static imports at module level
-import { MetaService } from '@/core/lib/services/meta.service'
-import { auth } from '@/core/lib/auth'
-import { queryOne } from '@/core/lib/db'
+import { MetaService } from '@nextsparkjs/core/lib/services/meta.service'
+import { auth } from '@nextsparkjs/core/lib/auth'
+import { queryOne } from '@nextsparkjs/core/lib/db'
 ```
 
 **Why prohibited:**
@@ -229,15 +229,14 @@ const pluginRoute = await import(`@/plugins/${plugin}/api/${path}/route`)
 **✅ CORRECT:**
 
 ```typescript
-// ✅ Use registry-based route resolution
-import { getThemeRouteHandler, getPluginRouteHandler } from '@nextsparkjs/registries/route-handlers'
-
-const themeHandler = getThemeRouteHandler(path, method) // <1ms
-const pluginHandler = getPluginRouteHandler(path, method) // <1ms
+// ✅ A route is a file: api/<path>/route.ts (project) or plugins/<name>/api/<path>/route.ts (plugin).
+// `nextspark prepare` writes a static route file for each one; nothing resolves a handler at run time.
+export async function GET(request: NextRequest) { /* ... */ }
 ```
 
 **Why prohibited:**
-- Routes registered at build time via registry
+- Routes are generated as static route files at build time
+- Runtime route loading bypasses Next.js optimizations
 - Runtime route loading bypasses Next.js optimizations
 - Security risk (allows arbitrary file path execution)
 
@@ -651,7 +650,7 @@ export function loadEntityConfig(entityName: string) {
 **❌ Violation:**
 
 ```typescript
-// app/api/v1/tasks/route.ts
+// api/tasks/route.ts
 import { taskEntityConfig } from '@/entities/tasks/tasks.config'
 
 export async function GET() {
@@ -662,7 +661,7 @@ export async function GET() {
 **✅ Fix:**
 
 ```typescript
-// app/api/v1/tasks/route.ts
+// api/tasks/route.ts
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 export async function GET() {
@@ -686,13 +685,9 @@ export async function resolvePluginRoute(plugin: string, path: string) {
 **✅ Fix:**
 
 ```typescript
-// core/lib/api/route-resolver.ts
-import { getPluginRouteHandler } from '@nextsparkjs/registries/route-handlers'
-
-export function resolvePluginRoute(plugin: string, path: string, method: string) {
-  const routeKey = `${plugin}/${path}`
-  return getPluginRouteHandler(routeKey, method) // <1ms
-}
+// plugins/<plugin>/api/<path>/route.ts, served at /api/plugins/<plugin>/<path>
+// Delete the resolver: the generated host imports this file statically.
+export async function GET(request: NextRequest) { /* ... */ }
 ```
 
 ### Violation 4: Conditional Service Import
@@ -734,7 +729,7 @@ export function trackEvent(event: string) {
 
 ```typescript
 // ✅ ALLOWED - But flagged
-const messages = await import(`@/core/messages/${locale}/common.json`)
+const messages = await import(`@nextsparkjs/core/messages/${locale}/common.json`)
 ```
 
 **Solution:** Add to exception list in `check-dynamic-imports.sh`:
@@ -864,7 +859,7 @@ describe('Dynamic Import Enforcement', () => {
   })
 
   it('should allow i18n message imports', () => {
-    const code = `const messages = await import('@/core/messages/en/common.json')`
+    const code = `const messages = await import('@nextsparkjs/core/messages/en/common.json')`
     expect(isAllowedPattern(code)).toBe(true)
   })
 

@@ -155,7 +155,7 @@ configuration file.
 
 ```typescript
 // entities/tasks/tasks.config.ts
-import type { EntityConfig } from '@/core/types/entity'
+import type { EntityConfig } from '@nextsparkjs/core/types/entity'
 
 export const tasksConfig: EntityConfig = {
   name: 'tasks',
@@ -184,7 +184,7 @@ export const tasksConfig: EntityConfig = {
 
 ```typescript
 // entities/subtasks/subtasks.config.ts
-import type { EntityConfig } from '@/core/types/entity'
+import type { EntityConfig } from '@nextsparkjs/core/types/entity'
 
 export const subtasksConfig: EntityConfig = {
   name: 'subtasks',
@@ -404,7 +404,7 @@ DELETE /api/v1/[entity]/[id]/child/[childType]/[childId]
 **📋 Route Handler Location:**
 
 ```
-app/api/v1/[entity]/[id]/child/[childType]/
+packages/core/src/routes/api/v1/[entity]/[id]/child/[childType]/
 ├── route.ts          # List and Create (GET, POST)
 └── [childId]/
     └── route.ts      # Single item (GET, PATCH, DELETE)

@@ -1,6 +1,6 @@
 # Configuration System
 
-> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (add `--watch` to watch).
 
 Generated projects are root-first. The required `nextspark.config.ts` lives
 beside `package.json` and identifies the project root; it does not select a

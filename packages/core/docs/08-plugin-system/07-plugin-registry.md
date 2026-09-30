@@ -1,6 +1,6 @@
 # Plugin Registry Integration
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -191,10 +191,10 @@ export default async function Page() {
 
 **Access plugins in API endpoints**:
 ```typescript
-// app/api/process/route.ts
+// api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
   // Authenticate
@@ -474,7 +474,7 @@ export async function initializePlugins() {
 
 **Manual initialization**:
 ```typescript
-// app/api/init/route.ts
+// api/init/route.ts
 import { initializeAllPlugins } from '@nextsparkjs/registries/plugin-registry'
 
 export async function POST() {
@@ -499,10 +499,10 @@ export async function POST() {
 **Build Commands**:
 ```bash
 # Rebuild registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Rebuild in watch mode (development)
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 
 # Build the application after regenerating the registry
 pnpm build
@@ -654,7 +654,7 @@ if (hasPluginFunction('ai', 'generateText')) {
 ls plugins/my-plugin/plugin.config.ts
 
 # Rebuild registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Verify plugin in generated registry
 cat .nextspark/registries/plugin-registry.ts | grep "'my-plugin'"
@@ -689,7 +689,7 @@ cat .nextspark/registries/plugin-registry.ts | grep "'my-plugin'"
 
 ---
 
-**For complete plugin registry reference**, see [Plugin Registry](../03-registry-system/04-plugin-registry.md)
+**For complete plugin registry reference**, see [Plugin Registry](../03-registry-system/04-plugin-registry-architecture.md)
 
 **Last Updated**: 2025-11-19
 **Version**: 1.0.0

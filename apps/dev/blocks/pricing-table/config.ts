@@ -6,6 +6,5 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'A pricing comparison table showing different plans with features list, price, CTA button, and optional "Popular" badge',
   category: 'pricing',
   icon: 'DollarSign',
-  thumbnail: '/theme/blocks/pricing-table/thumbnail.png',
   scope: ['pages']
 }

@@ -14,7 +14,7 @@
 ## Import
 
 ```typescript
-import { PermissionService } from '@/core/lib/services'
+import { PermissionService } from '@nextsparkjs/core/lib/services'
 ```
 
 ---

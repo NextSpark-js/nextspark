@@ -679,7 +679,7 @@ export const COVERAGE_SUMMARY = {
 **📋 Using the FeatureService:**
 
 ```typescript
-import { FeatureService } from '@/core/lib/services/feature.service'
+import { FeatureService } from '@nextsparkjs/core/lib/services/feature.service'
 
 // Get coverage metrics
 const coverage = FeatureService.getCoverageSummary()
@@ -796,7 +796,7 @@ jobs:
 
 ```typescript
 // scripts/check-coverage.ts
-import { FeatureService } from '@/core/lib/services/feature.service'
+import { FeatureService } from '@nextsparkjs/core/lib/services/feature.service'
 
 const featureCoverage = FeatureService.getFeatureCoveragePercent()
 const flowCoverage = FeatureService.getFlowCoveragePercent()
@@ -961,8 +961,6 @@ EXAMPLE COMBINATIONS:
 # Rebuild all registries (including testing)
 pnpm build:registries
 
-# Or specifically the testing registry
-node packages/core/scripts/build/registry.mjs --testing
 
 # The script will:
 # 1. Scan all .cy.ts files

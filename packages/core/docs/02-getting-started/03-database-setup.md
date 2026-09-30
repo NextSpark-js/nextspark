@@ -260,7 +260,7 @@ CREATE POLICY tasks_user_isolation ON tasks
 - URL-encode special characters
 - Verify user exists
 
-**See:** [Troubleshooting → Database](./08-troubleshooting.md#database-connection-errors)
+**See:** [Troubleshooting → Database](./10-troubleshooting.md#database-connection-errors)
 
 ---
 
@@ -279,7 +279,7 @@ CREATE POLICY tasks_user_isolation ON tasks
 - Core + Entity + Plugin migrations
 - RLS policies applied
 
-**Next:** [Environment Configuration](./03-environment-configuration.md)
+**Next:** [Environment Configuration](./05-environment-configuration.md)
 
 ---
 

@@ -251,7 +251,7 @@ Visit the generate endpoint info page:
 pnpm dev
 
 # Open browser or use curl
-curl http://localhost:5173/api/plugin/ai/generate
+curl http://localhost:5173/api/plugins/ai/generate
 
 # Should return endpoint documentation with:
 # - Available models
@@ -263,7 +263,7 @@ curl http://localhost:5173/api/plugin/ai/generate
 
 **Simple Test:**
 ```bash
-curl -X POST http://localhost:5173/api/plugin/ai/generate \
+curl -X POST http://localhost:5173/api/plugins/ai/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: your-session-cookie" \
   -d '{
@@ -293,7 +293,7 @@ curl -X POST http://localhost:5173/api/plugin/ai/generate \
 ### Test Embeddings Endpoint (OpenAI Only)
 
 ```bash
-curl -X POST http://localhost:5173/api/plugin/ai/embeddings \
+curl -X POST http://localhost:5173/api/plugins/ai/embeddings \
   -H "Content-Type: application/json" \
   -H "Cookie: your-session-cookie" \
   -d '{
@@ -425,7 +425,7 @@ ls plugins/ai/entities/ai-history/migrations/
 - Test from authenticated dashboard pages
 - Or use API key in Authorization header:
   ```bash
-  curl -X POST http://localhost:5173/api/plugin/ai/generate \
+  curl -X POST http://localhost:5173/api/plugins/ai/generate \
     -H "Authorization: Bearer your-api-key-here" \
     -d '{"prompt": "test"}'
   ```

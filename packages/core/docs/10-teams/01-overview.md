@@ -78,7 +78,7 @@ Note: The signup team is always created regardless of this setting. This option 
 Use the `useTeamsConfig` hook to check mode capabilities:
 
 ```typescript
-import { useTeamsConfig } from '@/core/hooks/useTeamsConfig'
+import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 
 function MyComponent() {
   const { mode, canCreate, canSwitch, canInvite } = useTeamsConfig()
@@ -148,7 +148,7 @@ Available helpers:
 For internal server-side operations, use the service layer instead of direct SQL:
 
 ```typescript
-import { TeamService, TeamMemberService } from '@/core/lib/services'
+import { TeamService, TeamMemberService } from '@nextsparkjs/core/lib/services'
 
 // Team operations
 const team = await TeamService.getById(teamId, userId)
@@ -236,7 +236,7 @@ const response = await fetch('/api/v1/teams', {
 })
 
 // Check mode before showing create UI
-import { useTeamsConfig } from '@/core/hooks/useTeamsConfig'
+import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 const { canCreate } = useTeamsConfig()
 if (canCreate) {
   // Show create team button
@@ -259,7 +259,7 @@ const response = await fetch(`/api/v1/teams/${teamId}/members`, {
 })
 
 // Check mode before showing invite UI
-import { useTeamsConfig } from '@/core/hooks/useTeamsConfig'
+import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 const { canInvite } = useTeamsConfig()
 if (canInvite) {
   // Show invite member button
@@ -273,8 +273,8 @@ if (canInvite) {
 Use the TeamSwitcher component in the sidebar or programmatically:
 
 ```typescript
-import { useTeamContext } from '@/core/contexts/TeamContext'
-import { useTeamsConfig } from '@/core/hooks/useTeamsConfig'
+import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
+import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 
 function MyComponent() {
   const { currentTeam, switchTeam } = useTeamContext()

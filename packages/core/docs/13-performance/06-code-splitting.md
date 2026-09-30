@@ -104,7 +104,7 @@ For **heavy components** not needed immediately:
 
 ```typescript
 import { lazy, Suspense } from 'react'
-import { Skeleton } from '@/core/components/ui/skeleton'
+import { Skeleton } from '@nextsparkjs/core/components/ui/skeleton'
 
 // ❌ WRONG - Rich text editor loaded immediately (800KB)
 import RichTextEditor from '@/components/RichTextEditor'
@@ -177,7 +177,7 @@ Load components **only when user needs them**:
 'use client'
 
 import { lazy, Suspense, useState } from 'react'
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 // Component loaded only when modal opens
 const CreateProductModal = lazy(() =>
@@ -212,7 +212,7 @@ export default function ProductsPage() {
 'use client'
 
 import { lazy, Suspense } from 'react'
-import { useAuth } from '@/core/hooks/useAuth'
+import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
 
 // Admin panel loaded only for admins
 const AdminPanel = lazy(() => import('@/components/admin/AdminPanel'))
@@ -244,7 +244,7 @@ export default function DashboardPage() {
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 export default function DocumentViewer() {
   const [pdfViewer, setPdfViewer] = useState<any>(null)
@@ -581,7 +581,7 @@ const CODE_SPLITTING_CHECKLIST = {
 ### Optimized Dashboard with Code Splitting
 
 ```typescript
-// app/dashboard/page.tsx
+// templates/dashboard/page.tsx
 import { Suspense, lazy } from 'react'
 import DashboardHeader from '@/components/dashboard/Header'  // Shared
 import StatsCard from '@/components/dashboard/StatsCard'      // Small
@@ -637,7 +637,7 @@ export default function DashboardPage() {
 const Editor = lazy(() => import('./RichTextEditor'))
 
 // Split by route (automatic)
-// app/dashboard/page.tsx → separate bundle
+// templates/dashboard/page.tsx → separate bundle
 
 // Load conditionally
 {showChart && <Suspense><Chart /></Suspense>}

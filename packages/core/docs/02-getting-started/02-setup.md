@@ -1,6 +1,6 @@
 # Setup
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -333,7 +333,7 @@ nextspark setup:ai
 - Want structured AI development workflow
 - Need project management integration
 
-**Learn more:** See [Claude Workflow Documentation](../16-claude-workflow/01-overview.md) for complete setup guide and customization options.
+**Learn more:** See [Claude Workflow Documentation](../16-claude-workflow/01-introduction.md) for complete setup guide and customization options.
 
 ---
 
@@ -478,7 +478,7 @@ export const appConfig = {
 
 **`package.json` - Dependencies and Scripts:**
 - Dependencies: Next.js, React, TypeScript, Better Auth, etc.
-- Scripts: dev, build, test, lint, registry:build, etc.
+- Scripts: dev, build, test, lint, build:registries, etc.
 - Workspace configuration (if using pnpm workspaces)
 
 ---
@@ -649,7 +649,7 @@ RUNTIME (every request):
 
 **Build registries manually:**
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 **Expected output:**
@@ -692,7 +692,7 @@ head -20 .nextspark/registries/entity-registry.ts
 **Start registry watch mode:**
 ```bash
 # In a separate terminal
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
 **What happens:**
@@ -718,7 +718,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 - Must stop `pnpm dev` and restart
 
 **Workflow:**
-1. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch` in terminal 1
+1. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch` in terminal 1
 2. Run `pnpm dev` in terminal 2
 3. Edit project or plugin source files
 4. Registry rebuilds automatically
@@ -798,7 +798,7 @@ pnpm dev
 
 **Terminal 2 - Registry Watch (Optional):**
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 # Automatically rebuilds registries on content changes
 # Use when actively developing entities/plugins
 ```
@@ -830,7 +830,7 @@ Ctrl+b "
 Ctrl+b arrow-keys
 
 # Pane 1: pnpm dev
-# Pane 2: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+# Pane 2: cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 # Pane 3: commands
 ```
 
@@ -847,7 +847,7 @@ Ctrl+a n (next)
 Ctrl+a p (previous)
 
 # Window 1: pnpm dev
-# Window 2: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+# Window 2: cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 # Window 3: commands
 ```
 
@@ -1068,7 +1068,7 @@ Test tags are **automatically discovered and validated** during the registry bui
 
 **Tags are validated when you build registries:**
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 The build generates `testing-registry.ts` with all discovered tags organized by category (features, flows, layers, priorities, etc.).
@@ -1094,7 +1094,7 @@ The build generates `testing-registry.ts` with all discovered tags organized by 
 **CI/CD will run:**
 1. `pnpm --dir apps/dev exec tsc --noEmit` (application TypeScript errors)
 2. `pnpm lint` (ESLint errors)
-3. `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (Registry build with tag validation)
+3. `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (Registry build with tag validation)
 4. `pnpm test:core` and `pnpm --dir apps/dev exec jest --watchman=false` (unit tests)
 5. `pnpm cy:run` (E2E tests)
 6. `pnpm build` (Production build)
@@ -1144,9 +1144,9 @@ Go through this checklist to verify everything is set up correctly:
 - [ ] TypeScript server working (autocomplete functional)
 
 ### Registry System
-- [ ] Registry build successful (`cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` completes)
+- [ ] Registry build successful (`cd apps/dev && node ../../packages/cli/dist/cli.js prepare` completes)
 - [ ] All 16 registry files created
-- [ ] Registry watch mode works (`cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch`)
+- [ ] Registry watch mode works (`cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch`)
 - [ ] Understand registry rebuild requires server restart
 
 ### Theme
@@ -1222,7 +1222,7 @@ Congratulations! Your development environment is fully set up. 🎉
    - [API Development](../05-api/01-introduction.md)
    - [Theme System](../07-theme-system/01-introduction.md)
    - [Plugin Development](../08-plugin-system/01-introduction.md)
-   - [Testing Guide](../12-testing/01-overview.md)
+   - [Testing Guide](../12-testing/01-testing-overview.md)
 
 **Support Resources:**
 
@@ -1268,7 +1268,7 @@ rm -rf .next
 rm -rf .nextspark/registries
 
 # Rebuild from scratch
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Restart dev server
 pnpm dev

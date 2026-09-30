@@ -1,6 +1,6 @@
 # Documentation System Architecture
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -19,7 +19,7 @@ serves them.
 │                     BUILD TIME                               │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│  1. core/scripts/build/registry/generators/docs-registry.mjs│
+│  1. packages/core/scripts/build/registry/generators/docs-registry.mjs│
 │     │                                                         │
 │     ├─> Scan docs/public/    │
 │     └─> Scan docs/superadmin/│
@@ -67,14 +67,14 @@ serves them.
 
 ### Documentation Registry Builder
 
-**Location:** `core/scripts/build/registry/generators/docs-registry.mjs`, invoked by `core/scripts/build/registry.mjs` alongside every other registry
+**Location:** `packages/core/scripts/build/registry/generators/docs-registry.mjs`, invoked by `packages/core/scripts/build/registry.mjs` alongside every other registry
 
 **Purpose:** Scans the project's `docs/public/` and `docs/superadmin/` directories and generates a static registry
 
 **Execution:**
 ```bash
 # In the NextSpark monorepo, from the repository root
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 In a generated project, `pnpm dev` and `pnpm build` (`nextspark dev` and
@@ -225,7 +225,7 @@ Core and plugin docs have no URL - they are never scanned into the registry.
 ### Route Handlers
 
 **Public Docs:**
-- **File:** `app/(public)/docs/[section]/[page]/page.tsx`
+- **File:** `packages/core/src/routes/(public)/docs/[section]/[page]/page.tsx`
 - **Dynamic Segments:** `section`, `page`
 
 **Superadmin Docs:**
@@ -377,7 +377,7 @@ description: Page description for SEO
 
 The docs system integrates with the core registry architecture:
 
-- **Build Script:** `core/scripts/build/registry.mjs`
+- **Build Script:** `packages/core/scripts/build/registry.mjs`
 - **Output Location:** `<project>/.nextspark/registries/docs-registry.ts`
 - **Import Pattern:** `import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'`
 

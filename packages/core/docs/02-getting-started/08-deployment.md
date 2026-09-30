@@ -55,7 +55,7 @@ pnpm --dir apps/dev exec next start -p 3010
 - Check error messages
 - Fix TypeScript errors
 - Fix linting errors
-- See: [Troubleshooting → Build Issues](./08-troubleshooting.md#build-issues)
+- See: [Troubleshooting → Build Issues](./10-troubleshooting.md#build-issues)
 
 ---
 
@@ -607,7 +607,7 @@ Serverless function exceeded max duration
 2. Increase timeout in `vercel.json` (if on Pro plan)
 3. Consider edge functions for faster response
 
-**See:** [Troubleshooting → Deployment Issues](./08-troubleshooting.md#deployment-issues)
+**See:** [Troubleshooting → Deployment Issues](./10-troubleshooting.md#deployment-issues)
 
 ---
 
@@ -647,7 +647,7 @@ vercel rollback [deployment-url]
 
 **Move API routes to edge:**
 ```typescript
-// app/api/edge-example/route.ts
+// api/edge-example/route.ts
 export const runtime = 'edge'
 
 export async function GET() {

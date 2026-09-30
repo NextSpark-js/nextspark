@@ -207,7 +207,7 @@ Define your plugin's configuration:
 
 ```typescript
 // plugins/my-plugin/plugin.config.ts
-import type { PluginConfig } from '@/core/types/plugin'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 import * as z from 'zod'
 
 // Configuration schema
@@ -318,7 +318,7 @@ export function useMyPlugin() {
   return useQuery({
     queryKey: QUERY_KEY,
     queryFn: async (): Promise<MyPluginData> => {
-      const response = await fetch('/api/plugin/my-plugin/data')
+      const response = await fetch('/api/plugins/my-plugin/data')
       if (!response.ok) {
         throw new Error('Failed to fetch plugin data')
       }
@@ -332,7 +332,7 @@ export function useMyPluginMutation() {
 
   return useMutation({
     mutationFn: async (input: MyPluginInput) => {
-      const response = await fetch('/api/plugin/my-plugin/process', {
+      const response = await fetch('/api/plugins/my-plugin/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
@@ -356,8 +356,8 @@ export function useMyPluginMutation() {
 'use client'
 
 import { useMyPlugin, useMyPluginMutation } from '../hooks/useMyPlugin'
-import { Card, CardHeader, CardContent } from '@/core/components/ui/card'
-import { Button } from '@/core/components/ui/button'
+import { Card, CardHeader, CardContent } from '@nextsparkjs/core/components/ui/card'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Loader2 } from 'lucide-react'
 
 interface MyPluginWidgetProps {
@@ -575,7 +575,7 @@ pnpm install
 **3️⃣ Rebuild Plugin Registry:**
 
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 **4️⃣ Test in Development:**

@@ -290,7 +290,7 @@ export function formatRelativeTime(date: Date | string, locale: 'en' | 'es' = 'e
 **Usage**:
 
 ```typescript
-import { formatDate, formatDateTime } from '@/core/lib/formatters'
+import { formatDate, formatDateTime } from '@nextsparkjs/core/lib/formatters'
 
 // Format date
 const formatted = formatDate(new Date(), 'en', 'PPP')
@@ -638,8 +638,8 @@ export function isRTL(locale: string): boolean {
 
 ```typescript
 // app/layout.tsx
-import { getUserLocale } from '@/core/lib/locale'
-import { isRTL } from '@/core/lib/locale'
+import { getUserLocale } from '@nextsparkjs/core/lib/locale'
+import { isRTL } from '@nextsparkjs/core/lib/locale'
 
 export default async function RootLayout({ children }: Props) {
   const locale = await getUserLocale()
@@ -747,7 +747,7 @@ export function DynamicComponent({ namespace }: { namespace: string }) {
   
   useEffect(() => {
     // Load namespace dynamically
-    import(`@/core/messages/en/${namespace}.json`)
+    import(`@nextsparkjs/core/messages/en/${namespace}.json`)
       .then(module => setTranslations(module.default))
       .catch(err => console.error('Failed to load translations:', err))
   }, [namespace])

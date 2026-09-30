@@ -33,13 +33,13 @@ expect(mockFn).toHaveBeenCalledTimes(3)
 
 ```typescript
 // Mock entire module
-jest.mock('@/core/lib/db', () => ({
+jest.mock('@nextsparkjs/core/lib/db', () => ({
   query: jest.fn(),
   queryWithRLS: jest.fn(),
 }))
 
 // Import mocked module
-import { query } from '@/core/lib/db'
+import { query } from '@nextsparkjs/core/lib/db'
 
 // Use in test
 describe('getUserData', () => {
@@ -61,8 +61,8 @@ describe('getUserData', () => {
 
 ```typescript
 // Mock only specific functions
-jest.mock('@/core/lib/utils', () => ({
-  ...jest.requireActual('@/core/lib/utils'),
+jest.mock('@nextsparkjs/core/lib/utils', () => ({
+  ...jest.requireActual('@nextsparkjs/core/lib/utils'),
   dangerousFunction: jest.fn().mockReturnValue('safe')
 }))
 ```
@@ -91,7 +91,7 @@ jest.mock('next/navigation', () => ({
 ### Mock Server Actions
 
 ```typescript
-jest.mock('@/app/actions/tasks', () => ({
+jest.mock('@/lib/actions/tasks', () => ({
   createTask: jest.fn().mockResolvedValue({ id: '1', title: 'Task' }),
   updateTask: jest.fn().mockResolvedValue({ success: true }),
   deleteTask: jest.fn().mockResolvedValue({ success: true }),
@@ -144,7 +144,7 @@ export const query = jest.fn()
 export const queryWithRLS = jest.fn()
 
 // In test
-import { queryWithRLS } from '@/core/lib/db'
+import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 
 describe('Task operations', () => {
   it('should fetch user tasks', async () => {

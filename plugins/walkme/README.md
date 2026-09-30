@@ -30,7 +30,7 @@ export const themeConfig: ThemeConfig = {
 Rebuild the registry:
 
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ## Quick Start

@@ -206,7 +206,7 @@ describe('Google OAuth', () => {
 
 ```typescript
 // core/tests/jest/auth/oauth.test.ts
-import { mapGoogleProfile } from '@/core/lib/auth'
+import { mapGoogleProfile } from '@nextsparkjs/core/lib/auth'
 
 describe('Google OAuth Profile Mapping', () => {
   it('should map Google profile correctly', () => {
@@ -254,7 +254,7 @@ describe('Google OAuth Profile Mapping', () => {
 
 ```typescript
 // core/tests/jest/auth/api-keys.test.ts
-import { validateApiKey } from '@/core/lib/api/auth'
+import { validateApiKey } from '@nextsparkjs/core/lib/api/auth'
 import { NextRequest } from 'next/server'
 
 describe('API Key Validation', () => {
@@ -541,7 +541,7 @@ export const auth = {
 ### Mock API Key Validation
 
 ```typescript
-jest.mock('@/core/lib/api/auth', () => ({
+jest.mock('@nextsparkjs/core/lib/api/auth', () => ({
   validateApiKey: jest.fn().mockResolvedValue({
     userId: 'user-123',
     keyId: 'key-456',

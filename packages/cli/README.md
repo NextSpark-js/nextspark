@@ -13,7 +13,7 @@ npx nextspark <command>
 Or install globally:
 
 ```bash
-npm install -g @nextsparkjs/cli
+pnpm add -g @nextsparkjs/cli
 ```
 
 ## Commands
@@ -43,10 +43,14 @@ New projects receive small `AGENTS.md` and `CLAUDE.md` pointers only. The legacy
 ### Development
 
 ```bash
-nextspark dev       # Start dev server with project
-nextspark build     # Production build
-nextspark registry  # Build component registries
+nextspark dev       # Generate src/app and the registries, start the dev server and regenerate on changes
+nextspark build     # prepare --production, then next build
+nextspark prepare   # Generate src/app and the registries once (--check compares, --watch watches)
 ```
+
+`src/app` is generated and git-ignored: never edit it. Change a route by putting a file at
+the same path in `templates/` (pages, layouts) or `api/` (Route Handlers).
+`registry build` and `registry watch` (also `registry:build`, `registry:watch`) are older names for `prepare` and `prepare --watch`.
 
 #### Choosing the bundler
 
@@ -70,8 +74,18 @@ nextspark build --debug --profile
 ### Database
 
 ```bash
-nextspark migrate   # Run database migrations
+nextspark db:migrate   # Run database migrations
+nextspark db:seed      # Seed sample data
 ```
+
+### Upgrade a 0.x project
+
+```bash
+nextspark migrate --dry-run   # Read-only report
+nextspark migrate --yes       # Move to the root-first layout and convert a committed app tree
+```
+
+See [Upgrading a 0.x project](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/17-updates/06-upgrade-0x-projects.md).
 
 ## Requirements
 

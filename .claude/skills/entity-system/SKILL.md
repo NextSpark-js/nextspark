@@ -626,7 +626,7 @@ fields: [
 - [ ] Created migration in `migrations/001_{entity}_table.sql`
 - [ ] Created `_metas` migration if `access.metadata: true`
 - [ ] Added entity to theme's entity registry
-- [ ] Ran `node core/scripts/build/registry.mjs`
+- [ ] Ran `pnpm build:registries`
 
 ## References
 

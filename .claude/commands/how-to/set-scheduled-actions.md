@@ -83,7 +83,7 @@ Scheduler
     │         ├── Running actions
     │         └── Completed/Failed actions
     │
-    ├──→ Webhook Endpoint (/api/v1/cron)
+    ├──→ Webhook Endpoint (/api/v1/cron/process)
     │
     └──→ Action Handlers (core/lib/actions/)
               │
@@ -125,9 +125,9 @@ Create a handler to define what the action does:
 
 ```typescript
 // core/lib/actions/handlers/send-reminder-email.handler.ts
-import type { ActionHandler, ActionResult } from '@/core/types/actions'
+import type { ActionHandler, ActionResult } from '@nextsparkjs/core/types/actions'
 import * as z from 'zod'
-import { EmailService } from '@/core/lib/services/email.service'
+import { EmailService } from '@nextsparkjs/core/lib/services/email.service'
 
 // Define payload schema
 const SendReminderPayloadSchema = z.object({
@@ -244,7 +244,7 @@ Schedule actions programmatically:
 
 ```typescript
 // core/lib/services/scheduled-action.service.ts
-import { ScheduledActionService } from '@/core/lib/services/scheduled-action.service'
+import { ScheduledActionService } from '@nextsparkjs/core/lib/services/scheduled-action.service'
 
 // 1. Schedule a one-time action
 await ScheduledActionService.schedule({
@@ -301,7 +301,7 @@ Common patterns:
 📋 In Your Code (e.g., when creating a task):
 
 ```typescript
-// app/api/v1/entities/tasks/route.ts
+// api/entities/tasks/route.ts
 export async function POST(request: NextRequest) {
   // ... create task ...
 
@@ -348,9 +348,9 @@ STEP 4 OF 5: Configure Webhooks
 The cron endpoint processes scheduled actions:
 
 ```typescript
-// app/api/v1/cron/route.ts
-import { processScheduledActions } from '@/core/lib/actions/processor'
-import { verifyCronSecret } from '@/core/lib/auth/cron'
+// packages/core/src/routes/api/v1/cron/process/route.ts
+import { processScheduledActions } from '@nextsparkjs/core/lib/actions/processor'
+import { verifyCronSecret } from '@nextsparkjs/core/lib/auth/cron'
 
 export async function POST(request: NextRequest) {
   // Verify the request is from authorized source
@@ -385,7 +385,7 @@ export async function POST(request: NextRequest) {
 {
   "crons": [
     {
-      "path": "/api/v1/cron",
+      "path": "/api/v1/cron/process",
       "schedule": "* * * * *"
     }
   ]
@@ -394,7 +394,7 @@ export async function POST(request: NextRequest) {
 
 **Option 2: External Cron Service (cron-job.org)**
 
-URL: `https://your-domain.com/api/v1/cron`
+URL: `https://your-domain.com/api/v1/cron/process`
 Method: POST
 Headers: `Authorization: Bearer YOUR_CRON_SECRET`
 Schedule: Every minute
@@ -413,7 +413,7 @@ CRON_SECRET=your-secure-random-string
 📋 Manual Trigger (development):
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/cron \
+curl -X POST http://localhost:3000/api/v1/cron/process \
   -H "Authorization: Bearer your-cron-secret"
 ```
 

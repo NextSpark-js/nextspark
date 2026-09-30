@@ -39,7 +39,7 @@ Examples:
 
 ### Public Documentation Pages
 
-**Location:** `app/(public)/docs/[section]/[page]/page.tsx`
+**Location:** `packages/core/src/routes/(public)/docs/[section]/[page]/page.tsx`
 
 **Dynamic Segments:**
 - `[section]` - Section slug (e.g., `getting-started`)

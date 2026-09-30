@@ -1,6 +1,6 @@
 # Creating Custom Project Templates
 
-> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (add `--watch` to watch).
 
 NextSpark themes are install-once project templates. A generated application
 never selects among sibling theme directories: its root is the project.

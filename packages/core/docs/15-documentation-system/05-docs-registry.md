@@ -1,6 +1,6 @@
 # Documentation Registry
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -88,7 +88,7 @@ const page = findDocPage('getting-started', 'introduction')
 `packages/core/scripts/build/registry.mjs` generates the docs registry with every other registry. From this monorepo's repository root, regenerate them with:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 The registry watcher observes the root-first project source directories and the enabled local plugin directories.
@@ -127,7 +127,7 @@ Documentation components render sidebars and breadcrumbs from registry metadata.
 Confirm that the markdown file is inside the project's `docs/public/` or `docs/superadmin/` directory and follows the `{order}-{slug}.md` convention. Then regenerate all registries:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ### Missing Documentation

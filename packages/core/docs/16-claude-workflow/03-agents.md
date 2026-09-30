@@ -1,6 +1,6 @@
 # Agents (v4.0)
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 > **Version 4.0** - 25 specialized agents organized by workflow block.
 
@@ -136,7 +136,7 @@ Agents are specialized AI assistants with defined roles, tools, and responsibili
 3. Set up `lib/core.ts` with main logic
 4. Create API routes structure
 5. Configure plugin in `plugin-sandbox` theme
-6. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+6. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 
 **Output:** Complete plugin in `plugins/{name}/`
 
@@ -177,12 +177,12 @@ Agents are specialized AI assistants with defined roles, tools, and responsibili
 **Purpose:** Scaffold new theme using preset.
 
 **Responsibilities:**
-1. Run `pnpm create:theme {name}` scaffolding
+1. Copy the closest template from `packages/core/templates/projects/` (see the `create-theme` skill)
 2. Configure `theme.config.ts`
 3. Configure `app.config.ts` (Team Mode, features)
 4. Configure `dashboard.config.ts`
 5. Configure `permissions.config.ts`
-6. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+6. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 
 **Output:** Complete theme in ``
 
@@ -389,7 +389,7 @@ for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
    - `fields.ts` - Form field definitions
    - `component.tsx` - React component with `data-cy`
    - `index.ts` - Exports
-4. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+4. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 5. Verify block in `BLOCK_REGISTRY`
 6. Test block in page builder
 

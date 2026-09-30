@@ -156,7 +156,7 @@ await Read('.claude/sessions/[session-name]/progress.md')
 await Read('.claude/sessions/[session-name]/context.md')
 
 // Review implemented code
-await Read('app/api/v1/products/route.ts')
+await Read('api/products/route.ts')
 await Read('core/lib/validation/products.ts')
 await Read('app/hooks/useProducts.ts')
 ```
@@ -183,7 +183,7 @@ import {
   createProductSchema,
   updateProductSchema,
   productQuerySchema
-} from '@/core/lib/validation/products'
+} from '@nextsparkjs/core/lib/validation/products'
 
 describe('Product Validation Schemas', () => {
   describe('createProductSchema', () => {
@@ -304,11 +304,11 @@ describe('Product Validation Schemas', () => {
 ```typescript
 // __tests__/api/products/route.test.ts
 
-import { GET, POST, PATCH, DELETE } from '@/app/api/v1/products/route'
-import { db } from '@/core/lib/db'
+import { GET, POST, PATCH, DELETE } from '@/api/products/route'
+import { db } from '@nextsparkjs/core/lib/db'
 
 // Mock database
-jest.mock('@/core/lib/db')
+jest.mock('@nextsparkjs/core/lib/db')
 
 describe('Products API Route', () => {
   beforeEach(() => {
@@ -373,7 +373,7 @@ describe('Products API Route', () => {
 
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useProducts, useCreateProduct } from '@/app/hooks/useProducts'
+import { useProducts, useCreateProduct } from '@/hooks/useProducts'
 
 // Mock fetch
 global.fetch = jest.fn()
@@ -459,7 +459,7 @@ import {
   calculateDiscount,
   slugify,
   truncateDescription
-} from '@/core/lib/products/utils'
+} from '@nextsparkjs/core/lib/products/utils'
 
 describe('Product Utilities', () => {
   describe('formatPrice', () => {
@@ -571,7 +571,7 @@ pnpm test:coverage
 File                | % Stmts | % Branch | % Funcs | % Lines |
 --------------------|---------|----------|---------|---------|
 core/lib/validation |   95.0  |   92.0   |  100.0  |   95.0  |
-app/api/v1/products |   88.0  |   85.0   |   90.0  |   88.0  |
+api/products |   88.0  |   85.0   |   90.0  |   88.0  |
 app/hooks           |   82.0  |   78.0   |   85.0  |   82.0  |
 core/lib/utils      |  100.0  |  100.0   |  100.0  |  100.0  |
 --------------------|---------|----------|---------|---------|
@@ -625,10 +625,10 @@ it('provides correct error message', () => {
 
 ```typescript
 // Mock database
-jest.mock('@/core/lib/db')
+jest.mock('@nextsparkjs/core/lib/db')
 
 // Mock auth
-jest.mock('@/core/lib/auth', () => ({
+jest.mock('@nextsparkjs/core/lib/auth', () => ({
   validateSession: jest.fn().mockResolvedValue({ userId: 'test-user' })
 }))
 

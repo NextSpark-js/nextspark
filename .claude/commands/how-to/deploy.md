@@ -196,7 +196,7 @@ Project Settings > General
   "framework": "nextjs",
   "regions": ["iad1"],
   "functions": {
-    "app/api/**/*.ts": {
+    "src/app/api/**/*.ts": {
       "maxDuration": 30
     }
   },
@@ -359,7 +359,7 @@ STEP 4 OF 4: Post-Deployment Setup
 
 ```bash
 # Option A: Via Vercel Function
-# Create: app/api/migrate/route.ts (temporary)
+# Create: api/migrate/route.ts (temporary)
 
 # Option B: Direct connection
 DATABASE_URL="production-url" pnpm db:migrate

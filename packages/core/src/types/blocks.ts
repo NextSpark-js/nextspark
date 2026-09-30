@@ -463,7 +463,7 @@ export interface BlockConfig {
   componentPath?: string
   schemaPath?: string
   fieldsPath?: string
-  thumbnail?: string
+  thumbnail?: { src: string } // a static image import (StaticImageData); `.src` is the URL
 
   // Field definitions for admin UI form generation
   fieldDefinitions: FieldDefinition[]

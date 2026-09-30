@@ -84,7 +84,7 @@ Configure team isolation in your entity config:
 
 ```typescript
 // entities/your-entity/config.ts
-import { EntityConfig } from '@/core/lib/entities/types'
+import { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
 export const yourEntityConfig: EntityConfig = {
   slug: 'your-entity',

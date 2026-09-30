@@ -39,7 +39,7 @@ export interface ThemeConfig {
 **Minimal Example:**
 
 ```typescript
-import type { ThemeConfig } from '@/core/types/theme'
+import type { ThemeConfig } from '@nextsparkjs/core/types/theme'
 
 export const myThemeConfig: ThemeConfig = {
   name: 'my-theme',
@@ -449,7 +449,7 @@ const finalConfig = {
 **Purpose:** Single source of truth for all permissions and custom roles.
 
 ```typescript
-import type { ThemePermissionsConfig } from '@/core/lib/permissions/types'
+import type { ThemePermissionsConfig } from '@nextsparkjs/core/lib/permissions/types'
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   // ==========================================
@@ -543,7 +543,7 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
 ### Checking Permissions
 
 ```typescript
-import { PermissionService } from '@/core/lib/services/permission.service'
+import { PermissionService } from '@nextsparkjs/core/lib/services/permission.service'
 
 // Unified API for all permission types
 PermissionService.canDoAction('admin', 'team.edit')           // Team permission
@@ -567,7 +567,7 @@ PermissionService.canDoAction('owner', 'anything') // Always true
 **Purpose:** Contains development-only settings that should never affect production. This file is specifically designed to keep development tools and test configurations separate from production configuration.
 
 ```typescript
-import type { DevConfig } from '@/core/lib/config/types'
+import type { DevConfig } from '@nextsparkjs/core/lib/config/types'
 
 export const DEV_CONFIG_OVERRIDES: DevConfig = {
   // =============================================================================
@@ -644,7 +644,7 @@ interface DevKeyringUser {
 ### Accessing Dev Config
 
 ```typescript
-import { DEV_CONFIG } from '@/core/lib/config/config-sync'
+import { DEV_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 
 // Check if DevKeyring is enabled
 if (DEV_CONFIG?.devKeyring?.enabled) {
@@ -778,7 +778,7 @@ export const DASHBOARD_CONFIG_OVERRIDES = {
 ### Full theme.config.ts
 
 ```typescript
-import type { ThemeConfig } from '@/core/types/theme'
+import type { ThemeConfig } from '@nextsparkjs/core/types/theme'
 
 export const myThemeConfig: ThemeConfig = {
   // Metadata
@@ -875,7 +875,7 @@ Error: Theme requires unavailable plugin: 'unknown'
 Full type checking for theme configuration:
 
 ```typescript
-import type { ThemeConfig } from '@/core/types/theme'
+import type { ThemeConfig } from '@nextsparkjs/core/types/theme'
 
 // ✅ Type-safe configuration
 export const config: ThemeConfig = {

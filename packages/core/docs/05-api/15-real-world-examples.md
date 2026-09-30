@@ -37,7 +37,7 @@ This guide provides **complete, production-ready examples** of real-world applic
 
 ```typescript
 // entities/tasks/config.ts
-import { EntityConfig } from '@/core/types/registry'
+import { EntityConfig } from '@nextsparkjs/core/types/registry'
 
 export const tasksEntity: EntityConfig = {
   name: 'tasks',
@@ -522,9 +522,9 @@ function ProductCard({ product }: { product: Product }) {
 ### Backend: Tenant Isolation
 
 ```typescript
-// app/api/v1/[entity]/route.ts
+// packages/core/src/routes/api/v1/[entity]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { db } from '@/lib/db'
 
 export async function GET(
@@ -679,7 +679,7 @@ function Dashboard() {
 ### Backend: SSE Endpoint
 
 ```typescript
-// app/api/v1/stream/[entity]/route.ts
+// api/stream/[entity]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
@@ -867,7 +867,7 @@ export function CollaborativeEditor({ documentId }: { documentId: string }) {
 ### Backend: Sync Endpoint
 
 ```typescript
-// app/api/v1/sync/route.ts
+// api/sync/route.ts
 export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers })
   if (!session?.user) {

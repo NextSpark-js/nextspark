@@ -1,6 +1,6 @@
 # Plugin Registry
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Overview
 
@@ -459,7 +459,7 @@ await initializeAllPlugins()
 
 ```typescript
 // plugins/ai/plugin.config.ts
-import type { PluginConfig } from '@/core/types/plugin'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
 export const aiPluginConfig: PluginConfig = {
   name: 'AI Assistant',
@@ -544,7 +544,7 @@ const aiEntities = getPluginEntitiesClient('ai')
 ### Example 1: AI Text Generation
 
 ```typescript
-// app/api/generate/route.ts
+// api/generate/route.ts
 import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -887,7 +887,7 @@ import { PLUGIN_REGISTRY_CLIENT } from '@nextsparkjs/registries/plugin-registry.
 **Solutions:**
 1. Check plugin exists in `plugins/my-plugin/`
 2. Verify `plugin.config.ts` file exists
-3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` to regenerate
+3. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` to regenerate
 4. Restart dev server
 
 ### Function Not Available
@@ -935,8 +935,8 @@ const entities: PluginEntity[] = plugin.entities
 
 ## Next Steps
 
-- **[Translation Registry](./06-translation-registry.md)** - i18n integration
-- **[Route Handlers Registry](./07-route-handlers-registry.md)** - API route handling
+- **[Translation Registry](./07-translation-registry-usage.md)** - i18n integration
+- **[Route Handlers Registry](./07-route-handlers-usage.md)** - API route handling
 - **[Performance & Caching](./08-performance-and-caching.md)** - Optimization strategies
 - **[Entity Registry](./03-entity-registry.md)** - Entity system integration
 

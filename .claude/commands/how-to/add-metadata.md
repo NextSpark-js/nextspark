@@ -264,7 +264,7 @@ writing entity metadata.
 
 ```typescript
 // From lib/services/meta.service.ts
-import { MetaService } from '@/core/lib/services/meta.service'
+import { MetaService } from '@nextsparkjs/core/lib/services/meta.service'
 
 // Get metadata for single entity
 const metas = await MetaService.getEntityMetas(
@@ -381,7 +381,7 @@ metadata in common scenarios.
 
 ```typescript
 // From lib/helpers/entity-meta.helpers.ts
-import { withMeta } from '@/core/lib/helpers/entity-meta.helpers'
+import { withMeta } from '@nextsparkjs/core/lib/helpers/entity-meta.helpers'
 
 // Add metadata to single entity
 const task = await getTask(taskId)
@@ -410,7 +410,7 @@ const tasksWithMeta = await withMeta(
 **📋 copyEntityMetas Helper:**
 
 ```typescript
-import { copyEntityMetas } from '@/core/lib/helpers/entity-meta.helpers'
+import { copyEntityMetas } from '@nextsparkjs/core/lib/helpers/entity-meta.helpers'
 
 // Copy metadata from one entity to another
 await copyEntityMetas(
@@ -429,7 +429,7 @@ await copyEntityMetas('task', originalTaskId, newTask.id, userId)
 **📋 validateBasicMetas Helper:**
 
 ```typescript
-import { validateBasicMetas } from '@/core/lib/helpers/entity-meta.helpers'
+import { validateBasicMetas } from '@nextsparkjs/core/lib/helpers/entity-meta.helpers'
 
 // Validate metadata before saving
 const metas = {
@@ -499,7 +499,7 @@ Expose metadata through your API endpoints.
 
 ```typescript
 // In your API route handler
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   // Declares the scope this route needs; an API key without it is
@@ -529,7 +529,7 @@ export async function GET(request: NextRequest) {
 **📋 Metadata CRUD Endpoints:**
 
 ```typescript
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 // GET /api/v1/tasks/:id/meta
 export async function GET(request, { params }) {

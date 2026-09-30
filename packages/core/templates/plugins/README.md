@@ -28,10 +28,10 @@ This file follows the project's established documentation standards and includes
 
 ```bash
 # Build plugin registry
-npm run build-registry
+pnpm build:registries
 
 # Watch mode for development
-npm run build-registry -- --watch
+pnpm exec nextspark prepare --watch
 
 # Validate plugin configuration
 npm run validate-registry

@@ -114,7 +114,7 @@ echo $?  # Should be 0
 **Common build errors to check:**
 ```typescript
 // Missing import
-Error: Cannot find module '@/core/lib/...'
+Error: Cannot find module '@nextsparkjs/core/lib/...'
 
 // Type error
 Type 'string' is not assignable to type 'number'
@@ -160,7 +160,7 @@ pnpm lint --fix
 
 ```typescript
 // Check each API route file
-const apiRoutes = await Glob('app/api/v1/**/route.ts')
+const apiRoutes = await Glob('api/**/route.ts')
 
 for (const route of apiRoutes) {
   const content = await Read(route)
@@ -181,8 +181,8 @@ for (const route of apiRoutes) {
 
 **Expected pattern in each route:**
 ```typescript
-import { auth } from '@/app/lib/auth'
-import { validateApiKey } from '@/core/lib/auth/api-keys'
+import { auth } from '@nextsparkjs/core/lib/auth'
+import { validateApiKey } from '@nextsparkjs/core/lib/auth/api-keys'
 
 export async function GET(request: Request) {
   // Check session OR API key
@@ -326,7 +326,7 @@ FAIL  __tests__/api/products.test.ts
 
 **TypeScript Errors:**
 ```
-app/api/v1/products/route.ts:45:10
+api/products/route.ts:45:10
 Type 'undefined' is not assignable to type 'string'
 ```
 
@@ -392,7 +392,7 @@ pnpm lint
 pnpm lint --fix
 
 # Check specific file types
-npx tsc --noEmit app/api/v1/**/route.ts
+npx tsc --noEmit api/**/route.ts
 ```
 
 ## Self-Validation Checklist

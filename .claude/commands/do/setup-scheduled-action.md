@@ -28,7 +28,7 @@ Read `.claude/skills/scheduled-actions/SKILL.md` completely before proceeding.
 
 ```typescript
 // handlers/{name}.ts
-import { registerScheduledAction } from '@/core/lib/scheduled-actions'
+import { registerScheduledAction } from '@nextsparkjs/core/lib/scheduled-actions'
 
 export function registerMyHandler() {
   registerScheduledAction('my-action:type', async (payload, action) => {
@@ -63,7 +63,7 @@ export function registerAllHandlers() {
 
 1. Rebuild registry:
    ```bash
-   node core/scripts/build/registry.mjs
+   pnpm build:registries
    ```
 
 2. Restart dev server to load handlers

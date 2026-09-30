@@ -390,7 +390,7 @@ export const themeNotificationsConfig = {
 
 // 1. Theme defines handlers (functions, but registered)
 // handlers/scheduled/send-daily-report.ts
-import type { ScheduledHandler } from '@/core/lib/scheduled-actions/types'
+import type { ScheduledHandler } from '@nextsparkjs/core/lib/scheduled-actions/types'
 
 export const sendDailyReportHandler: ScheduledHandler = async (context) => {
   const users = await context.db.query.users.findMany()

@@ -101,7 +101,7 @@ export function UserCard({ name, email, avatar, onEdit }: UserCardProps) {
 
 import { useQuery } from '@tanstack/react-query'
 import { UserCard } from './UserCard'
-import { Skeleton } from '@/core/components/ui/skeleton'
+import { Skeleton } from '@nextsparkjs/core/components/ui/skeleton'
 
 interface UserProfileProps {
   userId: string
@@ -456,8 +456,8 @@ export function SmartButton(props: ButtonProps) {
 
 import * as React from 'react'
 import { MapPin } from 'lucide-react'
-import { Input } from '@/core/components/ui/input'
-import { cn } from '@/core/lib/utils'
+import { Input } from '@nextsparkjs/core/components/ui/input'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 export interface Address {
   street: string
@@ -637,9 +637,9 @@ function CheckoutForm() {
 import * as React from 'react'
 import NextImage from 'next/image'
 import { X, Eye, Upload } from 'lucide-react'
-import { Button } from '@/core/components/ui/button'
-import { Dialog, DialogContent, DialogTrigger } from '@/core/components/ui/dialog'
-import { cn } from '@/core/lib/utils'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { Dialog, DialogContent, DialogTrigger } from '@nextsparkjs/core/components/ui/dialog'
+import { cn } from '@nextsparkjs/core/lib/utils'
 
 export interface UploadedImage {
   id: string
@@ -1136,7 +1136,7 @@ The AddressInput component provides a structured way to collect address informat
 ### Basic Usage
 
 \`\`\`tsx
-import { AddressInput } from '@/core/components/ui/address-input'
+import { AddressInput } from '@nextsparkjs/core/components/ui/address-input'
 
 function CheckoutForm() {
   const [address, setAddress] = useState({

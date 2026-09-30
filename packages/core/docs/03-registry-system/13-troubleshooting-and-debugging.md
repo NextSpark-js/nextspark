@@ -1,6 +1,6 @@
 # Troubleshooting and Debugging
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 **Common errors • Debugging techniques • Migration patterns • Best practices**
 
@@ -59,7 +59,7 @@ console.log(entity) // undefined
 **Solution:**
 ```bash
 # Rebuild registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Or with verbose output
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --verbose
@@ -83,7 +83,7 @@ const entity = ENTITY_REGISTRY.tasks
 **Solution:**
 ```bash
 # 1. Rebuild registry (generates new types)
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # 2. Restart TypeScript server in VS Code
 # Cmd/Ctrl + Shift + P → "TypeScript: Restart TS Server"
@@ -150,13 +150,13 @@ Module not found: Can't resolve '@nextsparkjs/registries/entity-registry'
 **Solution:**
 ```bash
 # Generate all registries
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Check file exists
 ls .nextspark/registries/entity-registry.ts
 
 # If still missing, check build script for errors
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs 2>&1 | tee build.log
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare 2>&1 | tee build.log
 ```
 
 ---
@@ -170,10 +170,10 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs 2>&1 | tee bu
 **Solution:**
 ```bash
 # Manual rebuild in the monorepo
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Watch for changes in the monorepo
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
 ---
@@ -255,7 +255,7 @@ if (DRY_RUN) {
 
 **Usage:**
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ---
@@ -453,7 +453,7 @@ npx tsx scripts/validate-registries.ts
 **Issue: Build script hangs**
 ```bash
 # Check for infinite loops or unresolved promises
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Add progress logging
 ```
@@ -540,7 +540,7 @@ import { EntityName } from '@nextsparkjs/registries/entity-registry'
 **Solution:**
 ```bash
 # Registry not built yet
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Verify export exists
 grep "export type EntityName" .nextspark/registries/entity-registry.ts
@@ -623,7 +623,7 @@ const EntityRegistry = lazy(() => import('@nextsparkjs/registries/entity-registr
 ```bash
 # Add to git hooks
 # .husky/pre-commit
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 git add .nextspark/registries/
 ```
 
@@ -662,7 +662,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
       - run: npm install
-      - run: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+      - run: cd apps/dev && node ../../packages/cli/dist/cli.js prepare
       - run: npx tsx scripts/validate-registries.ts
       - run: pnpm lint
       - run: npx tsc --noEmit

@@ -32,7 +32,7 @@ Returns all registered blocks with their metadata.
       "description": "A simple hero block with title and subtitle",
       "category": "hero",
       "icon": "Layout",
-      "thumbnail": "/blocks/hero-simple.png",
+      "thumbnail": "/_next/static/media/thumbnail.1djewq0ll8mx0.png",
       "scope": ["pages"],
       "fieldDefinitions": [
         {
@@ -72,7 +72,7 @@ Returns detailed metadata for a specific block.
   "description": "Expandable FAQ section with questions and answers",
   "category": "faq",
   "icon": "HelpCircle",
-  "thumbnail": "/blocks/faq-accordion.png",
+  "thumbnail": "/_next/static/media/thumbnail.1djewq0ll8mx0.png",
   "fieldDefinitions": [
     {
       "name": "title",

@@ -24,7 +24,7 @@ const TEAM_HEADERS = { 'x-team-id': 'team-1' }
 
 function useEntity(entity: EntityConfig) {
   mocks.resolveEntityFromUrl.mockResolvedValue({
-    isValidEntity: true, entityConfig: entity, entityName: entity.slug, hasCustomOverride: false,
+    isValidEntity: true, entityConfig: entity, entityName: entity.slug,
   })
 }
 

@@ -64,7 +64,6 @@ beforeEach(() => {
     isValidEntity: true,
     entityConfig: NOTES_ENTITY,
     entityName: 'notes',
-    hasCustomOverride: false,
   })
   mocks.authenticateRequest.mockResolvedValue(SESSION_AUTH())
   // Real schemas, not the permissive harness stub — the strict policy is the subject here.

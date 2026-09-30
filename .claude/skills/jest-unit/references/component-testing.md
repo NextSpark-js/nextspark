@@ -8,7 +8,7 @@ React component testing patterns with Testing Library and Jest.
 import { describe, test, expect, beforeEach, jest } from '@jest/globals'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { LoginForm } from '@/core/components/auth/forms/LoginForm'
+import { LoginForm } from '@nextsparkjs/core/components/auth/forms/LoginForm'
 
 describe('LoginForm Component', () => {
   beforeEach(() => {

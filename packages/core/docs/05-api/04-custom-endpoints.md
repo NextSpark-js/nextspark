@@ -33,7 +33,7 @@ While **dynamic endpoints** auto-generate CRUD APIs for entities, **custom endpo
 GET /api/v1/tasks → Automatic CRUD
 
 // Custom endpoint (manually created)
-POST /api/v1/ai/generate → Custom logic
+POST /api/ai/generate → Custom logic
 ```
 
 ---
@@ -45,7 +45,7 @@ POST /api/v1/ai/generate → Custom logic
 **1. Complex Business Logic**
 ```typescript
 // Example: Generate AI content
-POST /api/v1/ai/generate
+POST /api/ai/generate
 {
   "prompt": "Write product description",
   "maxTokens": 150
@@ -61,7 +61,7 @@ POST /api/v1/ai/generate
 **2. Multi-Entity Operations**
 ```typescript
 // Example: Bulk import
-POST /api/v1/import/tasks
+POST /api/import/tasks
 {
   "tasks": [...],  // Create tasks
   "assignUsers": true,  // Update users
@@ -74,7 +74,7 @@ POST /api/v1/import/tasks
 **3. Third-Party Integrations**
 ```typescript
 // Example: Webhook receiver
-POST /api/v1/webhooks/stripe
+POST /api/webhooks/stripe
 {
   "type": "payment.succeeded",
   "data": { /* ... */ }
@@ -86,7 +86,7 @@ POST /api/v1/webhooks/stripe
 **4. Specialized Queries**
 ```typescript
 // Example: Analytics
-GET /api/v1/analytics/dashboard
+GET /api/analytics/dashboard
 {
   "taskCompletionRate": 87,
   "averageTimeToComplete": "2.5 hours",
@@ -119,9 +119,9 @@ DELETE /api/v1/tasks/:id
 
 **1. Create route file:**
 ```typescript
-// app/api/v1/custom-route/route.ts
+// api/custom-route/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
 
 **Capture URL parameters:**
 ```typescript
-// app/api/v1/reports/[reportId]/export/route.ts
+// api/reports/[reportId]/export/route.ts
 export async function GET(
   request: NextRequest,
   { params }: { params: { reportId: string } }
@@ -217,65 +217,35 @@ export async function GET(
 
 ## Plugin Route Handlers
 
-**Plugins can register custom routes** via the route handler registry.
+**A plugin serves its own routes from its `api/` directory.** There is no route handler registry to register them in: `nextspark prepare` generates one route file for each of them, statically.
 
-### Register Plugin Route
+### Add a Plugin Route
 
-**1. Define route handler:**
+**1. Create the route file:**
 ```typescript
-// plugins/ai-assistant/routes/generate.ts
+// plugins/ai-assistant/api/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { RouteHandler } from '@/core/types/plugin'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
-export const generateRouteHandler: RouteHandler = {
-  path: '/ai/generate',
-  method: 'POST',
-  handler: async (request: NextRequest) => {
-    const body = await request.json()
-    const { prompt, maxTokens = 100 } = body
-
-    // Call OpenAI
-    const response = await openai.createCompletion({
-      model: 'gpt-4',
-      prompt,
-      max_tokens: maxTokens
-    })
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        text: response.choices[0].text,
-        tokensUsed: response.usage.total_tokens
-      }
-    })
-  },
-  auth: 'required',  // Require authentication
-  scopes: ['write'],  // Require write scope
-  rateLimit: {
-    limit: 20,
-    window: '1h'
+export async function POST(request: NextRequest) {
+  const auth = await authenticateRequest(request, { requiredScope: 'ai:write' })
+  if (!auth.success) {
+    return createAuthFailureResponse(auth)
   }
+
+  const { prompt, maxTokens = 100 } = await request.json()
+  // ... call the model ...
+
+  return NextResponse.json({ success: true, data: { text: '...', tokensUsed: 142 } })
 }
 ```
 
-**2. Register in plugin config:**
-```typescript
-// plugins/ai-assistant/ai-assistant.config.ts
-import { PluginConfig } from '@/core/types/plugin'
-import { generateRouteHandler } from './routes/generate'
+**2. Enable the plugin in `nextspark.config.ts`:** `plugins: ['ai-assistant']`.
 
-export const aiAssistantConfig: PluginConfig = {
-  name: 'ai-assistant',
-  version: '1.0.0',
-  routes: [
-    generateRouteHandler
-  ]
-}
-```
-
-**3. Access via API:**
+**3. Access via API:** a plugin's `api/<path>/route.ts` is served at `/api/plugins/<plugin>/<path>`, and only there
+(a plugin route outside `/api/plugins/<its-name>/**` stops generation).
 ```bash
-POST /api/v1/ai/generate
+POST /api/plugins/ai-assistant/generate
 Authorization: Bearer sk_live_abc123...
 Content-Type: application/json
 
@@ -285,16 +255,7 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "text": "Experience premium sound quality with our wireless headphones...",
-    "tokensUsed": 142
-  }
-}
-```
+A plugin route's `docs.md` sits next to it, but `presets.ts` presets are only collected for project `api/`, entities and core, not for plugin routes.
 
 ---
 
@@ -394,7 +355,7 @@ export async function GET(request: NextRequest) {
 
 **Use dual auth middleware:**
 ```typescript
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request, { requiredScope: 'users:read' })
@@ -420,7 +381,7 @@ export async function GET(request: NextRequest) {
 
 **Custom rate limits:**
 ```typescript
-import { checkRateLimit } from '@/core/lib/api/rate-limit'
+import { checkRateLimit } from '@nextsparkjs/core/lib/api/rate-limit'
 
 export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request, { requiredScope: 'ai:write' })
@@ -589,10 +550,10 @@ export async function GET(request: NextRequest) {
 ### Example 1: AI Text Generation
 
 ```typescript
-// app/api/v1/ai/generate/route.ts
+// api/ai/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
-import { checkRateLimit } from '@/core/lib/api/rate-limit'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { checkRateLimit } from '@nextsparkjs/core/lib/api/rate-limit'
 import * as z from 'zod'
 import OpenAI from 'openai'
 
@@ -674,7 +635,7 @@ export async function POST(request: NextRequest) {
 ### Example 2: Webhook Receiver
 
 ```typescript
-// app/api/v1/webhooks/stripe/route.ts
+// api/webhooks/stripe/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
@@ -753,9 +714,9 @@ async function handleSubscriptionUpdate(subscription: any) {
 ### Example 3: Bulk Import
 
 ```typescript
-// app/api/v1/import/tasks/route.ts
+// api/import/tasks/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import * as z from 'zod'
 import { db } from '@/lib/db'
 

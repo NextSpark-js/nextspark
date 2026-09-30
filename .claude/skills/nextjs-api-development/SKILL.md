@@ -15,22 +15,24 @@ Patterns and tools for REST API development with Next.js 15 App Router.
 ## Architecture Overview
 
 ```
-app/api/v1/
+Core (read-only, @nextsparkjs/core/routes/api/v1/, served at /api/v1/**)
 ├── [entity]/              # Dynamic CRUD (auto-generated from registry)
 │   ├── route.ts          # GET (list) / POST (create)
 │   └── [id]/route.ts     # GET (read) / PATCH (update) / DELETE
-├── (contents)/           # Custom overrides (parentheses = not in URL)
-│   └── tasks/            # Example: custom implementation
 ├── users/                # Core endpoints (not dynamic)
 ├── api-keys/             # API key management
 ├── auth/                 # Authentication endpoints
 ├── billing/              # Billing & subscriptions
-├── teams/                # Team management
-└── theme/                # Theme-specific endpoints
+└── teams/                # Team management
+
+Project (yours)
+├── api/<path>/route.ts             # served at /api/<path>
+├── templates/api/v1/<path>/route.ts  # replaces a core handler that exists
+└── plugins/<name>/api/<path>/route.ts  # served at /api/plugins/<name>/<path>
 ```
 
-> **📍 Context-Aware Paths:** Core API routes (`app/api/v1/`) are read-only in consumer projects.
-> Create custom endpoints in `app/api/` or override via `(contents)/` pattern.
+> **📍 Context-Aware Paths:** Core API routes (`/api/v1/**`) are read-only in consumer projects.
+> Create custom endpoints in the project's `api/` (served at `/api/<path>`); a project route under `/api/v1/**` is refused, and a deliberate override of a core handler goes in `templates/api/v1/<path>/route.ts`. `src/app` is generated: never edit it.
 > See `core-theme-responsibilities` skill for complete rules.
 
 ## When to Use This Skill
@@ -50,7 +52,7 @@ All routes MUST use `withApiLogging` wrapper and `addCorsHeaders`:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
-import { queryWithRLS, mutateWithRLS } from '@/core/lib/db'
+import { queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import {
   createApiResponse,
   createApiError,
@@ -59,8 +61,8 @@ import {
   withApiLogging,
   handleCorsPreflightRequest,
   addCorsHeaders,
-} from '@/core/lib/api/helpers'
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+} from '@nextsparkjs/core/lib/api/helpers'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -109,7 +111,7 @@ export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse
 ### Response Helpers (MANDATORY)
 
 ```typescript
-import { createApiResponse, createApiError } from '@/core/lib/api/helpers'
+import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 
 // Success responses - always wrap with addCorsHeaders
 const response = createApiResponse(data)
@@ -170,12 +172,12 @@ DELETE /api/v1/products/123 → Delete product
 
 **When to use:** Standard CRUD, basic validation, standard pagination.
 
-### 2. Custom Override Routes
+### 2. Custom Routes
 
-For special business logic. Use `(contents)/` folder.
+For special business logic beyond CRUD, add an endpoint in `api/<path>/route.ts` (served at `/api/<path>`). `/api/v1/**` is core's: a deliberate override of a core handler that exists goes in `templates/api/v1/<path>/route.ts`, but an entity has no per-entity handler to override.
 
 ```typescript
-// app/api/v1/(contents)/tasks/route.ts
+// api/tasks-admin/route.ts
 export const POST = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   const authResult = await authenticateRequest(req, { requiredScope: 'tasks:write' })
   if (!authResult.success) {
@@ -273,11 +275,11 @@ python .claude/skills/nextjs-api-development/scripts/generate-crud-tests.py \
 ### Validate API Structure
 ```bash
 python .claude/skills/nextjs-api-development/scripts/validate-api.py \
-  --path app/api/v1/
+  --path api/
 
 # Strict mode (exit with error if violations found)
 python .claude/skills/nextjs-api-development/scripts/validate-api.py \
-  --path app/api/v1/ \
+  --path api/ \
   --strict
 ```
 

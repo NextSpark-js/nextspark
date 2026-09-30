@@ -32,7 +32,7 @@
 
 ## What is NextSpark?
 
-NextSpark is a complete, production-ready SaaS framework built on Next.js 16, with support for Next.js 15. It provides everything you need to launch a SaaS product: authentication, payments, teams, permissions, entities, themes, and more—all pre-configured and ready to customize.
+NextSpark is a complete, production-ready SaaS framework built on Next.js 16, with support for Next.js 15. It provides everything you need to launch a SaaS product: authentication, payments, teams, permissions, entities, project templates, and more—all pre-configured and ready to customize.
 
 ## Features
 
@@ -42,7 +42,7 @@ NextSpark is a complete, production-ready SaaS framework built on Next.js 16, wi
 - **Permissions** — Granular role-based access control system
 - **Entities** — Dynamic CRUD with automatic API generation and validation
 - **MCP Server** — Every API-exposed entity gets LLM tool-calling (Claude, etc.) for free via the Model Context Protocol
-- **Themes** — Multiple theme support with easy customization
+- **Project templates** — Start from starter, blog, CRM or productivity; after creation the source is yours
 - **Plugins** — Extensible plugin architecture for adding features
 - **i18n** — Full internationalization with [next-intl](https://next-intl-docs.vercel.app/)
 - **UI Components** — 50+ components based on [shadcn/ui](https://ui.shadcn.com/)

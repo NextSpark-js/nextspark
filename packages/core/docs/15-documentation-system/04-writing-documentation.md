@@ -1,6 +1,6 @@
 # Writing Documentation
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -148,7 +148,7 @@ export interface EntityConfig {
 ```
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 pnpm dev
 ```
 
@@ -173,7 +173,7 @@ Use backticks for inline code:
 ```markdown
 The `DOCS_REGISTRY` constant provides access to project documentation metadata.
 
-Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` from the repository root to regenerate all registries.
+Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` from the repository root to regenerate all registries.
 
 Import from `@nextsparkjs/registries/docs-registry`.
 ```
@@ -348,7 +348,7 @@ This returns the complete entity configuration including fields, metadata, and r
 Show file paths for clarity:
 
 ````markdown
-**File: `app/api/users/route.ts`**
+**File: `api/users/route.ts`**
 ```typescript
 export async function GET() {
   return Response.json({ users: [] })
@@ -485,7 +485,7 @@ View [Next.js documentation](https://nextjs.org/docs)
 For published documentation, add or modify markdown under the project's `docs/public/` or `docs/superadmin/` directory. Then regenerate every registry:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 The generated documentation module is written to the consuming project's `.nextspark/registries/docs-registry.ts` and imported as `@nextsparkjs/registries/docs-registry`. Core and plugin documentation are internal reference material and are not registry sources.
@@ -493,7 +493,7 @@ The generated documentation module is written to the consuming project's `.nexts
 ### Development Workflow
 
 1. Create or edit project public or superadmin markdown files
-2. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+2. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 3. Start the development server: `pnpm dev`
 4. Navigate to the corresponding documentation route
 5. Verify navigation and rendering

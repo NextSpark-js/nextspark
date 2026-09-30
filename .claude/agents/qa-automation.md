@@ -320,7 +320,7 @@ cy.get(cySelector('entities.table.row', { slug: 'tasks', id: '123' }))
 // Generates: [data-cy="tasks-row-123"]
 
 // ❌ FORBIDDEN - Import from core in tests
-import { cySelector } from '@/core/lib/test'  // NEVER do this in tests!
+import { cySelector } from '@nextsparkjs/core/lib/test'  // NEVER do this in tests!
 
 // ❌ FORBIDDEN - Hardcoded selector strings
 cy.get('[data-cy="login-submit"]')  // NEVER do this!
@@ -344,9 +344,9 @@ export class TasksPOM extends DashboardEntityPOM {
 
 | Function | Use | Import From | Notes |
 |----------|-----|-------------|-------|
-| `cySelector(path)` | Cypress tests/POMs | `../selectors` (theme) | NEVER from `@/core/lib/test` |
+| `cySelector(path)` | Cypress tests/POMs | `../selectors` (theme) | NEVER from `@nextsparkjs/core/lib/test` |
 | `cySelector(path, { id })` | Dynamic selectors | `../selectors` (theme) | With placeholders |
-| `sel(path)` | React components only | `@/core/lib/test` (core) or `@theme/.../selectors` (theme) | Based on scope |
+| `sel(path)` | React components only | `@nextsparkjs/core/lib/test` (core) or `@theme/.../selectors` (theme) | Based on scope |
 
 ## Testing Protocol
 
@@ -1755,8 +1755,8 @@ cy.get(cySelector('entities.table.container', { slug: 'products' })).should('con
 | Dynamic selector | `cySelector('path', { replacements })` | `cySelector('entities.table.row', { slug, id })` | `../selectors` |
 | Iteration pattern | CSS attribute selector | `[data-cy^="products-row-"]` | N/A |
 | **FORBIDDEN** | Hardcoded string | ~~`'[data-cy="login-form"]'`~~ | - |
-| **FORBIDDEN** | Import from core | ~~`import { cySelector } from '@/core/lib/test'`~~ | - |
+| **FORBIDDEN** | Import from core | ~~`import { cySelector } from '@nextsparkjs/core/lib/test'`~~ | - |
 
-**Key Rule:** ALL Cypress tests and POMs import `cySelector` from the theme's `selectors.ts` file (relative path like `../selectors`), NEVER from `@/core/lib/test`.
+**Key Rule:** ALL Cypress tests and POMs import `cySelector` from the theme's `selectors.ts` file (relative path like `../selectors`), NEVER from `@nextsparkjs/core/lib/test`.
 
 Remember: Your tests are the final automated verification. Be thorough, use the documented selectors, and ensure 100% pass rate before proceeding.

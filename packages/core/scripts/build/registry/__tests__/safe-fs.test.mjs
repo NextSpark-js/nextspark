@@ -297,7 +297,6 @@ test('no file of the registry build, the rest of scripts/build or the postinstal
   const names = files.map(file => file.slice(CORE_DIR.length + 1))
   for (const expected of [
     'scripts/build/registry.mjs',
-    'scripts/build/theme.mjs',
     'scripts/build/registry/post-build/test-fixtures.mjs',
     'scripts/build/registry/post-build/own-gitignores.mjs',
     'scripts/utils/logging.mjs',

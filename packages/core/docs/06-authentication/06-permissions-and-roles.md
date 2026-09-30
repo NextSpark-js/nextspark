@@ -120,7 +120,7 @@ session.user.flags // ['beta_tester', 'vip']
 ### In Server Components
 
 ```typescript
-import { auth } from '@/core/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { headers } from 'next/headers'
 
 export default async function AdminPage() {
@@ -146,7 +146,7 @@ export default async function AdminPage() {
 ```typescript
 'use client'
 
-import { useSession } from '@/core/lib/auth-client'
+import { useSession } from '@nextsparkjs/core/lib/auth-client'
 
 export function FeatureComponent() {
   const { data: session } = useSession()
@@ -171,8 +171,8 @@ export function FeatureComponent() {
 ### In API Routes
 
 ```typescript
-// app/api/admin/route.ts
-import { auth } from '@/core/lib/auth'
+// api/admin/route.ts
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -200,7 +200,7 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 // middleware.ts
-import { auth } from '@/core/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -290,7 +290,7 @@ API keys use scope-based permissions:
 ### Checking Scopes
 
 ```typescript
-import { hasScope } from '@/core/lib/api/auth'
+import { hasScope } from '@nextsparkjs/core/lib/api/auth'
 
 export async function GET(request: NextRequest) {
   const auth = await validateApiKey(request)
@@ -376,7 +376,7 @@ export function hasAllFlags(user: SessionUser, ...flags: UserFlag[]): boolean {
 ### Usage
 
 ```typescript
-import { hasRole, hasFlag } from '@/core/lib/permissions'
+import { hasRole, hasFlag } from '@nextsparkjs/core/lib/permissions'
 
 const canManageUsers = hasRole(session.user, 'admin', 'colaborator')
 const hasBetaAccess = hasFlag(session.user, 'beta_tester')
@@ -462,7 +462,7 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
 The unified way to check any permission type:
 
 ```typescript
-import { PermissionService } from '@/core/lib/services/permission.service'
+import { PermissionService } from '@nextsparkjs/core/lib/services/permission.service'
 
 // Team permissions
 if (PermissionService.canDoAction('admin', 'team.edit')) {
@@ -488,7 +488,7 @@ PermissionService.canDoAction('owner', 'anything') // Always true
 All permissions are pre-computed at build time for O(1) runtime lookups:
 
 ```typescript
-import { PermissionService } from '@/core/lib/services/permission.service'
+import { PermissionService } from '@nextsparkjs/core/lib/services/permission.service'
 
 // O(1) permission check
 if (PermissionService.hasPermission('admin', 'posts.create')) {

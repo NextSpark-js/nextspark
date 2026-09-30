@@ -680,7 +680,7 @@ function App() {
 ```typescript
 // core/components/entities/EntityList.tsx
 import { memo, useCallback, useMemo } from 'react'
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
 interface EntityListProps {
   entityConfig: EntityConfig

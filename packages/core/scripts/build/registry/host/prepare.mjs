@@ -362,6 +362,8 @@ export function stagedRegistryBuild({ projectRoot, coreRoot, env = process.env }
         const tail = result.output.trim().split('\n').slice(-40).join('\n')
         throw new PrepareError([{ code: 'NS_HOST_REGISTRY_BUILD_FAILED', message: `the registry build failed (exit ${result.code}):\n${tail}` }])
       }
+      // The build's output is dropped when it succeeds, except its WARNING/ERROR lines (e.g. a thumbnail.png that is not a PNG)
+      for (const line of result.output.split('\n')) if (line.includes('WARNING') || line.includes('ERROR')) process.stderr.write(`${line}\n`)
       return walkFiles(outputDir).map(path => ({ path: `${REGISTRIES_DIR}/${path}`, content: withoutBuildTime(readFileSync(join(outputDir, path), 'utf8')), grammar: null }))
     } finally {
       fs.rmSync(staging, { recursive: true, force: true })

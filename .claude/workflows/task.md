@@ -802,7 +802,7 @@ User: Create endpoint to export products as CSV
 Claude's process:
 
 Phase 1: REQUIREMENTS (10 min)
-├── AC1: GET /api/v1/products/export returns CSV
+├── AC1: GET /api/products/export returns CSV
 ├── AC2: Supports filtering by date range
 ├── AC3: Requires authentication
 ├── AC4: Returns proper headers for download
@@ -815,7 +815,7 @@ Phase 2: PLAN (10 min)
 └── Risk: Large data sets → add pagination
 
 Phase 3: EXECUTE (40 min)
-├── Create app/api/v1/products/export/route.ts
+├── Create api/products/export/route.ts
 ├── Add exportToCsv() to ProductsService
 ├── Call backend-developer for complex auth logic
 ├── Create API test

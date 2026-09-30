@@ -8,7 +8,7 @@ Testing patterns for React hooks and service classes.
 
 ```typescript
 import { renderHook, act } from '@testing-library/react'
-import { useAuthMethodDetector } from '@/core/hooks/useAuthMethodDetector'
+import { useAuthMethodDetector } from '@nextsparkjs/core/hooks/useAuthMethodDetector'
 
 const mockSearchParams = { get: jest.fn() }
 const mockSaveAuthMethod = jest.fn()
@@ -17,7 +17,7 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => mockSearchParams
 }))
 
-jest.mock('@/core/hooks/useLastAuthMethod', () => ({
+jest.mock('@nextsparkjs/core/hooks/useLastAuthMethod', () => ({
   useLastAuthMethod: () => ({ saveAuthMethod: mockSaveAuthMethod })
 }))
 
@@ -52,7 +52,7 @@ describe('useAuthMethodDetector Hook', () => {
 
 ```typescript
 import { renderHook, act } from '@testing-library/react'
-import { useCounter } from '@/core/hooks/useCounter'
+import { useCounter } from '@nextsparkjs/core/hooks/useCounter'
 
 describe('useCounter', () => {
   test('should initialize with default value', () => {
@@ -107,7 +107,7 @@ describe('useCounter', () => {
 
 ```typescript
 import { renderHook, waitFor } from '@testing-library/react'
-import { useUserData } from '@/core/hooks/useUserData'
+import { useUserData } from '@nextsparkjs/core/hooks/useUserData'
 
 describe('useUserData', () => {
   beforeEach(() => {
@@ -155,7 +155,7 @@ describe('useUserData', () => {
 ```typescript
 import { renderHook } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useEntityQuery } from '@/core/hooks/useEntityQuery'
+import { useEntityQuery } from '@nextsparkjs/core/hooks/useEntityQuery'
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -201,14 +201,14 @@ describe('useEntityQuery', () => {
 import { describe, test, expect, beforeEach, jest } from '@jest/globals'
 
 // Mock database
-jest.mock('@/core/lib/db', () => ({
+jest.mock('@nextsparkjs/core/lib/db', () => ({
   queryOneWithRLS: jest.fn(),
   queryWithRLS: jest.fn(),
   mutateWithRLS: jest.fn(),
 }))
 
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@/core/lib/db'
-import { TestEntityService } from '@/core/services/test-entity.service'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { TestEntityService } from '@nextsparkjs/core/services/test-entity.service'
 
 const mockQueryOneWithRLS = queryOneWithRLS as jest.MockedFunction<typeof queryOneWithRLS>
 const mockQueryWithRLS = queryWithRLS as jest.MockedFunction<typeof queryWithRLS>
@@ -357,7 +357,7 @@ describe('TestEntityService', () => {
 
 ```typescript
 import { describe, test, expect } from '@jest/globals'
-import { formatCurrency, parseAmount, validateEmail } from '@/core/lib/utils'
+import { formatCurrency, parseAmount, validateEmail } from '@nextsparkjs/core/lib/utils'
 
 describe('Utility Functions', () => {
   describe('formatCurrency', () => {

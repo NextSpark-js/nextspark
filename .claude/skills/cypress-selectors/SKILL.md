@@ -259,7 +259,7 @@ sel('hero.container')  // Wrong!
 sel('blocks.hero.container')  // Correct!
 
 // ❌ NEVER: Import from core in theme components
-import { sel } from '@/core/lib/test'  // Wrong!
+import { sel } from '@nextsparkjs/core/lib/test'  // Wrong!
 import { sel } from '../../lib/selectors'  // Correct!
 
 // ❌ NEVER: Add selector without UI element

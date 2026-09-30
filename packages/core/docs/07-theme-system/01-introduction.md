@@ -1,6 +1,6 @@
 # Project Theme System
 
-> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (add `--watch` to watch).
 
 ## Overview
 
@@ -62,9 +62,9 @@ export default defineConfig({
 
 ## Styles
 
-Project styles live under `styles/`. The build maintains the generated
-`src/app/globals.css` adapter and `.next/theme-generated.css`; do not edit those
-outputs directly.
+Project styles live under `styles/`. The root layout that `nextspark prepare`
+generates imports `@/styles/globals.css` directly; do not edit anything under
+`src/app/`.
 
 ## Runtime access
 
@@ -91,6 +91,6 @@ When working in this repository, the reference project root is `apps/dev`:
 
 ```bash
 cd apps/dev
-node ../../packages/core/scripts/build/registry.mjs --build
+node ../../packages/cli/dist/cli.js prepare
 pnpm dev
 ```

@@ -26,7 +26,7 @@ core/lib/
 app/hooks/
 └── useAuth.ts                # Client-side auth hook
 
-app/(auth)/
+packages/core/src/routes/(auth)/
 ├── login/                    # Login page
 ├── register/                 # Registration page
 ├── verify-email/             # Email verification
@@ -50,7 +50,7 @@ Used for authenticated users in the dashboard UI.
 
 ```typescript
 // Server-side session check
-import { auth } from '@/core/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 
 const session = await auth.api.getSession({
   headers: request.headers
@@ -63,7 +63,7 @@ if (!session?.user) {
 
 ```typescript
 // Client-side with useAuth hook
-import { useAuth } from '@/app/hooks/useAuth'
+import { useAuth } from '@/hooks/useAuth'
 
 function Dashboard() {
   const { user, session, isLoading, isAuthenticated } = useAuth()
@@ -96,7 +96,7 @@ x-team-id: team-tmt-001
 All `/api/v1/` endpoints support both authentication methods.
 
 ```typescript
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   // Tries API Key first, then Session. Declares the scope this route
@@ -143,7 +143,7 @@ type UserRole = 'member' | 'superadmin' | 'developer'
 
 **Check user role:**
 ```typescript
-import { roleHelpers } from '@/core/lib/role-helpers'
+import { roleHelpers } from '@nextsparkjs/core/lib/role-helpers'
 
 // CORRECT: Use roleHelpers for user roles
 if (roleHelpers.isDeveloper(user.role)) {
@@ -180,7 +180,7 @@ type TeamRole = CoreTeamRole | 'editor' | 'contributor' | string
 
 **Check team role:**
 ```typescript
-import { MembershipService } from '@/core/lib/services'
+import { MembershipService } from '@nextsparkjs/core/lib/services'
 
 // Get membership context
 const membership = await MembershipService.get(userId, teamId)
@@ -242,7 +242,7 @@ CREATE TABLE "users_metas" (
 ### Usage
 
 ```typescript
-import { MetaService } from '@/core/lib/services'
+import { MetaService } from '@nextsparkjs/core/lib/services'
 
 // Get user meta
 const theme = await MetaService.get('users', userId, 'preferences.theme')
@@ -263,7 +263,7 @@ await MetaService.delete('users', userId, 'onboarding.step')
 ### Client-Side Hook
 
 ```typescript
-import { useUserSettings } from '@/core/hooks/useUserSettings'
+import { useUserSettings } from '@nextsparkjs/core/hooks/useUserSettings'
 
 function SettingsPage() {
   const { settings, updateSetting, isLoading } = useUserSettings()
@@ -449,15 +449,15 @@ import {
   isGoogleAuthEnabled,
   shouldBlockSignup,
   getPublicAuthConfig,
-} from '@/core/lib/auth/registration-helpers'
+} from '@nextsparkjs/core/lib/auth/registration-helpers'
 ```
 
 ### Enforcement Points
 
-1. **Route handler** (`app/api/auth/[...all]/route.ts`): Blocks email signup for `domain-restricted` and `invitation-only` modes
+1. **Route handler** (`packages/core/src/routes/api/auth/[...all]/route.ts`): Blocks email signup for `domain-restricted` and `invitation-only` modes
 2. **Database hook** (`auth.ts` → `databaseHooks.user.create.before`): Validates email domain for `domain-restricted` and `domain-open` modes; blocks signup in `invitation-only` mode when team exists
 3. **Session hook** (`auth.ts` → `databaseHooks.session.create.before`): Validates email domain on every login for `domain-restricted` and `domain-open` modes
-4. **Signup page** (`app/(auth)/signup/page.tsx`): Redirects to `/login` for `domain-restricted` and `invitation-only`
+4. **Signup page** (`packages/core/src/routes/(auth)/signup/page.tsx`): Redirects to `/login` for `domain-restricted` and `invitation-only`
 4. **LoginForm**: Hides Google OAuth button and signup link based on mode
 5. **SignupForm**: Hides Google button when disabled
 
@@ -466,7 +466,7 @@ import {
 Use `PUBLIC_AUTH_CONFIG` (from `config-sync.ts`) in client components. This strips `allowedDomains` for security.
 
 ```typescript
-import { PUBLIC_AUTH_CONFIG } from '@/core/lib/config/config-sync'
+import { PUBLIC_AUTH_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 
 // PUBLIC_AUTH_CONFIG.registration.mode → 'open' | 'domain-restricted' | 'domain-open' | 'invitation-only'
 // PUBLIC_AUTH_CONFIG.providers.google.enabled → boolean
@@ -572,7 +572,7 @@ const sessionConfig = {
 ## useAuth Hook
 
 ```typescript
-import { useAuth } from '@/app/hooks/useAuth'
+import { useAuth } from '@/hooks/useAuth'
 
 function Component() {
   const {
@@ -608,7 +608,7 @@ function Component() {
 
 ```typescript
 // middleware.ts
-export { auth as middleware } from "@/core/lib/auth"
+export { auth as middleware } from "@nextsparkjs/core/lib/auth"
 
 export const config = {
   matcher: [
@@ -622,8 +622,8 @@ export const config = {
 ### Page-Level Protection
 
 ```typescript
-// app/dashboard/page.tsx
-import { auth } from '@/core/lib/auth'
+// templates/dashboard/page.tsx
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { redirect } from 'next/navigation'
 
 export default async function DashboardPage() {

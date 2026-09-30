@@ -143,7 +143,7 @@ Every plugin MUST have a `plugin.config.ts` file:
 
 ```typescript
 import * as z from 'zod'
-import type { PluginConfig } from '@/core/types/plugin'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
 const MyPluginConfigSchema = z.object({
   apiKey: z.string().min(1),
@@ -234,7 +234,7 @@ export const PLUGIN_REGISTRY: Record<string, PluginRegistryEntry> = {
     name: 'my-plugin',
     config: myPluginConfig,
     hasAPI: true,
-    apiPath: '/api/plugin/my-plugin',
+    apiPath: '/api/plugins/my-plugin',
     hasComponents: true
   }
 }
@@ -244,7 +244,7 @@ export const PLUGIN_REGISTRY: Record<string, PluginRegistryEntry> = {
 
 ```bash
 # After creating or modifying plugins
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ---
@@ -312,7 +312,7 @@ export interface BadInterface { data: any }
 
 ### After Implementation
 
-- [ ] Run `node core/scripts/build/registry.mjs`
+- [ ] Run `pnpm build:registries`
 - [ ] Unit tests with 90%+ coverage
 - [ ] E2E tests with Page Object Model
 - [ ] Build passes: `pnpm build`

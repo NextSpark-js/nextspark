@@ -187,7 +187,7 @@ When working in the NextSpark framework repository:
 When working in a project that installed NextSpark via npm:
 - **FORBIDDEN:** Never create/modify files in `core/` or `node_modules/`
 - **CREATE** theme-specific services in `services/`
-- **CREATE** API routes in `app/api/`
+- **CREATE** API routes in `api/` (served at `/api/<path>`)
 - **CREATE** plugin services in `plugins/{plugin}/`
 - If core functionality needed → Use existing core services, don't duplicate
 
@@ -259,7 +259,7 @@ if (task.stepsCount >= 3) {
 
 **API Endpoints:**
 - Follow dual authentication pattern (session + API key)
-- Implement in `/app/api/v1/[entity]/route.ts`
+- Implement in `api/<endpoint>/route.ts` (entity CRUD needs no route file: core serves it from the entity config)
 - Use Zod schemas for validation
 - Return consistent response format with metadata
 - Handle errors gracefully with appropriate status codes
@@ -267,8 +267,8 @@ if (task.stepsCount >= 3) {
 **Security Implementation:**
 ```typescript
 // ALWAYS implement dual authentication
-import { auth } from '@/app/lib/auth'
-import { validateApiKey } from '@/core/lib/auth/api-keys'
+import { auth } from '@nextsparkjs/core/lib/auth'
+import { validateApiKey } from '@nextsparkjs/core/lib/auth/api-keys'
 
 export async function GET(request: Request) {
   // Check session OR API key
@@ -365,7 +365,7 @@ await launchAgent('test-writer-fixer', {
 
 ### Entity-Based API Structure
 ```typescript
-// /app/api/v1/[entity]/route.ts
+// api/<endpoint>/route.ts
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -437,7 +437,7 @@ export const SOME_REGISTRY = {
 export type SomeKey = keyof typeof SOME_REGISTRY
 
 // At the end of the file, reference the service:
-// Query functions -> @/core/lib/services/some.service.ts
+// Query functions -> @nextsparkjs/core/lib/services/some.service.ts
 ```
 
 ```typescript
@@ -477,7 +477,7 @@ export const getSomethingElse = (key: string) => {
 
 ### Why This Pattern Is Critical
 
-1. **Regeneration**: `node core/scripts/build/registry.mjs` regenerates the file COMPLETELY
+1. **Regeneration**: `pnpm build:registries` regenerates the file COMPLETELY
 2. **Separation**: Registries = Data, Services = Logic
 3. **Testing**: Services are testable, Registries are just data
 4. **Maintainability**: Changes in logic don't require modifying scripts
@@ -633,7 +633,7 @@ describe('[Entity] API', () => {
 ```
 
 **7.2 THEN - Implement API:**
-- Implement in `/app/api/v1/[entity]/route.ts`
+- Implement in `api/<endpoint>/route.ts` (entity CRUD needs no route file: core serves it from the entity config)
 - ALWAYS dual authentication (session + API key)
 - Validation with Zod schemas
 - Response format with metadata
@@ -668,7 +668,7 @@ ${sessionPath}/progress.md
 - [ ] Write tests for DELETE endpoint (200, 401, 404)
 
 #### 7.2 Implementation
-- [ ] Create route handler `app/api/v1/{entity}/route.ts`
+- [ ] Create route handler `api/{endpoint}/route.ts`
 - [ ] Implement dual authentication (session + API key)
 - [ ] Create Zod validation schemas
 - [ ] Implement POST handler
@@ -818,7 +818,7 @@ curl -X PATCH http://localhost:5173/api/v1/users/USER_ID \
 - Tests for DELETE: 200, 401, 404 ✅
 
 **7.2 Implementation:**
-- Route handler: `app/api/v1/products/route.ts`
+- Route handler: `api/products/route.ts`
 - Dual auth implemented (session + API key) ✅
 - Zod validation schemas ✅
 - All handlers: GET, POST, PATCH, DELETE ✅
@@ -963,7 +963,7 @@ Do you approve this security addition?
 - [ ] Tests cover DELETE (200, 401, 404)
 
 **Implementation:**
-- [ ] Route handlers implemented in `/app/api/v1/[entity]/route.ts`
+- [ ] Route handlers implemented in `api/<endpoint>/route.ts`
 - [ ] Dual authentication (session + API key) implemented
 - [ ] Zod validation on all inputs
 - [ ] Correct response format with metadata

@@ -1,12 +1,12 @@
 # PPR Migration Guide (Next.js 16 + Partial Prerendering)
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Overview
 
 Next.js 16 introduces **Partial Prerendering (PPR)** with `cacheComponents: true`. This enables a fully static shell that renders instantly from CDN, with dynamic content streamed via Suspense boundaries.
 
-NextSpark supports PPR as an **opt-in** feature. Projects on Next.js 15 continue to work unchanged.
+Cache Components + PPR is the **default for new projects**: the scaffold's `next.config.mjs` sets `cacheComponents: true`. Legacy ISR stays supported with `cacheComponents` off. Projects created earlier (and Next.js 15 projects) keep working unchanged; the steps below turn PPR on for them.
 
 ## Performance Impact
 
@@ -32,7 +32,7 @@ NextSpark supports PPR as an **opt-in** feature. Projects on Next.js 15 continue
 pnpm add next@^16.2.2 react@^19.2.4 react-dom@^19.2.4
 ```
 
-### 2. Enable cacheComponents in next.config
+### 2. Enable cacheComponents in next.config (already set in new projects)
 
 ```js
 // next.config.mjs
@@ -55,7 +55,7 @@ Update import paths if needed (the API is the same).
 ### 4. Regenerate registries
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 With `cacheComponents: true` detected, the translation registry will now generate PPR-specific exports:
@@ -138,7 +138,7 @@ export default function Page(props) {
 
 ## Rollback
 
-To disable PPR and revert to the default layout:
+To opt out of PPR and use legacy ISR (core's non-PPR layout):
 
-1. Remove `cacheComponents: true` from next.config
+1. Remove `cacheComponents: true` from next.config (or set it to `false`)
 2. Regenerate the host and the registries: `pnpm exec nextspark prepare` (the root layout is core's default again)

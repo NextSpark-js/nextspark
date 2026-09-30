@@ -190,7 +190,7 @@ Services provide typed data access methods. Reference `core/lib/services/user.se
 
 ```typescript
 // Example: tasks.service.ts
-import { queryOneWithRLS, queryWithRLS } from '@/core/lib/db'
+import { queryOneWithRLS, queryWithRLS } from '@nextsparkjs/core/lib/db'
 import type { Task, TaskListOptions, TaskListResult } from './tasks.types'
 
 export class TasksService {

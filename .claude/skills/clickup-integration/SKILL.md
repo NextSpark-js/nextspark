@@ -269,7 +269,7 @@ POST /team/{team_id}/webhook
 ### Handling Webhooks
 
 ```typescript
-// app/api/webhooks/clickup/route.ts
+// api/webhooks/clickup/route.ts
 export async function POST(request: Request) {
   const payload = await request.json();
 

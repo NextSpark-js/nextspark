@@ -28,15 +28,15 @@ From a generated project root:
 
 ```bash
 pnpm build:registries
-pnpm exec nextspark registry:watch
+pnpm exec nextspark prepare --watch
 ```
 
 From this repository's development project:
 
 ```bash
 cd apps/dev
-node ../../packages/core/scripts/build/registry.mjs --build
-node ../../packages/core/scripts/build/registry.mjs --watch
+node ../../packages/cli/dist/cli.js prepare
+node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
 Useful flags:

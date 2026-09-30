@@ -37,7 +37,7 @@ Create multiple records in a single request.
 
 **Endpoint:**
 ```http
-POST /api/v1/import/{entity}
+POST /api/import/{entity}
 ```
 
 **Request:**
@@ -79,7 +79,7 @@ POST /api/v1/import/{entity}
 
 **Implementation:**
 ```typescript
-// app/api/v1/import/[entity]/route.ts
+// api/import/[entity]/route.ts
 export async function POST(
   request: NextRequest,
   { params }: { params: { entity: string } }
@@ -358,7 +358,7 @@ Use Server-Sent Events (SSE) for real-time updates.
 ### SSE Endpoint
 
 ```typescript
-// app/api/v1/stream/tasks/route.ts
+// api/stream/tasks/route.ts
 export async function GET(request: NextRequest) {
   const encoder = new TextEncoder()
 
@@ -401,7 +401,7 @@ function useTaskUpdates() {
   const [tasks, setTasks] = useState([])
 
   useEffect(() => {
-    const eventSource = new EventSource('/api/v1/stream/tasks')
+    const eventSource = new EventSource('/api/stream/tasks')
 
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data)
@@ -481,7 +481,7 @@ Execute multiple API calls in a single HTTP request.
 
 **Implementation:**
 ```typescript
-// app/api/v1/batch/route.ts
+// api/batch/route.ts
 export async function POST(request: NextRequest) {
   const { requests } = await request.json()
   const responses = []

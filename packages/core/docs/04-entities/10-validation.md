@@ -286,7 +286,7 @@ export function TaskForm() {
 ### In Route Handlers
 
 ```typescript
-// app/api/v1/tasks/route.ts
+// api/tasks/route.ts
 import * as z from 'zod'
 
 const createTaskSchema = z.object({

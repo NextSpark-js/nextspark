@@ -1,6 +1,6 @@
 # Build Process
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -29,13 +29,13 @@ dotenv -e .env -- sh -c 'next dev --turbopack -p $PORT'
 Registry inputs are not watched by the root `pnpm dev` command. Build them explicitly when entity, plugin, theme configuration, template, translation, or documentation inputs change:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 For a separate long-running watcher:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
 The registry builder writes `.nextspark/registries/`, including `docs-registry.ts`, and updates generated template files. Restart the Next.js process when a regenerated import is not picked up automatically.
@@ -60,7 +60,7 @@ Files served under `/theme/` live in `apps/dev/public/theme/`; they are not copi
 If registry inputs changed, regenerate them first, then build the app:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 cd ../.. && pnpm build
 ```
 
@@ -75,10 +75,10 @@ The root build delegates to `apps/dev`, where Next.js creates the production out
 pnpm dev
 
 # Registry generation
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 # Registry watch mode (separate terminal)
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 
 # Production app build
 pnpm build

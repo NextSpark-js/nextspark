@@ -131,7 +131,7 @@ function getComponentPath(componentName: string): string {
 
 | Context | Shared Component Import | Theme Component Import |
 |---------|------------------------|------------------------|
-| Monorepo | `@/core/components/...` | `@/...` |
+| Monorepo | `@nextsparkjs/core/components/...` | `@/...` |
 | Consumer | `@core/components/...` (from npm) | `@theme/components/...` |
 
 ### Path Validation
@@ -337,16 +337,16 @@ The Cypress testing system uses a **centralized TypeScript-based selector archit
 
 | Function | Use | Import From (Core Project) | Import From (Theme Project) |
 |----------|-----|---------------------------|----------------------------|
-| `sel(path)` | React components | `@/core/lib/test` | `@theme/tests/cypress/src/selectors` |
+| `sel(path)` | React components | `@nextsparkjs/core/lib/test` | `@theme/tests/cypress/src/selectors` |
 | `cySelector(path)` | Cypress POMs/tests | N/A | `../selectors` (theme's file) |
-| `selDev(path)` | Dev-only (stripped in prod) | `@/core/lib/test` | N/A |
+| `selDev(path)` | Dev-only (stripped in prod) | `@nextsparkjs/core/lib/test` | N/A |
 
 **MANDATORY: Creating UI Components with Selectors**
 
 **For CORE project components** (when `scope.core: true` or working in saas-boilerplate):
 ```typescript
 // ✅ CORRECT - Import sel from core
-import { sel } from '@/core/lib/test'
+import { sel } from '@nextsparkjs/core/lib/test'
 
 function MyComponent() {
   return (
@@ -415,8 +415,8 @@ function EntityRow({ id, slug }: { id: string; slug: string }) {
 3. **For PROJECT scope (`scope.project: "themeName"`):**
    ```typescript
    // Add to tests/cypress/src/selectors.ts
-   import { createSelectorHelpers } from '@/core/lib/test/selector-factory'
-   import { CORE_SELECTORS } from '@/core/lib/test/core-selectors'
+   import { createSelectorHelpers } from '@nextsparkjs/core/lib/test/selector-factory'
+   import { CORE_SELECTORS } from '@nextsparkjs/core/lib/test/core-selectors'
 
    const THEME_SELECTORS = {
      ...CORE_SELECTORS,
@@ -437,7 +437,7 @@ function EntityRow({ id, slug }: { id: string; slug: string }) {
 4. **Use in Component (with correct import):**
    ```typescript
    // Core project:
-   import { sel } from '@/core/lib/test'
+   import { sel } from '@nextsparkjs/core/lib/test'
 
    // Theme project:
    import { sel } from '@theme/tests/cypress/src/selectors'
@@ -808,7 +808,7 @@ Before completing any task, verify:
 - [ ] Checked session `scope.json` to determine CORE vs THEME context
 - [ ] ALL interactive elements use `sel()` function (NOT hardcoded strings)
 - [ ] Import `sel()` from correct location:
-  - Core project: `@/core/lib/test`
+  - Core project: `@nextsparkjs/core/lib/test`
   - Theme project: `@theme/tests/cypress/src/selectors`
 - [ ] New selectors added to correct location BEFORE using:
   - Core scope: `core/lib/test/core-selectors.ts`

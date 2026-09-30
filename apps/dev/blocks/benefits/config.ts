@@ -6,6 +6,5 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: '3-column grid showcasing benefits with optional colored top borders',
   category: 'features',
   icon: 'LayoutGrid',
-  thumbnail: '/theme/blocks/benefits/thumbnail.png',
   scope: ['pages']
 }

@@ -19,7 +19,7 @@ The Social Media Publisher plugin provides flexible building blocks that allow y
 Create a custom endpoint with additional business logic:
 
 ```typescript
-// app/api/v1/custom/publish-with-approval/route.ts
+// api/custom/publish-with-approval/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 import { InstagramAPI, FacebookAPI } from '@/plugins/social-media-publisher/lib/providers'
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 Approve and publish pending posts:
 
 ```typescript
-// app/api/v1/custom/approve-post/[postId]/route.ts
+// api/custom/approve-post/[postId]/route.ts
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ postId: string }> }
@@ -160,7 +160,7 @@ CREATE INDEX "idx_scheduled_posts_scheduledFor"
 ### Schedule Endpoint
 
 ```typescript
-// app/api/v1/custom/schedule-post/route.ts
+// api/custom/schedule-post/route.ts
 export async function POST(request: NextRequest) {
   const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
   if (!authResult.success) {
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
 ### Cron Job to Process Scheduled Posts
 
 ```typescript
-// app/api/cron/process-scheduled-posts/route.ts
+// api/cron/process-scheduled-posts/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/core/lib/db'
 import { publishScheduledPost } from '@/lib/scheduled-posts'
@@ -317,7 +317,7 @@ async function publishScheduledPost(post: any) {
 ### Publish to Multiple Accounts at Once
 
 ```typescript
-// app/api/v1/custom/cross-post/route.ts
+// api/custom/cross-post/route.ts
 export async function POST(request: NextRequest) {
   const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
   if (!authResult.success) {
@@ -396,7 +396,7 @@ export async function POST(request: NextRequest) {
 ### Aggregate Analytics Endpoint
 
 ```typescript
-// app/api/v1/custom/analytics/summary/route.ts
+// api/custom/analytics/summary/route.ts
 export async function GET(request: NextRequest) {
   const authResult = await authenticateRequest(request, { requiredScope: 'social:read' })
   if (!authResult.success) {
@@ -478,7 +478,7 @@ export async function GET(request: NextRequest) {
 ### Publish History Dashboard
 
 ```typescript
-// app/api/v1/custom/analytics/publish-history/route.ts
+// api/custom/analytics/publish-history/route.ts
 export async function GET(request: NextRequest) {
   const authResult = await authenticateRequest(request, { requiredScope: 'social:read' })
   if (!authResult.success) {
@@ -517,7 +517,7 @@ export async function GET(request: NextRequest) {
 ### Save Post as Template
 
 ```typescript
-// app/api/v1/custom/templates/save/route.ts
+// api/custom/templates/save/route.ts
 export async function POST(request: NextRequest) {
   const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
   if (!authResult.success) {
@@ -543,7 +543,7 @@ export async function POST(request: NextRequest) {
 ### Use Template to Publish
 
 ```typescript
-// app/api/v1/custom/templates/publish/[templateId]/route.ts
+// api/custom/templates/publish/[templateId]/route.ts
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ templateId: string }> }
@@ -586,7 +586,7 @@ export async function POST(
 ### Receive Notifications from Meta
 
 ```typescript
-// app/api/webhooks/meta/route.ts
+// api/webhooks/meta/route.ts
 export async function POST(request: NextRequest) {
   const signature = request.headers.get('x-hub-signature-256')
   const body = await request.text()

@@ -136,7 +136,7 @@ Preview at: /devtools/blocks/hero-banner
 ### config.ts
 
 ```typescript
-import type { BlockConfig } from '@/core/block-system/types';
+import type { BlockConfig } from '@nextsparkjs/core/block-system/types';
 
 export const config: BlockConfig = {
   name: 'hero-banner',
@@ -153,7 +153,7 @@ export const config: BlockConfig = {
 ### schema.ts
 
 ```typescript
-import { baseBlockSchema } from '@/core/block-system/schemas';
+import { baseBlockSchema } from '@nextsparkjs/core/block-system/schemas';
 import * as z from 'zod';
 
 export const schema = baseBlockSchema.extend({

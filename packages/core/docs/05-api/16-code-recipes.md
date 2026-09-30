@@ -67,7 +67,7 @@ async function scheduleKeyDeletion(keyId: string, days: number) {
 
 ```typescript
 // lib/session-refresh.ts
-import { auth } from '@/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 
 export async function refreshSession(sessionToken: string) {
   const session = await auth.api.getSession({

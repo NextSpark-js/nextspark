@@ -1,6 +1,6 @@
 # Creating Custom Blocks
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 This guide walks you through creating custom blocks for the Page Builder. You'll learn the file structure, how to extend base schemas, and best practices.
 
@@ -45,7 +45,7 @@ cp -r core/templates/blocks/testimonials blocks/
 cp -r core/templates/blocks/{hero,cta-section,features-grid} blocks/
 
 # Rebuild registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ### Available Presets
@@ -60,14 +60,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 ### Block Thumbnails
 
-Thumbnails are automatically copied to `public/theme/blocks/` during theme build:
-
-```bash
-node core/scripts/build/theme.mjs
-# Output: ✅ Copied 5 block thumbnail(s) to public/theme/blocks/
-```
-
-The thumbnail path pattern is `/theme/blocks/{slug}/thumbnail.png`.
+Put `thumbnail.png` next to the block. The generated block registry imports it statically (`import hero_thumbnail from '@/blocks/hero/thumbnail.png'`), so Next.js processes and serves it as an asset; `BLOCK_REGISTRY[slug].thumbnail.src` is its URL. A block without the file has no `thumbnail`.
 
 ---
 
@@ -88,7 +81,7 @@ touch blocks/my-block/{config,fields,schema,component,index}.ts
 mv component.ts component.tsx
 
 # 3. Rebuild the registry
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ## File Structure
@@ -102,7 +95,7 @@ blocks/{block-slug}/
 ├── schema.ts        # Zod validation schema
 ├── component.tsx    # React component
 ├── index.ts         # Re-exports
-└── thumbnail.png    # Preview image (auto-copied to public/theme/blocks/)
+└── thumbnail.png    # Preview image (imported by the registry)
 ```
 
 ## Step-by-Step Guide
@@ -113,7 +106,7 @@ Define block metadata:
 
 ```typescript
 // blocks/pricing-table/config.ts
-import type { BlockConfig } from '@/core/types/blocks'
+import type { BlockConfig } from '@nextsparkjs/core/types/blocks'
 
 export const config: Omit<BlockConfig, 'fieldDefinitions'> = {
   slug: 'pricing-table',
@@ -121,7 +114,6 @@ export const config: Omit<BlockConfig, 'fieldDefinitions'> = {
   description: 'Display pricing plans with features and CTAs',
   category: 'pricing',
   icon: 'CreditCard',  // Lucide icon name
-  thumbnail: '/theme/blocks/pricing-table/thumbnail.png',
 
   // REQUIRED: Define which entities can use this block
   scope: ['pages'],  // Available only in pages
@@ -161,12 +153,12 @@ Define form fields for the admin UI:
 
 ```typescript
 // blocks/pricing-table/fields.ts
-import type { FieldDefinition } from '@/core/types/blocks'
+import type { FieldDefinition } from '@nextsparkjs/core/types/blocks'
 import {
   baseContentFields,
   baseDesignFields,
   baseAdvancedFields,
-} from '@/core/types/blocks'
+} from '@nextsparkjs/core/types/blocks'
 
 // Block-specific content fields
 const pricingContentFields: FieldDefinition[] = [
@@ -310,7 +302,7 @@ Define validation schema with Zod:
 ```typescript
 // blocks/pricing-table/schema.ts
 import * as z from 'zod'
-import { baseBlockSchema, type BaseBlockProps } from '@/core/types/blocks'
+import { baseBlockSchema, type BaseBlockProps } from '@nextsparkjs/core/types/blocks'
 
 // Define plan schema
 const planSchema = z.object({
@@ -345,11 +337,11 @@ Create the React component:
 ```typescript
 // blocks/pricing-table/component.tsx
 import React from 'react'
-import { Button } from '@/core/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/core/components/ui/card'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@nextsparkjs/core/components/ui/card'
 import { Check } from 'lucide-react'
-import { cn } from '@/core/lib/utils'
-import { buildSectionClasses } from '@/core/types/blocks'
+import { cn } from '@nextsparkjs/core/lib/utils'
+import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import type { PricingTableBlockProps, PlanConfig } from './schema'
 
 export function PricingTableBlock({
@@ -482,7 +474,7 @@ export { PricingTableBlock } from './component'
 Run the build script to register your block:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 **That's it!** Your block is now:
@@ -553,7 +545,7 @@ export function MyBlock({
 Leverage built-in helpers:
 
 ```typescript
-import { buildSectionClasses, getBackgroundClasses } from '@/core/types/blocks'
+import { buildSectionClasses, getBackgroundClasses } from '@nextsparkjs/core/types/blocks'
 
 // Build complete section classes
 const classes = buildSectionClasses('py-16 px-4', { backgroundColor, className })
@@ -681,7 +673,7 @@ describe('Pricing Table Block', () => {
 1. Check that `config.ts` has `scope` property (e.g., `scope: ['pages']`)
 2. Verify `scope` includes the entity you're editing (e.g., 'pages' or 'posts')
 3. Check that `config.ts` has correct `slug`
-4. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+4. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 5. Restart the dev server
 6. Check console for registry errors
 

@@ -19,7 +19,7 @@ Patterns for customizing shadcn/ui themes in NextSpark using CSS variables and t
 All visual customization happens in the project's `styles/globals.css`. No inline colors, no hardcoded values.
 
 ```
-styles/globals.css → BUILD → src/app/globals.css + .next/theme-generated.css → App
+styles/globals.css → imported by the generated root layout (src/app/layout.tsx) → App
 ```
 
 ## When to Use This Skill
@@ -42,9 +42,9 @@ styles/
 │
 └── components.css   # Component-specific styles (optional)
 
-BUILD OUTPUT:
-├── src/app/globals.css       # Generated import adapter (DO NOT EDIT)
-└── .next/theme-generated.css # Generated compiled CSS (DO NOT EDIT)
+There is no theme build step: `nextspark prepare` generates the root layout with
+`import '@/styles/globals.css'`, and Next.js compiles it (hot reload in dev).
+`components.css` is only loaded if `globals.css` imports it.
 ```
 
 ## Using tweakcn.com
@@ -319,7 +319,7 @@ The command will:
 2. Validate required variables
 3. Add missing `@theme inline` mappings if needed
 4. Write to project's `globals.css`
-5. Run `pnpm theme:build`
+5. Let Next.js recompile it (`pnpm dev` reloads; there is no build script to run)
 
 ### Path 2: From Mock Analysis
 
@@ -336,26 +336,14 @@ The process will:
 3. Convert HEX to OKLCH format
 4. Generate dark mode by inverting lightness
 5. Write to project's `globals.css`
-6. Run `pnpm theme:build`
+6. Let Next.js recompile it (`pnpm dev` reloads; there is no build script to run)
 
-## Theme Build Process
+## How the Styles Load
 
-After modifying `globals.css`:
-
-```bash
-# Rebuild theme CSS
-pnpm theme:build
-
-# Or with watch mode
-pnpm theme:build --watch
-```
-
-**What Build Does:**
-1. Finds the nearest project root from `nextspark.config.ts`
-2. Reads `styles/` directly from that project root
-3. Concatenates `globals.css` + `components.css`
-4. Writes the generated adapter/output under `src/app/` and `.next/`
-5. Copies assets to `public/theme/`
+After modifying `globals.css`, nothing has to be rebuilt: the root layout that
+`nextspark prepare` generates in `src/app/layout.tsx` imports `@/styles/globals.css`
+directly, so `pnpm dev` hot-reloads it and `pnpm build` compiles it. Keep project
+assets in `public/` (served from `/`).
 
 ## Validation Checklist
 
@@ -367,7 +355,7 @@ Before finalizing theme customization:
 - [ ] Colors use OKLCH format (not HEX or HSL)
 - [ ] Font stacks include fallbacks
 - [ ] `--radius` uses rem units
-- [ ] `pnpm theme:build` runs without errors
+- [ ] `pnpm build` compiles the styles without errors
 - [ ] Light mode looks correct
 - [ ] Dark mode looks correct
 - [ ] Components render properly
@@ -434,8 +422,7 @@ Before finalizing theme customization:
   /* ... all mappings */
 }
 
-/* ❌ NEVER: Edit src/app/globals.css or .next/theme-generated.css */
-/* (Will be overwritten on next build) */
+/* ❌ NEVER: Edit anything under src/app/ (generated; overwritten by nextspark prepare) */
 
 /* ✅ CORRECT: Edit styles/globals.css */
 ```

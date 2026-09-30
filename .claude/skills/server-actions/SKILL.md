@@ -437,10 +437,10 @@ export async function myAction(data: MyInput): Promise<EntityActionResult<MyOutp
 ```typescript
 // tests/jest/lib/actions/my.actions.test.ts
 
-import { myAction } from '@/core/lib/actions/my.actions'
+import { myAction } from '@nextsparkjs/core/lib/actions/my.actions'
 
 // Mock dependencies
-jest.mock('@/core/lib/auth', () => ({
+jest.mock('@nextsparkjs/core/lib/auth', () => ({
   getTypedSession: jest.fn(),
 }))
 
@@ -456,7 +456,7 @@ describe('myAction', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     // Setup authenticated user
-    const { getTypedSession } = require('@/core/lib/auth')
+    const { getTypedSession } = require('@nextsparkjs/core/lib/auth')
     getTypedSession.mockResolvedValue({
       user: { id: 'user-123' },
     })
@@ -468,7 +468,7 @@ describe('myAction', () => {
   })
 
   it('fails when not authenticated', async () => {
-    const { getTypedSession } = require('@/core/lib/auth')
+    const { getTypedSession } = require('@nextsparkjs/core/lib/auth')
     getTypedSession.mockResolvedValue(null)
 
     const result = await myAction({ name: 'Test' })

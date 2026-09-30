@@ -160,7 +160,7 @@ cp -r core/templates/blocks/hero blocks/
 # 2. Customize as needed (config.ts, schema.ts, fields.ts, component.tsx)
 
 # 3. Rebuild registry
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ### When to Use Presets vs Create from Scratch
@@ -313,14 +313,14 @@ Every block MUST have exactly 5 files in:
 
 ```
 {slug}/
-├── config.ts      # Metadata: slug, name, description, category, icon, thumbnail
+├── config.ts      # Metadata: slug, name, description, category, icon
 ├── schema.ts      # Zod validation schema extending baseBlockSchema
 ├── fields.ts      # FieldDefinitions array for DynamicForm
 ├── component.tsx  # React component with Props type from schema
 └── index.ts       # Re-exports all modules
 ```
 
-### Base Schemas (Import from @/core/types/blocks)
+### Base Schemas (Import from @nextsparkjs/core/types/blocks)
 
 ```typescript
 // Available base schemas
@@ -329,21 +329,21 @@ import {
   baseContentSchema,    // Content tab fields only
   baseDesignSchema,     // Design tab fields only
   baseAdvancedSchema,   // Advanced tab fields only
-} from '@/core/types/blocks'
+} from '@nextsparkjs/core/types/blocks'
 
 // Available base field definitions
 import {
   baseContentFields,   // Content tab: title, content, cta
   baseDesignFields,    // Design tab: backgroundColor
   baseAdvancedFields,  // Advanced tab: className, id
-} from '@/core/types/blocks'
+} from '@nextsparkjs/core/types/blocks'
 
 // Available helpers
 import {
   buildSectionClasses,    // Build CSS classes for section
   getBackgroundClasses,   // Get background color classes
   getSectionAttributes,   // Get section HTML attributes
-} from '@/core/types/blocks'
+} from '@nextsparkjs/core/types/blocks'
 
 // Available types
 import type {
@@ -353,7 +353,7 @@ import type {
   FieldTab,        // 'content' | 'design' | 'advanced'
   FieldType,       // 15 types available
   BlockCategory,   // 15 categories available
-} from '@/core/types/blocks'
+} from '@nextsparkjs/core/types/blocks'
 ```
 
 ### Field Types Available (15)
@@ -429,9 +429,9 @@ const sectionClasses = buildSectionClasses('py-16 px-4', {
 })
 ```
 
-5. **Run build-registry after changes**
+5. **Run the registry build after changes**
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 6. **Read existing blocks first** - Learn from theme patterns
@@ -443,7 +443,7 @@ node core/scripts/build/registry.mjs
 3. ❌ Hardcode colors - use CSS variables
 4. ❌ Forget index.ts with re-exports
 5. ❌ Modify files in .nextspark/registries/ (auto-generated)
-6. ❌ Skip build-registry after changes
+6. ❌ Skip the registry build after changes
 
 ---
 
@@ -452,7 +452,7 @@ node core/scripts/build/registry.mjs
 ### config.ts Template
 
 ```typescript
-import type { BlockCategory } from '@/core/types/blocks'
+import type { BlockCategory } from '@nextsparkjs/core/types/blocks'
 
 export const config = {
   slug: '{slug}',
@@ -460,7 +460,6 @@ export const config = {
   description: '{Brief description of what this block does}',
   category: '{category}' as BlockCategory,
   icon: '{LucideIconName}',
-  thumbnail: '/theme/blocks/{slug}-thumbnail.png',
 }
 ```
 
@@ -468,7 +467,7 @@ export const config = {
 
 ```typescript
 import * as z from 'zod'
-import { baseBlockSchema } from '@/core/types/blocks'
+import { baseBlockSchema } from '@nextsparkjs/core/types/blocks'
 
 export const schema = baseBlockSchema.merge(z.object({
   // Block-specific fields only
@@ -481,12 +480,12 @@ export type {BlockName}Props = z.infer<typeof schema>
 ### fields.ts Template
 
 ```typescript
-import type { FieldDefinition } from '@/core/types/blocks'
+import type { FieldDefinition } from '@nextsparkjs/core/types/blocks'
 import {
   baseContentFields,
   baseDesignFields,
   baseAdvancedFields,
-} from '@/core/types/blocks'
+} from '@nextsparkjs/core/types/blocks'
 
 // Block-specific content fields
 const {blockName}ContentFields: FieldDefinition[] = [
@@ -510,7 +509,7 @@ export const fieldDefinitions: FieldDefinition[] = [
 ### component.tsx Template
 
 ```typescript
-import { buildSectionClasses } from '@/core/types/blocks'
+import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import type { {BlockName}Props } from './schema'
 
 export function {BlockName}Block(props: {BlockName}Props) {
@@ -591,7 +590,7 @@ export const schema = baseBlockSchema.merge(z.object({
    - Define block-specific fields (schema)
    - Map fields to tabs (fields)
 5. **Create 5 files** in blocks/{slug}/
-6. **Run build-registry**: `node core/scripts/build/registry.mjs`
+6. **Run the registry build**: `pnpm build:registries`
 7. **Verify**: Check block appears in BLOCK_REGISTRY
 
 ## Workflow: Modify Existing Block
@@ -601,7 +600,7 @@ export const schema = baseBlockSchema.merge(z.object({
 3. **Read all 5 files** to understand current structure
 4. **Plan changes** maintaining backward compatibility
 5. **Modify files** (typically schema, fields, component)
-6. **Run build-registry**
+6. **Run the registry build**
 7. **Verify** consistency between schema, fields, and component
 
 ## Workflow: Validate Block
@@ -634,7 +633,7 @@ core/types/blocks.ts
 core/docs/18-page-builder/
 
 # Registry regeneration
-core/scripts/build/registry.mjs
+packages/core/scripts/build/registry.mjs
 
 # Auto-generated registry (DO NOT modify)
 .nextspark/registries/block-registry.ts
@@ -655,7 +654,7 @@ nextspark.config.ts → project root
 - [ ] Component uses buildSectionClasses helper
 - [ ] Component has data-cy attribute
 - [ ] No hardcoded colors (uses CSS variables)
-- [ ] build-registry executed: `node core/scripts/build/registry.mjs`
+- [ ] registry build executed: `pnpm build:registries`
 - [ ] Block appears in BLOCK_REGISTRY
 - [ ] TypeScript compiles without errors
 

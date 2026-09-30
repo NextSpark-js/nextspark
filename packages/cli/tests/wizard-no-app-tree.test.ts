@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, rm, copyFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -36,6 +36,19 @@ test('the wizard writes the request proxy to src/, where Next loads it beside th
     assert.equal(existsSync(join(project, 'src/app')), false)
   } finally {
     await rm(templates, { recursive: true, force: true })
+    await rm(project, { recursive: true, force: true })
+  }
+})
+
+test('the next.config.mjs the wizard copies into a project enables Cache Components (the default rendering mode)', async () => {
+  const templates = join(import.meta.dirname, '../../core/templates')
+  const project = await mkdtemp(join(tmpdir(), 'nextspark-next-config-'))
+  try {
+    const item = PROJECT_ROOT_ITEMS.find((entry) => entry.dest === 'next.config.mjs')
+    assert.ok(item?.force, 'next.config.mjs is copied by the wizard')
+    await copyFile(join(templates, item.src), join(project, item.dest))
+    assert.match(await readFile(join(project, 'next.config.mjs'), 'utf8'), /^\s*cacheComponents:\s*true,/m)
+  } finally {
     await rm(project, { recursive: true, force: true })
   }
 })

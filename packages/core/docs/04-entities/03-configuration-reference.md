@@ -764,7 +764,7 @@ foreignKey: 'entityId' (genérico para todas las entidades en metadata)
 
 ```typescript
 import { CheckSquare } from 'lucide-react'
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import { taskFields } from './tasks.fields'
 
 export const taskEntityConfig: EntityConfig = {

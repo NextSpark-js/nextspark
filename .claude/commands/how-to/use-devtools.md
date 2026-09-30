@@ -200,10 +200,10 @@ Shows:
 
 ```typescript
 // BlocksViewer component
-import { BlocksViewer } from '@/core/components/devtools'
+import { BlocksViewer } from '@nextsparkjs/core/components/devtools'
 
 // Or BlockDetailViewer for single block
-import { BlockDetailViewer } from '@/core/components/devtools'
+import { BlockDetailViewer } from '@nextsparkjs/core/components/devtools'
 
 <BlockDetailViewer blockName="hero-banner" />
 ```
@@ -278,7 +278,7 @@ to Postman but built into your app.
 The API Explorer reads documentation from `docs.md` files:
 
 ```
-app/api/v1/entities/
+api/entities/
 ├── route.ts         # API handler
 └── docs.md          # Endpoint documentation
 
@@ -300,7 +300,7 @@ List all records for an entity.
 **📋 ApiTester Component:**
 
 ```typescript
-import { ApiTester } from '@/core/components/devtools'
+import { ApiTester } from '@nextsparkjs/core/components/devtools'
 
 // Interactive API testing UI
 <ApiTester
@@ -496,7 +496,7 @@ in real-time.
 **📋 ConfigViewer Component:**
 
 ```typescript
-import { ConfigViewer } from '@/core/components/devtools'
+import { ConfigViewer } from '@nextsparkjs/core/components/devtools'
 
 <ConfigViewer
   config={appConfig}
@@ -592,7 +592,7 @@ Option 3: Custom user field
 
 1. Create docs.md next to your route.ts:
 
-   app/api/v1/my-endpoint/
+   api/my-endpoint/
    ├── route.ts
    └── docs.md
 

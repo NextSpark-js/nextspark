@@ -119,7 +119,7 @@ The config.ts file defines your entity's structure:
 
 ```typescript
 // entities/products/config.ts
-import type { EntityConfig } from '@/core/types/entity'
+import type { EntityConfig } from '@nextsparkjs/core/types/entity'
 import * as z from 'zod'
 import { Package } from 'lucide-react'
 
@@ -538,7 +538,7 @@ pnpm db:migrate
 **2️⃣ Rebuild the entity registry:**
 
 ```bash
-node core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 **3️⃣ Start the dev server:**

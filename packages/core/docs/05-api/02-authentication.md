@@ -342,8 +342,8 @@ export async function authenticateRequest(
 ### Using in Endpoints
 
 ```typescript
-// app/api/v1/[entity]/route.ts
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+// packages/core/src/routes/api/v1/[entity]/route.ts
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   // Authenticate (API Key OR Session) and declare the scope this route
@@ -540,7 +540,7 @@ branch — it reads `authResult.error` and returns the right status and code,
 so scope rejections are never mislabeled as a generic 401:
 
 ```typescript
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   const authResult = await authenticateRequest(request, { requiredScope: 'products:read' })
@@ -589,8 +589,8 @@ adds `ai:read`, `ai:write`, `social:read`, `social:write` this way.
 
 ```typescript
 // Generate API key
-import { ApiKeyManager } from '@/core/lib/api/keys'
-import { mutateOne } from '@/core/lib/db'
+import { ApiKeyManager } from '@nextsparkjs/core/lib/api/keys'
+import { mutateOne } from '@nextsparkjs/core/lib/db'
 
 async function createApiKey(userId: string, name: string, scopes: string[]) {
   // 1. Generate secure key
@@ -812,8 +812,8 @@ function ProductList() {
 ### Next.js Server Component
 
 ```typescript
-// app/dashboard/products/page.tsx
-import { auth } from '@/core/lib/auth'
+// templates/dashboard/products/page.tsx
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { headers } from 'next/headers'
 
 export default async function ProductsPage() {
@@ -849,7 +849,7 @@ export default async function ProductsPage() {
 ```typescript
 'use server'
 
-import { auth } from '@/core/lib/auth'
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { headers } from 'next/headers'
 
 export async function createProduct(formData: FormData) {
@@ -887,8 +887,8 @@ enforces it and fails closed, so there's nothing left to re-check by hand
 (see [Scope Enforcement Fails Closed](#scope-enforcement-fails-closed)):
 
 ```typescript
-// app/api/v1/products/route.ts
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+// api/products/route.ts
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   const authResult = await authenticateRequest(request, { requiredScope: 'products:read' })
@@ -1228,7 +1228,7 @@ has been blocked by CORS policy
 
 **Solution:** Configure CORS in API route:
 ```typescript
-// app/api/v1/[entity]/route.ts
+// packages/core/src/routes/api/v1/[entity]/route.ts
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, {
     status: 200,

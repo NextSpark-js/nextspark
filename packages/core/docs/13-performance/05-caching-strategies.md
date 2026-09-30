@@ -66,7 +66,7 @@ User Request
 Control how browsers and CDNs cache responses:
 
 ```typescript
-// app/api/v1/tasks/route.ts
+// api/tasks/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -344,7 +344,7 @@ function TaskListPage() {
 Next.js automatically caches fetch requests:
 
 ```typescript
-// app/dashboard/page.tsx
+// templates/dashboard/page.tsx
 export default async function DashboardPage() {
   // ✅ Cached by default (until revalidation)
   const tasks = await fetch('https://api.example.com/tasks', {
@@ -396,7 +396,7 @@ async function UserAvatar({ userId }: { userId: string }) {
 
 ```typescript
 import { unstable_cache } from 'next/cache'
-import { query } from '@/core/lib/db'
+import { query } from '@nextsparkjs/core/lib/db'
 
 // ✅ Cache database query results
 const getCachedTasks = unstable_cache(

@@ -91,7 +91,7 @@ Implement API routes using TDD approach (tests first).
 - Tables exist in database
 
 ### Files to Create/Modify
-- `app/api/v1/{{entity}}/route.ts` - CRUD endpoints
+- `api/{{entity}}/route.ts` - CRUD endpoints
 - `core/validation/{{entity}}.ts` - Zod schemas
 - `__tests__/api/{{entity}}.test.ts` - Jest tests (TDD)
 

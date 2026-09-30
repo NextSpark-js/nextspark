@@ -34,7 +34,7 @@ npx nextspark init
 - **UI Components** - 50+ components based on shadcn/ui
 - **Entities** - Dynamic CRUD with automatic API generation
 - **Page Builder** - Block-based page builder with drag and drop
-- **Themes** - Multiple theme support with easy customization
+- **Project templates** - Start from starter, blog, CRM or productivity; after creation the source is yours
 - **Plugins** - Extensible plugin system
 - **i18n** - Full internationalization with next-intl
 - **Testing** - Jest + Cypress setup included

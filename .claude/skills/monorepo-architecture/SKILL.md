@@ -103,7 +103,7 @@ Before `next build`, registries must be regenerated:
 
 ```bash
 # Run from the project root
-pnpm exec nextspark registry:build
+pnpm exec nextspark prepare
 
 # Then build
 pnpm build

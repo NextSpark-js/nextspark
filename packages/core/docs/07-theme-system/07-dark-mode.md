@@ -35,8 +35,8 @@ CSS Variables (.dark class applied to <html>)
 **Location:** `app/layout.tsx`
 
 ```typescript
-import { ThemeProvider as NextThemeProvider } from '@/core/providers/theme-provider'
-import { getThemeSettings } from '@/core/lib/theme/get-default-theme-mode'
+import { ThemeProvider as NextThemeProvider } from '@nextsparkjs/core/providers/theme-provider'
+import { getThemeSettings } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
 
 export default async function RootLayout({ children }) {
   const { defaultMode, allowUserToggle, forcedThemeRoutes } = await getThemeSettings()
@@ -149,7 +149,7 @@ export default async function RootLayout({ children }) {
 **Location:** `core/components/app/misc/ThemeToggle.tsx`
 
 ```tsx
-import { ThemeToggle } from '@/core/components/app/misc/ThemeToggle'
+import { ThemeToggle } from '@nextsparkjs/core/components/app/misc/ThemeToggle'
 
 export function Header() {
   return (
@@ -170,13 +170,13 @@ export function Header() {
 
 import { Moon, Sun, Monitor } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/core/components/ui/dropdown-menu'
+} from '@nextsparkjs/core/components/ui/dropdown-menu'
 import { useEffect, useState } from 'react'
 
 export function ThemeToggle() {

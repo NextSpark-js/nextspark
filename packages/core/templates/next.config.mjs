@@ -54,6 +54,8 @@ const applyWebpackFallbacks = (config, { isServer }) => {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   basePath,
+  // Cache Components + PPR is the default rendering mode. For legacy ISR, remove this line or set it to false.
+  cacheComponents: true,
   transpilePackages: ['@nextsparkjs/core'],
   serverExternalPackages: ['handlebars'],
   turbopack: {

@@ -1,13 +1,13 @@
 # Tag Validation System
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
 The Tag Validation System ensures that Cypress test tags are consistent and traceable across the codebase. Validation happens **automatically during the registry build** - no separate validation step required.
 
 **Key Benefits:**
-- **Automatic** - Tags are discovered and validated during `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+- **Automatic** - Tags are discovered and validated during `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 - **Zero Configuration** - No opt-in files or manual registration needed
 - **TypeScript Registry** - All tags exported in `testing-registry.ts` for type-safe access
 - **Build-time Validation** - Invalid tags fail the build immediately
@@ -148,7 +148,7 @@ pnpm cy:run --env grepTags=-@slow
 
 1. Add the feature to `config/features.config.ts`
 2. Use the tag in your test: `{ tags: ['@feat-new-feature'] }`
-3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` - validation happens automatically
+3. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` - validation happens automatically
 
 ### For Other Tags
 
@@ -168,7 +168,7 @@ Tag validation is part of the registry build. Any CI workflow that runs the buil
 
 ```yaml
 - name: Build registries
-  run: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+  run: cd apps/dev && node ../../packages/cli/dist/cli.js prepare
   # Fails if invalid tags found
 ```
 
@@ -201,7 +201,7 @@ console.log(`${COVERAGE_SUMMARY.features.withTests} features have tests`)
 
 | Task | Command |
 |------|---------|
-| Build & validate tags | `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` |
+| Build & validate tags | `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` |
 | Run smoke tests | `pnpm cy:run --env grepTags=@smoke` |
 | Run feature tests | `pnpm cy:run --env grepTags=@feat-customers` |
 | Run API tests | `pnpm cy:run --env grepTags=@api` |

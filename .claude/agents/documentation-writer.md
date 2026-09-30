@@ -739,7 +739,7 @@ description: [One-line summary of what this page covers]
 
 \`\`\`typescript
 // Example code with comments
-import { Feature } from '@/core/lib/feature'
+import { Feature } from '@nextsparkjs/core/lib/feature'
 
 const result = await Feature.doSomething({
   param1: 'value',
@@ -824,7 +824,7 @@ interface ComponentProps {
 **Usage:**
 
 \`\`\`tsx
-import { ComponentName } from '@/app/components/ComponentName'
+import { ComponentName } from '@/components/ComponentName'
 
 export default function Page() {
   return (
@@ -1001,7 +1001,7 @@ After generating all documentation, report to the user:
 - 2 components documented with real props
 
 ### Next Steps:
-- Run \`nextspark registry build\` to rebuild the docs registry
+- Run \`pnpm build:registries\` to rebuild the docs registry
 - Documentation available at /docs after rebuild
 ```
 
@@ -1114,7 +1114,7 @@ await Read('.claude/sessions/teams-management/progress_teams_management.md')
 
 ```typescript
 // Read implementation files to verify
-await Read('app/api/v1/teams/route.ts')
+await Read('packages/core/src/routes/api/v1/teams/route.ts')
 // → GET, POST endpoints verified
 // → Request/response formats extracted
 
@@ -1131,7 +1131,7 @@ await Read('migrations/009_create_teams_system.sql')
 
 ```typescript
 // Implementation analysis:
-// - API routes in app/api/v1/ → CORE documentation
+// - API routes in packages/core/src/routes/api/v1/ → CORE documentation
 // - Components in core/components/ → CORE documentation
 // - No theme-specific code → No theme docs needed
 // - No plugin code → No plugin docs needed
@@ -1177,7 +1177,7 @@ await Write('core/docs/08-frontend/06-team-components.md', componentDocContent)
 - Database schema matches migration file
 
 ### Next Steps:
-- Run `nextspark registry build` to rebuild the docs registry
+- Run `pnpm build:registries` to rebuild the docs registry
 - Core docs are internal reference, read from `core/docs/`; they are not published at any `/docs` route
 ```
 
@@ -1207,7 +1207,7 @@ When reporting completion to the user:
 - Troubleshooting with common issues
 
 **Next step:**
-- Run `nextspark registry build` to rebuild the registry
+- Run `pnpm build:registries` to rebuild the registry
 - Documentation available at /docs after rebuild
 ```
 

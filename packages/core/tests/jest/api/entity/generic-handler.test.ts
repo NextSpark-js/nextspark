@@ -254,7 +254,6 @@ beforeEach(() => {
     isValidEntity: true,
     entityConfig: PETS_ENTITY,
     entityName: 'pets',
-    hasCustomOverride: false,
   });
   mockValidateEntityOperation.mockReturnValue(true);
   mockQueryWithRLS.mockResolvedValue([]);
@@ -513,7 +512,6 @@ describe('#93 — generic handlers declare the entity scope at the auth entry po
       isValidEntity: true,
       entityConfig: { ...PETS_ENTITY, access: { ...PETS_ENTITY.access, public: true } },
       entityName: 'pets',
-      hasCustomOverride: false,
     });
     mockAuthenticateRequest.mockResolvedValue(API_KEY_AUTH(['tasks:read']));
 
@@ -528,7 +526,6 @@ describe('#93 — generic handlers declare the entity scope at the auth entry po
       isValidEntity: true,
       entityConfig: { ...PETS_ENTITY, access: { ...PETS_ENTITY.access, public: true } },
       entityName: 'pets',
-      hasCustomOverride: false,
     });
     mockAuthenticateRequest.mockResolvedValue({ success: false, type: 'none', user: null, error: { code: 'AUTHENTICATION_FAILED', status: 401, message: 'Authentication required' } });
 

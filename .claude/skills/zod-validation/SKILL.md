@@ -186,7 +186,7 @@ type UserName = z.infer<typeof userSchema.pick({ name: true })>
 ```typescript
 import * as z from 'zod'
 import { NextRequest } from 'next/server'
-import { createApiError, createApiResponse } from '@/core/lib/api/helpers'
+import { createApiError, createApiResponse } from '@nextsparkjs/core/lib/api/helpers'
 
 // Define schema
 const createCustomerSchema = z.object({
@@ -317,9 +317,9 @@ function LoginForm() {
 ### With shadcn/ui Form Components
 
 ```typescript
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/core/components/ui/form'
-import { Input } from '@/core/components/ui/input'
-import { Button } from '@/core/components/ui/button'
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@nextsparkjs/core/components/ui/form'
+import { Input } from '@nextsparkjs/core/components/ui/input'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 function CustomerForm() {
   const form = useForm<CustomerFormData>({
@@ -407,7 +407,7 @@ const formatted = result.error.format()
 
 ```typescript
 import * as z from 'zod'
-import { baseBlockSchema } from '@/core/types/blocks'
+import { baseBlockSchema } from '@nextsparkjs/core/types/blocks'
 
 // baseBlockSchema provides:
 // - title: z.string().optional()

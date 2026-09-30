@@ -160,7 +160,7 @@ Tokens refill at constant rate
 
 **Configure different limits for different entities:**
 ```typescript
-// app/api/v1/[entity]/route.ts
+// packages/core/src/routes/api/v1/[entity]/route.ts
 export const rateLimits = {
   tasks: {
     GET: { limit: 1000, window: '1h' },
@@ -187,7 +187,7 @@ export const rateLimits = {
 
 **Custom limits for specific routes:**
 ```typescript
-// app/api/v1/ai/generate/route.ts
+// api/ai/generate/route.ts
 export const config = {
   rateLimit: {
     limit: 20,          // Lower limit (expensive operation)
@@ -196,7 +196,7 @@ export const config = {
   }
 }
 
-// app/api/v1/webhooks/route.ts
+// api/webhooks/route.ts
 export const config = {
   rateLimit: {
     limit: 1000,

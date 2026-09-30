@@ -18,11 +18,11 @@ Patterns for implementing loading states and Suspense boundaries in this Next.js
 LOADING STATE ARCHITECTURE:
 
 Route-Level Loading (loading.tsx):
-├── app/dashboard/(main)/loading.tsx     # Dashboard home skeleton
-├── app/dashboard/settings/loading.tsx   # Settings overview skeleton
-├── app/dashboard/settings/*/loading.tsx # Setting-specific skeletons
-├── app/dashboard/features/loading.tsx   # Features placeholder skeleton
-└── app/dashboard/(main)/[entity]/       # Entity list skeleton (existing)
+├── templates/dashboard/(main)/loading.tsx     # Dashboard home skeleton
+├── packages/core/src/routes/dashboard/settings/loading.tsx   # Settings overview skeleton
+├── templates/dashboard/settings/*/loading.tsx # Setting-specific skeletons
+├── packages/core/src/routes/dashboard/features/loading.tsx   # Features placeholder skeleton
+└── templates/dashboard/(main)/[entity]/       # Entity list skeleton (existing)
 
 Skeleton Components (core/components/ui/):
 ├── skeleton.tsx           # Base Skeleton + SkeletonContainer + SkeletonText
@@ -110,7 +110,7 @@ import { Skeleton, SkeletonContainer, SkeletonText } from '@nextsparkjs/core/com
 ### Loading.tsx Pattern
 
 ```typescript
-// app/dashboard/settings/profile/loading.tsx
+// templates/dashboard/settings/profile/loading.tsx
 import { SkeletonProfileForm } from '@nextsparkjs/core/components/ui/skeleton-settings'
 
 export default function ProfileLoading() {
@@ -213,7 +213,7 @@ Skeletons should closely match the final content layout:
 Prefer `loading.tsx` files over component-level loading states:
 
 ```
-app/dashboard/settings/profile/
+packages/core/src/routes/dashboard/settings/profile/
 ├── page.tsx       # Actual content
 └── loading.tsx    # Skeleton shown during load
 ```
@@ -243,7 +243,7 @@ Use `SkeletonContainer` for lists to enable content-visibility:
 Next.js inherits `loading.tsx` from parent routes. You only need specific loading files for pages with different layouts:
 
 ```
-app/dashboard/settings/
+packages/core/src/routes/dashboard/settings/
 ├── loading.tsx           # Covers /settings and simple subroutes
 ├── profile/
 │   └── loading.tsx       # Different layout, needs own skeleton

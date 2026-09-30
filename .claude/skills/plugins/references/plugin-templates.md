@@ -148,8 +148,8 @@ export interface MyPluginOptions {
 'use client'
 
 import { useMyPlugin } from '../hooks/useMyPlugin'
-import { Card, CardHeader, CardContent } from '@/core/components/ui/card'
-import { Button } from '@/core/components/ui/button'
+import { Card, CardHeader, CardContent } from '@nextsparkjs/core/components/ui/card'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 
 interface MyWidgetProps {
   readonly title: string
@@ -203,7 +203,7 @@ export function useMyPlugin() {
   return useQuery({
     queryKey: QUERY_KEY,
     queryFn: async () => {
-      const response = await fetch('/api/plugin/my-plugin/data')
+      const response = await fetch('/api/plugins/my-plugin/data')
       if (!response.ok) throw new Error('Failed to fetch')
       return response.json()
     }
@@ -219,7 +219,7 @@ export function useMyPluginMutation() {
 
   return useMutation({
     mutationFn: async (input: MyPluginInput) => {
-      const response = await fetch('/api/plugin/my-plugin/process', {
+      const response = await fetch('/api/plugins/my-plugin/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input)
@@ -244,7 +244,7 @@ export function useMyPluginMutation() {
 // plugins/my-plugin/api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import * as z from 'zod'
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 const ProcessInputSchema = z.object({
   data: z.string().min(1).max(10000),
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
 ```typescript
 // plugins/my-plugin/api/data/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   try {

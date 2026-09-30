@@ -1,6 +1,6 @@
 # Theme Permissions Configuration
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Overview
 
@@ -24,7 +24,7 @@ config/permissions.config.ts
 ## Complete Configuration Structure
 
 ```typescript
-import type { ThemePermissionsConfig } from '@/core/lib/permissions/types'
+import type { ThemePermissionsConfig } from '@nextsparkjs/core/lib/permissions/types'
 
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   // ==========================================
@@ -227,7 +227,7 @@ The system merges permissions from multiple sources:
 All permissions are pre-computed during build:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 This generates `.nextspark/registries/permissions-registry.ts` with:
@@ -247,7 +247,7 @@ This generates `.nextspark/registries/permissions-registry.ts` with:
 The unified way to check any permission type:
 
 ```typescript
-import { PermissionService } from '@/core/lib/services/permission.service'
+import { PermissionService } from '@nextsparkjs/core/lib/services/permission.service'
 
 // Team permissions
 if (PermissionService.canDoAction('admin', 'team.edit')) {
@@ -273,7 +273,7 @@ PermissionService.canDoAction('owner', 'anything') // Always true
 Lower-level permission check:
 
 ```typescript
-import { PermissionService } from '@/core/lib/services/permission.service'
+import { PermissionService } from '@nextsparkjs/core/lib/services/permission.service'
 
 // O(1) lookup - no runtime computation
 if (PermissionService.hasPermission('admin', 'posts.create')) {
@@ -284,7 +284,7 @@ if (PermissionService.hasPermission('admin', 'posts.create')) {
 ### Getting Role Permissions
 
 ```typescript
-import { PermissionService } from '@/core/lib/services/permission.service'
+import { PermissionService } from '@nextsparkjs/core/lib/services/permission.service'
 
 const adminPerms = PermissionService.getRolePermissions('admin')
 // Returns: ['posts.create', 'posts.read', 'team.view', ...]
@@ -293,7 +293,7 @@ const adminPerms = PermissionService.getRolePermissions('admin')
 ### Checking Team Permissions
 
 ```typescript
-import { checkTeamPermission } from '@/core/lib/teams/permissions'
+import { checkTeamPermission } from '@nextsparkjs/core/lib/teams/permissions'
 
 // Check if role can perform team action
 if (checkTeamPermission('admin', 'team.members.invite')) {
@@ -349,7 +349,7 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
 After changes, regenerate the registry:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ## Role Hierarchy
@@ -383,7 +383,7 @@ Custom roles can have any value. Higher values = more authority for role compari
 4. **Group by Category**: Use `category` for features to organize the UI
 5. **Mark Dangerous**: Use `dangerous: true` for destructive actions
 6. **Custom Roles**: Define hierarchy, display names, and descriptions together
-7. **Regenerate Registry**: Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` after changes
+7. **Regenerate Registry**: Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` after changes
 
 ## Migration from Old Format
 
@@ -426,5 +426,5 @@ teams: [
 - [Permissions and Roles](./06-permissions-and-roles.md)
 - [Extensible Roles](./09-extensible-roles.md)
 - [Permission Service](../14-permissions/03-permission-service.md)
-- [Registry System](../03-registry-system/01-overview.md)
-- [Entity Configuration](../04-entities/02-entity-configuration.md)
+- [Registry System](../03-registry-system/01-introduction.md)
+- [Entity Configuration](../04-entities/03-configuration-reference.md)

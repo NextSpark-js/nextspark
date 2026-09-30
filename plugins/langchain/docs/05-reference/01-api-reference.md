@@ -734,7 +734,7 @@ All endpoints require:
 - **Authentication**: Session cookie or `x-api-key` header
 - **Team Context**: `x-team-id` header
 
-### GET /api/plugin/langchain/sessions
+### GET /api/plugins/langchain/sessions
 
 List all conversations or get a specific one.
 
@@ -779,7 +779,7 @@ List all conversations or get a specific one.
 }
 ```
 
-### POST /api/plugin/langchain/sessions
+### POST /api/plugins/langchain/sessions
 
 Create a new empty conversation.
 
@@ -820,7 +820,7 @@ Create a new empty conversation.
 }
 ```
 
-### PATCH /api/plugin/langchain/sessions
+### PATCH /api/plugins/langchain/sessions
 
 Update a conversation (rename, pin/unpin).
 
@@ -849,7 +849,7 @@ Update a conversation (rename, pin/unpin).
 }
 ```
 
-### DELETE /api/plugin/langchain/sessions
+### DELETE /api/plugins/langchain/sessions
 
 Delete a conversation.
 

@@ -1,6 +1,6 @@
 # Service Layer
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
 
@@ -164,7 +164,7 @@ These services encapsulate all billing and team management logic, providing a cl
 **Purpose:** Plan management and registry integration
 
 ```typescript
-import { PlanService } from '@/core/lib/services'
+import { PlanService } from '@nextsparkjs/core/lib/services'
 
 // Get all public plans
 const plans = await PlanService.list()
@@ -193,7 +193,7 @@ const isUpgrade = PlanService.isUpgrade('free', 'pro') // true
 **Purpose:** Subscription lifecycle, feature checks, quota management
 
 ```typescript
-import { SubscriptionService } from '@/core/lib/services'
+import { SubscriptionService } from '@nextsparkjs/core/lib/services'
 
 // Get subscription for team
 const sub = await SubscriptionService.getByTeamId(teamId)
@@ -243,7 +243,7 @@ const byPlan = await SubscriptionService.listByPlan('enterprise')
 **Purpose:** Usage tracking and quota enforcement
 
 ```typescript
-import { UsageService } from '@/core/lib/services'
+import { UsageService } from '@nextsparkjs/core/lib/services'
 
 // Increment usage (e.g., when creating a project)
 await UsageService.increment(subscriptionId, 'projects')
@@ -282,7 +282,7 @@ await UsageService.reset(subscriptionId, 'api_calls')
 **Purpose:** Invoice management and revenue tracking
 
 ```typescript
-import { InvoiceService } from '@/core/lib/services'
+import { InvoiceService } from '@nextsparkjs/core/lib/services'
 
 // List invoices for team
 const invoices = await InvoiceService.listByTeam(teamId, {
@@ -331,7 +331,7 @@ const revenue = await InvoiceService.getRevenueSummary(2024, 6)
 **Purpose:** Team management and multi-tenancy
 
 ```typescript
-import { TeamService } from '@/core/lib/services'
+import { TeamService } from '@nextsparkjs/core/lib/services'
 
 // Get team by ID or slug
 const team = await TeamService.getById(teamId, userId)
@@ -380,7 +380,7 @@ const owner = await TeamService.getOwner(teamId)
 **Purpose:** Team membership and role management
 
 ```typescript
-import { TeamMemberService } from '@/core/lib/services'
+import { TeamMemberService } from '@nextsparkjs/core/lib/services'
 
 // List team members
 const members = await TeamMemberService.listByTeam(teamId, requestingUserId)
@@ -442,8 +442,8 @@ All services follow this consistent pattern:
  * @module EntityService
  */
 
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@/core/lib/db'
-import type { Entity } from '@/core/lib/entities/...'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import type { Entity } from '@nextsparkjs/core/lib/entities/...'
 
 export class EntityService {
   // ===========================================
@@ -528,7 +528,7 @@ entities/[entity]/
 ```typescript
 // entities/posts/posts.service.ts
 
-import { query, queryOne, queryOneWithRLS, queryWithRLS } from '@/core/lib/db'
+import { query, queryOne, queryOneWithRLS, queryWithRLS } from '@nextsparkjs/core/lib/db'
 import type { PostPublic, PostMetadata, PostListResult } from './posts.types'
 
 export class PostsService {
@@ -702,8 +702,8 @@ export async function executeProjectMiddleware(
 ### Usage Examples
 
 ```typescript
-import { ThemeService } from '@/core/lib/services'
-import { executeProjectMiddleware, hasProjectMiddleware } from '@/core/lib/middleware'
+import { ThemeService } from '@nextsparkjs/core/lib/services'
+import { executeProjectMiddleware, hasProjectMiddleware } from '@nextsparkjs/core/lib/middleware'
 
 // The root-first compiler emits one project theme.
 const theme = ThemeService.getCurrent()
@@ -715,7 +715,7 @@ if (hasProjectMiddleware()) {
 }
 
 // Entity type queries
-import { EntityTypeService } from '@/core/lib/services'
+import { EntityTypeService } from '@nextsparkjs/core/lib/services'
 const searchTypes = EntityTypeService.getSearchTypes('starter')
 const entities = EntityTypeService.getEntitiesByCapability('hasBlocks')
 ```
@@ -735,7 +735,7 @@ const entities = EntityTypeService.getEntitiesByCapability('hasBlocks')
 When theme or entity configurations change:
 
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 This regenerates all `.nextspark/registries/*.ts` files.
@@ -821,7 +821,7 @@ await queryWithRLS('SELECT * FROM tasks WHERE id = ANY($1)', [ids], userId);
 - Centralized error handling
 - Reusable across application
 
-**See:** [User Service implementation](../../lib/services/user.service.ts)
+**See:** [User Service implementation](../../src/lib/services/user.service.ts)
 
 **Next:** [Middleware](./06-middleware.md)
 

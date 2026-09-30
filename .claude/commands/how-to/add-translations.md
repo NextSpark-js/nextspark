@@ -505,7 +505,7 @@ pnpm dev
 
 import { useLocale } from 'next-intl'
 import { usePathname, useRouter } from 'next/navigation'
-import { useAppConfig } from '@/core/lib/hooks/useAppConfig'
+import { useAppConfig } from '@nextsparkjs/core/lib/hooks/useAppConfig'
 
 function LanguageSwitcher() {
   const locale = useLocale()

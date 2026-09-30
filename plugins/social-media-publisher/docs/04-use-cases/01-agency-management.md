@@ -136,7 +136,7 @@ $$ LANGUAGE plpgsql;
 
 **Agency Dashboard Component:**
 ```typescript
-// app/dashboard/agency/page.tsx
+// templates/dashboard/agency/page.tsx
 import { getAgencyDashboard } from '@/lib/agency'
 
 export default async function AgencyDashboardPage() {
@@ -241,7 +241,7 @@ export async function getAgencyDashboard() {
 
 **Bulk Publishing Interface:**
 ```typescript
-// app/dashboard/publish/page.tsx
+// templates/dashboard/publish/page.tsx
 'use client'
 
 export default function BulkPublishPage() {
@@ -254,7 +254,7 @@ export default function BulkPublishPage() {
   const handlePublish = async () => {
     setPublishing(true)
 
-    const response = await fetch('/api/v1/custom/cross-post', {
+    const response = await fetch('/api/custom/cross-post', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -328,7 +328,7 @@ export default function BulkPublishPage() {
 
 **Client Performance Report:**
 ```typescript
-// app/dashboard/clients/[clientId]/analytics/page.tsx
+// templates/dashboard/clients/[clientId]/analytics/page.tsx
 export default async function ClientAnalyticsPage({
   params
 }: {
@@ -530,7 +530,7 @@ export async function generateClientReport(
 
 **Export All Activity:**
 ```typescript
-// app/api/v1/custom/export-audit-log/route.ts
+// api/custom/export-audit-log/route.ts
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {

@@ -275,11 +275,11 @@ describe('My Plugin API', {
     api = new BaseAPIController(BASE_URL, API_KEY)
   })
 
-  describe('POST /api/plugin/my-plugin/process', () => {
+  describe('POST /api/plugins/my-plugin/process', () => {
     it('should process valid input', () => {
       cy.request({
         method: 'POST',
-        url: `${BASE_URL}/api/plugin/my-plugin/process`,
+        url: `${BASE_URL}/api/plugins/my-plugin/process`,
         headers: {
           'Authorization': `Bearer ${API_KEY}`,
           'Content-Type': 'application/json'
@@ -297,7 +297,7 @@ describe('My Plugin API', {
     it('should reject invalid input', () => {
       cy.request({
         method: 'POST',
-        url: `${BASE_URL}/api/plugin/my-plugin/process`,
+        url: `${BASE_URL}/api/plugins/my-plugin/process`,
         headers: {
           'Authorization': `Bearer ${API_KEY}`,
           'Content-Type': 'application/json'
@@ -315,7 +315,7 @@ describe('My Plugin API', {
     it('should require authentication', () => {
       cy.request({
         method: 'POST',
-        url: `${BASE_URL}/api/plugin/my-plugin/process`,
+        url: `${BASE_URL}/api/plugins/my-plugin/process`,
         body: { data: 'test' },
         failOnStatusCode: false
       }).then((response) => {

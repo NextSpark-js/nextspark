@@ -160,7 +160,7 @@ The hierarchy value determines role permissions:
 ### Using Hierarchy for Access Control
 
 ```typescript
-import { roleHelpers, ROLE_HIERARCHY } from '@/core/types/user.types'
+import { roleHelpers, ROLE_HIERARCHY } from '@nextsparkjs/core/types/user.types'
 
 // Check if user has sufficient role level
 function canEditContent(userRole: UserRole): boolean {
@@ -194,7 +194,7 @@ type CoreRole = 'member' | 'superadmin' | 'developer'
 ### Type Guards
 
 ```typescript
-import { isCoreRole, isThemeRole } from '@/core/types/user.types'
+import { isCoreRole, isThemeRole } from '@nextsparkjs/core/types/user.types'
 
 // Check if role is a protected core role
 if (isCoreRole(userRole)) {
@@ -213,7 +213,7 @@ if (isThemeRole(userRole)) {
 The `USER_ROLES` constant is generated dynamically:
 
 ```typescript
-import { USER_ROLES } from '@/core/types/user.types'
+import { USER_ROLES } from '@nextsparkjs/core/types/user.types'
 
 // Access roles by uppercase name
 USER_ROLES.MEMBER      // 'member'
@@ -419,8 +419,8 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
 Use `canDoAction()` or `checkTeamPermission()`:
 
 ```typescript
-import { PermissionService } from '@/core/lib/services/permission.service'
-import { checkTeamPermission } from '@/core/lib/teams/permissions'
+import { PermissionService } from '@nextsparkjs/core/lib/services/permission.service'
+import { checkTeamPermission } from '@nextsparkjs/core/lib/teams/permissions'
 
 // Unified API (recommended)
 if (PermissionService.canDoAction('admin', 'team.members.invite')) {
@@ -456,7 +456,7 @@ The `owner` role is critical because:
 
 ```typescript
 // Existing guards work unchanged
-import { roleHelpers } from '@/core/types/user.types'
+import { roleHelpers } from '@nextsparkjs/core/types/user.types'
 
 // Check any role (core or theme)
 roleHelpers.hasRoleLevel(user.role, 'editor')

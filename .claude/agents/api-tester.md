@@ -586,7 +586,7 @@ When reviewing API route implementations, verify:
 
 ```typescript
 // ✅ CORRECT - API routes use Services for business logic
-import { EntityService } from '@/core/lib/services'
+import { EntityService } from '@nextsparkjs/core/lib/services'
 
 export async function GET(request: Request) {
   const data = await EntityService.getById(id, userId)

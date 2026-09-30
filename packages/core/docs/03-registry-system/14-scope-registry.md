@@ -129,7 +129,7 @@ The **ScopeService** provides 12 static methods for scope queries:
 ### Core Methods (6)
 
 ```typescript
-import { ScopeService } from '@/core/lib/services'
+import { ScopeService } from '@nextsparkjs/core/lib/services'
 
 // Get base scopes for all authenticated users
 const baseScopes = ScopeService.getBaseScopes()
@@ -187,7 +187,7 @@ const apiConfig = ScopeService.getApiConfig()
 ### Building User Scopes
 
 ```typescript
-import { ScopeService } from '@/core/lib/services'
+import { ScopeService } from '@nextsparkjs/core/lib/services'
 
 function buildUserScopes(role: string, flags: string[]): string[] {
   // Start with base scopes
@@ -242,7 +242,7 @@ function applyRestrictions(scopes: string[], flags: string[]): string[] {
 ### Validating API Filters
 
 ```typescript
-import { ScopeService } from '@/core/lib/services'
+import { ScopeService } from '@nextsparkjs/core/lib/services'
 
 function validateFilters(requestedFilters: string[]): string[] {
   const allowed = ScopeService.getAllowedFilters()
@@ -327,11 +327,11 @@ The service exports deprecated function aliases for backward compatibility:
 
 ```typescript
 // ❌ Deprecated (still works)
-import { getBaseScopes } from '@/core/lib/services/scope.service'
+import { getBaseScopes } from '@nextsparkjs/core/lib/services/scope.service'
 const scopes = getBaseScopes()
 
 // ✅ Recommended
-import { ScopeService } from '@/core/lib/services'
+import { ScopeService } from '@nextsparkjs/core/lib/services'
 const scopes = ScopeService.getBaseScopes()
 ```
 

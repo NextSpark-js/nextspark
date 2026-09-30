@@ -6,6 +6,5 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'A hero section with embedded video (YouTube/Vimeo) either as background or inline, with title, subtitle, and optional CTA',
   category: 'hero',
   icon: 'Video',
-  thumbnail: '/theme/blocks/video-hero/thumbnail.png',
   scope: ['pages', 'posts']
 }

@@ -18,9 +18,9 @@ Patterns for working with React 19 and Next.js 15 App Router in this application
 REACT COMPONENT ARCHITECTURE:
 
 Server Components (Default):
-├── app/layout.tsx           # Root layout with providers
-├── app/page.tsx             # Pages (default server)
-└── app/dashboard/layout.tsx # Nested layouts
+├── packages/core/src/routes/layout.tsx  # Root layout with providers (src/app is generated from it)
+├── templates/**/page.tsx                # Your pages (default server)
+└── packages/core/src/routes/dashboard/layout.tsx # Nested layouts
 
 Client Components ('use client'):
 ├── core/components/         # Interactive UI components
@@ -96,7 +96,7 @@ Mark with `'use client'` directive at the top of the file.
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/core/hooks/useAuth'
+import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
 
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null)
@@ -328,7 +328,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
 ### With Async Components
 
 ```typescript
-// app/dashboard/layout.tsx
+// templates/dashboard/layout.tsx
 'use client'
 
 import { Suspense } from 'react'
@@ -385,11 +385,11 @@ function BlockRenderer({ block }: { block: BlockInstance }) {
 ### Next.js Error Boundary
 
 ```typescript
-// app/dashboard/(main)/[entity]/error.tsx
+// templates/dashboard/(main)/[entity]/error.tsx
 'use client'
 
 import { useEffect } from 'react'
-import { Button } from '@/core/components/ui/button'
+import { Button } from '@nextsparkjs/core/components/ui/button'
 import { AlertCircle } from 'lucide-react'
 
 export default function EntityError({
@@ -517,7 +517,7 @@ const queryClient = new QueryClient()
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { authClient } from '@/core/lib/auth-client'
+import { authClient } from '@nextsparkjs/core/lib/auth-client'
 
 export function useAuth() {
   const router = useRouter()

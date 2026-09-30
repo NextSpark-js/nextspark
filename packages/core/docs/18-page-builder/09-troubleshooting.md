@@ -1,6 +1,6 @@
 # Troubleshooting
 
-> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 This guide helps you diagnose and fix common issues with the Page Builder system.
 
@@ -15,7 +15,7 @@ This guide helps you diagnose and fix common issues with the Page Builder system
 1. **Registry not rebuilt**
    ```bash
    # Run the registry builder
-   cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+   cd apps/dev && node ../../packages/cli/dist/cli.js prepare
    ```
 
 2. **Missing or invalid config.ts**
@@ -172,7 +172,7 @@ This guide helps you diagnose and fix common issues with the Page Builder system
 
 3. **Registry outdated**
    ```bash
-   cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+   cd apps/dev && node ../../packages/cli/dist/cli.js prepare
    ```
 
 ---
@@ -332,7 +332,7 @@ When reporting issues, include:
 
 ### Quick Fixes Checklist
 
-- [ ] Rebuild registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+- [ ] Rebuild registry: `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 - [ ] Restart dev server: `pnpm dev`
 - [ ] Clear browser cache: `Ctrl+Shift+R`
 - [ ] Check database connection

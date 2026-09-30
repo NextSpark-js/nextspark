@@ -11,7 +11,7 @@ version: "3.0"
 
 NextSpark no longer installs selectable theme packages into a running project.
 The project root is the product source, and a template is copied there once by
-`create-nextspark-app --template <name>`.
+`create-nextspark-app --theme <name>`.
 
 ## Locations
 
@@ -62,7 +62,7 @@ rg -n 'contents/(themes|plugins)|NEXT_PUBLIC_ACTIVE_THEME' \
   packages/core/templates/projects/<template-name>
 
 # Exercise compiler discovery from a clean extracted project fixture.
-node packages/core/scripts/build/registry.mjs --build
+pnpm build:registries
 
 # Run any retained template-specific suite from that extracted root.
 pnpm exec jest --config tests/jest/jest.config.cjs --watchman=false

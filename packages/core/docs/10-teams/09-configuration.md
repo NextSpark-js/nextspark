@@ -309,7 +309,7 @@ The TeamSwitcher is included in mobile navigation:
 
 ```typescript
 // core/components/dashboard/mobile/MobileMoreSheet.tsx
-import { TeamSwitcherCompact } from '@/core/components/teams/TeamSwitcherCompact'
+import { TeamSwitcherCompact } from '@nextsparkjs/core/components/teams/TeamSwitcherCompact'
 
 // Positioned between menu items and sign out
 <Separator className="my-2" />

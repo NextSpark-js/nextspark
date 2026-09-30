@@ -6,6 +6,5 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'A section displaying client/partner logos in a grid or row layout ("Trusted by...", "As seen in...")',
   category: 'content',
   icon: 'Building2',
-  thumbnail: '/theme/blocks/logo-cloud/thumbnail.png',
   scope: ['pages']
 }
