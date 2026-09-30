@@ -17,6 +17,7 @@
   "dependencies": {
     "@preeternal/react-native-cookie-manager": "6.4.1",
     "@tanstack/react-query": "^5.62.0",
+    "babel-preset-expo": "~54.0.12",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "expo": "^54.0.0",

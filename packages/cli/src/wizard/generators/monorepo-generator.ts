@@ -102,6 +102,9 @@ export const VERSIONS = {
 
   // Expo modules (use ~ for patch compatibility)
   EXPO_CONSTANTS: '~18.0.13',
+  EXPO_DEVICE: '~8.0.10',
+  // babel.config.js names it as a preset
+  BABEL_PRESET_EXPO: '~54.0.12',
   EXPO_LINKING: '~8.0.11',
   EXPO_ROUTER: '~6.0.22',
   EXPO_SECURE_STORE: '~15.0.8',
@@ -114,6 +117,8 @@ export const VERSIONS = {
   RN_SCREENS: '~4.16.0',
   RN_SVG: '15.12.1',
   RN_WEB: '^0.21.0',
+  // reanimated's babel plugin (added by babel-preset-expo) loads it from the project
+  RN_WORKLETS: '^0.5.1',
   // Lets @nextsparkjs/mobile empty the native cookie store on sign-out.
   // Exact version: the package has a single maintainer.
   RN_COOKIE_MANAGER: '6.4.1',
@@ -127,6 +132,9 @@ export const VERSIONS = {
   CLSX: '^2.1.1',
   CLASS_VARIANCE_AUTHORITY: '^0.7.1',
   LUCIDE_RN: '^0.563.0',
+  // Loaded by name from the project, not through nativewind: babel.config.js's
+  // jsxImportSource makes every file import react-native-css-interop/jsx-runtime.
+  RN_CSS_INTEROP: '^0.2.1',
 
   // Dev dependencies
   BABEL_CORE: '^7.25.0',
@@ -429,7 +437,7 @@ async function copyMobileTemplate(targetDir: string, config: WizardConfig): Prom
 /**
  * Create mobile package.json with project-specific values
  */
-async function createMobilePackageJson(mobileDir: string, config: WizardConfig): Promise<void> {
+export async function createMobilePackageJson(mobileDir: string, config: WizardConfig): Promise<void> {
   const mobileSlug = `${config.projectSlug}-mobile`
 
   const packageJson = {
@@ -455,8 +463,10 @@ async function createMobilePackageJson(mobileDir: string, config: WizardConfig):
       [CONTRACTS_PACKAGE_NAME]: 'workspace:*',
       '@preeternal/react-native-cookie-manager': VERSIONS.RN_COOKIE_MANAGER,
       '@tanstack/react-query': VERSIONS.TANSTACK_QUERY,
+      'babel-preset-expo': VERSIONS.BABEL_PRESET_EXPO,
       'expo': VERSIONS.EXPO,
       'expo-constants': VERSIONS.EXPO_CONSTANTS,
+      'expo-device': VERSIONS.EXPO_DEVICE,
       'expo-linking': VERSIONS.EXPO_LINKING,
       'expo-router': VERSIONS.EXPO_ROUTER,
       'expo-secure-store': VERSIONS.EXPO_SECURE_STORE,
@@ -466,12 +476,14 @@ async function createMobilePackageJson(mobileDir: string, config: WizardConfig):
       'react': VERSIONS.REACT,
       'react-dom': VERSIONS.REACT,
       'react-native': VERSIONS.REACT_NATIVE,
+      'react-native-css-interop': VERSIONS.RN_CSS_INTEROP,
       'react-native-web': VERSIONS.RN_WEB,
       'react-native-gesture-handler': VERSIONS.RN_GESTURE_HANDLER,
       'react-native-reanimated': VERSIONS.RN_REANIMATED,
       'react-native-safe-area-context': VERSIONS.RN_SAFE_AREA,
       'react-native-screens': VERSIONS.RN_SCREENS,
       'react-native-svg': VERSIONS.RN_SVG,
+      'react-native-worklets': VERSIONS.RN_WORKLETS,
       'tailwind-merge': VERSIONS.TAILWIND_MERGE,
       'tailwindcss': VERSIONS.TAILWINDCSS,
       'clsx': VERSIONS.CLSX,

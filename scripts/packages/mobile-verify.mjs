@@ -15,6 +15,7 @@
  *      no app tree, and the tarball installability/secret-leak checker
  *      (verify-tarballs.mjs),
  *      the mobile import boundary's own tests (mobile-boundary.test.mjs),
+ *      the check that the template's configs load only declared packages,
  *   2. compares apps/mobile/src against packages/mobile/templates/src file
  *      by file, so the copy cannot drift from the package silently,
  *   3. installs apps/mobile on its own (it is outside the pnpm workspace),
@@ -710,6 +711,7 @@ async function main() {
     ['sync:mobile-templates fills the generated mobile template directory (node:test)', nodeTest('sync-mobile-templates.test.mjs')],
     ['The core tarball ships its routes and no app tree (node:test)', nodeTest('pack-templates.test.mjs')],
     ['pack.sh tarballs are installable and leak nothing maintainer-local (node:test)', nodeTest('verify-tarballs.test.mjs')],
+    ['The template configs load only packages its package.json declares (node:test)', nodeTest('mobile-template-deps.test.mjs')],
     ['The mobile import boundary refuses server code, the database, registries, migrations and Node-only modules (node:test)', nodeTest('mobile-boundary.test.mjs')],
     ['apps/mobile/src matches packages/mobile/templates/src', verifyMobileSrcMatchesTemplate],
     // Not before the comparison above: the guard test's throwaway copy of this script stops there
