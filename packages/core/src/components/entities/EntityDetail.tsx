@@ -111,15 +111,15 @@ export function EntityDetail({
     .sort((a, b) => a.display.order - b.display.order)
 
   // Get child entities that should be shown from registry data
-  console.log('[EntityDetail] childEntityNames:', childEntityNames)
-  console.log('[EntityDetail] childData:', childData)
-  console.log('[EntityDetail] Object.keys(childData):', Object.keys(childData))
-  console.log('[EntityDetail] customFormComponents:', customFormComponents)
-  console.log('[EntityDetail] customFormComponents keys:', Object.keys(customFormComponents || {}))
+  if (process.env.NODE_ENV === 'development') console.log('[EntityDetail] childEntityNames:', childEntityNames)
+  if (process.env.NODE_ENV === 'development') console.log('[EntityDetail] childData:', childData)
+  if (process.env.NODE_ENV === 'development') console.log('[EntityDetail] Object.keys(childData):', Object.keys(childData))
+  if (process.env.NODE_ENV === 'development') console.log('[EntityDetail] customFormComponents:', customFormComponents)
+  if (process.env.NODE_ENV === 'development') console.log('[EntityDetail] customFormComponents keys:', Object.keys(customFormComponents || {}))
   // Always show child entity sections if childEntityNames are provided
   // This allows for creation even when no child data exists
   const childEntities = childEntityNames || []
-  console.log('[EntityDetail] childEntities (always show if names provided):', childEntities)
+  if (process.env.NODE_ENV === 'development') console.log('[EntityDetail] childEntities (always show if names provided):', childEntities)
 
   // Handle delete with loading state
   const handleDelete = async () => {
@@ -271,8 +271,8 @@ export function EntityDetail({
             }
           }
 
-          console.log(`[EntityDetail] Rendering EntityChildManager for ${childName}`)
-          console.log(`[EntityDetail] customFormComponents[${childName}]:`, customFormComponents[childName])
+          if (process.env.NODE_ENV === 'development') console.log(`[EntityDetail] Rendering EntityChildManager for ${childName}`)
+          if (process.env.NODE_ENV === 'development') console.log(`[EntityDetail] customFormComponents[${childName}]:`, customFormComponents[childName])
 
           return (
             <EntityChildManager

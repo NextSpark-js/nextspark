@@ -96,9 +96,9 @@ export function EntityChildManager({
   customFormComponent,
 }: EntityChildManagerProps) {
   // Debug logging
-  console.log(`[EntityChildManager] childEntityName: ${childEntityName}`)
-  console.log(`[EntityChildManager] customFormComponent:`, customFormComponent)
-  console.log(`[EntityChildManager] customFormComponent type:`, typeof customFormComponent)
+  if (process.env.NODE_ENV === 'development') console.log(`[EntityChildManager] childEntityName: ${childEntityName}`)
+  if (process.env.NODE_ENV === 'development') console.log(`[EntityChildManager] customFormComponent:`, customFormComponent)
+  if (process.env.NODE_ENV === 'development') console.log(`[EntityChildManager] customFormComponent type:`, typeof customFormComponent)
 
   const [formState, setFormState] = useState<ChildFormState>({
     isOpen: false,
@@ -670,12 +670,12 @@ export function EntityChildManager({
 
           <div>
             {useMemo(() => {
-              console.log('[EntityChildManager RENDER] Rendering form for:', childEntityName)
-              console.log('[EntityChildManager RENDER] customFormComponent:', customFormComponent)
-              console.log('[EntityChildManager RENDER] Using custom form?:', !!customFormComponent)
+              if (process.env.NODE_ENV === 'development') console.log('[EntityChildManager RENDER] Rendering form for:', childEntityName)
+              if (process.env.NODE_ENV === 'development') console.log('[EntityChildManager RENDER] customFormComponent:', customFormComponent)
+              if (process.env.NODE_ENV === 'development') console.log('[EntityChildManager RENDER] Using custom form?:', !!customFormComponent)
 
               if (customFormComponent) {
-                console.log('[EntityChildManager RENDER] Creating custom component with stable props')
+                if (process.env.NODE_ENV === 'development') console.log('[EntityChildManager RENDER] Creating custom component with stable props')
                 return React.createElement(customFormComponent, {
                   entityConfig: childEntityFormConfig as any,
                   initialData: formState.item || {},
@@ -687,7 +687,7 @@ export function EntityChildManager({
                   className: "border-0 shadow-none p-0"
                 })
               } else {
-                console.log('[EntityChildManager RENDER] Using generic EntityForm')
+                if (process.env.NODE_ENV === 'development') console.log('[EntityChildManager RENDER] Using generic EntityForm')
                 return (
                   <EntityForm
                     entityConfig={childEntityFormConfig as any}

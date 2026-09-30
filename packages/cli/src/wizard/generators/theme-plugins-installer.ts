@@ -19,6 +19,25 @@ const PLUGIN_PACKAGES: Record<Exclude<PluginChoice, 'starter'>, string> = {
 }
 const PLUGIN_OPTIONS = ['starter', ...Object.keys(PLUGIN_PACKAGES)]
 
+/**
+ * When create-nextspark-app runs with local tarballs (.packages/), it sets this to a JSON object of package name ->
+ * tarball path for the plugins it found at core's version: the wizard installs those files instead of packing the
+ * package from the registry, where an unpublished version does not exist.
+ */
+export const LOCAL_PLUGIN_TARBALLS_ENV = 'NEXTSPARK_LOCAL_PLUGIN_TARBALLS'
+
+function localPluginTarballs(): Record<string, string> {
+  if (!process.env[LOCAL_PLUGIN_TARBALLS_ENV]) return {}
+  try {
+    const parsed = JSON.parse(process.env[LOCAL_PLUGIN_TARBALLS_ENV] as string)
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed
+  } catch {
+    // reported below
+  }
+  console.log(chalk.yellow(`  ⚠ ${LOCAL_PLUGIN_TARBALLS_ENV} is not a JSON object of package name -> tarball path; ignoring it, plugins come from the registry.`))
+  return {}
+}
+
 function choices(options: readonly string[], includeNone = false): string {
   return [...options, ...(includeNone ? ['none'] : [])].join(', ')
 }
@@ -111,7 +130,8 @@ export async function installPlugins(plugins: PluginChoice[]): Promise<boolean> 
         spinner.succeed(chalk.green(`Plugin ${plugin} installed!`))
         continue
       }
-      const success = await installPluginViaCli(PLUGIN_PACKAGES[plugin as Exclude<PluginChoice, 'starter'>])
+      const packageName = PLUGIN_PACKAGES[plugin as Exclude<PluginChoice, 'starter'>]
+      const success = await installPluginViaCli(localPluginTarballs()[packageName] ?? packageName)
       if (success) spinner.succeed(chalk.green(`Plugin ${plugin} installed!`))
       else {
         spinner.fail(chalk.red(`Failed to install plugin: ${plugin}`))

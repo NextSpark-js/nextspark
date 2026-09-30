@@ -76,7 +76,7 @@ export function useEntityConfig(
         })
 
         if (!silent) {
-          console.log(`[useEntityConfig] Cache hit for ${entityType}`, {
+          if (process.env.NODE_ENV === 'development') console.log(`[useEntityConfig] Cache hit for ${entityType}`, {
             config: cachedConfig,
             hasOverride
           })
@@ -122,7 +122,7 @@ export function useEntityConfig(
       })
 
       if (!silent) {
-        console.log(`[useEntityConfig] Loaded config for ${entityType}`, {
+        if (process.env.NODE_ENV === 'development') console.log(`[useEntityConfig] Loaded config for ${entityType}`, {
           config: foundEntity,
           hasOverride,
           cached: cache
@@ -167,7 +167,7 @@ export function preloadEntityConfigs(): void {
     })
 
     registryLoaded = true
-    console.log('[useEntityConfig] Preloaded all entity configurations', {
+    if (process.env.NODE_ENV === 'development') console.log('[useEntityConfig] Preloaded all entity configurations', {
       count: allEntities.length,
       entities: allEntities.map(e => e.slug)
     })
@@ -182,7 +182,7 @@ export function preloadEntityConfigs(): void {
 export function clearEntityConfigCache(): void {
   configCache.clear()
   registryLoaded = false
-  console.log('[useEntityConfig] Cache cleared')
+  if (process.env.NODE_ENV === 'development') console.log('[useEntityConfig] Cache cleared')
 }
 
 /**

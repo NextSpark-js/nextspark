@@ -411,6 +411,34 @@ test('the template tree is checked with its own @/ alias', () => {
   }
 })
 
+test("inside a declaration file, `./x.js` names the sibling `./x.d.ts` (TypeScript's rule): a built package's chunks are followed, not reported as unresolved", () => {
+  const manifest = { name: '@acme/native', types: './dist/index.d.ts', exports: { '.': { types: './dist/index.d.ts', import: './dist/index.js' } } }
+  const files = extra => ({
+    'packages/native/package.json': JSON.stringify(manifest),
+    'packages/native/dist/index.js': "export * from './storage-abc.js'\n",
+    'packages/native/dist/index.d.ts': "export * from './storage-abc.js'\nexport { x } from './sub/index.js'\n",
+    'packages/native/dist/sub/index.d.ts': 'export declare const x: number\n',
+    'apps/mobile/src/useNative.ts': "import * as native from '@acme/native'\nexport const y = native\n",
+    ...extra,
+  })
+  const violationsOf = extra => {
+    const { root, cleanup } = repo(files(extra))
+    try {
+      return check(root).violations.map(v => [v.file, v.specifier, v.reason])
+    } finally {
+      cleanup()
+    }
+  }
+  // the chunk exists as .d.ts (and as .js): nothing to report
+  assert.deepEqual(violationsOf({ 'packages/native/dist/storage-abc.js': 'export const s = 1\n', 'packages/native/dist/storage-abc.d.ts': 'export declare const s: number\n' }), [])
+  // only the typings chunk exists (a bundler hashes the .d.ts chunks apart from the .js ones): the .js entry's own chunk is not on disk
+  assert.deepEqual(violationsOf({ 'packages/native/dist/storage-abc.d.ts': 'export declare const s: number\n' }).filter(([file]) => file.endsWith('.d.ts')), [])
+  // the chunk's typings reach server code: still found, through the sibling .d.ts
+  assert.deepEqual(violationsOf({ 'packages/native/dist/storage-abc.js': 'export const s = 1\n', 'packages/native/dist/storage-abc.d.ts': "export * from '../../core/src/lib/db'\n" }), [['packages/native/dist/storage-abc.d.ts', '../../core/src/lib/db', 'server code (packages/core)']])
+  // a specifier with no file at all is still reported, from the typings as from the runtime entry
+  assert.deepEqual(violationsOf({}).map(([file]) => file).sort(), ['packages/native/dist/index.d.ts', 'packages/native/dist/index.js'])
+})
+
 test('this repository passes, from the script and the API alike', () => {
   const result = checkMobileBoundary({ repoRoot: REPO_ROOT, ts })
   assert.deepEqual(describeViolations(result.violations), [])
@@ -425,9 +453,9 @@ test('the script exits 1 and names the chain when a violation is present', () =>
   try {
     // The script checks the repository it lives in: a copy of it in the temporary repository checks that one
     mkdirSync(join(root, 'scripts/packages'), { recursive: true })
-    // The copy imports stage 7a's resolver by a path relative to the repository it lives in: point it at the real one
-    const resolverUrl = new URL(`file://${join(REPO_ROOT, 'packages/core/scripts/build/registry/discovery/plugin-capabilities.mjs')}`).href
-    writeFileSync(join(root, 'scripts/packages/mobile-boundary.mjs'), readFileSync(SCRIPT, 'utf8').replace("'../../packages/core/scripts/build/registry/discovery/plugin-capabilities.mjs'", JSON.stringify(resolverUrl)))
+    // The copy imports the check, which core ships, by a path relative to the repository it lives in: point it at the real one
+    const checkUrl = new URL(`file://${join(REPO_ROOT, 'packages/core/scripts/build/mobile-boundary.mjs')}`).href
+    writeFileSync(join(root, 'scripts/packages/mobile-boundary.mjs'), readFileSync(SCRIPT, 'utf8').replaceAll("'../../packages/core/scripts/build/mobile-boundary.mjs'", JSON.stringify(checkUrl)))
     writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'boundary-fixture' }))
     mkdirSync(join(root, 'node_modules'), { recursive: true })
     symlinkSync(realpathSync(join(REPO_ROOT, 'node_modules/typescript')), join(root, 'node_modules/typescript'), 'dir')

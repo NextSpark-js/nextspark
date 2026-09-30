@@ -62,7 +62,7 @@ function ResetPasswordContent() {
 
     setLoading(true);
     setError(null);
-    console.log('Updating password...');
+    if (process.env.NODE_ENV === 'development') console.log('Updating password...');
 
     try {
       const result = await updatePassword(data.password, token);
@@ -72,7 +72,7 @@ function ResetPasswordContent() {
         setError(errorMsg);
       } else {
         setSuccess(true);
-        console.log('Password updated successfully');
+        if (process.env.NODE_ENV === 'development') console.log('Password updated successfully');
       }
     } catch {
       setError('Unexpected error updating password');

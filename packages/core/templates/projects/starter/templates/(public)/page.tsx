@@ -1,8 +1,20 @@
+import { Suspense } from 'react'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { Button } from '@nextsparkjs/core/components/ui/button'
+import { SkeletonLandingPage } from '@nextsparkjs/core/components/ui/skeleton-public'
 
-export default async function HomePage() {
+// The skeleton is scoped to the home page. A loading.tsx in this route group would wrap every public route, the
+// catch-all that ends in notFound() included, and Next answers 200 for a not-found that renders behind a boundary
+export default function HomePage() {
+  return (
+    <Suspense fallback={<SkeletonLandingPage />}>
+      <HomeContent />
+    </Suspense>
+  )
+}
+
+async function HomeContent() {
   const t = await getTranslations('home')
 
   return (

@@ -22,7 +22,7 @@ export async function loadAllI18nTranslations(locale: SupportedLocale): Promise<
     // Get all enabled entities
     const entities = getAllEntityConfigs().filter(entity => entity.enabled)
 
-    console.log(`[i18n-integration] Loading translations for ${entities.length} entities:`, entities.map(e => e.slug))
+    if (process.env.NODE_ENV === 'development') console.log(`[i18n-integration] Loading translations for ${entities.length} entities:`, entities.map(e => e.slug))
 
     // Load core + theme + entity translations (merge priority: core < theme < entity)
     return await loadMergedTranslations(locale)
@@ -67,14 +67,14 @@ export function getOptimizedNamespaces(pathname: string): {
   entities: string[]
   strategy: string
 } {
-  console.log(`[i18n-integration] 🔍 Analyzing pathname: "${pathname}"`)
+  if (process.env.NODE_ENV === 'development') console.log(`[i18n-integration] 🔍 Analyzing pathname: "${pathname}"`)
 
   try {
     const { detectRouteStrategy, getOptimizedNamespaces } = require('@nextsparkjs/registries/namespace-registry')
     const strategy = detectRouteStrategy(pathname)
     const namespaceConfig = getOptimizedNamespaces(strategy)
 
-    console.log(`[i18n-integration] 📋 Registry strategy: ${strategy}`)
+    if (process.env.NODE_ENV === 'development') console.log(`[i18n-integration] 📋 Registry strategy: ${strategy}`)
     return namespaceConfig
   } catch (error) {
     console.warn('Failed to load optimized namespaces from registry:', error)
@@ -82,7 +82,7 @@ export function getOptimizedNamespaces(pathname: string): {
     // Fallback to hardcoded logic during registry migration
     // Core namespaces for dashboard pages
     if (pathname.startsWith('/dashboard')) {
-      console.log(`[i18n-integration] 📱 Dashboard detected → Loading authenticated user namespaces`)
+      if (process.env.NODE_ENV === 'development') console.log(`[i18n-integration] 📱 Dashboard detected → Loading authenticated user namespaces`)
       return {
         core: ['common', 'dashboard', 'settings', 'public', 'validation', 'teams', 'admin'],
         entities: [], // Entities will be loaded dynamically
@@ -99,7 +99,7 @@ export function getOptimizedNamespaces(pathname: string): {
                        pathname === '/verify-email'
 
     if (isAuthPage) {
-      console.log(`[i18n-integration] 🔐 Auth page detected → Loading auth-only namespaces`)
+      if (process.env.NODE_ENV === 'development') console.log(`[i18n-integration] 🔐 Auth page detected → Loading auth-only namespaces`)
       return {
         core: ['common', 'auth', 'validation'],
         entities: [],
@@ -110,7 +110,7 @@ export function getOptimizedNamespaces(pathname: string): {
     // Public pages
     if (pathname === '/' || pathname.startsWith('/pricing') || pathname.startsWith('/docs') ||
         pathname.startsWith('/support') || pathname.startsWith('/features') || pathname.startsWith('/products')) {
-      console.log(`[i18n-integration] 🌐 Public page detected → Loading public + auth namespaces`)
+      if (process.env.NODE_ENV === 'development') console.log(`[i18n-integration] 🌐 Public page detected → Loading public + auth namespaces`)
       return {
         core: ['common', 'public', 'auth'],
         entities: [], // Some public pages might show entities
@@ -120,7 +120,7 @@ export function getOptimizedNamespaces(pathname: string): {
 
     // Superadmin panel pages
     if (pathname.startsWith('/superadmin')) {
-      console.log(`[i18n-integration] 🛠️ Superadmin panel detected → Loading superadmin namespaces`)
+      if (process.env.NODE_ENV === 'development') console.log(`[i18n-integration] 🛠️ Superadmin panel detected → Loading superadmin namespaces`)
       return {
         core: ['common', 'superadmin', 'dashboard'],
         entities: [],
@@ -129,7 +129,7 @@ export function getOptimizedNamespaces(pathname: string): {
     }
 
     // Default to public
-    console.log(`[i18n-integration] 🔄 Unknown route → Loading public as fallback`)
+    if (process.env.NODE_ENV === 'development') console.log(`[i18n-integration] 🔄 Unknown route → Loading public as fallback`)
     return {
       core: ['common', 'public'],
       entities: [],
@@ -173,7 +173,7 @@ export async function loadOptimizedTranslations(
       }
     }
 
-    console.log(`[i18n-integration] Loaded optimized translations for ${locale} (${strategy}):`, {
+    if (process.env.NODE_ENV === 'development') console.log(`[i18n-integration] Loaded optimized translations for ${locale} (${strategy}):`, {
       namespaces: Object.keys(optimizedTranslations)
     })
 

@@ -92,7 +92,7 @@ function VerifyEmailContent() {
                     }
                   })
                 });
-                console.log('Default metadata created for verified user:', session.user.id);
+                if (process.env.NODE_ENV === 'development') console.log('Default metadata created for verified user:', session.user.id);
               }
             }
           } catch (metaError) {

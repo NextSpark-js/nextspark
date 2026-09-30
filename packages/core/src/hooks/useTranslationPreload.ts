@@ -24,13 +24,13 @@ export function useTranslationPreload(context: 'dashboard' | 'auth' | 'auto' = '
   useEffect(() => {
     // Función para precargar namespaces específicos
     const preloadNamespaces = async (namespaces: string[], contextName: string) => {
-      console.log(`[TranslationPreload] 🚀 Starting ${contextName} preload for ${locale}:`, namespaces);
+      if (process.env.NODE_ENV === 'development') console.log(`[TranslationPreload] 🚀 Starting ${contextName} preload for ${locale}:`, namespaces);
 
       const promises = namespaces.map(async (namespace) => {
         try {
           // Usar dynamic import para precargar sin bloquear
           await import(`../messages/${locale}/${namespace}.json`);
-          console.log(`[TranslationPreload] ✓ Preloaded: ${namespace}`);
+          if (process.env.NODE_ENV === 'development') console.log(`[TranslationPreload] ✓ Preloaded: ${namespace}`);
           return { namespace, success: true };
         } catch (error) {
           console.warn(`[TranslationPreload] ⚠️ Error preloading ${namespace}:`, error);
@@ -43,7 +43,7 @@ export function useTranslationPreload(context: 'dashboard' | 'auth' | 'auto' = '
         result.status === 'fulfilled' && result.value.success
       ).length;
 
-      console.log(`[TranslationPreload] ✅ ${contextName} preload complete: ${successful}/${namespaces.length} namespaces`);
+      if (process.env.NODE_ENV === 'development') console.log(`[TranslationPreload] ✅ ${contextName} preload complete: ${successful}/${namespaces.length} namespaces`);
     };
 
     // Estrategia de precarga inteligente por contexto
@@ -114,7 +114,7 @@ export function useNavigationPreload() {
       namespacesToLoad = PUBLIC_NAMESPACES;
     }
 
-    console.log(`[NavigationPreload] Preloading for ${pathname}:`, namespacesToLoad);
+    if (process.env.NODE_ENV === 'development') console.log(`[NavigationPreload] Preloading for ${pathname}:`, namespacesToLoad);
 
     const promises = namespacesToLoad.map(namespace =>
       import(`../messages/${locale}/${namespace}.json`).catch(error => {
@@ -124,7 +124,7 @@ export function useNavigationPreload() {
     );
 
     await Promise.all(promises);
-    console.log(`[NavigationPreload] ✅ Ready to navigate to ${pathname}`);
+    if (process.env.NODE_ENV === 'development') console.log(`[NavigationPreload] ✅ Ready to navigate to ${pathname}`);
   };
 
   return { preloadForRoute };

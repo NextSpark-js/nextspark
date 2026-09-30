@@ -43,11 +43,11 @@ export function useContextAwareTranslations() {
     const newNamespaces = requiredNamespaces.filter(ns => !loadedNamespaces.current.has(ns));
     
     if (newNamespaces.length === 0) {
-      console.log(`[useContextAwareTranslations] ✓ All namespaces for ${context} already loaded`);
+      if (process.env.NODE_ENV === 'development') console.log(`[useContextAwareTranslations] ✓ All namespaces for ${context} already loaded`);
       return;
     }
 
-    console.log(`[useContextAwareTranslations] 🔄 Loading namespaces for ${context}:`, newNamespaces);
+    if (process.env.NODE_ENV === 'development') console.log(`[useContextAwareTranslations] 🔄 Loading namespaces for ${context}:`, newNamespaces);
 
     try {
       // Cargar namespaces usando dinámica imports
@@ -55,7 +55,7 @@ export function useContextAwareTranslations() {
         try {
           const messages = await import(`../messages/${locale}/${namespace}.json`);
           loadedNamespaces.current.add(namespace);
-          console.log(`[useContextAwareTranslations] ✓ Loaded ${namespace} for ${locale}`);
+          if (process.env.NODE_ENV === 'development') console.log(`[useContextAwareTranslations] ✓ Loaded ${namespace} for ${locale}`);
           return { namespace, messages: messages.default };
         } catch (error) {
           console.warn(`[useContextAwareTranslations] ⚠️ Failed to load ${namespace}:`, error);
@@ -64,7 +64,7 @@ export function useContextAwareTranslations() {
       });
 
       await Promise.all(loadPromises);
-      console.log(`[useContextAwareTranslations] ✅ Context ${context} loading complete`);
+      if (process.env.NODE_ENV === 'development') console.log(`[useContextAwareTranslations] ✅ Context ${context} loading complete`);
     } catch (error) {
       console.error(`[useContextAwareTranslations] ❌ Error loading namespaces for ${context}:`, error);
     }
@@ -76,17 +76,17 @@ export function useContextAwareTranslations() {
     
     // Si cambió el contexto, cargar nuevos namespaces
     if (previousContext.current !== currentContext) {
-      console.log(`[useContextAwareTranslations] 📍 Context change: ${previousContext.current} → ${currentContext}`);
+      if (process.env.NODE_ENV === 'development') console.log(`[useContextAwareTranslations] 📍 Context change: ${previousContext.current} → ${currentContext}`);
       
       // Estrategias específicas según transición
       if (currentContext === 'dashboard' && previousContext.current === 'public') {
-        console.log(`[useContextAwareTranslations] 🔑 User authenticated, loading dashboard namespaces`);
+        if (process.env.NODE_ENV === 'development') console.log(`[useContextAwareTranslations] 🔑 User authenticated, loading dashboard namespaces`);
         loadContextNamespaces('dashboard');
       } else if (currentContext === 'public' && previousContext.current === 'dashboard') {
-        console.log(`[useContextAwareTranslations] 🌐 Returning to public, ensuring public namespaces available`);
+        if (process.env.NODE_ENV === 'development') console.log(`[useContextAwareTranslations] 🌐 Returning to public, ensuring public namespaces available`);
         loadContextNamespaces('public');
       } else if (currentContext === 'auth') {
-        console.log(`[useContextAwareTranslations] 🔐 Auth context, loading auth-only namespaces`);
+        if (process.env.NODE_ENV === 'development') console.log(`[useContextAwareTranslations] 🔐 Auth context, loading auth-only namespaces`);
         loadContextNamespaces('auth');
       } else {
         // Cambio de contexto normal
@@ -104,12 +104,12 @@ export function useContextAwareTranslations() {
     const preloadRelatedNamespaces = () => {
       // Si estamos en público, precargar auth para transiciones rápidas a login
       if (currentContext === 'public') {
-        console.log(`[useContextAwareTranslations] 🔄 Preloading auth namespaces for potential login`);
+        if (process.env.NODE_ENV === 'development') console.log(`[useContextAwareTranslations] 🔄 Preloading auth namespaces for potential login`);
         loadContextNamespaces('auth');
       }
       // Si estamos en dashboard, asegurar que public esté disponible
       else if (currentContext === 'dashboard') {
-        console.log(`[useContextAwareTranslations] 🔄 Ensuring public namespaces available for navigation`);
+        if (process.env.NODE_ENV === 'development') console.log(`[useContextAwareTranslations] 🔄 Ensuring public namespaces available for navigation`);
         loadContextNamespaces('public');
       }
     };

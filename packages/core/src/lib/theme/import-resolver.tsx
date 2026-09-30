@@ -72,7 +72,7 @@ export function ImportResolverProvider({
         // Cache the resolved component
         componentCache.set(cacheKey, resolvedComponent)
         
-        console.log(`[ImportResolver] Using override for ${componentPath} from theme ${theme.name}`)
+        if (process.env.NODE_ENV === 'development') console.log(`[ImportResolver] Using override for ${componentPath} from theme ${theme.name}`)
         return resolvedComponent
       }
       
@@ -87,7 +87,7 @@ export function ImportResolverProvider({
 
   const clearComponentCache = React.useCallback(() => {
     componentCache.clear()
-    console.log('[ImportResolver] Component cache cleared')
+    if (process.env.NODE_ENV === 'development') console.log('[ImportResolver] Component cache cleared')
   }, [])
 
   // Clear cache when theme changes

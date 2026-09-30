@@ -86,7 +86,7 @@ export function setEntityRegistry(
   _cachedMetadata = metadata || null
 
   const entityCount = Object.keys(registry || {}).length
-  console.log(`[EntityQueries] Registry set with ${entityCount} entities`)
+  if (process.env.NODE_ENV === 'development') console.log(`[EntityQueries] Registry set with ${entityCount} entities`)
 }
 
 /**
@@ -135,7 +135,7 @@ function getRegistry(): Record<string, EntityRegistryEntry> {
 
   // Registry not yet set - this is expected on first load
   // The layout will call setEntityRegistry() with the imported registry
-  console.log('[EntityQueries] Registry not yet initialized (will be set by layout)')
+  if (process.env.NODE_ENV === 'development') console.log('[EntityQueries] Registry not yet initialized (will be set by layout)')
   return {}
 }
 

@@ -38,6 +38,9 @@ tests/jest/coverage
 # TypeScript
 *.tsbuildinfo
 
+# Next.js rewrites this on every dev and build
+next-env.d.ts
+
 # IDE
 .idea/
 .vscode/

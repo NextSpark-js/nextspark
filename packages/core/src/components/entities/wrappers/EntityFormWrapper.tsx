@@ -75,11 +75,11 @@ export function EntityFormWrapper({
         
         try {
           setIsLoadingData(true)
-          console.log(`[EntityFormWrapper] Loading data for ${entityType} ${id} (override: ${isOverride})`)
+          if (process.env.NODE_ENV === 'development') console.log(`[EntityFormWrapper] Loading data for ${entityType} ${id} (override: ${isOverride})`)
 
           const data = await getEntityData(entityType, id)
           
-          console.log(`[EntityFormWrapper] Loaded data:`, data)
+          if (process.env.NODE_ENV === 'development') console.log(`[EntityFormWrapper] Loaded data:`, data)
           setInitialData(data || {})
         } catch (error) {
           console.error(`[EntityFormWrapper] Error loading data for ${entityType} ${id}:`, error)
@@ -96,7 +96,7 @@ export function EntityFormWrapper({
   const handleSubmit = useCallback(async (data: Record<string, unknown>) => {
     setSubmitError(null)
     try {
-      console.log(`${mode === 'create' ? 'Creating' : 'Updating'} ${entityType}:`, data)
+      if (process.env.NODE_ENV === 'development') console.log(`${mode === 'create' ? 'Creating' : 'Updating'} ${entityType}:`, data)
 
       if (mode === 'create') {
         const created = await createEntityData(entityType, data)

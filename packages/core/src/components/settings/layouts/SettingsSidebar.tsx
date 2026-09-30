@@ -61,7 +61,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
   // Get enabled settings pages from configuration and filter based on user's auth method
   const filteredNavigation = useMemo(() => {
     const enabledPages = getEnabledSettingsPages()
-    console.log('[SettingsSidebar] enabledPages:', enabledPages)
+    if (process.env.NODE_ENV === 'development') console.log('[SettingsSidebar] enabledPages:', enabledPages)
 
     return enabledPages.filter((page) => {
       // Hide password page for Google users (they can't change password)

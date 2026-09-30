@@ -69,6 +69,8 @@ interface Created {
   installingPnpm: string
   /** Every line createProject printed with console.log, in order. */
   printed: string[]
+  /** The NEXTSPARK_LOCAL_PLUGIN_TARBALLS the wizard was started with ('' when it was not set). */
+  wizardPluginTarballs: string
 }
 
 /** The entries of the top-level YAML key `key`, one per line in the form `pattern` matches. */
@@ -106,10 +108,12 @@ async function create({ callerPnpm, projectPnpm, versionOutput, addExit = 0, ext
   const caller = path.join(root, 'caller')
   const project = path.join(root, 'projects', 'my-app')
   const addLog = path.join(root, 'pnpm-add.log')
+  const pluginTarballsLog = path.join(root, 'npx-plugin-tarballs.log')
 
   fs.mkdirSync(bin)
   fs.writeFileSync(path.join(bin, 'pnpm'), FAKE_PNPM, { mode: 0o755 })
-  fs.writeFileSync(path.join(bin, 'npx'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+  // The wizard: records the local plugin tarballs create-nextspark-app hands it
+  fs.writeFileSync(path.join(bin, 'npx'), '#!/bin/sh\nprintf \'%s\' "$NEXTSPARK_LOCAL_PLUGIN_TARBALLS" > "$FAKE_NPX_PLUGIN_TARBALLS_LOG"\nexit 0\n', { mode: 0o755 })
   fs.mkdirSync(path.join(caller, '.packages'), { recursive: true })
   fs.writeFileSync(path.join(caller, 'package.json'), JSON.stringify({ name: 'caller', packageManager: `pnpm@${callerPnpm}` }))
   // The project is a sibling of the caller. Its ancestor intentionally pins a
@@ -130,6 +134,7 @@ async function create({ callerPnpm, projectPnpm, versionOutput, addExit = 0, ext
   else process.env.FAKE_PNPM_VERSION_OUTPUT = versionOutput
   process.env.FAKE_PNPM_ADD_LOG = addLog
   process.env.FAKE_PNPM_ADD_EXIT = String(addExit)
+  process.env.FAKE_NPX_PLUGIN_TARBALLS_LOG = pluginTarballsLog
   try {
     try {
       await createProject({ projectName: 'my-app', projectPath: project })
@@ -148,6 +153,7 @@ async function create({ callerPnpm, projectPnpm, versionOutput, addExit = 0, ext
       added: fs.readFileSync(addLog, 'utf8').trim().split(/\s+/).slice(2),
       installingPnpm: fs.readFileSync(addLog, 'utf8').trim().split(/\s+/)[0],
       printed,
+      wizardPluginTarballs: fs.existsSync(pluginTarballsLog) ? fs.readFileSync(pluginTarballsLog, 'utf8') : '',
     }
   } finally {
     process.chdir(previousCwd)
@@ -157,6 +163,7 @@ async function create({ callerPnpm, projectPnpm, versionOutput, addExit = 0, ext
     delete process.env.FAKE_PNPM_VERSION_OUTPUT
     delete process.env.FAKE_PNPM_ADD_LOG
     delete process.env.FAKE_PNPM_ADD_EXIT
+    delete process.env.FAKE_NPX_PLUGIN_TARBALLS_LOG
     fs.rmSync(root, { recursive: true, force: true })
   }
 }
@@ -479,4 +486,24 @@ test('each pnpm builds a NextSpark package from a local tarball under the pnpm-w
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }
+})
+
+test('the wizard gets the local plugin tarballs at core\'s version, and only those', async () => {
+  const created = await create({
+    callerPnpm: '9.0.0',
+    projectPnpm: '9.0.0',
+    extraTarballs: [
+      'nextsparkjs-plugin-ai-0.1.0-beta.189.tgz',
+      'nextsparkjs-plugin-langchain-0.1.0-beta.189.tgz',
+      'nextsparkjs-plugin-social-media-publisher-0.1.0-beta.100.tgz', // a stale pack: not core's version
+    ],
+  })
+  const given = JSON.parse(created.wizardPluginTarballs) as Record<string, string>
+  assert.deepEqual(Object.keys(given).sort(), ['@nextsparkjs/plugin-ai', '@nextsparkjs/plugin-langchain'])
+  assert.ok(given['@nextsparkjs/plugin-ai'].endsWith('/caller/.packages/nextsparkjs-plugin-ai-0.1.0-beta.189.tgz'))
+})
+
+test('without local plugin tarballs the wizard is started as before', async () => {
+  const created = await create({ callerPnpm: '9.0.0', projectPnpm: '9.0.0' })
+  assert.equal(created.wizardPluginTarballs, '')
 })

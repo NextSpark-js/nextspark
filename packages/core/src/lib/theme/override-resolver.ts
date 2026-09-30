@@ -49,7 +49,7 @@ export async function resolveComponentOverride(
   // Check cache first
   const cached = overrideCache.get(cacheKey)
   if (cached && isCacheValid(cached)) {
-    console.log(`[Override] Cache hit for ${componentPath} in theme ${theme.name}`)
+    if (process.env.NODE_ENV === 'development') console.log(`[Override] Cache hit for ${componentPath} in theme ${theme.name}`)
     return cached.component
   }
 
@@ -74,7 +74,7 @@ export async function resolveComponentOverride(
       theme: theme.name
     })
 
-    console.log(`[Override] Resolved override for ${componentPath} in theme ${theme.name}`)
+    if (process.env.NODE_ENV === 'development') console.log(`[Override] Resolved override for ${componentPath} in theme ${theme.name}`)
     return override
 
   } catch (error) {
@@ -102,11 +102,11 @@ export async function resolveComponent<T>(
   const override = await resolveComponentOverride(componentPath, theme)
   
   if (override) {
-    console.log(`[Override] Using override for ${componentPath}`)
+    if (process.env.NODE_ENV === 'development') console.log(`[Override] Using override for ${componentPath}`)
     return override
   }
 
-  console.log(`[Override] Using original component for ${componentPath}`)
+  if (process.env.NODE_ENV === 'development') console.log(`[Override] Using original component for ${componentPath}`)
   return originalComponent
 }
 
@@ -129,7 +129,7 @@ export function clearOverrideCache(componentPath?: string, themeName?: string): 
   if (componentPath && themeName) {
     const cacheKey = getCacheKey(componentPath, themeName)
     overrideCache.delete(cacheKey)
-    console.log(`[Override] Cleared cache for ${componentPath} in theme ${themeName}`)
+    if (process.env.NODE_ENV === 'development') console.log(`[Override] Cleared cache for ${componentPath} in theme ${themeName}`)
   } else if (themeName) {
     // Clear all cache entries for a specific theme
     for (const [key] of overrideCache) {
@@ -137,11 +137,11 @@ export function clearOverrideCache(componentPath?: string, themeName?: string): 
         overrideCache.delete(key)
       }
     }
-    console.log(`[Override] Cleared all cache entries for theme ${themeName}`)
+    if (process.env.NODE_ENV === 'development') console.log(`[Override] Cleared all cache entries for theme ${themeName}`)
   } else {
     // Clear entire cache
     overrideCache.clear()
-    console.log('[Override] Cleared entire override cache')
+    if (process.env.NODE_ENV === 'development') console.log('[Override] Cleared entire override cache')
   }
 }
 
@@ -169,7 +169,7 @@ export async function preloadThemeOverrides(theme: ThemeConfig): Promise<void> {
 
   const overridePaths = Object.keys(theme.components.overrides)
   
-  console.log(`[Override] Preloading ${overridePaths.length} overrides for theme ${theme.name}`)
+  if (process.env.NODE_ENV === 'development') console.log(`[Override] Preloading ${overridePaths.length} overrides for theme ${theme.name}`)
   
   const promises = overridePaths.map(async (path) => {
     try {
@@ -180,5 +180,5 @@ export async function preloadThemeOverrides(theme: ThemeConfig): Promise<void> {
   })
 
   await Promise.allSettled(promises)
-  console.log(`[Override] Preloading complete for theme ${theme.name}`)
+  if (process.env.NODE_ENV === 'development') console.log(`[Override] Preloading complete for theme ${theme.name}`)
 }

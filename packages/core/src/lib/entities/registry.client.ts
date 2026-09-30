@@ -86,7 +86,7 @@ export function setServerEntities(entities: EntityConfig[]): void {
     }
     clientEntityRegistry.register(entity)
   }
-  console.log(`[EntityRegistry] Client-side: registered ${entities.length} entities from server (${entityIconRegistry.size} icons from registry)`)
+  if (process.env.NODE_ENV === 'development') console.log(`[EntityRegistry] Client-side: registered ${entities.length} entities from server (${entityIconRegistry.size} icons from registry)`)
 }
 
 /**
@@ -99,7 +99,7 @@ export function getAllEntityConfigs(): EntityConfig[] {
   if (clientEntities.length === 0) {
     // Registry not yet hydrated - this is normal during initial render
     // DashboardShell will call setServerEntities() to populate it
-    console.log('[EntityRegistry] Client registry empty - waiting for hydration from DashboardShell')
+    if (process.env.NODE_ENV === 'development') console.log('[EntityRegistry] Client registry empty - waiting for hydration from DashboardShell')
   }
 
   return clientEntities

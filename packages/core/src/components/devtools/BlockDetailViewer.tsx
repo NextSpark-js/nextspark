@@ -114,7 +114,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
   const BlockComponent = useMemo(() => {
     if (!block) return null;
     const component = getBlockComponent(slug);
-    console.log('[BlockDetailViewer] Loading block:', slug, 'Component:', component);
+    if (process.env.NODE_ENV === 'development') console.log('[BlockDetailViewer] Loading block:', slug, 'Component:', component);
     return component;
   }, [block, slug]);
 

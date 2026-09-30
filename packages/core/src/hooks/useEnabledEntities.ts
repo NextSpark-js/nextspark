@@ -22,7 +22,7 @@ export function useEnabledEntities() {
       // Get entities from client registry (populated by server component via EntityProvider)
       const enabledEntities = getEnabledEntities()
 
-      console.log(`[useEnabledEntities] Loaded ${enabledEntities.length} enabled entities:`, enabledEntities.map(e => e.slug))
+      if (process.env.NODE_ENV === 'development') console.log(`[useEnabledEntities] Loaded ${enabledEntities.length} enabled entities:`, enabledEntities.map(e => e.slug))
 
       setEntities(enabledEntities)
       setError(null)
@@ -42,7 +42,7 @@ export function useEnabledEntities() {
 
       const enabledEntities = getEnabledEntities()
 
-      console.log(`[useEnabledEntities.refetch] Reloaded ${enabledEntities.length} enabled entities:`, enabledEntities.map(e => e.slug))
+      if (process.env.NODE_ENV === 'development') console.log(`[useEnabledEntities.refetch] Reloaded ${enabledEntities.length} enabled entities:`, enabledEntities.map(e => e.slug))
 
       setEntities(enabledEntities)
       setError(null)

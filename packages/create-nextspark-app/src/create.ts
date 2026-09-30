@@ -152,6 +152,16 @@ const NEXTSPARK_PACKAGES = [
   '@nextsparkjs/ui',
 ]
 
+/** The plugin packages the wizard can install, by the names of their tarballs' packages. */
+const PLUGIN_PACKAGES = [
+  '@nextsparkjs/plugin-ai',
+  '@nextsparkjs/plugin-langchain',
+  '@nextsparkjs/plugin-social-media-publisher',
+]
+
+/** Read by the wizard (packages/cli theme-plugins-installer): package name -> local tarball for the plugins it installs. */
+export const LOCAL_PLUGIN_TARBALLS_ENV = 'NEXTSPARK_LOCAL_PLUGIN_TARBALLS'
+
 /** The minimum release age pnpm 11 applies when none is configured: one day, in minutes. */
 const MINIMUM_RELEASE_AGE_MINUTES = 1440
 
@@ -367,6 +377,9 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   // The local packages that are nested dependencies of another local tarball.
   // Unlike a direct `pnpm add <tarball>`, those must be redirected explicitly.
   const nestedTarballs: LocalTarball[] = []
+  // Plugins are not installed by pnpm: the wizard copies their source in. It gets the local tarballs, found the way
+  // core's are, instead of packing the package from the registry
+  const localPluginTarballs: Record<string, string> = {}
 
   if (localCoreTarball && localCliTarball) {
     corePackage = localCoreTarball
@@ -403,6 +416,11 @@ export async function createProject(options: ProjectOptions): Promise<void> {
           nestedTarballs.push(auxiliaryTarball)
           localTarballs.push(auxiliaryTarball)
         }
+      }
+
+      for (const name of PLUGIN_PACKAGES) {
+        const file = findVersionMatchedTarball(name, targetVersion)
+        if (file) localPluginTarballs[name] = file
       }
     }
   }
@@ -527,6 +545,9 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     cwd: projectPath,
     stdio: 'inherit', // Interactive mode
     shell: true,
+    env: Object.keys(localPluginTarballs).length > 0
+      ? { ...process.env, [LOCAL_PLUGIN_TARBALLS_ENV]: JSON.stringify(localPluginTarballs) }
+      : process.env,
   })
 
   if (result.status !== 0) {

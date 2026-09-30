@@ -80,19 +80,19 @@ export function EntityDetailWrapper({
 
   // Function to load child entities data from API
   const loadChildEntitiesData = useCallback(async (parentId: string) => {
-    console.log(`[loadChildEntitiesData] Called with parentId:`, parentId, `childEntityNames:`, childEntityNames)
+    if (process.env.NODE_ENV === 'development') console.log(`[loadChildEntitiesData] Called with parentId:`, parentId, `childEntityNames:`, childEntityNames)
     if (!hasChildEntities) {
-      console.log(`[loadChildEntitiesData] No child entities found, returning early`)
+      if (process.env.NODE_ENV === 'development') console.log(`[loadChildEntitiesData] No child entities found, returning early`)
       return
     }
 
     try {
       const childrenData: Record<string, Record<string, unknown>[]> = {}
-      console.log(`[loadChildEntitiesData] Starting to load child entities:`, childEntityNames)
+      if (process.env.NODE_ENV === 'development') console.log(`[loadChildEntitiesData] Starting to load child entities:`, childEntityNames)
 
       for (const childName of childEntityNames) {
         try {
-          console.log(`[EntityDetailWrapper] Loading child data for ${childName}`)
+          if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Loading child data for ${childName}`)
           
           // Load child data from API endpoint (using fetchWithTeam for team context)
           const response = await fetchWithTeam(`/api/v1/${entityType}/${parentId}/child/${childName}`, {
@@ -102,7 +102,7 @@ export function EntityDetailWrapper({
           if (response.ok) {
             const result = await response.json()
             const childRows = result.success ? result.data : []
-            console.log(`[EntityDetailWrapper] Loaded ${childRows.length} ${childName} records`)
+            if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Loaded ${childRows.length} ${childName} records`)
             childrenData[childName] = childRows
           } else {
             console.warn(`Failed to load child data for ${childName}: ${response.status}`)
@@ -114,7 +114,7 @@ export function EntityDetailWrapper({
         }
       }
       
-      console.log(`[loadChildEntitiesData] Setting child data:`, childrenData)
+      if (process.env.NODE_ENV === 'development') console.log(`[loadChildEntitiesData] Setting child data:`, childrenData)
       setChildData(childrenData)
     } catch (error) {
       console.error('Error loading child entities data:', error)
@@ -147,10 +147,10 @@ export function EntityDetailWrapper({
       try {
         setIsLoadingData(true)
         setDataError(null)
-        console.log(`[EntityDetailWrapper] Loading data for "${entityType}" id: ${id} (override: ${isOverride})`)
+        if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Loading data for "${entityType}" id: ${id} (override: ${isOverride})`)
 
         // Use the parent+child API endpoint directly to get everything in one call
-        console.log(`[EntityDetailWrapper] hasChildEntities:`, hasChildEntities)
+        if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] hasChildEntities:`, hasChildEntities)
 
         if (hasChildEntities) {
           // Use parent+child API for entities that have child entities
@@ -159,7 +159,7 @@ export function EntityDetailWrapper({
           url.searchParams.set('child', 'all')
           url.searchParams.set('metas', 'all')
 
-          console.log(`[EntityDetailWrapper] Loading parent+child data from:`, url.toString())
+          if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Loading parent+child data from:`, url.toString())
 
           const response = await fetchWithTeam(url.toString(), {
             method: 'GET',
@@ -170,25 +170,25 @@ export function EntityDetailWrapper({
           }
 
           const apiResult = await response.json()
-          console.log(`[EntityDetailWrapper] Received parent+child data:`, apiResult)
+          if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Received parent+child data:`, apiResult)
 
           const result = apiResult.data
-          console.log(`[EntityDetailWrapper] result.child:`, result.child)
-          console.log(`[EntityDetailWrapper] typeof result.child:`, typeof result.child)
+          if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] result.child:`, result.child)
+          if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] typeof result.child:`, typeof result.child)
           setData(result as Record<string, unknown>)
 
           // Extract child data from the combined response
           if (result.child) {
-            console.log(`[EntityDetailWrapper] Setting child data from combined response:`, result.child)
+            if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Setting child data from combined response:`, result.child)
             setChildData(result.child as Record<string, Record<string, unknown>[]>)
           } else {
-            console.log(`[EntityDetailWrapper] No result.child found, setting empty childData`)
+            if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] No result.child found, setting empty childData`)
             setChildData({})
           }
         } else {
           // Use regular API for entities without child entities
           const result = await getEntityData(entityType, id, true) // Include metadata
-          console.log(`[EntityDetailWrapper] Loaded data for "${entityType}" ${id}:`, result)
+          if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Loaded data for "${entityType}" ${id}:`, result)
           setData(result as Record<string, unknown>)
         }
 
@@ -287,23 +287,23 @@ export function EntityDetailWrapper({
 
   const handleChildAdd = useCallback(async (childName: string, childData: Record<string, unknown>) => {
     try {
-      console.log(`[EntityDetailWrapper] Adding child ${childName} for parent ${id}`, childData)
+      if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Adding child ${childName} for parent ${id}`, childData)
       
       // Call API to create child entity
       const endpointPath = entityConfig?.slug || `${entityType}s`
       const url = `/api/v1/${endpointPath}/${id}/child/${childName}`
-      console.log(`[EntityDetailWrapper] Calling URL: ${url}`)
-      console.log(`[EntityDetailWrapper] Sending data:`, JSON.stringify(childData, null, 2))
+      if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Calling URL: ${url}`)
+      if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Sending data:`, JSON.stringify(childData, null, 2))
       
       const response = await fetchWithTeam(url, {
         method: 'POST',
         body: JSON.stringify(childData),
       })
       
-      console.log(`[EntityDetailWrapper] Response status: ${response.status}`)
+      if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Response status: ${response.status}`)
       if (!response.ok) {
         const errorText = await response.text()
-        console.log(`[EntityDetailWrapper] Error response: ${errorText}`)
+        if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Error response: ${errorText}`)
         throw new Error(`Failed to create ${childName}: ${response.status}`)
       }
       
@@ -326,7 +326,7 @@ export function EntityDetailWrapper({
 
   const handleChildEdit = useCallback(async (childName: string, childId: string, childData: Record<string, unknown>) => {
     try {
-      console.log(`[EntityDetailWrapper] Editing child ${childName} with id ${childId}`, childData)
+      if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Editing child ${childName} with id ${childId}`, childData)
       
       // Call API to update child entity (using fetchWithTeam for team context)
       const endpointPath = entityConfig?.slug || `${entityType}s`
@@ -360,7 +360,7 @@ export function EntityDetailWrapper({
 
   const handleChildDelete = useCallback(async (childName: string, childId: string) => {
     try {
-      console.log(`[EntityDetailWrapper] Deleting child ${childName} with id ${childId}`)
+      if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Deleting child ${childName} with id ${childId}`)
       
       // Call API to delete child entity (using fetchWithTeam for team context)
       const endpointPath = entityConfig?.slug || `${entityType}s`

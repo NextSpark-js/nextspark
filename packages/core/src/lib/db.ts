@@ -563,21 +563,25 @@ export async function gracefulShutdown(timeoutMs: number = 30000): Promise<void>
   return shutdownPromise;
 }
 
-// Graceful shutdown handlers
-// FIX: Don't call process.exit() - let the shutdown complete naturally
-// Next.js and other frameworks handle process termination after async cleanup
-process.on('SIGTERM', async () => {
-  console.log('[DB] SIGTERM received, initiating graceful shutdown...');
-  await gracefulShutdown();
-  // Note: Don't call process.exit() here - let the event loop drain naturally
-  // The process will exit when all handlers complete
-});
+// Graceful shutdown handlers.
+// A signal listener switches off Node's default exit on that signal, so once the pools are closed the listener
+// gives the default back and re-sends the signal, unless another listener (Next's server closes and exits on its
+// own) is still there to decide. Never exiting left every `next build` static-generation worker that got a SIGTERM
+// running, orphaned, after the build ended.
+export function createSignalHandler(signal: 'SIGTERM' | 'SIGINT'): () => Promise<void> {
+  const listener = async (): Promise<void> => {
+    console.log(`[DB] ${signal} received, initiating graceful shutdown...`);
+    await gracefulShutdown();
+    process.removeListener(signal, listener);
+    if (process.listenerCount(signal) === 0) {
+      process.kill(process.pid, signal);
+    }
+  };
+  return listener;
+}
 
-process.on('SIGINT', async () => {
-  console.log('[DB] SIGINT received, initiating graceful shutdown...');
-  await gracefulShutdown();
-  // Note: Don't call process.exit() here - let the event loop drain naturally
-});
+process.on('SIGTERM', createSignalHandler('SIGTERM'));
+process.on('SIGINT', createSignalHandler('SIGINT'));
 
 // Export a helper to check database connection
 export async function checkDatabaseConnection(): Promise<boolean> {

@@ -134,7 +134,7 @@ export function EntityListWrapper({
       setDataError(null)
 
       const apiFilters = buildApiFilters()
-      console.log(`[EntityListWrapper] Loading data for "${entityType}" (override: ${isOverride}, filters:`, apiFilters, ')')
+      if (process.env.NODE_ENV === 'development') console.log(`[EntityListWrapper] Loading data for "${entityType}" (override: ${isOverride}, filters:`, apiFilters, ')')
 
       const result = await listEntityData(entityType, {
         limit: 50,
@@ -142,7 +142,7 @@ export function EntityListWrapper({
         ...(Object.keys(apiFilters).length > 0 && { filters: apiFilters })
       })
 
-      console.log(`[EntityListWrapper] Loaded ${result.data.length} items for "${entityType}"`)
+      if (process.env.NODE_ENV === 'development') console.log(`[EntityListWrapper] Loaded ${result.data.length} items for "${entityType}"`)
       setData(result.data as Record<string, unknown>[])
       setDataError(null)
     } catch (err) {

@@ -90,7 +90,7 @@ export class EntityErrorBoundary extends React.Component<
         userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : ''
       }
 
-      console.log('📊 Error Report:', errorReport)
+      if (process.env.NODE_ENV === 'development') console.log('📊 Error Report:', errorReport)
       
       // Aquí podrías enviar a tu servicio de logging
       // await fetch('/api/errors', { method: 'POST', body: JSON.stringify(errorReport) })
@@ -102,7 +102,7 @@ export class EntityErrorBoundary extends React.Component<
   private handleRetry = () => {
     if (this.retryCount < this.maxRetries) {
       this.retryCount++
-      console.log(`🔄 Retrying entity component (attempt ${this.retryCount}/${this.maxRetries})`)
+      if (process.env.NODE_ENV === 'development') console.log(`🔄 Retrying entity component (attempt ${this.retryCount}/${this.maxRetries})`)
       
       this.setState({
         hasError: false,

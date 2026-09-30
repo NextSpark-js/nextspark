@@ -18,6 +18,7 @@ if (process.argv[2] !== 'migrate') config({ quiet: true });
 import { buildCommand } from './commands/build.js';
 import { generateCommand } from './commands/generate.js';
 import { prepareCommand } from './commands/prepare.js';
+import { checkMobileCommand } from './commands/check-mobile.js';
 import { registryBuildCommand, registryWatchCommand } from './commands/registry.js';
 import { initCommand } from './commands/init.js';
 import { PROJECT_TEMPLATE_OPTIONS } from './wizard/generators/theme-plugins-installer.js';
@@ -91,6 +92,13 @@ program
   .option('--dev', 'With --check: compare with the development host nextspark dev writes')
   .option('--contracts-only', 'Generate (or with --check, compare) only the portable API contracts the mobile app imports')
   .action(prepareCommand);
+
+// Mobile boundary check
+program
+  .command('check:mobile')
+  .description('Check the mobile app of a web+mobile workspace imports portable code only, never the web project\'s server code')
+  .option('--mobile <dir>', 'The mobile app directory from the workspace root (found from the workspace by default)')
+  .action(checkMobileCommand);
 
 // Generate command
 program

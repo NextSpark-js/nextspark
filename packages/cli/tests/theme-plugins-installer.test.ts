@@ -199,3 +199,72 @@ test('add:theme and add:plugin set a failing exit code when the add fails', asyn
     fs.rmSync(root, { recursive: true, force: true })
   }
 })
+
+// create-nextspark-app hands the wizard the plugin tarballs it found in .packages/ (an unpublished version does not
+// exist in the registry): the wizard installs the file and never packs the package from npm.
+test('a plugin with a local tarball is installed from that file, not packed from the registry', { skip: process.platform === 'win32' }, async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-installer-'))
+  const bin = path.join(root, 'bin')
+  const project = path.join(root, 'project')
+  const packed = path.join(root, 'npm-was-called')
+  fs.mkdirSync(bin)
+  fs.mkdirSync(path.join(project, 'plugins'), { recursive: true })
+  fs.writeFileSync(path.join(project, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
+  fs.writeFileSync(path.join(bin, 'npm'), `#!/bin/sh\ntouch "${packed}"\nexit 1\n`, { mode: 0o755 })
+
+  const previousCwd = process.cwd()
+  const previousPath = process.env.PATH
+  const previousLocal = process.env.NEXTSPARK_LOCAL_PLUGIN_TARBALLS
+  process.chdir(project)
+  process.env.PATH = `${bin}${path.delimiter}${previousPath}`
+  // A path that does not exist: the failure names it, which shows the spec that was fetched
+  const missing = path.join(root, 'nextsparkjs-plugin-langchain-0.1.0.tgz')
+  process.env.NEXTSPARK_LOCAL_PLUGIN_TARBALLS = JSON.stringify({ '@nextsparkjs/plugin-langchain': missing })
+  const printed: string[] = []
+  const previousLog = console.log
+  console.log = (...args: unknown[]) => { printed.push(args.map(String).join(' ')) }
+  try {
+    assert.equal(await installPlugins(['langchain']), false)
+    assert.equal(fs.existsSync(packed), false, 'npm pack was not run')
+    assert.ok(printed.some(line => line.includes(`Local package not found: ${missing}`)), printed.join('\n'))
+  } finally {
+    console.log = previousLog
+    process.chdir(previousCwd)
+    process.env.PATH = previousPath
+    if (previousLocal === undefined) delete process.env.NEXTSPARK_LOCAL_PLUGIN_TARBALLS
+    else process.env.NEXTSPARK_LOCAL_PLUGIN_TARBALLS = previousLocal
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('a malformed NEXTSPARK_LOCAL_PLUGIN_TARBALLS is reported, and the plugin comes from the registry', { skip: process.platform === 'win32' }, async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-installer-'))
+  const bin = path.join(root, 'bin')
+  const project = path.join(root, 'project')
+  const packed = path.join(root, 'npm-was-called')
+  fs.mkdirSync(bin)
+  fs.mkdirSync(path.join(project, 'plugins'), { recursive: true })
+  fs.writeFileSync(path.join(project, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
+  fs.writeFileSync(path.join(bin, 'npm'), `#!/bin/sh\ntouch "${packed}"\nexit 1\n`, { mode: 0o755 })
+  const previousCwd = process.cwd()
+  const previousPath = process.env.PATH
+  const previousLocal = process.env.NEXTSPARK_LOCAL_PLUGIN_TARBALLS
+  process.chdir(project)
+  process.env.PATH = `${bin}${path.delimiter}${previousPath}`
+  process.env.NEXTSPARK_LOCAL_PLUGIN_TARBALLS = '{not json'
+  const printed: string[] = []
+  const previousLog = console.log
+  console.log = (...args: unknown[]) => { printed.push(args.map(String).join(' ')) }
+  try {
+    await installPlugins(['langchain'])
+    assert.ok(printed.some(line => line.includes('NEXTSPARK_LOCAL_PLUGIN_TARBALLS is not a JSON object')), printed.join('\n'))
+    assert.equal(fs.existsSync(packed), true, 'the registry path ran')
+  } finally {
+    console.log = previousLog
+    process.chdir(previousCwd)
+    process.env.PATH = previousPath
+    if (previousLocal === undefined) delete process.env.NEXTSPARK_LOCAL_PLUGIN_TARBALLS
+    else process.env.NEXTSPARK_LOCAL_PLUGIN_TARBALLS = previousLocal
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})

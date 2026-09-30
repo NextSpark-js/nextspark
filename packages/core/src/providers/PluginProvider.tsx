@@ -54,7 +54,7 @@ export function PluginProvider({ children }: PluginProviderProps) {
 
     const initializePlugins = async () => {
       try {
-        console.log('[PluginProvider] Initializing plugin system...')
+        if (process.env.NODE_ENV === 'development') console.log('[PluginProvider] Initializing plugin system...')
         
         // Initialize the plugin registry
         // TODO: Re-enable when plugin registry is properly integrated
@@ -71,7 +71,7 @@ export function PluginProvider({ children }: PluginProviderProps) {
         setPlugins(activePlugins)
         setError(null)
         
-        console.log(`[PluginProvider] Loaded ${activePlugins.length} active plugins:`, 
+        if (process.env.NODE_ENV === 'development') console.log(`[PluginProvider] Loaded ${activePlugins.length} active plugins:`, 
           activePlugins.map(p => p.name))
         
       } catch (err) {

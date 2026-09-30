@@ -142,7 +142,7 @@ function SecurityPage() {
   ]
 
   const handleTerminateSession = useCallback((sessionId: string) => {
-    console.log('Terminating session:', sessionId)
+    if (process.env.NODE_ENV === 'development') console.log('Terminating session:', sessionId)
     setStatusMessage(t('security.messages.sessionTerminated'))
     // Aquí iría la lógica para terminar la sesión
   }, [t])

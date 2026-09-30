@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_rethrow } from 'next/navigation';
 import { getRateLimitForScopes } from './keys';
 import { rateLimitCache, getCacheKey } from './cache';
 import {
@@ -266,6 +267,8 @@ export function withRateLimit<T extends unknown[]>(
       // Agregar headers de rate limiting
       return addRateLimitHeaders(response, keyId, scopes);
     } catch (error) {
+      // The prerender interrupting the header reads above is Next's, not a rate limiting error
+      unstable_rethrow(error);
       // En caso de error, continuar sin rate limiting
       console.error('Rate limiting error:', error);
       return handler(request, ...args);

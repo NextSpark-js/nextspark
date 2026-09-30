@@ -144,7 +144,7 @@ export function useEnsureUserMetadata() {
 
     if (needsMetadata && !createMetadataMutation.isPending) {
       hasCreatedMetadata.current = true
-      console.log('Creating default metadata for user:', userId, Object.keys(missingDefaults))
+      if (process.env.NODE_ENV === 'development') console.log('Creating default metadata for user:', userId, Object.keys(missingDefaults))
       createMetadataMutation.mutate(missingDefaults)
     }
   }, [isFetched, userData, userId, createMetadataMutation])

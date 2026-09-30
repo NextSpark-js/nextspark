@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { unstable_rethrow } from 'next/navigation'
 import {
   processPendingActions,
   cleanupOldActions
@@ -85,6 +86,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       { status: 200 }
     )
   } catch (error) {
+    // Reading request.headers above is what makes this route dynamic: under Cache Components the prerender interrupts
+    // it there, and that interruption is Next's to handle, not a processing error
+    unstable_rethrow(error)
     const executionTime = Date.now() - startTime
 
     console.error('[Cron] Error processing scheduled actions:', error)

@@ -366,9 +366,9 @@ export class EntityRegistry {
     // This method exists for backwards compatibility
     const count = this.getAll().length
     if (count > 0) {
-      console.log(`[EntityRegistry] Already initialized with ${count} entities from singleton`)
+      if (process.env.NODE_ENV === 'development') console.log(`[EntityRegistry] Already initialized with ${count} entities from singleton`)
     } else {
-      console.log('[EntityRegistry] Singleton empty - will be populated by layout import')
+      if (process.env.NODE_ENV === 'development') console.log('[EntityRegistry] Singleton empty - will be populated by layout import')
     }
   }
 

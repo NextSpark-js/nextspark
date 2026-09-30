@@ -38,7 +38,7 @@ import { setPackageEntries } from './workspace-yaml.js'
 import { installThemeAndPlugins } from './theme-plugins-installer.js'
 // DX improvement generators
 import { setupEnvironment } from './env-setup.js'
-import { setupGit } from './git-init.js'
+import { setupGit, writeGitignore } from './git-init.js'
 // Production sign-in provider (Step 202)
 import { writeProductionSignInEnv } from './production-sign-in-env.js'
 import { getDefaultProductionSignIn, type ProductionSignInResult } from '../prompts/production-sign-in.js'
@@ -418,44 +418,6 @@ export async function updatePackageJson(config: WizardConfig): Promise<void> {
 }
 
 /**
- * Update .gitignore with NextSpark entries
- */
-async function updateGitignore(config: WizardConfig): Promise<void> {
-  const gitignorePath = path.resolve(process.cwd(), '.gitignore')
-
-  const entriesToAdd = `
-# NextSpark
-.nextspark/
-# Generated Next.js host: nextspark prepare (and dev, build) writes all of it; never edit
-src/app/
-
-# Cypress
-tests/cypress/videos
-tests/cypress/screenshots
-tests/cypress/allure-results
-tests/cypress/allure-report
-
-# Jest
-tests/jest/coverage
-
-# Environment
-.env
-.env.local
-`
-
-  if (await fs.pathExists(gitignorePath)) {
-    const currentContent = await fs.readFile(gitignorePath, 'utf-8')
-    if (!currentContent.includes('.nextspark/')) {
-      await fs.appendFile(gitignorePath, entriesToAdd)
-    } else if (!currentContent.split('\n').some(line => line.trim() === 'src/app/')) {
-      await fs.appendFile(gitignorePath, `${currentContent.endsWith('\n') ? '' : '\n'}# Generated Next.js host: nextspark prepare (and dev, build) writes all of it; never edit\nsrc/app/\n`)
-    }
-  } else {
-    await fs.writeFile(gitignorePath, entriesToAdd.trim())
-  }
-}
-
-/**
  * Generate complete project based on wizard configuration
  * Supports both flat (web-only) and monorepo (web+mobile) structures.
  *
@@ -555,7 +517,7 @@ export async function generateProject(
     if (!isMonorepoProject(config)) {
       // Only update root gitignore for flat projects
       // Monorepo has its own root gitignore created by generateMonorepoStructure
-      await updateGitignore(config)
+      await writeGitignore(process.cwd())
     }
     await generateEnvExample(config)
     if (!isMonorepoProject(config)) {
