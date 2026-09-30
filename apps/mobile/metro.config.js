@@ -11,6 +11,7 @@ const config = getDefaultConfig(projectRoot);
 config.watchFolders = [
   path.resolve(monorepoRoot, 'packages/ui'),
   path.resolve(monorepoRoot, 'packages/mobile'),
+  path.resolve(monorepoRoot, 'packages/contracts'),
 ];
 
 // Let Metro know where to resolve packages
@@ -39,6 +40,17 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       filePath: path.resolve(
         monorepoRoot,
         'packages/mobile/src/index.ts'
+      ),
+      type: 'sourceFile',
+    };
+  }
+  // For @project/contracts (the API contracts nextspark prepare generates from
+  // apps/dev's entities), redirect to the source. It imports zod and nothing else.
+  if (moduleName === '@project/contracts') {
+    return {
+      filePath: path.resolve(
+        monorepoRoot,
+        'packages/contracts/src/index.ts'
       ),
       type: 'sourceFile',
     };

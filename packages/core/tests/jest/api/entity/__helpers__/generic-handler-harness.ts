@@ -135,7 +135,7 @@ jest.mock('@/core/lib/api/helpers', () => ({
     return { page, limit, offset: (page - 1) * limit }
   },
   createPaginationMeta: (page: number, limit: number, total: number) => ({
-    page, limit, total, totalPages: Math.ceil(total / limit), hasNextPage: page * limit < total,
+    page, limit, total, totalPages: Math.ceil(total / limit), hasNextPage: page * limit < total, hasPrevPage: page > 1,
   }),
   parseMetaParams: () => ({ includeMetadata: false, includeAll: false }),
   parseChildParams: () => ({ includeChildren: false, includeAll: false }),

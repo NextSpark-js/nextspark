@@ -89,6 +89,7 @@ program
   .option('--production', 'Run the registry compiler with NODE_ENV=production, then check a login method can authenticate')
   .option('--check', 'Write nothing; exit 1 when src/app or the registries differ from what prepare would generate')
   .option('--dev', 'With --check: compare with the development host nextspark dev writes')
+  .option('--contracts-only', 'Generate (or with --check, compare) only the portable API contracts the mobile app imports')
   .action(prepareCommand);
 
 // Generate command

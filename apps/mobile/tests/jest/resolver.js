@@ -12,15 +12,26 @@
  */
 const path = require('path')
 
-const PACKAGE_MOBILE_SRC = path.resolve(__dirname, '../../../../packages/mobile/src') + path.sep
+// packages/contracts/src is the same case: workspace source with its own node_modules, compiled here by
+// Babel, which needs its runtime helpers from the one install this app's Jest setup configured. It also
+// imports zod, which only its own install has, so a bare import the app does not have falls back to it.
+const WORKSPACE_SOURCES = [
+  path.resolve(__dirname, '../../../../packages/mobile/src') + path.sep,
+  path.resolve(__dirname, '../../../../packages/contracts/src') + path.sep,
+]
 const APP_ROOT = path.resolve(__dirname, '../..')
 
 module.exports = (request, options) => {
   const isBarePackage = !request.startsWith('.') && !path.isAbsolute(request)
-  const requestedFromPackageSrc = (options.basedir + path.sep).startsWith(PACKAGE_MOBILE_SRC)
+  const requestedFromPackageSrc = WORKSPACE_SOURCES.some(source => (options.basedir + path.sep).startsWith(source))
 
   if (isBarePackage && requestedFromPackageSrc) {
-    return options.defaultResolver(request, { ...options, basedir: APP_ROOT })
+    try {
+      return options.defaultResolver(request, { ...options, basedir: APP_ROOT })
+    } catch (error) {
+      // Only what the app does not install resolves from where the source lives (zod, for the contracts)
+      return options.defaultResolver(request, options)
+    }
   }
   return options.defaultResolver(request, options)
 }

@@ -266,7 +266,9 @@ test('a committed src/app no generation owns: prepare, build and dev take the le
       assert.equal(advice(result.output), false, `${args.join(' ')}: silent, exactly as before the generated host`)
     }
     const runs = await project.runs()
-    assert.equal(runs.filter((entry) => entry.args).length, 0, 'the host preparation script never ran')
+    // The generated host is never produced, but the portable contracts do not depend on how src/app is made:
+    // `prepare` (and only it) runs the script for them, contracts only
+    assert.deepEqual(runs.filter((entry) => entry.args).map((entry) => entry.args), [['--contracts-only']], 'the host preparation script ran once, for the contracts, and never for the host')
     assert.equal(runs.filter((entry) => entry.legacy).length, 3, 'the legacy registry build ran for prepare, build and dev')
     assert.equal((await project.nextRuns()).length, 2, 'build and dev still start next')
   } finally {

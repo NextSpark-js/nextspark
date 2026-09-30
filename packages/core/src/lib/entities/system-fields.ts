@@ -11,13 +11,11 @@
  */
 
 import type { EntityField } from './types'
+import { SYSTEM_FIELD_NAMES, type SystemFieldName } from './portable/system-fields'
 
-/**
- * All system field names that are implicit in every entity
- */
-export const SYSTEM_FIELD_NAMES = ['id', 'createdAt', 'updatedAt', 'userId', 'teamId'] as const
-
-export type SystemFieldName = (typeof SYSTEM_FIELD_NAMES)[number]
+// Defined in ./portable/system-fields (shared with the generated API contracts)
+export { SYSTEM_FIELD_NAMES }
+export type { SystemFieldName }
 
 /**
  * Fields that are implicitly available for sorting even if not in config

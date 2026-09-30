@@ -6,7 +6,8 @@
     "paths": {
       "@/*": ["./*", "./src/*"],
       "@nextsparkjs/ui": ["../../packages/ui/src/index.native.ts"],
-      "@nextsparkjs/mobile": ["../../packages/mobile/src/index.ts"]
+      "@nextsparkjs/mobile": ["../../packages/mobile/src/index.ts"],
+      "@project/contracts": ["../../packages/contracts/src/index.ts"]
     }
   },
   "include": [

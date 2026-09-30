@@ -30,6 +30,17 @@ jobs:
         env:
           CYPRESS_INSTALL_BINARY: '0'
 
+      # The mobile app imports portable code only: the generated contracts (packages/contracts,
+      # DTO types and zod schemas), @nextsparkjs/ui's native entry and @nextsparkjs/mobile. This
+      # fails, naming the chain of imports, when anything under apps/mobile or the mobile
+      # packages reaches server code, the db, the registries, migrations or a Node-only module.
+      - name: Check the mobile import boundary
+        run: pnpm mobile:boundary
+
+      # The contracts are generated from apps/dev's entities: a stale or hand-edited module fails here.
+      - name: Check the generated contracts are up to date
+        run: pnpm contracts:check
+
       # apps/mobile lives outside the pnpm workspace: mobile:verify installs it
       # on its own, type-checks and tests it, and type-checks the template that
       # ships in @nextsparkjs/mobile.

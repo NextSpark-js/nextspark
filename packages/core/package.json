@@ -377,6 +377,7 @@
     "templates",
     "migrations",
     "src/entities",
+    "src/lib/entities/portable",
     "tests/jest/setup.ts",
     "tests/jest/__mocks__",
     "globals.css",

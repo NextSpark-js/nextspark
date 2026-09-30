@@ -116,7 +116,7 @@ before(() => {
       `import { appendFileSync } from 'node:fs'\nappendFileSync(new URL('../../suites.log', import.meta.url), ${JSON.stringify(`${suite}\n`)})\n`,
     )
   }
-  for (const manifest of ['packages/mobile/package.json', 'packages/ui/package.json', 'node_modules/react-native/package.json']) {
+  for (const manifest of ['packages/mobile/package.json', 'packages/ui/package.json', 'packages/contracts/package.json', 'node_modules/react-native/package.json', 'node_modules/zod/package.json']) {
     mkdirSync(join(root, dirname(manifest)), { recursive: true })
     writeFileSync(join(root, manifest), '{}\n')
   }

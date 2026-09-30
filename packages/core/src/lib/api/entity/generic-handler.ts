@@ -16,6 +16,7 @@ import { authenticateRequest, createAuthFailureResponse, canBypassTeamContext, t
 import type { EntityField, EntityConfig, TaxonomyTypeConfig } from '../../entities/types'
 import { resolveEntityFromUrl, validateEntityOperation } from './resolver'
 import { generateEntitySchemas } from '../../entities/schema-generator'
+import { entityResponseSystemColumns, taxonomyResponseFields } from '../../entities/portable/response-shape'
 import { queryWithRLS, mutateWithRLS, queryOneWithRLS } from '../../db'
 import {
   createApiResponse,
@@ -211,8 +212,8 @@ async function includeTaxonomiesInData<T extends { id: string }>(
 
     // Initialize all taxonomy fields with empty arrays
     const taxonomyFields: Record<string, unknown[]> = {}
-    for (const tc of entityConfig.taxonomies!.types) {
-      taxonomyFields[tc.field] = itemTaxonomies[tc.field] || []
+    for (const field of taxonomyResponseFields(entityConfig)) {
+      taxonomyFields[field] = itemTaxonomies[field] || []
     }
 
     return {
@@ -996,17 +997,9 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     } else {
       // All fields (default behavior)
       // Always include system fields (id, userId, teamId, createdAt, updatedAt) even if not in entity fields config
-      const systemFields = ['id', 'userId', 'teamId', 'createdAt', 'updatedAt']
-
-      // Add blocks for builder-enabled entities
-      if (entityConfig.builder?.enabled) {
-        systemFields.push('blocks')
-      }
-
-      // Add soft delete columns when table.softDelete is enabled
-      if (entityConfig.table?.softDelete) {
-        systemFields.push('deletedAt', 'deletedBy')
-      }
+      // (blocks for builder entities, the soft-delete markers when table.softDelete is on: described once in
+      // portable/response-shape, which the generated API contracts read too)
+      const systemFields = entityResponseSystemColumns(entityConfig, { includeSoftDelete: true })
 
       const configFields = entityConfig.fields
           .map((field: EntityField) => {
@@ -1750,12 +1743,7 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
     // Always include system fields (id, userId, teamId, createdAt, updatedAt)
     // userId is always included to track ownership even for shared entities
     // teamId is always included for team context in hooks
-    const systemFields = ['id', 'userId', 'teamId', 'createdAt', 'updatedAt']
-
-    // Add blocks for builder-enabled entities
-    if (entityConfig.builder?.enabled) {
-      systemFields.push('blocks')
-    }
+    const systemFields = entityResponseSystemColumns(entityConfig, { includeSoftDelete: false })
 
     const configFields = entityConfig.fields
         .map((field: EntityField) => {
@@ -1914,17 +1902,7 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
     const entityConfig = resolution.entityConfig
     const tableName = getTableName(entityConfig)
     // Always include system fields (id, userId, teamId, createdAt, updatedAt)
-    const systemFields = ['id', 'userId', 'teamId', 'createdAt', 'updatedAt']
-
-    // Add blocks for builder-enabled entities
-    if (entityConfig.builder?.enabled) {
-      systemFields.push('blocks')
-    }
-
-    // Add soft delete columns when table.softDelete is enabled
-    if (entityConfig.table?.softDelete) {
-      systemFields.push('deletedAt', 'deletedBy')
-    }
+    const systemFields = entityResponseSystemColumns(entityConfig, { includeSoftDelete: true })
 
     const configFields = entityConfig.fields
         .map((field: EntityField) => {

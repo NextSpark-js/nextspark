@@ -394,7 +394,7 @@ function compilerOptionsFor(ts, { projectRoot, pluginDir }) {
 // (the bundlers already fail a web or mobile build that imports a Node built-in or `server-only`).
 // Which package `exports` conditions (and legacy fields) a bundler selects depends on the target the import is
 // bundled for: Next's client build (browser, never node), Metro (react-native first), Node for the server.
-const CONDITION_SETS = {
+export const CONDITION_SETS = {
   // Next: webpack and Turbopack differ on `require`, so a web require is checked against both branches.
   web: { import: [new Set(['browser', 'import', 'module', 'default'])], require: [new Set(['browser', 'require', 'default']), new Set(['browser', 'import', 'module', 'default'])] },
   // Metro: react-native + import for ESM, react-native + require for CommonJS, then default.
@@ -409,7 +409,7 @@ const TARGET_FIELDS = {
 const packageDirCache = new Map()
 const manifestCache = new Map()
 
-function packageSpecifier(specifier) {
+export function packageSpecifier(specifier) {
   const parts = specifier.split('/')
   const length = specifier.startsWith('@') ? 2 : 1
   if (parts.length < length) return null
@@ -453,7 +453,7 @@ function readManifest(dir) {
 }
 
 /** Node's exports resolution for a runtime import: the target path (relative to the package) or null. */
-function exportsTarget(exportsField, subpath, conditions) {
+export function exportsTarget(exportsField, subpath, conditions) {
   const target = (value, star) => {
     if (typeof value === 'string') return star === undefined ? value : value.split('*').join(star)
     if (Array.isArray(value)) {
@@ -474,20 +474,31 @@ function exportsTarget(exportsField, subpath, conditions) {
   }
   const isSubpaths = value => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).some(key => key.startsWith('.'))
   if (!isSubpaths(exportsField)) return subpath === '.' ? target(exportsField) : null
+  // Node's PACKAGE_IMPORTS_EXPORTS_RESOLVE: an exact key (no `*`) first, then the patterns with exactly one `*` in the order of
+  // PATTERN_KEY_COMPARE (a longer base before the `*`, then a longer key), never declaration order. The first pattern in that
+  // order that matches decides, even if its conditions select nothing: Node does not go on to a less specific one.
+  // A trailing-slash key (`"./lib/"`, the folder mapping) is not a mapping in Node 17 and later, so it never matches.
   if (subpath in exportsField && !subpath.includes('*')) return target(exportsField[subpath])
-  let best = null
-  for (const key of Object.keys(exportsField)) {
-    const star = key.indexOf('*')
-    if (star === -1) continue
-    const prefix = key.slice(0, star)
-    const suffix = key.slice(star + 1)
-    if (subpath.startsWith(prefix) && subpath.endsWith(suffix) && subpath.length >= key.length - 1 && (!best || prefix.length > best.prefix.length)) best = { key, prefix, matched: subpath.slice(prefix.length, subpath.length - suffix.length) }
+  const patternKeyCompare = (a, b) => {
+    const baseA = a.indexOf('*') + 1
+    const baseB = b.indexOf('*') + 1
+    if (baseA !== baseB) return baseB - baseA
+    return b.length - a.length
   }
-  return best ? target(exportsField[best.key], best.matched) : null
+  const patterns = Object.keys(exportsField).filter(key => key.indexOf('*') !== -1 && key.indexOf('*') === key.lastIndexOf('*')).sort(patternKeyCompare)
+  for (const key of patterns) {
+    const star = key.indexOf('*')
+    const base = key.slice(0, star)
+    const trailer = key.slice(star + 1)
+    if (subpath !== base && subpath.startsWith(base) && (trailer.length === 0 || (subpath.endsWith(trailer) && subpath.length >= key.length))) {
+      return target(exportsField[key], subpath.slice(base.length, subpath.length - trailer.length))
+    }
+  }
+  return null
 }
 
 /** A package file that may be built output: `dist/x.js` falls back to the source `src/x.ts` when it was not built. */
-function resolveBuilt(path) {
+export function resolveBuilt(path) {
   const direct = resolveFile(path)
   if (direct && !/\.d\.[cm]?ts$/.test(direct)) return direct
   const marker = `${sep}dist${sep}`
@@ -503,10 +514,11 @@ function resolveBuilt(path) {
  * edge of `kind` ('import' | 'require'): one per condition set that kind can select (a web `require` has two).
  * `thirdParty` also reads packages installed in node_modules (only the mobile check does, see below).
  */
-function resolvePackageRuntimes(specifier, from, target, kind, thirdParty = false) {
+export function resolvePackageRuntimes(specifier, from, target, kind, thirdParty = false, packageDir = null) {
   const parsed = packageSpecifier(specifier)
   if (!parsed) return []
-  const dir = findPackageDir(parsed.name, dirname(from))
+  // `packageDir`: a package the caller already located (a workspace package that is not linked into node_modules)
+  const dir = packageDir ?? findPackageDir(parsed.name, dirname(from))
   if (!dir) return []
   // A package outside node_modules is a workspace package; inside, only @nextsparkjs/* are read.
   if (!thirdParty && dir.includes(`${sep}node_modules${sep}`) && !parsed.name.startsWith('@nextsparkjs/')) return []

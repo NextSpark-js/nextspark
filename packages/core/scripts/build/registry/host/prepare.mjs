@@ -16,6 +16,7 @@
  *   stylesheet,        // the project's global stylesheet specifier the root layout imports
  *   modes, pageExtensions, cacheComponents,   // see render.mjs
  *   registries,        // async ({ mode }) => [{ path, content, grammar }] - staged registry files
+ *   contracts,         // { target(), plan() } - the portable contracts module (contracts/index.mjs), optional
  *   inputs,            // () => hashInputs(...)
  *   versions,          // { core, cli, next }
  * }
@@ -39,6 +40,7 @@ import { resolveNextPackage } from './facade-emitter.mjs'
 import { coreRouteManifestPath, coreRouteVariantsPath, hasCoreRouteManifest, loadCoreRouteManifest, resolveCoreRouteFile } from './core-routes.mjs'
 import { discoverAllEntities } from '../discovery/all-entities.mjs'
 import { PluginCapabilityError, withDeclaredCapabilities } from '../discovery/plugin-capabilities.mjs'
+import { ContractsPublishError, checkContractsPlan, preflightContractsPlan, projectContracts, publishContractsPlan } from '../contracts/index.mjs'
 import { planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
 import { webhookRoutes } from './webhooks.mjs'
 import { HostPlanError, compareTargets, planHost } from './plan.mjs'
@@ -163,20 +165,67 @@ async function generateAndPublish(config, { mode, devStatus, cache }) {
     const invalid = await validateFiles(files, { projectRoot: config.projectRoot, wrappers: config.compositionWrappers })
     if (invalid.length > 0) throw new PrepareError(invalid)
 
+    // The contracts module is planned and preflighted with everything else: nothing is written when any part fails
+    const contracts = await planContractsStep(config)
+
     const previous = readGeneration(config.hostRoot)
     const inputs = config.inputs ? config.inputs({ manifest }) : null
     const record = generationRecord({ mode, versions: config.versions, inputs, files })
     try {
       const published = publishGeneration({ hostRoot: config.hostRoot, previous, files, record })
-      return { routes, files, record, ...published }
+      return { routes, files, record, ...published, contracts: publishContractsStep(config, contracts) }
     } catch (error) {
-      if (error instanceof GenerationError) throw new PrepareError(error.diagnostics)
+      if (error instanceof GenerationError || error instanceof ContractsPublishError) throw new PrepareError(error.diagnostics)
       throw error
     }
   } catch (error) {
-    if (error instanceof GenerationError) throw new PrepareError(error.diagnostics)
+    if (error instanceof GenerationError || error instanceof ContractsPublishError) throw new PrepareError(error.diagnostics)
     throw error
   }
+}
+
+/** Plan the contracts module in memory (null: the host has none) and refuse what it could not publish. */
+async function planContractsStep(config) {
+  if (!config.contracts) return null
+  const target = config.contracts.target()
+  const plan = await config.contracts.plan()
+  if (plan.diagnostics.length > 0) throw new PrepareError(plan.diagnostics)
+  preflightContractsPlan({ target, plan })
+  return { target, plan }
+}
+
+function publishContractsStep(config, contracts) {
+  if (!contracts) return null
+  const published = publishContractsPlan({ target: contracts.target, projectRoot: config.projectRoot, plan: contracts.plan })
+  return { ...published, root: contracts.target.root, label: contracts.target.label, kind: contracts.target.kind, warnings: contracts.plan.warnings, files: contracts.plan.files.length }
+}
+
+/**
+ * Generate and publish only the portable contracts module (`prepare --contracts-only`, and the step
+ * a legacy project runs after its registry build): no src/app, no registries. Same ownership rules
+ * and the same lock as a full generation.
+ */
+export async function prepareContractsOnly(config, { staleAfterMs } = {}) {
+  if (!config.contracts) throw new PrepareError([{ code: 'NS_CONTRACTS_UNAVAILABLE', message: 'this project has no contracts step' }])
+  const release = acquireLock(config.hostRoot, { staleAfterMs })
+  try {
+    const contracts = await planContractsStep(config)
+    return publishContractsStep(config, contracts)
+  } catch (error) {
+    if (error instanceof ContractsPublishError) throw new PrepareError(error.diagnostics)
+    throw error
+  } finally {
+    release()
+  }
+}
+
+/** `prepare --contracts-only --check`: compare only the contracts module with what prepare would generate. */
+export async function checkContractsOnly(config) {
+  const target = config.contracts.target()
+  const plan = await config.contracts.plan()
+  if (plan.diagnostics.length > 0) return { ok: false, problems: plan.diagnostics.map(d => ({ state: 'invalid', detail: `[${d.code}] ${d.message}` })) }
+  const { ok, problems } = checkContractsPlan({ target, plan })
+  return { ok, problems: problems.map(problem => ({ ...problem, path: `${target.label}/${problem.path}` })) }
 }
 
 /**
@@ -212,6 +261,22 @@ export async function checkHost(config, { dev = false } = {}) {
         : 'this is not the development host nextspark dev writes; run nextspark dev, or check without --dev',
     })
     result.ok = false
+  }
+  if (config.contracts) {
+    const target = config.contracts.target()
+    let plan
+    try {
+      plan = await config.contracts.plan()
+    } catch (error) {
+      if (!(error instanceof PrepareError)) throw error
+      plan = { diagnostics: error.diagnostics, files: [] }
+    }
+    if (plan.diagnostics.length > 0) {
+      result.problems.push(...plan.diagnostics.map(d => ({ state: 'invalid', detail: `[${d.code}] ${d.message}` })))
+    } else {
+      for (const problem of checkContractsPlan({ target, plan }).problems) result.problems.push({ ...problem, path: `${target.label}/${problem.path}` })
+    }
+    result.ok = result.problems.length === 0
   }
   return result
 }
@@ -377,6 +442,8 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
         cacheComponents: readCacheComponents(config.projectRoot),
       })
     },
+    // The contracts are generated with the core that runs this script (its portable sources are what the server runs too)
+    contracts: projectContracts({ projectRoot: config.projectRoot, coreRoot: CORE_ROOT, currentConfig, plugins: pluginsOf }),
     webhooks: () =>
       webhookRoutes({
         webhookExtensions: currentConfig().billing?.webhookExtensions,

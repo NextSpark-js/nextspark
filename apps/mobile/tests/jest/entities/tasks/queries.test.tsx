@@ -3,6 +3,7 @@
  * TanStack Query hooks for fetching tasks
  */
 
+import { listInfo } from '../../list-info'
 import { renderHook, waitFor } from '@testing-library/react-native'
 import type { Task } from '@/entities/tasks/types'
 import type { PaginatedResponse } from '@nextsparkjs/mobile'
@@ -25,6 +26,7 @@ const testTasks: Task[] = [
     description: 'Description 1',
     status: 'todo',
     priority: 'high',
+    completed: false,
     teamId: 'team-1',
     userId: 'user-1',
     createdAt: '2024-01-01T00:00:00Z',
@@ -36,6 +38,7 @@ const testTasks: Task[] = [
     description: 'Description 2',
     status: 'in-progress',
     priority: 'medium',
+    completed: false,
     teamId: 'team-1',
     userId: 'user-1',
     createdAt: '2024-01-02T00:00:00Z',
@@ -58,7 +61,8 @@ describe('Task queries', () => {
     it('should fetch tasks list', async () => {
       const response: PaginatedResponse<Task> = {
         data: testTasks,
-        meta: { total: 2, page: 1, limit: 20, totalPages: 1 },
+        success: true,
+        info: listInfo(2, 1, 20),
       }
       mockTasksApi.list.mockResolvedValueOnce(response)
 
@@ -77,7 +81,8 @@ describe('Task queries', () => {
     it('should pass filter parameters', async () => {
       const response: PaginatedResponse<Task> = {
         data: [testTasks[0]],
-        meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+        success: true,
+        info: listInfo(1, 1, 10),
       }
       mockTasksApi.list.mockResolvedValueOnce(response)
 
@@ -102,7 +107,8 @@ describe('Task queries', () => {
     it('should pass search parameter', async () => {
       const response: PaginatedResponse<Task> = {
         data: testTasks,
-        meta: { total: 2, page: 1, limit: 20, totalPages: 1 },
+        success: true,
+        info: listInfo(2, 1, 20),
       }
       mockTasksApi.list.mockResolvedValueOnce(response)
 

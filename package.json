@@ -36,6 +36,9 @@
     "mobile:start": "cd apps/mobile && pnpm start",
     "mobile:web": "cd apps/mobile && pnpm run web",
     "mobile:verify": "node scripts/packages/mobile-verify.mjs",
+    "mobile:boundary": "node scripts/packages/mobile-boundary.mjs",
+    "contracts:generate": "cd apps/dev && node ../../packages/core/scripts/build/registry/host/prepare-cli.mjs --contracts-only",
+    "contracts:check": "cd apps/dev && node ../../packages/core/scripts/build/registry/host/prepare-cli.mjs --contracts-only --check",
     "test:route-js-budget": "node --test scripts/performance/verify-route-js-budget.test.mjs",
     "test:template-route-conformance": "pnpm --filter @nextsparkjs/ui build && pnpm --filter @nextsparkjs/core build:js && node scripts/performance/template-route-conformance.mjs",
     "verify:route-js-budget": "node scripts/performance/verify-route-js-budget.mjs"

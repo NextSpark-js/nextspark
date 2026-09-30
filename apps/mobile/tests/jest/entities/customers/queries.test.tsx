@@ -3,6 +3,7 @@
  * TanStack Query hooks for fetching customers
  */
 
+import { listInfo } from '../../list-info'
 import { renderHook, waitFor } from '@testing-library/react-native'
 import type { Customer } from '@/entities/customers/types'
 import type { PaginatedResponse } from '@nextsparkjs/mobile'
@@ -29,6 +30,7 @@ const testCustomers: Customer[] = [
     visitDays: ['lun', 'mie'],
     contactDays: ['mar'],
     teamId: 'team-1',
+    userId: 'user-1',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
   },
@@ -42,6 +44,7 @@ const testCustomers: Customer[] = [
     visitDays: ['vie'],
     contactDays: ['jue'],
     teamId: 'team-1',
+    userId: 'user-1',
     createdAt: '2024-01-02T00:00:00Z',
     updatedAt: '2024-01-02T00:00:00Z',
   },
@@ -62,7 +65,8 @@ describe('Customer queries', () => {
     it('should fetch customers list', async () => {
       const response: PaginatedResponse<Customer> = {
         data: testCustomers,
-        meta: { total: 2, page: 1, limit: 20, totalPages: 1 },
+        success: true,
+        info: listInfo(2, 1, 20),
       }
       mockCustomersApi.list.mockResolvedValueOnce(response)
 
@@ -81,7 +85,8 @@ describe('Customer queries', () => {
     it('should pass filter parameters', async () => {
       const response: PaginatedResponse<Customer> = {
         data: [testCustomers[0]],
-        meta: { total: 1, page: 2, limit: 10, totalPages: 1 },
+        success: true,
+        info: listInfo(1, 2, 10),
       }
       mockCustomersApi.list.mockResolvedValueOnce(response)
 
@@ -104,7 +109,8 @@ describe('Customer queries', () => {
     it('should pass search parameter', async () => {
       const response: PaginatedResponse<Customer> = {
         data: testCustomers,
-        meta: { total: 2, page: 1, limit: 20, totalPages: 1 },
+        success: true,
+        info: listInfo(2, 1, 20),
       }
       mockCustomersApi.list.mockResolvedValueOnce(response)
 

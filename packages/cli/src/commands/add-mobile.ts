@@ -3,6 +3,8 @@ import { join, dirname } from 'node:path'
 import chalk from '../utils/colors.js'
 import ora from 'ora'
 import { execSync } from 'node:child_process'
+import { CONTRACTS_PACKAGE_NAME, writeContractsPackage } from '../wizard/generators/contracts-package.js'
+import { reconcileMobileSampleEntities } from '../wizard/generators/monorepo-generator.js'
 
 interface AddMobileOptions {
   force?: boolean
@@ -111,8 +113,20 @@ export async function addMobileCommand(options: AddMobileOptions = {}): Promise<
         }
       }
 
+      // The template imports its API types from the generated contracts package. This project is not a
+      // pnpm workspace, so mobile/ links the package by path instead of `workspace:*`.
+      if (pkg.dependencies) pkg.dependencies[CONTRACTS_PACKAGE_NAME] = 'file:../packages/contracts'
+
       writeFileSync(pkgPath, JSON.stringify(pkg, null, 2))
     }
+
+    // packages/contracts: `nextspark prepare` generates its src/ from this project's entities
+    const contractsDir = join(projectRoot, 'packages', 'contracts')
+    if (!existsSync(join(contractsDir, 'package.json'))) {
+      await writeContractsPackage(contractsDir, { projectPath: '../..' })
+    }
+    // Samples whose entity this project does not have keep hand-written types (see the note in the file)
+    await reconcileMobileSampleEntities(projectRoot, projectRoot)
 
     copySpinner.succeed('Mobile app template copied')
   } catch (error) {
@@ -147,7 +161,8 @@ export async function addMobileCommand(options: AddMobileOptions = {}): Promise<
   console.log(`  ${chalk.cyan('1.')} cd mobile`)
   console.log(`  ${chalk.cyan('2.')} Update ${chalk.bold('app.config.ts')} with your app name and bundle ID`)
   console.log(`  ${chalk.cyan('3.')} Add your entities in ${chalk.bold('src/entities/')}`)
-  console.log(`  ${chalk.cyan('4.')} npm start`)
+  console.log(`  ${chalk.cyan('4.')} From the project root, run ${chalk.bold('nextspark prepare --contracts-only')} to generate ${chalk.bold('packages/contracts')} (the API types mobile/ imports)`)
+  console.log(`  ${chalk.cyan('5.')} npm start`)
   console.log()
   console.log(chalk.gray('  Documentation: https://nextspark.dev/docs/mobile'))
   console.log()

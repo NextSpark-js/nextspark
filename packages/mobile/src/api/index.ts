@@ -6,7 +6,17 @@
 
 // Client
 export { apiClient, ApiClient, getApiUrl } from './client'
-export { ApiError, type RequestConfig, type PaginatedResponse, type SingleResponse } from './client.types'
+export {
+  ApiError,
+  type RequestConfig,
+  type PaginatedResponse,
+  type SingleResponse,
+  type ApiInfo,
+  type PaginationInfo,
+  type ApiSuccessResponse,
+  type ApiListResponse,
+  type ApiErrorResponse,
+} from './client.types'
 
 // Core services
 export { authApi } from './core/auth'

@@ -8,7 +8,16 @@
 // API Client
 export { apiClient, ApiClient, getApiUrl } from './api/client'
 export { ApiError } from './api/client.types'
-export type { RequestConfig, PaginatedResponse, SingleResponse } from './api/client.types'
+export type {
+  RequestConfig,
+  PaginatedResponse,
+  SingleResponse,
+  ApiInfo,
+  PaginationInfo,
+  ApiSuccessResponse,
+  ApiListResponse,
+  ApiErrorResponse,
+} from './api/client.types'
 
 // Entity Factory
 export { createEntityApi } from './api/entities/factory'

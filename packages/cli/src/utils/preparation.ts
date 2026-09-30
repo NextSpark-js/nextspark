@@ -18,6 +18,11 @@ export interface PreparationOptions {
    * run it; `prepare --watch` generates first.
    */
   skipInitial?: boolean;
+  /**
+   * Generate (or with `check`, compare) only the portable contracts module (DTO types and zod schemas the
+   * mobile app imports), in any mode: a project whose src/app is not generated still has contracts.
+   */
+  contractsOnly?: boolean;
 }
 
 export interface PreparationResult {
@@ -174,6 +179,7 @@ export async function coreHostMode(coreDir: string, projectRoot: string): Promis
 /** The arguments of the host preparation script for these options. */
 export function hostPreparationArgs(options: PreparationOptions): string[] {
   return [
+    ...(options.contractsOnly ? ['--contracts-only'] : []),
     ...(options.check ? ['--check'] : []),
     ...(options.production ? ['--production'] : []),
     ...(options.dev && !options.production ? ['--dev'] : []),
@@ -225,7 +231,7 @@ export async function runHostPreparation(
       resolve(status === 0 ? { code: 0, successLines: all(), failureLines: [] } : { code: status, successLines: [], failureLines: all() });
     });
   });
-  if (result.code !== 0 || !options.production || options.check) return result;
+  if (result.code !== 0 || !options.production || options.check || options.contractsOnly) return result;
   const auth = await runAuthReadiness(coreDir, projectRoot, env);
   return { ...auth, successLines: [...result.successLines, ...auth.successLines] };
 }

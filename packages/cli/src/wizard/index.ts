@@ -59,17 +59,30 @@ interface WizardRuntime {
   generateProject(config: WizardConfig, signInProvider?: ProductionSignInResult, projectTemplate?: string, plugins?: readonly string[]): Promise<ProjectGenerationResult | void>
   installProjectDependencies(projectRoot: string): void
   buildRegistries(webDir: string): void
+  /** Generate the API contracts of a web+mobile project into packages/contracts (a core without the script has none). */
+  generateContracts?(webDir: string): void
 }
 
 const defaultWizardRuntime: WizardRuntime = {
   generateProject,
   installProjectDependencies,
   buildRegistries,
+  generateContracts,
 }
 
 function buildRegistries(webDir: string): void {
   const registryScript = join(webDir, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs')
   execSync(`node "${registryScript}" --build`, {
+    cwd: webDir,
+    stdio: 'inherit',
+    env: process.env,
+  })
+}
+
+function generateContracts(webDir: string): void {
+  const script = join(webDir, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare-cli.mjs')
+  if (!existsSync(script)) return
+  execSync(`node "${script}" --contracts-only`, {
     cwd: webDir,
     stdio: 'inherit',
     env: process.env,
@@ -306,6 +319,19 @@ export async function runWizard(
       registrySpinner.fail('Failed to build registries')
       const devCmd = isMonorepo ? 'pnpm dev' : 'pnpm dev'
       console.log(chalk.yellow(`  Registries will be built automatically when you run "${devCmd}"`))
+    }
+
+    // The mobile app imports the API contracts generated from the web project's entities
+    if (isMonorepo && runtime.generateContracts) {
+      const contractsSpinner = ora({ text: 'Generating the API contracts...', prefixText: '  ' }).start()
+      try {
+        contractsSpinner.stop()
+        runtime.generateContracts(webDir)
+        contractsSpinner.succeed('API contracts generated (packages/contracts)!')
+      } catch {
+        contractsSpinner.fail('Failed to generate the API contracts')
+        console.log(chalk.yellow('  Run "pnpm contracts" from the project root to generate packages/contracts'))
+      }
     }
 
     // AI Workflow setup (optional)

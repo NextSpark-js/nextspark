@@ -22,13 +22,14 @@ import {
 } from '@/entities/tasks/mutations'
 import { TASKS_QUERY_KEY } from '@/entities/tasks/queries'
 
-// Test data matching actual Task type
+// Test data matching the generated Task contract (@project/contracts)
 const testTask: Task = {
   id: 'task-1',
   title: 'Test Task',
   description: 'Test description',
   status: 'todo',
   priority: 'medium',
+  completed: false,
   dueDate: null,
   teamId: 'team-1',
   userId: 'user-1',
@@ -43,9 +44,11 @@ const createInput: CreateTaskInput = {
   priority: 'high',
 }
 
-const updateInput: UpdateTaskInput = {
+// `satisfies` keeps the literal's own type: an UpdateTaskInput may carry null for
+// a field (the server accepts it), which a Task never does.
+const updateInput = {
   title: 'Updated Task',
-}
+} satisfies UpdateTaskInput
 
 // tasksApi comes from createEntityApi, which resolves create/update with the
 // entity itself (it unwraps the API's { data } envelope).

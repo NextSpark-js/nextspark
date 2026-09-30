@@ -27,6 +27,17 @@ interface UpdateTaskInput {
   status?: 'pending' | 'completed'
 }
 
+// What createApiResponse sends for a list: the pagination is in `info`, next to the timestamp
+const LIST_INFO = (total: number, page: number, limit: number) => ({
+  timestamp: '2026-01-01T00:00:00.000Z',
+  page,
+  limit,
+  total,
+  totalPages: Math.ceil(total / limit),
+  hasNextPage: page * limit < total,
+  hasPrevPage: page > 1,
+})
+
 describe('createEntityApi', () => {
   const tasksApi = createEntityApi<Task, CreateTaskInput, UpdateTaskInput>('tasks')
 
@@ -37,8 +48,9 @@ describe('createEntityApi', () => {
   describe('list', () => {
     it('calls apiClient.get with correct path', async () => {
       const mockResponse = {
+        success: true,
         data: [{ id: '1', title: 'Task 1', status: 'pending' }],
-        meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+        info: LIST_INFO(1, 1, 10),
       }
       ;(apiClient.get as jest.Mock).mockResolvedValueOnce(mockResponse)
 
@@ -49,7 +61,7 @@ describe('createEntityApi', () => {
     })
 
     it('passes params to apiClient.get', async () => {
-      const mockResponse = { data: [], meta: { total: 0, page: 2, limit: 5, totalPages: 0 } }
+      const mockResponse = { success: true, data: [], info: LIST_INFO(0, 2, 5) }
       ;(apiClient.get as jest.Mock).mockResolvedValueOnce(mockResponse)
 
       await tasksApi.list({ page: 2, limit: 5 })
@@ -58,7 +70,7 @@ describe('createEntityApi', () => {
     })
 
     it('passes filter params', async () => {
-      const mockResponse = { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } }
+      const mockResponse = { success: true, data: [], info: LIST_INFO(0, 1, 10) }
       ;(apiClient.get as jest.Mock).mockResolvedValueOnce(mockResponse)
 
       await tasksApi.list({ page: 1, limit: 10, status: 'pending' })

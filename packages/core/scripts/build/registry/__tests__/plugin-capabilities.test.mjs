@@ -13,6 +13,7 @@ import {
   assertNoPluginCollisions,
   capabilitiesOf,
   checkPluginContributions,
+  exportsTarget,
   pluginCollisions,
   pluginsFor,
   readPluginDeclaration,
@@ -920,5 +921,51 @@ test('the catalog lists every plugin with static metadata; the executable regist
     assert.equal(generatePluginCatalog([...plugins].reverse()), catalog)
   } finally {
     cleanup()
+  }
+})
+
+test("package `exports` patterns are ordered as Node's PATTERN_KEY_COMPARE does, not by declaration order", () => {
+  const IMPORT = new Set(['import', 'default'])
+  const at = (exportsField, subpath) => exportsTarget(exportsField, subpath, IMPORT)
+  const both = { './*': { import: './generic/*.js' }, './*.js': { import: './js/*.js' } }
+  const reversed = { './*.js': { import: './js/*.js' }, './*': { import: './generic/*.js' } }
+  // `./*.js` and `./*` share the base before the star: the longer key is the more specific pattern, whichever comes first
+  for (const field of [both, reversed]) {
+    assert.equal(at(field, './feature.js'), './js/feature.js')
+    assert.equal(at(field, './feature'), './generic/feature.js')
+    assert.equal(at(field, './nested/feature.js'), './js/nested/feature.js')
+  }
+  // a longer base before the star wins over a longer key
+  const bases = { './*': './a/*', './lite/*': './b/*', './lite/*.js': './c/*.js' }
+  for (const field of [bases, Object.fromEntries(Object.entries(bases).reverse())]) {
+    assert.equal(at(field, './lite/x.js'), './c/x.js')
+    assert.equal(at(field, './lite/x'), './b/x')
+    assert.equal(at(field, './other/x'), './a/other/x')
+  }
+  // an exact key beats every pattern
+  assert.equal(at({ './*': './a/*', './feature.js': './exact.js', './*.js': './b/*.js' }, './feature.js'), './exact.js')
+  // the first pattern in that order that MATCHES decides, even when its conditions select nothing (Node does not fall back)
+  assert.equal(exportsTarget({ './*': { import: './a/*.js' }, './*.js': { require: './b/*.js' } }, './x.js', IMPORT), null)
+  // a key with two stars is not a pattern, a trailing-slash folder key is not a mapping (Node 17+), an empty match is not a match
+  assert.equal(at({ './*/*': './a/*', './lib/': './lib/' }, './lib/x.js'), null)
+  assert.equal(at({ './*': './a/*.js' }, './'), null)
+  // the same subpath through nested conditions and arrays
+  assert.equal(at({ './*.js': [{ require: './n.js' }, { import: './js/*.js' }], './*': './generic/*' }, './f.js'), './js/f.js')
+})
+
+test('the more specific wildcard export decides which file a plugin import reaches, in either declaration order', async () => {
+  const PLUGIN = {
+    'plugins/demo/plugin.config.ts': "export const demoPluginConfig = { name: 'demo', capabilities: ['web'] }\n",
+    'plugins/demo/components/Widget.tsx': "import { feature } from '@nextsparkjs/helper/feature.js'\nexport default () => feature\n",
+    'node_modules/@nextsparkjs/helper/dist/generic/feature.js.js': 'export const feature = 1\n',
+    'node_modules/@nextsparkjs/helper/dist/js/feature.js': "import 'server-only'\nexport const feature = 1\n",
+  }
+  const manifests = [
+    { './*': { import: './dist/generic/*.js' }, './*.js': { import: './dist/js/*.js' } },
+    { './*.js': { import: './dist/js/*.js' }, './*': { import: './dist/generic/*.js' } },
+  ]
+  for (const exportsField of manifests) {
+    const found = await check({ ...PLUGIN, 'node_modules/@nextsparkjs/helper/package.json': JSON.stringify({ name: '@nextsparkjs/helper', exports: exportsField }) })
+    assert.deepEqual(found.diagnostics.map(d => d.file), ['@nextsparkjs/helper/dist/js/feature.js'], JSON.stringify(Object.keys(exportsField)))
   }
 })

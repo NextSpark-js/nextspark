@@ -6,6 +6,7 @@
  */
 
 import * as z from 'zod'
+import { mediaRefObjectSchema, mediaRefSchema, type MediaRef, type MediaRefObject } from '../lib/entities/portable/media-ref'
 
 // ============================================================================
 // MEDIA REFERENCE - For image/media fields in blocks
@@ -19,19 +20,11 @@ import * as z from 'zod'
  * - New: object with mediaId + url (enables future URL re-resolution)
  *
  * Use `resolveMediaUrl()` in components to safely extract the URL from either format.
+ *
+ * Defined in lib/entities/portable/media-ref.ts (shared with the generated API contracts).
  */
-export const mediaRefObjectSchema = z.object({
-  mediaId: z.string(),
-  url: z.string(),
-})
-
-export const mediaRefSchema = z.union([
-  z.string(),
-  mediaRefObjectSchema,
-])
-
-export type MediaRef = z.infer<typeof mediaRefSchema>
-export type MediaRefObject = z.infer<typeof mediaRefObjectSchema>
+export { mediaRefObjectSchema, mediaRefSchema }
+export type { MediaRef, MediaRefObject }
 
 /**
  * Resolve a MediaRef value to a plain URL string.

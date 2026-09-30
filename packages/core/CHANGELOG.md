@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Portable API contracts (#203):** `nextspark prepare` generates a zod-only module of DTO types and schemas from the project's entities
+  (`packages/contracts` in a web+mobile project, `.nextspark/contracts` otherwise); `nextspark prepare --contracts-only [--check]` runs
+  only that step. Requests are validated with the server's own schema generator (copied verbatim from the new
+  `src/lib/entities/portable/`), responses are rendered from the columns the generic handlers select, and numeric wire types follow the
+  `pg` driver. `childEntities` are serialized into the contract, or generation fails.
+
 ### Removed
 
 - **`nextspark sync:app` and every write core's postinstall made into a project (#203, removed in
@@ -30,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [Upgrading a 0.x project](docs/17-updates/06-upgrade-0x-projects.md).
 - Core's API Explorer docs and presets (`docs.md`, `presets.ts`) live next to each route module in the package
   (`src/routes/api/**`, shipped as source under `dist/routes/api/**`).
+- The entity schema generator now lives in `lib/entities/portable/` (server-free) and is re-exported by `lib/entities/schema-generator.ts`;
+  the generic handlers build their SELECT lists from `portable/response-shape.ts`. No behavior change.
 
 ### Fixed
 

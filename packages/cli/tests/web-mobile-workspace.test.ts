@@ -66,14 +66,14 @@ function packageGlobs(yaml: string): string[] {
   return globs
 }
 
-test('a web-mobile project keeps only its applications in the root pnpm-workspace.yaml', async () => {
+test('a web-mobile project keeps only its applications and its contracts package in the root pnpm-workspace.yaml', async () => {
   const root = await generate('web-mobile')
   try {
     assert.equal(fs.existsSync(path.join(root, 'web', 'package.json')), true, 'the generator did not write web/')
     assert.equal(fs.existsSync(path.join(root, 'web', 'pnpm-workspace.yaml')), false, 'web/ has a pnpm-workspace.yaml of its own')
 
     const yaml = fs.readFileSync(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
-    assert.deepEqual(packageGlobs(yaml), ['web', 'mobile'])
+    assert.deepEqual(packageGlobs(yaml), ['web', 'mobile', 'packages/contracts'])
     assert.match(yaml, /^allowBuilds:\n {2}'fixture-built': true$/m)
   } finally {
     fs.rmSync(root, { recursive: true, force: true })

@@ -36,7 +36,8 @@ test('a real project: the registry build is staged and published with the host, 
 
     // The registry build wrote nothing of its own into src/app (no (templates) pages, no globals.css) and left no staging behind
     assert.deepEqual(readdirSync(join(root, 'src/app')).sort(), ['(shell)', 'about', 'api', 'error.tsx', 'global-error.tsx', 'layout.tsx', 'page.tsx', 'pricing'])
-    assert.deepEqual(readdirSync(join(root, '.nextspark')).sort(), ['generation.json', 'registries'])
+    // The portable contracts (#203 stage 7b) live beside the registries, in their own directory
+    assert.deepEqual(readdirSync(join(root, '.nextspark')).sort(), ['contracts', 'generation.json', 'registries'])
 
     const record = readGeneration(root)
     assert.equal(Object.keys(record.files).length, first.files.length)

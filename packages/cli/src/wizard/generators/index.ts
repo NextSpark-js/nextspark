@@ -43,7 +43,7 @@ import { setupGit } from './git-init.js'
 import { writeProductionSignInEnv } from './production-sign-in-env.js'
 import { getDefaultProductionSignIn, type ProductionSignInResult } from '../prompts/production-sign-in.js'
 // Monorepo generator
-import { generateMonorepoStructure, isMonorepoProject, getWebDir } from './monorepo-generator.js'
+import { generateMonorepoStructure, isMonorepoProject, getWebDir, reconcileMobileSampleEntities } from './monorepo-generator.js'
 import { isLocalPackageRef } from './local-package-refs.js'
 import { writeProxyFile, type ProxyFileResult } from './proxy-file-writer.js'
 import { ensureGeneratedPathsIgnored } from '../../utils/templates-gitignore.js'
@@ -521,6 +521,11 @@ export async function generateProject(
 
     // 3. Copy optional content features (pages entity, blog entity + block)
     await copyContentFeatures(config, templatesDir)
+
+    // 3.1 The mobile samples whose entity this web project does not have keep hand-written types
+    if (isMonorepoProject(config)) {
+      await reconcileMobileSampleEntities(originalCwd, process.cwd())
+    }
 
     // 4. Update theme configuration files
     await updateThemeConfig(config)

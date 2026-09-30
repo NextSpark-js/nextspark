@@ -1,7 +1,10 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
 import {
+  HOST_PREPARE_SCRIPT,
   coreHostMode,
   preparationWatchExitCode,
   preparationWatchWriteGuard,
@@ -18,6 +21,8 @@ export interface PrepareOptions {
   check?: boolean;
   /** With --check: compare with the development host `nextspark dev` writes, instead of the production one. */
   dev?: boolean;
+  /** Generate (or with --check, compare) only the portable contracts module, in any mode. */
+  contractsOnly?: boolean;
 }
 
 export async function prepareCommand(options: PrepareOptions): Promise<void> {
@@ -30,6 +35,24 @@ export async function prepareCommand(options: PrepareOptions): Promise<void> {
     // committed app tree no generation owns: that project keeps the legacy registry build
     const { mode: hostMode } = await coreHostMode(coreDir, projectRoot);
     const host = hostMode === 'host';
+
+    if (options.contractsOnly) {
+      if (options.watch || options.dev) {
+        spinner.fail('--contracts-only generates or checks once: it cannot be combined with --watch or --dev');
+        process.exit(1);
+        return;
+      }
+      const contracts = await runHostPreparation(coreDir, projectRoot, { contractsOnly: true, check: options.check });
+      if (contracts.code !== 0) {
+        spinner.fail(options.check ? 'The portable contracts are not up to date' : 'Generating the portable contracts failed');
+        for (const line of contracts.failureLines) console.error(chalk.red(line));
+        process.exit(contracts.code);
+        return;
+      }
+      spinner.succeed(options.check ? 'The portable contracts are up to date' : 'Portable contracts generated');
+      for (const line of contracts.successLines) console.log(chalk.gray(line));
+      return;
+    }
 
     if (options.dev && !options.check) {
       spinner.fail('--dev only applies to --check (nextspark dev writes the development host itself)');
@@ -100,8 +123,21 @@ export async function prepareCommand(options: PrepareOptions): Promise<void> {
       process.exit(result.code);
       return;
     }
+    // The portable contracts do not depend on how src/app is produced: a legacy project (committed
+    // src/app) gets them here; a generated host has them from the run above.
+    let contractLines: string[] = [];
+    if (!host && existsSync(join(coreDir, HOST_PREPARE_SCRIPT))) {
+      const contracts = await runHostPreparation(coreDir, projectRoot, { contractsOnly: true });
+      if (contracts.code !== 0) {
+        spinner.fail('Generating the portable contracts failed');
+        for (const line of [...result.successLines, ...contracts.failureLines]) console.error(chalk.red(line));
+        process.exit(contracts.code);
+        return;
+      }
+      contractLines = contracts.successLines;
+    }
     spinner.succeed(host ? `src/app and registries prepared (${mode} mode)` : `Registries prepared (${mode} mode)`);
-    for (const line of result.successLines) console.log(chalk.gray(line));
+    for (const line of [...result.successLines, ...contractLines]) console.log(chalk.gray(line));
   } catch (error) {
     spinner.fail('Preparation failed');
     if (error instanceof Error) for (const line of errorLines(error)) console.error(chalk.red(line));

@@ -23,8 +23,9 @@ import type { EntityApi, EntityListParams } from './types'
  * ```typescript
  * const tasksApi = createEntityApi<Task, CreateTaskInput, UpdateTaskInput>('tasks')
  *
- * // List tasks (returns PaginatedResponse)
- * const { data, meta } = await tasksApi.list({ page: 1, limit: 10 })
+ * // List tasks (returns PaginatedResponse: the items in `data`, the pagination in `info`)
+ * const { data, info } = await tasksApi.list({ page: 1, limit: 10 })
+ * console.log(data.length, info.total, info.totalPages, info.hasNextPage)
  *
  * // Get single task (returns entity directly)
  * const task = await tasksApi.get('task-id')
@@ -47,7 +48,7 @@ export function createEntityApi<T, CreateInput = Partial<T>, UpdateInput = Parti
   return {
     /**
      * List entities with pagination and filters
-     * Returns PaginatedResponse with data array and meta
+     * Returns PaginatedResponse: `data` array and the pagination in `info`
      */
     list: (params?: EntityListParams) =>
       apiClient.get<PaginatedResponse<T>>(basePath, params),

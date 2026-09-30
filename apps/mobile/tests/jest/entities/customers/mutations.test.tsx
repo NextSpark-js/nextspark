@@ -32,6 +32,7 @@ const testCustomer: Customer = {
   visitDays: ['lun', 'mie'],
   contactDays: ['mar', 'jue'],
   teamId: 'team-1',
+  userId: 'user-1',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
 }
@@ -44,10 +45,12 @@ const createInput: CreateCustomerInput = {
   visitDays: ['vie'],
 }
 
-const updateInput: UpdateCustomerInput = {
+// `satisfies` keeps the literal's own type: an UpdateCustomerInput may carry a numeric string or null for a
+// field (the server accepts them), which a Customer row never does
+const updateInput = {
   name: 'Updated Customer',
   phone: '555-9999',
-}
+} satisfies UpdateCustomerInput
 
 // customersApi comes from createEntityApi, which resolves create/update with
 // the entity itself (it unwraps the API's { data } envelope).

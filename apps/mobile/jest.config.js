@@ -24,6 +24,7 @@ module.exports = {
     '^@/src/(.*)$': '<rootDir>/src/$1',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@nextsparkjs/mobile$': '<rootDir>/../../packages/mobile/src/index.ts',
+    '^@project/contracts$': '<rootDir>/../../packages/contracts/src/index.ts',
     '^react-native/Libraries/Utilities/Platform$':
       '<rootDir>/tests/jest/__mocks__/platform.ts',
   },

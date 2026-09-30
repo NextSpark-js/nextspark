@@ -154,6 +154,11 @@ Singleton HTTP client for API requests.
 - `setTeamId(teamId): Promise<void>` - Set current team ID
 - `clearAuth(): Promise<void>` - Clear all authentication data: the stored token, team and user, and the native cookie store (see [Sign-out and native cookies](#sign-out-and-native-cookies))
 
+> **Migrating from `meta` (Unreleased):** `PaginatedResponse<T>` was typed `{ data, meta: { total, page, limit, totalPages } }`, but the API has
+> never sent a `meta`: it sends `{ success, data, info }` with the pagination in `info`. `PaginatedResponse<T>` is now that shape
+> (`ApiListResponse<T>`), and `SingleResponse<T>` is `ApiSuccessResponse<T>`. Replace `response.meta.total` with `response.info.total`
+> (same for `page`, `limit`, `totalPages`); code that read `meta` was reading `undefined`.
+
 #### `createEntityApi<T>(entity: string)`
 Factory function to create CRUD API for an entity.
 
@@ -161,7 +166,7 @@ Factory function to create CRUD API for an entity.
 - `entity: string` - Entity name (e.g., 'tasks', 'users')
 
 **Returns:** `EntityApi<T>` with methods:
-- `list(params?): Promise<PaginatedResponse<T>>` - List entities
+- `list(params?): Promise<PaginatedResponse<T>>` - List entities: `{ success, data, info }`, the pagination (`page`, `limit`, `total`, `totalPages`, `hasNextPage`, `hasPrevPage`) in `info`
 - `get(id): Promise<T>` - Get single entity
 - `create(data): Promise<T>` - Create entity
 - `update(id, data): Promise<T>` - Update entity
@@ -249,7 +254,7 @@ Pre-built API services for common entities:
 - `getSession(): Promise<SessionResponse>`
 
 ### `teamsApi`
-- `getTeams(): Promise<PaginatedResponse<Team>>`
+- `getTeams(): Promise<TeamsResponse>`
 - `switchTeam(teamId): Promise<void>`
 
 ### `usersApi`
