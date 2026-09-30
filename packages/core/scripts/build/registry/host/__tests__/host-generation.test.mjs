@@ -358,3 +358,25 @@ test('an invalid generation record is refused rather than trusted', async () => 
     host.cleanup()
   }
 })
+
+test('registries that older builds wrote and no build writes any more (template registries, template-scopes) are removed when they carry a registry build stamp; a file that does not stays', async () => {
+  const host = tempHost(SOURCE)
+  try {
+    const stamped = '/**\n * Auto-generated Template Registry\n *\n * Generated at: 2026-09-01T10:00:00.000Z\n */\nexport const TEMPLATE_REGISTRY = {}\n'
+    write(host.hostRoot, '.nextspark/registries/template-registry.ts', stamped)
+    write(host.hostRoot, '.nextspark/registries/template-registry.client.ts', stamped)
+    write(host.hostRoot, '.nextspark/registries/template-scopes/server/(public)/page.ts', '/** Auto-generated route-scoped template registry; do not edit. */\nexport {}\n')
+    write(host.hostRoot, '.nextspark/registries/template-scopes/client/mine.ts', 'export const MINE = 1 // a file of the user\'s\n')
+    const result = await prepareHost(host.config, { mode: 'production' })
+    assert.deepEqual(result.deleted.filter(path => path.includes('template-')).sort(), [
+      '.nextspark/registries/template-registry.client.ts',
+      '.nextspark/registries/template-registry.ts',
+      '.nextspark/registries/template-scopes/server/(public)/page.ts',
+    ])
+    assert.equal(existsSync(join(host.hostRoot, '.nextspark/registries/template-registry.ts')), false)
+    assert.equal(existsSync(join(host.hostRoot, '.nextspark/registries/template-scopes/server')), false, 'the emptied directories go with them')
+    assert.equal(read(host.hostRoot, '.nextspark/registries/template-scopes/client/mine.ts').includes('MINE'), true, 'a file without a stamp is the user\'s')
+  } finally {
+    host.cleanup()
+  }
+})

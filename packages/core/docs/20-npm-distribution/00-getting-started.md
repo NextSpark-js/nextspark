@@ -209,8 +209,6 @@ Auto-generated TypeScript files that index your themes, entities, and plugins:
 | File | Purpose |
 |------|---------|
 | `entity-registry.ts` | Entity CRUD configurations |
-| `template-registry.ts` | Page/layout overrides |
-| `template-registry.client.ts` | Client-safe templates |
 | `plugin-registry.ts` | Active plugins |
 | `theme-registry.ts` | Theme configuration |
 | `permissions-registry.ts` | Role/permission mapping |

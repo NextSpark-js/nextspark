@@ -12,7 +12,7 @@ import { buildCli } from './built-cli.js'
 
 /**
  * registry:build, build and dev, run as the built CLI against the real core:
- * whatever command runs the registry build, a place it writes under that isn't
+ * whatever command prepares the project (src/app and the registries), a place it writes under that isn't
  * safe stops the command before anything is written, in the project or through
  * it, with a code other than 0 and the cause in what it prints - core prints it
  * on stdout.
@@ -39,19 +39,18 @@ async function writeIn(root: string, path: string, content = '') {
 }
 
 /**
- * A project with the real core installed, a project template and a stale file in
- * src/app/(templates) for the build to back up, and a stand-in for Next that only
- * records, outside the project, that it ran.
+ * A project with the real core and Next installed, a project template, and a stand-in for
+ * Next's binary that only records, outside the project, that it ran.
  */
 async function project() {
   const { root, cleanup } = await directory('nextspark-write-check-')
   await writeIn(root, 'nextspark.config.ts', 'export default { plugins: [] }\n')
   await writeIn(root, 'package.json', JSON.stringify({ dependencies: { next: '16.3.5' } }))
-  await writeIn(root, 'src/app/layout.tsx', 'export default function Layout({ children }) { return children }\n')
-  await writeIn(root, 'src/app/(templates)/stale/page.tsx', 'export default function Stale() { return null }\n')
   await writeIn(root, 'templates/pricing/page.tsx', 'export default function Pricing() { return null }\n')
   await mkdir(join(root, 'node_modules/@nextsparkjs'), { recursive: true })
   await symlink(CORE_SOURCE, join(root, 'node_modules/@nextsparkjs/core'))
+  // The installed Next the host reads its route export table from
+  await symlink(join(PKG_ROOT, '../../node_modules/next'), join(root, 'node_modules/next'))
   await writeIn(root, 'node_modules/.bin/next', '#!/bin/sh\necho ran >> "$NEXT_RAN"\n')
   await chmod(join(root, 'node_modules/.bin/next'), 0o755)
   return { root, cleanup }
@@ -98,15 +97,6 @@ const CASES: [string, (root: string, outside: string) => Promise<void>, string][
     await mkdir(join(root, '.nextspark/registries'), { recursive: true })
     await symlink(join(outside, 'index.ts'), join(root, '.nextspark/registries/index.ts'))
   }, '.nextspark/registries/index.ts is a symlink'],
-  ['src/app/(templates) a symlink to a directory outside', async (root, outside) => {
-    await rm(join(root, 'src/app/(templates)'), { recursive: true })
-    await symlink(outside, join(root, 'src/app/(templates)'))
-  }, 'src/app/(templates) is a symlink'],
-  ['src/app/api a symlink to a directory outside holding an old generated plugin route and another file', async (root, outside) => {
-    await writeIn(outside, 'v1/plugin/legacy/route.ts', '// Auto-generated Plugin Route Proxy\n')
-    await writeIn(outside, 'v1/plugin/legacy/other.ts', 'export const other = 1\n')
-    await symlink(outside, join(root, 'src/app/api'))
-  }, 'src/app/api is a symlink'],
   ["the project's fixtures directory a symlink to one outside", async (root, outside) => {
     await writeIn(outside, 'entities.json', '{"outside":true}\n')
     await writeIn(outside, 'blocks.json', '{"outside":true}\n')
@@ -129,7 +119,7 @@ const COMMANDS: [string, string[]][] = [
   ['dev --registry', ['dev', '--registry', '-p', '4399']],
 ]
 
-test("registry:build, build and dev write nothing and stop with the cause when a place the registry build writes under isn't safe", { skip: process.platform === 'win32', timeout: 600_000 }, async () => {
+test("registry:build, build and dev write nothing and stop with the cause when a place the preparation writes under isn't safe", { skip: process.platform === 'win32', timeout: 600_000 }, async () => {
   const wrong: string[] = []
   for (const [label, setUp, named] of CASES) {
     for (const [command, args] of COMMANDS) {
@@ -170,7 +160,7 @@ test("registry:build, build and dev write nothing and stop with the cause when a
   assert.deepEqual(wrong, [])
 })
 
-test("registry:watch and prepare --watch stop before they start, with the cause and no misleading running message, when a place the registry build writes under isn't safe", { skip: process.platform === 'win32', timeout: 120_000 }, async () => {
+test("registry:watch and prepare --watch stop before they start, with the cause and no misleading running message, when a place the preparation writes under isn't safe", { skip: process.platform === 'win32', timeout: 120_000 }, async () => {
   const { root, cleanup } = await project()
   const outside = await directory('nextspark-write-check-outside-')
   try {
@@ -194,14 +184,14 @@ test("registry:watch and prepare --watch stop before they start, with the cause 
   }
 })
 
-test('registry:build, build and dev say when git tracks the registries they rewrite, and how to stop tracking them', { skip: process.platform === 'win32', timeout: 300_000 }, async () => {
+test('build says when git tracks the registries it rewrites, and how to stop tracking them', { skip: process.platform === 'win32', timeout: 300_000 }, async () => {
   const wrong: string[] = []
-  for (const [command, args] of [['registry:build', ['registry:build']], ['build', ['build']], ['dev', ['dev', '-p', '4399']]] as const) {
+  for (const [command, args] of [['build', ['build']]] as const) {
     const { root, cleanup } = await project()
     const outside = await directory('nextspark-write-check-outside-')
     try {
-      await writeIn(root, '.gitignore', 'node_modules/\n.env\nsrc/app/(templates)/\n.nextspark/backups/\n')
-      await writeIn(root, '.nextspark/registries/index.ts', '// committed before\n')
+      await writeIn(root, '.gitignore', 'node_modules/\n.env\nsrc/app/\n.nextspark/backups/\n')
+      await writeIn(root, '.nextspark/registries/index.ts', '/**\n * Auto-generated Unified Registry\n *\n * Generated at: 2026-09-01T10:00:00.000Z\n */\nexport const OLD = {}\n')
       spawnSync('git', ['init', '-q'], { cwd: root })
       spawnSync('git', ['add', '-A'], { cwd: root })
       spawnSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'init'], { cwd: root })

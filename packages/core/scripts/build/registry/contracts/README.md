@@ -106,9 +106,9 @@ the record does not list are left alone; a generated file no entity produces any
 
 ## Commands
 
-- `nextspark prepare` - a generated host writes the contracts with `src/app` and the registries (one lock, one preflight); a project
-  whose `src/app` is a committed tree (this repository's `apps/dev`, until it is converted) writes them after its registry build;
-- `nextspark prepare --contracts-only [--check]` - only the contracts, in any mode;
+- `nextspark prepare` - the generated host writes the contracts with `src/app` and the registries (one lock, one preflight); a project
+  whose `src/app` is a committed tree is not prepared at all (`nextspark migrate` first), contracts included;
+- `nextspark prepare --contracts-only [--check]` - only the contracts, without touching `src/app`; it refuses a committed `src/app` the same way;
 - `nextspark prepare --check` - includes the contracts when the host generates them;
 - this repository: `pnpm contracts:generate`, `pnpm contracts:check` (run in the Mobile workflow), `pnpm mobile:boundary`.
 

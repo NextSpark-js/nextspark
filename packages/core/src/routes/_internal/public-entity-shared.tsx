@@ -4,9 +4,8 @@
  * imported here, so an archive route's module graph does not hold the item page's client code or the
  * other way round.
  *
- * Both hosts use it: core's `(public)/[...slug]` route resolves the entity from the URL at runtime
- * (public-catch-all-page.tsx); the generated host's per-entity routes are given their entity's config
- * (public-item-route.tsx, public-archive-route.tsx). This module does not import the entity registry, so
+ * The generated host's per-entity routes are given their entity's config (public-item-route.tsx,
+ * public-archive-route.tsx). This module does not import the entity registry, so
  * a per-entity route's module graph holds no other entity.
  */
 

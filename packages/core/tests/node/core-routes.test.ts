@@ -27,7 +27,7 @@ const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const ROUTES = path.join(CORE, 'src/routes')
 const DIST_ROUTES = path.join(CORE, 'dist/routes')
 
-const { buildRoutesManifest, renderJson, unlistedRouteLikeFiles, specifierForRouteFile, ROUTES_SUBPATH, RETIRED_FROM_MANIFEST, COMPOSED_ROUTES, VARIANT_FILES } = await import(
+const { buildRoutesManifest, renderJson, unlistedRouteLikeFiles, specifierForRouteFile, ROUTES_SUBPATH, COMPOSED_ROUTES, VARIANT_FILES } = await import(
   path.join(CORE, 'scripts/build/routes-manifest.mjs')
 )
 const { emitFacade, ROUTE_KINDS, analyzeRouteSource } = await import(path.join(CORE, 'scripts/build/registry/host/facade-emitter.mjs'))
@@ -77,13 +77,12 @@ test('entries have the shape of the conformance fixture: kind, target, specifier
   assert.equal(new Set(manifest.map(entry => entry.target)).size, manifest.length, 'one entry per target')
 })
 
-test('the manifest lists exactly the route files under src/routes, less the retired ones, and every variant is one of them', () => {
+test('the manifest lists exactly the route files under src/routes, and every variant is one of them', () => {
   // _ folders hold helpers, variants replace a manifest route, presets.ts belongs to the API Explorer
   const routeLike = /(^|\/)(page|layout|loading|error|not-found|template|default|route|global-error|global-not-found|forbidden|unauthorized)\.(tsx|ts)$/
-  const retired = (file: string) => RETIRED_FROM_MANIFEST.some(({ path: prefix }: { path: string }) => file.startsWith(prefix))
   const isVariant = (file: string) => variantEntries.some(variant => variant.specifier === `${ROUTES_SUBPATH}/${file.replace(/\.(tsx|ts)$/, '')}`)
   const files = walk(ROUTES)
-    .filter(file => !file.split('/').some(part => part.startsWith('_')) && routeLike.test(file) && !retired(file) && !isVariant(file))
+    .filter(file => !file.split('/').some(part => part.startsWith('_')) && routeLike.test(file) && !isVariant(file))
     .sort()
   assert.deepEqual(manifest.map(entry => entry.target), files)
   for (const entry of variantEntries) assert.ok(fs.existsSync(path.join(ROUTES, entry.specifier.slice(`${ROUTES_SUBPATH}/`.length) + '.tsx')))
@@ -212,17 +211,13 @@ test('the built dist emits the same facades as the source (what a project that i
   assert.deepEqual(mismatches, [])
 })
 
-test('retired routes stay in the package for apps that still resolve them at runtime, and never in the manifest', () => {
+test('core ships no runtime dispatcher and no catch-all entity route: the generated host writes one route per entity, and per-entity routes forward metadata, error and loading from route helpers', () => {
+  const files = walk(ROUTES)
+  assert.deepEqual(files.filter(file => /^api\/v1\/(theme|plugin)\//.test(file)), [], 'project and plugin routes are route files of their own, not served through a dispatcher')
+  assert.deepEqual(files.filter(file => file.startsWith('dashboard/(main)/[entity]/') || file.startsWith('(public)/[...slug]/')), [])
+  for (const helper of ['entity-list-metadata.ts', 'entity-detail-metadata.ts', 'entity-error.tsx', 'entity-loading.tsx']) assert.ok(files.includes(`_internal/${helper}`), helper)
   const listed = new Set(manifest.map(entry => entry.target))
-  for (const { path: prefix, reason } of RETIRED_FROM_MANIFEST as Array<{ path: string; reason: string }>) {
-    assert.ok(reason.length > 0)
-    const modules = walk(ROUTES).filter(file => file.startsWith(prefix) && /\.(tsx|ts)$/.test(file) && !/presets\.ts$/.test(file))
-    assert.ok(modules.length > 0, `${prefix} has no module left; drop it from RETIRED_FROM_MANIFEST`)
-    for (const file of modules) assert.equal(listed.has(file), false, `${file} is retired but listed`)
-  }
-  // The runtime dispatchers (route-handlers registry lookups) are not served by the generated host.
   for (const target of listed) assert.doesNotMatch(target, /^api\/v1\/(theme|plugin)\//)
-  assert.deepEqual([...listed].filter(target => target.startsWith('dashboard/(main)/[entity]/') || target.startsWith('(public)/[...slug]/')), [])
 })
 
 test('layouts that wrap the layout a project resolves declare the wrapper their overrides are composed with', async () => {

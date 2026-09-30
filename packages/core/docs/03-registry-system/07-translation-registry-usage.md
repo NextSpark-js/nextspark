@@ -730,7 +730,6 @@ const translations = await loader()
 - **Bundle size:** 83% smaller with lazy loading
 
 **Next steps:**
-- [Template Registry](./08-template-registry.md) - Template override system
 - [Config Registry](./09-config-registry.md) - Configuration management
 - [Theme Registry](./05-theme-registry.md) - Theme system
 

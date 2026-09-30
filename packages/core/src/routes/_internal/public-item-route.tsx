@@ -4,8 +4,7 @@
  * A builder entity with `access.basePath` gets a concrete item route (`(public)/blog/[...slug]`): a facade
  * that statically imports the entity's config - and the project's item template when it has one - and
  * passes them to the factories here, so nothing resolves an entity or a template by a runtime key, and no
- * other entity's config is in the route's module graph. Core's `(public)/[...slug]` route
- * (public-catch-all-page.tsx) keeps serving apps that still resolve the entity from the URL.
+ * other entity's config is in the route's module graph.
  */
 
 import type { ComponentType } from 'react'

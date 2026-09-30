@@ -42,7 +42,6 @@ async function hostProject() {
     await writeFile(path, content, mode ? { mode } : undefined)
   }
   await write(join(core, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
-  await write(join(core, 'scripts/build/registry.mjs'), "throw new Error('the legacy registry build must not run for a generated host')\n")
   await write(join(core, 'scripts/build/auth-readiness.mjs'), "import { appendFileSync } from 'node:fs'\nappendFileSync(process.cwd() + '/host-runs.txt', JSON.stringify({ auth: true }) + '\\n')\n")
   await write(join(core, 'scripts/build/registry/write-places.mjs'), 'export function unsafeWritePlaces() { return [] }\nexport function unsafeWritePlacesLines() { return [] }\n')
   await write(join(core, 'scripts/build/registry/post-build/own-gitignores.mjs'), "export const BACKUPS_GITIGNORE = '.nextspark/backups/.gitignore'\nexport const REGISTRIES_GITIGNORE = '.nextspark/registries/.gitignore'\nexport function trackedFilesUnder() { return [] }\nexport function trackedRegistriesLines() { return [] }\n")
@@ -75,7 +74,7 @@ function run(root: string, args: string[], env: NodeJS.ProcessEnv = {}) {
   return { status: result.status, output: `${result.stdout}\n${result.stderr}` }
 }
 
-test('prepare runs core host preparation (not the legacy registry build), recording the CLI version; --production then checks auth readiness', async () => {
+test('prepare runs core host preparation, recording the CLI version; --production then checks auth readiness', async () => {
   const project = await hostProject()
   try {
     const prepared = run(project.root, ['prepare'])
@@ -154,9 +153,9 @@ test('dev: the first generation is fatal on failure; then a watcher regenerates 
     for (const args of [['dev', '--registry', '-p', '4391'], ['dev:registry', '-p', '4391']]) {
       const legacyFlag = run(project.root, args)
       assert.equal(legacyFlag.status, 0, legacyFlag.output)
-      assert.match(legacyFlag.output, /--registry has no effect with this core: nextspark dev always watches and regenerates src\/app/)
+      assert.match(legacyFlag.output, /--registry has no effect: nextspark dev always watches and regenerates src\/app/)
     }
-    assert.equal((await project.runs()).filter((entry) => entry.args?.includes('--watch')).length, 3, 'the host watcher, never the legacy registry watcher')
+    assert.equal((await project.runs()).filter((entry) => entry.args?.includes('--watch')).length, 3, 'the host watcher')
 
     await project.fail('dev')
     const failed = run(project.root, ['dev', '-p', '4391'])
@@ -169,16 +168,15 @@ test('dev: the first generation is fatal on failure; then a watcher regenerates 
   }
 })
 
-test('dev with a core that only builds registries: a failed registry build no longer starts Next anyway', async () => {
+test('a core that cannot generate the host (no route manifest, no host preparation): prepare, build and dev fail telling to install a matching core', async () => {
   const project = await hostProject()
   try {
     await rm(join(project.root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host'), { recursive: true })
-    await writeFile(join(project.root, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs'), "console.log('❌ registry failed at templates/page.tsx')\nprocess.exit(3)\n")
-    for (const args of [['dev', '-p', '4392'], ['dev', '--registry', '-p', '4392']]) {
-      const failed = run(project.root, args)
-      assert.equal(failed.status, 1, failed.output)
-      assert.match(failed.output, /Registry build failed; the dev server was not started/)
-      assert.match(failed.output, /registry failed at templates\/page\.tsx/)
+    for (const args of [['prepare'], ['prepare', '--check'], ['prepare', '--watch'], ['build'], ['dev', '-p', '4392'], ['dev', '--registry', '-p', '4392']]) {
+      const failed = run(project.root, args, { NEXTSPARK_AUTH_PREFLIGHT: 'off' })
+      assert.equal(failed.status, 1, `${args.join(' ')}: ${failed.output}`)
+      assert.match(failed.output, /does not generate src\/app/, args.join(' '))
+      assert.match(failed.output, /Install a @nextsparkjs\/core version matching this CLI/, args.join(' '))
     }
     assert.deepEqual(await project.nextRuns(), [])
   } finally {
@@ -247,30 +245,37 @@ test('a host --check rejects (e.g. an interrupted publication) never reaches nex
   }
 })
 
-test('a committed src/app no generation owns: prepare, build and dev take the legacy registry build silently; --check reports legacy mode', async () => {
+test('a committed src/app no generation owns: prepare, build and dev fail pointing to nextspark migrate, and nothing runs', async () => {
   const project = await hostProject()
   try {
-    await writeFile(join(project.root, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs'), "import { appendFileSync } from 'node:fs'\nappendFileSync(process.cwd() + '/host-runs.txt', JSON.stringify({ legacy: true }) + '\\n')\nconsole.log('✅ legacy registry build')\n")
     await mkdir(join(project.root, 'src/app'), { recursive: true })
     await writeFile(join(project.root, 'src/app/layout.tsx'), 'export default function Layout({ children }) { return children }\n')
-    const advice = (output: string) => /nextspark migrate|legacy path will be removed/.test(output)
 
-    const checked = run(project.root, ['prepare', '--check'])
-    assert.equal(checked.status, 1, checked.output)
-    assert.match(checked.output, /Legacy mode: src\/app is not a generated host/)
-    assert.equal(advice(checked.output), false)
-
-    for (const args of [['prepare'], ['build'], ['dev', '-p', '4395']]) {
+    for (const args of [['prepare', '--check'], ['prepare'], ['prepare', '--production'], ['prepare', '--watch'], ['prepare', '--contracts-only'], ['prepare', '--contracts-only', '--check'], ['build'], ['build', '--no-registry'], ['dev', '-p', '4395']]) {
       const result = run(project.root, args, { NEXTSPARK_AUTH_PREFLIGHT: 'off' })
-      assert.equal(result.status, 0, `${args.join(' ')}: ${result.output}`)
-      assert.equal(advice(result.output), false, `${args.join(' ')}: silent, exactly as before the generated host`)
+      assert.equal(result.status, 1, `${args.join(' ')}: ${result.output}`)
+      assert.match(result.output, /src\/app holds a committed app tree that nextspark did not generate/, args.join(' '))
+      assert.match(result.output, /nextspark migrate/, args.join(' '))
     }
-    const runs = await project.runs()
-    // The generated host is never produced, but the portable contracts do not depend on how src/app is made:
-    // `prepare` (and only it) runs the script for them, contracts only
-    assert.deepEqual(runs.filter((entry) => entry.args).map((entry) => entry.args), [['--contracts-only']], 'the host preparation script ran once, for the contracts, and never for the host')
-    assert.equal(runs.filter((entry) => entry.legacy).length, 3, 'the legacy registry build ran for prepare, build and dev')
-    assert.equal((await project.nextRuns()).length, 2, 'build and dev still start next')
+    assert.deepEqual(await project.runs(), [], 'neither the host preparation script (contracts included) nor the auth check ran')
+    assert.deepEqual(await project.nextRuns(), [], 'next never started')
+  } finally {
+    await project.cleanup()
+  }
+})
+
+test('registry:build, registry:watch and generate are names for prepare', async () => {
+  const project = await hostProject()
+  try {
+    for (const args of [['registry:build'], ['registry', 'build'], ['generate']]) {
+      const result = run(project.root, args)
+      assert.equal(result.status, 0, `${args.join(' ')}: ${result.output}`)
+    }
+    const watched = spawn(process.execPath, [cliEntry, 'registry:watch'], { cwd: project.root, env: { ...process.env, FORCE_COLOR: '0' } })
+    await new Promise((resolve) => setTimeout(resolve, 3_000))
+    watched.kill('SIGTERM')
+    await new Promise((resolve) => watched.on('close', resolve))
+    assert.deepEqual((await project.runs()).map((entry) => entry.args), [[], [], [], ['--watch']])
   } finally {
     await project.cleanup()
   }

@@ -10,12 +10,16 @@ import { buildCli } from './built-cli.js'
 let cliEntry: string
 before(() => { cliEntry = buildCli() })
 
-async function fixture(script: string) {
+/** A project whose core runs `script` as its host preparation (core's decision: this is a host); without one, the core cannot generate the host. */
+async function fixture(script: string | null) {
   const root = await mkdtemp(join(tmpdir(), 'nextspark prepare space '))
   const core = join(root, 'node_modules/@nextsparkjs/core')
-  await mkdir(join(core, 'scripts/build'), { recursive: true })
+  await mkdir(join(core, 'scripts/build/registry/host'), { recursive: true })
   await writeFile(join(core, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
-  await writeFile(join(core, 'scripts/build/registry.mjs'), script)
+  if (script !== null) {
+    await writeFile(join(core, 'scripts/build/registry/host/prepare-cli.mjs'), script)
+    await writeFile(join(core, 'scripts/build/registry/host/mode.mjs'), "export function resolveHostMode() { return { mode: 'host', reason: 'generated' } }\n")
+  }
   // A passing auth readiness check: its behavior is covered by auth-readiness-preflight.test.ts
   await writeFile(join(core, 'scripts/build/auth-readiness.mjs'), '')
   await mkdir(join(core, 'scripts/build/registry/post-build'), { recursive: true })
@@ -51,7 +55,7 @@ test('built CLI exposes prepare --check, which needs a core that generates src/a
   assert.match(help.stdout, /--check/)
 
   // A core without the generated host (no route manifest) has nothing to check against
-  const project = await fixture(`throw new Error('registry should not run')`)
+  const project = await fixture(null)
   try {
     const checked = run(project.root, ['prepare', '--check'])
     assert.equal(checked.status, 1, `${checked.stdout}\n${checked.stderr}`)
@@ -61,7 +65,7 @@ test('built CLI exposes prepare --check, which needs a core that generates src/a
   }
 })
 
-test('prepare invokes the core registry script once from the project root without root override forwarding and with production precedence', async () => {
+test('prepare invokes the core host preparation once from the project root without root override forwarding and with production precedence', async () => {
   const project = await fixture(`
 import { appendFileSync } from 'node:fs'
 appendFileSync(process.cwd() + '/runs.txt', JSON.stringify({ cwd: process.cwd(), hasRoot: 'NEXTSPARK_PROJECT_ROOT' in process.env, nodeEnv: process.env.NODE_ENV }) + '\\n')
@@ -101,8 +105,8 @@ process.exitCode = 7
   }
 })
 
-test('build --no-registry preserves the opt-out', async () => {
-  const project = await fixture(`throw new Error('registry should not run')`)
+test('build --no-registry preserves the opt-out: only the freshness check runs, never a generation', async () => {
+  const project = await fixture(`if (!process.argv.includes('--check')) throw new Error('generation should not run')`)
   await mkdir(join(project.root, 'node_modules/.bin'), { recursive: true })
   await writeFile(join(project.root, 'node_modules/.bin/next'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
   try {

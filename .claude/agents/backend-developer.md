@@ -497,7 +497,6 @@ When you need logic for a registry, use or create the corresponding service:
 | `route-handlers.ts` | `route-handler.service.ts` |
 | `block-registry.ts` | `block.service.ts` |
 | `translation-registry.ts` | `translation.service.ts` |
-| `template-registry.ts` | `template.service.ts` |
 | `plugin-registry.ts` | `plugin.service.ts` |
 
 **Documentacion completa:** `.claude/config/workflow.md` > Data-Only Registry Pattern

@@ -41,8 +41,6 @@ module.exports = {
     '^@/core$': '<rootDir>/src',
     // core's route modules: what the generated src/app of a project re-exports
     '^@/app/(.*)$': '<rootDir>/src/routes/$1',
-    '^@nextsparkjs/registries/template-scopes/client/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/template-scopes/client.ts',
-    '^@nextsparkjs/registries/template-scopes/server/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/template-scopes/server.ts',
     '^@nextsparkjs/registries/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/$1',
     '^next/server$': '<rootDir>/tests/jest/__mocks__/next-server.js',
     '^server-only$': '<rootDir>/tests/jest/__mocks__/server-only.js',

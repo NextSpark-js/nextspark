@@ -196,31 +196,9 @@ const translations = await loader()  // Loads only en.json
 // - Lower memory usage
 ```
 
-### Static Imports (Route Handlers)
+### Route Handlers
 
-**Route handlers use static imports**:
-
-```typescript
-// All route handlers imported at build time
-import * as plugin_ai_generate from '@/plugins/ai/api/generate/route'
-import * as plugin_ai_embeddings from '@/plugins/ai/api/embeddings/route'
-
-export const PLUGIN_ROUTE_HANDLERS = {
-  'ai/generate': {
-    POST: plugin_ai_generate.POST,
-    GET: plugin_ai_generate.GET
-  },
-  'ai/embeddings': {
-    POST: plugin_ai_embeddings.POST,
-    GET: plugin_ai_embeddings.GET
-  }
-}
-
-// Benefits:
-// - Zero dynamic imports at runtime
-// - Instant handler access
-// - Tree-shaking possible
-```
+The generated host writes every project and plugin route as a route file of its own in `src/app`, so Next.js resolves each handler statically at build time and nothing imports a handler through a registry. The route-handlers registry keeps only the API route metadata the API Explorer reads (`API_ROUTES_METADATA`).
 
 ---
 

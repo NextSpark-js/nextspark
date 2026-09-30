@@ -5,40 +5,7 @@
 import { existsSync, readFileSync, watch } from 'fs'
 import path from 'path'
 import { getConfig } from './registry/config.mjs'
-import { projectGeneratedAppDir } from './registry/project-mode.mjs'
 import { projectFiles } from './safe-fs.mjs'
-import { rewriteBelowGeneratedTag } from '../utils/generated-tag.mjs'
-
-export function syncAppGlobalsCss(config) {
-  const generatedAppDir = config.generatedAppDir || projectGeneratedAppDir(config.projectRoot)
-  const appGlobalsCssPath = path.join(generatedAppDir, 'globals.css')
-  const relativePath = path.relative(generatedAppDir, path.join(config.projectSourceDir, 'styles', 'globals.css')).replace(/\\/g, '/')
-  const expectedImport = `@import "${relativePath}";`
-  const template = `/* =============================================
-   GLOBAL STYLES - Import from project styles
-
-   This file is generated. Customize styles/globals.css instead.
-   ============================================= */
-
-${expectedImport}
-`
-
-  if (existsSync(appGlobalsCssPath)) {
-    const currentContent = readFileSync(appGlobalsCssPath, 'utf8')
-    const importMatch = currentContent.match(/@import\s+["']([^"']+)["'];?/)
-    if (importMatch?.[1] === relativePath) return false
-    if (importMatch) {
-      const updatedContent = rewriteBelowGeneratedTag(currentContent, body =>
-        body.replace(/@import\s+["'][^"']+["'];?/, expectedImport)
-      )
-      projectFiles(config.projectRoot).writeFileSync(appGlobalsCssPath, updatedContent)
-      return true
-    }
-  }
-
-  projectFiles(config.projectRoot).writeFileSync(appGlobalsCssPath, template)
-  return true
-}
 
 function validateThemeCSS(cssContent) {
   const required = ['@import "tailwindcss"', ':root', '.dark', '@theme', '--background:', '--primary:', '--color-background:']
@@ -58,7 +25,6 @@ export async function buildTheme(projectRoot = null) {
   const componentStylesPath = path.join(config.projectSourceDir, 'styles', 'components.css')
 
   projectFiles(config.projectRoot).mkdirSync(outputDir, { recursive: true })
-  syncAppGlobalsCss(config)
 
   const globalCSS = existsSync(globalStylesPath) ? readFileSync(globalStylesPath, 'utf8') : ''
   const componentCSS = existsSync(componentStylesPath) ? readFileSync(componentStylesPath, 'utf8') : ''

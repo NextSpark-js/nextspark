@@ -400,8 +400,8 @@ namespaces used by their **client** subtree:
 - the root layout: the shared `permissions` namespace used by `QueryProvider`;
 - `(public)`, `(auth)`, `dashboard`, `superadmin` and `devtools`: their own
   group from `NAMESPACE_GROUPS` in `core/lib/i18n/client-messages`;
-- generated `(templates)` route groups copy those layouts, so they retain the
-  same boundary.
+- the generated host's per-entity route groups use the same layouts, so they
+  retain the same boundary.
 
 Dashboard also adds every generated entity-registry namespace (and configured
 mobile-navigation key namespace); superadmin adds the namespace of each

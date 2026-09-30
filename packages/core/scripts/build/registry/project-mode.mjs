@@ -15,8 +15,6 @@ import { fileURLToPath } from 'url'
 
 const CORE_PACKAGE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
-export const GENERATED_APP_RELATIVE = 'src/app'
-export const GENERATED_TEMPLATES_RELATIVE = `${GENERATED_APP_RELATIVE}/(templates)`
 export const REGISTRIES_RELATIVE = '.nextspark/registries'
 export const BACKUPS_RELATIVE = '.nextspark/backups'
 export const TEST_FIXTURES_RELATIVE = 'tests/cypress/fixtures'
@@ -210,14 +208,6 @@ export function resolveProjectPluginSources(projectRoot, enabledPlugins, project
   return [...resolved.values()]
 }
 
-export function projectGeneratedAppDir(projectRoot) {
-  return join(projectRoot, GENERATED_APP_RELATIVE)
-}
-
-export function projectGeneratedTemplatesDir(projectRoot) {
-  return join(projectRoot, GENERATED_TEMPLATES_RELATIVE)
-}
-
 export function projectRegistriesDir(projectRoot) {
   return join(projectRoot, REGISTRIES_RELATIVE)
 }
@@ -248,8 +238,6 @@ export function resolveProjectPaths(startDir = process.cwd()) {
     projectSourceDir: projectRoot,
     sourceDirs: ['api', 'blocks', 'components', 'config', 'entities', 'lib', 'messages', 'styles', 'templates'].map(name => join(projectRoot, name)),
     pluginsDir: join(projectRoot, 'plugins'),
-    generatedAppDir: projectGeneratedAppDir(projectRoot),
-    generatedTemplatesDir: projectGeneratedTemplatesDir(projectRoot),
     outputDir: projectRegistriesDir(projectRoot),
     backupsDir: projectBackupsDir(projectRoot),
     testFixturesDir: projectTestFixturesDir(projectRoot),

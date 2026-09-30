@@ -1,8 +1,7 @@
 /**
  * The .gitignore files nextspark keeps in the two directories none of whose
  * content has a place in git: .nextspark/backups, where each backup of a file
- * the registry build or `nextspark sync:app` replaces or removes goes into a
- * directory named as it is created, and .nextspark/registries, which the
+ * nextspark replaces or removes goes into a directory named as it is created, and .nextspark/registries, which the
  * registry build writes again on every run. A .gitignore in a directory that
  * ignores everything in it covers all of it, named however and holding any
  * .gitignore of its own: git takes the patterns of the deepest .gitignore over
@@ -13,8 +12,8 @@
  * before - a .gitignore leaves tracked: each build that rewrites them leaves
  * them modified in git, and says so, with how to stop tracking them.
  *
- * `nextspark sync:app` reads them, and writes the one for backups, through this
- * module, loaded from the core installed in the project.
+ * The CLI reads them, and writes the one for backups, through this module, loaded from the core
+ * installed in the project.
  *
  * @module core/scripts/build/registry/post-build/own-gitignores
  */

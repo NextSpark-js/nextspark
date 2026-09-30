@@ -21,10 +21,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { COPY_BLOCK_SIZE, isUnsafeWrite, projectFiles, UNSAFE_WRITE, unsafeWriteProblem } from '../../safe-fs.mjs'
-import { cleanupDeletedTemplate, cleanupOldRouteFiles, cleanupOrphanedTemplates } from '../post-build/route-cleanup.mjs'
 import { generateTestBlocksJson, generateTestEntitiesJson } from '../post-build/test-fixtures.mjs'
-import { generateMissingPages } from '../post-build/page-generator.mjs'
-import { syncAppGlobalsCss } from '../../theme.mjs'
 import { directFsWrites, directFsWritesIn, generatorFiles } from './direct-fs-writes.mjs'
 
 const CORE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..')
@@ -248,33 +245,16 @@ test("the build's steps that write refuse through safe-fs even when the check be
     const root = project.root
     const config = { projectRoot: root, projectSourceDir: root, projectName: 'acme', monorepoRoot: null, isMonorepoMode: false, pluginsDir: join(root, 'plugins') }
 
-    // app/api linked outside, holding an old generated plugin route and a file of its own
-    await writeIn(outside.root, 'api/v1/plugin/legacy/route.ts', '// Auto-generated Plugin Route Proxy\n')
-    await writeIn(outside.root, 'api/v1/plugin/legacy/other.ts', 'export const other = 1\n')
-    await mkdir(join(root, 'src', 'app'), { recursive: true })
-    await symlink(join(outside.root, 'api'), join(root, 'src/app/api'))
-
     // The theme's fixtures linked outside
     await writeIn(outside.root, 'fixtures/entities.json', '{"outside":true}\n')
     await writeIn(outside.root, 'fixtures/blocks.json', '{"outside":true}\n')
     await mkdir(join(root, 'tests/cypress'), { recursive: true })
     await symlink(join(outside.root, 'fixtures'), join(root, 'tests/cypress/fixtures'))
 
-    // src/app/(templates) linked outside, and app/globals.css linked to a file outside
-    await writeIn(outside.root, 'templates/(public)/orphan/page.tsx', 'export default function Orphan() { return null }\n')
-    await symlink(join(outside.root, 'templates'), join(root, 'src/app/(templates)'))
-    await writeIn(outside.root, 'globals.css', '@import "../elsewhere.css";\n')
-    await symlink(join(outside.root, 'globals.css'), join(root, 'src/app/globals.css'))
-
     const before = await snapshot(outside.root)
     const steps = [
-      ['cleanupOldRouteFiles', () => cleanupOldRouteFiles(config), 'src/app/api'],
       ['generateTestEntitiesJson', () => generateTestEntitiesJson([], [{ name: 'acme' }], config), 'tests/cypress/fixtures'],
       ['generateTestBlocksJson', () => generateTestBlocksJson([], config), 'tests/cypress/fixtures'],
-      ['cleanupOrphanedTemplates', () => cleanupOrphanedTemplates([], config), 'src/app/(templates)'],
-      ['cleanupDeletedTemplate', () => cleanupDeletedTemplate(join(root, 'templates/(public)/orphan/page.tsx'), config), 'src/app/(templates)'],
-      ['generateMissingPages', () => generateMissingPages([], config, new Map()), 'src/app/(templates)'],
-      ['syncAppGlobalsCss', () => syncAppGlobalsCss(config, 'acme'), 'src/app/globals.css'],
     ]
     const wrong = []
     for (const [label, step, path] of steps) {
@@ -318,9 +298,6 @@ test('no file of the registry build, the rest of scripts/build or the postinstal
   for (const expected of [
     'scripts/build/registry.mjs',
     'scripts/build/theme.mjs',
-    'scripts/build/templates-plan.mjs',
-    'scripts/build/registry/post-build/page-generator.mjs',
-    'scripts/build/registry/post-build/route-cleanup.mjs',
     'scripts/build/registry/post-build/test-fixtures.mjs',
     'scripts/build/registry/post-build/own-gitignores.mjs',
     'scripts/utils/logging.mjs',

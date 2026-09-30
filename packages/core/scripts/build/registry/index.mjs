@@ -18,8 +18,6 @@ export {
   discoverNestedEntities,
   discoverThemes,
   discoverThemeRouteFiles,
-  discoverTemplates,
-  discoverThemeTemplates,
   discoverBlocks,
   discoverMiddlewares,
   discoverPermissionsConfig,
@@ -37,8 +35,6 @@ export {
   generateThemeRegistry,
   generateThemeRegistryClient,
   generateAppConfigClient,
-  generateTemplateRegistry,
-  generateTemplateRegistryClient,
   generateBlockRegistry,
   generateMiddlewareRegistry,
   generateTranslationRegistry,
@@ -54,21 +50,13 @@ export {
 
 // Post-build tasks
 export {
-  analyzeTemplates,
-  generateMissingPages,
-  generateTemplatePage,
   displayTreeStructure,
   generateTestEntitiesJson,
-  extractEntityTestData,
-  cleanupOldRouteFiles,
-  cleanupOrphanedTemplates
+  extractEntityTestData
 } from './post-build/index.mjs'
 
 // Validation
 export { validateEntityConfigurations } from './validation/entity-validator.mjs'
-
-// Watch mode
-export { watchContents } from './watch.mjs'
 
 /**
  * Build all registries

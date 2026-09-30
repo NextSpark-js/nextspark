@@ -7,7 +7,7 @@
  * Refactored to use useEntityConfig hook for better performance and consistency
  *
  * NOTE: Permission validation is now handled at the layout level
- * (app/dashboard/(main)/[entity]/layout.tsx) for better security.
+ * (each entity's generated dashboard layout, entity-permission-layout) for better security.
  * The layout validates permissions BEFORE this component renders.
  */
 

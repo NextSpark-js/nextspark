@@ -2,10 +2,8 @@
  * Where the registry build writes in a project, and whether it can write there
  * safely: the check the build runs before it writes anything, so a run that
  * can't finish stops before its first write rather than halfway. The commands
- * of `nextspark` that write before the build runs, or start something alongside
- * it, run this same check from the core installed in the project before their
- * first step: sync:app writes app/, its state and the .gitignore first, and dev
- * and registry:watch start what runs the build.
+ * of `nextspark` that start something alongside it (dev, prepare --watch) run this
+ * same check from the core installed in the project before their first step.
  *
  * This check names what is in the way ahead of time; what keeps each write,
  * removal and rename inside the project, whether this check saw the place or
@@ -19,31 +17,20 @@ import { join } from 'path'
 import { BACKUPS_GITIGNORE, OWN_GITIGNORE_PROBLEMS, REGISTRIES_GITIGNORE, ownGitignoreState } from './post-build/own-gitignores.mjs'
 
 /**
- * What the registry build writes under or writes, from the project root: app/,
- * src/app/(templates), which it regenerates, app/globals.css, which it points at the
- * project's styles, .nextspark/registries, and .nextspark/backups, where it
- * backs up what it replaces or removes in src/app/(templates).
+ * What the registry build writes under: .nextspark/registries, and .nextspark/backups, where
+ * nextspark keeps what it replaces on this machine. (src/app is written by `nextspark prepare`
+ * through the generation record, which proves every file before it writes: registry/host/generation.mjs.)
  */
 const PLACES = [
-  { path: 'src', kind: 'directory' },
-  { path: 'src/app', kind: 'directory' },
-  { path: 'src/app/(templates)', kind: 'directory' },
-  { path: 'src/app/globals.css', kind: 'file' },
   { path: '.nextspark', kind: 'directory' },
   { path: '.nextspark/backups', kind: 'directory' },
   { path: '.nextspark/registries', kind: 'directory' },
 ]
 
-// Registries are otherwise flat files. Route-scoped template registries are
-// generated beneath this one owned subtree so their paths can mirror app/.
-const TEMPLATE_SCOPES_DIRECTORY = '.nextspark/registries/template-scopes'
-
-/**
- * The directories the registry build removes old plugin route directories
- * under, from the project root, when app/api/v1/plugin is there: a symlink
- * among them takes the removal wherever it points.
- */
-const PLUGIN_ROUTES = ['src/app/api', 'src/app/api/v1', 'src/app/api/v1/plugin']
+// Registries are otherwise flat files. The route-scoped template registries that older builds wrote
+// (template-scopes/, removed in #203) may still be there: the host's publication deletes them, so they
+// are no obstacle, and this subtree is still guarded against symlinks and files of another kind.
+const OBSOLETE_TEMPLATE_SCOPES = '.nextspark/registries/template-scopes'
 
 /** The Cypress fixtures the registry build writes from the project root. */
 const TEST_FIXTURES = ['tests/cypress/fixtures/entities.json', 'tests/cypress/fixtures/blocks.json']
@@ -108,27 +95,18 @@ function reportEntriesUnder(projectRoot, dir, filesOnly, report, directoryExcept
  * from the project root - can't write under safely, each with what is wrong
  * with it, from the project root. None means nothing stands in the way.
  *
- * A symlink: app, src/app/(templates) or anything in it, app/globals.css,
- * .nextspark, its backups, its registries or anything right in them; app/api,
- * app/api/v1 or app/api/v1/plugin when the build looks for old plugin routes to
- * remove there; each of the project's Cypress fixtures the build writes or
- * a directory above one; and each of `written` or a directory above one. What goes through one lands wherever
- * it points, outside the project maybe, and blind: the build's listing of
- * src/app/(templates) skips a symlink, so what is behind one is written over. Nor
- * can git vouch for it: a symlink is no directory for a line like
- * `src/app/(templates)/`, and git won't say whether a path beyond one is ignored.
+ * A symlink: .nextspark, its backups, its registries or anything right in them; each of the
+ * project's Cypress fixtures the build writes or a directory above one; and each of `written` or a
+ * directory above one. What goes through one lands wherever it points, outside the project maybe,
+ * and blind. Nor can git vouch for it: git won't say whether a path beyond a symlink is ignored.
  *
- * Something other than what goes there, which stops a run halfway, once it has
- * written part of what it writes: a file where one of those directories goes,
- * or a directory above a path of `written`; a directory where app/globals.css,
- * a registry - the build writes only files right in .nextspark/registries - or
- * a path of `written` goes; and, in src/app/(templates), anything that is neither a
- * file, a directory nor a symlink. A file in src/app/(templates) where the build
- * needs a directory, or a directory where it needs a file, is not in the way:
- * the build backs up what is there and removes it before it writes.
+ * Something other than what goes there, which stops a run halfway, once it has written part of
+ * what it writes: a file where one of those directories goes, or a directory above a path of
+ * `written`; a directory where a registry - the build writes only files right in
+ * .nextspark/registries - or a path of `written` goes.
  *
- * What can't be read where the build needs to look: one of those places, a
- * directory in src/app/(templates), or the backups or registries directory. And a .gitignore of
+ * What can't be read where the build needs to look: one of those places, or the backups or
+ * registries directory. And a .gitignore of
  * .nextspark/backups or .nextspark/registries that would not keep what is
  * beside it out of git: a symlink, not a file, unreadable, or with patterns
  * other than `*`.
@@ -162,17 +140,6 @@ export function unsafeWritePlaces(projectRoot, written = []) {
     if (problem) report(gitignore, problem)
   }
 
-  if (existsSync(join(projectRoot, 'src', 'app', 'api', 'v1', 'plugin'))) {
-    for (const path of PLUGIN_ROUTES) {
-      const stat = lstatIn(projectRoot, path)
-      if (stat === 'unreadable') report(path, "can't be read")
-      else if (stat?.isSymbolicLink()) {
-        report(path, 'is a symlink')
-        break
-      }
-    }
-  }
-
   // The first thing in the way of each path written, from the project root
   for (const path of [...testFixturesWritten(projectRoot), ...written]) {
     const parts = path.split('/')
@@ -193,18 +160,8 @@ export function unsafeWritePlaces(projectRoot, written = []) {
     }
   }
 
-  // A tree that is somewhere else already, past a symlink, or that is no directory, is not walked
-  if (!reported('src') && !reported('src/app') && !reported('src/app/(templates)')) {
-    reportEntriesUnder(projectRoot, 'src/app/(templates)', false, report)
-  }
   if (!reported('.nextspark') && !reported('.nextspark/registries')) {
-    reportEntriesUnder(
-      projectRoot,
-      '.nextspark/registries',
-      true,
-      report,
-      new Set([TEMPLATE_SCOPES_DIRECTORY])
-    )
+    reportEntriesUnder(projectRoot, '.nextspark/registries', true, report, new Set([OBSOLETE_TEMPLATE_SCOPES]))
   }
   return unsafe
 }

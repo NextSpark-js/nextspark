@@ -1,5 +1,5 @@
 /**
- * Tests for what the registry build and its plan print: every call to the
+ * Tests for what the registry build prints: every call to the
  * console is escaped where it prints, once the console is guarded - as the
  * scripts that run the build guard it before anything loads - so a name that
  * holds a character that breaks or reorders a line, in a file of the project
@@ -11,7 +11,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { copyFile, chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -109,79 +109,6 @@ test("an error's own lines are printed one by one, and a newline anywhere else i
   } finally {
     await rm(root, { recursive: true, force: true })
   }
-})
-
-test('a directory in src/app/(templates) the build cannot read is named escaped where the build stops before writing and where its plan fails', { skip: process.getuid?.() === 0 }, async () => {
-  const root = await createProject()
-  const unreadable = join(root, 'src', 'app', '(templates)', FORGED)
-  try {
-    await mkdir(join(root, 'templates/pricing'), { recursive: true })
-    await writeFile(join(root, 'templates/pricing/page.tsx'), 'export default function Page() { return null }\n')
-    await mkdir(unreadable, { recursive: true })
-    await chmod(unreadable, 0)
-
-    const build = run('registry.mjs', root, ['--verbose'])
-    const plan = run('templates-plan.mjs', root)
-
-    const wrong = [...wrongLines('build', build.lines), ...wrongLines('plan', plan.lines)]
-    if (!build.lines.includes(`   "src/app/(templates)/${SHOWN} can't be read"`)) wrong.push('build: the check does not name the directory escaped')
-    if (!plan.lines.some(line => line.startsWith('"EACCES: permission denied, scandir ') && line.endsWith(`/src/app/(templates)/${SHOWN}'"`))) wrong.push('plan: the failure does not name the directory escaped')
-    assert.equal(build.status, 1)
-    assert.equal(plan.status, 1)
-    assert.deepEqual(wrong, [])
-  } finally {
-    await chmod(unreadable, 0o755).catch(() => {})
-    await rm(root, { recursive: true, force: true })
-  }
-})
-
-test('a theme template the build rejects is named escaped where it is discovered and where the build and its plan reject it', async () => {
-  const root = await createProject()
-  try {
-    await mkdir(join(root, 'templates', FORGED), { recursive: true })
-    await writeFile(join(root, 'templates', FORGED, 'page.tsx'), 'export const metadata = { title: "no default export" }\n')
-
-    const build = run('registry.mjs', root, ['--verbose'])
-    const plan = run('templates-plan.mjs', root)
-
-    const wrong = [...wrongLines('build', build.lines), ...wrongLines('plan', plan.lines)]
-    const rejected = `@/templates/${SHOWN}/page.tsx has no default export, and the app has no existing route at \\"app/${SHOWN}/page.tsx\\"`
-    if (!build.lines.includes(`   "Template: app/${SHOWN}/page.tsx → @/templates/${SHOWN}/page.tsx"`)) wrong.push('build: discovery does not name the template escaped')
-    if (!build.lines.some(line => line.startsWith(`"❌ Build failed: ${rejected}`))) wrong.push('build: the failure does not name the template escaped')
-    if (!plan.lines.some(line => line.startsWith(`"${rejected}`))) wrong.push('plan: the failure does not name the template escaped')
-    assert.equal(build.status, 1)
-    assert.equal(plan.status, 1)
-    assert.deepEqual(wrong, [])
-  } finally {
-    await rm(root, { recursive: true, force: true })
-  }
-})
-
-test('a theme template whose route-level exports the build cannot read is named escaped where the build and its plan reject it', async () => {
-  const sources = [
-    ['segment config it would not read', 'export default function Page() { return null }\nconst revalidate = 60\nexport { revalidate }\n', ':3: segment config export \\"revalidate\\"'],
-    ['source that does not parse', 'export default function Page( { return null\n', ':1: the template does not parse'],
-  ]
-  const wrong = []
-  for (const [label, source, problem] of sources) {
-    const root = await createProject()
-    try {
-      await mkdir(join(root, 'templates', FORGED), { recursive: true })
-      await writeFile(join(root, 'templates', FORGED, 'page.tsx'), source)
-
-      const build = run('registry.mjs', root, ['--verbose'])
-      const plan = run('templates-plan.mjs', root)
-
-      wrong.push(...wrongLines(`${label}, build`, build.lines), ...wrongLines(`${label}, plan`, plan.lines))
-      const namesEscapedTemplate = line => line.includes('/templates/forged\\n') && line.includes('/page.tsx') && line.includes(problem)
-      if (!build.lines.some(namesEscapedTemplate)) wrong.push(`${label}, build: the failure does not name the template escaped`)
-      if (!plan.lines.some(namesEscapedTemplate)) wrong.push(`${label}, plan: the failure does not name the template escaped`)
-      if (build.status !== 1 || plan.status !== 1) wrong.push(`${label}: build exited ${build.status} and plan ${plan.status}`)
-    } finally {
-      await rm(root, { recursive: true, force: true })
-    }
-  }
-  assert.deepEqual(wrong, [])
 })
 
 test("a project whose own path holds characters that break or reorder a line starts no line of its own in what the build prints, built or refused for its environment", async () => {

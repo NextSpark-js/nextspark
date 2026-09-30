@@ -123,8 +123,8 @@ publishes them safely. The CLI runs `prepare-cli.mjs` from the installed core (`
 
 | Module | Role |
 | --- | --- |
-| `core-routes.mjs` | `loadCoreRouteManifest()`: the one loader of core's route manifest, resolved through the core package's `exports` (`@nextsparkjs/core/routes/manifest.json` -> `dist/routes/manifest.json` in the npm package; in a source checkout `src/routes/manifest.json` wins, since dist is its build output); `[{ kind, target, specifier, protected? }]`. Route modules resolve the same way (`./routes/*`). `routes/variants.json` (`{ "cacheComponents": [...] }`) replaces entries by target when the host's `cacheComponents` is on (read from a literal in `next.config.*`; unknown keeps the manifest entries). No manifest: the core cannot generate the host and prepare keeps the legacy registry build. Protected targets: `protected: true` or core's `PROTECTED_PATHS` (any level: a whole-file override cannot keep part of a route protected). |
-| `mode.mjs` | `resolveHostMode()`: `host` when the core ships the manifest and `src/app` is absent, holds only empty directories and placeholders (`.gitkeep`, `README.md`, OS files - never touched), or is described by a valid generation record (parses, schema version, NextSpark paths only); `legacy-app` when `src/app` holds files and there is no valid record: the legacy registry build, silently (no command converts a committed src/app yet); `prepare --check` reports legacy mode, never fresh; `no-manifest` otherwise. Read-only. |
+| `core-routes.mjs` | `loadCoreRouteManifest()`: the one loader of core's route manifest, resolved through the core package's `exports` (`@nextsparkjs/core/routes/manifest.json` -> `dist/routes/manifest.json` in the npm package; in a source checkout `src/routes/manifest.json` wins, since dist is its build output); `[{ kind, target, specifier, protected? }]`. Route modules resolve the same way (`./routes/*`). `routes/variants.json` (`{ "cacheComponents": [...] }`) replaces entries by target when the host's `cacheComponents` is on (read from a literal in `next.config.*`; unknown keeps the manifest entries). No manifest: the core cannot generate the host and prepare fails saying so. Protected targets: `protected: true` or core's `PROTECTED_PATHS` (any level: a whole-file override cannot keep part of a route protected). |
+| `mode.mjs` | `resolveHostMode()`: `host` when the core ships the manifest and `src/app` is absent, holds only empty directories and placeholders (`.gitkeep`, `README.md`, OS files - never touched), or is described by a valid generation record (parses, schema version, NextSpark paths only); `legacy-app` when `src/app` holds files and there is no valid record (a committed app tree): `prepare`, `build` and `dev` fail with `LEGACY_APP_MESSAGE`, pointing to `nextspark migrate`, which detects the tree with this same decision and converts it; `no-manifest` otherwise. Read-only. |
 | `plan.mjs` | `planHost()`: core < plugin (`plugins/<name>/templates/**`, `plugins/<name>/api/**` at `api/plugins/<name>/**`) < project (`templates/**`, `api/**` at `api/**`). A higher layer replaces a lower one at the same directory + file stem (+ cache-mode suffix); two files of one layer, two plugins, anything over a protected core route, and a page with a Route Handler in one directory are diagnostics naming both sources. Sorted by code unit, so deterministic. |
 | `render.mjs` | One facade per planned route through `emitFacade` (every cache mode the host builds is checked; a problem all modes share is reported once). Facade cache for the watcher. |
 | `generation.mjs` | Ownership, validation, publication, lock and check (below). |
@@ -188,7 +188,7 @@ A facade forwards one module. Four things are not that, and the host writes them
 `export default wrapper(...)` / any number of `export const NAME = wrapper(...)`, where the callee is one of an explicit
 allowlist of core composition wrappers (`CORE_COMPOSITION_WRAPPERS`: each imported from the exact `@nextsparkjs/core/routes/_internal/...`
 module that exports it) and each argument is an imported name or a nested allowed call. The one literal is the array of child entity
-names that is `createEntityDetailRoute`'s second argument. A runtime resolver (`getTemplateOrDefault(...)`, a registry accessor,
+names that is `createEntityDetailRoute`'s second argument. A runtime resolver (a template lookup by key, a registry accessor,
 a wrapper name imported from anywhere else) is never a callee, however it is spelled; there is no member access, no other call, no
 spread and no expression. A host with another core (the conformance fixture) passes its own wrappers (`compositionWrappers`).
 
@@ -212,7 +212,7 @@ spread and no expression. A host with another core (the conformance fixture) pas
   item's `templates/(public)<basePath>/[slug]/page.tsx`) is composed into that route as its `Template` argument, and runs only after
   core's checks (the entity is enabled and shown in the dashboard): the generated factory is never discarded. The client code these
   routes carry does not depend on how many entities the project has: the create/edit views and the shared client modules read the
-  dashboard's own registry (hydrated from server props), never the generated client registry that imports every entity's config. `[entity]/**` and `(public)/[...slug]` are no longer core routes (`RETIRED_FROM_MANIFEST`).
+  dashboard's own registry (hydrated from server props), never the generated client registry that imports every entity's config. Core has no `[entity]/**` or `(public)/[...slug]` route: `metadata`, `error` and `loading` of the per-entity routes come from `routes/_internal/entity-{list,detail}-metadata`, `entity-error` and `entity-loading`.
   What decides the routes is read from the config's source as literals (`enabled`, `ui.dashboard.showInMenu`,
   `access.basePath`, `access.allowNestedSlugs`, `access.public`, `builder.enabled`, `ui.public.hasArchivePage`; the config
   object must be an object literal): a flag that cannot be read keeps the dashboard route (core's checks answer notFound()),
@@ -225,8 +225,8 @@ spread and no expression. A host with another core (the conformance fixture) pas
 each plugin's `api/` at `/api/plugins/<plugin>/**`. Stops generation (`NS_HOST_API_NAMESPACE`): a project `api/` route in `/api/v1/**` or
 `/api/plugins/**`; a project `templates/api/v1/...` route that replaces no route core has, or `templates/api/plugins/<plugin>/...` route that
 replaces no route that plugin serves (a project may override an existing route there, never create one); a plugin route (from `api/` or
-`templates/`) outside `/api/plugins/<its-name>/**`. There are no dispatchers: `/api/v1/theme/**` and `/api/v1/plugin/**` are not routes of the host, and the
-route-handlers registry of a generated host imports no handler.
+`templates/`) outside `/api/plugins/<its-name>/**`. There are no dispatchers: `/api/v1/theme/**` and `/api/v1/plugin/**` do not exist, and the
+route-handlers registry imports no handler (API route metadata only).
 
 The plan also refuses what Next.js would fail on later, with the routes named: two pages for one URL in different route
 groups (`NS_HOST_URL_CONFLICT`) and dynamic segments it cannot tell apart at one level (`[slug]` and `[entity]`, `[...a]`

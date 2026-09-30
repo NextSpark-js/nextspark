@@ -14,52 +14,27 @@ import '../../../utils/console-guard.mjs'
  *   generate, 1 listing what is missing, stale or foreign (with --dev: what `nextspark dev` writes);
  * - --dev: include the development status module (nextspark dev only);
  * - --contracts-only: generate (or with --check, compare) only the portable contracts module, in any
- *   mode: a legacy project (committed src/app) gets its contracts this way, and after its registry build;
+ *   host mode; it never touches src/app;
  * - --watch: regenerate on source changes (after an initial generation unless --no-initial).
  *
- * Legacy projects (mode.mjs): a core without a route manifest, or a project whose src/app is a
- * committed app tree no generation owns, run the legacy registry build unchanged for generation and
- * --watch, silently (no command converts a committed src/app yet); --check fails saying so.
+ * A project whose src/app is a committed app tree no generation owns (mode.mjs `legacy-app`) is not
+ * prepared: every option fails with a message pointing to `nextspark migrate`, which converts it. A
+ * core without a route manifest cannot generate the host at all and fails the same way.
  *
  * Exit codes: 0 success; 1 failure or check mismatch.
  *
  * @module core/scripts/build/registry/host/prepare-cli
  */
 
-import { spawn } from 'node:child_process'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 import { NoCoreRouteManifestError, PrepareError, checkContractsOnly, checkHost, diagnosticLines, prepareContractsOnly, prepareHost, projectHostConfig, watchHost } from './prepare.mjs'
-import { resolveHostMode } from './mode.mjs'
+import { LEGACY_APP_MESSAGE, resolveHostMode } from './mode.mjs'
+import { unsafeWritePlaces, unsafeWritePlacesLines } from '../write-places.mjs'
 
-const CORE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../../..')
 const args = new Set(process.argv.slice(2))
 const flag = name => args.has(`--${name}`)
 // The console guard escapes a multi-line argument: print each line with a call of its own.
 const errorLines = text => String(text).split('\n').forEach(line => console.error(line))
-
-function legacyRegistryBuild(extra = []) {
-  const child = spawn(process.execPath, [join(CORE_ROOT, 'scripts/build/registry.mjs'), ...extra], {
-    cwd: process.cwd(),
-    stdio: 'inherit',
-    env: flag('production') ? { ...process.env, NODE_ENV: 'production' } : process.env,
-  })
-  for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal))
-  child.on('close', async (code, signal) => {
-    const status = code ?? (signal ? 1 : 0)
-    // The portable contracts do not depend on how src/app is produced: a one-shot legacy build makes them too
-    if (status === 0 && !extra.includes('--watch')) {
-      try {
-        process.exit(await generateContracts())
-      } catch (error) {
-        errorLines(error instanceof Error ? error.message : String(error))
-        process.exit(1)
-      }
-    }
-    process.exit(status)
-  })
-}
 
 /** Generate only the contracts module; the exit code. */
 async function generateContracts() {
@@ -114,20 +89,28 @@ async function main() {
       errorLines('--contracts-only generates or checks once: it cannot be combined with --watch or --dev')
       process.exit(1)
     }
-    process.exit(flag('check') ? await checkContractsModule() : await generateContracts())
   }
   const config = projectHostConfig({ projectRoot: process.cwd() })
   const { mode: hostMode } = resolveHostMode({ coreRoot: config.coreRoot, projectRoot: config.projectRoot })
+  if (flag('contracts-only')) {
+    // One rule for every prepare flavour: a committed app tree is migrated first
+    if (hostMode === 'legacy-app') {
+      errorLines(LEGACY_APP_MESSAGE)
+      process.exit(1)
+    }
+    process.exit(flag('check') ? await checkContractsModule() : await generateContracts())
+  }
+
+  if (hostMode === 'no-manifest') {
+    errorLines(`${new NoCoreRouteManifestError(config.coreRoot).message}\nnextspark prepare needs a core that generates the host.`)
+    process.exit(1)
+  }
+  if (hostMode === 'legacy-app') {
+    errorLines(LEGACY_APP_MESSAGE)
+    process.exit(1)
+  }
 
   if (flag('check')) {
-    if (hostMode === 'no-manifest') {
-      errorLines(`${new NoCoreRouteManifestError(config.coreRoot).message}\nnextspark prepare --check needs a core that generates the host.`)
-      process.exit(1)
-    }
-    if (hostMode === 'legacy-app') {
-      errorLines('Legacy mode: src/app is not a generated host, so there is nothing to check it against (not fresh).')
-      process.exit(1)
-    }
     const result = await checkHost(config, { dev: flag('dev') })
     if (result.ok) {
       console.log(`src/app and the registries${config.contracts ? ' and the portable contracts' : ''} match what nextspark prepare generates.`)
@@ -142,9 +125,13 @@ async function main() {
     process.exit(1)
   }
 
-  if (hostMode !== 'host') {
-    legacyRegistryBuild(flag('watch') ? ['--watch'] : [])
-    return
+  // Nothing is written, in the project or through it, while a place the preparation writes under can't
+  // take it safely (a symlink, something of another kind, a .gitignore that would not keep the registries out of git)
+  const unsafe = unsafeWritePlaces(config.projectRoot)
+  if (unsafe.length > 0) {
+    errorLines("Preparation failed before writing anything: nextspark prepare can't write safely under these paths")
+    for (const line of unsafeWritePlacesLines(unsafe)) errorLines(`   ${line}`)
+    process.exit(1)
   }
 
   const mode = flag('production') ? 'production' : 'development'

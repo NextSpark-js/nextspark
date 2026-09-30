@@ -8,8 +8,8 @@
  * module of its own so a route's module graph holds only the client components that route renders (a
  * shared module would give every entity route the client code of all of them).
  *
- * Core's own `[entity]` routes (entity-list-page.tsx, entity-detail-page.tsx) keep serving apps that
- * still resolve entities at runtime.
+ * `entity-list-metadata.ts`, `entity-detail-metadata.ts`, `entity-error.tsx` and `entity-loading.tsx` are the
+ * modules every entity's route forwards `metadata`, `error` and `loading` from.
  */
 
 import type { ComponentType } from 'react'

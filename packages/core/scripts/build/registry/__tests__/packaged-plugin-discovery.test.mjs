@@ -35,7 +35,7 @@ test('packaged plugin discovery and registries use package imports', async () =>
     assert.equal(plugins[0].configPath, '@example/plugin-search')
     assert.equal(plugins[0].routeFiles[0].filePath, '@example/plugin-search/api/lookup/route')
     assert.match(generatePluginRegistry(plugins, config), /from '@example\/plugin-search'/)
-    assert.match(generateRouteHandlersRegistry(plugins, [], [], [], config), /from '@example\/plugin-search\/api\/lookup\/route'/)
+    assert.match(generateRouteHandlersRegistry(plugins, [], [], []), /path: '\/api\/plugins\/search\/lookup'/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

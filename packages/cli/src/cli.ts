@@ -44,7 +44,7 @@ program
   .description('NextSpark CLI - Professional SaaS Boilerplate')
   .version(pkg.version);
 
-// Dev command (Turbopack, no registry watcher — fast daily development)
+// Dev command (Turbopack; regenerates src/app and the registries as sources change)
 program
   .command('dev')
   .description('Start development server with Turbopack (fast)')
@@ -52,16 +52,16 @@ program
   .option('-p, --port <port>', 'Port to run the dev server on', process.env.PORT || '3000')
   .option('--no-turbopack', 'Disable Turbopack (use Webpack)')
   .option('--webpack', 'Use Webpack instead of Turbopack (same as --no-turbopack)')
-  .option('--registry', 'Enable registry watcher')
+  .option('--registry', 'No effect: dev always regenerates src/app and the registries on changes (kept for old scripts)')
   .allowUnknownOption()
   .action((nextArgs, opts) =>
     devCommand({ ...opts, turbopack: opts.webpack ? false : opts.turbopack, nextArgs })
   );
 
-// Dev with registry watcher (Webpack, auto-detects new entities/templates/blocks)
+// Dev with Webpack (same as `dev --webpack`; kept as a name for old scripts)
 program
   .command('dev:registry')
-  .description('Start dev server with registry watcher (use when creating entities/templates/blocks)')
+  .description('Start the dev server with Webpack (same as dev --webpack)')
   .argument('[nextArgs...]', 'Extra arguments forwarded to `next dev`')
   .option('-p, --port <port>', 'Port to run the dev server on', process.env.PORT || '3000')
   .option('--turbopack', 'Enable Turbopack')
@@ -95,34 +95,34 @@ program
 // Generate command
 program
   .command('generate')
-  .description('Generate all registries')
+  .description('Same as prepare: generate src/app and the registries')
   .option('-w, --watch', 'Watch for changes')
   .action(generateCommand);
 
 // Registry commands
 const registry = program
   .command('registry')
-  .description('Registry management commands');
+  .description('Registry commands (kept as names for prepare)');
 
 registry
   .command('build')
-  .description('Build all registries')
+  .description('Same as prepare')
   .action(registryBuildCommand);
 
 registry
   .command('watch')
-  .description('Watch and rebuild registries on changes')
+  .description('Same as prepare --watch')
   .action(registryWatchCommand);
 
 // Shorthand aliases for registry commands
 program
   .command('registry:build')
-  .description('Build all registries (alias)')
+  .description('Same as prepare (alias)')
   .action(registryBuildCommand);
 
 program
   .command('registry:watch')
-  .description('Watch and rebuild registries (alias)')
+  .description('Same as prepare --watch (alias)')
   .action(registryWatchCommand);
 
 // Init command

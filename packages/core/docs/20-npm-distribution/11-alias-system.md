@@ -238,8 +238,6 @@ ls -la .nextspark/registries/
 Should show:
 ```
 entity-registry.ts
-template-registry.ts
-template-registry.client.ts
 permissions-registry.ts
 plugin-registry.ts
 theme-registry.ts

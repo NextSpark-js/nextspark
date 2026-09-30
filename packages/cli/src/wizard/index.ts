@@ -71,8 +71,9 @@ const defaultWizardRuntime: WizardRuntime = {
 }
 
 function buildRegistries(webDir: string): void {
-  const registryScript = join(webDir, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs')
-  execSync(`node "${registryScript}" --build`, {
+  // Generates src/app and the registries together, as `nextspark prepare` does
+  const prepareScript = join(webDir, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare-cli.mjs')
+  execSync(`node "${prepareScript}"`, {
     cwd: webDir,
     stdio: 'inherit',
     env: process.env,

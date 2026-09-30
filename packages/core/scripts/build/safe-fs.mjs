@@ -1,7 +1,6 @@
 /**
  * The one way the generator writes, creates directories, renames and removes:
- * the registry build and the rest of scripts/build, and `nextspark sync:app`,
- * which loads this module from the core installed in the project. No other file
+ * the registry build and the rest of scripts/build. No other file
  * of the generator calls fs to change anything; a test fails when one does.
  *
  * Each call is bound to a root, the directory it may change things under: the

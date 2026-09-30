@@ -1,7 +1,7 @@
 import { test, before } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -174,19 +174,19 @@ async function forgedProject(parent: string) {
   const root = await mkdtemp(join(parent, `${FORGED}-`))
   const core = join(root, 'node_modules/@nextsparkjs/core')
   await mkdir(core, { recursive: true })
-  await writeFile(join(core, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
+  // core's own exports map: the host finds its route manifest through it
+  const { exports: coreExports } = JSON.parse(await readFile(join(CORE_SOURCE, 'package.json'), 'utf8'))
+  await writeFile(join(core, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test', exports: coreExports }))
   for (const linked of ['scripts', 'dist', 'node_modules']) await symlink(join(CORE_SOURCE, linked), join(core, linked))
-  await mkdir(join(root, 'node_modules/next'), { recursive: true })
-  await writeFile(join(root, 'node_modules/next/package.json'), JSON.stringify({ name: 'next', version: '15.5.24' }))
+  // The installed Next the host reads its route export table from
+  await symlink(join(PKG_ROOT, '../../node_modules/next'), join(root, 'node_modules/next'))
   await mkdir(join(root, 'node_modules/.bin'), { recursive: true })
   await writeFile(join(root, 'node_modules/.bin/next'), '#!/bin/sh\necho ran >> "$NEXT_RAN"\necho "Resolved from: $PWD"\nexit 1\n')
   await chmod(join(root, 'node_modules/.bin/next'), 0o755)
-  await mkdir(join(root, 'src', 'app'), { recursive: true })
-  await writeFile(join(root, 'src/app/layout.tsx'), 'export default function RootLayout({ children }) { return children }\n')
   await mkdir(join(root, 'templates/pricing'), { recursive: true })
   await writeFile(join(root, 'templates/pricing/page.tsx'), 'export default function Pricing() { return null }\n')
   await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '15.5.24' } }))
+  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.5' } }))
   return root
 }
 

@@ -1,57 +1,8 @@
-import chalk from '../utils/colors.js';
-import ora from 'ora';
-import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
-import { preparationWatchExitCode, preparationWatchWriteGuard, runPreparation, startPreparationWatch } from '../utils/preparation.js';
-import { errorLines } from '../utils/shown-path.js';
+import { prepareCommand } from './prepare.js';
 
 interface GenerateOptions { watch?: boolean; }
 
-/** Compatibility command for the same preparation operation exposed by `nextspark prepare`. */
+/** Compatibility command: the same operation as `nextspark prepare` (`--watch` included). */
 export async function generateCommand(options: GenerateOptions): Promise<void> {
-  const spinner = ora('Preparing registry generation...').start();
-  try {
-    const coreDir = getCoreDir();
-    const projectRoot = getProjectRoot();
-    const mode = isMonorepoMode() ? 'monorepo' : 'npm';
-    spinner.succeed(`Core found at: ${coreDir} (${mode} mode)`);
-
-    if (options.watch) {
-      const unsafeLines = await preparationWatchWriteGuard(coreDir, projectRoot);
-      if (unsafeLines.length > 0) {
-        spinner.fail("Registry watcher not started: the registry build can't write safely under these paths");
-        for (const line of unsafeLines) console.error(chalk.red(`  ${line}`));
-        process.exit(1);
-        return;
-      }
-      console.log(chalk.blue('\nWatching registries...'));
-      const watcher = startPreparationWatch(coreDir, projectRoot, { watch: true });
-      let stopping = false;
-      const cleanup = () => {
-        if (stopping) return;
-        stopping = true;
-        console.log(chalk.yellow('\nStopping watcher...'));
-        if (!watcher.killed) watcher.kill('SIGTERM');
-      };
-      process.on('SIGINT', cleanup);
-      process.on('SIGTERM', cleanup);
-      watcher.on('error', (error) => { console.error(chalk.red(`Error: ${error.message}`)); process.exit(1); });
-      watcher.on('close', (code, signal) => process.exit(preparationWatchExitCode(stopping, code, signal)));
-      return;
-    }
-
-    console.log(chalk.blue('\nGenerating registries...'));
-    const result = await runPreparation(coreDir, projectRoot);
-    if (result.code !== 0) {
-      for (const line of result.failureLines) console.error(chalk.red(line));
-      process.exit(result.code);
-      return;
-    }
-    for (const line of result.successLines) console.log(chalk.gray(line));
-    console.log(chalk.green('\nRegistry generation completed!'));
-    process.exit(0);
-  } catch (error) {
-    spinner.fail('Registry generation failed');
-    if (error instanceof Error) for (const line of errorLines(error)) console.error(chalk.red(line));
-    process.exit(1);
-  }
+  await prepareCommand({ watch: options.watch });
 }

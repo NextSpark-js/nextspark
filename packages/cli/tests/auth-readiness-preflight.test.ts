@@ -60,10 +60,13 @@ async function fixture(appConfig: string | null | typeof PROJECT_WITHOUT_CONFIG,
   // The check's one dependency, resolved from core as in an installed package
   await mkdir(join(core, 'node_modules'), { recursive: true })
   await symlink(realpathSync(join(CORE_ROOT, 'node_modules/dotenv')), join(core, 'node_modules/dotenv'))
-  await writeFile(join(core, 'scripts/build/registry.mjs'), `
+  // The host preparation core runs (`prepare`, `build`): a stand-in that records it ran, and core's decision that this is a host
+  await mkdir(join(core, 'scripts/build/registry/host'), { recursive: true })
+  await writeFile(join(core, 'scripts/build/registry/host/prepare-cli.mjs'), `
 import { appendFileSync } from 'node:fs'
 appendFileSync(process.cwd() + '/registry-ran.txt', 'ran\\n')
 `)
+  await writeFile(join(core, 'scripts/build/registry/host/mode.mjs'), "export function resolveHostMode() { return { mode: 'host', reason: 'generated' } }\n")
   await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
   await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.5' } }))
   if (appConfig !== null && appConfig !== PROJECT_WITHOUT_CONFIG) {

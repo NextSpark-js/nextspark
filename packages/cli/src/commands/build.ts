@@ -3,7 +3,7 @@ import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
 import { errorLines } from '../utils/shown-path.js';
-import { coreHostMode, runAuthReadiness, runHostPreparation, runPreparation } from '../utils/preparation.js';
+import { coreHostMode, hostBlockerLines, runAuthReadiness, runHostPreparation } from '../utils/preparation.js';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import { loadCoreWritePlaces } from '../utils/core-write-places.js';
 import { effectiveBundler, pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
@@ -37,12 +37,18 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
 
     // A core with a route manifest generates the whole src/app (#203): `prepare --production`
     // must succeed before Next builds, and --no-registry only skips regenerating a host that
-    // `prepare --check` finds up to date
+    // `prepare --check` finds up to date; a committed app tree is not built (nextspark migrate)
     const { mode: hostMode } = await coreHostMode(coreDir, projectRoot);
-    const host = hostMode === 'host';
+    const hostBlocker = hostBlockerLines(hostMode);
+    if (hostBlocker) {
+      spinner.fail('Build not started: src/app is not a generated host');
+      for (const line of hostBlocker) console.error(chalk.red(line));
+      process.exit(1);
+      return;
+    }
 
     // Step 1: Generate registries if enabled
-    if (host && !options.registry) {
+    if (!options.registry) {
       spinner.start('Checking the generated host is up to date...');
       const checked = await runHostPreparation(coreDir, projectRoot, { check: true });
       if (checked.code !== 0) {
@@ -54,11 +60,9 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
       spinner.succeed('Generated host up to date');
     }
     if (options.registry) {
-      spinner.start(host ? 'Generating src/app and registries, checking auth readiness...' : 'Generating registries and checking auth readiness...');
+      spinner.start('Generating src/app and registries, checking auth readiness...');
 
-      const preparation = host
-        ? await runHostPreparation(coreDir, projectRoot, { production: true })
-        : await runPreparation(coreDir, projectRoot, { production: true });
+      const preparation = await runHostPreparation(coreDir, projectRoot, { production: true });
       if (preparation.code !== 0) {
         spinner.fail('Production preparation failed');
         for (const line of preparation.failureLines) console.error(chalk.red(line));
@@ -66,7 +70,7 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
         return;
       }
 
-      spinner.succeed(host ? 'src/app and registries generated, auth readiness checked' : 'Registries generated, auth readiness checked');
+      spinner.succeed('src/app and registries generated, auth readiness checked');
       for (const line of preparation.successLines) console.log(chalk.gray(line));
 
       // What the build rewrites that git tracks stays tracked, whatever its .gitignore says

@@ -9,8 +9,8 @@ import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrapper
 import { BuilderEditorView } from '@nextsparkjs/core/components/dashboard/block-editor/builder-editor-view'
 
 /**
- * The create form of one entity's dashboard. Core's `[entity]` route passes the `entity` route
- * param; the generated host's per-entity routes pass their entity's slug.
+ * The create form of one entity's dashboard. The generated host's per-entity routes pass
+ * their entity's slug.
  */
 export function EntityCreateView({ entity }: { entity: string }) {
   const router = useRouter()

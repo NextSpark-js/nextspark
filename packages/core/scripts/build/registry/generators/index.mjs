@@ -11,7 +11,6 @@ export { generatePluginRegistry, generatePluginRegistryClient } from './plugin-r
 export { generatePluginCatalog } from './plugin-catalog.mjs'
 export { generateEntityRegistry, generateEntityRegistryClient } from './entity-registry.mjs'
 export { generateThemeRegistry, generateThemeRegistryClient, generateAppConfigClient, generateDashboardConfigClient, generateDevKeyringClient } from './theme-registry.mjs'
-export { generateTemplateRegistry, generateTemplateRegistryClient } from './template-registry.mjs'
 export { generateBlockRegistry } from './block-registry.mjs'
 export { generateIconRegistry } from './icon-registry.mjs'
 export { generateMiddlewareRegistry } from './middleware-registry.mjs'

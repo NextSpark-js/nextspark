@@ -391,11 +391,11 @@ The permissions system implements server-side validation at the layout level usi
 
 ### Entity Layout Validation
 
-The `app/dashboard/(main)/[entity]/layout.tsx` validates entity permissions automatically:
+The layout of each entity (generated as `src/app/dashboard/(main)/<entity>/layout.tsx` by `nextspark prepare`, from core's `entity-permission-layout`) validates entity permissions automatically:
 
 ```typescript
 // This layout runs BEFORE any entity page renders
-// Located at: app/dashboard/(main)/[entity]/layout.tsx
+// Generated per entity: src/app/dashboard/(main)/<entity>/layout.tsx (a project template cannot replace it)
 
 export default async function EntityPermissionLayout({
   children,

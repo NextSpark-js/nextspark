@@ -4,7 +4,7 @@
  * Server Component that validates entity permissions BEFORE rendering any page.
  * This layout is NOT overridable by themes to ensure security.
  *
- * IMPORTANT: Do NOT use getTemplateOrDefault here - security must not be bypassable.
+ * IMPORTANT: Do NOT let a project template replace it - security must not be bypassable.
  *
  * Flow:
  * 1. User navigates to /dashboard/companies/create
@@ -57,8 +57,8 @@ export interface EntityPermissionLayoutProps {
 }
 
 /**
- * The permission check of one entity's dashboard routes. Core's `[entity]` layout passes the
- * `entity` route param; the generated host's per-entity layouts pass their entity's slug.
+ * The permission check of one entity's dashboard routes. The generated host's per-entity
+ * layouts pass their entity's slug.
  */
 export async function EntityPermissionLayout({
   entity,

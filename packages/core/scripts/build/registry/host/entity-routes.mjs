@@ -7,7 +7,7 @@
  * (core `routes/_internal/entity-routes` and `public-entity-page`).
  *
  * - dashboard: `dashboard/(main)/<entity>/{layout,error,loading,page,create/page,[id]/page,[id]/edit/page}`
- *   for every entity the dashboard serves. URLs are the ones core's `[entity]` routes had.
+ *   for every entity the dashboard serves. URLs are the ones core's former `[entity]` routes had.
  * - public: a builder entity with `access.basePath` gets `(public)<basePath>/[...slug]` (item pages,
  *   nested slugs included, as the catch-all served them; `[slug]` / `[...slug]` at the root for basePath
  *   `/`) and, with an archive page, `(public)<basePath>`. A public entity with an archive page and no
@@ -43,7 +43,7 @@ export const ENTITY_DIAGNOSTICS = Object.freeze({
 /**
  * The core modules the entity routes are made of, one per kind of route: a route imports only the factory of
  * its own kind, so its module graph holds only the client components that route renders. `listMetadata`,
- * `detailMetadata`, `error` and `loading` are core's `[entity]` route modules the per-entity routes forward
+ * `detailMetadata`, `error` and `loading` are the core route helpers the per-entity routes forward
  * `metadata` from / re-export. A host with another core (the conformance fixture) passes its own as `modules`.
  */
 export const ENTITY_MODULES = Object.freeze({
@@ -56,10 +56,10 @@ export const ENTITY_MODULES = Object.freeze({
   // The item pages of a host with `cacheComponents` on: same factories, `'use cache'` reads instead of `revalidate`.
   publicItemCc: `${CORE_ROUTES_SPECIFIER}_internal/public-item-route.cc`,
   publicArchive: `${CORE_ROUTES_SPECIFIER}_internal/public-archive-route`,
-  listMetadata: `${CORE_ROUTES_SPECIFIER}dashboard/(main)/[entity]/page`,
-  detailMetadata: `${CORE_ROUTES_SPECIFIER}dashboard/(main)/[entity]/[id]/page`,
-  error: `${CORE_ROUTES_SPECIFIER}dashboard/(main)/[entity]/error`,
-  loading: `${CORE_ROUTES_SPECIFIER}dashboard/(main)/[entity]/loading`,
+  listMetadata: `${CORE_ROUTES_SPECIFIER}_internal/entity-list-metadata`,
+  detailMetadata: `${CORE_ROUTES_SPECIFIER}_internal/entity-detail-metadata`,
+  error: `${CORE_ROUTES_SPECIFIER}_internal/entity-error`,
+  loading: `${CORE_ROUTES_SPECIFIER}_internal/entity-loading`,
 })
 
 /** The revalidation the catch-all served public pages with (seconds). */

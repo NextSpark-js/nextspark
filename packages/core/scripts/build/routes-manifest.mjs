@@ -19,8 +19,6 @@
  * - A layout that wraps whatever layout the host resolves (the root layout and the four group
  *   layouts) carries `compose: { wrapper, specifier }` (`COMPOSED_ROUTES`): a project override
  *   of it is composed with that wrapper by the generated host instead of replacing it.
- * - A module that stays in the package for apps that still resolve routes at runtime but that
- *   the generated host must not emit is listed in `RETIRED_FROM_MANIFEST` with the reason.
  *
  * A file is a route when its name is `<kind stem>.{tsx,ts}` (`page.tsx`,
  * `route.ts`, `icon2.tsx`, ...). Directories starting with `_` hold route
@@ -94,24 +92,10 @@ export const VARIANT_COMPOSE = Object.freeze({
 })
 
 /**
- * Route modules the generated host does not emit. They stay in the package because apps whose
- * src/app still resolves routes at runtime import them; each entry is a directory prefix (ending in
- * `/`) or a file, with the reason.
- */
-export const RETIRED_FROM_MANIFEST = Object.freeze([
-  { path: 'dashboard/(main)/[entity]/', reason: 'the generated host writes one concrete route per entity (host/entity-routes.mjs)' },
-  { path: '(public)/[...slug]/', reason: 'the generated host writes one concrete public route per entity (host/entity-routes.mjs)' },
-  { path: 'api/v1/theme/', reason: 'runtime dispatcher: the project api/ is served at /api/<path>' },
-  { path: 'api/v1/plugin/', reason: 'runtime dispatcher: plugins are served at /api/plugins/<plugin>/**' },
-])
-
-/**
  * Files that live next to a route without being one: the API explorer's presets, read as text by the
  * registry build (registry/discovery/api-presets.mjs), and its docs.md.
  */
 const ROUTE_DATA_FILES = Object.freeze(['presets.ts'])
-
-const isRetired = file => RETIRED_FROM_MANIFEST.some(({ path }) => (path.endsWith('/') ? file.startsWith(path) : file === path))
 
 function listFiles(dir, base = dir) {
   const files = []
@@ -157,7 +141,6 @@ export function buildRoutesManifest(routesDir = ROUTES_DIR) {
       throw new Error(`Two route files for one route: ${seenTargets.get(routeKey)} and ${file}; keep one extension`)
     }
     seenTargets.set(routeKey, file)
-    if (isRetired(file)) continue
     const compose = COMPOSED_ROUTES[file]
     manifest.push({ kind, target: file, specifier: specifierForRouteFile(file), ...(compose ? { compose } : {}) })
   }
@@ -181,7 +164,7 @@ export function unlistedRouteLikeFiles(routesDir = ROUTES_DIR) {
   const { manifest } = buildRoutesManifest(routesDir)
   const listed = new Set(manifest.map(entry => entry.target))
   for (const byFile of Object.values(VARIANT_FILES)) for (const file of Object.keys(byFile)) listed.add(file)
-  return listFiles(routesDir).filter(file => splitRouteFile(file) && !listed.has(file) && !isRetired(file) && !ROUTE_DATA_FILES.includes(posix.basename(file)))
+  return listFiles(routesDir).filter(file => splitRouteFile(file) && !listed.has(file) && !ROUTE_DATA_FILES.includes(posix.basename(file)))
 }
 
 export function renderJson(value) {

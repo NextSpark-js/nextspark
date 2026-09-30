@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { StringDecoder } from 'node:string_decoder';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'dotenv';
 import { captureChildOutput } from './registry-build.js';
@@ -72,23 +73,6 @@ export function preparationEnvironment(projectRoot: string, options: Preparation
 export const AUTH_READINESS_SCRIPT = 'scripts/build/auth-readiness.mjs';
 
 /**
- * Run the one-shot core registry compiler without changing its inputs or
- * output locations. Production preparation then runs the auth readiness check,
- * so a build whose environment proves no login method can work stops here.
- */
-export async function runPreparation(
-  coreDir: string,
-  projectRoot: string,
-  options: PreparationOptions = {},
-  env: NodeJS.ProcessEnv = process.env,
-): Promise<PreparationResult> {
-  const registry = await runCoreScript(coreDir, projectRoot, ['scripts/build/registry.mjs'], preparationEnvironment(projectRoot, options, env));
-  if (registry.code !== 0 || !options.production) return registry;
-  const auth = await runAuthReadiness(coreDir, projectRoot, env);
-  return { ...auth, successLines: [...registry.successLines, ...auth.successLines] };
-}
-
-/**
  * Check, with the production preparation environment, that at least one login
  * method of the project can authenticate. The project's app.config.ts is
  * TypeScript, which core loads with Node's type stripping. A core that doesn't
@@ -136,20 +120,6 @@ function runCoreScript(coreDir: string, projectRoot: string, args: string[], env
   });
 }
 
-/** Start the core's existing incremental registry watcher. The caller owns its terminal lifecycle. */
-export function startPreparationWatch(
-  coreDir: string,
-  projectRoot: string,
-  options: PreparationOptions = {},
-  env: NodeJS.ProcessEnv = process.env,
-): ChildProcess {
-  return spawn('node', [join(coreDir, 'scripts/build/registry.mjs'), '--watch'], {
-    cwd: projectRoot,
-    stdio: 'inherit',
-    env: preparationEnvironment(projectRoot, { ...options, watch: true }, env),
-  });
-}
-
 /** The generated-host preparation script, relative to the core directory (#203). */
 export const HOST_PREPARE_SCRIPT = 'scripts/build/registry/host/prepare-cli.mjs';
 const HOST_MODE_MODULE = 'scripts/build/registry/host/mode.mjs';
@@ -161,12 +131,11 @@ export interface HostModeResult {
 }
 
 /**
- * Which preparation this project gets, decided by the installed core (`resolveHostMode`, loaded
+ * What state this project's src/app is in, decided by the installed core (`resolveHostMode`, loaded
  * from `coreDir`, so the CLI never guesses): `host` when the core ships its route manifest and
  * src/app is absent or owned by a previous generation; `legacy-app` when src/app is a committed
- * app tree no generation owns (the legacy registry build, silently); `no-manifest` for a
- * core that cannot generate the host (the legacy registry build). A core without the module is
- * `no-manifest`.
+ * app tree no generation owns (`nextspark migrate` converts it); `no-manifest` for a core that
+ * cannot generate the host. A core without the module is `no-manifest`. Only `host` is prepared.
  */
 export async function coreHostMode(coreDir: string, projectRoot: string): Promise<HostModeResult> {
   const module = join(coreDir, HOST_MODE_MODULE);
@@ -174,6 +143,22 @@ export async function coreHostMode(coreDir: string, projectRoot: string): Promis
   const { resolveHostMode } = await import(pathToFileURL(module).href);
   const { mode } = resolveHostMode({ coreRoot: coreDir, projectRoot });
   return { mode };
+}
+
+/**
+ * What `prepare`, `build` and `dev` print, one line each, when the project is not a generated host;
+ * null for a host. Nothing else prepares a project: a committed app tree is converted by `nextspark migrate`.
+ */
+export function hostBlockerLines(mode: HostMode): string[] | null {
+  if (mode === 'host') return null;
+  if (mode === 'legacy-app') return [
+    'src/app holds a committed app tree that nextspark did not generate, so it cannot be prepared: nextspark now generates src/app.',
+    'Run `nextspark migrate` to convert the project (`nextspark migrate --dry-run` shows what it would change first).',
+  ];
+  return [
+    'The installed @nextsparkjs/core does not generate src/app (it ships no route manifest, @nextsparkjs/core/routes/manifest.json).',
+    'Install a @nextsparkjs/core version matching this CLI.',
+  ];
 }
 
 /** The arguments of the host preparation script for these options. */
@@ -210,8 +195,10 @@ export async function runHostPreparation(
     const lines: string[] = [];
     let dropped = 0;
     const pending = { stdout: '', stderr: '' };
+    // A character of several bytes can arrive split across two chunks: decode it whole
+    const decoders = { stdout: new StringDecoder('utf8'), stderr: new StringDecoder('utf8') };
     const take = (stream: 'stdout' | 'stderr') => (chunk: Buffer) => {
-      const text = pending[stream] + chunk.toString('utf8');
+      const text = pending[stream] + decoders[stream].write(chunk);
       const parts = text.split('\n');
       pending[stream] = parts.pop() ?? '';
       for (const line of parts) {
@@ -222,6 +209,7 @@ export async function runHostPreparation(
     child.stdout?.on('data', take('stdout'));
     child.stderr?.on('data', take('stderr'));
     const all = () => {
+      for (const stream of ['stdout', 'stderr'] as const) pending[stream] += decoders[stream].end();
       for (const rest of [pending.stdout, pending.stderr]) if (rest) lines.push(rest);
       return dropped > 0 ? [...lines, `... and ${dropped} more line(s)`] : lines;
     };

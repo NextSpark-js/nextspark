@@ -587,33 +587,6 @@ declare module '@nextsparkjs/registries/plugin-registry.client' {
 }
 
 // ============================================================================
-// Template Registry (Server)
-// ============================================================================
-declare module '@nextsparkjs/registries/template-registry' {
-  export type TemplatePath = string
-
-  export interface TemplateOverride {
-    themeName: string
-    templateType: string
-    [key: string]: unknown
-  }
-
-  export interface TemplateRegistryEntry {
-    appPath: TemplatePath
-    component: unknown
-    template: TemplateOverride
-    alternatives: TemplateOverride[]
-  }
-
-  export const TEMPLATE_REGISTRY: Record<string, TemplateRegistryEntry>
-  export const TEMPLATE_METADATA: {
-    generatedAt: string
-    totalTemplates: number
-    templateTypes: string[]
-  }
-}
-
-// ============================================================================
 // Testing Registry
 //
 // Real shape is four independent top-level exports, not a single nested
@@ -695,8 +668,8 @@ declare module '@nextsparkjs/registries/translation-registry' {
 // ============================================================================
 // Route Handlers Registry
 //
-// Real shape is API-route metadata + theme/plugin handler maps, not the
-// single ROUTE_HANDLERS export the old ambient declaration had.
+// API-route metadata only: the generated host serves every project and plugin
+// route as a route file of its own, so no handler map is generated.
 // ============================================================================
 declare module '@nextsparkjs/registries/route-handlers' {
   export interface ApiRouteEntry {
@@ -718,16 +691,6 @@ declare module '@nextsparkjs/registries/route-handlers' {
     byCategory: Record<'core' | 'entity' | 'theme' | 'plugin', number>
     generatedAt: string
   }
-
-  // A single Next.js Route Handler function for one HTTP method.
-  export type RouteHandler = (
-    request: import('next/server').NextRequest,
-    context: { params: Promise<Record<string, string>> }
-  ) => Promise<Response> | Response
-
-  // Keyed by route key, then by HTTP method.
-  export const THEME_ROUTE_HANDLERS: Record<string, Record<string, RouteHandler>>
-  export const PLUGIN_ROUTE_HANDLERS: Record<string, Record<string, RouteHandler>>
 }
 
 // ============================================================================

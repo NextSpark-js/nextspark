@@ -4,58 +4,24 @@ This document explains how pages created with the Page Builder are rendered on t
 
 ## Overview
 
-Public pages are served through a dynamic route that handles both:
+Public pages are served through the routes `nextspark prepare` generates for both:
 1. **Dynamic pages** created via the Page Builder
 2. **Entity archives** from the entity system
 
 Pages take priority over entity archives, allowing you to create custom landing pages for any URL.
 
-## Dynamic Route Resolution
+## Route generation
 
-The system uses a **catch-all route** (`[...slug]`) that dynamically resolves URLs based on entity `access.basePath` configuration. This eliminates the need for manual route stubs for each entity type.
+`nextspark prepare` (and `nextspark dev`, which regenerates on changes) writes a **concrete public route for every builder entity** from its `access.basePath` configuration; there is no catch-all route and no runtime matching of the URL against the entity registry.
 
-### How It Works
+### How it works
 
-1. **URL Pattern Matching**: The `[...slug]` route captures all public paths
-2. **Entity Resolution**: `matchPathToEntity()` matches the URL against entity `access.basePath` configurations
-3. **Priority**: Longest-match-first strategy (e.g., `/blog` matches before `/`)
-4. **Template Override**: Checks for theme-specific templates before default rendering
-5. **Default Rendering**: Falls back to `PageRenderer` for block content
+1. **Entity facts**: the host reads `access.basePath`, `builder.enabled`, `ui.public.hasArchivePage` and `access.allowNestedSlugs` from each entity config, as literals.
+2. **Route per entity**: a builder entity with a basePath gets `(public)<basePath>/[...slug]/page.tsx` (item pages; `[slug]` when nested slugs are off), and `(public)<basePath>/page.tsx` when it has an archive page.
+3. **Template override**: a project template at `templates/(public)/<basePath>/[...slug]/page.tsx` is composed into that route at generation time.
+4. **Default rendering**: `PageRenderer` renders the block content.
 
-### Route Resolution Flow
-
-```text
-Request GET /blog/my-post
-         │
-         ▼
-┌─────────────────────────────────────┐
-│ app/(public)/[...slug]/page.tsx     │
-│ slugParts = ['blog', 'my-post']     │
-│ fullPath = '/blog/my-post'          │
-└─────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────┐
-│ matchPathToEntity(fullPath)         │
-│                                     │
-│ Entities sorted by basePath:        │
-│ 1. posts (basePath: '/blog')        │ ← MATCH!
-│ 2. pages (basePath: '/')            │
-│                                     │
-│ Returns: { entity: posts,           │
-│            slug: 'my-post' }        │
-└─────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────┐
-│ Check template override             │
-│ 'app/(public)/blog/[slug]/...'      │
-│                                     │
-│ → Theme template exists?            │
-│   YES → Render with template        │
-│   NO  → Render with PageRenderer    │
-└─────────────────────────────────────┘
-```
+Next.js' own routing decides which route answers a URL (a static segment beats a dynamic one, a longer basePath beats `/`), so `/blog/my-post` reaches the `/blog` entity and `/about` reaches the entity whose basePath is `/`.
 
 ### Configuring Public URLs
 
@@ -81,70 +47,29 @@ access: {
 }
 ```
 
-### Priority Resolution (Longest-Match-First)
+### Which entity answers a URL
 
-When multiple entities could match a URL, the system uses **longest-match-first** strategy:
+| URL | Entity | Reason |
+|-----|--------|--------|
+| `/blog/my-post` | posts | `/blog` has its own route |
+| `/about` | pages | basePath `/` gives `[slug]` at the root |
+| `/blog` | posts (archive) | Archive route of the entity (needs `ui.public.hasArchivePage: true`) |
+| `/nonexistent` | 404 | No route matches |
 
-| URL | Matched Entity | Reason |
-|-----|----------------|--------|
-| `/blog/my-post` | posts | `/blog` is longer than `/` |
-| `/about` | pages | Only `/` matches single segment |
-| `/blog` | posts (archive) | Exact basePath match |
-| `/nonexistent` | 404 | No entity matches |
+## Per-entity public routes
 
-### Archive Pages
+**Location**: `(public)<basePath>/[...slug]/page.tsx`, one route per builder entity, written by `nextspark prepare` (nothing is served by a catch-all).
 
-When a URL exactly matches a basePath (e.g., `/blog`), the system returns an **archive page** showing a list of published items:
-
-```typescript
-// matchPathToEntity returns isArchive: true for exact basePath matches
-if (path === basePath) {
-  return { entity, slug: '', isArchive: true }
-}
-```
-
-Archive pages require `ui.public.hasArchivePage: true` in the entity config.
-
-## Dynamic Route
-
-**Location**: `app/(public)/[...slug]/page.tsx`
+The generated route is a facade that statically imports the entity's config, and the project's item template when it has one (`templates/(public)/<basePath>/[...slug]/page.tsx`), and applies core's `createPublicItemRoute` to them. There is no runtime lookup of the entity from the URL and no template registry: a project template replaces the item page after the same checks, at build time.
 
 ```typescript
-import { TemplateService } from '@/core/lib/services/template.service'
-
-export default async function DynamicPublicPage({ params }: PageProps) {
-  const slugParts = (await params).slug
-  const fullPath = '/' + slugParts.join('/')
-
-  // Match path to builder entity using longest-match strategy
-  const match = matchPathToEntity(fullPath, registry)
-
-  if (match) {
-    const { entity, slug, isArchive } = match
-
-    // Archive page (e.g., /blog without slug)
-    if (isArchive) {
-      if (!entity.ui?.public?.hasArchivePage) notFound()
-      return <PublicEntityGrid entityType={entity.slug} />
-    }
-
-    // Check for theme template override
-    const templatePath = buildTemplatePath(entity)
-    if (TemplateService.hasOverride(templatePath)) {
-      const Template = TemplateService.getComponent(templatePath)
-      if (Template) return <Template params={params} />
-    }
-
-    // Default rendering with PageRenderer
-    const item = await fetchPublishedItem(entity.tableName, slug)
-    if (!item) notFound()
-
-    return <PageRenderer page={item} />
-  }
-
-  notFound()
-}
+// Generated: src/app/(public)/blog/[...slug]/page.tsx
+import { blogEntityConfig } from "@/entities/blog/blog.config"
+import { createPublicItemRoute } from "@nextsparkjs/core/routes/_internal/public-item-route"
+export default createPublicItemRoute(blogEntityConfig)
 ```
+
+An entity with `ui.public.hasArchivePage` also gets `(public)<basePath>/page.tsx` (the archive). Rendering per item: published item query, `PageRenderer` with its blocks, `notFound()` when there is none.
 
 ## PageRenderer Component
 
@@ -469,13 +394,7 @@ CREATE INDEX idx_pages_published_locale ON pages(published, locale)
 
 Override the default layout using theme templates:
 
-```typescript
-// In your theme
-export default getTemplateOrDefault(
-  'app/(public)/[entity]/page.tsx',
-  CustomPublicPage
-)
-```
+Add `templates/(public)/<basePath>/[...slug]/page.tsx` to your project: `nextspark prepare` composes it into the entity's generated route (see [Generated host](../01-fundamentals/08-generated-host.md)).
 
 ### Block Component Overrides
 
@@ -503,12 +422,14 @@ const BLOCK_COMPONENTS = {
 **Version**: 1.4.0
 **Status**: Stable
 
+**Changelog v1.5.0:**
+- The runtime `(public)/[...slug]` catch-all and template lookups were replaced by per-entity generated routes (#203)
+
 **Changelog v1.4.0:**
-- Updated template resolution to use TemplateService instead of legacy registry functions
-- Code examples now import from `@/core/lib/services/template.service`
+- Template resolution moved to a service layer (since replaced: see v1.5.0)
 
 **Changelog v1.3.0:**
-- Added "Dynamic Route Resolution" section documenting the catch-all `[...slug]` route
+- Added a section documenting the catch-all `[...slug]` route (replaced by per-entity generated routes in v1.5.0)
 - Added documentation for `access.basePath` configuration
 - Added archive page support documentation
 - Updated code examples to reflect new routing architecture

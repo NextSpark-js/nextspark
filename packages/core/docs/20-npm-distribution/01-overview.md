@@ -79,7 +79,6 @@ Registries are auto-generated TypeScript files that index your content:
 | Registry | Purpose |
 |----------|---------|
 | `entity-registry.ts` | Entity CRUD configurations |
-| `template-registry.ts` | Page/layout overrides |
 | `permissions-registry.ts` | Role/permission mapping |
 | `plugin-registry.ts` | Active plugins |
 | `theme-registry.ts` | Theme configuration |
@@ -124,8 +123,8 @@ The wizard writes `tsconfig.json` once; installs never touch it.
 │  ┌────────────────────────┐   ┌─────────────────────────────────┐│
 │  │   ./     │   │   .nextspark/registries/        ││
 │  │   └── default/         │   │   ├── entity-registry.ts        ││
-│  │       ├── entities/    │   │   ├── template-registry.ts      ││
-│  │       ├── templates/   │   │   ├── permissions-registry.ts   ││
+│  │       ├── entities/    │   │   ├── permissions-registry.ts   ││
+│  │       ├── templates/   │   │   ├── plugin-registry.ts        ││
 │  │       └── theme.config │   │   └── ...                       ││
 │  └───────────┬────────────┘   └───────────────┬─────────────────┘│
 │              │                                │                   │

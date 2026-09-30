@@ -478,6 +478,32 @@ export function isLegacyGeneratedRegistry(content) {
 }
 
 /**
+ * The registries older builds wrote that no build writes any more: the global template registries
+ * and the route-scoped template registries (`template-scopes/**`), which resolved a project's
+ * templates at run time before the generated host wrote them as static routes (#203).
+ */
+const OBSOLETE_REGISTRIES = [`${REGISTRIES_DIR}/template-registry.ts`, `${REGISTRIES_DIR}/template-registry.client.ts`]
+const OBSOLETE_REGISTRY_TREES = [`${REGISTRIES_DIR}/template-scopes/`]
+const SCOPE_MARKER = 'Auto-generated route-scoped template registry'
+
+/**
+ * Obsolete registries (above) that no record owns - a project prepared by the legacy registry build
+ * has them - and that carry a NextSpark registry build's stamp: dead output that would break the
+ * project's type check (they import registries that no longer exist). A file without a stamp is the
+ * user's and stays.
+ */
+export function obsoleteRegistryLeftovers({ hostRoot, previous, files }) {
+  const owned = new Set([...Object.keys(previous?.files ?? {}), ...files.map(file => file.path)])
+  const tree = scanTree(hostRoot, REGISTRIES_DIR)
+  return tree.files.filter(path => {
+    if (owned.has(path)) return false
+    if (!OBSOLETE_REGISTRIES.includes(path) && !OBSOLETE_REGISTRY_TREES.some(prefix => path.startsWith(prefix))) return false
+    const content = readFileSync(join(hostRoot, path), 'utf8')
+    return isLegacyGeneratedRegistry(content) || content.includes(SCOPE_MARKER)
+  })
+}
+
+/**
  * Registry files about to be written over that the previous record does not own, differ from the
  * new content and carry no registry-build stamp: never overwritten silently.
  */
@@ -572,6 +598,12 @@ export function publishGeneration({ hostRoot, previous, files, record }) {
     fs.unlinkSync(absolute)
     deleted.push(path)
     removeEmptyParents(fs, hostRoot, path, path.startsWith(`${APP_DIR}/`) ? APP_DIR : REGISTRIES_DIR)
+  }
+
+  for (const path of obsoleteRegistryLeftovers({ hostRoot, previous, files })) {
+    fs.unlinkSync(join(hostRoot, path))
+    deleted.push(path)
+    removeEmptyParents(fs, hostRoot, path, REGISTRIES_DIR)
   }
 
   writeAtomically(fs, hostRoot, GENERATION_FILE, renderRecord(record))

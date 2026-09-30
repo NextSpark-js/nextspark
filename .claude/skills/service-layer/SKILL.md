@@ -471,11 +471,10 @@ Combine multiple services for complex operations:
 | `NamespaceService` | Registry | Route namespaces |
 | `ScopeService` | Registry | API scopes |
 | Edge middleware helpers | Registry | Project middleware execution (`hasProjectMiddleware`, `executeProjectMiddleware`) |
-| `RouteHandlerService` | Registry | Route handlers |
+| `ApiRoutesService` | Registry | API route metadata |
 | `PluginService` | Registry | Plugin configuration |
 | `ApiRoutesService` | Registry | API route discovery |
 | `BlockService` | Registry | Page builder blocks |
-| `TemplateService` | Registry | Template management |
 | `TranslationService` | Registry | I18n translations |
 | `UserFlagsService` | Data | Feature flags |
 

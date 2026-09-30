@@ -7,7 +7,7 @@ import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 /**
  * The data boundary belongs in this server layout. Keeping the client
- * authentication shell in core lets generated (templates)/dashboard layouts
+ * authentication shell in core lets a project's dashboard layout (templates/dashboard/layout.tsx)
  * use the same narrowly scoped catalog.
  */
 export default async function CoreDashboardLayout({ children }: { children: React.ReactNode }) {

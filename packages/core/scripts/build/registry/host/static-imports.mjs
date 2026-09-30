@@ -27,7 +27,7 @@
  * is an imported name, a string literal, an array of string literals, or a nested composition. No other
  * call, member access, spread or expression is accepted, so a composition can only apply fixed, statically
  * imported modules to each other: `export default withPublicMessages(Template)`,
- * `export default createEntityListPage(taskEntityConfig, Template)`,
+ * `export default createEntityListRoute(taskEntityConfig, Template)`,
  * `export const POST = createStripeWebhookRoute(stripeWebhookExtensions)`.
  *
  * Grammar `dev-facade` (the root layout of a `nextspark dev` generation, render.mjs): the

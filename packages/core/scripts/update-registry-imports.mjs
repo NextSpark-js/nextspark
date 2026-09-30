@@ -33,7 +33,6 @@ const REGISTRIES = [
   'route-handlers',
   'scheduled-actions-registry',
   'scope-registry',
-  'template-registry',
   'testing-registry',
   'theme-registry',
   'translation-registry',

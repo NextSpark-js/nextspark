@@ -173,8 +173,6 @@ postinstall hook (historical run: it no longer writes; generation is nextspark p
     │
     ├── Generates registries in .nextspark/registries/
     │     ├── entity-registry.ts
-    │     ├── template-registry.ts
-    │     ├── template-registry.client.ts
     │     ├── permissions-registry.ts
     │     ├── plugin-registry.ts
     │     ├── theme-registry.ts

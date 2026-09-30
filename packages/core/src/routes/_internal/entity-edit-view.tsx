@@ -10,8 +10,8 @@ import { BuilderEditorView } from '@nextsparkjs/core/components/dashboard/block-
 import { getEntityData } from '@nextsparkjs/core/lib/api/entities'
 
 /**
- * The edit form of one entity's dashboard. Core's `[entity]/[id]` route passes both route params;
- * the generated host's per-entity routes pass their entity's slug and read `id` from theirs.
+ * The edit form of one entity's dashboard. The generated host's per-entity routes pass their
+ * entity's slug and read `id` from theirs.
  */
 export function EntityEditView({ entity, id }: { entity: string; id: string }) {
   const router = useRouter()

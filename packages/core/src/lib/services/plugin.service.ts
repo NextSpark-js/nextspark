@@ -118,15 +118,6 @@ export class PluginService {
   }
 
   /**
-   * Whether a plugin is enabled: the executable config's value for a 'server' plugin, else the catalog's literal.
-   * null when it is unknown (computed at run time, or no such plugin): never assumed true.
-   */
-  static isEnabled(name: string): boolean | null {
-    const config = (PLUGIN_REGISTRY as any)[name]?.config as PluginConfig | undefined
-    return config?.enabled ?? PLUGIN_CATALOG[name]?.enabled ?? null
-  }
-
-  /**
    * Get the plugins that run on the server (declare 'server'): the registered ones
    *
    * For a listing of all plugins use getCatalog().

@@ -1,17 +1,13 @@
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
 import {
-  HOST_PREPARE_SCRIPT,
   coreHostMode,
+  hostBlockerLines,
   preparationWatchExitCode,
   preparationWatchWriteGuard,
   runHostPreparation,
-  runPreparation,
   startHostWatch,
-  startPreparationWatch,
 } from '../utils/preparation.js';
 import { errorLines } from '../utils/shown-path.js';
 
@@ -31,14 +27,21 @@ export async function prepareCommand(options: PrepareOptions): Promise<void> {
     const coreDir = getCoreDir();
     const projectRoot = getProjectRoot();
     const mode = isMonorepoMode() ? 'monorepo' : 'npm';
-    // A core with a route manifest generates the whole src/app (#203), unless src/app is still a
-    // committed app tree no generation owns: that project keeps the legacy registry build
+    // A core with a route manifest generates the whole src/app (#203); a committed app tree no
+    // generation owns is not prepared (nextspark migrate converts it)
     const { mode: hostMode } = await coreHostMode(coreDir, projectRoot);
-    const host = hostMode === 'host';
+    const blocker = hostBlockerLines(hostMode);
 
     if (options.contractsOnly) {
       if (options.watch || options.dev) {
         spinner.fail('--contracts-only generates or checks once: it cannot be combined with --watch or --dev');
+        process.exit(1);
+        return;
+      }
+      // One rule for every prepare flavour: a committed app tree is migrated first
+      if (hostMode === 'legacy-app') {
+        spinner.fail('src/app is not a generated host');
+        for (const line of blocker ?? []) console.error(chalk.red(line));
         process.exit(1);
         return;
       }
@@ -66,14 +69,9 @@ export async function prepareCommand(options: PrepareOptions): Promise<void> {
         process.exit(1);
         return;
       }
-      if (hostMode === 'legacy-app') {
-        spinner.fail('Legacy mode: src/app is not a generated host, so it cannot be checked (not fresh)');
-        process.exit(1);
-        return;
-      }
-      if (!host) {
-        spinner.fail('The installed @nextsparkjs/core does not generate src/app, so there is nothing to check');
-        console.error(chalk.red('prepare --check needs a @nextsparkjs/core that ships a route manifest (@nextsparkjs/core/routes/manifest.json).'));
+      if (blocker) {
+        spinner.fail('src/app is not a generated host, so there is nothing to check');
+        for (const line of blocker) console.error(chalk.red(line));
         process.exit(1);
         return;
       }
@@ -88,6 +86,13 @@ export async function prepareCommand(options: PrepareOptions): Promise<void> {
       return;
     }
 
+    if (blocker) {
+      spinner.fail('Preparation failed');
+      for (const line of blocker) console.error(chalk.red(line));
+      process.exit(1);
+      return;
+    }
+
     if (options.watch) {
       const unsafeLines = await preparationWatchWriteGuard(coreDir, projectRoot);
       if (unsafeLines.length > 0) {
@@ -96,7 +101,7 @@ export async function prepareCommand(options: PrepareOptions): Promise<void> {
         process.exit(1);
         return;
       }
-      const watcher = host ? startHostWatch(coreDir, projectRoot, options) : startPreparationWatch(coreDir, projectRoot, options);
+      const watcher = startHostWatch(coreDir, projectRoot, options);
       let stopping = false;
       const cleanup = () => {
         if (stopping) return;
@@ -116,28 +121,15 @@ export async function prepareCommand(options: PrepareOptions): Promise<void> {
       return;
     }
 
-    const result = host ? await runHostPreparation(coreDir, projectRoot, options) : await runPreparation(coreDir, projectRoot, options);
+    const result = await runHostPreparation(coreDir, projectRoot, options);
     if (result.code !== 0) {
       spinner.fail('Preparation failed');
       for (const line of result.failureLines) console.error(chalk.red(line));
       process.exit(result.code);
       return;
     }
-    // The portable contracts do not depend on how src/app is produced: a legacy project (committed
-    // src/app) gets them here; a generated host has them from the run above.
-    let contractLines: string[] = [];
-    if (!host && existsSync(join(coreDir, HOST_PREPARE_SCRIPT))) {
-      const contracts = await runHostPreparation(coreDir, projectRoot, { contractsOnly: true });
-      if (contracts.code !== 0) {
-        spinner.fail('Generating the portable contracts failed');
-        for (const line of [...result.successLines, ...contracts.failureLines]) console.error(chalk.red(line));
-        process.exit(contracts.code);
-        return;
-      }
-      contractLines = contracts.successLines;
-    }
-    spinner.succeed(host ? `src/app and registries prepared (${mode} mode)` : `Registries prepared (${mode} mode)`);
-    for (const line of [...result.successLines, ...contractLines]) console.log(chalk.gray(line));
+    spinner.succeed(`src/app and registries prepared (${mode} mode)`);
+    for (const line of result.successLines) console.log(chalk.gray(line));
   } catch (error) {
     spinner.fail('Preparation failed');
     if (error instanceof Error) for (const line of errorLines(error)) console.error(chalk.red(line));

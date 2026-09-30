@@ -665,7 +665,7 @@ Registry Services encapsulate queries against auto-generated registries (located
 | `EntityTypeService` | `entity-registry.ts` | Entity configs, search types |
 | `NamespaceService` | `namespace-registry.ts` | Route namespaces |
 | `ScopeService` | `scope-registry.ts` | API scopes, restrictions |
-| `RouteHandlerService` | `route-handlers.ts` | Route handlers |
+| `ApiRoutesService` | `route-handlers.ts` | API route metadata (devtools) |
 
 ### Pattern: Registry Service
 

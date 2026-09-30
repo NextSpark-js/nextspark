@@ -81,31 +81,24 @@ test('a project doc for an endpoint wins over core\'s for the same endpoint', as
   }
 })
 
-test('the route registry of a generated host executes nothing and names the URLs the routes are served at', async () => {
+test('the route registry executes nothing and names the URLs the routes are served at', async () => {
   const plugin = { name: 'ai', importBase: '@/plugins/ai', routeFiles: [{ relativePath: 'generate', methods: ['POST'] }, { relativePath: '/', methods: ['GET'] }] }
   const theme = { name: 'default', routeFiles: [{ relativePath: 'ai/usage', methods: ['GET'] }] }
 
-  const legacy = generateRouteHandlersRegistry([plugin], [theme], [], [], { generatedHost: false })
-  assert.match(legacy, /import \* as plugin_ai_generate from '@\/plugins\/ai\/api\/generate\/route'/)
-  assert.match(legacy, /path: '\/api\/v1\/theme\/default\/ai\/usage'/)
-  assert.match(legacy, /path: '\/api\/v1\/plugin\/ai\/generate'/)
-  assert.match(legacy, /'default\/ai\/usage': \{\n    GET: /)
-
-  const host = generateRouteHandlersRegistry([plugin], [theme], [], [], { generatedHost: true })
-  assert.doesNotMatch(host, /^import \* as /m, 'no handler is imported: every route is a route file of its own')
-  assert.doesNotMatch(host, /RouteHandler \| undefined>> = \{\n  '/, 'no handler is registered')
-  assert.match(host, /path: '\/api\/ai\/usage', methods: \["GET"\], category: 'theme', source: 'default'/)
-  assert.match(host, /path: '\/api\/plugins\/ai\/generate'/)
-  assert.match(host, /path: '\/api\/plugins\/ai', methods: \["GET"\]/)
-  assert.doesNotMatch(host, /\/api\/v1\/(theme|plugin)/)
+  const registry = generateRouteHandlersRegistry([plugin], [theme], [], [])
+  assert.doesNotMatch(registry, /^import \* as /m, 'no handler is imported: every route is a route file of its own')
+  assert.doesNotMatch(registry, /ROUTE_HANDLERS|RouteHandler\b/, 'no handler is registered')
+  assert.match(registry, /path: '\/api\/ai\/usage', methods: \["GET"\], category: 'theme', source: 'default'/)
+  assert.match(registry, /path: '\/api\/plugins\/ai\/generate'/)
+  assert.match(registry, /path: '\/api\/plugins\/ai', methods: \["GET"\]/)
+  assert.doesNotMatch(registry, /\/api\/v1\/(theme|plugin)/)
 })
 
 test('a plugin\'s route files are named at the URL the host serves them at', async () => {
   const w = await world({ 'plugin/api/lookup/route.ts': 'export async function GET() {}\n', 'plugin/api/route.ts': 'export async function POST() {}\n' })
   try {
-    const paths = async options => (await discoverRouteFiles(join(w.root, 'plugin/api'), 'search', '@/plugins/search', options)).map(route => route.path).sort()
-    assert.deepEqual(await paths({ generatedHost: true }), ['/api/plugins/search', '/api/plugins/search/lookup'])
-    assert.deepEqual(await paths(), ['/api/v1/plugin/search', '/api/v1/plugin/search/lookup'])
+    const paths = (await discoverRouteFiles(join(w.root, 'plugin/api'), 'search', '@/plugins/search')).map(route => route.path).sort()
+    assert.deepEqual(paths, ['/api/plugins/search', '/api/plugins/search/lookup'])
   } finally {
     await w.cleanup()
   }

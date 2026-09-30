@@ -332,9 +332,6 @@ HARDCODED=$(grep -Er "from ['\"]@/(config|entities|blocks|plugins)/" --include="
   grep -v "node_modules" | \
   grep -v ".next" | \
   grep -v ".nextspark/registries/" | \  # Exclude auto-generated
-  grep -v "src/app/(templates)/" | \      # Exclude template overrides
-  grep -v "app/api/v1/theme/" | \     # Exclude theme API
-  grep -v "app/api/v1/plugin/" | \    # Exclude plugin API
   grep -v "types" | \                 # Exclude type imports
   grep -v "\.test\." | \
   grep -v "\.spec\." || true)

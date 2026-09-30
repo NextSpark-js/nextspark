@@ -333,8 +333,7 @@ export function withoutBuildTime(content) {
 
 /**
  * Run the registry build with its output in a staging directory under .nextspark and read what
- * it wrote. The build runs as a child process (it ends with process.exit on failure) with
- * NEXTSPARK_GENERATED_HOST=1, so it writes nothing under src/app.
+ * it wrote. The build runs as a child process (it ends with process.exit on failure).
  */
 export function stagedRegistryBuild({ projectRoot, coreRoot, env = process.env }) {
   return async ({ mode }) => {
@@ -351,7 +350,6 @@ export function stagedRegistryBuild({ projectRoot, coreRoot, env = process.env }
             ...env,
             ...(mode === 'production' ? { NODE_ENV: 'production' } : {}),
             NEXTSPARK_REGISTRIES_OUT: relative(projectRoot, outputDir),
-            NEXTSPARK_GENERATED_HOST: '1',
           },
         })
         let output = ''

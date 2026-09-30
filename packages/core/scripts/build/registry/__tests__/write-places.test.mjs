@@ -1,6 +1,6 @@
 /**
  * Tests for the check of where the registry build writes, which the build runs
- * before writing anything and `nextspark sync:app` and `nextspark dev` run from
+ * before writing anything and `nextspark dev` and `prepare --watch` run from
  * the installed core: a symlink, something of another kind or that can't be
  * read, or a .gitignore of .nextspark/backups or .nextspark/registries that
  * would not keep what is beside it out of git, is found, and a build that finds
@@ -50,33 +50,17 @@ test('a symlink where the build or a caller writes, or something else in the way
   const outside = await directory()
   try {
     await writeIn(outside.root, 'dashboard/layout.tsx')
-    await mkdir(join(root, 'src', 'app'), { recursive: true })
     await writeIn(root, '.nextspark/backups/2026-09-16T00-00-00-000Z-q1w2e3/i18n.ts')
 
     assert.deepEqual(unsafeWritePlaces(root), [])
 
-    await symlink(outside.root, join(root, 'src/app/(templates)'))
-    assert.deepEqual(unsafeWritePlaces(root), [{ path: 'src/app/(templates)', problem: 'is a symlink' }])
-
-    await rm(join(root, 'src/app/(templates)'))
-    await mkdir(join(root, 'src/app/(templates)/(public)'), { recursive: true })
-    await symlink(join(outside.root, 'dashboard'), join(root, 'src/app/(templates)/(public)/dashboard'))
-    await symlink(join(outside.root, 'missing'), join(root, '.nextspark/sync-state.json'))
+    await symlink(join(outside.root, 'missing'), join(root, '.nextspark/generation.json'))
     await symlink(join(outside.root, 'dashboard'), join(root, '.nextspark/registries'))
-    await symlink(join(outside.root, 'dashboard'), join(root, 'src/app/dashboard'))
-    await symlink(join(outside.root, 'globals.css'), join(root, 'src/app/globals.css'))
-    assert.deepEqual(unsafeWritePlaces(root, ['src/app/dashboard/page.tsx', 'src/app/layout.tsx', 'i18n.ts', '.nextspark/sync-state.json']), [
-      { path: 'src/app/globals.css', problem: 'is a symlink' },
+    assert.deepEqual(unsafeWritePlaces(root, ['i18n.ts', '.nextspark/generation.json']), [
       { path: '.nextspark/registries', problem: 'is a symlink' },
-      { path: 'src/app/dashboard', problem: 'is a symlink' },
-      { path: '.nextspark/sync-state.json', problem: 'is a symlink' },
-      { path: 'src/app/(templates)/(public)/dashboard', problem: 'is a symlink' },
+      { path: '.nextspark/generation.json', problem: 'is a symlink' },
     ])
-    assert.deepEqual(unsafeWritePlaces(root).map(({ path }) => path), [
-      'src/app/globals.css',
-      '.nextspark/registries',
-      'src/app/(templates)/(public)/dashboard',
-    ], 'src/app/dashboard and the sync state count only for a caller that writes under them')
+    assert.deepEqual(unsafeWritePlaces(root).map(({ path }) => path), ['.nextspark/registries'], 'the generation record counts only for a caller that writes it')
 
     await rm(join(root, '.nextspark/registries'))
     await mkdir(join(root, '.nextspark/registries'))
@@ -85,29 +69,16 @@ test('a symlink where the build or a caller writes, or something else in the way
 
     await rm(join(root, '.nextspark/registries/index.ts'))
     await mkdir(join(root, '.nextspark/registries/index.ts'))
-    await mkdir(join(root, 'src/app/(templates)/(public)/page.tsx'), { recursive: true })
-    await rm(join(root, 'src/app/dashboard'))
-    await writeFile(join(root, 'src/app/dashboard'), '')
-    await rm(join(root, 'src/app/globals.css'))
-    await mkdir(join(root, 'src/app/globals.css'))
     await mkdir(join(root, 'i18n.ts'))
-    assert.deepEqual(unsafeWritePlaces(root, ['src/app/dashboard/page.tsx', 'src/app/layout.tsx', 'i18n.ts', '.nextspark/sync-state.json']), [
-      { path: 'src/app/globals.css', problem: 'is not a file' },
-      { path: 'src/app/dashboard', problem: 'is not a directory' },
+    assert.deepEqual(unsafeWritePlaces(root, ['i18n.ts', '.nextspark/generation.json']), [
       { path: 'i18n.ts', problem: 'is not a file' },
-      { path: '.nextspark/sync-state.json', problem: 'is a symlink' },
-      { path: 'src/app/(templates)/(public)/dashboard', problem: 'is a symlink' },
+      { path: '.nextspark/generation.json', problem: 'is a symlink' },
       { path: '.nextspark/registries/index.ts', problem: 'is not a file' },
-    ], 'a directory in src/app/(templates) where a file goes is left to the registry build')
+    ])
 
     await rm(join(root, '.nextspark'), { recursive: true })
     await writeFile(join(root, '.nextspark'), '')
-    await rm(join(root, 'src', 'app'), { recursive: true })
-    await symlink(outside.root, join(root, 'src', 'app'))
-    assert.deepEqual(unsafeWritePlaces(root), [
-      { path: 'src/app', problem: 'is a symlink' },
-      { path: '.nextspark', problem: 'is not a directory' },
-    ])
+    assert.deepEqual(unsafeWritePlaces(root), [{ path: '.nextspark', problem: 'is not a directory' }])
   } finally {
     await outside.cleanup()
     await cleanup()
@@ -117,45 +88,39 @@ test('a symlink where the build or a caller writes, or something else in the way
 test('a directory the build lists that cannot be read is found', { skip: RUNS_AS_ROOT }, async () => {
   const { root, cleanup } = await directory()
   try {
-    await mkdir(join(root, 'src/app/(templates)/dashboard'), { recursive: true })
     await mkdir(join(root, '.nextspark/registries'), { recursive: true })
     await mkdir(join(root, '.nextspark/backups'), { recursive: true })
-    await chmod(join(root, 'src/app/(templates)/dashboard'), 0)
     await chmod(join(root, '.nextspark/registries'), 0)
     await chmod(join(root, '.nextspark/backups'), 0)
     assert.deepEqual(unsafeWritePlaces(root), [
       { path: '.nextspark/backups', problem: "can't be read" },
       { path: '.nextspark/registries', problem: "can't be read" },
-      { path: 'src/app/(templates)/dashboard', problem: "can't be read" },
     ])
   } finally {
-    await chmod(join(root, 'src/app/(templates)/dashboard'), 0o755).catch(() => {})
     await chmod(join(root, '.nextspark/registries'), 0o755).catch(() => {})
     await chmod(join(root, '.nextspark/backups'), 0o755).catch(() => {})
     await cleanup()
   }
 })
 
-test('only the generated template-scopes registry subtree may be a directory, and it is still guarded', async () => {
+test('the template-scopes registries an older build left may be a directory (the host removes them), and are still guarded', async () => {
   const { root, cleanup } = await directory()
   const outside = await directory()
   try {
-    await mkdir(join(root, 'src', 'app'), { recursive: true })
     await writeIn(root, '.nextspark/registries/template-scopes/server/(public)/page.ts', '/** Auto-generated route-scoped template registry; do not edit. */\n')
-
     assert.deepEqual(unsafeWritePlaces(root), [])
 
     await symlink(join(outside.root, 'scope'), join(root, '.nextspark/registries/template-scopes/server/(public)/link'))
-    assert.deepEqual(unsafeWritePlaces(root), [
-      { path: '.nextspark/registries/template-scopes/server/(public)/link', problem: 'is a symlink' }
-    ])
+    assert.deepEqual(unsafeWritePlaces(root), [{ path: '.nextspark/registries/template-scopes/server/(public)/link', problem: 'is a symlink' }])
     await rm(join(root, '.nextspark/registries/template-scopes/server/(public)/link'))
 
     await rm(join(root, '.nextspark/registries/template-scopes'), { recursive: true })
     await writeIn(root, '.nextspark/registries/template-scopes', '')
-    assert.deepEqual(unsafeWritePlaces(root), [
-      { path: '.nextspark/registries/template-scopes', problem: 'is not a directory' }
-    ])
+    assert.deepEqual(unsafeWritePlaces(root), [{ path: '.nextspark/registries/template-scopes', problem: 'is not a directory' }])
+
+    await rm(join(root, '.nextspark/registries/template-scopes'))
+    await mkdir(join(root, '.nextspark/registries/other'), { recursive: true })
+    assert.deepEqual(unsafeWritePlaces(root), [{ path: '.nextspark/registries/other', problem: 'is not a file' }], 'no other subtree is')
   } finally {
     await outside.cleanup()
     await cleanup()
@@ -300,13 +265,11 @@ async function snapshot(root) {
   return entries
 }
 
-/** A project for core's real registry build, with a stale file in src/app/(templates) the build would back up and remove. */
+/** A project for core's real registry build. */
 async function buildableProject() {
   const project = await directory()
   await writeIn(project.root, 'nextspark.config.ts', 'export default {}\n')
   await writeIn(project.root, 'package.json', '{"dependencies":{"next":"16.3.5"}}')
-  await writeIn(project.root, 'src/app/layout.tsx', 'export default function Layout({ children }) { return children }\n')
-  await writeIn(project.root, 'src/app/(templates)/stale/page.tsx', 'export default function Stale() { return null }\n')
   await writeIn(project.root, 'templates/pricing/page.tsx', 'export default function Pricing() { return null }\n')
   return project
 }
@@ -331,14 +294,6 @@ test("the registry build writes nothing, in the project or through it, when a pl
       await mkdir(join(root, '.nextspark'), { recursive: true })
       await symlink(outside, join(root, '.nextspark/registries'))
     }, '.nextspark/registries is a symlink'],
-    ['src/app/(templates) a symlink to a directory outside', async (root, outside) => {
-      await rm(join(root, 'src/app/(templates)'), { recursive: true })
-      await symlink(outside, join(root, 'src/app/(templates)'))
-    }, 'src/app/(templates) is a symlink'],
-    ['src/app/globals.css a symlink to a file outside', async (root, outside) => {
-      await writeIn(outside, 'globals.css', '/* outside */\n')
-      await symlink(join(outside, 'globals.css'), join(root, 'src/app/globals.css'))
-    }, 'src/app/globals.css is a symlink'],
     ['a directory where a registry goes', async root => {
       await writeIn(root, '.nextspark/registries/index.ts/stale.ts')
     }, '.nextspark/registries/index.ts is not a file'],
@@ -348,11 +303,6 @@ test("the registry build writes nothing, in the project or through it, when a pl
     ['a registries .gitignore that takes the registries back', async root => {
       await writeIn(root, REGISTRIES_GITIGNORE, '*\n!*.ts\n')
     }, `${REGISTRIES_GITIGNORE} has patterns other than *`],
-    ['src/app/api a symlink to a directory outside holding an old generated plugin route and another file', async (root, outside) => {
-      await writeIn(outside, 'v1/plugin/legacy/route.ts', '// Auto-generated Plugin Route Proxy\n')
-      await writeIn(outside, 'v1/plugin/legacy/other.ts', 'export const other = 1\n')
-      await symlink(outside, join(root, 'src/app/api'))
-    }, 'src/app/api is a symlink'],
     ["the project's fixtures directory a symlink to one outside", async (root, outside) => {
       await writeIn(outside, 'entities.json', '{"outside":true}\n')
       await writeIn(outside, 'blocks.json', '{"outside":true}\n')
@@ -394,50 +344,15 @@ test("the registry build writes nothing, in the project or through it, when a pl
 
   const control = await buildableProject()
   try {
-    await writeIn(control.root, 'src/app/api/v1/plugin/legacy/route.ts', '// Auto-generated Plugin Route Proxy\n')
     await mkdir(join(control.root, 'tests/cypress/fixtures'), { recursive: true })
     const { status } = runBuild(control.root)
     if (status !== 0) wrong.push(`with nothing in the way, the build exited ${status}`)
     if (!existsSync(join(control.root, '.nextspark/registries/index.ts'))) wrong.push('with nothing in the way, the build wrote no registry')
-    if (existsSync(join(control.root, 'src/app/(templates)/stale/page.tsx'))) wrong.push('with nothing in the way, the build left the stale file')
-    if (existsSync(join(control.root, 'src/app/api/v1/plugin/legacy'))) wrong.push('with nothing in the way, the build left the old generated plugin route')
+    if (existsSync(join(control.root, 'src'))) wrong.push('the registry build wrote into src')
     if (!existsSync(join(control.root, 'tests/cypress/fixtures/blocks.json'))) wrong.push('with nothing in the way, the build wrote no blocks.json')
   } finally {
     await control.cleanup()
   }
 
   assert.deepEqual(wrong, [])
-})
-
-test("the registry build keeps .nextspark/registries out of git with a .gitignore of its own, while it runs and after, whatever the project's rules take back", async () => {
-  const project = await buildableProject()
-  const root = project.root
-  try {
-    execFileSync('git', ['init', '-q'], { cwd: root })
-    await writeFile(join(root, '.gitignore'), 'node_modules/\n.env\nsrc/app/(templates)/\n!.nextspark/\n!.nextspark/registries/**\n')
-    await writeIn(root, '.nextspark/.gitignore', '!registries/\n!registries/**\n')
-    await writeFile(join(root, '.git/info/exclude'), '!*\n')
-    const visible = () => execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf8' })
-      .split('\n').filter(line => line.includes('.nextspark/registries'))
-
-    const build = spawn('node', [join(CORE_DIR, 'scripts/build/registry.mjs')], { cwd: root, env: process.env, stdio: 'ignore' })
-    let exited = null
-    build.on('exit', code => { exited = code })
-    const during = new Set()
-    let polls = 0
-    while (exited === null) {
-      for (const line of visible()) during.add(line)
-      polls++
-      await new Promise(resolve => setTimeout(resolve, 5))
-    }
-
-    assert.equal(exited, 0)
-    assert.ok(polls > 1, 'git was asked while the build ran')
-    assert.deepEqual([...during], [], 'git picks up no registry while the build runs')
-    assert.deepEqual(visible(), [], 'nor after')
-    assert.equal(await readFile(join(root, REGISTRIES_GITIGNORE), 'utf8'), REGISTRIES_GITIGNORE_CONTENT)
-    assert.ok(existsSync(join(root, '.nextspark/registries/index.ts')), 'the registries are written')
-  } finally {
-    await project.cleanup()
-  }
 })

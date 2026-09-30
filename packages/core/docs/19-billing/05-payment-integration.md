@@ -402,7 +402,7 @@ export default defineConfig({
 ```
 
 The generated route is `export const POST = createStripeWebhookRoute(stripeWebhookExtensions)` (or `createPolarWebhookRoute`).
-The dynamic-import routes shown above are the legacy form, for apps that still commit their own `src/app`.
+The dynamic-import routes shown above are the form of apps that committed their own `src/app` before beta.192; `nextspark migrate` replaces them with this declaration.
 
 ### Stripe Extension
 

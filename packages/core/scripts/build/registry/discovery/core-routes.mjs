@@ -1,17 +1,15 @@
 /**
  * Core Routes Discovery
  *
- * Discovers API routes from app/api/v1/ directory.
+ * Discovers core's API routes (api/v1) from the core route manifest.
  * Excludes dynamic/catch-all routes (handled by generic handlers).
  *
  * @module core/scripts/build/registry/discovery/core-routes
  */
 
-import { join } from 'path'
 import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
-import { projectGeneratedAppDir } from '../project-mode.mjs'
 import { loadCoreRouteManifest } from '../host/core-routes.mjs'
-import { verbose, extractHttpMethods, scanDirectory } from '../../../utils/index.mjs'
+import { verbose, extractHttpMethods } from '../../../utils/index.mjs'
 
 /**
  * Patterns to exclude from core route discovery
@@ -32,89 +30,14 @@ function isExcludedDirectory(name) {
 }
 
 /**
- * Discover core API routes from app/api/v1/
+ * Discover core's api/v1 routes from core's route manifest, each read from the core module that
+ * implements it (what the generated src/app/api/v1 holds a facade of): src/app is output of
+ * `nextspark prepare`, never an input of the registries. Dynamic routes are left out.
  *
- * @returns {Promise<Array<{
- *   path: string,
- *   methods: string[],
- *   relativePath: string,
- *   category: string
- * }>>}
- */
-/**
- * Discover core API routes from app/api/v1/
- * @param {object} config - Optional configuration object (defaults to DEFAULT_CONFIG)
- * @returns {Promise<Array>} Array of discovered core routes
+ * @param {object} config - configuration from getConfig()
+ * @returns {Promise<Array<{ path: string, methods: string[], relativePath: string, category: string, filePath: string }>>}
  */
 export async function discoverCoreRoutes(config = DEFAULT_CONFIG) {
-  if (config.generatedHost) return discoverManifestCoreRoutes(config)
-  const apiDir = join(config.generatedAppDir || projectGeneratedAppDir(config.projectRoot), 'api', 'v1')
-  const routes = []
-
-  verbose(`[Core Routes] Scanning ${apiDir}`)
-
-  /**
-   * Recursively scan directory for route.ts files
-   * @param {string} dir - Current directory
-   * @param {string} relativePath - Path relative to api/v1/
-   */
-  async function scanForRoutes(dir, relativePath = '') {
-    const entries = await scanDirectory(dir)
-
-    for (const entry of entries) {
-      const fullPath = join(dir, entry.name)
-      const currentRelativePath = relativePath ? `${relativePath}/${entry.name}` : entry.name
-
-      if (entry.isDirectory()) {
-        // Skip excluded patterns (dynamic routes)
-        if (isExcludedDirectory(entry.name)) {
-          verbose(`[Core Routes] Skipping dynamic directory: ${entry.name}`)
-          continue
-        }
-
-        // Recurse into subdirectory
-        await scanForRoutes(fullPath, currentRelativePath)
-      } else if (entry.name === 'route.ts') {
-        // Found a route file - extract methods
-        const routeFilePath = fullPath
-        const methods = await extractHttpMethods(routeFilePath)
-
-        // Build the API path
-        const apiPath = relativePath
-          ? `/api/v1/${relativePath}`
-          : '/api/v1'
-
-        // Determine category based on path
-        const category = getCategoryFromPath(relativePath)
-
-        routes.push({
-          path: apiPath,
-          methods,
-          relativePath: relativePath || '/',
-          category,
-          filePath: `@/app/api/v1${relativePath ? '/' + relativePath : ''}/route`
-        })
-
-        verbose(`[Core Routes] Found: ${apiPath} [${methods.join(', ')}] (${category})`)
-      }
-    }
-  }
-
-  await scanForRoutes(apiDir)
-
-  verbose(`[Core Routes] Discovered ${routes.length} core routes`)
-
-  return routes
-}
-
-/**
- * A generated host's src/app is output of nextspark prepare, never an input of the registries:
- * core's api/v1 routes come from core's route manifest, each read from the core module that
- * implements it (what src/app/api/v1 holds a facade of).
- * @param {object} config
- * @returns {Promise<Array>} the same entries as the src/app scan
- */
-async function discoverManifestCoreRoutes(config) {
   const manifest = await loadCoreRouteManifest({ coreRoot: config.coreDir })
   const routes = []
   for (const route of manifest?.routes ?? []) {
@@ -153,9 +76,7 @@ function getCategoryFromPath(relativePath) {
     'blocks': 'blocks',
     'media': 'media',
     'auth': 'auth',
-    'post-categories': 'content',
-    'plugin': 'plugin',
-    'theme': 'theme'
+    'post-categories': 'content'
   }
 
   return categoryMap[firstSegment] || 'other'

@@ -27,8 +27,8 @@ only prints a notice when the project still carries a committed `src/app` (or
 # Registry generation (generated-project package script)
 pnpm build:registries
 
-# Equivalent direct CLI command
-pnpm exec nextspark registry:build
+# Equivalent direct CLI command (registry:build is a name for prepare)
+pnpm exec nextspark prepare
 
 # TSConfig update
 node node_modules/@nextsparkjs/core/scripts/build/update-tsconfig.mjs
@@ -65,11 +65,11 @@ nextspark <command>
 Commands:
   init              Initialize NextSpark in an existing project
   dev               Start the Next.js development server
-  dev:registry      Start development with a registry watcher
-  build             Generate registries and build for production
-  generate          Generate registries
-  registry:build    Build registries
-  registry:watch    Watch and rebuild registries
+  dev:registry      Start development with Webpack (same as dev --webpack)
+  build             Generate src/app and the registries, then build for production
+  generate          Same as prepare
+  registry:build    Same as prepare
+  registry:watch    Same as prepare --watch
   doctor            Run project health checks
   db:migrate        Run database migrations
   db:seed           Seed sample data
@@ -90,7 +90,7 @@ Consumer projects can invoke the locally installed CLI explicitly through pnpm:
   "scripts": {
     "dev": "pnpm exec nextspark dev",
     "build": "pnpm exec nextspark build",
-    "build:registries": "pnpm exec nextspark registry:build",
+    "build:registries": "pnpm exec nextspark prepare",
     "db:migrate": "pnpm exec nextspark db:migrate"
   }
 }

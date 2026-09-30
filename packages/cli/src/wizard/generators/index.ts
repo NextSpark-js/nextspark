@@ -46,7 +46,6 @@ import { getDefaultProductionSignIn, type ProductionSignInResult } from '../prom
 import { generateMonorepoStructure, isMonorepoProject, getWebDir, reconcileMobileSampleEntities } from './monorepo-generator.js'
 import { isLocalPackageRef } from './local-package-refs.js'
 import { writeProxyFile, type ProxyFileResult } from './proxy-file-writer.js'
-import { ensureGeneratedPathsIgnored } from '../../utils/templates-gitignore.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -270,7 +269,7 @@ export async function updatePackageJson(config: WizardConfig): Promise<void> {
     'build': 'nextspark build',
     'start': 'next start',
     'lint': 'eslint .',
-    'build:registries': 'nextspark registry:build',
+    'build:registries': 'nextspark prepare',
     'db:migrate': 'nextspark db:migrate',
     'db:seed': 'nextspark db:seed',
     'update-core': 'node node_modules/@nextsparkjs/core/scripts/maintenance/update-core.mjs',
@@ -451,8 +450,6 @@ tests/jest/coverage
     } else if (!currentContent.split('\n').some(line => line.trim() === 'src/app/')) {
       await fs.appendFile(gitignorePath, `${currentContent.endsWith('\n') ? '' : '\n'}# Generated Next.js host: nextspark prepare (and dev, build) writes all of it; never edit\nsrc/app/\n`)
     }
-    // A .gitignore with the NextSpark entries may still lack some of these
-    ensureGeneratedPathsIgnored(path.dirname(gitignorePath), { writeFileSync: (file, data) => fs.writeFileSync(file, data) })
   } else {
     await fs.writeFile(gitignorePath, entriesToAdd.trim())
   }

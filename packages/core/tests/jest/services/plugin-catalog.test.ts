@@ -56,13 +56,4 @@ describe('PluginService catalog', () => {
     expect(PluginService.getCatalogEntry('walkme')?.capabilities).toEqual(['web'])
     expect(PluginService.getCatalogEntry('missing')).toBeUndefined()
   })
-
-  it('never reports a disabled or unknown plugin as enabled', () => {
-    expect(PluginService.isEnabled('langchain')).toBe(true) // the executable config
-    expect(PluginService.isEnabled('ai')).toBe(false) // the executable config wins over the catalog's literal
-    expect(PluginService.isEnabled('amplitude')).toBe(false) // web-only: the catalog's literal
-    expect(PluginService.isEnabled('walkme')).toBe(true)
-    expect(PluginService.isEnabled('tooling')).toBeNull() // computed at run time: unknown
-    expect(PluginService.isEnabled('missing')).toBeNull()
-  })
 })

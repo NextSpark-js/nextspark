@@ -413,7 +413,6 @@ Registry -> Service mapping:
 | route-handlers.ts | route-handler.service.ts |
 | block-registry.ts | block.service.ts |
 | translation-registry.ts | translation.service.ts |
-| template-registry.ts | template.service.ts |
 | plugin-registry.ts | plugin.service.ts |
 
 Reference: .claude/config/workflow.md > Data-Only Registry Pattern

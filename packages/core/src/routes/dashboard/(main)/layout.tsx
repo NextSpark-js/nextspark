@@ -6,8 +6,8 @@
  * 2. Server-side permission validation for entity routes
  * 3. Rendering the DashboardShell with entity navigation
  *
- * IMPORTANT: Permission checking MUST be in this layout (not in [entity]/layout.tsx)
- * because (templates) routes with specific paths take precedence over dynamic [entity] routes.
+ * The permission check of each entity's routes is its own generated layout (entity-permission-layout), because
+ * the generated host writes one concrete route per entity.
  */
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'

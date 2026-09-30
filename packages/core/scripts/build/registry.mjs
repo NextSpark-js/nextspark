@@ -13,15 +13,15 @@ import '../utils/console-guard.mjs'
  * - Unified plugin, entity, theme, and config discovery
  * - API endpoint registry generation
  * - TypeScript type generation
- * - Watch mode for development
- * - Turbo-compatible caching
  * - Dynamic project root support (NPM mode)
+ *
+ * Writes registries only, under .nextspark/registries (or NEXTSPARK_REGISTRIES_OUT). `nextspark prepare`
+ * runs it into a staging directory and publishes the result together with the generated src/app
+ * (registry/host/prepare.mjs); nothing here writes into src/app.
  */
 
 import { join, dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
-import { existsSync } from 'fs'
-import { lstat, readdir, readFile } from 'fs/promises'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -38,7 +38,6 @@ import { getBasename } from '../utils/paths.mjs'
 import { getConfig, validateEnvironment } from './registry/config.mjs'
 import { unsafeWritePlaces, unsafeWritePlacesLines } from './registry/write-places.mjs'
 import { projectFiles } from './safe-fs.mjs'
-import { ensureRegistriesGitignore, trackedFilesUnder, trackedRegistriesLines } from './registry/post-build/own-gitignores.mjs'
 
 // Import discovery modules (migrated from this file)
 import { discoverParentChildRelations } from './registry/discovery/parent-child.mjs'
@@ -49,7 +48,6 @@ import { discoverPlugins } from './registry/discovery/plugins.mjs'
 import { pluginsFor } from './registry/discovery/plugin-capabilities.mjs'
 import { discoverThemes } from './registry/discovery/themes.mjs'
 import { discoverMiddlewares } from './registry/discovery/middlewares.mjs'
-import { discoverTemplates } from './registry/discovery/templates.mjs'
 import { discoverEmails } from './registry/discovery/emails.mjs'
 import { discoverBlocks } from './registry/discovery/blocks.mjs'
 import { discoverIcons } from './registry/discovery/icons.mjs'
@@ -62,12 +60,6 @@ import { generatePluginCatalog } from './registry/generators/plugin-catalog.mjs'
 import { generateEntityRegistry, generateEntityRegistryClient } from './registry/generators/entity-registry.mjs'
 import { generateEntityTypes } from './registry/generators/entity-types.mjs'
 import { generateThemeRegistry, generateThemeRegistryClient, generateAppConfigClient, generateDashboardConfigClient, generateDevKeyringClient } from './registry/generators/theme-registry.mjs'
-import {
-  generateTemplateRegistry,
-  generateTemplateRegistryClient,
-  generateTemplateScopeRegistries,
-  SCOPE_MARKER
-} from './registry/generators/template-registry.mjs'
 import { generateEmailRegistry } from './registry/generators/email-registry.mjs'
 import { generateBlockRegistry, generateBlockRegistryClient, generateBlockRegistryLazy, generateBlockSchemas } from './registry/generators/block-registry.mjs'
 import { generateIconRegistry } from './registry/generators/icon-registry.mjs'
@@ -86,19 +78,14 @@ import { generateDocsRegistry } from './registry/generators/docs-registry.mjs'
 import { generateApiPresetsRegistry, generateApiDocsRegistry } from './registry/generators/api-presets-registry.mjs'
 import { generateMcpRegistry } from './registry/generators/mcp-registry.mjs'
 import {
-  analyzeTemplates,
-  generateMissingPages,
   displayTreeStructure,
   generateTestEntitiesJson,
-  generateTestBlocksJson,
-  cleanupOldRouteFiles
+  generateTestBlocksJson
 } from './registry/post-build/index.mjs'
-import { watchContents } from './registry/watch.mjs'
-import { syncAppGlobalsCss } from './theme.mjs'
 
 // ==================== Registry File Generation ====================
 
-async function generateRegistryFiles(CONFIG, plugins, entities, themes, templates, templateAnalysis, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData) {
+async function generateRegistryFiles(CONFIG, plugins, entities, themes, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData) {
   log('Generating registry files...', 'build')
 
   try {
@@ -106,23 +93,6 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
 
     // Ensure output directory exists
     await files.mkdir(CONFIG.outputDir, { recursive: true })
-
-    // The registries git doesn't track yet are kept out of git by a .gitignore
-    // of their own, in place before the first one is written, whatever the
-    // project's rules say; the ones it tracks stay tracked, and that is said.
-    // A generated host's prepare publishes the staged registries itself.
-    if (!CONFIG.generatedHost) {
-      if (await ensureRegistriesGitignore(CONFIG.projectRoot)) {
-        log('.gitignore', 'success')
-      }
-      const trackedRegistries = trackedFilesUnder(CONFIG.projectRoot, '.nextspark/registries')
-      if (trackedRegistries.length > 0) {
-        for (const line of trackedRegistriesLines(trackedRegistries.length)) log(line, 'warning')
-      }
-    }
-
-    // Generate client template registry (async - needs to check for server exports)
-    const templateRegistryClientContent = await generateTemplateRegistryClient(templates, CONFIG, templateAnalysis)
 
     // Collect the icon names configs can ask for by string (async - reads configs)
     const iconNames = await discoverIcons(blocks, CONFIG)
@@ -145,10 +115,8 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'app-config.client.ts', content: generateAppConfigClient(themes, CONFIG) },
       { name: 'dashboard-config.client.ts', content: generateDashboardConfigClient(themes, CONFIG) },
       { name: 'dev-keyring.client.ts', content: generateDevKeyringClient(themes, CONFIG) },
-      { name: 'route-handlers.ts', content: generateRouteHandlersRegistry(serverPlugins, themes, coreRoutes, entities, CONFIG) },
+      { name: 'route-handlers.ts', content: generateRouteHandlersRegistry(serverPlugins, themes, coreRoutes, entities) },
       { name: 'translation-registry.ts', content: generateTranslationRegistry(themes, CONFIG) },
-      { name: 'template-registry.ts', content: await generateTemplateRegistry(templates, CONFIG, templateAnalysis) },
-      { name: 'template-registry.client.ts', content: templateRegistryClientContent },
       { name: 'email-registry.ts', content: generateEmailRegistry(emails, CONFIG) },
       { name: 'block-registry.ts', content: generateBlockRegistry(blocks, CONFIG) },
       { name: 'block-registry.client.ts', content: generateBlockRegistryClient(blocks, CONFIG) },
@@ -165,7 +133,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'api-presets-registry.ts', content: generateApiPresetsRegistry(apiPresetsData, CONFIG) },
       { name: 'api-docs-registry.ts', content: generateApiDocsRegistry(apiPresetsData, CONFIG) },
       { name: 'mcp-registry.ts', content: generateMcpRegistry(mcpOverridesData, CONFIG) },
-      { name: 'index.ts', content: generateUnifiedRegistry(serverPlugins, entities, themes, templates, middlewares, CONFIG) }
+      { name: 'index.ts', content: generateUnifiedRegistry(serverPlugins, entities, themes, middlewares, CONFIG) }
     ]
 
     for (const file of registries) {
@@ -173,52 +141,6 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       await files.writeFile(filePath, file.content, 'utf8')
       log(`${file.name}`, 'success')
     }
-
-    // Each route imports its own tiny registry rather than the global one.
-    // Build a complete replacement before cleanup so a theme change can never
-    // leave an existing route pointing at an old component import.
-    const templateScopes = await generateTemplateScopeRegistries(templates, CONFIG, templateAnalysis)
-    await files.mkdir(templateScopes.directory, { recursive: true })
-    const generated = new Set(templateScopes.files.map(file => file.path))
-
-    async function removeStaleScopedFiles(directory) {
-      let entries
-      try {
-        entries = await readdir(directory, { withFileTypes: true })
-      } catch (error) {
-        if (error?.code === 'ENOENT') return
-        throw error
-      }
-      for (const entry of entries) {
-        const path = join(directory, entry.name)
-        const stat = await lstat(path)
-        if (stat.isSymbolicLink()) continue
-        if (stat.isDirectory()) {
-          await removeStaleScopedFiles(path)
-          continue
-        }
-        if (!stat.isFile() || generated.has(path) || !path.endsWith('.ts')) continue
-        // Only files bearing our explicit marker are owned by this generator.
-        if ((await readFile(path, 'utf8')).includes(SCOPE_MARKER)) await files.rm(path, { force: true })
-      }
-      if (directory !== templateScopes.directory) {
-        try {
-          const remaining = await readdir(directory)
-          if (remaining.length === 0) {
-            await files.rmdir(directory)
-          }
-        } catch {
-          // Ignore if directory disappeared or cannot be removed
-        }
-      }
-    }
-
-    await removeStaleScopedFiles(templateScopes.directory)
-    for (const file of templateScopes.files) {
-      await files.mkdir(dirname(file.path), { recursive: true })
-      await files.writeFile(file.path, file.content, 'utf8')
-    }
-    log(`template-scopes (${templateScopes.files.length / 2})`, 'success')
 
   } catch (error) {
     logFailure('Error writing registry files', error)
@@ -278,20 +200,15 @@ export async function buildRegistries(projectRoot = null) {
   const startTime = Date.now()
 
   try {
-    // Keep the generated host stylesheet pointed at project-owned styles. A generated host
-    // (NEXTSPARK_GENERATED_HOST=1) owns src/app through nextspark prepare: nothing here writes there.
-    if (!CONFIG.generatedHost) syncAppGlobalsCss(CONFIG)
-
     // Initialize parent-child discovery FIRST (needed for dynamic parseChildEntity)
     log('→ Initializing dynamic parent-child discovery...', 'info')
     await discoverParentChildRelations(CONFIG)
 
     // Discover all content types in parallel (pass CONFIG to each)
-    const [plugins, coreEntities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData] = await Promise.all([
+    const [plugins, coreEntities, themes, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData] = await Promise.all([
       discoverPlugins(CONFIG),
       discoverCoreEntities(CONFIG),
       discoverThemes(CONFIG),
-      discoverTemplates(CONFIG),
       discoverMiddlewares(CONFIG),
       discoverBlocks(CONFIG),
       discoverPermissionsConfig(CONFIG),
@@ -313,31 +230,17 @@ export async function buildRegistries(projectRoot = null) {
     // PHASE 3 VALIDATION: Ensure all entities have access.shared defined
     await validateEntityConfigurations(allEntities, CONFIG)
 
-    const totalContents = plugins.length + allEntities.length + themes.length + templates.length + middlewares.length + blocks.length
+    const totalContents = plugins.length + allEntities.length + themes.length + middlewares.length + blocks.length
 
-    if (totalContents === 0) {
-      log('No contents found!', 'warning')
-      return
-    }
+    // A project with no contents still gets its (empty) registries: the host publishes them with src/app
+    if (totalContents === 0) log('No contents found!', 'warning')
 
     // Display beautiful tree structure
     displayTreeStructure(plugins, themes, coreEntities)
 
-    // Parse every theme template once, before anything is written. Both template
-    // registries and the page generator take what they need to know about a
-    // template from this, so a template saved while a build runs (watch mode)
-    // can't look one way to one of them and another way to the next.
-    const templateAnalysis = await analyzeTemplates(templates, CONFIG)
-
-    // Clean up old generated route files first
-    if (!CONFIG.generatedHost) await cleanupOldRouteFiles(CONFIG)
-
     // Hoist plugin dependencies to root workspace for proper resolution
     // Generate all registry files (use aggregated entities for entity registry + blocks)
-    await generateRegistryFiles(CONFIG, plugins, allEntities, themes, templates, templateAnalysis, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData)
-
-    // Generate missing pages for templates that don't have core app pages
-    if (!CONFIG.generatedHost) await generateMissingPages(templates, CONFIG, templateAnalysis)
+    await generateRegistryFiles(CONFIG, plugins, allEntities, themes, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData)
 
     // Generate test fixtures for the root-first project.
     await generateTestEntitiesJson(allEntities, themes, CONFIG)
@@ -396,24 +299,11 @@ export async function buildRegistries(projectRoot = null) {
     console.log(`   Plugins: ${plugins.length}`)
     console.log(`   Entities: ${allEntities.length}`)
     console.log(`   Themes: ${themes.length}`)
-    console.log(`   Templates: ${templates.length}`)
     console.log(`   Blocks: ${blocks.length}`)
     console.log(`   Total: ${totalContents}`)
     console.log(`   Build time: ${buildTime}ms`)
     console.log()
     console.log(`🎯 All content types now accessible with zero I/O operations`)
-
-
-    if (templates.length > 0) {
-      console.log(`📄 Template overrides: ${templates.length} templates discovered`)
-      const groupedByTheme = templates.reduce((acc, t) => {
-        acc[t.themeName] = (acc[t.themeName] || 0) + 1
-        return acc
-      }, {})
-      Object.entries(groupedByTheme).forEach(([theme, count]) => {
-        console.log(`   ${theme}: ${count} templates`)
-      })
-    }
 
   } catch (error) {
     logFailure('Build failed', error, CONFIG.verbose)
@@ -423,25 +313,14 @@ export async function buildRegistries(projectRoot = null) {
 // ==================== Direct Execution (Backward Compatibility) ====================
 
 async function main() {
-  // Get config for detecting run mode (no projectRoot = auto-detect)
-  const config = getConfig()
-
-  if (config.buildMode) {
-    log('Running in BUILD mode (watch disabled)', 'build')
-    // One-time build for production/CI
-    await buildRegistries()
-  } else if (config.watchMode) {
-    log('Running in WATCH mode (development)', 'info')
-    // Initial build
-    await buildRegistries()
-
-    // Start watching
-    await watchContents(buildRegistries, getConfig())
-  } else {
-    log('Running in ONE-TIME mode', 'info')
-    // One-time build
-    await buildRegistries()
+  if (process.argv.includes('--watch')) {
+    console.error('registry.mjs no longer watches: nextspark prepare --watch (or nextspark dev) regenerates src/app and the registries on source changes.')
+    process.exit(1)
   }
+  // One build, whatever the flags: `--build` is what `nextspark prepare` passes, and regenerating
+  // on source changes is the generated host's watcher (registry/host/prepare.mjs watchHost)
+  log('Running in BUILD mode', 'build')
+  await buildRegistries()
 }
 
 // Handle graceful shutdown

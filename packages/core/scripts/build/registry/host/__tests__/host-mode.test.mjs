@@ -38,7 +38,7 @@ test('resolveHostMode: host for no src/app, placeholders only, or a valid record
     assert.equal(mode(), 'host', 'empty directories and placeholders only')
     write(root, 'src/app/layout.tsx', 'export default function Layout({ children }) { return children }\n')
     const legacy = resolveHostMode({ coreRoot: CORE_ROOT, projectRoot: root })
-    assert.deepEqual(Object.keys(legacy).sort(), ['mode', 'reason'], 'no warning: legacy mode is silent')
+    assert.deepEqual(Object.keys(legacy).sort(), ['mode', 'reason'])
     assert.equal(legacy.mode, 'legacy-app')
     for (const invalid of ['{}', 'not json', JSON.stringify({ schemaVersion: 1, files: { '../package.json': 'x' } }), JSON.stringify({ schemaVersion: 99, files: {} })]) {
       write(root, GENERATION_FILE, invalid)
@@ -114,22 +114,17 @@ test('placeholders in src/app (.gitkeep, README.md) are left untouched by a gene
   }
 })
 
-test('a legacy app tree keeps the legacy registry build silently; --check reports legacy mode, never fresh', { timeout: 300_000 }, () => {
+test('a committed app tree is not prepared: check, prepare, production and watch fail pointing to nextspark migrate, and nothing is written', { timeout: 300_000 }, () => {
   const { root, cleanup } = project({ legacyApp: true })
   try {
-    const checked = run(root, ['--check'])
-    assert.equal(checked.status, 1, checked.stderr)
-    assert.match(checked.stderr, /Legacy mode: src\/app is not a generated host/)
-    assert.doesNotMatch(`${checked.stdout}${checked.stderr}`, /nextspark migrate|Warning:/)
-    assert.equal(existsSync(join(root, '.nextspark')), false, 'check writes nothing')
-
-    const prepared = run(root, [])
-    assert.equal(prepared.status, 0, `${prepared.stdout}\n${prepared.stderr}`)
-    assert.doesNotMatch(`${prepared.stdout}${prepared.stderr}`, /nextspark migrate|Warning: src\/app/, 'silent')
-    assert.match(prepared.stdout, /Registry System built successfully/, 'the legacy registry build ran')
-    assert.equal(existsSync(join(root, '.nextspark/generation.json')), false, 'no generation took the app over')
+    for (const args of [['--check'], [], ['--production'], ['--watch'], ['--check', '--dev']]) {
+      const result = run(root, args)
+      assert.equal(result.status, 1, `${args.join(' ')}: ${result.stdout}${result.stderr}`)
+      assert.match(result.stderr, /src\/app holds a committed app tree that nextspark did not generate/, args.join(' '))
+      assert.match(result.stderr, /nextspark migrate/, args.join(' '))
+    }
+    assert.equal(existsSync(join(root, '.nextspark')), false, 'nothing was written')
     assert.equal(read(root, 'src/app/layout.tsx'), 'export default function Layout({ children }) { return children }\n', 'the committed tree is untouched')
-    assert.ok(readdirSync(join(root, '.nextspark/registries')).includes('index.ts'))
   } finally {
     cleanup()
   }

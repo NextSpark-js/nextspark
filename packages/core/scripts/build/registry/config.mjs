@@ -31,7 +31,6 @@ export function getConfig(projectRoot = null) {
     // `nextspark prepare` for a generated host stages the registries before publishing them
     // (host/prepare.mjs): it points the build at its staging directory inside .nextspark/.
     ...(process.env.NEXTSPARK_REGISTRIES_OUT ? { outputDir: resolve(paths.projectRoot, process.env.NEXTSPARK_REGISTRIES_OUT) } : {}),
-    generatedHost: process.env.NEXTSPARK_GENERATED_HOST === '1',
     projectName,
     pluginRequests: nextsparkConfig.plugins,
     pluginSources,
@@ -39,7 +38,6 @@ export function getConfig(projectRoot = null) {
     plugins: pluginSources.map(plugin => plugin.name),
     features: nextsparkConfig.features,
     billing: nextsparkConfig.billing,
-    watchMode: process.argv.includes('--watch') && !process.argv.includes('--build'),
     buildMode: process.argv.includes('--build'),
     verbose: process.argv.includes('--verbose') || process.argv.includes('-v'),
   }

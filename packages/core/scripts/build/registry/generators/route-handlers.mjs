@@ -1,27 +1,23 @@
 /**
  * Route Handlers Registry Generator
  *
- * Generates route-handlers.ts with:
- * - THEME_ROUTE_HANDLERS: Executable handlers for theme custom routes
- * - PLUGIN_ROUTE_HANDLERS: Executable handlers for plugin custom routes
- * - API_ROUTES_METADATA: Documentation metadata for all routes (core, entities, theme, plugins)
+ * Generates route-handlers.ts: API_ROUTES_METADATA, the documentation metadata of every route
+ * (core, entities, project, plugins), at the URLs the generated host serves them at. No handler is
+ * imported or executed here: the host writes every project and plugin route as a route file of its own.
  *
  * @module core/scripts/build/registry/generators/route-handlers
  */
 
 /**
- * Generate Route Handlers Registry
- * Auto-generates static imports for all theme and plugin route handlers
- * Ensures ZERO runtime dynamic imports - all resolved at build time
+ * Generate Route Handlers Registry (API routes metadata)
  *
  * @param {Array} plugins - Discovered plugins
  * @param {Array} themes - Discovered themes
  * @param {Array} coreRoutes - Discovered core routes from app/api/v1/
  * @param {Array} entities - Discovered entities for metadata
- * @param {object} config - Configuration object from getConfig()
  * @returns {string} Generated TypeScript content
  */
-export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], entities = [], config) {
+export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], entities = []) {
   const filteredThemes = themes
   const filteredPlugins = plugins
 
@@ -31,15 +27,10 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
     if (theme.routeFiles && theme.routeFiles.length > 0) {
       theme.routeFiles.forEach(route => {
         const routeKey = route.relativePath === '/' ? '' : route.relativePath
-        // No .ts extension - Next.js resolves extensions automatically on all platforms
-        const routeFile = route.relativePath === '/' ? '/route' : '/' + route.relativePath + '/route'
-        const filePath = `@/api${routeFile}`
         themeRoutes.push({
           themeName: theme.name,
           routePath: routeKey,
-          filePath,
-          methods: route.methods,
-          importKey: `theme_${theme.name.replace(/-/g, '_')}_${routeKey.replace(/[\\/\-\[\]]/g, '_') || 'root'}`
+          methods: route.methods
         })
       })
     }
@@ -51,45 +42,14 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
     if (plugin.routeFiles && plugin.routeFiles.length > 0) {
       plugin.routeFiles.forEach(route => {
         const routeKey = route.relativePath === '/' ? '' : route.relativePath
-        // No .ts extension - Next.js resolves extensions automatically on all platforms
-        const routeFile = route.relativePath === '/' ? '/route' : '/' + route.relativePath + '/route'
-        const filePath = `${plugin.importBase}/api${routeFile}`
         pluginRoutes.push({
           pluginName: plugin.name,
           routePath: routeKey,
-          filePath,
-          methods: route.methods,
-          importKey: `plugin_${plugin.name.replace(/-/g, '_')}_${routeKey.replace(/[\\/\-\[\]]/g, '_') || 'root'}`
+          methods: route.methods
         })
       })
     }
   })
-
-  // A generated host serves every project and plugin route as a route file of its own (`nextspark prepare`
-  // writes them): nothing here executes a handler, so nothing imports one - the registry is documentation
-  // metadata only, at the URLs the routes are served at. The legacy dispatchers keep the handlers.
-  const generatedHost = config?.generatedHost === true
-
-  // Generate imports for executable handlers
-  const imports = []
-  const allRoutes = generatedHost ? [] : [...themeRoutes, ...pluginRoutes]
-  allRoutes.forEach(route => {
-    imports.push(`import * as ${route.importKey} from '${route.filePath}'`)
-  })
-
-  // Generate theme handlers
-  const themeHandlersCode = (generatedHost ? [] : themeRoutes).map(route => {
-    const routeKey = `${route.themeName}/${route.routePath}`
-    const methodsCode = route.methods.map(method => `    ${method}: ${route.importKey}.${method} as RouteHandler`).join(',\n')
-    return `  '${routeKey}': {\n${methodsCode}\n  }`
-  }).join(',\n')
-
-  // Generate plugin handlers
-  const pluginHandlersCode = (generatedHost ? [] : pluginRoutes).map(route => {
-    const routeKey = `${route.pluginName}/${route.routePath}`
-    const methodsCode = route.methods.map(method => `    ${method}: ${route.importKey}.${method} as RouteHandler`).join(',\n')
-    return `  '${routeKey}': {\n${methodsCode}\n  }`
-  }).join(',\n')
 
   // ==================== API_ROUTES_METADATA Generation ====================
 
@@ -124,7 +84,7 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
 
   // Generate theme routes metadata
   const themeRoutesMetadata = themeRoutes.map(route => ({
-    path: generatedHost ? `/api${route.routePath ? '/' + route.routePath : ''}` : `/api/v1/theme/${route.themeName}${route.routePath ? '/' + route.routePath : ''}`,
+    path: `/api${route.routePath ? '/' + route.routePath : ''}`,
     methods: route.methods,
     category: 'theme',
     source: route.themeName
@@ -132,7 +92,7 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
 
   // Generate plugin routes metadata
   const pluginRoutesMetadata = pluginRoutes.map(route => ({
-    path: `${generatedHost ? '/api/plugins' : '/api/v1/plugin'}/${route.pluginName}${route.routePath ? '/' + route.routePath : ''}`,
+    path: `/api/plugins/${route.pluginName}${route.routePath ? '/' + route.routePath : ''}`,
     methods: route.methods,
     category: 'plugin',
     source: route.pluginName
@@ -173,22 +133,7 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
  * Total routes: ${totalRoutes}
  *
  * DO NOT EDIT - This file is auto-generated by scripts/build-registry.mjs
- *
- * ZERO runtime dynamic imports - all route handlers resolved at build time.
- * Provides ~17,255x performance improvement over runtime I/O.
  */
-
-import type { NextRequest, NextResponse } from 'next/server'
-
-${imports.length > 0 ? imports.join('\n') : '// No route imports needed'}
-
-/**
- * Route handler type definition
- */
-export type RouteHandler = (
-  request: NextRequest,
-  context: { params: Promise<any> }
-) => Promise<NextResponse>
 
 /**
  * API Route entry for documentation
@@ -199,22 +144,6 @@ export interface ApiRouteEntry {
   category: 'core' | 'entity' | 'theme' | 'plugin'
   source?: string
   subcategory?: string
-}
-
-/**
- * Theme Route Handlers Registry
- * Access: THEME_ROUTE_HANDLERS['theme-name/route-path'][HTTP_METHOD]
- */
-export const THEME_ROUTE_HANDLERS: Record<string, Record<string, RouteHandler | undefined>> = {
-${themeHandlersCode || (generatedHost ? '  // The generated host serves project routes as route files of their own' : '  // No theme routes discovered')}
-}
-
-/**
- * Plugin Route Handlers Registry
- * Access: PLUGIN_ROUTE_HANDLERS['plugin-name/route-path'][HTTP_METHOD]
- */
-export const PLUGIN_ROUTE_HANDLERS: Record<string, Record<string, RouteHandler | undefined>> = {
-${pluginHandlersCode || (generatedHost ? '  // The generated host serves plugin routes as route files of their own' : '  // No plugin routes discovered')}
 }
 
 // ==================== API ROUTES METADATA ====================
@@ -261,10 +190,6 @@ export const API_ROUTES_SUMMARY = {
 }
 
 // ==================== Service Layer ====================
-// Query functions have been moved to: @nextsparkjs/core/lib/services/route-handler.service
-// For route handler queries, import:
-// import { RouteHandlerService } from '@nextsparkjs/core/lib/services/route-handler.service'
-//
 // For API routes metadata queries, import:
 // import { ApiRoutesService } from '@nextsparkjs/core/lib/services/api-routes.service'
 `
