@@ -329,7 +329,21 @@ test('core\'s routes carry their protection level, so a composed layout can be t
   const withCc = await loadCoreRouteManifest({ coreRoot, cacheComponents: true })
   assert.equal(withCc.routes.find(route => route.target === 'layout.tsx').compose.specifier, '@nextsparkjs/core/routes/_internal/root-layout.ppr')
   assert.equal(withCc.routes.find(route => route.target === '(auth)/login/page.tsx').specifier, '@nextsparkjs/core/routes/(auth)/login/page.cc')
-  assert.deepEqual(withCc.variantsApplied.sort(), ['(auth)/login/page.tsx', '(auth)/signup/page.tsx', '(public)/docs/[section]/[page]/page.tsx', 'layout.tsx', 'superadmin/docs/[section]/[page]/page.tsx'])
+  assert.deepEqual(withCc.variantsApplied.sort(), [
+    '(auth)/layout.tsx', '(auth)/login/page.tsx', '(auth)/signup/page.tsx', '(public)/docs/[section]/[page]/page.tsx', '(public)/layout.tsx',
+    'dashboard/layout.tsx', 'devtools/layout.tsx', 'layout.tsx', 'superadmin/docs/[section]/[page]/page.tsx', 'superadmin/layout.tsx',
+  ])
+  // The layouts that load messages keep their wrapper (from the Cache Components module) and their protection level
+  const ccLevel = target => withCc.routes.find(route => route.target === target)
+  const GROUP_LAYOUTS = '@nextsparkjs/core/routes/_internal/group-layouts.cc'
+  assert.deepEqual(withCc.routes.filter(route => route.compose && route.target !== 'layout.tsx').map(route => [route.target, route.compose.wrapper, route.compose.specifier]), [
+    ['(auth)/layout.tsx', 'withAuthMessages', GROUP_LAYOUTS],
+    ['(public)/layout.tsx', 'withPublicMessages', GROUP_LAYOUTS],
+    ['devtools/layout.tsx', 'withDevtoolsGuard', GROUP_LAYOUTS],
+    ['superadmin/layout.tsx', 'withSuperadminGuard', GROUP_LAYOUTS],
+  ])
+  assert.equal(ccLevel('dashboard/layout.tsx').specifier, '@nextsparkjs/core/routes/dashboard/layout.cc')
+  for (const target of ['layout.tsx', 'dashboard/layout.tsx']) assert.equal(ccLevel(target).protectionLevel, level(target).protectionLevel, target)
 })
 
 test('planHost without a project (or a project without a root) plans core and the plugins only, without throwing', () => {

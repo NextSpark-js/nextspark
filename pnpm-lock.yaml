@@ -466,6 +466,9 @@ importers:
       typescript:
         specifier: ^5 || ^6
         version: 5.9.3
+      use-intl:
+        specifier: ^4.9.1
+        version: 4.11.0(react@19.2.4)
       uuid:
         specifier: ^13.0.0
         version: 13.0.0

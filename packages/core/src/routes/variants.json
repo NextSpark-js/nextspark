@@ -10,6 +10,47 @@
       }
     },
     {
+      "kind": "layout",
+      "target": "(auth)/layout.tsx",
+      "specifier": "@nextsparkjs/core/routes/(auth)/layout.cc",
+      "compose": {
+        "wrapper": "withAuthMessages",
+        "specifier": "@nextsparkjs/core/routes/_internal/group-layouts.cc"
+      }
+    },
+    {
+      "kind": "layout",
+      "target": "(public)/layout.tsx",
+      "specifier": "@nextsparkjs/core/routes/(public)/layout.cc",
+      "compose": {
+        "wrapper": "withPublicMessages",
+        "specifier": "@nextsparkjs/core/routes/_internal/group-layouts.cc"
+      }
+    },
+    {
+      "kind": "layout",
+      "target": "superadmin/layout.tsx",
+      "specifier": "@nextsparkjs/core/routes/superadmin/layout.cc",
+      "compose": {
+        "wrapper": "withSuperadminGuard",
+        "specifier": "@nextsparkjs/core/routes/_internal/group-layouts.cc"
+      }
+    },
+    {
+      "kind": "layout",
+      "target": "devtools/layout.tsx",
+      "specifier": "@nextsparkjs/core/routes/devtools/layout.cc",
+      "compose": {
+        "wrapper": "withDevtoolsGuard",
+        "specifier": "@nextsparkjs/core/routes/_internal/group-layouts.cc"
+      }
+    },
+    {
+      "kind": "layout",
+      "target": "dashboard/layout.tsx",
+      "specifier": "@nextsparkjs/core/routes/dashboard/layout.cc"
+    },
+    {
       "kind": "page",
       "target": "(auth)/login/page.tsx",
       "specifier": "@nextsparkjs/core/routes/(auth)/login/page.cc"

@@ -72,12 +72,16 @@ export const CORE_COMPOSITION_WRAPPERS = Object.freeze({
   [`${INTERNAL}public-layout`]: ['withPublicMessages'],
   [`${INTERNAL}superadmin-layout`]: ['withSuperadminGuard'],
   [`${INTERNAL}devtools-layout`]: ['withDevtoolsGuard'],
+  // The Cache Components modules (variants.json): the same wrappers over that mode's messages, each imported from the module
+  // that exports it. `withSuperadminMessages` / `withDevtoolsMessages` stay absent here too.
+  [`${INTERNAL}group-layouts.cc`]: ['withAuthMessages', 'withPublicMessages', 'withSuperadminGuard', 'withDevtoolsGuard'],
   [`${INTERNAL}entity-layout-route`]: ['createEntityLayoutRoute'],
   [`${INTERNAL}entity-list-route`]: ['createEntityListRoute'],
   [`${INTERNAL}entity-detail-route`]: ['createEntityDetailRoute'],
   [`${INTERNAL}entity-create-route`]: ['createEntityCreateRoute'],
   [`${INTERNAL}entity-edit-route`]: ['createEntityEditRoute'],
   [`${INTERNAL}public-item-route`]: ['createPublicItemRoute', 'createPublicItemMetadata'],
+  [`${INTERNAL}public-item-route.cc`]: ['createPublicItemRoute', 'createPublicItemMetadata'],
   [`${INTERNAL}public-archive-route`]: ['createPublicArchiveRoute', 'createPublicArchiveMetadata'],
   [`${INTERNAL}billing-webhooks`]: ['createStripeWebhookRoute', 'createPolarWebhookRoute'],
   [DEV_STATUS_SPECIFIER]: [DEV_STATUS_WRAPPER],

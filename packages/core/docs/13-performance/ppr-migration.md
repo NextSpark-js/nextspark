@@ -65,8 +65,9 @@ With `cacheComponents: true` detected, the translation registry will now generat
 
 ### 5. PPR layout
 
-Nothing to copy: with `cacheComponents: true` the generated host uses core's PPR layout
-(`@nextsparkjs/core/routes/layout.ppr`) for the root layout by itself.
+Nothing to copy: with `cacheComponents: true` in `next.config`, `nextspark prepare` emits the PPR root layout
+(`@nextsparkjs/core/routes/layout.ppr`), core's `layout.cc.tsx` variants of the group layouts (auth, public, devtools,
+superadmin, dashboard) and the cached public item pages by itself.
 
 Key differences from the default layout:
 - **Sync function** (not async) — enables PPR static shell

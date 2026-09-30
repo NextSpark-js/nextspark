@@ -17,6 +17,7 @@ import { PatternsResolverService } from '@nextsparkjs/core/lib/blocks/patterns-r
 import { extractPatternIds, resolvePatternReferences } from '@nextsparkjs/core/lib/blocks/pattern-resolver'
 import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
 import type { PatternReference } from '@nextsparkjs/core/types/pattern-reference'
+import type { Pattern } from '@nextsparkjs/core/types/pattern-reference'
 
 /**
  * Base fields that all builder-enabled entities have (from migrations)
@@ -90,10 +91,13 @@ export function buildPublicSelectClause(entity: EntityConfig): string {
  * This ensures public pages show the actual pattern content.
  *
  * @param blocks - Blocks array which may contain pattern references
+ * @param getPatterns - where the referenced patterns are read from (the database; the Cache Components
+ *   host passes a cached read)
  * @returns Resolved blocks array with patterns expanded
  */
 export async function getResolvedBlocks(
-  blocks: (BlockInstance | PatternReference)[]
+  blocks: (BlockInstance | PatternReference)[],
+  getPatterns: (ids: string[]) => Promise<Pattern[]> = ids => PatternsResolverService.getByIds(ids)
 ): Promise<BlockInstance[]> {
   // Extract pattern IDs from blocks array
   const patternIds = extractPatternIds(blocks)
@@ -105,7 +109,7 @@ export async function getResolvedBlocks(
 
   try {
     // Batch fetch all referenced patterns (only published ones)
-    const patterns = await PatternsResolverService.getByIds(patternIds)
+    const patterns = await getPatterns(patternIds)
 
     // Build pattern cache (Map for O(1) lookup)
     const patternCache = new Map(patterns.map((p) => [p.id, p]))

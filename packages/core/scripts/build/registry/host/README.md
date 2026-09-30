@@ -232,8 +232,15 @@ The plan also refuses what Next.js would fail on later, with the routes named: t
 groups (`NS_HOST_URL_CONFLICT`) and dynamic segments it cannot tell apart at one level (`[slug]` and `[entity]`, `[...a]`
 and `[[...a]]`: `NS_HOST_DYNAMIC_SEGMENT_CONFLICT`).
 
-**Cache Components** variants of the routes whose segment config Next.js rejects with it (login, signup and both docs pages:
-`dynamic`, `dynamicParams`) are core's `page.cc.tsx` files, listed in `routes/variants.json` and used when the project's
-next.config says `cacheComponents: true`, like the PPR root layout. The public item routes omit `revalidate` in that mode.
+**Cache Components** variants (`routes/variants.json`, used when the project's next.config says `cacheComponents: true`, like the PPR
+root layout) are of three kinds: the `page.cc.tsx` files of the routes whose segment config Next.js rejects with it (login, signup and both
+docs pages: `dynamic`, `dynamicParams`); the `layout.cc.tsx` files of the five layouts that load messages (`(auth)`, `(public)`, `devtools`,
+`superadmin`, `dashboard`), because `await getMessages()` reads the request and Next.js refuses that outside Suspense while prerendering
+(`_internal/group-layouts.cc`: `(auth)`, `(public)` and `devtools` provide the build-time `STATIC_MESSAGES` of the default locale and put
+their pages behind Suspense; `dashboard` and `superadmin` load request messages inside a Suspense boundary and declare their area
+request-time); and the root layout (`layout.ppr`, whose `main` puts the page behind Suspense as the net for a page that reads `params`,
+cookies or headers below no other boundary). The public item routes omit `revalidate` in that mode; a host that builds in Cache Components
+mode only imports `_internal/public-item-route.cc`, whose reads of the published item and of the patterns it references are `'use cache'`
+functions (`cacheLife` of an hour for an item, tags `entity:<slug>` and `public-item:<slug>:<item slug>`).
 
 Tests: `node --test packages/core/scripts/build/registry/host/__tests__/*.test.mjs`.

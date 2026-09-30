@@ -188,3 +188,76 @@ test('a project layout over a fully protected core layout (the dashboard\'s) is 
     cleanup()
   }
 })
+
+// ---------------------------------------------------------------------------
+// Cache Components mode (#203 stage 4b on stage 4's guards, namespaces and per-entity routes)
+// ---------------------------------------------------------------------------
+
+const CC_CONFIG = { 'next.config.mjs': 'export default { cacheComponents: true }\n' }
+const CC_GROUPS = {
+  '(auth)/layout.tsx': ['withAuthMessages', 'group-layouts.cc'],
+  '(public)/layout.tsx': ['withPublicMessages', 'group-layouts.cc'],
+  'superadmin/layout.tsx': ['withSuperadminGuard', 'group-layouts.cc'],
+  'devtools/layout.tsx': ['withDevtoolsGuard', 'group-layouts.cc'],
+}
+
+async function ccFiles(extra = {}) {
+  const { root, cleanup } = project({ ...CC_CONFIG, ...extra })
+  const { appFiles } = await renderHostFiles(projectHostConfig({ projectRoot: root })).finally(cleanup)
+  return appFiles
+}
+
+test('cacheComponents: a project override of every group layout is composed with the Cache Components wrapper, the guarded groups through the guard wrappers only', async () => {
+  const appFiles = await ccFiles(Object.fromEntries(Object.keys(CC_GROUPS).map(target => [`templates/${target}`, LAYOUT])))
+  for (const [target, [wrapper, module]] of Object.entries(CC_GROUPS)) {
+    const content = at(appFiles, `src/app/${target}`)
+    assert.match(content, new RegExp(`import \\{ ${wrapper} \\} from "@nextsparkjs/core/routes/_internal/${module.replace('.', '\\.')}"`), target)
+    assert.match(content, new RegExp(`export default ${wrapper}\\(NextSparkTemplate\\)`), target)
+  }
+  // The messages-only wrappers of the guarded groups are never written, and the ISR modules are not mixed in
+  assert.equal(/withSuperadminMessages|withDevtoolsMessages/.test(appFiles.map(file => file.content).join('\n')), false)
+  assert.equal(/_internal\/(auth|public|superadmin|devtools)-layout"/.test(appFiles.map(file => file.content).join('\n')), false)
+})
+
+test('cacheComponents: core\'s own guarded layouts (no override) are the Cache Components layouts, whose default layout holds the role guard', async () => {
+  const appFiles = await ccFiles()
+  assert.match(at(appFiles, 'src/app/superadmin/layout.tsx'), /routes\/superadmin\/layout\.cc"/)
+  assert.match(at(appFiles, 'src/app/devtools/layout.tsx'), /routes\/devtools\/layout\.cc"/)
+  assert.match(at(appFiles, 'src/app/dashboard/layout.tsx'), /routes\/dashboard\/layout\.cc"/)
+})
+
+test('cacheComponents: a project layout over the dashboard\'s fully protected layout is still refused', async () => {
+  const { root, cleanup } = project({ ...CC_CONFIG, 'templates/dashboard/layout.tsx': LAYOUT })
+  try {
+    await assert.rejects(renderHostFiles(projectHostConfig({ projectRoot: root })), error => {
+      assert.ok(error instanceof PrepareError)
+      assert.deepEqual(error.diagnostics.map(d => d.code), ['NS_HOST_PROTECTED_ROUTE'])
+      return true
+    })
+  } finally {
+    cleanup()
+  }
+})
+
+test('cacheComponents: per-entity routes are generated as in ISR, the public item pages import the cached source, and the API namespaces are enforced', async () => {
+  const cc = await ccFiles()
+  const isr = await (async () => {
+    const { root, cleanup } = project()
+    return (await renderHostFiles(projectHostConfig({ projectRoot: root })).finally(cleanup)).appFiles
+  })()
+  const targets = files => files.map(file => file.path).filter(path => /\/(dashboard\/\(main\)\/(tasks|posts)|\(public\)\/blog)\//.test(path) || /\(public\)\/blog\/page\.tsx$/.test(path)).sort()
+  assert.deepEqual(targets(cc), targets(isr), 'the same entity routes in both modes')
+  assert.ok(targets(cc).length >= 12)
+  const item = at(cc, 'src/app/(public)/blog/[...slug]/page.tsx')
+  assert.match(item, /from "@nextsparkjs\/core\/routes\/_internal\/public-item-route\.cc"/)
+  assert.doesNotMatch(item, /revalidate/)
+  assert.match(at(isr, 'src/app/(public)/blog/[...slug]/page.tsx'), /_internal\/public-item-route"/)
+  // Everything below /api/ratified namespaces: the project's api/ai/usage is /api/ai/usage in both modes
+  assert.ok(at(cc, 'src/app/api/ai/usage/route.ts'))
+  const { root, cleanup } = project({ ...CC_CONFIG, 'api/v1/x/route.ts': ROUTE })
+  try {
+    await assert.rejects(renderHostFiles(projectHostConfig({ projectRoot: root })), error => error.diagnostics.some(d => d.code === 'NS_HOST_API_NAMESPACE'))
+  } finally {
+    cleanup()
+  }
+})

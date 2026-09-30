@@ -30,6 +30,7 @@
  * ```
  */
 import { IntlProvider } from 'use-intl/react'
+import type { IntlError } from 'use-intl'
 import type { ReactNode } from 'react'
 
 interface StaticIntlProviderProps {
@@ -38,9 +39,19 @@ interface StaticIntlProviderProps {
   children: ReactNode
 }
 
+/**
+ * `now` and `timeZone` are not configured here (reading them from the request is what this provider
+ * avoids), so use-intl reports ENVIRONMENT_FALLBACK for the components that format with them.
+ * That is this provider's design, not a fault: every other error is still reported.
+ */
+export function onStaticIntlError(error: unknown) {
+  if ((error as IntlError).code === 'ENVIRONMENT_FALLBACK') return
+  console.error(error)
+}
+
 export function StaticIntlProvider({ locale, messages, children }: StaticIntlProviderProps) {
   return (
-    <IntlProvider locale={locale} messages={messages as never}>
+    <IntlProvider locale={locale} messages={messages as never} onError={onStaticIntlError}>
       {children}
     </IntlProvider>
   )

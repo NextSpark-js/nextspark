@@ -30,6 +30,7 @@ const CORE_MODULES = {
   [ENTITY_MODULES.create]: ['core/entity-create-route.tsx', factories('createEntityCreateRoute')],
   [ENTITY_MODULES.edit]: ['core/entity-edit-route.tsx', factories('createEntityEditRoute')],
   [ENTITY_MODULES.publicItem]: ['core/public-item-route.tsx', factories('createPublicItemRoute', 'createPublicItemMetadata')],
+  [ENTITY_MODULES.publicItemCc]: ['core/public-item-route.cc.tsx', factories('createPublicItemRoute', 'createPublicItemMetadata')],
   [ENTITY_MODULES.publicArchive]: ['core/public-archive-route.tsx', factories('createPublicArchiveRoute', 'createPublicArchiveMetadata')],
 }
 
@@ -549,6 +550,21 @@ test('a public entity route that Next.js could not tell from a core route is a d
       { coreRoutes: [{ kind: 'page', target: '(auth)/[token]/page.tsx', specifier: '@nextsparkjs/core/routes/t', file: '/core/t.tsx', protected: false }] }
     )
     assert.deepEqual(diagnostics.map(d => d.code), [PLAN_DIAGNOSTICS.DYNAMIC_SEGMENT_CONFLICT])
+  } finally {
+    w.cleanup()
+  }
+})
+
+test('a host that builds in Cache Components mode only imports the cached item source; one that builds both, or does not know, keeps the module valid in either', async () => {
+  const w = world()
+  try {
+    const args = [w, [entity('posts', 'postsEntityConfig')], { posts: await factsOf(BLOG) }]
+    const moduleOf = async options => at(await render((await plan(...args, options)).routes), '(public)/blog/[...slug]/page.tsx').match(/import \{ createPublicItemMetadata, createPublicItemRoute \} from "([^"]+)"/)[1]
+    assert.equal(ENTITY_MODULES.publicItemCc, `${ENTITY_MODULES.publicItem}.cc`)
+    assert.equal(await moduleOf({ cacheComponents: true }), ENTITY_MODULES.publicItemCc)
+    assert.equal(await moduleOf({ cacheComponents: false }), ENTITY_MODULES.publicItem)
+    assert.equal(await moduleOf({}), ENTITY_MODULES.publicItem)
+    assert.equal(await moduleOf({ cacheComponents: true, modes: ['isr', 'cc'] }), ENTITY_MODULES.publicItem)
   } finally {
     w.cleanup()
   }

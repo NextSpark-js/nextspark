@@ -100,12 +100,13 @@ export function withSuperadminMessages(ResolvedSuperadminLayout: ComponentType<S
 }
 
 /**
- * The composition of a project's superadmin layout with core (the generated host): core's protection is
- * always the outer layer. Messages, then the dashboard providers and the SuperAdminGuard, and only inside
- * them the project's layout - so an override can replace the chrome but never the role check.
+ * The layout core puts around a project's superadmin layout (the generated host): core's protection is
+ * always the outer layer - the dashboard providers and the SuperAdminGuard, and only inside them the
+ * project's layout - so an override can replace the chrome but never the role check. Shared by the
+ * message wrappers of both rendering modes (`withSuperadminGuard` here, and in `group-layouts.cc`).
  */
-export function withSuperadminGuard(ProjectLayout: ComponentType<SuperadminLayoutProps>) {
-  return withSuperadminMessages(function GuardedSuperadminLayout({ children }: SuperadminLayoutProps) {
+export function guardSuperadminLayout(ProjectLayout: ComponentType<SuperadminLayoutProps>) {
+  return function GuardedSuperadminLayout({ children }: SuperadminLayoutProps) {
     return (
       <Suspense fallback={
         <div className="min-h-screen flex items-center justify-center">
@@ -119,5 +120,13 @@ export function withSuperadminGuard(ProjectLayout: ComponentType<SuperadminLayou
         </DashboardProviders>
       </Suspense>
     )
-  })
+  }
+}
+
+/**
+ * The composition of a project's superadmin layout with core (the generated host): messages, then
+ * `guardSuperadminLayout` around the project's layout.
+ */
+export function withSuperadminGuard(ProjectLayout: ComponentType<SuperadminLayoutProps>) {
+  return withSuperadminMessages(guardSuperadminLayout(ProjectLayout))
 }

@@ -22,12 +22,33 @@ export interface ThemeProviderProps extends NextThemesProviderProps {
   forcedThemeRoutes?: ForcedThemeRoutes
 }
 
-export function ThemeProvider({ children, forcedThemeRoutes, forcedTheme, ...props }: ThemeProviderProps) {
+/**
+ * Reads the pathname, so it is only rendered when the app declares forced routes. `usePathname()` is
+ * runtime data for a route with dynamic segments: with Cache Components a component that reads it
+ * outside Suspense fails the prerender, and this provider sits at the top of the root layout.
+ */
+function RouteForcedThemeProvider({ children, forcedThemeRoutes, forcedTheme, ...props }: ThemeProviderProps & { forcedThemeRoutes: ForcedThemeRoutes }) {
   const pathname = usePathname()
   const routeForcedTheme = resolveForcedTheme(pathname, forcedThemeRoutes)
 
   return (
     <NextThemesProvider {...props} forcedTheme={routeForcedTheme ?? forcedTheme}>
+      {children}
+    </NextThemesProvider>
+  )
+}
+
+export function ThemeProvider({ children, forcedThemeRoutes, forcedTheme, ...props }: ThemeProviderProps) {
+  if (forcedThemeRoutes && Object.keys(forcedThemeRoutes).length > 0) {
+    return (
+      <RouteForcedThemeProvider {...props} forcedTheme={forcedTheme} forcedThemeRoutes={forcedThemeRoutes}>
+        {children}
+      </RouteForcedThemeProvider>
+    )
+  }
+
+  return (
+    <NextThemesProvider {...props} forcedTheme={forcedTheme}>
       {children}
     </NextThemesProvider>
   )

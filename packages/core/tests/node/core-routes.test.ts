@@ -240,10 +240,13 @@ test('layouts that wrap the layout a project resolves declare the wrapper their 
   assert.equal(ppr.compose?.specifier, `${ROUTES_SUBPATH}/_internal/root-layout.ppr`)
 })
 
-test('the Cache Components variants are the routes whose segment config Next.js rejects with it, and only those', async () => {
+test('the Cache Components variants are the routes whose segment config Next.js rejects with it, the root layout and the layouts that load messages', async () => {
   assert.deepEqual(
     Object.keys(VARIANT_FILES.cacheComponents).sort(),
-    ['(auth)/login/page.cc.tsx', '(auth)/signup/page.cc.tsx', '(public)/docs/[section]/[page]/page.cc.tsx', 'layout.ppr.tsx', 'superadmin/docs/[section]/[page]/page.cc.tsx']
+    [
+      '(auth)/layout.cc.tsx', '(auth)/login/page.cc.tsx', '(auth)/signup/page.cc.tsx', '(public)/docs/[section]/[page]/page.cc.tsx', '(public)/layout.cc.tsx',
+      'dashboard/layout.cc.tsx', 'devtools/layout.cc.tsx', 'layout.ppr.tsx', 'superadmin/docs/[section]/[page]/page.cc.tsx', 'superadmin/layout.cc.tsx',
+    ]
   )
   // Every manifest entry that Next.js refuses with cacheComponents has a variant that it accepts.
   const covered = new Set(variants.cacheComponents.map(entry => entry.target))
@@ -253,6 +256,32 @@ test('the Cache Components variants are the routes whose segment config Next.js 
     if (emitted && !covered.has(entry.target)) uncovered.push(`${entry.target}: ${emitted.message.split('\n')[1]}`)
   }
   assert.deepEqual(uncovered, [], 'a route Next.js rejects under Cache Components needs a variant')
+})
+
+test('a layout that awaits getMessages() has a Cache Components variant that does not (Next.js refuses it outside Suspense while prerendering)', () => {
+  const covered = new Set(variants.cacheComponents.map(entry => entry.target))
+  const missing: string[] = []
+  for (const entry of manifest.filter(route => route.kind === 'layout')) {
+    const files = [entry.specifier, entry.compose?.specifier].filter((specifier): specifier is string => Boolean(specifier))
+    const awaitsMessages = files.some(specifier => /await\s+getMessages\(/.test(fs.readFileSync(sourceOf(specifier), 'utf8')))
+    if (awaitsMessages && !covered.has(entry.target)) missing.push(entry.target)
+  }
+  assert.deepEqual(missing, [], 'add a layout.cc.tsx variant (see _internal/group-layouts.cc.tsx)')
+
+  // The variants themselves never await getMessages() outside a component under Suspense: their wrappers load it in RequestMessages.
+  for (const entry of variants.cacheComponents.filter(variant => variant.kind === 'layout')) {
+    for (const specifier of [entry.specifier, entry.compose?.specifier].filter((value): value is string => Boolean(value))) {
+      assert.doesNotMatch(fs.readFileSync(sourceOf(specifier), 'utf8').replace(/async function RequestMessages[\s\S]*?\n}\n/, ''), /await\s+getMessages\(/, specifier)
+    }
+  }
+})
+
+test('the Cache Components root layout puts the page behind Suspense and the group wrappers keep their shells', () => {
+  const ppr = fs.readFileSync(path.join(ROUTES, 'layout.ppr.tsx'), 'utf8')
+  assert.match(ppr, /<main><Suspense fallback=\{null\}>\{children\}<\/Suspense><\/main>/)
+  const groups = fs.readFileSync(path.join(ROUTES, '_internal/group-layouts.cc.tsx'), 'utf8')
+  assert.match(groups, /<Suspense fallback=\{null\}>\{children\}<\/Suspense>/, 'the static wrappers put the group pages behind Suspense')
+  assert.match(groups, /DynamicMarker/, 'the request-messages wrappers declare their area request-time')
 })
 
 /**
@@ -288,23 +317,31 @@ test('each per-entity route kind has a module of its own, so a route imports onl
  * Core's protections are always the outer layer of a composition: a composed override of a protected layout gets core's
  * guard around the project's layout (and only inside it the project's layout), never the messages wrapper alone.
  */
-test('a group layout with a role guard is composed only through a wrapper that puts the guard around the project layout', () => {
-  const guarded: Array<{ target: string; guard: string; wrapper: string }> = [
-    { target: 'superadmin/layout.tsx', guard: 'SuperAdminGuard', wrapper: 'withSuperadminGuard' },
-    { target: 'devtools/layout.tsx', guard: 'DeveloperGuard', wrapper: 'withDevtoolsGuard' },
+test('a group layout with a role guard is composed only through a wrapper that puts the guard around the project layout, in both rendering modes', () => {
+  const guarded: Array<{ target: string; guard: string; wrapper: string; helper: string; messages: string }> = [
+    { target: 'superadmin/layout.tsx', guard: 'SuperAdminGuard', wrapper: 'withSuperadminGuard', helper: 'guardSuperadminLayout', messages: 'withSuperadminMessages' },
+    { target: 'devtools/layout.tsx', guard: 'DeveloperGuard', wrapper: 'withDevtoolsGuard', helper: 'guardDevtoolsLayout', messages: 'withDevtoolsMessages' },
   ]
-  for (const { target, guard, wrapper } of guarded) {
+  const variantOf = (target: string) => variants.cacheComponents.find(candidate => candidate.target === target)!
+  for (const { target, guard, wrapper, helper, messages } of guarded) {
     const entry = manifest.find(candidate => candidate.target === target)!
-    assert.equal(entry.compose?.wrapper, wrapper, `${target} is composed with ${wrapper}`)
-    const source = fs.readFileSync(sourceOf(entry.compose!.specifier), 'utf8')
-    const start = source.indexOf(`export function ${wrapper}(`)
-    assert.ok(start >= 0, `${wrapper} is exported`)
-    const body = source.slice(start)
+    // ISR module and Cache Components module: the same wrapper name, the same specifier the facade grammar allows
+    for (const composed of [entry, variantOf(target)]) {
+      assert.equal(composed.compose?.wrapper, wrapper, `${target} (${composed.specifier}) is composed with ${wrapper}`)
+      const source = fs.readFileSync(sourceOf(composed.compose!.specifier), 'utf8')
+      assert.ok(source.includes(`export function ${wrapper}(`) || source.includes(`export const ${wrapper} =`), `${wrapper} is exported by ${composed.compose!.specifier}`)
+      assert.ok(source.includes(`${messages}(${helper}(ProjectLayout))`), `${wrapper}: messages, then ${helper} around the project layout`)
+      assert.ok(STATIC_IMPORTS.CORE_COMPOSITION_WRAPPERS[composed.compose!.specifier].includes(wrapper), `${wrapper} is on the facade grammar's allowlist for ${composed.compose!.specifier}`)
+    }
+    // The helper the wrapper uses is the one that puts the guard around the project layout, whatever the mode
+    const base = fs.readFileSync(sourceOf(entry.compose!.specifier), 'utf8')
+    const start = base.indexOf(`export function ${helper}(`)
+    assert.ok(start >= 0, `${helper} is exported`)
+    const body = base.slice(start)
     const at = (needle: string) => body.indexOf(needle)
-    assert.ok(at(`<${guard}>`) > 0 && at('<ProjectLayout>') > at(`<${guard}>`) && at('</ProjectLayout>') < at(`</${guard}>`), `${wrapper}: <${guard}> wraps <ProjectLayout>`)
-    assert.match(body, /return with\w+Messages\(function/, `${wrapper}: messages, then the guard, then the project layout`)
-    // The wrapper is the only one the grammar lets a facade call for that group
-    assert.deepEqual(STATIC_IMPORTS.CORE_COMPOSITION_WRAPPERS[entry.compose!.specifier], [wrapper])
+    assert.ok(at(`<${guard}>`) > 0 && at('<ProjectLayout>') > at(`<${guard}>`) && at('</ProjectLayout>') < at(`</${guard}>`), `${helper}: <${guard}> wraps <ProjectLayout>`)
+    // The Cache Components variant of core's own layout still renders core's layout (which holds the guard itself)
+    assert.match(fs.readFileSync(sourceOf(variantOf(target).specifier), 'utf8'), /export default with\w+Messages\((SuperadminLayout|DevLayout)\)/)
   }
   // Any other layout whose default module imports a guard must be listed above: a new guard cannot be forgotten
   const guardImport = /components\/app\/guards\/(\w+)/
@@ -313,6 +350,7 @@ test('a group layout with a role guard is composed only through a wrapper that p
     if (guardImport.test(defaults)) assert.ok(guarded.some(item => item.target === entry.target), `${entry.target} has a role guard: add it to the guarded list`)
   }
   assert.ok(!Object.values(STATIC_IMPORTS.CORE_COMPOSITION_WRAPPERS).flat().some(name => /^with(Superadmin|Devtools)Messages$/.test(name)), 'the messages-only wrappers of the guarded groups are not callable from a facade')
+  // protected_all layouts cannot be replaced: the dashboard layout variant carries the same protection as its base (host-plan.test.mjs)
 })
 
 /**

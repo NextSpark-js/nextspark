@@ -3,9 +3,9 @@ import { Separator } from '../../ui/separator'
 import { useTranslations } from 'next-intl'
 import { sel } from '../../../lib/test'
 import { APP_NAME } from '../../../lib/config/config-client'
+import { CurrentYear } from './CurrentYear'
 
 export function PublicFooter() {
-  const currentYear = new Date().getFullYear()
   const t = useTranslations('footer')
   const appName = APP_NAME
 
@@ -91,7 +91,7 @@ export function PublicFooter() {
               <span className="text-primary-foreground font-bold text-xs">{appName.charAt(0)}</span>
             </div>
             <span className="text-sm text-muted-foreground">
-              © {currentYear} {appName}. All rights reserved.
+              © <CurrentYear /> {appName}. All rights reserved.
             </span>
           </div>
 

@@ -90,7 +90,9 @@ export default async function RootLayout({
                   would fetch a signed-in visitor's teams and subscription and re-sync the
                   activeTeamId cookie for nothing. */}
               <QueryProvider>
-                <main>{children}</main>
+                {/* The boundary every page falls back to when it reads runtime data (params, cookies, headers) and
+                    no layout below has put one around it; the group layouts' own boundaries keep their shells. */}
+                <main><Suspense fallback={null}>{children}</Suspense></main>
                 <SessionCookieRefresher />
                 <Suspense><Toaster position="bottom-left" /></Suspense>
               </QueryProvider>

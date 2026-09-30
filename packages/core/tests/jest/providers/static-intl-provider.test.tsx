@@ -70,3 +70,29 @@ describe('StaticIntlProvider', () => {
     expect(screen.getByTestId('child')).toBeInTheDocument()
   })
 })
+
+describe('StaticIntlProvider onError', () => {
+  it('ignores ENVIRONMENT_FALLBACK (the request-free provider never configures now/timeZone) and reports every other error', () => {
+    const { onStaticIntlError } = jest.requireActual('@nextsparkjs/core/providers/static-intl-provider') as { onStaticIntlError: (error: unknown) => void }
+    const report = jest.spyOn(console, 'error').mockImplementation(() => {})
+
+    onStaticIntlError({ code: 'ENVIRONMENT_FALLBACK' })
+    expect(report).not.toHaveBeenCalled()
+
+    const missing = { code: 'MISSING_MESSAGE' }
+    onStaticIntlError(missing)
+    expect(report).toHaveBeenCalledWith(missing)
+
+    report.mockRestore()
+  })
+
+  it('hands that handler to IntlProvider', () => {
+    render(
+      <StaticIntlProvider locale="en" messages={{}}>
+        <div>Test</div>
+      </StaticIntlProvider>
+    )
+
+    expect(mockIntlProvider).toHaveBeenCalledWith(expect.objectContaining({ onError: expect.any(Function) }))
+  })
+})

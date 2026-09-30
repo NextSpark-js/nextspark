@@ -12,8 +12,10 @@
  *   implements it. Sorted by target.
  * - `src/routes/variants.json`: routes that replace a manifest entry when the host
  *   enables a Next.js mode. Today only `cacheComponents`: the root layout
- *   `layout.ppr.tsx` and the `page.cc.tsx` files of the routes whose segment config Next.js
- *   rejects under Cache Components (login, signup, both docs pages).
+ *   `layout.ppr.tsx`, the `layout.cc.tsx` files of the five layouts that load messages (their
+ *   `getMessages()` cannot be awaited outside Suspense while prerendering) and the `page.cc.tsx`
+ *   files of the routes whose segment config Next.js rejects under Cache Components (login,
+ *   signup, both docs pages).
  * - A layout that wraps whatever layout the host resolves (the root layout and the four group
  *   layouts) carries `compose: { wrapper, specifier }` (`COMPOSED_ROUTES`): a project override
  *   of it is composed with that wrapper by the generated host instead of replacing it.
@@ -57,6 +59,11 @@ const ROUTE_EXTENSIONS = ['tsx', 'ts']
 export const VARIANT_FILES = Object.freeze({
   cacheComponents: Object.freeze({
     'layout.ppr.tsx': 'layout.tsx',
+    '(auth)/layout.cc.tsx': '(auth)/layout.tsx',
+    '(public)/layout.cc.tsx': '(public)/layout.tsx',
+    'superadmin/layout.cc.tsx': 'superadmin/layout.tsx',
+    'devtools/layout.cc.tsx': 'devtools/layout.tsx',
+    'dashboard/layout.cc.tsx': 'dashboard/layout.tsx',
     '(auth)/login/page.cc.tsx': '(auth)/login/page.tsx',
     '(auth)/signup/page.cc.tsx': '(auth)/signup/page.tsx',
     '(public)/docs/[section]/[page]/page.cc.tsx': '(public)/docs/[section]/[page]/page.tsx',
@@ -80,6 +87,10 @@ export const COMPOSED_ROUTES = Object.freeze({
 /** The composition of a variant, when it differs from its base route's. */
 export const VARIANT_COMPOSE = Object.freeze({
   'layout.ppr.tsx': { wrapper: 'withRootLayout', specifier: `${ROUTES_SUBPATH}/_internal/root-layout.ppr` },
+  '(auth)/layout.cc.tsx': { wrapper: 'withAuthMessages', specifier: `${ROUTES_SUBPATH}/_internal/group-layouts.cc` },
+  '(public)/layout.cc.tsx': { wrapper: 'withPublicMessages', specifier: `${ROUTES_SUBPATH}/_internal/group-layouts.cc` },
+  'superadmin/layout.cc.tsx': { wrapper: 'withSuperadminGuard', specifier: `${ROUTES_SUBPATH}/_internal/group-layouts.cc` },
+  'devtools/layout.cc.tsx': { wrapper: 'withDevtoolsGuard', specifier: `${ROUTES_SUBPATH}/_internal/group-layouts.cc` },
 })
 
 /**

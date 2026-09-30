@@ -53,6 +53,8 @@ export const ENTITY_MODULES = Object.freeze({
   create: `${CORE_ROUTES_SPECIFIER}_internal/entity-create-route`,
   edit: `${CORE_ROUTES_SPECIFIER}_internal/entity-edit-route`,
   publicItem: `${CORE_ROUTES_SPECIFIER}_internal/public-item-route`,
+  // The item pages of a host with `cacheComponents` on: same factories, `'use cache'` reads instead of `revalidate`.
+  publicItemCc: `${CORE_ROUTES_SPECIFIER}_internal/public-item-route.cc`,
   publicArchive: `${CORE_ROUTES_SPECIFIER}_internal/public-archive-route`,
   listMetadata: `${CORE_ROUTES_SPECIFIER}dashboard/(main)/[entity]/page`,
   detailMetadata: `${CORE_ROUTES_SPECIFIER}dashboard/(main)/[entity]/[id]/page`,
@@ -201,6 +203,9 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
   const diagnostics = []
   const dedicated = name => coreRoutes.some(route => route.target.startsWith(`dashboard/(main)/${name}/`))
   const revalidates = cacheComponents !== true && !modes.includes('cc')
+  // A host that builds in Cache Components mode only gets the cached item source; one that builds both (the
+  // conformance fixture) or does not know keeps the module that works in either.
+  const publicItemModule = cacheComponents === true && modes.length === 0 && modules.publicItemCc ? modules.publicItemCc : modules.publicItem
 
   const coreFacade = (kind, target, specifier) => ({
     kind,
@@ -302,8 +307,8 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
         continue
       }
       const item = {
-        default: { factory: factory('createPublicItemRoute', modules.publicItem), args: [config, arg.template()] },
-        named: [{ name: 'generateMetadata', factory: factory('createPublicItemMetadata', modules.publicItem), args: [config] }],
+        default: { factory: factory('createPublicItemRoute', publicItemModule), args: [config, arg.template()] },
+        named: [{ name: 'generateMetadata', factory: factory('createPublicItemMetadata', publicItemModule), args: [config] }],
         literals: revalidates ? [{ name: 'revalidate', value: PUBLIC_REVALIDATE }] : [],
       }
       if (path === '/') {
