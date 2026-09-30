@@ -488,11 +488,11 @@ GET /api/v1/products?page=2&limit=50&status=active&sortBy=price&sortOrder=asc&fi
 **Philosophy:** Build-time generation for instant performance.
 
 ```typescript
-// ❌ Runtime discovery (140ms)
+// ❌ Runtime discovery
 const entities = await fs.readdir('entities/')
 const config = await import(`./entities/${entity}/config.ts`)
 
-// ✅ Build-time registry (6ms)
+// ✅ Build-time registry
 const config = ENTITY_REGISTRY[entity]  // Pre-loaded
 ```
 
@@ -751,14 +751,15 @@ export async function handleWebhook(event: WebhookEvent) {
 
 ### Response Times
 
-| Operation | Avg Time | Notes |
-|-----------|----------|-------|
-| **LIST (10 items)** | ~50ms | Includes auth + query |
-| **LIST (100 items)** | ~120ms | Pagination recommended |
-| **GET (single)** | ~30ms | Cached in registry |
-| **CREATE** | ~80ms | Includes validation |
-| **UPDATE** | ~70ms | Partial update |
-| **DELETE** | ~60ms | Soft delete available |
+The repository has no benchmark of endpoint response times, so none are quoted; measure your own deployment. What each operation does:
+
+| Operation | Notes |
+|-----------|-------|
+| **LIST** | Auth + query; pagination recommended |
+| **GET (single)** | Entity config comes from the registry |
+| **CREATE** | Includes validation |
+| **UPDATE** | Partial update |
+| **DELETE** | Soft delete available |
 
 ### Optimization Tips
 

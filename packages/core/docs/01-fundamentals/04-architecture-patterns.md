@@ -10,7 +10,7 @@ This document describes the core architectural patterns that define how the appl
 - **Zero Runtime I/O** - All configuration loaded at build-time
 - **Registry-Based Access** - Static registries replace dynamic imports
 - **Config-Driven Development** - Entities, plugins, and themes are config-first
-- **Build-Time Generation** - ~17,255x performance improvement over runtime loading
+- **Build-Time Generation** - static registries instead of runtime loading
 - **Type Safety** - Full TypeScript coverage with strict mode
 
 ---
@@ -22,9 +22,9 @@ This document describes the core architectural patterns that define how the appl
 The registry pattern is the foundation of the architecture. Instead of loading content at runtime with dynamic imports (slow), all content is loaded at build-time and compiled into static registries (fast).
 
 **Performance Impact:**
-- Runtime import: ~140ms per entity
-- Build-time registry: ~6ms total for all entities
-- **Improvement: ~17,255x faster**
+- Runtime import: filesystem I/O per entity
+- Build-time registry: static lookups
+- **Result: no runtime filesystem I/O or discovery**
 
 ### Implementation
 
@@ -54,7 +54,7 @@ const taskConfig = ENTITY_REGISTRY.tasks
 
 // ❌ WRONG - Runtime dynamic import
 const taskConfig = await import('@/entities/tasks/tasks.config')
-// 140ms I/O operation, defeats registry architecture
+// Runtime I/O, defeats registry architecture
 ```
 
 **Client-Side Usage:**
@@ -343,16 +343,16 @@ The zero-runtime-I/O pattern eliminates all file system operations, dynamic impo
 
 **Performance Comparison:**
 ```typescript
-// ❌ Runtime I/O (140ms per entity)
+// ❌ Runtime I/O (per entity)
 const entities = await Promise.all(
   entityPaths.map(path => import(path))
 )
-// Total: 140ms × 10 entities = 1,400ms
+// Cost grows with every entity
 
-// ✅ Build-time registry (6ms total)
+// ✅ Build-time registry
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 const entities = Object.values(ENTITY_REGISTRY)
-// Total: 6ms for all entities
+// Static lookups, no I/O
 ```
 
 ### Prohibited Patterns
@@ -1095,7 +1095,7 @@ const metadata = await MetaService.getMergedMeta('task_123', 'user_456')
 ## Summary
 
 **Core Patterns:**
-1. **Registry-Based Loading** - Build-time registries (~17,255x faster)
+1. **Registry-Based Loading** - Build-time registries
 2. **Build-Time Generation** - Static artifacts eliminate runtime overhead
 3. **Config-Driven Development** - Declarative configs generate implementation
 4. **Zero-Runtime-I/O** - No dynamic imports or file system operations

@@ -15,45 +15,36 @@ Code splitting is the practice of **dividing your JavaScript bundle into smaller
 ```typescript
 // Without code splitting (❌ Bad)
 const MONOLITHIC_BUNDLE = {
-  totalSize: '2.5MB',
   components: [
-    'HomePage',           // 50KB
-    'Dashboard',          // 200KB
-    'RichTextEditor',     // 800KB  ← User may never use
-    'ChartLibrary',       // 600KB  ← User may never use
-    'PDFViewer',          // 400KB  ← User may never use
-    'AdminPanel',         // 450KB  ← Most users can't access
+    'HomePage',
+    'Dashboard',
+    'RichTextEditor',     // ← User may never use
+    'ChartLibrary',       // ← User may never use
+    'PDFViewer',          // ← User may never use
+    'AdminPanel',         // ← Most users can't access
   ],
-  
-  impact: {
-    downloadTime: '8.5s @ 3G',      // Unbearable
-    parseTime: '2.1s',               // Blocks main thread
-    timeToInteractive: '10.6s',      // User abandons
-  },
+
+  // Everything downloads and parses before the page is interactive
 }
 
 // With code splitting (✅ Good)
 const SPLIT_BUNDLES = {
-  initial: '150KB',      // Only what's needed for first page
+  initial: 'Only what is needed for the first page',
   routes: {
-    home: '50KB',        // Loaded for home
-    dashboard: '200KB',  // Loaded when visiting /dashboard
+    home: 'Loaded for home',
+    dashboard: 'Loaded when visiting /dashboard',
   },
   onDemand: {
-    editor: '800KB',     // Loaded when user clicks "Edit"
-    charts: '600KB',     // Loaded when viewing analytics
-    pdf: '400KB',        // Loaded when opening PDF
+    editor: 'Loaded when user clicks "Edit"',
+    charts: 'Loaded when viewing analytics',
+    pdf: 'Loaded when opening PDF',
   },
-  
-  impact: {
-    downloadTime: '1.5s @ 3G',      // ✅ Acceptable
-    parseTime: '0.4s',               // ✅ Fast
-    timeToInteractive: '1.9s',       // ✅ Excellent
-  },
+
+  // Only the initial bundle downloads and parses before the page is interactive
 }
 ```
 
-**Result:** 5.6x faster Time to Interactive
+**Result:** less JavaScript to download and parse before the page is interactive (measure your own routes)
 
 ---
 
@@ -67,25 +58,25 @@ Next.js 15 App Router **automatically code splits** by route:
 // Each route creates a separate bundle
 app/
   ├── (public)/
-  │   ├── page.tsx                    // Bundle: home.js (~45KB)
+  │   ├── page.tsx
   │   ├── features/
-  │   │   └── page.tsx                // Bundle: features.js (~38KB)
+  │   │   └── page.tsx
   │   └── pricing/
-  │       └── page.tsx                // Bundle: pricing.js (~42KB)
+  │       └── page.tsx
   │
   ├── dashboard/
-  │   ├── page.tsx                    // Bundle: dashboard.js (~78KB)
+  │   ├── page.tsx
   │   ├── tasks/
-  │   │   └── page.tsx                // Bundle: tasks.js (~92KB)
+  │   │   └── page.tsx
   │   └── analytics/
-  │       └── page.tsx                // Bundle: analytics.js (~120KB)
+  │       └── page.tsx
   │
-  └── layout.tsx                      // Shared bundle (~55KB, loaded once)
+  └── layout.tsx                      // Shared bundle, loaded once
 
 // User visiting /dashboard only downloads:
-// 1. Shared layout bundle (55KB)
-// 2. Dashboard page bundle (78KB)
-// Total: 133KB (not 470KB if everything bundled together)
+// 1. Shared layout bundle
+// 2. Dashboard page bundle
+// Not the code of the other routes
 ```
 
 **Key Benefits:**
@@ -106,7 +97,7 @@ For **heavy components** not needed immediately:
 import { lazy, Suspense } from 'react'
 import { Skeleton } from '@nextsparkjs/core/components/ui/skeleton'
 
-// ❌ WRONG - Rich text editor loaded immediately (800KB)
+// ❌ WRONG - Rich text editor loaded immediately
 import RichTextEditor from '@/components/RichTextEditor'
 
 export default function BlogPostPage() {
@@ -249,7 +240,7 @@ import { Button } from '@nextsparkjs/core/components/ui/button'
 export default function DocumentViewer() {
   const [pdfViewer, setPdfViewer] = useState<any>(null)
 
-  // ❌ WRONG - PDF library loaded immediately (1.2MB)
+  // ❌ WRONG - PDF library loaded immediately
   // import * as pdfjsLib from 'pdfjs-dist'
 
   // ✅ CORRECT - Load only when user views PDF
@@ -285,7 +276,7 @@ export default function ChartComponent({ data }: { data: ChartData }) {
   const [ChartComponent, setChartComponent] = useState<any>(null)
 
   const loadChart = async () => {
-    // Load Chart.js + React wrapper (600KB)
+    // Load Chart.js + React wrapper
     const { Chart } = await import('react-chartjs-2')
     const { Chart as ChartJS, registerables } = await import('chart.js')
     
@@ -339,7 +330,7 @@ function MyComponent() {
 import { ChevronRight } from 'lucide-react'
 
 function MyComponent() {
-  return <ChevronRight />  // Bundles only 1 icon (~2KB)
+  return <ChevronRight />  // Bundles only 1 icon
 }
 
 // ✅ EVEN BETTER - Dynamic icon loading
@@ -459,7 +450,7 @@ ANALYZE=true pnpm build
 // Analyzing bundle-analysis.html
 
 const RED_FLAGS = [
-  '❌ Large shared chunks (>200KB)',
+  '❌ Large shared chunks',
   '❌ Duplicate dependencies (same package bundled twice)',
   '❌ Heavy libraries in initial bundle (charts, editors)',
   '❌ Admin code in public routes',
@@ -476,23 +467,7 @@ const GOOD_SIGNS = [
 
 ### Performance Metrics
 
-```typescript
-// Before code splitting
-const BEFORE = {
-  initialBundle: '850KB',
-  firstContentfulPaint: '3.2s',
-  timeToInteractive: '5.8s',
-  largestContentfulPaint: '4.1s',
-}
-
-// After code splitting
-const AFTER = {
-  initialBundle: '145KB',
-  firstContentfulPaint: '1.1s',   // 2.9x faster
-  timeToInteractive: '1.8s',       // 3.2x faster
-  largestContentfulPaint: '1.6s',  // 2.6x faster
-}
-```
+Compare the initial bundle size and FCP, TTI and LCP of your own routes before and after splitting (Lighthouse, `@next/bundle-analyzer`). The repository ships no benchmark that turns this into a figure; `scripts/performance/verify-route-js-budget.mjs` checks the route JavaScript budget.
 
 ---
 
@@ -525,7 +500,7 @@ const UserAuth = lazy(() => import('./UserAuth'))  // ❌ Blocks entire app
 import Hero from './Hero'  // ✅ Immediate
 
 // 2. Split heavy components only
-const RichTextEditor = lazy(() => import('./RichTextEditor'))  // ✅ 800KB saved
+const RichTextEditor = lazy(() => import('./RichTextEditor'))  // ✅ not in the initial bundle
 
 // 3. Always wrap in Suspense
 <Suspense fallback={<Skeleton />}>
@@ -554,7 +529,7 @@ const CODE_SPLITTING_CHECKLIST = {
   ],
   
   components: [
-    '✅ Heavy components lazy loaded (>50KB)',
+    '✅ Heavy components lazy loaded',
     '✅ Admin code split from public routes',
     '✅ Modals loaded conditionally',
     '✅ Charts/editors loaded on-demand',
@@ -620,10 +595,7 @@ export default function DashboardPage() {
   )
 }
 
-// Result:
-// - Initial bundle: 78KB (was 320KB)
-// - Time to Interactive: 1.2s (was 4.8s)
-// - 4x faster loading
+// Result: the below-the-fold components are no longer part of the initial bundle
 ```
 
 ---

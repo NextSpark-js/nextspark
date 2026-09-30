@@ -789,22 +789,22 @@ export function ClientGenerator() {
 ### Zero I/O Access
 
 ```typescript
-// Before (Runtime I/O): ~60ms
+// Before (Runtime I/O)
 const plugin = await findPlugin('ai')
 const functions = await loadPluginFunctions(plugin.path)
 
-// After (Registry): <1ms
+// After (Registry): no I/O
 const plugin = PLUGIN_REGISTRY.ai
 const functions = getPluginFunctions('ai')
 ```
 
-### Function Access Performance
+### Function Access
 
 ```typescript
-// Direct function access: <1ms
+// Direct function access
 const generateText = usePlugin('ai').generateText
 
-// Compared to dynamic import: ~40ms
+// Compared to a dynamic import (runtime I/O)
 const generateText = (await import(`@/plugins/ai/api`)).generateText
 ```
 
@@ -887,8 +887,7 @@ import { PLUGIN_REGISTRY_CLIENT } from '@nextsparkjs/registries/plugin-registry.
 **Solutions:**
 1. Check plugin exists in `plugins/my-plugin/`
 2. Verify `plugin.config.ts` file exists
-3. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` to regenerate
-4. Restart dev server
+3. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` to regenerate (a running `pnpm dev` does this when `plugins/` or `nextspark.config.ts` change)
 
 ### Function Not Available
 

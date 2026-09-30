@@ -13,18 +13,15 @@ Bundle size directly impacts **loading speed, user experience, and conversion ra
 ### The Performance Cost of JavaScript
 
 ```typescript
-// The journey of 1MB of JavaScript:
+// The journey of JavaScript to an interactive page:
 const javascriptTimeline = {
-  download: '1,200ms',    // @ 3G speed (typical mobile)
-  parse: '350ms',         // Browser parsing
-  compile: '400ms',       // JIT compilation
-  execute: '600ms',       // Initial execution
-  
-  total: '2,550ms',       // Time to Interactive
-  
+  download: 'Network transfer',
+  parse: 'Browser parsing',
+  compile: 'JIT compilation',
+  execute: 'Initial execution',
+  // Every step grows with the amount of JavaScript
+
   // Impact:
-  - '53% of users abandon after 3s'
-  - 'Every 100KB = ~400ms on mobile'
   - 'Parse/compile blocks main thread'
 }
 ```
@@ -61,7 +58,7 @@ const BUNDLE_TARGETS = {
 ```
 
 **Why These Numbers:**
-- 100KB initial = ~400ms parse time on mid-tier mobile
+- A small initial bundle keeps parse time low on mid-tier mobile
 - Total < 500KB allows reasonable multi-route navigation
 - Individual routes < 50KB ensure fast route transitions
 
@@ -77,21 +74,21 @@ Next.js 15 App Router **automatically splits code by route**:
 // Each route creates a separate bundle
 app/
   ├── (public)/
-  │   └── page.tsx                    // Bundle: ~45KB
-  │       └── features/page.tsx       // Bundle: ~38KB (separate)
-  │       └── pricing/page.tsx        // Bundle: ~42KB (separate)
+  │   └── page.tsx
+  │       └── features/page.tsx
+  │       └── pricing/page.tsx
   │
   ├── dashboard/
-  │   └── page.tsx                    // Bundle: ~78KB (separate)
+  │   └── page.tsx
   │       └── tasks/
-  │           └── page.tsx            // Bundle: ~92KB (separate)
+  │           └── page.tsx
   │
-  └── layout.tsx                      // Shared: ~55KB (loaded once)
+  └── layout.tsx                      // Shared: loaded once
 
 // ✅ User visiting /features only loads:
-// - layout.tsx (55KB)
-// - features/page.tsx (38KB)
-// - Total: 93KB (not 402KB if all bundled together)
+// - layout.tsx (shared)
+// - features/page.tsx
+// Not the other routes' code
 ```
 
 **Key Benefit:** Users only download code for routes they visit.
@@ -104,10 +101,8 @@ app/
 
 // Performance improvements:
 const turbopackBenefits = {
-  coldStart: '700x faster than Webpack',
-  hmr: '10x faster updates',
   bundling: 'Incremental (only changed modules)',
-  memory: '~50% lower usage',
+  hmr: 'Updates only what changed',
 }
 ```
 
@@ -143,7 +138,7 @@ function MyComponent() {
 import { ChevronRight } from 'lucide-react'
 
 function MyComponent() {
-  return <ChevronRight />  // Bundles only 1 icon (~2KB)
+  return <ChevronRight />  // Bundles only 1 icon
 }
 ```
 
@@ -184,7 +179,7 @@ import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 ### 1. Dynamic Imports for Heavy Dependencies
 
 ```typescript
-// ❌ WRONG - PDF library loaded on every page (1.2MB)
+// ❌ WRONG - PDF library loaded on every page
 import * as pdfjsLib from 'pdfjs-dist'
 
 export default function Page() {
@@ -212,7 +207,7 @@ export default function Page() {
 ### 2. Lazy Loading Components
 
 ```typescript
-// ❌ WRONG - Rich text editor loaded immediately (800KB)
+// ❌ WRONG - Rich text editor loaded immediately
 import RichTextEditor from '@/components/RichTextEditor'
 
 export default function BlogPostPage() {
@@ -352,7 +347,7 @@ Next.js 15 uses **Lightning CSS** for ultra-fast CSS processing:
 
 // Benefits:
 const lightningCSSBenefits = {
-  parsing: '100x faster than PostCSS',
+  parsing: 'Native parser (Rust)',
   minification: 'Better than cssnano',
   bundling: 'Automatic CSS module concatenation',
   prefixing: 'Automatic vendor prefixes',
@@ -380,7 +375,7 @@ const config: Config = {
 export default config
 ```
 
-**Result:** Final CSS typically **< 50KB** despite Tailwind's large class library.
+**Result:** Tailwind generates only the classes your sources use, so the final CSS stays small.
 
 ### CSS-in-JS Considerations
 
@@ -482,23 +477,16 @@ npx bundle-size <package-name>
 
 # Example
 npx bundle-size date-fns
-# date-fns: 78.5 KB (gzipped: 21.3 KB)
-
-npx bundle-size luxon
-# luxon: 72.3 KB (gzipped: 23.8 KB)
-
-npx bundle-size dayjs
-# dayjs: 6.5 KB (gzipped: 2.6 KB)  ← Winner!
 ```
 
 ### Choose Smaller Alternatives
 
-| Heavy Package | Lightweight Alternative | Size Savings |
-|--------------|------------------------|--------------|
-| moment.js (329KB) | date-fns (78KB) | 251KB |
-| lodash (531KB) | lodash-es (92KB) | 439KB |
-| axios (42KB) | fetch API (0KB) | 42KB |
-| uuid (25KB) | crypto.randomUUID (0KB) | 25KB |
+| Heavy Package | Lightweight Alternative |
+|--------------|------------------------|
+| moment.js | date-fns or dayjs |
+| lodash | lodash-es (tree-shakeable) |
+| axios | fetch API |
+| uuid | crypto.randomUUID |
 
 ### Tree-shakeable Imports
 
@@ -578,28 +566,7 @@ jobs:
 
 ### Our Current Bundle Analysis
 
-```typescript
-// Actual bundle sizes from our build
-const ourBundles = {
-  // Initial load (shared across all routes)
-  framework: '85KB',        // React, Next.js runtime
-  main: '45KB',             // App shell, layout
-  
-  // Public routes
-  home: '38KB',             // Landing page
-  features: '42KB',         // Features page
-  pricing: '35KB',          // Pricing page
-  
-  // Dashboard routes
-  dashboard: '78KB',        // Dashboard main
-  tasks: '92KB',            // Task management (largest)
-  
-  // Total for typical user journey:
-  // Home (123KB) → Dashboard (78KB) = 201KB total
-  
-  // Status: ✅ Well within 500KB target
-}
-```
+The repository does not track per-route bundle sizes by name. It checks the JavaScript each route loads with `scripts/performance/verify-route-js-budget.mjs` against `scripts/performance/apps-dev-route-js-budget.json`; for your own project use `@next/bundle-analyzer`.
 
 ---
 
@@ -638,7 +605,7 @@ import FullFeaturedEditor from 'big-library'
 import styled from 'styled-components'
 
 // Ignore bundle size warnings
-// (Bundle size increased by 200KB) ← Investigate!
+// (Bundle size increased) ← Investigate!
 
 // Skip bundle analysis
 // Always run periodically to catch bloat

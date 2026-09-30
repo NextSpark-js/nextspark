@@ -821,10 +821,7 @@ sudo sysctl -p
 
 **Problem:** `pnpm dev` or `pnpm build` takes too long
 
-**Normal times:**
-- Dev startup: 10-15 seconds
-- Registry build: 5-10 seconds
-- Production build: 2-3 minutes
+**Time your own runs** (`time pnpm exec nextspark prepare`, `time pnpm build`) and compare them with what you saw before, since the repository quotes no reference times.
 
 **If slower:**
 

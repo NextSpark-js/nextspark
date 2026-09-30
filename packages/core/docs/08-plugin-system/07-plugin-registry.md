@@ -7,7 +7,7 @@
 The plugin registry system provides **build-time discovery** and **zero-runtime-I/O access** to all plugins. This document explains how plugins integrate with the registry, how to access plugin data in code, and security considerations for server/client separation.
 
 **Key Concepts:**
-- **Build-Time Discovery** - Plugins found and registered during build (~17,255x faster)
+- **Build-Time Discovery** - Plugins found and registered during build
 - **Dual Registries** - Server-only and client-safe versions
 - **Type-Safe Access** - Helper functions with TypeScript support
 - **Security-First** - Server functions never exposed to client
@@ -508,8 +508,8 @@ cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 pnpm build
 ```
 
-The root `pnpm dev` command does not rebuild registries; keep the watcher above
-running when plugin registry inputs are changing.
+`pnpm dev` (`nextspark dev`) regenerates the registries when plugin inputs change,
+so the standalone watcher above is only needed without a running dev server.
 
 ---
 
@@ -517,25 +517,12 @@ running when plugin registry inputs are changing.
 
 ### Build-Time vs Runtime Comparison
 
-| Operation | Runtime | Build-Time | Improvement |
-|-----------|---------|------------|-------------|
-| **Plugin Discovery** | 1,750ms | 0.1ms | **~17,500x** |
-| **Plugin Load** | 140ms/plugin | 0.01ms | **~14,000x** |
-| **Config Access** | 50ms | 0.01ms | **~5,000x** |
-| **Total (10 plugins)** | 1,750ms | 0.1ms | **~17,255x** |
+| Operation | Runtime discovery | Build-time registry |
+|-----------|-------------------|---------------------|
+| **Plugin discovery** | Scan `plugins/` and read each config | Static registry, no scan |
+| **Plugin load** | Dynamic import per plugin | Static import |
+| **Config access** | File read | Object key access |
 
-**Memory Footprint**:
-```typescript
-// Server registry with 10 plugins:
-// - 10 static imports: ~50KB
-// - 10 registry entries: ~5KB
-// Total: ~55KB
-
-// Client registry with 10 plugins:
-// - No imports (metadata only)
-// - 10 registry entries: ~2KB
-// Total: ~2KB (97% smaller)
-```
 
 ---
 
@@ -665,7 +652,7 @@ cat .nextspark/registries/plugin-registry.ts | grep "'my-plugin'"
 ## Summary
 
 **Plugin Registry provides**:
-- ✅ **Build-time discovery** (~17,255x faster than runtime)
+- ✅ **Build-time discovery** (no runtime scanning)
 - ✅ **Dual registries** (server-only + client-safe)
 - ✅ **Type-safe access** with helper functions
 - ✅ **Security isolation** (server-only import guard)

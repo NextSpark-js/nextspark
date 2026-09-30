@@ -89,7 +89,7 @@ if (entityConfig.builder?.enabled && isBuilderRequest(request) && 'blocks' in da
 │  │  BLOCK_REGISTRY ← packages/core/scripts/build/registry.mjs                        │   │
 │  │  • Zero runtime I/O                                                  │   │
 │  │  • Static imports at build time                                      │   │
-│  │  • ~17,255x faster than dynamic loading                             │   │
+│  │  • static, no dynamic loading                                      │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -292,15 +292,15 @@ nextspark/                        # core's route modules: packages/core/src/rout
 Instead of loading block definitions at runtime:
 
 ```typescript
-// ❌ Slow: Runtime file system I/O (~140ms)
+// ❌ Runtime file system I/O
 const blocks = await loadBlocksFromFileSystem()
 
-// ✅ Fast: Build-time static registry (~6ms)
+// ✅ Build-time static registry
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 const blocks = Object.values(BLOCK_REGISTRY)
 ```
 
-**Performance improvement**: ~17,255x faster
+**Performance**: static registry, no runtime I/O
 
 ### 2. Lazy Loading Block Components
 
@@ -374,7 +374,7 @@ Block registry follows the same pattern as entity registry:
 
 ---
 
-> **Performance Tip**: The build-time registry approach eliminates ~140ms of file system I/O per request. Always use `BLOCK_REGISTRY` instead of dynamic imports.
+> **Performance Tip**: The build-time registry approach eliminates file system I/O at request time. Always use `BLOCK_REGISTRY` instead of dynamic imports.
 
 > **Integration Note**: The builder uses the generic entity handler (`generic-handler.ts`) rather than custom API routes. This ensures consistency across all builder-enabled entities.
 

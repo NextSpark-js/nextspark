@@ -1,6 +1,6 @@
 # Graph-Based Orchestration
 
-This guide covers the **LangGraph-based orchestrator**, the recommended approach for multi-agent systems. It replaces inefficient ReAct loops with an explicit state machine, achieving 25-50x faster execution with deterministic flow.
+This guide covers the **LangGraph-based orchestrator**, the recommended approach for multi-agent systems. It replaces inefficient ReAct loops with an explicit state machine, with a deterministic flow and far fewer LLM calls.
 
 > **Note**: For the legacy ReAct-based approach, see [Legacy Orchestration](./02-legacy-react.md) (deprecated).
 
@@ -39,7 +39,7 @@ TOTAL: 50+ LLM iterations → TIMEOUT (2-5 minutes)
 - **Recursion limit errors** from nested loops
 - **Non-deterministic** - different paths each time
 - **Expensive** - each iteration costs tokens
-- **Slow** - 2-5 minute response times
+- **Slow** - every iteration is another round trip
 
 ### The Solution: Explicit State Machine
 
@@ -71,15 +71,14 @@ User: "Show my tasks and find StartupXYZ account number"
 │                        END                                   │
 └─────────────────────────────────────────────────────────────┘
 
-TOTAL: 2 LLM calls → 2-3 seconds
+TOTAL: 2 LLM calls
 ```
 
 **Benefits:**
-- **1-2 LLM calls** instead of 50+
+- **A few LLM calls** instead of a loop of them
 - **No recursion** - explicit transitions
 - **Deterministic** - same input = same path
-- **Cost effective** - 25-50x fewer tokens
-- **Fast** - 2-10 second responses
+- **Cost effective** - fewer tokens, because a request needs few LLM calls
 
 ---
 
@@ -576,32 +575,21 @@ const result = await invokeOrchestrator(
 
 ## Performance Comparison
 
-### Benchmarks
+### Comparison
 
-| Metric | Graph Orchestrator | ReAct Loops | Improvement |
-|--------|-------------------|-------------|-------------|
-| **LLM Calls (single intent)** | 1 | 20-30 | 20-30x |
-| **LLM Calls (multi intent)** | 2 | 50+ | 25-50x |
-| **Response Time (single)** | 2-3s | 10-15s | 5x |
-| **Response Time (multi)** | 3-5s | 60-120s | 20-30x |
-| **Token Cost** | ~500 | ~15,000 | 30x |
-| **Recursion Errors** | Never | Frequent | - |
-| **Timeout Errors** | Never | Common | - |
+| Aspect | Graph Orchestrator | ReAct Loops |
+|--------|-------------------|-------------|
+| **LLM calls** | A fixed number per intent | Varies with the loop, often many |
+| **Recursion errors** | Not possible (explicit transitions) | Possible |
+| **Flow** | Deterministic | Model-driven |
 
-### Real-World Example
+The repository has no benchmark of response time or token cost for either approach, so no figures are quoted.
+
+### Example
 
 **Query**: "Show my tasks and find the account number for StartupXYZ"
 
-| Metric | Graph | ReAct |
-|--------|-------|-------|
-| Total LLM calls | 2 | 47 |
-| Router calls | 1 | - |
-| Orchestrator iterations | - | 15 |
-| Task agent iterations | - | 12 |
-| Customer agent iterations | - | 20 |
-| Response time | 4.2s | 127s (timeout) |
-| Tokens used | 892 | 23,450 |
-| Estimated cost | $0.002 | $0.047 |
+The graph routes it with one router call, runs the task and customer handlers, and combines the results: two LLM calls. A ReAct loop decides each step with the model and iterates until it finishes or hits the recursion limit, so the call count is open-ended.
 
 ---
 

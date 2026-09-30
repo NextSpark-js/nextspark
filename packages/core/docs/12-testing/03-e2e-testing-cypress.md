@@ -10,7 +10,7 @@ Cypress provides **end-to-end testing** in real browsers, validating complete us
 - Theme-level test isolation
 - @cypress/grep for tag-based filtering
 - Allure reporting with rich dashboards
-- Global sessions for 3-5x faster execution
+- Global sessions (login once per role instead of before every test)
 - CI workflow templates for automation
 
 ---
@@ -191,7 +191,7 @@ pnpm cy:run --env grepTags=@feat-customers
 
 Without global sessions, login runs before **every test** = slow execution.
 
-With global sessions, login runs **once per role** = 3-5x faster.
+With global sessions, login runs **once per role**.
 
 ### Session Helper Pattern
 
@@ -236,12 +236,7 @@ describe('Customers - Owner Role', {
 
 ### Performance Impact
 
-| Approach | 10 Tests | 50 Tests |
-|----------|----------|----------|
-| Login per test | ~30s | ~150s |
-| Global session | ~8s | ~35s |
-| **Improvement** | **3.75x** | **4.3x** |
-
+Login-per-test repeats the login for every test; a global session logs in once per role and reuses it, so the saving grows with the number of tests.
 ---
 
 ## Allure Labels Integration

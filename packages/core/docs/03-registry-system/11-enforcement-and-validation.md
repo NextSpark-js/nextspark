@@ -2,9 +2,9 @@
 
 ## Introduction
 
-The Registry System's ~17,255x performance improvement **depends entirely** on zero dynamic imports for content/config loading. This document explains the zero-tolerance enforcement policy, validation tools, and how to maintain compliance.
+The Registry System's static, no-runtime-I/O design **depends entirely** on zero dynamic imports for content/config loading. This document explains the zero-tolerance enforcement policy, validation tools, and how to maintain compliance.
 
-**Critical:** One dynamic import violation can reintroduce 140ms+ latency and defeat the entire registry architecture.
+**Critical:** One dynamic import violation can reintroduce runtime I/O and defeat the entire registry architecture.
 
 ---
 
@@ -23,25 +23,25 @@ The Registry System's ~17,255x performance improvement **depends entirely** on z
 ### Why This Policy Exists
 
 **Performance impact:**
-- Registry system: 6ms for all entities
-- One dynamic import: +140ms per import
-- **Result:** 17,255x performance loss
+- Registry system: static lookups, no runtime I/O
+- One dynamic import: runtime I/O on every call
+- **Result:** runtime filesystem discovery comes back, which the registries exist to avoid
 
 **Example violation cost:**
 
 ```typescript
-// ❌ ONE violation destroys performance
+// ❌ ONE violation brings runtime I/O back
 const config = await import('@/entities/tasks/tasks.config')
-// Cost: +140ms runtime I/O
+// Cost: runtime I/O
 
 // ✅ Registry access (correct)
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 const config = ENTITY_REGISTRY.tasks
-// Cost: <1ms (in-memory lookup)
+// Cost: an in-memory lookup
 ```
 
 **Impact of violations:**
-- ❌ Cold start: 140ms → 2-3 seconds
+- ❌ Cold start: slower, because discovery runs at runtime again
 - ❌ Core Web Vitals: LCP degraded
 - ❌ Serverless functions: Timeout risk
 - ❌ User experience: Slow page loads
@@ -146,7 +146,7 @@ export async function extractTextFromPDF(file: File): Promise<string> {
 }
 
 export async function extractTextFromDOCX(file: File): Promise<string> {
-  const mammoth = await import('mammoth')  // ~500KB
+  const mammoth = await import('mammoth')
   // Process DOCX...
   return text
 }
@@ -183,12 +183,12 @@ const entityConfig = await import('@/entities/products/product.config')
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 
-const entityConfig = ENTITY_REGISTRY.products // <1ms lookup
+const entityConfig = ENTITY_REGISTRY.products // in-memory lookup
 ```
 
 **Why prohibited:**
-- Registry system provides ~17,255x improvement
-- Dynamic import reintroduces 140ms+ overhead
+- The registries give runtime access with no filesystem I/O or discovery
+- Dynamic import reintroduces runtime I/O
 - All content available via static registries
 
 ### 2. API/Service Loading
@@ -641,7 +641,7 @@ export async function loadEntityConfig(entityName: string) {
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 export function loadEntityConfig(entityName: string) {
-  return ENTITY_REGISTRY[entityName] // <1ms
+  return ENTITY_REGISTRY[entityName]
 }
 ```
 
@@ -800,11 +800,11 @@ export async function getEntityList() {
 import { getRegisteredEntities } from '@nextsparkjs/registries/entity-registry'
 
 export function getEntityList() {
-  return getRegisteredEntities() // <1ms for all entities
+  return getRegisteredEntities() // in-memory lookups
 }
 ```
 
-**Performance improvement:** 420ms (140ms × 3) → <1ms
+**Performance:** three runtime discoveries become static lookups
 
 ### Migrating from Direct Imports
 
@@ -917,7 +917,7 @@ describe('Registry System Enforcement', () => {
 - `.eslintrc.js` - ESLint rules
 - CI/CD workflows - Pipeline integration
 
-**Key takeaway:** One violation can destroy ~17,255x performance gain. Enforcement is not optional.
+**Key takeaway:** One violation brings runtime discovery back. Enforcement is not optional.
 
 **See Also:**
 - [Introduction](./01-introduction.md) - Zero runtime I/O philosophy

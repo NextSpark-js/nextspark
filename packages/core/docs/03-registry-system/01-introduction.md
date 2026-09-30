@@ -59,8 +59,9 @@ node ../../packages/cli/dist/cli.js prepare
 node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
-Registry inputs require regeneration. Restart the development server when a
-changed generated module is not picked up by hot reload.
+Registry inputs require regeneration. `nextspark dev` regenerates on change and
+serves the result without a restart; `nextspark build` regenerates before it
+compiles. Restart only after changing environment variables.
 
 ## Runtime usage
 

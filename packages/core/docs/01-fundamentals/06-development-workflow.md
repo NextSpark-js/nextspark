@@ -71,13 +71,13 @@ if (task.involves('api') || task.involves('entity')) {
 **From `.rules/core.md`:**
 - Zero tolerance for errors (TypeScript, linting, tests)
 - Registry-based architecture (no dynamic imports)
-- Build-time generation (17,255x performance)
+- Build-time generation (static registries)
 - Type safety everywhere
 
 **From `.rules/testing.md`:**
 - Test coverage: 90%+ critical, 80%+ important
 - Cypress E2E + Jest unit testing
-- Global sessions for 3-5x faster E2E
+- Global sessions (login once per role) for faster E2E
 - POM (Page Object Model) patterns
 
 **From `.rules/components.md`:**
@@ -241,7 +241,7 @@ cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
-`pnpm dev` starts one Next.js process. Run the registry watcher in a separate terminal when registry inputs change; Next.js watches the imported theme CSS itself.
+`pnpm dev` runs `nextspark dev`: it generates the registries, starts Next.js and regenerates on change, so no separate watcher is needed. Next.js watches the imported theme CSS itself.
 
 ### Testing
 

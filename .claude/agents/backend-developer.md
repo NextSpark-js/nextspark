@@ -725,7 +725,6 @@ curl -X PATCH http://localhost:5173/api/v1/users/USER_ID \
 - [x] Implement PATCH /api/v1/users/:id
   - Tested with Bearer token ✅
   - Status: 200 OK
-  - Response time: 45ms
   - Dual auth verified ✅
 ```
 

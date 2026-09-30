@@ -30,7 +30,7 @@ The **Plugin Registry** provides **zero-runtime-I/O access** to all plugins in t
 
 **Key Benefits:**
 - ✅ **Zero dynamic imports** - All plugins resolved at build time
-- ✅ **~17,255x faster** than runtime discovery (140ms → 6ms)
+- ✅ **No runtime discovery**: plugins are listed in a static registry
 - ✅ **Type-safe plugin access** - TypeScript knows all available plugins
 - ✅ **Server-only security** - API functions never exposed to client
 - ✅ **Plugin isolation** - Each plugin discovered independently
@@ -976,25 +976,11 @@ export default async function RoutesPage() {
 
 ### Registry Lookup Performance
 
-| Operation | Time | Approach |
-|-----------|------|----------|
-| **Plugin lookup** | **~6ms** | Object key access |
-| Runtime discovery | ~140ms | File system I/O |
-| **Improvement** | **~17,255x** | Build-time generation |
+| Operation | Approach |
+|-----------|----------|
+| **Plugin lookup** | Object key access |
+| Runtime discovery | File system I/O (what the registry replaces) |
 
-### Memory Footprint
-
-```typescript
-// Server registry with 10 plugins:
-// - 10 static imports: ~50KB
-// - 10 registry entries: ~5KB
-// Total: ~55KB
-
-// Client registry with 10 plugins:
-// - No imports (metadata only)
-// - 10 registry entries: ~2KB
-// Total: ~2KB (97% smaller than server registry)
-```
 
 ---
 
@@ -1126,7 +1112,7 @@ cat .nextspark/registries/plugin-registry.ts | grep "'ai'"
 - ✅ **14+ helper functions** for plugin access
 - ✅ **Type-safe plugin API** (PluginName type)
 - ✅ **Security isolation** (server-only import guard)
-- ✅ **Zero-runtime-I/O** (~17,255x faster)
+- ✅ **Zero-runtime-I/O**
 - ✅ **Automatic initialization** (onLoad hooks)
 - ✅ **Graceful degradation** (plugin availability checks)
 

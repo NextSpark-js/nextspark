@@ -154,12 +154,14 @@ All migrations completed successfully!
 pnpm dev
 ```
 
-The root command delegates to `apps/dev` and starts one Next.js process:
+The root command delegates to `apps/dev`, which runs `nextspark dev`:
 
 ```text
 > @nextsparkjs/dev dev
-> dotenv -e .env -- sh -c 'next dev --turbopack -p $PORT'
+> dotenv -e .env -- sh -c 'node ../../packages/cli/dist/cli.js dev --turbopack -p $PORT'
 ```
+
+`pnpm dev` runs `nextspark dev`: it generates `src/app` and the registries before Next starts, then watches the sources and regenerates on change, so no separate watcher is needed.
 
 **Console output should show:**
 ```text
@@ -329,11 +331,11 @@ pnpm dev
 
 ## Understanding the Development Process
 
-`pnpm dev` starts one Next.js process with Turbopack. It does not run TypeScript config updates, theme asset copying, registry generation, documentation generation, or plugin workspace servers.
+`pnpm dev` runs `nextspark dev`: it generates `src/app` and the registries (documentation registry included) once, starts Next.js with Turbopack, and keeps a watcher that regenerates them when the sources change. It does not copy theme assets or run plugin workspace servers.
 
 ### Next.js Development Server
 
-**Command used by `apps/dev`:** `next dev --turbopack -p $PORT`
+**Command used by `apps/dev`:** `nextspark dev --turbopack -p $PORT` (starts `next dev` after the first generation)
 - Reads `PORT` from `apps/dev/.env` (3010 in the measured checkout)
 - Compiles application code and imported theme CSS
 - Enables Hot Module Replacement (HMR)
@@ -421,7 +423,7 @@ nextspark setup:ai
 4. [Architecture Patterns](../01-fundamentals/04-architecture-patterns.md)
 
 **Understand Key Concepts:**
-- Registry system (~17,255x performance)
+- Registry system (static, no runtime discovery)
 - Build-time vs runtime
 - Core vs Contents separation
 - Entity system

@@ -72,11 +72,10 @@ Services = Logic (methods that use registries)
 
 ### Performance Impact
 
-| Approach | Time | Notes |
-|----------|------|-------|
-| Dynamic Import | ~140ms | Per operation, I/O bound |
-| Static Registry | ~6ms | O(1) lookup |
-| **Improvement** | **~17,255x** | Build-time vs runtime |
+| Approach | Notes |
+|----------|-------|
+| Dynamic Import | Filesystem I/O on every operation |
+| Static Registry | O(1) lookup, no runtime I/O |
 
 ## Import Patterns
 

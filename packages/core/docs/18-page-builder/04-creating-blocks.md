@@ -673,9 +673,8 @@ describe('Pricing Table Block', () => {
 1. Check that `config.ts` has `scope` property (e.g., `scope: ['pages']`)
 2. Verify `scope` includes the entity you're editing (e.g., 'pages' or 'posts')
 3. Check that `config.ts` has correct `slug`
-4. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
-5. Restart the dev server
-6. Check console for registry errors
+4. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (a running `pnpm dev` regenerates when `blocks/` changes; no restart)
+5. Check console for registry errors
 
 > **Common mistake**: Missing or undefined `scope` makes the block unavailable everywhere.
 

@@ -21,7 +21,7 @@ The CLI writes provenance to `nextspark.config.ts`:
 
 ```ts
 export default defineConfig({
-  template: { name: 'blog', version: '0.1.0-beta.193' },
+  template: { name: 'blog', version: '0.1.0-beta.192' },
 })
 ```
 

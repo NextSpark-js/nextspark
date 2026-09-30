@@ -34,7 +34,7 @@ pnpm add @nextsparkjs/core @nextsparkjs/cli
 import { defineConfig } from '@nextsparkjs/core/lib/config'
 
 export default defineConfig({
-  template: { name: 'starter', version: '0.1.0-beta.193' },
+  template: { name: 'starter', version: '0.1.0-beta.192' },
   features: {
     billing: true,
     teams: true,

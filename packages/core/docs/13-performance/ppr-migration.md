@@ -10,17 +10,11 @@ Cache Components + PPR is the **default for new projects**: the scaffold's `next
 
 ## Performance Impact
 
-| Metric | Next.js 15 (baseline) | Next.js 16 + PPR |
-|--------|----------------------|------------------|
-| TTFB | 300-600ms | **3-6ms** |
-| LCP (cache hit) | ~700ms | **100-140ms** |
-| Render delay | ~493ms | **40-60ms** |
-| CLS | 0.01 | **0.00** |
-| Accessibility | 96 | **100** |
+The static shell is served from the cache or CDN and the dynamic parts stream in behind Suspense boundaries, so the first bytes do not wait on dynamic data. The repository has no script that measures TTFB or LCP before and after, so no figures are quoted; measure your own routes with Lighthouse or your RUM.
 
 ## Prerequisites
 
-- Next.js **16.2.2+**
+- Next.js **~16.3.5** (the version core pins)
 - React **19.2.4+**
 - NextSpark core with PPR support
 
@@ -29,7 +23,7 @@ Cache Components + PPR is the **default for new projects**: the scaffold's `next
 ### 1. Update dependencies
 
 ```bash
-pnpm add next@^16.2.2 react@^19.2.4 react-dom@^19.2.4
+pnpm add next@~16.3.5 react@^19.2.4 react-dom@^19.2.4
 ```
 
 ### 2. Enable cacheComponents in next.config (already set in new projects)

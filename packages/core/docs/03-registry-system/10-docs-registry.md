@@ -106,11 +106,10 @@ const page = findDocPage('getting-started', 'introduction')
 
 ## Performance
 
-| Operation | Time | Approach |
-|-----------|------|----------|
-| **Docs metadata** | ~1ms | Direct object access |
-| Runtime file scan | ~140ms | File system I/O |
-| **Improvement** | ~140x | Build-time generation |
+| Operation | Approach |
+|-----------|----------|
+| **Docs metadata** | Direct object access |
+| Runtime file scan | File system I/O (what the registry replaces) |
 
 ---
 

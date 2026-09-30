@@ -71,9 +71,9 @@ import { taskConfig } from '@/entities/tasks/tasks.config'
 ```
 
 **Performance Impact:**
-- Build-time registry: ~6ms
-- Runtime import: ~140ms
-- **Improvement: ~17,255x faster**
+- Build-time registry: static lookups
+- Runtime import: filesystem I/O
+- **Result: no runtime filesystem I/O or discovery**
 
 **Rules:**
 1. NEVER edit files in `registries/` manually

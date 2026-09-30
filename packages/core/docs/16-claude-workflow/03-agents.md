@@ -750,7 +750,7 @@ if (remainingTags.length > 0) {
 | code-reviewer | - | - | - | OPTIONAL |
 | Human | YES | YES | YES | YES |
 
-**Design Rationale:** 90% fewer API calls - progress tracked in session files, ClickUp for visibility only.
+**Design Rationale:** fewer API calls - progress tracked in session files, ClickUp for visibility only.
 
 ---
 

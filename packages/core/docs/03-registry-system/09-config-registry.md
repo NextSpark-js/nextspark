@@ -40,7 +40,7 @@ The **Config Registry** (`.nextspark/registries/config-registry.ts`) is an auto-
 
 **Key Benefits:**
 - ✅ **Zero runtime I/O** - All configs resolved at build time
-- ✅ **~17,255x faster** than runtime discovery (140ms → 6ms)
+- ✅ **No runtime discovery**: config is read from a static registry
 - ✅ **Type-safe access** - ConfigName type for all discovered configs
 - ✅ **Centralized management** - Single registry for all configs
 - ✅ **Auto-discovery** - Finds config files automatically
@@ -471,25 +471,11 @@ if (!validation.valid) {
 
 ### Registry Lookup Performance
 
-| Operation | Time | Approach |
-|-----------|------|----------|
-| **Config lookup** | **~6ms** | Object key access |
-| Runtime discovery | ~140ms | File system I/O |
-| **Improvement** | **~17,255x** | Build-time generation |
+| Operation | Approach |
+|-----------|----------|
+| **Config lookup** | Object key access |
+| Runtime discovery | File system I/O (what the registry replaces) |
 
-### Memory Footprint
-
-```typescript
-// Config registry with 10 configs:
-// - 10 static imports: ~5KB (small configs)
-// - 10 registry entries: ~2KB
-// Total: ~7KB for entire registry
-
-// vs Runtime Discovery:
-// - File system calls: Variable
-// - Dynamic imports: Variable
-// - Performance: Degrades with config count
-```
 
 ---
 
@@ -612,7 +598,7 @@ cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 **Config Registry provides:**
 - ✅ **Zero-runtime-I/O** config access
-- ✅ **~17,255x performance** improvement
+- ✅ **No runtime I/O** for config access
 - ✅ **Type-safe access** (ConfigName type)
 - ✅ **Centralized management** for all configs
 - ✅ **Auto-discovery** of config files
@@ -632,13 +618,11 @@ cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 - Designed for global application configs
 
 **Performance:**
-- **Config lookup:** ~6ms (object key access)
-- **Build generation:** <10ms for 10 configs
-- **Memory overhead:** ~7KB for 10 configs
+- **Config lookup:** object key access
 
 **Next steps:**
 - [Docs Registry](./10-docs-registry.md) - Documentation metadata system
-- [Performance and Benchmarks](./12-performance-and-benchmarks.md) - Performance analysis
+- [Performance Model](./12-performance-and-benchmarks.md) - Performance analysis
 - [Theme Registry](./05-theme-registry-usage.md) - Theme configurations
 
 **Documentation:** `core/docs/03-registry-system/09-config-registry.md`

@@ -84,7 +84,7 @@ ls .nextspark/registries/
 # - plugin-registry.ts
 # - theme-registry.ts
 # - route-handlers.ts
-# - ... (16 total registry files)
+# - ... (prepare prints how many it generated; the list changes as core adds registries)
 ```
 
 **Theme CSS and served assets:**
@@ -607,7 +607,7 @@ VALUES
 **What are registries?**
 
 Registries are **static TypeScript files** auto-generated at build time that contain all your entities, plugins, themes, and configurations. They provide:
-- ⚡ **~17,255x performance improvement** (140ms → 6ms)
+- ⚡ **No runtime discovery**: registries are static modules
 - 🔒 **Zero runtime I/O** (no filesystem access)
 - ✅ **Type safety** (full TypeScript autocomplete)
 - 🎯 **O(1) lookup** (instant access)
@@ -615,16 +615,16 @@ Registries are **static TypeScript files** auto-generated at build time that con
 **Why they matter:**
 
 Without registries, the app would need to:
-1. Scan filesystem for entities (20ms)
-2. Read configuration files (40ms)
-3. Process configurations (15ms)
-4. Discover related resources (35ms)
-5. Build metadata (30ms)
+1. Scan filesystem for entities
+2. Read configuration files
+3. Process configurations
+4. Discover related resources
+5. Build metadata
 
-**Total: 140ms PER ENTITY**
+**All of that would run at runtime, per entity**
 
 With registries, everything is pre-compiled:
-- **Total: 6ms for ALL entities** (17,255x faster!)
+- **All entities come from static imports**: no filesystem scan at runtime
 
 **How they work:**
 
@@ -642,7 +642,7 @@ BUILD TIME (once):
 
 RUNTIME (every request):
   import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
-  const config = ENTITY_REGISTRY.tasks  // <1ms lookup
+  const config = ENTITY_REGISTRY.tasks  // in-memory lookup
 ```
 
 ### 5.2 Initial Registry Build
@@ -652,26 +652,11 @@ RUNTIME (every request):
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
-**Expected output:**
+**Expected output** (the counts depend on your project and core version):
 ```text
-🔍 Discovering content...
-🔍 Found 2 entities:
-  ✓ tasks (from theme)
-  ✓ users (from core)
-🔍 Found 1 plugins:
-  ✓ ai
-🔍 Found 1 theme:
-  ✓ default
-
-📝 Generating registries...
-  ✓ entity-registry.ts (487 lines)
-  ✓ entity-registry.client.ts (245 lines)
-  ✓ plugin-registry.ts (312 lines)
-  ✓ theme-registry.ts (156 lines)
-  ✓ route-handlers.ts (428 lines)
-  ... (11 more registries)
-
-✅ Registry build completed in 5.2s
+- Preparing registries...
+✔ src/app and registries prepared
+Generated src/app (N files) and M registries: W written, 0 deleted, U unchanged. Recorded in .nextspark/generation.json.
 ```
 
 **Verify registry files created:**
@@ -695,37 +680,16 @@ head -20 .nextspark/registries/entity-registry.ts
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
-**What happens:**
-```text
-🔍 Initial build completed
-👀 Watching for changes in:
-  - entities/
-  - plugins/
-  - core/lib/entities/core/
+**What happens:** `prepare --watch` generates once, then regenerates `src/app` and the registries whenever `templates/`, `api/`, `plugins/`, `entities/`, `config/`, `blocks/`, `messages/`, `emails/`, `auth/`, `docs/public`, `docs/superadmin`, `nextspark.config.ts` or `next.config.*` change.
 
-[waiting for changes...]
-
-# When you edit a file:
-📝 Change detected: entities/tasks/tasks.config.ts
-🔄 Rebuilding registries... (1.2s)
-✅ Registry rebuilt successfully
-⚠️  RESTART DEV SERVER to apply changes
-```
-
-**Important:** Registry changes require server restart
-- Registries are imported at app initialization
-- Can't hot reload imports
-- Must stop `pnpm dev` and restart
+**You do not need this for day-to-day work:** `pnpm dev` (`nextspark dev`) already runs the same watcher. Edits to those sources are regenerated and served **without restarting the dev server**. If a regeneration fails, the last valid output stays and the error shows in the terminal and in the browser.
 
 **Workflow:**
-1. Run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch` in terminal 1
-2. Run `pnpm dev` in terminal 2
-3. Edit project or plugin source files
-4. Registry rebuilds automatically
-5. See "⚠️ RESTART DEV SERVER" message
-6. Stop dev server (Ctrl+C in terminal 2)
-7. Restart dev server (`pnpm dev`)
-8. Changes applied ✅
+1. Run `pnpm dev`
+2. Edit project or plugin source files
+3. The registries and `src/app` regenerate and the change is served ✅
+
+Restart the dev server only after changing environment variables.
 
 ---
 
@@ -787,23 +751,16 @@ getComputedStyle(document.documentElement).getPropertyValue('--color-primary')
 
 ### 7.1 Terminal Setup
 
-**Recommended terminal layout** (3 terminals):
+**Recommended terminal layout** (2 terminals):
 
 **Terminal 1 - Main Dev Server:**
 ```bash
 pnpm dev
-# Runs one Next.js development process on PORT from apps/dev/.env
-# Keep this running always
+# Generates src/app and the registries, runs Next.js on PORT from apps/dev/.env,
+# and regenerates on change. Keep this running always
 ```
 
-**Terminal 2 - Registry Watch (Optional):**
-```bash
-cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
-# Automatically rebuilds registries on content changes
-# Use when actively developing entities/plugins
-```
-
-**Terminal 3 - Testing/Commands:**
+**Terminal 2 - Testing/Commands:**
 ```bash
 # Use for ad-hoc commands:
 pnpm test:core
@@ -1114,7 +1071,7 @@ Go through this checklist to verify everything is set up correctly:
 - [ ] Root-first project structure created (`src/app/`, `config/`, `entities/`, `plugins/`, `templates/`)
 
 ### Build Artifacts
-- [ ] Registry files generated (16 files in .nextspark/registries/)
+- [ ] Registry files generated (see `.nextspark/registries/`; `prepare` prints the count)
 - [ ] the generated root layout (`apps/dev/src/app/layout.tsx`, written by `nextspark prepare`) imports the project stylesheet
 - [ ] App-served theme assets exist under `apps/dev/public/theme/`
 - [ ] Next.js cache created (.next/ directory exists)
@@ -1145,9 +1102,9 @@ Go through this checklist to verify everything is set up correctly:
 
 ### Registry System
 - [ ] Registry build successful (`cd apps/dev && node ../../packages/cli/dist/cli.js prepare` completes)
-- [ ] All 16 registry files created
+- [ ] Registries generated (`.nextspark/registries/`; `prepare` prints how many it wrote)
 - [ ] Registry watch mode works (`cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch`)
-- [ ] Understand registry rebuild requires server restart
+- [ ] Understand `pnpm dev` regenerates registries on change, with no restart
 
 ### Theme
 - [ ] Theme directory exists (``)
@@ -1267,10 +1224,8 @@ Error: Cannot find module '@/entities/tasks/tasks.config'
 rm -rf .next
 rm -rf .nextspark/registries
 
-# Rebuild from scratch
+# Rebuild from scratch (pnpm dev also regenerates on start)
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare
-
-# Restart dev server
 pnpm dev
 ```
 
@@ -1285,8 +1240,8 @@ pnpm dev
 test -f styles/globals.css
 grep -F 'styles/globals.css' apps/dev/src/app/layout.tsx
 
-# Restart dev server
-pnpm dev
+# If the import is missing, regenerate (pnpm dev does this on start)
+cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
 ### Database Connection Fails
@@ -1351,7 +1306,7 @@ pnpm test:core -- path/to/test.test.ts
 - ✅ Configured development tools (VS Code, debugging, git hooks)
 - ✅ Understood framework versus project-source ownership
 - ✅ Verified database connection and seeded data
-- ✅ Learned registry system (17,255x performance improvement)
+- ✅ Learned registry system (static, build-time generated)
 - ✅ Activated and verified theme
 - ✅ Set up development workflow (terminals, DevTools, git)
 - ✅ Configured testing environment
@@ -1367,7 +1322,7 @@ pnpm test:core -- path/to/test.test.ts
 - **Tag Validation:** Automatic during registry build
 - **CI Workflows:** Install via `pnpm setup:ci` for automated testing
 - **Zero Tolerance:** No errors, warnings, or failing tests
-- **Development Workflow:** Multiple terminals, registry watch, server restart
+- **Development Workflow:** `pnpm dev` watches and regenerates registries; restart only for env changes
 
 **You're now ready to:**
 - Build features

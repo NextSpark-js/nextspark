@@ -6,7 +6,7 @@ The plugin system provides a **WordPress-like architecture** for extending the a
 
 **Key Principles:**
 - **Zero Runtime I/O** - All plugins discovered and registered at build-time
-- **~17,255x Performance** - Build-time registry vs runtime discovery (140ms → 6ms)
+- **Static registry** - Build-time registry instead of runtime discovery
 - **Isolation** - Plugins operate independently without affecting core or other plugins
 - **Type Safety** - Full TypeScript support with strict type checking
 - **Hot-Swappable** - Enable/disable plugins without code changes
@@ -56,7 +56,7 @@ The plugin system draws inspiration from WordPress's successful plugin architect
 **Key Difference from WordPress:**
 - **Build-Time Discovery** - Plugins discovered at build time (not runtime)
 - **Type-Safe** - Full TypeScript support with strict typing
-- **Static Registry** - ~17,255x faster than WordPress's runtime scanning
+- **Static Registry** - no runtime scanning, unlike WordPress
 - **Server/Client Separation** - Security-first architecture prevents exposing server code to client
 
 ---
@@ -159,48 +159,34 @@ export const PLUGIN_REGISTRY: ClientPluginRegistry = {
 
 **❌ Runtime Discovery (Traditional WordPress Approach):**
 ```typescript
-// Runtime plugin discovery - SLOW
+// Runtime plugin discovery: filesystem I/O on every cold start
 async function discoverPluginsAtRuntime() {
-  const pluginPaths = await fs.readdir('plugins') // 400ms I/O
+  const pluginPaths = await fs.readdir('plugins')
   const plugins = await Promise.all(
-    pluginPaths.map(path => import(`@/plugins/${path}/plugin.config`)) // 140ms per plugin
+    pluginPaths.map(path => import(`@/plugins/${path}/plugin.config`)) // one dynamic import per plugin
   )
-  return plugins // Total: ~1,750ms for 10 plugins
+  return plugins // Cost grows with every plugin
 }
 ```
 
 **✅ Build-Time Registry (Our Approach):**
 ```typescript
-// Build-time plugin registry - FAST
+// Build-time plugin registry: no I/O
 import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
 
 function getPlugins() {
-  return Object.values(PLUGIN_REGISTRY) // ~0.1ms object access
+  return Object.values(PLUGIN_REGISTRY) // object access
 }
 ```
 
-**Performance Metrics:**
+**Comparison:**
 
-| Operation | Runtime | Build-Time | Improvement |
-|-----------|---------|------------|-------------|
-| **Plugin Discovery** | 1,750ms | 0.1ms | **~17,500x** |
-| **Plugin Load** | 140ms/plugin | 0.01ms | **~14,000x** |
-| **Config Access** | 50ms | 0.01ms | **~5,000x** |
-| **Total (10 plugins)** | 1,750ms | 0.1ms | **~17,255x** |
+| Operation | Runtime discovery | Build-time registry |
+|-----------|-------------------|---------------------|
+| **Plugin discovery** | Scan `plugins/` and read each config | Static registry, no scan |
+| **Plugin load** | Dynamic import per plugin | Static import |
+| **Config access** | File read | Object key access |
 
-**Memory Footprint:**
-
-```typescript
-// Server registry with 10 plugins:
-// - 10 static imports: ~50KB
-// - 10 registry entries: ~5KB
-// Total: ~55KB
-
-// Client registry with 10 plugins:
-// - No imports (metadata only)
-// - 10 registry entries: ~2KB
-// Total: ~2KB (97% smaller than server registry)
-```
 
 ---
 
@@ -497,7 +483,7 @@ export function ClientDisplay({ result }: { result: string }) {
 - API functions have type-safe signatures
 
 **4. Performance**
-- Build-time discovery and registration (~17,255x faster)
+- Build-time discovery and registration
 - Lazy loading for heavy components
 - Caching for expensive operations
 
@@ -585,7 +571,7 @@ export function ClientDisplay({ result }: { result: string }) {
 
 The plugin system provides:
 - ✅ **WordPress-like architecture** for extending functionality
-- ✅ **~17,255x performance improvement** through build-time discovery
+- ✅ **No runtime discovery**: plugins are found at build time
 - ✅ **Plugin isolation** via namespaced environment variables
 - ✅ **Type-safe development** with full TypeScript support
 - ✅ **Security-first design** with server/client separation

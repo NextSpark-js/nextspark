@@ -113,12 +113,12 @@ export const taskConfig: EntityConfig = {
 
 ### 2. Registry System ⭐
 
-**Build-time static registries for ~17,255x performance improvement**
+**Build-time static registries: no runtime discovery or filesystem I/O**
 
-The registry system is the performance foundation of the application. Instead of dynamically importing configurations at runtime (140ms), all entities, themes, plugins, and translations are discovered at build-time and compiled into static TypeScript registries (6ms).
+The registry system is the performance foundation of the application. Instead of dynamically importing configurations at runtime, all entities, themes, plugins, and translations are discovered at build-time and compiled into static TypeScript registries.
 
 **Performance Impact:**
-- Entity loading: 6ms (build-time) vs 140ms (runtime) = **~17,255x faster**
+- Entity access is a lookup in a static registry; nothing is discovered at runtime
 - Zero file system I/O at runtime
 - Type-safe access to all dynamic content
 - Instant availability without async operations
@@ -545,7 +545,7 @@ Instead of loading configurations at runtime (slow, I/O intensive), the applicat
 
 **Traditional Approach (Slow):**
 ```typescript
-// Runtime: ~140ms per entity
+// Runtime: filesystem I/O on every load
 const config = await import(`./entities/${entityName}/config`)
 const fields = await import(`./entities/${entityName}/fields`)
 // Filesystem I/O, dynamic imports, async operations
@@ -554,7 +554,7 @@ const fields = await import(`./entities/${entityName}/fields`)
 **Build-Time Approach (Fast):**
 ```typescript
 // Build-time: Generate static registry
-// Runtime: ~6ms per entity (from memory)
+// Runtime: a lookup in a static registry
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 const config = ENTITY_REGISTRY[entityName]
 // Instant access, no I/O, synchronous
@@ -564,7 +564,7 @@ const config = ENTITY_REGISTRY[entityName]
 - `packages/core/scripts/build/registry.mjs` - Generates all registries, including the docs index
 
 **Performance Impact:**
-- **17,255x faster** entity access (140ms → 6ms)
+- **Static entity access**: no runtime discovery
 - Zero filesystem I/O at runtime
 - Lower memory footprint
 - Faster application startup
@@ -737,52 +737,15 @@ const tasks = await queryWithRLS<Task>(
 
 ---
 
-## Performance Metrics
+## Performance
 
-### Registry System Performance
+The repository ships no benchmark for registry access, query times, API response times or build times, so none are quoted here. What it does check is the JavaScript each route loads: `scripts/performance/verify-route-js-budget.mjs` against `scripts/performance/apps-dev-route-js-budget.json`.
 
-**Entity Loading Time:**
-- **Runtime I/O**: ~140ms per entity
-- **Build-Time Registry**: ~6ms per entity
-- **Improvement**: ~17,255x faster (140ms → 6ms)
+**Targets** (goals to measure your own project against, not measurements):
+- **Core Web Vitals**: LCP < 2.5s, INP < 200ms, CLS < 0.1
+- **Registry access**: a lookup in a static registry, with no runtime I/O
 
-**Theme Loading Time:**
-- **Runtime I/O**: ~120ms for theme config
-- **Build-Time Registry**: <5ms for theme config
-- **Improvement**: ~15,000x faster
-
-**Bundle Size:**
-- **Initial Load**: ~85KB (target: < 100KB)
-- **Total Bundle**: ~420KB (target: < 500KB)
-- **First Contentful Paint (FCP)**: ~1.2s
-- **Largest Contentful Paint (LCP)**: ~2.1s (target: < 2.5s)
-
-### Database Performance
-
-**Query Performance (with RLS):**
-- **Simple SELECT**: ~5-10ms
-- **JOIN queries**: ~15-30ms
-- **Complex aggregations**: ~50-100ms
-- **Connection Pooling**: 10-20 active connections
-
-**API Response Times:**
-- **Entity List**: ~50-100ms (with pagination)
-- **Entity Get**: ~20-40ms (single record)
-- **Entity Create**: ~30-60ms (with validation)
-- **Entity Update**: ~30-60ms (with validation)
-
-### Frontend Performance
-
-**Core Web Vitals:**
-- **LCP (Largest Contentful Paint)**: ~2.1s (target: < 2.5s)
-- **FID (First Input Delay)**: ~50ms (target: < 100ms)
-- **CLS (Cumulative Layout Shift)**: ~0.05 (target: < 0.1)
-
-**Build Times:**
-- **Cold Build**: ~45s
-- **Hot Build (Turbopack)**: ~200ms
-- **Registry Generation**: ~2s
-- **Theme Compilation**: ~500ms
+See the [Performance guide](../13-performance/01-performance-overview.md) for how to measure.
 
 ---
 

@@ -699,19 +699,19 @@ ON tasks ((metadata->>'status'));
 **Without metadata:**
 ```bash
 GET /api/v1/tasks?limit=100
-# Response: ~50KB
+# Smallest response
 ```
 
 **With full metadata:**
 ```bash
 GET /api/v1/tasks?limit=100&includeMetadata=true
-# Response: ~150KB (3x larger!)
+# Largest response: every metadata field of every record
 ```
 
 **With specific metadata fields:**
 ```bash
 GET /api/v1/tasks?limit=100&metadataFields=priority,labels
-# Response: ~75KB (1.5x larger)
+# In between: only the requested metadata fields
 ```
 
 **✅ Best Practice:** Request only needed metadata fields.

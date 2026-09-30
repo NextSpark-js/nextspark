@@ -24,6 +24,8 @@ Performance is not just about speed—it's about user experience, SEO rankings, 
 
 ### Key Metrics to Track
 
+_Thresholds are Google's Core Web Vitals definitions (https://web.dev/articles/vitals)._
+
 | Metric | Target | Impact |
 |--------|--------|--------|
 | **First Contentful Paint (FCP)** | < 1.8s | User sees content |
@@ -35,8 +37,7 @@ Performance is not just about speed—it's about user experience, SEO rankings, 
 
 ### Why Performance Matters
 
-- **53% of mobile users** abandon sites that take > 3s to load
-- **100ms improvement** can increase conversion by 1%
+- Faster pages keep more visitors
 - **Better SEO** rankings with good Core Web Vitals
 - **Lower bounce rates** with faster load times
 
@@ -943,7 +944,7 @@ useCallback(() => {
 }, [])
 
 // 3. Not splitting large bundles
-import * as Icons from 'lucide-react'  // 50KB+ bundle
+import * as Icons from 'lucide-react'  // pulls in the whole icon library
 
 // 4. Loading all images eagerly
 <Image src="/hero.jpg" priority />

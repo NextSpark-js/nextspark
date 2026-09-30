@@ -70,12 +70,12 @@ Core translations provide the foundational application strings used across all t
 ```text
 core/messages/
 ├── en/                          # English locale
-│   ├── common.json             # Shared UI elements (~2.1KB)
-│   ├── dashboard.json          # Dashboard content (~1.2KB)
-│   ├── settings.json           # Settings pages (~12.5KB)
-│   ├── auth.json               # Authentication (~2.8KB)
-│   ├── public.json             # Public pages (~10.5KB)
-│   ├── validation.json         # Validation messages (~1.6KB)
+│   ├── common.json             # Shared UI elements
+│   ├── dashboard.json          # Dashboard content
+│   ├── settings.json           # Settings pages
+│   ├── auth.json               # Authentication
+│   ├── public.json             # Public pages
+│   ├── validation.json         # Validation messages
 │   └── admin.json            # Superadmin area
 ├── es/                          # Spanish locale
 │   ├── common.json
@@ -262,8 +262,8 @@ Theme translations provide theme-specific content and branding, allowing complet
 
 ```text
 messages/
-├── en.json                      # English theme translations (~15KB)
-├── es.json                      # Spanish theme translations (~15KB)
+├── en.json                      # English theme translations
+├── es.json                      # Spanish theme translations
 └── README.md                    # Optional: translation guidelines
 ```
 
@@ -924,12 +924,12 @@ plugin: "Process"
 ```text
 core/messages/
 ├── en/
-│   ├── common.json              # Shared UI (~2KB)
-│   ├── dashboard.json           # Dashboard (~1KB)
-│   ├── settings.json            # Settings (~12KB)
-│   ├── auth.json                # Auth flows (~3KB)
-│   ├── public.json              # Public pages (~10KB)
-│   ├── validation.json          # Validation (~2KB)
+│   ├── common.json              # Shared UI
+│   ├── dashboard.json           # Dashboard
+│   ├── settings.json            # Settings
+│   ├── auth.json                # Auth flows
+│   ├── public.json              # Public pages
+│   ├── validation.json          # Validation
 │   └── admin.json             # Superadmin
 ├── es/
 │   └── [same structure]

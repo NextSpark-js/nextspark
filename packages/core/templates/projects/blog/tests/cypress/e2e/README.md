@@ -162,7 +162,7 @@ npx cypress run --spec "test/cypress/e2e/**/*.cy.ts"
 
 - Blog theme uses **custom UI** for posts (PostsList, PostEditor) unlike generic EntityList/EntityForm
 - Categories use the **generic EntityList/EntityForm** pattern
-- All tests use **cy.session()** for cached authentication (3-5x faster)
+- All tests use **cy.session()** for cached authentication
 - Tests are designed to be **self-contained** and create their own test data
 
 ---

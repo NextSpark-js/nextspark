@@ -123,10 +123,8 @@ User Message → Router → Handlers → Combiner → Response
 ```
 
 **Benefits:**
-- 1-2 LLM calls per request (vs 50+ with ReAct)
-- 2-3 second response time
+- A few LLM calls per request (vs an open-ended loop with ReAct)
 - No recursion limit issues
-- ~$0.001 per request
 
 ### Available Agents
 

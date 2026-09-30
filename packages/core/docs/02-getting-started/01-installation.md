@@ -316,28 +316,17 @@ cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
 **Expected output:**
 ```text
-Building registries...
-✓ Scanning themes...
-✓ Scanning plugins...
-✓ Scanning entities...
-✓ Generating entity-registry.ts
-✓ Generating entity-registry.client.ts
-✓ Generating plugin-registry.ts
-✓ Generating plugin-registry.client.ts
-✓ Generating theme-registry.ts
-✓ Generating translation-registry.ts
-✓ Generating route-handlers.ts
-✓ Generating permissions-registry.ts
-✓ Generating docs-registry.ts in .nextspark/registries/
-
-Registry build completed in 5.2s
+- Preparing registries...
+✔ src/app and registries prepared
+Generated src/app (N files) and M registries: W written, 0 deleted, U unchanged. Recorded in .nextspark/generation.json.
 ```
 
+(`docs-registry.ts` and the other registries are written to `.nextspark/registries/`; the counts depend on your project and core version.)
+
 **Why this matters:**
-- **~17,255x performance improvement** over runtime imports
+- **No runtime discovery or filesystem I/O**: registries are static modules
 - Eliminates file system I/O at runtime
 - Static type checking for all configurations
-- Faster cold starts and page loads
 
 **See:** [Build Process Guide](./06-build-process.md) for detailed explanation
 
@@ -382,18 +371,14 @@ Registry build completed
 pnpm dev
 ```
 
-The root script delegates to `apps/dev`, which starts one Next.js process with Turbopack on the `PORT` loaded from `apps/dev/.env`:
+The root script delegates to `apps/dev`, which runs `nextspark dev` with Turbopack on the `PORT` loaded from `apps/dev/.env`:
 
 ```text
 > @nextsparkjs/dev dev
-> dotenv -e .env -- sh -c 'next dev --turbopack -p $PORT'
+> dotenv -e .env -- sh -c 'node ../../packages/cli/dist/cli.js dev --turbopack -p $PORT'
 ```
 
-Next.js handles application and imported CSS changes. If registry inputs change, run the registry watcher separately:
-
-```bash
-cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
-```
+`pnpm dev` runs `nextspark dev`: it generates `src/app` and the registries before Next starts, then watches the sources and regenerates on change, so no separate watcher is needed.
 
 **Open browser:** use the local URL printed by Next.js (port 3010 in the measured `apps/dev/.env`).
 
@@ -472,7 +457,7 @@ pnpm dev
 
 # Server should start on PORT from apps/dev/.env
 # ✅ No errors in console
-# ✅ One Next.js process is listening
+# ✅ Next.js is listening
 ```
 
 ### 6. Application Access

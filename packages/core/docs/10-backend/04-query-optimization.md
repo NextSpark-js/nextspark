@@ -6,7 +6,7 @@ Query optimization is critical for application performance and scalability. This
 
 ## Performance Targets
 
-**Query Response Time Goals:**
+**Query Response Time Goals (targets, not measurements):**
 - Simple queries: < 10ms
 - JOIN queries: < 30ms
 - Complex aggregations: < 100ms
@@ -174,10 +174,10 @@ LIMIT 20;
 ```text
 Index Scan using idx_tasks_user_status on tasks
   (cost=0.42..8.44 rows=1 width=234)
-  (actual time=0.015..0.016 rows=1 loops=1)
+  (actual time=<start>..<end> rows=1 loops=1)
   Index Cond: (("userId" = 'user-123') AND (status = 'in_progress'))
-Planning Time: 0.084 ms
-Execution Time: 0.032 ms
+Planning Time: <ms>
+Execution Time: <ms>
 ```
 
 **Key Metrics:**

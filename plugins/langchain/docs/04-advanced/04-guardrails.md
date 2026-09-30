@@ -540,10 +540,7 @@ If PII is not being masked:
 
 ### Performance Impact
 
-Guardrails add minimal overhead:
-- Injection check: < 1ms (regex matching)
-- PII masking: < 5ms (depends on input length)
-- Content filtering: < 1ms
+Guardrails run locally (regex matching, PII masking, content filtering) and add no LLM call. Their overhead depends on input length; the repository does not measure it.
 
 For high-throughput scenarios, consider:
 - Sampling (process 10% of requests)

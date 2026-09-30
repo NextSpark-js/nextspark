@@ -17,7 +17,7 @@ Our performance approach operates across **four distinct layers**, each contribu
 ```text
 ┌─────────────────────────────────────────────────────────┐
 │  Layer 1: BUILD-TIME OPTIMIZATION                      │
-│  • Registry System: ~17,255x improvement (140ms → 6ms) │
+│  • Registry System: static, no runtime discovery       │
 │  • Static generation and precomputation                │
 │  • Tree shaking and bundle optimization                │
 └─────────────────────────────────────────────────────────┘
@@ -50,44 +50,33 @@ Our performance approach operates across **four distinct layers**, each contribu
 
 ### The Foundation of Speed
 
-The **Registry System** is our most significant performance achievement, delivering a **~17,255x improvement** over traditional runtime discovery patterns.
+The **Registry System** is our most significant performance achievement, replacing runtime discovery (filesystem scans and dynamic imports) with static lookups. The repository has no benchmark of it, so no figure is quoted.
 
-**Before Registries (140ms per entity):**
+**Before Registries (runtime discovery per entity):**
 ```typescript
-// ❌ Traditional runtime discovery (slow)
+// ❌ Traditional runtime discovery
 async function getEntityConfig(entityName: string) {
-  const entityDir = await findEntityDirectory(entityName)      // 20ms
-  const configModule = await import(configPath)                 // 40ms
-  const config = await processEntityConfig(configModule)        // 15ms
-  const resources = await discoverRelatedResources(entityDir)   // 35ms
-  const metadata = await buildEntityMetadata(config)            // 30ms
+  const entityDir = await findEntityDirectory(entityName)
+  const configModule = await import(configPath)
+  const config = await processEntityConfig(configModule)
+  const resources = await discoverRelatedResources(entityDir)
+  const metadata = await buildEntityMetadata(config)
   
-  return entityData  // Total: ~140ms per entity
+  return entityData
 }
 ```
 
-**After Registries (6ms total):**
+**After Registries (static lookup):**
 ```typescript
-// ✅ Registry System (ultra-fast)
+// ✅ Registry System
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 function getEntityConfig(entityName: string) {
   return ENTITY_REGISTRY[entityName]  // Zero I/O - instant O(1) lookup
 }
-
-// Total: ~6ms for ALL entities combined
 ```
 
-**Impact Breakdown:**
-
-| Scenario | Before (Runtime) | After (Registry) | Improvement |
-|----------|------------------|------------------|-------------|
-| 1 entity | 140ms | 0.6ms | ~233x |
-| 10 entities | 1,400ms | 6ms | ~233x |
-| 50 entities | 7,000ms | 6ms | ~1,167x |
-| 100 entities | 14,000ms | 6ms | **~2,333x** |
-
-**Key Insight:** Registry lookup time remains constant regardless of entity count, while runtime discovery scales linearly.
+**Key Insight:** a registry lookup does not depend on how many entities exist, because the discovery already happened at build time; runtime discovery repeats its work for every entity.
 
 **Read More:** [Registry System Introduction](../03-registry-system/01-introduction.md) for complete architectural details.
 
@@ -117,6 +106,8 @@ const PERFORMANCE_TARGETS = {
 
 ### What These Metrics Mean
 
+_Thresholds below are Google's Core Web Vitals definitions (https://web.dev/articles/vitals)._
+
 **Largest Contentful Paint (LCP) - < 2.5s**
 - Measures loading performance
 - When the main content becomes visible
@@ -137,13 +128,12 @@ const PERFORMANCE_TARGETS = {
 
 | Metric | Good | Needs Improvement | Poor | Impact |
 |--------|------|-------------------|------|---------|
-| **LCP** | < 2.5s | 2.5s - 4.0s | > 4.0s | 53% of users abandon |
+| **LCP** | < 2.5s | 2.5s - 4.0s | > 4.0s | Slow loads lose visitors |
 | **FID** | < 100ms | 100ms - 300ms | > 300ms | Feels unresponsive |
 | **INP** | < 200ms | 200ms - 500ms | > 500ms | Laggy interactions |
 | **CLS** | < 0.1 | 0.1 - 0.25 | > 0.25 | Frustrating shifts |
 
 **Business Impact:**
-- 100ms improvement = **1% conversion increase**
 - Good Core Web Vitals = **SEO ranking boost**
 - < 3s load time = **47% higher engagement**
 
@@ -231,11 +221,11 @@ Next.js 15 provides several automatic performance enhancements:
 // Each route only loads its required code
 app/
   ├── (public)/
-  │   └── page.tsx              // ~50KB bundle
+  │   └── page.tsx
   ├── dashboard/
-  │   └── page.tsx              // ~80KB bundle (separate)
+  │   └── page.tsx
   └── dashboard/tasks/
-      └── page.tsx              // ~90KB bundle (separate)
+      └── page.tsx
 ```
 
 **2. React Server Components (RSC)**
@@ -255,7 +245,7 @@ export default async function DashboardPage() {
 ```
 
 **3. Turbopack (Dev Mode)**
-- **700x faster** than Webpack for updates
+- Incremental updates instead of full rebuilds
 - Hot Module Replacement (HMR) in milliseconds
 - Progressive bundling (only what's needed)
 
@@ -331,7 +321,7 @@ onCLS(reportWebVitals)
 
 Our architecture provides these performance benefits **out of the box**:
 
-✅ **Registry System**: 17,255x faster entity access
+✅ **Registry System**: static entity access, no runtime discovery
 ✅ **App Router**: Automatic code splitting per route
 ✅ **Server Components**: Zero client JS for static content
 ✅ **Image Optimization**: Automatic WebP/AVIF conversion
@@ -366,7 +356,7 @@ Run Lighthouse audit in Chrome DevTools (Cmd+Option+I → Lighthouse tab)
 
 **Q: What's the most impactful optimization?**
 
-The Registry System provides the largest single improvement (~17,255x), but it's already implemented.
+The Registry System removes runtime discovery, and it's already implemented.
 
 **Q: Should I optimize everything?**
 

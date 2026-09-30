@@ -39,7 +39,7 @@ Our form management uses a battle-tested stack:
 - Minimal re-renders (uncontrolled inputs)
 - Built-in validation
 - Excellent TypeScript support
-- Small bundle size (~9KB)
+- Small bundle size
 
 ✅ **Zod**:
 - TypeScript-first schema validation

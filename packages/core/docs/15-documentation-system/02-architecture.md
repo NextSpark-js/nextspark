@@ -400,13 +400,13 @@ in practice.
 ## Performance Characteristics
 
 **Build Time:**
-- Registry generation: ~50-100ms
+- Registry generation runs once per `prepare`
 - Scales linearly with documentation size
 - Negligible impact on total build time
 
 **Runtime:**
-- Registry lookup: ~6ms (memory access)
-- Markdown parsing: ~20-30ms per page
+- Registry lookup (memory access)
+- Markdown parsing per page
 - Server-side rendering: Single-pass HTML generation
 - No client-side hydration for content
 

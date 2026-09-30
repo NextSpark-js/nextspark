@@ -73,7 +73,7 @@ The system uses a **hybrid 2-table model**:
 | `usageEvents` | Detailed per-user audit trail | Historical data |
 
 This design enables:
-- Fast quota checks (< 10ms)
+- Fast quota checks
 - Detailed usage reports per user
 - Usage timeline and analytics
 

@@ -41,7 +41,7 @@ See **[Entity Integration](./10-entity-integration.md)** for detailed configurat
 | **Drag & Drop** | Reorder blocks with smooth animations (dnd-kit) |
 | **Live Preview** | Toggle between layout and preview modes |
 | **Type Safety** | Zod schemas for runtime validation |
-| **Build-Time Registry** | ~17,255x faster than runtime I/O |
+| **Build-Time Registry** | Static registry, no runtime I/O |
 | **ISR Support** | Incremental Static Regeneration for public pages |
 | **SEO Ready** | Title, description, keywords, and Open Graph fields |
 | **Extensible** | Add custom blocks with minimal boilerplate |

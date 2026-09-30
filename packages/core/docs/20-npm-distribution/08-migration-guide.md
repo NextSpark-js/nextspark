@@ -174,7 +174,7 @@ export default defineConfig({
 ```typescript
 export default defineConfig({
   // Record the bundled template used to create the project
-  template: { name: 'starter', version: '0.1.0-beta.193' },
+  template: { name: 'starter', version: '0.1.0-beta.192' },
 
   // Feature flags
   features: {
@@ -193,7 +193,7 @@ Plugins now read from `nextspark.config.ts` first:
 ```typescript
 // nextspark.config.ts (preferred)
 export default defineConfig({
-  template: { name: 'starter', version: '0.1.0-beta.193' },
+  template: { name: 'starter', version: '0.1.0-beta.192' },
   plugins: ['langchain', 'stripe']
 })
 

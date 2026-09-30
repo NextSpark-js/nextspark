@@ -773,7 +773,7 @@ console.log('[i18n] Pathname:', pathname)
 - Group related translations in same namespace
 - Use route-based namespace loading
 - Preload only critical namespaces
-- Keep namespaces under 20KB
+- Keep namespaces small
 
 ❌ **DON'T**:
 - Mix unrelated translations in one namespace

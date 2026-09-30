@@ -41,7 +41,7 @@ Almacena los contadores en Redis, compartidos entre todas las instancias.
 
 **Limitaciones:**
 - Requiere configurar Upstash (o Redis propio)
-- Latencia mínima adicional (~1-5ms por request)
+- Latencia adicional por request (una consulta a Redis; no medida en el repositorio)
 
 **Ideal para:**
 - Producción con múltiples instancias

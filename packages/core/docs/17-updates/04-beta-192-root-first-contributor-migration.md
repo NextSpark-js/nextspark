@@ -1,4 +1,4 @@
-# Beta 193 root-first contributor migration
+# Beta 192 root-first contributor migration
 
 The repository development project no longer selects `themes/default` through
 `apps/dev/contents`. Its project-owned source now lives directly under

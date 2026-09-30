@@ -327,16 +327,13 @@ El sistema genera automáticamente:
 - **Visualizaciones complejas**: Dashboards, analytics avanzados
 - **Procesamiento de archivos pesado**: Conversiones, transformaciones
 
-## Métricas de Impacto
+## Comparación
 
-| Métrica | Desarrollo Tradicional | Sistema de Entidades | Mejora |
-|---------|------------------------|----------------------|--------|
-| Tiempo por entidad | ~10 horas | ~15 minutos | **40x más rápido** |
-| Líneas de código | ~800 líneas | ~50 líneas config | **16x menos código** |
-| Archivos a crear | 8-12 archivos | 1 archivo config | **8-12x menos archivos** |
-| Tiempo de testing | 2-3 horas | 15 minutos | **8x más rápido** |
-| Mantenimiento | Alto (múltiples archivos) | Bajo (un solo archivo) | **~80% menos esfuerzo** |
-| Consistencia | Manual (propensa a errores) | Automática (garantizada) | **100% consistente** |
+| Aspecto | Desarrollo Tradicional | Sistema de Entidades |
+|---------|------------------------|----------------------|
+| Archivos a crear | Varios (esquema, rutas, servicio, formularios, tests) | 1 archivo de config |
+| Mantenimiento | Múltiples archivos | Un solo archivo |
+| Consistencia | Manual (propensa a errores) | Automática, derivada del config |
 
 ## Ejemplo Real: Tasks Entity
 

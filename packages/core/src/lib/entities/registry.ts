@@ -5,7 +5,7 @@
  * permission checking, plan limits validation, and child entity support.
  *
  * MIGRATION: Now uses build-time registries (THEME_REGISTRY, PLUGIN_REGISTRY)
- * for zero runtime I/O and ~17,255x performance improvement
+ * for zero runtime I/O
  *
  * SERVER-ONLY: This module is server-side only. Client components receive
  * entity configs as props from server components.

@@ -10,7 +10,7 @@ Database performance is **critical for application responsiveness**. Slow querie
 
 ## Performance Targets
 
-### Query Response Time Goals
+### Query Response Time Goals (targets, not measurements)
 
 ```typescript
 const QUERY_TARGETS = {
@@ -72,12 +72,12 @@ When queries filter on multiple columns, **composite indexes** dramatically impr
 ```sql
 -- ❌ WITHOUT composite index (slow)
 -- Query: SELECT * FROM tasks WHERE "userId" = $1 AND status = 'active'
--- Performance: Seq Scan → 150ms
+-- Plan: Seq Scan
 
 -- ✅ WITH composite index (fast)
 CREATE INDEX idx_tasks_user_status
 ON "tasks"("userId", status);
--- Performance: Index Scan → 8ms
+-- Plan: Index Scan
 
 -- User + date range queries
 CREATE INDEX idx_tasks_user_created
@@ -123,7 +123,7 @@ CREATE INDEX idx_tasks_active
 ON "tasks"("userId", "createdAt" DESC)
 WHERE status != 'completed';
 -- Benefits:
--- - 60% smaller index (completed tasks excluded)
+-- - Smaller index (completed tasks excluded)
 -- - Faster index scans
 -- - Reduced maintenance overhead
 
@@ -220,7 +220,7 @@ ON "user_metas" USING GIN ("metaValue" jsonb_path_ops);
 
 | Feature | GIN | GIN jsonb_path_ops |
 |---------|-----|-------------------|
-| **Size** | Larger | ~30% smaller |
+| **Size** | Larger | Smaller |
 | **Operations** | @>, ?, ?&, ?| | Only @> |
 | **Performance** | Good | Better for containment |
 | **Use case** | General JSONB | Known containment queries |
@@ -296,14 +296,14 @@ ORDER BY "createdAt" DESC;
 -- RLS forces full table scan
 EXPLAIN ANALYZE SELECT * FROM tasks WHERE status = 'active';
 -- Seq Scan on tasks (cost=0.00..1234.56 rows=10 width=...)
--- Execution time: 450ms
+-- Execution time: long (sequential scan)
 
 -- ✅ WITH userId index (fast)
 CREATE INDEX idx_tasks_user_id ON "tasks"("userId");
 
 EXPLAIN ANALYZE SELECT * FROM tasks WHERE status = 'active';
 -- Index Scan using idx_tasks_user_id (cost=0.42..12.45 rows=10 width=...)
--- Execution time: 12ms
+-- Execution time: much shorter (index scan)
 ```
 
 **Rule:** Always index columns used in RLS policies (typically `userId`).
@@ -442,11 +442,11 @@ LIMIT 20;
 ```text
 Index Scan using idx_tasks_user_status on tasks
   (cost=0.42..12.45 rows=10 width=584)
-  (actual time=0.023..0.156 rows=10 loops=1)
+  (actual time=<start>..<end> rows=10 loops=1)
   Index Cond: (("userId" = 'user-123') AND (status = 'active'))
   Buffers: shared hit=8
-Planning Time: 0.089 ms
-Execution Time: 0.198 ms
+Planning Time: <ms>
+Execution Time: <ms>
 ```
 
 **Key Metrics:**

@@ -27,7 +27,7 @@ The **Translation Registry** (`.nextspark/registries/translation-registry.ts`) i
 **Key Benefits:**
 - ✅ **Zero runtime string interpolation** - All paths resolved at build time
 - ✅ **Lazy-loading** - Only active locale loaded (not all translations)
-- ✅ **~17,255x faster discovery** than runtime I/O (140ms → 6ms)
+- ✅ **No runtime discovery**: translation loaders are static imports
 - ✅ **Type-safe locale access** - Build-time validation
 - ✅ **next-intl integration** - Works seamlessly with Next.js i18n
 - ✅ **Namespace optimization** - Organized by theme
@@ -253,22 +253,21 @@ import deTranslations from '@/messages/de.json'
 import itTranslations from '@/messages/it.json'
 import ptTranslations from '@/messages/pt.json'
 
-// User only needs 'en', but loaded 6 locales = 600KB+ bundle
+// User only needs 'en', but every locale is in the bundle
 ```
 
 **Solution with lazy-loading:**
 ```typescript
-// ✅ GOOD - Only loads active locale (fast)
+// ✅ GOOD - Only loads the active locale
 const loader = getThemeTranslationLoader('starter', userLocale)
 const translations = await loader()
 
-// User needs 'en', loaded only 'en' = 100KB bundle
+// User needs 'en', only 'en' is loaded
 ```
 
 **Performance Impact:**
-- **Eager loading:** 600KB+ for 6 locales
-- **Lazy loading:** 100KB for 1 locale
-- **Improvement:** 83% smaller bundle
+- **Eager loading:** every locale ships to every user
+- **Lazy loading:** only the requested locale is downloaded
 
 ---
 
@@ -560,29 +559,26 @@ export default async function I18nStatsPage() {
 
 ### Registry Lookup Performance
 
-| Operation | Time | Approach |
-|-----------|------|----------|
-| **Get loader** | **<1ms** | Object key access (2 levels) |
-| **Load translation** | **~50ms** | Dynamic import (cached after first load) |
-| Runtime discovery | ~140ms | File system I/O + parsing |
-| **Improvement** | **~2.8x** | Build-time path resolution |
+| Operation | Approach |
+|-----------|----------|
+| **Get loader** | Object key access (2 levels) |
+| **Load translation** | Dynamic import with a fixed specifier (cached after first load) |
+| Runtime discovery | File system I/O + parsing (what the registry replaces) |
 
 ### Bundle Size Impact
 
-**Scenario:** 6 locales × 100KB each = 600KB total
+**Scenario:** a project with several locales (no sizes quoted: the repository does not measure them)
 
 **Eager loading (all locales):**
 ```typescript
 // Bundle includes ALL locales
-Initial bundle: 600KB
-User downloads: 600KB (100% overhead)
+User downloads: every locale
 ```
 
 **Lazy loading (registry):**
 ```typescript
-// Bundle includes only active locale
-Initial bundle: 100KB (active) + 5KB (loaders)
-User downloads: 105KB (83% smaller)
+// Bundle includes only the active locale plus the loaders
+User downloads: the active locale
 ```
 
 **Code splitting:**
@@ -711,7 +707,7 @@ const translations = await loader()
 **Translation Registry provides:**
 - ✅ **Lazy-loading** - Only active locale loaded
 - ✅ **Zero runtime string interpolation** - All paths build-time
-- ✅ **83% bundle size reduction** (600KB → 105KB for 6 locales)
+- ✅ **Smaller initial bundle** (only the active locale is downloaded)
 - ✅ **next-intl integration** - Seamless i18n support
 - ✅ **Type-safe locale access** - Build-time validation
 - ✅ **6 helper functions** for queries
@@ -725,9 +721,9 @@ const translations = await loader()
 - ✅ i18n statistics and analytics
 
 **Performance:**
-- **Loader lookup:** <1ms (object access)
-- **Translation load:** ~50ms (dynamic import, cached)
-- **Bundle size:** 83% smaller with lazy loading
+- **Loader lookup:** object access
+- **Translation load:** dynamic import with a fixed specifier, cached after the first load
+- **Bundle size:** only the active locale is downloaded
 
 **Next steps:**
 - [Config Registry](./09-config-registry.md) - Configuration management

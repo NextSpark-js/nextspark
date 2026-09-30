@@ -315,7 +315,7 @@ describe('My Plugin Widget', () => {
 
 **cypress/support/commands.ts**:
 ```typescript
-// Use cy.session() for 3-5x faster test execution
+// Use cy.session() to log in once and reuse the session
 Cypress.Commands.add('loginAsUser', (email: string, password: string) => {
   cy.session([email, password], () => {
     cy.visit('/login')

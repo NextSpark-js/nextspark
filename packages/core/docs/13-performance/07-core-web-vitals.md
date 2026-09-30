@@ -40,9 +40,11 @@ const CORE_WEB_VITALS = {
 
 ### Why They Matter
 
+The Good / Needs Improvement / Poor thresholds are Google's published Core Web Vitals definitions (https://web.dev/articles/vitals), not NextSpark measurements.
+
 | Metric | Good | Needs Improvement | Poor | Business Impact |
 |--------|------|-------------------|------|-----------------|
-| **LCP** | < 2.5s | 2.5s - 4.0s | > 4.0s | 53% abandon if > 3s |
+| **LCP** | < 2.5s | 2.5s - 4.0s | > 4.0s | Slow loads lose visitors |
 | **INP** | < 200ms | 200ms - 500ms | > 500ms | Feels laggy/broken |
 | **CLS** | < 0.1 | 0.1 - 0.25 | > 0.25 | Accidental clicks |
 
@@ -714,9 +716,9 @@ const DEVTOOLS_WORKFLOW = {
 // Homepage optimization results
 const HOMEPAGE_RESULTS = {
   before: {
-    LCP: '3.8s',   // ❌ Poor
-    INP: '350ms',  // ❌ Poor
-    CLS: '0.18',   // ❌ Needs Improvement
+    LCP: 'Poor',              // ❌ Illustrative, not measured
+    INP: 'Poor',              // ❌
+    CLS: 'Needs Improvement', // ❌
   },
   
   changes: [
@@ -728,16 +730,12 @@ const HOMEPAGE_RESULTS = {
   ],
   
   after: {
-    LCP: '1.2s',   // ✅ Good
-    INP: '120ms',  // ✅ Good
-    CLS: '0.05',   // ✅ Good
+    LCP: 'Good',   // ✅
+    INP: 'Good',   // ✅
+    CLS: 'Good',   // ✅
   },
   
-  impact: {
-    bounceRate: '-23%',
-    conversionRate: '+18%',
-    avgSessionDuration: '+42%',
-  },
+  // Re-measure with Lighthouse or RUM; no impact figures are quoted
 }
 ```
 

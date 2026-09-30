@@ -412,9 +412,7 @@ plugin docs are never scanned into it.
 ```bash
 # Rebuild docs registry
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare
-
-# Restart dev server
-pnpm dev
+# A running pnpm dev regenerates when docs/public or docs/superadmin change; no restart
 ```
 
 **When the registry is rebuilt:**
@@ -470,8 +468,7 @@ Documentation
 1. Check file naming: `{order}-{slug}.md`
 2. Check directory naming: `{order}-{slug}/`
 3. Verify docs are in correct location
-4. Rebuild registry: `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
-5. Restart dev server
+4. Rebuild registry: `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (a running `pnpm dev` does this on change)
 
 ### Plugin Docs Missing
 

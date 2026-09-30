@@ -85,12 +85,7 @@ cd styles/
 
 ### Step 3: See Changes
 
-**Watch mode auto-rebuilds:**
-```text
-[THEME] ✓ Change detected in globals.css
-[THEME] ✓ Rebuilding theme... (0.8s)
-[THEME] ✓ Theme CSS updated
-```
+**No rebuild step:** Next.js recompiles the imported `styles/globals.css` and the page updates.
 
 **Browser auto-reloads** - No manual refresh needed!
 
@@ -197,11 +192,7 @@ export const appConfig = {
 }
 ```
 
-**Server restart required:**
-```bash
-# Ctrl+C to stop
-pnpm dev
-```
+**No restart needed:** `pnpm dev` watches `config/` and regenerates the registries on change.
 
 **Verify navigation:**
 - Visit http://localhost:3010
@@ -434,13 +425,9 @@ features: {
 },
 ```
 
-### Step 3: Rebuild and Restart
+### Step 3: See the change
 
-```bash
-# Ctrl+C to stop server
-cd apps/dev && node ../../packages/cli/dist/cli.js prepare   # Rebuild registries
-pnpm dev              # Restart server
-```
+`pnpm dev` watches `config/` and regenerates the registries on change: no rebuild or restart needed. Without a running dev server, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`.
 
 ---
 
@@ -499,13 +486,9 @@ footer: [
 ],
 ```
 
-### Step 4: Restart Server
+### Step 4: See the change
 
-```bash
-# Registry config changes require restart
-# Ctrl+C to stop
-pnpm dev
-```
+`pnpm dev` regenerates the registries when the config changes and serves the result: no restart needed.
 
 ---
 
@@ -696,7 +679,7 @@ export function useCustomFeature() {
 **Changes not appearing:**
 1. Check if file watcher is running
 2. Hard refresh browser (Cmd+Shift+R)
-3. Restart dev server if registry changed
+3. Run `pnpm exec nextspark prepare` and read its output if the registries look stale (`pnpm dev` regenerates them on change)
 4. Clear .next cache: `rm -rf .next`
 
 **Styling not working:**
@@ -747,7 +730,7 @@ Now that you've made your first customizations:
 - Use theme variables for styling
 - Compose shadcn/ui components upward
 - Never edit auto-generated files
-- Restart server for registry changes
+- `pnpm dev` regenerates registries on change; no restart
 
 **Continue reading** to learn advanced customizations!
 

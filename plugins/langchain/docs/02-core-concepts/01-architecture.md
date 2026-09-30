@@ -282,10 +282,10 @@ The graph-based orchestrator uses a **state machine** approach instead of ReAct 
 | Aspect | Graph Orchestrator | ReAct Loop |
 |--------|-------------------|------------|
 | **LLM Calls** | 1-2 per request | 50+ possible |
-| **Latency** | 2-3 seconds | 10-15+ seconds |
+| **Latency** | Bounded by a few LLM calls | Grows with every loop iteration |
 | **Predictability** | Deterministic flow | Non-deterministic |
 | **Recursion Limits** | Never hit | Frequent issue |
-| **Cost** | ~$0.001/request | ~$0.05/request |
+| **Cost** | Few LLM calls per request | Many LLM calls per request |
 
 > **Full Documentation**: See [Graph Orchestrator](../03-orchestration/01-graph-orchestrator.md) for complete details.
 
@@ -491,11 +491,11 @@ End-to-end tracing for debugging and monitoring:
 ┌─────────────────────────────────────────────────────────────┐
 │                    TRACE RECORD                              │
 │  traceId: abc-123                                           │
-│  ├─ Span: router (llm)          1200ms                      │
-│  ├─ Span: task_handler (tool)    340ms                      │
-│  └─ Span: combiner (llm)         800ms                      │
+│  ├─ Span: router (llm)          <ms>                        │
+│  ├─ Span: task_handler (tool)    <ms>                        │
+│  └─ Span: combiner (llm)         <ms>                        │
 │                                                              │
-│  Total: 2340ms | Tokens: 230 | Cost: $0.002                 │
+│  Total: <ms> | Tokens: <n> | Cost: <$>                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 

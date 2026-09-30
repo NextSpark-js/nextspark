@@ -13,45 +13,46 @@ Caching is a **multi-layer optimization strategy** that dramatically reduces lat
 ### Five-Layer Strategy
 
 ```text
+(Ordered from fastest to slowest; no latencies are quoted because the repository does not measure them.)
 User Request
       ↓
 ┌─────────────────────────────────────────────────────────┐
-│  Layer 1: BROWSER CACHE (0-5ms)                        │
+│  Layer 1: BROWSER CACHE                                 │
 │  • HTTP Cache-Control headers                          │
 │  • Service Workers / PWA cache                         │
 │  • Fastest, but shared across users                    │
 └─────────────────────────────────────────────────────────┘
       ↓ (Cache Miss)
 ┌─────────────────────────────────────────────────────────┐
-│  Layer 2: CLIENT STATE (5-10ms)                        │
+│  Layer 2: CLIENT STATE                                  │
 │  • TanStack Query cache                                │
 │  • React state / Context                               │
 │  • User-specific, in-memory                            │
 └─────────────────────────────────────────────────────────┘
       ↓ (Cache Miss)
 ┌─────────────────────────────────────────────────────────┐
-│  Layer 3: SERVER CACHE (10-50ms)                       │
+│  Layer 3: SERVER CACHE                                   │
 │  • Next.js fetch cache                                 │
 │  • React cache() API                                   │
 │  • Registry System (build-time)                        │
 └─────────────────────────────────────────────────────────┘
       ↓ (Cache Miss)
 ┌─────────────────────────────────────────────────────────┐
-│  Layer 3.5: DISTRIBUTED CACHE (1-20ms)                 │
+│  Layer 3.5: DISTRIBUTED CACHE                          │
 │  • L1: In-memory (per instance)                        │
 │  • L2: Redis/Upstash (shared across instances)         │
 │  • Tag-based invalidation                              │
 └─────────────────────────────────────────────────────────┘
       ↓ (Cache Miss)
 ┌─────────────────────────────────────────────────────────┐
-│  Layer 4: CDN CACHE (50-100ms)                         │
+│  Layer 4: CDN CACHE                                       │
 │  • Vercel Edge Network                                 │
 │  • Geographic distribution                             │
 │  • Public/static assets                                │
 └─────────────────────────────────────────────────────────┘
       ↓ (Cache Miss)
 ┌─────────────────────────────────────────────────────────┐
-│  DATABASE (100-200ms+)                                 │
+│  DATABASE                                                 │
 │  • PostgreSQL with connection pooling                  │
 │  • Last resort, slowest                                │
 └─────────────────────────────────────────────────────────┘
@@ -448,7 +449,7 @@ For multi-instance deployments, the distributed cache provides shared caching ac
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │  L1: MEMORY CACHE (per instance)                            │
-│  • Fastest access (~0.1ms)                                  │
+│  • Fastest access (in-process)                               │
 │  • LRU eviction (10K entries max)                          │
 │  • Tag-based invalidation                                   │
 └─────────────────────────────────────────────────────────────┘
@@ -610,22 +611,22 @@ The **Registry System** provides the ultimate cache—data computed at build tim
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 function getEntityConfig(entityName: string) {
-  return ENTITY_REGISTRY[entityName]  // O(1) lookup, ~6ms total
+  return ENTITY_REGISTRY[entityName]  // O(1) lookup
 }
 
-// vs Traditional Approach (140ms per entity)
+// vs Traditional Approach (runtime discovery per entity)
 async function getEntityConfigSlow(entityName: string) {
-  const dir = await findEntityDirectory(entityName)      // 20ms
-  const config = await import(configPath)                 // 40ms
-  const processed = await processConfig(config)           // 15ms
-  const resources = await discoverResources(dir)          // 35ms
-  const metadata = await buildMetadata(processed)         // 30ms
-  return metadata  // Total: ~140ms
+  const dir = await findEntityDirectory(entityName)
+  const config = await import(configPath)
+  const processed = await processConfig(config)
+  const resources = await discoverResources(dir)
+  const metadata = await buildMetadata(processed)
+  return metadata
 }
 ```
 
 **Registry System Benefits:**
-- ~17,255x faster than runtime discovery
+- no runtime discovery or filesystem I/O
 - Zero filesystem I/O at runtime
 - Data never stale (regenerated on build)
 - Type-safe with full TypeScript autocomplete

@@ -9,7 +9,7 @@ The Entity Registry is the **most frequently used registry** in the system. It p
 - `.nextspark/registries/entity-registry.client.ts` - Client-safe registry with 8 helper functions
 
 **Pattern:** Data-only (query functions in client registry)
-**Performance:** <1ms for all operations
+**Performance:** in-memory reads, no I/O
 **Usage:** Server Components, API routes, services
 
 ---
@@ -30,9 +30,9 @@ The Entity Registry is the **most frequently used registry** in the system. It p
 
 ### Why It Exists?
 
-**Performance:** ~17,255x faster than runtime discovery
-- Runtime discovery: 140ms per entity
-- Registry lookup: <1ms for all entities
+**Performance:** static registry, no runtime discovery or filesystem I/O
+- Runtime discovery: filesystem I/O per entity
+- Registry lookup: an in-memory read
 
 **Type Safety:** Full TypeScript autocomplete for entity names
 
@@ -236,7 +236,7 @@ entities.map(entity => (
 
 **Returns:** Array of all entity configs (not metadata, just configs)
 
-**Performance:** <1ms for 1,000+ entities
+**Performance:** an in-memory read
 
 ### 2. getEntity(name)
 
@@ -847,22 +847,18 @@ describe('Entity Registry', () => {
 
 **All operations are O(1) or O(n) with n = total entities:**
 
-| Function | Complexity | Performance |
-|----------|------------|-------------|
-| `ENTITY_REGISTRY.tasks` | O(1) | <0.1ms |
-| `getEntity(name)` | O(1) | <0.1ms |
-| `getEntityMetadata(name)` | O(1) | <0.1ms |
-| `getRegisteredEntities()` | O(n) | <1ms for 1,000 entities |
-| `getRootEntities()` | O(n) | <1ms for 1,000 entities |
-| `getChildEntities(parent)` | O(n) | <1ms for 1,000 entities |
-| `getEntityTree()` | O(n × depth) | <2ms for 1,000 entities |
-| `getPluginEntities(plugin)` | O(n) | <1ms for 1,000 entities |
+| Function | Complexity |
+|----------|------------|
+| `ENTITY_REGISTRY.tasks` | O(1) |
+| `getEntity(name)` | O(1) |
+| `getEntityMetadata(name)` | O(1) |
+| `getRegisteredEntities()` | O(n) |
+| `getRootEntities()` | O(n) |
+| `getChildEntities(parent)` | O(n) |
+| `getEntityTree()` | O(n × depth) |
+| `getPluginEntities(plugin)` | O(n) |
 
-**Scaling:**
-- 10 entities: <0.5ms
-- 100 entities: <1ms
-- 1,000 entities: <2ms
-- 10,000 entities: <5ms
+No timings are quoted: the repository has no benchmark for them. All of these read memory only.
 
 ---
 
@@ -905,4 +901,4 @@ describe('Entity Registry', () => {
 **Version**: 2.0.0
 **Status**: Complete
 **Pattern**: Data-only (functions in client registry)
-**Performance**: <1ms for all operations
+**Performance**: in-memory reads, no I/O

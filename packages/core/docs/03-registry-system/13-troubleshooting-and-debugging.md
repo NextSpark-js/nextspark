@@ -553,7 +553,7 @@ grep "export type EntityName" .nextspark/registries/entity-registry.ts
 ### Issue: Slow Registry Lookups
 
 **Symptoms:**
-- Registry lookups taking >50ms
+- Registry lookups that are measurably slow
 - Application feels slow
 
 **Debugging:**
@@ -564,7 +564,7 @@ const start = performance.now()
 const entity = ENTITY_REGISTRY.tasks
 const end = performance.now()
 
-console.log(`Lookup took ${end - start}ms`) // Should be <10ms
+console.log(`Lookup took ${end - start}ms`) // A lookup should be negligible: if it is not, something else is involved
 ```
 
 **Causes:**
@@ -748,7 +748,7 @@ export function loadEntity(name: EntityName) {
 
 **Next steps:**
 - [Introduction](./01-introduction.md) - Registry system overview
-- [Performance](./12-performance-and-benchmarks.md) - Performance analysis
+- [Performance Model](./12-performance-and-benchmarks.md) - Performance analysis
 - [Enforcement](./11-enforcement-and-validation.md) - Policy enforcement
 
 **Documentation:** `core/docs/03-registry-system/13-troubleshooting-and-debugging.md`

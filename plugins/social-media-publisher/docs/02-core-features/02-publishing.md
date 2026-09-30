@@ -157,10 +157,7 @@ Similar to photos but with **longer processing time**:
 - **Frame Rate:** Max 30fps
 - **Accessibility:** Must be publicly accessible via HTTPS
 
-**Processing Time:**
-- Small videos (< 10MB): 5-10 seconds
-- Medium videos (10-50MB): 15-30 seconds
-- Large videos (50-100MB): 30-60 seconds
+**Processing Time:** grows with the video size; the repository does not measure it.
 
 ## Facebook Pages Publishing
 

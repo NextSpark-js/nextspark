@@ -288,14 +288,11 @@ whsec_xxxxx
 **Deployment process:**
 ```text
 Building...
-[00:00:05] Installing dependencies (pnpm install)
-[00:00:35] Running build command (pnpm build)
-  [THEME]    Building theme CSS... ✓
-  [REGISTRY] Building registries... ✓
-  [DOCS]     Building docs index... ✓
-  [APP]      Building Next.js... ✓
-[00:02:30] Deploying to Edge Network...
-[00:02:45] ✅ Deployment ready
+Installing dependencies (pnpm install)
+Running build command (pnpm build)
+  nextspark build: generates src/app and the registries (docs index included), then runs next build
+Deploying to Edge Network...
+✅ Deployment ready
 
 URL: https://your-project-xxxxx.vercel.app
 ```

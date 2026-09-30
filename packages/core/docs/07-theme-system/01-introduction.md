@@ -56,7 +56,7 @@ import { defineConfig } from '@nextsparkjs/core/lib/config'
 
 export default defineConfig({
   plugins: ['analytics'],
-  template: { name: 'crm', version: '0.1.0-beta.193' },
+  template: { name: 'crm', version: '0.1.0-beta.192' },
 })
 ```
 

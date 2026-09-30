@@ -20,7 +20,7 @@ A complete "Projects" management system with:
 **Why this example:**
 
 The Projects entity demonstrates:
-- Config-driven entity development (~40x faster than traditional approach)
+- Config-driven entity development (one config file instead of hand-written CRUD)
 - Registry-based architecture (zero runtime I/O)
 - Dual authentication (sessions + API keys)
 - Row-Level Security (RLS) for data isolation
@@ -800,14 +800,10 @@ DELETE /api/v1/projects/:id   - Delete project
 
 ### 4.2 Test API Endpoints
 
-**Rebuild registries to activate the new entity:**
+**The new entity is picked up by `pnpm dev`:** it regenerates `src/app` and the registries when `entities/` changes, with no restart. Without a running dev server, generate explicitly:
 
 ```bash
-# Stop dev server (Ctrl+C)
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare
-
-# Restart dev server
-pnpm dev
 ```
 
 **Expected output:**
@@ -1198,11 +1194,10 @@ export const appConfig = {
 }
 ```
 
-**Rebuild registries and restart:**
+**Regenerate:** a running `pnpm dev` does it for you when `nextspark.config.ts` or `config/` changes. Otherwise:
 
 ```bash
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare
-# Restart pnpm dev
 ```
 
 **Verify navigation:**
@@ -1549,7 +1544,7 @@ grep -A 5 "projects" .nextspark/registries/entity-registry.ts
 # }
 ```
 
-**Restart dev server:**
+**Start the dev server:**
 
 ```bash
 pnpm dev
@@ -1808,20 +1803,13 @@ cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 - ✅ Deployment preparation
 
 **Entity system mastery:**
-- Config vs code (40x productivity improvement)
-- Registry-based architecture (17,255x performance)
+- Config vs code
+- Registry-based architecture (static, no runtime discovery)
 - Zero runtime I/O philosophy
 - Type-safe development
 - Auto-generated features
 
-**Time comparison:**
-
-| Approach | Time | Lines of Code | Features |
-|----------|------|---------------|----------|
-| Traditional | ~10 hours | ~800 lines | Basic CRUD |
-| Entity System | ~15 minutes | ~50 lines config | Full-featured CRUD + UI + Tests |
-
-**Improvement:** **40x faster development!**
+**Comparison:** a traditional build writes the schema, routes, services, forms and tests by hand; the entity system derives them from one config file.
 
 ### 11.2 What You Built
 
@@ -1903,7 +1891,7 @@ Then re-run migration.
 ```bash
 rm -rf .nextspark/registries
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare
-# Restart dev server
+# A running pnpm dev picks the regenerated files up without a restart
 ```
 
 ### API returns 401 Unauthorized

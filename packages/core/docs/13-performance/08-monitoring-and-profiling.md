@@ -97,7 +97,7 @@ const PROFILER_RED_FLAGS = [
 // Example analysis
 const ANALYSIS_EXAMPLE = {
   component: 'ProductList',
-  renderTime: '145ms',  // ❌ Way too slow
+  renderTime: 'Long',   // ❌ Well above the frame budget
   renderCount: '3',     // ❌ Rendered 3 times in one update
   
   diagnosis: 'Missing React.memo, re-rendering on every parent update',
@@ -234,17 +234,17 @@ const CHROME_ISSUES = {
 // Analyzing a slow interaction
 
 const SLOW_INTERACTION_ANALYSIS = {
-  issue: 'Button click takes 450ms to show feedback',
+  issue: 'Button click takes noticeably long to show feedback',
   
   timeline: {
-    '0ms': 'Click event',
-    '5ms': 'Event handler starts',
-    '280ms': 'Heavy calculation (blocking)',  // ⚠️ Problem
-    '285ms': 'State update',
-    '320ms': 'React reconciliation',
-    '350ms': 'Layout calculation',
-    '420ms': 'Paint',
-    '450ms': 'User sees feedback',
+    1: 'Click event',
+    2: 'Event handler starts',
+    3: 'Heavy calculation (blocking)',  // ⚠️ Problem
+    4: 'State update',
+    5: 'React reconciliation',
+    6: 'Layout calculation',
+    7: 'Paint',
+    8: 'User sees feedback',  // Illustrative order, not measured times
   },
   
   diagnosis: 'Heavy synchronous calculation blocking main thread',
@@ -252,7 +252,7 @@ const SLOW_INTERACTION_ANALYSIS = {
   solution: {
     before: `
       function handleClick() {
-        const result = heavyCalculation(data)  // 280ms
+        const result = heavyCalculation(data)  // blocks the main thread
         setState(result)
       }
     `,
@@ -270,7 +270,7 @@ const SLOW_INTERACTION_ANALYSIS = {
     `,
   },
   
-  improvement: '450ms → 50ms perceived response time',
+  improvement: 'Immediate feedback instead of waiting for the calculation',
 }
 ```
 
@@ -330,9 +330,9 @@ const LIGHTHOUSE_SECTIONS = {
   opportunities: {
     description: 'Specific improvements with estimated impact',
     examples: [
-      'Reduce unused JavaScript (saves 2.4s)',
-      'Properly size images (saves 1.8s)',
-      'Eliminate render-blocking resources (saves 1.2s)',
+      'Reduce unused JavaScript (Lighthouse shows the estimated saving)',
+      'Properly size images',
+      'Eliminate render-blocking resources',
     ],
   },
   
@@ -749,7 +749,7 @@ if (currentLCP > baselineLCP * 1.1) sendAlert()
 // Understand *why* something is slow
 
 // Set unrealistic budgets
-// LCP: 0.5s  ← Impossible for complex pages
+// An LCP far below what the page can reach  ← Unrealistic
 
 // Forget to clean up
 useEffect(() => {

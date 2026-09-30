@@ -1,7 +1,7 @@
 # Orchestration (Legacy)
 
 > **DEPRECATED**: This document describes the legacy ReAct-based orchestration approach.
-> For new implementations, use the **Graph-Based Orchestrator** which is 25-50x faster.
+> For new implementations, use the **Graph-Based Orchestrator** which makes far fewer LLM calls.
 >
 > **Recommended**: See [Graph Orchestrator](./01-graph-orchestrator.md) for the modern approach.
 >

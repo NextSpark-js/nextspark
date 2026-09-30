@@ -7,7 +7,7 @@ import '../utils/console-guard.mjs'
  * Unified Build-Time Registry Generator
  *
  * Consolidates all content discovery into a single, efficient build script.
- * Generates static registries for ultra-fast runtime access (~17,255x performance improvement).
+ * Generates static registries for runtime access without filesystem I/O or discovery.
  *
  * Features:
  * - Unified plugin, entity, theme, and config discovery

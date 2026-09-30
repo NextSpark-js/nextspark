@@ -4,7 +4,7 @@
 
 ## Introduction
 
-The NextSpark internationalization (i18n) system provides enterprise-grade multi-language support powered by **next-intl** with build-time translation registry optimization. The system enables seamless translation management across core application features, custom themes, and plugins while maintaining ~17,255x performance improvement through zero runtime I/O patterns.
+The NextSpark internationalization (i18n) system provides enterprise-grade multi-language support powered by **next-intl** with build-time translation registry optimization. The system enables seamless translation management across core application features, custom themes, and plugins with zero runtime I/O patterns.
 
 The i18n architecture follows the same build-time philosophy as the registry system: all translations are discovered, validated, and indexed during the build process, eliminating filesystem operations at runtime and ensuring instant access to localized content.
 
@@ -39,9 +39,8 @@ All translations are indexed at build-time into a static registry, providing:
 
 **Performance Impact**:
 ```text
-Runtime Translation Loading:  ~140ms (filesystem I/O)
-Registry Translation Loading: ~6ms (memory access)
-Improvement:                  ~17,255x faster
+Runtime Translation Loading:  filesystem I/O at request time
+Registry Translation Loading: static loaders, no runtime discovery
 ```
 
 ### 2. **Hierarchical Translation Sources**
@@ -63,15 +62,14 @@ This allows themes and plugins to override core translations while maintaining c
 Translations are organized into logical namespaces for efficient lazy-loading:
 
 **Core Namespaces (7 total)**:
-- `common` - Shared UI elements (~2.1KB)
-- `dashboard` - Dashboard-specific content (~1.2KB)
-- `settings` - User settings and preferences (~12.5KB)
-- `auth` - Authentication flows (~2.8KB)
-- `public` - Public pages and landing (~10.5KB)
-- `validation` - Form validation messages (~1.6KB)
+- `common` - Shared UI elements
+- `dashboard` - Dashboard-specific content
+- `settings` - User settings and preferences
+- `auth` - Authentication flows
+- `public` - Public pages and landing
+- `validation` - Form validation messages
 - `admin` - Superadmin area
 
-**Total Bundle Size**: ~37KB per locale (compressed ~25KB)
 
 ### 4. **Component-Level Integration**
 
@@ -175,12 +173,12 @@ Core translations provide the foundational application strings:
 ```text
 core/messages/
 ├── en/
-│   ├── common.json       # Shared UI elements (~2.1KB)
-│   ├── dashboard.json    # Dashboard content (~1.2KB)
-│   ├── settings.json     # User settings (~12.5KB)
-│   ├── auth.json         # Authentication (~2.8KB)
-│   ├── public.json       # Public pages (~10.5KB)
-│   ├── validation.json   # Validation messages (~1.6KB)
+│   ├── common.json       # Shared UI elements
+│   ├── dashboard.json    # Dashboard content
+│   ├── settings.json     # User settings
+│   ├── auth.json         # Authentication
+│   ├── public.json       # Public pages
+│   ├── validation.json   # Validation messages
 │   └── admin.json      # Superadmin area
 └── es/
     ├── common.json
@@ -204,8 +202,8 @@ Theme translations customize and extend core strings:
 **Structure**:
 ```text
 messages/
-├── en.json     # English theme translations (~15KB)
-└── es.json     # Spanish theme translations (~15KB)
+├── en.json     # English theme translations
+└── es.json     # Spanish theme translations
 ```
 
 **Example** (`en.json`):
@@ -644,45 +642,15 @@ const t = useTranslations('common')
 
 ### Translation Loading Performance
 
-**Registry-Based Loading**:
-```text
-Initial locale load:     ~6ms (from memory)
-Additional namespace:    ~2-3ms (lazy loaded)
-Locale switching:        ~6ms (new locale loaded)
-```
+**Registry-Based Loading**: each locale and namespace is a static loader; only the requested locale is imported.
 
-**Traditional Runtime Loading** (for comparison):
-```text
-Initial locale load:     ~140ms (filesystem I/O)
-Additional namespace:    ~20-30ms (filesystem I/O)
-Locale switching:        ~140ms (filesystem I/O)
-```
+**Traditional Runtime Loading** (for comparison): the locale files are found and read from disk at request time.
 
-**Performance Improvement**: ~17,255x faster (140ms → 6ms)
+**Performance**: static registry, no runtime discovery
 
 ### Bundle Size Impact
 
-**Per Locale**:
-- **Uncompressed**: ~37KB
-- **Compressed (gzip)**: ~25KB
-- **Brotli**: ~18KB
-
-**Core Namespaces Breakdown**:
-- `common.json`: ~2.1KB
-- `dashboard.json`: ~1.2KB
-- `settings.json`: ~12.5KB
-- `auth.json`: ~2.8KB
-- `public.json`: ~10.5KB
-- `validation.json`: ~1.6KB
-- `admin.json`: ~7KB (estimated)
-
-**Theme Translations**:
-- `en.json`: ~15KB
-- `es.json`: ~15KB
-
-**Total Initial Load** (one locale):
-- Core + Theme: ~52KB (uncompressed)
-- Compressed: ~35KB
+Only the requested locale and the namespaces a route lists are downloaded. The repository does not measure the size of the message files, so none is quoted; check `dist`/`.next` output or your bundle analyzer.
 
 ### Memory Footprint
 

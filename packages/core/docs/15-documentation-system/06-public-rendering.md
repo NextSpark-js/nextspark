@@ -293,21 +293,19 @@ export async function generateMetadata({ params }: DocsPageProps): Promise<Metad
 ### Server-Side
 
 **Page Rendering:**
-- Registry lookup: ~6ms (memory)
-- Markdown parsing: ~20-30ms
-- HTML generation: ~10ms
-- **Total:** ~40-50ms per page
+- Registry lookup (memory)
+- Markdown parsing
+- HTML generation
 
 **Caching:**
 - Static pages cached by Next.js
-- Subsequent loads: <5ms (cached)
+- Subsequent loads are served from the cache
 
 ### Client-Side
 
 **Initial Load:**
 - HTML: Pre-rendered (instant)
-- JavaScript: Minimal hydration (~50KB)
-- **FCP:** <300ms
+- JavaScript: Minimal hydration
 
 ## Accessibility
 

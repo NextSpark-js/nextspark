@@ -4,7 +4,7 @@
 
 ## Introduction
 
-The Translation Registry is a build-time optimization system that transforms runtime filesystem operations into static, type-safe imports. This architecture delivers ~17,255x performance improvement (140ms → 6ms) by eliminating runtime I/O operations while maintaining flexibility and extensibility.
+The Translation Registry is a build-time optimization system that transforms runtime filesystem operations into static, type-safe imports. This architecture eliminates runtime I/O operations while maintaining flexibility and extensibility.
 
 This document covers how the registry works, performance benefits, and best practices for working with the translation system.
 
@@ -16,26 +16,24 @@ This document covers how the registry works, performance benefits, and best prac
 
 **Traditional Approach** (Runtime I/O):
 ```typescript
-// BAD - Runtime filesystem I/O (140ms)
+// BAD - Runtime resolution by variable
 const messages = await import(`@/messages/${locale}.json`)
 ```
 
 **Registry Approach** (Build-Time):
 ```typescript
-// GOOD - Build-time registry (6ms)
+// GOOD - Build-time registry
 import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 const messages = await loadThemeTranslation('starter', 'en')
 ```
 
 ### Performance Comparison
 
-| Metric | Runtime I/O | Registry | Improvement |
-|--------|-------------|----------|-------------|
-| Initial Load | ~140ms | ~6ms | ~17,255x faster |
-| Namespace Load | ~20-30ms | ~2-3ms | ~10x faster |
-| Type Safety | None | Full | ✅ Complete |
-| Build Validation | None | Full | ✅ Errors caught at build |
-| Memory Usage | Variable | Optimized | ~40% reduction |
+| Metric | Runtime I/O | Registry |
+|--------|-------------|----------|
+| Loading | Filesystem read at runtime | Static loader, locale imported on request |
+| Type Safety | None | Full |
+| Build Validation | None | Errors caught at build |
 
 ---
 
@@ -313,7 +311,7 @@ Only one locale in memory at a time:
 User switches locale: en → es
 ┌─────────────┐        ┌─────────────┐
 │ EN Messages │   →    │ ES Messages │
-│   (52KB)    │        │   (52KB)    │
+│             │        │             │
 └─────────────┘        └─────────────┘
 Memory Released        Loaded on Demand
 ```
@@ -326,14 +324,12 @@ Namespace loading optimized by route:
 // Dashboard page
 pathname: '/dashboard'
 namespaces: ['common', 'dashboard', 'settings', 'public']
-bundle: ~25KB
 
 // Auth page
 pathname: '/login'
 namespaces: ['common', 'auth', 'validation']
-bundle: ~16KB
 
-// Savings: ~40-50% bundle size reduction
+// Each route loads only the namespaces it lists
 ```
 
 ---
@@ -496,7 +492,7 @@ cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 console.time('translation-load')
 const messages = await loadAllI18nTranslations('en')
 console.timeEnd('translation-load')
-// Should be < 10ms
+// Compare with your own baseline
 ```
 
 ---

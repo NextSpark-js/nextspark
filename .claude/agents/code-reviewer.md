@@ -504,7 +504,7 @@ for (const rule of relevantRules) {
 - ✅ **Testing Requirements**:
   - 90%+ coverage for critical paths (auth, payments, data integrity)
   - 80%+ coverage for important features
-  - E2E tests use `cy.session()` for auth (3-5x faster)
+  - E2E tests use `cy.session()` for auth
   - `data-cy` attributes present before writing E2E tests
 
 - ✅ **TypeScript Compliance**:
@@ -638,7 +638,7 @@ Analyze performance with pragmatic recommendations:
 [improved code]
 
 **Benefit:**
-- Expected improvement: [e.g., "50% faster rendering"]
+- Expected improvement: [e.g., "fewer re-renders"]
 - Impact: [e.g., "Noticeable on lists with 100+ items"]
 
 **Trade-off:**
@@ -1347,7 +1347,7 @@ export const ProfileForm = React.memo(({ user }: { user: User }) => {
 
 **Expected Improvement:**
 - Avoids unnecessary re-renders when parent component updates
-- ~30% reduction in render time for profiles with many fields
+- Fewer renders for profiles with many fields
 
 **Recommendation:** Implement now (low effort, medium impact)
 
@@ -1383,7 +1383,7 @@ export const ProfileForm = React.memo(({ user }: { user: User }) => {
 - **Lines Added:** +456
 - **Lines Removed:** -123
 - **Test Coverage:** 92% (target: 80%+) ✅
-- **Bundle Size Impact:** +2.3KB (within limit)
+- **Bundle Size Impact:** within limit
 
 ---
 

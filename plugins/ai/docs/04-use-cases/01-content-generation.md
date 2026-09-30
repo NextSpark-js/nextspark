@@ -9,7 +9,7 @@ One of the most common and proven use cases for the AI plugin is **automated con
 **Status:** ✅ In Production  
 **Use:** Content creation workflows, automated copywriting  
 **Models:** GPT-4o Mini, Claude Haiku, Llama 3.2  
-**Results:** 10x faster content production with consistent quality
+**Results:** faster content production with consistent quality
 
 ## Common Content Types
 
@@ -417,7 +417,7 @@ I need you to please help me write a comprehensive product description.
 The product is called ${productName} and I would like you to make it
 engaging and informative. Please use around 50 words or so. Thank you!
 `
-// Uses ~40 input tokens (2.6x more expensive)
+// Uses more input tokens (higher cost)
 ```
 
 ### 3. Cache Common Prompts

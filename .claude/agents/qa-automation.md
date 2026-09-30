@@ -1114,7 +1114,7 @@ describe('Products UAT', () => {
   const productsPOM = new ProductsPOM()
 
   beforeEach(() => {
-    // Use cy.session for faster auth (3-5x improvement)
+    // Use cy.session to log in once per role
     cy.session('admin', () => {
       cy.visit('/login')
       // ✅ CORRECT - Using cySelector
@@ -1608,7 +1608,7 @@ await Edit({
 - code-reviewer can begin Phase 7
 
 **Notes:**
-- cy.session() used for auth (3-5x faster)
+- cy.session() used for auth
 - All selectors from tests.md utilized
 ```
 
@@ -1703,7 +1703,7 @@ Before marking complete:
 ```typescript
 import { cySelector } from '../selectors'
 
-// 3-5x faster test execution
+// Log in once per role and reuse the session
 cy.session('admin', () => {
   cy.visit('/login')
   // ✅ CORRECT - Using cySelector

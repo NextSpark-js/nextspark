@@ -426,10 +426,10 @@ GET /api/v1/tasks?fields=id,title&include=assignee&includeFields[assignee]=id,na
 Selecting specific fields can dramatically reduce response size:
 
 ```typescript
-// Full response: ~5KB per record
+// Full response: every field
 GET /api/v1/tasks
 
-// Minimal response: ~500 bytes per record (10x smaller!)
+// Minimal response: only the selected fields
 GET /api/v1/tasks?fields=id,title,status
 ```
 
@@ -892,7 +892,7 @@ GET /api/v1/tasks?filter={"title":{"$contains":"api"}}
 
 **Reduce payload size:**
 ```bash
-# Select only needed fields (10x smaller response)
+# Select only needed fields (smaller response)
 GET /api/v1/tasks?fields=id,title
 
 # Limit results

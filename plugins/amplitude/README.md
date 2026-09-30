@@ -562,11 +562,13 @@ const debugConfig = {
 ## 📈 **Performance y Optimización**
 
 ### **Métricas Monitoreadas**
-- **Initialization Time**: < 50ms
-- **Event Processing**: < 10ms promedio
-- **Memory Usage**: < 5MB máximo
-- **Cache Hit Rate**: > 85%
-- **Error Rate**: < 1%
+- **Initialization Time**
+- **Event Processing**
+- **Memory Usage**
+- **Cache Hit Rate**
+- **Error Rate**
+
+(No se citan valores: el repositorio no los mide.)
 
 ### **Best Practices**
 1. **Batch events** en lugar de enviar individualmente

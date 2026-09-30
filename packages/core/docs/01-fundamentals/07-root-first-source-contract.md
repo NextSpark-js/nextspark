@@ -2,7 +2,7 @@
 
 ## Status and release boundary
 
-This document is the source contract for the `0.1.0-beta.193` compiler work. It is intentionally breaking: the compiler reads the root-first layout only. It does not read `contents/themes/<theme>`, does not fall back to that layout, and has no compatibility flag. `NEXT_PUBLIC_ACTIVE_THEME` is removed rather than renamed. A 0.x project must run the one-shot migration before upgrading.
+This document is the source contract for the `0.1.0-beta.192` compiler work. It is intentionally breaking: the compiler reads the root-first layout only. It does not read `contents/themes/<theme>`, does not fall back to that layout, and has no compatibility flag. `NEXT_PUBLIC_ACTIVE_THEME` is removed rather than renamed. A 0.x project must run the one-shot migration before upgrading.
 
 Themes are install-once project templates. Scaffolding may record their origin, but after extraction every file is project-owned source and is never synchronized from the template again.
 
@@ -77,7 +77,7 @@ export default defineConfig({
   },
   template: {
     name: 'crm',
-    version: '0.1.0-beta.193',
+    version: '0.1.0-beta.192',
   },
 })
 ```
@@ -231,7 +231,7 @@ This source contract covers the always-present web host. It intentionally does n
 - `desktop/` and Tauri;
 - project-authored `mcp/` tools and their authenticated transport.
 
-Those surfaces must not force another web-source move. See [issue #203, “Full platform picture (later releases, not a 1.0 commitment)”](https://github.com/NextSpark-js/nextspark/issues/203#full-platform-picture-later-releases-not-a-10-commitment) for the intended sibling `mobile/`, `desktop/`, `mcp/`, and portable `packages/` layout. Until the platform-contracts work lands, none of those directories is a beta.193 compiler input.
+Those surfaces must not force another web-source move. See [issue #203, “Full platform picture (later releases, not a 1.0 commitment)”](https://github.com/NextSpark-js/nextspark/issues/203#full-platform-picture-later-releases-not-a-10-commitment) for the intended sibling `mobile/`, `desktop/`, `mcp/`, and portable `packages/` layout. Until the platform-contracts work lands, none of those directories is a beta.192 compiler input.
 
 ## Open questions for later slices
 

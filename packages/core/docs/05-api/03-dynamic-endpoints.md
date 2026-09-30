@@ -33,7 +33,7 @@
 - ✅ **Zero Boilerplate** - Define entity config, get API automatically
 - ✅ **Full CRUD** - LIST, CREATE, READ, UPDATE, DELETE operations
 - ✅ **Type-Safe** - Full TypeScript support from entity config
-- ✅ **Performance** - Registry-based (6ms vs 140ms runtime discovery)
+- ✅ **Performance** - Registry-based (no runtime discovery)
 - ✅ **Dual Auth** - API Keys + Sessions supported
 - ✅ **Rich Querying** - Pagination, filtering, sorting, field selection
 - ✅ **Metadata Support** - Custom metadata integration
@@ -1242,7 +1242,7 @@ GET /api/v1/products?child=reviews  # Only one child type
 - ✅ **Full CRUD** - LIST, CREATE, READ, UPDATE, DELETE operations
 - ✅ **Rich querying** - Pagination, filtering, sorting, field selection
 - ✅ **Type-safe** - Full TypeScript support from entity config
-- ✅ **Performance** - Registry-based (6ms vs 140ms)
+- ✅ **Performance** - Registry-based (no runtime discovery)
 - ✅ **Flexible** - Public or authenticated, shared or user-scoped
 - ✅ **Validated** - Automatic validation from field definitions
 - ✅ **Metadata support** - Custom metadata integration

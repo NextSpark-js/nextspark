@@ -183,7 +183,7 @@ export async function POST(request: Request) {
 
 **Use Case:** Automated marketing content creation
 **Implementation:** Custom endpoint using `generate` with specialized prompts
-**Result:** 10x faster content production with consistent quality
+**Result:** faster content production with consistent quality
 
 ### AI-Powered CMS
 

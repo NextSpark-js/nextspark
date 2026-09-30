@@ -99,8 +99,8 @@ Confirm `package.json` declares `next` and that the config files are valid.
 
 ### Styles are stale
 
-Edit `styles/globals.css`, rebuild, and restart the development server. The
-compiler maintains the generated `src/app/globals.css` adapter.
+Edit `styles/globals.css`: Next.js recompiles the imported CSS without a restart. If the root layout does not import it (a project that had no
+`styles/globals.css` when `src/app` was generated), run `pnpm exec nextspark prepare`.
 
 ### Plugin contribution is missing
 

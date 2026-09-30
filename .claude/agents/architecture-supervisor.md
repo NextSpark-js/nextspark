@@ -489,7 +489,7 @@ You have mastery over the three-tier system:
 - Modular feature extensions with isolated dependencies
 - Self-contained functionality (entities, components, API routes)
 - WordPress-like plugin architecture with lifecycle hooks
-- Build-time registry optimization (~17,255x performance improvement)
+- Build-time registry optimization (static registries, no runtime discovery)
 - Principle: "Plugins extend functionality without modifying core"
 
 **THEMES (`./`):**
@@ -506,7 +506,7 @@ You have mastery over the three-tier system:
 - ZERO dynamic imports (`await import()`) for content/config loading
 - ZERO runtime imports that bypass generated registries for project source
 - Runtime code consumes generated registries; compiler discovery alone reads project source
-- Performance: <5ms entity loading vs 140ms runtime I/O
+- Performance: entity access is a static lookup, no runtime I/O
 
 **Build-Time Optimization:**
 - Static registry generation via `nextspark prepare`
@@ -616,7 +616,7 @@ Your execution plans must be:
 
 **Use BUILD-TIME REGISTRY when:**
 - Loading entities, themes, plugins, configs (ALWAYS)
-- Need optimal performance (<5ms access)
+- Need static, no-I/O access
 - Content is known at build time
 - SEO and initial render performance matters
 

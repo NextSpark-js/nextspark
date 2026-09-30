@@ -4,7 +4,7 @@
 
 ## Introduction
 
-The monorepo keeps the Next.js process and registry generation separate. The root `dev` and `build` scripts delegate to `apps/dev`; neither starts a set of theme, plugin, or registry workers.
+The root `dev` and `build` scripts delegate to `apps/dev`, which runs `nextspark dev` and `nextspark build`. Both generate `src/app` and the registries (`prepare`) before Next.js runs; `dev` then keeps a watcher that regenerates on change.
 
 ---
 
@@ -14,10 +14,10 @@ The monorepo keeps the Next.js process and registry generation separate. The roo
 pnpm dev
 ```
 
-The root script delegates to the app package, which starts a single process:
+The root script delegates to the app package, which runs:
 
 ```text
-dotenv -e .env -- sh -c 'next dev --turbopack -p $PORT'
+dotenv -e .env -- sh -c 'node ../../packages/cli/dist/cli.js dev --turbopack -p $PORT'
 ```
 
 `PORT` comes from `apps/dev/.env`. The measured checkout used port 3010. Next.js watches application code and the theme CSS imported by the generated root layout (`apps/dev/src/app/layout.tsx`).
@@ -26,19 +26,19 @@ dotenv -e .env -- sh -c 'next dev --turbopack -p $PORT'
 
 ## Registry Build
 
-Registry inputs are not watched by the root `pnpm dev` command. Build them explicitly when entity, plugin, theme configuration, template, translation, or documentation inputs change:
+`pnpm dev` and `pnpm build` already generate the registries. Run `prepare` explicitly when you want generation without starting Next.js:
 
 ```bash
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 ```
 
-For a separate long-running watcher:
+For a standalone watcher (`pnpm dev` already includes one):
 
 ```bash
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 ```
 
-The registry builder writes `.nextspark/registries/`, including `docs-registry.ts`, and updates generated template files. Restart the Next.js process when a regenerated import is not picked up automatically.
+The registry builder writes `.nextspark/registries/`, including `docs-registry.ts`, and updates generated template files. `nextspark dev` runs the same generation on every change and serves it without a restart.
 
 ---
 
@@ -71,16 +71,16 @@ The root build delegates to `apps/dev`, where Next.js creates the production out
 ## Command Reference
 
 ```bash
-# Next.js development server
+# Development server (generates, then watches and regenerates)
 pnpm dev
 
-# Registry generation
+# Registry generation only
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare
 
-# Registry watch mode (separate terminal)
+# Registry watch mode on its own
 cd apps/dev && node ../../packages/cli/dist/cli.js prepare --watch
 
-# Production app build
+# Production build (generates first, then builds)
 pnpm build
 ```
 
@@ -88,9 +88,8 @@ pnpm build
 
 ## Summary
 
-- `pnpm dev` starts one Next.js development process.
-- Registry generation is a separate command in the monorepo.
+- `pnpm dev` generates the registries, then runs Next.js and regenerates on change.
+- `pnpm build` generates the registries before it builds.
 - Next.js compiles the theme CSS imported by the generated root layout (`apps/dev/src/app/layout.tsx`).
-- `pnpm build` builds the app but does not replace the explicit registry step.
 
 **Next:** [Running Locally](./07-running-locally.md)
