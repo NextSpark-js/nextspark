@@ -28,11 +28,16 @@ interface BoundaryModule {
 /** The mobile boundary check ships in core: scripts/build/mobile-boundary.mjs. */
 const BOUNDARY_MODULE = join('scripts', 'build', 'mobile-boundary.mjs');
 
-/** The nearest directory at or above `from` that holds a pnpm-workspace.yaml. */
-function findWorkspaceRoot(from: string): string | null {
-  for (let dir = resolve(from); ; dir = dirname(dir)) {
-    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
-    if (dirname(dir) === dir) return null;
+/**
+ * Every directory above `from` (not `from` itself, the web project) that holds a pnpm-workspace.yaml, nearest first. The walk
+ * ends at the repository root (the first directory with a .git): a workspace outside the repository is not this project's.
+ */
+function findWorkspaceRoots(from: string): string[] {
+  const roots: string[] = [];
+  if (existsSync(join(resolve(from), '.git'))) return roots;
+  for (let dir = dirname(resolve(from)); ; dir = dirname(dir)) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) roots.push(dir);
+    if (existsSync(join(dir, '.git')) || dirname(dir) === dir) return roots;
   }
 }
 
@@ -56,8 +61,20 @@ function findMobileDirs(workspaceRoot: string): string[] {
  * installed core ships. Run from the web project, whose directory is the server code the mobile app must not reach.
  */
 export async function runMobileCheck(cwd: string, coreDir: string, options: CheckMobileOptions = {}): Promise<CheckMobileResult> {
-  const workspaceRoot = findWorkspaceRoot(cwd);
+  // A web host may have its own pnpm-workspace.yaml (a separate Vercel root) inside the workspace that lists the mobile app:
+  // the nearest one that holds the mobile app (the named one, or an app the workspace lists) is the workspace
+  const roots = findWorkspaceRoots(cwd);
+  const named = (root: string): string | null => {
+    const value = options.mobile?.replace(/\/+$/, '');
+    if (!value) return null;
+    const inside = isAbsolute(value) ? relative(root, value).split('\\').join('/') : value;
+    return inside === '' || inside.startsWith('..') ? null : inside;
+  };
+  const workspaceRoot = roots.find((root) => (options.mobile ? (named(root) !== null && existsSync(join(root, named(root) as string))) : findMobileDirs(root).length > 0)) ?? roots[0];
   const webDir = workspaceRoot ? relative(workspaceRoot, resolve(cwd)).split('\\').join('/') : '';
+  if (!workspaceRoot && existsSync(join(resolve(cwd), '.git')) && (existsSync(join(resolve(cwd), 'mobile', 'package.json')) || (existsSync(join(resolve(cwd), 'pnpm-workspace.yaml')) && findMobileDirs(resolve(cwd)).length > 0))) {
+    return { code: 1, lines: ['check:mobile needs the web project and the mobile app side by side (web/ and mobile/ under one workspace); here the mobile app is inside the web project.'] };
+  }
   if (!workspaceRoot || webDir === '' || webDir.startsWith('..')) {
     return { code: 1, lines: ['Run check:mobile from the web project of a web+mobile workspace (a pnpm-workspace.yaml above it lists the mobile app).'] };
   }
@@ -65,8 +82,8 @@ export async function runMobileCheck(cwd: string, coreDir: string, options: Chec
   // A path from the workspace root; an absolute one inside it is taken as that, one outside is refused
   let mobileDir = options.mobile?.replace(/\/+$/, '');
   if (mobileDir && isAbsolute(mobileDir)) {
-    const inside = relative(workspaceRoot, mobileDir).split('\\').join('/');
-    if (inside === '' || inside.startsWith('..')) return { code: 1, lines: [`--mobile ${mobileDir} is not inside the workspace ${workspaceRoot}.`] };
+    const inside = named(workspaceRoot);
+    if (inside === null) return { code: 1, lines: [`--mobile ${mobileDir} is not inside the workspace ${workspaceRoot}.`] };
     mobileDir = inside;
   }
   if (!mobileDir) {

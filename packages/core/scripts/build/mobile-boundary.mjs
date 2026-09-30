@@ -23,6 +23,10 @@
  *     imports it;
  *   - platform files (`.native`, `.ios`, `.android`) for relative imports.
  *
+ * Test files (`__tests__/`, `__mocks__/`, `*.test.*`, `*.spec.*`, jest setup) are not checked as mobile code: Metro never
+ * bundles them. A runtime file that imports one is still followed, and nothing under an `app/` (Expo Router) directory is
+ * excluded: every file there is a route.
+ *
  * It fails on:
  *
  *   1. a Node built-in (`fs`, `node:path`, `child_process`, ...) - unless the bare name is a declared dependency
@@ -126,6 +130,8 @@ const SERVER_DIRECTORIES = [
 const EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json']
 const PLATFORM_SUFFIXES = ['.native', '.ios', '.android', '']
 const SOURCE_FILE = /\.(?:[cm]?[jt]sx?)$/
+/** Files Metro never bundles: jest tests, mocks and setup run in Node, so they may use `fs`, the web project's messages, etc. */
+const TEST_FILE = /(?:^|\/)(?:__tests__|__mocks__)\/|\.(?:test|spec)\.[^/]+$|(?:^|\/)(?:jest[.-]setup|setup-jest|jestSetup|setupTests|test-utils)\.[^/]+$/
 const BUILTINS = new Set(builtinModules.flatMap(name => [name, `node:${name}`]))
 
 const posix = path => path.split(sep).join('/')
@@ -492,10 +498,14 @@ export function checkMobileBoundary({ repoRoot, ts = loadTypeScript(repoRoot), t
   // from the app; then every file of the other trees, reached or not (a file nothing imports yet is still checked).
   // The app is the tree of the first manifest (`apps/mobile`, or the project's `mobile/`), whatever directory it is in
   const appRoot = manifests[0]
+  // Expo Router bundles every file under app/ as a route, whatever it is called: test-named files there are runtime code
+  const isRouterTree = tree => /(?:^|\/)app$/.test(tree.dir)
+  const routerFile = new RegExp(`^${manifests[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/(?:src/)?app/`)
   const isApp = tree => tree.dir === appRoot || tree.dir.startsWith(`${appRoot}/`)
   for (const group of [trees.filter(isApp), trees.filter(tree => !isApp(tree))]) {
     for (const tree of group) {
-      for (const file of walk(join(root, tree.dir)).filter(candidate => SOURCE_FILE.test(candidate))) {
+      // Test files are not seeds (nothing imports them at runtime); one a runtime file does import is still followed
+      for (const file of walk(join(root, tree.dir)).filter(candidate => SOURCE_FILE.test(candidate) && (isRouterTree(tree) || routerFile.test(rel(candidate)) || !TEST_FILE.test(rel(candidate))))) {
         // packages/ui's web entries are not part of a mobile bundle: only its native entry and what that imports
         if (tree.nativeOnly && !/index\.native\.[cm]?[jt]sx?$/.test(file)) continue
         enqueue(file, [file], tree.tsconfig)

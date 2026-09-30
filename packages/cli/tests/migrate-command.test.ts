@@ -2429,7 +2429,7 @@ test('migrate converts the committed src/app of a root-first project: overrides,
     assert.equal(await readFile(join(root, 'templates/pricing/page.tsx'), 'utf8'), "import { Card } from './Card'\nimport Hero from '../../components/Hero'\nexport default function Pricing() { return <Hero><Card /></Hero> }\n")
     assert.equal(await readFile(join(root, 'nextspark.config.ts'), 'utf8'), "import { defineConfig } from '@nextsparkjs/core/lib/config'\n\nexport default defineConfig({\n  plugins: [],\n  billing: { webhookExtensions: { stripe: \"./lib/billing/stripe-webhook-extensions\" } },\n})\n")
     assert.equal(await readFile(join(root, 'lib/billing/stripe-webhook-extensions.ts'), 'utf8'), customStripe)
-    assert.match(await readFile(join(root, '.gitignore'), 'utf8'), /\.nextspark\/\nsrc\/app\/\n$/)
+    assert.match(await readFile(join(root, '.gitignore'), 'utf8'), /\.nextspark\/\nsrc\/app\/\nnext-env\.d\.ts\n$/)
     assert.deepEqual(await readdir(join(root, 'src/app')), ['generated-by-prepare.txt'])
     assert.match(result.stdout, /Git still tracks 5 file\(s\) under src\/app: remove them from the index with {2}git rm -r -q --cached src\/app {2}and commit\./)
     // Idempotent: a second run has nothing left to convert
@@ -2975,6 +2975,58 @@ test('migrate never rewrites AI-workflow directories, lists what they reference,
   }
 })
 
+test('a text reference to the theme root becomes the host root without a trailing dot (web/, not web/.)', async () => {
+  const { root } = await moveFixture({ monorepo: true })
+  try {
+    await write(root, 'CLAUDE.md', 'The theme is `web/contents/themes/acme/` (the theme), also web/contents/themes/acme and web/contents/themes/acme/components/Button.ts.\n')
+    await commitFixture(root)
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'CLAUDE.md'), 'utf8'), 'The theme is `web/` (the theme), also web/ and web/components/Button.ts.\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('theme-root references keep the sentence punctuation, and only real path starts are rewritten (not mycontents/..., not URLs)', async () => {
+  const { root } = await moveFixture({ monorepo: true })
+  try {
+    await write(root, 'CLAUDE.md', [
+      'See web/contents/themes/acme/.',
+      '[web/contents/themes/acme] and [web/contents/themes/acme/x.ts].',
+      'Also web/contents/themes/acme.',
+      'And web/contents/themes/acme/components/Button.ts.',
+      'Not mycontents/themes/acme/ nor https://github.com/org/repo/blob/main/contents/themes/acme/ nor web/contents/themes/acme-v2/.',
+      '',
+    ].join('\n'))
+    await commitFixture(root)
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'CLAUDE.md'), 'utf8'), [
+      'See web/.',
+      '[web/] and [web/x.ts].',
+      'Also web/.',
+      'And web/components/Button.ts.',
+      'Not mycontents/themes/acme/ nor https://github.com/org/repo/blob/main/contents/themes/acme/ nor web/contents/themes/acme-v2/.',
+      '',
+    ].join('\n'))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate --yes tells the project to untrack next-env.d.ts and ignores it', async () => {
+  const root = await rootFirstFixture({ 'src/app/layout.tsx': facadeOf(routeOf('layout.tsx')), 'next-env.d.ts': '/// <reference types="next" />\n' })
+  try {
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(await readFile(join(root, '.gitignore'), 'utf8'), /^next-env\.d\.ts$/m)
+    assert.match(result.stdout, /Git tracks next-env\.d\.ts, which Next rewrites on every build: remove it from the index with {2}git rm -q --cached next-env\.d\.ts {2}and commit\./)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate creates packages/contracts in a web+mobile workspace that lacks it and wires mobile to it', async () => {
   const { root } = await moveFixture({ monorepo: true })
   try {
@@ -3405,6 +3457,45 @@ test('migrate --dry-run asks the installed core\'s predictHost about the convert
     const printed = run(root, ['--dry-run'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
     assert.equal(printed.status, 0, printed.stderr)
     assert.match(printed.stdout, /no conflicts\n  notice NS_HOST_ENTITY_ROUTES_REPLACED: replaced\n  checks: plan passed, registries skipped\n  \(the installed core's predictHost\)/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the dry-run simulation gets the active theme from the environment, and says why emission was not checked on an older Next', async () => {
+  const root = await simulationFixture("console.error('prepare must not run when predictHost exists')\nprocess.exit(1)\n")
+  try {
+    await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare.mjs', PREDICT_MODULE(`{
+      ok: false,
+      routes: [],
+      notices: [{ code: 'NS_PROBE', message: 'theme=' + process.env.NEXT_PUBLIC_ACTIVE_THEME }],
+      diagnostics: [{ code: 'NS_HOST_UNSUPPORTED_NEXT_VERSION', message: 'the project resolves next@16.2.11 (/x/package.json) but the table applies to next@~16.3.5 only' }],
+      checks: { plan: 'passed', emission: 'failed', grammar: 'skipped', ownership: 'skipped', registries: 'skipped' },
+    }`))
+    // the theme comes from the environment only: no .env.example in the project
+    git(root, ['rm', '--quiet', '-f', '.env.example'])
+    await commitFixture(root)
+    const result = run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined, NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
+    const report = JSON.parse(result.stdout)
+    assert.equal(report.hostPlan.unknown, false, report.hostPlan.reason)
+    assert.deepEqual(report.hostPlan.notices, ['NS_PROBE: theme=acme'])
+    assert.deepEqual(report.hostPlan.conflicts, [])
+    assert.equal(report.hostPlan.checks.emission, `not checked (installed next 16.2.11 is not ${report.nextRange.required}; see Next.js range)`)
+    assert.equal(report.hostPlan.checks.grammar, 'skipped (needs emission)')
+    assert.equal(report.hostPlan.checks.ownership, 'skipped (needs emission)')
+
+    // a next that cannot be resolved, or has no schema: the diagnostic's own reason, never a version taken from its text
+    await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare.mjs', PREDICT_MODULE(`{
+      ok: false,
+      routes: [],
+      notices: [],
+      diagnostics: [{ code: 'NS_HOST_UNSUPPORTED_NEXT_VERSION', message: 'Next.js is not resolvable from /x; the route export table is for next@16.3.5' }],
+      checks: { plan: 'passed', emission: 'failed', grammar: 'skipped', ownership: 'skipped', registries: 'skipped' },
+    }`))
+    await commitFixture(root)
+    const unresolvable = JSON.parse(run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined, NEXT_PUBLIC_ACTIVE_THEME: 'acme' }).stdout)
+    assert.equal(unresolvable.hostPlan.checks.emission, 'not checked (Next.js is not resolvable from /x; the route export table is for next@16.3.5; see Next.js range)')
+    assert.equal(result.status, 0, result.stderr)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

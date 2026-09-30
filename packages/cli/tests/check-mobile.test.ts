@@ -123,3 +123,74 @@ test('a leak in the contracts package is reported with the chain from the mobile
     await cleanup()
   }
 })
+
+test('a web host with its own pnpm-workspace.yaml (separate Vercel root) finds the workspace that lists the mobile app', async () => {
+  const { root, cleanup } = await workspace({ 'web/pnpm-workspace.yaml': "packages:\n  - '.'\n" })
+  try {
+    const result = await runMobileCheck(join(root, 'web'), CORE_DIR)
+    assert.equal(result.code, 0, result.lines.join('\n'))
+    assert.match(result.lines[0], /in mobile\//)
+    const named = await runMobileCheck(join(root, 'web'), CORE_DIR, { mobile: 'mobile' })
+    assert.equal(named.code, 0, named.lines.join('\n'))
+    // the web directory is still the server code: a leak into it is found from the nested host too
+    await writeFile(join(root, 'mobile/src/bad.ts'), "import { pool } from '../../web/lib/db'\nexport const p = pool\n")
+    const leak = await runMobileCheck(join(root, 'web'), CORE_DIR)
+    assert.equal(leak.code, 1)
+    assert.match(leak.lines.join('\n'), /server code \(web\)/)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('test files Metro never bundles are not checked; the same code in a runtime file still fails', async () => {
+  const { root, cleanup } = await workspace({
+    'mobile/src/__tests__/copy.test.ts': "import { readFileSync } from 'node:fs'\nexport const r = readFileSync('../../web/messages/es/a.json')\n",
+    'mobile/src/home.spec.ts': "import path from 'path'\nexport const p = path\n",
+    'mobile/jest.setup.ts': "import 'fs'\n",
+  })
+  try {
+    const ok = await runMobileCheck(join(root, 'web'), CORE_DIR)
+    assert.equal(ok.code, 0, ok.lines.join('\n'))
+    await writeFile(join(root, 'mobile/src/runtime.ts'), "import { readFileSync } from 'node:fs'\nexport const r = readFileSync\n")
+    const bad = await runMobileCheck(join(root, 'web'), CORE_DIR)
+    assert.equal(bad.code, 1)
+    assert.match(bad.lines.join('\n'), /mobile\/src\/runtime\.ts: imports node:fs/)
+    assert.doesNotMatch(bad.lines.join('\n'), /__tests__|\.spec\./)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('the walk up stops at the repository root: a workspace outside the repo that lists an Expo app is not this project\'s', async () => {
+  const outer = await realpath(await mkdtemp(join(tmpdir(), 'nextspark-check-mobile-outer-')))
+  try {
+    const write = async (path: string, content: string) => {
+      await mkdir(dirname(join(outer, path)), { recursive: true })
+      await writeFile(join(outer, path), content)
+    }
+    await write('pnpm-workspace.yaml', "packages:\n  - 'repo/web'\n  - 'repo/mobile'\n")
+    await write('repo/.git/HEAD', 'ref: refs/heads/main\n')
+    await write('repo/web/package.json', JSON.stringify({ name: 'web' }))
+    await write('repo/mobile/package.json', JSON.stringify({ name: 'app-mobile', dependencies: { expo: '*' } }))
+    await write('repo/mobile/src/a.ts', 'export {}\n')
+    const result = await runMobileCheck(join(outer, 'repo/web'), CORE_DIR)
+    assert.equal(result.code, 1)
+    assert.match(result.lines[0], /Run check:mobile from the web project/)
+  } finally {
+    await rm(outer, { recursive: true, force: true })
+  }
+})
+
+test('a web project that holds the mobile app inside it (add:mobile layout) is told the two must sit side by side', async () => {
+  const dir = await realpath(await mkdtemp(join(tmpdir(), 'nextspark-check-mobile-inside-')))
+  try {
+    await mkdir(join(dir, '.git'), { recursive: true })
+    await mkdir(join(dir, 'mobile'), { recursive: true })
+    await writeFile(join(dir, 'mobile/package.json'), JSON.stringify({ name: 'm', dependencies: { expo: '*' } }))
+    const result = await runMobileCheck(dir, CORE_DIR)
+    assert.equal(result.code, 1)
+    assert.match(result.lines[0], /side by side/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})

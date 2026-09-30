@@ -69,6 +69,49 @@ test('Node built-ins are refused, with or without the node: prefix and in subpat
   }
 })
 
+test('test files Metro never bundles are not checked as mobile code; a runtime file importing one still is', () => {
+  const node = "import fs from 'node:fs'\nexport {}\n"
+  const { root, cleanup } = repo({
+    'apps/mobile/src/__tests__/a.ts': node,
+    'apps/mobile/src/__mocks__/b.ts': node,
+    'apps/mobile/src/c.test.tsx': node,
+    'apps/mobile/src/d.spec.ts': node,
+    'apps/mobile/jest.setup.ts': node,
+  })
+  try {
+    assert.deepEqual(summary(check(root)), [])
+  } finally {
+    cleanup()
+  }
+  const reached = repo({ 'apps/mobile/src/c.test.ts': node, 'apps/mobile/src/e.ts': "import './c.test'\nexport {}\n" })
+  try {
+    assert.deepEqual(summary(check(reached.root)), ['apps/mobile/src/c.test.ts -> node:fs: a Node-only module'])
+  } finally {
+    reached.cleanup()
+  }
+})
+
+test('under the Expo Router app/ directory every file is a route, test-named or not; setup-jest, jestSetup and test-utils are excluded elsewhere', () => {
+  const node = "import fs from 'node:fs'\nexport {}\n"
+  const { root, cleanup } = repo({
+    'apps/mobile/app/foo.test.tsx': node,
+    'apps/mobile/app/__tests__/x.tsx': node,
+    'apps/mobile/src/app/bar.spec.tsx': node,
+    'apps/mobile/src/setup-jest.ts': node,
+    'apps/mobile/src/jestSetup.ts': node,
+    'apps/mobile/src/test-utils.tsx': node,
+  })
+  try {
+    assert.deepEqual(summary(check(root)).sort(), [
+      'apps/mobile/app/__tests__/x.tsx -> node:fs: a Node-only module',
+      'apps/mobile/app/foo.test.tsx -> node:fs: a Node-only module',
+      'apps/mobile/src/app/bar.spec.tsx -> node:fs: a Node-only module',
+    ])
+  } finally {
+    cleanup()
+  }
+})
+
 test('server packages are refused: core, next, the database driver, an ORM, the CLI, a plugin', () => {
   const { root, cleanup } = repo({
     'apps/mobile/src/b.ts': [

@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "dotenv -e .env -- sh -c 'node ../../packages/cli/dist/cli.js dev --turbopack -p $PORT'",
-    "dev:webpack": "dotenv -e .env -- sh -c 'node ../../packages/cli/dist/cli.js dev --webpack -p $PORT'",
+    "dev": "../../node_modules/.bin/dotenv -e .env -- sh -c 'node ../../packages/cli/dist/cli.js dev --turbopack -p $PORT'",
+    "dev:webpack": "../../node_modules/.bin/dotenv -e .env -- sh -c 'node ../../packages/cli/dist/cli.js dev --webpack -p $PORT'",
     "build": "NEXTSPARK_AUTH_PREFLIGHT=off node ../../packages/cli/dist/cli.js build",
-    "start": "dotenv -e .env -- sh -c 'next start -p $PORT'",
+    "start": "../../node_modules/.bin/dotenv -e .env -- sh -c 'next start -p $PORT'",
     "lint": "eslint ."
   },
   "dependencies": {
