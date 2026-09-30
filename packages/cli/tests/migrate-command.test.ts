@@ -13,6 +13,7 @@ import type { AddressInfo } from 'node:net'
 import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
+import { simulationEnvironment } from '../src/commands/migrate.js'
 import { addCompatRewrites, addWorkspaceGlob, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
 
 let cliEntry: string
@@ -3616,5 +3617,18 @@ test('a real yaml that negates mobile/ makes mobile link the contracts package b
     assert.equal(await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8'), "packages: ['web', 'apps/*', '!apps/mobile']\n")
   } finally {
     await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the simulation keeps Corepack and Windows shell variables, and nothing secret', () => {
+  const names = ['COREPACK_HOME', 'SystemRoot', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATHEXT', 'ComSpec', 'TEMP', 'TMP', 'DATABASE_URL']
+  const saved = names.map(name => process.env[name])
+  names.forEach(name => { process.env[name] = 'x' })
+  try {
+    const env = simulationEnvironment('t')
+    for (const name of names.slice(0, -1)) assert.equal(env[name], 'x', name)
+    assert.equal(env.DATABASE_URL, undefined)
+  } finally {
+    names.forEach((name, i) => { if (saved[i] === undefined) delete process.env[name]; else process.env[name] = saved[i] })
   }
 })

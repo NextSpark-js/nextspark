@@ -23,15 +23,31 @@ function* sources(dir: string): Generator<string> {
 
 const isClient = (text: string) => /^(?:\s*(?:\/\*[\s\S]*?\*\/|\/\/.*)\s*)*['"]use client['"]/.test(text)
 
-/** Whether `node` sits in the then-branch of an `if` whose condition names NODE_ENV (or is inside a dev-only conditional expression). */
+/** The condition targets development: `=== 'development'`, `!== 'production'` (either side, `==`/`!=` too); a bare `NODE_ENV` mention is not enough. */
+const isDevCondition = (condition: ts.Expression) =>
+  /NODE_ENV\s*={2,3}\s*['"]development['"]|['"]development['"]\s*={2,3}\s*[\w.]*NODE_ENV|NODE_ENV\s*!={1,2}\s*['"]production['"]|['"]production['"]\s*!={1,2}\s*[\w.]*NODE_ENV/.test(condition.getText())
+
+/** Whether `node` sits in the then-branch of an `if` whose condition targets development (or is inside a dev-only conditional expression). */
 function inDevBranch(node: ts.Node): boolean {
   for (let child: ts.Node = node, parent = node.parent; parent; child = parent, parent = parent.parent) {
-    if (ts.isIfStatement(parent) && parent.thenStatement === child && /NODE_ENV/.test(parent.expression.getText())) return true
-    if (ts.isConditionalExpression(parent) && parent.whenTrue === child && /NODE_ENV/.test(parent.condition.getText())) return true
-    if (ts.isBinaryExpression(parent) && parent.right === child && parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && /NODE_ENV/.test(parent.left.getText())) return true
+    if (ts.isIfStatement(parent) && parent.thenStatement === child && isDevCondition(parent.expression)) return true
+    if (ts.isConditionalExpression(parent) && parent.whenTrue === child && isDevCondition(parent.condition)) return true
+    if (ts.isBinaryExpression(parent) && parent.right === child && parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && isDevCondition(parent.left)) return true
   }
   return false
 }
+
+test('the guard must target development, not merely mention NODE_ENV', () => {
+  const guarded = (condition: string) => {
+    const sf = ts.createSourceFile('x.ts', `if (${condition}) { console.log(1) }`, ts.ScriptTarget.Latest, true)
+    let found = false
+    const visit = (n: ts.Node) => { if (ts.isCallExpression(n) && inDevBranch(n)) found = true; ts.forEachChild(n, visit) }
+    visit(sf)
+    return found
+  }
+  for (const ok of ["process.env.NODE_ENV === 'development'", "process.env.NODE_ENV !== 'production'", "'development' === process.env.NODE_ENV"]) assert.ok(guarded(ok), ok)
+  for (const bad of ["process.env.NODE_ENV === 'production'", "process.env.NODE_ENV !== 'development'", 'process.env.NODE_ENV']) assert.ok(!guarded(bad), bad)
+})
 
 test('client code has no console.log, console.info or console.debug outside a NODE_ENV development branch', () => {
   const offenders: string[] = []

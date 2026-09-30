@@ -51,4 +51,50 @@ describe('db signal handlers', () => {
       process.removeListener('SIGINT', other)
     }
   })
+
+  it('does not re-raise over a process.once listener registered after it, which Node removes before calling it', async () => {
+    const { createSignalHandler } = await import('../../../src/lib/db')
+    const handler = createSignalHandler('SIGUSR2' as 'SIGINT')
+    const finished = jest.fn()
+    process.on('SIGUSR2', handler)
+    process.once('SIGUSR2', () => { setTimeout(finished, 50) })
+    try {
+      process.emit('SIGUSR2')
+      await new Promise((resolve) => setTimeout(resolve, 150))
+      expect(kill).not.toHaveBeenCalled()
+      expect(finished).toHaveBeenCalled()
+    } finally {
+      process.removeAllListeners('SIGUSR2')
+    }
+  })
+
+  it('with several copies of the handler (a bundler loading db.ts more than once), the last to finish re-raises', async () => {
+    const { createSignalHandler } = await import('../../../src/lib/db')
+    const first = createSignalHandler('SIGUSR2' as 'SIGINT')
+    const second = createSignalHandler('SIGUSR2' as 'SIGINT')
+    process.on('SIGUSR2', first)
+    process.on('SIGUSR2', second)
+    try {
+      await Promise.all([first(), second()])
+      expect(kill).toHaveBeenCalledTimes(1)
+      expect(kill).toHaveBeenCalledWith(process.pid, 'SIGUSR2')
+    } finally {
+      process.removeAllListeners('SIGUSR2')
+    }
+  })
+
+  it('still yields to a foreign listener next to several copies', async () => {
+    const { createSignalHandler } = await import('../../../src/lib/db')
+    const first = createSignalHandler('SIGUSR2' as 'SIGINT')
+    const second = createSignalHandler('SIGUSR2' as 'SIGINT')
+    process.on('SIGUSR2', first)
+    process.on('SIGUSR2', second)
+    process.once('SIGUSR2', () => undefined)
+    try {
+      await Promise.all([first(), second()])
+      expect(kill).not.toHaveBeenCalled()
+    } finally {
+      process.removeAllListeners('SIGUSR2')
+    }
+  })
 })

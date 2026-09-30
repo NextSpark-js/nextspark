@@ -3131,11 +3131,14 @@ function firstErrorLine(output: string): string | null {
   return lines.find(line => /(?:^|\s)(?:[A-Z][A-Za-z]*)?Error\b/.test(line)) ?? lines.find(line => line.startsWith('nextspark migrate:')) ?? lines[lines.length - 1] ?? null;
 }
 
-/** The simulation's children get only what they need: PATH, HOME, TMPDIR, NODE_OPTIONS, the package-manager settings, NEXTSPARK_* and the active theme migrate resolved (which may come from the environment, not from .env.example). */
-function simulationEnvironment(theme: string | null): NodeJS.ProcessEnv {
+// Windows has no HOME/TMPDIR: its shell, profile and temp locations travel under these names (env names are case-insensitive there)
+const SIMULATION_ENV = /^(?:PATH|HOME|TMPDIR|NODE_OPTIONS|SystemRoot|USERPROFILE|APPDATA|LOCALAPPDATA|PATHEXT|ComSpec|TEMP|TMP)$/i;
+
+/** The simulation's children get only what they need: PATH, HOME, TMPDIR, NODE_OPTIONS, COREPACK_*, on Windows SystemRoot/USERPROFILE/APPDATA/LOCALAPPDATA/PATHEXT/ComSpec/TEMP/TMP, the package-manager settings, NEXTSPARK_* and the active theme migrate resolved (which may come from the environment, not from .env.example). */
+export function simulationEnvironment(theme: string | null): NodeJS.ProcessEnv {
   const kept: NodeJS.ProcessEnv = {};
   for (const [name, value] of Object.entries(process.env)) {
-    if (/^(?:PATH|HOME|TMPDIR|NODE_OPTIONS)$/.test(name) || /^(?:npm_config_|NPM_CONFIG_|pnpm_config_|PNPM_CONFIG_|NEXTSPARK_)/.test(name)) kept[name] = value;
+    if (SIMULATION_ENV.test(name) || /^(?:npm_config_|NPM_CONFIG_|pnpm_config_|PNPM_CONFIG_|COREPACK_|NEXTSPARK_)/.test(name)) kept[name] = value;
   }
   return { ...kept, ...(theme ? { NEXT_PUBLIC_ACTIVE_THEME: theme } : {}), NEXTSPARK_MIGRATE_SIMULATION: '1', NEXTSPARK_AUTH_PREFLIGHT: 'off' };
 }

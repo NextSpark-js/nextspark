@@ -568,15 +568,26 @@ export async function gracefulShutdown(timeoutMs: number = 30000): Promise<void>
 // gives the default back and re-sends the signal, unless another listener (Next's server closes and exits on its
 // own) is still there to decide. Never exiting left every `next build` static-generation worker that got a SIGTERM
 // running, orphaned, after the build ended.
+// Node drops a `process.once` listener from the list just before calling it, so one that runs while the pools close is
+// invisible to a count taken afterwards. The count is therefore also taken on entry: it sees every listener registered
+// after this one, `once` included. A `once` listener registered BEFORE this one has already been removed by then and
+// cannot be seen at all: such code must use `process.on` and exit itself.
+// A bundler (Turbopack) may load several copies of this module in one process, each with its own listener. They are
+// tagged with a global symbol so a copy never counts another copy as "someone else": the last copy to finish re-raises.
+const OWN_LISTENER = Symbol.for('nextspark.db.signalListener');
+const foreignListeners = (signal: string): number =>
+  process.listeners(signal as NodeJS.Signals).filter(l => !(l as unknown as Record<symbol, unknown>)[OWN_LISTENER]).length;
 export function createSignalHandler(signal: 'SIGTERM' | 'SIGINT'): () => Promise<void> {
   const listener = async (): Promise<void> => {
     console.log(`[DB] ${signal} received, initiating graceful shutdown...`);
+    const othersOnEntry = foreignListeners(signal);
     await gracefulShutdown();
     process.removeListener(signal, listener);
-    if (process.listenerCount(signal) === 0) {
+    if (othersOnEntry <= 0 && process.listenerCount(signal) === 0) {
       process.kill(process.pid, signal);
     }
   };
+  (listener as unknown as Record<symbol, unknown>)[OWN_LISTENER] = true;
   return listener;
 }
 

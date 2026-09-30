@@ -452,18 +452,26 @@ function entityRoot(target, entity) {
 export function urlConflicts(routes) {
   const diagnostics = []
   const urls = new Map()
+  // Next sorts routes with the slots removed: an optional catch-all's parent URL is compared with every page at that URL, in any slot or none
+  const plainUrls = new Map()
+  const parents = new Map()
   const tree = { children: new Map(), dynamic: new Map() }
   for (const route of routes) {
     if ((route.kind !== 'page' && route.kind !== 'route') || route.mode) continue
     const segments = urlSegments(route.target)
-    const url = `/${segments.join('/')}`
+    // A parallel-route slot (`@slot/page`) renders beside the main page of the same URL: Next compares routes within one slot
+    const slot = posix.dirname(route.target).split('/').filter(part => part.startsWith('@')).join('/')
+    const url = `${slot ? `${slot}:` : ''}/${segments.join('/')}`
     if (!urls.has(url)) urls.set(url, [])
     urls.get(url).push(route)
+    const plain = `/${segments.join('/')}`
+    if (!plainUrls.has(plain)) plainUrls.set(plain, [])
+    plainUrls.get(plain).push(route)
     // An optional catch-all also serves its parent's URL: a page there is the same URL twice for Next.js
     if (dynamicKind(segments.at(-1) ?? '') === 'optional catch-all') {
       const parent = `/${segments.slice(0, -1).join('/')}`
-      if (!urls.has(parent)) urls.set(parent, [])
-      urls.get(parent).push(route)
+      if (!parents.has(parent)) parents.set(parent, [])
+      parents.get(parent).push(route)
     }
 
     let node = tree
@@ -487,7 +495,20 @@ export function urlConflicts(routes) {
         code: PLAN_DIAGNOSTICS.URL_CONFLICT,
         target: sameUrl[0].target,
         sources: sameUrl.map(route => route.source),
-        message: `${url}: ${sameUrl.map(route => `${describe(route)} (src/app/${route.target})`).join(' and ')} resolve to the same URL`,
+        message: `${url.replace(/^.*?:\//, '/')}: ${sameUrl.map(route => `${describe(route)} (src/app/${route.target})`).join(' and ')} resolve to the same URL`,
+      })
+    }
+  }
+  for (const [parent, catchAlls] of parents) {
+    // Only a page at the parent URL collides (next build measured): optional catch-alls of different slots share one path and are fine
+    const pages = plainUrls.get(parent) ?? []
+    const sameUrl = [...pages, ...catchAlls]
+    if (pages.length > 0) {
+      diagnostics.push({
+        code: PLAN_DIAGNOSTICS.URL_CONFLICT,
+        target: sameUrl[0].target,
+        sources: sameUrl.map(route => route.source),
+        message: `${parent}: ${sameUrl.map(route => `${describe(route)} (src/app/${route.target})`).join(' and ')} resolve to the same URL`,
       })
     }
   }
