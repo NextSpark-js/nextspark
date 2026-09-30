@@ -7,13 +7,145 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.192] - 2026-09-30
+
+### Breaking
+
+Every item is detailed under Added, Changed or Removed below; `nextspark migrate` does the move for a 0.x project
+([Upgrading 0.x projects to 0.1.0-beta.192](docs/17-updates/06-upgrade-0x-projects.md)).
+
+- **Root-first layout.** A project is the directory holding `nextspark.config.ts`; the former `contents/themes/<active>/` paths live at
+  the project root and there is no project selection, `--project` flag or `NEXT_PUBLIC_ACTIVE_THEME` for the compiler. Every 0.x project
+  must run `nextspark migrate` before it can run on this release.
+- **`src/app` is generated and git-ignored; `nextspark sync:app` and core's postinstall writes are removed.** Nothing copies framework
+  files into a project any more, and `packages/core/templates/app` no longer ships.
+- **Project API routes move:** `/api/v1/theme/<theme>/**` is now `/api/**` and `/api/v1/plugin/<plugin>/**` is `/api/plugins/<plugin>/**`
+  (`migrate` adds rewrites so installed clients keep working).
+- **Next.js is pinned to `~16.3.5`** for the generated host; the generator refuses another minor.
+- **The code the generated host made dead is removed** (runtime API dispatchers, runtime template resolution, the legacy registry build;
+  listed under Removed).
+- **`BlockConfig.thumbnail` is the imported image (`{ src }`),** not a string path.
+- **Stale `package.json` exports are removed:** `@nextsparkjs/core` `./theme-styles.css`, the bare `./lib/teams` and `./lib/permissions`,
+  `./presets/*` and `./cypress-support`; `@nextsparkjs/ui` `./variants/*`; `@nextsparkjs/cli` `main`/`types` (the CLI is bin-only).
+  Details in the [beta.192 status](docs/17-updates/03-beta-192-status.md).
+- **`@nextsparkjs/core` depends on `@nextsparkjs/ui` through `workspace:*`,** published pinned to the same version.
+
 ### Added
+
+- **The generated host (#203).** `nextspark prepare` plans and publishes the whole `src/app` as thin facades (static imports and literal
+  segment config only, so no route's module graph selects a module at runtime), with precedence core < plugin < project. Core ships every
+  framework route as a module (`@nextsparkjs/core/routes/*`, listed in `routes/manifest.json`); the project's `templates/` and `api/` are
+  static overrides, a plugin's routes are served at `/api/plugins/<name>`, and core owns `/api/v1`. Output is recorded in
+  `.nextspark/generation.json` and published atomically under an exclusive lock: a file is NextSpark's only while its bytes match, and
+  anything else in `src/app` is refused, never overwritten. `prepare --check` writes nothing and fails on missing, stale, foreign or
+  unfinished output; `predictHost` runs the same plan without writing. The emitter and the conformance suite
+  (`scripts/performance/host-conformance.mjs`) prove the facades build like a hand-written Next.js app. See the
+  [generated host](docs/01-fundamentals/08-generated-host.md).
+- **One generated route set per entity** replaces `dashboard/(main)/[entity]` and the public catch-all: each route imports only its own
+  entity, so client JS per route no longer grows with the number of entities (entity list pages are smaller in `apps/dev`).
+- **Project templates that collide with an entity's generated dashboard routes replace that entity's whole generated subtree,** as a static
+  template beat `[entity]` in 0.x; the entity's permission layout is kept at the top of every tree that serves the URL (a role the entity
+  does not allow now sees `permission-denied`). `prepare`, `build` and `dev` print it as an Info notice. A page beside an optional
+  catch-all at the same URL is `NS_HOST_URL_CONFLICT` instead of a failure inside `next build`.
+- **Cache Components and PPR build and run (#203).** Core's group layouts, docs pages and public item pages have Cache Components variants
+  that the host selects when `next.config` sets `cacheComponents: true` (runtime reads behind `Suspense` or `connection()`, cacheable reads
+  in `'use cache'` functions keyed only by entity, slug or docs path). **It is the default for new projects;** legacy ISR stays supported
+  and an existing project keeps its mode. `@nextsparkjs/core` declares `use-intl`, which it imports.
+- **Plugin capabilities (#203).** `definePlugin({ name, capabilities: ['server' | 'web' | 'build' | 'mobile'] })`. The registry build and the
+  host planner take from a plugin only what it declares (pages and layouts need `web`, Route Handlers and `api/` need `server`, build-only
+  code never enters a runtime bundle) and fail naming the plugin, the capability and the file. A web or mobile entry must not reach
+  server-only code. The plugins in the repository declare theirs; a plugin without `capabilities` is treated as server + web + build.
+- **`nextspark check:mobile`** checks a web+mobile project's mobile import graph for server-only code (the checker ships in core; the
+  monorepo's `pnpm mobile:boundary` wraps it). It works from a web host with its own `pnpm-workspace.yaml` and explains a layout it cannot
+  check. Test files (`__tests__/`, `*.test.*`, `*.spec.*`, jest setup) are not seeds of the graph, since Metro never bundles them; files
+  under an Expo `app/` tree always are, because each is a route.
+- **Block thumbnails are imported** from `blocks/<slug>/thumbnail.png` by the block registry (see Changed).
+- **`nextspark migrate`** (root-first layout and app tree conversion; see Changed) also: adds native Next rewrites so the old
+  `/api/v1/theme/**` and `/api/v1/plugin/**` URLs keep answering; checks the project's `next` and `eslint-config-next` ranges (`~16.3.5`, resolving `catalog:` specs)
+  and updates `package.json` with `--yes`; never rewrites AI-workflow directories (`.claude`, `.codex*`, `.gemini`, `.cursor`, `.superpowers`,
+  `.agents`), listing their old references instead; creates `packages/contracts` in a web+mobile workspace and wires it in; predicts the
+  generated host on a converted copy with `--dry-run` (`--no-simulate` skips it); and gives up on the registry after 10 s offline, saying how
+  to rerun.
+- **`nextspark skills`** serves an offline, versioned skill catalog from the installed CLI, and new projects get small, non-overwriting agent
+  onboarding pointers (#201).
+- **Production auth readiness (#202).** Runtime readiness gates the authentication endpoints and renders login, signup, invitation signup
+  and recovery as available, unavailable or fail-closed; `nextspark prepare --production` and `build` fail when no login method can work
+  (`NEXTSPARK_AUTH_RUNTIME_ONLY` declares the ones that work at runtime only; `NEXTSPARK_AUTH_PREFLIGHT=off` bypasses); the wizard collects
+  or explicitly postpones the production sign-in provider.
+- **`pnpm pkg:verify-tarballs`** verifies every packed tarball (exports targets exist, no `workspace:`/`link:`/`file:` specs, internal
+  versions match, no `.env`, key material or token shapes) and runs before publishing (#204 gate G3).
 
 - **Portable API contracts (#203):** `nextspark prepare` generates a zod-only module of DTO types and schemas from the project's entities
   (`packages/contracts` in a web+mobile project, `.nextspark/contracts` otherwise); `nextspark prepare --contracts-only [--check]` runs
   only that step. Requests are validated with the server's own schema generator (copied verbatim from the new
   `src/lib/entities/portable/`), responses are rendered from the columns the generic handlers select, and numeric wire types follow the
   `pg` driver. `childEntities` are serialized into the contract, or generation fails.
+
+### Changed
+
+- **Root-first layout (breaking).** The compiler reads a project from its own root; path resolution has a single owner
+  (`scripts/build/registry/project-mode.mjs`). The theme's reserved middleware hook is `config/hooks/proxy.ts`, and the calls to the removed
+  `hasThemeMiddleware`, `executeThemeMiddleware` and `getThemeAppConfig` are rewritten by `migrate` (call shapes it cannot rewrite safely
+  stop it). The generated directory keeps the name `.nextspark/registries`.
+- **Published plugins a project declares as dependencies are discovered** by the registry, and each published plugin declares a `files`
+  allowlist (the release check fails if an allowlist would drop a directory the plugin needs).
+- **Dependency security floors (#204 G1):** `@nextsparkjs/cli` `tar` `^7.5.21`, `@nextsparkjs/core` `sharp` `^0.35.4`,
+  `@nextsparkjs/plugin-langchain` `handlebars` `^4.7.9`. `@nextsparkjs/testing` is no longer a runtime dependency of core.
+- **Client JavaScript per route (#192, #207).** Overridden core routes have their own template scope (now replaced by static facades), each
+  route group gets only the translations its client components use, and the root layout's theme provider reads small client-safe modules
+  so dashboard and dev configuration no longer ship in every page.
+- **The request proxy runs in root-first projects and they build with Turbopack.**
+- **Scaffold:** a flat project's `.gitignore` is complete (`node_modules`, `.next`, `tsbuildinfo`, `next-env.d.ts`, `.nextspark`,
+  `src/app`; an existing file only gains the missing entries); the template `tsconfig` has Next 16's values and `next.config` sets
+  `agentRules: false`, so the first build or dev run leaves the tree clean; a web+mobile project's mobile app declares what Metro loads
+  (`react-native-css-interop`, `react-native-worklets`, `babel-preset-expo`, `expo-device`); `create-nextspark-app` installs plugins from the
+  local tarballs it was given; new projects advertise only real project templates.
+- **`nextspark dev` on Turbopack recovers from syntax errors:** on a parse error in a template, an entity config or any changed source in
+  the graph nothing is written until it parses again, so the fixed code is served instead of stale code.
+- **Breaking: `BlockConfig.thumbnail` is now the imported image (`{ src }`).** The block registry sets it from `blocks/<slug>/thumbnail.png`
+  through a static import (Next.js serves it as an asset; `/api/v1/blocks` returns `thumbnail.src`). A block `config.ts` must not set
+  `thumbnail`: the old `thumbnail: '/theme/blocks/<slug>/thumbnail.png'` string no longer type-checks, and `nextspark migrate` removes it.
+  The registry imports the file only if it is really a PNG (older scaffolds shipped text placeholders): otherwise it warns and the block
+  has no thumbnail. The `public/theme/blocks` copies are gone from the scaffold.
+- **New projects have no `src/app`.** `src/app` is generated by `nextspark dev`, `build` and `prepare` and is
+  git-ignored (so is `.nextspark/`); the wizard writes the request proxy to `src/proxy.ts`, where Next.js loads it
+  once `src/app` exists.
+- **`nextspark migrate` converts the app tree** of a 0.x project instead of archiving it: files core generates are
+  removed, customized core files become overrides under `templates/` (or `api/v1/**` overrides under
+  `templates/api/`), project-only route files move to `templates/` or `api/`, billing webhook extensions are declared
+  in `nextspark.config.ts` (`billing.webhookExtensions`), the project URLs that move to `/api/**` and
+  `/api/plugins/<plugin>/**` are listed, and a file whose shape it does not recognize stops it before it writes.
+  A root-first project with a committed `src/app` is converted too. `--no-prepare` skips the final generation. See
+  [Upgrading a 0.x project](docs/17-updates/06-upgrade-0x-projects.md).
+- Core's API Explorer docs and presets (`docs.md`, `presets.ts`) live next to each route module in the package
+  (`src/routes/api/**`, shipped as source under `dist/routes/api/**`).
+- The entity schema generator now lives in `lib/entities/portable/` (server-free) and is re-exported by `lib/entities/schema-generator.ts`;
+  the generic handlers build their SELECT lists from `portable/response-shape.ts`. No behavior change.
+
+### Fixed
+
+- **Audit log (#206):** entries were never written, because the table had no insert policy for the application role (migration 028).
+- **Calendar (#205):** the day grid stays mounted across parent renders (the three DayPicker components are module-level).
+- **Unknown public URLs answer 404 again in ISR** (the starter's `(public)/loading.tsx` wrapped the catch-all). Under Cache Components Next
+  still streams 200 with the not-found page and `noindex`.
+- `/api/v1/cron/process` and `withRateLimit` rethrow Next's prerender interruption instead of swallowing it under Cache Components.
+- `db.ts`'s SIGTERM/SIGINT handlers close the pools and then let the signal end the process, so `next build` no longer leaves its
+  static-generation workers running.
+- Debug `console.log` calls in client code run only in development.
+- A media upload stores only real files from the form data.
+- `migrate`: a dry run resolves the theme from the environment like one from `.env.example`; it ignores `next-env.d.ts` and says how to untrack
+  it; its previous-core lookup is reliable and fetches templates with the user's registry auth; errors from the registry (credentials refused,
+  version not served) are told apart from network failures.
+- Theme and plugin proxy composition enforces core's authentication boundaries and fails unsafe rewrite targets closed (#204).
+- The web template enforces TypeScript checks; the generated Cypress `tsconfig` resolves package `exports`; creating a project with a bundled
+  theme or plugin no longer tries to fetch it from the registry; a project created from locally packed core resolves `@nextsparkjs/ui`
+  from its local tarball too.
+- Geist faces no longer preload; projects using `var(--font-geist-sans)` load
+  them through normal CSS discovery with `font-display: swap`.
+- Request interception now lives beside `src/app` (`src/proxy.ts` on Next.js 16,
+  `src/middleware.ts` on Next.js 15), so Next discovers the authentication
+  boundary and unauthenticated dashboard requests redirect to login. The wizard
+  writes it, and `nextspark migrate` writes it when a project has none.
 
 ### Removed
 
@@ -53,36 +185,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`scripts/build/theme.mjs`** (`@nextsparkjs/core/scripts/build/theme.mjs`, nothing called it): it wrote `.next/theme-generated.css`, which nothing read; the generated root layout imports `styles/globals.css` directly.
 
-### Changed
-
-- **Breaking: `BlockConfig.thumbnail` is now the imported image (`{ src }`).** The block registry sets it from `blocks/<slug>/thumbnail.png`
-  through a static import (Next.js serves it as an asset; `/api/v1/blocks` returns `thumbnail.src`). A block `config.ts` must not set
-  `thumbnail`: the old `thumbnail: '/theme/blocks/<slug>/thumbnail.png'` string no longer type-checks, and `nextspark migrate` removes it.
-  The registry imports the file only if it is really a PNG (older scaffolds shipped text placeholders): otherwise it warns and the block
-  has no thumbnail. The `public/theme/blocks` copies are gone from the scaffold.
-- **New projects have no `src/app`.** `src/app` is generated by `nextspark dev`, `build` and `prepare` and is
-  git-ignored (so is `.nextspark/`); the wizard writes the request proxy to `src/proxy.ts`, where Next.js loads it
-  once `src/app` exists.
-- **`nextspark migrate` converts the app tree** of a 0.x project instead of archiving it: files core generates are
-  removed, customized core files become overrides under `templates/` (or `api/v1/**` overrides under
-  `templates/api/`), project-only route files move to `templates/` or `api/`, billing webhook extensions are declared
-  in `nextspark.config.ts` (`billing.webhookExtensions`), the project URLs that move to `/api/**` and
-  `/api/plugins/<plugin>/**` are listed, and a file whose shape it does not recognize stops it before it writes.
-  A root-first project with a committed `src/app` is converted too. `--no-prepare` skips the final generation. See
-  [Upgrading a 0.x project](docs/17-updates/06-upgrade-0x-projects.md).
-- Core's API Explorer docs and presets (`docs.md`, `presets.ts`) live next to each route module in the package
-  (`src/routes/api/**`, shipped as source under `dist/routes/api/**`).
-- The entity schema generator now lives in `lib/entities/portable/` (server-free) and is re-exported by `lib/entities/schema-generator.ts`;
-  the generic handlers build their SELECT lists from `portable/response-shape.ts`. No behavior change.
-
-### Fixed
-
-- Geist faces no longer preload; projects using `var(--font-geist-sans)` load
-  them through normal CSS discovery with `font-display: swap`.
-- Request interception now lives beside `src/app` (`src/proxy.ts` on Next.js 16,
-  `src/middleware.ts` on Next.js 15), so Next discovers the authentication
-  boundary and unauthenticated dashboard requests redirect to login. The wizard
-  writes it, and `nextspark migrate` writes it when a project has none.
+- **The project-selection machinery of 0.x:** `NEXT_PUBLIC_ACTIVE_THEME` and the `--project` flag for the compiler, the `contents/`
+  symlinks, and the theme-selection test harnesses. `blog`, `crm` and `productivity` are install-once project templates under
+  `packages/core/templates/projects/`.
 
 ## [0.1.0-beta.191] - 2026-09-18
 

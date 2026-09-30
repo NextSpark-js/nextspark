@@ -1,15 +1,20 @@
-# Upgrading a 0.x project to the generated host
+# Upgrading 0.x projects to 0.1.0-beta.192
 
-A 0.x project (a `contents/themes/<theme>` layout, or a root-first project whose `src/app` was committed) upgrades to `0.1.0-beta.192` in two steps: install the new packages, then run `nextspark migrate` once. After that `src/app` is generated, git-ignored, and yours to leave alone. See the [generated host workflow](../01-fundamentals/08-generated-host) for how a project changes routes afterwards.
+This is the one upgrade path. A 0.x project (a `contents/themes/<theme>` layout, or a root-first project whose `src/app` was committed) upgrades to `0.1.0-beta.192` in two steps: install the new packages, then run `nextspark migrate` once. After that `src/app` is generated, git-ignored, and yours to leave alone. See the [generated host workflow](../01-fundamentals/08-generated-host) for how a project changes routes afterwards.
 
 ## Steps
 
-1. Commit or stash everything: migrate refuses to move files on a dirty git tree.
-2. Set every `@nextsparkjs/*` package to the new version and install (`pnpm update-core` does both). Next.js must be the version core pins (`~16.3.5`): the generator reads Next's own route rules and refuses another minor.
-3. `pnpm exec nextspark migrate --dry-run` prints the report and changes nothing. It exits `1` when the migration would refuse to run, listing why under **App tree conversion**. `--json` prints the same as JSON.
-4. Fix what it names, then `pnpm exec nextspark migrate --yes`. Without `--yes` it stops after the report.
-5. Review the printed summary, commit, and if git still tracks files under `src/app`, run the `git rm -r -q --cached src/app` it prints (then commit) so that the now-ignored generated files leave the index.
-6. Update the callers of every URL the report lists under **Project URLs that change**.
+1. Commit or stash everything: migrate refuses to move files on a dirty git tree. Work on a new branch.
+2. Set every `@nextsparkjs/*` package to `0.1.0-beta.192` in the root and in `web/` (or wherever the web app lives), including any `overrides` or `catalog` entries, and install. `pnpm update-core` does both only if the project is already on `0.1.0-beta.191` or later: earlier releases do not have it. Do not bump `next` by hand: `migrate --yes` sets `next` and `eslint-config-next` to `~16.3.5` (the generator reads Next's own route rules and refuses another minor), and step 6 installs.
+3. Run `pnpm exec nextspark migrate --dry-run` from the web app's directory. It prints the report and changes nothing; it exits `1` when the migration would refuse to run, listing why under **App tree conversion**. `--json` prints the same as JSON. It also predicts the generated host on a throwaway copy (notices such as replaced entity routes and conflicts, and which checks ran); a prediction that fails is reported as unknown, never as clean.
+   - **The active theme** comes from `NEXT_PUBLIC_ACTIVE_THEME` in the environment, else from `.env.example` in the web app's directory (the host root, e.g. `web/.env.example`, not the repository root). If the project keeps it elsewhere, set it on the command line: `NEXT_PUBLIC_ACTIVE_THEME=<theme> pnpm exec nextspark migrate --dry-run`, and the same for `--yes`.
+4. Fix what the report names, then `pnpm exec nextspark migrate --yes`. Without `--yes` it stops after the report. Keep the rollback commands it prints until the upgrade is committed.
+5. Review the printed summary and commit. If git still tracks files under `src/app`, run the `git rm -r -q --cached src/app` it prints (then commit) so that the now-ignored generated files leave the index.
+6. **Install again** (at the root and in the web app). Migrate changes `next` and `eslint-config-next` to `~16.3.5`, so the install that came before it no longer matches `package.json`. Then `pnpm exec nextspark prepare`.
+7. **Commit the contracts.** A web+mobile workspace gets a `packages/contracts` workspace package (wired into `pnpm-workspace.yaml` and into mobile's dependencies); commit it with its `src/` and `contracts.generation.json`. A web-only project has `.nextspark/contracts`, which is git-ignored.
+8. **Untrack `next-env.d.ts`** if git tracks it (`git rm --cached next-env.d.ts`): migrate adds it to `.gitignore`, and Next rewrites it on every build.
+9. Update the callers of every URL the report lists under **Project URLs that change**.
+10. Verify: `pnpm exec nextspark prepare --check`, the web build, the mobile type-check, and in a web+mobile project `pnpm exec nextspark check:mobile`.
 
 `--no-prepare` converts the files but does not generate `src/app` at the end; run `pnpm exec nextspark prepare` yourself.
 
@@ -51,7 +56,22 @@ The dispatchers that served project routes at run time are gone:
 | `/api/v1/theme/<theme>/<path>` | `/api/<path>` (the project's `api/<path>/route.ts`) |
 | `/api/v1/plugin/<plugin>/<path>` | `/api/plugins/<plugin>/<path>` |
 
-The report lists every occurrence in the project's source (`file:line`, the old URL and the new one); migrate only lists them, it does not rewrite callers.
+**Old URLs keep working.** Migrate adds native Next rewrites to `next.config` (`/api/v1/theme/<theme>/:path*` to `/api/:path*`, `/api/v1/plugin/<plugin>/:path*` to `/api/plugins/<plugin>/:path*`), merged with any `rewrites()` the file already has, so an installed mobile app and external integrations keep calling the old URLs. If migrate cannot edit the file it refuses before writing and prints the snippet to add. Remove the rewrites when no old client is left.
+
+The report lists every occurrence in the project's source, including sibling workspaces such as `mobile/` and `packages/*` (`file:line`, the old URL and the new one); migrate does not rewrite callers.
+
+## Permissions on routes a project template replaces
+
+A project template whose URL collides with an entity's generated dashboard routes (`/dashboard/<entity>`, `/create`, `/[id]`, `/[id]/edit`; a differently named dynamic segment at the same position; or an optional catch-all that also serves one of them) **replaces that entity's whole generated subtree**, as a static template beat `[entity]` in 0.x. Migrate's report and `prepare`, `build` and `dev` print it as an Info notice. What changed from 0.x is that the replacing pages now sit behind the entity's permission layout (list, read, create or update, by URL):
+
+- A role the entity's permissions do not allow now sees `permission-denied` on the page. The API already answered 403 to it, so it used to see an empty page. Hide the menu entry for those roles.
+- The layout reads the *team* role. A `superadmin` or `developer` who belongs to a team with a role that lacks that permission can lose access on such a page. Check your data before deploying.
+
+Templates that only add URLs coexist with the generated routes and are not affected.
+
+## Cache Components is optional for an existing project
+
+New projects are created with Cache Components and PPR on. An upgraded project keeps the rendering mode it has: migrate does not turn it on, and legacy ISR stays supported. To opt in, set `cacheComponents: true` in `next.config` and run a build; routes that read request data need a `Suspense` boundary. Under Cache Components an unknown public URL still answers a `noindex` not-found page with status 200 (it streams); a `loading.tsx` that wraps the public catch-all makes ISR answer 200 too, so keep loading skeletons inside a `Suspense` of the page instead.
 
 ## Also
 
