@@ -5,5 +5,41 @@
     "badge": "Support Center",
     "title": "How can we help you?",
     "description": "Find answers to your questions, learn how to use the platform and contact our support team."
+  },
+  "sections": {
+    "quickStart": "Quick Start Guides",
+    "features": "Available Features",
+    "faq": "Frequently Asked Questions",
+    "needMoreHelp": "Need more help?"
+  },
+  "faqs": [
+    {
+      "question": "How can I change my password?",
+      "answer": "Go to Dashboard > Settings > Password. Enter your current password, then the new password twice to confirm it."
+    },
+    {
+      "question": "Can I switch my theme to dark mode?",
+      "answer": "Yes! Use the moon/sun button in the top right corner of any page to switch between light and dark mode."
+    },
+    {
+      "question": "How do I manage my tasks?",
+      "answer": "Go to Dashboard > Tasks to view, create, edit and delete your tasks. You can mark them as completed by clicking the checkbox."
+    },
+    {
+      "question": "Where do I configure my notifications?",
+      "answer": "In Dashboard > Settings > Notifications you can control which types of notifications you want to receive and how."
+    },
+    {
+      "question": "How do I contact technical support?",
+      "answer": "You can reach us by email at support@boilerplate.com or through live chat during office hours."
+    },
+    {
+      "question": "Is my data safe?",
+      "answer": "Yes, we use enterprise-grade encryption and follow security best practices to protect your information."
+    }
+  ],
+  "footer": {
+    "readyToContinue": "Ready to keep using the app?",
+    "backToDashboard": "Back to Dashboard"
   }
 }

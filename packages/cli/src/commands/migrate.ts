@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, rmdirSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
@@ -8,6 +8,8 @@ import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensi
 import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
 import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
 import { getNextMajorVersion } from '../utils/next-bundler.js';
+import { COMPAT_NOTE, addCompatRewrites, applyContractsPackage, catalogVersion, checkNextRange, compatRewrites, countBlockThumbnails, inAiWorkflowDirectory, isBlockConfig, removeBlockThumbnails, planContractsPackage, updateNextRange, type CompatRewrite, type ContractsPlan, type NextRangeCheck } from '../utils/migrate-extras.js';
+import { pathToFileURL } from 'node:url';
 import { adaptProxySource, planProxyFile, type ProxyFileName } from '../utils/proxy-file.js';
 import { contentHash, readSyncState } from '../utils/sync-state.js';
 
@@ -17,6 +19,8 @@ interface MigrateOptions {
   prepare?: boolean;
   json?: boolean;
   yes?: boolean;
+  /** `--no-simulate` sets this to false: a dry run does not convert a copy to run the host plan. */
+  simulate?: boolean;
 }
 
 interface FileChange {
@@ -98,6 +102,31 @@ interface MigrateReport {
   };
   untracked: string[];
   siblingThemeReferences: { path: string; occurrences: number }[];
+  /** The native Next rewrites for the old API URLs, kept for already-installed clients. */
+  compatRewrites: { entries: CompatRewrite[]; file: string | null; note: string };
+  /** Old API URLs in sibling workspaces (mobile/, packages/*, ...): reported, not rewritten. */
+  siblingApiUrlReferences: { path: string; occurrences: number }[];
+  nextRange: NextRangeCheck;
+  /** Old references inside AI-workflow directories: listed, never rewritten. */
+  aiWorkflowReferences: { path: string; occurrences: number }[];
+  contractsPackage: { needed: boolean; path: string; mobile: string | null; skipped: string | null; /** False when the directory already exists (without a package.json): rollback then removes only the files migrate writes. */ createsDirectory: boolean };
+  /** Block configs whose old `thumbnail: "/theme/blocks/..."` line is removed (BlockConfig.thumbnail is the registry's import now). */
+  blockThumbnails: { path: string; lines: number }[];
+  /** What the generated host says about the converted layout (a dry run converts a temporary copy). */
+  hostPlan: {
+    simulated: boolean;
+    /** Diagnostics that would stop the generation (the Next.js version ones are reported under nextRange). */
+    conflicts: string[];
+    /** Information from the plan, e.g. NS_HOST_ENTITY_ROUTES_REPLACED. */
+    notices: string[];
+    /** What ran, for `predictHost`: plan, emission, grammar, ownership, contracts, registries. */
+    checks: Record<string, string> | null;
+    /** The core's `predictHost`, or `prepare` run on the copy when the installed core has no predictHost. */
+    method: 'predictHost' | 'prepare' | null;
+    /** True when the prediction was attempted and failed: the plan is unknown, not clean. */
+    unknown: boolean;
+    reason: string | null;
+  };
 }
 
 class MigrateAnalysisError extends Error {}
@@ -247,7 +276,8 @@ function normalizedDeclaredVersion(version: string): string {
 }
 
 function packageFiles(repositoryRoot: string): string[] {
-  return filesIn(repositoryRoot).filter(file => basename(file) === 'package.json');
+  // an AI-workflow directory's package.json is not a workspace member
+  return filesIn(repositoryRoot).filter(file => basename(file) === 'package.json' && !inAiWorkflowDirectory(repositoryRoot, file));
 }
 
 function nextConfigFiles(directory: string): string[] {
@@ -374,6 +404,8 @@ interface PreviousTemplates {
 interface PreviousTemplateLookup {
   templates: PreviousTemplates | null;
   unavailableReason: string | null;
+  /** True when the lookup failed on the network (timeout, connection), so rerunning with network access can help. */
+  networkFailure?: boolean;
 }
 
 interface CoreVersionEvidence {
@@ -382,11 +414,29 @@ interface CoreVersionEvidence {
 }
 
 const previousTemplatesCache = new Map<string, PreviousTemplateLookup>();
-const DEFAULT_PREVIOUS_CORE_NETWORK_TIMEOUT_MS = 60_000;
+const DEFAULT_PREVIOUS_CORE_NETWORK_TIMEOUT_MS = 10_000;
 
-class PreviousTemplateTimeoutError extends Error {
+/** One deadline shared by every network step of the historical-core lookup, so the wait is bounded in total. */
+interface NetworkBudget {
+  total: number;
+  left(): number;
+}
+
+function networkBudget(total: number): NetworkBudget {
+  const deadline = Date.now() + total;
+  return { total, left: () => Math.max(1, deadline - Date.now()) };
+}
+
+/** A failed historical-core lookup; `network` says whether rerunning with network access can fix it. */
+class PreviousTemplateLookupError extends Error {
+  constructor(message: string, readonly network: boolean) {
+    super(message);
+  }
+}
+
+class PreviousTemplateTimeoutError extends PreviousTemplateLookupError {
   constructor(step: string, timeoutMs: number) {
-    super(`timed out after ${timeoutMs}ms while ${step}`);
+    super(`timed out after ${timeoutMs}ms while ${step}`, true);
   }
 }
 
@@ -549,25 +599,25 @@ async function templatesFromCoreArchive(archive: string, directory: string, vers
   return files.size > 0 ? { version, method, files, rootFiles } : null;
 }
 
-function pnpmConfigValue(key: string, directory: string, environment: NodeJS.ProcessEnv, timeoutMs: number): string | null {
+function pnpmConfigValue(key: string, directory: string, environment: NodeJS.ProcessEnv, budget: NetworkBudget): string | null {
   try {
     const value = execFileSync('pnpm', ['config', 'get', key, '--ignore-workspace'], {
       cwd: directory,
       env: environment,
       encoding: 'utf8',
       stdio: 'pipe',
-      timeout: timeoutMs,
+      timeout: budget.left(),
     }).trim();
     return value === '' || value === 'undefined' || value === 'null' ? null : value;
   } catch (error) {
-    if (didProcessTimeOut(error)) throw new PreviousTemplateTimeoutError('reading pnpm configuration', timeoutMs);
+    if (didProcessTimeOut(error)) throw new PreviousTemplateTimeoutError('reading pnpm configuration', budget.total);
     return null;
   }
 }
 
-function configuredCoreRegistry(directory: string, environment: NodeJS.ProcessEnv, timeoutMs: number): URL | null {
-  const configured = pnpmConfigValue('@nextsparkjs:registry', directory, environment, timeoutMs)
-    ?? pnpmConfigValue('registry', directory, environment, timeoutMs);
+function configuredCoreRegistry(directory: string, environment: NodeJS.ProcessEnv, budget: NetworkBudget): URL | null {
+  const configured = pnpmConfigValue('@nextsparkjs:registry', directory, environment, budget)
+    ?? pnpmConfigValue('registry', directory, environment, budget);
   if (!configured) return null;
   try {
     return new URL(configured);
@@ -576,29 +626,29 @@ function configuredCoreRegistry(directory: string, environment: NodeJS.ProcessEn
   }
 }
 
-function approvedTarballUrl(value: string, directory: string, environment: NodeJS.ProcessEnv, timeoutMs: number): URL {
+function approvedTarballUrl(value: string, directory: string, environment: NodeJS.ProcessEnv, budget: NetworkBudget): URL {
   let tarball: URL;
   try {
     tarball = new URL(value);
   } catch {
-    throw new Error('pnpm did not return a valid tarball URL');
+    throw new PreviousTemplateLookupError('pnpm did not return a valid tarball URL', false);
   }
   if (tarball.protocol === 'https:') return tarball;
-  const registry = configuredCoreRegistry(directory, environment, timeoutMs);
+  const registry = configuredCoreRegistry(directory, environment, budget);
   if (tarball.protocol !== 'http:' || registry?.protocol !== 'http:' || registry.host !== tarball.host) {
-    throw new Error('pnpm did not return an HTTPS tarball URL or an HTTP URL from the configured registry host');
+    throw new PreviousTemplateLookupError('pnpm did not return an HTTPS tarball URL or an HTTP URL from the configured registry host', false);
   }
   return tarball;
 }
 
-function tarballAuthorization(tarball: URL, directory: string, environment: NodeJS.ProcessEnv, timeoutMs: number): string | null {
+function tarballAuthorization(tarball: URL, directory: string, environment: NodeJS.ProcessEnv, budget: NetworkBudget): string | null {
   const prefix = `//${tarball.host}/:`;
-  const token = pnpmConfigValue(`${prefix}_authToken`, directory, environment, timeoutMs);
+  const token = pnpmConfigValue(`${prefix}_authToken`, directory, environment, budget);
   if (token) return `Bearer ${token}`;
-  const auth = pnpmConfigValue(`${prefix}_auth`, directory, environment, timeoutMs);
+  const auth = pnpmConfigValue(`${prefix}_auth`, directory, environment, budget);
   if (auth) return `Basic ${auth}`;
-  const username = pnpmConfigValue(`${prefix}username`, directory, environment, timeoutMs);
-  const encodedPassword = pnpmConfigValue(`${prefix}_password`, directory, environment, timeoutMs);
+  const username = pnpmConfigValue(`${prefix}username`, directory, environment, budget);
+  const encodedPassword = pnpmConfigValue(`${prefix}_password`, directory, environment, budget);
   if (!username || !encodedPassword) return null;
   try {
     return `Basic ${Buffer.from(`${username}:${Buffer.from(encodedPassword, 'base64').toString('utf8')}`).toString('base64')}`;
@@ -620,7 +670,7 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
   if (cached !== undefined) return cached;
 
   const directory = mkdtempSync(join(tmpdir(), 'nextspark-migrate-core-'));
-  const timeoutMs = previousCoreNetworkTimeoutMs();
+  const budget = networkBudget(previousCoreNetworkTimeoutMs());
   try {
     // Never let a project's workspace policies influence this historical
     // lookup. In particular, pnpm 12 can apply minimumReleaseAge and build
@@ -632,6 +682,14 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
       // historical-package lookup.
       npm_config_ignore_workspace: 'true',
       NPM_CONFIG_IGNORE_WORKSPACE: 'true',
+      // What bounds the wait is the shared time budget: every step is killed at its deadline. These only
+      // shorten pnpm's own retries so a failure can show before it. pnpm 9/10 read the npm_config_*
+      // spelling and pnpm 12 only pnpm_config_*, so both are set; a caller's own setting wins.
+      ...Object.fromEntries(Object.entries({ fetch_retries: '1', fetch_retry_mintimeout: '500', fetch_retry_maxtimeout: '2000' }).flatMap(([key, fallback]) => {
+        const value = [`npm_config_${key}`, `NPM_CONFIG_${key.toUpperCase()}`, `pnpm_config_${key}`, `PNPM_CONFIG_${key.toUpperCase()}`]
+          .map(name => process.env[name]).find(entry => entry !== undefined) ?? fallback;
+        return [[`npm_config_${key}`, value], [`pnpm_config_${key}`, value]];
+      })),
     };
     let url: string;
     try {
@@ -640,15 +698,25 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
         env: environment,
         encoding: 'utf8',
         stdio: 'pipe',
-        timeout: timeoutMs,
+        timeout: budget.left(),
       }).trim();
     } catch (viewError) {
-      if (didProcessTimeOut(viewError)) throw new PreviousTemplateTimeoutError('running pnpm view', timeoutMs);
+      if (didProcessTimeOut(viewError)) throw new PreviousTemplateTimeoutError('running pnpm view', budget.total);
+      // The registry answered and said no: rerunning with network access will not change that. pnpm 12
+      // words a 401/403 as a "client error" under ERR_PNPM_RESOLVING_NPM_RESOLVER_NETWORK_ERROR and a
+      // missing version as ERR_PNPM_PACKAGE_NOT_FOUND; pnpm 9/10 hand `view` to npm (E401, E403, E404).
+      const stderr = String((viewError as { stderr?: unknown }).stderr ?? '');
+      if (/client error \(40[13]\b|\bE40[13]\b|ERR_PNPM_FETCH_40[13]/.test(stderr)) {
+        throw new PreviousTemplateLookupError(`the registry refused the credentials for @nextsparkjs/core@${version} (HTTP 401/403); check the registry token`, false);
+      }
+      if (/client error \(404\b|\bE404\b|\bETARGET\b|ERR_PNPM_FETCH_404|ERR_PNPM_PACKAGE_NOT_FOUND|ERR_PNPM_NO_MATCHING_VERSION/.test(stderr)) {
+        throw new PreviousTemplateLookupError(`the registry does not serve @nextsparkjs/core@${version}`, false);
+      }
       throw viewError;
     }
-    const tarball = approvedTarballUrl(url, directory, environment, timeoutMs);
-    const authorization = tarballAuthorization(tarball, directory, environment, timeoutMs);
-    const signal = AbortSignal.timeout(timeoutMs);
+    const tarball = approvedTarballUrl(url, directory, environment, budget);
+    const authorization = tarballAuthorization(tarball, directory, environment, budget);
+    const signal = AbortSignal.timeout(budget.left());
     let response: Response;
     try {
       // The URL came from pnpm's configured registry. Reuse credentials only
@@ -656,26 +724,35 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
       // leaking an npm token to another host.
       response = await fetch(tarball, { signal, headers: authorization ? { authorization } : undefined });
     } catch (fetchError) {
-      if (signal.aborted) throw new PreviousTemplateTimeoutError('fetching the core tarball', timeoutMs);
+      if (signal.aborted) throw new PreviousTemplateTimeoutError('fetching the core tarball', budget.total);
       throw fetchError;
     }
-    if (!response.ok) throw new Error(`tarball request failed (${response.status})`);
+    if (!response.ok) {
+      throw new PreviousTemplateLookupError(
+        `the registry answered ${response.status} for the core tarball`,
+        response.status >= 500 || response.status === 408 || response.status === 429,
+      );
+    }
     const archive = join(directory, 'core.tgz');
     writeFileSync(archive, Buffer.from(await response.arrayBuffer()));
-    const templates = await templatesFromCoreArchive(archive, directory, version, 'pnpm view tarball');
+    let templates: PreviousTemplates | null;
+    try {
+      templates = await templatesFromCoreArchive(archive, directory, version, 'pnpm view tarball');
+    } catch {
+      throw new PreviousTemplateLookupError('the downloaded core package could not be unpacked', false);
+    }
     const result = {
       templates,
       unavailableReason: templates ? null : 'downloaded package identity or templates/app did not match the requested core release',
+      networkFailure: false,
     };
     previousTemplatesCache.set(version, result);
     return result;
   } catch (error) {
-    const result = {
-      templates: null,
-      unavailableReason: error instanceof PreviousTemplateTimeoutError
-        ? error.message
-        : 'pnpm could not retrieve or unpack the package',
-    };
+    const result = error instanceof PreviousTemplateLookupError
+      ? { templates: null, unavailableReason: error.message, networkFailure: error.network }
+      // pnpm or fetch failed without an answer from the registry: a connection problem
+      : { templates: null, unavailableReason: 'pnpm could not retrieve or unpack the package', networkFailure: true };
     previousTemplatesCache.set(version, result);
     return result;
   } finally {
@@ -1056,7 +1133,26 @@ function untrackedFiles(repositoryRoot: string): string[] {
 
 function siblingReferences(repositoryRoot: string, hostRoot: string, theme: string | null): MigrateReport['siblingThemeReferences'] {
   if (!theme) return [];
-  const needle = `contents/themes/${theme}`;
+  return siblingMatches(repositoryRoot, hostRoot, new RegExp(`contents/themes/${theme.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g'));
+}
+
+/** Old references inside AI-workflow directories: migrate never rewrites them (#201 owns those), so it lists them. */
+function aiWorkflowReferences(repository: string, theme: string | null): MigrateReport['aiWorkflowReferences'] {
+  const escaped = theme ? theme.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : null;
+  const pattern = new RegExp(`${escaped ? `contents/themes/${escaped}|` : ''}contents/plugins/|/api/v1/(?:theme|plugin)/`, 'g');
+  const references: { path: string; occurrences: number }[] = [];
+  for (const file of filesIn(repository)) {
+    if (!inAiWorkflowDirectory(repository, file)) continue;
+    const buffer = readFileSync(file);
+    if (!isText(buffer)) continue;
+    const occurrences = countOccurrences(buffer.toString('utf8'), pattern);
+    if (occurrences > 0) references.push({ path: pathFrom(repository, file), occurrences });
+  }
+  return references.sort((left, right) => left.path.localeCompare(right.path));
+}
+
+/** Occurrences of `pattern` in the workspace members outside the host, by file. */
+function siblingMatches(repositoryRoot: string, hostRoot: string, pattern: RegExp): MigrateReport['siblingThemeReferences'] {
   const hostPath = resolve(hostRoot);
   const references: { path: string; occurrences: number }[] = [];
   const packageRoots = packageFiles(repositoryRoot).map(file => resolve(dirname(file)));
@@ -1064,7 +1160,8 @@ function siblingReferences(repositoryRoot: string, hostRoot: string, theme: stri
   for (const packageRoot of packageRoots) {
     if (resolve(packageRoot) === hostPath || packageRoot.startsWith(`${hostPath}${sep}`)) continue;
     for (const file of filesIn(packageRoot).filter(file => owner(file) === packageRoot)) {
-      const occurrences = countOccurrences(readFileSync(file, 'utf8'), new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'));
+      if (!isText(readFileSync(file))) continue;
+      const occurrences = countOccurrences(readFileSync(file, 'utf8'), pattern);
       if (occurrences > 0) references.push({ path: pathFrom(repositoryRoot, file), occurrences });
     }
   }
@@ -1222,6 +1319,32 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     const declared = declareWebhookExtensions(readFileSync(configFile, 'utf8'), appPlan.webhookExtensions);
     if ('error' in declared) blockers.push(declared.error);
   }
+  const urlMoves = apiUrlMoves(hostFiles, host.root);
+  // F9: the URLs core's dispatchers served keep answering through native Next rewrites, for installed clients
+  const compatEntries = compatRewrites(
+    themeDirectory && (existsSync(join(themeDirectory, 'api')) || urlMoves.some(move => move.from.startsWith('/api/v1/theme/'))) ? selectedTheme.name : null,
+    plugins.filter(plugin => existsSync(join(pluginsDirectory, plugin.name, 'api'))).map(plugin => plugin.name),
+  );
+  const nextConfigFile = nextConfigFiles(host.root)[0] ?? null;
+  if (compatEntries.length > 0) {
+    const edit = nextConfigFile ? addCompatRewrites(readFileSync(nextConfigFile, 'utf8'), basename(nextConfigFile), compatEntries) : null;
+    if (!edit || 'error' in edit) {
+      const shown = edit ? edit.error : `${pathFrom(host.root, join(host.root, 'next.config.mjs'))} was not found`;
+      blockers.push(`${shown}. Merge these rewrites into your next config by hand, then run migrate again:\n${(edit && 'snippet' in edit ? edit.snippet : compatEntries.map(entry => `  { source: '${entry.source}', destination: '${entry.destination}' },`).join('\n'))}`);
+    }
+  }
+  // F11: the Next.js range the generated host needs
+  const workspaceYamls = [join(host.root, 'pnpm-workspace.yaml'), join(repository, 'pnpm-workspace.yaml')].filter(file => existsSync(file)).map(file => readFileSync(file, 'utf8'));
+  const nextRange = checkNextRange(hostPackage, (catalog, dependency) => workspaceYamls.map(yaml => catalogVersion(yaml, catalog, dependency)).find(version => version !== null) ?? null);
+  const notices: string[] = [];
+  for (const member of nextRange.members.filter(entry => entry.action === 'check')) {
+    notices.push(`${member.name} is declared as "${member.value}" in ${pathFrom(repository, join(host.root, 'package.json'))}: ${member.note}. Migrate does not change it.`);
+  }
+  // F13: a project with a mobile app imports its API types from packages/contracts
+  const contracts = planContractsPackage(repository, host.root, packageManifests);
+  const contractsPlan = contracts.plan;
+  if (contracts.blocker) blockers.push(contracts.blocker);
+  if (contracts.skipped) notices.push(contracts.skipped);
   const appConversion: MigrateReport['appConversion'] = {
     root: appRoot,
     removed: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'remove' ? [{ path: file.path, evidence: file.fate.evidence }] : []),
@@ -1253,12 +1376,15 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
   if (!selectedTheme.name) warnings.push('No active theme was found in NEXT_PUBLIC_ACTIVE_THEME or .env.example.');
   if (appConversion.blockers.length > 0) warnings.push(`BLOCKED: migration will not write anything until ${appConversion.blockers.length} app file(s) are placed by hand (see "App tree conversion").`);
   if (previousEvidence && !previousLookup.templates) {
-    warnings.push(`Could not fetch @nextsparkjs/core@${previousEvidence.version} (${previousLookup.unavailableReason}) to classify old generated files; unmatched files remain customizations.`);
+    warnings.push(previousLookup.networkFailure
+      ? `Could not fetch @nextsparkjs/core@${previousEvidence.version} (${previousLookup.unavailableReason}) to classify old generated files; that network step was skipped and unmatched files remain customizations. Rerun \`nextspark migrate\` with network access before applying anything (with --yes, roll back first with the commands printed in the move plan: files already moved can no longer be classified). The wait is ${previousCoreNetworkTimeoutMs() / 1000}s; NEXTSPARK_MIGRATE_NETWORK_TIMEOUT_MS overrides it.`
+      : `Could not use @nextsparkjs/core@${previousEvidence.version} (${previousLookup.unavailableReason}) to classify old generated files; unmatched files remain customizations.`);
   }
   for (const file of rootProxyFiles.customizations) {
     warnings.push(`WARNING: root ${file} was kept but Next loads src/proxy.ts; it will not run. Move its logic into config/hooks/proxy.ts.`);
   }
   if (envExample.action === 'conflict') warnings.push(`${envExample.path} differs from the root .env.example and will not be merged.`);
+  warnings.push(...notices);
   warnings.push(...configPlugins.warnings);
   warnings.push(...scripts.warnings);
   const report: MigrateReport = {
@@ -1268,7 +1394,7 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     activeTheme: { ...selectedTheme, themes, plugins },
     appTemplates,
     appConversion,
-    apiUrlMoves: apiUrlMoves(hostFiles, host.root),
+    apiUrlMoves: urlMoves,
     rootProxyFiles,
     routeRootGuard: {
       currentRoots: ['app', 'pages'].filter(path => existsSync(join(host.root, path))),
@@ -1283,6 +1409,16 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     collisions: collisions(host.root, themeDirectory),
     untracked,
     siblingThemeReferences: siblingReferences(repository, host.root, selectedTheme.name),
+    compatRewrites: { entries: compatEntries, file: nextConfigFile ? pathFrom(repository, nextConfigFile) : null, note: COMPAT_NOTE },
+    siblingApiUrlReferences: siblingMatches(repository, host.root, /\/api\/v1\/(?:theme|plugin)\//g),
+    nextRange,
+    aiWorkflowReferences: aiWorkflowReferences(repository, selectedTheme.name),
+    contractsPackage: { needed: contractsPlan !== null, path: pathFrom(repository, join(repository, 'packages', 'contracts')), mobile: contractsPlan?.mobile ? pathFrom(repository, contractsPlan.mobile) : null, skipped: contracts.skipped, createsDirectory: contractsPlan !== null && !existsSync(contractsPlan.contractsDirectory) },
+    blockThumbnails: hostFiles.filter(file => isBlockConfig(file) && !inAiWorkflowDirectory(repository, file)).flatMap(file => {
+      const lines = countBlockThumbnails(readFileSync(file, 'utf8'));
+      return lines > 0 ? [{ path: pathFrom(repository, file), lines }] : [];
+    }),
+    hostPlan: { simulated: false, conflicts: [], notices: [], checks: null, method: null, unknown: false, reason: null },
   };
   return { report, plan: appPlan };
 }
@@ -1367,6 +1503,33 @@ function printReport(report: MigrateReport): void {
   ]);
   section('Untracked non-ignored files', [paths(report.untracked)]);
   section('Sibling workspace references to the active theme', [report.siblingThemeReferences.length ? report.siblingThemeReferences.map(reference => `${reference.path} (${reference.occurrences})`).join(', ') : 'none']);
+  section('Compatibility rewrites for the old API URLs (native Next rewrites in next.config)', report.compatRewrites.entries.length
+    ? [`${report.compatRewrites.file ?? 'next.config'}:`, ...report.compatRewrites.entries.map(entry => `${entry.source} -> ${entry.destination}`), report.compatRewrites.note]
+    : ['none: no project or plugin API routes move']);
+  section('Old API URLs in sibling workspaces (reported, not rewritten; installed apps keep calling them through the rewrites above)', report.siblingApiUrlReferences.length ? report.siblingApiUrlReferences.map(reference => `${reference.path} (${reference.occurrences})`) : ['none']);
+  section(`Next.js range (the generated host needs ${report.nextRange.required})`, report.nextRange.members.length
+    ? report.nextRange.members.map(member => `${member.name} ${member.value} (${member.section}): ${member.action === 'ok' ? `ok${member.note ? ` (${member.note})` : ''}` : member.action === 'update' ? `--yes sets ${report.nextRange.required}, then install and run nextspark prepare` : `check it yourself: ${member.note}`}`)
+    : [`next is not declared in the host package.json: add next@${report.nextRange.required}`]);
+  section('AI-workflow directories (.claude, .codex*, .gemini, .cursor, .superpowers, .agents): never rewritten', report.aiWorkflowReferences.length
+    ? report.aiWorkflowReferences.map(reference => `${reference.path} (${reference.occurrences} old reference(s))`)
+    : ['no old references']);
+  section('Contracts package (a project with a mobile app)', report.contractsPackage.skipped ? [report.contractsPackage.skipped] : report.contractsPackage.needed
+    ? [`${report.contractsPackage.path} is missing: --yes creates it, lists it in the workspace, makes ${report.contractsPackage.mobile} depend on it, and prepare fills it`]
+    : ['nothing to create']);
+  section('Block thumbnails (BlockConfig.thumbnail is the image the registry imports; the old string fails the typecheck and was never read)', report.blockThumbnails.length
+    ? report.blockThumbnails.map(entry => `${entry.path}: ${entry.lines} thumbnail line(s) removed`)
+    : ['none']);
+  section('Generated host on the converted layout', report.hostPlan.unknown
+    ? [`host plan: unknown (${report.hostPlan.reason ?? 'the prediction failed'})`]
+    : report.hostPlan.simulated
+    ? [
+      ...(report.hostPlan.conflicts.length ? report.hostPlan.conflicts.map(line => `CONFLICT ${line}`) : ['no conflicts']),
+      ...report.hostPlan.notices.map(line => `notice ${line}`),
+      ...(report.hostPlan.checks ? [`checks: ${Object.entries(report.hostPlan.checks).map(([name, state]) => `${name} ${state}`).join(', ')}`] : []),
+      ...(report.hostPlan.method ? [`(${report.hostPlan.method === 'predictHost' ? "the installed core's predictHost" : 'nextspark prepare run on the copy: this core has no predictHost'})`] : []),
+      ...(report.hostPlan.reason ? [report.hostPlan.reason] : []),
+    ]
+    : [report.hostPlan.reason ?? 'not simulated']);
   if (report.warnings.length > 0) section('Warnings', report.warnings.map(warning => `⚠ ${warning}`));
 }
 
@@ -2270,7 +2433,7 @@ function validateLegacyHookImportShapes(hostRoot: string, hookSource: string, ca
     const line = readFileSync(file, 'utf8').slice(0, index).split(/\r?\n/).length;
     throw new MigrateAnalysisError(`Cannot safely rewrite legacy middleware import in ${pathFrom(hostRoot, file)}:${line}; only named middleware imports are supported.`);
   };
-  for (const file of filesIn(hostRoot)) {
+  for (const file of filesIn(hostRoot).filter(item => !inAiWorkflowDirectory(hostRoot, item))) {
     const content = readFileSync(file, 'utf8');
     const view = sourceView(content);
     const isCodeImport = (index: number) => view.code.slice(index, index + 'import'.length) === 'import';
@@ -2514,7 +2677,8 @@ function applyMove(repository: string, hostRoot: string, themeRoot: string, plug
   const planned = new Map(plannedItems.map(item => [item.source, item.destination]));
   const unmoved = new Set(plan.unmoved);
   const duplicateByDestination = new Map(plan.duplicates.map(item => [item.destination, item]));
-  const files = filesIn(repository).filter(file => !isOtherThemeFile(file, join(hostRoot, 'contents', 'themes'), theme));
+  // AI-workflow directories are left as they are (#201); the report lists what they still reference
+  const files = filesIn(repository).filter(file => !isOtherThemeFile(file, join(hostRoot, 'contents', 'themes'), theme) && !inAiWorkflowDirectory(repository, file));
   let rewritten = 0;
   for (const file of files) {
     if (plan.duplicates.some(item => item.source === file) || plan.collisions.some(item => item.source === file)) continue;
@@ -2759,6 +2923,12 @@ function rollbackCommands(repository: string, hostRoot: string, plan: MovePlan, 
   // Overrides and moved project files created from the app tree
   for (const file of [...report.appConversion.overrides, ...report.appConversion.projectFiles]) destinations.add(pathFrom(repository, join(hostRoot, file.destination)));
   if (report.envExample.action === 'move') destinations.add(pathFrom(repository, join(hostRoot, '.env.example')));
+  // A packages/contracts this migration creates is untracked, so `checkout` leaves it behind
+  if (report.contractsPackage.needed) {
+    // Only what did not exist before: a directory the user already had keeps its own (even ignored) files
+    if (report.contractsPackage.createsDirectory) destinations.add(report.contractsPackage.path);
+    else for (const name of ['package.json', 'tsconfig.json', 'README.md']) if (!existsSync(join(repository, report.contractsPackage.path, name))) destinations.add(`${report.contractsPackage.path}/${name}`);
+  }
   const selectiveCleanup: string[] = [];
   if (hadLegacyApp) {
     for (const path of GENERATED_HOST_ROLLBACK_PATHS) {
@@ -2921,6 +3091,185 @@ function trackedGeneratedFiles(repository: string, hostRoot: string): number {
   }
 }
 
+/**
+ * What the generated host says about the converted layout, without touching the project: convert a
+ * temporary copy (git files only; node_modules linked, not copied) with `migrate --yes`, which ends by
+ * running the host plan, and read its diagnostics. The current host plan API is the only contract:
+ * `nextspark prepare` inside the copy. The Next.js version check is reported on its own (nextRange).
+ */
+function lstatExists(path: string): boolean {
+  try {
+    lstatSync(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Env files hold secrets and are never copied; the .example/.sample/.template ones are placeholders migrate itself reads. */
+function copiesToSimulation(file: string): boolean {
+  const name = basename(file);
+  return !isEnvironmentFile(name) || /\.(?:example|sample|template)$/.test(name);
+}
+
+/** What a child that failed says, for the report: its first `Error` line, never Node's version banner. */
+function firstErrorLine(output: string): string | null {
+  const lines = output.split('\n').map(line => line.trim()).filter(line => line !== '' && !/^Node\.js v\d/.test(line));
+  return lines.find(line => /(?:^|\s)(?:[A-Z][A-Za-z]*)?Error\b/.test(line)) ?? lines.find(line => line.startsWith('nextspark migrate:')) ?? lines[lines.length - 1] ?? null;
+}
+
+/** The simulation's children get only what they need: PATH, HOME, TMPDIR, NODE_OPTIONS, the package-manager settings and NEXTSPARK_*. */
+function simulationEnvironment(): NodeJS.ProcessEnv {
+  const kept: NodeJS.ProcessEnv = {};
+  for (const [name, value] of Object.entries(process.env)) {
+    if (/^(?:PATH|HOME|TMPDIR|NODE_OPTIONS)$/.test(name) || /^(?:npm_config_|NPM_CONFIG_|pnpm_config_|PNPM_CONFIG_|NEXTSPARK_)/.test(name)) kept[name] = value;
+  }
+  return { ...kept, NEXTSPARK_MIGRATE_SIMULATION: '1', NEXTSPARK_AUTH_PREFLIGHT: 'off' };
+}
+
+interface SimulationChild {
+  code: number | null;
+  output: string;
+}
+
+function runAndCollect(command: string, args: string[], options: { cwd: string; env?: NodeJS.ProcessEnv; timeoutMs?: number }, track: (child: ChildProcess | null) => void): Promise<SimulationChild> {
+  return new Promise(resolvePromise => {
+    // its own process group, so a signal to the simulation reaches everything the migration started
+    const child = spawn(command, args, { cwd: options.cwd, env: options.env ?? process.env, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+    track(child);
+    let output = '';
+    // whole characters, however a chunk splits a multi-byte name
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', chunk => { output += chunk; });
+    child.stderr.on('data', chunk => { output += chunk; });
+    const timer = options.timeoutMs ? setTimeout(() => { try { process.kill(-(child.pid as number), 'SIGKILL'); } catch { child.kill('SIGKILL'); } }, options.timeoutMs) : null;
+    child.on('error', error => { if (timer) clearTimeout(timer); track(null); resolvePromise({ code: 1, output: `${output}\n${error.message}` }); });
+    child.on('close', code => { if (timer) clearTimeout(timer); track(null); resolvePromise({ code, output }); });
+  });
+}
+
+/**
+ * What the generated host says about the converted layout, without touching the project: clone the
+ * repository (hardlinked objects, no file hashing) into a temporary directory, lay the uncommitted state
+ * over it, convert it with `migrate --yes`, which ends by running the host plan, and read its diagnostics.
+ * The current host plan API is the only contract: `nextspark prepare` inside the copy. The Next.js version
+ * check is reported on its own (nextRange). The copy is removed however the run ends, Ctrl-C included.
+ */
+async function simulateHostPlan(repository: string, report: MigrateReport, coreDirectory: string | null, simulate: boolean | undefined): Promise<void> {
+  if (simulate === false || process.env.NEXTSPARK_MIGRATE_NO_SIMULATION === '1' || process.env.NEXTSPARK_MIGRATE_SIMULATION === '1') {
+    report.hostPlan.reason = 'not simulated (--no-simulate, or disabled by the environment)';
+    return;
+  }
+  if (!coreDirectory || (await coreHostMode(coreDirectory, resolve(repository, report.hostRoot.path))).mode === 'no-manifest') {
+    report.hostPlan.reason = 'not simulated: the installed @nextsparkjs/core cannot generate the host';
+    return;
+  }
+  process.stderr.write('Simulating the generated host on a converted copy of the project (--no-simulate skips this)...\n');
+  const copy = mkdtempSync(join(tmpdir(), 'nextspark-migrate-plan-'));
+  let running: ChildProcess | null = null;
+  const track = (child: ChildProcess | null) => { running = child; };
+  const cleanUp = () => {
+    const child = running as ChildProcess | null;
+    if (child?.pid) {
+      try {
+        process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        child.kill('SIGKILL');
+      }
+    }
+    rmSync(copy, { recursive: true, force: true });
+  };
+  const onSignal = (signal: NodeJS.Signals) => {
+    cleanUp();
+    process.exit(signal === 'SIGINT' ? 130 : 143);
+  };
+  process.once('SIGINT', onSignal);
+  process.once('SIGTERM', onSignal);
+  try {
+    const git = (args: string[], cwd = copy) => runAndCollect('git', ['-c', 'user.email=plan@nextspark.local', '-c', 'user.name=plan', ...args], { cwd }, track);
+    // No checkout at first: tracked env files must never land on disk, so only the other paths are checked out
+    const cloned = await git(['clone', '--quiet', '--local', '--no-checkout', repository, copy], repository);
+    if (cloned.code !== 0) throw new Error(`could not clone the repository: ${cloned.output.trim().split('\n')[0]}`);
+    const tracked = (await git(['ls-tree', '-r', '-z', '--name-only', 'HEAD'])).output.split('\0').filter(Boolean).filter(copiesToSimulation);
+    const pathspec = join(tmpdir(), `nextspark-migrate-pathspec-${process.pid}`);
+    writeFileSync(pathspec, tracked.join('\0'));
+    try {
+      const checkedOut = await git(['--literal-pathspecs', 'checkout', 'HEAD', `--pathspec-from-file=${pathspec}`, '--pathspec-file-nul']);
+      if (checkedOut.code !== 0) throw new Error(`could not check out the copy: ${checkedOut.output.trim().split('\n')[0]}`);
+    } finally {
+      rmSync(pathspec, { force: true });
+    }
+    // The working state (a dry run does not need a clean tree), staged or not: what differs from HEAD, plus new files
+    const listed = (args: string[]) => execFileSync('git', args, { cwd: repository, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }).split('\0').filter(Boolean);
+    const changes = listed(['diff', '--name-status', '--no-renames', '-z', 'HEAD']);
+    const touched: string[] = [];
+    for (let index = 0; index + 1 < changes.length; index += 2) touched.push(changes[index + 1]);
+    for (const file of [...touched, ...listed(['ls-files', '-z', '--others', '--exclude-standard'])].filter(copiesToSimulation)) {
+      const source = join(repository, file);
+      // a directory (a submodule's gitlink) is not a file to copy, and its empty folder in the copy stays
+      if (lstatExists(source) && !lstatSync(source).isSymbolicLink() && lstatSync(source).isDirectory()) continue;
+      rmSync(join(copy, file), { force: true });
+      if (!lstatExists(source)) continue;
+      mkdirSync(dirname(join(copy, file)), { recursive: true });
+      if (lstatSync(source).isSymbolicLink()) symlinkSync(readlinkSync(source), join(copy, file));
+      else copyFileSync(source, join(copy, file));
+    }
+    for (const manifest of packageFiles(repository)) {
+      const modules = join(dirname(manifest), 'node_modules');
+      const link = join(copy, pathFrom(repository, modules));
+      // a project that tracks its node_modules already has them in the copy
+      if (existsSync(modules) && !lstatExists(link)) symlinkSync(modules, link);
+    }
+    await git(['add', '-A']);
+    await git(['commit', '--quiet', '--no-verify', '--allow-empty', '-m', 'plan']);
+    const hostCopy = join(copy, report.hostRoot.path === '.' ? '' : report.hostRoot.path);
+    const copiedTemplates = templateDirectory(hostCopy, copy);
+    const prepareModule = copiedTemplates ? join(dirname(copiedTemplates), 'scripts', 'build', 'registry', 'host', 'prepare.mjs') : null;
+    // The core the project uses decides: one that exports predictHost answers without running the registry build
+    const hasPredict = prepareModule !== null && existsSync(prepareModule) && /export\s+(?:async\s+)?function\s+predictHost\b/.test(readFileSync(prepareModule, 'utf8'));
+    const simulationEnv = simulationEnvironment();
+    const migrated = await runAndCollect(process.execPath, [process.argv[1], 'migrate', '--yes', ...(hasPredict ? ['--no-prepare'] : [])], {
+      cwd: join(copy, pathFrom(repository, process.cwd())),
+      env: simulationEnv,
+      timeoutMs: 600_000,
+    }, track);
+    const lines = migrated.output.split('\n').map(line => line.trim()).filter(Boolean);
+    if (hasPredict && migrated.code === 0) {
+      report.hostPlan.method = 'predictHost';
+      const script = "const mod = await import(process.argv[1]); const config = mod.projectHostConfig({ projectRoot: process.cwd() }); const result = await mod.predictHost(config); console.log('__NEXTSPARK_PREDICT__' + JSON.stringify({ ok: result.ok, routes: result.routes.length, notices: result.notices, diagnostics: result.diagnostics, checks: result.checks }))";
+      const predicted = await runAndCollect(process.execPath, ['--input-type=module', '-e', script, pathToFileURL(prepareModule as string).href], { cwd: hostCopy, env: simulationEnv, timeoutMs: 600_000 }, track);
+      const marker = predicted.output.split('\n').find(line => line.startsWith('__NEXTSPARK_PREDICT__'));
+      if (!marker) {
+        report.hostPlan.unknown = true;
+        report.hostPlan.reason = `predictHost did not answer: ${firstErrorLine(predicted.output) ?? `exit ${predicted.code}`}`;
+        return;
+      }
+      const result = JSON.parse(marker.slice('__NEXTSPARK_PREDICT__'.length)) as { notices: { code?: string; message?: string }[]; diagnostics: { code?: string; message?: string; file?: string }[]; checks: Record<string, string> };
+      const describe = (entry: { code?: string; message?: string; file?: string }) => `${entry.code ?? 'NS_HOST'}: ${entry.message ?? ''}${entry.file ? ` (${entry.file})` : ''}`.trim();
+      report.hostPlan.conflicts = result.diagnostics.filter(entry => entry.code !== 'NS_HOST_UNSUPPORTED_NEXT_VERSION').map(describe);
+      report.hostPlan.notices = result.notices.map(describe);
+      report.hostPlan.checks = result.checks;
+      report.hostPlan.simulated = true;
+      return;
+    }
+    report.hostPlan.method = hasPredict ? null : 'prepare';
+    report.hostPlan.conflicts = lines.filter(line => /NS_HOST_/.test(line) && !/NS_HOST_UNSUPPORTED_NEXT_VERSION/.test(line));
+    if (migrated.code !== 0 && report.hostPlan.conflicts.length === 0) {
+      // No answer from the host plan: not a clean plan
+      report.hostPlan.unknown = true;
+      report.hostPlan.reason = `the simulation stopped before the host plan: ${firstErrorLine(migrated.output) ?? `exit ${migrated.code}`}`;
+    } else report.hostPlan.simulated = true;
+  } catch (error) {
+    report.hostPlan.unknown = true;
+    report.hostPlan.reason = `not simulated: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`;
+  } finally {
+    process.off('SIGINT', onSignal);
+    process.off('SIGTERM', onSignal);
+    cleanUp();
+  }
+}
+
 export async function migrateCommand(options: MigrateOptions): Promise<void> {
   let rollback: string[] | null = null;
   let writesStarted = false;
@@ -2928,12 +3277,16 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
   try {
     const { report, plan: appPlan } = await analyze(process.cwd());
     if (options.dryRun) {
+      if (appPlan && report.appConversion.blockers.length === 0) {
+        const templates = templateDirectory(resolve(repositoryRoot(process.cwd()), report.hostRoot.path), repositoryRoot(process.cwd()));
+        await simulateHostPlan(repositoryRoot(process.cwd()), report, templates ? dirname(templates) : null, options.simulate);
+      }
       if (options.json) {
         const json = JSON.stringify(report).replace(/[\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
         process.stdout.write(`${json}\n`);
       } else printReport(report);
       // A dry run is a report; it exits 1 only when the migration would refuse to run
-      if (report.appConversion.blockers.length > 0) process.exitCode = 1;
+      if (report.appConversion.blockers.length > 0 || report.hostPlan.conflicts.length > 0) process.exitCode = 1;
       return;
     }
     if (options.json) throw new MigrateAnalysisError('--json is available only with --dry-run.');
@@ -3002,6 +3355,35 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     const result = appTreeOnly
       ? null
       : applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme as string, plan, aliasesBeforeMove as AliasCatalog, report.envExample, report.config.plugins, hadLegacyApp ? report.rootProxyFiles.customizations : []);
+    const simulation = process.env.NEXTSPARK_MIGRATE_SIMULATION === '1';
+    let nextUpdated = false;
+    {
+      const thumbnails = filesIn(hostRoot).filter(file => isBlockConfig(file) && !inAiWorkflowDirectory(repository, file) && countBlockThumbnails(readFileSync(file, 'utf8')) > 0);
+      for (const file of thumbnails) {
+        assertContained(repository, file);
+        writeFileSync(file, removeBlockThumbnails(readFileSync(file, 'utf8')));
+      }
+      if (thumbnails.length > 0) console.log(`  Block configs: removed the old thumbnail line from ${thumbnails.length} file(s).`);
+      const nextConfig = nextConfigFiles(hostRoot)[0];
+      if (report.compatRewrites.entries.length > 0 && nextConfig) {
+        const edit = addCompatRewrites(readFileSync(nextConfig, 'utf8'), basename(nextConfig), report.compatRewrites.entries);
+        if ('error' in edit) throw new MigrateAnalysisError(`${edit.error}. Merge these rewrites by hand:\n${edit.snippet}`);
+        assertContained(repository, nextConfig);
+        writeFileSync(nextConfig, edit.source);
+        console.log(`  ${pathFrom(repository, nextConfig)}: rewrites ${report.compatRewrites.entries.map(entry => entry.source).join(', ')} added for already-installed clients (${report.compatRewrites.note})`);
+      }
+      const hostPackageFile = join(hostRoot, 'package.json');
+      if (!simulation && report.nextRange.members.some(member => member.action === 'update')) {
+        writeFileSync(hostPackageFile, updateNextRange(readFileSync(hostPackageFile, 'utf8'), report.nextRange));
+        nextUpdated = true;
+        console.log(`  ${pathFrom(repository, hostPackageFile)}: next and eslint-config-next set to ${report.nextRange.required}. Run your package manager's install, then nextspark prepare.`);
+      }
+      if (report.contractsPackage.needed) {
+        const manifests = packageFiles(repository).map(file => ({ file, pkg: readJson(file) })).filter((entry): entry is { file: string; pkg: Record<string, unknown> } => entry.pkg !== null);
+        const created = planContractsPackage(repository, hostRoot, manifests).plan;
+        if (created) for (const line of await applyContractsPackage(repository, created)) console.log(`  Contracts: ${line}.`);
+      }
+    }
     if (appPlan) {
       const converted = applyAppConversion(hostRoot, appPlan);
       console.log(`  App tree: removed ${converted.removed} generated file(s); converted ${converted.overrides} customized core file(s) into overrides and moved ${converted.moved - converted.overrides} project file(s).`);
@@ -3021,8 +3403,10 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       if (routeRoots.length > 0) {
         throw new MigrateAnalysisError(`Post-migration route-root check failed: ${routeRoots.join(', ')} remains next to src/app. Remove it before Next.js can use src/app.`);
       }
-      if (options.prepare === false) {
-        console.log('  Skipped generating src/app (--no-prepare). Run "nextspark prepare" to generate it.');
+      if (options.prepare === false || nextUpdated) {
+        console.log(nextUpdated
+          ? '  Skipped generating src/app: the installed next is not the one just set in package.json. Install, then run "nextspark prepare".'
+          : '  Skipped generating src/app (--no-prepare). Run "nextspark prepare" to generate it.');
       } else if (coreDirectory && (await coreHostMode(coreDirectory, hostRoot)).mode === 'host') {
         const generation = await runHostPreparation(coreDirectory, hostRoot, {});
         if (generation.code !== 0) {

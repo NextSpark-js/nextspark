@@ -1,17 +1,19 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { before, test } from 'node:test'
+import { after, before, test } from 'node:test'
 import { createServer } from 'node:http'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { access, chmod, lstat, mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import type { AddressInfo } from 'node:net'
 import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
+import { addCompatRewrites, addWorkspaceGlob, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
 
 let cliEntry: string
 before(() => { cliEntry = buildCli() })
@@ -103,7 +105,27 @@ async function installConversionCore(root: string, { version = '0.1.0-beta.192',
 // A migrate run plans and emits a whole host; GitHub runners need well over the
 // ~5 s it takes locally, so the child gets a generous budget before it is killed.
 const MIGRATE_CHILD_TIMEOUT_MS = 60_000
-const OFFLINE_MIGRATE_ENV = { npm_config_registry: 'http://127.0.0.1:9', NEXTSPARK_MIGRATE_NETWORK_TIMEOUT_MS: '5000' }
+// No migrate test may reach the real registry. pnpm 12 ignores `npm_config_registry` and reads
+// `pnpm_config_registry` (both are set, for older pnpm), and an empty cache and store keep a cached
+// packument from answering `pnpm view` with the real registry's tarball URL, which migrate would then
+// download. XDG_CACHE_HOME is left alone on purpose: emptying it makes corepack fetch pnpm itself.
+let emptyPnpmCache = ''
+before(() => { emptyPnpmCache = mkdtempSync(join(tmpdir(), 'nextspark-migrate-empty-cache-')) })
+after(() => rmSync(emptyPnpmCache, { recursive: true, force: true }))
+const DEAD_REGISTRY = 'http://127.0.0.1:9'
+/** Offline env for every migrate spawn; `registry` is a local server for the tests that need pnpm to get an answer. */
+function offlineMigrateEnv(registry = DEAD_REGISTRY) {
+  return {
+    npm_config_registry: registry,
+    pnpm_config_registry: registry,
+    NEXTSPARK_MIGRATE_NETWORK_TIMEOUT_MS: '5000',
+    // the host-plan simulation converts a whole copy; only the tests about it turn it on
+    NEXTSPARK_MIGRATE_NO_SIMULATION: '1',
+    npm_config_cache: join(emptyPnpmCache, 'npm'),
+    pnpm_config_cache_dir: join(emptyPnpmCache, 'pnpm-cache'),
+    pnpm_config_store_dir: join(emptyPnpmCache, 'store'),
+  }
+}
 
 function run(root: string, args: string[], env: NodeJS.ProcessEnv = {}) {
   return spawnSync(process.execPath, [cliEntry, 'migrate', ...args], {
@@ -114,7 +136,7 @@ function run(root: string, args: string[], env: NodeJS.ProcessEnv = {}) {
     // never let an accidental lookup escape to the real npm registry, nor
     // wait on pnpm's retries against the dead one: without a cached packument
     // (a CI runner) `pnpm view` retries for about a minute.
-    env: { ...process.env, ...OFFLINE_MIGRATE_ENV, ...env },
+    env: { ...process.env, ...offlineMigrateEnv(), ...env },
   })
 }
 
@@ -122,7 +144,7 @@ async function runAsync(root: string, args: string[], env: NodeJS.ProcessEnv = {
   return new Promise((resolveResult) => {
     const child = spawn(process.execPath, [cliEntry, 'migrate', ...args], {
       cwd: root,
-      env: { ...process.env, ...OFFLINE_MIGRATE_ENV, ...env },
+      env: { ...process.env, ...offlineMigrateEnv(), ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     let stdout = ''
@@ -164,7 +186,7 @@ function runWithoutActiveTheme(root: string, args: string[]) {
     cwd: root,
     encoding: 'utf8',
     timeout: MIGRATE_CHILD_TIMEOUT_MS,
-    env: { ...env, ...OFFLINE_MIGRATE_ENV },
+    env: { ...env, ...offlineMigrateEnv() },
   })
 }
 
@@ -172,7 +194,7 @@ async function flatFixture(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-flat-'))
   await startRepository(root)
   await write(root, 'package.json', JSON.stringify({
-    name: 'flat', packageManager: 'pnpm@9.0.0', dependencies: { next: '^16.0.0', '@nextsparkjs/core': '0.1.0-beta.192' },
+    name: 'flat', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.3.5', '@nextsparkjs/core': '0.1.0-beta.192' },
   }))
   await write(root, 'packages/tool/package.json', JSON.stringify({
     name: '@flat/tool', dependencies: { '@nextsparkjs/cli': '^0.1.0-beta.192', '@nextsparkjs/ui': '~0.1.0-beta.192' },
@@ -192,12 +214,12 @@ async function monorepoFixture(): Promise<string> {
   await startRepository(root)
   await write(root, 'package.json', JSON.stringify({
     name: 'repo', packageManager: 'pnpm@9.0.0',
-    devDependencies: { next: '^16.0.0', '@nextsparkjs/ai-workflow': '0.1.0-beta.167' },
+    devDependencies: { next: '~16.3.5', '@nextsparkjs/ai-workflow': '0.1.0-beta.167' },
   }))
   await write(root, 'pnpm-workspace.yaml', "packages:\n  - 'web'\n  - 'packages/*'\n")
   await write(root, 'next.config.mjs', 'export default {}\n')
   await write(root, 'web/package.json', JSON.stringify({
-    name: 'web', dependencies: { next: '^16.0.0', '@nextsparkjs/core': '0.1.0-beta.192', '@nextsparkjs/cli': '0.1.0-beta.192' },
+    name: 'web', dependencies: { next: '~16.3.5', '@nextsparkjs/core': '0.1.0-beta.192', '@nextsparkjs/cli': '0.1.0-beta.192' },
     scripts: { theme: 'node scripts/check.mjs contents/themes/acme' },
   }))
   await write(root, 'web/pnpm-workspace.yaml', "packages:\n  - '../packages/*'\n")
@@ -238,7 +260,7 @@ async function ambiguousHostsFixture(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-ambiguous-'))
   await startRepository(root)
   for (const directory of ['app', 'dashboard']) {
-    await write(root, `${directory}/package.json`, JSON.stringify({ name: directory, dependencies: { next: '^16.0.0' } }))
+    await write(root, `${directory}/package.json`, JSON.stringify({ name: directory, dependencies: { next: '~16.3.5' } }))
     await write(root, `${directory}/next.config.mjs`, 'export default {}\n')
   }
   await commitFixture(root)
@@ -492,7 +514,7 @@ async function moveFixture({
   await startRepository(root)
   const host = monorepo ? 'web' : '.'
   const atHost = (file: string) => host === '.' ? file : join(host, file)
-  await write(root, atHost('package.json'), JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '^16.0.0' }, scripts: { check: 'node scripts/check.mjs contents/themes/acme' } }, null, 2))
+  await write(root, atHost('package.json'), JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.3.5' }, scripts: { check: 'node scripts/check.mjs contents/themes/acme' } }, null, 2))
   await write(root, atHost('next.config.mjs'), 'export default {}\n')
   await write(root, atHost('nextspark.config.ts'), "export default { theme: 'acme', plugins: ['local'] }\n")
   await write(root, atHost('.env.example'), 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
@@ -584,7 +606,7 @@ async function symlinkedMoveFixture(link: 'themes' | 'plugins'): Promise<{ root:
   await startRepository(root)
   const host = join(root, 'apps/dev')
   await write(root, 'package.json', JSON.stringify({ name: 'repo', packageManager: 'pnpm@9.0.0' }))
-  await write(root, 'apps/dev/package.json', JSON.stringify({ name: 'dev', dependencies: { next: '^16.0.0' } }))
+  await write(root, 'apps/dev/package.json', JSON.stringify({ name: 'dev', dependencies: { next: '~16.3.5' } }))
   await write(root, 'apps/dev/next.config.mjs', 'export default {}\n')
   await write(root, 'apps/dev/.env.example', 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
   await write(root, 'themes/acme/components/Button.ts', 'export const Button = true\n')
@@ -610,7 +632,7 @@ async function symlinkedMoveFixture(link: 'themes' | 'plugins'): Promise<{ root:
 async function customRootDirectoriesFixture(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-custom-roots-'))
   await startRepository(root)
-  await write(root, 'package.json', JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '^16.0.0' } }))
+  await write(root, 'package.json', JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.3.5' } }))
   await write(root, 'next.config.mjs', 'export default {}\n')
   await write(root, '.env.example', 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
   await write(root, 'contents/themes/acme/services/load.ts', "import { run } from '@/contents/themes/acme/workers/run'\nexport const load = run\n")
@@ -1043,7 +1065,7 @@ test('migrate creates a missing root-first config from required local and packag
     await rm(join(root, 'nextspark.config.ts'))
     await write(root, 'package.json', JSON.stringify({
       name: 'fixture', packageManager: 'pnpm@9.0.0',
-      dependencies: { next: '^16.0.0', '@nextsparkjs/plugin-langchain': '^1.0.0' },
+      dependencies: { next: '~16.3.5', '@nextsparkjs/plugin-langchain': '^1.0.0' },
     }))
     await write(root, 'contents/themes/acme/package.json', JSON.stringify({ requiredPlugins: ['local', '@nextsparkjs/plugin-langchain', 'missing'] }))
     await commitFixture(root)
@@ -1884,7 +1906,7 @@ else process.exit(2)
     // Nothing proves the file generated, so the conversion blocks it and the dry run says so
     assert.equal(rejected.status, 1, `${rejected.stdout}\n${rejected.stderr}`)
     const report = JSON.parse(rejected.stdout)
-    assert.equal(report.appTemplates.previousTemplateUnavailableReason, 'pnpm could not retrieve or unpack the package')
+    assert.equal(report.appTemplates.previousTemplateUnavailableReason, 'pnpm did not return an HTTPS tarball URL or an HTTP URL from the configured registry host')
     assert.equal(mismatchedServer.requests.length, 0)
   } finally {
     await matchingServer.close()
@@ -1959,6 +1981,136 @@ test('migrate falls back conservatively when fetching the previous core times ou
   } finally {
     await rm(root, { recursive: true, force: true })
     await rm(support, { recursive: true, force: true })
+  }
+})
+
+async function previousCoreFixture(root: string) {
+  const packageFile = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+  packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+  await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+  await write(root, 'app/page.tsx', 'export default function Page() { return <main>old core</main> }\n')
+  await commitFixture(root)
+  packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+  await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+  await write(root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192' }))
+  await write(root, 'node_modules/@nextsparkjs/core/templates/next.config.mjs', 'export default {}\n')
+  await commitFixture(root)
+}
+
+test('the network wait for the previous core defaults to 10 s in total, without the env override', async () => {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-default-timeout-'))
+  try {
+    await previousCoreFixture(root)
+    // a pnpm that never answers: the wait is bounded by the default, not by pnpm's own retries
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', '#!/bin/sh\nexec sleep 120\n')
+    await chmod(join(bin, 'pnpm'), 0o755)
+    const started = Date.now()
+    const dryRun = run(root, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}`, NEXTSPARK_MIGRATE_NETWORK_TIMEOUT_MS: undefined })
+    const elapsed = Date.now() - started
+    assert.equal(dryRun.status, 1, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.match(report.appTemplates.previousTemplateUnavailableReason, /timed out after 10000ms while running pnpm view/)
+    assert.ok(elapsed >= 9_000 && elapsed < 30_000, `waited ${elapsed}ms`)
+    const warning = report.warnings.find((entry: string) => /Could not fetch @nextsparkjs\/core@0\.1\.0-beta\.183/.test(entry))
+    assert.match(warning, /network step was skipped/)
+    assert.match(warning, /Rerun `nextspark migrate` with network access/)
+    assert.match(warning, /NEXTSPARK_MIGRATE_NETWORK_TIMEOUT_MS/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('a registry that refuses the package is reported as such, not as a network problem', async () => {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-e404-'))
+  try {
+    await previousCoreFixture(root)
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', '#!/bin/sh\necho "ERR_PNPM_FETCH_404  GET https://registry.example/@nextsparkjs%2Fcore: Not Found - 404" >&2\nexit 1\n')
+    await chmod(join(bin, 'pnpm'), 0o755)
+    const dryRun = run(root, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}` })
+    assert.equal(dryRun.status, 1, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    const warning = report.warnings.find((entry: string) => /@nextsparkjs\/core@0\.1\.0-beta\.183/.test(entry))
+    assert.match(warning, /does not serve @nextsparkjs\/core@0\.1\.0-beta\.183/)
+    assert.doesNotMatch(warning, /network access|network step/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+/** Runs migrate with the real pnpm against a local registry that answers every request with `answer`. */
+async function migrateAgainstLocalRegistry(answer: (url: string, port: number) => { status: number, body: unknown }) {
+  const { root } = await moveFixture()
+  const server = createServer((request, response) => {
+    const { status, body } = answer(request.url ?? '', (server.address() as AddressInfo).port)
+    response.writeHead(status, { 'content-type': 'application/json' })
+    response.end(JSON.stringify(body))
+  })
+  await new Promise<void>(resolveListen => server.listen(0, '127.0.0.1', resolveListen))
+  try {
+    await previousCoreFixture(root)
+    const started = Date.now()
+    const registry = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    // runAsync: the server lives in this process, so a synchronous spawn would deadlock it
+    const dryRun = await runAsync(root, ['--dry-run', '--json'], offlineMigrateEnv(registry))
+    const report = JSON.parse(dryRun.stdout)
+    const warning = report.warnings.find((entry: string) => /@nextsparkjs\/core@0\.1\.0-beta\.183/.test(entry))
+    return { warning: warning as string, reason: report.appTemplates.previousTemplateUnavailableReason as string, elapsed: Date.now() - started }
+  } finally {
+    server.close()
+    await rm(root, { recursive: true, force: true })
+  }
+}
+
+for (const status of [401, 403]) {
+  test(`a registry that answers ${status} to the real pnpm is reported as refused credentials, not as a network problem`, async () => {
+    const { warning, reason, elapsed } = await migrateAgainstLocalRegistry(() => ({ status, body: { error: 'no' } }))
+    assert.match(reason, /refused the credentials for @nextsparkjs\/core@0\.1\.0-beta\.183/)
+    assert.doesNotMatch(warning, /network access|network step/)
+    assert.ok(elapsed < 20_000, `waited ${elapsed}ms`)
+  })
+}
+
+test('a registry that has no such version is reported as such, not as a network problem, with the real pnpm', async () => {
+  const { warning, reason, elapsed } = await migrateAgainstLocalRegistry((_url, port) => ({
+    status: 200,
+    body: { name: '@nextsparkjs/core', 'dist-tags': { latest: '0.1.0' }, versions: { '0.1.0': { name: '@nextsparkjs/core', version: '0.1.0', dist: { tarball: `http://127.0.0.1:${port}/x.tgz` } } } },
+  }))
+  assert.match(reason, /does not serve @nextsparkjs\/core@0\.1\.0-beta\.183/)
+  assert.doesNotMatch(warning, /network access|network step/)
+  assert.ok(elapsed < 20_000, `waited ${elapsed}ms`)
+})
+
+test('a tarball URL from another host is refused with its own message, not as a network problem', async () => {
+  const { warning, reason } = await migrateAgainstLocalRegistry(() => ({
+    status: 200,
+    body: { name: '@nextsparkjs/core', 'dist-tags': { latest: '0.1.0-beta.183' }, versions: { '0.1.0-beta.183': { name: '@nextsparkjs/core', version: '0.1.0-beta.183', dist: { tarball: 'http://192.0.2.1/x.tgz' } } } },
+  }))
+  assert.match(reason, /HTTP URL from the configured registry host/)
+  assert.doesNotMatch(warning, /network access|network step/)
+})
+
+test('a dead registry does not hold migrate past the default network wait', async () => {
+  const { root } = await moveFixture()
+  try {
+    await previousCoreFixture(root)
+    const started = Date.now()
+    const dryRun = run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NETWORK_TIMEOUT_MS: undefined })
+    const elapsed = Date.now() - started
+    assert.equal(dryRun.status, 1, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    const warning = report.warnings.find((entry: string) => /Could not fetch @nextsparkjs\/core@0\.1\.0-beta\.183/.test(entry))
+    assert.ok(warning, JSON.stringify([report.warnings, report.appTemplates]))
+    assert.match(warning, /Rerun `nextspark migrate` with network access before applying/)
+    assert.match(warning, /--yes/)
+    assert.ok(elapsed < 25_000, `waited ${elapsed}ms`)
+  } finally {
+    await rm(root, { recursive: true, force: true })
   }
 })
 
@@ -2652,5 +2804,726 @@ test('migrate refuses a move destination that is a symbolic link out of the proj
   } finally {
     await rm(root, { recursive: true, force: true })
     await rm(outside.dir, { recursive: true, force: true })
+  }
+})
+
+
+// ---- round 4: compatibility rewrites, next range, AI-workflow directories, contracts, thumbnails, host plan
+
+const OLD_URL_ENTRIES = [
+  { source: '/api/v1/theme/acme/:path*', destination: '/api/:path*' },
+  { source: '/api/v1/plugin/local/:path*', destination: '/api/plugins/local/:path*' },
+]
+
+/** The config text, edited, written to a temp module and loaded: what Next would evaluate. */
+async function loadEditedConfig(source: string, file = 'next.config.mjs') {
+  const edit = addCompatRewrites(source, file, OLD_URL_ENTRIES)
+  assert.ok('source' in edit, JSON.stringify(edit))
+  const directory = await mkdtemp(join(tmpdir(), 'nextspark-migrate-config-'))
+  try {
+    const target = join(directory, file.replace(/\.ts$/, '.mjs'))
+    await writeFile(target, edit.source)
+    const loaded = (await import(pathToFileURL(target).href)).default
+    return { edit: edit.source, config: typeof loaded === 'function' ? await loaded('phase', {}) : loaded }
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+}
+
+test('the compatibility rewrites merge into a next config whatever shape its rewrites() has', async () => {
+  const own = "{ source: '/old', destination: '/new' }"
+  const plain = await loadEditedConfig('export default { reactStrictMode: true }\n')
+  assert.deepEqual(await plain.config.rewrites(), OLD_URL_ENTRIES)
+  assert.equal(plain.config.reactStrictMode, true)
+
+  const array = await loadEditedConfig(`export default { async rewrites() { return [${own}] } }\n`)
+  assert.deepEqual(await array.config.rewrites(), [{ source: '/old', destination: '/new' }, ...OLD_URL_ENTRIES])
+
+  const phases = await loadEditedConfig(`const config = { async rewrites() { return { beforeFiles: [${own}], fallback: [${own}] } } }\nexport default config\n`)
+  assert.deepEqual(await phases.config.rewrites(), { beforeFiles: [{ source: '/old', destination: '/new' }], afterFiles: OLD_URL_ENTRIES, fallback: [{ source: '/old', destination: '/new' }] })
+
+  const asFunction = await loadEditedConfig('export default (phase) => ({ env: { phase } })\n')
+  assert.equal(asFunction.config.env.phase, 'phase')
+  assert.deepEqual(await asFunction.config.rewrites(), OLD_URL_ENTRIES)
+
+  const typedEdit = addCompatRewrites('const config = {}\nexport default config\n', 'next.config.ts', OLD_URL_ENTRIES)
+  assert.ok('source' in typedEdit && /\(config: any\)/.test(typedEdit.source))
+
+  // Idempotent
+  const twice = addCompatRewrites(plain.edit, 'next.config.mjs', OLD_URL_ENTRIES)
+  assert.ok('source' in twice && twice.source === plain.edit)
+})
+
+test('a next config migrate cannot edit safely is refused with the exact snippet', () => {
+  const two = addCompatRewrites('export default {}\nexport default {}\n', 'next.config.mjs', OLD_URL_ENTRIES)
+  assert.ok('error' in two)
+  assert.match(two.snippet, /source: "\/api\/v1\/theme\/acme\/:path\*", destination: "\/api\/:path\*"/)
+  const none = addCompatRewrites('module.exports = {}\nexport default {}\n', 'next.config.mjs', OLD_URL_ENTRIES)
+  assert.ok('error' in none)
+  const commonJs = addCompatRewrites('module.exports = { poweredByHeader: false }\n', 'next.config.js', OLD_URL_ENTRIES)
+  assert.ok('source' in commonJs && /module\.exports = typeof __nextspark_user_config/.test(commonJs.source))
+})
+
+test('migrate writes the compatibility rewrites for the old theme and plugin URLs and lists old URLs in sibling workspaces', async () => {
+  const { root, host } = await moveFixture({ monorepo: true })
+  try {
+    await write(root, 'web/contents/themes/acme/api/health/route.ts', 'export const GET = () => new Response("ok")\n')
+    await write(root, 'web/contents/plugins/local/api/ping/route.ts', 'export const GET = () => new Response("ok")\n')
+    await write(root, 'packages/tokens/src/client.ts', "export const url = '/api/v1/theme/acme/tasks'\n")
+    await write(root, 'mobile/package.json', JSON.stringify({ name: 'mobile', dependencies: { '@nextsparkjs/mobile': '^0.1.0' } }))
+    await write(root, 'mobile/src/api.ts', "fetch('/api/v1/theme/acme/me')\nfetch('/api/v1/plugin/local/ping')\n")
+    await commitFixture(root)
+
+    const dryRun = run(root, ['--dry-run', '--json'])
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.compatRewrites.entries, OLD_URL_ENTRIES)
+    assert.match(report.compatRewrites.note, /already-installed clients/)
+    assert.match(report.compatRewrites.note, /removed later/)
+    assert.deepEqual(report.siblingApiUrlReferences.map((entry: { path: string, occurrences: number }) => [entry.path, entry.occurrences]), [['mobile/src/api.ts', 2], ['packages/tokens/src/client.ts', 1]])
+    // reported, not rewritten
+    assert.equal(await readFile(join(root, 'mobile/src/api.ts'), 'utf8'), "fetch('/api/v1/theme/acme/me')\nfetch('/api/v1/plugin/local/ping')\n")
+
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const config = await readFile(join(host, 'next.config.mjs'), 'utf8')
+    assert.match(config, /nextspark-compat-rewrites/)
+    assert.match(config, /"\/api\/v1\/plugin\/local\/:path\*"/)
+    assert.equal(await readFile(join(root, 'mobile/src/api.ts'), 'utf8'), "fetch('/api/v1/theme/acme/me')\nfetch('/api/v1/plugin/local/ping')\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate stops before writing when it cannot edit next.config, and prints the snippet', async () => {
+  const { root, host } = await moveFixture({ monorepo: true })
+  try {
+    await write(root, 'web/contents/themes/acme/api/health/route.ts', 'export const GET = () => new Response("ok")\n')
+    await write(root, 'web/next.config.mjs', 'const a = {}\nconst b = {}\nexport { a, b }\n')
+    await commitFixture(root)
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /cannot edit it safely/)
+    assert.match(result.stderr, /source: \\?"\/api\/v1\/theme\/acme\/:path\*/)
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+    assert.ok(host)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate reports the Next.js range and --yes sets ~16.3.5, skipping prepare until install', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'package.json', JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '^16.2.11' }, devDependencies: { 'eslint-config-next': '16.2.11' }, scripts: { check: 'node scripts/check.mjs contents/themes/acme' } }, null, 2))
+    await commitFixture(root)
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.equal(report.nextRange.required, '~16.3.5')
+    assert.deepEqual(report.nextRange.members.map((member: { name: string, action: string }) => [member.name, member.action]), [['next', 'update'], ['eslint-config-next', 'update']])
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    assert.equal(pkg.dependencies.next, '~16.3.5')
+    assert.equal(pkg.devDependencies['eslint-config-next'], '~16.3.5')
+    assert.match(result.stdout, /set to ~16\.3\.5\. Run your package manager's install, then nextspark prepare/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a next spec migrate cannot change is a warning, and a catalog that already pins the range is fine', async () => {
+  const yaml = "packages:\n  - web\ncatalog:\n  next: '~16.3.7'\n  react: 19.2.0\ncatalogs:\n  legacy:\n    next: ^15.0.0\n"
+  assert.equal(catalogVersion(yaml, null, 'next'), '~16.3.7')
+  assert.equal(catalogVersion(yaml, 'legacy', 'next'), '^15.0.0')
+  assert.equal(catalogVersion(yaml, 'other', 'next'), null)
+  const lookup = (catalog: string | null, dependency: string) => catalogVersion(yaml, catalog, dependency)
+  assert.deepEqual(checkNextRange({ dependencies: { next: 'catalog:' } }, lookup).members.map(member => member.action), ['ok'])
+  assert.deepEqual(checkNextRange({ dependencies: { next: 'catalog:legacy' } }, lookup).members.map(member => member.action), ['check'])
+  assert.deepEqual(checkNextRange({ dependencies: { next: 'workspace:*' } }).members.map(member => member.action), ['check'])
+
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'package.json', JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: 'catalog:' }, scripts: { check: 'node scripts/check.mjs contents/themes/acme' } }, null, 2))
+    await commitFixture(root)
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, dryRun.stderr)
+    const warning = JSON.parse(dryRun.stdout).warnings.find((entry: string) => /next is declared as "catalog:"/.test(entry))
+    assert.match(warning, /could not read the catalog entry/)
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).dependencies.next, 'catalog:')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate never rewrites AI-workflow directories, lists what they reference, and still rewrites root project docs', async () => {
+  const { root } = await moveFixture()
+  try {
+    const text = 'read contents/themes/acme/components/Button.ts and call /api/v1/theme/acme/tasks\n'
+    for (const file of ['.claude/skills/a.md', '.codex-plugin/b.md', '.gemini/c.md', '.cursor/rules/d.mdc', '.superpowers/e.md', '.agents/f.md', 'AGENTS.md', 'CLAUDE.md']) await write(root, file, text)
+    await commitFixture(root)
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.aiWorkflowReferences.map((entry: { path: string }) => entry.path), ['.agents/f.md', '.claude/skills/a.md', '.codex-plugin/b.md', '.cursor/rules/d.mdc', '.gemini/c.md', '.superpowers/e.md'])
+
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    for (const file of ['.claude/skills/a.md', '.codex-plugin/b.md', '.gemini/c.md', '.cursor/rules/d.mdc', '.superpowers/e.md', '.agents/f.md']) assert.equal(await readFile(join(root, file), 'utf8'), text, file)
+    for (const file of ['AGENTS.md', 'CLAUDE.md']) assert.match(await readFile(join(root, file), 'utf8'), /read components\/Button\.ts/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate creates packages/contracts in a web+mobile workspace that lacks it and wires mobile to it', async () => {
+  const { root } = await moveFixture({ monorepo: true })
+  try {
+    await write(root, 'mobile/package.json', JSON.stringify({ name: 'mobile', dependencies: { '@nextsparkjs/mobile': '^0.1.0' } }, null, 2))
+    await commitFixture(root)
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.contractsPackage, { needed: true, path: 'packages/contracts', mobile: 'mobile', skipped: null, createsDirectory: true })
+
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const contracts = JSON.parse(await readFile(join(root, 'packages/contracts/package.json'), 'utf8'))
+    assert.equal(contracts.name, '@project/contracts')
+    assert.equal(contracts.nextspark.contractsProject, '../../web')
+    // mobile/ is not a workspace member here, so it links the package by path (add:mobile's way)
+    assert.equal(JSON.parse(await readFile(join(root, 'mobile/package.json'), 'utf8')).dependencies['@project/contracts'], 'file:../packages/contracts')
+    assert.match(await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8'), /packages\/\*/)
+    const again = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.equal(again.contractsPackage.needed, false)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate removes the old block thumbnail lines, keeps other thumbnail values, and reports them in the plan', async () => {
+  const { root, host } = await moveFixture()
+  try {
+    const config = [
+      "export const config = {",
+      "  slug: 'hero',",
+      "  thumbnail: '/theme/blocks/hero/thumbnail.png',",
+      "}",
+      "export const other = {",
+      '  thumbnail: "/theme/blocks/other/thumbnail.png"',
+      "}",
+      "export const kept = {",
+      "  thumbnail: heroImage,",
+      "  note: '/theme/blocks/x',",
+      "}",
+      '',
+    ].join('\n')
+    assert.equal(countBlockThumbnails(config), 2)
+    assert.equal(removeBlockThumbnails(config), config.split('\n').filter(line => !line.includes('thumbnail.png')).join('\n'))
+    await write(root, 'contents/themes/acme/blocks/hero/config.ts', config)
+    await commitFixture(root)
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.blockThumbnails, [{ path: 'contents/themes/acme/blocks/hero/config.ts', lines: 2 }])
+
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const migrated = await readFile(join(host, 'blocks/hero/config.ts'), 'utf8')
+    assert.doesNotMatch(migrated, /thumbnail\.png/)
+    assert.match(migrated, /thumbnail: heroImage,/)
+    assert.match(migrated, /note: '\/theme\/blocks\/x'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate --dry-run runs the host plan on a converted copy and reports its conflicts, leaving the project untouched', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root, { prepare: 'fail' })
+    await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare-cli.mjs', "console.error('NS_HOST_URL_CONFLICT dashboard/(main)/cohorts/page.tsx conflicts with templates/dashboard/(staff)/cohorts/page.tsx')\nconsole.error('NS_HOST_UNSUPPORTED_NEXT_VERSION 16.2.11')\nprocess.exit(1)\n")
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+    await commitFixture(root)
+
+    const result = run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
+    const report = JSON.parse(result.stdout)
+    assert.equal(report.hostPlan.simulated, true, JSON.stringify(report.hostPlan))
+    // a core without predictHost: nextspark prepare runs on the converted copy, as before
+    assert.equal(report.hostPlan.method, 'prepare')
+    assert.equal(report.hostPlan.conflicts.length, 1)
+    assert.match(report.hostPlan.conflicts[0], /NS_HOST_URL_CONFLICT dashboard\/\(main\)\/cohorts\/page\.tsx/)
+    assert.equal(result.status, 1)
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+    await assert.rejects(access(join(root, 'templates/dashboard/page.tsx')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+// ---- round 5
+
+const TS_CONFIG_STUB = "declare module 'next' { export interface NextConfig { reactStrictMode?: boolean; rewrites?: () => Promise<unknown> } }\n"
+
+/** Whether tsc accepts the config text as a next.config.ts (strict, with a stub for next's types). */
+async function typechecks(source: string): Promise<{ ok: boolean, output: string }> {
+  const directory = await mkdtemp(join(tmpdir(), 'nextspark-migrate-tsc-'))
+  try {
+    await write(directory, 'next.config.ts', source)
+    await write(directory, 'stub.d.ts', TS_CONFIG_STUB)
+    const tsc = requireHere.resolve('typescript/bin/tsc')
+    const checked = spawnSync(process.execPath, [tsc, '--noEmit', '--strict', '--target', 'es2022', '--module', 'esnext', '--moduleResolution', 'bundler', '--skipLibCheck', 'next.config.ts', 'stub.d.ts'], { cwd: directory, encoding: 'utf8' })
+    return { ok: checked.status === 0, output: `${checked.stdout}${checked.stderr}` }
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+}
+
+test('every next.config.ts shape still type-checks after the compatibility rewrites are merged in', async () => {
+  const shapes: Record<string, string> = {
+    'typed const': "import type { NextConfig } from 'next'\nconst nextConfig: NextConfig = { reactStrictMode: true }\nexport default nextConfig\n",
+    'wrapper call': "import type { NextConfig } from 'next'\nconst withThing = (config: NextConfig): NextConfig => config\nexport default withThing({ reactStrictMode: true })\n",
+    satisfies: "import type { NextConfig } from 'next'\nexport default { reactStrictMode: true } satisfies NextConfig\n",
+    'function of the phase': "import type { NextConfig } from 'next'\nexport default function config(phase: string): NextConfig { return { reactStrictMode: phase === 'x' } }\n",
+  }
+  for (const [name, source] of Object.entries(shapes)) {
+    const before = await typechecks(source)
+    assert.equal(before.ok, true, `${name} (original): ${before.output}`)
+    const edit = addCompatRewrites(source, 'next.config.ts', OLD_URL_ENTRIES)
+    assert.ok('source' in edit, name)
+    const after = await typechecks(edit.source)
+    assert.equal(after.ok, true, `${name}: ${after.output}`)
+  }
+})
+
+test('the thumbnail codemod and the hook-import check leave AI-workflow directories alone', async () => {
+  const { root, host } = await moveFixture()
+  try {
+    const thumbnail = "export const config = {\n  thumbnail: '/theme/blocks/hero/thumbnail.png',\n}\n"
+    await write(root, '.claude/skills/x/blocks/hero/config.ts', thumbnail)
+    await write(root, 'contents/themes/acme/blocks/hero/config.ts', thumbnail)
+    // a default import of the legacy hook would make the import check refuse the migration
+    await write(root, '.claude/skills/x/use-hook.ts', "import hook from '../../../contents/themes/acme/middleware'\nexport default hook\n")
+    await commitFixture(root)
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.blockThumbnails.map((entry: { path: string }) => entry.path), ['contents/themes/acme/blocks/hero/config.ts'])
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, '.claude/skills/x/blocks/hero/config.ts'), 'utf8'), thumbnail)
+    assert.doesNotMatch(await readFile(join(host, 'blocks/hero/config.ts'), 'utf8'), /thumbnail/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('add:mobile\'s layout (host at the repository root, mobile/ inside it) gets packages/contracts too', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'mobile/package.json', JSON.stringify({ name: 'acme-mobile', dependencies: { '@nextsparkjs/mobile': '^0.1.0' } }, null, 2))
+    await commitFixture(root)
+    assert.deepEqual(JSON.parse(run(root, ['--dry-run', '--json']).stdout).contractsPackage, { needed: true, path: 'packages/contracts', mobile: 'mobile', skipped: null, createsDirectory: true })
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(JSON.parse(await readFile(join(root, 'packages/contracts/package.json'), 'utf8')).nextspark.contractsProject, '../..')
+    assert.equal(JSON.parse(await readFile(join(root, 'mobile/package.json'), 'utf8')).dependencies['@project/contracts'], 'file:../packages/contracts')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('pnpm-workspace.yaml is edited in block and flow style, and left alone when migrate cannot read it', async () => {
+  const block = addWorkspaceGlob("packages:\n  - 'web'\n  - 'mobile'\nallowBuilds:\n  x: true\n")
+  assert.ok('text' in block)
+  assert.equal(block.text, "packages:\n  - 'web'\n  - 'mobile'\n  - 'packages/contracts'\nallowBuilds:\n  x: true\n")
+  const flow = addWorkspaceGlob("packages: ['web', 'mobile']\nallowBuilds:\n  x: true\n")
+  assert.ok('text' in flow)
+  assert.equal(flow.text, "packages: ['web', 'mobile', 'packages/contracts']\nallowBuilds:\n  x: true\n")
+  assert.deepEqual(workspaceGlobs(flow.text), { globs: ['web', 'mobile', 'packages/contracts'] })
+  assert.equal((flow.text.match(/^packages:/gm) ?? []).length, 1)
+  const empty = addWorkspaceGlob('packages: []\n')
+  assert.ok('text' in empty && empty.text === "packages: ['packages/contracts']\n")
+  const absent = addWorkspaceGlob('allowBuilds:\n  x: true\n')
+  assert.ok('text' in absent && absent.text.startsWith("packages:\n  - 'packages/contracts'\n"))
+  const covered = addWorkspaceGlob("packages:\n  - 'packages/*'\n")
+  assert.ok('text' in covered && covered.text === "packages:\n  - 'packages/*'\n")
+  const multiline = addWorkspaceGlob("packages: [\n  'web',\n  'mobile'\n]\n")
+  assert.ok('error' in multiline)
+  assert.match(multiline.line, /packages\/contracts/)
+
+  // end to end: a flow-style workspace that lists mobile/
+  const { root } = await moveFixture({ monorepo: true })
+  try {
+    await write(root, 'pnpm-workspace.yaml', "packages: ['web', 'mobile']\n")
+    await write(root, 'mobile/package.json', JSON.stringify({ name: 'mobile', dependencies: { '@nextsparkjs/mobile': '^0.1.0' } }))
+    await commitFixture(root)
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8'), "packages: ['web', 'mobile', 'packages/contracts']\n")
+    assert.equal(JSON.parse(await readFile(join(root, 'mobile/package.json'), 'utf8')).dependencies['@project/contracts'], 'workspace:*')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+
+  // a form migrate does not read stops the migration before it writes, with the line to add
+  const unreadable = await moveFixture({ monorepo: true })
+  try {
+    await write(unreadable.root, 'pnpm-workspace.yaml', "packages: [\n  'web',\n  'mobile'\n]\n")
+    await write(unreadable.root, 'mobile/package.json', JSON.stringify({ name: 'mobile', dependencies: { '@nextsparkjs/mobile': '^0.1.0' } }))
+    await commitFixture(unreadable.root)
+    const result = run(unreadable.root, ['--yes', '--no-prepare'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /packages\/contracts/)
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: unreadable.root, encoding: 'utf8' }), '')
+  } finally {
+    await rm(unreadable.root, { recursive: true, force: true })
+  }
+})
+
+test('the workspace yaml is edited only in shapes migrate is certain about, and re-read before it is trusted', () => {
+  const edit = (text: string) => addWorkspaceGlob(text)
+  // 4-space block list: the new item takes the first item's indent and quote
+  assert.deepEqual(edit("packages:\n    - web\n    - mobile\nx: 1\n"), { text: "packages:\n    - web\n    - mobile\n    - 'packages/contracts'\nx: 1\n" })
+  // indent-0 block list (valid YAML), and a double-quoted style
+  assert.deepEqual(edit('packages:\n- "web"\n- "mobile"\nx: 1\n'), { text: 'packages:\n- "web"\n- "mobile"\n- "packages/contracts"\nx: 1\n' })
+  // flow list with a trailing comma: dropped, not doubled
+  assert.deepEqual(edit("packages: ['web', 'mobile',]\n"), { text: "packages: ['web', 'mobile', 'packages/contracts']\n" })
+  assert.deepEqual(edit("packages: [web, mobile,] # members\n"), { text: "packages: [web, mobile, 'packages/contracts'] # members\n" })
+  // CRLF is kept everywhere
+  assert.deepEqual(edit("packages:\r\n  - web\r\n  - mobile\r\nx: 1\r\n"), { text: "packages:\r\n  - web\r\n  - mobile\r\n  - 'packages/contracts'\r\nx: 1\r\n" })
+  assert.deepEqual(workspaceGlobs("packages:\r\n  - web\r\n"), { globs: ['web'] })
+  // a quoted key is read (not misread as absent)
+  assert.deepEqual(workspaceGlobs("'packages':\n  - web\n"), { globs: ['web'] })
+  assert.deepEqual(edit('"packages":\n  - web\n'), { text: '"packages":\n  - web\n  - \'packages/contracts\'\n' })
+  // comments between items, and an already covered workspace
+  assert.deepEqual(edit("packages:\n  - web\n  # more\n  - mobile\n"), { text: "packages:\n  - web\n  # more\n  - mobile\n  - 'packages/contracts'\n" })
+  assert.deepEqual(edit("packages:\n  - 'packages/*'\n"), { text: "packages:\n  - 'packages/*'\n" })
+  // refused, never guessed: mixed indents, mixed line endings, anchors, several documents, a duplicate key, a map item, a tab
+  for (const unreadable of [
+    "packages:\n  - web\n    - mobile\n",
+    "packages:\n  - web\r\n  - mobile\n",
+    "packages: &members\n  - web\n",
+    "packages: [web, *other]\n",
+    "packages: [\n  web\n]\n",
+    "---\npackages:\n  - web\n",
+    "packages:\n  - web\npackages:\n  - mobile\n",
+    "packages:\n  - name: web\n",
+    "packages:\n\t- web\n",
+    "packages: web\n",
+  ]) {
+    const refused = edit(unreadable)
+    assert.ok('error' in refused, JSON.stringify(unreadable))
+    assert.match(refused.line, /packages\/contracts/)
+  }
+})
+
+test('catalogVersion reads catalog:default, CRLF, quoted keys and any indent', () => {
+  assert.equal(catalogVersion("catalog:\n  next: '~16.3.5'\n", 'default', 'next'), '~16.3.5')
+  assert.equal(catalogVersion("catalogs:\n  default:\n    next: ~16.3.6\n", 'default', 'next'), '~16.3.6')
+  assert.equal(catalogVersion("catalogs:\n  default:\n    next: ~16.3.6\n", null, 'next'), '~16.3.6')
+  assert.equal(catalogVersion("catalog:\r\n  \"next\": \"~16.3.5\"\r\n", null, 'next'), '~16.3.5')
+  assert.equal(catalogVersion("catalogs:\n    react19:\n        next: '16.3.5'\n    other:\n        next: 15.0.0\n", 'react19', 'next'), '16.3.5')
+  assert.equal(catalogVersion("catalogs:\n    react19:\n        next: '16.3.5'\n", 'missing', 'next'), null)
+})
+
+test('a package.json under an AI-workflow directory is not a workspace member', async () => {
+  const { root } = await moveFixture({ monorepo: true })
+  try {
+    await write(root, '.claude/skills/mobile-demo/package.json', JSON.stringify({ name: 'demo', dependencies: { '@nextsparkjs/mobile': '^0.1.0' } }))
+    await commitFixture(root)
+    assert.equal(JSON.parse(run(root, ['--dry-run', '--json']).stdout).contractsPackage.needed, false)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the rollback leaves the files of an existing packages/contracts directory alone', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root, { prepare: 'fail' })
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+    await write(root, 'mobile/package.json', JSON.stringify({ name: 'mobile', dependencies: { '@nextsparkjs/mobile': '^0.1.0' } }, null, 2))
+    // the directory exists already, with a file git ignores (a clean of the whole directory would delete it)
+    await write(root, '.gitignore', 'contents/themes/acme/tests/output\n*.keep\n')
+    await write(root, 'packages/contracts/README.md', 'mine\n')
+    await write(root, 'packages/contracts/notes.keep', 'keep me\n')
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    await access(join(root, 'packages/contracts/package.json'))
+    const commands = [...new Set(result.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
+    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    assert.equal(await readFile(join(root, 'packages/contracts/notes.keep'), 'utf8'), 'keep me\n')
+    assert.equal(await readFile(join(root, 'packages/contracts/README.md'), 'utf8'), 'mine\n')
+    await assert.rejects(access(join(root, 'packages/contracts/package.json')))
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the simulated copy has the staged changes: an edit, a new file and a removal', async () => {
+  const root = await simulationFixture("import { existsSync, readFileSync } from 'node:fs'\nconsole.error(`NS_HOST_PROBE edited=${existsSync('probe.txt') && readFileSync('probe.txt', 'utf8').trim()} added=${existsSync('added.txt')} removed=${existsSync('removed.txt')}`)\nprocess.exit(1)\n")
+  try {
+    await write(root, 'probe.txt', 'committed\n')
+    await write(root, 'removed.txt', 'gone soon\n')
+    await commitFixture(root)
+    await write(root, 'probe.txt', 'staged\n')
+    await write(root, 'added.txt', 'new\n')
+    execFileSync('git', ['add', 'probe.txt', 'added.txt'], { cwd: root })
+    execFileSync('git', ['rm', '-q', 'removed.txt'], { cwd: root })
+    const report = JSON.parse(run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined }).stdout)
+    assert.deepEqual(report.hostPlan.conflicts, ['NS_HOST_PROBE edited=staged added=true removed=false'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('packages/contracts is only planned where nextspark prepare will look for it', () => {
+  const manifest = (file: string, mobile: boolean) => ({ file, pkg: mobile ? { dependencies: { '@nextsparkjs/mobile': '^0.1.0' } } : {} })
+  const repository = '/nonexistent-repo'
+  const reachable = planContractsPackage(repository, `${repository}/apps/web`, [manifest(`${repository}/apps/web/package.json`, false), manifest(`${repository}/apps/mobile/package.json`, true)])
+  assert.equal(reachable.skipped, null)
+  assert.equal(reachable.plan?.hostPath, '../../apps/web')
+  const deep = planContractsPackage(repository, `${repository}/apps/site/web`, [manifest(`${repository}/apps/site/web/package.json`, false), manifest(`${repository}/apps/mobile/package.json`, true)])
+  assert.equal(deep.plan, null)
+  assert.match(deep.skipped ?? '', /nextspark prepare only looks for it at ..\/packages\/contracts, ..\/..\/packages\/contracts, packages\/contracts/)
+})
+
+test('the printed rollback removes a packages/contracts that migrate created', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root, { prepare: 'fail' })
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+    await write(root, 'mobile/package.json', JSON.stringify({ name: 'mobile', dependencies: { '@nextsparkjs/mobile': '^0.1.0' } }, null, 2))
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    await access(join(root, 'packages/contracts/package.json'))
+    const commands = [...new Set(result.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
+    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    await assert.rejects(access(join(root, 'packages/contracts')))
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+/** A fixture whose fake prepare reports what the simulated copy contains, then waits as long as `wait` says. */
+async function simulationFixture(script: string, moveOptions: Parameters<typeof moveFixture>[0] = {}) {
+  const { root } = await moveFixture(moveOptions)
+  await installConversionCore(root, { prepare: 'fail' })
+  await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare-cli.mjs', script)
+  await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+  await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+  return root
+}
+
+test('the simulated copy holds no env file, tracked or not, and --no-simulate skips it', async () => {
+  const root = await simulationFixture("import { existsSync } from 'node:fs'\nconsole.error(`NS_HOST_PROBE env=${existsSync('.env')} local=${existsSync('.env.local')} untracked=${existsSync('.env.production')} example=${existsSync('.env.example')}`)\nprocess.exit(1)\n")
+  try {
+    await write(root, '.env', 'SECRET=1\n')
+    await write(root, '.env.local', 'SECRET=2\n')
+    await commitFixture(root)
+    await write(root, '.env.production', 'SECRET=3\n')
+    const result = run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
+    const report = JSON.parse(result.stdout)
+    assert.deepEqual(report.hostPlan.conflicts, ['NS_HOST_PROBE env=false local=false untracked=false example=true'])
+    assert.match(result.stderr, /Simulating the generated host/)
+
+    const skipped = run(root, ['--dry-run', '--json', '--no-simulate'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
+    assert.equal(JSON.parse(skipped.stdout).hostPlan.simulated, false)
+    assert.match(JSON.parse(skipped.stdout).hostPlan.reason, /--no-simulate/)
+    assert.doesNotMatch(skipped.stderr, /Simulating/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a signal during the simulation removes the temporary copy', async () => {
+  const pidFile = join(tmpdir(), `nextspark-migrate-grandchild-${process.pid}`)
+  const root = await simulationFixture("import { spawn } from 'node:child_process'\nimport { writeFileSync } from 'node:fs'\nconst grandchild = spawn('sleep', ['60'], { stdio: 'ignore' })\nwriteFileSync(process.env.NEXTSPARK_PROBE_PID_FILE, String(grandchild.pid))\nawait new Promise(resolve => setTimeout(resolve, 60000))\n")
+  try {
+    await commitFixture(root)
+    const listCopies = () => readdirSync(tmpdir()).filter(name => name.startsWith('nextspark-migrate-plan-'))
+    const before = new Set(listCopies())
+    const child = spawn(process.execPath, [cliEntry, 'migrate', '--dry-run', '--json'], { cwd: root, env: { ...process.env, ...offlineMigrateEnv(), NEXTSPARK_MIGRATE_NO_SIMULATION: '', NEXTSPARK_PROBE_PID_FILE: pidFile }, stdio: 'ignore' })
+    const closed = new Promise<number | null>(resolveClose => child.on('close', code => resolveClose(code)))
+    const started = Date.now()
+    let copy: string | undefined
+    while (!copy && Date.now() - started < 30_000) {
+      copy = listCopies().find(name => !before.has(name))
+      if (!copy) await new Promise(resolveWait => setTimeout(resolveWait, 100))
+    }
+    assert.ok(copy, 'the simulation never created its copy')
+    // let it get to the child migrate, where the copy is fullest
+    await new Promise(resolveWait => setTimeout(resolveWait, 1500))
+    child.kill('SIGTERM')
+    assert.equal(await closed, 143)
+    assert.equal(existsSync(join(tmpdir(), copy)), false)
+    // the whole process group went: the grandchild that prepare started is gone too
+    const grandchild = Number(readFileSync(pidFile, 'utf8'))
+    await new Promise(resolveWait => setTimeout(resolveWait, 300))
+    assert.throws(() => process.kill(grandchild, 0), /ESRCH/)
+  } finally {
+    rmSync(pidFile, { force: true })
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+// ---- round 7
+
+const PREDICT_MODULE = (answer: string) => `import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+export function projectHostConfig({ projectRoot }) { return { projectRoot } }
+export async function predictHost(config) {
+  const converted = existsSync(join(config.projectRoot, 'templates/dashboard/page.tsx')) && !existsSync(join(config.projectRoot, 'app'))
+  return ${answer}
+}
+`
+
+test('migrate --dry-run asks the installed core\'s predictHost about the converted copy and reports diagnostics, notices and checks', async () => {
+  const root = await simulationFixture("console.error('prepare must not run when predictHost exists')\nprocess.exit(1)\n")
+  try {
+    await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare.mjs', PREDICT_MODULE(`{
+      ok: false,
+      routes: [{}, {}],
+      notices: [{ code: 'NS_HOST_ENTITY_ROUTES_REPLACED', message: '/dashboard/cohorts: templates replace it (converted=' + converted + ')' }],
+      diagnostics: [{ code: 'NS_HOST_URL_CONFLICT', message: 'dashboard/x/page.tsx twice', file: 'templates/a' }, { code: 'NS_HOST_UNSUPPORTED_NEXT_VERSION', message: 'next 16.2.11' }],
+      checks: { plan: 'failed', emission: 'skipped', registries: 'skipped' },
+    }`))
+    await commitFixture(root)
+    const result = run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
+    const report = JSON.parse(result.stdout)
+    assert.equal(report.hostPlan.method, 'predictHost')
+    assert.deepEqual(report.hostPlan.conflicts, ['NS_HOST_URL_CONFLICT: dashboard/x/page.tsx twice (templates/a)'])
+    assert.deepEqual(report.hostPlan.notices, ['NS_HOST_ENTITY_ROUTES_REPLACED: /dashboard/cohorts: templates replace it (converted=true)'])
+    assert.deepEqual(report.hostPlan.checks, { plan: 'failed', emission: 'skipped', registries: 'skipped' })
+    assert.equal(result.status, 1)
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+
+    // notices alone are not a failure, and the printed report says what ran
+    await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare.mjs', PREDICT_MODULE("{ ok: true, routes: [], notices: [{ code: 'NS_HOST_ENTITY_ROUTES_REPLACED', message: 'replaced' }], diagnostics: [], checks: { plan: 'passed', registries: 'skipped' } }"))
+    await commitFixture(root)
+    const printed = run(root, ['--dry-run'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
+    assert.equal(printed.status, 0, printed.stderr)
+    assert.match(printed.stdout, /no conflicts\n  notice NS_HOST_ENTITY_ROUTES_REPLACED: replaced\n  checks: plan passed, registries skipped\n  \(the installed core's predictHost\)/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('workspace yaml reading: a leading BOM, negations, ? in globs, and the - - x and - ? x shapes', () => {
+  assert.deepEqual(workspaceGlobs("\uFEFFpackages:\n  - web\n  - mobile\n"), { globs: ['web', 'mobile'] })
+  const withBom = addWorkspaceGlob("\uFEFFpackages: ['web']\n")
+  assert.deepEqual(withBom, { text: "\uFEFFpackages: ['web', 'packages/contracts']\n" })
+  // a ? in a glob is literal for the matcher (it used to throw)
+  assert.deepEqual(addWorkspaceGlob("packages:\n  - 'apps/?'\n"), { text: "packages:\n  - 'apps/?'\n  - 'packages/contracts'\n" })
+  // a negation excludes
+  const excluded = addWorkspaceGlob("packages:\n  - 'packages/*'\n  - '!packages/contracts'\n")
+  assert.ok('error' in excluded)
+  assert.match(excluded.line, /remove or narrow '!packages\/contracts'/)
+  const notListed = planContractsPackage('/nonexistent-repo', '/nonexistent-repo/web', [
+    { file: '/nonexistent-repo/web/package.json', pkg: {} },
+    { file: '/nonexistent-repo/apps/mobile/package.json', pkg: { dependencies: { '@nextsparkjs/mobile': '^0.1.0' } } },
+  ])
+  assert.equal(notListed.plan?.dependency, 'file:../../packages/contracts')
+  for (const odd of ["packages:\n  - - web\n", "packages:\n  - ? web\n", "packages: [? web]\n"]) assert.ok('error' in addWorkspaceGlob(odd), odd)
+})
+
+test('the simulated copy survives glob-named, non-ASCII-named and dirty-submodule entries and still leaves no env file', async () => {
+  const root = await simulationFixture("import { existsSync } from 'node:fs'\nconsole.error(`NS_HOST_PROBE env=${existsSync('.env')} japanese=${existsSync('日本語.txt')} star=${existsSync('*')} sub=${existsSync('vendor/sub/inner.txt')}`)\nprocess.exit(1)\n")
+  const submodule = await mkdtemp(join(tmpdir(), 'nextspark-migrate-submodule-'))
+  try {
+    await write(root, '.env', 'SECRET=1\n')
+    await write(root, '日本語.txt', 'x\n')
+    await write(root, '*', 'a file named star\n')
+    await startRepository(submodule)
+    await write(submodule, 'inner.txt', 'inner\n')
+    await commitFixture(submodule)
+    git(root, ['-c', 'protocol.file.allow=always', 'submodule', 'add', '--quiet', submodule, 'vendor/sub'])
+    await commitFixture(root)
+    // dirty the submodule: the superproject sees its gitlink as modified
+    await write(root, 'vendor/sub/inner.txt', 'changed\n')
+    const result = run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
+    const report = JSON.parse(result.stdout)
+    assert.equal(report.hostPlan.simulated, true, JSON.stringify(report.hostPlan))
+    assert.deepEqual(report.hostPlan.conflicts, ['NS_HOST_PROBE env=false japanese=true star=true sub=false'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(submodule, { recursive: true, force: true })
+  }
+})
+
+// ---- round 8
+
+test('a prediction that fails is reported as unknown, never as "no conflicts", with the first real error', async () => {
+  const cases: Record<string, { module: string, reason: RegExp, moveOptions?: Parameters<typeof moveFixture>[0] }> = {
+    'predictHost throws': { module: "export function projectHostConfig() { return {} }\nexport async function predictHost() { throw new Error('boom from predictHost') }\n", reason: /predictHost did not answer: .*boom from predictHost/ },
+    'projectHostConfig missing': { module: "export async function predictHost() { return { ok: true, routes: [], notices: [], diagnostics: [], checks: {} } }\n", reason: /predictHost did not answer: .*projectHostConfig is not a function/ },
+    'the conversion fails first': { module: PREDICT_MODULE('{ ok: true, routes: [], notices: [], diagnostics: [], checks: {} }'), reason: /the simulation stopped before the host plan: .*broken imports/, moveOptions: { brokenImport: true } },
+  }
+  for (const [name, { module, reason, moveOptions }] of Object.entries(cases)) {
+    const root = await simulationFixture('process.exit(1)\n', moveOptions)
+    try {
+      await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare.mjs', module)
+      await commitFixture(root)
+      const result = run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
+      const report = JSON.parse(result.stdout)
+      assert.equal(report.hostPlan.unknown, true, name)
+      assert.equal(report.hostPlan.simulated, false, name)
+      assert.deepEqual(report.hostPlan.conflicts, [], name)
+      assert.match(report.hostPlan.reason, reason, name)
+      assert.doesNotMatch(report.hostPlan.reason, /Node\.js v\d/, name)
+      assert.equal(result.status, 0, `${name}: ${result.stderr}`)
+      const printed = run(root, ['--dry-run'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
+      assert.match(printed.stdout, /host plan: unknown \(/, name)
+      assert.doesNotMatch(printed.stdout, /no conflicts/, name)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  }
+})
+
+test('the simulation children get a minimal environment: no secrets, but the NEXTSPARK_* and package-manager settings', async () => {
+  const root = await simulationFixture('process.exit(1)\n')
+  try {
+    await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare.mjs', PREDICT_MODULE(`{
+      ok: true, routes: [], diagnostics: [], checks: {},
+      notices: [{ code: 'PROBE', message: 'secret=' + (process.env.PROBE_SECRET ?? 'absent') + ' token=' + (process.env.GITHUB_TOKEN ?? 'absent') + ' kept=' + (process.env.NEXTSPARK_PROBE ?? 'absent') + ' registry=' + (process.env.pnpm_config_registry ?? 'absent') + ' path=' + Boolean(process.env.PATH) }],
+    }`))
+    await commitFixture(root)
+    const report = JSON.parse(run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined, PROBE_SECRET: 's3cret', GITHUB_TOKEN: 'ghp_x', NEXTSPARK_PROBE: 'yes' }).stdout)
+    assert.deepEqual(report.hostPlan.notices, ['PROBE: secret=absent token=absent kept=yes registry=http://127.0.0.1:9 path=true'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a workspace yaml that excludes packages/contracts stops the migration, with the line to change', async () => {
+  const { root } = await moveFixture({ monorepo: true })
+  try {
+    await write(root, 'pnpm-workspace.yaml', "packages:\n  - 'web'\n  - 'mobile'\n  - 'packages/*'\n  - '!packages/contracts'\n")
+    await write(root, 'mobile/package.json', JSON.stringify({ name: 'mobile', dependencies: { '@nextsparkjs/mobile': '^0.1.0' } }))
+    await commitFixture(root)
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /excludes packages\/contracts/)
+    assert.match(result.stderr, /remove or narrow '!packages\/contracts'/)
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a real yaml that negates mobile/ makes mobile link the contracts package by path', async () => {
+  const { root } = await moveFixture({ monorepo: true })
+  try {
+    await write(root, 'pnpm-workspace.yaml', "packages: ['web', 'apps/*', '!apps/mobile']\n")
+    await write(root, 'apps/mobile/package.json', JSON.stringify({ name: 'mobile', dependencies: { '@nextsparkjs/mobile': '^0.1.0' } }))
+    await commitFixture(root)
+    const result = run(root, ['--yes', '--no-prepare'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(JSON.parse(await readFile(join(root, 'apps/mobile/package.json'), 'utf8')).dependencies['@project/contracts'], 'file:../../packages/contracts')
+    assert.equal(await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8'), "packages: ['web', 'apps/*', '!apps/mobile']\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
   }
 })

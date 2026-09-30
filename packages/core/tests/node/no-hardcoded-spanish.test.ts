@@ -202,10 +202,7 @@ describe('no hardcoded Spanish in shipped code', () => {
 
   test('apps/dev templates/ and api/ have no hardcoded Spanish', () => {
     for (const directory of APPS_DEV_ROUTE_SOURCE) assert.ok(fs.existsSync(directory), `${directory} exists: the scan is not empty`)
-    // apps/dev's demo support page ships a Spanish FAQ that was never covered (src/app was the only scanned
-    // app tree); it is the one known exception, not a hole to widen
-    const KNOWN_DEMO_COPY = path.join('apps', 'dev', 'templates', '(public)', 'support', 'page.tsx')
-    const findings = APPS_DEV_ROUTE_SOURCE.flatMap((directory) => findSpanish(directory)).filter((finding) => !JSON.stringify(finding).includes(KNOWN_DEMO_COPY.split(path.sep).join('/')))
+    const findings = APPS_DEV_ROUTE_SOURCE.flatMap((directory) => findSpanish(directory))
     assert.equal(findings.length, 0, `Found hardcoded Spanish:\n${formatFindings(findings)}`)
   })
 })

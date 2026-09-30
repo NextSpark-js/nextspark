@@ -196,6 +196,7 @@ program
   .option('--json', 'Output the report as JSON (requires --dry-run)')
   .option('-y, --yes', 'Perform the move after printing the report')
   .option('--no-prepare', 'Convert the files but do not run nextspark prepare afterwards')
+  .option('--no-simulate', 'With --dry-run: do not convert a temporary copy to run the generated-host plan')
   .action(migrateCommand);
 
 // Database commands

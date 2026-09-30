@@ -5,5 +5,41 @@
     "badge": "Centro de Soporte",
     "title": "¿Cómo podemos ayudarte?",
     "description": "Encuentra respuestas a tus preguntas, aprende a usar la plataforma y contacta nuestro equipo de soporte."
+  },
+  "sections": {
+    "quickStart": "Guías de Inicio Rápido",
+    "features": "Funcionalidades Disponibles",
+    "faq": "Preguntas Frecuentes",
+    "needMoreHelp": "¿Necesitas más ayuda?"
+  },
+  "faqs": [
+    {
+      "question": "¿Cómo puedo cambiar mi contraseña?",
+      "answer": "Ve a Dashboard > Settings > Password. Ingresa tu contraseña actual y luego la nueva contraseña dos veces para confirmarla."
+    },
+    {
+      "question": "¿Puedo cambiar mi tema a modo oscuro?",
+      "answer": "Sí! Usa el botón de luna/sol en la esquina superior derecha de cualquier página para alternar entre modo claro y oscuro."
+    },
+    {
+      "question": "¿Cómo administro mis tareas?",
+      "answer": "Ve a Dashboard > Tasks para ver, crear, editar y eliminar tus tareas. Puedes marcarlas como completadas haciendo clic en el checkbox."
+    },
+    {
+      "question": "¿Dónde configuro mis notificaciones?",
+      "answer": "En Dashboard > Settings > Notifications puedes controlar qué tipos de notificaciones quieres recibir y cómo."
+    },
+    {
+      "question": "¿Cómo contacto soporte técnico?",
+      "answer": "Puedes contactarnos a través del email support@boilerplate.com o usando el chat en vivo durante horarios de oficina."
+    },
+    {
+      "question": "¿Mis datos están seguros?",
+      "answer": "Sí, usamos encriptación de nivel empresarial y seguimos las mejores prácticas de seguridad para proteger tu información."
+    }
+  ],
+  "footer": {
+    "readyToContinue": "¿Listo para continuar usando la aplicación?",
+    "backToDashboard": "Volver al Dashboard"
   }
 }

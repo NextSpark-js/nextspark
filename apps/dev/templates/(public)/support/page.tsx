@@ -15,8 +15,10 @@ import {
   CheckCircle2
 } from 'lucide-react'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 
-function SupportPage() {
+async function SupportPage() {
+  const t = await getTranslations('support')
   const quickLinks = [
     {
       title: "Getting Started",
@@ -119,32 +121,7 @@ function SupportPage() {
     }
   ]
 
-  const faqs = [
-    {
-      question: "¿Cómo puedo cambiar mi contraseña?",
-      answer: "Ve a Dashboard > Settings > Password. Ingresa tu contraseña actual y luego la nueva contraseña dos veces para confirmarla."
-    },
-    {
-      question: "¿Puedo cambiar mi tema a modo oscuro?",
-      answer: "Sí! Usa el botón de luna/sol en la esquina superior derecha de cualquier página para alternar entre modo claro y oscuro."
-    },
-    {
-      question: "¿Cómo administro mis tareas?",
-      answer: "Ve a Dashboard > Tasks para ver, crear, editar y eliminar tus tareas. Puedes marcarlas como completadas haciendo clic en el checkbox."
-    },
-    {
-      question: "¿Dónde configuro mis notificaciones?",
-      answer: "En Dashboard > Settings > Notifications puedes controlar qué tipos de notificaciones quieres recibir y cómo."
-    },
-    {
-      question: "¿Cómo contacto soporte técnico?",
-      answer: "Puedes contactarnos a través del email support@boilerplate.com o usando el chat en vivo durante horarios de oficina."
-    },
-    {
-      question: "¿Mis datos están seguros?",
-      answer: "Sí, usamos encriptación de nivel empresarial y seguimos las mejores prácticas de seguridad para proteger tu información."
-    }
-  ]
+  const faqs = t.raw('faqs') as Array<{ question: string; answer: string }>
 
   const contactOptions = [
     {
@@ -176,19 +153,19 @@ function SupportPage() {
       <div className="text-center mb-12">
         <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium mb-4">
           <HelpCircle className="h-4 w-4" />
-          Support Center
+          {t('hero.badge')}
         </div>
         <h1 className="text-4xl font-bold mb-4">
-          ¿Cómo podemos ayudarte?
+          {t('hero.title')}
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Encuentra respuestas a tus preguntas, aprende a usar la plataforma y contacta nuestro equipo de soporte.
+          {t('hero.description')}
         </p>
       </div>
 
       {/* Quick Start Guide */}
       <div className="mb-12">
-        <h2 className="text-2xl font-bold mb-6">Guías de Inicio Rápido</h2>
+        <h2 className="text-2xl font-bold mb-6">{t('sections.quickStart')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {quickLinks.map((section, index) => (
             <Card key={index} className="h-full">
@@ -220,7 +197,7 @@ function SupportPage() {
 
       {/* Features Documentation */}
       <div className="mb-12">
-        <h2 className="text-2xl font-bold mb-6">Funcionalidades Disponibles</h2>
+        <h2 className="text-2xl font-bold mb-6">{t('sections.features')}</h2>
         <div className="space-y-6">
           {features.map((category, index) => (
             <Card key={index}>
@@ -259,7 +236,7 @@ function SupportPage() {
 
       {/* FAQ Section */}
       <div className="mb-12">
-        <h2 className="text-2xl font-bold mb-6">Preguntas Frecuentes</h2>
+        <h2 className="text-2xl font-bold mb-6">{t('sections.faq')}</h2>
         <div className="space-y-4">
           {faqs.map((faq, index) => (
             <Card key={index}>
@@ -276,7 +253,7 @@ function SupportPage() {
 
       {/* Contact Support */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-6">¿Necesitas más ayuda?</h2>
+        <h2 className="text-2xl font-bold mb-6">{t('sections.needMoreHelp')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {contactOptions.map((option, index) => (
             <Card key={index} className="text-center">
@@ -306,11 +283,11 @@ function SupportPage() {
       <div className="text-center">
         <Separator className="mb-6" />
         <p className="text-muted-foreground mb-4">
-          ¿Listo para continuar usando la aplicación?
+          {t('footer.readyToContinue')}
         </p>
         <Button asChild>
           <Link href="/dashboard">
-            Volver al Dashboard
+            {t('footer.backToDashboard')}
           </Link>
         </Button>
       </div>
