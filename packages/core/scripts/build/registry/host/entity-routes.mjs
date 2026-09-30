@@ -146,7 +146,7 @@ export async function readEntityFacts({ source, file, exportName, projectRoot })
   const ts = await loadTypeScriptFor(projectRoot)
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.getScriptKindFromFileName(file))
   const [parseError] = sourceFile.parseDiagnostics ?? []
-  if (parseError) return { error: `does not parse (${ts.flattenDiagnosticMessageText(parseError.messageText, ' ')})` }
+  if (parseError) return { error: `does not parse (${ts.flattenDiagnosticMessageText(parseError.messageText, ' ')})`, parseError: true }
 
   let initializer = null
   for (const statement of sourceFile.statements) {
@@ -225,6 +225,7 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
       diagnostics.push({
         code: ENTITY_DIAGNOSTICS.CONFIG_UNREADABLE,
         message: `${where}: the entity config ${result?.error ?? 'was not read'}; the host cannot write its routes`,
+        ...(result?.parseError ? { parseError: true } : {}),
       })
       continue
     }

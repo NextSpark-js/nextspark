@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
 import { ENTITY_DIAGNOSTICS, ENTITY_MODULES, entityConfigFile, planEntityRoutes, readAllEntityFacts, readEntityFacts, routableEntities } from '../entity-routes.mjs'
-import { PLAN_DIAGNOSTICS, planHost, urlConflicts } from '../plan.mjs'
+import { PLAN_DIAGNOSTICS, PLAN_NOTICES, planHost, urlConflicts } from '../plan.mjs'
 import { renderHost } from '../render.mjs'
 import { validateGeneratedModule } from '../static-imports.mjs'
 import { loadTypeScriptFor } from '../../shared/typescript-compiler.mjs'
@@ -155,7 +155,7 @@ async function plan(w, entities, factsByName, { coreRoutes = [], plugins = [], m
     modes,
   })
   const planned = planHost({ coreRoutes, entityRoutes, plugins, project: { root: w.source } })
-  return { routes: planned.routes, diagnostics: [...entityDiagnostics, ...planned.diagnostics] }
+  return { routes: planned.routes, diagnostics: [...entityDiagnostics, ...planned.diagnostics], notices: planned.notices }
 }
 const factsOf = async body => ({ facts: await facts(body) })
 const render = async routes => renderHost({ routes, projectRoot: CORE_ROOT })
@@ -538,6 +538,12 @@ test('Next.js\' own routing limits are diagnostics with the routes named: one UR
   assert.equal(urlConflicts([route('a/[...x]/page.tsx'), route('a/[[...x]]/page.tsx')]).length, 1, 'required and optional catch-all cannot share a level')
   assert.equal(urlConflicts([route('a/[...x]/page.tsx'), route('a/[...y]/page.tsx')]).length, 1)
   assert.equal(urlConflicts([route('a/[x]/b/page.tsx'), route('a/[y]/c/page.tsx')]).length, 1, 'the conflict is at the shared parent, whatever is below it')
+  // An optional catch-all also serves its parent's URL (Next.js: "same specificity as an optional catch-all route")
+  const optional = urlConflicts([route('(a)/x/page.tsx'), route('(b)/x/[[...rest]]/page.tsx')])
+  assert.deepEqual(optional.map(d => d.code), [PLAN_DIAGNOSTICS.URL_CONFLICT])
+  assert.match(optional[0].message, /^\/x: /)
+  assert.equal(urlConflicts([route('x/page.tsx'), route('x/[[...rest]]/page.tsx')]).length, 1, 'in one group too')
+  assert.equal(urlConflicts([route('x/[[...rest]]/page.tsx'), route('y/page.tsx')]).length, 0, 'alone it is one route')
 })
 
 test('a public entity route that Next.js could not tell from a core route is a diagnostic at plan time', async () => {
@@ -567,5 +573,200 @@ test('a host that builds in Cache Components mode only imports the cached item s
     assert.equal(await moduleOf({ cacheComponents: true, modes: ['isr', 'cc'] }), ENTITY_MODULES.publicItem)
   } finally {
     w.cleanup()
+  }
+})
+
+// ---------------------------------------------------------------------------
+// "The template replaces": project templates at an entity's dashboard URL in another route group
+// ---------------------------------------------------------------------------
+
+const COHORTS = "slug: 'cohorts', enabled: true, ui: { dashboard: { showInMenu: true } }"
+const cohortsEntity = () => entity('cohorts', 'cohortsEntityConfig')
+const COHORT_TEMPLATES = {
+  'templates/dashboard/(staff)/layout.tsx': 'export default function L({ children }) { return children }\n',
+  'templates/dashboard/(staff)/cohorts/page.tsx': PAGE,
+  'templates/dashboard/(staff)/cohorts/loading.tsx': 'export default function L() { return null }\n',
+  'templates/dashboard/(staff)/cohorts/new/page.tsx': PAGE,
+  'templates/dashboard/(staff)/cohorts/[cohortId]/layout.tsx': 'export default function L({ children }) { return children }\n',
+  'templates/dashboard/(staff)/cohorts/[cohortId]/page.tsx': PAGE,
+  'templates/dashboard/(staff)/cohorts/[cohortId]/edit/page.tsx': PAGE,
+}
+const GENERATED_COHORTS = [
+  'dashboard/(main)/cohorts/[id]/edit/page.tsx',
+  'dashboard/(main)/cohorts/[id]/page.tsx',
+  'dashboard/(main)/cohorts/create/page.tsx',
+  'dashboard/(main)/cohorts/error.tsx',
+  'dashboard/(main)/cohorts/layout.tsx',
+  'dashboard/(main)/cohorts/loading.tsx',
+  'dashboard/(main)/cohorts/page.tsx',
+]
+
+test('project templates at an entity\'s dashboard URL in another route group replace its generated routes, with its permission layout kept over them', async () => {
+  const w = world(COHORT_TEMPLATES)
+  try {
+    const { routes, diagnostics, notices } = await plan(w, [cohortsEntity(), entity('tasks', 'taskEntityConfig')], {
+      cohorts: await factsOf(COHORTS),
+      tasks: await factsOf("slug: 'tasks', enabled: true"),
+    })
+    // No NS_HOST_URL_CONFLICT for /dashboard/cohorts, no NS_HOST_DYNAMIC_SEGMENT_CONFLICT for [id] vs [cohortId]
+    assert.deepEqual(diagnostics, [])
+    const all = targets(routes)
+    // The whole generated subtree is dropped (create included: /dashboard/cohorts/create is the project's [cohortId], as in 0.x)
+    assert.deepEqual(all.filter(target => target.startsWith('dashboard/(main)/cohorts/')), [])
+    assert.deepEqual(all.filter(target => target.startsWith('dashboard/(staff)/')), [
+      'dashboard/(staff)/cohorts/[cohortId]/edit/page.tsx',
+      'dashboard/(staff)/cohorts/[cohortId]/layout.tsx',
+      'dashboard/(staff)/cohorts/[cohortId]/page.tsx',
+      'dashboard/(staff)/cohorts/layout.tsx',
+      'dashboard/(staff)/cohorts/loading.tsx',
+      'dashboard/(staff)/cohorts/new/page.tsx',
+      'dashboard/(staff)/cohorts/page.tsx',
+      'dashboard/(staff)/layout.tsx',
+    ])
+    // Another entity is untouched
+    assert.equal(all.filter(target => target.startsWith('dashboard/(main)/tasks/')).length, 7)
+
+    // The guard: the entity's permission layout, protected, at the top of the project's tree for that URL
+    const guard = routes.find(route => route.target === 'dashboard/(staff)/cohorts/layout.tsx')
+    assert.equal(guard.origin, 'core')
+    assert.equal(guard.protected, true)
+    assert.equal(guard.entityRoute.default.factory.name, 'createEntityLayoutRoute')
+    // The project's pages are plain project routes (no generated factory, no forwarded metadata)
+    const page = routes.find(route => route.target === 'dashboard/(staff)/cohorts/[cohortId]/page.tsx')
+    assert.equal(page.origin, 'project')
+    assert.equal(page.entityRoute, undefined)
+
+    assert.deepEqual(notices, [{
+      code: PLAN_NOTICES.ENTITY_ROUTES_REPLACED,
+      entity: 'cohorts',
+      url: '/dashboard/cohorts',
+      by: [
+        'templates/dashboard/(staff)/cohorts/[cohortId]/edit/page.tsx',
+        'templates/dashboard/(staff)/cohorts/[cohortId]/page.tsx',
+        'templates/dashboard/(staff)/cohorts/page.tsx',
+      ],
+      dropped: GENERATED_COHORTS,
+      guards: ['dashboard/(staff)/cohorts/layout.tsx'],
+      message: notices[0].message,
+    }])
+    assert.match(notices[0].message, /^\/dashboard\/cohorts: the project's templates \(.*\) collide with the entity's generated dashboard routes and replace all of them \(7 files under src\/app\/dashboard\/\(main\)\/cohorts\/\); its permission layout is kept at src\/app\/dashboard\/\(staff\)\/cohorts\/layout\.tsx$/)
+
+    // Rendered: the guard is the same composed facade as the generated layout, and every file passes the grammar gate
+    const result = await render(routes)
+    assert.deepEqual(result.diagnostics, [])
+    assert.equal(
+      at(result, 'dashboard/(staff)/cohorts/layout.tsx'),
+      [
+        '// Generated by NextSpark for entities/cohorts (cohortsEntityConfig). Do not edit: regenerated on every build.',
+        'import { cohortsEntityConfig } from "@/entities/cohorts/cohorts.config"',
+        `import { createEntityLayoutRoute } from "${ENTITY_MODULES.layout}"`,
+        'export default createEntityLayoutRoute(cohortsEntityConfig)',
+        '',
+      ].join('\n')
+    )
+    for (const file of result.files) assert.deepEqual(validateGeneratedModule({ ts, source: file.content, file: file.path, grammar: file.grammar }), [], file.path)
+  } finally {
+    w.cleanup()
+  }
+})
+
+test('the replacement guards every project tree serving the URL, and only a page or a Route Handler claims it', async () => {
+  // Two groups serve under /dashboard/cohorts: each gets the guard. A template in the generated directory is one of
+  // them once another group claims the URL (it is then a plain project page, still behind the guard).
+  const w = world({
+    'templates/dashboard/(staff)/cohorts/[cohortId]/page.tsx': PAGE,
+    'templates/dashboard/(main)/cohorts/page.tsx': PAGE,
+  })
+  try {
+    const { routes, diagnostics, notices } = await plan(w, [cohortsEntity()], { cohorts: await factsOf(COHORTS) })
+    assert.deepEqual(diagnostics, [])
+    assert.deepEqual(targets(routes), [
+      'dashboard/(main)/cohorts/layout.tsx',
+      'dashboard/(main)/cohorts/page.tsx',
+      'dashboard/(staff)/cohorts/[cohortId]/page.tsx',
+      'dashboard/(staff)/cohorts/layout.tsx',
+    ])
+    assert.equal(routes.find(route => route.target === 'dashboard/(main)/cohorts/page.tsx').origin, 'project')
+    assert.deepEqual(notices[0].guards, ['dashboard/(main)/cohorts/layout.tsx', 'dashboard/(staff)/cohorts/layout.tsx'])
+  } finally {
+    w.cleanup()
+  }
+  // A layout or a loading state alone serves no URL: nothing is replaced
+  const layoutOnly = world({ 'templates/dashboard/(staff)/cohorts/loading.tsx': 'export default function L() { return null }\n' })
+  try {
+    const { routes, notices } = await plan(layoutOnly, [cohortsEntity()], { cohorts: await factsOf(COHORTS) })
+    assert.deepEqual(notices, [])
+    assert.equal(targets(routes).filter(target => target.startsWith('dashboard/(main)/cohorts/')).length, 7)
+  } finally {
+    layoutOnly.cleanup()
+  }
+})
+
+test('templates inside the generated directory keep being composed (no replacement), and a project layout over the moved guard is refused', async () => {
+  const inside = world({ 'templates/dashboard/(main)/cohorts/page.tsx': PAGE, 'templates/dashboard/(main)/cohorts/[id]/members/page.tsx': PAGE })
+  try {
+    const { routes, diagnostics, notices } = await plan(inside, [cohortsEntity()], { cohorts: await factsOf(COHORTS) })
+    assert.deepEqual(diagnostics, [])
+    assert.deepEqual(notices, [])
+    const list = routes.find(route => route.target === 'dashboard/(main)/cohorts/page.tsx')
+    assert.equal(list.origin, 'core')
+    assert.equal(list.template.source, 'templates/dashboard/(main)/cohorts/page.tsx')
+    assert.ok(targets(routes).includes('dashboard/(main)/cohorts/[id]/members/page.tsx'), 'an added page under the entity layout')
+  } finally {
+    inside.cleanup()
+  }
+  // The permission layout cannot be replaced where it moved either
+  const over = world({ 'templates/dashboard/(staff)/cohorts/page.tsx': PAGE, 'templates/dashboard/(staff)/cohorts/layout.tsx': 'export default function L({ children }) { return children }\n' })
+  try {
+    const { diagnostics } = await plan(over, [cohortsEntity()], { cohorts: await factsOf(COHORTS) })
+    assert.deepEqual(diagnostics.map(d => d.code), [PLAN_DIAGNOSTICS.PROTECTED])
+    assert.match(diagnostics[0].message, /src\/app\/dashboard\/\(staff\)\/cohorts\/layout\.tsx: templates\/dashboard\/\(staff\)\/cohorts\/layout\.tsx would replace the protected entities\/cohorts/)
+  } finally {
+    over.cleanup()
+  }
+})
+
+test('a template that only adds a URL under the entity coexists with the generated routes; only a real collision replaces them', async () => {
+  const HANDLER = 'export async function GET() { return new Response("x") }\n'
+  const cases = [
+    // [file, replaced?] — a page or a Route Handler that only adds a URL (a static segment wins over [id])
+    ['templates/dashboard/(staff)/cohorts/export/page.tsx', false],
+    ['templates/dashboard/(staff)/cohorts/export/route.ts', false],
+    // The same dynamic name, at a URL the generated routes do not serve
+    ['templates/dashboard/(staff)/cohorts/[id]/members/page.tsx', false],
+    // The same URL as a generated page, or another name for its dynamic segment
+    ['templates/dashboard/(staff)/cohorts/page.tsx', true],
+    ['templates/dashboard/(staff)/cohorts/create/page.tsx', true],
+    ['templates/dashboard/(staff)/cohorts/[id]/page.tsx', true],
+    ['templates/dashboard/(staff)/cohorts/[cohortId]/edit/page.tsx', true],
+    ['templates/dashboard/(staff)/cohorts/[cohortId]/performance/page.tsx', true],
+    ['templates/dashboard/(staff)/cohorts/[id]/edit/route.ts', true],
+    // An optional catch-all also serves its parent's URL: /dashboard/cohorts, /dashboard/cohorts/[id]
+    ['templates/dashboard/(staff)/cohorts/[[...slug]]/page.tsx', true],
+    ['templates/dashboard/(staff)/cohorts/[id]/[[...x]]/page.tsx', true],
+    // A required catch-all does not (Next.js tells [id] and [...x] apart)
+    ['templates/dashboard/(staff)/cohorts/[...slug]/page.tsx', false],
+  ]
+  for (const [file, replaced] of cases) {
+    const w = world({ [file]: file.endsWith('route.ts') ? HANDLER : PAGE })
+    try {
+      const { routes, diagnostics, notices } = await plan(w, [cohortsEntity()], { cohorts: await factsOf(COHORTS) })
+      assert.deepEqual(diagnostics, [], file)
+      assert.deepEqual(targets(routes).filter(target => target.startsWith('dashboard/(main)/cohorts/')), replaced ? [] : GENERATED_COHORTS, file)
+      assert.equal(notices.length, replaced ? 1 : 0, file)
+      assert.ok(targets(routes).includes(file.replace(/^templates\//, '')), `${file} is served`)
+      assert.equal(targets(routes).includes('dashboard/(staff)/cohorts/layout.tsx'), replaced, `${file}: the guard moves only with a replacement`)
+    } finally {
+      w.cleanup()
+    }
+  }
+  // An entity whose name is a prefix of another is matched by its exact URL segment only
+  const prefix = world({ 'templates/dashboard/(staff)/cohorts/page.tsx': PAGE })
+  try {
+    const { routes, diagnostics } = await plan(prefix, [cohortsEntity(), entity('cohorts-archive', 'archiveEntityConfig')], { cohorts: await factsOf(COHORTS), 'cohorts-archive': await factsOf("slug: 'cohorts-archive', enabled: true") })
+    assert.deepEqual(diagnostics, [])
+    assert.equal(targets(routes).filter(target => target.startsWith('dashboard/(main)/cohorts-archive/')).length, 7)
+  } finally {
+    prefix.cleanup()
   }
 })

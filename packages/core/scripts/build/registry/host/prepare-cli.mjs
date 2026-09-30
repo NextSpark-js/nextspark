@@ -73,6 +73,11 @@ function summary(result) {
   return `Generated src/app (${app} files) and ${registries} registries: ${result.written.length} written, ${result.deleted.length} deleted, ${result.unchanged} unchanged. Recorded in .nextspark/generation.json.`
 }
 
+/** The plan's notices (information, not problems), as terminal lines. */
+function noticeLines(result) {
+  return (result.notices ?? []).map(notice => `Info: [${notice.code}] ${notice.message}`)
+}
+
 /** The contracts module line (and its warnings), when the host generates one. */
 function contractsLines(result) {
   const contracts = result.contracts
@@ -137,10 +142,13 @@ async function main() {
   const mode = flag('production') ? 'production' : 'development'
   const devStatus = flag('dev') && mode === 'development'
 
+  let printedNotices = null
   if (!flag('watch') || !flag('no-initial')) {
     try {
       const result = await prepareHost(config, { mode, devStatus })
       console.log(summary(result))
+      for (const line of noticeLines(result)) console.log(line)
+      printedNotices = noticeLines(result).join('\n')
       for (const line of contractsLines(result)) console.log(line)
     } catch (error) {
       if (!(error instanceof PrepareError)) throw error
@@ -154,12 +162,17 @@ async function main() {
     devStatus,
     onSuccess: result => {
       console.log(`[prepare] ${result.changed.length > 0 ? `${result.changed.length} change(s): ` : ''}${summary(result)}`)
+      // Printed when they change, not on every regeneration
+      const notices = noticeLines(result).join('\n')
+      if (notices !== printedNotices && notices) for (const line of notices.split('\n')) console.log(`[prepare] ${line}`)
+      printedNotices = notices
       for (const line of contractsLines(result)) console.log(`[prepare] ${line}`)
     },
-    onFailure: ({ lines, statusWritten }) => {
+    onFailure: ({ error, lines, statusWritten }) => {
       console.error('[prepare] Regeneration failed; the last valid src/app stays in place.')
       for (const line of lines.join('\n').split('\n')) console.error(`[prepare] ${line}`)
       if (statusWritten) console.error('[prepare] The error is shown in the browser until the source is fixed.')
+      else if (error?.parseError) console.error('[prepare] Next.js shows the syntax error in the browser; src/app is regenerated once the source parses again.')
     },
   })
   console.log('[prepare] Watching templates/, api/, plugins/, entities/, config/ and nextspark.config.ts for changes.')

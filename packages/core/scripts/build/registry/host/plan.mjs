@@ -28,6 +28,12 @@
  * - `webhooks` (nextspark.config.ts `billing.webhookExtensions`) replace the core webhook routes
  *   with a composed route (`route.webhook`).
  *
+ * "The template replaces": a project template in another route group that collides with an entity's
+ * generated dashboard routes (same URL, or another name for their dynamic segment) takes that URL over;
+ * the entity's generated dashboard subtree is dropped and its permission layout moves over the
+ * project's tree (`replaceEntityDashboards`, returned as `notices`). A template that only adds a URL
+ * coexists with the generated routes.
+ *
  * API namespaces: core owns /api/v1/**, the project's `api/` is served at /api/<path> and a plugin's
  * at /api/plugins/<plugin>/**. A project `api/` route in /api/v1/** or /api/plugins/**, and a plugin
  * route outside /api/plugins/<its-name>/**, are diagnostics. The project's `templates/api/v1/...` and
@@ -57,6 +63,11 @@ export const PLAN_DIAGNOSTICS = Object.freeze({
   API_NAMESPACE: 'NS_HOST_API_NAMESPACE',
   URL_CONFLICT: 'NS_HOST_URL_CONFLICT',
   DYNAMIC_SEGMENT_CONFLICT: 'NS_HOST_DYNAMIC_SEGMENT_CONFLICT',
+})
+
+/** Information about the plan that is not a problem (printed by prepare, returned by `planHost` as `notices`). */
+export const PLAN_NOTICES = Object.freeze({
+  ENTITY_ROUTES_REPLACED: 'NS_HOST_ENTITY_ROUTES_REPLACED',
 })
 
 export const DEFAULT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js']
@@ -187,7 +198,7 @@ function dynamicKind(segment) {
  * @param {string[]} [input.modes] - cache-mode file suffixes the host understands (`page.isr.tsx`)
  * @param {string[]} [input.extensions] - source extensions
  * @param {Record<string, object>} [input.webhooks] - composed webhook routes by target (`webhookRoutes`)
- * @returns {{ routes: object[], diagnostics: object[] }}
+ * @returns {{ routes: object[], diagnostics: object[], notices: object[] }}
  */
 export function planHost({ coreRoutes, entityRoutes = [], plugins = [], project, modes = [], extensions = DEFAULT_EXTENSIONS, webhooks = {} }) {
   const diagnostics = []
@@ -234,6 +245,7 @@ export function planHost({ coreRoutes, entityRoutes = [], plugins = [], project,
     ...surfaceRoutes({ dir: join(project.root, 'api'), importBase: projectBase, surface: 'api', toTarget: path => `api/${path}`, layer: 'project', label: projectLabel, pattern, diagnostics, namespace: target => (API_V1.test(target) || API_PLUGINS.test(target) ? PROJECT_API_HINT : null) }),
   ]
   for (const route of projectRoutes) route.source = route.source.replace(/^\.\//, '')
+  const notices = replaceEntityDashboards(candidates, projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`)))
   candidates.push(...projectRoutes)
   for (const [target, webhook] of Object.entries(webhooks)) {
     candidates.push({ kind: 'route', target, mode: null, specifier: webhook.specifier, file: webhook.file, layer: 'project', source: webhook.source, webhook, configured: true })
@@ -336,7 +348,101 @@ export function planHost({ coreRoutes, entityRoutes = [], plugins = [], project,
   diagnostics.push(...urlConflicts(routes))
 
   const clean = routes.map(({ layer, ...route }) => ({ ...route, origin: layer }))
-  return { routes: clean.sort((a, b) => compareTargets(a.target, b.target)), diagnostics }
+  return { routes: clean.sort((a, b) => compareTargets(a.target, b.target)), diagnostics, notices }
+}
+
+/**
+ * "The template replaces" (#203): a project template (`templates/**`, a page or a Route Handler) in a directory other than
+ * the generated one (`dashboard/(main)/<entity>/`, typically another route group) that COLLIDES with the entity's
+ * generated dashboard routes takes their URL over, as its static segment took over core's dynamic `[entity]` route in
+ * 0.x. It collides when it serves a URL a generated page serves (`/dashboard/<entity>`, `/create`, `/[id]`,
+ * `/[id]/edit`, any dynamic segment name matching), or puts a dynamic segment with another name where a generated one
+ * is (`[cohortId]` next to `[id]`): Next.js refuses both. A template that only adds a URL (`(staff)/<entity>/export`)
+ * does not collide: the generated routes stay and both are served (a static segment wins over `[id]`).
+ *
+ * On a collision the rule is the whole subtree, not the colliding files: every generated dashboard route of that entity
+ * (layout, error, loading, list, create, `[id]`, `[id]/edit`, with the metadata they forward) is dropped. Keeping some
+ * of them would serve the entity from two route groups at once, under two different layouts and loading states; the
+ * project's own pages, metadata, loading and error states (and its groups' error boundaries) serve the URL instead.
+ *
+ * The entity's permission layout is a security boundary, not presentation: it is kept, moved to the top directory of
+ * each project tree that serves the URL (`dashboard/(staff)/<entity>/layout.tsx`), so every replaced route stays
+ * behind the same check. A project layout at that exact file is reported as over a protected route.
+ *
+ * Templates inside the generated directory keep the existing behaviour (a page at a generated slot becomes that
+ * route's template, others add pages under the entity's layout). Mutates `candidates`; returns the notices.
+ */
+function replaceEntityDashboards(candidates, templates) {
+  const notices = []
+  const generated = new Map() // entity -> its generated dashboard routes (error and loading are plain core facades)
+  const names = new Set(candidates.filter(route => route.generated && route.entityRoute?.name && route.target.startsWith(`dashboard/(main)/${route.entityRoute.name}/`)).map(route => route.entityRoute.name))
+  for (const route of candidates) {
+    const name = route.generated && route.target.startsWith('dashboard/(main)/') ? route.target.split('/')[2] : null
+    if (!names.has(name)) continue
+    if (!generated.has(name)) generated.set(name, [])
+    generated.get(name).push(route)
+  }
+  for (const [name, routes] of [...generated].sort(([a], [b]) => compareTargets(a, b))) {
+    const base = `dashboard/(main)/${name}/`
+    const under = templates.filter(route => {
+      const segments = urlSegments(route.target)
+      return segments[0] === 'dashboard' && segments[1] === name
+    })
+    const served = routes.filter(route => route.kind === 'page').map(route => urlSegments(route.target).slice(2))
+    const claims = under.filter(route => (route.kind === 'page' || route.kind === 'route') && !route.target.startsWith(base) && served.some(generated => collides(urlSegments(route.target).slice(2), generated)))
+    if (claims.length === 0) continue
+    const layout = routes.find(route => route.kind === 'layout')
+    for (const route of routes) candidates.splice(candidates.indexOf(route), 1)
+    // Every directory at the entity's URL that the project serves from, in or out of the generated directory
+    const roots = [...new Set(under.filter(route => route.kind === 'page' || route.kind === 'route').map(route => entityRoot(route.target, name)))].sort(compareTargets)
+    const guards = layout ? roots.map(root => ({ ...layout, target: `${root}/layout.tsx`, source: `${layout.source} (permission layout, kept over the project's templates)` })) : []
+    candidates.push(...guards)
+    notices.push({
+      code: PLAN_NOTICES.ENTITY_ROUTES_REPLACED,
+      entity: name,
+      url: `/dashboard/${name}`,
+      by: [...new Set(claims.map(route => route.source))].sort(compareTargets),
+      dropped: routes.map(route => route.target).sort(compareTargets),
+      guards: guards.map(route => route.target),
+      message:
+        `/dashboard/${name}: the project's templates (${[...new Set(claims.map(route => route.source))].sort(compareTargets).join(', ')}) collide with the entity's generated dashboard routes and replace all of them ` +
+        `(${routes.length} files under src/app/${base}); its permission layout is kept at ${guards.map(route => `src/app/${route.target}`).join(', ') || '(none)'}`,
+    })
+  }
+  return notices
+}
+
+/** Same kind of dynamic segment (a plain `[x]`, or a catch-all of either form), whatever its name. */
+const sameDynamicKind = (a, b) => (dynamicKind(a) === 'dynamic') === (dynamicKind(b) === 'dynamic')
+
+/**
+ * Whether a project URL (segments below `/dashboard/<entity>`) collides with a generated one: the same URL (a dynamic
+ * segment matches a dynamic segment of the same kind, whatever the names; an optional catch-all also serves its
+ * parent's URL), or two names for one dynamic segment (`[cohortId]` where the generated routes have `[id]`) under the
+ * same prefix. Next.js refuses both.
+ */
+function collides(project, generated) {
+  // An optional catch-all also serves the URL of its parent (`/x/[[...rest]]` answers `/x`)
+  if (dynamicKind(project.at(-1) ?? '') === 'optional catch-all' && collides(project.slice(0, -1), generated)) return true
+  for (let index = 0; index < Math.min(project.length, generated.length); index += 1) {
+    const [a, b] = [project[index], generated[index]]
+    const dynamic = dynamicKind(a) && dynamicKind(b) && sameDynamicKind(a, b)
+    if (dynamic && a !== b) return true
+    if (!dynamic && a !== b) return false
+  }
+  return project.length === generated.length
+}
+
+/** The directory of `target` whose URL is `/dashboard/<entity>` (route groups and slots included in the path). */
+function entityRoot(target, entity) {
+  const parts = posix.dirname(target).split('/')
+  let url = 0
+  for (let index = 0; index < parts.length; index += 1) {
+    if (/^\(.*\)$/.test(parts[index]) || parts[index].startsWith('@')) continue
+    url += 1
+    if (url === 2 && parts[index] === entity) return parts.slice(0, index + 1).join('/')
+  }
+  return posix.dirname(target)
 }
 
 /**
@@ -353,6 +459,12 @@ export function urlConflicts(routes) {
     const url = `/${segments.join('/')}`
     if (!urls.has(url)) urls.set(url, [])
     urls.get(url).push(route)
+    // An optional catch-all also serves its parent's URL: a page there is the same URL twice for Next.js
+    if (dynamicKind(segments.at(-1) ?? '') === 'optional catch-all') {
+      const parent = `/${segments.slice(0, -1).join('/')}`
+      if (!urls.has(parent)) urls.set(parent, [])
+      urls.get(parent).push(route)
+    }
 
     let node = tree
     for (const segment of segments) {

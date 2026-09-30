@@ -35,6 +35,7 @@ import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { projectFiles } from '../../safe-fs.mjs'
+import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 import { getConfig } from '../config.mjs'
 import { resolveNextPackage } from './facade-emitter.mjs'
 import { coreRouteManifestPath, coreRouteVariantsPath, hasCoreRouteManifest, loadCoreRouteManifest, resolveCoreRouteFile } from './core-routes.mjs'
@@ -53,6 +54,7 @@ import {
   checkGeneration,
   generationRecord,
   hashInputs,
+  preflight,
   publishGeneration,
   readGeneration,
   validateFiles,
@@ -111,7 +113,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
   })
   const { routes } = planned
   const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics]
-  if (diagnostics.length > 0) throw new PrepareError(diagnostics)
+  if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices: planned.notices ?? [], stage: 'plan' })
   const rendered = await renderHost({
     routes,
     projectRoot: config.projectRoot,
@@ -123,8 +125,72 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     cache,
     devStatus,
   })
-  if (rendered.diagnostics.length > 0) throw new PrepareError(rendered.diagnostics.map(describeDiagnostic))
-  return { routes, manifest, appFiles: rendered.files }
+  if (rendered.diagnostics.length > 0) throw Object.assign(new PrepareError(rendered.diagnostics.map(describeDiagnostic)), { notices: planned.notices ?? [], routes, stage: 'emission' })
+  return { routes, manifest, appFiles: rendered.files, notices: planned.notices ?? [] }
+}
+
+/**
+ * What `prepareHost` would decide, without writing anything and without throwing for a diagnostic. For dry runs
+ * (`nextspark migrate --dry-run`) and tools that predict a generation.
+ *
+ * Runs, read-only, every step of a generation but the registry build: the route plan (with its notices, such as project
+ * templates replacing an entity's dashboard routes), the facade emission, the grammar gate of the emitted files, the
+ * ownership preflight of `src/app` against the host's current files and generation record, and the contracts plan
+ * with its ownership preflight. The registry build runs the registry compiler into a staging directory (a write),
+ * so it is not run: `checks.registries` is `'skipped'`, and so is the ownership check of the registry files.
+ *
+ * `checks` says what ran: each of `plan`, `emission`, `grammar`, `ownership`, `contracts` is `'passed'`, `'failed'`,
+ * `'skipped'` (an earlier step failed, or it is never run here) or `'none'` (the host has no contracts module).
+ *
+ * @param {object} config - a host config (see the module comment; `projectHostConfig({ projectRoot })` for a project)
+ * @param {{ devStatus?: boolean }} [options]
+ * @returns {Promise<{ ok: boolean, routes: object[], notices: object[], diagnostics: object[], checks: Record<string, string> }>}
+ */
+export async function predictHost(config, { devStatus = false } = {}) {
+  const checks = { plan: 'skipped', emission: 'skipped', grammar: 'skipped', ownership: 'skipped', contracts: config.contracts ? 'skipped' : 'none', registries: 'skipped' }
+  const diagnostics = []
+  let routes = []
+  let notices = []
+  let appFiles = null
+  try {
+    const rendered = await renderHostFiles(config, { devStatus })
+    ;({ routes, notices, appFiles } = rendered)
+    checks.plan = 'passed'
+    checks.emission = 'passed'
+  } catch (error) {
+    if (error instanceof NoCoreRouteManifestError) {
+      diagnostics.push({ code: 'NS_HOST_NO_CORE_MANIFEST', message: error.message })
+    } else if (error instanceof PrepareError || error instanceof HostPlanError) {
+      diagnostics.push(...error.diagnostics)
+      notices = error.notices ?? []
+      if (error.stage === 'emission') {
+        checks.plan = 'passed'
+        checks.emission = 'failed'
+        routes = error.routes ?? []
+      } else checks.plan = 'failed'
+    } else throw error
+  }
+  if (appFiles) {
+    const invalid = await validateFiles(appFiles, { projectRoot: config.projectRoot, wrappers: config.compositionWrappers })
+    diagnostics.push(...invalid)
+    checks.grammar = invalid.length > 0 ? 'failed' : 'passed'
+    const ownership = preflight({ hostRoot: config.hostRoot, previous: readGeneration(config.hostRoot), files: appFiles })
+    diagnostics.push(...ownership)
+    checks.ownership = ownership.length > 0 ? 'failed' : 'passed'
+  }
+  if (config.contracts) {
+    try {
+      const plan = await config.contracts.plan()
+      diagnostics.push(...plan.diagnostics)
+      if (plan.diagnostics.length === 0) preflightContractsPlan({ target: config.contracts.target(), plan })
+      checks.contracts = plan.diagnostics.length > 0 ? 'failed' : 'passed'
+    } catch (error) {
+      if (!(error instanceof ContractsPublishError || error instanceof PrepareError)) throw error
+      diagnostics.push(...error.diagnostics)
+      checks.contracts = 'failed'
+    }
+  }
+  return { ok: diagnostics.length === 0, routes, notices, diagnostics, checks }
 }
 
 /**
@@ -137,14 +203,19 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
  * @param {Map} [options.cache] - facade cache shared by a watcher
  * @returns {Promise<{ routes: object[], files: object[], record: object, written: string[], deleted: string[], unchanged: number }>}
  */
-export async function prepareHost(config, { mode = 'development', devStatus = false, cache, staleAfterMs, reportFailure = false } = {}) {
+export async function prepareHost(config, { mode = 'development', devStatus = false, cache, staleAfterMs, reportFailure = false, changed = [] } = {}) {
   const release = acquireLock(config.hostRoot, { staleAfterMs })
   try {
     return await generateAndPublish(config, { mode, devStatus, cache })
   } catch (error) {
     // `nextspark dev`: the failure goes to the browser under the same lock, so no other writer's
-    // newer, successful generation can land between this failure and its diagnostic.
-    if (reportFailure && devStatus && !(error instanceof NoCoreRouteManifestError)) {
+    // newer, successful generation can land between this failure and its diagnostic. Not while a
+    // source does not parse: Next reports that itself, and rewriting a module of the graph then makes
+    // Turbopack drop the fix that follows (it keeps serving the code from before the error).
+    const unparsable = reportFailure && devStatus ? await unparsableSources(changed, config.projectRoot) : []
+    const parseError = hasParseError(error) || unparsable.length > 0
+    if (parseError) error.parseError = true
+    if (reportFailure && devStatus && !parseError && !(error instanceof NoCoreRouteManifestError)) {
       try {
         error.statusWritten = writeOwnedFile(config.hostRoot, DEV_DIAGNOSTIC_FILE, devDiagnosticModule(devFailureDiagnostic(diagnosticLines(error).join('\n'))))
       } catch {
@@ -159,7 +230,7 @@ export async function prepareHost(config, { mode = 'development', devStatus = fa
 
 async function generateAndPublish(config, { mode, devStatus, cache }) {
   try {
-    const { routes, manifest, appFiles } = await renderHostFiles(config, { devStatus, cache })
+    const { routes, manifest, appFiles, notices } = await renderHostFiles(config, { devStatus, cache })
     const registryFiles = config.registries ? await config.registries({ mode, hostRoot: config.hostRoot }) : []
     const files = [...appFiles, ...registryFiles]
     const invalid = await validateFiles(files, { projectRoot: config.projectRoot, wrappers: config.compositionWrappers })
@@ -173,7 +244,7 @@ async function generateAndPublish(config, { mode, devStatus, cache }) {
     const record = generationRecord({ mode, versions: config.versions, inputs, files })
     try {
       const published = publishGeneration({ hostRoot: config.hostRoot, previous, files, record })
-      return { routes, files, record, ...published, contracts: publishContractsStep(config, contracts) }
+      return { routes, files, record, notices, ...published, contracts: publishContractsStep(config, contracts) }
     } catch (error) {
       if (error instanceof GenerationError || error instanceof ContractsPublishError) throw new PrepareError(error.diagnostics)
       throw error
@@ -487,6 +558,39 @@ export { hasCoreRouteManifest }
 // Watch (nextspark dev)
 // ---------------------------------------------------------------------------
 
+const SOURCE_FILE = /\.(?:[cm]?[jt]sx?)$/
+// Not imported by the app (the Next and NextSpark configs, tests): a failure in them cannot reach the bundler's graph, and the
+// panel is the only place it shows
+const OUTSIDE_GRAPH = /(^|[\\/])(nextspark|next)\.config\.[cm]?[jt]s$|[\\/]__tests__[\\/]|\.(test|spec|cy)\.[cm]?[jt]sx?$/
+
+/**
+ * The changed files of a watch batch that are sources the app imports (TypeScript or JavaScript: a template, a config
+ * under config/, an entity or plugin config...) and do not parse. Parsed with the project's TypeScript; unreadable or
+ * removed files are skipped.
+ */
+export async function unparsableSources(changed, projectRoot) {
+  const candidates = changed.filter(path => SOURCE_FILE.test(path) && !OUTSIDE_GRAPH.test(path))
+  if (candidates.length === 0) return []
+  const ts = await loadTypeScriptFor(projectRoot)
+  const broken = []
+  for (const path of candidates) {
+    let source
+    try {
+      source = readFileSync(path, 'utf8')
+    } catch {
+      continue
+    }
+    const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, false, ts.getScriptKindFromFileName(path))
+    if ((file.parseDiagnostics ?? []).length > 0) broken.push(path)
+  }
+  return broken
+}
+
+/** True when a failure includes a source that does not parse (a template, a route or an entity config). */
+export function hasParseError(error) {
+  return Boolean(error?.diagnostics?.some(diagnostic => diagnostic.code === 'NS_HOST_PARSE_ERROR' || diagnostic.parseError === true))
+}
+
 /** Diagnostics as terminal lines. */
 export function diagnosticLines(error) {
   if (error instanceof PrepareError || error instanceof HostPlanError) return error.message.split('\n')
@@ -502,6 +606,9 @@ export function diagnosticLines(error) {
  * to `onFailure`, and - when the generation has the dev status files - the diagnostic module is
  * rewritten so the dev reporter logs it in the browser (Next's dev indicator lists it); the next
  * successful regeneration empties it and the issue clears. Nothing throws: routes keep rendering.
+ * Except while a source does not parse (a route, an entity config, or any changed source of the
+ * batch): then nothing is written at all, since Next reports the syntax error itself and a write to
+ * the graph at that moment makes Turbopack drop the fix that follows (see `prepareHost`).
  *
  * @returns {{ close(): void, regenerate(): Promise<object> }}
  */
@@ -513,6 +620,7 @@ export function watchHost(config, { debounceMs = 150, devStatus = true, onSucces
   let again = false
   let closed = false
   let changed = new Set()
+  let unparsed = []
 
   const regenerate = async () => {
     if (running) {
@@ -521,9 +629,12 @@ export function watchHost(config, { debounceMs = 150, devStatus = true, onSucces
     }
     const batch = [...changed].sort(compareTargets)
     changed = new Set()
+    // Sources that did not parse in an earlier batch count until they parse again, whatever this batch changed
+    const suspects = [...new Set([...batch, ...unparsed])]
     running = (async () => {
       try {
-        const result = await prepareHost(config, { mode: 'development', devStatus, cache, reportFailure: true })
+        unparsed = await unparsableSources(suspects, config.projectRoot).catch(() => [])
+        const result = await prepareHost(config, { mode: 'development', devStatus, cache, reportFailure: true, changed: unparsed })
         onSuccess({ ...result, changed: batch })
         return { ok: true, result }
       } catch (error) {

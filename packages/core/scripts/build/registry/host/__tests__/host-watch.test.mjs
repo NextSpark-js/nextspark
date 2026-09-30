@@ -96,3 +96,67 @@ test('nextspark dev watch: routes follow added, renamed and deleted templates; a
     host.cleanup()
   }
 })
+
+test('nextspark dev watch: a source that stopped parsing in an earlier batch keeps the graph untouched until it parses again; tests are not part of the graph', { timeout: 600_000 }, async () => {
+  const { PrepareError, unparsableSources } = await import('../prepare.mjs')
+  const { CORE_ROOT } = await import('./host-helpers.mjs')
+  let failing = false
+  const host = tempHost({ 'templates/about/page.tsx': PAGE('About') })
+  const config = {
+    ...host.config,
+    registries: async () => {
+      if (failing) throw new PrepareError([{ code: 'NS_TEST_FAILURE', message: 'an unrelated failure' }])
+      return host.config.registries()
+    },
+  }
+  const events = { list: [], listeners: new Set() }
+  const emit = event => {
+    events.list.push(event)
+    for (const listener of [...events.listeners]) listener()
+  }
+  await prepareHost(config, { devStatus: true })
+  const watcher = watchHost(config, { debounceMs: 50, onSuccess: result => emit({ kind: 'success', result }), onFailure: failure => emit({ kind: 'failure', ...failure }) })
+  try {
+    const armed = events.list.length
+    for (let touch = 0; events.list.length === armed; touch += 1) {
+      if (touch > 600) throw new Error('the watcher never reported a change')
+      write(host.source, 'templates/_armed.txt', String(touch))
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    const count = kind => events.list.filter(e => e.kind === kind).length
+    const diagnosticBefore = read(host.hostRoot, DEV_DIAGNOSTIC_FILE)
+
+    // A helper the templates import stops parsing: not a route, so the regeneration itself succeeds
+    const successes = count('success')
+    write(host.source, 'templates/helpers.ts', 'export const x = (\n')
+    await eventually(events, () => count('success') > successes, 'regenerated with the broken helper')
+
+    // Later, an unrelated failure: the helper still does not parse, so nothing is written
+    failing = true
+    const failures = count('failure')
+    write(host.source, 'templates/_other.txt', 'x')
+    await eventually(events, () => count('failure') > failures, 'unrelated failure')
+    const kept = events.list.filter(e => e.kind === 'failure').at(-1)
+    assert.equal(kept.statusWritten, false)
+    assert.equal(kept.error.parseError, true)
+    assert.equal(read(host.hostRoot, DEV_DIAGNOSTIC_FILE), diagnosticBefore)
+
+    // It parses again: the next failure reaches the browser panel as before
+    const again = count('failure')
+    write(host.source, 'templates/helpers.ts', 'export const x = 1\n')
+    await eventually(events, () => count('failure') > again, 'failure after the fix')
+    assert.equal(events.list.filter(e => e.kind === 'failure').at(-1).statusWritten, true)
+    assert.match(read(host.hostRoot, DEV_DIAGNOSTIC_FILE), /an unrelated failure/)
+  } finally {
+    watcher.close()
+    host.cleanup()
+  }
+  // A test or a spec is not imported by the app: its syntax error does not hold the panel back
+  const tests = tempHost({ 'templates/about.test.ts': 'x = (\n', 'templates/__tests__/a.ts': 'x = (\n', 'templates/b.ts': 'x = (\n' })
+  try {
+    const paths = ['templates/about.test.ts', 'templates/__tests__/a.ts', 'templates/b.ts'].map(path => join(tests.source, path))
+    assert.deepEqual(await unparsableSources(paths, CORE_ROOT), [paths[2]])
+  } finally {
+    tests.cleanup()
+  }
+})

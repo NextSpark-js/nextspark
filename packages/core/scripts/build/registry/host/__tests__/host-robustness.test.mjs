@@ -9,7 +9,7 @@ import { hasCoreRouteManifest, loadCoreRouteManifest, resolvePackageExport } fro
 import { GENERATION_DIAGNOSTICS, GENERATION_FILE, LOCK_FILE, acquireLock, isLegacyGeneratedRegistry, readGeneration, staleLockReason } from '../generation.mjs'
 import { PrepareError, checkHost, prepareHost, projectHostConfig, renderHostFiles } from '../prepare.mjs'
 import { loadFixtureCoreRoutes } from '../../../../../tests/fixtures/host-conformance/plan.mjs'
-import { PAGE, REGISTRY, hostConfig, manyRegistries, read, tempHost, write } from './host-helpers.mjs'
+import { CORE_ROOT, PAGE, REGISTRY, hostConfig, manyRegistries, read, tempHost, write } from './host-helpers.mjs'
 
 const HERE = import.meta.dirname
 const codes = error => error.diagnostics.map(d => d.code)
@@ -394,6 +394,131 @@ test('writeOwnedFile keeps an unfinished publication pending: its previousFiles 
     await prepareHost(host.config, { devStatus: true })
     assert.equal(readGeneration(host.hostRoot).pending, undefined)
     assert.deepEqual(await checkHost(host.config, { dev: true }), { ok: true, problems: [] })
+  } finally {
+    host.cleanup()
+  }
+})
+
+test('a dev regeneration that fails because a source does not parse writes nothing: no module of the graph changes until it parses again', async () => {
+  const { DEV_DIAGNOSTIC_FILE } = await import('../render.mjs')
+  const { hasParseError } = await import('../prepare.mjs')
+  const host = tempHost({ 'templates/about/page.tsx': PAGE('About') })
+  try {
+    await prepareHost(host.config, { devStatus: true })
+    const diagnosticBefore = read(host.hostRoot, DEV_DIAGNOSTIC_FILE)
+    const recordBefore = read(host.hostRoot, GENERATION_FILE)
+
+    // Turbopack drops the fix that follows a rewrite of the graph made while a module does not parse
+    write(host.source, 'templates/about/page.tsx', 'export default function About() { return null }\nexport const broken = (\n')
+    const error = await prepareHost(host.config, { devStatus: true, reportFailure: true }).catch(e => e)
+    assert.ok(error instanceof PrepareError)
+    assert.ok(codes(error).includes('NS_HOST_PARSE_ERROR'), codes(error).join(', '))
+    assert.equal(error.parseError, true)
+    assert.notEqual(error.statusWritten, true)
+    assert.equal(read(host.hostRoot, DEV_DIAGNOSTIC_FILE), diagnosticBefore, 'the diagnostic module is not rewritten')
+    assert.equal(read(host.hostRoot, GENERATION_FILE), recordBefore, 'nothing is published')
+
+    // Parses again but is still wrong (an error only prepare sees): the browser panel gets it as before
+    write(host.source, 'templates/about/page.tsx', 'export default function About() { return null }\nexport const notAllowed = 1\n')
+    const invalid = await prepareHost(host.config, { devStatus: true, reportFailure: true }).catch(e => e)
+    assert.equal(invalid.parseError, undefined)
+    assert.equal(invalid.statusWritten, true)
+    assert.match(read(host.hostRoot, DEV_DIAGNOSTIC_FILE), /notAllowed/)
+
+    // Fixed: written normally, and the diagnostic is emptied
+    write(host.source, 'templates/about/page.tsx', PAGE('AboutFixed'))
+    await prepareHost(host.config, { devStatus: true, reportFailure: true })
+    assert.match(read(host.hostRoot, DEV_DIAGNOSTIC_FILE), /generationDiagnostic = ""/)
+
+    // An entity config that does not parse counts too
+    assert.equal(hasParseError({ diagnostics: [{ code: 'NS_HOST_ENTITY_CONFIG_UNREADABLE', parseError: true }] }), true)
+    assert.equal(hasParseError({ diagnostics: [{ code: 'NS_HOST_ENTITY_CONFIG_UNREADABLE' }] }), false)
+    assert.equal(hasParseError(new Error('plain')), false)
+  } finally {
+    host.cleanup()
+  }
+})
+
+test('predictHost: the plan, its notices and every diagnostic of a generation, without writing anything (dry runs)', async () => {
+  const { predictHost } = await import('../prepare.mjs')
+  const clean = tempHost({ 'templates/about/page.tsx': PAGE('About') })
+  try {
+    const result = await predictHost(clean.config)
+    assert.equal(result.ok, true)
+    assert.deepEqual(result.diagnostics, [])
+    assert.deepEqual(result.notices, [])
+    assert.ok(result.routes.some(route => route.target === 'about/page.tsx'))
+    assert.deepEqual(result.checks, { plan: 'passed', emission: 'passed', grammar: 'passed', ownership: 'passed', contracts: 'none', registries: 'skipped' })
+    assert.deepEqual(readdirSync(clean.hostRoot), [], 'nothing written')
+
+    // A hand-written file where the host generates one: prepare would refuse it, so the prediction does too
+    write(clean.hostRoot, 'src/app/about/page.tsx', 'export default function Mine() { return null }\n')
+    const owned = await predictHost(clean.config)
+    assert.equal(owned.ok, false)
+    assert.equal(owned.checks.ownership, 'failed')
+    assert.equal(read(clean.hostRoot, 'src/app/about/page.tsx'), 'export default function Mine() { return null }\n', 'untouched')
+    const prepared = await prepareHost(clean.config).catch(error => error)
+    assert.ok(prepared instanceof PrepareError, 'and prepare agrees')
+  } finally {
+    clean.cleanup()
+  }
+  const conflicting = tempHost({ 'templates/(a)/x/page.tsx': PAGE('A'), 'templates/(b)/x/page.tsx': PAGE('B'), 'templates/y/page.tsx': 'export const = ;\n' })
+  try {
+    const result = await predictHost(conflicting.config)
+    assert.equal(result.ok, false)
+    assert.deepEqual(result.routes, [])
+    assert.ok(codes(result).includes('NS_HOST_URL_CONFLICT'), codes(result).join(', '))
+    assert.deepEqual(result.checks, { plan: 'failed', emission: 'skipped', grammar: 'skipped', ownership: 'skipped', contracts: 'none', registries: 'skipped' })
+    assert.deepEqual(readdirSync(conflicting.hostRoot), [], 'nothing written')
+  } finally {
+    conflicting.cleanup()
+  }
+  // The contracts plan runs even when the host plan fails, and its ownership preflight too
+  const contracts = tempHost({ 'templates/about/page.tsx': PAGE('About') })
+  try {
+    const target = join(contracts.root, 'contracts')
+    const file = { path: 'src/index.ts', content: 'export {}\n' }
+    const withContracts = plan => ({ ...contracts.config, contracts: { target: () => ({ root: target, label: 'contracts', kind: 'package' }), plan: async () => plan } })
+    const broken = await predictHost(withContracts({ files: [], warnings: [], diagnostics: [{ code: 'NS_CONTRACTS_TEST', message: 'entity config does not parse' }] }))
+    assert.equal(broken.checks.contracts, 'failed')
+    assert.ok(codes(broken).includes('NS_CONTRACTS_TEST'))
+    write(target, 'src/index.ts', '// mine\n')
+    const foreign = await predictHost(withContracts({ files: [file], warnings: [], diagnostics: [] }))
+    assert.equal(foreign.checks.contracts, 'failed')
+    assert.equal(read(target, 'src/index.ts'), '// mine\n', 'untouched')
+    rmSync(join(target, 'src/index.ts'))
+    const fine = await predictHost(withContracts({ files: [file], warnings: [], diagnostics: [] }))
+    assert.equal(fine.checks.contracts, 'passed')
+    assert.equal(existsSync(join(target, 'src/index.ts')), false, 'nothing written')
+  } finally {
+    contracts.cleanup()
+  }
+})
+
+test('a dev failure while a changed source of the graph does not parse (a config the registries import) writes nothing; nextspark.config.ts is outside the graph and still gets the panel', async () => {
+  const { DEV_DIAGNOSTIC_FILE } = await import('../render.mjs')
+  const { unparsableSources } = await import('../prepare.mjs')
+  const host = tempHost({ 'templates/about/page.tsx': PAGE('About') })
+  try {
+    await prepareHost(host.config, { devStatus: true })
+    const diagnosticBefore = read(host.hostRoot, DEV_DIAGNOSTIC_FILE)
+    // The registry build fails on it (a config under config/, an entity or plugin config): no NS_HOST_PARSE_ERROR from the host
+    const failing = { ...host.config, registries: async () => { throw new PrepareError([{ code: 'NS_HOST_REGISTRY_BUILD_FAILED', message: 'the registry build failed' }]) } }
+    write(host.source, 'config/app.config.ts', 'export const APP_CONFIG = {\n')
+    const config = join(host.source, 'config/app.config.ts')
+    assert.deepEqual(await unparsableSources([config, join(host.source, 'messages/en.json'), join(host.source, 'gone.ts')], CORE_ROOT), [config])
+
+    const error = await prepareHost(failing, { devStatus: true, reportFailure: true, changed: [config] }).catch(e => e)
+    assert.equal(error.parseError, true)
+    assert.notEqual(error.statusWritten, true)
+    assert.equal(read(host.hostRoot, DEV_DIAGNOSTIC_FILE), diagnosticBefore, 'nothing written while it does not parse')
+
+    // nextspark.config.ts (and next.config.*) are not imported by the app: the panel is the only place the error shows
+    write(host.source, 'nextspark.config.ts', 'export default {\n')
+    const outside = await prepareHost(failing, { devStatus: true, reportFailure: true, changed: [join(host.source, 'nextspark.config.ts')] }).catch(e => e)
+    assert.equal(outside.parseError, undefined)
+    assert.equal(outside.statusWritten, true)
+    assert.match(read(host.hostRoot, DEV_DIAGNOSTIC_FILE), /the registry build failed/)
   } finally {
     host.cleanup()
   }

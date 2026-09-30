@@ -128,7 +128,7 @@ publishes them safely. The CLI runs `prepare-cli.mjs` from the installed core (`
 | `plan.mjs` | `planHost()`: core < plugin (`plugins/<name>/templates/**`, `plugins/<name>/api/**` at `api/plugins/<name>/**`) < project (`templates/**`, `api/**` at `api/**`). A higher layer replaces a lower one at the same directory + file stem (+ cache-mode suffix); two files of one layer, two plugins, anything over a protected core route, and a page with a Route Handler in one directory are diagnostics naming both sources. Sorted by code unit, so deterministic. |
 | `render.mjs` | One facade per planned route through `emitFacade` (every cache mode the host builds is checked; a problem all modes share is reported once). Facade cache for the watcher. |
 | `generation.mjs` | Ownership, validation, publication, lock and check (below). |
-| `prepare.mjs` | `prepareHost()` / `checkHost()` / `watchHost()` for any host config; `projectHostConfig()` for a real project (the registry build runs into a staging directory: `NEXTSPARK_REGISTRIES_OUT`, `NEXTSPARK_GENERATED_HOST=1`, and its wall-clock timestamps are normalized so the same sources give the same bytes). |
+| `prepare.mjs` | `prepareHost()` / `checkHost()` / `watchHost()` for any host config; `predictHost(config)` resolves to `{ ok, routes, notices, diagnostics, checks }` without writing or throwing on a diagnostic (dry runs such as `migrate --dry-run`): it runs the plan, the emission, the grammar gate, the ownership preflight of `src/app` and the contracts plan with its preflight, read-only, and says which ran in `checks` (`passed` / `failed` / `skipped` / `none`); the registry build is never run there (it writes a staging directory), so `checks.registries` is `skipped`; `projectHostConfig()` for a real project (the registry build runs into a staging directory: `NEXTSPARK_REGISTRIES_OUT`, `NEXTSPARK_GENERATED_HOST=1`, and its wall-clock timestamps are normalized so the same sources give the same bytes). |
 
 Publication (`generation.mjs`):
 
@@ -178,6 +178,14 @@ still reach Next directly (a facade re-exports the module, it does not copy it),
   root layout's default import, or its composition with a project layout, see below);
 - on failure the watcher rewrites only `generation-diagnostic.ts`; Next's HMR re-renders and the reporter shows the
   diagnostic. The next successful regeneration empties it and the panel goes away, with no reload.
+  **Not while a source does not parse** (`NS_HOST_PARSE_ERROR`, an entity config that does not parse, or any TypeScript or
+  JavaScript source changed in this or an earlier batch that still does not parse; `nextspark.config.*`, `next.config.*`, tests and
+  specs aside: the app does not import them, so the panel is where their errors show): Next already shows
+  that error, and rewriting a module of the graph while one of them does not parse makes Turbopack drop the fix that
+  follows (it kept serving the code from before the error). Nothing is written until the sources parse again.
+  The regression guard is the unit test with its negative control (`host-robustness.test.mjs`); `scripts/performance/dev-recovery-e2e.mjs`
+  checks recovery and the panel over HTTP (`--project <dir>` on an installed project is where the Turbopack failure reproduced; the
+  fixture target does not reproduce it).
 
 A production preparation never emits these files or the composition: zero bytes and zero code in production builds.
 
@@ -217,6 +225,21 @@ spread and no expression. A host with another core (the conformance fixture) pas
   `access.basePath`, `access.allowNestedSlugs`, `access.public`, `builder.enabled`, `ui.public.hasArchivePage`; the config
   object must be an object literal): a flag that cannot be read keeps the dashboard route (core's checks answer notFound()),
   and one that decides a public route is a diagnostic. An entity's `slug` must equal its directory name.
+  **The template replaces** (`NS_HOST_ENTITY_ROUTES_REPLACED`, a notice, not an error): a project page or Route Handler under
+  `templates/`, in a directory other than `dashboard/(main)/<entity>/` (another route group, `templates/dashboard/(staff)/<entity>/...`),
+  that **collides** with the entity's generated dashboard routes takes their URL over, as its static segment took core's `[entity]`
+  route in 0.x. It collides when it serves a URL a generated page serves (`/dashboard/<entity>`, `/create`, `/[id]`, `/[id]/edit`,
+  whatever the dynamic segment's name) or names their dynamic segment differently (`[cohortId]` where they have `[id]`): Next refuses
+  both. A template that only adds a URL (`(staff)/<entity>/export`, `(staff)/<entity>/[id]/members`) does not collide: the generated
+  routes stay and both are served. On a collision the whole generated dashboard subtree of that entity is dropped (layout, error,
+  loading, list, create, `[id]`, `[id]/edit`, and the metadata they forward), so the entity is not served from two route groups
+  under two layouts. The entity's permission layout (`createEntityLayoutRoute`) is a security boundary and stays: it is written at the
+  top directory of every project tree serving the URL (`dashboard/(staff)/<entity>/layout.tsx`, protected, so a project layout at that
+  exact file is refused). Templates inside `dashboard/(main)/<entity>/` keep the composition above. `prepare` prints the replacement
+  as `Info:`; `planHost` returns it in `notices`.
+  An optional catch-all also serves its parent's URL (`(staff)/<entity>/[[...slug]]` collides with `/dashboard/<entity>`). An intercepting
+  route (`(.)[id]`, `@modal/(.)[id]`) is a segment of its own, never a collision: nothing is replaced, and it renders only in its
+  own layout tree, not under the generated `[id]` route's layout.
 - **Billing webhooks** (`webhooks.mjs`): `nextspark.config.ts` `billing.webhookExtensions: { stripe: './lib/...', polar: './lib/...' }`
   replaces core's webhook route with `export const POST = createStripeWebhookRoute(stripeWebhookExtensions)`, the module
   imported statically (it must export `stripeWebhookExtensions` / `polarWebhookExtensions`).
