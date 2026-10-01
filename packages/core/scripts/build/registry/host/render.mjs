@@ -28,7 +28,9 @@
  *
  * Composed routes (stage 4): a route the plan marks `compose` (a project layout over one of core's wrapped
  * layouts), `entityRoute` (a per-entity route: its config, factory and optional template) or `webhook` (a
- * billing webhook with the project's extensions) is written as a `composed-facade`: static imports of the
+ * billing webhook with the project's extensions) is written as a `composed-facade`; so is a route under a
+ * role-gated area (`access`: `export default withSuperadminAccess(Template)`, and its `generateMetadata` through
+ * `withSuperadminMetadata`; a Route Handler's methods through `withSuperadminRouteAccess`). Static imports of the
  * modules and one call of a core wrapper/factory over them, never a lookup (static-imports.mjs). The root
  * layout also imports the project's global stylesheet when the host has one (`stylesheet`).
  *
@@ -280,7 +282,18 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
   const ctx = { projectRoot, memo }
 
   let composition
-  if (route.compose && route.origin !== 'core') {
+  if (route.access) {
+    const names = route.kind === 'route' ? [route.access.handler] : [route.access.wrapper, ...(route.access.metadata ? [route.access.metadata] : [])]
+    const problems = await checkExports({ file: route.access.file, specifier: route.access.specifier, names, route, ctx })
+    if (problems.length > 0) throw new FacadeEmitError(problems.map(problem => ({ ...problem, file: problem.file ?? route.file })))
+    composition =
+      route.kind === 'route'
+        ? { handler: { name: route.access.handler, specifier: route.access.specifier } }
+        : {
+            wrapper: { name: route.access.wrapper, specifier: route.access.specifier },
+            ...(route.access.metadata ? { metadata: { name: route.access.metadata, specifier: route.access.specifier } } : {}),
+          }
+  } else if (route.compose && route.origin !== 'core') {
     const problems = await checkExports({ file: route.compose.file, specifier: route.compose.specifier, names: [route.compose.wrapper], route, ctx })
     if (problems.length > 0) throw new FacadeEmitError(problems.map(problem => ({ ...problem, file: problem.file ?? route.file })))
     // The metadata an override without its own keeps: from the composition module when it exports it (the group

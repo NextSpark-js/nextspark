@@ -6,7 +6,10 @@
  * `src/routes/manifest.json` in a source checkout): an array of
  * `{ kind, target, specifier }` - the facade emitter's route kind, the path under `src/app`, and
  * the core subpath that implements it. A layout may also carry `compose: { wrapper, specifier }`:
- * a project layout that overrides it is composed with that wrapper (see plan.mjs, render.mjs).
+ * a project layout that overrides it is composed with that wrapper (see plan.mjs, render.mjs). The layout of
+ * a role-gated area may carry `access: { wrapper, metadata?, handler?, specifier }`: every other page and layout
+ * under its URL is composed with `wrapper` (its `generateMetadata` with `metadata`), and every Route Handler's
+ * methods with `handler`, whoever provides them (plan.mjs).
  * Every consumer (prepare, --check, the dev watcher, the conformance fixture) reads it through
  * `loadCoreRouteManifest`, so its location and validation live in one place.
  *
@@ -181,19 +184,24 @@ function validateEntries(entries) {
     }
     if (typeof entry.specifier !== 'string' || entry.specifier === '') problems.push(`${at}: specifier must be a non-empty string`)
     if ('protected' in entry && typeof entry.protected !== 'boolean') problems.push(`${at}: protected must be a boolean`)
-    if ('compose' in entry) {
-      const { compose } = entry
-      if (entry.kind !== 'layout') problems.push(`${at}: only a layout can be composed`)
-      if (!compose || typeof compose !== 'object' || Array.isArray(compose)) {
-        problems.push(`${at}: compose must be { wrapper, specifier }`)
+    for (const key of ['compose', 'access']) {
+      if (!(key in entry)) continue
+      const wrapping = entry[key]
+      if (entry.kind !== 'layout') problems.push(key === 'compose' ? `${at}: only a layout can be composed` : `${at}: only a layout can declare access`)
+      if (!wrapping || typeof wrapping !== 'object' || Array.isArray(wrapping)) {
+        problems.push(`${at}: ${key} must be { wrapper, specifier }`)
       } else {
-        if (typeof compose.wrapper !== 'string' || !/^[A-Za-z_$][\w$]*$/.test(compose.wrapper)) problems.push(`${at}: compose.wrapper must be an identifier`)
+        if (typeof wrapping.wrapper !== 'string' || !/^[A-Za-z_$][\w$]*$/.test(wrapping.wrapper)) problems.push(`${at}: ${key}.wrapper must be an identifier`)
         // A package subpath (core's `@nextsparkjs/core/routes/...`, or a fixture core's own alias), never a path
-        if (typeof compose.specifier !== 'string' || !/^@?[A-Za-z0-9][^\s'"`\\]*$/.test(compose.specifier) || compose.specifier.split('/').includes('..')) {
-          problems.push(`${at}: compose.specifier must be a package subpath (such as ${CORE_ROUTES_SPECIFIER}_internal/root-layout)`)
+        if (typeof wrapping.specifier !== 'string' || !/^@?[A-Za-z0-9][^\s'"`\\]*$/.test(wrapping.specifier) || wrapping.specifier.split('/').includes('..')) {
+          problems.push(`${at}: ${key}.specifier must be a package subpath (such as ${CORE_ROUTES_SPECIFIER}_internal/root-layout)`)
         }
-        const unknown = Object.keys(compose).filter(key => key !== 'wrapper' && key !== 'specifier')
-        if (unknown.length > 0) problems.push(`${at}: compose has unknown keys ${unknown.join(', ')}`)
+        for (const optional of key === 'access' ? ['metadata', 'handler'] : []) {
+          if (optional in wrapping && (typeof wrapping[optional] !== 'string' || !/^[A-Za-z_$][\w$]*$/.test(wrapping[optional]))) problems.push(`${at}: access.${optional} must be an identifier`)
+        }
+        const known = key === 'access' ? ['wrapper', 'specifier', 'metadata', 'handler'] : ['wrapper', 'specifier']
+        const unknown = Object.keys(wrapping).filter(name => !known.includes(name))
+        if (unknown.length > 0) problems.push(`${at}: ${key} has unknown keys ${unknown.join(', ')}`)
       }
     }
   })
@@ -264,7 +272,9 @@ export async function loadCoreRouteManifest({ coreRoot, entries, manifestPath, r
       const variant = byTarget.get(entry.target)
       if (!variant) return entry
       variantsApplied.push(entry.target)
-      return { ...variant, protected: entry.protected === true || variant.protected === true }
+      // A variant never drops the area's access check of the entry it replaces.
+      const access = variant.access ?? entry.access
+      return { ...variant, protected: entry.protected === true || variant.protected === true, ...(access ? { access } : {}) }
     })
   }
 
@@ -276,6 +286,8 @@ export async function loadCoreRouteManifest({ coreRoot, entries, manifestPath, r
     if (!file) problems.push(`${entry.target}: no module found for ${entry.specifier}`)
     const composeFile = entry.compose ? resolve(entry.compose.specifier) : null
     if (entry.compose && !composeFile) problems.push(`${entry.target}: no module found for ${entry.compose.specifier}`)
+    const accessFile = entry.access ? resolve(entry.access.specifier) : null
+    if (entry.access && !accessFile) problems.push(`${entry.target}: no module found for ${entry.access.specifier}`)
     routes.push({
       kind: entry.kind,
       target: entry.target,
@@ -286,6 +298,7 @@ export async function loadCoreRouteManifest({ coreRoot, entries, manifestPath, r
         ? { protectionLevel: entry.protected === true ? 'protected_all' : protectedTarget.level?.(entry.target) ?? 'protected_all' }
         : {}),
       ...(entry.compose ? { compose: { ...entry.compose, file: composeFile } } : {}),
+      ...(entry.access ? { access: { ...entry.access, file: accessFile } } : {}),
     })
   }
   if (problems.length > 0) throw new CoreRouteManifestError(path, problems)

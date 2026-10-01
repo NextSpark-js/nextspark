@@ -19,6 +19,10 @@
  * - A layout that wraps whatever layout the host resolves (the root layout and the four group
  *   layouts) carries `compose: { wrapper, specifier }` (`COMPOSED_ROUTES`): a project override
  *   of it is composed with that wrapper by the generated host instead of replacing it.
+ * - The layouts of the role-gated areas (/superadmin, /devtools) carry `access: { wrapper, specifier }`
+ *   (`ACCESS_ROUTES`): the generated host composes every other page and layout under that directory, core's,
+ *   a plugin's or the project's, with that wrapper, so each segment checks the role on the server before it
+ *   renders (a layout cannot protect its pages: Next renders every segment of a route separately).
  *
  * A file is a route when its name is `<kind stem>.{tsx,ts}` (`page.tsx`,
  * `route.ts`, `icon2.tsx`, ...). Directories starting with `_` hold route
@@ -82,6 +86,16 @@ export const COMPOSED_ROUTES = Object.freeze({
   'devtools/layout.tsx': { wrapper: 'withDevtoolsGuard', specifier: `${ROUTES_SUBPATH}/_internal/devtools-layout` },
 })
 
+/**
+ * The layouts of the areas only some roles may enter (target -> the wrapper every page and layout under it is
+ * composed with, the one their `generateMetadata` is, and the one a Route Handler's methods are). The layout itself is checked by its own message wrapper
+ * (area-access).
+ */
+export const ACCESS_ROUTES = Object.freeze({
+  'superadmin/layout.tsx': { wrapper: 'withSuperadminAccess', metadata: 'withSuperadminMetadata', handler: 'withSuperadminRouteAccess', specifier: `${ROUTES_SUBPATH}/_internal/area-access` },
+  'devtools/layout.tsx': { wrapper: 'withDevtoolsAccess', metadata: 'withDevtoolsMetadata', handler: 'withDevtoolsRouteAccess', specifier: `${ROUTES_SUBPATH}/_internal/area-access` },
+})
+
 /** The composition of a variant, when it differs from its base route's. */
 export const VARIANT_COMPOSE = Object.freeze({
   'layout.ppr.tsx': { wrapper: 'withRootLayout', specifier: `${ROUTES_SUBPATH}/_internal/root-layout.ppr` },
@@ -142,7 +156,8 @@ export function buildRoutesManifest(routesDir = ROUTES_DIR) {
     }
     seenTargets.set(routeKey, file)
     const compose = COMPOSED_ROUTES[file]
-    manifest.push({ kind, target: file, specifier: specifierForRouteFile(file), ...(compose ? { compose } : {}) })
+    const access = ACCESS_ROUTES[file]
+    manifest.push({ kind, target: file, specifier: specifierForRouteFile(file), ...(compose ? { compose } : {}), ...(access ? { access } : {}) })
   }
   manifest.sort((a, b) => (a.target < b.target ? -1 : a.target > b.target ? 1 : 0))
 
@@ -153,7 +168,7 @@ export function buildRoutesManifest(routesDir = ROUTES_DIR) {
       const replaced = manifest.find(entry => entry.target === target)
       if (!replaced) throw new Error(`Variant ${file} (${mode}) replaces ${target}, which is not a core route`)
       const compose = VARIANT_COMPOSE[file] ?? replaced.compose
-      return { kind: replaced.kind, target, specifier: specifierForRouteFile(file), ...(compose ? { compose } : {}) }
+      return { kind: replaced.kind, target, specifier: specifierForRouteFile(file), ...(compose ? { compose } : {}), ...(replaced.access ? { access: replaced.access } : {}) }
     })
   }
   return { manifest, variants }

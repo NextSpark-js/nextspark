@@ -4,15 +4,15 @@ Development and debugging utilities for the NextSpark framework.
 
 ## Overview
 
-The DevTools API provides endpoints for development-time utilities including documentation serving, feature registry access, scheduled action management, test flows, and block metadata. These endpoints are restricted to superadmin and developer users.
+The DevTools API provides endpoints for development-time utilities including documentation serving, feature registry access, scheduled action management, test flows, and block metadata. These endpoints are restricted to developer users.
 
 ## Authentication
 
 All endpoints require authentication via:
-- **Session cookie** with superadmin or developer role
+- **Session cookie** with the developer role
 - **API Key** header with appropriate permissions
 
-Only superadmin and developer users can access these endpoints.
+Only developer users can access these endpoints (superadmin cannot).
 
 ## Endpoints
 
@@ -192,7 +192,7 @@ Returns testing configuration and utilities information.
 |--------|-------------|
 | 400 | Bad Request - Missing or invalid path parameter |
 | 401 | Unauthorized - Authentication required |
-| 403 | Forbidden - Requires superadmin or developer role |
+| 403 | Forbidden - Requires the developer role |
 | 404 | Not Found - Document or resource not found |
 | 500 | Server Error - Failed to read or process request |
 

@@ -4,7 +4,9 @@
  * Scheduled Actions API - DevTools Endpoint Tests
  *
  * Tests for /api/v1/devtools/scheduled-actions endpoint that:
- * - Validates authentication (requires superadmin/developer API key)
+ * - Validates authentication (developer role only: no credentials -> 401,
+ *   the superadmin API key -> 403); the other cases use the devKeyring developer's
+ *   session (loginAsDefaultDeveloper)
  * - Supports status filtering (pending, running, completed, failed)
  * - Supports action_type filtering
  * - Returns paginated results
@@ -23,6 +25,7 @@
  */
 
 import * as allure from 'allure-cypress'
+import { loginAsDefaultDeveloper } from '../../../../src/session-helpers'
 
 describe('Scheduled Actions API - DevTools Endpoint', {
   tags: ['@api', '@feat-scheduled-actions', '@regression']
@@ -30,8 +33,8 @@ describe('Scheduled Actions API - DevTools Endpoint', {
   const BASE_URL = Cypress.config('baseUrl') || 'http://localhost:5173'
   const DEVTOOLS_ENDPOINT = `${BASE_URL}/api/v1/devtools/scheduled-actions`
 
-  // API key for superadmin/developer access
-  const API_KEY = Cypress.env('SUPERADMIN_API_KEY') || 'test_api_key_for_testing_purposes_only_not_a_real_secret_key_abc123'
+  // Superadmin API key: refused, the devtools APIs are developer-only
+  const SUPERADMIN_API_KEY = Cypress.env('SUPERADMIN_API_KEY') || 'test_api_key_for_testing_purposes_only_not_a_real_secret_key_abc123'
 
   beforeEach(() => {
     allure.epic('API')
@@ -59,21 +62,36 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       })
     })
 
-    it('SA_DEVTOOLS_AUTH_002: Should return 200 with valid API key', () => {
+    it('SA_DEVTOOLS_AUTH_002: Should return 200 with a developer session', () => {
+      allure.severity('critical')
+      loginAsDefaultDeveloper()
+
+      cy.request({
+        method: 'GET',
+        url: DEVTOOLS_ENDPOINT,
+        failOnStatusCode: false
+      }).then((response) => {
+        expect(response.status).to.eq(200)
+        expect(response.body.success).to.be.true
+
+        cy.log('Returns 200 with a developer session')
+      })
+    })
+
+    it('SA_DEVTOOLS_AUTH_003: Should return 403 for the superadmin API key (developer-only)', () => {
       allure.severity('critical')
 
       cy.request({
         method: 'GET',
         url: DEVTOOLS_ENDPOINT,
         headers: {
-          'x-api-key': API_KEY
+          'x-api-key': SUPERADMIN_API_KEY
         },
         failOnStatusCode: false
       }).then((response) => {
-        expect(response.status).to.eq(200)
-        expect(response.body.success).to.be.true
-
-        cy.log('Returns 200 with valid API key')
+        expect(response.status).to.eq(403)
+        expect(response.body.success).to.be.false
+        expect(response.body.error.code).to.eq('DEVTOOLS_ACCESS_DENIED')
       })
     })
   })
@@ -82,6 +100,10 @@ describe('Scheduled Actions API - DevTools Endpoint', {
   // TEST 2: Status Filtering (AC-27)
   // ============================================================
   describe('Status Filtering', () => {
+    beforeEach(() => {
+      loginAsDefaultDeveloper()
+    })
+
     it('SA_DEVTOOLS_001: Should filter by status=pending', () => {
       allure.severity('critical')
       allure.tag('@ac-27')
@@ -89,9 +111,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?status=pending`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true
@@ -114,9 +133,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?status=completed`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true
@@ -137,9 +153,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?status=failed`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true
@@ -160,9 +173,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?status=running`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true
@@ -181,6 +191,10 @@ describe('Scheduled Actions API - DevTools Endpoint', {
   // TEST 3: Action Type Filtering (AC-28)
   // ============================================================
   describe('Action Type Filtering', () => {
+    beforeEach(() => {
+      loginAsDefaultDeveloper()
+    })
+
     it('SA_DEVTOOLS_003: Should filter by action_type=webhook:send', () => {
       allure.severity('critical')
       allure.tag('@ac-28')
@@ -188,9 +202,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?action_type=webhook:send`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true
@@ -211,9 +222,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?action_type=billing:check-renewals`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true
@@ -232,6 +240,10 @@ describe('Scheduled Actions API - DevTools Endpoint', {
   // TEST 4: Combined Filters (AC-29)
   // ============================================================
   describe('Combined Filters', () => {
+    beforeEach(() => {
+      loginAsDefaultDeveloper()
+    })
+
     it('SA_DEVTOOLS_004: Should filter by status AND action_type together', () => {
       allure.severity('critical')
       allure.tag('@ac-29')
@@ -239,9 +251,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?status=completed&action_type=webhook:send`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true
@@ -261,6 +270,10 @@ describe('Scheduled Actions API - DevTools Endpoint', {
   // TEST 5: Invalid Filter Handling (AC-30)
   // ============================================================
   describe('Invalid Filter Handling', () => {
+    beforeEach(() => {
+      loginAsDefaultDeveloper()
+    })
+
     it('SA_DEVTOOLS_005: Should return empty array for non-existent action_type', () => {
       allure.severity('normal')
       allure.tag('@ac-30')
@@ -268,9 +281,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?action_type=non-existent:action`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true
@@ -289,9 +299,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?status=invalid_status`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         // Should either return empty or treat as no filter
         expect(response.status).to.eq(200)
@@ -306,6 +313,10 @@ describe('Scheduled Actions API - DevTools Endpoint', {
   // TEST 6: Pagination with Filters (AC-31)
   // ============================================================
   describe('Pagination with Filters', () => {
+    beforeEach(() => {
+      loginAsDefaultDeveloper()
+    })
+
     it('SA_DEVTOOLS_006: Should paginate filtered results correctly', () => {
       allure.severity('critical')
       allure.tag('@ac-31')
@@ -313,9 +324,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?status=completed&limit=5&page=1`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true
@@ -343,9 +351,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?limit=5&page=1`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         const totalPages = response.body.data.pagination.totalPages
@@ -355,9 +360,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
           cy.request({
             method: 'GET',
             url: `${DEVTOOLS_ENDPOINT}?limit=5&page=2`,
-            headers: {
-              'x-api-key': API_KEY
-            }
           }).then((page2Response) => {
             expect(page2Response.status).to.eq(200)
             expect(page2Response.body.data.pagination.page).to.eq(2)
@@ -375,6 +377,10 @@ describe('Scheduled Actions API - DevTools Endpoint', {
   // TEST 7: Response Meta (AC-32)
   // ============================================================
   describe('Response Meta', () => {
+    beforeEach(() => {
+      loginAsDefaultDeveloper()
+    })
+
     it('SA_DEVTOOLS_007: Should include registeredActionTypes in meta', () => {
       allure.severity('critical')
       allure.tag('@ac-32')
@@ -382,9 +388,6 @@ describe('Scheduled Actions API - DevTools Endpoint', {
       cy.request({
         method: 'GET',
         url: DEVTOOLS_ENDPOINT,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true
@@ -406,15 +409,16 @@ describe('Scheduled Actions API - DevTools Endpoint', {
   // TEST 8: Response Structure
   // ============================================================
   describe('Response Structure', () => {
+    beforeEach(() => {
+      loginAsDefaultDeveloper()
+    })
+
     it('SA_DEVTOOLS_008: Should return correct action structure', () => {
       allure.severity('critical')
 
       cy.request({
         method: 'GET',
         url: `${DEVTOOLS_ENDPOINT}?limit=1`,
-        headers: {
-          'x-api-key': API_KEY
-        }
       }).then((response) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true

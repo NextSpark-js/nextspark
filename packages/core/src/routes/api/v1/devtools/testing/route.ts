@@ -4,7 +4,7 @@
  * GET /api/v1/devtools/testing
  *
  * Returns the complete tags registry with test coverage statistics.
- * Requires superadmin or developer user role.
+ * Requires the developer role.
  */
 
 import { NextRequest, NextResponse } from 'next/server'

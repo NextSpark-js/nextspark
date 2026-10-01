@@ -297,7 +297,7 @@ export const themeAppConfig: DeepPartial<AppConfig> = {
 
 Server code learns the active team from the `activeTeamId` cookie, which `POST /api/v1/teams/switch` sets to `<session id>:<team id>` for a signed-in browser (an API key gets `400 SESSION_REQUIRED` and sends `x-team-id` instead):
 
-- On protected routes the proxy forwards it as `x-active-team-id`, only when the cookie belongs to the verified session. The dashboard layouts check permissions in that team, or in the user's default team (the earliest joined) while the session has none (`getDashboardTeamId`).
+- The dashboard layouts read it from the verified session (`getDashboardPermissionContext`), only when this session wrote it, and check permissions in that team, or in the user's default team (the earliest joined) while the session has none. They do not trust the `x-active-team-id` header the proxy forwards.
 - API routes use `resolveTeamContext`: the `x-team-id` header, then the cookie of this session, then the default team.
 - Server actions use the cookie of this session, and answer "No active team selected" without it.
 

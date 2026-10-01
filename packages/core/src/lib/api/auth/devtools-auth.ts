@@ -2,24 +2,20 @@
  * DevTools API Authentication
  *
  * Permission helpers for devtools-only API endpoints.
- * Only superadmin and developer user roles can access these APIs.
+ * Only the developer role can access these APIs, the same rule as the /devtools pages and /api/devtools/*.
  */
 
 import { NextResponse } from 'next/server'
 import type { DualAuthResult } from './dual-auth'
 
-/**
- * User roles allowed to access DevTools APIs
- * - superadmin: Full system access
- * - developer: Development and debugging access
- */
-const DEVTOOLS_ALLOWED_ROLES = ['superadmin', 'developer'] as const
+/** User roles allowed to access DevTools APIs: developer only (superadmin administers the app, not its internals). */
+const DEVTOOLS_ALLOWED_ROLES = ['developer'] as const
 
 /**
  * Check if the authenticated user can access DevTools APIs
  *
  * @param authResult - Result from authenticateRequest()
- * @returns true if user has superadmin or developer role
+ * @returns true if the user has the developer role
  */
 export function canAccessDevtoolsApi(authResult: DualAuthResult): boolean {
   if (!authResult.success || !authResult.user) {
@@ -39,11 +35,11 @@ export function createDevtoolsAccessDeniedResponse(): NextResponse {
     {
       success: false,
       error: {
-        message: 'Access denied: DevTools APIs require superadmin or developer role',
+        message: 'Access denied: DevTools APIs require the developer role',
         code: 'DEVTOOLS_ACCESS_DENIED',
         details: {
           requiredRoles: DEVTOOLS_ALLOWED_ROLES,
-          hint: 'User role "member" cannot access DevTools APIs regardless of team role',
+          hint: 'Only the developer role can access DevTools APIs, regardless of team role',
         },
       },
     },

@@ -78,6 +78,8 @@ export const CORE_COMPOSITION_WRAPPERS = Object.freeze({
   [`${INTERNAL}public-layout.cc`]: ['withPublicMessages'],
   [`${INTERNAL}superadmin-layout.cc`]: ['withSuperadminGuard'],
   [`${INTERNAL}devtools-layout.cc`]: ['withDevtoolsGuard'],
+  // Every page and layout under /superadmin and /devtools (the manifest's `access`).
+  [`${INTERNAL}area-access`]: ['withSuperadminAccess', 'withDevtoolsAccess', 'withSuperadminMetadata', 'withDevtoolsMetadata', 'withSuperadminRouteAccess', 'withDevtoolsRouteAccess'],
   [`${INTERNAL}entity-layout-route`]: ['createEntityLayoutRoute'],
   [`${INTERNAL}entity-list-route`]: ['createEntityListRoute'],
   [`${INTERNAL}entity-detail-route`]: ['createEntityDetailRoute'],

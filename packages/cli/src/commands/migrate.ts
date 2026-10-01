@@ -813,6 +813,27 @@ const ROOT_TEMPLATE_FILES: readonly string[] = ['next.config.mjs', 'tsconfig.jso
 
 const ROOT_PROXY_FILES = ['proxy.ts', 'middleware.ts'] as const;
 
+/**
+ * S21: the areas core's proxy template protects, and the roles it lets in. A proxy the project keeps that never names
+ * one leaves it without the 307 a signed-in user without the role should get (core still refuses the page on the
+ * server, with a client-side redirect). Same rule and message as core's `prepare` (host/proxy-areas.mjs).
+ */
+const PROXY_PROTECTED_AREAS = [
+  { path: '/superadmin', roles: 'superadmin or developer' },
+  { path: '/devtools', roles: 'developer' },
+] as const;
+export const PROXY_AREA_WARNING = 'NS_PROXY_PROTECTED_AREA_MISSING';
+
+/** The warning for a kept proxy whose source never names some protected area as a path, or null. */
+export function proxyProtectedAreaWarning(file: string, source: string): string | null {
+  const missing = PROXY_PROTECTED_AREAS.filter(area => !new RegExp(`['"\`]${area.path}(?![\\w-])`).test(source));
+  if (missing.length === 0) return null;
+  return `[${PROXY_AREA_WARNING}] ${file} does not protect ${missing.map(area => area.path).join(' or ')}. core still refuses those pages on the server, ` +
+    `but without the proxy check a signed-in user without the role gets a 200 with a client-side redirect instead of a 307. ` +
+    `Add the protected-area check of node_modules/@nextsparkjs/core/templates/proxy.ts (protectedArea / authorize): ` +
+    `${missing.map(area => `${area.path} needs ${area.roles}`).join(', ')}; no session goes to /login?callbackUrl=..., a session without the role to /dashboard?error=access_denied.`;
+}
+
 /** Whether an old root interception file needs previous-core evidence. */
 function hasUnclassifiedRootProxyFiles(hostRoot: string): boolean {
   const state = readSyncState(hostRoot);
@@ -1462,6 +1483,15 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     } catch (error) {
       blockers.push(`root ${file} holds project code that migrate cannot rewrite (${(error instanceof Error ? error.message : 'unknown shape').replace(/\.$/, '')}). Move it to src/${file} by hand with those calls updated to the *Project* forms, delete the root file, commit, and run migrate again`);
     }
+  }
+  // S21: every proxy the project keeps (an existing src/ one, or a root one that moves to src/) protects both areas
+  const keptProxies = [
+    ...['src/proxy.ts', 'src/middleware.ts'].filter(file => existsSync(join(host.root, file))).map(file => ({ file, label: file })),
+    ...rootProxyFiles.customizations.map(file => ({ file, label: appPlan ? `${file} (moving to src/${file})` : file })),
+  ];
+  for (const { file, label } of keptProxies) {
+    const warning = proxyProtectedAreaWarning(label, readFileSync(join(host.root, file), 'utf8'));
+    if (warning) proxyNotices.push(warning);
   }
   const appConversion: MigrateReport['appConversion'] = {
     root: appRoot,

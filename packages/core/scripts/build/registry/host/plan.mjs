@@ -26,7 +26,15 @@
  *   template of a public item page named after its old catch-all path (`entityRoute.absorbs`) is
  *   absorbed the same way instead of being a route of its own;
  * - `webhooks` (nextspark.config.ts `billing.webhookExtensions`) replace the core webhook routes
- *   with a composed route (`route.webhook`).
+ *   with a composed route (`route.webhook`);
+ * - every page, layout, template and default served under the URL of a core layout that declares `access` (the
+ *   /superadmin and /devtools areas), core's, a plugin's or the project's, in any route group, is composed with
+ *   that wrapper (`route.access`): it checks the session's role on the server before the segment renders (and before
+ *   its `generateMetadata` resolves), an intercepting route (`@modal/(.)superadmin/...`) by the URL it intercepts, and
+ *   a Route Handler's methods answer 401 / 403 JSON instead. A metadata file there (icon, opengraph-image, sitemap,
+ *   ...) cannot be guarded and is a warning notice (`NS_HOST_AREA_FILE_UNGUARDED`). Only
+ *   that layout itself is left out (its message wrapper checks). A layout cannot protect its pages: Next renders
+ *   every segment of a route separately, so each one checks.
  *
  * "The template replaces": a project template in another route group that collides with an entity's
  * generated dashboard routes (same URL, or another name for their dynamic segment) takes that URL over;
@@ -73,11 +81,38 @@ export const PLAN_NOTICES = Object.freeze({
   ENTITY_ROUTES_REPLACED: 'NS_HOST_ENTITY_ROUTES_REPLACED',
   ENTITY_API_OVERRIDDEN: 'NS_HOST_ENTITY_API_OVERRIDDEN',
   CORE_API_REPLACED: 'NS_HOST_CORE_API_REPLACED',
+  AREA_FILE_UNGUARDED: 'NS_HOST_AREA_FILE_UNGUARDED',
 })
 
 export const DEFAULT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js']
 
 const LAYER_RANK = { core: 0, plugin: 1, project: 2 }
+
+/** The route kinds that render a segment's content, and so check an area's access (see the module comment). */
+const ACCESS_KINDS = new Set(['page', 'layout', 'template', 'default'])
+/** Metadata files: Next serves them as Route Handlers whose output is an image or a fixed document, so no refusal fits them. */
+const METADATA_FILE_KINDS = new Set(['sitemap', 'robots', 'manifest', 'icon', 'apple-icon', 'opengraph-image', 'twitter-image'])
+
+/**
+ * The URL a route file serves, as segments: route groups and slots dropped, and an intercepting segment
+ * (`(.)x`, `(..)x`, `(..)(..)x`, `(...)x`) resolved to the path it intercepts.
+ */
+function servedUrlSegments(target) {
+  const served = []
+  for (const segment of urlSegments(target)) {
+    const markers = /^((?:\(\.{1,3}\))+)(.*)$/.exec(segment)
+    if (!markers) {
+      served.push(segment)
+      continue
+    }
+    for (const marker of markers[1].match(/\(\.{1,3}\)/g)) {
+      if (marker === '(...)') served.length = 0
+      else if (marker === '(..)') served.pop()
+    }
+    served.push(markers[2])
+  }
+  return served
+}
 
 /** Thrown with every diagnostic of a plan that cannot be generated. */
 export class HostPlanError extends Error {
@@ -370,6 +405,24 @@ export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], plug
     }
   }
   diagnostics.push(...urlConflicts(routes))
+
+  const areas = coreRoutes.filter(route => route.access).map(route => ({ target: route.target, url: urlSegments(route.target).join('/'), access: route.access }))
+  for (const [index, { access: declared, ...route }] of routes.entries()) {
+    // `access` on a core layout declares the area; on a planned route it means "compose with this wrapper".
+    const url = servedUrlSegments(route.target).join('/')
+    const area = areas.find(candidate => route.target !== candidate.target && (url === candidate.url || url.startsWith(`${candidate.url}/`)))
+    routes[index] = area && (ACCESS_KINDS.has(route.kind) || (route.kind === 'route' && area.access.handler)) ? { ...route, access: area.access } : route
+    if (area && METADATA_FILE_KINDS.has(route.kind)) {
+      notices.push({
+        code: PLAN_NOTICES.AREA_FILE_UNGUARDED,
+        target: route.target,
+        by: [route.source],
+        message:
+          `src/app/${route.target}: ${route.source} is a metadata file under /${area.url}, which Next serves without the area's role check; ` +
+          `it is public whatever the role. Keep area data out of it, or move it outside /${area.url}`,
+      })
+    }
+  }
 
   const clean = routes.map(({ layer, ...route }) => ({ ...route, origin: layer }))
   return { routes: clean.sort((a, b) => compareTargets(a.target, b.target)), diagnostics, notices }

@@ -8,6 +8,7 @@ import { getAllPluginNavItems } from '@nextsparkjs/core/lib/plugins/nav-items'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { requireAreaAccess } from './area-access'
 
 export const defaultMetadata: Metadata = {
   title: "DevTools",
@@ -62,12 +63,14 @@ export function DevLayout({ children }: DevLayoutProps) {
 }
 
 /**
- * Wraps a layout for this route group in the group's client messages. The route's
- * default is `withDevtoolsMessages(DevLayout)`; a host that resolves a project override of the
- * layout wraps that instead, so the override gets the same messages.
+ * Wraps a layout for this route group in the group's client messages, after the server-side role check
+ * (area-access): it runs before anything is rendered or sent, so a page load without the role gets a 307. The
+ * route's default is `withDevtoolsMessages(DevLayout)`; a host that resolves a project override of the
+ * layout wraps that instead, so the override gets the same messages and the same check.
  */
 export function withDevtoolsMessages(ResolvedDevLayout: ComponentType<DevLayoutProps>) {
   return async function DevLayoutWithMessages({ children }: DevLayoutProps) {
+    await requireAreaAccess('devtools')
     const messages = await getMessages()
     return (
       <NextIntlClientProvider messages={selectMessages(messages, 'devtools')}>
@@ -80,8 +83,9 @@ export function withDevtoolsMessages(ResolvedDevLayout: ComponentType<DevLayoutP
 /**
  * The layout core puts around a project's devtools layout (the generated host): core's protection is
  * always the outer layer - the dashboard providers and the DeveloperGuard, and only inside them the
- * project's layout. Shared by the message wrappers of both rendering modes (`withDevtoolsGuard` here,
- * and in `group-layouts.cc`).
+ * project's layout. The server-side check is the message wrapper's, outside this (and every page under
+ * /devtools checks again, see area-access). Shared by the message wrappers of both rendering modes
+ * (`withDevtoolsGuard` here, and in `group-layouts.cc`).
  */
 export function guardDevtoolsLayout(ProjectLayout: ComponentType<DevLayoutProps>) {
   return function GuardedDevLayout({ children }: DevLayoutProps) {

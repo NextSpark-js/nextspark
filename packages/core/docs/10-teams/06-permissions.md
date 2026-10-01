@@ -402,13 +402,13 @@ export default async function EntityPermissionLayout({
   params
 }: EntityLayoutProps) {
   const { entity } = await params
-  const headersList = await headers()
+  // A routing hint from the proxy, used only to tell the action apart
+  const pathname = (await headers()).get('x-pathname') || ''
 
-  // Get userId from middleware header
-  const userId = headersList.get('x-user-id')
-
-  // The team this session chose (forwarded by the proxy), or the user's default team
-  const teamId = userId ? await getDashboardTeamId(headersList, userId) : null
+  // The verified session's user, and the team that session chose (or the user's default team).
+  // Never from the proxy's identity headers: a project's own proxy may forward them as the client sent them.
+  const { userId, teamId } = await getDashboardPermissionContext()
+  if (!userId || !teamId) return <>{children}</>
 
   // Detect required action from pathname
   const action = detectActionFromPathname(pathname, entity)
@@ -440,8 +440,7 @@ The team context reaches server code through a cookie bound to the session that 
 
 1. **Client-side**: `TeamContext` keeps the active team in localStorage and posts it to `/api/v1/teams/switch`
 2. **API call**: `/api/v1/teams/switch` checks membership and sets the httpOnly, host-only `activeTeamId` cookie to `<session id>:<team id>`
-3. **Proxy**: on protected routes, forwards the team as `x-active-team-id` only when the cookie belongs to the verified session
-4. **Server code**: layouts check permissions in `x-active-team-id`, or in the user's default team while the session has none (`getDashboardTeamId`); server actions and `resolveTeamContext` read the cookie through `activeTeamIdForSession`
+3. **Server code**: the dashboard layouts take the user from the verified session and the team from the cookie, only when this session wrote it (`getDashboardPermissionContext`), or the user's default team while the session has none; server actions and `resolveTeamContext` read the cookie through `activeTeamIdForSession` too. Core's proxy also forwards `x-active-team-id`, but no core check trusts that header
 
 A cookie another session wrote (an earlier user of the same browser, or a session since rotated) names no team, and `TeamContext` writes the current session's team as soon as it mounts. Being host-only, each subdomain of a multi-tenant app keeps its own team. A page sends its switch requests one at a time, each after the previous one answered, so the cookie ends on the team chosen last.
 
@@ -450,9 +449,9 @@ A cookie another session wrote (an earlier user of the same browser, or a sessio
 ```typescript
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '@nextsparkjs/core/lib/teams/active-team-cookie'
 
-// Server layouts, behind the proxy
-import { getDashboardTeamId } from '@nextsparkjs/core/lib/teams/dashboard-team'
-const teamId = await getDashboardTeamId(headersList, userId)
+// Server layouts and pages: user and team from the verified session (one lookup per request)
+import { getDashboardPermissionContext } from '@nextsparkjs/core/lib/auth/request-session'
+const { userId, teamId } = await getDashboardPermissionContext()
 
 // Anywhere the session is at hand
 const teamId = activeTeamIdForSession(cookieStore.get(ACTIVE_TEAM_COOKIE)?.value, session.session.id)

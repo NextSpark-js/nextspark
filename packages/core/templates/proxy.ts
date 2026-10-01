@@ -15,8 +15,10 @@
  * 4. Protected route authentication, and the roles /superadmin and /devtools need
  * 5. User header injection for downstream use (x-user-id, x-pathname, x-active-team-id)
  *
- * IMPORTANT: The EntityPermissionLayout depends on x-user-id and x-pathname
- * headers being set here for server-side permission validation.
+ * Core's server checks (EntityPermissionLayout, the dashboard layout, the
+ * /superadmin and /devtools access checks) read the verified session
+ * themselves and use only x-pathname from here, as a routing hint; the
+ * identity headers are still stripped and re-set for project code.
  */
 import { betterFetch } from '@better-fetch/fetch'
 import { NextRequest, NextResponse } from 'next/server'

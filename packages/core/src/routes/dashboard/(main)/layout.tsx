@@ -16,7 +16,7 @@ import { serializeEntityConfig, type SerializableEntityConfig } from '@nextspark
 import { setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import type { EntityConfig, ChildEntityDefinition } from '@nextsparkjs/core/lib/entities/types'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
-import { getDashboardTeamId } from '@nextsparkjs/core/lib/teams/dashboard-team'
+import { getDashboardPermissionContext } from '@nextsparkjs/core/lib/auth/request-session'
 import { isValidPermission } from '@nextsparkjs/core/lib/permissions/init'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 // Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
@@ -65,10 +65,9 @@ async function DefaultMainDashboardLayout({
   // === PERMISSION CHECK ===
   const headersList = await headers()
 
+  // A routing hint from the proxy; who the user is and which team they act in come from the verified session
   const pathname = headersList.get('x-pathname') || ''
-  const userId = headersList.get('x-user-id')
-  // The team this session chose, or the user's default team until it has one
-  const teamId = userId ? await getDashboardTeamId(headersList, userId) : null
+  const { userId, teamId } = await getDashboardPermissionContext()
 
   if (userId && teamId && pathname) {
     const parsed = parseEntityFromPathname(pathname)

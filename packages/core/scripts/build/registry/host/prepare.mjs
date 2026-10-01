@@ -44,6 +44,7 @@ import { PluginCapabilityError, withDeclaredCapabilities } from '../discovery/pl
 import { ContractsPublishError, checkContractsPlan, preflightContractsPlan, projectContracts, publishContractsPlan } from '../contracts/index.mjs'
 import { planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
 import { webhookRoutes } from './webhooks.mjs'
+import { proxyAreaNotices } from './proxy-areas.mjs'
 import { HostPlanError, compareTargets, planHost } from './plan.mjs'
 import { DEV_DIAGNOSTIC_FILE, DEV_STATUS_FILE, devDiagnosticModule, devFailureDiagnostic, renderHost } from './render.mjs'
 import {
@@ -113,8 +114,9 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     extensions: config.extensions,
   })
   const { routes } = planned
+  const notices = [...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot)]
   const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics]
-  if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices: planned.notices ?? [], stage: 'plan' })
+  if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices, stage: 'plan' })
   const rendered = await renderHost({
     routes,
     projectRoot: config.projectRoot,
@@ -126,8 +128,8 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     cache,
     devStatus,
   })
-  if (rendered.diagnostics.length > 0) throw Object.assign(new PrepareError(rendered.diagnostics.map(describeDiagnostic)), { notices: planned.notices ?? [], routes, stage: 'emission' })
-  return { routes, manifest, appFiles: rendered.files, notices: planned.notices ?? [] }
+  if (rendered.diagnostics.length > 0) throw Object.assign(new PrepareError(rendered.diagnostics.map(describeDiagnostic)), { notices, routes, stage: 'emission' })
+  return { routes, manifest, appFiles: rendered.files, notices }
 }
 
 /**

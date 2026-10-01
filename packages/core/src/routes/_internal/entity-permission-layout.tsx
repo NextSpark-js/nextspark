@@ -8,17 +8,17 @@
  *
  * Flow:
  * 1. User navigates to /dashboard/companies/create
- * 2. The proxy forwards the session's active team, taken from the
- *    activeTeamId cookie only when this session wrote it; without one, the
- *    user's default team is checked
- * 3. This layout takes that team (getDashboardTeamId) and checks permission via checkPermission()
+ * 2. The user comes from the verified session and the team from the activeTeamId
+ *    cookie only when this session wrote it (getDashboardPermissionContext; never
+ *    from the proxy's identity headers); without one, the user's default team
+ * 3. This layout checks permission in that team via checkPermission()
  * 4. If denied, redirects to /dashboard/permission-denied
  * 5. If allowed, renders the page (children)
  */
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
-import { getDashboardTeamId } from '@nextsparkjs/core/lib/teams/dashboard-team'
+import { getDashboardPermissionContext } from '@nextsparkjs/core/lib/auth/request-session'
 import { isValidPermission } from '@nextsparkjs/core/lib/permissions/init'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 
@@ -66,17 +66,14 @@ export async function EntityPermissionLayout({
 }: EntityPermissionLayoutProps) {
   const headersList = await headers()
 
-  // Get pathname from middleware header
+  // The pathname the proxy forwards: a routing hint for the action, not an identity
   const pathname = headersList.get('x-pathname') || ''
 
-  // Get userId from middleware header (set for all authenticated routes)
-  const userId = headersList.get('x-user-id')
-
-  // The team this session chose, or the user's default team until it has one
-  const teamId = userId ? await getDashboardTeamId(headersList, userId) : null
+  // The verified session's user, and the team it chose (or the user's default team until it has one)
+  const { userId, teamId } = await getDashboardPermissionContext()
 
   // Skip validation if missing required data
-  // - No userId: middleware will redirect to login (shouldn't happen for dashboard routes)
+  // - No session: nothing to check permissions for (the proxy sends it to login; the data APIs refuse it)
   // - No teamId: the user belongs to no team, let page handle it
   if (!userId || !teamId) {
     console.log('[EntityPermissionLayout] Skipping validation - missing data:', {

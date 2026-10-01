@@ -4,7 +4,7 @@
  * GET /api/v1/devtools/blocks
  *
  * Returns the block registry with field definitions and test coverage.
- * Requires superadmin or developer user role.
+ * Requires the developer role.
  */
 
 import { NextRequest, NextResponse } from 'next/server'

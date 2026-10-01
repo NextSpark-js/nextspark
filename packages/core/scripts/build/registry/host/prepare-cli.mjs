@@ -73,8 +73,8 @@ function summary(result) {
   return `Generated src/app (${app} files) and ${registries} registries: ${result.written.length} written, ${result.deleted.length} deleted, ${result.unchanged} unchanged. Recorded in .nextspark/generation.json.`
 }
 
-/** The plan's notices (not problems), as terminal lines; the ones that move auth and permissions to the project are warnings. */
-const WARNING_NOTICES = new Set(['NS_HOST_ENTITY_API_OVERRIDDEN', 'NS_HOST_CORE_API_REPLACED'])
+/** The plan's notices (not problems), as terminal lines; the ones that move auth and permissions to the project, or leave a file outside them, are warnings. */
+const WARNING_NOTICES = new Set(['NS_HOST_ENTITY_API_OVERRIDDEN', 'NS_HOST_CORE_API_REPLACED', 'NS_HOST_AREA_FILE_UNGUARDED', 'NS_PROXY_PROTECTED_AREA_MISSING'])
 function noticeLines(result) {
   return (result.notices ?? []).map(notice => `${WARNING_NOTICES.has(notice.code) ? 'Warning' : 'Info'}: [${notice.code}] ${notice.message}`)
 }

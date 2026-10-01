@@ -136,7 +136,7 @@ test('dev shows each line it repeats from the preparation escaped, whether it su
 test('dev still shows the cause once a flood of output follows it', { skip: process.platform === 'win32' }, async () => {
   const { root, coreDir, cleanup } = await projectWithPreparation(`console.error('[NS_HOST_ROUTE_COLLISION] templates/shop/page.tsx has no default export')
 for (let i = 0; i < 5000; i++) console.log('progress ' + i)
-process.exit(1)
+process.exitCode = 1
 `, 'nextspark-registry-commands-flood-')
   try {
     const printed = await runCommand(root, () => prepareHost(coreDir, root), false)

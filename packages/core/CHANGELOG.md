@@ -164,6 +164,39 @@ Every item is detailed under Added, Changed or Removed below; `nextspark migrate
   boundary and unauthenticated dashboard requests redirect to login. The wizard
   writes it, and `nextspark migrate` writes it when a project has none.
 
+### Security
+
+- **`/superadmin` and `/devtools` check the role on the server, whatever the project's proxy does.** Before, the role check lived only
+  in the proxy and in the client guards (`SuperAdminGuard`, `DeveloperGuard`), so a project whose own `proxy.ts` lacked it (a proxy copied
+  before core's template gained the check, which `migrate` keeps as written) served those pages with a 200 to anyone, with the server-rendered
+  content in the RSC payload (superadmin docs, the API explorer's route map). Now the group layout's message wrapper and every page and
+  layout under the area (core's, a plugin's or the project's; the generated host composes each with `withSuperadminAccess` /
+  `withDevtoolsAccess`, and their `generateMetadata` with `withSuperadminMetadata` / `withDevtoolsMetadata`) read the session
+  before rendering: no session goes to `/login`, a session without the role to
+  `/dashboard?error=access_denied` (superadmin or developer for `/superadmin`, developer for `/devtools`). A legacy ISR host answers a page load
+  with a 307; a Cache Components host has already sent its prerendered shell, so it answers 200 with a client-side redirect (meta refresh, or
+  the RSC redirect) and nothing of the area in the body. Core's proxy template still refuses these requests first.
+  A Route Handler under an area (a project's or a plugin's) answers 401 / 403 JSON before its code runs (`OPTIONS` excepted), and
+  an intercepting route (`@modal/(.)superadmin/...`) is checked by the URL it intercepts. Metadata files under an area cannot be
+  guarded: `nextspark prepare` warns about each one (`NS_HOST_AREA_FILE_UNGUARDED`). Server Actions and `loading` / `error` /
+  `not-found` files are not covered and must check or stay free of area data themselves.
+  `OPTIONS` handlers under an area are forwarded unchecked (a CORS preflight carries no credentials): they must not return data.
+- **A visitor with no session cookie gets a 307 to login from `/superadmin` and `/devtools`, in Cache Components mode too.**
+  The scaffold's `next.config.mjs` (core's `templates/next.config.mjs`) adds `redirects()` for both areas, applied only when neither
+  Better Auth session cookie (`__Secure-better-auth.session_token`, `better-auth.session_token`) is present; a signed-in user
+  without the role still reaches the proxy and core's server check. Existing projects can copy the `roleGatedAreaRedirects` block.
+- **`nextspark prepare` and `nextspark migrate` warn when the project's proxy does not protect `/superadmin` or `/devtools`**
+  (`NS_PROXY_PROTECTED_AREA_MISSING`), naming each area the proxy never mentions and the check to copy from core's proxy template:
+  without it a signed-in user without the role gets a 200 with a client-side redirect instead of a 307.
+- **`/api/v1/devtools/*` requires the developer role (or a developer's API key with `admin:devtools`); superadmin no longer
+  has access**, the same rule as the `/devtools` pages and `/api/devtools/*`. `GET /api/v1/devtools/docs` now authenticates at all:
+  it answered any request before, serving the API documentation files.
+- **The dashboard's permission checks take the user from the verified session**, not from the proxy's identity headers.
+  `EntityPermissionLayout` and the `dashboard/(main)` layout read the session (`lib/auth/request-session`) and the team from the
+  `activeTeamId` cookie that session wrote; `x-user-id`, `x-user-email` and `x-active-team-id` are no longer trusted (a project's
+  own proxy may forward them as the client sent them). `x-pathname` stays a routing hint. `getDashboardTeamId(userId, chosenTeamId)`
+  replaces `getDashboardTeamId(headers, userId)`.
+
 ### Removed
 
 - **`nextspark sync:app` and every write core's postinstall made into a project (#203, removed in

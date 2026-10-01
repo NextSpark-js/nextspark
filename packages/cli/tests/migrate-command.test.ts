@@ -2383,6 +2383,11 @@ test('migrate moves a root proxy that holds project logic to src/ with the renam
     assert.deepEqual(dry.rootProxyFiles.customizations, ['proxy.ts'])
     assert.deepEqual(dry.appConversion.blockers, [])
     assert.ok(dry.warnings.some((warning: string) => /root proxy\.ts holds project code: --yes moves it to src\/proxy\.ts/.test(warning)))
+    // S21: the kept proxy protects neither role-gated area
+    const areaWarnings = dry.warnings.filter((warning: string) => warning.startsWith('[NS_PROXY_PROTECTED_AREA_MISSING]'))
+    assert.equal(areaWarnings.length, 1, dry.warnings.join('\n'))
+    assert.match(areaWarnings[0], /^\[NS_PROXY_PROTECTED_AREA_MISSING\] proxy\.ts \(moving to src\/proxy\.ts\) does not protect \/superadmin or \/devtools\./)
+    assert.match(areaWarnings[0], /\/superadmin needs superadmin or developer, \/devtools needs developer/)
 
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)

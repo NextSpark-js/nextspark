@@ -7,6 +7,7 @@
  * Supports project-root docs and core-owned route docs.
  *
  * GET /api/v1/devtools/docs?path={path}
+ * Requires the developer role, like the other devtools APIs.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -14,6 +15,12 @@ import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { existsSync } from 'fs'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import {
+  canAccessDevtoolsApi,
+  createDevtoolsAccessDeniedResponse,
+  createDevtoolsUnauthorizedResponse,
+} from '@nextsparkjs/core/lib/api/auth/devtools-auth'
 
 /**
  * Valid path patterns for documentation files
@@ -79,6 +86,16 @@ function getBasePaths(): string[] {
 }
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
+  // Authenticate request; the API-key scope is declared at the entry point,
+  // which fails closed for keys that lack it (#93).
+  const authResult = await authenticateRequest(request, { requiredScope: 'admin:devtools' })
+  if (!authResult.success) {
+    return authResult.type === 'api-key' ? createAuthFailureResponse(authResult) : createDevtoolsUnauthorizedResponse()
+  }
+  if (!canAccessDevtoolsApi(authResult)) {
+    return createDevtoolsAccessDeniedResponse()
+  }
+
   const searchParams = request.nextUrl.searchParams
   const docPath = searchParams.get('path')
 

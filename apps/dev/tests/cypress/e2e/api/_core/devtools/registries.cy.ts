@@ -9,18 +9,21 @@
  * - GET /api/v1/devtools/blocks
  * - GET /api/v1/devtools/testing
  *
- * These endpoints require superadmin or developer user role.
- * Member role users are NOT allowed regardless of team role.
+ * These endpoints require the developer role (the rule of the /devtools pages):
+ * superadmin and member users are refused with 403 regardless of team role.
+ * The positive cases sign in as the devKeyring developer (loginAsDefaultDeveloper)
+ * and call the endpoints with that session; the superadmin API key expects 403.
  */
 
 import * as allure from 'allure-cypress'
+import { loginAsDefaultDeveloper } from '../../../../src/session-helpers'
 
 describe('DevTools Registries API', {
   tags: ['@api', '@feat-devtools', '@security', '@regression']
 }, () => {
   const BASE_URL = Cypress.config('baseUrl') || 'http://localhost:5173'
 
-  // Superadmin API key for testing (same as other API tests)
+  // Superadmin API key (same as other API tests): refused here, the devtools APIs are developer-only
   const SUPERADMIN_API_KEY = 'test_api_key_for_testing_purposes_only_not_a_real_secret_key_abc123'
   const INVALID_API_KEY = 'test_invalid_key_placeholder_does_not_exist_00000'
 
@@ -52,13 +55,14 @@ describe('DevTools Registries API', {
       allure.story('Features Registry')
     })
 
-    it('DEVTOOLS_API_001: Should return features registry with valid superadmin API key', { tags: '@smoke' }, () => {
+    it('DEVTOOLS_API_001: Should return features registry with a developer session', { tags: '@smoke' }, () => {
       allure.severity('critical')
+      loginAsDefaultDeveloper()
 
       cy.request({
         method: 'GET',
         url: `${BASE_URL}${endpoint}`,
-        headers: getHeaders(SUPERADMIN_API_KEY),
+        headers: getHeaders(null),
         failOnStatusCode: false
       }).then((response) => {
         expect(response.status).to.eq(200)
@@ -122,13 +126,14 @@ describe('DevTools Registries API', {
       allure.story('Flows Registry')
     })
 
-    it('DEVTOOLS_API_004: Should return flows registry with valid superadmin API key', { tags: '@smoke' }, () => {
+    it('DEVTOOLS_API_004: Should return flows registry with a developer session', { tags: '@smoke' }, () => {
       allure.severity('critical')
+      loginAsDefaultDeveloper()
 
       cy.request({
         method: 'GET',
         url: `${BASE_URL}${endpoint}`,
-        headers: getHeaders(SUPERADMIN_API_KEY),
+        headers: getHeaders(null),
         failOnStatusCode: false
       }).then((response) => {
         expect(response.status).to.eq(200)
@@ -189,13 +194,14 @@ describe('DevTools Registries API', {
       allure.story('Blocks Registry')
     })
 
-    it('DEVTOOLS_API_007: Should return blocks registry with valid superadmin API key', { tags: '@smoke' }, () => {
+    it('DEVTOOLS_API_007: Should return blocks registry with a developer session', { tags: '@smoke' }, () => {
       allure.severity('critical')
+      loginAsDefaultDeveloper()
 
       cy.request({
         method: 'GET',
         url: `${BASE_URL}${endpoint}`,
-        headers: getHeaders(SUPERADMIN_API_KEY),
+        headers: getHeaders(null),
         failOnStatusCode: false
       }).then((response) => {
         expect(response.status).to.eq(200)
@@ -270,13 +276,14 @@ describe('DevTools Registries API', {
       allure.story('Testing Registry')
     })
 
-    it('DEVTOOLS_API_010: Should return testing/tags registry with valid superadmin API key', { tags: '@smoke' }, () => {
+    it('DEVTOOLS_API_010: Should return testing/tags registry with a developer session', { tags: '@smoke' }, () => {
       allure.severity('critical')
+      loginAsDefaultDeveloper()
 
       cy.request({
         method: 'GET',
         url: `${BASE_URL}${endpoint}`,
-        headers: getHeaders(SUPERADMIN_API_KEY),
+        headers: getHeaders(null),
         failOnStatusCode: false
       }).then((response) => {
         expect(response.status).to.eq(200)
@@ -333,6 +340,31 @@ describe('DevTools Registries API', {
   // ============================================================
   // Cross-endpoint validation
   // ============================================================
+  describe('Developer-only rule', () => {
+    beforeEach(() => {
+      allure.story('Developer-only rule')
+    })
+
+    ;['/api/v1/devtools/features', '/api/v1/devtools/flows', '/api/v1/devtools/blocks', '/api/v1/devtools/testing'].forEach((endpoint, index) => {
+      it(`DEVTOOLS_API_${String(13 + index).padStart(3, '0')}: Should return 403 for the superadmin API key on ${endpoint}`, { tags: '@security' }, () => {
+        allure.severity('critical')
+
+        cy.request({
+          method: 'GET',
+          url: `${BASE_URL}${endpoint}`,
+          headers: getHeaders(SUPERADMIN_API_KEY),
+          failOnStatusCode: false
+        }).then((response) => {
+          expect(response.status).to.eq(403)
+          expect(response.body).to.have.property('success', false)
+          expect(response.body.error).to.have.property('code', 'DEVTOOLS_ACCESS_DENIED')
+          expect(response.body.error.details.requiredRoles).to.deep.eq(['developer'])
+        })
+      })
+    })
+  })
+
+  // ============================================================
   describe('Response Format Consistency', () => {
     beforeEach(() => {
       allure.story('Response Format')
@@ -347,10 +379,11 @@ describe('DevTools Registries API', {
 
     endpoints.forEach((endpoint) => {
       it(`Should have consistent response format for ${endpoint}`, () => {
+        loginAsDefaultDeveloper()
         cy.request({
           method: 'GET',
           url: `${BASE_URL}${endpoint}`,
-          headers: getHeaders(SUPERADMIN_API_KEY),
+          headers: getHeaders(null),
           failOnStatusCode: false
         }).then((response) => {
           expect(response.status).to.eq(200)

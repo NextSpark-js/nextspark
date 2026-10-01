@@ -51,6 +51,28 @@ const applyWebpackFallbacks = (config, { isServer }) => {
   return config
 }
 
+/**
+ * A visitor with no session cookie at all is sent to login before /superadmin and
+ * /devtools render, with a 307. With Cache Components a page's prerendered shell
+ * goes out with a 200 before core's server-side role check runs, so without this
+ * the refusal would be a client-side redirect. It only looks at whether a cookie
+ * is there: a signed-in user without the role still reaches core's check (and
+ * src/proxy.ts), which decides. Better Auth names the cookie with the __Secure-
+ * prefix over HTTPS and without it over HTTP; `missing` applies only when every
+ * item is missing. Next.js adds basePath to source and destination; callbackUrl
+ * is the path inside the app, as the proxy writes it.
+ */
+const SESSION_COOKIES = ['__Secure-better-auth.session_token', 'better-auth.session_token']
+const ROLE_GATED_AREAS = ['superadmin', 'devtools']
+
+const roleGatedAreaRedirects = () => {
+  const missing = SESSION_COOKIES.map((key) => ({ type: 'cookie', key }))
+  return ROLE_GATED_AREAS.flatMap((area) => [
+    { source: `/${area}`, destination: `/login?callbackUrl=/${area}`, permanent: false, missing },
+    { source: `/${area}/:path*`, destination: `/login?callbackUrl=/${area}/:path*`, permanent: false, missing },
+  ])
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   basePath,
@@ -129,6 +151,10 @@ const nextConfig = {
   // (on 15 with --turbopack, on 16 unless given --webpack), and next-intl picks
   // its own webpack or Turbopack setup from the same variable.
   ...(process.env.TURBOPACK ? {} : { webpack: applyWebpackFallbacks }),
+  // Add the project's own redirects after these.
+  async redirects() {
+    return [...roleGatedAreaRedirects()]
+  },
   async headers() {
     const isProduction = process.env.NODE_ENV === 'production';
 

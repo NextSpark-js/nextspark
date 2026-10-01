@@ -191,7 +191,7 @@ A production preparation never emits these files or the composition: zero bytes 
 
 ## Composition, per-entity routes, API namespaces (stage 4)
 
-A facade forwards one module. Four things are not that, and the host writes them as **composed facades**
+A facade forwards one module. Five things are not that, and the host writes them as **composed facades**
 (`composed-facade` grammar, `static-imports.mjs`): the facade grammar plus a fixed `.css` import and at most one
 `export default wrapper(...)` / any number of `export const NAME = wrapper(...)`, where the callee is one of an explicit
 allowlist of core composition wrappers (`CORE_COMPOSITION_WRAPPERS`: each imported from the exact `@nextsparkjs/core/routes/_internal/...`
@@ -215,6 +215,17 @@ spread and no expression. A host with another core (the conformance fixture) pas
   every client component a route's server graph reaches ships to the browser even if never rendered, so forwarding from
   core's layout would put its default navbar on every page of an override (core's default layouts live in
   `_internal/default-{auth,public}-layout`).
+- **Role-gated areas** `/superadmin`, `/devtools`: every page, layout, template and default served under the area's URL (core's,
+  a plugin's or the project's, in any route group) is composed with `withSuperadminAccess` / `withDevtoolsAccess`
+  (`routes/_internal/area-access`), which checks the session's role on the server before the segment renders, and its
+  `generateMetadata` with `withSuperadminMetadata` / `withDevtoolsMetadata` (metadata resolves apart too); a Route Handler's
+  methods but `OPTIONS` with `withSuperadminRouteAccess` / `withDevtoolsRouteAccess` (401 / 403 JSON; `OPTIONS` is forwarded
+  unchecked, so it must not return data). An intercepting route
+  counts by the URL it intercepts (`(.)`, `(..)`, `(...)` resolved). A metadata file there (`icon`, `opengraph-image`, `sitemap`, ...)
+  cannot be guarded: it stays a plain facade and is a warning notice (`NS_HOST_AREA_FILE_UNGUARDED`). The area's own
+  layout is left out: its message wrapper checks. A layout cannot protect its pages on its own (Next renders every segment of a
+  route separately), so the check does not depend on the project's proxy. The area layout declares it as `access: { wrapper, metadata, handler, specifier }`
+  in the core route manifest (`ACCESS_ROUTES`); a Cache Components variant keeps the access of the entry it replaces.
 - **One route per entity** (`entity-routes.mjs`). For every entity of the project and of enabled plugins, the host writes
   `dashboard/(main)/<entity>/{layout,error,loading,page,create/page,[id]/page,[id]/edit/page}` and, for builder entities with
   `access.basePath`, the public item route (`(public)<basePath>/[...slug]`, `[slug]` at `/`) and archive route; a public

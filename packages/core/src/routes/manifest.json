@@ -664,6 +664,12 @@
     "compose": {
       "wrapper": "withDevtoolsGuard",
       "specifier": "@nextsparkjs/core/routes/_internal/devtools-layout"
+    },
+    "access": {
+      "wrapper": "withDevtoolsAccess",
+      "metadata": "withDevtoolsMetadata",
+      "handler": "withDevtoolsRouteAccess",
+      "specifier": "@nextsparkjs/core/routes/_internal/area-access"
     }
   },
   {
@@ -727,6 +733,12 @@
     "compose": {
       "wrapper": "withSuperadminGuard",
       "specifier": "@nextsparkjs/core/routes/_internal/superadmin-layout"
+    },
+    "access": {
+      "wrapper": "withSuperadminAccess",
+      "metadata": "withSuperadminMetadata",
+      "handler": "withSuperadminRouteAccess",
+      "specifier": "@nextsparkjs/core/routes/_internal/area-access"
     }
   },
   {

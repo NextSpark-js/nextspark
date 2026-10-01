@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { DevLayout, defaultMetadata } from '../_internal/devtools-layout'
-import { withDevtoolsMessages } from '../_internal/group-layouts.cc'
+import { withDevtoolsAreaMessages } from '../_internal/devtools-layout.cc'
 
 export const metadata: Metadata = defaultMetadata
 
-export default withDevtoolsMessages(DevLayout)
+export default withDevtoolsAreaMessages(DevLayout)

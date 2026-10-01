@@ -5,7 +5,8 @@
  *
  * - the manifest is what scripts/build/routes-manifest.mjs writes from the files,
  *   in the shape of the host-conformance fixture's CORE_ROUTES (a layout may also
- *   carry `compose`, the wrapper a project override of it is composed with);
+ *   carry `compose`, the wrapper a project override of it is composed with, and the layout of a role-gated
+ *   area `access`, the wrapper every page and layout under it is composed with);
  * - it lists exactly the route files under src/routes, less the routes the generated host
  *   writes itself (per-entity routes) and the runtime API dispatchers (retired); apps/dev no
  *   longer commits an app tree: its src/app is generated from this manifest;
@@ -36,7 +37,7 @@ const { loadTypeScriptFor } = await import(path.join(CORE, 'scripts/build/regist
 const STATIC_IMPORTS = await import(path.join(CORE, 'scripts/build/registry/host/static-imports.mjs'))
 const { CORE_ROUTES: FIXTURE_ROUTES } = await import(path.join(CORE, 'tests/fixtures/host-conformance/fake-core/routes.mjs'))
 
-type Entry = { kind: string; target: string; specifier: string; compose?: { wrapper: string; specifier: string } }
+type Entry = { kind: string; target: string; specifier: string; compose?: { wrapper: string; specifier: string }; access?: { wrapper: string; metadata?: string; handler?: string; specifier: string } }
 const readJson = (file: string) => JSON.parse(fs.readFileSync(file, 'utf8'))
 const manifest: Entry[] = readJson(path.join(ROUTES, 'manifest.json'))
 const variants: Record<string, Entry[]> = readJson(path.join(ROUTES, 'variants.json'))
@@ -64,11 +65,11 @@ test('manifest.json and variants.json are what routes-manifest.mjs writes from s
   assert.deepEqual(unlistedRouteLikeFiles(), [], 'every .ts/.tsx under src/routes (outside _ folders) is a manifest entry or a variant')
 })
 
-test('entries have the shape of the conformance fixture: kind, target, specifier (and compose, on wrapped layouts)', () => {
+test('entries have the shape of the conformance fixture: kind, target, specifier (and compose, on wrapped layouts, and access, on role-gated areas)', () => {
   const shape = Object.keys(FIXTURE_ROUTES[0]).sort()
   assert.deepEqual(shape, ['kind', 'specifier', 'target'])
   for (const entry of [...manifest, ...Object.values(variants).flat()]) {
-    assert.deepEqual(Object.keys(entry).filter(key => key !== 'compose').sort(), shape, JSON.stringify(entry))
+    assert.deepEqual(Object.keys(entry).filter(key => key !== 'compose' && key !== 'access').sort(), shape, JSON.stringify(entry))
     assert.ok(ROUTE_KINDS.includes(entry.kind), `${entry.target}: unknown kind ${entry.kind}`)
     assert.match(entry.specifier, /^@nextsparkjs\/core\/routes\//)
     sourceOf(entry.specifier)
@@ -333,6 +334,47 @@ test('each per-entity route kind has a module of its own, so a route imports onl
 })
 
 /**
+ * The role check of /superadmin and /devtools does not depend on the project's proxy (#203, S21): the group message
+ * wrapper of both rendering modes checks the session on the server before the layout renders, and every page and layout
+ * under the area is composed with an access wrapper (a layout cannot protect its pages: Next renders each segment
+ * separately).
+ */
+test('the role-gated areas check the role on the server in the group wrapper of both modes and in every segment under them', () => {
+  const areas = [
+    { target: 'superadmin/layout.tsx', area: 'superadmin', access: 'withSuperadminAccess', metadata: 'withSuperadminMetadata', handler: 'withSuperadminRouteAccess', messages: 'withSuperadminMessages', ccMessages: 'withSuperadminAreaMessages', guard: 'withSuperadminGuard' },
+    { target: 'devtools/layout.tsx', area: 'devtools', access: 'withDevtoolsAccess', metadata: 'withDevtoolsMetadata', handler: 'withDevtoolsRouteAccess', messages: 'withDevtoolsMessages', ccMessages: 'withDevtoolsAreaMessages', guard: 'withDevtoolsGuard' },
+  ]
+  const accessModule = `${ROUTES_SUBPATH}/_internal/area-access`
+  const accessSource = fs.readFileSync(sourceOf(accessModule), 'utf8')
+  const shared = fs.readFileSync(sourceOf(`${ROUTES_SUBPATH}/_internal/group-layouts.cc`), 'utf8')
+  for (const { target, area, access, metadata, handler, messages, ccMessages, guard } of areas) {
+    const entry = manifest.find(candidate => candidate.target === target)!
+    const variant = variants.cacheComponents.find(candidate => candidate.target === target)!
+    for (const declared of [entry, variant]) assert.deepEqual(declared.access, { wrapper: access, metadata, handler, specifier: accessModule }, `${declared.specifier} declares ${access}`)
+    for (const wrapper of [access, metadata, handler]) {
+      assert.ok(accessSource.includes(`export function ${wrapper}<`), `${accessModule} exports ${wrapper}`)
+      assert.ok(STATIC_IMPORTS.CORE_COMPOSITION_WRAPPERS[accessModule].includes(wrapper), `${wrapper} is on the facade grammar's allowlist`)
+    }
+    // ISR: the wrapper awaits the check before anything else, so a page load without the role gets a 307
+    const isr = fs.readFileSync(sourceOf(entry.compose!.specifier), 'utf8')
+    const body = isr.slice(isr.indexOf(`export function ${messages}(`))
+    assert.match(body, new RegExp(`async function \\w+\\([^)]*\\) \\{\\s*await requireAreaAccess\\('${area}'\\)`), `${messages} (ISR) checks '${area}' first`)
+    // Cache Components: the area's own module puts the check (in its own Suspense boundary) inside the messages, for
+    // core's default layout and for a composed override alike
+    const cc = fs.readFileSync(sourceOf(variant.compose!.specifier), 'utf8')
+    assert.ok(cc.includes(`export const ${ccMessages} = (Layout: ComponentType<`) && cc.includes(`=> ${messages}(withAreaGate('${area}', Layout))`), `${ccMessages} checks '${area}'`)
+    assert.ok(cc.includes(`export const ${guard} = (ProjectLayout: ComponentType<`) && cc.includes(`=> ${ccMessages}(`), `${guard} goes through ${ccMessages}`)
+    assert.match(fs.readFileSync(sourceOf(variant.specifier), 'utf8'), new RegExp(`export default ${ccMessages}\\(`), `core's ${target} variant renders through ${ccMessages}`)
+  }
+  assert.match(accessSource, /async function AreaGate\([^)]*\) \{\s*await requireAreaAccess\(area\)/)
+  assert.match(accessSource, /<Suspense fallback=\{null\}>\s*<AreaGate area=\{area\}>/)
+  // The message module public and auth layouts import reaches none of it
+  assert.doesNotMatch(shared, /from '\.\/(area-access|superadmin-layout|devtools-layout)/)
+  // No other layout declares access
+  assert.deepEqual(manifest.filter(candidate => candidate.access).map(candidate => candidate.target).sort(), areas.map(item => item.target).sort())
+})
+
+/**
  * Core's protections are always the outer layer of a composition: a composed override of a protected layout gets core's
  * guard around the project's layout (and only inside it the project's layout), never the messages wrapper alone.
  */
@@ -349,7 +391,9 @@ test('a group layout with a role guard is composed only through a wrapper that p
       assert.equal(composed.compose?.wrapper, wrapper, `${target} (${composed.specifier}) is composed with ${wrapper}`)
       const source = fs.readFileSync(sourceOf(composed.compose!.specifier), 'utf8')
       assert.ok(source.includes(`export function ${wrapper}(`) || source.includes(`export const ${wrapper} =`), `${wrapper} is exported by ${composed.compose!.specifier}`)
-      assert.ok(source.includes(`${messages}(${helper}(ProjectLayout))`), `${wrapper}: messages, then ${helper} around the project layout`)
+      // The Cache Components module puts the server-side role check between the messages and the helper
+      const viaMessages = composed === entry ? messages : messages.replace(/Messages$/, 'AreaMessages')
+      assert.ok(source.includes(`${viaMessages}(${helper}(ProjectLayout))`), `${wrapper}: messages, then ${helper} around the project layout`)
       assert.ok(STATIC_IMPORTS.CORE_COMPOSITION_WRAPPERS[composed.compose!.specifier].includes(wrapper), `${wrapper} is on the facade grammar's allowlist for ${composed.compose!.specifier}`)
     }
     // The helper the wrapper uses is the one that puts the guard around the project layout, whatever the mode

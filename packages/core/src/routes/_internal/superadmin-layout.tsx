@@ -10,6 +10,7 @@ import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layou
 import { Loader2 } from 'lucide-react'
 import { Metadata } from "next";
 import { getAllPluginNavItems } from '@nextsparkjs/core/lib/plugins/nav-items'
+import { requireAreaAccess } from './area-access'
 
 export const defaultMetadata: Metadata = {
   title: "Super Admin | Super Admin Panel",
@@ -83,12 +84,14 @@ export function SuperadminLayout({ children }: SuperadminLayoutProps) {
 }
 
 /**
- * Wraps a layout for this route group in the group's client messages. The route's
- * default is `withSuperadminMessages(SuperadminLayout)`; a host that resolves a project override of the
- * layout wraps that instead, so the override gets the same messages.
+ * Wraps a layout for this route group in the group's client messages, after the server-side role check
+ * (area-access): it runs before anything is rendered or sent, so a page load without the role gets a 307. The
+ * route's default is `withSuperadminMessages(SuperadminLayout)`; a host that resolves a project override of the
+ * layout wraps that instead, so the override gets the same messages and the same check.
  */
 export function withSuperadminMessages(ResolvedSuperadminLayout: ComponentType<SuperadminLayoutProps>) {
   return async function SuperadminLayoutWithMessages({ children }: SuperadminLayoutProps) {
+    await requireAreaAccess('superadmin')
     const messages = await getMessages()
     const configuredNamespaces = getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED })
     return (
@@ -102,8 +105,10 @@ export function withSuperadminMessages(ResolvedSuperadminLayout: ComponentType<S
 /**
  * The layout core puts around a project's superadmin layout (the generated host): core's protection is
  * always the outer layer - the dashboard providers and the SuperAdminGuard, and only inside them the
- * project's layout - so an override can replace the chrome but never the role check. Shared by the
- * message wrappers of both rendering modes (`withSuperadminGuard` here, and in `group-layouts.cc`).
+ * project's layout - so an override can replace the chrome but never the role check. The server-side
+ * check is the message wrapper's, outside this (and every page under /superadmin checks again, see
+ * area-access). Shared by the message wrappers of both rendering modes (`withSuperadminGuard` here, and
+ * in `group-layouts.cc`).
  */
 export function guardSuperadminLayout(ProjectLayout: ComponentType<SuperadminLayoutProps>) {
   return function GuardedSuperadminLayout({ children }: SuperadminLayoutProps) {

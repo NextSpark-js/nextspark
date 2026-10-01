@@ -4,7 +4,7 @@
  * GET /api/v1/devtools/flows
  *
  * Returns the flow registry with test coverage information.
- * Requires superadmin or developer user role.
+ * Requires the developer role.
  */
 
 import { NextRequest, NextResponse } from 'next/server'

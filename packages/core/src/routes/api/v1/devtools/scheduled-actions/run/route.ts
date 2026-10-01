@@ -4,7 +4,7 @@
  * POST /api/v1/devtools/scheduled-actions/run
  *
  * Executes a pending action immediately.
- * Requires superadmin or developer user role.
+ * Requires the developer role.
  */
 
 import { NextRequest, NextResponse } from 'next/server'

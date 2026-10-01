@@ -2,16 +2,14 @@
  * Dashboard Team
  *
  * The team the dashboard layouts check permissions in: the one this session
- * chose, which the proxy forwards as x-active-team-id from a cookie the session
- * wrote. A session that has not chosen one yet (it just signed in, or carries a
- * cookie from an earlier release) is checked in the user's default team rather
- * than not checked at all, until TeamProvider writes its choice.
+ * chose (the activeTeamId cookie the session wrote, read from the verified
+ * session by lib/auth/request-session, never from a proxy header). A session
+ * that has not chosen one yet (it just signed in, or carries a cookie from an
+ * earlier release) is checked in the user's default team rather than not
+ * checked at all, until TeamProvider writes its choice.
  */
 import { cache } from 'react'
 import { queryOne } from '../db'
-
-/** The header the proxy forwards the session's active team in. */
-export const ACTIVE_TEAM_HEADER = 'x-active-team-id'
 
 /**
  * The team a user joined first, among teams that still exist: the default that
@@ -62,6 +60,6 @@ const findDashboardTeamId = cache(async (userId: string, chosenTeamId: string | 
  * permission check for a user in no team, so an error read as "no team" would
  * let the request through unchecked.
  */
-export function getDashboardTeamId(headers: Pick<Headers, 'get'>, userId: string): Promise<string | null> {
-  return findDashboardTeamId(userId, headers.get(ACTIVE_TEAM_HEADER))
+export function getDashboardTeamId(userId: string, chosenTeamId: string | null): Promise<string | null> {
+  return findDashboardTeamId(userId, chosenTeamId)
 }

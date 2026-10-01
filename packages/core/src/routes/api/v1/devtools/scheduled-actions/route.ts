@@ -4,7 +4,7 @@
  * GET /api/v1/devtools/scheduled-actions
  *
  * Returns scheduled actions with filtering and pagination.
- * Requires superadmin or developer user role.
+ * Requires the developer role.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -128,7 +128,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
  * POST /api/v1/devtools/scheduled-actions
  *
  * Retry a failed action by creating a new action with the same payload.
- * Requires superadmin or developer user role.
+ * Requires the developer role.
  *
  * Body:
  * {
