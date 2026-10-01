@@ -1,6 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
+import { spawnSync } from 'node:child_process'
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { mergeWorkspaceYaml } from '../src/wizard/generators/index.js'
 import { addPackageEntries, setPackageEntries } from '../src/wizard/generators/workspace-yaml.js'
 
 /** How many times the file declares the key. Two is a file pnpm refuses. */
@@ -104,3 +110,35 @@ test('setting entries replaces a multi-line flow sequence whole', () => {
   assert.doesNotMatch(out, /\[/)
   assert.match(out, /allowBuilds:/)
 })
+
+test('a flat project keeps a packages key pnpm accepts: `packages: []`, never a bare `packages:`', () => {
+  const out = setPackageEntries(WITH_ALLOW_BUILDS, [])
+  assert.match(out, /^packages: \[\]$/m)
+  assert.doesNotMatch(out, /^packages:\s*$/m)
+  assert.equal(packageKeys(out), 1)
+  assert.match(out, /allowBuilds:/)
+  assert.equal(setPackageEntries('', []), 'packages: []\n')
+})
+
+// The real check: the file mergeWorkspaceYaml leaves behind must install. pnpm 9 and 12 are the two ends that
+// matter (CI pins 9; users run whatever is current). A version that is not cached on this machine is skipped.
+for (const version of ['9.0.0', '12.4.2']) {
+  const bin = join(homedir(), 'Library/pnpm/.tools/pnpm', version, 'bin/pnpm')
+  const cached = join(homedir(), '.cache/node/corepack/v1/pnpm', version, 'bin/pnpm.mjs')
+  const pnpm = [bin, cached].find(existsSync)
+
+  test(`pnpm ${version} installs a flat project whose pnpm-workspace.yaml was merged`, { skip: !pnpm }, async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'workspace-yaml-'))
+    try {
+      writeFileSync(join(dir, 'package.json'), '{"name":"flat","version":"1.0.0"}')
+      writeFileSync(join(dir, 'pnpm-workspace.yaml'), WITH_ALLOW_BUILDS)
+      const template = join(dir, 'template.yaml')
+      writeFileSync(template, 'packages: []\n')
+      await mergeWorkspaceYaml(template, join(dir, 'pnpm-workspace.yaml'))
+      const result = spawnSync(pnpm!.endsWith('.mjs') ? process.execPath : pnpm!, [...(pnpm!.endsWith('.mjs') ? [pnpm!] : []), 'install', '--ignore-scripts'], { cwd: dir, encoding: 'utf8', env: { ...process.env, COREPACK_ENABLE_STRICT: '0' } })
+      assert.equal(result.status, 0, result.stdout + result.stderr)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+}

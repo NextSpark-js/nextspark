@@ -132,6 +132,8 @@ export function readPackageEntries(content: string): string[] {
 }
 
 function renderBlock(entries: string[]): string[] {
+  // A bare `packages:` is null: pnpm rejects it ("packages field missing or empty")
+  if (entries.length === 0) return ['packages: []']
   return ['packages:', ...entries.map(entry => `  - '${entry}'`)]
 }
 
