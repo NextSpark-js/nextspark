@@ -8,7 +8,7 @@ import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensi
 import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
 import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
 import { getNextMajorVersion } from '../utils/next-bundler.js';
-import { COMPAT_NOTE, addCompatRewrites, applyContractsPackage, catalogVersion, checkNextRange, compatRewrites, countBlockThumbnails, inAiWorkflowDirectory, isBlockConfig, removeBlockThumbnails, planContractsPackage, updateNextRange, type CompatRewrite, type ContractsPlan, type NextRangeCheck } from '../utils/migrate-extras.js';
+import { COMPAT_NOTE, addCompatRewrites, applyContractsPackage, catalogVersion, checkNextRange, compatRewrites, coreExportsSpecifier, countBlockThumbnails, inAiWorkflowDirectory, isBlockConfig, memberPeerUpdates, removeBlockThumbnails, planContractsPackage, updateNextRange, updatePeerRanges, type CompatRewrite, type ContractsPlan, type NextRangeCheck, type PeerNote, type PeerUpdate } from '../utils/migrate-extras.js';
 import { pathToFileURL } from 'node:url';
 import { adaptProxySource, planProxyFile, type ProxyFileName } from '../utils/proxy-file.js';
 import { contentHash, readSyncState } from '../utils/sync-state.js';
@@ -99,6 +99,8 @@ interface MigrateReport {
   collisions: {
     reserved: { path: string; reason: string }[];
     files: { path: string; identical: boolean }[];
+    /** L3: theme documents that move under another name because the project has a different file at their place. */
+    renamed: { from: string; to: string }[];
   };
   untracked: string[];
   siblingThemeReferences: { path: string; occurrences: number }[];
@@ -107,6 +109,10 @@ interface MigrateReport {
   /** Old API URLs in sibling workspaces (mobile/, packages/*, ...): reported, not rewritten. */
   siblingApiUrlReferences: { path: string; occurrences: number }[];
   nextRange: NextRangeCheck;
+  /** L8: peer ranges of the other workspace members that the generated host would not satisfy (--yes updates them). */
+  memberPeers: { path: string; updates: PeerUpdate[]; /** Ranges that do not accept the target but reach higher: reported, never lowered. */ kept: PeerNote[] }[];
+  /** L8: a copy of next / react / react-dom installed under a workspace member that differs from the host's. */
+  duplicateCopies: { member: string; name: string; version: string; host: string }[];
   /** Old references inside AI-workflow directories: listed, never rewritten. */
   aiWorkflowReferences: { path: string; occurrences: number }[];
   contractsPackage: { needed: boolean; path: string; mobile: string | null; skipped: string | null; /** False when the directory already exists (without a package.json): rollback then removes only the files migrate writes. */ createsDirectory: boolean };
@@ -1077,7 +1083,7 @@ function toolingReferences(repositoryRoot: string): ToolingReference[] {
   return references.sort((left, right) => left.path.localeCompare(right.path) || left.line - right.line);
 }
 
-function collisions(hostRoot: string, themeDirectory: string | null): MigrateReport['collisions'] {
+function collisions(hostRoot: string, themeDirectory: string | null): Omit<MigrateReport['collisions'], 'renamed'> {
   if (!themeDirectory) return { reserved: [], files: [] };
   const reserved: { path: string; reason: string }[] = [];
   const fileCollisions: { path: string; identical: boolean }[] = [];
@@ -1248,6 +1254,28 @@ function coreScripts(hostRoot: string, coreTemplates: string | null): MigrateRep
   return { renamed: [...new Set(renamed)].sort(), warnings: [...new Set(warnings)].sort() };
 }
 
+const FRAMEWORK_PACKAGES = ['next', 'react', 'react-dom'] as const;
+
+function installedVersion(directory: string, name: string): string | null {
+  const version = readJson(join(directory, 'node_modules', name, 'package.json'))?.version;
+  return typeof version === 'string' ? version : null;
+}
+
+/** L8: members that installed their own next / react / react-dom next to the host's (two copies break types and context). */
+function duplicateFrameworkCopies(repository: string, hostRoot: string, manifests: { file: string }[]): MigrateReport['duplicateCopies'] {
+  const copies: MigrateReport['duplicateCopies'] = [];
+  for (const { file } of manifests) {
+    const member = dirname(file);
+    if (member === hostRoot) continue;
+    for (const name of FRAMEWORK_PACKAGES) {
+      const own = installedVersion(member, name);
+      const host = installedVersion(hostRoot, name);
+      if (own && host && own !== host) copies.push({ member: pathFrom(repository, member), name, version: own, host });
+    }
+  }
+  return copies;
+}
+
 async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppConversionPlan | null }> {
   const repository = repositoryRoot(cwd);
   const host = resolveHostRoot(repository, cwd);
@@ -1314,6 +1342,27 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
       blockers.push(`${pathFrom(host.root, link)}: it is a symbolic link, which migrate cannot move or reproduce faithfully; replace it with a real file or directory (or import the target from where it lives) and run migrate again`);
     }
   }
+  // L3: a moved file that lands on a different file already in the project would stop --yes after the report said all was well
+  for (const collision of movePlan?.collisions ?? []) {
+    const from = pathFrom(host.root, collision.source);
+    const to = pathFrom(host.root, collision.destination);
+    blockers.push(`${from} would move to ${to}, where a different file already is. Rename one of them (for example  git mv ${from} ${from.replace(/(\.[^./]+)?$/, '-theme$1')}  keeps the theme's copy as a project file under a name that does not collide) or merge them, commit, and run migrate again`);
+  }
+  // L11: a file converted into an override or moved keeps its imports of core, which the installed core may no longer export
+  if (templates) {
+    const converted = [
+      ...(appPlan && appRoot ? appPlan.files.filter(entry => entry.fate.kind === 'override' || entry.fate.kind === 'project').map(entry => ({ display: `${appRoot}/${entry.path}`, absolute: join(host.root, appRoot, entry.path) })) : []),
+      // the root proxy that moves to src/ keeps its imports of core too
+      ...rootProxyFiles.customizations.map(file => ({ display: file, absolute: join(host.root, file) })),
+    ];
+    for (const file of converted) {
+      if (!/\.(?:[cm]?[jt]sx?)$/.test(file.absolute) || !existsSync(file.absolute)) continue;
+      const missing = importReferences(readFileSync(file.absolute, 'utf8')).filter(reference => /^@nextsparkjs\/core(?:\/|$)/.test(reference.target) && coreExportsSpecifier(dirname(templates), reference.target) === false);
+      for (const reference of missing) {
+        blockers.push(`${file.display}:${reference.line}: imports ${reference.target}, which the installed @nextsparkjs/core does not export (removed or renamed since the core this file was copied from). Replace the import (see the upgrade notes of the release that removed it) in the file, commit, and run migrate again`);
+      }
+    }
+  }
   const configFile = join(host.root, 'nextspark.config.ts');
   if (appPlan && appPlan.webhookExtensions.length > 0 && existsSync(configFile)) {
     const declared = declareWebhookExtensions(readFileSync(configFile, 'utf8'), appPlan.webhookExtensions);
@@ -1336,6 +1385,14 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
   // F11: the Next.js range the generated host needs
   const workspaceYamls = [join(host.root, 'pnpm-workspace.yaml'), join(repository, 'pnpm-workspace.yaml')].filter(file => existsSync(file)).map(file => readFileSync(file, 'utf8'));
   const nextRange = checkNextRange(hostPackage, (catalog, dependency) => workspaceYamls.map(yaml => catalogVersion(yaml, catalog, dependency)).find(version => version !== null) ?? null);
+  const hostFramework = Object.fromEntries(['react', 'react-dom'].map(name => [name, [hostPackage?.dependencies, hostPackage?.devDependencies].map(table => (table as Record<string, unknown> | undefined)?.[name]).find((value): value is string => typeof value === 'string')]));
+  const memberPeers = packageManifests
+    .filter(entry => dirname(entry.file) !== host.root)
+    .flatMap(entry => {
+      const { updates, kept } = memberPeerUpdates(entry.pkg, hostFramework);
+      return updates.length > 0 || kept.length > 0 ? [{ path: pathFrom(repository, entry.file), updates, kept }] : [];
+    });
+  const duplicateCopies = duplicateFrameworkCopies(repository, host.root, packageManifests);
   const notices: string[] = [];
   for (const member of nextRange.members.filter(entry => entry.action === 'check')) {
     notices.push(`${member.name} is declared as "${member.value}" in ${pathFrom(repository, join(host.root, 'package.json'))}: ${member.note}. Migrate does not change it.`);
@@ -1345,6 +1402,25 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
   const contractsPlan = contracts.plan;
   if (contracts.blocker) blockers.push(contracts.blocker);
   if (contracts.skipped) notices.push(contracts.skipped);
+  const proxyNotices: string[] = [];
+  // L5: with src/app in place Next loads the proxy from src/ only, but Turbopack still compiles a root file whose imports are gone
+  for (const file of rootProxyFiles.customizations) {
+    if (!appPlan) {
+      proxyNotices.push(`root ${file} holds project code and is left where it is: there is no app tree to convert, so migrate does not touch it. Make sure it only imports APIs the installed core still exports.`);
+      continue;
+    }
+    const occupied = [...['proxy.ts', 'middleware.ts'].map(name => join('src', name)).filter(name => existsSync(join(host.root, name))), ...(file === rootProxyFiles.customizations[0] ? [] : [`src/${rootProxyFiles.customizations[0]}`])];
+    if (occupied.length > 0) {
+      blockers.push(`root ${file} holds project code and cannot move to src/${file}: Next loads only one proxy file and ${occupied.join(', ')} is taken (it exists, or is where the other root file goes). Merge ${file} into ${occupied[0]} by hand, delete the root file, commit, and run migrate again`);
+      continue;
+    }
+    try {
+      rewriteRemovedMiddlewareApi(readFileSync(join(host.root, file), 'utf8'), join(host.root, file), host.root);
+      proxyNotices.push(`root ${file} holds project code: --yes moves it to src/${file} (where Next loads it next to src/app) with the renamed core middleware APIs (hasThemeMiddleware, executeThemeMiddleware, getThemeAppConfig) rewritten to their *Project* forms. Its logic is kept as written. It REPLACES core's current proxy template (migrate does not write src/${file} from it), so after migrating compare it with node_modules/@nextsparkjs/core/templates/proxy.ts for what the template gained since your copy: docs access control, the session hint cookie, the active-team header, protected-area checks.`);
+    } catch (error) {
+      blockers.push(`root ${file} holds project code that migrate cannot rewrite (${(error instanceof Error ? error.message : 'unknown shape').replace(/\.$/, '')}). Move it to src/${file} by hand with those calls updated to the *Project* forms, delete the root file, commit, and run migrate again`);
+    }
+  }
   const appConversion: MigrateReport['appConversion'] = {
     root: appRoot,
     removed: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'remove' ? [{ path: file.path, evidence: file.fate.evidence }] : []),
@@ -1374,15 +1450,13 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
   if (!gitSucceeds(repository, ['diff', '--quiet']) || !gitSucceeds(repository, ['diff', '--cached', '--quiet']) || untracked.length > 0) warnings.push('Git working tree is dirty; report mode does not modify it.');
   if (!templates) warnings.push('Installed @nextsparkjs/core templates were not found; template comparisons are unavailable.');
   if (!selectedTheme.name) warnings.push('No active theme was found in NEXT_PUBLIC_ACTIVE_THEME or .env.example.');
-  if (appConversion.blockers.length > 0) warnings.push(`BLOCKED: migration will not write anything until ${appConversion.blockers.length} app file(s) are placed by hand (see "App tree conversion").`);
+  if (appConversion.blockers.length > 0) warnings.push(`BLOCKED: migration will not write anything until ${appConversion.blockers.length} blocker(s) are fixed by hand (see "App tree conversion").`);
   if (previousEvidence && !previousLookup.templates) {
     warnings.push(previousLookup.networkFailure
       ? `Could not fetch @nextsparkjs/core@${previousEvidence.version} (${previousLookup.unavailableReason}) to classify old generated files; that network step was skipped and unmatched files remain customizations. Rerun \`nextspark migrate\` with network access before applying anything (with --yes, roll back first with the commands printed in the move plan: files already moved can no longer be classified). The wait is ${previousCoreNetworkTimeoutMs() / 1000}s; NEXTSPARK_MIGRATE_NETWORK_TIMEOUT_MS overrides it.`
       : `Could not use @nextsparkjs/core@${previousEvidence.version} (${previousLookup.unavailableReason}) to classify old generated files; unmatched files remain customizations.`);
   }
-  for (const file of rootProxyFiles.customizations) {
-    warnings.push(`WARNING: root ${file} was kept but Next loads src/proxy.ts; it will not run. Move its logic into config/hooks/proxy.ts.`);
-  }
+  warnings.push(...proxyNotices);
   if (envExample.action === 'conflict') warnings.push(`${envExample.path} differs from the root .env.example and will not be merged.`);
   warnings.push(...notices);
   warnings.push(...configPlugins.warnings);
@@ -1406,12 +1480,14 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     rootTemplates: compareRoot(host.root, templates),
     imports,
     toolingReferences: toolingReferences(repository),
-    collisions: collisions(host.root, themeDirectory),
+    collisions: { ...collisions(host.root, themeDirectory), renamed: movePlan?.renamed ?? [] },
     untracked,
     siblingThemeReferences: siblingReferences(repository, host.root, selectedTheme.name),
     compatRewrites: { entries: compatEntries, file: nextConfigFile ? pathFrom(repository, nextConfigFile) : null, note: COMPAT_NOTE },
     siblingApiUrlReferences: siblingMatches(repository, host.root, /\/api\/v1\/(?:theme|plugin)\//g),
     nextRange,
+    memberPeers,
+    duplicateCopies,
     aiWorkflowReferences: aiWorkflowReferences(repository, selectedTheme.name),
     contractsPackage: { needed: contractsPlan !== null, path: pathFrom(repository, join(repository, 'packages', 'contracts')), mobile: contractsPlan?.mobile ? pathFrom(repository, contractsPlan.mobile) : null, skipped: contracts.skipped, createsDirectory: contractsPlan !== null && !existsSync(contractsPlan.contractsDirectory) },
     blockThumbnails: hostFiles.filter(file => isBlockConfig(file) && !inAiWorkflowDirectory(repository, file)).flatMap(file => {
@@ -1500,6 +1576,7 @@ function printReport(report: MigrateReport): void {
   section('Root-first collisions', [
     `reserved names: ${report.collisions.reserved.map(collision => collision.path).join(', ') || 'none'}`,
     `file collisions: ${report.collisions.files.map(collision => `${collision.path} (${collision.identical ? 'byte-identical duplicate' : 'different files'})`).join(', ') || 'none'}`,
+    `theme documents renamed on the way, the project's file keeps its name: ${paths(report.collisions.renamed.map(item => `${item.from} -> ${item.to}`))}`,
   ]);
   section('Untracked non-ignored files', [paths(report.untracked)]);
   section('Sibling workspace references to the active theme', [report.siblingThemeReferences.length ? report.siblingThemeReferences.map(reference => `${reference.path} (${reference.occurrences})`).join(', ') : 'none']);
@@ -1510,6 +1587,13 @@ function printReport(report: MigrateReport): void {
   section(`Next.js range (the generated host needs ${report.nextRange.required})`, report.nextRange.members.length
     ? report.nextRange.members.map(member => `${member.name} ${member.value} (${member.section}): ${member.action === 'ok' ? `ok${member.note ? ` (${member.note})` : ''}` : member.action === 'update' ? `--yes sets ${report.nextRange.required}, then install and run nextspark prepare` : `check it yourself: ${member.note}`}`)
     : [`next is not declared in the host package.json: add next@${report.nextRange.required}`]);
+  section('Workspace members that declare next / react / react-dom as peers', [
+    ...(report.memberPeers.length ? report.memberPeers.map(member => [
+      member.updates.length ? `${member.path}: ${member.updates.map(update => `${update.name} "${update.from}" -> "${update.to}"`).join(', ')} (--yes updates it)` : null,
+      member.kept.length ? `${member.path}: ${member.kept.map(note => `${note.name} "${note.range}" does not accept ${note.wanted} but reaches higher`).join(', ')} (not edited: check it yourself)` : null,
+    ].filter(Boolean).join('; ')) : ['all satisfied']),
+    ...report.duplicateCopies.map(copy => `${copy.member} has its own ${copy.name}@${copy.version} next to the host's ${copy.host}: two copies. After installing, check  pnpm why next react react-dom  shows one version each`),
+  ]);
   section('AI-workflow directories (.claude, .codex*, .gemini, .cursor, .superpowers, .agents): never rewritten', report.aiWorkflowReferences.length
     ? report.aiWorkflowReferences.map(reference => `${reference.path} (${reference.occurrences} old reference(s))`)
     : ['no old references']);
@@ -1543,6 +1627,8 @@ interface MovePlan {
   moves: PlannedMove[];
   duplicates: PlannedMove[];
   collisions: PlannedMove[];
+  /** L3: a theme document that collided with a different project file moves under another name. */
+  renamed: { from: string; to: string }[];
   reserved: { path: string; reason: string }[];
   unmoved: string[];
 }
@@ -1597,10 +1683,11 @@ function planMove(hostRoot: string, themeRoot: string, pluginsRoot: string): Mov
   const moves: PlannedMove[] = [];
   const duplicates: PlannedMove[] = [];
   const collisions: PlannedMove[] = [];
+  const renamed: MovePlan['renamed'] = [];
   const reserved: { path: string; reason: string }[] = [];
   const unmoved: string[] = [];
   const plannedByDestination = new Map<string, PlannedMove>();
-  const add = (source: string, destination: string, kind: PlannedMove['kind']) => {
+  const add = (source: string, destination: string, kind: PlannedMove['kind'], mayRename = true) => {
     const item = { source, destination, kind };
     const prior = plannedByDestination.get(destination);
     // Environment-shaped files are relocated without reading their values.
@@ -1613,9 +1700,18 @@ function planMove(hostRoot: string, themeRoot: string, pluginsRoot: string): Mov
       plannedByDestination.set(destination, item);
       return;
     }
+    // A document (README.md, ...) is no import target: it keeps the theme's copy next to the project's under a name that does not collide
+    const rename = () => {
+      if (!mayRename || kind !== 'theme' || dirname(source) !== themeRoot || !/\.(?:md|mdx|txt)$/i.test(source)) return false;
+      const other = destination.replace(/(\.[^./\\]+)$/, '.theme$1');
+      if (other === destination || existsSync(other) || plannedByDestination.has(other)) return false;
+      add(source, other, kind, false);
+      renamed.push({ from: pathFrom(hostRoot, destination), to: pathFrom(hostRoot, other) });
+      return true;
+    };
     if (prior) {
       if (readFileSync(source).equals(readFileSync(prior.source))) duplicates.push(item);
-      else {
+      else if (!rename()) {
         collisions.push(item);
         unmoved.push(source);
       }
@@ -1623,6 +1719,7 @@ function planMove(hostRoot: string, themeRoot: string, pluginsRoot: string): Mov
     }
     if (!existsSync(destination)) moves.push(item);
     else if (statSync(destination).isFile() && readFileSync(source).equals(readFileSync(destination))) duplicates.push(item);
+    else if (rename()) return;
     else {
       collisions.push(item);
       unmoved.push(source);
@@ -1653,7 +1750,7 @@ function planMove(hostRoot: string, themeRoot: string, pluginsRoot: string): Mov
     for (const source of moveFilesIn(root)) add(source, join(hostRoot, 'plugins', plugin, pathFrom(root, source)), 'plugin');
   }
   const uniqueReserved = [...new Map(reserved.map(item => [item.path, item])).values()];
-  return { moves, duplicates, collisions, reserved: uniqueReserved.sort((left, right) => left.path.localeCompare(right.path)), unmoved };
+  return { moves, duplicates, collisions, renamed, reserved: uniqueReserved.sort((left, right) => left.path.localeCompare(right.path)), unmoved };
 }
 
 /** Parse the JSONC form TypeScript accepts without loading its dev-only runtime package. */
@@ -2214,27 +2311,43 @@ function rewriteLegacyPaths(content: string, source: string, destination: string
   // Themes stop being workspace members. Keep the host package in a workspace
   // manifest rather than leaving a glob that points at a removed directory.
   const themesRoot = dirname(themeRoot);
-  if (childDirectories(themesRoot).every(name => name === theme) && mapThemeSuffix('')) next = next.replace(/contents\/themes\/\*/g, '.');
+  // L6: git matches no pattern that starts with './', so a .gitignore loses the glob with its slash instead (a pattern that starts with the glob gets a leading /, which keeps it anchored as the path was; after a prefix (web/contents/themes/*/x, /contents/themes/*/x) the glob and its slash just go)
+  if (childDirectories(themesRoot).every(name => name === theme) && mapThemeSuffix('')) next = next.replace(basename(source) === '.gitignore' ? /contents\/themes\/\*(?:\/|(?=\s|$))/g : /contents\/themes\/\*/g, (all: string, offset: number, whole: string) => basename(source) !== '.gitignore' ? '.' : all.endsWith('/') && (offset === 0 || whole[offset - 1] === '\n' || (whole[offset - 1] === '!' && (offset === 1 || whole[offset - 2] === '\n'))) ? '/' : '');
   next = next.replace(/contents\/plugins\/([^'"`\s)]*)/g, (all, suffix: string) => mapPluginSuffix(suffix) ?? all);
   return rewriteLegacyAliasImports(next, source, catalog, themeRoot, pluginsRoot, hostRoot, planned, unmoved)
     .replace(/__NEXTSPARK_THEME_ALIAS__/g, `^@/themes/${theme}/(.*)$`);
 }
 
-function rewriteMovedRelativeImports(content: string, source: string, destination: string, planned: Map<string, string>): string {
+/**
+ * Where a relative reference lands after the move when its target is not a moved file (L7): a
+ * plugin's files (including its node_modules) follow the plugin to plugins/<name>, a file outside
+ * contents/ stays where it is. A theme file that stays behind has no new place.
+ */
+function unmovedReferenceDestination(target: string, themeRoot: string, pluginsRoot: string, hostRoot: string, unmoved: Set<string>): string | null {
+  // a file that stays (reserved, colliding) is still where it was; a directory holding one has no single new place
+  if (unmoved.has(target)) return target;
+  if ([...unmoved].some(file => file.startsWith(`${target}${sep}`))) return null;
+  if (isWithin(target, pluginsRoot)) return join(hostRoot, 'plugins', relative(pluginsRoot, target));
+  if (isWithin(target, join(hostRoot, 'contents'))) return null;
+  return target;
+}
+
+function rewriteMovedRelativeImports(content: string, source: string, destination: string, planned: Map<string, string>, themeRoot: string, pluginsRoot: string, hostRoot: string, unmoved: Set<string>): string {
   const replace = (_all: string, before: string, quote: string, value: string, after: string) => {
     if (!value.startsWith('.')) return `${before}${quote}${value}${quote}${after}`;
     if (quote === '`' && value.includes('${')) return `${before}${quote}${value}${quote}${after}`;
     const target = resolve(dirname(source), value);
-    const targetDestination = directMoveDestination(target, planned);
-    // Do not manufacture a new import when the old target is absent from the
-    // move. The post-move check reports it as a broken import instead.
+    // A path in a string (jest.mock, require.resolve, ...) that leaves the directory it was written in keeps pointing at the same file
+    const targetDestination = directMoveDestination(target, planned) ?? unmovedReferenceDestination(target, themeRoot, pluginsRoot, hostRoot, unmoved);
+    // Do not manufacture a new import when the old target is absent from the move. The post-move
+    // check reports it as a broken import instead.
     if (!targetDestination) return `${before}${quote}${value}${quote}${after}`;
     // Only a path whose meaning changes when this file moves needs adjustment.
     if (dirname(source) === dirname(destination) && targetDestination === target) return `${before}${quote}${value}${quote}${after}`;
     return `${before}${quote}${relativeSpecifier(destination, targetDestination)}${quote}${after}`;
   };
   return content
-    .replace(/(\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s*)(['"`])(\.[^'"`]*)\2(\s*\)?)/g, replace);
+    .replace(/(\bfrom\s*|\bimport\s*\(\s*|\brequire(?:\.resolve|\.requireActual)?\s*\(\s*|\bjest\.(?:mock|doMock|unmock|dontMock|requireActual|requireMock|createMockFromModule)\s*\(\s*|\bimport\s*)(['"`])(\.[^'"`]*)\2(\s*\)?)/g, replace);
 }
 
 function stylesheetReferenceParts(value: string, glob: boolean): { path: string; suffix: string } {
@@ -2637,6 +2750,25 @@ function removeGeneratedRootProxyFiles(hostRoot: string, files: string[]): void 
   }
 }
 
+/** A root proxy/middleware holding project code becomes the src/ one Next loads now, keeping its logic. */
+function moveProjectRootProxyFiles(hostRoot: string, files: string[]): string[] {
+  const moved: string[] = [];
+  for (const file of files) {
+    const source = join(hostRoot, file);
+    const destination = join(hostRoot, 'src', file);
+    assertContained(hostRoot, source);
+    assertContained(hostRoot, destination);
+    if (!existsSync(source)) continue;
+    // the file is one directory deeper: relative references keep pointing at the same files
+    const content = rewriteMovedRelativeImports(rewriteRemovedMiddlewareApi(readFileSync(source, 'utf8'), source, hostRoot), source, destination, new Map(), join(hostRoot, 'contents', 'themes'), join(hostRoot, 'contents', 'plugins'), hostRoot, new Set());
+    mkdirSync(dirname(destination), { recursive: true });
+    writeFileSync(destination, content);
+    unlinkSync(source);
+    moved.push(file);
+  }
+  return moved;
+}
+
 function isOtherThemeFile(file: string, themesRoot: string, selected: string): boolean {
   if (!(file === themesRoot || file.startsWith(`${themesRoot}${sep}`))) return false;
   const rel = pathFrom(themesRoot, file);
@@ -2660,7 +2792,8 @@ function remainingContents(hostRoot: string, themeRoot: string, plan: MovePlan, 
     }
   };
   if (existsSync(root)) visit(root);
-  return entries.map(file => {
+  // installed dependencies are not project files: the package manager recreates them in the plugin's new place
+  return entries.filter(file => !pathFrom(hostRoot, file).split('/').includes('node_modules')).map(file => {
     const path = pathFrom(hostRoot, file);
     if (envPlan.action === 'conflict' && envPlan.path === path) return { path, reason: 'differs from root .env.example; not merged' };
     if (file === join(themeRoot, 'package.json')) return { path, reason: 'legacy theme manifest has no root-first destination' };
@@ -2705,7 +2838,7 @@ function applyMove(repository: string, hostRoot: string, themeRoot: string, plug
     const tsconfig = tsconfigAliases.configs.get(file);
     if (tsconfig) next = rewriteDeadTsconfigAliases(next, tsconfig);
     if (planned.has(file) || duplicate) {
-      next = rewriteMovedRelativeImports(next, source, destination, planned);
+      next = rewriteMovedRelativeImports(next, source, destination, planned, themeRoot, pluginsRoot, hostRoot, unmoved);
       next = rewriteMovedStylesheetReferences(next, source, destination, planned, unmoved, themeRoot, pluginsRoot, hostRoot);
       next = rewriteMovedDepthConfig(next, source, destination, planned, unmoved, themeRoot, hostRoot);
       next = rewriteHookExport(next, destination);
@@ -2967,7 +3100,7 @@ function rollbackCommands(repository: string, hostRoot: string, plan: MovePlan, 
 
 function printRollback(rollback: string[]): void {
   section('Rollback after migration failure', [
-    'Run these commands from any directory to restore the pre-migration tree:',
+    'Run these commands from any directory to restore the pre-migration tree. They restore the snapshot taken when migrate started (git checkout plus .nextspark/migrate-rollback), so run them right away, before editing or committing anything else: files you changed since come back as the older copies.',
     ...rollback,
   ]);
 }
@@ -3253,12 +3386,17 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
     const lines = migrated.output.split('\n').map(line => line.trim()).filter(Boolean);
     if (hasPredict && migrated.code === 0) {
       report.hostPlan.method = 'predictHost';
-      const script = "const mod = await import(process.argv[1]); const config = mod.projectHostConfig({ projectRoot: process.cwd() }); const result = await mod.predictHost(config); console.log('__NEXTSPARK_PREDICT__' + JSON.stringify({ ok: result.ok, routes: result.routes.length, notices: result.notices, diagnostics: result.diagnostics, checks: result.checks }))";
+      const script = "const mod = await import(process.argv[1]); try { const config = mod.projectHostConfig({ projectRoot: process.cwd() }); const result = await mod.predictHost(config); console.log('__NEXTSPARK_PREDICT__' + JSON.stringify({ ok: result.ok, routes: result.routes.length, notices: result.notices, diagnostics: result.diagnostics, checks: result.checks })) } catch (error) { console.log('__NEXTSPARK_PREDICT_ERROR__' + JSON.stringify({ message: String(error && error.message || error).split('\\n')[0], diagnostics: Array.isArray(error && error.diagnostics) ? error.diagnostics : [] })) }";
       const predicted = await runAndCollect(process.execPath, ['--input-type=module', '-e', script, pathToFileURL(prepareModule as string).href], { cwd: hostCopy, env: simulationEnv, timeoutMs: 600_000 }, track);
       const marker = predicted.output.split('\n').find(line => line.startsWith('__NEXTSPARK_PREDICT__'));
       if (!marker) {
         report.hostPlan.unknown = true;
-        report.hostPlan.reason = `predictHost did not answer: ${firstErrorLine(predicted.output) ?? `exit ${predicted.code}`}`;
+        // L4: the diagnostics the prediction stopped on (codes and messages), never a source line of the stack
+        const failure = predicted.output.split('\n').find(line => line.startsWith('__NEXTSPARK_PREDICT_ERROR__'));
+        const stopped = failure ? JSON.parse(failure.slice('__NEXTSPARK_PREDICT_ERROR__'.length)) as { message: string; diagnostics: { code?: string; message?: string; file?: string }[] } : null;
+        report.hostPlan.reason = stopped
+          ? `predictHost did not answer: ${stopped.diagnostics.length > 0 ? stopped.diagnostics.map(entry => `${entry.code ?? 'NS_HOST'}: ${entry.message ?? ''}${entry.file ? ` (${entry.file})` : ''}`.trim()).join('; ') : stopped.message}`
+          : `predictHost did not answer (exit ${predicted.code}${predicted.output.trim() ? `: ${predicted.output.trim().split('\n').filter(line => !/^\s+at |^Node\.js v/.test(line)).slice(-1)[0]}` : ''})`;
         return;
       }
       const result = JSON.parse(marker.slice('__NEXTSPARK_PREDICT__'.length)) as { notices: { code?: string; message?: string }[]; diagnostics: { code?: string; message?: string; file?: string }[]; checks: Record<string, string> };
@@ -3316,7 +3454,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     if (options.json) throw new MigrateAnalysisError('--json is available only with --dry-run.');
     printReport(report);
     if (report.appConversion.blockers.length > 0) {
-      throw new MigrateAnalysisError(`Refusing to migrate: ${report.appConversion.blockers.length} app file(s) cannot be placed with certainty. Nothing was written. Fix them as described above, then rerun nextspark migrate.\n${report.appConversion.blockers.map(line => `  - ${line}`).join('\n')}`);
+      throw new MigrateAnalysisError(`Refusing to migrate: ${report.appConversion.blockers.length} blocker(s) (app files that cannot be placed with certainty, or files that collide). Nothing was written. Fix them as described above, then rerun nextspark migrate.\n${report.appConversion.blockers.map(line => `  - ${line}`).join('\n')}`);
     }
     const repository = repositoryRoot(process.cwd());
     if (!cleanWorkingTree(repository, report.untracked)) throw new MigrateAnalysisError('Refusing to move files on a dirty git tree. Commit, stash, or remove untracked files first.');
@@ -3329,7 +3467,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     if (!appTreeOnly && !existsSync(themeRoot)) throw new MigrateAnalysisError(`Active theme ${theme} was not found under contents/themes/.`);
     const pluginsRoot = join(hostRoot, 'contents', 'plugins');
     if (!appTreeOnly) assertMoveRootsAreLocal(hostRoot, themeRoot, pluginsRoot);
-    const plan: MovePlan = appTreeOnly ? { moves: [], duplicates: [], collisions: [], reserved: [], unmoved: [] } : planMove(hostRoot, themeRoot, pluginsRoot);
+    const plan: MovePlan = appTreeOnly ? { moves: [], duplicates: [], collisions: [], renamed: [], reserved: [], unmoved: [] } : planMove(hostRoot, themeRoot, pluginsRoot);
     validateHookExports(plan);
     assertPhysicalRoot(repository, hostRoot);
     // Every path the move will read, write or remove is inside the project with no link on the way, before anything is written
@@ -3347,6 +3485,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       `owned files to move: ${plan.moves.length}; byte-identical duplicates verified: ${plan.duplicates.length}`,
       `reserved source left in place: ${paths(plan.reserved.map(item => item.path))}`,
       `host collisions: ${paths(plan.collisions.map(item => pathFrom(hostRoot, item.source)) )}`,
+      `theme documents renamed (the project has a different file at their name): ${paths(plan.renamed.map(item => `${item.from} -> ${item.to}`))}`,
       `Rollback repository root: ${repository}`,
       ...rollback,
     ]);
@@ -3376,6 +3515,13 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     if (!appTreeOnly) preflightMovedStylesheetDependencies(hostRoot, themeRoot, pluginsRoot, plan);
     snapshotMigrationRollback(hostRoot, plan, report, hadLegacyApp);
     writesStarted = true;
+    // L8: before the move, so a plugin's manifest is edited where it still is and moves with the change
+    for (const member of report.memberPeers.filter(entry => entry.updates.length > 0)) {
+      const manifest = join(repository, member.path);
+      assertContained(repository, manifest);
+      writeFileSync(manifest, updatePeerRanges(readFileSync(manifest, 'utf8'), member.updates));
+      console.log(`  ${member.path}: peer ranges set to ${member.updates.map(update => `${update.name} ${update.to}`).join(', ')}.`);
+    }
     const result = appTreeOnly
       ? null
       : applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme as string, plan, aliasesBeforeMove as AliasCatalog, report.envExample, report.config.plugins, hadLegacyApp ? report.rootProxyFiles.customizations : []);
@@ -3421,6 +3567,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       }
       if (ignoreGeneratedPaths(hostRoot)) console.log('  .gitignore: added .nextspark/, src/app/ and next-env.d.ts (generated).');
       removeGeneratedRootProxyFiles(hostRoot, report.rootProxyFiles.generated);
+      for (const moved of moveProjectRootProxyFiles(hostRoot, report.rootProxyFiles.customizations)) console.log(`  ${moved}: the project's root proxy moved to src/ (Next loads it from there next to src/app), core middleware APIs renamed. It replaces core's current proxy template: compare it with node_modules/@nextsparkjs/core/templates/proxy.ts.`);
       const proxy = ensureSourceProxy(hostRoot, templates);
       if (proxy) console.log(`  ${proxy}: written from core's template (Next loads the request proxy from src/ next to src/app).`);
       const routeRoots = legacyRouteRoots(hostRoot);
@@ -3461,8 +3608,16 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       printMoveSummary(plan, result, report, hostRoot, legacyContentsImportCount(plan));
       if (preExisting.length > 0) printBrokenImports([], preExisting);
     }
+    if (report.duplicateCopies.length > 0 || report.memberPeers.length > 0) {
+      section('next / react / react-dom copies', [
+        ...report.duplicateCopies.map(copy => `${copy.member} has its own ${copy.name}@${copy.version} next to the host's ${copy.host}`),
+        'After you install, run  pnpm why next react react-dom : each must resolve to one version. A workspace member whose peer range the host does not satisfy gets its own copy, and two copies of Next or React break types and context.',
+      ]);
+    }
     if (report.apiUrlMoves.length > 0) {
-      section('Project URLs that changed (update their callers)', report.apiUrlMoves.map(move => `${move.file}:${move.line}: ${move.from} -> ${move.to}`));
+      // L9: where the files are now, not where they were
+      const movedTo = new Map(plan.moves.map(item => [pathFrom(hostRoot, item.source), pathFrom(hostRoot, item.destination)]));
+      section('Project URLs that changed (update their callers)', report.apiUrlMoves.map(move => `${movedTo.get(move.file) ?? move.file}:${move.line}: ${move.from} -> ${move.to}`));
     }
     removeMigrationRollbackBackup(hostRoot);
   } catch (error) {

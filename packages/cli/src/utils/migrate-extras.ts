@@ -169,6 +169,154 @@ export function updateNextRange(text: string, check: NextRangeCheck): string {
 }
 
 // ---------------------------------------------------------------------------------------------
+// L8: workspace members that declare next / react / react-dom as peers
+
+export interface PeerUpdate { name: 'next' | 'react' | 'react-dom'; from: string; to: string }
+
+const parseVersion = (value: string): [number, number, number] | null => {
+  const match = /^v?(\d+)(?:\.(\d+|[xX*]))?(?:\.(\d+|[xX*]))?(?:[-+].*)?$/.exec(value.trim());
+  if (!match) return null;
+  const part = (text: string | undefined) => text === undefined || /[xX*]/.test(text) ? -1 : Number(text);
+  return [Number(match[1]), part(match[2]), part(match[3])];
+};
+
+const compareVersions = (left: number[], right: number[]): number => left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
+
+interface Bound { version: number[]; inclusive: boolean }
+interface Interval { lower: Bound | null; upper: Bound | null }
+
+/** The first version above everything a partial version (`16`, `16.3`) covers. */
+const nextAbove = (base: number[]): number[] => base[1] === -1 ? [base[0] + 1, 0, 0] : base[2] === -1 ? [base[0], base[1] + 1, 0] : [base[0], base[1], base[2] + 1];
+const floorOf = (base: number[]): number[] => [base[0], Math.max(base[1], 0), Math.max(base[2], 0)];
+
+/** The interval one comparator (`^1.2.3`, `>=2`, `<3.x`, `1.2`) allows, or null when it is not understood. */
+function comparatorInterval(token: string): Interval | null {
+  if (token === '*' || token === 'x' || token === 'X') return { lower: null, upper: null };
+  const match = /^(>=|<=|>|<|=|\^|~)?(.+)$/.exec(token);
+  const base = match ? parseVersion(match[2]) : null;
+  if (!match || !base) return null;
+  switch (match[1] ?? '') {
+    case '>=': return { lower: { version: floorOf(base), inclusive: true }, upper: null };
+    case '>': return base[1] === -1 || base[2] === -1 ? { lower: { version: nextAbove(base), inclusive: true }, upper: null } : { lower: { version: base, inclusive: false }, upper: null };
+    case '<': return { lower: null, upper: { version: floorOf(base), inclusive: false } };
+    case '<=': return base[1] === -1 || base[2] === -1 ? { lower: null, upper: { version: nextAbove(base), inclusive: false } } : { lower: null, upper: { version: base, inclusive: true } };
+    case '^': {
+      const upper = base[0] > 0 || base[1] === -1 ? [base[0] + 1, 0, 0] : base[1] > 0 || base[2] === -1 ? [0, base[1] + 1, 0] : [0, 0, base[2] + 1];
+      return { lower: { version: floorOf(base), inclusive: true }, upper: { version: upper, inclusive: false } };
+    }
+    case '~': return { lower: { version: floorOf(base), inclusive: true }, upper: { version: base[1] === -1 ? [base[0] + 1, 0, 0] : [base[0], base[1] + 1, 0], inclusive: false } };
+    default: return { lower: { version: floorOf(base), inclusive: true }, upper: { version: nextAbove(base), inclusive: false } };
+  }
+}
+
+/** The intervals of an npm range, one per `||` alternative (hyphen ranges, spaces as "and"); null when any part is not understood. */
+function rangeIntervals(range: string): Interval[] | null {
+  const intervals: Interval[] = [];
+  for (const alternative of range.split('||')) {
+    const tokens = alternative.trim().replace(/(\S+)\s+-\s+(\S+)/, '>=$1 <=$2').replace(/(>=|<=|>|<|=|\^|~)\s+/g, '$1').split(/\s+/).filter(Boolean);
+    const merged: Interval = { lower: null, upper: null };
+    for (const token of tokens) {
+      const interval = comparatorInterval(token);
+      if (!interval) return null;
+      if (interval.lower && (!merged.lower || compareVersions(interval.lower.version, merged.lower.version) > 0)) merged.lower = interval.lower;
+      if (interval.upper && (!merged.upper || compareVersions(interval.upper.version, merged.upper.version) < 0)) merged.upper = interval.upper;
+    }
+    intervals.push(merged);
+  }
+  return intervals;
+}
+
+/** Whether an npm range accepts a plain `x.y.z` version. Anything not understood is not claimed to accept. */
+export function rangeAccepts(range: string, version: string): boolean {
+  const wanted = parseVersion(version);
+  const intervals = wanted ? rangeIntervals(range) : null;
+  if (!wanted || !intervals) return false;
+  return intervals.some(({ lower, upper }) => {
+    const above = !lower || (compareVersions(wanted, lower.version) > 0 || (lower.inclusive && compareVersions(wanted, lower.version) === 0));
+    const below = !upper || (compareVersions(wanted, upper.version) < 0 || (upper.inclusive && compareVersions(wanted, upper.version) === 0));
+    return above && below;
+  });
+}
+
+/** True only when every version the range accepts is below `version`: the one case where raising a peer range cannot lower it. */
+export function rangeAllBelow(range: string, version: string): boolean {
+  const target = parseVersion(version);
+  const intervals = target ? rangeIntervals(range) : null;
+  if (!target || !intervals) return false;
+  return intervals.every(({ upper }) => upper !== null && (compareVersions(upper.version, target) < 0 || (!upper.inclusive && compareVersions(upper.version, target) === 0)));
+}
+
+export interface PeerNote { name: 'next' | 'react' | 'react-dom'; range: string; wanted: string }
+
+/**
+ * The peer ranges of a workspace member that the generated host would not satisfy. `next` that does
+ * not accept the required release, and a `react` / `react-dom` that does not accept the host's own,
+ * are raised (`updates`) only when every version they accept is below it; a range that reaches
+ * higher (`^17`, `^19.2.4`) is never lowered, only reported (`kept`). pnpm installs a member's
+ * unmet peers under the member, which makes a second copy.
+ */
+export function memberPeerUpdates(pkg: Record<string, unknown>, host: { react?: string; 'react-dom'?: string }): { updates: PeerUpdate[]; kept: PeerNote[] } {
+  const peers = pkg.peerDependencies as Record<string, unknown> | undefined;
+  const updates: PeerUpdate[] = [];
+  const kept: PeerNote[] = [];
+  if (!peers) return { updates, kept };
+  const consider = (name: PeerUpdate['name'], value: unknown, version: string | null | undefined, to: string) => {
+    if (typeof value !== 'string' || !version || INDIRECT_SPEC.test(value) || INDIRECT_SPEC.test(to) || rangeAccepts(value, version)) return;
+    if (rangeAllBelow(value, version)) updates.push({ name, from: value, to });
+    else kept.push({ name, range: value, wanted: to });
+  };
+  consider('next', peers.next, REQUIRED_NEXT_RANGE.replace(/^~/, ''), REQUIRED_NEXT_RANGE);
+  for (const name of ['react', 'react-dom'] as const) {
+    const hostRange = host[name];
+    if (hostRange) consider(name, peers[name], /(\d+\.\d+\.\d+)/.exec(hostRange)?.[1], hostRange);
+  }
+  return { updates, kept };
+}
+
+/** The package.json text with those peer ranges replaced, keeping the file's formatting. */
+export function updatePeerRanges(text: string, updates: PeerUpdate[]): string {
+  let next = text;
+  for (const update of updates) {
+    const escaped = update.name.replace(/[-/]/g, '\\$&');
+    next = next.replace(new RegExp(`("peerDependencies"\\s*:\\s*\\{[^}]*?"${escaped}"\\s*:\\s*)"[^"]*"`), `$1"${update.to}"`);
+  }
+  return next;
+}
+
+// ---------------------------------------------------------------------------------------------
+// L11: the core imports of a converted file
+
+/**
+ * Whether the installed core exports `specifier` (`@nextsparkjs/core/lib/x`): its package.json
+ * `exports` entry (exact, or the longest `./prefix/*` pattern) points at a file that exists.
+ * `null` when it cannot tell (no readable manifest or `exports`): nothing is claimed missing then.
+ */
+export function coreExportsSpecifier(coreDir: string, specifier: string): boolean | null {
+  let exportsMap: unknown;
+  try {
+    exportsMap = (JSON.parse(readFileSync(join(coreDir, 'package.json'), 'utf8')) as { exports?: unknown }).exports;
+  } catch {
+    return null;
+  }
+  if (typeof exportsMap !== 'object' || exportsMap === null) return null;
+  const subpath = specifier === '@nextsparkjs/core' ? '.' : `.${specifier.slice('@nextsparkjs/core'.length)}`;
+  const table = exportsMap as Record<string, unknown>;
+  let target: unknown = table[subpath];
+  if (target === undefined) {
+    const pattern = Object.keys(table)
+      .filter(key => key.includes('*') && subpath.startsWith(key.slice(0, key.indexOf('*'))) && subpath.endsWith(key.slice(key.indexOf('*') + 1)) && subpath.length >= key.length - 1)
+      .sort((left, right) => right.indexOf('*') - left.indexOf('*'))[0];
+    if (!pattern) return false;
+    const matched = subpath.slice(pattern.indexOf('*'), subpath.length - (pattern.length - pattern.indexOf('*') - 1));
+    const entry = table[pattern];
+    const resolve = (value: unknown): unknown => typeof value === 'string' ? value.replace(/\*/g, matched) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, resolve(inner)])) : value;
+    target = resolve(entry);
+  }
+  const file = typeof target === 'string' ? target : target && typeof target === 'object' ? ((target as Record<string, unknown>).import ?? (target as Record<string, unknown>).default ?? (target as Record<string, unknown>).require) : null;
+  return typeof file === 'string' ? existsSync(join(coreDir, file)) : false;
+}
+
+// ---------------------------------------------------------------------------------------------
 // F12: AI-workflow directories
 
 const AI_WORKFLOW_DIRECTORY = /^(?:\.claude|\.codex[^/]*|\.gemini|\.cursor|\.superpowers|\.agents)$/;

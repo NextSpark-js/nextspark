@@ -1,4 +1,6 @@
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, rmdirSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { closingBrace, sourceView } from './source-view.js';
@@ -48,6 +50,48 @@ export type CoreHostLookup = { host: CoreHost } | { unavailable: string };
 const CORE_ROUTES_MODULE = join('scripts', 'build', 'registry', 'host', 'core-routes.mjs');
 const FACADE_EMITTER_MODULE = join('scripts', 'build', 'registry', 'host', 'facade-emitter.mjs');
 
+const targetNextRoots = new Map<string, string | null>();
+
+/**
+ * The project root the facade emitter should read Next.js from. The emitter refuses a Next.js other
+ * than the one core's route rules were verified on, but a 0.x project still has its old Next until
+ * migrate sets the new range and the person installs it (chicken and egg: its own app files were
+ * refused for the very version migrate is about to change). The rules are core's table, not the
+ * installed Next's: so classification reads the installed Next's segment-config schema through a
+ * stand-in package that reports the table's version. Segment config values are the only thing the
+ * schema checks, and prepare validates them again against the real Next after the install.
+ */
+function classificationRoot(emitter: { resolveNextPackage(root: string): { root: string; version: string } | null; isSupportedNextVersion(version: string): boolean; ROUTE_EXPORT_TABLE: { next: string } }, hostRoot: string): string {
+  if (targetNextRoots.has(hostRoot)) return targetNextRoots.get(hostRoot) ?? hostRoot;
+  let stand: string | null = null;
+  const installed = emitter.resolveNextPackage(hostRoot);
+  if (installed && !emitter.isSupportedNextVersion(installed.version)) {
+    try {
+      const directory = mkdtempSync(join(tmpdir(), 'nextspark-migrate-next-'));
+      const next = join(directory, 'node_modules', 'next');
+      mkdirSync(next, { recursive: true });
+      const manifest = JSON.parse(readFileSync(join(installed.root, 'package.json'), 'utf8')) as Record<string, unknown>;
+      writeFileSync(join(directory, 'package.json'), '{}');
+      writeFileSync(join(next, 'package.json'), JSON.stringify({ ...manifest, version: emitter.ROUTE_EXPORT_TABLE.next }));
+      symlinkSync(join(installed.root, 'dist'), join(next, 'dist'), 'dir');
+      try {
+        symlinkSync(dirname(createRequire(join(hostRoot, 'package.json')).resolve('typescript/package.json')), join(directory, 'node_modules', 'typescript'), 'dir');
+      } catch {
+        // core brings its own TypeScript
+      }
+      const remove = () => rmSync(directory, { recursive: true, force: true });
+      process.once('exit', remove);
+      // an interrupted run must not leave it either (the exit event does not fire on a default signal)
+      for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]] as const) process.once(signal, () => { remove(); process.exit(code); });
+      stand = directory;
+    } catch {
+      stand = null;
+    }
+  }
+  targetNextRoots.set(hostRoot, stand);
+  return stand ?? hostRoot;
+}
+
 /** Load the route manifest and the facade emitter from the core installed in the project. */
 export async function loadCoreHost(coreDir: string | null): Promise<CoreHostLookup> {
   if (!coreDir) return { unavailable: 'no installed @nextsparkjs/core was found' };
@@ -66,7 +110,7 @@ export async function loadCoreHost(coreDir: string | null): Promise<CoreHostLook
     return {
       host: {
         routes: new Map((manifest.routes as CoreRoute[]).map(route => [route.target, route])),
-        emit: input => emitter.emitFacade(input),
+        emit: input => emitter.emitFacade({ ...input, projectRoot: classificationRoot(emitter, input.projectRoot) }),
         kindForFileStem: (stem: string) => emitter.kindForFileStem(stem),
       },
     };
@@ -478,7 +522,13 @@ function destinationFor(path: string, host: CoreHost, override: boolean): { dest
   const stem = splitName(posix.basename(path))?.stem ?? posix.basename(path);
   if (!isApi) {
     if (!path.includes('/') && !host.kindForFileStem(stem.split('.')[0])) {
-      return { reason: `it is a file of the app root that is not a route (${posix.basename(path)}): move what it holds to public/ or styles/globals.css by hand, delete it, then run migrate again` };
+      const name = posix.basename(path);
+      // L9: where it goes depends on what it is
+      const where = /\.(?:css|scss)$/i.test(name) ? 'move what it holds to styles/globals.css (or import it from a template)'
+        : /\.(?:tsx?|jsx?|mjs|cjs)$/.test(name) ? 'it is code, not a route: move it to components/ or lib/ and update the files that import it'
+        : /\.(?:md|mdx|txt)$/i.test(name) ? 'it is documentation: move it out of the app tree (docs/ or the project root)'
+        : 'move it to public/';
+      return { reason: `it is a file of the app root that is not a route (${name}): ${where} by hand, delete it, then run migrate again` };
     }
     return { destination: `templates/${path}` };
   }

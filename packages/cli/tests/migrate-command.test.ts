@@ -14,7 +14,7 @@ import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
 import { simulationEnvironment } from '../src/commands/migrate.js'
-import { addCompatRewrites, addWorkspaceGlob, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
+import { addCompatRewrites, addWorkspaceGlob, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
 
 let cliEntry: string
 before(() => { cliEntry = buildCli() })
@@ -40,6 +40,10 @@ async function write(root: string, file: string, content: string): Promise<void>
 
 function git(root: string, args: string[]): void {
   execFileSync('git', args, { cwd: root, stdio: 'ignore' })
+}
+
+function git_status(root: string): string {
+  return execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim()
 }
 
 async function startRepository(root: string): Promise<void> {
@@ -875,18 +879,40 @@ test('migrate moves the recognized docs root and rewrites imports to it', async 
   }
 })
 
-test('migrate stops before writes on a different-content host collision', async () => {
+test('migrate renames a theme document that collides with a different project file instead of stopping (L3)', async () => {
   const { root } = await moveFixture({ collision: true })
   try {
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.collisions.renamed, [{ from: 'README.md', to: 'README.theme.md' }])
+    assert.deepEqual(report.appConversion.blockers, [])
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /README\.md -> README\.theme\.md/)
+    assert.equal(await readFile(join(root, 'README.md'), 'utf8'), 'host README\n')
+    assert.equal(await readFile(join(root, 'README.theme.md'), 'utf8'), 'theme README\n')
+    assert.equal(await readFile(join(root, 'public/same.txt'), 'utf8'), 'same\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate stops before writes on a different-content collision of a source file, with the exact fix, in the dry run too (L3)', async () => {
+  const { root } = await moveFixture({ collision: true })
+  try {
+    await write(root, 'components/Button.ts', 'export const Button = "the project one"\n')
+    await commitFixture(root)
+    const dry = run(root, ['--dry-run', '--json'])
+    assert.equal(dry.status, 1, `${dry.stdout}\n${dry.stderr}`)
+    const report = JSON.parse(dry.stdout)
+    assert.equal(report.appConversion.blockers.length, 1)
+    assert.match(report.appConversion.blockers[0], /contents\/themes\/acme\/components\/Button\.ts would move to components\/Button\.ts, where a different file already is\. Rename one of them .*git mv contents\/themes\/acme\/components\/Button\.ts contents\/themes\/acme\/components\/Button-theme\.ts/)
     const result = run(root, ['--yes'])
     assert.notEqual(result.status, 0)
-    assert.match(result.stderr, /Refusing to overwrite different host files: README\.md/)
+    assert.match(result.stderr, /Refusing to migrate: 1 blocker\(s\)/)
     assert.doesNotMatch(result.stdout, /Migration complete/)
-    assert.equal(await readFile(join(root, 'public/same.txt'), 'utf8'), 'same\n')
-    assert.equal(await readFile(join(root, 'contents/themes/acme/public/same.txt'), 'utf8'), 'same\n')
-    assert.equal(await readFile(join(root, 'README.md'), 'utf8'), 'host README\n')
     assert.equal(await readFile(join(root, 'contents/themes/acme/README.md'), 'utf8'), 'theme README\n')
-    await assert.rejects(access(join(root, 'components/Button.ts')))
+    assert.equal(await readFile(join(root, 'components/Button.ts'), 'utf8'), 'export const Button = "the project one"\n')
+    await assert.rejects(access(join(root, 'README.theme.md')))
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -1359,7 +1385,7 @@ test('migrate stops before writing anything when the installed core cannot gener
 
     const result = run(root, ['--yes'])
     assert.notEqual(result.status, 0)
-    assert.match(result.stderr, /Refusing to migrate: 1 app file\(s\) cannot be placed with certainty\. Nothing was written/)
+    assert.match(result.stderr, /Refusing to migrate: 1 blocker\(s\).*Nothing was written/)
     assert.match(result.stderr, /does not ship the generated-host route manifest and facade emitter \(0\.1\.0-beta\.192 or later\); upgrade it first/)
     assert.doesNotMatch(result.stdout, /Rollback after migration failure/)
     assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
@@ -1648,6 +1674,8 @@ test('migrate keeps an alias trailing index when a sibling module would change r
 test('migrate warns when legacy theme config plugins are not literal strings', async () => {
   const { root } = await moveFixture()
   try {
+    // the theme's config is the one that is read; a root config of a different content would collide with it (L3)
+    await rm(join(root, 'nextspark.config.ts'))
     await write(root, 'contents/themes/acme/nextspark.config.ts', "export default { plugins: getThemePlugins() }\n")
     await commitFixture(root)
     const result = run(root, ['--dry-run', '--json'])
@@ -2325,30 +2353,86 @@ else process.exit(2)
   }
 })
 
-test('migrate loudly preserves unproven root proxy files beside the generated src proxy', async () => {
+/** The root proxy.ts of a landings-shaped project: core's template with project logic and the removed theme-keyed APIs. */
+const PROJECT_ROOT_PROXY = [
+  "import { NextResponse, type NextRequest } from 'next/server'",
+  "import { hasThemeMiddleware, executeThemeMiddleware, getThemeAppConfig } from '@nextsparkjs/core/lib/middleware'",
+  "import { countryOf } from './lib/country'",
+  'export async function proxy(request: NextRequest) {',
+  "  const theme = 'acme'",
+  '  const config = getThemeAppConfig(theme)',
+  '  if (theme && hasThemeMiddleware(theme)) return executeThemeMiddleware(theme, request)',
+  "  const response = NextResponse.next()",
+  "  response.headers.set('x-country', countryOf(request, config))",
+  '  return response',
+  '}',
+  '',
+].join('\n')
+
+test('migrate moves a root proxy that holds project logic to src/ with the renamed core APIs, so nothing compiles it at the root (L5)', async () => {
   const { root } = await moveFixture()
   try {
-    // This nested argument is deliberately outside migrate's conservative
-    // middleware-API codemod. A dead, project-owned root file must warn and
-    // survive rather than turning that unsupported shape into a migration failure.
-    const rootProxy = "import { hasThemeMiddleware } from '@nextsparkjs/core/lib/middleware'\nexport function proxy() { return hasThemeMiddleware(getProjectTheme()) }\n"
-    const rootMiddleware = rootProxy.replace('function proxy', 'function middleware')
     await installConversionCore(root, { version: '0.1.0-beta.192' })
     await write(root, 'node_modules/@nextsparkjs/core/templates/proxy.ts', 'export function proxy() { return new Response("core proxy") }\n')
     await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
-    await write(root, 'proxy.ts', rootProxy)
-    await write(root, 'middleware.ts', rootMiddleware)
+    await write(root, 'proxy.ts', PROJECT_ROOT_PROXY)
+    await write(root, 'lib/country.ts', 'export const countryOf = () => "AR"\n')
     await commitFixture(root)
+
+    const dry = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(dry.rootProxyFiles.customizations, ['proxy.ts'])
+    assert.deepEqual(dry.appConversion.blockers, [])
+    assert.ok(dry.warnings.some((warning: string) => /root proxy\.ts holds project code: --yes moves it to src\/proxy\.ts/.test(warning)))
 
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
-    assert.equal(await readFile(join(root, 'proxy.ts'), 'utf8'), rootProxy)
-    assert.equal(await readFile(join(root, 'middleware.ts'), 'utf8'), rootMiddleware)
-    await access(join(root, 'src/proxy.ts'))
-    assert.match(result.stdout, /WARNING: root proxy\.ts was kept but Next loads src\/proxy\.ts; it will not run\. Move its logic into config\/hooks\/proxy\.ts\./)
-    assert.match(result.stdout, /WARNING: root middleware\.ts was kept but Next loads src\/proxy\.ts; it will not run\. Move its logic into config\/hooks\/proxy\.ts\./)
+    await assert.rejects(access(join(root, 'proxy.ts')))
+    const moved = await readFile(join(root, 'src/proxy.ts'), 'utf8')
+    assert.match(moved, /import \{ hasProjectMiddleware, executeProjectMiddleware, getProjectAppConfig \} from '@nextsparkjs\/core\/lib\/middleware'/)
+    assert.match(moved, /getProjectAppConfig\(\)/)
+    assert.match(moved, /theme && hasProjectMiddleware\(\)|hasProjectMiddleware\(\)/)
+    assert.match(moved, /executeProjectMiddleware\(request\)/)
+    assert.match(moved, /from '\.\.\/lib\/country'/)
+    assert.match(moved, /x-country/)
+    assert.doesNotMatch(moved, /ThemeMiddleware|getThemeAppConfig/)
   } finally {
     await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate blocks, writing nothing, a root proxy it cannot move: an unsupported API shape, or a src proxy already there (L5)', async () => {
+  const cases: Record<string, { files: Record<string, string>, message: RegExp }> = {
+    'a nested argument the codemod cannot rewrite': {
+      files: { 'proxy.ts': "import { hasThemeMiddleware } from '@nextsparkjs/core/lib/middleware'\nexport function proxy() { return hasThemeMiddleware(getProjectTheme()) }\n" },
+      message: /root proxy\.ts holds project code that migrate cannot rewrite \(Cannot safely migrate proxy\.ts.*\)\. Move it to src\/proxy\.ts by hand/,
+    },
+    'a src/proxy.ts that exists': {
+      files: { 'proxy.ts': PROJECT_ROOT_PROXY, 'lib/country.ts': 'export const countryOf = () => "AR"\n', 'src/proxy.ts': 'export function proxy() {}\n' },
+      message: /root proxy\.ts holds project code and cannot move to src\/proxy\.ts: Next loads only one proxy file and src\/proxy\.ts is taken/,
+    },
+    'two root files': {
+      files: { 'proxy.ts': PROJECT_ROOT_PROXY, 'middleware.ts': PROJECT_ROOT_PROXY.replace('function proxy', 'function middleware'), 'lib/country.ts': 'export const countryOf = () => "AR"\n' },
+      message: /root proxy\.ts holds project code and cannot move to src\/proxy\.ts: Next loads only one proxy file and src\/middleware\.ts is taken/,
+    },
+  }
+  for (const [name, { files, message }] of Object.entries(cases)) {
+    const { root } = await moveFixture()
+    try {
+      await installConversionCore(root, { version: '0.1.0-beta.192' })
+      await write(root, 'node_modules/@nextsparkjs/core/templates/proxy.ts', 'export function proxy() { return new Response("core proxy") }\n')
+      await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+      for (const [file, content] of Object.entries(files)) await write(root, file, content)
+      await commitFixture(root)
+      const dry = run(root, ['--dry-run', '--json'])
+      assert.equal(dry.status, 1, name)
+      assert.ok(JSON.parse(dry.stdout).appConversion.blockers.some((line: string) => message.test(line)), `${name}: ${dry.stdout}`)
+      const result = run(root, ['--yes'])
+      assert.notEqual(result.status, 0, name)
+      assert.match(result.stderr, /Refusing to migrate/, name)
+      assert.equal(git_status(root), '', `${name}: nothing was written`)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   }
 })
 
@@ -2468,7 +2552,7 @@ test('migrate stops before writing when nextspark.config.ts already has a billin
   try {
     const result = run(root, ['--yes'])
     assert.notEqual(result.status, 0)
-    assert.match(result.stderr, /Refusing to migrate: 1 app file\(s\) cannot be placed with certainty\. Nothing was written/)
+    assert.match(result.stderr, /Refusing to migrate: 1 blocker\(s\).*Nothing was written/)
     assert.match(result.stderr, /nextspark\.config\.ts already has a billing entry: add webhookExtensions to it by hand \(stripe: '\.\/lib\/billing\/stripe-webhook-extensions'\)/)
     assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
   } finally {
@@ -2499,7 +2583,7 @@ test('migrate names every file whose shape it does not recognize and writes noth
     assert.equal(dryRun.status, 1, `${dryRun.stdout}\n${dryRun.stderr}`)
     const blockers: string[] = JSON.parse(dryRun.stdout).appConversion.blockers
     const reasonFor = (path: string) => blockers.find(line => line.startsWith(`src/app/${path}: `)) ?? ''
-    assert.match(reasonFor('globals.css'), /it is a file of the app root that is not a route \(globals\.css\): move what it holds to public\/ or styles\/globals\.css by hand/)
+    assert.match(reasonFor('globals.css'), /it is a file of the app root that is not a route \(globals\.css\): move what it holds to styles\/globals\.css/)
     assert.match(reasonFor('api/v1/reports/route.ts'), /namespace core owns \(\/api\/v1\/\*\* and \/api\/plugins\/\*\*\): the generator refuses a project route there\. Rename its directory to \/api\/<name>/)
     assert.match(reasonFor('dashboard/page.tsx'), /it imports '\.\.\/layout' from the app tree, and that file is not kept/)
     assert.match(reasonFor('pricing/page.tsx'), /the generator cannot use it as templates\/pricing\/page\.tsx: \[NS_HOST_NON_LITERAL_SEGMENT_CONFIG\] segment config "dynamic" is not a literal/)
@@ -2510,7 +2594,7 @@ test('migrate names every file whose shape it does not recognize and writes noth
 
     const result = run(root, ['--yes'])
     assert.notEqual(result.status, 0)
-    assert.match(result.stderr, /Refusing to migrate: 7 app file\(s\) cannot be placed with certainty\. Nothing was written/)
+    assert.match(result.stderr, /Refusing to migrate: 7 blocker\(s\).*Nothing was written/)
     assert.doesNotMatch(result.stdout, /Rollback after migration failure/)
     assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
   } finally {
@@ -3630,5 +3714,330 @@ test('the simulation keeps Corepack and Windows shell variables, and nothing sec
     assert.equal(env.DATABASE_URL, undefined)
   } finally {
     names.forEach((name, i) => { if (saved[i] === undefined) delete process.env[name]; else process.env[name] = saved[i] })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// S16: a real 0.x project (landings) migrates without manual pre-steps
+
+/** Make the installed Next.js an older one: its package.json says `version`, its code is the real one this repository runs on. */
+async function installOlderNext(root: string, version: string): Promise<void> {
+  const real = dirname(requireHere.resolve('next/package.json'))
+  await rm(join(root, 'node_modules/next'), { recursive: true, force: true })
+  await write(root, 'node_modules/next/package.json', JSON.stringify({ name: 'next', version }))
+  await symlink(join(real, 'dist'), join(root, 'node_modules/next/dist'))
+}
+
+async function setPackageJson(root: string, edit: (pkg: Record<string, any>) => void): Promise<void> {
+  const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+  edit(pkg)
+  await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`)
+}
+
+test('migrate --yes works end to end on a project whose Next is older than the one core ships (L2)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root)
+    await installOlderNext(root, '16.2.4')
+    await setPackageJson(root, pkg => { pkg.dependencies.next = '^16.2.4' })
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/pricing/page.tsx', 'export default function Pricing() { return null }\n')
+    await commitFixture(root)
+
+    const dry = run(root, ['--dry-run', '--json'])
+    assert.equal(dry.status, 0, `${dry.stdout}\n${dry.stderr}`)
+    const report = JSON.parse(dry.stdout)
+    assert.deepEqual(report.appConversion.blockers, [], 'the project files are classified against the Next core ships, not the installed one')
+    assert.deepEqual(report.appConversion.projectFiles.map((file: { path: string }) => file.path), ['pricing/page.tsx'])
+    assert.equal(report.nextRange.members.find((member: { name: string }) => member.name === 'next').action, 'update')
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).dependencies.next, '~16.3.5')
+    assert.equal(await readFile(join(root, 'templates/pricing/page.tsx'), 'utf8'), 'export default function Pricing() { return null }\n')
+    assert.match(result.stdout, /Skipped generating src\/app: the installed next is not the one just set in package.json/)
+    await assert.rejects(access(join(root, 'app')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a Next the route rules do not apply to still refuses a project file whose segment config is invalid (L2 keeps the schema check)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root)
+    await installOlderNext(root, '16.2.4')
+    await setPackageJson(root, pkg => { pkg.dependencies.next = '^16.2.4' })
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/pricing/page.tsx', "export const revalidate = 'often'\nexport default function Pricing() { return null }\n")
+    await commitFixture(root)
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.equal(report.appConversion.blockers.length, 1)
+    assert.match(report.appConversion.blockers[0], /pricing\/page\.tsx/)
+    assert.doesNotMatch(report.appConversion.blockers[0], /NS_HOST_UNSUPPORTED_NEXT_VERSION/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the host plan shows the diagnostics a prediction stopped on, never a source line (L4)', async () => {
+  const root = await simulationFixture('process.exit(1)\n')
+  try {
+    await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare.mjs', [
+      'export function projectHostConfig() { return {} }',
+      'export async function predictHost() {',
+      "  const error = new Error('Plugin capability check failed:\\n  - [NS_PLUGIN_SERVER_IN_CLIENT] x')",
+      "  error.diagnostics = [{ code: 'NS_PLUGIN_SERVER_IN_CLIENT', message: 'lead-form imports a server-only module', file: 'plugins/lead-form/Form.tsx' }]",
+      '  if (error.diagnostics.length > 0) throw error',
+      '}',
+      '',
+    ].join('\n'))
+    await commitFixture(root)
+    const report = JSON.parse(run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined }).stdout)
+    assert.equal(report.hostPlan.unknown, true)
+    assert.equal(report.hostPlan.reason, 'predictHost did not answer: NS_PLUGIN_SERVER_IN_CLIENT: lead-form imports a server-only module (plugins/lead-form/Form.tsx)')
+    assert.doesNotMatch(report.hostPlan.reason, /throw new|diagnostics\.length/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the .gitignore rewrite emits patterns git matches, with no leading ./ (L6)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, '.gitignore', 'node_modules/\ncontents/themes/*/tests/cypress/videos\ncontents/themes/*/tests/jest/coverage\n!contents/themes/*/tests/cypress/videos/keep.mp4\ncontents/themes/*/coverage\nweb/contents/themes/*/web-cov\n/contents/themes/*/root-cov\n')
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const gitignore = await readFile(join(root, '.gitignore'), 'utf8')
+    assert.doesNotMatch(gitignore, /^!?\.\//m)
+    assert.match(gitignore, /^\/tests\/cypress\/videos$/m)
+    assert.match(gitignore, /^\/coverage$/m)
+    for (const file of ['tests/cypress/videos/a.mp4', 'tests/jest/coverage/lcov.info']) {
+      execFileSync('git', ['check-ignore', '-q', file], { cwd: root })
+    }
+    // anchored as the path was: a coverage directory deeper in the project is not ignored
+    assert.equal(spawnSync('git', ['check-ignore', '-q', 'lib/coverage/x.ts'], { cwd: root }).status, 1)
+    execFileSync('git', ['check-ignore', '-q', 'coverage/x.ts'], { cwd: root })
+    // a prefix before the glob: the glob and its slash go (web/web-cov, /root-cov), nothing becomes unanchored or wrong
+    assert.match(gitignore, /^web\/web-cov$/m)
+    assert.match(gitignore, /^\/root-cov$/m)
+    execFileSync('git', ['check-ignore', '-q', 'web/web-cov/a.ts'], { cwd: root })
+    assert.equal(spawnSync('git', ['check-ignore', '-q', 'lib/web/web-cov/a.ts'], { cwd: root }).status, 1)
+    execFileSync('git', ['check-ignore', '-q', 'root-cov/a.ts'], { cwd: root })
+    assert.equal(spawnSync('git', ['check-ignore', '-q', 'lib/root-cov/a.ts'], { cwd: root }).status, 1)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('relative specifiers in strings that leave the theme directory follow the file (jest.mock, require.resolve, import) (L7)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'lib/shared.ts', 'export const shared = 1\n')
+    await write(root, 'contents/themes/acme/tests/unit/viewer.test.ts', [
+      "jest.mock('../../../../plugins/local/node_modules/react', () => ({}))",
+      "jest.requireActual('../../../../plugins/local/Plugin')",
+      "const shared = require.resolve('../../../../../lib/shared')",
+      "const lazy = () => import('../../../../../lib/shared')",
+      "jest.mock('../../components/Button', () => ({}))",
+      '',
+    ].join('\n'))
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const moved = await readFile(join(root, 'tests/unit/viewer.test.ts'), 'utf8')
+    assert.match(moved, /jest\.mock\('\.\.\/\.\.\/plugins\/local\/node_modules\/react'/)
+    assert.match(moved, /jest\.requireActual\('\.\.\/\.\.\/plugins\/local\/Plugin'\)/)
+    assert.match(moved, /require\.resolve\('\.\.\/\.\.\/lib\/shared'\)/)
+    assert.match(moved, /import\('\.\.\/\.\.\/lib\/shared'\)/)
+    assert.match(moved, /jest\.mock\('\.\.\/\.\.\/components\/Button'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('workspace members get peer ranges the host satisfies, and a duplicate copy of Next or React is reported (L8)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root)
+    await setPackageJson(root, pkg => { pkg.dependencies.react = '^19.1.0' })
+    await write(root, 'contents/plugins/local/package.json', `${JSON.stringify({ name: 'local', peerDependencies: { next: '^15.0.0', react: '19.0.0', 'react-dom': '>=18' } }, null, 2)}\n`)
+    await write(root, 'contents/plugins/local/node_modules/next/package.json', JSON.stringify({ name: 'next', version: '15.5.12' }))
+    await commitFixture(root)
+
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.memberPeers, [{ path: 'contents/plugins/local/package.json', updates: [{ name: 'next', from: '^15.0.0', to: '~16.3.5' }, { name: 'react', from: '19.0.0', to: '^19.1.0' }], kept: [] }])
+    assert.equal(report.duplicateCopies.length, 1)
+    assert.deepEqual([report.duplicateCopies[0].member, report.duplicateCopies[0].name, report.duplicateCopies[0].version], ['contents/plugins/local', 'next', '15.5.12'])
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.deepEqual(JSON.parse(await readFile(join(root, 'plugins/local/package.json'), 'utf8')).peerDependencies, { next: '~16.3.5', react: '^19.1.0', 'react-dom': '>=18' })
+    assert.match(result.stdout, /next \/ react \/ react-dom copies/)
+    assert.match(result.stdout, /pnpm why next react react-dom/)
+    // L9: installed dependencies are not "not moved" project files
+    assert.doesNotMatch(result.stdout.split('\n').filter(line => /not moved|no safe root-first/.test(line)).join('\n'), /node_modules/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the report names where moved files are now, and says what to do with a code file in the app root (L9)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root)
+    await write(root, 'contents/themes/acme/lib/api.ts', "export const url = '/api/v1/theme/acme/landings'\n")
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/StaticIntlProvider.tsx', 'export const StaticIntlProvider = () => null\n')
+    await commitFixture(root)
+    const dry = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.equal(dry.appConversion.blockers.length, 1)
+    assert.match(dry.appConversion.blockers[0], /\(StaticIntlProvider\.tsx\): it is code, not a route: move it to components\/ or lib\/ and update the files that import it by hand/)
+    await rm(join(root, 'app/StaticIntlProvider.tsx'))
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const urls = result.stdout.slice(result.stdout.lastIndexOf('Project URLs that changed (update their callers)'))
+    assert.match(urls, /^ {2}lib\/api\.ts:1: \/api\/v1\/theme\/acme\/landings -> \/api\/landings$/m)
+    assert.doesNotMatch(urls, /contents\/themes/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the printed rollback says it restores the migrate-time snapshot and must run before further edits (L10)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root, { prepare: 'fail' })
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stdout, /They restore the snapshot taken when migrate started \(git checkout plus \.nextspark\/migrate-rollback\), so run them right away, before editing or committing anything else/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a converted override whose core import the installed core no longer exports is a dry-run blocker (L11)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root)
+    await write(root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192', exports: { './lib/*': { import: './dist/lib/*.js' }, './lib/api': { import: './dist/lib/api/index.js' } } }))
+    await write(root, 'node_modules/@nextsparkjs/core/dist/lib/present.js', 'export {}\n')
+    await write(root, 'node_modules/@nextsparkjs/core/dist/lib/api/index.js', 'export {}\n')
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', [
+      "import { present } from '@nextsparkjs/core/lib/present'",
+      "import { api } from '@nextsparkjs/core/lib/api'",
+      "import { TemplateService } from '@nextsparkjs/core/lib/services/template.service'",
+      'export default function Dashboard() { return null }',
+      '',
+    ].join('\n'))
+    await commitFixture(root)
+    const dry = run(root, ['--dry-run', '--json'])
+    assert.equal(dry.status, 1, `${dry.stdout}\n${dry.stderr}`)
+    const blockers = JSON.parse(dry.stdout).appConversion.blockers as string[]
+    assert.equal(blockers.length, 1, blockers.join('\n'))
+    assert.match(blockers[0], /^app\/dashboard\/page\.tsx:3: imports @nextsparkjs\/core\/lib\/services\/template\.service, which the installed @nextsparkjs\/core does not export/)
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /Refusing to migrate: 1 blocker\(s\)/)
+    assert.equal(git_status(root), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// S16 round 2
+
+test('peer ranges: only a range whose every version is below the target is raised; the rest is reported (L8)', () => {
+  assert.equal(rangeAccepts('>16', '16.3.5'), false)
+  assert.equal(rangeAccepts('>=16', '16.3.5'), true)
+  assert.equal(rangeAccepts('15.0.0 - 17.0.0', '16.3.5'), true)
+  assert.equal(rangeAccepts('^15 || ^16.3.0', '16.3.5'), true)
+  assert.equal(rangeAccepts('~16.3.5', '16.3.5'), true)
+  assert.equal(rangeAccepts('^0.2.1', '0.3.0'), false)
+  for (const below of ['^15.0.0', '15.5.12', '~15.2', '15.0.0 - 15.9.9', '>=14 <16', '<16', '^14 || ^15', '16.2.4']) assert.equal(rangeAllBelow(below, '16.3.5'), true, below)
+  for (const reaches of ['^17.0.0', '>=15', '>16', '*', '^15 || ^17', '~16.3.5', '^19.2.4', 'not a range']) assert.equal(rangeAllBelow(reaches, '16.3.5'), false, reaches)
+  assert.equal(rangeAllBelow('^19.2.4', '19.1.0'), false)
+  assert.equal(rangeAllBelow('19.0.0', '19.1.0'), true)
+})
+
+test('a member peer range that reaches higher than the target is reported and left as it is (L8)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root)
+    await setPackageJson(root, pkg => { pkg.dependencies.react = '^19.1.0'; pkg.dependencies['react-dom'] = '^19.1.0' })
+    const manifest = `${JSON.stringify({ name: 'local', peerDependencies: { next: '^17.0.0', react: '^19.2.4', 'react-dom': '^19.2.4' } }, null, 2)}\n`
+    await write(root, 'contents/plugins/local/package.json', manifest)
+    await commitFixture(root)
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.equal(report.memberPeers.length, 1)
+    assert.deepEqual(report.memberPeers[0].updates, [])
+    assert.deepEqual(report.memberPeers[0].kept.map((note: { name: string }) => note.name), ['next', 'react', 'react-dom'])
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'plugins/local/package.json'), 'utf8'), manifest)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('only a document at the theme root is renamed on a collision; public/, docs/ and source files block (L3)', async () => {
+  for (const file of ['public/robots.txt', 'public/llms.txt', 'docs/guide.md']) {
+    const { root } = await moveFixture()
+    try {
+      await write(root, `contents/themes/acme/${file}`, 'theme copy\n')
+      await write(root, file, 'project copy\n')
+      await commitFixture(root)
+      const dry = run(root, ['--dry-run', '--json'])
+      assert.equal(dry.status, 1, file)
+      const report = JSON.parse(dry.stdout)
+      assert.equal(report.appConversion.blockers.length, 1, file)
+      assert.match(report.appConversion.blockers[0], new RegExp(`contents/themes/acme/${file.replace('.', '\\.')} would move to ${file.replace('.', '\\.')}, where a different file already is`), file)
+      assert.deepEqual(report.collisions.renamed, [], file)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  }
+})
+
+test('the moved root proxy is announced as replacing core\'s template, and its core imports are checked (L5, L11)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root)
+    await write(root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192', exports: { './lib/*': { import: './dist/lib/*.js' } } }))
+    await write(root, 'node_modules/@nextsparkjs/core/dist/lib/middleware.js', 'export {}\n')
+    await write(root, 'node_modules/@nextsparkjs/core/templates/proxy.ts', 'export function proxy() {}\n')
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'lib/country.ts', 'export const countryOf = () => "AR"\n')
+    await write(root, 'proxy.ts', PROJECT_ROOT_PROXY)
+    await commitFixture(root)
+    const ok = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(ok.appConversion.blockers, [])
+    assert.ok(ok.warnings.some((warning: string) => /REPLACES core's current proxy template.*templates\/proxy\.ts/.test(warning)))
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /It replaces core's current proxy template: compare it with node_modules\/@nextsparkjs\/core\/templates\/proxy\.ts/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+  const broken = await moveFixture()
+  try {
+    await installConversionCore(broken.root)
+    await write(broken.root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192', exports: { './lib/*': { import: './dist/lib/*.js' } } }))
+    await write(broken.root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(broken.root, 'lib/country.ts', 'export const countryOf = () => "AR"\n')
+    await write(broken.root, 'proxy.ts', PROJECT_ROOT_PROXY)
+    await commitFixture(broken.root)
+    const dry = run(broken.root, ['--dry-run', '--json'])
+    assert.equal(dry.status, 1)
+    assert.match(JSON.parse(dry.stdout).appConversion.blockers[0], /^proxy\.ts:2: imports @nextsparkjs\/core\/lib\/middleware, which the installed @nextsparkjs\/core does not export/)
+  } finally {
+    await rm(broken.root, { recursive: true, force: true })
   }
 })
