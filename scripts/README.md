@@ -290,14 +290,21 @@ Publica `.tgz` a npm.
 
 # Opciones:
 #   --tag <tag>       Tag (default: latest)
-#   --dry-run         Simular
+#   --also-tag <tag>  Tras publicar, `npm dist-tag add <pkg>@<version> <tag>` por paquete
+#   --dry-run         Simular (imprime los comandos de dist-tag)
+#   --skip-auth-check Omitir npm whoami (solo con --dry-run)
 #   --otp <code>      Código 2FA
 
 # Ejemplos:
 ./scripts/packages/publish.sh ./.packages                 # Latest
 ./scripts/packages/publish.sh ./.packages --tag beta      # Beta
 ./scripts/packages/publish.sh ./.packages --dry-run       # Test
+./scripts/packages/publish.sh ./.packages --tag latest --also-tag beta   # latest y mover beta
 ```
+
+Un re-run tras una publicación parcial salta (`[SKIP]`) las versiones ya publicadas y aplica igual `--also-tag`; los `dist-tag` fallidos se listan al final.
+
+El orden de publicación sale de las dependencias entre los tarballs (`publish-order.mjs`), no de una lista fija.
 
 **Requisitos:** `npm login` y `npm login --scope=@nextsparkjs`
 

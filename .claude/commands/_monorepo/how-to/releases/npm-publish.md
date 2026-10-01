@@ -136,10 +136,19 @@ pnpm pkg:publish
 
 **If you need a specific tag:**
 ```bash
-# The publish script accepts options via the .packages directory
-# Edit the tag in the script or publish manually with pnpm:
-pnpm pkg:publish  # Uses publish.sh which defaults to 'latest' tag
+pnpm pkg:publish --tag beta                       # beta only
+pnpm pkg:publish --tag latest --also-tag beta     # latest AND move beta to the same version
+pnpm pkg:publish --tag latest --also-tag beta --dry-run --skip-auth-check   # preview, no login needed
 ```
+
+`--also-tag <tag>` runs `npm dist-tag add <pkg>@<version> <tag>` after each package is published
+(`--dry-run` only prints those commands). `--skip-auth-check` skips `npm whoami` and is only accepted
+with `--dry-run`. If a publish fails the run stops, so no package goes live before a dependency it pins.
+
+**Resuming after a partial publish:** re-run the same command with the same `.packages` (use `--no-cleanup`
+on the first run if unsure). Before each package the script runs `npm view <name>@<version> version`; a version
+already on the registry is reported as `[SKIP] already published` and still gets `--also-tag`. Dist-tag
+commands that failed (e.g. an expired OTP) are listed at the end so they can be re-run.
 
 **Manual override (only if script doesn't support needed options):**
 ```bash
@@ -175,23 +184,21 @@ npm view @nextsparkjs/plugin-walkme dist-tags --json 2>/dev/null
 
 ```bash
 # Quick smoke test
-pnpm dlx create-nextspark-app@beta test-install --yes
+pnpm dlx create-nextspark-app@latest test-install --yes
+cd test-install && pnpm install
+# A fresh project has no auth provider env, so the production auth preflight (#202) would fail the build;
+# declare the runtime-only providers for the smoke test:
+NEXTSPARK_AUTH_RUNTIME_ONLY=email,google pnpm exec nextspark build
 ```
 
 ---
 
 ## Publish Order (handled by script)
 
-The `publish.sh` script publishes in this order:
-
-1. `@nextsparkjs/core` (no dependencies)
-2. `@nextsparkjs/ui` (depends on core)
-3. `@nextsparkjs/mobile` (depends on core)
-4. `@nextsparkjs/testing` (depends on core)
-5. `@nextsparkjs/cli` (depends on core)
-6. `create-nextspark-app` (depends on cli)
-7. `@nextsparkjs/ai-workflow` (standalone)
-8. All plugins (depend on core)
+`publish.sh` computes the order from the tarballs: each package's `dependencies`, `peerDependencies`
+and `optionalDependencies` on other `@nextsparkjs/*` packages in the set (`scripts/packages/publish-order.mjs`).
+A package is published after everything it pins (e.g. `ui` before `core`, `core` before the plugins,
+`cli` before `create-nextspark-app`), and a dependency cycle aborts before anything is published.
 
 ---
 

@@ -713,6 +713,7 @@ async function main() {
     ['pack.sh tarballs are installable and leak nothing maintainer-local (node:test)', nodeTest('verify-tarballs.test.mjs')],
     ['The template configs load only packages its package.json declares (node:test)', nodeTest('mobile-template-deps.test.mjs')],
     ['The mobile import boundary refuses server code, the database, registries, migrations and Node-only modules (node:test)', nodeTest('mobile-boundary.test.mjs')],
+    ['publish.sh orders packages by their dependencies and lists the dist-tag commands (node:test)', nodeTest('publish-order.test.mjs')],
     ['apps/mobile/src matches packages/mobile/templates/src', verifyMobileSrcMatchesTemplate],
     // Not before the comparison above: the guard test's throwaway copy of this script stops there
     ['apps/mobile, @nextsparkjs/mobile and the template import portable code only', () =>

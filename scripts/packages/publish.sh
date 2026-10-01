@@ -15,7 +15,12 @@
 # OPTIONS:
 #   --tag <tag>       npm dist-tag (default: latest)
 #                     Common tags: latest, beta, alpha, next, rc
+#   --also-tag <tag>  After each successful publish, also point <tag> at the
+#                     published version: npm dist-tag add <pkg>@<version> <tag>
+#                     (e.g. --tag latest --also-tag beta). In --dry-run the
+#                     commands are printed, not run.
 #   --dry-run         Perform a dry run without publishing
+#   --skip-auth-check Skip the npm whoami check (only valid with --dry-run)
 #   --otp <code>      One-time password for npm 2FA
 #   --no-cleanup      Keep .tgz files after successful publish
 #   --registry <url>  Custom npm registry URL
@@ -25,16 +30,18 @@
 #   ./publish.sh ./dist                            # Publish all packages in dist
 #   ./publish.sh ./dist --tag beta                 # Publish with beta tag
 #   ./publish.sh ./dist --dry-run                  # Test without publishing
+#   ./publish.sh ./dist --tag latest --also-tag beta   # latest, and move beta to it
+#   ./publish.sh ./dist --dry-run --skip-auth-check    # Dry run without npm login
 #   ./publish.sh ./dist --otp 123456               # Publish with 2FA code
 #   ./publish.sh ./dist --registry http://localhost:4873  # Publish to verdaccio
 #   ./publish.sh ./dist --no-cleanup               # Keep .tgz files after publish
 #
 # PUBLISH ORDER:
-#   Packages are published in dependency order:
-#   1. @nextsparkjs/core
-#   2. @nextsparkjs/cli
-#   3. create-nextspark-app
-#   4. Plugins (@nextsparkjs/plugin-*)
+#   Packages are published in dependency order, computed from the tarballs'
+#   package.json (dependencies / peerDependencies / optionalDependencies on
+#   other packages in the set; see publish-order.mjs). A package is never
+#   live before an internal dependency it pins (ui before core, core before
+#   the plugins, ...). A dependency cycle aborts the run before publishing.
 #
 # REQUIREMENTS:
 #   - npm must be installed and authenticated (npm login)
@@ -61,6 +68,8 @@ DRY_RUN=false
 OTP=""
 CLEANUP=true
 REGISTRY=""
+ALSO_TAG=""
+SKIP_AUTH_CHECK=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -72,6 +81,18 @@ while [[ $# -gt 0 ]]; do
             fi
             TAG="$2"
             shift 2
+            ;;
+        --also-tag)
+            if [ -z "$2" ] || [[ "$2" == --* ]]; then
+                echo -e "${RED}Error: --also-tag requires a tag name${NC}"
+                exit 1
+            fi
+            ALSO_TAG="$2"
+            shift 2
+            ;;
+        --skip-auth-check)
+            SKIP_AUTH_CHECK=true
+            shift
             ;;
         --dry-run)
             DRY_RUN=true
@@ -105,7 +126,10 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Options:"
             echo "  --tag <tag>       npm dist-tag (default: latest)"
-            echo "  --dry-run         Test without publishing"
+            echo "  --also-tag <tag>  After publishing, run 'npm dist-tag add <pkg>@<version> <tag>'"
+            echo "                    for each published package (e.g. --tag latest --also-tag beta)"
+            echo "  --dry-run         Test without publishing (prints the dist-tag commands)"
+            echo "  --skip-auth-check Skip npm whoami (only with --dry-run)"
             echo "  --otp <code>      2FA one-time password"
             echo "  --no-cleanup      Keep .tgz files after publish"
             echo "  --registry <url>  Custom npm registry"
@@ -113,6 +137,7 @@ while [[ $# -gt 0 ]]; do
             echo "Examples:"
             echo "  $0 ./dist"
             echo "  $0 ./dist --tag beta --dry-run"
+            echo "  $0 ./dist --tag latest --also-tag beta"
             echo "  $0 ./dist --otp 123456"
             exit 0
             ;;
@@ -143,6 +168,16 @@ if [ -z "$PACKAGES_DIR" ]; then
     echo ""
     echo "Usage: $0 <packages-dir> [options]"
     echo "Use --help for more information"
+    exit 1
+fi
+
+if [ "$SKIP_AUTH_CHECK" = true ] && [ "$DRY_RUN" = false ]; then
+    echo -e "${RED}Error: --skip-auth-check is only valid with --dry-run${NC}"
+    exit 1
+fi
+
+if [ -n "$ALSO_TAG" ] && [ "$ALSO_TAG" = "$TAG" ]; then
+    echo -e "${RED}Error: --also-tag must differ from --tag ($TAG)${NC}"
     exit 1
 fi
 
@@ -188,22 +223,29 @@ if [ -n "$REGISTRY" ]; then
     REGISTRY_ARGS="--registry $REGISTRY"
 fi
 
-NPM_USER=$(npm whoami $REGISTRY_ARGS 2>/dev/null) || {
-    echo -e "${RED}Error: Not logged in to npm${NC}"
-    echo ""
-    echo "Please run: npm login"
-    if [ -n "$REGISTRY" ]; then
-        echo "Or for custom registry: npm login --registry $REGISTRY"
-    fi
-    exit 1
-}
-echo -e "  Logged in as: ${GREEN}$NPM_USER${NC}"
+if [ "$SKIP_AUTH_CHECK" = true ]; then
+    echo -e "  ${YELLOW}[SKIPPED]${NC} --skip-auth-check (dry run)"
+else
+    NPM_USER=$(npm whoami $REGISTRY_ARGS 2>/dev/null) || {
+        echo -e "${RED}Error: Not logged in to npm${NC}"
+        echo ""
+        echo "Please run: npm login"
+        if [ -n "$REGISTRY" ]; then
+            echo "Or for custom registry: npm login --registry $REGISTRY"
+        fi
+        exit 1
+    }
+    echo -e "  Logged in as: ${GREEN}$NPM_USER${NC}"
+fi
 echo ""
 
 # Display configuration
 echo -e "${CYAN}Configuration:${NC}"
 echo "  Packages directory: $PACKAGES_DIR"
 echo "  Distribution tag:   $TAG"
+if [ -n "$ALSO_TAG" ]; then
+    echo "  Also tag:          $ALSO_TAG"
+fi
 echo "  Dry run:           $DRY_RUN"
 echo "  Cleanup after:     $CLEANUP"
 if [ -n "$REGISTRY" ]; then
@@ -214,61 +256,41 @@ if [ -n "$OTP" ]; then
 fi
 echo ""
 
-# Define publish order for correct dependency resolution
-PUBLISH_ORDER=(
-    "nextsparkjs-core-"
-    "nextsparkjs-testing-"
-    "nextsparkjs-cli-"
-    "create-nextspark-app-"
-)
+FAILED_TAG_CMDS=()
 
-# Function to find and sort .tgz files by publish order
-get_ordered_packages() {
-    local dir="$1"
-    declare -a ordered=()
-    declare -a plugins=()
-    declare -a others=()
-
-    # First, add packages in defined order
-    for prefix in "${PUBLISH_ORDER[@]}"; do
-        for tgz in "$dir"/*.tgz; do
-            if [[ "$(basename "$tgz")" == "$prefix"* ]]; then
-                ordered+=("$tgz")
-            fi
-        done
-    done
-
-    # Then collect plugins and others
-    for tgz in "$dir"/*.tgz; do
-        local basename=$(basename "$tgz")
-        local already_added=false
-
-        # Check if already in ordered list
-        for added in "${ordered[@]}"; do
-            if [ "$tgz" = "$added" ]; then
-                already_added=true
-                break
-            fi
-        done
-
-        if [ "$already_added" = false ]; then
-            if [[ "$basename" == *"-plugin-"* ]] || [[ "$basename" == "nextsparkjs-plugin-"* ]]; then
-                plugins+=("$tgz")
-            else
-                others+=("$tgz")
-            fi
-        fi
-    done
-
-    # Combine: ordered -> plugins -> others
-    for tgz in "${ordered[@]}"; do echo "$tgz"; done
-    for tgz in "${plugins[@]}"; do echo "$tgz"; done
-    for tgz in "${others[@]}"; do echo "$tgz"; done
+# True when name@version is already on the registry (a re-run after a partial publish)
+already_published() {
+    npm view "$1@$2" version $REGISTRY_ARGS > /dev/null 2>&1
 }
 
-# Publish a single package
+# Point --also-tag at the version just published
+add_dist_tag() {
+    local pkg_name="$1"
+    local pkg_version="$2"
+    [ -n "$ALSO_TAG" ] || return 0
+
+    local cmd="npm dist-tag add $pkg_name@$pkg_version $ALSO_TAG"
+    [ -n "$REGISTRY" ] && cmd="$cmd --registry $REGISTRY"
+    [ -n "$OTP" ] && cmd="$cmd --otp $OTP"
+
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "    ${YELLOW}[DRY-RUN]${NC} Would run: $cmd"
+        return 0
+    fi
+    if eval "$cmd" > /dev/null 2>&1; then
+        echo -e "    ${GREEN}[OK]${NC} $ALSO_TAG -> $pkg_name@$pkg_version"
+        return 0
+    fi
+    echo -e "    ${RED}[FAIL]${NC} dist-tag $ALSO_TAG for $pkg_name@$pkg_version"
+    FAILED_TAG_CMDS+=("$cmd")
+    return 1
+}
+
+# Publish a single package (tab-separated: tgz, name, version)
 publish_package() {
     local tgz_file="$1"
+    local pkg_name="$2"
+    local pkg_version="$3"
     local pkg_basename=$(basename "$tgz_file")
 
     echo -e "  Publishing ${CYAN}$pkg_basename${NC}..."
@@ -288,8 +310,9 @@ publish_package() {
         cmd="$cmd --dry-run"
     fi
 
-    # Execute publish
-    if eval "$cmd" > /dev/null 2>&1; then
+    # Execute publish once, keeping its output for the failure report
+    local output
+    if output=$(eval "$cmd" 2>&1); then
         if [ "$DRY_RUN" = true ]; then
             echo -e "    ${YELLOW}[DRY-RUN]${NC} Would publish $pkg_basename"
         else
@@ -298,9 +321,7 @@ publish_package() {
         return 0
     else
         echo -e "    ${RED}[FAIL]${NC} Failed to publish $pkg_basename"
-        # Try again with verbose output for debugging
-        echo -e "    ${YELLOW}Retrying with verbose output...${NC}"
-        eval "$cmd" 2>&1 | head -20
+        echo "$output" | head -20
         return 1
     fi
 }
@@ -308,12 +329,19 @@ publish_package() {
 # Get ordered list of packages
 echo -e "${CYAN}Packages to publish (in order):${NC}"
 # Use while loop instead of mapfile for bash 3.2 compatibility (macOS)
+# Order comes from the tarballs' own dependency graph; a cycle aborts before anything is published
+ORDER_OUTPUT=$(node "$SCRIPT_DIR/publish-order.mjs" "$PACKAGES_DIR" 2>&1) || {
+    echo -e "${RED}$ORDER_OUTPUT${NC}"
+    echo -e "${RED}Could not compute the publish order. Nothing was published.${NC}"
+    exit 1
+}
 ORDERED_PACKAGES=()
 while IFS= read -r line; do
     [[ -n "$line" ]] && ORDERED_PACKAGES+=("$line")
-done < <(get_ordered_packages "$PACKAGES_DIR")
+done <<< "$ORDER_OUTPUT"
 
-for tgz in "${ORDERED_PACKAGES[@]}"; do
+for entry in "${ORDERED_PACKAGES[@]}"; do
+    IFS=$'\t' read -r tgz name version <<< "$entry"
     echo "  - $(basename "$tgz")"
 done
 echo ""
@@ -322,14 +350,23 @@ echo ""
 echo -e "${CYAN}Publishing packages...${NC}"
 published_count=0
 failed_count=0
+skipped_count=0
 
-for tgz in "${ORDERED_PACKAGES[@]}"; do
-    if publish_package "$tgz"; then
-        ((published_count++))
+for entry in "${ORDERED_PACKAGES[@]}"; do
+    IFS=$'\t' read -r tgz name version <<< "$entry"
+    if already_published "$name" "$version"; then
+        echo -e "  ${CYAN}$(basename "$tgz")${NC}"
+        echo -e "    ${YELLOW}[SKIP]${NC} already published: $name@$version"
+        skipped_count=$((skipped_count + 1))
+        add_dist_tag "$name" "$version" || failed_count=$((failed_count + 1))
+    elif publish_package "$tgz" "$name" "$version"; then
+        published_count=$((published_count + 1))
+        add_dist_tag "$name" "$version" || failed_count=$((failed_count + 1))
     else
-        ((failed_count++))
-        # Continue with other packages or abort?
-        echo -e "${YELLOW}Warning: Continuing with remaining packages...${NC}"
+        failed_count=$((failed_count + 1))
+        # Dependents of a package that failed must not go live without it
+        echo -e "${RED}Stopping: the remaining packages are not published so none goes live before a dependency.${NC}"
+        break
     fi
 done
 echo ""
@@ -358,6 +395,9 @@ if [ "$DRY_RUN" = true ]; then
 fi
 
 echo -e "Published: ${GREEN}$published_count${NC}"
+if [ $skipped_count -gt 0 ]; then
+    echo -e "Skipped (already published): ${YELLOW}$skipped_count${NC}"
+fi
 if [ $failed_count -gt 0 ]; then
     echo -e "Failed:    ${RED}$failed_count${NC}"
 fi
@@ -367,6 +407,12 @@ if [ $failed_count -eq 0 ]; then
     echo -e "${CYAN}Packages are now available on npm:${NC}"
     echo "  npm install @nextsparkjs/core@$TAG"
     echo "  npx create-nextspark-app@$TAG"
+    echo ""
+fi
+
+if [ ${#FAILED_TAG_CMDS[@]} -gt 0 ]; then
+    echo -e "${YELLOW}Failed dist-tag commands (re-run with a fresh OTP if needed):${NC}"
+    for c in "${FAILED_TAG_CMDS[@]}"; do echo "  $c"; done
     echo ""
 fi
 
