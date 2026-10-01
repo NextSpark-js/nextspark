@@ -115,6 +115,8 @@ export interface PluginEntity {
   hasAssets: boolean
   messagesPath: string
   pluginContext: { pluginName: string } | null
+  themeContext: { themeName: string } | null
+  source: string
 }
 
 export interface PluginSettingsArea {

@@ -35,7 +35,12 @@ export function mergeEntities({ plugins, coreEntities, themes, onOverride }) {
   ]
   const byName = new Map()
   for (const entity of merged) {
-    if (byName.has(entity.name)) onOverride?.(entity, byName.get(entity.name))
+    const replaced = byName.get(entity.name)
+    if (replaced) {
+      onOverride?.(entity, replaced)
+      // A project config of a core entity's name is that entity, customized (the host must not take its name for a new entity's)
+      if (replaced.isCore || replaced.overridesCore) entity.overridesCore = true
+    }
     byName.set(entity.name, entity)
   }
   return Array.from(byName.values())
@@ -46,10 +51,7 @@ export function mergeEntities({ plugins, coreEntities, themes, onOverride }) {
  * `includeCore: false` leaves core's own entities out (the host serves those with core's own routes).
  */
 export async function discoverAllEntities(config, { includeCore = true } = {}) {
-  const [plugins, coreEntities, themes] = await Promise.all([
-    discoverPlugins(config),
-    includeCore ? discoverCoreEntities(config) : [],
-    discoverThemes(config),
-  ])
-  return mergeEntities({ plugins, coreEntities, themes })
+  const [plugins, coreEntities, themes] = await Promise.all([discoverPlugins(config), discoverCoreEntities(config), discoverThemes(config)])
+  const merged = mergeEntities({ plugins, coreEntities, themes })
+  return includeCore ? merged : merged.filter(entity => !entity.isCore)
 }

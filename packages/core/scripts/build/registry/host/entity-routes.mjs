@@ -222,7 +222,7 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
 
   const coreApi = coreApiNamespaces(coreRoutes)
   for (const entity of routableEntities(entities)) {
-    if (coreApi.has(entity.name)) {
+    if (coreApi.has(entity.name) && !entity.overridesCore) {
       diagnostics.push({
         code: ENTITY_DIAGNOSTICS.CORE_API_NAMESPACE,
         message: `entity "${entity.name}" (${entity.source === 'plugin' ? `plugins/${entity.pluginContext?.pluginName}/entities/${entity.relativePath}` : `entities/${entity.relativePath}`}) has a name reserved by core's API namespace (/api/v1/${entity.name}/**). Rename the entity`,

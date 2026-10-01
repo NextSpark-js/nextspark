@@ -82,7 +82,7 @@ export function generateThemeRegistry(themes, config) {
     stylesPath: ${theme.stylesPath ? `'${theme.stylesPath}'` : 'null'},
     assetsPath: ${theme.assetsPath ? `'${theme.assetsPath}'` : 'null'},
     messagesPath: ${theme.messagesPath ? `'${theme.messagesPath}'` : 'null'},
-    entities: ${JSON.stringify(theme.entities || [], null, 6).replace(/^/gm, '    ')},
+    entities: ${JSON.stringify(theme.entities || [], (key, value) => (key === 'overridesCore' ? undefined : value), 6).replace(/^/gm, '    ')},
     routeFiles: ${JSON.stringify(theme.routeFiles || [], null, 6).replace(/^/gm, '    ')},
     plugins: [${(theme.plugins || []).map(p => `'${p}'`).join(', ')}]
   }`

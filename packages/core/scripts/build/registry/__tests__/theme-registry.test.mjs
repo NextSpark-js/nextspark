@@ -109,3 +109,9 @@ test('the dashboard client input imports only dashboard.config, not the server r
   assert.doesNotMatch(out, /from ['"][^'"]*theme-registry/)
   assert.doesNotMatch(out, /from ['"][^'"]*dev\.config/)
 })
+
+test('the theme registry does not serialize the merge-only overridesCore mark of an entity', () => {
+  const content = generateThemeRegistry([{ ...theme('t'), entities: [{ name: 'patterns', overridesCore: true }] }], { outputDir: '/tmp', isNpmMode: false })
+  assert.match(content, /"name": "patterns"/)
+  assert.doesNotMatch(content, /overridesCore/)
+})

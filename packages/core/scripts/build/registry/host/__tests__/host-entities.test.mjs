@@ -618,6 +618,18 @@ test('an entity named after a core API namespace is a diagnostic before any rout
   assert.ok(result.diagnostics.some(d => d.code === ENTITY_DIAGNOSTICS.CORE_API_NAMESPACE && /entity "billing".*\/api\/v1\/billing\/\*\*.*Rename the entity/.test(d.message)))
 })
 
+test('a project config that overrides a core entity (patterns) keeps its routes; only a new entity with a core API name is refused', async () => {
+  const coreRoutes = ['patterns', 'cron', 'auth', 'billing'].map(name => ({ kind: 'route', target: `api/v1/${name}/route.ts`, specifier: `@c/${name}`, file: `/c/${name}` }))
+  const facts = new Map()
+  for (const name of ['patterns']) facts.set(name, await factsOf(`  slug: '${name}',\n  enabled: true,\n  ui: { dashboard: { showInMenu: true } },`))
+  const overrides = ['patterns'].map(name => entity(name, `${name}EntityConfig`, { source: 'theme', overridesCore: true }))
+  const result = planEntityRoutes({ entities: [...overrides, entity('cron', 'cronEntityConfig'), entity('auth', 'authEntityConfig')], facts, coreRoutes, resolveFile: () => null })
+  const refused = result.diagnostics.filter(d => d.code === ENTITY_DIAGNOSTICS.CORE_API_NAMESPACE)
+  assert.deepEqual(refused.map(d => /entity "(\w+)"/.exec(d.message)[1]), ['cron', 'auth'])
+  for (const name of ['patterns']) assert.ok(result.routes.some(r => r.target.startsWith(`dashboard/(main)/${name}/`)), `${name} keeps its routes`)
+  assert.ok(!result.routes.some(r => /\/(cron|auth)\//.test(r.target)), 'a refused entity gets none')
+})
+
 test('Next.js\' own routing limits are diagnostics with the routes named: one URL twice, dynamic segments it cannot tell apart', () => {
   const route = (target, kind = 'page') => ({ kind, target, specifier: `@core/${target}`, source: `core route ${target}` })
   assert.deepEqual(urlConflicts([route('(a)/x/page.tsx'), route('(b)/x/page.tsx')]).map(d => d.code), [PLAN_DIAGNOSTICS.URL_CONFLICT])

@@ -814,6 +814,16 @@ test('core or the project may still replace a plugin entity', () => {
   assert.deepEqual(merged.map(e => e.source), ['project'])
 })
 
+test('mergeEntities marks a project entity that replaces a core one; a new one or a plugin\'s replaced one is not', () => {
+  const plugins = [{ name: 'alpha', sourceDir: '/p/alpha', entities: [{ name: 'tasks', source: 'plugin' }] }]
+  const merged = mergeEntities({
+    plugins,
+    coreEntities: [{ name: 'patterns', source: 'core', isCore: true }],
+    themes: [{ entities: [{ name: 'patterns', source: 'theme' }, { name: 'tasks', source: 'theme' }, { name: 'cron', source: 'theme' }] }],
+  })
+  assert.deepEqual(Object.fromEntries(merged.map(e => [e.name, e.overridesCore === true])), { tasks: false, patterns: true, cron: false })
+})
+
 test('the same plugin name twice is a diagnostic naming both sources, whatever their order', () => {
   const plugins = [
     { name: 'dup', sourceDir: '/p/second', entities: [] },
