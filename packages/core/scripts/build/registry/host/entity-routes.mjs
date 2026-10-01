@@ -32,12 +32,14 @@ import { join } from 'node:path'
 
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 import { CORE_ROUTES_SPECIFIER } from './core-routes.mjs'
+import { coreApiNamespaces } from './plan.mjs'
 
 export const ENTITY_DIAGNOSTICS = Object.freeze({
   CONFIG_UNREADABLE: 'NS_HOST_ENTITY_CONFIG_UNREADABLE',
   NOT_STATIC: 'NS_HOST_ENTITY_CONFIG_NOT_STATIC',
   SLUG_MISMATCH: 'NS_HOST_ENTITY_SLUG_MISMATCH',
   BASE_PATH: 'NS_HOST_ENTITY_BASE_PATH',
+  CORE_API_NAMESPACE: 'NS_HOST_ENTITY_CORE_API_NAMESPACE',
 })
 
 /**
@@ -196,7 +198,7 @@ const arg = {
  * @param {boolean} [input.cacheComponents] - the host's setting (public item pages revalidate only without it)
  * @param {string[]} [input.modes] - cache modes the host serves (a host that builds both omits `revalidate`)
  * @param {Record<string, string>} [input.modules] - the specifiers of the modules the routes import (`ENTITY_MODULES`)
- * @returns {{ routes: object[], diagnostics: object[] }}
+ * @returns {{ routes: object[], diagnostics: object[], entities: string[] }} `entities`: the names of the entities the host serves (the ones a project may override the API of)
  */
 export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cacheComponents, modes = [], modules = ENTITY_MODULES }) {
   const routes = []
@@ -218,7 +220,15 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
     generated: true,
   })
 
+  const coreApi = coreApiNamespaces(coreRoutes)
   for (const entity of routableEntities(entities)) {
+    if (coreApi.has(entity.name)) {
+      diagnostics.push({
+        code: ENTITY_DIAGNOSTICS.CORE_API_NAMESPACE,
+        message: `entity "${entity.name}" (${entity.source === 'plugin' ? `plugins/${entity.pluginContext?.pluginName}/entities/${entity.relativePath}` : `entities/${entity.relativePath}`}) has a name reserved by core's API namespace (/api/v1/${entity.name}/**). Rename the entity`,
+      })
+      continue
+    }
     const result = facts.get(entity.name)
     const where = entity.source === 'plugin' ? `plugins/${entity.pluginContext?.pluginName}/entities/${entity.relativePath}` : `entities/${entity.relativePath}`
     if (!result || result.error) {
@@ -340,7 +350,7 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
   for (const route of routes) {
     if (route.entityRoute?.reexport) route.entityRoute.reexport = route.entityRoute.reexport.map(entry => ({ ...entry, file: resolveFile(entry.specifier) }))
   }
-  return { routes, diagnostics }
+  return { routes, diagnostics, entities: routableEntities(entities).map(entity => entity.name) }
 }
 
 /**

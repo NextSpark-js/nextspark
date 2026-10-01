@@ -22,6 +22,8 @@ Every item is detailed under Added, Changed or Removed below; `nextspark migrate
 - **Project API routes move:** `/api/v1/theme/<theme>/**` is now `/api/**` and `/api/v1/plugin/<plugin>/**` is `/api/plugins/<plugin>/**`
   (`migrate` adds rewrites so installed clients keep working).
 - **Next.js is pinned to `~16.3.5`** for the generated host; the generator refuses another minor.
+- **Entities named like a core API namespace are refused** (`NS_HOST_ENTITY_CORE_API_NAMESPACE`): `users`, `teams`, `auth`, `billing`, `cron`,
+  `api-keys`, `devtools`, `media`, `media-tags`, `blocks`, `patterns`, `post-categories` and `team-invitations`. Rename the entity.
 - **The code the generated host made dead is removed** (runtime API dispatchers, runtime template resolution, the legacy registry build;
   listed under Removed).
 - **`BlockConfig.thumbnail` is the imported image (`{ src }`),** not a string path.
@@ -47,6 +49,12 @@ Every item is detailed under Added, Changed or Removed below; `nextspark migrate
   template beat `[entity]` in 0.x; the entity's permission layout is kept at the top of every tree that serves the URL (a role the entity
   does not allow now sees `permission-denied`). `prepare`, `build` and `dev` print it as an Info notice. A page beside an optional
   catch-all at the same URL is `NS_HOST_URL_CONFLICT` instead of a failure inside `next build`.
+- **A project can replace one entity's generic API handler (#203).** `templates/api/v1/<entity>/route.ts`, `[id]/route.ts`,
+  `[id]/child/[childType]/route.ts` and `[id]/child/[childType]/[childId]/route.ts` are accepted for an entity of the project (or of an
+  enabled plugin) and served at the static `/api/v1/<entity>/...`, which Next resolves before core's dynamic `[entity]` route; any other
+  path under `/api/v1` stays `NS_HOST_API_NAMESPACE`, and core's own API namespaces (`users`, `billing`, `cron`, ...) are never an entity's: an entity named like one is refused (`NS_HOST_ENTITY_CORE_API_NAMESPACE`). `prepare` prints a warning (`NS_HOST_ENTITY_API_OVERRIDDEN`; `NS_HOST_CORE_API_REPLACED` when a template replaces a core route at its exact path): the override
+  replaces the generic handler, so authentication, permissions and hooks become the project's responsibility (put business rules in
+  entity hooks). See [Overriding an entity's API](docs/05-api/04-custom-endpoints.md#overriding-an-entitys-api).
 - **Cache Components and PPR build and run (#203).** Core's group layouts, docs pages and public item pages have Cache Components variants
   that the host selects when `next.config` sets `cacheComponents: true` (runtime reads behind `Suspense` or `connection()`, cacheable reads
   in `'use cache'` functions keyed only by entity, slug or docs path). **It is the default for new projects;** legacy ISR stays supported
@@ -124,6 +132,9 @@ Every item is detailed under Added, Changed or Removed below; `nextspark migrate
 
 ### Fixed
 
+- **Plugin capability check: `@nextsparkjs/core/lib/api/entities` (and `api-error`, `keys`) are client-safe.** The check treated all of `lib/api/**` as
+  server-only, so a local plugin component using `fetchWithTeam` got a false `NS_PLUGIN_SERVER_IN_CLIENT` (it stopped `nextspark migrate` in
+  `prepare`). A guard test now requires every `lib/api` module a core `'use client'` file imports to be classified client-safe.
 - **Audit log (#206):** entries were never written, because the table had no insert policy for the application role (migration 028).
 - **Calendar (#205):** the day grid stays mounted across parent renders (the three DayPicker components are module-level).
 - **Unknown public URLs answer 404 again in ISR** (the starter's `(public)/loading.tsx` wrapped the catch-all). Under Cache Components Next

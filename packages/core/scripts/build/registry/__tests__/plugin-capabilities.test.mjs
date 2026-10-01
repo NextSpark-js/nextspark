@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import test from 'node:test'
 
 import { discoverPlugins } from '../discovery/plugins.mjs'
@@ -9,6 +9,7 @@ import { mergeEntities } from '../discovery/all-entities.mjs'
 import {
   LEGACY_CAPABILITIES,
   PLUGIN_DIAGNOSTICS,
+  CLIENT_SAFE_CORE_API,
   PluginCapabilityError,
   assertNoPluginCollisions,
   capabilitiesOf,
@@ -17,6 +18,7 @@ import {
   pluginCollisions,
   pluginsFor,
   readPluginDeclaration,
+  serverOnlySpecifier,
   withDeclaredCapabilities,
 } from '../discovery/plugin-capabilities.mjs'
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
@@ -297,6 +299,53 @@ test('a web entry reaching server-only code through a core module is a violation
   assert.deepEqual(server.diagnostics, [])
   const clean = await check({ ...corePackage(), 'plugins/demo/plugin.config.ts': config('demo', "['web']"), 'plugins/demo/components/Widget.tsx': "import { format } from '@nextsparkjs/core/lib/format'\nexport default () => format\n" })
   assert.deepEqual(clean.diagnostics, [])
+})
+
+test('core lib/api: the client-safe modules (entities) are fine for a web entry, the rest of lib/api is server-only', async () => {
+  const core = corePackage({
+    'node_modules/@nextsparkjs/core/dist/lib/api/entities.js': "export const fetchWithTeam = (...args) => fetch(...args)\n",
+    'node_modules/@nextsparkjs/core/dist/lib/api/entities.d.ts': 'export declare const fetchWithTeam: typeof fetch\n',
+    'node_modules/@nextsparkjs/core/dist/lib/api/auth/dual-auth.js': "import { headers } from 'next/headers'\nexport const authenticate = () => headers()\n",
+    'node_modules/@nextsparkjs/core/dist/lib/api/auth/dual-auth.d.ts': 'export declare const authenticate: () => unknown\n',
+  })
+  const web = await check({ ...core, 'plugins/demo/plugin.config.ts': config('demo', "['web']"), 'plugins/demo/components/Form.tsx': "import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'\nexport default () => fetchWithTeam\n" })
+  assert.deepEqual(web.diagnostics, [], 'lib/api/entities imports only client modules')
+  // a legacy plugin (no capabilities) is checked as web too: the false positive of the 0.x -> 1.0 migration
+  const legacy = await check({ ...core, 'plugins/demo/plugin.config.ts': legacyConfig('demo'), 'plugins/demo/components/Form.tsx': "import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'\nexport default () => fetchWithTeam\n" })
+  assert.deepEqual(legacy.diagnostics, [])
+  const server = await check({ ...core, 'plugins/demo/plugin.config.ts': config('demo', "['web']"), 'plugins/demo/components/Form.tsx': "import { authenticate } from '@nextsparkjs/core/lib/api/auth/dual-auth'\nexport default () => authenticate\n" })
+  assert.deepEqual(codes(server.diagnostics), [PLUGIN_DIAGNOSTICS.SERVER_IN_CLIENT])
+})
+
+test("guard: every core lib/api module a core 'use client' file imports is classified client-safe", () => {
+  const src = join(import.meta.dirname, '../../../../src')
+  const files = []
+  const walk = dir => {
+    for (const name of readdirSync(dir)) {
+      const path = join(dir, name)
+      if (statSync(path).isDirectory()) walk(path)
+      else if (/\.tsx?$/.test(name)) files.push(path)
+    }
+  }
+  walk(src)
+  const importOf = /(?:^|\n)\s*(?:import|export)\s+(?!type\b)[^'"]*?from\s+['"]([^'"]+)['"]/g
+  const found = new Map() // lib/api module -> a client file importing it
+  for (const file of files) {
+    const text = readFileSync(file, 'utf8')
+    if (!/^\s*(?:\/\*[\s\S]*?\*\/\s*|\/\/[^\n]*\n\s*)*['"]use client['"]/.test(text)) continue
+    for (const [, specifier] of text.matchAll(importOf)) {
+      const module = specifier.startsWith('@nextsparkjs/core/') ? specifier.slice('@nextsparkjs/core/'.length) : specifier.startsWith('.') ? relative(src, resolve(dirname(file), specifier)).split('\\').join('/') : null
+      const match = module && /^lib\/api\/(.+)$/.exec(module)
+      if (match) found.set(match[1], relative(src, file))
+    }
+  }
+  assert.ok(found.has('entities'), 'the scan finds the imports core\'s client components make (the guard is not vacuous)')
+  for (const [module, file] of found) {
+    assert.equal(serverOnlySpecifier(`@nextsparkjs/core/lib/api/${module}`), null, `${file} is 'use client' and imports lib/api/${module}: add it to CLIENT_SAFE_CORE_API`)
+    assert.ok(CLIENT_SAFE_CORE_API.includes(module))
+  }
+  assert.ok(serverOnlySpecifier('@nextsparkjs/core/lib/api'), 'the barrel re-exports server code')
+  assert.ok(serverOnlySpecifier('@nextsparkjs/core/lib/api/auth/dual-auth'))
 })
 
 test('imports resolve with the project tsconfig: paths and baseUrl aliases are followed', async () => {

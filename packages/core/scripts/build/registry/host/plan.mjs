@@ -39,6 +39,9 @@
  * route outside /api/plugins/<its-name>/**, are diagnostics. The project's `templates/api/v1/...` and
  * `templates/api/plugins/<plugin>/...` may only REPLACE a route core or that plugin already serves
  * (a route added there is a diagnostic): a project never creates routes under /api/v1 or /api/plugins.
+ * One exception: `templates/api/v1/<entity>/<rest>`, for an entity of the project, is allowed when `<rest>` mirrors a route
+ * core serves under its dynamic `[entity]` (`route.ts`, `[id]/route.ts`, `[id]/child/[childType]/route.ts`, ...): the
+ * generated route is the static `/api/v1/<entity>/...`, which Next resolves before `[entity]` (notice ENTITY_API_OVERRIDDEN).
  *
  * Next.js refuses two pages for one URL and two dynamic segments of the same kind with different
  * names at one level; both are diagnostics here, with the routes named, instead of a build failure.
@@ -68,6 +71,8 @@ export const PLAN_DIAGNOSTICS = Object.freeze({
 /** Information about the plan that is not a problem (printed by prepare, returned by `planHost` as `notices`). */
 export const PLAN_NOTICES = Object.freeze({
   ENTITY_ROUTES_REPLACED: 'NS_HOST_ENTITY_ROUTES_REPLACED',
+  ENTITY_API_OVERRIDDEN: 'NS_HOST_ENTITY_API_OVERRIDDEN',
+  CORE_API_REPLACED: 'NS_HOST_CORE_API_REPLACED',
 })
 
 export const DEFAULT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js']
@@ -168,7 +173,12 @@ const PROJECT_API_HINT =
   'would be served in a namespace it does not own: core owns /api/v1/**, the project\'s api/ is served at /api/<path> and plugins at /api/plugins/<plugin>/**. ' +
   'Move it outside them, or to templates/api/v1/... to replace an existing core route on purpose'
 const PROJECT_TEMPLATE_V1_HINT =
-  'replaces no core route: templates/api/v1/... may only override a route core has at that path (core owns /api/v1/**, so it cannot add routes there); put a new route in api/ (served at /api/<path>)'
+  'replaces no core route: templates/api/v1/... may only override a route core has at that path (core owns /api/v1/**, so it cannot add routes there) or, at templates/api/v1/<entity>/..., a route core serves for every entity (route.ts, [id]/route.ts, [id]/child/[childType]/route.ts, [id]/child/[childType]/[childId]/route.ts) of an entity of this project; put a new route in api/ (served at /api/<path>)'
+/** The first segments core serves under `api/v1/` (`users`, `billing`, ...): its API namespaces, never an entity's. */
+export const coreApiNamespaces = coreRoutes => new Set(coreRoutes.map(route => /^api\/v1\/([^/[][^/]*)\//.exec(route.target)?.[1]).filter(Boolean))
+export const coreApiCollisionHint = name =>
+  `replaces no core route: "${name}" is an entity of this project, but core serves its own API under /api/v1/${name}/** (a project entity cannot take that namespace, so templates/api/v1/${name}/... can neither add routes there nor override the entity's API); rename the entity, or override a core route at its exact path`
+const ENTITY_API = /^api\/v1\/(?<name>[^/[]+)\/(?<rest>.+)$/
 const PROJECT_PLUGINS_HINT = 'would be served under /api/plugins/**, which belongs to the plugins (each serves only /api/plugins/<its-name>/**); a project cannot create routes there (templates/api/plugins/<plugin>/... may only replace a route that plugin already serves)'
 const pluginApiHint = name =>
   `would be served outside /api/plugins/${name}/**, the only namespace plugin "${name}" may serve; a plugin serves its API from api/ (at /api/plugins/${name}/**) or from templates/api/plugins/${name}/**`
@@ -192,6 +202,7 @@ function dynamicKind(segment) {
  * @param {object} input
  * @param {object[]} input.coreRoutes - `loadCoreRouteManifest(...).routes`
  * @param {object[]} [input.entityRoutes] - `planEntityRoutes(...).routes`: per-entity route candidates
+ * @param {string[]} [input.entityNames] - `planEntityRoutes(...).entities`: the entities whose `/api/v1/<entity>/...` a project template may override
  * @param {{ name: string, root: string, importBase: string, capabilities?: string[] }[]} [input.plugins] - enabled plugins; a plugin
  *   that declares no `capabilities` is legacy (server + web + build)
  * @param {{ root: string, importBase?: string, label?: string }} input.project - project source root
@@ -200,7 +211,7 @@ function dynamicKind(segment) {
  * @param {Record<string, object>} [input.webhooks] - composed webhook routes by target (`webhookRoutes`)
  * @returns {{ routes: object[], diagnostics: object[], notices: object[] }}
  */
-export function planHost({ coreRoutes, entityRoutes = [], plugins = [], project, modes = [], extensions = DEFAULT_EXTENSIONS, webhooks = {} }) {
+export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], plugins = [], project, modes = [], extensions = DEFAULT_EXTENSIONS, webhooks = {} }) {
   const diagnostics = []
   const pattern = sourceFilePattern(modes, extensions)
   const candidates = [
@@ -239,13 +250,26 @@ export function planHost({ coreRoutes, entityRoutes = [], plugins = [], project,
   const servedSlots = new Set(candidates.map(route => slotOf(route)))
   const projectBase = project?.importBase ?? '@'
   const projectLabel = project?.label ?? '.'
+  // The names core serves its own API under (`api/v1/<name>/...`, `[entity]` is the generic handler): an entity cannot take them
+  const coreApiNames = coreApiNamespaces(coreRoutes)
+  // `api/v1/<entity>/<rest>` where `<rest>` is a route core serves under `[entity]`: the project's per-entity override
+  const entityApiOf = (target, mode) => {
+    const match = ENTITY_API.exec(target)
+    return match && entityNames.includes(match.groups.name) && !coreApiNames.has(match.groups.name) && servedSlots.has(slotKey(`api/v1/[entity]/${match.groups.rest}`, mode)) ? match.groups.name : null
+  }
+  const entityApiRefusal = target => {
+    const name = ENTITY_API.exec(target)?.groups.name
+    return name && entityNames.includes(name) && coreApiNames.has(name) ? coreApiCollisionHint(name) : null
+  }
   const projectRoutes = !project?.root ? [] : [
     ...surfaceRoutes({ dir: join(project.root, 'templates'), importBase: projectBase, surface: 'templates', toTarget: path => path, layer: 'project', label: projectLabel, pattern, diagnostics,
-      namespace: (target, path, mode) => (API_PLUGINS.test(target) && !servedSlots.has(slotKey(target, mode)) ? PROJECT_PLUGINS_HINT : API_V1.test(target) && !servedSlots.has(slotKey(target, mode)) ? PROJECT_TEMPLATE_V1_HINT : null) }),
+      namespace: (target, path, mode) => (API_PLUGINS.test(target) && !servedSlots.has(slotKey(target, mode)) ? PROJECT_PLUGINS_HINT : API_V1.test(target) && !servedSlots.has(slotKey(target, mode)) && !entityApiOf(target, mode) ? entityApiRefusal(target) ?? PROJECT_TEMPLATE_V1_HINT : null) }),
     ...surfaceRoutes({ dir: join(project.root, 'api'), importBase: projectBase, surface: 'api', toTarget: path => `api/${path}`, layer: 'project', label: projectLabel, pattern, diagnostics, namespace: target => (API_V1.test(target) || API_PLUGINS.test(target) ? PROJECT_API_HINT : null) }),
   ]
   for (const route of projectRoutes) route.source = route.source.replace(/^\.\//, '')
   const notices = replaceEntityDashboards(candidates, projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`)))
+  notices.push(...coreApiNotices(projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`) && API_V1.test(route.target) && servedSlots.has(slotOf(route))), candidates))
+  notices.push(...entityApiNotices(projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`) && !servedSlots.has(slotOf(route)) && entityApiOf(route.target, route.mode))))
   candidates.push(...projectRoutes)
   for (const [target, webhook] of Object.entries(webhooks)) {
     candidates.push({ kind: 'route', target, mode: null, specifier: webhook.specifier, file: webhook.file, layer: 'project', source: webhook.source, webhook, configured: true })
@@ -410,6 +434,54 @@ function replaceEntityDashboards(candidates, templates) {
     })
   }
   return notices
+}
+
+/**
+ * "The project replaces a core API route" (#203): `templates/api/v1/<path>/route.ts` at a path core serves (`users/route.ts`,
+ * `[entity]/[id]/route.ts`, ...). Core's handler, with its authentication, permissions and hooks, no longer answers that URL.
+ */
+function coreApiNotices(routes, candidates) {
+  return routes.map(route => {
+    const core = candidates.find(candidate => candidate.layer === 'core' && slotOf(candidate) === slotOf(route))
+    const url = `/${urlSegments(route.target).join('/')}`
+    return {
+      code: PLAN_NOTICES.CORE_API_REPLACED,
+      url,
+      by: [route.source],
+      replaces: core ? describe(core) : null,
+      message:
+        `${url}: the project's ${route.source} replaces ${core ? describe(core) : 'a core route'}; ` +
+        `authentication, permissions, rate limits and hooks of the core handler no longer run there and are the project's responsibility`,
+    }
+  }).sort((a, b) => compareTargets(a.url, b.url))
+}
+
+/**
+ * "The project overrides an entity's API" (#203): `templates/api/v1/<entity>/...` routes (already checked to mirror a core
+ * `[entity]` route) are served at the static `/api/v1/<entity>/...`, which Next matches before core's `[entity]`. For those
+ * URLs the project's handler replaces the generic one: its auth, permissions and entity hooks do not run unless the project
+ * calls them. One notice per entity.
+ */
+function entityApiNotices(routes) {
+  const byEntity = new Map()
+  for (const route of routes) {
+    const name = ENTITY_API.exec(route.target).groups.name
+    if (!byEntity.has(name)) byEntity.set(name, [])
+    byEntity.get(name).push(route)
+  }
+  return [...byEntity].sort(([a], [b]) => compareTargets(a, b)).map(([entity, list]) => {
+    const urls = [...new Set(list.map(route => `/${urlSegments(route.target).join('/')}`))].sort(compareTargets)
+    const by = list.map(route => route.source).sort(compareTargets)
+    return {
+      code: PLAN_NOTICES.ENTITY_API_OVERRIDDEN,
+      entity,
+      urls,
+      by,
+      message:
+        `/api/v1/${entity}: the project's ${by.join(', ')} replace${by.length === 1 ? 's' : ''} the generic entity handler at ${urls.join(', ')}; ` +
+        `authentication, permissions, rate limits and the entity's hooks are the project's responsibility there (put business rules in entity hooks, so every path keeps them)`,
+    }
+  })
 }
 
 /** Same kind of dynamic segment (a plain `[x]`, or a catch-all of either form), whatever its name. */

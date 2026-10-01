@@ -40,7 +40,7 @@ Next.js reads segment config (`dynamic`, `revalidate`, ...) statically from the 
 
 - **Replace a page or layout:** put a file at the same path in `templates/` (`templates/dashboard/page.tsx` replaces core's dashboard page). Core protects a few routes that cannot be replaced; the generator says which.
 - **Add a page:** the same, at a path core has no route for.
-- **Add or replace a Route Handler:** `api/<path>/route.ts` is served at `/api/<path>`. Core owns `/api/v1/**` and each plugin owns `/api/plugins/<name>/**`: a project route there is refused, and a deliberate override of a core handler goes through `templates/api/v1/.../route.ts`.
+- **Add or replace a Route Handler:** `api/<path>/route.ts` is served at `/api/<path>`. Core owns `/api/v1/**` and each plugin owns `/api/plugins/<name>/**`: a project route there is refused, and a deliberate override of a core handler goes through `templates/api/v1/.../route.ts`. The generic handler of one of your entities can be replaced the same way, at `templates/api/v1/<entity>/route.ts`, `[id]/route.ts`, `[id]/child/[childType]/route.ts` or `[id]/child/[childType]/[childId]/route.ts` (auth, permissions and hooks are then yours: [overriding an entity's API](../05-api/04-custom-endpoints.md#overriding-an-entitys-api)).
 - **API Explorer docs:** `docs.md` and `presets.ts` next to a handler are what the explorer shows; core's live next to its route modules in the package.
 - **Billing webhook hooks:** `billing.webhookExtensions` in `nextspark.config.ts` names the module that adds one-time payment handling to core's Stripe or Polar webhook.
 

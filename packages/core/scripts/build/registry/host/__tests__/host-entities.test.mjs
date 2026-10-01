@@ -525,6 +525,99 @@ test('API namespaces, every combination: who may serve what under /api', () => {
   }
 })
 
+test('a project overrides one entity\'s API: templates/api/v1/<entity>/<rest> when <rest> mirrors a core [entity] route', () => {
+  const shapes = ['route.ts', '[id]/route.ts', '[id]/child/[childType]/route.ts', '[id]/child/[childType]/[childId]/route.ts']
+  const core = [
+    ...shapes.map(shape => ({ kind: 'route', target: `api/v1/[entity]/${shape}`, specifier: `@nextsparkjs/core/routes/api/v1/[entity]/${shape}`, file: '/core/e', protected: false })),
+    { kind: 'route', target: 'api/v1/users/route.ts', specifier: '@nextsparkjs/core/routes/api/v1/users/route', file: '/core/u', protected: false },
+    { kind: 'route', target: 'api/v1/users/[id]/route.ts', specifier: '@nextsparkjs/core/routes/api/v1/users/[id]/route', file: '/core/uid', protected: false },
+  ]
+  const w = world({
+    'templates/api/v1/tasks/route.ts': ROUTE,
+    'templates/api/v1/tasks/[id]/route.ts': ROUTE,
+    'templates/api/v1/tasks/[id]/child/[childType]/route.ts': ROUTE,
+    'templates/api/v1/tasks/[id]/child/[childType]/[childId]/route.ts': ROUTE,
+    'templates/api/v1/projects/[id]/route.ts': ROUTE,
+    'templates/api/v1/tasks/[id]/export/route.ts': ROUTE, // not a core [entity] shape
+    'templates/api/v1/tasks/[taskId]/route.ts': ROUTE, // the dynamic segment has another name: not core's shape
+    'templates/api/v1/ghosts/[id]/route.ts': ROUTE, // not an entity of the project
+    'templates/api/v1/users/[id]/route.ts': ROUTE, // core serves this route: replaces it (a notice), whatever the entity names say
+    'api/v1/tasks/[id]/route.ts': ROUTE, // api/ is never core's namespace
+  })
+  try {
+    const { routes, diagnostics, notices } = planHost({ coreRoutes: core, entityNames: ['tasks', 'projects'], project: { root: w.source } })
+    assert.deepEqual(diagnostics.filter(d => d.code === PLAN_DIAGNOSTICS.API_NAMESPACE).map(d => d.sources[0]).sort(), [
+      './api/v1/tasks/[id]/route.ts',
+      './templates/api/v1/ghosts/[id]/route.ts',
+      './templates/api/v1/tasks/[id]/export/route.ts',
+      './templates/api/v1/tasks/[taskId]/route.ts',
+    ])
+    assert.deepEqual(routes.filter(route => route.origin === 'project').map(route => route.target), [
+      'api/v1/projects/[id]/route.ts',
+      'api/v1/tasks/[id]/child/[childType]/[childId]/route.ts',
+      'api/v1/tasks/[id]/child/[childType]/route.ts',
+      'api/v1/tasks/[id]/route.ts',
+      'api/v1/tasks/route.ts',
+      'api/v1/users/[id]/route.ts',
+    ])
+    assert.deepEqual(notices.map(n => [n.code, n.entity ?? n.url]), [
+      [PLAN_NOTICES.CORE_API_REPLACED, '/api/v1/users/[id]'],
+      [PLAN_NOTICES.ENTITY_API_OVERRIDDEN, 'projects'],
+      [PLAN_NOTICES.ENTITY_API_OVERRIDDEN, 'tasks'],
+    ])
+    assert.match(notices[0].message, /replaces core route @nextsparkjs\/core\/routes\/api\/v1\/users\/\[id\]\/route; authentication, permissions, rate limits and hooks of the core handler no longer run/)
+    assert.equal(notices[2].urls.length, 4)
+    assert.match(notices[2].message, /replace the generic entity handler at .*\/api\/v1\/tasks\/\[id\].*authentication, permissions, rate limits and the entity's hooks are the project's responsibility/)
+    // Without the entity registered the same files are refused
+    const refused = planHost({ coreRoutes: core, entityNames: [], project: { root: w.source } })
+    assert.ok(refused.diagnostics.some(d => d.sources[0] === './templates/api/v1/tasks/[id]/route.ts'))
+    assert.deepEqual(refused.notices.map(n => n.code), [PLAN_NOTICES.CORE_API_REPLACED], 'only the core route replacement; no entity override')
+  } finally {
+    w.cleanup()
+  }
+})
+
+test('core API namespaces are never taken by an entity: every core name, every shape, against the real core manifest', async () => {
+  const { loadCoreRouteManifest } = await import('../core-routes.mjs')
+  const manifest = await loadCoreRouteManifest({ coreRoot: CORE_ROOT })
+  const names = ['users', 'teams', 'auth', 'billing', 'cron', 'api-keys', 'devtools', 'media', 'media-tags', 'blocks', 'patterns', 'post-categories', 'team-invitations']
+  const shapes = ['route.ts', '[id]/route.ts', '[id]/child/[childType]/route.ts', '[id]/child/[childType]/[childId]/route.ts']
+  const files = Object.fromEntries(names.flatMap(name => shapes.map(shape => [`templates/api/v1/${name}/${shape}`, ROUTE])))
+  const w = world({ ...files, 'templates/api/v1/tasks/[id]/route.ts': ROUTE })
+  try {
+    const { routes, diagnostics, notices } = planHost({ coreRoutes: manifest.routes, entityNames: [...names, 'tasks'], project: { root: w.source } })
+    const coreServes = target => manifest.routes.some(route => route.target === target)
+    const projectTargets = routes.filter(route => route.origin === 'project').map(route => route.target)
+    // what survives is a route core itself serves at that exact path (the old replace rule) or the one real entity's
+    for (const target of projectTargets) assert.ok(coreServes(target) || target === 'api/v1/tasks/[id]/route.ts', `${target} created inside a core namespace`)
+    for (const name of names) {
+      for (const shape of shapes) {
+        const target = `api/v1/${name}/${shape}`
+        if (coreServes(target)) continue
+        assert.ok(!projectTargets.includes(target), `${target} must not be generated`)
+        const refused = diagnostics.find(d => d.sources?.[0] === `./templates/${target}` && d.code === PLAN_DIAGNOSTICS.API_NAMESPACE)
+        assert.ok(refused, `${target} must be refused`)
+        assert.match(refused.message, new RegExp(`core serves its own API under /api/v1/${name}/\\*\\*`))
+      }
+    }
+    assert.ok(!notices.some(n => n.code === PLAN_NOTICES.ENTITY_API_OVERRIDDEN && n.entity !== 'tasks'), 'no entity override for a core name')
+    assert.deepEqual(notices.filter(n => n.code === PLAN_NOTICES.ENTITY_API_OVERRIDDEN).map(n => n.entity), ['tasks'])
+    // a route core serves, replaced by the old rule, is never silent
+    const replaced = notices.filter(n => n.code === PLAN_NOTICES.CORE_API_REPLACED).map(n => n.url)
+    for (const target of projectTargets.filter(target => target !== 'api/v1/tasks/[id]/route.ts')) assert.ok(replaced.includes(`/${target.replace(/\/route\.ts$/, '')}`), `${target} replaces core silently`)
+    assert.ok(replaced.includes('/api/v1/users'), 'users/route.ts replaces core\'s users API')
+  } finally {
+    w.cleanup()
+  }
+})
+
+test('an entity named after a core API namespace is a diagnostic before any route is planned', () => {
+  const coreRoutes = [{ kind: 'route', target: 'api/v1/billing/checkout/route.ts', specifier: '@c/b', file: '/c/b' }, { kind: 'route', target: 'api/v1/[entity]/route.ts', specifier: '@c/e', file: '/c/e' }]
+  const facts = new Map()
+  const result = planEntityRoutes({ entities: [entity('billing', 'billingEntityConfig'), entity('tasks', 'taskEntityConfig')], facts, coreRoutes, resolveFile: () => null })
+  assert.ok(result.diagnostics.some(d => d.code === ENTITY_DIAGNOSTICS.CORE_API_NAMESPACE && /entity "billing".*\/api\/v1\/billing\/\*\*.*Rename the entity/.test(d.message)))
+})
+
 test('Next.js\' own routing limits are diagnostics with the routes named: one URL twice, dynamic segments it cannot tell apart', () => {
   const route = (target, kind = 'page') => ({ kind, target, specifier: `@core/${target}`, source: `core route ${target}` })
   assert.deepEqual(urlConflicts([route('(a)/x/page.tsx'), route('(b)/x/page.tsx')]).map(d => d.code), [PLAN_DIAGNOSTICS.URL_CONFLICT])

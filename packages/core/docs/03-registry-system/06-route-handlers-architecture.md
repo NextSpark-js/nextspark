@@ -19,7 +19,7 @@ It holds no handler. There is no runtime dispatcher (`/api/v1/theme/**` and `/ap
 | Core | shipped by `@nextsparkjs/core` | `/api/v1/**` |
 | Entity | generated from the entity config | `/api/v1/<entity>` and `/api/v1/<entity>/[id]` |
 
-`/api/v1/**` belongs to core: a project route there stops generation, and replacing a core route on purpose goes through `templates/api/v1/...`.
+`/api/v1/**` belongs to core: a project route there stops generation, and replacing a core route on purpose goes through `templates/api/v1/...`. A project can also replace the generic handler of one of its own entities with `templates/api/v1/<entity>/[id]/route.ts` (or `route.ts`, `[id]/child/[childType]/route.ts`, `[id]/child/[childType]/[childId]/route.ts`); see [Overriding an entity's API](../05-api/04-custom-endpoints.md#overriding-an-entitys-api).
 
 ---
 

@@ -328,10 +328,16 @@ const BUILTINS = new Set(builtinModules.filter(name => !name.startsWith('_')))
 
 /** Bare specifiers that only run on a server (`next/server` is Next's request/response and `after`/`connection` APIs). */
 const SERVER_ONLY_PACKAGES = new Set(['server-only', 'next/headers', 'next/server', 'pg', 'postgres', 'ioredis', 'nodemailer'])
+/**
+ * The `lib/api` modules core's own 'use client' files import (the entity fetch helpers, `ApiError`, the scope catalog):
+ * they import no server module, so they are client-safe. Everything else under `lib/api` is server-only. A guard test
+ * checks that every `lib/api` module a core 'use client' file imports is in this list.
+ */
+export const CLIENT_SAFE_CORE_API = ['entities', 'api-error', 'keys']
 /** Core modules known to be server-only; the ones that import a marker above are also found by following the import. */
 const SERVER_ONLY_CORE = [
   /^@nextsparkjs\/core\/lib\/db(\/|$)/,
-  /^@nextsparkjs\/core\/lib\/api(\/|$)/,
+  new RegExp(`^@nextsparkjs\\/core\\/lib\\/api(?!\\/(?:${CLIENT_SAFE_CORE_API.join('|')})$)(\\/|$)`),
   /^@nextsparkjs\/core\/lib\/rate-limit/,
   /^@nextsparkjs\/core\/lib\/entities\/registry$/,
   /^@nextsparkjs\/core\/lib\/auth\/runtime-readiness$/,

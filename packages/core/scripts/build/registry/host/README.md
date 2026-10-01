@@ -251,6 +251,16 @@ replaces no route that plugin serves (a project may override an existing route t
 `templates/`) outside `/api/plugins/<its-name>/**`. There are no dispatchers: `/api/v1/theme/**` and `/api/v1/plugin/**` do not exist, and the
 route-handlers registry imports no handler (API route metadata only).
 
+**Per-entity API override.** One exception to "a project never creates a route under `/api/v1`": `templates/api/v1/<entity>/<rest>` is allowed
+when `<entity>` is an entity of the project or of an enabled plugin (`planEntityRoutes(...).entities`, passed to `planHost` as `entityNames`) and
+`<rest>` mirrors a route core serves under `api/v1/[entity]` (`route.ts`, `[id]/route.ts`, `[id]/child/[childType]/route.ts`,
+`[id]/child/[childType]/[childId]/route.ts`, the same segment names): the planner checks the slot of `api/v1/[entity]/<rest>`, so it follows
+whatever core ships. The generated route is the static `/api/v1/<entity>/<rest>`, which Next resolves before `[entity]`; other URLs of the
+entity stay on the generic handler. `planHost` returns an Info notice per entity (`NS_HOST_ENTITY_API_OVERRIDDEN`, with the URLs and the
+files; `prepare` prints it): the override **replaces** the generic handler for those URLs, so authentication, permissions, rate limits and the
+entity's hooks are the project's responsibility there (business rules belong in entity hooks, which every path keeps). `prepare` prints it as `Warning:`. Core's own API namespaces (every first segment core serves under `api/v1/`: `users`, `teams`, `auth`, `billing`, `cron`, `api-keys`, `devtools`, `media`, `media-tags`, `blocks`, `patterns`, `post-categories`, `team-invitations`) are never an entity's: the override is refused there with a hint naming the collision, and an entity named like one is `NS_HOST_ENTITY_CORE_API_NAMESPACE` (checked in `planEntityRoutes`, before any route is planned). A route core serves, replaced at its exact path (`templates/api/v1/users/route.ts`), is allowed as before and now also reports `NS_HOST_CORE_API_REPLACED` (`Warning:`), so no core API is replaced silently. Any other file under
+`templates/api/v1/` that replaces no core route, an unknown entity or a shape core does not serve stays `NS_HOST_API_NAMESPACE`.
+
 The plan also refuses what Next.js would fail on later, with the routes named: two pages for one URL in different route
 groups (`NS_HOST_URL_CONFLICT`) and dynamic segments it cannot tell apart at one level (`[slug]` and `[entity]`, `[...a]`
 and `[[...a]]`: `NS_HOST_DYNAMIC_SEGMENT_CONFLICT`).

@@ -9,6 +9,7 @@
 - [Overview](#overview)
 - [When to Use Custom Endpoints](#when-to-use-custom-endpoints)
 - [Creating Custom Endpoints](#creating-custom-endpoints)
+- [Overriding an Entity's API](#overriding-an-entitys-api)
 - [Plugin Route Handlers](#plugin-route-handlers)
 - [Request and Response Handling](#request-and-response-handling)
 - [Middleware Integration](#middleware-integration)
@@ -210,6 +211,37 @@ export async function GET(
       'Content-Disposition': `attachment; filename="report-${reportId}.pdf"`
     }
   })
+}
+```
+
+---
+
+## Overriding an Entity's API
+
+A project's `api/` is served at `/api/<path>`; `/api/v1/**` belongs to core and a project route there is refused (`NS_HOST_API_NAMESPACE`). The one door into it is a **per-entity override**: for an entity of your project (or of an enabled plugin), a file in `templates/api/v1/<entity>/` replaces core's generic handler for that URL.
+
+| File in the project | Replaces |
+| --- | --- |
+| `templates/api/v1/<entity>/route.ts` | `GET`/`POST /api/v1/<entity>` |
+| `templates/api/v1/<entity>/[id]/route.ts` | `GET`/`PATCH`/`DELETE /api/v1/<entity>/:id` |
+| `templates/api/v1/<entity>/[id]/child/[childType]/route.ts` | the child collection |
+| `templates/api/v1/<entity>/[id]/child/[childType]/[childId]/route.ts` | one child |
+
+The path after `<entity>` must be one of these shapes, with these segment names; anything else under `/api/v1` is refused, and so is a name that is not an entity of the project. Core's own API namespaces (`users`, `teams`, `auth`, `billing`, `cron`, `api-keys`, `devtools`, `media`, `media-tags`, `blocks`, `patterns`, `post-categories`, `team-invitations`) cannot be used this way, and an entity cannot be named like one (`prepare` stops with `NS_HOST_ENTITY_CORE_API_NAMESPACE`). Replacing a route core serves at its exact path (`templates/api/v1/users/route.ts`) is still possible. You can override one file or all of them. `nextspark prepare` writes the route at the static `/api/v1/<entity>/...`, which Next resolves before core's dynamic `[entity]` route, and prints a warning (`NS_HOST_ENTITY_API_OVERRIDDEN`; replacing a core route prints `NS_HOST_CORE_API_REPLACED` the same way).
+
+**The override replaces the generic handler for that URL, not wraps it.** Authentication (`authenticateRequest`), permission and scope checks, rate limiting, validation and the entity's hooks do not run unless your handler does them, so they become your responsibility. Put business rules in the entity's hooks instead, so every path (the dashboard, the API, an override) keeps them, and override only what hooks cannot express.
+
+```typescript
+// templates/api/v1/landings/[id]/route.ts  ->  PATCH /api/v1/landings/:id
+import { NextRequest, NextResponse } from 'next/server'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await authenticateRequest(request, { requiredScope: 'landings:write' })
+  if (!auth.success) return createAuthFailureResponse(auth)
+  const { id } = await params
+  // ...the project's own rule, then the update
+  return NextResponse.json({ success: true, data: { id } })
 }
 ```
 

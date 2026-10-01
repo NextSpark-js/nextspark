@@ -105,6 +105,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
   const planned = planHost({
     coreRoutes: manifest.routes,
     entityRoutes: entityPlan.routes,
+    entityNames: entityPlan.entities,
     webhooks: webhookPlan.routes,
     plugins: declared.plugins,
     project: config.project,
