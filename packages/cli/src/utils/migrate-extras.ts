@@ -273,6 +273,44 @@ export function memberPeerUpdates(pkg: Record<string, unknown>, host: { react?: 
   return { updates, kept };
 }
 
+export interface HostFrameworkFix { name: 'react' | 'react-dom'; section: 'dependencies' | 'devDependencies'; from: string; to: string; manual: boolean; /** The member's version is in another major: never raised automatically. */ major: boolean }
+
+/**
+ * Members that resolve a newer react / react-dom than the host installed: the host's own range is
+ * raised to that version (never lowered, same major only, keeping `^` / `~` / exact) when it is a plain `^`, `~` or exact version that is
+ * below it; any other spec (catalog, workspace, a union, a tag) is left to the person, with the command.
+ */
+export function hostFrameworkFixes(pkg: Record<string, unknown> | undefined, copies: readonly { name: string; version: string; host: string }[]): HostFrameworkFix[] {
+  const fixes: HostFrameworkFix[] = [];
+  for (const name of ['react', 'react-dom'] as const) {
+    const newest = copies.filter(copy => copy.name === name && (() => { const own = parseVersion(copy.version); const host = parseVersion(copy.host); return own && host && compareVersions(own, host) > 0; })())
+      .map(copy => copy.version).sort((a, b) => compareVersions(parseVersion(b) ?? [0, 0, 0], parseVersion(a) ?? [0, 0, 0]))[0];
+    if (!newest) continue;
+    for (const section of ['dependencies', 'devDependencies'] as const) {
+      const from = (pkg?.[section] as Record<string, unknown> | undefined)?.[name];
+      if (typeof from !== 'string') continue;
+      const plain = /^[\^~]?\d+\.\d+\.\d+$/.test(from.trim());
+      const base = plain ? parseVersion(from.replace(/^[\^~]/, '')) : null;
+      const wanted = parseVersion(newest);
+      // only raising: a range whose base is already at or above the member's version is not the cause
+      if (plain && base && wanted && compareVersions(base, wanted) >= 0) continue;
+      const major = !!(base && wanted && base[0] !== wanted[0]);
+      // the operator stays: ~ stays ~, an exact pin stays exact
+      fixes.push({ name, section, from, to: `${/^[\^~]/.exec(from.trim())?.[0] ?? (plain ? '' : '^')}${newest}`, manual: !plain || major, major });
+    }
+  }
+  return fixes;
+}
+
+/** The package.json text with the host's react / react-dom ranges raised, keeping the file's formatting. */
+export function updateHostFramework(text: string, fixes: readonly HostFrameworkFix[]): string {
+  let next = text;
+  for (const fix of fixes.filter(entry => !entry.manual)) {
+    next = next.replace(new RegExp(`("${fix.section}"\\s*:\\s*\\{[^}]*?"${fix.name}"\\s*:\\s*)"[^"]*"`), `$1"${fix.to}"`);
+  }
+  return next;
+}
+
 /** The package.json text with those peer ranges replaced, keeping the file's formatting. */
 export function updatePeerRanges(text: string, updates: PeerUpdate[]): string {
   let next = text;

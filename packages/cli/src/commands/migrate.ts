@@ -1,6 +1,7 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, rmdirSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { randomBytes } from 'node:crypto';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import * as tar from 'tar';
 import { readGeneratedTagAt } from '../utils/generated-tag.js';
@@ -8,7 +9,7 @@ import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensi
 import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
 import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
 import { getNextMajorVersion } from '../utils/next-bundler.js';
-import { COMPAT_NOTE, addCompatRewrites, applyContractsPackage, catalogVersion, checkNextRange, compatRewrites, coreExportsSpecifier, countBlockThumbnails, inAiWorkflowDirectory, isBlockConfig, memberPeerUpdates, removeBlockThumbnails, planContractsPackage, updateNextRange, updatePeerRanges, type CompatRewrite, type ContractsPlan, type NextRangeCheck, type PeerNote, type PeerUpdate } from '../utils/migrate-extras.js';
+import { COMPAT_NOTE, addCompatRewrites, applyContractsPackage, catalogVersion, checkNextRange, compatRewrites, coreExportsSpecifier, countBlockThumbnails, inAiWorkflowDirectory, isBlockConfig, hostFrameworkFixes, memberPeerUpdates, removeBlockThumbnails, planContractsPackage, updateHostFramework, updateNextRange, updatePeerRanges, type CompatRewrite, type HostFrameworkFix, type ContractsPlan, type NextRangeCheck, type PeerNote, type PeerUpdate } from '../utils/migrate-extras.js';
 import { pathToFileURL } from 'node:url';
 import { adaptProxySource, planProxyFile, type ProxyFileName } from '../utils/proxy-file.js';
 import { contentHash, readSyncState } from '../utils/sync-state.js';
@@ -21,6 +22,8 @@ interface MigrateOptions {
   yes?: boolean;
   /** `--no-simulate` sets this to false: a dry run does not convert a copy to run the host plan. */
   simulate?: boolean;
+  /** Hidden: proof that this process is the simulation's child (see simulationVerified). */
+  simulationNonce?: string;
 }
 
 interface FileChange {
@@ -74,6 +77,8 @@ interface MigrateReport {
     webhookExtensions: { provider: string; module: string }[];
     /** What stops the migration before it writes anything. */
     blockers: string[];
+    /** The blockers that also make it impossible to convert a copy for the host simulation (symbolic links, file collisions). */
+    unsimulable: string[];
   };
   apiUrlMoves: ApiUrlMove[];
   rootProxyFiles: {
@@ -113,6 +118,8 @@ interface MigrateReport {
   memberPeers: { path: string; updates: PeerUpdate[]; /** Ranges that do not accept the target but reach higher: reported, never lowered. */ kept: PeerNote[] }[];
   /** L8: a copy of next / react / react-dom installed under a workspace member that differs from the host's. */
   duplicateCopies: { member: string; name: string; version: string; host: string }[];
+  /** N5: the host's react / react-dom ranges that keep it on an older copy than its members resolve (--yes raises the plain ones). */
+  hostFramework: HostFrameworkFix[];
   /** Old references inside AI-workflow directories: listed, never rewritten. */
   aiWorkflowReferences: { path: string; occurrences: number }[];
   contractsPackage: { needed: boolean; path: string; mobile: string | null; skipped: string | null; /** False when the directory already exists (without a package.json): rollback then removes only the files migrate writes. */ createsDirectory: boolean };
@@ -123,8 +130,12 @@ interface MigrateReport {
     simulated: boolean;
     /** Diagnostics that would stop the generation (the Next.js version ones are reported under nextRange). */
     conflicts: string[];
+    /** App files a blocker keeps out of the converted copy: their routes are not in the plan below. */
+    leftOut: string[];
     /** Information from the plan, e.g. NS_HOST_ENTITY_ROUTES_REPLACED. */
     notices: string[];
+    /** True when the plan was simulated with blockers still open: `conflicts: []` is then not a clean bill. */
+    partial: boolean;
     /** What ran, for `predictHost`: plan, emission, grammar, ownership, contracts, registries. */
     checks: Record<string, string> | null;
     /** The core's `predictHost`, or `prepare` run on the copy when the installed core has no predictHost. */
@@ -1254,6 +1265,34 @@ function coreScripts(hostRoot: string, coreTemplates: string | null): MigrateRep
   return { renamed: [...new Set(renamed)].sort(), warnings: [...new Set(warnings)].sort() };
 }
 
+const SIMULATION_MARKER = 'nextspark-simulation';
+
+/** The simulation's child skips the blocker refusal only when its own repository is the temporary copy that holds the parent's nonce; the environment alone proves nothing. */
+function simulationVerified(repository: string, nonce: string | undefined): boolean {
+  if (!nonce || process.env.NEXTSPARK_MIGRATE_SIMULATION !== '1') return false;
+  try {
+    const real = realpathSync(repository);
+    // the copy is a direct child of the temp directory: no nested path qualifies
+    return readFileSync(join(repository, '.git', SIMULATION_MARKER), 'utf8') === nonce
+      && dirname(real) === realpathSync(tmpdir())
+      && basename(real).startsWith('nextspark-migrate-plan-');
+  } catch {
+    return false;
+  }
+}
+
+/** What a host react / react-dom fix says, and for the ones --yes cannot make the exact command. */
+function hostFrameworkLine(fix: HostFrameworkFix, hostPath: string): string {
+  const where = `${hostPath === '.' ? '' : `${hostPath}/`}package.json`;
+  const have = `${where}: ${fix.name} "${fix.from}" is below the ${fix.to.replace(/^[\^~]/, '')} that members resolve`;
+  if (fix.from.startsWith('catalog:')) return `${have} and migrate cannot edit it: change the ${fix.name} entry in pnpm-workspace.yaml (the catalog) to ${fix.to}, then install`;
+  if (fix.from.startsWith('workspace:')) return `${have} and migrate cannot edit it: set ${fix.name} to ${fix.to} in the package.json of the workspace package it points to, then install`;
+  if (fix.major) return `${have}, in another major: migrate does not cross majors. Decide, then run  (cd ${hostPath} && pnpm add ${fix.section === 'devDependencies' ? '-D ' : ''}${fix.name}@${fix.to})`;
+  return fix.manual
+    ? `${have} and migrate cannot edit this spec safely: run  (cd ${hostPath} && pnpm add ${fix.section === 'devDependencies' ? '-D ' : ''}${fix.name}@${fix.to})`
+    : `${where}: ${fix.name} "${fix.from}" -> "${fix.to}" (--yes raises it within the same major, keeping the operator, so the host and its members share one copy)`;
+}
+
 const FRAMEWORK_PACKAGES = ['next', 'react', 'react-dom'] as const;
 
 function installedVersion(directory: string, name: string): string | null {
@@ -1336,17 +1375,19 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     })
     : null;
   const blockers = appPlan ? unrecognizedLines(appPlan) : [];
-  if (rootLink) blockers.push(`${pathFrom(host.root, rootLink)}: it is a symbolic link (the app tree, or a directory above it); migrate would follow it and change files outside the project. Replace it with a real directory and run migrate again`);
+  const unsimulable: string[] = [];
+  const blockSimulation = (line: string) => { blockers.push(line); unsimulable.push(line); };
+  if (rootLink) blockSimulation(`${pathFrom(host.root, rootLink)}: it is a symbolic link (the app tree, or a directory above it); migrate would follow it and change files outside the project. Replace it with a real directory and run migrate again`);
   if (appRoot && !rootLink) {
     for (const link of symlinksIn(join(host.root, appRoot))) {
-      blockers.push(`${pathFrom(host.root, link)}: it is a symbolic link, which migrate cannot move or reproduce faithfully; replace it with a real file or directory (or import the target from where it lives) and run migrate again`);
+      blockSimulation(`${pathFrom(host.root, link)}: it is a symbolic link, which migrate cannot move or reproduce faithfully; replace it with a real file or directory (or import the target from where it lives) and run migrate again`);
     }
   }
   // L3: a moved file that lands on a different file already in the project would stop --yes after the report said all was well
   for (const collision of movePlan?.collisions ?? []) {
     const from = pathFrom(host.root, collision.source);
     const to = pathFrom(host.root, collision.destination);
-    blockers.push(`${from} would move to ${to}, where a different file already is. Rename one of them (for example  git mv ${from} ${from.replace(/(\.[^./]+)?$/, '-theme$1')}  keeps the theme's copy as a project file under a name that does not collide) or merge them, commit, and run migrate again`);
+    blockSimulation(`${from} would move to ${to}, where a different file already is. Rename one of them (for example  git mv ${from} ${from.replace(/(\.[^./]+)?$/, '-theme$1')}  keeps the theme's copy as a project file under a name that does not collide) or merge them, commit, and run migrate again`);
   }
   // L11: a file converted into an override or moved keeps its imports of core, which the installed core may no longer export
   if (templates) {
@@ -1393,6 +1434,7 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
       return updates.length > 0 || kept.length > 0 ? [{ path: pathFrom(repository, entry.file), updates, kept }] : [];
     });
   const duplicateCopies = duplicateFrameworkCopies(repository, host.root, packageManifests);
+  const hostFrameworkPlan = hostFrameworkFixes(hostPackage, duplicateCopies);
   const notices: string[] = [];
   for (const member of nextRange.members.filter(entry => entry.action === 'check')) {
     notices.push(`${member.name} is declared as "${member.value}" in ${pathFrom(repository, join(host.root, 'package.json'))}: ${member.note}. Migrate does not change it.`);
@@ -1431,6 +1473,7 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     projectFiles: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'project' ? [{ path: file.path, destination: file.fate.destination }] : []),
     webhookExtensions: appPlan?.webhookExtensions ?? [],
     blockers,
+    unsimulable,
   };
   const themeNeedle = selectedTheme.name ? new RegExp(`@/contents/themes/${selectedTheme.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/`, 'g') : null;
   const pluginNeedle = /@\/contents\/plugins\//g;
@@ -1488,13 +1531,14 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     nextRange,
     memberPeers,
     duplicateCopies,
+    hostFramework: hostFrameworkPlan,
     aiWorkflowReferences: aiWorkflowReferences(repository, selectedTheme.name),
     contractsPackage: { needed: contractsPlan !== null, path: pathFrom(repository, join(repository, 'packages', 'contracts')), mobile: contractsPlan?.mobile ? pathFrom(repository, contractsPlan.mobile) : null, skipped: contracts.skipped, createsDirectory: contractsPlan !== null && !existsSync(contractsPlan.contractsDirectory) },
     blockThumbnails: hostFiles.filter(file => isBlockConfig(file) && !inAiWorkflowDirectory(repository, file)).flatMap(file => {
       const lines = countBlockThumbnails(readFileSync(file, 'utf8'));
       return lines > 0 ? [{ path: pathFrom(repository, file), lines }] : [];
     }),
-    hostPlan: { simulated: false, conflicts: [], notices: [], checks: null, method: null, unknown: false, reason: null },
+    hostPlan: { simulated: false, conflicts: [], leftOut: appPlan ? appPlan.files.filter(file => file.fate.kind === 'unrecognized').map(file => `${appPlan.root}/${file.path}`) : [], notices: [], partial: false, checks: null, method: null, unknown: false, reason: null },
   };
   return { report, plan: appPlan };
 }
@@ -1593,6 +1637,7 @@ function printReport(report: MigrateReport): void {
       member.kept.length ? `${member.path}: ${member.kept.map(note => `${note.name} "${note.range}" does not accept ${note.wanted} but reaches higher`).join(', ')} (not edited: check it yourself)` : null,
     ].filter(Boolean).join('; ')) : ['all satisfied']),
     ...report.duplicateCopies.map(copy => `${copy.member} has its own ${copy.name}@${copy.version} next to the host's ${copy.host}: two copies. After installing, check  pnpm why next react react-dom  shows one version each`),
+    ...report.hostFramework.map(fix => hostFrameworkLine(fix, report.hostRoot.path)),
   ]);
   section('AI-workflow directories (.claude, .codex*, .gemini, .cursor, .superpowers, .agents): never rewritten', report.aiWorkflowReferences.length
     ? report.aiWorkflowReferences.map(reference => `${reference.path} (${reference.occurrences} old reference(s))`)
@@ -1607,11 +1652,12 @@ function printReport(report: MigrateReport): void {
     ? [`host plan: unknown (${report.hostPlan.reason ?? 'the prediction failed'})`]
     : report.hostPlan.simulated
     ? [
-      ...(report.hostPlan.conflicts.length ? report.hostPlan.conflicts.map(line => `CONFLICT ${line}`) : ['no conflicts']),
+      ...(report.hostPlan.conflicts.length ? report.hostPlan.conflicts.map(line => `CONFLICT ${line}`) : [report.hostPlan.partial ? 'no conflicts in what was simulated (partial: blockers are still open)' : 'no conflicts']),
       ...report.hostPlan.notices.map(line => `notice ${line}`),
       ...(report.hostPlan.checks ? [`checks: ${Object.entries(report.hostPlan.checks).map(([name, state]) => `${name} ${state}`).join(', ')}`] : []),
       ...(report.hostPlan.method ? [`(${report.hostPlan.method === 'predictHost' ? "the installed core's predictHost" : 'nextspark prepare run on the copy: this core has no predictHost'})`] : []),
       ...(report.hostPlan.reason ? [report.hostPlan.reason] : []),
+      ...(report.appConversion.blockers.length ? [`simulated with ${report.appConversion.blockers.length} blocker(s) still open: --yes would refuse. ${report.hostPlan.leftOut.length ? `Left out of the simulation (their routes are not in this plan): ${report.hostPlan.leftOut.join(', ')}` : 'No app file was left out.'}`] : []),
     ]
     : [report.hostPlan.reason ?? 'not simulated']);
   if (report.warnings.length > 0) section('Warnings', report.warnings.map(warning => `⚠ ${warning}`));
@@ -3378,7 +3424,9 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
     // The core the project uses decides: one that exports predictHost answers without running the registry build
     const hasPredict = prepareModule !== null && existsSync(prepareModule) && /export\s+(?:async\s+)?function\s+predictHost\b/.test(readFileSync(prepareModule, 'utf8'));
     const simulationEnv = simulationEnvironment(report.activeTheme.name);
-    const migrated = await runAndCollect(process.execPath, [process.argv[1], 'migrate', '--yes', ...(hasPredict ? ['--no-prepare'] : [])], {
+    const nonce = randomBytes(16).toString('hex');
+    writeFileSync(join(copy, '.git', SIMULATION_MARKER), nonce);
+    const migrated = await runAndCollect(process.execPath, [process.argv[1], 'migrate', '--yes', '--simulation-nonce', nonce, ...(hasPredict ? ['--no-prepare'] : [])], {
       cwd: join(copy, pathFrom(repository, process.cwd())),
       env: simulationEnv,
       timeoutMs: 600_000,
@@ -3439,10 +3487,14 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
   try {
     const { report, plan: appPlan } = await analyze(process.cwd());
     if (options.dryRun) {
-      if (appPlan && report.appConversion.blockers.length === 0) {
+      if (appPlan && report.appConversion.unsimulable.length > 0) {
+        report.hostPlan.reason = `not simulated: ${report.appConversion.unsimulable.length} blocker(s) make it impossible to convert a copy (symbolic links or files that collide): fix ${report.appConversion.unsimulable.map(line => line.split(': ')[0]).join(', ')} and run the dry run again to see the host conflicts`;
+      } else if (appPlan) {
         const templates = templateDirectory(resolve(repositoryRoot(process.cwd()), report.hostRoot.path), repositoryRoot(process.cwd()));
         await simulateHostPlan(repositoryRoot(process.cwd()), report, templates ? dirname(templates) : null, options.simulate);
       }
+      report.hostPlan.partial = report.hostPlan.simulated && report.appConversion.blockers.length > 0;
+      if (!report.hostPlan.simulated) report.hostPlan.leftOut = [];
       if (options.json) {
         const json = JSON.stringify(report).replace(/[\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
         process.stdout.write(`${json}\n`);
@@ -3453,7 +3505,9 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     }
     if (options.json) throw new MigrateAnalysisError('--json is available only with --dry-run.');
     printReport(report);
-    if (report.appConversion.blockers.length > 0) {
+    // The simulation converts a copy in spite of the blockers, to report the host conflicts in the same pass
+    const simulation = simulationVerified(repositoryRoot(process.cwd()), options.simulationNonce);
+    if (report.appConversion.blockers.length > 0 && !simulation) {
       throw new MigrateAnalysisError(`Refusing to migrate: ${report.appConversion.blockers.length} blocker(s) (app files that cannot be placed with certainty, or files that collide). Nothing was written. Fix them as described above, then rerun nextspark migrate.\n${report.appConversion.blockers.map(line => `  - ${line}`).join('\n')}`);
     }
     const repository = repositoryRoot(process.cwd());
@@ -3525,7 +3579,6 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     const result = appTreeOnly
       ? null
       : applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme as string, plan, aliasesBeforeMove as AliasCatalog, report.envExample, report.config.plugins, hadLegacyApp ? report.rootProxyFiles.customizations : []);
-    const simulation = process.env.NEXTSPARK_MIGRATE_SIMULATION === '1';
     let nextUpdated = false;
     {
       const thumbnails = filesIn(hostRoot).filter(file => isBlockConfig(file) && !inAiWorkflowDirectory(repository, file) && countBlockThumbnails(readFileSync(file, 'utf8')) > 0);
@@ -3547,6 +3600,11 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
         writeFileSync(hostPackageFile, updateNextRange(readFileSync(hostPackageFile, 'utf8'), report.nextRange));
         nextUpdated = true;
         console.log(`  ${pathFrom(repository, hostPackageFile)}: next and eslint-config-next set to ${report.nextRange.required}. Run your package manager's install, then nextspark prepare.`);
+      }
+      const frameworkFixes = report.hostFramework.filter(fix => !fix.manual);
+      if (!simulation && frameworkFixes.length > 0) {
+        writeFileSync(hostPackageFile, updateHostFramework(readFileSync(hostPackageFile, 'utf8'), frameworkFixes));
+        console.log(`  ${pathFrom(repository, hostPackageFile)}: ${frameworkFixes.map(fix => `${fix.name} ${fix.to}`).join(', ')} (the range now accepts the version the members resolve). Run your package manager's install.`);
       }
       if (report.contractsPackage.needed) {
         const manifests = packageFiles(repository).map(file => ({ file, pkg: readJson(file) })).filter((entry): entry is { file: string; pkg: Record<string, unknown> } => entry.pkg !== null);
@@ -3611,6 +3669,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     if (report.duplicateCopies.length > 0 || report.memberPeers.length > 0) {
       section('next / react / react-dom copies', [
         ...report.duplicateCopies.map(copy => `${copy.member} has its own ${copy.name}@${copy.version} next to the host's ${copy.host}`),
+        ...report.hostFramework.filter(fix => fix.manual).map(fix => hostFrameworkLine(fix, report.hostRoot.path)),
         'After you install, run  pnpm why next react react-dom : each must resolve to one version. A workspace member whose peer range the host does not satisfy gets its own copy, and two copies of Next or React break types and context.',
       ]);
     }

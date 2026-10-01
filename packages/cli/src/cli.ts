@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { config } from 'dotenv';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import chalk from './utils/colors.js';
 import { readFileSync } from 'fs';
 import { devCommand } from './commands/dev.js';
@@ -197,6 +197,7 @@ program
   .option('-y, --yes', 'Perform the move after printing the report')
   .option('--no-prepare', 'Convert the files but do not run nextspark prepare afterwards')
   .option('--no-simulate', 'With --dry-run: do not convert a temporary copy to run the generated-host plan')
+  .addOption(new Option('--simulation-nonce <nonce>').hideHelp())
   .action(migrateCommand);
 
 // Database commands

@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 import { after, before, test } from 'node:test'
 import { createServer } from 'node:http'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
-import { access, chmod, lstat, mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises'
+import { access, chmod, lstat, mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -14,7 +14,7 @@ import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
 import { simulationEnvironment } from '../src/commands/migrate.js'
-import { addCompatRewrites, addWorkspaceGlob, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
+import { addCompatRewrites, addWorkspaceGlob, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, hostFrameworkFixes, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
 
 let cliEntry: string
 before(() => { cliEntry = buildCli() })
@@ -4039,5 +4039,152 @@ test('the moved root proxy is announced as replacing core\'s template, and its c
     assert.match(JSON.parse(dry.stdout).appConversion.blockers[0], /^proxy\.ts:2: imports @nextsparkjs\/core\/lib\/middleware, which the installed @nextsparkjs\/core does not export/)
   } finally {
     await rm(broken.root, { recursive: true, force: true })
+  }
+})
+
+test('the host react / react-dom range is raised to what members resolve, never lowered, and unsafe specs get the command (N5)', async () => {
+  const copy = (name: string, version: string, host: string) => ({ name, version, host })
+  const pkg = { dependencies: { react: '^19.1.0', 'react-dom': 'catalog:' }, devDependencies: {} }
+  assert.deepEqual(hostFrameworkFixes(pkg, [copy('react', '19.2.4', '19.1.0'), copy('react-dom', '19.2.4', '19.1.0'), copy('next', '16.3.7', '16.2.4')]), [
+    { name: 'react', section: 'dependencies', from: '^19.1.0', to: '^19.2.4', manual: false, major: false },
+    { name: 'react-dom', section: 'dependencies', from: 'catalog:', to: '^19.2.4', manual: true, major: false },
+  ])
+  // the operator stays, and a newer major is never raised automatically
+  assert.deepEqual(hostFrameworkFixes({ dependencies: { react: '~19.1.0', 'react-dom': '19.1.0' } }, [copy('react', '19.2.4', '19.1.0'), copy('react-dom', '19.2.4', '19.1.0')]).map(fix => [fix.to, fix.manual]), [['~19.2.4', false], ['19.2.4', false]])
+  assert.deepEqual(hostFrameworkFixes({ dependencies: { react: '^19.1.0' } }, [copy('react', '20.0.0', '19.1.0')]).map(fix => [fix.to, fix.manual, fix.major]), [['^20.0.0', true, true]])
+  // already at or above the member's version, or the member is the older copy: nothing to raise
+  assert.deepEqual(hostFrameworkFixes({ dependencies: { react: '^20.0.0' } }, [copy('react', '19.2.4', '19.1.0')]), [])
+  assert.deepEqual(hostFrameworkFixes({ dependencies: { react: '^19.1.0' } }, [copy('react', '19.0.0', '19.1.0')]), [])
+  assert.deepEqual(hostFrameworkFixes({ dependencies: { react: '^19.1.0' } }, [copy('react', '19.2.4', '19.1.0'), copy('react', '19.3.0', '19.1.0')]).map(fix => fix.to), ['^19.3.0'])
+
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root)
+    await setPackageJson(root, pkg => { pkg.dependencies.react = '^19.1.0'; pkg.dependencies['react-dom'] = 'catalog:' })
+    await write(root, 'node_modules/react/package.json', JSON.stringify({ name: 'react', version: '19.1.0' }))
+    await write(root, 'node_modules/react-dom/package.json', JSON.stringify({ name: 'react-dom', version: '19.1.0' }))
+    await write(root, 'contents/plugins/local/package.json', `${JSON.stringify({ name: 'local' }, null, 2)}\n`)
+    await write(root, 'contents/plugins/local/node_modules/react/package.json', JSON.stringify({ name: 'react', version: '19.2.4' }))
+    await write(root, 'contents/plugins/local/node_modules/react-dom/package.json', JSON.stringify({ name: 'react-dom', version: '19.2.4' }))
+    await commitFixture(root)
+
+    const dry = run(root, ['--dry-run'])
+    assert.match(dry.stdout, /package\.json: react "\^19\.1\.0" -> "\^19\.2\.4" \(--yes raises it/)
+    assert.match(dry.stdout, /react-dom "catalog:" is below the 19\.2\.4 .*change the react-dom entry in pnpm-workspace\.yaml \(the catalog\) to \^19\.2\.4/)
+    assert.equal(JSON.parse(run(root, ['--dry-run', '--json']).stdout).hostFramework.length, 2)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const host = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    assert.equal(host.dependencies.react, '^19.2.4')
+    assert.equal(host.dependencies['react-dom'], 'catalog:')
+    assert.match(result.stdout, /react \^19\.2\.4 \(the range now accepts/)
+    assert.match(result.stdout, /entry in pnpm-workspace\.yaml/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a dry run simulates the host even with app blockers, naming what it left out; --yes still refuses (N8)', async () => {
+  const root = await simulationFixture("console.error('NS_HOST_PROBE conflict seen')\nprocess.exit(1)\n")
+  try {
+    await write(root, 'app/globals.css', 'body { margin: 0 }\n')
+    await commitFixture(root)
+    const result = run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
+    assert.equal(result.status, 1)
+    const report = JSON.parse(result.stdout)
+    assert.ok(report.appConversion.blockers.some((line: string) => line.startsWith('app/globals.css: ')), report.appConversion.blockers.join('\n'))
+    assert.equal(report.hostPlan.simulated, true, JSON.stringify(report.hostPlan))
+    assert.deepEqual(report.hostPlan.conflicts, ['NS_HOST_PROBE conflict seen'])
+    assert.deepEqual(report.hostPlan.leftOut, ['app/globals.css'])
+    assert.equal(report.hostPlan.partial, true)
+    const text = run(root, ['--dry-run'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined }).stdout
+    assert.match(text, /CONFLICT NS_HOST_PROBE conflict seen/)
+    assert.match(text, /simulated with 1 blocker\(s\) still open: --yes would refuse\. Left out of the simulation.*app\/globals\.css/)
+
+    const refused = run(root, ['--yes'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
+    assert.notEqual(refused.status, 0)
+    assert.match(refused.stderr, /Refusing to migrate: 1 blocker\(s\).*Nothing was written/)
+    assert.equal(git_status(root), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a blocker that makes a converted copy impossible is named instead of simulating (N8)', async () => {
+  const root = await simulationFixture("console.error('NS_HOST_PROBE should not run')\nprocess.exit(1)\n")
+  try {
+    await symlink('dashboard/page.tsx', join(root, 'app/linked.ts'))
+    await commitFixture(root)
+    const result = run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined })
+    const report = JSON.parse(result.stdout)
+    assert.equal(report.hostPlan.simulated, false)
+    assert.deepEqual(report.hostPlan.leftOut, [])
+    assert.match(report.hostPlan.reason, /not simulated: 1 blocker\(s\) make it impossible to convert a copy \(symbolic links or files that collide\): fix app\/linked\.ts/)
+    assert.deepEqual(report.hostPlan.conflicts, [])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('NEXTSPARK_MIGRATE_SIMULATION without the parent nonce does not skip the blockers (N8)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root)
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/globals.css', 'body { margin: 0 }\n')
+    await commitFixture(root)
+    for (const extra of [[], ['--simulation-nonce', 'guess']]) {
+      const result = run(root, ['--yes', ...extra], { NEXTSPARK_MIGRATE_SIMULATION: '1' })
+      assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`)
+      assert.match(result.stderr, /Refusing to migrate: 1 blocker\(s\).*Nothing was written/)
+      assert.equal(git_status(root), '')
+      assert.equal(existsSync(join(root, 'app/globals.css')), true)
+    }
+    // a nested path under the prefix, and a direct child without the env var, do not count either
+    await write(root, '.git/nextspark-simulation', 'abc')
+    const nestedParent = join(tmpdir(), `nextspark-migrate-plan-nested-${process.pid}`)
+    await mkdir(nestedParent, { recursive: true })
+    const nested = join(nestedParent, 'deep')
+    await rename(root, nested)
+    try {
+      const viaNested = run(nested, ['--yes', '--simulation-nonce', 'abc'], { NEXTSPARK_MIGRATE_SIMULATION: '1' })
+      assert.notEqual(viaNested.status, 0, `${viaNested.stdout}\n${viaNested.stderr}`)
+      assert.equal(git_status(nested), '')
+      assert.equal(existsSync(join(nested, 'app/globals.css')), true)
+    } finally {
+      await rename(nested, root)
+      await rm(nestedParent, { recursive: true, force: true })
+    }
+    const direct = join(tmpdir(), `nextspark-migrate-plan-direct-${process.pid}`)
+    await rename(root, direct)
+    try {
+      const noEnv = run(direct, ['--yes', '--simulation-nonce', 'abc'])
+      assert.notEqual(noEnv.status, 0, `${noEnv.stdout}\n${noEnv.stderr}`)
+      assert.equal(existsSync(join(direct, 'app/globals.css')), true)
+    } finally {
+      await rename(direct, root)
+    }
+    // a nonce file in a repository that is not the simulation's temporary copy does not count either
+    await write(root, '.git/nextspark-simulation', 'abc')
+    const forged = run(root, ['--yes', '--simulation-nonce', 'abc'], { NEXTSPARK_MIGRATE_SIMULATION: '1' })
+    assert.notEqual(forged.status, 0)
+    assert.equal(git_status(root), '')
+    assert.equal(existsSync(join(root, 'app/globals.css')), true)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a partial plan with no conflicts says it is partial (N8)', async () => {
+  const root = await simulationFixture('process.exit(0)\n')
+  try {
+    await write(root, 'app/globals.css', 'body { margin: 0 }\n')
+    await commitFixture(root)
+    const text = run(root, ['--dry-run'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined }).stdout
+    assert.match(text, /no conflicts in what was simulated \(partial: blockers are still open\)/)
+    assert.doesNotMatch(text, /^no conflicts$/m)
+  } finally {
+    await rm(root, { recursive: true, force: true })
   }
 })
