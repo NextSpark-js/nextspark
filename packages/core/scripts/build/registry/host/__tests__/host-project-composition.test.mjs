@@ -75,6 +75,10 @@ test('a real project: composed layouts, per-entity routes, the stylesheet, webho
       ].join('\n')
     )
     assert.match(read(root, 'src/app/(public)/layout.tsx'), /export default withPublicMessages\(NextSparkTemplate\)/)
+    // Its metadata comes from the composition module, never from core's layout (whose default layout's client
+    // components would then ship on every public route, though the override renders none of them)
+    assert.match(read(root, 'src/app/(public)/layout.tsx'), /export \{ metadata \} from "@nextsparkjs\/core\/routes\/_internal\/public-layout"/)
+    assert.doesNotMatch(read(root, 'src/app/(public)/layout.tsx'), /routes\/\(public\)\/layout/)
     assert.equal(at(app, 'src/app/(auth)/layout.tsx').includes('withAuthMessages'), false, 'no override: core\'s own layout, as it is')
 
     // One concrete route per entity; the project's task template is composed into the list page
@@ -114,6 +118,8 @@ test('with cacheComponents on, core\'s Cache Components variants replace the rou
     }
     // The root layout is core's PPR one, composed with the PPR wrapper; public item pages carry no revalidate
     assert.match(content('layout.tsx'), /from "@nextsparkjs\/core\/routes\/_internal\/root-layout\.ppr"/)
+    assert.match(content('(public)/layout.tsx'), /export \{ metadata \} from "@nextsparkjs\/core\/routes\/_internal\/public-layout\.cc"/)
+    assert.doesNotMatch(content('(public)/layout.tsx'), /routes\/\(public\)\/layout/)
     assert.doesNotMatch(content('(public)/blog/[...slug]/page.tsx'), /revalidate/)
     for (const file of appFiles) assert.doesNotMatch(file.content, /export const (dynamic|dynamicParams) =/, file.path)
   } finally {
@@ -195,10 +201,10 @@ test('a project layout over a fully protected core layout (the dashboard\'s) is 
 
 const CC_CONFIG = { 'next.config.mjs': 'export default { cacheComponents: true }\n' }
 const CC_GROUPS = {
-  '(auth)/layout.tsx': ['withAuthMessages', 'group-layouts.cc'],
-  '(public)/layout.tsx': ['withPublicMessages', 'group-layouts.cc'],
-  'superadmin/layout.tsx': ['withSuperadminGuard', 'group-layouts.cc'],
-  'devtools/layout.tsx': ['withDevtoolsGuard', 'group-layouts.cc'],
+  '(auth)/layout.tsx': ['withAuthMessages', 'auth-layout.cc'],
+  '(public)/layout.tsx': ['withPublicMessages', 'public-layout.cc'],
+  'superadmin/layout.tsx': ['withSuperadminGuard', 'superadmin-layout.cc'],
+  'devtools/layout.tsx': ['withDevtoolsGuard', 'devtools-layout.cc'],
 }
 
 async function ccFiles(extra = {}) {

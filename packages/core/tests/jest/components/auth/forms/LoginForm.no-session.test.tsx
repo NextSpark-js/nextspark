@@ -18,7 +18,7 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }))
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en' }))
-jest.mock('@/core/lib/test', () => ({ sel: (key: string) => key }))
+jest.mock('@/core/lib/selectors/auth-sel', () => ({ sel: (key: string) => key }))
 
 import { LoginForm } from '@/core/components/auth/forms/LoginForm'
 

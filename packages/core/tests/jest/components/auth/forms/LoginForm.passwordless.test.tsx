@@ -69,7 +69,7 @@ jest.mock('@/core/components/auth/DevKeyring', () => ({
 }))
 
 // Selector helper: pass the path through so assertions can target data-cy by path
-jest.mock('@/core/lib/test', () => ({
+jest.mock('@/core/lib/selectors/auth-sel', () => ({
   sel: (path: string) => path,
 }))
 
@@ -83,7 +83,7 @@ const mockConfig: { PUBLIC_AUTH_CONFIG: any; DEV_KEYRING_CONFIG: any } = {
   },
   DEV_KEYRING_CONFIG: undefined,
 }
-jest.mock('@/core/lib/config/config-client', () => ({
+jest.mock('@/core/lib/config/public-config-client', () => ({
   get PUBLIC_AUTH_CONFIG() {
     return mockConfig.PUBLIC_AUTH_CONFIG
   },

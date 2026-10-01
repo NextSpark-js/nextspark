@@ -10,7 +10,7 @@ import { useState } from 'react'
 import { sel } from '../../../lib/test'
 
 import { useTranslations } from 'next-intl'
-import { APP_NAME } from '../../../lib/config/config-client'
+import { APP_NAME } from '../../../lib/config/public-config-client'
 
 type AuthActionsLayout = 'desktop' | 'mobile'
 

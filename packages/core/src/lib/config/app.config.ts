@@ -9,6 +9,7 @@
  */
 
 import type { AppConfig, AuthLoginMethod } from './types'
+import { DEFAULT_I18N_CONFIG } from './i18n.defaults'
 
 // =============================================================================
 // DEFAULT APPLICATION CONFIGURATION
@@ -33,52 +34,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   // INTERNATIONALIZATION SETTINGS
   // =============================================================================
 
-  i18n: {
-    /**
-     * Supported locales for your project
-     * Add/remove locales as needed
-     */
-    supportedLocales: ['en', 'es', 'fr', 'de', 'it', 'pt'],
-
-    /**
-     * Default fallback locale
-     */
-    defaultLocale: 'en',
-
-    /**
-     * Cookie settings for locale persistence
-     */
-    cookie: {
-      name: 'locale',
-      maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
-      httpOnly: false,
-      secure: 'auto',
-      sameSite: 'lax',
-      path: '/',
-    },
-
-    /**
-     * Translation namespaces for your project
-     * Add/remove namespaces based on your app structure
-     */
-    namespaces: [
-      'common',      // Shared UI elements, buttons, navigation
-      'dashboard',   // Dashboard-specific content (includes topbar, sidebar, etc.)
-      'settings',    // Settings pages (configuration managed in dashboard.config.ts)
-      'tasks',       // Task management
-      'teams',       // Team management (Phase 2)
-      'auth',        // Authentication flows
-      'public',      // Public pages (home, pricing, etc.)
-      'validation'   // Form validation messages
-    ],
-
-    /**
-     * Performance optimizations
-     */
-    performance: {
-      preloadCriticalNamespaces: ['common', 'dashboard'],
-    }
-  },
+  i18n: DEFAULT_I18N_CONFIG,
 
   // =============================================================================
   // USER ROLES CONFIGURATION

@@ -85,10 +85,10 @@ export const COMPOSED_ROUTES = Object.freeze({
 /** The composition of a variant, when it differs from its base route's. */
 export const VARIANT_COMPOSE = Object.freeze({
   'layout.ppr.tsx': { wrapper: 'withRootLayout', specifier: `${ROUTES_SUBPATH}/_internal/root-layout.ppr` },
-  '(auth)/layout.cc.tsx': { wrapper: 'withAuthMessages', specifier: `${ROUTES_SUBPATH}/_internal/group-layouts.cc` },
-  '(public)/layout.cc.tsx': { wrapper: 'withPublicMessages', specifier: `${ROUTES_SUBPATH}/_internal/group-layouts.cc` },
-  'superadmin/layout.cc.tsx': { wrapper: 'withSuperadminGuard', specifier: `${ROUTES_SUBPATH}/_internal/group-layouts.cc` },
-  'devtools/layout.cc.tsx': { wrapper: 'withDevtoolsGuard', specifier: `${ROUTES_SUBPATH}/_internal/group-layouts.cc` },
+  '(auth)/layout.cc.tsx': { wrapper: 'withAuthMessages', specifier: `${ROUTES_SUBPATH}/_internal/auth-layout.cc` },
+  '(public)/layout.cc.tsx': { wrapper: 'withPublicMessages', specifier: `${ROUTES_SUBPATH}/_internal/public-layout.cc` },
+  'superadmin/layout.cc.tsx': { wrapper: 'withSuperadminGuard', specifier: `${ROUTES_SUBPATH}/_internal/superadmin-layout.cc` },
+  'devtools/layout.cc.tsx': { wrapper: 'withDevtoolsGuard', specifier: `${ROUTES_SUBPATH}/_internal/devtools-layout.cc` },
 })
 
 /**

@@ -5,7 +5,7 @@ import { Key, ChevronDown, User, Shield, Crown, ShieldCheck, UserCircle } from '
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
-import { sel } from '../../lib/test'
+import { sel } from '../../lib/selectors/auth-sel'
 import type { DevKeyringConfig, DevKeyringUser } from '../../lib/config/types'
 
 interface DevKeyringProps {

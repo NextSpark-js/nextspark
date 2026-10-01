@@ -1,10 +1,22 @@
 name: Route JavaScript budget verifier
 
 on:
+  # Every push to main runs both jobs: main is what gets packed and published, and a change outside the paths below
+  # (a root override, a template) can still move a route's client JavaScript.
   push:
     branches: [main]
+  # A pull request runs them only when it can change what a starter project ships or how it is measured: the starter job
+  # packs the repo, installs and builds a project (20-30 minutes). The verifier tests only read scripts/performance.
   pull_request:
     branches: [main]
+    paths:
+      - 'packages/**'
+      - 'scripts/performance/**'
+      - 'scripts/packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/route-js-budget.yml'
   workflow_dispatch:
 
 permissions:
@@ -23,5 +35,77 @@ jobs:
         with:
           node-version: 22.14.0
 
-      - name: Test the route JavaScript budget verifier
-        run: node --test scripts/performance/verify-route-js-budget.test.mjs
+      - name: Test the route JavaScript budget verifiers
+        run: node --test scripts/performance/verify-route-js-budget.test.mjs scripts/performance/starter-route-js.test.mjs
+
+  # A starter project built from this repository's packages, per-route client JavaScript against
+  # scripts/performance/starter-route-js-budget.json (0.1.0-beta.191 + 2%; signed-out routes free of dashboard code).
+  starter-route-js:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: dbuser
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: starter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      - name: Locate the starter project
+        run: echo "STARTER=$RUNNER_TEMP/starter" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          CYPRESS_INSTALL_BINARY: '0'
+
+      - name: Pack the packages
+        run: ./scripts/packages/pack.sh --all --output "$STARTER/.packages"
+        env:
+          SKIP_MOBILE_VERIFY: '1'
+
+      - name: Create the starter project from the tarballs
+        working-directory: ${{ runner.temp }}/starter
+        run: node "$GITHUB_WORKSPACE/packages/create-nextspark-app/dist/index.js" app --preset saas --theme starter --type web --name app --slug app --description "Route JavaScript budget" -y < /dev/null
+        env:
+          CYPRESS_INSTALL_BINARY: '0'
+
+      - name: Migrate and build the starter project
+        working-directory: ${{ runner.temp }}/starter/app
+        run: |
+          sed -i 's#^DATABASE_URL=.*#DATABASE_URL=postgresql://dbuser:postgres@localhost:5432/starter?sslmode=disable#' .env
+          sed -i 's#^NODE_ENV=.*#NODE_ENV="production"#' .env
+          pnpm db:migrate
+          pnpm build
+        env:
+          NEXTSPARK_AUTH_RUNTIME_ONLY: email,google
+
+      - name: Check per-route client JavaScript against the budget
+        run: node scripts/performance/starter-route-js.mjs --app "$STARTER/app" --json "$STARTER/route-js.json"
+
+      - name: Upload the measurement
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: starter-route-js
+          path: ${{ runner.temp }}/starter/route-js.json
+          if-no-files-found: ignore

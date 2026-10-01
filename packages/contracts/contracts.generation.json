@@ -10,9 +10,9 @@
     "src/envelope.ts": "9316ff3bce0468a7cb44bb844c36d672bcda23c99a3af89b28f9f7a89e5f69c5",
     "src/fields.ts": "8700c2cb3781eaef0d2ac82446ec4281a9895afa6ccd17fa487b343269dfeff7",
     "src/index.ts": "698536544f65cca015ccb70ad2fe6fecf19b16b48a6ab7cbd04991c20ebfbfd8",
-    "src/schema/media-ref.ts": "89369fd3d380856a629bb549c72b8e4e0a9e402253d86735cd93f25593ad7e3c",
-    "src/schema/response-shape.ts": "83560e6526be0d22c8bfdbd0fd629bc1cf6a5efc3963bd5a647552274277ed81",
-    "src/schema/schema-generator.ts": "fcf840954f88ba8e0af478744a37c07bd7dcc765f1c68fd2e77ef4b709e957f5",
+    "src/schema/media-ref.ts": "50c76514c825668f761c26c8dd02041754dda8621b91fd102c97d529b5a89cb7",
+    "src/schema/response-shape.ts": "90d2ea9dd869e409810ad4fb74207a6bc7034754353af1cc178123d48dd5cc56",
+    "src/schema/schema-generator.ts": "e9a2755047cd10a44c963d24f1e3cd60e7b37c907829a7c47d9791a09c5d2d49",
     "src/schema/system-fields.ts": "7dd4e743dae8f6151c53dde60e9704629fbb85edac8ac39a6a2cd75e6dbb4289",
     "src/schema/types.ts": "935b3f6506afba88267dea68902d5f241a406858b8d759beba5fd84efbf3bc02"
   }

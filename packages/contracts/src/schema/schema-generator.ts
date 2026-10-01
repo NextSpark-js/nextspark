@@ -10,7 +10,7 @@
  * bytes, so what a client validates and what the server enforces cannot drift.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 import { SYSTEM_FIELD_NAMES } from './system-fields'
 import type { EntityConfig, EntityField, ChildEntityDefinition } from './types'
 import { mediaRefSchema } from './media-ref'

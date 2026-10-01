@@ -8,7 +8,7 @@
  * PORTABLE: imports zod only.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 
 export const mediaRefObjectSchema = z.object({
   mediaId: z.string(),

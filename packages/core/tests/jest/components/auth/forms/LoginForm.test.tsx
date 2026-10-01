@@ -105,7 +105,7 @@ jest.mock('next-intl', () => ({
 }))
 
 // Mock testing utils
-jest.mock('@/core/lib/test', () => ({
+jest.mock('@/core/lib/selectors/auth-sel', () => ({
   sel: jest.fn((path: string) => {
     // Map selector paths to expected values
     const selectors: Record<string, string> = {

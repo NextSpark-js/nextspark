@@ -102,6 +102,12 @@ Every item is detailed under Added, Changed or Removed below; `nextspark migrate
 - **Client JavaScript per route (#192, #207).** Overridden core routes have their own template scope (now replaced by static facades), each
   route group gets only the translations its client components use, and the root layout's theme provider reads small client-safe modules
   so dashboard and dev configuration no longer ship in every page.
+- **Internal layout modules moved (#192)** so a public or auth route ships no superadmin, devtools or default-layout client code. Only
+  hand-written imports of `@nextsparkjs/core/routes/_internal/*` are affected (the generated host is rewritten on every build):
+  `DefaultPublicLayout` and `DefaultAuthLayout` moved from `_internal/public-layout` / `_internal/auth-layout` to
+  `_internal/default-public-layout` / `_internal/default-auth-layout`; `withSuperadminGuard` and `withDevtoolsGuard` moved from
+  `_internal/group-layouts.cc` to `_internal/superadmin-layout.cc` / `_internal/devtools-layout.cc` (the `(public)` and `(auth)`
+  Cache Components wrappers are composed through `_internal/public-layout.cc` / `_internal/auth-layout.cc`).
 - **The request proxy runs in root-first projects and they build with Turbopack.**
 - **Scaffold:** a flat project's `.gitignore` is complete (`node_modules`, `.next`, `tsbuildinfo`, `next-env.d.ts`, `.nextspark`,
   `src/app`; an existing file only gains the missing entries); the template `tsconfig` has Next 16's values and `next.config` sets

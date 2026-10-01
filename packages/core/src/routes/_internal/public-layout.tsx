@@ -1,8 +1,5 @@
 import type { ComponentType } from 'react'
-import { Suspense } from "react"
 import type { Metadata } from "next"
-import { PublicNavbar } from '@nextsparkjs/core/components/app/layouts/PublicNavbar'
-import { PublicFooter } from '@nextsparkjs/core/components/app/layouts/PublicFooter'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
@@ -16,32 +13,15 @@ export const defaultMetadata: Metadata = {
   description: 'Application',
 }
 
-export function DefaultPublicLayout({
-  children
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Public Navbar */}
-      <PublicNavbar />
-
-      {/* Main Content */}
-      <main className="flex-1">
-        <Suspense fallback={null}>
-          {children}
-        </Suspense>
-      </main>
-
-      {/* Public Footer */}
-      <PublicFooter />
-    </div>
-  )
-}
+/**
+ * The metadata a project's override of this layout keeps when it declares none (the generated host forwards it from
+ * this module, the composition module of the ISR host, so the override's route does not import DefaultPublicLayout).
+ */
+export const metadata: Metadata = defaultMetadata
 
 /**
  * Wraps a layout for this route group in the group's client messages. The route's
- * default is `withPublicMessages(DefaultPublicLayout)`; a host that resolves a project override of the
+ * default is `withPublicMessages(DefaultPublicLayout)` (./default-public-layout); a host that resolves a project override of the
  * layout wraps that instead, so the override gets the same messages.
  */
 export function withPublicMessages(PublicLayout: ComponentType<{ children: React.ReactNode }>) {

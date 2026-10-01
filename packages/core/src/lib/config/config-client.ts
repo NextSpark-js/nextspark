@@ -13,8 +13,6 @@ import { DEFAULT_APP_CONFIG } from './app.config'
 import { DEFAULT_DASHBOARD_CONFIG } from './dashboard.config'
 import { mergeConfigs } from '../utils/config-merge'
 import { mergeRolesConfig } from './roles-merge'
-import { resolveAuthMethods } from '../auth/auth-methods'
-import { resolveOtpConfig } from '../auth/otp-config'
 import {
   AVAILABLE_ROLES as REGISTRY_AVAILABLE_ROLES,
   ROLE_HIERARCHY as REGISTRY_ROLE_HIERARCHY,
@@ -79,14 +77,5 @@ export const isTopbarFeatureEnabled = (feature: string): boolean =>
 export const getTopbarFeatureConfig = <T = Record<string, unknown>>(feature: string): T | undefined =>
   (DASHBOARD_CONFIG.topbar as Record<string, unknown>)[feature] as T | undefined
 
-const methods = resolveAuthMethods(APP_CONFIG_MERGED.auth)
-export const PUBLIC_AUTH_CONFIG = {
-  registration: { mode: APP_CONFIG_MERGED.auth?.registration?.mode ?? 'open' },
-  providers: {
-    google: {
-      enabled: APP_CONFIG_MERGED.auth?.providers?.google?.enabled !== false && methods.includes('google'),
-    },
-  },
-  methods,
-  otp: resolveOtpConfig(APP_CONFIG_MERGED.auth),
-}
+// The public values have one definition, shared with the pages that import ./public-config-client only.
+export { PUBLIC_AUTH_CONFIG } from './public-config-client'

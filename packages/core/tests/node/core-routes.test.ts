@@ -280,6 +280,30 @@ test('the Cache Components root layout puts the page behind Suspense and the gro
 })
 
 /**
+ * A project that overrides the public or auth layout is composed with these modules (and gets its fallback metadata from
+ * them): every client component they reach, even one the override never renders, ships on every route of the group. So they
+ * import no component, provider (but the messages one, which the root layout ships anyway) or other group's layout (#192).
+ */
+test('the composition modules of the public and auth layouts reach no client component', () => {
+  const composeModules = [...new Set([...Object.values(COMPOSED_ROUTES), ...variants.cacheComponents.map(entry => entry.compose).filter(Boolean)]
+    .filter((compose: { wrapper: string }) => /^with(Public|Auth)Messages$/.test(compose.wrapper))
+    .map((compose: { specifier: string }) => compose.specifier))]
+  assert.equal(composeModules.length, 4, composeModules.join(', '))
+  const offenders: string[] = []
+  const seen = new Set<string>()
+  const visit = (file: string) => {
+    if (seen.has(file)) return
+    seen.add(file)
+    for (const [, specifier] of fs.readFileSync(file, 'utf8').matchAll(/^(?:import|export)\s[^'"]*?from\s+['"]([^'"]+)['"]/gm)) {
+      if (/@nextsparkjs\/core\/(components\/|providers\/(?!static-intl-provider$))|\/(superadmin|devtools|default-(public|auth))-layout$/.test(specifier)) offenders.push(`${path.relative(ROUTES, file)} -> ${specifier}`)
+      if (specifier.startsWith('.')) visit(sourceOf(path.posix.join('@nextsparkjs/core/routes', path.relative(ROUTES, path.dirname(file)).split(path.sep).join('/'), specifier)))
+    }
+  }
+  for (const specifier of composeModules) visit(sourceOf(specifier))
+  assert.deepEqual(offenders, [])
+})
+
+/**
  * The generated host's per-entity routes are given their entity's config: the modules they call look no entity
  * up by a runtime key and import no entity registry, so a route's module graph holds the one entity it serves.
  * (The client views and wrappers they render read the client registry by slug; that is components, not routes.)

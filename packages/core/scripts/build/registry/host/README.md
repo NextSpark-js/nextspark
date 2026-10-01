@@ -209,7 +209,12 @@ spread and no expression. A host with another core (the conformance fixture) pas
   the role-guarded groups (`superadmin`, `devtools`) are composed with `withSuperadminGuard` / `withDevtoolsGuard`, which put the
   messages, the dashboard providers and the role guard around the project's layout (and `with...Messages` alone is not callable from a
   facade). A core layout declares the wrapper as `compose: { wrapper, specifier }` in the core route manifest
-  (`routes-manifest.mjs`, `COMPOSED_ROUTES`); a route protected at `protected_all` is never composed.
+  (`routes-manifest.mjs`, `COMPOSED_ROUTES`); a route protected at `protected_all` is never composed. An override without
+  `metadata` keeps core's, forwarded from the wrapper's module when it exports it (the `(auth)` and `(public)` modules
+  `_internal/{auth,public}-layout` and their `.cc` variants do), else from core's layout. Those modules import no component:
+  every client component a route's server graph reaches ships to the browser even if never rendered, so forwarding from
+  core's layout would put its default navbar on every page of an override (core's default layouts live in
+  `_internal/default-{auth,public}-layout`).
 - **One route per entity** (`entity-routes.mjs`). For every entity of the project and of enabled plugins, the host writes
   `dashboard/(main)/<entity>/{layout,error,loading,page,create/page,[id]/page,[id]/edit/page}` and, for builder entities with
   `access.basePath`, the public item route (`(public)<basePath>/[...slug]`, `[slug]` at `/`) and archive route; a public
@@ -271,7 +276,8 @@ docs pages: `dynamic`, `dynamicParams`); the `layout.cc.tsx` files of the five l
 `superadmin`, `dashboard`), because `await getMessages()` reads the request and Next.js refuses that outside Suspense while prerendering
 (`_internal/group-layouts.cc`: `(auth)`, `(public)` and `devtools` provide the build-time `STATIC_MESSAGES` of the default locale and put
 their pages behind Suspense; `dashboard` and `superadmin` load request messages inside a Suspense boundary and declare their area
-request-time); and the root layout (`layout.ppr`, whose `main` puts the page behind Suspense as the net for a page that reads `params`,
+request-time; an override composes through `_internal/{auth,public,superadmin,devtools}-layout.cc`, one module per group, so the
+guards, dashboard providers and sidebars of the protected groups never reach a public or auth route); and the root layout (`layout.ppr`, whose `main` puts the page behind Suspense as the net for a page that reads `params`,
 cookies or headers below no other boundary). The public item routes omit `revalidate` in that mode; a host that builds in Cache Components
 mode only imports `_internal/public-item-route.cc`, whose reads of the published item and of the patterns it references are `'use cache'`
 functions (`cacheLife` of an hour for an item, tags `entity:<slug>` and `public-item:<slug>:<item slug>`).

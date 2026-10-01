@@ -15,7 +15,7 @@
       "specifier": "@nextsparkjs/core/routes/(auth)/layout.cc",
       "compose": {
         "wrapper": "withAuthMessages",
-        "specifier": "@nextsparkjs/core/routes/_internal/group-layouts.cc"
+        "specifier": "@nextsparkjs/core/routes/_internal/auth-layout.cc"
       }
     },
     {
@@ -24,7 +24,7 @@
       "specifier": "@nextsparkjs/core/routes/(public)/layout.cc",
       "compose": {
         "wrapper": "withPublicMessages",
-        "specifier": "@nextsparkjs/core/routes/_internal/group-layouts.cc"
+        "specifier": "@nextsparkjs/core/routes/_internal/public-layout.cc"
       }
     },
     {
@@ -33,7 +33,7 @@
       "specifier": "@nextsparkjs/core/routes/superadmin/layout.cc",
       "compose": {
         "wrapper": "withSuperadminGuard",
-        "specifier": "@nextsparkjs/core/routes/_internal/group-layouts.cc"
+        "specifier": "@nextsparkjs/core/routes/_internal/superadmin-layout.cc"
       }
     },
     {
@@ -42,7 +42,7 @@
       "specifier": "@nextsparkjs/core/routes/devtools/layout.cc",
       "compose": {
         "wrapper": "withDevtoolsGuard",
-        "specifier": "@nextsparkjs/core/routes/_internal/group-layouts.cc"
+        "specifier": "@nextsparkjs/core/routes/_internal/devtools-layout.cc"
       }
     },
     {

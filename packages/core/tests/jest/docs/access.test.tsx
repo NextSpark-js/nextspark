@@ -9,9 +9,9 @@
 
 let mockThemeAppConfig: Record<string, unknown> | undefined
 
-jest.mock('@/core/lib/config/config-client', () => ({
-  get APP_CONFIG_MERGED() {
-    return { docs: mockThemeAppConfig?.docs }
+jest.mock('@/core/lib/config/public-config-client', () => ({
+  get DOCS_CONFIG() {
+    return mockThemeAppConfig?.docs
   },
 }))
 

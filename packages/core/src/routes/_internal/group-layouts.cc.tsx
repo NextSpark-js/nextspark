@@ -6,8 +6,6 @@ import { connection } from 'next/server'
 import { StaticIntlProvider } from '@nextsparkjs/core/providers/static-intl-provider'
 import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
 import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
-import { guardSuperadminLayout, type SuperadminLayoutProps } from './superadmin-layout'
-import { guardDevtoolsLayout, type DevLayoutProps } from './devtools-layout'
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/translation-registry'
 
@@ -29,6 +27,10 @@ import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/transla
  * around it (navbar, footer, sidebar) stays in the prerendered shell. Without one Next fails the build.
  *
  * ISR hosts keep the wrappers of `auth-layout`, `public-layout`, ... (they await `getMessages()`).
+ *
+ * The guard wrappers of the protected groups live in `superadmin-layout.cc` / `devtools-layout.cc`, not here: the
+ * public and auth layouts import this module, and every client component reachable from it (the guards, the dashboard
+ * providers, the sidebars) would ship to those routes.
  */
 type LayoutProps = { children: ReactNode }
 type Layout = ComponentType<LayoutProps>
@@ -82,12 +84,4 @@ export const withAuthMessages = staticMessagesWrapper('auth')
 export const withPublicMessages = staticMessagesWrapper('public')
 export const withDevtoolsMessages = staticMessagesWrapper('devtools')
 export const withSuperadminMessages = requestMessagesWrapper('superadmin')
-/**
- * What a project's superadmin / devtools layout is composed with in this mode (the manifest's `compose` of these
- * two variants): the mode's messages, then core's role guard around the project's layout, exactly as
- * `withSuperadminGuard` / `withDevtoolsGuard` do in the ISR modules. The bare message wrappers above are not
- * composition wrappers: a project layout composed with them alone would drop the role check.
- */
-export const withSuperadminGuard = (ProjectLayout: ComponentType<SuperadminLayoutProps>) => withSuperadminMessages(guardSuperadminLayout(ProjectLayout))
-export const withDevtoolsGuard = (ProjectLayout: ComponentType<DevLayoutProps>) => withDevtoolsMessages(guardDevtoolsLayout(ProjectLayout))
 export const withDashboardMessages = requestMessagesWrapper('dashboard')

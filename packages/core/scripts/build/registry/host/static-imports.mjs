@@ -74,7 +74,10 @@ export const CORE_COMPOSITION_WRAPPERS = Object.freeze({
   [`${INTERNAL}devtools-layout`]: ['withDevtoolsGuard'],
   // The Cache Components modules (variants.json): the same wrappers over that mode's messages, each imported from the module
   // that exports it. `withSuperadminMessages` / `withDevtoolsMessages` stay absent here too.
-  [`${INTERNAL}group-layouts.cc`]: ['withAuthMessages', 'withPublicMessages', 'withSuperadminGuard', 'withDevtoolsGuard'],
+  [`${INTERNAL}auth-layout.cc`]: ['withAuthMessages'],
+  [`${INTERNAL}public-layout.cc`]: ['withPublicMessages'],
+  [`${INTERNAL}superadmin-layout.cc`]: ['withSuperadminGuard'],
+  [`${INTERNAL}devtools-layout.cc`]: ['withDevtoolsGuard'],
   [`${INTERNAL}entity-layout-route`]: ['createEntityLayoutRoute'],
   [`${INTERNAL}entity-list-route`]: ['createEntityListRoute'],
   [`${INTERNAL}entity-detail-route`]: ['createEntityDetailRoute'],

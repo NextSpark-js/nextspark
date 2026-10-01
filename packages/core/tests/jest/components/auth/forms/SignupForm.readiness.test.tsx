@@ -30,7 +30,7 @@ jest.mock('next-intl', () => ({
     typeof options?.defaultValue === 'string' ? options.defaultValue : key,
 }))
 jest.mock('@/core/lib/i18n/AuthTranslationPreloader', () => ({ AuthTranslationPreloader: () => null }))
-jest.mock('@/core/lib/test', () => ({ sel: (path: string) => path }))
+jest.mock('@/core/lib/selectors/auth-sel', () => ({ sel: (path: string) => path }))
 jest.mock('sonner', () => ({ toast: { success: jest.fn() } }))
 
 import { SignupForm } from '@/core/components/auth/forms/SignupForm'

@@ -1,6 +1,6 @@
 'use client'
 
-import { I18N_CONFIG } from './config/config-client'
+import { I18N_CONFIG } from './config/i18n-config-client'
 type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 
 // Client-side function to set locale cookie

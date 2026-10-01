@@ -283,10 +283,17 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
   if (route.compose && route.origin !== 'core') {
     const problems = await checkExports({ file: route.compose.file, specifier: route.compose.specifier, names: [route.compose.wrapper], route, ctx })
     if (problems.length > 0) throw new FacadeEmitError(problems.map(problem => ({ ...problem, file: problem.file ?? route.file })))
-    const coreExports = route.composeOfFile ? await moduleExports(route.composeOfFile, ctx) : null
+    // The metadata an override without its own keeps: from the composition module when it exports it (the group
+    // layouts: it imports no default layout, so the override's route ships none of core's layout components), else
+    // from core's layout.
+    const metadataOf = async file => {
+      const exported = file ? await moduleExports(file, ctx) : null
+      return exported ? METADATA_EXPORTS.filter(name => exported.has(name)) : []
+    }
+    const fromWrapper = await metadataOf(route.compose.file)
     composition = {
       wrapper: { name: route.compose.wrapper, specifier: route.compose.specifier },
-      fallback: { specifier: route.composeOf, names: coreExports ? METADATA_EXPORTS.filter(name => coreExports.has(name)) : [] },
+      fallback: fromWrapper.length > 0 ? { specifier: route.compose.specifier, names: fromWrapper } : { specifier: route.composeOf, names: await metadataOf(route.composeOfFile) },
     }
   }
 

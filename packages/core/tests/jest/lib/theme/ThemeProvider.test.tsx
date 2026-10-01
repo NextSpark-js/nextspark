@@ -53,6 +53,8 @@ describe('client module registry boundaries', () => {
     ['useEntityTranslations', '@nextsparkjs/core/hooks/useEntityTranslations'],
     ['translations/registry', '@nextsparkjs/core/lib/translations/registry'],
     ['config-client', '@nextsparkjs/core/lib/config/config-client'],
+    ['public-config-client', '@nextsparkjs/core/lib/config/public-config-client'],
+    ['i18n-config-client', '@nextsparkjs/core/lib/config/i18n-config-client'],
   ] as const
 
   test.each(clientSources)('%s cannot import the server theme registry or ThemeService', (_name, modulePath) => {

@@ -25,7 +25,7 @@ jest.mock('next-intl', () => ({
 }))
 jest.mock('@/core/lib/i18n/AuthTranslationPreloader', () => ({ AuthTranslationPreloader: () => null }))
 jest.mock('@/core/components/auth/DevKeyring', () => ({ DevKeyring: () => <div data-testid="dev-keyring" /> }))
-jest.mock('@/core/lib/test', () => ({ sel: (path: string) => path }))
+jest.mock('@/core/lib/selectors/auth-sel', () => ({ sel: (path: string) => path }))
 jest.mock('@/core/lib/config/config-sync', () => ({
   PUBLIC_AUTH_CONFIG: {
     registration: { mode: 'open' },

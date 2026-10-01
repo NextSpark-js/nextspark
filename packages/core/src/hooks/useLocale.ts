@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 
 import { useUserProfile } from './useUserProfile'
 import { setUserLocaleClient } from '../lib/locale-client'
-import { I18N_CONFIG } from '../lib/config/config-client'
+import { I18N_CONFIG } from '../lib/config/i18n-config-client'
 type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 
 export function useLocale() {

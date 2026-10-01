@@ -8,7 +8,7 @@ import { useState } from 'react'
 import type { DocSectionMeta } from '@nextsparkjs/registries/docs-registry'
 import { useTranslations } from 'next-intl'
 import { Input } from '../ui/input'
-import { APP_CONFIG_MERGED } from '../../lib/config/config-client'
+import { DOCS_CONFIG } from '../../lib/config/public-config-client'
 import { getPublicDocsCategory } from '../../lib/docs/access'
 
 interface DocsSidebarProps {
@@ -37,7 +37,7 @@ export function DocsSidebar({ sections }: DocsSidebarProps) {
 
   const activeSection = getActiveSection()
 
-  const publicConfig = getPublicDocsCategory(APP_CONFIG_MERGED.docs) ?? { enabled: true, open: true, label: 'Documentation' }
+  const publicConfig = getPublicDocsCategory(DOCS_CONFIG) ?? { enabled: true, open: true, label: 'Documentation' }
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
     // Expand active section by default

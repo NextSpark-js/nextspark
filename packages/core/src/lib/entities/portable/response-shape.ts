@@ -8,7 +8,7 @@
  * PORTABLE: imports zod and its siblings in this directory and nothing else.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 import type { EntityConfig } from './types'
 
 /** The columns every entity row carries, in the order the handlers select them. */

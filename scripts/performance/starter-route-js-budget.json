@@ -1,0 +1,64 @@
+{
+  "kind": "starter-route-js-budget",
+  "schemaVersion": 1,
+  "description": "Per-route client JavaScript (gzip) of the starter project (create-nextspark-app --preset saas --theme starter, Cache Components on) built from this repo. maxGzipBytes is the 0.1.0-beta.191 project (published packages, --theme default, same flags) measured by starter-route-js.mjs, plus 2%. Signed-out routes (public: true) must not carry any dashboardOnlyMarkers.",
+  "dashboardOnlyMarkers": [
+    "superadmin-sidebar",
+    "devtools-sidebar",
+    "isSettingsPageEnabled",
+    "getEnabledSettingsPages",
+    "teamSwitch"
+  ],
+  "routes": {
+    "/": {
+      "maxGzipBytes": 283288,
+      "public": true,
+      "reference191GzipBytes": 277733
+    },
+    "/support": {
+      "maxGzipBytes": 235739,
+      "public": true,
+      "reference191GzipBytes": 231116
+    },
+    "/docs": {
+      "maxGzipBytes": 291739,
+      "public": true,
+      "reference191GzipBytes": 286018
+    },
+    "/blog": {
+      "maxGzipBytes": 311762,
+      "public": true,
+      "reference191GzipBytes": 305649
+    },
+    "/login": {
+      "maxGzipBytes": 332825,
+      "public": true,
+      "reference191GzipBytes": 326299
+    },
+    "/signup": {
+      "maxGzipBytes": 308702,
+      "public": true,
+      "reference191GzipBytes": 302649
+    },
+    "/dashboard": {
+      "maxGzipBytes": 349985,
+      "public": false,
+      "reference191GzipBytes": 343122
+    },
+    "/dashboard/analytics": {
+      "maxGzipBytes": 275174,
+      "public": false,
+      "reference191GzipBytes": 269778
+    },
+    "/dashboard/tasks": {
+      "maxGzipBytes": 456430,
+      "public": false,
+      "reference191GzipBytes": 447480
+    },
+    "/dashboard/settings/profile": {
+      "maxGzipBytes": 402964,
+      "public": false,
+      "reference191GzipBytes": 395062
+    }
+  }
+}
