@@ -77,3 +77,4 @@ New projects are created with Cache Components and PPR on. An upgraded project k
 
 - A project migrated by an earlier release may have a `legacy-app-customizations/` directory. Its files are not read any more: move each into `templates/` or `api/` by hand, following the table above.
 - `nextspark sync:app` no longer exists: see the [removal timeline](./05-sync-app-removal).
+- `getBillingResourceHints()` is async (since 0.1.0-beta.191). A root layout that still reads it without `await` fails the build while prerendering `/_not-found`: make the layout `async` and `await` the call.

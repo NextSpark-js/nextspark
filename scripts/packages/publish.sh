@@ -339,6 +339,10 @@ ORDERED_PACKAGES=()
 while IFS= read -r line; do
     [[ -n "$line" ]] && ORDERED_PACKAGES+=("$line")
 done <<< "$ORDER_OUTPUT"
+if [ ${#ORDERED_PACKAGES[@]} -ne "$TGZ_COUNT" ]; then
+    echo -e "${RED}The publish order lists ${#ORDERED_PACKAGES[@]} package(s) for $TGZ_COUNT tarball(s). Nothing was published.${NC}"
+    exit 1
+fi
 
 for entry in "${ORDERED_PACKAGES[@]}"; do
     IFS=$'\t' read -r tgz name version <<< "$entry"

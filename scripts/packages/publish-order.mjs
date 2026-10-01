@@ -8,7 +8,7 @@
  * Exits 1 with a message naming the packages involved on a dependency cycle.
  */
 import { spawnSync } from 'node:child_process'
-import { readdirSync } from 'node:fs'
+import { readdirSync, realpathSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -45,7 +45,8 @@ export function readManifests(dir) {
     })
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+// Real paths: under a symlinked directory (macOS /tmp) argv[1] and import.meta.url differ and nothing would print
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   try {
     const dir = resolve(process.argv[2] ?? '.')
     for (const m of computeOrder(readManifests(dir))) console.log(`${m.file}\t${m.name}\t${m.version}`)

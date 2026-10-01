@@ -73,7 +73,7 @@ async function loadGateway(): Promise<BillingGateway> {
  *
  * @example
  * // In layout.tsx:
- * const { preconnect, dnsPrefetch } = getBillingResourceHints()
+ * const { preconnect, dnsPrefetch } = await getBillingResourceHints()
  */
 export async function getBillingResourceHints(): Promise<{ preconnect: string[]; dnsPrefetch: string[] }> {
   try {

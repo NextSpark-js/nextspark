@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -80,6 +80,23 @@ test('the CLI exits 1 on a cycle', () => {
     assert.equal(r.status, 1)
     assert.match(r.stderr, /cycle/)
   } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('the CLI prints the order when run through a symlinked directory', () => {
+  const dir = fixtureTarballs(set)
+  const real = mkdtempSync(join(tmpdir(), 'order-real-'))
+  const link = `${real}-link`
+  try {
+    copyFileSync(ORDER_CLI, join(real, 'publish-order.mjs'))
+    symlinkSync(real, link)
+    const r = spawnSync('node', [join(link, 'publish-order.mjs'), dir], { encoding: 'utf8' })
+    assert.equal(r.status, 0, r.stderr)
+    assert.equal(r.stdout.trim().split('\n').length, set.length)
+  } finally {
+    rmSync(link, { force: true })
+    rmSync(real, { recursive: true, force: true })
     rmSync(dir, { recursive: true, force: true })
   }
 })
