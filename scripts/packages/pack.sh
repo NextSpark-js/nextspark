@@ -322,6 +322,14 @@ if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/core " ]] && [ -e "$REPO
     exit 1
 fi
 
+# A dist/templates/app left by an old build (core built before #203 copied templates/app into dist) would be
+# packed as is: mobile-verify packs the existing dist before core is rebuilt, and --skip-build ships it too.
+# dist is generated and gitignored, and a full build starts from a clean dist, so drop the leftover here.
+if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/core " ]] && [ -e "$REPO_ROOT/packages/core/dist/templates/app" ]; then
+    echo -e "${YELLOW}[WARN]${NC} Removing stale packages/core/dist/templates/app (left by an old core build)"
+    rm -rf "$REPO_ROOT/packages/core/dist/templates/app"
+fi
+
 # Build packages if not skipped
 if [ "$SKIP_BUILD" = false ]; then
     echo -e "${CYAN}Building packages...${NC}"

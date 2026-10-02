@@ -15,7 +15,7 @@ This directory contains detailed instructions for managing NextSpark releases.
 ### Release Workflow (MANDATORY order)
 
 ```
-/do:npm-version     →  List 16 packages, ask user, bump versions, commit
+/do:npm-version     →  List 12 packages, ask user, bump versions, commit
 /do:npm-publish     →  Calls npm-version first, then: pnpm pkg:pack → pnpm pkg:verify-tarballs → pnpm pkg:publish
 ```
 
@@ -26,10 +26,9 @@ internal `@nextsparkjs/*` version drift, and leaked maintainer paths/secrets/`.e
 
 **CRITICAL:** NEVER use `npm publish` directly. It does NOT resolve `workspace:*` and BREAKS packages.
 
-### All 16 Packages
+### All 12 Packages
 
 **Core (7):** core, ui, mobile, testing, cli, create-nextspark-app, ai-workflow
-**Themes (4):** theme-default, theme-blog, theme-crm, theme-productivity
 **Plugins (5):** plugin-ai, plugin-amplitude, plugin-langchain, plugin-social-media-publisher, plugin-walkme
 
 ### Semantic Versioning

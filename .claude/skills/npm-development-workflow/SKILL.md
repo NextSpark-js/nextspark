@@ -331,7 +331,6 @@ cd ../projects
 rm -rf my-app
 npx --yes create-nextspark-app@latest my-app
 cd my-app
-pnpm nextspark add:theme @nextsparkjs/theme-default
 pnpm dev
 ```
 

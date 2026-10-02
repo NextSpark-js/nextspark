@@ -42,7 +42,7 @@ Step 3: pnpm pkg:publish    →  Validate + publish to npm in order
 1. **Version check**: Execute the `/do:npm-version` flow first (list versions, ask user, bump if needed, commit)
 2. **Prerequisites**: Verify `npm whoami`, clean git status
 3. **Pack**: Run `pnpm pkg:pack` (syncs templates, builds all, creates .tgz)
-4. **Publish**: Run `pnpm pkg:publish` (validates, publishes in dependency order)
+4. **Publish**: Run `pnpm pkg:publish` on a terminal, unpiped (validates, publishes in dependency order, then runs any `--also-tag` dist-tags in one block at the end)
 5. **Verify**: Check all 12 packages on npm
 6. **Test**: Quick smoke test with `pnpm dlx create-nextspark-app@beta`
 

@@ -141,13 +141,14 @@ pnpm pkg:publish --tag latest --also-tag beta     # latest AND move beta to the 
 pnpm pkg:publish --tag latest --also-tag beta --dry-run --skip-auth-check   # preview, no login needed
 ```
 
-`--also-tag <tag>` runs `npm dist-tag add <pkg>@<version> <tag>` after each package is published
-(`--dry-run` only prints those commands). `--skip-auth-check` skips `npm whoami` and is only accepted
+`--also-tag <tag>` runs `npm dist-tag add <pkg>@<version> <tag>` for every package, in one block after all of them
+are published (so the browser 2FA of a security key is not asked per package; `--dry-run` only prints those commands).
+Run the script on a terminal and do not pipe it: npm only opens the browser 2FA when stdin and stdout are a TTY. `--skip-auth-check` skips `npm whoami` and is only accepted
 with `--dry-run`. If a publish fails the run stops, so no package goes live before a dependency it pins.
 
 **Resuming after a partial publish:** re-run the same command with the same `.packages` (use `--no-cleanup`
 on the first run if unsure). Before each package the script runs `npm view <name>@<version> version`; a version
-already on the registry is reported as `[SKIP] already published` and still gets `--also-tag`. Dist-tag
+already on the registry is reported as `[SKIP] already published` and still gets `--also-tag` in the final block. Dist-tag
 commands that failed (e.g. an expired OTP) are listed at the end so they can be re-run.
 
 **Manual override (only if script doesn't support needed options):**

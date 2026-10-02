@@ -290,7 +290,7 @@ Publica `.tgz` a npm.
 
 # Opciones:
 #   --tag <tag>       Tag (default: latest)
-#   --also-tag <tag>  Tras publicar, `npm dist-tag add <pkg>@<version> <tag>` por paquete
+#   --also-tag <tag>  Tras publicar todo, `npm dist-tag add <pkg>@<version> <tag>` por paquete, en un bloque al final
 #   --dry-run         Simular (imprime los comandos de dist-tag)
 #   --skip-auth-check Omitir npm whoami (solo con --dry-run)
 #   --otp <code>      Código 2FA
@@ -302,7 +302,7 @@ Publica `.tgz` a npm.
 ./scripts/packages/publish.sh ./.packages --tag latest --also-tag beta   # latest y mover beta
 ```
 
-Un re-run tras una publicación parcial salta (`[SKIP]`) las versiones ya publicadas y aplica igual `--also-tag`; los `dist-tag` fallidos se listan al final.
+Un re-run tras una publicación parcial salta (`[SKIP]`) las versiones ya publicadas y aplica igual `--also-tag` (en el bloque final); los `dist-tag` fallidos se listan al final.
 
 El orden de publicación sale de las dependencias entre los tarballs (`publish-order.mjs`), no de una lista fija.
 

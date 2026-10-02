@@ -16,18 +16,17 @@ Read `.claude/commands/_monorepo/how-to/releases/npm-version.md` completely befo
 
 ## Quick Reference
 
-### All 16 Packages
+### All 12 Packages
 
 **Core (7):** core, ui, mobile, testing, cli, create-nextspark-app, ai-workflow
-**Themes (4):** theme-default, theme-blog, theme-crm, theme-productivity
 **Plugins (5):** plugin-ai, plugin-amplitude, plugin-langchain, plugin-social-media-publisher, plugin-walkme
 
 ### Process
 
-1. **List versions**: Read ALL 16 package.json files and display current versions
+1. **List versions**: Read ALL 12 package.json files and display current versions
 2. **Ask user**: Use `AskUserQuestion` with these options:
-   - Beta bump (all aligned) — increment pre-release on all 16
-   - Release (all aligned) — patch/minor/major on all 16
+   - Beta bump (all aligned) — increment pre-release on all 12
+   - Release (all aligned) — patch/minor/major on all 12
    - Release (only modified) — bump only changed packages (warns about desync)
    - Versions are ready — validate only, no changes
 3. **Execute**: Update all relevant package.json files

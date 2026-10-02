@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -66,6 +66,26 @@ test('the core tarball ships the route modules and no templates/app', () => {
       assert.ok(existsSync(join(outputDir, 'package/dist/routes/api/v1/teams/presets.ts')), 'core route presets ship as source')
     }
   } finally {
+    rmSync(outputDir, { recursive: true, force: true })
+  }
+})
+
+// mobile-verify packs the existing core dist before core is rebuilt: a dist/templates/app from an old build must not ship.
+test('pack.sh drops a stale dist/templates/app instead of packing it', () => {
+  const staleDir = join(REPO_ROOT, 'packages/core/dist/templates/app')
+  assert.equal(existsSync(staleDir), false, 'packages/core/dist/templates/app must not exist before this test')
+  const outputDir = mkdtempSync(join(tmpdir(), 'pack-stale-test-'))
+  mkdirSync(staleDir, { recursive: true })
+  writeFileSync(join(staleDir, 'stale.txt'), 'x')
+  try {
+    const result = packCore(outputDir)
+    assert.equal(result.status, 0, result.stderr || result.stdout)
+    assert.equal(existsSync(staleDir), false, 'pack.sh must remove the stale dist/templates/app')
+    const archive = readdirSync(outputDir).find((file) => /^nextsparkjs-core-.*\.tgz$/.test(file))
+    const listed = spawnSync('tar', ['tzf', join(outputDir, archive)], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+    assert.doesNotMatch(listed.stdout, /package\/dist\/templates\/app\//)
+  } finally {
+    rmSync(staleDir, { recursive: true, force: true })
     rmSync(outputDir, { recursive: true, force: true })
   }
 })

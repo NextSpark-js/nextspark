@@ -101,6 +101,12 @@ test('the CLI prints the order when run through a symlinked directory', () => {
   }
 })
 
+test('importing publish-order.mjs does not throw when argv[1] does not exist', () => {
+  const code = `process.argv[1] = '/nonexistent/entry.mjs'; await import(${JSON.stringify(ORDER_CLI)})`
+  const r = spawnSync('node', ['--input-type=module', '-e', code], { encoding: 'utf8' })
+  assert.equal(r.status, 0, r.stderr)
+})
+
 test('publish.sh refuses --skip-auth-check without --dry-run and an --also-tag equal to --tag', () => {
   const dir = fixtureTarballs([{ name: 'a' }])
   try {
@@ -115,10 +121,28 @@ test('publish.sh refuses --skip-auth-check without --dry-run and an --also-tag e
   }
 })
 
+const FAKE_NPM = `#!/bin/bash
+echo "$@" >> "$FAKE_NPM_LOG"
+case "$1" in
+  whoami) echo tester ;;
+  view) [[ ",$FAKE_NPM_PUBLISHED," == *",\${2%@*},"* ]] || exit 1 ;;
+  publish) if [ -n "$FAKE_NPM_FAIL_PUBLISH" ] && [[ "$2" == *"$FAKE_NPM_FAIL_PUBLISH"* ]]; then echo "npm error 500 fake publish failure"; exit 1; fi ;;
+  dist-tag) if [ -n "$FAKE_NPM_FAIL_TAG" ] && [[ "$3" == *"$FAKE_NPM_FAIL_TAG"* ]]; then exit 1; fi ;;
+esac
+exit 0
+`
+
 // The full dry run verifies real tarballs (pkg:validate, verify-tarballs --expect-all), so it needs a
 // complete `pack.sh --all` output: PUBLISH_TEST_PACKS=/path/to/packs node --test scripts/packages/publish-order.test.mjs
 test('publish.sh --dry-run lists the packages in dependency order and the dist-tag commands', { skip: !process.env.PUBLISH_TEST_PACKS }, () => {
-  const r = spawnSync('bash', [PUBLISH, process.env.PUBLISH_TEST_PACKS, '--tag', 'latest', '--also-tag', 'beta', '--dry-run', '--skip-auth-check'], { encoding: 'utf8' })
+  // Fake npm: the real registry may already hold these versions (then every package would be skipped, not published)
+  const fake = mkdtempSync(join(tmpdir(), 'fake-npm-dry-'))
+  writeFileSync(join(fake, 'npm'), FAKE_NPM, { mode: 0o755 })
+  const r = spawnSync('bash', [PUBLISH, process.env.PUBLISH_TEST_PACKS, '--tag', 'latest', '--also-tag', 'beta', '--dry-run', '--skip-auth-check'], {
+    encoding: 'utf8',
+    env: { ...process.env, PATH: `${fake}:${process.env.PATH}`, FAKE_NPM_LOG: join(fake, 'calls.log') },
+  })
+  rmSync(fake, { recursive: true, force: true })
   assert.equal(r.status, 0, r.stdout + r.stderr)
   const out = r.stdout.replace(/\x1b\[[0-9;]*m/g, '')
   const published = [...out.matchAll(/Would publish (\S+)\.tgz/g)].map((m) => m[1])
@@ -133,16 +157,6 @@ test('publish.sh --dry-run lists the packages in dependency order and the dist-t
 
 // publish.sh against a fake npm on PATH (real publish never runs). Needs the same complete packs as above.
 // FAKE_NPM_PUBLISHED: names whose version is already live; FAKE_NPM_FAIL_PUBLISH / FAKE_NPM_FAIL_TAG: a name fragment that fails.
-const FAKE_NPM = `#!/bin/bash
-echo "$@" >> "$FAKE_NPM_LOG"
-case "$1" in
-  whoami) echo tester ;;
-  view) [[ ",$FAKE_NPM_PUBLISHED," == *",\${2%@*},"* ]] || exit 1 ;;
-  publish) if [ -n "$FAKE_NPM_FAIL_PUBLISH" ] && [[ "$2" == *"$FAKE_NPM_FAIL_PUBLISH"* ]]; then echo "npm error 500 fake publish failure"; exit 1; fi ;;
-  dist-tag) if [ -n "$FAKE_NPM_FAIL_TAG" ] && [[ "$3" == *"$FAKE_NPM_FAIL_TAG"* ]]; then exit 1; fi ;;
-esac
-exit 0
-`
 const withFakeNpm = process.env.PUBLISH_TEST_PACKS ? test : (name, fn) => test(name, { skip: true }, fn)
 
 function runWithFakeNpm(env) {
@@ -182,4 +196,51 @@ withFakeNpm('a failed dist-tag exits 1, keeps publishing and prints the command 
   assert.equal(r.status, 1)
   assert.equal(callsOf(calls, 'publish').length, 12)
   assert.match(out, /Failed dist-tag commands[\s\S]*npm dist-tag add @nextsparkjs\/mobile@\S+ beta/)
+})
+
+// A fake node on PATH wraps publish-order.mjs: FAKE_ORDER_MODE=drop removes the last package line,
+// FAKE_ORDER_MODE=warn writes a warning to stderr and leaves stdout intact.
+function runWithFakeNode(mode) {
+  const dir = mkdtempSync(join(tmpdir(), 'fake-node-'))
+  const realNode = process.execPath
+  writeFileSync(join(dir, 'node'), `#!/bin/bash
+if [[ "$1" == *publish-order.mjs ]]; then
+  if [ "$FAKE_ORDER_MODE" = warn ]; then echo "(node:1) Warning: fake" >&2; fi
+  if [ "$FAKE_ORDER_MODE" = drop ]; then "${realNode}" "$@" | sed '$d'; else "${realNode}" "$@"; fi
+  exit 0
+fi
+exec "${realNode}" "$@"
+`, { mode: 0o755 })
+  writeFileSync(join(dir, 'npm'), FAKE_NPM, { mode: 0o755 })
+  const log = join(dir, 'calls.log')
+  writeFileSync(log, '')
+  const r = spawnSync('bash', [PUBLISH, process.env.PUBLISH_TEST_PACKS, '--tag', 'latest', '--no-cleanup'], {
+    encoding: 'utf8',
+    env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, FAKE_NPM_LOG: log, FAKE_ORDER_MODE: mode },
+  })
+  const calls = readFileSync(log, 'utf8').trim().split('\n')
+  rmSync(dir, { recursive: true, force: true })
+  return { r, out: (r.stdout + r.stderr).replace(/\x1b\[[0-9;]*m/g, ''), calls }
+}
+
+withFakeNpm('publish.sh stops before publishing when the order lists fewer packages than tarballs', () => {
+  const { r, out, calls } = runWithFakeNpm_drop()
+  assert.equal(r.status, 1, out)
+  assert.match(out, /The publish order lists 11 package\(s\) for 12 tarball\(s\)\. Nothing was published\./)
+  assert.equal(callsOf(calls, 'publish').length, 0)
+})
+const runWithFakeNpm_drop = () => runWithFakeNode('drop')
+
+withFakeNpm('a node warning on stderr is not counted as a package line', () => {
+  const { r, out, calls } = runWithFakeNode('warn')
+  assert.equal(r.status, 0, out)
+  assert.equal(callsOf(calls, 'publish').length, 12)
+})
+
+withFakeNpm('every publish runs before the first dist-tag', () => {
+  const { r, out, calls } = runWithFakeNpm({})
+  assert.equal(r.status, 0, out)
+  const verbs = calls.map((c) => c.split(' ')[0])
+  assert.ok(verbs.lastIndexOf('publish') < verbs.indexOf('dist-tag'), 'dist-tags run after the last publish')
+  assert.equal(callsOf(calls, 'dist-tag').length, 12)
 })

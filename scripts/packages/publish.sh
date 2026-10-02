@@ -17,10 +17,11 @@
 # OPTIONS:
 #   --tag <tag>       npm dist-tag (default: latest)
 #                     Common tags: latest, beta, alpha, next, rc
-#   --also-tag <tag>  After each successful publish, also point <tag> at the
+#   --also-tag <tag>  After every package is published, also point <tag> at each
 #                     published version: npm dist-tag add <pkg>@<version> <tag>
-#                     (e.g. --tag latest --also-tag beta). In --dry-run the
-#                     commands are printed, not run.
+#                     (e.g. --tag latest --also-tag beta). The dist-tags run in
+#                     one block at the end, so browser 2FA is not asked per
+#                     package. In --dry-run the commands are printed, not run.
 #   --dry-run         Perform a dry run without publishing
 #   --skip-auth-check Skip the npm whoami check (only valid with --dry-run)
 #   --otp <code>      One-time password for npm 2FA
@@ -128,8 +129,8 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Options:"
             echo "  --tag <tag>       npm dist-tag (default: latest)"
-            echo "  --also-tag <tag>  After publishing, run 'npm dist-tag add <pkg>@<version> <tag>'"
-            echo "                    for each published package (e.g. --tag latest --also-tag beta)"
+            echo "  --also-tag <tag>  After all packages are published, run 'npm dist-tag add <pkg>@<version> <tag>'"
+            echo "                    for each one (e.g. --tag latest --also-tag beta)"
             echo "  --dry-run         Test without publishing (prints the dist-tag commands)"
             echo "  --skip-auth-check Skip npm whoami (only with --dry-run)"
             echo "  --otp <code>      2FA one-time password"
@@ -311,9 +312,6 @@ publish_package() {
 
     if [ "$DRY_RUN" = true ]; then
         cmd="$cmd --dry-run"
-    fi
-
-    if [ "$DRY_RUN" = true ]; then
         local output
         if output=$(eval "$cmd" 2>&1); then
             echo -e "    ${YELLOW}[DRY-RUN]${NC} Would publish $pkg_basename"
@@ -338,11 +336,14 @@ publish_package() {
 echo -e "${CYAN}Packages to publish (in order):${NC}"
 # Use while loop instead of mapfile for bash 3.2 compatibility (macOS)
 # Order comes from the tarballs' own dependency graph; a cycle aborts before anything is published
-ORDER_OUTPUT=$(node "$SCRIPT_DIR/publish-order.mjs" "$PACKAGES_DIR" 2>&1) || {
-    echo -e "${RED}$ORDER_OUTPUT${NC}"
+ORDER_ERR=$(mktemp)
+ORDER_OUTPUT=$(node "$SCRIPT_DIR/publish-order.mjs" "$PACKAGES_DIR" 2>"$ORDER_ERR") || {
+    echo -e "${RED}$(cat "$ORDER_ERR")${NC}"
+    rm -f "$ORDER_ERR"
     echo -e "${RED}Could not compute the publish order. Nothing was published.${NC}"
     exit 1
 }
+rm -f "$ORDER_ERR"
 ORDERED_PACKAGES=()
 while IFS= read -r line; do
     [[ -n "$line" ]] && ORDERED_PACKAGES+=("$line")
@@ -363,6 +364,7 @@ echo -e "${CYAN}Publishing packages...${NC}"
 published_count=0
 failed_count=0
 skipped_count=0
+TO_TAG=()
 
 for entry in "${ORDERED_PACKAGES[@]}"; do
     IFS=$'\t' read -r tgz name version <<< "$entry"
@@ -370,10 +372,10 @@ for entry in "${ORDERED_PACKAGES[@]}"; do
         echo -e "  ${CYAN}$(basename "$tgz")${NC}"
         echo -e "    ${YELLOW}[SKIP]${NC} already published: $name@$version"
         skipped_count=$((skipped_count + 1))
-        add_dist_tag "$name" "$version" || failed_count=$((failed_count + 1))
+        TO_TAG+=("$entry")
     elif publish_package "$tgz" "$name" "$version"; then
         published_count=$((published_count + 1))
-        add_dist_tag "$name" "$version" || failed_count=$((failed_count + 1))
+        TO_TAG+=("$entry")
     else
         failed_count=$((failed_count + 1))
         # Dependents of a package that failed must not go live without it
@@ -382,6 +384,17 @@ for entry in "${ORDERED_PACKAGES[@]}"; do
     fi
 done
 echo ""
+
+# Dist-tags after every publish, in one block on the terminal: consecutive npm writes reuse the browser 2FA
+# auth, interleaving publish and dist-tag asked for it twice per package. Already-published packages are tagged too.
+if [ -n "$ALSO_TAG" ] && [ ${#TO_TAG[@]} -gt 0 ]; then
+    echo -e "${CYAN}Adding dist-tag $ALSO_TAG...${NC}"
+    for entry in "${TO_TAG[@]}"; do
+        IFS=$'\t' read -r tgz name version <<< "$entry"
+        add_dist_tag "$name" "$version" || failed_count=$((failed_count + 1))
+    done
+    echo ""
+fi
 
 # Cleanup
 if [ "$CLEANUP" = true ] && [ "$DRY_RUN" = false ] && [ $failed_count -eq 0 ]; then
