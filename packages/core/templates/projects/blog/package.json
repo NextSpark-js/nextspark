@@ -23,8 +23,5 @@
   "nextspark": {
     "type": "theme",
     "name": "blog"
-  },
-  "devDependencies": {
-    "@types/dompurify": "^3.2.0"
   }
 }

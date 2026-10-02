@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.193] - 2026-10-02
+
+### Upgrading from 0.1.0-beta.192
+
+Nothing is mandatory: bump the `@nextsparkjs/*` dependencies, install and rebuild (`src/app` is regenerated). Optional: import `sel` from
+`@nextsparkjs/core/selectors/<domain>` on pages where the bundle matters, and give a project block or item template that calls
+`useSearchParams` on a statically rendered legacy route its own `<Suspense>` if the build asks for one (see the last Fixed item).
+Two responses change status in the legacy host (`cacheComponents: false`), in case a project's own tests assert them: an invitation-only
+`/signup` answers 307 to `/login` (it was 200 with a client-side refresh), and with core's default public layout an unknown one-segment
+URL answers 404 (it was 200 with the not-found page). Under Cache Components both still stream: 200, with a client-side redirect or the
+not-found page.
+
 ### Added
 
 - **`@nextsparkjs/core/selectors/<domain>`**: one entry per selector domain (`auth`, `dashboard`, `entities`, `global-search`, `taxonomies`,
@@ -17,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Theme context is set at the first render.** `ThemeProvider` started with no theme and set it from a mount effect; that context change right
+  after hydration made React discard the server HTML of any Suspense boundary not yet hydrated and render it again, so on a slow link a login form
+  vanished for ~3 s and came back as a new node (LCP ~1.5 s to ~5 s on a production app). The theme comes from the build-time registry, so it is
+  known at render 1 on server and client; the effect only applies the styles.
+- **`/signup` of an invitation-only app answers a real 307 in the legacy host** instead of 200 with a `meta refresh`: the default page called
+  `redirect()` inside its own Suspense. The page is `force-dynamic` and needs no boundary. Under Cache Components the redirect still streams
+  behind the group layout's Suspense (200 with a client-side redirect).
+- **`nextspark migrate`** says a missing active theme is the cause of the unrecognized `app/globals.css` blocker, and how to pass the theme.
 - **Every project template creates, migrates, builds and serves from a new project** (`--theme blog|crm|productivity`; the starter already did):
   - The packages a template's source imports (`dompurify`, `next-themes`, `@dnd-kit/*`, `@tailwindcss/container-queries`) are now written into the
     generated `package.json`: `create-nextspark-app` left the template's own `package.json` out, so `pnpm build` failed with "Can't resolve 'dompurify'".

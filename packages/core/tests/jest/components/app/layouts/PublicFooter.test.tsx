@@ -11,7 +11,6 @@ import path from 'path'
 import { render, screen } from '@testing-library/react'
 
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
-jest.mock('@/core/lib/test', () => ({ sel: (key: string) => key }))
 
 import { PublicFooter } from '@/core/components/app/layouts/PublicFooter'
 

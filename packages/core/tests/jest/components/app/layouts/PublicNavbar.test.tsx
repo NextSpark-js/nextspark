@@ -12,7 +12,6 @@ jest.mock('@/core/hooks/useAuth', () => ({
 }))
 jest.mock('@/core/components/app/misc/ThemeToggle', () => ({ ThemeToggle: () => null }))
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
-jest.mock('@/core/lib/test', () => ({ sel: (key: string) => key }))
 
 import { PublicNavbar } from '@/core/components/app/layouts/PublicNavbar'
 

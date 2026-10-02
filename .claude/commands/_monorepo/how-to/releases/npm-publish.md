@@ -162,6 +162,17 @@ done
 
 ### Step 5: Verify Publication
 
+npm answers `+ <name>@<version>` and then processes the package: `npm view` and the registry can miss a package that
+was just published for a few minutes (seen on 0.1.0-beta.192: five of twelve showed up about two minutes late). Re-check before
+concluding a publish failed, and compare what is live with what was packed:
+
+```bash
+cd .packages && for f in *.tgz; do
+  n=$(tar xzOf "$f" package/package.json | node -pe 'JSON.parse(require("fs").readFileSync(0)).name')
+  [ "$(shasum "$f" | cut -d' ' -f1)" = "$(npm view "$n@<version>" dist.shasum)" ] && echo "same $n" || echo "DIFFERENT $n"
+done
+```
+
 ```bash
 echo "=== Verify Published Versions ==="
 echo ""
@@ -190,6 +201,15 @@ cd test-install && pnpm install
 # A fresh project has no auth provider env, so the production auth preflight (#202) would fail the build;
 # declare the runtime-only providers for the smoke test:
 NEXTSPARK_AUTH_RUNTIME_ONLY=email,google pnpm exec nextspark build
+```
+
+### Step 7: Tag the release commit
+
+After every package is live, tag the commit the tarballs were packed from (annotated, message = the version), and push the tag:
+
+```bash
+git tag -a v<version> <release commit SHA> -m "<version>"
+git push origin v<version>
 ```
 
 ---

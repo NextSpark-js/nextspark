@@ -126,7 +126,7 @@ test('a content feature leaves an entity the project template already ships as i
 
 test('the template package.json dependencies reach the generated package.json', async () => {
   const declared = await generatedDependencies('blog')
-  for (const pkg of ['dompurify', 'next-themes', '@tailwindcss/container-queries', '@types/dompurify']) assert.ok(declared.has(pkg), pkg)
+  for (const pkg of ['dompurify', 'next-themes', '@tailwindcss/container-queries']) assert.ok(declared.has(pkg), pkg)
   assert.ok((await generatedDependencies('productivity')).has('@dnd-kit/core'))
 })
 
