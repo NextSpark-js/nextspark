@@ -35,9 +35,15 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [currentTheme, setCurrentTheme] = useState<ThemeConfig | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | undefined>()
+  // The theme comes from the build-time registry, so it is known on the first render, on the server
+  // and in the browser alike. Setting it from an effect after mount changes this context's value
+  // right after hydration; React then throws away the server HTML of every Suspense boundary that has
+  // not hydrated yet (a client component whose chunk is still downloading) and renders it from
+  // scratch, so on a slow link the content disappears and comes back as a new DOM node (a second LCP
+  // candidate, seconds later).
+  const [currentTheme, setCurrentTheme] = useState<ThemeConfig | null>(() => getCurrentClientTheme() ?? null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | undefined>(() => getCurrentClientTheme() ? undefined : 'Project theme was not generated')
 
   const loadTheme = React.useCallback(() => {
     try {
@@ -80,10 +86,12 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     })
   }, [currentTheme, loadTheme])
 
-  // Load the sole root-first project theme.
+  // Apply the sole root-first project theme's styles: a DOM side effect only, no state change.
   useEffect(() => {
-    loadTheme()
-  }, [loadTheme])
+    if (!currentTheme) console.error('[ThemeProvider] Project theme was not generated')
+    else if (currentTheme.styles?.globals) applyThemeStyles(currentTheme)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount: reloadTheme re-applies on demand
+  }, [])
 
   // Hot reload support in development
   useEffect(() => {

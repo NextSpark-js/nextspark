@@ -464,3 +464,11 @@ test('a per-entity route\'s core module graph never imports the generated client
   }
   assert.deepEqual(offenders, [])
 })
+
+test('the default /signup page redirects outside Suspense (a real 307); the Cache Components variant re-exports it', () => {
+  const legacy = fs.readFileSync(path.join(ROUTES, '(auth)/signup/page.tsx'), 'utf8')
+  const cc = fs.readFileSync(path.join(ROUTES, '(auth)/signup/page.cc.tsx'), 'utf8')
+  assert.match(legacy, /redirect\('\/login'\)/)
+  assert.doesNotMatch(legacy, /<Suspense|import { Suspense/, 'redirect() thrown inside a Suspense boundary reaches the browser as a 200 with a meta refresh')
+  assert.match(cc, /export \{ default, metadata \} from '\.\/page'/)
+})

@@ -104,6 +104,26 @@ describe('ThemeProvider', () => {
     })
   })
 
+  // A context value that changes right after hydration makes React discard the server HTML of every
+  // Suspense boundary that has not hydrated yet and render it from scratch (a blank gap and a second
+  // LCP candidate on a slow link). The theme is in the build-time registry, so it is there at render 1.
+  it('has the theme at the first render and never changes its value after mount', async () => {
+    const seen: Array<{ name?: string; loading: boolean }> = []
+    function Recorder() {
+      const { currentTheme, loading } = useTheme()
+      seen.push({ name: currentTheme?.name, loading })
+      return null
+    }
+    render(
+      <ThemeProvider>
+        <Recorder />
+      </ThemeProvider>
+    )
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0))
+    expect(seen[0]).toEqual({ name: 'default', loading: false })
+    expect(new Set(seen.map(entry => JSON.stringify(entry))).size).toBe(1)
+  })
+
   it('throws when useTheme is used outside a ThemeProvider', () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
     expect(() => render(<Probe />)).toThrow('useTheme must be used within a ThemeProvider')

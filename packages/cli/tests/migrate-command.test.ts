@@ -474,6 +474,21 @@ test('migrate --dry-run reports no active theme when .env.example is absent', as
   }
 })
 
+test('migrate without an active theme names it as the cause of an unrecognized app/globals.css', async () => {
+  const root = await flatFixture()
+  try {
+    await rm(join(root, '.env.example'))
+    await write(root, 'app/globals.css', '@import "../contents/themes/acme/styles/globals.css";\n')
+    const result = runWithoutActiveTheme(root, ['--dry-run', '--json'])
+    assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`)
+    const { blockers } = JSON.parse(result.stdout).appConversion
+    const line = blockers.find((entry: string) => entry.startsWith('app/globals.css: '))
+    assert.match(line, /no active theme was found.*NEXT_PUBLIC_ACTIVE_THEME=<theme> nextspark migrate.*\.env\.example.*themes found: acme.*move what it holds to styles\/globals\.css/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate --dry-run explains that it requires a git repository', async () => {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-no-git-'))
   try {

@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { SignupForm } from '@nextsparkjs/core/components/auth/forms/SignupForm'
@@ -17,7 +16,10 @@ const defaultMetadata: Metadata = {
 
 export const metadata: Metadata = defaultMetadata
 
-async function SignupPageContent() {
+// No Suspense boundary around the content: redirect() inside one is thrown after the shell was
+// flushed, so it reaches the browser as a 200 with a meta refresh instead of a 307. The page is
+// force-dynamic, so useSearchParams in SignupForm does not need a boundary to prerender.
+async function SignupPage() {
   const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open'
 
   // Passwordless preset (no 'email-password' in auth.methods): the account is
@@ -46,14 +48,5 @@ async function SignupPageContent() {
 
   return <SignupForm />
 }
-
-function SignupPage() {
-  return (
-    <Suspense fallback={null}>
-      <SignupPageContent />
-    </Suspense>
-  )
-}
-
 
 export default SignupPage

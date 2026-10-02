@@ -1396,6 +1396,12 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     })
     : null;
   const blockers = appPlan ? unrecognizedLines(appPlan) : [];
+  // core's own app/globals.css imports the active theme's stylesheet; without the theme name it reads as a project file, and the generic line hides the real cause
+  if (!selectedTheme.name && appPlan) {
+    const line = `${appPlan.root}/globals.css: `;
+    const at = blockers.findIndex(entry => entry.startsWith(line));
+    if (at >= 0) blockers[at] = `${line}no active theme was found (NEXT_PUBLIC_ACTIVE_THEME is not set and .env.example does not declare it), so migrate cannot tell core's own copy of this file from yours. Pass the theme: NEXT_PUBLIC_ACTIVE_THEME=<theme> nextspark migrate, or add NEXT_PUBLIC_ACTIVE_THEME=<theme> to .env.example (${themes.length > 0 ? `themes found: ${themes.map(theme => theme.name).join(', ')}` : 'no directory under contents/themes'}); if it is your own file: ${blockers[at].slice(line.length)}`;
+  }
   const unsimulable: string[] = [];
   const blockSimulation = (line: string) => { blockers.push(line); unsimulable.push(line); };
   if (rootLink) blockSimulation(`${pathFrom(host.root, rootLink)}: it is a symbolic link (the app tree, or a directory above it); migrate would follow it and change files outside the project. Replace it with a real directory and run migrate again`);
