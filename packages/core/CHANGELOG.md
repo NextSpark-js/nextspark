@@ -40,6 +40,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no longer carries the superadmin/devtools/team-switcher selectors.
 - CI: the `template-build` job of `route-js-budget.yml` creates, migrates, builds and serves each of the four templates from the packed tarballs; the
   starter's route-JavaScript budget check stays on the starter. `packages/cli/tests/project-templates.test.ts` guards the same causes without a build.
+- **An unknown URL answers 404 in the legacy host (`cacheComponents: false`) of a project that uses core's default public layout** (`crm`, and any project
+  without `templates/(public)/layout`). `DefaultPublicLayout` wrapped the page in `<Suspense fallback={null}>`, so the
+  `notFound()` of `(public)/[slug]` (the pages entity has `basePath: '/'`, so `/zzz-missing` matches it) arrived after the response head: 200 with the
+  not-found page, and a redirect on `/` the same way (a client-side `meta refresh` instead of a 307). The boundary is gone from the default layout; the Cache
+  Components wrapper keeps its own, which that mode needs.
+  A project block or item template that calls `useSearchParams` on a statically rendered legacy route (a fixed locale, an ISR item route)
+  used to sit inside that boundary; wrap it in its own `<Suspense>` if the build now asks for one.
+
+### Documentation
+
+- **The status of an unknown public URL, per rendering mode** ([Public rendering](docs/18-page-builder/07-public-rendering.md)). Under legacy it is a
+  404 (a URL that matches no route is a 404 in both modes). Under Cache Components (the default) a URL that matches `(public)/[slug]` and has no
+  published page answers **200** with the not-found page and `<meta name="robots" content="noindex">`: the prerendered shell, with its 200, goes out before the
+  slug is read, and Next cannot change the status of a `notFound()` that arrives in the stream. That is why a fresh `starter` and `crm` answered 200
+  while `blog` and `productivity` (no root `[slug]`) answered 404. The page builder docs said an unknown URL is a 404 because "no route matches"; the table
+  now says which URL that holds for, and how a project that needs the status in Cache Components can answer it in `src/proxy.ts` (rewrite to `/_not-found`,
+  as the template does for a missing docs page). Tests: `tests/node/public-item-not-found.test.ts`.
 
 ## [0.1.0-beta.192] - 2026-09-30
 

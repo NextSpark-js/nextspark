@@ -54,7 +54,8 @@ access: {
 | `/blog/my-post` | posts | `/blog` has its own route |
 | `/about` | pages | basePath `/` gives `[slug]` at the root |
 | `/blog` | posts (archive) | Archive route of the entity (needs `ui.public.hasArchivePage: true`) |
-| `/nonexistent` | 404 | No route matches |
+| `/nonexistent` | pages (not found) | basePath `/` gives `[slug]` at the root, which matches any single segment; with no published page of that slug it calls `notFound()` (see below) |
+| `/a/b/c` | 404 | No route matches |
 
 ## Per-entity public routes
 
@@ -70,6 +71,19 @@ export default createPublicItemRoute(blogEntityConfig)
 ```
 
 An entity with `ui.public.hasArchivePage` also gets `(public)<basePath>/page.tsx` (the archive). Rendering per item: published item query, `PageRenderer` with its blocks, `notFound()` when there is none.
+
+### The status of a URL that has no page
+
+A missing item calls `notFound()`, and what status the response carries depends on the rendering mode:
+
+| Mode | `/nonexistent` (or `/blog/nonexistent`) | A URL no route matches (`/a/b/c`) |
+|------|------------------------------------------|-----------------------------------|
+| Legacy (`cacheComponents: false`) | **404** | **404** |
+| Cache Components (default) | **200**, the not-found page and `<meta name="robots" content="noindex">` | **404** |
+
+Under Cache Components the item route has a dynamic segment (`[slug]`), so Next sends the prerendered shell, with its 200, before the page reads the slug; the `notFound()` that follows arrives in the stream, and Next cannot change a status it has already sent. The visitor sees the not-found page and crawlers get `noindex`, but a client that only reads the status sees 200. Only a route with a closed list of params can answer 404 first (`dynamicParams = false`, which is how the docs pages do it); published pages are not a closed list. If you need the status, answer it in `src/proxy.ts` before anything renders: look the slug up and `NextResponse.rewrite(appUrl(request, '/_not-found'))`, as the template proxy does for a missing docs page.
+
+The legacy 404 holds while nothing between the root layout and the page is a Suspense boundary: a project `(public)/layout` that wraps `children` in `<Suspense>`, or a `templates/(public)/loading.tsx` (an implicit boundary), brings the 200 back, for `notFound()` and for `redirect()` alike. Put a `loading.tsx` only next to pages that never call `notFound()` or `redirect()`, not at the group level; on the `[slug]` route it brings the 200 back too.
 
 ## PageRenderer Component
 
