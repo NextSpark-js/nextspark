@@ -5,6 +5,8 @@
 # This script publishes NextSpark packages to the npm registry in the
 # correct dependency order. It verifies npm authentication, handles
 # OTP for 2FA, and supports dry-run mode for testing.
+# Run it on a terminal and do not pipe its output (| tee): npm's browser
+# 2FA (security key) only works when npm's stdin and stdout are a TTY.
 #
 # USAGE:
 #   ./publish.sh <packages-dir> [options]
@@ -277,7 +279,8 @@ add_dist_tag() {
         echo -e "    ${YELLOW}[DRY-RUN]${NC} Would run: $cmd"
         return 0
     fi
-    if eval "$cmd" > /dev/null 2>&1; then
+    # On the terminal, not captured: npm only opens the browser 2FA (security key) when stdin and stdout are a TTY
+    if eval "$cmd"; then
         echo -e "    ${GREEN}[OK]${NC} $ALSO_TAG -> $pkg_name@$pkg_version"
         return 0
     fi
@@ -310,20 +313,25 @@ publish_package() {
         cmd="$cmd --dry-run"
     fi
 
-    # Execute publish once, keeping its output for the failure report
-    local output
-    if output=$(eval "$cmd" 2>&1); then
-        if [ "$DRY_RUN" = true ]; then
+    if [ "$DRY_RUN" = true ]; then
+        local output
+        if output=$(eval "$cmd" 2>&1); then
             echo -e "    ${YELLOW}[DRY-RUN]${NC} Would publish $pkg_basename"
-        else
-            echo -e "    ${GREEN}[OK]${NC} Published $pkg_basename"
+            return 0
         fi
-        return 0
-    else
         echo -e "    ${RED}[FAIL]${NC} Failed to publish $pkg_basename"
-        echo "$output" | head -20
+        echo "$output" | tail -20
         return 1
     fi
+
+    # Execute publish once, on the terminal: npm only opens the browser 2FA (security key) when stdin and
+    # stdout are a TTY, and its error stays visible above
+    if eval "$cmd"; then
+        echo -e "    ${GREEN}[OK]${NC} Published $pkg_basename"
+        return 0
+    fi
+    echo -e "    ${RED}[FAIL]${NC} Failed to publish $pkg_basename (npm's output is above)"
+    return 1
 }
 
 # Get ordered list of packages
