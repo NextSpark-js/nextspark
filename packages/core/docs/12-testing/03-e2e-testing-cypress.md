@@ -394,6 +394,22 @@ const THEME_SELECTORS = { ...CORE_SELECTORS }
 export const { cySelector, sel, SELECTORS } = createSelectorHelpers(THEME_SELECTORS)
 ```
 
+**Components and pages: import one domain.** `sel` from `@nextsparkjs/core/selectors` resolves a path at runtime, so the module that
+binds it ships every domain's selector map (block editor, devtools, superadmin, settings...) to each page that imports it, about 9.5 kB
+gzip on `/login`. A component that reads one domain imports that domain's subpath instead; `sel` takes the same paths and returns the same
+values:
+
+```tsx
+import { sel } from '@nextsparkjs/core/selectors/auth'
+
+<form data-cy={sel('auth.login.form')} />
+```
+
+Subpaths: `auth`, `dashboard`, `entities`, `global-search`, `taxonomies`, `teams`, `block-editor`, `settings`, `superadmin`, `devtools`,
+`public`, `common`, `patterns` and `media`. Each also exports its map (`AUTH_SELECTORS`), `s`, `selDev` and `cySelector`. The barrel
+(`@nextsparkjs/core/selectors`) is unchanged, and it is still what a project's `lib/selectors.ts` extends and what Cypress tests import:
+tests do not ship to the browser.
+
 ### Using POMs in Tests
 
 ```typescript

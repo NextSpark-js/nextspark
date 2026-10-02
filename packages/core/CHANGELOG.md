@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`@nextsparkjs/core/selectors/<domain>`**: one entry per selector domain (`auth`, `dashboard`, `entities`, `global-search`, `taxonomies`,
+  `teams`, `block-editor`, `settings`, `superadmin`, `devtools`, `public`, `common`, `patterns`, `media`), each exporting `sel`, `s`, `selDev`,
+  `cySelector` and its map bound to that domain only. A page importing `sel` from `@nextsparkjs/core/selectors` ships every domain's selector
+  map (~9.5 kB gzip on the starter's `/login`); `import { sel } from '@nextsparkjs/core/selectors/auth'` ships the auth one. `@nextsparkjs/core/selectors`
+  is unchanged. Core's own auth and public docs pages use the narrow entries.
+
 ## [0.1.0-beta.192] - 2026-09-30
 
 ### Breaking

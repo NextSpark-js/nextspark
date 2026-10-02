@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@nextsparkjs/core/component
 import { Loader2, CheckCircle, XCircle, Users, LogIn, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { sel } from '@nextsparkjs/core/lib/selectors'
+import { sel } from '@nextsparkjs/core/selectors/teams'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 type InvitationStatus = 'loading' | 'valid' | 'accepting' | 'accepted' | 'error' | 'expired' | 'not_found' | 'email_mismatch' | 'already_member' | 'requires_auth'

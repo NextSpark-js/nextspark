@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { DocsLayout } from '@nextsparkjs/core/components/docs/docs-layout'
 import { DocsSidebar } from '@nextsparkjs/core/components/docs/docs-sidebar'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
-import { sel } from '@nextsparkjs/core/lib/selectors'
+import { sel } from '@nextsparkjs/core/selectors/public'
 
 export default function DocsLayoutPage({
   children

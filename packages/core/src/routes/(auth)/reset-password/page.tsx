@@ -18,7 +18,7 @@ import { Label } from "@nextsparkjs/core/components/ui/label";
 import { PasswordInput } from "@nextsparkjs/core/components/ui/password-input";
 import { Alert, AlertDescription } from "@nextsparkjs/core/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nextsparkjs/core/components/ui/card";
-import { sel } from '@nextsparkjs/core/lib/selectors'
+import { sel } from '@nextsparkjs/core/selectors/auth'
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams()!;

@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Button } from '@nextsparkjs/core/components/ui/button';
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert';
-import { sel } from '@nextsparkjs/core/lib/selectors'
+import { sel } from '@nextsparkjs/core/selectors/auth'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 function VerifyEmailContent() {

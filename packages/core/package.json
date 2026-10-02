@@ -346,6 +346,10 @@
       "types": "./dist/lib/selectors/index.d.ts",
       "import": "./dist/lib/selectors/index.js"
     },
+    "./selectors/*": {
+      "types": "./dist/lib/selectors/by-domain/*.d.ts",
+      "import": "./dist/lib/selectors/by-domain/*.js"
+    },
     "./lib/selectors": {
       "types": "./dist/lib/selectors/index.d.ts",
       "import": "./dist/lib/selectors/index.js"

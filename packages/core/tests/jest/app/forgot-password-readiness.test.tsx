@@ -22,7 +22,7 @@ jest.mock('next/link', () => ({
   __esModule: true,
   default: ({ children, href, ...props }: any) => <a href={href} {...props}>{children}</a>,
 }))
-jest.mock('@nextsparkjs/core/selectors', () => ({ sel: (path: string) => path }))
+jest.mock('@nextsparkjs/core/selectors/auth', () => ({ sel: (path: string) => path }))
 
 import ForgotPasswordPage from '@/app/(auth)/forgot-password/page'
 

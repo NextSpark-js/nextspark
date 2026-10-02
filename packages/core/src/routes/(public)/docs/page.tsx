@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
-import { sel } from '@nextsparkjs/core/lib/selectors'
+import { sel } from '@nextsparkjs/core/selectors/public'
 import { BookOpen, Folder, FileText, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import type { Metadata } from 'next'
