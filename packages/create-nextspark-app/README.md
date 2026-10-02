@@ -78,8 +78,9 @@ pnpm install
 ```
 
 pnpm 10 has no lenient mode for a pinned version younger than a day, so the project excludes the
-NextSpark packages of the release it was created with by version. pnpm 10.16 to 10.18 do not read
-a version in that exclusion: with them, a NextSpark release does not install during its first day.
+NextSpark packages (every `@nextsparkjs/*` package and `create-nextspark-app`) by name: a NextSpark
+release installs on the day it is published, on pnpm 10.16 and later, 11 and 12. Every other
+dependency keeps the one-day wait.
 
 ## Documentation
 

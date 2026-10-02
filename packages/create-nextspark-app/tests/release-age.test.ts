@@ -131,7 +131,7 @@ function lockedVersion(project: string, name: string): string | undefined {
 async function withRegistry(packages: FixturePackage[], body: (setup: {
   root: string
   env: NodeJS.ProcessEnv
-  project: (name: string, dependencies: Record<string, string>, nextsparkVersion: string) => string
+  project: (name: string, dependencies: Record<string, string>) => string
   install: (version: string, project: string) => Promise<Run>
 }) => Promise<void>) {
   // Outside this repository, whose packageManager would make Corepack refuse other versions.
@@ -144,11 +144,11 @@ async function withRegistry(packages: FixturePackage[], body: (setup: {
     await body({
       root,
       env,
-      project: (name, dependencies, nextsparkVersion) => {
+      project: (name, dependencies) => {
         const dir = path.join(root, 'projects', name)
         fs.mkdirSync(dir, { recursive: true })
         fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name, version: '0.1.0', private: true, dependencies }))
-        fs.writeFileSync(path.join(dir, 'pnpm-workspace.yaml'), buildWorkspaceYaml(allowlistEntries(dir, []), releaseAgeExclusions(nextsparkVersion)))
+        fs.writeFileSync(path.join(dir, 'pnpm-workspace.yaml'), buildWorkspaceYaml(allowlistEntries(dir, []), releaseAgeExclusions()))
         return dir
       },
       install: async (version, project) => {
@@ -179,7 +179,7 @@ const FLOATING: FixturePackage = {
 
 test('a project created with pnpm 10.34.5 installs with pnpm 11.17.0', async () => {
   await withRegistry([FLOATING], async ({ project, install }) => {
-    const dir = project('created-with-10', { '@fixture/floating': '^1.0.0' }, '0.1.0-beta.190')
+    const dir = project('created-with-10', { '@fixture/floating': '^1.0.0' })
 
     const created = await install('10.34.5', dir)
     assert.equal(created.status, 0, `pnpm 10.34.5 install exited ${created.status}:\n${created.output}`)
@@ -194,7 +194,7 @@ test('a project created with pnpm 10.34.5 installs with pnpm 11.17.0', async () 
 
 test('pnpm 9 ignores the policy, so pnpm 11 refuses what it locked until those versions are a day old or it resolves again', async () => {
   await withRegistry([FLOATING], async ({ root, env, project, install }) => {
-    const dir = project('created-with-9', { '@fixture/floating': '^1.0.0' }, '0.1.0-beta.190')
+    const dir = project('created-with-9', { '@fixture/floating': '^1.0.0' })
 
     const created = await install('9.15.9', dir)
     assert.equal(created.status, 0, `pnpm 9.15.9 install exited ${created.status}:\n${created.output}`)
@@ -225,37 +225,73 @@ test('pnpm 9 ignores the policy, so pnpm 11 refuses what it locked until those v
   })
 })
 
-test('on the day of a NextSpark release, pnpm 10.34.5 and 11.17.0 still install its exact versions', async () => {
-  const release = '0.1.0-beta.190'
-  const nextspark: FixturePackage[] = ['@nextsparkjs/core', '@nextsparkjs/cli'].map(name => ({
-    name,
-    versions: [{ version: '0.1.0-beta.189', age: 7 * DAY }, { version: release, age: HOUR }],
-  }))
+/** Oldest pnpm that reads the policy, a 10.16-18 that ignores versions, the last 10.x, then 11 and 12. */
+const PNPM_VERSIONS = ['10.16.0', '10.18.3', '10.34.6', '11.28.3', '12.9.0']
 
-  await withRegistry(nextspark, async ({ project, install }) => {
-    for (const version of ['10.34.5', '11.17.0']) {
-      const dir = project(`release-day-${version}`, { '@nextsparkjs/core': release, '@nextsparkjs/cli': release }, release)
-      const run = await install(version, dir)
-      assert.equal(run.status, 0, `pnpm ${version} install exited ${run.status}:\n${run.output}`)
-      assert.equal(lockedVersion(dir, '@nextsparkjs/core'), release)
-    }
+for (const version of PNPM_VERSIONS) {
+  test(`pnpm ${version}: a NextSpark release published an hour ago installs, an upgrade to it too, other fresh packages keep the policy`, async () => {
+    const next = '0.1.0-beta.999'
+    const nextspark: FixturePackage[] = ['@nextsparkjs/core', '@nextsparkjs/cli'].map(name => ({
+      name,
+      versions: [{ version: '0.1.0-beta.998', age: 7 * DAY }, { version: next, age: HOUR }],
+    }))
+    const fresh: FixturePackage = { name: '@fixture/fresh', versions: [{ version: '2.0.0', age: HOUR }] }
+
+    await withRegistry([...nextspark, fresh], async ({ project, install }) => {
+      const dir = project('upgrade', { '@nextsparkjs/core': '0.1.0-beta.998', '@nextsparkjs/cli': '0.1.0-beta.998' })
+      const first = await install(version, dir)
+      assert.equal(first.status, 0, `pnpm ${version} install of the older release exited ${first.status}:\n${first.output}`)
+
+      // The project bumps to the release published an hour ago: no entry for that version was ever written.
+      fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'upgrade', private: true, dependencies: { '@nextsparkjs/core': next, '@nextsparkjs/cli': next } }))
+      const bumped = await install(version, dir)
+      assert.equal(bumped.status, 0, `pnpm ${version} install of the fresh release exited ${bumped.status}:\n${bumped.output}`)
+      assert.equal(lockedVersion(dir, '@nextsparkjs/core'), next)
+
+      fs.rmSync(path.join(dir, 'node_modules'), { recursive: true, force: true })
+      const again = await install(version, dir)
+      assert.equal(again.status, 0, `pnpm ${version} install from the lockfile exited ${again.status}:\n${again.output}`)
+
+      // pnpm 10 refuses a fresh package that is not excluded; 11 and 12 keep it lenient (minimumReleaseAgeStrict: false).
+      const other = project('other', { '@fixture/fresh': '2.0.0' })
+      const refused = await install(version, other)
+      if (version.startsWith('10.')) {
+        assert.notEqual(refused.status, 0, 'a non-NextSpark package published an hour ago is still refused')
+        assert.match(refused.output, /NO_(?:MATURE_)?MATCHING_VERSION/, 'refused by the release-age policy, not by a network error')
+      }
+      else assert.equal(refused.status, 0, refused.output)
+    })
   })
-})
+}
 
-test('the generated workspace YAML declares the release-age policy and its version exclusions', () => {
-  const yaml = buildWorkspaceYaml(['@nextsparkjs/core'], releaseAgeExclusions('0.1.0-beta.190'))
+test('the generated workspace YAML declares the release-age policy and excludes the NextSpark packages by name', () => {
+  const yaml = buildWorkspaceYaml(['@nextsparkjs/core'], releaseAgeExclusions())
 
   assert.match(yaml, /^minimumReleaseAge: 1440$/m)
   assert.match(yaml, /^minimumReleaseAgeStrict: false$/m)
-  assert.match(yaml, /^minimumReleaseAgeExclude:\n(?:  - '@nextsparkjs\/[a-z-]+@0\.1\.0-beta\.190'\n)+/m)
+  assert.match(yaml, /^minimumReleaseAgeExclude:\n(?:  - '(?:@nextsparkjs\/[a-z-]+|create-nextspark-app)'\n)+/m)
 })
 
-test('the exclusions name only the NextSpark packages at the version being created', () => {
-  const exclusions = releaseAgeExclusions('0.1.0-beta.190')
+test('the exclusions are package names, with no version and no pattern', () => {
+  const exclusions = releaseAgeExclusions()
 
-  assert.ok(exclusions.length > 0)
-  for (const entry of exclusions) {
-    assert.match(entry, /^@nextsparkjs\/[a-z-]+@0\.1\.0-beta\.190$/)
+  for (const name of ['@nextsparkjs/core', '@nextsparkjs/cli', '@nextsparkjs/plugin-ai', 'create-nextspark-app']) {
+    assert.ok(exclusions.includes(name), name)
   }
-  assert.deepEqual(releaseAgeExclusions('latest'), [], 'a dist-tag is not a version pnpm can exclude')
+  for (const entry of exclusions) assert.match(entry, /^(?:@nextsparkjs\/)?[a-z-]+$/, 'pnpm 10.16 reads neither a version nor a wildcard')
+})
+
+// pack.sh publishes every non-private package under packages/ and plugins/: a new one must be excluded too.
+test('the exclusions are exactly the packages this repository publishes', () => {
+  const root = path.resolve(import.meta.dirname, '../../..')
+  const published = new Set<string>()
+  for (const dir of ['packages', 'plugins']) {
+    for (const entry of fs.readdirSync(path.join(root, dir))) {
+      const file = path.join(root, dir, entry, 'package.json')
+      if (!fs.existsSync(file)) continue
+      const pkg = JSON.parse(fs.readFileSync(file, 'utf8'))
+      if (!pkg.private) published.add(pkg.name)
+    }
+  }
+  assert.deepEqual(releaseAgeExclusions(), [...published].sort())
 })

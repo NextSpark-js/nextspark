@@ -166,14 +166,23 @@ export const LOCAL_PLUGIN_TARBALLS_ENV = 'NEXTSPARK_LOCAL_PLUGIN_TARBALLS'
 const MINIMUM_RELEASE_AGE_MINUTES = 1440
 
 /**
- * The `minimumReleaseAgeExclude` entries that let the NextSpark packages of
- * `version` install while that release is less than a day old: `<name>@<version>`
- * for each, the form pnpm 11 writes by itself for a pinned version younger than
- * the minimum. None when `version` is a dist-tag rather than a version.
+ * The `minimumReleaseAgeExclude` entries that let any NextSpark release install
+ * on the day it is published: the name of every package NextSpark publishes.
+ * By name, not `<name>@<version>`: a project on one release that bumps to the
+ * next within a day would be refused until it added the new version by hand.
+ * Names are the one form every supported pnpm reads: 10.16 ignores a version in
+ * an exclusion (10.16 to 10.18 with only versions refuse a fresh release) and
+ * 10.16 also ignores a `@nextsparkjs/*` pattern, so the names are spelled out.
+ * Every other dependency keeps the one-day policy.
  */
-export function releaseAgeExclusions(version: string): string[] {
-  if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(version)) return []
-  return NEXTSPARK_PACKAGES.map(name => `${name}@${version}`)
+export function releaseAgeExclusions(): string[] {
+  return [
+    ...NEXTSPARK_PACKAGES,
+    ...PLUGIN_PACKAGES,
+    '@nextsparkjs/plugin-amplitude',
+    '@nextsparkjs/plugin-walkme',
+    'create-nextspark-app',
+  ].sort()
 }
 
 /**
@@ -194,9 +203,7 @@ export function releaseAgeExclusions(version: string): string[] {
  * their lockfile. `minimumReleaseAgeStrict: false` keeps pnpm 11 lenient, as it
  * is by default, once the age is set explicitly. pnpm 10 is strict whatever that
  * key says, so the NextSpark packages of the release being installed, which
- * the project pins, are excluded by version; pnpm 10.16 to 10.18 do not read a
- * version in an exclusion, and with them a NextSpark release fails to install
- * during its first day.
+ * the project pins, are excluded by name (see releaseAgeExclusions).
  *
  * pnpm 9 and pnpm 10 before 10.16 ignore the policy and lock the newest version
  * each range allows. pnpm 11 refuses that lockfile with
@@ -462,7 +469,7 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     path.join(projectPath, 'pnpm-workspace.yaml'),
     buildWorkspaceYaml(
       allowlistEntries(projectPath, localTarballs),
-      releaseAgeExclusions(ownVersion),
+      releaseAgeExclusions(),
       pnpmMajor !== null && pnpmMajor >= 11 ? overrides : {},
     )
   )

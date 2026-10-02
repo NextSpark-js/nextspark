@@ -242,6 +242,8 @@ test('the pnpm that installs the project chooses the local ui override placement
     }
     assert.match(workspaceYaml, /^minimumReleaseAge: 1440$/m, `${label}: pnpm 11's one-day release-age policy is declared`)
     assert.match(workspaceYaml, /^minimumReleaseAgeStrict: false$/m, `${label}: pnpm 11 keeps the declared policy lenient`)
+    assert.match(workspaceYaml, /^minimumReleaseAgeExclude:\n(?:  - '.+'\n)*  - '@nextsparkjs\/core'\n/m, `${label}: NextSpark packages are excluded from the age by name, so a release installs the day it is published`)
+    assert.doesNotMatch(workspaceYaml, /^  - '@nextsparkjs\/[a-z-]+@\d/m, `${label}: no per-version exclusion`)
   }
 })
 

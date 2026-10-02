@@ -18,6 +18,9 @@ Two responses change status in the legacy host (`cacheComponents: false`), in ca
 `/signup` answers 307 to `/login` (it was 200 with a client-side refresh), and with core's default public layout an unknown one-segment
 URL answers 404 (it was 200 with the not-found page). Under Cache Components both still stream: 200, with a client-side redirect or the
 not-found page.
+A project created before this release lists `<name>@<version>` entries under `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`, which cannot
+cover a release published less than a day ago: replace them with the package names (`'@nextsparkjs/core'`, `'@nextsparkjs/cli'`,
+`'@nextsparkjs/ui'` and any other `@nextsparkjs/*` package the project installs) to install any NextSpark release the day it is published.
 
 ### Added
 
@@ -29,6 +32,11 @@ not-found page.
 
 ### Fixed
 
+- **A new NextSpark release installs the day it is published.** `create-nextspark-app` excluded the NextSpark packages from pnpm's one-day
+  `minimumReleaseAge` as `<name>@<exact version>` of the release that created the project, so on pnpm 10 a project that bumped to the next release
+  within 24 h of its publication was refused until it added those entries by hand. It now writes the package names (every `@nextsparkjs/*` package and
+  `create-nextspark-app`), which no release age can outrun; every other dependency keeps the policy. Names, not `@nextsparkjs/*`: pnpm 10.16
+  reads neither a pattern nor a version in an exclusion (checked on pnpm 10.16.0, 10.18.3, 10.34.6, 11.28.3 and 12.9.0).
 - **Theme context is set at the first render.** `ThemeProvider` started with no theme and set it from a mount effect; that context change right
   after hydration made React discard the server HTML of any Suspense boundary not yet hydrated and render it again, so on a slow link a login form
   vanished for ~3 s and came back as a new node (LCP ~1.5 s to ~5 s on a production app). The theme comes from the build-time registry, so it is
