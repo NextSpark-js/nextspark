@@ -65,3 +65,17 @@ test('a subpath `sel` resolves the same values as the barrel', async () => {
     for (const leaf of leaves) assert.equal(sel(leaf), barrel(leaf), leaf)
   }
 })
+
+test('the theme toggle reads its selector from the public domain, with the dashboard topnav value', () => {
+  const value = (domain: string, key: string) => fs.readFileSync(path.join(SELECTORS, `domains/${domain}.selectors.ts`), 'utf8').match(new RegExp(`${key}: '([^']+)'`, 'g'))
+  assert.ok(value('public', 'themeToggle')?.[0].includes("'topnav-theme-toggle'"))
+  assert.ok(value('dashboard', 'themeToggle')?.[0].includes("'topnav-theme-toggle'"), 'Cypress still finds it through dashboard.topnav.themeToggle')
+})
+
+test('the public navbar, footer and theme toggle do not import the all-domain barrel (they render on every public page)', () => {
+  for (const file of ['layouts/PublicNavbar.tsx', 'layouts/PublicFooter.tsx', 'misc/ThemeToggle.tsx']) {
+    const code = fs.readFileSync(path.join(CORE, 'src/components/app', file), 'utf8')
+    assert.doesNotMatch(code, /from\s+['"][./]*(?:lib\/test|lib\/selectors|selectors)['"]/, file)
+    assert.doesNotMatch(code, /@nextsparkjs\/core\/selectors['"]/, file)
+  }
+})

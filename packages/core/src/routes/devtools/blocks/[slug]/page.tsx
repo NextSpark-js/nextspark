@@ -30,10 +30,14 @@ export default async function BlockDetailPage({ params }: BlockDetailPageProps) 
 }
 
 /**
- * Generate static params for all blocks
+ * Generate static params for all blocks.
+ *
+ * Cache Components needs at least one result. A project with no blocks (the productivity template) returns a
+ * placeholder no block matches, so the page answers notFound() instead of failing the build.
  */
 export async function generateStaticParams() {
-  return Object.keys(BLOCK_REGISTRY).map((slug) => ({
+  const slugs = Object.keys(BLOCK_REGISTRY);
+  return (slugs.length > 0 ? slugs : ["_none"]).map((slug) => ({
     slug,
   }));
 }

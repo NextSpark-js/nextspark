@@ -2,7 +2,7 @@ import React from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import { sanitizeBlockHtml } from '@nextsparkjs/core/lib/blocks/sanitize-html'
-import { sel } from '../../lib/selectors'
+import { sel } from '../../lib/block-selectors'
 import type { PostContentBlockProps } from './schema'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 

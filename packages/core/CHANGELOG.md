@@ -15,6 +15,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   map (~9.5 kB gzip on the starter's `/login`); `import { sel } from '@nextsparkjs/core/selectors/auth'` ships the auth one. `@nextsparkjs/core/selectors`
   is unchanged. Core's own auth and public docs pages use the narrow entries.
 
+### Fixed
+
+- **Every project template creates, migrates, builds and serves from a new project** (`--theme blog|crm|productivity`; the starter already did):
+  - The packages a template's source imports (`dompurify`, `next-themes`, `@dnd-kit/*`, `@tailwindcss/container-queries`) are now written into the
+    generated `package.json`: `create-nextspark-app` left the template's own `package.json` out, so `pnpm build` failed with "Can't resolve 'dompurify'".
+  - `--preset blog --theme blog`: the pages/blog content features no longer merge their `posts` entity over the one the template ships, which left two
+    migration sets side by side (`002_add_featured.sql: column "status" does not exist`). The feature entity configs also stop hard-coding an `es`
+    message loader, which broke a single-locale project (`Can't resolve './messages/es.json'`); the registry finds the messages by path.
+  - `--theme crm`: `useCRMSidebar` moves out of the dashboard layout into `templates/shared/CRMSidebarContext.tsx` (Next allows only the default export
+    from a layout, `NS_HOST_UNSUPPORTED_EXPORT`).
+  - The starter, blog, crm and productivity `lib/selectors.ts` define the `hero` and `postContent` block selectors the content-feature blocks call, so
+    `sel('blocks.hero.container')` never reaches a missing path.
+  - `FeatureCategory` and `FlowCategory` accept a template's own categories (`'leads'`, `'sales'`, `'boards'`, the blog's `'public'`): the closed union failed
+    the type check of the blog, crm and productivity `config/features.config.ts` and `flows.config.ts`.
+  - The productivity services called `queryWithRLS`, `queryOneWithRLS` and `mutateWithRLS` as `(userId, sql, params)` and used the `mutateWithRLS` result as a row;
+    the core signature is `(sql, params, userId)` and returns `{ rows, rowCount }` (type errors at build, wrong arguments at run time).
+  - `devtools/blocks/[slug]` returns a placeholder param when the project has no blocks (the productivity template): Cache Components rejects an empty
+    `generateStaticParams`, which failed the build.
+- **Block selectors no longer pull every core domain onto a public page**: block components take `sel` from the project's `lib/block-selectors.ts`
+  (`createSelectorHelpers({ blocks: BLOCK_SELECTORS })`) instead of `lib/selectors.ts`, which merges `CORE_SELECTORS` (~10.8 kB gzip). `lib/selectors.ts`
+  re-exports `BLOCK_SELECTORS`, so Cypress and the merged `sel` see the same paths. Applies to apps/dev and to the starter, blog, crm and productivity templates. `PublicNavbar`, `PublicFooter` and `ThemeToggle` read `sel` from
+  `@nextsparkjs/core/selectors/public` (the toggle's value is `public.navbar.themeToggle`, equal to `dashboard.topnav.themeToggle`), so a public page of apps/dev
+  no longer carries the superadmin/devtools/team-switcher selectors.
+- CI: the `template-build` job of `route-js-budget.yml` creates, migrates, builds and serves each of the four templates from the packed tarballs; the
+  starter's route-JavaScript budget check stays on the starter. `packages/cli/tests/project-templates.test.ts` guards the same causes without a build.
+
 ## [0.1.0-beta.192] - 2026-09-30
 
 ### Breaking

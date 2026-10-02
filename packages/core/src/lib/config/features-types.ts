@@ -10,7 +10,8 @@
 // =============================================================================
 
 /**
- * Feature categories for organization
+ * Feature categories for organization. The named ones are the platform's; a project template adds its own
+ * (the CRM's 'leads' and 'sales', the blog's 'public'), so any string is accepted.
  */
 export type FeatureCategory =
   | 'core'       // Core platform features (auth, teams, settings)
@@ -18,6 +19,7 @@ export type FeatureCategory =
   | 'content'    // Content management features (page builder, blocks)
   | 'settings'   // User/team settings features
   | 'admin'      // Admin/superadmin features
+  | (string & {}) // Template-specific categories
 
 /**
  * Feature definition in configuration
@@ -65,7 +67,7 @@ export type FeaturesConfig = Record<string, FeatureDefinition>
 // =============================================================================
 
 /**
- * Flow categories for organization
+ * Flow categories for organization. Like feature categories, a project template may add its own.
  */
 export type FlowCategory =
   | 'acquisition'  // User acquisition flows (onboarding, signup)
@@ -73,6 +75,7 @@ export type FlowCategory =
   | 'content'      // Content creation flows (publish, edit)
   | 'admin'        // Administrative flows
   | 'settings'     // Settings/configuration flows
+  | (string & {})  // Template-specific categories
 
 /**
  * A step in a user flow/journey

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Separator } from '../../ui/separator'
 import { useTranslations } from 'next-intl'
-import { sel } from '../../../lib/test'
+import { sel } from '@nextsparkjs/core/selectors/public'
 import { APP_NAME } from '../../../lib/config/public-config-client'
 import { CurrentYear } from './CurrentYear'
 

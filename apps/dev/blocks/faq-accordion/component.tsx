@@ -3,7 +3,7 @@
 import React from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
-import { sel } from '../../lib/selectors'
+import { sel } from '../../lib/block-selectors'
 import {
   Accordion,
   AccordionContent,

@@ -10,20 +10,13 @@
  */
 
 import { createSelectorHelpers, CORE_SELECTORS } from '@nextsparkjs/core/selectors'
+import { BLOCK_SELECTORS } from './block-selectors'
 
 // =============================================================================
 // BLOCK SELECTORS
 // =============================================================================
 
-/**
- * Block-specific selectors for the productivity theme.
- * Each block has at minimum a 'container' selector.
- * Dynamic selectors use {index} placeholder.
- */
-export const BLOCK_SELECTORS = {
-  // Productivity theme currently has no custom blocks
-  // Add block selectors here when blocks are created
-} as const
+export { BLOCK_SELECTORS }
 
 // =============================================================================
 // ENTITY SELECTORS

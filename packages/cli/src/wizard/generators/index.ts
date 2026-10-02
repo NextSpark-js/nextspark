@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url'
 import type { WizardConfig } from '../types.js'
 import {
   copyStarterTheme,
+  readTemplateDependencies,
   updateThemeConfig,
   updateDevConfig,
   updateAppConfig,
@@ -235,7 +236,10 @@ async function patchTurbopackRootForMonorepo(): Promise<void> {
 /**
  * Update or create package.json with required scripts and dependencies
  */
-export async function updatePackageJson(config: WizardConfig): Promise<void> {
+export async function updatePackageJson(
+  config: WizardConfig,
+  templateDependencies: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> } = {}
+): Promise<void> {
   const packageJsonPath = path.resolve(process.cwd(), 'package.json')
 
   // Create package.json if it doesn't exist
@@ -290,6 +294,7 @@ export async function updatePackageJson(config: WizardConfig): Promise<void> {
 
   // Ensure dependencies object exists
   packageJson.dependencies = packageJson.dependencies || {}
+  packageJson.devDependencies = packageJson.devDependencies || {}
 
   // Pin all @nextsparkjs/* packages to the CLI's version for a coherent install
   const nsVersion = getNextSparkVersion()
@@ -414,6 +419,14 @@ export async function updatePackageJson(config: WizardConfig): Promise<void> {
     }
   }
 
+  // What the project template's source imports (it ships no package.json of its own). Last, so an existing
+  // entry and core's vetted floors above (next, better-auth, ...) win over a template's range.
+  for (const field of ['dependencies', 'devDependencies'] as const) {
+    for (const [name, version] of Object.entries(templateDependencies[field] ?? {})) {
+      packageJson[field]![name] ??= version
+    }
+  }
+
   await fs.writeJson(packageJsonPath, packageJson, { spaces: 2 })
 }
 
@@ -513,7 +526,7 @@ export async function generateProject(
     await processI18n(config)
 
     // 10. Update project files
-    await updatePackageJson(config)
+    await updatePackageJson(config, await readTemplateDependencies(templatesDir, projectTemplate))
     if (!isMonorepoProject(config)) {
       // Only update root gitignore for flat projects
       // Monorepo has its own root gitignore created by generateMonorepoStructure

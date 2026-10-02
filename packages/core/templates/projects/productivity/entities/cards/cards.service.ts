@@ -105,9 +105,9 @@ export class CardsService {
    */
   static async getById(id: string, userId: string): Promise<Card | null> {
     const result = await queryOneWithRLS<DbCard>(
-      userId,
       `SELECT * FROM cards WHERE id = $1`,
-      [id]
+      [id],
+      userId
     )
 
     return result ? mapDbCard(result) : null
@@ -162,9 +162,9 @@ export class CardsService {
 
     // Get total count
     const countResult = await queryOneWithRLS<{ count: string }>(
-      userId,
       `SELECT COUNT(*) as count FROM cards ${whereClause}`,
-      params
+      params,
+      userId
     )
     const total = parseInt(countResult?.count || '0', 10)
 
@@ -176,9 +176,9 @@ export class CardsService {
 
     params.push(limit, offset)
     const cards = await queryWithRLS<DbCard>(
-      userId,
       `SELECT * FROM cards ${whereClause} ORDER BY ${validOrderBy} ${validOrderDir} LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
-      params
+      params,
+      userId
     )
 
     return {
@@ -218,13 +218,13 @@ export class CardsService {
       teamId,
     } = data
 
-    const result = await mutateWithRLS<DbCard>(
-      userId,
+    const result = (await mutateWithRLS<DbCard>(
       `INSERT INTO cards (title, description, list_id, board_id, position, due_date, assignee_id, labels, is_archived, user_id, team_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
-      [title, description, listId, boardId, position, dueDate, assigneeId, JSON.stringify(labels), isArchived, userId, teamId]
-    )
+      [title, description, listId, boardId, position, dueDate, assigneeId, JSON.stringify(labels), isArchived, userId, teamId],
+      userId
+    )).rows[0] ?? null
 
     if (!result) {
       throw new Error('Failed to create card')
@@ -293,11 +293,11 @@ export class CardsService {
     updates.push(`updated_at = NOW()`)
     params.push(id)
 
-    const result = await mutateWithRLS<DbCard>(
-      userId,
+    const result = (await mutateWithRLS<DbCard>(
       `UPDATE cards SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      params
-    )
+      params,
+      userId
+    )).rows[0] ?? null
 
     if (!result) {
       throw new Error('Card not found or access denied')
@@ -325,11 +325,11 @@ export class CardsService {
    * Delete a card with RLS
    */
   static async delete(userId: string, id: string): Promise<boolean> {
-    const result = await mutateWithRLS<DbCard>(
-      userId,
+    const result = (await mutateWithRLS<DbCard>(
       `DELETE FROM cards WHERE id = $1 RETURNING *`,
-      [id]
-    )
+      [id],
+      userId
+    )).rows[0] ?? null
 
     return result !== null
   }

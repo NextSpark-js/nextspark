@@ -2,7 +2,7 @@ import React from 'react'
 import Image from 'next/image'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
-import { sel } from '../../lib/selectors'
+import { sel } from '../../lib/block-selectors'
 import type { LogoCloudBlockProps, LogoItem } from './schema'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 

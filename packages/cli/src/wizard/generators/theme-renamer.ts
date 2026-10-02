@@ -49,6 +49,21 @@ export async function copyStarterTheme(
 }
 
 /**
+ * The runtime and dev dependencies a project template declares in its own package.json.
+ *
+ * copyStarterTheme leaves that file out, so without this the packages the template's source imports
+ * (dompurify, next-themes, @dnd-kit/*) never reach the project and its build cannot resolve them.
+ */
+export async function readTemplateDependencies(
+  templatesDir: string,
+  templateName: string
+): Promise<{ dependencies: Record<string, string>; devDependencies: Record<string, string> }> {
+  const file = path.join(templatesDir, 'projects', templateName, 'package.json')
+  const pkg = (await fs.pathExists(file)) ? await fs.readJson(file) : {}
+  return { dependencies: pkg.dependencies ?? {}, devDependencies: pkg.devDependencies ?? {} }
+}
+
+/**
  * Update theme.config.ts with new name and display name
  */
 export async function updateThemeConfig(config: WizardConfig): Promise<void> {

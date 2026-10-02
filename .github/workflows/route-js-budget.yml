@@ -1,12 +1,12 @@
 name: Route JavaScript budget verifier
 
 on:
-  # Every push to main runs both jobs: main is what gets packed and published, and a change outside the paths below
+  # Every push to main runs every job: main is what gets packed and published, and a change outside the paths below
   # (a root override, a template) can still move a route's client JavaScript.
   push:
     branches: [main]
-  # A pull request runs them only when it can change what a starter project ships or how it is measured: the starter job
-  # packs the repo, installs and builds a project (20-30 minutes). The verifier tests only read scripts/performance.
+  # A pull request runs them only when it can change what a starter project ships or how it is measured: the template jobs
+  # pack the repo, install and build a project (20-30 minutes). The verifier tests only read scripts/performance.
   pull_request:
     branches: [main]
     paths:
@@ -38,18 +38,28 @@ jobs:
       - name: Test the route JavaScript budget verifiers
         run: node --test scripts/performance/verify-route-js-budget.test.mjs scripts/performance/starter-route-js.test.mjs
 
-  # A starter project built from this repository's packages, per-route client JavaScript against
-  # scripts/performance/starter-route-js-budget.json (0.1.0-beta.191 + 2%; signed-out routes free of dashboard code).
-  starter-route-js:
+  # Every project template (starter, blog, crm, productivity) created from this repository's packages, as a new user
+  # would: create from the tarballs, migrate, build, serve. The starter also gets its per-route client JavaScript checked
+  # against scripts/performance/starter-route-js-budget.json (0.1.0-beta.191 + 2%; signed-out routes free of dashboard code).
+  template-build:
+    name: template-build (${{ matrix.theme }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { theme: starter, preset: saas, page: / }
+          - { theme: blog, preset: blog, page: /authors }
+          - { theme: crm, preset: crm, page: /dashboard }
+          - { theme: productivity, preset: saas, page: /dashboard }
     services:
       postgres:
         image: postgres:15
         env:
           POSTGRES_USER: dbuser
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: starter
+          POSTGRES_DB: app
         ports:
           - 5432:5432
         options: >-
@@ -70,8 +80,8 @@ jobs:
           node-version: 22.14.0
           cache: pnpm
 
-      - name: Locate the starter project
-        run: echo "STARTER=$RUNNER_TEMP/starter" >> "$GITHUB_ENV"
+      - name: Locate the project
+        run: echo "PROJECT=$RUNNER_TEMP/project" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -79,33 +89,47 @@ jobs:
           CYPRESS_INSTALL_BINARY: '0'
 
       - name: Pack the packages
-        run: ./scripts/packages/pack.sh --all --output "$STARTER/.packages"
+        run: ./scripts/packages/pack.sh --all --output "$PROJECT/.packages"
         env:
           SKIP_MOBILE_VERIFY: '1'
 
-      - name: Create the starter project from the tarballs
-        working-directory: ${{ runner.temp }}/starter
-        run: node "$GITHUB_WORKSPACE/packages/create-nextspark-app/dist/index.js" app --preset saas --theme starter --type web --name app --slug app --description "Route JavaScript budget" -y < /dev/null
+      - name: Create the ${{ matrix.theme }} project from the tarballs
+        working-directory: ${{ runner.temp }}/project
+        run: node "$GITHUB_WORKSPACE/packages/create-nextspark-app/dist/index.js" app --preset ${{ matrix.preset }} --theme ${{ matrix.theme }} --type web --name app --slug app --description "Template build" -y < /dev/null
         env:
           CYPRESS_INSTALL_BINARY: '0'
 
-      - name: Migrate and build the starter project
-        working-directory: ${{ runner.temp }}/starter/app
+      - name: Migrate and build the project
+        working-directory: ${{ runner.temp }}/project/app
         run: |
-          sed -i 's#^DATABASE_URL=.*#DATABASE_URL=postgresql://dbuser:postgres@localhost:5432/starter?sslmode=disable#' .env
+          sed -i 's#^DATABASE_URL=.*#DATABASE_URL=postgresql://dbuser:postgres@localhost:5432/app?sslmode=disable#' .env
           sed -i 's#^NODE_ENV=.*#NODE_ENV="production"#' .env
           pnpm db:migrate
           pnpm build
         env:
           NEXTSPARK_AUTH_RUNTIME_ONLY: email,google
 
+      - name: Serve the project and request a page of the template
+        working-directory: ${{ runner.temp }}/project/app
+        run: |
+          PORT=3100 pnpm start > "$PROJECT/start.log" 2>&1 &
+          for _ in $(seq 1 60); do curl -fs --max-time 5 -o /dev/null localhost:3100/login && break; sleep 2; done
+          for page in /login ${{ matrix.page }}; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "localhost:3100$page")
+            echo "GET $page -> $code"
+            # /login must render; a signed-out request to a dashboard page answers 307 to /login
+            if [ "$page" = /login ]; then ok=200; else ok='200|307'; fi
+            case "$code" in 200) ;; 307) [ "$ok" != 200 ] || { cat "$PROJECT/start.log"; exit 1; } ;; *) cat "$PROJECT/start.log"; exit 1 ;; esac
+          done
+
       - name: Check per-route client JavaScript against the budget
-        run: node scripts/performance/starter-route-js.mjs --app "$STARTER/app" --json "$STARTER/route-js.json"
+        if: matrix.theme == 'starter'
+        run: node scripts/performance/starter-route-js.mjs --app "$PROJECT/app" --json "$PROJECT/route-js.json"
 
       - name: Upload the measurement
-        if: always()
+        if: always() && matrix.theme == 'starter'
         uses: actions/upload-artifact@v4
         with:
           name: starter-route-js
-          path: ${{ runner.temp }}/starter/route-js.json
+          path: ${{ runner.temp }}/project/route-js.json
           if-no-files-found: ignore

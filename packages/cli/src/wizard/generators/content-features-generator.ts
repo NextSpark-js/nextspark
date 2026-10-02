@@ -37,7 +37,9 @@ async function copyPagesFeature(config: WizardConfig, templatesDir: string): Pro
   const sourcePagesEntity = path.join(featuresDir, 'pages', 'entities', 'pages')
   const targetEntitiesDir = path.join(targetThemeDir, 'entities', 'pages')
 
-  if (await fs.pathExists(sourcePagesEntity)) {
+  if (await fs.pathExists(targetEntitiesDir)) {
+    // The project template ships its own pages entity; merging the feature's files over it would mix two migration sets
+  } else if (await fs.pathExists(sourcePagesEntity)) {
     await fs.copy(sourcePagesEntity, targetEntitiesDir)
   } else {
     console.warn(`Warning: Pages entity not found at: ${sourcePagesEntity}`)
@@ -65,7 +67,10 @@ async function copyBlogFeature(config: WizardConfig, templatesDir: string): Prom
   const sourcePostsEntity = path.join(featuresDir, 'blog', 'entities', 'posts')
   const targetPostsEntity = path.join(targetThemeDir, 'entities', 'posts')
 
-  if (await fs.pathExists(sourcePostsEntity)) {
+  if (await fs.pathExists(targetPostsEntity)) {
+    // The project template (blog, starter) ships its own posts entity; merging the feature's files over it would
+    // mix two migration sets (the feature's 003_add_status.sql lands after the theme's 002_add_featured.sql)
+  } else if (await fs.pathExists(sourcePostsEntity)) {
     await fs.copy(sourcePostsEntity, targetPostsEntity)
   } else {
     console.warn(`Warning: Posts entity not found at: ${sourcePostsEntity}`)

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
-import { sel } from '../../lib/selectors'
+import { sel } from '../../lib/block-selectors'
 import type { CTASectionBlockProps } from './schema'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 

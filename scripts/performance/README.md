@@ -31,6 +31,7 @@ against `starter-route-js-budget.json`. No server, browser or session is needed,
 The budget is the 0.1.0-beta.191 starter-equivalent project (`create-nextspark-app --preset saas --theme default`, the
 published packages) measured by the same script, plus 2%. Signed-out routes (`public: true`) also fail when a chunk carries a
 `dashboardOnlyMarkers` string (the superadmin and devtools sidebars, the dashboard settings helpers, the team switcher).
-The `starter-route-js` job of the `Route JavaScript budget verifier` workflow packs this repository, creates the starter
-(`--preset saas --theme starter`), builds it against a service PostgreSQL and runs the check; `starter-route-js.test.mjs`
+The `template-build` job of the `Route JavaScript budget verifier` workflow packs this repository and, for each project
+template (starter, blog, crm, productivity), creates a project from the tarballs, migrates and builds it against a service
+PostgreSQL and serves it; for the starter (`--preset saas --theme starter`) it also runs the check. `starter-route-js.test.mjs`
 covers the verifier itself.

@@ -66,17 +66,6 @@ export const postsEntityConfig: EntityConfig = {
   // See: config/permissions.config.ts -> entities.posts
 
   // ==========================================
-  // 5. INTERNATIONALIZATION
-  // ==========================================
-  i18n: {
-    fallbackLocale: 'en',
-    loaders: {
-      en: () => import('./messages/en.json'),
-      es: () => import('./messages/es.json'),
-    },
-  },
-
-  // ==========================================
   // 6. BUILDER CONFIGURATION
   // ==========================================
   builder: {

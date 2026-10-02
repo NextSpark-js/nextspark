@@ -13,7 +13,7 @@ import {
 } from '@nextsparkjs/core/components/ui/select'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
-import { sel } from '../../lib/selectors'
+import { sel } from '../../lib/block-selectors'
 import type { HeroWithFormBlockProps } from './schema'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 

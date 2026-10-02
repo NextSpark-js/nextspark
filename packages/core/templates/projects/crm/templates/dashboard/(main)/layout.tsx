@@ -5,27 +5,12 @@
 
 'use client'
 
-import { useState, createContext, useContext, ReactNode, useEffect } from 'react'
+import { useState, ReactNode, useEffect } from 'react'
 import { CRMSidebar } from '@/templates/shared/CRMSidebar'
 import { CRMTopBar } from '@/templates/shared/CRMTopBar'
 import { CRMMobileNav } from '@/templates/shared/CRMMobileNav'
+import { SidebarContext } from '@/templates/shared/CRMSidebarContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
-
-// Context for sidebar state
-interface SidebarContextValue {
-  expanded: boolean
-  setExpanded: (value: boolean) => void
-}
-
-const SidebarContext = createContext<SidebarContextValue | undefined>(undefined)
-
-export function useCRMSidebar() {
-  const context = useContext(SidebarContext)
-  if (!context) {
-    return { expanded: false, setExpanded: () => {} }
-  }
-  return context
-}
 
 interface CRMDashboardLayoutProps {
   children: ReactNode

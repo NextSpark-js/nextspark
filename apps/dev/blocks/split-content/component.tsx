@@ -4,7 +4,7 @@ import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Check } from 'lucide-react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
-import { sel } from '../../lib/selectors'
+import { sel } from '../../lib/block-selectors'
 import type { SplitContentBlockProps, BulletPoint } from './schema'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 

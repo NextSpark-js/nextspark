@@ -15,6 +15,8 @@ export const PUBLIC_SELECTORS = {
     logo: 'navbar-logo',
     loginButton: 'navbar-login',
     signupButton: 'navbar-signup',
+    // The same toggle as dashboard.topnav.themeToggle (same value): ThemeToggle reads it here so a public page does not ship the dashboard map
+    themeToggle: 'topnav-theme-toggle',
   },
   footer: {
     container: 'public-footer',

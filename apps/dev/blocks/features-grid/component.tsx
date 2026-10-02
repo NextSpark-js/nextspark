@@ -7,7 +7,7 @@ import React from 'react'
 import * as Icons from 'lucide-react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
-import { sel } from '../../lib/selectors'
+import { sel } from '../../lib/block-selectors'
 import type { FeaturesGridBlockProps, FeatureItem } from './schema'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 

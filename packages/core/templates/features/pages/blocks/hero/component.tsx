@@ -2,7 +2,7 @@ import React from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses, resolveMediaUrl } from '@nextsparkjs/core/types/blocks'
-import { sel } from '../../lib/selectors'
+import { sel } from '../../lib/block-selectors'
 import type { HeroBlockProps } from './schema'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 

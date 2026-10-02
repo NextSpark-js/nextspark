@@ -10,22 +10,13 @@
  */
 
 import { createSelectorHelpers, CORE_SELECTORS } from '@nextsparkjs/core/selectors'
+import { BLOCK_SELECTORS } from './block-selectors'
 
 // =============================================================================
 // BLOCK SELECTORS
 // =============================================================================
 
-/**
- * Block-specific selectors for the starter theme.
- * Each block has at minimum a 'container' selector.
- * Dynamic selectors use {index} placeholder.
- */
-export const BLOCK_SELECTORS = {
-  hero: {
-    container: 'block-hero',
-    cta: 'hero-cta',
-  },
-} as const
+export { BLOCK_SELECTORS }
 
 // =============================================================================
 // THEME SELECTORS (CORE + BLOCKS)

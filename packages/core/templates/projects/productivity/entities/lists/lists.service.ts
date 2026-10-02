@@ -78,9 +78,9 @@ export class ListsService {
    */
   static async getById(id: string, userId: string): Promise<List | null> {
     const result = await queryOneWithRLS<DbList>(
-      userId,
       `SELECT * FROM lists WHERE id = $1`,
-      [id]
+      [id],
+      userId
     )
 
     return result ? mapDbList(result) : null
@@ -123,9 +123,9 @@ export class ListsService {
 
     // Get total count
     const countResult = await queryOneWithRLS<{ count: string }>(
-      userId,
       `SELECT COUNT(*) as count FROM lists ${whereClause}`,
-      params
+      params,
+      userId
     )
     const total = parseInt(countResult?.count || '0', 10)
 
@@ -137,9 +137,9 @@ export class ListsService {
 
     params.push(limit, offset)
     const lists = await queryWithRLS<DbList>(
-      userId,
       `SELECT * FROM lists ${whereClause} ORDER BY ${validOrderBy} ${validOrderDir} LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
-      params
+      params,
+      userId
     )
 
     return {
@@ -174,13 +174,13 @@ export class ListsService {
       teamId,
     } = data
 
-    const result = await mutateWithRLS<DbList>(
-      userId,
+    const result = (await mutateWithRLS<DbList>(
       `INSERT INTO lists (name, board_id, position, is_archived, user_id, team_id)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [name, boardId, position, isArchived, userId, teamId]
-    )
+      [name, boardId, position, isArchived, userId, teamId],
+      userId
+    )).rows[0] ?? null
 
     if (!result) {
       throw new Error('Failed to create list')
@@ -224,11 +224,11 @@ export class ListsService {
     updates.push(`updated_at = NOW()`)
     params.push(id)
 
-    const result = await mutateWithRLS<DbList>(
-      userId,
+    const result = (await mutateWithRLS<DbList>(
       `UPDATE lists SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      params
-    )
+      params,
+      userId
+    )).rows[0] ?? null
 
     if (!result) {
       throw new Error('List not found or access denied')
@@ -241,11 +241,11 @@ export class ListsService {
    * Delete a list with RLS
    */
   static async delete(userId: string, id: string): Promise<boolean> {
-    const result = await mutateWithRLS<DbList>(
-      userId,
+    const result = (await mutateWithRLS<DbList>(
       `DELETE FROM lists WHERE id = $1 RETURNING *`,
-      [id]
-    )
+      [id],
+      userId
+    )).rows[0] ?? null
 
     return result !== null
   }

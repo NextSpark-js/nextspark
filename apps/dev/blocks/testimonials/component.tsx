@@ -3,7 +3,7 @@ import { Quote } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@nextsparkjs/core/components/ui/avatar'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
-import { sel } from '../../lib/selectors'
+import { sel } from '../../lib/block-selectors'
 import type { TestimonialsBlockProps, TestimonialItem } from './schema'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 

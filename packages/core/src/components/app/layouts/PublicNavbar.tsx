@@ -7,7 +7,7 @@ import { Button } from '../../ui/button'
 import { ThemeToggle } from '../misc/ThemeToggle'
 import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
-import { sel } from '../../../lib/test'
+import { sel } from '@nextsparkjs/core/selectors/public'
 
 import { useTranslations } from 'next-intl'
 import { APP_NAME } from '../../../lib/config/public-config-client'

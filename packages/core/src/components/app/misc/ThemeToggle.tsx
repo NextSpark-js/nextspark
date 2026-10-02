@@ -11,7 +11,8 @@ import {
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu'
 import { useEffect, useState, useCallback } from "react"
-import { createAriaLabel, sel } from '../../../lib/test'
+import { createAriaLabel } from '../../../lib/test/utils'
+import { sel } from '@nextsparkjs/core/selectors/public'
 import { useTranslations } from 'next-intl'
 import { hasSessionHint } from '../../../lib/auth/session-hint'
 import { withBasePath } from '../../../lib/base-path'
@@ -75,7 +76,7 @@ export function ThemeToggle() {
         size="icon"
         disabled
         aria-label={t('theme.loading')}
-                data-cy={sel('dashboard.topnav.themeToggle')}
+                data-cy={sel('public.navbar.themeToggle')}
       >
         <Sun className="h-5 w-5" aria-hidden="true" />
         <span className="sr-only">{t('theme.loading')}</span>
@@ -106,7 +107,7 @@ export function ThemeToggle() {
             })}
             aria-haspopup="true"
             aria-expanded="false"
-                        data-cy={sel('dashboard.topnav.themeToggle')}
+                        data-cy={sel('public.navbar.themeToggle')}
           >
             <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" aria-hidden="true" />
             <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" aria-hidden="true" />

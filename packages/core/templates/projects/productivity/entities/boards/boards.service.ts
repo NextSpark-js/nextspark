@@ -82,9 +82,9 @@ export class BoardsService {
    */
   static async getById(id: string, userId: string): Promise<Board | null> {
     const result = await queryOneWithRLS<DbBoard>(
-      userId,
       `SELECT * FROM boards WHERE id = $1`,
-      [id]
+      [id],
+      userId
     )
 
     return result ? mapDbBoard(result) : null
@@ -121,9 +121,9 @@ export class BoardsService {
 
     // Get total count
     const countResult = await queryOneWithRLS<{ count: string }>(
-      userId,
       `SELECT COUNT(*) as count FROM boards ${whereClause}`,
-      params
+      params,
+      userId
     )
     const total = parseInt(countResult?.count || '0', 10)
 
@@ -135,9 +135,9 @@ export class BoardsService {
 
     params.push(limit, offset)
     const boards = await queryWithRLS<DbBoard>(
-      userId,
       `SELECT * FROM boards ${whereClause} ORDER BY ${validOrderBy} ${validOrderDir} LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
-      params
+      params,
+      userId
     )
 
     return {
@@ -173,13 +173,13 @@ export class BoardsService {
       teamId,
     } = data
 
-    const result = await mutateWithRLS<DbBoard>(
-      userId,
+    const result = (await mutateWithRLS<DbBoard>(
       `INSERT INTO boards (name, description, color, is_archived, position, user_id, team_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [name, description, color, isArchived, position, userId, teamId]
-    )
+      [name, description, color, isArchived, position, userId, teamId],
+      userId
+    )).rows[0] ?? null
 
     if (!result) {
       throw new Error('Failed to create board')
@@ -228,11 +228,11 @@ export class BoardsService {
     updates.push(`updated_at = NOW()`)
     params.push(id)
 
-    const result = await mutateWithRLS<DbBoard>(
-      userId,
+    const result = (await mutateWithRLS<DbBoard>(
       `UPDATE boards SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      params
-    )
+      params,
+      userId
+    )).rows[0] ?? null
 
     if (!result) {
       throw new Error('Board not found or access denied')
@@ -245,11 +245,11 @@ export class BoardsService {
    * Delete a board with RLS
    */
   static async delete(userId: string, id: string): Promise<boolean> {
-    const result = await mutateWithRLS<DbBoard>(
-      userId,
+    const result = (await mutateWithRLS<DbBoard>(
       `DELETE FROM boards WHERE id = $1 RETURNING *`,
-      [id]
-    )
+      [id],
+      userId
+    )).rows[0] ?? null
 
     return result !== null
   }
