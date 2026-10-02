@@ -21,6 +21,10 @@ Every item is detailed under Added, Changed or Removed below; `nextspark migrate
   files into a project any more, and `packages/core/templates/app` no longer ships.
 - **Project API routes move:** `/api/v1/theme/<theme>/**` is now `/api/**` and `/api/v1/plugin/<plugin>/**` is `/api/plugins/<plugin>/**`
   (`migrate` adds rewrites so installed clients keep working).
+- **The theme packages are no longer published:** `@nextsparkjs/theme-default`, `theme-blog`, `theme-crm` and `theme-productivity` stay
+  at `0.1.0-beta.191` and do not work with this release. Their content ships inside `@nextsparkjs/core` as the project templates
+  (`starter`, `blog`, `crm`, `productivity`) that `create-nextspark-app --theme` uses. A 0.x project already has its theme copied under
+  `contents/themes/`, which `nextspark migrate` moves to the root; if its `package.json` lists one of these packages, remove it.
 - **Next.js is pinned to `~16.3.5`** for the generated host; the generator refuses another minor.
 - **Entities named like a core API namespace are refused** (`NS_HOST_ENTITY_CORE_API_NAMESPACE`): `users`, `teams`, `auth`, `billing`, `cron`,
   `api-keys`, `devtools`, `media`, `media-tags`, `blocks`, `patterns`, `post-categories` and `team-invitations`. Rename the entity.
