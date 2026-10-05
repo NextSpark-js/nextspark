@@ -131,8 +131,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Node 24: the release-age matrix installs pnpm 12 through Corepack, which Node 22's bundled Corepack cannot do
       - name: Set up the repository
         uses: ./.github/actions/setup
+        with:
+          node-version: '24'
 
       - name: Test create-nextspark-app
         run: pnpm --filter create-nextspark-app test
