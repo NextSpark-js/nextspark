@@ -32,6 +32,10 @@ It looks at `app/` (before the `src/` layout) or `src/app/`, and decides file by
 
 Every moved file keeps its relative imports pointing at the same files. Migrate then writes `src/proxy.ts` when the project has none, adds `.nextspark/` and `src/app/` to `.gitignore`, and runs `nextspark prepare`. If generation fails, the project is left converted, the failure is printed, and so is the rollback (`git checkout -- .` plus a `git clean` of exactly what the run created).
 
+## When migrate is killed or fails after it started writing
+
+Before its first write, `migrate --yes` takes a snapshot of what it can overwrite and records the rollback commands in `.nextspark/migrate-rollback/rollback.txt`. A run that is killed (`SIGKILL`, a closed terminal, a power cut) cannot print them, and a half-converted tree makes the next dry run report blockers that have nothing to do with the cause. So, while `.nextspark/migrate-rollback` exists, `migrate` (dry run or `--yes`) refuses to analyze, says the previous run did not finish, and prints the recorded commands. Run them from any directory, right away, before editing or committing anything: they restore the tracked files through git, remove what the run created, and put back the ignored files it had overwritten, then delete the snapshot. After that, run `migrate` again. If the snapshot has no `rollback.txt`, an older CLI's run failed or a run stopped while taking it, and project files may already have changed: inspect `.nextspark/migrate-rollback/files` and restore from it (or with git) before deleting the folder. If you keep the converted tree after an interrupted migrate (instead of running the rollback), delete `.nextspark/migrate-rollback` or every later migrate refuses. A symlinked backup folder, or a `rollback.txt` that is tracked by git or has a line the CLI would not write, is refused without printing anything: inspect it by hand. A run killed before the snapshot leaves nothing behind.
+
 ## When migrate stops
 
 Anything it cannot place with certainty stops the run **before it writes**, naming the file and the reason. The usual ones:

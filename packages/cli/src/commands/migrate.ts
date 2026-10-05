@@ -2,7 +2,7 @@ import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, rmdirSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { randomBytes } from 'node:crypto';
-import { basename, dirname, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import * as tar from 'tar';
 import { readGeneratedTagAt } from '../utils/generated-tag.js';
 import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensions, loadCoreHost, planAppConversion, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
@@ -3089,6 +3089,58 @@ function isLink(path: string): boolean {
   }
 }
 
+/** Written last: its presence means the snapshot is complete and the first project write may have happened. */
+const MIGRATION_ROLLBACK_COMMANDS_FILE = 'rollback.txt';
+/** The non-executable state the commands are rebuilt from. */
+const MIGRATION_ROLLBACK_STATE_FILE = 'rollback.json';
+
+/**
+ * A kill (SIGKILL, power loss, a closed terminal) cannot be handled in-process, so the backup that
+ * `migrate --yes` leaves behind is the only trace of an unfinished run. Say so before analysing,
+ * because analysing a half-converted tree reports unrelated blockers.
+ */
+function unfinishedMigration(roots: string[], repository: string): { message: string; rollback: string[] | null } | null {
+  for (const root of new Set(roots)) {
+    const backup = migrationRollbackBackup(root);
+    if (!existsSync(backup) && !isLink(backup)) continue;
+    const head = `A previous nextspark migrate did not finish: ${MIGRATION_ROLLBACK_BACKUP_PATH} exists. Refusing to overwrite migration rollback backup: ${MIGRATION_ROLLBACK_BACKUP_PATH}.`;
+    const inspect = `Inspect ${MIGRATION_ROLLBACK_BACKUP_PATH} by hand`;
+    // A link at .nextspark or at the backup would make the "recorded" commands come from outside the project
+    try {
+      assertContained(root, join(root, '.nextspark'));
+      assertContained(root, backup);
+    } catch {
+      return { message: `${head} It is, or sits below, a symbolic link, so its contents are not trusted and no commands are printed. ${inspect} (and delete the link if you did not create it).`, rollback: null };
+    }
+    const commands = join(backup, MIGRATION_ROLLBACK_COMMANDS_FILE);
+    if (!existsSync(commands) || isLink(commands)) {
+      return { message: `${head} It has no ${MIGRATION_ROLLBACK_COMMANDS_FILE}: either a run of an older nextspark failed, or a run stopped while taking its snapshot. Either way project files may already have changed. Inspect ${MIGRATION_ROLLBACK_BACKUP_PATH}/files and restore from it (or with git) before deleting ${MIGRATION_ROLLBACK_BACKUP_PATH}, then run nextspark migrate again.`, rollback: null };
+    }
+    // The commands are rebuilt from the marker's paths; rollback.txt is a human copy and is never echoed
+    const marker = join(backup, MIGRATION_ROLLBACK_STATE_FILE);
+    const state = existsSync(marker) && !isLink(marker) && !gitTracks(repository, marker) && !gitTracks(repository, commands)
+      ? parseRollbackState(readFileSync(marker, 'utf8'), repository, root)
+      : null;
+    if (!state) {
+      return { message: `${head} Its ${MIGRATION_ROLLBACK_STATE_FILE} is missing, tracked by git or not what nextspark writes (a run of an older nextspark leaves only ${MIGRATION_ROLLBACK_COMMANDS_FILE}, which is never trusted), so no commands are printed. ${inspect}, run the rollback that run printed or restore with git.`, rollback: null };
+    }
+    return {
+      message: `${head} Restore the tree first with the rollback commands it recorded (printed below), then run nextspark migrate again. If you keep the converted tree instead, delete ${MIGRATION_ROLLBACK_BACKUP_PATH}.`,
+      rollback: buildRollbackCommands(repository, root, state),
+    };
+  }
+  return null;
+}
+
+function gitTracks(repository: string, file: string): boolean {
+  try {
+    gitOutput(repository, ['ls-files', '--error-unmatch', '--', file]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function removeMigrationRollbackBackup(hostRoot: string): void {
   const backup = migrationRollbackBackup(hostRoot);
   // rm never follows a link inside the backup, but a link at .nextspark or at the backup itself is refused
@@ -3118,27 +3170,36 @@ function snapshotGeneratedHostPaths(hostRoot: string): Map<string, Set<string>> 
 }
 
 /** Remove entries absent from the pre-write snapshot, while retaining user-owned directories and files. */
-function cleanNewEntriesCommand(repository: string, hostRoot: string, path: string, existing: Set<string>): string | null {
+function cleanNewEntriesState(repository: string, hostRoot: string, path: string, existing: Set<string>): RollbackCleanup | null {
   const root = join(hostRoot, path);
   if (existing.size === 0 || !lstatSync(root).isDirectory()) return null;
-  const repositoryRoot = pathFrom(repository, root);
-  const preserved = [...existing]
-    .filter(file => file !== path)
-    .map(file => `! -path ${shellQuote(pathFrom(repository, join(hostRoot, file)))}`)
-    .join(' ');
-  return `(cd ${shellQuote(repository)} && if [ -d ${shellQuote(repositoryRoot)} ]; then find ${shellQuote(repositoryRoot)} -depth -mindepth 1 ${preserved} -delete; fi)`;
+  return {
+    root: pathFrom(repository, root),
+    preserved: [...existing].filter(file => file !== path).map(file => pathFrom(repository, join(hostRoot, file))),
+  };
 }
+
+function cleanNewEntriesCommand(repository: string, cleanup: RollbackCleanup): string {
+  // `./` keeps a root from being read as a find option; -path patterns are matched against the same prefixed names
+  // -path reads a glob: escape [ ] * ? so a route such as app/[slug] matches only itself (markers never hold a backslash)
+  const literal = (file: string) => file.replace(/[[\]*?]/g, '\\$&');
+  const preserved = cleanup.preserved.map(file => `! -path ${shellQuote(`./${literal(file)}`)}`).join(' ');
+  return `(cd ${shellQuote(repository)} && if [ -d ${shellQuote(cleanup.root)} ]; then find ${shellQuote(`./${cleanup.root}`)} -depth -mindepth 1 ${preserved} -delete; fi)`;
+}
+
+/** The only data a rollback is rebuilt from: repository-relative paths, never commands. */
+interface RollbackCleanup { root: string; preserved: string[] }
+interface RollbackState { version: 1; created: string[]; cleanups: RollbackCleanup[] }
 
 /** Restore ignored or untracked originals after git has restored tracked files and cleaned new output. */
 function restoreMigrationBackupCommand(repository: string, hostRoot: string): string {
   const backup = pathFrom(repository, migrationRollbackBackup(hostRoot));
   const files = `${backup}/files`;
   const destination = pathFrom(repository, hostRoot);
-  return `(cd ${shellQuote(repository)} && if [ -d ${shellQuote(files)} ]; then cp -pR ${shellQuote(`${files}/.`)} ${shellQuote(destination)} && rm -rf ${shellQuote(backup)}; fi)`;
+  return `(cd ${shellQuote(repository)} && if [ -d ${shellQuote(files)} ]; then cp -pR -- ${shellQuote(`${files}/.`)} ${shellQuote(destination)} && rm -rf -- ${shellQuote(backup)}; fi)`;
 }
 
-function rollbackCommands(repository: string, hostRoot: string, plan: MovePlan, report: MigrateReport, hadLegacyApp: boolean, generatedHostSnapshot: Map<string, Set<string> | null> | null): string[] {
-  const commands = [`git -C ${shellQuote(repository)} checkout -- .`];
+function rollbackState(repository: string, hostRoot: string, plan: MovePlan, report: MigrateReport, hadLegacyApp: boolean, generatedHostSnapshot: Map<string, Set<string> | null> | null): RollbackState {
   // `checkout` restores tracked sources and edits.  Clean every path this
   // migration can newly create as well, including sync:app's generated state.
   const destinations = new Set(plan.moves.map(item => pathFrom(repository, item.destination)));
@@ -3157,7 +3218,7 @@ function rollbackCommands(repository: string, hostRoot: string, plan: MovePlan, 
     if (report.contractsPackage.createsDirectory) destinations.add(report.contractsPackage.path);
     else for (const name of ['package.json', 'tsconfig.json', 'README.md']) if (!existsSync(join(repository, report.contractsPackage.path, name))) destinations.add(`${report.contractsPackage.path}/${name}`);
   }
-  const selectiveCleanup: string[] = [];
+  const cleanups: RollbackCleanup[] = [];
   if (hadLegacyApp) {
     for (const path of GENERATED_HOST_ROLLBACK_PATHS) {
       const existing = generatedHostSnapshot?.get(path) ?? null;
@@ -3165,19 +3226,50 @@ function rollbackCommands(repository: string, hostRoot: string, plan: MovePlan, 
         destinations.add(pathFrom(repository, join(hostRoot, path)));
         continue;
       }
-      const cleanup = cleanNewEntriesCommand(repository, hostRoot, path, existing);
-      if (cleanup) selectiveCleanup.push(cleanup);
+      const cleanup = cleanNewEntriesState(repository, hostRoot, path, existing);
+      if (cleanup) cleanups.push(cleanup);
     }
   }
-  const created = [...destinations].sort();
+  return { version: 1, created: [...destinations].sort(), cleanups };
+}
+
+function buildRollbackCommands(repository: string, hostRoot: string, state: RollbackState): string[] {
+  const commands = [`git -C ${shellQuote(repository)} checkout -- .`];
+  const selectiveCleanup = state.cleanups.map(cleanup => cleanNewEntriesCommand(repository, cleanup));
+  const created = state.created;
   if (created.length > 0) {
-    commands.push(`git -C ${shellQuote(repository)} clean -fdx -- ${created.map(shellQuote).join(' ')}${selectiveCleanup.length > 0 ? ` && ${selectiveCleanup.join(' && ')}` : ''} && ${restoreMigrationBackupCommand(repository, hostRoot)}`);
+    // --literal-pathspecs: a destination such as app/[slug] must not match app/s
+    commands.push(`git -C ${shellQuote(repository)} --literal-pathspecs clean -fdx -- ${created.map(shellQuote).join(' ')}${selectiveCleanup.length > 0 ? ` && ${selectiveCleanup.join(' && ')}` : ''} && ${restoreMigrationBackupCommand(repository, hostRoot)}`);
   } else if (selectiveCleanup.length > 0) {
     commands.push(`git -C ${shellQuote(repository)} rev-parse --is-inside-work-tree >/dev/null && ${selectiveCleanup.join(' && ')} && ${restoreMigrationBackupCommand(repository, hostRoot)}`);
   } else {
     commands.push(`git -C ${shellQuote(repository)} rev-parse --is-inside-work-tree >/dev/null && ${restoreMigrationBackupCommand(repository, hostRoot)}`);
   }
   return commands;
+}
+
+/** A path the marker may name: relative, inside the repository, no `.`/`..` segment, no NUL or newline. */
+function isSafeRelativePath(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && !/[\0\n\r\\]/.test(value) && !isAbsolute(value) && !/^[A-Za-z]:/.test(value)
+    && value.split('/').every(part => part !== '' && part !== '.' && part !== '..' && !part.startsWith('-'));
+}
+
+/** Parse the marker; anything that is not exactly the shape this CLI writes is rejected. */
+function parseRollbackState(text: string, repository: string, hostRoot: string): RollbackState | null {
+  try {
+    const data = JSON.parse(text) as Partial<RollbackState>;
+    if (data.version !== 1 || !Array.isArray(data.created) || !Array.isArray(data.cleanups)) return null;
+    if (!data.created.every(isSafeRelativePath)) return null;
+    // A cleanup may only target a generated-host path the live run produces, and only spare entries below it
+    const roots = new Set(GENERATED_HOST_ROLLBACK_PATHS.map(path => pathFrom(repository, join(hostRoot, path))));
+    for (const cleanup of data.cleanups) {
+      if (!cleanup || !isSafeRelativePath(cleanup.root) || !roots.has(cleanup.root) || !Array.isArray(cleanup.preserved)
+        || !cleanup.preserved.every(file => isSafeRelativePath(file) && file.startsWith(`${cleanup.root}/`))) return null;
+    }
+    return { version: 1, created: data.created, cleanups: data.cleanups.map(({ root, preserved }) => ({ root, preserved })) };
+  } catch {
+    return null;
+  }
 }
 
 function printRollback(rollback: string[]): void {
@@ -3521,6 +3613,19 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
   let writesStarted = false;
   let printRollbackOnFailure = false;
   try {
+    const earlyRepository = repositoryRoot(process.cwd());
+    let earlyHost: string | null = null;
+    try {
+      earlyHost = resolveHostRoot(earlyRepository, process.cwd()).root;
+    } catch {
+      // Not resolvable yet: cwd and the repository root are still checked
+    }
+    const unfinished = unfinishedMigration([process.cwd(), earlyRepository, ...(earlyHost ? [earlyHost] : [])], earlyRepository);
+    if (unfinished) {
+      rollback = unfinished.rollback;
+      printRollbackOnFailure = true;
+      throw new MigrateAnalysisError(unfinished.message);
+    }
     const { report, plan: appPlan } = await analyze(process.cwd());
     if (options.dryRun) {
       if (appPlan && report.appConversion.unsimulable.length > 0) {
@@ -3570,7 +3675,8 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       throw new MigrateAnalysisError(`Refusing to overwrite migration rollback backup: ${MIGRATION_ROLLBACK_BACKUP_PATH}. Run the prior migration's printed rollback first.`);
     }
     const generatedHostSnapshot = hadLegacyApp ? snapshotGeneratedHostPaths(hostRoot) : null;
-    rollback = rollbackCommands(repository, hostRoot, plan, report, hadLegacyApp, generatedHostSnapshot);
+    const state = rollbackState(repository, hostRoot, plan, report, hadLegacyApp, generatedHostSnapshot);
+    rollback = buildRollbackCommands(repository, hostRoot, state);
     section('Move plan', [
       `owned files to move: ${plan.moves.length}; byte-identical duplicates verified: ${plan.duplicates.length}`,
       `reserved source left in place: ${paths(plan.reserved.map(item => item.path))}`,
@@ -3604,6 +3710,8 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     const brokenBeforeMove = aliasesBeforeMove ? brokenImports(hostRoot, beforeFiles, aliasesBeforeMove) : [];
     if (!appTreeOnly) preflightMovedStylesheetDependencies(hostRoot, themeRoot, pluginsRoot, plan);
     snapshotMigrationRollback(hostRoot, plan, report, hadLegacyApp);
+    writeFileSync(join(migrationRollbackBackup(hostRoot), MIGRATION_ROLLBACK_STATE_FILE), `${JSON.stringify(state)}\n`);
+    writeFileSync(join(migrationRollbackBackup(hostRoot), MIGRATION_ROLLBACK_COMMANDS_FILE), `${rollback.join('\n')}\n`);
     writesStarted = true;
     // L8: before the move, so a plugin's manifest is edited where it still is and moves with the change
     for (const member of report.memberPeers.filter(entry => entry.updates.length > 0)) {

@@ -163,6 +163,23 @@ What the rollback restores is what git tracks as of that commit, so it can't res
 
 ---
 
+## Going Back After an Update Finished
+
+The rollback above undoes a run that did not finish. Once an update has finished and been committed, going back is a different operation, and it covers the project's files only, never its database.
+
+- **`update-core` does not downgrade.** `pnpm update-core --version <older>` stops with `<older> is older than the installed <current>. update-core doesn't downgrade: applied migrations can't be undone. Nothing was changed.`
+- **A package downgrade by hand works between releases whose database schema is the same.** Set every `@nextsparkjs/*` package back to the older release in `package.json`, install, run `pnpm exec nextspark prepare` and build. Checked from `0.1.0-beta.193` to `0.1.0-beta.192`, on a project upgraded from `.192` and on one migrated from `.191`: install, prepare, `db:migrate`, build and `next start` all worked. A release that adds a migration to core has no down migration: the older release does not know the table or column it added and does not remove it. The changelog of each release says whether it adds migrations.
+- **`db:migrate` only moves forward.** Nothing undoes a migration that ran, and the migration history tables (`_migrations`, `_entity_migrations`, `_content_migrations`) are never rewound. To return the data to how it was before an upgrade, restore a backup of the database taken before it: take one before `db:migrate` whenever the new release brings migrations. The backup is for going back, not for an interrupted run: `db:migrate` runs each file and records it in one transaction, so a run that is killed or fails leaves the file it stopped in neither applied nor recorded, and the next run applies it once (see [One Transaction per File](../backend/migrations#one-transaction-per-file)). A file that starts with `-- nextspark:no-transaction` is the exception: it is recorded only after it has run.
+- **`nextspark migrate` is one-way for files.** After it, a package downgrade does not bring `contents/` back: with `0.1.0-beta.191` installed again, `build` fails on the first registry step (`app/globals.css` not found). Go back with git, to the commit before migrate.
+
+---
+
+## Releases Published Less Than a Day Ago on pnpm 10
+
+A project created before `0.1.0-beta.193` lists `<name>@<version>` entries under `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`. On pnpm 10.16 and later, `pnpm update-core` to a release published less than 24 hours earlier then fails in its install step (`ERR_PNPM_NO_MATCHING_VERSION` or `ERR_PNPM_NO_MATURE_MATCHING_VERSION`, naming a `@nextsparkjs` package) and the update is reported as not finished. Replace those entries with the package names (`'@nextsparkjs/core'`, `'@nextsparkjs/cli'`, `'@nextsparkjs/ui'`, and any other `@nextsparkjs/*` package the project installs), commit, and run the update again, or wait until the release is a day old. pnpm 11 and 12 do not refuse it (`minimumReleaseAgeStrict: false`).
+
+---
+
 ## Flags
 
 ### `--version <version>`

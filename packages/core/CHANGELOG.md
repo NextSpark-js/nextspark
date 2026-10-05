@@ -30,10 +30,19 @@ marker. History tables are unchanged.
   neither, and the next run applies the file once. Effects that are not transactional (a sequence advanced with `nextval`) are not undone. A file that
   starts with `-- nextspark:no-transaction` runs as before, outside a transaction and recorded after it (the way to run `CREATE INDEX CONCURRENTLY`
   or `VACUUM`), and has to be safe to run again. Filenames, checksums and history tables are unchanged.
+- **An interrupted `nextspark migrate` is named on the next run.** A run killed after it started writing left a half-converted tree, and the next dry run
+  reported blockers unrelated to the cause (files the first run had already rewritten), with no mention of the rollback. `migrate --yes` now records what its
+  rollback needs in `.nextspark/migrate-rollback/rollback.json` once its snapshot is complete; while `.nextspark/migrate-rollback` exists, `migrate`
+  (dry run or `--yes`) says the previous run did not finish and prints the rollback commands, rebuilt by the CLI from that record (never read back
+  as commands), instead of analyzing. A symlinked or git-tracked backup, or a record that names a path outside the generated host, is refused
+  with nothing printed. The rollback's cleanup now matches paths literally: before, a preserved route such as `app/[slug]` was deleted by `find -path`,
+  and `git clean` could remove an untracked `app/s`.
 
 ### Documentation
 
 - Deployment overview: a "Self-hosting on Node" section (`next start`, and `output: 'standalone'` copied without the project), with what was checked.
+- `17-updates`: what a package downgrade and `db:migrate` do (the database is never rolled back, `update-core` does not downgrade, `migrate` is one-way
+  for files), and the day-one `minimumReleaseAgeExclude` step on pnpm 10 for projects created before `0.1.0-beta.193`.
 
 ## [0.1.0-beta.193] - 2026-10-02
 
