@@ -204,6 +204,19 @@ test('runtime-only does not excuse a concrete placeholder', async () => {
     assert.equal(result.status, 1, result.output)
     assert.match(result.output, /RESEND_API_KEY_PLACEHOLDER/)
     assert.ok(!result.output.includes('re_your_api_key_here'))
+    assert.match(result.output, /placeholder value .* is a value, not a missing one: NEXTSPARK_AUTH_RUNTIME_ONLY does not defer it/)
+    assert.match(result.output, /Remove the placeholder lines from \.env/)
+  } finally {
+    await project.cleanup()
+  }
+})
+
+test('the placeholder hint is not printed when no value is a placeholder', async () => {
+  const project = await fixture(methods(['email-otp']))
+  try {
+    const result = run(project.root, ['prepare', '--production'], {})
+    assert.equal(result.status, 1, result.output)
+    assert.doesNotMatch(result.output, /does not defer it/)
   } finally {
     await project.cleanup()
   }

@@ -17,6 +17,14 @@ marker. History tables are unchanged.
 
 ### Fixed
 
+- **`nextspark migrate` from `0.1.0-beta.183`** (the oldest release it is supported from; guide: `docs/17-updates/06-upgrade-0x-projects.md`).
+  An untracked `node_modules/` no longer crashes it with `spawnSync git ENOBUFS` (the untracked listing collapses directories, so a project
+  without `node_modules/` in `.gitignore` gets the "dirty git tree" refusal, which now says to ignore `node_modules/` or `.next/` first). `--yes`
+  adds `node_modules/` and `.next/` to `.gitignore` when missing and names only the entries it really added (it claimed `.nextspark/` when
+  that was already there). A legacy `pnpm.onlyBuiltDependencies` moves into `pnpm-workspace.yaml` as `allowBuilds` and `onlyBuiltDependencies`
+  (plus the packages NextSpark needs, your entries kept), so pnpm 11 and later install with exit 0 instead of `ERR_PNPM_IGNORED_BUILDS`.
+- The production auth readiness check says that a placeholder value (`re_...`, `your-google-client-id`) is not deferred by
+  `NEXTSPARK_AUTH_RUNTIME_ONLY` and must be removed or replaced; the check itself is unchanged.
 - `nextspark prepare`, `build` and `dev` recover from a run that was killed (SIGKILL, out of memory, power loss) while writing. The scratch files a
   killed writer leaves (`.<file>.<pid>.<id>.nextspark-tmp` under `src/app` and `.nextspark`, `<file>.nextspark-tmp` in `.nextspark/contracts`) and the
   registry build's `.nextspark/staging-*` directory are swept at the start of the next generation, under the lock. Before, a leftover scratch file in

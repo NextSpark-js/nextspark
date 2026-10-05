@@ -192,6 +192,10 @@ async function main() {
     console.log('   RESEND_API_KEY, RESEND_FROM_EMAIL; Google: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET), or change auth.methods.')
     console.log('   Credentials injected only at runtime: declare them with NEXTSPARK_AUTH_RUNTIME_ONLY=email,google;')
     console.log('   they are validated again when the server starts and on every login request.')
+    if (result.diagnostics.some(({ code }) => code.endsWith('_PLACEHOLDER'))) {
+      console.log('   A placeholder value (re_..., your-google-client-id) is a value, not a missing one: NEXTSPARK_AUTH_RUNTIME_ONLY does not defer it.')
+      console.log('   Remove the placeholder lines from .env (and the build environment), or replace them with the real values.')
+    }
     process.exit(1)
   }
 

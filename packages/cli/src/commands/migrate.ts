@@ -9,7 +9,7 @@ import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensi
 import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
 import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
 import { getNextMajorVersion } from '../utils/next-bundler.js';
-import { COMPAT_NOTE, addCompatRewrites, applyContractsPackage, catalogVersion, checkNextRange, compatRewrites, coreExportsSpecifier, countBlockThumbnails, inAiWorkflowDirectory, isBlockConfig, hostFrameworkFixes, memberPeerUpdates, removeBlockThumbnails, planContractsPackage, updateHostFramework, updateNextRange, updatePeerRanges, type CompatRewrite, type HostFrameworkFix, type ContractsPlan, type NextRangeCheck, type PeerNote, type PeerUpdate } from '../utils/migrate-extras.js';
+import { BUILD_ALLOWLIST, COMPAT_NOTE, addBuildAllowlist, addCompatRewrites, applyContractsPackage, catalogVersion, checkNextRange, compatRewrites, coreExportsSpecifier, countBlockThumbnails, dropLegacyBuildList, inAiWorkflowDirectory, isBlockConfig, legacyBuildList, hostFrameworkFixes, memberPeerUpdates, removeBlockThumbnails, planContractsPackage, updateHostFramework, updateNextRange, updatePeerRanges, type CompatRewrite, type HostFrameworkFix, type ContractsPlan, type NextRangeCheck, type PeerNote, type PeerUpdate, type PnpmBuildsPlan } from '../utils/migrate-extras.js';
 import { pathToFileURL } from 'node:url';
 import { adaptProxySource, planProxyFile, type ProxyFileName } from '../utils/proxy-file.js';
 import { contentHash, readSyncState } from '../utils/sync-state.js';
@@ -114,6 +114,8 @@ interface MigrateReport {
   /** Old API URLs in sibling workspaces (mobile/, packages/*, ...): reported, not rewritten. */
   siblingApiUrlReferences: { path: string; occurrences: number }[];
   nextRange: NextRangeCheck;
+  /** pnpm 11 reads the build-script allowlist only from pnpm-workspace.yaml: a legacy `pnpm.onlyBuiltDependencies` moves there (--yes). Null when the package.json has none. */
+  pnpmBuilds: PnpmBuildsPlan | null;
   /** L8: peer ranges of the other workspace members that the generated host would not satisfy (--yes updates them). */
   memberPeers: { path: string; updates: PeerUpdate[]; /** Ranges that do not accept the target but reach higher: reported, never lowered. */ kept: PeerNote[] }[];
   /** L8: a copy of next / react / react-dom installed under a workspace member that differs from the host's. */
@@ -1165,7 +1167,8 @@ function assertPhysicalRoot(repository: string, hostRoot: string): void {
 }
 
 function untrackedFiles(repositoryRoot: string): string[] {
-  const output = gitOutput(repositoryRoot, ['ls-files', '--others', '--exclude-standard', '-z', '--', ':(exclude,glob)**/.env*']);
+  // --directory: an untracked node_modules/ is one entry, not a 20 MB listing that overflows execFileSync's buffer (ENOBUFS)
+  const output = gitOutput(repositoryRoot, ['ls-files', '--others', '--exclude-standard', '--directory', '--no-empty-directory', '-z', '--', ':(exclude,glob)**/.env*']);
   return output.split('\0').filter(Boolean).filter(file => !isEnvironmentFile(basename(file))).sort();
 }
 
@@ -1453,6 +1456,14 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
   // F11: the Next.js range the generated host needs
   const workspaceYamls = [join(host.root, 'pnpm-workspace.yaml'), join(repository, 'pnpm-workspace.yaml')].filter(file => existsSync(file)).map(file => readFileSync(file, 'utf8'));
   const nextRange = checkNextRange(hostPackage, (catalog, dependency) => workspaceYamls.map(yaml => catalogVersion(yaml, catalog, dependency)).find(version => version !== null) ?? null);
+  // The allowlist moves only where the workspace file is the project's own (a root-first project, not a package of a larger workspace)
+  const legacyBuilds = host.root === repository ? legacyBuildList(hostPackage) : null;
+  const pnpmBuilds: PnpmBuildsPlan | null = legacyBuilds && (() => {
+    const workspaceFile = join(host.root, 'pnpm-workspace.yaml');
+    const wanted = [...new Set([...legacyBuilds, ...BUILD_ALLOWLIST])].sort();
+    const edit = addBuildAllowlist(existsSync(workspaceFile) ? readFileSync(workspaceFile, 'utf8') : null, wanted);
+    return { fromPackageJson: legacyBuilds, added: 'added' in edit ? edit.added : [], createsFile: !existsSync(workspaceFile), ...('error' in edit ? { error: edit.error } : {}) };
+  })();
   const hostFramework = Object.fromEntries(['react', 'react-dom'].map(name => [name, [hostPackage?.dependencies, hostPackage?.devDependencies].map(table => (table as Record<string, unknown> | undefined)?.[name]).find((value): value is string => typeof value === 'string')]));
   const memberPeers = packageManifests
     .filter(entry => dirname(entry.file) !== host.root)
@@ -1565,6 +1576,7 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     compatRewrites: { entries: compatEntries, file: nextConfigFile ? pathFrom(repository, nextConfigFile) : null, note: COMPAT_NOTE },
     siblingApiUrlReferences: siblingMatches(repository, host.root, /\/api\/v1\/(?:theme|plugin)\//g),
     nextRange,
+    pnpmBuilds,
     memberPeers,
     duplicateCopies,
     hostFramework: hostFrameworkPlan,
@@ -1667,6 +1679,11 @@ function printReport(report: MigrateReport): void {
   section(`Next.js range (the generated host needs ${report.nextRange.required})`, report.nextRange.members.length
     ? report.nextRange.members.map(member => `${member.name} ${member.value} (${member.section}): ${member.action === 'ok' ? `ok${member.note ? ` (${member.note})` : ''}` : member.action === 'update' ? `--yes sets ${report.nextRange.required}, then install and run nextspark prepare` : `check it yourself: ${member.note}`}`)
     : [`next is not declared in the host package.json: add next@${report.nextRange.required}`]);
+  section('pnpm build-script allowlist (pnpm 11 and later read it only from pnpm-workspace.yaml; without it every install ends with ERR_PNPM_IGNORED_BUILDS)', report.pnpmBuilds === null
+    ? ['nothing to move: package.json has no pnpm.onlyBuiltDependencies']
+    : report.pnpmBuilds.error
+    ? [`not moved: ${report.pnpmBuilds.error}`]
+    : [`--yes ${report.pnpmBuilds.createsFile ? 'creates' : 'updates'} pnpm-workspace.yaml (allowBuilds and onlyBuiltDependencies) with ${report.pnpmBuilds.added.join(', ') || 'nothing new'}, keeps your entries (${report.pnpmBuilds.fromPackageJson.join(', ') || 'none'}), and removes pnpm.onlyBuiltDependencies from package.json`]);
   section('Workspace members that declare next / react / react-dom as peers', [
     ...(report.memberPeers.length ? report.memberPeers.map(member => [
       member.updates.length ? `${member.path}: ${member.updates.map(update => `${update.name} "${update.from}" -> "${update.to}"`).join(', ')} (--yes updates it)` : null,
@@ -3043,6 +3060,7 @@ function copyForMigrationRollback(root: string, source: string, destination: str
 function migrationRollbackPaths(hostRoot: string, plan: MovePlan, report: MigrateReport, hadLegacyApp: boolean): string[] {
   const paths = new Set<string>([
     'package.json',
+    'pnpm-workspace.yaml',
     'tsconfig.json',
     'nextspark.config.ts',
     '.gitignore',
@@ -3212,6 +3230,7 @@ function rollbackState(repository: string, hostRoot: string, plan: MovePlan, rep
   // Overrides and moved project files created from the app tree
   for (const file of [...report.appConversion.overrides, ...report.appConversion.projectFiles]) destinations.add(pathFrom(repository, join(hostRoot, file.destination)));
   if (report.envExample.action === 'move') destinations.add(pathFrom(repository, join(hostRoot, '.env.example')));
+  if (report.pnpmBuilds?.createsFile && !report.pnpmBuilds.error) destinations.add(pathFrom(repository, join(hostRoot, 'pnpm-workspace.yaml')));
   // A packages/contracts this migration creates is untracked, so `checkout` leaves it behind
   if (report.contractsPackage.needed) {
     // Only what did not exist before: a directory the user already had keeps its own (even ignored) files
@@ -3389,16 +3408,19 @@ function printMoveSummary(plan: MovePlan, result: { moved: number; deduplicated:
   console.log('  Rollback commands were printed in the move plan above.');
 }
 
-/** Add `.nextspark/`, `src/app/` and `next-env.d.ts` (Next rewrites it on every build) to the project's .gitignore: all are generated. */
-function ignoreGeneratedPaths(hostRoot: string): boolean {
+/**
+ * Add `.nextspark/`, `src/app/` and `next-env.d.ts` (Next rewrites it on every build) to the project's .gitignore: all are
+ * generated. `node_modules/` and `.next/` too, which older projects never ignored. Returns what it added.
+ */
+function ignoreGeneratedPaths(hostRoot: string): string[] {
   const file = join(hostRoot, '.gitignore');
   assertContained(hostRoot, file);
   const current = existsSync(file) ? readFileSync(file, 'utf8') : '';
   const lines = new Set(current.split(/\r?\n/).map(line => line.trim()));
-  const missing = ['.nextspark/', 'src/app/', 'next-env.d.ts'].filter(entry => !lines.has(entry) && !lines.has(entry.replace(/\/$/, '')) && !lines.has(`/${entry}`));
-  if (missing.length === 0) return false;
+  const missing = ['.nextspark/', 'src/app/', 'next-env.d.ts', 'node_modules/', '.next/'].filter(entry => !lines.has(entry) && !lines.has(entry.replace(/\/$/, '')) && !lines.has(`/${entry}`));
+  if (missing.length === 0) return [];
   writeFileSync(file, `${current}${current === '' || current.endsWith('\n') ? '' : '\n'}\n# Generated by NextSpark (nextspark dev, build and prepare write all of it; never edit)\n${missing.join('\n')}\n`);
-  return true;
+  return missing;
 }
 
 /** Which of src/app's files git tracks: they stay in the index until the project removes them from it. */
@@ -3652,7 +3674,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       throw new MigrateAnalysisError(`Refusing to migrate: ${report.appConversion.blockers.length} blocker(s) (app files that cannot be placed with certainty, or files that collide). Nothing was written. Fix them as described above, then rerun nextspark migrate.\n${report.appConversion.blockers.map(line => `  - ${line}`).join('\n')}`);
     }
     const repository = repositoryRoot(process.cwd());
-    if (!cleanWorkingTree(repository, report.untracked)) throw new MigrateAnalysisError('Refusing to move files on a dirty git tree. Commit, stash, or remove untracked files first.');
+    if (!cleanWorkingTree(repository, report.untracked)) throw new MigrateAnalysisError(`Refusing to move files on a dirty git tree. Commit, stash, or remove untracked files first.${report.untracked.some(file => /(^|\/)(node_modules|\.next)\/$/.test(file)) ? ' node_modules/ or .next/ is untracked: add it to .gitignore and commit that first.' : ''}`);
     const theme = report.activeTheme.name;
     const hostRoot = resolve(repository, report.hostRoot.path);
     // A project that is root-first already (no contents/) only has an app tree left to convert
@@ -3745,6 +3767,15 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
         nextUpdated = true;
         console.log(`  ${pathFrom(repository, hostPackageFile)}: next and eslint-config-next set to ${report.nextRange.required}. Run your package manager's install, then nextspark prepare.`);
       }
+      if (!simulation && report.pnpmBuilds && !report.pnpmBuilds.error) {
+        const workspaceFile = join(hostRoot, 'pnpm-workspace.yaml');
+        assertContained(repository, workspaceFile);
+        const edit = addBuildAllowlist(existsSync(workspaceFile) ? readFileSync(workspaceFile, 'utf8') : null, [...new Set([...report.pnpmBuilds.fromPackageJson, ...BUILD_ALLOWLIST])].sort());
+        if ('error' in edit) throw new MigrateAnalysisError(edit.error);
+        writeFileSync(workspaceFile, edit.text);
+        writeFileSync(hostPackageFile, dropLegacyBuildList(readFileSync(hostPackageFile, 'utf8')));
+        console.log(`  pnpm-workspace.yaml: build-script allowlist (allowBuilds, onlyBuiltDependencies) ${report.pnpmBuilds.createsFile ? 'created' : 'updated'} from package.json pnpm.onlyBuiltDependencies, which is removed (pnpm 11 and later ignore it). Run your package manager's install.`);
+      }
       const frameworkFixes = report.hostFramework.filter(fix => !fix.manual);
       if (!simulation && frameworkFixes.length > 0) {
         writeFileSync(hostPackageFile, updateHostFramework(readFileSync(hostPackageFile, 'utf8'), frameworkFixes));
@@ -3767,7 +3798,8 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
         writeFileSync(configFile, declared.source);
         console.log(`  nextspark.config.ts: billing.webhookExtensions declared for ${appPlan.webhookExtensions.map(item => item.provider).join(', ')}.`);
       }
-      if (ignoreGeneratedPaths(hostRoot)) console.log('  .gitignore: added .nextspark/, src/app/ and next-env.d.ts (generated).');
+      const ignored = ignoreGeneratedPaths(hostRoot);
+      if (ignored.length > 0) console.log(`  .gitignore: added ${ignored.join(', ')} (generated).`);
       removeGeneratedRootProxyFiles(hostRoot, report.rootProxyFiles.generated);
       for (const moved of moveProjectRootProxyFiles(hostRoot, report.rootProxyFiles.customizations)) console.log(`  ${moved}: the project's root proxy moved to src/ (Next loads it from there next to src/app), core middleware APIs renamed. It replaces core's current proxy template: compare it with node_modules/@nextsparkjs/core/templates/proxy.ts.`);
       const proxy = ensureSourceProxy(hostRoot, templates);

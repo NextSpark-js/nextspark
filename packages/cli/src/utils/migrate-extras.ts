@@ -614,3 +614,108 @@ export function countBlockThumbnails(text: string): number {
 export function removeBlockThumbnails(text: string): string {
   return text.split('\n').filter(line => !THUMBNAIL_LINE.test(line.replace(/\r$/, ''))).join('\n');
 }
+
+// ---------------------------------------------------------------------------------------------
+// pnpm 11 and later read the build-script allowlist only from pnpm-workspace.yaml
+
+/**
+ * The packages create-nextspark-app allows to run install scripts (`PACKAGES_ALLOWED_TO_BUILD` in its create.ts): pnpm 11
+ * fails the install over each one left out, so a legacy list of two is completed with these.
+ */
+export const BUILD_ALLOWLIST = [
+  '@nextsparkjs/ai-workflow',
+  '@nextsparkjs/core',
+  '@parcel/watcher',
+  '@swc/core',
+  'cypress',
+  'esbuild',
+  'protobufjs',
+  'sharp',
+  'unrs-resolver',
+];
+
+export interface PnpmBuildsPlan {
+  /** What the project's package.json lists under pnpm.onlyBuiltDependencies (kept). */
+  fromPackageJson: string[];
+  /** Entries the workspace file gets (those it already has are not repeated). */
+  added: string[];
+  /** The workspace file does not exist yet. */
+  createsFile: boolean;
+  /** Set when the workspace file cannot be edited safely: nothing is written. */
+  error?: string;
+}
+
+type BuildBlock = { names: Set<string>; denied: Set<string>; last: number; indent: string };
+
+/** `allowBuilds` / `onlyBuiltDependencies` blocks of the workspace yaml: the names they hold (and those set to false), the line where each ends and the indentation of its entries, or an error for a shape that cannot be edited safely. */
+function readBuildBlock(lines: string[], key: string): BuildBlock | null | { error: string } {
+  const start = lines.findIndex(line => line.startsWith(`${key}:`));
+  if (start === -1) return null;
+  const byHand = { error: `${key} in pnpm-workspace.yaml is not a block this migration can edit (add the entries by hand)` };
+  if (lines[start].slice(key.length + 1).replace(/#.*$/, '').trim() !== '') return byHand;
+  const list = key !== 'allowBuilds';
+  const block: BuildBlock = { names: new Set(), denied: new Set(), last: start, indent: '  ' };
+  let indent: string | null = null;
+  for (let index = start + 1; index < lines.length; index++) {
+    const line = lines[index];
+    if (line.trim() === '' || line.trim().startsWith('#')) continue;
+    // A list may sit at column 0 (`key:\n- a`); anything else at column 0 ends the block
+    if (!/^\s/.test(line) && !(list && /^-\s/.test(line))) break;
+    const entry = list ? /^(\s*)-\s+(['"]?)([^'"#\s][^#]*?)\2\s*(?:#.*)?$/.exec(line) : /^(\s+)(['"]?)([^'"\s][^'"]*?)\2\s*:\s*([^#\s]+)\s*(?:#.*)?$/.exec(line);
+    if (!entry) return byHand;
+    if (indent !== null && entry[1] !== indent) return byHand;
+    indent = entry[1];
+    block.last = index;
+    block.names.add(entry[3]);
+    if (!list && entry[4] === 'false') block.denied.add(entry[3]);
+  }
+  if (indent !== null) block.indent = indent;
+  return block;
+}
+
+/** The legacy `pnpm.onlyBuiltDependencies` of a package.json, or null when it has none. */
+export function legacyBuildList(pkg: Record<string, unknown> | undefined): string[] | null {
+  const list = (pkg?.pnpm as Record<string, unknown> | undefined)?.onlyBuiltDependencies;
+  return Array.isArray(list) ? list.filter((entry): entry is string => typeof entry === 'string') : null;
+}
+
+/** The workspace yaml with the allowlist in both forms (`allowBuilds`: pnpm 11, `onlyBuiltDependencies`: pnpm 10), keeping every entry it has. */
+export function addBuildAllowlist(yaml: string | null, entries: readonly string[]): { text: string; added: string[] } | { error: string } {
+  const eol = yaml?.includes('\r\n') ? '\r\n' : '\n';
+  const lines = yaml === null ? ['packages: []'] : yaml.split(/\r?\n/);
+  // Only the bare `key:` spelling is edited: a quoted or spaced key (`'allowBuilds':`, `allowBuilds :`) would get a duplicate,
+  // and a document marker after the first line would put the new keys in another document. Both are left to the user.
+  const unusual = lines.some((line, index) => (index > 0 && /^(---|\.\.\.)\s*$/.test(line))
+    || (/^['"]?(allowBuilds|onlyBuiltDependencies)['"]?\s*:/.test(line) && !/^(allowBuilds|onlyBuiltDependencies):/.test(line)));
+  if (unusual) return { error: 'allowBuilds/onlyBuiltDependencies in pnpm-workspace.yaml are written in a form this migration does not edit (add the entries by hand)' };
+  const added = new Set<string>();
+  const forms: [string, (name: string, indent: string) => string][] = [['allowBuilds', (name, indent) => `${indent}'${name}': true`], ['onlyBuiltDependencies', (name, indent) => `${indent}- '${name}'`]];
+  const denied = readBuildBlock(lines, 'allowBuilds');
+  if (denied && 'error' in denied) return denied;
+  for (const [key, format] of forms) {
+    const block = readBuildBlock(lines, key);
+    if (block && 'error' in block) return block;
+    // A name allowBuilds sets to false is the user's explicit refusal: neither form adds it
+    const missing = entries.filter(name => !block?.names.has(name) && !denied?.denied.has(name));
+    missing.forEach(name => added.add(name));
+    if (missing.length === 0) continue;
+    if (block) lines.splice(block.last + 1, 0, ...missing.map(name => format(name, block.indent)));
+    else {
+      while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+      lines.push('', `${key}:`, ...missing.map(name => format(name, '  ')));
+    }
+  }
+  const text = lines.join(eol);
+  return { text: text.endsWith(eol) ? text : `${text}${eol}`, added: [...added] };
+}
+
+/** The package.json without `pnpm.onlyBuiltDependencies` (pnpm 11 ignores it and warns); the rest of the `pnpm` field stays. */
+export function dropLegacyBuildList(text: string): string {
+  const pkg = JSON.parse(text) as Record<string, unknown>;
+  const pnpm = pkg.pnpm as Record<string, unknown> | undefined;
+  if (!pnpm || !('onlyBuiltDependencies' in pnpm)) return text;
+  delete pnpm.onlyBuiltDependencies;
+  if (Object.keys(pnpm).length === 0) delete pkg.pnpm;
+  const indent = /^\{\r?\n([ \t]+)"/.exec(text)?.[1] ?? 2;
+  return `${JSON.stringify(pkg, null, indent)}${text.endsWith('\n') ? '\n' : ''}`;
+}
