@@ -73,13 +73,13 @@ When the development server starts, Next.js prints its local URL (port 3000 by d
 
 ## Test a Production Build Locally
 
-Set `DATABASE_URL` in `.env` for local Postgres with `?sslmode=disable`, then run the build and server on the same URL:
+Set `DATABASE_URL` in `.env` for local Postgres with `?sslmode=disable`. Unless you entered a provider's credentials in the wizard, a new project has no sign-in provider that works in production (the one-time-code email only prints to the console, which is development-only), so `pnpm build` stops with `Production auth readiness failed` until you either set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (and/or `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`) in `.env`, or declare that your host injects them at runtime. Then run the build and server on the same URL:
 
 ```bash
-pnpm build && PORT=3000 pnpm start
+NEXTSPARK_AUTH_RUNTIME_ONLY=email,google pnpm build && PORT=3000 pnpm start
 ```
 
-In production, database connections require SSL unless `sslmode=disable` is explicit; this is needed only for a local Postgres server without SSL. Set `NEXT_PUBLIC_APP_URL="http://localhost:3000"` before `pnpm build`: Next.js inlines public variables at build time, so if its port differs from `pnpm start`, update it and build again. Leave `RESEND_API_KEY` unset to print one-time codes to the server log (they are not sent); set a real Resend key to deliver email.
+In production, database connections require SSL unless `sslmode=disable` is explicit; this is needed only for a local Postgres server without SSL. Set `NEXT_PUBLIC_APP_URL="http://localhost:3000"` before `pnpm build`: Next.js inlines public variables at build time, so if its port differs from `pnpm start`, update it and build again. With `NEXTSPARK_AUTH_RUNTIME_ONLY` and no credentials the pages render but sign-in answers `503 AUTH_METHOD_UNAVAILABLE`; to sign in on a production build, set a real Resend key or Google credentials. `pnpm dev` is the mode that prints one-time codes to the server log.
 
 ## Packages
 

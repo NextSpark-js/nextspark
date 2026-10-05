@@ -567,7 +567,7 @@ function showNextSteps(
   console.log(chalk.gray(`     Recommended: ${chalk.cyan('https://supabase.com')} | ${chalk.cyan('https://neon.com')}`))
   console.log('')
   console.log(chalk.yellow('     BETTER_AUTH_SECRET'))
-  console.log(chalk.gray('     Generate with:'))
+  console.log(chalk.gray('     Already generated in .env; to replace it:'))
   console.log(chalk.cyan('     openssl rand -base64 32'))
   console.log('')
 

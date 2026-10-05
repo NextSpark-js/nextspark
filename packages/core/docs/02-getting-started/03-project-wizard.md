@@ -164,12 +164,7 @@ The wizard can automatically:
 Optionally initialize a Git repository with an initial commit.
 
 ### Doctor Command
-The CLI includes `nextspark doctor`, but it is not currently a passing
-post-generation gate. On a newly generated project it exits with code 1 after
-three passing checks because the configuration check parses `tsconfig.json` as
-strict JSON while the generated file contains valid JSONC comments. This is a
-known CLI/template mismatch; it does not mean the generated TypeScript config
-is invalid.
+`nextspark doctor` checks dependencies, configuration, `DATABASE_URL` and imports. On a newly generated project all four checks pass; `tsconfig.json` is read as JSONC, so the comments the generated file carries are valid.
 
 ## What's New
 
@@ -189,7 +184,7 @@ is invalid.
    - Interactive config preview
    - Environment auto-setup
    - Git initialization
-   - Doctor diagnostics (with the fresh-project limitation described above)
+   - Doctor diagnostics
 
 4. **Empty Directory Support**
    - Wizard can now run from an empty directory

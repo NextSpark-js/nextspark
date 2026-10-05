@@ -46,8 +46,14 @@ npx create-nextspark-app my-app -y
 
 ```bash
 cd my-app
+# set DATABASE_URL in .env (BETTER_AUTH_SECRET is already generated)
+pnpm db:migrate
 pnpm dev
 ```
+
+`pnpm build` stops until a sign-in provider can work in production: set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (and/or `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`) in `.env`, or declare that your host injects them with `NEXTSPARK_AUTH_RUNTIME_ONLY=email,google pnpm build`. `pnpm dev` needs none of this.
+
+Installing with lifecycle scripts disabled (`pnpm install --ignore-scripts`) works: nothing a project needs is created at install time, and `pnpm dev` and `pnpm build` generate `src/app` and the registries first (`pnpm build:registries` does only that). Cypress downloads its binary during install; with scripts off, run `pnpm exec cypress install` before `pnpm cy:run`.
 
 ## Requirements
 

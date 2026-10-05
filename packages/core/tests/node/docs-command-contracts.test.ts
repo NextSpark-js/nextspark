@@ -246,7 +246,8 @@ test('generated-project docs use the generated config paths and current CLI surf
 
   assert.match(gettingStarted, /pnpm 9\.0\.0/, `${gettingStartedFile} does not name the repository package-manager version`)
   assert.doesNotMatch(gettingStarted, /pnpm 8\+/, `${gettingStartedFile} still advertises the previous pnpm floor`)
-  assert.match(wizard, /doctor[\s\S]{0,400}JSONC comments/i, `${wizardFile} does not explain the fresh-project doctor limitation`)
+  assert.match(wizard, /doctor[\s\S]{0,400}all four checks pass/i, `${wizardFile} does not say doctor passes on a fresh project`)
+  assert.doesNotMatch(wizard, /known CLI\/template mismatch/i, `${wizardFile} still documents the fixed fresh-project doctor limitation`)
   assert.doesNotMatch(packageDoc, /@nextspark\/core\b/, `${packageFile} uses the historical package scope`)
   assert.doesNotMatch(packageDoc, /nextspark\s+generate:app\b/, `${packageFile} recommends a removed CLI command`)
   assert.match(configDoc, /required `nextspark\.config\.ts`/, `${configFile} does not describe the required root config`)

@@ -16,6 +16,8 @@ pnpm add @nextsparkjs/core
 # Create a new NextSpark project
 npx create-nextspark-app my-app
 cd my-app
+# set DATABASE_URL in .env (BETTER_AUTH_SECRET is already generated)
+pnpm db:migrate
 pnpm dev
 ```
 

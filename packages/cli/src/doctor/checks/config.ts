@@ -28,6 +28,18 @@ const OPTIONAL_CONFIG_FILES = [
 ]
 
 /**
+ * Parse JSON with comments and trailing commas (tsconfig.json is JSONC; the generated one has comments).
+ * Strings are matched first so a `//` inside one (a URL) is not taken for a comment.
+ */
+function parseJsonc(content: string): unknown {
+  return JSON.parse(
+    content
+      .replace(/("(?:\\.|[^"\\])*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (_, str) => str ?? '')
+      .replace(/,(\s*[}\]])/g, '$1')
+  )
+}
+
+/**
  * Check if configuration files exist and are valid
  */
 export async function checkConfigs(): Promise<HealthCheckResult> {
@@ -62,12 +74,12 @@ export async function checkConfigs(): Promise<HealthCheckResult> {
     }
   }
 
-  // Check tsconfig.json specifically and validate JSON syntax
+  // Check tsconfig.json specifically and validate its JSONC syntax
   const tsconfigPath = path.join(cwd, 'tsconfig.json')
   if (await fs.pathExists(tsconfigPath)) {
     try {
       const content = await fs.readFile(tsconfigPath, 'utf-8')
-      JSON.parse(content)
+      parseJsonc(content)
     } catch {
       invalidFiles.push('tsconfig.json')
     }

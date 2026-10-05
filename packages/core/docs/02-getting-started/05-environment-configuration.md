@@ -14,7 +14,7 @@ Complete reference for all environment variables used in NextSpark. This guide c
 |----------|----------|---------|-------------|
 | `DATABASE_URL` | ✅ | `postgresql://user:pass@host:6543/db` | PostgreSQL connection (pooler) |
 | `BETTER_AUTH_SECRET` | ✅ | `Zx8Kp2...` (32 chars) | Session encryption key |
-| `BETTER_AUTH_URL` | ✅ | `http://localhost:3010` | App URL for auth |
+| `BETTER_AUTH_URL` | ⬜ | `http://localhost:3010` | App URL for auth; defaults to `NEXT_PUBLIC_APP_URL`, and a generated project's `.env` does not set it |
 | `NEXT_PUBLIC_APP_URL` | ✅ | `http://localhost:3010` | Public app URL |
 | `RESEND_API_KEY` | ✅ | `re_xxxxx` | Email service key |
 | `RESEND_FROM_EMAIL` | ✅ | `noreply@domain.com` | Sender email |
