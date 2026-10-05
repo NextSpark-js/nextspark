@@ -439,6 +439,60 @@ export function acquireLock(hostRoot, { staleAfterMs = DEFAULT_STALE_LOCK_MS, at
 }
 
 // ---------------------------------------------------------------------------
+// What a killed writer leaves behind
+// ---------------------------------------------------------------------------
+
+// The names of the scratch files and directories the writers create: `writeAtomically` (below),
+// the contracts publisher (`<file>.nextspark-tmp`) and the registry build's staging directory
+// (`fs.mkdtempSync('.nextspark/staging-')`).
+const TEMPORARY_FILE = /^\..+\.\d+\.[0-9a-f]{8}\.nextspark-tmp$/
+const CONTRACTS_TEMPORARY_FILE = /\.nextspark-tmp$/
+const STAGING_DIR = /^staging-[A-Za-z0-9]{6}$/
+
+/**
+ * Remove what a writer that was killed (SIGKILL, power loss) between creating a scratch file and
+ * renaming it leaves behind: its temporary files under `src/app` and `.nextspark`, and a registry
+ * build's staging directory. Call it with the lock held, when no live writer can own one of them.
+ * Without it a temporary file in `src/app` is a file "NextSpark did not generate", so the next
+ * prepare refuses to run until someone deletes it by hand, and the others stay forever.
+ * Only names the writers use are touched, never through a symlink; returns the paths removed.
+ */
+export function sweepInterruptedWrites(hostRoot, { app = true } = {}) {
+  const fs = projectFiles(hostRoot)
+  const removed = []
+  const entries = dir => {
+    try {
+      return lstatOrNull(join(hostRoot, dir))?.isDirectory() ? readdirSync(join(hostRoot, dir), { withFileTypes: true }) : []
+    } catch {
+      return [] // an unreadable directory is skipped: the build reports it
+    }
+  }
+  const visit = (dir, isTemporary, recursive) => {
+    for (const entry of entries(dir)) {
+      const path = `${dir}/${entry.name}`
+      if (entry.isDirectory()) {
+        if (recursive) visit(path, isTemporary, true)
+      } else if (entry.isFile() && isTemporary.test(entry.name)) {
+        fs.unlinkSync(join(hostRoot, path))
+        removed.push(path)
+      }
+    }
+  }
+  // Only the places the writers use; never `.nextspark/backups` or `.nextspark/migrate-rollback`.
+  // src/app belongs to the host only when it generates it (prepareContractsOnly leaves it alone).
+  if (app) visit(APP_DIR, TEMPORARY_FILE, true)
+  visit('.nextspark', TEMPORARY_FILE, false)
+  visit(REGISTRIES_DIR, TEMPORARY_FILE, true)
+  visit('.nextspark/contracts', CONTRACTS_TEMPORARY_FILE, true)
+  for (const entry of entries('.nextspark')) {
+    if (!entry.isDirectory() || !STAGING_DIR.test(entry.name)) continue
+    fs.rmSync(join(hostRoot, '.nextspark', entry.name), { recursive: true, force: true })
+    removed.push(`.nextspark/${entry.name}`)
+  }
+  return removed
+}
+
+// ---------------------------------------------------------------------------
 // Publication
 // ---------------------------------------------------------------------------
 

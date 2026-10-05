@@ -58,6 +58,7 @@ import {
   preflight,
   publishGeneration,
   readGeneration,
+  sweepInterruptedWrites,
   validateFiles,
   writeOwnedFile,
 } from './generation.mjs'
@@ -209,6 +210,7 @@ export async function predictHost(config, { devStatus = false } = {}) {
 export async function prepareHost(config, { mode = 'development', devStatus = false, cache, staleAfterMs, reportFailure = false, changed = [] } = {}) {
   const release = acquireLock(config.hostRoot, { staleAfterMs })
   try {
+    sweepInterruptedWrites(config.hostRoot)
     return await generateAndPublish(config, { mode, devStatus, cache })
   } catch (error) {
     // `nextspark dev`: the failure goes to the browser under the same lock, so no other writer's
@@ -283,6 +285,7 @@ export async function prepareContractsOnly(config, { staleAfterMs } = {}) {
   if (!config.contracts) throw new PrepareError([{ code: 'NS_CONTRACTS_UNAVAILABLE', message: 'this project has no contracts step' }])
   const release = acquireLock(config.hostRoot, { staleAfterMs })
   try {
+    sweepInterruptedWrites(config.hostRoot, { app: false })
     const contracts = await planContractsStep(config)
     return publishContractsStep(config, contracts)
   } catch (error) {

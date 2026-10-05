@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `nextspark prepare`, `build` and `dev` recover from a run that was killed (SIGKILL, out of memory, power loss) while writing. The scratch files a
+  killed writer leaves (`.<file>.<pid>.<id>.nextspark-tmp` under `src/app` and `.nextspark`, `<file>.nextspark-tmp` in `.nextspark/contracts`) and the
+  registry build's `.nextspark/staging-*` directory are swept at the start of the next generation, under the lock. Before, a leftover scratch file in
+  `src/app` read as "a file NextSpark did not generate" and every later `prepare`/`build`/`dev` refused to run until it was deleted by hand; the others
+  stayed forever. Only the writers' own places are swept (`src/app` for a full generation, `.nextspark`, `.nextspark/registries`, `.nextspark/contracts`);
+  backups and rollback snapshots are never touched, and a leftover in `packages/contracts` is not swept and does not block.
+
+### Documentation
+
+- Deployment overview: a "Self-hosting on Node" section (`next start`, and `output: 'standalone'` copied without the project), with what was checked.
+
 ## [0.1.0-beta.193] - 2026-10-02
 
 ### Upgrading from 0.1.0-beta.192

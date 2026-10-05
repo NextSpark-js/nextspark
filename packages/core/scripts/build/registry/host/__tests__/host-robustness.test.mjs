@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { hostname, tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -135,6 +135,69 @@ test('crash mid-publish (SIGKILL): --check reports the host as not fresh, and th
     const again = await prepareHost(fresh, { mode: 'production' })
     assert.deepEqual([again.written, again.deleted], [[], []])
   } finally {
+    host.cleanup()
+  }
+})
+
+test('what a killed writer leaves (temporary files, a staging directory) is swept by the next prepare instead of blocking it or piling up', async () => {
+  const host = tempHost({ 'templates/about/page.tsx': PAGE('About') })
+  try {
+    const config = hostConfig(host.root)
+    await prepareHost(config, { mode: 'production' })
+    const leftovers = [
+      'src/app/(public)/.page.tsx.4242.0a1b2c3d.nextspark-tmp',
+      '.nextspark/registries/.example.ts.4242.0a1b2c3d.nextspark-tmp',
+      '.nextspark/contracts/index.ts.nextspark-tmp',
+      '.nextspark/staging-AbC123/registries/example.ts',
+    ]
+    const kept = ['.nextspark/my-notes.txt', '.nextspark/staging-notes/keep.txt']
+    for (const path of [...leftovers, ...kept]) write(host.hostRoot, path, 'x\n')
+
+    // A temporary file in src/app used to read as "a file NextSpark did not generate": prepare refused to run
+    const published = await prepareHost(config, { mode: 'production' })
+    assert.deepEqual(published.written, [])
+    for (const path of leftovers) assert.equal(existsSync(join(host.hostRoot, path)), false, `${path} is swept`)
+    assert.equal(existsSync(join(host.hostRoot, '.nextspark/staging-AbC123')), false)
+    // Only the writers' own names go: anything else is the user's
+    for (const path of kept) assert.equal(existsSync(join(host.hostRoot, path)), true, `${path} stays`)
+    write(host.hostRoot, 'src/app/(public)/page.tsx.nextspark-tmp', 'x\n')
+    await assert.rejects(() => prepareHost(config, { mode: 'production' }), error => error instanceof PrepareError && codes(error).includes(GENERATION_DIAGNOSTICS.FOREIGN))
+    assert.equal(existsSync(join(host.hostRoot, 'src/app/(public)/page.tsx.nextspark-tmp')), true)
+  } finally {
+    host.cleanup()
+  }
+})
+
+test('a scratch registry file a killed writer left is swept and the next prepare completes', async () => {
+  const host = tempHost({ 'templates/about/page.tsx': PAGE('About') })
+  try {
+    const config = hostConfig(host.root, { registries: manyRegistries(20, 'old') })
+    await prepareHost(config, { mode: 'production' })
+    const scratch = '.nextspark/registries/.r00003.ts.4242.0a1b2c3d.nextspark-tmp'
+    write(host.hostRoot, scratch, 'half written')
+    const fresh = hostConfig(host.root, { registries: manyRegistries(20, 'new') })
+    await prepareHost(fresh, { mode: 'production' })
+    assert.equal(existsSync(join(host.hostRoot, scratch)), false)
+    assert.deepEqual(await checkHost(fresh), { ok: true, problems: [] })
+  } finally {
+    host.cleanup()
+  }
+})
+
+test('the sweep never enters backups or migrate-rollback, and an unreadable directory under .nextspark does not crash prepare', async () => {
+  const host = tempHost({ 'templates/about/page.tsx': PAGE('About') })
+  const locked = join(host.hostRoot, '.nextspark/unreadable')
+  try {
+    const config = hostConfig(host.root)
+    await prepareHost(config, { mode: 'production' })
+    const kept = ['.nextspark/backups/20260101/src/app/.page.tsx.1.0a1b2c3d.nextspark-tmp', '.nextspark/backups/20260101/x.nextspark-tmp', '.nextspark/migrate-rollback/y.nextspark-tmp']
+    for (const path of kept) write(host.hostRoot, path, 'x\n')
+    write(host.hostRoot, '.nextspark/unreadable/z.nextspark-tmp', 'x\n')
+    if (process.getuid?.() !== 0) chmodSync(locked, 0)
+    await prepareHost(config, { mode: 'production' })
+    for (const path of kept) assert.equal(existsSync(join(host.hostRoot, path)), true, `${path} stays`)
+  } finally {
+    try { chmodSync(locked, 0o755) } catch {}
     host.cleanup()
   }
 })

@@ -244,6 +244,37 @@ pnpm vercel:deploy --prod
 
 ---
 
+## Self-hosting on Node
+
+A generated project does not need Vercel. Two ways of running it on your own machine or container were checked on `0.1.0-beta.193` (a new `starter` project: `next start` with and without Cache Components, standalone with Cache Components).
+
+**`nextspark build` and `next start`** (the project directory must stay in place):
+
+```bash
+pnpm build        # nextspark build: generates src/app and the registries, then next build
+pnpm start        # next start
+```
+
+**Standalone output** (a directory you copy without the project). Add `output: 'standalone'` to `next.config.mjs`, build, and copy three things:
+
+```bash
+pnpm build
+mkdir -p deploy/.next
+cp -R .next/standalone/. deploy/
+cp -R .next/static deploy/.next/static
+cp -R public deploy/public
+cd deploy && PORT=3000 HOSTNAME=0.0.0.0 node server.js
+```
+
+With the project directory moved out of the way, `/`, `/login`, `/api/health` and the static assets answered from `deploy/` alone.
+
+- Next copies the `.env` (and `.env.production`) it loaded into `.next/standalone`. Keep that file out of an image or archive you share, and give the server its configuration as environment variables.
+- `DATABASE_URL`, `BETTER_AUTH_SECRET` and the rest of the project's variables are read when the server starts; export them where `node server.js` runs (the check above ran with the project's `.env` values exported in the shell and the copied `.env` removed).
+- A production server connects to PostgreSQL over SSL. Against a database without SSL (a local container, for one) `/api/health` answers 503 with `The server does not support SSL connections` until you add `sslmode=disable` to the connection string.
+- Run `pnpm db:migrate` from the project (or any checkout with the same `migrations/`) before starting a new database; the standalone directory does not migrate.
+
+---
+
 ## Troubleshooting
 
 ### Common Issues

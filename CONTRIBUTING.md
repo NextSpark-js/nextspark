@@ -32,9 +32,11 @@ By participating in this project, you agree to maintain a respectful and inclusi
    ```
 3. **Make your changes** following our coding standards
 4. **Write tests** for new functionality
-5. **Run tests** to ensure nothing is broken:
+5. **Run tests** to ensure nothing is broken (build `ui` and `core` first, `pnpm build:core`; the suites that read `core/dist` fail without it):
    ```bash
-   pnpm test
+   pnpm --filter @nextsparkjs/cli test
+   pnpm exec tsx --test packages/core/tests/node/*.test.ts
+   pnpm test:core
    ```
 6. **Commit** with clear messages:
    ```bash
