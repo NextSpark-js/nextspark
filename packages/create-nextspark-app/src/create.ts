@@ -457,7 +457,7 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     // unresolvable in the other, so fail before writing either configuration.
     throw new Error('Could not determine the pnpm version that will install this project; cannot safely configure local-tarball overrides.')
   }
-  if (nestedTarballs.length > 0 && pnpmMajor < 11) {
+  if (pnpmMajor !== null && pnpmMajor < 11) {
     packageJson.pnpm = {
       overrides,
     }

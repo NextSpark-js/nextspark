@@ -1,0 +1,272 @@
+name: Generated projects
+
+# Projects created from this repository's packages as a new user would: pack the packages once, then for each
+# combination create a project from the tarballs, migrate it, build it and serve it. Everything below runs on every push
+# to main (main is what gets packed and published); a pull request runs it only when it can change what a project ships.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'plugins/**'
+      - 'scripts/performance/**'
+      - 'scripts/packages/**'
+      - 'scripts/security/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/actions/**'
+      - '.github/workflows/generated-projects.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A pull request cancels its own older run; every push to main gets its own group, so none is ever dropped
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # The supported matrix (G0 decision 4 and 12): Node 22.14 and 24; pnpm 10 (from 10.16), 11 and 12 for the generated
+  # project. The repository itself stays on its packageManager (pnpm 9).
+  NODE_OLDEST: 22.14.0
+
+jobs:
+  pack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_OLDEST }}
+
+      - name: Pack the packages
+        run: ./scripts/packages/pack.sh --all --output "$RUNNER_TEMP/packages"
+        env:
+          SKIP_MOBILE_VERIFY: '1'
+
+      - name: Upload the tarballs
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: ${{ runner.temp }}/packages
+          retention-days: 1
+
+      - name: Upload create-nextspark-app
+        uses: actions/upload-artifact@v4
+        with:
+          name: create-nextspark-app-dist
+          path: packages/create-nextspark-app/dist
+          retention-days: 1
+
+  # Every project template (starter, blog, crm, productivity) on the oldest and the newest Node. The starter also gets
+  # its per-route client JavaScript checked against scripts/performance/starter-route-js-budget.json (the 0.1.0-beta.193
+  # starter + 5%; signed-out routes free of dashboard code) and the security probes.
+  template-build:
+    name: template-build (${{ matrix.theme }}, node ${{ matrix.node }})
+    needs: pack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { theme: starter, preset: saas, page: /, node: 22.14.0 }
+          - { theme: blog, preset: blog, page: /authors, node: 22.14.0 }
+          - { theme: crm, preset: crm, page: /dashboard, node: 22.14.0 }
+          - { theme: productivity, preset: saas, page: /dashboard, node: 22.14.0 }
+          - { theme: starter, preset: saas, page: /, node: '24' }
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: dbuser
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Create the project
+        uses: ./.github/actions/create-project
+        with:
+          theme: ${{ matrix.theme }}
+          preset: ${{ matrix.preset }}
+
+      - name: Migrate, build and serve the project
+        uses: ./.github/actions/build-project
+        with:
+          pages: ${{ matrix.page }}
+          probes: ${{ matrix.theme == 'starter' }}
+
+      - name: Check per-route client JavaScript against the budget
+        if: matrix.theme == 'starter' && matrix.node == env.NODE_OLDEST
+        run: node scripts/performance/starter-route-js.mjs --app "$PROJECT/app" --json "$PROJECT/route-js.json"
+
+      - name: Upload the measurement
+        if: always() && matrix.theme == 'starter' && matrix.node == env.NODE_OLDEST
+        uses: actions/upload-artifact@v4
+        with:
+          name: starter-route-js
+          path: ${{ runner.temp }}/project/route-js.json
+          if-no-files-found: ignore
+
+  # The package managers a generated project supports. The project's pnpm comes from Corepack, and the step after the
+  # create fails if the pnpm that ran in the project is not the matrix one.
+  pnpm:
+    name: pnpm ${{ matrix.pnpm }} (node ${{ matrix.node }})
+    needs: pack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { pnpm: 10.16.0, node: 22.14.0 }
+          - { pnpm: 11.28.4, node: '24' }
+          - { pnpm: 12.9.1, node: 22.14.0 }
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: dbuser
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Create the project with pnpm ${{ matrix.pnpm }}
+        uses: ./.github/actions/create-project
+        with:
+          theme: starter
+          preset: saas
+          pnpm: ${{ matrix.pnpm }}
+
+      - name: Check the project used pnpm ${{ matrix.pnpm }}
+        working-directory: ${{ runner.temp }}/project/app
+        run: test "$(pnpm --version)" = "${{ matrix.pnpm }}"
+
+      - name: Migrate, build and serve the project
+        uses: ./.github/actions/build-project
+
+  # Legacy ISR is supported and not the default: the same starter with cacheComponents off.
+  legacy-isr:
+    needs: pack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: dbuser
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_OLDEST }}
+
+      - name: Create the project
+        uses: ./.github/actions/create-project
+        with:
+          theme: starter
+          preset: saas
+
+      - name: Migrate, build and serve the project with cacheComponents off
+        uses: ./.github/actions/build-project
+        with:
+          legacy-isr: 'true'
+          probes: 'true'
+
+  # The migrations of every template against the PostgreSQL versions beyond the one the builds use (15).
+  migrate:
+    name: migrate (${{ matrix.theme }}, postgres ${{ matrix.postgres }})
+    needs: pack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        theme: [starter, blog, crm, productivity]
+        postgres: ['16', '17']
+        include:
+          - { theme: starter, preset: saas }
+          - { theme: blog, preset: blog }
+          - { theme: crm, preset: crm }
+          - { theme: productivity, preset: saas }
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: dbuser
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_OLDEST }}
+
+      - name: Create the project
+        uses: ./.github/actions/create-project
+        with:
+          theme: ${{ matrix.theme }}
+          preset: ${{ matrix.preset }}
+
+      - name: Migrate the project
+        uses: ./.github/actions/build-project
+        with:
+          migrate-only: 'true'

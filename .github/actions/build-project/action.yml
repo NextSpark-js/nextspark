@@ -1,0 +1,78 @@
+name: Migrate, build and serve a created project
+description: >-
+  Runs in $RUNNER_TEMP/project/app (see .github/actions/create-project) against a PostgreSQL on localhost:5432
+  with the user dbuser and the database app.
+
+inputs:
+  pages:
+    description: Pages of the template to request after /login, space separated; a signed-out request to a dashboard page may answer 307
+    default: /
+  migrate-only:
+    description: Only run db:migrate (the PostgreSQL version rows), no build or server
+    default: 'false'
+  legacy-isr:
+    description: Turn cacheComponents off in next.config.mjs before the build (legacy ISR)
+    default: 'false'
+  probes:
+    description: Run the security probes against the build and the server
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Point the project at the database
+      shell: bash
+      working-directory: ${{ runner.temp }}/project/app
+      run: |
+        sed -i 's#^DATABASE_URL=.*#DATABASE_URL=postgresql://dbuser:postgres@localhost:5432/app?sslmode=disable#' .env
+        sed -i 's#^NODE_ENV=.*#NODE_ENV="production"#' .env
+
+    - name: Migrate the project
+      shell: bash
+      working-directory: ${{ runner.temp }}/project/app
+      run: pnpm db:migrate
+
+    - name: Turn Cache Components off (legacy ISR)
+      if: inputs.legacy-isr == 'true' && inputs.migrate-only != 'true'
+      shell: bash
+      working-directory: ${{ runner.temp }}/project/app
+      run: |
+        sed -i 's#cacheComponents: true#cacheComponents: false#' next.config.mjs
+        grep -q 'cacheComponents: false' next.config.mjs
+
+    - name: Build the project
+      if: inputs.migrate-only != 'true'
+      shell: bash
+      working-directory: ${{ runner.temp }}/project/app
+      run: pnpm build
+      env:
+        NEXTSPARK_AUTH_RUNTIME_ONLY: email,google
+
+    - name: Serve the project and request a page of the template
+      if: inputs.migrate-only != 'true'
+      shell: bash
+      working-directory: ${{ runner.temp }}/project/app
+      run: |
+        PORT=3100 pnpm start > "$PROJECT/start.log" 2>&1 &
+        for _ in $(seq 1 60); do curl -fs --max-time 5 -o /dev/null localhost:3100/login && break; sleep 2; done
+        for page in /login ${{ inputs.pages }}; do
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "localhost:3100$page")
+          echo "GET $page -> $code"
+          # /login must render; a signed-out request to a dashboard page answers 307 to /login
+          if [ "$page" = /login ]; then ok=200; else ok='200|307'; fi
+          case "$code" in 200) ;; 307) [ "$ok" != 200 ] || { cat "$PROJECT/start.log"; exit 1; } ;; *) cat "$PROJECT/start.log"; exit 1 ;; esac
+        done
+
+    # The build must carry none of config/dev.config.ts, and the running server must refuse /superadmin and /devtools
+    # to a visitor without the role. Both read the project the steps above built.
+    - name: Security probes
+      if: inputs.probes == 'true' && inputs.migrate-only != 'true'
+      shell: bash
+      run: |
+        node scripts/security/verify-no-dev-credentials.mjs "$PROJECT/app"
+        node scripts/security/verify-protected-areas.mjs --base-url http://localhost:3100 --json "$PROJECT/protected-areas.json"
+
+    - name: Print the server log
+      if: failure() && inputs.migrate-only != 'true'
+      shell: bash
+      run: cat "$PROJECT/start.log" || true

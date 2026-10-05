@@ -3,14 +3,6 @@ name: Project template migrations
 on:
   push:
     branches: [main]
-    paths:
-      - 'packages/core/migrations/**'
-      - 'packages/core/scripts/db/**'
-      - 'packages/core/templates/projects/**/migrations/**'
-      - 'apps/dev/migrations/**'
-      - 'apps/dev/**/migrations/**'
-      - 'apps/dev/plugins/**/migrations/**'
-      - '.github/workflows/theme-migrations.yml'
   pull_request:
     paths:
       - 'packages/core/migrations/**'
@@ -19,21 +11,34 @@ on:
       - 'apps/dev/migrations/**'
       - 'apps/dev/**/migrations/**'
       - 'apps/dev/plugins/**/migrations/**'
+      - '.github/actions/**'
       - '.github/workflows/theme-migrations.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  # A pull request cancels its own older run; every push to main gets its own group, so none is ever dropped
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    name: verify (${{ matrix.theme }}, postgres ${{ matrix.postgres }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         # Install-once templates are extracted into clean root-first projects;
         # default verifies the repository's root-first apps/dev project.
         theme: [blog, crm, default, productivity, starter]
+        # 15 is the supported version; 16 and 17 are checked so a migration that only breaks on a newer server shows up
+        postgres: ['15', '16', '17']
     services:
       postgres:
-        image: postgres:15
+        image: postgres:${{ matrix.postgres }}
         env:
           POSTGRES_USER: dbuser
           POSTGRES_PASSWORD: postgres
@@ -50,20 +55,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up pnpm
-        # The version comes from package.json's packageManager; also giving one here fails the step
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.14.0
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        env:
-          CYPRESS_INSTALL_BINARY: 0
+      - name: Set up the repository
+        uses: ./.github/actions/setup
 
       - name: Verify ${{ matrix.theme }} project migrations against a fresh database
         run: pnpm db:verify-theme ${{ matrix.theme }}

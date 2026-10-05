@@ -17,7 +17,7 @@ export async function execAsync(
       ...options,
       maxBuffer: 1024 * 1024 * 10, // 10MB buffer
     })
-    return { stdout, stderr }
+    return { stdout: String(stdout), stderr: String(stderr) }
   } catch (error) {
     if (error instanceof Error && 'stderr' in error) {
       throw new Error(`Command failed: ${command}\n${(error as any).stderr}`)

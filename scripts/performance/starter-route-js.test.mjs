@@ -91,8 +91,8 @@ test('the tracked budget is valid and covers public, auth and dashboard routes',
   for (const url of ['/', '/support', '/login', '/signup', '/dashboard', '/dashboard/tasks']) assert.ok(BUDGET.routes[url], url)
   for (const [url, rule] of routes) {
     assert.equal(rule.public, !url.startsWith('/dashboard'), url)
-    // The ceiling is the 0.1.0-beta.191 reference plus a small tolerance, never more than 2%
-    assert.ok(rule.maxGzipBytes >= rule.reference191GzipBytes && rule.maxGzipBytes <= Math.ceil(rule.reference191GzipBytes * 1.02), url)
+    // The ceiling is the 0.1.0-beta.193 reference plus 5% (G0 decision 10)
+    assert.ok(rule.maxGzipBytes >= rule.reference193GzipBytes && rule.maxGzipBytes <= Math.ceil(rule.reference193GzipBytes * 1.05), url)
   }
   assert.deepEqual(validateBudget({ kind: 'x', schemaVersion: 1, dashboardOnlyMarkers: ['ab'], routes: { support: { maxGzipBytes: 0 } } }), [
     'kind must be "starter-route-js-budget" and schemaVersion 1',

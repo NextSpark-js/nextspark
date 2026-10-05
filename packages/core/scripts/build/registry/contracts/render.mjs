@@ -201,7 +201,7 @@ export function renderEntity(contract, { source, shape } = {}) {
   const lines = [CONTRACTS_HEADER]
   if (source) lines.push(`// Source: ${source}`)
   for (const warning of contract.warnings) lines.push(`// Warning: ${warning}`)
-  lines.push('', "import { z } from 'zod'", "import type { EntityConfig } from '../schema/types'", "import { generateEntitySchemas } from '../schema/schema-generator'", `import { ${usedFromShape.join(', ')} } from '../schema/response-shape'`)
+  lines.push('', "import * as z from 'zod'", "import type { EntityConfig } from '../schema/types'", "import { generateEntitySchemas } from '../schema/schema-generator'", `import { ${usedFromShape.join(', ')} } from '../schema/response-shape'`)
   if (shared.length > 0) lines.push(`import { ${shared.join(', ')} } from '../fields'`)
   lines.push('', `export const ${names.apiPath} = ${quote(`/api/v1/${contract.slug}`)}`, '')
 
@@ -246,7 +246,7 @@ export function renderEntity(contract, { source, shape } = {}) {
 export function renderEnvelope() {
   return `${CONTRACTS_HEADER}
 
-import { z } from 'zod'
+import * as z from 'zod'
 
 /** \`info\` of every response: the timestamp, plus whatever the endpoint adds (pagination, \`created\`). */
 export const apiInfoSchema = z.looseObject({ timestamp: z.string() })
@@ -307,7 +307,7 @@ export const apiErrorResponseSchema = z.object({
 export function renderFields() {
   return `${CONTRACTS_HEADER}
 
-import { z } from 'zod'
+import * as z from 'zod'
 import { addressSchema, fileObjectSchema } from './schema/schema-generator'
 import { mediaRefSchema } from './schema/media-ref'
 

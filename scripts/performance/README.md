@@ -28,10 +28,32 @@ production build loads before any interaction (the root main files plus the chun
 from `.next/build-manifest.json` and the route's client reference manifest; gzip, as `next start` serves it) and checks it
 against `starter-route-js-budget.json`. No server, browser or session is needed, so dashboard routes are covered too.
 
-The budget is the 0.1.0-beta.191 starter-equivalent project (`create-nextspark-app --preset saas --theme default`, the
-published packages) measured by the same script, plus 2%. Signed-out routes (`public: true`) also fail when a chunk carries a
+The budget is the published 0.1.0-beta.193 starter plus 5% per route (G0 decision 10), rounded up; `reference193GzipBytes`
+is the measured value it comes from. Signed-out routes (`public: true`) also fail when a chunk carries a
 `dashboardOnlyMarkers` string (the superadmin and devtools sidebars, the dashboard settings helpers, the team switcher).
-The `template-build` job of the `Route JavaScript budget verifier` workflow packs this repository and, for each project
-template (starter, blog, crm, productivity), creates a project from the tarballs, migrates and builds it against a service
-PostgreSQL and serves it; for the starter (`--preset saas --theme starter`) it also runs the check. `starter-route-js.test.mjs`
+The `template-build` job of the `Generated projects` workflow packs this repository once and, for each project template
+(starter, blog, crm, productivity), creates a project from the tarballs, migrates and builds it against a service
+PostgreSQL and serves it; for the starter (`--preset saas --theme starter`) it also runs this check and the security
+probes. This repository's own `route-js-budget.yml` only runs the verifiers' tests.
+
+### Re-basing the budget
+
+Measure a published release, not a build of `main`, so the reference does not move with the code it guards:
+
+```bash
+mkdir /tmp/ref && cd /tmp/ref
+pnpm dlx create-nextspark-app@<version> app --preset saas --theme starter --type web --name app --slug app -y < /dev/null
+cd app   # point DATABASE_URL in .env at a scratch PostgreSQL and set NODE_ENV="production"
+pnpm db:migrate
+NEXTSPARK_AUTH_RUNTIME_ONLY=email,google pnpm build      # Cache Components on, Turbopack, Next 16.3.5
+node <repo>/scripts/performance/starter-route-js.mjs --app . --json measured.json
+```
+
+Then set each route's `reference<version>GzipBytes` to `gzipBytes` from `measured.json` and `maxGzipBytes` to
+`ceil(reference * 1.05)`; `starter-route-js.test.mjs` fails if a ceiling is not between the reference and +5%. The numbers
+are the gzip bytes of what the route's HTML loads, which is not the browser-measured "transferred kB" of the LCP
+reference environment: the two are never compared. The 0.1.0-beta.193 values were measured on 2026-10-05 (Node 24.21, macOS
+arm64); the build is deterministic, a rebuild of `main` the same day differed by 0.1 kB on one route.
+
+`starter-route-js.test.mjs`
 covers the verifier itself.

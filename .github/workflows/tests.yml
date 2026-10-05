@@ -10,30 +10,27 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A pull request cancels its own older run; every push to main gets its own group, so none is ever dropped
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: test (node ${{ matrix.node }})
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22.14.0, '24']
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up the repository
+        uses: ./.github/actions/setup
         with:
-          node-version: 22.14.0
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        env:
-          CYPRESS_INSTALL_BINARY: '0'
+          node-version: ${{ matrix.node }}
 
       # CLI and registry tests import @nextsparkjs/core's JavaScript output.
       - name: Build packages used by the fast suites

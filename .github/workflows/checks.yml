@@ -1,0 +1,140 @@
+name: Checks
+
+# What used to run only on a developer's machine: the core Jest suite, lint, the type-check of every package and of
+# apps/dev, the generated-host conformance suite and the create-nextspark-app tests (release-age matrix included).
+# The fast Node suites are in tests.yml; the projects built from the packages are in generated-projects.yml.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'plugins/**'
+      - 'scripts/**'
+      - 'eslint.config.mjs'
+      - 'tsconfig*.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/actions/**'
+      - '.github/workflows/checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A pull request cancels its own older run; every push to main gets its own group, so none is ever dropped
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  jest-core:
+    name: jest-core (node ${{ matrix.node }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22.14.0, '24']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Test core (Jest)
+        run: pnpm --filter @nextsparkjs/core test
+        env:
+          npm_config_registry: http://127.0.0.1:9
+
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+
+      - name: Lint
+        run: pnpm lint
+
+  # Core's declarations and apps/dev need the bootstrap: ui and core built, the CLI built, and `nextspark prepare`
+  # (build:registries) generating apps/dev's src/app and registries, which its tsconfig includes.
+  typecheck:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+
+      - name: Build ui, core and the CLI
+        run: |
+          pnpm --filter @nextsparkjs/ui build
+          pnpm --filter @nextsparkjs/core build
+          pnpm build:cli
+
+      - name: Generate apps/dev's host and registries
+        run: pnpm build:registries
+
+      - name: Type-check the packages
+        run: |
+          for package in cli contracts create-nextspark-app testing ui; do
+            echo "::group::tsc packages/$package"
+            pnpm exec tsc --noEmit -p "packages/$package"
+            echo '::endgroup::'
+          done
+          echo '::group::tsc packages/core'
+          pnpm exec tsc --noEmit -p packages/core/tsconfig.dts.json
+          pnpm exec tsc --noEmit -p packages/core/tsconfig.dts.routes.json
+          echo '::endgroup::'
+          pnpm --filter @nextsparkjs/mobile typecheck
+
+      - name: Type-check apps/dev
+        run: pnpm exec tsc --noEmit -p apps/dev
+
+  # Builds the manual and the generated host of the fixture with webpack and Turbopack, legacy ISR and Cache Components,
+  # and compares them. Writes its report to the job summary.
+  conformance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+
+      - name: Host conformance
+        run: node scripts/performance/host-conformance.mjs --report "$RUNNER_TEMP/host-conformance.md"
+
+      - name: Report
+        if: always()
+        run: cat "$RUNNER_TEMP/host-conformance.md" >> "$GITHUB_STEP_SUMMARY" || true
+
+  # Needs network: it installs pnpm 10.16 to 12 through Corepack and queries registry.npmjs.org for the dependency
+  # engines (the fast suite in tests.yml runs the CLI and core tests offline instead).
+  create-nextspark-app:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+
+      - name: Test create-nextspark-app
+        run: pnpm --filter create-nextspark-app test
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'

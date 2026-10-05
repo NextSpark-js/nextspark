@@ -1,7 +1,7 @@
 {
   "kind": "starter-route-js-budget",
   "schemaVersion": 1,
-  "description": "Per-route client JavaScript (gzip) of the starter project (create-nextspark-app --preset saas --theme starter, Cache Components on) built from this repo. maxGzipBytes is the 0.1.0-beta.191 project (published packages, --theme default, same flags) measured by starter-route-js.mjs, plus 2%. Signed-out routes (public: true) must not carry any dashboardOnlyMarkers.",
+  "description": "Per-route client JavaScript (gzip) of the starter project (create-nextspark-app --preset saas --theme starter, Cache Components on) built from this repo. maxGzipBytes is the published 0.1.0-beta.193 project (same flags, built with Next 16.3.5 + Turbopack, measured by starter-route-js.mjs) plus 5%, rounded up. Signed-out routes (public: true) must not carry any dashboardOnlyMarkers. How it was measured: scripts/performance/README.md.",
   "dashboardOnlyMarkers": [
     "superadmin-sidebar",
     "devtools-sidebar",
@@ -11,54 +11,54 @@
   ],
   "routes": {
     "/": {
-      "maxGzipBytes": 283288,
+      "maxGzipBytes": 230742,
       "public": true,
-      "reference191GzipBytes": 277733
+      "reference193GzipBytes": 219754
     },
     "/support": {
-      "maxGzipBytes": 235739,
+      "maxGzipBytes": 194278,
       "public": true,
-      "reference191GzipBytes": 231116
+      "reference193GzipBytes": 185026
     },
     "/docs": {
-      "maxGzipBytes": 291739,
+      "maxGzipBytes": 241945,
       "public": true,
-      "reference191GzipBytes": 286018
+      "reference193GzipBytes": 230423
     },
     "/blog": {
-      "maxGzipBytes": 311762,
+      "maxGzipBytes": 271990,
       "public": true,
-      "reference191GzipBytes": 305649
+      "reference193GzipBytes": 259038
     },
     "/login": {
-      "maxGzipBytes": 332825,
+      "maxGzipBytes": 300389,
       "public": true,
-      "reference191GzipBytes": 326299
+      "reference193GzipBytes": 286084
     },
     "/signup": {
-      "maxGzipBytes": 308702,
+      "maxGzipBytes": 299598,
       "public": true,
-      "reference191GzipBytes": 302649
+      "reference193GzipBytes": 285331
     },
     "/dashboard": {
-      "maxGzipBytes": 349985,
+      "maxGzipBytes": 353539,
       "public": false,
-      "reference191GzipBytes": 343122
+      "reference193GzipBytes": 336703
     },
     "/dashboard/analytics": {
-      "maxGzipBytes": 275174,
+      "maxGzipBytes": 278110,
       "public": false,
-      "reference191GzipBytes": 269778
+      "reference193GzipBytes": 264866
     },
     "/dashboard/tasks": {
-      "maxGzipBytes": 456430,
+      "maxGzipBytes": 460827,
       "public": false,
-      "reference191GzipBytes": 447480
+      "reference193GzipBytes": 438882
     },
     "/dashboard/settings/profile": {
-      "maxGzipBytes": 402964,
+      "maxGzipBytes": 408415,
       "public": false,
-      "reference191GzipBytes": 395062
+      "reference193GzipBytes": 388966
     }
   }
 }

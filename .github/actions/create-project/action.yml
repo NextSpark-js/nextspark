@@ -1,0 +1,57 @@
+name: Create a project from the packed packages
+description: >-
+  Creates a project as a new user would, from the tarballs the pack job uploaded, in $RUNNER_TEMP/project/app.
+  Needs the repository set up (.github/actions/setup) first; sets PROJECT for the steps after it.
+
+inputs:
+  theme:
+    description: Project template (starter, blog, crm, productivity)
+    required: true
+  preset:
+    description: create-nextspark-app preset
+    required: true
+  pnpm:
+    description: >-
+      Exact pnpm version the generated project installs and builds with, through Corepack. Empty keeps the pnpm the
+      repository uses. The repository itself stays on its packageManager either way.
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Download the packed packages
+      uses: actions/download-artifact@v4
+      with:
+        name: packages
+        path: ${{ runner.temp }}/project/.packages
+
+    - name: Download the built create-nextspark-app
+      uses: actions/download-artifact@v4
+      with:
+        name: create-nextspark-app-dist
+        path: packages/create-nextspark-app/dist
+
+    - name: Locate the project
+      shell: bash
+      run: echo "PROJECT=$RUNNER_TEMP/project" >> "$GITHUB_ENV"
+
+    # create-nextspark-app asks the `pnpm` found from the project's directory, which Corepack resolves from the
+    # packageManager of the nearest package.json above it: the one written here, not the repository's.
+    - name: Use pnpm ${{ inputs.pnpm }} for the project
+      if: inputs.pnpm != ''
+      shell: bash
+      run: |
+        echo '{"packageManager":"pnpm@${{ inputs.pnpm }}"}' > "$RUNNER_TEMP/project/package.json"
+        mkdir -p "$RUNNER_TEMP/pnpm-bin"
+        corepack enable --install-directory "$RUNNER_TEMP/pnpm-bin" pnpm
+        echo "$RUNNER_TEMP/pnpm-bin" >> "$GITHUB_PATH"
+        echo 'COREPACK_ENABLE_DOWNLOAD_PROMPT=0' >> "$GITHUB_ENV"
+        cd "$RUNNER_TEMP/project"
+        PATH="$RUNNER_TEMP/pnpm-bin:$PATH" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm --version
+
+    - name: Create the ${{ inputs.theme }} project from the tarballs
+      shell: bash
+      working-directory: ${{ runner.temp }}/project
+      run: node "$GITHUB_WORKSPACE/packages/create-nextspark-app/dist/index.js" app --preset ${{ inputs.preset }} --theme ${{ inputs.theme }} --type web --name app --slug app --description "Template build" -y < /dev/null
+      env:
+        CYPRESS_INSTALL_BINARY: '0'
