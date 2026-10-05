@@ -30,17 +30,17 @@ export async function promptThemeSelection(): Promise<ThemeChoice> {
       },
       { name: 'Starter', value: 'starter', description: 'Minimal bundled project template' },
       {
-        name: 'Blog',
+        name: 'Blog (experimental)',
         value: 'blog',
         description: 'Content management and publishing platform',
       },
       {
-        name: 'CRM',
+        name: 'CRM (experimental)',
         value: 'crm',
         description: 'Customer relationship management',
       },
       {
-        name: 'Productivity',
+        name: 'Productivity (experimental)',
         value: 'productivity',
         description: 'Tasks, projects, and calendar management',
       },

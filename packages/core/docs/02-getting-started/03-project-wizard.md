@@ -1,5 +1,7 @@
 # NextSpark Project Wizard
 
+> **Experimental:** The blog, crm and productivity templates (starter is stable) — not part of the stable 1.0 surface and may change without a deprecation period.
+
 The NextSpark CLI wizard helps you create a new project with a customized starter theme. It provides an interactive experience to configure your project's settings.
 
 ## Running the Wizard

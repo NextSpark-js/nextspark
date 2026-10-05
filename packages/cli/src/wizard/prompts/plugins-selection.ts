@@ -48,20 +48,20 @@ export async function promptPluginsSelection(
     message: 'Select plugins to install (Enter to skip, Space to select):',
     choices: [
       {
-        name: 'AI',
+        name: 'AI (experimental)',
         value: 'ai',
         description: 'AI SDK with OpenAI, Anthropic, Ollama support',
         checked: false,
       },
       {
-        name: 'LangChain',
+        name: 'LangChain (experimental)',
         value: 'langchain',
         description: 'AI agents, chains, and advanced AI features',
         checked: requiredPlugins.includes('langchain'),
         disabled: requiredPlugins.includes('langchain') ? '(required by theme)' : false,
       },
       {
-        name: 'Social Media Publisher',
+        name: 'Social Media Publisher (experimental)',
         value: 'social-media-publisher',
         description: 'Multi-platform social media publishing',
         checked: false,

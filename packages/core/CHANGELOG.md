@@ -15,6 +15,15 @@ manage its own transactions (see the last Fixed item). Files that already ran ar
 have no such statements. A `DO` block or `CALL` that commits inside its body now fails inside that transaction (nothing stays) and needs the same
 marker. History tables are unchanged.
 
+### Changed
+
+- **Supported versions for 1.0 (G0): Next `~16.3.5` and React `^19.2`.** `nextspark init` now adds `next@~16.3.5` (was `^16.3.5`) and
+  `react`/`react-dom` `^19.2.0`; core's `react` and `react-dom` peers are `^19.2.0`. The plugins and the blog, crm and productivity
+  templates take `next` `~16.3.5` as a peer (they accepted `^15.0.0 || ^16.0.0`). Next 15 and React 18 are no longer supported.
+  Core, ui and testing declare `engines.node` `>=22.14.0`.
+- The CLI marks billing, the first-party plugins, the blog/crm/productivity templates and the `add:plugin`, `add:mobile`, `setup:ai` and
+  `sync:ai` helpers as experimental (the docs also mark the MCP server). `add:theme` stays unsupported and now points to `create-nextspark-app --theme`.
+
 ### Fixed
 
 - **`nextspark migrate` from `0.1.0-beta.183`** (the oldest release it is supported from; guide: `docs/17-updates/06-upgrade-0x-projects.md`).

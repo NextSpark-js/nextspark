@@ -54,7 +54,7 @@ my-project/
 │
 ├── src/
 │   ├── app/                     # GENERATED Next.js adapter; never edit
-│   └── proxy.ts                 # GENERATED Next.js 16 request entry (middleware.ts on Next.js 15)
+│   └── proxy.ts                 # GENERATED Next.js 16 request entry
 └── .nextspark/
     └── registries/              # GENERATED registries and manifests; never edit
 ```

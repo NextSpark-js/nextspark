@@ -1,5 +1,7 @@
 # 📊 Amplitude Analytics Plugin
 
+> **Experimental:** The Amplitude plugin is not part of the stable 1.0 surface and may change without a deprecation period.
+
 > **Enterprise-grade user analytics and behavioral tracking plugin for NextSpark applications**
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](./package.json)

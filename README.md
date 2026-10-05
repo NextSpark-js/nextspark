@@ -32,18 +32,20 @@
 
 ## What is NextSpark?
 
-NextSpark is a complete, production-ready SaaS framework built on Next.js 16, with support for Next.js 15. It provides everything you need to launch a SaaS product: authentication, payments, teams, permissions, entities, project templates, and more—all pre-configured and ready to customize.
+NextSpark is a complete, production-ready SaaS framework built on Next.js 16. It provides everything you need to launch a SaaS product: authentication, payments, teams, permissions, entities, project templates, and more—all pre-configured and ready to customize.
+
+> **Stability:** the starter template, the generated host, the web app and mobile (current scope) are stable. Billing (Stripe, Polar), MCP, the five first-party plugins, the blog/crm/productivity templates, Vercel and standalone deployment, and the `add:theme`, `add:plugin`, `add:mobile`, `setup:ai` and `sync:ai` helpers are **experimental**: they carry no deprecation promise.
 
 ## Features
 
 - **Authentication** — Email/password, Google OAuth, magic links with [Better Auth](https://better-auth.com)
-- **Payments** — Stripe integration with subscriptions, usage billing, and customer portal
+- **Payments** *(experimental)* — Stripe and Polar integration with subscriptions, usage billing, and customer portal
 - **Teams** — Multi-tenant team management with roles and invitations
 - **Permissions** — Granular role-based access control system
 - **Entities** — Dynamic CRUD with automatic API generation and validation
-- **MCP Server** — Every API-exposed entity gets LLM tool-calling (Claude, etc.) for free via the Model Context Protocol
-- **Project templates** — Start from starter, blog, CRM or productivity; after creation the source is yours
-- **Plugins** — Extensible plugin architecture for adding features
+- **MCP Server** *(experimental)* — Every API-exposed entity gets LLM tool-calling (Claude, etc.) for free via the Model Context Protocol
+- **Project templates** — Start from starter (stable), or blog, CRM or productivity *(experimental)*; after creation the source is yours
+- **Plugins** — `definePlugin` is stable; the five first-party plugins (ai, amplitude, langchain, social-media-publisher, walkme) are *(experimental)*
 - **i18n** — Full internationalization with [next-intl](https://next-intl-docs.vercel.app/)
 - **UI Components** — 50+ components based on [shadcn/ui](https://ui.shadcn.com/)
 - **Database** — PostgreSQL with migrations and type-safe queries
@@ -107,7 +109,7 @@ Visit [nextspark.dev/docs](https://nextspark.dev/docs) for the full documentatio
 
 - Node.js 22.14.0 or later
 - PostgreSQL database
-- pnpm 9, 10, or 11
+- pnpm 10 (10.16 or later), 11 or 12. pnpm 9 is only for contributing to this repository; npm, yarn and bun are not supported
 
 ## Tech Stack
 
@@ -115,7 +117,7 @@ NextSpark is built with modern technologies:
 
 | Category | Technology |
 |----------|------------|
-| Framework | [Next.js 16](https://nextjs.org/) with App Router and Turbopack by default (Next.js 15 supported) |
+| Framework | [Next.js 16](https://nextjs.org/) with App Router and Turbopack by default |
 | Language | [TypeScript](https://www.typescriptlang.org/) |
 | Styling | [Tailwind CSS v4](https://tailwindcss.com/) |
 | Components | [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/) |

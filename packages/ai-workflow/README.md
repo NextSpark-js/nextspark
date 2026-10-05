@@ -1,5 +1,7 @@
 # @nextsparkjs/ai-workflow
 
+> **Experimental:** @nextsparkjs/ai-workflow and the setup:ai / sync:ai commands — not part of the stable 1.0 surface and may change without a deprecation period.
+
 AI workflow templates for NextSpark applications. Provides agents, commands, skills, and configuration for AI-assisted development with multiple editor support.
 
 ## Supported Editors

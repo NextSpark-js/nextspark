@@ -60,6 +60,8 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ## Development Setup
 
+Contributing to this repository uses **pnpm 9** (the `packageManager` field pins `pnpm@9.0.0`). Projects created with NextSpark support pnpm 10 (>=10.16), 11 and 12; npm, yarn and bun are not supported.
+
 ```bash
 # Clone your fork
 git clone https://github.com/YOUR_USERNAME/nextspark.git

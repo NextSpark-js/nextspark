@@ -1,12 +1,12 @@
 # @nextsparkjs/testing
 
+> **Experimental:** @nextsparkjs/testing is not part of the stable 1.0 surface and may change without a deprecation period.
+
 Testing utilities for NextSpark applications. Provides selectors, Page Object Models, and Cypress helpers.
 
 ## Installation
 
 ```bash
-npm install @nextsparkjs/testing
-# or
 pnpm add @nextsparkjs/testing
 ```
 

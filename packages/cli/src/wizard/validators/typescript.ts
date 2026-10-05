@@ -118,7 +118,7 @@ export async function validateTypeScript(
       if (error.message.includes('ENOENT') || error.message.includes('not found')) {
         warnings.push({
           type: 'typescript',
-          message: 'TypeScript compiler not found. Run "npm install" first.',
+          message: 'TypeScript compiler not found. Run "pnpm install" first.',
         })
       } else {
         errors.push({

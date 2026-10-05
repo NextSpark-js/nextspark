@@ -1,5 +1,7 @@
 # Claude Workflow Introduction (v4.0)
 
+> **Experimental:** The AI workflow (setup:ai / sync:ai and @nextsparkjs/ai-workflow) is not part of the stable 1.0 surface and may change without a deprecation period.
+
 > **Version 4.0** - 19-phase workflow with 9 quality gates.
 
 ## Introduction

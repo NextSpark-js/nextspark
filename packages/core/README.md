@@ -5,8 +5,6 @@ The complete SaaS framework for Next.js. Build production-ready SaaS application
 ## Installation
 
 ```bash
-npm install @nextsparkjs/core
-# or
 pnpm add @nextsparkjs/core
 ```
 

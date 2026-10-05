@@ -1,5 +1,7 @@
 # Template System
 
+> **Experimental:** The blog, crm and productivity templates (starter is stable) — not part of the stable 1.0 surface and may change without a deprecation period.
+
 > **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (add `--watch` to watch).
 
 NextSpark has two different template layers:

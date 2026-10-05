@@ -1,5 +1,7 @@
 # MCP Server
 
+> **Experimental:** The MCP server is not part of the stable 1.0 surface and may change without a deprecation period.
+
 **Model Context Protocol • Registry-driven tools • LLM tool-calling • Theme extension point**
 
 ---

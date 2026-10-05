@@ -33,11 +33,11 @@ The templates correctly use `@nextsparkjs/mobile` imports, while `apps/mobile` u
 ## Installation
 
 ```bash
-# Add mobile app to your NextSpark project
+# Add mobile app to your NextSpark project (the add:mobile helper is experimental)
 npx nextspark add:mobile
 
 # Or install manually
-npm install @nextsparkjs/mobile
+pnpm add @nextsparkjs/mobile
 ```
 
 ## Quick Start

@@ -5,6 +5,8 @@ description: Multi-provider payment integration for subscription payments
 
 # Payment Provider Integration
 
+> **Experimental:** Billing (Stripe and Polar) is not part of the stable 1.0 surface and may change without a deprecation period.
+
 The billing system supports multiple payment providers through a **Gateway Factory** pattern. Providers are abstracted behind a unified `BillingGateway` interface, so consumer code never imports from a specific provider.
 
 ## Architecture

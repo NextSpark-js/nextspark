@@ -1,5 +1,7 @@
 # LangChain Plugin Documentation
 
+> **Experimental:** The LangChain plugin is not part of the stable 1.0 surface and may change without a deprecation period.
+
 Complete documentation for the LangChain Plugin - a comprehensive AI agent infrastructure for Next.js applications.
 
 ---

@@ -1,5 +1,7 @@
 # AI Plugin
 
+> **Experimental:** The AI plugin is not part of the stable 1.0 surface and may change without a deprecation period.
+
 Plugin empresarial de IA con soporte multi-modelo, generación de contenido, y características de seguridad. Diseñado para integrarse dinámicamente con el sistema de entidades y plugins.
 
 ## Características

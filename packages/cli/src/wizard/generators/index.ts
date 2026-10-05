@@ -310,9 +310,9 @@ export async function updatePackageJson(
     // create.ts for the full rationale. better-auth is deliberately tilde-ranged
     // (not caret): 1.7.0 introduces a breaking Account table schema change
     // (accountId -> providerAccountId) this app's migrations don't account for.
-    'next': '^16.3.5',
-    'react': '^19.0.0',
-    'react-dom': '^19.0.0',
+    'next': '~16.3.5',
+    'react': '^19.2.0',
+    'react-dom': '^19.2.0',
     // Auth
     'better-auth': '~1.6.30',
     // The exact version better-auth pins, which @better-auth/core requires as a peer

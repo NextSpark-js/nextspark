@@ -1,5 +1,7 @@
 # @nextsparkjs/plugin-walkme
 
+> **Experimental:** The WalkMe plugin is not part of the stable 1.0 surface and may change without a deprecation period.
+
 Guided tours and onboarding system for NextSpark applications. Supports declarative tour definitions, multiple step types (tooltip, modal, spotlight, beacon), cross-page navigation, conditional triggers, localStorage persistence, full keyboard accessibility, and i18n.
 
 ## Installation

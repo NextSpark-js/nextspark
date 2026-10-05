@@ -14,9 +14,11 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.
 
 const read = (file: string) => fs.readFileSync(path.join(REPO, file), 'utf8')
 
-/** Majors a range admits, for the forms these manifests use: `^X.Y.Z` and `>=X.Y.Z`, joined by `||`. */
+/** Majors a range admits, for the forms these manifests use: `~X.Y.Z`, `^X.Y.Z` and `>=X.Y.Z`, joined by `||`. */
 function admits(range: string, major: number): boolean {
   return range.split('||').some((alternative) => {
+    const tilde = alternative.trim().match(/^~(\d+)\.\d+\.\d+$/)
+    if (tilde) return Number(tilde[1]) === major
     const caret = alternative.trim().match(/^\^(\d+)\.\d+\.\d+$/)
     if (caret) return Number(caret[1]) === major
     const floor = alternative.trim().match(/^>=(\d+)\.\d+\.\d+$/)
@@ -69,8 +71,7 @@ test("every project template and published plugin admits the project's Next as a
   assert.deepEqual(rejecting, [])
 })
 
-test('the theme and plugin scaffolding skills declare a next range that admits both majors', () => {
-  const majors = requiredMajors()
+test('the theme and plugin scaffolding skills declare next ~16.3.5', () => {
   const skills = [
     '.claude/skills/create-theme/SKILL.md',
     '.claude/skills/create-plugin/SKILL.md',
@@ -80,12 +81,24 @@ test('the theme and plugin scaffolding skills declare a next range that admits b
   ]
 
   const rejecting = skills.flatMap((file) => {
-    const ranges = [...read(file).matchAll(/"next":\s*"([\^>][^"]*)"/g)].map((match) => match[1])
+    const ranges = [...read(file).matchAll(/"next":\s*"([^"]*)"/g)].map((match) => match[1])
     assert.ok(ranges.length > 0, `${file} declares a next range`)
-    return ranges.flatMap((range) =>
-      majors.filter((major) => !admits(range, major)).map((major) => `${file}: next "${range}" rejects ${major}`),
-    )
+    return ranges.filter((range) => range !== "~16.3.5").map((range) => `${file}: next "${range}"`)
   })
 
   assert.deepEqual(rejecting, [])
+})
+
+test('no template, plugin or core peer admits Next 15 or React 18 (G0: ~16.3.5 and ^19.2 only)', () => {
+  const corePeers = JSON.parse(read('packages/core/package.json')).peerDependencies as Record<string, string>
+  assert.equal(corePeers.react, '^19.2.0')
+  assert.equal(corePeers['react-dom'], '^19.2.0')
+
+  const offending = manifests().flatMap((file) => {
+    const peers = JSON.parse(read(file)).peerDependencies ?? {}
+    return Object.entries({ next: corePeers.next, react: '^19.2.0', 'react-dom': '^19.2.0' })
+      .filter(([name, expected]) => peers[name] !== undefined && peers[name] !== expected)
+      .map(([name, expected]) => `${file}: ${name} "${peers[name]}" should be "${expected}"`)
+  })
+  assert.deepEqual(offending, [])
 })

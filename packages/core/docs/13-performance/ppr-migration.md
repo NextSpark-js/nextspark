@@ -6,7 +6,7 @@
 
 Next.js 16 introduces **Partial Prerendering (PPR)** with `cacheComponents: true`. This enables a fully static shell that renders instantly from CDN, with dynamic content streamed via Suspense boundaries.
 
-Cache Components + PPR is the **default for new projects**: the scaffold's `next.config.mjs` sets `cacheComponents: true`. Legacy ISR stays supported with `cacheComponents` off. Projects created earlier (and Next.js 15 projects) keep working unchanged; the steps below turn PPR on for them.
+Cache Components + PPR is the **default for new projects**: the scaffold's `next.config.mjs` sets `cacheComponents: true`. Legacy ISR stays supported with `cacheComponents` off. Projects created earlier keep working unchanged; the steps below turn PPR on for them.
 
 ## Performance Impact
 
@@ -101,6 +101,10 @@ revalidateTag(`landing-${slug}`)
 ```
 
 Or use the entity hook system for automatic revalidation.
+
+### Unknown URLs answer 200 with `noindex`
+
+With `cacheComponents: true`, a URL that a catch-all `[slug]` route matches but that has no page answers **200 with `noindex`** (the visitor sees the not-found page). Legacy ISR answers 404. A 404 under Cache Components is a project recipe, a `proxyHook` rewrite to `/_not-found`: see [The status of a URL that has no page](../18-page-builder/07-public-rendering.md#the-status-of-a-url-that-has-no-page).
 
 ### 8. Verify
 

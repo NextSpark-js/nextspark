@@ -267,7 +267,7 @@ We use `bundle: false` to **preserve module structure**:
 
 Registries are project-specific:
 - They index the consumer project's root entities and enabled local plugins
-- Generated at `npm install` time in the consumer project
+- Generated at install time in the consumer project
 - Cannot be bundled into the package
 
 ### Why No DTS?

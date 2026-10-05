@@ -25,13 +25,18 @@ npx create-nextspark-app my-app --preset saas
 npx create-nextspark-app my-app --preset blog
 npx create-nextspark-app my-app --preset crm
 
+# Pick a template (starter is stable; blog, crm and productivity are experimental)
+npx create-nextspark-app my-app --theme starter
+
 # Skip all prompts (use defaults)
 npx create-nextspark-app my-app -y
 ```
 
+> **Experimental:** the blog, crm and productivity templates, the first-party plugins (`--plugins`), and billing (Stripe, Polar) are not part of the stable 1.0 surface and may change without a deprecation period. The CLI says so when you select them.
+
 ## What's Included
 
-- **Next.js 16** with App Router and Turbopack by default (Next.js 15 supported)
+- **Next.js 16** with App Router and Turbopack by default
 - **TypeScript** strict configuration
 - **Tailwind CSS v4** with CSS-based theming
 - **Authentication** ready with Better Auth
@@ -58,7 +63,7 @@ Installing with lifecycle scripts disabled (`pnpm install --ignore-scripts`) wor
 ## Requirements
 
 - Node.js 22.14.0 or later
-- pnpm 9, 10 or 11
+- pnpm 10 (10.16 or later), 11 or 12. npm, yarn and bun are not supported (pnpm 9 is only for contributing to the NextSpark repository)
 
 ### Installing with another pnpm than the one that created the project
 

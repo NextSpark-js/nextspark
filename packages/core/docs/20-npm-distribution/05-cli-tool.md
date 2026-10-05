@@ -1,5 +1,7 @@
 # CLI Tool
 
+> **Experimental:** The add:theme, add:plugin, add:mobile, setup:ai and sync:ai commands — not part of the stable 1.0 surface and may change without a deprecation period.
+
 > **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (add `--watch` to watch).
 
 NextSpark provides a CLI tool for common development tasks.

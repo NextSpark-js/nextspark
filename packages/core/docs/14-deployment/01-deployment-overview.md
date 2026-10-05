@@ -2,6 +2,8 @@
 
 ## Introduction
 
+> **Experimental:** Deployment to Vercel and standalone output (`output: 'standalone'`) are not part of the stable 1.0 surface and may change without a deprecation period. `next start` is the stable way to run a project.
+
 This application uses **Vercel** as the primary deployment platform with an automated deployment script that handles environment configuration, variable management, and deployment in a single command.
 
 **Current Status:** ⚠️ Deployment infrastructure is functional but actively being improved. This documentation covers the current working setup.

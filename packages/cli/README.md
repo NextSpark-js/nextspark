@@ -25,6 +25,9 @@ npx nextspark init              # Interactive wizard
 npx nextspark init --preset saas    # Use SaaS preset
 npx nextspark init --preset blog    # Use Blog preset
 npx nextspark init --preset crm     # Use CRM preset
+npx nextspark init --theme blog     # Pre-select a template: starter (stable); blog, crm, productivity (experimental)
+
+> **Experimental:** the blog, crm and productivity templates, the first-party plugins (`--plugins`), and billing are not part of the stable 1.0 surface and may change without a deprecation period.
 ```
 
 ### Versioned skill guides
@@ -55,10 +58,10 @@ the same path in `templates/` (pages, layouts) or `api/` (Route Handlers).
 #### Choosing the bundler
 
 `dev` and `build` both accept `--webpack` and `--turbopack`. The choice is
-spelled for the project's Next.js version, so the same flag works across
-majors: on Next 15 Webpack is the default and Turbopack is opt-in, on Next 16
-it is the other way round. `nextspark build --webpack` is what a Next 16
-project with a custom `webpack()` in `next.config` needs in order to build.
+spelled for the project's Next.js version. NextSpark supports Next.js ~16.3.5,
+where Turbopack is the default and Webpack is opt-in (Webpack is deferred, not
+a supported bundler for 1.0). `nextspark build --webpack` is what a project with
+a custom `webpack()` in `next.config` needs in order to build.
 
 ```bash
 nextspark build --webpack     # Force Webpack
@@ -70,6 +73,10 @@ Any other flag is forwarded verbatim to `next dev` / `next build`:
 ```bash
 nextspark build --debug --profile
 ```
+
+### Experimental helpers
+
+> **Experimental:** `add:plugin`, `add:mobile`, `setup:ai` and `sync:ai` are not part of the stable 1.0 surface and may change without a deprecation period. Each prints this notice when it runs. `add:theme` is not supported: templates are extracted once from `@nextsparkjs/core` when the project is created (`create-nextspark-app --theme <name>`).
 
 ### Database
 

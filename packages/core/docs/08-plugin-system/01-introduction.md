@@ -1,5 +1,7 @@
 # Plugin System Introduction
 
+> **Stability:** `definePlugin` and the plugin system are stable. The five first-party plugins (ai, amplitude, langchain, social-media-publisher, walkme) are **experimental**: they are not part of the stable 1.0 surface and may change without a deprecation period.
+
 ## Introduction
 
 The plugin system provides a **WordPress-like architecture** for extending the application's functionality without modifying core code. Plugins enable modular feature development, allowing you to add new capabilities, integrate third-party services, and customize the application through isolated, self-contained packages.

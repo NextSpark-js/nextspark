@@ -58,7 +58,7 @@ package.json que defina cómo se consume el paquete.
     "LICENSE"
   ],
   "peerDependencies": {
-    "next": ">=15.0.0",
+    "next": "~16.3.5",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   },
@@ -179,7 +179,7 @@ Dependencias que el proyecto del usuario DEBE tener instaladas.
 ```json
 {
   "peerDependencies": {
-    "next": ">=15.0.0",
+    "next": "~16.3.5",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   }
@@ -213,10 +213,10 @@ Cuando un usuario instala NextSpark:
 
 ```bash
 # 1. Usuario ejecuta
-npm install @nextspark/core
+pnpm add @nextsparkjs/core
 
-# 2. npm instala el paquete + dependencies
-# 3. npm ejecuta el postinstall hook, que no escribe nada: solo imprime un aviso
+# 2. pnpm instala el paquete + dependencies
+# 3. pnpm ejecuta el postinstall hook, que no escribe nada: solo imprime un aviso
 #    si el proyecto tiene un src/app o app/ commiteado (nextspark migrate)
 # 4. nextspark dev / build / prepare generan src/app y los registries
 ```

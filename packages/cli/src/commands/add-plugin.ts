@@ -7,6 +7,7 @@ import { runPostinstall } from '../lib/postinstall/index.js'
 import { installWorkspaceDependencies, dependencyInstallNotice } from '../lib/workspace-dependencies.js'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
+import { printExperimentalNotice } from '../utils/experimental.js'
 import type { DependencyOwner, InstallOptions, PostinstallContext } from '../types/nextspark-package.js'
 
 interface AddPluginOptions extends InstallOptions {
@@ -121,6 +122,7 @@ function getCoreVersion(): string {
  * Node exits 0 wherever unhandled rejections only warn.
  */
 export async function addPluginCommand(packageSpec: string, options: Record<string, unknown>): Promise<void> {
+  printExperimentalNotice('add:plugin')
   try {
     await addPlugin(packageSpec, {
       force: options.force as boolean,

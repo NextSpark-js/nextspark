@@ -1,5 +1,7 @@
 # Social Media Publisher Plugin
 
+> **Experimental:** The Social Media Publisher plugin is not part of the stable 1.0 surface and may change without a deprecation period.
+
 Multi-account social media publishing plugin with OAuth integration and token encryption. **Theme-agnostic design** allows any theme to integrate social media publishing for their specific entity structure.
 
 ## Features

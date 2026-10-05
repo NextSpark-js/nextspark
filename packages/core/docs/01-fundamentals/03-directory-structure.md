@@ -49,7 +49,7 @@ source belongs in `api/`. The compiler diagnoses collisions before it writes the
 generated adapter.
 
 Reserved Next.js entry points are not project-template source. The generated
-request entry lives at `src/proxy.ts` (or `src/middleware.ts` on Next.js 15),
+request entry lives at `src/proxy.ts`,
 project request behavior is exported as `proxyHook` from
 `config/hooks/proxy.ts`, and project instrumentation behavior belongs in
 `config/hooks/instrumentation.ts`.

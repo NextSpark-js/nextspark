@@ -446,7 +446,7 @@ component is framework-owned and renders across every project using that group.
 
 A project may extend request handling with the optional root-first hook at
 `config/hooks/proxy.ts`. It must export a named `proxyHook`; the framework-owned
-`src/proxy.ts` (or `src/middleware.ts` on Next.js 15) composes it with
+`src/proxy.ts` composes it with
 authentication, route protection, and locale handling.
 
 ```typescript

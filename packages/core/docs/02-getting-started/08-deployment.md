@@ -1,5 +1,7 @@
 # Deployment
 
+> **Experimental:** Deployment to Vercel is not part of the stable 1.0 surface and may change without a deprecation period. `next start` is the stable way to run a project.
+
 ## Introduction
 
 Complete guide to deploying NextSpark to production using Vercel (recommended platform). Covers environment setup, database configuration, deployment process, and post-deployment verification.

@@ -30,7 +30,7 @@
     "dev": "tsup --watch"
   },
   "peerDependencies": {
-    "react": ">=18.0.0",
+    "react": "^19.1.0",
     "react-native": ">=0.75.0",
     "react-native-reanimated": ">=4.0.0"
   },
@@ -62,5 +62,8 @@
     "@types/react": "^19",
     "tsup": "^8.5.1",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22.14.0"
   }
 }

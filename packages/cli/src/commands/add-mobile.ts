@@ -4,6 +4,7 @@ import chalk from '../utils/colors.js'
 import ora from 'ora'
 import { execSync } from 'node:child_process'
 import { CONTRACTS_PACKAGE_NAME, writeContractsPackage } from '../wizard/generators/contracts-package.js'
+import { printExperimentalNotice } from '../utils/experimental.js'
 import { reconcileMobileSampleEntities } from '../wizard/generators/monorepo-generator.js'
 
 interface AddMobileOptions {
@@ -37,7 +38,7 @@ function findMobileCoreDir(): string {
 
   throw new Error(
     'Could not find @nextsparkjs/mobile package.\n' +
-    'Run: npm install @nextsparkjs/mobile'
+    'Run: pnpm add @nextsparkjs/mobile'
   )
 }
 
@@ -50,6 +51,7 @@ export async function addMobileCommand(options: AddMobileOptions = {}): Promise<
 
   console.log()
   console.log(chalk.bold('Adding NextSpark Mobile App'))
+  printExperimentalNotice('add:mobile')
   console.log()
 
   // 1. Check if already exists
@@ -140,7 +142,7 @@ export async function addMobileCommand(options: AddMobileOptions = {}): Promise<
     const installSpinner = ora('Installing dependencies...').start()
 
     try {
-      execSync('npm install', {
+      execSync('pnpm install', {
         cwd: mobileDir,
         stdio: 'pipe',
         timeout: 300000, // 5 minutes
@@ -148,7 +150,7 @@ export async function addMobileCommand(options: AddMobileOptions = {}): Promise<
       installSpinner.succeed('Dependencies installed')
     } catch (error) {
       installSpinner.fail('Failed to install dependencies')
-      console.log(chalk.yellow('  Run `npm install` in mobile/ manually'))
+      console.log(chalk.yellow('  Run `pnpm install` in mobile/ manually'))
     }
   }
 

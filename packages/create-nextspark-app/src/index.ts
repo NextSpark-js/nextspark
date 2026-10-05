@@ -20,8 +20,8 @@ program
   .option('--name <name>', 'Project name (non-interactive mode)')
   .option('--slug <slug>', 'Project slug (non-interactive mode)')
   .option('--description <desc>', 'Project description (non-interactive mode)')
-  .option('--theme <theme>', 'Theme to use (starter, blog, crm, productivity, none)')
-  .option('--plugins <plugins>', 'Plugins to install (comma-separated)')
+  .option('--theme <theme>', 'Theme to use (starter, blog, crm, productivity, none); blog, crm and productivity are experimental')
+  .option('--plugins <plugins>', 'Plugins to install (comma-separated; all but starter are experimental)')
   .option('-y, --yes', 'Skip prompts and use defaults', false)
   .action(async (projectName: string | undefined, options: { preset?: string; type?: string; name?: string; slug?: string; description?: string; theme?: string; plugins?: string; yes: boolean }) => {
     console.log()

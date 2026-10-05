@@ -38,6 +38,7 @@ import { installThemeAndPlugins, selectPlugins, selectTheme } from './generators
 import { installProjectDependencies, setupAIWorkflow } from './install-dependencies.js'
 import { showConfigPreview } from './preview.js'
 import { errorLines } from '../utils/shown-path.js'
+import { EXPERIMENTAL_TEMPLATES, experimentalNotice } from '../utils/experimental.js'
 import { writeAiOnboarding } from './generators/ai-onboarding.js'
 import {
   promptProductionSignIn,
@@ -211,6 +212,17 @@ export async function runWizard(
       !preset && options.mode !== 'quick' && !options.yes
         ? await promptProductionSignIn(config.auth)
         : getDefaultProductionSignIn()
+
+    // Experimental surfaces the choices above select: one line each, before the summary.
+    if (selectedTheme && EXPERIMENTAL_TEMPLATES.includes(selectedTheme)) {
+      showWarning(experimentalNotice(`The ${selectedTheme} template`))
+    }
+    if (selectedPlugins.some(plugin => plugin !== 'starter')) {
+      showWarning(experimentalNotice('The first-party plugins (ai, langchain, social-media-publisher)'))
+    }
+    if (config.billingModel !== 'free') {
+      showWarning(experimentalNotice('Billing (Stripe, Polar)'))
+    }
 
     // Show summary before generating
     showConfigSummary(config)
@@ -724,18 +736,7 @@ async function installCore(): Promise<boolean> {
       spinner.text = 'Installing @nextsparkjs/core from local tarball...'
     }
 
-    // Detect package manager
-    const useYarn = existsSync(join(process.cwd(), 'yarn.lock'))
-    const usePnpm = existsSync(join(process.cwd(), 'pnpm-lock.yaml'))
-
-    let installCmd: string
-    if (usePnpm) {
-      installCmd = `pnpm add ${pnpmWorkspaceRootFlag()}${packageSpec}`
-    } else if (useYarn) {
-      installCmd = `yarn add ${packageSpec}`
-    } else {
-      installCmd = `npm install ${packageSpec}`
-    }
+    const installCmd = `pnpm add ${pnpmWorkspaceRootFlag()}${packageSpec}`
 
     // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
     spinner.stop()
@@ -815,18 +816,7 @@ async function installMobile(): Promise<boolean> {
       spinner.text = 'Installing @nextsparkjs/mobile from local tarball...'
     }
 
-    // Detect package manager
-    const useYarn = existsSync(join(process.cwd(), 'yarn.lock'))
-    const usePnpm = existsSync(join(process.cwd(), 'pnpm-lock.yaml'))
-
-    let installCmd: string
-    if (usePnpm) {
-      installCmd = `pnpm add ${pnpmWorkspaceRootFlag()}${packageSpec}`
-    } else if (useYarn) {
-      installCmd = `yarn add ${packageSpec}`
-    } else {
-      installCmd = `npm install ${packageSpec}`
-    }
+    const installCmd = `pnpm add ${pnpmWorkspaceRootFlag()}${packageSpec}`
 
     spinner.stop()
     execSync(installCmd, {

@@ -81,7 +81,39 @@ A missing item calls `notFound()`, and what status the response carries depends 
 | Legacy (`cacheComponents: false`) | **404** | **404** |
 | Cache Components (default) | **200**, the not-found page and `<meta name="robots" content="noindex">` | **404** |
 
-Under Cache Components the item route has a dynamic segment (`[slug]`), so Next sends the prerendered shell, with its 200, before the page reads the slug; the `notFound()` that follows arrives in the stream, and Next cannot change a status it has already sent. The visitor sees the not-found page and crawlers get `noindex`, but a client that only reads the status sees 200. Only a route with a closed list of params can answer 404 first (`dynamicParams = false`, which is how the docs pages do it); published pages are not a closed list. If you need the status, answer it in `src/proxy.ts` before anything renders: look the slug up and `NextResponse.rewrite(appUrl(request, '/_not-found'))`, as the template proxy does for a missing docs page.
+Under Cache Components the item route has a dynamic segment (`[slug]`), so Next sends the prerendered shell, with its 200, before the page reads the slug; the `notFound()` that follows arrives in the stream, and Next cannot change a status it has already sent. The visitor sees the not-found page and crawlers get `noindex`, but a client that only reads the status sees 200. Only a route with a closed list of params can answer 404 first (`dynamicParams = false`, which is how the docs pages do it); published pages are not a closed list. If you need the status, answer it in the project's request hook (`config/hooks/proxy.ts`, recipe below) before anything renders. `src/proxy.ts` is generated: do not edit it. The framework proxy does the same for a missing docs page.
+
+**Decision (G0, 1.0):** under Cache Components an unknown URL that a catch-all `[slug]` route matches answers **200 with `noindex`**. That is the documented behavior, not a bug, and a 404 is not the default. If your project needs the 404 status, add it as a recipe in `config/hooks/proxy.ts`: the framework proxy runs `proxyHook` before it renders anything and honors a rewrite the hook returns, so a rewrite to `/_not-found` is served with the not-found page and a 404.
+
+```typescript
+// config/hooks/proxy.ts
+import { NextRequest, NextResponse } from 'next/server'
+
+// Your own lookup: a closed list of public slugs, a cached query, or a call to your pages API.
+import { isPublishedSlug } from '@/lib/published-slugs'
+
+// One-segment paths served by a route other than the pages catch-all: core's first segments and the starter's
+// `blog` (posts basePath) and `support`. Add every top-level route and entity basePath your project has.
+const NOT_PAGES = new Set([
+  'login', 'signup', 'forgot-password', 'reset-password', 'verify-email', 'accept-invite', 'auth-error',
+  '403', 'dashboard', 'superadmin', 'devtools', 'docs', 'api', 'public', 'blog', 'support',
+])
+
+export async function proxyHook(request: NextRequest) {
+  const [segment, ...rest] = request.nextUrl.pathname.split('/').filter(Boolean)
+  // Only a single segment, with no dot (robots.txt, sitemap.xml, manifest.webmanifest, assets),
+  // that is not another route.
+  if (segment && rest.length === 0 && !segment.includes('.') && !NOT_PAGES.has(segment)
+      && !(await isPublishedSlug(segment))) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/_not-found'
+    return NextResponse.rewrite(url)
+  }
+  return NextResponse.next()
+}
+```
+
+Keep the lookup cheap (the proxy runs on every request). The reserved list above is a starting point: add every top-level route your project defines (a page, a route handler, a metadata file), because anything that is not in the list and not a published slug becomes a 404. The recipe covers `/not-a-page` only; `/blog/[slug]` (two segments) is not covered, so give that route its own check in the same hook. This snippet is a recipe, not covered by the repository's tests: after adding it, confirm with `curl -I https://your-host/not-a-page` that the status is 404.
 
 The legacy 404 holds while nothing between the root layout and the page is a Suspense boundary: a project `(public)/layout` that wraps `children` in `<Suspense>`, or a `templates/(public)/loading.tsx` (an implicit boundary), brings the 200 back, for `notFound()` and for `redirect()` alike. Put a `loading.tsx` only next to pages that never call `notFound()` or `redirect()`, not at the group level; on the `[slug]` route it brings the 200 back too.
 

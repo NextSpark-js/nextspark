@@ -1,5 +1,7 @@
 # Vercel Deployment
 
+> **Experimental:** Deployment to Vercel is not part of the stable 1.0 surface and may change without a deprecation period.
+
 ## Introduction
 
 Vercel is our primary deployment platform, offering **zero-configuration deployments** for Next.js applications with automatic HTTPS, global CDN, and instant rollbacks.

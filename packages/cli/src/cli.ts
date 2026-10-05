@@ -142,8 +142,8 @@ program
   .option('--quick', 'Quick wizard mode (essential steps only)')
   .option('--expert', 'Expert wizard mode (all options)')
   .option('--preset <name>', 'Use preset configuration (saas, blog, crm)')
-  .option('--theme <name>', `Pre-select project template (${PROJECT_TEMPLATE_OPTIONS.join(', ')})`)
-  .option('--plugins <list>', 'Pre-select plugins (starter, ai, langchain, social-media-publisher; comma-separated)')
+  .option('--theme <name>', `Pre-select project template (${PROJECT_TEMPLATE_OPTIONS.join(', ')}); blog, crm and productivity are experimental`)
+  .option('--plugins <list>', 'Pre-select plugins (starter, ai, langchain, social-media-publisher; comma-separated; all but starter are experimental)')
   .option('-y, --yes', 'Skip confirmations')
   .option('--registries-only', 'Only create registries (no wizard)')
   .option('--name <name>', 'Project name (non-interactive mode)')
@@ -155,7 +155,7 @@ program
 // Add plugin command
 program
   .command('add:plugin <package>')
-  .description('Add a plugin to your project')
+  .description('Add a plugin to your project (experimental)')
   .option('-v, --version <version>', 'Specific version to install')
   .option('-f, --force', 'Overwrite if already exists')
   .option('--skip-postinstall', 'Skip postinstall hooks')
@@ -166,7 +166,7 @@ program
 // Add theme command
 program
   .command('add:theme <package>')
-  .description('Explain the install-once project-template workflow')
+  .description('Explain the install-once project-template workflow (experimental; not supported, use create-nextspark-app --theme)')
   .option('-v, --version <version>', 'Specific version to install')
   .option('-f, --force', 'Overwrite if already exists')
   .option('--skip-postinstall', 'Skip postinstall hooks')
@@ -177,9 +177,9 @@ program
 // Add mobile command
 program
   .command('add:mobile')
-  .description('Add mobile app to your project')
+  .description('Add mobile app to your project (experimental)')
   .option('-f, --force', 'Overwrite if already exists')
-  .option('--skip-install', 'Skip npm install')
+  .option('--skip-install', 'Skip pnpm install')
   .action(addMobileCommand);
 
 // Doctor command (health check)
@@ -229,14 +229,14 @@ program
 // Setup AI workflow
 program
   .command('setup:ai')
-  .description('Setup AI workflow for your editor (Claude Code, Cursor, Antigravity)')
+  .description('Setup AI workflow for your editor (Claude Code, Cursor, Antigravity) (experimental)')
   .option('-e, --editor <editor>', 'Editor to setup (claude, cursor, antigravity, all)', 'claude')
   .action(setupAICommand);
 
 // Sync AI workflow
 program
   .command('sync:ai')
-  .description('Sync AI workflow files from @nextsparkjs/ai-workflow')
+  .description('Sync AI workflow files from @nextsparkjs/ai-workflow (experimental)')
   .option('-e, --editor <editor>', 'Editor to sync (claude, cursor, antigravity, all)', 'claude')
   .option('-f, --force', 'Skip confirmation prompt')
   .action(syncAICommand);

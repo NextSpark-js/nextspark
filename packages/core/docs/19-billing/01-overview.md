@@ -5,6 +5,8 @@ description: Plans, subscriptions, and usage-based billing for SaaS monetization
 
 # Billing System Overview
 
+> **Experimental:** Billing (Stripe and Polar) is not part of the stable 1.0 surface and may change without a deprecation period.
+
 The Billing System provides comprehensive infrastructure for SaaS monetization, including plans, subscriptions, feature gating, usage tracking, and payment provider integration.
 
 ## Core Concepts

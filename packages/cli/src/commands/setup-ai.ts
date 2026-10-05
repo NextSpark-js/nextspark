@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 import chalk from '../utils/colors.js';
 import ora from 'ora';
+import { printExperimentalNotice } from '../utils/experimental.js';
 import { getAIWorkflowDir } from '../utils/paths.js';
 
 interface SetupAIOptions {
@@ -22,6 +23,7 @@ export async function setupAICommand(options: SetupAIOptions): Promise<void> {
 
   console.log('');
   console.log(chalk.cyan('  AI Workflow Setup'));
+  printExperimentalNotice('setup:ai');
   console.log(chalk.gray('  ' + '-'.repeat(40)));
   console.log('');
 

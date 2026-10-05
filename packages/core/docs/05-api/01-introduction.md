@@ -25,7 +25,7 @@
 
 ## Overview
 
-The **API v1** provides a comprehensive RESTful interface to interact with your SaaS application programmatically. Built on the Next.js 16 App Router with TypeScript (Next.js 15 supported), it offers:
+The **API v1** provides a comprehensive RESTful interface to interact with your SaaS application programmatically. Built on the Next.js 16 App Router with TypeScript, it offers:
 
 **Key Features:**
 - ✅ **Dual Authentication** - API Keys (external) + Sessions (dashboard)
