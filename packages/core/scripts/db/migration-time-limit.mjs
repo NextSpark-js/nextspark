@@ -35,11 +35,15 @@
 // then says the limit had not run out.
 //
 // A migration stopped either way is not recorded as run, and the next run starts
-// the file over. Postgres keeps nothing the migration had not committed, but
-// what it committed before it was stopped, with a COMMIT in the file or in a
-// procedure it calls, stays; the error says so, and what to do about it.
+// the file over. A file runs in one transaction with its record (see
+// runAndRecordMigration), so nothing it changed stays but effects that are not
+// transactional, such as a sequence; the error says so. A file that runs
+// outside that transaction, with NO_TRANSACTION_MARKER, keeps what it committed
+// before it was stopped, with a COMMIT in the file or in a procedure it calls;
+// the error says so, and what to do about it.
 //
-// A file has to leave its session outside a transaction, with or without a
+// The rest of this section is about a file that runs outside the runner's
+// transaction. It has to leave its session outside a transaction, with or without a
 // limit. Recording it goes on the same session, so a record sent while the file
 // still has a transaction open would go inside that transaction, and be undone
 // with it when the connection closes. A file that ends inside a transaction it
@@ -83,16 +87,19 @@
 // not reported.
 //
 // The limit is for the file, not for recording it as run. A migration that ran
-// to the end is recorded in its tracking table on the same session, and under a
-// limit the record gets RECORD_WAIT_MS instead, whatever the limit: on the
+// to the end is recorded in its tracking table on the same session, inside the
+// runner's transaction unless the file runs outside it, and under a
+// limit the record, and the COMMIT after it, get RECORD_WAIT_MS instead, whatever the limit: on the
 // server as a SET LOCAL statement_timeout sent with the INSERT, together with
 // lock_timeout off (on Postgres 13 and later both hold for the INSERT whatever
 // the limit or the migration left on the session), and on the client as the
 // wait for the answer. A tracking table another session holds a lock on is
 // waited for up to then, and a server that stops answering is given up on then.
-// When the record fails, however it fails, the error says the file ran to the
-// end and is not recorded, and gives the INSERT that records it; the runner
-// prints that instead of calling the file failed.
+// When the record fails inside the runner's transaction, that transaction is
+// rolled back with the file. When it fails for a file that ran outside it,
+// however it fails, the error says the file ran to the end and is not recorded,
+// and gives the INSERT that records it; the runner prints that instead of
+// calling the file failed.
 //
 // The limit holds whatever the database URL says. A URL that sets
 // statement_timeout or query_timeout itself, `?statement_timeout=0` included,
@@ -109,6 +116,9 @@ const { Client, DatabaseError, escapeIdentifier, escapeLiteral } = pg;
 const CONNECT_MS = 10000;
 
 export const TIME_LIMIT_VARIABLE = 'MIGRATION_TIMEOUT_SECONDS';
+
+/** The line a migration file starts with, among the comments before its first statement, to run outside the runner's transaction. */
+export const NO_TRANSACTION_MARKER = '-- nextspark:no-transaction';
 
 /** How long recording a migration that ran to the end may take, under a limit. */
 export const RECORD_WAIT_MS = 60000;
@@ -152,7 +162,8 @@ export function ignoredParametersNotice(connectionString, limit) {
 }
 
 /** What a migration stopped partway leaves behind, and what to do before running the migrations again. */
-function leftBehind({ stillRunning, prepared = NONE_PREPARED }) {
+function leftBehind({ stillRunning, prepared = NONE_PREPARED, inTransaction = false }) {
+  if (inTransaction) return stillRunning ? `It may still be running there, but ${UNCOMMITTED}` : NOTHING_STAYS;
   const committed = stillRunning
     ? 'It may still be running there, and what it commits, with a COMMIT in the file or in a procedure it calls, stays in the database.'
     : `What it had ${mayLeavePrepared(prepared) ? 'neither committed nor left prepared' : 'not committed'} is gone, but what it committed ` +
@@ -211,8 +222,13 @@ async function rollBackLeftTransaction(client, status) {
  * transaction is rolled back, so it is never recorded as run. A file that
  * leaves prepared a transaction it names in PREPARE TRANSACTION fails too,
  * however it ended, naming it and how to resolve it; nothing resolves it here.
+ *
+ * `inTransaction` when the file runs inside the transaction runAndRecordMigration
+ * opened for it: that transaction is rolled back when the file fails, and left
+ * open when it does not, and the status the server answered the file with is
+ * returned ('T' unless the file ended that transaction itself).
  */
-export async function runMigrationSql(client, { sql, limit, connectionString }) {
+export async function runMigrationSql(client, { sql, limit, connectionString, inTransaction = false }) {
   // Read before listening for the file's own ReadyForQuery: these queries' are answered, and consumed, first.
   const named = await transactionsTheFileNames(client, sql);
   const preparedNow = async ({ onSession }) =>
@@ -236,12 +252,13 @@ export async function runMigrationSql(client, { sql, limit, connectionString }) 
         elapsedMs < limit.statementMs
           ? `${cancelled}, before ${TIME_LIMIT_VARIABLE} (${limit.seconds} s) ran out`
           : `did not finish within ${limit.seconds} s (${TIME_LIMIT_VARIABLE}); ${cancelled}`;
-      throw new Error(`${stopped}: ${error.message}. ${leftBehind({ stillRunning: false, prepared })}`);
+      throw new Error(`${stopped}: ${error.message}. ${leftBehind({ stillRunning: false, prepared, inTransaction })}`);
     }
 
     if (!limit || error.message !== 'Query read timeout') {
       // Nothing but an answer from the server says the file is no longer running there
       const prepared = await preparedNow({ onSession: answeredByServer });
+      if (inTransaction) throw failedInRunnerTransaction(error, rolledBack, { stillRunning: !answeredByServer });
       throw failedInsideTransaction(error, rolledBack, prepared, { stillRunning: !answeredByServer });
     }
 
@@ -255,12 +272,15 @@ export async function runMigrationSql(client, { sql, limit, connectionString }) 
     throw new Error(
       `did not finish within ${limit.seconds} s (${TIME_LIMIT_VARIABLE}); ` +
       (ended === true
-        ? `its session on the server was ended. ${leftBehind({ stillRunning: false, prepared })}`
-        : `its session on the server could not be ended: ${ended}. ${leftBehind({ stillRunning: true, prepared })}`)
+        ? `its session on the server was ended. ${leftBehind({ stillRunning: false, prepared, inTransaction })}`
+        : `its session on the server could not be ended: ${ended}. ${leftBehind({ stillRunning: true, prepared, inTransaction })}`)
     );
   }
 
-  const rolledBack = await rollBackLeftTransaction(client, await answered);
+  const status = await answered;
+  // The runner's transaction, still open, is what the file is expected to leave
+  if (inTransaction) return status;
+  const rolledBack = await rollBackLeftTransaction(client, status);
   const prepared = await preparedNow({ onSession: true });
   if (rolledBack) {
     throw new Error(
@@ -304,6 +324,38 @@ function failedInsideTransaction(error, rolledBack, prepared = NONE_PREPARED, { 
   return new Error(withSentences(`${error.message}. ${outcome}`, sentences), { cause: error });
 }
 
+/** What a ROLLBACK leaves of a file that ran in the runner's transaction, said as a clause. */
+const UNCOMMITTED =
+  'it ran in one transaction with its record, which the runner did not commit, so nothing it changed stays in the database, ' +
+  'except effects that are not transactional, such as a sequence advanced with nextval or set with setval; ' +
+  'it is not recorded as run, and the next run starts the file over.';
+
+/** UNCOMMITTED as a sentence of its own. */
+const NOTHING_STAYS = `It${UNCOMMITTED.slice(2)}`;
+
+/** What to do with a file Postgres refuses to run inside a transaction block. */
+const OUTSIDE_TRANSACTION_HINT =
+  `A statement that cannot run inside a transaction block needs the file to start with the line ${NO_TRANSACTION_MARKER}, ` +
+  'and the file then has to be safe to run again: such a file is recorded only after it has run.';
+
+/**
+ * The error a file that failed inside the runner's transaction fails with: the
+ * server's own, with what the rollback leaves. `rolledBack` says how that
+ * transaction ended when the server answered the file; when it did not, the
+ * connection is ended and the transaction with it.
+ */
+function failedInRunnerTransaction(error, rolledBack, { stillRunning }) {
+  const outcome = stillRunning
+    ? `It may still be running there, but ${UNCOMMITTED}`
+    : rolledBack && rolledBack !== 'that transaction was rolled back'
+      ? `It ran in one transaction with its record, and ${rolledBack}: nothing it changed stays, except effects that are not ` +
+        'transactional, such as a sequence advanced with nextval or set with setval; it is not recorded as run, and the next run starts the file over.'
+      : NOTHING_STAYS;
+  // 25001: a statement Postgres refuses in a transaction block; 2D000: a DO block or procedure that commits
+  const hint = error.code === '25001' || error.code === '2D000' ? ` ${OUTSIDE_TRANSACTION_HINT}` : '';
+  return new Error(`${error.message}. ${outcome}${hint}`, { cause: error });
+}
+
 /** How long a connection of the run's own, beside the migration's, waits to connect and for each answer. */
 function sideConnectionWaitMs(limit) {
   return limit ? Math.min(5000, limit.statementMs) : 5000;
@@ -323,8 +375,7 @@ async function transactionsTheFileNames(client, sql) {
   if (!/prepare/i.test(sql)) return [];
   let constants = [];
   try {
-    const setting = await client.query({ text: 'SHOW standard_conforming_strings', rowMode: 'array' });
-    constants = preparedTransactionConstants(sql, { standardConformingStrings: setting.rows[0]?.[0] !== 'off' });
+    constants = preparedTransactionConstants(sql, { standardConformingStrings: await standardConformingStrings(client) });
     if (constants.length === 0) return [];
     const rows = await preparedAmong(client, constants);
     const named = new Map();
@@ -492,12 +543,7 @@ const DOLLAR_QUOTE = /\$(?:[A-Za-z_-￿][A-Za-z0-9_-￿]*)?\$/y;
  * the server refuses the query it is in.
  */
 export function preparedTransactionConstants(sql, { standardConformingStrings = true } = {}) {
-  const tokens = [];
-  for (let start = afterSpace(sql, 0); start < sql.length; ) {
-    const [kind, end] = tokenAt(sql, start, standardConformingStrings);
-    tokens.push({ kind, start, end, word: kind === 'word' ? sql.slice(start, end).replace(/[A-Z]/g, letter => letter.toLowerCase()) : null });
-    start = afterSpace(sql, end);
-  }
+  const tokens = tokensOf(sql, standardConformingStrings);
   return tokens.flatMap((token, index) => {
     const startsStatement = index === 0 || tokens[index - 1].kind === ';';
     const constant = tokens[index + 2];
@@ -505,6 +551,56 @@ export function preparedTransactionConstants(sql, { standardConformingStrings = 
       ? [sql.slice(constant.start, constant.end)]
       : [];
   });
+}
+
+/** The tokens of a query string, read as preparedTransactionConstants describes, with each word in lower case. */
+function tokensOf(sql, standardConformingStrings) {
+  const tokens = [];
+  for (let start = afterSpace(sql, 0); start < sql.length; ) {
+    const [kind, end] = tokenAt(sql, start, standardConformingStrings);
+    tokens.push({ kind, start, end, word: kind === 'word' ? sql.slice(start, end).replace(/[A-Z]/g, letter => letter.toLowerCase()) : null });
+    start = afterSpace(sql, end);
+  }
+  return tokens;
+}
+
+/**
+ * The first statement at the top level of a query string that opens, ends or
+ * prepares a transaction, as its leading keywords in capitals (BEGIN, START
+ * TRANSACTION, COMMIT, END, ROLLBACK, ABORT, PREPARE TRANSACTION), or null when
+ * there is none. ROLLBACK TO a savepoint is not one, and neither is the END
+ * that closes a BEGIN ATOMIC function body. The string is read as
+ * preparedTransactionConstants reads it. Postgres runs these only as statements
+ * of the query itself: in a DO block, a function or a procedure called inside a
+ * transaction block it refuses a COMMIT or ROLLBACK.
+ */
+export function transactionControlStatement(sql, { standardConformingStrings = true } = {}) {
+  const tokens = tokensOf(sql, standardConformingStrings);
+  let atomicBodies = 0;
+  for (let index = 0; index < tokens.length; index++) {
+    const { word } = tokens[index];
+    const next = tokens[index + 1]?.word;
+    if (index > 0 && tokens[index - 1].kind !== ';') {
+      if (word === 'begin' && next === 'atomic') atomicBodies++;
+      continue;
+    }
+    if (atomicBodies > 0) {
+      if (word === 'end') atomicBodies--;
+      continue;
+    }
+    if (word === 'prepare' && next === 'transaction') return 'PREPARE TRANSACTION';
+    if (word === 'start' && next === 'transaction') return 'START TRANSACTION';
+    if (word === 'rollback') {
+      const after = next === 'work' || next === 'transaction' ? tokens[index + 2]?.word : next;
+      if (after !== 'to') return 'ROLLBACK';
+    } else if (['begin', 'commit', 'end', 'abort'].includes(word)) return word.toUpperCase();
+  }
+  return null;
+}
+
+/** Whether the comments a migration file starts with include NO_TRANSACTION_MARKER as a line of its own. */
+export function runsOutsideTransaction(sql) {
+  return /^[ \t]*--[ \t]*nextspark:no-transaction[ \t]*$/m.test(sql.slice(0, afterSpace(sql, 0)));
 }
 
 /** Where the whitespace and comments from `i` on end. */
@@ -639,18 +735,9 @@ export class MigrationNotRecordedError extends Error {}
  * written.
  */
 export async function recordMigration(client, { file, table, row, limit, waitMs = RECORD_WAIT_MS }) {
-  const insert =
-    `INSERT INTO ${escapeIdentifier(table)} (${Object.keys(row).map(escapeIdentifier).join(', ')}) ` +
-    `VALUES (${Object.values(row).map(escapeLiteral).join(', ')})`;
+  const insert = recordInsert(table, row);
   try {
-    if (limit) {
-      await client.query({
-        text: `SET LOCAL statement_timeout = ${waitMs}; SET LOCAL lock_timeout = 0; ${insert}`,
-        query_timeout: waitMs,
-      });
-    } else {
-      await client.query(insert);
-    }
+    await sendRecord(client, insert, { limit, waitMs });
   } catch (error) {
     const recording = `recording it as run in ${escapeIdentifier(table)}`;
     const outcome =
@@ -663,6 +750,101 @@ export async function recordMigration(client, { file, table, row, limit, waitMs 
       `Record it before running the migrations again: ${insert} ON CONFLICT DO NOTHING;`
     );
   }
+}
+
+/** The INSERT that records a migration as the row given (column → value) of its tracking table. */
+function recordInsert(table, row) {
+  return (
+    `INSERT INTO ${escapeIdentifier(table)} (${Object.keys(row).map(escapeIdentifier).join(', ')}) ` +
+    `VALUES (${Object.values(row).map(escapeLiteral).join(', ')})`
+  );
+}
+
+/**
+ * Sends the INSERT that records a migration, under a limit with `waitMs` on the
+ * server, as SET LOCAL statement_timeout with lock_timeout off, and on the client.
+ * Inside a transaction the SET LOCAL holds until it ends, COMMIT included.
+ */
+async function sendRecord(client, insert, { limit, waitMs }) {
+  if (limit) {
+    await client.query({
+      text: `SET LOCAL statement_timeout = ${waitMs}; SET LOCAL lock_timeout = 0; ${insert}`,
+      query_timeout: waitMs,
+    });
+  } else {
+    await client.query(insert);
+  }
+}
+
+/**
+ * Runs a migration file and records it as run in the row given of its tracking
+ * table, both in one transaction: BEGIN, the file, the INSERT, COMMIT, on the
+ * migration's session. A run stopped anywhere before the COMMIT, by an error,
+ * the limit, a kill of the process or a crash of the server, leaves neither the
+ * file's changes nor its record, and the next run starts the file over; once the
+ * COMMIT is through, both are there and the next run skips it. Effects that are
+ * not transactional, such as a sequence advanced with nextval, are the exception.
+ *
+ * A file that opens, ends or prepares a transaction itself, with a statement at
+ * its top level (see transactionControlStatement), cannot run inside that
+ * transaction, and is not run: it fails saying so. A file that starts with the
+ * line NO_TRANSACTION_MARKER runs as it is instead, outside any transaction of
+ * the runner's, and is recorded once it has run (runMigrationSql, then
+ * recordMigration): a run stopped between the two starts it over, so such a file
+ * has to be safe to run again. That is also how a statement Postgres refuses
+ * inside a transaction block (CREATE INDEX CONCURRENTLY, VACUUM) runs.
+ *
+ * The record and the COMMIT get RECORD_WAIT_MS under a limit, as recordMigration's
+ * record does. A COMMIT that gets no answer may or may not have gone through,
+ * and the error says so: the file and its record went through together or not
+ * at all.
+ */
+export async function runAndRecordMigration(client, { file, sql, table, row, limit, connectionString, waitMs = RECORD_WAIT_MS }) {
+  if (runsOutsideTransaction(sql)) {
+    await runMigrationSql(client, { sql, limit, connectionString });
+    return recordMigration(client, { file, table, row, limit, waitMs });
+  }
+  const control = /\b(?:begin|start|commit|end|rollback|abort|prepare)\b/i.test(sql)
+    ? transactionControlStatement(sql, { standardConformingStrings: await standardConformingStrings(client) })
+    : null;
+  if (control) {
+    throw new Error(
+      `the file was not run: it has a ${control} statement, so it manages transactions itself, and the runner runs each file ` +
+        'in one transaction with its record. Take its transaction statements out, or, when it has to manage its own transactions ' +
+        `or run outside one, start it with the line ${NO_TRANSACTION_MARKER}; such a file is recorded only after it has run, ` +
+        'so it has to be safe to run again. It is not recorded as run.'
+    );
+  }
+
+  await client.query('BEGIN');
+  const status = await runMigrationSql(client, { sql, limit, connectionString, inTransaction: true });
+  // The file ended the runner's transaction after all: what it did is committed, so it is recorded as recordMigration records
+  if (status !== 'T') return recordMigration(client, { file, table, row, limit, waitMs });
+
+  let step = `recording it as run in ${escapeIdentifier(table)}`;
+  try {
+    await sendRecord(client, recordInsert(table, row), { limit, waitMs });
+    step = 'committing it together with its record';
+    await client.query(limit ? { text: 'COMMIT', query_timeout: waitMs } : 'COMMIT');
+  } catch (error) {
+    const answered = error instanceof DatabaseError;
+    // A failed record leaves the transaction failed, and a failed COMMIT has rolled it back; one with no answer ends with the connection
+    if (answered) await client.query('ROLLBACK').catch(() => {});
+    else await client.end().catch(() => {});
+    const failed = error.message === 'Query read timeout' ? `got no answer within ${waitMs / 1000} s` : `failed: ${error.message}`;
+    const outcome =
+      !answered && step.startsWith('committing')
+        ? 'Whether the COMMIT went through is not known, but the file and its record went through together or not at all: ' +
+          'the next run skips the file if it did, and starts it over if it did not.'
+        : NOTHING_STAYS;
+    throw new Error(`the file ran to the end, but ${step} ${failed}. ${outcome}`, { cause: error });
+  }
+}
+
+/** Whether the session reads quoted strings under standard_conforming_strings, as it reads a migration file. */
+async function standardConformingStrings(client) {
+  const setting = await client.query({ text: 'SHOW standard_conforming_strings', rowMode: 'array' });
+  return setting.rows[0]?.[0] !== 'off';
 }
 
 /** The line the runner prints for a migration that failed. */

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading
+
+A project migration file that has its own `BEGIN`/`COMMIT` (or `ROLLBACK`, `END`, `ABORT`, `START TRANSACTION`, `PREPARE TRANSACTION`) and has not run
+yet now stops `db:migrate` before it runs: take those statements out, or start the file with the line `-- nextspark:no-transaction` if it has to
+manage its own transactions (see the last Fixed item). Files that already ran are skipped as before; core's, the templates' and the plugins' files
+have no such statements. A `DO` block or `CALL` that commits inside its body now fails inside that transaction (nothing stays) and needs the same
+marker. History tables are unchanged.
+
 ### Fixed
 
 - `nextspark prepare`, `build` and `dev` recover from a run that was killed (SIGKILL, out of memory, power loss) while writing. The scratch files a
@@ -15,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `src/app` read as "a file NextSpark did not generate" and every later `prepare`/`build`/`dev` refused to run until it was deleted by hand; the others
   stayed forever. Only the writers' own places are swept (`src/app` for a full generation, `.nextspark`, `.nextspark/registries`, `.nextspark/contracts`);
   backups and rollback snapshots are never touched, and a leftover in `packages/contracts` is not swept and does not block.
+- **`db:migrate` records each migration in the same transaction that runs it.** It ran a file and then recorded it in `_migrations`,
+  `_content_migrations` or `_entity_migrations` as a separate statement, so a run killed or disconnected between the two left the file applied but
+  unrecorded, and the next run applied it again; a generated `001_*_table.sql` starts with `DROP TABLE IF EXISTS … CASCADE`, so that re-run dropped
+  the rows written in between. Each file now runs as `BEGIN`, the file, its record, `COMMIT`: a run stopped anywhere before the `COMMIT` leaves
+  neither, and the next run applies the file once. Effects that are not transactional (a sequence advanced with `nextval`) are not undone. A file that
+  starts with `-- nextspark:no-transaction` runs as before, outside a transaction and recorded after it (the way to run `CREATE INDEX CONCURRENTLY`
+  or `VACUUM`), and has to be safe to run again. Filenames, checksums and history tables are unchanged.
 
 ### Documentation
 

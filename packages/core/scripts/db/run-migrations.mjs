@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runMigrationSql, recordMigration, migrationFailure } from './migration-time-limit.mjs';
+import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runAndRecordMigration, migrationFailure } from './migration-time-limit.mjs';
 import { getConfig } from '../build/registry/config.mjs';
 
 const projectConfig = getConfig();
@@ -106,10 +106,10 @@ async function runMigrations() {
       const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
       
       try {
-        await runMigrationSql(client, { sql, limit: TIME_LIMIT, connectionString: MIGRATION_URL });
-        
-        // Record successful migration
-        await recordMigration(client, { file, table: '_migrations', row: { filename: file }, limit: TIME_LIMIT });
+        // Runs the file and records it in one transaction (see runAndRecordMigration)
+        await runAndRecordMigration(client, {
+          file, sql, table: '_migrations', row: { filename: file }, limit: TIME_LIMIT, connectionString: MIGRATION_URL,
+        });
         
         console.log(`✅ Successfully executed ${file}\n`);
       } catch (error) {
@@ -139,54 +139,6 @@ async function runMigrations() {
 // Read enabled local plugins from nextspark.config.ts.
 async function getActivePlugins() {
   return projectConfig.plugins;
-}
-
-// Run content-level migrations (theme/plugin root-level, not entity-specific)
-async function runContentMigrations(client, migrationsPath, sourceType, sourceName) {
-  const files = fs.readdirSync(migrationsPath)
-    .filter(f => f.endsWith('.sql'))
-    .sort();
-
-  if (files.length === 0) {
-    return 0;
-  }
-
-  let executedCount = 0;
-
-  for (const file of files) {
-    // Check if migration has already been executed
-    const result = await client.query(
-      'SELECT * FROM "_content_migrations" WHERE source_type = $1 AND source_name = $2 AND filename = $3',
-      [sourceType, sourceName, file]
-    );
-
-    if (result.rows.length > 0) {
-      console.log(`  ⏭️  ${file} (already executed)`);
-      continue;
-    }
-
-    // Read and execute migration
-    console.log(`  🔄 ${file}...`);
-    const sql = fs.readFileSync(path.join(migrationsPath, file), 'utf8');
-
-    try {
-      await client.query(sql);
-
-      // Record successful migration with source tracking
-      await client.query(
-        'INSERT INTO "_content_migrations" (source_type, source_name, filename) VALUES ($1, $2, $3)',
-        [sourceType, sourceName, file]
-      );
-
-      console.log(`  ✅ ${file} executed successfully`);
-      executedCount++;
-    } catch (error) {
-      console.error(`  ❌ Failed to execute ${file}:`, error.message);
-      throw error;
-    }
-  }
-
-  return executedCount;
 }
 
 // Helper: Check if a filename is a sample_data migration
@@ -280,12 +232,13 @@ async function executeContentMigration(client, migration) {
   console.log(`  🔄 ${filename}...`);
   const sql = fs.readFileSync(fullPath, 'utf8');
 
-  await runMigrationSql(client, { sql, limit: TIME_LIMIT, connectionString: MIGRATION_URL });
-  await recordMigration(client, {
+  await runAndRecordMigration(client, {
     file: filename,
+    sql,
     table: '_content_migrations',
     row: { source_type: sourceType, source_name: sourceName, filename },
     limit: TIME_LIMIT,
+    connectionString: MIGRATION_URL,
   });
 
   console.log(`  ✅ ${filename} executed successfully`);
@@ -311,12 +264,13 @@ async function executeEntityMigration(client, migration) {
   console.log(`${indent}🔄 ${filename}...`);
   const sql = fs.readFileSync(fullPath, 'utf8');
 
-  await runMigrationSql(client, { sql, limit: TIME_LIMIT, connectionString: MIGRATION_URL });
-  await recordMigration(client, {
+  await runAndRecordMigration(client, {
     file: filename,
+    sql,
     table: '_entity_migrations',
     row: { entity_name: entityName, source_type: sourceType, source_name: sourceName, filename },
     limit: TIME_LIMIT,
+    connectionString: MIGRATION_URL,
   });
 
   console.log(`${indent}✅ ${filename} executed successfully`);
@@ -591,128 +545,6 @@ async function runEntityMigrations() {
     await client.end();
     process.exit(1);
   }
-}
-
-// Recursively discover and run migrations from entity directories
-async function discoverAndRunMigrations(client, baseDir, sourceType, sourceName, depth = 0) {
-  let stats = { entities: 0, migrations: 0 };
-
-  const entries = fs.readdirSync(baseDir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-
-    const entityPath = path.join(baseDir, entry.name);
-    const entityStats = await processEntityDirectory(client, entityPath, entry.name, sourceType, sourceName, depth);
-
-    stats.entities += entityStats.entities;
-    stats.migrations += entityStats.migrations;
-  }
-
-  return stats;
-}
-
-// Process a single entity directory and its potential children
-async function processEntityDirectory(client, entityPath, entityName, sourceType, sourceName, depth) {
-  let stats = { entities: 0, migrations: 0 };
-  const indent = '  '.repeat(depth + 1);
-
-  // Check if this directory has migrations
-  const migrationsPath = path.join(entityPath, 'migrations');
-  if (fs.existsSync(migrationsPath)) {
-    const migrationFiles = fs.readdirSync(migrationsPath)
-      .filter(f => f.endsWith('.sql'));
-
-    if (migrationFiles.length > 0) {
-      console.log(`${indent}📁 ${entityName} (${migrationFiles.length} migration(s))`);
-      const executed = await runMigrationsFromDir(client, migrationsPath, entityName, sourceType, sourceName, depth + 1);
-      stats.entities++;
-      stats.migrations += executed;
-    }
-  }
-
-  // Intelligently detect and process children entities
-  const childrenStats = await discoverChildrenEntities(client, entityPath, entityName, sourceType, sourceName, depth);
-  stats.entities += childrenStats.entities;
-  stats.migrations += childrenStats.migrations;
-
-  return stats;
-}
-
-// Intelligent children entity detection
-async function discoverChildrenEntities(client, entityPath, parentEntityName, sourceType, sourceName, depth) {
-  let stats = { entities: 0, migrations: 0 };
-  const indent = '  '.repeat(depth + 1);
-
-  // Check for both 'children' and 'childs' for backward compatibility
-  const possibleChildrenDirs = ['children', 'childs'];
-
-  for (const childDirName of possibleChildrenDirs) {
-    const childrenDir = path.join(entityPath, childDirName);
-
-    if (fs.existsSync(childrenDir)) {
-      console.log(`${indent}🔍 Found ${childDirName} entities in ${parentEntityName}`);
-
-      // Recursively process children entities
-      const childStats = await discoverAndRunMigrations(client, childrenDir, sourceType, sourceName, depth + 1);
-      stats.entities += childStats.entities;
-      stats.migrations += childStats.migrations;
-
-      // Only process the first found children directory to avoid duplicates
-      break;
-    }
-  }
-
-  return stats;
-}
-
-// Helper function to run migrations from a specific directory
-async function runMigrationsFromDir(client, migrationsPath, entityName, sourceType, sourceName, depth = 0) {
-  const files = fs.readdirSync(migrationsPath)
-    .filter(f => f.endsWith('.sql'))
-    .sort();
-
-  if (files.length === 0) {
-    return 0;
-  }
-
-  let executedCount = 0;
-  const indent = '  '.repeat(depth + 1);
-
-  for (const file of files) {
-    // Check if migration has already been executed for this entity
-    const result = await client.query(
-      'SELECT * FROM "_entity_migrations" WHERE entity_name = $1 AND filename = $2',
-      [entityName, file]
-    );
-
-    if (result.rows.length > 0) {
-      console.log(`${indent}⏭️  ${file} (already executed)`);
-      continue;
-    }
-
-    // Read and execute migration
-    console.log(`${indent}🔄 ${file}...`);
-    const sql = fs.readFileSync(path.join(migrationsPath, file), 'utf8');
-
-    try {
-      await client.query(sql);
-
-      // Record successful migration with source tracking
-      await client.query(
-        'INSERT INTO "_entity_migrations" (entity_name, source_type, source_name, filename) VALUES ($1, $2, $3, $4)',
-        [entityName, sourceType, sourceName, file]
-      );
-
-      console.log(`${indent}✅ ${file} executed successfully`);
-      executedCount++;
-    } catch (error) {
-      console.error(`${indent}❌ Failed to execute ${file}:`, error.message);
-      throw error;
-    }
-  }
-
-  return executedCount;
 }
 
 // Main migration runner

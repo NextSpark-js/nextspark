@@ -30,9 +30,13 @@ import {
   RECORD_WAIT_MS,
   migrationClient,
   migrationTimeLimit,
+  NO_TRANSACTION_MARKER,
   preparedTransactionConstants,
   recordMigration,
+  runAndRecordMigration,
   runMigrationSql,
+  runsOutsideTransaction,
+  transactionControlStatement,
 } from '../../scripts/db/migration-time-limit.mjs'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -390,6 +394,9 @@ test('a migration still running at the limit fails the run with its name, and it
 
 // What the runner says about a migration stopped partway, however it was stopped
 const COMMITTED_STAYS = /stays in the database\. It is not recorded as run, so the next run starts the file over/
+// What it says about one that ran in the runner's transaction, which was never committed
+const NOTHING_STAYS =
+  /It ran in one transaction with its record, which the runner did not commit, so nothing it changed stays in the database, except effects that are not transactional, such as a sequence advanced with nextval or set with setval; it is not recorded as run, and the next run starts the file over\./
 
 test('a statement the server cancels under a limit the migration sets itself is not reported as the limit', { timeout: 20000 }, async t => {
   // a lock wait the server gives up on before the client does: its own limit, set lower by the migration
@@ -410,7 +417,7 @@ test('a statement the server cancels under a limit the migration sets itself is 
   assert.ok(reported, result.output)
   assert.ok(Number(reported[1]) >= 100 && Number(reported[1]) < 5000, reported[0])
   assert.doesNotMatch(result.output, /did not finish within 5 s/)
-  assert.match(result.output, COMMITTED_STAYS)
+  assert.match(result.output, NOTHING_STAYS)
   assert.deepEqual(server.terminated, [])
 })
 
@@ -500,8 +507,8 @@ test('a migration the server never answers is given up on, and its session ended
 
   assert.equal(result.status, 1, result.output)
   assert.match(result.output, /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\)/)
-  assert.match(result.output, /its session on the server was ended\. What it had not committed is gone, but what it committed before it was stopped/)
-  assert.match(result.output, COMMITTED_STAYS)
+  assert.match(result.output, /its session on the server was ended\. It ran in one transaction with its record, which the runner did not commit/)
+  assert.match(result.output, NOTHING_STAYS)
   // See the equivalent bounded assertion above: process wall time includes
   // scheduler delays, but must remain far below the test's 20 second timeout.
   assert.ok(result.elapsedMs < 15000, `took ${result.elapsedMs} ms`)
@@ -575,31 +582,34 @@ test('recording a migration that ran to the end is not held to the limit, in any
   for (const session of server.sessions) assert.equal(session.startup.statement_timeout, '500')
 })
 
-test('a migration that ran to the end but could not be recorded says so, and gives the INSERT that records it', { timeout: 30000 }, async t => {
-  const cases = [
-    {
-      table: '_migrations',
-      error: ['57014', 'canceling statement due to statement timeout'] as [string, string],
-      file: '001_core.sql',
-      insert: `INSERT INTO "_migrations" ("filename") VALUES ('001_core.sql') ON CONFLICT DO NOTHING;`,
-      notRun: TRACKED.core['002_core_after.sql'],
-    },
-    {
-      table: '_content_migrations',
-      error: ['42501', 'permission denied for table _content_migrations'] as [string, string],
-      file: '001_theme.sql',
-      insert: `INSERT INTO "_content_migrations" ("source_type", "source_name", "filename") VALUES ('project', 'fixture', '001_theme.sql') ON CONFLICT DO NOTHING;`,
-      notRun: TRACKED.widgets['001_widgets.sql'],
-    },
-    {
-      table: '_entity_migrations',
-      error: ['55P03', 'canceling statement due to lock timeout'] as [string, string],
-      file: '001_widgets.sql',
-      insert: `INSERT INTO "_entity_migrations" ("entity_name", "source_type", "source_name", "filename") VALUES ('widgets', 'project', 'fixture', '001_widgets.sql') ON CONFLICT DO NOTHING;`,
-      notRun: undefined,
-    },
-  ]
-  for (const { table, error, file, insert, notRun } of cases) {
+const RECORD_FAILURES = [
+  {
+    table: '_migrations',
+    error: ['57014', 'canceling statement due to statement timeout'] as [string, string],
+    file: '001_core.sql',
+    insert: `INSERT INTO "_migrations" ("filename") VALUES ('001_core.sql') ON CONFLICT DO NOTHING;`,
+    notRun: TRACKED.core['002_core_after.sql'],
+  },
+  {
+    table: '_content_migrations',
+    error: ['42501', 'permission denied for table _content_migrations'] as [string, string],
+    file: '001_theme.sql',
+    insert: `INSERT INTO "_content_migrations" ("source_type", "source_name", "filename") VALUES ('project', 'fixture', '001_theme.sql') ON CONFLICT DO NOTHING;`,
+    notRun: TRACKED.widgets['001_widgets.sql'],
+  },
+  {
+    table: '_entity_migrations',
+    error: ['55P03', 'canceling statement due to lock timeout'] as [string, string],
+    file: '001_widgets.sql',
+    insert: `INSERT INTO "_entity_migrations" ("entity_name", "source_type", "source_name", "filename") VALUES ('widgets', 'project', 'fixture', '001_widgets.sql') ON CONFLICT DO NOTHING;`,
+    notRun: undefined,
+  },
+]
+
+const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+test('a migration whose record fails is rolled back with it, in _migrations, _content_migrations and _entity_migrations', { timeout: 30000 }, async t => {
+  for (const { table, error, file, notRun } of RECORD_FAILURES) {
     const server = await standInPostgres(t, sql => (recordOf(table).test(sql) ? { error } : 'ok'))
     const cwd = projectWithTheme(t, TRACKED)
 
@@ -610,7 +620,36 @@ test('a migration that ran to the end but could not be recorded says so, and giv
     })
 
     assert.equal(result.status, 1, result.output)
-    const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    assert.match(
+      result.output,
+      new RegExp(`❌ Failed to execute ${escaped(file)}: the file ran to the end, but recording it as run in "${table}" failed: ${escaped(error[1])}\\. `),
+      table
+    )
+    assert.match(result.output, NOTHING_STAYS, table)
+    assert.doesNotMatch(result.output, /Record it before running the migrations again/, table)
+    const queries = server.sessions.flatMap(session => session.queries)
+    const record = queries.findIndex(sql => recordOf(table).test(sql))
+    assert.equal(queries[record + 1], 'ROLLBACK', table)
+    assert.ok(!queries.slice(record).includes('COMMIT'), table)
+    if (notRun) assert.equal(sessionThatRan(server.sessions, notRun), undefined, table)
+  }
+})
+
+test('a migration that runs outside the transaction, ran to the end and could not be recorded says so, and gives the INSERT that records it', { timeout: 30000 }, async t => {
+  const marked = Object.fromEntries(
+    Object.entries(TRACKED).map(([dir, files]) => [dir, Object.fromEntries(Object.entries(files).map(([file, sql]) => [file, outside(sql)]))])
+  ) as typeof TRACKED
+  for (const { table, error, file, insert, notRun } of RECORD_FAILURES) {
+    const server = await standInPostgres(t, sql => (recordOf(table).test(sql) ? { error } : 'ok'))
+    const cwd = projectWithTheme(t, marked)
+
+    const result = await run(t, RUNNER, ['--no-env-file'], {
+      cwd,
+      env: cleanEnv({ DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+      killAfterMs: 10000,
+    })
+
+    assert.equal(result.status, 1, result.output)
     assert.match(
       result.output,
       new RegExp(
@@ -621,8 +660,136 @@ test('a migration that ran to the end but could not be recorded says so, and giv
       table
     )
     assert.doesNotMatch(result.output, new RegExp(`Failed to execute ${escaped(file)}`), table)
-    if (notRun) assert.equal(sessionThatRan(server.sessions, notRun), undefined, table)
+    assert.ok(!server.sessions.some(session => session.queries.includes('BEGIN')), table)
+    if (notRun) assert.equal(sessionThatRan(server.sessions, outside(notRun)), undefined, table)
   }
+})
+
+test('each migration runs and is recorded in one transaction of its own: BEGIN, the file, its record, COMMIT', { timeout: 30000 }, async t => {
+  for (const limit of WITH_AND_WITHOUT_LIMIT) {
+    const server = await standInPostgres(t, () => 'ok')
+    const result = await run(t, RUNNER, ['--no-env-file'], {
+      cwd: projectWithTheme(t, TRACKED),
+      env: cleanEnv({ DATABASE_URL: server.url, ...limit }),
+      killAfterMs: 10000,
+    })
+    assert.equal(result.status, 0, result.output)
+    const queries = server.sessions.flatMap(session => session.queries)
+    for (const [table, sql] of [
+      ['_migrations', TRACKED.core['001_core.sql']],
+      ['_migrations', TRACKED.core['002_core_after.sql']],
+      ['_content_migrations', TRACKED.theme['001_theme.sql']],
+      ['_entity_migrations', TRACKED.widgets['001_widgets.sql']],
+    ]) {
+      const at = queries.indexOf(sql)
+      assert.equal(queries[at - 1], 'BEGIN', `${table} ${sql}`)
+      assert.match(queries[at + 1], recordOf(table), `${table} ${sql}`)
+      assert.equal(queries[at + 2], 'COMMIT', `${table} ${sql}`)
+    }
+  }
+})
+
+test('a migration that opens or ends transactions itself is not run unless it starts with the line that runs it outside the transaction', { timeout: 60000 }, async t => {
+  for (const [sql, statement] of [
+    ['BEGIN; CREATE TABLE own_table (id int); COMMIT;', 'BEGIN'],
+    ['CREATE TABLE own_table (id int); COMMIT;', 'COMMIT'],
+    ["CREATE TABLE own_table (id int); PREPARE TRANSACTION 'own';", 'PREPARE TRANSACTION'],
+  ]) {
+    for (const table of TABLES) {
+      const { server, result, file, next, label, records } = await runTrackedWith(t, table, sql, 'ok', {})
+      assert.equal(result.status, 1, `${label}\n${result.output}`)
+      assert.match(
+        result.output,
+        new RegExp(
+          `❌ Failed to execute ${escapedFile(file)}: the file was not run: it has a ${statement} statement, so it manages transactions itself, ` +
+            'and the runner runs each file in one transaction with its record\\. .*start it with the line -- nextspark:no-transaction; ' +
+            'such a file is recorded only after it has run, so it has to be safe to run again\\. It is not recorded as run\\.'
+        ),
+        label
+      )
+      assert.equal(sessionThatRan(server.sessions, sql), undefined, label)
+      assert.deepEqual(records, [], label)
+      if (next) assert.equal(sessionThatRan(server.sessions, next), undefined, label)
+    }
+  }
+})
+
+test('a statement Postgres refuses inside a transaction block says how to run it outside one', { timeout: 20000 }, async t => {
+  const sql = 'CREATE INDEX CONCURRENTLY widgets_id ON widgets (id);'
+  const refused = await runTrackedWith(t, '_entity_migrations', sql, { error: ['25001', 'CREATE INDEX CONCURRENTLY cannot run inside a transaction block'] }, {})
+  assert.equal(refused.result.status, 1, refused.result.output)
+  assert.match(refused.result.output, /CREATE INDEX CONCURRENTLY cannot run inside a transaction block\. It ran in one transaction with its record/)
+  assert.match(refused.result.output, /A statement that cannot run inside a transaction block needs the file to start with the line -- nextspark:no-transaction/)
+  assert.equal(refused.afterFile, 'ROLLBACK')
+  assert.deepEqual(refused.records, [])
+
+  // the same file, marked, runs as it is and is recorded after it
+  const marked = await runTrackedWith(t, '_entity_migrations', outside(sql), 'ok', {})
+  assert.equal(marked.result.status, 0, marked.result.output)
+  assert.equal(marked.records.length, 1)
+  const session = sessionThatRan(marked.server.sessions, outside(sql))!
+  assert.notEqual(session.queries[session.queries.indexOf(outside(sql)) - 1], 'BEGIN')
+})
+
+test('a COMMIT that gets no answer says the file and its record went through together or not at all', { timeout: 20000 }, async t => {
+  const server = await standInPostgres(t, sql => (sql === 'COMMIT' ? 'silent' : 'ok'))
+  const limit = migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS: '5' })
+  const client = migrationClient(server.url, limit)
+  await client.connect()
+  try {
+    await assert.rejects(
+      runAndRecordMigration(client, {
+        file: '001_core.sql',
+        sql: TRACKED.core['001_core.sql'],
+        table: '_migrations',
+        row: { filename: '001_core.sql' },
+        limit,
+        connectionString: server.url,
+        waitMs: 300,
+      }),
+      (error: Error) => {
+        assert.equal(
+          error.message,
+          'the file ran to the end, but committing it together with its record got no answer within 0.3 s. ' +
+            'Whether the COMMIT went through is not known, but the file and its record went through together or not at all: ' +
+            'the next run skips the file if it did, and starts it over if it did not.'
+        )
+        return true
+      }
+    )
+  } finally {
+    await client.end().catch(() => {})
+  }
+  assert.deepEqual(server.sessions[0].queries.slice(-4), ['BEGIN', TRACKED.core['001_core.sql'], `SET LOCAL statement_timeout = 300; SET LOCAL lock_timeout = 0; INSERT INTO "_migrations" ("filename") VALUES ('001_core.sql')`, 'COMMIT'])
+  assert.equal(server.sessions[0].closed, true)
+})
+
+test('transaction statements are found at the top level only, and the line that runs a file outside the transaction only among its first comments', () => {
+  const found: [string, string | null][] = [
+    ['SELECT 1;', null],
+    ['BEGIN; SELECT 1; COMMIT;', 'BEGIN'],
+    ['begin transaction isolation level serializable; select 1; end;', 'BEGIN'],
+    ['SELECT 1; commit', 'COMMIT'],
+    ['SELECT 1; END;', 'END'],
+    ['SELECT 1; ABORT;', 'ABORT'],
+    ['START TRANSACTION; SELECT 1;', 'START TRANSACTION'],
+    ['SELECT 1; ROLLBACK;', 'ROLLBACK'],
+    ["SELECT 1; PREPARE TRANSACTION 'x';", 'PREPARE TRANSACTION'],
+    ['SAVEPOINT a; SELECT 1; ROLLBACK TO SAVEPOINT a; ROLLBACK WORK TO a; RELEASE a;', null],
+    ['PREPARE fetch_one AS SELECT 1;', null],
+    ['DO $$ BEGIN PERFORM 1; COMMIT; END $$;', null],
+    ['CREATE FUNCTION f() RETURNS void LANGUAGE plpgsql AS $body$ BEGIN END; $body$;', null],
+    ['CREATE FUNCTION f() RETURNS int LANGUAGE sql BEGIN ATOMIC SELECT 1; END; SELECT f();', null],
+    ['CREATE FUNCTION f() RETURNS int LANGUAGE sql BEGIN ATOMIC SELECT 1; END; COMMIT;', 'COMMIT'],
+    ["-- COMMIT;\n/* BEGIN; /* nested */ END; */ SELECT 'COMMIT;', \"commit\";", null],
+  ]
+  for (const [sql, statement] of found) assert.equal(transactionControlStatement(sql), statement, sql)
+
+  assert.equal(runsOutsideTransaction(`${NO_TRANSACTION_MARKER}\nVACUUM;`), true)
+  assert.equal(runsOutsideTransaction(`-- Rebuilds an index without locking writes.\n  --  nextspark:no-transaction  \n\nCREATE INDEX CONCURRENTLY i ON t (id);`), true)
+  assert.equal(runsOutsideTransaction(`SELECT 1;\n${NO_TRANSACTION_MARKER}\nVACUUM;`), false)
+  assert.equal(runsOutsideTransaction(`-- see ${NO_TRANSACTION_MARKER}\nSELECT 1;`), false)
+  assert.equal(runsOutsideTransaction(`/* ${NO_TRANSACTION_MARKER} */ SELECT 1;`), false)
 })
 
 /** The tracked migrations with `sql` as the file recorded in `table`, and the migration the runner would run after it. */
@@ -665,9 +832,12 @@ async function runTrackedWith(t: TestContext, table: string, sql: string, treatm
 
 const escapedFile = (file: string) => file.replace(/\./g, '\\.')
 
+/** A migration file that starts with the line that runs it outside the runner's transaction, as it is. */
+const outside = (sql: string) => `${NO_TRANSACTION_MARKER}\n${sql}`
+
 test('a migration that ends inside a transaction it left open is rolled back and fails, in _migrations, _content_migrations and _entity_migrations', { timeout: 60000 }, async t => {
   // BEGIN; SELECT 1; opens a transaction that writes nothing, so no transaction id is ever assigned to it
-  for (const sql of ['BEGIN; CREATE TABLE open_table (id int);', 'BEGIN; SELECT 1;']) {
+  for (const sql of [outside('BEGIN; CREATE TABLE open_table (id int);'), outside('BEGIN; SELECT 1;')]) {
     for (const table of TABLES) {
       for (const limit of WITH_AND_WITHOUT_LIMIT) {
         const { server, result, file, next, label, afterFile, records } = await runTrackedWith(t, table, sql, 'ok', limit)
@@ -693,7 +863,7 @@ test('a migration that ends inside a transaction it left open is rolled back and
 })
 
 test('a migration that fails inside a transaction it opened has it rolled back, and says its transactional changes are undone, not effects such as a sequence', { timeout: 60000 }, async t => {
-  const sql = 'BEGIN; SELECT 1/0;'
+  const sql = outside('BEGIN; SELECT 1/0;')
   for (const table of TABLES) {
     for (const limit of WITH_AND_WITHOUT_LIMIT) {
       const { server, result, file, next, label, afterFile, records } = await runTrackedWith(t, table, sql, { error: ['22012', 'division by zero'] }, limit)
@@ -717,7 +887,7 @@ test('a migration that fails inside a transaction it opened has it rolled back, 
 })
 
 test('a migration that commits the transaction it opens is recorded, and the rest runs', { timeout: 60000 }, async t => {
-  const sql = 'BEGIN; CREATE TABLE committed_table (id int); COMMIT;'
+  const sql = outside('BEGIN; CREATE TABLE committed_table (id int); COMMIT;')
   for (const table of TABLES) {
     for (const limit of WITH_AND_WITHOUT_LIMIT) {
       const { server, result, file, next, label, records } = await runTrackedWith(t, table, sql, 'ok', limit)
@@ -732,7 +902,7 @@ test('a migration that commits the transaction it opens is recorded, and the res
 })
 
 test('a statement cancelled inside a transaction has it rolled back, and a cancellation under the limit keeps its own message', { timeout: 20000 }, async t => {
-  const sql = 'BEGIN; SET LOCAL statement_timeout = 100; SELECT pg_sleep(60);'
+  const sql = outside('BEGIN; SET LOCAL statement_timeout = 100; SELECT pg_sleep(60);')
 
   const limited = await runTrackedWith(t, '_migrations', sql, 'stuck', { MIGRATION_TIMEOUT_SECONDS: '5' })
   assert.equal(limited.result.status, 1, limited.result.output)
@@ -863,7 +1033,7 @@ const leavesPrepared = (gid: string) =>
   'nothing resolves it on its own\\.'
 
 test('a migration that prepares a transaction as another role is not recorded, and names it, in _migrations, _content_migrations and _entity_migrations', { timeout: 60000 }, async t => {
-  const sql = "SET ROLE r14_other; BEGIN; CREATE TABLE r14_role (id int); PREPARE TRANSACTION 'r14_role'; RESET ROLE;"
+  const sql = outside("SET ROLE r14_other; BEGIN; CREATE TABLE r14_role (id int); PREPARE TRANSACTION 'r14_role'; RESET ROLE;")
   for (const table of TABLES) {
     for (const limit of WITH_AND_WITHOUT_LIMIT) {
       const catalog = preparedCatalog()
@@ -894,19 +1064,19 @@ test('a migration that prepares a transaction as another role is not recorded, a
 test('a migration that prepares a transaction and then fails, or ends inside another, names it, in _migrations, _content_migrations and _entity_migrations', { timeout: 90000 }, async t => {
   const cases = [
     {
-      sql: "BEGIN; CREATE TABLE r14_divide (id int); PREPARE TRANSACTION 'r14_divide'; SELECT 1/0;",
+      sql: outside("BEGIN; CREATE TABLE r14_divide (id int); PREPARE TRANSACTION 'r14_divide'; SELECT 1/0;"),
       gid: 'r14_divide',
       treatment: { error: ['22012', 'division by zero'] } as Treatment,
       says: 'division by zero\\. It is not recorded as run, so the next run starts the file over\\. ',
     },
     {
-      sql: "BEGIN; CREATE TABLE r14_open (id int); PREPARE TRANSACTION 'r14_open'; BEGIN; SELECT 1;",
+      sql: outside("BEGIN; CREATE TABLE r14_open (id int); PREPARE TRANSACTION 'r14_open'; BEGIN; SELECT 1;"),
       gid: 'r14_open',
       treatment: 'ok' as Treatment,
       says: 'the file ends inside a transaction it opened and did not close; that transaction was rolled back: .* before running the migrations again\\. ',
     },
     {
-      sql: "BEGIN; CREATE TABLE r14_failed (id int); PREPARE TRANSACTION 'r14_failed'; BEGIN; SELECT 1/0;",
+      sql: outside("BEGIN; CREATE TABLE r14_failed (id int); PREPARE TRANSACTION 'r14_failed'; BEGIN; SELECT 1/0;"),
       gid: 'r14_failed',
       treatment: { error: ['22012', 'division by zero'] } as Treatment,
       says: 'division by zero\\. It failed inside a transaction it had not closed, and that transaction was rolled back: .* starts the file over\\. ',
@@ -938,7 +1108,7 @@ test('a migration that prepares a transaction and is then cancelled, or given up
   const cases = [
     {
       // its own statement_timeout
-      sql: "BEGIN; CREATE TABLE r14_own (id int); PREPARE TRANSACTION 'r14_own'; SET LOCAL statement_timeout = 100; SELECT pg_sleep(60);",
+      sql: outside("BEGIN; CREATE TABLE r14_own (id int); PREPARE TRANSACTION 'r14_own'; SET LOCAL statement_timeout = 100; SELECT pg_sleep(60);"),
       gid: 'r14_own',
       treatment: 'stuck' as Treatment,
       limits: [
@@ -948,7 +1118,7 @@ test('a migration that prepares a transaction and is then cancelled, or given up
     },
     {
       // another session's pg_cancel_backend
-      sql: "BEGIN; CREATE TABLE r14_cancel (id int); PREPARE TRANSACTION 'r14_cancel'; SELECT pg_sleep(60);",
+      sql: outside("BEGIN; CREATE TABLE r14_cancel (id int); PREPARE TRANSACTION 'r14_cancel'; SELECT pg_sleep(60);"),
       gid: 'r14_cancel',
       treatment: { error: ['57014', 'canceling statement due to user request'] } as Treatment,
       limits: [
@@ -958,7 +1128,7 @@ test('a migration that prepares a transaction and is then cancelled, or given up
     },
     {
       // the limit, with the server no longer answering: the session is ended and the transaction read on a connection of its own
-      sql: "BEGIN; CREATE TABLE r14_silent (id int); PREPARE TRANSACTION 'r14_silent'; SELECT pg_sleep(60);",
+      sql: outside("BEGIN; CREATE TABLE r14_silent (id int); PREPARE TRANSACTION 'r14_silent'; SELECT pg_sleep(60);"),
       gid: 'r14_silent',
       treatment: 'silent' as Treatment,
       limits: [[{ MIGRATION_TIMEOUT_SECONDS: '0.5' }, 'did not finish within 0\\.5 s \\(MIGRATION_TIMEOUT_SECONDS\\); its session on the server was ended\\. ']],
@@ -1018,7 +1188,7 @@ test("a transaction another session prepares while a migration runs is not taken
   }
 
   // COMMIT PREPARED cannot run inside the implicit transaction a query of several statements is, so the file's own stays prepared
-  const sql = "BEGIN; CREATE TABLE r14_mine (id int); PREPARE TRANSACTION 'r14_mine'; COMMIT PREPARED 'r14_mine';"
+  const sql = outside("BEGIN; CREATE TABLE r14_mine (id int); PREPARE TRANSACTION 'r14_mine'; COMMIT PREPARED 'r14_mine';")
   for (const table of TABLES) {
     for (const limit of WITH_AND_WITHOUT_LIMIT) {
       const catalog = preparedCatalog()
@@ -1051,7 +1221,7 @@ test("a transaction another session prepares while a migration runs is not taken
 })
 
 test('a transaction already prepared under the id a migration names is not taken for one the migration left', { timeout: 20000 }, async t => {
-  const sql = "BEGIN; CREATE TABLE r14_taken (id int); PREPARE TRANSACTION 'r14_taken';"
+  const sql = outside("BEGIN; CREATE TABLE r14_taken (id int); PREPARE TRANSACTION 'r14_taken';")
   for (const limit of WITH_AND_WITHOUT_LIMIT) {
     const catalog = preparedCatalog([{ gid: 'r14_taken', owner: 'r14_other' }])
     const { result, label, records } = await runTrackedWith(
@@ -1071,7 +1241,7 @@ test('a transaction already prepared under the id a migration names is not taken
 
 test("a transaction replaced under a preexisting id while a migration runs is taken for the migration's, in _migrations, _content_migrations and _entity_migrations", { timeout: 60000 }, async t => {
   const gid = 'r14_replaced'
-  const sql = `BEGIN; CREATE TABLE r14_replaced (id int); PREPARE TRANSACTION '${gid}';`
+  const sql = outside(`BEGIN; CREATE TABLE r14_replaced (id int); PREPARE TRANSACTION '${gid}';`)
   for (const table of TABLES) {
     for (const limit of WITH_AND_WITHOUT_LIMIT) {
       const catalog = preparedCatalog([{ gid, owner: 'r14_other' }])
@@ -1100,7 +1270,7 @@ test("a transaction replaced under a preexisting id while a migration runs is ta
 })
 
 test('a migration whose prepared transactions cannot be read once it has run is not recorded, and says so', { timeout: 20000 }, async t => {
-  const sql = "BEGIN; CREATE TABLE r14_unread (id int); PREPARE TRANSACTION 'r14_unread';"
+  const sql = outside("BEGIN; CREATE TABLE r14_unread (id int); PREPARE TRANSACTION 'r14_unread';")
   for (const limit of WITH_AND_WITHOUT_LIMIT) {
     const catalog = preparedCatalog()
     let ran = false
@@ -1137,9 +1307,10 @@ test('a migration whose prepared transactions cannot be read once it has run is 
 test('a failed final prepared-transaction read names both preexisting and new ids', { timeout: 20000 }, async t => {
   const preexisting = 'r14_unread_preexisting'
   const added = 'r14_unread_new'
-  const sql =
+  const sql = outside(
     `BEGIN; CREATE TABLE r14_unread_preexisting (id int); PREPARE TRANSACTION '${preexisting}'; ` +
-    `BEGIN; CREATE TABLE r14_unread_new (id int); PREPARE TRANSACTION '${added}';`
+      `BEGIN; CREATE TABLE r14_unread_new (id int); PREPARE TRANSACTION '${added}';`
+  )
   for (const limit of WITH_AND_WITHOUT_LIMIT) {
     const catalog = preparedCatalog([{ gid: preexisting, owner: 'r14_other' }])
     let ran = false
@@ -1175,7 +1346,7 @@ test('a failed final prepared-transaction read names both preexisting and new id
 })
 
 test('a migration whose PREPARE TRANSACTION ids Postgres cannot decode is not run', { timeout: 20000 }, async t => {
-  const sql = "BEGIN; CREATE TABLE r14_undecoded (id int); PREPARE TRANSACTION U&'r14\\zzzz';"
+  const sql = outside("BEGIN; CREATE TABLE r14_undecoded (id int); PREPARE TRANSACTION U&'r14\\zzzz';")
   for (const limit of WITH_AND_WITHOUT_LIMIT) {
     const { server, result, label, records } = await runTrackedWith(
       t,
@@ -1387,7 +1558,7 @@ const RUNS_PAST_THE_LIMIT_MS = 1500
 test('a migration that switches statement_timeout off for itself still stops at the limit', { timeout: 60000 }, async t => {
   for (const switchedOff of [
     'SET statement_timeout = 0; SELECT pg_sleep(1.5);',
-    'BEGIN; SET LOCAL statement_timeout = 0; SELECT pg_sleep(1.5); COMMIT;',
+    outside('BEGIN; SET LOCAL statement_timeout = 0; SELECT pg_sleep(1.5); COMMIT;'),
     "SELECT set_config('statement_timeout', '0', false); SELECT pg_sleep(1.5);",
     "SELECT set_config('statement_timeout', '0', true); SELECT pg_sleep(1.5);",
   ]) {

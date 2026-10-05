@@ -348,6 +348,25 @@ CREATE TABLE "_entity_migrations" (
 );
 ```
 
+### One Transaction per File
+
+`db:migrate` runs each file and records it in one transaction: `BEGIN`, the file, the `INSERT` into its tracking table, `COMMIT`. A run that stops anywhere before the `COMMIT` (a failing statement, `MIGRATION_TIMEOUT_SECONDS`, `Ctrl-C`, a killed process, a lost connection, a database restart) leaves neither the file's changes nor its record, and the next run starts the file over. Once the `COMMIT` is through, both are there and the next run skips it. A file is never applied twice, so a file that begins with `DROP TABLE IF EXISTS … CASCADE`, as the generated `001_*_table.sql` files do, cannot drop rows written after it ran.
+
+Limits:
+
+- Effects that are not transactional are not undone: a sequence advanced with `nextval` or set with `setval` keeps its value after a rollback.
+- A file must not open or end transactions itself. A `BEGIN`, `START TRANSACTION`, `COMMIT`, `END`, `ROLLBACK`, `ABORT` or `PREPARE TRANSACTION` statement in the file (not inside a function body or `DO` block) makes `db:migrate` stop before running it: take those statements out, since the file already runs in a transaction. A `DO` block or a procedure (`CALL`) that commits inside its body fails in that transaction (`2D000`) and leaves nothing behind: start such a file with `-- nextspark:no-transaction`.
+- A file that has to manage its own transactions, or run a statement Postgres refuses inside a transaction block (`CREATE INDEX CONCURRENTLY`, `VACUUM`), starts with this line, among the comments before its first statement:
+
+  ```sql
+  -- nextspark:no-transaction
+  CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tasks_status ON "tasks" (status);
+  ```
+
+  Such a file runs as it is and is recorded only after it has run, so a run stopped in between starts it over: it has to be safe to run again (`IF NOT EXISTS`, no `DROP … CASCADE` of tables that hold data).
+- Atomic is per file, not per run: files that ran before a failure stay applied and recorded.
+- Nothing undoes a migration that ran to the end. Take a backup before `db:migrate` when you need to be able to return to the data as it was before it (see [Rollback Strategies](#rollback-strategies)).
+
 ---
 
 ## Creating New Migrations
@@ -585,6 +604,9 @@ ALTER TABLE "tasks" DROP COLUMN IF EXISTS priority;
 ```
 
 **2. Database Backup Before Migration**
+
+An interrupted `db:migrate` needs no backup: the file it stopped in is neither applied nor recorded (see [One Transaction per File](#one-transaction-per-file)). A backup is what takes the data back to before a migration that ran to the end.
+
 ```bash
 # Before running migrations
 pg_dump $DATABASE_URL > backup_before_migration.sql
@@ -740,6 +762,8 @@ CREATE TABLE IF NOT EXISTS "table_name" (...);
 3. Check core migrations run before entity migrations
 
 ### Migration Marked as Executed but Failed
+
+A file and its record are committed together, so this happens only to a file that starts with `-- nextspark:no-transaction` and failed partway, or to a record written by hand.
 
 **Solution:**
 ```sql
