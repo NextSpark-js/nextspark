@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading from 0.1.0-beta.194
+
+- **Read and update the signed-in user at `/api/v1/users/me`.** It answers `GET` and `PATCH` for a session cookie or an API key (`users:read` / `users:write`)
+  and is `/api/v1/users/:id` for the caller's own id: same fields, same checks (`role` stays a superadmin's to change). Clients that called `/users/me` got a 403
+  since beta.194: nothing to change there. The route is a new core route: run `pnpm exec nextspark prepare` (or just `pnpm build`). The documented body is
+  `firstName`, `lastName`, `language` and `metas`, not `name`/`image`.
+
+### Added
+
+- **`GET` and `PATCH /api/v1/users/me`** (the static `me` segment wins over `[id]`). Fixes #209.
+
 ### Changed
 
 - The sign-in pages, the page titles of the auth group and of public entity pages, and the emails core sends (sign-in code, password reset,
@@ -54,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   request for the session answers, and `signOut()` emptied the query cache before that: every signed-in query still on the page (teams, profile, preferences) refetched on its next
   render, and the API refused each with 401 (three red lines in the browser console). `signOut()` now brings the session store up to date first, then empties the cache and goes to `/login`
   as before.
+- **Docs:** `/api/v1/users` docs, API Explorer preset and the metadata guide's `users/me` example describe what the route accepts and returns (`metas=`, not `metadataFields=`).
 
 ## [0.1.0-beta.194] - 2026-10-06
 

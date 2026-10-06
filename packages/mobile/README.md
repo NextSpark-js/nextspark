@@ -150,7 +150,7 @@ Singleton HTTP client for API requests.
 - `post<T>(endpoint, data, config?): Promise<T>` - POST request
 - `patch<T>(endpoint, data, config?): Promise<T>` - PATCH request
 - `delete<T>(endpoint, config?): Promise<T>` - DELETE request
-- `setToken(token): Promise<void>` - Set authentication token
+- `setToken(token): Promise<void>` - Store the session token (a marker that a session exists; requests authenticate with the session cookie and send no `Authorization` header)
 - `setTeamId(teamId): Promise<void>` - Set current team ID
 - `clearAuth(): Promise<void>` - Clear all authentication data: the stored token, team and user, and the native cookie store (see [Sign-out and native cookies](#sign-out-and-native-cookies))
 
@@ -232,7 +232,7 @@ const confirmed = await confirmDestructive('Delete All', 'This cannot be undone'
 
 ## Sign-out and native cookies
 
-React Native's `fetch` keeps the cookies the server sets, Better Auth's session cookie among them, in the platform cookie store (`NSHTTPCookieStorage` on iOS, the `CookieManager` Android shares with WebViews). Clearing the Bearer token alone leaves that cookie authenticating requests, so `clearAuth()` (which `logout()` calls after the server request) also empties the native cookie store. The app ends up signed out even when the sign-out request fails: no network, server down.
+React Native's `fetch` keeps the cookies the server sets, Better Auth's session cookie among them, in the platform cookie store (`NSHTTPCookieStorage` on iOS, the `CookieManager` Android shares with WebViews). Clearing the stored token alone leaves that cookie authenticating requests, so `clearAuth()` (which `logout()` calls after the server request) also empties the native cookie store. The app ends up signed out even when the sign-out request fails: no network, server down.
 
 Emptying the store uses [`@preeternal/react-native-cookie-manager`](https://github.com/Preeternal/react-native-cookie-manager), an optional peer dependency. The mobile template already declares it; in an existing app:
 
@@ -243,6 +243,10 @@ pnpm add @preeternal/react-native-cookie-manager
 It is a native module: **it needs a [development build](https://docs.expo.dev/develop/development-builds/introduction/) and does not work in Expo Go**, which does not include its native code. Without it (Expo Go, or an app that does not install it), sign-out still clears SecureStore, logs a one-time warning, and leaves the native cookies until they expire. On web the browser owns the cookies and nothing is cleared.
 
 `clearAuth()` removes every cookie in the native store, not only the API's.
+
+### Expo web and the origin check
+
+Requests authenticate with the session cookie and send no `Authorization` header. From Expo web the browser sends an `Origin`, and core checks it on cookie-authenticated writes (`POST`, `PUT`, `PATCH`, `DELETE`): add the Expo web origin (for example `http://localhost:8081`) to `CORS_ADDITIONAL_ORIGINS` (or `api.cors.additionalOrigins`) on the API, or those writes get 403 `ORIGIN_NOT_ALLOWED`. Native iOS and Android requests carry no `Origin` and are not affected.
 
 ## Core Services
 

@@ -467,7 +467,7 @@ function useUserPreferences() {
     queryKey: ['user', 'preferences'],
     queryFn: async () => {
       const response = await fetch(
-        'https://yourdomain.com/api/v1/users/me?metadataFields=preferences',
+        'https://yourdomain.com/api/v1/users/me?metas=preferences',
         {
           headers: {
             'Authorization': `Bearer ${apiKey}`
@@ -475,7 +475,7 @@ function useUserPreferences() {
         }
       )
       const data = await response.json()
-      return data.data.metadata?.preferences
+      return data.data.metas?.preferences
     }
   })
 }

@@ -94,7 +94,7 @@ export default function ProfileScreen() {
 
 The mobile profile screen is currently **read-only**. Profile updates would require:
 
-1. API endpoints for profile update (`PATCH /api/v1/users/me`)
+1. The profile update call (`usersApi.updateProfile`, `PATCH /api/v1/users/me`: `firstName`, `lastName`, `language`)
 2. Form state management
 3. Mutation hooks similar to entity CRUD
 

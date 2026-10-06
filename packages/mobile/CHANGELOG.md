@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading from 0.1.0-beta.194
+
+- **The client no longer sends `Authorization: Bearer <session token>`.** Core has no bearer plugin: the session cookie (native cookie store) is what authenticated, and the header was read as an API key,
+  rejected after a ~100 ms delay on every request. The token is still stored (`getToken()` marks that a session exists). An app that uses an API key passes it in
+  `headers` as before. **Expo web:** cookie-authenticated writes are origin-checked: add the Expo web origin to `CORS_ADDITIONAL_ORIGINS` on the API (see the README).
+- **`updateProfile({ name, image })` no longer type-checks:** use `firstName`, `lastName` and `language` (`name` is derived from them; core never accepted `name` or `image` there). The `User` type gains `firstName`, `lastName` and `language`.
+
+### Changed
+
+- **API:** `UpdateProfileInput` is `{ firstName, lastName, language }`. `updatePreferences()` calls run one after another; across devices the last write wins.
+
+### Fixed
+
+- **API:** `usersApi.getCurrentUser()` and `updateProfile()` call `/api/v1/users/me`, which core now serves (#209). `getPreferences()`/`updatePreferences()` no longer call `/api/v1/users/me/preferences`, which no core route backs:
+  they read and write the user's `preferences` metadata (`/api/v1/users/:id/meta/preferences`).
+
 ## [0.1.0-beta.194] - 2026-10-06
 
 ### Fixed

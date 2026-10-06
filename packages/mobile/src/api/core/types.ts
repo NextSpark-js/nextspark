@@ -11,6 +11,9 @@ export interface User {
   id: string
   email: string
   name?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  language?: string
   image?: string | null
 }
 

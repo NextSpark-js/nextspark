@@ -24,6 +24,10 @@ const updateUserSchema = z.object({
   metas: z.record(z.string(), z.any()).optional()
 });
 
+// `/api/v1/users/me` (the static me/route.ts) reaches GET and PATCH with id "me": it means the caller, so the
+// same allowlist and checks apply as for the caller's own id. DELETE does not resolve it.
+const resolveUserId = ({ id }: { id: string }, callerId: string) => (id === 'me' ? callerId : id);
+
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request);
@@ -47,7 +51,7 @@ export const GET = withRateLimitTier(withApiLogging(async (
       return authResult.rateLimitResponse as NextResponse;
     }
 
-    const { id } = await params;
+    const id = resolveUserId(await params, authResult.user!.id);
 
     // Validate that id is not empty
     if (!id || id.trim() === '') {
@@ -104,7 +108,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       return authResult.rateLimitResponse as NextResponse;
     }
 
-    const { id } = await params;
+    const id = resolveUserId(await params, authResult.user!.id);
 
     // Validate that id is not empty
     if (!id || id.trim() === '') {

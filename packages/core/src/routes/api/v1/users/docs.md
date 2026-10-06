@@ -4,51 +4,66 @@ Manage user profiles and account settings.
 
 ## Overview
 
-The Users API allows you to view and update user profile information. Users can update their own profile, while admins can manage other users within their team.
+The Users API allows you to view and update user profile information. Users can read and update their own profile; a superadmin can manage any user.
 
 ## Authentication
 
 All endpoints require authentication via:
 - **Session cookie** (for browser-based requests)
-- **API Key** header (for server-to-server requests)
+- **API Key** (for server-to-server requests), sent as `x-api-key: <key>` or `Authorization: Bearer <key>`: it needs the `users:read` scope to read and `users:write` to update, and it answers as the key's owner
+
+A user can read and update only themselves; a superadmin can manage any user. Anything else answers `403`.
 
 ## Endpoints
 
 ### Get Current User
 `GET /api/v1/users/me`
 
-Returns the currently authenticated user's profile.
+Returns the signed-in user, with a session cookie or an API key. It is `GET /api/v1/users/:id` for the caller's own id, so it takes the same `metas` query parameters and answers with the same fields.
+
+```bash
+curl -H "Cookie: <session cookie>" https://yourdomain.com/api/v1/users/me
+curl -H "Authorization: Bearer <api key>" https://yourdomain.com/api/v1/users/me
+curl -H "x-api-key: <api key>" https://yourdomain.com/api/v1/users/me
+```
 
 **Example Response:**
 ```json
 {
-  "id": "user_123",
-  "name": "John Doe",
-  "email": "john@example.com",
-  "image": "/uploads/avatar.png",
-  "createdAt": "2024-01-15T10:30:00Z",
-  "teams": [
-    {
-      "id": "team_456",
-      "name": "Acme Corp",
-      "role": "admin"
-    }
-  ]
+  "success": true,
+  "data": {
+    "id": "user_123",
+    "email": "john@example.com",
+    "name": "John Doe",
+    "firstName": "John",
+    "lastName": "Doe",
+    "image": "/uploads/avatar.png",
+    "country": null,
+    "timezone": null,
+    "language": "en",
+    "role": "member",
+    "emailVerified": true,
+    "createdAt": "2024-01-15T10:30:00Z",
+    "updatedAt": "2024-01-15T10:30:00Z"
+  }
 }
 ```
 
 ### Update Current User
 `PATCH /api/v1/users/me`
 
-Update the current user's profile.
+Update the signed-in user. It is `PATCH /api/v1/users/:id` for the caller's own id, with the same rules: only `firstName`, `lastName`, `language` and `metas` are accepted, and `role` is a superadmin's to change (anyone else gets `403`).
 
 **Request Body:**
 ```json
 {
-  "name": "John Smith",
-  "image": "/uploads/new-avatar.png"
+  "firstName": "John",
+  "lastName": "Smith",
+  "metas": { "preferences": { "theme": "dark" } }
 }
 ```
+
+To store per-user settings (the mobile client's preferences), use the user's metadata: `GET`/`PUT /api/v1/users/:id/meta/:key`.
 
 ### List Team Members
 `GET /api/v1/users`
@@ -63,7 +78,7 @@ Returns all users in the current team.
 ### Get User by ID
 `GET /api/v1/users/[id]`
 
-Returns a specific user's profile (within the same team).
+Returns a specific user's profile. Only that user or a superadmin can read it; `403` otherwise.
 
 **Path Parameters:**
 - `id` (string, required): User ID

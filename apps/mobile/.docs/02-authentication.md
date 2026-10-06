@@ -6,7 +6,7 @@ This document explains how the mobile app integrates with NextSpark's Better Aut
 
 NextSpark uses [Better Auth](https://better-auth.com) for authentication. The mobile app uses a hybrid approach:
 - **Session cookies** for web compatibility
-- **Bearer tokens** for mobile API calls
+- **Session cookie** for mobile API calls (kept in the native cookie store; no Authorization header)
 - **Local storage** for offline session restoration
 
 ## Authentication Flow
@@ -79,7 +79,7 @@ await requestOtp('user@example.com')          // emails a 6-digit code (5-minute
 await loginWithOtp('user@example.com', '123456') // creates the session; first sign-in creates the account
 ```
 
-`loginWithOtp` stores the user and the Bearer token and loads the teams exactly
+`loginWithOtp` stores the user and the session token and loads the teams exactly
 like `login()`. The code is delivered through the backend's email provider
 (Resend in the default setup — `RESEND_API_KEY` / `RESEND_FROM_EMAIL`).
 
@@ -124,10 +124,7 @@ class ApiClient {
       ...(options.body != null ? { 'Content-Type': 'application/json' } : {}),
     }
 
-    // Add Bearer token (Better Auth mobile flow)
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`
-    }
+    // No Authorization header: the session cookie authenticates (credentials: 'include')
 
     // Add team context header
     if (this.teamId) {
@@ -296,19 +293,20 @@ Namespaced, because SecureStore only allows alphanumerics, `.`, `-` and `_`
 
 | Key | Purpose | Storage |
 |-----|---------|---------|
-| `nextspark.auth.token` | Bearer token for API calls | SecureStore |
+| `nextspark.auth.token` | Session token: marks that a session exists (not sent as a header) | SecureStore |
 | `nextspark.auth.teamId` | Currently selected team id (sent as `x-team-id`) | SecureStore |
 | `nextspark.auth.user` | User info for offline access | SecureStore |
 | `nextspark.auth.team` | Full record of the selected team, for an offline start (`@nextsparkjs/mobile`) | SecureStore |
 
 ## Request Headers
 
-All authenticated API calls include:
+All authenticated API calls include the session cookie (`credentials: 'include'`) and:
 
 ```
-Authorization: Bearer {session-token}
 x-team-id: {team-uuid}
 ```
+
+No `Authorization` header: core has no bearer plugin, so a session token sent as Bearer would be read as an API key and rejected.
 
 Requests with a body (`post`/`patch` with data) also send
 `Content-Type: application/json`. Bodyless requests do not: Better Auth answers

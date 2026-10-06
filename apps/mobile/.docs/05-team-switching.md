@@ -102,10 +102,6 @@ private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T
     'Content-Type': 'application/json',
   }
 
-  if (this.token) {
-    headers['Authorization'] = `Bearer ${this.token}`
-  }
-
   // Team context - critical for data scoping
   if (this.teamId) {
     headers['x-team-id'] = this.teamId

@@ -160,7 +160,7 @@ export class ApiClient {
   }
 
   /**
-   * Set authentication token
+   * Store the session token. It is not sent as a header: it marks that a session exists (restoreSession)
    */
   async setToken(token: string): Promise<void> {
     this.token = token
@@ -266,7 +266,7 @@ export class ApiClient {
 
   /**
    * Make authenticated request
-   * Uses credentials: 'include' to support cookie-based auth alongside Bearer token
+   * Authenticates with the session cookie (`credentials: 'include'`); sends no Authorization header
    */
   async request<T>(endpoint: string, options: RequestConfig = {}): Promise<T> {
     const { params, ...fetchOptions } = options
@@ -280,10 +280,10 @@ export class ApiClient {
       ...fetchOptions.headers,
     }
 
-    // Add Bearer token if available (Better Auth mobile flow)
-    if (this.token) {
-      ;(headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`
-    }
+    // No Authorization header: core has no bearer plugin, so the session cookie (kept in the native cookie
+    // store, sent by `credentials: 'include'`) is what authenticates. A Bearer would be read as an API key
+    // and rejected on format after a ~100 ms constant-time delay.
+    // An app that wants an API key sends it through `headers` (`x-api-key` or `Authorization`).
 
     // Add team context header
     if (this.teamId) {

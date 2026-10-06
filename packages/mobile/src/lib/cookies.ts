@@ -3,7 +3,7 @@
  *
  * React Native's fetch keeps the cookies a server sets, Better Auth's session
  * cookie among them, in the platform cookie store (NSHTTPCookieStorage on iOS,
- * the CookieManager Android shares with WebViews). Clearing the Bearer token is
+ * the CookieManager Android shares with WebViews). Clearing the stored token is
  * not enough to sign out: requests keep authenticating with that cookie.
  *
  * Emptying the store needs the native module of

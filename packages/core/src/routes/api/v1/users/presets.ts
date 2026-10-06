@@ -34,13 +34,13 @@ export default defineApiEndpoint({
     {
       id: 'update-profile',
       title: 'Update My Profile',
-      description: 'Update current user name',
+      description: 'Update the current user first name',
       method: 'PATCH',
       pathParams: {
         id: 'me'
       },
       payload: {
-        name: 'Updated Name'
+        firstName: 'Updated'
       },
       tags: ['write', 'profile']
     },

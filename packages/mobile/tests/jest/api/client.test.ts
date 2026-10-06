@@ -95,7 +95,7 @@ describe('ApiClient', () => {
   })
 
   describe('request', () => {
-    it('includes Authorization header when token is set', async () => {
+    it('sends no Authorization header on session requests, even with a stored token', async () => {
       await apiClient.setToken('test-token')
 
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -106,14 +106,19 @@ describe('ApiClient', () => {
 
       await apiClient.get('/test')
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            Authorization: 'Bearer test-token',
-          }),
-        })
-      )
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(Object.keys(init.headers).map(name => name.toLowerCase())).not.toContain('authorization')
+      expect(init.credentials).toBe('include')
+    })
+
+    it('leaves a caller-supplied Authorization or x-api-key header (an API key) untouched', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) })
+
+      await apiClient.request('/test', { headers: { Authorization: 'Bearer sk_test_key' } })
+      await apiClient.request('/test', { headers: { 'x-api-key': 'sk_test_key' } })
+
+      expect((global.fetch as jest.Mock).mock.calls[0][1].headers.Authorization).toBe('Bearer sk_test_key')
+      expect((global.fetch as jest.Mock).mock.calls[1][1].headers['x-api-key']).toBe('sk_test_key')
     })
 
     it('throws ApiError on non-ok response', async () => {
