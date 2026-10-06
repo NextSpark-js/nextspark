@@ -60,6 +60,8 @@ const MOBILE_TEMPLATE_FILES = [
   'tailwind.config.js',
   'tsconfig.json',
   'jest.config.js',
+  // Smoke test, so the root `pnpm test` has something to run in mobile
+  '__tests__',
   'eas.json',
   // NativeWind types — without it `className` on RN View/Text fails typecheck
   'nativewind-env.d.ts',
@@ -97,6 +99,8 @@ export const VERSIONS = {
   TANSTACK_QUERY: '^5.62.0',
   EXPO: '^54.0.0',
   REACT: '19.1.0',
+  // What Expo SDK 54 expects (expo-doctor); web's ^19 would otherwise resolve to a newer minor
+  TYPES_REACT: '~19.1.10',
   REACT_NATIVE: '0.81.5',
   TYPESCRIPT: '^5.3.0',
 
@@ -118,7 +122,7 @@ export const VERSIONS = {
   RN_SVG: '15.12.1',
   RN_WEB: '^0.21.0',
   // reanimated's babel plugin (added by babel-preset-expo) loads it from the project
-  RN_WORKLETS: '^0.5.1',
+  RN_WORKLETS: '0.5.1',
   // Lets @nextsparkjs/mobile empty the native cookie store on sign-out.
   // Exact version: the package has a single maintainer.
   RN_COOKIE_MANAGER: '6.4.1',
@@ -495,7 +499,7 @@ export async function createMobilePackageJson(mobileDir: string, config: WizardC
       '@testing-library/react-native': VERSIONS.TESTING_LIBRARY_RN,
       '@types/jest': '^29.5.0',
       '@types/node': '^22.10.7',
-      '@types/react': '^19',
+      '@types/react': VERSIONS.TYPES_REACT,
       'jest': VERSIONS.JEST,
       'jest-expo': VERSIONS.JEST_EXPO,
       'react-test-renderer': VERSIONS.REACT,
@@ -518,8 +522,8 @@ async function createMobileAppConfig(mobileDir: string, config: WizardConfig): P
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: '${config.projectName}',
-  slug: '${config.projectSlug}',
+  name: ${JSON.stringify(config.projectName)},
+  slug: ${JSON.stringify(config.projectSlug)},
   version: '1.0.0',
   orientation: 'portrait',
   icon: './${DIRS.ASSETS}/icon.png',

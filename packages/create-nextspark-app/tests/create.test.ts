@@ -16,7 +16,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
-import { allowlistEntries, buildWorkspaceYaml, createProject } from '../src/create.js'
+import { allowlistEntries, buildWorkspaceYaml, createProject, wizardArgs } from '../src/create.js'
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 const TARBALLS = ['nextsparkjs-core-0.1.0-beta.189.tgz', 'nextsparkjs-cli-0.1.0-beta.189.tgz', 'nextsparkjs-ui-0.1.0-beta.189.tgz']
@@ -508,4 +508,10 @@ test('the wizard gets the local plugin tarballs at core\'s version, and only tho
 test('without local plugin tarballs the wizard is started as before', async () => {
   const created = await create({ callerPnpm: '9.0.0', projectPnpm: '9.0.0' })
   assert.equal(created.wizardPluginTarballs, '')
+})
+
+test('wizardArgs: values with spaces reach the wizard whole', () => {
+  const args = ['nextspark', 'init', '--name', 'My App', '--yes']
+  assert.deepEqual(wizardArgs(args, 'linux'), args)
+  assert.deepEqual(wizardArgs(args, 'win32'), ['nextspark', 'init', '--name', '"My App"', '--yes'])
 })

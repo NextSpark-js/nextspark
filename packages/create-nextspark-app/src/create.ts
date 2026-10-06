@@ -266,6 +266,16 @@ function getPnpmMajorVersion(projectPath: string): number | null {
   }
 }
 
+/**
+ * The arguments to hand `npx`. Windows needs `shell: true` to find npx.cmd, and with a
+ * shell Node joins the arguments with spaces and no quoting, so `--name "My App"` would
+ * reach the wizard as `--name My App`. Quote there; elsewhere they go through as-is.
+ */
+export function wizardArgs(args: string[], platform: string = process.platform): string[] {
+  if (platform !== 'win32') return args
+  return args.map(arg => (/[\s"]/.test(arg) ? `"${arg.replace(/"/g, '\\"')}"` : arg))
+}
+
 export interface ProjectOptions {
   projectName: string
   projectPath: string
@@ -546,12 +556,10 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     initArgs.push('--yes')
   }
 
-  // Use spawnSync to properly handle arguments with spaces
-  // shell: true is required for Windows compatibility
-  const result = spawnSync('npx', initArgs, {
+  const result = spawnSync('npx', wizardArgs(initArgs), {
     cwd: projectPath,
     stdio: 'inherit', // Interactive mode
-    shell: true,
+    shell: process.platform === 'win32',
     env: Object.keys(localPluginTarballs).length > 0
       ? { ...process.env, [LOCAL_PLUGIN_TARBALLS_ENV]: JSON.stringify(localPluginTarballs) }
       : process.env,

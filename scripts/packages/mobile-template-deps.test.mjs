@@ -51,7 +51,9 @@ test('every package the template configs load is a declared dependency of mobile
 
 test('template dependency ranges agree with apps/mobile for the shared build packages', () => {
   const dev = JSON.parse(readFileSync(join(TEMPLATE, '../../../apps/mobile/package.json'), 'utf8'))
-  for (const n of ['react-native-css-interop', 'react-native-worklets', 'nativewind', 'expo', 'react-native-reanimated']) {
+  for (const n of ['react-native-css-interop', 'nativewind', 'expo', 'react-native-reanimated']) {
     assert.equal(pkg.dependencies[n], dev.dependencies[n], n)
   }
+  // Pinned exactly: Expo SDK 54 expects 0.5.1 (expo-doctor), where apps/mobile keeps its caret
+  assert.equal(pkg.dependencies['react-native-worklets'], '0.5.1')
 })

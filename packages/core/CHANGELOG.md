@@ -26,6 +26,8 @@ marker. History tables are unchanged.
 
 ### Fixed
 
+- **A web+mobile project from `create-nextspark-app` keeps the full `--name` and passes its own checks.** `--name "My App"` reached the wizard as `--name My App` (the wizard was spawned through a shell that does not quote), so `mobile/app.config.ts` got `name: 'My'`, and a description with spaces was cut the same way. The name is also escaped when written into `app.config.ts`. The mobile app ships a smoke test and a Jest `transformIgnorePatterns` that works under pnpm's `.pnpm/` layout, so the root `pnpm test` no longer fails on `jest` finding nothing to run. `react-native-worklets` is pinned to `0.5.1` and mobile's `@types/react` to `~19.1.10`, what Expo SDK 54 expects, so `expo-doctor` passes 18/18 (web keeps its own `@types/react`).
+
 - **`nextspark migrate` from `0.1.0-beta.183`** (the oldest release it is supported from; guide: `docs/17-updates/06-upgrade-0x-projects.md`).
   An untracked `node_modules/` no longer crashes it with `spawnSync git ENOBUFS` (the untracked listing collapses directories, so a project
   without `node_modules/` in `.gitignore` gets the "dirty git tree" refusal, which now says to ignore `node_modules/` or `.next/` first). `--yes`

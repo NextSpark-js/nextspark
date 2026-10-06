@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Template:** ships `__tests__/utils.test.ts` and a Jest `transformIgnorePatterns` that works under pnpm, so a new project's `pnpm test` passes. `react-native-worklets` is pinned to `0.5.1` and `@types/react` to `~19.1.10` (what Expo SDK 54 expects; `expo-doctor` 18/18).
+
 ## [0.1.0-beta.192] - 2026-09-30
 
 ### Breaking
