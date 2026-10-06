@@ -438,8 +438,9 @@ export function withRateLimitTier<T extends unknown[]>(
 ) {
   return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
     // Cookie-authenticated writes must come from a trusted origin (see request-origin.ts)
-    const originRefused = checkRequestOrigin(request);
-    if (originRefused) return originRefused;
+    const checked = checkRequestOrigin(request);
+    if (checked instanceof NextResponse) return checked;
+    request = checked;
 
     // Skip rate limiting if disabled via environment variable
     if (isRateLimitingDisabled()) {

@@ -94,6 +94,17 @@ export class ApiKeyManager {
 }
 
 /**
+ * The API key a request presents: the token of `Authorization: Bearer <token>`,
+ * else the `x-api-key` header. validateApiKey checks this value, and the
+ * cookie-write origin check (lib/api/request-origin) reads it too.
+ */
+export function presentedApiKey(headers: Headers): string | null {
+  const authorization = headers.get('authorization');
+  if (authorization?.startsWith('Bearer ')) return authorization.substring(7);
+  return headers.get('x-api-key') || null;
+}
+
+/**
  * Definición de scopes disponibles para API keys
  */
 export const API_SCOPES = {

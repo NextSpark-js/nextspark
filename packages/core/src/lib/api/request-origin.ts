@@ -9,19 +9,24 @@
  * What passes without a trusted origin, and why:
  * - Reads (GET/HEAD/OPTIONS).
  * - Requests without the session cookie: there is no session for them to use.
- * - Requests with an `Authorization: Bearer` token or an x-api-key header (API
- *   keys, the mobile client's bearer token). A browser adds those only when the page's script
- *   sets them, and a script on another origin needs CORS approval first.
+ * - Requests that present an API key (`Authorization: Bearer sk_...` or
+ *   x-api-key, in the API-key format). They are let through without their
+ *   session cookie, so the handler can authenticate them only by the key: a key
+ *   that does not validate gets 401, never the cookie's session. Any other
+ *   Authorization value is not a credential here, and the check applies. Handlers
+ *   should read the session from the request they are given, not from
+ *   next/headers.
  * - Requests with neither Origin nor Referer, unless their body is one an HTML
  *   form can send. Browsers send Origin on every write, so these come from
  *   native or server-side clients; requiring a non-form content type keeps
  *   a body without origin information from ever being read as a form post.
  */
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { APP_CONFIG_MERGED } from '../config'
 import { hasSessionCookie } from '../auth/session-hint'
 import { getTrustedOrigins, isOriginAllowed, normalizeOrigin } from '../utils/cors'
+import { ApiKeyManager, presentedApiKey } from './keys'
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -41,36 +46,58 @@ function requestOrigin(headers: Headers): string | null {
   }
 }
 
-/** `Authorization: Bearer <token>` or a non-empty `x-api-key`. Other schemes (Basic, ...) are not counted. */
-function hasHeaderCredential(headers: Headers): boolean {
-  if (headers.get('x-api-key')?.trim()) return true
-  return /^bearer\s+\S/i.test(headers.get('authorization') ?? '')
+/** Better Auth's cookies (`better-auth.*`, with or without the `__Secure-` prefix). */
+const SESSION_COOKIE_NAME = /^(?:__Secure-)?better-auth[.-]/
+
+/** The request without Better Auth's cookies; other cookies are kept. */
+function withoutSessionCookies(request: NextRequest): NextRequest {
+  const headers: Record<string, string> = {}
+  request.headers.forEach((value, key) => {
+    headers[key] = value
+  })
+  const kept = (headers.cookie ?? '')
+    .split(';')
+    .map(part => part.trim())
+    .filter(part => part && !SESSION_COOKIE_NAME.test(part))
+  if (kept.length) headers.cookie = kept.join('; ')
+  else delete headers.cookie
+  return new NextRequest(request.url, {
+    method: request.method,
+    headers,
+    body: request.body,
+    signal: request.signal,
+    nextConfig: { basePath: request.nextUrl.basePath },
+  })
+}
+
+function refusal(error: string, code: 'ORIGIN_REQUIRED' | 'ORIGIN_NOT_ALLOWED'): NextResponse {
+  return NextResponse.json({ success: false, error, code }, { status: 403 })
 }
 
 /**
- * Returns a 403 response when a cookie-authenticated write does not come from a
- * trusted origin, or null when the request may proceed.
+ * Checks a write's origin. Returns a 403 response when a cookie-authenticated
+ * write does not come from a trusted origin. Otherwise returns the request the
+ * handler should get: the same request, or, for a write that would be refused
+ * but presents an API key, a copy without its session cookie.
  */
-export function checkRequestOrigin(request: Request): NextResponse | null {
-  if (!WRITE_METHODS.has(request.method.toUpperCase())) return null
+export function checkRequestOrigin(request: NextRequest): NextResponse | NextRequest {
+  if (!WRITE_METHODS.has(request.method.toUpperCase())) return request
   const headers = request.headers
-  if (!hasSessionCookie(headers.get('cookie'))) return null
-  if (hasHeaderCredential(headers)) return null
+  if (!hasSessionCookie(headers.get('cookie'))) return request
 
+  let refused: NextResponse
   const origin = requestOrigin(headers)
   if (origin === null) {
     const contentType = (headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
-    if (!FORM_CONTENT_TYPES.has(contentType)) return null
-    return NextResponse.json(
-      { success: false, error: 'This request needs an Origin header', code: 'ORIGIN_REQUIRED' },
-      { status: 403 }
-    )
+    if (!FORM_CONTENT_TYPES.has(contentType)) return request
+    refused = refusal('This request needs an Origin header', 'ORIGIN_REQUIRED')
+  } else {
+    const normalized = normalizeOrigin(origin)
+    if (isOriginAllowed(normalized, getTrustedOrigins(APP_CONFIG_MERGED, normalized))) return request
+    refused = refusal('Request origin not allowed', 'ORIGIN_NOT_ALLOWED')
   }
 
-  const normalized = normalizeOrigin(origin)
-  if (isOriginAllowed(normalized, getTrustedOrigins(APP_CONFIG_MERGED, normalized))) return null
-  return NextResponse.json(
-    { success: false, error: 'Request origin not allowed', code: 'ORIGIN_NOT_ALLOWED' },
-    { status: 403 }
-  )
+  const apiKey = presentedApiKey(headers)
+  if (apiKey && ApiKeyManager.validateKeyFormat(apiKey)) return withoutSessionCookies(request)
+  return refused
 }

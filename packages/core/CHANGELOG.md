@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and is `/api/v1/users/:id` for the caller's own id: same fields, same checks (`role` stays a superadmin's to change). Clients that called `/users/me` got a 403
   since beta.194: nothing to change there. The route is a new core route: run `pnpm exec nextspark prepare` (or just `pnpm build`). The documented body is
   `firstName`, `lastName`, `language` and `metas`, not `name`/`image`.
+- **The write-origin check now skips only requests that present an API key.** A `POST`/`PUT`/`PATCH`/`DELETE` that carries the session cookie
+  from an origin the app does not trust (or with a form-encodable body and no Origin) passes the check only when its `Authorization: Bearer`
+  value or `x-api-key` is in the API-key format (`sk_live_…` / `sk_test_…`), and it then reaches the route without its session cookie: it is
+  authenticated by the key, or gets 401. Other `Authorization` values are not credentials for this check. A client affected: a browser page on another origin
+  that sends a non-key Bearer (for example a Better Auth session token) together with the cookie. Add that origin to the trusted origins
+  (`api.cors.allowedOrigins` / `CORS_ADDITIONAL_ORIGINS`) or authenticate it with an API key. Native clients (no Origin, JSON body) and pages on
+  the app's own origin are not affected; `Origin: null` keeps being refused (403 `ORIGIN_NOT_ALLOWED`).
+  Code that calls `checkRequestOrigin` (`@nextsparkjs/core/lib/api/request-origin`) itself: it now returns the 403 response or the request
+  to hand to the handler (never `null`); pass that request on instead of the original one.
 
 ### Added
 
@@ -33,6 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- CORS on `/api` responses and preflights (`addCorsHeaders`, `handleCorsPreflightRequest`, `wrapAuthHandlerWithCors`): an origin that is not
+  allowed gets no `Access-Control-Allow-Origin` and no `Access-Control-Allow-Credentials`. With `api.cors.allowAllOrigins.development`, any
+  origin is still echoed in development, with credentials only for the origins the write-origin check trusts. `/api/user/profile` reads the session from the request it handles.
 - web-mobile projects: the root scripts `dev:mobile`, `ios` and `android` and the README's `pnpm --filter mobile test` matched no package (the
   mobile package is named `<slug>-mobile`), so pnpm printed "No projects matched the filters" and exited 0. Every filter the generator writes is
   now a path (`--filter ./mobile`, `--filter ./web`). A project created before this keeps the broken scripts: replace `--filter mobile` with

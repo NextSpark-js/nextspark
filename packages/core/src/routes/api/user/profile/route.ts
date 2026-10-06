@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@nextsparkjs/core/lib/auth'
-import { headers } from 'next/headers'
 import { queryOneWithRLS, mutateWithRLS, queryOne } from '@nextsparkjs/core/lib/db'
 import { profileSchema } from '@nextsparkjs/core/lib/validation'
 import { MetaService, MetaValueTooLargeError } from '@nextsparkjs/core/lib/services/meta.service'
@@ -10,7 +9,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   const url = new URL(request.url)
   const includeMeta = url.searchParams.get('includeMeta') === 'true'
   try {
-    const sessionHeaders = await headers()
+    const sessionHeaders = request.headers
     const session = await auth.api.getSession({ headers: sessionHeaders })
     
     if (!session?.user) {
@@ -58,7 +57,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
 export const PATCH = withRateLimitTier(async (request: NextRequest) => {
   try {
-    const sessionHeaders = await headers()
+    const sessionHeaders = request.headers
     const session = await auth.api.getSession({ headers: sessionHeaders })
     
     if (!session?.user) {

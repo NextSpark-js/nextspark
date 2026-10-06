@@ -25,7 +25,7 @@ const mockedQueryOne = queryOne as unknown as jest.Mock
 function requestWithKey(key: string): NextRequest {
   return {
     headers: {
-      get: (header: string) => (header === 'Authorization' ? `Bearer ${key}` : null),
+      get: (header: string) => (header.toLowerCase() === 'authorization' ? `Bearer ${key}` : null),
     },
   } as unknown as NextRequest
 }

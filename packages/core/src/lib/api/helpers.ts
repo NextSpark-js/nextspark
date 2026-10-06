@@ -9,7 +9,7 @@ import { ScopeService } from '../services/scope.service';
 import { getEntityConfig } from '../entities/registry';
 import { getChildEntities, getEntity } from '../entities/queries';
 import { CreateMetaPayload } from '../../types/meta.types';
-import { getCorsOrigins, normalizeOrigin, isOriginAllowed } from '../utils/cors';
+import { getCorsOrigins, getTrustedOrigins, normalizeOrigin, isOriginAllowed } from '../utils/cors';
 import { isValidUUID } from '../utils/uuid';
 import {
   type AuthenticateOptions,
@@ -512,54 +512,56 @@ function getAllowedFiltersFromRegistry(): string[] {
 }
 
 /**
+ * Which origin a CORS response may name, and whether credentials go with it.
+ * A listed origin (getCorsOrigins, wildcard entries allowed) is echoed with
+ * credentials. In development with allowAllOrigins.development, any other
+ * origin is echoed too, but with credentials only when the cookie-write origin
+ * check trusts it (getTrustedOrigins). Any other origin gets no grant: the
+ * response names no origin and sends no credentials header.
+ */
+function corsGrant(
+  origin: string,
+  config: Awaited<ReturnType<typeof getApplicationConfig>>,
+  env: string
+): { origin: string; credentials: boolean } | null {
+  const normalizedOrigin = normalizeOrigin(origin);
+  const listed = isOriginAllowed(normalizedOrigin, getCorsOrigins(config, env));
+  if (listed) return { origin: listed, credentials: true };
+  if (env === 'development' && config.api.cors.allowAllOrigins.development) {
+    const trusted = isOriginAllowed(normalizedOrigin, getTrustedOrigins(config, normalizedOrigin, env));
+    return { origin: normalizedOrigin, credentials: trusted !== null };
+  }
+  return null;
+}
+
+/**
  * Agrega headers de CORS para API externa
- * Uses unified getCorsOrigins() for single source of truth
+ * Uses unified getCorsOrigins() for single source of truth (see corsGrant)
  */
 export async function addCorsHeaders(response: NextResponse, request?: NextRequest): Promise<NextResponse> {
   const env = process.env.NODE_ENV || 'development';
   const config = await getApplicationConfig();
-  const corsConfig = config.api.cors;
 
-  // Determinar el origen permitido
-  let allowedOrigin = 'null';
-
+  let grant: { origin: string; credentials: boolean } | null = null;
   if (request) {
     const origin = request.headers.get('origin');
-
-    if (origin) {
-      // Normalize the incoming origin for consistent comparison
-      const normalizedOrigin = normalizeOrigin(origin);
-
-      // En desarrollo, permitir todos los orígenes si está configurado
-      if (env === 'development' && corsConfig.allowAllOrigins.development) {
-        allowedOrigin = normalizedOrigin;
-      }
-      // En producción o desarrollo con restricciones, verificar lista permitida
-      else {
-        // Use unified origin list from getCorsOrigins() (already normalized).
-        // isOriginAllowed supports wildcard-pattern entries and echoes the
-        // concrete origin (credentialed responses can't use '*').
-        const allowedOrigins = getCorsOrigins(config, env);
-        const matched = isOriginAllowed(normalizedOrigin, allowedOrigins);
-        if (matched) {
-          allowedOrigin = matched;
-        }
-      }
-    }
-  } else if (env === 'development' && corsConfig.allowAllOrigins.development) {
+    if (origin) grant = corsGrant(origin, config, env);
+  } else if (env === 'development' && config.api.cors.allowAllOrigins.development) {
     // In development with allowAllOrigins but no request, use the first allowed origin
     // This handles cases where generic handlers don't pass the request
     const allowedOrigins = getCorsOrigins(config, env);
-    allowedOrigin = allowedOrigins[0] || 'http://localhost:3000';
+    grant = { origin: allowedOrigins[0] || 'http://localhost:3000', credentials: true };
   }
 
-  response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+  if (grant) {
+    response.headers.set('Access-Control-Allow-Origin', grant.origin);
+    if (grant.credentials) response.headers.set('Access-Control-Allow-Credentials', 'true');
+  }
   // Credentialed CORS echoes a per-request origin, so the response varies by
   // Origin — tell caches to key on it (prevents serving origin A's grant to B).
   response.headers.append('Vary', 'Origin');
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, x-team-id, x-builder-source');
-  response.headers.set('Access-Control-Allow-Credentials', 'true');
   response.headers.set('Access-Control-Max-Age', '86400');
 
   return response;
@@ -606,32 +608,14 @@ export async function wrapAuthHandlerWithCors(
     headers: new Headers(response.headers),
   })
 
-  // Add CORS headers
-  const env = process.env.NODE_ENV || 'development'
-  const config = await getApplicationConfig()
-  const corsConfig = config.api.cors
+  // Add CORS headers (see corsGrant)
   const origin = request.headers.get('origin')
-
   if (origin) {
-    // Normalize the incoming origin for consistent comparison
-    const normalizedOrigin = normalizeOrigin(origin)
-    let allowedOrigin = 'null'
-
-    // In development with allowAllOrigins, allow any origin
-    if (env === 'development' && corsConfig.allowAllOrigins.development) {
-      allowedOrigin = normalizedOrigin
-    } else {
-      // Check against allowed origins list (already normalized). isOriginAllowed
-      // supports wildcard-pattern entries and echoes the concrete origin.
-      const allowedOrigins = getCorsOrigins(config, env)
-      const matched = isOriginAllowed(normalizedOrigin, allowedOrigins)
-      if (matched) {
-        allowedOrigin = matched
-      }
+    const grant = corsGrant(origin, await getApplicationConfig(), process.env.NODE_ENV || 'development')
+    if (grant) {
+      newResponse.headers.set('Access-Control-Allow-Origin', grant.origin)
+      if (grant.credentials) newResponse.headers.set('Access-Control-Allow-Credentials', 'true')
     }
-
-    newResponse.headers.set('Access-Control-Allow-Origin', allowedOrigin)
-    newResponse.headers.set('Access-Control-Allow-Credentials', 'true')
     // Vary on Origin since ACAO is per-request (cache-key correctness).
     newResponse.headers.append('Vary', 'Origin')
   }

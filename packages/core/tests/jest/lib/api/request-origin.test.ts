@@ -18,6 +18,7 @@ jest.mock('@/core/lib/config', () => ({
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRequestOrigin } from '@/core/lib/api/request-origin'
 import { withRateLimitTier } from '@/core/lib/api/rate-limit'
+import { presentedApiKey } from '@/core/lib/api/keys'
 
 const APP = 'https://app.example.com'
 const SESSION = 'better-auth.session_token=abc.def'
@@ -28,8 +29,13 @@ function makeRequest(method: string, headers: Record<string, string> = {}) {
 
 async function refusal(method: string, headers: Record<string, string>) {
   const res = checkRequestOrigin(makeRequest(method, headers))
-  return res ? { status: res.status, code: (await res.json()).code } : null
+  return res instanceof NextResponse ? { status: res.status, code: (await res.json()).code } : null
 }
+
+/** A value in the API-key format (validateApiKey still has to find it). */
+const KEY = `sk_test_${'a'.repeat(64)}`
+const FOREIGN = 'https://other.example'
+const REFUSED = { status: 403, code: 'ORIGIN_NOT_ALLOWED' }
 
 describe('checkRequestOrigin', () => {
   const saved = { app: process.env.NEXT_PUBLIC_APP_URL, auth: process.env.BETTER_AUTH_URL }
@@ -78,10 +84,42 @@ describe('checkRequestOrigin', () => {
     expect(await refusal('POST', { cookie: 'theme=dark', origin: 'https://other.example' })).toBeNull()
   })
 
-  it('leaves requests with an API key or bearer token alone', async () => {
-    expect(await refusal('POST', { authorization: 'Bearer sk_test', cookie: SESSION, origin: 'https://other.example' })).toBeNull()
-    expect(await refusal('POST', { 'x-api-key': 'sk_test', cookie: SESSION })).toBeNull()
-    expect(await refusal('POST', { authorization: 'Bearer sk_test', 'content-type': 'text/plain' })).toBeNull()
+  it('lets a write that presents an API key through, without its session cookie', async () => {
+    for (const headers of [{ authorization: `Bearer ${KEY}` }, { 'x-api-key': KEY }]) {
+      const out = checkRequestOrigin(makeRequest('POST', { ...headers, cookie: `${SESSION}; theme=dark; __Secure-better-auth.session_data=x`, origin: FOREIGN }))
+      expect(out).toBeInstanceOf(NextRequest)
+      const passed = out as NextRequest
+      expect(passed.headers.get('cookie')).toBe('theme=dark')
+      expect(presentedApiKey(passed.headers as Headers)).toBe(KEY)
+    }
+    const noOrigin = checkRequestOrigin(makeRequest('POST', { 'x-api-key': KEY, cookie: SESSION, 'content-type': 'text/plain' })) as NextRequest
+    expect(noOrigin.headers.get('cookie') ?? null).toBeNull()
+  })
+
+  it('keeps the request unchanged when the origin is trusted', async () => {
+    const same = makeRequest('POST', { authorization: `Bearer ${KEY}`, cookie: SESSION, origin: APP })
+    expect(checkRequestOrigin(same)).toBe(same)
+  })
+
+  it('applies the check to a Bearer value that is not in the API-key format', async () => {
+    for (const authorization of ['Bearer junk', 'Bearer some.session-token', `bearer ${KEY}`, `Bearer  ${KEY}`]) {
+      expect(await refusal('POST', { authorization, cookie: SESSION, origin: FOREIGN })).toEqual(REFUSED)
+    }
+    expect(await refusal('POST', { 'x-api-key': 'junk', cookie: SESSION, origin: FOREIGN })).toEqual(REFUSED)
+    expect(await refusal('POST', { authorization: 'Bearer junk', cookie: SESSION, 'content-type': 'text/plain' })).toEqual({ status: 403, code: 'ORIGIN_REQUIRED' })
+  })
+
+  it('reads the key from Authorization before x-api-key, as validateApiKey does', async () => {
+    expect(await refusal('POST', { authorization: 'Bearer junk', 'x-api-key': KEY, cookie: SESSION, origin: FOREIGN })).toEqual(REFUSED)
+  })
+
+  it('refuses Origin: null with the session cookie and a JSON body', async () => {
+    expect(await refusal('POST', { cookie: SESSION, origin: 'null', 'content-type': 'application/json' })).toEqual(REFUSED)
+  })
+
+  it('leaves requests without a session cookie alone, whatever their Authorization', async () => {
+    expect(await refusal('POST', { authorization: 'Bearer junk', origin: FOREIGN })).toBeNull()
+    expect(await refusal('POST', { authorization: `Bearer ${KEY}`, 'content-type': 'text/plain' })).toBeNull()
   })
 
   it('does not count a non-Bearer Authorization scheme or an empty credential', async () => {
@@ -165,5 +203,20 @@ describe('withRateLimitTier runs the origin check first', () => {
 
     const get = await route(makeRequest('GET', { cookie: SESSION, origin: 'https://other.example' }))
     expect(get.status).toBe(201)
+  })
+
+  it('hands the handler a request without the session cookie when it passes on an API key', async () => {
+    const seen: (string | null)[] = []
+    const route = withRateLimitTier(async (req: NextRequest) => {
+      seen.push(req.headers.get('cookie') ?? null)
+      return NextResponse.json({ ok: true }, { status: 201 })
+    }, 'write')
+    const res = await route(makeRequest('POST', { authorization: `Bearer ${KEY}`, cookie: SESSION, origin: 'https://other.example' }))
+    expect(res.status).toBe(201)
+    expect(seen).toEqual([null])
+
+    const junk = await route(makeRequest('POST', { authorization: 'Bearer junk', cookie: SESSION, origin: 'https://other.example' }))
+    expect(junk.status).toBe(403)
+    expect(seen).toHaveLength(1)
   })
 })

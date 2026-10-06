@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { queryOne } from '../db';
-import { ApiKeyManager } from './keys';
+import { ApiKeyManager, presentedApiKey } from './keys';
 import { apiKeyCache, getCacheKey } from './cache';
 import { TeamMemberService } from '../services/team-member.service';
 import { ScopeService } from '../services/scope.service';
@@ -37,19 +37,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyAuth |
   const startTime = Date.now();
 
   try {
-    const authHeader = request.headers.get('Authorization');
-    const xApiKeyHeader = request.headers.get('x-api-key');
-
-    let apiKey: string | null = null;
-
-    // Check Authorization header first
-    if (authHeader?.startsWith('Bearer ')) {
-      apiKey = authHeader.substring(7);
-    }
-    // Then check x-api-key header
-    else if (xApiKeyHeader) {
-      apiKey = xApiKeyHeader;
-    }
+    const apiKey = presentedApiKey(request.headers);
 
     if (!apiKey) {
       // Añadir delay constante para prevenir timing attacks
