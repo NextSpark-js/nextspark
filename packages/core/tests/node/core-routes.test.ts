@@ -240,8 +240,8 @@ test('the Cache Components variants are the routes whose segment config Next.js 
   assert.deepEqual(
     Object.keys(VARIANT_FILES.cacheComponents).sort(),
     [
-      '(auth)/layout.cc.tsx', '(auth)/login/page.cc.tsx', '(auth)/signup/page.cc.tsx', '(public)/docs/[section]/[page]/page.cc.tsx', '(public)/layout.cc.tsx',
-      'dashboard/layout.cc.tsx', 'devtools/layout.cc.tsx', 'layout.ppr.tsx', 'superadmin/docs/[section]/[page]/page.cc.tsx', 'superadmin/layout.cc.tsx',
+      '(auth)/layout.cc.tsx', '(auth)/login/page.cc.tsx', '(auth)/signup/page.cc.tsx', '(public)/docs/[section]/[page]/page.cc.tsx', '(public)/layout.cc.tsx', '(public)/page.cc.tsx',
+      'dashboard/(main)/layout.cc.tsx', 'dashboard/layout.cc.tsx', 'devtools/layout.cc.tsx', 'layout.ppr.tsx', 'superadmin/docs/[section]/[page]/page.cc.tsx', 'superadmin/layout.cc.tsx',
     ]
   )
   // Every manifest entry that Next.js refuses with cacheComponents has a variant that it accepts.
@@ -465,10 +465,46 @@ test('a per-entity route\'s core module graph never imports the generated client
   assert.deepEqual(offenders, [])
 })
 
-test('the default /signup page redirects outside Suspense (a real 307); the Cache Components variant re-exports it', () => {
+test('the default /signup page redirects outside Suspense (a real 307); the Cache Components variant renders it behind its own boundary', () => {
   const legacy = fs.readFileSync(path.join(ROUTES, '(auth)/signup/page.tsx'), 'utf8')
   const cc = fs.readFileSync(path.join(ROUTES, '(auth)/signup/page.cc.tsx'), 'utf8')
   assert.match(legacy, /redirect\('\/login'\)/)
   assert.doesNotMatch(legacy, /<Suspense|import { Suspense/, 'redirect() thrown inside a Suspense boundary reaches the browser as a 200 with a meta refresh')
-  assert.match(cc, /export \{ default, metadata \} from '\.\/page'/)
+  assert.match(cc, /import SignupPage, \{ metadata \} from '\.\/page'/)
+  assert.match(cc, /<Suspense fallback=\{null\}>\s*<SignupPage \/>\s*<\/Suspense>/, 'a page that redirects needs a boundary under the segment the dev server validates')
+})
+
+/**
+ * Next.js's dev server validates every page of a Cache Components host for instant navigation (it logs "Could not
+ * validate that a segment in your UI has instant navigation" and the dev badge shows an issue). What it reports
+ * in the starter's routes, and how they avoid it (#203):
+ */
+test('the Cache Components main dashboard layout checks the entity permission behind Suspense; the default one before the shell', () => {
+  const read = (file: string) => fs.readFileSync(path.join(ROUTES, file), 'utf8')
+  const legacy = read('dashboard/(main)/layout.tsx')
+  const cc = read('dashboard/(main)/layout.cc.tsx')
+  const shared = read('_internal/dashboard-main-shared.tsx')
+  // The ISR layout still answers a denied request with a real redirect: the check runs before anything renders
+  assert.match(legacy, /await enforceEntityPermission\(\)\s*\n\s*\n?\s*return <MainDashboardShell>/)
+  assert.doesNotMatch(legacy, /<Suspense/)
+  // The Cache Components one renders the shell at once and checks inside a boundary around the page
+  assert.match(cc, /<MainDashboardShell>\s*<Suspense fallback=\{null\}>\s*<EntityPermission>\{children\}<\/EntityPermission>\s*<\/Suspense>\s*<\/MainDashboardShell>/)
+  assert.match(cc, /await enforceEntityPermission\(\)/)
+  assert.doesNotMatch(cc.replace(/async function EntityPermission[\s\S]*?\n}\n/, ''), /await\s/, 'the layout itself awaits nothing')
+  // The check itself is shared, so the two cannot drift
+  assert.match(shared, /export async function enforceEntityPermission/)
+  assert.match(shared, /redirect\(`\/dashboard\/permission-denied/)
+})
+
+test('the public archive page reads the search parameters behind Suspense (request data outside it makes the route not instant)', () => {
+  const archive = fs.readFileSync(path.join(ROUTES, '_internal/public-archive-route.tsx'), 'utf8')
+  assert.match(archive, /<Suspense fallback=\{null\}>\s*<ArchiveGrid config=\{config\} searchParams=\{searchParams\} \/>\s*<\/Suspense>/)
+  assert.doesNotMatch(archive.replace(/async function ArchiveGrid[\s\S]*?\n}\n/, ''), /await searchParams/)
+})
+
+test('the dashboard auth gate renders the page while the session loads (a skeleton in its place drops the route segments from the server render)', () => {
+  const gate = fs.readFileSync(path.join(CORE, 'src/components/dashboard/layouts/AuthenticatedDashboardLayout.tsx'), 'utf8')
+  assert.doesNotMatch(gate, /if \(isLoading\) return/)
+  assert.doesNotMatch(gate, /DashboardAuthSkeleton/)
+  assert.match(gate, /if \(!isLoading && !user\) return null/)
 })

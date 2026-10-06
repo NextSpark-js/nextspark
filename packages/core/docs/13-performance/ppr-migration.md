@@ -61,7 +61,7 @@ With `cacheComponents: true` detected, the translation registry will now generat
 
 Nothing to copy: with `cacheComponents: true` in `next.config`, `nextspark prepare` emits the PPR root layout
 (`@nextsparkjs/core/routes/layout.ppr`), core's `layout.cc.tsx` variants of the group layouts (auth, public, devtools,
-superadmin, dashboard) and the cached public item pages by itself.
+superadmin, dashboard, and the dashboard's main layout) and the cached public item pages by itself.
 
 Key differences from the default layout:
 - **Sync function** (not async) — enables PPR static shell

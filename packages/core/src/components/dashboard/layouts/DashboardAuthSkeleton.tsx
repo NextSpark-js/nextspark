@@ -14,8 +14,8 @@ import { Skeleton, SkeletonContainer } from '../../ui/skeleton'
  * The sidebar rail collapses below the `md:` breakpoint, matching the real
  * dashboard sidebar, so mobile never shows a phantom sidebar block.
  *
- * Shared by AuthGuard, DashboardAuthLayout and the generated
- * app/dashboard/layout.tsx so the public API and the template cannot drift.
+ * Shared by AuthGuard and DashboardAuthLayout so the public API and the template cannot drift. The
+ * dashboard layout itself (AuthenticatedDashboardLayout) does not use it: it renders the page while the session loads.
  */
 export function DashboardAuthSkeleton() {
   return (

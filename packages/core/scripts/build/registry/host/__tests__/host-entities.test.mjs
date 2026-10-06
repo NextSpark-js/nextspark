@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path'
 import { ENTITY_DIAGNOSTICS, ENTITY_MODULES, entityConfigFile, planEntityRoutes, readAllEntityFacts, readEntityFacts, routableEntities } from '../entity-routes.mjs'
 import { PLAN_DIAGNOSTICS, PLAN_NOTICES, planHost, urlConflicts } from '../plan.mjs'
 import { renderHost } from '../render.mjs'
-import { validateGeneratedModule } from '../static-imports.mjs'
+import { CORE_COMPOSITION_WRAPPERS, validateGeneratedModule } from '../static-imports.mjs'
 import { loadTypeScriptFor } from '../../shared/typescript-compiler.mjs'
 
 const CORE_ROOT = join(import.meta.dirname, '../../../../..')
@@ -29,6 +29,8 @@ const CORE_MODULES = {
   [ENTITY_MODULES.detail]: ['core/entity-detail-route.tsx', factories('createEntityDetailRoute')],
   [ENTITY_MODULES.create]: ['core/entity-create-route.tsx', factories('createEntityCreateRoute')],
   [ENTITY_MODULES.edit]: ['core/entity-edit-route.tsx', factories('createEntityEditRoute')],
+  [ENTITY_MODULES.detailCc]: ['core/entity-detail-route.cc.tsx', factories('createEntityDetailRoute')],
+  [ENTITY_MODULES.editCc]: ['core/entity-edit-route.cc.tsx', factories('createEntityEditRoute')],
   [ENTITY_MODULES.publicItem]: ['core/public-item-route.tsx', factories('createPublicItemRoute', 'createPublicItemMetadata')],
   [ENTITY_MODULES.publicItemCc]: ['core/public-item-route.cc.tsx', factories('createPublicItemRoute', 'createPublicItemMetadata')],
   [ENTITY_MODULES.publicArchive]: ['core/public-archive-route.tsx', factories('createPublicArchiveRoute', 'createPublicArchiveMetadata')],
@@ -687,6 +689,35 @@ test('a host that builds in Cache Components mode only imports the cached item s
     assert.equal(await moduleOf({ cacheComponents: true, modes: ['isr', 'cc'] }), ENTITY_MODULES.publicItem)
   } finally {
     w.cleanup()
+  }
+})
+
+test('a Cache Components host writes the detail and edit pages of an entity from the modules that put them behind Suspense (they await `params`)', async () => {
+  const w = world()
+  try {
+    const args = [w, [entity('tasks', 'taskEntityConfig')], { tasks: await factsOf("slug: 'tasks', enabled: true, ui: { dashboard: { showInMenu: true } }") }]
+    const moduleOf = async (target, factory, options) => at(await render((await plan(...args, options)).routes), target).match(new RegExp(`import \\{ ${factory} \\} from "([^"]+)"`))[1]
+    assert.equal(ENTITY_MODULES.detailCc, `${ENTITY_MODULES.detail}.cc`)
+    assert.equal(ENTITY_MODULES.editCc, `${ENTITY_MODULES.edit}.cc`)
+    const detail = options => moduleOf('dashboard/(main)/tasks/[id]/page.tsx', 'createEntityDetailRoute', options)
+    const edit = options => moduleOf('dashboard/(main)/tasks/[id]/edit/page.tsx', 'createEntityEditRoute', options)
+    assert.equal(await detail({ cacheComponents: true }), ENTITY_MODULES.detailCc)
+    assert.equal(await edit({ cacheComponents: true }), ENTITY_MODULES.editCc)
+    // An ISR host keeps the routes that redirect and answer notFound() before anything is sent; so does one that builds both, or does not know
+    for (const options of [{ cacheComponents: false }, {}, { cacheComponents: true, modes: ['isr', 'cc'] }]) {
+      assert.equal(await detail(options), ENTITY_MODULES.detail)
+      assert.equal(await edit(options), ENTITY_MODULES.edit)
+    }
+  } finally {
+    w.cleanup()
+  }
+})
+
+test('every factory module the entity routes import is a known composition module, with the factories it exports (a real host fails facade validation otherwise)', () => {
+  const FACTORY_MODULES = ['layout', 'list', 'detail', 'create', 'edit', 'detailCc', 'editCc', 'publicItem', 'publicItemCc', 'publicArchive']
+  for (const name of FACTORY_MODULES) {
+    const wrappers = CORE_COMPOSITION_WRAPPERS[ENTITY_MODULES[name]]
+    assert.ok(Array.isArray(wrappers) && wrappers.length > 0, `${name}: ${ENTITY_MODULES[name]} is missing from CORE_COMPOSITION_WRAPPERS`)
   }
 })
 

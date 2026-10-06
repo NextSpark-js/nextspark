@@ -63,6 +63,16 @@
       "specifier": "@nextsparkjs/core/routes/dashboard/layout.cc"
     },
     {
+      "kind": "layout",
+      "target": "dashboard/(main)/layout.tsx",
+      "specifier": "@nextsparkjs/core/routes/dashboard/(main)/layout.cc"
+    },
+    {
+      "kind": "page",
+      "target": "(public)/page.tsx",
+      "specifier": "@nextsparkjs/core/routes/(public)/page.cc"
+    },
+    {
       "kind": "page",
       "target": "(auth)/login/page.tsx",
       "specifier": "@nextsparkjs/core/routes/(auth)/login/page.cc"

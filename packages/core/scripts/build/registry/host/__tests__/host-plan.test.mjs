@@ -330,8 +330,8 @@ test('core\'s routes carry their protection level, so a composed layout can be t
   assert.equal(withCc.routes.find(route => route.target === 'layout.tsx').compose.specifier, '@nextsparkjs/core/routes/_internal/root-layout.ppr')
   assert.equal(withCc.routes.find(route => route.target === '(auth)/login/page.tsx').specifier, '@nextsparkjs/core/routes/(auth)/login/page.cc')
   assert.deepEqual(withCc.variantsApplied.sort(), [
-    '(auth)/layout.tsx', '(auth)/login/page.tsx', '(auth)/signup/page.tsx', '(public)/docs/[section]/[page]/page.tsx', '(public)/layout.tsx',
-    'dashboard/layout.tsx', 'devtools/layout.tsx', 'layout.tsx', 'superadmin/docs/[section]/[page]/page.tsx', 'superadmin/layout.tsx',
+    '(auth)/layout.tsx', '(auth)/login/page.tsx', '(auth)/signup/page.tsx', '(public)/docs/[section]/[page]/page.tsx', '(public)/layout.tsx', '(public)/page.tsx',
+    'dashboard/(main)/layout.tsx', 'dashboard/layout.tsx', 'devtools/layout.tsx', 'layout.tsx', 'superadmin/docs/[section]/[page]/page.tsx', 'superadmin/layout.tsx',
   ])
   // The layouts that load messages keep their wrapper (from the Cache Components module) and their protection level
   const ccLevel = target => withCc.routes.find(route => route.target === target)

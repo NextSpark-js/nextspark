@@ -6,6 +6,7 @@
  * See public-item-route.tsx for how these routes are made.
  */
 
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { PublicEntityGrid } from '@nextsparkjs/core/components/public/entities/PublicEntityGrid'
@@ -14,9 +15,18 @@ import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
+/**
+ * The grid reads the search parameters (page, sort, filter), which Next.js counts as request data: behind its own
+ * boundary the heading renders with the static shell and the grid streams in, and a navigation to the archive
+ * does not wait for them.
+ */
+async function ArchiveGrid({ config, searchParams }: { config: EntityConfig; searchParams: SearchParams }) {
+  return <PublicEntityGrid entityType={config.slug} entitySlug={config.slug} searchParams={await searchParams} />
+}
+
 /** @param config - the entity's config (`ui.public.hasArchivePage` decides whether the archive is served) */
 export function createPublicArchiveRoute(config: EntityConfig) {
-  return async function PublicArchiveRoute({ searchParams }: { searchParams: SearchParams }) {
+  return function PublicArchiveRoute({ searchParams }: { searchParams: SearchParams }) {
     if (!config.ui?.public?.hasArchivePage) notFound()
     // An archive at the entity's own path (no basePath) is served only for an enabled, public entity
     const hasBasePath = Boolean(config.access?.basePath ?? config.builder?.public?.basePath)
@@ -28,7 +38,9 @@ export function createPublicArchiveRoute(config: EntityConfig) {
           <p className="text-lg text-muted-foreground">Browse all {config.names.plural.toLowerCase()}</p>
         </div>
 
-        <PublicEntityGrid entityType={config.slug} entitySlug={config.slug} searchParams={await searchParams} />
+        <Suspense fallback={null}>
+          <ArchiveGrid config={config} searchParams={searchParams} />
+        </Suspense>
       </div>
     )
   }

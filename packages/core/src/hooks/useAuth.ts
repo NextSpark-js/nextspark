@@ -48,6 +48,32 @@ function rememberSignedIn(user: unknown) {
   }
 }
 
+/** The longest the sign-out waits for the session store before it goes on to the login page. */
+const SESSION_DROP_TIMEOUT_MS = 2000
+
+/**
+ * After a sign-out the client keeps the signed-in user in its session store until its own request for the
+ * session answers (it is sent when the sign-out succeeds). Emptying the query cache before that makes every
+ * signed-in query on the page refetch the moment it re-renders - they still see the user - and the API
+ * answers each with 401. So the store is brought up to date first, for at most SESSION_DROP_TIMEOUT_MS:
+ * the redirect never depends on that request. Best effort: a store that cannot be refreshed leaves the order as it was.
+ *
+ * `$store.atoms.session` is an undocumented internal of better-auth, checked against 1.6.30 (client/session-atom.mjs: the atom's
+ * value carries `refetch`). If an upgrade renames it this becomes a no-op and the 401s come back:
+ * tests/jest/hooks/useAuth.signed-in-data.test.tsx pins the call, re-check it when better-auth is bumped.
+ */
+async function waitForSessionToDrop() {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    const refetch = authClient.$store?.atoms?.session?.get?.()?.refetch?.()
+    await Promise.race([refetch, new Promise<void>(resolve => { timer = setTimeout(resolve, SESSION_DROP_TIMEOUT_MS) })])
+  } catch {
+    // the sign-out itself went through; the page is on its way to the login page
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 /**
  * Sign-in, sign-up and account actions, without subscribing to the session: a
  * page that only acts, like the login and signup forms, makes no session request.
@@ -118,6 +144,7 @@ export function useAuthActions() {
     }
     await authClient.signOut()
     setSessionHint(false)
+    await waitForSessionToDrop()
     forgetSignedInData()
     router.push('/login')
   }

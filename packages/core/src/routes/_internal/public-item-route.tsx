@@ -30,6 +30,16 @@ export interface ItemRouteProps {
   searchParams: SearchParams
 }
 
+/**
+ * The extensions of the static files a browser or crawler asks a site for. A request for one that reaches an item route
+ * (`/favicon.ico`, `/robots.txt`, `/apple-touch-icon.png`) is not an item: it answers not found at once, without reading the
+ * database or rendering a template. A slug may contain a dot (`release-1.0`, `v2.5`), so only these extensions on the last
+ * segment count.
+ */
+export const STATIC_FILE_EXTENSION = /\.(?:ico|png|jpe?g|gif|svg|webp|avif|txt|xml|json|webmanifest|map|js|css|woff2?)$/i
+
+const isFileRequest = (slug: string) => STATIC_FILE_EXTENSION.test(slug)
+
 /** The item slug of a `[slug]` or `[...slug]` route: a nested slug is joined, as the catch-all did. */
 const slugOf = (slug: string | string[]) => (Array.isArray(slug) ? slug.join('/') : slug)
 
@@ -77,6 +87,7 @@ async function renderDefaultPublicItem(source: PublicItemSource, entity: EntityC
 function itemRoute(source: PublicItemSource, config: EntityConfig, Template?: ComponentType<PublicItemTemplateProps>) {
   return async function PublicItemRoute({ params, searchParams }: ItemRouteProps) {
     const slug = slugOf((await params).slug)
+    if (isFileRequest(slug)) notFound()
     if (Template) return <Template params={Promise.resolve({ slug })} searchParams={searchParams} />
 
     const item = await renderDefaultPublicItem(source, config, slug)
@@ -89,6 +100,7 @@ function itemRoute(source: PublicItemSource, config: EntityConfig, Template?: Co
 function itemMetadata(source: PublicItemSource, config: EntityConfig) {
   return async function generatePublicItemMetadata({ params }: Pick<ItemRouteProps, 'params'>): Promise<Metadata> {
     const slug = slugOf((await params).slug)
+    if (isFileRequest(slug)) return { title: 'Not Found' }
     const item = await source.fetchItem(config, slug)
     if (item) {
       return {

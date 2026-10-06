@@ -293,4 +293,24 @@ cookies or headers below no other boundary). The public item routes omit `revali
 mode only imports `_internal/public-item-route.cc`, whose reads of the published item and of the patterns it references are `'use cache'`
 functions (`cacheLife` of an hour for an item, tags `entity:<slug>` and `public-item:<slug>:<item slug>`).
 
+**Instant navigation (dev server).** On a Cache Components host `next dev` runs Next.js's instant-navigation check on every page it
+serves: it renders the route as a navigation into each segment and logs `Could not validate that a segment in your UI has instant
+navigation` (a segment the server render never reached), `... uncached data during prerendering or a navigation` or `... runtime data
+(`cookies()`, `headers()`, `params`, `searchParams`) accessed outside of <Suspense>`, and the dev badge shows an issue. The pages work; the check is
+about what a navigation would wait for. What it found in the starter, and the fix, are in core, so no project file changes:
+- The dashboard's client auth gate (`AuthenticatedDashboardLayout`) rendered a skeleton instead of `children` while the session loaded, so the
+  route's own segments were never rendered on the server ("dropped"). It renders the page while the session loads and keeps the signed-in side effects for
+  a known user.
+- `dashboard/(main)/layout.cc` (one more `layout.cc.tsx` variant, for a layout whose permission check reads the request) renders the shell at once and runs the permission check (session and database) in a
+  Suspense boundary around the page; the ISR layout still checks before rendering anything, so a denied request keeps its real redirect.
+- The pages that await `params` (the public item routes `public-item-route.cc`, the dashboard detail and edit routes `entity-detail-route.cc` /
+  `entity-edit-route.cc`, written for a host with `cacheComponents` on and nothing else) sit behind a boundary of their own
+  (`_internal/suspended-route`); the `/signup` variant and core's default home (`(public)/page.cc`) render the page that redirects behind one too, and the public archive and the permission-denied
+  page read `searchParams` behind one. The status a visitor gets does not change: the layouts already streamed these pages after their shell.
+- A project without `public/favicon.ico` made the browser's own `GET /favicon.ico` hit the public `[slug]` page (an HTML "not found" with a 200);
+  new projects ship a favicon, and a request for a page that does not exist is now answered inside a boundary the check accepts.
+Not covered: `/superadmin` and `/devtools` (admin areas: their client guards hide the page until the session loads, and each segment checks the role
+on the server outside Suspense); the dev server reports their pages as dropped. Opting an area out is `export const instant = false` in the
+layout's source (a literal, as the facade rules require); nothing sets it today.
+
 Tests: `node --test packages/core/scripts/build/registry/host/__tests__/*.test.mjs`.

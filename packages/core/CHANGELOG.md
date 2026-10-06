@@ -26,10 +26,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mobile package is named `<slug>-mobile`), so pnpm printed "No projects matched the filters" and exited 0. Every filter the generator writes is
   now a path (`--filter ./mobile`, `--filter ./web`). A project created before this keeps the broken scripts: replace `--filter mobile` with
   `--filter ./mobile` in its root `package.json`.
-- web-mobile README: dropped the obsolete `npm install -g expo-cli` prerequisite (`pnpm dlx expo ...` / `npx expo ...` need no global install).
+- web-mobile README: dropped the obsolete `npm install -g expo-cli` prerequisite (the project's own Expo CLI, `pnpm expo ...` in `mobile/` or the root scripts, needs no global install).
 - `[DB] WARNING: SSL disabled in production environment` printed once per module load (about 12 times per build or start). It now prints once per
   process, and not at all when the connection string asks for `sslmode=disable` and the host is `localhost`, `127.0.0.1` or `::1` (a remote host
   still gets it; the host name is matched case-insensitively).
+- **`pnpm dev` of a Cache Components project no longer reports instant-navigation issues on a fresh starter.** Next.js 16.3's dev server checks every
+  page of a Cache Components host for instant navigation and logged `Could not validate that a segment in your UI has instant navigation` for
+  `/dashboard` and `/dashboard/tasks` (and `Could not validate instant ... the target segment from rendering` for `/[slug]`), with an issue in the dev badge; the
+  pages worked. Causes and fixes, all in core (nothing to change in a project):
+  - The dashboard's client auth gate (`AuthenticatedDashboardLayout`) returned a skeleton instead of the page while the session loaded, so the route's own
+    segments were never rendered on the server. It now renders the page while the session loads (the shell and pages show their own loading states) and
+    mounts the translation preloader and the auth-method detector only for a known user. Signed out it still renders nothing and goes to `/login`.
+  - A new Cache Components variant of the main dashboard layout (`routes/dashboard/(main)/layout.cc`, picked by `nextspark prepare` when `cacheComponents` is on) renders the
+    shell at once and runs the entity permission check (session and database) inside a Suspense boundary around the page. The ISR layout is unchanged and still redirects
+    before rendering anything. The check moved to `routes/_internal/dashboard-main-shared`, shared by both.
+  - The pages that await `params`, `searchParams` or redirect now sit behind a boundary of their own in a Cache Components host: the public item pages
+    (`public-item-route.cc`), the dashboard detail and edit pages of every entity (new `entity-detail-route.cc` / `entity-edit-route.cc`, used by the generated host only with
+    `cacheComponents` on), the `/signup` page, core's default home (`/`, a redirect to the dashboard when a project has no landing page: new `(public)/page.cc` variant), the public archive page and `/dashboard/permission-denied`. What a visitor gets does not change (the layouts already streamed these
+    pages after their shell; an ISR host keeps its real 307 and 404).
+  - New projects ship `public/favicon.ico`. Without one, the browser's own `GET /favicon.ico` was answered by the public `[slug]` page (an HTML "not found" with status 200) and
+    logged the `/[slug]` message on every page load. Add the file to an existing project to stop it.
+  - The public item routes (`[slug]`, `[...slug]`) answer `notFound()` at once for a request for a static file (last segment ending in `.ico`, `.png`, `.jpg`, `.svg`, `.webp`, `.txt`, `.xml`,
+    `.json`, `.webmanifest`, `.map`, `.js`, `.css`, `.woff`, ...: `/favicon.ico`, `/robots.txt`): no database read and no project template run for it. A slug with a dot (`release-1.0`, `v2.5`) still renders.
+  - Not covered: the `/superadmin` and `/devtools` areas still log the check's "dropped segment" message in dev (their client guards hide the page until the session loads and
+    each page checks the role on the server). They are admin tools outside the starter's user flow; see `scripts/build/registry/host/README.md` and #213.
+- **Signing out no longer makes the dashboard request `/api/user/profile` and `/api/v1/teams` and get 401.** The client's session store keeps the signed-in user until its own
+  request for the session answers, and `signOut()` emptied the query cache before that: every signed-in query still on the page (teams, profile, preferences) refetched on its next
+  render, and the API refused each with 401 (three red lines in the browser console). `signOut()` now brings the session store up to date first, then empties the cache and goes to `/login`
+  as before.
 
 ## [0.1.0-beta.194] - 2026-10-06
 

@@ -66,6 +66,8 @@ export const VARIANT_FILES = Object.freeze({
     'superadmin/layout.cc.tsx': 'superadmin/layout.tsx',
     'devtools/layout.cc.tsx': 'devtools/layout.tsx',
     'dashboard/layout.cc.tsx': 'dashboard/layout.tsx',
+    'dashboard/(main)/layout.cc.tsx': 'dashboard/(main)/layout.tsx',
+    '(public)/page.cc.tsx': '(public)/page.tsx',
     '(auth)/login/page.cc.tsx': '(auth)/login/page.tsx',
     '(auth)/signup/page.cc.tsx': '(auth)/signup/page.tsx',
     '(public)/docs/[section]/[page]/page.cc.tsx': '(public)/docs/[section]/[page]/page.tsx',

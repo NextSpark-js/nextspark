@@ -54,6 +54,9 @@ export const ENTITY_MODULES = Object.freeze({
   detail: `${CORE_ROUTES_SPECIFIER}_internal/entity-detail-route`,
   create: `${CORE_ROUTES_SPECIFIER}_internal/entity-create-route`,
   edit: `${CORE_ROUTES_SPECIFIER}_internal/entity-edit-route`,
+  // The detail and edit pages of a host with `cacheComponents` on: the same routes behind a Suspense boundary (they await `params`).
+  detailCc: `${CORE_ROUTES_SPECIFIER}_internal/entity-detail-route.cc`,
+  editCc: `${CORE_ROUTES_SPECIFIER}_internal/entity-edit-route.cc`,
   publicItem: `${CORE_ROUTES_SPECIFIER}_internal/public-item-route`,
   // The item pages of a host with `cacheComponents` on: same factories, `'use cache'` reads instead of `revalidate`.
   publicItemCc: `${CORE_ROUTES_SPECIFIER}_internal/public-item-route.cc`,
@@ -207,7 +210,10 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
   const revalidates = cacheComponents !== true && !modes.includes('cc')
   // A host that builds in Cache Components mode only gets the cached item source; one that builds both (the
   // conformance fixture) or does not know keeps the module that works in either.
-  const publicItemModule = cacheComponents === true && modes.length === 0 && modules.publicItemCc ? modules.publicItemCc : modules.publicItem
+  const ccOnly = cacheComponents === true && modes.length === 0
+  const publicItemModule = ccOnly && modules.publicItemCc ? modules.publicItemCc : modules.publicItem
+  const detailModule = ccOnly && modules.detailCc ? modules.detailCc : modules.detail
+  const editModule = ccOnly && modules.editCc ? modules.editCc : modules.edit
 
   const coreFacade = (kind, target, specifier) => ({
     kind,
@@ -275,8 +281,8 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
         coreFacade('loading', `${base}/loading.tsx`, modules.loading),
         composed('page', `${base}/page.tsx`, 'createEntityListRoute', modules.list, [config, arg.template()], { acceptsTemplate: true, reexport: [{ names: ['metadata'], specifier: modules.listMetadata }] }),
         composed('page', `${base}/create/page.tsx`, 'createEntityCreateRoute', modules.create, [config, arg.template()], { acceptsTemplate: true }),
-        composed('page', `${base}/[id]/page.tsx`, 'createEntityDetailRoute', modules.detail, [config, arg.literal(children), arg.template()], { acceptsTemplate: true, reexport: [{ names: ['metadata'], specifier: modules.detailMetadata }] }),
-        composed('page', `${base}/[id]/edit/page.tsx`, 'createEntityEditRoute', modules.edit, [config, arg.template()], { acceptsTemplate: true })
+        composed('page', `${base}/[id]/page.tsx`, 'createEntityDetailRoute', detailModule, [config, arg.literal(children), arg.template()], { acceptsTemplate: true, reexport: [{ names: ['metadata'], specifier: modules.detailMetadata }] }),
+        composed('page', `${base}/[id]/edit/page.tsx`, 'createEntityEditRoute', editModule, [config, arg.template()], { acceptsTemplate: true })
       )
     }
 

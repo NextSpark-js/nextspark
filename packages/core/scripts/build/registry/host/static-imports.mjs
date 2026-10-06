@@ -85,6 +85,8 @@ export const CORE_COMPOSITION_WRAPPERS = Object.freeze({
   [`${INTERNAL}entity-detail-route`]: ['createEntityDetailRoute'],
   [`${INTERNAL}entity-create-route`]: ['createEntityCreateRoute'],
   [`${INTERNAL}entity-edit-route`]: ['createEntityEditRoute'],
+  [`${INTERNAL}entity-detail-route.cc`]: ['createEntityDetailRoute'],
+  [`${INTERNAL}entity-edit-route.cc`]: ['createEntityEditRoute'],
   [`${INTERNAL}public-item-route`]: ['createPublicItemRoute', 'createPublicItemMetadata'],
   [`${INTERNAL}public-item-route.cc`]: ['createPublicItemRoute', 'createPublicItemMetadata'],
   [`${INTERNAL}public-archive-route`]: ['createPublicArchiveRoute', 'createPublicArchiveMetadata'],

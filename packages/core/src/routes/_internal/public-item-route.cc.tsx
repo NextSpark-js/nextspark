@@ -23,6 +23,7 @@ import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
 import type { Pattern, PatternReference } from '@nextsparkjs/core/types/pattern-reference'
 import { buildPublicSelectClause, getResolvedBlocks, type PublishedItem } from './public-entity-shared'
 import { bindPublicItemRoutes, type PublicItemSource } from './public-item-route'
+import { behindSuspense } from './suspended-route'
 
 /** One published row: the arguments are the cache key, so they are plain strings. */
 async function readPublishedItem(entitySlug: string, tableName: string, selectClause: string, slug: string): Promise<PublishedItem | null> {
@@ -56,6 +57,7 @@ const cachedSource: PublicItemSource = {
 }
 
 const cachedRoutes = bindPublicItemRoutes(cachedSource)
-export const createPublicItemRoute = cachedRoutes.createPublicItemRoute
+// The page awaits `params` (and may answer notFound()): behind a boundary of its own, see suspended-route.tsx.
+export const createPublicItemRoute = (...args: Parameters<typeof cachedRoutes.createPublicItemRoute>) => behindSuspense(cachedRoutes.createPublicItemRoute(...args))
 export const createPublicItemMetadata = cachedRoutes.createPublicItemMetadata
 export type { PublicItemTemplateProps } from './public-item-route'
