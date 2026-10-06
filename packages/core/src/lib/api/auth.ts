@@ -31,6 +31,17 @@ export interface ApiKeyValidationResult {
 }
 
 /**
+ * The key validateApiKey accepted for each request, so code that runs around the handler (audit logging) can
+ * attribute the request to the key's owner without trusting any header the client sent.
+ */
+const validatedKeys = new WeakMap<Request, ApiKeyAuth>();
+
+/** The API key validateApiKey accepted for this request, or null when none was validated. */
+export function getValidatedApiKey(request: Request): ApiKeyAuth | null {
+  return validatedKeys.get(request) ?? null;
+}
+
+/**
  * Valida una API Key desde el header Authorization o x-api-key
  */
 export async function validateApiKey(request: NextRequest): Promise<ApiKeyAuth | null> {
@@ -127,11 +138,13 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyAuth |
       console.error('Error updating API key last used:', error);
     });
     
-    return {
+    const validated: ApiKeyAuth = {
       userId: keyData.userId,
       keyId: keyData.id,
       scopes: keyData.scopes || []
     };
+    validatedKeys.set(request, validated);
+    return validated;
   } catch (error) {
     console.error('Error validating API key:', error);
     await constantTimeDelay(startTime);

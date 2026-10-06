@@ -12,6 +12,7 @@ import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/cor
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 export const POST = withRateLimitTier(async (request: NextRequest) => {
   // 1. Dual authentication; the API-key scope is declared at the entry
@@ -91,3 +92,5 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     )
   }
 }, 'write');
+
+export const OPTIONS = corsPreflight

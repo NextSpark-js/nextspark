@@ -28,6 +28,7 @@ import {
 } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { validateApiKey } from '@nextsparkjs/core/lib/api/auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import { createMcpEngine } from '@nextsparkjs/core/lib/mcp'
 import type { ToolExecutionContext } from '@nextsparkjs/core/lib/mcp'
@@ -174,3 +175,5 @@ export async function DELETE(): Promise<NextResponse> {
     { status: 405, headers: { Allow: 'POST' } }
   )
 }
+
+export const OPTIONS = corsPreflight

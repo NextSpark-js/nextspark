@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { DisconnectAccountSchema } from '../../../lib/validation'
 import { queryOneWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
 
@@ -186,3 +187,5 @@ const deleteHandler = async (
 }
 
 export const DELETE = withRateLimitTier(deleteHandler, 'write')
+
+export const OPTIONS = corsPreflight

@@ -14,6 +14,7 @@ import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/cor
 import { SubscriptionService } from '@nextsparkjs/core/lib/services'
 import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 const checkActionSchema = z.object({
   action: z.string().min(1, 'Action is required'),
@@ -83,3 +84,5 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     data: result
   })
 }, 'read');
+
+export const OPTIONS = corsPreflight

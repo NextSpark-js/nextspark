@@ -4,6 +4,7 @@ import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/hel
 import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { updateMediaSchema } from '@nextsparkjs/core/lib/media/schemas'
 
@@ -166,3 +167,5 @@ export const DELETE = withRateLimitTier(async (
     return createApiError('Failed to delete media', 500)
   }
 }, 'write')
+
+export const OPTIONS = corsPreflight

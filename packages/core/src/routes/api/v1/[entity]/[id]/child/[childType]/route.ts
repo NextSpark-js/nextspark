@@ -9,6 +9,7 @@ import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { resolveEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/resolver'
 import { getChildEntities, getEntity, setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 // Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
 import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
 
@@ -327,3 +328,5 @@ export const POST = withRateLimitTier(async (
     )
   }
 }, 'write')
+
+export const OPTIONS = corsPreflight

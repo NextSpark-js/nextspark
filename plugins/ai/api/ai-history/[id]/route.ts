@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@nextsparkjs/core/lib/auth'
 import { AIHistoryService } from '@/plugins/ai/lib/ai-history-service'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 interface RouteParams {
   params: Promise<{
@@ -113,3 +114,5 @@ const patchHandler = async (
 }
 
 export const PATCH = withRateLimitTier(patchHandler, 'write')
+
+export const OPTIONS = corsPreflight

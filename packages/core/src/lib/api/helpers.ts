@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiKeyAuth, validateApiKey } from './auth';
+import { ApiKeyAuth, getValidatedApiKey, validateApiKey } from './auth';
 import { mutateWithRLS, queryWithRLS } from '../db';
 import { checkRateLimit, addRateLimitHeaders } from './rate-limit';
 import { getApplicationConfig } from '../config';
@@ -9,7 +9,8 @@ import { ScopeService } from '../services/scope.service';
 import { getEntityConfig } from '../entities/registry';
 import { getChildEntities, getEntity } from '../entities/queries';
 import { CreateMetaPayload } from '../../types/meta.types';
-import { getCorsOrigins, getTrustedOrigins, normalizeOrigin, isOriginAllowed } from '../utils/cors';
+import { getCorsOrigins } from '../utils/cors';
+import { corsGrant, setCorsHeaders, varyOnOrigin } from './cors-response';
 import { isValidUUID } from '../utils/uuid';
 import {
   type AuthenticateOptions,
@@ -243,33 +244,17 @@ function applyApiKeyRateLimit(auth: ApiKeyAuth): {
 }
 
 /**
- * Extrae la información de autenticación API de los headers de la request
+ * The API key this request was authenticated with: the one validateApiKey accepted for it (directly, or through
+ * authenticateRequest / validateAndAuthenticateRequest). Throws when no key was validated for the request.
+ * Identity never comes from request headers.
  * @deprecated Use validateAndAuthenticateApiRequest instead
  */
 export function getApiAuth(request: NextRequest): ApiKeyAuth {
-  const userId = request.headers.get('x-api-user-id');
-  const keyId = request.headers.get('x-api-key-id');
-  const scopesHeader = request.headers.get('x-api-scopes');
-  
-  if (!userId || !keyId || !scopesHeader) {
-    throw new Error('Missing API authentication headers');
+  const auth = getValidatedApiKey(request);
+  if (!auth) {
+    throw new Error('No validated API key for this request');
   }
-  
-  let scopes: string[] = [];
-  try {
-    const parsed = JSON.parse(scopesHeader);
-    if (Array.isArray(parsed)) {
-      scopes = parsed.filter((s): s is string => typeof s === 'string');
-    }
-  } catch {
-    console.warn('[API] Invalid scopes header format');
-  }
-
-  return {
-    userId,
-    keyId,
-    scopes
-  };
+  return auth;
 }
 
 /**
@@ -409,52 +394,29 @@ export async function logApiUsage(
 
 /**
  * Wrapper para endpoints que agrega logging automático
+ *
+ * Writes an api_audit_log row for a request authenticated with an API key, attributed to the key the handler
+ * validated (getValidatedApiKey), never to identity headers in the request. Requests without a validated key
+ * are not logged here. The request body is not stored, as in entity/audit-log.ts: payloads carry personal data.
  */
 export function withApiLogging<T extends unknown[]>(
   handler: (request: NextRequest, ...args: T) => Promise<NextResponse>
 ) {
   return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
     const startTime = Date.now();
-    let auth: ApiKeyAuth | null = null;
-    let requestBody: unknown = null;
-    
-    try {
-      // Intentar obtener auth (puede fallar si no está autenticado)
-      try {
-        auth = getApiAuth(request);
-      } catch {
-        // Ignorar si no hay auth (será manejado por el handler)
-      }
-      
-      // Intentar capturar body para logging (solo para POST/PUT/PATCH)
-      if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
-        try {
-          const clonedRequest = request.clone();
-          requestBody = await clonedRequest.json();
-        } catch {
-          // Ignorar si no se puede parsear el body
-        }
-      }
-      
-      const response = await handler(request, ...args);
-      const responseTime = Date.now() - startTime;
-      
-      // Log async si tenemos auth
+    const log = (status: number) => {
+      const auth = getValidatedApiKey(request);
       if (auth) {
-        logApiUsage(auth, request, response.status, responseTime, requestBody)
-          .catch(console.error);
+        logApiUsage(auth, request, status, Date.now() - startTime).catch(console.error);
       }
-      
+    };
+
+    try {
+      const response = await handler(request, ...args);
+      log(response.status);
       return response;
     } catch (error) {
-      const responseTime = Date.now() - startTime;
-      
-      // Log error si tenemos auth
-      if (auth) {
-        logApiUsage(auth, request, 500, responseTime, requestBody)
-          .catch(console.error);
-      }
-      
+      log(500);
       throw error;
     }
   };
@@ -512,29 +474,6 @@ function getAllowedFiltersFromRegistry(): string[] {
 }
 
 /**
- * Which origin a CORS response may name, and whether credentials go with it.
- * A listed origin (getCorsOrigins, wildcard entries allowed) is echoed with
- * credentials. In development with allowAllOrigins.development, any other
- * origin is echoed too, but with credentials only when the cookie-write origin
- * check trusts it (getTrustedOrigins). Any other origin gets no grant: the
- * response names no origin and sends no credentials header.
- */
-function corsGrant(
-  origin: string,
-  config: Awaited<ReturnType<typeof getApplicationConfig>>,
-  env: string
-): { origin: string; credentials: boolean } | null {
-  const normalizedOrigin = normalizeOrigin(origin);
-  const listed = isOriginAllowed(normalizedOrigin, getCorsOrigins(config, env));
-  if (listed) return { origin: listed, credentials: true };
-  if (env === 'development' && config.api.cors.allowAllOrigins.development) {
-    const trusted = isOriginAllowed(normalizedOrigin, getTrustedOrigins(config, normalizedOrigin, env));
-    return { origin: normalizedOrigin, credentials: trusted !== null };
-  }
-  return null;
-}
-
-/**
  * Agrega headers de CORS para API externa
  * Uses unified getCorsOrigins() for single source of truth (see corsGrant)
  */
@@ -553,16 +492,7 @@ export async function addCorsHeaders(response: NextResponse, request?: NextReque
     grant = { origin: allowedOrigins[0] || 'http://localhost:3000', credentials: true };
   }
 
-  if (grant) {
-    response.headers.set('Access-Control-Allow-Origin', grant.origin);
-    if (grant.credentials) response.headers.set('Access-Control-Allow-Credentials', 'true');
-  }
-  // Credentialed CORS echoes a per-request origin, so the response varies by
-  // Origin — tell caches to key on it (prevents serving origin A's grant to B).
-  response.headers.append('Vary', 'Origin');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, x-team-id, x-builder-source');
-  response.headers.set('Access-Control-Max-Age', '86400');
+  setCorsHeaders(response.headers, grant);
 
   return response;
 }
@@ -617,7 +547,7 @@ export async function wrapAuthHandlerWithCors(
       if (grant.credentials) newResponse.headers.set('Access-Control-Allow-Credentials', 'true')
     }
     // Vary on Origin since ACAO is per-request (cache-key correctness).
-    newResponse.headers.append('Vary', 'Origin')
+    varyOnOrigin(newResponse.headers)
   }
 
   return newResponse

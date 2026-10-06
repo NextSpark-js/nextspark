@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { processMessage } from '@/lib/langchain/orchestrator'
 import { dbMemoryStore } from '@nextsparkjs/plugin-langchain/lib/db-memory-store'
 import type { ChatMessage } from '@nextsparkjs/plugin-langchain/types/langchain.types'
@@ -233,3 +234,5 @@ const deleteHandler = async (req: NextRequest) => {
 }
 
 export const DELETE = withRateLimitTier(deleteHandler, 'write')
+
+export const OPTIONS = corsPreflight

@@ -219,35 +219,8 @@ const nextConfig = {
         source: '/:path*',
         headers: securityHeaders
       },
-      // CORS headers for API routes
-      // NOTE: In development, CORS is handled dynamically by API routes using addCorsHeaders()
-      // to support multiple origins (web app, mobile app, etc.)
-      // In production, we set static CORS headers here
-      ...(isProduction ? [{
-        source: '/api/:path*',
-        headers: [
-          {
-            key: 'Access-Control-Allow-Origin',
-            value: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-          },
-          {
-            key: 'Access-Control-Allow-Methods',
-            value: 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
-          },
-          {
-            key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Authorization, x-api-key, x-verify-from-ui, Cookie, Set-Cookie'
-          },
-          {
-            key: 'Access-Control-Allow-Credentials',
-            value: 'true'
-          },
-          {
-            key: 'Access-Control-Expose-Headers',
-            value: 'Set-Cookie'
-          }
-        ]
-      }] : [])
+      // No CORS headers here: core's API routes answer CORS per request (addCorsHeaders), so the
+      // origins in api.cors.allowedOrigins and CORS_ADDITIONAL_ORIGINS get their grant in production too
     ]
   },
 }

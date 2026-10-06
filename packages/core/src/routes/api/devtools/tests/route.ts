@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { readdir, stat } from "fs/promises";
 import { join } from "path";
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
 
 /**
  * File tree node structure
@@ -126,3 +127,5 @@ export const GET = withRateLimitTier(async (request: Request) => {
     );
   }
 }, 'read');
+
+export const OPTIONS = corsPreflight;

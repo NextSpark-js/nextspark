@@ -18,6 +18,7 @@ import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import type { ScheduledAction, ScheduledActionStatus } from '@nextsparkjs/core/lib/scheduled-actions/types'
 import { getAllRegisteredActions } from '@nextsparkjs/core/lib/scheduled-actions/registry'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions/scheduler'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
@@ -233,12 +234,4 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   })
 }, 'write');
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key',
-    },
-  })
-}
+export const OPTIONS = corsPreflight

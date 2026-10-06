@@ -30,6 +30,9 @@ const FORGED = {
   'x-user-email': 'attacker@example.com',
   'x-pathname': '/admin',
   'x-active-team-id': 'attacker-team',
+  'x-api-user-id': 'forged-user-id',
+  'x-api-key-id': 'forged-key-id',
+  'x-api-scopes': '["*"]',
 }
 
 function makeRequest(path: string, extraHeaders: Record<string, string> = {}) {
@@ -66,6 +69,9 @@ describe('proxy identity headers (#87)', () => {
     expect(forwarded.get('x-user-id')).toBeNull()
     expect(forwarded.get('x-user-email')).toBeNull()
     expect(forwarded.get('x-active-team-id')).toBeNull()
+    expect(forwarded.get('x-api-user-id')).toBeNull()
+    expect(forwarded.get('x-api-key-id')).toBeNull()
+    expect(forwarded.get('x-api-scopes')).toBeNull()
     // x-pathname is always the real pathname, never the inbound value
     expect(forwarded.get('x-pathname')).toBe(path)
     // Unrelated headers still pass through

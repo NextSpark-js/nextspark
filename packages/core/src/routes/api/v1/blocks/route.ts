@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { BLOCK_REGISTRY, BLOCK_CATEGORIES } from '@nextsparkjs/registries/block-registry'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
@@ -44,3 +45,5 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
 }, 'read');
+
+export const OPTIONS = corsPreflight

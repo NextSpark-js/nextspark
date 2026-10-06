@@ -15,6 +15,7 @@ import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { existsSync } from 'fs'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import {
   canAccessDevtoolsApi,
@@ -163,3 +164,5 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     )
   }
 }, 'read');
+
+export const OPTIONS = corsPreflight

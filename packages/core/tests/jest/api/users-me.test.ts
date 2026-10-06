@@ -6,6 +6,7 @@
 const mockValidateApiKey = jest.fn()
 jest.mock('@/core/lib/api/auth', () => ({
   validateApiKey: (...args: unknown[]) => mockValidateApiKey(...args),
+  getValidatedApiKey: () => null,
 }))
 
 const mockGetSession = jest.fn()

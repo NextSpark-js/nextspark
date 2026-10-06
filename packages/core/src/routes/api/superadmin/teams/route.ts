@@ -3,6 +3,7 @@ import { getTypedSession } from '@nextsparkjs/core/lib/auth';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { SYSTEM_ADMIN_TEAM_ID } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
 
 interface TeamWithStats {
   id: string;
@@ -185,3 +186,5 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     );
   }
 }, 'strict');
+
+export const OPTIONS = corsPreflight;

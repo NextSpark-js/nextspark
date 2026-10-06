@@ -202,14 +202,14 @@ All 3 requests count toward the SAME 200/min 'read' limit
 
 ## Identifier Strategy
 
-Rate limits are tracked by:
+`withRateLimitTier` tracks every request by client address: `{tier}:ip:{clientIp}`.
 
-1. **API Key** (when present): `{tier}:apikey:{first16chars}`
-2. **IP Address** (fallback): `{tier}:ip:{clientIp}`
+It runs before the route authenticates anything, so no credential header (`x-api-key` included) picks the bucket.
+Routes that authenticate with `validateAndAuthenticateRequest` / `validateAndAuthenticateApiRequest` (`lib/api/helpers.ts`)
+also limit each validated API key; routes that use `authenticateRequest` have only the per-address limit.
 
-This allows:
-- Per-user limits for authenticated API requests
-- IP-based limits for unauthenticated or session-based requests
+`withRateLimitTier` also adds core's CORS to every response it returns (route, 429, origin-check 403), except in the `webhook`
+tier. Export `OPTIONS = corsPreflight` (`@nextsparkjs/core/lib/api/cors-response`) from every wrapped route so its preflight matches.
 
 ## Redis Configuration (Production)
 

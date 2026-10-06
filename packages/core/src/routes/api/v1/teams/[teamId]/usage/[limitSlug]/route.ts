@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAndAuthenticateRequest, createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { SubscriptionService, UsageService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { trackUsageSchema } from '@nextsparkjs/core/lib/billing/schema'
 
@@ -94,3 +95,5 @@ export const POST = withRateLimitTier(async function POST(request: NextRequest, 
     return createApiError(errorMessage, 500)
   }
 }, 'write')
+
+export const OPTIONS = corsPreflight

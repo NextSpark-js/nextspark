@@ -14,6 +14,7 @@ import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/se
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 const cancelSchema = z.object({
   immediate: z.boolean().optional().default(false),
@@ -204,3 +205,5 @@ async function handleReactivation(teamId: string) {
     )
   }
 }
+
+export const OPTIONS = corsPreflight

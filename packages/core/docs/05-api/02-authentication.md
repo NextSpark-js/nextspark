@@ -1226,21 +1226,11 @@ Access to fetch at 'https://api.example.com' from origin 'https://app.example.co
 has been blocked by CORS policy
 ```
 
-**Solution:** Configure CORS in API route:
-```typescript
-// packages/core/src/routes/api/v1/[entity]/route.ts
-export async function OPTIONS(request: NextRequest) {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-API-Key',
-      'Access-Control-Allow-Credentials': 'true'
-    }
-  })
-}
-```
+**Solution:** Add the calling origin to the allowed origins: `api.cors.allowedOrigins` (per environment) in the app config, or the
+`CORS_ADDITIONAL_ORIGINS` environment variable (comma-separated). Core's API routes answer CORS per request from that list (`addCorsHeaders`),
+with credentials for a listed origin and no grant for any other: `withRateLimitTier` adds it to every response of the routes it wraps, and
+those routes export `OPTIONS` (`corsPreflight` from `@nextsparkjs/core/lib/api/cors-response`) for the preflight. A route of your own does
+the same. Do not set `Access-Control-*` headers in `next.config.mjs`: they apply on top of the route's and replace its per-origin answer.
 
 ### Debug Checklist
 

@@ -11,6 +11,7 @@ import { PlanService } from '@nextsparkjs/core/lib/services'
 import { createPlanSchema } from '@nextsparkjs/core/lib/billing/schema'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Plans list is partially public (public plans visible to all, hidden plans only to superadmin)
@@ -80,3 +81,5 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     return createApiError('Failed to create plan', 500)
   }
 }, 'strict');
+
+export const OPTIONS = corsPreflight

@@ -200,8 +200,19 @@ function getSession(request: NextRequest) {
  * session. Gating the strip on protected prefixes is not enough: Next.js
  * dispatches Server Actions by the `Next-Action` header, not by the URL, so an
  * action can be POSTed to a public path with a forged `x-user-id`.
+ *
+ * The `x-api-*` names are never set here: core takes an API key's identity from
+ * validating the key, and nothing downstream may receive them from the client.
  */
-const TRUSTED_IDENTITY_HEADERS = ['x-user-id', 'x-user-email', 'x-pathname', 'x-active-team-id'] as const
+const TRUSTED_IDENTITY_HEADERS = [
+  'x-user-id',
+  'x-user-email',
+  'x-pathname',
+  'x-active-team-id',
+  'x-api-user-id',
+  'x-api-key-id',
+  'x-api-scopes',
+] as const
 
 /**
  * Build the request headers forwarded to the app: inbound copy minus every

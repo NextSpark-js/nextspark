@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
   })()
   const rateLimitResult = await checkDistributedRateLimit(`auth:ip:${clientIp}`, 'auth')
   if (!rateLimitResult.allowed) {
-    return new NextResponse(JSON.stringify({ error: 'Too many requests' }), {
+    return wrapAuthHandlerWithCors(async () => new NextResponse(JSON.stringify({ error: 'Too many requests' }), {
       status: 429,
       headers: {
         'Content-Type': 'application/json',
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
         'X-RateLimit-Remaining': '0',
         'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
       },
-    })
+    }), req)
   }
 
   const readinessResponse = await getAuthReadinessResponse(req);

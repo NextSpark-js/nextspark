@@ -4,6 +4,7 @@ import { queryOneWithRLS, mutateWithRLS, queryOne } from '@nextsparkjs/core/lib/
 import { profileSchema } from '@nextsparkjs/core/lib/validation'
 import { MetaService, MetaValueTooLargeError } from '@nextsparkjs/core/lib/services/meta.service'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   const url = new URL(request.url)
@@ -126,3 +127,5 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }, 'write');
+
+export const OPTIONS = corsPreflight

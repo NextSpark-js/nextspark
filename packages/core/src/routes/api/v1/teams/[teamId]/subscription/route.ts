@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAndAuthenticateRequest, createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 
 interface RouteParams {
@@ -49,3 +50,5 @@ export const GET = withRateLimitTier(async function GET(request: NextRequest, pr
     return createApiError('Failed to fetch subscription', 500)
   }
 }, 'read')
+
+export const OPTIONS = corsPreflight

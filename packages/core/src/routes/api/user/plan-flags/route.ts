@@ -11,6 +11,7 @@ import { getUserPlanAndFlags, updateUserPlan, updateUserFlags } from '@nextspark
 import * as z from 'zod'
 import type { UserRole } from '@nextsparkjs/core/types/user.types'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 // Validation schemas
 const planFlagsQuerySchema = z.object({
@@ -268,3 +269,5 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     )
   }
 }, 'strict');
+
+export const OPTIONS = corsPreflight

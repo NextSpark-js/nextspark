@@ -19,6 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { getAdapter } from '../../../lib/adapter'
@@ -267,3 +268,5 @@ const postHandler = async (request: NextRequest) => {
 }
 
 export const POST = withRateLimitTier(postHandler, 'write')
+
+export const OPTIONS = corsPreflight

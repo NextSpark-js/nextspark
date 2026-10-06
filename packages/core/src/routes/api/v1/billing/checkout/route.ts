@@ -13,6 +13,7 @@ import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factor
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 const checkoutSchema = z.object({
   planSlug: z.string().min(1, 'Plan slug is required'),
@@ -151,3 +152,5 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     )
   }
 }, 'write');
+
+export const OPTIONS = corsPreflight

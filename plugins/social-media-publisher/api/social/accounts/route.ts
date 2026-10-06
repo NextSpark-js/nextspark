@@ -20,6 +20,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { FacebookAPI } from '../../../lib/providers/facebook'
@@ -354,3 +355,5 @@ const getHandler = async (request: NextRequest) => {
 }
 
 export const GET = withRateLimitTier(getHandler, 'read')
+
+export const OPTIONS = corsPreflight

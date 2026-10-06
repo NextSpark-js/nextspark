@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { dbMemoryStore, CONVERSATION_LIMITS } from '../../lib/db-memory-store'
 import { config } from '../../plugin.config'
 import type {
@@ -331,3 +332,5 @@ const deleteHandler = async (req: NextRequest) => {
 }
 
 export const DELETE = withRateLimitTier(deleteHandler, 'write')
+
+export const OPTIONS = corsPreflight

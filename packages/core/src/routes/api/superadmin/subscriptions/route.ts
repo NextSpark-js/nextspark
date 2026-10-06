@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTypedSession } from '@nextsparkjs/core/lib/auth';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory';
 
 interface SubscriptionResult {
@@ -313,3 +314,5 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     );
   }
 }, 'strict');
+
+export const OPTIONS = corsPreflight;

@@ -27,6 +27,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { streamChat } from '@nextsparkjs/plugin-langchain/lib/agent-factory'
 import { createSSEEncoder } from '@nextsparkjs/plugin-langchain/lib/streaming'
 import { loadSystemPrompt, type AgentName } from '@/lib/langchain/agents'
@@ -208,3 +209,5 @@ const postHandler = async (request: NextRequest): Promise<NextResponse | Respons
 }
 
 export const POST = withRateLimitTier(postHandler as (request: NextRequest) => Promise<NextResponse>, 'write')
+
+export const OPTIONS = corsPreflight

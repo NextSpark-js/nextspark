@@ -270,15 +270,11 @@ function createErrorResponse(status: number, message: string, details?: Record<s
 }
 
 /**
- * Get client identifier for rate limiting
+ * Get client identifier for rate limiting. Rate limiting runs before the API key is validated, so it counts per
+ * client address: no key or client id header picks the bucket.
  */
 function getClientIdentifier(request: NextRequest): string {
-  // Priority: API Key ID > Client ID > IP address
-  const apiKeyId = request.headers.get('x-api-key-id')
-  const clientId = request.headers.get('x-client-id')
-  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
-  
-  return apiKeyId || clientId || ip
+  return request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
 }
 
 /**

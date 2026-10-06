@@ -17,6 +17,7 @@ import {
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 import { TAGS_REGISTRY, COVERAGE_SUMMARY } from '@nextsparkjs/registries/testing-registry'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Authenticate request; the API-key scope is declared at the entry point,
@@ -73,12 +74,4 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   })
 }, 'read');
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key',
-    },
-  })
-}
+export const OPTIONS = corsPreflight

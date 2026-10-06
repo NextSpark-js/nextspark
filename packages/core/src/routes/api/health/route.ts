@@ -1,5 +1,6 @@
 import { queryWithRLS } from "@nextsparkjs/core/lib/db";
 import { withRateLimitTier } from "@nextsparkjs/core/lib/api/rate-limit";
+import { corsPreflight } from "@nextsparkjs/core/lib/api/cors-response";
 import { isRedisConfigured } from "@nextsparkjs/core/lib/rate-limit-redis";
 import { authenticateRequest } from "@nextsparkjs/core/lib/api/auth/dual-auth";
 import { NextRequest, NextResponse } from "next/server";
@@ -51,3 +52,5 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     ...(dbError ? { error: dbError } : {}),
   }, { status: healthy ? 200 : 503 });
 }, 'read');
+
+export const OPTIONS = corsPreflight;

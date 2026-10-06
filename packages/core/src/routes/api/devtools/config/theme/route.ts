@@ -2,6 +2,7 @@ import { getTypedSession } from "@nextsparkjs/core/lib/auth";
 import { NextResponse } from "next/server";
 import { ThemeService } from "@nextsparkjs/core/lib/services/theme.service";
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
 
 /**
  * GET /api/devtools/config/theme
@@ -62,3 +63,5 @@ export const GET = withRateLimitTier(async (request: Request) => {
     );
   }
 }, 'read');
+
+export const OPTIONS = corsPreflight;

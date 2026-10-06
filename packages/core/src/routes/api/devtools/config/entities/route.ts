@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getEntityRegistry } from "@nextsparkjs/core/lib/entities/queries";
 import type { EntityConfig, ChildEntityDefinition } from "@nextsparkjs/core/lib/entities/types";
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
 
 // Type guard to check if entity is a full EntityConfig
 function isEntityConfig(entity: EntityConfig | ChildEntityDefinition): entity is EntityConfig {
@@ -113,3 +114,5 @@ export const GET = withRateLimitTier(async (request: Request) => {
     );
   }
 }, 'read');
+
+export const OPTIONS = corsPreflight;

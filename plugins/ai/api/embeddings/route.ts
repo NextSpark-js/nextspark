@@ -10,6 +10,7 @@ import { validatePlugin, handleAIError } from '../../lib/core-utils'
 import { getServerPluginConfig } from '../../lib/server-env'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { embed } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import * as z from 'zod'
@@ -133,3 +134,5 @@ const getHandler = async (): Promise<NextResponse> => {
 }
 
 export const GET = withRateLimitTier(getHandler, 'read')
+
+export const OPTIONS = corsPreflight

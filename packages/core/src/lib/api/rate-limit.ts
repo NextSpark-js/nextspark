@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_rethrow } from 'next/navigation';
-import { getRateLimitForScopes } from './keys';
+import { getRateLimitForScopes, presentedApiKey } from './keys';
+import { validateApiKey } from './auth';
 import { rateLimitCache, getCacheKey } from './cache';
 import {
   checkRateLimit as checkRedisRateLimit,
@@ -9,6 +10,7 @@ import {
   type RateLimitTier,
 } from '../rate-limit-redis';
 import { checkRequestOrigin } from './request-origin';
+import { withCors } from './cors-response';
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -231,31 +233,22 @@ export function addRateLimitHeaders(
 
 /**
  * Middleware helper para aplicar rate limiting automáticamente
+ *
+ * Limits per API key, with the limits of the key's scopes, when the request presents a key that validates.
+ * The key id and scopes come from that validation, never from request headers; any other request runs the
+ * handler without this limit.
  */
 export function withRateLimit<T extends unknown[]>(
   handler: (request: NextRequest, ...args: T) => Promise<NextResponse>
 ) {
   return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
     try {
-      // Extraer información de autenticación
-      const keyId = request.headers.get('x-api-key-id');
-      const scopesHeader = request.headers.get('x-api-scopes');
-      
-      if (!keyId || !scopesHeader) {
-        // Si no hay autenticación API, continuar sin rate limiting
+      const auth = presentedApiKey(request.headers) ? await validateApiKey(request) : null;
+      if (!auth) {
         return handler(request, ...args);
       }
-      
-      let scopes: string[] = [];
-      try {
-        const parsed = JSON.parse(scopesHeader);
-        if (Array.isArray(parsed)) {
-          scopes = parsed.filter((s): s is string => typeof s === 'string');
-        }
-      } catch {
-        console.warn('[RateLimit] Invalid scopes header format');
-      }
-      
+      const { keyId, scopes } = auth;
+
       // Verificar rate limit
       const rateLimitResponse = applyRateLimit(request, keyId, scopes);
       if (rateLimitResponse) {
@@ -362,35 +355,22 @@ function getClientIp(request: NextRequest): string {
 }
 
 /**
- * Extract user identifier from request headers if available.
- * Checks for API key header which indicates an authenticated API request.
- * This allows for user-based rate limiting when authenticated.
- */
-function getUserIdentifier(request: NextRequest): string | null {
-  // Check for API key - if present, use it as user identifier
-  // This provides user-based rate limiting for API key authenticated requests
-  const apiKey = request.headers.get('x-api-key');
-  if (apiKey) {
-    // Use a hash of the API key (first 16 chars) to avoid exposing full key in logs
-    return `apikey:${apiKey.substring(0, 16)}`;
-  }
-
-  // For session-based auth, we can't easily extract user ID without async auth check
-  // The handler itself will perform auth, so we fall back to IP-based limiting here
-  return null;
-}
-
-/**
  * Higher-Order Component that applies rate limiting to API route handlers.
  *
  * This HOC wraps a Next.js route handler and applies rate limiting using the
  * distributed rate limiting system (Redis when configured, in-memory fallback).
  * Before that it refuses cookie-authenticated writes from an untrusted origin
- * (checkRequestOrigin), so every route that uses it gets that check too.
+ * (checkRequestOrigin), so every route that uses it gets that check too. Every
+ * response it returns (the route's, its own 429 and the origin check's 403)
+ * carries core's CORS for the request (withCors), except in the 'webhook' tier:
+ * webhooks are called server to server and get no CORS.
  *
  * Rate limiting strategy:
- * - Uses user identifier (API key) when available for more accurate per-user limiting
- * - Falls back to IP-based limiting for unauthenticated or session-based requests
+ * - Counts per client address (getClientIp), for every caller. It runs before the handler has
+ *   authenticated anything, so no credential or identity header (x-api-key included) picks the
+ *   bucket. Routes that authenticate with validateAndAuthenticateRequest or
+ *   validateAndAuthenticateApiRequest (helpers.ts) also limit a validated API key per key; routes that use
+ *   authenticateRequest have only this per-address limit.
  * - Rate limits are applied per-tier across ALL endpoints (not per-endpoint)
  *
  * Rate limit tiers:
@@ -436,7 +416,7 @@ export function withRateLimitTier<T extends unknown[]>(
   handler: (request: NextRequest, ...args: T) => Promise<NextResponse>,
   tier: RateLimitTier = 'api'
 ) {
-  return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
+  const limited = async (request: NextRequest, ...args: T): Promise<NextResponse> => {
     // Cookie-authenticated writes must come from a trusted origin (see request-origin.ts)
     const checked = checkRequestOrigin(request);
     if (checked instanceof NextResponse) return checked;
@@ -447,16 +427,8 @@ export function withRateLimitTier<T extends unknown[]>(
       return handler(request, ...args);
     }
 
-    // Get client identifier - prefer user-based (API key) over IP-based
-    const userIdentifier = getUserIdentifier(request);
-    const clientIp = getClientIp(request);
-
-    // Create identifier: use user-based when available, otherwise IP-based
-    // Rate limits apply per-tier across all endpoints (not per-endpoint)
-    // This prevents attackers from hitting multiple endpoints to bypass limits
-    const identifier = userIdentifier
-      ? `${tier}:${userIdentifier}`
-      : `${tier}:ip:${clientIp}`;
+    // Per client address and tier, across all endpoints (see the strategy above)
+    const identifier = `${tier}:ip:${getClientIp(request)}`;
 
     // Check rate limit using distributed system
     const rateLimitResult = await checkDistributedRateLimit(identifier, tier);
@@ -474,5 +446,10 @@ export function withRateLimitTier<T extends unknown[]>(
     response.headers.set('X-RateLimit-Reset', rateLimitResult.resetTime.toString());
 
     return response;
+  };
+
+  return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
+    const response = await limited(request, ...args);
+    return tier === 'webhook' ? response : withCors(response, request);
   };
 }

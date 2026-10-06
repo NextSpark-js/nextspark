@@ -5,6 +5,7 @@ import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/hel
 import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MEDIA_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { extractImageDimensions } from '@nextsparkjs/core/lib/media/utils'
@@ -273,3 +274,5 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     )
   }
 }, 'read');
+
+export const OPTIONS = corsPreflight

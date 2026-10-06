@@ -12,6 +12,7 @@ import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 const changePlanSchema = z.object({
   planSlug: z.string().min(1, 'Plan slug is required'),
@@ -97,3 +98,5 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     },
   })
 }, 'strict');
+
+export const OPTIONS = corsPreflight

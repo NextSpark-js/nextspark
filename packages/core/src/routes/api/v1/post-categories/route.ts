@@ -3,6 +3,7 @@ import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/cor
 import { query as dbQuery } from '@nextsparkjs/core/lib/db'
 import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 const createCategorySchema = z.object({
   name: z.string().min(1).max(255),
@@ -119,3 +120,5 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
 }, 'write');
+
+export const OPTIONS = corsPreflight

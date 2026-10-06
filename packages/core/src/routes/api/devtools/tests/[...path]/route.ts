@@ -4,6 +4,7 @@ import { readFile, stat } from "fs/promises";
 import { join } from "path";
 import matter from "gray-matter";
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
 
 /**
  * GET /api/devtools/tests/[...path]
@@ -122,3 +123,5 @@ export const GET = withRateLimitTier(async (
     );
   }
 }, 'read');
+
+export const OPTIONS = corsPreflight;

@@ -3,6 +3,7 @@ import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 import { BLOCK_SCHEMAS } from '@nextsparkjs/registries/block-schemas'
 import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 const requestSchema = z.object({
   blockSlug: z.string(),
@@ -43,3 +44,5 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }, 'write');
+
+export const OPTIONS = corsPreflight

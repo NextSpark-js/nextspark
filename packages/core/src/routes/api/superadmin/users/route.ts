@@ -3,6 +3,7 @@ import { getTypedSession } from '@nextsparkjs/core/lib/auth';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import type { User } from '@nextsparkjs/core/types/user.types';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
 
 /**
  * GET /api/superadmin/users
@@ -320,3 +321,5 @@ export const PUT = withRateLimitTier(async () => {
     { status: 501 }
   );
 }, 'strict');
+
+export const OPTIONS = corsPreflight;

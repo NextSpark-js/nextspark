@@ -10,6 +10,7 @@ import { selectModel, calculateCost, validatePlugin, extractTokens, handleAIErro
 import { getServerPluginConfig } from '../../lib/server-env'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { generateText } from 'ai'
 import { saveExampleSafely } from '../../lib/save-example'
 import * as z from 'zod'
@@ -169,3 +170,5 @@ const getHandler = async (): Promise<NextResponse> => {
 }
 
 export const GET = withRateLimitTier(getHandler, 'read')
+
+export const OPTIONS = corsPreflight

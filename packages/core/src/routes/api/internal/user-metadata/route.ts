@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { MetaService } from '@nextsparkjs/core/lib/services/meta.service'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 // Endpoint interno para crear metadata default después del signup
@@ -45,3 +46,5 @@ export const POST = withRateLimitTier(async (req: NextRequest) => {
     }, { status: 500 })
   }
 }, 'write');
+
+export const OPTIONS = corsPreflight

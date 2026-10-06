@@ -22,6 +22,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the app's own origin are not affected; `Origin: null` keeps being refused (403 `ORIGIN_NOT_ALLOWED`).
   Code that calls `checkRequestOrigin` (`@nextsparkjs/core/lib/api/request-origin`) itself: it now returns the 403 response or the request
   to hand to the handler (never `null`); pass that request on instead of the original one.
+- **`next.config.mjs`: remove the CORS block for `/api`.** Core now answers CORS on `/api` itself, per request, from `NEXT_PUBLIC_APP_URL`,
+  `api.cors.allowedOrigins`, `api.cors.additionalOrigins` and `CORS_ADDITIONAL_ORIGINS` (see Changed). The `headers()` of the
+  `next.config.mjs` that `create-nextspark-app` wrote applies on top of a route's own headers under `next start`, so it would keep naming
+  `NEXT_PUBLIC_APP_URL` on every `/api` response and the other listed origins would get no CORS grant. New projects no longer have the block.
+  `nextspark migrate` and `prepare` keep your `next.config.mjs` as it is, so delete these lines from the array `headers()` returns (keep the
+  `securityHeaders` entry before them):
+  ```js
+      // CORS headers for API routes
+      // NOTE: In development, CORS is handled dynamically by API routes using addCorsHeaders()
+      // to support multiple origins (web app, mobile app, etc.)
+      // In production, we set static CORS headers here
+      ...(isProduction ? [{
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization, x-api-key, x-verify-from-ui, Cookie, Set-Cookie'
+          },
+          {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true'
+          },
+          {
+            key: 'Access-Control-Expose-Headers',
+            value: 'Set-Cookie'
+          }
+        ]
+      }] : [])
+  ```
+  A project created before 0.1.0-beta.95 has the same entry without the `...(isProduction ? [ … ] : [])` around it (it applied in
+  development too): delete the whole `{ source: '/api/:path*', headers: [ … ] }` object that follows the `securityHeaders` entry.
+  `isProduction` is still used by the CSP and HSTS above it. If your project serves its front end from another origin, list that origin in
+  `api.cors.allowedOrigins.production` or `CORS_ADDITIONAL_ORIGINS`. A project that added its own `/api` headers there should not set
+  `Access-Control-*` in `next.config.mjs`, for the same reason.
+- **Your own API routes:** a route wrapped in `withRateLimitTier` now sends core's CORS on every response. For its preflight to match, export
+  `OPTIONS` from it: `export const OPTIONS = corsPreflight` (`import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'`).
+  Without it Next.js answers `OPTIONS` itself, with no CORS headers, as before. A route that does not use `withRateLimitTier` and must be
+  called from another origin calls `addCorsHeaders` itself.
+- **`src/proxy.ts` (optional):** core no longer reads `x-api-user-id`, `x-api-key-id` or `x-api-scopes` from requests (see Changed), and the
+  proxy template now also removes them from incoming requests. To do the same in an existing project, add the three names to
+  `TRUSTED_IDENTITY_HEADERS` in `src/proxy.ts`.
 
 ### Added
 
@@ -29,6 +78,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `withRateLimitTier` (`@nextsparkjs/core/lib/api/rate-limit`) counts requests per client address and tier for every caller. The `x-api-key`
+  header no longer selects the bucket: the wrapper runs before the route has validated anything. Routes that authenticate with
+  `validateAndAuthenticateRequest` or `validateAndAuthenticateApiRequest` also limit each validated API key on its own; routes that use
+  `authenticateRequest` have only the per-address limit. Several API keys used from one address now share that address's limit per tier.
+  `generateExternalAPI` (`lib/entities/external-api-generator`) counts per client address
+  too, before the key check.
+- API audit logging takes the caller's identity only from authentication. `withApiLogging` writes an `api_audit_log` row for a request that
+  the route authenticated with an API key, attributed to that key and its owner, and writes none otherwise; it no longer stores the request
+  body (as the entity routes' audit log). `getApiAuth` returns the key that `validateApiKey` accepted for the request and throws when there is
+  none. `withRateLimit` (without `Tier`) validates the presented key and limits by it. None of them read `x-api-user-id`, `x-api-key-id` or
+  `x-api-scopes`, and the proxy template removes those headers from incoming requests.
+- CORS on `/api` comes from core in every environment, and the `next.config.mjs` template sends no `Access-Control-*` headers (existing
+  projects: see Upgrading). `withRateLimitTier` adds core's CORS to every response it returns: the route's, its own 429 and the origin
+  check's 403. A listed origin (`api.cors.allowedOrigins`, `additionalOrigins`, `CORS_ADDITIONAL_ORIGINS`, `NEXT_PUBLIC_APP_URL`) gets itself
+  back with `Access-Control-Allow-Credentials: true`, any other origin gets neither header, and development with
+  `api.cors.allowAllOrigins.development` keeps its rules. A response that already names an origin keeps it. The `webhook` tier gets no CORS
+  headers. Every core, plugin and template route wrapped in `withRateLimitTier` (webhooks excepted) exports `OPTIONS`
+  (`corsPreflight`, `@nextsparkjs/core/lib/api/cors-response`), so its preflight gets the same answer; the devtools routes' preflights do too.
+  The 429 of `/api/auth/*` carries the same CORS as its other responses. A front end served from another origin than the API works under
+  `next start` once that origin is listed.
 - The sign-in pages, the page titles of the auth group and of public entity pages, and the emails core sends (sign-in code, password reset,
   team invitation, email verification) use `app.name` from the project's `config/app.config.ts` instead of the fixed "Boilerplate" / "Your App".
   `NEXT_PUBLIC_APP_NAME` still wins when it is set, in the pages and in the emails alike. The name is HTML-escaped in the email bodies. A project that never set `app.name` shows core's default name, `NextSpark`. The new optional

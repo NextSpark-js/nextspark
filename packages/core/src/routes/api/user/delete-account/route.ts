@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@nextsparkjs/core/lib/auth";
 import { withRateLimitTier } from "@nextsparkjs/core/lib/api/rate-limit";
+import { corsPreflight } from "@nextsparkjs/core/lib/api/cors-response";
 import { UserService } from "@nextsparkjs/core/lib/services";
 
 export const DELETE = withRateLimitTier(async (req: NextRequest) => {
@@ -56,3 +57,5 @@ export const DELETE = withRateLimitTier(async (req: NextRequest) => {
     );
   }
 }, 'strict');
+
+export const OPTIONS = corsPreflight;
