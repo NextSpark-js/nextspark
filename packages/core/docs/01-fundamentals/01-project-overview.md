@@ -14,7 +14,7 @@ NextSpark is an enterprise-grade Next.js 16 application, designed for rapid SaaS
 - **React 19** - Latest React with Concurrent Features and Server Components
 - **TypeScript 5** - Strict type safety throughout the codebase
 - **Node.js** - JavaScript runtime for server-side operations
-- **pnpm** - Fast, disk space efficient package manager with workspaces (projects: pnpm 10 (>=10.16), 11 or 12; pnpm 9 is only for contributing to this repository)
+- **pnpm** - Fast, disk space efficient package manager with workspaces (projects: pnpm 10 (>=10.34.6), 11 or 12; pnpm 9 is only for contributing to this repository)
 
 ### Frontend Technologies
 

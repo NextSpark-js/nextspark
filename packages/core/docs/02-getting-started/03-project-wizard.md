@@ -45,13 +45,13 @@ pnpm exec nextspark init --preset crm
 - **Supported Locales**: Additional languages
 
 ### Step 5: Billing Configuration
-- **Billing Model**: `free` | `freemium` | `paid`
+- **Billing Model**: `free` (default) | `freemium` | `paid`. `freemium` and `paid` are experimental and print a notice; `free` has no billing, no notice and no plan limits.
 - **Currency**: USD, EUR, GBP, CAD, AUD
 
 ### Step 6: Features
 - Analytics Dashboard
 - Team Management
-- Billing & Subscriptions
+- Billing & Subscriptions (experimental, off by default)
 - API Access
 - Documentation Site
 
@@ -109,7 +109,7 @@ Presets pre-configure all settings for common use cases:
 
 | Preset | Team Mode | Billing | Content Features |
 |--------|-----------|---------|------------------|
-| **saas** | multi-tenant | freemium | pages: false, blog: false |
+| **saas** (`--yes` default) | multi-tenant | free | pages: false, blog: false |
 | **blog** | single-user | free | pages: false, blog: true |
 | **crm** | single-tenant | paid | pages: true, blog: false |
 

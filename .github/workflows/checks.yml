@@ -122,7 +122,7 @@ jobs:
         if: always()
         run: cat "$RUNNER_TEMP/host-conformance.md" >> "$GITHUB_STEP_SUMMARY" || true
 
-  # Needs network: it installs pnpm 10.16 to 12 through Corepack and queries registry.npmjs.org for the dependency
+  # Needs network: it installs pnpm 10.34.6 to 12 through Corepack and queries registry.npmjs.org for the dependency
   # engines (the fast suite in tests.yml runs the CLI and core tests offline instead).
   create-nextspark-app:
     runs-on: ubuntu-24.04

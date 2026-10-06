@@ -2,7 +2,7 @@
 
 > **Starting a new project?** This guide walks through the NextSpark monorepo (a clone with `apps/dev`, `.env.local` and port 3010). For a project of your own run `npx create-nextspark-app my-app`: it installs the dependencies, writes `.env` (with `BETTER_AUTH_SECRET` already generated) and the generated host, so the path is: set `DATABASE_URL` in `.env`, `pnpm db:migrate`, `pnpm dev` (port 3000). `pnpm build` additionally needs a production sign-in provider; see the [project wizard](./03-project-wizard.md#production-sign-in-provider).
 
-> **Package managers:** this guide is for contributing to the NextSpark monorepo, which pins pnpm 9. Projects you create with NextSpark support pnpm 10 (>=10.16), 11 and 12; npm, yarn and bun are not supported.
+> **Package managers:** this guide is for contributing to the NextSpark monorepo, which pins pnpm 9. Projects you create with NextSpark support pnpm 10 (>=10.34.6), 11 and 12; npm, yarn and bun are not supported.
 
 > **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 

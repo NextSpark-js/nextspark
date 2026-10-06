@@ -83,7 +83,7 @@ export async function runAllPrompts(): Promise<WizardConfig> {
   const billingConfig = await promptBillingConfig()
 
   // Step 6: Features Configuration
-  const featuresConfig = await promptFeaturesConfig()
+  const featuresConfig = await promptFeaturesConfig(billingConfig.billingModel)
 
   // Step 7: Content Features Configuration
   const contentFeaturesConfig = await promptContentFeaturesConfig('interactive', 10)
@@ -132,7 +132,7 @@ export async function runQuickPrompts(): Promise<WizardConfig> {
   const billingConfig = await promptBillingConfig()
 
   // Step 6: Features Configuration
-  const featuresConfig = await promptFeaturesConfig()
+  const featuresConfig = await promptFeaturesConfig(billingConfig.billingModel)
 
   // Step 7: Content Features Configuration (shown in all modes)
   const contentFeaturesConfig = await promptContentFeaturesConfig('quick', 10)
@@ -177,7 +177,7 @@ export async function runExpertPrompts(): Promise<WizardConfig> {
   const billingConfig = await promptBillingConfig()
 
   // Step 6: Features Configuration
-  const featuresConfig = await promptFeaturesConfig()
+  const featuresConfig = await promptFeaturesConfig(billingConfig.billingModel)
 
   // Step 7: Content Features Configuration
   const contentFeaturesConfig = await promptContentFeaturesConfig('expert', 10)

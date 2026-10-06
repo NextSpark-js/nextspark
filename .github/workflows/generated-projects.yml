@@ -30,7 +30,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # The supported matrix (G0 decision 4 and 12): Node 22.14 and 24; pnpm 10 (from 10.16), 11 and 12 for the generated
+  # The supported matrix (G0 decision 4 and 12): Node 22.14 and 24; pnpm 10 (from 10.34.6), 11 and 12 for the generated
   # project. The repository itself stays on its packageManager (pnpm 9).
   NODE_OLDEST: 22.14.0
 
@@ -141,7 +141,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { pnpm: 10.16.0, node: 22.14.0 }
+          - { pnpm: 10.34.6, node: 22.14.0 }
           - { pnpm: 11.28.4, node: '24' }
           # Node 22's bundled Corepack cannot install pnpm 12 (its package no longer has bin/pnpm.cjs): pnpm 12 runs on Node 24
           - { pnpm: 12.9.1, node: '24' }

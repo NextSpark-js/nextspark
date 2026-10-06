@@ -27,8 +27,8 @@ const FEATURE_OPTIONS = [
   {
     name: 'Billing & Subscriptions',
     value: 'billing',
-    description: 'Stripe integration for payments and subscriptions',
-    checked: true,
+    description: 'Stripe integration for payments and subscriptions (experimental)',
+    checked: false, // overridden by the chosen billing model
   },
   {
     name: 'API Access',
@@ -47,7 +47,13 @@ const FEATURE_OPTIONS = [
 /**
  * Run features configuration prompts
  */
-export async function promptFeaturesConfig(): Promise<Pick<WizardConfig, 'features'>> {
+export function featureChoices(billingModel: WizardConfig['billingModel']) {
+  return FEATURE_OPTIONS.map((o) => (o.value === 'billing' ? { ...o, checked: billingModel !== 'free' } : o))
+}
+
+export async function promptFeaturesConfig(
+  billingModel: WizardConfig['billingModel'] = 'free'
+): Promise<Pick<WizardConfig, 'features'>> {
   showSection('Features', 6, 10)
 
   showInfo('Select the features you want to include in your project.')
@@ -57,7 +63,7 @@ export async function promptFeaturesConfig(): Promise<Pick<WizardConfig, 'featur
   // Select features
   const selectedFeatures = await checkbox({
     message: 'Which features do you want to enable?',
-    choices: FEATURE_OPTIONS,
+    choices: featureChoices(billingModel),
   })
 
   // Convert to feature flags object

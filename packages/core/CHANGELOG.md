@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading
+
+A project migration file that has its own `BEGIN`/`COMMIT` (or `ROLLBACK`, `END`, `ABORT`, `START TRANSACTION`, `PREPARE TRANSACTION`) and has not run
+yet now stops `db:migrate` before it runs: take those statements out, or start the file with the line `-- nextspark:no-transaction` if it has to
+manage its own transactions (see the last Fixed item). Files that already ran are skipped as before; core's, the templates' and the plugins' files
+have no such statements. A `DO` block or `CALL` that commits inside its body now fails inside that transaction (nothing stays) and needs the same
+marker. History tables are unchanged.
+
 ### Security
 
 - The CORS headers in `lib/entities/external-api-generator` (`generateExternalAPI`) no longer send `Access-Control-Allow-Credentials` unless the request origin is
@@ -23,20 +31,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   If a browser app on another origin calls the API with the session cookie, add that origin to `api.cors.additionalOrigins` or
   `CORS_ADDITIONAL_ORIGINS`.
 
-### Upgrading
-
-A project migration file that has its own `BEGIN`/`COMMIT` (or `ROLLBACK`, `END`, `ABORT`, `START TRANSACTION`, `PREPARE TRANSACTION`) and has not run
-yet now stops `db:migrate` before it runs: take those statements out, or start the file with the line `-- nextspark:no-transaction` if it has to
-manage its own transactions (see the last Fixed item). Files that already ran are skipped as before; core's, the templates' and the plugins' files
-have no such statements. A `DO` block or `CALL` that commits inside its body now fails inside that transaction (nothing stays) and needs the same
-marker. History tables are unchanged.
-
 ### Changed
 
 - **Supported versions for 1.0 (G0): Next `~16.3.6` and React `^19.2`.** `nextspark init` now adds `next@~16.3.6` (was `^16.3.5`) and
   `react`/`react-dom` `^19.2.0`; core's `react` and `react-dom` peers are `^19.2.0`. The plugins and the blog, crm and productivity
   templates take `next` `~16.3.6` as a peer (they accepted `^15.0.0 || ^16.0.0`). Next 15 and React 18 are no longer supported.
   Core, ui and testing declare `engines.node` `>=22.14.0`.
+- **Billing is off by default.** `create-nextspark-app -y` (the `saas` preset) and the wizard's billing prompt now default to billing `free`: no
+  billing notice, no seeded plans and no plan limits, so a fresh project can create tasks. The wizard's "Billing & Subscriptions" feature is
+  unchecked by default. `freemium` and `paid` stay available (billing prompt, `crm` preset) and keep the experimental notice.
+- **pnpm floor for projects: 10.34.6** (was 10.16), the newest 10.x that CI tests; 11 and 12 are unchanged. pnpm 10.16 fails on a warm
+  cache with `ERR_PNPM_MISSING_TIME`. With Node 22, the bundled Corepack cannot install pnpm 12: update Corepack
+  (`npm install --global corepack@latest`) or install pnpm standalone. README, create README, getting started and the generated project README say so.
 - **The lowest supported Next.js is now 16.3.6** (the range stays `~16.3.x`). `create-nextspark-app` installs `next@16.3.6`; core's peer,
   the templates and plugins, `nextspark init` and `nextspark migrate` use `~16.3.6` (migrate also sets `eslint-config-next` to it, and init
   now writes `eslint-config-next` `~16.3.6` instead of `^16.3.5`). The generated host refuses Next 16.3.5: run `pnpm add next@~16.3.6`
@@ -48,6 +54,8 @@ marker. History tables are unchanged.
 
 - **A web+mobile project from `create-nextspark-app` keeps the full `--name` and passes its own checks.** `--name "My App"` reached the wizard as `--name My App` (the wizard was spawned through a shell that does not quote), so `mobile/app.config.ts` got `name: 'My'`, and a description with spaces was cut the same way. The name is also escaped when written into `app.config.ts`. The mobile app ships a smoke test and a Jest `transformIgnorePatterns` that works under pnpm's `.pnpm/` layout, so the root `pnpm test` no longer fails on `jest` finding nothing to run. `react-native-worklets` is pinned to `0.5.1` and mobile's `@types/react` to `~19.1.10`, what Expo SDK 54 expects, so `expo-doctor` passes 18/18 (web keeps its own `@types/react`).
 
+- **A project with no billing plans can create entities with a mapped limit.** `SubscriptionService.canPerformAction` returned `QUOTA_EXCEEDED` (429)
+  for `tasks.create` when `plans` is empty, because no subscription exists; with no plans declared it now skips the feature and quota checks.
 - **`nextspark migrate` from `0.1.0-beta.183`** (the oldest release it is supported from; guide: `docs/17-updates/06-upgrade-0x-projects.md`).
   An untracked `node_modules/` no longer crashes it with `spawnSync git ENOBUFS` (the untracked listing collapses directories, so a project
   without `node_modules/` in `.gitignore` gets the "dirty git tree" refusal, which now says to ignore `node_modules/` or `.next/` first). `--yes`

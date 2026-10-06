@@ -1017,6 +1017,12 @@ export class SubscriptionService {
       }
     }
 
+    // No plans declared = no billing (billing 'free'): nothing to gate by feature or quota.
+    // Without this, a project with limits mapped but no plans has no subscription and every create is denied.
+    if (BILLING_REGISTRY.plans.length === 0) {
+      return { allowed: true }
+    }
+
     // 2. Feature Check - Verify plan feature
     const requiredFeature = BILLING_REGISTRY.actionMappings.features[action]
     if (requiredFeature) {

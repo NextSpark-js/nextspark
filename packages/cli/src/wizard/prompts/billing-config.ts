@@ -40,7 +40,7 @@ export async function promptBillingConfig(): Promise<Pick<WizardConfig, 'billing
   const billingModel = await select({
     message: 'What billing model do you want to use?',
     choices: BILLING_MODEL_OPTIONS,
-    default: 'freemium',
+    default: 'free',
   })
 
   // Show info about selected model

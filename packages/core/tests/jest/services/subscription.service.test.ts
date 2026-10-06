@@ -437,6 +437,67 @@ describe('SubscriptionService', () => {
       expect(result.reason).toBe('no_permission')
     })
 
+    it('allows a mapped limit when the project declares no plans (billing free)', async () => {
+      mockQueryOneWithRLS
+        .mockResolvedValueOnce({ role: 'user' }) // user role query
+        .mockResolvedValueOnce({ role: 'member', userRole: 'user' }) // team member query
+
+      // The mocked registry maps a permission for this action; the RBAC rules are not under test here
+      const { BILLING_REGISTRY } = jest.requireMock('@/core/lib/registries/billing-registry') as any
+      const permissions = BILLING_REGISTRY.actionMappings.permissions
+      BILLING_REGISTRY.actionMappings.permissions = {}
+      try {
+        const result = await SubscriptionService.canPerformAction('user-123', 'team-456', 'create_project')
+        expect(result).toEqual({ allowed: true })
+      } finally {
+        BILLING_REGISTRY.actionMappings.permissions = permissions
+      }
+    })
+
+    describe('when the project declares plans', () => {
+      // Run `fn` with a non-empty plan list and no RBAC mapping, restoring the shared mock after
+      const withPlans = async (fn: () => Promise<void>) => {
+        const { BILLING_REGISTRY } = jest.requireMock('@/core/lib/registries/billing-registry') as any
+        const { permissions } = BILLING_REGISTRY.actionMappings
+        const plans = BILLING_REGISTRY.plans
+        BILLING_REGISTRY.actionMappings.permissions = {}
+        BILLING_REGISTRY.plans = [{ slug: 'pro', limits: { projects: 10 }, features: ['basic'] }]
+        try {
+          await fn()
+        } finally {
+          BILLING_REGISTRY.actionMappings.permissions = permissions
+          BILLING_REGISTRY.plans = plans
+        }
+      }
+
+      it('denies a limited action when the team has no subscription', async () => {
+        await withPlans(async () => {
+          mockQueryOneWithRLS
+            .mockResolvedValueOnce({ role: 'user' })
+            .mockResolvedValueOnce({ role: 'member', userRole: 'user' })
+            .mockResolvedValueOnce(null) // no active subscription
+
+          const result = await SubscriptionService.canPerformAction('user-123', 'team-456', 'create_project')
+
+          expect(result.allowed).toBe(false)
+          expect(result.reason).toBe('quota_exceeded')
+        })
+      })
+
+      it('denies an action whose feature is not in the plan', async () => {
+        await withPlans(async () => {
+          mockQueryOneWithRLS
+            .mockResolvedValueOnce({ role: 'user' })
+            .mockResolvedValueOnce({ role: 'member', userRole: 'user' })
+            .mockResolvedValueOnce(null) // no active subscription -> no feature
+
+          const result = await SubscriptionService.canPerformAction('user-123', 'team-456', 'use_analytics')
+
+          expect(result).toEqual({ allowed: false, reason: 'feature_not_in_plan' })
+        })
+      })
+    })
+
     it('returns not allowed for empty parameters', async () => {
       const result = await SubscriptionService.canPerformAction('', 'team-456', 'create_project')
 

@@ -40,8 +40,8 @@ export interface PresetConfig {
 /**
  * SaaS Preset
  *
- * Multi-tenant SaaS application with freemium billing,
- * team management, and authentication options.
+ * Multi-tenant SaaS application with no billing (freemium and paid are
+ * chosen explicitly), team management, and authentication options.
  */
 const SAAS_PRESET: PresetConfig = {
   projectType: 'web',
@@ -49,12 +49,12 @@ const SAAS_PRESET: PresetConfig = {
   teamRoles: ['owner', 'admin', 'member', 'viewer'],
   defaultLocale: 'en',
   supportedLocales: ['en'],
-  billingModel: 'freemium',
+  billingModel: 'free',
   currency: 'usd',
   features: {
     analytics: true,
     teams: true,
-    billing: true,
+    billing: false,
     api: true,
     docs: false,
   },
@@ -200,7 +200,7 @@ export const DEFAULT_PRESET: PresetName = 'saas'
  * Preset descriptions for display
  */
 export const PRESET_DESCRIPTIONS: Record<PresetName, string> = {
-  saas: 'Multi-tenant SaaS with freemium billing and team management',
+  saas: 'Multi-tenant SaaS with team management and no billing',
   blog: 'Single-user blog or content site with minimal features',
   crm: 'Single-tenant CRM or internal tool with paid subscription',
 }
@@ -260,12 +260,12 @@ export function getDefaultConfig(): PresetConfig {
     teamRoles: ['owner', 'admin', 'member', 'viewer'],
     defaultLocale: 'en',
     supportedLocales: ['en'],
-    billingModel: 'freemium',
+    billingModel: 'free',
     currency: 'usd',
     features: {
       analytics: true,
       teams: true,
-      billing: true,
+      billing: false,
       api: true,
       docs: false,
     },
