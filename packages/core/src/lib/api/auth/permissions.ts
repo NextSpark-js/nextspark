@@ -53,3 +53,25 @@ export function hasAdminPermission(
 
   return true
 }
+
+/**
+ * Whether the caller may read or edit the user `target` (an id or an email, as
+ * the /users/:id routes accept both): the user themselves, or a superadmin.
+ * An API key is its owner, so it gets the same answer, but a superadmin key
+ * must also carry `requiredScope`.
+ *
+ * Application-layer check: row-level security does not cover a deployment that
+ * has not cut over to the non-owner runtime role.
+ */
+export function canAccessUser(
+  authResult: DualAuthResult,
+  target: string,
+  requiredScope?: string | string[]
+): boolean {
+  if (!authResult.success || !authResult.user) return false
+  if (hasAdminPermission(authResult, requiredScope)) return true
+  const { id, email } = authResult.user
+  // Exact match, like the routes' `WHERE id = $1 OR email = $1`: a case-insensitive check could pass for one account
+  // and then read another whose email differs only in case
+  return target === id || (!!email && target === email)
+}

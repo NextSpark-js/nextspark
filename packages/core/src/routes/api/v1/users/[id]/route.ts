@@ -12,6 +12,7 @@ import {
   processEntityMetadata
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { canAccessUser, hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions';
 import * as z from 'zod';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
@@ -51,6 +52,12 @@ export const GET = withRateLimitTier(withApiLogging(async (
     // Validate that id is not empty
     if (!id || id.trim() === '') {
       const response = createApiError('User ID or email is required', 400, null, 'MISSING_IDENTIFIER');
+      return addCorsHeaders(response, req);
+    }
+
+    // SECURITY: a user is readable and editable by themselves or a superadmin only
+    if (!canAccessUser(authResult, id, 'users:read')) {
+      const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);
     }
 
@@ -105,9 +112,21 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
+    // SECURITY: a user is readable and editable by themselves or a superadmin only
+    if (!canAccessUser(authResult, id, 'users:write')) {
+      const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN');
+      return addCorsHeaders(response, req);
+    }
+
     const body = await req.json();
     const { metas, ...userData } = body;
     const validatedData = updateUserSchema.parse(userData);
+
+    // SECURITY: roles are granted by a superadmin, never by the user themselves
+    if (validatedData.role !== undefined && !hasAdminPermission(authResult, 'users:write')) {
+      const response = createApiError('Only a superadmin can change a role', 403, null, 'FORBIDDEN');
+      return addCorsHeaders(response, req);
+    }
 
     // Build dynamic update query
     const updates = [];
@@ -228,6 +247,12 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
     // Validate that id is not empty
     if (!id || id.trim() === '') {
       const response = createApiError('User ID or email is required', 400, null, 'MISSING_IDENTIFIER');
+      return addCorsHeaders(response, req);
+    }
+
+    // SECURITY: deleting a user is a superadmin action
+    if (!hasAdminPermission(authResult, 'users:delete')) {
+      const response = createApiError('Insufficient permissions. Superadmin access required.', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);
     }
 

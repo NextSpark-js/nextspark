@@ -29,6 +29,7 @@ import {
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { canAccessUser } from '@nextsparkjs/core/lib/api/auth/permissions'
 import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
@@ -79,6 +80,12 @@ export const GET = withRateLimitTier(withApiLogging(async (
     // Validate parameters
     if (!id || id.trim() === '') {
       const response = createApiError('User ID is required', 400, null, 'MISSING_USER_ID')
+      return addCorsHeaders(response, req)
+    }
+
+    // SECURITY: a user's metadata is readable and editable by that user or a superadmin only
+    if (!canAccessUser(authResult, id, 'users:read')) {
+      const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN')
       return addCorsHeaders(response, req)
     }
 
@@ -161,6 +168,12 @@ export const PUT = withRateLimitTier(withApiLogging(async (
     // Validate parameters
     if (!id || id.trim() === '') {
       const response = createApiError('User ID is required', 400, null, 'MISSING_USER_ID')
+      return addCorsHeaders(response, req)
+    }
+
+    // SECURITY: a user's metadata is readable and editable by that user or a superadmin only
+    if (!canAccessUser(authResult, id, 'users:write')) {
+      const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN')
       return addCorsHeaders(response, req)
     }
 
@@ -274,6 +287,12 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
     // Validate parameters
     if (!id || id.trim() === '') {
       const response = createApiError('User ID is required', 400, null, 'MISSING_USER_ID')
+      return addCorsHeaders(response, req)
+    }
+
+    // SECURITY: a user's metadata is readable and editable by that user or a superadmin only
+    if (!canAccessUser(authResult, id, 'users:write')) {
+      const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN')
       return addCorsHeaders(response, req)
     }
 
