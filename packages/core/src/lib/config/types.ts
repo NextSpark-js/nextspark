@@ -713,6 +713,8 @@ export interface AppConfig {
   app: {
     name: string
     version: string
+    /** One line shown under the name on the sign-in pages; the wizard writes the project's. */
+    description?: string
   }
 
   i18n: {

@@ -206,7 +206,7 @@ export const SUPPORTED_LOCALES = APP_CONFIG_MERGED.i18n.supportedLocales
 export const DEFAULT_LOCALE = APP_CONFIG_MERGED.i18n.defaultLocale
 export const AVAILABLE_ROLES = APP_CONFIG_MERGED.userRoles.availableRoles
 export const DEFAULT_ROLE = APP_CONFIG_MERGED.userRoles.defaultRole
-export const APP_NAME = APP_CONFIG_MERGED.app.name
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || APP_CONFIG_MERGED.app.name
 export const APP_VERSION = APP_CONFIG_MERGED.app.version
 
 // Re-export configuration sections (using merged config)

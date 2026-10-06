@@ -81,6 +81,9 @@ async function projectWithPreparation(script: string, name = 'nextspark-registry
   await writeFile(join(coreDir, 'scripts/build/registry/host/mode.mjs'), "export function resolveHostMode() { return { mode: 'host', reason: 'generated' } }\n")
   // A passing auth readiness check: its behavior is covered by auth-readiness-preflight.test.ts
   await writeFile(join(coreDir, 'scripts/build/auth-readiness.mjs'), '')
+  // build checks that Next is installed before it prepares anything
+  await mkdir(join(root, 'node_modules/.bin'), { recursive: true })
+  await writeFile(join(root, 'node_modules/.bin/next'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
   await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
   return { root, coreDir, cleanup: () => rm(root, { recursive: true, force: true }) }
 }

@@ -19,6 +19,8 @@ export default async function teamInvitation(
   ? await getTranslations({ locale, namespace: 'email.teamInvitation' })
   : await getTranslations('email.teamInvitation');
   const appName = data.appName || APP_NAME_FALLBACK;
+  // The name goes into HTML (the subject stays plain text)
+  const htmlAppName = escapeHtml(appName);
   const year = new Date().getFullYear();
 
   return {
@@ -38,7 +40,7 @@ export default async function teamInvitation(
                   <!-- Header -->
                   <tr>
                     <td style="padding: 40px 40px 20px 40px; text-align: center; background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); border-radius: 8px 8px 0 0;">
-                      <h1 style="color: #ffffff; font-size: 28px; margin: 0; font-weight: 600;">${appName}</h1>
+                      <h1 style="color: #ffffff; font-size: 28px; margin: 0; font-weight: 600;">${htmlAppName}</h1>
                       <p style="color: #ffffff; font-size: 16px; margin: 10px 0 0 0; opacity: 0.95;">${t('headerSubtitle')}</p>
                     </td>
                   </tr>
@@ -88,7 +90,7 @@ export default async function teamInvitation(
                   <tr>
                     <td style="padding: 30px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
                       <p style="color: #999999; font-size: 14px; margin: 0 0 10px 0;">
-                        ${t('copyright', { year, appName })}
+                        ${t('copyright', { year, appName: htmlAppName })}
                       </p>
                       <p style="color: #999999; font-size: 12px; margin: 0;">
                         ${t('footerSentTo', { inviteeEmail: escapeHtml(data.inviteeEmail) })}<br>

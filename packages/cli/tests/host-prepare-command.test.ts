@@ -28,7 +28,10 @@ if (fail) {
 }
 if (args.includes('--watch')) {
   console.log('[prepare] Watching')
-  setInterval(() => {}, 1000)
+  appendFileSync(process.cwd() + '/watcher-pids.txt', process.pid + '\\n')
+  // A watcher outlives its CLI when the test run kills only the CLI (spawnSync's timeout): leave with it
+  const parent = process.ppid
+  setInterval(() => { if (process.ppid !== parent || !existsSync(process.cwd() + '/package.json')) process.exit(0) }, 500)
 } else {
   console.log('Generated src/app (3 files) and 1 registries: 3 written, 0 deleted, 0 unchanged.')
 }
@@ -59,13 +62,23 @@ export function resolveHostMode({ projectRoot }) {
   await write(join(core, 'scripts/build/registry/host/prepare-cli.mjs'), STUB)
   await write(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
   await write(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.6' } }))
-  await write(join(root, 'node_modules/.bin/next'), '#!/bin/sh\necho "$@" >> next-runs.txt\n', 0o755)
+  // Next runs through its own executable now, with no npx start-up ahead of it: the pause stands in for a dev server
+  // that stays up, so the watcher the CLI starts beside it has recorded its run before the CLI stops it.
+  await write(join(root, 'node_modules/.bin/next'), '#!/bin/sh\necho "$@" >> next-runs.txt\nsleep 1\n', 0o755)
   return {
     root,
     runs: async () => (existsSync(join(root, 'host-runs.txt')) ? (await readFile(join(root, 'host-runs.txt'), 'utf8')).trim().split('\n').map((line) => JSON.parse(line)) : []),
     nextRuns: async () => (existsSync(join(root, 'next-runs.txt')) ? (await readFile(join(root, 'next-runs.txt'), 'utf8')).trim().split('\n') : []),
     fail: (step: string) => writeFile(join(root, `fail-${step}`), ''),
-    cleanup: () => rm(root, { recursive: true, force: true }),
+    cleanup: async () => {
+      // Whatever watcher a test left running dies with its project
+      if (existsSync(join(root, 'watcher-pids.txt'))) {
+        for (const pid of (await readFile(join(root, 'watcher-pids.txt'), 'utf8')).split('\n').filter(Boolean)) {
+          try { process.kill(Number(pid), 'SIGKILL') } catch { /* already gone */ }
+        }
+      }
+      await rm(root, { recursive: true, force: true })
+    },
   }
 }
 
@@ -163,6 +176,22 @@ test('dev: the first generation is fatal on failure; then a watcher regenerates 
     assert.match(failed.output, /the dev server was not started/)
     assert.match(failed.output, /NS_HOST_ROUTE_COLLISION/)
     assert.equal((await project.nextRuns()).length, 3, 'next dev did not start after the failed generation')
+  } finally {
+    await project.cleanup()
+  }
+})
+
+test('dev and build without next installed stop first: exit 1, no host preparation, no watcher left', async () => {
+  const project = await hostProject()
+  try {
+    await rm(join(project.root, 'node_modules/.bin'), { recursive: true })
+    for (const args of [['dev', '-p', '4394'], ['build']]) {
+      const failed = run(project.root, args, { NEXTSPARK_AUTH_PREFLIGHT: 'off' })
+      assert.equal(failed.status, 1, `${args.join(' ')}: ${failed.output}`)
+      assert.match(failed.output, /Next\.js is not installed in .*pnpm install/, args.join(' '))
+    }
+    assert.deepEqual(await project.runs(), [], 'nothing was prepared or watched')
+    assert.equal(existsSync(join(project.root, 'watcher-pids.txt')), false, 'no watcher was started')
   } finally {
     await project.cleanup()
   }

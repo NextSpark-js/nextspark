@@ -1,5 +1,5 @@
 import { sendResetPasswordEmail, sendVerifyEmail } from './email/send';
-import { I18N_CONFIG } from './config';
+import { I18N_CONFIG, APP_NAME } from './config';
 import type { EmailProvider } from './email';
 import type { UserWithEmail } from './auth';
 
@@ -32,7 +32,7 @@ export async function sendResetPasswordCallback(
     const template = await sendResetPasswordEmail({
       userName: user.firstName || '',
       resetUrl: url,
-      appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App',
+      appName: process.env.NEXT_PUBLIC_APP_NAME || APP_NAME,
       expiresIn: '1 hour',
     }, I18N_CONFIG.defaultLocale);
 
@@ -66,7 +66,7 @@ export async function sendVerificationEmailCallback(
     const template = await sendVerifyEmail({
       userName: user.firstName || '',
       verificationUrl: url,
-      appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App',
+      appName: process.env.NEXT_PUBLIC_APP_NAME || APP_NAME,
     }, I18N_CONFIG.defaultLocale);
 
     const response = await emailService.send({

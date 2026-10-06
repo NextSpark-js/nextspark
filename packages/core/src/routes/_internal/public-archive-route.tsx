@@ -10,6 +10,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { PublicEntityGrid } from '@nextsparkjs/core/components/public/entities/PublicEntityGrid'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
+import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -37,7 +38,7 @@ export function createPublicArchiveRoute(config: EntityConfig) {
 export function createPublicArchiveMetadata(config: EntityConfig) {
   return async function generatePublicArchiveMetadata(): Promise<Metadata> {
     return {
-      title: `${config.names.plural} | Boilerplate`,
+      title: `${config.names.plural} | ${APP_NAME}`,
       description: `Browse all ${config.names.plural.toLowerCase()}`,
     }
   }

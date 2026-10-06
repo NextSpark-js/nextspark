@@ -8,7 +8,7 @@ import {
   sendOtpVerificationEmail,
 } from './email/send';
 import { sendResetPasswordCallback, sendVerificationEmailCallback } from './auth-email-callbacks';
-import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, AUTH_CONFIG, APP_CONFIG_MERGED, type UserRole } from './config';
+import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, AUTH_CONFIG, APP_CONFIG_MERGED, APP_NAME, type UserRole } from './config';
 import { getUserFlags } from './services/user-flags.service';
 // Direct imports avoid a circular dependency through the services barrel.
 import { TeamService } from './services/team.service';
@@ -316,7 +316,7 @@ export const auth = betterAuth({
               email,
               otp,
               type,
-              appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App',
+              appName: process.env.NEXT_PUBLIC_APP_NAME || APP_NAME,
               expiresIn: otpConfig.expiresIn,
             }, I18N_CONFIG.defaultLocale);
             await getEmailService().send({ to: email, ...template });

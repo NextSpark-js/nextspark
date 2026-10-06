@@ -3,11 +3,12 @@ import type { Metadata } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
 
 export const defaultMetadata: Metadata = {
   title: {
-    default: 'Authentication | Boilerplate',
-    template: '%s | Boilerplate',
+    default: `Authentication | ${APP_NAME}`,
+    template: `%s | ${APP_NAME}`,
   },
   description: 'Sign in or create an account to access our platform',
   robots: {

@@ -6,6 +6,7 @@
  */
 
 import { getTranslations } from 'next-intl/server';
+import { escapeHtml } from '../lib/auth/security-notifications/templates/shared';
 import type { EmailContent, OtpVerificationEmailData } from '../lib/email/types';
 import { DEFAULT_OTP_CONFIG } from '../lib/auth/otp-config';
 
@@ -19,6 +20,8 @@ export default async function otpVerification(
   ? await getTranslations({ locale, namespace: 'email.otpVerification' })
   : await getTranslations('email.otpVerification');
   const appName = data.appName || APP_NAME_FALLBACK;
+  // The name goes into HTML (the subject stays plain text)
+  const htmlAppName = escapeHtml(appName);
   const year = new Date().getFullYear();
   // Rounded down so the email never promises more time than the code has: 90s
   // reads as "1 minute", and a code under a minute has its own wording (=0).
@@ -41,7 +44,7 @@ export default async function otpVerification(
                   <!-- Header -->
                   <tr>
                     <td style="padding: 40px 40px 20px 40px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
-                      <h1 style="color: #ffffff; font-size: 28px; margin: 0; font-weight: 600;">${appName}</h1>
+                      <h1 style="color: #ffffff; font-size: 28px; margin: 0; font-weight: 600;">${htmlAppName}</h1>
                       <p style="color: #ffffff; font-size: 16px; margin: 10px 0 0 0; opacity: 0.95;">${t('headerSubtitle')}</p>
                     </td>
                   </tr>
@@ -70,10 +73,10 @@ export default async function otpVerification(
                   <tr>
                     <td style="padding: 30px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
                       <p style="color: #999999; font-size: 14px; margin: 0 0 10px 0;">
-                        ${t('copyright', { year, appName })}
+                        ${t('copyright', { year, appName: htmlAppName })}
                       </p>
                       <p style="color: #999999; font-size: 12px; margin: 0;">
-                        ${t('footerLine1', { appName })}
+                        ${t('footerLine1', { appName: htmlAppName })}
                       </p>
                     </td>
                   </tr>

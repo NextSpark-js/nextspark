@@ -134,6 +134,18 @@ export async function updateDevConfig(config: WizardConfig): Promise<void> {
 }
 
 /**
+ * Point the `app: { name }` block of a project's app.config.ts at the wizard's name and description. Every template
+ * names its own app there ('Starter', 'Blog Platform', ...); the sign-in pages, the emails and the page titles read
+ * it, so it is the one place the project's name has to be. Running it again replaces its own description line.
+ */
+export function withAppIdentity(content: string, config: Pick<WizardConfig, 'projectName' | 'projectDescription'>): string {
+  return content.replace(
+    /(\bapp:\s*\{\s*)name:\s*(['"]).*?\2,(\s*description:\s*(['"]).*?\4,)?/s,
+    (_match, open: string) => `${open}name: ${JSON.stringify(config.projectName)},\n    description: ${JSON.stringify(config.projectDescription)},`,
+  )
+}
+
+/**
  * Update app.config.ts with project settings
  */
 export async function updateAppConfig(config: WizardConfig): Promise<void> {
@@ -145,11 +157,7 @@ export async function updateAppConfig(config: WizardConfig): Promise<void> {
 
   let content = await fs.readFile(appConfigPath, 'utf-8')
 
-  // Update app name
-  content = content.replace(
-    /name:\s*['"]Starter['"]/g,
-    `name: '${config.projectName}'`
-  )
+  content = withAppIdentity(content, config)
 
   // Update team mode
   content = content.replace(

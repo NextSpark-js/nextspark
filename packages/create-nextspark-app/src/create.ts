@@ -523,7 +523,8 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     throw new Error(`pnpm add exited with code ${status}; its output above says why.`)
   }
 
-  // Step 5: Run wizard (inherits terminal for interactive mode)
+  // Step 5: Run wizard (inherits terminal for interactive mode). Not via npx: npm reads
+  // the project .npmrc and warns about shamefully-hoist
   console.log()
   console.log(chalk.blue('  Starting NextSpark wizard...'))
   console.log()
@@ -556,7 +557,7 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     initArgs.push('--yes')
   }
 
-  const result = spawnSync('npx', wizardArgs(initArgs), {
+  const result = spawnSync('pnpm', ['exec', ...wizardArgs(initArgs)], {
     cwd: projectPath,
     stdio: 'inherit', // Interactive mode
     shell: process.platform === 'win32',

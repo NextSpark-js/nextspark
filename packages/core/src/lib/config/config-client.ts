@@ -46,7 +46,7 @@ if (DEFAULT_APP_CONFIG.teams?.roles) {
 
 export const APP_CONFIG_MERGED = mergedConfig
 export const I18N_CONFIG = APP_CONFIG_MERGED.i18n
-export const APP_NAME = APP_CONFIG_MERGED.app.name
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || APP_CONFIG_MERGED.app.name
 export const APP_VERSION = APP_CONFIG_MERGED.app.version
 export const AUTH_CONFIG = APP_CONFIG_MERGED.auth
 export const API_CONFIG = APP_CONFIG_MERGED.api

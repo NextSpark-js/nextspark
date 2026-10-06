@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The sign-in pages, the page titles of the auth group and of public entity pages, and the emails core sends (sign-in code, password reset,
+  team invitation, email verification) use `app.name` from the project's `config/app.config.ts` instead of the fixed "Boilerplate" / "Your App".
+  `NEXT_PUBLIC_APP_NAME` still wins when it is set, in the pages and in the emails alike. The name is HTML-escaped in the email bodies. A project that never set `app.name` shows core's default name, `NextSpark`. The new optional
+  `app.description` is the line under the name on the sign-in card (nothing is shown without it; it used to read "Modern Full-Stack Application").
+  `create-nextspark-app` now writes the wizard's name and description into `app.config.ts` for all four templates.
+- `create-nextspark-app` / `nextspark init` run `pnpm install` without `--force` (the flag printed `WARN using --force I sure hope you know what
+  you are doing` on pnpm 10; it was added for "cleaner installs" and nothing depends on it).
+- `nextspark dev` and `nextspark build` start the project's own `next` instead of `npx next`, and the wizard runs `pnpm exec nextspark init`
+  instead of `npx nextspark init`: npm 11 (Node 24) read the generated `.npmrc` and printed `npm warn Unknown project config "shamefully-hoist"`
+  on every run. When Next is not installed in the project they stop with "Next.js is not installed in <dir>. Run `pnpm install`".
+
+### Fixed
+
+- web-mobile projects: the root scripts `dev:mobile`, `ios` and `android` and the README's `pnpm --filter mobile test` matched no package (the
+  mobile package is named `<slug>-mobile`), so pnpm printed "No projects matched the filters" and exited 0. Every filter the generator writes is
+  now a path (`--filter ./mobile`, `--filter ./web`). A project created before this keeps the broken scripts: replace `--filter mobile` with
+  `--filter ./mobile` in its root `package.json`.
+- web-mobile README: dropped the obsolete `npm install -g expo-cli` prerequisite (`pnpm dlx expo ...` / `npx expo ...` need no global install).
+- `[DB] WARNING: SSL disabled in production environment` printed once per module load (about 12 times per build or start). It now prints once per
+  process, and not at all when the connection string asks for `sslmode=disable` and the host is `localhost`, `127.0.0.1` or `::1` (a remote host
+  still gets it; the host name is matched case-insensitively).
+
 ## [0.1.0-beta.194] - 2026-10-06
 
 ### Upgrading from 0.1.0-beta.193

@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import chalk from '../utils/colors.js';
 import ora from 'ora';
-import { nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
+import { nextCommand, nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
 import { errorLines } from '../utils/shown-path.js';
 import { coreHostMode, hostBlockerLines, runAuthReadiness, runHostPreparation } from '../utils/preparation.js';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
@@ -34,6 +34,9 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
       console.error(chalk.yellow('Move the project to a directory whose path holds no such character.'));
       process.exit(1);
     }
+
+    // Also before anything runs: a missing Next throws here, before `prepare --production` has done any work
+    nextCommand(projectRoot);
 
     // A core with a route manifest generates the whole src/app (#203): `prepare --production`
     // must succeed before Next builds, and --no-registry only skips regenerating a host that
@@ -97,14 +100,13 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
 
     // Step 2: Run Next.js build
     const bundlerArgs = resolveBundlerArgs(bundler, projectRoot);
-    const nextArgs = ['next', 'build', ...bundlerArgs, ...(options.nextArgs ?? [])];
+    const nextArgs = ['build', ...bundlerArgs, ...(options.nextArgs ?? [])];
 
     spinner.start('Building for production...');
     const running = effectiveBundler(bundler, projectRoot);
     console.log(chalk.blue(`[Build] Bundler: ${running === 'webpack' ? 'Webpack' : 'Turbopack'}`));
 
-    const buildProcess = spawnNext(nextArgs, {
-      cwd: projectRoot,
+    const buildProcess = spawnNext(projectRoot, nextArgs, {
       stdio: 'inherit',
       env: {
         ...process.env,

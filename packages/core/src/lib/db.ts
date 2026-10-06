@@ -32,6 +32,19 @@ export function stripSSLParams(databaseUrl: string): string {
   }
 }
 
+let warnedSSLDisabled = false;
+
+/**
+ * `sslmode=disable` in production is insecure for a remote database, so say so, once per process.
+ * A loopback host is the documented way to run a production build locally: no warning there.
+ */
+function warnSSLDisabledInProduction(url: URL): void {
+  if (warnedSSLDisabled) return;
+  if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname.toLowerCase())) return;
+  warnedSSLDisabled = true;
+  console.warn('[DB] WARNING: SSL disabled in production environment. This is insecure!');
+}
+
 /**
  * Parse SSL mode from DATABASE_URL using proper URL parameter parsing
  * Supports: disable, allow, prefer, require, verify-ca, verify-full
@@ -59,9 +72,7 @@ export function parseSSLConfig(databaseUrl: string): false | { rejectUnauthorize
     if (sslmode) {
       switch (sslmode) {
         case 'disable':
-          if (isProduction) {
-            console.warn('[DB] WARNING: SSL disabled in production environment. This is insecure!');
-          }
+          if (isProduction) warnSSLDisabledInProduction(url);
           return false;
         case 'require':
         case 'prefer':

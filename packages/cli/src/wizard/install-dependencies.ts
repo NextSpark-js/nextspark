@@ -21,7 +21,7 @@ import { showError, showSuccess, showWarning } from './banner.js'
  */
 export function installProjectDependencies(projectRoot: string): void {
   try {
-    execSync('pnpm install --force --no-frozen-lockfile', {
+    execSync('pnpm install --no-frozen-lockfile', {
       cwd: projectRoot,
       stdio: 'inherit',
     })

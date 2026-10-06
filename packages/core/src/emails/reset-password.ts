@@ -6,6 +6,7 @@
  */
 
 import { getTranslations } from 'next-intl/server';
+import { escapeHtml } from '../lib/auth/security-notifications/templates/shared';
 import type { EmailContent, PasswordResetEmailData } from '../lib/email/types';
 
 const APP_NAME_FALLBACK = process.env.NEXT_PUBLIC_APP_NAME || 'Your App';
@@ -18,6 +19,8 @@ export default async function resetPassword(
   ? await getTranslations({ locale, namespace: 'email.resetPassword' })
   : await getTranslations('email.resetPassword');
   const appName = data.appName || APP_NAME_FALLBACK;
+  // The name goes into HTML (the subject stays plain text)
+  const htmlAppName = escapeHtml(appName);
   const year = new Date().getFullYear();
   const greeting = `${t('greetingPrefix')}${data.userName ? ` ${data.userName}` : ''},`;
   const expiresIn = data.expiresIn || t('defaultExpiresIn');
@@ -39,7 +42,7 @@ export default async function resetPassword(
                   <!-- Header -->
                   <tr>
                     <td style="padding: 40px 40px 20px 40px; text-align: center; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 8px 8px 0 0;">
-                      <h1 style="color: #ffffff; font-size: 28px; margin: 0; font-weight: 600;">${appName}</h1>
+                      <h1 style="color: #ffffff; font-size: 28px; margin: 0; font-weight: 600;">${htmlAppName}</h1>
                       <p style="color: #ffffff; font-size: 16px; margin: 10px 0 0 0; opacity: 0.95;">${t('headerSubtitle')}</p>
                     </td>
                   </tr>
@@ -89,10 +92,10 @@ export default async function resetPassword(
                   <tr>
                     <td style="padding: 30px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
                       <p style="color: #999999; font-size: 14px; margin: 0 0 10px 0;">
-                        ${t('copyright', { year, appName })}
+                        ${t('copyright', { year, appName: htmlAppName })}
                       </p>
                       <p style="color: #999999; font-size: 12px; margin: 0;">
-                        ${t('footerLine1', { appName })}
+                        ${t('footerLine1', { appName: htmlAppName })}
                         <br>${t('footerLine2')}
                       </p>
                     </td>

@@ -6,7 +6,7 @@ A React Native (Expo) app for testing the NextSpark API with full CRUD operation
 
 - Node.js 22.14.0 or later
 - pnpm
-- Expo CLI: `npm install -g expo-cli`
+- Expo CLI: nothing global to install; `pnpm expo ...` in this directory runs the project's own Expo CLI
 - iOS Simulator (macOS) or Android Emulator
 
 ## Setup

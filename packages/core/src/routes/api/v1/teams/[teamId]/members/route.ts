@@ -18,7 +18,7 @@ import { canInviteToRole } from '@nextsparkjs/core/lib/teams/permissions'
 import type { TeamMember, TeamInvitation, TeamRole, Team } from '@nextsparkjs/core/lib/teams/types'
 import { EmailFactory } from '@nextsparkjs/core/lib/email/factory'
 import { sendTeamInvitationEmail } from '@nextsparkjs/core/lib/email/send'
-import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
+import { I18N_CONFIG, APP_NAME } from '@nextsparkjs/core/lib/config'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 // Handle CORS preflight
@@ -308,7 +308,7 @@ export const POST = withRateLimitTier(withApiLogging(
           role: validatedData.role,
           acceptUrl,
           expiresIn: '7 days',
-          appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App',
+          appName: process.env.NEXT_PUBLIC_APP_NAME || APP_NAME,
         }, I18N_CONFIG.defaultLocale)
 
         await emailProvider.send({

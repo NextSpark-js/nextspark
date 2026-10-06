@@ -31,6 +31,15 @@ const DIRS = {
   CONTRACTS: 'packages/contracts',
 } as const
 
+/**
+ * pnpm filters for the two packages, by path: the mobile package is named `<slug>-mobile`, so a name filter
+ * (`--filter mobile`) matches no project and pnpm still exits 0.
+ */
+const FILTER = {
+  WEB: `./${DIRS.WEB}`,
+  MOBILE: `./${DIRS.MOBILE}`,
+} as const
+
 /** File names used in monorepo structure */
 const FILES = {
   PNPM_WORKSPACE: 'pnpm-workspace.yaml',
@@ -244,33 +253,33 @@ function slugToBundleId(slug: string): string {
 /**
  * Create the root monorepo package.json
  */
-async function createRootPackageJson(targetDir: string, config: WizardConfig): Promise<void> {
+export async function createRootPackageJson(targetDir: string, config: WizardConfig): Promise<void> {
   const rootPkg = {
     name: config.projectSlug,
     version: '0.1.0',
     private: true,
     scripts: {
       // Web commands
-      'dev': `pnpm --filter ${DIRS.WEB} dev`,
-      'build': `pnpm --filter ${DIRS.WEB} build`,
-      'start': `pnpm --filter ${DIRS.WEB} start`,
+      'dev': `pnpm --filter ${FILTER.WEB} dev`,
+      'build': `pnpm --filter ${FILTER.WEB} build`,
+      'start': `pnpm --filter ${FILTER.WEB} start`,
       'lint': 'pnpm -r lint',
       // Mobile commands
-      'dev:mobile': `pnpm --filter ${DIRS.MOBILE} start`,
-      'ios': `pnpm --filter ${DIRS.MOBILE} ios`,
-      'android': `pnpm --filter ${DIRS.MOBILE} android`,
+      'dev:mobile': `pnpm --filter ${FILTER.MOBILE} start`,
+      'ios': `pnpm --filter ${FILTER.MOBILE} ios`,
+      'android': `pnpm --filter ${FILTER.MOBILE} android`,
       // Shared commands
       'typecheck': 'pnpm -r typecheck',
       'test': 'pnpm -r test',
       // Web-specific CLI commands (run from root)
-      'db:migrate': `pnpm --filter ${DIRS.WEB} db:migrate`,
-      'db:seed': `pnpm --filter ${DIRS.WEB} db:seed`,
-      'build:registries': `pnpm --filter ${DIRS.WEB} build:registries`,
+      'db:migrate': `pnpm --filter ${FILTER.WEB} db:migrate`,
+      'db:seed': `pnpm --filter ${FILTER.WEB} db:seed`,
+      'build:registries': `pnpm --filter ${FILTER.WEB} build:registries`,
       // Portable API contracts for mobile/, generated from web/'s entities into packages/contracts
-      'contracts': `pnpm --filter ${DIRS.WEB} exec nextspark prepare --contracts-only`,
-      'contracts:check': `pnpm --filter ${DIRS.WEB} exec nextspark prepare --contracts-only --check`,
+      'contracts': `pnpm --filter ${FILTER.WEB} exec nextspark prepare --contracts-only`,
+      'contracts:check': `pnpm --filter ${FILTER.WEB} exec nextspark prepare --contracts-only --check`,
       // Fails when mobile/ imports the web project's server code, the database or a Node built-in
-      'mobile:boundary': `pnpm --filter ${DIRS.WEB} exec nextspark check:mobile --mobile ${DIRS.MOBILE}`,
+      'mobile:boundary': `pnpm --filter ${FILTER.WEB} exec nextspark check:mobile --mobile ${DIRS.MOBILE}`,
     },
     devDependencies: {
       'typescript': VERSIONS.TYPESCRIPT,
@@ -632,7 +641,7 @@ Create each file at the specified sizes above. Use PNG format with transparency 
 /**
  * Create monorepo README.md
  */
-async function createMonorepoReadme(targetDir: string, config: WizardConfig): Promise<void> {
+export async function createMonorepoReadme(targetDir: string, config: WizardConfig): Promise<void> {
   const readmeContent = `# ${config.projectName}
 
 ${config.projectDescription}
@@ -665,7 +674,7 @@ ${config.projectSlug}/
 
 - Node.js 22.14.0 or later
 - pnpm 10 (>=10.34.6), 11 or 12
-- For mobile: Expo CLI (\`npm install -g expo-cli\`)
+- For mobile: nothing global to install; \`pnpm expo ...\` inside \`mobile/\` (or the root scripts \`pnpm dev:mobile\`, \`pnpm ios\`, \`pnpm android\`) runs the project's own Expo CLI
 
 ### Installation
 
@@ -713,10 +722,10 @@ cd ${DIRS.MOBILE} && pnpm start
 pnpm test
 
 # Run web tests only
-pnpm --filter ${DIRS.WEB} test
+pnpm --filter ${FILTER.WEB} test
 
 # Run mobile tests only
-pnpm --filter ${DIRS.MOBILE} test
+pnpm --filter ${FILTER.MOBILE} test
 \`\`\`
 
 ## Mobile App Configuration

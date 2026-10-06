@@ -109,3 +109,35 @@ test('a valid URL without sslmode deliberately uses libpq SSL prefer in scripts'
     })
   }
 })
+
+const WARNING = '[DB] WARNING: SSL disabled in production environment. This is insecure!'
+
+/** Run `parse` in production with console.warn captured; returns the warnings it printed. */
+function warningsFrom(parse: () => void): string[] {
+  const warnings: string[] = []
+  const original = console.warn
+  console.warn = (message: string) => { warnings.push(message) }
+  try {
+    withNodeEnv('production', parse)
+  } finally {
+    console.warn = original
+  }
+  return warnings
+}
+
+// Each implementation warns at most once per process, and the parity test above already used up the shared
+// module's one warning: this test loads fresh instances of both.
+test('sslmode=disable in production: silent on loopback, warns once for a remote host', async () => {
+  const runtime = await runtimeSSLHelpers()
+  const fresh = await import('../../scripts/db/ssl-config.mjs?fresh') as { parseSSLConfig: ParseSSLConfig }
+  const implementations = { script: fresh.parseSSLConfig, runtime: runtime.parseSSLConfig }
+
+  for (const [name, parse] of Object.entries(implementations)) {
+    for (const host of ['localhost', 'LOCALHOST', '127.0.0.1', '[::1]']) {
+      const warnings = warningsFrom(() => { for (let i = 0; i < 3; i++) parse(`postgresql://u:p@${host}:5432/db?sslmode=disable`) })
+      assert.deepEqual(warnings, [], `${name}: ${host}`)
+    }
+    const remote = warningsFrom(() => { for (let i = 0; i < 3; i++) parse(`${URL}?sslmode=disable`) })
+    assert.deepEqual(remote, [WARNING], `${name}: remote host warns exactly once`)
+  }
+})

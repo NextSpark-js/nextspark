@@ -176,3 +176,21 @@ describe('team-invitation branches', () => {
     expect(result.html).toContain('invited@x.test')
   })
 })
+
+describe('the app name in the email HTML', () => {
+  const NAME = 'A & B <Acme>'
+  const ESCAPED = 'A &amp; B &lt;Acme&gt;'
+
+  it('is escaped in the body and left as plain text in the subject', async () => {
+    const results = await Promise.all([
+      verifyEmail({ userName: 'P', verificationUrl: 'u', appName: NAME }, 'en'),
+      resetPassword({ userName: 'P', resetUrl: 'u', appName: NAME }, 'en'),
+      otpVerification({ email: 'p@x.test', otp: '123456', type: 'sign-in', appName: NAME } as Parameters<typeof otpVerification>[0], 'en'),
+    ])
+    for (const result of results) {
+      expect(result.html).toContain(`>${ESCAPED}</h1>`)
+      expect(result.html).not.toContain('<Acme>')
+      expect(result.subject).toContain(NAME)
+    }
+  })
+})

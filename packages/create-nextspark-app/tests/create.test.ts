@@ -34,6 +34,8 @@ done
 case "$1" in
   --version) echo "\${FAKE_PNPM_VERSION_OUTPUT:-$version}" ;;
   add) echo "$version $@" > "$FAKE_PNPM_ADD_LOG"; mkdir -p node_modules/@nextsparkjs/core; exit "\${FAKE_PNPM_ADD_EXIT:-0}" ;;
+  exec) # the wizard: records the local plugin tarballs it is handed
+   printf '%s' "$NEXTSPARK_LOCAL_PLUGIN_TARBALLS" > "$FAKE_NPX_PLUGIN_TARBALLS_LOG"; exit 0 ;;
 esac
 `
 
@@ -112,8 +114,6 @@ async function create({ callerPnpm, projectPnpm, versionOutput, addExit = 0, ext
 
   fs.mkdirSync(bin)
   fs.writeFileSync(path.join(bin, 'pnpm'), FAKE_PNPM, { mode: 0o755 })
-  // The wizard: records the local plugin tarballs create-nextspark-app hands it
-  fs.writeFileSync(path.join(bin, 'npx'), '#!/bin/sh\nprintf \'%s\' "$NEXTSPARK_LOCAL_PLUGIN_TARBALLS" > "$FAKE_NPX_PLUGIN_TARBALLS_LOG"\nexit 0\n', { mode: 0o755 })
   fs.mkdirSync(path.join(caller, '.packages'), { recursive: true })
   fs.writeFileSync(path.join(caller, 'package.json'), JSON.stringify({ name: 'caller', packageManager: `pnpm@${callerPnpm}` }))
   // The project is a sibling of the caller. Its ancestor intentionally pins a
@@ -385,7 +385,6 @@ test('two local testing tarballs at the same, matching version are an ambiguous 
 
   fs.mkdirSync(bin)
   fs.writeFileSync(path.join(bin, 'pnpm'), FAKE_PNPM, { mode: 0o755 })
-  fs.writeFileSync(path.join(bin, 'npx'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
   // Two different directories findLocalTarballCandidates both search, each
   // holding a same-version testing tarball: a real "which one?" ambiguity
   // that a single .packages/ directory (where a filename collision is

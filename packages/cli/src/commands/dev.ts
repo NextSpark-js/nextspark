@@ -3,7 +3,7 @@ import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
 import { resolveBundlerArgs, type Bundler } from '../utils/next-bundler.js';
-import { nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
+import { nextCommand, nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
 import { loadCoreWritePlaces } from '../utils/core-write-places.js';
 import { coreHostMode, hostBlockerLines, runHostPreparation, startHostWatch } from '../utils/preparation.js';
 
@@ -48,6 +48,9 @@ export async function devCommand(options: DevOptions): Promise<void> {
       console.error(chalk.yellow('[Dev] Move the project to a directory whose path holds no such character.'));
       process.exit(1);
     }
+
+    // Also before anything runs: a missing Next throws here, not after the host watcher is already up
+    nextCommand(projectRoot);
 
     // A core with a route manifest generates the whole src/app (#203): the first generation
     // must succeed before Next starts, then a watcher regenerates it as sources change. When a
@@ -95,7 +98,6 @@ export async function devCommand(options: DevOptions): Promise<void> {
     // Start Next.js dev server
     const bundler: Bundler = options.turbopack ? 'turbopack' : 'webpack';
     const nextArgs = [
-      'next',
       'dev',
       ...resolveBundlerArgs(bundler, projectRoot),
       '-p',
@@ -106,8 +108,7 @@ export async function devCommand(options: DevOptions): Promise<void> {
     const bundlerLabel = options.turbopack ? 'Turbopack' : 'Webpack';
     console.log(chalk.green(`\n[Dev] Starting Next.js dev server on port ${options.port} (${bundlerLabel})...`));
 
-    const devProcess = spawnNext(nextArgs, {
-      cwd: projectRoot,
+    const devProcess = spawnNext(projectRoot, nextArgs, {
       stdio: 'inherit',
       env: {
         ...process.env,

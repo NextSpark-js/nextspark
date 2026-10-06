@@ -1,34 +1,40 @@
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
 import { breaksALine } from './shown-path.js';
 
 /**
- * Run `npx next …` without letting a shell rewrite the arguments.
+ * Run the project's own `next` without a shell and without `npx`.
  *
  * The CLI forwards the user's own flags to Next verbatim, and a shell does not
  * pass them through: it splits on spaces, expands globs and `$`, and turns a
  * trailing `&` into a background job — so a value like
  * `--experimental-upload-trace 'https://host/x?run=1&team=alpha'` arrives
- * truncated at the ampersand.
+ * truncated at the ampersand. Spawning Next's own executable needs no shell,
+ * so nothing has to be quoted.
  *
- * Windows is the exception that forces the shell: Node refuses to spawn a
- * `.cmd` without one (CVE-2024-27980), and `npx` is a `.cmd` there. Arguments
- * are quoted for that path instead.
+ * `npx` is out for another reason: npm reads the project's .npmrc, and
+ * npm 11 warns `Unknown project config "shamefully-hoist"` on every run.
  */
-const IS_WINDOWS = process.platform === 'win32';
 
-/** Quote an argument for cmd.exe, which only understands double quotes. */
-export function quoteForWindowsShell(argument: string): string {
-  if (argument === '') return '""';
-  if (!/[\s"&|<>^()%!]/.test(argument)) return argument;
+/**
+ * How to start the project's own Next, or an error that says next is not installed there.
+ *
+ * Off Windows the project's `node_modules/.bin/next` runs as it is: it is the executable pnpm links for the
+ * installed version. Windows only has `.cmd` shims there, which need a shell, so it runs Next's JS entry with this
+ * Node instead (the entry is also the fallback when the link is missing).
+ */
+export function nextCommand(projectRoot: string): { command: string; args: string[] } {
+  const link = join(projectRoot, 'node_modules', '.bin', 'next');
+  if (process.platform !== 'win32' && existsSync(link)) return { command: link, args: [] };
 
-  return `"${argument.replace(/(["\\])/g, '\\$1')}"`;
-}
-
-/** The command and arguments to hand `spawn`, per platform. */
-export function npxInvocation(args: string[]): { command: string; args: string[]; shell: boolean } {
-  if (!IS_WINDOWS) return { command: 'npx', args, shell: false };
-
-  return { command: 'npx.cmd', args: args.map(quoteForWindowsShell), shell: true };
+  try {
+    const entry = createRequire(join(projectRoot, 'package.json')).resolve('next/dist/bin/next');
+    return { command: process.execPath, args: [entry] };
+  } catch {
+    throw new Error(`Next.js is not installed in ${projectRoot}. Run \`pnpm install\` and try again.`);
+  }
 }
 
 /**
@@ -44,8 +50,9 @@ export function nextOutputBlocker(projectRoot: string): string | null {
     : null;
 }
 
-export function spawnNext(args: string[], options: Omit<SpawnOptions, 'shell'>): ChildProcess {
-  const invocation = npxInvocation(args);
+/** Spawn `next <args>` for the project; `args` start at the Next command (`dev`, `build`). */
+export function spawnNext(projectRoot: string, args: string[], options: Omit<SpawnOptions, 'shell' | 'cwd'>): ChildProcess {
+  const next = nextCommand(projectRoot);
 
-  return spawn(invocation.command, invocation.args, { ...options, shell: invocation.shell });
+  return spawn(next.command, [...next.args, ...args], { ...options, cwd: projectRoot, shell: false });
 }

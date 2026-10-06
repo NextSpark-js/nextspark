@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { AuthWrapper } from '@nextsparkjs/core/components/auth/layouts/AuthWrapper'
+import { APP_DESCRIPTION, APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
 
 /**
  * Core's default auth layout. A module of its own: the composition module (./auth-layout) and the metadata a
@@ -12,11 +13,13 @@ export function DefaultAuthLayout({ children }: { children: React.ReactNode }) {
         <div className="bg-card rounded-lg shadow-lg border border-border p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">
-              Boilerplate
+              {APP_NAME}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              Modern Full-Stack Application
-            </p>
+            {APP_DESCRIPTION && (
+              <p className="text-sm text-muted-foreground">
+                {APP_DESCRIPTION}
+              </p>
+            )}
           </div>
 
           <AuthWrapper>

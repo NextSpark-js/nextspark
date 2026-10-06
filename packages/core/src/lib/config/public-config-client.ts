@@ -14,7 +14,8 @@ import { resolveOtpConfig } from '../auth/otp-config'
 
 const appConfig = mergeConfigs(DEFAULT_APP_CONFIG, APP_CONFIG_OVERRIDES)
 
-export const APP_NAME = appConfig.app.name
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || appConfig.app.name
+export const APP_DESCRIPTION = appConfig.app.description
 export const DOCS_CONFIG = appConfig.docs
 
 const methods = resolveAuthMethods(appConfig.auth)

@@ -29,6 +29,16 @@ export function stripSSLParams(databaseUrl) {
   }
 }
 
+let warnedSSLDisabled = false
+
+/** Once per process, and not for a loopback host: mirrors `warnSSLDisabledInProduction` in src/lib/db.ts. */
+function warnSSLDisabledInProduction(url) {
+  if (warnedSSLDisabled) return
+  if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname.toLowerCase())) return
+  warnedSSLDisabled = true
+  console.warn('[DB] WARNING: SSL disabled in production environment. This is insecure!')
+}
+
 /**
  * Parse the SSL policy used by database scripts.
  *
@@ -47,7 +57,7 @@ export function parseSSLConfig(databaseUrl) {
     if (sslmode) {
       switch (sslmode) {
         case 'disable':
-          if (isProduction) console.warn('[DB] WARNING: SSL disabled in production environment. This is insecure!')
+          if (isProduction) warnSSLDisabledInProduction(url)
           return false
         case 'require':
         case 'prefer':

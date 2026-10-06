@@ -1,41 +1,59 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
-import { npxInvocation, quoteForWindowsShell } from '../src/utils/spawn-next.js'
-
-const onWindows = process.platform === 'win32'
+import { nextCommand, spawnNext } from '../src/utils/spawn-next.js'
 
 // The arguments are the user's own, forwarded to Next verbatim. A shell would
 // split this one at the ampersand and background the rest.
 const AWKWARD = 'https://trace.invalid/upload?run=1&team=alpha'
 
-test('off Windows, nothing goes through a shell', { skip: onWindows }, () => {
-  const invocation = npxInvocation(['next', 'build', '--experimental-upload-trace', AWKWARD])
+/** A project whose `next` entry prints the arguments it got, one JSON line. */
+function projectWithFakeNext(): string {
+  const root = mkdtempSync(join(tmpdir(), 'spawn-next-'))
+  const bin = join(root, 'node_modules', 'next', 'dist', 'bin')
+  mkdirSync(bin, { recursive: true })
+  writeFileSync(join(root, 'package.json'), '{"name":"p"}')
+  writeFileSync(join(root, 'node_modules', 'next', 'package.json'), '{"name":"next","version":"0.0.0"}')
+  writeFileSync(join(bin, 'next'), 'console.log(JSON.stringify({ argv: process.argv.slice(2) }))')
+  return root
+}
 
-  assert.equal(invocation.command, 'npx')
-  assert.equal(invocation.shell, false)
-  assert.deepEqual(invocation.args, ['next', 'build', '--experimental-upload-trace', AWKWARD])
+test('runs the project\'s own next with the arguments untouched, no shell', async () => {
+  const root = projectWithFakeNext()
+  try {
+    const child = spawnNext(root, ['build', '--experimental-upload-trace', AWKWARD], { stdio: ['ignore', 'pipe', 'inherit'] })
+    let out = ''
+    child.stdout?.on('data', (chunk) => { out += chunk })
+    await new Promise((resolve) => child.on('close', resolve))
+
+    const seen = JSON.parse(out)
+    assert.deepEqual(seen.argv, ['build', '--experimental-upload-trace', AWKWARD])
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
-test('on Windows the shell is unavoidable, so the arguments are quoted', { skip: !onWindows }, () => {
-  const invocation = npxInvocation(['next', 'build', AWKWARD])
-
-  assert.equal(invocation.command, 'npx.cmd')
-  assert.equal(invocation.shell, true)
-  assert.equal(invocation.args[0], 'next')
-  assert.match(invocation.args[2], /^".*"$/)
+test('a project without next fails with an error that says so', () => {
+  const root = mkdtempSync(join(tmpdir(), 'spawn-next-'))
+  try {
+    writeFileSync(join(root, 'package.json'), '{"name":"p"}')
+    assert.throws(() => nextCommand(root), /Next\.js is not installed in .*pnpm install/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
-test('quoting leaves an ordinary argument alone', () => {
-  assert.equal(quoteForWindowsShell('next'), 'next')
-  assert.equal(quoteForWindowsShell('--turbopack'), '--turbopack')
-  assert.equal(quoteForWindowsShell('-p'), '-p')
-})
+test('off Windows the project\'s linked node_modules/.bin/next wins over the JS entry', { skip: process.platform === 'win32' }, () => {
+  const root = projectWithFakeNext()
+  try {
+    mkdirSync(join(root, 'node_modules', '.bin'))
+    writeFileSync(join(root, 'node_modules', '.bin', 'next'), '#!/bin/sh\n', { mode: 0o755 })
 
-test('quoting wraps what cmd.exe would otherwise read as syntax', () => {
-  for (const argument of [AWKWARD, 'a b', 'x|y', 'x>y', 'say "hi"', '%PATH%', '']) {
-    const quoted = quoteForWindowsShell(argument)
-
-    assert.match(quoted, /^".*"$/, `not quoted: ${argument}`)
+    assert.deepEqual(nextCommand(root), { command: join(root, 'node_modules', '.bin', 'next'), args: [] })
+  } finally {
+    rmSync(root, { recursive: true, force: true })
   }
 })

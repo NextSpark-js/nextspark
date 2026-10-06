@@ -15,6 +15,7 @@ import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
 import type { PatternReference } from '@nextsparkjs/core/types/pattern-reference'
 import { fetchPublishedItem, getResolvedBlocks, type PublishedItem } from './public-entity-shared'
+import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -91,7 +92,7 @@ function itemMetadata(source: PublicItemSource, config: EntityConfig) {
     const item = await source.fetchItem(config, slug)
     if (item) {
       return {
-        title: item.seoTitle || `${item.title} | Boilerplate`,
+        title: item.seoTitle || `${item.title} | ${APP_NAME}`,
         description: item.seoDescription || item.excerpt || undefined,
         openGraph: {
           title: item.seoTitle || item.title,
