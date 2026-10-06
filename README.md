@@ -110,7 +110,7 @@ Visit [nextspark.dev/docs](https://nextspark.dev/docs) for the full documentatio
 - Node.js 22.14.0 or later
 - PostgreSQL database
 - pnpm 10 (10.34.6 or later), 11 or 12. pnpm 9 is only for contributing to this repository; npm, yarn and bun are not supported.
-  Corepack bundled with Node.js 22 cannot install pnpm 12: update Corepack first (`npm install --global corepack@latest`) or install pnpm standalone (`curl -fsSL https://get.pnpm.io/install.sh | sh -`); Node.js 24 ships a Corepack that can. The floor is 10.34.6 because pnpm 10.16 fails on a warm store cache with `ERR_PNPM_MISSING_TIME`.
+  Corepack bundled with Node.js 22.x cannot install pnpm 12: update Corepack first (`npm install --global corepack@latest`) or install pnpm standalone (`curl -fsSL https://get.pnpm.io/install.sh | sh -`); Node.js 24 ships a Corepack that can. The floor is 10.34.6 because pnpm 10.16 fails on a warm store cache with `ERR_PNPM_MISSING_TIME`.
 
 ## Tech Stack
 
