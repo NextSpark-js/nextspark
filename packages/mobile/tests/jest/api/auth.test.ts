@@ -69,6 +69,28 @@ describe('authApi (passwordless preset)', () => {
     expect(apiClient.clearAuth).toHaveBeenCalled()
   })
 
+  it('getSession treats Better Auth\'s 200 with a null body as no session', async () => {
+    ;(apiClient.get as jest.Mock).mockResolvedValue(null)
+
+    await expect(authApi.getSession()).resolves.toBeNull()
+    expect(apiClient.setUser).not.toHaveBeenCalled()
+  })
+
+  it('getSession does not read an unexpected 200 body (a proxy page, a 204) as "no session"', async () => {
+    ;(apiClient.get as jest.Mock).mockResolvedValue({})
+
+    await expect(authApi.getSession()).rejects.toThrow('Unexpected get-session response')
+    expect(apiClient.setUser).not.toHaveBeenCalled()
+  })
+
+  it('getSession refreshes the stored user from a live session', async () => {
+    const user = { id: 'user-1', email: 'ada@example.com' }
+    ;(apiClient.get as jest.Mock).mockResolvedValue({ user, session: { id: 's' } })
+
+    await expect(authApi.getSession()).resolves.toEqual({ user, session: { id: 's' } })
+    expect(apiClient.setUser).toHaveBeenCalledWith(user)
+  })
+
   it('getSocialSignInUrl returns the provider authorization URL', async () => {
     mockPost.mockResolvedValue({ url: 'https://accounts.google.com/o/oauth2/auth?x=1', redirect: true })
 

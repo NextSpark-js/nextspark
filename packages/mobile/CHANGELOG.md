@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Upgrading from 0.1.0-beta.194
 
 - **The client no longer sends `Authorization: Bearer <session token>`.** Core has no bearer plugin: the session cookie (native cookie store) is what authenticated, and the header was read as an API key,
-  rejected after a ~100 ms delay on every request. The token is still stored (`getToken()` marks that a session exists). An app that uses an API key passes it in
+  rejected after a ~100 ms delay on every request. The token is still stored, but it no longer says a session exists: the app asks the server (see Fixed). An app that uses an API key passes it in
   `headers` as before. **Expo web:** cookie-authenticated writes are origin-checked: add the Expo web origin to `CORS_ADDITIONAL_ORIGINS` on the API (see the README).
 - **`updateProfile({ name, image })` no longer type-checks:** use `firstName`, `lastName` and `language` (`name` is derived from them; core never accepted `name` or `image` there). The `User` type gains `firstName`, `lastName` and `language`.
 
@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Signing in again with a session still active, and signing out, work from native apps.** The client sends `Origin: <API origin>` on native (never on web, never over an `Origin` you set): Better Auth refused
+  cookie-authenticated POSTs without one (403 `MISSING_OR_NULL_ORIGIN`). Sign-out now revokes the session on the server; before, the server answered 403 and the app only cleared local state.
+  If the API host differs from `BETTER_AUTH_URL` / `NEXT_PUBLIC_APP_URL`, add it to `CORS_ADDITIONAL_ORIGINS`.
+- **Session after reinstalling the app (iOS):** the Keychain outlives an uninstall, so the stored token and user made a fresh install believe it was signed in and the first call got a 401. `apiClient.init()` now clears
+  credentials found with no cookie in the native cookie store (which an uninstall does empty; needs `@preeternal/react-native-cookie-manager`, otherwise the server decides), and `restoreSession` treats Better Auth's
+  answer of "no session" (200 with a `null` body, which `authApi.getSession()` used to turn into a `TypeError`) as signed out instead of falling back to the stored user; any other body (a proxy's page, a 204) is not an answer and keeps the stored state. A server that cannot be reached still keeps the stored user. `init()` clears only the stored credentials, not the cookies of other hosts.
+  New `hasNativeCookies(url)` in `@nextsparkjs/mobile/lib`.
 - **API:** `usersApi.getCurrentUser()` and `updateProfile()` call `/api/v1/users/me`, which core now serves (#209). `getPreferences()`/`updatePreferences()` no longer call `/api/v1/users/me/preferences`, which no core route backs:
   they read and write the user's `preferences` metadata (`/api/v1/users/:id/meta/preferences`).
 

@@ -7,6 +7,7 @@ import { clearNativeCookies } from '../../../src/lib/cookies'
 // module is linked in the Jest runtime.
 jest.mock('../../../src/lib/cookies', () => ({
   clearNativeCookies: jest.fn().mockResolvedValue(undefined),
+  hasNativeCookies: jest.fn().mockResolvedValue(null),
 }))
 
 // Re-mock for this specific test
@@ -119,6 +120,39 @@ describe('ApiClient', () => {
 
       expect((global.fetch as jest.Mock).mock.calls[0][1].headers.Authorization).toBe('Bearer sk_test_key')
       expect((global.fetch as jest.Mock).mock.calls[1][1].headers['x-api-key']).toBe('sk_test_key')
+    })
+
+    it('sends the API origin as Origin on native, so Better Auth accepts cookie-authenticated POSTs', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({}) })
+
+      await apiClient.post('/api/auth/sign-out', {})
+
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(init.headers.Origin).toBe('http://test-api.example.com')
+    })
+
+    it('keeps an Origin the caller set, whatever its case', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({}) })
+
+      await apiClient.request('/x', { method: 'POST', headers: { origin: 'https://other.example' } })
+
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(init.headers.origin).toBe('https://other.example')
+      expect(init.headers.Origin).toBeUndefined()
+    })
+
+    it('sends no Origin on web: the browser sets its own', async () => {
+      jest.resetModules()
+      jest.doMock('react-native', () => ({ Platform: { OS: 'web', select: (obj: { web?: unknown }) => obj.web } }))
+      const { apiClient: webClient } = require('../../../src/api/client') as typeof import('../../../src/api/client')
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({}) })
+
+      await webClient.get('/x')
+
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(Object.keys(init.headers).map((h) => h.toLowerCase())).not.toContain('origin')
+      jest.doMock('react-native', () => ({ Platform: { OS: 'ios', select: (obj: { ios?: unknown }) => obj.ios }, Alert: { alert: jest.fn() } }))
+      jest.resetModules()
     })
 
     it('throws ApiError on non-ok response', async () => {

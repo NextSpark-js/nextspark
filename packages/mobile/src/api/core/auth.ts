@@ -18,7 +18,7 @@ function extractSessionToken(response: { token?: string | null; session?: { toke
 
 /**
  * Persist what a successful sign-in gives us: the user (for offline
- * restoration) and the Bearer token (for API calls).
+ * restoration) and the session token (a marker; requests authenticate with the cookie).
  */
 async function persistSignIn(response: { user: LoginResponse['user']; token?: string | null; session?: { token?: string | null } | null }) {
   await apiClient.setUser(response.user)
@@ -57,7 +57,7 @@ export const authApi = {
 
   /**
    * Passwordless step 2: exchange the emailed code for a session.
-   * Stores user + Bearer token like `login()`.
+   * Stores user + session token like `login()`.
    */
   async loginWithOtp(email: string, otp: string): Promise<OtpLoginResponse> {
     const response = await apiClient.post<OtpLoginResponse>('/api/auth/sign-in/email-otp', {
@@ -111,12 +111,14 @@ export const authApi = {
    */
   async getSession(): Promise<SessionResponse | null> {
     try {
-      const response = await apiClient.get<SessionResponse>('/api/auth/get-session')
+      // Better Auth answers 200 with a null body when there is no session
+      const response = await apiClient.get<SessionResponse | null>('/api/auth/get-session')
+      if (response === null) return null
+      // Not Better Auth's answer (a proxy's page, a 204): not proof that the session is gone
+      if (!response?.user) throw new Error('Unexpected get-session response')
 
       // Update stored user with fresh data
-      if (response.user) {
-        await apiClient.setUser(response.user)
-      }
+      await apiClient.setUser(response.user)
 
       return response
     } catch (error) {

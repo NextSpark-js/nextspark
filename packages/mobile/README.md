@@ -246,7 +246,7 @@ It is a native module: **it needs a [development build](https://docs.expo.dev/de
 
 ### Expo web and the origin check
 
-Requests authenticate with the session cookie and send no `Authorization` header. From Expo web the browser sends an `Origin`, and core checks it on cookie-authenticated writes (`POST`, `PUT`, `PATCH`, `DELETE`): add the Expo web origin (for example `http://localhost:8081`) to `CORS_ADDITIONAL_ORIGINS` (or `api.cors.additionalOrigins`) on the API, or those writes get 403 `ORIGIN_NOT_ALLOWED`. Native iOS and Android requests carry no `Origin` and are not affected.
+Requests authenticate with the session cookie and send no `Authorization` header. From Expo web the browser sends an `Origin`, and core checks it on cookie-authenticated writes (`POST`, `PUT`, `PATCH`, `DELETE`): add the Expo web origin (for example `http://localhost:8081`) to `CORS_ADDITIONAL_ORIGINS` (or `api.cors.additionalOrigins`) on the API, or those writes get 403 `ORIGIN_NOT_ALLOWED`. Native iOS and Android requests send `Origin: <the API's own origin>` (the client adds it: Better Auth answers 403 `MISSING_OR_NULL_ORIGIN` to a cookie-authenticated POST without one). That origin is trusted when the API host is the one in `BETTER_AUTH_URL` / `NEXT_PUBLIC_APP_URL`; if the app talks to a different host (for example `api.example.com` while the site is `app.example.com`), add the API's origin to `CORS_ADDITIONAL_ORIGINS` too, or native requests get 403 `INVALID_ORIGIN`.
 
 ## Core Services
 

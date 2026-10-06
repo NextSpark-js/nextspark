@@ -16,6 +16,7 @@ import { Platform } from 'react-native'
 
 interface CookieManager {
   clearAll(useWebKit?: boolean): Promise<boolean>
+  get(url: string, useWebKit?: boolean): Promise<Record<string, unknown>>
 }
 
 const COOKIE_MANAGER_PACKAGE = '@preeternal/react-native-cookie-manager'
@@ -59,5 +60,27 @@ export async function clearNativeCookies(): Promise<void> {
     await cookieManager.clearAll()
   } catch (error) {
     console.warn('[@nextsparkjs/mobile] Failed to clear native cookies on sign-out:', error)
+  }
+}
+
+/**
+ * Whether the native cookie store holds any cookie for `url`.
+ *
+ * The store is wiped when the app is uninstalled, unlike the Keychain (iOS),
+ * so no cookie means no session, whatever SecureStore still remembers.
+ * Resolves to `null` when it cannot tell (web, cookie manager unavailable or
+ * failing): callers then fall back to asking the server.
+ */
+export async function hasNativeCookies(url: string): Promise<boolean | null> {
+  if (Platform.OS === 'web') return null
+
+  const cookieManager = loadCookieManager()
+  if (!cookieManager) return null
+
+  try {
+    return Object.keys((await cookieManager.get(url)) ?? {}).length > 0
+  } catch (error) {
+    console.warn('[@nextsparkjs/mobile] Failed to read native cookies:', error)
+    return null
   }
 }

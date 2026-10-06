@@ -176,6 +176,74 @@ describe('apiClient.clearAuth() and native cookies', () => {
     expectSessionCleared(loaded)
   })
 
+  describe('init() after a reinstall (SecureStore survives, the cookie store does not)', () => {
+    const SecureStoreKeys = { token: 'nextspark.auth.token', user: 'nextspark.auth.user' }
+
+    const clearAll = jest.fn().mockResolvedValue(true)
+    function mockCookies(get: jest.Mock) {
+      jest.doMock(COOKIE_MANAGER, () => ({ __esModule: true, default: { clearAll, get } }), {
+        virtual: true,
+      })
+    }
+
+    async function seedKeychain() {
+      const SecureStore = require('expo-secure-store') as typeof import('expo-secure-store')
+      await SecureStore.setItemAsync(SecureStoreKeys.token, 'stale-token')
+      await SecureStore.setItemAsync(SecureStoreKeys.user, JSON.stringify({ id: 'user-1', email: 'ada@example.com' }))
+    }
+
+    it('clears credentials left in the Keychain when the cookie store is empty', async () => {
+      const get = jest.fn().mockResolvedValue({})
+      mockCookies(get)
+      const loaded = loadClient()
+      await seedKeychain()
+
+      await loaded.apiClient.init()
+
+      expect(get).toHaveBeenCalledWith('http://test-api.example.com')
+      expectSessionCleared(loaded)
+      expect(clearAll).not.toHaveBeenCalled() // other cookies (other hosts, WebViews) stay
+    })
+
+    it('keeps the credentials while a session cookie is in the store', async () => {
+      mockCookies(jest.fn().mockResolvedValue({ 'better-auth.session_token': { value: 'x' } }))
+      const loaded = loadClient()
+      await seedKeychain()
+
+      await loaded.apiClient.init()
+
+      expect(loaded.apiClient.getToken()).toBe('stale-token')
+      expect(loaded.apiClient.getStoredUser()).toEqual({ id: 'user-1', email: 'ada@example.com' })
+    })
+
+    it('keeps the credentials when the cookie store cannot be read (the server decides)', async () => {
+      mockCookies(jest.fn().mockRejectedValue(new Error('native failure')))
+      const loaded = loadClient()
+      await seedKeychain()
+
+      await loaded.apiClient.init()
+
+      expect(loaded.apiClient.getToken()).toBe('stale-token')
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('Failed to read native cookies'), expect.any(Error))
+    })
+
+    it('keeps the credentials when the cookie manager is not installed', async () => {
+      jest.doMock(
+        COOKIE_MANAGER,
+        () => {
+          throw new Error(`Cannot find module '${COOKIE_MANAGER}'`)
+        },
+        { virtual: true }
+      )
+      const loaded = loadClient()
+      await seedKeychain()
+
+      await loaded.apiClient.init()
+
+      expect(loaded.apiClient.getToken()).toBe('stale-token')
+    })
+  })
+
   // Overrides the react-native mock for the rest of the file, so it runs last.
   it('leaves cookies to the browser on web', async () => {
     const clearAll = jest.fn().mockResolvedValue(true)
@@ -187,5 +255,11 @@ describe('apiClient.clearAuth() and native cookies', () => {
 
     expect(clearAll).not.toHaveBeenCalled()
     expect(warn).not.toHaveBeenCalled()
+
+    const get = jest.fn()
+    jest.doMock(COOKIE_MANAGER, () => ({ __esModule: true, default: { clearAll, get } }), { virtual: true })
+    const { hasNativeCookies } = require('../../../src/lib/cookies') as typeof import('../../../src/lib/cookies')
+    await expect(hasNativeCookies('http://x')).resolves.toBeNull()
+    expect(get).not.toHaveBeenCalled()
   })
 })

@@ -72,7 +72,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Offline-first: when the server cannot be reached (anything but a 401) the
    * stored user AND the stored team are kept, so `isAuthenticated` stays true
    * and the app keeps working on cached data until `refreshSession()` gets an
-   * answer. Only a 401 clears the credentials.
+   * answer. A 401, or an answer that says there is no session, clears the
+   * credentials.
    */
   const restoreSession = useCallback(async () => {
     try {
@@ -87,18 +88,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Try to validate session with server and get fresh user data
       const sessionResponse = await authApi.getSession()
 
-      if (sessionResponse?.user) {
-        // Session is valid, use fresh user data
-        setUser(sessionResponse.user)
-      } else if (storedUser) {
-        // Session call failed but we have stored user - try to use it
-        // This allows offline-first behavior
-        setUser(storedUser)
-      } else {
-        // No valid session and no stored user - clear auth
+      if (!sessionResponse?.user) {
+        // The server answered: there is no session (whatever storage remembers)
         await apiClient.clearAuth()
+        setUser(null)
+        setTeam(null)
+        setTeams([])
         return
       }
+
+      // Session is valid, use fresh user data
+      setUser(sessionResponse.user)
 
       // Get teams and restore team selection
       const teamsResponse = await teamsApi.getTeams()

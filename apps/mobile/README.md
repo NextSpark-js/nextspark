@@ -112,6 +112,9 @@ apps/mobile/
 - If a physical Android device does not share a network with the development machine, tunnel both ports with `adb reverse tcp:8081 tcp:8081` and `adb reverse tcp:3000 tcp:3000`, and start Expo with `--localhost` so Metro's own address is loopback too - the client detects that and uses `localhost` automatically (see `packages/mobile/README.md`)
 - If only the backend port is tunneled (`adb reverse tcp:3000 tcp:3000`) while Metro stays in its default LAN mode, the client cannot tell that tunnel apart from a plain LAN device and still resolves the LAN address: set `EXPO_PUBLIC_API_URL=http://localhost:3000` explicitly
 
+### Android build fails with `libworklets.so ... missing` (macOS)
+- Build outside `/tmp` (for example under your home folder): `react-native-reanimated`'s CMake step cannot find `libworklets.so` for projects under `/tmp` or `/private/tmp` (see [reanimated#9151](https://github.com/software-mansion/react-native-reanimated/issues/9151)). pnpm's two copies of `react-native-worklets` are not the cause
+
 ### "Unauthorized" errors
 - Token may have expired, try logging out and back in
 - Verify the test user exists in the database

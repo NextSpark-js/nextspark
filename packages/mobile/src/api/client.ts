@@ -15,7 +15,7 @@ import Constants from 'expo-constants'
 import * as Device from 'expo-device'
 import { Platform } from 'react-native'
 import * as Storage from '../lib/storage'
-import { clearNativeCookies } from '../lib/cookies'
+import { clearNativeCookies, hasNativeCookies } from '../lib/cookies'
 import { ApiError, type RequestConfig } from './client.types'
 import type { Team, User } from './core/types'
 
@@ -125,7 +125,12 @@ export class ApiClient {
   private storedTeam: Team | null = null
 
   /**
-   * Initialize client by loading stored credentials
+   * Initialize client by loading stored credentials.
+   *
+   * SecureStore (the iOS Keychain) outlives an uninstall, the native cookie
+   * store does not: credentials with no cookie behind them are leftovers of a
+   * previous install and are cleared (only them: other cookies stay), instead
+   * of passing for a session.
    */
   async init(): Promise<void> {
     this.token = await Storage.getItemAsync(TOKEN_KEY)
@@ -146,6 +151,10 @@ export class ApiClient {
         this.storedTeam = null
       }
     }
+
+    if ((this.token || this.storedUser) && (await hasNativeCookies(API_URL)) === false) {
+      await this.clearCredentials()
+    }
   }
 
   // ==========================================
@@ -160,7 +169,7 @@ export class ApiClient {
   }
 
   /**
-   * Store the session token. It is not sent as a header: it marks that a session exists (restoreSession)
+   * Store the session token. It is not sent as a header and does not prove a session exists: restoreSession asks the server
    */
   async setToken(token: string): Promise<void> {
     this.token = token
@@ -223,6 +232,14 @@ export class ApiClient {
    * cookie behind. Failures are logged.
    */
   async clearAuth(): Promise<void> {
+    await this.clearCredentials([clearNativeCookies])
+  }
+
+  /**
+   * Forget the stored credentials (in memory and SecureStore) plus any extra
+   * steps. Best effort, never rejects: every step runs even when another fails.
+   */
+  private async clearCredentials(extraSteps: Array<() => Promise<void>> = []): Promise<void> {
     this.token = null
     this.teamId = null
     this.storedUser = null
@@ -232,7 +249,7 @@ export class ApiClient {
       () => Storage.deleteItemAsync(TEAM_ID_KEY),
       () => Storage.deleteItemAsync(USER_KEY),
       () => Storage.deleteItemAsync(TEAM_KEY),
-      clearNativeCookies,
+      ...extraSteps,
     ]
     const results = await Promise.allSettled(steps.map(async (step) => step()))
     for (const result of results) {
@@ -284,6 +301,13 @@ export class ApiClient {
     // store, sent by `credentials: 'include'`) is what authenticates. A Bearer would be read as an API key
     // and rejected on format after a ~100 ms constant-time delay.
     // An app that wants an API key sends it through `headers` (`x-api-key` or `Authorization`).
+
+    // Native fetch sends no Origin. Better Auth answers 403 MISSING_OR_NULL_ORIGIN to any non-GET auth request
+    // that carries the session cookie and no Origin (re-sign-in, sign-out...), so declare the API's own origin.
+    // Web is left alone: the browser sets Origin itself and forbids overriding it.
+    if (Platform.OS !== 'web' && !Object.keys(headers).some((name) => name.toLowerCase() === 'origin')) {
+      ;(headers as Record<string, string>).Origin = new URL(API_URL).origin
+    }
 
     // Add team context header
     if (this.teamId) {
