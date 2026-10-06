@@ -17,7 +17,7 @@ async function project(files = {}) {
 
 test('the nearest nextspark.config.ts owns every project source path', async () => {
   const root = await project({
-    'package.json': JSON.stringify({ dependencies: { next: '16.3.5' } }),
+    'package.json': JSON.stringify({ dependencies: { next: '16.3.6' } }),
     'nextspark.config.ts': 'export default {}\n',
   })
   const nested = join(root, 'entities', 'tasks')
@@ -40,7 +40,7 @@ test('the nearest nextspark.config.ts owns every project source path', async () 
 
 test('a next.config file cannot select a project without nextspark.config.ts', async () => {
   const root = await project({
-    'package.json': JSON.stringify({ dependencies: { next: '16.3.5' } }),
+    'package.json': JSON.stringify({ dependencies: { next: '16.3.6' } }),
     'next.config.mjs': 'export default {}\n',
   })
   try {
@@ -66,7 +66,7 @@ test('an enabled packaged plugin resolves through the project dependency tree', 
   const root = await project({
     'package.json': JSON.stringify({
       dependencies: {
-        next: '16.3.5',
+        next: '16.3.6',
         '@example/plugin-search': '1.0.0',
       },
     }),
@@ -98,7 +98,7 @@ test('an enabled packaged plugin that is not installed fails with an actionable 
   const root = await project({
     'package.json': JSON.stringify({
       dependencies: {
-        next: '16.3.5',
+        next: '16.3.6',
         '@example/plugin-search': '1.0.0',
       },
     }),
@@ -119,7 +119,7 @@ test('a packaged plugin cannot use a path segment as its logical name', async ()
   const root = await project({
     'package.json': JSON.stringify({
       dependencies: {
-        next: '16.3.5',
+        next: '16.3.6',
         '@example/plugin-search': '1.0.0',
       },
     }),
@@ -146,7 +146,7 @@ test('a local plugin shadows an installed packaged plugin with the same NextSpar
   const root = await project({
     'package.json': JSON.stringify({
       dependencies: {
-        next: '16.3.5',
+        next: '16.3.6',
         '@example/plugin-search': '1.0.0',
       },
     }),

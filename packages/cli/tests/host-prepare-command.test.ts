@@ -58,7 +58,7 @@ export function resolveHostMode({ projectRoot }) {
 `)
   await write(join(core, 'scripts/build/registry/host/prepare-cli.mjs'), STUB)
   await write(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  await write(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.5' } }))
+  await write(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.6' } }))
   await write(join(root, 'node_modules/.bin/next'), '#!/bin/sh\necho "$@" >> next-runs.txt\n', 0o755)
   return {
     root,

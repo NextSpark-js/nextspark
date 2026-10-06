@@ -186,7 +186,7 @@ async function forgedProject(parent: string) {
   await mkdir(join(root, 'templates/pricing'), { recursive: true })
   await writeFile(join(root, 'templates/pricing/page.tsx'), 'export default function Pricing() { return null }\n')
   await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.5' } }))
+  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.6' } }))
   return root
 }
 

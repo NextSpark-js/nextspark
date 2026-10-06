@@ -29,7 +29,7 @@ const RAW_CONTROL = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u061c\u200e\u200f\
 async function createProject(parent = tmpdir(), name = 'nextspark-build-output-test-') {
   const root = await mkdtemp(join(parent, name))
   await writeFile(join(root, 'nextspark.config.ts'), 'export default {}\n')
-  await writeFile(join(root, 'package.json'), '{"dependencies":{"next":"16.3.5"}}')
+  await writeFile(join(root, 'package.json'), '{"dependencies":{"next":"16.3.6"}}')
   await mkdir(join(root, 'src', 'app'), { recursive: true })
   return root
 }

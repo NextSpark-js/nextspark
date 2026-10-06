@@ -8,6 +8,7 @@ import {
   type RateLimitCheckResult as RedisRateLimitResult,
   type RateLimitTier,
 } from '../rate-limit-redis';
+import { checkRequestOrigin } from './request-origin';
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -384,6 +385,8 @@ function getUserIdentifier(request: NextRequest): string | null {
  *
  * This HOC wraps a Next.js route handler and applies rate limiting using the
  * distributed rate limiting system (Redis when configured, in-memory fallback).
+ * Before that it refuses cookie-authenticated writes from an untrusted origin
+ * (checkRequestOrigin), so every route that uses it gets that check too.
  *
  * Rate limiting strategy:
  * - Uses user identifier (API key) when available for more accurate per-user limiting
@@ -434,6 +437,10 @@ export function withRateLimitTier<T extends unknown[]>(
   tier: RateLimitTier = 'api'
 ) {
   return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
+    // Cookie-authenticated writes must come from a trusted origin (see request-origin.ts)
+    const originRefused = checkRequestOrigin(request);
+    if (originRefused) return originRefused;
+
     // Skip rate limiting if disabled via environment variable
     if (isRateLimitingDisabled()) {
       return handler(request, ...args);

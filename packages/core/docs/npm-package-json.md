@@ -58,7 +58,7 @@ package.json que defina cómo se consume el paquete.
     "LICENSE"
   ],
   "peerDependencies": {
-    "next": "~16.3.5",
+    "next": "~16.3.6",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   },
@@ -179,7 +179,7 @@ Dependencias que el proyecto del usuario DEBE tener instaladas.
 ```json
 {
   "peerDependencies": {
-    "next": "~16.3.5",
+    "next": "~16.3.6",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   }

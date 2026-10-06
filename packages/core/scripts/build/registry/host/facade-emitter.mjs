@@ -284,8 +284,8 @@ export function resolveNextPackage(projectRoot = process.cwd()) {
 /**
  * Whether `version` is a Next.js the table applies to: the table's `next` is the verified
  * baseline, and core pins `next` to `~<baseline>`, so any stable patch of the same minor at or
- * above the baseline is accepted (16.3.5, 16.3.9, 16.3.5+build.1), while other minors/majors, lower
- * patches and prereleases (16.3.6-canary.0) are refused.
+ * above the baseline is accepted (16.3.6, 16.3.9, 16.3.6+build.1), while other minors/majors, lower
+ * patches and prereleases (16.3.7-canary.0) are refused.
  */
 export function isSupportedNextVersion(version, baseline = ROUTE_EXPORT_TABLE.next) {
   // Stable versions only; build metadata (`+build.1`) is allowed, as npm's `~` range allows it.

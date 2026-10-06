@@ -32,7 +32,7 @@ export const BACKUPS_GITIGNORE = '.nextspark/backups/.gitignore'
 export const REGISTRIES_GITIGNORE = '.nextspark/registries/.gitignore'
 `)
   await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.5' } }))
+  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.6' } }))
   await writeFile(join(root, '.env'), 'NODE_ENV=file-value\n')
   return { root, cleanup: () => rm(root, { recursive: true, force: true }) }
 }

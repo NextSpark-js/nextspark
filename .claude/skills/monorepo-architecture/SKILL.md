@@ -64,7 +64,7 @@ Is this dependency...?
   },
   "peerDependencies": {
     "@nextsparkjs/core": "workspace:*",  // Framework
-    "next": "~16.3.5",                   // Platform
+    "next": "~16.3.6",                   // Platform
     "react": "^19.0.0",                  // Platform
     "react-dom": "^19.0.0",              // Platform
     "zod": "^4.0.0"                      // Shared utility

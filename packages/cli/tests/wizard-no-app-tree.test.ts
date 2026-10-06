@@ -24,7 +24,7 @@ test('the wizard writes the request proxy to src/, where Next loads it beside th
     await writeFile(join(templates, 'proxy.ts'), 'export async function proxy() { return undefined }\n')
     // Next 16 in the project: the file is proxy.ts
     await mkdir(join(project, 'node_modules/next'), { recursive: true })
-    await writeFile(join(project, 'node_modules/next/package.json'), JSON.stringify({ name: 'next', version: '16.3.5' }))
+    await writeFile(join(project, 'node_modules/next/package.json'), JSON.stringify({ name: 'next', version: '16.3.6' }))
     assert.equal(existsSync(join(project, 'src')), false, 'the project has no src/ yet')
 
     const result = await writeProxyFile(templates, project, 'src')

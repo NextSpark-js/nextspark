@@ -14,7 +14,7 @@ The static shell is served from the cache or CDN and the dynamic parts stream in
 
 ## Prerequisites
 
-- Next.js **~16.3.5** (the version core pins)
+- Next.js **~16.3.6** (the version core pins)
 - React **19.2.4+**
 - NextSpark core with PPR support
 
@@ -23,7 +23,7 @@ The static shell is served from the cache or CDN and the dynamic parts stream in
 ### 1. Update dependencies
 
 ```bash
-pnpm add next@~16.3.5 react@^19.2.4 react-dom@^19.2.4
+pnpm add next@~16.3.6 react@^19.2.4 react-dom@^19.2.4
 ```
 
 ### 2. Enable cacheComponents in next.config (already set in new projects)

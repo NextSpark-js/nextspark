@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- The CORS headers in `lib/entities/external-api-generator` (`generateExternalAPI`) no longer send `Access-Control-Allow-Credentials` unless the request origin is
+  listed explicitly; an origin list of `['*']` gets no credentials header.
+- The origin check counts only `Authorization: Bearer <token>` and a non-empty `x-api-key` as header credentials; other `Authorization`
+  schemes (for example `Basic`) are checked like a cookie request.
+- Cookie-authenticated `POST`, `PUT`, `PATCH` and `DELETE` requests to the API routes wrapped by `withRateLimitTier` (core's `/api/v1`,
+  `/api/user`, `/api/superadmin` and `/api/devtools`, and any app or plugin route that uses it) must come from a trusted origin: the app's own
+  (`NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL`) or one Better Auth already trusts (`api.cors.allowedOrigins` / `additionalOrigins`,
+  `CORS_ADDITIONAL_ORIGINS`). The `Origin` header is checked, or the `Referer` when `Origin` is absent; anything else gets 403
+  `ORIGIN_NOT_ALLOWED`. Requests with an API key or a bearer token (`Authorization: Bearer`, `x-api-key`), reads, and requests without the session
+  cookie are unaffected. A request with neither `Origin` nor `Referer` (native and server-side clients, such as `@nextsparkjs/mobile`) is
+  accepted unless its body is `text/plain`, `application/x-www-form-urlencoded` or `multipart/form-data`, which gets 403 `ORIGIN_REQUIRED`.
+  If a browser app on another origin calls the API with the session cookie, add that origin to `api.cors.additionalOrigins` or
+  `CORS_ADDITIONAL_ORIGINS`.
+
 ### Upgrading
 
 A project migration file that has its own `BEGIN`/`COMMIT` (or `ROLLBACK`, `END`, `ABORT`, `START TRANSACTION`, `PREPARE TRANSACTION`) and has not run
@@ -17,10 +33,14 @@ marker. History tables are unchanged.
 
 ### Changed
 
-- **Supported versions for 1.0 (G0): Next `~16.3.5` and React `^19.2`.** `nextspark init` now adds `next@~16.3.5` (was `^16.3.5`) and
+- **Supported versions for 1.0 (G0): Next `~16.3.6` and React `^19.2`.** `nextspark init` now adds `next@~16.3.6` (was `^16.3.5`) and
   `react`/`react-dom` `^19.2.0`; core's `react` and `react-dom` peers are `^19.2.0`. The plugins and the blog, crm and productivity
-  templates take `next` `~16.3.5` as a peer (they accepted `^15.0.0 || ^16.0.0`). Next 15 and React 18 are no longer supported.
+  templates take `next` `~16.3.6` as a peer (they accepted `^15.0.0 || ^16.0.0`). Next 15 and React 18 are no longer supported.
   Core, ui and testing declare `engines.node` `>=22.14.0`.
+- **The lowest supported Next.js is now 16.3.6** (the range stays `~16.3.x`). `create-nextspark-app` installs `next@16.3.6`; core's peer,
+  the templates and plugins, `nextspark init` and `nextspark migrate` use `~16.3.6` (migrate also sets `eslint-config-next` to it, and init
+  now writes `eslint-config-next` `~16.3.6` instead of `^16.3.5`). The generated host refuses Next 16.3.5: run `pnpm add next@~16.3.6`
+  (or `nextspark migrate --yes`) and install again. The route export table was re-checked against 16.3.6 with no change.
 - The CLI marks billing, the first-party plugins, the blog/crm/productivity templates and the `add:plugin`, `add:mobile`, `setup:ai` and
   `sync:ai` helpers as experimental (the docs also mark the MCP server). `add:theme` stays unsupported and now points to `create-nextspark-app --theme`.
 

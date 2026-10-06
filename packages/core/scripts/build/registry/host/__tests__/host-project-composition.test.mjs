@@ -36,7 +36,7 @@ const LAYOUT = 'export default function Layout({ children }: { children: React.R
 function project(extra = {}) {
   const root = mkdtempSync(join(tmpdir(), 'nextspark-host-composition-'))
   write(root, 'nextspark.config.ts', "export default { plugins: [], billing: { webhookExtensions: { stripe: './lib/billing/stripe-webhook-extensions' } } }\n")
-  write(root, 'package.json', JSON.stringify({ name: 'composition', dependencies: { next: '16.3.5' } }))
+  write(root, 'package.json', JSON.stringify({ name: 'composition', dependencies: { next: '16.3.6' } }))
   write(root, 'config/theme.config.ts', "export const compositionThemeConfig = { name: 'composition' }\n")
   write(root, 'styles/globals.css', '@import "tailwindcss";\n')
   write(root, 'lib/billing/stripe-webhook-extensions.ts', 'export const stripeWebhookExtensions = {}\n')

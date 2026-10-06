@@ -62,7 +62,7 @@ function project(t: TestContext, widgets: Record<string, string>) {
   fs.mkdirSync(path.join(root, 'entities/widgets/migrations'), { recursive: true })
   fs.mkdirSync(path.join(root, 'config'), { recursive: true })
   fs.writeFileSync(path.join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.3.5' } }))
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.3.6' } }))
   fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'packages: []\n')
   fs.writeFileSync(path.join(root, 'config/theme.config.ts'), "export const themeConfig = { name: 'fixture' }\n")
   const write = (files: Record<string, string>) => {

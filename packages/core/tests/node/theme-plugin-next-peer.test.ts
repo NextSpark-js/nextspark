@@ -71,7 +71,7 @@ test("every project template and published plugin admits the project's Next as a
   assert.deepEqual(rejecting, [])
 })
 
-test('the theme and plugin scaffolding skills declare next ~16.3.5', () => {
+test('the theme and plugin scaffolding skills declare next ~16.3.6', () => {
   const skills = [
     '.claude/skills/create-theme/SKILL.md',
     '.claude/skills/create-plugin/SKILL.md',
@@ -83,13 +83,13 @@ test('the theme and plugin scaffolding skills declare next ~16.3.5', () => {
   const rejecting = skills.flatMap((file) => {
     const ranges = [...read(file).matchAll(/"next":\s*"([^"]*)"/g)].map((match) => match[1])
     assert.ok(ranges.length > 0, `${file} declares a next range`)
-    return ranges.filter((range) => range !== "~16.3.5").map((range) => `${file}: next "${range}"`)
+    return ranges.filter((range) => range !== "~16.3.6").map((range) => `${file}: next "${range}"`)
   })
 
   assert.deepEqual(rejecting, [])
 })
 
-test('no template, plugin or core peer admits Next 15 or React 18 (G0: ~16.3.5 and ^19.2 only)', () => {
+test('no template, plugin or core peer admits Next 15 or React 18 (G0: ~16.3.6 and ^19.2 only)', () => {
   const corePeers = JSON.parse(read('packages/core/package.json')).peerDependencies as Record<string, string>
   assert.equal(corePeers.react, '^19.2.0')
   assert.equal(corePeers['react-dom'], '^19.2.0')

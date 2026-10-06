@@ -212,6 +212,24 @@ export function isPrivateLanOrigin(origin: string): boolean {
 }
 
 /**
+ * The origins trusted for cookie-authenticated requests: Better Auth's
+ * trustedOrigins and the write-origin check (lib/api/request-origin) share it.
+ * getCorsOrigins() plus, outside production, the request's own origin when it is
+ * a private-network address (#170).
+ */
+export function getTrustedOrigins(
+  config: ApplicationConfig,
+  requestOrigin?: string | null,
+  env: string = process.env.NODE_ENV || 'development'
+): string[] {
+  const origins = getCorsOrigins(config, env)
+  if (normalizeCorsEnvironment(env) !== 'production' && requestOrigin && isPrivateLanOrigin(requestOrigin)) {
+    return [...origins, requestOrigin]
+  }
+  return origins
+}
+
+/**
  * Check whether a request origin is allowed, supporting wildcard-pattern entries
  * in the allow-list. A `*` in an entry matches exactly ONE host label (no dots),
  * so `https://*.example.app` matches `https://tenant.example.app` but NOT

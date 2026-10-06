@@ -27,7 +27,7 @@ shows the fields relevant to consumers and maintainers:
     "postinstall": "node scripts/postinstall.mjs || true"
   },
   "peerDependencies": {
-    "next": "~16.3.5",
+    "next": "~16.3.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   }
@@ -141,7 +141,7 @@ pnpm exec nextspark init --help
 ```json
 {
   "peerDependencies": {
-    "next": "~16.3.5",
+    "next": "~16.3.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   }

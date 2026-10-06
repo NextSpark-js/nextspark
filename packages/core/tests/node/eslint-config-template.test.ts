@@ -55,7 +55,7 @@ function write(root: string, file: string, contents: string): void {
  * what a project's `eslint .` walks. Core's own dist and route modules are the installed core here.
  */
 function generateHost(root: string): void {
-  write(root, 'package.json', JSON.stringify({ name: 'eslint-host-probe', private: true, dependencies: { next: '~16.3.5' } }))
+  write(root, 'package.json', JSON.stringify({ name: 'eslint-host-probe', private: true, dependencies: { next: '~16.3.6' } }))
   write(root, 'nextspark.config.ts', fs.readFileSync(path.join(REPO, 'apps/dev/nextspark.config.ts'), 'utf8').replace("'@nextsparkjs/plugin-langchain'", "'langchain'"))
   const core = path.join(root, 'node_modules/@nextsparkjs/core')
   fs.mkdirSync(path.dirname(core), { recursive: true })

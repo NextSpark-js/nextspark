@@ -249,7 +249,10 @@ function addCORSHeaders(
   response.headers.set('Access-Control-Allow-Methods', corsOptions.methods.join(', '))
   response.headers.set('Access-Control-Allow-Headers', corsOptions.headers.join(', '))
   response.headers.set('Access-Control-Max-Age', '86400') // 24 hours
-  response.headers.set('Access-Control-Allow-Credentials', 'true')
+  // Credentials only for an explicitly listed origin, never for a wildcard list.
+  if (origin && corsOptions.origins.includes(origin)) {
+    response.headers.set('Access-Control-Allow-Credentials', 'true')
+  }
 }
 
 /**

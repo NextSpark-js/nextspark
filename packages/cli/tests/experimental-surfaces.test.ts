@@ -33,9 +33,9 @@ test('every experimental helper command prints the notice', () => {
   }
 })
 
-test('the generator writes Next ~16.3.5 and React ^19.2', () => {
+test('the generator writes Next ~16.3.6 and React ^19.2', () => {
   const generator = src('wizard/generators/index.ts')
-  assert.match(generator, /'next': '~16\.3\.5'/)
+  assert.match(generator, /'next': '~16\.3\.6'/)
   assert.match(generator, /'react': '\^19\.2\.0'/)
   assert.match(generator, /'react-dom': '\^19\.2\.0'/)
 })

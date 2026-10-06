@@ -23,7 +23,7 @@ import { resolveSessionConfig } from './auth/session-config';
 import { resolveOtpConfig } from './auth/otp-config';
 import { isPasswordLoginEnabled } from './auth/auth-methods';
 import { isRuntimeEmailAvailable, isRuntimeGoogleAvailable } from './auth/runtime-readiness';
-import { getCorsOrigins, isPrivateLanOrigin, normalizeCorsEnvironment } from './utils/cors';
+import { getTrustedOrigins } from './utils/cors';
 import { withBasePath } from './base-path';
 
 /**
@@ -297,17 +297,7 @@ export const auth = betterAuth({
   // adding a wildcard entry (e.g. "https://*.vercel.app") to
   // api.cors.additionalOrigins — better-auth's own trustedOrigins matching
   // already supports the same wildcard syntax as isOriginAllowed() above.
-  trustedOrigins: async (request?: Request) => {
-    const origins = getCorsOrigins(APP_CONFIG_MERGED);
-    if (normalizeCorsEnvironment(process.env.NODE_ENV || 'development') === 'production') {
-      return origins;
-    }
-    const requestOrigin = request?.headers.get('origin');
-    if (requestOrigin && isPrivateLanOrigin(requestOrigin)) {
-      return [...origins, requestOrigin];
-    }
-    return origins;
-  },
+  trustedOrigins: async (request?: Request) => getTrustedOrigins(APP_CONFIG_MERGED, request?.headers.get('origin')),
   // Redirect auth errors to our custom error page instead of Better Auth's default.
   // Better Auth redirects to this path as-is, outside the Next.js router.
   onAPIError: {
