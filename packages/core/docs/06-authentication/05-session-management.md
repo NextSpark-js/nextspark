@@ -468,7 +468,7 @@ Better Auth automatically:
 ```typescript
 // Optional: Validate IP address
 const session = await getSession(token)
-if (session.ipAddress !== request.ip) {
+if (session.ipAddress !== getClientIp(request.headers)) { // @nextsparkjs/core/lib/api/client-ip
   // Potential session hijacking
   await invalidateSession(token)
   throw new Error('Session invalid')

@@ -289,7 +289,7 @@ interface Session {
 }
 
 // Validate on each request
-if (session.ipAddress !== request.ip) {
+if (session.ipAddress !== getClientIp(request.headers)) { // @nextsparkjs/core/lib/api/client-ip
   // Potential hijacking
   await invalidateSession(session.id)
 }

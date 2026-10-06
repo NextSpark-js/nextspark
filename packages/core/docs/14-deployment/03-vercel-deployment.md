@@ -49,6 +49,10 @@ VERCEL_PROJECT=your-project-name  # Optional
 # Find team slug: Vercel Dashboard → Settings → General
 ```
 
+### 5. Set the Client Address Source
+
+Add `NEXTSPARK_CLIENT_IP_SOURCE=vercel` to the production and preview environment variables, so rate limits and audit logs use the client address Vercel sets. See [Client Address](./10-client-address.md).
+
 ---
 
 ## Using the Automated Script

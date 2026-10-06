@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { getRecordedClientIp } from '@nextsparkjs/core/lib/api/client-ip'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { DisconnectAccountSchema } from '../../../lib/validation'
 import { queryOneWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
@@ -103,7 +104,7 @@ const postHandler = async (request: NextRequest) => {
           success: true,
           disconnectedAt: new Date().toISOString()
         }),
-        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+        getRecordedClientIp(request.headers),
         request.headers.get('user-agent') || null
       ],
       authResult.user!.id

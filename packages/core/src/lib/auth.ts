@@ -25,6 +25,7 @@ import { isPasswordLoginEnabled } from './auth/auth-methods';
 import { isRuntimeEmailAvailable, isRuntimeGoogleAvailable } from './auth/runtime-readiness';
 import { getTrustedOrigins } from './utils/cors';
 import { withBasePath } from './base-path';
+import { getBetterAuthIpHeaders } from './api/client-ip';
 
 /**
  * Does this email have a pending, unexpired team invitation waiting?
@@ -80,6 +81,7 @@ interface GoogleProfile {
 }
 
 const isProd = process.env.NODE_ENV === 'production';
+const betterAuthIpHeaders = getBetterAuthIpHeaders();
 const baseUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173';
 
 // Providers are created only inside callbacks that actually send email. This
@@ -527,6 +529,9 @@ export const auth = betterAuth({
   },
   // Removed additionalFields - will use standard name and image fields
   advanced: {
+    // Better Auth's own rate limiter reads the client address from the header NEXTSPARK_CLIENT_IP_SOURCE
+    // names (lib/api/client-ip); unset, 'xff' and 'none' keep Better Auth's default.
+    ...(betterAuthIpHeaders ? { ipAddress: { ipAddressHeaders: betterAuthIpHeaders } } : {}),
     // Cross-subdomain session cookies (opt-in via env).
     //
     // When an app serves tenants on subdomains (e.g. `<tenant>.example.com`)

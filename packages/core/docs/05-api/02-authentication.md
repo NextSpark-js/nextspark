@@ -1030,7 +1030,7 @@ async function logApiKeyUsage(authResult: DualAuthResult, endpoint: string) {
     authType: authResult.type,
     endpoint,
     timestamp: new Date(),
-    ipAddress: request.headers.get('x-forwarded-for')
+    ipAddress: getRecordedClientIp(request.headers) // @nextsparkjs/core/lib/api/client-ip
   })
 }
 ```

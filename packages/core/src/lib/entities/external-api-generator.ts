@@ -11,6 +11,7 @@ import type { EntityConfig } from './types'
 import { getEntityConfig } from './registry'
 import { rateLimit } from '../rate-limit'
 import { validateAPIKey } from '../auth/api-keys'
+import { getClientIp } from '../api/client-ip'
 
 export interface ExternalAPIOptions extends APIGeneratorOptions {
   enableAPIKeyAuth?: boolean
@@ -274,7 +275,7 @@ function createErrorResponse(status: number, message: string, details?: Record<s
  * client address: no key or client id header picks the bucket.
  */
 function getClientIdentifier(request: NextRequest): string {
-  return request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+  return getClientIp(request.headers)
 }
 
 /**

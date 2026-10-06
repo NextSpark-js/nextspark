@@ -109,7 +109,7 @@ export function loggingMiddleware(request: NextRequest) {
     method: request.method,
     url: request.url,
     userAgent: request.headers.get('user-agent'),
-    ip: request.headers.get('x-forwarded-for')
+    ip: getRecordedClientIp(request.headers) // @nextsparkjs/core/lib/api/client-ip
   }, 'Incoming request')
 
   // Continue to handler

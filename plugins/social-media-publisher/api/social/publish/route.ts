@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { getRecordedClientIp } from '@nextsparkjs/core/lib/api/client-ip'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { FacebookAPI } from '../../../lib/providers/facebook'
@@ -272,7 +273,7 @@ const postHandler = async (request: NextRequest) => {
           caption: caption || '',
           publishedAt
         }),
-        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+        getRecordedClientIp(request.headers),
         request.headers.get('user-agent') || null
       ],
       userId

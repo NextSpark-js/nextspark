@@ -441,7 +441,8 @@ const trustedIPs = [
 ]
 
 export async function checkRateLimit(request: NextRequest) {
-  const clientIP = request.headers.get('x-forwarded-for') || request.ip
+  // The address NEXTSPARK_CLIENT_IP_SOURCE names (@nextsparkjs/core/lib/api/client-ip)
+  const clientIP = getClientIp(request.headers)
 
   if (trustedIPs.includes(clientIP)) {
     return { allowed: true, bypass: true }
@@ -491,7 +492,7 @@ export async function logRateLimitViolation(
     endpoint,
     limit,
     timestamp: new Date(),
-    ip: request.ip,
+    ip: getClientIp(request.headers),
     userAgent: request.headers.get('user-agent')
   })
 

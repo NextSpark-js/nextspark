@@ -3,6 +3,7 @@ import { unstable_rethrow } from 'next/navigation';
 import { getRateLimitForScopes, presentedApiKey } from './keys';
 import { validateApiKey } from './auth';
 import { rateLimitCache, getCacheKey } from './cache';
+import { getClientIp } from './client-ip';
 import {
   checkRateLimit as checkRedisRateLimit,
   maybeRedisConfigured,
@@ -326,35 +327,6 @@ export function getRateLimitCacheStats() {
 }
 
 /**
- * Get client IP address from request headers.
- * Strategy: Cloudflare > rightmost x-forwarded-for > x-real-ip > fallback.
- * Uses rightmost x-forwarded-for entry (last proxy-appended) to prevent spoofing.
- */
-function getClientIp(request: NextRequest): string {
-  // Cloudflare sets this header and it cannot be spoofed when behind CF
-  const cfIp = request.headers.get('cf-connecting-ip');
-  if (cfIp) return cfIp;
-
-  // X-Forwarded-For: use rightmost entry (most trustworthy, appended by last proxy)
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  if (forwardedFor) {
-    const ips = forwardedFor.split(',').map(ip => ip.trim()).filter(Boolean);
-    if (ips.length > 0) return ips[ips.length - 1];
-  }
-
-  // X-Real-IP is set by some proxies (nginx)
-  const realIp = request.headers.get('x-real-ip');
-  if (realIp) return realIp;
-
-  // True-Client-IP is set by some CDNs
-  const trueClientIp = request.headers.get('true-client-ip');
-  if (trueClientIp) return trueClientIp;
-
-  // Fallback to a generic identifier
-  return 'unknown';
-}
-
-/**
  * Higher-Order Component that applies rate limiting to API route handlers.
  *
  * This HOC wraps a Next.js route handler and applies rate limiting using the
@@ -428,7 +400,7 @@ export function withRateLimitTier<T extends unknown[]>(
     }
 
     // Per client address and tier, across all endpoints (see the strategy above)
-    const identifier = `${tier}:ip:${getClientIp(request)}`;
+    const identifier = `${tier}:ip:${getClientIp(request.headers)}`;
 
     // Check rate limit using distributed system
     const rateLimitResult = await checkDistributedRateLimit(identifier, tier);

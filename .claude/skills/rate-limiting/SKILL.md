@@ -202,7 +202,9 @@ All 3 requests count toward the SAME 200/min 'read' limit
 
 ## Identifier Strategy
 
-`withRateLimitTier` tracks every request by client address: `{tier}:ip:{clientIp}`.
+`withRateLimitTier` tracks every request by client address: `{tier}:ip:{clientIp}`. The address comes from
+`getClientIp(headers)` (`@nextsparkjs/core/lib/api/client-ip`), which reads the source `NEXTSPARK_CLIENT_IP_SOURCE` names
+(see `docs/14-deployment/10-client-address.md`). Never read `x-forwarded-for` or similar headers yourself: use the helper.
 
 It runs before the route authenticates anything, so no credential header (`x-api-key` included) picks the bucket.
 Routes that authenticate with `validateAndAuthenticateRequest` / `validateAndAuthenticateApiRequest` (`lib/api/helpers.ts`)

@@ -17,6 +17,7 @@
  */
 
 import { createHash } from 'crypto'
+import { getRecordedClientIp } from '../../api/client-ip'
 
 /**
  * Normalize a User-Agent string:
@@ -77,32 +78,7 @@ export function computeDeviceFingerprint(
   return createHash('sha256').update(material).digest('hex')
 }
 
-/**
- * Extract the best-effort client IP from request headers.
- *
- * Strategy mirrors the rate-limiter (see lib/api/rate-limit.ts):
- *   Cloudflare > rightmost x-forwarded-for > x-real-ip > true-client-ip > 'unknown'
- * The rightmost x-forwarded-for entry is the one appended by the last (trusted)
- * proxy, so it is the hardest for a client to spoof.
- */
+/** The client address of a request (lib/api/client-ip, the same one rate limits and audit logs use); unknown on an invalid setting. */
 export function extractClientIp(headers: Headers): string {
-  const cfIp = headers.get('cf-connecting-ip')
-  if (cfIp) return cfIp
-
-  const forwardedFor = headers.get('x-forwarded-for')
-  if (forwardedFor) {
-    const ips = forwardedFor
-      .split(',')
-      .map((v) => v.trim())
-      .filter(Boolean)
-    if (ips.length > 0) return ips[ips.length - 1]
-  }
-
-  const realIp = headers.get('x-real-ip')
-  if (realIp) return realIp
-
-  const trueClientIp = headers.get('true-client-ip')
-  if (trueClientIp) return trueClientIp
-
-  return 'unknown'
+  return getRecordedClientIp(headers)
 }

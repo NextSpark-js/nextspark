@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import type { RateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+import { getClientIp } from '@nextsparkjs/core/lib/api/client-ip';
 
 // Dynamic import for rate limiting - graceful fallback if not available
 let checkDistributedRateLimit: ((id: string, tier: RateLimitTier) => Promise<{ allowed: boolean; limit: number; remaining: number; resetTime: number; retryAfter?: number }>) | null = null;
@@ -57,23 +58,6 @@ const getAllowedOrigin = () => {
   return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 };
 
-/**
- * Get client IP address from request headers.
- * Handles various proxy scenarios (X-Forwarded-For, X-Real-IP, etc.)
- */
-function getClientIp(request: NextRequest): string {
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  if (forwardedFor) {
-    const ips = forwardedFor.split(',').map(ip => ip.trim());
-    if (ips[0]) return ips[0];
-  }
-  const realIp = request.headers.get('x-real-ip');
-  if (realIp) return realIp;
-  const cfIp = request.headers.get('cf-connecting-ip');
-  if (cfIp) return cfIp;
-  return 'unknown';
-}
-
 export async function POST(request: NextRequest) {
   await ensureRateLimitLoaded();
   const requestId = randomUUID().slice(0, 8);
@@ -83,7 +67,7 @@ export async function POST(request: NextRequest) {
   // Skip if rate limiting is not available
   if (checkDistributedRateLimit && createRateLimitErrorResponse) {
     try {
-      const clientIp = getClientIp(request);
+      const clientIp = getClientIp(request.headers);
       const rateLimitResult = await checkDistributedRateLimit(`csp-report:ip:${clientIp}`, 'api');
 
       if (!rateLimitResult.allowed) {

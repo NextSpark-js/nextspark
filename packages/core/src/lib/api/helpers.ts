@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiKeyAuth, getValidatedApiKey, validateApiKey } from './auth';
 import { mutateWithRLS, queryWithRLS } from '../db';
 import { checkRateLimit, addRateLimitHeaders } from './rate-limit';
+import { getRecordedClientIp } from './client-ip';
 import { getApplicationConfig } from '../config';
 import { auth } from '../auth';
 import { MetaService } from '../services/meta.service';
@@ -366,7 +367,7 @@ export async function logApiUsage(
   try {
     const endpoint = request.nextUrl.pathname;
     const method = request.method;
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const ipAddress = getRecordedClientIp(request.headers);
     const userAgent = request.headers.get('user-agent');
     
     await mutateWithRLS(

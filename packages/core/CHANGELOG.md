@@ -71,13 +71,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`src/proxy.ts` (optional):** core no longer reads `x-api-user-id`, `x-api-key-id` or `x-api-scopes` from requests (see Changed), and the
   proxy template now also removes them from incoming requests. To do the same in an existing project, add the three names to
   `TRUSTED_IDENTITY_HEADERS` in `src/proxy.ts`.
+- **Set `NEXTSPARK_CLIENT_IP_SOURCE` for your deployment (recommended).** It names where the client address comes from for rate limits,
+  audit logs and security notifications: `vercel`, `cloudflare`, `xff` (with `NEXTSPARK_TRUSTED_PROXY_HOPS`, the number of proxies you
+  run in front of the app), `header:<name>`, or `none` when nothing in front of the app sets one. Left unset, the order core used before
+  stays and production logs a warning at startup. See `docs/14-deployment/10-client-address.md` for what to set on Vercel, Cloudflare,
+  behind nginx and on Docker without a proxy.
 
 ### Added
 
+- **`NEXTSPARK_CLIENT_IP_SOURCE` and `NEXTSPARK_TRUSTED_PROXY_HOPS`**, and `getClientIp(headers)` in `@nextsparkjs/core/lib/api/client-ip`:
+  one place that decides a request's client address, from the source the deployment names. With `vercel`, `cloudflare` or `header:<name>`,
+  Better Auth's own rate limit reads the same header (`advanced.ipAddress.ipAddressHeaders`). Fixes #211.
 - **`GET` and `PATCH /api/v1/users/me`** (the static `me` segment wins over `[id]`). Fixes #209.
 
 ### Changed
 
+- Every reader of the client address in core and the `social-media-publisher` plugin uses `getClientIp`: `withRateLimitTier`, the auth and
+  CSP report rate limits, `generateExternalAPI`, `logApiUsage`, the entity audit log and the new-device fingerprint. API and entity audit rows
+  and the plugin's audit rows used the whole `X-Forwarded-For` value; with the setting unset they now record the same address the rate limit
+  counts: `cf-connecting-ip`, else the last `X-Forwarded-For` entry, else `x-real-ip`, else `true-client-ip`. With the setting unset, the rate
+  limit of `POST /api/auth/*` also falls back to `true-client-ip`, and the CSP report endpoint's limit uses that same order instead of the
+  first `X-Forwarded-For` entry. An invalid `NEXTSPARK_CLIENT_IP_SOURCE` makes rate-limited routes answer 500 and is logged at startup in
+  every environment; audit rows and the new-device fingerprint record `unknown` instead.
 - `withRateLimitTier` (`@nextsparkjs/core/lib/api/rate-limit`) counts requests per client address and tier for every caller. The `x-api-key`
   header no longer selects the bucket: the wrapper runs before the route has validated anything. Routes that authenticate with
   `validateAndAuthenticateRequest` or `validateAndAuthenticateApiRequest` also limit each validated API key on its own; routes that use

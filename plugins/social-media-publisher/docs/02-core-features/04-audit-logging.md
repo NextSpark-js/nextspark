@@ -111,7 +111,7 @@ await query(`
     accountName: '@brandname',
     clientId: clientId
   }),
-  request.headers.get('x-forwarded-for'),
+  getRecordedClientIp(request.headers),
   request.headers.get('user-agent')
 ])
 ```
@@ -171,7 +171,7 @@ await query(`
     publishedAt: new Date().toISOString(),
     success: true
   }),
-  request.headers.get('x-forwarded-for'),
+  getRecordedClientIp(request.headers),
   request.headers.get('user-agent')
 ])
 ```
@@ -590,8 +590,8 @@ details: { success: true }
 
 **3. Capture IP and User-Agent:**
 ```typescript
-// ✅ Good
-ipAddress: request.headers.get('x-forwarded-for'),
+// ✅ Good: the address the deployment configured (import { getRecordedClientIp } from '@nextsparkjs/core/lib/api/client-ip')
+ipAddress: getRecordedClientIp(request.headers),
 userAgent: request.headers.get('user-agent')
 ```
 

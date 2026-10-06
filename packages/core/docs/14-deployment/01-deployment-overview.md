@@ -138,6 +138,7 @@ const PRE_DEPLOYMENT_CHECKLIST = {
     '✅ VERCEL_TEAM and VERCEL_PROJECT in .env',
     '✅ Production URLs configured in .env.prod',
     '✅ Email service configured (Resend)',
+    '✅ NEXTSPARK_CLIENT_IP_SOURCE set for the platform (see 10-client-address.md)',
   ],
   
   recommended: [

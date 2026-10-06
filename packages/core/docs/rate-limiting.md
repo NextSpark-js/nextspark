@@ -166,7 +166,8 @@ import {
 
 export async function POST(request: Request) {
   // Obtener identificador (IP o userId)
-  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  // Dirección del cliente según NEXTSPARK_CLIENT_IP_SOURCE (@nextsparkjs/core/lib/api/client-ip)
+  const ip = getClientIp(request.headers);
 
   // Verificar rate limit
   const rateLimit = await checkDistributedRateLimit(ip, 'auth');

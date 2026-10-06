@@ -25,6 +25,7 @@
 
 import type { NextRequest } from 'next/server'
 import { mutateWithRLS } from '../../db'
+import { getRecordedClientIp } from '../client-ip'
 import type { DualAuthResult } from '../auth/dual-auth'
 
 /**
@@ -57,7 +58,7 @@ export async function logGenericHandlerUsage(
   try {
     endpoint = request.nextUrl.pathname
     method = request.method
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    const ipAddress = getRecordedClientIp(request.headers)
     const userAgent = request.headers.get('user-agent')
 
     // User-attributed writes deliberately stay on the application pool so the
