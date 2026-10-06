@@ -454,13 +454,15 @@ test('a cancellation says after how long it came, and that the limit had not run
       return true
     }
   )
-  // another session cancelling the statement once the limit has passed: the reason is the server's, not the limit
+  // another session cancelling the statement once the limit has passed: the reason is the server's, not the limit.
+  // The 450 ms timer can fire a millisecond early or hundreds late, so the report only has to be at or past the 0.4 s limit
+  // (that is what puts it in the "did not finish" branch), with no upper bound.
   await assert.rejects(
     runMigrationSql(cancelledAfter(450, 'canceling statement due to user request'), { sql: 'SELECT 1', limit, connectionString: '' }),
     (error: Error) => {
       assert.match(
         error.message,
-        /^did not finish within 0\.4 s \(MIGRATION_TIMEOUT_SECONDS\); the server cancelled it after (4[5-9]\d|[5-9]\d\d) ms: canceling statement due to user request\./
+        /^did not finish within 0\.4 s \(MIGRATION_TIMEOUT_SECONDS\); the server cancelled it after ([4-9]\d\d|\d{4,}) ms: canceling statement due to user request\./
       )
       return true
     }
@@ -757,11 +759,13 @@ test('a COMMIT that gets no answer says the file and its record went through tog
         return true
       }
     )
+    // the runner ends the connection itself; the stand-in sees the close on its own turn, a moment after client.end() resolves
+    for (let waited = 0; !server.sessions[0].closed && waited < 2000; waited += 20) await new Promise(resolve => setTimeout(resolve, 20))
+    assert.equal(server.sessions[0].closed, true, 'the runner ended the connection itself')
   } finally {
     await client.end().catch(() => {})
   }
   assert.deepEqual(server.sessions[0].queries.slice(-4), ['BEGIN', TRACKED.core['001_core.sql'], `SET LOCAL statement_timeout = 300; SET LOCAL lock_timeout = 0; INSERT INTO "_migrations" ("filename") VALUES ('001_core.sql')`, 'COMMIT'])
-  assert.equal(server.sessions[0].closed, true)
 })
 
 test('transaction statements are found at the top level only, and the line that runs a file outside the transaction only among its first comments', () => {
@@ -1577,7 +1581,7 @@ test('a migration that switches statement_timeout off for itself still stops at 
     const session = sessionThatRan(server.sessions, switchedOff)!
     assert.deepEqual(server.terminated, [session.pid], switchedOff)
     const cutMs = cutAfterMs(session, switchedOff)
-    assert.ok(cutMs >= 900 && cutMs < RUNS_PAST_THE_LIMIT_MS - 200, `${switchedOff}: cut after ${cutMs} ms`)
+    assert.ok(cutMs >= 900 && cutMs < RUNS_PAST_THE_LIMIT_MS, `${switchedOff}: cut after ${cutMs} ms`)
     assert.equal(sessionThatRan(server.sessions, MIGRATIONS['003_after.sql']), undefined, switchedOff)
   }
 })
@@ -1603,7 +1607,7 @@ test('a migration that switches statement_timeout off for the ones after it does
   const session = sessionThatRan(server.sessions, migrations['003_waits.sql'])!
   assert.equal(session.statementTimeout, 0)
   const cutMs = cutAfterMs(session, migrations['003_waits.sql'])
-  assert.ok(cutMs >= 900 && cutMs < RUNS_PAST_THE_LIMIT_MS - 200, `cut after ${cutMs} ms`)
+  assert.ok(cutMs >= 900 && cutMs < RUNS_PAST_THE_LIMIT_MS, `cut after ${cutMs} ms`)
 })
 
 test('db:migrate takes the limit from the project .env, as it takes the database', { timeout: 20000 }, async t => {

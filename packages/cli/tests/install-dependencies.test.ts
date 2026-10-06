@@ -16,6 +16,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { installProjectDependencies, setupAIWorkflow } from '../src/wizard/install-dependencies.js'
+import { silenceConsoleOutput } from './quiet-console.js'
+
+silenceConsoleOutput()
+// The install runs pnpm with inherited stdio: pnpm 12 prints "✓ Lockfile passes supply-chain policies" on the test child's stdout
+process.env.pnpm_config_reporter = 'silent'
 
 const pnpmAvailable = spawnSync('pnpm', ['--version'], { stdio: 'ignore' }).status === 0
 

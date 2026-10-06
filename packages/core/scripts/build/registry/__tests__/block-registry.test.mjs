@@ -25,6 +25,9 @@ import {
 import { readSchemaExport, thumbnailImport } from '../discovery/blocks.mjs'
 import { validateGeneratedModule } from '../host/static-imports.mjs'
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
+import { silenceConsoleOutput } from './quiet-console.mjs'
+
+silenceConsoleOutput()
 
 function block(slug, category) {
   const base = `@/blocks/${slug}`

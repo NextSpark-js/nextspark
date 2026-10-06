@@ -7,6 +7,9 @@ import { join } from 'node:path'
 import { copyEnvExampleToEnv, generateEnvExample } from '../src/wizard/generators/config-generator.js'
 import { setupEnvironment } from '../src/wizard/generators/env-setup.js'
 import type { WizardConfig } from '../src/wizard/types.js'
+import { silenceConsoleOutput } from './quiet-console.js'
+
+silenceConsoleOutput()
 
 const config = {
   projectName: 'Example',

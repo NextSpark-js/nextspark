@@ -10,6 +10,9 @@ import { buildCli } from './built-cli.js'
 import { writeAiOnboarding } from '../src/wizard/generators/ai-onboarding.js'
 import { runWizard } from '../src/wizard/index.js'
 import type { WizardConfig } from '../src/wizard/types.js'
+import { silenceConsoleOutput } from './quiet-console.js'
+
+silenceConsoleOutput()
 
 const cli = buildCli()
 const catalog = ['nextspark-auth', 'nextspark-blocks', 'nextspark-cli']

@@ -24,6 +24,9 @@ import {
   isTestFilePath,
   extractLiteralIconCallNames
 } from '../discovery/icons.mjs'
+import { silenceConsoleOutput } from './quiet-console.mjs'
+
+silenceConsoleOutput()
 
 test('discovers core entity icons through the resolution owner coreDir', async () => {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-icons-core-dir-'))

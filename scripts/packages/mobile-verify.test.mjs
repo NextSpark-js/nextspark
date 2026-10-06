@@ -14,6 +14,9 @@ import {
   MOBILE_INSTALL_ARGS,
   nodeOptionsWithDisabledWarning,
 } from './mobile-verify.mjs'
+import { silenceConsoleOutput } from '../../packages/core/scripts/build/registry/__tests__/quiet-console.mjs'
+
+silenceConsoleOutput()
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 

@@ -18,6 +18,9 @@ import assert from 'node:assert/strict'
 
 import { computeTeamRoleConfig, generatePermissionsRegistry } from '../generators/permissions-registry.mjs'
 import { parseTeamRolesFromAppConfig } from '../discovery/permissions.mjs'
+import { silenceConsoleOutput } from './quiet-console.mjs'
+
+silenceConsoleOutput()
 
 // ---------------------------------------------------------------------------
 // computeTeamRoleConfig — the pure build-time computation

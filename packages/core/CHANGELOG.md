@@ -45,6 +45,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CORS on `/api` responses and preflights (`addCorsHeaders`, `handleCorsPreflightRequest`, `wrapAuthHandlerWithCors`): an origin that is not
   allowed gets no `Access-Control-Allow-Origin` and no `Access-Control-Allow-Credentials`. With `api.cors.allowAllOrigins.development`, any
   origin is still echoed in development, with credentials only for the origins the write-origin check trusts. `/api/user/profile` reads the session from the request it handles.
+- A `config/billing.config.ts` that exists but cannot be loaded (a syntax error, a bad import, an exception while it is evaluated) now fails
+  `prepare` and `build` with the file name and the underlying error. It used to be swallowed and the build went on with an empty billing
+  registry, and a project without plans skips every feature and quota check. A config without a `billingConfig` export with plans, features
+  and limits already failed, and now says which file. A project with no billing config keeps building as before; if yours throws today, the
+  build now stops until you fix it.
 - web-mobile projects: the root scripts `dev:mobile`, `ios` and `android` and the README's `pnpm --filter mobile test` matched no package (the
   mobile package is named `<slug>-mobile`), so pnpm printed "No projects matched the filters" and exited 0. Every filter the generator writes is
   now a path (`--filter ./mobile`, `--filter ./web`). A project created before this keeps the broken scripts: replace `--filter mobile` with

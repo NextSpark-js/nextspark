@@ -353,15 +353,28 @@ test('climbs when the enclosing lockfile writes the nested importer as {}', asyn
   await m.cleanup()
 })
 
-test('what a .pnpmfile.cjs writes without a line break does not hide the listing', { skip: !pnpmAvailable && 'pnpm is not installed' }, async () => {
+// The product runs pnpm inside the project (a temp dir here), so the version that counts is the one found
+// outside this repo's packageManager pin, not the one `pnpm` reports from the repo.
+const pnpmMajor = pnpmAvailable ? Number(spawnSync('pnpm', ['--version'], { cwd: tmpdir(), encoding: 'utf8' }).stdout.split('.')[0]) : 0
+// pnpm 12 talks to .pnpmfile.cjs over its stdout, so a hook that prints makes `pnpm ls` wait 30 s for the hook
+// and fail (measured on 12.9.1; 9.0.0, 10.12.1 and 11.28.4 list the projects behind the printed text).
+const pnpmfilePrintBreaksPnpm = pnpmMajor >= 12
+
+test('what a .pnpmfile.cjs writes without a line break does not hide the listing', { skip: !pnpmAvailable && 'pnpm is not installed', timeout: 90_000 }, async () => {
   const p = await project()
   await writeFile(join(p.root, '.pnpmfile.cjs'), "process.stdout.write('notice: ')\nmodule.exports = { hooks: {} }\n")
   const calls: string[] = []
-  installWorkspaceDependencies(
+  const result = installWorkspaceDependencies(
     [{ name: 'blog', dir: p.theme, dependencies: { dompurify: '^3.2.7' } }],
     { projectRoot: p.root, run: c => calls.push(c) }
   )
-  assert.equal(calls.length, 1)
+  if (pnpmfilePrintBreaksPnpm) {
+    // pnpm itself cannot list the workspace: the honest outcome is "missing", not a pretend install
+    assert.equal(result.status, 'missing')
+    assert.equal(calls.length, 0)
+  } else {
+    assert.equal(calls.length, 1)
+  }
   await p.cleanup()
 })
 

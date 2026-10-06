@@ -119,10 +119,14 @@ export async function generateBillingRegistry(configOrName, _legacyContentsDir, 
     // Use jiti to import .ts files at build time (Node.js can't import .ts natively)
     const jiti = createJiti(import.meta.url, { interopDefault: true, fsCache: false })
     const module = await jiti.import(absolutePath)
-    billingConfig = module.billingConfig || module.default
+    billingConfig = module.billingConfig
   } catch (error) {
-    log(`Failed to import billing config from ${absolutePath}: ${error.message}`, 'error')
-    return generateEmptyBillingRegistry(config)
+    // A config that exists but cannot load must stop the build: an empty registry has no plans,
+    // and a project without plans skips every feature and quota check.
+    throw new Error(`Failed to load billing config ${absolutePath}: ${error.message}`, { cause: error })
+  }
+  if (!billingConfig || !Array.isArray(billingConfig.plans) || !billingConfig.features || !billingConfig.limits) {
+    throw new Error(`Billing config ${absolutePath} must export \`billingConfig\` with plans, features and limits`)
   }
 
   // Pre-compute everything at build time

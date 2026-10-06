@@ -15,6 +15,9 @@ import test from 'node:test'
 import { discoverApiPresets } from '../discovery/api-presets.mjs'
 import { discoverRouteFiles } from '../discovery/plugins.mjs'
 import { generateRouteHandlersRegistry } from '../generators/route-handlers.mjs'
+import { silenceConsoleOutput } from './quiet-console.mjs'
+
+silenceConsoleOutput()
 
 const presets = endpoint => `export default defineApiEndpoint({\n  endpoint: '${endpoint}',\n  summary: 'S',\n  presets: [{ id: 'a', title: 'A', method: 'GET' }]\n})\n`
 

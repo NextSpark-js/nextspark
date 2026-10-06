@@ -23,6 +23,9 @@ import { fileURLToPath } from 'node:url'
 import { COPY_BLOCK_SIZE, isUnsafeWrite, projectFiles, UNSAFE_WRITE, unsafeWriteProblem } from '../../safe-fs.mjs'
 import { generateTestBlocksJson, generateTestEntitiesJson } from '../post-build/test-fixtures.mjs'
 import { directFsWrites, directFsWritesIn, generatorFiles } from './direct-fs-writes.mjs'
+import { silenceConsoleOutput } from './quiet-console.mjs'
+
+silenceConsoleOutput()
 
 const CORE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..')
 const RUNS_AS_ROOT = process.getuid?.() === 0

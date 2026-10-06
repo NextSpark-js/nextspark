@@ -8,12 +8,15 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readdir, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { generateBillingRegistry } from '../generators/billing-registry.mjs'
+import { silenceConsoleOutput } from './quiet-console.mjs'
+
+silenceConsoleOutput()
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '..', '..')
 
@@ -43,5 +46,51 @@ test("generateBillingRegistry's jiti import writes nothing under TMPDIR, even wh
     if (originalTmpdir === undefined) delete process.env.TMPDIR
     else process.env.TMPDIR = originalTmpdir
     await cacheRoot.cleanup()
+  }
+})
+
+// #212: a billing config that exists but cannot load must fail the build, never become an empty registry
+async function projectWith(billingSource) {
+  const dir = await directory('nextspark-billing-registry-cases-')
+  if (billingSource !== undefined) {
+    await mkdir(join(dir.root, 'config'), { recursive: true })
+    await writeFile(join(dir.root, 'config/billing.config.ts'), billingSource)
+  }
+  return { ...dir, config: { projectRoot: dir.root, projectSourceDir: dir.root, projectName: 'cases', outputDir: join(dir.root, 'out') } }
+}
+
+test('no billing config: the empty registry, the build keeps going', async () => {
+  const project = await projectWith(undefined)
+  try {
+    assert.match(await generateBillingRegistry(project.config), /No billing config found - empty registry generated/)
+  } finally { await project.cleanup() }
+})
+
+test('a valid billing config is read into the registry', async () => {
+  const project = await projectWith(`export const billingConfig = { provider: 'stripe', currency: 'usd', defaultPlan: 'free', features: { api: {} }, limits: { seats: {} }, plans: [{ slug: 'free', visibility: 'public', features: ['api'], limits: { seats: 3 } }] }\n`)
+  try {
+    const output = await generateBillingRegistry(project.config)
+    assert.match(output, /"totalPlans": 1/)
+    assert.match(output, /"seats": \{\s+"free": 3/)
+  } finally { await project.cleanup() }
+})
+
+test('a billing config that throws fails with its file name and the underlying error', async () => {
+  const project = await projectWith(`throw new Error('stripe price id is missing')\n`)
+  try {
+    await assert.rejects(generateBillingRegistry(project.config), (error) => {
+      assert.ok(error.message.includes(join(project.root, 'config/billing.config.ts')), error.message)
+      assert.ok(error.message.includes('stripe price id is missing'), error.message)
+      return true
+    })
+  } finally { await project.cleanup() }
+})
+
+test('a billing config with a syntax error or without a billingConfig export also fails', async () => {
+  for (const source of ['export const billingConfig = {', 'export const other = 1\n']) {
+    const project = await projectWith(source)
+    try {
+      await assert.rejects(generateBillingRegistry(project.config), /billing\.config\.ts/)
+    } finally { await project.cleanup() }
   }
 })

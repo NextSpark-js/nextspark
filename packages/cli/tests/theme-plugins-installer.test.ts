@@ -8,6 +8,9 @@ import { installPlugins, installTheme, selectPlugins, selectTheme } from '../src
 import { addPluginCommand } from '../src/commands/add-plugin.js'
 import { addThemeCommand } from '../src/commands/add-theme.js'
 import { runWizard } from '../src/wizard/index.js'
+import { silenceConsoleOutput } from './quiet-console.js'
+
+silenceConsoleOutput()
 
 // A web + mobile project keeps its app in web/, so its local plugins live in
 // web/plugins. The wizard then installs the selected

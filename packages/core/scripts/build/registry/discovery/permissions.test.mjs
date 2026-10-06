@@ -6,6 +6,9 @@
 
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
+import { silenceConsoleOutput } from '../__tests__/quiet-console.mjs'
+
+silenceConsoleOutput()
 
 // Import the regex pattern directly since parseEntitiesFromConfig is not exported
 // We'll test the regex patterns directly
