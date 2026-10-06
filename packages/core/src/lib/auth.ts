@@ -329,11 +329,9 @@ export const auth = betterAuth({
       : []),
     nextCookies(), // MUST be the last plugin for Next.js cookie handling
   ],
-  // The proxy asks /get-session on every protected page with only the cookie,
-  // so Better Auth sees no client IP and counts every visitor in one shared
-  // bucket: 100 page loads in 10 seconds, from anyone, sent every signed-in
-  // user to /login. A session token cannot be guessed, so that endpoint is not
-  // limited; the default limits (sign-in, sign-up, OTP, ...) stay.
+  // The proxy reads the session on every request; that lookup only reads the
+  // caller's own signed cookie, so it is kept out of the shared auth rate limit.
+  // The default limits (sign-in, sign-up, OTP, ...) stay.
   rateLimit: {
     customRules: { '/get-session': false },
   },

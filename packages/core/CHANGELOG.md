@@ -7,53 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Upgrading
+## [0.1.0-beta.194] - 2026-10-06
 
-A project migration file that has its own `BEGIN`/`COMMIT` (or `ROLLBACK`, `END`, `ABORT`, `START TRANSACTION`, `PREPARE TRANSACTION`) and has not run
-yet now stops `db:migrate` before it runs: take those statements out, or start the file with the line `-- nextspark:no-transaction` if it has to
-manage its own transactions (see the last Fixed item). Files that already ran are skipped as before; core's, the templates' and the plugins' files
-have no such statements. A `DO` block or `CALL` that commits inside its body now fails inside that transaction (nothing stays) and needs the same
-marker. History tables are unchanged.
+### Upgrading from 0.1.0-beta.193
+
+Bump the `@nextsparkjs/*` dependencies, then:
+
+1. **Next 16.3.6 is the lowest supported Next.js (required).** The generated host refuses 16.3.5 and earlier: run `pnpm add next@~16.3.6` and install again.
+2. **React `^19.2.0` and Node.js 22.14 or later.** Raise `react` and `react-dom` to `^19.2.0` (`pnpm add react@^19.2.0 react-dom@^19.2.0`) and run
+   Node.js 22.14 or later: core, ui and testing now declare `engines.node` `>=22.14.0`.
+3. **Cookie-authenticated writes check the request origin.** A browser app served from another origin than `NEXT_PUBLIC_APP_URL` /
+   `BETTER_AUTH_URL` that calls the API with the session cookie (`POST`, `PUT`, `PATCH`, `DELETE`) now gets 403 `ORIGIN_NOT_ALLOWED`: add
+   that origin to `CORS_ADDITIONAL_ORIGINS` (or `api.cors.additionalOrigins`). Nothing to do for the app's own pages, for API keys and bearer
+   tokens, for reads, or for `@nextsparkjs/mobile` (it sends `Authorization: Bearer`). A client that sends the session cookie with a
+   `text/plain`, urlencoded or multipart body and no `Origin`/`Referer` now gets 403 `ORIGIN_REQUIRED`: send JSON or an `Origin` header.
+   Private-LAN origins are accepted outside production only.
+4. **`/api/v1/users/:id` and `/api/v1/users/:id/meta/:key` accept only the user themselves or a superadmin.** A client that reads or updates
+   another user through these routes gets 403: use the superadmin endpoints, or the team endpoints (`/api/v1/teams/:teamId/members`) for team members.
+   Changing a role and deleting a user stay superadmin-only.
+5. **`db:migrate` refuses a not-yet-run project migration file that has its own transaction statements.** A file with its own `BEGIN`/`COMMIT`
+   (or `ROLLBACK`, `END`, `ABORT`, `START TRANSACTION`, `PREPARE TRANSACTION`) that has not run yet stops `db:migrate` before it runs: take those
+   statements out, or start the file with the line `-- nextspark:no-transaction` if it has to manage its own transactions (see the last Fixed
+   item). Files that already ran are skipped as before; core's, the templates' and the plugins' files have no such statements. A `DO` block or
+   `CALL` that commits inside its body now fails inside that transaction (nothing stays) and needs the same marker. History tables are unchanged.
+6. Nothing to do for the billing default: it only changes what `create-nextspark-app` writes into a **new** project. An existing project keeps
+   its `billing` setting and its plans.
+7. **pnpm 10 projects need 10.34.6 or later** (was 10.16; 10.16 fails on a warm cache with `ERR_PNPM_MISSING_TIME`); pnpm 11 and 12 are
+   unchanged. With Node 22, the bundled Corepack cannot install pnpm 12: update Corepack or install pnpm standalone.
+
+Then run `pnpm exec nextspark prepare` (or just `pnpm build`) and `pnpm db:migrate`. A project created before `0.1.0-beta.193` that lists
+`<name>@<version>` entries under `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` replaces them with the package names to install a release
+the day it is published (see `0.1.0-beta.193` below).
 
 ### Security
 
+- `/api/v1/users/:id` and `/api/v1/users/:id/meta/:key` check who is asking: every handler allows only the user themselves (by id or exact email)
+  or a superadmin (a superadmin API key also needs the route's scope); changing a role and deleting stay superadmin-only. The check runs before any
+  lookup. See the security advisories published with this release.
+- The proxy's session lookup (`/get-session`) is excluded from Better Auth's shared rate limit; sign-in, sign-up and one-time-code limits are unchanged.
 - The CORS headers in `lib/entities/external-api-generator` (`generateExternalAPI`) no longer send `Access-Control-Allow-Credentials` unless the request origin is
   listed explicitly; an origin list of `['*']` gets no credentials header.
-- The origin check counts only `Authorization: Bearer <token>` and a non-empty `x-api-key` as header credentials; other `Authorization`
-  schemes (for example `Basic`) are checked like a cookie request.
 - Cookie-authenticated `POST`, `PUT`, `PATCH` and `DELETE` requests to the API routes wrapped by `withRateLimitTier` (core's `/api/v1`,
   `/api/user`, `/api/superadmin` and `/api/devtools`, and any app or plugin route that uses it) must come from a trusted origin: the app's own
   (`NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL`) or one Better Auth already trusts (`api.cors.allowedOrigins` / `additionalOrigins`,
   `CORS_ADDITIONAL_ORIGINS`). The `Origin` header is checked, or the `Referer` when `Origin` is absent; anything else gets 403
   `ORIGIN_NOT_ALLOWED`. Requests with an API key or a bearer token (`Authorization: Bearer`, `x-api-key`), reads, and requests without the session
-  cookie are unaffected. A request with neither `Origin` nor `Referer` (native and server-side clients, such as `@nextsparkjs/mobile`) is
-  accepted unless its body is `text/plain`, `application/x-www-form-urlencoded` or `multipart/form-data`, which gets 403 `ORIGIN_REQUIRED`.
+  cookie are unaffected. `@nextsparkjs/mobile` passes because it sends `Authorization: Bearer`. A cookie client with neither `Origin` nor `Referer` is
+  accepted unless its body is `text/plain`, `application/x-www-form-urlencoded` or `multipart/form-data`, which gets 403 `ORIGIN_REQUIRED`
+  (send JSON or an `Origin` header). Private-LAN origins are accepted outside production only.
   If a browser app on another origin calls the API with the session cookie, add that origin to `api.cors.additionalOrigins` or
   `CORS_ADDITIONAL_ORIGINS`.
+- The origin check counts only `Authorization: Bearer <token>` and a non-empty `x-api-key` as header credentials; other `Authorization`
+  schemes (for example `Basic`) are checked like a cookie request.
 
 ### Changed
 
-- **Supported versions for 1.0 (G0): Next `~16.3.6` and React `^19.2`.** `nextspark init` now adds `next@~16.3.6` (was `^16.3.5`) and
-  `react`/`react-dom` `^19.2.0`; core's `react` and `react-dom` peers are `^19.2.0`. The plugins and the blog, crm and productivity
-  templates take `next` `~16.3.6` as a peer (they accepted `^15.0.0 || ^16.0.0`). Next 15 and React 18 are no longer supported.
-  Core, ui and testing declare `engines.node` `>=22.14.0`.
+- **Supported versions for 1.0 (G0): Next `~16.3.6` (lowest supported 16.3.6, range still `~16.3.x`) and React `^19.2`.** `nextspark init` adds
+  `next@~16.3.6` (was `^16.3.5`), `eslint-config-next` `~16.3.6` and `react`/`react-dom` `^19.2.0`; `create-nextspark-app` installs `next@16.3.6`;
+  core's `next` peer, the templates and plugins and `nextspark migrate` use `~16.3.6` (migrate also sets `eslint-config-next` to it), and core's
+  `react` and `react-dom` peers are `^19.2.0`. The plugins and the blog, crm and productivity templates take `next` `~16.3.6` as a peer (they
+  accepted `^15.0.0 || ^16.0.0`). The generated host refuses Next 16.3.5: run `pnpm add next@~16.3.6` and install again. Next 15 and React 18 are
+  no longer supported. Core, ui and testing declare `engines.node` `>=22.14.0`. The route export table was re-checked against 16.3.6 with no change.
 - **Billing is off by default.** `create-nextspark-app -y` (the `saas` preset) and the wizard's billing prompt now default to billing `free`: no
   billing notice, no seeded plans and no plan limits, so a fresh project can create tasks. The wizard's "Billing & Subscriptions" feature is
   unchecked by default. `freemium` and `paid` stay available (billing prompt, `crm` preset) and keep the experimental notice.
 - **pnpm floor for projects: 10.34.6** (was 10.16), the newest 10.x that CI tests; 11 and 12 are unchanged. pnpm 10.16 fails on a warm
   cache with `ERR_PNPM_MISSING_TIME`. With Node 22, the bundled Corepack cannot install pnpm 12: update Corepack
   (`npm install --global corepack@latest`) or install pnpm standalone. README, create README, getting started and the generated project README say so.
-- **The lowest supported Next.js is now 16.3.6** (the range stays `~16.3.x`). `create-nextspark-app` installs `next@16.3.6`; core's peer,
-  the templates and plugins, `nextspark init` and `nextspark migrate` use `~16.3.6` (migrate also sets `eslint-config-next` to it, and init
-  now writes `eslint-config-next` `~16.3.6` instead of `^16.3.5`). The generated host refuses Next 16.3.5: run `pnpm add next@~16.3.6`
-  (or `nextspark migrate --yes`) and install again. The route export table was re-checked against 16.3.6 with no change.
 - The CLI marks billing, the first-party plugins, the blog/crm/productivity templates and the `add:plugin`, `add:mobile`, `setup:ai` and
   `sync:ai` helpers as experimental (the docs also mark the MCP server). `add:theme` stays unsupported and now points to `create-nextspark-app --theme`.
 
 ### Fixed
 
-- **A web+mobile project from `create-nextspark-app` keeps the full `--name` and passes its own checks.** `--name "My App"` reached the wizard as `--name My App` (the wizard was spawned through a shell that does not quote), so `mobile/app.config.ts` got `name: 'My'`, and a description with spaces was cut the same way. The name is also escaped when written into `app.config.ts`. The mobile app ships a smoke test and a Jest `transformIgnorePatterns` that works under pnpm's `.pnpm/` layout, so the root `pnpm test` no longer fails on `jest` finding nothing to run. `react-native-worklets` is pinned to `0.5.1` and mobile's `@types/react` to `~19.1.10`, what Expo SDK 54 expects, so `expo-doctor` passes 18/18 (web keeps its own `@types/react`).
-
+- **A web+mobile project from `create-nextspark-app` keeps the full `--name` and passes its own checks.** `--name "My App"` reached the
+  wizard as `--name My App` (the wizard was spawned through a shell that does not quote), so `mobile/app.config.ts` got `name: 'My'`, and a
+  description with spaces was cut the same way. The name is also escaped when written into `app.config.ts`. The mobile app ships a smoke
+  test and a Jest `transformIgnorePatterns` that works under pnpm's `.pnpm/` layout, so the root `pnpm test` no longer fails on `jest`
+  finding nothing to run. `react-native-worklets` is pinned to `0.5.1` and mobile's `@types/react` to `~19.1.10`, what Expo SDK 54 expects,
+  so `expo-doctor` passes 18/18 (web keeps its own `@types/react`).
 - **A project with no billing plans can create entities with a mapped limit.** `SubscriptionService.canPerformAction` returned `QUOTA_EXCEEDED` (429)
   for `tasks.create` when `plans` is empty, because no subscription exists; with no plans declared it now skips the feature and quota checks.
 - **`nextspark migrate` from `0.1.0-beta.183`** (the oldest release it is supported from; guide: `docs/17-updates/06-upgrade-0x-projects.md`).
