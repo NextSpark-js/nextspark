@@ -514,11 +514,16 @@ export async function createMobilePackageJson(mobileDir: string, config: WizardC
  * Create mobile app.config.ts with project-specific values
  */
 async function createMobileAppConfig(mobileDir: string, config: WizardConfig): Promise<void> {
+  await fs.writeFile(path.join(mobileDir, FILES.APP_CONFIG), mobileAppConfigSource(config))
+}
+
+/** The mobile app.config.ts source for a project. */
+export function mobileAppConfigSource(config: Pick<WizardConfig, 'projectName' | 'projectSlug'>): string {
   // Convert project slug to bundle identifier format
   // "my-awesome-app" → "my.awesome.app"
   const bundleId = slugToBundleId(config.projectSlug)
 
-  const appConfigContent = `import { ExpoConfig, ConfigContext } from 'expo/config'
+  return `import { ExpoConfig, ConfigContext } from 'expo/config'
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -558,8 +563,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: '${config.projectSlug}',
 })
 `
-
-  await fs.writeFile(path.join(mobileDir, FILES.APP_CONFIG), appConfigContent)
 }
 
 /**

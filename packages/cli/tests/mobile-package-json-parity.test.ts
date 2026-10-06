@@ -10,7 +10,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { createMobilePackageJson, generateMonorepoStructure } from '../src/wizard/generators/monorepo-generator.js'
+import { createMobilePackageJson, mobileAppConfigSource } from '../src/wizard/generators/monorepo-generator.js'
 import type { WizardConfig } from '../src/wizard/types.js'
 
 const TEMPLATE_DIR = path.resolve(import.meta.dirname, '../../mobile/templates')
@@ -39,20 +39,10 @@ test('the wizard declares the same mobile packages as the shipped template', asy
   }
 })
 
-test('app.config.ts keeps the whole project name, escaped', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mobile-app-config-'))
-  try {
-    await generateMonorepoStructure(dir, {
-      projectName: "Bob's \\ \"App\"\nTwo",
-      projectSlug: 'bobs-app',
-      projectType: 'web-mobile',
-    } as WizardConfig)
-    const src = fs.readFileSync(path.join(dir, 'mobile/app.config.ts'), 'utf8')
-    // JSON.stringify: quotes, backslashes and newlines all stay inside one valid string literal
-    assert.ok(src.includes(`name: ${JSON.stringify("Bob's \\ \"App\"\nTwo")},`), src)
-    assert.ok(src.includes('slug: "bobs-app",'), src)
-    assert.ok(src.includes("scheme: 'bobs-app'"))
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true })
-  }
+test('app.config.ts keeps the whole project name, escaped', () => {
+  const src = mobileAppConfigSource({ projectName: "Bob's \\ \"App\"\nTwo", projectSlug: 'bobs-app' })
+  // JSON.stringify: quotes, backslashes and newlines all stay inside one valid string literal
+  assert.ok(src.includes(`name: ${JSON.stringify("Bob's \\ \"App\"\nTwo")},`), src)
+  assert.ok(src.includes('slug: "bobs-app",'), src)
+  assert.ok(src.includes("scheme: 'bobs-app'"))
 })
