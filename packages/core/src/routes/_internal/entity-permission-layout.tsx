@@ -95,14 +95,6 @@ export async function EntityPermissionLayout({
   const action = detectActionFromPathname(pathname, entity)
   const permission = `${entity}.${action}` as Permission
 
-  console.log('[EntityPermissionLayout] Checking permission:', {
-    entity,
-    action,
-    permission,
-    userId,
-    teamId
-  })
-
   // Check permission using existing core function
   const hasPermission = await checkPermission(userId, teamId, permission)
 

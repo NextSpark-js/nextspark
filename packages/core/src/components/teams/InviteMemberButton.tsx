@@ -109,7 +109,7 @@ export function InviteMemberButton({
               aria-label={t('invite.limitReached', { limit: maxMembersPerTeam })}
             >
               {showIcon && <UserPlus className="h-4 w-4 mr-2" aria-hidden="true" />}
-              {children || t('invite.inviteMember')}
+              {children || t('actions.invite')}
             </Button>
           </TooltipTrigger>
           <TooltipContent>
@@ -127,10 +127,10 @@ export function InviteMemberButton({
       className={className}
       onClick={onClick}
       data-cy="invite-member-button"
-      aria-label={t('invite.inviteMember')}
+      aria-label={t('actions.invite')}
     >
       {showIcon && <UserPlus className="h-4 w-4 mr-2" aria-hidden="true" />}
-      {children || t('invite.inviteMember')}
+      {children || t('actions.invite')}
     </Button>
   )
 }

@@ -86,10 +86,10 @@ export function CreateTeamButton({
       className={className}
       onClick={onClick}
       data-cy="create-team-button"
-      aria-label={t('create.createTeam')}
+      aria-label={t('actions.create')}
     >
       {showIcon && <Plus className="h-4 w-4 mr-2" aria-hidden="true" />}
-      {children || t('create.createTeam')}
+      {children || t('actions.create')}
     </Button>
   )
 }

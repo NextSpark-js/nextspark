@@ -2,20 +2,6 @@
   "title": "Teams",
   "description": "Manage your teams and collaboration",
 
-  "entity": {
-    "description": "Manage your teams, members and invitations",
-    "plural": "Teams"
-  },
-
-  "fields": {
-    "name": "Name",
-    "slug": "URL",
-    "description": "Description",
-    "email": "Email",
-    "role": "Role",
-    "joinedAt": "Joined date"
-  },
-
   "types": {
     "personal": "Personal",
     "work": "Work Team"
@@ -120,6 +106,7 @@
   },
 
   "invitations": {
+    "expired": "Expired",
     "title": "Pending Invitations",
     "description": "Invitations waiting for response",
     "pending": "Pending",
@@ -138,6 +125,7 @@
   },
 
   "invite": {
+    "limitReached": "Team member limit reached ({limit})",
     "title": "Invite Team Member",
     "description": "Invite someone to join this team",
     "emailLabel": "Email Address",
@@ -168,10 +156,6 @@
     "danger": "Danger Zone"
   },
 
-  "messages": {
-    "loading": "Loading..."
-  },
-
   "errors": {
     "notFound": "Team not found",
     "notMember": "You are not a member of this team",
@@ -197,6 +181,7 @@
   },
 
   "messages": {
+    "cancelling": "Cancelling...",
     "created": "Team created successfully",
     "loading": "Loading teams...",
     "memberInvited": "Member invited successfully"

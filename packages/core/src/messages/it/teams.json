@@ -2,20 +2,6 @@
   "title": "Team",
   "description": "Gestisci i tuoi team e collaborazioni",
 
-  "entity": {
-    "description": "Gestisci i tuoi team, membri e inviti",
-    "plural": "Team"
-  },
-
-  "fields": {
-    "name": "Nome",
-    "slug": "URL",
-    "description": "Descrizione",
-    "email": "Email",
-    "role": "Ruolo",
-    "joinedAt": "Data iscrizione"
-  },
-
   "types": {
     "personal": "Personale",
     "work": "Team di Lavoro"
@@ -120,6 +106,7 @@
   },
 
   "invitations": {
+    "expired": "Scaduto",
     "title": "Inviti in Sospeso",
     "description": "Inviti in attesa di risposta",
     "pending": "In sospeso",
@@ -138,6 +125,7 @@
   },
 
   "invite": {
+    "limitReached": "Limite di membri del team raggiunto ({limit})",
     "title": "Invita Membro",
     "description": "Invita qualcuno a unirsi a questo team",
     "emailLabel": "Email",
@@ -168,10 +156,6 @@
     "danger": "Zona Pericolosa"
   },
 
-  "messages": {
-    "loading": "Caricamento..."
-  },
-
   "errors": {
     "notFound": "Team non trovato",
     "notMember": "Non sei membro di questo team",
@@ -197,6 +181,7 @@
   },
 
   "messages": {
+    "cancelling": "Annullamento...",
     "created": "Team creato con successo",
     "loading": "Caricamento team...",
     "memberInvited": "Membro invitato con successo"

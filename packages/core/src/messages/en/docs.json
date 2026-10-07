@@ -18,6 +18,7 @@
     "home": "Home"
   },
   "sidebar": {
+    "close": "Close sidebar",
     "open": "Open sidebar",
     "label": "Documentation navigation"
   },

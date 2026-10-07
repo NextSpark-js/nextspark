@@ -46,11 +46,11 @@ export function InvoicesPagination({
     <div
       className="flex items-center justify-between pt-4 border-t"
       data-cy="invoices-pagination"
-      aria-label={t('showing', { from: showingFrom, to: showingTo, total: totalInvoices })}
+      aria-label={t('showing', { start: showingFrom, end: showingTo, total: totalInvoices })}
     >
       {/* Showing X to Y of Z invoices */}
       <p className="text-sm text-muted-foreground">
-        {t('showing', { from: showingFrom, to: showingTo, total: totalInvoices })}
+        {t('showing', { start: showingFrom, end: showingTo, total: totalInvoices })}
       </p>
 
       {/* Page navigation */}

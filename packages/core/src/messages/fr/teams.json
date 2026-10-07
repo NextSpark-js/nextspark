@@ -2,20 +2,6 @@
   "title": "Equipes",
   "description": "Gerez vos equipes et collaborations",
 
-  "entity": {
-    "description": "Gerez vos equipes, membres et invitations",
-    "plural": "Equipes"
-  },
-
-  "fields": {
-    "name": "Nom",
-    "slug": "URL",
-    "description": "Description",
-    "email": "Email",
-    "role": "Role",
-    "joinedAt": "Date d'adhesion"
-  },
-
   "types": {
     "personal": "Personnel",
     "work": "Equipe de travail"
@@ -120,6 +106,7 @@
   },
 
   "invitations": {
+    "expired": "Expirée",
     "title": "Invitations en attente",
     "description": "Invitations en attente de reponse",
     "pending": "En attente",
@@ -138,6 +125,7 @@
   },
 
   "invite": {
+    "limitReached": "Limite de membres de l'équipe atteinte ({limit})",
     "title": "Inviter un membre",
     "description": "Invitez quelqu'un a rejoindre cette equipe",
     "emailLabel": "Adresse email",
@@ -168,10 +156,6 @@
     "danger": "Zone de danger"
   },
 
-  "messages": {
-    "loading": "Chargement..."
-  },
-
   "errors": {
     "notFound": "Equipe non trouvee",
     "notMember": "Vous n'etes pas membre de cette equipe",
@@ -197,6 +181,7 @@
   },
 
   "messages": {
+    "cancelling": "Annulation...",
     "created": "Equipe creee avec succes",
     "loading": "Chargement des equipes...",
     "memberInvited": "Membre invite avec succes"

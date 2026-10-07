@@ -53,7 +53,12 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
       return addCorsHeaders(response, req)
     }
 
-    const body = await req.json()
+    // A body that is empty or cut off (the browser aborts the request when the page navigates away) is the
+    // caller's problem, not a server error worth a stack trace in the log
+    const body = await req.json().catch(() => undefined)
+    if (body === undefined) {
+      return addCorsHeaders(createApiError('Request body must be valid JSON', 400, null, 'INVALID_JSON'), req)
+    }
     const validatedData = switchTeamSchema.parse(body)
 
     try {

@@ -7,7 +7,6 @@
   "contactUs": "Fale Conosco",
   "unlimited": "Ilimitado",
   "upgrade": "Fazer Upgrade",
-  "downgrade": "Fazer Downgrade",
   "cancelSubscription": "Cancelar Assinatura",
   "upgradeDescription": "Escolha o plano que melhor se adapta as suas necessidades",
   "monthly": "Mensal",
@@ -157,6 +156,18 @@
     "paid": "Paga",
     "pending": "Pendente",
     "failed": "Falhou"
+  },
+
+  "changePlan": {
+    "title": "Alterar plano",
+    "from": "Plano atual",
+    "to": "Novo plano",
+    "upgradeDescription": "A cobrança será ajustada proporcionalmente ao período atual",
+    "downgradeDescription": "Os recursos existentes continuarão acessíveis, mas a criação de novos pode ser limitada",
+    "downgradeToFreeDescription": "Sua assinatura será cancelada e você passará para o plano gratuito",
+    "confirm": "Confirmar alteração",
+    "cancel": "Cancelar",
+    "confirming": "Alterando o plano..."
   },
 
   "quota": {

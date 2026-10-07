@@ -9,5 +9,10 @@
   "features": {
     "title": "Features",
     "subtitle": "Everything you need"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "goToDashboard": "Go to dashboard"
   }
 }

@@ -50,7 +50,7 @@ export function CreateTeamDialog({ open, onOpenChange }: CreateTeamDialogProps) 
       setSlug('')
       setDescription('')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('errors.unauthorized'))
+      toast.error(error instanceof Error ? error.message : t('errors.permissionDenied'))
     }
   }
 

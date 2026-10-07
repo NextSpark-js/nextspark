@@ -2,20 +2,6 @@
   "title": "Equipes",
   "description": "Gerencie suas equipes e colaboracoes",
 
-  "entity": {
-    "description": "Gerencie suas equipes, membros e convites",
-    "plural": "Equipes"
-  },
-
-  "fields": {
-    "name": "Nome",
-    "slug": "URL",
-    "description": "Descricao",
-    "email": "Email",
-    "role": "Funcao",
-    "joinedAt": "Data de entrada"
-  },
-
   "types": {
     "personal": "Pessoal",
     "work": "Equipe de Trabalho"
@@ -120,6 +106,7 @@
   },
 
   "invitations": {
+    "expired": "Expirado",
     "title": "Convites Pendentes",
     "description": "Convites aguardando resposta",
     "pending": "Pendente",
@@ -138,6 +125,7 @@
   },
 
   "invite": {
+    "limitReached": "Limite de membros da equipe atingido ({limit})",
     "title": "Convidar Membro",
     "description": "Convide alguem para participar desta equipe",
     "emailLabel": "Email",
@@ -168,10 +156,6 @@
     "danger": "Zona de Perigo"
   },
 
-  "messages": {
-    "loading": "Carregando..."
-  },
-
   "errors": {
     "notFound": "Equipe nao encontrada",
     "notMember": "Voce nao e membro desta equipe",
@@ -197,6 +181,7 @@
   },
 
   "messages": {
+    "cancelling": "Cancelando...",
     "created": "Equipe criada com sucesso",
     "loading": "Carregando equipes...",
     "memberInvited": "Membro convidado com sucesso"

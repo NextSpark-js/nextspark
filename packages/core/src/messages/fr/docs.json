@@ -18,6 +18,7 @@
     "home": "Accueil"
   },
   "sidebar": {
+    "close": "Fermer le menu latéral",
     "open": "Ouvrir le menu lateral",
     "label": "Navigation de la documentation"
   },

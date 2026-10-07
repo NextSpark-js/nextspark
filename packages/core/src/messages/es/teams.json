@@ -115,6 +115,7 @@
   },
 
   "invitations": {
+    "expired": "Expirada",
     "title": "Invitaciones Pendientes",
     "description": "Invitaciones esperando respuesta",
     "pending": "Pendiente",
@@ -133,6 +134,7 @@
   },
 
   "invite": {
+    "limitReached": "Límite de miembros del equipo alcanzado ({limit})",
     "title": "Invitar Miembro",
     "description": "Invita a alguien a unirse a este equipo",
     "emailLabel": "Correo Electronico",
@@ -164,6 +166,7 @@
   },
 
   "messages": {
+    "cancelling": "Cancelando...",
     "created": "Equipo creado exitosamente",
     "loading": "Cargando equipos...",
     "memberInvited": "Miembro invitado exitosamente"

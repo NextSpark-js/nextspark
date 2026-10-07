@@ -9,5 +9,10 @@
   "features": {
     "title": "Recursos",
     "subtitle": "Tudo o que voce precisa"
+  },
+  "auth": {
+    "signIn": "Entrar",
+    "createAccount": "Criar conta",
+    "goToDashboard": "Ir para o painel"
   }
 }

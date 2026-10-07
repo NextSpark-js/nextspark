@@ -374,7 +374,7 @@ export const auth = betterAuth({
           if (registrationMode === 'domain-restricted' || registrationMode === 'domain-open') {
             const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
             if (allowedDomains.length > 0 && !isDomainAllowed(user.email, allowedDomains)) {
-              console.log(`[Auth] Blocked registration for ${user.email}: domain not in allowedDomains (allowed: ${allowedDomains.join(', ')})`);
+              console.log(`[Auth] Blocked registration for a user at ${user.email.split('@').pop()}: domain not in allowedDomains (allowed: ${allowedDomains.join(', ')})`);
               throw new Error(`DOMAIN_NOT_ALLOWED: Email domain not authorized. Please use an email from: ${allowedDomains.join(', ')}`);
             }
           }
@@ -465,7 +465,7 @@ export const auth = betterAuth({
               );
               const email = result.rows[0]?.email;
               if (email && !isDomainAllowed(email, allowedDomains)) {
-                console.log(`[Auth] Blocked sign-in for ${email}: domain not in allowedDomains`);
+                console.log(`[Auth] Blocked sign-in for a user at ${email.split('@').pop()}: domain not in allowedDomains`);
                 return false; // Abort session creation
               }
             }

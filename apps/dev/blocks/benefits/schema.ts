@@ -7,7 +7,7 @@ const benefitItemSchema = z.object({
   borderColor: z.string().optional().default('#3b82f6'),
 })
 
-export const benefitsSchema = baseBlockSchema.extend({
+export const schema = baseBlockSchema.extend({
   // Content
   sectionTitle: z.string().optional(),
   sectionSubtitle: z.string().optional(),
@@ -30,4 +30,4 @@ export const benefitsSchema = baseBlockSchema.extend({
   cardStyle: z.enum(['minimal', 'bordered', 'elevated']).default('bordered'),
 })
 
-export type BenefitsProps = z.infer<typeof benefitsSchema>
+export type BenefitsProps = z.infer<typeof schema>

@@ -317,20 +317,22 @@ export const POST = withRateLimitTier(withApiLogging(
           html: emailContent.html
         })
 
-        // Log for testing purposes (like email verification)
-        console.log('\n' + '🎫'.repeat(30))
-        console.log('📨 TEAM INVITATION CREATED')
-        console.log('🎫'.repeat(30))
-        console.log(`📧 To: ${validatedData.email}`)
-        console.log(`👤 Invited by: ${inviterName}`)
-        console.log(`🏢 Team: ${team.name}`)
-        console.log(`👑 Role: ${validatedData.role}`)
-        console.log(`🔗 Accept URL: ${acceptUrl}`)
-        console.log('🎫'.repeat(30) + '\n')
+        // Development only (to accept an invitation without an inbox): the accept URL is a credential
+        if (process.env.NODE_ENV === 'development') {
+          console.log('\n' + '🎫'.repeat(30))
+          console.log('📨 TEAM INVITATION CREATED')
+          console.log('🎫'.repeat(30))
+          console.log(`📧 To: ${validatedData.email}`)
+          console.log(`👤 Invited by: ${inviterName}`)
+          console.log(`🏢 Team: ${team.name}`)
+          console.log(`👑 Role: ${validatedData.role}`)
+          console.log(`🔗 Accept URL: ${acceptUrl}`)
+          console.log('🎫'.repeat(30) + '\n')
+        }
       } catch (emailError) {
         // Log error but don't fail the invitation creation
         console.error('Failed to send invitation email:', emailError)
-        console.log(`⚠️ Email failed but invitation created. Accept URL: ${acceptUrl}`)
+        if (process.env.NODE_ENV === 'development') console.log(`⚠️ Email failed but invitation created. Accept URL: ${acceptUrl}`)
       }
 
       const response = createApiResponse(invitation, { created: true }, 201)

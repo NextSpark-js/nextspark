@@ -100,11 +100,7 @@ export async function checkEntityPermission(
 ): Promise<{ allowed: true } | { allowed: false; error: NextResponse }> {
   const permission = getEntityPermission(entitySlug, action)
 
-  console.log(`[PermMiddleware] Checking permission: ${permission} for user ${userId} in team ${teamId}`)
-
   const hasPermission = await checkPermission(userId, teamId, permission)
-
-  console.log(`[PermMiddleware] Result: ${hasPermission}`)
 
   if (!hasPermission) {
     return {

@@ -18,6 +18,7 @@
     "home": "Startseite"
   },
   "sidebar": {
+    "close": "Seitenleiste schließen",
     "open": "Seitenmenue oeffnen",
     "label": "Dokumentationsnavigation"
   },

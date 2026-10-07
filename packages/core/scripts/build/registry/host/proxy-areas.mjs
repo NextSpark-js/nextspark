@@ -24,8 +24,18 @@ export const PROTECTED_AREAS = Object.freeze([
 /** Where Next loads a project's proxy from, next to the generated src/app. */
 export const PROXY_FILES = Object.freeze(['src/proxy.ts', 'src/proxy.js', 'src/middleware.ts', 'src/middleware.js'])
 
+/**
+ * A proxy that re-exports core's template under its own name (apps/dev does) has the check without naming the areas
+ * itself. Exact name (`proxy as x` is not the proxy Next loads), a concrete specifier (the package, or the repository's
+ * packages/core), and only code: a commented-out line does not count.
+ */
+const REEXPORTS_CORE_PROXY =
+  /^\s*export\s*\{\s*(?:[\w$]+\s*,\s*)*proxy\s*(?:,[^}]*)?\}\s*from\s*['"](?:@nextsparkjs\/core|(?:\.\.\/)+packages\/core)\/templates\/proxy(?:\.ts)?['"]/m
+const withoutComments = source => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+
 /** The protected areas a proxy's source never names as a path (`'/superadmin'`, `"/devtools"`, `` `/devtools` ``). */
 export function missingProxyAreas(source) {
+  if (REEXPORTS_CORE_PROXY.test(withoutComments(source))) return []
   return PROTECTED_AREAS.filter(area => !new RegExp(`['"\`]${area.path}(?![\\w-])`).test(source))
 }
 

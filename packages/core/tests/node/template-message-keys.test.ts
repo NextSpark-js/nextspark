@@ -104,12 +104,50 @@ function missing(files: string[], messagesByLocale: Record<string, Json>): strin
     keys.filter(([, k]) => !has(messages, k)).map(([f, k]) => `${locale}: ${k} (${f})`))
 }
 
-// core/src/components is not scanned: 18 literal keys there are missing from the English catalog today
-// (teams.*, billing.changePlan.confirming, home.auth.* ...), a separate cleanup.
 test('core routes only use keys that core ships, in every locale', () => {
   const byLocale = Object.fromEntries(LOCALES.map(l => [l, coreMessages(l)]))
   assert.deepEqual(missing(walk(path.join(CORE, 'src/routes')), byLocale), [])
 })
+
+test('core components only use keys that core ships, in every locale', () => {
+  const byLocale = Object.fromEntries(LOCALES.map(l => [l, coreMessages(l)]))
+  assert.deepEqual(missing(walk(path.join(CORE, 'src/components')), byLocale), [])
+})
+
+// Each locale is read over English, as the runtime does, so a key that only `en` has passes: the fr/de/it/pt block-editor
+// (`admin.builder.*`) and a few more keys are still English-only today, a separate translation cleanup.
+
+/** JSON.parse keeps the last of two equal keys, so a duplicated block silently drops the first one's text. */
+function duplicateKeys(file: string): string[] {
+  const source = ts.parseJsonText(file, fs.readFileSync(file, 'utf8'))
+  const dups: string[] = []
+  const visit = (node: ts.Node, trail: string): void => {
+    if (ts.isObjectLiteralExpression(node)) {
+      const seen = new Set<string>()
+      for (const p of node.properties) {
+        if (!ts.isPropertyAssignment(p) || !ts.isStringLiteral(p.name)) continue
+        const here = trail ? `${trail}.${p.name.text}` : p.name.text
+        if (seen.has(p.name.text)) dups.push(`${path.relative(CORE, file)}: ${here}`)
+        seen.add(p.name.text)
+        visit(p.initializer, here)
+      }
+    } else ts.forEachChild(node, n => visit(n, trail))
+  }
+  visit(source, '')
+  return dups
+}
+
+test('no message file repeats a key in the same object', () => {
+  const files = [path.join(CORE, 'src/messages'), TEMPLATES].flatMap(d => walkJson(d))
+  assert.deepEqual(files.flatMap(duplicateKeys), [])
+})
+
+function walkJson(dir: string): string[] {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => {
+    const f = path.join(dir, e.name)
+    return e.isDirectory() ? (e.name === 'node_modules' ? [] : walkJson(f)) : e.name.endsWith('.json') && f.includes(`${path.sep}messages${path.sep}`) ? [f] : []
+  })
+}
 
 for (const template of fs.readdirSync(TEMPLATES)) {
   test(`template ${template} only uses keys that core or the template ships`, () => {

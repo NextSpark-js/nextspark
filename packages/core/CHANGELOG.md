@@ -40,6 +40,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `/devtools`, `/devtools/config`, `/devtools/tests` and `/devtools/scheduled-actions` read core's `devtools` messages instead of the starter-only `dev` ones, so blog, crm and productivity no longer show raw keys there.
 - New check `tests/node/template-message-keys.test.ts`: every literal translation key used by core routes (all six locales, over the English fallback) and by each template's components, templates, blocks and lib exists in the
   messages the build merges.
+- **Every translation key the core components ask for exists.** 18 literal keys in `src/components` were missing from the `en` catalog (`teams.*`,
+  `billing.changePlan.confirming`, `home.auth.*`, `navigation.navigation.dashboard`, `common.soon` / `common.comingSoon`, `docs.sidebar.close`,
+  `settings.billing.invoices.pagination.page`) and showed up as `MISSING_MESSAGE` the first time the component rendered. The text is added in the six locales (the
+  fr/de/it/pt catalogs also get the whole `billing.changePlan` block they never had), and five components that asked for a wrong key now ask for the one that exists
+  (`teams.actions.create` / `actions.invite` / `errors.permissionDenied`, `invitations.cancelSuccess`, `navigation.dashboard`). `InvoicesPagination` passed
+  `{from, to}` to a message that reads `{start, end}`. `teams.json` and `billing.json` repeated a key (`entity`, `fields`, `messages`, `downgrade`), so the second
+  copy silently replaced the first; the shadowed copies are gone. `tests/node/template-message-keys.test.ts` now scans `src/components` in the six locales, each read over English as the runtime does (a key that exists only in `en` still passes: many `admin.builder.*` texts are English-only in fr/de/it/pt), and fails on a repeated key in any message file.
+- **`POST /api/v1/teams/switch` answers 400 `INVALID_JSON` for an empty or cut-off body** (the browser aborts the request when the page navigates away) instead of a 500 with
+  a stack trace in the server log.
+- **`nextspark prepare` / `build` no longer warn `NS_PROXY_PROTECTED_AREA_MISSING` for a proxy that re-exports core's template** (`export { proxy } from '@nextsparkjs/core/templates/proxy'`, or
+  the repository's `…/packages/core/templates/proxy` as `apps/dev` does): that proxy has the check. Only a re-export of exactly `proxy` from that specifier counts, in code (not in a
+  comment); `proxy as x`, another path ending in `core/templates/proxy`, or a proxy that names neither area still gets the warning.
+- **Request-path logs that printed ids, roles, emails or invitation links are gone.** Removed: `[dual-auth]` (four lines per authenticated request, with the user id), `[GenericHandler]`
+  team-membership and admin-bypass lines, `[EntityPermissionLayout]`, `[Auth] Session authentication successful for user … with role …` (billing and team usage routes),
+  `[PermMiddleware]` (user and team id on every permission check), `User … switched to team …`, `[Media Upload] Team context`, and the development-only `[SettingsSidebar] enabledPages`.
+  The team invitation block (invitee email and the accept URL, which is a credential) and its "email failed" fallback now print only when `NODE_ENV=development`. The domain-restriction
+  messages in `lib/auth.ts` log the email's domain, not the address. Operational events (Stripe/Polar webhooks, team creation, the opt-in `logOperationHook` / `auditTrailHook`) are unchanged.
 
 ### Documentation
 

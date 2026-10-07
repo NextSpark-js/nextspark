@@ -406,8 +406,6 @@ export async function switchActiveTeam(
 
   // In a full implementation, this would update the session
   // For now, we just verify membership
-  console.log(`User ${userId} switched to team ${teamId}`)
-
   return true
 }
 

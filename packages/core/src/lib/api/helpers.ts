@@ -81,7 +81,6 @@ export async function validateAndAuthenticateRequest(
           isSession: true
         };
         
-        console.log(`[Auth] Session authentication successful for user ${session.user.id} with role ${userRole}`);
         return { auth: sessionAuth };
       }
     } catch (sessionError) {

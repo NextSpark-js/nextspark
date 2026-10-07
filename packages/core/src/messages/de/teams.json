@@ -2,20 +2,6 @@
   "title": "Teams",
   "description": "Verwalten Sie Ihre Teams und Zusammenarbeiten",
 
-  "entity": {
-    "description": "Verwalten Sie Ihre Teams, Mitglieder und Einladungen",
-    "plural": "Teams"
-  },
-
-  "fields": {
-    "name": "Name",
-    "slug": "URL",
-    "description": "Beschreibung",
-    "email": "E-Mail",
-    "role": "Rolle",
-    "joinedAt": "Beitrittsdatum"
-  },
-
   "types": {
     "personal": "Persoenlich",
     "work": "Arbeitsteam"
@@ -120,6 +106,7 @@
   },
 
   "invitations": {
+    "expired": "Abgelaufen",
     "title": "Ausstehende Einladungen",
     "description": "Einladungen, die auf Antwort warten",
     "pending": "Ausstehend",
@@ -138,6 +125,7 @@
   },
 
   "invite": {
+    "limitReached": "Mitgliederlimit des Teams erreicht ({limit})",
     "title": "Mitglied einladen",
     "description": "Laden Sie jemanden ein, diesem Team beizutreten",
     "emailLabel": "E-Mail-Adresse",
@@ -168,10 +156,6 @@
     "danger": "Gefahrenzone"
   },
 
-  "messages": {
-    "loading": "Laden..."
-  },
-
   "errors": {
     "notFound": "Team nicht gefunden",
     "notMember": "Sie sind kein Mitglied dieses Teams",
@@ -197,6 +181,7 @@
   },
 
   "messages": {
+    "cancelling": "Wird storniert...",
     "created": "Team erfolgreich erstellt",
     "loading": "Teams werden geladen...",
     "memberInvited": "Mitglied erfolgreich eingeladen"

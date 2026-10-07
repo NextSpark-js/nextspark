@@ -258,11 +258,11 @@ export function DynamicNavigation({
             isMobile && "w-full"
           )}
           aria-current={pathname === '/dashboard' ? 'page' : undefined}
-          title={isCollapsed ? t('navigation.dashboard') : undefined}
+          title={isCollapsed ? t('dashboard') : undefined}
           data-cy={sel('dashboard.navigation.dashboardLink')}
         >
           <Home className="h-4 w-4 shrink-0" aria-hidden="true" />
-          {!isCollapsed && <span className="truncate">{t('navigation.dashboard')}</span>}
+          {!isCollapsed && <span className="truncate">{t('dashboard')}</span>}
         </Link>
 
         {/* Custom sections with permission checking */}

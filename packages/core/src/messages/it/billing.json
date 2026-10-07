@@ -7,7 +7,6 @@
   "contactUs": "Contattaci",
   "unlimited": "Illimitato",
   "upgrade": "Aggiorna",
-  "downgrade": "Declassa",
   "cancelSubscription": "Annulla Abbonamento",
   "upgradeDescription": "Scegli il piano che meglio si adatta alle tue esigenze",
   "monthly": "Mensile",
@@ -157,6 +156,18 @@
     "paid": "Pagata",
     "pending": "In Sospeso",
     "failed": "Fallita"
+  },
+
+  "changePlan": {
+    "title": "Cambia piano",
+    "from": "Piano attuale",
+    "to": "Nuovo piano",
+    "upgradeDescription": "La fatturazione verrà adeguata proporzionalmente al periodo in corso",
+    "downgradeDescription": "Le risorse esistenti resteranno accessibili, ma la creazione di nuove potrebbe essere limitata",
+    "downgradeToFreeDescription": "Il tuo abbonamento verrà annullato e passerai al piano gratuito",
+    "confirm": "Conferma la modifica",
+    "cancel": "Annulla",
+    "confirming": "Cambio del piano..."
   },
 
   "quota": {

@@ -368,6 +368,7 @@
         "refunded": "Remboursee"
       },
       "pagination": {
+        "page": "Page {current} sur {total}",
         "showing": "Affichage de {start} a {end} sur {total} factures",
         "previous": "Precedent",
         "next": "Suivant"

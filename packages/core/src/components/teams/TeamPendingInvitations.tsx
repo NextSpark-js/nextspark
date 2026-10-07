@@ -96,11 +96,11 @@ export function TeamPendingInvitations({ teamId }: TeamPendingInvitationsProps) 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-invitations', teamId] })
-      toast.success(t('messages.invitationCancelled'))
+      toast.success(t('invitations.cancelSuccess'))
       setCancellingId(null)
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : t('errors.unauthorized'))
+      toast.error(error instanceof Error ? error.message : t('errors.permissionDenied'))
       setCancellingId(null)
     }
   })

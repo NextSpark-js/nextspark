@@ -7,7 +7,6 @@
   "contactUs": "Kontaktieren Sie uns",
   "unlimited": "Unbegrenzt",
   "upgrade": "Upgrade",
-  "downgrade": "Downgrade",
   "cancelSubscription": "Abonnement kuendigen",
   "upgradeDescription": "Waehlen Sie den Tarif, der am besten zu Ihren Beduerfnissen passt",
   "monthly": "Monatlich",
@@ -157,6 +156,18 @@
     "paid": "Bezahlt",
     "pending": "Ausstehend",
     "failed": "Fehlgeschlagen"
+  },
+
+  "changePlan": {
+    "title": "Tarif wechseln",
+    "from": "Aktueller Tarif",
+    "to": "Neuer Tarif",
+    "upgradeDescription": "Ihre Abrechnung wird für den laufenden Zeitraum anteilig angepasst",
+    "downgradeDescription": "Bestehende Ressourcen bleiben zugänglich, das Anlegen neuer kann jedoch eingeschränkt sein",
+    "downgradeToFreeDescription": "Ihr Abonnement wird gekündigt und Sie wechseln zum kostenlosen Tarif",
+    "confirm": "Wechsel bestätigen",
+    "cancel": "Abbrechen",
+    "confirming": "Tarif wird geändert..."
   },
 
   "quota": {

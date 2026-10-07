@@ -30,6 +30,20 @@ test('an area counts only when the proxy names its path; a look-alike prefix or 
   assert.deepEqual(missingProxyAreas("const docs = '/superadmin-guide'; const tips = \"/devtools-tips\"").map(area => area.path), ['/superadmin', '/devtools'])
 })
 
+test("a proxy that re-exports core's template has the check; a re-export of anything else does not", () => {
+  assert.deepEqual(missingProxyAreas("export { proxy } from '../../../packages/core/templates/proxy'\nexport const config = { matcher: [] }"), [])
+  assert.deepEqual(missingProxyAreas("export { proxy } from '@nextsparkjs/core/templates/proxy'"), [])
+  assert.deepEqual(missingProxyAreas("export { proxy } from './my-proxy'").map(area => area.path), ['/superadmin', '/devtools'])
+  assert.deepEqual(missingProxyAreas("export { other } from '@nextsparkjs/core/templates/proxy'").map(area => area.path), ['/superadmin', '/devtools'])
+  const both = ['/superadmin', '/devtools']
+  assert.deepEqual(missingProxyAreas("export { proxy as coreProxy } from '@nextsparkjs/core/templates/proxy'\nexport function proxy() {}").map(a => a.path), both)
+  assert.deepEqual(missingProxyAreas("export { other as proxy } from '@nextsparkjs/core/templates/proxy'").map(a => a.path), both)
+  assert.deepEqual(missingProxyAreas("export { proxy } from './vendor/core/templates/proxy'").map(a => a.path), both)
+  assert.deepEqual(missingProxyAreas("// export { proxy } from '@nextsparkjs/core/templates/proxy'\nexport function proxy() {}").map(a => a.path), both)
+  assert.deepEqual(missingProxyAreas("/*\nexport { proxy } from '@nextsparkjs/core/templates/proxy'\n*/\nexport function proxy() {}").map(a => a.path), both)
+  assert.deepEqual(missingProxyAreas("export { config, proxy } from '@nextsparkjs/core/templates/proxy.ts'"), [])
+})
+
 test('the warning names the file, each missing area, its roles and where the check comes from', () => {
   const notice = proxyAreaNotice('src/proxy.ts', "const PROTECTED = ['/superadmin']")
   assert.equal(notice.code, PROXY_AREA_WARNING)

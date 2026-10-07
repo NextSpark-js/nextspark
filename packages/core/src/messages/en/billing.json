@@ -7,7 +7,6 @@
   "contactUs": "Contact Us",
   "unlimited": "Unlimited",
   "upgrade": "Upgrade",
-  "downgrade": "Downgrade",
   "cancelSubscription": "Cancel Subscription",
   "upgradeDescription": "Choose the plan that best fits your needs",
   "monthly": "Monthly",
@@ -160,6 +159,7 @@
   },
 
   "changePlan": {
+    "confirming": "Changing plan...",
     "title": "Change Plan",
     "from": "Current Plan",
     "to": "New Plan",

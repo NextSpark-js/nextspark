@@ -78,7 +78,7 @@ export function InviteMemberDialog({ open, onOpenChange, teamId, currentUserRole
       setEmail('')
       setRole(defaultRole)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('errors.unauthorized'))
+      toast.error(error instanceof Error ? error.message : t('errors.permissionDenied'))
     }
   }
 

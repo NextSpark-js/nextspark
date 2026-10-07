@@ -368,6 +368,7 @@
         "refunded": "Erstattet"
       },
       "pagination": {
+        "page": "Seite {current} von {total}",
         "showing": "Zeige {start} bis {end} von {total} Rechnungen",
         "previous": "Zurueck",
         "next": "Weiter"

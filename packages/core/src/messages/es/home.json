@@ -9,5 +9,10 @@
   "features": {
     "title": "Características",
     "subtitle": "Todo lo que necesitas"
+  },
+  "auth": {
+    "signIn": "Iniciar sesión",
+    "createAccount": "Crear cuenta",
+    "goToDashboard": "Ir al panel"
   }
 }

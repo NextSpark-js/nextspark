@@ -18,6 +18,7 @@
     "home": "Inicio"
   },
   "sidebar": {
+    "close": "Fechar menu lateral",
     "open": "Abrir menu lateral",
     "label": "Navegacao da documentacao"
   },

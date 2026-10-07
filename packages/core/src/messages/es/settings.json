@@ -368,6 +368,7 @@
         "refunded": "Reembolsada"
       },
       "pagination": {
+        "page": "Página {current} de {total}",
         "showing": "Mostrando {start} a {end} de {total} facturas",
         "previous": "Anterior",
         "next": "Siguiente"

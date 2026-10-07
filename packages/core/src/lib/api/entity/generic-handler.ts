@@ -691,13 +691,11 @@ async function checkAuthPermission(
 
 async function validateTeamMembership(userId: string, teamId: string): Promise<boolean> {
   try {
-    console.log('[GenericHandler] Validating team membership:', { userId, teamId, teamIdLength: teamId?.length })
     const member = await queryOneWithRLS<{ id: string }>(
       'SELECT id FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
       [teamId, userId],
       userId
     )
-    console.log('[GenericHandler] Team membership result:', { found: !!member, memberId: member?.id })
     return !!member
   } catch (error) {
     console.error('[GenericHandler] Error validating team membership:', error)
@@ -731,7 +729,6 @@ async function validateTeamContextWithBypass(
     // - If provided: filter by that team (no membership check)
     // - If not provided: cross-team access (all teams)
     // isBypass = true means skip userId filter too (see all records)
-    console.log('[GenericHandler] Admin bypass active:', { userId, teamId: teamId || 'cross-team' })
     return { valid: true, teamId, isBypass: true }
   }
 

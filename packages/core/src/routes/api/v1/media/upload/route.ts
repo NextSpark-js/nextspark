@@ -87,7 +87,6 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const useVercelBlob = isVercelBlobConfigured()
 
     console.log(`📤 [Media Upload] Storage mode: ${useVercelBlob ? 'Vercel Blob' : 'Local Storage'}`)
-    console.log(`📤 [Media Upload] Team context: ${teamId}`)
 
     for (const file of files) {
       if (!file.size) {

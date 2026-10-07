@@ -296,19 +296,14 @@ async function tryApiKeyAuth(request: NextRequest): Promise<DualAuthResult> {
  */
 async function trySessionAuth(request: NextRequest): Promise<DualAuthResult> {
   try {
-    console.log('[dual-auth] Attempting session authentication...')
     const session = await auth.api.getSession({ headers: request.headers })
-    console.log('[dual-auth] Session result:', session ? 'found' : 'not found')
-
     if (!session?.user) {
-      console.log('[dual-auth] No session.user found')
       return { success: false, type: 'none', user: null }
     }
 
     // Get user's default team
     const defaultTeamId = await getUserDefaultTeamId(session.user.id)
 
-    console.log('[dual-auth] Session auth successful for user:', session.user.id)
     return {
       success: true,
       type: 'session',
