@@ -108,6 +108,15 @@ export const VARIANT_COMPOSE = Object.freeze({
 })
 
 /**
+ * The per-segment access check of a variant, when it differs from its base route's: in Cache Components mode every
+ * page and layout under an area checks the role inside its own Suspense boundary (area-access.cc).
+ */
+export const VARIANT_ACCESS = Object.freeze({
+  'superadmin/layout.cc.tsx': { ...ACCESS_ROUTES['superadmin/layout.tsx'], specifier: `${ROUTES_SUBPATH}/_internal/area-access.cc` },
+  'devtools/layout.cc.tsx': { ...ACCESS_ROUTES['devtools/layout.tsx'], specifier: `${ROUTES_SUBPATH}/_internal/area-access.cc` },
+})
+
+/**
  * Files that live next to a route without being one: the API explorer's presets, read as text by the
  * registry build (registry/discovery/api-presets.mjs), and its docs.md.
  */
@@ -170,7 +179,8 @@ export function buildRoutesManifest(routesDir = ROUTES_DIR) {
       const replaced = manifest.find(entry => entry.target === target)
       if (!replaced) throw new Error(`Variant ${file} (${mode}) replaces ${target}, which is not a core route`)
       const compose = VARIANT_COMPOSE[file] ?? replaced.compose
-      return { kind: replaced.kind, target, specifier: specifierForRouteFile(file), ...(compose ? { compose } : {}), ...(replaced.access ? { access: replaced.access } : {}) }
+      const access = VARIANT_ACCESS[file] ?? replaced.access
+      return { kind: replaced.kind, target, specifier: specifierForRouteFile(file), ...(compose ? { compose } : {}), ...(access ? { access } : {}) }
     })
   }
   return { manifest, variants }

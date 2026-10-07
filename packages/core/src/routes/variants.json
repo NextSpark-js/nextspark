@@ -39,7 +39,7 @@
         "wrapper": "withSuperadminAccess",
         "metadata": "withSuperadminMetadata",
         "handler": "withSuperadminRouteAccess",
-        "specifier": "@nextsparkjs/core/routes/_internal/area-access"
+        "specifier": "@nextsparkjs/core/routes/_internal/area-access.cc"
       }
     },
     {
@@ -54,7 +54,7 @@
         "wrapper": "withDevtoolsAccess",
         "metadata": "withDevtoolsMetadata",
         "handler": "withDevtoolsRouteAccess",
-        "specifier": "@nextsparkjs/core/routes/_internal/area-access"
+        "specifier": "@nextsparkjs/core/routes/_internal/area-access.cc"
       }
     },
     {

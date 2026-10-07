@@ -276,3 +276,35 @@ test('a metadata file under an area cannot be guarded: a warning notice names it
     w.cleanup()
   }
 })
+
+/**
+ * #213: with core's own manifest, a Cache Components host composes every page and layout under the areas with
+ * area-access.cc (the check inside the segment's own Suspense boundary), a legacy ISR host with area-access as before.
+ * The facades stay inside the facade grammar either way.
+ */
+test("core's manifest: area segments import their check from area-access.cc in a Cache Components host only", async () => {
+  const facades = async cacheComponents => {
+    const { routes } = await loadCoreRouteManifest({ coreRoot: CORE_ROOT, cacheComponents })
+    const planned = planHost({ coreRoutes: routes })
+    const result = await render(planned.routes)
+    assert.deepEqual(result.diagnostics, [])
+    return result
+  }
+  const INTERNAL = '@nextsparkjs/core/routes/_internal/'
+  for (const [cacheComponents, module] of [[true, 'area-access.cc'], [false, 'area-access']]) {
+    const result = await facades(cacheComponents)
+    for (const [target, wrapper] of [
+      ['superadmin/users/page.tsx', 'withSuperadminAccess'],
+      ['superadmin/docs/[section]/[page]/page.tsx', 'withSuperadminAccess'],
+      ['devtools/page.tsx', 'withDevtoolsAccess'],
+      ['devtools/api/layout.tsx', 'withDevtoolsAccess'],
+    ]) {
+      const content = contentOf(result, target)
+      assert.ok(content, target)
+      assert.ok(content.includes(`import { ${wrapper} } from "${INTERNAL}${module}"`), `${target} (cacheComponents ${cacheComponents}) imports ${wrapper} from ${module}:\n${content}`)
+      assert.deepEqual(validateGeneratedModule({ ts, source: content, file: `src/app/${target}`, grammar: 'composed-facade' }), [], target)
+    }
+    // A doc page's generateMetadata keeps area-access's check (re-exported by area-access.cc)
+    assert.match(contentOf(result, 'superadmin/docs/[section]/[page]/page.tsx'), new RegExp(`withSuperadminMetadata.*from "${INTERNAL}${module.replace('.', '\\.')}"`, 's'))
+  }
+})

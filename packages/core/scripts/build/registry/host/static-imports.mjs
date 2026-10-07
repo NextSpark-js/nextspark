@@ -80,6 +80,8 @@ export const CORE_COMPOSITION_WRAPPERS = Object.freeze({
   [`${INTERNAL}devtools-layout.cc`]: ['withDevtoolsGuard'],
   // Every page and layout under /superadmin and /devtools (the manifest's `access`).
   [`${INTERNAL}area-access`]: ['withSuperadminAccess', 'withDevtoolsAccess', 'withSuperadminMetadata', 'withDevtoolsMetadata', 'withSuperadminRouteAccess', 'withDevtoolsRouteAccess'],
+  // The same, for a Cache Components host (each segment checks inside its own Suspense boundary).
+  [`${INTERNAL}area-access.cc`]: ['withSuperadminAccess', 'withDevtoolsAccess', 'withSuperadminMetadata', 'withDevtoolsMetadata', 'withSuperadminRouteAccess', 'withDevtoolsRouteAccess'],
   [`${INTERNAL}entity-layout-route`]: ['createEntityLayoutRoute'],
   [`${INTERNAL}entity-list-route`]: ['createEntityListRoute'],
   [`${INTERNAL}entity-detail-route`]: ['createEntityDetailRoute'],

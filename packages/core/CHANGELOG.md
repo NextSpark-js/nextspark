@@ -177,8 +177,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     logged the `/[slug]` message on every page load. Add the file to an existing project to stop it.
   - The public item routes (`[slug]`, `[...slug]`) answer `notFound()` at once for a request for a static file (last segment ending in `.ico`, `.png`, `.jpg`, `.svg`, `.webp`, `.txt`, `.xml`,
     `.json`, `.webmanifest`, `.map`, `.js`, `.css`, `.woff`, ...: `/favicon.ico`, `/robots.txt`): no database read and no project template run for it. A slug with a dot (`release-1.0`, `v2.5`) still renders.
-  - Not covered: the `/superadmin` and `/devtools` areas still log the check's "dropped segment" message in dev (their client guards hide the page until the session loads and
-    each page checks the role on the server). They are admin tools outside the starter's user flow; see `scripts/build/registry/host/README.md` and #213.
+  - `/superadmin` and `/devtools` open without the message too (#213). Their client guards (`SuperAdminGuard`, `DeveloperGuard`) showed a loading state on the server, so
+    the area's pages were never rendered there ("dropped segment"), and each page awaited its server-side role check outside Suspense. In a Cache Components host core's area
+    layouts now tell their guard the server already checked the role (new `serverChecked` prop, off by default), and every page and layout under an area checks the role
+    inside a Suspense boundary of its own (`_internal/area-access.cc`, the variant's `access`). The check itself does not change: an anonymous request is still sent to
+    `/login`, a session without the role to `/dashboard?error=access_denied`, and nothing of the area renders for either (the proxy's redirect still comes first). A legacy
+    ISR host keeps its facades, its guards and its 307.
 - **Signing out no longer makes the dashboard request `/api/user/profile` and `/api/v1/teams` and get 401.** The client's session store keeps the signed-in user until its own
   request for the session answers, and `signOut()` emptied the query cache before that: every signed-in query still on the page (teams, profile, preferences) refetched on its next
   render, and the API refused each with 401 (three red lines in the browser console). `signOut()` now brings the session store up to date first, then empties the cache and goes to `/login`

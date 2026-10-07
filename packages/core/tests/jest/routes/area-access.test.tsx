@@ -46,6 +46,11 @@ import { withDevtoolsMessages } from '../../../src/routes/_internal/devtools-lay
 import * as cc from '../../../src/routes/_internal/group-layouts.cc'
 import * as superadminCc from '../../../src/routes/_internal/superadmin-layout.cc'
 import * as devtoolsCc from '../../../src/routes/_internal/devtools-layout.cc'
+import * as accessCc from '../../../src/routes/_internal/area-access.cc'
+import * as superadminIsr from '../../../src/routes/_internal/superadmin-layout'
+import * as devtoolsIsr from '../../../src/routes/_internal/devtools-layout'
+import SuperadminLayoutCc from '../../../src/routes/superadmin/layout.cc'
+import DevtoolsLayoutCc from '../../../src/routes/devtools/layout.cc'
 
 const session = (role: string) => ({ session: { id: 's' }, user: { id: 'u', role } })
 const LOGIN = (path: string) => `NEXT_REDIRECT:/login?callbackUrl=${encodeURIComponent(path)}`
@@ -243,5 +248,93 @@ describe('the Cache Components modules of the two areas check inside their own S
       const tree = (wrap(Layout) as unknown as Renders)({ children: 'x' })
       expect(findByName(tree, 'GatedAreaLayout')).toEqual([])
     }
+  })
+})
+
+/**
+ * #213: in a Cache Components host every page and layout under an area is composed with area-access.cc. The check is
+ * the same; it runs inside the segment's own Suspense boundary, so a navigation into the segment is instant and the
+ * dev server stops reporting it. The segment still renders only once the check has passed.
+ */
+describe('area-access.cc (every page and layout under an area, Cache Components host)', () => {
+  const Segment = jest.fn((_props: { params: Promise<{ x: string }> }) => null)
+  const params = Promise.resolve({ x: '1' })
+  type Gate = (props: { params: typeof params }) => Promise<React.ReactElement<{ params: typeof params }>>
+
+  beforeEach(() => Segment.mockClear())
+
+  /** The segment's element: a Suspense boundary (no fallback content) whose only child is the gate. */
+  function gateOf(wrap: typeof accessCc.withSuperadminAccess) {
+    const element = (wrap(Segment) as unknown as (props: { params: typeof params }) => React.ReactElement<{ fallback: unknown; children: React.ReactElement }>)({ params })
+    expect(element.type).toBe(React.Suspense)
+    expect(element.props.fallback).toBeNull()
+    const gate = element.props.children as React.ReactElement<{ params: typeof params }>
+    expect(gate.props.params).toBe(params)
+    return { run: () => (gate.type as Gate)(gate.props) }
+  }
+
+  it.each([
+    ['superadmin', 'no', accessCc.withSuperadminAccess, null, LOGIN('/superadmin')],
+    ['superadmin', 'a member', accessCc.withSuperadminAccess, 'member', DENIED],
+    ['devtools', 'no', accessCc.withDevtoolsAccess, null, LOGIN('/devtools')],
+    ['devtools', 'a superadmin', accessCc.withDevtoolsAccess, 'superadmin', DENIED],
+  ] as const)('%s, %s session: the boundary redirects before the segment is rendered', async (_area, _label, wrap, role, thrown) => {
+    getTypedSession.mockResolvedValue(role ? session(role) : null)
+    await expect(gateOf(wrap).run()).rejects.toThrow(thrown)
+    expect(Segment).not.toHaveBeenCalled()
+  })
+
+  it('renders the segment with its props inside the boundary once the check passes', async () => {
+    getTypedSession.mockResolvedValue(session('developer'))
+    for (const wrap of [accessCc.withSuperadminAccess, accessCc.withDevtoolsAccess]) {
+      const element = await gateOf(wrap).run()
+      expect(element.type).toBe(Segment)
+      expect(element.props.params).toBe(params)
+    }
+  })
+
+  it("metadata and Route Handlers keep area-access's own checks", () => {
+    expect(accessCc.withSuperadminMetadata).toBe(withSuperadminMetadata)
+    expect(accessCc.withDevtoolsMetadata).toBe(withDevtoolsMetadata)
+    expect(accessCc.withSuperadminRouteAccess).toBe(withSuperadminRouteAccess)
+    expect(accessCc.withDevtoolsRouteAccess).toBe(withDevtoolsRouteAccess)
+  })
+})
+
+/**
+ * Every element of a tree, rendering the function components that are not async (what the server would render);
+ * `stopAt` names a component whose subtree is left out.
+ */
+function expand(node: React.ReactNode, stopAt?: string, depth = 0): React.ReactElement[] {
+  if (!React.isValidElement(node) || depth > 20) return []
+  const element = node as React.ReactElement<{ children?: React.ReactNode }>
+  if (stopAt && typeof element.type === 'function' && element.type.name === stopAt) return [element]
+  const inner =
+    typeof element.type === 'function' && element.type.constructor.name !== 'AsyncFunction' && !/Guard$|Providers$|Sidebar|Header$/.test(element.type.name)
+      ? expand((element.type as (props: unknown) => React.ReactNode)(element.props), stopAt, depth + 1)
+      : React.Children.toArray(element.props.children).flatMap(child => expand(child, stopAt, depth + 1))
+  return [element, ...inner]
+}
+
+describe("the area guards are told the server checked the role only behind that check (#213)", () => {
+  const Layout = ({ children }: { children: React.ReactNode }) => <>{children}</>
+  const guardProps = (tree: React.ReactNode, guard: string, stopAt?: string) =>
+    expand(tree, stopAt).filter(element => typeof element.type === 'function' && element.type.name === guard).map(element => (element.props as { serverChecked?: boolean }).serverChecked)
+
+  it.each([
+    ['superadmin', 'SuperAdminGuard', superadminCc.withSuperadminGuard, superadminIsr.withSuperadminGuard, SuperadminLayoutCc],
+    ['devtools', 'DeveloperGuard', devtoolsCc.withDevtoolsGuard, devtoolsIsr.withDevtoolsGuard, DevtoolsLayoutCc],
+  ] as const)('%s: Cache Components layouts pass serverChecked inside the gate; the ISR composition does not', async (_area, guard, ccGuard, isrGuard, ccLayout) => {
+    // Cache Components: core's layout and a composed override, behind the gate (the gate itself is async: open it)
+    for (const tree of [(ccGuard(Layout) as unknown as (p: { children: React.ReactNode }) => React.ReactElement)({ children: 'x' }), (ccLayout as unknown as (p: { children: React.ReactNode }) => React.ReactElement)({ children: 'x' })]) {
+      const [gate] = expand(tree).filter(element => typeof element.type === 'function' && element.type.name === 'AreaGate') as Array<React.ReactElement<{ children: React.ReactNode }>>
+      expect(gate).toBeDefined()
+      expect(guardProps(tree, guard, 'AreaGate')).toEqual([]) // nothing of the guard outside the gate
+      expect(guardProps(gate.props.children, guard)).toEqual([true])
+    }
+    // ISR: the composition's guard keeps its loading state on the server (the message wrapper is async: render the layout it wraps)
+    getTypedSession.mockResolvedValue(session('developer'))
+    const isr = await (isrGuard(Layout) as unknown as (p: { children: React.ReactNode }) => Promise<React.ReactElement>)({ children: 'x' })
+    expect(guardProps(isr, guard)).toEqual([false])
   })
 })

@@ -11,6 +11,13 @@ import { useTranslations } from "next-intl";
 interface DeveloperGuardProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  /**
+   * The server already checked the role before rendering `children` (a Cache Components host: core's area layout
+   * renders the guard only after area-access passed). Then the children render while the session loads instead of
+   * the loading state, so the server render holds the area's segments (Next's dev check reports a route whose
+   * segments a client component hides as "dropped"). The checks below still run once the session has loaded.
+   */
+  serverChecked?: boolean;
 }
 
 /**
@@ -23,7 +30,7 @@ interface DeveloperGuardProps {
  * @param children - Components to render if user is developer
  * @param fallback - Custom fallback component (optional)
  */
-export function DeveloperGuard({ children, fallback }: DeveloperGuardProps) {
+export function DeveloperGuard({ children, fallback, serverChecked = false }: DeveloperGuardProps) {
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const t = useTranslations();
@@ -51,6 +58,7 @@ export function DeveloperGuard({ children, fallback }: DeveloperGuardProps) {
 
   // Show loading state while checking session
   if (!mounted || isPending) {
+    if (serverChecked) return <>{children}</>;
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-pulse">

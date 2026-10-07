@@ -337,7 +337,8 @@ test('each per-entity route kind has a module of its own, so a route imports onl
  * The role check of /superadmin and /devtools does not depend on the project's proxy (#203, S21): the group message
  * wrapper of both rendering modes checks the session on the server before the layout renders, and every page and layout
  * under the area is composed with an access wrapper (a layout cannot protect its pages: Next renders each segment
- * separately).
+ * separately). In Cache Components mode that wrapper comes from area-access.cc, which runs the same check inside the
+ * segment's own Suspense boundary (#213: a check outside one makes the dev server report the segment as not instant).
  */
 test('the role-gated areas check the role on the server in the group wrapper of both modes and in every segment under them', () => {
   const areas = [
@@ -345,15 +346,25 @@ test('the role-gated areas check the role on the server in the group wrapper of 
     { target: 'devtools/layout.tsx', area: 'devtools', access: 'withDevtoolsAccess', metadata: 'withDevtoolsMetadata', handler: 'withDevtoolsRouteAccess', messages: 'withDevtoolsMessages', ccMessages: 'withDevtoolsAreaMessages', guard: 'withDevtoolsGuard' },
   ]
   const accessModule = `${ROUTES_SUBPATH}/_internal/area-access`
+  const ccAccessModule = `${ROUTES_SUBPATH}/_internal/area-access.cc`
   const accessSource = fs.readFileSync(sourceOf(accessModule), 'utf8')
+  const ccAccessSource = fs.readFileSync(sourceOf(ccAccessModule), 'utf8')
   const shared = fs.readFileSync(sourceOf(`${ROUTES_SUBPATH}/_internal/group-layouts.cc`), 'utf8')
   for (const { target, area, access, metadata, handler, messages, ccMessages, guard } of areas) {
     const entry = manifest.find(candidate => candidate.target === target)!
     const variant = variants.cacheComponents.find(candidate => candidate.target === target)!
-    for (const declared of [entry, variant]) assert.deepEqual(declared.access, { wrapper: access, metadata, handler, specifier: accessModule }, `${declared.specifier} declares ${access}`)
+    assert.deepEqual(entry.access, { wrapper: access, metadata, handler, specifier: accessModule }, `${entry.specifier} declares ${access}`)
+    assert.deepEqual(variant.access, { wrapper: access, metadata, handler, specifier: ccAccessModule }, `${variant.specifier} declares ${access} from area-access.cc`)
     for (const wrapper of [access, metadata, handler]) {
       assert.ok(accessSource.includes(`export function ${wrapper}<`), `${accessModule} exports ${wrapper}`)
-      assert.ok(STATIC_IMPORTS.CORE_COMPOSITION_WRAPPERS[accessModule].includes(wrapper), `${wrapper} is on the facade grammar's allowlist`)
+      for (const module of [accessModule, ccAccessModule]) {
+        assert.ok(STATIC_IMPORTS.CORE_COMPOSITION_WRAPPERS[module].includes(wrapper), `${wrapper} is on the facade grammar's allowlist for ${module}`)
+      }
+    }
+    // area-access.cc: its own segment wrapper; metadata and Route Handlers are area-access's, re-exported
+    assert.ok(ccAccessSource.includes(`export function ${access}<`), `${ccAccessModule} exports ${access}`)
+    for (const wrapper of [metadata, handler]) {
+      assert.match(ccAccessSource, new RegExp(`export \\{[^}]*\\b${wrapper}\\b[^}]*\\} from './area-access'`), `${ccAccessModule} re-exports ${wrapper}`)
     }
     // ISR: the wrapper awaits the check before anything else, so a page load without the role gets a 307
     const isr = fs.readFileSync(sourceOf(entry.compose!.specifier), 'utf8')
@@ -368,6 +379,8 @@ test('the role-gated areas check the role on the server in the group wrapper of 
   }
   assert.match(accessSource, /async function AreaGate\([^)]*\) \{\s*await requireAreaAccess\(area\)/)
   assert.match(accessSource, /<Suspense fallback=\{null\}>\s*<AreaGate area=\{area\}>/)
+  assert.match(ccAccessSource, /async function AreaSegmentGate\([^)]*\) \{\s*await requireAreaAccess\(area\)\s*return <Segment \{\.\.\.props\} \/>/)
+  assert.match(ccAccessSource, /<Suspense fallback=\{null\}>\s*<AreaSegmentGate \{\.\.\.props\} \/>\s*<\/Suspense>/)
   // The message module public and auth layouts import reaches none of it
   assert.doesNotMatch(shared, /from '\.\/(area-access|superadmin-layout|devtools-layout)/)
   // No other layout declares access
@@ -393,7 +406,10 @@ test('a group layout with a role guard is composed only through a wrapper that p
       assert.ok(source.includes(`export function ${wrapper}(`) || source.includes(`export const ${wrapper} =`), `${wrapper} is exported by ${composed.compose!.specifier}`)
       // The Cache Components module puts the server-side role check between the messages and the helper
       const viaMessages = composed === entry ? messages : messages.replace(/Messages$/, 'AreaMessages')
-      assert.ok(source.includes(`${viaMessages}(${helper}(ProjectLayout))`), `${wrapper}: messages, then ${helper} around the project layout`)
+      // ISR: the guard shows its loading state until the client session loads; Cache Components: the guard is told the
+      // server checked the role (`serverChecked`), so the server render holds the area's segments (#213)
+      const helperCall = composed === entry ? `${helper}(ProjectLayout)` : `${helper}(ProjectLayout, true)`
+      assert.ok(source.includes(`${viaMessages}(${helperCall})`), `${wrapper}: messages, then ${helperCall} around the project layout`)
       assert.ok(STATIC_IMPORTS.CORE_COMPOSITION_WRAPPERS[composed.compose!.specifier].includes(wrapper), `${wrapper} is on the facade grammar's allowlist for ${composed.compose!.specifier}`)
     }
     // The helper the wrapper uses is the one that puts the guard around the project layout, whatever the mode
@@ -402,9 +418,16 @@ test('a group layout with a role guard is composed only through a wrapper that p
     assert.ok(start >= 0, `${helper} is exported`)
     const body = base.slice(start)
     const at = (needle: string) => body.indexOf(needle)
-    assert.ok(at(`<${guard}>`) > 0 && at('<ProjectLayout>') > at(`<${guard}>`) && at('</ProjectLayout>') < at(`</${guard}>`), `${helper}: <${guard}> wraps <ProjectLayout>`)
-    // The Cache Components variant of core's own layout still renders core's layout (which holds the guard itself)
-    assert.match(fs.readFileSync(sourceOf(variantOf(target).specifier), 'utf8'), /export default with\w+Messages\((SuperadminLayout|DevLayout)\)/)
+    const open = `<${guard} serverChecked={serverChecked}>`
+    assert.ok(at(open) > 0 && at('<ProjectLayout>') > at(open) && at('</ProjectLayout>') < at(`</${guard}>`), `${helper}: <${guard}> wraps <ProjectLayout>`)
+    assert.match(body, new RegExp(`^export function ${helper}\\(ProjectLayout: [^,]+, serverChecked = false\\)`), `${helper}: serverChecked is off unless asked`)
+    // The Cache Components variant of core's own layout still renders core's layout (which holds the guard itself),
+    // telling its guard that the server checked the role
+    const ccLayout = fs.readFileSync(sourceOf(variantOf(target).specifier), 'utf8')
+    assert.match(ccLayout, /export default with\w+AreaMessages\(ServerChecked(SuperadminLayout|DevLayout)\)/)
+    assert.match(ccLayout, /return <(SuperadminLayout|DevLayout) serverChecked>\{children\}<\/\1>/)
+    // ...and the ISR layout does not
+    assert.doesNotMatch(fs.readFileSync(sourceOf(entry.specifier), 'utf8'), /serverChecked/)
   }
   // Any other layout whose default module imports a guard must be listed above: a new guard cannot be forgotten
   const guardImport = /components\/app\/guards\/(\w+)/

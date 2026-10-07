@@ -125,12 +125,12 @@ const DYNAMIC_TRANSLATION_ALLOWLIST: Record<string, { groups: TranslationGroup[]
     namespaces: 'top-level APP_CONFIG_MERGED.userRoles.displayNames keys',
     reason: 'role display keys resolve from APP_CONFIG_MERGED.userRoles.displayNames.',
   },
-  'packages/core/src/components/app/guards/DeveloperGuard.tsx:29': {
+  'packages/core/src/components/app/guards/DeveloperGuard.tsx:36': {
     groups: ['devtools'],
     namespaces: 'common',
     reason: 'the guard only reads common.* and devtools provides common.',
   },
-  'packages/core/src/components/app/guards/SuperAdminGuard.tsx:29': {
+  'packages/core/src/components/app/guards/SuperAdminGuard.tsx:36': {
     groups: ['superadmin'],
     namespaces: 'common',
     reason: 'the guard only reads common.* and superadmin provides common.',

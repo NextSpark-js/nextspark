@@ -20,6 +20,9 @@ export interface DevLayoutProps {
   children: React.ReactNode;
 }
 
+/** `serverChecked`: see DeveloperGuard (only the Cache Components module passes it, after its role check). */
+type GuardedProps = DevLayoutProps & { serverChecked?: boolean }
+
 /**
  * Developer Area Layout
  *
@@ -28,11 +31,11 @@ export interface DevLayoutProps {
  * Includes responsive design for mobile and desktop.
  * Uses purple/violet color scheme to differentiate from Admin Panel (red).
  */
-export function DevLayout({ children }: DevLayoutProps) {
+export function DevLayout({ children, serverChecked }: GuardedProps) {
   const pluginNavItems = getAllPluginNavItems('devtools')
   return (
     <DashboardProviders>
-      <DeveloperGuard>
+      <DeveloperGuard serverChecked={serverChecked}>
         <div className="flex h-screen bg-background">
         {/* Sidebar - Hidden on mobile, visible on desktop */}
         <div className="hidden lg:block">
@@ -87,11 +90,11 @@ export function withDevtoolsMessages(ResolvedDevLayout: ComponentType<DevLayoutP
  * /devtools checks again, see area-access). Shared by the message wrappers of both rendering modes
  * (`withDevtoolsGuard` here, and in `group-layouts.cc`).
  */
-export function guardDevtoolsLayout(ProjectLayout: ComponentType<DevLayoutProps>) {
+export function guardDevtoolsLayout(ProjectLayout: ComponentType<DevLayoutProps>, serverChecked = false) {
   return function GuardedDevLayout({ children }: DevLayoutProps) {
     return (
       <DashboardProviders>
-        <DeveloperGuard>
+        <DeveloperGuard serverChecked={serverChecked}>
           <ProjectLayout>{children}</ProjectLayout>
         </DeveloperGuard>
       </DashboardProviders>

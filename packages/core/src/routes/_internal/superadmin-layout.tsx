@@ -22,15 +22,18 @@ export interface SuperadminLayoutProps {
   children: React.ReactNode;
 }
 
+/** `serverChecked`: see SuperAdminGuard (only the Cache Components module passes it, after its role check). */
+type GuardedProps = SuperadminLayoutProps & { serverChecked?: boolean }
+
 /**
  * Wrapped in Suspense so PPR doesn't fail during prerender.
  */
-function SuperadminContent({ children }: SuperadminLayoutProps) {
+function SuperadminContent({ children, serverChecked }: GuardedProps) {
   const pluginNavItems = getAllPluginNavItems('superadmin')
 
   return (
     <DashboardProviders>
-      <SuperAdminGuard>
+      <SuperAdminGuard serverChecked={serverChecked}>
           <div className="flex h-screen bg-background" data-cy="superadmin-container">
             {/* Sidebar - Hidden on mobile, visible on desktop */}
             <div className="hidden lg:block">
@@ -71,14 +74,14 @@ function SuperadminContent({ children }: SuperadminLayoutProps) {
  * Protected layout for superadmin-only sections with dedicated sidebar navigation.
  * Owns the narrowly scoped client catalog for superadmin routes.
  */
-export function SuperadminLayout({ children }: SuperadminLayoutProps) {
+export function SuperadminLayout({ children, serverChecked }: GuardedProps) {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     }>
-      <SuperadminContent>{children}</SuperadminContent>
+      <SuperadminContent serverChecked={serverChecked}>{children}</SuperadminContent>
     </Suspense>
   )
 }
@@ -110,7 +113,7 @@ export function withSuperadminMessages(ResolvedSuperadminLayout: ComponentType<S
  * area-access). Shared by the message wrappers of both rendering modes (`withSuperadminGuard` here, and
  * in `group-layouts.cc`).
  */
-export function guardSuperadminLayout(ProjectLayout: ComponentType<SuperadminLayoutProps>) {
+export function guardSuperadminLayout(ProjectLayout: ComponentType<SuperadminLayoutProps>, serverChecked = false) {
   return function GuardedSuperadminLayout({ children }: SuperadminLayoutProps) {
     return (
       <Suspense fallback={
@@ -119,7 +122,7 @@ export function guardSuperadminLayout(ProjectLayout: ComponentType<SuperadminLay
         </div>
       }>
         <DashboardProviders>
-          <SuperAdminGuard>
+          <SuperAdminGuard serverChecked={serverChecked}>
             <ProjectLayout>{children}</ProjectLayout>
           </SuperAdminGuard>
         </DashboardProviders>

@@ -217,7 +217,8 @@ spread and no expression. A host with another core (the conformance fixture) pas
   `_internal/default-{auth,public}-layout`).
 - **Role-gated areas** `/superadmin`, `/devtools`: every page, layout, template and default served under the area's URL (core's,
   a plugin's or the project's, in any route group) is composed with `withSuperadminAccess` / `withDevtoolsAccess`
-  (`routes/_internal/area-access`), which checks the session's role on the server before the segment renders, and its
+  (`routes/_internal/area-access`; `area-access.cc` in a Cache Components host, the same check inside the segment's own Suspense
+  boundary), which checks the session's role on the server before the segment renders, and its
   `generateMetadata` with `withSuperadminMetadata` / `withDevtoolsMetadata` (metadata resolves apart too); a Route Handler's
   methods but `OPTIONS` with `withSuperadminRouteAccess` / `withDevtoolsRouteAccess` (401 / 403 JSON; `OPTIONS` is forwarded
   unchecked, so it must not return data). An intercepting route
@@ -309,8 +310,11 @@ about what a navigation would wait for. What it found in the starter, and the fi
   page read `searchParams` behind one. The status a visitor gets does not change: the layouts already streamed these pages after their shell.
 - A project without `public/favicon.ico` made the browser's own `GET /favicon.ico` hit the public `[slug]` page (an HTML "not found" with a 200);
   new projects ship a favicon, and a request for a page that does not exist is now answered inside a boundary the check accepts.
-Not covered: `/superadmin` and `/devtools` (admin areas: their client guards hide the page until the session loads, and each segment checks the role
-on the server outside Suspense); the dev server reports their pages as dropped. Opting an area out is `export const instant = false` in the
-layout's source (a literal, as the facade rules require); nothing sets it today.
+- `/superadmin` and `/devtools` (#213): their client guards hid the page from the server render until the session loaded, and each segment awaited
+  its role check outside Suspense. In a Cache Components host the area layouts (`superadmin/layout.cc`, `devtools/layout.cc` and the composed
+  override through `withSuperadminGuard` / `withDevtoolsGuard`) pass `serverChecked` to their guard, which they render only after the role
+  check, and every segment under an area is composed from `_internal/area-access.cc`: the same check, inside the segment's own Suspense boundary,
+  the segment rendered only once it has passed. The ISR host keeps `_internal/area-access` and its guards' loading state.
+Opting a segment out is `export const instant = false` in its source (a literal, as the facade rules require); nothing sets it today.
 
 Tests: `node --test packages/core/scripts/build/registry/host/__tests__/*.test.mjs`.

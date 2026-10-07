@@ -12,7 +12,8 @@ export const withDevtoolsAreaMessages = (Layout: ComponentType<DevLayoutProps>) 
 /**
  * What a project's devtools layout is composed with in Cache Components mode (the manifest's `compose` of that
  * variant): the mode's messages and the server-side role check, then core's client guard around the project's layout,
- * as `withDevtoolsGuard` does in the ISR module. A module of its own so only the devtools route group imports the guard,
- * the role check and their client components.
+ * as `withDevtoolsGuard` does in the ISR module. The guard is told the server checked the role (`serverChecked`), so it
+ * renders the area while the client session loads. A module of its own so only the devtools route group imports the
+ * guard, the role check and their client components.
  */
-export const withDevtoolsGuard = (ProjectLayout: ComponentType<DevLayoutProps>) => withDevtoolsAreaMessages(guardDevtoolsLayout(ProjectLayout))
+export const withDevtoolsGuard = (ProjectLayout: ComponentType<DevLayoutProps>) => withDevtoolsAreaMessages(guardDevtoolsLayout(ProjectLayout, true))

@@ -12,7 +12,8 @@ export const withSuperadminAreaMessages = (Layout: ComponentType<SuperadminLayou
 /**
  * What a project's superadmin layout is composed with in Cache Components mode (the manifest's `compose` of that
  * variant): the mode's messages and the server-side role check, then core's client guard around the project's layout,
- * as `withSuperadminGuard` does in the ISR module. A module of its own so only the superadmin route group imports the
+ * as `withSuperadminGuard` does in the ISR module. The guard is told the server checked the role (`serverChecked`), so it
+ * renders the area while the client session loads. A module of its own so only the superadmin route group imports the
  * guard, the role check and their client components.
  */
-export const withSuperadminGuard = (ProjectLayout: ComponentType<SuperadminLayoutProps>) => withSuperadminAreaMessages(guardSuperadminLayout(ProjectLayout))
+export const withSuperadminGuard = (ProjectLayout: ComponentType<SuperadminLayoutProps>) => withSuperadminAreaMessages(guardSuperadminLayout(ProjectLayout, true))
