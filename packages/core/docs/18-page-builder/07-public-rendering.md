@@ -278,19 +278,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 ## Incremental Static Regeneration (ISR)
 
-Public pages are cached for 1 hour. In the default Cache Components mode the generated route omits `revalidate` and the cached read uses `cacheLife` with the same duration; with ISR (`cacheComponents` off) the route sets `revalidate`:
+**Cache Components (the default)** caches the public item pages for 1 hour (`cacheLife`) and expires them on every write (see below).
 
-```typescript
-// At the top of the route file
-export const revalidate = 3600  // 1 hour in seconds
-```
+**Legacy ISR (`cacheComponents` off) does not cache them: the public item pages render dynamically on every request.** The generated route exports `revalidate = 3600`, but Next only caches a route with dynamic params (`[slug]`, `[...slug]`) when it also exports `generateStaticParams`, so without it `revalidate` has no effect (the build shows `ƒ`, the response is `no-store`).
 
-This means:
-- First request generates and caches the page
-- Subsequent requests serve the cached version
-- After 1 hour, the next request triggers regeneration
-- The stale page is served while regenerating
+NextSpark does not emit `generateStaticParams` for these routes on purpose. With it, Next would cache the not-found page of every slug that does not exist as a 404 for the whole hour (until a write through the app expires it), and each unknown URL a visitor or a bot asks for would leave its own cache file on the server, so the cache grows without bound. A template that reads `headers()` or `cookies()` would also fail with a 500 in a cached route.
 
+If a project wants ISR caching anyway, it takes that on itself: a page that exports `generateStaticParams` (a template's own export is not read: only its default export is used) served from the project's own route, plus a CDN or WAF rule that keeps unknown slugs out of the cache.
 ### On-Demand Revalidation
 
 Every write of an entity that has public pages (`access.basePath`) expires its cached pages at once: create, update (title, blocks, slug, status), delete and bulk delete, through the REST API, the page builder, the server actions and `GenericEntityService`. They all end in the `afterEntityCreate/Update/Delete` hooks, which call `expirePublicEntity` (`lib/cache/public-entity-cache.ts`); `deleteMany` without hooks calls it itself.

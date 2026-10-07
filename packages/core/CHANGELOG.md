@@ -41,6 +41,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New check `tests/node/template-message-keys.test.ts`: every literal translation key used by core routes (all six locales, over the English fallback) and by each template's components, templates, blocks and lib exists in the
   messages the build merges.
 
+### Documentation
+
+- **Legacy ISR does not cache public item pages.** With `cacheComponents: false` the public item pages render dynamically on every request: the `revalidate`
+  they export has no effect without `generateStaticParams`, which NextSpark does not emit (Next would cache not-found pages for the whole window and every
+  unknown URL would add a cache file). Cache Components, the default, caches the item pages and expires them on every write. The ISR section of
+  `18-page-builder/07-public-rendering.md` says so and what a project can do to cache them itself.
+
 ## [0.1.0-beta.195] - 2026-10-07
 
 ### Upgrading from 0.1.0-beta.194
