@@ -26,6 +26,7 @@
 
 import { queryWithRLS, queryOneWithRLS, mutateWithRLS } from '../db'
 import { entityRegistry } from '../entities/registry'
+import { expirePublicEntity } from '../cache/public-entity-cache'
 import {
   beforeEntityCreate,
   afterEntityCreate,
@@ -898,6 +899,7 @@ export class GenericEntityService {
       userId
     )
 
+    if (result.rowCount > 0) expirePublicEntity(entityConfig)
     return result.rowCount
   }
 }

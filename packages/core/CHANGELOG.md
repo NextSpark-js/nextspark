@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A public entity page is no longer served after it is deleted, unpublished or edited.** The cached read of the public item page
+  (`entity:<entity>` / `public-item:<entity>:<slug>` tags, and the ISR route) was never expired by a write, so a deleted page kept answering with its old
+  content (for up to an hour), and a slug visited before it was created kept answering "not found". Every write of an entity with `access.basePath` now
+  expires its public pages at once: the REST API (create, update, delete), the page builder, the server actions, `GenericEntityService` (including
+  `deleteMany`), through the `afterEntity*` hooks and `expirePublicEntity` (`lib/cache/public-entity-cache.ts`). Editing a pattern expires the `patterns`
+  tag. Already in beta.194; not a regression of beta.195.
+
 ## [0.1.0-beta.195] - 2026-10-07
 
 ### Upgrading from 0.1.0-beta.194

@@ -293,27 +293,12 @@ This means:
 
 ### On-Demand Revalidation
 
-The Pages API automatically triggers revalidation when saving pages, so changes appear immediately on the public site.
+Every write of an entity that has public pages (`access.basePath`) expires its cached pages at once: create, update (title, blocks, slug, status), delete and bulk delete, through the REST API, the page builder, the server actions and `GenericEntityService`. They all end in the `afterEntityCreate/Update/Delete` hooks, which call `expirePublicEntity` (`lib/cache/public-entity-cache.ts`); `deleteMany` without hooks calls it itself.
 
-**Implementation in `api/pages/[id]/route.ts`:**
+- **Cache Components:** the tag `entity:<entity>` is on every cached read of the entity's items, including the "not found" answer for a slug that did not exist yet, so one `revalidateTag` covers the old and the new slug of a rename, an unpublished item and a deleted one. The other items of the entity are read again by their next visit. Writing a pattern expires the `patterns` tag.
+- **ISR (`cacheComponents` off):** `revalidatePath` with the route group the generator puts these routes in: `/(public)<basePath>` (layout: the item pages and the archive) or `/(public)/[slug]` / `/(public)/[...slug]` for an entity at `/`. Next tags a page by its route file path, group included, so a path without `(public)` expires nothing.
 
-```typescript
-import { revalidatePath } from 'next/cache'
-
-// In PATCH handler, after successful database update:
-revalidatePath(`/${page.slug}`)
-console.log(`[Pages API] Revalidated: /${page.slug}`)
-```
-
-**How it works:**
-1. User saves page in dashboard
-2. API updates database
-3. `revalidatePath()` is called automatically
-4. Next.js invalidates the cached page
-5. Next request generates fresh content
-6. Changes are visible immediately (< 5 seconds)
-
-**No manual action required** - the revalidation happens automatically on every save.
+A deleted or unpublished item shows the not-found page on the next request, an edit shows the new content. A write outside a request (a script) has no cache to expire and is not affected. A project's own item template that reads the database itself is not cached by core and needs nothing.
 
 ## Error Handling
 

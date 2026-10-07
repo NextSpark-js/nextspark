@@ -7,6 +7,7 @@
 
 import { getGlobalHooks } from '../plugins/hook-system'
 import { getEntityBySlug, getRegisteredEntities } from './queries'
+import { expirePublicEntity } from '../cache/public-entity-cache'
 import type { EntityConfig, EntityHooks, HookFunction, CRUDOperation } from './types'
 
 /**
@@ -201,6 +202,9 @@ export class EntityHookManager {
       operation: 'create'
     }
 
+    // First statement, so it runs in the caller's request even when the caller does not await this hook
+    expirePublicEntity(hookData.entityConfig)
+
     // Emit action for plugins to execute side effects
     await this.hooks.doAction(
       `entity.${entityName}.created`,
@@ -253,6 +257,8 @@ export class EntityHookManager {
       operation: 'update'
     }
 
+    expirePublicEntity(hookData.entityConfig)
+
     await this.hooks.doAction(
       `entity.${entityName}.updated`,
       hookData
@@ -301,6 +307,8 @@ export class EntityHookManager {
       userId,
       operation: 'delete'
     }
+
+    expirePublicEntity(hookData.entityConfig)
 
     await this.hooks.doAction(
       `entity.${entityName}.deleted`,
