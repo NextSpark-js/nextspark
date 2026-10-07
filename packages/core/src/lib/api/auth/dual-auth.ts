@@ -10,6 +10,7 @@ import { getUserDefaultTeamId } from '../../teams/dashboard-team'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../../auth'
 import { validateApiKey } from '../auth'
+import { apiKeyRateLimitResponse } from '../rate-limit'
 import { queryOne } from '../../db'
 import { TeamMemberService } from '../../services/team-member.service'
 import { TeamService } from '../../services/team.service'
@@ -76,6 +77,7 @@ export interface DualAuthResult {
   keyId?: string
   /** The session's id (type 'session' only): the active team cookie counts only for it. */
   sessionId?: string
+  /** The 429 to return when a valid API key is over its per-key limit (`success` is false, `error` says 429). */
   rateLimitResponse?: Response
   /** Set when a dev-only x-act-as-user override replaced the real caller. */
   actingAs?: { originalUserId: string; originalRole: string }
@@ -121,6 +123,27 @@ export async function authenticateRequest(
         scopes: apiKeyResult.scopes,
         keyId: apiKeyResult.keyId,
         error: failure,
+      }
+    }
+    // The same per-key limit validateAndAuthenticate*Request apply, on top of the route's per-address one.
+    const rateLimitResponse = apiKeyRateLimitResponse(request, {
+      userId: apiKeyResult.user!.id,
+      keyId: apiKeyResult.keyId!,
+      scopes: apiKeyResult.scopes ?? [],
+    })
+    if (rateLimitResponse) {
+      return {
+        success: false,
+        type: 'api-key',
+        user: apiKeyResult.user,
+        scopes: apiKeyResult.scopes,
+        keyId: apiKeyResult.keyId,
+        rateLimitResponse,
+        error: {
+          code: 'RATE_LIMIT_EXCEEDED',
+          status: 429,
+          message: 'Rate limit exceeded',
+        },
       }
     }
     return applyActAsOverride(request, apiKeyResult)
@@ -475,10 +498,11 @@ export function createAuthError(message: string = 'Authentication required', sta
  * Turn a failed `authenticateRequest` result into the right HTTP response:
  * 401 `AUTHENTICATION_FAILED` when nothing usable was presented, 403
  * `INSUFFICIENT_SCOPE` / `SCOPE_NOT_DECLARED` when a valid API key was
- * rejected by scope enforcement. Use it in the `!authResult.success` branch
+ * rejected by scope enforcement, the 429 when the key is over its limit. Use it in the `!authResult.success` branch
  * instead of a hand-written 401, so scope rejections are not mislabeled.
  */
 export function createAuthFailureResponse(authResult: DualAuthResult): NextResponse {
+  if (authResult.rateLimitResponse) return authResult.rateLimitResponse as NextResponse
   const failure = authResult.error ?? authenticationFailed()
   return NextResponse.json(
     {

@@ -1,7 +1,7 @@
 export { createMcpEngine, type McpEngine } from './engine'
 export { executeEntityOperation } from './executor'
 export { auditToolCall } from './audit'
-export { translateApiError } from './errors'
+export { RATE_LIMIT_MESSAGE, translateApiError } from './errors'
 export { buildEntitySchemas, type EntitySchemaBundle, type SchemaBuilderContext } from './schema-builder'
 export { StatelessJsonRpcTransport } from './transport'
 export {

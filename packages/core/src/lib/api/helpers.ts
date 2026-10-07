@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiKeyAuth, getValidatedApiKey, validateApiKey } from './auth';
 import { mutateWithRLS, queryWithRLS } from '../db';
-import { checkRateLimit, addRateLimitHeaders } from './rate-limit';
+import { apiKeyRateLimitResponse } from './rate-limit';
 import { getRecordedClientIp } from './client-ip';
 import { getApplicationConfig } from '../config';
 import { auth } from '../auth';
@@ -111,7 +111,8 @@ export async function validateAndAuthenticateRequest(
     };
   }
 
-  return applyApiKeyRateLimit(apiKeyAuth);
+  const rateLimitResponse = apiKeyRateLimitResponse(request, apiKeyAuth);
+  return rateLimitResponse ? { auth: apiKeyAuth, rateLimitResponse } : { auth: apiKeyAuth };
 }
 
 /**
@@ -212,36 +213,8 @@ export async function validateAndAuthenticateApiRequest(request: NextRequest): P
     throw new Error('Invalid API key');
   }
 
-  return applyApiKeyRateLimit(auth);
-}
-
-/**
- * Aplica rate limiting a una API key ya validada.
- * Devuelve la respuesta 429 lista para retornar cuando se excede el límite.
- */
-function applyApiKeyRateLimit(auth: ApiKeyAuth): {
-  auth: ApiKeyAuth;
-  rateLimitResponse?: NextResponse;
-} {
-  const rateLimitResult = checkRateLimit(auth.keyId);
-
-  if (!rateLimitResult.allowed) {
-    const response = NextResponse.json(
-      {
-        success: false,
-        error: 'Rate limit exceeded',
-        message: `Too many requests. Limit: ${rateLimitResult.limit} requests per minute`,
-        code: 'RATE_LIMIT_EXCEEDED',
-        retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
-      },
-      { status: 429 }
-    );
-    
-    addRateLimitHeaders(response, auth.keyId, auth.scopes);
-    return { auth, rateLimitResponse: response };
-  }
-  
-  return { auth };
+  const rateLimitResponse = apiKeyRateLimitResponse(request, auth);
+  return rateLimitResponse ? { auth, rateLimitResponse } : { auth };
 }
 
 /**

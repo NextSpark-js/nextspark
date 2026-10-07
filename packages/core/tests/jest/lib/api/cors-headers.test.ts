@@ -57,7 +57,10 @@ function fakeResponse() {
 }
 
 function req(origin?: string) {
-  return { headers: { get: (name: string) => (name.toLowerCase() === 'origin' ? origin ?? null : null) } } as unknown as NextRequest
+  return {
+    url: 'https://app.example.com/api/v1/tasks',
+    headers: { get: (name: string) => (name.toLowerCase() === 'origin' ? origin ?? null : null) },
+  } as unknown as NextRequest
 }
 
 async function grant(origin?: string) {

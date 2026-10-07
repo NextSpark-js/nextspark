@@ -76,8 +76,9 @@ function withoutSessionCookies(request: NextRequest): NextRequest {
 
 /** Whether a write from `origin` (normalized) to `request`'s path comes from an origin the app trusts. */
 function isTrustedWriteOrigin(request: NextRequest, origin: string): boolean {
+  // A path that cannot be determined counts as app-only.
   const path = requestPathname(request)
-  if (path !== undefined && isAppOnlyCorsPath(path)) {
+  if (path === undefined || isAppOnlyCorsPath(path)) {
     const lan = normalizeCorsEnvironment(process.env.NODE_ENV || 'development') !== 'production' && isPrivateLanOrigin(origin)
     return lan || appOrigins().includes(origin)
   }

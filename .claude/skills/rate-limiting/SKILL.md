@@ -207,8 +207,11 @@ All 3 requests count toward the SAME 200/min 'read' limit
 (see `docs/14-deployment/10-client-address.md`). Never read `x-forwarded-for` or similar headers yourself: use the helper.
 
 It runs before the route authenticates anything, so no credential header (`x-api-key` included) picks the bucket.
-Routes that authenticate with `validateAndAuthenticateRequest` / `validateAndAuthenticateApiRequest` (`lib/api/helpers.ts`)
-also limit each validated API key; routes that use `authenticateRequest` have only the per-address limit.
+A request authenticated with an API key (`authenticateRequest`, `validateAndAuthenticateRequest`, `validateAndAuthenticateApiRequest`)
+is also limited per key (`apiKeyRateLimitResponse`, counted once per request), on top of the per-address limit. With
+`authenticateRequest`, a key over its limit comes back as `success: false` with `rateLimitResponse` (429); `createAuthFailureResponse`
+returns it. The per-key limit is a safety cap and stays on with `DISABLE_RATE_LIMITING=true`, which only turns off the
+per-address limit. On that 429 the wrapper keeps the handler's own `X-RateLimit-*` headers.
 
 `withRateLimitTier` also adds core's CORS to every response it returns (route, 429, origin-check 403), except in the `webhook`
 tier. Export `OPTIONS = corsPreflight` (`@nextsparkjs/core/lib/api/cors-response`) from every wrapped route so its preflight matches.

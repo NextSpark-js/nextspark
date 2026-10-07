@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_rethrow } from 'next/navigation';
 import { getRateLimitForScopes, presentedApiKey } from './keys';
-import { validateApiKey } from './auth';
+import { validateApiKey, type ApiKeyAuth } from './auth';
 import { rateLimitCache, getCacheKey } from './cache';
 import { getClientIp } from './client-ip';
 import {
@@ -68,6 +68,43 @@ export function checkRateLimit(
     resetTime: current.resetTime,
     limit
   };
+}
+
+/** The per-key check each request got, so a request authenticated more than once is counted once. */
+const apiKeyChecks = new WeakMap<Request, RateLimitResult>();
+
+/**
+ * The per-key limit (checkRateLimit, by the key's id) for a request authenticated with `auth`: a 429 ready to
+ * return when the key is over it, null otherwise. Counted once per request, however many times the request is
+ * authenticated (authenticateRequest, validateAndAuthenticate*Request). The per-address limit of the route
+ * wrapper (withRateLimitTier) still applies on top. It is a safety cap, so DISABLE_RATE_LIMITING does not turn it off.
+ */
+export function apiKeyRateLimitResponse(request: Request, auth: ApiKeyAuth): NextResponse | null {
+  let result = apiKeyChecks.get(request);
+  if (!result) {
+    result = checkRateLimit(auth.keyId);
+    apiKeyChecks.set(request, result);
+  }
+  if (result.allowed) return null;
+  const retryAfter = Math.ceil((result.resetTime - Date.now()) / 1000);
+  return NextResponse.json(
+    {
+      success: false,
+      error: 'Rate limit exceeded',
+      message: `Too many requests. Limit: ${result.limit} requests per minute`,
+      code: 'RATE_LIMIT_EXCEEDED',
+      retryAfter
+    },
+    {
+      status: 429,
+      headers: {
+        'X-RateLimit-Limit': result.limit.toString(),
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': result.resetTime.toString(),
+        'Retry-After': retryAfter.toString()
+      }
+    }
+  );
 }
 
 /**
@@ -340,9 +377,9 @@ export function getRateLimitCacheStats() {
  * Rate limiting strategy:
  * - Counts per client address (getClientIp), for every caller. It runs before the handler has
  *   authenticated anything, so no credential or identity header (x-api-key included) picks the
- *   bucket. Routes that authenticate with validateAndAuthenticateRequest or
- *   validateAndAuthenticateApiRequest (helpers.ts) also limit a validated API key per key; routes that use
- *   authenticateRequest have only this per-address limit.
+ *   bucket. A route that authenticates a request with an API key (authenticateRequest,
+ *   validateAndAuthenticateRequest, validateAndAuthenticateApiRequest) also limits that key on its own
+ *   (apiKeyRateLimitResponse), on top of this per-address limit.
  * - Rate limits are applied per-tier across ALL endpoints (not per-endpoint)
  *
  * Rate limit tiers:
@@ -412,10 +449,13 @@ export function withRateLimitTier<T extends unknown[]>(
     // Execute the original handler
     const response = await handler(request, ...args);
 
-    // Add rate limit headers to successful responses
-    response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
-    response.headers.set('X-RateLimit-Remaining', Math.max(0, rateLimitResult.remaining).toString());
-    response.headers.set('X-RateLimit-Reset', rateLimitResult.resetTime.toString());
+    // The address bucket's headers, except on a 429 the handler answered itself (the per-key limit): its own
+    // X-RateLimit-* describe the limit that was hit.
+    if (response.status !== 429) {
+      response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
+      response.headers.set('X-RateLimit-Remaining', Math.max(0, rateLimitResult.remaining).toString());
+      response.headers.set('X-RateLimit-Reset', rateLimitResult.resetTime.toString());
+    }
 
     return response;
   };

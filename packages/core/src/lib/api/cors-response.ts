@@ -22,12 +22,14 @@ const APP_ONLY_PATH = /(^|\/)api\/(v1\/)?(superadmin|devtools)(\/|$)/
  * cookie-authenticated writes only from it (checkRequestOrigin).
  */
 export function isAppOnlyCorsPath(pathname: string): boolean {
-  let path = pathname
-  try { path = decodeURIComponent(pathname) } catch { /* keep it as it came */ }
+  // Each segment decodes on its own: a malformed one is kept as it came and does not stop the others decoding.
+  const path = pathname.split('/').map(segment => {
+    try { return decodeURIComponent(segment) } catch { return segment }
+  }).join('/')
   return APP_ONLY_PATH.test(path.toLowerCase().replace(/\/{2,}/g, '/'))
 }
 
-/** A request's path, for corsGrant (undefined when its URL does not parse). */
+/** A request's path, for corsGrant (undefined when its URL does not parse, which corsGrant treats as app-only). */
 export function requestPathname(request: Request): string | undefined {
   try { return new URL(request.url).pathname } catch { return undefined }
 }
@@ -49,7 +51,8 @@ export function appOrigins(): string[] {
  * response names no origin and sends no credentials header.
  * Under the admin and developer areas (isAppOnlyCorsPath, given the request's
  * `pathname`), only the app's own origin is granted, with credentials; no
- * other origin, listed or not.
+ * other origin, listed or not. A `pathname` that is undefined (not known)
+ * gets the same answer as those areas.
  */
 export function corsGrant(
   origin: string,
@@ -58,7 +61,7 @@ export function corsGrant(
   pathname?: string
 ): { origin: string; credentials: boolean } | null {
   const normalizedOrigin = normalizeOrigin(origin);
-  if (pathname !== undefined && isAppOnlyCorsPath(pathname)) {
+  if (pathname === undefined || isAppOnlyCorsPath(pathname)) {
     return appOrigins().includes(normalizedOrigin) ? { origin: normalizedOrigin, credentials: true } : null;
   }
   const listed = isOriginAllowed(normalizedOrigin, getCorsOrigins(config as ApplicationConfig, env));

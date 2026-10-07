@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Routes that authenticate with `authenticateRequest` (`lib/api/auth/dual-auth`) now also limit each validated API key on its own, as
+  `validateAndAuthenticateRequest` and `validateAndAuthenticateApiRequest` already did, on top of the per-address limit of `withRateLimitTier`.
+  Several keys used from one address each get their own per-key budget. A key over its limit gets `success: false`, `error.status` 429 and
+  `rateLimitResponse` (the 429, with `Retry-After`); `createAuthFailureResponse` returns it. A request authenticated more than once is counted once.
+  The per-key limit is a safety cap: `DISABLE_RATE_LIMITING=true` turns off the per-address limit only, not this one. On that 429, `withRateLimitTier`
+  keeps the response's own `X-RateLimit-*` headers instead of writing the per-address ones over them. `/api/mcp` answers a key over its limit with a
+  JSON-RPC 429 and `Retry-After`.
+- The admin and developer areas' CORS rule (`isAppOnlyCorsPath`) decodes each path segment on its own, and `corsGrant` and the write-origin check treat a
+  request whose path cannot be determined like those areas. Calling `corsGrant` (`lib/api/cors-response`) without its `pathname` argument now gets the
+  admin and developer areas' answer (only the app's own origins are granted): pass `requestPathname(request)`.
+
 ### Fixed
 
 - **A public entity page is no longer served after it is deleted, unpublished or edited.** The cached read of the public item page

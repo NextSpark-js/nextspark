@@ -30,7 +30,7 @@ import { validateApiKey } from '@nextsparkjs/core/lib/api/auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
-import { createMcpEngine } from '@nextsparkjs/core/lib/mcp'
+import { createMcpEngine, RATE_LIMIT_MESSAGE } from '@nextsparkjs/core/lib/mcp'
 import type { ToolExecutionContext } from '@nextsparkjs/core/lib/mcp'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 // Import registries directly - webpack resolves @nextsparkjs/registries alias at compile time
@@ -111,6 +111,13 @@ async function handleMcpPost(request: NextRequest): Promise<NextResponse> {
   // are enforced by the generic entity handlers the executor invokes for each
   // tool call, so this entry point accepts any valid key explicitly (#93).
   const authResult = await authenticateRequest(request, { allowAnyScope: true })
+  if (authResult.rateLimitResponse) {
+    // A valid key over its per-key limit: say so, with the limit's Retry-After, instead of the 401 below.
+    const limited = jsonRpcError(429, -32000, RATE_LIMIT_MESSAGE)
+    const retryAfter = authResult.rateLimitResponse.headers.get('Retry-After')
+    if (retryAfter) limited.headers.set('Retry-After', retryAfter)
+    return limited
+  }
   if (!authResult.success || authResult.type !== 'api-key' || !authResult.user) {
     return jsonRpcError(401, -32001, API_KEY_HELP)
   }

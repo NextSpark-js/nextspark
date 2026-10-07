@@ -14,6 +14,10 @@ interface ErrorContext {
   hints?: string[]
 }
 
+/** What an MCP client is told when its API key is over its request limit. */
+export const RATE_LIMIT_MESSAGE =
+  'Request limit reached. Wait a minute before retrying; for large loads use the batch tools if the entity exposes them.'
+
 export function translateApiError(result: EntityApiResult, context: ErrorContext): string {
   const { status, body } = result
   const code = body.code ?? `HTTP_${status}`
@@ -33,7 +37,7 @@ export function translateApiError(result: EntityApiResult, context: ErrorContext
     case 'UNIQUE_CONSTRAINT_VIOLATION':
       return `A record for ${context.slug} already exists with that unique value${detail}. Look it up with the list tool and update it instead of creating it.`
     case 'RATE_LIMIT_EXCEEDED':
-      return 'Request limit reached. Wait a minute before retrying; for large loads use the batch tools if the entity exposes them.'
+      return RATE_LIMIT_MESSAGE
     default:
       break
   }

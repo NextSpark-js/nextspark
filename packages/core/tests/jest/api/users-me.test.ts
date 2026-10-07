@@ -24,6 +24,7 @@ jest.mock('@/core/lib/db', () => ({
 }))
 jest.mock('@/core/lib/api/rate-limit', () => ({
   withRateLimitTier: (handler: unknown) => handler,
+  apiKeyRateLimitResponse: () => null,
 }))
 // The next/server mock's Headers is a Map: skip the CORS header writes, keep everything else real
 jest.mock('@/core/lib/api/helpers', () => ({
