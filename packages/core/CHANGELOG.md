@@ -19,9 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The admin and developer areas' CORS rule (`isAppOnlyCorsPath`) decodes each path segment on its own, and `corsGrant` and the write-origin check treat a
   request whose path cannot be determined like those areas. Calling `corsGrant` (`lib/api/cors-response`) without its `pathname` argument now gets the
   admin and developer areas' answer (only the app's own origins are granted): pass `requestPathname(request)`.
+- **A production upload without storage no longer saves a file that is never served, and now fails.** `POST /api/v1/media/upload` with no `BLOB_READ_WRITE_TOKEN`
+  wrote to `process.cwd()/public/uploads/temp` and returned a `/uploads/temp/...` URL that answered 404 until the server restarted (Next indexes
+  `public/` at startup, and a container's disk is gone on redeploy). With `NODE_ENV=production` it now answers `503`, code `STORAGE_NOT_CONFIGURED`
+  (`API_ERROR_CODES.STORAGE_NOT_CONFIGURED`), naming `BLOB_READ_WRITE_TOKEN`, and writes nothing; a failed Blob upload in production is a 500 instead of a
+  local fallback. Development keeps the local fallback. The media library shows the message. The media docs and the self-hosting guide say that a
+  self-hosted deployment needs a storage provider. No other runtime code writes under `public/`. There is no opt-out that keeps local storage in production (see Upgrading from 0.1.0-beta.195).
 
 ### Fixed
 
+- **A new project no longer ships dotfiles in `public/`.** `public/brand/.gitkeep` and `public/uploads/.gitignore` + `public/uploads/temp/.gitkeep` were
+  copied into every scaffold and answered 500 (`GET /brand/.gitkeep`, `GET /uploads/.gitignore`). The templates no longer carry them; the generated
+  `.gitignore` ignores `public/uploads/temp/` instead, and the upload route creates that directory when it needs it. Projects created earlier keep their
+  files (see Upgrading from 0.1.0-beta.195).
 - **A public entity page is no longer served after it is deleted, unpublished or edited.** The cached read of the public item page
   (`entity:<entity>` / `public-item:<entity>:<slug>` tags, and the ISR route) was never expired by a write, so a deleted page kept answering with its old
   content (for up to an hour), and a slug visited before it was created kept answering "not found". Every write of an entity with `access.basePath` now
@@ -64,6 +74,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   they export has no effect without `generateStaticParams`, which NextSpark does not emit (Next would cache not-found pages for the whole window and every
   unknown URL would add a cache file). Cache Components, the default, caches the item pages and expires them on every write. The ISR section of
   `18-page-builder/07-public-rendering.md` says so and what a project can do to cache them itself.
+
+### Upgrading from 0.1.0-beta.195
+
+- **Self-hosted production that stores uploads locally:** set `BLOB_READ_WRITE_TOKEN` (a Vercel Blob token, starts with `vercel_blob_`) *before*
+  upgrading. From this release `POST /api/v1/media/upload` answers `503` `STORAGE_NOT_CONFIGURED` when `NODE_ENV=production` and the token is missing.
+  There is no setting that keeps local storage in production. Files already under `public/uploads/temp/` keep being served and their media records
+  keep pointing there; nothing migrates them.
+- **Dotfiles in `public/` that answer 500** (`/brand/.gitkeep`, `/uploads/.gitignore`, `/uploads/temp/.gitkeep`), in this order: add
+  `public/uploads/temp/` to your `.gitignore` (in a monorepo, `web/public/uploads/temp/`), then
+  `rm -f public/brand/.gitkeep public/uploads/.gitignore public/uploads/temp/.gitkeep`. Deleting `uploads/.gitignore` first leaves development
+  uploads committable.
 
 ## [0.1.0-beta.195] - 2026-10-07
 

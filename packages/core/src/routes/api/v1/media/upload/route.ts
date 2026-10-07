@@ -22,7 +22,19 @@ const isVercelBlobConfigured = () => {
   return !!token && token.startsWith('vercel_blob_')
 }
 
-// Local storage fallback - accepts buffer directly
+// Next serves public/ from what it indexed at startup, so a file written there while a production server
+// runs answers 404 until a restart (and a container's disk is gone on redeploy anyway): production without
+// Blob is a setup error, not a place to write. Development keeps the local fallback.
+const localFallbackAllowed = () => process.env.NODE_ENV !== 'production'
+
+const storageNotConfigured = () => createApiError(
+  'Media storage is not configured: set BLOB_READ_WRITE_TOKEN (a Vercel Blob read/write token, starts with "vercel_blob_") to upload files in production.',
+  503,
+  { missing: 'BLOB_READ_WRITE_TOKEN' },
+  API_ERROR_CODES.STORAGE_NOT_CONFIGURED
+)
+
+// Local storage fallback (development only) - accepts buffer directly
 // Used when Vercel Blob is not configured or fails
 async function uploadToLocalStorageBuffer(buffer: Buffer, fileName: string): Promise<string> {
   const uploadDir = join(process.cwd(), 'public', 'uploads', 'temp')
@@ -46,7 +58,8 @@ async function uploadToLocalStorageBuffer(buffer: Buffer, fileName: string): Pro
  * Enhanced version that creates database records for uploaded files.
  *
  * Features:
- * - Uploads files to Vercel Blob (production) or local storage (development)
+ * - Uploads files to Vercel Blob; development without a token falls back to local storage,
+ *   production without one answers 503 STORAGE_NOT_CONFIGURED
  * - Creates media records in database for tracking
  * - Extracts image dimensions automatically
  * - Returns both legacy URLs array and new media records array
@@ -73,6 +86,8 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     if (!await checkPermission(authResult.user!.id, teamId, 'media.upload')) {
       return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
+
+    if (!isVercelBlobConfigured() && !localFallbackAllowed()) return storageNotConfigured()
 
     const formData = await request.formData()
     const files = Array.from(formData.getAll('files') as unknown[])
@@ -148,6 +163,8 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
             uploadedUrl = blob.url
             console.log(`✅ [Media Upload] Uploaded to Vercel Blob: ${uploadedUrl}`)
           } catch (blobError) {
+            // A failed put in production is an error, not a file that is never served
+            if (!localFallbackAllowed()) throw blobError
             // Fallback to local storage if Vercel Blob fails
             console.warn(`⚠️ [Media Upload] Vercel Blob failed, falling back to local storage:`, blobError)
             uploadedUrl = await uploadToLocalStorageBuffer(fileBuffer, fileName)
@@ -256,7 +273,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const maxSizeMB = MEDIA_CONFIG?.maxSizeMB ?? 10
     return createApiResponse({
       message: 'Media upload endpoint is active',
-      storage: useVercelBlob ? 'Vercel Blob' : 'Local Storage',
+      storage: useVercelBlob ? 'Vercel Blob' : localFallbackAllowed() ? 'Local Storage' : 'Not configured (set BLOB_READ_WRITE_TOKEN)',
       uploadPath: 'uploads/temp/',
       supportedTypes: MEDIA_CONFIG?.allowedMimeTypes ?? ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
       maxFileSize: `${maxSizeMB}MB`,

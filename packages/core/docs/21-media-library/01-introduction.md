@@ -47,7 +47,7 @@ Full create, read, update, and delete operations for media records. Media record
 
 ### File Upload
 
-Upload files via drag-and-drop or file browser. Supports multiple simultaneous uploads with progress indicators. Files are stored in Vercel Blob (production) or local `/public/uploads/temp/` directory (development). Image dimensions are extracted automatically using `sharp`.
+Upload files via drag-and-drop or file browser. Supports multiple simultaneous uploads with progress indicators. Files are stored in Vercel Blob (production) or local `/public/uploads/temp/` directory (development only; production needs `BLOB_READ_WRITE_TOKEN`). Image dimensions are extracted automatically using `sharp`.
 
 ### Tagging System
 

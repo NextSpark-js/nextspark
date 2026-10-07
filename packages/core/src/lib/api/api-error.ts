@@ -11,6 +11,8 @@ export const API_ERROR_CODES = {
   INSUFFICIENT_SCOPE: 'INSUFFICIENT_SCOPE',
   /** Route declared no required API key scope, so API keys are rejected (fail closed, #93) */
   SCOPE_NOT_DECLARED: 'SCOPE_NOT_DECLARED',
+  /** Production upload with no media storage provider configured (BLOB_READ_WRITE_TOKEN) */
+  STORAGE_NOT_CONFIGURED: 'STORAGE_NOT_CONFIGURED',
 } as const
 
 export type ApiErrorCode = typeof API_ERROR_CODES[keyof typeof API_ERROR_CODES]

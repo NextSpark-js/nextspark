@@ -330,7 +330,7 @@ shamefully-hoist=true
 /**
  * Create the root .gitignore file
  */
-async function createGitignore(targetDir: string): Promise<void> {
+export async function createGitignore(targetDir: string): Promise<void> {
   const gitignoreContent = `# Dependencies
 node_modules/
 
@@ -377,6 +377,9 @@ ${DIRS.WEB}/tests/cypress/allure-report
 
 # Jest (web project)
 ${DIRS.WEB}/tests/jest/coverage
+
+# Files uploaded in development (no storage provider configured)
+${DIRS.WEB}/public/uploads/temp/
 
 # Mobile specific
 ${DIRS.MOBILE}/.expo/

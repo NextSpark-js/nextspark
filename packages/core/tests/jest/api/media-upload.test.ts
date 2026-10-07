@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals'
 
 const mockAuthenticateRequest = jest.fn()
 const mockResolveTeamContext = jest.fn()
@@ -15,7 +15,7 @@ jest.mock('@nextsparkjs/core/lib/api/auth/dual-auth', () => ({
 
 jest.mock('@nextsparkjs/core/lib/api/helpers', () => ({
   createApiResponse: (data: unknown) => Response.json(data),
-  createApiError: (message: string, status: number) => Response.json({ message }, { status }),
+  createApiError: (message: string, status: number, details?: unknown, code?: string) => Response.json({ message, details, code }, { status }),
 }))
 
 jest.mock('@nextsparkjs/core/lib/api/rate-limit', () => ({
@@ -40,9 +40,16 @@ jest.mock('@nextsparkjs/core/lib/media/utils', () => ({
 
 jest.mock('@vercel/blob', () => ({ put: mockPut }))
 
+const mockWriteFile = jest.fn()
+jest.mock('fs/promises', () => ({ writeFile: mockWriteFile, mkdir: jest.fn() }))
+
 import { POST } from '@/app/api/v1/media/upload/route'
 
 describe('POST /api/v1/media/upload', () => {
+  const env = process.env as Record<string, string | undefined>
+  const savedNodeEnv = env.NODE_ENV
+  afterEach(() => { env.NODE_ENV = savedNodeEnv })
+
   beforeEach(() => {
     jest.clearAllMocks()
     process.env.BLOB_READ_WRITE_TOKEN = 'vercel_blob_test'
@@ -86,5 +93,51 @@ describe('POST /api/v1/media/upload', () => {
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toMatchObject({ message: 'No files uploaded' })
     expect(mockPut).not.toHaveBeenCalled()
+  })
+
+  describe('without a storage provider', () => {
+    beforeEach(() => { delete process.env.BLOB_READ_WRITE_TOKEN })
+
+    it('answers 503 STORAGE_NOT_CONFIGURED in production and writes nothing', async () => {
+      env.NODE_ENV = 'production'
+      const response = await upload([imageFile()])
+
+      expect(response.status).toBe(503)
+      const body = await response.json()
+      expect(body.code).toBe('STORAGE_NOT_CONFIGURED')
+      expect(body.message).toContain('BLOB_READ_WRITE_TOKEN')
+      expect(body.details).toEqual({ missing: 'BLOB_READ_WRITE_TOKEN' })
+      expect(mockWriteFile).not.toHaveBeenCalled()
+      expect(mockPut).not.toHaveBeenCalled()
+      expect(mockCreateMedia).not.toHaveBeenCalled()
+    })
+
+    it('treats a malformed token like a missing one in production', async () => {
+      env.NODE_ENV = 'production'
+      process.env.BLOB_READ_WRITE_TOKEN = 'not-a-blob-token'
+
+      expect((await upload([imageFile()])).status).toBe(503)
+    })
+
+    it('keeps the local fallback in development', async () => {
+      env.NODE_ENV = 'development'
+      const response = await upload([imageFile()])
+
+      expect(response.status).toBe(200)
+      await expect(response.json()).resolves.toMatchObject({ count: 1, storage: 'local' })
+      expect(mockWriteFile).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('does not fall back to a local file when Blob fails in production', async () => {
+    env.NODE_ENV = 'production'
+    mockPut.mockRejectedValue(new Error('blob down'))
+    jest.spyOn(console, 'error').mockImplementation(() => {})
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const response = await upload([imageFile()])
+
+    expect(response.status).toBe(500)
+    expect(mockWriteFile).not.toHaveBeenCalled()
   })
 })

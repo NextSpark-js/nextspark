@@ -275,6 +275,7 @@ With the project directory moved out of the way, `/`, `/login`, `/api/health` an
 - `DATABASE_URL`, `BETTER_AUTH_SECRET` and the rest of the project's variables are read when the server starts; export them where `node server.js` runs (the check above ran with the project's `.env` values exported in the shell and the copied `.env` removed).
 - A production server connects to PostgreSQL over SSL. Against a database without SSL (a local container, for one) `/api/health` answers 503 with `The server does not support SSL connections` until you add `sslmode=disable` to the connection string.
 - Run `pnpm db:migrate` from the project (or any checkout with the same `migrations/`) before starting a new database; the standalone directory does not migrate.
+- **Media uploads need a storage provider.** A production server does not write uploads to `public/` (Next serves `public/` from what it indexed at startup, so the file would answer 404 until a restart, and a container's disk is lost on redeploy). Set `BLOB_READ_WRITE_TOKEN` (a Vercel Blob token); without it `POST /api/v1/media/upload` answers `503` with code `STORAGE_NOT_CONFIGURED` and the media library shows that message. See `21-media-library/05-configuration.md`.
 
 ---
 

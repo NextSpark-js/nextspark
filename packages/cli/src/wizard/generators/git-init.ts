@@ -67,6 +67,9 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 
+# Files uploaded in development (no storage provider configured)
+public/uploads/temp/
+
 # Logs
 *.log
 npm-debug.log*
@@ -111,7 +114,7 @@ function initGitRepository(projectPath: string): void {
 }
 
 /** What an existing .gitignore gains: what a NextSpark project builds and generates, and its secrets. Never editor or tool folders. */
-const APPENDED_PATTERNS = ['node_modules/', '.next/', '*.tsbuildinfo', 'next-env.d.ts', '.nextspark/', 'src/app/', '.env', '.env.local', '.env*.local']
+const APPENDED_PATTERNS = ['node_modules/', '.next/', '*.tsbuildinfo', 'next-env.d.ts', '.nextspark/', 'src/app/', 'public/uploads/temp/', '.env', '.env.local', '.env*.local']
 
 /**
  * The .gitignore a project ends up with: the whole of GITIGNORE_CONTENT when there is none, otherwise

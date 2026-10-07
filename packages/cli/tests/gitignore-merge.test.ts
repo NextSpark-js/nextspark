@@ -48,3 +48,8 @@ test('an existing CRLF .gitignore stays CRLF', () => {
   assert.equal(merged.replace(/\r\n/g, '').includes('\n'), false, 'no bare LF was added')
   assert.ok(merged.includes('next-env.d.ts\r\n'))
 })
+
+test('an existing .gitignore gains the development uploads rule', () => {
+  const lines = mergeGitignore('dist\n').split('\n')
+  assert.ok(lines.includes('public/uploads/temp/'))
+})

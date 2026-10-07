@@ -220,7 +220,7 @@ curl -X POST "https://yourdomain.com/api/v1/media" \
 POST /api/v1/media/upload
 ```
 
-Upload one or more files via multipart form data. Files are stored in Vercel Blob (when `BLOB_READ_WRITE_TOKEN` is configured) or local filesystem as fallback. Image dimensions are automatically extracted. A media record is created in the database for each uploaded file.
+Upload one or more files via multipart form data. Files are stored in Vercel Blob (when `BLOB_READ_WRITE_TOKEN` is configured) or, in development only, the local filesystem as fallback. In production without a token the endpoint answers `503` with code `STORAGE_NOT_CONFIGURED`. Image dimensions are automatically extracted. A media record is created in the database for each uploaded file.
 
 ### Request
 
@@ -280,7 +280,8 @@ curl -X POST "https://yourdomain.com/api/v1/media/upload" \
 | Mode | Condition | URL Pattern |
 |------|-----------|-------------|
 | **Vercel Blob** | `BLOB_READ_WRITE_TOKEN` starts with `vercel_blob_` | `https://blob.vercel-storage.com/uploads/temp/...` |
-| **Local Storage** | No blob token or blob upload fails | `/uploads/temp/...` |
+| **Local Storage** | Development only: no blob token or blob upload fails | `/uploads/temp/...` |
+| **Not configured** | Production with no blob token | `503`, code `STORAGE_NOT_CONFIGURED`, `details.missing: "BLOB_READ_WRITE_TOKEN"` |
 
 ### Validation
 

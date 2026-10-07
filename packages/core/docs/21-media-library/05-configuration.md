@@ -475,7 +475,7 @@ cy.get('[data-cy="media-detail-save"]').click()
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `BLOB_READ_WRITE_TOKEN` | No | Vercel Blob token (must start with `vercel_blob_`). When set, uploads go to Vercel Blob. When absent, uploads go to local filesystem. |
+| `BLOB_READ_WRITE_TOKEN` | No | Vercel Blob token (must start with `vercel_blob_`). When set, uploads go to Vercel Blob. When absent, development uploads go to the local filesystem and **production uploads fail with `503 STORAGE_NOT_CONFIGURED`**. |
 
 ### Storage Behavior
 
@@ -483,12 +483,18 @@ cy.get('[data-cy="media-detail-save"]').click()
 BLOB_READ_WRITE_TOKEN set?
   |
   YES --> Use Vercel Blob (publicly accessible URLs)
-  |         On failure --> Fallback to local storage
+  |         On failure --> development: fallback to local storage
+  |                        production: 500, nothing is written
   |
-  NO  --> Use local storage (public/uploads/temp/)
+  NO  --> NODE_ENV=production? --> 503 STORAGE_NOT_CONFIGURED (no file is written)
+          otherwise            --> Use local storage (public/uploads/temp/)
 ```
 
-Local storage writes files to `{cwd}/public/uploads/temp/{timestamp}_{random}.{ext}` and serves them via the Next.js public directory at `/uploads/temp/...`.
+In development, local storage writes files to `{cwd}/public/uploads/temp/{timestamp}_{random}.{ext}` and serves them via the Next.js public directory at `/uploads/temp/...` (Next indexes `public/` at startup: restart the dev server if a new file answers 404).
+
+### Self-hosting needs a storage provider
+
+A production server never writes uploads to `public/`: Next serves `public/` from what it indexed at startup, so a file written while the server runs answers 404 until a restart, and a container's disk does not survive a redeploy. Without `BLOB_READ_WRITE_TOKEN`, `POST /api/v1/media/upload` answers `503` with code `STORAGE_NOT_CONFIGURED` and the media library shows that message. Self-hosted deployments (standalone, `next start`, Docker) must set a Vercel Blob token; the app can run anywhere, only the file storage is Vercel Blob.
 
 ---
 
