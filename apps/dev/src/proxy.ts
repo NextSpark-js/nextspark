@@ -5,8 +5,7 @@
  * come only from the verified session, and a docs page the registry lacks is a
  * 404.
  *
- * The template's own imports resolve from packages/core, which declares
- * @better-fetch/fetch as a dev dependency for it. Next.js reads `config` from
+ * The template's own imports resolve from packages/core. Next.js reads `config` from
  * this file's source rather than from its imports, so the matcher is written
  * here; tests/node/apps-dev-proxy.test.ts keeps it equal to the template's.
  */

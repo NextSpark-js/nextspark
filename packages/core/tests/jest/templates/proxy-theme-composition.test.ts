@@ -11,8 +11,8 @@ const mockHasThemeMiddleware = jest.fn()
 const mockExecuteThemeMiddleware = jest.fn()
 const mockGetThemeAppConfig = jest.fn()
 
-jest.mock('@better-fetch/fetch', () => ({
-  betterFetch: jest.fn(),
+jest.mock('@nextsparkjs/core/lib/auth', () => ({
+  auth: { api: { getSession: jest.fn() } },
 }))
 
 jest.mock('@nextsparkjs/core/lib/middleware', () => ({
@@ -39,7 +39,7 @@ jest.mock('next/server', () => {
   }
 })
 
-import { betterFetch } from '@better-fetch/fetch'
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { proxy } from '../../../templates/proxy'
 
@@ -50,7 +50,7 @@ const FORGED_IDENTITY = {
   'x-active-team-id': 'forged-team',
 }
 
-const mockedFetch = betterFetch as unknown as jest.Mock
+const mockedGetSession = auth.api.getSession as unknown as jest.Mock
 
 function request(path: string, headers: Record<string, string> = {}, nextConfig?: object): NextRequest {
   return new NextRequest(`http://localhost:3000${path}`, {
@@ -79,10 +79,8 @@ function responseCookies(response: NextResponse): string[] {
 }
 
 const memberSession = {
-  data: {
-    user: { id: 'real-user', email: 'real@example.com', role: 'member' },
-    session: { id: 'session-1' },
-  },
+  user: { id: 'real-user', email: 'real@example.com', role: 'member' },
+  session: { id: 'session-1' },
 }
 
 describe('project-hook proxy composition (#204)', () => {
@@ -90,7 +88,7 @@ describe('project-hook proxy composition (#204)', () => {
     mockHasThemeMiddleware.mockReset().mockReturnValue(true)
     mockExecuteThemeMiddleware.mockReset()
     mockGetThemeAppConfig.mockReset().mockReturnValue(undefined)
-    mockedFetch.mockReset()
+    mockedGetSession.mockReset()
   })
 
   test('passes a sanitized request to the theme hook', async () => {
@@ -112,7 +110,7 @@ describe('project-hook proxy composition (#204)', () => {
 
   test('denies an anonymous theme continuation on a protected route', async () => {
     mockExecuteThemeMiddleware.mockResolvedValue(NextResponse.next())
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = await proxy(request('/dashboard?tab=tasks'))
 
@@ -122,7 +120,7 @@ describe('project-hook proxy composition (#204)', () => {
 
   test('denies a theme continuation when the verified user has the wrong role', async () => {
     mockExecuteThemeMiddleware.mockResolvedValue(NextResponse.next())
-    mockedFetch.mockResolvedValue(memberSession)
+    mockedGetSession.mockResolvedValue(memberSession)
 
     const response = await proxy(request('/devtools/config'))
 
@@ -142,7 +140,7 @@ describe('project-hook proxy composition (#204)', () => {
       },
       headers: { 'x-theme-response': 'kept', 'x-user-id': 'theme-response-user' },
     }))
-    mockedFetch.mockResolvedValue(memberSession)
+    mockedGetSession.mockResolvedValue(memberSession)
 
     const response = await proxy(request('/dashboard', { cookie: 'activeTeamId=session-1%3Ateam-real' }))
     const forwarded = forwardedHeaders(response)
@@ -179,7 +177,7 @@ describe('project-hook proxy composition (#204)', () => {
     expect(forwarded?.get('x-pathname')).toBe('/login')
     expect(forwarded?.get('x-theme-request')).toBe('kept')
     expect(response.headers.get('x-user-id')).toBeNull()
-    expect(mockedFetch).not.toHaveBeenCalled()
+    expect(mockedGetSession).not.toHaveBeenCalled()
   })
 
   test('preserves a legitimate theme redirect without forwarding request identity metadata', async () => {
@@ -196,7 +194,7 @@ describe('project-hook proxy composition (#204)', () => {
     expect(response.headers.get('x-theme-response')).toBe('kept')
     expect(response.headers.get('x-middleware-override-headers')).toBeNull()
     expect(response.headers.get('x-middleware-request-x-user-id')).toBeNull()
-    expect(mockedFetch).not.toHaveBeenCalled()
+    expect(mockedGetSession).not.toHaveBeenCalled()
   })
 
   test('gates a terminal theme response before it can replace protected content', async () => {
@@ -204,7 +202,7 @@ describe('project-hook proxy composition (#204)', () => {
       status: 201,
       headers: { 'x-theme-response': 'kept', 'x-user-id': 'theme-response-user' },
     }))
-    mockedFetch.mockResolvedValueOnce({ data: null }).mockResolvedValueOnce(memberSession)
+    mockedGetSession.mockResolvedValueOnce(null).mockResolvedValueOnce(memberSession)
 
     const anonymous = await proxy(request('/dashboard'))
     const authenticated = await proxy(request('/dashboard'))
@@ -239,7 +237,7 @@ describe('project-hook proxy composition (#204)', () => {
   test('a public route rewritten to a protected destination cannot bypass authentication', async () => {
     mockExecuteThemeMiddleware.mockImplementation(async (_theme, themeRequest: NextRequest) =>
       NextResponse.rewrite(new URL('/dashboard?tab=team', themeRequest.url)))
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = await proxy(request('/login'))
 
@@ -251,7 +249,7 @@ describe('project-hook proxy composition (#204)', () => {
     mockExecuteThemeMiddleware.mockResolvedValue(
       NextResponse.rewrite(new URL('http://localhost:3000//dashboard?tab=team'))
     )
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = await proxy(request('/x'))
 
@@ -264,7 +262,7 @@ describe('project-hook proxy composition (#204)', () => {
     mockExecuteThemeMiddleware.mockResolvedValue(
       NextResponse.rewrite(new URL('http://localhost:3000///admin/users'))
     )
-    mockedFetch.mockResolvedValue(memberSession)
+    mockedGetSession.mockResolvedValue(memberSession)
 
     const response = await proxy(request('/x'))
 
@@ -277,7 +275,7 @@ describe('project-hook proxy composition (#204)', () => {
     mockExecuteThemeMiddleware.mockResolvedValue(
       NextResponse.rewrite(new URL('http://localhost:3000/%64ashboard?tab=team'))
     )
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = await proxy(request('/x'))
 
@@ -300,7 +298,7 @@ describe('project-hook proxy composition (#204)', () => {
 
     expect(response.status).toBe(502)
     expect(response.headers.get('x-middleware-rewrite')).toBeNull()
-    expect(mockedFetch).not.toHaveBeenCalled()
+    expect(mockedGetSession).not.toHaveBeenCalled()
   })
 
   test.each(['', 'http://[::1'])(
@@ -314,7 +312,7 @@ describe('project-hook proxy composition (#204)', () => {
 
       expect(response.status).toBe(502)
       expect(response.headers.get('x-middleware-rewrite')).toBeNull()
-      expect(mockedFetch).not.toHaveBeenCalled()
+      expect(mockedGetSession).not.toHaveBeenCalled()
     }
   )
 
@@ -329,7 +327,7 @@ describe('project-hook proxy composition (#204)', () => {
     expect(response.status).toBe(200)
     expect(response.headers.get('x-middleware-rewrite')).toBe('http://localhost:3000/caf%C3%A9?view=full')
     expect(forwarded?.get('x-pathname')).toBe('/café')
-    expect(mockedFetch).not.toHaveBeenCalled()
+    expect(mockedGetSession).not.toHaveBeenCalled()
   })
 
   test('an authenticated same-origin rewrite reaches a protected destination with core identity', async () => {
@@ -337,7 +335,7 @@ describe('project-hook proxy composition (#204)', () => {
       NextResponse.rewrite(new URL('/dashboard?tab=team', themeRequest.url), {
         request: { headers: new Headers({ 'x-user-id': 'theme-user', 'x-theme-request': 'kept' }) },
       }))
-    mockedFetch.mockResolvedValue(memberSession)
+    mockedGetSession.mockResolvedValue(memberSession)
 
     const response = await proxy(request('/login'))
     const forwarded = forwardedHeaders(response)
@@ -351,7 +349,7 @@ describe('project-hook proxy composition (#204)', () => {
   test('a rewrite to a role-gated destination enforces the destination role', async () => {
     mockExecuteThemeMiddleware.mockImplementation(async (_theme, themeRequest: NextRequest) =>
       NextResponse.rewrite(new URL('/devtools/config', themeRequest.url)))
-    mockedFetch.mockResolvedValue(memberSession)
+    mockedGetSession.mockResolvedValue(memberSession)
 
     const response = await proxy(request('/login'))
 
@@ -362,7 +360,7 @@ describe('project-hook proxy composition (#204)', () => {
   test('a protected original route remains protected when rewritten to a public destination', async () => {
     mockExecuteThemeMiddleware.mockImplementation(async (_theme, themeRequest: NextRequest) =>
       NextResponse.rewrite(new URL('/pricing', themeRequest.url)))
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = await proxy(request('/dashboard'))
 
@@ -374,7 +372,7 @@ describe('project-hook proxy composition (#204)', () => {
     mockGetThemeAppConfig.mockReturnValue({ docs: { publicAccess: false } })
     mockExecuteThemeMiddleware.mockImplementation(async (_theme, themeRequest: NextRequest) =>
       NextResponse.rewrite(new URL('/docs/getting-started/introduction', themeRequest.url)))
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = await proxy(request('/login'))
 
@@ -383,7 +381,7 @@ describe('project-hook proxy composition (#204)', () => {
   })
 
   test('a null or throwing theme hook safely falls back to core protection', async () => {
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
 
     try {
@@ -407,7 +405,7 @@ describe('project-hook proxy composition (#204)', () => {
   test('keeps basePath and query when a theme rewrite is denied', async () => {
     mockExecuteThemeMiddleware.mockImplementation(async (_theme, themeRequest: NextRequest) =>
       NextResponse.rewrite(new URL('/base/es/dashboard?tab=team', themeRequest.url)))
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = await proxy(request(
       '/base/es/login',
@@ -440,6 +438,6 @@ describe('project-hook proxy composition (#204)', () => {
     expect(response.status).toBe(502)
     expect(response.headers.get('x-middleware-rewrite')).toBeNull()
     expect(response.headers.get('x-middleware-override-headers')).toBeNull()
-    expect(mockedFetch).not.toHaveBeenCalled()
+    expect(mockedGetSession).not.toHaveBeenCalled()
   })
 })

@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading from 0.1.0-beta.195
+
+- **`src/proxy.ts`: read the session in process (behind an HTTPS proxy every signed-in user was sent to `/login`). From 0.1.0-beta.195, or
+  any earlier beta that copied the template proxy (the session check is the same since beta.190).** Your project owns
+  `src/proxy.ts` and an upgrade never rewrites it, so apply the template's change by hand (`nextspark prepare`, `build` and `migrate` warn
+  `NS_PROXY_SESSION_OVER_HTTP` until you do). In `src/proxy.ts`:
+  1. Replace `import { betterFetch } from '@better-fetch/fetch'` with `import { auth } from '@nextsparkjs/core/lib/auth'`.
+  2. Replace the `getSession` function:
+     ```ts
+     function getSession(request: NextRequest) {
+       return betterFetch<Session>('/api/auth/get-session', {
+         baseURL: `${request.nextUrl.origin}${request.nextUrl.basePath}`,
+         headers: { cookie: request.headers.get('cookie') || '' },
+       })
+     }
+     ```
+     with
+     ```ts
+     async function getSession(request: NextRequest): Promise<Session | null> {
+       const session = await auth.api.getSession({
+         headers: new Headers({ cookie: request.headers.get('cookie') || '' }),
+         query: { disableRefresh: true },
+       })
+       return session as Session | null
+     }
+     ```
+  3. In `verifiedSession`, delete the line `.then(({ data }) => data)` after `getSession(request)` (the session comes back as is, not as `{ data }`).
+
+  A proxy you changed elsewhere that fetches `/api/auth/get-session` needs the same change. Until you apply it, a TLS-terminating proxy
+  can send `X-Forwarded-Proto: http` to the app as a workaround (the `nextspark.signed_in` hint cookie then loses `Secure`; redirects and the
+  write-origin check keep using `NEXT_PUBLIC_APP_URL`). Keep `@better-fetch/fetch` in `package.json`: `@better-auth/core` requires it as a peer.
+
+  The proxy must run on Node: Next 16's `src/proxy.ts` always does. A `middleware.ts` on the edge runtime (Next 15) cannot import
+  `@nextsparkjs/core/lib/auth`, which opens database connections.
+
+  Database connections: the proxy's copy of `lib/auth` shares the app's Better Auth pool (one per process and database URL, at most 20
+  connections), so the change adds none. Measured with `next start` behind a TLS proxy, 50 concurrent `/dashboard` requests with the cookie
+  cache missed: at most 41 connections to the database with this release, 40 with the old proxy (both: Better Auth's pool plus core's
+  query pool, 20 each, one database URL), 62 when the proxy had a pool of its own. A pooler in front of Postgres (PgBouncer, Supavisor) needs
+  no new budget for this release: keep the one each instance already had (more when `DATABASE_SERVICE_URL` differs from `DATABASE_URL`,
+  which adds core's service pool).
+- **Self-hosted production that stores uploads locally:** set `BLOB_READ_WRITE_TOKEN` (a Vercel Blob token, starts with `vercel_blob_`) *before*
+  upgrading. From this release `POST /api/v1/media/upload` answers `503` `STORAGE_NOT_CONFIGURED` when `NODE_ENV=production` and the token is missing.
+  There is no setting that keeps local storage in production. Files already under `public/uploads/temp/` keep being served and their media records
+  keep pointing there; nothing migrates them.
+- **Dotfiles in `public/` that answer 500** (`/brand/.gitkeep`, `/uploads/.gitignore`, `/uploads/temp/.gitkeep`), in this order: add
+  `public/uploads/temp/` to your `.gitignore` (in a monorepo, `web/public/uploads/temp/`), then
+  `rm -f public/brand/.gitkeep public/uploads/.gitignore public/uploads/temp/.gitkeep`. Deleting `uploads/.gitignore` first leaves development
+  uploads committable.
+
 ### Changed
 
 - Routes that authenticate with `authenticateRequest` (`lib/api/auth/dual-auth`) now also limit each validated API key on its own, as
@@ -32,6 +82,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   copied into every scaffold and answered 500 (`GET /brand/.gitkeep`, `GET /uploads/.gitignore`). The templates no longer carry them; the generated
   `.gitignore` ignores `public/uploads/temp/` instead, and the upload route creates that directory when it needs it. Projects created earlier keep their
   files (see Upgrading from 0.1.0-beta.195).
+- **Behind a proxy that terminates TLS, signed-in users can open protected pages again.** The proxy template (`templates/proxy.ts`, the
+  project's `src/proxy.ts`) checked the session by fetching `/api/auth/get-session` from the request's own origin. With `X-Forwarded-Proto: https`
+  (nginx's usual `proxy_set_header X-Forwarded-Proto $scheme`) that origin is https on the plain-HTTP port `next start` listens on: the fetch failed
+  (`Proxy error: TypeError: fetch failed … ERR_SSL_WRONG_VERSION_NUMBER` on every request) and every page under `/dashboard`, `/settings`,
+  `/superadmin`, `/devtools` and private `/docs` redirected to `/login`. The API was not affected. The template now reads the session in process
+  with `auth.api.getSession` from the cookie alone, so no forwarded scheme or host (`X-Forwarded-Proto`, `X-Forwarded-Host`, `Host`) can make the
+  check fail or call another host, and it no longer spends Better Auth's rolling renewal on a response that cannot carry the renewed cookie
+  (`disableRefresh`, as the other render-time reads do). Redirects, `basePath`, the role checks and the `nextspark.signed_in` hint are unchanged.
+  `lib/auth` keeps one Better Auth pool per process and database URL (`Symbol.for('nextspark.auth.pools')`), so the proxy's copy of the module
+  does not open a second pool. Existing projects: see Upgrading.
 - **A public entity page is no longer served after it is deleted, unpublished or edited.** The cached read of the public item page
   (`entity:<entity>` / `public-item:<entity>:<slug>` tags, and the ISR route) was never expired by a write, so a deleted page kept answering with its old
   content (for up to an hour), and a slug visited before it was created kept answering "not found". Every write of an entity with `access.basePath` now
@@ -74,17 +134,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   they export has no effect without `generateStaticParams`, which NextSpark does not emit (Next would cache not-found pages for the whole window and every
   unknown URL would add a cache file). Cache Components, the default, caches the item pages and expires them on every write. The ISR section of
   `18-page-builder/07-public-rendering.md` says so and what a project can do to cache them itself.
-
-### Upgrading from 0.1.0-beta.195
-
-- **Self-hosted production that stores uploads locally:** set `BLOB_READ_WRITE_TOKEN` (a Vercel Blob token, starts with `vercel_blob_`) *before*
-  upgrading. From this release `POST /api/v1/media/upload` answers `503` `STORAGE_NOT_CONFIGURED` when `NODE_ENV=production` and the token is missing.
-  There is no setting that keeps local storage in production. Files already under `public/uploads/temp/` keep being served and their media records
-  keep pointing there; nothing migrates them.
-- **Dotfiles in `public/` that answer 500** (`/brand/.gitkeep`, `/uploads/.gitignore`, `/uploads/temp/.gitkeep`), in this order: add
-  `public/uploads/temp/` to your `.gitignore` (in a monorepo, `web/public/uploads/temp/`), then
-  `rm -f public/brand/.gitkeep public/uploads/.gitignore public/uploads/temp/.gitkeep`. Deleting `uploads/.gitignore` first leaves development
-  uploads committable.
 
 ## [0.1.0-beta.195] - 2026-10-07
 

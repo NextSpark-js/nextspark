@@ -20,8 +20,8 @@
  * themselves and use only x-pathname from here, as a routing hint; the
  * identity headers are still stripped and re-set for project code.
  */
-import { betterFetch } from '@better-fetch/fetch'
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@nextsparkjs/core/lib/auth'
 import {
   hasProjectMiddleware,
   executeProjectMiddleware,
@@ -181,14 +181,22 @@ function redirectAccessDenied(request: NextRequest): NextResponse {
 }
 
 /**
- * The session the request's cookies carry, asked of this app's own auth route,
- * which is served under the base path like every other route.
+ * The session the request's cookies carry, read in this process the way core's
+ * server code reads it. Asking the app's own /api/auth/get-session over HTTP
+ * built the URL from the request's origin, which behind a proxy that
+ * terminates TLS (X-Forwarded-Proto: https) is https on a port that speaks
+ * plain HTTP: the fetch failed and every signed-in user was sent to /login.
+ * Nothing here leaves the process, so no forwarded scheme or host can point
+ * the check anywhere. `disableRefresh`: this response cannot carry the renewed
+ * session cookie, so the rolling renewal is left to the auth route
+ * (lib/auth/session-refresh).
  */
-function getSession(request: NextRequest) {
-  return betterFetch<Session>('/api/auth/get-session', {
-    baseURL: `${request.nextUrl.origin}${request.nextUrl.basePath}`,
-    headers: { cookie: request.headers.get('cookie') || '' },
+async function getSession(request: NextRequest): Promise<Session | null> {
+  const session = await auth.api.getSession({
+    headers: new Headers({ cookie: request.headers.get('cookie') || '' }),
+    query: { disableRefresh: true },
   })
+  return session as Session | null
 }
 
 /**
@@ -490,7 +498,6 @@ export async function proxy(request: NextRequest) {
   const verifiedSession = async (): Promise<Session | null> => {
     if (!sessionPromise) {
       sessionPromise = getSession(request)
-        .then(({ data }) => data)
         .catch(error => {
           sessionError = error
           return null

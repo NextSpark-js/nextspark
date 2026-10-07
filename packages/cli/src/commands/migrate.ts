@@ -836,6 +836,51 @@ export function proxyProtectedAreaWarning(file: string, source: string): string 
     `${missing.map(area => `${area.path} needs ${area.roles}`).join(', ')}; no session goes to /login?callbackUrl=..., a session without the role to /dashboard?error=access_denied.`;
 }
 
+/**
+ * S80: a kept proxy copied before 0.1.0-beta.196 fetches its own /api/auth/get-session from the request's origin, which
+ * behind a proxy that terminates TLS is https on a plain-HTTP port: every signed-in user is sent to /login. Same rule
+ * and message as core's `prepare` (host/proxy-areas.mjs).
+ */
+export const PROXY_SESSION_WARNING = 'NS_PROXY_SESSION_OVER_HTTP';
+
+/**
+ * The source without its comments, string literals kept whole: the same scanner as core's prepare
+ * (host/proxy-areas.mjs `withoutComments`), with the same limits (regex literals, `${}` nesting).
+ */
+function proxyCodeWithoutComments(source: string): string {
+  let out = '';
+  let quote: string | null = null;
+  for (let i = 0; i < source.length; i++) {
+    const c = source[i];
+    if (quote) {
+      out += c;
+      if (c === '\\') out += source[++i] ?? '';
+      else if (c === quote) quote = null;
+    } else if (c === '/' && source[i + 1] === '/') {
+      while (i + 1 < source.length && source[i + 1] !== '\n') i++;
+    } else if (c === '/' && source[i + 1] === '*') {
+      const end = source.indexOf('*/', i + 2);
+      i = end < 0 ? source.length : end + 1;
+      out += ' ';
+    } else {
+      if (c === "'" || c === '"' || c === '`') quote = c;
+      out += c;
+    }
+  }
+  return out;
+}
+
+/** The warning for a kept proxy whose code (not a comment) asks /api/auth/get-session over HTTP, or null. */
+export function proxySessionWarning(file: string, source: string): string | null {
+  if (!proxyCodeWithoutComments(source).includes('/api/auth/get-session')) return null;
+  return `[${PROXY_SESSION_WARNING}] ${file} checks the session by fetching /api/auth/get-session from the request's own origin. Behind a proxy that ` +
+    `terminates TLS (X-Forwarded-Proto: https) that origin is https on a port that speaks plain HTTP: the fetch fails ` +
+    `and every signed-in user is sent to /login. Read the session in process, as node_modules/@nextsparkjs/core/templates/proxy.ts does: ` +
+    `import { auth } from '@nextsparkjs/core/lib/auth' and replace the betterFetch('/api/auth/get-session', ...) call with ` +
+    `auth.api.getSession({ headers: new Headers({ cookie: request.headers.get('cookie') || '' }), query: { disableRefresh: true } }), ` +
+    'which returns the session itself (or null), not { data }';
+}
+
 /** Whether an old root interception file needs previous-core evidence. */
 function hasUnclassifiedRootProxyFiles(hostRoot: string): boolean {
   const state = readSyncState(hostRoot);
@@ -1507,8 +1552,10 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     ...rootProxyFiles.customizations.map(file => ({ file, label: appPlan ? `${file} (moving to src/${file})` : file })),
   ];
   for (const { file, label } of keptProxies) {
-    const warning = proxyProtectedAreaWarning(label, readFileSync(join(host.root, file), 'utf8'));
-    if (warning) proxyNotices.push(warning);
+    const source = readFileSync(join(host.root, file), 'utf8');
+    for (const warning of [proxyProtectedAreaWarning(label, source), proxySessionWarning(label, source)]) {
+      if (warning) proxyNotices.push(warning);
+    }
   }
   const appConversion: MigrateReport['appConversion'] = {
     root: appRoot,

@@ -106,13 +106,18 @@ const connectionString = isPoolerUrl
   ? (cleanUrl.includes('?') ? `${cleanUrl}&pgbouncer=true` : `${cleanUrl}?pgbouncer=true`)
   : cleanUrl;
 
-const pool = new Pool({
+// One pool per process and database URL. The bundler loads several copies of this module (the project's proxy.ts
+// has its own, since it reads the session in process); a pool per copy would multiply the connections.
+const AUTH_POOLS = Symbol.for('nextspark.auth.pools');
+const authPools = ((globalThis as Record<symbol, unknown>)[AUTH_POOLS] ??= new Map<string, Pool>()) as Map<string, Pool>;
+const pool = authPools.get(databaseUrl) ?? new Pool({
   connectionString,
   ssl: parseSSLConfig(databaseUrl),
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
   max: 20,
 });
+authPools.set(databaseUrl, pool);
 
 // Session duration/renewal comes from the merged app config (core defaults +
 // theme `auth.session` overrides), validated and clamped by resolveSessionConfig.

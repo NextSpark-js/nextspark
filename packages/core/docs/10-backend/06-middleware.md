@@ -213,7 +213,7 @@ if (isPublicPath(pathname)) {
 **2. Handle Errors Gracefully**
 ```typescript
 try {
-  const session = await betterFetch(...);
+  const session = await auth.api.getSession({ headers });
 } catch (error) {
   console.error('Auth error:', error);
   return NextResponse.redirect(loginUrl);
@@ -239,8 +239,10 @@ requestHeaders.set("x-pathname", pathname);
 // ❌ BAD - Slow database query
 const user = await db.query('SELECT * FROM users...');
 
-// ✅ GOOD - Quick session check only
-const session = await betterFetch('/api/auth/get-session');
+// ✅ GOOD - Quick session check only, in process (never fetch your own
+// /api/auth/get-session: behind a TLS-terminating proxy that URL is https
+// on a plain-HTTP port and the check fails)
+const session = await auth.api.getSession({ headers });
 ```
 
 **2. Never Block Static Assets**
@@ -255,11 +257,11 @@ matcher: ["/((?!_next/static|...).*"]
 **3. Never Skip Error Handling**
 ```typescript
 // ❌ BAD - No error handling
-const session = await betterFetch(...);
+const session = await auth.api.getSession({ headers });
 
 // ✅ GOOD - Try/catch
 try {
-  const session = await betterFetch(...);
+  const session = await auth.api.getSession({ headers });
 } catch (error) {
   // Handle error
 }

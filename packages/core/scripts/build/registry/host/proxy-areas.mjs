@@ -7,6 +7,10 @@
  * before the template gained the check, or written by hand, may not have it: `nextspark prepare` (and `migrate`, in
  * the CLI) warn, naming each area the proxy never mentions.
  *
+ * Same for the session check (S80): a proxy copied before 0.1.0-beta.196 fetches its own /api/auth/get-session from
+ * the request's origin, which behind a proxy that terminates TLS is https on a plain-HTTP port, so every signed-in
+ * user is sent to /login. That copy is never updated by an upgrade, so prepare and migrate say what to change.
+ *
  * @module core/scripts/build/registry/host/proxy-areas
  */
 
@@ -31,7 +35,34 @@ export const PROXY_FILES = Object.freeze(['src/proxy.ts', 'src/proxy.js', 'src/m
  */
 const REEXPORTS_CORE_PROXY =
   /^\s*export\s*\{\s*(?:[\w$]+\s*,\s*)*proxy\s*(?:,[^}]*)?\}\s*from\s*['"](?:@nextsparkjs\/core|(?:\.\.\/)+packages\/core)\/templates\/proxy(?:\.ts)?['"]/m
-const withoutComments = source => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+/**
+ * The source without its comments (`//` to the end of the line, wherever it starts, and block comments). String
+ * literals are kept whole, so a `/*` or `//` inside one is text. Not parsed: regular-expression literals (a quote in
+ * one can hide the code after it) and template-literal `${}` nesting; nor does the session detector follow a URL
+ * assembled from parts. No template that copied the HTTP session check needs either.
+ */
+export function withoutComments(source) {
+  let out = ''
+  let quote = null
+  for (let i = 0; i < source.length; i++) {
+    const c = source[i]
+    if (quote) {
+      out += c
+      if (c === '\\') out += source[++i] ?? ''
+      else if (c === quote) quote = null
+    } else if (c === '/' && source[i + 1] === '/') {
+      while (i + 1 < source.length && source[i + 1] !== '\n') i++
+    } else if (c === '/' && source[i + 1] === '*') {
+      const end = source.indexOf('*/', i + 2)
+      i = end < 0 ? source.length : end + 1
+      out += ' '
+    } else {
+      if (c === "'" || c === '"' || c === '`') quote = c
+      out += c
+    }
+  }
+  return out
+}
 
 /** The protected areas a proxy's source never names as a path (`'/superadmin'`, `"/devtools"`, `` `/devtools` ``). */
 export function missingProxyAreas(source) {
@@ -56,11 +87,33 @@ export function proxyAreaNotice(file, source) {
   }
 }
 
+export const PROXY_SESSION_WARNING = 'NS_PROXY_SESSION_OVER_HTTP'
+
+/** What to write instead of the HTTP session check; migrate in the CLI says the same. */
+export const PROXY_SESSION_FIX =
+  "import { auth } from '@nextsparkjs/core/lib/auth' and replace the betterFetch('/api/auth/get-session', ...) call with " +
+  "auth.api.getSession({ headers: new Headers({ cookie: request.headers.get('cookie') || '' }), query: { disableRefresh: true } }), " +
+  'which returns the session itself (or null), not { data }'
+
+/** The warning for a proxy whose code (not a comment) asks /api/auth/get-session over HTTP, or null. */
+export function proxySessionNotice(file, source) {
+  if (!withoutComments(source).includes('/api/auth/get-session')) return null
+  return {
+    code: PROXY_SESSION_WARNING,
+    target: file,
+    message:
+      `${file} checks the session by fetching /api/auth/get-session from the request's own origin. Behind a proxy that ` +
+      `terminates TLS (X-Forwarded-Proto: https) that origin is https on a port that speaks plain HTTP: the fetch fails ` +
+      `and every signed-in user is sent to /login. Read the session in process, as ` +
+      `node_modules/@nextsparkjs/core/templates/proxy.ts does: ${PROXY_SESSION_FIX}`,
+  }
+}
+
 /** The warnings for the proxy Next would load in `projectRoot` (the first of PROXY_FILES that exists). */
 export function proxyAreaNotices(projectRoot) {
   if (!projectRoot) return []
   const file = PROXY_FILES.find(candidate => existsSync(join(projectRoot, candidate)))
   if (!file) return []
-  const notice = proxyAreaNotice(file, readFileSync(join(projectRoot, file), 'utf8'))
-  return notice ? [notice] : []
+  const source = readFileSync(join(projectRoot, file), 'utf8')
+  return [proxyAreaNotice(file, source), proxySessionNotice(file, source)].filter(Boolean)
 }

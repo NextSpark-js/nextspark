@@ -12,7 +12,7 @@ import { mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { PROXY_AREA_WARNING, missingProxyAreas, proxyAreaNotice, proxyAreaNotices } from '../proxy-areas.mjs'
+import { PROXY_AREA_WARNING, PROXY_SESSION_WARNING, missingProxyAreas, withoutComments, proxyAreaNotice, proxyAreaNotices, proxySessionNotice } from '../proxy-areas.mjs'
 import { predictHost } from '../prepare.mjs'
 import { PAGE, tempHost, write } from './host-helpers.mjs'
 
@@ -62,6 +62,63 @@ test('the proxy Next loads is the one checked; a project without one is not warn
     assert.deepEqual(proxyAreaNotices(root).map(notice => [notice.target, notice.areas]), [['src/middleware.ts', ['/superadmin', '/devtools']]])
     write(root, 'src/proxy.ts', readFileSync(join(CORE_ROOT, 'templates/proxy.ts'), 'utf8'))
     assert.deepEqual(proxyAreaNotices(root), [], 'src/proxy.ts wins over src/middleware.ts')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+// S80 (D1): the session check that fetched /api/auth/get-session from the request's origin, as every proxy.ts copied
+// before 0.1.0-beta.196 does. Upgrading core never touches that copy, so prepare says what to change.
+const HTTP_SESSION_CHECK = `function getSession(request: NextRequest) {
+  return betterFetch<Session>('/api/auth/get-session', {
+    baseURL: \`\${request.nextUrl.origin}\${request.nextUrl.basePath}\`,
+    headers: { cookie: request.headers.get('cookie') || '' },
+  })
+}
+const PROTECTED = ['/superadmin', '/devtools']
+`
+
+test('a proxy that asks its own /api/auth/get-session over HTTP is warned about, with the in-process call to use', () => {
+  const notice = proxySessionNotice('src/proxy.ts', HTTP_SESSION_CHECK)
+  assert.equal(notice.code, PROXY_SESSION_WARNING)
+  assert.match(notice.message, /^src\/proxy\.ts checks the session by fetching \/api\/auth\/get-session/)
+  assert.match(notice.message, /X-Forwarded-Proto: https/)
+  assert.match(notice.message, /auth\.api\.getSession\(\{ headers: new Headers\(\{ cookie: request\.headers\.get\('cookie'\) \|\| '' \}\), query: \{ disableRefresh: true \} \}\)/)
+  assert.equal(proxySessionNotice('src/proxy.ts', readFileSync(join(CORE_ROOT, 'templates/proxy.ts'), 'utf8')), null)
+  assert.equal(proxySessionNotice('src/proxy.ts', "// was: betterFetch('/api/auth/get-session')\nexport function proxy() {}"), null)
+  assert.equal(proxySessionNotice('src/proxy.ts', "export { proxy } from '@nextsparkjs/core/templates/proxy'"), null)
+})
+
+// The S80 review's measured edges: an end-of-line comment, and a '/*' / '*/' pair inside two string literals.
+const COMMENT_EDGES = [
+  ['an end-of-line comment after code', "const x = 1 // was '/api/auth/get-session'\nexport function proxy() {}", false],
+  ['an end-of-line comment after code, no space', "const x = 1// was '/api/auth/get-session'", false],
+  ["a '/*' and a '*/' in two strings around the call", "const a = '/api/*'\nbetterFetch('/api/auth/get-session')\nconst b = 'x*/'", true],
+  ["a '//' inside a string before the call", "const u = 'https://example.com'; betterFetch('/api/auth/get-session')", true],
+  ['a block comment', "/* betterFetch('/api/auth/get-session') */ export function proxy() {}", false],
+  ['a quote escaped inside a string', "const q = 'it\\'s'; betterFetch('/api/auth/get-session')", true],
+]
+
+test('comments are stripped wherever they start, and never inside a string literal', () => {
+  for (const [label, source, warns] of COMMENT_EDGES) {
+    assert.equal(proxySessionNotice('src/proxy.ts', source) !== null, warns, label)
+  }
+  assert.equal(withoutComments("a // b\nc"), 'a \nc')
+  assert.equal(withoutComments("'//' /* x */ \"/*\""), "'//'   \"/*\"")
+  // The repository template, old and new, reads the same with comments gone: every regex literal in it survives.
+  const template = readFileSync(join(CORE_ROOT, 'templates/proxy.ts'), 'utf8')
+  assert.match(withoutComments(template), /\.replace\(\/\\\\\/g, '\/'\)\.replace\(\/\\\/\\\/\+\/g, '\/'\)/)
+})
+
+test("the proxy Next loads gets the session warning next to the areas one; core's template gets neither", () => {
+  const root = mkdtempSync(join(tmpdir(), 'nextspark-proxy-session-'))
+  try {
+    write(root, 'src/proxy.ts', HTTP_SESSION_CHECK)
+    assert.deepEqual(proxyAreaNotices(root).map(notice => notice.code), [PROXY_SESSION_WARNING])
+    write(root, 'src/proxy.ts', `${HTTP_SESSION_CHECK.replace("['/superadmin', '/devtools']", '[]')}`)
+    assert.deepEqual(proxyAreaNotices(root).map(notice => notice.code), [PROXY_AREA_WARNING, PROXY_SESSION_WARNING])
+    write(root, 'src/proxy.ts', readFileSync(join(CORE_ROOT, 'templates/proxy.ts'), 'utf8'))
+    assert.deepEqual(proxyAreaNotices(root), [])
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

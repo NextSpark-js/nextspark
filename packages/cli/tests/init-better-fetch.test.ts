@@ -1,7 +1,8 @@
 /**
  * better-auth depends on one exact @better-fetch/fetch and @better-auth/core requires that same
- * version as a peer. A project declares @better-fetch/fetch itself, since the template proxy.ts
- * imports it, and any other version is an unmet peer: pnpm with strict peers aborts the install.
+ * version as a peer. A project declares @better-fetch/fetch itself (a proxy.ts copied before
+ * 0.1.0-beta.196 imports it), and any other version is an unmet peer: pnpm with strict peers
+ * aborts the install.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

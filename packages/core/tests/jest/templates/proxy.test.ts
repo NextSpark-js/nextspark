@@ -7,8 +7,8 @@
  */
 import { describe, test, expect, jest, beforeEach } from '@jest/globals'
 
-jest.mock('@better-fetch/fetch', () => ({
-  betterFetch: jest.fn(),
+jest.mock('@nextsparkjs/core/lib/auth', () => ({
+  auth: { api: { getSession: jest.fn() } },
 }))
 
 const mockGetAppConfig = jest.fn(() => undefined)
@@ -18,7 +18,7 @@ jest.mock('@nextsparkjs/core/lib/middleware', () => ({
   getProjectAppConfig: mockGetAppConfig,
 }))
 
-import { betterFetch } from '@better-fetch/fetch'
+import { auth } from '@nextsparkjs/core/lib/auth'
 import { getProjectAppConfig } from '@nextsparkjs/core/lib/middleware'
 import { NextRequest } from 'next/server'
 import { proxy } from '../../../templates/proxy'
@@ -48,11 +48,11 @@ function makeRequest(path: string, extraHeaders: Record<string, string> = {}) {
   return request
 }
 
-const mockedFetch = betterFetch as unknown as jest.Mock
+const mockedGetSession = auth.api.getSession as unknown as jest.Mock
 
 describe('proxy identity headers (#87)', () => {
   beforeEach(() => {
-    mockedFetch.mockReset()
+    mockedGetSession.mockReset()
   })
 
   test.each([
@@ -76,13 +76,11 @@ describe('proxy identity headers (#87)', () => {
     expect(forwarded.get('x-pathname')).toBe(path)
     // Unrelated headers still pass through
     expect(forwarded.get('next-action')).toBe('abc123')
-    expect(mockedFetch).not.toHaveBeenCalled()
+    expect(mockedGetSession).not.toHaveBeenCalled()
   })
 
   test('re-adds identity headers only from the verified session on protected routes', async () => {
-    mockedFetch.mockResolvedValue({
-      data: { user: { id: 'real-user-id', email: 'real@example.com', role: 'member' } },
-    })
+    mockedGetSession.mockResolvedValue({ user: { id: 'real-user-id', email: 'real@example.com', role: 'member' } })
 
     const response = (await proxy(makeRequest('/dashboard'))) as unknown as PassThrough
 
@@ -94,7 +92,7 @@ describe('proxy identity headers (#87)', () => {
   })
 
   test('redirects to login on protected routes without a session (forged header does not help)', async () => {
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = (await proxy(makeRequest('/dashboard'))) as unknown as PassThrough
 
@@ -105,15 +103,15 @@ describe('proxy identity headers (#87)', () => {
 
 describe('proxy role-gated areas', () => {
   beforeEach(() => {
-    mockedFetch.mockReset()
+    mockedGetSession.mockReset()
   })
 
-  const signedInAs = (role: string) => ({ data: { user: { id: 'user-1', email: 'user-1@example.com', role } } })
+  const signedInAs = (role: string) => ({ user: { id: 'user-1', email: 'user-1@example.com', role } })
 
   test.each(['/superadmin', '/superadmin/users', '/devtools', '/devtools/config'])(
     'sends a visitor without a session on %s to login',
     async path => {
-      mockedFetch.mockResolvedValue({ data: null })
+      mockedGetSession.mockResolvedValue(null)
 
       const response = (await proxy(makeRequest(path))) as unknown as PassThrough
 
@@ -131,7 +129,7 @@ describe('proxy role-gated areas', () => {
     ['/devtools/config', 'superadmin', 'redirect'],
     ['/devtools/config', 'member', 'redirect'],
   ])('%s signed in as %s: %s', async (path, role, outcome) => {
-    mockedFetch.mockResolvedValue(signedInAs(role))
+    mockedGetSession.mockResolvedValue(signedInAs(role))
 
     const response = (await proxy(makeRequest(path))) as unknown as PassThrough
 
@@ -147,7 +145,7 @@ describe('proxy role-gated areas', () => {
     const response = (await proxy(makeRequest('/devtools-guide'))) as unknown as PassThrough
 
     expect(response.type).toBe('next')
-    expect(mockedFetch).not.toHaveBeenCalled()
+    expect(mockedGetSession).not.toHaveBeenCalled()
   })
 })
 
@@ -155,7 +153,7 @@ describe('proxy path boundaries and redirect targets', () => {
   const mockedAppConfig = getProjectAppConfig as unknown as jest.Mock
 
   beforeEach(() => {
-    mockedFetch.mockReset()
+    mockedGetSession.mockReset()
     mockedAppConfig.mockReset()
     mockedAppConfig.mockReturnValue(undefined)
   })
@@ -166,13 +164,13 @@ describe('proxy path boundaries and redirect targets', () => {
       const response = (await proxy(makeRequest(path))) as unknown as PassThrough
 
       expect(response.type).toBe('next')
-      expect(mockedFetch).not.toHaveBeenCalled()
+      expect(mockedGetSession).not.toHaveBeenCalled()
     }
   )
 
   test('with private docs, /docs-logo.png is not docs, but /docs/intro is', async () => {
     mockedAppConfig.mockReturnValue({ docs: { publicAccess: false } })
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const asset = (await proxy(makeRequest('/docs-logo.png'))) as unknown as PassThrough
     const page = (await proxy(makeRequest('/docs/intro?section=install'))) as unknown as PassThrough
@@ -196,7 +194,7 @@ describe('proxy path boundaries and redirect targets', () => {
     ['a leftover public: false beside publicAccess: true', { publicAccess: true, public: false }],
   ])('docs with %s ask for a session', async (_label, docs) => {
     mockedAppConfig.mockReturnValue({ docs })
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     for (const path of ['/docs', '/docs/getting-started/introduction']) {
       const response = (await proxy(makeRequest(path))) as unknown as PassThrough
@@ -219,12 +217,12 @@ describe('proxy path boundaries and redirect targets', () => {
 
       expect(response.type).toBe('next')
     }
-    expect(mockedFetch).not.toHaveBeenCalled()
+    expect(mockedGetSession).not.toHaveBeenCalled()
   })
 
   test('private docs are served to a signed-in user', async () => {
     mockedAppConfig.mockReturnValue({ docs: { publicAccess: false, public: DOCS_CATEGORY } })
-    mockedFetch.mockResolvedValue({ data: { user: { id: 'user-1', email: 'user-1@example.com', role: 'member' } } })
+    mockedGetSession.mockResolvedValue({ user: { id: 'user-1', email: 'user-1@example.com', role: 'member' } })
 
     const response = (await proxy(makeRequest('/docs/getting-started/introduction'))) as unknown as PassThrough
 
@@ -236,9 +234,9 @@ describe('proxy path boundaries and redirect targets', () => {
     try {
       await jest.isolateModulesAsync(async () => {
         const middleware = await import('@nextsparkjs/core/lib/middleware')
-        const fetchModule = await import('@better-fetch/fetch')
+        const authModule = await import('@nextsparkjs/core/lib/auth')
         ;(middleware.getProjectAppConfig as unknown as jest.Mock).mockReturnValue({ docs: { public: false } })
-        ;(fetchModule.betterFetch as unknown as jest.Mock).mockResolvedValue({ data: null })
+        ;(authModule.auth.api.getSession as unknown as jest.Mock).mockResolvedValue(null)
         const { proxy: freshProxy } = await import('../../../templates/proxy')
 
         await freshProxy(makeRequest('/docs'))
@@ -257,7 +255,7 @@ describe('proxy path boundaries and redirect targets', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       mockedAppConfig.mockReturnValue({ docs: { publicAccess: false, public: DOCS_CATEGORY } })
-      mockedFetch.mockResolvedValue({ data: null })
+      mockedGetSession.mockResolvedValue(null)
 
       await proxy(makeRequest('/docs'))
 
@@ -272,7 +270,7 @@ describe('proxy path boundaries and redirect targets', () => {
   // unredirected. A stale 2-level -> 3-level rewrite here would send it to a
   // /docs/core/overview/customization that no route answers.
   test('a docs page link passes through, not redirected to a 3-level path', async () => {
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = (await proxy(makeRequest('/docs/getting-started/installation'))) as unknown as PassThrough
 
@@ -321,7 +319,7 @@ describe('proxy path boundaries and redirect targets', () => {
   })
 
   test('a 2-segment path is never mistaken for the historical 3-level shape', async () => {
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = (await proxy(makeRequest('/docs/core'))) as unknown as PassThrough
 
@@ -329,7 +327,7 @@ describe('proxy path boundaries and redirect targets', () => {
   })
 
   test('a redirect to login carries the query of the page asked for', async () => {
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = (await proxy(makeRequest('/dashboard/settings/billing?plan=pro&cycle=annual'))) as unknown as PassThrough
 
@@ -337,12 +335,43 @@ describe('proxy path boundaries and redirect targets', () => {
     expect(response.redirectUrl).toContain(`callbackUrl=${encodeURIComponent('/dashboard/settings/billing?plan=pro&cycle=annual')}`)
   })
 
-  test("the session is asked of the app's own auth route", async () => {
-    mockedFetch.mockResolvedValue({ data: null })
+  // S80 / D1: behind a proxy that terminates TLS the request's origin is https on a plain-HTTP port. The check used to
+  // fetch /api/auth/get-session from that origin, failed, and sent every signed-in user to /login.
+  test('the session is read in process from the cookie alone, whatever the forwarded scheme and host say', async () => {
+    mockedGetSession.mockResolvedValue({ user: { id: 'user-1', email: 'user-1@example.com', role: 'member' } })
+    const fetchSpy = jest.fn()
+    const realFetch = globalThis.fetch
+    globalThis.fetch = fetchSpy as unknown as typeof fetch
+    try {
+      const response = (await proxy(makeRequest('/dashboard', {
+        cookie: 'better-auth.session_token=abc',
+        'x-forwarded-proto': 'https',
+        'x-forwarded-host': 'evil.example',
+        host: 'evil.example',
+      }))) as unknown as PassThrough
 
-    await proxy(makeRequest('/dashboard'))
+      expect(response.type).toBe('next')
+      expect(response.requestHeaders?.get('x-user-id')).toBe('user-1')
+    } finally {
+      globalThis.fetch = realFetch
+    }
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(mockedGetSession).toHaveBeenCalledTimes(1)
+    const [{ headers, query }] = mockedGetSession.mock.calls[0] as [{ headers: Headers; query?: object }]
+    expect([...headers.entries()]).toEqual([['cookie', 'better-auth.session_token=abc']])
+    expect(query).toEqual({ disableRefresh: true })
+  })
 
-    expect(mockedFetch).toHaveBeenCalledWith('/api/auth/get-session', expect.objectContaining({ baseURL: 'http://localhost:3000' }))
+  test('a session lookup that throws is no session', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {})
+    mockedGetSession.mockRejectedValue(new Error('database down'))
+    try {
+      const response = (await proxy(makeRequest('/dashboard'))) as unknown as PassThrough
+      expect(response.type).toBe('redirect')
+      expect(error).toHaveBeenCalledWith('Proxy error:', expect.any(Error))
+    } finally {
+      error.mockRestore()
+    }
   })
 
   function underBasePath(path: string) {
@@ -357,7 +386,7 @@ describe('proxy path boundaries and redirect targets', () => {
   }
 
   test('a redirect to login keeps the base path and locale the request came in with', async () => {
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = (await proxy(underBasePath('/superadmin'))) as unknown as PassThrough
 
@@ -365,17 +394,9 @@ describe('proxy path boundaries and redirect targets', () => {
     expect(response.redirectUrl).toContain('/base/es/login?callbackUrl=%2Fsuperadmin')
   })
 
-  test('under a base path, the session is asked of the auth route under it', async () => {
-    mockedFetch.mockResolvedValue({ data: null })
-
-    await proxy(underBasePath('/dashboard'))
-
-    expect(mockedFetch).toHaveBeenCalledWith('/api/auth/get-session', expect.objectContaining({ baseURL: 'http://localhost:3000/base' }))
-  })
-
   test('private docs under a base path redirect to the login under it', async () => {
     mockedAppConfig.mockReturnValue({ docs: { publicAccess: false, public: { enabled: true, open: true, label: 'Documentation' } } })
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = (await proxy(underBasePath('/docs/getting-started/introduction'))) as unknown as PassThrough
 
@@ -384,7 +405,7 @@ describe('proxy path boundaries and redirect targets', () => {
   })
 
   test('an access-denied redirect keeps the base path and locale too', async () => {
-    mockedFetch.mockResolvedValue({ data: { user: { id: 'user-1', email: 'user-1@example.com', role: 'member' } } })
+    mockedGetSession.mockResolvedValue({ user: { id: 'user-1', email: 'user-1@example.com', role: 'member' } })
 
     const response = (await proxy(underBasePath('/devtools/config'))) as unknown as PassThrough
 
@@ -401,10 +422,10 @@ describe('proxy path boundaries and redirect targets', () => {
 // and management/users under superadmin.
 describe('proxy docs pages the registry lacks', () => {
   const mockedAppConfig = getProjectAppConfig as unknown as jest.Mock
-  const superadmin = { data: { user: { id: 'user-1', email: 'user-1@example.com', role: 'superadmin' }, session: { id: 'session-1' } } }
+  const superadmin = { user: { id: 'user-1', email: 'user-1@example.com', role: 'superadmin' }, session: { id: 'session-1' } }
 
   beforeEach(() => {
-    mockedFetch.mockReset()
+    mockedGetSession.mockReset()
     mockedAppConfig.mockReset()
     mockedAppConfig.mockReturnValue(undefined)
   })
@@ -433,7 +454,7 @@ describe('proxy docs pages the registry lacks', () => {
 
   test('private docs send a visitor without a session to login before saying whether a page exists', async () => {
     mockedAppConfig.mockReturnValue({ docs: { publicAccess: false } })
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
 
     const response = (await proxy(makeRequest('/docs/nope/99-does-not-exist.md'))) as unknown as PassThrough
 
@@ -447,7 +468,7 @@ describe('proxy docs pages the registry lacks', () => {
     ['a section that does not exist', '/superadmin/docs/nope/configuration'],
     ['a public page under the superadmin path', '/superadmin/docs/getting-started/introduction'],
   ])('superadmin docs: %s gets the not-found page', async (_label, path) => {
-    mockedFetch.mockResolvedValue(superadmin)
+    mockedGetSession.mockResolvedValue(superadmin)
 
     const response = (await proxy(makeRequest(path))) as unknown as PassThrough & { rewriteUrl?: string }
 
@@ -459,7 +480,7 @@ describe('proxy docs pages the registry lacks', () => {
   test.each(['/superadmin/docs/setup/configuration', '/superadmin/docs/management/users', '/superadmin/docs'])(
     'superadmin docs: %s is left to the app',
     async path => {
-      mockedFetch.mockResolvedValue(superadmin)
+      mockedGetSession.mockResolvedValue(superadmin)
 
       const response = (await proxy(makeRequest(path))) as unknown as PassThrough
 
@@ -468,10 +489,10 @@ describe('proxy docs pages the registry lacks', () => {
   )
 
   test('superadmin docs: the session and role are checked before saying whether a page exists', async () => {
-    mockedFetch.mockResolvedValue({ data: null })
+    mockedGetSession.mockResolvedValue(null)
     const anonymous = (await proxy(makeRequest('/superadmin/docs/nope/configuration'))) as unknown as PassThrough
 
-    mockedFetch.mockResolvedValue({ data: { user: { id: 'user-2', email: 'user-2@example.com', role: 'member' } } })
+    mockedGetSession.mockResolvedValue({ user: { id: 'user-2', email: 'user-2@example.com', role: 'member' } })
     const member = (await proxy(makeRequest('/superadmin/docs/nope/configuration'))) as unknown as PassThrough
 
     expect(anonymous.type).toBe('redirect')
@@ -484,7 +505,7 @@ describe('proxy docs pages the registry lacks', () => {
     const { NextURL } = jest.requireActual('next/dist/server/web/next-url') as {
       NextURL: new (url: string, options: object) => { href: string }
     }
-    mockedFetch.mockResolvedValue(superadmin)
+    mockedGetSession.mockResolvedValue(superadmin)
     const request = makeRequest('/superadmin/docs/nope/configuration')
     ;(request as unknown as { nextUrl: unknown }).nextUrl = new NextURL('http://localhost:3000/base/superadmin/docs/nope/configuration', {
       nextConfig: { basePath: '/base' },
@@ -499,13 +520,13 @@ describe('proxy docs pages the registry lacks', () => {
 
 describe('proxy active team header', () => {
   beforeEach(() => {
-    mockedFetch.mockReset()
+    mockedGetSession.mockReset()
   })
 
-  const session = { data: { user: { id: 'user-1', email: 'user-1@example.com', role: 'member' }, session: { id: 'session-1' } } }
+  const session = { user: { id: 'user-1', email: 'user-1@example.com', role: 'member' }, session: { id: 'session-1' } }
 
   test('forwards the team from a cookie this session wrote', async () => {
-    mockedFetch.mockResolvedValue(session)
+    mockedGetSession.mockResolvedValue(session)
 
     const response = (await proxy(makeRequest('/dashboard/tasks', { cookie: 'activeTeamId=session-1%3Ateam-a' }))) as unknown as PassThrough
 
@@ -518,7 +539,7 @@ describe('proxy active team header', () => {
     ['carries no session', 'activeTeamId=team-a'],
     ['is missing', ''],
   ])('forwards no team, whatever the request claims, when the cookie %s', async (_label, cookie) => {
-    mockedFetch.mockResolvedValue(session)
+    mockedGetSession.mockResolvedValue(session)
 
     const response = (await proxy(makeRequest('/dashboard/tasks', { cookie }))) as unknown as PassThrough
 
@@ -529,7 +550,7 @@ describe('proxy active team header', () => {
 
 describe('proxy session hint', () => {
   beforeEach(() => {
-    mockedFetch.mockReset()
+    mockedGetSession.mockReset()
   })
 
   const hintCookie = (response: PassThrough) => response.setCookies?.find(cookie => cookie.name === 'nextspark.signed_in')
