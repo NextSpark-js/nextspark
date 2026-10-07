@@ -722,6 +722,11 @@
     "specifier": "@nextsparkjs/core/routes/public/page"
   },
   {
+    "kind": "robots",
+    "target": "robots.ts",
+    "specifier": "@nextsparkjs/core/routes/robots"
+  },
+  {
     "kind": "page",
     "target": "superadmin/docs/[section]/[page]/page.tsx",
     "specifier": "@nextsparkjs/core/routes/superadmin/docs/[section]/[page]/page"

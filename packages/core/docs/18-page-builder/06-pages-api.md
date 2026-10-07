@@ -158,7 +158,7 @@ Content-Type: application/json
 
 **Validation Errors**:
 - `400 Bad Request`: Invalid data or Zod validation failure
-- `400 Bad Request`: Slug is reserved (see reserved slugs)
+- `400 Bad Request` (`VALIDATION_ERROR`, `details[].path` is `['slug']`): the slug is not valid or is reserved (see Slug format and Reserved Slugs)
 - `400 Bad Request`: Slug already exists for this locale
 
 ---
@@ -387,16 +387,23 @@ CREATE TABLE pages (
 );
 ```
 
+## Slug format
+
+A public entity's slug (pages, posts and any custom entity with a `slug` field and `access.public` or a base path) is validated on `POST` and `PATCH` and in the page builder:
+lowercase letters, digits and hyphens, 2 to 100 characters, no leading, trailing or repeated hyphen, which is the `^[a-z0-9\-]+$` the templates' database constraints enforce, a little stricter.
+A dot is not allowed (`v1.2` is not a slug; use `v1-2`). The error is `400` with `details[].path` `['slug']` and the reason as its message. Existing rows are not rewritten: find the
+ones that would be refused if their slug were written again with `SELECT id, slug FROM pages WHERE slug !~ '^[a-z0-9]+(-[a-z0-9]+)*$' OR length(slug) NOT BETWEEN 2 AND 100`.
+A slug that is not changing is never judged: editing such a page in the builder, or a `PATCH` that carries its stored slug, works; only a change to the slug is validated.
+The 100-character cap is new for blog posts and categories, whose columns allow more.
+
 ## Reserved Slugs
 
-The following slugs cannot be used for pages as they conflict with system routes:
+A page at the site root cannot take a slug a route already answers (Next serves a static segment before the generated `(public)/[slug]` page):
 
-- `api`, `auth`, `dashboard`, `admin`
-- `login`, `logout`, `signup`, `register`
-- `settings`, `profile`, `account`
-- Entity slugs (e.g., `products`, `users`)
+- core's top-level routes: `api`, `dashboard`, `superadmin`, `devtools`, `docs`, `login`, `signup`, `forgot-password`, `reset-password`, `verify-email`, `accept-invite`, `auth-error`, `403`, `public`, `_next`
+- the first segment of the base path of every other registered entity (`blog` when posts are served at `/blog`)
 
-See `core/lib/constants/reserved-slugs.ts` for the complete list.
+Other words (`home`, `v1`, `index`...) are allowed. Routes a project adds under `templates/` are the project's to avoid. The list is `core/lib/constants/reserved-slugs.ts`. These are refused for entities served at the site root (`basePath: '/'`); a post at `/blog/dashboard` does not shadow a route.
 
 ## Error Responses
 

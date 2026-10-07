@@ -16,6 +16,8 @@ import { authenticateRequest, createAuthFailureResponse, canBypassTeamContext, t
 import type { EntityField, EntityConfig, TaxonomyTypeConfig } from '../../entities/types'
 import { resolveEntityFromUrl, validateEntityOperation } from './resolver'
 import { generateEntitySchemas } from '../../entities/schema-generator'
+import { publicSlugIssue, otherBasePathSegments } from '../../entities/public-slug'
+import { getAllEntityConfigs } from '../../entities/registry'
 import { entityResponseSystemColumns, taxonomyResponseFields } from '../../entities/portable/response-shape'
 import { queryWithRLS, mutateWithRLS, queryOneWithRLS } from '../../db'
 import {
@@ -1476,6 +1478,11 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
 
     let validatedData = validation.data as Record<string, unknown>
 
+    const slugIssue = publicSlugIssue(entityConfig, validatedData as Record<string, unknown>, otherBasePathSegments(entityConfig, getAllEntityConfigs()))
+    if (slugIssue) {
+      return addCorsHeaders(createApiError(slugIssue.message, 400, [slugIssue], 'VALIDATION_ERROR'), request)
+    }
+
     // Reject HTML markup in name/title fields (stored-XSS prevention)
     const xssField = checkNameFieldXss(entityConfig, validatedData as Record<string, unknown>)
     if (xssField) {
@@ -2163,6 +2170,20 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
     }
 
     let validatedData = validation.data
+
+    // A slug that is not changing is not judged: rows written before the rule (or by SQL) stay editable (#215)
+    let slugIssue = publicSlugIssue(entityConfig, validatedData as Record<string, unknown>, otherBasePathSegments(entityConfig, getAllEntityConfigs()))
+    if (slugIssue) {
+      const current = await queryWithRLS<{ slug: string | null }>(
+        `SELECT "slug" FROM "${tableName}" WHERE id = $1 AND "teamId" = $2`,
+        [id, teamId],
+        authResult.user!.id
+      )
+      if (current[0]?.slug === (validatedData as Record<string, unknown>).slug) slugIssue = null
+    }
+    if (slugIssue) {
+      return addCorsHeaders(createApiError(slugIssue.message, 400, [slugIssue], 'VALIDATION_ERROR'), request)
+    }
 
     // Reject HTML markup in name/title fields (stored-XSS prevention)
     const updateXssField = checkNameFieldXss(entityConfig, validatedData as Record<string, unknown>)

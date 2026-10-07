@@ -1,87 +1,54 @@
 /**
  * Reserved Slugs for Pages System
  *
- * This file contains all slugs that cannot be used for dynamic pages
- * to prevent conflicts with system routes, API endpoints, and existing entities.
- *
- * Auto-updated by build-registry.mjs to include entity slugs from ENTITY_REGISTRY
+ * The slugs a page at the site root cannot take because a route of the host already answers that URL: Next serves
+ * a static segment before the generated `(public)/[slug]` page. They are the first segments of core's route
+ * manifest (`src/routes/manifest.json`; a test fails when the two drift) plus `_next`. The base paths of the
+ * other registered entities are added where the check runs (`validatePublicSlug`); the routes a project adds
+ * under `templates/` are the project's to avoid.
  */
 
 export const RESERVED_SLUGS = [
-  // Core system routes
-  'api',
-  'auth',
-  'admin',
-  'login',
-  'register',
-  'dashboard',
-  'signin',
-  'signout',
-  'signup',
-  'verify',
-  'reset-password',
-  'forgot-password',
-
-  // Next.js internals
   '_next',
-  '_vercel',
-  '_error',
-  '_document',
-  '_app',
-
-  // Common static assets
+  '403',
+  'accept-invite',
+  'api',
+  'auth-error',
+  'dashboard',
+  'devtools',
+  'docs',
+  'forgot-password',
+  'login',
   'public',
-  'static',
-  'assets',
-  'images',
-  'theme',
-  'favicon.ico',
-  'robots.txt',
-  'sitemap.xml',
-  'manifest.json',
-
-  // Reserved for potential future use
-  'app',
-  'core',
-  'lib',
-  'components',
-  'utils',
-  'styles',
-  'fonts',
-
-  // Common page names that might conflict
-  'index',
-  'home',
-  'page',
-  'post',
-  'posts',
-  'blog',
-  'article',
-  'articles',
-
-  // API versioning
-  'v1',
-  'v2',
-  'v3',
-
-  // Will be extended with entity slugs from ENTITY_REGISTRY
-  // by build-registry.mjs
+  'reset-password',
+  'signup',
+  'superadmin',
+  'verify-email',
 ] as const
 
 export type ReservedSlug = (typeof RESERVED_SLUGS)[number]
 
 /**
- * Check if a slug is reserved
+ * Check if a slug is reserved: one of core's routes, or one of `extra` (other entities' base path segments)
  */
-export function isReservedSlug(slug: string): boolean {
-  return RESERVED_SLUGS.includes(slug.toLowerCase() as ReservedSlug)
+export function isReservedSlug(slug: string, extra: readonly string[] = []): boolean {
+  const lower = slug.toLowerCase()
+  return (RESERVED_SLUGS as readonly string[]).includes(lower) || extra.includes(lower)
 }
 
 /**
  * Validate a slug for pages system
  * Returns error message if invalid, null if valid
+ *
+ * The format is the one the templates' `valid_slug` / `valid_post_slug` constraints enforce
+ * (`^[a-z0-9\-]+$`, no dot: a dotted last segment is read as a file request by the public item routes),
+ * plus the stricter rules below, which only apply to new writes. `checkReserved: false` skips the reserved
+ * list, `reserved` adds words to it, for an entity whose URLs are not at the site root (`/blog/v1` cannot shadow a root route).
  */
-export function validatePageSlug(slug: string): string | null {
+export function validatePageSlug(
+  slug: string,
+  { checkReserved = true, reserved = [] }: { checkReserved?: boolean; reserved?: readonly string[] } = {}
+): string | null {
   // Check if empty
   if (!slug || slug.trim().length === 0) {
     return 'Slug cannot be empty'
@@ -113,7 +80,7 @@ export function validatePageSlug(slug: string): string | null {
   }
 
   // Check if reserved
-  if (isReservedSlug(slug)) {
+  if (checkReserved && isReservedSlug(slug, reserved)) {
     return `Slug "${slug}" is reserved by the system`
   }
 

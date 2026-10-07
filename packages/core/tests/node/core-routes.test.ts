@@ -80,7 +80,7 @@ test('entries have the shape of the conformance fixture: kind, target, specifier
 
 test('the manifest lists exactly the route files under src/routes, and every variant is one of them', () => {
   // _ folders hold helpers, variants replace a manifest route, presets.ts belongs to the API Explorer
-  const routeLike = /(^|\/)(page|layout|loading|error|not-found|template|default|route|global-error|global-not-found|forbidden|unauthorized)\.(tsx|ts)$/
+  const routeLike = /(^|\/)(page|layout|loading|error|not-found|template|default|route|global-error|global-not-found|forbidden|unauthorized|robots)\.(tsx|ts)$/
   const isVariant = (file: string) => variantEntries.some(variant => variant.specifier === `${ROUTES_SUBPATH}/${file.replace(/\.(tsx|ts)$/, '')}`)
   const files = walk(ROUTES)
     .filter(file => !file.split('/').some(part => part.startsWith('_')) && routeLike.test(file) && !isVariant(file))
@@ -507,4 +507,14 @@ test('the dashboard auth gate renders the page while the session loads (a skelet
   assert.doesNotMatch(gate, /if \(isLoading\) return/)
   assert.doesNotMatch(gate, /DashboardAuthSkeleton/)
   assert.match(gate, /if \(!isLoading && !user\) return null/)
+})
+
+test('the reserved root slugs are the top-level segments core serves (#215), plus _next', async () => {
+  const { RESERVED_SLUGS } = await import(path.join(CORE, 'src/lib/constants/reserved-slugs.ts'))
+  const segments = new Set<string>(['_next'])
+  for (const entry of JSON.parse(fs.readFileSync(path.join(ROUTES, 'manifest.json'), 'utf8')) as Entry[]) {
+    const [first, ...rest] = entry.target.split('/').filter(part => !/^\(.*\)$/.test(part))
+    if (rest.length > 0) segments.add(first) // a lone file (page.tsx, layout.tsx, robots.ts) is not a segment
+  }
+  assert.deepEqual([...RESERVED_SLUGS].sort(), [...segments].sort())
 })

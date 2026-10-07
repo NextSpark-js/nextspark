@@ -83,6 +83,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one place that decides a request's client address, from the source the deployment names. With `vercel`, `cloudflare` or `header:<name>`,
   Better Auth's own rate limit reads the same header (`advanced.ipAddress.ipAddressHeaders`). Fixes #211.
 - **`GET` and `PATCH /api/v1/users/me`** (the static `me` segment wins over `[id]`). Fixes #209.
+- **`/robots.txt`** from core's route manifest (`@nextsparkjs/core/routes/robots`), so every project answers `text/plain` 200 in Cache Components and legacy
+  ISR, not the public catch-all's HTML. It allows the public pages and disallows `/dashboard`, `/superadmin`, `/devtools` and `/api` (under the base path, if any).
+  It declares no sitemap: core has none. Under a Next `basePath` it is served at `/<base>/robots.txt` (its rules carry the prefix), which crawlers do not read: the robots file of the host root is then the deployment's concern. Run `pnpm exec nextspark prepare` (or `pnpm build`) to generate it. To change it, add `templates/robots.ts`
+  (a default export returning Next's `MetadataRoute.Robots`), which replaces core's. A project that already serves `/robots.txt` from `public/robots.txt` should
+  delete that file: Next refuses a public file and a route for one path (500 in dev). Fixes #214.
 
 ### Changed
 
@@ -126,6 +131,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Slugs of public entities are validated on write (#215): `POST`/`PATCH` of an entity with a `slug` field that is public (`access.public` or a base path) answers
+  `400 VALIDATION_ERROR` with `details[].path: ['slug']` instead of a database constraint error, and the page builder's slug input shows the same message next to
+  the input. One format, the one the starter's `valid_slug` / `valid_post_slug` constraints enforce: lowercase letters, digits and hyphens (2 to 100 characters, no leading,
+  trailing or repeated hyphen). The 100-character cap is new for blog posts and categories, whose columns allow more (`VARCHAR(255)` / `VARCHAR(100)`, no CHECK). A dot is not
+  allowed: the database refuses it, and a public item route reads a last segment with a file extension as a file request. Reserved words are the routes that really answer a root URL,
+  not a guess list: core's top-level routes (`api`, `dashboard`, `superadmin`, `devtools`, `docs`, `login`, `signup`, `forgot-password`, `reset-password`, `verify-email`,
+  `accept-invite`, `auth-error`, `403`, `public`, `_next`; a test keeps the list equal to the route manifest) and the first segment of every other registered entity's base path
+  (`blog` while posts are at `/blog`). They are refused only for entities served at the site root, not below `/blog`; `home`, `v1`, `index`... are allowed again. A route a project adds
+  under `templates/` is the project's to avoid. An entity with `allowNestedSlugs` is validated per segment.
+  Existing rows are not rewritten and **a slug that is not changing is never judged**: the builder neither checks nor sends the stored slug of a page it edits, and `PATCH` with the
+  stored slug passes (the API reads the current value only when the rule fails), so a row written before this rule, or by SQL, stays editable. To find the rows that would be refused
+  if their slug changed to the same value, run `SELECT id, slug FROM pages WHERE slug !~ '^[a-z0-9]+(-[a-z0-9]+)*$' OR length(slug) NOT BETWEEN 2 AND 100` (and the same for each public entity).
 - CORS on `/api` responses and preflights (`addCorsHeaders`, `handleCorsPreflightRequest`, `wrapAuthHandlerWithCors`): an origin that is not
   allowed gets no `Access-Control-Allow-Origin` and no `Access-Control-Allow-Credentials`. With `api.cors.allowAllOrigins.development`, any
   origin is still echoed in development, with credentials only for the origins the write-origin check trusts. `/api/user/profile` reads the session from the request it handles.

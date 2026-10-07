@@ -39,6 +39,7 @@ import type { BlockInstance } from '../../../types/blocks'
 import { isPatternReference, type PatternReference } from '../../../types/pattern-reference'
 import type { ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
 import { withBasePath } from '../../../lib/base-path'
+import { validatePublicSlug, type SlugScope } from '../../../lib/entities/public-slug'
 
 type ViewMode = 'preview' | 'settings'
 
@@ -76,6 +77,7 @@ function slugify(text: string): string {
     .trim()
     .replace(/\s+/g, '-') // Replace spaces with hyphens
     .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .replace(/^-|-$/g, '') // No leading or trailing hyphen
 }
 
 export interface BuilderEditorViewProps {
@@ -111,6 +113,8 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
   const [entityFields, setEntityFields] = useState<Record<string, unknown>>({})
   // Validation errors
   const [validationErrors, setValidationErrors] = useState<{ title?: boolean; slug?: boolean }>({})
+  // Why the slug cannot be saved (format, reserved word): from the shared rule before saving, or the API's field error
+  const [slugError, setSlugError] = useState<string | null>(null)
   // Ref for title input auto-focus
   const titleInputRef = useRef<HTMLInputElement>(null)
 
@@ -241,7 +245,10 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || `Failed to save ${entitySlug}`)
+        const slugIssue = Array.isArray(error.details)
+          ? error.details.find((issue: { path?: unknown[] }) => issue.path?.[0] === 'slug')
+          : undefined
+        throw Object.assign(new Error(slugIssue?.message || error.error || `Failed to save ${entitySlug}`), { slugIssue: Boolean(slugIssue) })
       }
 
       return response.json()
@@ -261,10 +268,14 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
         setHasUnsavedChanges(false)
       }
     },
-    onError: (error: Error) => {
+    onError: (error: Error & { slugIssue?: boolean }) => {
+      if (error.slugIssue) setSlugError(error.message)
       toast.error(error.message)
     },
   })
+
+  // A stored slug that is left alone is not judged and not sent: content written before the slug rule stays editable (#215)
+  const slugChanged = mode === 'create' || slug !== entityData?.data?.slug
 
   // Validate required fields before save
   const validateFields = useCallback((): boolean => {
@@ -278,7 +289,15 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
       errors.slug = true
     }
 
+    // The same rule the API enforces, so a bad slug is reported here, next to the input
+    // (the client registry does not carry `allowNestedSlugs`, so a nested slug is left to the API's field error)
+    const slugReason = showSlug && slugChanged && slug.trim() && !slug.includes('/') ? validatePublicSlug(entityConfig as SlugScope, slug.trim()) : null
+    setSlugError(slugReason)
+    if (slugReason) toast.error(slugReason)
+
     setValidationErrors(errors)
+
+    if (slugReason) return false
 
     if (errors.title || errors.slug) {
       // Focus the first invalid field
@@ -289,49 +308,49 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     }
 
     return true
-  }, [title, slug, showSlug])
+  }, [title, slug, slugChanged, showSlug, entityConfig])
 
   const handleSave = useCallback(() => {
     if (!validateFields()) return
 
     const data: Record<string, unknown> = {
       title,
-      slug,
+      ...(slugChanged ? { slug } : {}),
       blocks,
       status,
       settings: pageSettings,
       ...entityFields,
     }
     saveMutation.mutate(data)
-  }, [title, slug, blocks, status, pageSettings, entityFields, saveMutation, validateFields])
+  }, [title, slug, blocks, status, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
 
   const handleSaveDraft = useCallback(() => {
     if (!validateFields()) return
 
     const data: Record<string, unknown> = {
       title,
-      slug,
+      ...(slugChanged ? { slug } : {}),
       blocks,
       status: 'draft',
       settings: pageSettings,
       ...entityFields,
     }
     saveMutation.mutate(data)
-  }, [title, slug, blocks, pageSettings, entityFields, saveMutation, validateFields])
+  }, [title, slug, blocks, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
 
   const handlePublish = useCallback(() => {
     if (!validateFields()) return
 
     const data: Record<string, unknown> = {
       title,
-      slug,
+      ...(slugChanged ? { slug } : {}),
       blocks,
       status: 'published',
       settings: pageSettings,
       ...entityFields,
     }
     saveMutation.mutate(data)
-  }, [title, slug, blocks, pageSettings, entityFields, saveMutation, validateFields])
+  }, [title, slug, blocks, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
 
   // --- Multi-selection helpers ---
   const selectedBlockId = useMemo(() => {
@@ -761,7 +780,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
                 <div
                   className={cn(
                     "flex items-center gap-0.5 text-sm text-muted-foreground",
-                    validationErrors.slug && "text-destructive"
+                    (validationErrors.slug || slugError) && "text-destructive"
                   )}
                   data-cy={sel('blockEditor.header.slugWrapper')}
                 >
@@ -773,6 +792,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
                     onChange={(e) => {
                       const newSlug = e.target.value
                       setSlug(newSlug)
+                      setSlugError(null)
                       // Mark as manually edited when user types
                       if (newSlug !== slugify(title)) {
                         setSlugManuallyEdited(true)
@@ -791,7 +811,11 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
                     placeholder={t('placeholders.slug')}
                     data-cy={sel('blockEditor.header.slugInput')}
                     style={{ width: slug ? `${Math.max(slug.length, 4)}ch` : '60px' }}
+                    aria-invalid={Boolean(slugError)}
                   />
+                  {slugError && (
+                    <span role="alert" className="ml-2 text-xs" data-cy="builder-slug-error">{slugError}</span>
+                  )}
                   {/* External link - only for public entities */}
                   {isPublicEntity && publicUrl && (
                     <Button

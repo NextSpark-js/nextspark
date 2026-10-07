@@ -53,6 +53,16 @@ test('core < plugin < project: a higher layer replaces a lower one at the same r
   }
 })
 
+test('a project robots.ts replaces the robots route core ships (#214)', () => {
+  const { root, cleanup } = project({ 'templates/robots.ts': 'export default function robots() { return { rules: { userAgent: "*", disallow: "/" } } }\n' })
+  try {
+    const routes = resolveHostPlan({ coreRoutes: [core('robots.ts', 'robots')], plugins: [], project: { root } })
+    assert.deepEqual(summary(routes), ['robots.ts <- project:@/templates/robots (overrides core route @nextsparkjs/core/routes/robots)'])
+  } finally {
+    cleanup()
+  }
+})
+
 test('the extension does not decide the slot: templates/about/page.ts replaces core about/page.tsx', () => {
   const { root, cleanup } = project({ 'templates/about/page.ts': PAGE })
   try {
