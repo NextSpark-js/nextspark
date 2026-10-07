@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.195] - 2026-10-07
+
 ### Upgrading from 0.1.0-beta.194
+
+Bump the `@nextsparkjs/*` dependencies, then:
 
 - **Read and update the signed-in user at `/api/v1/users/me`.** It answers `GET` and `PATCH` for a session cookie or an API key (`users:read` / `users:write`)
   and is `/api/v1/users/:id` for the caller's own id: same fields, same checks (`role` stays a superadmin's to change). Clients that called `/users/me` got a 403
-  since beta.194: nothing to change there. The route is a new core route: run `pnpm exec nextspark prepare` (or just `pnpm build`). The documented body is
+  since beta.194: nothing to change there. The route is a new core route. The documented body is
   `firstName`, `lastName`, `language` and `metas`, not `name`/`image`.
 - **The write-origin check now skips only requests that present an API key.** A `POST`/`PUT`/`PATCH`/`DELETE` that carries the session cookie
   from an origin the app does not trust (or with a form-encodable body and no Origin) passes the check only when its `Authorization: Bearer`
@@ -68,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `OPTIONS` from it: `export const OPTIONS = corsPreflight` (`import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'`).
   Without it Next.js answers `OPTIONS` itself, with no CORS headers, as before. A route that does not use `withRateLimitTier` and must be
   called from another origin calls `addCorsHeaders` itself.
-- **`src/proxy.ts` (optional):** core no longer reads `x-api-user-id`, `x-api-key-id` or `x-api-scopes` from requests (see Changed), and the
+- **`src/proxy.ts` (optional):** core no longer reads `x-api-user-id`, `x-api-key-id` or `x-api-scopes` from requests (see Security), and the
   proxy template now also removes them from incoming requests. To do the same in an existing project, add the three names to
   `TRUSTED_IDENTITY_HEADERS` in `src/proxy.ts`.
 - **Set `NEXTSPARK_CLIENT_IP_SOURCE` for your deployment (recommended).** It names where the client address comes from for rate limits,
@@ -83,6 +87,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     one rate-limit bucket per tier and audit rows record `unknown`; put a proxy in front for per-client limits.
 
   Each mode reads only the headers it names, so a client cannot choose its address with a header the mode does not name. More at [nextspark.dev/docs](https://nextspark.dev/docs).
+
+Then run `pnpm exec nextspark prepare` (or just `pnpm build`). Nothing here needs `pnpm db:migrate`.
+
+### Security
+
+- API audit rows take the caller's identity only from authentication. `withApiLogging` writes an `api_audit_log` row only for a request the route authenticated
+  with an API key, attributed to that key and its owner, and writes none otherwise; it no longer stores the request body (the entity routes' audit log likewise).
+  `getApiAuth` returns the key that `validateApiKey` accepted for the request and throws when there is none. `withRateLimit` (without `Tier`) validates the presented key
+  and limits by it. The `src/proxy.ts` template removes the internal identity headers from incoming requests (see Upgrading). See the security advisory published with this release.
+- The write-origin check on cookie-authenticated `POST`/`PUT`/`PATCH`/`DELETE` requests is skipped only for a request that presents an API key (`sk_live_…` / `sk_test_…`
+  in `Authorization: Bearer` or `x-api-key`); such a request reaches the route without its session cookie. Other `Authorization` values are not credentials for the check. See Upgrading.
+- CORS credentials only for trusted origins: an origin that is not allowed gets no `Access-Control-Allow-Origin` and no `Access-Control-Allow-Credentials`, from
+  `addCorsHeaders`, `handleCorsPreflightRequest` and `wrapAuthHandlerWithCors`. With `api.cors.allowAllOrigins.development`, any origin is still echoed in development,
+  with credentials only for the origins the write-origin check trusts. CORS now comes from core in every environment (see Changed). `/api/user/profile`
+  reads the session from the request it handles.
+- Rate limits are counted per client address, and the source of that address is a deployment setting (`NEXTSPARK_CLIENT_IP_SOURCE`, see Added and Upgrading). `withRateLimitTier` (`@nextsparkjs/core/lib/api/rate-limit`) counts requests per client address and tier for every caller. The `x-api-key`
+  header no longer selects the bucket: the wrapper runs before the route has validated anything. Routes that authenticate with
+  `validateAndAuthenticateRequest` or `validateAndAuthenticateApiRequest` also limit each validated API key on its own; routes that use
+  `authenticateRequest` have only the per-address limit. Several API keys used from one address now share that address's limit per tier.
+  `generateExternalAPI` (`lib/entities/external-api-generator`) counts per client address too, before the key check.
 
 ### Added
 
@@ -105,22 +129,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   limit of `POST /api/auth/*` also falls back to `true-client-ip`, and the CSP report endpoint's limit uses that same order instead of the
   first `X-Forwarded-For` entry. An invalid `NEXTSPARK_CLIENT_IP_SOURCE` makes rate-limited routes answer 500 and is logged at startup in
   every environment; audit rows and the new-device fingerprint record `unknown` instead.
-- `withRateLimitTier` (`@nextsparkjs/core/lib/api/rate-limit`) counts requests per client address and tier for every caller. The `x-api-key`
-  header no longer selects the bucket: the wrapper runs before the route has validated anything. Routes that authenticate with
-  `validateAndAuthenticateRequest` or `validateAndAuthenticateApiRequest` also limit each validated API key on its own; routes that use
-  `authenticateRequest` have only the per-address limit. Several API keys used from one address now share that address's limit per tier.
-  `generateExternalAPI` (`lib/entities/external-api-generator`) counts per client address
-  too, before the key check.
-- API audit logging takes the caller's identity only from authentication. `withApiLogging` writes an `api_audit_log` row for a request that
-  the route authenticated with an API key, attributed to that key and its owner, and writes none otherwise; it no longer stores the request
-  body (as the entity routes' audit log). `getApiAuth` returns the key that `validateApiKey` accepted for the request and throws when there is
-  none. `withRateLimit` (without `Tier`) validates the presented key and limits by it. None of them read `x-api-user-id`, `x-api-key-id` or
-  `x-api-scopes`, and the proxy template removes those headers from incoming requests.
 - CORS on `/api` comes from core in every environment, and the `next.config.mjs` template sends no `Access-Control-*` headers (existing
   projects: see Upgrading). `withRateLimitTier` adds core's CORS to every response it returns: the route's, its own 429 and the origin
-  check's 403. A listed origin (`api.cors.allowedOrigins`, `additionalOrigins`, `CORS_ADDITIONAL_ORIGINS`, `NEXT_PUBLIC_APP_URL`) gets itself
-  back with `Access-Control-Allow-Credentials: true`, any other origin gets neither header, and development with
-  `api.cors.allowAllOrigins.development` keeps its rules. A response that already names an origin keeps it. The `webhook` tier gets no CORS
+  check's 403. Listed origins come from `api.cors.allowedOrigins`, `additionalOrigins`, `CORS_ADDITIONAL_ORIGINS` and `NEXT_PUBLIC_APP_URL`
+  (which origins get CORS and credentials: see Security). A response that already names an origin keeps it. The `webhook` tier gets no CORS
   headers. Every core, plugin and template route wrapped in `withRateLimitTier` (webhooks excepted) exports `OPTIONS`
   (`corsPreflight`, `@nextsparkjs/core/lib/api/cors-response`), so its preflight gets the same answer; the devtools routes' preflights do too.
   The 429 of `/api/auth/*` carries the same CORS as its other responses. A front end served from another origin than the API works under
@@ -145,7 +157,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   allowed: the database refuses it, and a public item route reads a last segment with a file extension as a file request. Reserved words are the routes that really answer a root URL,
   not a guess list: core's top-level routes (`api`, `dashboard`, `superadmin`, `devtools`, `docs`, `login`, `signup`, `forgot-password`, `reset-password`, `verify-email`,
   `accept-invite`, `auth-error`, `403`, `public`, `_next`; a test keeps the list equal to the route manifest) and the first segment of every other registered entity's base path
-  (`blog` while posts are at `/blog`). They are refused only for entities served at the site root, not below `/blog`; `home`, `v1`, `index`... are allowed again. A route a project adds
+  (`blog` while posts are at `/blog`). They are refused only for entities served at the site root, not below `/blog`; `home`, `v1`, `index`... are allowed. A route a project adds
   under `templates/` is the project's to avoid. An entity with `allowNestedSlugs` is validated per segment.
   Existing rows are not rewritten and **a slug that is not changing is never judged**: the builder neither checks nor sends the stored slug of a page it edits, and `PATCH` with the
   stored slug passes (the API reads the current value only when the rule fails), so a row written before this rule, or by SQL, stays editable. To find the rows that would be refused
@@ -156,11 +168,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dashboard, shown again after the next sign-in, sent the user back to `/login` (seen in development). The client's session refresh before leaving
   stays, so there are no 401s after a sign-out. The entity detail, edit and list pages request nothing while there is no user (that was a 401 in legacy
   ISR). `signOut()` now throws when the server refuses it (a 429, a network error) instead of loading `/login` with the session still alive.
-- CORS on `/api` responses and preflights (`addCorsHeaders`, `handleCorsPreflightRequest`, `wrapAuthHandlerWithCors`): an origin that is not
-  allowed gets no `Access-Control-Allow-Origin` and no `Access-Control-Allow-Credentials`. With `api.cors.allowAllOrigins.development`, any
-  origin is still echoed in development, with credentials only for the origins the write-origin check trusts. `/api/user/profile` reads the session from the request it handles.
 - A `config/billing.config.ts` that exists but cannot be loaded (a syntax error, a bad import, an exception while it is evaluated) now fails
-  `prepare` and `build` with the file name and the underlying error. It used to be swallowed and the build went on with an empty billing
+  `prepare` and `build` with the file name and the underlying error (#212). It used to be swallowed and the build went on with an empty billing
   registry, and a project without plans skips every feature and quota check. A config without a `billingConfig` export with plans, features
   and limits already failed, and now says which file. A project with no billing config keeps building as before; if yours throws today, the
   build now stops until you fix it.
@@ -172,7 +181,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `[DB] WARNING: SSL disabled in production environment` printed once per module load (about 12 times per build or start). It now prints once per
   process, and not at all when the connection string asks for `sslmode=disable` and the host is `localhost`, `127.0.0.1` or `::1` (a remote host
   still gets it; the host name is matched case-insensitively).
-- **`pnpm dev` of a Cache Components project no longer reports instant-navigation issues on a fresh starter.** Next.js 16.3's dev server checks every
+- **`pnpm dev` of a Cache Components project no longer reports instant-navigation issues on a fresh starter (#216).** Next.js 16.3's dev server checks every
   page of a Cache Components host for instant navigation and logged `Could not validate that a segment in your UI has instant navigation` for
   `/dashboard` and `/dashboard/tasks` (and `Could not validate instant ... the target segment from rendering` for `/[slug]`), with an issue in the dev badge; the
   pages worked. Causes and fixes, all in core (nothing to change in a project):
@@ -199,7 +208,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Signing out no longer makes the dashboard request `/api/user/profile` and `/api/v1/teams` and get 401.** The client's session store keeps the signed-in user until its own
   request for the session answers, and `signOut()` emptied the query cache before that: every signed-in query still on the page (teams, profile, preferences) refetched on its next
   render, and the API refused each with 401 (three red lines in the browser console). `signOut()` now brings the session store up to date first, then loads `/login` (see *Signing out and in again in the same tab*).
-- **Docs:** `/api/v1/users` docs, API Explorer preset and the metadata guide's `users/me` example describe what the route accepts and returns (`metas=`, not `metadataFields=`).
+
+### Documentation
+
+- `/api/v1/users` docs, API Explorer preset and the metadata guide's `users/me` example describe what the route accepts and returns (`metas=`, not `metadataFields=`).
+- New guide `14-deployment/10-client-address.md` (which `NEXTSPARK_CLIENT_IP_SOURCE` value to set per deployment target); the authentication, rate-limiting, audit-logging and deployment pages, the page builder pages API and the mobile app docs describe the changes above.
 
 ## [0.1.0-beta.194] - 2026-10-06
 

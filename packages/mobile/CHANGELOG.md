@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.195] - 2026-10-07
+
 ### Upgrading from 0.1.0-beta.194
 
 - **The client no longer sends `Authorization: Bearer <session token>`.** Core has no bearer plugin: the session cookie (native cookie store) is what authenticated, and the header was read as an API key,
