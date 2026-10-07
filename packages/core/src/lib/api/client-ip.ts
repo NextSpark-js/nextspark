@@ -14,7 +14,7 @@
  * Unset keeps the order core always used (cf-connecting-ip, rightmost X-Forwarded-For, x-real-ip,
  * true-client-ip), and production logs one warning saying what to set. Next.js gives route handlers
  * no socket address, so 'none' cannot fall back to one.
- * See docs/14-deployment/10-client-address.md.
+ * What to set per deployment: the upgrade note in CHANGELOG.md, and https://nextspark.dev/docs.
  */
 
 export const UNKNOWN_CLIENT_IP = 'unknown'

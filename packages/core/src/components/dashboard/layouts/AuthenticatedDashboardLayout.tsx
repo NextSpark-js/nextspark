@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { loadLoginPage } from '../../../lib/auth/load-login-page'
 import { useAuth } from '../../../hooks/useAuth'
 import { DashboardProviders } from '../../../providers/DashboardProviders'
 import { DashboardTranslationPreloader } from '../../../lib/i18n/DashboardTranslationPreloader'
@@ -16,13 +16,12 @@ function AuthMethodDetectorWrapper() {
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
-  const router = useRouter()
 
   useEnsureUserMetadata()
 
   useEffect(() => {
-    if (!isLoading && !user) router.push('/login')
-  }, [user, isLoading, router])
+    if (!isLoading && !user) loadLoginPage()
+  }, [user, isLoading])
 
   // Signed out: nothing, the effect above sends the visitor to the login page. While the session loads the
   // page renders anyway: a gate that replaced it with a skeleton would leave the route's own segments out

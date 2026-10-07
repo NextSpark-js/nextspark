@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '../../../hooks/useAuth'
-import { useRouter } from 'next/navigation'
+import { loadLoginPage } from '../../../lib/auth/load-login-page'
 import { useEffect, Suspense } from 'react'
 import { DashboardAuthSkeleton } from './DashboardAuthSkeleton'
 import { DashboardTranslationPreloader } from '../../../lib/i18n/DashboardTranslationPreloader'
@@ -28,16 +28,15 @@ function AuthMethodDetectorWrapper() {
  */
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
-  const router = useRouter()
 
   // Ensure user has default metadata
   useEnsureUserMetadata()
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/login')
+      loadLoginPage()
     }
-  }, [user, isLoading, router])
+  }, [user, isLoading])
 
   if (isLoading) {
     return <DashboardAuthSkeleton />

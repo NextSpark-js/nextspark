@@ -19,6 +19,7 @@ import { EntityForm } from '../EntityForm'
 import { EntityDetailHeader } from '../EntityDetailHeader'
 import { Alert, AlertDescription } from '../../ui/alert'
 import { SkeletonEntityForm } from '../../ui/skeleton-form'
+import { useAuth } from '../../../hooks/useAuth'
 import { useEntityConfig } from '../../../hooks/useEntityConfig'
 import { useTeam } from '../../../hooks/useTeam'
 import { getEntityData, createEntityData, updateEntityData } from '../../../lib/api/entities'
@@ -44,6 +45,11 @@ export function EntityFormWrapper({
   className,
   headerActions: additionalHeaderActions
 }: EntityFormWrapperProps) {
+  // Nothing is requested while there is no user: during a sign-out the session store empties before the page is left,
+  // and a load started then is answered with a 401.
+  const { user } = useAuth()
+  const signedIn = Boolean(user)
+
   const router = useRouter()
 
   // Use the new centralized hook for entity configuration
@@ -67,7 +73,7 @@ export function EntityFormWrapper({
     }
 
     const loadInitialData = async () => {
-      if (mode === 'edit' && id && entityConfig) {
+      if (mode === 'edit' && id && entityConfig && signedIn) {
         if (!entityConfig.enabled) {
           onError?.(new Error(`Entity "${entityType}" is disabled`))
           return
@@ -91,7 +97,7 @@ export function EntityFormWrapper({
     }
 
     loadInitialData()
-  }, [mode, id, entityType, entityConfig, onError, isOverride, propsInitialData])
+  }, [mode, id, entityType, entityConfig, onError, isOverride, propsInitialData, signedIn])
 
   const handleSubmit = useCallback(async (data: Record<string, unknown>) => {
     setSubmitError(null)

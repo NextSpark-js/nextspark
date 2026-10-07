@@ -74,8 +74,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Set `NEXTSPARK_CLIENT_IP_SOURCE` for your deployment (recommended).** It names where the client address comes from for rate limits,
   audit logs and security notifications: `vercel`, `cloudflare`, `xff` (with `NEXTSPARK_TRUSTED_PROXY_HOPS`, the number of proxies you
   run in front of the app), `header:<name>`, or `none` when nothing in front of the app sets one. Left unset, the order core used before
-  stays and production logs a warning at startup. See `docs/14-deployment/10-client-address.md` for what to set on Vercel, Cloudflare,
-  behind nginx and on Docker without a proxy.
+  stays and production logs a warning at startup. What to set:
+  - Vercel: `NEXTSPARK_CLIENT_IP_SOURCE=vercel`.
+  - Cloudflare (every request reaches the app through it): `NEXTSPARK_CLIENT_IP_SOURCE=cloudflare`.
+  - nginx or another single reverse proxy that appends to `X-Forwarded-For`: `NEXTSPARK_CLIENT_IP_SOURCE=xff` and `NEXTSPARK_TRUSTED_PROXY_HOPS=1`
+    (a proxy that overwrites one header instead: `NEXTSPARK_CLIENT_IP_SOURCE=header:x-real-ip`, naming that header). Let `next start` listen only where the proxy reaches it.
+  - Docker (or any host) with no proxy in front: `NEXTSPARK_CLIENT_IP_SOURCE=none`. The app cannot see a client address there, so every request shares
+    one rate-limit bucket per tier and audit rows record `unknown`; put a proxy in front for per-client limits.
+
+  Each mode reads only the headers it names, so a client cannot choose its address with a header the mode does not name. More at [nextspark.dev/docs](https://nextspark.dev/docs).
 
 ### Added
 
@@ -143,6 +150,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Existing rows are not rewritten and **a slug that is not changing is never judged**: the builder neither checks nor sends the stored slug of a page it edits, and `PATCH` with the
   stored slug passes (the API reads the current value only when the rule fails), so a row written before this rule, or by SQL, stays editable. To find the rows that would be refused
   if their slug changed to the same value, run `SELECT id, slug FROM pages WHERE slug !~ '^[a-z0-9]+(-[a-z0-9]+)*$' OR length(slug) NOT BETWEEN 2 AND 100` (and the same for each public entity).
+- **Signing out and in again in the same tab.** Signing out, and the dashboard's own redirect to `/login` when the session ends (another tab signed out,
+  the session expired or was revoked), now load `/login` as a full page navigation (base path included) instead of a client navigation. With Cache
+  Components the signed-in pages stayed mounted, hidden, so `/login` came back as the form the last sign-in left (code step, the used code) and the
+  dashboard, shown again after the next sign-in, sent the user back to `/login` (seen in development). The client's session refresh before leaving
+  stays, so there are no 401s after a sign-out. The entity detail, edit and list pages request nothing while there is no user (that was a 401 in legacy
+  ISR). `signOut()` now throws when the server refuses it (a 429, a network error) instead of loading `/login` with the session still alive.
 - CORS on `/api` responses and preflights (`addCorsHeaders`, `handleCorsPreflightRequest`, `wrapAuthHandlerWithCors`): an origin that is not
   allowed gets no `Access-Control-Allow-Origin` and no `Access-Control-Allow-Credentials`. With `api.cors.allowAllOrigins.development`, any
   origin is still echoed in development, with credentials only for the origins the write-origin check trusts. `/api/user/profile` reads the session from the request it handles.
@@ -185,8 +198,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     ISR host keeps its facades, its guards and its 307.
 - **Signing out no longer makes the dashboard request `/api/user/profile` and `/api/v1/teams` and get 401.** The client's session store keeps the signed-in user until its own
   request for the session answers, and `signOut()` emptied the query cache before that: every signed-in query still on the page (teams, profile, preferences) refetched on its next
-  render, and the API refused each with 401 (three red lines in the browser console). `signOut()` now brings the session store up to date first, then empties the cache and goes to `/login`
-  as before.
+  render, and the API refused each with 401 (three red lines in the browser console). `signOut()` now brings the session store up to date first, then loads `/login` (see *Signing out and in again in the same tab*).
 - **Docs:** `/api/v1/users` docs, API Explorer preset and the metadata guide's `users/me` example describe what the route accepts and returns (`metas=`, not `metadataFields=`).
 
 ## [0.1.0-beta.194] - 2026-10-06

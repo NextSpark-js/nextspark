@@ -29,6 +29,7 @@ import { SkeletonEntityList } from '../../ui/skeleton-list'
 import { SearchInput } from '../../shared/SearchInput'
 import { MultiSelectFilter } from '../../shared/MultiSelectFilter'
 import { useEntityConfig } from '../../../hooks/useEntityConfig'
+import { useAuth } from '../../../hooks/useAuth'
 import { useUrlFilters, type FilterSchema, type EntityFiltersReturn } from '../../../hooks/useUrlFilters'
 import { listEntityData, deleteEntityData, duplicateEntityData } from '../../../lib/api/entities'
 import { useTeam } from '../../../hooks/useTeam'
@@ -48,6 +49,10 @@ export function EntityListWrapper({
   className,
   headerActions
 }: EntityListWrapperProps) {
+  // Nothing is requested while there is no user: during a sign-out the session store empties before the page is left,
+  // and a load started then is answered with a 401.
+  const { user } = useAuth()
+  const signedIn = Boolean(user)
   const router = useRouter()
 
   // Use the new centralized hook for entity configuration
@@ -196,7 +201,7 @@ export function EntityListWrapper({
 
   // Load data when config is ready AND filters are synced with URL
   useEffect(() => {
-    if (!entityConfig?.slug) return
+    if (!entityConfig?.slug || !signedIn) return
 
     // Wait for filters to sync with URL params before loading
     if (!filtersMatchUrl) return
@@ -210,7 +215,7 @@ export function EntityListWrapper({
       hasLoadedRef.current = true
       loadData(isInitial)
     }
-  }, [entityConfig?.slug, filtersKey, filtersMatchUrl, loadData])
+  }, [entityConfig?.slug, filtersKey, filtersMatchUrl, loadData, signedIn])
 
   // Handle search input change
   const handleSearch = useCallback((query: string) => {

@@ -29,13 +29,14 @@ export function stripSSLParams(databaseUrl) {
   }
 }
 
-let warnedSSLDisabled = false
+// On globalThis, like src/lib/db.ts: one warning per process however many copies of the module are loaded
+const SSL_WARNED = Symbol.for('nextspark.dbSslDisabledWarned')
 
 /** Once per process, and not for a loopback host: mirrors `warnSSLDisabledInProduction` in src/lib/db.ts. */
 function warnSSLDisabledInProduction(url) {
-  if (warnedSSLDisabled) return
+  if (globalThis[SSL_WARNED]) return
   if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname.toLowerCase())) return
-  warnedSSLDisabled = true
+  globalThis[SSL_WARNED] = true
   console.warn('[DB] WARNING: SSL disabled in production environment. This is insecure!')
 }
 

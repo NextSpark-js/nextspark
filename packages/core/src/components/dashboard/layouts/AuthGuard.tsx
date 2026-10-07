@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '../../../hooks/useAuth'
-import { useRouter } from 'next/navigation'
+import { loadLoginPage } from '../../../lib/auth/load-login-page'
 import { useEffect } from 'react'
 import { DashboardAuthSkeleton } from './DashboardAuthSkeleton'
 import { useEnsureUserMetadata } from '../../../hooks/useEnsureUserMetadata'
@@ -18,15 +18,14 @@ function EnsureUserMetadata() {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const { user, isLoading } = useAuth()
-  const router = useRouter()
 
   useAuthMethodDetector()
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/login')
+      loadLoginPage()
     }
-  }, [user, isLoading, router])
+  }, [user, isLoading])
 
   if (isLoading) {
     return <DashboardAuthSkeleton />

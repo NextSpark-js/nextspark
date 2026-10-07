@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from '../../ui/alert'
 // Button import removed - not needed after Dialog removal
 import { SkeletonEntityDetail } from '../../ui/skeleton-detail'
 import { useEntityConfig } from '../../../hooks/useEntityConfig'
+import { useAuth } from '../../../hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { getEntityData, deleteEntityData, fetchWithTeam } from '../../../lib/api/entities'
 import { TeamDetailSection } from '../../teams/TeamDetailSection'
@@ -47,6 +48,11 @@ export function EntityDetailWrapper({
   // Use the new centralized hook for entity configuration
   const { config: entityConfig, isLoading: isLoadingConfig, error: configError, isOverride } = useEntityConfig(entityType)
   
+  // Nothing is requested while there is no user: during a sign-out the session store empties before the page is left,
+  // and a load started then is answered with a 401.
+  const { user } = useAuth()
+  const signedIn = Boolean(user)
+
   // Router for navigation
   const router = useRouter()
   
@@ -133,7 +139,7 @@ export function EntityDetailWrapper({
       prevIdRef.current = id
     }
 
-    if (!entityConfig || !id) return
+    if (!entityConfig || !id || !signedIn) return
     if (dataLoadedRef.current) return // Prevent re-fetching if already loaded
 
     if (!entityConfig.enabled) {
@@ -211,7 +217,7 @@ export function EntityDetailWrapper({
 
     loadEntityData()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityConfig?.slug, entityType, id])
+  }, [entityConfig?.slug, entityType, id, signedIn])
 
   // Handler functions for child entity operations
   const handleEdit = useCallback(() => {

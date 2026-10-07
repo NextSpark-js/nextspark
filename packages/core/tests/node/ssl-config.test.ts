@@ -125,14 +125,18 @@ function warningsFrom(parse: () => void): string[] {
   return warnings
 }
 
-// Each implementation warns at most once per process, and the parity test above already used up the shared
-// module's one warning: this test loads fresh instances of both.
+const SSL_WARNED = Symbol.for('nextspark.dbSslDisabledWarned')
+const forgetWarning = () => { delete (globalThis as Record<symbol, unknown>)[SSL_WARNED] }
+
+// The warning is once per process, whichever copy of the module prints it (Next bundles one for instrumentation and
+// one for the routes), so it is kept on globalThis. The parity test above already used it up: this test starts over.
 test('sslmode=disable in production: silent on loopback, warns once for a remote host', async () => {
   const runtime = await runtimeSSLHelpers()
   const fresh = await import('../../scripts/db/ssl-config.mjs?fresh') as { parseSSLConfig: ParseSSLConfig }
   const implementations = { script: fresh.parseSSLConfig, runtime: runtime.parseSSLConfig }
 
   for (const [name, parse] of Object.entries(implementations)) {
+    forgetWarning()
     for (const host of ['localhost', 'LOCALHOST', '127.0.0.1', '[::1]']) {
       const warnings = warningsFrom(() => { for (let i = 0; i < 3; i++) parse(`postgresql://u:p@${host}:5432/db?sslmode=disable`) })
       assert.deepEqual(warnings, [], `${name}: ${host}`)
@@ -140,4 +144,13 @@ test('sslmode=disable in production: silent on loopback, warns once for a remote
     const remote = warningsFrom(() => { for (let i = 0; i < 3; i++) parse(`${URL}?sslmode=disable`) })
     assert.deepEqual(remote, [WARNING], `${name}: remote host warns exactly once`)
   }
+})
+
+test('two copies of the module in one process print the warning once', async () => {
+  const runtime = await runtimeSSLHelpers()
+  const copyA = await import('../../scripts/db/ssl-config.mjs?copy-a') as { parseSSLConfig: ParseSSLConfig }
+  const copyB = await import('../../scripts/db/ssl-config.mjs?copy-b') as { parseSSLConfig: ParseSSLConfig }
+  forgetWarning()
+  const warnings = warningsFrom(() => { for (const parse of [copyA.parseSSLConfig, copyB.parseSSLConfig, runtime.parseSSLConfig]) parse(`${URL}?sslmode=disable`) })
+  assert.deepEqual(warnings, [WARNING])
 })

@@ -32,16 +32,18 @@ export function stripSSLParams(databaseUrl: string): string {
   }
 }
 
-let warnedSSLDisabled = false;
+// On globalThis: Next bundles this module separately for instrumentation and for the routes, and each copy would warn.
+const SSL_WARNED = Symbol.for('nextspark.dbSslDisabledWarned');
 
 /**
  * `sslmode=disable` in production is insecure for a remote database, so say so, once per process.
  * A loopback host is the documented way to run a production build locally: no warning there.
  */
 function warnSSLDisabledInProduction(url: URL): void {
-  if (warnedSSLDisabled) return;
+  const state = globalThis as Record<symbol, unknown>;
+  if (state[SSL_WARNED]) return;
   if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname.toLowerCase())) return;
-  warnedSSLDisabled = true;
+  state[SSL_WARNED] = true;
   console.warn('[DB] WARNING: SSL disabled in production environment. This is insecure!');
 }
 

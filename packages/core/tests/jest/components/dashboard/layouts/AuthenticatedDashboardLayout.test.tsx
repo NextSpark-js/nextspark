@@ -11,7 +11,7 @@ import { render, screen } from '@testing-library/react'
 const push = jest.fn()
 const mockUseAuth = jest.fn()
 
-jest.mock('next/navigation', () => ({ useRouter: () => ({ push }) }))
+jest.mock('@/core/lib/auth/load-login-page', () => ({ loadLoginPage: () => push('/login') }))
 jest.mock('@/core/hooks/useAuth', () => ({ useAuth: () => mockUseAuth() }))
 jest.mock('@/core/hooks/useEnsureUserMetadata', () => ({ useEnsureUserMetadata: jest.fn() }))
 jest.mock('@/core/hooks/useAuthMethodDetector', () => ({ useAuthMethodDetector: jest.fn() }))

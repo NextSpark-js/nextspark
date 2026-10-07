@@ -9,6 +9,7 @@ import { useOrigin } from './useOrigin'
 import { useLastAuthMethod } from './useLastAuthMethod'
 import { safeCallbackPath } from '../lib/auth/callback-url'
 import { withBasePath } from '../lib/base-path'
+import { loadLoginPage } from '../lib/auth/load-login-page'
 import { setSessionHint } from '../lib/auth/session-hint'
 import { setUserLocaleClient } from '../lib/locale-client'
 import { I18N_CONFIG } from '../lib/config/i18n-config-client'
@@ -53,8 +54,8 @@ const SESSION_DROP_TIMEOUT_MS = 2000
 
 /**
  * After a sign-out the client keeps the signed-in user in its session store until its own request for the
- * session answers (it is sent when the sign-out succeeds). Emptying the query cache before that makes every
- * signed-in query on the page refetch the moment it re-renders - they still see the user - and the API
+ * session answers (it is sent when the sign-out succeeds). Leaving before that lets every
+ * signed-in query on the page refetch while the page still sees the user, and the API
  * answers each with 401. So the store is brought up to date first, for at most SESSION_DROP_TIMEOUT_MS:
  * the redirect never depends on that request. Best effort: a store that cannot be refreshed leaves the order as it was.
  *
@@ -86,7 +87,7 @@ export function useAuthActions() {
 
   // Cached queries (teams, entity lists, the subscription) belong to whoever was
   // signed in. The root layout's query client outlives the dashboard that used
-  // to clear it on logout, so it is emptied whenever someone signs in or out.
+  // to clear it on logout, so it is emptied whenever someone signs in (a sign-out loads a new page, which drops it).
   const forgetSignedInData = () => queryClient?.clear()
 
 
@@ -142,11 +143,18 @@ export function useAuthActions() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('activeTeamId')
     }
-    await authClient.signOut()
+    // signOut() answers with { error } instead of throwing: a 429 or a network error leaves the server session alive,
+    // so the caller shows its error and the page stays as it is
+    const { error } = await authClient.signOut()
+    if (error) throw new Error(error.message || 'Failed to sign out')
     setSessionHint(false)
     await waitForSessionToDrop()
-    forgetSignedInData()
-    router.push('/login')
+    // A full navigation, not router.push: with Cache Components the signed-in pages stay mounted (hidden) after a
+    // client navigation, and /login came back as the form the last sign-in left (code step, used code) while the
+    // dashboard, shown again after the next sign-in, acted on the session it rendered at this sign-out and sent the
+    // user back to /login. Loading the page drops all of that state at once (React tree, session store, query
+    // cache), so nothing signed-in is left to refetch with the session gone: no query cache clearing here either.
+    loadLoginPage()
   }
 
   /**
