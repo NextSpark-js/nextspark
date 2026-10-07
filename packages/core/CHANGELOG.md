@@ -15,6 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expires its public pages at once: the REST API (create, update, delete), the page builder, the server actions, `GenericEntityService` (including
   `deleteMany`), through the `afterEntity*` hooks and `expirePublicEntity` (`lib/cache/public-entity-cache.ts`). Editing a pattern expires the `patterns`
   tag. Already in beta.194; not a regression of beta.195.
+- **A production build of a fresh project no longer prints `MISSING_MESSAGE` or `ReferenceError: location is not defined`.** A starter build printed 132 of the
+  first and 2 of the second (blog, crm and productivity printed 48 and 2) while still passing.
+  - Core's `features` messages (`analytics`, `webhooks`, `automation`) were never registered in `src/messages/<locale>/index.ts`, and `webhooks` / `automation` had no
+    text, so the `/dashboard/features/*` pages asked for keys that did not exist. They are registered and written for the six locales; the empty `analytics` placeholders now have text.
+  - The starter's `/dashboard/analytics` client components read the `analytics` namespace, which the dashboard route group does not send to the browser. The starter now has
+    `templates/dashboard/analytics/layout.tsx`, the documented project-owned extension (`selectMessages(messages, 'dashboard', ['analytics'])`).
+  - `/dashboard/settings/password` called `router.push` while rendering, which reads `location` on the server. The redirects run in an effect now, and the error status text
+    uses `common.status.error` (it asked `settings` for `common.status.error`).
+  - The password page no longer sends a signed-in user to `/login` while the session loads: it shows the spinner, and without a session the dashboard layout does the redirect.
+  - `/devtools`, `/devtools/config`, `/devtools/tests` and `/devtools/scheduled-actions` read core's `devtools` messages instead of the starter-only `dev` ones, so blog, crm and productivity no longer show raw keys there.
+- New check `tests/node/template-message-keys.test.ts`: every literal translation key used by core routes (all six locales, over the English fallback) and by each template's components, templates, blocks and lib exists in the
+  messages the build merges.
 
 ## [0.1.0-beta.195] - 2026-10-07
 

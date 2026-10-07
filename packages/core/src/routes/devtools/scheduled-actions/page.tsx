@@ -53,7 +53,7 @@ async function fetchScheduledActions(
 }
 
 export default function ScheduledActionsPage() {
-  const t = useTranslations('dev.scheduledActions')
+  const t = useTranslations('devtools.scheduledActions')
   const [filters, setFilters] = useState<ScheduledActionsFilters>({})
   const [page, setPage] = useState(1)
   const limit = 20

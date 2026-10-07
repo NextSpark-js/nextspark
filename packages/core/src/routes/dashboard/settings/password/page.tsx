@@ -9,7 +9,7 @@ import {
   CheckCircle, 
   Loader2
 } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 
@@ -27,6 +27,7 @@ function UpdatePasswordPage() {
   const { hasPassword, isLoading: profileLoading } = useUserProfile();
   const router = useRouter();
   const t = useTranslations('settings');
+  const tCommon = useTranslations('common');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +68,7 @@ function UpdatePasswordPage() {
       if (!result.success) {
         const errorMsg = result.error || t('password.messages.updateError');
         setError(errorMsg);
-        setStatusMessage(`${t('common.status.error')}: ${errorMsg}`);
+        setStatusMessage(`${tCommon('status.error')}: ${errorMsg}`);
       } else {
         setSuccess(true);
         setStatusMessage(t('password.messages.updateSuccess'));
@@ -75,23 +76,23 @@ function UpdatePasswordPage() {
     } catch {
       const errorMsg = t('password.messages.unexpectedError');
       setError(errorMsg);
-      setStatusMessage(`${t('common.status.error')}: ${errorMsg}`);
+      setStatusMessage(`${tCommon('status.error')}: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
-  }, [changePassword, t]);
+  }, [changePassword, t, tCommon]);
 
-  if (!user) {
-    router.push('/login');
-    return null;
-  }
+  // Redirects run in an effect: router.push during render reads `location` on the server (prerender).
+  // Without a session AuthenticatedDashboardLayout sends the visitor to /login; useAuth reports
+  // user: null while the session loads, so this page must not redirect on that.
+  // Google users can't change password
+  const mustRedirectToProfile = !!user && !profileLoading && !hasPassword;
 
-  // Redirect Google users - they can't change password
-  if (!profileLoading && !hasPassword) {
-    router.push('/dashboard/settings/profile');
-    return null;
-  }
+  useEffect(() => {
+    if (mustRedirectToProfile) router.push('/dashboard/settings/profile');
+  }, [mustRedirectToProfile, router]);
 
+  // useUserProfile().isLoading includes the session loading
   if (profileLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -100,6 +101,8 @@ function UpdatePasswordPage() {
       </div>
     );
   }
+
+  if (!user || mustRedirectToProfile) return null;
 
   if (success) {
     return (

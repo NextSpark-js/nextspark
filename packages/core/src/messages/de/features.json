@@ -1,8 +1,20 @@
 {
   "analytics": {
-    "title": "",
-    "benefit1": "",
-    "benefit2": "",
-    "benefit3": ""
+    "title": "Erweiterte Analysen",
+    "benefit1": "Echtzeit-Metriken",
+    "benefit2": "Benutzerdefinierter Report-Builder",
+    "benefit3": "Export nach PDF/CSV"
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "benefit1": "HTTP-Callbacks für Ereignisse",
+    "benefit2": "Benutzerdefinierte Payload-Vorlagen",
+    "benefit3": "Wiederholungslogik und Protokollierung"
+  },
+  "automation": {
+    "title": "Aufgabenautomatisierung",
+    "benefit1": "Automatische Aufgabenerstellung",
+    "benefit2": "Geplante Aktionen",
+    "benefit3": "Workflow-Trigger"
   }
 }

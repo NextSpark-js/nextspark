@@ -1,8 +1,20 @@
 {
   "analytics": {
-    "title": "",
-    "benefit1": "",
-    "benefit2": "",
-    "benefit3": ""
+    "title": "Analíticas Avanzadas",
+    "benefit1": "Métricas en tiempo real",
+    "benefit2": "Constructor de reportes personalizados",
+    "benefit3": "Exportar a PDF/CSV"
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "benefit1": "Callbacks HTTP para eventos",
+    "benefit2": "Plantillas de payload personalizadas",
+    "benefit3": "Lógica de reintentos y logging"
+  },
+  "automation": {
+    "title": "Automatización de Tareas",
+    "benefit1": "Creación automática de tareas",
+    "benefit2": "Acciones programadas",
+    "benefit3": "Disparadores de flujo de trabajo"
   }
 }

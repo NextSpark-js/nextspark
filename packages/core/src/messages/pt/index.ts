@@ -8,6 +8,7 @@ import devtools from './devtools.json'
 import docs from './docs.json'
 import email from './email.json'
 import entities from './entities.json'
+import features from './features.json'
 import footer from './footer.json'
 import home from './home.json'
 import navigation from './navigation.json'
@@ -30,6 +31,7 @@ export default {
   docs,
   email,
   entities,
+  features,
   footer,
   home,
   navigation,

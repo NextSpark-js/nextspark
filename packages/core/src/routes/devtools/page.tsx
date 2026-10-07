@@ -11,7 +11,7 @@ import { getTranslations } from "next-intl/server";
  * Shows overview of available sections in the dev area.
  */
 async function DevHomePageContent() {
-  const t = await getTranslations('dev');
+  const t = await getTranslations('devtools');
   const tCommon = await getTranslations('common');
 
   const sections = [

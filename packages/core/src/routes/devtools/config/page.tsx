@@ -10,7 +10,7 @@ import { getTranslations } from "next-intl/server";
  * Provides read-only view with JSON formatting and copy functionality.
  */
 async function DevConfigPageContent() {
-  const t = await getTranslations('dev.config');
+  const t = await getTranslations('devtools.config');
 
   return (
     <div className="space-y-6" data-cy="devtools-config-page">
