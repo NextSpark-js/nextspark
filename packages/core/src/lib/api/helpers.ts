@@ -11,7 +11,7 @@ import { getEntityConfig } from '../entities/registry';
 import { getChildEntities, getEntity } from '../entities/queries';
 import { CreateMetaPayload } from '../../types/meta.types';
 import { getCorsOrigins } from '../utils/cors';
-import { corsGrant, setCorsHeaders, varyOnOrigin } from './cors-response';
+import { corsGrant, requestPathname, setCorsHeaders, varyOnOrigin } from './cors-response';
 import { isValidUUID } from '../utils/uuid';
 import {
   type AuthenticateOptions,
@@ -485,7 +485,7 @@ export async function addCorsHeaders(response: NextResponse, request?: NextReque
   let grant: { origin: string; credentials: boolean } | null = null;
   if (request) {
     const origin = request.headers.get('origin');
-    if (origin) grant = corsGrant(origin, config, env);
+    if (origin) grant = corsGrant(origin, config, env, requestPathname(request));
   } else if (env === 'development' && config.api.cors.allowAllOrigins.development) {
     // In development with allowAllOrigins but no request, use the first allowed origin
     // This handles cases where generic handlers don't pass the request
@@ -542,7 +542,7 @@ export async function wrapAuthHandlerWithCors(
   // Add CORS headers (see corsGrant)
   const origin = request.headers.get('origin')
   if (origin) {
-    const grant = corsGrant(origin, await getApplicationConfig(), process.env.NODE_ENV || 'development')
+    const grant = corsGrant(origin, await getApplicationConfig(), process.env.NODE_ENV || 'development', requestPathname(request))
     if (grant) {
       newResponse.headers.set('Access-Control-Allow-Origin', grant.origin)
       if (grant.credentials) newResponse.headers.set('Access-Control-Allow-Credentials', 'true')

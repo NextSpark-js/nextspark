@@ -19,6 +19,7 @@ import type { PatternReference } from '../../../types/pattern-reference'
 import type { ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
 import type { Pattern } from '../../../types/pattern-reference'
 import { withBasePath } from '../../../lib/base-path'
+import { TEAM_ID_HEADER } from '../../../lib/api/client-headers'
 
 type TabValue = 'blocks' | 'patterns' | 'layout'
 
@@ -35,7 +36,7 @@ function buildApiHeaders(): HeadersInit {
   const headers: Record<string, string> = {}
   const teamId = getTeamId()
   if (teamId) {
-    headers['x-team-id'] = teamId
+    headers[TEAM_ID_HEADER] = teamId
   }
   return headers
 }

@@ -7,6 +7,7 @@ import { Button } from '@nextsparkjs/core/components/ui/button';
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert';
 import { sel } from '@nextsparkjs/core/selectors/auth'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { VERIFY_FROM_UI_HEADER } from '@nextsparkjs/core/lib/api/client-headers'
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams()!;
@@ -30,7 +31,7 @@ function VerifyEmailContent() {
           method: 'GET',
           credentials: 'include',
           headers: {
-            'x-verify-from-ui': 'true'
+            [VERIFY_FROM_UI_HEADER]: 'true'
           }
         });
         

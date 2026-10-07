@@ -13,6 +13,7 @@ import { loadLoginPage } from '../lib/auth/load-login-page'
 import { setSessionHint } from '../lib/auth/session-hint'
 import { setUserLocaleClient } from '../lib/locale-client'
 import { I18N_CONFIG } from '../lib/config/i18n-config-client'
+import { SIGNUP_INTENT_HEADER } from '../lib/api/client-headers'
 type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 
 // Esta función ya no se usa directamente aquí
@@ -125,7 +126,7 @@ export function useAuthActions() {
       },
       // Optional signup intent, sent as the `x-signup-intent` header. The signup
       // route maps it to an initial team role (AUTH_CONFIG.signupIntent).
-      intent ? { headers: { 'x-signup-intent': intent } } : undefined
+      intent ? { headers: { [SIGNUP_INTENT_HEADER]: intent } } : undefined
     )
 
     if (error) {

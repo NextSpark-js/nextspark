@@ -3,6 +3,7 @@
 import * as React from "react"
 import { parseClientChildEntity as parseChildEntity, getClientEntityApiPath as getEntityApiPath } from '../../lib/entities/client-entity-meta'
 import { withBasePath } from '../../lib/base-path'
+import { TEAM_ID_HEADER } from '../../lib/api/client-headers'
 
 interface RelationDisplayProps {
   value: string | string[] | null
@@ -113,7 +114,7 @@ export function RelationDisplay({
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            ...(teamId && { 'x-team-id': teamId })
+            ...(teamId && { [TEAM_ID_HEADER]: teamId })
           },
           credentials: 'include',
         })

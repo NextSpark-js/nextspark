@@ -40,6 +40,7 @@ import { isPatternReference, type PatternReference } from '../../../types/patter
 import type { ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
 import { withBasePath } from '../../../lib/base-path'
 import { validatePublicSlug, type SlugScope } from '../../../lib/entities/public-slug'
+import { BUILDER_SOURCE_HEADER, TEAM_ID_HEADER } from '../../../lib/api/client-headers'
 
 type ViewMode = 'preview' | 'settings'
 
@@ -59,10 +60,10 @@ function buildApiHeaders(includeContentType = false): HeadersInit {
   }
   const teamId = getTeamId()
   if (teamId) {
-    headers['x-team-id'] = teamId
+    headers[TEAM_ID_HEADER] = teamId
   }
   // Identify that the request comes from the builder
-  headers['x-builder-source'] = 'true'
+  headers[BUILDER_SOURCE_HEADER] = 'true'
   return headers
 }
 type LeftSidebarMode = 'blocks' | 'fields' | 'none'

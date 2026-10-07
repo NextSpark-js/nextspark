@@ -5,6 +5,9 @@
  * from an origin the app trusts: its own (NEXT_PUBLIC_APP_URL / BETTER_AUTH_URL)
  * or one in the list Better Auth already trusts for sign-in (see
  * getTrustedOrigins). withRateLimitTier runs it before every handler it wraps.
+ * Under the admin and developer areas (isAppOnlyCorsPath) only the app's own
+ * origin is trusted, plus, outside production, the request's own origin when it
+ * is a private-network address (#170); no other listed origin.
  *
  * What passes without a trusted origin, and why:
  * - Reads (GET/HEAD/OPTIONS).
@@ -25,8 +28,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { APP_CONFIG_MERGED } from '../config'
 import { hasSessionCookie } from '../auth/session-hint'
-import { getTrustedOrigins, isOriginAllowed, normalizeOrigin } from '../utils/cors'
+import { getTrustedOrigins, isOriginAllowed, isPrivateLanOrigin, normalizeCorsEnvironment, normalizeOrigin } from '../utils/cors'
 import { ApiKeyManager, presentedApiKey } from './keys'
+import { appOrigins, isAppOnlyCorsPath, requestPathname } from './cors-response'
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -70,6 +74,16 @@ function withoutSessionCookies(request: NextRequest): NextRequest {
   })
 }
 
+/** Whether a write from `origin` (normalized) to `request`'s path comes from an origin the app trusts. */
+function isTrustedWriteOrigin(request: NextRequest, origin: string): boolean {
+  const path = requestPathname(request)
+  if (path !== undefined && isAppOnlyCorsPath(path)) {
+    const lan = normalizeCorsEnvironment(process.env.NODE_ENV || 'development') !== 'production' && isPrivateLanOrigin(origin)
+    return lan || appOrigins().includes(origin)
+  }
+  return isOriginAllowed(origin, getTrustedOrigins(APP_CONFIG_MERGED, origin)) !== null
+}
+
 function refusal(error: string, code: 'ORIGIN_REQUIRED' | 'ORIGIN_NOT_ALLOWED'): NextResponse {
   return NextResponse.json({ success: false, error, code }, { status: 403 })
 }
@@ -93,7 +107,7 @@ export function checkRequestOrigin(request: NextRequest): NextResponse | NextReq
     refused = refusal('This request needs an Origin header', 'ORIGIN_REQUIRED')
   } else {
     const normalized = normalizeOrigin(origin)
-    if (isOriginAllowed(normalized, getTrustedOrigins(APP_CONFIG_MERGED, normalized))) return request
+    if (isTrustedWriteOrigin(request, normalized)) return request
     refused = refusal('Request origin not allowed', 'ORIGIN_NOT_ALLOWED')
   }
 

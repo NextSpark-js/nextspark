@@ -7,11 +7,38 @@ import { NextResponse } from 'next/server'
 import { APP_CONFIG_MERGED } from '../config'
 import { getCorsOrigins, getTrustedOrigins, isOriginAllowed, normalizeOrigin } from '../utils/cors'
 import type { ApplicationConfig } from '../config/config-types'
+import { CLIENT_REQUEST_HEADERS } from './client-headers'
 
 type CorsConfig = Pick<ApplicationConfig, 'api'>
 
 export const CORS_ALLOW_METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
-export const CORS_ALLOW_HEADERS = 'Content-Type, Authorization, X-API-Key, x-team-id, x-builder-source'
+export const CORS_ALLOW_HEADERS = ['Content-Type', 'Authorization', 'X-API-Key', ...CLIENT_REQUEST_HEADERS].join(', ')
+
+/** The admin and developer areas: /api/superadmin/*, /api/devtools/* and /api/v1/devtools/*. */
+const APP_ONLY_PATH = /(^|\/)api\/(v1\/)?(superadmin|devtools)(\/|$)/
+
+/**
+ * True for a path under the admin or developer areas, which answer CORS only to the app's own origin and accept
+ * cookie-authenticated writes only from it (checkRequestOrigin).
+ */
+export function isAppOnlyCorsPath(pathname: string): boolean {
+  let path = pathname
+  try { path = decodeURIComponent(pathname) } catch { /* keep it as it came */ }
+  return APP_ONLY_PATH.test(path.toLowerCase().replace(/\/{2,}/g, '/'))
+}
+
+/** A request's path, for corsGrant (undefined when its URL does not parse). */
+export function requestPathname(request: Request): string | undefined {
+  try { return new URL(request.url).pathname } catch { return undefined }
+}
+
+/** The app's own origins: NEXT_PUBLIC_APP_URL and BETTER_AUTH_URL. */
+export function appOrigins(): string[] {
+  return [process.env.NEXT_PUBLIC_APP_URL, process.env.BETTER_AUTH_URL].flatMap(url => {
+    if (!url) return []
+    try { return [new URL(url).origin] } catch { return [] }
+  })
+}
 
 /**
  * Which origin a CORS response may name, and whether credentials go with it.
@@ -20,13 +47,20 @@ export const CORS_ALLOW_HEADERS = 'Content-Type, Authorization, X-API-Key, x-tea
  * origin is echoed too, but with credentials only when the cookie-write origin
  * check trusts it (getTrustedOrigins). Any other origin gets no grant: the
  * response names no origin and sends no credentials header.
+ * Under the admin and developer areas (isAppOnlyCorsPath, given the request's
+ * `pathname`), only the app's own origin is granted, with credentials; no
+ * other origin, listed or not.
  */
 export function corsGrant(
   origin: string,
   config: CorsConfig,
-  env: string
+  env: string,
+  pathname?: string
 ): { origin: string; credentials: boolean } | null {
   const normalizedOrigin = normalizeOrigin(origin);
+  if (pathname !== undefined && isAppOnlyCorsPath(pathname)) {
+    return appOrigins().includes(normalizedOrigin) ? { origin: normalizedOrigin, credentials: true } : null;
+  }
   const listed = isOriginAllowed(normalizedOrigin, getCorsOrigins(config as ApplicationConfig, env));
   if (listed) return { origin: listed, credentials: true };
   if (env === 'development' && config.api.cors.allowAllOrigins.development) {
@@ -68,7 +102,7 @@ export function withCors<R extends Response>(response: R, request: Request): R {
   if (response.headers.has('access-control-allow-origin')) return response;
   const origin = request.headers.get('origin');
   const env = process.env.NODE_ENV || 'development';
-  const grant = origin ? corsGrant(origin, APP_CONFIG_MERGED as CorsConfig, env) : null;
+  const grant = origin ? corsGrant(origin, APP_CONFIG_MERGED as CorsConfig, env, requestPathname(request)) : null;
   try {
     setCorsHeaders(response.headers, grant);
     return response;

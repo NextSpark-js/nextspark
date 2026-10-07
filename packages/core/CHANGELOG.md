@@ -107,6 +107,13 @@ Then run `pnpm exec nextspark prepare` (or just `pnpm build`). Nothing here need
   `validateAndAuthenticateRequest` or `validateAndAuthenticateApiRequest` also limit each validated API key on its own; routes that use
   `authenticateRequest` have only the per-address limit. Several API keys used from one address now share that address's limit per tier.
   `generateExternalAPI` (`lib/entities/external-api-generator`) counts per client address too, before the key check.
+- The admin and developer areas answer CORS only to the app's own origin (`NEXT_PUBLIC_APP_URL`, `BETTER_AUTH_URL`): under `/api/superadmin/*`,
+  `/api/devtools/*` and `/api/v1/devtools/*`, responses, errors and preflights name no other origin, listed or not, and send no credentials header
+  to it. The write-origin check applies the same rule there: a cookie-authenticated `POST`/`PUT`/`PATCH`/`DELETE` is accepted only from the
+  app's own origin (and, outside production, a private-network origin), and any other listed origin gets 403 `ORIGIN_NOT_ALLOWED`. Requests that
+  present an API key, and native requests without `Origin`, are handled as on other routes. Same-origin requests from the app's own pages are
+  unaffected. There is no option to change it: if the admin areas are opened from another domain of yours (`www.` vs the apex, a preview
+  domain), that domain must be `NEXT_PUBLIC_APP_URL` or `BETTER_AUTH_URL`, not only a listed origin. #217
 
 ### Added
 
@@ -137,6 +144,9 @@ Then run `pnpm exec nextspark prepare` (or just `pnpm build`). Nothing here need
   (`corsPreflight`, `@nextsparkjs/core/lib/api/cors-response`), so its preflight gets the same answer; the devtools routes' preflights do too.
   The 429 of `/api/auth/*` carries the same CORS as its other responses. A front end served from another origin than the API works under
   `next start` once that origin is listed.
+- The CORS preflight allows every custom header core's clients send: `x-signup-intent` and `x-verify-from-ui` join `x-team-id` and
+  `x-builder-source`, so a signup with an intent or an email verification from a listed origin passes its preflight. Core's clients and the
+  allowed-headers list share one constant (`@nextsparkjs/core/lib/api/client-headers`). #217
 - The sign-in pages, the page titles of the auth group and of public entity pages, and the emails core sends (sign-in code, password reset,
   team invitation, email verification) use `app.name` from the project's `config/app.config.ts` instead of the fixed "Boilerplate" / "Your App".
   `NEXT_PUBLIC_APP_NAME` still wins when it is set, in the pages and in the emails alike. The name is HTML-escaped in the email bodies. A project that never set `app.name` shows core's default name, `NextSpark`. The new optional

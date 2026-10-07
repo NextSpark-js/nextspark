@@ -12,6 +12,7 @@ import type { PatternReference } from '../../../types/pattern-reference'
 import type { BlockInstance } from '../../../types/blocks'
 import { getBlockComponent, normalizeBlockProps } from '../../../lib/blocks/loader'
 import { withBasePath } from '../../../lib/base-path'
+import { TEAM_ID_HEADER } from '../../../lib/api/client-headers'
 
 interface PatternReferencePreviewProps {
   patternRef: PatternReference
@@ -59,7 +60,7 @@ function buildApiHeaders(): HeadersInit {
   const headers: Record<string, string> = {}
   const teamId = getTeamId()
   if (teamId) {
-    headers['x-team-id'] = teamId
+    headers[TEAM_ID_HEADER] = teamId
   }
   return headers
 }

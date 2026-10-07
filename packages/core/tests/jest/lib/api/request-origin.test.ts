@@ -1,6 +1,7 @@
 /**
  * Origin check for cookie-authenticated writes (lib/api/request-origin), on its
- * own and through withRateLimitTier, which every core API route uses.
+ * own and through withRateLimitTier, which every core API route uses. Under the
+ * admin and developer areas only the app's own origin is trusted (#217).
  */
 
 jest.mock('@/core/lib/config', () => ({
@@ -23,12 +24,12 @@ import { presentedApiKey } from '@/core/lib/api/keys'
 const APP = 'https://app.example.com'
 const SESSION = 'better-auth.session_token=abc.def'
 
-function makeRequest(method: string, headers: Record<string, string> = {}) {
-  return new NextRequest(`${APP}/api/v1/tasks`, { method, headers })
+function makeRequest(method: string, headers: Record<string, string> = {}, path = '/api/v1/tasks') {
+  return new NextRequest(`${APP}${path}`, { method, headers })
 }
 
-async function refusal(method: string, headers: Record<string, string>) {
-  const res = checkRequestOrigin(makeRequest(method, headers))
+async function refusal(method: string, headers: Record<string, string>, path?: string) {
+  const res = checkRequestOrigin(makeRequest(method, headers, path))
   return res instanceof NextResponse ? { status: res.status, code: (await res.json()).code } : null
 }
 
@@ -218,5 +219,85 @@ describe('withRateLimitTier runs the origin check first', () => {
     const junk = await route(makeRequest('POST', { authorization: 'Bearer junk', cookie: SESSION, origin: 'https://other.example' }))
     expect(junk.status).toBe(403)
     expect(seen).toHaveLength(1)
+  })
+})
+
+describe('the admin and developer areas accept cookie writes only from the app’s own origin (#217)', () => {
+  const PARTNER = 'https://partner.example.com'
+  const ADMIN_PATHS = ['/api/superadmin/users', '/api/superadmin/teams/t1', '/api/devtools/tests', '/api/v1/devtools/scheduled-actions/run', '/API//SuperAdmin/users', '/api/%73uperadmin/users']
+  const saved = { app: process.env.NEXT_PUBLIC_APP_URL, auth: process.env.BETTER_AUTH_URL }
+  beforeAll(() => {
+    process.env.NEXT_PUBLIC_APP_URL = APP
+    delete process.env.BETTER_AUTH_URL
+  })
+  afterAll(() => {
+    process.env.NEXT_PUBLIC_APP_URL = saved.app
+    if (saved.auth !== undefined) process.env.BETTER_AUTH_URL = saved.auth
+  })
+
+  it.each(ADMIN_PATHS)('%s: a simple text/plain POST with the cookie from a listed origin gets 403', async path => {
+    expect(await refusal('POST', { cookie: SESSION, origin: PARTNER, 'content-type': 'text/plain' }, path)).toEqual(REFUSED)
+    expect(await refusal('PATCH', { cookie: SESSION, origin: 'https://acme.tenants.example.com', 'content-type': 'application/json' }, path)).toEqual(REFUSED)
+    expect(await refusal('DELETE', { cookie: SESSION, referer: `${PARTNER}/admin` }, path)).toEqual(REFUSED)
+  })
+
+  it.each(ADMIN_PATHS)('%s: the same write from the app’s own origin passes', async path => {
+    expect(await refusal('POST', { cookie: SESSION, origin: APP, 'content-type': 'text/plain' }, path)).toBeNull()
+    expect(await refusal('DELETE', { cookie: SESSION, referer: `${APP}/superadmin/users` }, path)).toBeNull()
+  })
+
+  it('the same write from a listed origin to a normal path passes, as before', async () => {
+    expect(await refusal('POST', { cookie: SESSION, origin: PARTNER, 'content-type': 'text/plain' })).toBeNull()
+    expect(await refusal('POST', { cookie: SESSION, origin: PARTNER, 'content-type': 'text/plain' }, '/api/superadmins')).toBeNull()
+  })
+
+  it('BETTER_AUTH_URL is the app’s own origin too', async () => {
+    process.env.BETTER_AUTH_URL = 'https://auth.example.com/api/auth'
+    try {
+      expect(await refusal('POST', { cookie: SESSION, origin: 'https://auth.example.com' }, '/api/superadmin/users')).toBeNull()
+    } finally {
+      delete process.env.BETTER_AUTH_URL
+    }
+  })
+
+  it('an API-key request and a native request without Origin behave as on other paths', async () => {
+    const keyed = checkRequestOrigin(makeRequest('POST', { cookie: SESSION, origin: PARTNER, authorization: `Bearer ${KEY}` }, '/api/superadmin/users'))
+    expect(keyed).toBeInstanceOf(NextRequest)
+    expect((keyed as NextRequest).headers.get('cookie') ?? null).toBeNull()
+    expect(await refusal('POST', { cookie: SESSION, 'content-type': 'application/json' }, '/api/superadmin/users')).toBeNull()
+    expect(await refusal('POST', { cookie: SESSION, 'content-type': 'text/plain' }, '/api/superadmin/users')).toEqual({ status: 403, code: 'ORIGIN_REQUIRED' })
+  })
+
+  it('a private-LAN origin is trusted there outside production only, as elsewhere', async () => {
+    const lan = 'http://192.168.1.20:3000'
+    const env = process.env as Record<string, string | undefined>
+    const savedEnv = env.NODE_ENV
+    try {
+      env.NODE_ENV = 'development'
+      expect(await refusal('POST', { cookie: SESSION, origin: lan }, '/api/superadmin/users')).toBeNull()
+      env.NODE_ENV = 'production'
+      expect(await refusal('POST', { cookie: SESSION, origin: lan }, '/api/superadmin/users')).toEqual(REFUSED)
+    } finally {
+      env.NODE_ENV = savedEnv
+    }
+  })
+
+  it('through withRateLimitTier the handler is not called for the listed origin, and is for the own origin', async () => {
+    const savedDisable = process.env.DISABLE_RATE_LIMITING
+    process.env.DISABLE_RATE_LIMITING = 'true'
+    try {
+      const handler = jest.fn(async () => NextResponse.json({ ok: true }))
+      const route = withRateLimitTier(handler, 'write')
+      const refused = await route(makeRequest('POST', { cookie: SESSION, origin: PARTNER, 'content-type': 'text/plain' }, '/api/superadmin/users'))
+      expect(refused.status).toBe(403)
+      expect((await refused.json()).code).toBe('ORIGIN_NOT_ALLOWED')
+      expect(handler).not.toHaveBeenCalled()
+      const ok = await route(makeRequest('POST', { cookie: SESSION, origin: APP, 'content-type': 'text/plain' }, '/api/superadmin/users'))
+      expect(ok.status).toBe(200)
+      expect(handler).toHaveBeenCalledTimes(1)
+    } finally {
+      if (savedDisable === undefined) delete process.env.DISABLE_RATE_LIMITING
+      else process.env.DISABLE_RATE_LIMITING = savedDisable
+    }
   })
 })

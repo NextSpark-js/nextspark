@@ -6,6 +6,7 @@ import { Badge } from './badge'
 import { cn } from '../../lib/utils'
 import { useTeam } from '../../hooks/useTeam'
 import { withBasePath } from '../../lib/base-path'
+import { TEAM_ID_HEADER } from '../../lib/api/client-headers'
 
 interface UserDisplayProps {
   value: string | null | undefined
@@ -69,7 +70,7 @@ export function UserDisplay({
         const response = await fetch(withBasePath(`/api/v1/teams/${effectiveTeamId}/members`), {
           headers: {
             'Content-Type': 'application/json',
-            'x-team-id': effectiveTeamId
+            [TEAM_ID_HEADER]: effectiveTeamId
           },
           credentials: 'include'
         })

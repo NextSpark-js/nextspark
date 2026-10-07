@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 import { useTeam } from './useTeam'
 import { withBasePath } from '../lib/base-path'
+import { TEAM_ID_HEADER } from '../lib/api/client-headers'
 
 /**
  * Options for the usePatternUsages hook
@@ -119,7 +120,7 @@ export function usePatternUsages(
 
       // Add team context header
       if (teamId) {
-        headers['x-team-id'] = teamId
+        headers[TEAM_ID_HEADER] = teamId
       }
 
       const response = await fetch(withBasePath(url), { headers })
@@ -180,7 +181,7 @@ export function usePatternUsageCount(
       }
 
       if (teamId) {
-        headers['x-team-id'] = teamId
+        headers[TEAM_ID_HEADER] = teamId
       }
 
       const response = await fetch(withBasePath(`/api/v1/patterns/${patternId}/usages?limit=1`), { headers })

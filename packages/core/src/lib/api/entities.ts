@@ -6,6 +6,7 @@
 
 import { getClientEntityApiPath, getClientEntityConfigs } from '../entities/client-entity-meta'
 import { withBasePath, withBasePathIfInApp } from '../base-path'
+import { BUILDER_SOURCE_HEADER, TEAM_ID_HEADER } from './client-headers'
 
 export interface EntityData {
   id?: string
@@ -98,7 +99,7 @@ function buildHeaders(additionalHeaders: Record<string, string> = {}): Record<st
 
   const teamId = getCurrentTeamId()
   if (teamId) {
-    headers['x-team-id'] = teamId
+    headers[TEAM_ID_HEADER] = teamId
   }
 
   return headers
@@ -593,7 +594,7 @@ export class EntityApiClient {
     delete copyData.updatedAt
 
     const hasBlocks = 'blocks' in copyData && Array.isArray(copyData.blocks)
-    return this.create(entityType, copyData, hasBlocks ? { 'x-builder-source': 'true' } : {})
+    return this.create(entityType, copyData, hasBlocks ? { [BUILDER_SOURCE_HEADER]: 'true' } : {})
   }
 
   /**
@@ -701,7 +702,7 @@ export async function fetchWithTeam(
   }
 
   if (activeTeamId) {
-    headers.set('x-team-id', activeTeamId)
+    headers.set(TEAM_ID_HEADER, activeTeamId)
   }
 
   return fetch(withBasePathIfInApp(url), {

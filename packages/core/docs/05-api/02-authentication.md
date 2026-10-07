@@ -1232,6 +1232,12 @@ with credentials for a listed origin and no grant for any other: `withRateLimitT
 those routes export `OPTIONS` (`corsPreflight` from `@nextsparkjs/core/lib/api/cors-response`) for the preflight. A route of your own does
 the same. Do not set `Access-Control-*` headers in `next.config.mjs`: they apply on top of the route's and replace its per-origin answer.
 
+The admin and developer areas (`/api/superadmin/*`, `/api/devtools/*`, `/api/v1/devtools/*`) answer CORS only to the app's own origin
+(`NEXT_PUBLIC_APP_URL`, `BETTER_AUTH_URL`), never to another listed origin: a front end on another origin cannot call them with
+credentials, and a cookie-authenticated write there from another listed origin gets 403 `ORIGIN_NOT_ALLOWED`. This is fixed in core,
+with no option. The preflight allows `Content-Type`, `Authorization`, `X-API-Key` and the headers
+core's clients send (`x-team-id`, `x-builder-source`, `x-signup-intent`, `x-verify-from-ui`).
+
 ### Debug Checklist
 
 **API Key Authentication:**
