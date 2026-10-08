@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading
 
+- **Run `pnpm db:migrate`: core adds `032_team_join_policies.sql`.** It changes the RLS policies of `teams`, `team_members` and `team_invitations` (idempotent). Only a project that runs the application as `nextspark_app` (the RLS cutover in `22-stability-and-support/04-postgresql-requirements.md`) sees a difference: creating a team and accepting an invitation as an existing user work there now, and a user adds a membership row only for themself (the creator of a team with no member yet, or an invitee with a pending invitation). A project route that added other users to a team on the request user's RLS connection must do it on the service connection after its own checks, as core's routes do. An invitation's team, email, role, token, inviter and expiry can no longer be changed once it is sent.
 - **Production migrations now validate the certificate.** With `NODE_ENV=production` (in the environment or the project `.env`),
   `db:migrate`, `db:seed` and the migration verifiers connect to a URL without `sslmode` over SSL with certificate validation, as the
   application does, and no longer fall back to plain. Use `sslmode=disable` for a local server without SSL.
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- With the application on the `nextspark_app` connection, `POST /api/v1/teams` and accepting an invitation as an existing user no longer answer 500, and the invitee can decline an invitation or have it marked expired. Accepting claims the pending invitation before adding the member, so the same invitation is not accepted twice. The invitee's email is matched without case, as the accept route does.
 - Deleting an account now also deactivates the user's API keys (and drops them from the key cache) and removes the user from every team, in the same transaction as the anonymization. The audit log, login events, billing usage events and the invitations the user sent keep pointing at the anonymized user. The whole anonymization now runs on the service pool, so a deployment that runs the application as `nextspark_app` needs `DATABASE_SERVICE_URL`: without it the call fails with `User not found` and changes nothing (before, it left the sessions behind).
 
 ### Documentation

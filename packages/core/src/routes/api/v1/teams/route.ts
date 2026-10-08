@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { queryWithRLS, getTransactionClient, queryRows } from '@nextsparkjs/core/lib/db'
+import { queryWithRLS, getServiceTransactionClient, queryRows } from '@nextsparkjs/core/lib/db'
 import {
   createApiResponse,
   createApiError,
@@ -237,8 +237,9 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
       return addCorsHeaders(response, req)
     }
 
-    // Use transaction to ensure atomicity
-    const tx = await getTransactionClient(userId)
+    // The checks above authorize the creation; the team and its owner row are written on the service connection, as
+    // TeamService.create does (the creator is not a member yet). One transaction.
+    const tx = await getServiceTransactionClient()
 
     try {
       // Create team WITHOUT type column

@@ -35,6 +35,8 @@ A default Neon project's owner role has `BYPASSRLS`, so on Neon RLS is not evalu
 5. Set `MIGRATE_DATABASE_URL` to the owner, so later migrations and seeds still run as the owner.
 6. Check that sign-in works, that a plain member lists only their team's rows, and that cross-team access is denied.
 
+Before 0.1.0-beta.198, creating a team and accepting an invitation as an existing user answered 500 on the `nextspark_app` connection. Both now write their rows on the service connection after the route's own checks, and migration `032_team_join_policies.sql` lets the creator read their new team and lets a user add only themself to a team: as the owner of a team they own that has no member yet, or with the role of a pending, unexpired invitation to their email. Run `pnpm db:migrate` before the cutover, and add both flows to the check in step 6.
+
 For each user request the application sets `app.user_id` with `SET LOCAL` inside a transaction (`queryWithRLS` in `src/lib/db.ts`); the policies read it through `get_auth_user_id()`. It does not use `SET ROLE`. A query with no user context runs on the service connection. The service connection is chosen by credential, never by request input. Set `DATABASE_SERVICE_URL` before pointing `DATABASE_URL` at `nextspark_app`: sign-in and the other system operations are meant to run on the service connection, and without it they fall back to the RLS-evaluated one.
 
 ### The migration role

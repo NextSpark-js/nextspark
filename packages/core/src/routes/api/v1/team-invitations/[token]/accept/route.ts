@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { queryOneWithRLS, mutateWithRLS, getTransactionClient } from '@nextsparkjs/core/lib/db'
+import { queryOneWithRLS, mutateWithRLS, getServiceTransactionClient } from '@nextsparkjs/core/lib/db'
 import {
   createApiResponse,
   createApiError,
@@ -116,10 +116,24 @@ export const POST = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response, req)
       }
 
-      // Use transaction to ensure atomicity
-      const tx = await getTransactionClient(authResult.user!.id)
+      // The checks above (the invitee's email, pending, not expired, not a member yet) authorize the join; the member
+      // row and the accepted status are written on the service connection in one transaction, as signup-with-invite
+      // does. The status condition keeps two concurrent accepts from both joining.
+      const tx = await getServiceTransactionClient()
 
       try {
+        const claimed = await tx.mutate(
+          `UPDATE "team_invitations"
+           SET status = 'accepted', "acceptedAt" = NOW(), "updatedAt" = CURRENT_TIMESTAMP
+           WHERE id = $1 AND status = 'pending'`,
+          [invitation.id]
+        )
+        if (claimed.rowCount === 0) {
+          await tx.rollback()
+          const response = createApiError('Invitation is no longer pending', 409, null, 'INVITATION_NOT_PENDING')
+          return addCorsHeaders(response, req)
+        }
+
         // Add user as team member
         const [member] = await tx.query<TeamMember>(
           `INSERT INTO "team_members" ("teamId", "userId", role, "invitedBy", "joinedAt")
@@ -131,14 +145,6 @@ export const POST = withRateLimitTier(withApiLogging(
         if (!member) {
           throw new Error('Failed to create team member')
         }
-
-        // Update invitation status
-        await tx.query(
-          `UPDATE "team_invitations"
-           SET status = 'accepted', "acceptedAt" = NOW(), "updatedAt" = CURRENT_TIMESTAMP
-           WHERE id = $1`,
-          [invitation.id]
-        )
 
         await tx.commit()
 
