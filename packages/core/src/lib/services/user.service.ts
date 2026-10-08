@@ -7,7 +7,7 @@
  * @module UserService
  */
 
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '../db'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS, getServiceTransactionClient } from '../db'
 import { MetaService } from './meta.service'
 import type { User, UserRole } from '../../types/user.types'
 import type { MetaDataType } from '../../types/meta.types'
@@ -685,9 +685,16 @@ export class UserService {
    * A hard DELETE of the users row fails under foreign-key constraints (other
    * tables reference the user) and would orphan that history. Anonymizing
    * instead frees the UNIQUE email for re-registration, strips PII, revokes
-   * every session and purges stored credentials, while preserving referential
-   * integrity. `userId` must come from the caller's session — a user may only
-   * anonymize their own account.
+   * every session, purges stored credentials, deactivates every API key and
+   * removes the user from every team, while preserving referential integrity.
+   * `userId` must come from the caller's session — a user may only anonymize
+   * their own account.
+   *
+   * Rows that keep pointing at the anonymized user: the API audit log and
+   * login events (history), billing usage events and subscriptions (team
+   * billing), invitations they sent and the `invitedBy` of members they invited.
+   * Removing the memberships never leaves a team without its owner (an owner
+   * cannot delete their account); the last admin of a team simply leaves it.
    *
    * Throws an Error with `.code === 'OWNS_TEAMS'` when the user still owns
    * teams; the caller must surface that so ownership is transferred first.
@@ -711,42 +718,51 @@ export class UserService {
       throw error
     }
 
-    // 2. Scrub user metadata (phone and any other PII stored as metas).
-    await UserService.deleteAllUserMetas(userId, userId)
-
-    // 3. Anonymize the row. The sync_user_name BEFORE-UPDATE trigger recomputes
-    //    `name` from firstName/lastName whenever those columns are in the SET
-    //    list, so set them to neutral placeholders (=> name 'Deleted account')
-    //    rather than NULL (which the trigger would collapse to an empty name).
-    //    Self-scoped via RLS (a user may only update their own row).
-    const result = await mutateWithRLS(
-      `UPDATE "users"
-         SET email = 'deleted+' || id || '@deleted.invalid',
-             "emailVerified" = false,
-             "firstName" = 'Deleted',
-             "lastName" = 'account',
-             image = NULL
-       WHERE id = $1`,
-      [userId],
-      userId
-    )
-    if (result.rowCount === 0) {
-      throw new Error('User not found')
+    // 2. Everything else in one transaction on the service (RLS-bypass) pool:
+    //    session, account, api_key and other teams' member rows are not the
+    //    user's to write under RLS. A deployment whose app role is RLS-enforced
+    //    MUST therefore set DATABASE_SERVICE_URL (the same prerequisite as the
+    //    team/subscription bootstrap). The sync_user_name BEFORE-UPDATE trigger
+    //    recomputes `name` from firstName/lastName, so they get neutral
+    //    placeholders (=> name 'Deleted account') rather than NULL. Re-running
+    //    it is safe: the email sentinel embeds the id (no UNIQUE conflict).
+    const tx = await getServiceTransactionClient()
+    let keyHashes: string[]
+    try {
+      await tx.query('DELETE FROM "users_metas" WHERE "userId" = $1', [userId])
+      const anonymized = await tx.mutate(
+        `UPDATE "users"
+           SET email = 'deleted+' || id || '@deleted.invalid',
+               "emailVerified" = false,
+               "firstName" = 'Deleted',
+               "lastName" = 'account',
+               image = NULL
+         WHERE id = $1`,
+        [userId]
+      )
+      if (anonymized.rowCount === 0) {
+        throw new Error('User not found')
+      }
+      await tx.query('DELETE FROM "session" WHERE "userId" = $1', [userId])
+      await tx.query('DELETE FROM "account" WHERE "userId" = $1', [userId])
+      // Inactive rather than deleted, as suspendUser does: the audit log keeps the keys.
+      const keys = await tx.query<{ keyHash: string }>(
+        `UPDATE "api_key" SET status = 'inactive', "updatedAt" = NOW()
+         WHERE "userId" = $1 AND status IS DISTINCT FROM 'inactive'
+         RETURNING "keyHash"`,
+        [userId]
+      )
+      keyHashes = keys.map(k => k.keyHash)
+      await tx.query('DELETE FROM "team_members" WHERE "userId" = $1', [userId])
+      await tx.commit()
+    } catch (error) {
+      await tx.rollback()
+      throw error
     }
 
-    // 4. Revoke every session and purge stored credentials so the account is
-    //    logged out on all devices and no password hash / OAuth token lingers.
-    //    The old hard-DELETE relied on ON DELETE CASCADE, which no longer fires
-    //    on an UPDATE; the session and account tables are service-write-only
-    //    under RLS, so these run on the service (RLS-bypass) pool. A deployment
-    //    whose app role is RLS-enforced MUST therefore set DATABASE_SERVICE_URL
-    //    (the same prerequisite as the team/subscription bootstrap) — otherwise
-    //    the service pool falls back to the app pool and these deletes silently
-    //    match zero rows. This method is idempotent and safe to re-run: the
-    //    email sentinel embeds the id (no UNIQUE conflict) and every step repeats
-    //    cleanly, so a caller may retry after a transient mid-sequence failure.
-    await mutateWithRLS('DELETE FROM "session" WHERE "userId" = $1', [userId], userId, { service: true })
-    await mutateWithRLS('DELETE FROM "account" WHERE "userId" = $1', [userId], userId, { service: true })
+    // validateApiKey caches a key for 5 minutes in this process: drop the deactivated ones now.
+    const { invalidateApiKeyCache } = await import('../api/auth')
+    for (const keyHash of keyHashes) invalidateApiKeyCache(keyHash)
   }
 
   /**

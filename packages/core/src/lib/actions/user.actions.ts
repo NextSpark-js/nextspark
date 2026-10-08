@@ -298,7 +298,8 @@ export async function deleteAccount(): Promise<EntityActionVoidResult> {
     const userId = session.user.id
 
     // 2. Anonymize the account: scrubs user metadata, frees the UNIQUE email,
-    // strips PII, and revokes every session + stored credential. Throws an
+    // strips PII, revokes every session + stored credential, deactivates the
+    // user's API keys and removes their team memberships. Throws an
     // Error with code 'OWNS_TEAMS' if the user still owns teams (ownership must
     // be transferred or those teams deleted first).
     await UserService.anonymizeAccount(userId)

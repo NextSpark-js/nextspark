@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   production; in production it uses SSL with a validated certificate, and a server without SSL stops the run with an error that names
   `sslmode=disable` and `sslmode=verify-full` and does not print the URL. Explicit `sslmode` values keep their meaning.
 
+### Fixed
+
+- Deleting an account now also deactivates the user's API keys (and drops them from the key cache) and removes the user from every team, in the same transaction as the anonymization. The audit log, login events, billing usage events and the invitations the user sent keep pointing at the anonymized user. The whole anonymization now runs on the service pool, so a deployment that runs the application as `nextspark_app` needs `DATABASE_SERVICE_URL`: without it the call fails with `User not found` and changes nothing (before, it left the sessions behind).
+
 ### Documentation
 
 - New section `22-stability-and-support` with the 1.0 stability table (stable, experimental, deprecated, deferred), the support matrix (Node.js, Next.js `~16.3.8`, pnpm, PostgreSQL 15-17, Expo SDK 54), the SemVer and deprecation policy (one minor of notice, security support for the latest 1.x minor, `latest` and `1.0.0-rc.N` on `next`, `nextspark migrate` for 12 months after 1.0.0 or the whole 1.x line, whichever ends first) and the written PostgreSQL requirements (application, service and migration roles, the `pgcrypto` extension, SSL, poolers). Neon, Supabase and Amazon RDS are listed as not verified.

@@ -18,7 +18,8 @@ export const DELETE = withRateLimitTier(async (req: NextRequest) => {
 
     try {
       // Anonymize the account: scrubs user metadata, frees the UNIQUE email,
-      // strips PII, and revokes every session + stored credential. A hard
+      // strips PII, revokes every session + stored credential, deactivates the
+      // user's API keys and removes their team memberships. A hard
       // DELETE fails under foreign-key constraints; anonymizing preserves
       // referential integrity. Throws code 'OWNS_TEAMS' if the user still
       // owns teams (ownership must be transferred or those teams deleted first).
