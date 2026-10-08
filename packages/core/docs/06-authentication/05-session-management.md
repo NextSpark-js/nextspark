@@ -83,9 +83,9 @@ values are what `lib/auth.ts` hands to Better Auth's `session` option.
 
 Authorization reads skip the cookie cache: the API entry points (`authenticateRequest` in `lib/api/auth/dual-auth.ts` and
 `validateAndAuthenticateRequest`), the `/api/user/*` routes, the entity, user and team server actions, `generateEntityAPI`, the
-`/superadmin` and `/devtools` API and page checks, and the proxy template read the session from the database (`getAuthorizationSession` in `lib/auth/authorization-session.ts`, or `query: { disableCookieCache: true }`).
+`/superadmin` and `/devtools` API and page checks, and core's proxy (`@nextsparkjs/core/proxy`) read the session from the database (`getAuthorizationSession` in `lib/auth/authorization-session.ts`, or `query: { disableCookieCache: true }`).
 A sign-out, a revoked session, a suspension or a role change therefore counts on the next request instead of when the cached cookie
-expires. Reads that only display data keep the cache. A project that owns `src/proxy.ts` passes the same option in its session
+expires. Reads that only display data keep the cache. A project whose `src/proxy.ts` does not re-export core's proxy passes the same option in its session
 read.
 
 ### Session Renewal

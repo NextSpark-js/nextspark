@@ -8,7 +8,7 @@
  * anything else before rendering in `next dev` and wherever a production build
  * prerenders the route. A route rendered on demand has no prerendered list to
  * check; the proxy answers 404 for those requests instead
- * (tests/jest/templates/proxy.test.ts), in apps/dev as in a generated project
+ * (tests/jest/proxy/proxy.test.ts), in apps/dev as in a generated project
  * (tests/node/apps-dev-proxy.test.ts).
  * The pages are core route modules (packages/core/src/routes, #203); the app
  * files are facades that copy `dynamicParams` as a literal.

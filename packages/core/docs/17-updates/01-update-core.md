@@ -50,7 +50,7 @@ pnpm install
 
 - The rest of `package.json`: name, scripts, other dependencies
 - `api/`, `blocks/`, `components/`, `config/`, `entities/`, `lib/`, `messages/`, `migrations/`, `plugins/`, `public/`, `styles/`, `templates/`, and `tests/`: project-owned root-first source
-- `next.config.mjs`, `tsconfig.json`, `i18n.ts`, `instrumentation.ts`, `proxy.ts` or `middleware.ts`: project files. `nextspark sync:app`, which used to update them, was [removed in 0.1.0-beta.192](./05-sync-app-removal); a change a new release needs in one of them is in its release notes
+- `next.config.mjs`, `tsconfig.json`, `i18n.ts`, `instrumentation.ts`, `proxy.ts` or `middleware.ts`: project files. `nextspark sync:app`, which used to update them, was [removed in 0.1.0-beta.192](./05-sync-app-removal); a change a new release needs in one of them is in its release notes. One exception: `nextspark prepare`, which update-core runs, replaces a `src/proxy.ts`, `src/middleware.ts` or `instrumentation.ts` that is byte for byte a template an earlier core shipped with the current template (a facade over `@nextsparkjs/core/proxy` or `@nextsparkjs/core/instrumentation`), and says so. A file with any change of yours is kept, and prepare prints the replacement to make (`NS_PROXY_FACADE_MISSING`, `NS_INSTRUMENTATION_FACADE_MISSING`)
 - `.env*`: environment files
 
 The lifecycle scripts `pnpm install` runs are not bound by this list: they can write anywhere in the project. That is why a run that stops partway is rolled back through git, as a whole (see [When a Run Stops Partway](#when-a-run-stops-partway)).

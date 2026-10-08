@@ -20,7 +20,7 @@ Everything else is **internal**, even if the exports map lets you import it.
 - A public subpath is exported by the package for as long as the major lasts. A test (`tests/node/public-api.test.ts`) fails if an entry stops resolving to a built file through the exports map.
 - A stable template cannot import a subpath that is not on the list, or build a core specifier at runtime: the same test fails and names the file and the subpath. Adding the subpath to the list is how a template makes it part of the contract. It also fails when a `template-import` entry is no longer imported by any stable template.
 - A public subpath that belongs to an **experimental surface** (billing, scheduled actions, testing helpers) follows the experimental rule until that surface is stable: no guarantee, changes in a minor with a changelog note. Those rows are marked *experimental*.
-- A subpath marked *public, frozen in 1.x unless replaced by a `./proxy` facade before the RC* stays as it is for the 1.x line unless a facade replaces it first.
+- `./proxy` and `./instrumentation` are the request proxy and server startup. Their exports (`proxy`, `createProxy` and its options, `register`) are the contract; what they do inside (cookie names, the session hint, the order of the checks) is core's to change, like any behaviour behind a public function, and changes with a changelog note.
 
 ## What internal means
 
@@ -31,6 +31,7 @@ An internal subpath may change or disappear in a minor release, with no deprecat
 - the devtools components;
 - the billing gateways and the webhook handlers (`lib/billing/stripe-webhook` and `polar-webhook` still resolve for one more minor; the webhook extension types are exported from `./lib/billing/config-types`);
 - `lib/mcp`;
+- the proxy plumbing behind `./proxy`: `lib/middleware`, `lib/auth/session-hint` and `lib/docs/access` (public up to 0.1.0-beta.197; the release after it made the scaffold's `proxy.ts` a facade over `./proxy`);
 - any `lib/*`, `components/*`, `hooks/*` or `utils/*` subpath not on the list.
 
 Importing an internal subpath from your own code works today and is not supported. Code samples in other guides that import an unlisted subpath use an internal API; the test prints the list of such subpaths. Three things that look like public paths are not:
@@ -123,18 +124,17 @@ The reason in each row is one of `template-import` (a stable template imports it
 | Subpath | Why it is public |
 | --- | --- |
 | `./lib/api/auth/dual-auth` | documented — authenticateRequest for API routes; the nextspark skills guide tells projects to import it. |
-| `./lib/auth` | template-import — Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
-| `./lib/auth/session-hint` | template-import — Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
-| `./lib/auth/runtime-readiness` | template-import — Imported by instrumentation.ts. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
-| `./lib/middleware` | template-import — Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
-| `./lib/teams/active-team-cookie` | template-import — Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
-| `./lib/docs/access` | template-import — Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
+| `./proxy` | template-import — proxy and createProxy({ authenticatedPaths }): the request proxy the src/proxy.ts the scaffold writes re-exports. |
+| `./instrumentation` | template-import — register(): the server startup the instrumentation.ts the scaffold writes re-exports. |
+| `./lib/auth` | documented — The Better Auth instance (auth.api.getSession and the other server calls) the authentication and API guides use in project code. |
+| `./lib/auth/runtime-readiness` | documented — getAuthReadinessResponse, which a project that overrides core's auth routes adds to them (passwordless guide), and logAuthReadinessAtStartup for a project instrumentation.ts that does not call core's register(). |
+| `./lib/teams/active-team-cookie` | documented — ACTIVE_TEAM_COOKIE and activeTeamIdForSession, how server code reads the active team (teams permissions guide). |
 
 ### Jobs
 
 | Subpath | Why it is public |
 | --- | --- |
-| `./lib/scheduled-actions` | template-import (experimental) — Imported by instrumentation.ts. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
+| `./lib/scheduled-actions` | documented (experimental) — registerScheduledAction, scheduleAction and the rest of the scheduled-actions API (scheduled actions guides). |
 
 ### Blocks
 

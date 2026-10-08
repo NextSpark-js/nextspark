@@ -11,7 +11,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
-const ROOTS = ['apps/dev/templates', 'apps/dev/api', 'packages/core/src', 'packages/core/templates/proxy.ts', 'themes', 'plugins']
+const ROOTS = ['apps/dev/templates', 'apps/dev/api', 'packages/core/src', 'themes', 'plugins']
 const SKIPPED_DIRS = new Set(['node_modules', '.next', 'dist', 'tests', '__tests__', 'cypress'])
 /** A cookie accessor called with the literal name; localStorage's getItem/setItem is not a cookie. */
 const DIRECT_COOKIE_ACCESS = /\.(?:get|set|delete|has)\(\s*['"`]activeTeamId['"`]/

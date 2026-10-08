@@ -214,46 +214,40 @@
       "note": "authenticateRequest for API routes; the nextspark skills guide tells projects to import it."
     },
     {
-      "subpath": "./lib/auth",
+      "subpath": "./proxy",
       "reason": "template-import",
       "area": "Request pipeline",
-      "note": "Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
+      "note": "proxy and createProxy({ authenticatedPaths }): the request proxy the src/proxy.ts the scaffold writes re-exports."
     },
     {
-      "subpath": "./lib/auth/session-hint",
+      "subpath": "./instrumentation",
       "reason": "template-import",
       "area": "Request pipeline",
-      "note": "Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
+      "note": "register(): the server startup the instrumentation.ts the scaffold writes re-exports."
+    },
+    {
+      "subpath": "./lib/auth",
+      "reason": "documented",
+      "area": "Request pipeline",
+      "note": "The Better Auth instance (auth.api.getSession and the other server calls) the authentication and API guides use in project code."
     },
     {
       "subpath": "./lib/auth/runtime-readiness",
-      "reason": "template-import",
+      "reason": "documented",
       "area": "Request pipeline",
-      "note": "Imported by instrumentation.ts. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
-    },
-    {
-      "subpath": "./lib/middleware",
-      "reason": "template-import",
-      "area": "Request pipeline",
-      "note": "Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
+      "note": "getAuthReadinessResponse, which a project that overrides core's auth routes adds to them (passwordless guide), and logAuthReadinessAtStartup for a project instrumentation.ts that does not call core's register()."
     },
     {
       "subpath": "./lib/teams/active-team-cookie",
-      "reason": "template-import",
+      "reason": "documented",
       "area": "Request pipeline",
-      "note": "Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
-    },
-    {
-      "subpath": "./lib/docs/access",
-      "reason": "template-import",
-      "area": "Request pipeline",
-      "note": "Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
+      "note": "ACTIVE_TEAM_COOKIE and activeTeamIdForSession, how server code reads the active team (teams permissions guide)."
     },
     {
       "subpath": "./lib/scheduled-actions",
-      "reason": "template-import",
+      "reason": "documented",
       "area": "Jobs",
-      "note": "Imported by instrumentation.ts. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC.",
+      "note": "registerScheduledAction, scheduleAction and the rest of the scheduled-actions API (scheduled actions guides).",
       "stability": "experimental"
     },
     {

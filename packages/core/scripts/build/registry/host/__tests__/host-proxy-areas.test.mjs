@@ -105,8 +105,8 @@ test('comments are stripped wherever they start, and never inside a string liter
   }
   assert.equal(withoutComments("a // b\nc"), 'a \nc')
   assert.equal(withoutComments("'//' /* x */ \"/*\""), "'//'   \"/*\"")
-  // The repository template, old and new, reads the same with comments gone: every regex literal in it survives.
-  const template = readFileSync(join(CORE_ROOT, 'templates/proxy.ts'), 'utf8')
+  // Core's proxy (the code every old template copy holds) reads the same with comments gone: every regex literal in it survives.
+  const template = readFileSync(join(CORE_ROOT, 'src/proxy/index.ts'), 'utf8')
   assert.match(withoutComments(template), /\.replace\(\/\\\\\/g, '\/'\)\.replace\(\/\\\/\\\/\+\/g, '\/'\)/)
 })
 

@@ -269,55 +269,22 @@ try {
 
 Keep the import inside the `try`: if loading core's config fails, startup continues and the log carries no error details.
 
-If the project has no `instrumentation.ts` at all — every host generated before this file existed, and any beta.192 project packaged before the wizard started copying it — create one at the project root with the current template's content (`packages/core/templates/instrumentation.ts`), verbatim, below. It also initializes scheduled actions; a reduced file with only the auth-readiness call would silently drop that initialization. No `next.config.mjs` flag is needed: Next.js 15 and later run `instrumentation.ts` automatically.
+If the project has no `instrumentation.ts` at all — every host generated before this file existed, and any beta.192 project packaged before the wizard started copying it — create one at the project root with the current template's content (`packages/core/templates/instrumentation.ts`), verbatim, below. Core's `register()` also initializes scheduled actions, so a file of your own that only made the auth-readiness call would silently drop that initialization. No `next.config.mjs` flag is needed: Next.js 15 and later run `instrumentation.ts` automatically.
 
 ```ts
 /**
- * Next.js Instrumentation
+ * Next.js instrumentation: runs once when the server starts. This file is
+ * yours: core's register() checks the login providers and starts scheduled
+ * actions, and is updated with @nextsparkjs/core.
  *
- * This file runs once when the server starts (not on every request).
- * Used to initialize global systems like scheduled action handlers.
- *
- * Runs in both development and production environments.
- * Initialization is idempotent - safe to call multiple times.
+ * To run startup code of your own, call it from your register():
+ *   import { register as registerNextSpark } from '@nextsparkjs/core/instrumentation'
+ *   export async function register() {
+ *     await registerNextSpark()
+ *     // your code
+ *   }
  *
  * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
  */
-
-export async function register() {
-  // Only run on server (not during build or in edge runtime)
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Re-validate login providers at startup: logs one safe error in production when none can work
-    try {
-      const { logAuthReadinessAtStartup } = await import('@nextsparkjs/core/lib/auth/runtime-readiness')
-      logAuthReadinessAtStartup()
-    } catch {
-      // Fixed text only: what failed to load can carry configuration values
-      console.error('[auth-readiness] startup readiness check could not run; per-request gates still apply')
-    }
-
-    console.log('[Instrumentation] Initializing scheduled actions system...')
-
-    try {
-      const {
-        initializeScheduledActions,
-        initializeRecurringActions,
-      } = await import('@nextsparkjs/core/lib/scheduled-actions')
-
-      // Register scheduled action handlers (includes entity hooks for automatic scheduling)
-      // This registers hooks like 'entity.contents.updated' that create scheduled actions
-      initializeScheduledActions()
-
-      // Register recurring scheduled actions (token refresh, cleanup jobs, etc.)
-      // These are background tasks that run on a schedule (e.g., every 30 minutes)
-      // Non-blocking: if DB is unavailable at cold start, the server still boots
-      await initializeRecurringActions()
-
-      console.log('[Instrumentation] ✅ Scheduled actions initialized')
-    } catch (error) {
-      console.warn(`[Instrumentation] ⚠️ Failed to initialize scheduled actions: ${error instanceof Error ? error.message : error}`)
-      console.warn('[Instrumentation] Server will continue without recurring actions')
-    }
-  }
-}
+export { register } from '@nextsparkjs/core/instrumentation'
 ```

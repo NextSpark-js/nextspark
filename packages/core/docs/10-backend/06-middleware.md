@@ -40,31 +40,62 @@ Next.js middleware provides powerful request/response transformation capabilitie
 
 ## Implementation
 
-### Shipped Proxy Template
+### The Project's `src/proxy.ts` and Core's Proxy
 
-Location: `packages/core/templates/proxy.ts` (generated projects receive it as
-`src/proxy.ts`, beside the
-generated `src/app`; Next ignores a project-root proxy when the app uses `src/`).
-
-The core proxy owns the security boundary. An project may extend request
-handling, but its result is composed with the core checks rather than returned
-before them:
+The proxy lives in core: `@nextsparkjs/core/proxy` exports `proxy`, the request
+handler, and `createProxy`, which builds one with project options. A generated
+project's `src/proxy.ts` (beside the generated `src/app`; Next ignores a
+project-root proxy when the app uses `src/`) is yours and only re-exports it:
 
 ```typescript
-const sanitizedRequest = requestForTheme(
-  request,
-  sanitizeRequestHeaders(request)
-)
-const themeResponse = await executeProjectMiddleware(sanitizedRequest, null)
+// src/proxy.ts
+export { proxy } from '@nextsparkjs/core/proxy'
 
-// The proxy then applies core docs/session/role checks before honoring a
-// continuation, same-origin rewrite, or protected terminal response.
+export const config = {
+  matcher: [
+    '/((?!_next/static/|_next/image$|favicon\\.ico$).*)',
+  ],
+}
 ```
 
-The implementation keeps the session lookup in the core proxy and injects
+Core's proxy is updated with `@nextsparkjs/core`; the file is not. Next.js
+reads `config` from this file's own source, not from its imports, so the
+matcher stays written here: a `config` re-exported from a package is not seen.
+
+### Extending It
+
+| You want | Where |
+| --- | --- |
+| Redirects, same-origin rewrites, response headers or cookies, request metadata for your routes | `config/hooks/proxy.ts`, exporting `proxyHook`. Core's proxy runs it first, on a request with the identity headers removed, then applies its own checks to the original route and to any rewrite target (see below). |
+| More paths that need a signed-in user | `createProxy({ authenticatedPaths: ['/account'] })` in `src/proxy.ts`. Each entry is a path prefix matched on segment boundaries (`/account` covers `/account/billing`, not `/accounts`), added to `/dashboard`, `/settings`, `/profile` and `/update-password`. No session goes to `/login?callbackUrl=...`; a session gets the page with the verified identity headers. `createProxy` throws on an entry on, under or above a path core lets through first (the public pages, such as `/terms` and `/login`; `/api/auth`; `/docs`; and `/api/v1`, which authenticates on its own): it would not be gated there. |
+| An area of your own that needs a role, such as `/reports` for managers | Not in the proxy: `authenticatedPaths` only requires a session, and the hook runs without one. Check the role in the page or its layout on the server (`auth.api.getSession` from `@nextsparkjs/core/lib/auth`). |
+| Paths the proxy should not run on | The `matcher` in `src/proxy.ts`. Leave out only exact paths: excluding by file extension would let a route such as `/profile/alice.png` skip the session check. |
+
+```typescript
+// src/proxy.ts
+import { createProxy } from '@nextsparkjs/core/proxy'
+
+export const proxy = createProxy({ authenticatedPaths: ['/account', '/billing'] })
+
+export const config = {
+  matcher: [
+    '/((?!_next/static/|_next/image$|favicon\\.ico$).*)',
+  ],
+}
+```
+
+The core proxy owns the security boundary. A project may extend request
+handling, but its result is composed with the core checks rather than returned
+before them. The session lookup stays in core's proxy, which injects
 `x-user-id`, `x-user-email`, and `x-active-team-id` only from that verified
 session. Layout guards remain defense in depth; they are not the route access
 boundary.
+
+A `src/proxy.ts` that does not use `@nextsparkjs/core/proxy` (a copy of the
+template from 0.1.0-beta.197 or earlier, edited, or a proxy of your own) keeps
+working as written and gets none of core's changes. `nextspark prepare` and
+`nextspark migrate` print `NS_PROXY_FACADE_MISSING` with the content to put in
+its place; an unchanged copy of an earlier template is replaced for you.
 
 ## Key Features
 
@@ -110,17 +141,9 @@ headers; those values always come from the core session lookup.
 
 ### 2. Documentation Access Control
 
-Controls public/private documentation access. `docs.publicAccess` decides it,
-read through `isDocsPublic()` from `@nextsparkjs/core/lib/docs/access`:
-
-```typescript
-if (!isDocsPublic(appConfig?.docs)) {
-  // Require authentication for docs
-  if (!session) {
-    return NextResponse.redirect(loginUrl);
-  }
-}
-```
+Controls public/private documentation access. `docs.publicAccess` decides it:
+when `/docs` is not public, a request without a session goes to
+`/login?callbackUrl=...`.
 
 **Configuration:**
 ```typescript
@@ -182,19 +205,18 @@ export async function GET(request: NextRequest) {
 ```typescript
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    '/((?!_next/static/|_next/image$|favicon\\.ico$).*)',
   ],
-};
+}
 ```
 
-**Excludes:**
-- Static files (`_next/static`)
-- Image optimization (`_next/image`)
-- Favicon
-- Images (svg, png, jpg, jpeg, gif, webp)
+**Excludes** only the exact paths of Next's own output: `_next/static/`, the
+`_next/image` endpoint and `favicon.ico`. Files under `public/` pass through
+the proxy and are served as they are.
 
-**Includes:**
-- All other routes (pages, API routes, etc.)
+**Why not by extension:** a matcher that skips `.png` or `.svg` would also skip
+a dynamic route such as `/profile/alice.png`, which would then reach the app
+without the session check and with forged identity headers intact.
 
 ---
 
@@ -220,10 +242,10 @@ try {
 }
 ```
 
-**3. Use Specific Matchers**
+**3. Keep the Matcher Exact**
 ```typescript
-// Exclude static assets for performance
-matcher: ["/((?!_next/static|...).*"])
+// Exclude only Next's own output, never by file extension
+matcher: ['/((?!_next/static/|_next/image$|favicon\\.ico$).*)']
 ```
 
 **4. Inject Useful Headers**
@@ -250,8 +272,8 @@ const session = await auth.api.getSession({ headers });
 // ❌ BAD - Runs on every static file
 matcher: ["/*"]
 
-// ✅ GOOD - Excludes static assets
-matcher: ["/((?!_next/static|...).*"]
+// ✅ GOOD - Excludes Next's static output
+matcher: ['/((?!_next/static/|_next/image$|favicon\\.ico$).*)']
 ```
 
 **3. Never Skip Error Handling**

@@ -173,8 +173,8 @@ export const appConfig = {
 
 #### Who can read /docs
 
-`docs.publicAccess` is the only access setting. The generated proxy
-(`proxy.ts`, from `core/templates/proxy.ts`) reads it through `isDocsPublic()`
+`docs.publicAccess` is the only access setting. Core's proxy
+(`@nextsparkjs/core/proxy`, which the project's `src/proxy.ts` re-exports) reads it through `isDocsPublic()`
 in `core/lib/docs/access.ts` on every request under `/docs`:
 
 | `docs` block | `/docs` without a session |

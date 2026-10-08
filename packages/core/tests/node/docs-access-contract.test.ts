@@ -1,6 +1,6 @@
 /**
  * `docs.publicAccess` is the one setting that decides whether /docs needs a
- * session: the generated proxy reads it through isDocsPublic() in
+ * session: core's proxy (src/proxy/index.ts, @nextsparkjs/core/proxy) reads it through isDocsPublic() in
  * lib/docs/access, and the docs have to describe that same setting. A doc that
  * still gates /docs on `docs.public === false`, or tells a project to write
  * `docs: { public: false }` to require a session, describes the older shape as
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 const CORE_DOCS_DIR = path.join(REPO_ROOT, 'packages/core/docs')
-const PROXY_TEMPLATE = path.join(REPO_ROOT, 'packages/core/templates/proxy.ts')
+const CORE_PROXY = path.join(REPO_ROOT, 'packages/core/src/proxy/index.ts')
 const ARCHITECTURE_DOC = path.join(CORE_DOCS_DIR, '15-documentation-system/02-architecture.md')
 
 function markdownFiles(dir: string): string[] {
@@ -25,8 +25,8 @@ function markdownFiles(dir: string): string[] {
   })
 }
 
-test('the proxy template decides docs access through isDocsPublic, not by reading docs.public itself', () => {
-  const source = fs.readFileSync(PROXY_TEMPLATE, 'utf8')
+test('core\'s proxy decides docs access through isDocsPublic, not by reading docs.public itself', () => {
+  const source = fs.readFileSync(CORE_PROXY, 'utf8')
   assert.match(source, /isDocsPublic\(/)
   assert.doesNotMatch(source, /\.docs\?*\.public\b/)
 })

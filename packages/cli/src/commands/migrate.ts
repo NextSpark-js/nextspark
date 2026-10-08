@@ -828,6 +828,7 @@ export const PROXY_AREA_WARNING = 'NS_PROXY_PROTECTED_AREA_MISSING';
 
 /** The warning for a kept proxy whose source never names some protected area as a path, or null. */
 export function proxyProtectedAreaWarning(file: string, source: string): string | null {
+  if (/['"]@nextsparkjs\/core\/proxy['"]/.test(proxyCodeWithoutComments(source))) return null;
   const missing = PROXY_PROTECTED_AREAS.filter(area => !new RegExp(`['"\`]${area.path}(?![\\w-])`).test(source));
   if (missing.length === 0) return null;
   return `[${PROXY_AREA_WARNING}] ${file} does not protect ${missing.map(area => area.path).join(' or ')}. core still refuses those pages on the server, ` +

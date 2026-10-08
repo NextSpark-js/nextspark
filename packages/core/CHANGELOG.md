@@ -55,12 +55,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`pnpm build` needs a login method that can authenticate.** A project without Resend or Google credentials in `.env` or the build
   environment fails with `Production auth readiness failed`. A build that gets them only at run time declares
   `NEXTSPARK_AUTH_RUNTIME_ONLY=email,google`; placeholder values such as `re_...` are not deferred.
+- **`src/proxy.ts` and `instrumentation.ts` become facades over core.** The request proxy and the server startup are now public
+  entries, `@nextsparkjs/core/proxy` and `@nextsparkjs/core/instrumentation`, updated with core; the files the scaffold writes only
+  re-export them. Your project still owns both files.
+  - **Unchanged copies are replaced for you.** `pnpm update-core` (through `nextspark prepare`), `nextspark prepare`, `nextspark migrate`
+    and the wizard replace a `src/proxy.ts`, `src/middleware.ts` or `instrumentation.ts` that is byte for byte a template an earlier
+    core shipped, and print `NS_PROXY_TEMPLATE_REPLACED` / `NS_INSTRUMENTATION_TEMPLATE_REPLACED`. Commit the change.
+  - **Edited copies are kept**, and `prepare` and `migrate` print `NS_PROXY_FACADE_MISSING` / `NS_INSTRUMENTATION_FACADE_MISSING` with
+    the content to put in their place. Replace `src/proxy.ts` with:
+    ```ts
+    export { proxy } from '@nextsparkjs/core/proxy'
+
+    export const config = {
+      matcher: [
+        '/((?!_next/static/|_next/image$|favicon\\.ico$).*)',
+      ],
+    }
+    ```
+    and `instrumentation.ts` with `export { register } from '@nextsparkjs/core/instrumentation'`. Carry your changes over first:
+    request logic of your own goes in `config/hooks/proxy.ts` (`proxyHook`, run before core's checks); paths that need a signed-in user
+    go in `createProxy({ authenticatedPaths: ['/account'] })`, exported as `proxy`; startup code of your own goes in your `register()`,
+    after `await registerNextSpark()` (`import { register as registerNextSpark } from '@nextsparkjs/core/instrumentation'`). Keep the
+    `config` literal in `src/proxy.ts`: Next.js reads it from that file, not from its imports. See
+    [Middleware](./docs/10-backend/06-middleware.md#extending-it).
+  - **`@nextsparkjs/core/lib/middleware`, `/lib/auth/session-hint` and `/lib/docs/access` are internal now.** They were public only
+    because the old template imported them. They still resolve; code of yours that imports them should use the proxy entry instead.
+    `./lib/auth`, `./lib/auth/runtime-readiness`, `./lib/teams/active-team-cookie` and `./lib/scheduled-actions` stay public: the guides
+    use them in project code.
+
 - **`sel`, `cySelector` and `createAriaLabel` are no longer exported from `@nextsparkjs/core`.** Import `sel` and `cySelector` from `@nextsparkjs/core/selectors`; `createAriaLabel` comes from `@nextsparkjs/testing`. None of the three names was in the public list, and removing them after 1.0 would need a major.
 - The webhook extension types `StripeWebhookExtensions` and `PolarWebhookExtensions` are now exported from `@nextsparkjs/core/lib/billing/config-types`, and the `lib/billing/*-webhook-extensions.ts` templates import them from there. The old `lib/billing/stripe-webhook` and `polar-webhook` subpaths keep working for one minor and are internal.
 
 ### Added
 
 - Ownership transfer: `POST /api/v1/teams/:teamId/transfer-ownership` (session only), the `transferTeamOwnership` Server Action and a "Transfer ownership" entry with a confirmation in the team members list (owner only). The owner hands the team to a current member, who becomes owner while the previous owner becomes admin, in one transaction on the service connection. `TeamMemberService.transferOwnership` now runs in that transaction and throws errors with `code` `SAME_OWNER`, `NOT_OWNER` or `NOT_A_MEMBER`. An owner who wants to delete their account can now hand their teams over first.
+- `@nextsparkjs/core/proxy` (`proxy`, `createProxy({ authenticatedPaths })`) and `@nextsparkjs/core/instrumentation` (`register()`): the
+  request proxy and server startup the scaffold's `src/proxy.ts` and `instrumentation.ts` used to copy, as public entries.
 - The [Public API](./docs/22-stability-and-support/05-public-api.md) of `@nextsparkjs/core`: the list of subpaths that follow SemVer (`public-api.json`) and the rule that makes a subpath public. A node test fails when a stable template imports a subpath that is not on the list. The exports map is unchanged; closing it is a 2.0 change.
 - A CI job checks standalone output. The `standalone` job of the *Generated projects* workflow runs `scripts/deploy/verify-standalone.sh`: a starter from the packed packages, built with `output: 'standalone'`, copied without the checkout to a separate directory and served with `node server.js`, alone and behind a TLS proxy that sends `X-Forwarded-Proto: https`. It checks health, public pages, sign-in by one-time code, protected pages, writes, the write-origin rules, the Secure session cookies, the https redirect and sign-out. It has not run on GitHub yet.
 

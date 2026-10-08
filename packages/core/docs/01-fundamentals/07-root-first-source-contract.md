@@ -54,7 +54,7 @@ my-project/
 │
 ├── src/
 │   ├── app/                     # GENERATED Next.js adapter; never edit
-│   └── proxy.ts                 # GENERATED Next.js 16 request entry
+│   └── proxy.ts                 # Next.js 16 request entry: re-exports @nextsparkjs/core/proxy
 └── .nextspark/
     └── registries/              # GENERATED registries and manifests; never edit
 ```

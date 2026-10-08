@@ -1,10 +1,13 @@
 /**
- * The startup auth readiness check in apps/dev/instrumentation.ts, the
- * generated project's packages/core/templates/instrumentation.ts and the host
- * upgrade snippet in the passwordless docs: when loading core's
- * runtime-readiness fails, register() still resolves and logs only fixed text,
- * never what the failure carried. Each is run with Node's type stripping
- * against a stand-in core whose runtime-readiness module throws a sentinel.
+ * The startup auth readiness check in core's register() (src/instrumentation/index.ts),
+ * which apps/dev/instrumentation.ts and the generated project's
+ * packages/core/templates/instrumentation.ts re-export, and in the host upgrade
+ * snippet in the passwordless docs: when loading core's runtime-readiness
+ * fails, register() still resolves, logs only fixed text, never what the
+ * failure carried, and still starts scheduled actions. Each is run with Node's
+ * type stripping against a stand-in core whose runtime-readiness module throws
+ * a sentinel; the stand-in's instrumentation entry is core's src/instrumentation.ts
+ * compiled the way the build ships it (relative imports with their file names).
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -13,6 +16,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import ts from 'typescript'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 const SENTINEL = 're_SENTINELdoNotLeak0123456789'
@@ -40,15 +44,25 @@ function standInProject(source: string): string {
     name: '@nextsparkjs/core',
     type: 'module',
     exports: {
-      './lib/auth/runtime-readiness': './runtime-readiness.js',
-      './lib/scheduled-actions': './scheduled-actions.js',
+      './instrumentation': './instrumentation/index.js',
+      './lib/auth/runtime-readiness': './lib/auth/runtime-readiness.js',
+      './lib/scheduled-actions': './lib/scheduled-actions/index.js',
     },
   }))
-  fs.writeFileSync(path.join(core, 'runtime-readiness.js'), `const error = new Error('${SENTINEL}')
+  fs.mkdirSync(path.join(core, 'lib/auth'), { recursive: true })
+  fs.mkdirSync(path.join(core, 'lib/scheduled-actions'), { recursive: true })
+  fs.writeFileSync(path.join(core, 'lib/auth/runtime-readiness.js'), `const error = new Error('${SENTINEL}')
 Object.assign(error, { code: '${SENTINEL}' })
 throw error
 `)
-  fs.writeFileSync(path.join(core, 'scheduled-actions.js'), 'export function initializeScheduledActions() {}\nexport async function initializeRecurringActions() {}\n')
+  fs.writeFileSync(path.join(core, 'lib/scheduled-actions/index.js'), "export function initializeScheduledActions() { console.log('SCHEDULED_ACTIONS_INITIALIZED') }\nexport async function initializeRecurringActions() {}\n")
+  const coreInstrumentation = ts.transpileModule(fs.readFileSync(path.join(REPO_ROOT, 'packages/core/src/instrumentation/index.ts'), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  }).outputText
+    .replace("'../lib/auth/runtime-readiness'", "'../lib/auth/runtime-readiness.js'")
+    .replace("'../lib/scheduled-actions'", "'../lib/scheduled-actions/index.js'")
+  fs.mkdirSync(path.join(core, 'instrumentation'), { recursive: true })
+  fs.writeFileSync(path.join(core, 'instrumentation/index.js'), coreInstrumentation)
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ type: 'module' }))
   fs.writeFileSync(path.join(root, 'instrumentation.ts'), source)
   fs.writeFileSync(path.join(root, 'run.mjs'), `const { register } = await import('./instrumentation.ts')
@@ -76,6 +90,7 @@ for (const [label, read] of SOURCES) {
       assert.match(output, /REGISTER_RESOLVED/, output)
       assert.match(output, /\[auth-readiness\] startup readiness check could not run/, output)
       assert.ok(!output.includes('SENTINEL'), `the sentinel leaked:\n${output}`)
+      if (label !== 'docs startup snippet') assert.match(output, /SCHEDULED_ACTIONS_INITIALIZED/, output)
     } finally {
       fs.rmSync(root, { recursive: true, force: true })
     }
@@ -85,7 +100,7 @@ for (const [label, read] of SOURCES) {
 /**
  * "Startup re-validation" carries a second `ts` fence: the full file a host
  * with no instrumentation.ts at all is told to create. It must be the
- * current template verbatim -- scheduled-actions initialization included --
+ * current template verbatim -- core's register(), scheduled-actions initialization included --
  * not a reduced, auth-readiness-only file that would silently drop that
  * initialization for a host that copies it. Checked by equality, not by
  * running it, so the two can never drift apart unnoticed.
@@ -101,5 +116,5 @@ test('the doc\'s from-scratch instrumentation.ts content is the current template
 
   const template = fs.readFileSync(path.join(REPO_ROOT, 'packages/core/templates/instrumentation.ts'), 'utf8')
   assert.equal(blocks[1], template, "the doc's from-scratch instrumentation.ts must match packages/core/templates/instrumentation.ts exactly")
-  assert.match(blocks[1], /initializeScheduledActions\(\)/, "the doc's from-scratch file must initialize scheduled actions, not just auth readiness")
+  assert.match(blocks[1], /export \{ register \} from '@nextsparkjs\/core\/instrumentation'/, "the doc's from-scratch file must be core's register(), which initializes scheduled actions too, not just auth readiness")
 })

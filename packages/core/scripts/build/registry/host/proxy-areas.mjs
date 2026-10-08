@@ -64,9 +64,13 @@ export function withoutComments(source) {
   return out
 }
 
+/** A proxy built on core's proxy entry (the scaffold's facade, or createProxy) has core's checks. */
+const USES_CORE_PROXY = /['"]@nextsparkjs\/core\/proxy['"]/
+
 /** The protected areas a proxy's source never names as a path (`'/superadmin'`, `"/devtools"`, `` `/devtools` ``). */
 export function missingProxyAreas(source) {
-  if (REEXPORTS_CORE_PROXY.test(withoutComments(source))) return []
+  const code = withoutComments(source)
+  if (REEXPORTS_CORE_PROXY.test(code) || USES_CORE_PROXY.test(code)) return []
   return PROTECTED_AREAS.filter(area => !new RegExp(`['"\`]${area.path}(?![\\w-])`).test(source))
 }
 

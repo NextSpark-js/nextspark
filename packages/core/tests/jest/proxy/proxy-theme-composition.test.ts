@@ -41,7 +41,7 @@ jest.mock('next/server', () => {
 
 import { auth } from '@nextsparkjs/core/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { proxy } from '../../../templates/proxy'
+import { proxy } from '@nextsparkjs/core/proxy'
 
 const FORGED_IDENTITY = {
   'x-user-id': 'forged-user',

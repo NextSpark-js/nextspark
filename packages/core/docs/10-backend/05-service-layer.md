@@ -703,16 +703,13 @@ export async function executeProjectMiddleware(
 
 ```typescript
 import { ThemeService } from '@nextsparkjs/core/lib/services'
-import { executeProjectMiddleware, hasProjectMiddleware } from '@nextsparkjs/core/lib/middleware'
 
 // The root-first compiler emits one project theme.
 const theme = ThemeService.getCurrent()
 const dashboard = ThemeService.getCurrentDashboardConfig()
 
-// Middleware extension (the sole root project's hook)
-if (hasProjectMiddleware()) {
-  const response = await executeProjectMiddleware(request, coreSession)
-}
+// The project's request hook (config/hooks/proxy.ts) is run by core's proxy
+// (@nextsparkjs/core/proxy); lib/middleware is internal.
 
 // Entity type queries
 import { EntityTypeService } from '@nextsparkjs/core/lib/services'

@@ -47,6 +47,14 @@
       "types": "./dist/i18n.d.ts",
       "import": "./dist/i18n.js"
     },
+    "./proxy": {
+      "types": "./dist/proxy/index.d.ts",
+      "import": "./dist/proxy/index.js"
+    },
+    "./instrumentation": {
+      "types": "./dist/instrumentation/index.d.ts",
+      "import": "./dist/instrumentation/index.js"
+    },
     "./config/protected-paths": {
       "types": "./dist/config/protected-paths.d.ts",
       "import": "./dist/config/protected-paths.js"

@@ -21,7 +21,7 @@ jest.mock('@nextsparkjs/core/lib/middleware', () => ({
 import { auth } from '@nextsparkjs/core/lib/auth'
 import { getProjectAppConfig } from '@nextsparkjs/core/lib/middleware'
 import { NextRequest } from 'next/server'
-import { proxy } from '../../../templates/proxy'
+import { createProxy, proxy } from '@nextsparkjs/core/proxy'
 
 type PassThrough = { type?: string; requestHeaders?: Headers | null; redirectUrl?: string; setCookies?: Array<{ name: string; value: string; maxAge?: number }> }
 
@@ -244,7 +244,7 @@ describe('proxy path boundaries and redirect targets', () => {
         const authModule = await import('@nextsparkjs/core/lib/auth')
         ;(middleware.getProjectAppConfig as unknown as jest.Mock).mockReturnValue({ docs: { public: false } })
         ;(authModule.auth.api.getSession as unknown as jest.Mock).mockResolvedValue(null)
-        const { proxy: freshProxy } = await import('../../../templates/proxy')
+        const { proxy: freshProxy } = await import('@nextsparkjs/core/proxy')
 
         await freshProxy(makeRequest('/docs'))
         await freshProxy(makeRequest('/docs/getting-started/introduction'))
@@ -585,5 +585,64 @@ describe('proxy session hint', () => {
     const response = (await proxy(makeRequest('/', { cookie }))) as unknown as PassThrough
 
     expect(hintCookie(response)).toBeUndefined()
+  })
+})
+
+describe('createProxy authenticatedPaths', () => {
+  const projectProxy = createProxy({ authenticatedPaths: ['/account', '/app/reports'] })
+
+  beforeEach(() => {
+    mockedGetSession.mockReset()
+  })
+
+  test.each(['/account', '/account/billing', '/app/reports/2026'])('%s needs a session: login with the page as callbackUrl', async path => {
+    mockedGetSession.mockResolvedValue(null)
+    const response = (await projectProxy(makeRequest(`${path}?tab=1`))) as unknown as PassThrough
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toContain(`/login?callbackUrl=${encodeURIComponent(`${path}?tab=1`)}`)
+  })
+
+  test('a signed-in user gets the page with identity headers from the verified session only', async () => {
+    mockedGetSession.mockResolvedValue({ user: { id: 'real-user-id', email: 'real@example.com', role: 'member' } })
+    const response = (await projectProxy(makeRequest('/account'))) as unknown as PassThrough
+    expect(response.type).toBe('next')
+    const forwarded = response.requestHeaders as Headers
+    expect(forwarded.get('x-user-id')).toBe('real-user-id')
+    expect(forwarded.get('x-api-scopes')).toBeNull()
+  })
+
+  test('a suspended account is refused on an added path as on core\'s', async () => {
+    mockedGetSession.mockResolvedValue({ user: { id: 'user-1', role: 'suspended' } })
+    const response = (await projectProxy(makeRequest('/account'))) as unknown as PassThrough
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toContain('/login')
+  })
+
+  test.each(['/accounts', '/account-help', '/app/reports-old', '/app'])('%s only starts like an added path and is not gated', async path => {
+    const response = (await projectProxy(makeRequest(path))) as unknown as PassThrough
+    expect(response.type).toBe('next')
+    expect(mockedGetSession).not.toHaveBeenCalled()
+  })
+
+  test('core\'s areas and roles stay as they are', async () => {
+    mockedGetSession.mockResolvedValue({ user: { id: 'u', role: 'member' } })
+    const dashboard = (await projectProxy(makeRequest('/dashboard'))) as unknown as PassThrough
+    expect(dashboard.type).toBe('next')
+    const devtools = (await projectProxy(makeRequest('/devtools'))) as unknown as PassThrough
+    expect(devtools.redirectUrl).toContain('/dashboard?error=access_denied')
+  })
+
+  test('the default proxy does not gate a project path', async () => {
+    const response = (await proxy(makeRequest('/account'))) as unknown as PassThrough
+    expect(response.type).toBe('next')
+    expect(mockedGetSession).not.toHaveBeenCalled()
+  })
+
+  test.each([['account'], ['/account/'], ['/'], ['/account?x=1'], ['/acc ount'], [''], [42]])('rejects %p as an authenticated path', entry => {
+    expect(() => createProxy({ authenticatedPaths: [entry as string] })).toThrow(/authenticatedPaths/)
+  })
+
+  test.each(['/api/v1/reports', '/api/v1', '/terms', '/privacy/x', '/api/auth/x', '/login/x', '/auth-test/x', '/docs/internal', '/api', '//x'])('rejects %p: core lets it through before the authenticated paths', entry => {
+    expect(() => createProxy({ authenticatedPaths: [entry] })).toThrow(/core's proxy handles before the authenticated paths/)
   })
 })

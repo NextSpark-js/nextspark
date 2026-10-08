@@ -1,42 +1,15 @@
 /**
- * Next.js Instrumentation
+ * Next.js instrumentation: runs once when the server starts. This file is
+ * yours: core's register() checks the login providers and starts scheduled
+ * actions, and is updated with @nextsparkjs/core.
  *
- * This file runs once when the server starts (not on every request).
- * Used to initialize global systems like scheduled action handlers.
- *
- * Runs in both development and production environments.
- * Initialization is idempotent - safe to call multiple times.
+ * To run startup code of your own, call it from your register():
+ *   import { register as registerNextSpark } from '@nextsparkjs/core/instrumentation'
+ *   export async function register() {
+ *     await registerNextSpark()
+ *     // your code
+ *   }
  *
  * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
  */
-
-export async function register() {
-  // Only run on server (not during build or in edge runtime)
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Re-validate login providers at startup: logs one safe error in production when none can work
-    try {
-      const { logAuthReadinessAtStartup } = await import('@nextsparkjs/core/lib/auth/runtime-readiness')
-      logAuthReadinessAtStartup()
-    } catch {
-      // Fixed text only: what failed to load can carry configuration values
-      console.error('[auth-readiness] startup readiness check could not run; per-request gates still apply')
-    }
-
-    const {
-      initializeScheduledActions,
-      initializeRecurringActions,
-    } = await import('@nextsparkjs/core/lib/scheduled-actions')
-
-    console.log('[Instrumentation] Initializing scheduled actions system...')
-
-    // Register scheduled action handlers (includes entity hooks for automatic scheduling)
-    // This registers hooks like 'entity.contents.updated' that create scheduled actions
-    initializeScheduledActions()
-
-    // Register recurring scheduled actions (token refresh, cleanup jobs, etc.)
-    // These are background tasks that run on a schedule (e.g., every 30 minutes)
-    await initializeRecurringActions()
-
-    console.log('[Instrumentation] ✅ Scheduled actions initialized')
-  }
-}
+export { register } from '@nextsparkjs/core/instrumentation'

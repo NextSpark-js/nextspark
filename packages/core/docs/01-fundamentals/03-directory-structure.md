@@ -48,11 +48,13 @@ Project page and layout source belongs in `templates/`; project route-handler
 source belongs in `api/`. The compiler diagnoses collisions before it writes the
 generated adapter.
 
-Reserved Next.js entry points are not project-template source. The generated
-request entry lives at `src/proxy.ts`,
-project request behavior is exported as `proxyHook` from
-`config/hooks/proxy.ts`, and project instrumentation behavior belongs in
-`config/hooks/instrumentation.ts`.
+Reserved Next.js entry points are not project-template source. The request
+entry lives at `src/proxy.ts`, a few lines that re-export
+`@nextsparkjs/core/proxy`; project request behavior is exported as `proxyHook`
+from `config/hooks/proxy.ts`. Server startup lives in `instrumentation.ts`,
+which re-exports `register()` from `@nextsparkjs/core/instrumentation`; startup
+code of the project's own goes in that file's `register()`, after it calls
+core's.
 
 ## Entities, migrations, and plugins
 
