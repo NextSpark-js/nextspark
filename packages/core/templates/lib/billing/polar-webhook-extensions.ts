@@ -6,7 +6,7 @@
  *
  * Example: create lib/billing/polar-webhook-extensions.ts in your project:
  *
- *   import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/polar-webhook'
+ *   import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/config-types'
  *   import { handleCreditPackPurchase } from '@/lib/billing/credit-packs'
  *
  *   export const polarWebhookExtensions: PolarWebhookExtensions = {
@@ -18,6 +18,6 @@
  *   }
  */
 
-import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/polar-webhook'
+import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/config-types'
 
 export const polarWebhookExtensions: PolarWebhookExtensions = {}

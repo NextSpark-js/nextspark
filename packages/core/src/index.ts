@@ -33,16 +33,10 @@ export * from './components/ui'
 // App Components - commonly used across themes
 export { ThemeToggle } from './components/app/misc/ThemeToggle'
 
-// Selector utilities - for data-cy attributes in components
-// Note: For testing, import createTestId/createCyId from @nextsparkjs/testing
-export { sel, cySelector } from './lib/selectors'
-
-// Test utils - commonly used in components
-export { createAriaLabel } from './lib/test/utils'
-
 // Note: For specific imports use:
 // - @nextsparkjs/core/lib/auth for auth utilities
 // - @nextsparkjs/core/lib/db for database utilities
 // - @nextsparkjs/core/components/ui/button for individual UI components
 // - @nextsparkjs/core/next for Next.js utilities
 // - @nextsparkjs/core/i18n for i18n utilities
+// - @nextsparkjs/core/selectors for sel and cySelector

@@ -8,6 +8,10 @@
 
 import type { PlanType, PlanVisibility, PaymentProvider } from './types'
 
+// Extension types for lib/billing/{stripe,polar}-webhook-extensions.ts; the webhook modules themselves are internal.
+export type { StripeWebhookExtensions } from './stripe-webhook'
+export type { PolarWebhookExtensions } from './polar-webhook'
+
 // ===========================================
 // FEATURE & LIMIT DEFINITIONS
 // ===========================================

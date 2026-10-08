@@ -6,7 +6,7 @@
  *
  * Example: create lib/billing/stripe-webhook-extensions.ts in your project:
  *
- *   import type { StripeWebhookExtensions } from '@nextsparkjs/core/lib/billing/stripe-webhook'
+ *   import type { StripeWebhookExtensions } from '@nextsparkjs/core/lib/billing/config-types'
  *   import { handleCreditPackPurchase } from '@/lib/billing/credit-packs'
  *
  *   export const stripeWebhookExtensions: StripeWebhookExtensions = {
@@ -18,6 +18,6 @@
  *   }
  */
 
-import type { StripeWebhookExtensions } from '@nextsparkjs/core/lib/billing/stripe-webhook'
+import type { StripeWebhookExtensions } from '@nextsparkjs/core/lib/billing/config-types'
 
 export const stripeWebhookExtensions: StripeWebhookExtensions = {}
