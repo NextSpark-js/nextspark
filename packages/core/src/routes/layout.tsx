@@ -103,7 +103,7 @@ export default async function RootLayout({
                     write cookies, so the rolling refresh is triggered from the
                     client through the auth Route Handler instead. */}
                 <SessionCookieRefresher />
-                <main>{children}</main>
+                {children}
                 <Suspense><Toaster position="bottom-left" /></Suspense>
               </QueryProvider>
             </CustomThemeProvider>

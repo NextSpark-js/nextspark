@@ -18,7 +18,7 @@ async function HomeContent() {
   const t = await getTranslations('home')
 
   return (
-    <main className="flex min-h-screen flex-col" data-cy="home-page">
+    <div className="flex min-h-screen flex-col" data-cy="home-page">
       {/* Hero Section */}
       <section className="flex flex-col items-center justify-center px-4 py-24 text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
@@ -44,6 +44,6 @@ async function HomeContent() {
           {/* Feature cards would go here */}
         </div>
       </section>
-    </main>
+    </div>
   )
 }

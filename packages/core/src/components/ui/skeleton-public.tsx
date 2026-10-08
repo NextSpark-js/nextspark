@@ -60,10 +60,10 @@ export function SkeletonFeaturesSection() {
  */
 export function SkeletonLandingPage() {
   return (
-    <main className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col">
       <SkeletonHeroSection />
       <SkeletonFeaturesSection />
-    </main>
+    </div>
   )
 }
 

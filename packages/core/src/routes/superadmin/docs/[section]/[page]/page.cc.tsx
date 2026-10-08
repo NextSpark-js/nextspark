@@ -79,7 +79,7 @@ export default async function SuperadminDocsDetailPage({ params }: SuperadminDoc
         <SuperadminDocsSidebar sections={DOCS_REGISTRY.superadmin} />
       </aside>
 
-      <main className="flex-1 max-w-4xl">
+      <div className="flex-1 max-w-4xl">
         <DocsBreadcrumbs
           items={[
             { label: 'Super Admin', href: '/superadmin' },
@@ -97,7 +97,7 @@ export default async function SuperadminDocsDetailPage({ params }: SuperadminDoc
 
           <DocsContent html={html} />
         </article>
-      </main>
+      </div>
     </div>
   )
 }

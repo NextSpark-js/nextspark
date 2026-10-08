@@ -8,7 +8,7 @@ import { APP_DESCRIPTION, APP_NAME } from '@nextsparkjs/core/lib/config/public-c
  */
 export function DefaultAuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
+    <main className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-card rounded-lg shadow-lg border border-border p-8">
           <div className="text-center mb-8">
@@ -35,6 +35,6 @@ export function DefaultAuthLayout({ children }: { children: React.ReactNode }) {
           </p>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

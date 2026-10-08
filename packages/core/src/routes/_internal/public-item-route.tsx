@@ -65,7 +65,7 @@ async function renderDefaultPublicItem(source: PublicItemSource, entity: EntityC
   const resolvedBlocks = await source.resolveBlocks(item.blocks as (BlockInstance | PatternReference)[])
 
   return (
-    <main className="min-h-screen bg-background" data-cy="public-entity-page" data-entity={entity.slug} data-slug={slug}>
+    <div className="min-h-screen bg-background" data-cy="public-entity-page" data-entity={entity.slug} data-slug={slug}>
       <PageRenderer
         page={{
           id: item.id,
@@ -75,7 +75,7 @@ async function renderDefaultPublicItem(source: PublicItemSource, entity: EntityC
           locale: item.locale || 'en',
         }}
       />
-    </main>
+    </div>
   )
 }
 

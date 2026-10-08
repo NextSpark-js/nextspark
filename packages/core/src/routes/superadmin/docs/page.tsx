@@ -19,12 +19,12 @@ export default function SuperadminDocsPage() {
         <aside className="hidden lg:block w-64 shrink-0">
           <SuperadminDocsSidebar sections={sections} />
         </aside>
-        <main className="flex-1">
+        <div className="flex-1">
           <h1 className="text-3xl font-bold mb-4">Admin Documentation</h1>
           <p className="text-muted-foreground">
             No administrator documentation available yet.
           </p>
-        </main>
+        </div>
       </div>
     )
   }
@@ -39,7 +39,7 @@ export default function SuperadminDocsPage() {
         <SuperadminDocsSidebar sections={sections} />
       </aside>
 
-      <main className="flex-1">
+      <div className="flex-1">
         <h1 className="text-3xl font-bold mb-4">Admin Documentation</h1>
         <p className="text-muted-foreground mb-8">
           Documentation for administrators covering deployment, configuration, and system management.
@@ -69,7 +69,7 @@ export default function SuperadminDocsPage() {
             </div>
           ))}
         </div>
-      </main>
+      </div>
     </div>
   )
 }

@@ -258,7 +258,7 @@ export function SignupForm() {
 
         <Card 
           className="w-full max-w-md"
-          role="main"
+          role="region"
           aria-labelledby="email-sent-heading"
                     data-cy={sel('auth.verifyEmail.container')}
         >

@@ -144,14 +144,13 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
         {statusMessage}
       </div>
 
-      <nav
+      <header
         className={cn(
           "bg-background border-b border-border fixed top-0 right-0 z-40 transition-all duration-300",
           "lg:left-64", // Default left position when sidebar is expanded
           isCollapsed && "lg:left-16", // Adjusted left position when sidebar is collapsed
           className
         )}
-        role="banner"
         aria-label={t('a11y.mainNavigation')}
         data-cy={sel('dashboard.topnav.container')}
       >
@@ -700,7 +699,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
           </div>
         </div>
       )}
-    </nav>
+    </header>
     </>
   )
 }

@@ -17,7 +17,7 @@ import {
   Key,
   Share2
 } from 'lucide-react'
-import { createAriaLabel, sel } from '../../../lib/test'
+import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { getEnabledSettingsPages } from '../../../lib/config/config-client'
 
@@ -130,7 +130,6 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
                       >
             <div
               className="space-y-1"
-              role="list"
                             data-cy={sel('settings.sidebar.nav.items')}
             >
               {filteredNavigation.map((item) => {
@@ -142,19 +141,10 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
                   <Link
                     key={item.name}
                     href={item.href}
-                    role="listitem"
                     onClick={() => handleNavigation(tSettings(`navigation.${item.name}`), tSettings(`overview.${item.name}Description`))}
                     onKeyDown={(e) => handleKeyDown(e, item.href, tSettings(`navigation.${item.name}`), tSettings(`overview.${item.name}Description`))}
                     onMouseEnter={prefetchHandler}
                     aria-current={isActive ? 'page' : undefined}
-                    aria-label={createAriaLabel(
-                      '{name} - {description}{current}',
-                      { 
-                        name: tSettings(`navigation.${item.name}`),
-                        description: tSettings(`overview.${item.name}Description`),
-                        current: isActive ? t('a11y.currentPageSuffix') : ''
-                      }
-                    )}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:text-accent-foreground group focus:outline-none focus:ring-2 focus:ring-accent",
                       isActive

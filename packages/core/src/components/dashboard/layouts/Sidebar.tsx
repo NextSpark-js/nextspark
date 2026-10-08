@@ -53,10 +53,9 @@ export function Sidebar({ className, entities }: SidebarProps) {
       >
         <div className="flex flex-col h-full">
         {/* Logo/Brand */}
-        <header className="p-4">
+        <div className="p-4">
           <div
             className="flex items-center justify-between"
-            role="banner"
             data-cy={sel('dashboard.sidebar.header')}
           >
             <Link
@@ -87,7 +86,7 @@ export function Sidebar({ className, entities }: SidebarProps) {
               )}
             </Link>
           </div>
-        </header>
+        </div>
 
         {/* Navigation */}
         <nav

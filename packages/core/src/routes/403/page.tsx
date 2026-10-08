@@ -13,7 +13,7 @@ function ForbiddenContent() {
   const upgrade = searchParams.get('upgrade') === 'true'
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 p-4 rounded-full bg-yellow-100">
@@ -60,14 +60,14 @@ function ForbiddenContent() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </main>
   )
 }
 
 function ForbiddenPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 p-4 rounded-full bg-yellow-100">
@@ -78,7 +78,7 @@ function ForbiddenPage() {
             </CardTitle>
           </CardHeader>
         </Card>
-      </div>
+      </main>
     }>
       <ForbiddenContent />
     </Suspense>

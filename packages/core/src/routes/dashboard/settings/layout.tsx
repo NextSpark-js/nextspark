@@ -82,9 +82,8 @@ function SettingsLayout({
       >
         <div className="max-w-7xl mx-auto p-4 lg:p-6 pt-16 pb-24 lg:pt-6 lg:pb-6">
           {/* Back Button - Desktop only */}
-          <nav
+          <div
             className="mb-6 hidden lg:block"
-            aria-label={t('navigation.ariaLabel')}
             data-cy={sel('settings.sidebar.nav.container')}
           >
             <Link href="/dashboard">
@@ -99,7 +98,7 @@ function SettingsLayout({
                 {t('navigation.backButton')}
               </Button>
             </Link>
-          </nav>
+          </div>
 
           {/* Header - Desktop only */}
           <header

@@ -15,11 +15,11 @@ export default function DocsLayoutPage({
   return (
     <DocsLayout>
       <DocsSidebar sections={sections} />
-      <main className="flex-1 p-6 lg:p-8" data-cy={sel('public.docs.mainContent')}>
+      <div className="flex-1 p-6 lg:p-8" data-cy={sel('public.docs.mainContent')}>
         <Suspense fallback={<div className="animate-pulse">Loading...</div>}>
           {children}
         </Suspense>
-      </main>
+      </div>
     </DocsLayout>
   )
 }

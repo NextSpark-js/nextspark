@@ -92,7 +92,7 @@ export default async function RootLayout({
               <QueryProvider>
                 {/* The boundary every page falls back to when it reads runtime data (params, cookies, headers) and
                     no layout below has put one around it; the group layouts' own boundaries keep their shells. */}
-                <main><Suspense fallback={null}>{children}</Suspense></main>
+                <Suspense fallback={null}>{children}</Suspense>
                 <SessionCookieRefresher />
                 <Suspense><Toaster position="bottom-left" /></Suspense>
               </QueryProvider>

@@ -274,7 +274,8 @@ test('a layout that awaits getMessages() has a Cache Components variant that doe
 
 test('the Cache Components root layout puts the page behind Suspense and the group wrappers keep their shells', () => {
   const ppr = fs.readFileSync(path.join(ROUTES, 'layout.ppr.tsx'), 'utf8')
-  assert.match(ppr, /<main><Suspense fallback=\{null\}>\{children\}<\/Suspense><\/main>/)
+  assert.match(ppr, /<Suspense fallback=\{null\}>\{children\}<\/Suspense>/)
+  assert.doesNotMatch(ppr, /<main/, 'each area of the app renders its own <main>')
   const groups = fs.readFileSync(path.join(ROUTES, '_internal/group-layouts.cc.tsx'), 'utf8')
   assert.match(groups, /<Suspense fallback=\{null\}>\{children\}<\/Suspense>/, 'the static wrappers put the group pages behind Suspense')
   assert.match(groups, /DynamicMarker/, 'the request-messages wrappers declare their area request-time')

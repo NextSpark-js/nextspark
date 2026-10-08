@@ -88,6 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`sel`, `cySelector` and `createAriaLabel` are no longer exported from `@nextsparkjs/core`.** Import `sel` and `cySelector` from `@nextsparkjs/core/selectors`; `createAriaLabel` comes from `@nextsparkjs/testing`. None of the three names was in the public list, and removing them after 1.0 would need a major.
 - The webhook extension types `StripeWebhookExtensions` and `PolarWebhookExtensions` are now exported from `@nextsparkjs/core/lib/billing/config-types`, and the `lib/billing/*-webhook-extensions.ts` templates import them from there. The old `lib/billing/stripe-webhook` and `polar-webhook` subpaths keep working for one minor and are internal.
+- **The root layout no longer wraps pages in `<main>`.** Core's dashboard, settings, superadmin, devtools, auth and public layouts render one. A route outside those areas (a top-level page of your project, a custom `not-found`) or a group layout you override without a `<main>` must render its own; keep one per page. Selectors that matched `body main > ...` need updating.
 
 ### Added
 
@@ -110,6 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The dashboard and the settings pages start with a "Skip to main content" link to the `main` landmark (new `a11y.skipToMainContent` message in every locale).
   - Closing the confirmation dialog of a row action (delete) puts focus back on the row's menu button, or on the next (else the previous) row's once the row is gone, where it used to fall to `<body>`.
   - Controls whose label did not contain their visible text (2.5.3 Label in Name) now do: the sidebar logo link, the team switcher, the user menu and the settings back button.
+  - Landmarks: the dashboard's top bar is a `<header>` (one banner per page, the sidebar header no longer claims `role="banner"`), the auth layout is a `<main>`, the settings sidebar links are links again (they had `role="listitem"`), and the settings back link is no longer a one-item `nav`. An axe scan of the starter goes from 40 moderate and 15 minor findings to 3 moderate and none, the 3 left appearing only while a menu is open.
 
 ## [0.1.0-beta.197] - 2026-10-08
 

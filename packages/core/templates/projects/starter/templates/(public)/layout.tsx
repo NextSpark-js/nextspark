@@ -8,7 +8,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Add public header/nav here if needed */}
-      {children}
+      <main>{children}</main>
       {/* Add public footer here if needed */}
     </div>
   )
