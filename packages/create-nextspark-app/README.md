@@ -60,6 +60,8 @@ pnpm dev
 
 Installing with lifecycle scripts disabled (`pnpm install --ignore-scripts`) works: nothing a project needs is created at install time, and `pnpm dev` and `pnpm build` generate `src/app` and the registries first (`pnpm build:registries` does only that). Cypress downloads its binary during install; with scripts off, run `pnpm exec cypress install` before `pnpm cy:run`.
 
+After `pnpm install --frozen-lockfile --ignore-scripts`, the whole sequence is `pnpm db:migrate`, then `pnpm dev`, or `pnpm build` and `pnpm start`. `@nextsparkjs/core`'s own postinstall only prints a notice about a committed `src/app`.
+
 ## Requirements
 
 - Node.js 22.14.0 or later

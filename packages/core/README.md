@@ -19,6 +19,8 @@ pnpm db:migrate
 pnpm dev
 ```
 
+With lifecycle scripts disabled (`pnpm install --frozen-lockfile --ignore-scripts`) nothing else is needed: `nextspark dev`, `build` and `prepare` generate `src/app` and the registries. Only Cypress needs `pnpm exec cypress install` before `pnpm cy:run`.
+
 Or initialize in an existing project:
 
 ```bash
