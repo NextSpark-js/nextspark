@@ -2,7 +2,7 @@
 
 > **Status:** this is the policy recorded for 1.0 (issue [#204](https://github.com/NextSpark-js/nextspark/issues/204), G0). Until 1.0.0 is released, the `0.1.0-beta` line follows none of it: any beta can break anything.
 
-NextSpark follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from 1.0.0. The packages `@nextsparkjs/core`, `@nextsparkjs/cli` and `create-nextspark-app` are released together. Which surfaces the rules cover is in [Stability](./01-stability); which of `@nextsparkjs/core`'s subpaths are public is in the Public API document (published separately).
+NextSpark follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from 1.0.0. The packages `@nextsparkjs/core`, `@nextsparkjs/cli` and `create-nextspark-app` are released together. Which surfaces the rules cover is in [Stability](./01-stability); which of `@nextsparkjs/core`'s subpaths are public is in the [Public API](./05-public-api) page.
 
 ## What each release may change
 
@@ -16,7 +16,7 @@ NextSpark follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) fro
 
 A subpath of `@nextsparkjs/core` is public if at least one of these holds:
 
-1. It is listed in the Public API document.
+1. It is listed in the [Public API](./05-public-api) page.
 2. Code that a stable template copies into a project imports it.
 3. It is a configuration contract: the `nextspark.config.ts` types, the entity config, `definePlugin`, `BlockConfig`, the billing config types, permissions and features.
 

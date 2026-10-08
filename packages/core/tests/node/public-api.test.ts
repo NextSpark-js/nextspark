@@ -1,5 +1,5 @@
 /**
- * The public API of @nextsparkjs/core (public-api.json, docs/17-updates/07-public-api.md).
+ * The public API of @nextsparkjs/core (public-api.json, docs/22-stability-and-support/05-public-api.md).
  *
  * A subpath is public when it is listed, and it is listed when a stable template imports it, it is a
  * configuration contract, or the Public API document names it. The exports map stays open until 2.0,
@@ -165,9 +165,9 @@ test('every public entry resolves through the exports map of @nextsparkjs/core t
 })
 
 test('the Public API document lists every public subpath', () => {
-  const doc = fs.readFileSync(path.join(DOCS_DIR, '17-updates/07-public-api.md'), 'utf8')
+  const doc = fs.readFileSync(path.join(DOCS_DIR, '22-stability-and-support/05-public-api.md'), 'utf8')
   const missing = publicApi.entries.map(entry => entry.subpath).filter(subpath => !doc.includes(`\`${subpath}\``))
-  assert.deepEqual(missing, [], `docs/17-updates/07-public-api.md does not list: ${missing.join(', ')}`)
+  assert.deepEqual(missing, [], `docs/22-stability-and-support/05-public-api.md does not list: ${missing.join(', ')}`)
 })
 
 test('stable templates import only public subpaths of @nextsparkjs/core', () => {
@@ -182,7 +182,7 @@ test('stable templates import only public subpaths of @nextsparkjs/core', () => 
     offenders,
     [],
     `A stable template imports a subpath that is not public:\n  ${offenders.join('\n  ')}\n` +
-      'Import a public subpath instead, or add the subpath to packages/core/public-api.json and docs/17-updates/07-public-api.md ' +
+      'Import a public subpath instead, or add the subpath to packages/core/public-api.json and docs/22-stability-and-support/05-public-api.md ' +
       '(reason "template-import"): from then on it is covered by SemVer. A specifier built at runtime is never allowed.'
   )
 })

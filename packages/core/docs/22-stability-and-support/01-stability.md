@@ -78,7 +78,7 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 
 ## What "stable" does not cover
 
-The public API is a list, not everything that can be imported. A subpath of `@nextsparkjs/core` that is not on that list can change in a minor, even though it resolves. The list is in the Public API document (published separately); everything else in the package export map is internal.
+The public API is a list, not everything that can be imported. A subpath of `@nextsparkjs/core` that is not on that list can change in a minor, even though it resolves. The list is in the [Public API](./05-public-api) page; everything else in the package export map is internal.
 
 The generated `src/app` is not public. Closing the export map to the public list is a 2.0 change.
 

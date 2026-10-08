@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- The [Public API](./docs/17-updates/07-public-api.md) of `@nextsparkjs/core`: the list of subpaths that follow SemVer (`public-api.json`) and the rule that makes a subpath public. A node test fails when a stable template imports a subpath that is not on the list. The exports map is unchanged; closing it is a 2.0 change.
+- The [Public API](./docs/22-stability-and-support/05-public-api.md) of `@nextsparkjs/core`: the list of subpaths that follow SemVer (`public-api.json`) and the rule that makes a subpath public. A node test fails when a stable template imports a subpath that is not on the list. The exports map is unchanged; closing it is a 2.0 change.
 
 ## [0.1.0-beta.197] - 2026-10-08
 

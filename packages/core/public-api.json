@@ -1,5 +1,5 @@
 {
-  "$comment": "Public subpaths of @nextsparkjs/core. See docs/17-updates/07-public-api.md. tests/node/public-api.test.ts checks it against the stable templates, the exports map and the built files. 'stability: experimental' marks a subpath of an experimental surface.",
+  "$comment": "Public subpaths of @nextsparkjs/core. See docs/22-stability-and-support/05-public-api.md. tests/node/public-api.test.ts checks it against the stable templates, the exports map and the built files. 'stability: experimental' marks a subpath of an experimental surface.",
   "reasons": {
     "template-import": "A stable template (the starter project and the shared files the scaffold copies) imports it.",
     "config-contract": "It carries a configuration contract: nextspark.config.ts, entity config, definePlugin, BlockConfig, billing config types, permissions or features.",
@@ -332,8 +332,15 @@
       "subpath": "./selectors",
       "reason": "template-import",
       "area": "Testing selectors",
-      "note": "Public because the starter lib/selectors.ts, lib/block-selectors.ts and its Cypress tests import it. Testing helpers are experimental.",
+      "note": "Public because the starter lib/selectors.ts and its Cypress tests import it. Testing helpers are experimental.",
       "stability": "experimental"
+    },
+    {
+      "subpath": "./lib/selectors/selector-factory",
+      "reason": "template-import",
+      "area": "Testing selectors",
+      "stability": "experimental",
+      "note": "Public because the starter lib/block-selectors.ts imports it: the lightweight import for blocks; the ./selectors barrel pulls in every domain."
     }
   ]
 }

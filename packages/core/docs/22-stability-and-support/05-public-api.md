@@ -27,7 +27,7 @@ Everything else is **internal**, even if the exports map lets you import it.
 An internal subpath may change or disappear in a minor release, with no deprecation. Internal subpaths are versioned in lockstep with `@nextsparkjs/cli`, so a project that moves both together keeps working. Internal areas include:
 
 - `routes/*`, `templates/*`, `scripts/*` and `migrations/*`;
-- the testing selectors and helpers, except `./selectors`;
+- the testing selectors and helpers, except `./selectors` and `./lib/selectors/selector-factory`;
 - the devtools components;
 - the billing gateways and the webhook handlers (`lib/billing/stripe-webhook` and `polar-webhook` still resolve for one more minor; the webhook extension types are exported from `./lib/billing/config-types`);
 - `lib/mcp`;
@@ -177,7 +177,8 @@ The reason in each row is one of `template-import` (a stable template imports it
 
 | Subpath | Why it is public |
 | --- | --- |
-| `./selectors` | template-import (experimental) — Public because the starter lib/selectors.ts, lib/block-selectors.ts and its Cypress tests import it. Testing helpers are experimental. |
+| `./selectors` | template-import (experimental) — Public because the starter lib/selectors.ts and its Cypress tests import it. Testing helpers are experimental. |
+| `./lib/selectors/selector-factory` | template-import (experimental) — Public because the starter lib/block-selectors.ts imports it: the lightweight import for blocks; the ./selectors barrel pulls in every domain. |
 
 ## Outside the exports map
 
