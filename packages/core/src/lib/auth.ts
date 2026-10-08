@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
-import { Pool } from "pg";
+import type { Pool } from "pg";
+import { createPool } from './db-pool';
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins";
 import { parseSSLConfig, stripSSLParams, queryOne } from './db';
@@ -110,12 +111,9 @@ const connectionString = isPoolerUrl
 // has its own, since it reads the session in process); a pool per copy would multiply the connections.
 const AUTH_POOLS = Symbol.for('nextspark.auth.pools');
 const authPools = ((globalThis as Record<symbol, unknown>)[AUTH_POOLS] ??= new Map<string, Pool>()) as Map<string, Pool>;
-const pool = authPools.get(databaseUrl) ?? new Pool({
+const pool = authPools.get(databaseUrl) ?? createPool('auth', {
   connectionString,
   ssl: parseSSLConfig(databaseUrl),
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
-  max: 20,
 });
 authPools.set(databaseUrl, pool);
 

@@ -16,7 +16,7 @@ jest.mock('better-auth', () => ({
 }))
 jest.mock('better-auth/plugins', () => ({ emailOTP: jest.fn(() => ({ id: 'email-otp' })) }))
 jest.mock('better-auth/next-js', () => ({ nextCookies: jest.fn(() => ({ id: 'next-cookies' })) }))
-jest.mock('pg', () => ({ Pool: jest.fn(() => ({ query: jest.fn() })) }))
+jest.mock('pg', () => ({ Pool: jest.fn(() => ({ query: jest.fn(), on: jest.fn() })) }))
 jest.mock('@/core/lib/db', () => ({
   queryOne: jest.fn(),
   parseSSLConfig: jest.fn(() => false),

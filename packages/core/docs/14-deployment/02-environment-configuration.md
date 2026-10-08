@@ -67,6 +67,10 @@ DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
 # MIGRATE_DATABASE_URL=postgresql://owner:[PASSWORD]@[HOST]:5432/postgres
 ```
 
+Optional query limits for every pool core creates (see
+[Environment Configuration](../02-getting-started/05-environment-configuration.md#db_query_timeout_ms--db_statement_timeout_ms-optional)):
+`DB_QUERY_TIMEOUT_MS` (default `60000`, `0` disables) and `DB_STATEMENT_TIMEOUT_MS` (default off; direct connections only).
+
 > The RLS cutover is **opt-in and backward-compatible**: leave `DATABASE_SERVICE_URL`
 > unset and the app behaves as before. See
 > [Backend → RLS Policies → Enforcement Layer](../10-backend/03-rls-policies.md#enforcement-layer-beta167).

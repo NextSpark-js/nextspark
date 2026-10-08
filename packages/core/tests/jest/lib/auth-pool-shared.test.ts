@@ -5,7 +5,7 @@
  */
 import { describe, test, expect, jest } from '@jest/globals'
 
-const mockPool = jest.fn(() => ({ query: jest.fn() }))
+const mockPool = jest.fn(() => ({ query: jest.fn(), on: jest.fn() }))
 jest.mock('pg', () => ({ Pool: mockPool }))
 jest.mock('better-auth', () => ({ betterAuth: jest.fn(() => ({ api: { getSession: jest.fn() }, $Infer: {} })) }))
 jest.mock('better-auth/plugins', () => ({ emailOTP: jest.fn(() => ({ id: 'email-otp' })) }))

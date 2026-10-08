@@ -1,4 +1,5 @@
-import { Pool, type PoolClient } from 'pg';
+import type { Pool, PoolClient } from 'pg';
+import { createPool } from './db-pool';
 import { isValidUUID } from './utils/uuid';
 
 // Track active connections for graceful shutdown
@@ -111,12 +112,9 @@ const sslConfig = parseSSLConfig(databaseUrl);
 // Create a connection pool
 // Strip sslmode from connectionString to prevent pg-connection-string from
 // overriding our explicit ssl config (pg v8+ treats require as verify-full)
-const pool = new Pool({
+const pool = createPool('app', {
   connectionString: stripSSLParams(databaseUrl),
   ssl: sslConfig,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
 });
 
 /**
@@ -140,12 +138,9 @@ const serviceDatabaseUrl = process.env.DATABASE_SERVICE_URL || databaseUrl;
 const servicePool: Pool =
   serviceDatabaseUrl === databaseUrl
     ? pool
-    : new Pool({
+    : createPool('service', {
         connectionString: stripSSLParams(serviceDatabaseUrl),
         ssl: parseSSLConfig(serviceDatabaseUrl),
-        max: 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
       });
 
 /**
@@ -278,7 +273,7 @@ export async function queryWithRLS<T = unknown>(
     return result.rows;
   } catch (error) {
     // Rollback on error
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK').catch(() => {}); // the original error matters, not a failed rollback on a dead client
     throw error;
   } finally {
     // Release connection back to pool
@@ -333,7 +328,7 @@ export async function mutateWithRLS<T = unknown>(
       rowCount: result.rowCount || 0
     };
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK').catch(() => {}); // the original error matters, not a failed rollback on a dead client
     throw error;
   } finally {
     releaseClient(client);
@@ -388,7 +383,7 @@ export async function getTransactionClient(userId?: string | null, options?: RLS
       releaseClient(client);
     },
     rollback: async () => {
-      await client.query('ROLLBACK');
+      await client.query('ROLLBACK').catch(() => {}); // the original error matters, not a failed rollback on a dead client
       releaseClient(client);
     },
   };

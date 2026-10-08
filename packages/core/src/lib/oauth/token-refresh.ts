@@ -13,7 +13,7 @@
  * 3. Via Next.js middleware for automatic background refresh
  */
 
-import { Pool } from 'pg';
+import { createPool } from '../db-pool';
 import { parseSSLConfig } from '../db';
 import { TokenEncryption } from './encryption';
 import {
@@ -55,12 +55,9 @@ const connectionString = databaseUrl.includes('?')
   ? `${databaseUrl}&pgbouncer=true`
   : `${databaseUrl}?pgbouncer=true`;
 
-const pool = new Pool({
+const pool = createPool('oauth-token-refresh', {
   connectionString,
   ssl: parseSSLConfig(databaseUrl),
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
-  max: 20,
 });
 
 /**

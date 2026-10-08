@@ -27,18 +27,15 @@
  * ```
  */
 
-import { Pool } from 'pg'
+import { createPool } from '../db-pool'
 import { getEntityMetaConfig, EntityType } from '../../types/meta.types'
 import { parseSSLConfig } from '../db'
 
 // Use the existing pool from db.ts
 const databaseUrl = process.env.DATABASE_URL!;
-const pool = new Pool({
+const pool = createPool('transactional-meta', {
   connectionString: databaseUrl,
   ssl: parseSSLConfig(databaseUrl),
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
 })
 
 /**
@@ -204,7 +201,7 @@ export class TransactionalMetaService {
         return upsertResult.rows[0].metaValue as T
       } catch (error) {
         // Rollback transaction
-        await client.query('ROLLBACK')
+        await client.query('ROLLBACK').catch(() => {}) // the original error matters, not a failed rollback on a dead client
         client.release()
 
         const pgError = error as { code?: string; message: string }
@@ -328,7 +325,7 @@ export class TransactionalMetaService {
 
       return (result.rowCount || 0) > 0
     } catch (error) {
-      await client.query('ROLLBACK')
+      await client.query('ROLLBACK').catch(() => {}) // the original error matters, not a failed rollback on a dead client
       client.release()
 
       const pgError = error as { code?: string; message: string }

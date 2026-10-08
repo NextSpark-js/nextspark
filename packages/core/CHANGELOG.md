@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading
+
+- **Queries on core's pools now fail after 60 s** (`DB_QUERY_TIMEOUT_MS`, default `60000`). Set it higher, or `0`, for long jobs
+  (reports, bulk updates, scheduled actions).
+
+### Fixed
+
+- **Database pools no longer hand out dead connections and fail fast on them (#221).** With Neon, Supabase poolers or a NAT/load balancer
+  between the app and the database, an idle pooled connection can be dropped silently; the next request then hung for minutes (about
+  577 s observed) until `read ETIMEDOUT`, and the socket error could surface as an `uncaughtException`. Every pool core creates (the app
+  pool and the service pool in `lib/db`, the Better Auth pool, the OAuth token-refresh pool and the transactional-meta pool) now comes
+  from one helper, `lib/db-pool`, with:
+  - a client-side query timeout (default 60 s), the mechanism that fails a query on a dead socket fast. A client whose query timed out
+    is dropped, never returned to the pool: it could still be running the statement or hold an open transaction;
+  - an optional server-side statement timeout;
+  - TCP keep-alive (first probe after 10 s; how soon a dead peer is detected after that depends on the operating system);
+  - idle connections closed after 10 s (was 30 s), well under the idle cutoffs of providers and NATs;
+  - an `error` listener on every client, idle or checked out, that logs one warning line with the error code only (never the connection
+    string or the message) instead of crashing the process.
+
+  A connection that dies is dropped and the next query opens a fresh one. The transaction helpers now rethrow the original error when
+  their `ROLLBACK` also fails. Nothing is retried. `max` (20) and the 10 s connect timeout are unchanged. Migrations do not use these
+  pools and are not limited by them.
+
+### Added
+
+- `DB_QUERY_TIMEOUT_MS` (default `60000`; `0` disables): how long the client waits for an answer to a query. Works behind any pooler.
+- `DB_STATEMENT_TIMEOUT_MS` (default unset): also asks the server to cancel a statement after this long. Opt-in because it travels as a
+  startup parameter that transaction poolers such as PgBouncer can reject.
+  A value that is not a non-negative integer is ignored with a warning.
+
 ## [0.1.0-beta.196] - 2026-10-07
 
 ### Upgrading from 0.1.0-beta.195

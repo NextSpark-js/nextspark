@@ -21,7 +21,7 @@ jest.mock('better-auth/next-js', () => ({
   nextCookies: jest.fn(() => ({ id: 'next-cookies' })),
 }))
 jest.mock('pg', () => ({
-  Pool: jest.fn(() => ({ query: jest.fn() })),
+  Pool: jest.fn(() => ({ query: jest.fn(), on: jest.fn() })),
 }))
 jest.mock('@/core/lib/db', () => ({
   queryOne: jest.fn(),
