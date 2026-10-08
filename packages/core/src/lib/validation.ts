@@ -18,6 +18,9 @@ export const baseSignupSchema = z.object({
     .regex(/[0-9]/, 'Must contain at least one number'),
 });
 
+// Invitation signup when password login is off: the account signs in with an email code
+export const inviteSignupSchema = baseSignupSchema.omit({ password: true });
+
 // Frontend signup schema with confirmPassword
 export const signupSchema = baseSignupSchema.extend({
   confirmPassword: z.string(),

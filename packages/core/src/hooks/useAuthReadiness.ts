@@ -9,6 +9,7 @@ export type AuthReadinessState = 'loading' | 'ready' | 'unavailable' | 'error'
 
 /** Server-derived flows independent of the login UI methods; see runtime-readiness. */
 export interface ClientAuthCapabilities {
+  invitationSignup: boolean
   invitationPasswordSignup: boolean
   passwordRecovery: boolean
 }
@@ -20,6 +21,7 @@ export interface ClientAuthReadiness {
 }
 
 const NO_CAPABILITIES: ClientAuthCapabilities = {
+  invitationSignup: false,
   invitationPasswordSignup: false,
   passwordRecovery: false,
 }
@@ -40,6 +42,7 @@ function parseReadiness(value: unknown): ClientAuthReadiness {
   if (
     !capabilities ||
     typeof capabilities !== 'object' ||
+    typeof capabilities.invitationSignup !== 'boolean' ||
     typeof capabilities.invitationPasswordSignup !== 'boolean' ||
     typeof capabilities.passwordRecovery !== 'boolean'
   ) {
@@ -49,6 +52,7 @@ function parseReadiness(value: unknown): ClientAuthReadiness {
     state: candidate.status,
     availableMethods: [...new Set(candidate.availableMethods)],
     capabilities: {
+      invitationSignup: capabilities.invitationSignup,
       invitationPasswordSignup: capabilities.invitationPasswordSignup,
       passwordRecovery: capabilities.passwordRecovery,
     },

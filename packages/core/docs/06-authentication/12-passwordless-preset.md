@@ -13,8 +13,8 @@ Login page
     └── enter 6-digit code → session (first sign-in creates the account)
 ```
 
-No password field, no `/signup` page (it redirects to `/login`), no
-forgot/reset-password flow.
+No password field, no `/signup` page (it redirects to `/login`, except for an
+invitation link with an `inviteToken`), no forgot/reset-password flow.
 
 ## Configuration
 
@@ -22,7 +22,7 @@ forgot/reset-password flow.
 // packages/core/src/lib/config/app.config.ts (core defaults)
 auth: {
   methods: ['email-otp', 'google'],   // passwordless preset — DEFAULT
-  emailAndPassword: { enabled: true }, // password endpoints stay on server-side
+  emailAndPassword: {},                // undeclared: follows methods in production, on in development
 }
 ```
 
@@ -86,23 +86,31 @@ Client components read `PUBLIC_AUTH_CONFIG.methods` (`lib/config/config-sync.ts`
 
 ### Server side: `emailAndPassword.enabled`
 
-`auth.methods` only shapes the UI and the signup page. Better Auth's password
-endpoints (`sign-in/email`, `sign-up/email`, forget/reset/change-password) stay
-**enabled by default**, even under the passwordless preset, so:
+Better Auth's password endpoints (`sign-in/email`, `sign-up/email`,
+forget/reset/change-password) follow `auth.emailAndPassword.enabled` when it is
+declared. Left undeclared, the default:
 
-- existing password accounts keep working when a project switches preset,
-- Cypress API logins and DevKeyring keep working with the sample users on a local
-  development database (`pnpm db:seed` loads them; production never gets them),
-- an admin can still be given a password if a project needs it.
+- **production** (`NODE_ENV=production`): on only when `auth.methods` lists
+  `'email-password'`. Under the passwordless preset the endpoints answer
+  `503 AUTH_METHOD_UNAVAILABLE`, and `signup-with-invite` creates an account
+  without a password that signs in with an email code;
+- **development and tests**: on, so DevKeyring, Cypress API logins and the sample
+  users of `pnpm db:seed` sign in with a password (production never gets them).
+  "Production" means `NODE_ENV=production` exactly (`next start` and a standalone
+  `server.js` set it): a host that runs the build with `NODE_ENV` unset or set to
+  another value, such as `staging`, keeps the password endpoints on.
 
-A strictly passwordless app hard-disables them:
+A passwordless production app that still needs password logins (API clients,
+test users, an admin given a password) declares them:
 
 ```typescript
 auth: {
   methods: ['email-otp', 'google'],
-  emailAndPassword: { enabled: false },
+  emailAndPassword: { enabled: true },
 }
 ```
+
+`{ enabled: false }` turns them off everywhere, development included.
 
 ## Environment variables
 
@@ -150,8 +158,8 @@ minutes per IP) to every `POST /api/auth/*`, OTP requests included.
 
 - `tests/jest/lib/auth/auth-methods.test.ts` — presets and resolution rules.
 - `tests/jest/lib/auth-passwordless-preset.test.ts` — the preset is active by
-  default and the traditional password endpoints stay enabled unless a theme
-  overrides them.
+  default; the password endpoints stay on outside production, and in production
+  only when `methods` lists `'email-password'` or the theme declares them.
 - `tests/jest/components/auth/forms/LoginForm.passwordless.test.tsx` — the
   login renders OTP + Google with no password field under the preset, and the
   classic form when a theme picks `'email-password'`; also the countdown's
@@ -170,16 +178,17 @@ The auth route evaluates the resolved server `AUTH_CONFIG` together with the run
 
 In production, email OTP requires a valid `RESEND_API_KEY` and a non-placeholder `RESEND_FROM_EMAIL` on a verified domain; the console provider is development-only. Google requires a valid `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Requests for unavailable providers receive a non-secret `503 AUTH_METHOD_UNAVAILABLE` response before provider code runs, while the server log records safe diagnostic codes and remediation messages.
 
-`auth.methods` remains the list of methods advertised by the UI. It does not disable the existing email/password API: use `auth.emailAndPassword.enabled: false` to disable those endpoints, and `auth.providers.google.enabled: false` to disable Google endpoints. Session inspection and sign-out remain available even when no new login method is ready, so existing sessions can still be inspected and ended.
+`auth.methods` remains the list of methods advertised by the UI. In production it also decides the email/password API while `auth.emailAndPassword.enabled` is undeclared (see above): declare `true` to keep those endpoints or `false` to disable them everywhere, and `auth.providers.google.enabled: false` to disable Google endpoints. Session inspection and sign-out remain available even when no new login method is ready, so existing sessions can still be inspected and ended.
 
 ### Invitation registration and password recovery
 
-`GET /api/auth/readiness` also returns two server-derived booleans in `capabilities`. They are computed from the backend switch and email delivery, never from `auth.methods`, so hiding the password field on the login screen does not disable existing invitations or recovery:
+`GET /api/auth/readiness` also returns three server-derived booleans in `capabilities`. The password ones are computed from the password backend (`isPasswordLoginEnabled`: `auth.emailAndPassword.enabled` when declared, otherwise `auth.methods` in production and on in development) and email delivery:
 
 | Capability | True when | Used by |
 |---|---|---|
-| `invitationPasswordSignup` | `auth.emailAndPassword.enabled` is not `false` | Signup page opened with an `inviteToken` (`POST /api/v1/auth/signup-with-invite`) |
-| `passwordRecovery` | `auth.emailAndPassword.enabled` is not `false` **and** email delivery is ready | `/forgot-password` (`/request-password-reset`) |
+| `invitationSignup` | Always (core's `signup-with-invite` creates the invited account with or without a password) | Signup page opened with an `inviteToken` (`POST /api/v1/auth/signup-with-invite`) |
+| `invitationPasswordSignup` | The password backend is on | The same page: with it, the form asks for a password; without it, the form has no password field, the account is created without one, and the page then opens `/login` with the invited email filled in to sign in with a code |
+| `passwordRecovery` | The password backend is on **and** email delivery is ready | `/forgot-password` (`/request-password-reset`) |
 
 A normal signup page whose only ready method is email OTP shows an explanation and a link to the login page (keeping `callbackUrl`), because the account is created on the first OTP sign-in. Loading, error, and a missing or malformed `capabilities` object all fail closed: the shared UI shows no password action.
 
@@ -226,6 +235,8 @@ if (!isPasswordLoginEnabled(AUTH_CONFIG)) {
   )
 }
 ```
+
+Core's own route does not answer 503 there: with password login off it creates the invited account without a password (OTP-only) and answers `403` with `DOMAIN_NOT_ALLOWED`, `SIGNUP_RESTRICTED` or `SIGNUP_FAILED` when a registration rule refuses it. Port that branch if your override should accept invitations under the passwordless preset.
 
 > **Warning:** without the catch-all change, `GET /api/auth/readiness` returns 404. Login, signup, and forgot-password then show the error state and offer no sign-in action. There is no permissive fallback. Provider endpoints called directly also stay ungated until the route is updated.
 

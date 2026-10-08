@@ -22,7 +22,8 @@ export async function OPTIONS(request: NextRequest) {
 
 interface SignupWithInviteBody {
   email: string
-  password: string
+  /** Ignored when password login is off: the account then signs in with an email code. */
+  password?: string
   firstName?: string
   lastName?: string
   inviteToken: string
@@ -32,23 +33,17 @@ interface SignupWithInviteBody {
 export const POST = withRateLimitTier(withApiLogging(
   async (req: NextRequest): Promise<NextResponse> => {
     try {
-      if (!isPasswordLoginEnabled(AUTH_CONFIG)) {
-        const response = createApiError(
-          'Password authentication is unavailable',
-          503,
-          null,
-          'AUTH_METHOD_UNAVAILABLE'
-        )
-        return addCorsHeaders(response, req)
-      }
+      // With password login off the account is created without a password
+      // (OTP-only): the invitee signs in with an email code.
+      const passwordLogin = isPasswordLoginEnabled(AUTH_CONFIG)
 
       const body: SignupWithInviteBody = await req.json()
       const { email, password, firstName, lastName, inviteToken } = body
 
       // Validate required fields
-      if (!email || !password || !inviteToken) {
+      if (!email || (passwordLogin && !password) || !inviteToken) {
         const response = createApiError(
-          'Email, password, and invitation token are required',
+          passwordLogin ? 'Email, password, and invitation token are required' : 'Email and invitation token are required',
           400,
           null,
           'MISSING_FIELDS'
@@ -64,7 +59,7 @@ export const POST = withRateLimitTier(withApiLogging(
       }
 
       // Validate password length (min 8 characters as per Better Auth config)
-      if (password.length < 8) {
+      if (passwordLogin && password!.length < 8) {
         const response = createApiError(
           'Password must be at least 8 characters',
           400,
@@ -120,36 +115,60 @@ export const POST = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response, req)
       }
 
-      // Step 2: Create user using Better Auth's internal API
-      // Wrap in signup context to skip automatic team creation
-      // (user will be added to the invited team instead)
-      const signUpRequest = new Request(`${process.env.NEXT_PUBLIC_APP_URL}${withBasePath('/api/auth/sign-up/email')}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          name: firstName && lastName ? `${firstName} ${lastName}` : firstName || '',
-          firstName,
-          lastName,
-          language: I18N_CONFIG.defaultLocale,
-        }),
-      })
+      // Step 2: Create the user. Wrapped in the signup context to skip automatic
+      // team creation (the user is added to the invited team instead).
+      let userId: string | undefined
+      const signupContext = { skipTeamCreation: true, invitedTeamId: invitation.teamId }
+      const name = firstName && lastName ? `${firstName} ${lastName}` : firstName || ''
+      if (passwordLogin) {
+        // Better Auth's sign-up creates the user and its password account
+        const signUpRequest = new Request(`${process.env.NEXT_PUBLIC_APP_URL}${withBasePath('/api/auth/sign-up/email')}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            name,
+            firstName,
+            lastName,
+            language: I18N_CONFIG.defaultLocale,
+          }),
+        })
 
-      // Use signup context to signal that we should skip team creation
-      // The user will be added to the invited team instead
-      const signUpResponse = await withSignupContext(
-        { skipTeamCreation: true, invitedTeamId: invitation.teamId },
-        () => auth.handler(signUpRequest)
-      ) as Response
+        const signUpResponse = await withSignupContext(signupContext, () => auth.handler(signUpRequest)) as Response
 
-      if (!signUpResponse.ok) {
-        const errorData = await signUpResponse.json() as { message?: string; code?: string }
+        if (!signUpResponse.ok) {
+          const errorData = await signUpResponse.json() as { message?: string; code?: string }
 
-        // Check if user already exists
-        if (errorData.message?.includes('already exists') || errorData.code === 'USER_ALREADY_EXISTS') {
+          // Check if user already exists
+          if (errorData.message?.includes('already exists') || errorData.code === 'USER_ALREADY_EXISTS') {
+            const response = createApiError(
+              'An account with this email already exists. Please sign in instead.',
+              409,
+              null,
+              'USER_ALREADY_EXISTS'
+            )
+            return addCorsHeaders(response, req)
+          }
+
+          const response = createApiError(
+            errorData.message || 'Failed to create account',
+            signUpResponse.status,
+            null,
+            'SIGNUP_FAILED'
+          )
+          return addCorsHeaders(response, req)
+        }
+
+        // Parse response to get user data
+        const signUpData = await signUpResponse.json()
+        userId = signUpData.user?.id
+      } else {
+        // The user row only, as the email-otp plugin creates it on a first code sign-in
+        const { internalAdapter } = await auth.$context
+        if (await internalAdapter.findUserByEmail(email.toLowerCase())) {
           const response = createApiError(
             'An account with this email already exists. Please sign in instead.',
             409,
@@ -158,19 +177,41 @@ export const POST = withRateLimitTier(withApiLogging(
           )
           return addCorsHeaders(response, req)
         }
-
-        const response = createApiError(
-          errorData.message || 'Failed to create account',
-          signUpResponse.status,
-          null,
-          'SIGNUP_FAILED'
-        )
-        return addCorsHeaders(response, req)
+        let user: { id: string } | null
+        try {
+          user = await withSignupContext(signupContext, () => internalAdapter.createUser({
+            email: email.toLowerCase(),
+            emailVerified: true,
+            name,
+            firstName,
+            lastName,
+            language: I18N_CONFIG.defaultLocale,
+          }))
+        } catch (error) {
+          // The registration hook refuses with `CODE: message` (registration.mode rules)
+          const message = error instanceof Error ? error.message : ''
+          const refused = /^(DOMAIN_NOT_ALLOWED|SIGNUP_RESTRICTED): (.*)$/s.exec(message)
+          if (refused) {
+            return addCorsHeaders(createApiError(refused[2], 403, null, refused[1]), req)
+          }
+          // The same email created between the lookup above and this insert
+          if ((error as { code?: string }).code === '23505' || /duplicate key/i.test(message)) {
+            const response = createApiError(
+              'An account with this email already exists. Please sign in instead.',
+              409,
+              null,
+              'USER_ALREADY_EXISTS'
+            )
+            return addCorsHeaders(response, req)
+          }
+          throw error
+        }
+        if (!user) {
+          // A registration hook declined to create the account
+          return addCorsHeaders(createApiError('Account creation was refused', 403, null, 'SIGNUP_FAILED'), req)
+        }
+        userId = user.id
       }
-
-      // Parse response to get user data
-      const signUpData = await signUpResponse.json()
-      const userId = signUpData.user?.id
 
       if (!userId) {
         const response = createApiError(

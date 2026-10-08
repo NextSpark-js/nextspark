@@ -234,10 +234,9 @@ export const auth = betterAuth({
     },
   },
   emailAndPassword: {
-    // Enabled by default even under the passwordless preset (AUTH_CONFIG.methods
-    // only shapes the login UI) so password accounts, seeded test users and
-    // API logins keep working. A theme hard-disables it with
-    // `auth.emailAndPassword.enabled: false`.
+    // On when AUTH_CONFIG.methods lists 'email-password', and outside production
+    // (seeded test users, the dev keyring). A production passwordless app opts
+    // in with `auth.emailAndPassword.enabled: true` (API logins, test users).
     enabled: isPasswordLoginEnabled(AUTH_CONFIG),
     requireEmailVerification: true,
     minPasswordLength: 8,

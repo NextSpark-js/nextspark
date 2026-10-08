@@ -21,12 +21,15 @@ export interface RuntimeAuthReadinessOptions {
 
 /**
  * Server-derived flows that do not follow the login UI intent (`auth.methods`).
- * The password backend (`auth.emailAndPassword.enabled`) stays on under the
- * passwordless preset, so invitation registration and password recovery must
- * not be inferred from `availableMethods`.
+ * The password backend (`isPasswordLoginEnabled`) can be on without
+ * `'email-password'` in `methods` (outside production, or declared), so
+ * invitation registration and password recovery are not inferred from
+ * `availableMethods`.
  */
 export interface PublicAuthCapabilities {
-  /** `/api/v1/auth/signup-with-invite` accepts a password (backend switch only). */
+  /** `/api/v1/auth/signup-with-invite` creates the invited account: always, with or without a password. */
+  invitationSignup: boolean
+  /** `/api/v1/auth/signup-with-invite` takes a password (backend switch only); otherwise the account signs in by code. */
   invitationPasswordSignup: boolean
   /** `/request-password-reset` can run: password backend + usable email delivery. */
   passwordRecovery: boolean
@@ -83,11 +86,12 @@ export function logAuthReadinessAtStartup(options: RuntimeAuthReadinessOptions =
 export function getPublicAuthReadiness(options: RuntimeAuthReadinessOptions = {}): PublicAuthReadiness {
   const result = getRuntimeAuthReadiness(options)
   const authConfig = options.authConfig === undefined ? AUTH_CONFIG : options.authConfig
-  const passwordBackend = isPasswordLoginEnabled(authConfig)
+  const passwordBackend = isPasswordLoginEnabled(authConfig, (options.env ?? process.env).NODE_ENV)
   return {
     status: result.outcome === 'ready' ? 'ready' : 'unavailable',
     availableMethods: result.availableMethods,
     capabilities: {
+      invitationSignup: true,
       invitationPasswordSignup: passwordBackend,
       passwordRecovery: passwordBackend && isRuntimeEmailAvailable(options),
     },
@@ -121,7 +125,8 @@ function authRoutePath(pathname: string): string | null {
   const marker = '/api/auth'
   const index = pathname.lastIndexOf(marker)
   if (index === -1) return null
-  const suffix = pathname.slice(index + marker.length)
+  // Better Auth's router also matches a path with a trailing slash, so the gate compares it without one
+  const suffix = pathname.slice(index + marker.length).replace(/\/+$/, '')
   return suffix || '/'
 }
 
@@ -213,10 +218,10 @@ export async function getAuthReadinessResponse(
     }
   }
 
-  if (isPasswordOperation && authConfig?.emailAndPassword?.enabled === false) {
+  if (isPasswordOperation && !isPasswordLoginEnabled(authConfig, (options.env ?? process.env).NODE_ENV)) {
     return unavailableResponse('email-password', [{
       code: 'EMAIL_PASSWORD_POLICY_DISABLED',
-      message: 'Password authentication is disabled by auth.emailAndPassword.enabled.',
+      message: 'Password authentication is off: auth.methods has no email-password and auth.emailAndPassword.enabled is not true.',
     }], pathname)
   }
 

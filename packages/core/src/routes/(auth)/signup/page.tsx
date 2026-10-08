@@ -19,13 +19,15 @@ export const metadata: Metadata = defaultMetadata
 // No Suspense boundary around the content: redirect() inside one is thrown after the shell was
 // flushed, so it reaches the browser as a 200 with a meta refresh instead of a 307. The page is
 // force-dynamic, so useSearchParams in SignupForm does not need a boundary to prerender.
-async function SignupPage() {
+async function SignupPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open'
+  // An invitation link registers through signup-with-invite, with or without a password
+  const invited = typeof (await searchParams)?.inviteToken === 'string'
 
   // Passwordless preset (no 'email-password' in auth.methods): the account is
   // created by the first one-time-code sign-in, so there is no password signup
   // form to show — send people to /login instead.
-  if (!resolveAuthMethods(AUTH_CONFIG).includes('email-password')) {
+  if (!invited && !resolveAuthMethods(AUTH_CONFIG).includes('email-password')) {
     redirect('/login')
   }
 

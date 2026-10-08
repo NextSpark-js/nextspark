@@ -12,10 +12,10 @@ import SignupPage, { metadata } from './page'
 
 export { metadata }
 
-export default function SignupPageCc() {
+export default function SignupPageCc({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   return (
     <Suspense fallback={null}>
-      <SignupPage />
+      <SignupPage searchParams={searchParams} />
     </Suspense>
   )
 }

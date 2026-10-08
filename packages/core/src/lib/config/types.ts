@@ -610,8 +610,8 @@ export interface AuthConfig {
    * auth: { methods: ['email-otp', 'email-password', 'google'] } // both, OTP first
    * ```
    *
-   * This only shapes the UI and the signup page. Better Auth's password
-   * endpoints stay enabled unless `emailAndPassword.enabled` is set to false.
+   * This shapes the UI and the signup page, and decides whether Better Auth's
+   * password endpoints run in production (see `emailAndPassword`).
    */
   methods?: AuthLoginMethod[]
 
@@ -619,10 +619,12 @@ export interface AuthConfig {
    * Server-side switch for Better Auth's email + password endpoints
    * (`sign-in/email`, `sign-up/email`, forget/reset/change-password).
    *
-   * Default: `true` — even under the passwordless preset — so existing
-   * password accounts, seeded test users and API-based logins keep working
-   * when a theme only changes the login UI. Set `{ enabled: false }` to
-   * hard-disable password auth for a strictly passwordless app.
+   * Default (undeclared): on when `methods` lists `'email-password'`, and
+   * outside production (`NODE_ENV !== 'production'`) so the dev keyring,
+   * `db:seed` users and Cypress can sign in with a password. A production app
+   * on the passwordless preset serves no password endpoint. Set
+   * `{ enabled: true }` to keep password logins (API clients, test users) in
+   * production, or `{ enabled: false }` to turn them off everywhere.
    */
   emailAndPassword?: {
     enabled?: boolean

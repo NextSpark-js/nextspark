@@ -901,7 +901,8 @@ describe('build check assumptions', () => {
   // relies on the evaluator treating unset values as these core defaults.
   test('core auth defaults match what the evaluator assumes when a theme leaves them unset', () => {
     expect(DEFAULT_APP_CONFIG.auth?.providers?.google?.enabled).toBe(true)
-    expect(DEFAULT_APP_CONFIG.auth?.emailAndPassword?.enabled).toBe(true)
+    // Undeclared: the evaluator treats a declared 'email-password' as enabled (isPasswordLoginEnabled agrees)
+    expect(DEFAULT_APP_CONFIG.auth?.emailAndPassword?.enabled).toBeUndefined()
     expect(DEFAULT_APP_CONFIG.auth?.methods).toEqual([...DEFAULT_AUTH_METHODS])
   })
 

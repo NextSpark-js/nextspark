@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `<store-id>.public.blob.vercel-storage.com`, and remove the hosts you do not use.
 - **Queries on core's pools now fail after 60 s** (`DB_QUERY_TIMEOUT_MS`, default `60000`). Set it higher, or `0`, for long jobs
   (reports, bulk updates, scheduled actions).
+- **Password sign-in in production now follows `auth.methods`.** A project on the passwordless preset (the default, no `'email-password'` in
+  `auth.methods`) that still signs in with a password in production (API clients, test users, an admin given a password) adds
+  `emailAndPassword: { enabled: true }` to `auth` in its `app.config.ts`; without it those requests answer `503 AUTH_METHOD_UNAVAILABLE`.
+  Projects that list `'email-password'`, or declare `emailAndPassword.enabled`, are unaffected. Development is unaffected. Without the
+  opt-in, invited users register with no password and sign in with an email code; a project that overrode `signup-with-invite` or the
+  signup page keeps its own behaviour.
 
 ### Added
 
@@ -34,6 +40,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wildcard hosts (`*.public.blob.vercel-storage.com`, `*.supabase.co`, `*.cloudinary.com`) and the unused `images.unsplash.com`,
   `upload.wikimedia.org` and `i.pravatar.cc`, which stay as commented examples. A project serving uploads from Vercel Blob through `next/image`
   adds its store's host (see Upgrading from 0.1.0-beta.196).
+- **Better Auth's password endpoints follow `auth.methods` in production.** `auth.emailAndPassword.enabled` no longer defaults to `true`:
+  left undeclared, `sign-in/email`, `sign-up/email` and the reset and change-password endpoints are on when `auth.methods` lists
+  `'email-password'`, and always when `NODE_ENV` is not `production` (the dev keyring, `pnpm db:seed` users and Cypress keep signing in with
+  a password). A declared `true` or `false` decides everywhere. Under the passwordless preset in production `POST /api/auth/sign-up/email` and
+  `POST /api/auth/sign-in/email` answer `503 AUTH_METHOD_UNAVAILABLE` (with or without a trailing slash), `GET /api/auth/readiness` reports
+  no password capability, and `POST /api/v1/auth/signup-with-invite` creates the invited account without a password (it signs in with an
+  email code; a password in the request is ignored and not required); with passwords off it used to answer 503. A registration rule that
+  refuses that account answers `403` with `DOMAIN_NOT_ALLOWED`, `SIGNUP_RESTRICTED` or `SIGNUP_FAILED`, and an email registered at the same
+  moment `409 USER_ALREADY_EXISTS`. `isPasswordLoginEnabled(authConfig, nodeEnv?)` (`lib/auth/auth-methods`) implements the rule. The
+  starter's `app.config.ts` shows the opt-in, and `06-authentication/12-passwordless-preset.md` describes it.
+- **Invitation signup works without passwords.** `GET /api/auth/readiness` adds `capabilities.invitationSignup` (always `true`), and the
+  signup page opened with an `inviteToken` follows it: when `invitationPasswordSignup` is `false` it shows the form without the password
+  fields, sends no password, and after the account is created opens `/login` with the invited email filled in, to sign in with a code.
+  Under the passwordless preset `/signup` still redirects to `/login`, except when it opens an invitation (`inviteToken` in the query).
+  `useAuthReadiness` (`ClientAuthCapabilities`) now requires the new boolean and fails closed without it.
 
 ### Fixed
 

@@ -82,7 +82,7 @@ describe('runtime auth readiness adapter', () => {
     expect(result).toEqual({
       status: 'ready',
       availableMethods: ['email-otp'],
-      capabilities: { invitationPasswordSignup: true, passwordRecovery: true },
+      capabilities: { invitationSignup: true, invitationPasswordSignup: false, passwordRecovery: false },
     })
     expect(JSON.stringify(result)).not.toContain(secret)
     expect(JSON.stringify(result)).not.toContain('GOOGLE_CLIENT_ID_MALFORMED')
@@ -90,24 +90,34 @@ describe('runtime auth readiness adapter', () => {
 })
 
 describe('public auth capabilities', () => {
-  test('passwordless default keeps invitation registration and recovery when the backend and email are ready', () => {
-    const result = getPublicAuthReadiness({
+  test('passwordless default offers no password capability in production unless declared', () => {
+    const undeclared = getPublicAuthReadiness({
       authConfig: { methods: ['email-otp', 'google'] },
       env: { ...production, ...validEmail },
     })
+    const declared = getPublicAuthReadiness({
+      authConfig: { methods: ['email-otp', 'google'], emailAndPassword: { enabled: true } },
+      env: { ...production, ...validEmail },
+    })
+    const development = getPublicAuthReadiness({
+      authConfig: { methods: ['email-otp', 'google'] },
+      env: { NODE_ENV: 'development', ...validEmail },
+    })
 
-    expect(result.availableMethods).not.toContain('email-password')
-    expect(result.capabilities).toEqual({ invitationPasswordSignup: true, passwordRecovery: true })
+    expect(undeclared.availableMethods).not.toContain('email-password')
+    expect(undeclared.capabilities).toEqual({ invitationSignup: true, invitationPasswordSignup: false, passwordRecovery: false })
+    expect(declared.capabilities).toEqual({ invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: true })
+    expect(development.capabilities).toEqual({ invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: true })
   })
 
   test('recovery needs email delivery while invitation registration follows only the backend switch', () => {
     const result = getPublicAuthReadiness({
-      authConfig: { methods: ['email-otp', 'google'] },
+      authConfig: { methods: ['email-otp', 'google'], emailAndPassword: { enabled: true } },
       env: { ...production, ...validGoogle },
     })
 
     expect(result.status).toBe('ready')
-    expect(result.capabilities).toEqual({ invitationPasswordSignup: true, passwordRecovery: false })
+    expect(result.capabilities).toEqual({ invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: false })
   })
 
   test('a disabled password backend removes both capabilities even when the UI lists email-password', () => {
@@ -116,7 +126,7 @@ describe('public auth capabilities', () => {
       env: { ...production, ...validEmail },
     })
 
-    expect(result.capabilities).toEqual({ invitationPasswordSignup: false, passwordRecovery: false })
+    expect(result.capabilities).toEqual({ invitationSignup: true, invitationPasswordSignup: false, passwordRecovery: false })
   })
 
   test('capabilities carry no credential values', () => {
@@ -209,6 +219,48 @@ describe('auth request readiness wrapper', () => {
     expect(okHandler).not.toHaveBeenCalled()
   })
 
+  test.each([
+    ['/api/auth/sign-up/email', { email: 'a@example.com', password: 'Password1!', name: 'A' }],
+    ['/api/auth/sign-in/email', { email: 'a@example.com', password: 'Password1!' }],
+  ])('blocks %s in production when methods has no password and none is declared', async (path, body) => {
+    const blocked = await withAuthRequestReadiness(
+      request(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
+      okHandler,
+      { authConfig: { methods: ['email-otp', 'google'] }, env: { ...production, ...validEmail } },
+    )
+    expect(blocked.status).toBe(503)
+    expect(await blocked.json()).toMatchObject({ code: 'AUTH_METHOD_UNAVAILABLE', method: 'email-password' })
+    expect(okHandler).not.toHaveBeenCalled()
+
+    const development = await withAuthRequestReadiness(
+      request(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
+      okHandler,
+      { authConfig: { methods: ['email-otp', 'google'] }, env: { NODE_ENV: 'development', ...validEmail } },
+    )
+    expect(development.status).toBe(200)
+    expect(okHandler).toHaveBeenCalledTimes(1)
+  })
+
+  test.each([
+    '/api/auth/sign-in/email/',
+    '/api/auth/sign-up/email/',
+    '/api/auth/sign-up/credentials/',
+    '/api/auth/request-password-reset/',
+    '/api/auth/forget-password/',
+    '/api/auth/reset-password/',
+    '/api/auth/change-password//',
+  ])('blocks %s with a trailing slash like the path without one', async (path) => {
+    const response = await withAuthRequestReadiness(
+      request(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }),
+      okHandler,
+      { authConfig: { methods: ['email-otp', 'google'] }, env: { ...production, ...validEmail } },
+    )
+
+    expect(response.status).toBe(503)
+    expect(await response.json()).toMatchObject({ code: 'AUTH_METHOD_UNAVAILABLE', method: 'email-password' })
+    expect(okHandler).not.toHaveBeenCalled()
+  })
+
   test('does not use UI method intent as a backend switch for a configured OTP endpoint', async () => {
     const response = await withAuthRequestReadiness(
       request('/api/auth/email-otp/send-verification-otp', { method: 'POST' }),
@@ -275,7 +327,7 @@ describe('auth request readiness wrapper', () => {
     expect(await response.json()).toEqual({
       status: 'ready',
       availableMethods: ['google'],
-      capabilities: { invitationPasswordSignup: true, passwordRecovery: false },
+      capabilities: { invitationSignup: true, invitationPasswordSignup: false, passwordRecovery: false },
     })
     expect(okHandler).not.toHaveBeenCalled()
   })

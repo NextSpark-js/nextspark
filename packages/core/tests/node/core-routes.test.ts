@@ -494,7 +494,14 @@ test('the default /signup page redirects outside Suspense (a real 307); the Cach
   assert.match(legacy, /redirect\('\/login'\)/)
   assert.doesNotMatch(legacy, /<Suspense|import { Suspense/, 'redirect() thrown inside a Suspense boundary reaches the browser as a 200 with a meta refresh')
   assert.match(cc, /import SignupPage, \{ metadata \} from '\.\/page'/)
-  assert.match(cc, /<Suspense fallback=\{null\}>\s*<SignupPage \/>\s*<\/Suspense>/, 'a page that redirects needs a boundary under the segment the dev server validates')
+  assert.match(cc, /<Suspense fallback=\{null\}>\s*<SignupPage searchParams=\{searchParams\} \/>\s*<\/Suspense>/, 'a page that redirects needs a boundary under the segment the dev server validates')
+})
+
+test('/signup redirects to /login under the passwordless preset unless it opens an invitation', () => {
+  const legacy = fs.readFileSync(path.join(ROUTES, '(auth)/signup/page.tsx'), 'utf8')
+  // signup-with-invite registers with or without a password, so an invitation link keeps the form
+  assert.match(legacy, /const invited = typeof \(await searchParams\)\?\.inviteToken === 'string'/)
+  assert.match(legacy, /if \(!invited && !resolveAuthMethods\(AUTH_CONFIG\)\.includes\('email-password'\)\) \{\s*redirect\('\/login'\)/)
 })
 
 /**

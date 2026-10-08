@@ -140,7 +140,7 @@ describe('shipped auth route runtime readiness integration', () => {
     expect(await response.json()).toEqual({
       status: 'ready',
       availableMethods: ['google'],
-      capabilities: { invitationPasswordSignup: true, passwordRecovery: false },
+      capabilities: { invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: false },
     })
     expect(mockGet).not.toHaveBeenCalled()
   })

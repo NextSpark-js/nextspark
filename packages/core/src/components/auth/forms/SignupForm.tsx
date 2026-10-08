@@ -19,7 +19,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from '../../ui/separator'
 import { PasswordInput } from '../../ui/password-input'
 import { Mail, User, Loader2, AlertCircle, ArrowRight, MailCheck, CheckCircle2, Users } from 'lucide-react'
-import { signupSchema } from '../../../lib/validation'
+import { inviteSignupSchema, signupSchema } from '../../../lib/validation'
 import { sel } from '../../../lib/selectors/auth-sel'
 import { useTranslations } from 'next-intl'
 import { AuthTranslationPreloader } from '../../../lib/i18n/AuthTranslationPreloader'
@@ -50,11 +50,14 @@ export function SignupForm() {
   const fromInvite = searchParams.get('fromInvite') === 'true'
   const callbackUrl = safeCallbackPath(searchParams.get('callbackUrl'))
   const inviteToken = searchParams.get('inviteToken')
-  // Invitation registration follows the password backend switch, not the
-  // login UI methods: the passwordless preset keeps inviting with a password.
+  // Invitation registration follows the server capabilities, not the login UI
+  // methods: with the password backend on it takes a password, otherwise the
+  // invited account is created without one and signs in with an email code.
   const passwordAvailable = inviteToken
     ? readiness.capabilities.invitationPasswordSignup
     : readiness.availableMethods.includes('email-password')
+  const invitePasswordless = Boolean(inviteToken) && !passwordAvailable && readiness.capabilities.invitationSignup
+  const formAvailable = passwordAvailable || invitePasswordless
   const loginHref = callbackUrl ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/login'
 
   const {
@@ -63,7 +66,8 @@ export function SignupForm() {
     watch,
     formState: { errors },
   } = useForm<SignupFormData>({
-    resolver: zodResolver(signupSchema),
+    // Without a password field the form validates the rest only
+    resolver: zodResolver((invitePasswordless ? inviteSignupSchema : signupSchema) as typeof signupSchema),
     defaultValues: {
       email: inviteEmail || '',
     },
@@ -93,7 +97,7 @@ export function SignupForm() {
           },
           body: JSON.stringify({
             email: data.email,
-            password: data.password,
+            ...(invitePasswordless ? {} : { password: data.password }),
             firstName: data.firstName,
             lastName: data.lastName,
             inviteToken,
@@ -124,8 +128,15 @@ export function SignupForm() {
           description: t('signup.messages.inviteJoinedTeam')
         })
 
+        const redirectTo = result.data?.redirectTo || '/dashboard/settings/teams'
+        if (invitePasswordless) {
+          // No password: the invitee signs in with a code sent to the invited address
+          router.push(`/login?${new URLSearchParams({ email: data.email, fromInvite: 'true', callbackUrl: redirectTo })}`)
+          return
+        }
+
         // Redirect to team settings page
-        router.push(result.data?.redirectTo || '/dashboard/settings/teams')
+        router.push(redirectTo)
         return
       }
 
@@ -148,7 +159,7 @@ export function SignupForm() {
     } finally {
       setLoadingProvider(null)
     }
-  }, [agreedToTerms, signUp, t, inviteToken, router])
+  }, [agreedToTerms, signUp, t, inviteToken, invitePasswordless, router])
 
   const handleGoogleSignUp = async () => {
     setLoadingProvider('google')
@@ -187,7 +198,7 @@ export function SignupForm() {
   if (
     readiness.state === 'loading' ||
     readiness.state === 'error' ||
-    (readiness.state === 'unavailable' && !(inviteToken && passwordAvailable))
+    (readiness.state === 'unavailable' && !(inviteToken && formAvailable))
   ) {
     const isLoading = readiness.state === 'loading'
     const isError = readiness.state === 'error'
@@ -400,7 +411,7 @@ export function SignupForm() {
             </Alert>
           )}
 
-        {passwordAvailable && (
+        {formAvailable && (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -468,6 +479,8 @@ export function SignupForm() {
             )}
           </div>
 
+          {!invitePasswordless && (
+          <>
           <div className="space-y-2">
             <Label htmlFor="password">{t('signup.form.password')}</Label>
             <PasswordInput
@@ -507,6 +520,8 @@ export function SignupForm() {
               </p>
             )}
           </div>
+          </>
+          )}
 
           {error && (
             <Alert variant="destructive" data-cy={sel('auth.signup.error')}>
@@ -551,7 +566,7 @@ export function SignupForm() {
         </form>
         )}
 
-        {!passwordAvailable && !googleAvailable && (
+        {!formAvailable && !googleAvailable && (
           <Alert
             role="alert"
             data-cy={sel(
@@ -580,7 +595,7 @@ export function SignupForm() {
           </Alert>
         )}
 
-        {inviteToken && !passwordAvailable && googleAvailable && (
+        {inviteToken && !formAvailable && googleAvailable && (
           <Alert role="alert" className="mb-4" data-cy={sel('auth.signup.inviteUnavailable')}>
             <AlertCircle className="h-4 w-4" aria-hidden="true" />
             <AlertDescription>{t('signup.inviteUnavailable')}</AlertDescription>
@@ -589,7 +604,7 @@ export function SignupForm() {
 
         {googleAvailable && (
           <>
-            {passwordAvailable && (
+            {formAvailable && (
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
                 <Separator className="w-full" />

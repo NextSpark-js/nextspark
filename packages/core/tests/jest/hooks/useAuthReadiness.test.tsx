@@ -8,7 +8,7 @@ function Probe() {
   return <pre data-testid="state">{JSON.stringify(readiness)}</pre>
 }
 
-const capabilities = { invitationPasswordSignup: true, passwordRecovery: false }
+const capabilities = { invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: false }
 
 const originalFetch = global.fetch
 const originalBasePath = process.env.__NEXT_ROUTER_BASEPATH
@@ -38,7 +38,7 @@ describe('useAuthReadiness', () => {
     await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('"state":"ready"'))
     expect(screen.getByTestId('state')).toHaveTextContent('"availableMethods":["google"]')
     expect(screen.getByTestId('state')).toHaveTextContent(
-      '"capabilities":{"invitationPasswordSignup":true,"passwordRecovery":false}',
+      '"capabilities":{"invitationSignup":true,"invitationPasswordSignup":true,"passwordRecovery":false}',
     )
     expect(global.fetch).toHaveBeenCalledWith('/base/api/auth/readiness', {
       method: 'GET',
@@ -74,7 +74,7 @@ describe('useAuthReadiness', () => {
   test.each([
     ['missing', undefined],
     ['non-boolean', { invitationPasswordSignup: 'true', passwordRecovery: false }],
-    ['partial', { invitationPasswordSignup: true }],
+    ['partial', { invitationPasswordSignup: true, passwordRecovery: false }],
   ])('fails closed when capabilities are %s', async (_label, badCapabilities) => {
     global.fetch = jest.fn(async () => new Response(
       JSON.stringify({ status: 'ready', availableMethods: ['email-otp'], capabilities: badCapabilities }),
@@ -85,7 +85,7 @@ describe('useAuthReadiness', () => {
 
     await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('"state":"error"'))
     expect(screen.getByTestId('state')).toHaveTextContent(
-      '"capabilities":{"invitationPasswordSignup":false,"passwordRecovery":false}',
+      '"capabilities":{"invitationSignup":false,"invitationPasswordSignup":false,"passwordRecovery":false}',
     )
   })
 

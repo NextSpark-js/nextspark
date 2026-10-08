@@ -84,11 +84,21 @@ describe('auth methods presets', () => {
     expect(isAuthLoginMethod(42)).toBe(false)
   })
 
-  test('password endpoints stay enabled server-side unless a theme disables them', () => {
-    expect(isPasswordLoginEnabled(undefined)).toBe(true)
-    expect(isPasswordLoginEnabled({})).toBe(true)
-    expect(isPasswordLoginEnabled(DEFAULT_APP_CONFIG.auth)).toBe(true)
-    expect(isPasswordLoginEnabled({ emailAndPassword: { enabled: false } })).toBe(false)
+  test('password endpoints follow auth.methods in production unless declared', () => {
+    expect(isPasswordLoginEnabled(undefined, 'production')).toBe(false)
+    expect(isPasswordLoginEnabled({}, 'production')).toBe(false)
+    expect(isPasswordLoginEnabled(DEFAULT_APP_CONFIG.auth, 'production')).toBe(false)
+    expect(isPasswordLoginEnabled({ methods: ['email-otp', 'google'] }, 'production')).toBe(false)
+    expect(isPasswordLoginEnabled({ methods: ['email-password', 'google'] }, 'production')).toBe(true)
+    expect(isPasswordLoginEnabled({ methods: ['email-otp'], emailAndPassword: { enabled: true } }, 'production')).toBe(true)
+    expect(isPasswordLoginEnabled({ methods: ['email-password'], emailAndPassword: { enabled: false } }, 'production')).toBe(false)
+  })
+
+  test('password endpoints stay on outside production (dev keyring, db:seed users) unless disabled', () => {
+    for (const nodeEnv of ['development', 'test', undefined]) {
+      expect(isPasswordLoginEnabled(DEFAULT_APP_CONFIG.auth, nodeEnv)).toBe(true)
+      expect(isPasswordLoginEnabled({ emailAndPassword: { enabled: false } }, nodeEnv)).toBe(false)
+    }
   })
 })
 

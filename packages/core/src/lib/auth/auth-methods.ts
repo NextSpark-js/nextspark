@@ -99,10 +99,16 @@ export function matchAuthPreset(methods: readonly AuthLoginMethod[]): AuthPreset
 
 /**
  * Server-side: should Better Auth's email + password endpoints be enabled?
- * Defaults to true regardless of the UI preset (see `AuthConfig.emailAndPassword`).
+ * An explicit `emailAndPassword.enabled` decides. Otherwise they are on when
+ * `methods` lists `'email-password'`, and outside production (so the dev
+ * keyring, `db:seed` users and Cypress sign in with a password); a production
+ * app on the passwordless preset serves no password endpoint.
  */
 export function isPasswordLoginEnabled(
-  authConfig?: Pick<AuthConfig, 'emailAndPassword'> | null
+  authConfig?: Pick<AuthConfig, 'methods' | 'emailAndPassword'> | null,
+  nodeEnv: string | undefined = process.env.NODE_ENV
 ): boolean {
-  return authConfig?.emailAndPassword?.enabled !== false
+  const declared = authConfig?.emailAndPassword?.enabled
+  if (typeof declared === 'boolean') return declared
+  return (authConfig?.methods ?? []).includes('email-password') || nodeEnv !== 'production'
 }

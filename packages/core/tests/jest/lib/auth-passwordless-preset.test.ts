@@ -91,12 +91,25 @@ describe('passwordless preset (#126)', () => {
     expect(betterAuthOptions.socialProviders.google).toBeUndefined()
   })
 
-  test('the traditional email + password login keeps working when the theme does not override it', () => {
+  test('outside production the password login keeps working when the theme does not override it', () => {
     const { betterAuthOptions, authConfig } = loadWithThemeAuth(undefined)
 
-    expect(authConfig.emailAndPassword.enabled).toBe(true)
+    expect(authConfig.emailAndPassword.enabled).toBeUndefined()
     expect(betterAuthOptions.emailAndPassword.enabled).toBe(true)
     expect(betterAuthOptions.emailAndPassword.requireEmailVerification).toBe(true)
+  })
+
+  test('in production the passwordless default serves no password endpoint unless the theme declares it', () => {
+    const env = process.env as Record<string, string | undefined>
+    const previous = env.NODE_ENV
+    env.NODE_ENV = 'production'
+    try {
+      expect(loadWithThemeAuth(undefined).betterAuthOptions.emailAndPassword.enabled).toBe(false)
+      expect(loadWithThemeAuth({ emailAndPassword: { enabled: true } }).betterAuthOptions.emailAndPassword.enabled).toBe(true)
+      expect(loadWithThemeAuth({ methods: ['email-password', 'google'] }).betterAuthOptions.emailAndPassword.enabled).toBe(true)
+    } finally {
+      env.NODE_ENV = previous
+    }
   })
 
   test('a theme can switch to the classic preset without touching the server', () => {
@@ -107,6 +120,14 @@ describe('passwordless preset (#126)', () => {
     // OTP plugin remains registered because methods are UI intent and the
     // development console email backend is usable.
     expect(mockEmailOTP).toHaveBeenCalledTimes(1)
+  })
+
+  test('the domain-restricted registration hook refuses with a DOMAIN_NOT_ALLOWED: prefix (signup-with-invite maps it to 403)', async () => {
+    const { betterAuthOptions } = loadWithThemeAuth({ registration: { mode: 'domain-restricted', allowedDomains: ['corp.test'] } })
+    const before = betterAuthOptions.databaseHooks.user.create.before as (user: { email: string }) => Promise<unknown>
+
+    await expect(before({ email: 'invitee@other.test' })).rejects.toThrow(/^DOMAIN_NOT_ALLOWED: /)
+    await expect(before({ email: 'invitee@corp.test' })).resolves.toEqual({ email: 'invitee@corp.test' })
   })
 
   test('a theme can hard-disable password auth server-side for a strictly passwordless app', () => {

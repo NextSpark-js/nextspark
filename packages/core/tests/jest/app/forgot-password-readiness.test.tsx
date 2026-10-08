@@ -5,11 +5,11 @@ import { render } from '@testing-library/react'
 const readiness: {
   state: 'loading' | 'ready' | 'unavailable' | 'error'
   availableMethods: string[]
-  capabilities: { invitationPasswordSignup: boolean; passwordRecovery: boolean }
+  capabilities: { invitationSignup: boolean; invitationPasswordSignup: boolean; passwordRecovery: boolean }
 } = {
   state: 'loading',
   availableMethods: [],
-  capabilities: { invitationPasswordSignup: false, passwordRecovery: false },
+  capabilities: { invitationSignup: true, invitationPasswordSignup: false, passwordRecovery: false },
 }
 
 jest.mock('@nextsparkjs/core/hooks/useAuthReadiness', () => ({ useAuthReadiness: () => readiness }))
@@ -32,7 +32,7 @@ describe('forgot password runtime readiness', () => {
   beforeEach(() => {
     readiness.state = 'loading'
     readiness.availableMethods = []
-    readiness.capabilities = { invitationPasswordSignup: false, passwordRecovery: false }
+    readiness.capabilities = { invitationSignup: true, invitationPasswordSignup: false, passwordRecovery: false }
   })
 
   test('does not offer the reset form before runtime readiness resolves', () => {
@@ -45,7 +45,7 @@ describe('forgot password runtime readiness', () => {
   test('does not offer password reset when the server reports no recovery capability', () => {
     readiness.state = 'ready'
     readiness.availableMethods = ['google']
-    readiness.capabilities = { invitationPasswordSignup: true, passwordRecovery: false }
+    readiness.capabilities = { invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: false }
     render(<ForgotPasswordPage />)
 
     expect(byCy('auth.forgotPassword.unavailable')).toBeInTheDocument()
@@ -55,7 +55,7 @@ describe('forgot password runtime readiness', () => {
   test('renders the reset form under the passwordless preset when backend and email support recovery', () => {
     readiness.state = 'ready'
     readiness.availableMethods = ['email-otp', 'google']
-    readiness.capabilities = { invitationPasswordSignup: true, passwordRecovery: true }
+    readiness.capabilities = { invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: true }
     render(<ForgotPasswordPage />)
 
     expect(byCy('auth.forgotPassword.submitButton')).toBeInTheDocument()
@@ -64,7 +64,7 @@ describe('forgot password runtime readiness', () => {
   test('does not infer recovery from email-password in the login methods', () => {
     readiness.state = 'ready'
     readiness.availableMethods = ['email-password']
-    readiness.capabilities = { invitationPasswordSignup: false, passwordRecovery: false }
+    readiness.capabilities = { invitationSignup: true, invitationPasswordSignup: false, passwordRecovery: false }
     render(<ForgotPasswordPage />)
 
     expect(byCy('auth.forgotPassword.unavailable')).toBeInTheDocument()
@@ -73,7 +73,7 @@ describe('forgot password runtime readiness', () => {
 
   test('fails closed on a readiness error', () => {
     readiness.state = 'error'
-    readiness.capabilities = { invitationPasswordSignup: true, passwordRecovery: true }
+    readiness.capabilities = { invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: true }
     render(<ForgotPasswordPage />)
 
     expect(byCy('auth.forgotPassword.readinessError')).toBeInTheDocument()

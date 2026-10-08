@@ -372,14 +372,13 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
     methods: ['email-otp', 'google'] as AuthLoginMethod[],
 
     /**
-     * Better Auth's email + password endpoints stay enabled by default (even
-     * under the passwordless preset) so password accounts, seeded test users
-     * and API-based logins keep working. Set `enabled: false` in a theme to
-     * hard-disable password auth server-side.
+     * Better Auth's email + password endpoints. Left undeclared, they follow
+     * `methods`: on when it lists 'email-password', and always outside
+     * production (seeded test users, the dev keyring). Set `enabled: true` to
+     * keep password logins (API clients, test users) in a passwordless
+     * production app, or `false` to turn them off everywhere.
      */
-    emailAndPassword: {
-      enabled: true,
-    },
+    emailAndPassword: {},
 
     /**
      * Whether Better Auth automatically sends the verification email on signup.

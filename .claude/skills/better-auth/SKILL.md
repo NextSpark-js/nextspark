@@ -419,8 +419,8 @@ interface AuthConfig {
   // Login methods offered by the templates, in priority order.
   // DEFAULT = passwordless preset ['email-otp', 'google'] (no password field).
   methods?: AuthLoginMethod[]
-  // Server-side switch for Better Auth's password endpoints (default true,
-  // even under the passwordless preset). `{ enabled: false }` hard-disables them.
+  // Server-side switch for Better Auth's password endpoints. Undeclared: on when
+  // methods lists 'email-password', and outside production. `true`/`false` decide.
   emailAndPassword?: { enabled?: boolean }
   // Session duration/renewal in seconds (defaults: 7d / 1d / 5-min cookie cache)
   session?: { expiresIn?: number; updateAge?: number; cookieCache?: { enabled?: boolean; maxAge?: number } }

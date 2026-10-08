@@ -127,6 +127,14 @@ export const APP_CONFIG_OVERRIDES = {
     // methods: ['email-otp', 'email-password', 'google'],
 
     /**
+     * Password endpoints (sign-in/email, sign-up/email, reset). Left undeclared
+     * they follow `methods` in production (off under the passwordless preset) and
+     * stay on in development (dev keyring, `pnpm db:seed` users, Cypress).
+     * Uncomment to keep password logins in production (API clients, test users):
+     */
+    // emailAndPassword: { enabled: true },
+
+    /**
      * Session duration / renewal in seconds (defaults: 7 days, renewed daily).
      * Long-lived sessions for an installed PWA, for example:
      */

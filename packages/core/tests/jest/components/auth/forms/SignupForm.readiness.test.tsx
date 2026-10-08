@@ -1,24 +1,25 @@
 /** @jest-environment jsdom */
 import { beforeEach, describe, expect, jest, test } from '@jest/globals'
-import { render } from '@testing-library/react'
+import { fireEvent, render, waitFor } from '@testing-library/react'
 
 const readiness: {
   state: 'loading' | 'ready' | 'unavailable' | 'error'
   availableMethods: string[]
-  capabilities: { invitationPasswordSignup: boolean; passwordRecovery: boolean }
+  capabilities: { invitationSignup: boolean; invitationPasswordSignup: boolean; passwordRecovery: boolean }
 } = {
   state: 'loading',
   availableMethods: [],
-  capabilities: { invitationPasswordSignup: false, passwordRecovery: false },
+  capabilities: { invitationSignup: false, invitationPasswordSignup: false, passwordRecovery: false },
 }
 const mockSearch = { value: '' }
+const mockPush = jest.fn()
 
 jest.mock('@/core/hooks/useAuthReadiness', () => ({ useAuthReadiness: () => readiness }))
 jest.mock('@/core/hooks/useAuth', () => ({
   useAuthActions: () => ({ signUp: jest.fn(), googleSignIn: jest.fn(), resendVerificationEmail: jest.fn() }),
 }))
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: mockPush }),
   useSearchParams: () => new URLSearchParams(mockSearch.value),
 }))
 jest.mock('next/link', () => ({
@@ -41,8 +42,9 @@ describe('SignupForm runtime readiness', () => {
   beforeEach(() => {
     readiness.state = 'loading'
     readiness.availableMethods = []
-    readiness.capabilities = { invitationPasswordSignup: false, passwordRecovery: false }
+    readiness.capabilities = { invitationSignup: false, invitationPasswordSignup: false, passwordRecovery: false }
     mockSearch.value = ''
+    mockPush.mockClear()
   })
 
   test('does not offer signup actions while readiness is loading', () => {
@@ -74,7 +76,7 @@ describe('SignupForm runtime readiness', () => {
   test('ready with email OTP only explains the OTP path instead of rendering an empty card', () => {
     readiness.state = 'ready'
     readiness.availableMethods = ['email-otp']
-    readiness.capabilities = { invitationPasswordSignup: true, passwordRecovery: true }
+    readiness.capabilities = { invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: true }
     render(<SignupForm />)
 
     expect(byCy('auth.signup.otpOnly')).toHaveTextContent('signup.otpOnly.message')
@@ -104,7 +106,7 @@ describe('SignupForm runtime readiness', () => {
   test('invitation registration stays usable under the passwordless preset when the backend is enabled', () => {
     readiness.state = 'ready'
     readiness.availableMethods = ['email-otp', 'google']
-    readiness.capabilities = { invitationPasswordSignup: true, passwordRecovery: false }
+    readiness.capabilities = { invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: false }
     mockSearch.value = 'inviteToken=tok-123&fromInvite=true&email=invitee%40example.com'
     render(<SignupForm />)
 
@@ -117,7 +119,7 @@ describe('SignupForm runtime readiness', () => {
   test('invitation registration does not depend on login methods being ready', () => {
     readiness.state = 'unavailable'
     readiness.availableMethods = []
-    readiness.capabilities = { invitationPasswordSignup: true, passwordRecovery: false }
+    readiness.capabilities = { invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: false }
     mockSearch.value = 'inviteToken=tok-123'
     render(<SignupForm />)
 
@@ -125,16 +127,58 @@ describe('SignupForm runtime readiness', () => {
     expect(byCy('auth.signup.noMethods')).not.toBeInTheDocument()
   })
 
-  test('a disabled password backend removes the invitation password action even if the UI lists email-password', () => {
+  test('with the password backend off an invitation shows the form without a password field', () => {
     readiness.state = 'ready'
     readiness.availableMethods = ['email-password', 'email-otp']
-    readiness.capabilities = { invitationPasswordSignup: false, passwordRecovery: false }
+    readiness.capabilities = { invitationSignup: true, invitationPasswordSignup: false, passwordRecovery: false }
+    mockSearch.value = 'inviteToken=tok-123'
+    render(<SignupForm />)
+
+    expect(byCy('auth.signup.submitButton')).toBeInTheDocument()
+    expect(byCy('auth.signup.email')).toBeInTheDocument()
+    expect(byCy('auth.signup.password')).not.toBeInTheDocument()
+    expect(byCy('auth.signup.confirmPassword')).not.toBeInTheDocument()
+    expect(byCy('auth.signup.inviteUnavailable')).not.toBeInTheDocument()
+  })
+
+  test('a server without invitation signup keeps the invitation closed when passwords are off', () => {
+    readiness.state = 'ready'
+    readiness.availableMethods = ['email-otp']
+    readiness.capabilities = { invitationSignup: false, invitationPasswordSignup: false, passwordRecovery: false }
     mockSearch.value = 'inviteToken=tok-123'
     render(<SignupForm />)
 
     expect(byCy('auth.signup.inviteUnavailable')).toHaveTextContent('signup.inviteUnavailable')
     expect(byCy('auth.signup.submitButton')).not.toBeInTheDocument()
-    expect(byCy('auth.signup.password')).not.toBeInTheDocument()
+  })
+
+  test('a password-less invitation sends no password and then opens the code login with the email', async () => {
+    readiness.state = 'ready'
+    readiness.availableMethods = ['email-otp', 'google']
+    readiness.capabilities = { invitationSignup: true, invitationPasswordSignup: false, passwordRecovery: false }
+    mockSearch.value = 'inviteToken=tok-123&fromInvite=true&email=invitee%40example.com'
+    const fetchMock = jest.fn(async () => new Response(JSON.stringify({ data: { redirectTo: '/dashboard/settings/teams' } }), { status: 201 }))
+    global.fetch = fetchMock as unknown as typeof fetch
+    render(<SignupForm />)
+
+    fireEvent.change(byCy('auth.signup.firstName')!, { target: { value: 'Ana' } })
+    fireEvent.change(byCy('auth.signup.lastName')!, { target: { value: 'Diaz' } })
+    fireEvent.click(byCy('auth.signup.termsCheckbox')!)
+    fireEvent.click(byCy('auth.signup.submitButton')!)
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalled())
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('/api/v1/auth/signup-with-invite')
+    const body = JSON.parse(init.body as string)
+    expect(body).toMatchObject({ email: 'invitee@example.com', firstName: 'Ana', lastName: 'Diaz', inviteToken: 'tok-123' })
+    expect(body).not.toHaveProperty('password')
+    const target = new URL(mockPush.mock.calls[0][0] as string, 'https://x.test')
+    expect(target.pathname).toBe('/login')
+    expect(Object.fromEntries(target.searchParams)).toEqual({
+      email: 'invitee@example.com',
+      fromInvite: 'true',
+      callbackUrl: '/dashboard/settings/teams',
+    })
   })
 
   test('an invitation with no capability and no method stays closed', () => {
@@ -149,7 +193,7 @@ describe('SignupForm runtime readiness', () => {
 
   test.each(['loading', 'error'] as const)('an invitation fails closed while readiness is %s', (state) => {
     readiness.state = state
-    readiness.capabilities = { invitationPasswordSignup: true, passwordRecovery: true }
+    readiness.capabilities = { invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: true }
     mockSearch.value = 'inviteToken=tok-123'
     render(<SignupForm />)
 
