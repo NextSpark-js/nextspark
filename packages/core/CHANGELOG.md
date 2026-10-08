@@ -96,6 +96,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   request proxy and server startup the scaffold's `src/proxy.ts` and `instrumentation.ts` used to copy, as public entries.
 - The [Public API](./docs/22-stability-and-support/05-public-api.md) of `@nextsparkjs/core`: the list of subpaths that follow SemVer (`public-api.json`) and the rule that makes a subpath public. A node test fails when a stable template imports a subpath that is not on the list. The exports map is unchanged; closing it is a 2.0 change.
 - A CI job checks standalone output. The `standalone` job of the *Generated projects* workflow runs `scripts/deploy/verify-standalone.sh`: a starter from the packed packages, built with `output: 'standalone'`, copied without the checkout to a separate directory and served with `node server.js`, alone and behind a TLS proxy that sends `X-Forwarded-Proto: https`. It checks health, public pages, sign-in by one-time code, protected pages, writes, the write-origin rules, the Secure session cookies, the https redirect and sign-out. It runs on every push to `main`.
+- `scripts/accessibility/axe-scan.mjs` and a check in the "Generated projects" workflow: axe-core runs through Playwright on the starter's public
+  pages and, signed in, its dashboard, task and profile pages, and the job fails on any serious or critical violation. The report is uploaded
+  as the `starter-axe-report` artifact.
+
+### Fixed
+
+- **Accessibility, from an axe scan of the starter (WCAG 2.2 AA is the 1.0 target).**
+  - The status and priority filters of an entity list, and the country and timezone pickers of the profile page, are named for screen readers. A
+    `role="combobox"` button takes its name from `aria-label` or a label, not from its text.
+  - The profile form's email and language fields are labelled.
+  - The initials avatar of the top bar uses `-700` backgrounds so its white text reaches a 4.5:1 contrast.
+  - The dashboard and the settings pages start with a "Skip to main content" link to the `main` landmark (new `a11y.skipToMainContent` message in every locale).
+  - Closing the confirmation dialog of a row action (delete) puts focus back on the row's menu button, or on the next (else the previous) row's once the row is gone, where it used to fall to `<body>`.
+  - Controls whose label did not contain their visible text (2.5.3 Label in Name) now do: the sidebar logo link, the team switcher, the user menu and the settings back button.
 
 ## [0.1.0-beta.197] - 2026-10-08
 
