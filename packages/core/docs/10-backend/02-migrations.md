@@ -253,6 +253,8 @@ CREATE TRIGGER users_metas_set_updated_at
 DATABASE_URL=postgresql://user:pass@host:5432/database
 ```
 
+**Which source wins.** The database scripts read `.env` **after** the environment, so a `DATABASE_URL` (or `MIGRATE_DATABASE_URL`) in the project `.env` wins over the same variable set in the shell or in CI: a job that exports `DATABASE_URL` with a `.env` present migrates the `.env` database. To point one run elsewhere, set `MIGRATE_DATABASE_URL` in the environment (it is preferred over `DATABASE_URL` and is not overridden unless `.env` also sets it). `pnpm db:migrate` itself has no option to skip `.env`: for a run that must use only the environment, move `.env` aside for that run.
+
 **Required:**
 - PostgreSQL connection string
 - project configured

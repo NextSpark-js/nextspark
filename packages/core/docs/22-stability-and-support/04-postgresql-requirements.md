@@ -67,6 +67,10 @@ A production server without SSL, such as a local PostgreSQL used to test a produ
 
 `channel_binding=require` in the URL (Neon's default connection string carries it) is not applied: the `pg` driver only honours channel binding through its `enableChannelBinding` option, so the connection uses SCRAM without it and without a warning.
 
+### Local Postgres
+
+The database scripts read `.env` **after** the environment, so a `DATABASE_URL` (or `MIGRATE_DATABASE_URL`) in the project `.env` wins over the same variable set in the shell or in CI: a job that exports `DATABASE_URL` with a `.env` present migrates the `.env` database. To point one run elsewhere, set `MIGRATE_DATABASE_URL` in the environment (it is preferred over `DATABASE_URL` and is not overridden unless `.env` also sets it). `pnpm db:migrate` itself has no option to skip `.env`: for a run that must use only the environment, move `.env` aside for that run.
+
 ## Poolers and timeouts
 
 - **`DB_QUERY_TIMEOUT_MS`** (default `60000`, `0` disables) is applied by the client. It works behind any pooler.
