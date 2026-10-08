@@ -747,3 +747,17 @@ dropdb "<db name>"
 # Playwright MCP screenshots land in the repo root: move them to your evidence folder, then check
 git -C "$REPO_ROOT" status --short   # must be clean
 ```
+
+## Maintainer note: building a 0.x fixture for `nextspark migrate`
+
+This is for testing `nextspark migrate` from an old release (the oldest supported is `0.1.0-beta.183`), not part of the run above.
+`create-nextspark-app@0.1.0-beta.183 --yes` is not non-interactive: it stops at the "Step 1/10 Project Type" prompt and exits 0 with "Wizard cancelled".
+Create the fixture with the CLI of that release instead:
+
+```bash
+pnpm dlx @nextsparkjs/cli@0.1.0-beta.183 init --preset saas --type web --name <name> --slug <slug> --description "<text>" --theme default --yes
+```
+
+The wizard installs the *current* `@nextsparkjs/plugin-langchain`, which needs core >= `0.1.0-beta.192`, so the project resolves a mix of versions and the dev
+server answers 500 (`Can't resolve '@nextsparkjs/registries/app-config.client'`). Remove `contents/plugins/langchain` and the `nextspark.plugins` entry
+in `package.json` (and the dependency) before you use it.
