@@ -38,7 +38,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '../../ui/select'
-import { withBasePath, withBasePathIfInApp } from '../../../lib/base-path'
+import { withBasePathIfInApp } from '../../../lib/base-path'
+import { fetchWithTeam } from '../../../lib/api/entities'
 
 interface TaxonomyItem {
   id: string
@@ -90,7 +91,7 @@ export function ConfigPanel({
     queryKey: ['taxonomies', taxonomyApiPath],
     queryFn: async () => {
       if (!taxonomyApiPath) return { data: [] }
-      const response = await fetch(withBasePath(`/api/v1/${taxonomyApiPath}`))
+      const response = await fetchWithTeam(`/api/v1/${taxonomyApiPath}`)
       if (!response.ok) return { data: [] }
       return response.json()
     },

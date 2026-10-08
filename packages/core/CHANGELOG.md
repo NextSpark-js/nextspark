@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Projects that list `'email-password'`, or declare `emailAndPassword.enabled`, are unaffected. Development is unaffected. Without the
   opt-in, invited users register with no password and sign in with an email code; a project that overrode `signup-with-invite` or the
   signup page keeps its own behaviour.
+- **Post categories belong to a team.** `pnpm db:migrate` applies core's `030_taxonomies_team_writes.sql`. Categories created before this release
+  have no team (`taxonomies."teamId"` NULL): every team and every visitor still sees them, and only a superadmin can rename or delete them. To
+  hand one to a team, set its team (review first, then run it yourself):
+  ```sql
+  SELECT id, slug, name FROM taxonomies WHERE type = 'post_category' AND "teamId" IS NULL;
+  UPDATE taxonomies SET "teamId" = '<team id>' WHERE type = 'post_category' AND "teamId" IS NULL AND id IN ('<id>', …);
+  ```
+  A client of `/api/v1/post-categories` that writes, or that should see its team's categories, sends `x-team-id` (the dashboard's page builder
+  does). Without it a read returns only the categories without a team.
 
 ### Added
 
@@ -65,6 +74,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in one transaction, rolled back (403, no usage counted) when the database's own default made the row published and the caller may not
   publish. An update that sets `status` carries the status it was checked against in its `WHERE`:
   if another write changed it in between, the REST API answers 409 `STATUS_CHANGED` (reload and retry) and the service fails.
+- **Post categories belong to a team.** `POST /api/v1/post-categories` creates the category in the caller's team (`x-team-id`, required) and
+  needs `posts.create` there; `PUT` and `DELETE` act only on a category of the caller's team and need `posts.update` / `posts.delete`, the
+  same team-role permissions as the posts entity (API keys also need the `posts:write` / `posts:delete` scope, as before). A category of
+  another team answers 404, and a read lists the caller's team's categories plus the ones without a team (visitors and callers without
+  `x-team-id` see only the latter). Categories without a team, from earlier releases, can be changed or deleted only by a superadmin (403
+  otherwise). The slug is unique per team. A post links only categories of its own team or without a team; the id of another team's category
+  is ignored. Migration `030_taxonomies_team_writes.sql` says the same in the `taxonomies` RLS policies: reads as before, writes need the row's
+  team, and rows without a team need `is_superadmin()` (see Upgrading). That function is wider than the API's rule: it also accepts a
+  developer enrolled in the System Admin Team, so on the RLS-enforced connection (`nextspark_app`) such a developer could write a category
+  without a team, while the API lets only `users.role = 'superadmin'` do it. The API is the stricter layer and the one every route goes
+  through.
 
 ### Fixed
 

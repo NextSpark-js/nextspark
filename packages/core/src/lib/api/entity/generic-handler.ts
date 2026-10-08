@@ -227,13 +227,15 @@ async function includeTaxonomiesInData<T extends { id: string }>(
 
 /**
  * Process taxonomy relations for create/update operations
- * Handles inserting/updating entity_taxonomy_relations
+ * Handles inserting/updating entity_taxonomy_relations. Only taxonomies of the record's team, or without a team,
+ * are linked; an id of another team's taxonomy is skipped.
  */
 async function processTaxonomyRelations(
   entityConfig: EntityConfig,
   entityId: string,
   data: Record<string, unknown>,
   userId: string,
+  teamId: string,
   isUpdate: boolean = false
 ): Promise<void> {
   // Skip if taxonomies not enabled
@@ -270,8 +272,9 @@ async function processTaxonomyRelations(
 
         await mutateWithRLS(
           `INSERT INTO entity_taxonomy_relations ("entityType", "entityId", "taxonomyId", "order")
-           VALUES ($1, $2, $3, $4)`,
-          [entityType, entityId, taxonomyId, i + 1],
+           SELECT $1, $2, id, $4 FROM taxonomies
+           WHERE id = $3 AND type = $5 AND ("teamId" IS NULL OR "teamId" = $6)`,
+          [entityType, entityId, taxonomyId, i + 1, taxonomyType.type, teamId],
           userId
         )
       }
@@ -1805,7 +1808,7 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
 
     // Handle taxonomy relations if entity has taxonomies enabled
     if (entityConfig.taxonomies?.enabled) {
-      await processTaxonomyRelations(entityConfig, createdEntityId, body, authResult.user!.id, false)
+      await processTaxonomyRelations(entityConfig, createdEntityId, body, authResult.user!.id, teamId, false)
     }
 
     // Handle metadata if provided
@@ -2472,7 +2475,7 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
 
     // Handle taxonomy relations if entity has taxonomies enabled
     if (entityConfig.taxonomies?.enabled) {
-      await processTaxonomyRelations(entityConfig, id, body, authResult.user!.id, true)
+      await processTaxonomyRelations(entityConfig, id, body, authResult.user!.id, teamId, true)
     }
 
     // Handle metadata if provided

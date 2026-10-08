@@ -24,6 +24,8 @@ describe('Post-Categories API - CRUD Operations', {
 }, () => {
   // Test constants
   const SUPERADMIN_API_KEY = 'test_api_key_for_testing_purposes_only_not_a_real_secret_key_abc123'
+  // Categories belong to a team: they are created, changed and deleted in the caller's team (x-team-id)
+  const TEAM_ID = 'team-tmt-001'
   const BASE_URL = Cypress.config('baseUrl') || 'http://localhost:5173'
   const API_CATEGORIES = `${BASE_URL}/api/v1/post-categories`
 
@@ -37,6 +39,7 @@ describe('Post-Categories API - CRUD Operations', {
       url,
       headers: {
         'x-api-key': SUPERADMIN_API_KEY,
+        'x-team-id': TEAM_ID,
         'Content-Type': 'application/json'
       },
       body,
@@ -605,6 +608,54 @@ describe('Post-Categories API - CRUD Operations', {
           })
         })
       })
+    })
+  })
+
+  // ============================================================
+  // Team scope
+  // ============================================================
+  describe('Team scope', { tags: '@permissions' }, () => {
+    // Ironvale Global (dev.config.ts, password Test1234): Ana García owner, Michael Brown member
+    const IRONVALE_TEAM_ID = 'team-ironvale-002'
+    const signIn = (email: string) => {
+      cy.session([email, 'Test1234'], () => {
+        cy.request({ method: 'POST', url: `${BASE_URL}/api/auth/sign-in/email`, body: { email, password: 'Test1234' } })
+          .its('status').should('eq', 200)
+      })
+    }
+    const asSession = (method: string, url: string, body?: object) =>
+      cy.request({ method, url, headers: { 'x-team-id': IRONVALE_TEAM_ID }, body, failOnStatusCode: false })
+
+    it('CAT_API_050: another team\'s category is not found, and not listed', () => {
+      apiRequest('POST', API_CATEGORIES, { name: `Team scope ${Date.now()}` }).then((created) => {
+        expect(created.status).to.eq(201)
+        expect(created.body.data.teamId).to.eq(TEAM_ID)
+        createdCategories.push(created.body.data.id)
+        signIn('ana.garcia@nextspark.dev')
+        asSession('DELETE', `${API_CATEGORIES}/${created.body.data.id}`).its('status').should('eq', 404)
+        asSession('PUT', `${API_CATEGORIES}/${created.body.data.id}`, { name: 'x' }).its('status').should('eq', 404)
+        asSession('GET', API_CATEGORIES).then((list) => {
+          expect(list.status).to.eq(200)
+          expect(list.body.data.map((c: { id: string }) => c.id)).not.to.include(created.body.data.id)
+        })
+      })
+    })
+
+    it('CAT_API_051: a member cannot delete a category of their team (no posts.delete)', () => {
+      signIn('ana.garcia@nextspark.dev')
+      asSession('POST', API_CATEGORIES, { name: `Ironvale ${Date.now()}` }).then((created) => {
+        expect(created.status).to.eq(201)
+        signIn('michael.brown@nextspark.dev')
+        asSession('DELETE', `${API_CATEGORIES}/${created.body.data.id}`).its('status').should('eq', 403)
+        signIn('ana.garcia@nextspark.dev')
+        asSession('DELETE', `${API_CATEGORIES}/${created.body.data.id}`).its('status').should('eq', 200)
+      })
+    })
+
+    it('CAT_API_052: a category shared by every team (no team) is read by all, changed only by a superadmin', () => {
+      signIn('ana.garcia@nextspark.dev')
+      asSession('GET', `${API_CATEGORIES}/cat-news`).its('status').should('eq', 200)
+      asSession('PUT', `${API_CATEGORIES}/cat-news`, { description: 'x' }).its('status').should('eq', 403)
     })
   })
 })

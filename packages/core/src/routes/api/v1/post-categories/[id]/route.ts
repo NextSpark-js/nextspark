@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { categoryReadTeam, categoryWriter, type CategoryWriter, type Refusal } from '@nextsparkjs/core/lib/api/post-categories'
 import { query as dbQuery } from '@nextsparkjs/core/lib/db'
 import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
@@ -17,20 +17,40 @@ const updateCategorySchema = z.object({
   isActive: z.boolean().optional()
 })
 
-// GET /api/v1/post-categories/:id - Get category by ID
+/** The post category `id` that `writer` may change: of their team, or (superadmin) without a team; else 404/403. */
+async function findCategory(id: string, writer: CategoryWriter): Promise<{ teamId: string | null } | Refusal> {
+  const found = await dbQuery<{ teamId: string | null }>(
+    'SELECT "teamId" FROM taxonomies WHERE id = $1 AND type = \'post_category\' AND ("teamId" IS NULL OR "teamId" = $2)',
+    [id, writer.teamId]
+  )
+  if (found.rows.length === 0) {
+    return { response: NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 }) }
+  }
+  if (found.rows[0].teamId === null && !writer.superadmin) {
+    return { response: NextResponse.json(
+      { success: false, error: 'Only a superadmin can change a category shared by every team', code: 'PERMISSION_DENIED' },
+      { status: 403 }
+    ) }
+  }
+  return found.rows[0]
+}
+
+// GET /api/v1/post-categories/:id - Get category by ID (the caller's team's, or one without a team)
 export const GET = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
   try {
     const { id } = await params
+    const scope = await categoryReadTeam(request)
+    if ('response' in scope) return scope.response
 
     const result = await dbQuery(
       `SELECT id, name, slug, description, icon, color, "parentId", "order", "isDefault", "isActive",
               "createdAt", "updatedAt"
        FROM taxonomies
-       WHERE id = $1 AND type = 'post_category' AND "deletedAt" IS NULL`,
-      [id]
+       WHERE id = $1 AND type = 'post_category' AND "deletedAt" IS NULL AND ("teamId" IS NULL OR "teamId" = $2)`,
+      [id, scope.teamId]
     )
 
     if (result.rows.length === 0) {
@@ -47,38 +67,29 @@ export const GET = withRateLimitTier(async (
   }
 }, 'read');
 
-// PUT /api/v1/post-categories/:id - Update category
+// PUT /api/v1/post-categories/:id - Update category (one of the caller's team, with posts.update there; one
+// without a team: superadmin only)
 export const PUT = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
   try {
-    // Dual authentication: API key or session; the API-key scope is declared
-    // at the entry point, which fails closed for keys that lack it (#93).
-    const authResult = await authenticateRequest(request, { requiredScope: 'posts:write' })
-    if (!authResult.success || !authResult.user) {
-      return createAuthFailureResponse(authResult)
-    }
+    // Dual authentication (the API-key scope fails closed, #93), then the team-role permission.
+    const writer = await categoryWriter(request, 'update')
+    if ('response' in writer) return writer.response
 
     const body = await request.json()
     const data = updateCategorySchema.parse(body)
     const { id } = await params
 
-    // Verify this is a post_category taxonomy
-    const typeCheck = await dbQuery(
-      'SELECT id FROM taxonomies WHERE id = $1 AND type = \'post_category\'',
-      [id]
-    )
+    const row = await findCategory(id, writer)
+    if ('response' in row) return row.response
 
-    if (typeCheck.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 })
-    }
-
-    // Check slug uniqueness if slug is being updated
+    // Check slug uniqueness (in the category's team, or among the ones without a team) if slug is being updated
     if (data.slug) {
       const slugCheck = await dbQuery(
-        'SELECT id FROM taxonomies WHERE type = \'post_category\' AND slug = $1 AND id != $2',
-        [data.slug, id]
+        'SELECT id FROM taxonomies WHERE type = \'post_category\' AND slug = $1 AND id != $2 AND "teamId" IS NOT DISTINCT FROM $3',
+        [data.slug, id, row.teamId]
       )
       if (slugCheck.rows.length > 0) {
         return NextResponse.json(
@@ -91,8 +102,8 @@ export const PUT = withRateLimitTier(async (
     // Verify parentId exists if provided
     if (data.parentId) {
       const parentCheck = await dbQuery(
-        'SELECT id FROM taxonomies WHERE id = $1 AND type = \'post_category\'',
-        [data.parentId]
+        'SELECT id FROM taxonomies WHERE id = $1 AND type = \'post_category\' AND ("teamId" IS NULL OR "teamId" IS NOT DISTINCT FROM $2)',
+        [data.parentId, row.teamId]
       )
       if (parentCheck.rows.length === 0) {
         return NextResponse.json({
@@ -167,7 +178,8 @@ export const PUT = withRateLimitTier(async (
     // Add the id as the last parameter
     values.push(id)
 
-    const query = `UPDATE taxonomies SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`
+    values.push(row.teamId)
+    const query = `UPDATE taxonomies SET ${updates.join(', ')} WHERE id = $${paramIndex} AND "teamId" IS NOT DISTINCT FROM $${paramIndex + 1} RETURNING *`
     const result = await dbQuery(query, values)
 
     if (result.rows.length === 0) {
@@ -188,30 +200,21 @@ export const PUT = withRateLimitTier(async (
   }
 }, 'write');
 
-// DELETE /api/v1/post-categories/:id - Delete category
+// DELETE /api/v1/post-categories/:id - Delete category (one of the caller's team, with posts.delete there; one
+// without a team: superadmin only)
 export const DELETE = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
   try {
-    // Dual authentication: API key or session; the API-key scope is declared
-    // at the entry point, which fails closed for keys that lack it (#93).
-    const authResult = await authenticateRequest(request, { requiredScope: 'posts:delete' })
-    if (!authResult.success || !authResult.user) {
-      return createAuthFailureResponse(authResult)
-    }
+    // Dual authentication (the API-key scope fails closed, #93), then the team-role permission.
+    const writer = await categoryWriter(request, 'delete')
+    if ('response' in writer) return writer.response
 
     const { id } = await params
 
-    // Verify this is a post_category taxonomy
-    const typeCheck = await dbQuery(
-      'SELECT id FROM taxonomies WHERE id = $1 AND type = \'post_category\'',
-      [id]
-    )
-
-    if (typeCheck.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 })
-    }
+    const row = await findCategory(id, writer)
+    if ('response' in row) return row.response
 
     // Check if category is used by any posts (using entity_taxonomy_relations)
     let usageCount = 0
@@ -231,8 +234,8 @@ export const DELETE = withRateLimitTier(async (
     if (usageCount > 0) {
       // Soft delete: SET deletedAt = now()
       await dbQuery(
-        'UPDATE taxonomies SET "deletedAt" = now() WHERE id = $1',
-        [id]
+        'UPDATE taxonomies SET "deletedAt" = now() WHERE id = $1 AND "teamId" IS NOT DISTINCT FROM $2',
+        [id, row.teamId]
       )
       return NextResponse.json({
         success: true,
@@ -241,8 +244,8 @@ export const DELETE = withRateLimitTier(async (
     } else {
       // Hard delete: No posts use it
       const result = await dbQuery<{ id: string }>(
-        'DELETE FROM taxonomies WHERE id = $1 RETURNING id',
-        [id]
+        'DELETE FROM taxonomies WHERE id = $1 AND "teamId" IS NOT DISTINCT FROM $2 RETURNING id',
+        [id, row.teamId]
       )
       if (result.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 })

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { categoryReadTeam, categoryWriter } from '@nextsparkjs/core/lib/api/post-categories'
 import { query as dbQuery } from '@nextsparkjs/core/lib/db'
 import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
@@ -27,15 +27,21 @@ function generateSlug(name: string): string {
     .replace(/^-|-$/g, '')         // Remove leading/trailing dashes
 }
 
-// GET /api/v1/post-categories - List categories (filters taxonomies by type = 'post_category')
-export const GET = withRateLimitTier(async () => {
+// GET /api/v1/post-categories - List categories (filters taxonomies by type = 'post_category'): the caller's team's
+// (x-team-id) and the ones without a team (lib/api/post-categories.ts)
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
+    const scope = await categoryReadTeam(request)
+    if ('response' in scope) return scope.response
+
     const result = await dbQuery(
       `SELECT id, name, slug, description, icon, color, "parentId", "order", "isDefault", "isActive",
               "createdAt", "updatedAt"
        FROM taxonomies
        WHERE type = 'post_category' AND "deletedAt" IS NULL AND "isActive" = true
-       ORDER BY "order" ASC, name ASC`
+         AND ("teamId" IS NULL OR "teamId" = $1)
+       ORDER BY "order" ASC, name ASC`,
+      [scope.teamId]
     )
 
     return NextResponse.json({
@@ -48,15 +54,13 @@ export const GET = withRateLimitTier(async () => {
   }
 }, 'read');
 
-// POST /api/v1/post-categories - Create category
+// POST /api/v1/post-categories - Create category in the caller's team (needs posts.create there)
 export const POST = withRateLimitTier(async (request: NextRequest) => {
   try {
-    // Dual authentication: API key or session; the API-key scope is declared
-    // at the entry point, which fails closed for keys that lack it (#93).
-    const authResult = await authenticateRequest(request, { requiredScope: 'posts:write' })
-    if (!authResult.success || !authResult.user) {
-      return createAuthFailureResponse(authResult)
-    }
+    // Dual authentication (the API-key scope fails closed, #93), then the team-role permission.
+    const writer = await categoryWriter(request, 'create')
+    if ('response' in writer) return writer.response
+    const teamId = writer.teamId!
 
     const body = await request.json()
     const data = createCategorySchema.parse(body)
@@ -64,10 +68,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     // Auto-generate slug if not provided
     const slug = data.slug || generateSlug(data.name)
 
-    // Check slug uniqueness for this taxonomy type
+    // Check slug uniqueness for this taxonomy type in the team
     const existing = await dbQuery(
-      'SELECT id FROM taxonomies WHERE type = \'post_category\' AND slug = $1',
-      [slug]
+      'SELECT id FROM taxonomies WHERE type = \'post_category\' AND slug = $1 AND "teamId" = $2',
+      [slug, teamId]
     )
 
     if (existing.rows.length > 0) {
@@ -78,11 +82,11 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       }, { status: 400 })
     }
 
-    // Verify parentId exists if provided
+    // Verify parentId exists if provided (in the team, or without a team)
     if (data.parentId) {
       const parentCheck = await dbQuery(
-        'SELECT id FROM taxonomies WHERE id = $1 AND type = \'post_category\'',
-        [data.parentId]
+        'SELECT id FROM taxonomies WHERE id = $1 AND type = \'post_category\' AND ("teamId" IS NULL OR "teamId" = $2)',
+        [data.parentId, teamId]
       )
       if (parentCheck.rows.length === 0) {
         return NextResponse.json({
@@ -95,8 +99,8 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     // Insert category (type is hardcoded to 'post_category')
     const result = await dbQuery(
       `INSERT INTO taxonomies (
-        type, slug, name, description, icon, color, "parentId", "order", "isDefault", "userId"
-      ) VALUES ('post_category', $1, $2, $3, $4, $5, $6, $7, $8, $9)
+        type, slug, name, description, icon, color, "parentId", "order", "isDefault", "userId", "teamId"
+      ) VALUES ('post_category', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
         slug,
@@ -107,7 +111,8 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
         data.parentId || null,
         data.order,
         data.isDefault,
-        authResult.user.id
+        writer.userId,
+        teamId
       ]
     )
 
