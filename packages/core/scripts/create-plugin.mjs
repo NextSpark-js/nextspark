@@ -52,6 +52,10 @@ const FILES_TO_PROCESS = [
   'migrations/README.md',
   'messages/en.json',
   'messages/es.json',
+  'messages/de.json',
+  'messages/fr.json',
+  'messages/it.json',
+  'messages/pt.json',
 ]
 
 // Files to rename after placeholder replacement
@@ -155,16 +159,22 @@ function formatPluginName(name) {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
 
-  // Variable name: camelCase
+  // Variable name: camelCase (the exported `<name>PluginConfig`)
   const varName = slug
     .split('-')
     .map((word, i) => (i === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)))
     .join('')
 
+  // Type/hook/component name: PascalCase
+  const pascalName = slug
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('')
+
   // Environment prefix: SCREAMING_SNAKE_CASE
   const envPrefix = slug.toUpperCase().replace(/-/g, '_') + '_PLUGIN'
 
-  return { slug, displayName, varName, envPrefix }
+  return { slug, displayName, varName, pascalName, envPrefix }
 }
 
 /**
@@ -218,20 +228,10 @@ function copyDir(src, dest, replacements, varName) {
           destPath = destPath.slice(0, -'.template'.length)
         }
 
-        // Check if file needs renaming
-        const relativeDestPath = path.relative(dest, destPath)
-        for (const [pattern, renameFn] of Object.entries(FILES_TO_RENAME)) {
-          if (relativeDestPath === pattern || relativeDestPath.endsWith(pattern)) {
-            const newName = renameFn(varName)
-            const destDir = path.dirname(destPath)
-            destPath = path.join(dest, newName)
-            // Ensure directory exists
-            if (!fs.existsSync(path.dirname(destPath))) {
-              fs.mkdirSync(path.dirname(destPath), { recursive: true })
-            }
-            break
-          }
-        }
+        // Rename by path relative to the plugin root (hooks/usePlugin.ts -> hooks/useMyDemo.ts)
+        const pluginRoot = path.resolve(dest, path.relative(src, PRESET_DIR))
+        const renameFn = FILES_TO_RENAME[relativePath.replace(/\.template$/, '')]
+        if (renameFn) destPath = path.join(pluginRoot, renameFn(varName))
 
         fs.writeFileSync(destPath, processed)
       } else if (entry.name.endsWith('.template')) {
@@ -301,7 +301,7 @@ function main() {
   }
 
   // Format plugin name
-  const { slug, displayName, varName, envPrefix } = formatPluginName(options.pluginName)
+  const { slug, displayName, varName, pascalName, envPrefix } = formatPluginName(options.pluginName)
   const finalDisplayName = options.displayName || displayName
 
   // Check if plugin already exists
@@ -323,6 +323,7 @@ function main() {
     PLUGIN_SLUG: slug,
     PLUGIN_DISPLAY_NAME: finalDisplayName,
     PLUGIN_VAR_NAME: varName,
+    PLUGIN_PASCAL_NAME: pascalName,
     PLUGIN_ENV_PREFIX: envPrefix,
     PLUGIN_DESCRIPTION: options.description,
     PLUGIN_AUTHOR: options.author,
@@ -340,7 +341,7 @@ function main() {
 
   // Copy preset to plugins directory
   try {
-    copyDir(PRESET_DIR, pluginDir, replacements, varName)
+    copyDir(PRESET_DIR, pluginDir, replacements, pascalName)
 
     console.log('\x1b[32m✓ Plugin created successfully!\x1b[0m\n')
     console.log('\x1b[1mNext steps:\x1b[0m')

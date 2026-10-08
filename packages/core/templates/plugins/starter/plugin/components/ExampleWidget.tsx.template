@@ -11,9 +11,9 @@ import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { Input } from '@nextsparkjs/core/components/ui/input'
 import { Loader2 } from 'lucide-react'
-import { use{{PLUGIN_VAR_NAME}} } from '../hooks/use{{PLUGIN_VAR_NAME}}'
+import { use{{PLUGIN_PASCAL_NAME}} } from '../hooks/use{{PLUGIN_PASCAL_NAME}}'
 
-interface {{PLUGIN_VAR_NAME}}WidgetProps {
+interface {{PLUGIN_PASCAL_NAME}}WidgetProps {
   /**
    * Widget title
    */
@@ -30,15 +30,15 @@ interface {{PLUGIN_VAR_NAME}}WidgetProps {
  *
  * @example
  * ```tsx
- * <{{PLUGIN_VAR_NAME}}Widget title="My Widget" />
+ * <{{PLUGIN_PASCAL_NAME}}Widget title="My Widget" />
  * ```
  */
-export function {{PLUGIN_VAR_NAME}}Widget({
+export function {{PLUGIN_PASCAL_NAME}}Widget({
   title = '{{PLUGIN_DISPLAY_NAME}}',
   className,
-}: {{PLUGIN_VAR_NAME}}WidgetProps) {
+}: {{PLUGIN_PASCAL_NAME}}WidgetProps) {
   const [input, setInput] = useState('')
-  const { data, isLoading, error, execute, reset } = use{{PLUGIN_VAR_NAME}}()
+  const { data, isLoading, error, execute, reset } = use{{PLUGIN_PASCAL_NAME}}()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -112,4 +112,4 @@ export function {{PLUGIN_VAR_NAME}}Widget({
   )
 }
 
-export default {{PLUGIN_VAR_NAME}}Widget
+export default {{PLUGIN_PASCAL_NAME}}Widget

@@ -47,10 +47,10 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 'use client'
-import { use{{PLUGIN_VAR_NAME}} } from '@/plugins/{{PLUGIN_SLUG}}/hooks/use{{PLUGIN_VAR_NAME}}'
+import { use{{PLUGIN_PASCAL_NAME}} } from '@/plugins/{{PLUGIN_SLUG}}/hooks/use{{PLUGIN_PASCAL_NAME}}'
 
 function MyComponent() {
-  const { data, isLoading } = use{{PLUGIN_VAR_NAME}}()
+  const { data, isLoading } = use{{PLUGIN_PASCAL_NAME}}()
   // ...
 }
 ```
@@ -82,7 +82,7 @@ Example function description.
 ├── components/           # React components
 │   └── ExampleWidget.tsx
 ├── hooks/                # Custom React hooks
-│   └── use{{PLUGIN_VAR_NAME}}.ts
+│   └── use{{PLUGIN_PASCAL_NAME}}.ts
 ├── entities/             # Plugin entities (optional)
 ├── migrations/           # Database migrations (optional)
 ├── messages/             # i18n translations

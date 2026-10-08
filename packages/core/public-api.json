@@ -178,6 +178,12 @@
       "note": "Entity list, detail and form wrappers (entity guide)."
     },
     {
+      "subpath": "./lib/plugins/env-loader",
+      "reason": "documented",
+      "area": "Plugins and blocks",
+      "note": "getPluginEnv and hasPluginEnv, which the create-plugin skill teaches plugins to import."
+    },
+    {
       "subpath": "./lib/plugins/hook-system",
       "reason": "documented",
       "area": "Plugins and blocks",

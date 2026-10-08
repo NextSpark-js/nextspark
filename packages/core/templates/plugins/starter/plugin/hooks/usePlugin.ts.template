@@ -8,9 +8,9 @@
 
 import { useState, useCallback } from 'react'
 import type {
-  {{PLUGIN_VAR_NAME}}Result,
-  {{PLUGIN_VAR_NAME}}Error,
-  Use{{PLUGIN_VAR_NAME}}Return,
+  {{PLUGIN_PASCAL_NAME}}Result,
+  {{PLUGIN_PASCAL_NAME}}Error,
+  Use{{PLUGIN_PASCAL_NAME}}Return,
 } from '../lib/types'
 
 /**
@@ -19,7 +19,7 @@ import type {
  * @example
  * ```tsx
  * function MyComponent() {
- *   const { data, isLoading, execute } = use{{PLUGIN_VAR_NAME}}()
+ *   const { data, isLoading, execute } = use{{PLUGIN_PASCAL_NAME}}()
  *
  *   const handleClick = async () => {
  *     const result = await execute('my input')
@@ -34,15 +34,15 @@ import type {
  * }
  * ```
  */
-export function use{{PLUGIN_VAR_NAME}}(): Use{{PLUGIN_VAR_NAME}}Return {
-  const [data, setData] = useState<{{PLUGIN_VAR_NAME}}Result | null>(null)
+export function use{{PLUGIN_PASCAL_NAME}}(): Use{{PLUGIN_PASCAL_NAME}}Return {
+  const [data, setData] = useState<{{PLUGIN_PASCAL_NAME}}Result | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<{{PLUGIN_VAR_NAME}}Error | null>(null)
+  const [error, setError] = useState<{{PLUGIN_PASCAL_NAME}}Error | null>(null)
 
   /**
    * Execute the plugin function
    */
-  const execute = useCallback(async (input?: string): Promise<{{PLUGIN_VAR_NAME}}Result> => {
+  const execute = useCallback(async (input?: string): Promise<{{PLUGIN_PASCAL_NAME}}Result> => {
     setIsLoading(true)
     setError(null)
 
@@ -61,7 +61,7 @@ export function use{{PLUGIN_VAR_NAME}}(): Use{{PLUGIN_VAR_NAME}}Return {
       }
 
       const result = await response.json()
-      const pluginResult: {{PLUGIN_VAR_NAME}}Result = result.data || {
+      const pluginResult: {{PLUGIN_PASCAL_NAME}}Result = result.data || {
         success: true,
         message: 'Operation completed',
         timestamp: new Date().toISOString(),
@@ -70,7 +70,7 @@ export function use{{PLUGIN_VAR_NAME}}(): Use{{PLUGIN_VAR_NAME}}Return {
       setData(pluginResult)
       return pluginResult
     } catch (err) {
-      const pluginError: {{PLUGIN_VAR_NAME}}Error = {
+      const pluginError: {{PLUGIN_PASCAL_NAME}}Error = {
         code: 'EXECUTION_ERROR',
         message: err instanceof Error ? err.message : 'Unknown error occurred',
       }
@@ -99,4 +99,4 @@ export function use{{PLUGIN_VAR_NAME}}(): Use{{PLUGIN_VAR_NAME}}Return {
   }
 }
 
-export default use{{PLUGIN_VAR_NAME}}
+export default use{{PLUGIN_PASCAL_NAME}}

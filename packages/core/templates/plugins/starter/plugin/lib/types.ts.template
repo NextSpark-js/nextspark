@@ -7,7 +7,7 @@
 /**
  * Plugin configuration options
  */
-export interface {{PLUGIN_VAR_NAME}}Config {
+export interface {{PLUGIN_PASCAL_NAME}}Config {
   /**
    * API key for external service (if applicable)
    */
@@ -27,7 +27,7 @@ export interface {{PLUGIN_VAR_NAME}}Config {
 /**
  * Result from plugin operations
  */
-export interface {{PLUGIN_VAR_NAME}}Result {
+export interface {{PLUGIN_PASCAL_NAME}}Result {
   /**
    * Whether the operation was successful
    */
@@ -52,7 +52,7 @@ export interface {{PLUGIN_VAR_NAME}}Result {
 /**
  * Error from plugin operations
  */
-export interface {{PLUGIN_VAR_NAME}}Error {
+export interface {{PLUGIN_PASCAL_NAME}}Error {
   /**
    * Error code
    */
@@ -72,16 +72,16 @@ export interface {{PLUGIN_VAR_NAME}}Error {
 /**
  * Plugin status
  */
-export type {{PLUGIN_VAR_NAME}}Status = 'active' | 'inactive' | 'error'
+export type {{PLUGIN_PASCAL_NAME}}Status = 'active' | 'inactive' | 'error'
 
 /**
- * Hook return type for use{{PLUGIN_VAR_NAME}}
+ * Hook return type for use{{PLUGIN_PASCAL_NAME}}
  */
-export interface Use{{PLUGIN_VAR_NAME}}Return {
+export interface Use{{PLUGIN_PASCAL_NAME}}Return {
   /**
    * Plugin data
    */
-  data: {{PLUGIN_VAR_NAME}}Result | null
+  data: {{PLUGIN_PASCAL_NAME}}Result | null
 
   /**
    * Loading state
@@ -91,12 +91,12 @@ export interface Use{{PLUGIN_VAR_NAME}}Return {
   /**
    * Error state
    */
-  error: {{PLUGIN_VAR_NAME}}Error | null
+  error: {{PLUGIN_PASCAL_NAME}}Error | null
 
   /**
    * Execute plugin function
    */
-  execute: (input?: string) => Promise<{{PLUGIN_VAR_NAME}}Result>
+  execute: (input?: string) => Promise<{{PLUGIN_PASCAL_NAME}}Result>
 
   /**
    * Reset state

@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { exampleFunction, validateConfig, DEFAULTS } from '../lib/core'
-import type { {{PLUGIN_VAR_NAME}}Config } from '../lib/types'
+import type { {{PLUGIN_PASCAL_NAME}}Config } from '../lib/types'
 
 describe('{{PLUGIN_DISPLAY_NAME}} Plugin', () => {
   beforeEach(() => {
@@ -36,7 +36,7 @@ describe('{{PLUGIN_DISPLAY_NAME}} Plugin', () => {
 
   describe('validateConfig', () => {
     it('should return true for valid config', () => {
-      const config: Partial<{{PLUGIN_VAR_NAME}}Config> = {
+      const config: Partial<{{PLUGIN_PASCAL_NAME}}Config> = {
         apiKey: 'test-key',
         debug: false,
       }
@@ -73,7 +73,7 @@ describe('{{PLUGIN_DISPLAY_NAME}} Widget', () => {
   it.todo('should reset state when reset button clicked')
 })
 
-describe('use{{PLUGIN_VAR_NAME}} Hook', () => {
+describe('use{{PLUGIN_PASCAL_NAME}} Hook', () => {
   // Hook tests would go here
   // Using @testing-library/react-hooks
 

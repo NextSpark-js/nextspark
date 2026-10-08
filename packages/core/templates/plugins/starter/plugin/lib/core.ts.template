@@ -5,7 +5,7 @@
  * These functions are exported via plugin.config.ts
  */
 
-import type { {{PLUGIN_VAR_NAME}}Config, {{PLUGIN_VAR_NAME}}Result } from './types'
+import type { {{PLUGIN_PASCAL_NAME}}Config, {{PLUGIN_PASCAL_NAME}}Result } from './types'
 
 /**
  * Example function that demonstrates plugin functionality.
@@ -19,7 +19,7 @@ import type { {{PLUGIN_VAR_NAME}}Config, {{PLUGIN_VAR_NAME}}Result } from './typ
  * const result = await exampleFunction('hello')
  * ```
  */
-export async function exampleFunction(input?: string): Promise<{{PLUGIN_VAR_NAME}}Result> {
+export async function exampleFunction(input?: string): Promise<{{PLUGIN_PASCAL_NAME}}Result> {
   // TODO: Implement your plugin logic here
 
   return {
@@ -35,7 +35,7 @@ export async function exampleFunction(input?: string): Promise<{{PLUGIN_VAR_NAME
  * @param config - Configuration to validate
  * @returns True if valid, throws error otherwise
  */
-export function validateConfig(config: Partial<{{PLUGIN_VAR_NAME}}Config>): boolean {
+export function validateConfig(config: Partial<{{PLUGIN_PASCAL_NAME}}Config>): boolean {
   // TODO: Add validation logic
 
   if (!config) {
@@ -50,7 +50,7 @@ export function validateConfig(config: Partial<{{PLUGIN_VAR_NAME}}Config>): bool
  *
  * @param config - Plugin configuration
  */
-export async function initialize(config: {{PLUGIN_VAR_NAME}}Config): Promise<void> {
+export async function initialize(config: {{PLUGIN_PASCAL_NAME}}Config): Promise<void> {
   validateConfig(config)
 
   // TODO: Add initialization logic

@@ -113,6 +113,7 @@ The reason in each row is one of `template-import` (a stable template imports it
 
 | Subpath | Why it is public |
 | --- | --- |
+| `./lib/plugins/env-loader` | documented — `getPluginEnv` and `hasPluginEnv`, which the create-plugin skill teaches plugins to import. |
 | `./lib/plugins/hook-system` | documented — Entity and plugin hooks (entity and scheduled-action guides). |
 | `./components/ui/input` | documented — Used by the plugin guide. |
 | `./components/ui/select` | documented — Used by the plugin guide. |
