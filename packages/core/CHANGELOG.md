@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading from 0.1.0-beta.197
 
+- **Update with a clean git tree.** Commit your work, then `pnpm update-core --version <version>`: it stops on uncommitted changes, sets the
+  `@nextsparkjs` packages to exactly that version, installs, and runs `nextspark prepare`. Next.js must already be on `~16.3.8` (16.3.8 or a later
+  16.3 patch): `prepare` refuses other versions, earlier patches and other minors alike, with `NS_HOST_UNSUPPORTED_NEXT_VERSION`.
+- **`pnpm build` needs a login method that can authenticate.** A project without Resend or Google credentials in `.env` or the build
+  environment fails with `Production auth readiness failed`. A build that gets them only at run time declares
+  `NEXTSPARK_AUTH_RUNTIME_ONLY=email,google`; placeholder values such as `re_...` are not deferred.
 - **`sel`, `cySelector` and `createAriaLabel` are no longer exported from `@nextsparkjs/core`.** Import `sel` and `cySelector` from `@nextsparkjs/core/selectors`; `createAriaLabel` comes from `@nextsparkjs/testing`. None of the three names was in the public list, and removing them after 1.0 would need a major.
 - The webhook extension types `StripeWebhookExtensions` and `PolarWebhookExtensions` are now exported from `@nextsparkjs/core/lib/billing/config-types`, and the `lib/billing/*-webhook-extensions.ts` templates import them from there. The old `lib/billing/stripe-webhook` and `polar-webhook` subpaths keep working for one minor and are internal.
 
@@ -39,6 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading from 0.1.0-beta.196
 
+- **Update the packages, after Next.js, with a clean git tree.** Commit your work first: `pnpm update-core` stops on uncommitted changes. Do the
+  Next.js step below (`pnpm add next@~16.3.8`, and `pnpm add -D eslint-config-next@~16.3.8` if you have it) **before** it, and commit between
+  the two, because `nextspark prepare` (the last step of `update-core`) refuses any Next.js outside `~16.3.8` (16.3.7 and earlier, 16.4 and later) with `NS_HOST_UNSUPPORTED_NEXT_VERSION`.
+  Then run `pnpm update-core --version 0.1.0-beta.197`: it sets the `@nextsparkjs` packages in `package.json` (`cli`, `core`, `ui` and `testing`
+  in a starter) to exactly that version, installs, and runs `prepare`. A run that stops at `prepare` leaves `package.json` and the lockfile
+  modified ("Nothing was undone"): run the rollback command it prints under "To put the project back at the commit the update started from" (`git reset --hard <commit> && git clean -fd && rm -rf node_modules && pnpm install --frozen-lockfile`), fix the Next.js version, and run it again.
 - **Next.js 16.3.8 is the lowest supported Next.js (required).** In your project run `pnpm add next@~16.3.8` (and
   `pnpm add -D eslint-config-next@~16.3.8` if you have it), then install again; the generated host refuses 16.3.7 and earlier. This release
   of Next fixes GHSA-cjq9-62q9-8jv4 in Image Optimization.
@@ -46,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   allows `lh3.googleusercontent.com` (Google avatars) only and leaves the other hosts as commented examples. Replace any wildcard host
   (`*.public.blob.vercel-storage.com`, `*.supabase.co`, `*.cloudinary.com`) with the exact host you use, for example your Vercel Blob store's
   `<store-id>.public.blob.vercel-storage.com`, and remove the hosts you do not use.
+  `allowedImageDomains` in the same file (the CSP `img-src`) is a separate list and this release left it as it was, wildcards included; narrow
+  it the same way if you want the browser restricted too.
 - **Queries on core's pools now fail after 60 s** (`DB_QUERY_TIMEOUT_MS`, default `60000`). Set it higher, or `0`, for long jobs
   (reports, bulk updates, scheduled actions).
 - **Password sign-in in production now follows `auth.methods`.** A project on the passwordless preset (the default, no `'email-password'` in
@@ -54,6 +68,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Projects that list `'email-password'`, or declare `emailAndPassword.enabled`, are unaffected. Development is unaffected. Without the
   opt-in, invited users register with no password and sign in with an email code; a project that overrode `signup-with-invite` or the
   signup page keeps its own behaviour.
+- **`pnpm build` needs a login method that can authenticate.** The production build checks it (`Production auth readiness failed`): a project
+  with neither Resend nor Google credentials in `.env` or the build environment fails (the starter has none until you add them). A build that gets the credentials only at run time declares `NEXTSPARK_AUTH_RUNTIME_ONLY=email,google`
+  (either or both); placeholder values such as `re_...` are values, not missing ones, and are not deferred.
 - **Post categories belong to a team.** `pnpm db:migrate` applies core's `030_taxonomies_team_writes.sql`. Categories created before this release
   have no team (`taxonomies."teamId"` NULL): every team and every visitor still sees them, and only a superadmin can rename or delete them. To
   hand one to a team, set its team (review first, then run it yourself):
@@ -81,6 +98,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `return session as Session | null`, is replaced with:
   `return session && (session.user as { role?: unknown }).role !== 'suspended' ? (session as Session) : null` (the API and the pages refuse
   it anyway; `NS_PROXY_SESSION_CACHED` warns until the proxy has both lines).
+- **Rolling back.** Migrations 030 and 031 are not undone by downgrading the packages (`update-core` refuses to downgrade). The older
+  release starts and keeps working on that database, but it does not know the `suspended` role: an account suspended on 0.1.0-beta.197 can
+  sign in again on 0.1.0-beta.196. Before downgrading, restore the backup you took before `pnpm db:migrate`, or list them first
+  (`SELECT id, email FROM users WHERE role = 'suspended';`). Unsuspending gives them access back, as the downgrade would; it is what the
+  unsuspend action does, run it yourself: `UPDATE users SET role = 'member' WHERE role = 'suspended';`. To keep an account out, delete it or
+  stay on 0.1.0-beta.197. On 0.1.0-beta.196 the superadmin suspend action succeeds on this database but is not enforced.
 
 ### Added
 
