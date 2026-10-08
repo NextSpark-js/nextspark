@@ -44,7 +44,7 @@ Next.js reads segment config (`dynamic`, `revalidate`, ...) statically from the 
 - **API Explorer docs:** `docs.md` and `presets.ts` next to a handler are what the explorer shows; core's live next to its route modules in the package.
 - **Billing webhook hooks:** `billing.webhookExtensions` in `nextspark.config.ts` names the module that adds one-time payment handling to core's Stripe or Polar webhook.
 
-Rendering mode: Cache Components with PPR is the default for new projects (their `next.config.mjs` sets `cacheComponents: true` and the host emits the Cache Components / PPR variants of core's layouts and public pages, [PPR guide](../13-performance/ppr-migration.md)). Legacy ISR stays supported: remove the setting or set it to `false`. Next.js is pinned to `~16.3.6`.
+Rendering mode: Cache Components with PPR is the default for new projects (their `next.config.mjs` sets `cacheComponents: true` and the host emits the Cache Components / PPR variants of core's layouts and public pages, [PPR guide](../13-performance/ppr-migration.md)). Legacy ISR stays supported: remove the setting or set it to `false`. Next.js is pinned to `~16.3.8`.
 
 ## Upgrading
 

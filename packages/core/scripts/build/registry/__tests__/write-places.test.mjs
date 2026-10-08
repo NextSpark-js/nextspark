@@ -269,7 +269,7 @@ async function snapshot(root) {
 async function buildableProject() {
   const project = await directory()
   await writeIn(project.root, 'nextspark.config.ts', 'export default {}\n')
-  await writeIn(project.root, 'package.json', '{"dependencies":{"next":"16.3.6"}}')
+  await writeIn(project.root, 'package.json', '{"dependencies":{"next":"16.3.8"}}')
   await writeIn(project.root, 'templates/pricing/page.tsx', 'export default function Pricing() { return null }\n')
   return project
 }

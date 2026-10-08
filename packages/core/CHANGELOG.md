@@ -7,10 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Upgrading
+### Upgrading from 0.1.0-beta.196
 
+- **Next.js 16.3.8 is the lowest supported Next.js (required).** In your project run `pnpm add next@~16.3.8` (and
+  `pnpm add -D eslint-config-next@~16.3.8` if you have it), then install again; the generated host refuses 16.3.7 and earlier. This release
+  of Next fixes GHSA-cjq9-62q9-8jv4 in Image Optimization.
+- **Review `images.remotePatterns` in your `next.config.mjs`.** Your project owns the file and an upgrade never rewrites it. The template now
+  allows `lh3.googleusercontent.com` (Google avatars) only and leaves the other hosts as commented examples. Replace any wildcard host
+  (`*.public.blob.vercel-storage.com`, `*.supabase.co`, `*.cloudinary.com`) with the exact host you use, for example your Vercel Blob store's
+  `<store-id>.public.blob.vercel-storage.com`, and remove the hosts you do not use.
 - **Queries on core's pools now fail after 60 s** (`DB_QUERY_TIMEOUT_MS`, default `60000`). Set it higher, or `0`, for long jobs
   (reports, bulk updates, scheduled actions).
+
+### Added
+
+- `DB_QUERY_TIMEOUT_MS` (default `60000`; `0` disables): how long the client waits for an answer to a query. Works behind any pooler.
+- `DB_STATEMENT_TIMEOUT_MS` (default unset): also asks the server to cancel a statement after this long. Opt-in because it travels as a
+  startup parameter that transaction poolers such as PgBouncer can reject.
+  A value that is not a non-negative integer is ignored with a warning.
+
+### Changed
+
+- **Next.js `~16.3.8`.** `nextspark init` adds `next@~16.3.8` and `eslint-config-next` `~16.3.8`; `create-nextspark-app` installs `next@16.3.8`;
+  core's `next` peer, the templates, the plugins and `nextspark migrate` use `~16.3.8`. The route export table was re-checked against 16.3.8.
+- **The template `next.config.mjs` lists exact image hosts only.** `images.remotePatterns` keeps `lh3.googleusercontent.com` and drops the
+  wildcard hosts (`*.public.blob.vercel-storage.com`, `*.supabase.co`, `*.cloudinary.com`) and the unused `images.unsplash.com`,
+  `upload.wikimedia.org` and `i.pravatar.cc`, which stay as commented examples. A project serving uploads from Vercel Blob through `next/image`
+  adds its store's host (see Upgrading from 0.1.0-beta.196).
 
 ### Fixed
 
@@ -30,13 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   A connection that dies is dropped and the next query opens a fresh one. The transaction helpers now rethrow the original error when
   their `ROLLBACK` also fails. Nothing is retried. `max` (20) and the 10 s connect timeout are unchanged. Migrations do not use these
   pools and are not limited by them.
-
-### Added
-
-- `DB_QUERY_TIMEOUT_MS` (default `60000`; `0` disables): how long the client waits for an answer to a query. Works behind any pooler.
-- `DB_STATEMENT_TIMEOUT_MS` (default unset): also asks the server to cancel a statement after this long. Opt-in because it travels as a
-  startup parameter that transaction poolers such as PgBouncer can reject.
-  A value that is not a non-negative integer is ignored with a warning.
 
 ## [0.1.0-beta.196] - 2026-10-07
 

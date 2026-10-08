@@ -29,7 +29,7 @@ async function prepareWith(billing: string | null) {
       await writeFile(join(root, path), content)
     }
     await write('nextspark.config.ts', 'export default { plugins: [] }\n')
-    await write('package.json', JSON.stringify({ dependencies: { next: '16.3.6' } }))
+    await write('package.json', JSON.stringify({ dependencies: { next: '16.3.8' } }))
     await write('templates/pricing/page.tsx', 'export default function Pricing() { return null }\n')
     if (billing !== null) await write('config/billing.config.ts', billing)
     await mkdir(join(root, 'node_modules/@nextsparkjs'), { recursive: true })

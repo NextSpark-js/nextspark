@@ -157,7 +157,7 @@ async function main() {
     extracted = fs.mkdtempSync(path.join(os.tmpdir(), `nextspark-template-${theme}-`));
     fs.cpSync(located.sourceDir, extracted, { recursive: true });
     fs.writeFileSync(path.join(extracted, 'nextspark.config.ts'), `export default { plugins: [], template: { name: ${JSON.stringify(theme)}, version: 'test' } }\n`);
-    fs.writeFileSync(path.join(extracted, 'package.json'), JSON.stringify({ name: `nextspark-template-${theme}`, private: true, dependencies: { next: '16.3.6' } }, null, 2));
+    fs.writeFileSync(path.join(extracted, 'package.json'), JSON.stringify({ name: `nextspark-template-${theme}`, private: true, dependencies: { next: '16.3.8' } }, null, 2));
     runDir = extracted;
   }
 

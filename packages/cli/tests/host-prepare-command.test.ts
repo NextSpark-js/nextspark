@@ -61,7 +61,7 @@ export function resolveHostMode({ projectRoot }) {
 `)
   await write(join(core, 'scripts/build/registry/host/prepare-cli.mjs'), STUB)
   await write(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  await write(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.6' } }))
+  await write(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.8' } }))
   // Next runs through its own executable now, with no npx start-up ahead of it: the pause stands in for a dev server
   // that stays up, so the watcher the CLI starts beside it has recorded its run before the CLI stops it.
   await write(join(root, 'node_modules/.bin/next'), '#!/bin/sh\necho "$@" >> next-runs.txt\nsleep 1\n', 0o755)

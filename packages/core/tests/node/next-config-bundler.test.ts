@@ -28,9 +28,9 @@ type Bundler = 'webpack' | 'turbopack'
 const CASES: Array<{ next: string; bundler: Bundler; command: string; turbopackEnv?: string }> = [
   { next: '15.5.24', bundler: 'webpack', command: 'next build' },
   { next: '15.5.24', bundler: 'turbopack', command: 'next build --turbopack', turbopackEnv: '1' },
-  { next: '16.3.6', bundler: 'webpack', command: 'next build --webpack' },
-  { next: '16.3.6', bundler: 'turbopack', command: 'next build', turbopackEnv: 'auto' },
-  { next: '16.3.6', bundler: 'turbopack', command: 'next build --turbopack', turbopackEnv: '1' },
+  { next: '16.3.8', bundler: 'webpack', command: 'next build --webpack' },
+  { next: '16.3.8', bundler: 'turbopack', command: 'next build', turbopackEnv: 'auto' },
+  { next: '16.3.8', bundler: 'turbopack', command: 'next build --turbopack', turbopackEnv: '1' },
 ]
 
 /** A project holding `configFile`, whose installed Next reports `nextVersion`. */
@@ -96,7 +96,7 @@ for (const configFile of CONFIGS) {
     { label: 'Turbopack', turbopackEnv: '1' },
   ]) {
     test(`${configFile}: the ${label} config does not suppress Next type errors`, async () => {
-      const root = projectWith(configFile, '16.3.6')
+      const root = projectWith(configFile, '16.3.8')
       const previous = process.env.TURBOPACK
       if (turbopackEnv === undefined) delete process.env.TURBOPACK
       else process.env.TURBOPACK = turbopackEnv

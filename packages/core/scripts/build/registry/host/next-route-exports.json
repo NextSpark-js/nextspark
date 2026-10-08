@@ -1,7 +1,7 @@
 {
   "$comment": "Route file kinds x exports x emitted facade form, for the generated host (#203). Source of truth for host/facade-emitter.mjs; README.md renders it. Verified against the installed Next.js source listed in verifiedAgainst and by the probe builds recorded in README.md. Re-verify and bump `next` when upgrading Next.js: host/__tests__/facade-emitter.test.mjs fails when the installed version differs.",
-  "next": "16.3.6",
-  "supportedNext": "~16.3.6 (same major.minor, stable patch >= the verified baseline in \"next\"; enforced by isSupportedNextVersion)",
+  "next": "16.3.8",
+  "supportedNext": "~16.3.8 (same major.minor, stable patch >= the verified baseline in \"next\"; enforced by isSupportedNextVersion)",
   "verifiedAgainst": [
     "next/dist/build/segment-config/app/app-segment-config.js (AppSegmentConfigSchemaKeys, parseAppSegmentConfig)",
     "next/dist/build/analysis/get-page-static-info.js (checkExports, getAppPageStaticInfo)",

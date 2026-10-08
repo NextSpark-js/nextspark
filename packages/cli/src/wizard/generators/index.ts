@@ -310,7 +310,7 @@ export async function updatePackageJson(
     // create.ts for the full rationale. better-auth is deliberately tilde-ranged
     // (not caret): 1.7.0 introduces a breaking Account table schema change
     // (accountId -> providerAccountId) this app's migrations don't account for.
-    'next': '~16.3.6',
+    'next': '~16.3.8',
     'react': '^19.2.0',
     'react-dom': '^19.2.0',
     // Auth
@@ -383,7 +383,7 @@ export async function updatePackageJson(
     '@tailwindcss/postcss': '^4.0.0',
     // ESLint
     'eslint': '^9.18.0',
-    'eslint-config-next': '~16.3.6',
+    'eslint-config-next': '~16.3.8',
     // Database
     'drizzle-kit': '^0.31.4',
     // Jest

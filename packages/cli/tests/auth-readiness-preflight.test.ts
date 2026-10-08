@@ -68,7 +68,7 @@ appendFileSync(process.cwd() + '/registry-ran.txt', 'ran\\n')
 `)
   await writeFile(join(core, 'scripts/build/registry/host/mode.mjs'), "export function resolveHostMode() { return { mode: 'host', reason: 'generated' } }\n")
   await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.6' } }))
+  await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.3.8' } }))
   if (appConfig !== null && appConfig !== PROJECT_WITHOUT_CONFIG) {
     await mkdir(join(root, 'config'), { recursive: true })
     await writeFile(join(root, 'config/app.config.ts'), appConfig)

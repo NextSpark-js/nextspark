@@ -108,7 +108,7 @@ function project(t: TestContext, { withDisabling = true } = {}) {
   fs.writeFileSync(path.join(root, 'migrations/999_theme_sample_data.sql'), 'INSERT INTO widgets VALUES (2);')
   fs.mkdirSync(path.join(root, 'config'), { recursive: true })
   fs.writeFileSync(path.join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.3.6' } }))
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.3.8' } }))
   fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'packages: []\n')
   fs.writeFileSync(path.join(root, 'config/theme.config.ts'), "export const themeConfig = { name: 'fixture' }\n")
   return {

@@ -26,7 +26,7 @@ test('the changelog names the next spec create-nextspark-app and init each write
 
   const stated = [...changelog.matchAll(/`next@([^`]+)`/g)].map((match) => match[1])
   // Specs earlier releases wrote stay in their entries.
-  const earlier = ['^16.3.5', '16.3.5', '~16.3.5']
+  const earlier = ['^16.3.5', '16.3.5', '~16.3.5', '16.3.6', '~16.3.6']
   const unknown = stated.filter((spec) => spec !== pinned && spec !== range && !earlier.includes(spec) && !/^1[0-5]\./.test(spec))
   assert.deepEqual(unknown, [], 'every Next 16 spec the changelog names is one the code writes')
 })

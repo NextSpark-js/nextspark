@@ -109,42 +109,21 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // Hosts the server may fetch and resize through /_next/image.
+    // Keep this list to the exact hosts you use.
     remotePatterns: [
+      // Google profile pictures shown for accounts that sign in with Google.
       {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
         pathname: '/**',
       },
-      {
-        protocol: 'https',
-        hostname: '*.public.blob.vercel-storage.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'upload.wikimedia.org',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i.pravatar.cc',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.supabase.co',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.cloudinary.com',
-        pathname: '/**',
-      },
+      // Examples: add the exact host of your own store, e.g. your Vercel Blob store
+      // (`<store-id>.public.blob.vercel-storage.com`) once uploads use it.
+      // { protocol: 'https', hostname: '<store-id>.public.blob.vercel-storage.com', pathname: '/**' },
+      // { protocol: 'https', hostname: '<project-ref>.supabase.co', pathname: '/**' },
+      // { protocol: 'https', hostname: 'res.cloudinary.com', pathname: '/<cloud-name>/**' },
+      // { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
     ],
   },
   // Next.js sets TURBOPACK before it loads this file whenever Turbopack builds
@@ -158,7 +137,8 @@ const nextConfig = {
   async headers() {
     const isProduction = process.env.NODE_ENV === 'production';
 
-    // Allowed image domains (must match remotePatterns above)
+    // Image hosts the browser may load directly (CSP img-src). The server only fetches the hosts in
+    // images.remotePatterns above; add a host there too when next/image should serve it.
     // NOTE: Wildcard patterns (*.public.blob.vercel-storage.com, *.supabase.co, *.cloudinary.com)
     // allow images from any account on these services for development flexibility.
     // For production with stricter security, consider restricting to specific account subdomains.

@@ -45,7 +45,7 @@ async function writeIn(root: string, path: string, content = '') {
 async function project() {
   const { root, cleanup } = await directory('nextspark-write-check-')
   await writeIn(root, 'nextspark.config.ts', 'export default { plugins: [] }\n')
-  await writeIn(root, 'package.json', JSON.stringify({ dependencies: { next: '16.3.6' } }))
+  await writeIn(root, 'package.json', JSON.stringify({ dependencies: { next: '16.3.8' } }))
   await writeIn(root, 'templates/pricing/page.tsx', 'export default function Pricing() { return null }\n')
   await mkdir(join(root, 'node_modules/@nextsparkjs'), { recursive: true })
   await symlink(CORE_SOURCE, join(root, 'node_modules/@nextsparkjs/core'))

@@ -19,11 +19,11 @@ function projectOn(version: string): string {
 
 test('with no flag, the bundler reported is the one that major runs', () => {
   assert.equal(effectiveBundler(undefined, projectOn('15.5.24')), 'webpack')
-  assert.equal(effectiveBundler(undefined, projectOn('16.3.6')), 'turbopack')
+  assert.equal(effectiveBundler(undefined, projectOn('16.3.8')), 'turbopack')
 })
 
 test('a flag wins over the version default', () => {
-  assert.equal(effectiveBundler('webpack', projectOn('16.3.6')), 'webpack')
+  assert.equal(effectiveBundler('webpack', projectOn('16.3.8')), 'webpack')
   assert.equal(effectiveBundler('turbopack', projectOn('15.5.24')), 'turbopack')
 })
 
@@ -32,8 +32,8 @@ test('an unreadable project falls back to Webpack', () => {
 })
 
 test('the flag is spelled the way each major understands it', () => {
-  assert.deepEqual(resolveBundlerArgs('webpack', projectOn('16.3.6')), ['--webpack'])
-  assert.deepEqual(resolveBundlerArgs('turbopack', projectOn('16.3.6')), [])
+  assert.deepEqual(resolveBundlerArgs('webpack', projectOn('16.3.8')), ['--webpack'])
+  assert.deepEqual(resolveBundlerArgs('turbopack', projectOn('16.3.8')), [])
   assert.deepEqual(resolveBundlerArgs('turbopack', projectOn('15.5.24')), ['--turbopack'])
   assert.deepEqual(resolveBundlerArgs('webpack', projectOn('15.5.24')), [])
 })

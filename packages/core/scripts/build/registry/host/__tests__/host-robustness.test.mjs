@@ -314,7 +314,7 @@ test('an npm-installed core ships only dist/: the manifest, variants and route m
 test('the project config is read again for every generation: enabling a plugin in nextspark.config.ts adds its routes', async () => {
   const root = mkdtempSync(join(tmpdir(), 'nextspark-config-reload-'))
   try {
-    write(root, 'package.json', JSON.stringify({ name: 'reload', dependencies: { next: '16.3.6' } }))
+    write(root, 'package.json', JSON.stringify({ name: 'reload', dependencies: { next: '16.3.8' } }))
     write(root, 'nextspark.config.ts', 'export default { plugins: [] }\n')
     write(root, 'plugins/search/plugin.config.ts', 'export const searchPluginConfig = {}\n')
     write(root, 'plugins/search/templates/search/page.tsx', PAGE('Search'))

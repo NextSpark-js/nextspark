@@ -22,7 +22,7 @@ async function planFor(files) {
   const root = temp()
   try {
     write(root, 'nextspark.config.ts', 'export default { plugins: [] }\n')
-    write(root, 'package.json', JSON.stringify({ name: 'wire', dependencies: { next: '16.3.6' } }))
+    write(root, 'package.json', JSON.stringify({ name: 'wire', dependencies: { next: '16.3.8' } }))
     write(root, 'config/theme.config.ts', "export const wireThemeConfig = { name: 'wire' }\n")
     for (const [path, content] of Object.entries(files)) write(root, path, content)
     const entities = await discoverAllEntities(getConfig(root), { includeCore: false })

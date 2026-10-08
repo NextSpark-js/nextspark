@@ -291,7 +291,7 @@ export interface ProjectOptions {
 
 /** What create-nextspark-app installs next to the NextSpark packages before the wizard runs. */
 export const ESSENTIAL_DEPENDENCIES = [
-  'next@16.3.6',
+  'next@16.3.8',
   'react',
   'react-dom',
   'next-intl@4.11.0',

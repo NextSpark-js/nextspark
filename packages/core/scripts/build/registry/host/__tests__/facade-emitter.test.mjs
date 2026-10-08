@@ -124,11 +124,12 @@ test("page and layout exports include Next.js's TS-plugin ALLOWED_EXPORTS (excep
   }
 })
 
-test('metadata route loader still filters dynamicParams/generateSitemaps out of its re-exports', async () => {
-  // The table forbids dynamicParams and generateStaticParams on metadata routes because the
-  // loader either drops them or declares its own; detect a Next.js change to that code.
+test('metadata route loader still filters generateSitemaps out of its re-exports', async () => {
+  // The table forbids dynamicParams and generateStaticParams on metadata routes: the loader
+  // declares its own generateStaticParams, and up to 16.3.7 it dropped dynamicParams (16.3.8
+  // re-exports it; the table keeps refusing it). Detect a Next.js change to that code.
   const loader = await readFile(requireFromCore.resolve('next/dist/build/webpack/loaders/next-metadata-route-loader'), 'utf8')
-  assert.match(loader, /name !== 'default' && name !== 'generateSitemaps' && name !== 'dynamicParams'/)
+  assert.match(loader, /exportNames\.filter\(\(name\)=>name !== 'default' && name !== 'generateSitemaps'\);/)
   assert.match(loader, /export async function generateStaticParams/)
 })
 
@@ -595,14 +596,14 @@ test('an aliased magic export is forwarded under its source local name', async (
   assert.match(content, /^export \{ listSlugs as generateStaticParams \}$/m)
 })
 
-// --- fix round 3: ~baseline version range (baseline 16.3.6 since 0.1.0-beta.194) ---
+// --- fix round 3: ~baseline version range (baseline 16.3.8 since 0.1.0-beta.197) ---
 
 test('isSupportedNextVersion accepts ~baseline: same minor, stable patch >= baseline', () => {
-  assert.equal(ROUTE_EXPORT_TABLE.next, '16.3.6')
-  for (const version of ['16.3.6', '16.3.7', '16.3.9', '16.3.10', '16.3.123', '16.3.6+build.1', '16.3.7+sha.abc-1']) assert.equal(isSupportedNextVersion(version), true, version)
+  assert.equal(ROUTE_EXPORT_TABLE.next, '16.3.8')
+  for (const version of ['16.3.8', '16.3.9', '16.3.10', '16.3.123', '16.3.8+build.1', '16.3.9+sha.abc-1']) assert.equal(isSupportedNextVersion(version), true, version)
   for (const version of [
-    '16.3.5', '16.3.4', '16.3.0', '16.4.0', '16.2.9', '17.0.0', '15.3.6', '16.3.7-canary.0', '16.3.6-rc.1', '16.3.7-canary.0+build.1',
-    '16.3.5+build.1', '16.3.6+', '16.3.6+bad..meta', '16.3', 'latest', '', undefined,
+    '16.3.7', '16.3.6', '16.3.5', '16.3.4', '16.3.0', '16.4.0', '16.2.9', '17.0.0', '15.3.6', '16.3.7-canary.0', '16.3.8-rc.1', '16.3.7-canary.0+build.1',
+    '16.3.5+build.1', '16.3.8+', '16.3.8+bad..meta', '16.3', 'latest', '', undefined,
   ]) {
     assert.equal(isSupportedNextVersion(version), false, String(version))
   }
@@ -625,7 +626,7 @@ test('a later 16.3 patch is accepted and its own schema internal is used', async
   }
 })
 
-for (const version of ['16.3.5', '16.4.0', '17.0.0', '16.3.6-canary.0']) {
+for (const version of ['16.3.5', '16.4.0', '17.0.0', '16.3.8-canary.0']) {
   test(`${DIAGNOSTICS.UNSUPPORTED_NEXT_VERSION}: next@${version} is refused`, async () => {
     const dir = await fakeNextProject(version, "exports.AppSegmentConfigSchemaKeys = []\nexports.parseAppSegmentConfig = () => ({})\n")
     try {
@@ -634,7 +635,7 @@ for (const version of ['16.3.5', '16.4.0', '17.0.0', '16.3.6-canary.0']) {
         error => {
           assert.deepEqual(error.diagnostics.map(d => d.code), [DIAGNOSTICS.UNSUPPORTED_NEXT_VERSION])
           assert.match(error.message, new RegExp(`next@${version.replace(/\./g, '\\.')}`))
-          assert.match(error.message, /next@~16\.3\.6/)
+          assert.match(error.message, /next@~16\.3\.8/)
           return true
         }
       )
@@ -646,9 +647,9 @@ for (const version of ['16.3.5', '16.4.0', '17.0.0', '16.3.6-canary.0']) {
 
 // --- fix round 4: build metadata ----------------------------------------------
 
-test('a Next.js version with build metadata (16.3.6+build.1) is accepted end to end', async () => {
+test('a Next.js version with build metadata (16.3.8+build.1) is accepted end to end', async () => {
   const marker = "exports.AppSegmentConfigSchemaKeys = []\nexports.parseAppSegmentConfig = () => ({})\n"
-  const dir = await fakeNextProject('16.3.6+build.1', marker)
+  const dir = await fakeNextProject('16.3.8+build.1', marker)
   try {
     assert.equal(loadNextSegmentConfig(dir).error, undefined)
     const { content } = await emitFacade({ kind: 'page', target: 'a/page.tsx', specifier: '@/a', file: FILE, source: PAGE_WITH_CONFIG, projectRoot: dir })

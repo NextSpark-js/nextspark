@@ -17,7 +17,7 @@ const PREPARE_CLI = join(CORE_ROOT, 'scripts/build/registry/host/prepare-cli.mjs
 function project({ legacyApp = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'nextspark-host-mode-'))
   write(root, 'nextspark.config.ts', 'export default { plugins: [] }\n')
-  write(root, 'package.json', JSON.stringify({ name: 'host-mode', dependencies: { next: '16.3.6' } }))
+  write(root, 'package.json', JSON.stringify({ name: 'host-mode', dependencies: { next: '16.3.8' } }))
   write(root, 'templates/pricing/page.tsx', PAGE('Pricing'))
   if (legacyApp) write(root, 'src/app/layout.tsx', 'export default function Layout({ children }) { return children }\n')
   return { root, cleanup: () => rmSync(root, { recursive: true, force: true }) }

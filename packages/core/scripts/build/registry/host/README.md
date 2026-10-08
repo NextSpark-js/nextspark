@@ -28,7 +28,7 @@ const { target, content } = await emitFacade({
 Every problem is a `FacadeEmitError` carrying all diagnostics (`code`, `file`, `line`, `exportName`,
 `message`); nothing is dropped silently.
 
-## Export table (Next.js 16.3.6)
+## Export table (Next.js 16.3.8)
 
 Source of truth: `next-route-exports.json`. The tests fail when the installed Next.js version differs,
 when Next's `AppSegmentConfigSchemaKeys` or `HTTP_METHODS` change, and when this rendering is stale.
@@ -71,7 +71,7 @@ export { listSlugs as generateStaticParams }
 Metadata image kinds accept Next's one-digit variants (`icon1`, `apple-icon9`, `opengraph-image2`,
 `twitter-image3`), mapped to the base kind.
 
-The emitter resolves `next/package.json` once (project first, then core) and accepts only `~16.3.6`: the table's
+The emitter resolves `next/package.json` once (project first, then core) and accepts only `~16.3.8`: the table's
 `next` is the verified baseline, and any stable 16.3.x patch at or above it is accepted, while other minors/majors,
 lower patches and prereleases are refused (`NS_HOST_UNSUPPORTED_NEXT_VERSION`). It loads Next's segment config
 schema from that same package root.

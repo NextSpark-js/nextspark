@@ -16,7 +16,7 @@ const PREPARE_CLI = join(CORE_ROOT, 'scripts/build/registry/host/prepare-cli.mjs
 function project() {
   const root = mkdtempSync(join(tmpdir(), 'nextspark-host-project-'))
   write(root, 'nextspark.config.ts', 'export default { plugins: [] }\n')
-  write(root, 'package.json', JSON.stringify({ name: 'host-project', dependencies: { next: '16.3.6' } }))
+  write(root, 'package.json', JSON.stringify({ name: 'host-project', dependencies: { next: '16.3.8' } }))
   write(root, 'templates/pricing/page.tsx', PAGE('Pricing'))
   write(root, 'api/ping/route.ts', ROUTE)
   return { root, cleanup: () => rmSync(root, { recursive: true, force: true }) }
@@ -41,7 +41,7 @@ test('a real project: the registry build is staged and published with the host, 
 
     const record = readGeneration(root)
     assert.equal(Object.keys(record.files).length, first.files.length)
-    assert.ok(record.versions.core && record.versions.next === '16.3.6')
+    assert.ok(record.versions.core && record.versions.next === '16.3.8')
     assert.ok(record.inputs.files['nextspark.config.ts'] && record.inputs.files['templates/pricing/page.tsx'])
     assert.deepEqual(await checkHost(config), { ok: true, problems: [] })
 

@@ -72,6 +72,8 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // The monorepo dev app only, not a template to copy: its sample data loads these hosts. A project
+    // starts from packages/core/templates/next.config.mjs, which lists exact hosts.
     remotePatterns: [
       {
         protocol: 'https',

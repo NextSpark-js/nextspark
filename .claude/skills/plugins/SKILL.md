@@ -118,7 +118,7 @@ Result: No conflicts, optimized bundle
   },
   "peerDependencies": {
     "@nextsparkjs/core": "workspace:*",
-    "next": "~16.3.6",
+    "next": "~16.3.8",
     "react": "^19.0.0",
     "zod": "^4.0.0"
   }

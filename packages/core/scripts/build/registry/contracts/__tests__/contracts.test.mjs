@@ -73,7 +73,7 @@ const NOTES_CONFIG = `export const noteEntityConfig = {
 function project(extra = {}) {
   const root = temp()
   write(root, 'nextspark.config.ts', 'export default { plugins: [] }\n')
-  write(root, 'package.json', JSON.stringify({ name: 'contracts-project', dependencies: { next: '16.3.6' } }))
+  write(root, 'package.json', JSON.stringify({ name: 'contracts-project', dependencies: { next: '16.3.8' } }))
   write(root, 'config/theme.config.ts', "export const contractsThemeConfig = { name: 'contracts' }\n")
   write(root, 'entities/tasks/tasks.config.ts', TASKS_CONFIG)
   write(root, 'entities/tasks/tasks.fields.ts', FIELDS)
