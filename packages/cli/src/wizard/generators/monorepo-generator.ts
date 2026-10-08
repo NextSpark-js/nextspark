@@ -115,6 +115,8 @@ export const VERSIONS = {
 
   // Expo modules (use ~ for patch compatibility)
   EXPO_CONSTANTS: '~18.0.13',
+  // Native dev client: `expo run:ios|android` builds a debug app that needs it to open the bundler
+  EXPO_DEV_CLIENT: '~6.0.21',
   EXPO_DEVICE: '~8.0.10',
   // babel.config.js names it as a preset
   BABEL_PRESET_EXPO: '~54.0.12',
@@ -463,8 +465,8 @@ export async function createMobilePackageJson(mobileDir: string, config: WizardC
     main: 'expo-router/entry',
     scripts: {
       start: 'expo start',
-      android: 'expo start --android',
-      ios: 'expo start --ios',
+      android: 'expo run:android',
+      ios: 'expo run:ios',
       web: 'expo start --web',
       lint: 'eslint .',
       typecheck: 'tsc --noEmit',
@@ -482,6 +484,7 @@ export async function createMobilePackageJson(mobileDir: string, config: WizardC
       'babel-preset-expo': VERSIONS.BABEL_PRESET_EXPO,
       'expo': VERSIONS.EXPO,
       'expo-constants': VERSIONS.EXPO_CONSTANTS,
+      'expo-dev-client': VERSIONS.EXPO_DEV_CLIENT,
       'expo-device': VERSIONS.EXPO_DEVICE,
       'expo-linking': VERSIONS.EXPO_LINKING,
       'expo-router': VERSIONS.EXPO_ROUTER,

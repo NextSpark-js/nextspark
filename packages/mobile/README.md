@@ -361,6 +361,32 @@ export function useCreateTask() {
 }
 ```
 
+## Running on a simulator or emulator
+
+Sign-out clears the native cookie store with a native module, so the app needs a [development build](https://docs.expo.dev/develop/development-builds/introduction/), not Expo Go. The template ships `expo-dev-client` for it:
+
+```bash
+cd mobile
+pnpm ios       # expo run:ios, needs Xcode and CocoaPods
+pnpm android   # expo run:android, needs Android Studio and an emulator
+```
+
+**The first run is slow, and nothing prints for a while.** Measured on an Apple Silicon Mac with Xcode 26.3 and a cold CocoaPods cache: `pod install` took about 14 minutes (it downloads about 800 MB of React Native and Hermes binaries from Maven), and the native Xcode build another 15 minutes or so. Later runs reuse the pods and the build products. After the first `expo run:ios`, `pnpm start` is enough to serve Metro to the installed build; to use Expo Go instead, run `expo start --go` (the native cookie module will not work there).
+
+**The bundler port.** `expo run:ios` starts Metro on 8081. `--port <n>` moves it, and the app has to be told where to find it. The `expo-dev-client` launcher takes that from the link the CLI opens. A debug build without `expo-dev-client` (a project created before the template added it) ignores that link and shows "No script URL provided": add the dependency (`pnpm add expo-dev-client`) and rebuild, or point the app at Metro for the simulator:
+
+```bash
+xcrun simctl spawn <udid> defaults write <bundle id> RCT_jsLocation localhost:<port>
+# back to the default (8081):
+xcrun simctl spawn <udid> defaults delete <bundle id> RCT_jsLocation
+```
+
+The value is stored in the simulator and survives restarts. Get `<udid>` from `xcrun simctl list devices booted`; `booted` can stand in for it only when exactly one simulator is running.
+
+**Against a production build of the web app, use HTTPS.** In production core marks the session cookie `Secure` (`secure` is on when `NODE_ENV=production`), and iOS does not send a `Secure` cookie over `http://localhost`: the code is accepted, then the first request after it (`GET /api/v1/teams`) fails with 401 and the app shows "Request failed with status 401". Measured on the iOS simulator with `next start` on `http://localhost`; the same build behind a local TLS proxy signed in. By that code `next dev` is not affected (not measured). For a local production check, put a TLS proxy in front, set `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` to its `https://` origin (the second is read at build time), and trust its CA in the simulator with `xcrun simctl keychain <udid> add-root-cert ca.pem`. The sign-in endpoints are rate limited, so repeated attempts in a row end in 429.
+
+On the Android emulator the API is at `http://10.0.2.2:3000` (see [Environment Configuration](#environment-configuration)).
+
 ## Troubleshooting
 
 ### Cannot connect to API
