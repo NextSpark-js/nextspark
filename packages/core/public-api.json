@@ -1,0 +1,260 @@
+{
+  "$comment": "Public subpaths of @nextsparkjs/core. See docs/17-updates/07-public-api.md. tests/node/public-api.test.ts checks it against the stable templates and the exports map.",
+  "reasons": {
+    "template-import": "A stable template (the starter project and the shared files the scaffold copies) imports it.",
+    "config-contract": "It carries a configuration contract: nextspark.config.ts, entity config, definePlugin, BlockConfig, billing config types, permissions or features.",
+    "documented": "The Public API document lists it by name."
+  },
+  "entries": [
+    {
+      "subpath": ".",
+      "reason": "documented",
+      "area": "Package root",
+      "note": "The package root: cn, hooks, contexts, providers, UI components and authenticateRequest."
+    },
+    {
+      "subpath": "./lib/config",
+      "reason": "config-contract",
+      "area": "Configuration",
+      "note": "defineConfig and validateNextSparkConfig for nextspark.config.ts; the generated nextspark.config.ts imports it."
+    },
+    {
+      "subpath": "./lib/config/nextspark-types",
+      "reason": "config-contract",
+      "area": "Configuration",
+      "note": "The NextSparkConfig types behind nextspark.config.ts."
+    },
+    {
+      "subpath": "./lib/config/types",
+      "reason": "config-contract",
+      "area": "Configuration",
+      "note": "App configuration types (app.config.ts, dev.config.ts)."
+    },
+    {
+      "subpath": "./lib/config/features-types",
+      "reason": "config-contract",
+      "area": "Configuration",
+      "note": "Feature flag configuration types (features.config.ts)."
+    },
+    {
+      "subpath": "./lib/billing/config-types",
+      "reason": "config-contract",
+      "area": "Configuration",
+      "note": "Billing configuration types (billing.config.ts)."
+    },
+    {
+      "subpath": "./lib/permissions/types",
+      "reason": "config-contract",
+      "area": "Configuration",
+      "note": "Permission configuration types (permissions.config.ts)."
+    },
+    {
+      "subpath": "./lib/entities/types",
+      "reason": "config-contract",
+      "area": "Configuration",
+      "note": "Entity configuration types (EntityConfig and its fields)."
+    },
+    {
+      "subpath": "./types/blocks",
+      "reason": "config-contract",
+      "area": "Configuration",
+      "note": "BlockConfig, baseBlockSchema and the block field types."
+    },
+    {
+      "subpath": "./types/plugin",
+      "reason": "config-contract",
+      "area": "Configuration",
+      "note": "definePlugin and the PluginConfig types."
+    },
+    {
+      "subpath": "./types/theme",
+      "reason": "config-contract",
+      "area": "Configuration",
+      "note": "Project theme configuration types (theme.config.ts)."
+    },
+    {
+      "subpath": "./types/api-presets",
+      "reason": "template-import",
+      "area": "Configuration",
+      "note": "API presets for entity api folders."
+    },
+    {
+      "subpath": "./components/ui",
+      "reason": "template-import",
+      "area": "UI components",
+      "note": "Barrel for optimizePackageImports in next.config.mjs."
+    },
+    {
+      "subpath": "./components/ui/avatar",
+      "reason": "template-import",
+      "area": "UI components"
+    },
+    {
+      "subpath": "./components/ui/badge",
+      "reason": "template-import",
+      "area": "UI components"
+    },
+    {
+      "subpath": "./components/ui/button",
+      "reason": "template-import",
+      "area": "UI components"
+    },
+    {
+      "subpath": "./components/ui/card",
+      "reason": "template-import",
+      "area": "UI components"
+    },
+    {
+      "subpath": "./components/ui/skeleton-features",
+      "reason": "template-import",
+      "area": "UI components"
+    },
+    {
+      "subpath": "./components/ui/skeleton-public",
+      "reason": "template-import",
+      "area": "UI components"
+    },
+    {
+      "subpath": "./hooks",
+      "reason": "template-import",
+      "area": "Hooks and contexts",
+      "note": "Barrel for optimizePackageImports in next.config.mjs."
+    },
+    {
+      "subpath": "./contexts/TeamContext",
+      "reason": "template-import",
+      "area": "Hooks and contexts"
+    },
+    {
+      "subpath": "./lib/utils",
+      "reason": "template-import",
+      "area": "Utilities"
+    },
+    {
+      "subpath": "./lib/base-path",
+      "reason": "template-import",
+      "area": "Utilities"
+    },
+    {
+      "subpath": "./lib/db",
+      "reason": "template-import",
+      "area": "Data access"
+    },
+    {
+      "subpath": "./lib/api/auth/dual-auth",
+      "reason": "documented",
+      "area": "Request pipeline",
+      "note": "authenticateRequest for API routes; the nextspark skills guide tells projects to import it."
+    },
+    {
+      "subpath": "./lib/auth",
+      "reason": "template-import",
+      "area": "Request pipeline",
+      "note": "Imported by the proxy.ts the scaffold writes."
+    },
+    {
+      "subpath": "./lib/auth/session-hint",
+      "reason": "template-import",
+      "area": "Request pipeline",
+      "note": "Imported by the proxy.ts the scaffold writes."
+    },
+    {
+      "subpath": "./lib/auth/runtime-readiness",
+      "reason": "template-import",
+      "area": "Request pipeline",
+      "note": "Imported by instrumentation.ts."
+    },
+    {
+      "subpath": "./lib/middleware",
+      "reason": "template-import",
+      "area": "Request pipeline",
+      "note": "Imported by the proxy.ts the scaffold writes."
+    },
+    {
+      "subpath": "./lib/teams/active-team-cookie",
+      "reason": "template-import",
+      "area": "Request pipeline",
+      "note": "Imported by the proxy.ts the scaffold writes."
+    },
+    {
+      "subpath": "./lib/docs/access",
+      "reason": "template-import",
+      "area": "Request pipeline",
+      "note": "Imported by the proxy.ts the scaffold writes."
+    },
+    {
+      "subpath": "./lib/scheduled-actions",
+      "reason": "template-import",
+      "area": "Jobs",
+      "note": "Imported by instrumentation.ts."
+    },
+    {
+      "subpath": "./lib/blocks/sanitize-html",
+      "reason": "template-import",
+      "area": "Blocks"
+    },
+    {
+      "subpath": "./lib/billing/stripe-webhook",
+      "reason": "template-import",
+      "area": "Billing",
+      "note": "Public only because templates/lib/billing/stripe-webhook-extensions.ts imports it. The gateways and webhook handlers stay internal."
+    },
+    {
+      "subpath": "./lib/billing/polar-webhook",
+      "reason": "template-import",
+      "area": "Billing",
+      "note": "Public only because templates/lib/billing/polar-webhook-extensions.ts imports it. The gateways and webhook handlers stay internal."
+    },
+    {
+      "subpath": "./lib/email/types",
+      "reason": "template-import",
+      "area": "Email"
+    },
+    {
+      "subpath": "./lib/email/send",
+      "reason": "documented",
+      "area": "Email",
+      "note": "Named by the emails/_README.md the starter copies."
+    },
+    {
+      "subpath": "./emails/verify-email",
+      "reason": "template-import",
+      "area": "Email"
+    },
+    {
+      "subpath": "./i18n",
+      "reason": "template-import",
+      "area": "Internationalization",
+      "note": "Re-exported by the i18n.ts the scaffold writes."
+    },
+    {
+      "subpath": "./lib/i18n/client-messages",
+      "reason": "template-import",
+      "area": "Internationalization"
+    },
+    {
+      "subpath": "./styles/utilities.css",
+      "reason": "template-import",
+      "area": "Styles",
+      "note": "Imported by the starter globals.css."
+    },
+    {
+      "subpath": "./styles/docs.css",
+      "reason": "template-import",
+      "area": "Styles",
+      "note": "Imported by the starter globals.css."
+    },
+    {
+      "subpath": "./selectors",
+      "reason": "template-import",
+      "area": "Testing selectors",
+      "note": "Public only because the starter lib/selectors.ts and its Cypress tests import it."
+    },
+    {
+      "subpath": "./lib/selectors/selector-factory",
+      "reason": "template-import",
+      "area": "Testing selectors",
+      "note": "Public only because the starter lib/block-selectors.ts imports it."
+    }
+  ]
+}

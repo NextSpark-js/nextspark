@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The accessibility guide states WCAG 2.2 AA as the 1.0 target (axe in CI plus a keyboard and focus pass), still in progress, and no longer promises legal compliance.
 - The beta.192 status page is marked historical. The README and guides no longer call the project production-ready or recommend Supabase and Vercel.
 
+### Added
+
+- The [Public API](./docs/17-updates/07-public-api.md) of `@nextsparkjs/core`: the list of subpaths that follow SemVer (`public-api.json`) and the rule that makes a subpath public. A node test fails when a stable template imports a subpath that is not on the list. The exports map is unchanged; closing it is a 2.0 change.
+
 ## [0.1.0-beta.197] - 2026-10-08
 
 ### Upgrading from 0.1.0-beta.196

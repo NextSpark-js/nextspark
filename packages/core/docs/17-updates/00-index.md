@@ -10,3 +10,4 @@ How a NextSpark project moves between releases of the `@nextsparkjs` packages.
 | [0.1.0-beta.192 status](./03-beta-192-status) | You want the scope, breaking changes and verification of the beta.192 line (historical). |
 | [Root-first contributor migration](./04-beta-192-root-first-contributor-migration) | You contribute to the framework repository itself, not to a project built with it. |
 | [`sync:app` removal timeline](./05-sync-app-removal) | You used `sync:app` or core's postinstall write and need to know what replaces them. |
+| [Public API](./07-public-api) | You want to know which `@nextsparkjs/core` subpaths follow SemVer and which may change in a minor. |
