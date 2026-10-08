@@ -1,6 +1,6 @@
 # Accessibility (a11y)
 
-> **1.0 target, in progress:** the target for 1.0 is **WCAG 2.2 AA** for the `starter` template. It is checked with two things: axe in CI, with no serious or critical findings, and a manual keyboard and focus pass over the starter's authentication flows, dashboard and task CRUD. This is a target, not a claim: the checks are being added, and passing them is a release gate. NextSpark does not certify that a project meets any law or standard. Content, customization and the accessibility of your own components are your responsibility. See [Stability](../22-stability-and-support/01-stability.md).
+> **1.0 target:** WCAG 2.2 AA for the `starter` template, checked two ways: axe in CI, which fails on any serious or critical finding, and a manual keyboard and focus pass over the starter's authentication flows, dashboard and task create, edit and delete. This is a target, not a claim: passing the checks is a release gate, and NextSpark does not certify that a project meets any law or standard. Content, customization and the accessibility of your own components are your responsibility. See [Stability](../22-stability-and-support/01-stability.md).
 
 This guide covers the accessibility practices used in NextSpark's components and the checks that apply to them.
 
@@ -902,6 +902,23 @@ describe('Login Page', () => {
   })
 })
 ```
+
+### Checks that run for the starter
+
+- **axe in CI.** The *Generated projects* workflow builds the `starter` from the packed packages and runs `scripts/accessibility/axe-scan.mjs` (axe-core with the WCAG 2.0, 2.1 and 2.2 A and AA rules, through Playwright). It scans the public pages and, signed in by email code, the dashboard, the task list (also with the row menu and the delete confirmation open), the task create, detail and edit pages and the profile settings. The job fails on any serious or critical violation and uploads the report as `starter-axe-report`. Moderate and minor findings are in the report and do not fail the job. axe's best-practice rules are reported but never block. With a Radix menu open, the rule `aria-hidden-focus` is switched off for that one state: the menu keeps Tab inside it, and axe flags the page behind it anyway.
+- **Keyboard and focus pass (manual, one run).** A keyboard and focus pass was run on the starter at `0.1.0-beta.197` plus the fixes of this change set, with a Playwright script that is not part of the repository. It covered sign-in by email code, the dashboard, the task list, create, edit and delete (the row menu and the confirmation dialog) and the profile settings. In that flow every control was reachable with Tab, a focus ring (outline or box-shadow) showed on each stop, menus and dialogs kept Tab inside and gave focus back on Escape, and nothing trapped the keyboard. It found two defects that are fixed: the dashboard had no skip link, and focus fell to `<body>` when the confirmation dialog of a row action closed. It is a record of that run, not a test that runs on every change.
+- **Not covered:** screen-reader testing, zoom and reflow, forced colors, touch target size beyond the 24 px check axe makes on the desktop viewport, the mobile layout, and pages outside those flows (superadmin, devtools, the page builder, the other templates). Also the WCAG 2.2 criteria axe cannot check (2.4.11 focus not obscured, 2.5.7 dragging, 3.3.7 redundant entry, 3.3.8 accessible authentication) and the contrast of the focus indicator: the pass only checks that an indicator is present. Automated rules find only part of the problems.
+
+You can point the scan at your own built project: `node scripts/accessibility/axe-scan.mjs --app <project dir>`.
+
+### Rules the starter's findings came from
+
+- A `role="combobox"` button takes its accessible name from `aria-label` or a label, not from its text.
+- Every input needs a label whose `htmlFor` matches the input's `id`.
+- Use palette steps whose text reaches 4.5:1 (for example `-700` backgrounds under white text).
+- After a dialog opened from a menu item closes, return focus to the control that opened the menu.
+- A visible text must be part of the accessible name (2.5.3): an `aria-label` that does not contain the text the control shows fails, and so does text that is in the DOM but not in the label (an initials badge next to a labelled link). Drop the `aria-label`, or render decoration as generated content.
+- Give each page one `<main>` and one top-level banner: the root layout renders no `<main>`, so each area (dashboard, settings, auth, public pages, superadmin, devtools) renders its own.
 
 ### Manual Testing
 

@@ -86,5 +86,5 @@ The generated `src/app` is not public. Closing the export map to the public list
 
 These are targets for 1.0, not guarantees:
 
-- Accessibility: WCAG 2.2 AA, see [Accessibility](../09-frontend/07-accessibility.md).
+- Accessibility: WCAG 2.2 AA, see [Accessibility](../09-frontend/07-accessibility.md). An axe scan of the starter runs in CI and fails on serious or critical findings; the keyboard and focus pass is manual.
 - Performance: LCP of 2.5 s or less on the reference environment, and per-route client JavaScript within the ceilings in `scripts/performance/starter-route-js-budget.json`.
