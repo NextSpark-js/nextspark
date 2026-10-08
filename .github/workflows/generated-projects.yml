@@ -14,6 +14,7 @@ on:
       - 'scripts/performance/**'
       - 'scripts/packages/**'
       - 'scripts/security/**'
+      - 'scripts/deploy/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -221,6 +222,63 @@ jobs:
         with:
           legacy-isr: 'true'
           probes: 'true'
+
+  # Standalone output (`output: 'standalone'`): a starter built with it, copied without the checkout to a separate directory
+  # and served there with `node server.js`, alone and behind a TLS proxy. The script is the one to run locally.
+  standalone:
+    needs: pack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dbuser
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+        with:
+          node-version: '24'
+
+      - name: Download the packed packages
+        uses: actions/download-artifact@v4
+        with:
+          name: packages
+          path: ${{ runner.temp }}/packages
+
+      - name: Download the built create-nextspark-app
+        uses: actions/download-artifact@v4
+        with:
+          name: create-nextspark-app-dist
+          path: packages/create-nextspark-app/dist
+
+      - name: Deploy the starter as standalone output and check it
+        run: scripts/deploy/verify-standalone.sh --packages "$RUNNER_TEMP/packages" --work "$RUNNER_TEMP/standalone" --logs "$RUNNER_TEMP/standalone-logs"
+        env:
+          PGHOST: localhost
+          PGUSER: dbuser
+          PGPASSWORD: postgres
+
+      - name: Upload the logs
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standalone-logs
+          path: ${{ runner.temp }}/standalone-logs
+          if-no-files-found: ignore
+          retention-days: 7
 
   # The migrations of every template against the PostgreSQL versions beyond the one the builds use (15).
   migrate:
