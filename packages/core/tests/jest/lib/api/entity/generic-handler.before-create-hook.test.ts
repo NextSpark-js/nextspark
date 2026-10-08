@@ -62,6 +62,8 @@ jest.mock('@nextsparkjs/core/lib/api/helpers', () => ({
 
 jest.mock('@nextsparkjs/core/lib/permissions/check', () => ({
   checkPermission: jest.fn(),
+  publishPermissionFor: () => null,
+  declaredPublishPermission: () => null,
 }))
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 const mockCheckPermission = checkPermission as jest.Mock

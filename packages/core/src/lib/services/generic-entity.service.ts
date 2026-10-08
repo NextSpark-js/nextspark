@@ -24,7 +24,7 @@
  * ```
  */
 
-import { queryWithRLS, queryOneWithRLS, mutateWithRLS } from '../db'
+import { queryWithRLS, queryOneWithRLS, mutateWithRLS, getTransactionClient } from '../db'
 import { entityRegistry } from '../entities/registry'
 import { expirePublicEntity } from '../cache/public-entity-cache'
 import {
@@ -36,6 +36,7 @@ import {
   afterEntityDelete,
 } from '../entities/entity-hooks'
 import type { EntityConfig, EntityField } from '../entities/types'
+import { checkPermission, declaredPublishPermission, publishPermissionFor } from '../permissions/check'
 
 // ============================================
 // TYPES
@@ -531,6 +532,16 @@ export class GenericEntityService {
       throw new Error(`Validation failed: ${validation.errors.join(', ')}`)
     }
 
+    // Creating a record as published also needs `<slug>.publish` when the entity declares it. Without a status the
+    // field's configured default counts; without one either, the stored row is checked after the INSERT.
+    const statusField = entityConfig.fields.find((f: EntityField) => f.name === 'status')
+    const createStatus = finalData.status ?? statusField?.defaultValue
+    const publish = publishPermissionFor(entitySlug, createStatus)
+    if (publish && !(await checkPermission(userId, teamId, publish))) {
+      throw new Error('Permission denied')
+    }
+    const storedPublish = createStatus === undefined && statusField ? declaredPublishPermission(entitySlug) : null
+
     const tableName = getTableName(entityConfig)
     const fieldNames = getFieldNames(entityConfig)
     const selectClause = buildSelectClause(fieldNames)
@@ -552,13 +563,29 @@ export class GenericEntityService {
 
     const quotedFields = fields.map(f => quoteField(f)).join(', ')
 
-    const result = await mutateWithRLS<Record<string, unknown>>(
-      `INSERT INTO ${tableName} (${quotedFields})
+    const insertQuery = `INSERT INTO ${tableName} (${quotedFields})
        VALUES (${placeholders.join(', ')})
-       RETURNING ${selectClause}`,
-      values,
-      userId
-    )
+       RETURNING ${selectClause}`
+
+    // Without a status to check up front, the INSERT and the check of the status it stored share one transaction: a
+    // row the database's default made published is rolled back unless the caller may publish.
+    let result: { rows: Record<string, unknown>[]; rowCount: number }
+    if (storedPublish) {
+      const tx = await getTransactionClient(userId)
+      let denied = false
+      try {
+        result = await tx.mutate<Record<string, unknown>>(insertQuery, values)
+        denied = result.rows[0]?.status === 'published' && !(await checkPermission(userId, teamId, storedPublish))
+        if (denied) await tx.rollback()
+        else await tx.commit()
+      } catch (error) {
+        await tx.rollback().catch(() => {})
+        throw error
+      }
+      if (denied) throw new Error('Permission denied')
+    } else {
+      result = await mutateWithRLS<Record<string, unknown>>(insertQuery, values, userId)
+    }
 
     if (!result.rows[0]) {
       throw new Error('Failed to create entity')
@@ -633,6 +660,12 @@ export class GenericEntityService {
       throw new Error(`Validation failed: ${validation.errors.join(', ')}`)
     }
 
+    // Moving a record into or out of published also needs `<slug>.publish` when the entity declares it.
+    const publish = 'status' in finalData ? publishPermissionFor(entitySlug, finalData.status, currentEntity.status) : null
+    if (publish && !(await checkPermission(userId, (teamId ?? currentEntity.teamId) as string, publish))) {
+      throw new Error('Permission denied')
+    }
+
     // Build UPDATE statement
     const setClauses: string[] = []
     const values: unknown[] = []
@@ -662,6 +695,12 @@ export class GenericEntityService {
     if (teamId) {
       values.push(teamId)
       updateWhereClause += ` AND "teamId" = $${paramIndex}`
+      paramIndex++
+    }
+    // The status the publish check saw: a publish that lands in between fails the UPDATE instead of being undone
+    if ('status' in finalData && declaredPublishPermission(entitySlug)) {
+      values.push(currentEntity.status)
+      updateWhereClause += ` AND "status" IS NOT DISTINCT FROM $${paramIndex}`
     }
 
     const result = await mutateWithRLS<Record<string, unknown>>(

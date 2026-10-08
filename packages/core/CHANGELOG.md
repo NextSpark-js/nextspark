@@ -55,6 +55,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fields, sends no password, and after the account is created opens `/login` with the invited email filled in, to sign in with a code.
   Under the passwordless preset `/signup` still redirects to `/login`, except when it opens an invitation (`inviteToken` in the query).
   `useAuthReadiness` (`ClientAuthCapabilities`) now requires the new boolean and fails closed without it.
+- **Publishing and unpublishing need the entity's `publish` permission.** When an entity declares a `publish` action (the starter declares
+  `posts.publish` and `pages.publish` for owner and admin), creating a record with `status: "published"`, or changing a record's status into or
+  out of `published`, now also needs `<entity>.publish` in the caller's team role, on top of `<entity>.create` / `<entity>.update`. Without it the
+  REST API answers 403 `PERMISSION_DENIED` and nothing is written; `GenericEntityService.create` / `update` and the `createEntity` /
+  `updateEntity` server actions fail with `Permission denied`. The page builder saves through the REST API and follows the same rule. Drafts,
+  and edits that leave the status as it is, need only `create` / `update` as before. Entities that do not declare `publish` are unchanged.
+  A create without `status` counts the field's configured `defaultValue`; with none, the INSERT and the check of the status it stored run
+  in one transaction, rolled back (403, no usage counted) when the database's own default made the row published and the caller may not
+  publish. An update that sets `status` carries the status it was checked against in its `WHERE`:
+  if another write changed it in between, the REST API answers 409 `STATUS_CHANGED` (reload and retry) and the service fails.
 
 ### Fixed
 

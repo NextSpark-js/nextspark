@@ -19,7 +19,7 @@ import { generateEntitySchemas } from '../../entities/schema-generator'
 import { publicSlugIssue, otherBasePathSegments } from '../../entities/public-slug'
 import { getAllEntityConfigs } from '../../entities/registry'
 import { entityResponseSystemColumns, taxonomyResponseFields } from '../../entities/portable/response-shape'
-import { queryWithRLS, mutateWithRLS, queryOneWithRLS } from '../../db'
+import { queryWithRLS, mutateWithRLS, queryOneWithRLS, getTransactionClient } from '../../db'
 import {
   createApiResponse,
   createApiError,
@@ -36,7 +36,7 @@ import {
 } from '../helpers'
 import { beforeEntityCreate, afterEntityCreate, beforeEntityUpdate, afterEntityUpdate, beforeEntityDelete, afterEntityDelete, beforeEntityRead, afterEntityRead } from '../../entities/entity-hooks'
 import { logGenericHandlerUsage, type AuditContext } from './audit-log'
-import { checkPermission } from '../../permissions/check'
+import { checkPermission, declaredPublishPermission, publishPermissionFor } from '../../permissions/check'
 import type { Permission } from '../../permissions/types'
 import { extractPatternIds } from '../../blocks/pattern-resolver'
 import { isPatternReference } from '../../../types/pattern-reference'
@@ -1576,6 +1576,16 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
       return addCorsHeaders(response, request)
     }
 
+    // Creating a record as published also needs `<slug>.publish` when the entity declares it. Without a status in
+    // the payload the field's configured default counts; without one either, the stored row is checked below.
+    const createStatusField = entityConfig.fields.find((f: EntityField) => f.name === 'status')
+    const createStatus = (validatedData as Record<string, unknown>).status ?? createStatusField?.defaultValue
+    if (publishPermissionFor(entityConfig.slug, createStatus)) {
+      const publishDenied = await checkAuthPermission(authResult, entityConfig.slug, 'publish', teamId, request)
+      if (publishDenied) return publishDenied
+    }
+    const checkStoredStatus = createStatus === undefined && !!createStatusField && !!declaredPublishPermission(entityConfig.slug)
+
     if (idStrategy === 'serial') {
       // SERIAL: Let database generate ID via DEFAULT/SERIAL
       // Always include userId to track who created the record (even for shared entities)
@@ -1724,13 +1734,34 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
       VALUES (${placeholders.join(', ')}) RETURNING *
     `
 
-    const insertResult = await mutateWithRLS<Record<string, unknown>>(insertQuery, values, authResult.user!.id)
+    // Without a status to check up front, the INSERT and the check of the status it stored share one transaction: a
+    // row the database's default made published is rolled back unless the caller may publish.
+    let insertResult: { rows: Record<string, unknown>[]; rowCount: number }
+    if (checkStoredStatus) {
+      const tx = await getTransactionClient(authResult.user!.id)
+      try {
+        insertResult = await tx.mutate<Record<string, unknown>>(insertQuery, values)
+        if (insertResult.rows[0]?.status === 'published') {
+          const publishDenied = await checkAuthPermission(authResult, entityConfig.slug, 'publish', teamId, request)
+          if (publishDenied) {
+            await tx.rollback()
+            return publishDenied
+          }
+        }
+        await tx.commit()
+      } catch (error) {
+        await tx.rollback().catch(() => {})
+        throw error
+      }
+    } else {
+      insertResult = await mutateWithRLS<Record<string, unknown>>(insertQuery, values, authResult.user!.id)
+    }
 
     // Extract the generated ID from the insert result
     const createdEntityId = String(insertResult.rows[0]?.id)
 
     // ── Usage tracking (fire-and-forget) ──────────────────────────────
-    // After successful insert, increment the usage counter for this entity.
+    // After the insert is committed (and its status checked), increment the usage counter for this entity.
     if (limitSlug) {
       UsageService.track({
         teamId,
@@ -2219,6 +2250,22 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
       return addCorsHeaders(response, request)
     }
 
+    // Moving a record into or out of published also needs `<slug>.publish` when the entity declares it. A row
+    // that is not there is left to the UPDATE below (404), so another team's id answers as before. The UPDATE
+    // carries the status read here (statusRead), so a publish that lands in between is not undone unchecked.
+    let statusRead: { status: unknown } | undefined
+    if ('status' in entityData && entityConfig.fields.some((f: EntityField) => f.name === 'status') && declaredPublishPermission(entityConfig.slug)) {
+      statusRead = (await queryWithRLS<{ status: unknown }>(
+        `SELECT "status" FROM "${tableName}" WHERE id = $1 AND "teamId" = $2`,
+        [id, teamId],
+        authResult.user!.id
+      ))[0]
+      if (statusRead && publishPermissionFor(entityConfig.slug, (validatedData as Record<string, unknown>).status, statusRead.status)) {
+        const publishDenied = await checkAuthPermission(authResult, entityConfig.slug, 'publish', teamId, request)
+        if (publishDenied) return publishDenied
+      }
+    }
+
     // Build dynamic UPDATE query
     const updates: string[] = []
     const values: unknown[] = []
@@ -2371,6 +2418,10 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
         whereConditions.push(`"${updateOwnershipFilter.field}" = $${paramCount++}`)
         values.push(updateOwnershipFilter.value)
       }
+      if (statusRead) {
+        whereConditions.push(`"status" IS NOT DISTINCT FROM $${paramCount++}`)
+        values.push(statusRead.status)
+      }
 
       const updateQuery = `
         UPDATE "${tableName}"
@@ -2382,6 +2433,17 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
       const result = await mutateWithRLS(updateQuery, values, authResult.user!.id)
 
       if (!result.rows || result.rows.length === 0) {
+        // The status changed between the permission check and the UPDATE: the caller reloads and tries again
+        if (statusRead) {
+          const [now] = await queryWithRLS<{ status: unknown }>(
+            `SELECT "status" FROM "${tableName}" WHERE id = $1 AND "teamId" = $2`,
+            [id, teamId],
+            authResult.user!.id
+          )
+          if (now && now.status !== statusRead.status) {
+            return addCorsHeaders(createApiError('The record changed while it was being saved. Reload it and try again.', 409, undefined, 'STATUS_CHANGED'), request)
+          }
+        }
         const response = createApiError('Item not found', 404)
         return addCorsHeaders(response, request)
       }

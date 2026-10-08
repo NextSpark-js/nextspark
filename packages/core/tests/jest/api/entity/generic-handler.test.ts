@@ -87,6 +87,8 @@ jest.mock('@/core/lib/api/auth/dual-auth', () => {
 const mockCheckPermission = jest.fn();
 jest.mock('@/core/lib/permissions/check', () => ({
   checkPermission: (...args: unknown[]) => mockCheckPermission(...args),
+  publishPermissionFor: () => null,
+  declaredPublishPermission: () => null,
 }));
 
 const mockQueryWithRLS = jest.fn();

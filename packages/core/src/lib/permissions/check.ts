@@ -171,3 +171,20 @@ export function hasPermissionSync(
 ): boolean {
   return permissionRegistry.hasPermission(teamRole, permission)
 }
+
+/**
+ * The extra permission a write needs when it moves a record into or out of `published`: `<slug>.publish`, if the
+ * entity declares that action, else null. `next` is the status the write sets (undefined: not changed) and
+ * `current` the stored one (undefined on create). Every writer asks this: the REST handler (and the page builder
+ * through it), GenericEntityService and the server actions through it.
+ */
+export function publishPermissionFor(entitySlug: string, next: unknown, current?: unknown): Permission | null {
+  if (next === undefined || (next === 'published') === (current === 'published')) return null
+  return declaredPublishPermission(entitySlug)
+}
+
+/** `<slug>.publish` when the entity declares that action, else null. */
+export function declaredPublishPermission(entitySlug: string): Permission | null {
+  const permission = `${entitySlug}.publish` as Permission
+  return permissionRegistry.isValidPermission(permission) ? permission : null
+}

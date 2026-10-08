@@ -37,12 +37,13 @@ export const TEAM_PERMISSIONS_BY_ROLE: Record<string, string[]> = {
   viewer: ['team.view'],
 }
 
-// Entity permissions used by service tests (mirrors the default theme's customers entity)
+// Entity permissions used by service tests (mirrors the default theme's customers entity, and the starter's
+// posts entity, whose `publish` action is owner/admin only)
 const ENTITY_PERMISSIONS_BY_ROLE: Record<string, string[]> = {
-  owner: ['customers.create', 'customers.read', 'customers.list', 'customers.update', 'customers.delete'],
-  admin: ['customers.create', 'customers.read', 'customers.list', 'customers.update'],
+  owner: ['customers.create', 'customers.read', 'customers.list', 'customers.update', 'customers.delete', 'posts.create', 'posts.update', 'posts.publish'],
+  admin: ['customers.create', 'customers.read', 'customers.list', 'customers.update', 'posts.create', 'posts.update', 'posts.publish'],
   editor: ['customers.read', 'customers.list'],
-  member: ['customers.read', 'customers.list'],
+  member: ['customers.read', 'customers.list', 'posts.create', 'posts.update'],
   viewer: [],
 }
 

@@ -65,15 +65,26 @@ jest.mock('@/core/lib/api/auth/dual-auth', () => ({
 const mockCheckPermission = jest.fn()
 jest.mock('@/core/lib/permissions/check', () => ({
   checkPermission: (...args: unknown[]) => mockCheckPermission(...args),
+  // The real predicate: which entity declares `publish` comes from the permissions registry mock.
+  publishPermissionFor: jest.requireActual('@/core/lib/permissions/check').publishPermissionFor,
+  declaredPublishPermission: jest.requireActual('@/core/lib/permissions/check').declaredPublishPermission,
 }))
 
 const mockQueryWithRLS = jest.fn()
 const mockQueryOneWithRLS = jest.fn()
 const mockMutateWithRLS = jest.fn()
+// A transaction's statements go through mockMutateWithRLS too, so `writes` sees them; commit/rollback are recorded.
+const mockTxCommit = jest.fn()
+const mockTxRollback = jest.fn()
 jest.mock('@/core/lib/db', () => ({
   queryWithRLS: (...args: unknown[]) => mockQueryWithRLS(...args),
   queryOneWithRLS: (...args: unknown[]) => mockQueryOneWithRLS(...args),
   mutateWithRLS: (...args: unknown[]) => mockMutateWithRLS(...args),
+  getTransactionClient: async () => ({
+    mutate: (sql: string, params: unknown[]) => mockMutateWithRLS(sql, params),
+    commit: async () => mockTxCommit(),
+    rollback: async () => mockTxRollback(),
+  }),
 }))
 
 const mockGenerateEntitySchemas = jest.fn()
@@ -110,8 +121,9 @@ jest.mock('@/core/lib/services/pattern-usage.service', () => ({
 jest.mock('@/core/lib/services/subscription.service', () => ({
   SubscriptionService: { getActive: jest.fn(), canPerformAction: jest.fn() },
 }))
+const mockUsageTrack = jest.fn(async () => undefined)
 jest.mock('@/core/lib/services/usage.service', () => ({
-  UsageService: { track: jest.fn(), checkLimit: jest.fn() },
+  UsageService: { track: (...args: unknown[]) => mockUsageTrack(...args), checkLimit: jest.fn() },
 }))
 
 // Full mock — helpers.ts imports `../auth` (Better Auth + DB bootstrapping).
@@ -264,6 +276,9 @@ export const harness = {
     queryWithRLS: mockQueryWithRLS,
     queryOneWithRLS: mockQueryOneWithRLS,
     mutateWithRLS: mockMutateWithRLS,
+    txCommit: mockTxCommit,
+    txRollback: mockTxRollback,
+    usageTrack: mockUsageTrack,
     generateEntitySchemas: mockGenerateEntitySchemas,
     beforeEntityCreate: mockBeforeEntityCreate,
     afterEntityCreate: mockAfterEntityCreate,

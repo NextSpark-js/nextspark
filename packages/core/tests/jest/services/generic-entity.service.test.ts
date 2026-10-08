@@ -10,10 +10,16 @@ import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@/core/lib/db'
 import { entityRegistry } from '@/core/lib/entities/registry'
 
 // Mock database functions
+// A transaction's statements go through mutateWithRLS too; commit/rollback are recorded on mockTx.
+const mockTx = { commit: jest.fn(), rollback: jest.fn() }
 jest.mock('@/core/lib/db', () => ({
   queryOneWithRLS: jest.fn(),
   queryWithRLS: jest.fn(),
   mutateWithRLS: jest.fn(),
+  getTransactionClient: async () => {
+    const { mutateWithRLS } = jest.requireMock('@/core/lib/db')
+    return { mutate: (sql: string, params: unknown[]) => mutateWithRLS(sql, params), commit: async () => mockTx.commit(), rollback: async () => mockTx.rollback() }
+  },
 }))
 
 // Mock entity registry
@@ -845,3 +851,86 @@ describe('validateEntityData', () => {
     expect(result.valid).toBe(true)
   })
 })
+
+// ===========================================
+// publish permission (server actions reach the service)
+// ===========================================
+
+describe('GenericEntityService publish permission', () => {
+  // `posts.publish` is declared, for owner and admin only, in the permissions registry mock.
+  const postsConfig = { ...mockEntityConfig, slug: 'posts', tableName: 'posts' }
+  const routeRole = (role: string, stored: Record<string, unknown> = { ...mockEntityRow, status: 'draft' }) =>
+    mockQueryOneWithRLS.mockImplementation(async (sql: string) =>
+      (sql.includes('"team_members"') ? { role } : stored) as never)
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockEntityRegistry.get.mockReturnValue(postsConfig as any)
+    mockMutateWithRLS.mockResolvedValue({ rows: [mockEntityRow], rowCount: 1 } as any)
+  })
+
+  it('refuses a member creating a published post, and writes nothing', async () => {
+    routeRole('member')
+    await expect(GenericEntityService.create('posts', 'user-456', 'team-789', { title: 'x', status: 'published' }))
+      .rejects.toThrow('Permission denied')
+    expect(mockMutateWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('lets a member create a draft and an admin create a published post', async () => {
+    routeRole('member')
+    await GenericEntityService.create('posts', 'user-456', 'team-789', { title: 'x', status: 'draft' })
+    routeRole('admin')
+    await GenericEntityService.create('posts', 'user-456', 'team-789', { title: 'x', status: 'published' })
+    expect(mockMutateWithRLS).toHaveBeenCalledTimes(2)
+  })
+
+  it('refuses a member publishing or unpublishing, with or without a teamId', async () => {
+    routeRole('member', { ...mockEntityRow, status: 'draft' })
+    await expect(GenericEntityService.update('posts', 'entity-123', 'user-456', { status: 'published' }, 'team-789'))
+      .rejects.toThrow('Permission denied')
+    routeRole('member', { ...mockEntityRow, status: 'published' })
+    await expect(GenericEntityService.update('posts', 'entity-123', 'user-456', { status: 'draft' }))
+      .rejects.toThrow('Permission denied')
+    expect(mockMutateWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('lets a member edit a published post without changing its status', async () => {
+    routeRole('member', { ...mockEntityRow, status: 'published' })
+    await GenericEntityService.update('posts', 'entity-123', 'user-456', { title: 'typo' }, 'team-789')
+    expect(mockMutateWithRLS).toHaveBeenCalledTimes(1)
+  })
+
+  it('a configured default of published counts as publishing for a create without status', async () => {
+    mockEntityRegistry.get.mockReturnValue({ ...postsConfig, fields: [...postsConfig.fields.slice(0, 2), { name: 'status', type: 'select', defaultValue: 'published' }] } as any)
+    routeRole('member')
+    await expect(GenericEntityService.create('posts', 'user-456', 'team-789', { title: 'x' })).rejects.toThrow('Permission denied')
+    expect(mockMutateWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('without a configured default, the INSERT and the stored-status check share one transaction', async () => {
+    // a member: the row the database's default made published is rolled back, nothing committed, no DELETE
+    routeRole('member')
+    mockMutateWithRLS.mockResolvedValueOnce({ rows: [{ ...mockEntityRow, status: 'published' }], rowCount: 1 } as any)
+    await expect(GenericEntityService.create('posts', 'user-456', 'team-789', { title: 'x' })).rejects.toThrow('Permission denied')
+    expect(mockTx.rollback).toHaveBeenCalledTimes(1)
+    expect(mockTx.commit).not.toHaveBeenCalled()
+    expect(mockMutateWithRLS.mock.calls.filter(([sql]) => String(sql).startsWith('DELETE'))).toHaveLength(0)
+
+    // an admin: committed
+    jest.clearAllMocks()
+    routeRole('admin')
+    mockMutateWithRLS.mockResolvedValueOnce({ rows: [{ ...mockEntityRow, status: 'published' }], rowCount: 1 } as any)
+    await GenericEntityService.create('posts', 'user-456', 'team-789', { title: 'x' })
+    expect(mockTx.commit).toHaveBeenCalledTimes(1)
+    expect(mockTx.rollback).not.toHaveBeenCalled()
+  })
+
+  it('the UPDATE carries the status the publish check saw', async () => {
+    routeRole('admin', { ...mockEntityRow, status: 'draft' })
+    await GenericEntityService.update('posts', 'entity-123', 'user-456', { status: 'published' }, 'team-789')
+    const [sql, params] = mockMutateWithRLS.mock.calls[0] as [string, unknown[]]
+    expect(sql).toMatch(/AND "teamId" = \$3 AND "status" IS NOT DISTINCT FROM \$4/)
+    expect(params).toEqual(['published', 'entity-123', 'team-789', 'draft'])
+  })
+})
+
