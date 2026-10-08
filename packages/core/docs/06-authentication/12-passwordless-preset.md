@@ -91,7 +91,8 @@ endpoints (`sign-in/email`, `sign-up/email`, forget/reset/change-password) stay
 **enabled by default**, even under the passwordless preset, so:
 
 - existing password accounts keep working when a project switches preset,
-- seeded test users, Cypress API logins and DevKeyring keep working,
+- Cypress API logins and DevKeyring keep working with the sample users on a local
+  development database (`pnpm db:seed` loads them; production never gets them),
 - an admin can still be given a password if a project needs it.
 
 A strictly passwordless app hard-disables them:

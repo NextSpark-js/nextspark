@@ -586,6 +586,7 @@ function showNextSteps(
   // Step 2: Run migrations
   console.log(chalk.white('  2. Run database migrations:'))
   console.log(chalk.cyan('     pnpm db:migrate'))
+  console.log(chalk.gray('     Local development with sample users and content: pnpm db:seed'))
   console.log('')
 
   // Step 3: Start dev server

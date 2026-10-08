@@ -37,9 +37,11 @@ module.exports = {
 # Create test database
 createdb saas_test
 
-# Run migrations
-DATABASE_URL="postgresql://localhost/saas_test" pnpm migrate
+# Run migrations with the sample users the tests sign in as (local and CI test databases only)
+DATABASE_URL="postgresql://localhost/saas_test" pnpm db:seed
 ```
+
+Sample users (DevKeyring, Cypress) are for local development only: `pnpm db:seed` loads them; `pnpm db:migrate` alone does not, and neither applies them when `NODE_ENV` is `production`.
 
 ## Testing Email/Password Authentication
 

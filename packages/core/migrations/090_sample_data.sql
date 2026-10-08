@@ -7,6 +7,16 @@
 -- Theme-specific demo data (TMT.dev users, companies, invoices) is in:
 -- migrations/090_demo_users_teams.sql
 
+-- Only a development run that asked for sample data applies this file (see
+-- scripts/db/sample-data.mjs); anything else that runs it, such as a tool that
+-- applies every core .sql file in order, fails here instead of creating these accounts.
+DO $$
+BEGIN
+  IF current_setting('nextspark.seed_sample_data', true) IS DISTINCT FROM 'on' THEN
+    RAISE EXCEPTION 'Sample data is applied only by `pnpm db:seed` (or db:migrate --sample-data) outside production. If you ran that, the session setting it relies on was lost: a transaction-mode pooler (PgBouncer, Supavisor on port 6543) drops it, so point MIGRATE_DATABASE_URL at a direct connection.';
+  END IF;
+END $$;
+
 -- ============================================
 -- STEP 1: CREATE CORE TEST USERS
 -- ============================================

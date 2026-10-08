@@ -37,7 +37,7 @@ function loadProjectEnv(projectRoot: string): Record<string, string> {
 /**
  * Run database migrations
  */
-export async function dbMigrateCommand(): Promise<void> {
+export async function dbMigrateCommand(options: { sampleData?: boolean } = {}): Promise<void> {
   const spinner = ora('Preparing to run migrations...').start();
 
   try {
@@ -67,7 +67,7 @@ export async function dbMigrateCommand(): Promise<void> {
 
     spinner.start('Running database migrations...');
 
-    const migrateProcess = spawn('node', [migrationsScript], {
+    const migrateProcess = spawn('node', [migrationsScript, ...(options.sampleData ? ['--sample-data'] : [])], {
       cwd: projectRoot,
       stdio: 'inherit',
       env: {
@@ -103,13 +103,12 @@ export async function dbMigrateCommand(): Promise<void> {
 }
 
 /**
- * Seed the database with sample data
- * Note: This runs the same migration script as db:migrate,
- * which handles sample data as part of the migration process.
+ * Run the migrations and apply the sample data (development only).
+ * The migration script refuses the sample data when NODE_ENV is production.
  */
 export async function dbSeedCommand(): Promise<void> {
-  console.log(chalk.cyan('ℹ️  Sample data is included as part of the migration process.'));
-  console.log(chalk.cyan('   Running db:migrate to apply all migrations including sample data...\n'));
+  console.log(chalk.cyan('ℹ️  Running the migrations with the sample data (development only; never applied when NODE_ENV is production)...'));
+  console.log(chalk.yellow('   Never use a database seeded this way in production: its sample accounts share a documented password.\n'));
 
-  await dbMigrateCommand();
+  await dbMigrateCommand({ sampleData: true });
 }

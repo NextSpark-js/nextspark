@@ -21,6 +21,8 @@ cp .env.example .env.local
 
 # Run migrations
 pnpm db:migrate
+# Local development only: also load the sample users (DevKeyring, Cypress)
+pnpm db:seed
 
 # Start development
 pnpm dev

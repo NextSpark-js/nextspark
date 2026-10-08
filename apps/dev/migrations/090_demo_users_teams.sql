@@ -1,4 +1,5 @@
 -- Migration: 090_demo_users_teams.sql
+-- nextspark:sample-data
 -- Description: Demo users, teams, and invoices for default theme
 -- Date: 2025-12-24
 -- Theme: default

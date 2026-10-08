@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading from 0.1.0-beta.195
 
+- **Sample data is applied only on request, in development.** `pnpm db:migrate` no longer applies sample data (core's `090_sample_data.sql`,
+  and every project, plugin or entity migration whose name contains `sample_data`/`sample-data` or that has a `-- nextspark:sample-data` line).
+  `pnpm db:seed` (`nextspark db:seed`), `--sample-data` or `NEXTSPARK_SEED_SAMPLE_DATA=1` applies it, never when `NODE_ENV` is `production`.
+  A development database that already has the sample users: run `pnpm db:seed` rather than `pnpm db:migrate` for this upgrade. Cypress and
+  CI jobs that sign in as the sample users need `pnpm db:seed` on their throwaway database; the `cypress-smoke.yml` template now runs it, and
+  `cypress-regression.yml` no longer hides a failing seed. A tool that applies core's `.sql` files itself, outside `db:migrate`, now gets an
+  error from `090_sample_data.sql`: leave that file out. `db:seed` needs a direct database connection (not a transaction-mode pooler).
 - **`src/proxy.ts`: read the session in process (behind an HTTPS proxy every signed-in user was sent to `/login`). From 0.1.0-beta.195, or
   any earlier beta that copied the template proxy (the session check is the same since beta.190).** Your project owns
   `src/proxy.ts` and an upgrade never rewrites it, so apply the template's change by hand (`nextspark prepare`, `build` and `migrate` warn
@@ -56,6 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `public/uploads/temp/` to your `.gitignore` (in a monorepo, `web/public/uploads/temp/`), then
   `rm -f public/brand/.gitkeep public/uploads/.gitignore public/uploads/temp/.gitkeep`. Deleting `uploads/.gitignore` first leaves development
   uploads committable.
+
+### Security
+
+- Sample data is no longer applied outside development. See the security advisory published with this release.
 
 ### Changed
 

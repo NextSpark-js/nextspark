@@ -17,6 +17,8 @@ Welcome to the Starter theme for NextSpark. This minimal theme provides everythi
 3. Run migrations: `pnpm db:migrate`
 4. Start development: `pnpm dev`
 
+Sample users (DevKeyring, Cypress) are for local development only: `pnpm db:seed` loads them; `pnpm db:migrate` alone does not, and neither applies them when `NODE_ENV` is `production`.
+
 ## Project Structure
 
 ```

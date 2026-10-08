@@ -66,7 +66,7 @@ jobs:
       - name: Seed test data
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
-        run: pnpm db:seed || echo "No seed script found, skipping..."
+        run: pnpm db:seed
 
       - name: Build application
         run: pnpm build

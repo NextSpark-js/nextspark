@@ -577,6 +577,7 @@ export const DEV_CONFIG_OVERRIDES: DevConfig = {
    * DevKeyring - Quick login for testing
    * Users defined here will appear in the DevKeyring dropdown on the login page.
    * Only rendered in non-production environments.
+   * The sample users exist only in a local database loaded with `pnpm db:seed`.
    */
   devKeyring: {
     enabled: true,

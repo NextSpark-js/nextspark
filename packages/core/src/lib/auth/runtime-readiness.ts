@@ -4,6 +4,7 @@ import { AUTH_CONFIG } from '../config'
 import type { AuthConfig, AuthLoginMethod } from '../config/types'
 import { isPasswordLoginEnabled } from './auth-methods'
 import { warnClientIpSourceAtStartup } from '../api/client-ip'
+import { warnSampleAccountsAtStartup } from './sample-accounts'
 import {
   authReadinessConfigurationFromEnv,
   evaluateAuthReadiness,
@@ -63,6 +64,7 @@ export function getRuntimeAuthReadiness(options: RuntimeAuthReadinessOptions = {
 export function logAuthReadinessAtStartup(options: RuntimeAuthReadinessOptions = {}): void {
   // The startup hook every project's instrumentation already calls, so the client address warning rides on it
   warnClientIpSourceAtStartup(options.env ?? process.env)
+  void warnSampleAccountsAtStartup(options.env ?? process.env)
   try {
     const env = options.env ?? process.env
     if (env.NODE_ENV !== 'production') return

@@ -28,6 +28,9 @@
 // `pnpm db:migrate` uses. Templates are first extracted into a clean temporary
 // root-first project; apps/dev already is one. No .env is read or written.
 //
+// The run applies the theme's sample data (the database is empty and
+// throwaway), so NODE_ENV is development for it whatever the shell says.
+//
 // MIGRATE_DATABASE_URL is removed from the child's environment because
 // run-migrations.mjs connects to it in preference to DATABASE_URL, which
 // would migrate a database this script never checked.
@@ -46,6 +49,7 @@ import { GLOBAL_OBJECTS, inspectCluster } from './cluster-changes.mjs';
 import { inspectTarget, inspectMaintenanceDatabase } from './inspect-server.mjs';
 import { findTheme } from './theme-location.mjs';
 import { TIME_LIMIT_VARIABLE, migrationTimeLimit } from './migration-time-limit.mjs';
+import { SAMPLE_DATA_VARIABLE } from './sample-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -164,6 +168,8 @@ async function main() {
       ...inheritedEnv,
       DATABASE_URL: databaseUrl,
       [TIME_LIMIT_VARIABLE]: timeLimitSetting,
+      [SAMPLE_DATA_VARIABLE]: '1',
+      NODE_ENV: 'development',
     },
   });
   if (extracted) fs.rmSync(extracted, { recursive: true, force: true });

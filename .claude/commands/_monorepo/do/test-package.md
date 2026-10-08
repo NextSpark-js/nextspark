@@ -264,11 +264,13 @@ CYPRESS_SUPERADMIN_EMAIL=superadmin@nextspark.dev
 
 ```bash
 cd "$TEST_DIR"
-pnpm exec nextspark db:migrate
+# db:seed = the migrations plus the sample data (development only; plain db:migrate applies no sample data)
+pnpm exec nextspark db:seed
 ```
 
 **Verify:** Command completes without errors. Should show:
-- Phase 1: Core migrations (28 files)
+- `Sample data is applied (development)`
+- Phase 1: Core migrations (29 files)
 - Phase 2: Entity migrations (9 for the starter theme: pages, posts, tasks)
 
 **Seeded users** (table `users`, no password and no session: they sign in with an emailed code): `superadmin@nextspark.dev` (role `superadmin`), `developer@nextspark.dev` (role `developer`).

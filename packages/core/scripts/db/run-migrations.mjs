@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runAndRecordMigration, migrationFailure } from './migration-time-limit.mjs';
 import { getConfig } from '../build/registry/config.mjs';
+import { isSampleDataMigration, sampleDataPolicy } from './sample-data.mjs';
 
 const projectConfig = getConfig();
 const projectRoot = projectConfig.projectRoot;
@@ -21,6 +22,8 @@ let DATABASE_URL = process.env.DATABASE_URL ?? null;
 // Falls back to DATABASE_URL when unset (pre-cutover: same owner connection).
 let MIGRATE_DATABASE_URL = process.env.MIGRATE_DATABASE_URL ?? null;
 let MIGRATION_TIMEOUT_SECONDS = process.env.MIGRATION_TIMEOUT_SECONDS;
+// What the .env says about NODE_ENV and the sample-data switch (see sample-data.mjs)
+const fileEnv = {};
 
 if (readEnvFile && fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
@@ -39,6 +42,11 @@ if (readEnvFile && fs.existsSync(envPath)) {
       }
       if (key?.trim() === 'MIGRATION_TIMEOUT_SECONDS' && valueParts.length > 0) {
         MIGRATION_TIMEOUT_SECONDS = value;
+      }
+      // `export NODE_ENV=...` counts too; sample-data.mjs reads the value itself (case, trailing comment)
+      const name = key?.trim().replace(/^export\s+/, '');
+      if (['NODE_ENV', 'NEXTSPARK_SEED_SAMPLE_DATA'].includes(name) && valueParts.length > 0) {
+        fileEnv[name] = value;
       }
     }
   });
@@ -65,12 +73,20 @@ try {
 const ignoredParameters = ignoredParametersNotice(MIGRATION_URL, TIME_LIMIT);
 if (ignoredParameters) console.log(`⚠️  ${ignoredParameters}\n`);
 
+const SAMPLE_DATA = sampleDataPolicy({ argv: process.argv, env: process.env, fileEnv });
+
 async function runMigrations() {
   const client = migrationClient(MIGRATION_URL, TIME_LIMIT);
   
   try {
     await client.connect();
     console.log("✅ Connected to database\n");
+
+    // 029_sample_accounts_outside_development.sql reads it: a run that applies sample data keeps the sample accounts
+    await client.query("SELECT set_config('nextspark.seed_sample_data', $1, false)", [SAMPLE_DATA.apply ? 'on' : 'off']);
+    client.on('notice', notice => {
+      if (notice.message?.startsWith('Sample accounts:')) console.log(`🔐 ${notice.message}`);
+    });
     
     // Create migrations tracking table
     await client.query(`
@@ -101,9 +117,14 @@ async function runMigrations() {
         continue;
       }
       
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+      if (!SAMPLE_DATA.apply && isSampleDataMigration(file, sql)) {
+        console.log(`⏭️  Skipping ${file} (sample data)`);
+        continue;
+      }
+
       // Read and execute migration
       console.log(`🔄 Running ${file}...`);
-      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
       
       try {
         // Runs the file and records it in one transaction (see runAndRecordMigration)
@@ -141,11 +162,6 @@ async function getActivePlugins() {
   return projectConfig.plugins;
 }
 
-// Helper: Check if a filename is a sample_data migration
-function isSampleDataMigration(filename) {
-  return filename.toLowerCase().includes('sample_data') || filename.toLowerCase().includes('sample-data');
-}
-
 // Helper: Collect all migration files from a directory (theme/plugin level)
 function collectContentMigrations(migrationsPath, sourceType, sourceName) {
   if (!fs.existsSync(migrationsPath)) return [];
@@ -160,7 +176,7 @@ function collectContentMigrations(migrationsPath, sourceType, sourceName) {
     sourceName,
     filename: file,
     fullPath: path.join(migrationsPath, file),
-    isSampleData: isSampleDataMigration(file)
+    isSampleData: isSampleDataMigration(file, fs.readFileSync(path.join(migrationsPath, file), 'utf8'))
   }));
 }
 
@@ -193,7 +209,7 @@ function collectEntityMigrations(baseDir, sourceType, sourceName, depth = 0) {
           entityName,
           filename: file,
           fullPath: path.join(migrationsPath, file),
-          isSampleData: isSampleDataMigration(file),
+          isSampleData: isSampleDataMigration(file, fs.readFileSync(path.join(migrationsPath, file), 'utf8')),
           depth
         });
       }
@@ -415,9 +431,9 @@ async function runEntityMigrations() {
     const sortByFilename = (a, b) => a.filename.localeCompare(b.filename);
 
     const contentSchema = allContentMigrations.filter(m => !m.isSampleData).sort(sortByFilename);
-    const contentSampleData = allContentMigrations.filter(m => m.isSampleData).sort(sortByFilename);
+    const contentSampleData = allContentMigrations.filter(m => m.isSampleData && SAMPLE_DATA.apply).sort(sortByFilename);
     const entitySchema = allEntityMigrations.filter(m => !m.isSampleData).sort(sortByFilename);
-    const entitySampleData = allEntityMigrations.filter(m => m.isSampleData).sort(sortByFilename);
+    const entitySampleData = allEntityMigrations.filter(m => m.isSampleData && SAMPLE_DATA.apply).sort(sortByFilename);
 
     console.log(`📊 Migration breakdown:`);
     console.log(`   - Content schema: ${contentSchema.length}`);
@@ -550,6 +566,7 @@ async function runEntityMigrations() {
 // Main migration runner
 async function runAllMigrations() {
   console.log("🚀 Starting migration process...\n");
+  console.log(`🌱 ${SAMPLE_DATA.notice}\n`);
   
   // First run core migrations
   console.log("📋 PHASE 1: Core migrations");

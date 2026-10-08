@@ -208,22 +208,22 @@ const db = program
 db
   .command('migrate')
   .description('Run database migrations')
-  .action(dbMigrateCommand);
+  .action(() => dbMigrateCommand());
 
 db
   .command('seed')
-  .description('Seed database with sample data')
+  .description('Run migrations with the sample data (development only)')
   .action(dbSeedCommand);
 
 // Shorthand aliases for database commands
 program
   .command('db:migrate')
   .description('Run database migrations (alias)')
-  .action(dbMigrateCommand);
+  .action(() => dbMigrateCommand());
 
 program
   .command('db:seed')
-  .description('Seed database with sample data (alias)')
+  .description('Run migrations with the sample data, development only (alias)')
   .action(dbSeedCommand);
 
 // Setup AI workflow

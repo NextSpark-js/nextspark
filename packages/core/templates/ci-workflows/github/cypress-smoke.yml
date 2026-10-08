@@ -59,7 +59,8 @@ jobs:
       - name: Setup database
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
-        run: pnpm db:migrate
+        # a throwaway test database: migrations plus the sample users the tests sign in as
+        run: pnpm db:seed
 
       - name: Build application
         run: pnpm build

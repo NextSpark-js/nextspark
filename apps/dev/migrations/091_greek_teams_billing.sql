@@ -1,4 +1,5 @@
 -- Migration: 091_greek_teams_billing.sql
+-- nextspark:sample-data
 -- Description: Greek alphabet teams for billing/subscription testing
 -- Date: 2025-12-25
 -- Theme: default
