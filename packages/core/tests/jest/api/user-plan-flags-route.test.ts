@@ -4,8 +4,8 @@
  */
 import { NextRequest } from 'next/server'
 
-const getTypedSession = jest.fn()
-jest.mock('@nextsparkjs/core/lib/auth', () => ({ getTypedSession: (...args: unknown[]) => getTypedSession(...args) }))
+const getAuthorizationSession = jest.fn()
+jest.mock('@nextsparkjs/core/lib/auth/authorization-session', () => ({ getAuthorizationSession: (...args: unknown[]) => getAuthorizationSession(...args) }))
 const getUserPlanAndFlags = jest.fn()
 jest.mock('@nextsparkjs/core/lib/user-data', () => ({
   getUserPlanAndFlags: (...args: unknown[]) => getUserPlanAndFlags(...args),
@@ -20,7 +20,7 @@ const get = (query = '') => GET(new NextRequest(`http://localhost:3000/api/user/
 
 describe('GET /api/user/plan-flags', () => {
   beforeEach(() => {
-    getTypedSession.mockResolvedValue({ user: { id: 'user-1', role: 'member' } })
+    getAuthorizationSession.mockResolvedValue({ user: { id: 'user-1', role: 'member' } })
     getUserPlanAndFlags.mockReset().mockResolvedValue({ plan: 'free', flags: [], cached: false })
   })
 
