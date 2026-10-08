@@ -170,8 +170,9 @@ export class MediaService {
 
   // Tag operations
   static async getTags(mediaId: string, userId: string): Promise<MediaTag[]>
-  static async addTag(mediaId: string, tagId: string, userId: string): Promise<void>
-  static async removeTag(mediaId: string, tagId: string, userId: string): Promise<void>
+  static async addTag(mediaId: string, tagId: string, userId: string, teamId: string): Promise<boolean>
+  static async removeTag(mediaId: string, tagId: string, userId: string): Promise<boolean>
+  static async setTags(mediaId: string, tagIds: string[], userId: string, teamId: string): Promise<void>
   static async getAllTags(userId: string): Promise<MediaTag[]>
 
   // Duplicate detection

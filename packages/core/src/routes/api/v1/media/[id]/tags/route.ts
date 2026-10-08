@@ -100,11 +100,15 @@ export const POST = withRateLimitTier(async (
       return createApiError('Invalid request body', 400, { errors: parsed.error.issues })
     }
 
-    await MediaService.addTag(id, parsed.data.tagId, authResult.user!.id)
+    await MediaService.addTag(id, parsed.data.tagId, authResult.user!.id, teamId)
     const tags = await MediaService.getMediaTags(id, authResult.user!.id, teamId)
 
     return createApiResponse(tags, undefined, 201)
   } catch (error) {
+    // Another team's tag answers as an unknown one, as another team's post category does
+    if ((error as { code?: string })?.code === 'TAG_NOT_FOUND') {
+      return createApiError('Tag not found', 404)
+    }
     console.error('[Media Tags API] Error adding tag:', error)
     return createApiError('Failed to add tag', 500)
   }
@@ -152,11 +156,15 @@ export const PUT = withRateLimitTier(async (
       return createApiError('Invalid request body', 400, { errors: parsed.error.issues })
     }
 
-    await MediaService.setTags(id, parsed.data.tagIds, authResult.user!.id)
+    await MediaService.setTags(id, parsed.data.tagIds, authResult.user!.id, teamId)
     const tags = await MediaService.getMediaTags(id, authResult.user!.id, teamId)
 
     return createApiResponse(tags)
   } catch (error) {
+    // Another team's tag answers as an unknown one, as another team's post category does
+    if ((error as { code?: string })?.code === 'TAG_NOT_FOUND') {
+      return createApiError('Tag not found', 404)
+    }
     console.error('[Media Tags API] Error setting tags:', error)
     return createApiError('Failed to set tags', 500)
   }

@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `POST` and `PUT /api/v1/media/:id/tags` answer 404 `Tag not found` for a tag that is not a media tag of the media item's team, and change nothing. `MediaService.addTag(mediaId, tagId, userId, teamId)` and `setTags(mediaId, tagIds, userId, teamId)` take the media item's team as a new, required last argument (`Team ID is required` without it) and check every tag against it.
 - The `removeMember` and `updateMemberRole` Server Actions write under the acting user's RLS context instead of the member's.
 - With the application on the `nextspark_app` connection, `POST /api/v1/teams` and accepting an invitation as an existing user no longer answer 500, and the invitee can decline an invitation or have it marked expired. Accepting claims the pending invitation before adding the member, so the same invitation is not accepted twice. The invitee's email is matched without case, as the accept route does.
 - Deleting an account now also deactivates the user's API keys (and drops them from the key cache) and removes the user from every team, in the same transaction as the anonymization. The audit log, login events, billing usage events and the invitations the user sent keep pointing at the anonymized user. The whole anonymization now runs on the service pool, so a deployment that runs the application as `nextspark_app` needs `DATABASE_SERVICE_URL`: without it the call fails with `User not found` and changes nothing (before, it left the sessions behind).

@@ -971,3 +971,47 @@ describe('MediaService', () => {
     })
   })
 })
+
+describe('MediaService tags of another team', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('addTag links a media tag of the media item\'s team', async () => {
+    mockQueryWithRLS.mockResolvedValue([{ id: 'tag-a' }])
+    mockMutateWithRLS.mockResolvedValue({ rows: [], rowCount: 1 })
+
+    expect(await MediaService.addTag('media-123', 'tag-a', 'user-456', 'team-789')).toBe(true)
+    const [sql, params] = mockQueryWithRLS.mock.calls[0]
+    expect(sql).toMatch(/type = 'media_tag' AND "teamId" = \$2/)
+    expect(params).toEqual([['tag-a'], 'team-789'])
+  })
+
+  it('addTag refuses a tag of another team (or not a media tag) and links nothing', async () => {
+    mockQueryWithRLS.mockResolvedValue([])
+
+    await expect(MediaService.addTag('media-123', 'tag-b', 'user-456', 'team-789')).rejects.toMatchObject({ code: 'TAG_NOT_FOUND' })
+    expect(mockMutateWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('setTags refuses the whole set when one tag is of another team, and keeps the current tags', async () => {
+    mockQueryWithRLS.mockResolvedValue([{ id: 'tag-a' }])
+
+    await expect(MediaService.setTags('media-123', ['tag-a', 'tag-b'], 'user-456', 'team-789')).rejects.toMatchObject({ code: 'TAG_NOT_FOUND' })
+    expect(mockMutateWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('setTags with the team\'s tags (repeated ids counted once) replaces the set', async () => {
+    mockQueryWithRLS.mockResolvedValue([{ id: 'tag-a' }])
+    mockMutateWithRLS.mockResolvedValue({ rows: [], rowCount: 1 })
+
+    await MediaService.setTags('media-123', ['tag-a', 'tag-a'], 'user-456', 'team-789')
+    expect(mockMutateWithRLS).toHaveBeenCalledTimes(2)
+  })
+
+  it('setTags with no tags clears them without a lookup', async () => {
+    mockMutateWithRLS.mockResolvedValue({ rows: [], rowCount: 0 })
+
+    await MediaService.setTags('media-123', [], 'user-456', 'team-789')
+    expect(mockQueryWithRLS).not.toHaveBeenCalled()
+    expect(mockMutateWithRLS).toHaveBeenCalledTimes(1)
+  })
+})

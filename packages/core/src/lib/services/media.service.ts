@@ -340,17 +340,41 @@ export class MediaService {
   }
 
   /**
-   * Add a tag to a media item
+   * Throws an Error with `.code === 'TAG_NOT_FOUND'` unless every id is an active media tag of `teamId`.
+   */
+  private static async assertTeamTags(tagIds: string[], userId: string, teamId: string): Promise<void> {
+    const unique = [...new Set(tagIds)]
+    if (unique.length === 0) return
+    const found = await queryWithRLS<{ id: string }>(
+      `SELECT id FROM "taxonomies"
+       WHERE id = ANY($1) AND type = 'media_tag' AND "teamId" = $2 AND "deletedAt" IS NULL`,
+      [unique, teamId],
+      userId
+    )
+    if (found.length !== unique.length) {
+      const error = new Error('Tag not found') as Error & { code?: string }
+      error.code = 'TAG_NOT_FOUND'
+      throw error
+    }
+  }
+
+  /**
+   * Add a tag to a media item. The tag must be a media tag of the media item's team.
    *
    * @param mediaId - Media item ID
    * @param tagId - Tag taxonomy ID
    * @param userId - User ID for RLS context
+   * @param teamId - The media item's team (media ownership verified before calling)
    * @returns True if tag was added
+   * @throws Error with `.code === 'TAG_NOT_FOUND'` for a tag of another team, of another type, or unknown
    */
-  static async addTag(mediaId: string, tagId: string, userId: string): Promise<boolean> {
+  static async addTag(mediaId: string, tagId: string, userId: string, teamId: string): Promise<boolean> {
     if (!mediaId?.trim()) throw new Error('Media ID is required')
     if (!tagId?.trim()) throw new Error('Tag ID is required')
     if (!userId?.trim()) throw new Error('User ID is required')
+    if (!teamId?.trim()) throw new Error('Team ID is required')
+
+    await this.assertTeamTags([tagId], userId, teamId)
 
     const result = await mutateWithRLS(
       `INSERT INTO "entity_taxonomy_relations" ("entityType", "entityId", "taxonomyId")
@@ -387,15 +411,21 @@ export class MediaService {
   }
 
   /**
-   * Set tags for a media item (replace all existing tags)
+   * Set tags for a media item (replace all existing tags). Every tag must be a media tag of the media item's team;
+   * otherwise nothing changes.
    *
    * @param mediaId - Media item ID
    * @param tagIds - Array of tag taxonomy IDs
    * @param userId - User ID for RLS context
+   * @param teamId - The media item's team (media ownership verified before calling)
+   * @throws Error with `.code === 'TAG_NOT_FOUND'` for a tag of another team, of another type, or unknown
    */
-  static async setTags(mediaId: string, tagIds: string[], userId: string): Promise<void> {
+  static async setTags(mediaId: string, tagIds: string[], userId: string, teamId: string): Promise<void> {
     if (!mediaId?.trim()) throw new Error('Media ID is required')
     if (!userId?.trim()) throw new Error('User ID is required')
+    if (!teamId?.trim()) throw new Error('Team ID is required')
+
+    await this.assertTeamTags(tagIds, userId, teamId)
 
     // Remove existing tags
     await mutateWithRLS(
