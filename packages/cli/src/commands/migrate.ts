@@ -1665,8 +1665,8 @@ function section(title: string, lines: string[]): void {
   for (const line of lines) console.log(`  ${line}`);
 }
 
-function printReport(report: MigrateReport): void {
-  console.log('NextSpark 0.x → 1.0 migration report (dry run)');
+function printReport(report: MigrateReport, dryRun: boolean): void {
+  console.log(`NextSpark 0.x → 1.0 migration report${dryRun ? ' (dry run)' : ''}`);
   section('Host root', [`${report.hostRoot.path} (${report.hostRoot.reason})`]);
   section('Versions', [
     `package manager: ${report.versions.packageManager.value ?? 'not declared'}`,
@@ -3725,13 +3725,13 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       if (options.json) {
         const json = JSON.stringify(report).replace(/[\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
         process.stdout.write(`${json}\n`);
-      } else printReport(report);
+      } else printReport(report, true);
       // A dry run is a report; it exits 1 only when the migration would refuse to run
       if (report.appConversion.blockers.length > 0 || report.hostPlan.conflicts.length > 0) process.exitCode = 1;
       return;
     }
     if (options.json) throw new MigrateAnalysisError('--json is available only with --dry-run.');
-    printReport(report);
+    printReport(report, false);
     // The simulation converts a copy in spite of the blockers, to report the host conflicts in the same pass
     const simulation = simulationVerified(repositoryRoot(process.cwd()), options.simulationNonce);
     if (report.appConversion.blockers.length > 0 && !simulation) {

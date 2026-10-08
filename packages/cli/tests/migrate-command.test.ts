@@ -300,6 +300,7 @@ test('migrate --dry-run resolves a flat host and reports empty risk categories',
 
     const text = run(root, ['--dry-run'])
     assert.equal(text.status, 0, `${text.stdout}\n${text.stderr}`)
+    assert.match(text.stdout, /migration report \(dry run\)/)
     assert.match(text.stdout, /Host root/)
     assert.match(text.stdout, /Root-first collisions/)
   } finally {
@@ -668,6 +669,7 @@ test('migrate --yes moves an intact legacy project and rewrites its source and t
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.match(result.stdout, /Migration complete/)
+    assert.doesNotMatch(result.stdout, /migration report \(dry run\)/)
     assert.match(result.stdout, /git -C .* checkout -- \./)
     assert.equal(await readFile(join(root, 'components/Button.ts'), 'utf8'), 'export const Button = true\n')
     assert.match(await readFile(join(root, 'templates/page.tsx'), 'utf8'), /\.\.\/components\/Button/)
