@@ -7,7 +7,7 @@
  * @author {{PLUGIN_AUTHOR}}
  */
 
-import type { PluginConfig } from '@/core/types/plugin'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
 // Import your core utilities
 import { exampleFunction } from './lib/core'

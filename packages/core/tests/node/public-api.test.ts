@@ -22,7 +22,8 @@ const CORE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 const TEMPLATES_DIR = path.join(CORE_DIR, 'templates')
 const DOCS_DIR = path.join(CORE_DIR, 'docs')
 const EXPERIMENTAL = ['blog', 'crm', 'productivity'].map(name => path.join(TEMPLATES_DIR, 'projects', name))
-const SOURCE_FILE = /\.(?:[cm]?[jt]sx?|css)$/
+// `*.ts.template` and `*.tsx.template` (the plugin preset) are source files too: scaffolds copy them into a project as .ts.
+const SOURCE_FILE = /\.(?:[cm]?[jt]sx?|css)(?:\.template)?$/
 // A quoted `@nextsparkjs/core[/sub]` covers static imports, re-exports, type imports, import(), JSDoc import types and
 // CSS @import. `${` right after the prefix is a specifier built at runtime. Specifiers holding `{` (the `{{member}}` of
 // optimizePackageImports) are not subpaths. Comments are not skipped: commented-out code costs a listing, a missed import
@@ -185,6 +186,13 @@ test('stable templates import only public subpaths of @nextsparkjs/core', () => 
       'Import a public subpath instead, or add the subpath to packages/core/public-api.json and docs/22-stability-and-support/05-public-api.md ' +
       '(reason "template-import"): from then on it is covered by SemVer. A specifier built at runtime is never allowed.'
   )
+})
+
+test('no template imports the monorepo alias @/core (it does not resolve in a root-first project)', () => {
+  const offenders = [...walk(TEMPLATES_DIR)]
+    .filter(file => SOURCE_FILE.test(file) && /['"`]@\/core(?:\/|['"`])/.test(fs.readFileSync(file, 'utf8')))
+    .map(file => path.relative(CORE_DIR, file))
+  assert.deepEqual(offenders, [], `Import from @nextsparkjs/core/<public subpath> instead of @/core:\n  ${offenders.join('\n  ')}`)
 })
 
 test('every template-import entry is still imported by a stable template', () => {

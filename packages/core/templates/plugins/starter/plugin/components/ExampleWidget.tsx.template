@@ -7,9 +7,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
+import { Input } from '@nextsparkjs/core/components/ui/input'
 import { Loader2 } from 'lucide-react'
 import { use{{PLUGIN_VAR_NAME}} } from '../hooks/use{{PLUGIN_VAR_NAME}}'
 

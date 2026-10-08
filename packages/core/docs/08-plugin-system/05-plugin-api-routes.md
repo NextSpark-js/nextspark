@@ -31,7 +31,7 @@ import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 export async function POST(request: NextRequest) {
   // 1. Authenticate request
   const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
+  if (!authResult.success) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
+  if (!authResult.success) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -102,7 +102,7 @@ import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 export async function POST(request: NextRequest) {
   const authResult = await authenticateRequest(request)
 
-  if (!authResult.authenticated) {
+  if (!authResult.success) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -197,7 +197,7 @@ import { ProcessInputSchema } from '../lib/validation'
 
 export async function POST(request: NextRequest) {
   const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
+  if (!authResult.success) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -243,7 +243,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
+  if (!authResult.success) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -264,7 +264,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
+  if (!authResult.success) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -286,7 +286,7 @@ export async function DELETE(
 ```typescript
 export async function GET(request: NextRequest) {
   const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
+  if (!authResult.success) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -377,7 +377,7 @@ const GenerateSchema = z.object({
 export async function POST(request: NextRequest) {
   // Authenticate
   const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
+  if (!authResult.success) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

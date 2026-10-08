@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import * as z from 'zod'
-import { getAuthContext } from '@/core/lib/api/auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 // Request validation schema
@@ -25,13 +25,8 @@ const RequestSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // 1. Authenticate request (dual auth: session + API key)
-    const auth = await getAuthContext(request)
-    if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const auth = await authenticateRequest(request, { allowAnyScope: true })
+    if (!auth.success || !auth.user) return createAuthFailureResponse(auth)
 
     // 2. Parse and validate request body
     const body = await request.json()
@@ -39,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Validation failed', details: validationResult.error.errors },
+        { error: 'Validation failed', details: validationResult.error.issues },
         { status: 400 }
       )
     }
@@ -72,13 +67,8 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const auth = await getAuthContext(request)
-    if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const auth = await authenticateRequest(request, { allowAnyScope: true })
+    if (!auth.success || !auth.user) return createAuthFailureResponse(auth)
 
     return NextResponse.json({
       plugin: '{{PLUGIN_SLUG}}',

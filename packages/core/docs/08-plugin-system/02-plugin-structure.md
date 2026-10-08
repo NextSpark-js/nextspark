@@ -413,7 +413,7 @@ import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 export async function POST(request: NextRequest) {
   // Authenticate request
   const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
+  if (!authResult.success) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -440,7 +440,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
+  if (!authResult.success) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }

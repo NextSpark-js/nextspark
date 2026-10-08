@@ -158,7 +158,7 @@ plugins/<plugin-name>/              # Monorepo location
 ### 4.1 plugin.config.ts - Plugin Identity
 
 ```typescript
-import type { PluginConfig } from '@nextsparkjs/core/types/plugins'
+import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 import { exampleFunction } from './lib/core'
 
 export const myPluginConfig: PluginConfig = {
