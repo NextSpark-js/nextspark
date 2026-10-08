@@ -296,7 +296,9 @@ async function tryApiKeyAuth(request: NextRequest): Promise<DualAuthResult> {
  */
 async function trySessionAuth(request: NextRequest): Promise<DualAuthResult> {
   try {
-    const session = await auth.api.getSession({ headers: request.headers })
+    // From the database, not the cookie cache: a sign-out, a revoked session or a role change counts at once
+    // (lib/auth/authorization-session.ts).
+    const session = await auth.api.getSession({ headers: request.headers, query: { disableCookieCache: true } })
     if (!session?.user) {
       return { success: false, type: 'none', user: null }
     }

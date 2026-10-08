@@ -12,7 +12,7 @@ import { mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { PROXY_AREA_WARNING, PROXY_SESSION_WARNING, missingProxyAreas, withoutComments, proxyAreaNotice, proxyAreaNotices, proxySessionNotice } from '../proxy-areas.mjs'
+import { PROXY_AREA_WARNING, PROXY_SESSION_WARNING, PROXY_SESSION_CACHED_WARNING, missingProxyAreas, withoutComments, proxyAreaNotice, proxyAreaNotices, proxySessionNotice, proxySessionCachedNotice } from '../proxy-areas.mjs'
 import { predictHost } from '../prepare.mjs'
 import { PAGE, tempHost, write } from './host-helpers.mjs'
 
@@ -83,7 +83,7 @@ test('a proxy that asks its own /api/auth/get-session over HTTP is warned about,
   assert.equal(notice.code, PROXY_SESSION_WARNING)
   assert.match(notice.message, /^src\/proxy\.ts checks the session by fetching \/api\/auth\/get-session/)
   assert.match(notice.message, /X-Forwarded-Proto: https/)
-  assert.match(notice.message, /auth\.api\.getSession\(\{ headers: new Headers\(\{ cookie: request\.headers\.get\('cookie'\) \|\| '' \}\), query: \{ disableRefresh: true \} \}\)/)
+  assert.match(notice.message, /auth\.api\.getSession\(\{ headers: new Headers\(\{ cookie: request\.headers\.get\('cookie'\) \|\| '' \}\), query: \{ disableRefresh: true, disableCookieCache: true \} \}\)/)
   assert.equal(proxySessionNotice('src/proxy.ts', readFileSync(join(CORE_ROOT, 'templates/proxy.ts'), 'utf8')), null)
   assert.equal(proxySessionNotice('src/proxy.ts', "// was: betterFetch('/api/auth/get-session')\nexport function proxy() {}"), null)
   assert.equal(proxySessionNotice('src/proxy.ts', "export { proxy } from '@nextsparkjs/core/templates/proxy'"), null)
@@ -137,4 +137,27 @@ test("prepare's prediction carries the warning among its notices", async () => {
     host.cleanup()
     rmSync(project, { recursive: true, force: true })
   }
+})
+
+// The in-process session read of the 0.1.0-beta.196 template, without disableCookieCache.
+const BETA_196_SESSION_READ = `async function getSession(request: NextRequest): Promise<Session | null> {
+  const session = await auth.api.getSession({
+    headers: new Headers({ cookie: request.headers.get('cookie') || '' }),
+    query: { disableRefresh: true },
+  })
+  return session as Session | null
+}
+`
+
+test('a proxy that reads the session in process from the cookie cache is warned about, with the option to add', () => {
+  const notice = proxySessionCachedNotice('src/proxy.ts', BETA_196_SESSION_READ)
+  assert.equal(notice.code, PROXY_SESSION_CACHED_WARNING)
+  assert.match(notice.message, /^src\/proxy\.ts reads the session with auth\.api\.getSession from Better Auth's cookie cache/)
+  assert.match(notice.message, /query: \{ disableRefresh: true, disableCookieCache: true \}/)
+  assert.equal(proxySessionCachedNotice('src/proxy.ts', readFileSync(join(CORE_ROOT, 'templates/proxy.ts'), 'utf8')), null)
+  assert.equal(proxySessionCachedNotice('src/proxy.ts', BETA_196_SESSION_READ.replace('disableRefresh: true', 'disableRefresh: true, disableCookieCache: true')), null)
+  // a comment that names the option does not count
+  assert.notEqual(proxySessionCachedNotice('src/proxy.ts', `// disableCookieCache\n${BETA_196_SESSION_READ}`), null)
+  // no in-process read (the HTTP check has its own warning), no notice
+  assert.equal(proxySessionCachedNotice('src/proxy.ts', HTTP_SESSION_CHECK), null)
 })

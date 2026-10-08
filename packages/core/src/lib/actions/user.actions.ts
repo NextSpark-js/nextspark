@@ -9,7 +9,7 @@
  * SECURITY:
  * - Auth is obtained from session/cookies (NOT from client parameters)
  * - Users can only modify their own profile
- * - userId comes from getTypedSession()
+ * - userId comes from getAuthorizationSession() (database read, past the cookie cache)
  *
  * @example
  * ```typescript
@@ -32,7 +32,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
-import { getTypedSession } from '../auth'
+import { getAuthorizationSession } from '../auth/authorization-session'
 import { UserService, type UpdateUserPayload } from '../services/user.service'
 import type { EntityActionResult, EntityActionVoidResult } from './types'
 
@@ -100,7 +100,7 @@ export async function updateProfile(
   try {
     // 1. Get auth context from session
     const headersList = await headers()
-    const session = await getTypedSession(headersList)
+    const session = await getAuthorizationSession(headersList)
 
     if (!session?.user?.id) {
       return { success: false, error: 'Authentication required' }
@@ -188,7 +188,7 @@ export async function updateAvatar(
   try {
     // 1. Get auth context from session
     const headersList = await headers()
-    const session = await getTypedSession(headersList)
+    const session = await getAuthorizationSession(headersList)
 
     if (!session?.user?.id) {
       return { success: false, error: 'Authentication required' }
@@ -289,7 +289,7 @@ export async function deleteAccount(): Promise<EntityActionVoidResult> {
   try {
     // 1. Get auth context from session
     const headersList = await headers()
-    const session = await getTypedSession(headersList)
+    const session = await getAuthorizationSession(headersList)
 
     if (!session?.user?.id) {
       return { success: false, error: 'Authentication required' }

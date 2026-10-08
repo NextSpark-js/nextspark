@@ -15,7 +15,12 @@ let requestHeaders = new Headers()
 
 jest.mock('next/navigation', () => ({ redirect: (url: string) => redirect(url), useRouter: () => ({ push: jest.fn() }) }))
 jest.mock('next/headers', () => ({ headers: async () => requestHeaders }))
-jest.mock('@nextsparkjs/core/lib/auth', () => ({ getTypedSession: (h: Headers) => getTypedSession(h) }))
+// The area checks read the session past the cookie cache (lib/auth/authorization-session); the mock answers from getTypedSession
+const sessionQueries: unknown[] = []
+jest.mock('@nextsparkjs/core/lib/auth', () => ({
+  getTypedSession: (h: Headers) => getTypedSession(h),
+  auth: { api: { getSession: ({ headers, query }: { headers: Headers; query?: unknown }) => { sessionQueries.push(query); return getTypedSession(headers) } } },
+}))
 jest.mock('next-intl/server', () => ({ getMessages: () => getMessages() }))
 jest.mock('next-intl', () => ({ NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children }))
 jest.mock('@nextsparkjs/core/lib/i18n/client-messages', () => ({ selectMessages: () => ({}), getConfiguredClientNamespaces: () => ({ superadmin: [], dashboard: [] }) }))
@@ -104,6 +109,13 @@ describe('requireAreaAccess', () => {
     await expect(requireAreaAccess('superadmin')).rejects.toThrow(DENIED)
     getTypedSession.mockResolvedValue(session('superadmin'))
     await expect(requireAreaAccess('devtools')).rejects.toThrow(DENIED)
+  })
+
+  it('reads the session from the database, not the cookie cache, so a sign-out or a role change counts at once', async () => {
+    sessionQueries.length = 0
+    getTypedSession.mockResolvedValue(session('superadmin'))
+    await requireAreaAccess('superadmin')
+    expect(sessionQueries).toEqual([{ disableCookieCache: true }])
   })
 
   it('lets the roles of the area in', async () => {

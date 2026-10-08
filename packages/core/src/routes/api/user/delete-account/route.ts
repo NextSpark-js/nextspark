@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@nextsparkjs/core/lib/auth";
+import { getAuthorizationSession } from "@nextsparkjs/core/lib/auth/authorization-session";
 import { withRateLimitTier } from "@nextsparkjs/core/lib/api/rate-limit";
 import { corsPreflight } from "@nextsparkjs/core/lib/api/cors-response";
 import { UserService } from "@nextsparkjs/core/lib/services";
@@ -7,9 +8,7 @@ import { UserService } from "@nextsparkjs/core/lib/services";
 export const DELETE = withRateLimitTier(async (req: NextRequest) => {
   try {
     // Get session from Better Auth
-    const session = await auth.api.getSession({
-      headers: req.headers,
-    });
+    const session = await getAuthorizationSession(req.headers);
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -60,8 +60,9 @@ jest.mock('next/headers', () => ({
 
 // Mock auth
 const mockGetTypedSession = jest.fn()
-jest.mock('@/core/lib/auth', () => ({
-  getTypedSession: (headers: unknown) => mockGetTypedSession(headers),
+// The actions read the session from the database, past the cookie cache (lib/auth/authorization-session)
+jest.mock('@/core/lib/auth/authorization-session', () => ({
+  getAuthorizationSession: (headers: unknown) => mockGetTypedSession(headers),
 }))
 
 // Mock permissions
@@ -169,6 +170,23 @@ describe('Entity Server Actions', () => {
       if (!result.success) {
         expect(result.error).toBe('Authentication required')
       }
+    })
+
+    it('a cookie pair the database no longer has a session for (signed out, or the account suspended) writes nothing', async () => {
+      // getAuthorizationSession reads past the cookie cache, so the cached session_data cookie does not count
+      mockHeaders.mockReturnValue(new Headers({ cookie: 'better-auth.session_token=t; better-auth.session_data=d' }))
+      mockGetTypedSession.mockResolvedValue(null)
+
+      const results = [
+        await createEntity('test_entities', { title: 'Test' }),
+        await updateEntity('test_entities', 'entity-1', { title: 'x' }),
+        await deleteEntity('test_entities', 'entity-1'),
+      ]
+
+      expect(results.map(r => r.success)).toEqual([false, false, false])
+      expect(mockGenericEntityService.create).not.toHaveBeenCalled()
+      expect(mockGenericEntityService.update).not.toHaveBeenCalled()
+      expect(mockGenericEntityService.delete).not.toHaveBeenCalled()
     })
 
     it('returns error when no team is selected', async () => {

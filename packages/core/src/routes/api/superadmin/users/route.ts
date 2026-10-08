@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTypedSession } from '@nextsparkjs/core/lib/auth';
+import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import type { User } from '@nextsparkjs/core/types/user.types';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -28,7 +28,7 @@ import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get the current session using Better Auth
-    const session = await getTypedSession(request.headers);
+    const session = await getAuthorizationSession(request.headers);
 
     // Check if user is authenticated
     if (!session?.user) {

@@ -9,7 +9,7 @@
  * SECURITY:
  * - Auth is obtained from session/cookies (NOT from client parameters)
  * - Team operations require appropriate team role permissions
- * - userId comes from getTypedSession()
+ * - userId comes from getAuthorizationSession() (database read, past the cookie cache)
  * - teamId validation ensures user has access
  *
  * @example
@@ -39,7 +39,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers, cookies } from 'next/headers'
-import { getTypedSession } from '../auth'
+import { getAuthorizationSession } from '../auth/authorization-session'
 import { TeamService, type UpdateTeamPayload } from '../services/team.service'
 import { TeamMemberService } from '../services/team-member.service'
 import type { Team, TeamRole, TeamMember } from '../teams/types'
@@ -84,7 +84,7 @@ async function getAuthUser(): Promise<
   | { success: false; error: string }
 > {
   const headersList = await headers()
-  const session = await getTypedSession(headersList)
+  const session = await getAuthorizationSession(headersList)
 
   if (!session?.user?.id) {
     return { success: false, error: 'Authentication required' }

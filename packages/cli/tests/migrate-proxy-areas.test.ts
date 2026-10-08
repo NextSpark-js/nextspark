@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
-import { PROXY_AREA_WARNING, PROXY_SESSION_WARNING, proxyProtectedAreaWarning, proxySessionWarning } from '../src/commands/migrate'
+import { PROXY_AREA_WARNING, PROXY_SESSION_WARNING, PROXY_SESSION_CACHED_WARNING, proxyProtectedAreaWarning, proxySessionWarning, proxySessionCachedWarning } from '../src/commands/migrate'
 
 const CORE_TEMPLATE = readFileSync(join(import.meta.dirname, '../../core/templates/proxy.ts'), 'utf8')
 
@@ -63,5 +63,20 @@ test('the comment edges the S80 review measured give the same answer here as in 
   for (const [source, warns] of cases) {
     assert.equal(proxySessionWarning('src/proxy.ts', source) !== null, warns, source)
     assert.equal(core.proxySessionNotice('src/proxy.ts', source) !== null, warns, source)
+  }
+})
+
+// S101: a kept proxy copied from the 0.1.0-beta.196 template reads the session in process but from the cookie cache
+test('a kept proxy that reads the session from the cookie cache is warned about, with the same code and message as prepare', async () => {
+  const beta196 = "const session = await auth.api.getSession({ headers: new Headers({ cookie: '' }), query: { disableRefresh: true } })"
+  const warning = proxySessionCachedWarning('src/proxy.ts', beta196)
+  assert.match(warning ?? '', new RegExp(`^\\[${PROXY_SESSION_CACHED_WARNING}\\] src/proxy\\.ts reads the session with auth\\.api\\.getSession`))
+  assert.equal(proxySessionCachedWarning('src/proxy.ts', CORE_TEMPLATE), null)
+
+  const core = await import('../../core/scripts/build/registry/host/proxy-areas.mjs')
+  assert.equal(core.PROXY_SESSION_CACHED_WARNING, PROXY_SESSION_CACHED_WARNING)
+  assert.equal(warning, `[${PROXY_SESSION_CACHED_WARNING}] ${core.proxySessionCachedNotice('src/proxy.ts', beta196).message}`)
+  for (const source of [CORE_TEMPLATE, beta196, `// disableCookieCache\n${beta196}`, 'export {}']) {
+    assert.equal(proxySessionCachedWarning('src/proxy.ts', source) === null, core.proxySessionCachedNotice('src/proxy.ts', source) === null, source)
   }
 })

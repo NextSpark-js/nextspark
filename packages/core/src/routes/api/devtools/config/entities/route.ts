@@ -1,4 +1,4 @@
-import { getTypedSession } from "@nextsparkjs/core/lib/auth";
+import { getAuthorizationSession } from "@nextsparkjs/core/lib/auth/authorization-session";
 import { NextResponse } from "next/server";
 import { getEntityRegistry } from "@nextsparkjs/core/lib/entities/queries";
 import type { EntityConfig, ChildEntityDefinition } from "@nextsparkjs/core/lib/entities/types";
@@ -44,7 +44,7 @@ interface EntityInfo {
 export const GET = withRateLimitTier(async (request: Request) => {
   try {
     // Verify developer role
-    const session = await getTypedSession(request.headers);
+    const session = await getAuthorizationSession(request.headers);
 
     if (!session?.user || session.user.role !== "developer") {
       return NextResponse.json(

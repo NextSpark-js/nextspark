@@ -62,10 +62,12 @@ export async function validateAndAuthenticateRequest(
   if (cookieHeader) {
     try {
       // Use the same auth library that's used in the main app
+      // From the database, not the cookie cache (lib/auth/authorization-session.ts).
       const session = await auth.api.getSession({
         headers: new Headers({
           cookie: cookieHeader
-        })
+        }),
+        query: { disableCookieCache: true }
       });
 
       if (session?.user?.id) {

@@ -31,7 +31,7 @@ import type { ComponentType, ReactNode } from 'react'
 import { Suspense } from 'react'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { getRequestSession } from '@nextsparkjs/core/lib/auth/request-session'
+import { getAuthorizationRequestSession } from '@nextsparkjs/core/lib/auth/request-session'
 
 export type AccessArea = 'superadmin' | 'devtools'
 
@@ -55,9 +55,9 @@ export function loginPathFor(area: AccessArea, pathname: string | null | undefin
   return `/login?callbackUrl=${encodeURIComponent(back)}`
 }
 
-/** The verified session (one lookup per request, shared with the dashboard checks) and the proxy's pathname hint. */
+/** The verified session, from the database (one lookup per request), and the proxy's pathname hint. */
 async function requestSession() {
-  return { session: await getRequestSession(), pathname: (await headers()).get('x-pathname') }
+  return { session: await getAuthorizationRequestSession(), pathname: (await headers()).get('x-pathname') }
 }
 
 /** Redirects unless the request's session may enter `area`. */

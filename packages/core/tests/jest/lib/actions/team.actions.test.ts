@@ -56,8 +56,9 @@ jest.mock('next/headers', () => ({
 
 // Mock auth
 const mockGetTypedSession = jest.fn()
-jest.mock('@/core/lib/auth', () => ({
-  getTypedSession: (headers: unknown) => mockGetTypedSession(headers),
+// The actions read the session from the database, past the cookie cache (lib/auth/authorization-session)
+jest.mock('@/core/lib/auth/authorization-session', () => ({
+  getAuthorizationSession: (headers: unknown) => mockGetTypedSession(headers),
 }))
 
 const mockTeamService = TeamService as jest.Mocked<typeof TeamService>

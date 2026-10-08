@@ -10,11 +10,18 @@
 import { cache } from 'react'
 import { cookies, headers } from 'next/headers'
 import { getTypedSession, type TypedSession } from '../auth'
+import { getAuthorizationSession } from './authorization-session'
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../teams/active-team-cookie'
 import { getDashboardTeamId } from '../teams/dashboard-team'
 
 /** The request's verified session, or null; one lookup per request however many callers ask. */
 export const getRequestSession = cache(async (): Promise<TypedSession | null> => getTypedSession(await headers()))
+
+/**
+ * The same, read from the database instead of better-auth's cookie cache, once per request: the /superadmin and
+ * /devtools checks use it, so a sign-out or a role change counts at once (lib/auth/authorization-session.ts).
+ */
+export const getAuthorizationRequestSession = cache(async (): Promise<TypedSession | null> => getAuthorizationSession(await headers()))
 
 /** The team the session chose (the activeTeamId cookie, only when this session wrote it), or null. */
 export async function getSessionActiveTeamId(session: TypedSession): Promise<string | null> {

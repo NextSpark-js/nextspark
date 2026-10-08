@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@nextsparkjs/core/lib/auth'
+import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
 import { queryOneWithRLS, mutateWithRLS, queryOne } from '@nextsparkjs/core/lib/db'
 import { profileSchema } from '@nextsparkjs/core/lib/validation'
 import { MetaService, MetaValueTooLargeError } from '@nextsparkjs/core/lib/services/meta.service'
@@ -11,7 +11,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   const includeMeta = url.searchParams.get('includeMeta') === 'true'
   try {
     const sessionHeaders = request.headers
-    const session = await auth.api.getSession({ headers: sessionHeaders })
+    const session = await getAuthorizationSession(sessionHeaders)
     
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -59,7 +59,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 export const PATCH = withRateLimitTier(async (request: NextRequest) => {
   try {
     const sessionHeaders = request.headers
-    const session = await auth.api.getSession({ headers: sessionHeaders })
+    const session = await getAuthorizationSession(sessionHeaders)
     
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

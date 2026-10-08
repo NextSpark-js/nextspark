@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTypedSession } from '@nextsparkjs/core/lib/auth';
+import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { SYSTEM_ADMIN_TEAM_ID } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -36,7 +36,7 @@ interface TeamWithStats {
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get the current session using Better Auth
-    const session = await getTypedSession(request.headers);
+    const session = await getAuthorizationSession(request.headers);
 
     // Check if user is authenticated
     if (!session?.user) {

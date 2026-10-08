@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getTypedSession } from '@nextsparkjs/core/lib/auth'
+import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
 import { getUserPlanAndFlags, updateUserPlan, updateUserFlags } from '@nextsparkjs/core/lib/user-data'
 import * as z from 'zod'
 import type { UserRole } from '@nextsparkjs/core/types/user.types'
@@ -31,7 +31,7 @@ const planFlagsUpdateSchema = z.object({
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get session
-    const session = await getTypedSession(request.headers)
+    const session = await getAuthorizationSession(request.headers)
 
     if (!session) {
       return NextResponse.json(
@@ -94,7 +94,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 export const PATCH = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get session
-    const session = await getTypedSession(request.headers)
+    const session = await getAuthorizationSession(request.headers)
 
     if (!session) {
       return NextResponse.json(
@@ -180,7 +180,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
 export const POST = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get session
-    const session = await getTypedSession(request.headers)
+    const session = await getAuthorizationSession(request.headers)
 
     if (!session) {
       return NextResponse.json(

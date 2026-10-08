@@ -1,4 +1,4 @@
-import { getTypedSession } from "@nextsparkjs/core/lib/auth";
+import { getAuthorizationSession } from "@nextsparkjs/core/lib/auth/authorization-session";
 import { NextResponse } from "next/server";
 import { ThemeService } from "@nextsparkjs/core/lib/services/theme.service";
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -13,7 +13,7 @@ import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
 export const GET = withRateLimitTier(async (request: Request) => {
   try {
     // Verify developer role
-    const session = await getTypedSession(request.headers);
+    const session = await getAuthorizationSession(request.headers);
 
     if (!session?.user || session.user.role !== "developer") {
       return NextResponse.json(

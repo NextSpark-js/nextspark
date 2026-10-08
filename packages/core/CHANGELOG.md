@@ -33,6 +33,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ```
   A client of `/api/v1/post-categories` that writes, or that should see its team's categories, sends `x-team-id` (the dashboard's page builder
   does). Without it a read returns only the categories without a team.
+- **`src/proxy.ts`: read the session past the cookie cache.** Your project owns `src/proxy.ts` and an upgrade never rewrites it
+  (`nextspark prepare`, `build` and `migrate` warn `NS_PROXY_SESSION_CACHED` until you do this). In its
+  `getSession`, add `disableCookieCache: true` to the query, as the template now does:
+  ```ts
+  const session = await auth.api.getSession({
+    headers: new Headers({ cookie: request.headers.get('cookie') || '' }),
+    query: { disableRefresh: true, disableCookieCache: true },
+  })
+  ```
+  Without it the proxy keeps letting a signed-out cookie pair into `/dashboard`, `/superadmin` and `/devtools` (and keeps an old role) until
+  the cached `session_data` cookie expires (5 minutes by default); the pages and the API behind it already refuse.
 
 ### Added
 
@@ -85,6 +96,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   developer enrolled in the System Admin Team, so on the RLS-enforced connection (`nextspark_app`) such a developer could write a category
   without a team, while the API lets only `users.role = 'superadmin'` do it. The API is the stricter layer and the one every route goes
   through.
+- **Authorization reads skip the session cookie cache.** Better Auth's cookie cache (`session.cookieCache`, 5 minutes) answered session
+  lookups from the signed `session_data` cookie, so after a sign-out the cookie pair copied before it still worked for up to 5 minutes, and a
+  revoked session or a changed global role (`superadmin`, `developer`) kept its old answer for as long. The API entry points
+  (`authenticateRequest` in `lib/api/auth/dual-auth`, and `validateAndAuthenticateRequest`), the `/api/superadmin/*`, `/api/devtools/*` and
+  `/api/user/*` routes (profile, delete-account, plan-flags), the entity, user and team server actions, the handlers of
+  `generateEntityAPI` and the deprecated `entity-handler`, the `/superadmin` and `/devtools` page checks and the proxy template now read the
+  session from the database (`query: { disableCookieCache: true }`; the new `getAuthorizationSession` in `lib/auth/authorization-session`
+  does it for a `Headers`). That is one session query per request on those paths: the cookie cache saved it before. Reads that only display
+  data (locale, the dashboard layouts) keep the cache. `nextspark prepare` and `migrate` suggest the same option in their
+  `NS_PROXY_SESSION_OVER_HTTP` advice, and warn `NS_PROXY_SESSION_CACHED` for a `src/proxy.ts` that reads the session with
+  `auth.api.getSession` without it.
+  A project's own `src/proxy.ts`: see Upgrading.
 
 ### Fixed
 

@@ -16,7 +16,7 @@ import * as z from 'zod'
 import type { EntityConfig, ChildEntityDefinition, HookContext } from './types'
 import { getEntityConfig } from './registry'
 import { executeEntityHooks } from './hooks'
-import { getTypedSession } from '../auth'
+import { getAuthorizationSession } from '../auth/authorization-session'
 import type { UserRole } from '../../types/user.types'
 
 export interface APIGeneratorOptions {
@@ -97,7 +97,7 @@ function createGETHandler(
       // Authentication
       let user = null
       if (options.enableAuth) {
-        const session = await getTypedSession(request.headers)
+        const session = await getAuthorizationSession(request.headers)
         if (!session) {
           return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
         }
@@ -199,7 +199,7 @@ function createPOSTHandler(
       // Authentication
       let user = null
       if (options.enableAuth) {
-        const session = await getTypedSession(request.headers)
+        const session = await getAuthorizationSession(request.headers)
         if (!session) {
           return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
         }
@@ -307,7 +307,7 @@ function createPATCHHandler(
       // Authentication
       let user = null
       if (options.enableAuth) {
-        const session = await getTypedSession(request.headers)
+        const session = await getAuthorizationSession(request.headers)
         if (!session) {
           return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
         }
@@ -422,7 +422,7 @@ function createDELETEHandler(
       // Authentication
       let user = null
       if (options.enableAuth) {
-        const session = await getTypedSession(request.headers)
+        const session = await getAuthorizationSession(request.headers)
         if (!session) {
           return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
         }

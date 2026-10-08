@@ -877,8 +877,23 @@ export function proxySessionWarning(file: string, source: string): string | null
     `terminates TLS (X-Forwarded-Proto: https) that origin is https on a port that speaks plain HTTP: the fetch fails ` +
     `and every signed-in user is sent to /login. Read the session in process, as node_modules/@nextsparkjs/core/templates/proxy.ts does: ` +
     `import { auth } from '@nextsparkjs/core/lib/auth' and replace the betterFetch('/api/auth/get-session', ...) call with ` +
-    `auth.api.getSession({ headers: new Headers({ cookie: request.headers.get('cookie') || '' }), query: { disableRefresh: true } }), ` +
+    `auth.api.getSession({ headers: new Headers({ cookie: request.headers.get('cookie') || '' }), query: { disableRefresh: true, disableCookieCache: true } }), ` +
     'which returns the session itself (or null), not { data }';
+}
+
+export const PROXY_SESSION_CACHED_WARNING = 'NS_PROXY_SESSION_CACHED';
+
+/**
+ * The warning for a kept proxy whose code reads the session in process (the 0.1.0-beta.196 template) without
+ * disableCookieCache, or null. Same rule and message as core's `prepare` (host/proxy-areas.mjs).
+ */
+export function proxySessionCachedWarning(file: string, source: string): string | null {
+  const code = proxyCodeWithoutComments(source);
+  if (!code.includes('auth.api.getSession(') || code.includes('disableCookieCache')) return null;
+  return `[${PROXY_SESSION_CACHED_WARNING}] ${file} reads the session with auth.api.getSession from Better Auth's cookie cache: after a sign-out, the copied cookie ` +
+    `pair, or a role changed since sign-in, still passes the proxy until the cached cookie expires (5 minutes by default). ` +
+    `As node_modules/@nextsparkjs/core/templates/proxy.ts does, ` +
+    'add disableCookieCache: true to the query of its auth.api.getSession call: query: { disableRefresh: true, disableCookieCache: true }';
 }
 
 /** Whether an old root interception file needs previous-core evidence. */
@@ -1553,7 +1568,7 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
   ];
   for (const { file, label } of keptProxies) {
     const source = readFileSync(join(host.root, file), 'utf8');
-    for (const warning of [proxyProtectedAreaWarning(label, source), proxySessionWarning(label, source)]) {
+    for (const warning of [proxyProtectedAreaWarning(label, source), proxySessionWarning(label, source), proxySessionCachedWarning(label, source)]) {
       if (warning) proxyNotices.push(warning);
     }
   }

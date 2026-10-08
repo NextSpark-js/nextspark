@@ -9,7 +9,7 @@
  * SECURITY:
  * - Auth is obtained from session/cookies (NOT from client parameters)
  * - Permissions are checked against the permissions registry
- * - userId comes from getTypedSession()
+ * - userId comes from getAuthorizationSession() (database read, past the cookie cache)
  * - teamId comes from the httpOnly 'activeTeamId' cookie, when this session wrote it
  *
  * Benefits over fetch/hooks:
@@ -42,7 +42,7 @@ import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../teams/active-team
 import { redirect } from 'next/navigation'
 import { GenericEntityService } from '../services/generic-entity.service'
 import { entityRegistry } from '../entities/registry'
-import { getTypedSession } from '../auth'
+import { getAuthorizationSession } from '../auth/authorization-session'
 import { checkPermission } from '../permissions/check'
 import type {
   EntityActionResult,
@@ -70,7 +70,7 @@ async function getAuthContext(): Promise<
 > {
   // 1. Get userId from session
   const headersList = await headers()
-  const session = await getTypedSession(headersList)
+  const session = await getAuthorizationSession(headersList)
 
   if (!session?.user?.id) {
     return { success: false, error: 'Authentication required' }

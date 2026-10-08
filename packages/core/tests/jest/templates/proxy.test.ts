@@ -359,7 +359,8 @@ describe('proxy path boundaries and redirect targets', () => {
     expect(mockedGetSession).toHaveBeenCalledTimes(1)
     const [{ headers, query }] = mockedGetSession.mock.calls[0] as [{ headers: Headers; query?: object }]
     expect([...headers.entries()]).toEqual([['cookie', 'better-auth.session_token=abc']])
-    expect(query).toEqual({ disableRefresh: true })
+    // disableCookieCache: a signed-out or revoked session, or a changed role, counts on the next request
+    expect(query).toEqual({ disableRefresh: true, disableCookieCache: true })
   })
 
   test('a session lookup that throws is no session', async () => {

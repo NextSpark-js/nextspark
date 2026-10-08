@@ -92,7 +92,7 @@ export const PROXY_SESSION_WARNING = 'NS_PROXY_SESSION_OVER_HTTP'
 /** What to write instead of the HTTP session check; migrate in the CLI says the same. */
 export const PROXY_SESSION_FIX =
   "import { auth } from '@nextsparkjs/core/lib/auth' and replace the betterFetch('/api/auth/get-session', ...) call with " +
-  "auth.api.getSession({ headers: new Headers({ cookie: request.headers.get('cookie') || '' }), query: { disableRefresh: true } }), " +
+  "auth.api.getSession({ headers: new Headers({ cookie: request.headers.get('cookie') || '' }), query: { disableRefresh: true, disableCookieCache: true } }), " +
   'which returns the session itself (or null), not { data }'
 
 /** The warning for a proxy whose code (not a comment) asks /api/auth/get-session over HTTP, or null. */
@@ -109,11 +109,35 @@ export function proxySessionNotice(file, source) {
   }
 }
 
+export const PROXY_SESSION_CACHED_WARNING = 'NS_PROXY_SESSION_CACHED'
+
+/** What to add to an in-process session read (the 0.1.0-beta.196 template); migrate in the CLI says the same. */
+export const PROXY_SESSION_CACHED_FIX =
+  "add disableCookieCache: true to the query of its auth.api.getSession call: query: { disableRefresh: true, disableCookieCache: true }"
+
+/**
+ * The warning for a proxy whose code (not a comment) reads the session in process (auth.api.getSession, as the
+ * 0.1.0-beta.196 template) without disableCookieCache, or null: Better Auth then answers from the cached session_data
+ * cookie, so a signed-out cookie pair or an old role passes the proxy for up to 5 minutes.
+ */
+export function proxySessionCachedNotice(file, source) {
+  const code = withoutComments(source)
+  if (!code.includes('auth.api.getSession(') || code.includes('disableCookieCache')) return null
+  return {
+    code: PROXY_SESSION_CACHED_WARNING,
+    target: file,
+    message:
+      `${file} reads the session with auth.api.getSession from Better Auth's cookie cache: after a sign-out, the copied cookie ` +
+      `pair, or a role changed since sign-in, still passes the proxy until the cached cookie expires (5 minutes by default). ` +
+      `As node_modules/@nextsparkjs/core/templates/proxy.ts does, ${PROXY_SESSION_CACHED_FIX}`,
+  }
+}
+
 /** The warnings for the proxy Next would load in `projectRoot` (the first of PROXY_FILES that exists). */
 export function proxyAreaNotices(projectRoot) {
   if (!projectRoot) return []
   const file = PROXY_FILES.find(candidate => existsSync(join(projectRoot, candidate)))
   if (!file) return []
   const source = readFileSync(join(projectRoot, file), 'utf8')
-  return [proxyAreaNotice(file, source), proxySessionNotice(file, source)].filter(Boolean)
+  return [proxyAreaNotice(file, source), proxySessionNotice(file, source), proxySessionCachedNotice(file, source)].filter(Boolean)
 }
