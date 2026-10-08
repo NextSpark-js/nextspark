@@ -1,6 +1,7 @@
 'use client'
 
 import { Sidebar } from './Sidebar'
+import { SkipLink } from './SkipLink'
 import { TopNavbar } from './TopNavbar'
 import { MobileTopBar } from '../mobile/MobileTopBar'
 import { MobileBottomNav } from '../mobile/MobileBottomNav'
@@ -32,6 +33,8 @@ function DashboardShellContent({ children, entities }: DashboardShellProps) {
 
   return (
     <div className="min-h-screen" data-cy={sel('dashboard.container')}>
+      <SkipLink />
+
       {/* Desktop only - Sidebar */}
       <Sidebar className="hidden lg:flex" entities={entities} />
 
@@ -55,7 +58,7 @@ function DashboardShellContent({ children, entities }: DashboardShellProps) {
           isCollapsed && "lg:ml-16"
         )}
       >
-        <main className="flex-1">
+        <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
           {children}
         </main>
       </div>

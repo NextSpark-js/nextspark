@@ -138,6 +138,11 @@ export function EntityTable<T extends { id: string } = { id: string }>({
     action: null,
   })
   const [isDeleting, setIsDeleting] = useState(false)
+  // Where focus goes when the confirmation dialog closes. The menu item that opened it unmounts with the menu, so
+  // without this focus falls back to <body>. In order: the row's menu button, the one of the next row, the one of
+  // the previous row (a deleted row takes its own button with it), then the table itself.
+  const dialogReturnFocusRef = useRef<(HTMLElement | null)[]>([])
+  const tableRegionRef = useRef<HTMLDivElement>(null)
 
   // Track last clicked row index for shift-click selection
   const lastClickedIndexRef = useRef<number | null>(null)
@@ -443,12 +448,23 @@ export function EntityTable<T extends { id: string } = { id: string }>({
   const handleDropdownAction = useCallback(
     (action: DropdownAction<T>, item: T) => {
       if (action.requiresConfirmation) {
+        const trigger = document.querySelector<HTMLElement>(
+          `[data-cy="${sel('entities.list.table.row.menu', { slug, id: item.id })}"]`
+        )
+        const row = trigger?.closest('tr')
+        const menuOf = (sibling: Element | null | undefined) =>
+          sibling?.querySelector<HTMLElement>('[aria-haspopup="menu"]') ?? null
+        dialogReturnFocusRef.current = [
+          trigger,
+          menuOf(row?.nextElementSibling),
+          menuOf(row?.previousElementSibling),
+        ]
         setConfirmDialog({ open: true, item, action })
       } else {
         action.onClick(item)
       }
     },
-    []
+    [slug]
   )
 
   // Confirm the pending action
@@ -456,6 +472,9 @@ export function EntityTable<T extends { id: string } = { id: string }>({
     if (confirmDialog.action && confirmDialog.item) {
       // Special handling for delete action
       if (confirmDialog.action.id === 'delete' && onDelete) {
+        // The dialog closes on this click, before the delete finishes: the row's own button is about to go away,
+        // so focus returns to a neighbour instead
+        dialogReturnFocusRef.current = dialogReturnFocusRef.current.slice(1)
         setIsDeleting(true)
         try {
           await onDelete(confirmDialog.item.id)
@@ -498,7 +517,9 @@ export function EntityTable<T extends { id: string } = { id: string }>({
 
   return (
     <div
-      className={cn(showHeader && 'p-6', 'space-y-4', className)}
+      ref={tableRegionRef}
+      tabIndex={-1}
+      className={cn(showHeader && 'p-6', 'space-y-4', 'focus:outline-none', className)}
       data-cy={sel('entities.list.table.container', { slug })}
     >
         {/* Header with search and actions - conditionally rendered */}
@@ -909,7 +930,17 @@ export function EntityTable<T extends { id: string } = { id: string }>({
             !open && setConfirmDialog({ open: false, item: null, action: null })
           }
         >
-          <AlertDialogContent data-cy={sel('entities.list.confirm.dialog', { slug })}>
+          <AlertDialogContent
+            data-cy={sel('entities.list.confirm.dialog', { slug })}
+            onCloseAutoFocus={(event) => {
+              const target =
+                dialogReturnFocusRef.current.find((el) => el?.isConnected) ?? tableRegionRef.current
+              if (target) {
+                event.preventDefault()
+                target.focus()
+              }
+            }}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle>{getConfirmationTitle()}</AlertDialogTitle>
               <AlertDialogDescription>{getConfirmationDescription()}</AlertDialogDescription>

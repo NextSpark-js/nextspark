@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { notFound } from 'next/navigation'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { SettingsSidebar } from '@nextsparkjs/core/components/settings/layouts/SettingsSidebar'
+import { SkipLink } from '@nextsparkjs/core/components/dashboard/layouts/SkipLink'
 import { MobileTopBar } from '@nextsparkjs/core/components/dashboard/mobile/MobileTopBar'
 import { MobileBottomNav } from '@nextsparkjs/core/components/dashboard/mobile/MobileBottomNav'
 import { ArrowLeft } from 'lucide-react'
@@ -58,6 +59,8 @@ function SettingsLayout({
 
   return (
     <>
+      <SkipLink />
+
       {/* MANDATORY: Screen reader announcements */}
       <div
         aria-live="polite"
@@ -118,7 +121,9 @@ function SettingsLayout({
 
           {/* Main Content */}
           <main
-            className="flex flex-col lg:flex-row gap-0 lg:gap-8"
+            id="main-content"
+            tabIndex={-1}
+            className="flex flex-col lg:flex-row gap-0 lg:gap-8 focus:outline-none"
             aria-labelledby="settings-main-heading"
             data-cy={sel('settings.sidebar.layout.contentArea')}
           >
