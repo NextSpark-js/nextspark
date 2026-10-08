@@ -1,5 +1,5 @@
 {
-  "$comment": "Public subpaths of @nextsparkjs/core. See docs/17-updates/07-public-api.md. tests/node/public-api.test.ts checks it against the stable templates and the exports map.",
+  "$comment": "Public subpaths of @nextsparkjs/core. See docs/17-updates/07-public-api.md. tests/node/public-api.test.ts checks it against the stable templates, the exports map and the built files. 'stability: experimental' marks a subpath of an experimental surface.",
   "reasons": {
     "template-import": "A stable template (the starter project and the shared files the scaffold copies) imports it.",
     "config-contract": "It carries a configuration contract: nextspark.config.ts, entity config, definePlugin, BlockConfig, billing config types, permissions or features.",
@@ -10,7 +10,7 @@
       "subpath": ".",
       "reason": "documented",
       "area": "Package root",
-      "note": "The package root: cn, hooks, contexts, providers, UI components and authenticateRequest."
+      "note": "The package root: cn, the hooks, contexts, providers and UI components of the barrels, authenticateRequest and ThemeToggle. sel, cySelector and createAriaLabel are not exported from the root: import sel and cySelector from ./selectors."
     },
     {
       "subpath": "./lib/config",
@@ -40,7 +40,8 @@
       "subpath": "./lib/billing/config-types",
       "reason": "config-contract",
       "area": "Configuration",
-      "note": "Billing configuration types (billing.config.ts)."
+      "note": "Billing config types, plus the StripeWebhookExtensions and PolarWebhookExtensions types the webhook-extension templates import. The gateways and webhook modules are internal.",
+      "stability": "experimental"
     },
     {
       "subpath": "./lib/permissions/types",
@@ -82,7 +83,7 @@
       "subpath": "./components/ui",
       "reason": "template-import",
       "area": "UI components",
-      "note": "Barrel for optimizePackageImports in next.config.mjs."
+      "note": "Barrel for optimizePackageImports in next.config.mjs. Every name the barrel exports is public by name."
     },
     {
       "subpath": "./components/ui/avatar",
@@ -118,7 +119,7 @@
       "subpath": "./hooks",
       "reason": "template-import",
       "area": "Hooks and contexts",
-      "note": "Barrel for optimizePackageImports in next.config.mjs."
+      "note": "Barrel for optimizePackageImports in next.config.mjs. Every name the barrel exports is public by name."
     },
     {
       "subpath": "./contexts/TeamContext",
@@ -141,6 +142,72 @@
       "area": "Data access"
     },
     {
+      "subpath": "./lib/services",
+      "reason": "documented",
+      "area": "Entities and permissions",
+      "note": "Service classes the entity and permission guides call."
+    },
+    {
+      "subpath": "./lib/api/auth",
+      "reason": "documented",
+      "area": "Entities and permissions",
+      "note": "API auth helpers named by the permissions guides."
+    },
+    {
+      "subpath": "./lib/permissions/hooks",
+      "reason": "documented",
+      "area": "Entities and permissions",
+      "note": "Permission hooks named by the entity and teams guides."
+    },
+    {
+      "subpath": "./lib/api/rate-limit",
+      "reason": "documented",
+      "area": "Entities and permissions",
+      "note": "Rate limiting for API routes (rate-limiting guide)."
+    },
+    {
+      "subpath": "./lib/api/entity/generic-handler",
+      "reason": "documented",
+      "area": "Entities and permissions",
+      "note": "The generic entity route handler named by the API guides."
+    },
+    {
+      "subpath": "./components/entities/wrappers",
+      "reason": "documented",
+      "area": "Entities and permissions",
+      "note": "Entity list, detail and form wrappers (entity guide)."
+    },
+    {
+      "subpath": "./lib/plugins/hook-system",
+      "reason": "documented",
+      "area": "Plugins and blocks",
+      "note": "Entity and plugin hooks (entity and scheduled-action guides)."
+    },
+    {
+      "subpath": "./components/ui/input",
+      "reason": "documented",
+      "area": "Plugins and blocks",
+      "note": "Used by the plugin guide."
+    },
+    {
+      "subpath": "./components/ui/select",
+      "reason": "documented",
+      "area": "Plugins and blocks",
+      "note": "Used by the plugin guide."
+    },
+    {
+      "subpath": "./components/ui/textarea",
+      "reason": "documented",
+      "area": "Plugins and blocks",
+      "note": "Used by the plugin guide."
+    },
+    {
+      "subpath": "./lib/blocks/loader",
+      "reason": "documented",
+      "area": "Plugins and blocks",
+      "note": "Block loader named by the page builder guide."
+    },
+    {
       "subpath": "./lib/api/auth/dual-auth",
       "reason": "documented",
       "area": "Request pipeline",
@@ -150,43 +217,44 @@
       "subpath": "./lib/auth",
       "reason": "template-import",
       "area": "Request pipeline",
-      "note": "Imported by the proxy.ts the scaffold writes."
+      "note": "Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
     },
     {
       "subpath": "./lib/auth/session-hint",
       "reason": "template-import",
       "area": "Request pipeline",
-      "note": "Imported by the proxy.ts the scaffold writes."
+      "note": "Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
     },
     {
       "subpath": "./lib/auth/runtime-readiness",
       "reason": "template-import",
       "area": "Request pipeline",
-      "note": "Imported by instrumentation.ts."
+      "note": "Imported by instrumentation.ts. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
     },
     {
       "subpath": "./lib/middleware",
       "reason": "template-import",
       "area": "Request pipeline",
-      "note": "Imported by the proxy.ts the scaffold writes."
+      "note": "Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
     },
     {
       "subpath": "./lib/teams/active-team-cookie",
       "reason": "template-import",
       "area": "Request pipeline",
-      "note": "Imported by the proxy.ts the scaffold writes."
+      "note": "Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
     },
     {
       "subpath": "./lib/docs/access",
       "reason": "template-import",
       "area": "Request pipeline",
-      "note": "Imported by the proxy.ts the scaffold writes."
+      "note": "Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC."
     },
     {
       "subpath": "./lib/scheduled-actions",
       "reason": "template-import",
       "area": "Jobs",
-      "note": "Imported by instrumentation.ts."
+      "note": "Imported by instrumentation.ts. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC.",
+      "stability": "experimental"
     },
     {
       "subpath": "./lib/blocks/sanitize-html",
@@ -194,16 +262,32 @@
       "area": "Blocks"
     },
     {
-      "subpath": "./lib/billing/stripe-webhook",
-      "reason": "template-import",
+      "subpath": "./hooks/useSubscription",
+      "reason": "documented",
       "area": "Billing",
-      "note": "Public only because templates/lib/billing/stripe-webhook-extensions.ts imports it. The gateways and webhook handlers stay internal."
+      "note": "Billing is experimental.",
+      "stability": "experimental"
     },
     {
-      "subpath": "./lib/billing/polar-webhook",
-      "reason": "template-import",
+      "subpath": "./hooks/useFeature",
+      "reason": "documented",
       "area": "Billing",
-      "note": "Public only because templates/lib/billing/polar-webhook-extensions.ts imports it. The gateways and webhook handlers stay internal."
+      "note": "Billing is experimental.",
+      "stability": "experimental"
+    },
+    {
+      "subpath": "./hooks/useQuota",
+      "reason": "documented",
+      "area": "Billing",
+      "note": "Billing is experimental.",
+      "stability": "experimental"
+    },
+    {
+      "subpath": "./hooks/useMembership",
+      "reason": "documented",
+      "area": "Billing",
+      "note": "Billing is experimental.",
+      "stability": "experimental"
     },
     {
       "subpath": "./lib/email/types",
@@ -248,13 +332,8 @@
       "subpath": "./selectors",
       "reason": "template-import",
       "area": "Testing selectors",
-      "note": "Public only because the starter lib/selectors.ts and its Cypress tests import it."
-    },
-    {
-      "subpath": "./lib/selectors/selector-factory",
-      "reason": "template-import",
-      "area": "Testing selectors",
-      "note": "Public only because the starter lib/block-selectors.ts imports it."
+      "note": "Public because the starter lib/selectors.ts, lib/block-selectors.ts and its Cypress tests import it. Testing helpers are experimental.",
+      "stability": "experimental"
     }
   ]
 }

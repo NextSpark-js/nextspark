@@ -644,7 +644,7 @@ entities/
 **Example Entity Configuration:**
 ```typescript
 // plugins/my-plugin/entities/my-records/my-records.config.ts
-import type { EntityConfig } from '@nextsparkjs/core/types/entity'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
 export const myRecordsConfig: EntityConfig = {
   name: 'my-records',
@@ -676,9 +676,9 @@ export const myRecordsConfig: EntityConfig = {
 **Example Field Definitions:**
 ```typescript
 // plugins/my-plugin/entities/my-records/my-records.fields.ts
-import type { FieldDefinition } from '@nextsparkjs/core/types/entity'
+import type { EntityField } from '@nextsparkjs/core/lib/entities/types'
 
-export const myRecordsFields: FieldDefinition[] = [
+export const myRecordsFields: EntityField[] = [
   {
     name: 'title',
     type: 'text',

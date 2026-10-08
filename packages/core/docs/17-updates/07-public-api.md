@@ -12,34 +12,42 @@ A subpath is **public** if at least one of these holds:
 
 Everything else is **internal**, even if the exports map lets you import it.
 
+**Barrels.** `.`, `./components/ui` and `./hooks` are barrels. A name a public barrel exports is public by name. Its own file subpath (`./components/ui/input`, `./hooks/useAuth`) is public only if it is listed. Importing `useAuth` from `@nextsparkjs/core` is covered by SemVer; importing it from `@nextsparkjs/core/hooks/useAuth` is not.
+
 ## What public means
 
-- A breaking change to a public subpath needs a **major** release. A deprecation is announced in a minor, with a changelog entry, and the item is removed in the next major.
-- A public subpath is exported by the package for as long as the major lasts. A test (`tests/node/public-api.test.ts`) fails if an entry stops resolving in the exports map.
-- A stable template cannot import a subpath that is not on the list: the same test fails and names the file and the subpath. Adding the subpath to the list is how a template makes it part of the contract.
+- A breaking change to a public subpath needs a **major** release. A deprecation is announced in a minor, with a runtime or CLI notice and a changelog entry, and the item is removed in the next major.
+- A public subpath is exported by the package for as long as the major lasts. A test (`tests/node/public-api.test.ts`) fails if an entry stops resolving to a built file through the exports map.
+- A stable template cannot import a subpath that is not on the list, or build a core specifier at runtime: the same test fails and names the file and the subpath. Adding the subpath to the list is how a template makes it part of the contract. It also fails when a `template-import` entry is no longer imported by any stable template.
+- A public subpath that belongs to an **experimental surface** (billing, scheduled actions, testing helpers) follows the experimental rule until that surface is stable: no guarantee, changes in a minor with a changelog note. Those rows are marked *experimental*.
+- A subpath marked *public, frozen in 1.x unless replaced by a `./proxy` facade before the RC* stays as it is for the 1.x line unless a facade replaces it first.
 
 ## What internal means
 
 An internal subpath may change or disappear in a minor release, with no deprecation. Internal subpaths are versioned in lockstep with `@nextsparkjs/cli`, so a project that moves both together keeps working. Internal areas include:
 
 - `routes/*`, `templates/*`, `scripts/*` and `migrations/*`;
-- the testing selectors and helpers, except the two listed below;
+- the testing selectors and helpers, except `./selectors`;
 - the devtools components;
-- the billing gateways and the webhook handlers, except the two webhook modules listed below;
+- the billing gateways and the webhook handlers (`lib/billing/stripe-webhook` and `polar-webhook` still resolve for one more minor; the webhook extension types are exported from `./lib/billing/config-types`);
 - `lib/mcp`;
 - any `lib/*`, `components/*`, `hooks/*` or `utils/*` subpath not on the list.
 
-Importing an internal subpath from your own code works today and is not supported. Two things that look like public paths are not: the generated `src/app` (it is regenerated, never edit it) and the `node_modules/@nextsparkjs/core/scripts/...` files the generated `package.json` scripts run (they belong to the CLI).
+Importing an internal subpath from your own code works today and is not supported. Code samples in other guides that import an unlisted subpath use an internal API; the test prints the list of such subpaths. Three things that look like public paths are not:
+
+- the generated `src/app` (it is regenerated, never edit it);
+- the `node_modules/@nextsparkjs/core/scripts/...` files the generated `package.json` scripts run (they belong to the CLI);
+- the generated Jest config, which maps `@nextsparkjs/core/(lib|hooks|components)/...` straight into `dist/` (the CLI owns it).
 
 ## Public subpaths
 
-The reason in each row is one of `template-import` (a stable template imports it), `config-contract` or `documented`. A few subpaths are public only because a stable template imports them; they are marked, and a template change can retire them with an upgrade note.
+The reason in each row is one of `template-import` (a stable template imports it), `config-contract` or `documented`. A template change can retire a `template-import` entry with an upgrade note.
 
 ### Package root
 
 | Subpath | Why it is public |
 | --- | --- |
-| `.` | documented — The package root: cn, hooks, contexts, providers, UI components and authenticateRequest. |
+| `.` | documented — The package root: cn, the hooks, contexts, providers and UI components of the barrels, authenticateRequest and ThemeToggle. sel, cySelector and createAriaLabel are not exported from the root: import sel and cySelector from ./selectors. |
 
 ### Configuration
 
@@ -49,7 +57,7 @@ The reason in each row is one of `template-import` (a stable template imports it
 | `./lib/config/nextspark-types` | config-contract — The NextSparkConfig types behind nextspark.config.ts. |
 | `./lib/config/types` | config-contract — App configuration types (app.config.ts, dev.config.ts). |
 | `./lib/config/features-types` | config-contract — Feature flag configuration types (features.config.ts). |
-| `./lib/billing/config-types` | config-contract — Billing configuration types (billing.config.ts). |
+| `./lib/billing/config-types` | config-contract (experimental) — Billing config types, plus the StripeWebhookExtensions and PolarWebhookExtensions types the webhook-extension templates import. The gateways and webhook modules are internal. |
 | `./lib/permissions/types` | config-contract — Permission configuration types (permissions.config.ts). |
 | `./lib/entities/types` | config-contract — Entity configuration types (EntityConfig and its fields). |
 | `./types/blocks` | config-contract — BlockConfig, baseBlockSchema and the block field types. |
@@ -61,7 +69,7 @@ The reason in each row is one of `template-import` (a stable template imports it
 
 | Subpath | Why it is public |
 | --- | --- |
-| `./components/ui` | template-import — Barrel for optimizePackageImports in next.config.mjs. |
+| `./components/ui` | template-import — Barrel for optimizePackageImports in next.config.mjs. Every name the barrel exports is public by name. |
 | `./components/ui/avatar` | template-import |
 | `./components/ui/badge` | template-import |
 | `./components/ui/button` | template-import |
@@ -73,7 +81,7 @@ The reason in each row is one of `template-import` (a stable template imports it
 
 | Subpath | Why it is public |
 | --- | --- |
-| `./hooks` | template-import — Barrel for optimizePackageImports in next.config.mjs. |
+| `./hooks` | template-import — Barrel for optimizePackageImports in next.config.mjs. Every name the barrel exports is public by name. |
 | `./contexts/TeamContext` | template-import |
 
 ### Utilities
@@ -89,23 +97,44 @@ The reason in each row is one of `template-import` (a stable template imports it
 | --- | --- |
 | `./lib/db` | template-import |
 
+### Entities and permissions
+
+| Subpath | Why it is public |
+| --- | --- |
+| `./lib/services` | documented — Service classes the entity and permission guides call. |
+| `./lib/api/auth` | documented — API auth helpers named by the permissions guides. |
+| `./lib/permissions/hooks` | documented — Permission hooks named by the entity and teams guides. |
+| `./lib/api/rate-limit` | documented — Rate limiting for API routes (rate-limiting guide). |
+| `./lib/api/entity/generic-handler` | documented — The generic entity route handler named by the API guides. |
+| `./components/entities/wrappers` | documented — Entity list, detail and form wrappers (entity guide). |
+
+### Plugins and blocks
+
+| Subpath | Why it is public |
+| --- | --- |
+| `./lib/plugins/hook-system` | documented — Entity and plugin hooks (entity and scheduled-action guides). |
+| `./components/ui/input` | documented — Used by the plugin guide. |
+| `./components/ui/select` | documented — Used by the plugin guide. |
+| `./components/ui/textarea` | documented — Used by the plugin guide. |
+| `./lib/blocks/loader` | documented — Block loader named by the page builder guide. |
+
 ### Request pipeline
 
 | Subpath | Why it is public |
 | --- | --- |
 | `./lib/api/auth/dual-auth` | documented — authenticateRequest for API routes; the nextspark skills guide tells projects to import it. |
-| `./lib/auth` | template-import — Imported by the proxy.ts the scaffold writes. |
-| `./lib/auth/session-hint` | template-import — Imported by the proxy.ts the scaffold writes. |
-| `./lib/auth/runtime-readiness` | template-import — Imported by instrumentation.ts. |
-| `./lib/middleware` | template-import — Imported by the proxy.ts the scaffold writes. |
-| `./lib/teams/active-team-cookie` | template-import — Imported by the proxy.ts the scaffold writes. |
-| `./lib/docs/access` | template-import — Imported by the proxy.ts the scaffold writes. |
+| `./lib/auth` | template-import — Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
+| `./lib/auth/session-hint` | template-import — Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
+| `./lib/auth/runtime-readiness` | template-import — Imported by instrumentation.ts. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
+| `./lib/middleware` | template-import — Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
+| `./lib/teams/active-team-cookie` | template-import — Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
+| `./lib/docs/access` | template-import — Imported by the proxy.ts the scaffold writes. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
 
 ### Jobs
 
 | Subpath | Why it is public |
 | --- | --- |
-| `./lib/scheduled-actions` | template-import — Imported by instrumentation.ts. |
+| `./lib/scheduled-actions` | template-import (experimental) — Imported by instrumentation.ts. Public, frozen in 1.x unless replaced by a ./proxy facade before the RC. |
 
 ### Blocks
 
@@ -117,8 +146,10 @@ The reason in each row is one of `template-import` (a stable template imports it
 
 | Subpath | Why it is public |
 | --- | --- |
-| `./lib/billing/stripe-webhook` | template-import — Public only because templates/lib/billing/stripe-webhook-extensions.ts imports it. The gateways and webhook handlers stay internal. |
-| `./lib/billing/polar-webhook` | template-import — Public only because templates/lib/billing/polar-webhook-extensions.ts imports it. The gateways and webhook handlers stay internal. |
+| `./hooks/useSubscription` | documented (experimental) — Billing is experimental. |
+| `./hooks/useFeature` | documented (experimental) — Billing is experimental. |
+| `./hooks/useQuota` | documented (experimental) — Billing is experimental. |
+| `./hooks/useMembership` | documented (experimental) — Billing is experimental. |
 
 ### Email
 
@@ -146,8 +177,7 @@ The reason in each row is one of `template-import` (a stable template imports it
 
 | Subpath | Why it is public |
 | --- | --- |
-| `./selectors` | template-import — Public only because the starter lib/selectors.ts and its Cypress tests import it. |
-| `./lib/selectors/selector-factory` | template-import — Public only because the starter lib/block-selectors.ts imports it. |
+| `./selectors` | template-import (experimental) — Public because the starter lib/selectors.ts, lib/block-selectors.ts and its Cypress tests import it. Testing helpers are experimental. |
 
 ## Outside the exports map
 
