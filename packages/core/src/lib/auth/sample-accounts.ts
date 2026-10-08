@@ -13,7 +13,8 @@ type QueryRows = (text: string, params?: unknown[]) => Promise<Array<{ count: nu
 
 /**
  * In production, logs one warning when accounts with a sample password exist.
- * Never throws: a database that cannot be reached at startup is not this check's to report.
+ * Never throws. When the query fails it logs one line with the error code or class name only
+ * (never the error object, which can carry the connection string).
  */
 export async function warnSampleAccountsAtStartup(
   env: Record<string, string | undefined> = process.env,
@@ -29,7 +30,9 @@ export async function warnSampleAccountsAtStartup(
     if (row && row.count > 0) {
       console.warn(`[auth-readiness] ${row.count} account(s) still have a sample-data password; pnpm db:migrate disables them once; if it already ran, see the CHANGELOG upgrade notes`)
     }
-  } catch {
-    // startup goes on; the migration is what disables those accounts
+  } catch (error) {
+    const safe = (value: unknown) => (typeof value === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(value) ? value : undefined)
+    const reason = safe((error as { code?: unknown } | null)?.code) ?? safe((error as Error | null)?.name) ?? 'unknown error'
+    console.warn(`[auth-readiness] could not check for sample-data passwords at startup (query failed: ${reason}); check DATABASE_URL, then run the read-only query in the 0.1.0-beta.196 CHANGELOG upgrade notes`)
   }
 }
