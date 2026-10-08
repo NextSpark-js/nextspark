@@ -14,7 +14,7 @@ import pg from 'pg'
 import { timeLimitParametersIn, timeLimitedClient } from '../../scripts/db/connection-time-limits.mjs'
 import { inspectTarget, inspectMaintenanceDatabase } from '../../scripts/db/inspect-server.mjs'
 import { migrationClient } from '../../scripts/db/migration-time-limit.mjs'
-import { parseSSLConfig, prefersSSL, scriptPool, stripSSLParams } from '../../scripts/db/ssl-config.mjs'
+import { NO_SSL_IN_PRODUCTION, parseSSLConfig, prefersSSL, scriptConnectionOptions, scriptPool, scriptSSL, setProjectEnv, stripSSLParams } from '../../scripts/db/ssl-config.mjs'
 
 type TestContext = { after: (fn: () => void) => void }
 
@@ -158,31 +158,97 @@ test('the time-limit parameters are named as pg reads them', () => {
   }
 })
 
-test('every migration connection path keeps explicit SSL modes and starts missing modes with TLS', () => {
-  const nodeEnv = process.env.NODE_ENV
-  const cases = [
-    { url: `${BASE}?sslmode=disable`, env: 'production', ssl: false },
-    { url: `${BASE}?sslmode=require`, env: 'development', ssl: { rejectUnauthorized: false } },
-    { url: `${BASE}?sslmode=prefer`, env: 'development', ssl: { rejectUnauthorized: false } },
-    { url: `${BASE}?sslmode=allow`, env: 'development', ssl: { rejectUnauthorized: false } },
-    { url: `${BASE}?sslmode=verify-ca`, env: 'development', ssl: { rejectUnauthorized: true } },
-    { url: `${BASE}?sslmode=verify-full`, env: 'development', ssl: { rejectUnauthorized: true } },
-    // The runtime differs deliberately here: scripts implement libpq prefer.
-    { url: BASE, env: 'development', ssl: { rejectUnauthorized: false } },
-    { url: BASE, env: 'production', ssl: { rejectUnauthorized: false } },
-  ]
+/**
+ * The SSL decision table for every script connection path: NODE_ENV (from the
+ * process or the project .env) x sslmode x whether the server has SSL.
+ * `verified` and `unverified` are TLS with and without certificate validation;
+ * against a server without SSL, `plain` connects without it and an error is
+ * pg's (explicit modes) or the production one, which names what to put in the URL.
+ */
+const SSL_TABLE: { sslmode: string | null, env: 'development' | 'production' | '.env production', withSSL: 'verified' | 'unverified' | 'plain', withoutSSL: 'plain' | 'pg error' | 'production error' }[] = [
+  { sslmode: null, env: 'development', withSSL: 'unverified', withoutSSL: 'plain' },
+  { sslmode: null, env: 'production', withSSL: 'verified', withoutSSL: 'production error' },
+  { sslmode: null, env: '.env production', withSSL: 'verified', withoutSSL: 'production error' },
+  ...(['development', 'production', '.env production'] as const).flatMap(env => [
+    { sslmode: 'disable', env, withSSL: 'plain' as const, withoutSSL: 'plain' as const },
+    ...['require', 'prefer', 'allow'].map(sslmode => ({ sslmode, env, withSSL: 'unverified' as const, withoutSSL: 'pg error' as const })),
+    ...['verify-ca', 'verify-full'].map(sslmode => ({ sslmode, env, withSSL: 'verified' as const, withoutSSL: 'pg error' as const })),
+  ]),
+  // an empty or unknown sslmode gets the environment default: production, from the process or the .env alone, validates
+  ...['', 'unknown'].flatMap(sslmode => [
+    { sslmode, env: 'development' as const, withSSL: 'plain' as const, withoutSSL: 'plain' as const },
+    { sslmode, env: 'production' as const, withSSL: 'verified' as const, withoutSSL: 'pg error' as const },
+    { sslmode, env: '.env production' as const, withSSL: 'verified' as const, withoutSSL: 'pg error' as const },
+  ]),
+]
 
+const SSL_OPTION = { verified: { rejectUnauthorized: true }, unverified: { rejectUnauthorized: false }, plain: false }
+
+function inEnv<T>(env: string, run: () => T): T {
+  const nodeEnv = process.env.NODE_ENV
+  process.env.NODE_ENV = env === 'production' ? 'production' : 'development'
+  if (env === '.env production') setProjectEnv({ NODE_ENV: 'production' })
   try {
-    for (const { url, env, ssl } of cases) {
-      process.env.NODE_ENV = env
-      const limited = timeLimitedClient(url, LIMITS) as ClientInternals
-      const unbounded = migrationClient(url, null) as ClientInternals
-      assert.deepEqual(limited.connectionParameters.ssl, ssl, `time-limited ${url} (${env})`)
-      assert.deepEqual(unbounded.connectionParameters.ssl, ssl, `migration ${url} (${env})`)
-    }
+    return run()
   } finally {
+    setProjectEnv({})
     if (nodeEnv === undefined) delete process.env.NODE_ENV
     else process.env.NODE_ENV = nodeEnv
+  }
+}
+
+const withMode = (url: string, sslmode: string | null) => sslmode === null ? url : `${url}?sslmode=${sslmode}`
+
+test('SSL decision table, server with SSL: every script connection path hands pg the same ssl option', () => {
+  for (const { sslmode, env, withSSL } of SSL_TABLE) {
+    const url = withMode(BASE, sslmode)
+    const label = `sslmode=${sslmode} (${env})`
+    inEnv(env, () => {
+      const limited = timeLimitedClient(url, LIMITS) as ClientInternals
+      const unbounded = migrationClient(url, null) as ClientInternals
+      const pool = scriptPool(url) as pg.Pool & { options: { ssl: unknown } }
+      assert.deepEqual(limited.connectionParameters.ssl, SSL_OPTION[withSSL], `time-limited ${label}`)
+      assert.deepEqual(unbounded.connectionParameters.ssl, SSL_OPTION[withSSL], `migration ${label}`)
+      assert.deepEqual(pool.options.ssl, SSL_OPTION[withSSL], `pool ${label}`)
+    })
+  }
+})
+
+test('SSL decision table, malformed URL: the environment default, with production from the process or the .env alone', () => {
+  const url = 'not-a-url'
+  for (const [env, ssl] of [['development', false], ['production', { rejectUnauthorized: true }], ['.env production', { rejectUnauthorized: true }]] as const) {
+    inEnv(env, () => {
+      assert.deepEqual(scriptSSL(url), { ssl, fallback: false }, env)
+      assert.deepEqual(scriptConnectionOptions(url).ssl, ssl, env)
+    })
+  }
+})
+
+test('SSL decision table, server without SSL: plaintext only for disable, or no sslmode outside production', { timeout: 30000 }, async t => {
+  const server = await socketServer(t)
+  for (const { sslmode, env, withoutSSL } of SSL_TABLE) {
+    const url = withMode(`postgresql://dbuser:url-secret@${encodeURIComponent(server.dir)}/nextspark_verify`, sslmode)
+    const label = `sslmode=${sslmode} (${env})`
+    const clients = inEnv(env, () => [timeLimitedClient(url, QUICK), migrationClient(url, null), scriptPool(url)])
+    for (const client of clients) {
+      const connecting = client instanceof pg.Pool ? client.query('SELECT 1') : client.connect()
+      if (withoutSSL === 'plain') {
+        await connecting
+      } else {
+        await assert.rejects(connecting, (error: Error) => {
+          if (withoutSSL === 'production error') {
+            assert.equal(error.message, NO_SSL_IN_PRODUCTION, label)
+            assert.match(error.message, /sslmode=disable/)
+            assert.match(error.message, /sslmode=verify-full/)
+            assert.doesNotMatch(error.message, /url-secret|dbuser|nextspark_verify/)
+          } else {
+            assert.equal(error.message, 'The server does not support SSL connections', label)
+          }
+          return true
+        }, label)
+      }
+      await client.end().catch(() => {})
+    }
   }
 })
 

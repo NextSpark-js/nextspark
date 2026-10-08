@@ -3,6 +3,7 @@ import path from "path";
 import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runAndRecordMigration, migrationFailure } from './migration-time-limit.mjs';
 import { getConfig } from '../build/registry/config.mjs';
 import { isSampleDataMigration, sampleDataPolicy } from './sample-data.mjs';
+import { setProjectEnv } from './ssl-config.mjs';
 
 const projectConfig = getConfig();
 const projectRoot = projectConfig.projectRoot;
@@ -74,6 +75,10 @@ const ignoredParameters = ignoredParametersNotice(MIGRATION_URL, TIME_LIMIT);
 if (ignoredParameters) console.log(`⚠️  ${ignoredParameters}\n`);
 
 const SAMPLE_DATA = sampleDataPolicy({ argv: process.argv, env: process.env, fileEnv });
+// A production .env also means a URL without sslmode needs a validated certificate (see ssl-config.mjs).
+// Call it before anything connects: the first client is made in runMigrations() below. ignoredParametersNotice
+// above only builds clients to read their parameters and never connects.
+setProjectEnv(fileEnv);
 
 async function runMigrations() {
   const client = migrationClient(MIGRATION_URL, TIME_LIMIT);

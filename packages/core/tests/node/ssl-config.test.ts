@@ -1,9 +1,9 @@
 /**
  * The standalone database scripts intentionally duplicate the runtime SSL
  * policy. Keep their explicit decisions coupled without putting a script module
- * in the application bundle. A URL without sslmode deliberately differs:
- * scripts implement libpq's SSL `prefer`, while the runtime keeps its existing
- * environment default until its next release.
+ * in the application bundle. A URL without sslmode differs only outside
+ * production: scripts implement libpq's SSL `prefer` there, while in production
+ * they validate the certificate as the runtime does.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -15,6 +15,7 @@ import {
   parseSSLConfig as scriptParseSSLConfig,
   prefersSSL,
   scriptConnectionOptions,
+  setProjectEnv,
   stripSSLParams as scriptStripSSLParams,
 } from '../../scripts/db/ssl-config.mjs'
 
@@ -93,21 +94,33 @@ test('database scripts match the runtime for explicit and invalid SSL policy inp
   }
 })
 
-test('a valid URL without sslmode deliberately uses libpq SSL prefer in scripts', async () => {
+test('a valid URL without sslmode uses libpq SSL prefer outside production, and the runtime policy in production', async () => {
   const runtime = await runtimeSSLHelpers()
-  for (const nodeEnv of ['development', 'production']) {
-    withNodeEnv(nodeEnv, () => {
-      // Keep parseSSLConfig itself coupled: its callers outside connection
-      // creation still have the runtime's documented environment policy.
-      assert.deepEqual(scriptParseSSLConfig(URL), runtime.parseSSLConfig(URL), nodeEnv)
-      // The connection builder is intentionally different: it asks for TLS
-      // first and scriptClient retries plaintext only for pg's exact no-SSL
-      // server error. Do not fold this back into runtime parity by accident.
-      assert.equal(prefersSSL(URL), true, nodeEnv)
-      assert.deepEqual(scriptConnectionOptions(URL).ssl, { rejectUnauthorized: false }, nodeEnv)
-      assert.notDeepEqual(scriptConnectionOptions(URL).ssl, runtime.parseSSLConfig(URL), nodeEnv)
-    })
-  }
+  withNodeEnv('development', () => {
+    // Keep parseSSLConfig itself coupled: its callers outside connection
+    // creation still have the runtime's documented environment policy.
+    assert.deepEqual(scriptParseSSLConfig(URL), runtime.parseSSLConfig(URL))
+    // Outside production the connection builder deliberately differs: it asks
+    // for TLS first and scriptClient retries plaintext only for pg's exact
+    // no-SSL server error.
+    assert.equal(prefersSSL(URL), true)
+    assert.deepEqual(scriptConnectionOptions(URL).ssl, { rejectUnauthorized: false })
+    assert.notDeepEqual(scriptConnectionOptions(URL).ssl, runtime.parseSSLConfig(URL))
+  })
+  withNodeEnv('production', () => {
+    assert.deepEqual(scriptConnectionOptions(URL).ssl, { rejectUnauthorized: true })
+    assert.deepEqual(scriptConnectionOptions(URL).ssl, runtime.parseSSLConfig(URL))
+  })
+  // NODE_ENV=production in the project .env counts as it does for the sample data
+  withNodeEnv('development', () => {
+    setProjectEnv({ NODE_ENV: '"production" # live' })
+    try {
+      assert.deepEqual(scriptConnectionOptions(URL).ssl, { rejectUnauthorized: true })
+    } finally {
+      setProjectEnv({})
+    }
+    assert.deepEqual(scriptConnectionOptions(URL).ssl, { rejectUnauthorized: false })
+  })
 })
 
 const WARNING = '[DB] WARNING: SSL disabled in production environment. This is insecure!'

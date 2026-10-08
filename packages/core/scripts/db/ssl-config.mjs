@@ -1,5 +1,6 @@
 import pg from 'pg'
 import { EventEmitter } from 'node:events'
+import { isProduction } from './sample-data.mjs'
 
 /**
  * SSL handling for the database maintenance scripts.
@@ -44,10 +45,10 @@ function warnSSLDisabledInProduction(url) {
  * Parse the SSL policy used by database scripts.
  *
  * Explicit sslmode takes precedence. With no recognized mode, only production
- * uses validated TLS; all other environments use no TLS.
+ * uses validated TLS; all other environments use no TLS. `isProduction`
+ * defaults to the runtime's check; scriptSSL passes the scripts' own.
  */
-export function parseSSLConfig(databaseUrl) {
-  const isProduction = process.env.NODE_ENV === 'production'
+export function parseSSLConfig(databaseUrl, isProduction = process.env.NODE_ENV === 'production') {
 
   if (!databaseUrl) return isProduction ? { rejectUnauthorized: true } : false
 
@@ -90,37 +91,71 @@ export function prefersSSL(databaseUrl) {
   }
 }
 
+// What the project .env says NODE_ENV is, when the runner has read it (see setProjectEnv).
+let projectNodeEnv
+
 /**
- * The initial configuration for a script connection.
- *
- * A URL without sslmode has libpq's `prefer` semantics: first ask for TLS
- * without validating the certificate, and fall back only when Postgres says it
- * has no TLS support. `parseSSLConfig` intentionally remains the runtime's
- * policy; the distinct initial value here is what makes the scripts differ on
- * that one, documented case.
+ * The runner reads NODE_ENV from the project .env for the sample data; it hands
+ * the same values here so that a production .env counts for SSL as well.
  */
+export function setProjectEnv(fileEnv = {}) {
+  projectNodeEnv = fileEnv.NODE_ENV
+}
+
+/** NODE_ENV is production in the process environment or the project .env, read as the runner reads it for the sample data. */
+export function scriptsInProduction() {
+  return [process.env.NODE_ENV, projectNodeEnv].some(isProduction)
+}
+
+/**
+ * The one SSL decision for a script connection: the `ssl` option pg gets, and
+ * whether a server that says it has no SSL is retried without it.
+ *
+ * An explicit sslmode means what it means to the application (parseSSLConfig),
+ * with no retry; an empty or unknown one, or a malformed URL, gets
+ * parseSSLConfig's environment default, with production as the scripts read it.
+ * A URL without sslmode:
+ * - in production, is what the application does there: SSL with a validated
+ *   certificate, and no plaintext retry;
+ * - elsewhere, has libpq's `prefer` semantics: SSL without validating the
+ *   certificate, then plaintext only when Postgres says it has no SSL.
+ */
+export function scriptSSL(databaseUrl, production = scriptsInProduction()) {
+  if (!prefersSSL(databaseUrl)) return { ssl: parseSSLConfig(databaseUrl, production), fallback: false }
+  return production ? { ssl: { rejectUnauthorized: true }, fallback: false } : { ssl: { rejectUnauthorized: false }, fallback: true }
+}
+
+/** The initial configuration for a script connection. */
 export function scriptConnectionOptions(databaseUrl, options = {}) {
   return {
     ...options,
     connectionString: stripSSLParams(databaseUrl),
-    ssl: prefersSSL(databaseUrl) ? { rejectUnauthorized: false } : parseSSLConfig(databaseUrl),
+    ssl: scriptSSL(databaseUrl).ssl,
   }
 }
 
 const NO_SSL_SUPPORT = 'The server does not support SSL connections'
+
+/** Never names the URL: it holds the password. */
+export const NO_SSL_IN_PRODUCTION =
+  'The database server does not support SSL. With NODE_ENV=production, a database URL without sslmode ' +
+  'connects only over SSL with a validated certificate, as the application does. For a server without SSL, ' +
+  'such as a local PostgreSQL, add sslmode=disable to the URL; for a server with SSL, sslmode=verify-full ' +
+  'states the validated connection explicitly.'
 
 function isNoSSLSupport(error) {
   return error?.message === NO_SSL_SUPPORT
 }
 
 /**
- * A small Client facade for the only case where scripts deliberately differ
- * from the runtime: a URL with no sslmode. It preserves pg's Client surface
- * while swapping the first TLS-only connection for one without TLS only after
- * pg's precise "server does not support SSL" error. Every other failure is
- * returned unchanged.
+ * A small Client facade for a URL with no sslmode. It preserves pg's Client
+ * surface while swapping the first TLS-only connection for one without TLS only
+ * after pg's precise "server does not support SSL" error. Every other failure
+ * is returned unchanged.
  */
 class SSLPreferClient extends EventEmitter {
+  fallback = true
+
   constructor(options) {
     super()
     this.options = options
@@ -152,6 +187,7 @@ class SSLPreferClient extends EventEmitter {
       await this.client.connect()
     } catch (error) {
       if (!isNoSSLSupport(error)) throw error
+      if (!this.fallback) throw new Error(NO_SSL_IN_PRODUCTION, { cause: error })
 
       // A retry shares, rather than resets, the connection time budget. This
       // matters for timeLimitedClient(), whose connectMs is a hard bound.
@@ -189,17 +225,24 @@ class SSLPreferClient extends EventEmitter {
   unref() { return this.client.unref() }
 }
 
-/** A Client with explicit modes unchanged, or libpq-style `prefer` otherwise. */
-export function scriptClient(databaseUrl, options = {}) {
-  const config = scriptConnectionOptions(databaseUrl, options)
-  return prefersSSL(databaseUrl) ? new SSLPreferClient(config) : new pg.Client(config)
+/** The same facade with no plaintext retry: pg's no-SSL error becomes one that says what to put in the URL. */
+class SSLRequiredClient extends SSLPreferClient {
+  fallback = false
 }
 
-/** A Pool whose clients have the same `prefer` behavior as direct clients. */
+/** The client class for a URL, as scriptSSL decides. */
+function clientClass(databaseUrl) {
+  if (!prefersSSL(databaseUrl)) return pg.Client
+  return scriptSSL(databaseUrl).fallback ? SSLPreferClient : SSLRequiredClient
+}
+
+/** A Client with the SSL behaviour scriptSSL decides. */
+export function scriptClient(databaseUrl, options = {}) {
+  const Client = clientClass(databaseUrl)
+  return new Client(scriptConnectionOptions(databaseUrl, options))
+}
+
+/** A Pool whose clients behave as direct script clients do. */
 export function scriptPool(databaseUrl, options = {}) {
-  const config = scriptConnectionOptions(databaseUrl, options)
-  return new pg.Pool({
-    ...config,
-    ...(prefersSSL(databaseUrl) ? { Client: SSLPreferClient } : {}),
-  })
+  return new pg.Pool({ ...scriptConnectionOptions(databaseUrl, options), Client: clientClass(databaseUrl) })
 }

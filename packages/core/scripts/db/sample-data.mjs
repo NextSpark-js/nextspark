@@ -13,7 +13,7 @@ export const SAMPLE_DATA_VARIABLE = 'NEXTSPARK_SEED_SAMPLE_DATA';
 export const SAMPLE_DATA_MARKER = '-- nextspark:sample-data';
 
 // A value as a .env or a shell may write it: any case, quotes, a trailing comment.
-const isProduction = value => /^\s*["']?production\b/i.test(String(value ?? ''));
+export const isProduction = value => /^\s*["']?production\b/i.test(String(value ?? ''));
 const isOn = value => /^\s*["']?(1|true)\b/i.test(String(value ?? ''));
 
 // Copies made before the name rule and the marker existed (the default theme's
