@@ -25,7 +25,7 @@ These apply to a **generated project**. The framework repository itself is pinne
 | pnpm 10 | 10.34.6 and later 10.x | 10.34.6 on Node 22.14.0. |
 | pnpm 11 | Yes | 11.28.4 on Node 24. |
 | pnpm 12 | Yes | 12.9.1 on Node 24. |
-| pnpm 12 on Node 22 | Only with an updated Corepack or a standalone pnpm. The Corepack bundled with Node 22 cannot install pnpm 12. | No. |
+| pnpm 12 on Node 22.x | Only with an updated Corepack or a standalone pnpm. The Corepack bundled with Node 22.x cannot install pnpm 12. | No. |
 | pnpm 9 | Contributing to the framework repository only. | Yes, as the repository's own package manager. |
 | npm, yarn, bun | Not supported. | No. |
 
