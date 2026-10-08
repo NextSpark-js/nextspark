@@ -198,7 +198,7 @@ import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
   // Authenticate
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { allowAnyScope: true })
   if (!authResult.success) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

@@ -345,9 +345,10 @@ import { apiRequest } from '@/lib/api-server'
 export default async function TasksPage({
   searchParams
 }: {
-  searchParams: { page?: string }
+  searchParams: Promise<{ page?: string }>
 }) {
-  const page = parseInt(searchParams.page || '1')
+  const { page: pageParam } = await searchParams
+  const page = parseInt(pageParam || '1')
 
   const { data, pagination } = await apiRequest('/tasks', {
     params: { page, limit: 20 }

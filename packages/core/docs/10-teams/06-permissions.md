@@ -204,7 +204,9 @@ validateRoleTransition('member', 'admin', 'owner')
 // packages/core/src/routes/api/v1/teams/[teamId]/members/route.ts
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
-export async function POST(req: NextRequest, { params }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ teamId: string }> }) {
+  const { teamId } = await params
+
   // Declares 'teams:write'; an API key without it is rejected here, before
   // the team-role check below ever runs (fails closed, #93)
   const authResult = await authenticateRequest(req, { requiredScope: 'teams:write' })
@@ -216,7 +218,7 @@ export async function POST(req: NextRequest, { params }) {
   // Check team permission (team role, a separate check from the API-key scope above)
   const member = await getTeamMember(
     authResult.user.id,
-    params.teamId
+    teamId
   )
 
   if (!member || !['owner', 'admin'].includes(member.role)) {

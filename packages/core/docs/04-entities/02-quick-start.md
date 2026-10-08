@@ -545,13 +545,15 @@ Crea `templates/dashboard/(main)/products/[id]/edit/page.tsx`:
 'use client'
 
 import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrappers'
+import { use } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function EditProductPage({ 
   params 
 }: { 
-  params: { id: string } 
+  params: Promise<{ id: string }> 
 }) {
+  const { id } = use(params) // Client Component: unwrap the Promise with use()
   const router = useRouter()
   
   return (
@@ -559,12 +561,12 @@ export default function EditProductPage({
       <EntityFormWrapper
         entityType="products"
         mode="edit"
-        id={params.id}
+        id={id}
         onSuccess={() => {
-          router.push(`/dashboard/products/${params.id}`)
+          router.push(`/dashboard/products/${id}`)
         }}
         onCancel={() => {
-          router.push(`/dashboard/products/${params.id}`)
+          router.push(`/dashboard/products/${id}`)
         }}
       />
     </div>
@@ -579,18 +581,20 @@ Crea `templates/dashboard/(main)/products/[id]/page.tsx`:
 ```typescript
 'use client'
 
+import { use } from 'react'
 import { EntityDetailWrapper } from '@nextsparkjs/core/components/entities/wrappers'
 
 export default function ProductDetailPage({ 
   params 
 }: { 
-  params: { id: string } 
+  params: Promise<{ id: string }> 
 }) {
+  const { id } = use(params) // Client Component: unwrap the Promise with use()
   return (
     <div className="container mx-auto py-8">
       <EntityDetailWrapper
         entityType="products"
-        id={params.id}
+        id={id}
       />
     </div>
   )

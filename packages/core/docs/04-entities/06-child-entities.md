@@ -351,13 +351,15 @@ DELETE /api/v1/orders/{orderId}/child/items/{itemId}
 ```typescript
 'use client'
 
+import { use } from 'react'
 import { EntityDetailWrapper } from '@nextsparkjs/core/components/entities/wrappers'
 
-export default function OrderDetailPage({ params }: { params: { id: string } }) {
+export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params) // Client Component: unwrap the Promise with use()
   return (
     <EntityDetailWrapper
       entityType="orders"
-      id={params.id}
+      id={id}
       childEntityNames={['items']}  // Loads items automatically
     />
   )

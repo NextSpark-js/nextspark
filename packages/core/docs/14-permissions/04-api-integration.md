@@ -84,10 +84,10 @@ import { requireAuth } from '@nextsparkjs/core/lib/api/auth'
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { teamId: string; memberId: string } }
+  { params }: { params: Promise<{ teamId: string; memberId: string }> }
 ) {
   const { userId } = await requireAuth(req)
-  const { teamId, memberId } = params
+  const { teamId, memberId } = await params
 
   const membership = await MembershipService.get(userId, teamId)
 
@@ -127,10 +127,10 @@ import { requireAuth } from '@nextsparkjs/core/lib/api/auth'
 
 export async function POST(
   req: Request,
-  { params }: { params: { teamId: string } }
+  { params }: { params: Promise<{ teamId: string }> }
 ) {
   const { userId } = await requireAuth(req)
-  const { teamId } = params
+  const { teamId } = await params
   const body = await req.json()
 
   const membership = await MembershipService.get(userId, teamId)

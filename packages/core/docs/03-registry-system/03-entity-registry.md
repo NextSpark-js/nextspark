@@ -624,8 +624,9 @@ const entity = getEntityBySlug('tasks')
 // Returns: taskEntityConfig
 
 // URL routing
-async function EntityPage({ params }: { params: { slug: string } }) {
-  const entity = getEntityBySlug(params.slug)
+async function EntityPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const entity = getEntityBySlug(slug)
 
   if (!entity) {
     notFound()
@@ -715,8 +716,9 @@ export default async function EntitiesPage() {
 import { getEntityBySlug } from '@nextsparkjs/registries/entity-registry'
 import { notFound } from 'next/navigation'
 
-export default async function EntityPage({ params }: { params: { slug: string } }) {
-  const entity = getEntityBySlug(params.slug)
+export default async function EntityPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const entity = getEntityBySlug(slug)
 
   if (!entity) {
     notFound()
@@ -740,14 +742,15 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { entity: string } }
+  { params }: { params: Promise<{ entity: string }> }
 ) {
-  const entityConfig = getEntity(params.entity)
+  const { entity } = await params
+  const entityConfig = getEntity(entity)
   if (!entityConfig) {
     return NextResponse.json({ error: 'Entity not found' }, { status: 404 })
   }
 
-  const tableName = getEntityTableName(params.entity)
+  const tableName = getEntityTableName(entity)
   const data = await db.query(`SELECT * FROM ${tableName}`)
 
   return NextResponse.json({ data })

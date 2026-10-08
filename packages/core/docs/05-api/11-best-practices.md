@@ -285,15 +285,16 @@ import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/cor
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const auth = await authenticateRequest(request, { requiredScope: 'tasks:delete' })
   if (!auth.success) {
     return createAuthFailureResponse(auth)
   }
 
   // Proceed with delete
-  await deleteTask(params.id)
+  await deleteTask(id)
 
   return NextResponse.json({ success: true })
 }

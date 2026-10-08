@@ -305,11 +305,12 @@ const translations = await loader()
 import { loadThemeTranslation } from '@nextsparkjs/registries/translation-registry'
 import { getTranslations } from 'next-intl/server'
 
-export default async function HomePage({ params }: { params: { locale: string } }) {
+export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
   const projectTheme = 'project'
 
   // Load theme-specific translations
-  const themeTranslations = await loadThemeTranslation(projectTheme, params.locale)
+  const themeTranslations = await loadThemeTranslation(projectTheme, locale)
 
   // Get typed translations from next-intl
   const t = await getTranslations('home')
@@ -384,8 +385,9 @@ export async function loadProjectTranslations(locale: string) {
 // Usage in Server Component
 import { loadProjectTranslations } from '@/lib/i18n/load-translations'
 
-export default async function Page({ params }: { params: { locale: string } }) {
-  const translations = await loadProjectTranslations(params.locale)
+export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  const translations = await loadProjectTranslations(locale)
   return <div>{translations['common.welcome']}</div>
 }
 ```

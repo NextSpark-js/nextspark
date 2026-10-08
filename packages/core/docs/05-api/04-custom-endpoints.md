@@ -189,9 +189,9 @@ export async function POST(request: NextRequest) {
 // api/reports/[reportId]/export/route.ts
 export async function GET(
   request: NextRequest,
-  { params }: { params: { reportId: string } }
+  { params }: { params: Promise<{ reportId: string }> }
 ) {
-  const { reportId } = params
+  const { reportId } = await params
 
   const report = await getReport(reportId)
 

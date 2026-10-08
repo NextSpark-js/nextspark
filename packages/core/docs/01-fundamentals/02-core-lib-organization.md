@@ -488,8 +488,9 @@ export async function GET(request: NextRequest) {
 ```typescript
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
-export default async function EntityPage({ params }) {
-  const entityConfig = ENTITY_REGISTRY[params.entity]
+export default async function EntityPage({ params }: { params: Promise<{ entity: string }> }) {
+  const { entity } = await params
+  const entityConfig = ENTITY_REGISTRY[entity]
 
   if (!entityConfig) {
     notFound()

@@ -1101,17 +1101,18 @@ import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrapper
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nextsparkjs/core/components/ui/tabs'
 
 interface ProjectDetailPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+  const { id } = await params
   const projectConfig = ENTITY_REGISTRY.projects
 
   // Fetch project data (server-side)
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL}/api/v1/projects/${params.id}`,
+    `${process.env.NEXT_PUBLIC_APP_URL}/api/v1/projects/${id}`,
     {
       cache: 'no-store' // Always fresh data
     }
@@ -1148,7 +1149,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
             config={projectConfig}
             mode="edit"
             initialData={project}
-            redirectOnSuccess={`/dashboard/projects/${params.id}`}
+            redirectOnSuccess={`/dashboard/projects/${id}`}
           />
         </TabsContent>
       </Tabs>

@@ -529,8 +529,9 @@ import { db } from '@/lib/db'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { entity: string } }
+  { params }: { params: Promise<{ entity: string }> }
 ) {
+  const { entity } = await params
   const session = await auth.api.getSession({ headers: request.headers })
 
   if (!session?.user) {
@@ -564,7 +565,7 @@ export async function GET(
   filter.organizationId = organizationId
 
   // Query database
-  const { data, total } = await db.findMany(params.entity, {
+  const { data, total } = await db.findMany(entity, {
     filter,
     page,
     limit
@@ -684,8 +685,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { entity: string } }
+  { params }: { params: Promise<{ entity: string }> }
 ) {
+  const { entity } = await params
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
@@ -696,7 +698,7 @@ export async function GET(
       )
 
       // Subscribe to entity updates
-      const unsubscribe = subscribeToUpdates(params.entity, (event) => {
+      const unsubscribe = subscribeToUpdates(entity, (event) => {
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
         )

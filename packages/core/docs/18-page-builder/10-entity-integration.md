@@ -279,8 +279,8 @@ Public pages check for builder content:
 ```typescript
 // templates/(public)/[entity]/page.tsx
 
-async function PublicDynamicPage({ params }) {
-  const slug = params.entity
+async function PublicDynamicPage({ params }: { params: Promise<{ entity: string }> }) {
+  const slug = (await params).entity
 
   // Check for pages with this slug
   const pageResult = await query(
@@ -303,10 +303,11 @@ Posts have a dedicated route at `/blog/[slug]`:
 ```typescript
 // templates/(public)/blog/[slug]/page.tsx
 
-async function BlogPost({ params }) {
+async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
   const postResult = await query(
     'SELECT * FROM posts WHERE slug = $1 AND status = $2',
-    [params.slug, 'published']
+    [slug, 'published']
   )
 
   if (postResult.rows.length > 0) {

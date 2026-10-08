@@ -21,6 +21,8 @@ Plugins can expose custom API endpoints for external access, data processing, an
 
 **Location**: `plugins/[plugin]/api/[endpoint]/route.ts`
 
+**Scope declaration**: a request authenticated with an API key is rejected with 403 `SCOPE_NOT_DECLARED` unless the route passes `requiredScope` or `allowAnyScope: true` to `authenticateRequest` (session requests are unaffected). The samples in this guide use `allowAnyScope: true`; pass `requiredScope: '<scope>'` to restrict a route to keys that hold that scope.
+
 **Example**:
 ```typescript
 // plugins/my-plugin/api/process/route.ts
@@ -30,7 +32,7 @@ import { usePlugin } from '@nextsparkjs/registries/plugin-registry'
 
 export async function POST(request: NextRequest) {
   // 1. Authenticate request
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { allowAnyScope: true })
   if (!authResult.success) {
     return NextResponse.json(
       { error: 'Unauthorized' },
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { allowAnyScope: true })
   if (!authResult.success) {
     return NextResponse.json(
       { error: 'Unauthorized' },
@@ -100,7 +102,7 @@ export async function GET(request: NextRequest) {
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { allowAnyScope: true })
 
   if (!authResult.success) {
     return NextResponse.json(
@@ -196,7 +198,7 @@ export type ProcessInput = z.infer<typeof ProcessInputSchema>
 import { ProcessInputSchema } from '../lib/validation'
 
 export async function POST(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { allowAnyScope: true })
   if (!authResult.success) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -240,14 +242,14 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { allowAnyScope: true })
   if (!authResult.success) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const itemId = params.id
+  const { id: itemId } = await params
 
   const { getItem } = usePlugin('my-plugin')
   const item = await getItem(itemId)
@@ -261,14 +263,14 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { allowAnyScope: true })
   if (!authResult.success) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const itemId = params.id
+  const { id: itemId } = await params
 
   const { deleteItem } = usePlugin('my-plugin')
   await deleteItem(itemId)
@@ -285,7 +287,7 @@ export async function DELETE(
 
 ```typescript
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { allowAnyScope: true })
   if (!authResult.success) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -376,7 +378,7 @@ const GenerateSchema = z.object({
 
 export async function POST(request: NextRequest) {
   // Authenticate
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { allowAnyScope: true })
   if (!authResult.success) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

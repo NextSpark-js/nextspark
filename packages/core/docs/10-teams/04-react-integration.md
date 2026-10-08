@@ -506,8 +506,9 @@ Pass team data from server to client:
 
 ```tsx
 // Server Component
-async function TeamPage({ params }) {
-  const team = await getTeam(params.teamId)
+async function TeamPage({ params }: { params: Promise<{ teamId: string }> }) {
+  const { teamId } = await params
+  const team = await getTeam(teamId)
   return <TeamClient team={team} />
 }
 

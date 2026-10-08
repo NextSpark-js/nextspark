@@ -82,8 +82,9 @@ POST /api/import/{entity}
 // api/import/[entity]/route.ts
 export async function POST(
   request: NextRequest,
-  { params }: { params: { entity: string } }
+  { params }: { params: Promise<{ entity: string }> }
 ) {
+  const { entity } = await params
   const body = await request.json()
   const { items, options = {} } = body
 
@@ -91,7 +92,7 @@ export async function POST(
 
   for (const [index, item] of items.entries()) {
     try {
-      const created = await createEntity(params.entity, item)
+      const created = await createEntity(entity, item)
       results.created.push(created)
     } catch (error) {
       if (options.skipInvalid) {
