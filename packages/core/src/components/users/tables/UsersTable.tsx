@@ -240,9 +240,9 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
   // Get role badge variant
   const getRoleBadgeVariant = (role: UserRole) => {
     switch (role) {
-      case 'admin':
+      case 'suspended':
         return 'destructive';
-      case 'colaborator':
+      case 'developer':
         return 'default';
       case 'member':
         return 'secondary';
@@ -401,11 +401,8 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                           <DropdownMenuRadioItem value="member">
                             Member
                           </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="colaborator">
-                            Colaborator
-                          </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="admin">
-                            Admin
+                          <DropdownMenuRadioItem value="developer">
+                            Developer
                           </DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
                       </DropdownMenuSubContent>

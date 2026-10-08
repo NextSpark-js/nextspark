@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, APIError } from "better-auth";
 import type { Pool } from "pg";
 import { createPool } from './db-pool';
 import { nextCookies } from "better-auth/next-js";
@@ -455,6 +455,12 @@ export const auth = betterAuth({
         // Enforce domain restrictions on EVERY login (not just signup)
         // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
         before: async (session: { userId: string; [key: string]: unknown }) => {
+          // A suspended account gets no new session (lib/auth/suspension.ts)
+          const owner = await pool.query('SELECT role FROM users WHERE id = $1 LIMIT 1', [session.userId]);
+          if (owner.rows[0]?.role === 'suspended') {
+            throw new APIError('FORBIDDEN', { message: 'This account is suspended', code: 'ACCOUNT_SUSPENDED' });
+          }
+
           const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
           if (registrationMode === 'domain-restricted' || registrationMode === 'domain-open') {

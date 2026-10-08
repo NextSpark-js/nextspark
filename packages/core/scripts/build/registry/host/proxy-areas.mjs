@@ -113,22 +113,25 @@ export const PROXY_SESSION_CACHED_WARNING = 'NS_PROXY_SESSION_CACHED'
 
 /** What to add to an in-process session read (the 0.1.0-beta.196 template); migrate in the CLI says the same. */
 export const PROXY_SESSION_CACHED_FIX =
-  "add disableCookieCache: true to the query of its auth.api.getSession call: query: { disableRefresh: true, disableCookieCache: true }"
+  "add disableCookieCache: true to the query of its auth.api.getSession call: query: { disableRefresh: true, disableCookieCache: true }, " +
+  "and refuse a suspended account's session at the end of getSession: return session && (session.user as { role?: unknown }).role !== 'suspended' ? (session as Session) : null"
 
 /**
  * The warning for a proxy whose code (not a comment) reads the session in process (auth.api.getSession, as the
- * 0.1.0-beta.196 template) without disableCookieCache, or null: Better Auth then answers from the cached session_data
- * cookie, so a signed-out cookie pair or an old role passes the proxy for up to 5 minutes.
+ * 0.1.0-beta.196 template) without disableCookieCache, or without refusing a suspended account, or null: Better Auth
+ * then answers from the cached session_data cookie, so a signed-out cookie pair or an old role passes the proxy for up
+ * to 5 minutes, and a suspended account's session passes it.
  */
 export function proxySessionCachedNotice(file, source) {
   const code = withoutComments(source)
-  if (!code.includes('auth.api.getSession(') || code.includes('disableCookieCache')) return null
+  if (!code.includes('auth.api.getSession(') || (code.includes('disableCookieCache') && code.includes("'suspended'"))) return null
   return {
     code: PROXY_SESSION_CACHED_WARNING,
     target: file,
     message:
       `${file} reads the session with auth.api.getSession from Better Auth's cookie cache: after a sign-out, the copied cookie ` +
-      `pair, or a role changed since sign-in, still passes the proxy until the cached cookie expires (5 minutes by default). ` +
+      `pair, or a role changed since sign-in, still passes the proxy until the cached cookie expires (5 minutes by default), ` +
+      `and a suspended account's session passes it. ` +
       `As node_modules/@nextsparkjs/core/templates/proxy.ts does, ${PROXY_SESSION_CACHED_FIX}`,
   }
 }

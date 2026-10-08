@@ -10,6 +10,7 @@ import { getUserDefaultTeamId } from '../../teams/dashboard-team'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../../auth'
 import { validateApiKey } from '../auth'
+import { isSuspendedRole } from '../../auth/suspension'
 import { apiKeyRateLimitResponse } from '../rate-limit'
 import { queryOne } from '../../db'
 import { TeamMemberService } from '../../services/team-member.service'
@@ -299,7 +300,8 @@ async function trySessionAuth(request: NextRequest): Promise<DualAuthResult> {
     // From the database, not the cookie cache: a sign-out, a revoked session or a role change counts at once
     // (lib/auth/authorization-session.ts).
     const session = await auth.api.getSession({ headers: request.headers, query: { disableCookieCache: true } })
-    if (!session?.user) {
+    // A suspended account's session is refused (lib/auth/suspension.ts).
+    if (!session?.user || isSuspendedRole((session.user as { role?: unknown }).role)) {
       return { success: false, type: 'none', user: null }
     }
 

@@ -155,7 +155,11 @@ test('a proxy that reads the session in process from the cookie cache is warned 
   assert.match(notice.message, /^src\/proxy\.ts reads the session with auth\.api\.getSession from Better Auth's cookie cache/)
   assert.match(notice.message, /query: \{ disableRefresh: true, disableCookieCache: true \}/)
   assert.equal(proxySessionCachedNotice('src/proxy.ts', readFileSync(join(CORE_ROOT, 'templates/proxy.ts'), 'utf8')), null)
-  assert.equal(proxySessionCachedNotice('src/proxy.ts', BETA_196_SESSION_READ.replace('disableRefresh: true', 'disableRefresh: true, disableCookieCache: true')), null)
+  assert.match(notice.message, /role !== 'suspended'/)
+  // the cache option alone is not enough: the proxy must also refuse a suspended account's session
+  const cacheOnly = BETA_196_SESSION_READ.replace('disableRefresh: true', 'disableRefresh: true, disableCookieCache: true')
+  assert.notEqual(proxySessionCachedNotice('src/proxy.ts', cacheOnly), null)
+  assert.equal(proxySessionCachedNotice('src/proxy.ts', cacheOnly.replace('return session as Session | null', "return session && (session.user as { role?: unknown }).role !== 'suspended' ? (session as Session) : null")), null)
   // a comment that names the option does not count
   assert.notEqual(proxySessionCachedNotice('src/proxy.ts', `// disableCookieCache\n${BETA_196_SESSION_READ}`), null)
   // no in-process read (the HTTP check has its own warning), no notice

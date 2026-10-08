@@ -91,6 +91,13 @@ describe('proxy identity headers (#87)', () => {
     expect(forwarded.get('x-pathname')).toBe('/dashboard')
   })
 
+  test('a suspended account\'s session is no session: login', async () => {
+    mockedGetSession.mockResolvedValue({ user: { id: 'user-1', email: 'user-1@example.com', role: 'suspended' } })
+    const response = (await proxy(makeRequest('/dashboard', { cookie: 'better-auth.session_token=abc' }))) as unknown as PassThrough
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toContain('/login')
+  })
+
   test('redirects to login on protected routes without a session (forged header does not help)', async () => {
     mockedGetSession.mockResolvedValue(null)
 

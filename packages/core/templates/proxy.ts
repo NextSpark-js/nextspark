@@ -192,13 +192,14 @@ function redirectAccessDenied(request: NextRequest): NextResponse {
  * (lib/auth/session-refresh). `disableCookieCache`: the session comes from the
  * database, not the signed session_data cookie, so a sign-out, a revoked
  * session or a role change counts at once (lib/auth/authorization-session).
+ * A suspended account's session is no session (lib/auth/suspension).
  */
 async function getSession(request: NextRequest): Promise<Session | null> {
   const session = await auth.api.getSession({
     headers: new Headers({ cookie: request.headers.get('cookie') || '' }),
     query: { disableRefresh: true, disableCookieCache: true },
   })
-  return session as Session | null
+  return session && (session.user as { role?: unknown }).role !== 'suspended' ? (session as Session) : null
 }
 
 /**

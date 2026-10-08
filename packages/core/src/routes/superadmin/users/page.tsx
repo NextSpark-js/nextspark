@@ -73,8 +73,8 @@ interface UsersData {
 
 const roleOptions = [
   { value: "member", label: "Member" },
-  { value: "colaborator", label: "Colaborator" },
-  { value: "admin", label: "Admin" },
+  { value: "developer", label: "Developer" },
+  { value: "suspended", label: "Suspended" },
 ];
 
 const statusOptions = [

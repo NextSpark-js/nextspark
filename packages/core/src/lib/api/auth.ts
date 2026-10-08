@@ -45,6 +45,10 @@ export function getValidatedApiKey(request: Request): ApiKeyAuth | null {
  * Valida una API Key desde el header Authorization o x-api-key
  */
 export async function validateApiKey(request: NextRequest): Promise<ApiKeyAuth | null> {
+  // Once per request: the rate limiter and the route both validate the key of the same request.
+  const validatedBefore = validatedKeys.get(request);
+  if (validatedBefore) return validatedBefore;
+
   const startTime = Date.now();
 
   try {
@@ -128,6 +132,14 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyAuth |
       return null;
     }
     
+    // The owner's role is read on every request, never from the key cache: a suspension (lib/auth/suspension.ts)
+    // counts at once on every server instance, not when this process's cached entry expires.
+    const owner = await queryOne<{ role: string }>('SELECT role FROM "users" WHERE id = $1', [keyData.userId]);
+    if (owner?.role === 'suspended') {
+      await constantTimeDelay(startTime);
+      return null;
+    }
+
     // Resetear intentos fallidos en caso de éxito
     if (keyData.failedAttempts && keyData.failedAttempts > 0) {
       resetFailedAttempts(keyData.id).catch(console.error);

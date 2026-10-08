@@ -37,6 +37,11 @@ describe('authenticateRequest (session)', () => {
     expect(mockGetSession).toHaveBeenCalledWith(expect.objectContaining({ query: { disableCookieCache: true } }))
   })
 
+  it('a suspended account\'s session is not authenticated', async () => {
+    mockGetSession.mockResolvedValue({ session: { id: 's1' }, user: { id: 'u1', email: 'u@x', role: 'suspended' } })
+    expect((await authenticateRequest(request(), { requiredScope: 'users:read' })).success).toBe(false)
+  })
+
   it('a signed-out session (no row any more) is not authenticated, whatever the cookies still carry', async () => {
     mockGetSession.mockResolvedValue(null)
     const result = await authenticateRequest(request(), { requiredScope: 'users:read' })
@@ -45,6 +50,11 @@ describe('authenticateRequest (session)', () => {
 })
 
 describe('getAuthorizationSession', () => {
+  it('a suspended account\'s session is no session', async () => {
+    mockGetSession.mockResolvedValue({ session: { id: 's1' }, user: { id: 'u1', role: 'suspended' } })
+    expect(await getAuthorizationSession(new Headers(COOKIES))).toBeNull()
+  })
+
   it('passes the request headers and disables the cookie cache', async () => {
     mockGetSession.mockResolvedValue(null)
     const headers = new Headers(COOKIES)

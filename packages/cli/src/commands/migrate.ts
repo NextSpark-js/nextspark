@@ -885,15 +885,17 @@ export const PROXY_SESSION_CACHED_WARNING = 'NS_PROXY_SESSION_CACHED';
 
 /**
  * The warning for a kept proxy whose code reads the session in process (the 0.1.0-beta.196 template) without
- * disableCookieCache, or null. Same rule and message as core's `prepare` (host/proxy-areas.mjs).
+ * disableCookieCache or without refusing a suspended account, or null. Same rule and message as core's `prepare` (host/proxy-areas.mjs).
  */
 export function proxySessionCachedWarning(file: string, source: string): string | null {
   const code = proxyCodeWithoutComments(source);
-  if (!code.includes('auth.api.getSession(') || code.includes('disableCookieCache')) return null;
+  if (!code.includes('auth.api.getSession(') || (code.includes('disableCookieCache') && code.includes("'suspended'"))) return null;
   return `[${PROXY_SESSION_CACHED_WARNING}] ${file} reads the session with auth.api.getSession from Better Auth's cookie cache: after a sign-out, the copied cookie ` +
-    `pair, or a role changed since sign-in, still passes the proxy until the cached cookie expires (5 minutes by default). ` +
+    `pair, or a role changed since sign-in, still passes the proxy until the cached cookie expires (5 minutes by default), ` +
+    `and a suspended account's session passes it. ` +
     `As node_modules/@nextsparkjs/core/templates/proxy.ts does, ` +
-    'add disableCookieCache: true to the query of its auth.api.getSession call: query: { disableRefresh: true, disableCookieCache: true }';
+    'add disableCookieCache: true to the query of its auth.api.getSession call: query: { disableRefresh: true, disableCookieCache: true }, ' +
+    "and refuse a suspended account's session at the end of getSession: return session && (session.user as { role?: unknown }).role !== 'suspended' ? (session as Session) : null";
 }
 
 /** Whether an old root interception file needs previous-core evidence. */

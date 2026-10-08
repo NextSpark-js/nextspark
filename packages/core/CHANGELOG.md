@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ```
   Without it the proxy keeps letting a signed-out cookie pair into `/dashboard`, `/superadmin` and `/devtools` (and keeps an old role) until
   the cached `session_data` cookie expires (5 minutes by default); the pages and the API behind it already refuse.
+- **Suspended accounts.** `pnpm db:migrate` applies core's `031_users_role_suspended.sql`, which adds `suspended` to the roles
+  `check_users_role` accepts and keeps the others (roles your project added included). If your project replaced that constraint with
+  something that is not a list of roles, the migration leaves it as it is and prints a notice: add `suspended` to it yourself. Your
+  `src/proxy.ts` treats a suspended account's session as no session once it has the change above plus this line at the end of `getSession`:
+  `return session && (session.user as { role?: unknown }).role !== 'suspended' ? (session as Session) : null` (the API and the pages refuse
+  it anyway; `NS_PROXY_SESSION_CACHED` warns until the proxy has both lines).
 
 ### Added
 
@@ -108,6 +114,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `NS_PROXY_SESSION_OVER_HTTP` advice, and warn `NS_PROXY_SESSION_CACHED` for a `src/proxy.ts` that reads the session with
   `auth.api.getSession` without it.
   A project's own `src/proxy.ts`: see Upgrading.
+- **The superadmin "suspend" action works.** It failed with a 500 because `users.role` did not accept `suspended`, and nothing treated
+  that role as a refusal. Now `PATCH /api/superadmin/users/:id` with `suspend` sets the role `suspended`, deletes the user's sessions and
+  deactivates their active API keys (`status = 'inactive'`), in one statement; the answer reports how many (`revoked`). A suspended
+  account gets no new session (sign-in answers 403 `ACCOUNT_SUSPENDED`), and its session and API keys are refused wherever core reads the
+  session for an authorization (`getAuthorizationSession`, `authenticateRequest`, `validateAndAuthenticateRequest`, the server actions, the
+  `/superadmin` and `/devtools` checks and the proxy template) and by `validateApiKey`. `validateApiKey` reads the key owner's role on every
+  request, not from its 5-minute key cache, so a suspension counts at once on every server instance (one indexed query per API-key request;
+  a request now validates its key once, where the rate limiter and the route each validated it before). `unsuspend` gives a suspended user
+  back the `member` role (400 if the user is not suspended); their deactivated API keys stay deactivated, they create new ones. `change-role`
+  on a suspended user answers 400 and points to `unsuspend`. Nobody can act on their own account or on a superadmin, so the last superadmin cannot be suspended. `change-role` accepts only the
+  roles `users.role` accepts, `member` and `developer` (only a superadmin grants `developer`); `colaborator` and `admin`, which the
+  database refused, are gone from the action and from the superadmin users page. `lib/auth/suspension` exports `suspendUser`,
+  `unsuspendUser` and `isSuspendedRole`.
 
 ### Fixed
 

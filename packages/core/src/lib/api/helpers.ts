@@ -5,6 +5,7 @@ import { apiKeyRateLimitResponse } from './rate-limit';
 import { getRecordedClientIp } from './client-ip';
 import { getApplicationConfig } from '../config';
 import { auth } from '../auth';
+import { isSuspendedRole } from '../auth/suspension';
 import { MetaService } from '../services/meta.service';
 import { ScopeService } from '../services/scope.service';
 import { getEntityConfig } from '../entities/registry';
@@ -70,7 +71,8 @@ export async function validateAndAuthenticateRequest(
         query: { disableCookieCache: true }
       });
 
-      if (session?.user?.id) {
+      // A suspended account's session is refused (lib/auth/suspension.ts).
+      if (session?.user?.id && !isSuspendedRole((session.user as { role?: unknown }).role)) {
         // Create session auth object with appropriate scopes based on user role
         // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
         const userRole = session.user.role || 'member';

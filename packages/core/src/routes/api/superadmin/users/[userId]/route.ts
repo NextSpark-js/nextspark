@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
+import { suspendUser, unsuspendUser } from '@nextsparkjs/core/lib/auth/suspension';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
@@ -235,10 +236,12 @@ interface UserActionBody {
  * Only accessible by superadmin or developer users.
  *
  * Actions:
- * - change-role: Change user's role (requires 'role' field)
- * - suspend: Suspend the user (sets role to 'suspended')
- * - unsuspend: Restore user's role to 'member'
+ * - change-role: Change user's role (requires 'role' field: member, or developer when a superadmin asks)
+ * - suspend: Suspend the user (role 'suspended'), sign out all their sessions and deactivate their API keys
+ * - unsuspend: Give a suspended user back the 'member' role (their API keys stay deactivated)
  * - verify-email: Manually verify user's email
+ *
+ * Nobody can act on their own account or on a superadmin, so the last superadmin is never suspended.
  */
 export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: RouteParams) => {
   try {
@@ -319,11 +322,25 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
 
     switch (action) {
       case 'change-role':
-        // Validate role
-        if (!role || !['member', 'colaborator', 'admin'].includes(role)) {
+        // The roles users.role accepts (check_users_role) besides superadmin, which is not granted here, and suspended,
+        // which the suspend action sets with its sign-out
+        if (!role || !['member', 'developer'].includes(role)) {
           return NextResponse.json(
-            { error: 'Invalid role. Must be one of: member, colaborator, admin' },
+            { error: 'Invalid role. Must be one of: member, developer' },
             { status: 400 }
+          );
+        }
+        // A suspended account comes back only through unsuspend
+        if (targetUser.role === 'suspended') {
+          return NextResponse.json(
+            { error: 'User is suspended. Use the unsuspend action to restore access, then change the role' },
+            { status: 400 }
+          );
+        }
+        if (role === 'developer' && session.user.role !== 'superadmin') {
+          return NextResponse.json(
+            { error: 'Forbidden - Only a superadmin can grant the developer role' },
+            { status: 403 }
           );
         }
         updateQuery = `
@@ -335,25 +352,35 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
         updateParams = [role, userId];
         break;
 
-      case 'suspend':
-        updateQuery = `
-          UPDATE "users"
-          SET role = 'suspended', "updatedAt" = NOW()
-          WHERE id = $1
-          RETURNING id, role
-        `;
-        updateParams = [userId];
-        break;
+      case 'suspend': {
+        const suspended = await suspendUser(userId, session.user.id);
+        if (!suspended) {
+          return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+        }
+        return NextResponse.json({
+          success: true,
+          action,
+          userId,
+          message: `User ${action} successful`,
+          revoked: suspended,
+          metadata: { performedBy: session.user.id, performedAt: new Date().toISOString(), source: 'superadmin-api' }
+        });
+      }
 
       case 'unsuspend':
-        updateQuery = `
-          UPDATE "users"
-          SET role = 'member', "updatedAt" = NOW()
-          WHERE id = $1
-          RETURNING id, role
-        `;
-        updateParams = [userId];
-        break;
+        if (targetUser.role !== 'suspended') {
+          return NextResponse.json({ error: 'User is not suspended' }, { status: 400 });
+        }
+        if (!(await unsuspendUser(userId, session.user.id))) {
+          return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+        }
+        return NextResponse.json({
+          success: true,
+          action,
+          userId,
+          message: `User ${action} successful`,
+          metadata: { performedBy: session.user.id, performedAt: new Date().toISOString(), source: 'superadmin-api' }
+        });
 
       case 'verify-email':
         updateQuery = `

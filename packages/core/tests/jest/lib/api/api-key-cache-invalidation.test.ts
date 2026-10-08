@@ -101,4 +101,30 @@ describe('API key cache invalidation (#92)', () => {
     expect(await validateApiKey(requestWithKey(key))).toBeNull()
     expect(lookupCalls()).toBe(2)
   })
+
+  test('the owner\'s role is read on every request, past the key cache: a suspension counts at once', async () => {
+    const { key } = await ApiKeyManager.generateApiKey()
+    let role = 'member'
+    mockedQueryOne.mockImplementation(async (sql: string) => {
+      if (String(sql).includes('WHERE "keyHash"')) return activeRow('key-owner-role')
+      if (String(sql).includes('SELECT role FROM "users"')) return { role }
+      return null
+    })
+    expect(await validateApiKey(requestWithKey(key))).toMatchObject({ keyId: 'key-owner-role' })
+    role = 'suspended' // set elsewhere (another instance, or SQL): this process's key cache still holds the key
+    expect(await validateApiKey(requestWithKey(key))).toBeNull()
+    expect(lookupCalls()).toBe(1)
+    const ownerReads = mockedQueryOne.mock.calls.filter(([sql]) => String(sql).includes('SELECT role FROM "users"')).length
+    expect(ownerReads).toBe(2)
+  })
+
+  test('a request validates its key once, however many callers ask', async () => {
+    const { key } = await ApiKeyManager.generateApiKey()
+    mockedQueryOne.mockImplementation(async (sql: string) =>
+      String(sql).includes('WHERE "keyHash"') ? activeRow('key-once') : String(sql).includes('FROM "users"') ? { role: 'member' } : null)
+    const request = requestWithKey(key)
+    await validateApiKey(request)
+    await validateApiKey(request)
+    expect(mockedQueryOne.mock.calls.filter(([sql]) => String(sql).includes('FROM "users"')).length).toBe(1)
+  })
 })
