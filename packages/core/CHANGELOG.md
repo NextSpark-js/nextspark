@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- New section `22-stability-and-support` with the 1.0 stability table (stable, experimental, deprecated, deferred), the support matrix (Node.js, Next.js `~16.3.8`, pnpm, PostgreSQL 15-17, Expo SDK 54), the SemVer and deprecation policy (one minor of notice, security support for the latest 1.x minor, `latest` and `1.0.0-rc.N` on `next`, `nextspark migrate` for 12 months after 1.0.0 or the whole 1.x line, whichever ends first) and the written PostgreSQL requirements (application, service and migration roles, the `pgcrypto` extension, SSL, poolers). Neon, Supabase and Amazon RDS are listed as not verified.
+- Experimental notices on the page builder dashboard editor, the media library, scheduled actions and the non-starter templates.
+- The accessibility guide states WCAG 2.2 AA as the 1.0 target (axe in CI plus a keyboard and focus pass), still in progress, and no longer promises legal compliance.
+- The beta.192 status page is marked historical. The README and guides no longer call the project production-ready or recommend Supabase and Vercel.
+
 ## [0.1.0-beta.197] - 2026-10-08
 
 ### Upgrading from 0.1.0-beta.196
