@@ -61,6 +61,8 @@ PACKAGES_DIR="${REPO_ROOT}/.packages"         # Local tarballs directory
 TEST_PORT=3005
 ```
 
+**Where `create-nextspark-app` looks for tarballs:** a `.packages` directory in the current directory, `../`, `../repo/`, `../../` or `../../repo/`. If `REPO_ROOT` is a git worktree (`.claude/worktrees/NN`), none of those reaches it: create a symlink `ln -s "$REPO_ROOT" "$(dirname "$PROJECTS_DIR")/repo"` (the parent of `projects/` gets a `repo` link to the worktree). If more than one `.packages` is in sight, core and cli take the first one in that order **without a warning**; ui and testing warn ("Found more than one local ... tarball" or "Ignoring local ... not at <version>") and come from the registry. Keep exactly one `.packages` visible.
+
 ---
 
 ## EXECUTE ALL STEPS AUTOMATICALLY
@@ -184,7 +186,7 @@ rm -rf "$TEST_DIR"
 
 **This uses the locally built `create-nextspark-app` which:**
 - Creates a minimal `package.json` (no create-next-app download)
-- Looks for tarballs in `.packages/` directory automatically
+- Looks for tarballs in a `.packages/` directory in `cwd`, `../`, `../repo/`, `../../` or `../../repo/` (see Step 0.3 for worktrees)
 - Installs `@nextsparkjs/core`, `@nextsparkjs/cli`, `@nextsparkjs/ui` and `@nextsparkjs/testing` from local tarballs
 - Runs `nextspark init` wizard (creates the host, `src/app` included, and a `.env` with a generated `BETTER_AUTH_SECRET`)
 
@@ -209,7 +211,7 @@ npx --yes "${PACKAGES_DIR}/create-nextspark-app-"*.tgz test-package \
 **What this does automatically:**
 1. Creates `test-package/` directory
 2. Writes minimal `package.json`
-3. Finds tarballs in `$REPO_ROOT/.packages/` (via `findLocalTarball`)
+3. Finds tarballs in `.packages/` (via `findLocalTarball`; with the repo in a worktree it needs the `repo` symlink from Step 0.3, and only one visible `.packages`)
 4. Installs `@nextsparkjs/{core,cli,ui,testing}` from local tarballs (the installer may be your global pnpm, not the repo's pinned one)
 5. Runs `nextspark init --theme starter --yes`, which generates the host: `src/app` (thin facades, `src/proxy.ts`), `.nextspark/registries/`, `config/`, `templates/`
 
@@ -224,7 +226,7 @@ ls "$TEST_DIR/.nextspark/registries/"
 grep '@nextsparkjs' "$TEST_DIR/package.json"   # four `file:` tarball paths: core, cli, ui, testing
 ```
 
-`src/app` is fully generated and git-ignored: after init it already exists (~180 files), and `nextspark prepare` (Step 8) regenerates it. Never edit it by hand.
+`src/app` is fully generated and git-ignored: after init it already exists (180 files), and `nextspark prepare` (Step 8) regenerates it. Never edit it by hand.
 
 **If project generation fails, stop and report the failed command; do not reconstruct a legacy layout manually.**
 
@@ -273,7 +275,7 @@ pnpm exec nextspark db:seed
 - Phase 1: Core migrations (29 files)
 - Phase 2: Entity migrations (9 for the starter theme: pages, posts, tasks)
 
-**Seeded users** (table `users`, no password and no session: they sign in with an emailed code): `superadmin@nextspark.dev` (role `superadmin`), `developer@nextspark.dev` (role `developer`).
+**Seeded users** (table `users`): `superadmin@nextspark.dev` (role `superadmin`), `developer@nextspark.dev` (role `developer`). `db:seed` gives each a `credential` account with the sample-data password, but in this flow they still sign in with an emailed code (the code is in the dev log); the password exists, so the production check in Step 12 reports it.
 
 ---
 
@@ -281,8 +283,8 @@ pnpm exec nextspark db:seed
 
 ```bash
 cd "$TEST_DIR"
-pnpm exec nextspark prepare
-pnpm exec nextspark prepare   # second run: must report "0 written" (everything unchanged)
+pnpm exec nextspark prepare   # init already generated everything: this first run already reports "0 written"
+pnpm exec nextspark prepare   # second run: "0 written" again (everything unchanged)
 ```
 
 **Verify:**
@@ -290,7 +292,7 @@ pnpm exec nextspark prepare   # second run: must report "0 written" (everything 
 ls -la .nextspark/registries/*.ts
 ```
 
-Should have 31 registry files and report `Generated src/app (~179 files) and 31 registries`. Check for NO path escaping errors (no `\v`, `\t` in file paths).
+Should have 31 registry files and report `Generated src/app (180 files) and 31 registries: 0 written ... 211 unchanged` (beta.196). Check for NO path escaping errors (no `\v`, `\t` in file paths).
 
 ---
 
@@ -369,7 +371,7 @@ Login is **passwordless by default**. There is no password to fill, and `CYPRESS
 
 **CRITICAL:** Test full CRUD operations to verify the data flow works end-to-end.
 
-Selectors (`data-cy`): fields `tasks-field-title`, `tasks-field-description` (the inputs have **no `name` attribute**); detail page `tasks-edit`, `tasks-delete`; delete dialog `tasks-delete-confirm`. The submit button is `tasks-submit` with label **Create** on the create form and `tasks-form-submit` with label **Save Changes** on the edit form.
+Selectors (`data-cy`): `tasks-field-title` and `tasks-field-description` are **container `div`s**, not the inputs: the controls are `[data-cy=tasks-field-title] input` and `[data-cy=tasks-field-description] textarea` (they have **no `name` attribute**); detail page `tasks-edit`, `tasks-delete`; delete dialog `tasks-delete-confirm`. The submit button is `tasks-form-submit` on both forms (label **Create** on the create form, **Save Changes** on the edit form); there is no `tasks-submit`.
 
 ##### 10.3.1 Navigate to Tasks
 `browser_navigate` to `http://localhost:3005/dashboard/tasks`, then `browser_snapshot`.
@@ -379,7 +381,7 @@ Verify: heading "Tasks", link "Add task", heading "No tasks found" or table with
 Navigate directly to `http://localhost:3005/dashboard/tasks/create` (more reliable than clicking the link) and snapshot.
 Verify: heading "Create task", form fields: Title*, Description, Status, Priority, etc.
 
-Fill `[data-cy=tasks-field-title]` with `NPM Package Test Task` and `[data-cy=tasks-field-description]` with `Task created during NPM package test`, then click the button **Create**.
+Fill `[data-cy=tasks-field-title] input` with `NPM Package Test Task` and `[data-cy=tasks-field-description] textarea` with `Task created during NPM package test`, then click `[data-cy=tasks-form-submit]` (**Create**).
 
 **Expect:** redirect to `/dashboard/tasks/<uuid>` with heading "NPM Package Test Task" and the Edit and Delete buttons.
 
@@ -391,7 +393,7 @@ Visually verify: Title, Description, Status "To Do", Priority "Medium", timestam
 Navigate directly to `http://localhost:3005/dashboard/tasks/<TASK_UUID>/edit` and snapshot.
 Verify: form pre-filled with current values.
 
-Replace the content of `[data-cy=tasks-field-title]` with `NPM Package Test Task - UPDATED` and click **Save Changes**.
+Replace the content of `[data-cy=tasks-field-title] input` with `NPM Package Test Task - UPDATED` and click `[data-cy=tasks-form-submit]` (**Save Changes**).
 
 **Expect:** redirect to the detail page with heading "NPM Package Test Task - UPDATED".
 
@@ -437,7 +439,7 @@ SLUG=test-landing-page   # or the value of [data-cy=builder-slug-input]
 3. Page content/blocks render on the public URL
 
 ##### 10.4.3 DELETE - Remove Page (via list bulk action)
-Navigate to `http://localhost:3005/dashboard/pages`. Tick the row's checkbox (`tr:has-text("Test Landing") [role=checkbox]`), click `[data-cy=pages-bulk-delete]`, then `[data-cy=pages-bulk-delete-confirm]`. The row disappears from the list.
+Navigate to `http://localhost:3005/dashboard/pages`. Tick the row's checkbox (`tr:has-text("Test Landing") input[data-cy^="pages-select-"]`; it is a native input, not `[role=checkbox]`), click `[data-cy=pages-bulk-delete]`, then `[data-cy=pages-bulk-delete-confirm]`. The row disappears from the list. The dashboard has **two** `main` elements: scope content queries to `main.flex-1`.
 
 **Verify the public URL no longer serves the page:** `http://localhost:3005/${SLUG}` must NOT contain `data-page-slug=<slug>`; it shows the not-found page (`This page could not be found`) and `<meta name="robots" content="noindex">`.
 
@@ -499,7 +501,7 @@ lsof -tiTCP:${TEST_PORT} -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null || tr
 lsof -tiTCP:${TEST_PORT} -sTCP:LISTEN || echo "port ${TEST_PORT} free"
 ```
 
-The dev log prints `[DB] SIGTERM received, initiating graceful shutdown ... Database pool closed` many times during normal use (27 in ~3 minutes in beta.195); it does not fail the run, but note the count in the report.
+The dev log prints `[DB] SIGTERM received, initiating graceful shutdown ... Database pool closed` many times during normal use (27 in ~3 minutes in beta.195, 28-29 in a session on beta.196); it does not fail the run, but note the count in the report.
 
 ---
 
@@ -531,7 +533,7 @@ Record which of the two builds you ran. (`NEXTSPARK_AUTH_PREFLIGHT=off` is the o
 - Route list showing all pages (`◐` partial prerender, `○` static, `ƒ` dynamic; ~133 static pages for the starter theme)
 - No "Module not found" errors
 - No "Type error" messages
-- Noise that does not fail the build but must be counted and reported: `grep -c MISSING_MESSAGE build.log`, `grep -c 'ReferenceError' build.log` (beta.195: 132 and 2)
+- Noise that does not fail the build but must be counted and reported: `grep -c MISSING_MESSAGE build.log`, `grep -c 'ReferenceError' build.log` (beta.196: both 0)
 
 **Start the production server and check it** (`next start` needs only the output of the build):
 ```bash
@@ -544,6 +546,8 @@ kill "$(cat prod.pid)" 2>/dev/null; lsof -tiTCP:${TEST_PORT} -sTCP:LISTEN | xarg
 ```
 
 With the runtime-only build, `start.log` shows an `[auth-readiness] no login method can authenticate` error at startup: expected until the credentials are injected; the server keeps serving and the per-request gates refuse unusable methods.
+
+**Sample-data password warning.** On a database seeded with `db:seed`, `next start` also prints `[auth-readiness] 2 account(s) still have a sample-data password` (expected), but only when the production server can reach the database. Production defaults to SSL, so a local Postgres without SSL needs `?sslmode=disable` in `DATABASE_URL` (the usage example at the top already has it). Without it the line is instead `[auth-readiness] could not check for sample-data passwords at startup (query failed: <code or class>)`: the server keeps serving, but the check did not run (`ECONNREFUSED`/`Error` usually mean the connection, often SSL; `42P01` means the database answered but is not migrated; `28P01` is a wrong password). Do not report a missing warning as a pass until you have seen one of the two lines.
 
 ---
 
@@ -574,7 +578,7 @@ Summarize all results:
 
 ### Configuration Phase
 - [ ] .env created with DATABASE_URL
-- [ ] Migrations ran successfully (28 core + 9 entity)
+- [ ] Migrations ran successfully (29 core + 9 entity)
 - [ ] Registries built (31 files, no path errors)
 
 ### Runtime Phase (Playwright MCP)
@@ -695,6 +699,22 @@ pnpm pkg:publish
 
 ---
 
+## Optional: Against the published release
+
+To test what npm serves instead of the local tarballs, skip Steps 3-5 and create the project **outside the repo**, with no `.packages` in sight:
+
+```bash
+export TEST_DIR="$HOME/published-check/test-package"   # Steps 6-12 run in $TEST_DIR: point it here
+mkdir -p "$HOME/published-check" && cd "$HOME/published-check"
+npx create-nextspark-app@<version> test-package --theme starter --yes
+# or, with pnpm:
+pnpm --config.minimum-release-age=0 dlx create-nextspark-app@<version> test-package --theme starter --yes
+```
+
+Pin `<version>` (for example `0.1.0-beta.196`). pnpm 11+ ignores versions published less than a day ago (`minimumReleaseAge`), so `pnpm dlx create-nextspark-app@latest` installs the **previous** release during the first day after a publish. Check `grep '@nextsparkjs' package.json` shows the version you asked for, then continue from Step 6. In this flow the Step 5 check "four `file:` tarball paths" (and the matching checklist item) becomes "four `@nextsparkjs/*` entries at `<version>`". Remove `$HOME/published-check` in Cleanup.
+
+---
+
 ## Cleanup
 
 After testing, optionally clean up:
@@ -706,6 +726,10 @@ setopt nonomatch 2>/dev/null || true
 # Stop any server still running, by PID (Steps 11 and 12)
 # Remove test project
 rm -rf "$TEST_DIR"
+rm -rf "$HOME/published-check"   # only if the published-release section was used
+
+# Remove the worktree symlink from Step 0.3, if you created one
+[ -L "$(dirname "$PROJECTS_DIR")/repo" ] && rm "$(dirname "$PROJECTS_DIR")/repo"
 
 # Remove .packages tarballs
 rm -rf "$PACKAGES_DIR"
