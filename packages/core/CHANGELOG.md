@@ -7,15 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.196] - 2026-10-07
+
 ### Upgrading from 0.1.0-beta.195
 
-- **Sample data is applied only on request, in development.** `pnpm db:migrate` no longer applies sample data (core's `090_sample_data.sql`,
-  and every project, plugin or entity migration whose name contains `sample_data`/`sample-data` or that has a `-- nextspark:sample-data` line).
-  `pnpm db:seed` (`nextspark db:seed`), `--sample-data` or `NEXTSPARK_SEED_SAMPLE_DATA=1` applies it, never when `NODE_ENV` is `production`.
-  A development database that already has the sample users: run `pnpm db:seed` rather than `pnpm db:migrate` for this upgrade. Cypress and
-  CI jobs that sign in as the sample users need `pnpm db:seed` on their throwaway database; the `cypress-smoke.yml` template now runs it, and
-  `cypress-regression.yml` no longer hides a failing seed. A tool that applies core's `.sql` files itself, outside `db:migrate`, now gets an
-  error from `090_sample_data.sql`: leave that file out. `db:seed` needs a direct database connection (not a transaction-mode pooler).
+Bump the `@nextsparkjs/*` dependencies together (`@nextsparkjs/cli` 0.1.0-beta.196 is what makes `pnpm db:seed` apply the sample data), then:
+
+- **Sample data is no longer applied outside development, and databases that already hold it get its accounts disabled.** For every
+  database, production included:
+  1. Before upgrading, list the accounts that still have a sample-data password (read-only):
+     ```sql
+     SELECT u.id, u.email, u.role FROM users u JOIN account a ON a."userId" = u.id AND a."providerId" = 'credential'
+     WHERE a.password LIKE '22de14d5472248ed0bece911df908b2a:%' OR a.password LIKE '3db9e98e2b4d3caca97fdf2783791cbc:%';
+     ```
+  2. Run `pnpm db:migrate` with this release. The new core migration `029_sample_accounts_outside_development.sql` finds those accounts by
+     their sample password (not by name, so a renamed one is found too) and, for each, removes that password and its sessions, deactivates
+     its API keys (`status = 'inactive'`, so the audit log keeps their rows) and sets its role to `member`, which also takes it out of the
+     System Admin Team. It changes nothing else and prints one line, `Sample accounts: N disabled`.
+  3. If step 1 listed any account, review what it did (`login_events`, `api_audit_log`, user, team and role changes), rotate what it could
+     reach (`BETTER_AUTH_SECRET`, which signs every session out, and your administrators' API keys), and delete the account if you do not
+     use it. An account you still need: give it back its role and set a new password through password recovery. An account from the sample
+     data that already had a password of its own is left as it is.
+
+  A server started with `NODE_ENV=production` logs `[auth-readiness] N account(s) still have a sample-data password` while any is left.
+
+  Development: `pnpm db:migrate` now applies no sample data (core's `090_sample_data.sql`, and every project, plugin or entity migration
+  whose name contains `sample_data`/`sample-data`, that has a `-- nextspark:sample-data` line, or that inserts an account with a sample-data
+  password). `pnpm db:seed` (`nextspark db:seed`), or `NEXTSPARK_SEED_SAMPLE_DATA=1` in the environment or `.env` (or `--sample-data`
+  passed to core's `scripts/db/run-migrations.mjs`), applies it, and never when `NODE_ENV` is `production`.
+  A tool that applies core's `.sql` files itself, outside `db:migrate`, now gets an error from `090_sample_data.sql`: leave that file out.
+  Never use a database seeded for development in production (no dump, promotion or repointed `DATABASE_URL`): on it the migration above
+  is recorded without disabling anything, so its sample accounts keep their password (`db:seed` prints this reminder, and a production
+  server logs the warning above). To clean such a database, run the check in step 1 and remove the accounts it lists by hand (the security
+  advisory has the SQL). `db:seed` relies on a session setting: behind a transaction-mode pooler (PgBouncer, Supavisor on port
+  6543) it is lost and `090_sample_data.sql` fails, so point `MIGRATE_DATABASE_URL` at a direct connection.
+  A development database that already has the sample users: run `pnpm db:seed` rather than `pnpm db:migrate` for this upgrade, or the
+  migration above disables them (then reset the database). Cypress and CI jobs that sign in as the sample users need `pnpm db:seed` on their
+  throwaway database; the `cypress-smoke.yml` template now runs it, and `cypress-regression.yml` no longer hides a failing seed.
+  A project created before 0.1.0-beta.192 with the `default` theme has `migrations/090_demo_users_teams.sql` and
+  `migrations/091_greek_teams_billing.sql` (moved there by `nextspark migrate`). They are sample data although their names do not say so:
+  `db:migrate` recognises them by the sample accounts they insert and skips them outside development (`pnpm db:seed` applies them). The
+  project keeps the files; delete them if you do not use that data, or add the line `-- nextspark:sample-data` to make it explicit.
 - **`src/proxy.ts`: read the session in process (behind an HTTPS proxy every signed-in user was sent to `/login`). From 0.1.0-beta.195, or
   any earlier beta that copied the template proxy (the session check is the same since beta.190).** Your project owns
   `src/proxy.ts` and an upgrade never rewrites it, so apply the template's change by hand (`nextspark prepare`, `build` and `migrate` warn
@@ -66,7 +98,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- Sample data is no longer applied outside development. See the security advisory published with this release.
+- Sample data is no longer applied outside development, and databases that already hold it are corrected by a new core migration. See the
+  security advisory published with this release, and "Upgrading from 0.1.0-beta.195" for what to check and rotate.
 
 ### Changed
 
