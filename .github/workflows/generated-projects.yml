@@ -15,6 +15,7 @@ on:
       - 'scripts/packages/**'
       - 'scripts/security/**'
       - 'scripts/deploy/**'
+      - 'scripts/accessibility/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -129,6 +130,25 @@ jobs:
         with:
           name: starter-route-js
           path: ${{ runner.temp }}/project/route-js.json
+          if-no-files-found: ignore
+
+      # axe-core (WCAG 2.0/2.1/2.2 A and AA rules) through Playwright, on the starter's public pages and, signed in by
+      # email OTP, its dashboard, task and profile pages. Fails on any serious or critical violation. The versions of
+      # playwright, @axe-core/playwright and axe-core are pinned in the root package.json.
+      - name: Install the browser for the accessibility scan
+        if: matrix.theme == 'starter' && matrix.node == env.NODE_OLDEST
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Check accessibility with axe
+        if: matrix.theme == 'starter' && matrix.node == env.NODE_OLDEST
+        run: node scripts/accessibility/axe-scan.mjs --app "$PROJECT/app" --json "$PROJECT/axe-report.json"
+
+      - name: Upload the accessibility report
+        if: always() && matrix.theme == 'starter' && matrix.node == env.NODE_OLDEST
+        uses: actions/upload-artifact@v4
+        with:
+          name: starter-axe-report
+          path: ${{ runner.temp }}/project/axe-report.json
           if-no-files-found: ignore
 
   # The package managers a generated project supports. The project's pnpm comes from Corepack, and the step after the

@@ -45,13 +45,16 @@
     "verify:route-js-budget": "node scripts/performance/verify-route-js-budget.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@cypress/grep": "^5.0.1",
     "@testing-library/cypress": "^10.1.0",
     "allure-cypress": "^3.0.0",
+    "axe-core": "4.14.0",
     "cypress": "^15.8.2",
     "dotenv": "^16.4.5",
     "dotenv-cli": "^11.0.0",
     "jiti": "^2.6.1",
+    "playwright": "1.63.0",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.23.13",
     "typescript": "^5.0.0"

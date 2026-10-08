@@ -61,6 +61,6 @@ jobs:
           npm_config_registry: http://127.0.0.1:9
 
       - name: Test package, performance, and security scripts
-        run: node --test $NODE_TEST_FLAGS scripts/packages/*.test.mjs scripts/performance/*.test.mjs scripts/security/*.test.mjs
+        run: node --test $NODE_TEST_FLAGS scripts/packages/*.test.mjs scripts/performance/*.test.mjs scripts/security/*.test.mjs scripts/accessibility/*.test.mjs
         env:
           npm_config_registry: http://127.0.0.1:9
