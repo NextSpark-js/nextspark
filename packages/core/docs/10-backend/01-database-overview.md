@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The application uses **PostgreSQL** as its relational database, hosted on **Supabase**. The database architecture implements multi-tenancy through Row-Level Security (RLS), provides dual database separation for application and authentication data, and supports flexible metadata storage for dynamic entity fields.
+The application uses **PostgreSQL** (standard PostgreSQL 15–17) as its relational database. Supabase is one possible host; it is not verified for 1.0. The database architecture implements multi-tenancy through Row-Level Security (RLS), provides dual database separation for application and authentication data, and supports flexible metadata storage for dynamic entity fields.
 
 ## Database Provider
 
@@ -16,7 +16,7 @@ The application uses **PostgreSQL** as its relational database, hosted on **Supa
 - Connection pooling via PgBouncer
 - REST API auto-generation (not used in favor of custom API v1)
 
-**Version:** PostgreSQL 15+
+**Version:** PostgreSQL 15, 16 or 17 (see [Support matrix](../22-stability-and-support/02-support-matrix)). Supabase is not verified for 1.0.
 
 **Connection:** Uses standard PostgreSQL client (`pg` package) for maximum control and performance.
 

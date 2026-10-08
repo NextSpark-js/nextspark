@@ -764,7 +764,7 @@ jobs:
 
 ### Deployment
 
-**Vercel (Recommended):**
+**Vercel (experimental):**
 ```bash
 # Install Vercel CLI
 npm i -g vercel

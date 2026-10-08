@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Complete guide to deploying NextSpark to production using Vercel (recommended platform). Covers environment setup, database configuration, deployment process, and post-deployment verification.
+Complete guide to deploying NextSpark to production using Vercel (experimental). Covers environment setup, database configuration, deployment process, and post-deployment verification.
 
 **Estimated time:** 15-20 minutes
 
@@ -393,7 +393,7 @@ console.log(process.env.NEXT_PUBLIC_APP_URL)
 
 **Configure DNS:**
 
-**Option A: Vercel Nameservers (Recommended)**
+**Option A: Vercel Nameservers**
 1. Update nameservers at your registrar:
    - `ns1.vercel-dns.com`
    - `ns2.vercel-dns.com`

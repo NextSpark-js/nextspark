@@ -62,7 +62,7 @@ Corepack needs Node.js 22.14.0 or later to download pnpm: Corepack in Node.js 22
 
 **Options:**
 
-**A. Supabase (Recommended for Beginners)**
+**A. Supabase (not verified; see [PostgreSQL requirements](../22-stability-and-support/04-postgresql-requirements))**
 - ✅ Free tier available
 - ✅ Managed hosting
 - ✅ Built-in authentication

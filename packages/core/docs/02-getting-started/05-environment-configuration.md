@@ -59,7 +59,7 @@ RESEND_FROM_NAME="Your App Name"
 DATABASE_URL="postgresql://[user]:[password]@[host]:[port]/[database]"
 ```
 
-**Supabase (Recommended):**
+**Supabase (not verified):**
 ```bash
 DATABASE_URL="postgresql://postgres.xxxxx:password@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
 ```

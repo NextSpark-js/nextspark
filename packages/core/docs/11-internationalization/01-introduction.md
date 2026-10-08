@@ -4,7 +4,7 @@
 
 ## Introduction
 
-The NextSpark internationalization (i18n) system provides enterprise-grade multi-language support powered by **next-intl** with build-time translation registry optimization. The system enables seamless translation management across core application features, custom themes, and plugins with zero runtime I/O patterns.
+The NextSpark internationalization (i18n) system provides multi-language support powered by **next-intl** with build-time translation registry optimization. The system enables seamless translation management across core application features, custom themes, and plugins with zero runtime I/O patterns.
 
 The i18n architecture follows the same build-time philosophy as the registry system: all translations are discovered, validated, and indexed during the build process, eliminating filesystem operations at runtime and ensuring instant access to localized content.
 

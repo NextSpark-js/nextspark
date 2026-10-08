@@ -4,7 +4,7 @@
 
 ## Introduction
 
-NextSpark is an enterprise-grade Next.js 16 application, designed for rapid SaaS product development. It combines modern web technologies with a WordPress-like extensibility model through themes, plugins, and config-driven entities. The architecture prioritizes performance, developer experience, and production-ready features out of the box.
+NextSpark is a Next.js 16 application, designed for rapid SaaS product development. It combines modern web technologies with a WordPress-like extensibility model through themes, plugins, and config-driven entities. The architecture prioritizes performance, developer experience, and features that work out of the box.
 
 ## Technology Stack
 

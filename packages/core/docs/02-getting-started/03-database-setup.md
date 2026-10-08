@@ -2,11 +2,13 @@
 
 ## Introduction
 
-Complete guide to setting up PostgreSQL database for NextSpark. Covers Supabase (recommended), local PostgreSQL, and Docker options.
+Complete guide to setting up PostgreSQL database for NextSpark. Covers Supabase, local PostgreSQL, and Docker options.
+
+> **Supported databases:** standard PostgreSQL 15, 16 and 17. Neon, Supabase and Amazon RDS are **not verified** for 1.0: they may work, but none is tested. The roles, extension and SSL settings a server must provide are in [PostgreSQL requirements](../22-stability-and-support/04-postgresql-requirements).
 
 ---
 
-## Option 1: Supabase (Recommended)
+## Option 1: Supabase (not verified)
 
 **Why Supabase:**
 - ✅ Free tier (500MB, 2 databases)
@@ -266,7 +268,7 @@ CREATE POLICY tasks_user_isolation ON tasks
 
 ## Summary
 
-**Supabase (Recommended):**
+**Supabase (not verified):**
 - Free tier, managed, pooling built-in
 - Use pooler connection (`:6543`)
 

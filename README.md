@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  Build production-ready SaaS applications in days, not months.
+  Build SaaS applications on Next.js in days, not months.
 </p>
 
 <p align="center">
@@ -32,9 +32,9 @@
 
 ## What is NextSpark?
 
-NextSpark is a complete, production-ready SaaS framework built on Next.js 16. It provides everything you need to launch a SaaS product: authentication, payments, teams, permissions, entities, project templates, and more—all pre-configured and ready to customize.
+NextSpark is a SaaS framework built on Next.js 16. It provides everything you need to launch a SaaS product: authentication, payments, teams, permissions, entities, project templates, and more—all pre-configured and ready to customize.
 
-> **Stability:** the starter template, the generated host, the web app and mobile (current scope) are stable. Billing (Stripe, Polar), MCP, the five first-party plugins, the blog/crm/productivity templates, Vercel and standalone deployment, and the `add:theme`, `add:plugin`, `add:mobile`, `setup:ai` and `sync:ai` helpers are **experimental**: they carry no deprecation promise.
+> **Stability:** the starter template, the generated host and the web app are stable for 1.0, conditional on the release gates. Mobile (Expo SDK 54) is stable only if a real sign-in from the app passes in a simulator before the release candidate; otherwise it is experimental. Standalone output (`output: 'standalone'`) is stable only if a Linux CI job for it lands before the release candidate; until then, treat it as experimental. Billing (Stripe, Polar), MCP, the page builder dashboard editor, the media library, scheduled actions, `nextspark skills`, the five first-party plugins, the blog/crm/productivity templates, Vercel deployment, and the `add:theme`, `add:plugin`, `add:mobile`, `setup:ai` and `sync:ai` helpers are **experimental**: they carry no deprecation promise. See [Stability](./packages/core/docs/22-stability-and-support/01-stability.md), the [support matrix](./packages/core/docs/22-stability-and-support/02-support-matrix.md) and the [versioning policy](./packages/core/docs/22-stability-and-support/03-versioning-policy.md).
 
 ## Features
 
@@ -108,7 +108,7 @@ Visit [nextspark.dev/docs](https://nextspark.dev/docs) for the full documentatio
 ## Requirements
 
 - Node.js 22.14.0 or later
-- PostgreSQL database
+- Standard PostgreSQL 15, 16 or 17, with the [written requirements](./packages/core/docs/22-stability-and-support/04-postgresql-requirements.md). Neon, Supabase and Amazon RDS are not verified.
 - pnpm 10 (10.34.6 or later), 11 or 12. pnpm 9 is only for contributing to this repository; npm, yarn and bun are not supported.
   Corepack bundled with Node.js 22.x cannot install pnpm 12: update Corepack first (`npm install --global corepack@latest`) or install pnpm standalone (`curl -fsSL https://get.pnpm.io/install.sh | sh -`); Node.js 24 ships a Corepack that can. The floor is 10.34.6 because pnpm 10.16 fails on a warm store cache with `ERR_PNPM_MISSING_TIME`.
 
