@@ -2,7 +2,7 @@
 
 ## Introduction
 
-> **Experimental:** Deployment to Vercel is not part of the stable 1.0 surface and may change without a deprecation period. `next start` is the stable way to run a project, also behind a TLS reverse proxy with the settings in [Client address](./10-client-address). Standalone output (`output: 'standalone'`) is planned to be stable for 1.0 only if a Linux CI job for it lands before the release candidate; there is no such job yet, so treat it as experimental until the [Support matrix](../22-stability-and-support/02-support-matrix) says otherwise.
+> **Experimental:** Deployment to Vercel is not part of the stable 1.0 surface and may change without a deprecation period. `next start` is the stable way to run a project, also behind a TLS reverse proxy with the settings in [Client address](./10-client-address). A Linux CI job (`standalone` in *Generated projects*, see [Self-hosting on Node](#self-hosting-on-node)) checks standalone output (`output: 'standalone'`). It becomes stable for 1.0 once that job passes on `main` before the release candidate; until the [Support matrix](../22-stability-and-support/02-support-matrix) says so, treat it as experimental.
 
 This page describes deploying to **Vercel** (experimental) with an automated deployment script that handles environment configuration, variable management, and deployment in a single command.
 
@@ -270,6 +270,8 @@ cd deploy && PORT=3000 HOSTNAME=0.0.0.0 node server.js
 ```
 
 With the project directory moved out of the way, `/`, `/login`, `/api/health` and the static assets answered from `deploy/` alone.
+
+**Checked by CI.** The `standalone` job of the *Generated projects* workflow (Ubuntu 24.04, Node 24, PostgreSQL 16) runs `scripts/deploy/verify-standalone.sh` on every push to `main` and on pull requests that touch the packages (it is new and has not run on `main` yet). It creates a starter from the packed packages, migrates a database, builds with `output: 'standalone'`, copies the output to a directory with no checkout and starts `node server.js` there. It then checks health, public pages, static assets, sign-in by one-time code (against a local stand-in for Resend), protected pages with the session, a write, the write-origin rules and sign-out, first with the server alone and then behind a Node TLS proxy that sends `X-Forwarded-Proto: https`. Behind the proxy it also checks that a redirect is an `https` URL, that the session cookies are `Secure`, and that a wrong-scheme `Origin` or a forged `X-Forwarded-Host` is refused. The script runs on a developer machine too: it needs `pnpm install` in the repository, PostgreSQL reachable through the `PG*` variables, `openssl` and `curl`; `--help` lists the options.
 
 - Next copies the `.env` (and `.env.production`) it loaded into `.next/standalone`. Keep that file out of an image or archive you share, and give the server its configuration as environment variables.
 - `DATABASE_URL`, `BETTER_AUTH_SECRET` and the rest of the project's variables are read when the server starts; export them where `node server.js` runs (the check above ran with the project's `.env` values exported in the shell and the copied `.env` removed).
