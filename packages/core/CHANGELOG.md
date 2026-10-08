@@ -76,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pools and are not limited by them.
 - **`GET /api/v1/team-invitations` with no query string lists the caller's pending invitations** (page 1, limit 20) instead of answering 500,
   and a `page`, `limit` or `status` the schema refuses is a `400 VALIDATION_ERROR`.
+- **`GET /api/user/plan-flags` without `userId` answers for the signed-in user** instead of `400` ("expected string, received null").
 
 ## [0.1.0-beta.196] - 2026-10-07
 

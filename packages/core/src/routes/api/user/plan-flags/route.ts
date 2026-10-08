@@ -41,8 +41,9 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     }
 
     const { searchParams } = new URL(request.url)
+    // An absent userId is undefined, so the signed-in user is the default
     const validation = planFlagsQuerySchema.safeParse({
-      userId: searchParams.get('userId')
+      userId: searchParams.get('userId') ?? undefined
     })
 
     if (!validation.success) {
