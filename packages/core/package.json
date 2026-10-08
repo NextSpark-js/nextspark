@@ -387,6 +387,8 @@
     "globals.css",
     "nextspark-entities.d.ts",
     "README.md",
+    "CHANGELOG.md",
+    "docs/17-updates",
     "scripts"
   ],
   "scripts": {
