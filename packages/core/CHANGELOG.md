@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading
+
+- **Production migrations now validate the certificate.** With `NODE_ENV=production` (in the environment or the project `.env`),
+  `db:migrate`, `db:seed` and the migration verifiers connect to a URL without `sslmode` over SSL with certificate validation, as the
+  application does, and no longer fall back to plain. Use `sslmode=disable` for a local server without SSL.
+
+### Changed
+
+- The database scripts decide SSL in one place (`scripts/db/ssl-config.mjs`). A URL without `sslmode` keeps libpq's `prefer` outside
+  production; in production it uses SSL with a validated certificate, and a server without SSL stops the run with an error that names
+  `sslmode=disable` and `sslmode=verify-full` and does not print the URL. Explicit `sslmode` values keep their meaning.
+
 ### Documentation
 
 - New section `22-stability-and-support` with the 1.0 stability table (stable, experimental, deprecated, deferred), the support matrix (Node.js, Next.js `~16.3.8`, pnpm, PostgreSQL 15-17, Expo SDK 54), the SemVer and deprecation policy (one minor of notice, security support for the latest 1.x minor, `latest` and `1.0.0-rc.N` on `next`, `nextspark migrate` for 12 months after 1.0.0 or the whole 1.x line, whichever ends first) and the written PostgreSQL requirements (application, service and migration roles, the `pgcrypto` extension, SSL, poolers). Neon, Supabase and Amazon RDS are listed as not verified.

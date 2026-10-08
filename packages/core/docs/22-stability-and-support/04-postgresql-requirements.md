@@ -48,7 +48,7 @@ Where the provider already supplies `authenticated`, `anon` or `service_role` (S
 
 ## SSL
 
-The connection policy is in `src/lib/db.ts` (the application) and `scripts/db/ssl-config.mjs` (the database scripts). It is set per connection string. The application's connections (`DATABASE_URL`, `DATABASE_SERVICE_URL`) follow the table below. The database scripts follow it too, except when the URL has no `sslmode` (see below).
+The connection policy is in `src/lib/db.ts` (the application) and `scripts/db/ssl-config.mjs` (the database scripts). It is set per connection string. The application's connections (`DATABASE_URL`, `DATABASE_SERVICE_URL`) follow the table below. The database scripts follow it too, except when the URL has no `sslmode` outside production (see below).
 
 | `sslmode` in the URL | Behaviour |
 | --- | --- |
@@ -61,7 +61,7 @@ The connection policy is in `src/lib/db.ts` (the application) and `scripts/db/ss
 
 Core removes `sslmode` from the connection string before it reaches the driver, so that the policy above, not the driver's reading of `sslmode`, decides. In particular `sslmode=require` does not validate the certificate here. Use `verify-full` for a remote server whose certificate chain your runtime trusts.
 
-A production server without SSL, such as a local PostgreSQL used to test a production build, needs `sslmode=disable` in the URL. The table above is the application's policy. The database scripts (`db:migrate`, `db:seed` and the migration verifiers) differ in one case: a URL with no `sslmode`, in any `NODE_ENV`, production included, asks for SSL **without** validating the certificate, and falls back to plain only if the server says it has no SSL. To validate the certificate on the migration connection, put `sslmode=verify-full` in `MIGRATE_DATABASE_URL` (or in `DATABASE_URL` if it is unset).
+A production server without SSL, such as a local PostgreSQL used to test a production build, needs `sslmode=disable` in the URL. The database scripts (`db:migrate`, `db:seed` and the migration verifiers) follow the table above with one difference: a URL with no `sslmode` outside production asks for SSL **without** validating the certificate, and falls back to plain only if the server says it has no SSL. With `NODE_ENV=production`, in the environment or in the project `.env`, they do what the application does: SSL with certificate validation and no fallback. A production run against a server without SSL then stops with an error that names `sslmode=disable` and `sslmode=verify-full`.
 
 ## Poolers and timeouts
 
