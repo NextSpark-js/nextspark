@@ -1,10 +1,12 @@
 # 0.1.0-beta.192 status
 
-**UNRELEASED — work in progress.** This prerelease continues the 0.1.0 beta line; it is not a 1.0 release or a statement that the linked issues are complete.
+> **Historical.** This page records the scope and validation of the 0.1.0-beta.192 line when it was prepared. It is not the current stability statement: the generated host is the only host and is stable for 1.0, and mobile is stable only if a real sign-in from the app passes in a simulator before the release candidate. See [Stability](../22-stability-and-support/01-stability) and [Support matrix](../22-stability-and-support/02-support-matrix).
+
+This prerelease continues the 0.1.0 beta line; it is not a 1.0 release or a statement that the linked issues are complete.
 
 ## Release target
 
-The stable target remains existing web hosts. Generated and mobile hosts remain experimental while their host-specific validation and migration work is completed.
+At beta.192 the stable target was existing web hosts, and the generated and mobile hosts were still experimental while their host-specific validation and migration work was completed. That is superseded for 1.0 by [Stability](../22-stability-and-support/01-stability).
 
 | Issue | Integrated beta.192 slice | Remaining acceptance |
 | --- | --- | --- |

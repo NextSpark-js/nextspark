@@ -344,7 +344,7 @@ All components include:
 - **Keyboard navigation** - Tab, Enter, Escape support
 - **Focus management** - Proper focus trapping in modals
 - **Role attributes** - Correct semantic roles
-- **Contrast ratios** - WCAG AA compliant
+- **Contrast ratios** - aimed at WCAG AA
 
 ```tsx
 // Example ARIA usage in TeamSwitcher

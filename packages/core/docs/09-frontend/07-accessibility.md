@@ -1,6 +1,8 @@
 # Accessibility (a11y)
 
-Accessibility is not optional—it's a fundamental requirement for modern web applications. This guide covers our complete accessibility strategy, ensuring our application is usable by everyone, regardless of ability or assistive technology.
+> **1.0 target, in progress:** the target for 1.0 is **WCAG 2.2 AA** for the `starter` template. It is checked with two things: axe in CI, with no serious or critical findings, and a manual keyboard and focus pass over the starter's authentication flows, dashboard and task CRUD. This is a target, not a claim: the checks are being added, and passing them is a release gate. NextSpark does not certify that a project meets any law or standard. Content, customization and the accessibility of your own components are your responsibility. See [Stability](../22-stability-and-support/01-stability).
+
+This guide covers the accessibility practices used in NextSpark's components and the checks that apply to them.
 
 ---
 
@@ -15,7 +17,7 @@ Accessibility is not optional—it's a fundamental requirement for modern web ap
 7. [Semantic HTML](#semantic-html)
 8. [Forms Accessibility](#forms-accessibility)
 9. [Testing Accessibility](#testing-accessibility)
-10. [WCAG Compliance](#wcag-compliance)
+10. [WCAG Target](#wcag-target)
 11. [Best Practices](#best-practices)
 12. [Common Pitfalls](#common-pitfalls)
 
@@ -31,7 +33,6 @@ Accessibility is not optional—it's a fundamental requirement for modern web ap
 
 ### Benefits
 
-✅ **Legal Compliance** - Meet ADA, Section 508, WCAG requirements
 ✅ **Better SEO** - Semantic HTML improves search rankings
 ✅ **Improved UX** - Keyboard navigation helps power users
 ✅ **Wider Audience** - Reach users with assistive technologies
@@ -571,12 +572,12 @@ function SearchDialog() {
 
 ### Color Contrast Requirements
 
-**WCAG 2.1 Level AA (Minimum)**:
+**WCAG 2.2 Level AA (the 1.0 target)**:
 - **Normal text** (< 18pt): Contrast ratio ≥ 4.5:1
 - **Large text** (≥ 18pt or 14pt bold): Contrast ratio ≥ 3:1
 - **UI components and graphics**: Contrast ratio ≥ 3:1
 
-**WCAG 2.1 Level AAA (Enhanced)**:
+**WCAG 2.2 Level AAA (Enhanced)**:
 - **Normal text**: Contrast ratio ≥ 7:1
 - **Large text**: Contrast ratio ≥ 4.5:1
 
@@ -895,7 +896,7 @@ describe('Login Page', () => {
     cy.checkA11y(null, {
       runOnly: {
         type: 'tag',
-        values: ['wcag2a', 'wcag2aa']
+        values: ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']
       }
     })
   })
@@ -930,17 +931,19 @@ describe('Login Page', () => {
 
 ---
 
-## WCAG Compliance
+## WCAG Target
 
-### WCAG 2.1 Levels
+The 1.0 target is WCAG 2.2 level AA, checked as described at the top of this page. Meeting a level also depends on content and customization that NextSpark does not control.
+
+### WCAG 2.2 Levels
 
 | Level | Requirement | Description |
 |-------|-------------|-------------|
 | **A** | Minimum | Basic accessibility features |
-| **AA** | Mid-range | Industry standard (most laws require this) |
+| **AA** | Mid-range | The 1.0 target |
 | **AAA** | Highest | Enhanced accessibility |
 
-### WCAG 2.1 Principles (POUR)
+### WCAG 2.2 Principles (POUR)
 
 #### 1. **Perceivable**
 
@@ -977,7 +980,7 @@ Information and operation must be understandable:
 Content must be robust enough to work with assistive technologies:
 
 ✅ Valid HTML
-✅ ARIA compliance
+✅ Correct use of ARIA
 ✅ Compatible with current and future tools
 
 ---
@@ -1142,7 +1145,7 @@ import { Dialog } from '@radix-ui/react-dialog'
 
 ### Documentation
 
-- [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+- [WCAG 2.2 Guidelines](https://www.w3.org/WAI/WCAG22/quickref/)
 - [MDN Accessibility Guide](https://developer.mozilla.org/en-US/docs/Web/Accessibility)
 - [Radix UI Accessibility](https://www.radix-ui.com/primitives/docs/overview/accessibility)
 - [WebAIM](https://webaim.org/) - Comprehensive accessibility resource
