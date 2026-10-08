@@ -80,25 +80,27 @@ USING (
   ))
 );
 
--- Authenticated users can manage all relations
+-- Signed-in users read, link and unlink the relations of their team's entities, to taxonomies without a team or of
+-- that team (core migration 033 defines auth_can_use_entity_taxonomy)
 CREATE POLICY "Entity taxonomy relations authenticated read"
 ON public."entity_taxonomy_relations"
 FOR SELECT TO authenticated
-USING (true);
+USING (public.auth_can_use_entity_taxonomy("entityType", "entityId", "taxonomyId"));
 
 CREATE POLICY "Entity taxonomy relations authenticated insert"
 ON public."entity_taxonomy_relations"
 FOR INSERT TO authenticated
-WITH CHECK (true);
+WITH CHECK (public.auth_can_use_entity_taxonomy("entityType", "entityId", "taxonomyId"));
 
 CREATE POLICY "Entity taxonomy relations authenticated delete"
 ON public."entity_taxonomy_relations"
 FOR DELETE TO authenticated
-USING (true);
+USING (public.auth_can_use_entity_taxonomy("entityType", "entityId", "taxonomyId"));
 
 -- ============================================
 -- CLEANUP TRIGGER function
 -- ============================================
+-- Runs as the table owner: the entity the RLS policies check is already deleted.
 CREATE OR REPLACE FUNCTION public.cleanup_entity_taxonomy_relations()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -106,7 +108,7 @@ BEGIN
   WHERE "entityType" = TG_ARGV[0] AND "entityId" = OLD.id::text;
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Trigger for posts
 DROP TRIGGER IF EXISTS cleanup_post_entity_taxonomy ON public."posts";

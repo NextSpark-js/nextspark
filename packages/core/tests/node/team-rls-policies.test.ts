@@ -164,3 +164,107 @@ test('an existing user accepts or declines their own invitation, and only that',
   await owner.query(`INSERT INTO team_invitations (id, "teamId", email, role, token, "invitedBy") VALUES ('inv-c', 'team-b', 'mema@example.test', 'member', 'token-c', 'ownb')`)
   assert.equal((await as('memb', `UPDATE "team_invitations" SET status = 'accepted' WHERE id = 'inv-c'`)).rowCount, 0)
 })
+
+test('team_members follow the API: owner and admin manage lower roles, nobody touches the owner row, anyone else leaves', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
+  const { owner, app } = await cutoverDatabase(t)
+  await seed(owner)
+  const as = asUser(app)
+  const count = async (sql: string, params: unknown[] = []) => (await owner.query(sql, params)).rowCount
+
+  // a plain member of team B: no self-promotion, no demoting or removing the owner, no outsider
+  assert.equal((await as('memb', `UPDATE "team_members" SET role = 'owner' WHERE "teamId" = 'team-b' AND "userId" = 'memb'`)).rowCount, 0)
+  assert.equal((await as('memb', `UPDATE "team_members" SET role = 'admin' WHERE "teamId" = 'team-b' AND "userId" = 'memb'`)).rowCount, 0)
+  assert.equal((await as('memb', `UPDATE "team_members" SET role = 'member' WHERE "teamId" = 'team-b' AND "userId" = 'ownb'`)).rowCount, 0)
+  assert.equal((await as('memb', `DELETE FROM "team_members" WHERE "teamId" = 'team-b' AND "userId" = 'ownb'`)).rowCount, 0)
+  await assert.rejects(as('memb', `INSERT INTO "team_members" ("teamId", "userId", role) VALUES ('team-b', 'owna', 'owner')`), RLS)
+  // a foreign owner reaches nothing in team A
+  assert.equal((await as('ownb', `UPDATE "team_members" SET role = 'viewer' WHERE "teamId" = 'team-a' AND "userId" = 'mema'`)).rowCount, 0)
+  assert.equal((await as('ownb', `DELETE FROM "team_members" WHERE "teamId" = 'team-a' AND "userId" = 'mema'`)).rowCount, 0)
+
+  // an admin manages members, not admins nor the owner, and does not grant admin or owner
+  assert.equal((await as('adma', `UPDATE "team_members" SET role = 'viewer' WHERE "teamId" = 'team-a' AND "userId" = 'mema'`)).rowCount, 1)
+  await assert.rejects(as('adma', `UPDATE "team_members" SET role = 'admin' WHERE "teamId" = 'team-a' AND "userId" = 'mema'`), RLS)
+  assert.equal((await as('adma', `UPDATE "team_members" SET role = 'member' WHERE "teamId" = 'team-a' AND "userId" = 'owna'`)).rowCount, 0)
+  assert.equal((await as('adma', `DELETE FROM "team_members" WHERE "teamId" = 'team-a' AND "userId" = 'owna'`)).rowCount, 0)
+
+  // the owner promotes and demotes (the members route), never to owner, and never edits their own row
+  assert.equal((await as('owna', `UPDATE "team_members" SET role = 'admin', "updatedAt" = CURRENT_TIMESTAMP WHERE "teamId" = 'team-a' AND "userId" = 'mema' RETURNING *`)).rowCount, 1)
+  assert.equal((await as('owna', `UPDATE "team_members" SET role = 'member' WHERE "teamId" = 'team-a' AND "userId" = 'mema'`)).rowCount, 1)
+  await assert.rejects(as('owna', `UPDATE "team_members" SET role = 'owner' WHERE "teamId" = 'team-a' AND "userId" = 'adma'`), RLS)
+  assert.equal((await as('owna', `UPDATE "team_members" SET role = 'admin' WHERE "teamId" = 'team-a' AND "userId" = 'owna'`)).rowCount, 0)
+  // a membership does not move to another user
+  await assert.rejects(as('owna', `UPDATE "team_members" SET "userId" = 'outsider' WHERE "teamId" = 'team-a' AND "userId" = 'mema'`), /cannot change/)
+
+  // a superadmin has no RLS path to memberships: deleting a user removes them through the foreign key's cascade
+  await owner.query(`INSERT INTO users (id, email, name, role, "emailVerified") VALUES ('sup', 'sup@example.test', 'Super', 'superadmin', true)`)
+  assert.equal((await as('sup', `DELETE FROM "team_members" WHERE "teamId" = 'team-a' AND "userId" = 'owna'`)).rowCount, 0)
+  assert.equal((await as('sup', `DELETE FROM "team_members" WHERE "teamId" = 'team-a' AND "userId" = 'mema'`)).rowCount, 0)
+
+  // leaving: anyone but the owner
+  assert.equal((await as('owna', `DELETE FROM "team_members" WHERE "teamId" = 'team-a' AND "userId" = 'owna'`)).rowCount, 0)
+  assert.equal((await as('mema', `DELETE FROM "team_members" WHERE "teamId" = 'team-a' AND "userId" = 'mema'`)).rowCount, 1)
+  // the owner removes an admin (the members route's DELETE)
+  assert.equal((await as('owna', `DELETE FROM "team_members" WHERE "teamId" = 'team-a' AND "userId" = 'adma' RETURNING id`)).rowCount, 1)
+  assert.equal(await count(`SELECT 1 FROM team_members WHERE "teamId" = 'team-a'`), 1)
+  // deleting the team still removes its members (the foreign key's cascade)
+  await as('owna', `DELETE FROM "teams" WHERE id = 'team-a'`)
+  assert.equal(await count(`SELECT 1 FROM team_members WHERE "teamId" = 'team-a'`), 0)
+})
+
+const RELATIONS = fs.readFileSync(path.join(CORE, 'templates/projects/starter/entities/posts/migrations/004_entity_taxonomy_relations.sql'), 'utf8')
+const PERMISSIVE = `
+  DROP POLICY "Entity taxonomy relations authenticated read" ON entity_taxonomy_relations;
+  DROP POLICY "Entity taxonomy relations authenticated insert" ON entity_taxonomy_relations;
+  DROP POLICY "Entity taxonomy relations authenticated delete" ON entity_taxonomy_relations;
+  CREATE POLICY "Entity taxonomy relations authenticated read" ON entity_taxonomy_relations FOR SELECT TO authenticated USING (true);
+  CREATE POLICY "Entity taxonomy relations authenticated insert" ON entity_taxonomy_relations FOR INSERT TO authenticated WITH CHECK (true);
+  CREATE POLICY "Entity taxonomy relations authenticated delete" ON entity_taxonomy_relations FOR DELETE TO authenticated USING (true);`
+
+for (const upgrade of [false, true]) {
+  test(`taxonomy relations stay inside the entity's team (${upgrade ? 'a project created before, upgraded by 033' : 'a new project'})`, { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
+    const { owner, app } = await cutoverDatabase(t)
+    await seed(owner)
+    // the posts and pages tables of the posts entity, reduced to what the relations look at; a theme entity with a team
+    await owner.query(`
+      CREATE TABLE posts (id TEXT PRIMARY KEY, "teamId" TEXT, status TEXT, locale TEXT);
+      CREATE TABLE pages (id TEXT PRIMARY KEY, "teamId" TEXT, status TEXT, locale TEXT);
+      CREATE TABLE products (id TEXT PRIMARY KEY, "teamId" TEXT);
+    `)
+    await owner.query(RELATIONS)
+    if (upgrade) {
+      await owner.query(PERMISSIVE)
+      await owner.query(fs.readFileSync(path.join(CORE, 'migrations/033_team_member_roles_and_taxonomy_relations.sql'), 'utf8'))
+    }
+    await owner.query(`
+      INSERT INTO posts VALUES ('post-a', 'team-a', 'published', 'en'), ('post-b', 'team-b', 'draft', 'en');
+      INSERT INTO products VALUES ('prod-a', 'team-a');
+      INSERT INTO taxonomies (id, type, slug, name, "teamId") VALUES
+        ('cat-a', 'post_category', 'cat-a', 'Cat A', 'team-a'), ('cat-b', 'post_category', 'cat-b', 'Cat B', 'team-b'),
+        ('cat-global', 'post_category', 'cat-global', 'Cat global', NULL), ('tag-a', 'media_tag', 'tag-a', 'Tag A', 'team-a');
+      INSERT INTO media (id, "userId", "teamId", url, filename, "fileSize", "mimeType") VALUES ('media-a', 'owna', 'team-a', 'https://x.test/a.png', 'a.png', 1, 'image/png');
+      INSERT INTO entity_taxonomy_relations ("entityType", "entityId", "taxonomyId") VALUES
+        ('posts', 'post-a', 'cat-a'), ('posts', 'post-b', 'cat-b'), ('media', 'media-a', 'tag-a');
+    `)
+    const as = asUser(app)
+
+    // another team's member: reads, unlinks and links nothing of team A
+    assert.equal((await as('memb', `SELECT * FROM entity_taxonomy_relations WHERE "entityId" IN ('post-a', 'media-a')`)).rowCount, 0)
+    assert.equal((await as('memb', `DELETE FROM entity_taxonomy_relations WHERE "entityId" IN ('post-a', 'media-a')`)).rowCount, 0)
+    await assert.rejects(as('memb', `INSERT INTO entity_taxonomy_relations ("entityType", "entityId", "taxonomyId") VALUES ('media', 'media-a', 'cat-b')`), RLS)
+    await assert.rejects(as('memb', `INSERT INTO entity_taxonomy_relations ("entityType", "entityId", "taxonomyId") VALUES ('posts', 'post-a', 'cat-global')`), RLS)
+    // their own team's rows
+    assert.equal((await as('memb', `SELECT * FROM entity_taxonomy_relations`)).rowCount, 1)
+
+    // a member of team A: their entities, with their team's taxonomies or global ones, not another team's
+    assert.equal((await as('mema', `SELECT * FROM entity_taxonomy_relations`)).rowCount, 2)
+    await assert.rejects(as('mema', `INSERT INTO entity_taxonomy_relations ("entityType", "entityId", "taxonomyId") VALUES ('posts', 'post-a', 'cat-b')`), RLS)
+    await as('mema', `INSERT INTO entity_taxonomy_relations ("entityType", "entityId", "taxonomyId") VALUES ('posts', 'post-a', 'cat-global')`)
+    await as('mema', `INSERT INTO entity_taxonomy_relations ("entityType", "entityId", "taxonomyId") VALUES ('products', 'prod-a', 'cat-a')`)
+    await assert.rejects(as('mema', `INSERT INTO entity_taxonomy_relations ("entityType", "entityId", "taxonomyId") VALUES ('no_such_table', 'x', 'cat-a')`), RLS)
+    assert.equal((await as('mema', `DELETE FROM entity_taxonomy_relations WHERE "entityId" = 'post-a' AND "taxonomyId" = 'cat-global'`)).rowCount, 1)
+
+    // deleting a post on the RLS connection still removes its relations (the cleanup trigger)
+    await as('mema', `DELETE FROM posts WHERE id = 'post-a'`)
+    assert.equal((await owner.query(`SELECT 1 FROM entity_taxonomy_relations WHERE "entityId" = 'post-a'`)).rowCount, 0)
+  })
+}

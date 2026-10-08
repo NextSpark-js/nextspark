@@ -391,11 +391,11 @@ await TeamMemberService.add(teamId, newUserId, 'member', {
   invitedBy: adminUserId
 })
 
-// Update role
-await TeamMemberService.updateRole(teamId, userId, 'admin')
+// Update role (the last argument is the acting user: the team's owner, or an admin for roles below admin)
+await TeamMemberService.updateRole(teamId, userId, 'admin', actorId)
 
-// Remove member
-await TeamMemberService.remove(teamId, userId)
+// Remove member (actorId: the owner, an admin for roles below admin, or userId leaving on their own)
+await TeamMemberService.remove(teamId, userId, actorId)
 
 // Transfer ownership
 await TeamMemberService.transferOwnership(

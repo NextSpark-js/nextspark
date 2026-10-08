@@ -270,7 +270,7 @@ describe('TeamMemberService', () => {
       mockQueryOneWithRLS.mockResolvedValue({ role: 'member' }) // Not owner
       mockQueryWithRLS.mockResolvedValue([])
 
-      await TeamMemberService.remove('team-456', 'user-789')
+      await TeamMemberService.remove('team-456', 'user-789', 'user-789')
 
       expect(mockQueryWithRLS).toHaveBeenCalledWith(
         'DELETE FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
@@ -283,8 +283,15 @@ describe('TeamMemberService', () => {
       mockQueryOneWithRLS.mockResolvedValue({ role: 'owner' })
 
       await expect(
-        TeamMemberService.remove('team-456', 'owner-id')
+        TeamMemberService.remove('team-456', 'owner-id', 'owner-id')
       ).rejects.toThrow('Cannot remove team owner. Transfer ownership first.')
+    })
+
+    it('requires the acting user', async () => {
+      await expect(
+        (TeamMemberService.remove as (...a: unknown[]) => Promise<void>)('team-456', 'user-789')
+      ).rejects.toThrow('Actor ID is required')
+      expect(mockQueryWithRLS).not.toHaveBeenCalled()
     })
   })
 
@@ -293,7 +300,7 @@ describe('TeamMemberService', () => {
       mockQueryOneWithRLS.mockResolvedValue({ role: 'member' })
       mockMutateWithRLS.mockResolvedValue({ rows: [{ ...mockMember, role: 'admin' }], rowCount: 1 })
 
-      const result = await TeamMemberService.updateRole('team-456', 'user-789', 'admin')
+      const result = await TeamMemberService.updateRole('team-456', 'user-789', 'admin', 'owner-1')
 
       expect(result.role).toBe('admin')
     })
@@ -302,7 +309,7 @@ describe('TeamMemberService', () => {
       mockQueryOneWithRLS.mockResolvedValue({ role: 'owner' })
 
       await expect(
-        TeamMemberService.updateRole('team-456', 'owner-id', 'admin')
+        TeamMemberService.updateRole('team-456', 'owner-id', 'admin', 'owner-id')
       ).rejects.toThrow('Cannot change owner role. Transfer ownership first.')
     })
   })
@@ -484,5 +491,27 @@ describe('TeamMemberService', () => {
         'user-789'
       )
     })
+  })
+})
+
+describe('TeamMemberService writes run as the actor', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('remove deletes under the RLS context of the user removing the member', async () => {
+    mockQueryOneWithRLS.mockResolvedValue({ role: 'member' })
+    mockQueryWithRLS.mockResolvedValue([])
+
+    await TeamMemberService.remove('team-456', 'user-789', 'owner-1')
+
+    expect(mockQueryWithRLS).toHaveBeenCalledWith(expect.stringMatching(/DELETE FROM "team_members"/), ['team-456', 'user-789'], 'owner-1')
+  })
+
+  it('updateRole updates under the RLS context of the user changing the role', async () => {
+    mockQueryOneWithRLS.mockResolvedValue({ role: 'member' })
+    mockMutateWithRLS.mockResolvedValue({ rows: [{ ...mockMember, role: 'viewer' }], rowCount: 1 })
+
+    await TeamMemberService.updateRole('team-456', 'user-789', 'viewer', 'admin-1')
+
+    expect(mockMutateWithRLS).toHaveBeenCalledWith(expect.stringMatching(/UPDATE "team_members"/), ['team-456', 'user-789', 'viewer'], 'admin-1')
   })
 })

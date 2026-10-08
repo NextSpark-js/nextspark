@@ -424,7 +424,7 @@ describe('Team Server Actions', () => {
       const result = await removeMember('team-123', 'user-789')
 
       expect(result.success).toBe(true)
-      expect(mockTeamMemberService.remove).toHaveBeenCalledWith('team-123', 'user-789')
+      expect(mockTeamMemberService.remove).toHaveBeenCalledWith('team-123', 'user-789', 'user-456')
     })
 
     it('returns error when team ID is missing', async () => {
@@ -505,7 +505,7 @@ describe('Team Server Actions', () => {
       if (result.success) {
         expect(result.data.role).toBe('admin')
       }
-      expect(mockTeamMemberService.updateRole).toHaveBeenCalledWith('team-123', 'user-789', 'admin')
+      expect(mockTeamMemberService.updateRole).toHaveBeenCalledWith('team-123', 'user-789', 'admin', 'user-456')
     })
 
     it('returns error when team ID is missing', async () => {

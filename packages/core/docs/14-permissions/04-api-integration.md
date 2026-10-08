@@ -112,7 +112,7 @@ export async function DELETE(
   }
 
   // Remove member
-  await TeamMemberService.remove(teamId, memberId)
+  await TeamMemberService.remove(teamId, memberId, userId)
 
   return Response.json({ success: true })
 }

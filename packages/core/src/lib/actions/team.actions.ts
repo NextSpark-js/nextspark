@@ -380,7 +380,7 @@ export async function removeMember(
     }
 
     // 8. Remove member
-    await TeamMemberService.remove(teamId, targetUserId)
+    await TeamMemberService.remove(teamId, targetUserId, userId)
 
     // 9. Revalidate team-related paths
     revalidatePath('/dashboard/settings/team')
@@ -482,7 +482,7 @@ export async function updateMemberRole(
     }
 
     // 6. Update role
-    const updatedMember = await TeamMemberService.updateRole(teamId, targetUserId, role)
+    const updatedMember = await TeamMemberService.updateRole(teamId, targetUserId, role, userId)
 
     // 7. Revalidate team-related paths
     revalidatePath('/dashboard/settings/team')

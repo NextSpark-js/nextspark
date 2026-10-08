@@ -322,17 +322,22 @@ export class TeamMemberService {
    *
    * @param teamId - Team ID
    * @param userId - User ID to remove
+   * @param actorId - User removing them (RLS context): the team's owner or admin, or `userId` leaving on their own
    *
    * @example
-   * await TeamMemberService.remove('team-123', 'user-456')
+   * await TeamMemberService.remove('team-123', 'user-456', 'owner-id')
    */
-  static async remove(teamId: string, userId: string): Promise<void> {
+  static async remove(teamId: string, userId: string, actorId: string): Promise<void> {
     if (!teamId || teamId.trim() === '') {
       throw new Error('Team ID is required')
     }
 
     if (!userId || userId.trim() === '') {
       throw new Error('User ID is required')
+    }
+
+    if (!actorId) {
+      throw new Error('Actor ID is required')
     }
 
     // Check if user is owner (can't remove owner)
@@ -344,7 +349,7 @@ export class TeamMemberService {
     await queryWithRLS(
       'DELETE FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
       [teamId, userId],
-      userId
+      actorId
     )
   }
 
@@ -354,15 +359,17 @@ export class TeamMemberService {
    * @param teamId - Team ID
    * @param userId - User ID
    * @param role - New role
+   * @param actorId - User changing the role (RLS context): the team's owner, or an admin for roles below admin
    * @returns Updated team member
    *
    * @example
-   * const member = await TeamMemberService.updateRole('team-123', 'user-456', 'admin')
+   * const member = await TeamMemberService.updateRole('team-123', 'user-456', 'admin', 'owner-id')
    */
   static async updateRole(
     teamId: string,
     userId: string,
-    role: TeamRole
+    role: TeamRole,
+    actorId: string
   ): Promise<TeamMember> {
     if (!teamId || teamId.trim() === '') {
       throw new Error('Team ID is required')
@@ -370,6 +377,10 @@ export class TeamMemberService {
 
     if (!userId || userId.trim() === '') {
       throw new Error('User ID is required')
+    }
+
+    if (!actorId) {
+      throw new Error('Actor ID is required')
     }
 
     if (!role) {
@@ -388,7 +399,7 @@ export class TeamMemberService {
        WHERE "teamId" = $1 AND "userId" = $2
        RETURNING *`,
       [teamId, userId, role],
-      userId
+      actorId
     )
 
     if (!result.rows[0]) {
