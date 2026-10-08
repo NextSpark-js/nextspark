@@ -16,9 +16,16 @@ export const SAMPLE_DATA_MARKER = '-- nextspark:sample-data';
 const isProduction = value => /^\s*["']?production\b/i.test(String(value ?? ''));
 const isOn = value => /^\s*["']?(1|true)\b/i.test(String(value ?? ''));
 
+// Copies made before the name rule and the marker existed (the default theme's
+// 090_demo_users_teams.sql and 091_greek_teams_billing.sql, up to 0.1.0-beta.191)
+// are recognised by what they insert: a credential with a sample password. The
+// salts are those of migrations/029_*.sql, which has them but inserts nothing.
+const SAMPLE_PASSWORD_SALTS = ['22de14d5472248ed0bece911df908b2a:', '3db9e98e2b4d3caca97fdf2783791cbc:'];
+const insertsSamplePassword = sql => /insert\s+into\s+(?:"?public"?\s*\.\s*)?"?account\b/i.test(sql) && SAMPLE_PASSWORD_SALTS.some(salt => sql.includes(salt));
+
 export function isSampleDataMigration(filename, sql = '') {
   const name = filename.toLowerCase();
-  return name.includes('sample_data') || name.includes('sample-data') || sql.split('\n').some(line => line.trim() === SAMPLE_DATA_MARKER);
+  return name.includes('sample_data') || name.includes('sample-data') || sql.split('\n').some(line => line.trim() === SAMPLE_DATA_MARKER) || insertsSamplePassword(sql);
 }
 
 /**

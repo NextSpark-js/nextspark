@@ -47,6 +47,21 @@ test('the sample-data switch applies only outside production', () => {
   assert.equal(isSampleDataMigration('001_table.sql', 'CREATE TABLE t ();'), false)
 })
 
+test('older sample data without the name or the marker is recognised by the accounts it inserts', () => {
+  // the default theme's copies up to 0.1.0-beta.191, trimmed
+  for (const file of ['090_demo_users_teams.sql', '091_greek_teams_billing.sql']) {
+    const sql = fs.readFileSync(path.join(CORE, 'tests/fixtures/legacy-sample-data', file), 'utf8')
+    assert.equal(isSampleDataMigration(file, sql), true, file)
+  }
+  for (const target of ['account', '"account"', 'public.account', '"public"."account"']) {
+    assert.equal(isSampleDataMigration('x.sql', `INSERT INTO ${target} ("password") VALUES ('3db9e98e2b4d3caca97fdf2783791cbc:x');`), true, target)
+  }
+  assert.equal(isSampleDataMigration('x.sql', "INSERT INTO accounts (\"password\") VALUES ('3db9e98e2b4d3caca97fdf2783791cbc:x');"), false)
+  // the disabling migration names the same passwords but inserts none
+  assert.equal(isSampleDataMigration(DISABLING, fs.readFileSync(path.join(CORE, 'migrations', DISABLING), 'utf8')), false)
+  assert.equal(isSampleDataMigration('010_teams.sql', fs.readFileSync(path.join(CORE, 'migrations/010_teams_functions_triggers.sql'), 'utf8')), false)
+})
+
 async function freePort() {
   const server = net.createServer()
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))

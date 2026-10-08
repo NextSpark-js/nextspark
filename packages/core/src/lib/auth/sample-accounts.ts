@@ -27,7 +27,7 @@ export async function warnSampleAccountsAtStartup(
       [SAMPLE_PASSWORD_HASHES],
     )
     if (row && row.count > 0) {
-      console.warn(`[auth-readiness] ${row.count} account(s) still have a sample-data password; run the migrations (pnpm db:migrate) to disable them, and see the CHANGELOG upgrade notes`)
+      console.warn(`[auth-readiness] ${row.count} account(s) still have a sample-data password; pnpm db:migrate disables them once; if it already ran, see the CHANGELOG upgrade notes`)
     }
   } catch {
     // startup goes on; the migration is what disables those accounts

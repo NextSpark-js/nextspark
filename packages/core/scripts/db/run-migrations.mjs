@@ -440,6 +440,9 @@ async function runEntityMigrations() {
     console.log(`   - Content sample_data: ${contentSampleData.length}`);
     console.log(`   - Entity schema: ${entitySchema.length}`);
     console.log(`   - Entity sample_data: ${entitySampleData.length}`);
+    for (const m of [...allContentMigrations, ...allEntityMigrations].filter(m => m.isSampleData && !SAMPLE_DATA.apply)) {
+      console.log(`⏭️  Skipping ${m.filename} (sample data, ${m.sourceName})`);
+    }
     console.log('');
 
     let totalContentMigrations = 0;
