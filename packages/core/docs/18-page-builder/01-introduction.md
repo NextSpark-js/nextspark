@@ -1,5 +1,7 @@
 # Page Builder System
 
+> **Stability:** block structure and public rendering are stable. The dashboard editor is **experimental**: it is not part of the stable 1.0 surface and may change without a deprecation period. See [Stability](../22-stability-and-support/01-stability).
+
 > **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 The Page Builder is a visual editor that enables users to create dynamic content by composing reusable blocks. Inspired by WordPress and Webflow, it provides a no-code interface for content editors while maintaining full type safety and developer extensibility.
