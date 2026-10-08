@@ -36,13 +36,15 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     // Get user email to find invitations
     const userEmail = authResult.user!.email
 
-    // Parse query parameters
+    // Parse query parameters (filter out null values so Zod defaults work)
     const { searchParams } = new URL(req.url)
-    const queryParams = {
-      page: searchParams.get('page'),
-      limit: searchParams.get('limit'),
-      status: searchParams.get('status'),
-    }
+    const queryParams = Object.fromEntries(
+      Object.entries({
+        page: searchParams.get('page'),
+        limit: searchParams.get('limit'),
+        status: searchParams.get('status'),
+      }).filter(([, value]) => value !== null && value !== '')
+    )
 
     const validatedQuery = invitationListQuerySchema.parse(queryParams)
     const { page, limit, status } = validatedQuery
@@ -106,6 +108,11 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     const response = createApiResponse(invitations, paginationMeta)
     return addCorsHeaders(response, req)
   } catch (error) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      const zodError = error as { issues?: unknown[] }
+      const response = createApiError('Validation error', 400, zodError.issues, 'VALIDATION_ERROR')
+      return addCorsHeaders(response, req)
+    }
     console.error('Error fetching invitations:', error)
     const response = createApiError('Internal server error', 500)
     return addCorsHeaders(response, req)

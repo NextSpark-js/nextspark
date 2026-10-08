@@ -74,6 +74,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   A connection that dies is dropped and the next query opens a fresh one. The transaction helpers now rethrow the original error when
   their `ROLLBACK` also fails. Nothing is retried. `max` (20) and the 10 s connect timeout are unchanged. Migrations do not use these
   pools and are not limited by them.
+- **`GET /api/v1/team-invitations` with no query string lists the caller's pending invitations** (page 1, limit 20) instead of answering 500,
+  and a `page`, `limit` or `status` the schema refuses is a `400 VALIDATION_ERROR`.
 
 ## [0.1.0-beta.196] - 2026-10-07
 
