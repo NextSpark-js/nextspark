@@ -23,6 +23,10 @@ jobs:
       fail-fast: false
       matrix:
         node: [22.14.0, '24']
+    env:
+      # Node 22.14 intermittently fails the test runner's own IPC ("Unable to deserialize cloned data", #210);
+      # the plain node --test steps run one file at a time there. Node 24 keeps the default parallelism.
+      NODE_TEST_FLAGS: ${{ matrix.node == '22.14.0' && '--test-concurrency=1' || '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -52,11 +56,11 @@ jobs:
           npm_config_registry: http://127.0.0.1:9
 
       - name: Test registry build scripts
-        run: node --test $(find packages/core/scripts/build/registry -type f -name '*.test.mjs' -print)
+        run: node --test $NODE_TEST_FLAGS $(find packages/core/scripts/build/registry -type f -name '*.test.mjs' -print)
         env:
           npm_config_registry: http://127.0.0.1:9
 
       - name: Test package, performance, and security scripts
-        run: node --test scripts/packages/*.test.mjs scripts/performance/*.test.mjs scripts/security/*.test.mjs
+        run: node --test $NODE_TEST_FLAGS scripts/packages/*.test.mjs scripts/performance/*.test.mjs scripts/security/*.test.mjs
         env:
           npm_config_registry: http://127.0.0.1:9
