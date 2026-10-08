@@ -568,4 +568,4 @@ If you're still experiencing issues:
 - [Overview](./01-overview.md) - System architecture
 - [Database Schema](./02-database-schema.md) - Tables and RLS
 - [API Reference](./03-api-reference.md) - Endpoints
-- [Configuration](./08-configuration.md) - Settings
+- [Configuration](./09-configuration.md) - Settings

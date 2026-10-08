@@ -1,6 +1,6 @@
 # Accessibility (a11y)
 
-> **1.0 target, in progress:** the target for 1.0 is **WCAG 2.2 AA** for the `starter` template. It is checked with two things: axe in CI, with no serious or critical findings, and a manual keyboard and focus pass over the starter's authentication flows, dashboard and task CRUD. This is a target, not a claim: the checks are being added, and passing them is a release gate. NextSpark does not certify that a project meets any law or standard. Content, customization and the accessibility of your own components are your responsibility. See [Stability](../22-stability-and-support/01-stability).
+> **1.0 target, in progress:** the target for 1.0 is **WCAG 2.2 AA** for the `starter` template. It is checked with two things: axe in CI, with no serious or critical findings, and a manual keyboard and focus pass over the starter's authentication flows, dashboard and task CRUD. This is a target, not a claim: the checks are being added, and passing them is a release gate. NextSpark does not certify that a project meets any law or standard. Content, customization and the accessibility of your own components are your responsibility. See [Stability](../22-stability-and-support/01-stability.md).
 
 This guide covers the accessibility practices used in NextSpark's components and the checks that apply to them.
 

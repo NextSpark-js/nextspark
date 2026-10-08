@@ -386,4 +386,4 @@ CREATE INDEX idx_invitations_email ON team_invitations(email);
 
 - [Overview](./01-overview.md) - System architecture
 - [UI Components](./05-ui-components.md) - Component customization
-- [Troubleshooting](./09-troubleshooting.md) - Common issues
+- [Troubleshooting](./10-troubleshooting.md) - Common issues

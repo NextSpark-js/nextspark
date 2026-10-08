@@ -1,6 +1,6 @@
 # Page Builder System
 
-> **Stability:** block structure and public rendering are stable. The dashboard editor is **experimental**: it is not part of the stable 1.0 surface and may change without a deprecation period. See [Stability](../22-stability-and-support/01-stability).
+> **Stability:** block structure and public rendering are stable. The dashboard editor is **experimental**: it is not part of the stable 1.0 surface and may change without a deprecation period. See [Stability](../22-stability-and-support/01-stability.md).
 
 > **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
@@ -159,7 +159,7 @@ For automated block development, use the specialized Claude Code workflow:
 | **List Blocks** | View available blocks by theme | `/block:list` |
 | **Document Block** | Generate block documentation | `/block:docs` |
 
-See [Claude Workflow - Block Developer Agent](../16-claude-workflow/03-agents.md#10-block-developer) and [Block Commands](../16-claude-workflow/06-commands.md#block-commands) for details.
+See [Claude Workflow - Block Developer Agent](../16-claude-workflow/03-agents.md#12-block-developer) and [Block Commands](../16-claude-workflow/06-commands.md#block-commands) for details.
 
 ## Recent Updates (v1.1.0)
 

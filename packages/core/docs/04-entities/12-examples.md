@@ -884,7 +884,7 @@ export const contactConfig: EntityConfig = {
 
 - **[Configuration Reference](./03-configuration-reference.md)** - Complete configuration reference
 - **[Field Types](./04-field-types.md)** - All field types
-- **[Testing](../12-testing/01-overview.md)** - Entity testing
+- **[Testing](../12-testing/01-testing-overview.md)** - Entity testing
 
 ---
 

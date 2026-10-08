@@ -1,12 +1,12 @@
 # 0.1.0-beta.192 status
 
-> **Historical.** This page records the scope and validation of the 0.1.0-beta.192 line when it was prepared. It is not the current stability statement: the generated host is the only host and is stable for 1.0, and mobile is stable only if a real sign-in from the app passes in a simulator before the release candidate. See [Stability](../22-stability-and-support/01-stability) and [Support matrix](../22-stability-and-support/02-support-matrix).
+> **Historical.** This page records the scope and validation of the 0.1.0-beta.192 line when it was prepared. It is not the current stability statement: the generated host is the only host and is stable for 1.0, and mobile is stable only if a real sign-in from the app passes in a simulator before the release candidate. See [Stability](../22-stability-and-support/01-stability.md) and [Support matrix](../22-stability-and-support/02-support-matrix.md).
 
 This prerelease continues the 0.1.0 beta line; it is not a 1.0 release or a statement that the linked issues are complete.
 
 ## Release target
 
-At beta.192 the stable target was existing web hosts, and the generated and mobile hosts were still experimental while their host-specific validation and migration work was completed. That is superseded for 1.0 by [Stability](../22-stability-and-support/01-stability).
+At beta.192 the stable target was existing web hosts, and the generated and mobile hosts were still experimental while their host-specific validation and migration work was completed. That is superseded for 1.0 by [Stability](../22-stability-and-support/01-stability.md).
 
 | Issue | Integrated beta.192 slice | Remaining acceptance |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ Every 0.x project must move to the root-first layout before it can run on this l
 
 1. `pnpm exec nextspark migrate --dry-run` reports what will move, what will be rewritten, and what needs attention, without writing anything.
 2. `pnpm exec nextspark migrate --yes` performs the move. On any failure it stops, and prints rollback commands that return the tree exactly to its state before migrating, including ignored files it overwrote.
-3. `pnpm dev` or `pnpm build` generates the host. There is nothing else to apply: `nextspark sync:app` and core's postinstall write were removed in this release ([timeline](./05-sync-app-removal)), and `src/app` is generated and git-ignored from now on. See [Upgrading a 0.x project](./06-upgrade-0x-projects).
+3. `pnpm dev` or `pnpm build` generates the host. There is nothing else to apply: `nextspark sync:app` and core's postinstall write were removed in this release ([timeline](./05-sync-app-removal.md)), and `src/app` is generated and git-ignored from now on. See [Upgrading a 0.x project](./06-upgrade-0x-projects.md).
 
 What the move does:
 - It moves the active theme's files to the root and local plugins to `plugins/`, and rewrites the project's imports and aliases, its package scripts that point at renamed core scripts, and moved `tsconfig` and Jest configs.

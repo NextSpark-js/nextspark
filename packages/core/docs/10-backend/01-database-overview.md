@@ -16,7 +16,7 @@ The application uses **PostgreSQL** (standard PostgreSQL 15–17) as its relatio
 - Connection pooling via PgBouncer
 - REST API auto-generation (not used in favor of custom API v1)
 
-**Version:** PostgreSQL 15, 16 or 17 (see [Support matrix](../22-stability-and-support/02-support-matrix)). Supabase is not verified for 1.0.
+**Version:** PostgreSQL 15, 16 or 17 (see [Support matrix](../22-stability-and-support/02-support-matrix.md)). Supabase is not verified for 1.0.
 
 **Connection:** Uses standard PostgreSQL client (`pg` package) for maximum control and performance.
 

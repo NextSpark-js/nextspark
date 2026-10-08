@@ -1,6 +1,6 @@
 # Upgrading 0.x projects to 0.1.0-beta.192 or later
 
-This is the one upgrade path, supported from `0.1.0-beta.183` (the oldest release `nextspark migrate` is tested from; for anything older, first go to `0.1.0-beta.183`). A 0.x project (a `contents/themes/<theme>` layout, or a root-first project whose `src/app` was committed) upgrades to `0.1.0-beta.192` or a later release (the latest is the one to use) in two steps: install the new packages, then run `nextspark migrate` once. After that `src/app` is generated, git-ignored, and yours to leave alone. See the [generated host workflow](../01-fundamentals/08-generated-host) for how a project changes routes afterwards.
+This is the one upgrade path, supported from `0.1.0-beta.183` (the oldest release `nextspark migrate` is tested from; for anything older, first go to `0.1.0-beta.183`). A 0.x project (a `contents/themes/<theme>` layout, or a root-first project whose `src/app` was committed) upgrades to `0.1.0-beta.192` or a later release (the latest is the one to use) in two steps: install the new packages, then run `nextspark migrate` once. After that `src/app` is generated, git-ignored, and yours to leave alone. See the [generated host workflow](../01-fundamentals/08-generated-host.md) for how a project changes routes afterwards.
 
 ## Steps
 
@@ -91,5 +91,5 @@ New projects are created with Cache Components and PPR on. An upgraded project k
 ## Also
 
 - A project migrated by an earlier release may have a `legacy-app-customizations/` directory. Its files are not read any more: move each into `templates/` or `api/` by hand, following the table above.
-- `nextspark sync:app` no longer exists: see the [removal timeline](./05-sync-app-removal).
+- `nextspark sync:app` no longer exists: see the [removal timeline](./05-sync-app-removal.md).
 - `getBillingResourceHints()` is async (since 0.1.0-beta.191). A root layout that still reads it without `await` fails the build while prerendering `/_not-found`: make the layout `async` and `await` the call.

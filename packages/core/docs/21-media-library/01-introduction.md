@@ -1,6 +1,6 @@
 # Media Library Overview
 
-> **Experimental:** The media library is not part of the stable 1.0 surface and may change without a deprecation period. See [Stability](../22-stability-and-support/01-stability).
+> **Experimental:** The media library is not part of the stable 1.0 surface and may change without a deprecation period. See [Stability](../22-stability-and-support/01-stability.md).
 
 **WordPress-style media management for NextSpark SaaS applications**
 

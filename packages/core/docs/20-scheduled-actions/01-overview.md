@@ -5,7 +5,7 @@ description: Background task processing system for deferred, recurring, and lock
 
 # Scheduled Actions System
 
-> **Experimental:** Scheduled actions are not part of the stable 1.0 surface and may change without a deprecation period. See [Stability](../22-stability-and-support/01-stability).
+> **Experimental:** Scheduled actions are not part of the stable 1.0 surface and may change without a deprecation period. See [Stability](../22-stability-and-support/01-stability.md).
 
 The Scheduled Actions system provides a robust infrastructure for scheduling, processing, and managing background tasks. It supports one-time actions, recurring jobs with fixed or rolling recurrence, lock-group-based sequential execution, time-window deduplication with advisory locks, and configurable retries with linear backoff.
 

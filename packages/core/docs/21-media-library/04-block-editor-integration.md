@@ -9,7 +9,7 @@
 - [Overview](#overview)
 - [The media-library Field Type](#the-media-library-field-type)
 - [How It Replaces the image Field Type](#how-it-replaces-the-image-field-type)
-- [MediaLibraryField Component](#medialibraryfieldcomponent)
+- [MediaLibraryField Component](#medialibraryfield-component)
 - [ArrayMediaLibraryField Component](#arraymedialibraryfield-component)
 - [Data Flow](#data-flow)
 - [Blocks Using media-library](#blocks-using-media-library)

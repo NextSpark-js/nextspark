@@ -921,7 +921,7 @@ describe('Registry System Enforcement', () => {
 
 **See Also:**
 - [Introduction](./01-introduction.md) - Zero runtime I/O philosophy
-- [Dynamic Import Rules](/.rules/dynamic-imports.md) - Complete policy (503 lines)
+- [Zero Tolerance Policy](#zero-tolerance-policy) - The policy this page enforces
 - [Troubleshooting](./13-troubleshooting-and-debugging.md) - Fixing violations
 
 ---

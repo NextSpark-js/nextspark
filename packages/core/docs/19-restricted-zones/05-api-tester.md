@@ -512,5 +512,5 @@ app/devtools/api/
 ## Ver También
 
 - [DevTools Overview](./03-devtools.md) - Documentación general DevTools
-- [API Authentication](../06-authentication/03-api-authentication.md) - Sistema dual auth
-- [Generic Entity Handler](../05-api/04-generic-entity-handler.md) - Handler de entities
+- [API Authentication](../06-authentication/04-api-keys.md) - Sistema dual auth
+- [Generic Entity Handler](../05-api/03-dynamic-endpoints.md) - Handler de entities

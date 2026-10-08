@@ -23,7 +23,7 @@ This is the published timeline for RFC #203, acceptance criterion 12 ("`sync:app
 
 ## Upgrading
 
-- A project with a committed `src/app` (or `app/`): follow [Upgrading a 0.x project](./06-upgrade-0x-projects). `nextspark migrate` removes the files core generates, turns your customizations into `templates/` and `api/` files, and stops before writing if it cannot place one.
+- A project with a committed `src/app` (or `app/`): follow [Upgrading a 0.x project](./06-upgrade-0x-projects.md). `nextspark migrate` removes the files core generates, turns your customizations into `templates/` and `api/` files, and stops before writing if it cannot place one.
 - A project created on `0.1.0-beta.192` or later has nothing to do.
 - Scripts and CI that call `nextspark sync:app` fail with `unknown command`: replace the call with `nextspark prepare`.
 

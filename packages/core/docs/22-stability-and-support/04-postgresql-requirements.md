@@ -2,7 +2,7 @@
 
 > **Status:** written requirements for 1.0 (issue [#204](https://github.com/NextSpark-js/nextspark/issues/204), G0), checked against the core migrations and the database code at `0.1.0-beta.197`. NextSpark supports **standard PostgreSQL 15, 16 and 17**. Neon, Supabase and Amazon RDS are **not verified**.
 
-This page lists what a PostgreSQL server and its roles must provide for NextSpark to run. Version support and what CI tests are in [Support matrix](./02-support-matrix). Setup steps are in [Database setup](../02-getting-started/03-database-setup); the row-level security design is in [RLS policies](../10-backend/03-rls-policies).
+This page lists what a PostgreSQL server and its roles must provide for NextSpark to run. Version support and what CI tests are in [Support matrix](./02-support-matrix.md). Setup steps are in [Database setup](../02-getting-started/03-database-setup.md); the row-level security design is in [RLS policies](../10-backend/03-rls-policies.md).
 
 ## Server
 
@@ -80,7 +80,7 @@ The database scripts read `.env` **after** the environment, so a `DATABASE_URL` 
 - **Transaction-mode poolers.** Every user request opens a transaction and sets `app.user_id` with `SET LOCAL`, which does not outlive the transaction. That is the shape a transaction-mode pooler needs, but no CI job runs through one. Point `MIGRATE_DATABASE_URL` and `DATABASE_SERVICE_URL` at a direct, non-pooler connection.
 - **`MIGRATE_DATABASE_URL` and `db:seed`.** `pnpm db:seed` is `db:migrate` with the sample data, for development only. It uses the same runner, so it connects with `MIGRATE_DATABASE_URL` and falls back to `DATABASE_URL`. After the switch to `nextspark_app`, a `db:seed` without `MIGRATE_DATABASE_URL` connects as a role that cannot create tables.
 
-See [Environment configuration](../02-getting-started/05-environment-configuration) for each variable.
+See [Environment configuration](../02-getting-started/05-environment-configuration.md) for each variable.
 
 ## Providers
 

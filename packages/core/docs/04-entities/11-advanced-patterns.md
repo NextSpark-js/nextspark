@@ -540,8 +540,8 @@ const sendWebhook: HookFunction = async (context) => {
 ## Next Steps
 
 1. **[Examples](./12-examples.md)** - Complete examples implementing these patterns
-2. **[Testing](../12-testing/01-overview.md)** - Testing advanced patterns
-3. **[Performance](../13-performance/01-optimization.md)** - Advanced optimization
+2. **[Testing](../12-testing/01-testing-overview.md)** - Testing advanced patterns
+3. **[Performance](../13-performance/01-performance-overview.md)** - Advanced optimization
 
 ---
 

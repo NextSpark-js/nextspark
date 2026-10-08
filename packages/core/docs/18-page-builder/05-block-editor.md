@@ -1,6 +1,6 @@
 # Block Editor Components
 
-> **Experimental:** The page builder dashboard editor is not part of the stable 1.0 surface and may change without a deprecation period. It becomes stable once it has an end-to-end test. Block structure and public rendering are stable. See [Stability](../22-stability-and-support/01-stability).
+> **Experimental:** The page builder dashboard editor is not part of the stable 1.0 surface and may change without a deprecation period. It becomes stable once it has an end-to-end test. Block structure and public rendering are stable. See [Stability](../22-stability-and-support/01-stability.md).
 
 This document describes the components that make up the visual page editor. Understanding these components helps you customize or extend the editor.
 

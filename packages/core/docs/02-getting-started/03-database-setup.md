@@ -4,7 +4,7 @@
 
 Complete guide to setting up PostgreSQL database for NextSpark. Covers Supabase, local PostgreSQL, and Docker options.
 
-> **Supported databases:** standard PostgreSQL 15, 16 and 17. Neon, Supabase and Amazon RDS are **not verified** for 1.0: they may work, but none is tested. The roles, extension and SSL settings a server must provide are in [PostgreSQL requirements](../22-stability-and-support/04-postgresql-requirements).
+> **Supported databases:** standard PostgreSQL 15, 16 and 17. Neon, Supabase and Amazon RDS are **not verified** for 1.0: they may work, but none is tested. The roles, extension and SSL settings a server must provide are in [PostgreSQL requirements](../22-stability-and-support/04-postgresql-requirements.md).
 
 ---
 
@@ -222,7 +222,7 @@ CREATE POLICY tasks_user_isolation ON tasks
   USING (user_id = current_setting('app.current_user_id')::uuid);
 ```
 
-**See:** [Architecture Patterns → RLS](../01-fundamentals/04-architecture-patterns.md#row-level-security-rls-pattern)
+**See:** [Architecture Patterns → RLS](../01-fundamentals/04-architecture-patterns.md#6-row-level-security-rls-pattern)
 
 ---
 

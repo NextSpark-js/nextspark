@@ -1131,7 +1131,7 @@ vercel logs <deployment-url> --follow
 - Include minimal reproducible example
 
 **Documentation:**
-- Search docs: [Full Documentation](../README.md)
+- Search docs: [Full Documentation](../01-fundamentals/01-project-overview.md)
 - Check related guides
 - Review examples
 
@@ -1161,7 +1161,7 @@ vercel logs <deployment-url> --follow
 - Test locally before deploying
 - Monitor logs regularly
 
-**Next:** [Get detailed help in specific areas](../README.md)
+**Next:** [Get detailed help in specific areas](../01-fundamentals/01-project-overview.md)
 
 ---
 

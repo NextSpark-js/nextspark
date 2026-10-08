@@ -486,9 +486,9 @@ pnpm lint                   # Check code quality
 - [Troubleshooting Guide](./10-troubleshooting.md)
 
 **Documentation:**
-- [Full Documentation](../README.md)
-- [API Reference](../05-api/README.md)
-- [Component Guide](../09-frontend/README.md)
+- [Full Documentation](../01-fundamentals/01-project-overview.md)
+- [API Reference](../05-api/01-introduction.md)
+- [Component Guide](../09-frontend/01-component-architecture.md)
 
 **Support:**
 - GitHub Issues: Report bugs or request features

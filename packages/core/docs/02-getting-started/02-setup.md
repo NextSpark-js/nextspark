@@ -1183,7 +1183,7 @@ Congratulations! Your development environment is fully set up. 🎉
 
 **Support Resources:**
 
-- **Documentation:** [Main README](../README.md)
+- **Documentation:** [Project Overview](../01-fundamentals/01-project-overview.md)
 - **Troubleshooting:** [Common Issues](./10-troubleshooting.md)
 - **GitHub Issues:** Report bugs or request features
 - **Discord Community:** Real-time help (if available)

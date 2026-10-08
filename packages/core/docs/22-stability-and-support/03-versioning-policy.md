@@ -2,7 +2,7 @@
 
 > **Status:** this is the policy recorded for 1.0 (issue [#204](https://github.com/NextSpark-js/nextspark/issues/204), G0). Until 1.0.0 is released, the `0.1.0-beta` line follows none of it: any beta can break anything.
 
-NextSpark follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from 1.0.0. The packages `@nextsparkjs/core`, `@nextsparkjs/cli` and `create-nextspark-app` are released together. Which surfaces the rules cover is in [Stability](./01-stability); which of `@nextsparkjs/core`'s subpaths are public is in the [Public API](./05-public-api) page.
+NextSpark follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from 1.0.0. The packages `@nextsparkjs/core`, `@nextsparkjs/cli` and `create-nextspark-app` are released together. Which surfaces the rules cover is in [Stability](./01-stability.md); which of `@nextsparkjs/core`'s subpaths are public is in the [Public API](./05-public-api.md) page.
 
 ## What each release may change
 
@@ -16,7 +16,7 @@ NextSpark follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) fro
 
 A subpath of `@nextsparkjs/core` is public if at least one of these holds:
 
-1. It is listed in the [Public API](./05-public-api) page.
+1. It is listed in the [Public API](./05-public-api.md) page.
 2. Code that a stable template copies into a project imports it.
 3. It is a configuration contract: the `nextspark.config.ts` types, the entity config, `definePlugin`, `BlockConfig`, the billing config types, permissions and features.
 
@@ -53,10 +53,10 @@ A release candidate becomes 1.0.0 only after seven days on the same candidate wi
 
 ## Upgrading from 0.x
 
-There is **no legacy window in 1.x**. 1.0 does not read the old layout (`contents/themes/<theme>`, a committed `src/app`) at runtime. A 0.x project, from `0.1.0-beta.183` on, moves once with `nextspark migrate`; see [Upgrading 0.x projects](../17-updates/06-upgrade-0x-projects).
+There is **no legacy window in 1.x**. 1.0 does not read the old layout (`contents/themes/<theme>`, a committed `src/app`) at runtime. A 0.x project, from `0.1.0-beta.183` on, moves once with `nextspark migrate`; see [Upgrading 0.x projects](../17-updates/06-upgrade-0x-projects.md).
 
 `nextspark migrate` stays available for 12 months after 1.0.0, or for the whole 1.x line, whichever ends first.
 
 ## Upgrading within 1.x
 
-Follow the changelog. A minor that adopts a new Next.js minor says so under "Upgrading". Use `pnpm update-core` to move the `@nextsparkjs/*` packages; see [Core update command](../17-updates/01-update-core).
+Follow the changelog. A minor that adopts a new Next.js minor says so under "Upgrading". Use `pnpm update-core` to move the `@nextsparkjs/*` packages; see [Core update command](../17-updates/01-update-core.md).

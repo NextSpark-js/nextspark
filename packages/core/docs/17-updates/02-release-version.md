@@ -836,7 +836,7 @@ gh release create v0.2.0 \
 
 ## See Also
 
-- [Core Update Command](../updates/update-core) - Updating to new releases
-- [Installation Guide](../getting-started/installation) - Initial setup
+- [Core Update Command](./01-update-core.md) - Updating to new releases
+- [Installation Guide](../02-getting-started/01-installation.md) - Initial setup
 - [Semantic Versioning](https://semver.org/) - Official SemVer specification
 

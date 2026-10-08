@@ -1,6 +1,6 @@
 # Project Theme System
 
-> **Stability:** the `starter` template is stable. The `blog`, `crm` and `productivity` templates are **experimental**: they are not part of the stable 1.0 surface and may change without a deprecation period. The `@nextsparkjs/theme-*` packages are deprecated. See [Stability](../22-stability-and-support/01-stability).
+> **Stability:** the `starter` template is stable. The `blog`, `crm` and `productivity` templates are **experimental**: they are not part of the stable 1.0 surface and may change without a deprecation period. The `@nextsparkjs/theme-*` packages are deprecated. See [Stability](../22-stability-and-support/01-stability.md).
 
 > **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/cli/dist/cli.js prepare` (add `--watch` to watch).
 

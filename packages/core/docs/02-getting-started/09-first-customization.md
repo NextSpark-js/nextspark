@@ -708,7 +708,7 @@ export function useCustomFeature() {
 
 Now that you've made your first customizations:
 
-1. **Explore Entities**: [Core Concepts → Entity System](../01-fundamentals/01-core-concepts.md#entity-system)
+1. **Explore Entities**: [Project Overview → Entity System](../01-fundamentals/01-project-overview.md#1-entity-system)
 2. **Advanced Theming**: [Customization → Theme System](../07-theme-system/01-introduction.md)
 3. **API Development**: [API Development → Creating Endpoints](../05-api/04-custom-endpoints.md)
 4. **Deploy**: [Deployment Guide](./08-deployment.md)

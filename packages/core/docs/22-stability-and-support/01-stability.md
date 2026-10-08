@@ -2,7 +2,7 @@
 
 > **Status:** these are the stability decisions recorded for 1.0 (issue [#204](https://github.com/NextSpark-js/nextspark/issues/204), G0). Recording a decision does not certify it: a surface is stable only once its release gate has linked evidence and an independent review. Until 1.0.0 is released, every surface carries only the guarantees of the current `0.1.0-beta` line.
 
-This page lists which parts of NextSpark are **stable**, **experimental** or **deferred** for 1.0. The rules each label implies are in [Stability and versioning policy](./03-versioning-policy). Supported versions of Node, Next.js, pnpm and PostgreSQL are in [Support matrix](./02-support-matrix).
+This page lists which parts of NextSpark are **stable**, **experimental** or **deferred** for 1.0. The rules each label implies are in [Stability and versioning policy](./03-versioning-policy.md). Supported versions of Node, Next.js, pnpm and PostgreSQL are in [Support matrix](./02-support-matrix.md).
 
 | Label | Meaning |
 | --- | --- |
@@ -25,12 +25,12 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 | `definePlugin` and the plugin system | The first-party plugins are experimental, see below. |
 | `starter` template | The other templates are experimental. |
 | Web app, `saas` preset | The default preset of `create-nextspark-app`. |
-| `nextspark migrate` from 0.x | Supported from `0.1.0-beta.183`. Availability window in [Stability and versioning policy](./03-versioning-policy#upgrading-from-0x). |
+| `nextspark migrate` from 0.x | Supported from `0.1.0-beta.183`. Availability window in [Stability and versioning policy](./03-versioning-policy.md#upgrading-from-0x). |
 | Email (Resend) and i18n | |
 | Superadmin and devtools | Stable as protected areas. |
 | Stable CLI: `create-nextspark-app`; `nextspark` `dev`, `build`, `prepare`, `db:*`, `doctor`, `migrate`; and `update-core` (a bin of `@nextsparkjs/core`, run as `pnpm update-core`) | No programmatic API. |
 | `next start` | |
-| Deployment behind a TLS reverse proxy | Stable with the documented settings: `NEXTSPARK_CLIENT_IP_SOURCE` and `NEXTSPARK_TRUSTED_PROXY_HOPS` (see [Client address](../14-deployment/10-client-address)), and a proxy that sets `X-Forwarded-Proto`. The `X-Forwarded-Proto` requirement is not documented in a guide yet. |
+| Deployment behind a TLS reverse proxy | Stable with the documented settings: `NEXTSPARK_CLIENT_IP_SOURCE` and `NEXTSPARK_TRUSTED_PROXY_HOPS` (see [Client address](../14-deployment/10-client-address.md)), and a proxy that sets `X-Forwarded-Proto`. The `X-Forwarded-Proto` requirement is not documented in a guide yet. |
 
 ## Stable, conditional
 
@@ -49,17 +49,17 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 
 | Surface | Notes |
 | --- | --- |
-| Page builder dashboard editor | Becomes stable when it has an end-to-end test. See [Block editor](../18-page-builder/05-block-editor). |
-| Media library | See [Media library](../21-media-library/01-introduction). |
-| Scheduled actions | See [Scheduled actions](../20-scheduled-actions/01-overview). |
+| Page builder dashboard editor | Becomes stable when it has an end-to-end test. See [Block editor](../18-page-builder/05-block-editor.md). |
+| Media library | See [Media library](../21-media-library/01-introduction.md). |
+| Scheduled actions | See [Scheduled actions](../20-scheduled-actions/01-overview.md). |
 | `nextspark skills` | The offline skill catalog of the CLI. |
-| Billing (Stripe, Polar) | The create flow defaults to the `free` plan. See [Billing](../19-billing/01-overview). |
-| MCP server | MCP enabled by default in every web project is not part of 1.0. See [MCP server](../05-api/20-mcp-server). |
+| Billing (Stripe, Polar) | The create flow defaults to the `free` plan. See [Billing](../19-billing/01-overview.md). |
+| MCP server | MCP enabled by default in every web project is not part of 1.0. See [MCP server](../05-api/20-mcp-server.md). |
 | First-party plugins: `ai`, `amplitude`, `langchain`, `social-media-publisher`, `walkme` | `definePlugin` itself is stable. |
-| Templates `blog`, `crm`, `productivity` | See [Project themes](../07-theme-system/01-introduction). |
+| Templates `blog`, `crm`, `productivity` | See [Project themes](../07-theme-system/01-introduction.md). |
 | AI workflow: `@nextsparkjs/ai-workflow`, `setup:ai`, `sync:ai` | Legacy, opt-in. |
 | CLI: `add:theme`, `add:plugin`, `add:mobile`, and `@nextsparkjs/testing` | |
-| Vercel deployment | See [Vercel deployment](../14-deployment/03-vercel-deployment). |
+| Vercel deployment | See [Vercel deployment](../14-deployment/03-vercel-deployment.md). |
 
 ## Deprecated
 
@@ -78,7 +78,7 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 
 ## What "stable" does not cover
 
-The public API is a list, not everything that can be imported. A subpath of `@nextsparkjs/core` that is not on that list can change in a minor, even though it resolves. The list is in the [Public API](./05-public-api) page; everything else in the package export map is internal.
+The public API is a list, not everything that can be imported. A subpath of `@nextsparkjs/core` that is not on that list can change in a minor, even though it resolves. The list is in the [Public API](./05-public-api.md) page; everything else in the package export map is internal.
 
 The generated `src/app` is not public. Closing the export map to the public list is a 2.0 change.
 
@@ -86,5 +86,5 @@ The generated `src/app` is not public. Closing the export map to the public list
 
 These are targets for 1.0, not guarantees:
 
-- Accessibility: WCAG 2.2 AA, see [Accessibility](../09-frontend/07-accessibility).
+- Accessibility: WCAG 2.2 AA, see [Accessibility](../09-frontend/07-accessibility.md).
 - Performance: LCP of 2.5 s or less on the reference environment, and per-route client JavaScript within the ceilings in `scripts/performance/starter-route-js-budget.json`.

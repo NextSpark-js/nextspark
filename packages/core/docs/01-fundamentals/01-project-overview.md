@@ -588,7 +588,7 @@ const config = ENTITY_REGISTRY[entityName]
 
 **Enforcement:** Review these constraints during code review. The repository does not currently expose a root package script that validates this complete list.
 
-**Learn More:** [Zero Dynamic Imports Policy](../../.rules/dynamic-imports.md)
+**Learn More:** [Zero Dynamic Imports Policy](../03-registry-system/11-enforcement-and-validation.md)
 
 ### Protected Routes & Middleware
 
