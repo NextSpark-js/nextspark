@@ -32,7 +32,7 @@ User Request
       ↓ (Cache Miss)
 ┌─────────────────────────────────────────────────────────┐
 │  Layer 3: SERVER CACHE                                   │
-│  • Next.js fetch cache                                 │
+│  • Next.js server cache ('use cache')                  │
 │  • React cache() API                                   │
 │  • Registry System (build-time)                        │
 └─────────────────────────────────────────────────────────┘
@@ -340,31 +340,48 @@ function TaskListPage() {
 
 ## Layer 3: Next.js Server Caching
 
-### Next.js 15 Fetch Cache
+### Next.js 16 Server Cache
 
-Next.js automatically caches fetch requests:
+Next.js 16 does **not** cache `fetch` responses, route handlers or pages by default: everything renders per request until you opt in. How you opt in depends on `cacheComponents` in `next.config.mjs`:
+
+- **`cacheComponents: true`** (the default for new NextSpark projects, see the [PPR Migration Guide](./ppr-migration.md)): mark a component or function with `'use cache'`, set how long it lives with `cacheLife` and name it with `cacheTag`. Anything not cached renders at request time and streams behind a `<Suspense>` boundary.
+- **`cacheComponents` off (legacy ISR)**: opt in per request with the `fetch` options below, or per route with segment config such as `revalidate`.
 
 ```typescript
 // templates/dashboard/page.tsx
+import { Suspense } from 'react'
+import { cacheLife, cacheTag } from 'next/cache'
+
+// ✅ Cache Components: cached for an hour, tagged for invalidation
+async function getTasks() {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('tasks')
+  const response = await fetch('https://api.example.com/tasks')
+  return response.json()
+}
+
+// ✅ Not cached: renders on every request, streams inside <Suspense>
+async function Notifications() {
+  const notifications = await fetch('https://api.example.com/notifications').then(r => r.json())
+  return <ul>{/* ... */}</ul>
+}
+
 export default async function DashboardPage() {
-  // ✅ Cached by default (until revalidation)
-  const tasks = await fetch('https://api.example.com/tasks', {
-    next: { revalidate: 3600 }  // Revalidate every hour
-  })
+  const tasks = await getTasks()
 
-  // ✅ No cache (always fresh)
-  const notifications = await fetch('https://api.example.com/notifications', {
-    cache: 'no-store'
-  })
-
-  // ✅ Force cache (never revalidate)
-  const config = await fetch('https://api.example.com/config', {
-    cache: 'force-cache'
-  })
-
-  return <div>{/* ... */}</div>
+  return (
+    <div>
+      {/* ... uses tasks */}
+      <Suspense fallback={null}>
+        <Notifications />
+      </Suspense>
+    </div>
+  )
 }
 ```
+
+With `cacheComponents` off, `fetch(url, { next: { revalidate: 3600 } })` revalidates hourly and `fetch(url, { cache: 'force-cache' })` caches until it is invalidated.
 
 ### React cache() API
 
@@ -393,7 +410,9 @@ async function UserAvatar({ userId }: { userId: string }) {
 }
 ```
 
-### unstable_cache for Database Queries
+### Caching Database Queries
+
+With Cache Components, put `'use cache'` on the function that runs the query (see above). `unstable_cache` is the older API for projects with `cacheComponents` off:
 
 ```typescript
 import { unstable_cache } from 'next/cache'
@@ -428,8 +447,10 @@ import { revalidateTag, revalidatePath } from 'next/cache'
 export async function POST(request: NextRequest) {
   const task = await createTask(data)
 
-  // Invalidate all queries tagged 'tasks'
-  revalidateTag('tasks')
+  // Invalidate all queries tagged 'tasks'. Next.js 16 requires the second
+  // argument: 'max' serves the stale entry while the new one is fetched.
+  // In a Server Action, updateTag('tasks') expires it immediately instead.
+  revalidateTag('tasks', 'max')
 
   // Or invalidate specific path
   revalidatePath('/dashboard/tasks')
@@ -663,8 +684,8 @@ const nextConfig = {
 ### Custom CDN Headers
 
 ```typescript
-// middleware.ts
-export function middleware(request: NextRequest) {
+// proxy.ts
+export function proxy(request: NextRequest) {
   const response = NextResponse.next()
 
   // Cache static entity configs at edge
@@ -731,8 +752,8 @@ function useUpdateTask() {
 ```typescript
 import { revalidateTag, revalidatePath } from 'next/cache'
 
-// Invalidate by tag
-revalidateTag('tasks')
+// Invalidate by tag (Next.js 16 requires the second argument)
+revalidateTag('tasks', 'max')
 
 // Invalidate by path
 revalidatePath('/dashboard/tasks')

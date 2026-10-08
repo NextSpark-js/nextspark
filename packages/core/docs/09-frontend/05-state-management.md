@@ -502,7 +502,9 @@ function ProductList() {
 
 Use URL search params for shareable UI state like filters, sorting, and pagination.
 
-### Next.js 15 Search Params
+### Next.js 16 Search Params
+
+With Cache Components (the default), a Client Component that calls `useSearchParams()` must sit inside a `<Suspense>` boundary: the search params are only known per request, so the static shell cannot include it.
 
 ```typescript
 'use client'
@@ -1430,4 +1432,4 @@ const LayoutContext = createContext({ sidebar })
 - [TanStack Query Documentation](https://tanstack.com/query/latest/docs/framework/react/overview)
 - [React Documentation - Managing State](https://react.dev/learn/managing-state)
 - [You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)
-- [Next.js 15 - useSearchParams](https://nextjs.org/docs/app/api-reference/functions/use-search-params)
+- [Next.js - useSearchParams](https://nextjs.org/docs/app/api-reference/functions/use-search-params)

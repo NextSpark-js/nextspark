@@ -39,7 +39,7 @@ Our performance approach operates across **four distinct layers**, each contribu
 ┌─────────────────────────────────────────────────────────┐
 │  Layer 4: CACHING OPTIMIZATION                          │
 │  • TanStack Query client cache                         │
-│  • Next.js 15 fetch cache                              │
+│  • Next.js 16 server cache ('use cache')               │
 │  • CDN and browser caching                             │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -209,11 +209,11 @@ module.exports = {
 
 ---
 
-## Next.js 15 Performance Features
+## Next.js 16 Performance Features
 
 ### Built-in Optimizations
 
-Next.js 15 provides several automatic performance enhancements:
+Next.js 16 provides several automatic performance enhancements:
 
 **1. App Router Optimizations**
 ```typescript
@@ -244,7 +244,7 @@ export default async function DashboardPage() {
 }
 ```
 
-**3. Turbopack (Dev Mode)**
+**3. Turbopack (the default bundler for `next dev` and `next build`)**
 - Incremental updates instead of full rebuilds
 - Hot Module Replacement (HMR) in milliseconds
 - Progressive bundling (only what's needed)

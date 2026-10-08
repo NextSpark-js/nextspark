@@ -1115,7 +1115,7 @@ function AnalyticsDashboard() {
 
 ### Step 2: Update Locale Config
 
-**Edit:** `middleware.ts` or i18n config
+**Edit:** the i18n config
 
 ```typescript
 export const locales = ['en', 'es', 'fr']  // Add 'fr'

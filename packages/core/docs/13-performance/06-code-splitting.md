@@ -52,7 +52,7 @@ const SPLIT_BUNDLES = {
 
 ### Route-Based Splitting (Automatic)
 
-Next.js 15 App Router **automatically code splits** by route:
+Next.js 16 App Router **automatically code splits** by route:
 
 ```typescript
 // Each route creates a separate bundle

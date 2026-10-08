@@ -517,7 +517,9 @@ export function TaskList() {
 
 ## 5. API Route Typing
 
-### Next.js 15 App Router
+### Next.js 16 App Router
+
+In Next.js 16 `params` is a `Promise`: type it that way and `await` it.
 
 **Route Handler Types:**
 ```typescript
@@ -569,11 +571,12 @@ export async function POST(
 // PATCH /api/v1/tasks/[id]
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
+  const { id } = await params
   const body = await request.json() as UpdateTaskInput
 
-  const task = await TaskService.update(params.id, body, userId)
+  const task = await TaskService.update(id, body, userId)
 
   const response: ApiResponse<Task> = {
     data: task
@@ -585,9 +588,10 @@ export async function PATCH(
 // DELETE /api/v1/tasks/[id]
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
-  await TaskService.delete(params.id, userId)
+  const { id } = await params
+  await TaskService.delete(id, userId)
 
   return new Response(null, { status: 204 })
 }

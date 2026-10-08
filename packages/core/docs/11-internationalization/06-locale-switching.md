@@ -524,11 +524,11 @@ You can implement URL-based locale routing:
 **Middleware Implementation**:
 
 ```typescript
-// middleware.ts
+// proxy.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   
   // Check if locale is in URL

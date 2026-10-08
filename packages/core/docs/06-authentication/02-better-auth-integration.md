@@ -569,12 +569,12 @@ export async function GET(request: NextRequest) {
 ### In Middleware
 
 ```typescript
-// middleware.ts
+// proxy.ts
 import { auth } from '@nextsparkjs/core/lib/auth'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const session = await auth.api.getSession({
     headers: request.headers
   })

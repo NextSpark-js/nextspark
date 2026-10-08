@@ -155,8 +155,8 @@ DELETE /api/v1/tasks/:id      // Delete task
 
 **✅ DO: Enforce HTTPS in production**
 ```typescript
-// middleware.ts
-export function middleware(request: NextRequest) {
+// proxy.ts
+export function proxy(request: NextRequest) {
   // Redirect HTTP to HTTPS
   if (
     process.env.NODE_ENV === 'production' &&

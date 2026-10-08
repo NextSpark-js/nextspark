@@ -352,7 +352,7 @@ export default getRequestConfig(async ({ locale }) => {
 ### Locale Validation
 
 ```typescript
-// middleware.ts
+// proxy.ts
 import { getThemeLocales } from '@nextsparkjs/registries/translation-registry'
 import createMiddleware from 'next-intl/middleware'
 

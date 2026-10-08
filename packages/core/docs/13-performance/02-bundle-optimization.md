@@ -64,11 +64,11 @@ const BUNDLE_TARGETS = {
 
 ---
 
-## Next.js 15 Automatic Optimizations
+## Next.js 16 Automatic Optimizations
 
 ### App Router Code Splitting
 
-Next.js 15 App Router **automatically splits code by route**:
+Next.js 16 App Router **automatically splits code by route**:
 
 ```typescript
 // Each route creates a separate bundle
@@ -93,11 +93,12 @@ app/
 
 **Key Benefit:** Users only download code for routes they visit.
 
-### Turbopack in Development
+### Turbopack
+
+Next.js 16 uses Turbopack by default for `next dev` and `next build`; pass `--webpack` to opt out.
 
 ```typescript
-// next.config.ts enables Turbopack automatically in dev mode
-// pnpm dev automatically uses --turbopack flag
+// No flag or next.config.ts setting is needed to turn Turbopack on.
 
 // Performance improvements:
 const turbopackBenefits = {
@@ -111,7 +112,7 @@ const turbopackBenefits = {
 ```bash
 # pnpm build automatically applies:
 ✓ Tree shaking (dead code elimination)
-✓ Minification (Terser for JS, Lightning CSS for styles)
+✓ Minification (JavaScript and CSS)
 ✓ Compression (Gzip/Brotli)
 ✓ Code splitting (automatic route-based)
 ✓ Image optimization (WebP/AVIF conversion)
@@ -272,7 +273,7 @@ export default function AnalyticsPage() {
 
 ### next/font Integration
 
-Next.js 15 automatically optimizes fonts:
+Next.js automatically optimizes fonts:
 
 ```typescript
 // app/layout.tsx
@@ -339,11 +340,11 @@ const customFont = localFont({
 
 ### Lightning CSS
 
-Next.js 15 uses **Lightning CSS** for ultra-fast CSS processing:
+Next.js 16 builds with Turbopack, which processes CSS with **Lightning CSS**:
 
 ```typescript
-// next.config.ts automatically uses Lightning CSS
-// No configuration needed - it's the default
+// Turbopack uses Lightning CSS for CSS
+// No configuration needed
 
 // Benefits:
 const lightningCSSBenefits = {

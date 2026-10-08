@@ -436,8 +436,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ### Production Configuration
 
 ```typescript
-// middleware.ts
-export function middleware(request: NextRequest) {
+// proxy.ts
+export function proxy(request: NextRequest) {
   const proto = request.headers.get('x-forwarded-proto')
   
   if (proto === 'http' && process.env.NODE_ENV === 'production') {

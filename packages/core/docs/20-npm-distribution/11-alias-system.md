@@ -73,7 +73,7 @@ Generated projects include these aliases in `tsconfig.json`:
 
 #### B. Turbopack Resolution (next.config.mjs)
 
-For Next.js 15 or 16 with Turbopack:
+For Next.js 16 with Turbopack (the default bundler):
 
 ```typescript
 const nextConfig: NextConfig = {

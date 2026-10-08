@@ -14,7 +14,7 @@ Performance is not just about speed—it's about user experience, SEO rankings, 
 6. [Virtualization for Long Lists](#virtualization-for-long-lists)
 7. [Core Web Vitals](#core-web-vitals)
 8. [Monitoring and Measuring](#monitoring-and-measuring)
-9. [Next.js 15 Optimizations](#nextjs-15-optimizations)
+9. [Next.js 16 Optimizations](#nextjs-16-optimizations)
 10. [Best Practices](#best-practices)
 11. [Common Pitfalls](#common-pitfalls)
 
@@ -794,7 +794,7 @@ jobs:
 
 ---
 
-## Next.js 15 Optimizations
+## Next.js 16 Optimizations
 
 ### Server Components (Default)
 

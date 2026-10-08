@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Next.js middleware provides powerful request/response transformation capabilities. Our middleware implementation handles authentication, route protection, theme overrides, and documentation access control.
+The Next.js proxy (`proxy.ts`, called middleware before Next.js 16) provides powerful request/response transformation capabilities. Our proxy implementation handles authentication, route protection, theme overrides, and documentation access control.
 
 ## Middleware Architecture
 

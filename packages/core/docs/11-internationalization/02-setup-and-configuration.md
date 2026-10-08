@@ -460,7 +460,7 @@ export async function proxyHook(request: NextRequest) {
 ```
 
 The project hook is an extension point, not a replacement security boundary.
-Do not create a separate `middleware.ts` or replace the framework proxy to
+Do not create a separate `proxy.ts` (Next.js 16 renamed `middleware.ts`) or replace the framework proxy to
 customize locale handling.
 
 ## Environment Variables

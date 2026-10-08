@@ -292,8 +292,8 @@ The authentication system provides comprehensive user management with session-ba
 
 **Middleware Protection:**
 ```typescript
-// middleware.ts
-export default async function middleware(request: NextRequest) {
+// proxy.ts
+export default async function proxy(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers })
 
   if (!session) {
@@ -592,7 +592,7 @@ const config = ENTITY_REGISTRY[entityName]
 
 ### Protected Routes & Middleware
 
-The application uses Next.js middleware for route protection and authentication:
+The application uses the Next.js proxy (`proxy.ts`, called middleware before Next.js 16) for route protection and authentication:
 
 **Route Groups:**
 - `(public)/` - Public pages (landing, login, signup, docs)
@@ -603,7 +603,7 @@ The application uses Next.js middleware for route protection and authentication:
 
 **Middleware Flow:**
 ```typescript
-// middleware.ts
+// proxy.ts
 1. Check session with Better Auth
 2. If no session and protected route → redirect to /login
 3. If session but insufficient permissions → redirect to /403
