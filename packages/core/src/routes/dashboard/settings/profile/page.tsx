@@ -357,10 +357,11 @@ function ProfilePage() {
               {/* Email, Auth and Verification - 50%, 25%, 25% Layout */}
               <div className="grid gap-4 grid-cols-1 md:grid-cols-4">
                 <div className="space-y-2 md:col-span-2">
-                  <Label>{t('profile.form.email')}</Label>
+                  <Label htmlFor="email">{t('profile.form.email')}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
+                      id="email"
                       value={profile?.email || ''}
                       disabled
                       className="pl-10 bg-muted"
@@ -411,7 +412,7 @@ function ProfilePage() {
                       }
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="language">
                       <div className="flex items-center gap-2">
                         <Languages className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         <SelectValue placeholder={t('profile.form.languagePlaceholder')} />
@@ -435,6 +436,7 @@ function ProfilePage() {
                   <Popover open={countryOpen} onOpenChange={setCountryOpen}>
                     <PopoverTrigger asChild>
                       <Button
+                        id="country"
                         variant="outline"
                         role="combobox"
                         aria-expanded={countryOpen}
@@ -487,6 +489,7 @@ function ProfilePage() {
                   <Popover open={timezoneOpen} onOpenChange={setTimezoneOpen}>
                     <PopoverTrigger asChild>
                       <Button
+                        id="timezone"
                         variant="outline"
                         role="combobox"
                         aria-expanded={timezoneOpen}

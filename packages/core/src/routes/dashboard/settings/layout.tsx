@@ -90,7 +90,6 @@ function SettingsLayout({
                 size="sm"
                 className="gap-2"
                 onClick={handleBackToDashboard}
-                aria-label={t('navigation.backToDashboard')}
                 data-cy={sel('settings.sidebar.backButton')}
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />

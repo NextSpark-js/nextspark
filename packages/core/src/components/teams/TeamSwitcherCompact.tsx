@@ -85,7 +85,6 @@ export function TeamSwitcherCompact({ className }: TeamSwitcherCompactProps) {
             variant="ghost"
             className="w-full justify-between h-auto p-2 hover:bg-accent"
             data-cy="team-switcher-compact"
-            aria-label={t('switcher.switchTeam')}
           >
             <div className="flex items-center gap-2 min-w-0">
               <Avatar className="h-8 w-8 shrink-0">

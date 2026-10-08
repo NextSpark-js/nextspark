@@ -75,6 +75,9 @@ export function MultiSelectFilter({
   const selectedOptions = options.filter((opt) => values.includes(opt.value))
   const hasSelection = selectedOptions.length > 0
 
+  // A combobox takes its accessible name from aria-label, not from its text
+  const triggerLabel = hasSelection ? `${label} (${selectedOptions.length})` : label
+
   const handleToggle = (optionValue: string) => {
     if (values.includes(optionValue)) {
       onChange(values.filter((v) => v !== optionValue))
@@ -101,6 +104,7 @@ export function MultiSelectFilter({
             variant="outline"
             role="combobox"
             aria-expanded={open}
+            aria-label={triggerLabel}
             className={cn(
               'h-10 gap-2 justify-between min-w-[120px]',
               hasSelection && 'text-foreground',
@@ -109,7 +113,7 @@ export function MultiSelectFilter({
             data-cy={`${dataCy}-trigger`}
           >
             <span className="truncate">
-              {hasSelection ? `${label} (${selectedOptions.length})` : label}
+              {triggerLabel}
             </span>
             <ChevronDown
               className={cn(

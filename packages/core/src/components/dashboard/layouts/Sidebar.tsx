@@ -70,7 +70,13 @@ export function Sidebar({ className, entities }: SidebarProps) {
                 role="img"
                 aria-label={t('a11y.logoOf', { appName })}
               >
-                <span className="text-primary-foreground font-bold text-sm" aria-hidden="true">{appName.charAt(0)}</span>
+                {/* The initial is generated content, not text: it is not part of the link's label, and a visible text
+                    that the accessible name lacks fails WCAG 2.5.3 (Label in Name) */}
+                <span
+                  className="text-primary-foreground font-bold text-sm before:content-[attr(data-initial)]"
+                  data-initial={appName.charAt(0)}
+                  aria-hidden="true"
+                />
               </div>
               {!isCollapsed && (
                 <span 

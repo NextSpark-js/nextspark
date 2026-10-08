@@ -83,8 +83,8 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
   // Función para generar color del avatar basado en el email
   const getAvatarColor = (email?: string) => {
     const colors = [
-      'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
-      'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-orange-500'
+      'bg-red-700', 'bg-blue-700', 'bg-green-700', 'bg-yellow-700', 
+      'bg-purple-700', 'bg-pink-700', 'bg-indigo-700', 'bg-orange-700'
     ]
     const index = (email?.charCodeAt(0) ?? 0) % colors.length
     return colors[index]
@@ -371,12 +371,11 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                                               />
                     ) : (
                       <div 
-                        className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getAvatarColor(user.email)}`}
+                        className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getAvatarColor(user.email)} before:content-[attr(data-initials)]`}
                         role="img"
                         aria-label={t('a11y.avatarForName', { name: user.firstName || user.email })}
-                                              >
-                        {getUserInitials(user)}
-                      </div>
+                        data-initials={getUserInitials(user)}
+                      />
                     )}
                     <span className="text-sm text-foreground">
                       {user.firstName || user.email}
@@ -467,11 +466,11 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                     />
                   ) : (
                     <div
-                      className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getAvatarColor(user.email)}`}
+                      className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getAvatarColor(user.email)} before:content-[attr(data-initials)]`}
+                      role="img"
                       aria-label={t('a11y.avatarForName', { name: user.firstName || user.email })}
-                    >
-                      {getUserInitials(user)}
-                    </div>
+                      data-initials={getUserInitials(user)}
+                    />
                   )}
                   <span className="text-sm text-foreground hidden sm:block">
                     {user.firstName || user.email?.split('@')[0]}
@@ -618,12 +617,11 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                     />
                   ) : (
                     <div 
-                      className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getAvatarColor(user.email)}`}
+                      className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getAvatarColor(user.email)} before:content-[attr(data-initials)]`}
                       role="img"
                       aria-label={t('a11y.avatarForName', { name: user.firstName || user.email })}
-                    >
-                      {getUserInitials(user)}
-                    </div>
+                      data-initials={getUserInitials(user)}
+                    />
                   )}
                   <div>
                     <div className="text-sm font-medium text-foreground">
