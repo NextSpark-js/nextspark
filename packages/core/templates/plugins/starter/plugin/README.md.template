@@ -80,7 +80,7 @@ Example function description.
 │   ├── core.ts
 │   └── types.ts
 ├── components/           # React components
-│   └── ExampleWidget.tsx
+│   └── {{PLUGIN_PASCAL_NAME}}Widget.tsx
 ├── hooks/                # Custom React hooks
 │   └── use{{PLUGIN_PASCAL_NAME}}.ts
 ├── entities/             # Plugin entities (optional)

@@ -859,30 +859,27 @@ async function DashboardStats() {
 }
 ```
 
-### Partial Prerendering (Experimental)
+### Partial Prerendering (Cache Components)
 
 ```typescript
-// next.config.js
-module.exports = {
-  experimental: {
-    ppr: true,  // Partial Prerendering
-  },
-}
+// next.config.mjs (on by default in new NextSpark projects)
+const nextConfig = { cacheComponents: true }
 
-// Combines static and dynamic rendering
-export default function ProductPage({ params }: { params: { id: string } }) {
+// Static shell plus dynamic holes
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   return (
     <div>
       {/* Static shell renders immediately */}
       <ProductLayout>
         {/* Dynamic content streams in */}
         <Suspense fallback={<ProductSkeleton />}>
-          <ProductDetails id={params.id} />
+          <ProductDetails id={id} />
         </Suspense>
 
         {/* Dynamic recommendations */}
         <Suspense fallback={<RecommendationsSkeleton />}>
-          <ProductRecommendations id={params.id} />
+          <ProductRecommendations id={id} />
         </Suspense>
       </ProductLayout>
     </div>

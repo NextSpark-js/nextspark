@@ -44,7 +44,7 @@ for (const [name, pascal, camel] of [['my-demo', 'MyDemo', 'myDemo'], ['analytic
         if (!/\.(?:ts|tsx)$/.test(file)) continue
         for (const [, specifier] of source.matchAll(/from\s+['"](\.{1,2}\/[^'"]+)['"]/g)) {
           const target = path.resolve(dir, path.dirname(file), specifier)
-          const found = ['.ts', '.tsx', '/index.ts', '/index.tsx'].some(ext => fs.existsSync(target + ext))
+          const found = ['.ts', '.tsx', '/index.ts', '/index.tsx'].some(ext => files.has(path.relative(dir, target + ext)))
           assert.ok(found, `${file} imports ${specifier}, which is not a generated file`)
         }
       }

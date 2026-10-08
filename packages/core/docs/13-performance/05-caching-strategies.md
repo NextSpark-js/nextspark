@@ -342,9 +342,9 @@ function TaskListPage() {
 
 ### Next.js 16 Server Cache
 
-Next.js 16 does **not** cache `fetch` responses, route handlers or pages by default: everything renders per request until you opt in. How you opt in depends on `cacheComponents` in `next.config.mjs`:
+Next.js 16 does **not** cache `fetch` responses or route handlers by default. A page is still prerendered at build time up to the first read of uncached or request-time data; that data is fetched per request until you opt in. How you opt in depends on `cacheComponents` in `next.config.mjs`:
 
-- **`cacheComponents: true`** (the default for new NextSpark projects, see the [PPR Migration Guide](./ppr-migration.md)): mark a component or function with `'use cache'`, set how long it lives with `cacheLife` and name it with `cacheTag`. Anything not cached renders at request time and streams behind a `<Suspense>` boundary.
+- **`cacheComponents: true`** (the default for new NextSpark projects, see the [PPR Migration Guide](./ppr-migration.md)): mark a component or function with `'use cache'`, set how long it lives with `cacheLife` and name it with `cacheTag`. Wrap any component that reads uncached or request-time data in `<Suspense>`: its fallback goes into the static shell and the component streams in at request time.
 - **`cacheComponents` off (legacy ISR)**: opt in per request with the `fetch` options below, or per route with segment config such as `revalidate`.
 
 ```typescript
