@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/plugin-amplitude",
-  "version": "0.1.0-beta.196",
+  "version": "0.1.0-beta.197",
   "files": [
     "plugin.config.ts",
     "components",

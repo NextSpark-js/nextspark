@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.197] - 2026-10-08
+
 ### Upgrading from 0.1.0-beta.196
 
 - **Next.js 16.3.8 is the lowest supported Next.js (required).** In your project run `pnpm add next@~16.3.8` (and
@@ -47,7 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Suspended accounts.** `pnpm db:migrate` applies core's `031_users_role_suspended.sql`, which adds `suspended` to the roles
   `check_users_role` accepts and keeps the others (roles your project added included). If your project replaced that constraint with
   something that is not a list of roles, the migration leaves it as it is and prints a notice: add `suspended` to it yourself. Your
-  `src/proxy.ts` treats a suspended account's session as no session once it has the change above plus this line at the end of `getSession`:
+  `src/proxy.ts` treats a suspended account's session as no session once it has the change above and the last line of `getSession`,
+  `return session as Session | null`, is replaced with:
   `return session && (session.user as { role?: unknown }).role !== 'suspended' ? (session as Session) : null` (the API and the pages refuse
   it anyway; `NS_PROXY_SESSION_CACHED` warns until the proxy has both lines).
 
@@ -123,8 +126,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   request, not from its 5-minute key cache, so a suspension counts at once on every server instance (one indexed query per API-key request;
   a request now validates its key once, where the rate limiter and the route each validated it before). `unsuspend` gives a suspended user
   back the `member` role (400 if the user is not suspended); their deactivated API keys stay deactivated, they create new ones. `change-role`
-  on a suspended user answers 400 and points to `unsuspend`. Nobody can act on their own account or on a superadmin, so the last superadmin cannot be suspended. `change-role` accepts only the
-  roles `users.role` accepts, `member` and `developer` (only a superadmin grants `developer`); `colaborator` and `admin`, which the
+  on a suspended user answers 400 and points to `unsuspend`. Nobody can act on their own account or on a superadmin, so the last superadmin
+  cannot be suspended. `change-role` accepts only the roles `users.role` accepts, `member` and `developer` (only a superadmin grants `developer`); `colaborator` and `admin`, which the
   database refused, are gone from the action and from the superadmin users page. `lib/auth/suspension` exports `suspendUser`,
   `unsuspendUser` and `isSuspendedRole`.
 
@@ -149,6 +152,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`GET /api/v1/team-invitations` with no query string lists the caller's pending invitations** (page 1, limit 20) instead of answering 500,
   and a `page`, `limit` or `status` the schema refuses is a `400 VALIDATION_ERROR`.
 - **`GET /api/user/plan-flags` without `userId` answers for the signed-in user** instead of `400` ("expected string, received null").
+- **The production startup check for sample-data passwords says so when it cannot run.** When its query fails, the server logs one line,
+  `[auth-readiness] could not check for sample-data passwords at startup (query failed: <code>)`, with the error code or class name only,
+  instead of staying silent. Startup goes on as before.
 
 ## [0.1.0-beta.196] - 2026-10-07
 
