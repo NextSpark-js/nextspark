@@ -33,7 +33,8 @@ export function parseTimeoutMs(name: string, raw: string | undefined, fallback: 
  * DB_QUERY_TIMEOUT_MS (default 60000): the client gives up on a query that has no answer after this long. It works on
  * every provider, pooled or not, and is what fails a query on a dead socket. 0 disables it.
  * DB_STATEMENT_TIMEOUT_MS (default unset): also asks the server to cancel a statement after this long. Opt-in because
- * the limit travels as a connection startup parameter, which some transaction poolers (PgBouncer) reject.
+ * the limit travels as a connection startup parameter, which a transaction pooler can reject (PgBouncer) or silently drop
+ * (Neon: the setting stays 0, pooled or direct). Behind those use DB_QUERY_TIMEOUT_MS or ALTER ROLE ... SET statement_timeout.
  */
 export function poolTimeouts(env: NodeJS.ProcessEnv = process.env): Pick<PoolConfig, 'query_timeout' | 'statement_timeout'> {
   return {

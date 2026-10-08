@@ -24,6 +24,8 @@ Core's row-level security (RLS) is only evaluated for a role that does not own t
 
 Migration `022_rls_runtime_roles.sql` creates `nextspark_app` as `NOLOGIN` and a member of the `authenticated` role, so every policy written `TO authenticated` applies to it. It grants it `SELECT`, `INSERT`, `UPDATE` and `DELETE` on the tables of `public`, usage on sequences, and `EXECUTE` on functions, and sets default privileges so tables created later by the migration owner get the same grants. It creates no login and no `BYPASSRLS` role: both are deployment decisions.
 
+A default Neon project's owner role has `BYPASSRLS`, so on Neon RLS is not evaluated on the owner path either; the `nextspark_app` switch below is the only setup that enforces it.
+
 **Which role the application connects as is your choice, and the default is the owner.** A fresh project connects `DATABASE_URL` as the role that ran the migrations. That role owns the tables, so RLS is **not** evaluated on the application path. To enforce RLS, switch the application to `nextspark_app`:
 
 1. Run the migrations, which create `nextspark_app` (`pnpm db:migrate`).
@@ -63,10 +65,12 @@ Core removes `sslmode` from the connection string before it reaches the driver, 
 
 A production server without SSL, such as a local PostgreSQL used to test a production build, needs `sslmode=disable` in the URL. The database scripts (`db:migrate`, `db:seed` and the migration verifiers) follow the table above with one difference: a URL with no `sslmode` outside production asks for SSL **without** validating the certificate, and falls back to plain only if the server says it has no SSL. With `NODE_ENV=production`, in the environment or in the project `.env`, they do what the application does: SSL with certificate validation and no fallback. A production run against a server without SSL then stops with an error that names `sslmode=disable` and `sslmode=verify-full`.
 
+`channel_binding=require` in the URL (Neon's default connection string carries it) is not applied: the `pg` driver only honours channel binding through its `enableChannelBinding` option, so the connection uses SCRAM without it and without a warning.
+
 ## Poolers and timeouts
 
 - **`DB_QUERY_TIMEOUT_MS`** (default `60000`, `0` disables) is applied by the client. It works behind any pooler.
-- **`DB_STATEMENT_TIMEOUT_MS`** (default unset) also asks the server to cancel a statement. It is sent as a connection startup parameter, which some transaction poolers, PgBouncer among them, reject. Leave it unset behind a transaction pooler.
+- **`DB_STATEMENT_TIMEOUT_MS`** (default unset) also asks the server to cancel a statement. It is sent as a connection startup parameter, which a transaction pooler can reject (PgBouncer, for example) or drop without a word. Neon drops it: pooled or direct, its `statement_timeout` stays at 0 and the setting does nothing. Leave it unset behind a transaction pooler and rely on `DB_QUERY_TIMEOUT_MS`, or set the limit on the server with `ALTER ROLE <role> SET statement_timeout = ...`.
 - **Transaction-mode poolers.** Every user request opens a transaction and sets `app.user_id` with `SET LOCAL`, which does not outlive the transaction. That is the shape a transaction-mode pooler needs, but no CI job runs through one. Point `MIGRATE_DATABASE_URL` and `DATABASE_SERVICE_URL` at a direct, non-pooler connection.
 - **`MIGRATE_DATABASE_URL` and `db:seed`.** `pnpm db:seed` is `db:migrate` with the sample data, for development only. It uses the same runner, so it connects with `MIGRATE_DATABASE_URL` and falls back to `DATABASE_URL`. After the switch to `nextspark_app`, a `db:seed` without `MIGRATE_DATABASE_URL` connects as a role that cannot create tables.
 
