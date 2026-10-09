@@ -37,7 +37,7 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 | Surface | Condition |
 | --- | --- |
 | Web and mobile (Expo SDK 54, React Native 0.81) | A real sign-in from the app passes in an iOS or Android simulator before the release candidate. Without it, mobile is experimental. |
-| Standalone output (`output: 'standalone'`) | A Linux job for it in CI before the release candidate. Without it, standalone is experimental. The `standalone` job of the *Generated projects* workflow runs `scripts/deploy/verify-standalone.sh`; it has not run on `main` yet. |
+| Standalone output (`output: 'standalone'`) | A Linux job for it in CI before the release candidate. That job exists and passes: the `standalone` job of the *Generated projects* workflow runs `scripts/deploy/verify-standalone.sh` on every push to `main`. |
 
 ## Supported, not default
 

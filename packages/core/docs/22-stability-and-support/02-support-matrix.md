@@ -43,7 +43,7 @@ The floor is 10.34.6 because pnpm 10.16 fails on a warm store cache with `ERR_PN
 | Axis | Supported for 1.0 | Tested in CI today |
 | --- | --- | --- |
 | `next start` | Stable. | Yes. |
-| Standalone output | Stable if a Linux CI job for it exists before the release candidate. Otherwise experimental. | Job added (`standalone`, `scripts/deploy/verify-standalone.sh`, Linux, Node 24, PostgreSQL 16); not yet run on `main`. |
+| Standalone output | Stable if a Linux CI job for it exists before the release candidate. Otherwise experimental. | Job added (`standalone`, `scripts/deploy/verify-standalone.sh`, Linux, Node 24, PostgreSQL 16); it checks standalone output on every push to `main`. |
 | Behind a TLS reverse proxy | Stable with the documented settings: `NEXTSPARK_CLIENT_IP_SOURCE` and `NEXTSPARK_TRUSTED_PROXY_HOPS` (see [Client address](../14-deployment/10-client-address)), and a proxy that sets `X-Forwarded-Proto`. The `X-Forwarded-Proto` requirement is not documented in a guide yet. | Partly, once the `standalone` job has run: it checks standalone output behind a Node TLS proxy that sends `X-Forwarded-Proto: https` and asserts the https redirect and the Secure cookies; `next start` behind a proxy is not checked. |
 | Docker | No separate promise. A container running standalone output is standalone output. | No. |
 | Vercel | Experimental. | No. |
