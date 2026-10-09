@@ -11,6 +11,7 @@ import {
   type RateLimitTier,
 } from '../rate-limit-redis';
 import { checkRequestOrigin } from './request-origin';
+import { isRateLimitingDisabled } from './rate-limit-disabled';
 import { withCors } from './cors-response';
 
 export interface RateLimitResult {
@@ -406,21 +407,6 @@ export function getRateLimitCacheStats() {
  *   return NextResponse.json({ created: true });
  * }, 'write');
  */
-/**
- * Check if rate limiting is disabled via environment variable.
- * Use DISABLE_RATE_LIMITING=true to disable rate limiting (development/testing only).
- * WARNING: Never disable rate limiting in production!
- */
-let rateLimitDisabledWarningLogged = false;
-function isRateLimitingDisabled(): boolean {
-  const disabled = process.env.DISABLE_RATE_LIMITING === 'true';
-  if (disabled && !rateLimitDisabledWarningLogged) {
-    console.warn('[RateLimit] WARNING: Rate limiting is DISABLED via DISABLE_RATE_LIMITING=true. Do not use in production!');
-    rateLimitDisabledWarningLogged = true;
-  }
-  return disabled;
-}
-
 export function withRateLimitTier<T extends unknown[]>(
   handler: (request: NextRequest, ...args: T) => Promise<NextResponse>,
   tier: RateLimitTier = 'api'

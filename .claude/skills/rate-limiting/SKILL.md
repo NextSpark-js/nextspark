@@ -211,7 +211,7 @@ A request authenticated with an API key (`authenticateRequest`, `validateAndAuth
 is also limited per key (`apiKeyRateLimitResponse`, counted once per request), on top of the per-address limit. With
 `authenticateRequest`, a key over its limit comes back as `success: false` with `rateLimitResponse` (429); `createAuthFailureResponse`
 returns it. The per-key limit is a safety cap and stays on with `DISABLE_RATE_LIMITING=true`, which only turns off the
-per-address limit. On that 429 the wrapper keeps the handler's own `X-RateLimit-*` headers.
+per-address limit and Better Auth's own limiter. On that 429 the wrapper keeps the handler's own `X-RateLimit-*` headers.
 
 `withRateLimitTier` also adds core's CORS to every response it returns (route, 429, origin-check 403), except in the `webhook`
 tier. Export `OPTIONS = corsPreflight` (`@nextsparkjs/core/lib/api/cors-response`) from every wrapped route so its preflight matches.
@@ -241,11 +241,16 @@ DISABLE_RATE_LIMITING=true
 ```
 
 When disabled:
-- All rate limit checks are bypassed
+- The per-address checks (`withRateLimitTier`, `checkDistributedRateLimit`) are bypassed
+- Better Auth's own limiter is off too (`rateLimit.enabled: false` in `lib/auth.ts`): sign-in, sign-up and the
+  email OTP rules (3 per minute per address) no longer answer 429
+- The per-API-key limit (`checkRateLimit` by key id) stays on: it is a per-key cap, not per address
 - A warning is logged once: `[RateLimit] WARNING: Rate limiting is DISABLED...`
 - Handlers execute without rate limit headers
 
-**WARNING:** Never disable rate limiting in production environments!
+Any value other than `true` leaves everything on, Better Auth included (its default: on when `NODE_ENV=production`).
+
+**WARNING:** Never disable rate limiting in production environments! Only for QA/preview deploys and tests.
 
 **Use cases for disabling:**
 - Local development when hitting limits during testing

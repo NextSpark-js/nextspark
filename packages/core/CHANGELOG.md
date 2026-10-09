@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The database scripts decide SSL in one place (`scripts/db/ssl-config.mjs`). A URL without `sslmode` keeps libpq's `prefer` outside
   production; in production it uses SSL with a validated certificate, and a server without SSL stops the run with an error that names
   `sslmode=disable` and `sslmode=verify-full` and does not print the URL. Explicit `sslmode` values keep their meaning.
+- `DISABLE_RATE_LIMITING=true` also turns off Better Auth's own rate limit (`rateLimit.enabled: false`): sign-in, sign-up and
+  the email OTP endpoints no longer answer 429 from one shared address. The per-API-key limit stays on. Any other value leaves
+  Better Auth's default (on in production). For QA/preview deploys and tests only, never production.
 
 ### Fixed
 

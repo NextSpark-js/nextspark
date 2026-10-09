@@ -453,6 +453,25 @@ export async function checkRateLimit(request: NextRequest) {
 }
 ```
 
+### Disabling Rate Limiting (QA/Preview and Tests)
+
+`DISABLE_RATE_LIMITING=true` turns rate limiting off for a whole deploy, for example a QA team testing a
+Vercel Preview from one shared address:
+
+```env
+DISABLE_RATE_LIMITING=true
+```
+
+When set to exactly `true`:
+- The per-address limits (`withRateLimitTier`, `checkDistributedRateLimit`) are bypassed
+- Better Auth's own limiter is off too (sign-in, sign-up and the email OTP rules, 3 per minute per address)
+- The per-API-key limit stays on: it is a per-key cap, not per address
+- A warning is logged once: `[RateLimit] WARNING: Rate limiting is DISABLED...`
+
+Any other value leaves everything on, Better Auth included (on by default when `NODE_ENV=production`).
+
+**WARNING:** Never disable rate limiting in production! Only for QA/preview deploys and tests.
+
 ### Internal Service Accounts
 
 **Service accounts get higher limits:**

@@ -27,6 +27,7 @@ import { isRuntimeEmailAvailable, isRuntimeGoogleAvailable } from './auth/runtim
 import { getTrustedOrigins } from './utils/cors';
 import { withBasePath } from './base-path';
 import { getBetterAuthIpHeaders } from './api/client-ip';
+import { isRateLimitingDisabled } from './api/rate-limit-disabled';
 
 /**
  * Does this email have a pending, unexpired team invitation waiting?
@@ -335,8 +336,10 @@ export const auth = betterAuth({
   ],
   // The proxy reads the session on every request; that lookup only reads the
   // caller's own signed cookie, so it is kept out of the shared auth rate limit.
-  // The default limits (sign-in, sign-up, OTP, ...) stay.
+  // The default limits (sign-in, sign-up, OTP, ...) stay, unless
+  // DISABLE_RATE_LIMITING=true turns the whole limiter off (QA/preview and tests only).
   rateLimit: {
+    ...(isRateLimitingDisabled() ? { enabled: false } : {}),
     customRules: { '/get-session': false },
   },
   session: {
