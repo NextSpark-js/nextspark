@@ -151,7 +151,7 @@ Create an invitation for a new team member. Requires `members.invite` permission
 }
 ```
 
-**Role Hierarchy:** Users can only invite to roles at or below their own level.
+**Role Hierarchy:** Users can only invite to roles below their own level, the same rule as changing a role (an admin invites members and viewers, not admins).
 
 ### Update Member Role
 `PATCH /api/v1/teams/[teamId]/members/[memberId]`

@@ -23,21 +23,12 @@ import {
 import { useTeamMembers } from '../../hooks/useTeamMembers'
 import { TeamRole } from '../../lib/teams/types'
 import { toast } from 'sonner'
-import { APP_CONFIG_MERGED } from '../../lib/config/config-client'
-import { getInvitableRoles } from '../../lib/teams/permissions'
+import { canInviteToRole, getInvitableRoles } from '../../lib/teams/permissions'
 
-// Get roles that a user can invite to (same level or below)
+// Get roles that a user can invite to (below their own, as for a role change)
 // Uses dynamic config to support theme-defined additional roles
 function getAvailableRolesForInvite(userRole: TeamRole): TeamRole[] {
-  const hierarchy = APP_CONFIG_MERGED.teams.roles.hierarchy
-  const userLevel = hierarchy[userRole] ?? 0
-  const invitableRoles = getInvitableRoles()
-
-  // Filter to only roles at same level or below that the user can manage
-  return invitableRoles.filter(role => {
-    const roleLevel = hierarchy[role] ?? 0
-    return roleLevel <= userLevel
-  })
+  return getInvitableRoles().filter(role => canInviteToRole(userRole, role))
 }
 
 interface InviteMemberDialogProps {

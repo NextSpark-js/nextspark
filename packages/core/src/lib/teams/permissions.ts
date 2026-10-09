@@ -235,10 +235,10 @@ export function canManageRole(
  * Reads hierarchy from the merged permissions registry, so any roles added
  * by consumers via additional config are supported automatically.
  *
- * Semantics: invitation is allowed when the actor's hierarchy level is
- * greater than or equal to the target's hierarchy level. Peers can invite
- * peers (e.g. admin → admin); a lower-ranked actor cannot invite a
- * higher-ranked target.
+ * Semantics: the same rule as a role change (validateRoleTransition): the
+ * actor's hierarchy level must be strictly greater than the invited role's.
+ * An admin invites members and viewers, not another admin; only a higher
+ * role (the owner, in core's roles) invites an admin.
  *
  * Missing hierarchy entries are treated as 0, mirroring canManageRole.
  *
@@ -250,9 +250,7 @@ export function canInviteToRole(
   actorRole: string,
   targetRole: string
 ): boolean {
-  const hierarchy = getHierarchyFromRegistry()
-
-  return (hierarchy[actorRole] ?? 0) >= (hierarchy[targetRole] ?? 0)
+  return canManageRole(actorRole, targetRole)
 }
 
 /**

@@ -10,7 +10,7 @@
  * any role, including one above the actor's own level.
  */
 
-import { canManageRole, validateRoleTransition } from '@/core/lib/teams/permissions'
+import { canInviteToRole, canManageRole, validateRoleTransition } from '@/core/lib/teams/permissions'
 
 describe('teams/permissions', () => {
   describe('canManageRole', () => {
@@ -24,6 +24,18 @@ describe('teams/permissions', () => {
     it('treats unknown roles as hierarchy 0', () => {
       expect(canManageRole('member', 'unknown-role')).toBe(true)
       expect(canManageRole('unknown-role', 'viewer')).toBe(false)
+    })
+  })
+
+  describe('canInviteToRole', () => {
+    it('follows the role-change rule: only roles strictly below the inviter', () => {
+      expect(canInviteToRole('owner', 'admin')).toBe(true)
+      expect(canInviteToRole('admin', 'member')).toBe(true)
+      expect(canInviteToRole('admin', 'admin')).toBe(false)
+      expect(canInviteToRole('member', 'member')).toBe(false)
+      for (const [actor, role] of [['owner', 'admin'], ['admin', 'admin'], ['admin', 'viewer'], ['member', 'viewer']]) {
+        expect(canInviteToRole(actor, role)).toBe(validateRoleTransition('viewer', role, actor).allowed)
+      }
     })
   })
 

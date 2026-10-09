@@ -41,6 +41,8 @@ Each team membership has a role stored in `team_members`:
 | `member` | 2 | Can create/edit own content |
 | `viewer` | 1 | Read-only access |
 
+**Granting a role:** inviting someone and changing a member's role follow one rule: the actor's level must be strictly higher than the role granted (and, for a change, than the member's current role). An owner invites or promotes to admin; an admin invites or sets members and viewers, not admins. Nobody becomes owner this way: the owner transfers ownership (`POST /api/v1/teams/:teamId/transfer-ownership`).
+
 ## Permission Matrix
 
 > **Important**: Permissions apply within the context of the configured Teams Mode. Some actions (like creating teams or inviting members) may be completely disabled at the mode level, regardless of the user's team role. See [Teams Modes](./01-overview.md#teams-modes) for details.

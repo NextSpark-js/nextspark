@@ -216,7 +216,7 @@ export const POST = withRateLimitTier(withApiLogging(
       const validatedData = inviteMemberSchema.parse(body)
 
       // Check role hierarchy via the merged permissions registry — users can
-      // only invite to roles at the same level or below their own
+      // only invite to roles below their own (the role-change rule)
       if (!canInviteToRole(userRole, validatedData.role)) {
         const response = createApiError(
           `You cannot invite members to a role higher than your own. Your role: ${userRole}, requested role: ${validatedData.role}`,

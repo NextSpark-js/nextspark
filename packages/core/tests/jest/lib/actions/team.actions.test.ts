@@ -322,6 +322,24 @@ describe('Team Server Actions', () => {
   // ===========================================
 
   describe('inviteMember', () => {
+    beforeEach(() => {
+      mockTeamMemberService.getRole.mockResolvedValue('owner')
+    })
+
+    it('an admin adds members, not admins (the role-change rule)', async () => {
+      const { UserService } = require('@/core/lib/services/user.service')
+      UserService.getUserByEmail.mockResolvedValue({ id: 'user-789', email: 'new@example.com' })
+      mockTeamMemberService.getByTeamAndUser.mockResolvedValue(null)
+      mockTeamMemberService.add.mockResolvedValue(mockMember)
+      mockTeamMemberService.getRole.mockResolvedValue('admin')
+
+      const refused = await inviteMember('team-123', 'new@example.com', 'admin')
+      expect(refused.success).toBe(false)
+      expect(mockTeamMemberService.add).not.toHaveBeenCalled()
+
+      expect((await inviteMember('team-123', 'new@example.com', 'member')).success).toBe(true)
+    })
+
     it('invites member successfully', async () => {
       const { UserService } = require('@/core/lib/services/user.service')
       UserService.getUserByEmail.mockResolvedValue({ id: 'user-789', email: 'new@example.com' })

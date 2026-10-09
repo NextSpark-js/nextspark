@@ -44,7 +44,7 @@ import { TeamService, type UpdateTeamPayload } from '../services/team.service'
 import { TeamMemberService } from '../services/team-member.service'
 import type { Team, TeamRole, TeamMember } from '../teams/types'
 import type { EntityActionResult, EntityActionVoidResult } from './types'
-import { getInvitableRoles } from '../teams/permissions'
+import { canInviteToRole, getInvitableRoles } from '../teams/permissions'
 import { APP_CONFIG_MERGED } from '../config/config-sync'
 
 // ============================================================================
@@ -261,6 +261,12 @@ export async function inviteMember(
     const permResult = await verifyTeamPermission(userId, teamId, ['owner', 'admin'])
     if (permResult.success === false) {
       return { success: false, error: permResult.error }
+    }
+
+    // The role granted must be below the inviter's own, as for a role change (an admin does not add admins)
+    const inviterRole = await TeamMemberService.getRole(teamId, userId)
+    if (!inviterRole || !canInviteToRole(inviterRole, role)) {
+      return { success: false, error: 'You cannot invite members to a role equal to or higher than your own' }
     }
 
     // 4. Find user by email
