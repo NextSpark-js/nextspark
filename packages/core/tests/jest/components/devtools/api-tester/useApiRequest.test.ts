@@ -271,21 +271,18 @@ describe('useApiRequest Hook', () => {
     })
 
     test('should measure timing correctly', async () => {
-      mockFetch.mockImplementation(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(
-              () =>
-                resolve({
-                  status: 200,
-                  statusText: 'OK',
-                  headers: createMockHeaders([['content-type', 'application/json']]),
-                  json: async () => ({ data: 'test' }),
-                }),
-              50
-            )
-          )
-      )
+      // The hook times the request with performance.now(); a mocked clock makes the duration exact
+      let clock = 1000
+      const now = jest.spyOn(performance, 'now').mockImplementation(() => clock)
+      mockFetch.mockImplementationOnce(async () => {
+        clock += 50
+        return {
+          status: 200,
+          statusText: 'OK',
+          headers: createMockHeaders([['content-type', 'application/json']]),
+          json: async () => ({ data: 'test' }),
+        }
+      })
 
       const { result } = renderHook(() => useApiRequest())
 
@@ -299,9 +296,10 @@ describe('useApiRequest Hook', () => {
       await act(async () => {
         await result.current.execute(config)
       })
+      now.mockRestore()
 
       expect(result.current.status).toBe('success')
-      expect(result.current.response?.timing).toBeGreaterThanOrEqual(50)
+      expect(result.current.response?.timing).toBe(50)
     })
 
     test('should parse response headers correctly', async () => {
