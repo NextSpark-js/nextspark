@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Run `pnpm db:migrate`: core adds `032_team_join_policies.sql`.** It changes the RLS policies of `teams`, `team_members` and `team_invitations` (idempotent). Only a project that runs the application as `nextspark_app` (the RLS cutover in `22-stability-and-support/04-postgresql-requirements.md`) sees a difference: creating a team and accepting an invitation as an existing user work there now, and a user adds a membership row only for themself (the creator of a team with no member yet, or an invitee with a pending invitation). A project route that added other users to a team on the request user's RLS connection must do it on the service connection after its own checks, as core's routes do. An invitation's team, email, role, token, inviter and expiry can no longer be changed once it is sent.
 - **`pnpm db:migrate` also applies `033_team_member_roles_and_taxonomy_relations.sql`.** On the `nextspark_app` connection, a membership's role is changed by the team's owner, or by an admin for rows below admin; the owner row is changed only on the service connection (ownership transfer); members leave on their own; a membership never moves to another user or team. `entity_taxonomy_relations` rows are read and written only for entities of the caller's teams (the table named by `entityType`, with `"teamId"`, or `"userId"` for an entity without a team) and taxonomies without a team or of that team. A project whose posts entity migration was copied from an earlier template keeps it; 033 replaces its policies. A theme entity whose table name differs from its slug has its relations refused on the RLS connection. `TeamMemberService.remove(teamId, userId, actorId)` and `updateRole(teamId, userId, role, actorId)` take the acting user as a new, required last argument and run as that user (`Actor ID is required` without it); before they ran as the member, so on the `nextspark_app` connection only a member removing or changing themself worked, and core's Server Actions now pass the session user.
 - **`pnpm db:migrate` also applies `034_media_taxonomy_cleanup_trigger.sql`.** It creates the trigger that removes a deleted media row's taxonomy relations on databases where `021` skipped it (see Fixed); on the others it replaces the trigger with the same one.
+- **Upgraded from a `contents/themes` project and saw `db:migrate` run one of your migrations again?** Run `pnpm db:migrate` again: a
+  migration that failed on that second run is now recognised as applied and skipped. One that ran twice without failing (an `INSERT`
+  without a key, a data fix) left its second effect behind: check those tables and remove the duplicates by hand. If `db:migrate` stops
+  with "recorded under more than one theme", set `NEXT_PUBLIC_ACTIVE_THEME` to the theme the project was migrated from.
 - **Production migrations now validate the certificate.** With `NODE_ENV=production` (in the environment or the project `.env`),
   `db:migrate`, `db:seed` and the migration verifiers connect to a URL without `sslmode` over SSL with certificate validation, as the
   application does, and no longer fall back to plain. Use `sslmode=disable` for a local server without SSL.
@@ -109,6 +113,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Closing the confirmation dialog of a row action (delete) puts focus back on the row's menu button, or on the next (else the previous) row's once the row is gone, where it used to fall to `<body>`.
   - Controls whose label did not contain their visible text (2.5.3 Label in Name) now do: the sidebar logo link, the team switcher, the user menu and the settings back button.
   - Landmarks: the dashboard's top bar is a `<header>` (one banner per page, the sidebar header no longer claims `role="banner"`), the auth layout is a `<main>`, the settings sidebar links are links again (they had `role="listitem"`), and the settings back link is no longer a one-item `nav`. An axe scan of the starter goes from 40 moderate and 15 minor findings to 3 moderate and none, the 3 left appearing only while a menu is open.
+- `db:migrate` no longer runs again a migration a 0.x project applied while it lived in `contents/themes/<theme>`. Those were recorded
+  as `('theme', <theme>)` (and `('theme-settings', '<theme>/settings/<area>')`); after `nextspark migrate` the same files are looked up as
+  the project's, were not found and ran a second time, so a seed `INSERT` or an `ADD COLUMN` without `IF NOT EXISTS` failed the upgrade
+  or duplicated rows. A project migration recorded under the theme the project came from is now recorded for the project (the old row is
+  kept) and skipped, with `already applied as theme <theme>; recorded for the project` in the log. The same holds for an entity whose
+  directory went from `campaign_members` to `campaign-members` (`already applied as entity campaign_members; recorded for
+  campaign-members`), taken over only from the theme the project came from, or for a plugin entity from the same plugin. When a
+  migration would be taken over and the table names more than one theme, `NEXT_PUBLIC_ACTIVE_THEME` must name one of them; otherwise
+  the run stops before running anything and lists them. Matching is by file name, as for every other migration; a database that was
+  used by a different theme and now serves a different project with the same file names should be reviewed after the first run (the
+  log lists every takeover).
 
 ### Documentation
 
