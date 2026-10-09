@@ -50,7 +50,7 @@ pnpm install
 
 - The rest of `package.json`: name, scripts, other dependencies
 - `api/`, `blocks/`, `components/`, `config/`, `entities/`, `lib/`, `messages/`, `migrations/`, `plugins/`, `public/`, `styles/`, `templates/`, and `tests/`: project-owned root-first source
-- `next.config.mjs`, `tsconfig.json`, `i18n.ts`, `instrumentation.ts`, `proxy.ts` or `middleware.ts`: project files. `nextspark sync:app`, which used to update them, was [removed in 0.1.0-beta.192](./05-sync-app-removal); a change a new release needs in one of them is in its release notes. One exception: `nextspark prepare`, which update-core runs, replaces a `src/proxy.ts`, `src/middleware.ts` or `instrumentation.ts` that is byte for byte a template an earlier core shipped with the current template (a facade over `@nextsparkjs/core/proxy` or `@nextsparkjs/core/instrumentation`), and says so. A file with any change of yours is kept, and prepare prints the replacement to make (`NS_PROXY_FACADE_MISSING`, `NS_INSTRUMENTATION_FACADE_MISSING`)
+- `next.config.mjs`, `tsconfig.json`, `i18n.ts`, `instrumentation.ts`, `proxy.ts` or `middleware.ts`: project files. `nextspark sync:app`, which used to update them, was [removed in 0.1.0-beta.192](./05-sync-app-removal.md); a change a new release needs in one of them is in its release notes. One exception: `nextspark prepare`, which update-core runs, replaces a `src/proxy.ts`, `src/middleware.ts` or `instrumentation.ts` that is byte for byte a template an earlier core shipped with the current template (a facade over `@nextsparkjs/core/proxy` or `@nextsparkjs/core/instrumentation`), and says so. A file with any change of yours is kept, and prepare prints the replacement to make (`NS_PROXY_FACADE_MISSING`, `NS_INSTRUMENTATION_FACADE_MISSING`)
 - `.env*`: environment files
 
 The lifecycle scripts `pnpm install` runs are not bound by this list: they can write anywhere in the project. That is why a run that stops partway is rolled back through git, as a whole (see [When a Run Stops Partway](#when-a-run-stops-partway)).
@@ -170,7 +170,7 @@ The rollback above undoes a run that did not finish. Once an update has finished
 - **`update-core` does not downgrade.** `pnpm update-core --version <older>` stops with `<older> is older than the installed <current>. update-core doesn't downgrade: applied migrations can't be undone. Nothing was changed.`
 - **A package downgrade by hand works between releases whose database schema is the same.** Set every `@nextsparkjs/*` package back to the older release in `package.json`, install, run `pnpm exec nextspark prepare` and build. Checked from `0.1.0-beta.193` to `0.1.0-beta.192`, on a project upgraded from `.192` and on one migrated from `.191`: install, prepare, `db:migrate`, build and `next start` all worked. A release that adds a migration to core has no down migration: the older release does not know the table or column it added and does not remove it. The changelog of each release says whether it adds migrations.
 - **A downgrade does not undo what the newer release's migrations changed.** Migrations 030 and 031 (`0.1.0-beta.197`) stay applied: the older release starts and works on that database, but it does not know the `suspended` role, so an account suspended on `0.1.0-beta.197` can sign in again on `0.1.0-beta.196`. Before going back, restore the backup you took before `pnpm db:migrate`, or list them first (`SELECT id, email FROM users WHERE role = 'suspended';`). Unsuspending gives them access back, as the downgrade would; it is what the unsuspend action does, run it yourself: `UPDATE users SET role = 'member' WHERE role = 'suspended';`. To keep an account out, delete it or stay on `0.1.0-beta.197`. On `0.1.0-beta.196` the superadmin suspend action succeeds on this database but is not enforced.
-- **`db:migrate` only moves forward.** Nothing undoes a migration that ran, and the migration history tables (`_migrations`, `_entity_migrations`, `_content_migrations`) are never rewound. To return the data to how it was before an upgrade, restore a backup of the database taken before it: take one before `db:migrate` whenever the new release brings migrations. The backup is for going back, not for an interrupted run: `db:migrate` runs each file and records it in one transaction, so a run that is killed or fails leaves the file it stopped in neither applied nor recorded, and the next run applies it once (see [One Transaction per File](../backend/migrations#one-transaction-per-file)). A file that starts with `-- nextspark:no-transaction` is the exception: it is recorded only after it has run.
+- **`db:migrate` only moves forward.** Nothing undoes a migration that ran, and the migration history tables (`_migrations`, `_entity_migrations`, `_content_migrations`) are never rewound. To return the data to how it was before an upgrade, restore a backup of the database taken before it: take one before `db:migrate` whenever the new release brings migrations. The backup is for going back, not for an interrupted run: `db:migrate` runs each file and records it in one transaction, so a run that is killed or fails leaves the file it stopped in neither applied nor recorded, and the next run applies it once (see [One Transaction per File](../10-backend/02-migrations.md#one-transaction-per-file)). A file that starts with `-- nextspark:no-transaction` is the exception: it is recorded only after it has run.
 - **`nextspark migrate` is one-way for files.** After it, a package downgrade does not bring `contents/` back: with `0.1.0-beta.191` installed again, `build` fails on the first registry step (`app/globals.css` not found). Go back with git, to the commit before migrate.
 
 ---
@@ -256,12 +256,12 @@ If `pnpm update-core` answers `Command "update-core" not found`, the installed c
 
 1. Set every `@nextsparkjs/*` package in `package.json` to the new version.
 2. Run `pnpm install`.
-3. Run `pnpm exec nextspark prepare`. A project that still has a committed `src/app` (or `app/`) runs `pnpm exec nextspark migrate` first: see [Upgrading a 0.x project](./06-upgrade-0x-projects).
+3. Run `pnpm exec nextspark prepare`. A project that still has a committed `src/app` (or `app/`) runs `pnpm exec nextspark migrate` first: see [Upgrading a 0.x project](./06-upgrade-0x-projects.md).
 
 ---
 
 ## See Also
 
-- [Release Version Command](../updates/release-version) - Creating new core releases
-- [Installation Guide](../getting-started/installation) - Initial setup
-- [Deployment](../deployment/overview) - Production deployment strategies
+- [Release Version Command](./02-release-version.md) - Creating new core releases
+- [Installation Guide](../02-getting-started/01-installation.md) - Initial setup
+- [Deployment](../14-deployment/01-deployment-overview.md) - Production deployment strategies

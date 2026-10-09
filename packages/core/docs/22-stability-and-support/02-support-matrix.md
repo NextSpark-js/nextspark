@@ -14,7 +14,7 @@ A version outside this table is not supported. "Tested" means a CI job installs 
 | Bundler | Turbopack. Webpack is deferred. | Project builds use the default bundler. The host conformance build also builds its fixture with webpack, which is not a support promise. |
 | Operating system | Linux x64 and macOS arm64. Windows is not supported. Linux arm64 is untested. | `ubuntu-24.04` only. macOS is supported but has no CI job. |
 
-A new minor of Next.js may be adopted in a minor of NextSpark if it does not break the public API. It ships with an upgrade note, a re-verified export table and a passing conformance suite. A new major of Next.js or React is a NextSpark major. See [Stability and versioning policy](./03-versioning-policy).
+A new minor of Next.js may be adopted in a minor of NextSpark if it does not break the public API. It ships with an upgrade note, a re-verified export table and a passing conformance suite. A new major of Next.js or React is a NextSpark major. See [Stability and versioning policy](./03-versioning-policy.md).
 
 ## Package managers
 
@@ -35,7 +35,7 @@ The floor is 10.34.6 because pnpm 10.16 fails on a warm store cache with `ERR_PN
 
 | Axis | Supported for 1.0 | Tested in CI today |
 | --- | --- | --- |
-| PostgreSQL | Standard PostgreSQL 15, 16 and 17, with the [written requirements](./04-postgresql-requirements). PostgreSQL 18 is untested. | 15 for every build. 15, 16 and 17 for the migrations of every template, core migrations included (`theme-migrations.yml`; `generated-projects.yml` also migrates each created project on 16 and 17). |
+| PostgreSQL | Standard PostgreSQL 15, 16 and 17, with the [written requirements](./04-postgresql-requirements.md). PostgreSQL 18 is untested. | 15 for every build. 15, 16 and 17 for the migrations of every template, core migrations included (`theme-migrations.yml`; `generated-projects.yml` also migrates each created project on 16 and 17). |
 | Neon, Supabase, Amazon RDS | **Not verified.** They may work if they meet the requirements. None is tested for 1.0 and none is promised. | No. |
 
 ## Deployment
@@ -44,7 +44,7 @@ The floor is 10.34.6 because pnpm 10.16 fails on a warm store cache with `ERR_PN
 | --- | --- | --- |
 | `next start` | Stable. | Yes. |
 | Standalone output | Stable if a Linux CI job for it exists before the release candidate. Otherwise experimental. | Job added (`standalone`, `scripts/deploy/verify-standalone.sh`, Linux, Node 24, PostgreSQL 16); it checks standalone output on every push to `main`. |
-| Behind a TLS reverse proxy | Stable with the documented settings: `NEXTSPARK_CLIENT_IP_SOURCE` and `NEXTSPARK_TRUSTED_PROXY_HOPS` (see [Client address](../14-deployment/10-client-address)), and a proxy that sets `X-Forwarded-Proto`. The `X-Forwarded-Proto` requirement is not documented in a guide yet. | Partly, once the `standalone` job has run: it checks standalone output behind a Node TLS proxy that sends `X-Forwarded-Proto: https` and asserts the https redirect and the Secure cookies; `next start` behind a proxy is not checked. |
+| Behind a TLS reverse proxy | Stable with the documented settings: `NEXTSPARK_CLIENT_IP_SOURCE` and `NEXTSPARK_TRUSTED_PROXY_HOPS` (see [Client address](../14-deployment/10-client-address.md)), and a proxy that sets `X-Forwarded-Proto`. The `X-Forwarded-Proto` requirement is not documented in a guide yet. | Partly, once the `standalone` job has run: it checks standalone output behind a Node TLS proxy that sends `X-Forwarded-Proto: https` and asserts the https redirect and the Secure cookies; `next start` behind a proxy is not checked. |
 | Docker | No separate promise. A container running standalone output is standalone output. | No. |
 | Vercel | Experimental. | No. |
 | Legacy ISR (`cacheComponents` off) | Supported, not the default. | Yes, the `legacy-isr` job. |
@@ -60,4 +60,4 @@ The `@nextsparkjs/mobile` package declares wider peer ranges (`expo >=54.0.0`, `
 ## What the matrix does not promise
 
 - A version listed as supported but not tested has no CI evidence; report a failure as a bug.
-- Experimental surfaces in [Stability](./01-stability) are outside the matrix.
+- Experimental surfaces in [Stability](./01-stability.md) are outside the matrix.

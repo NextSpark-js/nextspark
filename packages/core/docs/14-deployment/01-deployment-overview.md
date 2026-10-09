@@ -2,7 +2,7 @@
 
 ## Introduction
 
-> **Experimental:** Deployment to Vercel is not part of the stable 1.0 surface and may change without a deprecation period. `next start` is the stable way to run a project, also behind a TLS reverse proxy with the settings in [Client address](./10-client-address). A Linux CI job (`standalone` in *Generated projects*, see [Self-hosting on Node](#self-hosting-on-node)) checks standalone output (`output: 'standalone'`). It becomes stable for 1.0 once that job passes on `main` before the release candidate; until the [Support matrix](../22-stability-and-support/02-support-matrix) says so, treat it as experimental.
+> **Experimental:** Deployment to Vercel is not part of the stable 1.0 surface and may change without a deprecation period. `next start` is the stable way to run a project, also behind a TLS reverse proxy with the settings in [Client address](./10-client-address.md). A Linux CI job (`standalone` in *Generated projects*, see [Self-hosting on Node](#self-hosting-on-node)) checks standalone output (`output: 'standalone'`). It becomes stable for 1.0 once that job passes on `main` before the release candidate; until the [Support matrix](../22-stability-and-support/02-support-matrix.md) says so, treat it as experimental.
 
 This page describes deploying to **Vercel** (experimental) with an automated deployment script that handles environment configuration, variable management, and deployment in a single command.
 
@@ -351,7 +351,7 @@ This deployment section covers:
 9. **[Disaster Recovery](./09-disaster-recovery.md)** - Backup and recovery
 
 **Additional Resources:**
-- [DEPLOYMENT.md](/DEPLOYMENT.md) - Complete technical guide
+- [Environment Configuration](./02-environment-configuration.md) - Every variable a deployment needs
 - [Vercel Documentation](https://vercel.com/docs) - Official Vercel docs
 
 ---
