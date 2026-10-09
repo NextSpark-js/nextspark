@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `removeMember` and `updateMemberRole` Server Actions write under the acting user's RLS context instead of the member's.
 - With the application on the `nextspark_app` connection, `POST /api/v1/teams` and accepting an invitation as an existing user no longer answer 500, and the invitee can decline an invitation or have it marked expired. Accepting claims the pending invitation before adding the member, so the same invitation is not accepted twice. The invitee's email is matched without case, as the accept route does.
 - Deleting an account now also deactivates the user's API keys (and drops them from the key cache) and removes the user from every team, in the same transaction as the anonymization. The audit log, login events, billing usage events and the invitations the user sent keep pointing at the anonymized user. The whole anonymization now runs on the service pool, so a deployment that runs the application as `nextspark_app` needs `DATABASE_SERVICE_URL`: without it the call fails with `User not found` and changes nothing (before, it left the sessions behind).
+- The scheduled-actions processor registers the handlers of the action types core enqueues (`auth:security-notification`,
+  `pattern:invalidate-cache`) itself, so the cron route and DevTools "run" execute them in any server instance, including one that
+  restarted or never served the request that queued them. They no longer fail with "No handler registered". A project handler
+  registered under the same name is kept. `pattern:invalidate-cache` loads the generated entity registry when it runs, so the cron route
+  resolves the pages that use the pattern and revalidates them instead of skipping them as unknown entities.
 
 ### Documentation
 

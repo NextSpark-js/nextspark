@@ -68,18 +68,17 @@ CRON_SECRET=your-secure-random-string-min-32-chars
 
 #### Processing Logic
 
-1. Call `initializeScheduledActions()` as safety net (re-registers handlers after server restarts)
-2. Fetch up to `batchSize` pending actions where `scheduledAt <= NOW()`
-3. Apply lock group enforcement: only one action per `lockGroup` in each batch
-4. Mark each as `running` (with `attempts` counter incremented)
-5. Execute handler with timeout protection
-6. On success: mark `completed`, reschedule if recurring
-7. On failure: if `attempts < maxRetries`, reschedule with linear backoff; otherwise mark `failed`
-8. Run `cleanupOldActions()` based on `retentionDays` config
+1. Fetch up to `batchSize` pending actions where `scheduledAt <= NOW()`
+2. Apply lock group enforcement: only one action per `lockGroup` in each batch
+3. Mark each as `running` (with `attempts` counter incremented)
+4. Register the core handlers that are not registered yet, then execute the handler with timeout protection
+5. On success: mark `completed`, reschedule if recurring
+6. On failure: if `attempts < maxRetries`, reschedule with linear backoff; otherwise mark `failed`
+7. Run `cleanupOldActions()` based on `retentionDays` config
 
 #### Handler Initialization Safety Net
 
-The cron endpoint calls `initializeScheduledActions()` before processing. This re-registers all theme handlers from the `SCHEDULED_ACTIONS_REGISTRY` if they were lost due to a server restart (common in serverless environments). The initializer has a guard to prevent double registration.
+The processor registers the handlers of the action types core enqueues (`auth:security-notification` and `pattern:invalidate-cache`) itself, right before it runs an action, so they work in any server instance, including a serverless one that never served the request that queued the action. A handler your project registers under one of those names replaces the core one. Your own handlers are registered by `initializeScheduledActions()`, which `instrumentation.ts` calls when each server instance starts; the initializer has a guard to prevent double registration.
 
 #### Cron Service Setup
 

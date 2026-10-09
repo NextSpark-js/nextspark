@@ -12,6 +12,7 @@
 import { queryWithRLS, mutateWithRLS } from '../db'
 import { APP_CONFIG_MERGED } from '../config'
 import { getActionHandler } from './registry'
+import { registerCoreHandlers } from './handlers'
 import { scheduleAction } from './scheduler'
 import type { ScheduledAction, ProcessResult } from './types'
 
@@ -205,7 +206,8 @@ export async function executeAction(action: ScheduledAction): Promise<void> {
   await markActionRunning(action.id)
 
   try {
-    // Get the registered handler
+    // Core handlers live in this process's registry only once registered: do it here, where the action runs
+    registerCoreHandlers()
     const actionDef = getActionHandler(action.actionType)
 
     if (!actionDef) {

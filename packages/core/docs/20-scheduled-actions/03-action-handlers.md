@@ -218,7 +218,7 @@ export function isActionRegistered(name: string): boolean
 export function clearActionRegistry(): void  // For testing
 ```
 
-**Important:** Duplicate registrations **overwrite** the existing handler (with a warning). This is intentional — it allows the cron endpoint's safety net to re-register handlers after server restarts without issues.
+**Important:** Duplicate registrations **overwrite** the existing handler (with a warning). The processor's registration of the core handlers skips names that are already registered, so a handler you register under a core action type is kept.
 
 ## Integrating with Entity Hooks
 

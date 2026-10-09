@@ -262,6 +262,8 @@ instrumentation.ts::register()
     |   |
     |   +-- Guard: Skip if already initialized
     |   |
+    |   +-- registerCoreHandlers()  (auth:security-notification, pattern:invalidate-cache)
+    |   |
     |   +-- SCHEDULED_ACTIONS_REGISTRY[themeName].registerAllHandlers()
     |       |
     |       +-- registerContentPublishHandler()
@@ -278,7 +280,7 @@ instrumentation.ts::register()
             +-- Create new ones if needed
 ```
 
-The cron endpoint also calls `initializeScheduledActions()` as a safety net to re-register handlers after server restarts.
+The cron endpoint does not initialize anything. The processor registers the core handlers itself before it runs an action, so core action types work in any server instance; your handlers come from `instrumentation.ts`, which runs when each server instance starts.
 
 ## Quick Start
 

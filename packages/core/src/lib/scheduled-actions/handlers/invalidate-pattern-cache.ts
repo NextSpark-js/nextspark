@@ -12,6 +12,8 @@ import { revalidatePath } from 'next/cache'
 import { registerScheduledAction } from '../registry'
 import { PatternUsageService } from '../../services/pattern-usage.service'
 import { entityRegistry } from '../../entities/registry'
+import { setEntityRegistry, type EntityRegistryEntry, type EntityRegistryMetadata } from '../../entities/queries'
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
 import { getEntityBasePath } from '../../entities/schema-generator'
 import type { ScheduledAction } from '../types'
 
@@ -71,6 +73,13 @@ export function registerPatternCacheInvalidationHandler(): void {
     'pattern:invalidate-cache',
     async (payload: unknown, action: ScheduledAction): Promise<void> => {
       const { patternId, userId } = payload as InvalidatePatternCachePayload
+
+      // The entity registry is per module graph and only the entity routes fill theirs: the cron route's is empty.
+      // The casts bridge core's declaration stub of the generated module to the shape it really has.
+      setEntityRegistry(
+        ENTITY_REGISTRY as unknown as Record<string, EntityRegistryEntry>,
+        ENTITY_METADATA as unknown as EntityRegistryMetadata
+      )
 
       console.info(
         `[ScheduledAction:pattern:invalidate-cache] Starting for pattern ${patternId} (action: ${action.id})`

@@ -11,6 +11,7 @@
 import 'server-only'
 
 import { SCHEDULED_ACTIONS_REGISTRY } from '@nextsparkjs/registries/scheduled-actions-registry'
+import { registerCoreHandlers } from './handlers'
 
 // Guards to prevent multiple initializations
 // Stored on globalThis to survive HMR module reloads in dev mode
@@ -37,6 +38,9 @@ export function initializeScheduledActions(): void {
     console.log('[ScheduledActions] Handlers already initialized, skipping...')
     return
   }
+
+  // Core first, so a project handler registered under the same name replaces it
+  registerCoreHandlers()
 
   const [projectName, module] = Object.entries(SCHEDULED_ACTIONS_REGISTRY)[0] ?? []
 
