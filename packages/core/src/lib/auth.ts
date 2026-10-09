@@ -20,6 +20,7 @@ import {
 } from './teams/helpers';
 import { isDomainAllowed } from './auth/registration-helpers';
 import { registrationGuardPlugin } from './auth/registration-guard-plugin';
+import { registrationError } from './auth/registration-errors';
 import { resolveSessionConfig } from './auth/session-config';
 import { resolveOtpConfig } from './auth/otp-config';
 import { isPasswordLoginEnabled } from './auth/auth-methods';
@@ -358,7 +359,7 @@ export const auth = betterAuth({
       create: {
         // Validate registration mode before creating user
         // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
-        before: async (user: { email: string; [key: string]: unknown }) => {
+        before: async (user: { email: string; [key: string]: unknown }, ctx?: { path?: string } | null) => {
           const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
           // In 'invitation-only' mode, block new user creation (except via invitation flow or first user)
@@ -369,7 +370,7 @@ export const auth = betterAuth({
               const existingTeam = await TeamService.getGlobal();
               if (existingTeam) {
                 // Team exists, so this is not the first user - block it
-                throw new Error('SIGNUP_RESTRICTED: Registration requires an invitation. Contact an administrator.');
+                throw registrationError('SIGNUP_RESTRICTED', ctx);
               }
             }
           }
@@ -379,8 +380,8 @@ export const auth = betterAuth({
           if (registrationMode === 'domain-restricted' || registrationMode === 'domain-open') {
             const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
             if (allowedDomains.length > 0 && !isDomainAllowed(user.email, allowedDomains)) {
-              console.log(`[Auth] Blocked registration for a user at ${user.email.split('@').pop()}: domain not in allowedDomains (allowed: ${allowedDomains.join(', ')})`);
-              throw new Error(`DOMAIN_NOT_ALLOWED: Email domain not authorized. Please use an email from: ${allowedDomains.join(', ')}`);
+              console.log(`[Auth] Blocked registration for a user at ${user.email.split('@').pop()}: domain not in allowedDomains`);
+              throw registrationError('DOMAIN_NOT_ALLOWED', ctx);
             }
           }
 
@@ -477,7 +478,7 @@ export const auth = betterAuth({
               const email = result.rows[0]?.email;
               if (email && !isDomainAllowed(email, allowedDomains)) {
                 console.log(`[Auth] Blocked sign-in for a user at ${email.split('@').pop()}: domain not in allowedDomains`);
-                return false; // Abort session creation
+                throw registrationError('DOMAIN_NOT_ALLOWED');
               }
             }
           }

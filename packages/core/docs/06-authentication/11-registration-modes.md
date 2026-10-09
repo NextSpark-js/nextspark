@@ -123,6 +123,10 @@ Registration mode restrictions are enforced at multiple layers:
 
 5. **LoginForm** (`components/auth/forms/LoginForm.tsx`): Hides the email login option for `domain-restricted` mode. Shows signup link for `open` and `domain-open` modes.
 
+6. **Sign-in code request** (`lib/auth/registration-guard-plugin.ts`, before `/email-otp/send-verification-otp`): in `domain-restricted` and `domain-open`, a `sign-in` code for an address outside `allowedDomains` is refused before any email is sent.
+
+Every refusal above answers `403` with a code in the JSON body: `DOMAIN_NOT_ALLOWED` or `SIGNUP_RESTRICTED`. A Google sign-in is redirected to `/auth-error?error=<code>` instead. The login, sign-up and auth error pages show a translated message for both codes, and no response, redirect or log names the allowed domains.
+
 ## Types
 
 ```typescript
@@ -152,6 +156,8 @@ import {
 ## Client-Side Access
 
 The `PublicAuthConfig` (exposed to client components via `config-sync.ts`) only includes the mode — `allowedDomains` is intentionally stripped to prevent domain enumeration.
+
+The list itself is never sent, but whether one domain is allowed can be learned: asking for a sign-in code for an address answers `403 DOMAIN_NOT_ALLOWED` when its domain is outside the list, without needing access to that mailbox. This is deliberate: sending a code that can never work is worse. The request is rate limited like any other auth request. Treat `allowedDomains` as something a determined caller can probe one domain at a time, not as a secret.
 
 ```typescript
 import { PUBLIC_AUTH_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'

@@ -9,6 +9,8 @@ import * as z from 'zod'
 import { useAuthActions } from '../../../hooks/useAuth'
 import { useAuthReadiness } from '../../../hooks/useAuthReadiness'
 import { safeCallbackPath } from '../../../lib/auth/callback-url'
+import { registrationErrorKey } from '../../../lib/auth/registration-error-keys'
+import type { AuthError } from '../../../types/auth'
 import { withBasePath } from '../../../lib/base-path'
 import { Button } from '../../ui/button'
 import { Input } from '../../ui/input'
@@ -153,7 +155,10 @@ export function SignupForm() {
       setEmailSent(true)
       setStatusMessage(t('signup.messages.accountCreated'))
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : t('signup.errors.failedToCreate')
+      const registrationKey = registrationErrorKey((err as AuthError | null)?.code)
+      const errorMessage = registrationKey
+        ? t(registrationKey)
+        : err instanceof Error ? err.message : t('signup.errors.failedToCreate')
       setError(errorMessage)
       setStatusMessage(t('signup.messages.createError', { error: errorMessage }))
     } finally {

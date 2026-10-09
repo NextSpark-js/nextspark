@@ -12,6 +12,7 @@ import type { TeamInvitation, TeamMember } from '@nextsparkjs/core/lib/teams/typ
 import { AUTH_CONFIG, I18N_CONFIG } from '@nextsparkjs/core/lib/config'
 import { isPasswordLoginEnabled } from '@nextsparkjs/core/lib/auth/auth-methods'
 import { withSignupContext } from '@nextsparkjs/core/lib/auth-context'
+import { isRegistrationRefusal } from '@nextsparkjs/core/lib/auth/registration-errors'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
@@ -157,7 +158,7 @@ export const POST = withRateLimitTier(withApiLogging(
             errorData.message || 'Failed to create account',
             signUpResponse.status,
             null,
-            'SIGNUP_FAILED'
+            isRegistrationRefusal(errorData.code) ? errorData.code : 'SIGNUP_FAILED'
           )
           return addCorsHeaders(response, req)
         }
@@ -188,11 +189,11 @@ export const POST = withRateLimitTier(withApiLogging(
             language: I18N_CONFIG.defaultLocale,
           }))
         } catch (error) {
-          // The registration hook refuses with `CODE: message` (registration.mode rules)
+          // The registration hook refuses with a 403 APIError carrying its code (registration.mode rules)
           const message = error instanceof Error ? error.message : ''
-          const refused = /^(DOMAIN_NOT_ALLOWED|SIGNUP_RESTRICTED): (.*)$/s.exec(message)
-          if (refused) {
-            return addCorsHeaders(createApiError(refused[2], 403, null, refused[1]), req)
+          const code = (error as { body?: { code?: string } }).body?.code
+          if (isRegistrationRefusal(code)) {
+            return addCorsHeaders(createApiError(message, 403, null, code), req)
           }
           // The same email created between the lookup above and this insert
           if ((error as { code?: string }).code === '23505' || /duplicate key/i.test(message)) {

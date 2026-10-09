@@ -17,6 +17,8 @@ export type AuthErrorCode =
   | 'NETWORK_ERROR'
   | 'SERVER_ERROR'
   | 'UNKNOWN_ERROR'
+  | 'DOMAIN_NOT_ALLOWED'
+  | 'SIGNUP_RESTRICTED'
 
 /**
  * Authentication error with code mapping

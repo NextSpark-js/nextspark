@@ -14,6 +14,15 @@ import { setSessionHint } from '../lib/auth/session-hint'
 import { setUserLocaleClient } from '../lib/locale-client'
 import { I18N_CONFIG } from '../lib/config/i18n-config-client'
 import { SIGNUP_INTENT_HEADER } from '../lib/api/client-headers'
+import type { AuthError } from '../types/auth'
+
+// Keeps a registration-policy code (DOMAIN_NOT_ALLOWED, SIGNUP_RESTRICTED) so forms can show their own message for it
+function toAuthError(error: { message?: string; code?: string }, fallback: string): AuthError {
+  const authError: AuthError = new Error(error.message || fallback)
+  if (error.code === 'DOMAIN_NOT_ALLOWED' || error.code === 'SIGNUP_RESTRICTED') authError.code = error.code
+  return authError
+}
+
 type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 
 // Esta función ya no se usa directamente aquí
@@ -99,7 +108,7 @@ export function useAuthActions() {
     })
 
     if (error) {
-      throw new Error(error.message || 'Failed to sign in')
+      throw toAuthError(error, 'Failed to sign in')
     }
 
     if (data) {
@@ -130,7 +139,7 @@ export function useAuthActions() {
     )
 
     if (error) {
-      throw new Error(error.message || 'Failed to create account')
+      throw toAuthError(error, 'Failed to create account')
     }
 
     // Para email/password signup, la metadata se crea después de la verificación de email
@@ -169,7 +178,7 @@ export function useAuthActions() {
     })
 
     if (error) {
-      throw new Error(error.message || 'Failed to send the sign-in code')
+      throw toAuthError(error, 'Failed to send the sign-in code')
     }
 
     return data
@@ -182,7 +191,7 @@ export function useAuthActions() {
     const { data, error } = await authClient.signIn.emailOtp({ email, otp })
 
     if (error) {
-      throw new Error(error.message || 'Invalid or expired code')
+      throw toAuthError(error, 'Invalid or expired code')
     }
 
     if (data) {

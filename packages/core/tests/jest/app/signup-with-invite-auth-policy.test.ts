@@ -51,6 +51,11 @@ const invitation = {
   expiresAt: new Date(Date.now() + 60_000).toISOString(),
 }
 
+// The shape of Better Auth's APIError: the message, and { code, message } as its body
+function refusal(code: string, message: string) {
+  return Object.assign(new Error(message), { status: 'FORBIDDEN', body: { code, message } })
+}
+
 function request(body: Record<string, unknown>) {
   return new NextRequest('https://example.com/api/v1/auth/signup-with-invite', {
     method: 'POST',
@@ -118,21 +123,21 @@ describe('signup-with-invite password policy', () => {
     afterEach(() => { delete mockAuthConfig.registration })
 
     test('a domain-restricted refusal from the registration hook is a 403 with its code', async () => {
-      // The message the user.create.before hook in lib/auth throws for a domain outside allowedDomains
-      mockCreateUser.mockRejectedValue(new Error('DOMAIN_NOT_ALLOWED: Email domain not authorized. Please use an email from: corp.test') as never)
+      // What the user.create.before hook in lib/auth throws for a domain outside allowedDomains (a 403 APIError)
+      mockCreateUser.mockRejectedValue(refusal('DOMAIN_NOT_ALLOWED', "This email's domain can't sign in here. Use your organization's email.") as never)
 
       const response = await POST(request({}))
 
       expect(response.status).toBe(403)
       expect(await response.json()).toEqual({
-        error: 'Email domain not authorized. Please use an email from: corp.test',
+        error: "This email's domain can't sign in here. Use your organization's email.",
         code: 'DOMAIN_NOT_ALLOWED',
       })
       expect(mockTx.query).not.toHaveBeenCalled()
     })
 
     test('an invitation-only refusal is a 403 SIGNUP_RESTRICTED', async () => {
-      mockCreateUser.mockRejectedValue(new Error('SIGNUP_RESTRICTED: Registration requires an invitation. Contact an administrator.') as never)
+      mockCreateUser.mockRejectedValue(refusal('SIGNUP_RESTRICTED', 'Registration requires an invitation. Contact an administrator.') as never)
 
       const response = await POST(request({}))
 

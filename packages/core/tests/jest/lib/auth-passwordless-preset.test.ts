@@ -13,6 +13,7 @@ const mockEmailOTP = jest.fn(() => ({ id: 'email-otp' }))
 
 jest.mock('better-auth', () => ({
   betterAuth: (...args: unknown[]) => mockBetterAuth(...(args as [])),
+  APIError: jest.requireActual<{ APIError: unknown }>('better-auth').APIError,
 }))
 jest.mock('better-auth/plugins', () => ({
   emailOTP: (...args: unknown[]) => mockEmailOTP(...(args as [])),
@@ -122,11 +123,11 @@ describe('passwordless preset (#126)', () => {
     expect(mockEmailOTP).toHaveBeenCalledTimes(1)
   })
 
-  test('the domain-restricted registration hook refuses with a DOMAIN_NOT_ALLOWED: prefix (signup-with-invite maps it to 403)', async () => {
+  test('the domain-restricted registration hook refuses with a 403 DOMAIN_NOT_ALLOWED (signup-with-invite passes it on)', async () => {
     const { betterAuthOptions } = loadWithThemeAuth({ registration: { mode: 'domain-restricted', allowedDomains: ['corp.test'] } })
     const before = betterAuthOptions.databaseHooks.user.create.before as (user: { email: string }) => Promise<unknown>
 
-    await expect(before({ email: 'invitee@other.test' })).rejects.toThrow(/^DOMAIN_NOT_ALLOWED: /)
+    await expect(before({ email: 'invitee@other.test' })).rejects.toMatchObject({ status: 'FORBIDDEN', body: { code: 'DOMAIN_NOT_ALLOWED' } })
     await expect(before({ email: 'invitee@corp.test' })).resolves.toEqual({ email: 'invitee@corp.test' })
   })
 

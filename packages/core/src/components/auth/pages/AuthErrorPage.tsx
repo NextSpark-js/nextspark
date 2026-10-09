@@ -5,21 +5,29 @@ import { useTranslations } from 'next-intl'
 import { ShieldAlert, ArrowLeft } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { withBasePath } from '../../../lib/base-path'
+import { registrationErrorKey } from '../../../lib/auth/registration-error-keys'
 
 export function AuthErrorPage() {
   const searchParams = useSearchParams()
   const t = useTranslations('auth.error')
+  const tAuth = useTranslations('auth')
 
   const error = searchParams.get('error')
 
-  // Intentionally generic: don't reveal registration mode or system config
+  // Generic for anything else: don't reveal registration mode or system config.
+  // A registration-policy code (OAuth sign-in from a domain outside
+  // allowedDomains, ...) gets its own message, the same one the login form shows.
   const code = error?.toLowerCase() ?? ''
-  const isAccountError = code === 'unable_to_create_user'
+  const registrationKey = registrationErrorKey(error)
+  const isAccountError = registrationKey !== null
+    || code === 'unable_to_create_user'
     || code === 'unable_to_create_session'
     || code === 'user_not_found'
 
   const titleKey = isAccountError ? 'unable_to_create.title' : 'generic.title'
-  const descriptionKey = isAccountError ? 'unable_to_create.description' : 'generic.description'
+  const description = registrationKey
+    ? tAuth(registrationKey)
+    : t(isAccountError ? 'unable_to_create.description' : 'generic.description')
 
   return (
     <div className="space-y-6" data-cy="auth-error-page">
@@ -37,7 +45,7 @@ export function AuthErrorPage() {
           {t(titleKey)}
         </h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          {t(descriptionKey)}
+          {description}
         </p>
       </div>
 

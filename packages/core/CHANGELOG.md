@@ -124,6 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the run stops before running anything and lists them. Matching is by file name, as for every other migration; a database that was
   used by a different theme and now serves a different project with the same file names should be reviewed after the first run (the
   log lists every takeover).
+- With `registration.mode` `domain-open` or `domain-restricted` and `allowedDomains` set, a sign-in from another domain (one-time code, password, sign-up) answers 403 with code `DOMAIN_NOT_ALLOWED` and no account or session is created; the one-time code sign-in answered an empty 500. Requesting a sign-in code for such an address answers the same 403 and sends no email. That answer tells whether one domain is allowed, without access to the mailbox (rate limited; the list itself is never sent), as signing up in `domain-open` already did. A user created under `invitation-only` without an invitation gets 403 `SIGNUP_RESTRICTED` instead of a 500. The login, sign-up and auth error pages show a translated message for both codes, and a Google sign-in from another domain lands on the auth error page with `?error=DOMAIN_NOT_ALLOWED`. Custom clients: these rejections were 500, 422 or 401 and are now 403 with the code in the JSON body.
 
 ### Documentation
 

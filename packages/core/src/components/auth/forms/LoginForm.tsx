@@ -27,6 +27,7 @@ import { AuthTranslationPreloader } from '../../../lib/i18n/AuthTranslationPrelo
 import { PUBLIC_AUTH_CONFIG } from '../../../lib/config/public-config-client'
 import type { DevKeyringConfig } from '../../../lib/config/types'
 import { getPrimaryEmailMethod } from '../../../lib/auth/auth-methods'
+import { registrationErrorKey } from '../../../lib/auth/registration-error-keys'
 import { DEFAULT_OTP_CONFIG, formatOtpCountdown, getOtpSecondsRemaining } from '../../../lib/auth/otp-config'
 import type { AuthProviderWithNull, AuthErrorCode, AuthError } from '../../../types/auth'
 import type { AuthLoginMethod } from '../../../lib/config/types'
@@ -49,6 +50,8 @@ const DevKeyring: ComponentType<{ config: DevKeyringConfig }> | null = process.e
 function getErrorMessageFromCode(error: Error | AuthError, t: (key: string, options?: any) => string, context: 'email' | 'google' | 'otp'): string {
   const authError = error as AuthError
   const errorCode = authError.code || getErrorCodeFromMessage(error.message)
+  const registrationKey = registrationErrorKey(authError.code)
+  if (registrationKey) return t(registrationKey)
 
   if (context === 'otp') {
     const lower = (error.message || '').toLowerCase()
@@ -332,7 +335,8 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
       setStatusMessage(t('login.messages.otpSent'))
     } catch (err) {
       const error = err instanceof Error ? err : new Error(t('login.messages.otpSendFailed'))
-      const errorMessage = error.message || t('login.messages.otpSendFailed')
+      const registrationKey = registrationErrorKey((error as AuthError).code)
+      const errorMessage = registrationKey ? t(registrationKey) : error.message || t('login.messages.otpSendFailed')
       setError(errorMessage)
       setStatusMessage(t('login.messages.signInError', { error: errorMessage }))
     } finally {
