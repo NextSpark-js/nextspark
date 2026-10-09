@@ -497,3 +497,53 @@ export async function updateMemberRole(
     }
   }
 }
+
+// ============================================================================
+// TRANSFER OWNERSHIP
+// ============================================================================
+
+/**
+ * Hand the team to a current member: they become owner and the caller becomes admin.
+ *
+ * Only the team's owner can do it (TeamMemberService.transferOwnership checks it in the same transaction).
+ *
+ * @param teamId - The team ID
+ * @param newOwnerId - The user ID of the member who becomes owner
+ *
+ * @example
+ * ```typescript
+ * const result = await transferTeamOwnership('team-123', 'user-456')
+ * ```
+ */
+export async function transferTeamOwnership(
+  teamId: string,
+  newOwnerId: string
+): Promise<EntityActionVoidResult> {
+  try {
+    if (!teamId?.trim()) {
+      return { success: false, error: 'Team ID is required' }
+    }
+
+    if (!newOwnerId?.trim()) {
+      return { success: false, error: 'New owner ID is required' }
+    }
+
+    const authResult = await getAuthUser()
+    if (authResult.success === false) {
+      return { success: false, error: authResult.error }
+    }
+
+    await TeamMemberService.transferOwnership(teamId, newOwnerId, authResult.userId)
+
+    revalidatePath('/dashboard/settings/team')
+    revalidatePath('/dashboard/settings/team/members')
+
+    return { success: true }
+  } catch (error) {
+    console.error('[transferTeamOwnership] Error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to transfer ownership',
+    }
+  }
+}

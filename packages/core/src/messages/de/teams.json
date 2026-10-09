@@ -39,7 +39,8 @@
     "removeMember": "Mitglied entfernen",
     "changeRole": "Rolle aendern",
     "makeRole": "Zu {role} machen",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "transferOwnership": "Eigentümerschaft übertragen"
   },
 
   "switcher": {
@@ -185,5 +186,12 @@
     "created": "Team erfolgreich erstellt",
     "loading": "Teams werden geladen...",
     "memberInvited": "Mitglied erfolgreich eingeladen"
+  },
+
+  "transferOwnership": {
+    "title": "Eigentümerschaft übertragen?",
+    "description": "{name} wird Eigentümer dieses Teams und Sie werden Administrator. Nur der neue Eigentümer kann sie zurückgeben.",
+    "confirm": "Eigentümerschaft übertragen",
+    "success": "{name} ist jetzt Eigentümer dieses Teams"
   }
 }

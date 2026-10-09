@@ -48,7 +48,8 @@
     "removeMember": "Eliminar Miembro",
     "changeRole": "Cambiar Rol",
     "makeRole": "Hacer {role}",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "transferOwnership": "Transferir propiedad"
   },
 
   "switcher": {
@@ -185,5 +186,12 @@
   "empty": {
     "title": "Sin equipos aun",
     "description": "Crea tu primer equipo para comenzar a colaborar"
+  },
+
+  "transferOwnership": {
+    "title": "¿Transferir la propiedad?",
+    "description": "{name} pasa a ser propietario de este equipo y tú pasas a ser administrador. Solo el nuevo propietario puede devolverla.",
+    "confirm": "Transferir propiedad",
+    "success": "{name} ahora es propietario de este equipo"
   }
 }

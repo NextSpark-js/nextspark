@@ -268,3 +268,29 @@ for (const upgrade of [false, true]) {
     assert.equal((await owner.query(`SELECT 1 FROM entity_taxonomy_relations WHERE "entityId" = 'post-a'`)).rowCount, 0)
   })
 }
+
+test('an ownership transfer runs on the service connection, and RLS then follows the new owner', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
+  const { owner, app } = await cutoverDatabase(t)
+  await seed(owner)
+  const as = asUser(app)
+
+  // through RLS, not even the owner can make someone else owner
+  await assert.rejects(as('owna', `UPDATE "team_members" SET role = 'owner' WHERE "teamId" = 'team-a' AND "userId" = 'mema'`), RLS)
+
+  // TeamMemberService.transferOwnership's statements, on the service connection (the owner here)
+  await owner.query('BEGIN')
+  assert.equal((await owner.query(`SELECT "ownerId" FROM "teams" WHERE id = 'team-a' AND "deletedAt" IS NULL FOR UPDATE`)).rows[0].ownerId, 'owna')
+  assert.equal((await owner.query(`UPDATE "team_members" SET role = 'owner', "updatedAt" = NOW() WHERE "teamId" = 'team-a' AND "userId" = 'mema' RETURNING *`)).rowCount, 1)
+  assert.equal((await owner.query(`UPDATE "team_members" SET role = 'admin', "updatedAt" = NOW() WHERE "teamId" = 'team-a' AND "userId" = 'owna' AND role = 'owner' RETURNING *`)).rowCount, 1)
+  await owner.query(`UPDATE "teams" SET "ownerId" = 'mema', "updatedAt" = NOW() WHERE id = 'team-a'`)
+  await owner.query('COMMIT')
+
+  // the new owner manages the former owner; the former owner, now admin, cannot touch the new owner or other admins
+  assert.equal((await as('owna', `UPDATE "team_members" SET role = 'member' WHERE "teamId" = 'team-a' AND "userId" = 'mema'`)).rowCount, 0)
+  assert.equal((await as('owna', `DELETE FROM "team_members" WHERE "teamId" = 'team-a' AND "userId" = 'adma'`)).rowCount, 0)
+  assert.equal((await as('mema', `UPDATE "team_members" SET role = 'member' WHERE "teamId" = 'team-a' AND "userId" = 'owna'`)).rowCount, 1)
+  assert.equal((await as('mema', `UPDATE "teams" SET name = 'Renamed' WHERE id = 'team-a'`)).rowCount, 1)
+  assert.equal((await as('owna', `UPDATE "teams" SET name = 'Again' WHERE id = 'team-a'`)).rowCount, 0)
+  // and the former owner can now leave, or delete their account
+  assert.equal((await as('owna', `DELETE FROM "team_members" WHERE "teamId" = 'team-a' AND "userId" = 'owna'`)).rowCount, 1)
+})

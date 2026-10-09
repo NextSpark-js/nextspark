@@ -8,7 +8,7 @@
  */
 
 import { APP_CONFIG_MERGED } from '../config/config-sync'
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '../db'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS, getServiceTransactionClient } from '../db'
 import { TeamService } from './team.service'
 import type { TeamMember, TeamRole } from '../teams/types'
 
@@ -240,6 +240,13 @@ export class TeamMemberService {
   /**
    * Transfer team ownership to another member
    *
+   * Only the current owner transfers, and only to a current member of the team. In one transaction on the service
+   * connection (the owner row is not writable through RLS): the new owner gets `owner`, the previous owner becomes
+   * `admin`, and `teams.ownerId` follows. The caller authenticates `currentOwnerId` (its session user).
+   *
+   * Throws an Error whose `.code` is `SAME_OWNER`, `NOT_OWNER` (no active team owned by `currentOwnerId`) or
+   * `NOT_A_MEMBER` (the new owner is not a member of the team); nothing changes then.
+   *
    * @param teamId - Team ID
    * @param newOwnerId - User ID of the new owner (must be existing member)
    * @param currentOwnerId - Current owner's user ID (for verification)
@@ -265,55 +272,48 @@ export class TeamMemberService {
       throw new Error('Current owner ID is required')
     }
 
-    if (newOwnerId === currentOwnerId) {
-      throw new Error('New owner must be different from current owner')
-    }
+    const fail = (code: string, message: string) => Object.assign(new Error(message), { code })
 
-    // Verify current owner
-    const currentOwnerRole = await this.getRole(teamId, currentOwnerId)
-    if (currentOwnerRole !== 'owner') {
-      throw new Error('Only the current owner can transfer ownership')
-    }
+    const tx = await getServiceTransactionClient()
+    try {
+      // The team row is locked so two transfers of the same team run one after the other.
+      const team = await tx.queryOne<{ ownerId: string }>(
+        `SELECT "ownerId" FROM "teams" WHERE id = $1 AND "deletedAt" IS NULL FOR UPDATE`,
+        [teamId]
+      )
+      if (!team || team.ownerId !== currentOwnerId) {
+        throw fail('NOT_OWNER', 'Only the current owner can transfer ownership')
+      }
+      if (newOwnerId === currentOwnerId) {
+        throw fail('SAME_OWNER', 'New owner must be different from current owner')
+      }
 
-    // Verify new owner is a member
-    const newOwnerMember = await this.getByTeamAndUser(teamId, newOwnerId)
-    if (!newOwnerMember) {
-      throw new Error('New owner must be an existing team member')
-    }
+      const [newOwner] = await tx.query<TeamMember>(
+        `UPDATE "team_members" SET role = 'owner', "updatedAt" = NOW()
+         WHERE "teamId" = $1 AND "userId" = $2
+         RETURNING *`,
+        [teamId, newOwnerId]
+      )
+      if (!newOwner) {
+        throw fail('NOT_A_MEMBER', 'New owner must be an existing team member')
+      }
 
-    // Update both members' roles
-    const previousOwnerResult = await mutateWithRLS<TeamMember>(
-      `UPDATE "team_members"
-       SET role = 'admin', "updatedAt" = NOW()
-       WHERE "teamId" = $1 AND "userId" = $2
-       RETURNING *`,
-      [teamId, currentOwnerId],
-      currentOwnerId
-    )
+      const [previousOwner] = await tx.query<TeamMember>(
+        `UPDATE "team_members" SET role = 'admin', "updatedAt" = NOW()
+         WHERE "teamId" = $1 AND "userId" = $2 AND role = 'owner'
+         RETURNING *`,
+        [teamId, currentOwnerId]
+      )
+      if (!previousOwner) {
+        throw fail('NOT_OWNER', 'Only the current owner can transfer ownership')
+      }
 
-    const newOwnerResult = await mutateWithRLS<TeamMember>(
-      `UPDATE "team_members"
-       SET role = 'owner', "updatedAt" = NOW()
-       WHERE "teamId" = $1 AND "userId" = $2
-       RETURNING *`,
-      [teamId, newOwnerId],
-      currentOwnerId
-    )
-
-    // Update team's ownerId
-    await queryWithRLS(
-      `UPDATE "teams" SET "ownerId" = $1, "updatedAt" = NOW() WHERE id = $2`,
-      [newOwnerId, teamId],
-      currentOwnerId
-    )
-
-    if (!previousOwnerResult.rows[0] || !newOwnerResult.rows[0]) {
-      throw new Error('Failed to transfer ownership')
-    }
-
-    return {
-      previousOwner: previousOwnerResult.rows[0],
-      newOwner: newOwnerResult.rows[0],
+      await tx.query(`UPDATE "teams" SET "ownerId" = $1, "updatedAt" = NOW() WHERE id = $2`, [newOwnerId, teamId])
+      await tx.commit()
+      return { previousOwner, newOwner }
+    } catch (error) {
+      await tx.rollback()
+      throw error
     }
   }
 

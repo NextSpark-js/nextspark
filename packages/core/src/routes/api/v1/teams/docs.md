@@ -170,6 +170,20 @@ Update a team member's role. Requires admin+ permissions.
 
 Remove a member from the team. Cannot remove the last owner.
 
+### Transfer Ownership
+`POST /api/v1/teams/[teamId]/transfer-ownership`
+
+Hand the team to a current member: they become `owner` and the caller becomes `admin`, in one transaction. Only the team's owner can call it, with a session (API keys are not accepted).
+
+**Request Body:**
+```json
+{
+  "newOwnerId": "user-id-of-a-member"
+}
+```
+
+**Errors:** `400 SAME_OWNER`, `403 NOT_OWNER` (the caller does not own the team), `404 NOT_A_MEMBER` (the user is not a member of the team), `401` without a session.
+
 ---
 
 ## Invitation Endpoints

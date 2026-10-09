@@ -399,6 +399,11 @@
   },
   {
     "kind": "route",
+    "target": "api/v1/teams/[teamId]/transfer-ownership/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/transfer-ownership/route"
+  },
+  {
+    "kind": "route",
     "target": "api/v1/teams/[teamId]/usage/[limitSlug]/route.ts",
     "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/usage/[limitSlug]/route"
   },

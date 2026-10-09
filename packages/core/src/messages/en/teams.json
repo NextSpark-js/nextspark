@@ -39,7 +39,8 @@
     "removeMember": "Remove Member",
     "changeRole": "Change Role",
     "makeRole": "Make {role}",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "transferOwnership": "Transfer ownership"
   },
 
   "switcher": {
@@ -185,5 +186,12 @@
     "created": "Team created successfully",
     "loading": "Loading teams...",
     "memberInvited": "Member invited successfully"
+  },
+
+  "transferOwnership": {
+    "title": "Transfer ownership?",
+    "description": "{name} becomes the owner of this team and you become an admin. Only the new owner can give it back.",
+    "confirm": "Transfer ownership",
+    "success": "{name} is now the owner of this team"
   }
 }

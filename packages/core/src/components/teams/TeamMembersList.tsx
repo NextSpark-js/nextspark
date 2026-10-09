@@ -21,6 +21,17 @@ import {
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '../ui/alert-dialog'
+import { toast } from 'sonner'
 import { useTeamMembers } from '../../hooks/useTeamMembers'
 import { useTeam } from '../../hooks/useTeam'
 import { useAuth } from '../../hooks/useAuth'
@@ -67,8 +78,22 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
   const { user } = useAuth()
   const { team } = useTeam()
   // Use prop teamId if provided, otherwise fall back to context
-  const { members, isLoading, updateMemberRole, removeMember } = useTeamMembers({ teamId: propTeamId })
+  const { members, isLoading, updateMemberRole, removeMember, transferOwnershipAsync, isTransferringOwnership } = useTeamMembers({ teamId: propTeamId })
   const [showInviteDialog, setShowInviteDialog] = useState(false)
+  // The member the owner is about to hand the team to (confirmation dialog)
+  const [transferTarget, setTransferTarget] = useState<{ userId: string; name: string } | null>(null)
+
+  const confirmTransfer = async () => {
+    if (!transferTarget) return
+    try {
+      await transferOwnershipAsync(transferTarget.userId)
+      toast.success(t('transferOwnership.success', { name: transferTarget.name }))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('errors.permissionDenied'))
+    } finally {
+      setTransferTarget(null)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -187,6 +212,18 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
                                 )
                               })
                             }
+                            {currentUserRole === 'owner' && (
+                              <DropdownMenuItem
+                                onClick={() => setTransferTarget({
+                                  userId: member.userId || member.user_id,
+                                  name: member.user?.name || member.user?.email || ''
+                                })}
+                                data-cy="transfer-ownership-action"
+                              >
+                                <Crown className="h-4 w-4 mr-2" aria-hidden="true" />
+                                {t('actions.transferOwnership')}
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={() => removeMember(member.id)}
                               className="text-destructive"
@@ -206,6 +243,29 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
           </TableBody>
         </Table>
       </div>
+
+      {!readOnly && (
+        <AlertDialog open={transferTarget !== null} onOpenChange={(open) => !open && setTransferTarget(null)}>
+          <AlertDialogContent data-cy="transfer-ownership-dialog">
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('transferOwnership.title')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('transferOwnership.description', { name: transferTarget?.name ?? '' })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isTransferringOwnership}>{t('actions.cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(event) => { event.preventDefault(); void confirmTransfer() }}
+                disabled={isTransferringOwnership}
+                data-cy="transfer-ownership-confirm"
+              >
+                {t('transferOwnership.confirm')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       {!readOnly && (
         <InviteMemberDialog

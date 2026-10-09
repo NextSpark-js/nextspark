@@ -83,6 +83,7 @@ export {
   inviteMember,
   removeMember,
   updateMemberRole,
+  transferTeamOwnership,
 } from './team.actions'
 
 export type {

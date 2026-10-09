@@ -100,6 +100,26 @@ export function useTeamMembers(options?: UseTeamMembersOptions) {
     }
   })
 
+  const transferOwnershipMutation = useMutation({
+    mutationFn: async (newOwnerId: string) => {
+      const response = await fetch(withBasePath(`/api/v1/teams/${teamId}/transfer-ownership`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newOwnerId })
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Failed to transfer ownership')
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team-members', teamId] })
+      queryClient.invalidateQueries({ queryKey: ['teams'] })
+    }
+  })
+
   return {
     members,
     isLoading,
@@ -109,6 +129,8 @@ export function useTeamMembers(options?: UseTeamMembersOptions) {
     updateMemberRole: updateMemberRoleMutation.mutate,
     isUpdatingRole: updateMemberRoleMutation.isPending,
     removeMember: removeMemberMutation.mutate,
-    isRemovingMember: removeMemberMutation.isPending
+    isRemovingMember: removeMemberMutation.isPending,
+    transferOwnershipAsync: transferOwnershipMutation.mutateAsync,
+    isTransferringOwnership: transferOwnershipMutation.isPending
   }
 }

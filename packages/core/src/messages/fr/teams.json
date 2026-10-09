@@ -39,7 +39,8 @@
     "removeMember": "Supprimer le membre",
     "changeRole": "Changer le role",
     "makeRole": "Faire {role}",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "transferOwnership": "Transférer la propriété"
   },
 
   "switcher": {
@@ -185,5 +186,12 @@
     "created": "Equipe creee avec succes",
     "loading": "Chargement des equipes...",
     "memberInvited": "Membre invite avec succes"
+  },
+
+  "transferOwnership": {
+    "title": "Transférer la propriété ?",
+    "description": "{name} devient propriétaire de cette équipe et vous devenez administrateur. Seul le nouveau propriétaire pourra vous la rendre.",
+    "confirm": "Transférer la propriété",
+    "success": "{name} est désormais propriétaire de cette équipe"
   }
 }

@@ -6,7 +6,7 @@
  */
 
 import { TeamMemberService } from '@/core/lib/services/team-member.service'
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@/core/lib/db'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS, getServiceTransactionClient } from '@/core/lib/db'
 import type { TeamMember } from '@/core/lib/teams/types'
 
 // Mock database functions
@@ -14,6 +14,7 @@ jest.mock('@/core/lib/db', () => ({
   queryOneWithRLS: jest.fn(),
   queryWithRLS: jest.fn(),
   mutateWithRLS: jest.fn(),
+  getServiceTransactionClient: jest.fn(),
 }))
 
 // Mock TeamService
@@ -228,40 +229,64 @@ describe('TeamMemberService', () => {
   })
 
   describe('transferOwnership', () => {
-    it('transfers ownership successfully', async () => {
-      // Mock current owner check
-      mockQueryOneWithRLS
-        .mockResolvedValueOnce({ role: 'owner' }) // isOwner check
-        .mockResolvedValueOnce(mockMember) // getByTeamAndUser for new owner
+    // One service transaction: lock the team, promote the target, demote the owner, move teams.ownerId
+    const tx = { query: jest.fn(), queryOne: jest.fn(), commit: jest.fn(), rollback: jest.fn() }
+    beforeEach(() => {
+      Object.values(tx).forEach(fn => fn.mockReset())
+      ;(getServiceTransactionClient as jest.Mock).mockResolvedValue(tx)
+    })
 
-      mockMutateWithRLS
-        .mockResolvedValueOnce({ rows: [{ ...mockMember, role: 'admin' }], rowCount: 1 }) // Update old owner
-        .mockResolvedValueOnce({ rows: [{ ...mockMember, role: 'owner' }], rowCount: 1 }) // Update new owner
-
-      mockQueryWithRLS.mockResolvedValue([]) // Update teams table
+    it('transfers ownership in one service transaction: the old owner becomes admin', async () => {
+      tx.queryOne.mockResolvedValue({ ownerId: 'current-owner-id' })
+      tx.query
+        .mockResolvedValueOnce([{ ...mockMember, userId: 'new-owner-id', role: 'owner' }])
+        .mockResolvedValueOnce([{ ...mockMember, userId: 'current-owner-id', role: 'admin' }])
+        .mockResolvedValueOnce([])
 
       const result = await TeamMemberService.transferOwnership('team-456', 'new-owner-id', 'current-owner-id')
 
       expect(result.previousOwner.role).toBe('admin')
       expect(result.newOwner.role).toBe('owner')
+      expect(tx.queryOne.mock.calls[0][0]).toMatch(/FOR UPDATE/)
+      expect(tx.query.mock.calls[2]).toEqual([expect.stringMatching(/UPDATE "teams" SET "ownerId" = \$1/), ['new-owner-id', 'team-456']])
+      expect(tx.commit).toHaveBeenCalledTimes(1)
+      expect(mockMutateWithRLS).not.toHaveBeenCalled()
     })
 
-    it('throws error when current user is not owner', async () => {
-      mockQueryOneWithRLS.mockResolvedValue({ role: 'admin' })
+    it('refuses a caller who does not own the team, and changes nothing', async () => {
+      tx.queryOne.mockResolvedValue({ ownerId: 'someone-else' })
 
       await expect(
         TeamMemberService.transferOwnership('team-456', 'new-owner-id', 'not-owner-id')
-      ).rejects.toThrow('Only the current owner can transfer ownership')
+      ).rejects.toMatchObject({ code: 'NOT_OWNER', message: 'Only the current owner can transfer ownership' })
+      expect(tx.query).not.toHaveBeenCalled()
+      expect(tx.rollback).toHaveBeenCalledTimes(1)
     })
 
-    it('throws error when new owner is not a member', async () => {
-      mockQueryOneWithRLS
-        .mockResolvedValueOnce({ role: 'owner' })
-        .mockResolvedValueOnce(null) // New owner not found
+    it('refuses a new owner who is not a member of the team, and rolls back', async () => {
+      tx.queryOne.mockResolvedValue({ ownerId: 'current-owner-id' })
+      tx.query.mockResolvedValueOnce([])
 
       await expect(
         TeamMemberService.transferOwnership('team-456', 'new-owner-id', 'current-owner-id')
-      ).rejects.toThrow('New owner must be an existing team member')
+      ).rejects.toMatchObject({ code: 'NOT_A_MEMBER', message: 'New owner must be an existing team member' })
+      expect(tx.query).toHaveBeenCalledTimes(1)
+      expect(tx.rollback).toHaveBeenCalledTimes(1)
+      expect(tx.commit).not.toHaveBeenCalled()
+    })
+
+    it('refuses a transfer to the current owner, after checking the caller owns the team', async () => {
+      tx.queryOne.mockResolvedValue({ ownerId: 'same-id' })
+      await expect(
+        TeamMemberService.transferOwnership('team-456', 'same-id', 'same-id')
+      ).rejects.toMatchObject({ code: 'SAME_OWNER' })
+      expect(tx.query).not.toHaveBeenCalled()
+
+      // someone who does not own the team, naming themself, is told they do not own it
+      tx.queryOne.mockResolvedValue({ ownerId: 'owner-id' })
+      await expect(
+        TeamMemberService.transferOwnership('team-456', 'member-id', 'member-id')
+      ).rejects.toMatchObject({ code: 'NOT_OWNER' })
     })
   })
 
