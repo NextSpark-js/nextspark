@@ -6,6 +6,7 @@
 
 import { View, Pressable } from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Bell, Moon } from "lucide-react-native";
 import { useAuth } from "@nextsparkjs/mobile";
 import {
@@ -23,6 +24,7 @@ interface TopBarProps {
 
 export function TopBar({ notificationCount = 0 }: TopBarProps) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   // Get first name for greeting
   const getFirstName = (name?: string | null) => {
@@ -31,7 +33,10 @@ export function TopBar({ notificationCount = 0 }: TopBarProps) {
   };
 
   return (
-    <View className="flex-row items-center justify-between border-b border-border bg-background px-4 py-3">
+    <View
+      className="flex-row items-center justify-between border-b border-border bg-background px-4 pb-3 pt-3"
+      style={{ paddingTop: insets.top + 12 }}
+    >
       {/* Left: Avatar + Greeting */}
       <View className="flex-row items-center gap-3">
         <Avatar style={{ backgroundColor: "#f59e0b" }}>
