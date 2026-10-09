@@ -11,6 +11,7 @@ import { EntityEditView } from './entity-edit-view'
 /** Props a project's edit template receives. */
 export interface EntityEditTemplateProps {
   params: Promise<{ entity: string; id: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 /**
@@ -19,10 +20,10 @@ export interface EntityEditTemplateProps {
  *   runs only after core's checks (the entity is enabled and shown in the dashboard)
  */
 export function createEntityEditRoute(config: EntityConfig, Template?: ComponentType<EntityEditTemplateProps>) {
-  return async function EntityEditRoute({ params }: { params: Promise<{ id: string }> }) {
+  return async function EntityEditRoute({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: EntityEditTemplateProps['searchParams'] }) {
     const { id } = await params
     if (!isManageableEntity(config)) notFound()
-    if (Template) return <Template params={Promise.resolve({ entity: config.slug, id })} />
+    if (Template) return <Template params={Promise.resolve({ entity: config.slug, id })} searchParams={searchParams} />
     return <EntityEditView entity={config.slug} id={id} />
   }
 }

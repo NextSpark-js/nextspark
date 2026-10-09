@@ -27,12 +27,12 @@ export interface EntityListTemplateProps {
 /**
  * @param config - the entity's config
  * @param Template - the project's list page for this entity, when it has one: it replaces the
- *   generic list after the same checks
+ *   generic list after the same checks, and gets Next's `searchParams` promise unawaited (the template decides when to read it)
  */
 export function createEntityListRoute(config: EntityConfig, Template?: ComponentType<EntityListTemplateProps>) {
-  return async function EntityListRoute() {
+  return async function EntityListRoute({ searchParams }: { searchParams: EntityListTemplateProps['searchParams'] }) {
     if (!isDashboardEntity(config)) notFound()
-    if (Template) return <Template params={Promise.resolve({ entity: config.slug })} searchParams={Promise.resolve({})} />
+    if (Template) return <Template params={Promise.resolve({ entity: config.slug })} searchParams={searchParams} />
     return <EntityListWrapper entityType={config.slug} />
   }
 }

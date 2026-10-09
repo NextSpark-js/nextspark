@@ -11,6 +11,7 @@ import { isDashboardEntity } from './entity-dashboard'
 /** Props a project's detail template receives. */
 export interface EntityDetailTemplateProps {
   params: Promise<{ entity: string; id: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 /**
@@ -20,10 +21,10 @@ export interface EntityDetailTemplateProps {
  *   generic detail, and runs only after core's checks (the entity is enabled and shown in the dashboard)
  */
 export function createEntityDetailRoute(config: EntityConfig, childEntityNames: string[], Template?: ComponentType<EntityDetailTemplateProps>) {
-  return async function EntityDetailRoute({ params }: { params: Promise<{ id: string }> }) {
+  return async function EntityDetailRoute({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: EntityDetailTemplateProps['searchParams'] }) {
     const { id } = await params
     if (!isDashboardEntity(config)) notFound()
-    if (Template) return <Template params={Promise.resolve({ entity: config.slug, id })} />
+    if (Template) return <Template params={Promise.resolve({ entity: config.slug, id })} searchParams={searchParams} />
 
     // Builder-enabled entities redirect to the edit view: a detail view makes no sense for them
     if (config.builder?.enabled) redirect(`/dashboard/${config.slug}/${id}/edit`)

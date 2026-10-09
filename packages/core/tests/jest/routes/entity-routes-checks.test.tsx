@@ -28,9 +28,10 @@ const config = (extra: Record<string, unknown> = {}) =>
 const DISABLED = config({ enabled: false })
 const HIDDEN = config({ ui: { dashboard: { showInMenu: false } } })
 const params = Promise.resolve({ id: '7' })
+const searchParams = Promise.resolve({ page: '2', status: ['open', 'late'] })
 
 const Template = () => null
-type Element = React.ReactElement<{ params: Promise<Record<string, string>> }>
+type Element = React.ReactElement<{ params: Promise<Record<string, string>>; searchParams: Promise<unknown> }>
 
 beforeEach(() => {
   notFound.mockClear()
@@ -44,22 +45,34 @@ describe.each([
   ['edit', (c: EntityConfig) => createEntityEditRoute(c, Template as never)],
 ])('%s route with a project template', (_name, make) => {
   it.each([['disabled', DISABLED], ['hidden from the dashboard', HIDDEN]])('answers notFound() for an entity that is %s, without reaching the template', async (_label, entity) => {
-    const route = make(entity) as unknown as (props: { params: Promise<{ id: string }> }) => Promise<unknown>
-    await expect(route({ params })).rejects.toThrow('NEXT_NOT_FOUND')
+    const route = make(entity) as unknown as (props: { params: Promise<{ id: string }>; searchParams: Promise<unknown> }) => Promise<unknown>
+    await expect(route({ params, searchParams })).rejects.toThrow('NEXT_NOT_FOUND')
     expect(notFound).toHaveBeenCalledTimes(1)
   })
 
   it('renders the template for a served entity, with the route params it always got', async () => {
-    const route = make(config()) as unknown as (props: { params: Promise<{ id: string }> }) => Promise<Element>
-    const element = await route({ params })
+    const route = make(config()) as unknown as (props: { params: Promise<{ id: string }>; searchParams: Promise<unknown> }) => Promise<Element>
+    const element = await route({ params, searchParams })
     expect(element.type).toBe(Template)
     expect(notFound).not.toHaveBeenCalled()
     await expect(element.props.params).resolves.toMatchObject({ entity: 'tasks' })
   })
+
+  it('hands the template the exact searchParams promise Next passed, unawaited', async () => {
+    const route = make(config()) as unknown as (props: { params: Promise<{ id: string }>; searchParams: Promise<unknown> }) => Promise<Element>
+    const element = await route({ params, searchParams })
+    expect(element.props.searchParams).toBe(searchParams)
+    await expect(element.props.searchParams).resolves.toEqual({ page: '2', status: ['open', 'late'] })
+    // A promise that never settles: a route that awaited it would never return
+    const pending = new Promise<never>(() => {})
+    const unawaited = await Promise.race([route({ params, searchParams: pending }), new Promise<'awaited'>(resolve => setTimeout(() => resolve('awaited'), 50))])
+    expect(unawaited).not.toBe('awaited')
+    expect((unawaited as Element).props.searchParams).toBe(pending)
+  })
 })
 
 describe('what each route renders without a template', () => {
-  const run = async (route: unknown, props: Record<string, unknown> = { params }) => (route as (p: unknown) => Promise<Element>)(props)
+  const run = async (route: unknown, props: Record<string, unknown> = { params, searchParams }) => (route as (p: unknown) => Promise<Element>)(props)
 
   it('create and edit render the generated view, so a project template cannot discard the factory', async () => {
     const create = await run(createEntityCreateRoute(config()))

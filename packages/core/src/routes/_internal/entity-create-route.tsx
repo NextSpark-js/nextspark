@@ -11,6 +11,7 @@ import { EntityCreateView } from './entity-create-view'
 /** Props a project's create template receives. */
 export interface EntityCreateTemplateProps {
   params: Promise<{ entity: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 /**
@@ -19,9 +20,9 @@ export interface EntityCreateTemplateProps {
  *   runs only after core's checks (the entity is enabled and shown in the dashboard)
  */
 export function createEntityCreateRoute(config: EntityConfig, Template?: ComponentType<EntityCreateTemplateProps>) {
-  return async function EntityCreateRoute() {
+  return async function EntityCreateRoute({ searchParams }: { searchParams: EntityCreateTemplateProps['searchParams'] }) {
     if (!isManageableEntity(config)) notFound()
-    if (Template) return <Template params={Promise.resolve({ entity: config.slug })} />
+    if (Template) return <Template params={Promise.resolve({ entity: config.slug })} searchParams={searchParams} />
     return <EntityCreateView entity={config.slug} />
   }
 }
