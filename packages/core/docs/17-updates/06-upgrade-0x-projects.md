@@ -93,3 +93,148 @@ New projects are created with Cache Components and PPR on. An upgraded project k
 - A project migrated by an earlier release may have a `legacy-app-customizations/` directory. Its files are not read any more: move each into `templates/` or `api/` by hand, following the table above.
 - `nextspark sync:app` no longer exists: see the [removal timeline](./05-sync-app-removal.md).
 - `getBillingResourceHints()` is async (since 0.1.0-beta.191). A root layout that still reads it without `await` fails the build while prerendering `/_not-found`: make the layout `async` and `await` the call.
+
+## Coming from 0.1.0-beta.18x
+
+Things a project that jumped from `0.1.0-beta.184` (or a neighbouring release) to the root-first layout met, none of which the steps above warn about. Do the first two before `pnpm db:migrate`, and the rest while you update callers and routes; a renamed entity directory is taken over by `pnpm db:migrate` from `0.1.0-beta.198` and needs its `_entity_migrations` rows re-keyed first on an earlier core (see [Entity slugs with an underscore](#entity-slugs-with-an-underscore)).
+
+### Better Auth: a NOT NULL `issuer` column on `account`
+
+`0.1.0-beta.184` declared `better-auth` as `^1.3.5`, so a lockfile could resolve any 1.x. Core has pinned `~1.6.30` since `0.1.0-beta.185`. Better Auth `1.7.0` through `1.7.2` made `issuer` a required column of `account` (with a unique index on `("issuer", "accountId")`); `1.7.3` and later, and `1.6.x`, do not have it. A database that was migrated while the project ran one of those three releases keeps `account.issuer NOT NULL`, and `1.6` never writes it, so creating an account (a Google sign-in, a password sign-up) fails on the insert.
+
+Read-only check (columns of `account` that are required, have no default and are not part of core's table):
+
+```sql
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'account'
+  AND is_nullable = 'NO' AND column_default IS NULL
+  AND column_name NOT IN ('id', 'accountId', 'providerId', 'userId');
+```
+
+An empty result is fine. If it lists `issuer`, make it optional. This keeps the column and its values; nothing is dropped:
+
+```sql
+ALTER TABLE "account" ALTER COLUMN "issuer" DROP NOT NULL;
+```
+
+The unique index on `("issuer", "accountId")` can stay: rows written by `1.6` have a null `issuer`, which a PostgreSQL unique index does not compare. Core's own `account` table (`002_auth_tables.sql`) never had the column. Take a backup first, as for any `ALTER`.
+
+### Migration 029 and the only superadmin
+
+Migration `029_sample_accounts_outside_development.sql` finds accounts whose password is one of the two sample passwords (by the password, never by name), removes that password and their sessions, deactivates their API keys, and sets their role to `member`. If your only `superadmin` or `developer` still has a sample password, nobody can open `/superadmin` or `/devtools` after `pnpm db:migrate`.
+
+Before upgrading, run:
+
+```sql
+SELECT u.id, u.email, u.role,
+       EXISTS (
+         SELECT 1 FROM "account" a
+         WHERE a."userId" = u.id AND a."providerId" = 'credential'
+           AND a."password" IN (
+             '22de14d5472248ed0bece911df908b2a:d29576424798ba6845d348a3767c0b0f38a00f2aca461b3b1d34b99a93cab06c86774c6edb183e6d6ec47457649b032a49a7b60a48f6f4f7fbbc4ea40258f19f',
+             '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866')
+       ) AS has_sample_password
+FROM "users" u
+WHERE u.role IN ('superadmin', 'developer')
+ORDER BY u.role, u.email;
+```
+
+Every row with `has_sample_password = true` will be demoted. Give each one you want to keep a new password first (the account's "change password" page, or the reset flow below); an account whose password was changed is left alone.
+
+If it already ran and nobody can get in, there is no CLI command or script that creates a superadmin. The supported way is the one the migration's own header names, "set its role back and reset its password":
+
+1. Request a password reset for the account's email on the login page. Better Auth's reset creates the password (`credential`) account when it is missing, so it works after 029 removed it. It needs working email delivery, a verified email address on the user, and email and password sign-in enabled: it is outside production; in production the project's `auth` config must list `email-password` in `methods` or set `emailAndPassword.enabled: true`.
+2. Set the role back on the database, from a trusted shell:
+
+   ```sql
+   UPDATE "users" SET role = 'superadmin' WHERE email = 'owner@example.com';
+   ```
+
+   Migration `027`'s trigger enrols the user in the System Admin Team again (when the database has one). Use `'developer'` for a developer.
+
+### Rate limits, CORS and the origin check on the project's own API routes
+
+In `0.1.0-beta.184` a project route under `api/v1/theme/<theme>/**` was served by one dispatcher that wrapped every request in `withRateLimitTier`: `GET` in the `read` tier (200 requests per minute) and `POST`, `PUT`, `PATCH` and `DELETE` in the `write` tier (50 per minute). It exported no `OPTIONS`, and `0.1.0-beta.184`'s `withRateLimitTier` added no CORS headers. On root-first the project's `api/<path>/route.ts` is a plain Route Handler: it has no limit at all unless it wraps its exports. Match the old behaviour with:
+
+```ts
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+
+export const GET = withRateLimitTier(getHandler, 'read')
+export const POST = withRateLimitTier(postHandler, 'write')
+```
+
+The tier is chosen per exported method; counters are per client address and tier across all routes (in `0.1.0-beta.184` a request with an `x-api-key` header was counted per key instead). Two things differ from the old dispatcher, and you want both: `withRateLimitTier` now refuses a cookie-authenticated write from an untrusted origin (403) and adds core's CORS headers to every response. A route called from another origin also exports `export const OPTIONS = corsPreflight` (`import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'`). See [rate limiting](../05-api/07-rate-limiting.md) and the CORS section of [authentication](../05-api/02-authentication.md#issue-4-cors-errors).
+
+### Entity slugs with an underscore
+
+Portable contracts need a slug that matches `^[a-z][a-z0-9-]*$`. `nextspark prepare` (so also the last step of `migrate --yes`, and the prediction of `migrate --dry-run`) refuses an entity whose `slug` has an underscore with `NS_CONTRACTS_BAD_SLUG`. `nextspark migrate` does not rename or warn about the slug in advance, so you do it by hand. `prepare` also requires the slug to equal the entity's directory name (`NS_HOST_ENTITY_SLUG_MISMATCH`), so rename both: `entities/campaign_members/` becomes `entities/campaign-members/` (update the imports that point into it), and its `slug` becomes `'campaign-members'`.
+
+An entity's table name and its meta table (`<table>_metas`) derive from the slug, so keep the table by setting it explicitly; the SQL does not change:
+
+```ts
+export const campaignMembersEntityConfig: EntityConfig = {
+  slug: 'campaign-members',
+  tableName: 'campaign_members',
+  // ...
+}
+```
+
+`pnpm db:migrate` records an entity's migrations under its directory name, so after the rename it would look as if none of that entity's migrations had run.
+
+- **From `0.1.0-beta.198`,** `pnpm db:migrate` recognises this: when `entities/campaign-members/` has no recorded migrations and `_entity_migrations` has rows for `campaign_members` from the same origin (the old theme, or the same plugin), it records them for the new name instead of running them again, and prints one line per migration, for example `001_x.sql: already applied as entity campaign_members; recorded for campaign-members`. Check that the log shows those lines and that no `CREATE` ran.
+- **On an earlier core,** re-key the rows **before** the next `pnpm db:migrate` (take a backup first). Only before `0.1.0-beta.198`:
+
+  ```sql
+  UPDATE "_entity_migrations" SET entity_name = 'campaign-members' WHERE entity_name = 'campaign_members';
+  ```
+
+What the new slug changes, and what a project updates:
+
+| Where the old slug appears | Update |
+| --- | --- |
+| Role permissions: the `entities` key in `config/permissions.config.ts`, and every `campaign_members.<action>` string | The new slug (`campaign-members.create`) |
+| API keys: stored `scopes` are `<slug>:read`, `<slug>:write` and `<slug>:delete` | A key holding `campaign_members:read` no longer matches (scopes are compared exactly; a key with `*` is unaffected): rewrite the stored scopes with the `UPDATE` below, or issue new keys |
+| URLs: `/api/v1/campaign_members` is now `/api/v1/campaign-members` (there is no alias for the old one) | Every client: mobile app, integrations, scripts |
+| Translations: the entity's i18n namespace is its directory name, so it follows the rename | `useTranslations('campaign_members')` becomes `useTranslations('campaign-members')`; the entity's own `messages/` files move with the directory, but keys for it in the project's other message files move under the new name |
+
+```sql
+UPDATE "api_key"
+SET scopes = array_replace(array_replace(array_replace(scopes,
+  'campaign_members:read', 'campaign-members:read'),
+  'campaign_members:write', 'campaign-members:write'),
+  'campaign_members:delete', 'campaign-members:delete')
+WHERE scopes && ARRAY['campaign_members:read', 'campaign_members:write', 'campaign_members:delete'];
+```
+
+The contracts read column types from the migration that creates a table named like the slug, so with a different `tableName` the numeric fields of that entity are typed as `number | string` instead of following the column. It is only looser typing.
+
+### Translations in the browser
+
+Core now sends each route group only the message namespaces it uses; the rest stay on the server. A client component of the project that calls `useTranslations('<namespace>')` for a namespace of its own (not core's, and not an entity's name, which the dashboard sends for you) gets missing-message errors until a server layout next to that template adds it:
+
+```tsx
+// templates/dashboard/reports/layout.tsx
+import { NextIntlClientProvider } from 'next-intl'
+import { getMessages } from 'next-intl/server'
+import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+
+export default async function ReportsLayout({ children }: { children: React.ReactNode }) {
+  const messages = await getMessages()
+  return (
+    <NextIntlClientProvider messages={selectMessages(messages, 'dashboard', ['reports'])}>
+      {children}
+    </NextIntlClientProvider>
+  )
+}
+```
+
+The group is `'root'`, `'public'`, `'auth'`, `'dashboard'`, `'superadmin'` or `'devtools'`. There is no config key. The nested provider replaces the dashboard's messages for everything under it. If that part of the dashboard also renders entity screens, add those entities' names to the list. See [Project template namespace outside its route group](../11-internationalization/02-setup-and-configuration.md#project-template-namespace-outside-its-route-group).
+
+### Files under the old `app/` that stop migrate
+
+Migrate names each file it cannot place, with the reason and what to do, and stops before writing anything; the usual cases are in [When migrate stops](#when-migrate-stops). A `globals.css`, `favicon.ico` or `robots.txt` at the root of the old `app/` is the common one: move what it holds to `styles/globals.css` or `public/`, delete it, run migrate again.
+
+### Client address behind a proxy or on Vercel
+
+Set `NEXTSPARK_CLIENT_IP_SOURCE` explicitly (`vercel` on Vercel, `cloudflare`, `xff` with `NEXTSPARK_TRUSTED_PROXY_HOPS`, or `header:<name>`). Unset, core falls back to guessing from several headers and production logs a warning at startup, and the rate limits above count whatever address it picks. See [Client address](../14-deployment/10-client-address.md).
