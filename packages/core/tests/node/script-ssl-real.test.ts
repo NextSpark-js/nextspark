@@ -152,7 +152,7 @@ test('server with a self-signed certificate: production validates it, sslmode=re
     await client.connect()
     const { rows } = await client.query('SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()')
     await client.end()
-    console.log(rows[0].ssl)
+    process.stdout.write(String(rows[0].ssl))
   `], { env: { ...process.env, NODE_ENV: 'production', URL: url, NODE_EXTRA_CA_CERTS: certificate }, encoding: 'utf8', timeout: 30000 })
   assert.equal(trusted.status, 0, `${trusted.stdout}${trusted.stderr}`)
   assert.equal(trusted.stdout.trim(), 'true')
