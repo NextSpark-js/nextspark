@@ -61,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Unchanged copies are replaced for you.** `pnpm update-core` (through `nextspark prepare`), `nextspark prepare`, `nextspark migrate`
     and the wizard replace a `src/proxy.ts`, `src/middleware.ts` or `instrumentation.ts` that is byte for byte a template an earlier
     core shipped, and print `NS_PROXY_TEMPLATE_REPLACED` / `NS_INSTRUMENTATION_TEMPLATE_REPLACED`. Commit the change.
+    A copy prepare cannot write (read-only, a symlink) is left as it is with `NS_PROJECT_ENTRY_NOT_REPLACED`, and prepare goes on.
   - **Edited copies are kept**, and `prepare` and `migrate` print `NS_PROXY_FACADE_MISSING` / `NS_INSTRUMENTATION_FACADE_MISSING` with
     the content to put in their place. Replace `src/proxy.ts` with:
     ```ts
@@ -74,7 +75,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     ```
     and `instrumentation.ts` with `export { register } from '@nextsparkjs/core/instrumentation'`. Carry your changes over first:
     request logic of your own goes in `config/hooks/proxy.ts` (`proxyHook`, run before core's checks); paths that need a signed-in user
-    go in `createProxy({ authenticatedPaths: ['/account'] })`, exported as `proxy`; startup code of your own goes in your `register()`,
+    go in `createProxy({ authenticatedPaths: ['/account'] })`, exported as `proxy` (it refuses paths core lets through first, such as
+    `/terms`, `/api/auth` or `/api/v1`); a role check of your own, such as an area only managers may open, has no proxy option and goes in
+    that page or its layout, on the server; startup code of your own goes in your `register()`,
     after `await registerNextSpark()` (`import { register as registerNextSpark } from '@nextsparkjs/core/instrumentation'`). Keep the
     `config` literal in `src/proxy.ts`: Next.js reads it from that file, not from its imports. See
     [Middleware](./docs/10-backend/06-middleware.md#extending-it).

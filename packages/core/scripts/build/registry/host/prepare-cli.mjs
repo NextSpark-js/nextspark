@@ -74,7 +74,7 @@ function summary(result) {
 }
 
 /** The plan's notices (not problems), as terminal lines; the ones that move auth and permissions to the project, or leave a file outside them, are warnings. */
-const WARNING_NOTICES = new Set(['NS_HOST_ENTITY_API_OVERRIDDEN', 'NS_HOST_CORE_API_REPLACED', 'NS_HOST_AREA_FILE_UNGUARDED', 'NS_PROXY_PROTECTED_AREA_MISSING'])
+const WARNING_NOTICES = new Set(['NS_HOST_ENTITY_API_OVERRIDDEN', 'NS_HOST_CORE_API_REPLACED', 'NS_HOST_AREA_FILE_UNGUARDED', 'NS_PROXY_PROTECTED_AREA_MISSING', 'NS_PROXY_FACADE_MISSING', 'NS_INSTRUMENTATION_FACADE_MISSING', 'NS_PROJECT_ENTRY_NOT_REPLACED'])
 function noticeLines(result) {
   return (result.notices ?? []).map(notice => `${WARNING_NOTICES.has(notice.code) ? 'Warning' : 'Info'}: [${notice.code}] ${notice.message}`)
 }

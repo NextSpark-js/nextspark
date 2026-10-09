@@ -12,6 +12,7 @@ import { getNextMajorVersion } from '../utils/next-bundler.js';
 import { BUILD_ALLOWLIST, COMPAT_NOTE, addBuildAllowlist, addCompatRewrites, applyContractsPackage, catalogVersion, checkNextRange, compatRewrites, coreExportsSpecifier, countBlockThumbnails, dropLegacyBuildList, inAiWorkflowDirectory, isBlockConfig, legacyBuildList, hostFrameworkFixes, memberPeerUpdates, removeBlockThumbnails, planContractsPackage, updateHostFramework, updateNextRange, updatePeerRanges, type CompatRewrite, type HostFrameworkFix, type ContractsPlan, type NextRangeCheck, type PeerNote, type PeerUpdate, type PnpmBuildsPlan } from '../utils/migrate-extras.js';
 import { pathToFileURL } from 'node:url';
 import { adaptProxySource, planProxyFile, type ProxyFileName } from '../utils/proxy-file.js';
+import { isPreviousTemplate, readPreviousTemplates, type PreviousTemplates as PreviousTemplateHashes } from '../utils/previous-templates.js';
 import { contentHash, readSyncState } from '../utils/sync-state.js';
 
 interface MigrateOptions {
@@ -828,12 +829,12 @@ export const PROXY_AREA_WARNING = 'NS_PROXY_PROTECTED_AREA_MISSING';
 
 /** The warning for a kept proxy whose source never names some protected area as a path, or null. */
 export function proxyProtectedAreaWarning(file: string, source: string): string | null {
-  if (/['"]@nextsparkjs\/core\/proxy['"]/.test(proxyCodeWithoutComments(source))) return null;
+  if (usesCoreProxy(source)) return null;
   const missing = PROXY_PROTECTED_AREAS.filter(area => !new RegExp(`['"\`]${area.path}(?![\\w-])`).test(source));
   if (missing.length === 0) return null;
   return `[${PROXY_AREA_WARNING}] ${file} does not protect ${missing.map(area => area.path).join(' or ')}. core still refuses those pages on the server, ` +
     `but without the proxy check a signed-in user without the role gets a 200 with a client-side redirect instead of a 307. ` +
-    `Add the protected-area check of node_modules/@nextsparkjs/core/templates/proxy.ts (protectedArea / authorize): ` +
+    `Replace the file with the facade over @nextsparkjs/core/proxy (see ${PROXY_FACADE_WARNING}), or add the check core's proxy makes: ` +
     `${missing.map(area => `${area.path} needs ${area.roles}`).join(', ')}; no session goes to /login?callbackUrl=..., a session without the role to /dashboard?error=access_denied.`;
 }
 
@@ -876,7 +877,8 @@ export function proxySessionWarning(file: string, source: string): string | null
   if (!proxyCodeWithoutComments(source).includes('/api/auth/get-session')) return null;
   return `[${PROXY_SESSION_WARNING}] ${file} checks the session by fetching /api/auth/get-session from the request's own origin. Behind a proxy that ` +
     `terminates TLS (X-Forwarded-Proto: https) that origin is https on a port that speaks plain HTTP: the fetch fails ` +
-    `and every signed-in user is sent to /login. Read the session in process, as node_modules/@nextsparkjs/core/templates/proxy.ts does: ` +
+    `and every signed-in user is sent to /login. Replace the file with the facade over @nextsparkjs/core/proxy (see ${PROXY_FACADE_WARNING}), ` +
+    `or read the session in process as core's proxy does: ` +
     `import { auth } from '@nextsparkjs/core/lib/auth' and replace the betterFetch('/api/auth/get-session', ...) call with ` +
     `auth.api.getSession({ headers: new Headers({ cookie: request.headers.get('cookie') || '' }), query: { disableRefresh: true, disableCookieCache: true } }), ` +
     'which returns the session itself (or null), not { data }';
@@ -894,9 +896,103 @@ export function proxySessionCachedWarning(file: string, source: string): string 
   return `[${PROXY_SESSION_CACHED_WARNING}] ${file} reads the session with auth.api.getSession from Better Auth's cookie cache: after a sign-out, the copied cookie ` +
     `pair, or a role changed since sign-in, still passes the proxy until the cached cookie expires (5 minutes by default), ` +
     `and a suspended account's session passes it. ` +
-    `As node_modules/@nextsparkjs/core/templates/proxy.ts does, ` +
+    `Replace the file with the facade over @nextsparkjs/core/proxy (see ${PROXY_FACADE_WARNING}), or, as core's proxy does, ` +
     'add disableCookieCache: true to the query of its auth.api.getSession call: query: { disableRefresh: true, disableCookieCache: true }, ' +
     "and refuse a suspended account's session at the end of getSession: return session && (session.user as { role?: unknown }).role !== 'suspended' ? (session as Session) : null";
+}
+
+/**
+ * S114: core's proxy and startup are public entries, and the scaffold's src/proxy.ts and instrumentation.ts are facades
+ * over them. A kept file that is not is told what to write instead; an unchanged copy of an earlier template is replaced.
+ * Same rules and messages as core's `prepare` (host/project-entries.mjs).
+ */
+export const PROXY_FACADE_WARNING = 'NS_PROXY_FACADE_MISSING';
+export const INSTRUMENTATION_FACADE_WARNING = 'NS_INSTRUMENTATION_FACADE_MISSING';
+const PROXY_ENTRY_FILES = ['src/proxy.ts', 'src/middleware.ts'] as const;
+const INSTRUMENTATION_ENTRY_FILES = ['instrumentation.ts', 'src/instrumentation.ts'] as const;
+
+function usesCoreProxy(source: string): boolean {
+  return /['"]@nextsparkjs\/core\/proxy['"]/.test(proxyCodeWithoutComments(source));
+}
+
+function usesCoreInstrumentation(source: string): boolean {
+  return /['"]@nextsparkjs\/core\/instrumentation['"]/.test(proxyCodeWithoutComments(source));
+}
+
+/** The installed core's current template for a project entry file, adapted to its name, or null when core has no facade yet. */
+function entryTemplate(templates: string | null, kind: 'proxy.ts' | 'instrumentation.ts', file: string): string | null {
+  if (!templates || !existsSync(join(templates, kind))) return null;
+  const source = readFileSync(join(templates, kind), 'utf8');
+  if (kind === 'proxy.ts' ? !usesCoreProxy(source) : !usesCoreInstrumentation(source)) return null;
+  return kind === 'proxy.ts' ? adaptProxySource(source, file.endsWith('middleware.ts') ? 'middleware.ts' : 'proxy.ts') : source;
+}
+
+/** The warning for a kept proxy that does not build on @nextsparkjs/core/proxy, with the exact replacement (one line: the CLI quotes a line break), or null. */
+export function proxyFacadeWarning(file: string, source: string, template: string | null, previous: PreviousTemplateHashes): string | null {
+  if (!template || usesCoreProxy(source)) return null;
+  const unchanged = isPreviousTemplate('proxy.ts', source, previous);
+  return `[${PROXY_FACADE_WARNING}] ` +
+    (unchanged
+      ? `${file} is an unchanged copy of an earlier core proxy template; nextspark prepare replaces it with the current one. `
+      : `${file} does not use @nextsparkjs/core/proxy, so it keeps the proxy it was written with and gets none of core's fixes to it (sessions, protected areas, roles, docs access, identity headers). `) +
+    `Replace it with core's current template: cp node_modules/@nextsparkjs/core/templates/proxy.ts ${file}` +
+    (file.endsWith('middleware.ts') ? `, then rename the export: export { proxy as middleware } from '@nextsparkjs/core/proxy'.` : '.') +
+    ` The template is export { proxy } from '@nextsparkjs/core/proxy' plus the config matcher, which Next.js reads from the file itself.` +
+    (unchanged ? '' : ` Move request logic of your own to config/hooks/proxy.ts (core's proxy runs its proxyHook before its checks), and paths that need a signed-in user to createProxy({ authenticatedPaths: [...] }) from @nextsparkjs/core/proxy. A role check of your own (an area for one role) goes in that page or its layout, on the server: the proxy entry only adds paths that need a session.`);
+}
+
+/** The warning for a kept instrumentation file that does not call core's register(), with the exact replacement, or null. */
+export function instrumentationFacadeWarning(file: string, source: string, template: string | null, previous: PreviousTemplateHashes): string | null {
+  if (!template || usesCoreInstrumentation(source)) return null;
+  const unchanged = isPreviousTemplate('instrumentation.ts', source, previous);
+  return `[${INSTRUMENTATION_FACADE_WARNING}] ` +
+    (unchanged
+      ? `${file} is an unchanged copy of an earlier core instrumentation template; nextspark prepare replaces it with the current one. `
+      : `${file} does not call core's register() from @nextsparkjs/core/instrumentation, so the startup checks and scheduled actions run as this file was written, without core's changes to them. `) +
+    `Replace it with core's current template: cp node_modules/@nextsparkjs/core/templates/instrumentation.ts ${file}. The template is export { register } from '@nextsparkjs/core/instrumentation'.` +
+    (unchanged ? '' : ` To keep startup code of your own, call core's register() from your register(): import { register as registerNextSpark } from '@nextsparkjs/core/instrumentation', then await registerNextSpark().`);
+}
+
+/** The facade warnings for the proxy Next loads from src/ and the instrumentation files of `hostRoot`. */
+function entryFacadeWarnings(hostRoot: string, templates: string | null): string[] {
+  const previous = readPreviousTemplates(templates);
+  const warnings: string[] = [];
+  const proxy = PROXY_ENTRY_FILES.find(file => existsSync(join(hostRoot, file)));
+  if (proxy) {
+    const warning = proxyFacadeWarning(proxy, readFileSync(join(hostRoot, proxy), 'utf8'), entryTemplate(templates, 'proxy.ts', proxy), previous);
+    if (warning) warnings.push(warning);
+  }
+  for (const file of INSTRUMENTATION_ENTRY_FILES.filter(candidate => existsSync(join(hostRoot, candidate)))) {
+    const warning = instrumentationFacadeWarning(file, readFileSync(join(hostRoot, file), 'utf8'), entryTemplate(templates, 'instrumentation.ts', file), previous);
+    if (warning) warnings.push(warning);
+  }
+  return warnings;
+}
+
+/** The project entry files that are unchanged copies of an earlier template, with what replaces each. */
+function entryUpgrades(hostRoot: string, templates: string | null): { file: string; content: string }[] {
+  const previous = readPreviousTemplates(templates);
+  const upgrades: { file: string; content: string }[] = [];
+  const proxy = PROXY_ENTRY_FILES.find(file => existsSync(join(hostRoot, file)));
+  const candidates = [
+    ...(proxy ? [{ file: proxy, kind: 'proxy.ts' as const }] : []),
+    ...INSTRUMENTATION_ENTRY_FILES.filter(file => existsSync(join(hostRoot, file))).map(file => ({ file, kind: 'instrumentation.ts' as const })),
+  ];
+  for (const { file, kind } of candidates) {
+    const content = entryTemplate(templates, kind, file);
+    const current = readFileSync(join(hostRoot, file), 'utf8');
+    if (content && current !== content && isPreviousTemplate(kind, current, previous)) upgrades.push({ file, content });
+  }
+  return upgrades;
+}
+
+/** Replace the project entry files that are unchanged copies of an earlier template, and say so. */
+function applyEntryUpgrades(hostRoot: string, templates: string | null): void {
+  for (const { file, content } of entryUpgrades(hostRoot, templates)) {
+    assertContained(hostRoot, join(hostRoot, file));
+    writeFileSync(join(hostRoot, file), content);
+    console.log(`  ${file}: was an unchanged copy of an earlier core template and now re-exports ${file.includes('instrumentation') ? '@nextsparkjs/core/instrumentation' : '@nextsparkjs/core/proxy'}.`);
+  }
 }
 
 /** Whether an old root interception file needs previous-core evidence. */
@@ -1575,6 +1671,8 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
       if (warning) proxyNotices.push(warning);
     }
   }
+  // S114: a kept src/ proxy or instrumentation file that is not a facade over core's entries
+  proxyNotices.push(...entryFacadeWarnings(host.root, templates));
   const appConversion: MigrateReport['appConversion'] = {
     root: appRoot,
     removed: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'remove' ? [{ path: file.path, evidence: file.fate.evidence }] : []),
@@ -3742,6 +3840,26 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     if (!cleanWorkingTree(repository, report.untracked)) throw new MigrateAnalysisError(`Refusing to move files on a dirty git tree. Commit, stash, or remove untracked files first.${report.untracked.some(file => /(^|\/)(node_modules|\.next)\/$/.test(file)) ? ' node_modules/ or .next/ is untracked: add it to .gitignore and commit that first.' : ''}`);
     const theme = report.activeTheme.name;
     const hostRoot = resolve(repository, report.hostRoot.path);
+    // A root-first project (no contents/, no app tree) has nothing to move: only unchanged copies of earlier proxy and
+    // instrumentation templates to replace
+    if (!existsSync(join(hostRoot, 'contents')) && appPlan === null) {
+      const templatesDir = templateDirectory(hostRoot, repository);
+      const upgrades = entryUpgrades(hostRoot, templatesDir);
+      if (upgrades.length === 0) {
+        console.log('Nothing to migrate: the project is root-first already, and its proxy and instrumentation files are not unchanged copies of an earlier core template (see the warnings above for any to change by hand).');
+        return;
+      }
+      section('Root-first project', upgrades.map(upgrade => `${upgrade.file}: an unchanged copy of an earlier core template, replaced with the current one`));
+      if (!options.yes) {
+        if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to replace these files.');
+        process.stdout.write('Replace these files? [y/N] ');
+        const answer = readFileSync(0, 'utf8').trim().toLowerCase();
+        if (answer !== 'y' && answer !== 'yes') throw new MigrateAnalysisError('Migration cancelled.');
+      }
+      applyEntryUpgrades(hostRoot, templatesDir);
+      console.log('  Commit the change. Rollback: git checkout -- ' + upgrades.map(upgrade => shellQuote(pathFrom(repository, join(hostRoot, upgrade.file)))).join(' '));
+      return;
+    }
     // A project that is root-first already (no contents/) only has an app tree left to convert
     const appTreeOnly = !existsSync(join(hostRoot, 'contents')) && appPlan !== null;
     if (!theme && !appTreeOnly) throw new MigrateAnalysisError('No active theme was found; set it in .env.example before migrating.');
@@ -3869,6 +3987,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       for (const moved of moveProjectRootProxyFiles(hostRoot, report.rootProxyFiles.customizations)) console.log(`  ${moved}: the project's root proxy moved to src/ (Next loads it from there next to src/app), core middleware APIs renamed. It replaces core's current proxy template: compare it with node_modules/@nextsparkjs/core/templates/proxy.ts.`);
       const proxy = ensureSourceProxy(hostRoot, templates);
       if (proxy) console.log(`  ${proxy}: written from core's template (Next loads the request proxy from src/ next to src/app).`);
+      applyEntryUpgrades(hostRoot, templates);
       const routeRoots = legacyRouteRoots(hostRoot);
       if (routeRoots.length > 0) {
         throw new MigrateAnalysisError(`Post-migration route-root check failed: ${routeRoots.join(', ')} remains next to src/app. Remove it before Next.js can use src/app.`);

@@ -85,7 +85,7 @@ export function proxyAreaNotice(file, source) {
     message:
       `${file} does not protect ${missing.map(area => area.path).join(' or ')}. core still refuses those pages on the server, ` +
       `but without the proxy check a signed-in user without the role gets a 200 with a client-side redirect instead of a 307. ` +
-      `Add the protected-area check of node_modules/@nextsparkjs/core/templates/proxy.ts (protectedArea / authorize): ` +
+      `Replace the file with the facade over @nextsparkjs/core/proxy (see NS_PROXY_FACADE_MISSING), or add the check core's proxy makes: ` +
       `${missing.map(area => `${area.path} needs ${area.roles}`).join(', ')}; no session goes to /login?callbackUrl=..., ` +
       `a session without the role to /dashboard?error=access_denied`,
   }
@@ -108,8 +108,8 @@ export function proxySessionNotice(file, source) {
     message:
       `${file} checks the session by fetching /api/auth/get-session from the request's own origin. Behind a proxy that ` +
       `terminates TLS (X-Forwarded-Proto: https) that origin is https on a port that speaks plain HTTP: the fetch fails ` +
-      `and every signed-in user is sent to /login. Read the session in process, as ` +
-      `node_modules/@nextsparkjs/core/templates/proxy.ts does: ${PROXY_SESSION_FIX}`,
+      `and every signed-in user is sent to /login. Replace the file with the facade over @nextsparkjs/core/proxy (see NS_PROXY_FACADE_MISSING), ` +
+      `or read the session in process as core's proxy does: ${PROXY_SESSION_FIX}`,
   }
 }
 
@@ -136,7 +136,7 @@ export function proxySessionCachedNotice(file, source) {
       `${file} reads the session with auth.api.getSession from Better Auth's cookie cache: after a sign-out, the copied cookie ` +
       `pair, or a role changed since sign-in, still passes the proxy until the cached cookie expires (5 minutes by default), ` +
       `and a suspended account's session passes it. ` +
-      `As node_modules/@nextsparkjs/core/templates/proxy.ts does, ${PROXY_SESSION_CACHED_FIX}`,
+      `Replace the file with the facade over @nextsparkjs/core/proxy (see NS_PROXY_FACADE_MISSING), or, as core's proxy does, ${PROXY_SESSION_CACHED_FIX}`,
   }
 }
 

@@ -2503,6 +2503,45 @@ async function rootFirstFixture(files: Record<string, string> = {}): Promise<str
 
 const sha = (text: string) => createHash('sha256').update(text).digest('hex')
 
+// S114: a root-first project has nothing to move; migrate replaces only an unchanged copy of an earlier proxy or
+// instrumentation template (the installed core lists their hashes) and leaves an edited one with the replacement to make
+test('migrate on a root-first project replaces an unchanged earlier proxy template and keeps an edited instrumentation.ts with a notice', async () => {
+  const oldProxy = "import { auth } from '@nextsparkjs/core/lib/auth'\nexport async function proxy() { return auth }\nexport const config = { matcher: ['/((?!_next/static/|_next/image$|favicon\\\\.ico$).*)'] }\nconst areas = ['/superadmin', '/devtools']\n"
+  const oldInstrumentation = 'export async function register() {}\n'
+  const editedInstrumentation = `${oldInstrumentation}// my startup code\n`
+  const facade = await readFile(join(CORE_SOURCE, 'templates/proxy.ts'), 'utf8')
+  const root = await rootFirstFixture({
+    'src/proxy.ts': oldProxy,
+    'instrumentation.ts': editedInstrumentation,
+    'node_modules/@nextsparkjs/core/templates/proxy.ts': facade,
+    'node_modules/@nextsparkjs/core/templates/instrumentation.ts': await readFile(join(CORE_SOURCE, 'templates/instrumentation.ts'), 'utf8'),
+    'node_modules/@nextsparkjs/core/scripts/build/registry/host/previous-templates.json': JSON.stringify({ 'proxy.ts': [sha(oldProxy)], 'instrumentation.ts': [sha(oldInstrumentation)] }),
+  })
+  try {
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const warnings: string[] = JSON.parse(dryRun.stdout).warnings
+    assert.ok(warnings.some(line => line.startsWith('[NS_PROXY_FACADE_MISSING] src/proxy.ts is an unchanged copy of an earlier core proxy template')), warnings.join('\n'))
+    assert.ok(warnings.some(line => line.startsWith("[NS_INSTRUMENTATION_FACADE_MISSING] instrumentation.ts does not call core's register()") && line.includes("export { register } from '@nextsparkjs/core/instrumentation'")), warnings.join('\n'))
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /src\/proxy\.ts: was an unchanged copy of an earlier core template and now re-exports @nextsparkjs\/core\/proxy/)
+    assert.equal(await readFile(join(root, 'src/proxy.ts'), 'utf8'), facade)
+    assert.equal(await readFile(join(root, 'instrumentation.ts'), 'utf8'), editedInstrumentation)
+    assert.equal(git_status(root), 'M src/proxy.ts')
+
+    const again = run(root, ['--yes'])
+    assert.equal(again.status, 1, 'the tree is dirty now')
+    git(root, ['commit', '--quiet', '-am', 'facade'])
+    const clean = run(root, ['--yes'])
+    assert.equal(clean.status, 0, `${clean.stdout}\n${clean.stderr}`)
+    assert.match(clean.stdout, /Nothing to migrate: the project is root-first already/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate converts the committed src/app of a root-first project: overrides, moved files, webhook extensions, and a generated host', async () => {
   const customStripe = 'export const stripeWebhookExtensions = { onPaymentIntentSucceeded: async () => {} }\n'
   const root = await rootFirstFixture({

@@ -50,7 +50,7 @@ test('the warning names the file, each missing area, its roles and where the che
   assert.deepEqual(notice.areas, ['/devtools'])
   assert.match(notice.message, /^src\/proxy\.ts does not protect \/devtools\./)
   assert.match(notice.message, /\/devtools needs developer/)
-  assert.match(notice.message, /node_modules\/@nextsparkjs\/core\/templates\/proxy\.ts/)
+  assert.match(notice.message, /facade over @nextsparkjs\/core\/proxy \(see NS_PROXY_FACADE_MISSING\)/)
   assert.equal(proxyAreaNotice('src/proxy.ts', readFileSync(join(CORE_ROOT, 'templates/proxy.ts'), 'utf8')), null)
 })
 

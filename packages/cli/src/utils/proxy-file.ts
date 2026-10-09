@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { isPreviousTemplate, type PreviousTemplates } from './previous-templates.js';
 
 /**
  * Write the request-interception file under the name the project's Next.js
@@ -12,8 +13,9 @@ import { join } from 'node:path';
  * `x-user-id` / `x-pathname` headers downstream layouts read. Nothing fails —
  * which is what makes it worth spelling out here.
  *
- * The template exports `proxy`; Next 15 expects that function to be called
- * `middleware`, so the export is renamed along with the file.
+ * The template exports `proxy` (re-exported from @nextsparkjs/core/proxy since
+ * the template became a facade; a function before that); Next 15 expects it to
+ * be called `middleware`, so the export is renamed along with the file.
  */
 
 /** What Next calls this file, per major version. */
@@ -29,7 +31,8 @@ export function adaptProxySource(source: string, fileName: string): string {
 
   return source
     .replace(/export\s+async\s+function\s+proxy\s*\(/, 'export async function middleware(')
-    .replace(/export\s+function\s+proxy\s*\(/, 'export function middleware(');
+    .replace(/export\s+function\s+proxy\s*\(/, 'export function middleware(')
+    .replace(/export\s*\{\s*proxy\s*\}/, 'export { proxy as middleware }');
 }
 
 /**
@@ -49,13 +52,14 @@ const PUBLISHED_TAG_HEADER = /^\/\*\*\r?\n \* @nextspark-generated\r?\n/;
  * ran unattended (core's postinstall called `sync:app --force`, removed in beta.192);
  * the wizard and `migrate` still replace only what they can prove is theirs.
  */
-export function isGeneratedProxySource(existing: string, source: string): boolean {
+export function isGeneratedProxySource(existing: string, source: string, previous: PreviousTemplates = {}): boolean {
   if (PUBLISHED_TAG_HEADER.test(existing)) return true;
 
   // A file from a release that predates the tag: only recognisable by being
-  // exactly what that template produced.
+  // exactly what that template, or an earlier one the installed core lists, produced.
   return existing === adaptProxySource(source, 'proxy.ts')
-    || existing === adaptProxySource(source, 'middleware.ts');
+    || existing === adaptProxySource(source, 'middleware.ts')
+    || isPreviousTemplate('proxy.ts', existing, previous);
 }
 
 export type ProxyFileName = 'proxy.ts' | 'middleware.ts';
@@ -93,24 +97,26 @@ export interface ProxyFilePlan {
  * @param source - The template's proxy.ts.
  * @param nextMajor - The project's Next major version, or null when unknown.
  * @param existing - The project's current proxy.ts and middleware.ts, when present.
+ * @param previous - The earlier templates the installed core lists (readPreviousTemplates), replaced like the current one.
  */
 export function planProxyFile(
   source: string,
   nextMajor: number | null,
-  existing: Partial<Record<ProxyFileName, string>>
+  existing: Partial<Record<ProxyFileName, string>>,
+  previous: PreviousTemplates = {}
 ): ProxyFilePlan {
   const fileName = proxyFileNameFor(nextMajor);
   const preserved: ProxyFileName[] = [];
 
   const current = existing[fileName];
-  const targetIsOurs = current === undefined || isGeneratedProxySource(current, source);
+  const targetIsOurs = current === undefined || isGeneratedProxySource(current, source, previous);
   if (!targetIsOurs) preserved.push(fileName);
 
   const stale: ProxyFileName = fileName === 'proxy.ts' ? 'middleware.ts' : 'proxy.ts';
   const staleContent = existing[stale];
   let remove: ProxyFileName | null = null;
   if (staleContent !== undefined) {
-    if (isGeneratedProxySource(staleContent, source)) {
+    if (isGeneratedProxySource(staleContent, source, previous)) {
       remove = stale;
     } else {
       preserved.push(stale);

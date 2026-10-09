@@ -1,0 +1,33 @@
+{
+  "$comment": "sha256 of every proxy.ts (and the earlier middleware.ts) and instrumentation.ts that packages/core/templates/ has held, before they became facades over @nextsparkjs/core/proxy and /instrumentation. A project file with one of these exact contents is an unchanged copy of core's template, so nextspark prepare, migrate and the wizard replace it with the current template; any other content is the project's and is kept. When templates/proxy.ts or instrumentation.ts changes, add the old file's hash here (scripts/build/registry/host/__tests__/host-project-entries.test.mjs fails until you do).",
+  "proxy.ts": [
+    "0c19886825ba0cb104379da71d31a8a11d9288c092f3a6849be2fa1c75e31431",
+    "15dba876519671c5f0d3f4bb94ac3cfa0619f3ad3d5e2a820b40e76f7aafd40e",
+    "192b6c4941ed8c5f9771e11b4830d28a0c0332948042f29321c26d169af82af5",
+    "2a0590eaa24b39ce962759ff1b3a6045a917c3ed12be824e2db511295be7a7b6",
+    "302b63c3509b0bc0f2e3bcae10e4624a9d910495e6f05c509f5e46ead40c8043",
+    "3236ed5f053af394a28d25f30e69da65a3d8c75922e8f8a500f2238b9ac4fa51",
+    "383eff4423520bbab13ddd09443b35275efa5ebc31f3f37e1c280d2f296a1f68",
+    "3e8d97ebba3a4d9d8773b2514c5e93f1991577e472130f7957ca0ea4a4410626",
+    "538e88ea359f569613520bda9beb8afcfa5ad83a3042aa2b924e514d39c3a793",
+    "55b30cb2be0e312c3eb37f3967e16396e7e5426a74cc1124ac51b0e14fc348d5",
+    "57197bf3a35c905c550be10dabdb7e3fd67931e1436cf6ce3f804e5d170fe2ac",
+    "58e45e18ec8ca2193ad980e91110fd66ce5eb20d1f06d9419c18554ac2738870",
+    "9d68821c78f5ec85567b0a42b81f9e23355d0f70d67b2ecff0e552afb4b59362",
+    "9fede1bd17608c17ae8753acef6640cd00169d8e40711c472292f4946bc3862c",
+    "a5e88d1dd1be369e1710bee7cc56818fc16fe4b725acff0271795eabe882dfeb",
+    "a88634a9ee137e2c9c650b223df264b21bb0b02f945ffb5b8d5273cf954c0e97",
+    "c56055d33cb937c1fbd6141ae32377a5d9e701c1f0999d767fb99e35b0a17415",
+    "df2af3b562aef0b995555ab121f9611a02df928c17e0df26c250ff7cca46573f",
+    "e6a767196f553404b0e0f60b9a01b5dc32c4b115beaac63277b87c10e46ee673",
+    "e9062ff45b5e94ef9f2cd41a2cb8111c24b851326b6b5e4ab095a458b0bdf7c9",
+    "f22b63d8e844c8dfb0547d557540ba89decbb5815f644f1bd3c51b30b589f337",
+    "f9c2d86a2c911e36c232526468764e292ea08aa85f52b7a7d206005d1c2b8330",
+    "fc66015fb35f24523514c0c29e3839613bf08a455ae5142fc58ec74166b6d7af"
+  ],
+  "instrumentation.ts": [
+    "4ce49f38fb4c32e0f63576455f97416dd1456d8eb79fb2f0b55c9aac9cf1157a",
+    "56534467aae6763af679b8598c9cef299aadcb8b0409c086d40cc247b5457954",
+    "f497e4bd774e576408555c6c0f1c021a58d9f361f765688caa6488e34b79370a"
+  ]
+}

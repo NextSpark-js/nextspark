@@ -45,6 +45,7 @@ import { ContractsPublishError, checkContractsPlan, preflightContractsPlan, proj
 import { planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
 import { webhookRoutes } from './webhooks.mjs'
 import { proxyAreaNotices } from './proxy-areas.mjs'
+import { ENTRY_NOT_REPLACED, projectEntryNotices, upgradeProjectEntries } from './project-entries.mjs'
 import { HostPlanError, compareTargets, planHost } from './plan.mjs'
 import { DEV_DIAGNOSTIC_FILE, DEV_STATUS_FILE, devDiagnosticModule, devFailureDiagnostic, renderHost } from './render.mjs'
 import {
@@ -115,7 +116,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     extensions: config.extensions,
   })
   const { routes } = planned
-  const notices = [...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot)]
+  const notices = [...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot)]
   const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics]
   if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices, stage: 'plan' })
   const rendered = await renderHost({
@@ -249,7 +250,17 @@ async function generateAndPublish(config, { mode, devStatus, cache }) {
     const record = generationRecord({ mode, versions: config.versions, inputs, files })
     try {
       const published = publishGeneration({ hostRoot: config.hostRoot, previous, files, record })
-      return { routes, files, record, notices, ...published, contracts: publishContractsStep(config, contracts) }
+      const contractsResult = publishContractsStep(config, contracts)
+      // Once the generation is out: an unchanged copy of an earlier proxy or instrumentation template becomes the
+      // current one, and the notices about what that copy lacked go with it
+      const replaced = upgradeProjectEntries(config.projectRoot)
+      const replacedFiles = new Set(replaced.filter(notice => notice.code !== ENTRY_NOT_REPLACED).map(notice => notice.target))
+      // A copy that could not be written gets NS_PROJECT_ENTRY_NOT_REPLACED in place of the notice saying prepare replaces it
+      const failedFiles = new Set(replaced.filter(notice => notice.code === ENTRY_NOT_REPLACED).map(notice => notice.target))
+      const kept = notices.filter(notice =>
+        !(replacedFiles.has(notice.target) && /^NS_(?:PROXY|INSTRUMENTATION)_/.test(notice.code)) &&
+        !(failedFiles.has(notice.target) && /^NS_(?:PROXY|INSTRUMENTATION)_FACADE_MISSING$/.test(notice.code)))
+      return { routes, files, record, notices: [...replaced, ...kept], ...published, contracts: contractsResult }
     } catch (error) {
       if (error instanceof GenerationError || error instanceof ContractsPublishError) throw new PrepareError(error.diagnostics)
       throw error

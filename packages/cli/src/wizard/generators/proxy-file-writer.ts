@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import fs from 'fs-extra';
 import { readGeneratedTagAt } from '../../utils/generated-tag.js';
 import { getNextMajorVersion } from '../../utils/next-bundler.js';
+import { readPreviousTemplates } from '../../utils/previous-templates.js';
 import {
   isGeneratedProxySource,
   planProxyFile,
@@ -26,8 +27,9 @@ export interface ProxyFileResult {
  * the other spelling so a project that changed Next major does not end up with
  * both files.
  *
- * Anything that does not match the template verbatim is left where it is: it
- * belongs to the project, and this reports it so the caller can say so.
+ * Anything that does not match the template, or an earlier template the
+ * installed core lists, verbatim is left where it is: it belongs to the
+ * project, and this reports it so the caller can say so.
  *
  * @param templatesDir - The core package's templates directory.
  * @param projectRoot - The Next project whose app/pages convention decides where the file lands.
@@ -53,7 +55,8 @@ export async function writeProxyFile(
     if (await fs.pathExists(path)) existing[name] = await fs.readFile(path, 'utf-8');
   }
 
-  const plan = planProxyFile(source, getNextMajorVersion(projectRoot), existing);
+  const previous = readPreviousTemplates(templatesDir);
+  const plan = planProxyFile(source, getNextMajorVersion(projectRoot), existing, previous);
   if (plan.content !== null) {
     await fs.writeFile(join(destinationDir, plan.fileName), plan.content, 'utf-8');
   }
@@ -69,7 +72,7 @@ export async function writeProxyFile(
     if (!await fs.pathExists(path)) continue;
     const content = await fs.readFile(path, 'utf-8');
     const tag = readGeneratedTagAt(relativePath, Buffer.from(content));
-    if (tag ? tag.intact : isGeneratedProxySource(content, source)) {
+    if (tag ? tag.intact : isGeneratedProxySource(content, source, previous)) {
       await fs.remove(path);
     } else {
       preserved.push(relativePath);

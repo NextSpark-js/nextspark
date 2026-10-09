@@ -47,6 +47,7 @@ import { getDefaultProductionSignIn, type ProductionSignInResult } from '../prom
 import { generateMonorepoStructure, isMonorepoProject, getWebDir, reconcileMobileSampleEntities } from './monorepo-generator.js'
 import { isLocalPackageRef } from './local-package-refs.js'
 import { writeProxyFile, type ProxyFileResult } from './proxy-file-writer.js'
+import { isPreviousTemplate, readPreviousTemplates } from '../../utils/previous-templates.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -124,11 +125,13 @@ let cachedTemplatesDir: string | null = null;
  * when the project doesn't already have one, so a copy the project customized
  * (or wrote itself) is never overwritten.
  *
- * instrumentation.ts calls logAuthReadinessAtStartup() and initializes
- * scheduled actions at server startup (see packages/core/templates/instrumentation.ts
- * and packages/core/docs/06-authentication/12-passwordless-preset.md's "Startup
+ * instrumentation.ts re-exports core's register(), which calls
+ * logAuthReadinessAtStartup() and initializes scheduled actions at server
+ * startup (see packages/core/templates/instrumentation.ts and
+ * packages/core/docs/06-authentication/12-passwordless-preset.md's "Startup
  * re-validation" section) — force: false so a project's own instrumentation.ts
- * is left alone.
+ * is left alone; an unchanged copy of an earlier template is replaced
+ * (copyProjectFiles).
  */
 export const PROJECT_ROOT_ITEMS: Array<{ src: string; dest: string; force: boolean }> = [
   // lib/ ships project-local modules the generated routes load (e.g.
@@ -152,6 +155,12 @@ export const PROJECT_ROOT_ITEMS: Array<{ src: string; dest: string; force: boole
   { src: 'instrumentation.ts', dest: 'instrumentation.ts', force: false },
 ]
 
+/** Whether the project's `instrumentation.ts` is byte for byte an earlier core template, so core's to replace. */
+export async function isUnchangedEarlierTemplate(src: string, destPath: string, templatesDir: string): Promise<boolean> {
+  if (src !== 'instrumentation.ts') return false
+  return isPreviousTemplate('instrumentation.ts', await fs.readFile(destPath, 'utf-8'), readPreviousTemplates(templatesDir))
+}
+
 async function copyProjectFiles(config: WizardConfig): Promise<ProxyFileResult | null> {
   if (!cachedTemplatesDir) {
     throw new Error('Templates directory not cached. Call cacheTemplatesDir() first.')
@@ -164,7 +173,7 @@ async function copyProjectFiles(config: WizardConfig): Promise<ProxyFileResult |
     const destPath = path.join(projectDir, item.dest)
 
     if (await fs.pathExists(srcPath)) {
-      if (item.force || !await fs.pathExists(destPath)) {
+      if (item.force || !await fs.pathExists(destPath) || await isUnchangedEarlierTemplate(item.src, destPath, templatesDir)) {
         await fs.copy(srcPath, destPath)
       }
     }

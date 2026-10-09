@@ -72,9 +72,11 @@ What gets updated:
 
 What update-core itself never writes:
   The rest of package.json (name, scripts, other dependencies)
-  next.config.mjs, tsconfig.json, i18n.ts, proxy.ts or middleware.ts
+  next.config.mjs, tsconfig.json, i18n.ts, proxy.ts or middleware.ts, instrumentation.ts
                           Project files: nextspark sync:app, which used to update them, was
-                          removed in 0.1.0-beta.192
+                          removed in 0.1.0-beta.192. nextspark prepare replaces src/proxy.ts,
+                          src/middleware.ts or instrumentation.ts only when it is byte for byte
+                          a template an earlier core shipped, and says so
   api/, blocks/, components/, config/, entities/, lib/, messages/, migrations/, plugins/, styles/, templates/, tests/
                           Project-owned root-first source
   .env*                   Environment files
