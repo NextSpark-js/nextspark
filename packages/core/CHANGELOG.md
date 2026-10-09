@@ -7,62 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Upgrading
-
-- **Run `pnpm db:migrate`: core adds `032_team_join_policies.sql`.** It changes the RLS policies of `teams`, `team_members` and `team_invitations` (idempotent). Only a project that runs the application as `nextspark_app` (the RLS cutover in `22-stability-and-support/04-postgresql-requirements.md`) sees a difference: creating a team and accepting an invitation as an existing user work there now, and a user adds a membership row only for themself (the creator of a team with no member yet, or an invitee with a pending invitation). A project route that added other users to a team on the request user's RLS connection must do it on the service connection after its own checks, as core's routes do. An invitation's team, email, role, token, inviter and expiry can no longer be changed once it is sent.
-- **`pnpm db:migrate` also applies `033_team_member_roles_and_taxonomy_relations.sql`.** On the `nextspark_app` connection, a membership's role is changed by the team's owner, or by an admin for rows below admin; the owner row is changed only on the service connection (ownership transfer); members leave on their own; a membership never moves to another user or team. `entity_taxonomy_relations` rows are read and written only for entities of the caller's teams (the table named by `entityType`, with `"teamId"`, or `"userId"` for an entity without a team) and taxonomies without a team or of that team. A project whose posts entity migration was copied from an earlier template keeps it; 033 replaces its policies. A theme entity whose table name differs from its slug has its relations refused on the RLS connection. `TeamMemberService.remove(teamId, userId, actorId)` and `updateRole(teamId, userId, role, actorId)` take the acting user as a new, required last argument and run as that user (`Actor ID is required` without it); before they ran as the member, so on the `nextspark_app` connection only a member removing or changing themself worked, and core's Server Actions now pass the session user.
-- **Production migrations now validate the certificate.** With `NODE_ENV=production` (in the environment or the project `.env`),
-  `db:migrate`, `db:seed` and the migration verifiers connect to a URL without `sslmode` over SSL with certificate validation, as the
-  application does, and no longer fall back to plain. Use `sslmode=disable` for a local server without SSL.
-
-### Changed
-
-- The database scripts decide SSL in one place (`scripts/db/ssl-config.mjs`). A URL without `sslmode` keeps libpq's `prefer` outside
-  production; in production it uses SSL with a validated certificate, and a server without SSL stops the run with an error that names
-  `sslmode=disable` and `sslmode=verify-full` and does not print the URL. Explicit `sslmode` values keep their meaning.
-- `DISABLE_RATE_LIMITING=true` also turns off Better Auth's own rate limit (`rateLimit.enabled: false`): sign-in, sign-up and
-  the email OTP endpoints no longer answer 429 from one shared address. The per-API-key limit stays on. Any other value leaves
-  Better Auth's default (on in production). For QA/preview deploys and tests only, never production.
-
-### Fixed
-
-- Inviting and changing a role follow one rule: the actor must outrank the role granted (`canInviteToRole` now matches `validateRoleTransition`). An admin no longer invites another admin (`POST /api/v1/teams/:teamId/members` answers 403 `ROLE_HIERARCHY_VIOLATION`, and the `inviteMember` Server Action refuses it), and the invite dialog lists only the roles below the inviter's.
-- `POST` and `PUT /api/v1/media/:id/tags` answer 404 `Tag not found` for a tag that is not a media tag of the media item's team, and change nothing. `MediaService.addTag(mediaId, tagId, userId, teamId)` and `setTags(mediaId, tagIds, userId, teamId)` take the media item's team as a new, required last argument (`Team ID is required` without it) and check every tag against it.
-- The `removeMember` and `updateMemberRole` Server Actions write under the acting user's RLS context instead of the member's.
-- With the application on the `nextspark_app` connection, `POST /api/v1/teams` and accepting an invitation as an existing user no longer answer 500, and the invitee can decline an invitation or have it marked expired. Accepting claims the pending invitation before adding the member, so the same invitation is not accepted twice. The invitee's email is matched without case, as the accept route does.
-- Deleting an account now also deactivates the user's API keys (and drops them from the key cache) and removes the user from every team, in the same transaction as the anonymization. The audit log, login events, billing usage events and the invitations the user sent keep pointing at the anonymized user. The whole anonymization now runs on the service pool, so a deployment that runs the application as `nextspark_app` needs `DATABASE_SERVICE_URL`: without it the call fails with `User not found` and changes nothing (before, it left the sessions behind).
-- The scheduled-actions processor registers the handlers of the action types core enqueues (`auth:security-notification`,
-  `pattern:invalidate-cache`) itself, so the cron route and DevTools "run" execute them in any server instance, including one that
-  restarted or never served the request that queued them. They no longer fail with "No handler registered". A project handler
-  registered under the same name is kept. `pattern:invalidate-cache` loads the generated entity registry when it runs, so the cron route
-  resolves the pages that use the pattern and revalidates them instead of skipping them as unknown entities.
-- `POST /api/v1/blocks/validate` answers 400 with the API validation error shape (`code: VALIDATION_ERROR`, the issues in `details`)
-  for a body that is not JSON or does not match `{ blockSlug: string, props: object }`, instead of 500.
-- Migration `034_media_taxonomy_cleanup_trigger.sql`: deleting a media row removes its taxonomy relations on every database. `021`
-  created that trigger only when `entity_taxonomy_relations` already existed, which on a fresh database it did not (the posts entity
-  migration creates it later). 034 creates the trigger unconditionally, with a function that does nothing while the table is missing,
-  and replaces the one 021 created where it exists, with the same effect.
-
-### Documentation
-
-- New section `22-stability-and-support` with the 1.0 stability table (stable, experimental, deprecated, deferred), the support matrix (Node.js, Next.js `~16.3.8`, pnpm, PostgreSQL 15-17, Expo SDK 54), the SemVer and deprecation policy (one minor of notice, security support for the latest 1.x minor, `latest` and `1.0.0-rc.N` on `next`, `nextspark migrate` for 12 months after 1.0.0 or the whole 1.x line, whichever ends first) and the written PostgreSQL requirements (application, service and migration roles, the `pgcrypto` extension, SSL, poolers). Neon, Supabase and Amazon RDS are listed as not verified.
-- Experimental notices on the page builder dashboard editor, the media library, scheduled actions and the non-starter templates.
-- The accessibility guide states WCAG 2.2 AA as the 1.0 target (axe in CI plus a keyboard and focus pass), still in progress, and no longer promises legal compliance.
-- The beta.192 status page is marked historical. The README and guides no longer call the project production-ready or recommend Supabase and Vercel.
+## [0.1.0-beta.198] - 2026-10-09
 
 ### Upgrading from 0.1.0-beta.197
 
 - **Update with a clean git tree.** Commit your work, then `pnpm update-core --version <version>`: it stops on uncommitted changes, sets the
   `@nextsparkjs` packages to exactly that version, installs, and runs `nextspark prepare`. Next.js must already be on `~16.3.8` (16.3.8 or a later
   16.3 patch): `prepare` refuses other versions, earlier patches and other minors alike, with `NS_HOST_UNSUPPORTED_NEXT_VERSION`.
-- **`pnpm build` needs a login method that can authenticate.** A project without Resend or Google credentials in `.env` or the build
-  environment fails with `Production auth readiness failed`. A build that gets them only at run time declares
-  `NEXTSPARK_AUTH_RUNTIME_ONLY=email,google`; placeholder values such as `re_...` are not deferred.
+- **Run `pnpm db:migrate`: core adds `032_team_join_policies.sql`.** It changes the RLS policies of `teams`, `team_members` and `team_invitations` (idempotent). Only a project that runs the application as `nextspark_app` (the RLS cutover in `22-stability-and-support/04-postgresql-requirements.md`) sees a difference: creating a team and accepting an invitation as an existing user work there now, and a user adds a membership row only for themself (the creator of a team with no member yet, or an invitee with a pending invitation). A project route that added other users to a team on the request user's RLS connection must do it on the service connection after its own checks, as core's routes do. An invitation's team, email, role, token, inviter and expiry can no longer be changed once it is sent.
+- **`pnpm db:migrate` also applies `033_team_member_roles_and_taxonomy_relations.sql`.** On the `nextspark_app` connection, a membership's role is changed by the team's owner, or by an admin for rows below admin; the owner row is changed only on the service connection (ownership transfer); members leave on their own; a membership never moves to another user or team. `entity_taxonomy_relations` rows are read and written only for entities of the caller's teams (the table named by `entityType`, with `"teamId"`, or `"userId"` for an entity without a team) and taxonomies without a team or of that team. A project whose posts entity migration was copied from an earlier template keeps it; 033 replaces its policies. A theme entity whose table name differs from its slug has its relations refused on the RLS connection. `TeamMemberService.remove(teamId, userId, actorId)` and `updateRole(teamId, userId, role, actorId)` take the acting user as a new, required last argument and run as that user (`Actor ID is required` without it); before they ran as the member, so on the `nextspark_app` connection only a member removing or changing themself worked, and core's Server Actions now pass the session user.
+- **`pnpm db:migrate` also applies `034_media_taxonomy_cleanup_trigger.sql`.** It creates the trigger that removes a deleted media row's taxonomy relations on databases where `021` skipped it (see Fixed); on the others it replaces the trigger with the same one.
+- **Production migrations now validate the certificate.** With `NODE_ENV=production` (in the environment or the project `.env`),
+  `db:migrate`, `db:seed` and the migration verifiers connect to a URL without `sslmode` over SSL with certificate validation, as the
+  application does, and no longer fall back to plain. Use `sslmode=disable` for a local server without SSL.
 - **`src/proxy.ts` and `instrumentation.ts` become facades over core.** The request proxy and the server startup are now public
   entries, `@nextsparkjs/core/proxy` and `@nextsparkjs/core/instrumentation`, updated with core; the files the scaffold writes only
   re-export them. Your project still owns both files.
   - **Unchanged copies are replaced for you.** `pnpm update-core` (through `nextspark prepare`), `nextspark prepare`, `nextspark migrate`
-    and the wizard replace a `src/proxy.ts`, `src/middleware.ts` or `instrumentation.ts` that is byte for byte a template an earlier
+    and the wizard replace a `src/proxy.ts`, `src/middleware.ts`, `instrumentation.ts` or `src/instrumentation.ts` that is byte for byte a template an earlier
     core shipped, and print `NS_PROXY_TEMPLATE_REPLACED` / `NS_INSTRUMENTATION_TEMPLATE_REPLACED`. Commit the change.
     A copy prepare cannot write (read-only, a symlink) is left as it is with `NS_PROJECT_ENTRY_NOT_REPLACED`, and prepare goes on.
   - **Edited copies are kept**, and `prepare` and `migrate` print `NS_PROXY_FACADE_MISSING` / `NS_INSTRUMENTATION_FACADE_MISSING` with
@@ -88,10 +50,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     because the old template imported them. They still resolve; code of yours that imports them should use the proxy entry instead.
     `./lib/auth`, `./lib/auth/runtime-readiness`, `./lib/teams/active-team-cookie` and `./lib/scheduled-actions` stay public: the guides
     use them in project code.
-
 - **`sel`, `cySelector` and `createAriaLabel` are no longer exported from `@nextsparkjs/core`.** Import `sel` and `cySelector` from `@nextsparkjs/core/selectors`; `createAriaLabel` comes from `@nextsparkjs/testing`. None of the three names was in the public list, and removing them after 1.0 would need a major.
+- **The root layout no longer wraps pages in `<main>`.** Core's dashboard, settings, superadmin, devtools, auth and public layouts render one. A route outside those areas (a top-level page of your project, a custom `not-found`) or a group layout you override without a `<main>` must render its own; keep one per page. Selectors that matched `body main > ...` need updating. In a project created from the starter, `templates/(public)/layout.tsx` is yours and has no `<main>`, while its home and support pages render one: they keep a single landmark as they are. If you add `<main>` to that layout, as the 0.1.0-beta.198 starter does, change those pages' `<main>` to a `<div>`.
+- **`pnpm build` needs a login method that can authenticate.** A project without Resend or Google credentials in `.env` or the build
+  environment fails with `Production auth readiness failed`. A build that gets them only at run time declares
+  `NEXTSPARK_AUTH_RUNTIME_ONLY=email,google`; placeholder values such as `re_...` are not deferred.
 - The webhook extension types `StripeWebhookExtensions` and `PolarWebhookExtensions` are now exported from `@nextsparkjs/core/lib/billing/config-types`, and the `lib/billing/*-webhook-extensions.ts` templates import them from there. The old `lib/billing/stripe-webhook` and `polar-webhook` subpaths keep working for one minor and are internal.
-- **The root layout no longer wraps pages in `<main>`.** Core's dashboard, settings, superadmin, devtools, auth and public layouts render one. A route outside those areas (a top-level page of your project, a custom `not-found`) or a group layout you override without a `<main>` must render its own; keep one per page. Selectors that matched `body main > ...` need updating.
 
 ### Added
 
@@ -104,8 +68,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pages and, signed in, its dashboard, task and profile pages, and the job fails on any serious or critical violation. The report is uploaded
   as the `starter-axe-report` artifact.
 
+### Changed
+
+- The database scripts decide SSL in one place (`scripts/db/ssl-config.mjs`). A URL without `sslmode` keeps libpq's `prefer` outside
+  production; in production it uses SSL with a validated certificate, and a server without SSL stops the run with an error that names
+  `sslmode=disable` and `sslmode=verify-full` and does not print the URL. Explicit `sslmode` values keep their meaning.
+- `CHANGELOG.md` and `docs/17-updates` ship in the `@nextsparkjs/core` package, so the upgrade notes are in `node_modules/@nextsparkjs/core` next to the code they describe.
+- `DISABLE_RATE_LIMITING=true` also turns off Better Auth's own rate limit (`rateLimit.enabled: false`): sign-in, sign-up and
+  the email OTP endpoints no longer answer 429 from one shared address. The per-API-key limit stays on. Any other value leaves
+  Better Auth's default (on in production). For QA/preview deploys and tests only, never production.
+
 ### Fixed
 
+- Inviting and changing a role follow one rule: the actor must outrank the role granted (`canInviteToRole` now matches `validateRoleTransition`). An admin no longer invites another admin (`POST /api/v1/teams/:teamId/members` answers 403 `ROLE_HIERARCHY_VIOLATION`, and the `inviteMember` Server Action refuses it), and the invite dialog lists only the roles below the inviter's.
+- `POST` and `PUT /api/v1/media/:id/tags` answer 404 `Tag not found` for a tag that is not a media tag of the media item's team, and change nothing. `MediaService.addTag(mediaId, tagId, userId, teamId)` and `setTags(mediaId, tagIds, userId, teamId)` take the media item's team as a new, required last argument (`Team ID is required` without it) and check every tag against it.
+- The `removeMember` and `updateMemberRole` Server Actions write under the acting user's RLS context instead of the member's.
+- With the application on the `nextspark_app` connection, `POST /api/v1/teams` and accepting an invitation as an existing user no longer answer 500, and the invitee can decline an invitation or have it marked expired. Accepting claims the pending invitation before adding the member, so the same invitation is not accepted twice. The invitee's email is matched without case, as the accept route does.
+- Deleting an account now also deactivates the user's API keys (and drops them from the key cache) and removes the user from every team, in the same transaction as the anonymization. The audit log, login events, billing usage events and the invitations the user sent keep pointing at the anonymized user. The whole anonymization now runs on the service pool, so a deployment that runs the application as `nextspark_app` needs `DATABASE_SERVICE_URL`: without it the call fails with `User not found` and changes nothing (before, it left the sessions behind).
+- The scheduled-actions processor registers the handlers of the action types core enqueues (`auth:security-notification`,
+  `pattern:invalidate-cache`) itself, so the cron route and DevTools "run" execute them in any server instance, including one that
+  restarted or never served the request that queued them. They no longer fail with "No handler registered". A project handler
+  registered under the same name is kept. `pattern:invalidate-cache` loads the generated entity registry when it runs, so the cron route
+  resolves the pages that use the pattern and revalidates them instead of skipping them as unknown entities.
+- `POST /api/v1/blocks/validate` answers 400 with the API validation error shape (`code: VALIDATION_ERROR`, the issues in `details`)
+  for a body that is not JSON or does not match `{ blockSlug: string, props: object }`, instead of 500.
+- Migration `034_media_taxonomy_cleanup_trigger.sql`: deleting a media row removes its taxonomy relations on every database. `021`
+  created that trigger only when `entity_taxonomy_relations` already existed, which on a fresh database it did not (the posts entity
+  migration creates it later). 034 creates the trigger unconditionally, with a function that does nothing while the table is missing,
+  and replaces the one 021 created where it exists, with the same effect.
+- `create-plugin` names the hook, widget and types of a generated plugin in PascalCase (`useMyDemo`, `MyDemoConfig`) and renames the files to match. Before, the files kept their template names (`hooks/usePlugin.ts`, `components/ExampleWidget.tsx`) while the widget imported `usemyDemo` from `../hooks/usemyDemo`, so a new plugin did not compile. The `de`, `fr`, `it` and `pt` message files are now filled in too; they were copied with their placeholders.
+- The plugin preset imports only public `@nextsparkjs/core` subpaths (`types/plugin`, `lib/api/auth/dual-auth`, `components/ui/*`) and calls `authenticateRequest`; its example route used a function that does not exist. `./lib/plugins/env-loader` is listed in the Public API.
+- `nextspark migrate --yes` no longer prints its report as "(dry run)"; only `--dry-run` does.
 - **Accessibility, from an axe scan of the starter (WCAG 2.2 AA is the 1.0 target).**
   - The status and priority filters of an entity list, and the country and timezone pickers of the profile page, are named for screen readers. A
     `role="combobox"` button takes its name from `aria-label` or a label, not from its text.
@@ -115,6 +108,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Closing the confirmation dialog of a row action (delete) puts focus back on the row's menu button, or on the next (else the previous) row's once the row is gone, where it used to fall to `<body>`.
   - Controls whose label did not contain their visible text (2.5.3 Label in Name) now do: the sidebar logo link, the team switcher, the user menu and the settings back button.
   - Landmarks: the dashboard's top bar is a `<header>` (one banner per page, the sidebar header no longer claims `role="banner"`), the auth layout is a `<main>`, the settings sidebar links are links again (they had `role="listitem"`), and the settings back link is no longer a one-item `nav`. An axe scan of the starter goes from 40 moderate and 15 minor findings to 3 moderate and none, the 3 left appearing only while a menu is open.
+
+### Documentation
+
+- New section `22-stability-and-support` with the 1.0 stability table (stable, experimental, deprecated, deferred), the support matrix (Node.js, Next.js `~16.3.8`, pnpm, PostgreSQL 15-17, Expo SDK 54), the SemVer and deprecation policy (one minor of notice, security support for the latest 1.x minor, `latest` and `1.0.0-rc.N` on `next`, `nextspark migrate` for 12 months after 1.0.0 or the whole 1.x line, whichever ends first) and the written PostgreSQL requirements (application, service and migration roles, the `pgcrypto` extension, SSL, poolers). Neon, Supabase and Amazon RDS are listed as not verified.
+- Experimental notices on the page builder dashboard editor, the media library, scheduled actions and the non-starter templates.
+- The accessibility guide states WCAG 2.2 AA as the 1.0 target (axe in CI plus a keyboard and focus pass), still in progress, and no longer promises legal compliance.
+- The beta.192 status page is marked historical. The README and guides no longer call the project production-ready or recommend Supabase and Vercel.
+- Every relative link and anchor in the core guides resolves (88 were broken, 60 of them page links without `.md`), and the guides describe Next.js 16 where they said 15: fetches and routes are not cached by default, `'use cache'` with `cacheLife` and `cacheTag`, `revalidateTag(tag, 'max')`, async `params`, `proxy.ts` instead of `middleware.ts`.
+- The 0.x upgrade guide and the beta.197 notes gain the missing update, build and rollback steps, the pnpm 12 and `.gitignore` notes, and say that `.env` wins over the process environment for the database scripts. The PostgreSQL requirements say what Neon does with `statement_timeout`, channel binding and the role attribute that skips row-level security.
 
 ## [0.1.0-beta.197] - 2026-10-08
 

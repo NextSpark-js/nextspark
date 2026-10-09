@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.198] - 2026-10-09
+
+### Upgrading from 0.1.0-beta.197
+
+- **A native build needs `expo-dev-client`.** `expo run:ios` and `expo run:android` build a debug app that opens the bundler through the `expo-dev-client` launcher; without it the app ignores the link the CLI opens and shows "No script URL provided". New projects have it. An existing project adds it with `pnpm add expo-dev-client@~6.0.21` (Expo SDK 54) in `mobile/` and rebuilds.
+
+### Added
+
+- The template ships `expo-dev-client` (`~6.0.21`, Expo SDK 54), and the generated monorepo lists it in `mobile/package.json`. The `ios` and `android` scripts run `expo run:ios` and `expo run:android` (a native build) instead of `expo start --ios` and `--android`.
+
+### Fixed
+
+- The authenticated top bar keeps below the status bar: it uses the top safe area inset, so on a phone with a notch or Dynamic Island the clock no longer overlaps the greeting, and the status icons no longer overlap the header buttons. An existing project takes the fix by copying `src/components/navigation/TopBar.tsx` from the template.
+
+### Documentation
+
+- The README has a "Running on a simulator or emulator" section: the development build, the 14 minutes of the first `pod install` and 15 of the first native build measured on a cold cache, how the bundler port reaches the app (`--port` and `RCT_jsLocation`), why a production build of the web app needs HTTPS (the `Secure` session cookie is not sent over `http://localhost`), and the Android emulator address.
+
 ## [0.1.0-beta.197] - 2026-10-08
 
 No changes; version aligned with core.
