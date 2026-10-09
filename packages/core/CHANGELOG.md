@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   resolves the pages that use the pattern and revalidates them instead of skipping them as unknown entities.
 - `POST /api/v1/blocks/validate` answers 400 with the API validation error shape (`code: VALIDATION_ERROR`, the issues in `details`)
   for a body that is not JSON or does not match `{ blockSlug: string, props: object }`, instead of 500.
+- Migration `034_media_taxonomy_cleanup_trigger.sql`: deleting a media row removes its taxonomy relations on every database. `021`
+  created that trigger only when `entity_taxonomy_relations` already existed, which on a fresh database it did not (the posts entity
+  migration creates it later). 034 creates the trigger unconditionally, with a function that does nothing while the table is missing,
+  and replaces the one 021 created where it exists, with the same effect.
 
 ### Documentation
 
