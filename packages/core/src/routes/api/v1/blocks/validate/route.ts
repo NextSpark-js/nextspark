@@ -4,6 +4,7 @@ import { BLOCK_SCHEMAS } from '@nextsparkjs/registries/block-schemas'
 import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
+import { createApiError } from '@nextsparkjs/core/lib/api/helpers'
 
 const requestSchema = z.object({
   blockSlug: z.string(),
@@ -12,8 +13,11 @@ const requestSchema = z.object({
 
 export const POST = withRateLimitTier(async (request: NextRequest) => {
   try {
-    const body = await request.json()
-    const { blockSlug, props } = requestSchema.parse(body)
+    const parsed = requestSchema.safeParse(await request.json().catch(() => undefined))
+    if (!parsed.success) {
+      return createApiError('Validation error', 400, parsed.error.issues, 'VALIDATION_ERROR')
+    }
+    const { blockSlug, props } = parsed.data
 
     const block = BLOCK_REGISTRY[blockSlug]
 

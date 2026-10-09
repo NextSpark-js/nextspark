@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   restarted or never served the request that queued them. They no longer fail with "No handler registered". A project handler
   registered under the same name is kept. `pattern:invalidate-cache` loads the generated entity registry when it runs, so the cron route
   resolves the pages that use the pattern and revalidates them instead of skipping them as unknown entities.
+- `POST /api/v1/blocks/validate` answers 400 with the API validation error shape (`code: VALIDATION_ERROR`, the issues in `details`)
+  for a body that is not JSON or does not match `{ blockSlug: string, props: object }`, instead of 500.
 
 ### Documentation
 

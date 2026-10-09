@@ -59,4 +59,22 @@ describe('POST /api/v1/blocks/validate', () => {
     expect(response.status).toBe(500)
     expect(await response.json()).toEqual({ error: 'Block schema not found' })
   })
+
+  it('answers 400 with the API validation error shape for a body that does not match the request schema', async () => {
+    for (const body of [{}, { blockSlug: 42, props: {} }, { blockSlug: 'hero' }, { blockSlug: 'hero', props: 'x' }]) {
+      const response = await validate(body)
+      expect(response.status).toBe(400)
+      const json = await response.json()
+      expect(json).toMatchObject({ success: false, error: 'Validation error', code: 'VALIDATION_ERROR' })
+      expect(Array.isArray(json.details) && json.details.length > 0).toBe(true)
+    }
+  })
+
+  it('answers 400 for a body that is not JSON', async () => {
+    const response = await (POST as unknown as (request: NextRequest) => Promise<Response>)(
+      new NextRequest('http://localhost:3000/api/v1/blocks/validate', { method: 'POST', body: 'not json' })
+    )
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'VALIDATION_ERROR' })
+  })
 })

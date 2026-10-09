@@ -131,6 +131,18 @@ Validates block properties against the block's Zod schema.
 }
 ```
 
+A request body that is not JSON, or that has no string `blockSlug` or no `props` object, answers 400 with the API's validation error shape:
+
+```json
+{
+  "success": false,
+  "error": "Validation error",
+  "code": "VALIDATION_ERROR",
+  "details": [{ "code": "invalid_type", "expected": "string", "path": ["blockSlug"], "message": "Invalid input: expected string, received undefined" }],
+  "info": { "timestamp": "2026-10-08T00:00:00.000Z" }
+}
+```
+
 ## Error Responses
 
 | Status | Description |
