@@ -183,29 +183,47 @@ export const rateLimits = {
 }
 ```
 
-### Per-Endpoint Limits
+### Your Own API Routes (Project and Plugins)
 
-**Custom limits for specific routes:**
+**Every Route Handler a project serves under `api/` (and a plugin under its `api/`) is rate limited by default.**
+The generated host wraps each exported method when it writes the route's file in `src/app`, the way the theme and
+plugin dispatchers did up to `0.1.0-beta.191`:
+
+| Method | Tier | Limit |
+|---|---|---|
+| `GET`, `HEAD` | `read` | 200 requests per minute per client address |
+| `POST`, `PUT`, `PATCH`, `DELETE` | `write` | 50 requests per minute per client address |
+| `OPTIONS` | none | a CORS preflight is never limited |
+
+The counters are per client address and tier, shared with every other route in that tier. A blocked request gets
+`429` with `Retry-After` and the `X-RateLimit-*` headers. The default only limits: it adds no CORS headers and no
+origin check, so a route keeps what it does about those itself.
+
+**Choose a tier for a method** by wrapping it yourself. The host sees the call in the method's declaration and leaves
+that method alone (`withRateLimit`, the per-API-key limit, counts the same way):
+
 ```typescript
-// api/ai/generate/route.ts
-export const config = {
-  rateLimit: {
-    limit: 20,          // Lower limit (expensive operation)
-    window: '1h',
-    cost: 10            // Each request costs 10 tokens
-  }
-}
+// api/intake/route.ts
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-// api/webhooks/route.ts
-export const config = {
-  rateLimit: {
-    limit: 1000,
-    window: '1m',       // 1 minute window (burst-friendly)
-    strategy: 'token-bucket',
-    burst: 100          // Allow 100 request burst
-  }
-}
+export const POST = withRateLimitTier(postHandler, 'strict') // 10 per hour; GET below still gets 'read'
+export async function GET() { /* ... */ }
 ```
+
+`withRateLimitTier` also refuses a cookie-authenticated write from an untrusted origin and adds core's CORS headers.
+
+**Opt a route out** (a webhook that verifies a signature and has its own limits) with:
+
+```typescript
+// api/webhooks/acme/route.ts
+export const rateLimit = false
+```
+
+It applies to every method of that file, it must be exactly the literal `false` (any other value stops
+`nextspark prepare` with `NS_HOST_INVALID_RATE_LIMIT`), and it is only read by the generator, never passed to Next.js.
+A method the route re-exports from another module (`export { POST } from './handler'`) is wrapped too: if that module
+already limits it, export `rateLimit = false` or wrap it in this file instead. Core's own routes, and Route Handlers
+outside `api/`, are not touched.
 
 ### Tiered Limits
 
@@ -463,7 +481,7 @@ DISABLE_RATE_LIMITING=true
 ```
 
 When set to exactly `true`:
-- The per-address limits (`withRateLimitTier`, `checkDistributedRateLimit`) are bypassed
+- The per-address limits (`withRateLimitTier`, `checkDistributedRateLimit`, and the default limit of your own API routes) are bypassed
 - Better Auth's own limiter is off too (sign-in, sign-up and the email OTP rules, 3 per minute per address)
 - The per-API-key limit stays on: it is a per-key cap, not per address
 - A warning is logged once: `[RateLimit] WARNING: Rate limiting is DISABLED...`

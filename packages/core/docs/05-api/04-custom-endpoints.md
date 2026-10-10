@@ -118,7 +118,8 @@ DELETE /api/v1/tasks/:id
 
 ### Basic Pattern
 
-**1. Create route file:**
+**1. Create route file.** Its methods are rate limited by default (`read` for `GET`, `write` for `POST`; see
+[Apply Rate Limiting](#apply-rate-limiting)):
 ```typescript
 // api/custom-route/route.ts
 import { NextRequest, NextResponse } from 'next/server'
@@ -275,7 +276,8 @@ export async function POST(request: NextRequest) {
 **2. Enable the plugin in `nextspark.config.ts`:** `plugins: ['ai-assistant']`.
 
 **3. Access via API:** a plugin's `api/<path>/route.ts` is served at `/api/plugins/<plugin>/<path>`, and only there
-(a plugin route outside `/api/plugins/<its-name>/**` stops generation).
+(a plugin route outside `/api/plugins/<its-name>/**` stops generation). It gets the same default rate limit as a
+project route ([Apply Rate Limiting](#apply-rate-limiting)).
 ```bash
 POST /api/plugins/ai-assistant/generate
 Authorization: Bearer sk_live_abc123...
@@ -411,57 +413,21 @@ export async function GET(request: NextRequest) {
 
 ### Apply Rate Limiting
 
-**Custom rate limits:**
+**You do not have to.** `nextspark prepare` wraps every method of a route under `api/` (and of a plugin's `api/`) with
+core's per-address limit: `GET` and `HEAD` in the `read` tier (200 per minute), `POST`, `PUT`, `PATCH` and `DELETE` in
+the `write` tier (50 per minute), `OPTIONS` never. Over the limit the route answers `429` with `Retry-After`.
+
+**Another tier for one method:** wrap it yourself, and the generator leaves that method as it is:
+
 ```typescript
-import { checkRateLimit } from '@nextsparkjs/core/lib/api/rate-limit'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function POST(request: NextRequest) {
-  const auth = await authenticateRequest(request, { requiredScope: 'ai:write' })
-
-  // Apply rate limit
-  const rateLimit = await checkRateLimit(auth.user.id, 'ai/generate', {
-    limit: 20,
-    window: 3600  // 1 hour
-  })
-
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Rate limit exceeded',
-        code: 'RATE_LIMIT_EXCEEDED',
-        details: {
-          limit: rateLimit.limit,
-          resetAt: rateLimit.resetAt
-        }
-      },
-      {
-        status: 429,
-        headers: {
-          'X-RateLimit-Limit': rateLimit.limit.toString(),
-          'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
-          'Retry-After': rateLimit.resetAfter.toString()
-        }
-      }
-    )
-  }
-
-  // Proceed with request
-  const result = await processRequest()
-
-  return NextResponse.json({
-    success: true,
-    data: result
-  }, {
-    headers: {
-      'X-RateLimit-Limit': rateLimit.limit.toString(),
-      'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-      'X-RateLimit-Reset': rateLimit.resetAt.toString()
-    }
-  })
-}
+// Expensive: 10 requests per hour per address
+export const POST = withRateLimitTier(postHandler, 'strict')
 ```
+
+**No limit for the whole route** (a webhook with its own limits): `export const rateLimit = false`. Only that literal is
+accepted. See [rate limiting](./07-rate-limiting.md#your-own-api-routes-project-and-plugins) for the tiers and details.
 
 ---
 
@@ -675,6 +641,9 @@ import Stripe from 'stripe'
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16'
 })
+
+// Stripe signs every call and retries in bursts: no default rate limit for this route
+export const rateLimit = false
 
 export async function POST(request: NextRequest) {
   try {

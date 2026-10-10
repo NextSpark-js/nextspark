@@ -35,10 +35,33 @@ api/                              # Project API routes
 
 ## MANDATORY RULE: All Endpoints Must Have Rate Limiting
 
-**CRITICAL:** Every `route.ts` file that exports HTTP handlers (GET, POST, PUT, PATCH, DELETE)
-MUST use the `withRateLimitTier` HOC wrapper.
+**CRITICAL:** Every core `route.ts` file (`packages/core/src/routes/api/**`) that exports HTTP handlers
+(GET, POST, PUT, PATCH, DELETE) MUST use the `withRateLimitTier` HOC wrapper.
 
-**Only exceptions:**
+**Project and plugin routes are limited by default (#226).** `nextspark prepare` wraps every method of a
+Route Handler under a project's `api/` or a plugin's `api/` in the generated facade
+(`packages/core/scripts/build/registry/host/rate-limit.mjs`, wrappers in
+`packages/core/src/routes/_internal/route-rate-limit.ts`):
+
+```typescript
+// src/app/api/intake/route.ts (generated)
+import { GET as NextSparkGET, POST as NextSparkPOST } from "@/api/intake/route"
+import { withReadRateLimit, withWriteRateLimit } from "@nextsparkjs/core/routes/_internal/route-rate-limit"
+export const GET = withReadRateLimit(NextSparkGET)    // GET, HEAD: 'read'
+export const POST = withWriteRateLimit(NextSparkPOST) // POST, PUT, PATCH, DELETE: 'write'; OPTIONS never
+```
+
+- The default is the per-address limit only (`withAddressRateLimit`): no CORS, no origin check.
+- A method whose declaration calls `withRateLimitTier` or `withRateLimit` is left alone: that is how a
+  route chooses another tier (`export const POST = withRateLimitTier(handler, 'strict')`).
+- `export const rateLimit = false` opts the whole route out (webhooks with their own limits). Only the
+  literal `false`; anything else is `NS_HOST_INVALID_RATE_LIMIT`.
+- `DISABLE_RATE_LIMITING=true` turns it off with the rest.
+
+So in a project or plugin route, do not add `withRateLimitTier` just to get `read`/`write`: the default
+does it. Add it to choose another tier or to get core's CORS and origin check.
+
+**Only exceptions (core routes):**
 - `/api/auth/**` - Better Auth handles its own rate limiting
 - `/api/cron/**` - Protected by Vercel cron signatures
 - `/api/webhooks/**` - Protected by webhook signatures
@@ -261,7 +284,8 @@ Any value other than `true` leaves everything on, Better Auth included (its defa
 ## Anti-Patterns
 
 ```typescript
-// NEVER: Skip rate limiting on public endpoints
+// NEVER (core routes): Skip rate limiting on public endpoints
+// (a project or plugin route under api/ gets the default limit from the generated host)
 export const GET = async (request: NextRequest) => {
   // Missing withRateLimitTier - VULNERABLE TO DDOS!
   return NextResponse.json({ data: [] });
@@ -292,7 +316,9 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
 Before finalizing any API endpoint:
 
-- [ ] Handler is wrapped with `withRateLimitTier`
+- [ ] Core route: handler is wrapped with `withRateLimitTier`
+- [ ] Project/plugin route: the default `read`/`write` fits, or the method wraps itself with another tier,
+      or the route exports `rateLimit = false` for a documented reason (webhook)
 - [ ] Appropriate tier selected based on operation type
 - [ ] GET operations use 'read' tier
 - [ ] POST/PUT/PATCH/DELETE use 'write' tier

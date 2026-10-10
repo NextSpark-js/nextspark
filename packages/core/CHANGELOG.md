@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading
+
+- **Your own API routes are rate limited again, by default.** Up to `0.1.0-beta.191` core's theme and plugin dispatchers rate
+  limited a project's and a plugin's API routes; since the root-first layout they had no limit unless they wrapped themselves,
+  and nothing said so. Now `nextspark prepare` wraps every method of every Route Handler under the project's `api/` (and a
+  plugin's `api/`) in the generated `src/app` file: `GET` and `HEAD` in the `read` tier (200 requests per minute per client
+  address), `POST`, `PUT`, `PATCH` and `DELETE` in the `write` tier (50 per minute), `OPTIONS` never. Over the limit a route
+  answers `429` with `Retry-After`. Routes that had no limit now have one; nothing to change in them. The default only limits:
+  it adds no CORS headers and no origin check. Core's own routes and Route Handlers outside `api/` are not affected.
+  - **Choose a tier** for a method by wrapping it yourself: `export const POST = withRateLimitTier(postHandler, 'strict')`
+    (`@nextsparkjs/core/lib/api/rate-limit`). A method whose declaration calls `withRateLimitTier` or `withRateLimit` keeps its own
+    limit and is not limited twice; the other methods of the file still get the default. A method re-exported from another module
+    (`export { POST } from './handler'`) is wrapped by the default even if that module limits it: wrap it in the route file or opt out.
+  - **Opt a route out** (a webhook with its own limits) with `export const rateLimit = false` in its `route.ts`. Only that literal is
+    accepted (anything else stops `prepare` with `NS_HOST_INVALID_RATE_LIMIT`), and it is not passed to Next.js.
+  - `DISABLE_RATE_LIMITING=true` turns the default off with the other per-address limits.
+  - Behind a proxy or on Vercel, set `NEXTSPARK_CLIENT_IP_SOURCE`, or every request may count against one address.
+
 ## [0.1.0-beta.198] - 2026-10-09
 
 ### Upgrading from 0.1.0-beta.197

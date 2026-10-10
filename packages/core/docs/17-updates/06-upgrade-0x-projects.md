@@ -155,7 +155,10 @@ If it already ran and nobody can get in, there is no CLI command or script that 
 
 ### Rate limits, CORS and the origin check on the project's own API routes
 
-In `0.1.0-beta.184` a project route under `api/v1/theme/<theme>/**` was served by one dispatcher that wrapped every request in `withRateLimitTier`: `GET` in the `read` tier (200 requests per minute) and `POST`, `PUT`, `PATCH` and `DELETE` in the `write` tier (50 per minute). It exported no `OPTIONS`, and `0.1.0-beta.184`'s `withRateLimitTier` added no CORS headers. On root-first the project's `api/<path>/route.ts` is a plain Route Handler: it has no limit at all unless it wraps its exports. Match the old behaviour with:
+In `0.1.0-beta.184` a project route under `api/v1/theme/<theme>/**` was served by one dispatcher that wrapped every request in `withRateLimitTier`: `GET` in the `read` tier (200 requests per minute) and `POST`, `PUT`, `PATCH` and `DELETE` in the `write` tier (50 per minute), and plugin routes under `api/v1/plugin/<plugin>/**` the same way. It exported no `OPTIONS`, and `0.1.0-beta.184`'s `withRateLimitTier` added no CORS headers.
+
+- **From `0.1.0-beta.199`** the generated host applies that same limit again to every method of every Route Handler under the project's `api/` (and a plugin's `api/`): `GET` and `HEAD` read, `POST`, `PUT`, `PATCH` and `DELETE` write, `OPTIONS` never, per client address and tier. Nothing to change in the routes. It only limits: no CORS headers and no origin check are added. A method that already wraps itself with `withRateLimitTier` or `withRateLimit` keeps its own limit and is not counted twice. A webhook with its own limits opts the whole route out with `export const rateLimit = false`. `DISABLE_RATE_LIMITING=true` still turns it off.
+- **From `0.1.0-beta.192` to `0.1.0-beta.198`** a project route had no limit at all unless it wrapped its exports. Match the old behaviour on those releases with:
 
 ```ts
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
@@ -164,7 +167,7 @@ export const GET = withRateLimitTier(getHandler, 'read')
 export const POST = withRateLimitTier(postHandler, 'write')
 ```
 
-The tier is chosen per exported method; counters are per client address and tier across all routes (in `0.1.0-beta.184` a request with an `x-api-key` header was counted per key instead). Two things differ from the old dispatcher, and you want both: `withRateLimitTier` now refuses a cookie-authenticated write from an untrusted origin (403) and adds core's CORS headers to every response. A route called from another origin also exports `export const OPTIONS = corsPreflight` (`import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'`). See [rate limiting](../05-api/07-rate-limiting.md) and the CORS section of [authentication](../05-api/02-authentication.md#issue-4-cors-errors).
+Counters are per client address and tier across all routes (in `0.1.0-beta.184` a request with an `x-api-key` header was counted per key instead). Wrapping a method with `withRateLimitTier` yourself (on any release; to choose another tier, `'strict'` for example) differs from the old dispatcher in two ways you want: it refuses a cookie-authenticated write from an untrusted origin (403) and adds core's CORS headers to every response. A route called from another origin also exports `export const OPTIONS = corsPreflight` (`import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'`). See [rate limiting](../05-api/07-rate-limiting.md#your-own-api-routes-project-and-plugins) and the CORS section of [authentication](../05-api/02-authentication.md#issue-4-cors-errors).
 
 ### Entity slugs with an underscore
 
