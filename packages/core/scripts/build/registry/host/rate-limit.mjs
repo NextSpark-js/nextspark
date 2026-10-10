@@ -56,7 +56,7 @@ export function isRateLimitedRoute(route) {
 
 /**
  * True when `expression` is a call of core's limiter (`limiters`: local names; `namespaces`: `ns.withRateLimitTier`), or a
- * call whose arguments carry one on the way to the handler (a wrapper chain). Function bodies are not looked into.
+ * call whose first argument (the handler position) carries one (a wrapper chain). Function bodies are not looked into.
  * `follow` resolves a local identifier to its initializer, one step.
  */
 function isSelfLimited(expression, { limiters, namespaces, ts, follow }) {
@@ -70,7 +70,8 @@ function isSelfLimited(expression, { limiters, namespaces, ts, follow }) {
   const callee = node.expression
   if (ts.isIdentifier(callee) && limiters.has(callee.text)) return true
   if (ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression) && namespaces.has(callee.expression.text) && SELF_LIMITERS.has(callee.name.text)) return true
-  return node.arguments.some(argument => isSelfLimited(argument, { limiters, namespaces, ts, follow }))
+  // Only the handler position: a limiter passed as another argument does not limit the handler
+  return node.arguments.length > 0 && isSelfLimited(node.arguments[0], { limiters, namespaces, ts, follow })
 }
 
 /**

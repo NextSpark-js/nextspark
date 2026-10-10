@@ -128,6 +128,10 @@ test("only core's limiter, around the handler, counts (the review's probes): oth
     'a property call on any object': "import * as x from '@/lib/mine'\nexport const POST = x.withRateLimitTier(async () => Response.json({}), 'write')\n",
     'a call inside the handler body, not around it':
       "import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'\nexport const POST = async () => { const l = withRateLimitTier(async () => Response.json({}), 'write'); return new Response() }\n",
+    'a limiter passed beside the handler, not around it':
+      "import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'\nconst h = async () => Response.json({})\nconst other = async () => Response.json({})\nfunction combine(a, b) { return a }\nexport const POST = combine(h, withRateLimitTier(other, 'read'))\n",
+    'the same through a constant':
+      "import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'\nconst h = async () => Response.json({})\nconst a = async () => Response.json({})\nconst lim = withRateLimitTier(a, 'read')\nfunction combine(x, y) { return x }\nexport const POST = combine(h, lim)\n",
     'a type-only import': "import type { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'\ndeclare const withRateLimitTier2: any\nexport const POST = withRateLimitTier2(async () => Response.json({}))\n",
   }
   for (const [name, source] of Object.entries(probes)) {
