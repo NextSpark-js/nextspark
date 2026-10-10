@@ -199,8 +199,11 @@ The counters are per client address and tier, shared with every other route in t
 `429` with `Retry-After` and the `X-RateLimit-*` headers. The default only limits: it adds no CORS headers and no
 origin check, so a route keeps what it does about those itself.
 
-**Choose a tier for a method** by wrapping it yourself. The host sees the call in the method's declaration and leaves
-that method alone (`withRateLimit`, the per-API-key limit, counts the same way):
+**Choose a tier for a method** by wrapping it yourself with `withRateLimitTier`, imported from
+`@nextsparkjs/core/lib/api/rate-limit` (or `@nextsparkjs/core/lib/api`). The host leaves that method alone when its
+declaration is that call: directly, inside other wrappers around the handler (`withLogging(withRateLimitTier(h, 'strict'))`),
+or through a constant (`const h = withRateLimitTier(...); export const GET = h`). `withRateLimit`, the per-API-key limit,
+does not count: it only limits requests that present a key, so the method still gets the default for every caller.
 
 ```typescript
 // api/intake/route.ts
@@ -222,8 +225,11 @@ export const rateLimit = false
 It applies to every method of that file, it must be exactly the literal `false` (any other value stops
 `nextspark prepare` with `NS_HOST_INVALID_RATE_LIMIT`), and it is only read by the generator, never passed to Next.js.
 A method the route re-exports from another module (`export { POST } from './handler'`) is wrapped too: if that module
-already limits it, export `rateLimit = false` or wrap it in this file instead. Core's own routes, and Route Handlers
-outside `api/`, are not touched.
+already limits it, export `rateLimit = false` or wrap it in this file instead. The same goes for a call inside a function
+body (`export async function GET(r) { return withRateLimitTier(h, 'read')(r) }`): the host does not look into it, so the
+request is counted twice. A route with `dynamic = 'force-static'` is answered from the build, where a limit checks nothing:
+opt it out. `nextspark prepare` lists the opted-out routes in one `Info: [NS_HOST_RATE_LIMIT_OPT_OUT]` line. Core's own
+routes, and Route Handlers outside `api/`, are not touched.
 
 ### Tiered Limits
 

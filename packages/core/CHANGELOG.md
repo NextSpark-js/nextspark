@@ -17,11 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   answers `429` with `Retry-After`. Routes that had no limit now have one; nothing to change in them. The default only limits:
   it adds no CORS headers and no origin check. Core's own routes and Route Handlers outside `api/` are not affected.
   - **Choose a tier** for a method by wrapping it yourself: `export const POST = withRateLimitTier(postHandler, 'strict')`
-    (`@nextsparkjs/core/lib/api/rate-limit`). A method whose declaration calls `withRateLimitTier` or `withRateLimit` keeps its own
-    limit and is not limited twice; the other methods of the file still get the default. A method re-exported from another module
-    (`export { POST } from './handler'`) is wrapped by the default even if that module limits it: wrap it in the route file or opt out.
+    (`@nextsparkjs/core/lib/api/rate-limit` or `@nextsparkjs/core/lib/api`). A method declared as that call, directly, inside other
+    wrappers around the handler, or through a constant (`const h = withRateLimitTier(...); export const GET = h`), keeps its own limit
+    and is not limited twice; the other methods of the file still get the default. `withRateLimit` (the per-API-key limit) does not
+    count: it only limits requests that present a key, so a route using only it now also gets the default for every caller. A call
+    inside a function body (`export async function GET(r) { return withRateLimitTier(h)(r) }`) or a method re-exported from another
+    module (`export { POST } from './handler'`) is wrapped too, so it is counted twice: declare it as above, or opt out.
   - **Opt a route out** (a webhook with its own limits) with `export const rateLimit = false` in its `route.ts`. Only that literal is
     accepted (anything else stops `prepare` with `NS_HOST_INVALID_RATE_LIMIT`), and it is not passed to Next.js.
+  - `prepare` lists the routes that opted out in one `Info: [NS_HOST_RATE_LIMIT_OPT_OUT]` line.
+  - A route with `dynamic = 'force-static'` is answered from the build, where a rate limit checks nothing: opt it out.
   - `DISABLE_RATE_LIMITING=true` turns the default off with the other per-address limits.
   - Behind a proxy or on Vercel, set `NEXTSPARK_CLIENT_IP_SOURCE`, or every request may count against one address.
 

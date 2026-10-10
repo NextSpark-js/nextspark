@@ -52,8 +52,12 @@ export const POST = withWriteRateLimit(NextSparkPOST) // POST, PUT, PATCH, DELET
 ```
 
 - The default is the per-address limit only (`withAddressRateLimit`): no CORS, no origin check.
-- A method whose declaration calls `withRateLimitTier` or `withRateLimit` is left alone: that is how a
-  route chooses another tier (`export const POST = withRateLimitTier(handler, 'strict')`).
+- A method declared as core's `withRateLimitTier(...)` (imported from `@nextsparkjs/core/lib/api/rate-limit` or
+  `@nextsparkjs/core/lib/api`; directly, in the wrapper chain around the handler, or through one constant) is
+  left alone: that is how a route chooses another tier (`export const POST = withRateLimitTier(handler, 'strict')`).
+  `withRateLimit` does NOT count: it only limits API-key requests. A call inside a function body is not seen
+  (double count): declare the method as the call.
+- `prepare` prints the opted-out routes as `Info: [NS_HOST_RATE_LIMIT_OPT_OUT]`. Opt out `dynamic = 'force-static'` routes.
 - `export const rateLimit = false` opts the whole route out (webhooks with their own limits). Only the
   literal `false`; anything else is `NS_HOST_INVALID_RATE_LIMIT`.
 - `DISABLE_RATE_LIMITING=true` turns it off with the rest.
