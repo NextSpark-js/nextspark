@@ -111,6 +111,7 @@ Literal values are accepted exactly as `next/dist/build/analysis/extract-const-v
 | `NS_HOST_UNCLASSIFIABLE_EXPORT` | `export *`, destructuring exports, `enum`, `namespace`, `export =` |
 | `NS_HOST_SERVER_ACTIONS_MODULE` | a `'use server'` module used as a route file |
 | `NS_HOST_PARSE_ERROR` | the source does not parse |
+| `NS_HOST_INVALID_RATE_LIMIT` | a project or plugin API route exports `rateLimit` as anything but the literal `false` (`rate-limit.mjs`) |
 | `NS_HOST_UNSUPPORTED_NEXT_VERSION` | the project resolves a Next.js outside `~<table next>` (other minor/major, lower patch, prerelease), or it lacks the segment config schema |
 | `NS_HOST_VARIABLE_LOOKUP` | an emitted facade leaves the allowed facade grammar (internal guard, `static-imports.mjs`) |
 | `NS_HOST_TARGET_MISMATCH` / `NS_HOST_INVALID_SPECIFIER` / `NS_HOST_UNKNOWN_KIND` | bad emitter input |
@@ -191,7 +192,7 @@ A production preparation never emits these files or the composition: zero bytes 
 
 ## Composition, per-entity routes, API namespaces (stage 4)
 
-A facade forwards one module. Five things are not that, and the host writes them as **composed facades**
+A facade forwards one module. Six things are not that, and the host writes them as **composed facades**
 (`composed-facade` grammar, `static-imports.mjs`): the facade grammar plus a fixed `.css` import and at most one
 `export default wrapper(...)` / any number of `export const NAME = wrapper(...)`, where the callee is one of an explicit
 allowlist of core composition wrappers (`CORE_COMPOSITION_WRAPPERS`: each imported from the exact `@nextsparkjs/core/routes/_internal/...`
@@ -260,6 +261,14 @@ spread and no expression. A host with another core (the conformance fixture) pas
 - **Billing webhooks** (`webhooks.mjs`): `nextspark.config.ts` `billing.webhookExtensions: { stripe: './lib/...', polar: './lib/...' }`
   replaces core's webhook route with `export const POST = createStripeWebhookRoute(stripeWebhookExtensions)`, the module
   imported statically (it must export `stripeWebhookExtensions` / `polarWebhookExtensions`).
+- **API rate limit** (`rate-limit.mjs`, #226): every method of a Route Handler under `src/app/api/` that a project or plugin
+  provides is composed with core's per-address limit, as the 0.x theme and plugin dispatchers did:
+  `export const GET = withReadRateLimit(NextSparkGET)` (`GET`, `HEAD`), `withWriteRateLimit` (`POST`, `PUT`, `PATCH`, `DELETE`),
+  `OPTIONS` forwarded (`routes/_internal/route-rate-limit`: the limit only, no CORS or origin check). A method whose declaration in
+  the source calls `withRateLimitTier` or `withRateLimit` is forwarded as is; `export const rateLimit = false` forwards the whole
+  route and is itself never forwarded (any other value: `NS_HOST_INVALID_RATE_LIMIT`). The host config's `rateLimit`
+  (`coreRouteRateLimit()`) turns it on; `projectHostConfig()` sets it, the conformance fixture does not. Under a role-gated area
+  the rate limit is the outer call, around the area check.
 
 **API namespaces** are enforced by the plan (`plan.mjs`): core owns `/api/v1/**`, the project's `api/` is served at `/api/<path>`,
 each plugin's `api/` at `/api/plugins/<plugin>/**`. Stops generation (`NS_HOST_API_NAMESPACE`): a project `api/` route in `/api/v1/**` or

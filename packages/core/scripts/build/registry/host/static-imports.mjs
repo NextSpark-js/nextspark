@@ -93,6 +93,8 @@ export const CORE_COMPOSITION_WRAPPERS = Object.freeze({
   [`${INTERNAL}public-item-route.cc`]: ['createPublicItemRoute', 'createPublicItemMetadata'],
   [`${INTERNAL}public-archive-route`]: ['createPublicArchiveRoute', 'createPublicArchiveMetadata'],
   [`${INTERNAL}billing-webhooks`]: ['createStripeWebhookRoute', 'createPolarWebhookRoute'],
+  // The default rate limit of project and plugin API routes (rate-limit.mjs).
+  [`${INTERNAL}route-rate-limit`]: ['withReadRateLimit', 'withWriteRateLimit'],
   [DEV_STATUS_SPECIFIER]: [DEV_STATUS_WRAPPER],
 })
 

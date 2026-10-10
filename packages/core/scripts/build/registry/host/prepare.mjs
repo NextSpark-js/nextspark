@@ -44,6 +44,7 @@ import { PluginCapabilityError, withDeclaredCapabilities } from '../discovery/pl
 import { ContractsPublishError, checkContractsPlan, preflightContractsPlan, projectContracts, publishContractsPlan } from '../contracts/index.mjs'
 import { planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
 import { webhookRoutes } from './webhooks.mjs'
+import { coreRouteRateLimit } from './rate-limit.mjs'
 import { proxyAreaNotices } from './proxy-areas.mjs'
 import { ENTRY_NOT_REPLACED, projectEntryNotices, upgradeProjectEntries } from './project-entries.mjs'
 import { HostPlanError, compareTargets, planHost } from './plan.mjs'
@@ -127,6 +128,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     pageExtensions: config.pageExtensions,
     stylesheet: config.stylesheet,
     wrappers: config.compositionWrappers,
+    rateLimit: config.rateLimit,
     cache,
     devStatus,
   })
@@ -538,6 +540,8 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
         projectRoot: config.projectRoot,
         resolveFile: specifier => resolveCoreRouteFile(coreRoot, specifier),
       }),
+    // Project and plugin API routes get core's default rate limit (rate-limit.mjs)
+    rateLimit: coreRouteRateLimit(specifier => resolveCoreRouteFile(coreRoot, specifier)),
     registries: stagedRegistryBuild({ projectRoot: config.projectRoot, coreRoot, env }),
     inputs: ({ manifest } = {}) => {
       const enabled = currentPlugins()

@@ -362,7 +362,7 @@ export function kindForFileStem(stem) {
  * @param {string[]} [input.pageExtensions] - the host's `pageExtensions` (default tsx, ts, jsx, js)
  * @param {object} [input.nextSegmentConfig] - `loadNextSegmentConfig()`; values are only schema-checked when given
  */
-export function planFacade({ kind, target, specifier, file, analysis, cacheComponents, pageExtensions = ['tsx', 'ts', 'jsx', 'js'], nextSegmentConfig }) {
+export function planFacade({ kind, target, specifier, file, analysis, cacheComponents, pageExtensions = ['tsx', 'ts', 'jsx', 'js'], nextSegmentConfig, ignoreExports = [] }) {
   const diagnostics = []
   const report = (code, message, exportName, line) => diagnostics.push({ code, file, exportName, line, message })
 
@@ -434,6 +434,8 @@ export function planFacade({ kind, target, specifier, file, analysis, cacheCompo
     const { name, line } = entry
     if (seen.has(name)) continue
     seen.add(name)
+    // Read by the generator, never forwarded (the `rateLimit` opt-out of an API route, rate-limit.mjs)
+    if (ignoreExports.includes(name)) continue
 
     if (name === 'default' && kind === 'route') {
       report(
@@ -565,7 +567,8 @@ const METADATA_EXPORTS = ['metadata', 'generateMetadata']
  * @param {{ wrapper: { name: string, specifier: string }, metadata?: { name: string, specifier: string }, fallback?: { specifier: string, names: string[] } }} [input.composition] -
  *   compose the module's default export with a core wrapper (`export default wrapper(Template)`) instead of
  *   forwarding it; `metadata` composes its `generateMetadata` the same way; `handler` composes each HTTP method of a
- *   Route Handler but OPTIONS (a CORS preflight carries no credentials); `fallback` names a core module whose
+ *   Route Handler but OPTIONS (a CORS preflight carries no credentials); `rateLimit` maps a Route Handler method to the
+ *   rate-limit wrapper around it (`{ GET: { name, specifier } }`, rate-limit.mjs); `fallback` names a core module whose
  *   metadata is forwarded when the module has none
  */
 export function renderFacade({ specifier, facade, stylesheet, composition }) {
@@ -585,7 +588,9 @@ export function renderFacade({ specifier, facade, stylesheet, composition }) {
   }
   const aliases = facade.aliases ?? {}
   const wrapsMetadata = Boolean(composed && composition.metadata && facade.reexports.includes('generateMetadata'))
-  const handlers = composition?.handler ? facade.reexports.filter(name => GUARDED_METHODS.includes(name)) : []
+  const guarded = name => Boolean(composition?.handler && GUARDED_METHODS.includes(name))
+  const limited = name => composition?.rateLimit?.[name]
+  const handlers = facade.reexports.filter(name => guarded(name) || limited(name))
   const forwarded = facade.reexports.filter(name => !(wrapsMetadata && name === 'generateMetadata') && !handlers.includes(name))
   const direct = forwarded.filter(name => !aliases[name])
   if (direct.length > 0) lines.push(`export { ${direct.join(', ')} } from ${from}`)
@@ -601,8 +606,19 @@ export function renderFacade({ specifier, facade, stylesheet, composition }) {
   }
   if (handlers.length > 0) {
     lines.push(`import { ${handlers.map(name => `${name} as ${COMPOSED_HANDLER}${name}`).join(', ')} } from ${from}`)
-    lines.push(`import { ${composition.handler.name} } from ${JSON.stringify(composition.handler.specifier)}`)
-    for (const name of handlers) lines.push(`export const ${name} = ${composition.handler.name}(${COMPOSED_HANDLER}${name})`)
+    const wrapperImports = new Map() // specifier -> names
+    for (const wrapper of handlers.flatMap(name => [guarded(name) && composition.handler, limited(name)]).filter(Boolean)) {
+      if (!wrapperImports.has(wrapper.specifier)) wrapperImports.set(wrapper.specifier, new Set())
+      wrapperImports.get(wrapper.specifier).add(wrapper.name)
+    }
+    for (const [wrapperSpecifier, names] of wrapperImports) lines.push(`import { ${[...names].sort().join(', ')} } from ${JSON.stringify(wrapperSpecifier)}`)
+    for (const name of handlers) {
+      // The area's role check inside, the rate limit outside (a refused request still counts)
+      let call = `${COMPOSED_HANDLER}${name}`
+      if (guarded(name)) call = `${composition.handler.name}(${call})`
+      if (limited(name)) call = `${limited(name).name}(${call})`
+      lines.push(`export const ${name} = ${call}`)
+    }
   }
   // A composed layout that has no metadata of its own keeps core's.
   if (composed && composition.fallback && !facade.reexports.some(name => METADATA_EXPORTS.includes(name)) && !facade.literals.some(({ name }) => METADATA_EXPORTS.includes(name))) {
@@ -629,11 +645,11 @@ const GUARDED_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH']
  * @returns {Promise<{ target: string, content: string, facade: object }>}
  * @throws {FacadeEmitError} with every diagnostic when the facade cannot be emitted
  */
-export async function emitFacade({ kind, target, specifier, file, source, projectRoot = process.cwd(), cacheComponents, pageExtensions, stylesheet, composition, wrappers }) {
+export async function emitFacade({ kind, target, specifier, file, source, projectRoot = process.cwd(), cacheComponents, pageExtensions, stylesheet, composition, wrappers, ignoreExports }) {
   const text = source ?? (await readFile(file, 'utf8'))
   const analysis = await analyzeRouteSource({ source: text, file, projectRoot })
   const nextSegmentConfig = loadNextSegmentConfig(projectRoot)
-  const { diagnostics, facade } = planFacade({ kind, target, specifier, file, analysis, cacheComponents, pageExtensions, nextSegmentConfig })
+  const { diagnostics, facade } = planFacade({ kind, target, specifier, file, analysis, cacheComponents, pageExtensions, nextSegmentConfig, ignoreExports })
   if (diagnostics.length > 0) throw new FacadeEmitError(diagnostics)
   const content = renderFacade({ specifier, facade, stylesheet, composition })
   // Guard on the output itself: a facade must stay inside the allowed facade grammar

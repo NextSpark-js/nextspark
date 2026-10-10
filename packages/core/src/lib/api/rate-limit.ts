@@ -411,43 +411,49 @@ export function withRateLimitTier<T extends unknown[]>(
   handler: (request: NextRequest, ...args: T) => Promise<NextResponse>,
   tier: RateLimitTier = 'api'
 ) {
+  const byAddress = withAddressRateLimit(handler, tier);
   const limited = async (request: NextRequest, ...args: T): Promise<NextResponse> => {
     // Cookie-authenticated writes must come from a trusted origin (see request-origin.ts)
     const checked = checkRequestOrigin(request);
     if (checked instanceof NextResponse) return checked;
-    request = checked;
-
-    // Skip rate limiting if disabled via environment variable
-    if (isRateLimitingDisabled()) {
-      return handler(request, ...args);
-    }
-
-    // Per client address and tier, across all endpoints (see the strategy above)
-    const identifier = `${tier}:ip:${getClientIp(request.headers)}`;
-
-    // Check rate limit using distributed system
-    const rateLimitResult = await checkDistributedRateLimit(identifier, tier);
-
-    if (!rateLimitResult.allowed) {
-      return createRateLimitErrorResponse(rateLimitResult);
-    }
-
-    // Execute the original handler
-    const response = await handler(request, ...args);
-
-    // The address bucket's headers, except on a 429 the handler answered itself (the per-key limit): its own
-    // X-RateLimit-* describe the limit that was hit.
-    if (response.status !== 429) {
-      response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
-      response.headers.set('X-RateLimit-Remaining', Math.max(0, rateLimitResult.remaining).toString());
-      response.headers.set('X-RateLimit-Reset', rateLimitResult.resetTime.toString());
-    }
-
-    return response;
+    return byAddress(checked, ...args);
   };
 
   return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
     const response = await limited(request, ...args);
     return tier === 'webhook' ? response : withCors(response, request);
+  };
+}
+
+/**
+ * The per-address, per-tier limit of withRateLimitTier and nothing else: no origin check, no CORS. It is what the
+ * generated host puts around a project's or plugin's own Route Handlers (routes/_internal/route-rate-limit), which
+ * keep the CORS and origin handling they already have. DISABLE_RATE_LIMITING=true turns it off.
+ *
+ * The handler's own signature is kept (a method may take no arguments); Next.js always passes the request first.
+ */
+export function withAddressRateLimit<A extends unknown[], R>(handler: (...args: A) => R, tier: RateLimitTier) {
+  return async (...args: A): Promise<Awaited<R> | NextResponse> => {
+    if (isRateLimitingDisabled()) return await handler(...args);
+
+    // Per client address and tier, across all endpoints (see withRateLimitTier)
+    const request = args[0] as Request;
+    const rateLimitResult = await checkDistributedRateLimit(`${tier}:ip:${getClientIp(request.headers)}`, tier);
+    if (!rateLimitResult.allowed) return createRateLimitErrorResponse(rateLimitResult);
+
+    const response = await handler(...args);
+
+    // The address bucket's headers, except on a 429 the handler answered itself (the per-key limit): its own
+    // X-RateLimit-* describe the limit that was hit. A response with immutable headers (Response.redirect) keeps its own.
+    if (response instanceof Response && response.status !== 429) {
+      try {
+        response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
+        response.headers.set('X-RateLimit-Remaining', Math.max(0, rateLimitResult.remaining).toString());
+        response.headers.set('X-RateLimit-Reset', rateLimitResult.resetTime.toString());
+      } catch {
+        // immutable headers
+      }
+    }
+    return response;
   };
 }

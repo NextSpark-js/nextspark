@@ -31,7 +31,8 @@
  * billing webhook with the project's extensions) is written as a `composed-facade`; so is a route under a
  * role-gated area (`access`: `export default withSuperadminAccess(Template)`, and its `generateMetadata` through
  * `withSuperadminMetadata`; a Route Handler's methods through `withSuperadminRouteAccess`). Static imports of the
- * modules and one call of a core wrapper/factory over them, never a lookup (static-imports.mjs). The root
+ * modules and one call of a core wrapper/factory over them, never a lookup (static-imports.mjs). A project or plugin
+ * Route Handler under `api/` has its methods composed with core's default rate limit (`rateLimit`, rate-limit.mjs). The root
  * layout also imports the project's global stylesheet when the host has one (`stylesheet`).
  *
  * @module core/scripts/build/registry/host/render
@@ -42,6 +43,7 @@ import { readFile } from 'node:fs/promises'
 
 import { COMPOSED_TEMPLATE, FacadeEmitError, analyzeRouteSource, emitFacade, loadNextSegmentConfig, planFacade } from './facade-emitter.mjs'
 import { DEV_STATUS_SPECIFIER, validateGeneratedModule } from './static-imports.mjs'
+import { RATE_LIMIT_EXPORT, isRateLimitedRoute, planRouteRateLimit } from './rate-limit.mjs'
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 
 export const APP_DIR = 'src/app'
@@ -276,10 +278,12 @@ async function renderWebhookRoute(route, ctx) {
  * Emit one route: prevalidated against every cache mode it serves, then written by `emitFacade`
  * (which applies the facade grammar gate to its own output).
  */
-async function emitRoute(route, source, { projectRoot, modes, cacheComponents, pageExtensions, stylesheet, wrappers, memo }) {
+async function emitRoute(route, source, { projectRoot, modes, cacheComponents, pageExtensions, stylesheet, wrappers, rateLimit, memo }) {
   const routeModes = route.mode ? [route.mode] : modes
   const isRootLayout = route.kind === 'layout' && route.target === 'layout.tsx'
   const ctx = { projectRoot, memo }
+  const limited = Boolean(rateLimit) && isRateLimitedRoute(route)
+  const ignoreExports = limited ? [RATE_LIMIT_EXPORT] : []
 
   let composition
   if (route.access) {
@@ -310,6 +314,21 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
     }
   }
 
+  // A project or plugin API route: its methods behind the default rate limit (rate-limit.mjs)
+  if (limited) {
+    const analysis = await analyzeRouteSource({ source, file: route.file, projectRoot })
+    if (!analysis.parseError) {
+      const planned = planRouteRateLimit({ source, file: route.file, analysis, ts: await loadTypeScriptFor(projectRoot), config: rateLimit })
+      if (planned.diagnostics.length > 0) throw new FacadeEmitError(planned.diagnostics)
+      const names = [...new Set(Object.values(planned.methods).map(wrapper => wrapper.name))]
+      if (names.length > 0) {
+        const problems = await checkExports({ file: rateLimit.file, specifier: rateLimit.specifier, names, route, ctx })
+        if (problems.length > 0) throw new FacadeEmitError(problems.map(problem => ({ ...problem, file: problem.file ?? route.file })))
+        composition = { ...composition, rateLimit: planned.methods }
+      }
+    }
+  }
+
   const needsAnalysis = routeModes.length > 0 || route.composeProtection === 'protected_metadata'
   if (needsAnalysis) {
     const analysis = await analyzeRouteSource({ source, file: route.file, projectRoot })
@@ -329,6 +348,7 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
           cacheComponents: mode === 'cc',
           pageExtensions,
           nextSegmentConfig: loadNextSegmentConfig(projectRoot),
+          ignoreExports,
         })
         for (const diagnostic of found) {
           const key = JSON.stringify([diagnostic.code, diagnostic.line, diagnostic.exportName, diagnostic.message])
@@ -351,6 +371,7 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
     stylesheet: isRootLayout ? stylesheet : undefined,
     composition,
     wrappers,
+    ignoreExports,
   })
   return { content: emitted.content, grammar: emitted.grammar, sourceHash: sha256(source) }
 }
@@ -366,15 +387,17 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
  * @param {string[]} [input.pageExtensions] - the host's pageExtensions
  * @param {string} [input.stylesheet] - specifier of the project's global stylesheet the root layout imports
  * @param {Record<string, string[]>} [input.wrappers] - the composition wrappers a composed facade may call (`CORE_COMPOSITION_WRAPPERS` by default)
+ * @param {{ specifier: string, file: string|null }} [input.rateLimit] - the core module of the default rate limit of project and
+ *   plugin API routes (`coreRouteRateLimit()`, rate-limit.mjs); without it those routes are plain facades
  * @param {Map} [input.cache] - reused across calls by the watcher: unchanged sources are not re-parsed
  * @param {boolean} [input.devStatus] - add the development status module (see the module comment)
  * @returns {Promise<{ files: { path: string, content: string, grammar: string }[], diagnostics: object[] }>}
  */
-export async function renderHost({ routes, projectRoot, modes = [], cacheComponents, pageExtensions, stylesheet, wrappers, cache = new Map(), devStatus = false }) {
+export async function renderHost({ routes, projectRoot, modes = [], cacheComponents, pageExtensions, stylesheet, wrappers, rateLimit, cache = new Map(), devStatus = false }) {
   const files = []
   const diagnostics = []
-  const options = { projectRoot, modes, cacheComponents, pageExtensions, stylesheet, wrappers, memo: cache }
-  const optionsKey = JSON.stringify({ modes, cacheComponents, pageExtensions, stylesheet })
+  const options = { projectRoot, modes, cacheComponents, pageExtensions, stylesheet, wrappers, rateLimit, memo: cache }
+  const optionsKey = JSON.stringify({ modes, cacheComponents, pageExtensions, stylesheet, rateLimit })
 
   for (const route of routes) {
     // Routes made of imports and one composition, not of a module's exports.
