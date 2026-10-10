@@ -264,11 +264,14 @@ spread and no expression. A host with another core (the conformance fixture) pas
 - **API rate limit** (`rate-limit.mjs`, #226): every method of a Route Handler under `src/app/api/` that a project or plugin
   provides is composed with core's per-address limit, as the 0.x theme and plugin dispatchers did:
   `export const GET = withReadRateLimit(NextSparkGET)` (`GET`, `HEAD`), `withWriteRateLimit` (`POST`, `PUT`, `PATCH`, `DELETE`),
-  `OPTIONS` forwarded (`routes/_internal/route-rate-limit`: the limit only, no CORS or origin check). A method whose declaration in
-  the source calls `withRateLimitTier` or `withRateLimit` is forwarded as is; `export const rateLimit = false` forwards the whole
+  `OPTIONS` forwarded (`routes/_internal/route-rate-limit`: the limit only, no CORS or origin check). A method declared in the
+  source as core's `withRateLimitTier(...)` (named or namespace import from `@nextsparkjs/core/lib/api/rate-limit` or
+  `@nextsparkjs/core/lib/api`; the call itself, a wrapper chain around it, or one local constant) is forwarded as is, anything
+  else is wrapped (`withRateLimit` limits API-key requests only and does not count); `export const rateLimit = false` forwards the whole
   route and is itself never forwarded (any other value: `NS_HOST_INVALID_RATE_LIMIT`). The host config's `rateLimit`
   (`coreRouteRateLimit()`) turns it on; `projectHostConfig()` sets it, the conformance fixture does not. Under a role-gated area
-  the rate limit is the outer call, around the area check.
+  the rate limit is the outer call, around the area check. The opted-out routes are listed in one Info notice
+  (`NS_HOST_RATE_LIMIT_OPT_OUT`, `renderHost().notices`).
 
 **API namespaces** are enforced by the plan (`plan.mjs`): core owns `/api/v1/**`, the project's `api/` is served at `/api/<path>`,
 each plugin's `api/` at `/api/plugins/<plugin>/**`. Stops generation (`NS_HOST_API_NAMESPACE`): a project `api/` route in `/api/v1/**` or

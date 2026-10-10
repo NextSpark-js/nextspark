@@ -43,7 +43,7 @@ import { readFile } from 'node:fs/promises'
 
 import { COMPOSED_TEMPLATE, FacadeEmitError, analyzeRouteSource, emitFacade, loadNextSegmentConfig, planFacade } from './facade-emitter.mjs'
 import { DEV_STATUS_SPECIFIER, validateGeneratedModule } from './static-imports.mjs'
-import { RATE_LIMIT_EXPORT, isRateLimitedRoute, planRouteRateLimit } from './rate-limit.mjs'
+import { RATE_LIMIT_EXPORT, isRateLimitedRoute, planRouteRateLimit, rateLimitOptOutNotice } from './rate-limit.mjs'
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 
 export const APP_DIR = 'src/app'
@@ -284,6 +284,7 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
   const ctx = { projectRoot, memo }
   const limited = Boolean(rateLimit) && isRateLimitedRoute(route)
   const ignoreExports = limited ? [RATE_LIMIT_EXPORT] : []
+  let rateLimitOptOut = false
 
   let composition
   if (route.access) {
@@ -320,6 +321,7 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
     if (!analysis.parseError) {
       const planned = planRouteRateLimit({ source, file: route.file, analysis, ts: await loadTypeScriptFor(projectRoot), config: rateLimit })
       if (planned.diagnostics.length > 0) throw new FacadeEmitError(planned.diagnostics)
+      rateLimitOptOut = Boolean(planned.optedOut)
       const names = [...new Set(Object.values(planned.methods).map(wrapper => wrapper.name))]
       if (names.length > 0) {
         const problems = await checkExports({ file: rateLimit.file, specifier: rateLimit.specifier, names, route, ctx })
@@ -373,7 +375,7 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
     wrappers,
     ignoreExports,
   })
-  return { content: emitted.content, grammar: emitted.grammar, sourceHash: sha256(source) }
+  return { content: emitted.content, grammar: emitted.grammar, sourceHash: sha256(source), rateLimitOptOut }
 }
 
 /**
@@ -391,11 +393,12 @@ async function emitRoute(route, source, { projectRoot, modes, cacheComponents, p
  *   plugin API routes (`coreRouteRateLimit()`, rate-limit.mjs); without it those routes are plain facades
  * @param {Map} [input.cache] - reused across calls by the watcher: unchanged sources are not re-parsed
  * @param {boolean} [input.devStatus] - add the development status module (see the module comment)
- * @returns {Promise<{ files: { path: string, content: string, grammar: string }[], diagnostics: object[] }>}
+ * @returns {Promise<{ files: { path: string, content: string, grammar: string }[], diagnostics: object[], notices: object[] }>}
  */
 export async function renderHost({ routes, projectRoot, modes = [], cacheComponents, pageExtensions, stylesheet, wrappers, rateLimit, cache = new Map(), devStatus = false }) {
   const files = []
   const diagnostics = []
+  const optedOut = [] // API routes served without the default rate limit (`rateLimit = false`)
   const options = { projectRoot, modes, cacheComponents, pageExtensions, stylesheet, wrappers, rateLimit, memo: cache }
   const optionsKey = JSON.stringify({ modes, cacheComponents, pageExtensions, stylesheet, rateLimit })
 
@@ -435,6 +438,7 @@ export async function renderHost({ routes, projectRoot, modes = [], cacheCompone
         continue
       }
     }
+    if (emitted.rateLimitOptOut) optedOut.push(route)
     const devLayout = devStatus && ROOT_LAYOUT.test(route.target) ? composeDevRootLayout(emitted.content) : null
     files.push({ path: `${APP_DIR}/${route.target}`, content: devLayout ?? emitted.content, grammar: devLayout ? 'dev-facade' : emitted.grammar ?? 'facade' })
   }
@@ -456,5 +460,6 @@ export async function renderHost({ routes, projectRoot, modes = [], cacheCompone
     }
   }
 
-  return { files, diagnostics }
+  const notice = rateLimitOptOutNotice(optedOut)
+  return { files, diagnostics, notices: notice ? [notice] : [] }
 }

@@ -3,7 +3,7 @@
  *
  * The generated host wraps every HTTP method a Route Handler under `api/` exports with one of these (`GET`/`HEAD` read,
  * `POST`/`PUT`/`PATCH`/`DELETE` write, `OPTIONS` untouched), as core's theme and plugin dispatchers did up to
- * 0.1.0-beta.191. A method that wraps itself with `withRateLimitTier` or `withRateLimit`, and a route that exports
+ * 0.1.0-beta.191. A method that wraps itself with core's `withRateLimitTier`, and a route that exports
  * `rateLimit = false`, are left alone (scripts/build/registry/host/rate-limit.mjs).
  *
  * Only the per-address limit: the route keeps its own CORS and origin handling (withAddressRateLimit).

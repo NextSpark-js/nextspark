@@ -133,7 +133,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     devStatus,
   })
   if (rendered.diagnostics.length > 0) throw Object.assign(new PrepareError(rendered.diagnostics.map(describeDiagnostic)), { notices, routes, stage: 'emission' })
-  return { routes, manifest, appFiles: rendered.files, notices }
+  return { routes, manifest, appFiles: rendered.files, notices: [...notices, ...rendered.notices] }
 }
 
 /**
