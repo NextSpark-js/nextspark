@@ -80,7 +80,8 @@
       "sendMessage": "Nachricht senden",
       "suspendUser": "Benutzer sperren",
       "adminSettings": "Admin-Einstellungen",
-      "revokeAdmin": "Admin widerrufen"
+      "revokeAdmin": "Admin widerrufen",
+      "restrictedTarget": "Nur ein Entwickler kann dieses Konto ändern"
     },
     "descriptions": {
       "regularUsersDescription": "Alle Benutzer ausser Superadministratoren. Beinhaltet Mitglieder, Mitarbeiter und Administratoren.",

@@ -80,7 +80,8 @@
       "sendMessage": "Enviar Mensaje",
       "suspendUser": "Suspender Usuario",
       "adminSettings": "Configuraciones de Admin",
-      "revokeAdmin": "Revocar Admin"
+      "revokeAdmin": "Revocar Admin",
+      "restrictedTarget": "Solo un desarrollador puede modificar esta cuenta"
     },
     "descriptions": {
       "regularUsersDescription": "Todos los usuarios excluyendo superadministradores. Incluye miembros, colaboradores y administradores.",

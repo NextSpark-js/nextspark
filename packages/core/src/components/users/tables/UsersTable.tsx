@@ -50,7 +50,9 @@ import {
   Loader2,
 } from "lucide-react";
 import { useRoleTranslations } from '../../../lib/role-helpers';
-import { useIsDeveloper } from '../../app/guards/DeveloperGuard';
+import { useSession } from '../../../lib/auth-client';
+import { canActOnUser, canGrantUserRole } from '../../../lib/auth/assignable-roles';
+import { useTranslations } from 'next-intl';
 import type { UserRole } from '../../../types/user.types';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -90,8 +92,16 @@ interface PendingAction {
  */
 export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
   const getRoleName = useRoleTranslations();
-  // Only a developer grants the developer role (the route answers 403 to anyone else)
-  const canGrantDeveloper = useIsDeveloper();
+  const t = useTranslations('superadmin.users.actions');
+  const { data: session } = useSession();
+  // the session's user type is wrong upstream (#131)
+  const viewer = (session as { user?: { id?: string; role?: string } } | null)?.user;
+  const viewerRole = viewer?.role;
+  const viewerId = viewer?.id;
+  // The API answers 403 to anyone else: only a developer grants the developer role and acts on a developer, and
+  // nobody acts on their own account
+  const canGrantDeveloper = canGrantUserRole(viewerRole, 'developer');
+  const canAct = (user: User) => user.id !== viewerId && canActOnUser(viewerRole, user.role);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -390,68 +400,76 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                       </Link>
                     </DropdownMenuItem>
 
-                    {/* Role Change Submenu */}
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Change Role
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuRadioGroup
-                          value={user.role}
-                          onValueChange={(value: string) => handleRoleChange(user, value)}
-                        >
-                          <DropdownMenuRadioItem value="member">
-                            Member
-                          </DropdownMenuRadioItem>
-                          {(canGrantDeveloper || user.role === "developer") && (
-                            <DropdownMenuRadioItem value="developer">
-                              Developer
+                    {canAct(user) ? (
+                      <>
+                      {/* Role Change Submenu */}
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Change Role
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuRadioGroup
+                            value={user.role}
+                            onValueChange={(value: string) => handleRoleChange(user, value)}
+                          >
+                            <DropdownMenuRadioItem value="member">
+                              Member
                             </DropdownMenuRadioItem>
-                          )}
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
+                            {(canGrantDeveloper || user.role === "developer") && (
+                              <DropdownMenuRadioItem value="developer">
+                                Developer
+                              </DropdownMenuRadioItem>
+                            )}
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
 
-                    {/* Verify Email (only if not verified) */}
-                    {!user.emailVerified && (
+                      {/* Verify Email (only if not verified) */}
+                      {!user.emailVerified && (
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => setPendingAction({ type: "verify-email", user })}
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Verify Email
+                        </DropdownMenuItem>
+                      )}
+
+                      <DropdownMenuSeparator />
+
+                      {/* Suspend/Unsuspend based on current role */}
+                      {user.role === "suspended" ? (
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => setPendingAction({ type: "unsuspend", user })}
+                        >
+                          <UserCheck className="mr-2 h-4 w-4" />
+                          Unsuspend User
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          className="cursor-pointer text-yellow-600"
+                          onClick={() => setPendingAction({ type: "suspend", user })}
+                        >
+                          <Ban className="mr-2 h-4 w-4" />
+                          Suspend User
+                        </DropdownMenuItem>
+                      )}
+
                       <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => setPendingAction({ type: "verify-email", user })}
+                        className="cursor-pointer text-destructive"
+                        onClick={() => setPendingAction({ type: "delete", user })}
                       >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Verify Email
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete User
                       </DropdownMenuItem>
-                    )}
-
-                    <DropdownMenuSeparator />
-
-                    {/* Suspend/Unsuspend based on current role */}
-                    {user.role === "suspended" ? (
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => setPendingAction({ type: "unsuspend", user })}
-                      >
-                        <UserCheck className="mr-2 h-4 w-4" />
-                        Unsuspend User
-                      </DropdownMenuItem>
+                      </>
                     ) : (
-                      <DropdownMenuItem
-                        className="cursor-pointer text-yellow-600"
-                        onClick={() => setPendingAction({ type: "suspend", user })}
-                      >
-                        <Ban className="mr-2 h-4 w-4" />
-                        Suspend User
+                      <DropdownMenuItem disabled title={t('restrictedTarget')} data-cy={`superadmin-user-restricted-${user.id}`}>
+                        {t('restrictedTarget')}
                       </DropdownMenuItem>
                     )}
-
-                    <DropdownMenuItem
-                      className="cursor-pointer text-destructive"
-                      onClick={() => setPendingAction({ type: "delete", user })}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete User
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

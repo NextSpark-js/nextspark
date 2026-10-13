@@ -25,7 +25,7 @@ export const NAMESPACE_GROUPS = {
   // Superadmin guards/pages plus the LangChain observability plugin page.
   superadmin: [
     'admin', 'auth', 'billing', 'common', 'dashboard', 'entities', 'navigation',
-    'observability', 'permissions', 'settings', 'teams', 'users', 'validation',
+    'observability', 'permissions', 'settings', 'superadmin', 'teams', 'users', 'validation',
   ],
 
   // DeveloperGuard and every devtools client view.

@@ -31,6 +31,8 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { useRoleTranslations } from '../../../lib/role-helpers';
+import { useSession } from '../../../lib/auth-client';
+import { canActOnUser } from '../../../lib/auth/assignable-roles';
 import type { UserRole } from '../../../types/user.types';
 
 interface SuperAdmin {
@@ -64,6 +66,9 @@ export function SuperAdminsTable({
 }: SuperAdminsTableProps) {
 
   const getRoleName = useRoleTranslations();
+  const { data: session } = useSession();
+  // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
+  const viewerRole: string | undefined = session?.user?.role;
 
   // Generate user initials for avatar
   const getUserInitials = (user: SuperAdmin) => {
@@ -218,7 +223,7 @@ export function SuperAdminsTable({
                       </DropdownMenuItem>
                       
                       {/* Only show dangerous actions for other admins */}
-                      {!isCurrentUser && (
+                      {!isCurrentUser && canActOnUser(viewerRole, admin.role) && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="cursor-pointer text-orange-600">

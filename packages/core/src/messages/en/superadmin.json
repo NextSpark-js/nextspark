@@ -80,7 +80,8 @@
       "sendMessage": "Send Message",
       "suspendUser": "Suspend User",
       "adminSettings": "Admin Settings",
-      "revokeAdmin": "Revoke Admin"
+      "revokeAdmin": "Revoke Admin",
+      "restrictedTarget": "Only a developer can modify this account"
     },
     "descriptions": {
       "regularUsersDescription": "All users excluding superadministrators. Includes members, colaborators, and admins.",
