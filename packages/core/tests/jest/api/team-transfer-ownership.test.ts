@@ -8,6 +8,7 @@ import { NextRequest } from 'next/server'
 const mockSession = jest.fn()
 jest.mock('@nextsparkjs/core/lib/auth/authorization-session', () => ({ getAuthorizationSession: () => mockSession() }))
 jest.mock('@/core/lib/auth/authorization-session', () => ({ getAuthorizationSession: () => mockSession() }))
+jest.mock('@/core/lib/actions/rate-limit', () => ({ actionRateLimitError: async () => null }))
 jest.mock('@nextsparkjs/core/lib/api/rate-limit', () => ({ withRateLimitTier: (handler: unknown) => handler }))
 const mockTransfer = jest.fn()
 jest.mock('@nextsparkjs/core/lib/services/team-member.service', () => ({ TeamMemberService: { transferOwnership: (...a: unknown[]) => mockTransfer(...a) } }))

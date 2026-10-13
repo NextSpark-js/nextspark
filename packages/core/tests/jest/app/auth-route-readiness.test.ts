@@ -40,6 +40,7 @@ import { GET, POST } from '@/app/api/auth/[...all]/route'
 
 const ENV_KEYS = [
   'NODE_ENV',
+  'BETTER_AUTH_SECRET',
   'EMAIL_PROVIDER',
   'RESEND_API_KEY',
   'RESEND_FROM_EMAIL',
@@ -51,6 +52,7 @@ const originalEnv = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[k
 function setProductionEnv(values: Partial<Record<(typeof ENV_KEYS)[number], string>> = {}) {
   for (const key of ENV_KEYS) delete process.env[key]
   process.env.NODE_ENV = 'production'
+  process.env.BETTER_AUTH_SECRET = 'k9f3Zq7LmRt8VbNcHdYsWa3xk9f3Zq7L'
   Object.assign(process.env, values)
 }
 
@@ -100,6 +102,20 @@ describe('shipped auth route runtime readiness integration', () => {
 
     expect(response.status).toBe(200)
     expect(mockPost).toHaveBeenCalledTimes(1)
+  })
+
+  test('blocks a usable provider in production while BETTER_AUTH_SECRET is a placeholder', async () => {
+    setProductionEnv({
+      EMAIL_PROVIDER: 'resend',
+      RESEND_API_KEY: 're_1234567890abcdefghijklmnop',
+      RESEND_FROM_EMAIL: 'auth@example.com',
+      BETTER_AUTH_SECRET: 'your-secret-key-min-32-chars',
+    })
+
+    const response = await POST(nextRequest('/api/auth/email-otp/send-verification-otp', { method: 'POST' }))
+
+    expect(response.status).toBe(503)
+    expect(mockPost).not.toHaveBeenCalled()
   })
 
   test('blocks a policy-disabled Google request at the real route boundary', async () => {
