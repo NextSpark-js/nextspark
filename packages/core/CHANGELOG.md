@@ -25,8 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entity namespaces from `ENTITY_REGISTRY` (through `getConfiguredClientNamespaces`) next to the template's own; the earlier example left the
   entity screens under it without messages.
 - The auth readiness check refuses a `BETTER_AUTH_SECRET` that is a template placeholder or shorter than 32 characters when `NODE_ENV` is
-  `production` (`BETTER_AUTH_SECRET_PLACEHOLDER`, `BETTER_AUTH_SECRET_MALFORMED`): `nextspark build` fails, and at startup the server logs the
-  diagnostic and offers no login method. Outside production it only warns.
+  `production` (`BETTER_AUTH_SECRET_PLACEHOLDER`, `BETTER_AUTH_SECRET_MALFORMED`): `nextspark build` fails, and a server that starts
+  with such a value refuses every auth request with a `500` until the secret is fixed. Outside production it only warns.
 - The media upload stores each file with the extension of its allow-listed type (`image/jpeg` as `.jpg`, a type core does not know as `.bin`)
   and checks the file's leading bytes against the declared type before accepting it. The original name is kept for display, sanitized.
 - The user id and the lock timeout of a database transaction are set with bound `set_config` parameters.
@@ -76,8 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gated nothing; use the literal prefix, `/account`, which covers the path and everything under it. A dynamic segment such as
   `/[tenant]/billing` cannot be gated by prefix: gate its fixed parent, or check the session in the page or layout.
 - **A production `BETTER_AUTH_SECRET` must be a real secret.** A value copied from a template (`your-secret-key-min-32-chars`,
-  `your-super-secret-key-change-this`) or shorter than 32 characters now fails `nextspark build` and takes the login methods out of service
-  at startup. Generate one, for example with `openssl rand -base64 32`. Changing the secret signs everyone out. A build that does not have
+  `your-super-secret-key-change-this`) or shorter than 32 characters now fails `nextspark build`, and a server started with it refuses
+  every auth request with a `500`. Generate one, for example with `openssl rand -base64 32`. Changing the secret signs everyone out. A build that does not have
   the variable skips this check and the server judges it at startup.
 - **Uploaded media keeps no extension from the client's file name.** The stored URL ends in the extension of the file's type, and a file whose
   leading bytes do not match its declared type is refused with `400`. A type you add to `media.allowedMimeTypes` that core does not know is

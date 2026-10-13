@@ -142,7 +142,7 @@ function credentialState(value: string | undefined, pattern: RegExp, minimumLeng
  * guessing. In production it is an error that takes every method out of
  * service; elsewhere it is only a warning.
  */
-function evaluateSessionSecret(input: AuthReadinessInput): AuthReadinessDiagnostic | null {
+export function evaluateSessionSecret(input: AuthReadinessInput): AuthReadinessDiagnostic | null {
   const state = credentialState(
     input.configuration?.betterAuthSecret,
     /^\S+$/,

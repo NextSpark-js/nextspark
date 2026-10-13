@@ -24,6 +24,7 @@ import { registrationError } from './auth/registration-errors';
 import { resolveSessionConfig } from './auth/session-config';
 import { resolveOtpConfig } from './auth/otp-config';
 import { isPasswordLoginEnabled } from './auth/auth-methods';
+import { evaluateSessionSecret } from './auth/readiness';
 import { isRuntimeEmailAvailable, isRuntimeGoogleAvailable } from './auth/runtime-readiness';
 import { getTrustedOrigins } from './utils/cors';
 import { withBasePath } from './base-path';
@@ -192,6 +193,20 @@ async function applySignupIntentRole(
   } catch (error) {
     console.error(`[Teams] Failed to apply signup intent role for user ${user.id}:`, error);
   }
+}
+
+// Sessions are signed with this secret, so a production server never builds a working
+// instance around a template value or a short one: every auth request then fails with a 500.
+if (
+  process.env.NODE_ENV === 'production' &&
+  evaluateSessionSecret({
+    profile: 'web-local-auth',
+    stage: 'runtime',
+    environment: 'production',
+    configuration: { betterAuthSecret: process.env.BETTER_AUTH_SECRET },
+  })
+) {
+  throw new Error('BETTER_AUTH_SECRET is a placeholder or shorter than 32 characters; set a random secret of at least 32 characters');
 }
 
 export const auth = betterAuth({
