@@ -70,8 +70,14 @@ export function logAuthReadinessAtStartup(options: RuntimeAuthReadinessOptions =
   void warnSampleAccountsAtStartup(options.env ?? process.env)
   try {
     const env = options.env ?? process.env
-    if (env.NODE_ENV !== 'production') return
     const result = getRuntimeAuthReadiness(options)
+    if (env.NODE_ENV !== 'production') {
+      // Outside production a weak session secret only warns; the code and message, never the value
+      for (const { code, message } of result.diagnostics) {
+        if (code.startsWith('BETTER_AUTH_SECRET_')) console.warn(`[auth-readiness] ${code}: ${message}`)
+      }
+      return
+    }
     if (result.outcome !== 'invalid') return
     console.error('[auth-readiness] no login method can authenticate; login requests will be refused until this is fixed', {
       declaredMethods: result.declaredMethods,

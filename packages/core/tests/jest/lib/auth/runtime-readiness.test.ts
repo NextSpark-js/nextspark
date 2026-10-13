@@ -385,6 +385,21 @@ describe('startup auth readiness log', () => {
     expect(console.error).not.toHaveBeenCalled()
   })
 
+  test('warns outside production about a placeholder session secret, without printing it', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    const secret = 'your-secret-key-min-32-chars'
+    logAuthReadinessAtStartup({
+      authConfig: { methods: ['google'] },
+      env: { NODE_ENV: 'development', BETTER_AUTH_SECRET: secret },
+    })
+
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0][0])).toContain('BETTER_AUTH_SECRET_PLACEHOLDER')
+    expect(JSON.stringify(warn.mock.calls)).not.toContain(secret)
+    expect(console.error).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
   test('never throws, even when readiness cannot be evaluated', () => {
     const authConfig = Object.defineProperty({}, 'methods', {
       get() { throw new Error('config exploded') },
