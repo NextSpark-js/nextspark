@@ -71,7 +71,7 @@ function SuperadminContent({ children, serverChecked }: GuardedProps) {
 /**
  * Superadmin Layout
  *
- * Protected layout for superadmin-only sections with dedicated sidebar navigation.
+ * Protected layout for the superadmin area (superadmin and developer) with dedicated sidebar navigation.
  * Owns the narrowly scoped client catalog for superadmin routes.
  */
 export function SuperadminLayout({ children, serverChecked }: GuardedProps) {

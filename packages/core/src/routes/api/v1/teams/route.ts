@@ -53,7 +53,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     const { page, limit, search, sort, order, scope } = validatedQuery
     const offset = (page - 1) * limit
 
-    // Check if scope=all is requested (requires superadmin)
+    // Check if scope=all is requested (requires superadmin or developer)
     const requestAllTeams = scope === 'all'
     if (requestAllTeams && !isSuperAdmin(authResult)) {
       const response = createApiError(
@@ -64,7 +64,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     }
 
     // Build WHERE clause based on filters
-    // If scope=all (superadmin), don't filter by user.
+    // If scope=all (superadmin or developer), don't filter by user.
     // For a user's own list, exclude soft-deleted teams: a member (e.g. the former
     // owner of a discarded personal team) keeps their team_members row, so without
     // this filter a stale active-team pointer to a deleted team resurfaces in the

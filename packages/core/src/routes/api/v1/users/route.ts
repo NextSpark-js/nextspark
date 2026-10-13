@@ -53,7 +53,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
       return authResult.rateLimitResponse as NextResponse;
     }
 
-    // SECURITY: Only superadmins can list all users
+    // SECURITY: Only a superadmin or a developer can list all users
     if (!hasAdminPermission(authResult, 'users:read')) {
       const response = createApiError('Insufficient permissions. Superadmin access required.', 403);
       return addCorsHeaders(response, req);
@@ -124,7 +124,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
       return authResult.rateLimitResponse as NextResponse;
     }
 
-    // SECURITY: Only superadmins can create users
+    // SECURITY: Only a superadmin or a developer can create users
     if (!hasAdminPermission(authResult, 'users:write')) {
       const response = createApiError('Insufficient permissions. Superadmin access required.', 403);
       return addCorsHeaders(response, req);

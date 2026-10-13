@@ -44,7 +44,7 @@ export const GET = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response, req)
       }
 
-      // Superadmins can view members of any team
+      // Superadmins and developers can view members of any team
       const userIsSuperAdmin = isSuperAdmin(authResult)
 
       // Listing the roster is gated by the 'team.members.view' permission, not

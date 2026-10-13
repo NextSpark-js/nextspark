@@ -137,8 +137,8 @@ export const API_SCOPES = {
   'admin:users': 'Full user administration',
   'admin:devtools': 'Access to DevTools APIs (registries, testing, scheduled actions)',
 
-  // Comodín (solo para superadmins)
-  '*': 'Full access (superadmin only)'
+  // Comodín (solo para superadmins y developers)
+  '*': 'Full access (superadmin or developer only)'
 } as const;
 
 export type ApiScope = keyof typeof API_SCOPES;

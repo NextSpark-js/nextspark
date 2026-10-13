@@ -58,7 +58,7 @@ export const GET = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
-    // SECURITY: a user is readable and editable by themselves or a superadmin only
+    // SECURITY: a user is readable and editable by themselves, a superadmin or a developer only
     if (!canAccessUser(authResult, id, 'users:read')) {
       const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);
@@ -115,7 +115,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
-    // SECURITY: a user is readable and editable by themselves or a superadmin only
+    // SECURITY: a user is readable and editable by themselves, a superadmin or a developer only
     if (!canAccessUser(authResult, id, 'users:write')) {
       const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);
@@ -125,7 +125,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
     const { metas, ...userData } = body;
     const validatedData = updateUserSchema.parse(userData);
 
-    // SECURITY: roles are granted by a superadmin, never by the user themselves
+    // SECURITY: roles are granted by a superadmin or a developer, never by the user themselves
     if (validatedData.role !== undefined && !hasAdminPermission(authResult, 'users:write')) {
       const response = createApiError('Only a superadmin can change a role', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);
@@ -253,7 +253,7 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
-    // SECURITY: deleting a user is a superadmin action
+    // SECURITY: deleting a user is a superadmin (or developer) action
     if (!hasAdminPermission(authResult, 'users:delete')) {
       const response = createApiError('Insufficient permissions. Superadmin access required.', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);

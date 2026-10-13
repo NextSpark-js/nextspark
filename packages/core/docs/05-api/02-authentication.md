@@ -400,8 +400,8 @@ export const API_SCOPES = {
   'admin:users': 'Full user administration',
   'admin:devtools': 'Access developer tools endpoints',
 
-  // Wildcard (superadmin only)
-  '*': 'Full access (superadmin only)'
+  // Wildcard (superadmin or developer only)
+  '*': 'Full access (superadmin or developer only)'
 }
 ```
 

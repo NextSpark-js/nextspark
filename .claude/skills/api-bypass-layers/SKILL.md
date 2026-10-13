@@ -276,6 +276,12 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 - App-level: Requires explicit intent (header) to prevent accidents
 - DB-level: Final defense, superadmin always trusted at data layer
 
+**Developer vs superadmin (owner decision, 2026-10-13):** a developer has every superadmin capability, plus
+devtools. The app-level role checks (`isSuperAdmin`/`hasAdminPermission`, the proxy and area guards, API-key
+minting) accept both. The DB-level difference above is unchanged and pending the owner's decision: a developer
+outside the System Admin Team gets RLS-filtered results from the `/api/v1/*` admin routes. The `/api/superadmin/*`
+routes do not depend on it: they run on the service connection after their role check (see `rls-enforcement`).
+
 ## RLS Helper Functions
 
 ### get_auth_user_id()

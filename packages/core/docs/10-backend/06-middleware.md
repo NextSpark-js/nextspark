@@ -183,9 +183,9 @@ keeps `/docs` private; see
 Restricts access based on user roles:
 
 ```typescript
-// Superadmin-only routes
+// Admin routes: superadmin or developer (a developer has every superadmin capability)
 if (isAdminRoute) {
-  if (session.user.role !== 'superadmin') {
+  if (session.user.role !== 'superadmin' && session.user.role !== 'developer') {
     return NextResponse.redirect(dashboardUrl);
   }
 }

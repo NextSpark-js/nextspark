@@ -83,7 +83,7 @@ export const GET = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req)
     }
 
-    // SECURITY: a user's metadata is readable and editable by that user or a superadmin only
+    // SECURITY: a user's metadata is readable and editable by that user, a superadmin or a developer only
     if (!canAccessUser(authResult, id, 'users:read')) {
       const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN')
       return addCorsHeaders(response, req)
@@ -171,7 +171,7 @@ export const PUT = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req)
     }
 
-    // SECURITY: a user's metadata is readable and editable by that user or a superadmin only
+    // SECURITY: a user's metadata is readable and editable by that user, a superadmin or a developer only
     if (!canAccessUser(authResult, id, 'users:write')) {
       const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN')
       return addCorsHeaders(response, req)
@@ -290,7 +290,7 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req)
     }
 
-    // SECURITY: a user's metadata is readable and editable by that user or a superadmin only
+    // SECURITY: a user's metadata is readable and editable by that user, a superadmin or a developer only
     if (!canAccessUser(authResult, id, 'users:write')) {
       const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN')
       return addCorsHeaders(response, req)

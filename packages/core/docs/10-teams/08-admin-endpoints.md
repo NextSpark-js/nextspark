@@ -2,7 +2,7 @@
 
 ## Overview
 
-Algunos endpoints están diseñados exclusivamente para superadmins (dueños del producto). Estos endpoints permiten acceso a datos globales del sistema, no limitados por team isolation.
+Algunos endpoints están diseñados exclusivamente para superadmins (dueños del producto) y developers: un developer tiene todas las capacidades de un superadmin, más las de devtools. Estos endpoints permiten acceso a datos globales del sistema, no limitados por team isolation.
 
 ## Endpoints Administrativos
 
@@ -10,8 +10,8 @@ Algunos endpoints están diseñados exclusivamente para superadmins (dueños del
 
 | Endpoint | Método | Descripción | Autenticación |
 |----------|--------|-------------|---------------|
-| `/api/v1/users` | GET | Lista todos los usuarios del sistema | `role: superadmin` |
-| `/api/v1/users` | POST | Crear nuevo usuario | `role: superadmin` |
+| `/api/v1/users` | GET | Lista todos los usuarios del sistema | `role: superadmin` o `developer` |
+| `/api/v1/users` | POST | Crear nuevo usuario | `role: superadmin` o `developer` |
 
 **Validación de permisos:**
 ```typescript
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     return createAuthFailureResponse(authResult)
   }
 
-  // Chequeo adicional de rol (superadmin), independiente del scope declarado
+  // Chequeo adicional de rol (superadmin o developer), independiente del scope declarado
   if (!hasAdminPermission(authResult, 'users:read')) {
     return createApiError('Insufficient permissions. Superadmin access required.', 403)
   }
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
 | Tipo | Ejemplo | Quién puede acceder |
 |------|---------|---------------------|
-| Admin-Only | `/api/v1/users` | Solo superadmin |
+| Admin-Only | `/api/v1/users` | Superadmin o developer |
 | Team-Scoped | `/api/v1/teams/[id]/members` | Miembros del team |
 | User-Scoped | `/api/v1/api-keys` | El propio usuario |
 
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 | Código | Mensaje | Cuándo |
 |--------|---------|--------|
 | 401 | Authentication required | No hay sesión/API key |
-| 403 | Superadmin access required | Usuario no es superadmin |
+| 403 | Superadmin access required | Usuario no es superadmin ni developer |
 
 ## Security Best Practices
 
@@ -177,5 +177,5 @@ curl -X GET http://localhost:3010/api/v1/users \
 - Solo API keys tenían validación de scopes
 
 **Después de Phase 3:**
-- Solo superadmins pueden acceder (sesión o API key)
+- Solo superadmins y developers pueden acceder (sesión o API key)
 - Validación unificada con `hasAdminPermission()`

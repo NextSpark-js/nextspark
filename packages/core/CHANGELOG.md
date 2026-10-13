@@ -60,12 +60,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     Reads are unchanged. A project migration that re-created the `Subscriptions elevated insert/update/delete` or `Billing events
     elevated insert` policies of its own loses them to 035; re-create them after it.
 
+### Changed
+
+- **A developer has every superadmin capability, plus devtools.** The checks that accepted only `superadmin` accept `developer` too:
+  `isSuperAdmin` and `hasAdminPermission` (`@nextsparkjs/core/lib/api/auth/permissions`, so `/api/v1/users`, `/api/v1/users/:id` and its
+  metadata, `GET /api/v1/teams?scope=all` and a team's member list), `checkTeamPermission` (`lib/teams/permissions`), minting an API key
+  with any scope (`validateScopesForUser`, `canCreateApiKeys`, `POST /api/v1/api-keys` without a team), changing or deleting post
+  categories without a team, another user's plan and flags (`/api/user/plan-flags`), the proxy's `/admin` area and the admin panel link of
+  the mobile menu. On the `nextspark_app` connection the RLS policies still give a developer the superadmin bypass (`can_bypass_rls()`)
+  only as a member of the System Admin Team, so the `/api/v1` routes above return to a developer outside that team only the rows RLS
+  shows them. Only a superadmin still grants the developer role.
+- The `/api/superadmin` routes read and write on the service connection after their role check, for a superadmin as for a developer.
+
 ### Fixed
 
 - The metas of pages and posts are written and read through the entity API. `PATCH /api/v1/pages/:id` and `/posts/:id` with `metas`
   answered 200 and stored nothing, and `?metas=all` returned none, because the metas service looked for an `entityId` column;
   `pages_metas` and `posts_metas` link to their parent with `pageId` and `postId`. The service now reads the parent column from the
   single-column foreign key of the metas table to its parent table; a metas table without one keeps `entityId`.
+- A developer can change, suspend, unsuspend, verify and delete a user in the superadmin area on the `nextspark_app` connection; it
+  answered 404 there (#241). The users, teams and subscriptions lists of that area and a team's detail no longer leave out what RLS
+  hides from a developer, nor members of teams the caller does not belong to.
 - A team admin can edit the team on the `nextspark_app` connection; it answered 404 there.
 - A developer can open a user's detail in the superadmin area on the `nextspark_app` connection; it answered 404 there.
 - The RLS policies of `pages_metas`, `posts_metas`, `subscriptions`, `usage`, `usage_events` and `billing_events` match what the API
