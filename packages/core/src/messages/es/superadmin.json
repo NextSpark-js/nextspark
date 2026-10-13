@@ -81,7 +81,10 @@
       "suspendUser": "Suspender Usuario",
       "adminSettings": "Configuraciones de Admin",
       "revokeAdmin": "Revocar Admin",
-      "restrictedTarget": "Solo un desarrollador puede modificar esta cuenta"
+      "restrictedTarget": "Solo un desarrollador puede modificar esta cuenta",
+      "ownAccount": "No puedes modificar tu propia cuenta aquí",
+      "demoteToMember": "Degradar a Miembro",
+      "deleteUser": "Eliminar Usuario"
     },
     "descriptions": {
       "regularUsersDescription": "Todos los usuarios excluyendo superadministradores. Incluye miembros, colaboradores y administradores.",
@@ -90,6 +93,18 @@
     "security": {
       "notice": "Aviso de Seguridad:",
       "superadminWarning": "El acceso de superadmin otorga control total del sistema. Manejar con extrema precaución."
+    },
+    "confirm": {
+      "demoteTitle": "Degradar a Miembro",
+      "demoteDescription": "¿Seguro que quieres degradar a {name} a miembro? Pierde el acceso de superadministrador.",
+      "suspendTitle": "Suspender Usuario",
+      "suspendDescription": "¿Seguro que quieres suspender a {name}? Ya no podrá acceder a la aplicación.",
+      "deleteTitle": "Eliminar Usuario",
+      "deleteDescription": "¿Seguro que quieres eliminar a {name} de forma permanente? Esta acción no se puede deshacer. Se eliminarán todos sus datos, equipos y membresías.",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar",
+      "done": "Hecho",
+      "failed": "La acción falló"
     }
   },
   "style": {

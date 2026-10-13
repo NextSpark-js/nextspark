@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `EntityForm` no longer validates the fields listed in `hiddenFields`: a theme that hides a required field and renders it elsewhere could not submit, with the error on an invisible field.
 - `SimpleRelationSelect` searches the related entity on the server as you type (debounced, two characters or more) and merges the hits into its options, so a record outside the first page of results can be found.
-- The superadmin users table offers an action only when the API would accept it: the row menu of a developer (or of the viewer's own account) shows no edit, role, verify, suspend or delete to anyone but a developer, and says so in the viewer's language; the superadmins table no longer offers "Revoke Admin".
+- The superadmin users table offers an action only when the API would accept it: the row menu of a developer (or of the viewer's own account) shows no role, verify, suspend or delete to anyone but a developer, and says so in the viewer's language; a suspended user has no role change, as the API refuses it; the superadmins table offers a developer demote to member, suspend and delete on another superadmin, and nobody else.
 - The cached reads of the public item pages, the patterns they reference and the docs pages take only plain names, validate them first and work out the rest (table, columns, published status, docs files) themselves; an argument that does not fit answers not found.
 - A project whose database was migrated while it ran Better Auth 1.7.0 to 1.7.2 (possible up to `0.1.0-beta.184`) creates accounts
   again: migration 038 makes the `account.issuer` column those releases added nullable. Before, a Google sign-in or a password sign-up
@@ -137,9 +137,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   never on the caller's own row. Core's routes already work that way, and suspend on the service connection. Code of your own that
   changes a role on the request user's connection must be a superadmin's or a developer's request, on another user, or use the service
   connection after its own checks.
-- **Only a developer changes, suspends or deletes a developer.** A superadmin gets 403 for a developer target from
-  `PATCH`/`DELETE /api/superadmin/users/:id`, `PATCH`/`DELETE /api/v1/users/:id` and the writes of `/api/v1/users/:id/meta/:key`
-  (the metadata writes also refuse another superadmin, as the users routes do).
+- **Only a developer changes, suspends or deletes a developer or a superadmin.** A superadmin gets 403 for a developer or
+  superadmin target from `PATCH`/`DELETE /api/superadmin/users/:id`, `PATCH`/`DELETE /api/v1/users/:id` and the writes of
+  `/api/v1/users/:id/meta/:key`; a developer acts on both (never on their own account). Before, nobody could act on a superadmin.
+  `suspendUser` (`@nextsparkjs/core/lib/auth/suspension`) no longer refuses a superadmin itself: the caller authorizes with
+  `canActOnUser`, as the routes do.
 
 ### Changed
 

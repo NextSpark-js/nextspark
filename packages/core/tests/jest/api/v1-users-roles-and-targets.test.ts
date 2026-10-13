@@ -1,7 +1,7 @@
 /**
  * /api/v1/users and /api/v1/users/:id follow the superadmin users route:
  * - the only roles assigned are member and developer, and only a developer grants developer;
- * - nobody changes or deletes another superadmin, nobody changes their own role, and a suspended user is restored
+ * - only a developer changes or deletes a superadmin, nobody changes their own role, and a suspended user is restored
  *   only through unsuspend.
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -97,12 +97,19 @@ describe('PATCH /api/v1/users/:id, the role', () => {
 })
 
 describe('superadmin targets, as on the superadmin route', () => {
-  it.each(['sa', 'dev'])('%s neither changes nor deletes another superadmin', async (actor) => {
-    as(actor)
-    const target = actor === 'sa' ? 'sa2' : 'sa'
-    expect(await patch(target, { firstName: 'X' })).toBe(403)
-    expect(await del(target)).toBe(403)
+  it('a superadmin neither changes nor deletes another superadmin', async () => {
+    as('sa')
+    expect(await patch('sa2', { firstName: 'X' })).toBe(403)
+    expect(await patch('sa2', { role: 'member' })).toBe(403)
+    expect(await del('sa2')).toBe(403)
     expect(mutateWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('a developer changes, demotes and deletes a superadmin', async () => {
+    as('dev')
+    expect(await patch('sa', { firstName: 'X' })).toBe(200)
+    expect(await patch('sa', { role: 'member' })).toBe(200)
+    expect(await del('sa')).toBe(200)
   })
 
   it.each(['sa', 'dev'])('%s changes and deletes a member', async (actor) => {
@@ -147,7 +154,7 @@ describe('/api/v1/users/:id/meta/:key writes follow the same targets', () => {
   const remove = async (target: string) =>
     (await deleteMeta(new NextRequest(`http://localhost/api/v1/users/${target}/meta/k`, { method: 'DELETE' }), { params: Promise.resolve({ id: target, key: 'k' }) } as never)).status
 
-  it('a superadmin writes a member\'s metadata, not a developer\'s nor another superadmin\'s', async () => {
+  it('a superadmin writes a member\'s metadata, not a developer\'s nor another superadmin\'s; a developer writes a superadmin\'s', async () => {
     as('sa')
     expect(await put('mem')).toBe(200)
     expect(await put('dev')).toBe(403)
@@ -155,6 +162,8 @@ describe('/api/v1/users/:id/meta/:key writes follow the same targets', () => {
     expect(await put('sa2')).toBe(403)
     expect(updateUserMeta).toHaveBeenCalledTimes(1)
     expect(deleteUserMeta).not.toHaveBeenCalled()
+    as('dev')
+    expect(await put('sa2')).toBe(200)
   })
 
   it('a developer writes a developer\'s metadata; everyone writes their own', async () => {

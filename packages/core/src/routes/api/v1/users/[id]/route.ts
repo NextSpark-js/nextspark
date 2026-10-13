@@ -132,8 +132,8 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
-    // SECURITY: the rules of PATCH /api/superadmin/users/:id. Nobody changes another superadmin or their own role, only a
-    // developer changes a developer or grants the developer role, and a suspended user comes back only through unsuspend.
+    // SECURITY: the rules of PATCH /api/superadmin/users/:id. Nobody changes their own role, only a developer
+    // changes a developer or a superadmin or grants the developer role, and a suspended user comes back only through unsuspend.
     const target = await queryOneWithRLS<{ id: string; role: string }>(
       'SELECT id, role FROM "users" WHERE id = $1 OR email = $1',
       [id],
@@ -143,12 +143,8 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       const response = createApiError('User not found', 404, null, 'USER_NOT_FOUND');
       return addCorsHeaders(response, req);
     }
-    if (target.id !== authResult.user!.id && target.role === 'superadmin') {
-      const response = createApiError('Cannot modify other superadmin accounts', 403, null, 'FORBIDDEN');
-      return addCorsHeaders(response, req);
-    }
     if (target.id !== authResult.user!.id && !canActOnUser(authResult.user!.role, target.role)) {
-      const response = createApiError('Only a developer can modify a developer account', 403, null, 'FORBIDDEN');
+      const response = createApiError('Only a developer can modify a developer or superadmin account', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);
     }
     if (validatedData.role !== undefined) {
@@ -312,13 +308,8 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
-    // As DELETE /api/superadmin/users/:id: nobody deletes another superadmin
-    if ((targetUser as Record<string, unknown>).role === 'superadmin') {
-      const response = createApiError('Cannot delete other superadmin accounts', 403, null, 'FORBIDDEN');
-      return addCorsHeaders(response, req);
-    }
     if (!canActOnUser(authResult.user!.role, (targetUser as { role: string }).role)) {
-      const response = createApiError('Only a developer can delete a developer account', 403, null, 'FORBIDDEN');
+      const response = createApiError('Only a developer can delete a developer or superadmin account', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);
     }
 

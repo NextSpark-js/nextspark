@@ -487,6 +487,7 @@ function UsersPage() {
                 superadmins={usersData?.superadmins || []}
                 isLoading={isLoading}
                 currentUserId={session?.user?.id}
+                onRefresh={() => refetch()}
               />
               {usersData?.pagination && (
                 <div className="p-4 border-t">

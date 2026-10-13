@@ -50,7 +50,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useRoleTranslations } from '../../../lib/role-helpers';
-import { useSession } from '../../../lib/auth-client';
+import { useSession, type ClientSession } from '../../../lib/auth-client';
+import type { SessionUser } from '../../../lib/auth';
 import { canActOnUser, canGrantUserRole } from '../../../lib/auth/assignable-roles';
 import { useTranslations } from 'next-intl';
 import type { UserRole } from '../../../types/user.types';
@@ -94,13 +95,13 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
   const getRoleName = useRoleTranslations();
   const t = useTranslations('superadmin.users.actions');
   const { data: session } = useSession();
-  // the session's user type is wrong upstream (#131)
-  const viewer = (session as { user?: { id?: string; role?: string } } | null)?.user;
+  const viewer = (session as ClientSession | null)?.user as SessionUser | undefined;
   const viewerRole = viewer?.role;
   const viewerId = viewer?.id;
   // The API answers 403 to anyone else: only a developer grants the developer role and acts on a developer, and
   // nobody acts on their own account
   const canGrantDeveloper = canGrantUserRole(viewerRole, 'developer');
+  const restrictedKey = (user: User) => t(user.id === viewerId ? 'ownAccount' : 'restrictedTarget');
   const canAct = (user: User) => user.id !== viewerId && canActOnUser(viewerRole, user.role);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -402,7 +403,8 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
 
                     {canAct(user) ? (
                       <>
-                      {/* Role Change Submenu */}
+                      {/* Role Change Submenu: a suspended user comes back only through unsuspend (the API answers 400) */}
+                      {user.role !== "suspended" && (
                       <DropdownMenuSub>
                         <DropdownMenuSubTrigger>
                           <Edit className="mr-2 h-4 w-4" />
@@ -424,6 +426,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                           </DropdownMenuRadioGroup>
                         </DropdownMenuSubContent>
                       </DropdownMenuSub>
+                      )}
 
                       {/* Verify Email (only if not verified) */}
                       {!user.emailVerified && (
@@ -466,8 +469,8 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                       </DropdownMenuItem>
                       </>
                     ) : (
-                      <DropdownMenuItem disabled title={t('restrictedTarget')} data-cy={`superadmin-user-restricted-${user.id}`}>
-                        {t('restrictedTarget')}
+                      <DropdownMenuItem disabled title={restrictedKey(user)} data-cy={`superadmin-user-restricted-${user.id}`}>
+                        {restrictedKey(user)}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>

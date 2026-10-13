@@ -240,8 +240,7 @@ interface UserActionBody {
  * - unsuspend: Give a suspended user back the 'member' role (their API keys stay deactivated)
  * - verify-email: Manually verify user's email
  *
- * Nobody can act on their own account or on a superadmin, so the last superadmin is never suspended. Only a developer
- * acts on a developer.
+ * Nobody can act on their own account. Only a developer acts on a developer or a superadmin.
  */
 export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: RouteParams) => {
   try {
@@ -311,18 +310,10 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
 
     const targetUser = userCheck[0];
 
-    // Prevent modifying other superadmins
-    if (targetUser.role === 'superadmin') {
-      return NextResponse.json(
-        { error: 'Cannot modify other superadmin accounts' },
-        { status: 403 }
-      );
-    }
-
-    // The developer role ranks above superadmin: only a developer acts on a developer
+    // The developer role ranks above superadmin: only a developer acts on a developer or a superadmin
     if (!canActOnUser(session.user.role, targetUser.role)) {
       return NextResponse.json(
-        { error: 'Forbidden - Only a developer can modify a developer account' },
+        { error: 'Forbidden - Only a developer can modify a developer or superadmin account' },
         { status: 403 }
       );
     }
@@ -504,18 +495,10 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
 
     const targetUser = userCheck[0];
 
-    // Prevent deleting other superadmins
-    if (targetUser.role === 'superadmin') {
-      return NextResponse.json(
-        { error: 'Cannot delete other superadmin accounts' },
-        { status: 403 }
-      );
-    }
-
-    // Only a developer deletes a developer
+    // Only a developer deletes a developer or a superadmin
     if (!canActOnUser(session.user.role, targetUser.role)) {
       return NextResponse.json(
-        { error: 'Forbidden - Only a developer can delete a developer account' },
+        { error: 'Forbidden - Only a developer can delete a developer or superadmin account' },
         { status: 403 }
       );
     }

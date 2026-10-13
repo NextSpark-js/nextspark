@@ -81,7 +81,10 @@
       "suspendUser": "Suspendre l'utilisateur",
       "adminSettings": "Parametres admin",
       "revokeAdmin": "Revoquer admin",
-      "restrictedTarget": "Seul un développeur peut modifier ce compte"
+      "restrictedTarget": "Seul un développeur peut modifier ce compte",
+      "ownAccount": "Vous ne pouvez pas modifier votre propre compte ici",
+      "demoteToMember": "Rétrograder en membre",
+      "deleteUser": "Supprimer l'utilisateur"
     },
     "descriptions": {
       "regularUsersDescription": "Tous les utilisateurs a l'exception des super administrateurs. Inclut les membres, collaborateurs et administrateurs.",
@@ -90,6 +93,18 @@
     "security": {
       "notice": "Avis de securite :",
       "superadminWarning": "L'acces super admin accorde un controle total du systeme. A manipuler avec une extreme prudence."
+    },
+    "confirm": {
+      "demoteTitle": "Rétrograder en membre",
+      "demoteDescription": "Voulez-vous vraiment rétrograder {name} en membre ? Cette personne perd l'accès superadministrateur.",
+      "suspendTitle": "Suspendre l'utilisateur",
+      "suspendDescription": "Voulez-vous vraiment suspendre {name} ? Cette personne ne pourra plus accéder à l'application.",
+      "deleteTitle": "Supprimer l'utilisateur",
+      "deleteDescription": "Voulez-vous vraiment supprimer {name} définitivement ? Cette action est irréversible. Toutes ses données, équipes et appartenances seront supprimées.",
+      "cancel": "Annuler",
+      "confirm": "Confirmer",
+      "done": "Terminé",
+      "failed": "L'action a échoué"
     }
   },
   "style": {

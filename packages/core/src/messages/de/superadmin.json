@@ -81,7 +81,10 @@
       "suspendUser": "Benutzer sperren",
       "adminSettings": "Admin-Einstellungen",
       "revokeAdmin": "Admin widerrufen",
-      "restrictedTarget": "Nur ein Entwickler kann dieses Konto ändern"
+      "restrictedTarget": "Nur ein Entwickler kann dieses Konto ändern",
+      "ownAccount": "Sie können Ihr eigenes Konto hier nicht ändern",
+      "demoteToMember": "Zum Mitglied herabstufen",
+      "deleteUser": "Benutzer löschen"
     },
     "descriptions": {
       "regularUsersDescription": "Alle Benutzer ausser Superadministratoren. Beinhaltet Mitglieder, Mitarbeiter und Administratoren.",
@@ -90,6 +93,18 @@
     "security": {
       "notice": "Sicherheitshinweis:",
       "superadminWarning": "Superadmin-Zugriff gewaehrt vollstaendige Systemkontrolle. Mit aeusserster Vorsicht behandeln."
+    },
+    "confirm": {
+      "demoteTitle": "Zum Mitglied herabstufen",
+      "demoteDescription": "Möchten Sie {name} wirklich zum Mitglied herabstufen? Der Superadmin-Zugriff geht verloren.",
+      "suspendTitle": "Benutzer sperren",
+      "suspendDescription": "Möchten Sie {name} wirklich sperren? Der Zugriff auf die Anwendung ist dann nicht mehr möglich.",
+      "deleteTitle": "Benutzer löschen",
+      "deleteDescription": "Möchten Sie {name} wirklich endgültig löschen? Dies kann nicht rückgängig gemacht werden. Alle Daten, Teams und Mitgliedschaften werden entfernt.",
+      "cancel": "Abbrechen",
+      "confirm": "Bestätigen",
+      "done": "Erledigt",
+      "failed": "Aktion fehlgeschlagen"
     }
   },
   "style": {

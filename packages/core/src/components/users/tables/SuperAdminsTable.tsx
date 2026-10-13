@@ -1,7 +1,9 @@
 "use client";
 
-
+import { useState } from "react";
 import { format } from "date-fns";
+import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import {
   Table,
   TableBody,
@@ -18,6 +20,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../ui/dialog';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../../ui/avatar';
@@ -28,10 +38,16 @@ import {
   Calendar,
   Eye,
   Settings,
-  AlertTriangle
+  AlertTriangle,
+  Ban,
+  Trash2,
+  UserMinus
 } from "lucide-react";
 import { useRoleTranslations } from '../../../lib/role-helpers';
-import { useSession } from '../../../lib/auth-client';
+import { useSession, type ClientSession } from '../../../lib/auth-client';
+import type { SessionUser } from '../../../lib/auth';
+import { useToast } from '../../../hooks/useToast';
+import { withBasePath } from '../../../lib/base-path';
 import { canActOnUser } from '../../../lib/auth/assignable-roles';
 import type { UserRole } from '../../../types/user.types';
 
@@ -51,7 +67,10 @@ interface SuperAdminsTableProps {
   superadmins: SuperAdmin[];
   isLoading?: boolean;
   currentUserId?: string; // To identify current user
+  onRefresh?: () => void;
 }
+
+type ActionType = 'demote' | 'suspend' | 'delete';
 
 /**
  * SuperAdmins Table Component
@@ -62,13 +81,41 @@ interface SuperAdminsTableProps {
 export function SuperAdminsTable({ 
   superadmins, 
   isLoading, 
-  currentUserId 
+  currentUserId,
+  onRefresh
 }: SuperAdminsTableProps) {
 
   const getRoleName = useRoleTranslations();
+  const t = useTranslations('superadmin.users');
+  const { toast } = useToast();
   const { data: session } = useSession();
-  // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
-  const viewerRole: string | undefined = session?.user?.role;
+  const viewerRole = ((session as ClientSession | null)?.user as SessionUser | undefined)?.role;
+  const [pending, setPending] = useState<{ type: ActionType; admin: SuperAdmin } | null>(null);
+
+  // The same routes the users table calls; the API accepts these only from a developer (canActOnUser)
+  const actionMutation = useMutation({
+    mutationFn: async ({ type, id }: { type: ActionType; id: string }) => {
+      const response = await fetch(withBasePath(`/api/superadmin/users/${id}`), type === 'delete'
+        ? { method: 'DELETE' }
+        : {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(type === 'demote' ? { action: 'change-role', role: 'member' } : { action: 'suspend' }),
+          });
+      if (!response.ok) throw new Error((await response.json()).error || t('confirm.failed'));
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: t('confirm.done') });
+      onRefresh?.();
+    },
+    onError: (error: Error) => toast({ title: t('confirm.failed'), description: error.message, variant: 'destructive' }),
+  });
+
+  const confirmPending = () => {
+    if (pending) actionMutation.mutate({ type: pending.type, id: pending.admin.id });
+    setPending(null);
+  };
 
   // Generate user initials for avatar
   const getUserInitials = (user: SuperAdmin) => {
@@ -222,13 +269,21 @@ export function SuperAdminsTable({
                         Send Message
                       </DropdownMenuItem>
                       
-                      {/* Only show dangerous actions for other admins */}
+                      {/* Only a developer acts on a superadmin, and nobody on their own account */}
                       {!isCurrentUser && canActOnUser(viewerRole, admin.role) && (
                         <>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer text-orange-600">
-                            <AlertTriangle className="mr-2 h-4 w-4" />
-                            Revoke Admin
+                          <DropdownMenuItem className="cursor-pointer text-orange-600" onClick={() => setPending({ type: 'demote', admin })}>
+                            <UserMinus className="mr-2 h-4 w-4" />
+                            {t('actions.demoteToMember')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer text-yellow-600" onClick={() => setPending({ type: 'suspend', admin })}>
+                            <Ban className="mr-2 h-4 w-4" />
+                            {t('actions.suspendUser')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer text-destructive" onClick={() => setPending({ type: 'delete', admin })}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {t('actions.deleteUser')}
                           </DropdownMenuItem>
                         </>
                       )}
@@ -240,6 +295,23 @@ export function SuperAdminsTable({
           })}
         </TableBody>
       </Table>
+
+      <Dialog open={!!pending} onOpenChange={() => setPending(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{pending && t(`confirm.${pending.type}Title`)}</DialogTitle>
+            <DialogDescription>
+              {pending && t(`confirm.${pending.type}Description`, { name: pending.admin.fullName || pending.admin.email })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPending(null)}>{t('confirm.cancel')}</Button>
+            <Button variant={pending?.type === 'delete' ? 'destructive' : 'default'} onClick={confirmPending}>
+              {t('confirm.confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Security Notice */}
       <div className="bg-red-50 border-t border-red-200 p-3">

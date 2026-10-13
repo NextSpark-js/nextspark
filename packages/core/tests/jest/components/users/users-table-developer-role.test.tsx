@@ -38,19 +38,23 @@ describe('actions on a row follow the API rule (canActOnUser)', () => {
     ['developer', 'developer', true],
     ['superadmin', 'developer', false],
     ['superadmin', 'superadmin', false],
-    ['developer', 'superadmin', false],
+    ['developer', 'superadmin', true],
   ] as const)('as a %s, the actions on a %s are shown: %s', (r, target, shown) => {
     role = r
     render(<UsersTable users={[unverified('t', target)] as never} />)
     for (const label of menu) expect(screen.queryAllByText(label)).toHaveLength(shown ? 1 : 0)
     expect(screen.queryAllByText('restrictedTarget')).toHaveLength(shown ? 0 : 1)
+    expect(screen.queryAllByText('ownAccount')).toHaveLength(0)
     expect(screen.getAllByText('View Profile')).toHaveLength(1)
   })
 
-  it('offers unsuspend on a suspended member to a superadmin', () => {
-    role = 'superadmin'
-    render(<UsersTable users={[user('s', 'suspended')] as never} />)
-    expect(screen.getByText('Unsuspend User')).toBeTruthy()
+  it.each(['superadmin', 'developer'])('as a %s, a suspended member has no Change Role (the API answers 400), but unsuspend, verify and delete', (r) => {
+    role = r
+    render(<UsersTable users={[unverified('s', 'suspended')] as never} />)
+    expect(screen.queryAllByText('Change Role')).toHaveLength(0)
+    expect(screen.queryAllByText('Developer')).toHaveLength(0)
+    for (const label of ['Unsuspend User', 'Verify Email', 'Delete User']) expect(screen.getAllByText(label)).toHaveLength(1)
+    expect(screen.queryAllByText('Suspend User')).toHaveLength(0)
   })
 
   it('shows no actions on the viewer own row', () => {
@@ -58,7 +62,8 @@ describe('actions on a row follow the API rule (canActOnUser)', () => {
     viewerId = 'me'
     render(<UsersTable users={[user('me', 'developer')] as never} />)
     expect(screen.queryAllByText('Delete User')).toHaveLength(0)
-    expect(screen.getByText('restrictedTarget')).toBeTruthy()
+    expect(screen.getByText('ownAccount')).toBeTruthy()
+    expect(screen.queryAllByText('restrictedTarget')).toHaveLength(0)
     viewerId = 'viewer'
   })
 })

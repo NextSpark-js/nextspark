@@ -13,10 +13,10 @@ export function canGrantUserRole(callerRole: string | null | undefined, role: st
 }
 
 /**
- * Whether a caller with `callerRole` may change, suspend or delete another user whose role is `targetRole`: nobody acts
- * on another superadmin, and only a developer acts on a developer.
+ * Whether a caller with `callerRole` may change, suspend or delete another user whose role is `targetRole`: the developer
+ * role ranks above superadmin, so only a developer acts on a developer or on a superadmin. This is the only rule: the
+ * routes and the admin UI call it, none repeats it.
  */
 export function canActOnUser(callerRole: string | null | undefined, targetRole: string): boolean {
-  if (targetRole === 'superadmin') return false
-  return targetRole !== 'developer' || callerRole === 'developer'
+  return (targetRole !== 'superadmin' && targetRole !== 'developer') || callerRole === 'developer'
 }

@@ -81,7 +81,10 @@
       "suspendUser": "Suspend User",
       "adminSettings": "Admin Settings",
       "revokeAdmin": "Revoke Admin",
-      "restrictedTarget": "Only a developer can modify this account"
+      "restrictedTarget": "Only a developer can modify this account",
+      "ownAccount": "You cannot change your own account here",
+      "demoteToMember": "Demote to Member",
+      "deleteUser": "Delete User"
     },
     "descriptions": {
       "regularUsersDescription": "All users excluding superadministrators. Includes members, colaborators, and admins.",
@@ -90,6 +93,18 @@
     "security": {
       "notice": "Security Notice:",
       "superadminWarning": "Superadmin access grants full system control. Handle with extreme caution."
+    },
+    "confirm": {
+      "demoteTitle": "Demote to Member",
+      "demoteDescription": "Are you sure you want to demote {name} to member? They lose superadmin access.",
+      "suspendTitle": "Suspend User",
+      "suspendDescription": "Are you sure you want to suspend {name}? They will no longer be able to access the application.",
+      "deleteTitle": "Delete User",
+      "deleteDescription": "Are you sure you want to permanently delete {name}? This action cannot be undone. All their data, teams, and memberships will be removed.",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "done": "Done",
+      "failed": "Action failed"
     }
   },
   "style": {

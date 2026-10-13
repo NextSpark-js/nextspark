@@ -15,8 +15,8 @@ export function isSuspendedRole(role: unknown): boolean {
 
 /**
  * Suspends `userId` in one statement: sets the role, deletes the user's sessions and deactivates their active API keys
- * (`status = 'inactive'`, so the audit log keeps the rows; unsuspending does not bring them back). A superadmin is never
- * suspended. Returns null when no user was suspended (unknown id, or a superadmin).
+ * (`status = 'inactive'`, so the audit log keeps the rows; unsuspending does not bring them back). The caller authorizes
+ * (`canActOnUser`). Returns null when no user was suspended (unknown id).
  *
  * Both functions run on the service connection: the caller authorizes (the superadmin users route checks the role).
  */
@@ -24,7 +24,7 @@ export async function suspendUser(userId: string, actorId: string): Promise<{ se
   const [result] = await queryWithRLS<{ suspended: number; sessions: number; keyHashes: string[] }>(
     `WITH suspended AS (
        UPDATE "users" SET role = '${SUSPENDED_ROLE}', "updatedAt" = NOW()
-       WHERE id = $1 AND role <> 'superadmin'
+       WHERE id = $1
        RETURNING id
      ), sessions AS (
        DELETE FROM "session" WHERE "userId" IN (SELECT id FROM suspended) RETURNING id

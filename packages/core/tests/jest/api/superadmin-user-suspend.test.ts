@@ -44,20 +44,22 @@ describe('suspend', () => {
     expect(await response.json()).toMatchObject({ success: true, revoked: { sessions: 2, apiKeys: 2 } })
     const [[sql, params]] = queryWithRLS.mock.calls.filter(([s]: [string]) => s.includes('WITH suspended AS'))
     expect(sql).toContain(`SET role = 'suspended'`)
-    expect(sql).toContain(`role <> 'superadmin'`)
+    expect(sql).not.toContain('superadmin')
     expect(sql).toContain('DELETE FROM "session"')
     expect(sql).toContain(`UPDATE "api_key" SET status = 'inactive'`)
     expect(params).toEqual(['mem-1'])
     expect(invalidateApiKeyCache.mock.calls).toEqual([['h1'], ['h2']])
   })
 
-  it('refuses the caller\'s own account and any superadmin (so never the last one)', async () => {
+  it('refuses the caller\'s own account, and a superadmin unless the caller is a developer', async () => {
     as('sa-1')
     expect((await patch('sa-1', { action: 'suspend' })).status).toBe(400)
     expect((await patch('sa-2', { action: 'suspend' })).status).toBe(403)
-    as('dev-1')
-    expect((await patch('sa-1', { action: 'suspend' })).status).toBe(403)
     expect(queryWithRLS.mock.calls.some(([s]: [string]) => s.includes('WITH suspended AS'))).toBe(false)
+    as('dev-1')
+    expect((await patch('dev-1', { action: 'suspend' })).status).toBe(400)
+    expect((await patch('sa-1', { action: 'suspend' })).status).toBe(200)
+    expect(queryWithRLS.mock.calls.some(([s]: [string]) => s.includes('WITH suspended AS'))).toBe(true)
   })
 
   it('a member cannot suspend anyone', async () => {
@@ -164,10 +166,13 @@ describe('PATCH and DELETE on the service connection', () => {
     expect(queryWithRLS).not.toHaveBeenCalled()
   })
 
-  it('nobody deletes a superadmin, a developer neither', async () => {
-    as('dev-1')
-    expect((await del('sa-1')).status).toBe(403)
+  it('only a developer deletes a superadmin', async () => {
+    as('sa-1')
+    expect((await del('sa-2')).status).toBe(403)
     expect(queryWithRLS.mock.calls.some(([s]: [string]) => s.startsWith('DELETE'))).toBe(false)
+    as('dev-1')
+    expect((await del('sa-1')).status).toBe(200)
+    expect(queryWithRLS.mock.calls.some(([s]: [string]) => s.startsWith('DELETE'))).toBe(true)
   })
 })
 
@@ -185,6 +190,20 @@ describe('developer targets', () => {
     }
     expect((await del('dev-1')).status).toBe(403)
     expect(queryWithRLS.mock.calls.some(([s]: [string]) => /^\s*(UPDATE|DELETE)|WITH suspended/.test(s))).toBe(false)
+  })
+
+  it('a superadmin neither changes, suspends, verifies nor deletes another superadmin; a developer does all of it', async () => {
+    as('sa-1')
+    for (const body of [{ action: 'change-role', role: 'member' }, { action: 'suspend' }, { action: 'verify-email' }]) {
+      expect((await patch('sa-2', body)).status).toBe(403)
+    }
+    expect((await del('sa-2')).status).toBe(403)
+    queryWithRLS.mockClear()
+    as('dev-1')
+    expect((await patch('sa-2', { action: 'change-role', role: 'member' })).status).toBe(200)
+    expect((await patch('sa-2', { action: 'suspend' })).status).toBe(200)
+    expect((await patch('sa-2', { action: 'verify-email' })).status).toBe(200)
+    expect((await del('sa-2')).status).toBe(200)
   })
 
   it('another developer does', async () => {

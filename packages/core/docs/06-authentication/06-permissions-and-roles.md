@@ -55,8 +55,7 @@ role: {
 | The roles assigned are `member` and `developer`; `superadmin` is never assigned through the API | 400 |
 | **Only a developer grants `developer`** | 403 |
 | Nobody changes their own role | 400 |
-| Nobody changes or deletes another superadmin | 403 |
-| **Only a developer changes, suspends or deletes a developer** (their profile and metadata included) | 403 |
+| **Only a developer changes, suspends or deletes a developer or a superadmin** (their profile and metadata included); nobody acts on their own account | 403 |
 | A suspended user comes back only through `unsuspend` | 400 |
 
 A superadmin is created by the owner directly in the database.
