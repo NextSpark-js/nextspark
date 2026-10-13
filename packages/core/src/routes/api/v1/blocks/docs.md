@@ -8,7 +8,16 @@ The Blocks API provides read-only access to block metadata from the block regist
 
 ## Authentication
 
-These endpoints are **public** (no authentication required) as block metadata is not sensitive.
+These endpoints are **public on purpose** (no authentication required): they expose block slugs, names and field definitions, never tenant data, and `POST /api/v1/blocks/validate` only checks the props it is sent against a block's schema.
+
+They are rate limited per client address:
+
+| Endpoint | Tier | Limit |
+|---|---|---|
+| `GET /api/v1/blocks`, `GET /api/v1/blocks/[slug]` | `read` | 200 requests per minute |
+| `POST /api/v1/blocks/validate` | `write` | 50 requests per minute |
+
+A project that does not want its block definitions visible to anonymous callers can put a rule in its own proxy that requires a session for `/api/v1/blocks`.
 
 ## Endpoints
 
