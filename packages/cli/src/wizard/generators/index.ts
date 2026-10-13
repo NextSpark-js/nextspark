@@ -317,15 +317,15 @@ export async function updatePackageJson(
     // next/better-auth/next-intl vetted floors, kept in lockstep with this
     // monorepo's own pnpm.overrides in package.json -- see create-nextspark-app's
     // create.ts for the full rationale. better-auth is deliberately tilde-ranged
-    // (not caret): 1.7.0 introduces a breaking Account table schema change
-    // (accountId -> providerAccountId) this app's migrations don't account for.
+    // (not caret): core is tested against one minor line, and its migrations
+    // (038) and `db:migrate`'s auth schema check follow that line's schema.
     'next': '~16.3.8',
     'react': '^19.2.0',
     'react-dom': '^19.2.0',
     // Auth
-    'better-auth': '~1.6.30',
+    'better-auth': '~1.7.7',
     // The exact version better-auth pins, which @better-auth/core requires as a peer
-    '@better-fetch/fetch': '1.3.1',
+    '@better-fetch/fetch': '1.3.2',
     // i18n
     'next-intl': '^4.11.0',
     // Build tools
@@ -338,7 +338,7 @@ export async function updatePackageJson(
     // State & Data
     '@tanstack/react-query': '^5.64.2',
     // Forms & Validation
-    'zod': '^4.1.5',
+    'zod': '^4.5.4',
     'react-hook-form': '^7.54.2',
     '@hookform/resolvers': '^5.0.1',
     // UI

@@ -3,7 +3,7 @@
 import { useContext, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { QueryClientContext } from '@tanstack/react-query'
-import { authClient } from '../lib/auth-client'
+import { authClient, type ClientSession } from '../lib/auth-client'
 import type { SessionUser } from '../lib/auth'
 import { useOrigin } from './useOrigin'
 import { useLastAuthMethod } from './useLastAuthMethod'
@@ -69,7 +69,7 @@ const SESSION_DROP_TIMEOUT_MS = 2000
  * answers each with 401. So the store is brought up to date first, for at most SESSION_DROP_TIMEOUT_MS:
  * the redirect never depends on that request. Best effort: a store that cannot be refreshed leaves the order as it was.
  *
- * `$store.atoms.session` is an undocumented internal of better-auth, checked against 1.6.30 (client/session-atom.mjs: the atom's
+ * `$store.atoms.session` is an undocumented internal of better-auth, checked against 1.7.7 (client/session-atom.mjs: the atom's
  * value carries `refetch`). If an upgrade renames it this becomes a no-op and the 401s come back:
  * tests/jest/hooks/useAuth.signed-in-data.test.tsx pins the call, re-check it when better-auth is bumped.
  */
@@ -155,7 +155,8 @@ export function useAuthActions() {
     }
     // signOut() answers with { error } instead of throwing: a 429 or a network error leaves the server session alive,
     // so the caller shows its error and the page stays as it is
-    const { error } = await authClient.signOut()
+    // undefined, not nothing: Better Auth 1.7 types the argument as required without strictNullChecks (see ClientSession)
+    const { error } = await authClient.signOut(undefined)
     if (error) throw new Error(error.message || 'Failed to sign out')
     setSessionHint(false)
     await waitForSessionToDrop()
@@ -358,16 +359,17 @@ export function useAuthActions() {
 /** The session (user, loading state) and the auth actions. */
 export function useAuth() {
   const session = authClient.useSession()
+  const data = session.data as ClientSession | null
   const actions = useAuthActions()
 
   // Whatever answer the session gives, the hint follows it; a failed request says nothing
   useEffect(() => {
-    if (!session.isPending && !session.error) setSessionHint(Boolean(session.data))
-  }, [session.isPending, session.error, session.data])
+    if (!session.isPending && !session.error) setSessionHint(Boolean(data))
+  }, [session.isPending, session.error, data])
 
   return {
-    user: session.data?.user as SessionUser | null,
-    session: session.data,
+    user: data?.user as SessionUser | null,
+    session: data,
     isLoading: session.isPending,
     ...actions,
     isSigningIn: false, // BetterAuth doesn't provide this directly

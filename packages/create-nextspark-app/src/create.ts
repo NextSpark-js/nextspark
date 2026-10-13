@@ -295,11 +295,11 @@ export const ESSENTIAL_DEPENDENCIES = [
   'react',
   'react-dom',
   'next-intl@4.11.0',
-  'better-auth@~1.6.30',
+  'better-auth@~1.7.7',
   // better-auth pins this exact version and @better-auth/core requires it as a
   // peer, and a proxy.ts copied before 0.1.0-beta.196 imports it directly, so the
   // project declares it.
-  '@better-fetch/fetch@1.3.1',
+  '@better-fetch/fetch@1.3.2',
   'jiti',
   // Imported directly by shipped app routes (devtools docs/tests + media upload).
   // Must be direct project deps, not phantom-hoisted from @nextsparkjs/core,
@@ -496,10 +496,10 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     // Essential runtime dependencies that must be present for Next.js to start.
     // next/next-intl/better-auth are pinned (not left to float to npm "latest")
     // because unpinned installs bypass whatever security/compatibility vetting
-    // this monorepo's own pnpm.overrides did -- in particular, better-auth >=1.7.0
-    // has a breaking Account table schema change (accountId -> providerAccountId)
-    // this app's migrations don't account for. Bump these deliberately, in lockstep
-    // with the monorepo's own pnpm.overrides in package.json, not automatically.
+    // this monorepo's own pnpm.overrides did -- in particular, better-auth is held
+    // to the minor line core is tested against (its tables must match what core's
+    // migrations create). Bump these deliberately, in lockstep with the monorepo's
+    // own pnpm.overrides in package.json, not automatically.
     const essentialDeps = [
       corePackage,
       cliPackage,

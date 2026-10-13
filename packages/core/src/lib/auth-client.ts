@@ -25,6 +25,12 @@ export const authClient = createAuthClient({
   ]
 });
 
+/**
+ * What `useSession().data` holds. Better Auth 1.7 infers the client's session type only with strictNullChecks, which
+ * core's declaration build leaves off (there it is `never`), so the hooks read the data through this type.
+ */
+export type ClientSession = typeof auth.$Infer.Session;
+
 export const {
   signIn,
   signUp,

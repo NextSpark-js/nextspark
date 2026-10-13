@@ -84,6 +84,7 @@ describe('signup-with-invite password policy', () => {
     const created = mockCreateUser.mock.calls[0][0] as Record<string, unknown>
     expect(created).toMatchObject({ email: 'invitee@example.com', emailVerified: true, firstName: 'Ana' })
     expect(created).not.toHaveProperty('password')
+    expect(mockCreateUser.mock.calls[0][1]).toEqual({ method: 'email-otp' })
     expect(mockTx.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO "team_members"'), ['team-1', 'user-1', 'member', 'owner-1'])
     expect(mockTx.commit).toHaveBeenCalled()
   })

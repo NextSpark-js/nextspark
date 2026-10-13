@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { authClient } from '../lib/auth-client'
+import { authClient, type ClientSession } from '../lib/auth-client'
 import { USER_PROFILE_WITH_META_QUERY_KEY } from './useUserSettings'
 import { withBasePath } from '../lib/base-path'
 
@@ -86,7 +86,7 @@ export function getMissingMetadataDefaults(
  */
 export function useEnsureUserMetadata() {
   const session = authClient.useSession()
-  const userId = session.data?.user?.id
+  const userId = (session.data as ClientSession | null)?.user?.id
   const queryClient = useQueryClient()
   const hasCreatedMetadata = useRef(false)
 

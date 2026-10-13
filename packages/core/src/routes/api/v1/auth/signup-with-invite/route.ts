@@ -187,7 +187,8 @@ export const POST = withRateLimitTier(withApiLogging(
             firstName,
             lastName,
             language: I18N_CONFIG.defaultLocale,
-          }))
+            // the provisioning source Better Auth 1.7 asks for: the account signs in by email code
+          }, { method: 'email-otp' }))
         } catch (error) {
           // The registration hook refuses with a 403 APIError carrying its code (registration.mode rules)
           const message = error instanceof Error ? error.message : ''
