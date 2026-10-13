@@ -257,3 +257,63 @@ test('(h) an unrelated entity row of another theme does not make a content takeo
   assert.doesNotMatch(result.output, /more than one theme/)
   assert.equal(await value(client, 'SELECT count(*)::int FROM seeded'), 1)
 })
+
+test('(i) a content takeover under one theme and an entity takeover under another, with no NEXT_PUBLIC_ACTIVE_THEME: the run stops before anything', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+  const { url, client } = await throwawayDatabase(t, 'i')
+  await legacyDatabase(client, [['theme', 'acme', '010_seed.sql']])
+  // campaign_members was recorded under beta; both kinds have something to take over
+  await client.query(`
+    ${SEEDED_BEFORE} CREATE TABLE campaign_members (id int);
+    INSERT INTO "_entity_migrations" (entity_name, source_type, source_name, filename) VALUES ('campaign_members', 'theme', 'beta', '001_campaign_members.sql');
+    DROP TABLE core_marker; DELETE FROM "_migrations";
+  `)
+  const root = project(t, { ...SEED, 'entities/campaign-members/migrations/001_campaign_members.sql': 'CREATE TABLE campaign_members (id int);' })
+
+  const result = migrate(root, url, { LABEL: '(i) content acme, entity beta, no env' })
+  assert.equal(result.status, 1, result.output)
+  assert.match(result.output, /recorded under more than one theme: acme, beta\. Set NEXT_PUBLIC_ACTIVE_THEME/)
+  assert.doesNotMatch(result.output, /already applied as|🔄/)
+  // nothing ran or was recorded: not the core migration, not the project's, not the entity's
+  assert.equal(await value(client, `SELECT to_regclass('core_marker')::text`), null)
+  assert.equal(await value(client, 'SELECT count(*)::int FROM "_migrations"'), 0)
+  assert.deepEqual(await projectRows(client), [])
+  assert.deepEqual(await rows(client, 'SELECT entity_name FROM "_entity_migrations"'), [['campaign_members']])
+})
+
+test('(j) renamed entities with migrations of their own, recorded under the old theme, are taken over and nothing runs again', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+  const { url, client } = await throwawayDatabase(t, 'j')
+  await legacyDatabase(client, [['theme', 'acme', '010_seed.sql']], [
+    ['campaign_members', '001_campaign_members.sql'],
+    ['campaign_members', '002_campaign_members_name.sql'],
+    ['order_invoices', '001_order_invoices.sql'],
+  ])
+  await client.query(`${SEEDED_BEFORE} CREATE TABLE campaign_members (id int, name text); CREATE TABLE order_invoices (id int);`)
+  // Not idempotent, so a migration that runs again fails the run
+  const root = project(t, {
+    ...SEED,
+    'entities/campaign-members/migrations/001_campaign_members.sql': 'CREATE TABLE campaign_members (id int);',
+    'entities/campaign-members/migrations/002_campaign_members_name.sql': 'ALTER TABLE campaign_members ADD COLUMN name text;',
+    'entities/order-invoices/migrations/001_order_invoices.sql': 'CREATE TABLE order_invoices (id int);',
+  })
+
+  const first = migrate(root, url, { LABEL: '(j) CRM-shaped rename, no env' })
+  assert.equal(first.status, 0, first.output)
+  for (const [from, to, file] of [
+    ['campaign_members', 'campaign-members', '001_campaign_members.sql'],
+    ['campaign_members', 'campaign-members', '002_campaign_members_name.sql'],
+    ['order_invoices', 'order-invoices', '001_order_invoices.sql'],
+  ]) assert.match(first.output, new RegExp(`${file.replace('.', '\\.')}: already applied as entity ${from}; recorded for ${to}`))
+  assert.match(first.output, /010_seed\.sql: already applied as theme acme; recorded for the project/)
+  assert.doesNotMatch(first.output, /🔄 \d+_(campaign|order)/)
+  assert.deepEqual(await rows(client, `SELECT entity_name, source_type, filename FROM "_entity_migrations" WHERE entity_name LIKE '%-%' ORDER BY entity_name, filename`), [
+    ['campaign-members', 'project', '001_campaign_members.sql'],
+    ['campaign-members', 'project', '002_campaign_members_name.sql'],
+    ['order-invoices', 'project', '001_order_invoices.sql'],
+  ])
+  assert.equal(await value(client, 'SELECT count(*)::int FROM "_entity_migrations"'), 6)
+
+  const second = migrate(root, url, { LABEL: '(j) second run' })
+  assert.equal(second.status, 0, second.output)
+  assert.doesNotMatch(second.output, /already applied as/)
+  assert.equal(await value(client, 'SELECT count(*)::int FROM "_entity_migrations"'), 6)
+})
