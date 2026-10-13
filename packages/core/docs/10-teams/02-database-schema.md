@@ -202,16 +202,22 @@ CREATE POLICY "teams_insert_policy" ON public."teams"
     "ownerId" = public.get_auth_user_id()
   );
 
--- Only owners and admins can update teams
+-- Only owners and admins can update teams (migration 035)
 CREATE POLICY "teams_update_policy" ON public."teams"
   FOR UPDATE TO authenticated
   USING (
-    id IN (
-      SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
-      AND role IN ('owner', 'admin')
-    )
+    public.is_superadmin()
+    OR "ownerId" = public.get_auth_user_id()
+    OR public.auth_team_role(id) IN ('owner', 'admin')
+  )
+  WITH CHECK (
+    public.is_superadmin()
+    OR "ownerId" = public.get_auth_user_id()
+    OR public.auth_team_role(id) IN ('owner', 'admin')
   );
+-- The teams_rls_update_limits trigger: on the RLS connection an admin changes only name, slug, description,
+-- "avatarUrl" and settings, and nobody but a superadmin changes "ownerId" (an ownership transfer runs on the
+-- service connection).
 
 -- Only owners can delete teams
 CREATE POLICY "teams_delete_policy" ON public."teams"

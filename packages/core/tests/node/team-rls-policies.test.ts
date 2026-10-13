@@ -288,9 +288,143 @@ test('an ownership transfer runs on the service connection, and RLS then follows
   // the new owner manages the former owner; the former owner, now admin, cannot touch the new owner or other admins
   assert.equal((await as('owna', `UPDATE "team_members" SET role = 'member' WHERE "teamId" = 'team-a' AND "userId" = 'mema'`)).rowCount, 0)
   assert.equal((await as('owna', `DELETE FROM "team_members" WHERE "teamId" = 'team-a' AND "userId" = 'adma'`)).rowCount, 0)
+  // the former owner edits the team as an admin, and does not take it back
+  assert.equal((await as('owna', `UPDATE "teams" SET name = 'Again' WHERE id = 'team-a'`)).rowCount, 1)
+  await assert.rejects(as('owna', `UPDATE "teams" SET "ownerId" = 'owna' WHERE id = 'team-a'`), /cannot change/)
   assert.equal((await as('mema', `UPDATE "team_members" SET role = 'member' WHERE "teamId" = 'team-a' AND "userId" = 'owna'`)).rowCount, 1)
   assert.equal((await as('mema', `UPDATE "teams" SET name = 'Renamed' WHERE id = 'team-a'`)).rowCount, 1)
+  // demoted to member, they no longer edit it
   assert.equal((await as('owna', `UPDATE "teams" SET name = 'Again' WHERE id = 'team-a'`)).rowCount, 0)
   // and the former owner can now leave, or delete their account
   assert.equal((await as('owna', `DELETE FROM "team_members" WHERE "teamId" = 'team-a' AND "userId" = 'owna'`)).rowCount, 1)
+})
+
+const MIGRATION_035 = fs.readFileSync(path.join(CORE, 'migrations/035_team_admin_metas_and_billing_policies.sql'), 'utf8')
+
+test('the team row follows PATCH /api/v1/teams/:teamId: owner and admins edit it, nobody moves its ownership through RLS', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
+  const { owner, app } = await cutoverDatabase(t)
+  await seed(owner)
+  const as = asUser(app)
+  // the statement of TeamService.update and of the route, with every column the route writes
+  const edit = `UPDATE "teams" SET name = $1, slug = $2, description = $3, "avatarUrl" = $4, settings = $5, "updatedAt" = CURRENT_TIMESTAMP WHERE id = 'team-a' RETURNING *`
+
+  assert.equal((await as('adma', edit, ['By admin', 'by-admin', 'd', 'https://x.test/a.png', '{"k":1}'])).rowCount, 1)
+  assert.equal((await as('owna', edit, ['By owner', 'by-owner', 'd2', null, '{}'])).rowCount, 1)
+  // a member, and another team's owner, update nothing
+  assert.equal((await as('mema', `UPDATE "teams" SET name = 'By member' WHERE id = 'team-a'`)).rowCount, 0)
+  assert.equal((await as('ownb', `UPDATE "teams" SET name = 'By B' WHERE id = 'team-a'`)).rowCount, 0)
+
+  // an admin changes nothing else, and nobody changes the owner here
+  for (const set of [`"ownerId" = 'adma'`, `metadata = '{"systemAdmin": true}'`, `"isGlobal" = true`, `"deletedAt" = now()`]) {
+    await assert.rejects(as('adma', `UPDATE "teams" SET ${set} WHERE id = 'team-a'`), /cannot change/, set)
+  }
+  await assert.rejects(as('owna', `UPDATE "teams" SET "ownerId" = 'adma' WHERE id = 'team-a'`), /cannot change/)
+  // the owner still changes the other fields, as before
+  assert.equal((await as('owna', `UPDATE "teams" SET metadata = '{"segment": "x"}' WHERE id = 'team-a'`)).rowCount, 1)
+  // the service connection (an ownership transfer) and a superadmin are not limited
+  await owner.query(`INSERT INTO users (id, email, name, role, "emailVerified") VALUES ('sup', 'sup@example.test', 'Super', 'superadmin', true)`)
+  assert.equal((await as('sup', `UPDATE "teams" SET metadata = '{}' WHERE id = 'team-a'`)).rowCount, 1)
+  assert.equal((await owner.query(`UPDATE "teams" SET "ownerId" = 'adma' WHERE id = 'team-a'`)).rowCount, 1)
+
+  const row = (await owner.query(`SELECT name, slug, "ownerId", "isGlobal", "deletedAt" FROM teams WHERE id = 'team-a'`)).rows[0]
+  assert.deepEqual(row, { name: 'By owner', slug: 'by-owner', ownerId: 'adma', isGlobal: false, deletedAt: null })
+})
+
+const METAS = {
+  pages: fs.readFileSync(path.join(CORE, 'templates/projects/starter/entities/pages/migrations/002_pages_metas.sql'), 'utf8'),
+  posts: fs.readFileSync(path.join(CORE, 'templates/projects/starter/entities/posts/migrations/006_posts_metas.sql'), 'utf8'),
+}
+const PERMISSIVE_METAS = ['pages', 'posts'].map(table => `
+  DROP POLICY "${table}_metas_auth_all" ON ${table}_metas;
+  CREATE POLICY "${table}_metas_auth_all" ON ${table}_metas FOR ALL TO authenticated USING (true) WITH CHECK (true);`).join('')
+
+for (const upgrade of [false, true]) {
+  test(`pages and posts metas stay inside the parent's team (${upgrade ? 'a project created before, upgraded by 035' : 'a new project'})`, { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
+    const { owner, app } = await cutoverDatabase(t)
+    await seed(owner)
+    // the pages and posts tables of the entities, reduced to what the metas look at
+    await owner.query(`
+      CREATE TABLE pages (id UUID PRIMARY KEY, "teamId" TEXT NOT NULL);
+      CREATE TABLE posts (id UUID PRIMARY KEY, "teamId" TEXT NOT NULL);
+    `)
+    await owner.query(METAS.pages)
+    await owner.query(METAS.posts)
+    if (upgrade) {
+      await owner.query(PERMISSIVE_METAS)
+      await owner.query(MIGRATION_035)
+    }
+    const A = '00000000-0000-4000-8000-00000000000a'
+    const B = '00000000-0000-4000-8000-00000000000b'
+    await owner.query(`
+      INSERT INTO pages VALUES ('${A}', 'team-a'), ('${B}', 'team-b');
+      INSERT INTO posts VALUES ('${A}', 'team-a'), ('${B}', 'team-b');
+      INSERT INTO pages_metas ("pageId", "metaKey", "metaValue") VALUES ('${A}', 'note', '"a"'), ('${B}', 'note', '"b"');
+      INSERT INTO posts_metas ("postId", "metaKey", "metaValue") VALUES ('${A}', 'note', '"a"'), ('${B}', 'note', '"b"');
+    `)
+    const as = asUser(app)
+
+    for (const [table, column] of [['pages_metas', 'pageId'], ['posts_metas', 'postId']]) {
+      // another team's member, a user with no team and an empty user context: nothing of team A
+      for (const user of ['memb', 'outsider', '']) {
+        assert.equal((await as(user, `SELECT * FROM ${table} WHERE "${column}" = '${A}'`)).rowCount, 0, `${table} ${user}`)
+        assert.equal((await as(user, `UPDATE ${table} SET "metaValue" = '"x"' WHERE "${column}" = '${A}'`)).rowCount, 0)
+        assert.equal((await as(user, `DELETE FROM ${table} WHERE "${column}" = '${A}'`)).rowCount, 0)
+        await assert.rejects(as(user, `INSERT INTO ${table} ("${column}", "metaKey") VALUES ('${A}', 'forged')`), RLS)
+      }
+      // a member of team B moves nothing of theirs into team A
+      await assert.rejects(as('memb', `UPDATE ${table} SET "${column}" = '${A}' WHERE "${column}" = '${B}'`), RLS)
+      // a member of team A reads and writes team A's metas (the entity handler's statements)
+      assert.equal((await as('mema', `SELECT * FROM ${table}`)).rowCount, 1)
+      await as('mema', `INSERT INTO ${table} ("${column}", "metaKey", "metaValue") VALUES ('${A}', 'seo', '"s"') ON CONFLICT ("${column}", "metaKey") DO UPDATE SET "metaValue" = EXCLUDED."metaValue"`)
+      assert.equal((await as('mema', `UPDATE ${table} SET "metaValue" = '"y"' WHERE "${column}" = '${A}'`)).rowCount, 2)
+      assert.equal((await as('mema', `DELETE FROM ${table} WHERE "${column}" = '${A}' AND "metaKey" = 'seo'`)).rowCount, 1)
+    }
+  })
+}
+
+test('billing rows are written on the service connection only; owners and admins still read them', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
+  const { owner, app } = await cutoverDatabase(t)
+  await seed(owner)
+  // 035 runs again on a database that has it: idempotent
+  await owner.query(MIGRATION_035)
+  await owner.query(`
+    INSERT INTO plans (id, slug, name, type) VALUES ('plan-free', 'free-x', 'Free', 'free'), ('plan-pro', 'pro-x', 'Pro', 'paid');
+    INSERT INTO subscriptions (id, "teamId", "planId", status, "currentPeriodStart", "currentPeriodEnd") VALUES
+      ('sub-a', 'team-a', 'plan-free', 'active', now(), now() + interval '30 days'),
+      ('sub-b', 'team-b', 'plan-free', 'active', now(), now() + interval '30 days');
+    INSERT INTO usage (id, "subscriptionId", "limitSlug", "periodKey", "currentValue") VALUES ('us-a', 'sub-a', 'tasks', '2026-10', 5);
+    INSERT INTO billing_events (id, "subscriptionId", type, status, amount) VALUES ('be-a', 'sub-a', 'payment', 'succeeded', 100);
+    INSERT INTO usage_events (id, "subscriptionId", "userId", "teamId", "limitSlug", delta, "periodKey") VALUES ('ue-a', 'sub-a', 'owna', 'team-a', 'tasks', 1, '2026-10');
+  `)
+  const as = asUser(app)
+
+  for (const user of ['owna', 'adma', 'mema', 'memb']) {
+    assert.equal((await as(user, `UPDATE subscriptions SET "planId" = 'plan-pro', status = 'active' WHERE "teamId" = 'team-a'`)).rowCount, 0, user)
+    assert.equal((await as(user, `DELETE FROM subscriptions WHERE "teamId" = 'team-a'`)).rowCount, 0, user)
+    await assert.rejects(as(user, `INSERT INTO subscriptions ("teamId", "planId", status, "currentPeriodStart", "currentPeriodEnd") VALUES ('team-a', 'plan-pro', 'active', now(), now())`), RLS)
+    assert.equal((await as(user, `UPDATE usage SET "currentValue" = 0 WHERE "subscriptionId" = 'sub-a'`)).rowCount, 0, user)
+    assert.equal((await as(user, `DELETE FROM usage WHERE "subscriptionId" = 'sub-a'`)).rowCount, 0, user)
+    await assert.rejects(as(user, `INSERT INTO usage ("subscriptionId", "limitSlug", "periodKey", "currentValue") VALUES ('sub-a', 'posts', '2026-10', 0)`), RLS)
+    await assert.rejects(as(user, `INSERT INTO billing_events ("subscriptionId", type, status, amount) VALUES ('sub-a', 'payment', 'succeeded', 999)`), RLS)
+    await assert.rejects(as(user, `INSERT INTO usage_events ("subscriptionId", "userId", "teamId", "limitSlug", delta, "periodKey") VALUES ('sub-a', '${user}', 'team-a', 'tasks', -1000, '2026-10')`), RLS)
+  }
+  await assert.rejects(as('', `INSERT INTO usage_events ("subscriptionId", "teamId", "limitSlug", delta, "periodKey") VALUES ('sub-a', 'team-a', 'tasks', 1, '2026-10')`), RLS)
+
+  // reads are as before: owners and admins see the subscription, its usage and its billing events; members their usage events
+  for (const user of ['owna', 'adma']) {
+    assert.equal((await as(user, `SELECT 1 FROM subscriptions WHERE "teamId" = 'team-a'`)).rowCount, 1, user)
+    assert.equal((await as(user, `SELECT 1 FROM usage WHERE "subscriptionId" = 'sub-a'`)).rowCount, 1, user)
+    assert.equal((await as(user, `SELECT 1 FROM billing_events WHERE "subscriptionId" = 'sub-a'`)).rowCount, 1, user)
+  }
+  assert.equal((await as('mema', `SELECT 1 FROM usage_events WHERE "teamId" = 'team-a'`)).rowCount, 1)
+  assert.equal((await as('memb', `SELECT 1 FROM subscriptions WHERE "teamId" = 'team-a'`)).rowCount, 0)
+
+  // the service connection writes them, as UsageService.track, the webhooks and the jobs do
+  await owner.query('BEGIN')
+  await owner.query(`INSERT INTO usage_events ("subscriptionId", "userId", "teamId", "limitSlug", delta, "periodKey") VALUES ('sub-a', 'mema', 'team-a', 'tasks', 1, '2026-10')`)
+  await owner.query(`UPDATE usage SET "currentValue" = "currentValue" + 1 WHERE id = 'us-a'`)
+  await owner.query(`UPDATE subscriptions SET "planId" = 'plan-pro' WHERE id = 'sub-a'`)
+  await owner.query(`INSERT INTO billing_events ("subscriptionId", type, status, amount) VALUES ('sub-a', 'lifecycle', 'succeeded', 0)`)
+  await owner.query('COMMIT')
+  assert.equal((await owner.query(`SELECT "currentValue" FROM usage WHERE id = 'us-a'`)).rows[0].currentValue, 6)
 })

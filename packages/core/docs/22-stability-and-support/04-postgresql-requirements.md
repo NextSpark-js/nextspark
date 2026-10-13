@@ -37,6 +37,8 @@ A default Neon project's owner role has `BYPASSRLS`, so on Neon RLS is not evalu
 
 Before 0.1.0-beta.198, creating a team and accepting an invitation as an existing user answered 500 on the `nextspark_app` connection. Both now write their rows on the service connection after the route's own checks, and migration `032_team_join_policies.sql` lets the creator read their new team and lets a user add only themself to a team: as the owner of a team they own that has no member yet, or with the role of a pending, unexpired invitation to their email. Run `pnpm db:migrate` before the cutover, and add both flows to the check in step 6.
 
+Since migration `035_team_admin_metas_and_billing_policies.sql`, a team admin can edit the team on the `nextspark_app` connection (before it answered 404), and `subscriptions`, `usage`, `usage_events` and `billing_events` are written only on the service connection. Core's billing services, jobs and webhooks already write there; code of your own that writes these tables must too.
+
 For each user request the application sets `app.user_id` with `SET LOCAL` inside a transaction (`queryWithRLS` in `src/lib/db.ts`); the policies read it through `get_auth_user_id()`. It does not use `SET ROLE`. A query with no user context runs on the service connection. The service connection is chosen by credential, never by request input. Set `DATABASE_SERVICE_URL` before pointing `DATABASE_URL` at `nextspark_app`: sign-in and the other system operations are meant to run on the service connection, and without it they fall back to the RLS-evaluated one.
 
 ### The migration role
@@ -44,7 +46,7 @@ For each user request the application sets `app.user_id` with `SET LOCAL` inside
 The role in `MIGRATE_DATABASE_URL` (or `DATABASE_URL`, if unset) must be able to:
 
 - create roles: migration `001` creates `authenticated`, `anon` and `service_role` when they do not exist, and migration `022` creates `nextspark_app` (`CREATE ROLE` needs the `CREATEROLE` attribute or a superuser);
-- create tables, indexes, functions and triggers in `public`, enable row-level security, and create policies (the core migrations contain 59 `CREATE POLICY` statements);
+- create tables, indexes, functions and triggers in `public`, enable row-level security, and create policies (the core migrations contain 80 `CREATE POLICY` statements);
 - create the `pgcrypto` extension, or find it already installed;
 - grant privileges on its own objects to `nextspark_app` and to `authenticated`, and grant `nextspark_app` to the migration role itself, so that role can `SET ROLE` to it in an isolation test. That last grant is attempted and skipped with a notice if it fails.
 

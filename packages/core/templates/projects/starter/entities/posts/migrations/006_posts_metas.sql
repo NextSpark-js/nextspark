@@ -41,12 +41,26 @@ CREATE POLICY "posts_metas_public_select"
 ON "posts_metas" FOR SELECT TO anon
 USING ("isPublic" = TRUE);
 
--- Authenticated users can manage all metadata
+-- Team members manage the metadata of their team's posts (core migration 035 sets the same policy)
 DROP POLICY IF EXISTS "posts_metas_auth_all" ON "posts_metas";
 CREATE POLICY "posts_metas_auth_all"
 ON "posts_metas" FOR ALL TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (
+  public.is_superadmin()
+  OR EXISTS (
+    SELECT 1 FROM public."posts" p
+    WHERE p.id = "posts_metas"."postId"
+      AND p."teamId" = ANY(public.get_user_team_ids())
+  )
+)
+WITH CHECK (
+  public.is_superadmin()
+  OR EXISTS (
+    SELECT 1 FROM public."posts" p
+    WHERE p.id = "posts_metas"."postId"
+      AND p."teamId" = ANY(public.get_user_team_ids())
+  )
+);
 
 -- Comments
 COMMENT ON TABLE "posts_metas" IS 'Flexible key-value metadata storage for posts';

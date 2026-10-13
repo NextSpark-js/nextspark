@@ -41,12 +41,26 @@ CREATE POLICY "pages_metas_public_select"
 ON "pages_metas" FOR SELECT TO anon
 USING ("isPublic" = TRUE);
 
--- Authenticated users can manage all metadata
+-- Team members manage the metadata of their team's pages (core migration 035 sets the same policy)
 DROP POLICY IF EXISTS "pages_metas_auth_all" ON "pages_metas";
 CREATE POLICY "pages_metas_auth_all"
 ON "pages_metas" FOR ALL TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (
+  public.is_superadmin()
+  OR EXISTS (
+    SELECT 1 FROM public."pages" p
+    WHERE p.id = "pages_metas"."pageId"
+      AND p."teamId" = ANY(public.get_user_team_ids())
+  )
+)
+WITH CHECK (
+  public.is_superadmin()
+  OR EXISTS (
+    SELECT 1 FROM public."pages" p
+    WHERE p.id = "pages_metas"."pageId"
+      AND p."teamId" = ANY(public.get_user_team_ids())
+  )
+);
 
 -- Comments
 COMMENT ON TABLE "pages_metas" IS 'Flexible key-value metadata storage for pages';
