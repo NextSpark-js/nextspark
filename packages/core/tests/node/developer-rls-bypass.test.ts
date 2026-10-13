@@ -65,3 +65,50 @@ test('a developer bypasses RLS as a superadmin does, with no System Admin Team',
   await owner.query(fs.readFileSync(MIGRATION_036, 'utf8'))
   assert.equal((await as('dev', 'SELECT public.can_bypass_rls() AS b')).rows[0].b, true)
 })
+
+const MIGRATION_037 = path.join(CORE, 'migrations/037_users_role_guard.sql')
+const ROLE_GUARD = /role/
+
+test('users.role changes through RLS only for can_bypass_rls(), and never on the caller\'s own row (037)', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
+  const { owner, app } = await cutoverDatabase(t)
+  await owner.query(`
+    INSERT INTO users (id, email, name, role, "emailVerified") VALUES
+      ('super', 'super@example.test', 'Super', 'superadmin', true),
+      ('dev', 'dev@example.test', 'Dev', 'developer', true),
+      ('mem', 'mem@example.test', 'Mem', 'member', true),
+      ('mem2', 'mem2@example.test', 'Mem 2', 'member', true);
+  `)
+  const as = asUser(app)
+  const roleOf = async (id: string) => (await owner.query('SELECT role FROM users WHERE id = $1', [id])).rows[0].role
+
+  // a member does not raise their own role; their profile stays editable
+  for (const role of ['developer', 'superadmin']) {
+    await assert.rejects(as('mem', `UPDATE users SET role = $1 WHERE id = 'mem'`, [role]), ROLE_GUARD, role)
+  }
+  assert.equal(await roleOf('mem'), 'member')
+  assert.equal((await as('mem', `UPDATE users SET "firstName" = 'M' WHERE id = 'mem'`)).rowCount, 1)
+  // nobody changes their own role through RLS, a developer or a superadmin neither
+  await assert.rejects(as('dev', `UPDATE users SET role = 'member' WHERE id = 'dev'`), ROLE_GUARD)
+  await assert.rejects(as('super', `UPDATE users SET role = 'developer' WHERE id = 'super'`), ROLE_GUARD)
+
+  // a developer (and a superadmin) changes another user's role through RLS
+  assert.equal((await as('dev', `UPDATE users SET role = 'developer' WHERE id = 'mem2'`)).rowCount, 1)
+  assert.equal(await roleOf('mem2'), 'developer')
+  assert.equal((await as('super', `UPDATE users SET role = 'member' WHERE id = 'mem2'`)).rowCount, 1)
+  assert.equal(await roleOf('mem2'), 'member')
+
+  // the service connection (a BYPASSRLS role, so RLS is not active) changes any role, the request user's own included
+  await owner.query('CREATE ROLE svc_bypass NOLOGIN NOSUPERUSER BYPASSRLS INHERIT IN ROLE nextspark_app')
+  await owner.query('BEGIN')
+  await owner.query('SET LOCAL ROLE svc_bypass')
+  await owner.query(`SET LOCAL app.user_id = 'mem'`)
+  assert.equal((await owner.query(`UPDATE users SET role = 'suspended' WHERE id = 'mem'`)).rowCount, 1)
+  await owner.query('COMMIT')
+  assert.equal(await roleOf('mem'), 'suspended')
+  // and so does the owner connection
+  assert.equal((await owner.query(`UPDATE users SET role = 'member' WHERE id = 'mem'`)).rowCount, 1)
+
+  // 037 runs again on a database that has it: idempotent
+  await owner.query(fs.readFileSync(MIGRATION_037, 'utf8'))
+  await assert.rejects(as('mem', `UPDATE users SET role = 'developer' WHERE id = 'mem'`), ROLE_GUARD)
+})
