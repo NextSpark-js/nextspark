@@ -6,15 +6,13 @@
  *   notFound(); the proxy already answers 404 for a missing docs page before anything renders. Cache
  *   Components needs generateStaticParams to return at least one pair, so a project with no superadmin
  *   docs returns a placeholder that no page matches.
- * - `await connection()` is left out. At the top of the page it made the whole page request-time, so no listed
- *   document prerendered. The listed pairs prerender, an unlisted one renders on demand. (Next.js fails a
- *   build whose route is otherwise prerenderable when its metadata reads `params`, which the shell of an
- *   unlisted pair does; the superadmin layout declares its content request-time, see group-layouts.cc.)
- * - Parsing a markdown file reads the clock (the highlighter times itself), which Next.js does not allow while
- *   prerendering. The parse moves into one `'use cache'` function, as in the public docs page.
+ * - `await connection()` is left out: the page awaits the role check (`requireAreaAccess`) before it reads a file, which
+ *   makes the read request-time. Nothing of a superadmin document is prerendered or cached; the parse (which reads the
+ *   clock) is a plain function, not a `'use cache'` one, because a cached function is a server reference and would
+ *   return the document to any caller without the check. (The superadmin layout declares its content request-time too,
+ *   see group-layouts.cc.)
  */
 import { notFound } from 'next/navigation'
-import { cacheLife } from 'next/cache'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { parseMarkdownFile } from '@nextsparkjs/core/lib/docs/parser'
 import { DocsBreadcrumbs } from '@nextsparkjs/core/components/docs/docs-breadcrumbs'
@@ -38,13 +36,11 @@ export async function generateStaticParams() {
 }
 
 /**
- * The parsed document of a section/page pair, or null when it is not a superadmin doc. Reachable as a server reference, so it
- * takes only the two names and reads only the registry's files under `docs/superadmin`. The access check (`requireAreaAccess`) runs in the page before it is called.
+ * The parsed document of a section/page pair, or null when it is not a superadmin doc. Not a `'use cache'` function: that
+ * would be a server reference returning superadmin docs to whoever calls it, with no access check. The page checks the
+ * role first, so the read is request-time and may read the clock.
  */
 async function loadDoc(sectionSlug: string, pageSlug: string) {
-  'use cache'
-  cacheLife('max')
-
   const doc = resolveRegistryDoc(DOCS_REGISTRY.superadmin, 'superadmin', sectionSlug, pageSlug)
   if (!doc) return null
 

@@ -37,8 +37,9 @@ const MAX_PATTERN_IDS = 50
 /** The public entities whose routes this process built, by slug: where a cached read finds the entity's config. */
 const publicEntities = new Map<string, EntityConfig>()
 
+/** The config is the one a route facade imports and hands to the factories (never an argument of a cached read). */
 function registerEntity(config: EntityConfig) {
-  if (config.access?.basePath !== undefined) publicEntities.set(config.slug, config)
+  publicEntities.set(config.slug, config)
 }
 
 /** One published row of a public entity: the arguments are the cache key, so they are plain strings. */
@@ -48,8 +49,10 @@ export async function readPublishedItem(entitySlug: string, slug: string): Promi
 
   if (typeof entitySlug !== 'string' || typeof slug !== 'string' || !IDENTIFIER.test(entitySlug) || slug.length > 200 || !ITEM_SLUG.test(slug)) return null
   const entity = publicEntities.get(entitySlug)
-  const tableName = entity && (entity.tableName || entity.slug)
-  if (!entity || !IDENTIFIER.test(tableName!)) return null
+  // Not a "not found": the entry would be cached untagged under the key the page uses once it is registered. A throw is not cached.
+  if (!entity) throw new Error(`[readPublishedItem] no route of this process serves the entity "${entitySlug}"`)
+  const tableName = entity.tableName || entity.slug
+  if (!IDENTIFIER.test(tableName)) return null
   cacheTag(`entity:${entitySlug}`, `public-item:${entitySlug}:${slug}`)
 
   const result = await query<PublishedItem>(`SELECT ${buildPublicSelectClause(entity)} FROM "${tableName}" WHERE slug = $1 AND status = 'published'`, [slug])
@@ -61,10 +64,12 @@ export async function readPatterns(ids: string[]): Promise<Pattern[]> {
   'use cache'
   cacheLife({ stale: 300, revalidate: 900, expire: 86400 })
 
-  if (!Array.isArray(ids) || ids.length === 0 || ids.length > MAX_PATTERN_IDS || !ids.every(id => typeof id === 'string' && IDENTIFIER.test(id))) return []
+  if (!Array.isArray(ids) || ids.length > MAX_PATTERN_IDS) return []
+  const valid = ids.filter(id => typeof id === 'string' && IDENTIFIER.test(id))
+  if (valid.length === 0) return []
   cacheTag('patterns')
 
-  return PatternsResolverService.getByIds(ids)
+  return PatternsResolverService.getByIds(valid)
 }
 
 const cachedSource: PublicItemSource = {
@@ -82,6 +87,13 @@ const cachedSource: PublicItemSource = {
 
 const cachedRoutes = bindPublicItemRoutes(cachedSource)
 // The page awaits `params` (and may answer notFound()): behind a boundary of its own, see suspended-route.tsx.
-export const createPublicItemRoute = (...args: Parameters<typeof cachedRoutes.createPublicItemRoute>) => behindSuspense(cachedRoutes.createPublicItemRoute(...args))
-export const createPublicItemMetadata = cachedRoutes.createPublicItemMetadata
+// The facade calls these when its module loads, so the entity is known before any request (or any direct call of a cached read).
+export const createPublicItemRoute = (...args: Parameters<typeof cachedRoutes.createPublicItemRoute>) => {
+  registerEntity(args[0])
+  return behindSuspense(cachedRoutes.createPublicItemRoute(...args))
+}
+export const createPublicItemMetadata = (...args: Parameters<typeof cachedRoutes.createPublicItemMetadata>) => {
+  registerEntity(args[0])
+  return cachedRoutes.createPublicItemMetadata(...args)
+}
 export type { PublicItemTemplateProps } from './public-item-route'

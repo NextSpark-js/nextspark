@@ -3,6 +3,7 @@
  * so it takes only a section and a page name: both are validated here, looked up in the build's docs registry, and the
  * file must sit under the docs root of its category (`docs/public`, `docs/superadmin`) of the project.
  */
+import fs from 'fs'
 import path from 'path'
 
 const SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/
@@ -31,5 +32,12 @@ export function resolveRegistryDoc(
   const root = path.resolve(cwd, 'docs', category)
   const filePath = path.resolve(cwd, page.path)
   if (!filePath.startsWith(root + path.sep) || !filePath.endsWith('.md')) return null
+  // A symlink under the root that points outside is not a doc of the category.
+  try {
+    const realRoot = fs.realpathSync(root)
+    if (!fs.realpathSync(filePath).startsWith(realRoot + path.sep)) return null
+  } catch {
+    return null
+  }
   return { sectionTitle: section.title, filePath }
 }

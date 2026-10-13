@@ -3,7 +3,12 @@
  * arguments. Each takes only plain identifiers, validates them first and derives the rest itself, so an argument
  * that does not fit answers "not found" (null, [], notFound()), not data.
  */
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+
 const query = jest.fn()
+const cacheTag = jest.fn()
 const getByIds = jest.fn()
 const parseMarkdownFile = jest.fn()
 const requireAreaAccess = jest.fn()
@@ -11,7 +16,7 @@ const notFound = jest.fn(() => {
   throw new Error('NEXT_NOT_FOUND')
 })
 
-jest.mock('next/cache', () => ({ cacheLife: jest.fn(), cacheTag: jest.fn() }))
+jest.mock('next/cache', () => ({ cacheLife: jest.fn(), cacheTag: (...a: unknown[]) => cacheTag(...a) }))
 jest.mock('next/navigation', () => ({ notFound: () => notFound() }))
 jest.mock('@nextsparkjs/core/lib/db', () => ({ query: (...a: unknown[]) => query(...a) }))
 jest.mock('@nextsparkjs/core/lib/blocks/patterns-resolver.service', () => ({ PatternsResolverService: { getByIds: (...a: unknown[]) => getByIds(...a) } }))
@@ -34,31 +39,47 @@ jest.mock('@nextsparkjs/registries/docs-registry', () => {
   }
 })
 
-import { readPublishedItem, readPatterns, createPublicItemRoute } from '../../../src/routes/_internal/public-item-route.cc'
+import { readPublishedItem, readPatterns, createPublicItemRoute, createPublicItemMetadata } from '../../../src/routes/_internal/public-item-route.cc'
 import { resolveRegistryDoc } from '../../../src/lib/docs/registry-doc'
 import { generateMetadata as publicMetadata } from '../../../src/routes/(public)/docs/[section]/[page]/page.cc'
 import PublicDocsPage from '../../../src/routes/(public)/docs/[section]/[page]/page.cc'
 import SuperadminDocsPage from '../../../src/routes/superadmin/docs/[section]/[page]/page.cc'
 import type { EntityConfig } from '../../../src/lib/entities/types'
 
+// docs files on disk: the root check resolves real paths
+const projectDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 's166-')))
+for (const rel of ['docs/public/01-guide/01-intro.md', 'docs/superadmin/01-guide/01-intro.md', 'docs/superadmin/01-ops/01-run.md']) {
+  fs.mkdirSync(path.dirname(path.join(projectDir, rel)), { recursive: true })
+  fs.writeFileSync(path.join(projectDir, rel), '# x')
+}
+beforeAll(() => void jest.spyOn(process, 'cwd').mockReturnValue(projectDir))
+afterAll(() => {
+  jest.restoreAllMocks()
+  fs.rmSync(projectDir, { recursive: true, force: true })
+})
+
 const pages = { slug: 'pages', tableName: 'pages', fields: [{ name: 'slug' }, { name: 'excerpt' }], access: { basePath: '/' } } as unknown as EntityConfig
-const secrets = { slug: 'secrets', tableName: 'secrets', fields: [], access: {} } as unknown as EntityConfig
+const legacy = { slug: 'posts', tableName: 'posts', fields: [], access: {}, builder: { enabled: true, public: { basePath: '/blog' } } } as unknown as EntityConfig
+const oddTable = { slug: 'odd', tableName: 'odd"; DROP TABLE users;--', fields: [], access: { basePath: '/odd' } } as unknown as EntityConfig
 const props = (slug: string) => ({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) })
 
 beforeEach(() => {
   query.mockReset().mockResolvedValue({ rows: [{ id: '1', slug: 'about', title: 'About', blocks: [] }] })
   getByIds.mockReset().mockResolvedValue([])
+  cacheTag.mockClear()
   parseMarkdownFile.mockReset().mockResolvedValue({ metadata: { title: 'T' }, html: '<p>x</p>' })
   requireAreaAccess.mockReset().mockResolvedValue(undefined)
   notFound.mockClear()
 })
 
 describe('readPublishedItem', () => {
-  // an entity is known to the cached read only once a route of this process has been given its config
-  beforeEach(async () => {
-    await createPublicItemRoute(pages)(props('about')).catch(() => undefined)
-    query.mockClear()
+  // the facade of a route hands its config to the factories when its module loads: that is where the cached read learns an entity
+  beforeAll(() => {
+    createPublicItemRoute(pages)
+    createPublicItemMetadata(legacy)
+    createPublicItemRoute(oddTable)
   })
+  beforeEach(() => query.mockClear())
 
   it('reads the published row of a registered entity, with its table and columns derived inside', async () => {
     await expect(readPublishedItem('pages', 'about')).resolves.toMatchObject({ slug: 'about' })
@@ -67,19 +88,39 @@ describe('readPublishedItem', () => {
     expect(params).toEqual(['about'])
   })
 
+  it('tags a read with the entity and the item, for revalidateTag', async () => {
+    await readPublishedItem('pages', 'about')
+    expect(cacheTag).toHaveBeenCalledWith('entity:pages', 'public-item:pages:about')
+  })
+
+  it('serves an entity that declares its base path the deprecated way (builder.public.basePath)', async () => {
+    await expect(readPublishedItem('posts', 'hello')).resolves.toMatchObject({ slug: 'about' })
+    expect(query.mock.calls[0][0]).toContain('FROM "posts"')
+  })
+
+  it('answers null, without a query, for an entity whose table name is not an identifier', async () => {
+    await expect(readPublishedItem('odd', 'about')).resolves.toBeNull()
+    expect(query).not.toHaveBeenCalled()
+  })
+
+  it('throws, rather than answering a cacheable null, for a well-formed entity no route registered', async () => {
+    await expect(readPublishedItem('unregistered', 'about')).rejects.toThrow(/no route/)
+    expect(query).not.toHaveBeenCalled()
+    expect(cacheTag).not.toHaveBeenCalled()
+    createPublicItemRoute({ ...pages, slug: 'unregistered', tableName: 'unregistered' } as EntityConfig)
+    await expect(readPublishedItem('unregistered', 'about')).resolves.toMatchObject({ slug: 'about' })
+  })
+
   it.each([
-    ['an unknown entity', 'nope', 'about'],
-    ['an entity without a public base path', 'secrets', 'about'],
     ['an entity slug that is not an identifier', 'pages"; DROP TABLE users;--', 'about'],
     ['an empty slug', 'pages', ''],
     ['a slug with a quote', 'pages', "x' OR '1'='1"],
     ['a slug with traversal', 'pages', '../etc/passwd'],
     ['a slug that is too long', 'pages', 'a'.repeat(201)],
-  ])('answers null, without a query, for %s', async (_label, entity, slug) => {
-    await createPublicItemRoute(secrets)(props('x')).catch(() => undefined)
-    query.mockClear()
+  ])('answers null, without a query or a tag, for %s', async (_label, entity, slug) => {
     await expect(readPublishedItem(entity, slug)).resolves.toBeNull()
     expect(query).not.toHaveBeenCalled()
+    expect(cacheTag).not.toHaveBeenCalled()
   })
 
   it.each([[undefined, 'a'], ['pages', undefined], [{ toString: () => 'pages' }, 'a'], ['pages', ['a']], [null, null], [42, 42]])('answers null for the arguments %j', async (entity, slug) => {
@@ -94,36 +135,49 @@ describe('readPublishedItem', () => {
 })
 
 describe('readPatterns', () => {
-  it('reads the published patterns of valid ids', async () => {
+  it('reads the published patterns of valid ids, tagged for revalidation', async () => {
     getByIds.mockResolvedValue([{ id: 'abc-123' }])
     await expect(readPatterns(['abc-123', '2f1c0a9e-aaaa-bbbb-cccc-000000000001'])).resolves.toEqual([{ id: 'abc-123' }])
+    expect(cacheTag).toHaveBeenCalledWith('patterns')
+  })
+
+  it('drops only the malformed ids, the others are still read', async () => {
+    await readPatterns(['good-1', "x') OR 1=1 --", 7 as never, 'good-2'])
+    expect(getByIds).toHaveBeenCalledWith(['good-1', 'good-2'])
   })
 
   it.each([
     ['a string', 'abc'],
     ['nothing', undefined],
     ['an empty list', []],
-    ['an id with a quote', ["x') OR 1=1 --"]],
-    ['a non-string id', [{ id: 1 }]],
+    ['only malformed ids', ["x') OR 1=1 --", { id: 1 }]],
     ['an object', { length: 1, 0: 'a' }],
     ['too many ids', Array.from({ length: 51 }, (_, i) => `id${i}`)],
   ])('answers [] without a query for %s', async (_label, ids) => {
     await expect(readPatterns(ids as never)).resolves.toEqual([])
     expect(getByIds).not.toHaveBeenCalled()
+    expect(cacheTag).not.toHaveBeenCalled()
   })
 })
 
 describe('resolveRegistryDoc', () => {
-  const sections = [{ slug: 'ops', title: 'Ops', pages: [{ slug: 'run', path: 'docs/superadmin/01-ops/01-run.md' }, { slug: 'out', path: '../secret.md' }, { slug: 'pub', path: 'docs/public/01-ops/01-pub.md' }, { slug: 'txt', path: 'docs/superadmin/01-ops/notes.txt' }] }]
+  const sections = [{ slug: 'ops', title: 'Ops', pages: [{ slug: 'run', path: 'docs/superadmin/01-ops/01-run.md' }, { slug: 'out', path: '../secret.md' }, { slug: 'pub', path: 'docs/public/01-guide/01-intro.md' }, { slug: 'txt', path: 'docs/superadmin/01-ops/notes.txt' }, { slug: 'gone', path: 'docs/superadmin/01-ops/gone.md' }, { slug: 'link', path: 'docs/superadmin/01-ops/link.md' }] }]
+  beforeAll(() => {
+    fs.writeFileSync(path.join(projectDir, 'docs/superadmin/01-ops/notes.txt'), 'x')
+    fs.writeFileSync(path.join(projectDir, 'outside.md'), 'x')
+    fs.symlinkSync(path.join(projectDir, 'outside.md'), path.join(projectDir, 'docs/superadmin/01-ops/link.md'))
+  })
 
   it('resolves a registry page under its docs root', () => {
-    expect(resolveRegistryDoc(sections, 'superadmin', 'ops', 'run', '/proj')).toEqual({ sectionTitle: 'Ops', filePath: '/proj/docs/superadmin/01-ops/01-run.md' })
+    expect(resolveRegistryDoc(sections, 'superadmin', 'ops', 'run', projectDir)).toEqual({ sectionTitle: 'Ops', filePath: path.join(projectDir, 'docs/superadmin/01-ops/01-run.md') })
   })
 
   it.each([
     ['a page outside the project', 'ops', 'out'],
     ['a page of the other category', 'ops', 'pub'],
     ['a file that is not markdown', 'ops', 'txt'],
+    ['a file that does not exist', 'ops', 'gone'],
+    ['a symlink that points outside the root', 'ops', 'link'],
     ['an unknown page', 'ops', 'nope'],
     ['a traversing section', '../ops', 'run'],
     ['a traversing page', 'ops', '..'],
@@ -132,7 +186,7 @@ describe('resolveRegistryDoc', () => {
     ['the placeholder', '_', '_'],
     ['non-strings', 1 as never, ['run'] as never],
   ])('answers null for %s', (_label, section, page) => {
-    expect(resolveRegistryDoc(sections, 'superadmin', section, page, '/proj')).toBeNull()
+    expect(resolveRegistryDoc(sections, 'superadmin', section, page, projectDir)).toBeNull()
   })
 })
 
