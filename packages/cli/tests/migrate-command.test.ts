@@ -3650,20 +3650,24 @@ test('a signal during the simulation removes the temporary copy', async () => {
     await commitFixture(root)
     const listCopies = () => readdirSync(tmpdir()).filter(name => name.startsWith('nextspark-migrate-plan-'))
     const before = new Set(listCopies())
-    const child = spawn(process.execPath, [cliEntry, 'migrate', '--dry-run', '--json'], { cwd: root, env: { ...process.env, ...offlineMigrateEnv(), NEXTSPARK_MIGRATE_NO_SIMULATION: '', NEXTSPARK_PROBE_PID_FILE: pidFile }, stdio: 'ignore' })
-    const closed = new Promise<number | null>(resolveClose => child.on('close', code => resolveClose(code)))
-    const started = Date.now()
-    let copy: string | undefined
-    while (!copy && Date.now() - started < 30_000) {
-      copy = listCopies().find(name => !before.has(name))
-      if (!copy) await new Promise(resolveWait => setTimeout(resolveWait, 100))
+    const child = spawn(process.execPath, [cliEntry, 'migrate', '--dry-run', '--json'], { cwd: root, env: { ...process.env, ...offlineMigrateEnv(), NEXTSPARK_MIGRATE_NO_SIMULATION: '', NEXTSPARK_PROBE_PID_FILE: pidFile }, stdio: ['ignore', 'ignore', 'pipe'] })
+    let stderr = ''
+    child.stderr.on('data', chunk => { stderr += chunk })
+    let exitCode: number | null | undefined
+    const closed = new Promise<number | null>(resolveClose => child.on('close', code => { exitCode = code; resolveClose(code) }))
+    const waitFor = async (found: () => unknown, limitMs: number) => {
+      const started = Date.now()
+      while (!found() && exitCode === undefined && Date.now() - started < limitMs) await new Promise(resolveWait => setTimeout(resolveWait, 50))
     }
-    assert.ok(copy, 'the simulation never created its copy')
-    // let it get to the child prepare, where the copy is fullest: it writes the pid file once it has started the grandchild
-    while (!existsSync(pidFile) && Date.now() - started < 30_000) await new Promise(resolveWait => setTimeout(resolveWait, 50))
-    assert.ok(existsSync(pidFile), 'the simulation never started its grandchild')
+    let copy: string | undefined
+    await waitFor(() => (copy = listCopies().find(name => !before.has(name))), 30_000)
+    assert.ok(copy, `the simulation never created its copy (exit ${exitCode}): ${stderr}`)
+    // let it get to the child prepare, where the copy is fullest: it writes the pid file once it has started the grandchild.
+    // Its own limit, counted from when the copy appears, and cut short if the child closes
+    await waitFor(() => existsSync(pidFile), 60_000)
+    assert.ok(existsSync(pidFile), `the simulation never started its grandchild (exit ${exitCode}): ${stderr}`)
     child.kill('SIGTERM')
-    assert.equal(await closed, 143)
+    assert.equal(await closed, 143, stderr)
     assert.equal(existsSync(join(tmpdir(), copy)), false)
     // the whole process group went: the grandchild that prepare started is gone too
     const grandchild = Number(readFileSync(pidFile, 'utf8'))
