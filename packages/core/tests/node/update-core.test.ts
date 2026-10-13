@@ -836,6 +836,20 @@ test('only the packages: list of the workspace yaml names directories; onlyBuilt
   assert.doesNotMatch(result.stdout, /esbuild\/package\.json/)
 })
 
+test('a trailing comment, a quoted name with a space and the inline form of packages: are read', (t) => {
+  const web = webMobileWith(t, 'packages:\n  - web\n  - mobile   # the app\n  - "my app"\n', ['mobile', 'my app'])
+  const inline = webMobileWith(t, "packages: ['web', 'mobile']  # all\n", ['mobile'])
+
+  const result = runUpdateCore(web, ['--version', TO])
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.stdout, /\.\.\/mobile\/package\.json: @nextsparkjs\/mobile/)
+  assert.match(result.stdout, /\.\.\/my app\/package\.json: @nextsparkjs\/mobile/)
+
+  const second = runUpdateCore(inline, ['--version', TO])
+  assert.equal(second.status, 0, second.output)
+  assert.match(second.stdout, /\.\.\/mobile\/package\.json: @nextsparkjs\/mobile/)
+})
+
 test('it lists nothing when no other package of the workspace pins a @nextsparkjs package off the target', (t) => {
   const web = createProject(t, { webMobile: true })
 
