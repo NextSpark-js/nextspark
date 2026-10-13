@@ -850,6 +850,28 @@ test('a trailing comment, a quoted name with a space and the inline form of pack
   assert.match(second.stdout, /\.\.\/mobile\/package\.json: @nextsparkjs\/mobile/)
 })
 
+test('when web/ is already on the target it still lists the pins left in mobile/', (t) => {
+  const web = webMobileWith(t, "packages:\n  - 'web'\n  - 'mobile'\n", ['mobile'])
+  assert.equal(runUpdateCore(web, ['--version', TO]).status, 0)
+  git(path.dirname(web), 'add', '-A')
+  git(path.dirname(web), 'commit', '-q', '-m', 'Updated web')
+
+  const again = runUpdateCore(web, ['--version', TO])
+
+  assert.equal(again.status, 0, again.output)
+  assert.match(again.stdout, /Already on 0\.1\.0-beta\.189/)
+  assert.match(again.stdout, /Not moved:[^\n]*\n {4}\.\.\/mobile\/package\.json: @nextsparkjs\/mobile 0\.1\.0-beta\.188/)
+})
+
+test('a project outside a workspace with @nextsparkjs pins at the old version lists nothing', (t) => {
+  const root = createProject(t)
+
+  const result = runUpdateCore(root, ['--version', TO])
+
+  assert.equal(result.status, 0, result.output)
+  assert.doesNotMatch(result.output, /Not moved/)
+})
+
 test('it lists nothing when no other package of the workspace pins a @nextsparkjs package off the target', (t) => {
   const web = createProject(t, { webMobile: true })
 
