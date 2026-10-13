@@ -17,7 +17,8 @@ import * as z from 'zod';
 import { updateProfileSchema } from '@nextsparkjs/core/lib/users/schema';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
-const updateUserSchema = updateProfileSchema.extend({
+// Only the profile fields this route stores; the schema also holds name, country and timezone, for the actions
+const updateUserSchema = updateProfileSchema.pick({ firstName: true, lastName: true, language: true }).extend({
   role: z.enum(['member', 'superadmin']).optional(),
   metas: z.record(z.string(), z.any()).optional()
 });

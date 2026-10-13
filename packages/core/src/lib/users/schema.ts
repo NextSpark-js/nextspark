@@ -35,10 +35,12 @@ export const avatarImageSchema = z
   .string()
   .max(2048)
   .refine(
-    (value) =>
-      value.startsWith('/')
-        ? !value.startsWith('//') && !value.startsWith('/\\')
-        : z.url({ protocol: /^https?$/ }).safeParse(value).success,
+    (value) => {
+      if (/[\u0000-\u001F\u007F]/.test(value)) return false // browsers drop tab and newline: "/\t/host" is "//host"
+      if (!value.startsWith('/')) return z.url({ protocol: /^https?$/ }).safeParse(value).success
+      // a path stays on this app: resolved against a fixed origin it must keep it ("//host", "/\\host" do not)
+      return new URL(value, 'http://app.invalid').origin === 'http://app.invalid'
+    },
     'Invalid image URL format'
   )
 

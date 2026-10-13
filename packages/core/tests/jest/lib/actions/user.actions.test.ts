@@ -360,6 +360,8 @@ describe('User Server Actions', () => {
       ['a javascript: URL', 'javascript:alert(1)'],
       ['a data: URL', 'data:image/png;base64,AAAA'],
       ['a backslash path', '/\\evil.example/p.png'],
+      ['a tab inside //', '/\t/evil.example/p.png'],
+      ['a newline inside //', '/\n/evil.example'],
     ])('rejects %s', async (_label, value) => {
       const formData = new FormData()
       formData.append('avatar', value)

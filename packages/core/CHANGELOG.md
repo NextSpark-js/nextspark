@@ -62,7 +62,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@nextsparkjs/core/lib/users/schema`); `updateAvatar` accepts an `http(s)` URL or a path on the app, not `//host/...`. A bad value
   answers `success: false` with `<field>: <message>` and stores nothing. `updateProfile` now requires `language` to be a language tag
   (`en`, `pt-BR`), `country` a two-letter code and `timezone` a valid IANA zone, and `PATCH /api/v1/users/:id` applies the same
-  limits to the fields it accepts.
+  limits to `firstName`, `lastName` and `language`, the profile fields it stores. `updateAvatar` also refuses a path that a browser
+  reads as another host (`/\t/host`), and `inviteMember` answers `Failed to invite member` to an unexpected failure, as REST
+  answers 500.
+- **`POST /api/v1/teams/:teamId/members` answers `400 VALIDATION_ERROR` to a body that is not JSON** (it answered 500).
+- Core's `TimezoneSelect` offers `Asia/Kolkata` instead of `Asia/Mumbai` (not an IANA zone). A stored `Asia/Mumbai` is kept until the
+  user saves the timezone again.
 
 ## [0.1.0-beta.198] - 2026-10-09
 

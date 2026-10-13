@@ -44,7 +44,8 @@ import { TeamService, type UpdateTeamPayload } from '../services/team.service'
 import { TeamMemberService } from '../services/team-member.service'
 import { TeamInvitationService } from '../services/team-invitation.service'
 import { updateTeamSchema } from '../teams/schema'
-import { actionErrorMessage, formatZodError } from './validation'
+import type { ZodError } from 'zod'
+import { formatZodError } from './validation'
 import type { Team, TeamRole, TeamMember } from '../teams/types'
 import type { EntityActionResult, EntityActionVoidResult } from './types'
 import { getInvitableRoles } from '../teams/permissions'
@@ -284,8 +285,12 @@ export async function inviteMember(
       },
     }
   } catch (error) {
-    if (!(error instanceof Error && error.name === 'ZodError')) console.error('[inviteMember] Error:', error)
-    return { success: false, error: actionErrorMessage(error, 'Failed to invite member') }
+    if (error instanceof Error && error.name === 'ZodError') {
+      return { success: false, error: formatZodError(error as ZodError) }
+    }
+    // Like REST's 500: log the cause, send none (database and policy names stay on the server)
+    console.error('[inviteMember] Error:', error)
+    return { success: false, error: 'Failed to invite member' }
   }
 }
 

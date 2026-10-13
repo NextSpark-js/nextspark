@@ -12,9 +12,3 @@ export function formatZodError(error: ZodError): string {
   const field = issue.path.join('.')
   return field ? `${field}: ${issue.message}` : issue.message
 }
-
-/** The message an action returns for a caught error: validation errors are short, others keep their message */
-export function actionErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.name === 'ZodError') return formatZodError(error as ZodError)
-  return error instanceof Error ? error.message : fallback
-}

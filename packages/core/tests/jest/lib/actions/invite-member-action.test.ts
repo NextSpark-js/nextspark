@@ -116,6 +116,7 @@ describe('inviteMember creates a pending invitation', () => {
     const inserts = mockMutate.mock.calls.filter(([sql]) => String(sql).includes('INSERT INTO "team_invitations"'))
     expect(inserts).toHaveLength(1)
     expect(inserts[0][1].slice(0, 3)).toEqual(['team-1', 'new@example.com', 'member'])
+    expect(inserts[0][1][4]).toBe(ACTOR.id) // invitedBy comes from the session
     expect(mockMutate.mock.calls.some(([sql]) => String(sql).includes('team_members'))).toBe(false)
     expect(TeamMemberService.add).not.toHaveBeenCalled()
     expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({ to: 'new@example.com' }))
@@ -201,7 +202,35 @@ describe('inviteMember refuses what POST /api/v1/teams/:teamId/members refuses',
   })
 })
 
+describe('an unexpected failure', () => {
+  it('answers 500 "Internal server error" on REST and a fixed message from the action, without the cause', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    mockMutate.mockRejectedValue(new Error('new row violates row-level security policy for table "team_invitations"'))
+
+    const res = await rest('new@example.com', 'member')
+    const result = await inviteMember('team-1', 'new@example.com', 'member')
+
+    expect(res.status).toBe(500)
+    expect((await res.json()).error).toBe('Internal server error')
+    expect(result).toEqual({ success: false, error: 'Failed to invite member' })
+    consoleError.mockRestore()
+  })
+})
+
 describe('the REST route keeps its answers through the shared service', () => {
+  it('400 VALIDATION_ERROR for a body that is not JSON (it was 500)', async () => {
+    const res = await POST(
+      new NextRequest('http://localhost:3000/api/v1/teams/team-1/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{bad',
+      }),
+      { params: Promise.resolve({ teamId: 'team-1' }) }
+    )
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('VALIDATION_ERROR')
+  })
+
   it('201 with the invitation', async () => {
     const res = await rest('new@example.com', 'member')
     expect(res.status).toBe(201)

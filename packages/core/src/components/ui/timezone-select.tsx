@@ -14,7 +14,7 @@ const timezones: ComboboxOption[] = [
   { value: "Asia/Shanghai", label: "Shanghai (GMT+8)", description: "China Standard Time" },
   { value: "Asia/Hong_Kong", label: "Hong Kong (GMT+8)", description: "Hong Kong Time" },
   { value: "Asia/Singapore", label: "Singapore (GMT+8)", description: "Singapore Standard Time" },
-  { value: "Asia/Mumbai", label: "Mumbai (GMT+5:30)", description: "India Standard Time" },
+  { value: "Asia/Kolkata", label: "Mumbai (GMT+5:30)", description: "India Standard Time" },
   { value: "Asia/Dubai", label: "Dubai (GMT+4)", description: "Gulf Standard Time" },
   { value: "Europe/Moscow", label: "Moscow (GMT+3)", description: "Moscow Standard Time" },
   { value: "Africa/Cairo", label: "Cairo (GMT+2)", description: "Eastern European Time" },
