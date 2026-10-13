@@ -448,4 +448,31 @@ describe('MetaService - Simplified Tests', () => {
       expect(mockQueryWithRLS.mock.calls[0][0]).toContain('"userId"');
     });
   });
+
+  describe('parent column resolution edge cases', () => {
+    test('two foreign keys to the parent: nothing says which, so entityId is kept and not cached', async () => {
+      mockQuery.mockResolvedValue({ rows: [{ column: 'aId' }, { column: 'bId' }], rowCount: 2 });
+      mockQueryWithRLS.mockResolvedValue([]);
+
+      await MetaService.getEntityMetas('doubles', mockEntityId, mockUserId, true);
+      await MetaService.getEntityMetas('doubles', mockEntityId, mockUserId, true);
+
+      expect(mockQueryWithRLS.mock.calls[0][0]).toContain('WHERE "entityId" = $1');
+      expect(mockQuery).toHaveBeenCalledTimes(2);
+    });
+
+    test('a missing column (42703) drops the cached column, and the next call reads it again', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ column: 'oldId' }], rowCount: 1 });
+      mockQueryWithRLS.mockRejectedValueOnce(Object.assign(new Error('column "oldId" does not exist'), { code: '42703' }));
+
+      await expect(MetaService.getEntityMetas('renamed', mockEntityId, mockUserId, true)).rejects.toThrow('does not exist');
+
+      mockQuery.mockResolvedValueOnce({ rows: [{ column: 'newId' }], rowCount: 1 });
+      mockQueryWithRLS.mockResolvedValueOnce([]);
+      await MetaService.getEntityMetas('renamed', mockEntityId, mockUserId, true);
+
+      expect(mockQuery).toHaveBeenCalledTimes(2);
+      expect(mockQueryWithRLS.mock.calls[1][0]).toContain('WHERE "newId" = $1');
+    });
+  });
 });

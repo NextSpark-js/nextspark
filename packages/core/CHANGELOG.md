@@ -62,7 +62,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The metas of pages and posts are written and read through the entity API. `PATCH /api/v1/pages/:id` and `/posts/:id` with `metas` answered 200 and stored nothing, and `?metas=all` returned none, because the metas service looked for an `entityId` column; `pages_metas` and `posts_metas` link to their parent with `pageId` and `postId`. The service now reads the parent column from the foreign key of the metas table, so any entity whose metas table names it differently works too.
+- The metas of pages and posts are written and read through the entity API. `PATCH /api/v1/pages/:id` and `/posts/:id` with `metas`
+  answered 200 and stored nothing, and `?metas=all` returned none, because the metas service looked for an `entityId` column;
+  `pages_metas` and `posts_metas` link to their parent with `pageId` and `postId`. The service now reads the parent column from the
+  single-column foreign key of the metas table to its parent table; a metas table without one keeps `entityId`.
 - A team admin can edit the team on the `nextspark_app` connection; it answered 404 there.
 - A developer can open a user's detail in the superadmin area on the `nextspark_app` connection; it answered 404 there.
 - The RLS policies of `pages_metas`, `posts_metas`, `subscriptions`, `usage`, `usage_events` and `billing_events` match what the API

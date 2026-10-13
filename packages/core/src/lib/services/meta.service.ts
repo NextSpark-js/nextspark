@@ -1,4 +1,4 @@
-import { query, queryWithRLS, mutateWithRLS } from '../db';
+import { query, queryWithRLS as dbQueryWithRLS, mutateWithRLS as dbMutateWithRLS } from '../db';
 import { 
   EntityConfig, 
   getEntityMetaConfig, 
@@ -20,12 +20,28 @@ export class MetaValueTooLargeError extends Error {
 /** Parent column of each metas table, read once from the table's foreign key. */
 const parentColumnCache = new Map<string, string>();
 
+/** Postgres undefined_column: a cached parent column no longer exists (a migration renamed it). */
+const UNDEFINED_COLUMN = '42703';
+
+/** Runs a query and, when it hits a missing column, forgets the cached parent columns so the next call reads them again. */
+async function forgetOnUndefinedColumn<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if ((error as { code?: string }).code === UNDEFINED_COLUMN) parentColumnCache.clear();
+    throw error;
+  }
+}
+
+const queryWithRLS: typeof dbQueryWithRLS = (...args) => forgetOnUndefinedColumn(() => dbQueryWithRLS(...args));
+const mutateWithRLS: typeof dbMutateWithRLS = (...args) => forgetOnUndefinedColumn(() => dbMutateWithRLS(...args));
+
 /**
  * The column of a metas table that points at its parent row. Tables made by the
  * entity migrations use `entityId`, but `pages_metas` and `posts_metas` use
  * `pageId` and `postId`, so the column is read from the foreign key of the
  * table itself (catalog only, no tenant data). Without a foreign key, such as
- * a table that does not exist yet, the config value is used and not cached.
+ * a table that does not exist yet, or with two foreign keys to the parent, the config value is used and not cached.
  */
 export async function resolveMetaIdColumn(config: EntityConfig): Promise<string> {
   if (config.entityType === 'user') return config.idColumn;
@@ -37,11 +53,11 @@ export async function resolveMetaIdColumn(config: EntityConfig): Promise<string>
        FROM pg_constraint c
        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
       WHERE c.contype = 'f' AND array_length(c.conkey, 1) = 1
-        AND c.conrelid = to_regclass($1) AND c.confrelid = to_regclass($2)
-      LIMIT 1`,
+        AND c.conrelid = to_regclass($1) AND c.confrelid = to_regclass($2)`,
     [`"${config.metaTableName}"`, `"${config.tableName}"`]
   );
-  if (!rows[0]) return config.idColumn;
+  // Zero foreign keys, or two to the same parent: nothing says which one, so keep the config value
+  if (rows.length !== 1) return config.idColumn;
   parentColumnCache.set(config.metaTableName, rows[0].column);
   return rows[0].column;
 }
