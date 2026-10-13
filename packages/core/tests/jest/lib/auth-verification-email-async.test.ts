@@ -36,6 +36,16 @@ function loadBetterAuthOptions(): Record<string, any> {
   return (mockBetterAuth.mock.calls[0] as unknown[])[0] as Record<string, any>
 }
 
+describe('lib/auth.ts background tasks', () => {
+  test('hands deferred work (the sign-up verification email) to runAfterResponse, outside the database transaction', () => {
+    const options = loadBetterAuthOptions()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { runAfterResponse } = require('@/core/lib/auth/background-tasks')
+    expect(options.advanced.backgroundTasks.handler.name).toBe(runAfterResponse.name)
+    expect(options.advanced.backgroundTasks.handler).toEqual(expect.any(Function))
+  })
+})
+
 describe('lib/auth.ts sendVerificationEmail', () => {
   test('turns a synchronous EmailFactory failure into a rejected promise without logging the token', async () => {
     const logged: unknown[][] = []

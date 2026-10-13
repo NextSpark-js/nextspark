@@ -197,9 +197,25 @@ describe('Registration Guard Plugin', () => {
       mockAuthConfig.registration.allowedDomains = []
     })
 
-    test('matches only the send-verification-otp endpoint', () => {
+    test('matches only the send-verification-otp and email sign-up endpoints', () => {
       expect(otpMatcher(otpCtx('a@nextspark.dev'))).toBe(true)
+      expect(otpMatcher({ path: '/sign-up/email' })).toBe(true)
       expect(otpMatcher({ path: '/sign-in/email-otp' })).toBe(false)
+      expect(otpMatcher({ path: '/sign-in/email' })).toBe(false)
+    })
+
+    test('refuses an email sign-up for a domain outside allowedDomains with a 403 DOMAIN_NOT_ALLOWED, before Better Auth creates anything', async () => {
+      const signUp = (email: unknown) => ({ path: '/sign-up/email', body: { email, password: 'x', name: 'N' } })
+      await expect(otpHandler(signUp('someone@other.example'))).rejects.toMatchObject({
+        status: 'FORBIDDEN',
+        body: { code: 'DOMAIN_NOT_ALLOWED' },
+      })
+      expect((console.log as jest.Mock).mock.calls.flat().join(' ')).toContain('Refused a sign-up for a user at "other.example"')
+      await expect(otpHandler(signUp('someone@nextspark.dev'))).resolves.toBeUndefined()
+      // left to Better Auth's own validation
+      await expect(otpHandler(signUp(42))).resolves.toBeUndefined()
+      mockAuthConfig.registration.mode = 'open'
+      await expect(otpHandler(signUp('someone@other.example'))).resolves.toBeUndefined()
     })
 
     test('refuses a sign-in code for a domain outside allowedDomains with a 403 DOMAIN_NOT_ALLOWED', async () => {

@@ -59,18 +59,24 @@ export const registrationGuardPlugin = (): BetterAuthPlugin => {
         {
           // A sign-in code for a domain outside allowedDomains could never be
           // used (the user/session hooks reject it), so refuse it up front and
-          // send no email. The answer depends only on the domain, never on
-          // whether an account exists, so it reveals nothing about accounts.
-          matcher: (ctx) => ctx.path === '/email-otp/send-verification-otp',
+          // send no email. An email sign-up for such a domain is refused here
+          // too: Better Auth 1.7 answers a 403 from user.create.before on
+          // /sign-up/email with its generic "account created" response, so the
+          // hook's refusal would never reach the form. The answer depends only
+          // on the domain, never on whether an account exists, so it reveals
+          // nothing about accounts.
+          matcher: (ctx) => ctx.path === '/email-otp/send-verification-otp' || ctx.path === '/sign-up/email',
           handler: async (ctx) => {
             const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
             if (registrationMode !== 'domain-restricted' && registrationMode !== 'domain-open') return;
             const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
             const body = ctx.body as { email?: unknown; type?: unknown } | undefined;
-            if (body?.type !== 'sign-in' || typeof body.email !== 'string' || allowedDomains.length === 0) return;
+            // the handler gets the endpoint context the matcher saw; its type does not declare path
+            const signUp = (ctx as { path?: string }).path === '/sign-up/email';
+            if ((!signUp && body?.type !== 'sign-in') || typeof body?.email !== 'string' || allowedDomains.length === 0) return;
             if (!isDomainAllowed(body.email, allowedDomains)) {
               // The body is not validated yet: log a bounded, quoted domain so a crafted address cannot forge log lines
-              console.log(`[Auth] Refused a sign-in code for a user at ${JSON.stringify((body.email.split('@').pop() ?? '').slice(0, 100))}: domain not in allowedDomains`);
+              console.log(`[Auth] Refused ${signUp ? 'a sign-up' : 'a sign-in code'} for a user at ${JSON.stringify((body.email.split('@').pop() ?? '').slice(0, 100))}: domain not in allowedDomains`);
               throw registrationError('DOMAIN_NOT_ALLOWED');
             }
           },

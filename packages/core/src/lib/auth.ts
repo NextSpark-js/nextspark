@@ -29,6 +29,7 @@ import { getTrustedOrigins } from './utils/cors';
 import { withBasePath } from './base-path';
 import { getBetterAuthIpHeaders } from './api/client-ip';
 import { isRateLimitingDisabled } from './api/rate-limit-disabled';
+import { runAfterResponse } from './auth/background-tasks';
 
 /**
  * Does this email have a pending, unexpired team invitation waiting?
@@ -541,6 +542,8 @@ export const auth = betterAuth({
   },
   // Removed additionalFields - will use standard name and image fields
   advanced: {
+    // Emails and other deferred work run after the database transaction, not inside it (lib/auth/background-tasks)
+    backgroundTasks: { handler: runAfterResponse },
     // Better Auth's own rate limiter reads the client address from the header NEXTSPARK_CLIENT_IP_SOURCE
     // names (lib/api/client-ip); unset, 'xff' and 'none' keep Better Auth's default.
     ...(betterAuthIpHeaders ? { ipAddress: { ipAddressHeaders: betterAuthIpHeaders } } : {}),
