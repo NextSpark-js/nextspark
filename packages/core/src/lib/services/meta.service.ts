@@ -1,4 +1,4 @@
-import { queryWithRLS, mutateWithRLS } from '../db';
+import { query, queryWithRLS, mutateWithRLS } from '../db';
 import { 
   EntityConfig, 
   getEntityMetaConfig, 
@@ -17,16 +17,45 @@ export class MetaValueTooLargeError extends Error {
   }
 }
 
+/** Parent column of each metas table, read once from the table's foreign key. */
+const parentColumnCache = new Map<string, string>();
+
+/**
+ * The column of a metas table that points at its parent row. Tables made by the
+ * entity migrations use `entityId`, but `pages_metas` and `posts_metas` use
+ * `pageId` and `postId`, so the column is read from the foreign key of the
+ * table itself (catalog only, no tenant data). Without a foreign key, such as
+ * a table that does not exist yet, the config value is used and not cached.
+ */
+export async function resolveMetaIdColumn(config: EntityConfig): Promise<string> {
+  if (config.entityType === 'user') return config.idColumn;
+  const cached = parentColumnCache.get(config.metaTableName);
+  if (cached) return cached;
+
+  const { rows } = await query<{ column: string }>(
+    `SELECT a.attname AS "column"
+       FROM pg_constraint c
+       JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+      WHERE c.contype = 'f' AND array_length(c.conkey, 1) = 1
+        AND c.conrelid = to_regclass($1) AND c.confrelid = to_regclass($2)
+      LIMIT 1`,
+    [`"${config.metaTableName}"`, `"${config.tableName}"`]
+  );
+  if (!rows[0]) return config.idColumn;
+  parentColumnCache.set(config.metaTableName, rows[0].column);
+  return rows[0].column;
+}
+
 export class MetaService {
   /**
    * Obtener configuración de entidad
    */
-  private static getEntityConfig(entityType: EntityType): EntityConfig {
+  private static async getEntityConfig(entityType: EntityType): Promise<EntityConfig> {
     const config = getEntityMetaConfig(entityType);
     if (!config) {
       throw new Error(`Entity type '${entityType}' not configured`);
     }
-    return config;
+    return { ...config, idColumn: await resolveMetaIdColumn(config) };
   }
 
   /**
@@ -38,7 +67,7 @@ export class MetaService {
     userId: string,
     includePrivate: boolean = false
   ): Promise<Record<string, unknown>> {
-    const config = this.getEntityConfig(entityType);
+    const config = await this.getEntityConfig(entityType);
     
     // TODO: Cache key para optimización futura
     // const cacheKey = `meta:${entityType}:${entityId}:${includePrivate}`;
@@ -74,7 +103,7 @@ export class MetaService {
       return {};
     }
 
-    const config = this.getEntityConfig(entityType);
+    const config = await this.getEntityConfig(entityType);
     
     // Crear placeholders para los IDs
     const idPlaceholders = entityIds.map((_, index) => `$${index + 1}`).join(',');
@@ -117,7 +146,7 @@ export class MetaService {
     metaKeys: string[],
     userId: string
   ): Promise<Record<string, unknown>> {
-    const config = this.getEntityConfig(entityType);
+    const config = await this.getEntityConfig(entityType);
     
     if (metaKeys.length === 0) {
       return {};
@@ -155,7 +184,7 @@ export class MetaService {
       return {};
     }
 
-    const config = this.getEntityConfig(entityType);
+    const config = await this.getEntityConfig(entityType);
     
     // Crear placeholders para los IDs y metaKeys
     const idPlaceholders = entityIds.map((_, index) => `$${index + 1}`).join(',');
@@ -196,7 +225,7 @@ export class MetaService {
     metaKey: string,
     userId: string
   ): Promise<unknown> {
-    const config = this.getEntityConfig(entityType);
+    const config = await this.getEntityConfig(entityType);
 
     const result = await queryWithRLS<{ metaValue: unknown }>(
       `SELECT "metaValue" FROM "${config.metaTableName}"
@@ -279,7 +308,7 @@ export class MetaService {
     userId: string,
     options: Partial<CreateMetaPayload> = {}
   ): Promise<void> {
-    const config = this.getEntityConfig(entityType);
+    const config = await this.getEntityConfig(entityType);
     const jsonString = this.validateMetaWrite(config, metaKey, metaValue);
 
     // Standard query - no teamId column in metas tables
@@ -328,7 +357,7 @@ export class MetaService {
     options: Partial<CreateMetaPayload>,
     precedence: 'incoming' | 'stored'
   ): Promise<void> {
-    const config = this.getEntityConfig(entityType);
+    const config = await this.getEntityConfig(entityType);
     const jsonString = this.validateMetaWrite(config, metaKey, metaValue);
 
     const stored = `"${config.metaTableName}"."metaValue"`;
@@ -463,7 +492,7 @@ export class MetaService {
     metaKey: string,
     userId: string
   ): Promise<void> {
-    const config = this.getEntityConfig(entityType);
+    const config = await this.getEntityConfig(entityType);
     
     await mutateWithRLS(
       `DELETE FROM "${config.metaTableName}" WHERE "${config.idColumn}" = $1 AND "metaKey" = $2`,
@@ -480,7 +509,7 @@ export class MetaService {
     entityId: string,
     userId: string
   ): Promise<void> {
-    const config = this.getEntityConfig(entityType);
+    const config = await this.getEntityConfig(entityType);
     
     await mutateWithRLS(
       `DELETE FROM "${config.metaTableName}" WHERE "${config.idColumn}" = $1`,
@@ -502,7 +531,7 @@ export class MetaService {
     limit: number = 100,
     offset: number = 0
   ): Promise<{ entities: string[], total: number }> {
-    const config = this.getEntityConfig(entityType);
+    const config = await this.getEntityConfig(entityType);
     
     // Primero obtener el total para paginación
     const countResult = await queryWithRLS<{ count: number }>(
@@ -542,7 +571,7 @@ export class MetaService {
     entityId: string,
     userId: string
   ): Promise<number> {
-    const config = this.getEntityConfig(entityType);
+    const config = await this.getEntityConfig(entityType);
     
     const result = await queryWithRLS<{ count: number }>(
       `SELECT COUNT(*) as count FROM "${config.metaTableName}" WHERE "${config.idColumn}" = $1`,

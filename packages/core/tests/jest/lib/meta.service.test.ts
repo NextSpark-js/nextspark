@@ -1,8 +1,10 @@
 // Mock del módulo de DB
 const mockQueryWithRLS = jest.fn();
 const mockMutateWithRLS = jest.fn();
+const mockQuery = jest.fn();
 
 jest.mock('@/core/lib/db', () => ({
+  query: mockQuery,
   queryWithRLS: mockQueryWithRLS,
   mutateWithRLS: mockMutateWithRLS
 }));
@@ -16,6 +18,7 @@ describe('MetaService - Simplified Tests', () => {
   
   beforeEach(() => {
     jest.clearAllMocks();
+    mockQuery.mockResolvedValue({ rows: [], rowCount: 0 });
   });
 
   describe('Core functionality', () => {
@@ -379,6 +382,70 @@ describe('MetaService - Simplified Tests', () => {
         ['user', mockEntityId, 'uiPreferences', { theme: 'light', sidebarCollapsed: false }, mockUserId],
       ]);
       expect(merge).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('parent column of the metas table', () => {
+    // pages_metas and posts_metas link to their parent with pageId / postId, not entityId
+    test.each([
+      ['pages', 'pageId'],
+      ['posts', 'postId'],
+    ])('%s reads and writes through "%s", read from the table foreign key', async (entity, column) => {
+      mockQuery.mockResolvedValue({ rows: [{ column }], rowCount: 1 });
+      mockQueryWithRLS.mockResolvedValue([]);
+      mockMutateWithRLS.mockResolvedValue({ rowCount: 1 });
+
+      await MetaService.getEntityMetas(entity, mockEntityId, mockUserId, true);
+      await MetaService.setEntityMeta(entity, mockEntityId, 'seo', { a: 1 }, mockUserId);
+      await MetaService.getBulkEntityMetas(entity, [mockEntityId], mockUserId, true);
+
+      const [readSql] = mockQueryWithRLS.mock.calls[0];
+      expect(readSql).toContain(`WHERE "${column}" = $1`);
+      expect(readSql).not.toContain('"entityId"');
+      const [writeSql] = mockMutateWithRLS.mock.calls[0];
+      expect(writeSql).toContain(`("${column}", "metaKey"`);
+      expect(writeSql).toContain(`ON CONFLICT ("${column}", "metaKey")`);
+      const [bulkSql] = mockQueryWithRLS.mock.calls[1];
+      expect(bulkSql).toContain(`SELECT "${column}" as "entityId"`);
+      // every call keeps the caller's RLS context
+      expect(mockQueryWithRLS.mock.calls[0][2]).toBe(mockUserId);
+      expect(mockMutateWithRLS.mock.calls[0][2]).toBe(mockUserId);
+    });
+
+    test('asks the catalog about the metas table and its parent table', async () => {
+      mockQuery.mockResolvedValue({ rows: [{ column: 'widgetId' }], rowCount: 1 });
+      mockQueryWithRLS.mockResolvedValue([]);
+
+      await MetaService.getEntityMetas('widgets', mockEntityId, mockUserId, true);
+
+      expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('pg_constraint'), ['"widgets_metas"', '"widgets"']);
+    });
+
+    test('keeps entityId when the table has no foreign key to read', async () => {
+      mockQueryWithRLS.mockResolvedValue([]);
+
+      await MetaService.getEntityMetas('gadgets', mockEntityId, mockUserId, true);
+
+      expect(mockQueryWithRLS.mock.calls[0][0]).toContain('WHERE "entityId" = $1');
+    });
+
+    test('reads the foreign key once per table', async () => {
+      mockQuery.mockResolvedValue({ rows: [{ column: 'gizmoId' }], rowCount: 1 });
+      mockQueryWithRLS.mockResolvedValue([]);
+
+      await MetaService.getEntityMetas('gizmos', mockEntityId, mockUserId, true);
+      await MetaService.getEntityMetas('gizmos', mockEntityId, mockUserId, true);
+
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+    });
+
+    test('the user entity keeps userId without asking the catalog', async () => {
+      mockQueryWithRLS.mockResolvedValue([]);
+
+      await MetaService.getEntityMetas('user', mockEntityId, mockUserId, true);
+
+      expect(mockQuery).not.toHaveBeenCalled();
+      expect(mockQueryWithRLS.mock.calls[0][0]).toContain('"userId"');
     });
   });
 });

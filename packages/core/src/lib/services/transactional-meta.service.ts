@@ -30,6 +30,7 @@
 import { createPool } from '../db-pool'
 import { getEntityMetaConfig, EntityType } from '../../types/meta.types'
 import { parseSSLConfig } from '../db'
+import { resolveMetaIdColumn } from './meta.service'
 
 // Use the existing pool from db.ts
 const databaseUrl = process.env.DATABASE_URL!;
@@ -123,11 +124,12 @@ export class TransactionalMetaService {
     }
 
     const opts = { ...this.DEFAULT_OPTIONS, ...options }
-    const config = getEntityMetaConfig(entityType)
+    const baseConfig = getEntityMetaConfig(entityType)
 
-    if (!config) {
+    if (!baseConfig) {
       throw new TransactionalError(`Entity type '${entityType}' not configured`)
     }
+    const config = { ...baseConfig, idColumn: await resolveMetaIdColumn(baseConfig) }
 
     // Validate metaKey
     if (!metaKey || metaKey.trim() === '') {
@@ -295,11 +297,12 @@ export class TransactionalMetaService {
     metaKey: string,
     userId: string
   ): Promise<boolean> {
-    const config = getEntityMetaConfig(entityType)
+    const baseConfig = getEntityMetaConfig(entityType)
 
-    if (!config) {
+    if (!baseConfig) {
       throw new TransactionalError(`Entity type '${entityType}' not configured`)
     }
+    const config = { ...baseConfig, idColumn: await resolveMetaIdColumn(baseConfig) }
 
     const client = await pool.connect()
 
