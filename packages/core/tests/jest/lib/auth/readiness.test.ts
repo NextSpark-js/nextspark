@@ -928,3 +928,50 @@ describe('build check assumptions', () => {
     })
   })
 })
+
+describe('evaluateAuthReadiness session secret', () => {
+  const email = { provider: 'resend', resendApiKey: validResendApiKey, resendFromEmail: 'auth@example.com' }
+  const withSecret = (betterAuthSecret: string | undefined, environment: 'production' | 'development' = 'production') =>
+    evaluateAuthReadiness({
+      ...productionWeb,
+      environment,
+      authConfig: { methods: ['email-otp'] },
+      configuration: { betterAuthSecret, email },
+    })
+
+  test.each([
+    ['template placeholder', 'your-secret-key-min-32-chars', 'BETTER_AUTH_SECRET_PLACEHOLDER'],
+    ['documented placeholder', 'your-super-secret-key-change-this', 'BETTER_AUTH_SECRET_PLACEHOLDER'],
+    ['short value', 'a'.repeat(31), 'BETTER_AUTH_SECRET_MALFORMED'],
+  ])('production refuses the %s', (_label, secret, code) => {
+    const result = withSecret(secret)
+
+    expect(result.outcome).toBe('invalid')
+    expect(result.availableMethods).toEqual([])
+    expect(diagnosticCodes(result)[0]).toBe(code)
+    expect(result.diagnostics[0].severity).toBe('error')
+    expect(JSON.stringify(result)).not.toContain(secret)
+  })
+
+  test.each(['k9f3'.repeat(8), 'Zq7-Lm2_Rt8+Vb4/Nc6=Hd1.Ys5~Wa3x'])('production accepts a 32+ character random value', (secret) => {
+    const result = withSecret(secret)
+
+    expect(result.outcome).toBe('ready')
+    expect(result.diagnostics).toEqual([])
+  })
+
+  test('production leaves a missing secret to the auth library', () => {
+    expect(withSecret(undefined).outcome).toBe('ready')
+  })
+
+  test('outside production a bad secret only warns', () => {
+    const result = withSecret('your-secret-key-min-32-chars', 'development')
+
+    expect(result.outcome).toBe('ready')
+    expect(result.diagnostics).toMatchObject([{ code: 'BETTER_AUTH_SECRET_PLACEHOLDER', severity: 'warning' }])
+  })
+
+  test('the environment adapter reads BETTER_AUTH_SECRET', () => {
+    expect(authReadinessConfigurationFromEnv({ BETTER_AUTH_SECRET: 'abc' }).betterAuthSecret).toBe('abc')
+  })
+})

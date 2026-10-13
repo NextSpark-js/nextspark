@@ -18,6 +18,11 @@ export interface AuthReadinessInput {
   environment: 'development' | 'production'
   authConfig?: Pick<AuthConfig, 'methods' | 'providers' | 'emailAndPassword'> | null
   configuration?: {
+    /**
+     * Raw BETTER_AUTH_SECRET. Only a present value is judged: a missing one is
+     * left to the auth library, and a runtime-only build never sees it.
+     */
+    betterAuthSecret?: string
     email?: {
       /**
        * Raw EMAIL_PROVIDER. Exactly `auto`, `resend` or `console`; undefined or
@@ -65,6 +70,8 @@ export type AuthReadinessDiagnosticCode =
   | 'GOOGLE_CLIENT_SECRET_MISSING'
   | 'GOOGLE_CLIENT_SECRET_PLACEHOLDER'
   | 'GOOGLE_CLIENT_SECRET_MALFORMED'
+  | 'BETTER_AUTH_SECRET_PLACEHOLDER'
+  | 'BETTER_AUTH_SECRET_MALFORMED'
 
 /**
  * Severity follows the overall outcome. When the outcome is `ready` or
@@ -105,6 +112,8 @@ const EMAIL_PROVIDER_TOKENS: readonly string[] = ['auto', 'resend', 'console']
 
 const RESEND_API_KEY_PATTERN = /^re_[A-Za-z0-9_-]{16,}$/
 const GOOGLE_CLIENT_ID_PATTERN = /^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/
+/** Shorter secrets are below the length the auth library itself warns about. */
+const BETTER_AUTH_SECRET_MIN_LENGTH = 32
 const EMAIL_PATTERN = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/
 /** Sender domain used by the framework's deployment docs as a template value. */
 const DOCUMENTED_PLACEHOLDER_SENDER_PATTERN = /@yourdomain\.com$/i
@@ -128,9 +137,31 @@ function credentialState(value: string | undefined, pattern: RegExp, minimumLeng
   return 'valid'
 }
 
+/**
+ * A session-signing secret copied from a template, or too short to resist
+ * guessing. In production it is an error that takes every method out of
+ * service; elsewhere it is only a warning.
+ */
+function evaluateSessionSecret(input: AuthReadinessInput): AuthReadinessDiagnostic | null {
+  const state = credentialState(
+    input.configuration?.betterAuthSecret,
+    /^\S+$/,
+    BETTER_AUTH_SECRET_MIN_LENGTH
+  )
+  if (state === 'missing' || state === 'valid') return null
+  return {
+    ...credentialDiagnostic('auth', 'BETTER_AUTH_SECRET', state),
+    severity: input.environment === 'production' ? 'error' : 'warning',
+    message:
+      state === 'placeholder'
+        ? 'BETTER_AUTH_SECRET is a placeholder; set a random secret of at least 32 characters.'
+        : `BETTER_AUTH_SECRET is shorter than ${BETTER_AUTH_SECRET_MIN_LENGTH} characters; set a random secret of at least 32 characters.`,
+  }
+}
+
 function credentialDiagnostic(
   method: AuthReadinessDiagnostic['method'],
-  field: 'RESEND_API_KEY' | 'RESEND_FROM_EMAIL' | 'GOOGLE_CLIENT_ID' | 'GOOGLE_CLIENT_SECRET',
+  field: 'RESEND_API_KEY' | 'RESEND_FROM_EMAIL' | 'GOOGLE_CLIENT_ID' | 'GOOGLE_CLIENT_SECRET' | 'BETTER_AUTH_SECRET',
   state: Exclude<CredentialState, 'valid'>
 ): AuthReadinessDiagnostic {
   return {
@@ -277,6 +308,7 @@ export function authReadinessConfigurationFromEnv(
   env: Record<string, string | undefined>
 ): NonNullable<AuthReadinessInput['configuration']> {
   return {
+    betterAuthSecret: env.BETTER_AUTH_SECRET,
     email: {
       provider: env.EMAIL_PROVIDER,
       resendApiKey: env.RESEND_API_KEY,
@@ -310,9 +342,27 @@ export function evaluateAuthReadiness(input: AuthReadinessInput): AuthReadinessR
   }
 
   const declaredMethods = resolveDeclaredMethods(input.authConfig)
+  const secretDiagnostic = evaluateSessionSecret(input)
+  if (secretDiagnostic?.severity === 'error') {
+    // Nothing that signs a session can be trusted, so no method is offered.
+    const others = evaluateAuthReadiness({
+      ...input,
+      configuration: { ...input.configuration, betterAuthSecret: undefined },
+    })
+    return {
+      outcome: 'invalid',
+      declaredMethods,
+      availableMethods: [],
+      deferredMethods: [],
+      diagnostics: [
+        secretDiagnostic,
+        ...others.diagnostics.map((diagnostic) => ({ ...diagnostic, severity: 'warning' as const })),
+      ],
+    }
+  }
   const available = new Set<AuthLoginMethod>()
   const deferred = new Set<AuthLoginMethod>()
-  const diagnostics: AuthReadinessDiagnostic[] = []
+  const diagnostics: AuthReadinessDiagnostic[] = secretDiagnostic ? [secretDiagnostic] : []
 
   const passwordEnabled = input.authConfig?.emailAndPassword?.enabled !== false
   const googleEnabled = input.authConfig?.providers?.google?.enabled !== false
