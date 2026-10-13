@@ -44,6 +44,17 @@ export function countByImpact(rows) {
   return Object.fromEntries(IMPACTS.map((i) => [i, rows.filter((r) => r.impact === i).length]))
 }
 
+/**
+ * The first mail to `to` in `mails` from index `from` on, waiting up to `ms` for it: core sends the sign-in code after
+ * answering the request (Better Auth's background tasks), so it can arrive a moment after the send returns.
+ */
+export async function waitForMail(mails, to, { from = 0, ms = 15000, everyMs = 200 } = {}) {
+  for (const end = Date.now() + ms; ; await new Promise((r) => setTimeout(r, everyMs))) {
+    const mail = mails.slice(from).find((m) => JSON.stringify(m.to).includes(to))
+    if (mail || Date.now() >= end) return mail ?? null
+  }
+}
+
 /** The local Resend stand-in: keeps what was sent so the OTP can be read back. */
 function startFakeResend(port) {
   const mails = []
@@ -153,13 +164,14 @@ async function main() {
 
     // Sign in by OTP, the way the login form does, but through the API so the scan starts signed in.
     const headers = { origin: base, 'content-type': 'application/json' }
+    const sentBefore = resend.mails.length
     const send = await context.request.post(`${base}/api/auth/email-otp/send-verification-otp`, {
       headers, data: { email, type: 'sign-in' },
     })
     if (!send.ok()) throw new Error(`send OTP -> ${send.status()}`)
-    const mail = resend.mails.at(-1)
+    const mail = await waitForMail(resend.mails, email, { from: sentBefore })
     const otp = /^(\d{6})\b/.exec(mail?.subject ?? '')?.[1]
-    if (!otp) throw new Error('no OTP in the stand-in Resend mail')
+    if (!otp) throw new Error(`no OTP in the stand-in Resend mail (${mail ? 'a mail without a code' : 'no mail in 15 s'})`)
     const signIn = await context.request.post(`${base}/api/auth/sign-in/email-otp`, { headers, data: { email, otp } })
     if (!signIn.ok()) throw new Error(`sign in -> ${signIn.status()}`)
 

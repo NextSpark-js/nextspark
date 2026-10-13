@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
-import { blocking, countByImpact, rowsFromAxe } from './axe-scan.mjs'
+import { blocking, countByImpact, rowsFromAxe, waitForMail } from './axe-scan.mjs'
 
 const results = {
   violations: [
@@ -58,4 +58,16 @@ test('a busy port for the Resend stand-in exits 2, not 1', async () => {
   } finally {
     busy.close()
   }
+})
+
+test('waitForMail waits for a code mailed after the send answered, and only for a new one to that address', async () => {
+  const mails = [{ to: ['axe-scan@example.com'], subject: '111111 is your verification code' }]
+  setTimeout(() => mails.push({ to: ['other@example.com'], subject: '222222' }), 50)
+  setTimeout(() => mails.push({ to: ['axe-scan@example.com'], subject: '333333 is your verification code' }), 300)
+  const mail = await waitForMail(mails, 'axe-scan@example.com', { from: 1, ms: 3000, everyMs: 20 })
+  assert.equal(mail.subject, '333333 is your verification code')
+
+  const started = Date.now()
+  assert.equal(await waitForMail(mails, 'nobody@example.com', { from: 0, ms: 150, everyMs: 20 }), null)
+  assert.ok(Date.now() - started >= 150)
 })
