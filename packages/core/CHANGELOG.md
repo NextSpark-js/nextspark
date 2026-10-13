@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - The cached reads of the public item pages, the patterns they reference and the docs pages take only plain names, validate them first and work out the rest (table, columns, published status, docs files) themselves; an argument that does not fit answers not found.
+- A project whose database was migrated while it ran Better Auth 1.7.0 to 1.7.2 (possible up to `0.1.0-beta.184`) creates accounts
+  again: migration 038 makes the `account.issuer` column those releases added nullable. Before, a Google sign-in or a password sign-up
+  failed on the insert and could leave a user without an account.
 - A request hook (`config/hooks/proxy.ts`) that throws no longer lets the request continue as if it had returned `null`: core's proxy answers
   a fixed `500` (`Internal Server Error`) and logs the error once on the server. The response carries nothing of the error.
 - `createProxy({ authenticatedPaths })` refuses an entry that is not a literal path prefix (`/account/:path*`, `/account/*`, `/account(.*)`,
@@ -24,6 +27,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading
 
+- **Better Auth 1.7: core moves to `better-auth ~1.7.7`** (from `~1.6.30`), with `@better-fetch/fetch` `1.3.2` and `zod` `^4.5.4`.
+  `pnpm update-core` does not change these in a project's `package.json`: set `"better-auth": "~1.7.7"` and
+  `"@better-fetch/fetch": "1.3.2"`, and `zod` to `^4.5.4` or later if the project declares it (or forces an older zod 4 with an
+  override), then `pnpm install`. Better Auth's tables are the same in 1.6 and 1.7; a project that never ran Better Auth 1.7.0 to
+  1.7.2 has no schema change beyond migration 038. Rolling back to `~1.6.30` is a version change only.
+- **Run `pnpm db:migrate`: core adds `038_better_auth_account_identity.sql`.** Idempotent; on a schema core's migrations created it only
+  makes `''` the default of `users.name`. On a schema Better Auth 1.7.0 to 1.7.2 wrote, it makes `account.issuer` nullable (the column
+  and its values stay) and drops the unique indexes that include it; Better Auth 1.7.3 and later refuses every auth call while that
+  column is NOT NULL. It adds the unique `("providerId", "accountId")` index when the `account` table lacks it, and stops, naming the
+  query that lists them, if rows share a key. It gives `users.name` a value where it is `NULL`. See
+  `17-updates/06-upgrade-0x-projects.md`.
+- **`pnpm db:migrate` stops when an auth table has a NOT NULL column without a default that Better Auth never writes** (`users`,
+  `session`, `account`, `verification`), after running the migrations, and names each column; `nextspark doctor` reports the same as
+  "Auth schema". Better Auth 1.7.3 and later refuses every auth call, `getSession` included, on such a column: a column a project or theme
+  migration adds to these tables must be nullable or have a default.
+- **Custom auth code on Better Auth 1.7:**
+  - `internalAdapter.createUser(user, source)` takes the provisioning source as a second argument (`{ method: 'email-otp' }`, for example).
+  - Under `strict: false` (or without `strictNullChecks`), Better Auth 1.7 types `authClient.useSession().data` as `never` and makes
+    `authClient.signOut`'s argument required. Read the data as `ClientSession | null` (`@nextsparkjs/core/lib/auth-client`), or turn on
+    `strictNullChecks`; `useAuth()` already returns it typed.
+  - A `403` `APIError` thrown from a `databaseHooks.user.create.before` of your own on `/sign-up/email` reaches the client as Better
+    Auth's generic `200` response. Refuse a sign-up before Better Auth runs (a plugin `hooks.before` matcher on `/sign-up/email`), as
+    core's registration guard does.
+  - Sign-up, OAuth sign-in and verification run in one database transaction, and `databaseHooks.*.after` run after it commits. Core sets
+    `advanced.backgroundTasks.handler`, so emails Better Auth sends in the background no longer finish before the response.
+  - A `429` from Better Auth's limiter has `Content-Type: application/json`; a password longer than 128 characters gets `400`
+    `PASSWORD_TOO_LONG`.
 - **A request hook that throws now answers `500`.** Before, the error was logged and the request went on to core's checks and the page. A hook
   that relied on that (an optional rule that fails when its data source is down) catches its own error and returns `null`. There is no option
   to continue after a hook error. `executeProjectMiddleware` from `@nextsparkjs/core/lib/middleware` now rethrows the hook's error instead of
@@ -84,6 +114,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Better Auth `~1.7.7`.** The support matrix and the stability page name it as the line 1.0 ships with. The monorepo forces zod
+  `4.6.5` (it was `4.4.3`, older than Better Auth 1.7 needs). A generated project gets `better-auth ~1.7.7`, `@better-fetch/fetch 1.3.2`
+  and `zod ^4.5.4`. Behavior kept across the move:
+  - an email sign-up (`POST /api/auth/sign-up/email`) for a domain outside `auth.registration.allowedDomains` still answers `403`
+    `DOMAIN_NOT_ALLOWED` before anything is created: core's registration guard refuses it before Better Auth runs, since Better Auth 1.7
+    answers a refusal from `user.create.before` on that endpoint with its generic success response;
+  - a sign-up does not wait for its verification email: Better Auth 1.7 runs a sign-up in a database transaction, and core hands the
+    email to `advanced.backgroundTasks.handler`, which sends it after the transaction (after the response, through Next's `after()`).
+- `nextspark doctor` has an "Auth schema" check (see Upgrading).
 - **A developer has every superadmin capability, plus devtools.** The checks that accepted only `superadmin` accept `developer` too:
   `isSuperAdmin` and `hasAdminPermission` (`@nextsparkjs/core/lib/api/auth/permissions`, so `/api/v1/users`, `/api/v1/users/:id` and its
   metadata, `GET /api/v1/teams?scope=all` and a team's member list), `checkTeamPermission` (`lib/teams/permissions`), minting an API key
