@@ -15,8 +15,8 @@ export type Refusal = { response: NextResponse }
 
 const deny = (status: number, code: string, error: string): Refusal => ({ response: NextResponse.json({ success: false, error, code }, { status }) })
 
-// A superadmin or a developer (a developer has every superadmin capability). The RLS policy of migration 030
-// (is_superadmin()) accepts a developer only as a member of the System Admin Team.
+// A superadmin or a developer (a developer has every superadmin capability), as the RLS policy of migration 030
+// (is_superadmin(), true for both since 036).
 const isSuperadmin = (auth: DualAuthResult) => auth.user?.role === 'superadmin' || auth.user?.role === 'developer'
 
 /**

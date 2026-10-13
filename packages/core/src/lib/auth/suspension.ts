@@ -18,8 +18,7 @@ export function isSuspendedRole(role: unknown): boolean {
  * (`status = 'inactive'`, so the audit log keeps the rows; unsuspending does not bring them back). A superadmin is never
  * suspended. Returns null when no user was suspended (unknown id, or a superadmin).
  *
- * Both functions run on the service connection: the caller authorizes (the superadmin users route checks the role),
- * and a developer outside the System Admin Team could not update another user's row under RLS.
+ * Both functions run on the service connection: the caller authorizes (the superadmin users route checks the role).
  */
 export async function suspendUser(userId: string, actorId: string): Promise<{ sessions: number; apiKeys: number } | null> {
   const [result] = await queryWithRLS<{ suspended: number; sessions: number; keyHashes: string[] }>(

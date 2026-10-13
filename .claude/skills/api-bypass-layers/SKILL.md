@@ -72,7 +72,7 @@ Security architecture for superadmin and developer bypass access in the API laye
 │                    LAYER 4: DATABASE RLS                         │
 ├─────────────────────────────────────────────────────────────────┤
 │  PostgreSQL Row Level Security (Final Defense)                  │
-│  ├─ can_bypass_rls() - superadmin ALWAYS, developer IF member   │
+│  ├─ can_bypass_rls() - superadmin and developer ALWAYS          │
 │  ├─ get_auth_user_id() - reads from app.user_id GUC             │
 │  ├─ get_user_team_ids() - array of user's teams                 │
 │  └─ Policies: SELECT/INSERT/UPDATE/DELETE per table             │
@@ -222,46 +222,26 @@ if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
 
 ## Database-Level Bypass: can_bypass_rls()
 
-**File:** `packages/core/migrations/001_better_auth_and_functions.sql` (moved here in beta.167 so the hardened auth-table policies in `002` can use it; it was previously in `010`)
+**File:** `packages/core/migrations/036_developer_rls_bypass.sql` (first defined in `001`; 027 made a developer's
+bypass depend on the System Admin Team; 036 removed that condition)
 
-**CRITICAL DIFFERENCE from App-Level:**
-- **Superadmin:** ALWAYS bypasses RLS (no team membership check)
-- **Developer:** Only bypasses IF member of System Admin Team
+- **Superadmin and developer:** always bypass RLS. A developer has every superadmin capability, plus devtools
+  (owner decision, 2026-10-13).
+- `is_superadmin()` (001) is an alias that calls `can_bypass_rls()`.
 
 ```sql
 CREATE OR REPLACE FUNCTION public.can_bypass_rls()
 RETURNS BOOLEAN AS $$
 DECLARE
-  current_user_id TEXT;
   user_role TEXT;
-  is_system_admin_member BOOLEAN;
 BEGIN
-  current_user_id := public.get_auth_user_id();
-
-  -- Get user role
   SELECT role INTO user_role
   FROM public."users"
-  WHERE id = current_user_id;
+  WHERE id = public.get_auth_user_id();
 
-  -- Superadmin ALWAYS bypasses (no team membership check)
-  IF user_role = 'superadmin' THEN
-    RETURN TRUE;
-  END IF;
-
-  -- Developer can bypass ONLY if member of System Admin Team
-  IF user_role = 'developer' THEN
-    SELECT EXISTS(
-      SELECT 1 FROM public."team_members"
-      WHERE "userId" = current_user_id
-        AND "teamId" = 'team-nextspark-001'
-    ) INTO is_system_admin_member;
-
-    RETURN is_system_admin_member;
-  END IF;
-
-  RETURN FALSE;
+  RETURN COALESCE(user_role IN ('superadmin', 'developer'), FALSE);
 END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
 ```
 
 ## App vs DB Bypass Logic Comparison
@@ -269,18 +249,15 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 | Role | App-Level (canBypassTeamContext) | DB-Level (can_bypass_rls) |
 |------|----------------------------------|---------------------------|
 | superadmin | Needs header + team membership | ALWAYS bypasses |
-| developer | Needs header + team membership | Only with team membership |
+| developer | Needs header + team membership | ALWAYS bypasses |
 | member | Cannot bypass | Cannot bypass |
 
 **Why the difference?**
-- App-level: Requires explicit intent (header) to prevent accidents
-- DB-level: Final defense, superadmin always trusted at data layer
+- App-level: Requires explicit intent (header) to prevent accidents. The System Admin Team only plays a role here.
+- DB-level: Final defense, superadmin and developer always trusted at the data layer.
 
-**Developer vs superadmin (owner decision, 2026-10-13):** a developer has every superadmin capability, plus
-devtools. The app-level role checks (`isSuperAdmin`/`hasAdminPermission`, the proxy and area guards, API-key
-minting) accept both. The DB-level difference above is unchanged and pending the owner's decision: a developer
-outside the System Admin Team gets RLS-filtered results from the `/api/v1/*` admin routes. The `/api/superadmin/*`
-routes do not depend on it: they run on the service connection after their role check (see `rls-enforcement`).
+The app-level role checks (`isSuperAdmin`/`hasAdminPermission`, the proxy and area guards, API-key minting) accept
+both roles too. Only a developer grants the developer role (`lib/auth/assignable-roles.ts`).
 
 ## RLS Helper Functions
 
@@ -553,8 +530,7 @@ Before finalizing bypass implementation:
 - [ ] `x-admin-bypass` header value is exactly `confirm-cross-team-access`
 - [ ] System Admin Team ID is `team-nextspark-001` (hardcoded)
 - [ ] RLS policies use `can_bypass_rls()` function
-- [ ] Superadmin always bypasses RLS (no team check at DB level)
-- [ ] Developer requires System Admin Team membership for RLS bypass
+- [ ] Superadmin and developer always bypass RLS (no team check at DB level)
 - [ ] `isBypass` flag controls userId filter in queries
 - [ ] Normal mode requires `x-team-id` header
 - [ ] Bypass mode makes `x-team-id` optional

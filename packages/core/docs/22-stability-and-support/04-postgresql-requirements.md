@@ -39,6 +39,8 @@ Before 0.1.0-beta.198, creating a team and accepting an invitation as an existin
 
 Since migration `035_team_admin_metas_and_billing_policies.sql`, a team admin can edit the team on the `nextspark_app` connection (before it answered 404), and `subscriptions`, `usage`, `usage_events` and `billing_events` are written only on the service connection. Core's billing services, jobs and webhooks already write there; code of your own that writes these tables must too.
 
+Since migration `036_developer_rls_bypass.sql`, `can_bypass_rls()` (and its alias `is_superadmin()`) is true for a developer as for a superadmin. Before it a developer bypassed RLS only as a member of the team flagged `metadata.systemAdmin`, so on the `nextspark_app` connection a developer outside that team saw only their own rows.
+
 For each user request the application sets `app.user_id` with `SET LOCAL` inside a transaction (`queryWithRLS` in `src/lib/db.ts`); the policies read it through `get_auth_user_id()`. It does not use `SET ROLE`. A query with no user context runs on the service connection. The service connection is chosen by credential, never by request input. Set `DATABASE_SERVICE_URL` before pointing `DATABASE_URL` at `nextspark_app`: sign-in and the other system operations are meant to run on the service connection, and without it they fall back to the RLS-evaluated one.
 
 ### The migration role

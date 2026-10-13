@@ -4,39 +4,33 @@ NextSpark implements a comprehensive role-based access control (RBAC) system int
 
 ## User Roles
 
+A user's global role is `users.role`. What a user can do inside a team comes from their **team** role (`owner`, `admin`,
+`member`, ... in `permissions.config.ts`), not from this one.
+
 ### Role Hierarchy
 
 ```text
-admin (Level 4)
-  └─ colaborator (Level 3)
-      └─ member (Level 2)
-          └─ user (Level 1)
+developer   (100)  every superadmin capability, plus /devtools
+  └─ superadmin (99)  the admin area (/superadmin, /admin) and every team's data
+      └─ member  (1)  their own data and their teams'
+suspended            no session and no API key (set only by the suspend action)
 ```
 
 ### Role Definitions
 
-| Role | Level | Description | Typical Use |
-|------|-------|-------------|-------------|
-| `user` | 1 | Basic access | Limited features, restricted data |
-| `member` | 2 | Standard user | Most features, own data |
-| `colaborator` | 3 | Extended access | Content management, team collaboration |
-| `admin` | 4 | Full control | System administration, all features |
+| Role | Description |
+|------|-------------|
+| `member` | Default role of every new user |
+| `superadmin` | System administration: the admin area, every user and team, RLS bypass (`can_bypass_rls()`) |
+| `developer` | Everything a superadmin can do, plus devtools. Bypasses RLS like a superadmin (migration 036) |
+| `suspended` | Set by `PATCH /api/superadmin/users/:id` `{ "action": "suspend" }`; sessions are deleted and API keys deactivated |
 
 ### Role Assignment
 
-**Default Role:**
+**On signup** every user gets the default role (`member`); a user cannot set their own role:
 
 ```typescript
-// core/lib/config.ts
-export const USER_ROLES_CONFIG = {
-  defaultRole: 'member'  // New users get 'member' role
-}
-```
-
-**On Signup:**
-
-```typescript
-// Automatic via Better Auth additionalFields
+// Better Auth additionalFields (lib/auth.ts)
 role: {
   type: "string",
   required: false,
@@ -45,14 +39,20 @@ role: {
 }
 ```
 
-**Manual Assignment:**
+**Changing a role** goes through `PATCH /api/superadmin/users/:id` (`{ "action": "change-role", "role": ... }`), or
+`role` in `PATCH /api/v1/users/:id` and `POST /api/v1/users`. The same rules apply on all three
+(`lib/auth/assignable-roles.ts`):
 
-```typescript
-// Only admins can change roles
-await updateUser(userId, {
-  role: 'colaborator'
-})
-```
+| Rule | Answer otherwise |
+|------|------------------|
+| Only a superadmin or a developer changes a role | 403 |
+| The roles assigned are `member` and `developer`; `superadmin` is never assigned through the API | 400 |
+| **Only a developer grants `developer`** | 403 |
+| Nobody changes their own role | 400 |
+| Nobody changes or deletes another superadmin | 403 |
+| A suspended user comes back only through `unsuspend` | 400 |
+
+A superadmin is created by the owner directly in the database.
 
 ## User Flags
 
@@ -318,35 +318,33 @@ RLS policies enforce data isolation at the PostgreSQL level:
 -- Users can only see their own tasks
 CREATE POLICY "tasks_select_own" ON "tasks"
   FOR SELECT
-  USING ("userId" = auth.uid());
+  USING ("userId" = public.get_auth_user_id());
 
 -- Users can only create tasks for themselves
 CREATE POLICY "tasks_insert_own" ON "tasks"
   FOR INSERT
-  WITH CHECK ("userId" = auth.uid());
+  WITH CHECK ("userId" = public.get_auth_user_id());
 
 -- Users can only update their own tasks
 CREATE POLICY "tasks_update_own" ON "tasks"
   FOR UPDATE
-  USING ("userId" = auth.uid())
-  WITH CHECK ("userId" = auth.uid());
+  USING ("userId" = public.get_auth_user_id())
+  WITH CHECK ("userId" = public.get_auth_user_id());
 
--- Only admin can delete any task
+-- A superadmin or a developer deletes any task
 CREATE POLICY "tasks_delete_admin" ON "tasks"
   FOR DELETE
-  USING (
-    auth.user_role() = 'admin'
-  );
+  USING (public.can_bypass_rls());
 ```
 
 ### Helper Functions
 
 ```sql
--- Get current user's role
-CREATE OR REPLACE FUNCTION auth.user_role()
-RETURNS TEXT AS $$
-  SELECT "role" FROM "users" WHERE "id" = auth.uid()
-$$ LANGUAGE SQL STABLE;
+-- The request user, from the app.user_id the application sets per transaction
+public.get_auth_user_id()
+
+-- True for a superadmin or a developer (migration 036); is_superadmin() is an alias
+public.can_bypass_rls()
 ```
 
 ## Permission Utilities

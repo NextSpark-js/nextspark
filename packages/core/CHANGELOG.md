@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   project that runs the application as `nextspark_app` (the RLS cutover in `22-stability-and-support/04-postgresql-requirements.md`)
   sees a difference. On that connection:
   - a team's admins update the team, as `PATCH /api/v1/teams/:teamId` allows, but only its name, slug, description, `avatarUrl` and
-    `settings`; only a superadmin, or a developer of the system admin team (`can_bypass_rls()`), changes `teams."ownerId"` (an ownership transfer runs on the service connection);
+    `settings`; only a superadmin or a developer (`can_bypass_rls()`, see 036) changes `teams."ownerId"` (an ownership transfer runs on the service connection);
   - `pages_metas` and `posts_metas` rows are read and written only for pages and posts of the caller's teams, like `tasks_metas`. The
     pages and posts entity migrations of the templates have the same policy now; a project with an earlier copy keeps its file and
     035 replaces the policy;
@@ -59,6 +59,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (`queryWithRLS(sql, params, userId)`) must use the service connection (`{ service: true }`, or no user id) after its own checks.
     Reads are unchanged. A project migration that re-created the `Subscriptions elevated insert/update/delete` or `Billing events
     elevated insert` policies of its own loses them to 035; re-create them after it.
+- **Run `pnpm db:migrate`: core adds `036_developer_rls_bypass.sql`.** It replaces the function `can_bypass_rls()` (idempotent); only a
+  project that runs the application as `nextspark_app` sees a difference. There, a developer bypasses RLS as a superadmin does: before,
+  only as a member of the team flagged `metadata.systemAdmin`, which a project without sample data does not have. Every policy that calls
+  `can_bypass_rls()` or `is_superadmin()`, core's and your own, now lets a developer through. The System Admin Team still decides the
+  `x-admin-bypass` team-context check of the API, and 027's enrollment trigger is unchanged.
+- **Only a developer grants the developer role.** A superadmin who sends `role: "developer"` gets 403 from `PATCH /api/superadmin/users/:id`
+  (`change-role`), `PATCH /api/v1/users/:id` and `POST /api/v1/users`. The superadmin users table offers the developer role only to a
+  developer. Give a first developer the role in the database, as the first superadmin.
 
 ### Changed
 
@@ -67,9 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metadata, `GET /api/v1/teams?scope=all` and a team's member list), `checkTeamPermission` (`lib/teams/permissions`), minting an API key
   with any scope (`validateScopesForUser`, `canCreateApiKeys`, `POST /api/v1/api-keys` without a team), changing or deleting post
   categories without a team, another user's plan and flags (`/api/user/plan-flags`), the proxy's `/admin` area and the admin panel link of
-  the mobile menu. On the `nextspark_app` connection the RLS policies still give a developer the superadmin bypass (`can_bypass_rls()`)
-  only as a member of the System Admin Team, so the `/api/v1` routes above return to a developer outside that team only the rows RLS
-  shows them. Only a superadmin still grants the developer role.
+  the mobile menu. On the `nextspark_app` connection a developer also bypasses RLS as a superadmin does (migration 036).
+- `/api/v1/users/:id` follows the rules of `/api/superadmin/users/:id`: nobody changes or deletes another superadmin (403), nobody changes
+  their own role (400), a suspended user comes back only through `unsuspend` (400), and `role` accepts only `member` and `developer`
+  (`superadmin` is 400). `POST /api/v1/users` accepts the same roles. Both share `lib/auth/assignable-roles.ts` with the superadmin route.
 - The `/api/superadmin` routes read and write on the service connection after their role check, for a superadmin as for a developer.
 
 ### Fixed
@@ -81,6 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A developer can change, suspend, unsuspend, verify and delete a user in the superadmin area on the `nextspark_app` connection; it
   answered 404 there (#241). The users, teams and subscriptions lists of that area and a team's detail no longer leave out what RLS
   hides from a developer, nor members of teams the caller does not belong to.
+- `POST /api/v1/users` with `role: "colaborator"`, which `users.role` does not accept, answers 400; it answered 500.
 - A team admin can edit the team on the `nextspark_app` connection; it answered 404 there.
 - A developer can open a user's detail in the superadmin area on the `nextspark_app` connection; it answered 404 there.
 - The RLS policies of `pages_metas`, `posts_metas`, `subscriptions`, `usage`, `usage_events` and `billing_events` match what the API

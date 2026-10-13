@@ -66,10 +66,9 @@ yet). These run on the **service pool**, authorized at the API/action layer (not
 If you add a new "first-membership" writer, route it the same way or it will break under RLS.
 
 - The **`/api/superadmin/*` routes** (session only, global admin area): every read and write runs with
-  `{ service: true }` after the route's own role check (superadmin or developer). Under RLS a developer
-  outside the System Admin Team sees only their own users and teams, and `team_members` has no bypass
-  policy at all, so these routes cannot rely on `can_bypass_rls()`. The role check is the authorization;
-  each statement stays scoped to its subject (`WHERE id = $1`, ...). The `/api/v1/*` routes keep RLS.
+  `{ service: true }` after the route's own role check (superadmin or developer). `team_members` has no bypass
+  policy at all, so these routes cannot rely on `can_bypass_rls()`. The role check is the authorization; each
+  statement stays scoped to its subject (`WHERE id = $1`, ...). The `/api/v1/*` routes keep RLS.
 
 **Other legitimate service-pool actors** (no request user → service pool by routing, since they
 call with no `userId`): Better Auth login/verification, the **scheduled-actions processor**,

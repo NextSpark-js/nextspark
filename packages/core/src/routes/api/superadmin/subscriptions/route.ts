@@ -206,8 +206,8 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     `;
 
     // Execute all queries
-    // On the service connection after the role check above: under RLS a developer outside the System Admin Team sees
-    // only their own users and teams, and team_members has no bypass policy at all.
+    // On the service connection after the role check above: team_members has no bypass policy at all, so under RLS
+    // even a superadmin would see only their own memberships.
     const [statsResult, planDistResult, subscriptionsResult, countResult] = await Promise.all([
       queryWithRLS(statsQuery, [], session.user.id, { service: true }) as Promise<StatsResult[]>,
       queryWithRLS(planDistributionQuery, [], session.user.id, { service: true }) as Promise<PlanDistribution[]>,
