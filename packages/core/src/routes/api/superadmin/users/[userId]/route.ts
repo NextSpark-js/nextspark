@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { suspendUser, unsuspendUser } from '@nextsparkjs/core/lib/auth/suspension';
-import { ASSIGNABLE_USER_ROLES, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
+import { ASSIGNABLE_USER_ROLES, canActOnUser, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
@@ -240,7 +240,8 @@ interface UserActionBody {
  * - unsuspend: Give a suspended user back the 'member' role (their API keys stay deactivated)
  * - verify-email: Manually verify user's email
  *
- * Nobody can act on their own account or on a superadmin, so the last superadmin is never suspended.
+ * Nobody can act on their own account or on a superadmin, so the last superadmin is never suspended. Only a developer
+ * acts on a developer.
  */
 export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: RouteParams) => {
   try {
@@ -314,6 +315,14 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
     if (targetUser.role === 'superadmin') {
       return NextResponse.json(
         { error: 'Cannot modify other superadmin accounts' },
+        { status: 403 }
+      );
+    }
+
+    // The developer role ranks above superadmin: only a developer acts on a developer
+    if (!canActOnUser(session.user.role, targetUser.role)) {
+      return NextResponse.json(
+        { error: 'Forbidden - Only a developer can modify a developer account' },
         { status: 403 }
       );
     }
@@ -499,6 +508,14 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
     if (targetUser.role === 'superadmin') {
       return NextResponse.json(
         { error: 'Cannot delete other superadmin accounts' },
+        { status: 403 }
+      );
+    }
+
+    // Only a developer deletes a developer
+    if (!canActOnUser(session.user.role, targetUser.role)) {
+      return NextResponse.json(
+        { error: 'Forbidden - Only a developer can delete a developer account' },
         { status: 403 }
       );
     }

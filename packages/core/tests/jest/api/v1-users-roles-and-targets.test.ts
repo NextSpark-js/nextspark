@@ -39,7 +39,14 @@ jest.mock('@nextsparkjs/core/lib/db', () => ({
   mutateWithRLS: (...args: [string, unknown[]]) => mutateWithRLS(...args),
 }))
 
+const updateUserMeta = jest.fn()
+const deleteUserMeta = jest.fn()
+jest.mock('@nextsparkjs/core/lib/services', () => ({
+  UserService: { getUserMeta: jest.fn(async () => 'v'), updateUserMeta: (...a: unknown[]) => updateUserMeta(...a), deleteUserMeta: (...a: unknown[]) => deleteUserMeta(...a) },
+}))
+
 import { PATCH, DELETE } from '../../../src/routes/api/v1/users/[id]/route'
+import { PUT as putMeta, DELETE as deleteMeta } from '../../../src/routes/api/v1/users/[id]/meta/[key]/route'
 import { POST } from '../../../src/routes/api/v1/users/route'
 
 function as(id: string) {
@@ -98,11 +105,22 @@ describe('superadmin targets, as on the superadmin route', () => {
     expect(mutateWithRLS).not.toHaveBeenCalled()
   })
 
-  it.each(['sa', 'dev'])('%s changes and deletes a developer or a member, as the superadmin route allows', async (actor) => {
+  it.each(['sa', 'dev'])('%s changes and deletes a member', async (actor) => {
     as(actor)
-    expect(await patch('dev2', { firstName: 'X' })).toBe(200)
-    expect(await del('dev2')).toBe(200)
+    expect(await patch('mem2', { firstName: 'X' })).toBe(200)
     expect(await del('mem2')).toBe(200)
+  })
+
+  it('only a developer changes or deletes a developer', async () => {
+    as('sa')
+    expect(await patch('dev2', { firstName: 'X' })).toBe(403)
+    expect(await patch('dev2', { role: 'member' })).toBe(403)
+    expect(await del('dev2')).toBe(403)
+    expect(mutateWithRLS).not.toHaveBeenCalled()
+    as('dev')
+    expect(await patch('dev2', { firstName: 'X' })).toBe(200)
+    expect(await patch('dev2', { role: 'member' })).toBe(200)
+    expect(await del('dev2')).toBe(200)
   })
 
   it('a member deletes nobody', async () => {
@@ -120,5 +138,33 @@ describe('POST /api/v1/users, the role', () => {
     as('dev')
     expect(await create({ role: 'developer' })).toBe(201)
     expect(await create({ role: 'superadmin' })).toBe(400)
+  })
+})
+
+describe('/api/v1/users/:id/meta/:key writes follow the same targets', () => {
+  const put = async (target: string) =>
+    (await putMeta(new NextRequest(`http://localhost/api/v1/users/${target}/meta/k`, { method: 'PUT', body: JSON.stringify({ value: 1 }) }), { params: Promise.resolve({ id: target, key: 'k' }) } as never)).status
+  const remove = async (target: string) =>
+    (await deleteMeta(new NextRequest(`http://localhost/api/v1/users/${target}/meta/k`, { method: 'DELETE' }), { params: Promise.resolve({ id: target, key: 'k' }) } as never)).status
+
+  it('a superadmin writes a member\'s metadata, not a developer\'s nor another superadmin\'s', async () => {
+    as('sa')
+    expect(await put('mem')).toBe(200)
+    expect(await put('dev')).toBe(403)
+    expect(await remove('dev')).toBe(403)
+    expect(await put('sa2')).toBe(403)
+    expect(updateUserMeta).toHaveBeenCalledTimes(1)
+    expect(deleteUserMeta).not.toHaveBeenCalled()
+  })
+
+  it('a developer writes a developer\'s metadata; everyone writes their own', async () => {
+    as('dev')
+    expect(await put('dev2')).toBe(200)
+    expect(await remove('dev2')).toBe(200)
+    as('sa')
+    expect(await put('sa')).toBe(200)
+    as('mem')
+    expect(await put('mem')).toBe(200)
+    expect(await put('mem2')).toBe(403)
   })
 })

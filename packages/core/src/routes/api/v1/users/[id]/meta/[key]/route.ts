@@ -30,10 +30,24 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { canAccessUser } from '@nextsparkjs/core/lib/api/auth/permissions'
+import { canActOnUser } from '@nextsparkjs/core/lib/auth/assignable-roles'
+import { queryOneWithRLS } from '@nextsparkjs/core/lib/db'
+import type { DualAuthResult } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Validation schema for metadata value
+/**
+ * A write on another user's metadata follows the users routes: nobody writes another superadmin's, and only a
+ * developer writes a developer's.
+ */
+async function targetRefused(authResult: DualAuthResult, id: string): Promise<boolean> {
+  const { id: callerId, email, role } = authResult.user!
+  if (id === callerId || id === email) return false
+  const target = await queryOneWithRLS<{ role: string }>('SELECT role FROM "users" WHERE id = $1 OR email = $1', [id], callerId)
+  return !!target && !canActOnUser(role, target.role)
+}
+
 const metadataValueSchema = z.object({
   value: z.any(), // Accept any JSON value
   isPublic: z.boolean().optional().default(false),
@@ -176,6 +190,10 @@ export const PUT = withRateLimitTier(withApiLogging(async (
       const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN')
       return addCorsHeaders(response, req)
     }
+    if (await targetRefused(authResult, id)) {
+      const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN')
+      return addCorsHeaders(response, req)
+    }
 
     if (!key || key.trim() === '') {
       const response = createApiError('Metadata key is required', 400, null, 'MISSING_META_KEY')
@@ -292,6 +310,10 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
 
     // SECURITY: a user's metadata is readable and editable by that user, a superadmin or a developer only
     if (!canAccessUser(authResult, id, 'users:write')) {
+      const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN')
+      return addCorsHeaders(response, req)
+    }
+    if (await targetRefused(authResult, id)) {
       const response = createApiError('Insufficient permissions', 403, null, 'FORBIDDEN')
       return addCorsHeaders(response, req)
     }

@@ -16,7 +16,7 @@ jest.mock('@nextsparkjs/core/lib/api/auth', () => ({ invalidateApiKeyCache: (has
 
 import { GET, PATCH, DELETE } from '../../../src/routes/api/superadmin/users/[userId]/route'
 
-const USERS: Record<string, string> = { 'sa-1': 'superadmin', 'sa-2': 'superadmin', 'dev-1': 'developer', 'mem-1': 'member', 'sus-1': 'suspended' }
+const USERS: Record<string, string> = { 'sa-1': 'superadmin', 'sa-2': 'superadmin', 'dev-1': 'developer', 'dev-2': 'developer', 'mem-1': 'member', 'sus-1': 'suspended' }
 
 function as(id: string) {
   session.mockResolvedValue({ session: { id: 's' }, user: { id, role: USERS[id] } })
@@ -77,7 +77,7 @@ describe('unsuspend', () => {
   })
 
   it('refuses a user who is not suspended (a developer is not demoted by it)', async () => {
-    as('sa-1')
+    as('dev-2')
     expect((await patch('dev-1', { action: 'unsuspend' })).status).toBe(400)
   })
 })
@@ -88,6 +88,7 @@ describe('change-role', () => {
     for (const role of ['admin', 'colaborator', 'superadmin', 'suspended']) {
       expect((await patch('mem-1', { action: 'change-role', role })).status).toBe(400)
     }
+    as('dev-2')
     expect((await patch('dev-1', { action: 'change-role', role: 'member' })).status).toBe(200)
   })
 
@@ -167,5 +168,30 @@ describe('PATCH and DELETE on the service connection', () => {
     as('dev-1')
     expect((await del('sa-1')).status).toBe(403)
     expect(queryWithRLS.mock.calls.some(([s]: [string]) => s.startsWith('DELETE'))).toBe(false)
+  })
+})
+
+// The developer role ranks above superadmin: only a developer changes, suspends or deletes a developer.
+describe('developer targets', () => {
+  const del = (target: string) =>
+    DELETE(new NextRequest(`http://localhost/api/superadmin/users/${target}`, { method: 'DELETE' }), { params: Promise.resolve({ userId: target }) } as never)
+
+  it('a superadmin neither changes, suspends, verifies nor deletes a developer', async () => {
+    as('sa-1')
+    for (const body of [{ action: 'change-role', role: 'member' }, { action: 'suspend' }, { action: 'verify-email' }]) {
+      const response = await patch('dev-1', body)
+      expect(response.status).toBe(403)
+      expect((await response.json()).error).toMatch(/developer/)
+    }
+    expect((await del('dev-1')).status).toBe(403)
+    expect(queryWithRLS.mock.calls.some(([s]: [string]) => /^\s*(UPDATE|DELETE)|WITH suspended/.test(s))).toBe(false)
+  })
+
+  it('another developer does', async () => {
+    as('dev-2')
+    expect((await patch('dev-1', { action: 'verify-email' })).status).toBe(200)
+    expect((await patch('dev-1', { action: 'change-role', role: 'member' })).status).toBe(200)
+    expect((await patch('dev-1', { action: 'suspend' })).status).toBe(200)
+    expect((await del('dev-1')).status).toBe(200)
   })
 })
