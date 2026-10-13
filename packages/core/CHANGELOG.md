@@ -29,6 +29,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A route with `dynamic = 'force-static'` is answered from the build, where a rate limit checks nothing: opt it out.
   - `DISABLE_RATE_LIMITING=true` turns the default off with the other per-address limits.
   - Behind a proxy or on Vercel, set `NEXTSPARK_CLIENT_IP_SOURCE`, or every request may count against one address.
+- **Run `pnpm db:migrate`: core adds `035_team_admin_metas_and_billing_policies.sql`.** It changes RLS policies (idempotent); only a
+  project that runs the application as `nextspark_app` (the RLS cutover in `22-stability-and-support/04-postgresql-requirements.md`)
+  sees a difference. On that connection:
+  - a team's admins update the team, as `PATCH /api/v1/teams/:teamId` allows, but only its name, slug, description, `avatarUrl` and
+    `settings`; only a superadmin, or a developer of the system admin team (`can_bypass_rls()`), changes `teams."ownerId"` (an ownership transfer runs on the service connection);
+  - `pages_metas` and `posts_metas` rows are read and written only for pages and posts of the caller's teams, like `tasks_metas`. The
+    pages and posts entity migrations of the templates have the same policy now; a project with an earlier copy keeps its file and
+    035 replaces the policy;
+  - `subscriptions`, `usage`, `usage_events` and `billing_events` are written only by `can_bypass_rls()`. Core's billing services,
+    jobs and payment webhooks write them on the service connection. Code of your own that writes them on the request user's connection
+    (`queryWithRLS(sql, params, userId)`) must use the service connection (`{ service: true }`, or no user id) after its own checks.
+    Reads are unchanged. A project migration that re-created the `Subscriptions elevated insert/update/delete` or `Billing events
+    elevated insert` policies of its own loses them to 035; re-create them after it.
+
+### Fixed
+
+- A team admin can edit the team on the `nextspark_app` connection; it answered 404 there.
+- A developer can open a user's detail in the superadmin area on the `nextspark_app` connection; it answered 404 there.
+- The RLS policies of `pages_metas`, `posts_metas`, `subscriptions`, `usage`, `usage_events` and `billing_events` match what the API
+  allows (migration 035).
 
 ## [0.1.0-beta.198] - 2026-10-09
 

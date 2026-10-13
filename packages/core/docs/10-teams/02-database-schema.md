@@ -216,7 +216,7 @@ CREATE POLICY "teams_update_policy" ON public."teams"
     OR public.auth_team_role(id) IN ('owner', 'admin')
   );
 -- The teams_rls_update_limits trigger: on the RLS connection an admin changes only name, slug, description,
--- "avatarUrl" and settings, and nobody but a superadmin changes "ownerId" (an ownership transfer runs on the
+-- "avatarUrl" and settings, and only a superadmin or a developer of the system admin team (can_bypass_rls()) changes "ownerId" (an ownership transfer runs on the
 -- service connection).
 
 -- Only owners can delete teams
