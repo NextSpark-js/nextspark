@@ -25,6 +25,8 @@ pnpm update-core --help                     # Help
 
 Run it where the `package.json` that depends on `@nextsparkjs/core` is: the project root, or `web/` in a web-mobile project. `pnpm install` runs where `pnpm-lock.yaml` is, which in a web-mobile project is the directory above `web/`.
 
+In a web-mobile project `update-core` writes only `web/package.json`. `@nextsparkjs` pins in `mobile/package.json` or in the workspace root's `package.json` (`@nextsparkjs/ai-workflow`, say) stay where they were; the run ends by listing each one that is not at the target, and the `pnpm install` to run after you set them.
+
 In a web-mobile project whose `web/` has a `pnpm-workspace.yaml` of its own, as projects `create-nextspark-app` generates have had, pnpm 11 takes `web/` for a workspace of its own and installs it before running any script there: `pnpm update-core` fails in that install (`ERR_PNPM_IGNORED_BUILDS`) before `update-core` starts, having written `web/pnpm-lock.yaml` and `web/pnpm-workspace.yaml`. Run it from `web/` as `pnpm --config.verify-deps-before-run=false update-core`, which skips that install.
 
 When changing pnpm major versions, first update the project's `packageManager` field to the target major so Corepack permits it. Corepack needs Node.js 22.14.0 or later to download pnpm: Corepack in Node.js 22.13.x fails with `Cannot find matching keyid`. pnpm 11 can reject a lockfile written by pnpm 9 or 10 while it contains a dependency published less than a day ago (`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`). Keep the release-age policy and regenerate the lockfile instead of weakening it:

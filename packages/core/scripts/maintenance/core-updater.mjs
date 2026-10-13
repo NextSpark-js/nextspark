@@ -71,6 +71,8 @@ What gets updated:
   core.version.json       Written once everything above succeeded
 
 What update-core itself never writes:
+  Other packages of a web-mobile workspace (mobile/, the root package.json): it lists their
+                          @nextsparkjs pins that are not at the target, with the install to run
   The rest of package.json (name, scripts, other dependencies)
   next.config.mjs, tsconfig.json, i18n.ts, proxy.ts or middleware.ts, instrumentation.ts
                           Project files: nextspark sync:app, which used to update them, was
@@ -377,6 +379,45 @@ function installRoot(cwd, top) {
     if (fs.existsSync(path.join(dir, LOCKFILE))) return dir
     if (dir === stop || path.dirname(dir) === dir) return null
   }
+}
+
+/**
+ * The @nextsparkjs pins that sit in the workspace's other manifests and aren't
+ * at `target`: update-core writes only the package.json of the project it runs
+ * in. In a web-mobile project those are the workspace root's own package.json
+ * and the directories pnpm-workspace.yaml lists, mobile/ among them.
+ * ponytail: only plain directory entries in pnpm-workspace.yaml are read, not
+ * globs; a project that lists `apps/*` gets no report for those.
+ */
+function otherWorkspacePins(cwd, root, target) {
+  if (!root) return []
+  let listed = []
+  try {
+    listed = fs.readFileSync(path.join(root, 'pnpm-workspace.yaml'), 'utf8').split('\n')
+      .map((line) => line.match(/^\s*-\s*['"]?([^'"*#\s]+)['"]?\s*$/)?.[1])
+      .filter(Boolean)
+  } catch {}
+
+  const pins = []
+  for (const dir of new Set([root, ...listed.map((entry) => path.resolve(root, entry))])) {
+    if (realPath(dir) === realPath(cwd)) continue
+    const file = path.join(dir, 'package.json')
+    const manifest = readJson(file)
+    for (const field of DEPENDENCY_FIELDS) {
+      for (const [name, spec] of Object.entries(manifest?.[field] ?? {})) {
+        if (name.startsWith(SCOPE) && takesFromRegistry(spec) && spec !== target) pins.push({ file: path.relative(cwd, file), name, spec })
+      }
+    }
+  }
+  return pins
+}
+
+/** Says which pins update-core left alone and how to move them; prints nothing when there are none. */
+function reportOtherPins(out, pins, target, cwd, root) {
+  if (pins.length === 0) return
+  out('\n  Not moved: these @nextsparkjs pins are in other packages of the workspace, which update-core never writes:')
+  for (const { file, name, spec } of pins) out(`    ${file}: ${name} ${spec}`)
+  out(`  Set each to ${target}, then run: pnpm${path.relative(cwd, root) ? ` --dir ${shellWord(path.relative(cwd, root))}` : ''} install`)
 }
 
 /**
@@ -851,7 +892,9 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
   }
 
   if (packages.every(({ name, spec }) => spec === target && installedVersion(cwd, name) === target)) {
-    out(`\n   Already on ${target}: every @nextsparkjs package in package.json is pinned to it and node_modules holds it. Nothing was changed.\n`)
+    out(`\n   Already on ${target}: every @nextsparkjs package in package.json is pinned to it and node_modules holds it. Nothing was changed.`)
+    reportOtherPins(out, otherWorkspacePins(cwd, root, target), target, cwd, root)
+    out('')
     return 0
   }
 
@@ -877,6 +920,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
   }
 
   const rollback = rollbackCommand(git, { cwd, root, branch })
+  const otherPins = otherWorkspacePins(cwd, root, target)
   out(`\n   Starting from commit ${git.head.slice(0, 12)}. If this run is killed before it can report (SIGKILL), roll back with:`)
   out(`     ${rollback}`)
   out('   Killing this run also kills the install or prepare it is running, unless its guard process is stopped or killed too, but not processes that left that step\'s process group.')
@@ -981,6 +1025,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     out(`\n  ${CORE_PACKAGE} ${installed} -> ${target}`)
     if (branch) out(`  Branch: ${branch}`)
     if (newMigrations.length > 0) out(`  New core migrations: ${newMigrations.length}`)
+    reportOtherPins(out, otherPins, target, cwd, root)
     out('\n  Next steps:')
     const nextSteps = ['Review: git status && git diff', 'Test: pnpm build && pnpm dev']
     if (newMigrations.length > 0) nextSteps.push('Migrate: pnpm db:migrate')

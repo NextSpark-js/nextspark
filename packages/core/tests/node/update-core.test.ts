@@ -784,6 +784,31 @@ test('in a web-mobile project the install runs where pnpm-lock.yaml is, not in w
   assert.match(result.stdout, /Roll back: git reset --hard \S+ && git clean -fd :\/ && rm -rf \.\.\/node_modules node_modules && pnpm --dir \.\. install --frozen-lockfile\n/)
 })
 
+test('in a web-mobile project it lists the @nextsparkjs pins in mobile/ and the workspace root it did not move, with the install to run', (t) => {
+  const web = createProject(t, { webMobile: true })
+  const repo = path.dirname(web)
+  fs.writeFileSync(path.join(repo, 'mobile/package.json'), `${JSON.stringify({ name: 'mobile', private: true, dependencies: { '@nextsparkjs/mobile': FROM } }, null, 2)}\n`)
+  fs.writeFileSync(path.join(repo, 'package.json'), `${JSON.stringify({ name: 'acme', private: true, devDependencies: { '@nextsparkjs/ai-workflow': FROM, '@nextsparkjs/local': 'workspace:*' } }, null, 2)}\n`)
+  git(repo, 'add', '-A')
+  git(repo, 'commit', '-q', '-m', 'Mobile and ai-workflow')
+
+  const result = runUpdateCore(web, ['--version', TO])
+
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.stdout, /Not moved: [^\n]*other packages of the workspace[^\n]*\n {4}\.\.\/package\.json: @nextsparkjs\/ai-workflow 0\.1\.0-beta\.188\n {4}\.\.\/mobile\/package\.json: @nextsparkjs\/mobile 0\.1\.0-beta\.188\n {2}Set each to 0\.1\.0-beta\.189, then run: pnpm --dir \.\. install\n/)
+  assert.doesNotMatch(result.stdout, /workspace:\*/)
+  assert.equal(JSON.parse(fs.readFileSync(path.join(repo, 'mobile/package.json'), 'utf8')).dependencies['@nextsparkjs/mobile'], FROM)
+})
+
+test('it lists nothing when no other package of the workspace pins a @nextsparkjs package off the target', (t) => {
+  const web = createProject(t, { webMobile: true })
+
+  const result = runUpdateCore(web, ['--version', TO])
+
+  assert.equal(result.status, 0, result.output)
+  assert.doesNotMatch(result.output, /Not moved/)
+})
+
 test('a core.version.json that can\'t be written fails through the same report and rollback', (t) => {
   const root = createProject(t, { files: { 'core.version.json/keep': '' } })
   const before = stateOf(root)
