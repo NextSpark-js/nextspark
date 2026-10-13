@@ -45,6 +45,7 @@ import { entityRegistry } from '../entities/registry'
 import { getAuthorizationSession } from '../auth/authorization-session'
 import { checkPermission } from '../permissions/check'
 import { actionRateLimitError } from './rate-limit'
+import { actionErrorMessage } from './errors'
 import { MAX_BATCH_DELETE_IDS } from './types'
 import type {
   EntityActionResult,
@@ -187,7 +188,7 @@ export async function createEntity<T = unknown>(
     console.error(`[createEntity] Error creating ${entitySlug}:`, error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: actionErrorMessage(error, 'Failed to create the record'),
     }
   }
 }
@@ -283,7 +284,7 @@ export async function updateEntity<T = unknown>(
     console.error(`[updateEntity] Error updating ${entitySlug}/${id}:`, error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: actionErrorMessage(error, 'Failed to update the record'),
     }
   }
 }
@@ -374,7 +375,7 @@ export async function deleteEntity(
     console.error(`[deleteEntity] Error deleting ${entitySlug}/${id}:`, error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: actionErrorMessage(error, 'Failed to delete the record'),
     }
   }
 }
@@ -442,7 +443,7 @@ export async function getEntity<T = unknown>(
     console.error(`[getEntity] Error fetching ${entitySlug}/${id}:`, error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: actionErrorMessage(error, 'Failed to get the record'),
     }
   }
 }
@@ -513,7 +514,7 @@ export async function listEntities<T = unknown>(
     console.error(`[listEntities] Error listing ${entitySlug}:`, error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: actionErrorMessage(error, 'Failed to list the records'),
     }
   }
 }
@@ -608,7 +609,7 @@ export async function deleteEntities(
     console.error(`[deleteEntities] Error batch deleting ${entitySlug}:`, error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: actionErrorMessage(error, 'Failed to delete the records'),
     }
   }
 }
@@ -674,7 +675,7 @@ export async function entityExists(
     console.error(`[entityExists] Error checking ${entitySlug}/${id}:`, error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: actionErrorMessage(error, 'Failed to check the record'),
     }
   }
 }
@@ -735,7 +736,7 @@ export async function countEntities(
     console.error(`[countEntities] Error counting ${entitySlug}:`, error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: actionErrorMessage(error, 'Failed to count the records'),
     }
   }
 }

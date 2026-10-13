@@ -47,6 +47,7 @@ import { updateTeamSchema } from '../teams/schema'
 import type { ZodError } from 'zod'
 import { formatZodError } from './validation'
 import { actionRateLimitError } from './rate-limit'
+import { actionErrorMessage } from './errors'
 import type { Team, TeamRole, TeamMember } from '../teams/types'
 import type { EntityActionResult, EntityActionVoidResult } from './types'
 import { getInvitableRoles } from '../teams/permissions'
@@ -214,7 +215,7 @@ export async function updateTeam(
     console.error('[updateTeam] Error:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update team',
+      error: actionErrorMessage(error, 'Failed to update team'),
     }
   }
 }
@@ -391,7 +392,7 @@ export async function removeMember(
     console.error('[removeMember] Error:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to remove member',
+      error: actionErrorMessage(error, 'Failed to remove member'),
     }
   }
 }
@@ -496,7 +497,7 @@ export async function updateMemberRole(
     console.error('[updateMemberRole] Error:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update member role',
+      error: actionErrorMessage(error, 'Failed to update member role'),
     }
   }
 }
@@ -549,7 +550,7 @@ export async function transferTeamOwnership(
     console.error('[transferTeamOwnership] Error:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to transfer ownership',
+      error: actionErrorMessage(error, 'Failed to transfer ownership'),
     }
   }
 }

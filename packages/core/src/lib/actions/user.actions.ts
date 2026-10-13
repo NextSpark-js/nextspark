@@ -37,6 +37,7 @@ import { UserService, type UpdateUserPayload } from '../services/user.service'
 import { updateProfileSchema, avatarImageSchema } from '../users/schema'
 import { formatZodError } from './validation'
 import { actionRateLimitError } from './rate-limit'
+import { actionErrorMessage } from './errors'
 import type { EntityActionResult, EntityActionVoidResult } from './types'
 
 // ============================================================================
@@ -155,7 +156,7 @@ export async function updateProfile(
     console.error('[updateProfile] Error:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update profile',
+      error: actionErrorMessage(error, 'Failed to update profile'),
     }
   }
 }
@@ -258,7 +259,7 @@ export async function updateAvatar(
     console.error('[updateAvatar] Error:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update avatar',
+      error: actionErrorMessage(error, 'Failed to update avatar'),
     }
   }
 }
@@ -325,7 +326,7 @@ export async function deleteAccount(): Promise<EntityActionVoidResult> {
     console.error('[deleteAccount] Error:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete account',
+      error: actionErrorMessage(error, 'Failed to delete account'),
     }
   }
 }

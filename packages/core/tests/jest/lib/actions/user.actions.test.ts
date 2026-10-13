@@ -215,7 +215,7 @@ describe('User Server Actions', () => {
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toBe('Database error')
+        expect(result.error).toBe('Failed to update profile')
       }
     })
 
@@ -429,7 +429,7 @@ describe('User Server Actions', () => {
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toBe('User not found')
+        expect(result.error).toBe('Failed to delete account')
       }
     })
 
@@ -449,7 +449,7 @@ describe('User Server Actions', () => {
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toBe('Database error')
+        expect(result.error).toBe('Failed to delete account')
       }
     })
   })

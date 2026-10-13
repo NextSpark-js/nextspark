@@ -313,7 +313,7 @@ describe('Entity Server Actions', () => {
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toBe('Database error')
+        expect(result.error).toBe('Failed to create the record')
       }
     })
 
@@ -642,7 +642,7 @@ describe('Entity Server Actions', () => {
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toBe('Unknown error')
+        expect(result.error).toBe('Failed to create the record')
       }
     })
 
