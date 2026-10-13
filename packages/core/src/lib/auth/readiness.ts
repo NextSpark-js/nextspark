@@ -145,7 +145,7 @@ function credentialState(value: string | undefined, pattern: RegExp, minimumLeng
 export function evaluateSessionSecret(input: AuthReadinessInput): AuthReadinessDiagnostic | null {
   const state = credentialState(
     input.configuration?.betterAuthSecret,
-    /^\S+$/,
+    /./,
     BETTER_AUTH_SECRET_MIN_LENGTH
   )
   if (state === 'missing' || state === 'valid') return null

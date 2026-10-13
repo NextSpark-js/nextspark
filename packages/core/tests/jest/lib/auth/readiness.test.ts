@@ -953,6 +953,10 @@ describe('evaluateAuthReadiness session secret', () => {
     expect(JSON.stringify(result)).not.toContain(secret)
   })
 
+  test('production accepts a long passphrase with spaces', () => {
+    expect(withSecret('correct horse battery staple 7 gamma 42').outcome).toBe('ready')
+  })
+
   test.each(['k9f3'.repeat(8), 'Zq7-Lm2_Rt8+Vb4/Nc6=Hd1.Ys5~Wa3x'])('production accepts a 32+ character random value', (secret) => {
     const result = withSecret(secret)
 
