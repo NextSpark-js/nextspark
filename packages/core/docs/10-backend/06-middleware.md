@@ -126,8 +126,12 @@ continued as if the hook had returned `null`. Core answers a fixed `500`
 (`Internal Server Error`, `Cache-Control: no-store`) for every route, public
 or protected, and logs the error once on the server
 (`Error executing the project request hook:`); the response never carries the
-message or the stack. There is no option to fail open. A hook whose failure
-should not block the request catches its own error and returns `null`:
+message or the stack. There is no option to fail open. A hook that has not
+answered within 5 seconds fails the same way (`createProxy({ hookTimeoutMs })` in
+`src/proxy.ts` sets another limit). Core stops waiting for such a hook, it does
+not cancel it: give the hook's outbound calls their own `AbortSignal.timeout`. A
+hook whose failure should not block the request catches its own error and returns
+`null`:
 
 ```ts
 export async function proxyHook(request: NextRequest) {
