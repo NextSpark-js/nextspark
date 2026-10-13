@@ -14,12 +14,10 @@ import {
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { canAccessUser, hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions';
 import * as z from 'zod';
+import { updateProfileSchema } from '@nextsparkjs/core/lib/users/schema';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
-const updateUserSchema = z.object({
-  firstName: z.string().min(1).optional(),
-  lastName: z.string().optional(),
-  language: z.string().optional(),
+const updateUserSchema = updateProfileSchema.extend({
   role: z.enum(['member', 'superadmin']).optional(),
   metas: z.record(z.string(), z.any()).optional()
 });

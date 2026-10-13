@@ -34,6 +34,8 @@ import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { getAuthorizationSession } from '../auth/authorization-session'
 import { UserService, type UpdateUserPayload } from '../services/user.service'
+import { updateProfileSchema, avatarImageSchema } from '../users/schema'
+import { formatZodError } from './validation'
 import type { EntityActionResult, EntityActionVoidResult } from './types'
 
 // ============================================================================
@@ -113,15 +115,12 @@ export async function updateProfile(
       return { success: false, error: 'No fields provided for update' }
     }
 
-    // 3. Build update payload (filter to allowed fields only)
-    const updatePayload: UpdateUserPayload = {}
-
-    if (data.firstName !== undefined) updatePayload.firstName = data.firstName
-    if (data.lastName !== undefined) updatePayload.lastName = data.lastName
-    if (data.name !== undefined) updatePayload.name = data.name
-    if (data.country !== undefined) updatePayload.country = data.country
-    if (data.timezone !== undefined) updatePayload.timezone = data.timezone
-    if (data.language !== undefined) updatePayload.language = data.language
+    // 3. Validate the fields with the profile schema of PATCH /api/v1/users/:id (unknown keys are dropped)
+    const parsed = updateProfileSchema.safeParse(data)
+    if (!parsed.success) {
+      return { success: false, error: formatZodError(parsed.error) }
+    }
+    const updatePayload: UpdateUserPayload = parsed.data
 
     if (Object.keys(updatePayload).length === 0) {
       return { success: false, error: 'No valid fields provided for update' }
@@ -216,9 +215,10 @@ export async function updateAvatar(
       }
     }
 
-    // 3. Validate URL format (basic validation)
-    if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://') && !imageUrl.startsWith('/')) {
-      return { success: false, error: 'Invalid image URL format' }
+    // 3. Validate the URL
+    const parsedUrl = avatarImageSchema.safeParse(imageUrl)
+    if (!parsedUrl.success) {
+      return { success: false, error: formatZodError(parsedUrl.error) }
     }
 
     // 4. Update user via service

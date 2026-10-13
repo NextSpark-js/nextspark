@@ -254,6 +254,36 @@ describe('User Server Actions', () => {
   })
 
   // ===========================================
+  // updateProfile: the fields are parsed with updateProfileSchema, as PATCH /api/v1/users/:id does
+  // ===========================================
+
+  describe('updateProfile validation', () => {
+    it.each([
+      ['a language that is not a tag', { language: 'xx-not-a-locale!' }, 'language'],
+      ['a timezone that does not exist', { timezone: 'Not/AZone' }, 'timezone'],
+      ['a country that is markup', { country: '<script>alert(1)</script>' }, 'country'],
+      ['an object as first name', { firstName: { a: 1 } }, 'firstName'],
+      ['an array as last name', { lastName: ['a'] }, 'lastName'],
+      ['an empty first name', { firstName: '' }, 'firstName'],
+      ['a name over 200 characters', { name: 'x'.repeat(201) }, 'name'],
+    ])('rejects %s without touching the service', async (_label, data, field) => {
+      const result = await updateProfile(data as never)
+
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error.startsWith(`${field}:`)).toBe(true)
+      expect(mockUserService.updateUser).not.toHaveBeenCalled()
+    })
+
+    it('drops keys the schema does not know', async () => {
+      mockUserService.updateUser.mockResolvedValue(mockUser)
+
+      await updateProfile({ firstName: 'John', role: 'superadmin' } as never)
+
+      expect(mockUserService.updateUser).toHaveBeenCalledWith('user-123', { firstName: 'John' }, 'user-123')
+    })
+  })
+
+  // ===========================================
   // updateAvatar
   // ===========================================
 
@@ -323,6 +353,21 @@ describe('User Server Actions', () => {
       if (!result.success) {
         expect(result.error).toBe('Invalid image URL format')
       }
+    })
+
+    it.each([
+      ['a protocol-relative URL', '//evil.example/p.png'],
+      ['a javascript: URL', 'javascript:alert(1)'],
+      ['a data: URL', 'data:image/png;base64,AAAA'],
+      ['a backslash path', '/\\evil.example/p.png'],
+    ])('rejects %s', async (_label, value) => {
+      const formData = new FormData()
+      formData.append('avatar', value)
+
+      const result = await updateAvatar(formData)
+
+      expect(result.success).toBe(false)
+      expect(mockUserService.updateUser).not.toHaveBeenCalled()
     })
 
     it('revalidates paths after avatar update', async () => {
