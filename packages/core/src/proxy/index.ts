@@ -348,6 +348,11 @@ function mergeThemeHeaders(response: NextResponse, themeResponse: NextResponse |
   return response
 }
 
+/** The answer when the project's request hook throws: fixed, with nothing of the error (it is only in the server log). */
+function hookFailed(request: NextRequest): NextResponse {
+  return syncSessionHint(request, new NextResponse('Internal Server Error', { status: 500, headers: { 'cache-control': 'no-store' } }))
+}
+
 function unsupportedThemeRewrite(request: NextRequest): NextResponse {
   return syncSessionHint(request, new NextResponse('Unsupported or ambiguous theme rewrite destination', { status: 502 }))
 }
@@ -461,7 +466,9 @@ async function handle(request: NextRequest, authenticatedPaths: readonly string[
         null
       )
     } catch (error) {
+      // Fail closed: a hook that denies (maintenance mode, an allow-list) and then throws must not let the request through
       console.error('Error executing the project request hook:', error)
+      return hookFailed(request)
     }
   }
 
@@ -667,6 +674,8 @@ export interface ProxyOptions {
    * path segment boundary: '/account' covers /account and /account/billing,
    * not /accounts. A visitor without a session goes to /login with a
    * callbackUrl; the verified identity headers are set for the page.
+   * Entries are literal prefixes (letters, digits and . _ ~ - per segment); patterns such as
+   * '/account/:path*' or '/account/*' are refused, they would protect nothing.
    * An entry on, under or above a path core handles first (its public pages
    * and auth routes, /docs, /api/v1) is refused: it would not be gated.
    */
@@ -689,8 +698,8 @@ export interface ProxyOptions {
 export function createProxy(options: ProxyOptions = {}): (request: NextRequest) => Promise<NextResponse> {
   const extra = options.authenticatedPaths ?? []
   for (const prefix of extra) {
-    if (typeof prefix !== 'string' || !/^\/[^?#\s]*[^/?#\s]$/.test(prefix)) {
-      throw new Error(`createProxy: authenticatedPaths entries are paths such as '/account' (a leading slash, no trailing slash, no query): got ${JSON.stringify(prefix)}`)
+    if (typeof prefix !== 'string' || !/^(\/[A-Za-z0-9._~-]+)+$/.test(prefix) || prefix.split('/').some(segment => segment === '.' || segment === '..')) {
+      throw new Error(`createProxy: authenticatedPaths entries are literal path prefixes such as '/account' or '/app/reports': a leading slash, segments of letters, digits and . _ ~ - only, no trailing slash, no query. Patterns (*, :param, (.*), [param]) are not supported: '/account' already covers /account and everything under it. Got ${JSON.stringify(prefix)}`)
     }
     // Core lets these through before the authenticated paths are looked at, so an entry on or around one would not be gated
     const before = [...publicPaths, '/docs', '/api/v1'].find(path => isUnder(prefix, path) || isUnder(path, prefix))

@@ -642,7 +642,25 @@ describe('createProxy authenticatedPaths', () => {
     expect(() => createProxy({ authenticatedPaths: [entry as string] })).toThrow(/authenticatedPaths/)
   })
 
-  test.each(['/api/v1/reports', '/api/v1', '/terms', '/privacy/x', '/api/auth/x', '/login/x', '/auth-test/x', '/docs/internal', '/api', '//x'])('rejects %p: core lets it through before the authenticated paths', entry => {
+  // Entries that look like patterns (Next.js matcher / redirects spelling) match only their own literal text, so they protected nothing
+  test.each([
+    '/account/:path*', '/account/*', '/account(.*)', '/account*', '/account/(.*)', '/[tenant]/billing', '/:locale/account',
+    '/acc%6funt', '/account%2Fx', '/account/../terms', '/..', '/./terms', '//x', '/account//x', '/account\\x', '/caf\u00e9',
+  ])('rejects the pattern or ambiguous entry %p and names the supported syntax', entry => {
+    expect(() => createProxy({ authenticatedPaths: [entry] })).toThrow(/literal path prefixes such as '\/account'.*Patterns \(\*, :param, \(\.\*\), \[param\]\) are not supported/)
+  })
+
+  test.each(['/Account', '/app/reports', '/a.b/c_d/e-f/g~h', '/v2'])('takes the literal prefix %p and gates it and what is under it', async entry => {
+    const guarded = createProxy({ authenticatedPaths: [entry] })
+    mockedGetSession.mockResolvedValue(null)
+    for (const path of [entry, `${entry}/x/y`]) {
+      const response = (await guarded(makeRequest(path))) as unknown as PassThrough
+      expect(response.type).toBe('redirect')
+      expect(response.redirectUrl).toContain('/login?callbackUrl=')
+    }
+  })
+
+  test.each(['/api/v1/reports', '/api/v1', '/terms', '/privacy/x', '/api/auth/x', '/login/x', '/auth-test/x', '/docs/internal', '/api'])('rejects %p: core lets it through before the authenticated paths', entry => {
     expect(() => createProxy({ authenticatedPaths: [entry] })).toThrow(/core's proxy handles before the authenticated paths/)
   })
 })

@@ -380,23 +380,32 @@ describe('project-hook proxy composition (#204)', () => {
     expect(response.headers.get('location')).toContain('/login?callbackUrl=')
   })
 
-  test('a null or throwing theme hook safely falls back to core protection', async () => {
+  test('a null theme hook falls back to core protection', async () => {
     mockedGetSession.mockResolvedValue(null)
+    mockExecuteThemeMiddleware.mockResolvedValueOnce(null)
+    expect((await proxy(request('/dashboard'))).status).toBe(307)
+  })
+
+  test.each([
+    ['throws', () => mockExecuteThemeMiddleware.mockImplementationOnce(() => { throw new Error('secret store password=hunter2') })],
+    ['rejects', () => mockExecuteThemeMiddleware.mockRejectedValueOnce(new Error('secret store password=hunter2'))],
+    ['rejects with a string', () => mockExecuteThemeMiddleware.mockRejectedValueOnce('secret store password=hunter2')],
+  ])('a theme hook that %s answers a fixed 500, on a public page and a protected one, and logs once', async (_name, arrange) => {
+    mockedGetSession.mockResolvedValue({ user: { id: 'u1', role: 'member' } })
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
-
     try {
-      mockExecuteThemeMiddleware.mockResolvedValueOnce(null)
-      const nullResponse = await proxy(request('/dashboard'))
-
-      mockExecuteThemeMiddleware.mockRejectedValueOnce(new Error('theme failure'))
-      const thrownResponse = await proxy(request('/dashboard'))
-
-      expect(nullResponse.status).toBe(307)
-      expect(thrownResponse.status).toBe(307)
-      expect(consoleError).toHaveBeenCalledWith(
-        'Error executing the project request hook:',
-        expect.any(Error)
-      )
+      for (const path of ['/', '/dashboard', '/api/v1/things']) {
+        arrange()
+        const response = await proxy(request(path))
+        expect(response.status).toBe(500)
+        const body = await response.text()
+        expect(body).toBe('Internal Server Error')
+        expect(response.headers.get('cache-control')).toBe('no-store')
+        expect(response.headers.get('x-middleware-next')).toBeNull()
+        expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+      }
+      expect(consoleError).toHaveBeenCalledTimes(3)
+      expect(consoleError).toHaveBeenCalledWith('Error executing the project request hook:', expect.anything())
     } finally {
       consoleError.mockRestore()
     }

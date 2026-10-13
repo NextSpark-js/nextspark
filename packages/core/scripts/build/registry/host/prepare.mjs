@@ -46,6 +46,7 @@ import { planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
 import { webhookRoutes } from './webhooks.mjs'
 import { coreRouteRateLimit } from './rate-limit.mjs'
 import { proxyAreaNotices } from './proxy-areas.mjs'
+import { proxyPathDiagnostics } from './proxy-paths.mjs'
 import { ENTRY_NOT_REPLACED, projectEntryNotices, upgradeProjectEntries } from './project-entries.mjs'
 import { HostPlanError, compareTargets, planHost } from './plan.mjs'
 import { DEV_DIAGNOSTIC_FILE, DEV_STATUS_FILE, devDiagnosticModule, devFailureDiagnostic, renderHost } from './render.mjs'
@@ -118,7 +119,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
   })
   const { routes } = planned
   const notices = [...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot)]
-  const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics]
+  const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics, ...proxyPathDiagnostics(config.projectRoot)]
   if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices, stage: 'plan' })
   const rendered = await renderHost({
     routes,

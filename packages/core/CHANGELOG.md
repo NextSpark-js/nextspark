@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A request hook (`config/hooks/proxy.ts`) that throws no longer lets the request continue as if it had returned `null`: core's proxy answers
+  a fixed `500` (`Internal Server Error`) and logs the error once on the server. The response carries nothing of the error.
+- `createProxy({ authenticatedPaths })` refuses an entry that is not a literal path prefix (`/account/:path*`, `/account/*`, `/account(.*)`,
+  `/[tenant]/billing`, encoded or `..` segments) with an error that names the supported syntax; they matched only their own text and protected nothing.
+- `nextspark prepare` and `nextspark build` refuse an invalid `authenticatedPaths` entry written as a string literal in `src/proxy.ts`
+  (`NS_PROXY_AUTHENTICATED_PATH_INVALID`), instead of the server answering `500` to every request after it starts.
+
 ### Upgrading
+
+- **A request hook that throws now answers `500`.** Before, the error was logged and the request went on to core's checks and the page. A hook
+  that relied on that (an optional rule that fails when its data source is down) catches its own error and returns `null`. There is no option
+  to continue after a hook error.
+- **`authenticatedPaths` entries written as patterns are refused.** `/account/:path*`, `/account/*` and `/account(.*)` were accepted and
+  gated nothing; use the literal prefix, `/account`, which covers the path and everything under it. A dynamic segment such as
+  `/[tenant]/billing` cannot be gated by prefix: gate its fixed parent, or check the session in the page or layout.
 
 - **Your own API routes are rate limited again, by default.** Up to `0.1.0-beta.191` core's theme and plugin dispatchers rate
   limited a project's and a plugin's API routes; since the root-first layout they had no limit unless they wrapped themselves,

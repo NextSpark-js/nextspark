@@ -67,7 +67,7 @@ matcher stays written here: a `config` re-exported from a package is not seen.
 | You want | Where |
 | --- | --- |
 | Redirects, same-origin rewrites, response headers or cookies, request metadata for your routes | `config/hooks/proxy.ts`, exporting `proxyHook`. Core's proxy runs it first, on a request with the identity headers removed, then applies its own checks to the original route and to any rewrite target (see below). |
-| More paths that need a signed-in user | `createProxy({ authenticatedPaths: ['/account'] })` in `src/proxy.ts`. Each entry is a path prefix matched on segment boundaries (`/account` covers `/account/billing`, not `/accounts`), added to `/dashboard`, `/settings`, `/profile` and `/update-password`. No session goes to `/login?callbackUrl=...`; a session gets the page with the verified identity headers. `createProxy` throws on an entry on, under or above a path core lets through first (the public pages, such as `/terms` and `/login`; `/api/auth`; `/docs`; and `/api/v1`, which authenticates on its own): it would not be gated there. |
+| More paths that need a signed-in user | `createProxy({ authenticatedPaths: ['/account'] })` in `src/proxy.ts`. Each entry is a path prefix matched on segment boundaries (`/account` covers `/account/billing`, not `/accounts`), added to `/dashboard`, `/settings`, `/profile` and `/update-password`. No session goes to `/login?callbackUrl=...`; a session gets the page with the verified identity headers. Entries are literal prefixes only: a leading slash, segments of letters, digits and `. _ ~ -`, no trailing slash. A pattern (`/account/:path*`, `/account/*`, `/account(.*)`, `/[tenant]/billing`) or an encoded or `..` segment makes `createProxy` throw, naming this syntax, and `nextspark prepare` (so `nextspark build`) refuses it with `NS_PROXY_AUTHENTICATED_PATH_INVALID` when the array is written as string literals in `src/proxy.ts`; `/account` already covers `/account` and everything under it. A dynamic segment cannot be gated by prefix: gate its fixed parent, or check the session in the page or layout. `createProxy` throws on an entry on, under or above a path core lets through first (the public pages, such as `/terms` and `/login`; `/api/auth`; `/docs`; and `/api/v1`, which authenticates on its own): it would not be gated there. |
 | An area of your own that needs a role, such as `/reports` for managers | Not in the proxy: `authenticatedPaths` only requires a session, and the hook runs without one. Check the role in the page or its layout on the server (`auth.api.getSession` from `@nextsparkjs/core/lib/auth`). |
 | Paths the proxy should not run on | The `matcher` in `src/proxy.ts`. Leave out only exact paths: excluding by file extension would let a route such as `/profile/alice.png` skip the session check. |
 
@@ -120,6 +120,25 @@ Supported results:
   removing request-override metadata.
 - Another terminal response: return it only after the original route passes
   its core access check.
+
+A hook that throws, or whose promise rejects, fails closed: the request is not
+continued as if the hook had returned `null`. Core answers a fixed `500`
+(`Internal Server Error`, `Cache-Control: no-store`) for every route, public
+or protected, and logs the error once on the server
+(`Error executing the project request hook:`); the response never carries the
+message or the stack. There is no option to fail open. A hook whose failure
+should not block the request catches its own error and returns `null`:
+
+```ts
+export async function proxyHook(request: NextRequest) {
+  try {
+    return await maybeRedirect(request)
+  } catch (error) {
+    console.error('maybeRedirect failed', error)
+    return null // the rule is optional here: core's checks still run
+  }
+}
+```
 
 External, empty, malformed, and otherwise ambiguous rewrites intentionally fail
 closed with `502`. Ambiguous path encodings include encoded separators,

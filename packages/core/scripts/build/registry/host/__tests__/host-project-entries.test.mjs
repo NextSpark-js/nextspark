@@ -210,3 +210,31 @@ test('prepare shows the facade notices and a copy it could not replace as warnin
   const warnings = source.match(/const WARNING_NOTICES = new Set\(\[([^\]]*)\]\)/)?.[1] ?? ''
   for (const code of [PROXY_FACADE_WARNING, INSTRUMENTATION_FACADE_WARNING, ENTRY_NOT_REPLACED]) assert.ok(warnings.includes(`'${code}'`), code)
 })
+
+test('an invalid createProxy authenticatedPaths entry is refused at prepare, not only when the server starts', async () => {
+  const { authenticatedPathProblem, authenticatedPathLiterals, proxyPathDiagnostics, PATHS_HANDLED_FIRST } = await import('../proxy-paths.mjs')
+  const { root, cleanup } = project()
+  try {
+    const entries = ['/account', '/app/reports', '/account/:path*', '/account/*', '/account(.*)', '/[tenant]/billing', '/acc%6funt', '/terms', '/docs/internal', '/api/v1/x', '/account/']
+    write(root, 'src/proxy.ts', `import { createProxy } from '@nextsparkjs/core/proxy'\n// authenticatedPaths: ['/commented']\nexport const proxy = createProxy({\n  authenticatedPaths: [${entries.map(entry => `'${entry}'`).join(', ')}],\n})\n`)
+    assert.deepEqual(authenticatedPathLiterals(readFileSync(join(root, 'src/proxy.ts'), 'utf8')), entries)
+    const diagnostics = proxyPathDiagnostics(root)
+    assert.deepEqual(diagnostics.map(d => JSON.parse(d.message.match(/entry ("[^"]*")/)[1])), entries.slice(2))
+    for (const d of diagnostics) {
+      assert.equal(d.code, 'NS_PROXY_AUTHENTICATED_PATH_INVALID')
+      assert.equal(d.file, 'src/proxy.ts')
+    }
+    assert.match(diagnostics[0].message, /Patterns \(\*, :param, \(\.\*\), \[param\]\) are not supported/)
+    assert.match(diagnostics[5].message, /overlaps \/terms/)
+    write(root, 'src/proxy.ts', "export const proxy = createProxy({ authenticatedPaths: ['/account', paths] })\n")
+    assert.deepEqual(proxyPathDiagnostics(root), [])
+    assert.equal(authenticatedPathProblem('/account'), null)
+    // The overlap list is the one createProxy uses (publicPaths, /docs, /api/v1 in src/proxy/index.ts)
+    const source = readFileSync(join(CORE_ROOT, 'src/proxy/index.ts'), 'utf8')
+    const publicPaths = [...source.match(/const publicPaths = \[([^\]]*)\]/)[1].matchAll(/'([^']+)'/g)].map(m => m[1])
+    assert.deepEqual([...PATHS_HANDLED_FIRST].sort(), [...publicPaths, '/docs', '/api/v1'].sort())
+    assert.match(source, /\[\.\.\.publicPaths, '\/docs', '\/api\/v1'\]/)
+  } finally {
+    cleanup()
+  }
+})

@@ -60,12 +60,8 @@ export async function executeProjectMiddleware(
 ): Promise<NextResponse | null> {
   const entry = Object.values(MIDDLEWARE_REGISTRY).find(candidate => candidate.exists)
   if (!entry) return null
-  try {
-    return await entry.middleware(request, coreSession)
-  } catch (error) {
-    console.error('Error executing the project request hook:', error)
-    return null
-  }
+  // A throwing hook is not caught here: the proxy answers a fixed 500 for it (a hook that denies must not fail open)
+  return entry.middleware(request, coreSession)
 }
 
 // ============== Theme Config Functions ==============
