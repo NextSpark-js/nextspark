@@ -50,6 +50,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The RLS policies of `pages_metas`, `posts_metas`, `subscriptions`, `usage`, `usage_events` and `billing_events` match what the API
   allows (migration 035).
 
+- **The `inviteMember` Server Action sends an invitation instead of adding the user.** It now behaves like
+  `POST /api/v1/teams/:teamId/members`: it creates a pending invitation and emails the invitee, who accepts through the link. The
+  inviter needs the `team.members.invite` permission, can invite only to a role below their own, and shares the REST rate limit (20 per
+  minute). The invitee needs no account yet. The call and its arguments are the same; the result changes. If your code reads
+  `result.data.memberId` or `result.data.userId`, read `result.data.invitationId` (and `email`, `role`, `status: 'pending'`,
+  `expiresAt`) instead, and do not expect the user in the team until they accept. The accept token is never in the result. Core's
+  own invite dialog calls the REST route and is not affected.
+- **The team and profile Server Actions validate their input like their REST routes.** `updateTeam` uses `updateTeamSchema`
+  (`PATCH /api/v1/teams/:teamId`); `updateProfile` uses `updateProfileSchema` (`PATCH /api/v1/users/:id`, exported from
+  `@nextsparkjs/core/lib/users/schema`); `updateAvatar` accepts an `http(s)` URL or a path on the app, not `//host/...`. A bad value
+  answers `success: false` with `<field>: <message>` and stores nothing. `updateProfile` now requires `language` to be a language tag
+  (`en`, `pt-BR`), `country` a two-letter code and `timezone` a valid IANA zone, and `PATCH /api/v1/users/:id` applies the same
+  limits to the fields it accepts.
+
 ## [0.1.0-beta.198] - 2026-10-09
 
 ### Upgrading from 0.1.0-beta.197
