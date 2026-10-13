@@ -169,30 +169,6 @@ export function hasScope(scopes: string[], requiredScope: string): boolean {
 }
 
 /**
- * Create API key (mock implementation)
- */
-export async function createAPIKey(data: {
-  clientId: string
-  userId?: string
-  scopes: string[]
-  name: string
-  expiresAt?: string
-  metadata?: Record<string, unknown>
-}): Promise<{ apiKey: string; keyData: APIKeyData }> {
-  const apiKey = `key_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  const keyData: APIKeyData = {
-    id: `api_key_${Date.now()}`,
-    active: true,
-    lastUsed: new Date().toISOString(),
-    ...data
-  }
-  
-  mockAPIKeys[apiKey] = keyData
-  
-  return { apiKey, keyData }
-}
-
-/**
  * Revoke API key
  */
 export async function revokeAPIKey(apiKey: string): Promise<boolean> {
