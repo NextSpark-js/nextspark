@@ -11,6 +11,7 @@ A version outside this table is not supported. "Tested" means a CI job installs 
 | Node.js | 22.14 and later 22.x, and 24.x. `engines.node` is `>=22.14.0`. | 22.14.0 and 24 (unit and package suites, template builds). |
 | Next.js | `~16.3.8`. This is the peer range of `@nextsparkjs/core`, and the generated host refuses 16.3.7 and earlier. | The version pinned by the repository, 16.3.8. |
 | React | `^19.2.0` | 19.2.4. |
+| Better Auth | `~1.7.7`, the 1.7 line (issue [#225](https://github.com/NextSpark-js/nextspark/issues/225)). Core, a generated project and `create-nextspark-app` declare the same range, with `@better-fetch/fetch` at the exact version Better Auth pins. A project does not choose another line: core's migrations and the auth schema check of `db:migrate` follow this line's tables. | The version pinned by the repository, 1.7.7, compiled by the template builds. Core's Jest suites mock Better Auth, and no CI job signs in against the real library yet. |
 | Bundler | Turbopack. Webpack is deferred. | Project builds use the default bundler. The host conformance build also builds its fixture with webpack, which is not a support promise. |
 | Operating system | Linux x64 and macOS arm64. Windows is not supported. Linux arm64 is untested. | `ubuntu-24.04` only. macOS is supported but has no CI job. |
 

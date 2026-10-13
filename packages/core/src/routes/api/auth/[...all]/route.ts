@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { TEAMS_CONFIG, AUTH_CONFIG } from "@nextsparkjs/core/lib/config";
 import { isPublicSignupRestricted } from "@nextsparkjs/core/lib/teams/helpers";
 // Registration helpers available if needed: shouldBlockSignup, isDomainAllowed
-// Currently domain validation happens in auth.ts databaseHooks
+// Domain validation happens in the registration guard plugin (code sends, email sign-up) and auth.ts databaseHooks
 import { TeamService } from "@nextsparkjs/core/lib/services";
 import { wrapAuthHandlerWithCors, handleCorsPreflightRequest, addCorsHeaders } from "@nextsparkjs/core/lib/api/helpers";
 import { checkDistributedRateLimit } from "@nextsparkjs/core/lib/api/rate-limit";

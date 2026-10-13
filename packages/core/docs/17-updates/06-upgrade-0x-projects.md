@@ -100,25 +100,14 @@ Things a project that jumped from `0.1.0-beta.184` (or a neighbouring release) t
 
 ### Better Auth: a NOT NULL `issuer` column on `account`
 
-`0.1.0-beta.184` declared `better-auth` as `^1.3.5`, so a lockfile could resolve any 1.x. Core has pinned `~1.6.30` since `0.1.0-beta.185`. Better Auth `1.7.0` through `1.7.2` made `issuer` a required column of `account` (with a unique index on `("issuer", "accountId")`); `1.7.3` and later, and `1.6.x`, do not have it. A database that was migrated while the project ran one of those three releases keeps `account.issuer NOT NULL`, and `1.6` never writes it, so creating an account (a Google sign-in, a password sign-up) fails on the insert.
+`0.1.0-beta.184` declared `better-auth` as `^1.3.5`, so a lockfile could resolve any 1.x. Core pinned `~1.6.30` from `0.1.0-beta.185` and pins `~1.7.7` since `0.1.0-beta.199`. Better Auth `1.7.0` through `1.7.2` made `issuer` a required column of `account` (with a unique index on `("issuer", "accountId")`); `1.7.3` and later, and `1.6.x`, do not have it. A database migrated while the project ran one of those three releases keeps `account.issuer NOT NULL`. On `1.6` creating an account (a Google sign-in, a password sign-up) failed on the insert; on `1.7.3` and later Better Auth checks its tables when it starts and refuses every auth call, `getSession` included.
 
-Read-only check (columns of `account` that are required, have no default and are not part of core's table):
+From `0.1.0-beta.199` there is nothing to do by hand: `pnpm db:migrate` applies `038_better_auth_account_identity.sql`, which makes `issuer` nullable and drops the unique indexes that include it. The column and its values stay. The same migration:
 
-```sql
-SELECT column_name, data_type
-FROM information_schema.columns
-WHERE table_schema = 'public' AND table_name = 'account'
-  AND is_nullable = 'NO' AND column_default IS NULL
-  AND column_name NOT IN ('id', 'accountId', 'providerId', 'userId');
-```
+- adds the unique index on `("providerId", "accountId")` that core's `002_auth_tables.sql` declares, when the `account` table was created by Better Auth before 002 ran and lacks it. If rows already share a key, it stops and names the query that lists them; resolve each one (the Better Auth 1.7 upgrade guide, "Account identity keeps the provider key"), then run `pnpm db:migrate` again;
+- gives `users.name` a value where it is `NULL` (first and last name, or `''`) and makes `''` its default. Better Auth 1.7 expects a string there.
 
-An empty result is fine. If it lists `issuer`, make it optional. This keeps the column and its values; nothing is dropped:
-
-```sql
-ALTER TABLE "account" ALTER COLUMN "issuer" DROP NOT NULL;
-```
-
-The unique index on `("issuer", "accountId")` can stay: rows written by `1.6` have a null `issuer`, which a PostgreSQL unique index does not compare. Core's own `account` table (`002_auth_tables.sql`) never had the column. Take a backup first, as for any `ALTER`.
+After the migrations, `pnpm db:migrate` checks the auth tables (`users`, `session`, `account`, `verification`) and stops if one still has a NOT NULL column without a default that Better Auth never writes, naming each column. `nextspark doctor` runs the same check ("Auth schema"). Take a backup first, as for any migration.
 
 ### Migration 029 and the only superadmin
 

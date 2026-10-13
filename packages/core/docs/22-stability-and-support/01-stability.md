@@ -2,7 +2,7 @@
 
 > **Status:** these are the stability decisions recorded for 1.0 (issue [#204](https://github.com/NextSpark-js/nextspark/issues/204), G0). Recording a decision does not certify it: a surface is stable only once its release gate has linked evidence and an independent review. Until 1.0.0 is released, every surface carries only the guarantees of the current `0.1.0-beta` line.
 
-This page lists which parts of NextSpark are **stable**, **experimental** or **deferred** for 1.0. The rules each label implies are in [Stability and versioning policy](./03-versioning-policy.md). Supported versions of Node, Next.js, pnpm and PostgreSQL are in [Support matrix](./02-support-matrix.md).
+This page lists which parts of NextSpark are **stable**, **experimental** or **deferred** for 1.0. The rules each label implies are in [Stability and versioning policy](./03-versioning-policy.md). Supported versions of Node, Next.js, Better Auth, pnpm and PostgreSQL are in [Support matrix](./02-support-matrix.md).
 
 | Label | Meaning |
 | --- | --- |
@@ -19,7 +19,7 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 | Generated host: root-first layout, generated and git-ignored `src/app`, facades of `@nextsparkjs/core/routes/*` | The only host. The host conformance suite runs in CI. |
 | Cache Components with PPR | The default rendering mode. In a project with a catch-all page (a `[slug]` route), an unknown public URL answers `200` with `noindex`; a 404 is available as a project recipe. |
 | Entities: config, generated CRUD, `/api/v1`, metadata, child entities | Conditional on the security review gate (G1). |
-| Auth: email one-time code, Google OAuth, API keys | Conditional on G1 and G2. The one-time code prints to the console only in development. |
+| Auth: email one-time code, Google OAuth, API keys | Conditional on G1 and G2. The one-time code prints to the console only in development. Built on Better Auth 1.7 (`~1.7.7`, see [Support matrix](./02-support-matrix.md)). |
 | Teams, RLS, permissions | Conditional on G1. |
 | Page builder: block structure and public rendering | The dashboard editor is experimental, see below. |
 | `definePlugin` and the plugin system | The first-party plugins are experimental, see below. |

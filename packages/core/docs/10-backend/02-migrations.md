@@ -426,6 +426,8 @@ CREATE TABLE IF NOT EXISTS "theme_specific_table" (
 );
 ```
 
+**Columns on the auth tables.** A column a project or theme adds to `users`, `session`, `account` or `verification` is nullable or has a default. Better Auth (1.7.3 and later) checks these tables when it starts and refuses every auth call, sign-in and `getSession` included, when one has a NOT NULL column without a default that it never writes. `pnpm db:migrate` checks for such a column after the migrations and stops with its name; `nextspark doctor` runs the same check.
+
 ### Entity Migration
 
 **1. Create Entity Migrations Directory:**
