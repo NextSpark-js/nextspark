@@ -3659,8 +3659,9 @@ test('a signal during the simulation removes the temporary copy', async () => {
       if (!copy) await new Promise(resolveWait => setTimeout(resolveWait, 100))
     }
     assert.ok(copy, 'the simulation never created its copy')
-    // let it get to the child migrate, where the copy is fullest
-    await new Promise(resolveWait => setTimeout(resolveWait, 1500))
+    // let it get to the child prepare, where the copy is fullest: it writes the pid file once it has started the grandchild
+    while (!existsSync(pidFile) && Date.now() - started < 30_000) await new Promise(resolveWait => setTimeout(resolveWait, 50))
+    assert.ok(existsSync(pidFile), 'the simulation never started its grandchild')
     child.kill('SIGTERM')
     assert.equal(await closed, 143)
     assert.equal(existsSync(join(tmpdir(), copy)), false)
