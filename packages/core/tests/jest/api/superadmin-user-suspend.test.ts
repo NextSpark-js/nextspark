@@ -14,7 +14,7 @@ jest.mock('@nextsparkjs/core/lib/db', () => ({ queryWithRLS: (...args: unknown[]
 const invalidateApiKeyCache = jest.fn()
 jest.mock('@nextsparkjs/core/lib/api/auth', () => ({ invalidateApiKeyCache: (hash: string) => invalidateApiKeyCache(hash) }))
 
-import { GET, PATCH } from '../../../src/routes/api/superadmin/users/[userId]/route'
+import { GET, PATCH, DELETE } from '../../../src/routes/api/superadmin/users/[userId]/route'
 
 const USERS: Record<string, string> = { 'sa-1': 'superadmin', 'sa-2': 'superadmin', 'dev-1': 'developer', 'mem-1': 'member', 'sus-1': 'suspended' }
 
@@ -28,6 +28,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   jest.spyOn(console, 'error').mockImplementation(() => {})
   queryWithRLS.mockImplementation(async (sql: string, params: string[]) => {
+    if (sql.includes('SELECT id, role, email FROM "users"')) return USERS[params[0]] ? [{ id: params[0], role: USERS[params[0]], email: `${params[0]}@x` }] : []
     if (sql.includes('SELECT id, role FROM "users"')) return USERS[params[0]] ? [{ id: params[0], role: USERS[params[0]] }] : []
     if (sql.includes('WITH suspended AS')) return [{ suspended: 1, sessions: 2, keyHashes: ['h1', 'h2'] }]
     if (sql.includes(`AND role = 'suspended' RETURNING id`)) return USERS[params[0]] === 'suspended' ? [{ id: params[0] }] : []
@@ -115,5 +116,52 @@ describe('GET', () => {
       const [call] = queryWithRLS.mock.calls.filter(([s]: [string]) => s.includes(`FROM ${table}`))
       expect(call[3]).toEqual({ service: true })
     }
+  })
+})
+
+// #241: the developer role has every superadmin capability. Under the nextspark_app role the users policies hide other
+// users from a developer outside the System Admin Team, so the route reads and writes on the service connection after
+// its role check.
+describe('PATCH and DELETE on the service connection', () => {
+  const del = (target: string) =>
+    DELETE(new NextRequest(`http://localhost/api/superadmin/users/${target}`, { method: 'DELETE' }), { params: Promise.resolve({ userId: target }) } as never)
+  const everyQueryOnService = () => {
+    expect(queryWithRLS.mock.calls.length).toBeGreaterThan(0)
+    for (const call of queryWithRLS.mock.calls) expect(call[3]).toEqual({ service: true })
+  }
+
+  it.each(['dev-1', 'sa-1'])('%s changes, suspends, unsuspends and verifies a user', async (actor) => {
+    as(actor)
+    for (const [target, body] of [
+      ['mem-1', { action: 'change-role', role: 'member' }],
+      ['mem-1', { action: 'verify-email' }],
+      ['mem-1', { action: 'suspend' }],
+      ['sus-1', { action: 'unsuspend' }],
+    ] as const) {
+      expect((await patch(target, body)).status).toBe(200)
+    }
+    everyQueryOnService()
+  })
+
+  it.each(['dev-1', 'sa-1'])('%s deletes a user', async (actor) => {
+    as(actor)
+    const response = await del('mem-1')
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ success: true, userId: 'mem-1' })
+    expect(queryWithRLS.mock.calls.some(([s]: [string]) => s.includes('DELETE FROM "users"'))).toBe(true)
+    everyQueryOnService()
+  })
+
+  it('a member is refused before any query', async () => {
+    as('mem-1')
+    expect((await patch('dev-1', { action: 'verify-email' })).status).toBe(403)
+    expect((await del('dev-1')).status).toBe(403)
+    expect(queryWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('nobody deletes a superadmin, a developer neither', async () => {
+    as('dev-1')
+    expect((await del('sa-1')).status).toBe(403)
+    expect(queryWithRLS.mock.calls.some(([s]: [string]) => s.startsWith('DELETE'))).toBe(false)
   })
 })

@@ -298,7 +298,9 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
     const checkUserQuery = `
       SELECT id, role FROM "users" WHERE id = $1
     `;
-    const userCheck = await queryWithRLS(checkUserQuery, [userId], session.user.id) as { id: string; role: string }[];
+    // On the service connection, as GET: the users policies hide other users from a developer outside the System Admin
+    // Team. The role check above authorizes, and every statement here is scoped to the subject user.
+    const userCheck = await queryWithRLS(checkUserQuery, [userId], session.user.id, { service: true }) as { id: string; role: string }[];
 
     if (!userCheck || userCheck.length === 0) {
       return NextResponse.json(
@@ -394,7 +396,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
     }
 
     // Execute update
-    const result = await queryWithRLS(updateQuery, updateParams, session.user.id) as { id: string }[];
+    const result = await queryWithRLS(updateQuery, updateParams, session.user.id, { service: true }) as { id: string }[];
 
     if (!result || result.length === 0) {
       return NextResponse.json(
@@ -482,7 +484,8 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
     const checkUserQuery = `
       SELECT id, role, email FROM "users" WHERE id = $1
     `;
-    const userCheck = await queryWithRLS(checkUserQuery, [userId], session.user.id) as { id: string; role: string; email: string }[];
+    // On the service connection, as GET and PATCH (team_members has no bypass policy at all)
+    const userCheck = await queryWithRLS(checkUserQuery, [userId], session.user.id, { service: true }) as { id: string; role: string; email: string }[];
 
     if (!userCheck || userCheck.length === 0) {
       return NextResponse.json(
@@ -506,7 +509,8 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
     await queryWithRLS(
       `DELETE FROM "team_members" WHERE "userId" = $1`,
       [userId],
-      session.user.id
+      session.user.id,
+      { service: true }
     );
 
     // 2. Delete user's owned teams (and their members)
@@ -514,33 +518,38 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
     await queryWithRLS(
       `DELETE FROM "team_members" WHERE "teamId" IN (SELECT id FROM "teams" WHERE "ownerId" = $1)`,
       [userId],
-      session.user.id
+      session.user.id,
+      { service: true }
     );
     await queryWithRLS(
       `DELETE FROM "teams" WHERE "ownerId" = $1`,
       [userId],
-      session.user.id
+      session.user.id,
+      { service: true }
     );
 
     // 4. Delete user sessions
     await queryWithRLS(
       `DELETE FROM "session" WHERE "userId" = $1`,
       [userId],
-      session.user.id
+      session.user.id,
+      { service: true }
     );
 
     // 5. Delete user accounts (OAuth)
     await queryWithRLS(
       `DELETE FROM "account" WHERE "userId" = $1`,
       [userId],
-      session.user.id
+      session.user.id,
+      { service: true }
     );
 
     // 6. Delete the user
     await queryWithRLS(
       `DELETE FROM "users" WHERE id = $1`,
       [userId],
-      session.user.id
+      session.user.id,
+      { service: true }
     );
 
     return NextResponse.json({

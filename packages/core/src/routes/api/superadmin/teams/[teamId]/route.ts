@@ -186,12 +186,14 @@ export const GET = withRateLimitTier(async (
     `;
 
     // Execute queries
+    // On the service connection after the role check above: under RLS a developer outside the System Admin Team sees
+    // only their own users and teams, and team_members has no bypass policy at all.
     const [teamResult, membersResult, subscriptionResult, billingEventsResult, usageResult] = await Promise.all([
-      queryWithRLS(teamQuery, [teamId], session.user.id) as Promise<TeamResult[]>,
-      queryWithRLS(membersQuery, [teamId], session.user.id) as Promise<TeamMemberResult[]>,
-      queryWithRLS(subscriptionQuery, [teamId], session.user.id) as Promise<SubscriptionResult[]>,
-      queryWithRLS(billingEventsQuery, [teamId], session.user.id) as Promise<BillingEventResult[]>,
-      queryWithRLS(usageQuery, [teamId], session.user.id) as Promise<UsageResult[]>
+      queryWithRLS(teamQuery, [teamId], session.user.id, { service: true }) as Promise<TeamResult[]>,
+      queryWithRLS(membersQuery, [teamId], session.user.id, { service: true }) as Promise<TeamMemberResult[]>,
+      queryWithRLS(subscriptionQuery, [teamId], session.user.id, { service: true }) as Promise<SubscriptionResult[]>,
+      queryWithRLS(billingEventsQuery, [teamId], session.user.id, { service: true }) as Promise<BillingEventResult[]>,
+      queryWithRLS(usageQuery, [teamId], session.user.id, { service: true }) as Promise<UsageResult[]>
     ]);
 
     if (!teamResult || teamResult.length === 0) {

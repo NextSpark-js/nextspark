@@ -182,6 +182,8 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     `;
 
     // Execute all queries in parallel
+    // On the service connection after the role check above: under RLS a developer outside the System Admin Team sees
+    // only their own users and teams, and team_members has no bypass policy at all.
     const [
       regularUsers,
       regularCount,
@@ -191,13 +193,13 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       teamRoleDistribution,
       teamsCount
     ] = await Promise.all([
-      queryWithRLS(regularUsersQuery, regularWhere.params, session.user.id) as Promise<User[]>,
-      queryWithRLS(regularCountQuery, regularWhere.params, session.user.id) as Promise<{ total: number }[]>,
-      queryWithRLS(superadminsQuery, superadminWhere.params, session.user.id) as Promise<User[]>,
-      queryWithRLS(superadminCountQuery, superadminWhere.params, session.user.id) as Promise<{ total: number }[]>,
-      queryWithRLS(statusDistributionQuery, [], session.user.id) as Promise<{ status: string; count: number }[]>,
-      queryWithRLS(teamRoleDistributionQuery, [], session.user.id) as Promise<{ role: string; count: number }[]>,
-      queryWithRLS(teamsCountQuery, [], session.user.id) as Promise<{ total: number }[]>
+      queryWithRLS(regularUsersQuery, regularWhere.params, session.user.id, { service: true }) as Promise<User[]>,
+      queryWithRLS(regularCountQuery, regularWhere.params, session.user.id, { service: true }) as Promise<{ total: number }[]>,
+      queryWithRLS(superadminsQuery, superadminWhere.params, session.user.id, { service: true }) as Promise<User[]>,
+      queryWithRLS(superadminCountQuery, superadminWhere.params, session.user.id, { service: true }) as Promise<{ total: number }[]>,
+      queryWithRLS(statusDistributionQuery, [], session.user.id, { service: true }) as Promise<{ status: string; count: number }[]>,
+      queryWithRLS(teamRoleDistributionQuery, [], session.user.id, { service: true }) as Promise<{ role: string; count: number }[]>,
+      queryWithRLS(teamsCountQuery, [], session.user.id, { service: true }) as Promise<{ total: number }[]>
     ]);
 
     const regularTotal = regularCount[0]?.total || 0;

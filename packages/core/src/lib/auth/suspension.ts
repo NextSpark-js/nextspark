@@ -17,6 +17,9 @@ export function isSuspendedRole(role: unknown): boolean {
  * Suspends `userId` in one statement: sets the role, deletes the user's sessions and deactivates their active API keys
  * (`status = 'inactive'`, so the audit log keeps the rows; unsuspending does not bring them back). A superadmin is never
  * suspended. Returns null when no user was suspended (unknown id, or a superadmin).
+ *
+ * Both functions run on the service connection: the caller authorizes (the superadmin users route checks the role),
+ * and a developer outside the System Admin Team could not update another user's row under RLS.
  */
 export async function suspendUser(userId: string, actorId: string): Promise<{ sessions: number; apiKeys: number } | null> {
   const [result] = await queryWithRLS<{ suspended: number; sessions: number; keyHashes: string[] }>(
@@ -35,7 +38,8 @@ export async function suspendUser(userId: string, actorId: string): Promise<{ se
             (SELECT COUNT(*) FROM sessions)::int AS sessions,
             COALESCE((SELECT json_agg("keyHash") FROM keys), '[]'::json) AS "keyHashes"`,
     [userId],
-    actorId
+    actorId,
+    { service: true }
   )
   if (!result?.suspended) return null
   // validateApiKey caches a key for 5 minutes in this process: drop the deactivated ones now.
@@ -48,7 +52,8 @@ export async function unsuspendUser(userId: string, actorId: string): Promise<{ 
   const [row] = await queryWithRLS<{ id: string }>(
     `UPDATE "users" SET role = 'member', "updatedAt" = NOW() WHERE id = $1 AND role = '${SUSPENDED_ROLE}' RETURNING id`,
     [userId],
-    actorId
+    actorId,
+    { service: true }
   )
   return row ?? null
 }
