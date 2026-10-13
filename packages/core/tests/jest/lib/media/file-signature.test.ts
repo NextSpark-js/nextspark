@@ -31,6 +31,14 @@ describe('bytesMatchMime', () => {
     }
   )
 
+  it.each(['ftyp', 'moov', 'mdat', 'wide', 'free'])('accepts a QuickTime file whose first atom is %s', (atom) => {
+    expect(bytesMatchMime(text(`\0\0\0\x18${atom}`), 'video/quicktime')).toBe(true)
+  })
+
+  it('refuses markup declared as video/quicktime', () => {
+    expect(bytesMatchMime(text('<svg onload=alert(1)>'), 'video/quicktime')).toBe(false)
+  })
+
   it('does not judge a type it has no signature for', () => {
     expect(bytesMatchMime(text('anything'), 'application/x-theme-type')).toBe(true)
   })

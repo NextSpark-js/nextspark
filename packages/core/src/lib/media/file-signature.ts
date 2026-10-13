@@ -36,7 +36,8 @@ const SIGNATURES: Record<string, (bytes: Uint8Array) => boolean> = {
   'image/gif': (b) => startsWith(b, ascii('GIF87a')) || startsWith(b, ascii('GIF89a')),
   'image/webp': (b) => startsWith(b, ascii('RIFF')) && startsWith(b, ascii('WEBP'), 8),
   'video/mp4': IS_FTYP,
-  'video/quicktime': IS_FTYP,
+  // Classic QuickTime files may start with a movie atom instead of ftyp
+  'video/quicktime': (b) => ['ftyp', 'moov', 'mdat', 'wide', 'free', 'skip', 'pnot'].some((atom) => startsWith(b, ascii(atom), 4)),
   'video/webm': (b) => startsWith(b, [0x1a, 0x45, 0xdf, 0xa3]),
   'video/mpeg': (b) => startsWith(b, [0x00, 0x00, 0x01, 0xba]) || startsWith(b, [0x00, 0x00, 0x01, 0xb3]),
   'application/pdf': (b) => startsWith(b, ascii('%PDF')),
