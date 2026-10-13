@@ -9,7 +9,8 @@
  *   exit 0: the schema matches; 1: it does not, and the report says what to change;
  *   2: no DATABASE_URL, or the database could not be read.
  */
-import { pathToFileURL } from 'node:url'
+import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { scriptClient } from './ssl-config.mjs'
 
 /** The tables core maps Better Auth's models to (lib/auth.ts), and the columns Better Auth writes in each. */
@@ -74,6 +75,7 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// run directly, also through a symlink (a project's node_modules/@nextsparkjs/core under pnpm)
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
   process.exitCode = await main()
 }

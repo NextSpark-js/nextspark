@@ -28,7 +28,8 @@ export async function checkAuthSchema(coreDir = getCoreDir()): Promise<HealthChe
     encoding: 'utf8',
     timeout: 30000,
   })
-  const output = (run.stdout || '').trim()
+  // one line: the doctor prints each result on its own line
+  const output = (run.stdout || '').trim().replace(/\s*\n\s*/g, ' ')
   if (run.status === 0) return { name, status: 'pass', message: output }
   if (run.status === 1) {
     return { name, status: 'fail', message: output, fix: 'Change the columns listed, then run `pnpm db:migrate`' }

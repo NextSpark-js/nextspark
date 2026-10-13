@@ -12,7 +12,7 @@ async function doctor(code: number | null, env = 'DATABASE_URL=postgresql://u@12
   if (code !== null) {
     fs.mkdirSync(path.join(core, 'scripts/db'), { recursive: true })
     fs.writeFileSync(path.join(core, 'scripts/db/check-auth-schema.mjs'),
-      `console.log('report for ' + process.env.DATABASE_URL.split('/').pop()); process.exit(${code})\n`)
+      `console.log('report for\\n  ' + process.env.DATABASE_URL.split('/').pop()); process.exit(${code})\n`)
   }
   fs.writeFileSync(path.join(dir, '.env'), env)
   const previous = process.cwd()

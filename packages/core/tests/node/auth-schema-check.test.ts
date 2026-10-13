@@ -17,8 +17,8 @@ const SCRIPT = path.join(CORE, 'scripts/db/check-auth-schema.mjs')
 const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
 const skip = !HAS_POSTGRES && 'initdb/pg_ctl not on PATH'
 
-function check(env: Record<string, string | undefined>) {
-  const result = spawnSync(process.execPath, [SCRIPT], { env: { ...process.env, ...env }, encoding: 'utf8', timeout: 30000 })
+function check(env: Record<string, string | undefined>, script = SCRIPT) {
+  const result = spawnSync(process.execPath, [script], { env: { ...process.env, ...env }, encoding: 'utf8', timeout: 30000 })
   return { status: result.status, output: result.stdout.trim() }
 }
 
@@ -28,6 +28,12 @@ test('the auth schema check: quiet on core\'s schema, names account.issuer and a
   assert.deepEqual(check({ DATABASE_URL: ownerUrl }), { status: 0, output: 'The auth tables match Better Auth\'s schema' })
   // the runtime role reads the catalogs too
   assert.equal(check({ DATABASE_URL: appUrl }).status, 0)
+  // run through a symlink, as from a project's node_modules under pnpm
+  const linked = fs.mkdtempSync(path.join(os.tmpdir(), 'auth-schema-link-'))
+  t.after(() => fs.rmSync(linked, { recursive: true, force: true }))
+  fs.symlinkSync(CORE, path.join(linked, 'core'))
+  const viaLink = check({ DATABASE_URL: ownerUrl }, path.join(linked, 'core/scripts/db/check-auth-schema.mjs'))
+  assert.deepEqual(viaLink, { status: 0, output: 'The auth tables match Better Auth\'s schema' })
 
   await owner.query(`
     ALTER TABLE account ADD COLUMN issuer TEXT NOT NULL DEFAULT 'x';
