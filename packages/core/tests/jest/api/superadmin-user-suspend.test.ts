@@ -89,7 +89,6 @@ describe('change-role', () => {
       expect((await patch('mem-1', { action: 'change-role', role })).status).toBe(400)
     }
     expect((await patch('dev-1', { action: 'change-role', role: 'member' })).status).toBe(200)
-    expect((await patch('mem-1', { action: 'change-role', role: 'developer' })).status).toBe(200)
   })
 
   it('a suspended user is restored only through unsuspend', async () => {
@@ -101,9 +100,14 @@ describe('change-role', () => {
     }
   })
 
-  it('only a superadmin grants the developer role', async () => {
+  it('only a developer grants the developer role', async () => {
+    as('sa-1')
+    const refused = await patch('mem-1', { action: 'change-role', role: 'developer' })
+    expect(refused.status).toBe(403)
+    expect((await refused.json()).error).toMatch(/Only a developer/)
+    expect(queryWithRLS.mock.calls.some(([s]: [string]) => s.includes('UPDATE "users"'))).toBe(false)
     as('dev-1')
-    expect((await patch('mem-1', { action: 'change-role', role: 'developer' })).status).toBe(403)
+    expect((await patch('mem-1', { action: 'change-role', role: 'developer' })).status).toBe(200)
   })
 })
 

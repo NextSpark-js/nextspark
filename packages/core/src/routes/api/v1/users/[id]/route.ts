@@ -13,13 +13,14 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { canAccessUser, hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions';
+import { ASSIGNABLE_USER_ROLES, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
 import * as z from 'zod';
 import { updateProfileSchema } from '@nextsparkjs/core/lib/users/schema';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 // Only the profile fields this route stores; the schema also holds name, country and timezone, for the actions
 const updateUserSchema = updateProfileSchema.pick({ firstName: true, lastName: true, language: true }).extend({
-  role: z.enum(['member', 'superadmin']).optional(),
+  role: z.enum(ASSIGNABLE_USER_ROLES).optional(),
   metas: z.record(z.string(), z.any()).optional()
 });
 
@@ -129,6 +130,36 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
     if (validatedData.role !== undefined && !hasAdminPermission(authResult, 'users:write')) {
       const response = createApiError('Only a superadmin can change a role', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);
+    }
+
+    // SECURITY: the rules of PATCH /api/superadmin/users/:id. Nobody changes another superadmin or their own role, a
+    // suspended user comes back only through unsuspend, and only a developer grants the developer role.
+    const target = await queryOneWithRLS<{ id: string; role: string }>(
+      'SELECT id, role FROM "users" WHERE id = $1 OR email = $1',
+      [id],
+      authResult.user!.id
+    );
+    if (!target) {
+      const response = createApiError('User not found', 404, null, 'USER_NOT_FOUND');
+      return addCorsHeaders(response, req);
+    }
+    if (target.id !== authResult.user!.id && target.role === 'superadmin') {
+      const response = createApiError('Cannot modify other superadmin accounts', 403, null, 'FORBIDDEN');
+      return addCorsHeaders(response, req);
+    }
+    if (validatedData.role !== undefined) {
+      if (target.id === authResult.user!.id) {
+        const response = createApiError('Cannot change your own role', 400, null, 'SELF_ROLE_CHANGE');
+        return addCorsHeaders(response, req);
+      }
+      if (target.role === 'suspended') {
+        const response = createApiError('User is suspended. Restore access with the unsuspend action of /api/superadmin/users/:id', 400, null, 'USER_SUSPENDED');
+        return addCorsHeaders(response, req);
+      }
+      if (!canGrantUserRole(authResult.user!.role, validatedData.role)) {
+        const response = createApiError('Only a developer can grant the developer role', 403, null, 'FORBIDDEN');
+        return addCorsHeaders(response, req);
+      }
     }
 
     // Build dynamic update query
@@ -261,7 +292,7 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
 
     // First, get the user to check if it exists and prevent self-deletion
     const targetUser = await queryOneWithRLS(
-      'SELECT id, email FROM "users" WHERE id = $1 OR email = $1',
+      'SELECT id, email, role FROM "users" WHERE id = $1 OR email = $1',
       [id],
       authResult.user!.id
     );
@@ -274,6 +305,12 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
     // Prevent self-deletion
     if ((targetUser as Record<string, unknown>).id === authResult.user!.id) {
       const response = createApiError('Cannot delete your own account via API', 403, null, 'SELF_DELETE_FORBIDDEN');
+      return addCorsHeaders(response, req);
+    }
+
+    // As DELETE /api/superadmin/users/:id: nobody deletes another superadmin
+    if ((targetUser as Record<string, unknown>).role === 'superadmin') {
+      const response = createApiError('Cannot delete other superadmin accounts', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);
     }
 

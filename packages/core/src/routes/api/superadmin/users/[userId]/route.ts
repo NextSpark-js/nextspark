@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { suspendUser, unsuspendUser } from '@nextsparkjs/core/lib/auth/suspension';
+import { ASSIGNABLE_USER_ROLES, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
@@ -133,11 +134,9 @@ export const GET = withRateLimitTier(async (request: NextRequest, { params }: Ro
 
     // Execute all queries in parallel.
     //
-    // All four run on the service (RLS-bypass) pool. users and team_members show
-    // a developer only themself and their teammates, and team_members has no
-    // superadmin bypass policy either, so with the acting admin's own id as RLS
-    // context the user was "not found" for a developer and multi-team users were
-    // under-reported. Authorization is already enforced above (superadmin/developer
+    // All four run on the service (RLS-bypass) pool. team_members has no bypass
+    // policy, so with the acting admin's own id as RLS context multi-team users
+    // were under-reported. Authorization is already enforced above (superadmin/developer
     // role check) and the WHERE clauses scope the rows to the subject user.
     const [userResults, teamsResults, countsResults, metasResults] = await Promise.all([
       queryWithRLS(userQuery, [userId], session.user.id, { service: true }) as Promise<UserResult[]>,
@@ -236,7 +235,7 @@ interface UserActionBody {
  * Only accessible by superadmin or developer users.
  *
  * Actions:
- * - change-role: Change user's role (requires 'role' field: member, or developer when a superadmin asks)
+ * - change-role: Change user's role (requires 'role' field: member, or developer when a developer asks)
  * - suspend: Suspend the user (role 'suspended'), sign out all their sessions and deactivate their API keys
  * - unsuspend: Give a suspended user back the 'member' role (their API keys stay deactivated)
  * - verify-email: Manually verify user's email
@@ -298,8 +297,8 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
     const checkUserQuery = `
       SELECT id, role FROM "users" WHERE id = $1
     `;
-    // On the service connection, as GET: the users policies hide other users from a developer outside the System Admin
-    // Team. The role check above authorizes, and every statement here is scoped to the subject user.
+    // On the service connection, as GET: the role check above authorizes, and every statement here is scoped to the
+    // subject user.
     const userCheck = await queryWithRLS(checkUserQuery, [userId], session.user.id, { service: true }) as { id: string; role: string }[];
 
     if (!userCheck || userCheck.length === 0) {
@@ -326,7 +325,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
       case 'change-role':
         // The roles users.role accepts (check_users_role) besides superadmin, which is not granted here, and suspended,
         // which the suspend action sets with its sign-out
-        if (!role || !['member', 'developer'].includes(role)) {
+        if (!role || !(ASSIGNABLE_USER_ROLES as readonly string[]).includes(role)) {
           return NextResponse.json(
             { error: 'Invalid role. Must be one of: member, developer' },
             { status: 400 }
@@ -339,9 +338,9 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
             { status: 400 }
           );
         }
-        if (role === 'developer' && session.user.role !== 'superadmin') {
+        if (!canGrantUserRole(session.user.role, role)) {
           return NextResponse.json(
-            { error: 'Forbidden - Only a superadmin can grant the developer role' },
+            { error: 'Forbidden - Only a developer can grant the developer role' },
             { status: 403 }
           );
         }

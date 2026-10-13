@@ -50,6 +50,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useRoleTranslations } from '../../../lib/role-helpers';
+import { useIsDeveloper } from '../../app/guards/DeveloperGuard';
 import type { UserRole } from '../../../types/user.types';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -89,6 +90,8 @@ interface PendingAction {
  */
 export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
   const getRoleName = useRoleTranslations();
+  // Only a developer grants the developer role (the route answers 403 to anyone else)
+  const canGrantDeveloper = useIsDeveloper();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -401,9 +404,11 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                           <DropdownMenuRadioItem value="member">
                             Member
                           </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="developer">
-                            Developer
-                          </DropdownMenuRadioItem>
+                          {(canGrantDeveloper || user.role === "developer") && (
+                            <DropdownMenuRadioItem value="developer">
+                              Developer
+                            </DropdownMenuRadioItem>
+                          )}
                         </DropdownMenuRadioGroup>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>

@@ -152,7 +152,7 @@ describe('PATCH /api/v1/users/me', () => {
 
   it('refuses a role change from a member, through /me as through /users/:id', async () => {
     asSession()
-    const res = await meRoute.PATCH(request('/api/v1/users/me', { method: 'PATCH', headers: { ...SESSION, ...json({}).headers }, body: json({ role: 'superadmin' }).body }))
+    const res = await meRoute.PATCH(request('/api/v1/users/me', { method: 'PATCH', headers: { ...SESSION, ...json({}).headers }, body: json({ role: 'developer' }).body }))
     expect(res.status).toBe(403)
     expect(mockMutateWithRLS).not.toHaveBeenCalled()
   })

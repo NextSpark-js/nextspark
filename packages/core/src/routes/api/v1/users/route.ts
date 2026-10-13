@@ -16,6 +16,7 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions';
+import { ASSIGNABLE_USER_ROLES, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
 import * as z from 'zod';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
@@ -27,7 +28,7 @@ const createUserSchema = z.object({
   image: z.string().url('Invalid image URL format').optional(),
   language: z.string().optional().default('en'),
   timezone: z.string().optional().default('UTC'),
-  role: z.enum(['member', 'colaborator']).default('member'),
+  role: z.enum(ASSIGNABLE_USER_ROLES).default('member'),
   metas: z.record(z.string(), z.any()).optional()
 });
 
@@ -133,6 +134,12 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
     const body = await req.json();
     const { metas, ...userData } = body;
     const validatedData = createUserSchema.parse(userData);
+
+    // SECURITY: only a developer grants the developer role
+    if (!canGrantUserRole(authResult.user!.role, validatedData.role)) {
+      const response = createApiError('Only a developer can grant the developer role', 403, null, 'FORBIDDEN');
+      return addCorsHeaders(response, req);
+    }
       
     // Check if email already exists
     const existingUser = await queryWithRLS(
