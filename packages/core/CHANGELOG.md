@@ -7,59 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+## [0.1.0-beta.199] - 2026-10-13
 
-- `EntityForm` no longer validates the fields listed in `hiddenFields`: a theme that hides a required field and renders it elsewhere could not submit, with the error on an invisible field.
-- `SimpleRelationSelect` searches the related entity on the server as you type (debounced, two characters or more) and merges the hits into its options, so a record outside the first page of results can be found.
-- The superadmin users table offers an action only when the API would accept it: the row menu of a developer (or of the viewer's own account) shows no role, verify, suspend or delete to anyone but a developer, and says so in the viewer's language; a suspended user has no role change, as the API refuses it; the superadmins table offers a developer demote to member, suspend and delete on another superadmin, and nobody else.
-- The cached reads of the public item pages, the patterns they reference and the docs pages take only plain names, validate them first and work out the rest (table, columns, published status, docs files) themselves; an argument that does not fit answers not found.
-- A project whose database was migrated while it ran Better Auth 1.7.0 to 1.7.2 (possible up to `0.1.0-beta.184`) creates accounts
-  again: migration 038 makes the `account.issuer` column those releases added nullable. Before, a Google sign-in or a password sign-up
-  failed on the insert and could leave a user without an account.
-- A request hook (`config/hooks/proxy.ts`) that throws no longer lets the request continue as if it had returned `null`: core's proxy answers
-  a fixed `500` (`Internal Server Error`) and logs the error once on the server. The response carries nothing of the error.
-- `createProxy({ authenticatedPaths })` refuses an entry that is not a literal path prefix (`/account/:path*`, `/account/*`, `/account(.*)`,
-  `/[tenant]/billing`, encoded or `..` segments) with an error that names the supported syntax; they matched only their own text and protected nothing.
-- `nextspark prepare` and `nextspark build` refuse an invalid `authenticatedPaths` entry written as a string literal in `src/proxy.ts`
-  (`NS_PROXY_AUTHENTICATED_PATH_INVALID`), instead of the server answering `500` to every request after it starts.
-- `pnpm update-core` in a web-mobile project ends by listing the `@nextsparkjs` pins in `mobile/` and in the workspace root's `package.json` that are
-  not at the target version, with the `pnpm install` to run once they are set. It still writes only the `package.json` of the project it runs in.
-- The upgrade guide and the internationalization setup page show the nested `NextIntlClientProvider` for a project dashboard template with the
-  entity namespaces from `ENTITY_REGISTRY` (through `getConfiguredClientNamespaces`) next to the template's own; the earlier example left the
-  entity screens under it without messages.
-- The auth readiness check refuses a `BETTER_AUTH_SECRET` that is a template placeholder or shorter than 32 characters when `NODE_ENV` is
-  `production` (`BETTER_AUTH_SECRET_PLACEHOLDER`, `BETTER_AUTH_SECRET_MALFORMED`): `nextspark build` fails, and a production server does not
-  start with such a value (it logs the code and exits with status 1). Outside production it only warns.
-- The media upload stores each file with the extension of its allow-listed type (`image/jpeg` as `.jpg`, a type core does not know as `.bin`)
-  and checks the file's leading bytes against the declared type before accepting it. The original name is kept for display, sanitized.
-- The user id and the lock timeout of a database transaction are set with bound `set_config` parameters.
-- `sharp` is `^0.35.5` in `@nextsparkjs/core`, and `handlebars` is `^4.7.10` in `@nextsparkjs/plugin-langchain`. The unused `createAPIKey`
-  mock in `lib/auth/api-keys` is removed.
-- Server Actions that write are limited per signed-in user, in the tiers of their REST routes (`write`; `strict` for
-  `transferTeamOwnership` and `deleteAccount`). `deleteEntities` takes at most 100 ids per call.
-- A Server Action that fails answers a fixed message (`Failed to update the record`, `Failed to delete account`, ...) and logs the cause on
-  the server; validation messages and the owner and permission rules keep theirs.
-- A request hook (`config/hooks/proxy.ts`) that has not answered within 5 seconds fails the request with the same fixed `500` as a hook that throws.
-  `createProxy({ hookTimeoutMs })` sets another limit.
+### Upgrading from 0.1.0-beta.198
 
-### Upgrading
+In the order that can stop a build or a start first.
 
+- **Run `pnpm db:migrate`: core adds migrations `035` to `038`.** They are idempotent. `035` to `037` change RLS policies, a function and a
+  trigger, so only a project that runs the application as `nextspark_app` (the RLS cutover in
+  `22-stability-and-support/04-postgresql-requirements.md`) sees a difference; `038` also touches the auth tables. What each means for
+  code of your own that writes these tables:
+  - **`035_team_admin_metas_and_billing_policies.sql`.** On the `nextspark_app` connection:
+    - a team's admins update the team, as `PATCH /api/v1/teams/:teamId` allows, but only its name, slug, description, `avatarUrl` and
+      `settings`; only a superadmin or a developer (`can_bypass_rls()`, see `036`) changes `teams."ownerId"` (an ownership transfer runs
+      on the service connection);
+    - `pages_metas` and `posts_metas` rows are read and written only for pages and posts of the caller's teams, like `tasks_metas`. The
+      pages and posts entity migrations of the templates have the same policy now; a project with an earlier copy keeps its file and
+      `035` replaces the policy;
+    - `subscriptions`, `usage`, `usage_events` and `billing_events` are written only by a caller `can_bypass_rls()` lets through.
+      Core's billing services, jobs and payment webhooks write them on the service connection. Code of your own that writes them on the
+      request user's connection (`queryWithRLS(sql, params, userId)`) must use the service connection (`{ service: true }`, or no user
+      id) after its own checks. Reads are unchanged. A project migration that re-created the `Subscriptions elevated insert/update/delete`
+      or `Billing events elevated insert` policies of its own loses them to `035`; re-create them after it.
+  - **`036`** replaces `can_bypass_rls()`, the function RLS policies call to let a superadmin through (same name and signature;
+    `is_superadmin()` stays its alias). A developer now passes it as a superadmin does; before, only a member of the team flagged
+    `metadata.systemAdmin` did, which a project without sample data does not have. Every policy that calls `can_bypass_rls()` or
+    `is_superadmin()`, core's and your own, now lets a developer through. The System Admin Team still decides the admin team-context
+    check of the API, and `027`'s enrollment trigger is unchanged.
+  - **`037_users_role_guard.sql`** adds a trigger on `users`. On the `nextspark_app` connection, `users.role` changes only when the caller
+    passes that function, and never on the caller's own row. Core's routes already work that way, and suspend on the service connection.
+    Code of your own that changes a role on the request user's connection must be a superadmin's or a developer's request, on another
+    user, or use the service connection after its own checks.
+  - **`038_better_auth_account_identity.sql`** (see Better Auth 1.7 below): on a schema core's migrations created it only makes `''` the
+    default of `users.name`. On a schema Better Auth 1.7.0 to 1.7.2 wrote, it makes `account.issuer` nullable (the column and its values
+    stay) and drops the unique indexes that include it; Better Auth 1.7.3 and later refuses every auth call while that column is NOT NULL.
+    It adds the unique `("providerId", "accountId")` index when the `account` table lacks it, and stops, naming the query that lists
+    them, if rows share a key. It gives `users.name` a value where it is `NULL`. See `17-updates/06-upgrade-0x-projects.md`.
+  - **`pnpm db:migrate` stops when an auth table has a NOT NULL column without a default that Better Auth never writes** (`users`,
+    `session`, `account`, `verification`), after running the migrations, and names each column; `nextspark doctor` reports the same as
+    "Auth schema". Better Auth 1.7.3 and later refuses every auth call, `getSession` included, on such a column: a column a project or
+    theme migration adds to these tables must be nullable or have a default.
 - **Better Auth 1.7: core moves to `better-auth ~1.7.7`** (from `~1.6.30`), with `@better-fetch/fetch` `1.3.2` and `zod` `^4.5.4`.
-  `pnpm update-core` does not change these in a project's `package.json`: set `"better-auth": "~1.7.7"` and
-  `"@better-fetch/fetch": "1.3.2"`, and `zod` to `^4.5.4` or later if the project declares it (or forces an older zod 4 with an
-  override), then `pnpm install`. Better Auth's tables are the same in 1.6 and 1.7; a project that never ran Better Auth 1.7.0 to
-  1.7.2 has no schema change beyond migration 038. Rolling back to `~1.6.30` is a version change only.
-- **Run `pnpm db:migrate`: core adds `038_better_auth_account_identity.sql`.** Idempotent; on a schema core's migrations created it only
-  makes `''` the default of `users.name`. On a schema Better Auth 1.7.0 to 1.7.2 wrote, it makes `account.issuer` nullable (the column
-  and its values stay) and drops the unique indexes that include it; Better Auth 1.7.3 and later refuses every auth call while that
-  column is NOT NULL. It adds the unique `("providerId", "accountId")` index when the `account` table lacks it, and stops, naming the
-  query that lists them, if rows share a key. It gives `users.name` a value where it is `NULL`. See
-  `17-updates/06-upgrade-0x-projects.md`.
-- **`pnpm db:migrate` stops when an auth table has a NOT NULL column without a default that Better Auth never writes** (`users`,
-  `session`, `account`, `verification`), after running the migrations, and names each column; `nextspark doctor` reports the same as
-  "Auth schema". Better Auth 1.7.3 and later refuses every auth call, `getSession` included, on such a column: a column a project or theme
-  migration adds to these tables must be nullable or have a default.
-- **Custom auth code on Better Auth 1.7:**
+  `pnpm update-core` does not change these in a project's `package.json` (a project generated by `0.1.0-beta.198` declares
+  `better-auth ~1.6.33`, `@better-fetch/fetch 1.3.1` and `zod ^4.1.5`, and keeps working on them: core uses its own Better Auth 1.7.7
+  and the project's 1.6.33 stays installed beside it, used only by code of yours that imports better-auth directly): set
+  `"better-auth": "~1.7.7"` and `"@better-fetch/fetch": "1.3.2"`, and `zod` to `^4.5.4` or later if the project declares it (or forces
+  an older zod 4 with an override), then `pnpm install`. Better Auth's tables are the same in 1.6 and 1.7; a project that never ran
+  Better Auth 1.7.0 to 1.7.2 has no schema change beyond migration `038`. Rolling back to `~1.6.30` is a version change only. Custom auth code:
   - `internalAdapter.createUser(user, source)` takes the provisioning source as a second argument (`{ method: 'email-otp' }`, for example).
   - Under `strict: false` (or without `strictNullChecks`), Better Auth 1.7 types `authClient.useSession().data` as `never` and makes
     `authClient.signOut`'s argument required. Read the data as `ClientSession | null` (`@nextsparkjs/core/lib/auth-client`), or turn on
@@ -71,26 +65,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `advanced.backgroundTasks.handler`, so emails Better Auth sends in the background no longer finish before the response.
   - A `429` from Better Auth's limiter has `Content-Type: application/json`; a password longer than 128 characters gets `400`
     `PASSWORD_TOO_LONG`.
-- **A request hook that throws now answers `500`.** Before, the error was logged and the request went on to core's checks and the page. A hook
-  that relied on that (an optional rule that fails when its data source is down) catches its own error and returns `null`. There is no option
-  to continue after a hook error. `executeProjectMiddleware` from `@nextsparkjs/core/lib/middleware` now rethrows the hook's error instead of
-  logging it and returning `null`; a custom proxy that calls it catches the error and answers its own.
-- **`authenticatedPaths` entries written as patterns are refused.** `/account/:path*`, `/account/*` and `/account(.*)` were accepted and
-  gated nothing; use the literal prefix, `/account`, which covers the path and everything under it. A dynamic segment such as
-  `/[tenant]/billing` cannot be gated by prefix: gate its fixed parent, or check the session in the page or layout.
 - **A production `BETTER_AUTH_SECRET` must be a real secret.** A value copied from a template (`your-secret-key-min-32-chars`,
   `your-super-secret-key-change-this`) or shorter than 32 characters now fails `nextspark build`, and a production server does not start
-  with it: it exits with status 1 at startup, and `lib/auth` refuses to load as a second layer. Generate one, for example with `openssl rand -base64 32`. Changing the secret signs everyone out. A build that does not have
-  the variable skips this check and the server judges it at startup.
-- **Uploaded media keeps no extension from the client's file name.** The stored URL ends in the extension of the file's type, and a file whose
-  leading bytes do not match its declared type is refused with `400`. A type you add to `media.allowedMimeTypes` that core does not know is
-  stored as `.bin` and not byte-checked. The `filename` of the media record is the sanitized original name.
-- **Server Actions answer `Too many requests. Please try again later.` over the limit** (50 writes per minute per user; 10 per hour for
-  `transferTeamOwnership` and `deleteAccount`). `deleteEntities` refuses more than 100 ids: split a larger delete into calls of 100. A client that
-  showed the text of a failed action will now show the fixed message.
-- **A request hook has 5 seconds.** One that takes longer fails its requests with `500`. Raise it with `createProxy({ hookTimeoutMs: 10000 })`
-  in `src/proxy.ts`, and give the hook's own outbound calls an `AbortSignal.timeout`: core stops waiting for the hook, it does not cancel it.
-
+  with it: it exits with status 1 at startup (`BETTER_AUTH_SECRET_PLACEHOLDER`, `BETTER_AUTH_SECRET_MALFORMED`), and `lib/auth` refuses to
+  load as a second layer. Generate one, for example with `openssl rand -base64 32`. Changing the secret signs everyone out. A build that
+  does not have the variable skips this check and the server judges it at startup. Outside production it only warns.
 - **Your own API routes are rate limited again, by default.** Up to `0.1.0-beta.191` core's theme and plugin dispatchers rate
   limited a project's and a plugin's API routes; since the root-first layout they had no limit unless they wrapped themselves,
   and nothing said so. Now `nextspark prepare` wraps every method of every Route Handler under the project's `api/` (and a
@@ -111,37 +90,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A route with `dynamic = 'force-static'` is answered from the build, where a rate limit checks nothing: opt it out.
   - `DISABLE_RATE_LIMITING=true` turns the default off with the other per-address limits.
   - Behind a proxy or on Vercel, set `NEXTSPARK_CLIENT_IP_SOURCE`, or every request may count against one address.
-- **Run `pnpm db:migrate`: core adds `035_team_admin_metas_and_billing_policies.sql`.** It changes RLS policies (idempotent); only a
-  project that runs the application as `nextspark_app` (the RLS cutover in `22-stability-and-support/04-postgresql-requirements.md`)
-  sees a difference. On that connection:
-  - a team's admins update the team, as `PATCH /api/v1/teams/:teamId` allows, but only its name, slug, description, `avatarUrl` and
-    `settings`; only a superadmin or a developer (`can_bypass_rls()`, see 036) changes `teams."ownerId"` (an ownership transfer runs on the service connection);
-  - `pages_metas` and `posts_metas` rows are read and written only for pages and posts of the caller's teams, like `tasks_metas`. The
-    pages and posts entity migrations of the templates have the same policy now; a project with an earlier copy keeps its file and
-    035 replaces the policy;
-  - `subscriptions`, `usage`, `usage_events` and `billing_events` are written only by `can_bypass_rls()`. Core's billing services,
-    jobs and payment webhooks write them on the service connection. Code of your own that writes them on the request user's connection
-    (`queryWithRLS(sql, params, userId)`) must use the service connection (`{ service: true }`, or no user id) after its own checks.
-    Reads are unchanged. A project migration that re-created the `Subscriptions elevated insert/update/delete` or `Billing events
-    elevated insert` policies of its own loses them to 035; re-create them after it.
-- **Run `pnpm db:migrate`: core adds `036_developer_rls_bypass.sql`.** It replaces the function `can_bypass_rls()` (idempotent); only a
-  project that runs the application as `nextspark_app` sees a difference. There, a developer bypasses RLS as a superadmin does: before,
-  only as a member of the team flagged `metadata.systemAdmin`, which a project without sample data does not have. Every policy that calls
-  `can_bypass_rls()` or `is_superadmin()`, core's and your own, now lets a developer through. The System Admin Team still decides the
-  `x-admin-bypass` team-context check of the API, and 027's enrollment trigger is unchanged.
 - **Only a developer grants the developer role.** A superadmin who sends `role: "developer"` gets 403 from `PATCH /api/superadmin/users/:id`
   (`change-role`), `PATCH /api/v1/users/:id` and `POST /api/v1/users`. The superadmin users table offers the developer role only to a
   developer. Give a first developer the role in the database, as the first superadmin.
-- **Run `pnpm db:migrate`: core adds `037_users_role_guard.sql`.** It adds a trigger on `users` (idempotent); only a project that runs
-  the application as `nextspark_app` sees a difference. There, `users.role` changes only when the caller passes `can_bypass_rls()`, and
-  never on the caller's own row. Core's routes already work that way, and suspend on the service connection. Code of your own that
-  changes a role on the request user's connection must be a superadmin's or a developer's request, on another user, or use the service
-  connection after its own checks.
 - **Only a developer changes, suspends or deletes a developer or a superadmin.** A superadmin gets 403 for a developer or
   superadmin target from `PATCH`/`DELETE /api/superadmin/users/:id`, `PATCH`/`DELETE /api/v1/users/:id` and the writes of
   `/api/v1/users/:id/meta/:key`; a developer acts on both (never on their own account). Before, nobody could act on a superadmin.
   `suspendUser` (`@nextsparkjs/core/lib/auth/suspension`) no longer refuses a superadmin itself: the caller authorizes with
-  `canActOnUser`, as the routes do.
+  `canActOnUser(callerRole, targetRole)` (`@nextsparkjs/core/lib/auth/assignable-roles`), as the routes do.
+- **The `inviteMember` Server Action sends an invitation instead of adding the user.** It now behaves like
+  `POST /api/v1/teams/:teamId/members`: it creates a pending invitation and emails the invitee, who accepts through the link. The
+  inviter needs the `team.members.invite` permission, can invite only to a role below their own, and shares the REST rate limit (20 per
+  minute). The invitee needs no account yet. The call and its arguments are the same; the result changes. If your code reads
+  `result.data.memberId` or `result.data.userId`, read `result.data.invitationId` (and `email`, `role`, `status: 'pending'`,
+  `expiresAt`) instead, and do not expect the user in the team until they accept. The accept token is never in the result. Core's
+  own invite dialog calls the REST route and is not affected.
+- **A request hook that throws now answers `500`.** Before, the error was logged and the request went on to core's checks and the page. A hook
+  that relied on that (an optional rule that fails when its data source is down) catches its own error and returns `null`. There is no option
+  to continue after a hook error. `executeProjectMiddleware` from `@nextsparkjs/core/lib/middleware` now rethrows the hook's error instead of
+  logging it and returning `null`; a custom proxy that calls it catches the error and answers its own.
+- **A request hook has 5 seconds.** One that takes longer fails its requests with `500`. Raise it with `createProxy({ hookTimeoutMs: 10000 })`
+  in `src/proxy.ts` (up to `2147483647`; `createProxy` refuses a larger value), and give the hook's own outbound calls an
+  `AbortSignal.timeout`: core stops waiting for the hook, it does not cancel it.
+- **`authenticatedPaths` entries written as patterns are refused.** `/account/:path*`, `/account/*` and `/account(.*)` were accepted and
+  gated nothing; use the literal prefix, `/account`, which covers the path and everything under it. A dynamic segment such as
+  `/[tenant]/billing` cannot be gated by prefix: gate its fixed parent, or check the session in the page or layout.
+- **Uploaded media keeps no extension from the client's file name.** The stored URL ends in the extension of the file's type, and a file whose
+  leading bytes do not match its declared type is refused with `400`. A type you add to `media.allowedMimeTypes` that core does not know is
+  stored as `.bin` and not byte-checked. The `filename` of the media record is the sanitized original name.
+- **Server Actions answer `Too many requests. Please try again later.` over the limit** (50 writes per minute per user; 10 per hour for
+  `transferTeamOwnership` and `deleteAccount`). `deleteEntities` refuses more than 100 ids: split a larger delete into calls of 100. A client that
+  showed the text of a failed action will now show the fixed message.
+- **The team and profile Server Actions validate their input like their REST routes.** `updateTeam` uses `updateTeamSchema`
+  (`PATCH /api/v1/teams/:teamId`); `updateProfile` uses `updateProfileSchema` (`PATCH /api/v1/users/:id`, exported from
+  `@nextsparkjs/core/lib/users/schema`); `updateAvatar` accepts an `http(s)` URL or a path on the app, not `//host/...`. A bad value
+  answers `success: false` with `<field>: <message>` and stores nothing. `updateProfile` now requires `language` to be a language tag
+  (`en`, `pt-BR`), `country` a two-letter code and `timezone` a valid IANA zone, and `PATCH /api/v1/users/:id` applies the same
+  limits to `firstName`, `lastName` and `language`, the profile fields it stores. `updateAvatar` also refuses a path that a browser
+  reads as another host (`/\t/host`), and `inviteMember` answers `Failed to invite member` to an unexpected failure, as REST
+  answers 500.
+
+### Added
+
+- `MAX_BATCH_DELETE_IDS` (100), the cap on the ids one `deleteEntities` call takes, is exported from `@nextsparkjs/core/lib/actions`.
 
 ### Changed
 
@@ -159,7 +150,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metadata, `GET /api/v1/teams?scope=all` and a team's member list), `checkTeamPermission` (`lib/teams/permissions`), minting an API key
   with any scope (`validateScopesForUser`, `canCreateApiKeys`, `POST /api/v1/api-keys` without a team), changing or deleting post
   categories without a team, another user's plan and flags (`/api/user/plan-flags`), the proxy's `/admin` area and the admin panel link of
-  the mobile menu. On the `nextspark_app` connection a developer also bypasses RLS as a superadmin does (migration 036).
+  the mobile menu. On the `nextspark_app` connection a developer is also exempt from RLS as a superadmin is (migration `036`).
 - `/api/v1/users/:id` follows the rules of `/api/superadmin/users/:id`: nobody changes or deletes another superadmin (403), nobody changes
   their own role (400), a suspended user comes back only through `unsuspend` (400), and `role` accepts only `member` and `developer`
   (`superadmin` is 400). `POST /api/v1/users` accepts the same roles. Both share `lib/auth/assignable-roles.ts` with the superadmin route.
@@ -169,6 +160,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `EntityForm` no longer validates the fields listed in `hiddenFields`: a theme that hides a required field and renders it elsewhere could not submit, with the error on an invisible field.
+- `SimpleRelationSelect` searches the related entity on the server as you type (debounced, two characters or more) and merges the hits into its options, so a record outside the first page of results can be found. It waits for the first page before merging, and stops searching an entity whose API answers 400 `SEARCH_NOT_SUPPORTED` (the generic handler searches only entities with a name, title, slug or content field).
+- The superadmin users table offers an action only when the API would accept it: the row menu of a developer (or of the viewer's own account) shows no role, verify, suspend or delete to anyone but a developer, and says so in the viewer's language; a suspended user has no role change, as the API refuses it; the superadmins table offers a developer demote to member, suspend and delete on another superadmin, and nobody else.
+- The cached reads of the public item pages, the patterns they reference and the docs pages take only plain names, validate them first and work out the rest (table, columns, published status, docs files) themselves; an argument that does not fit answers not found.
+- A project whose database was migrated while it ran Better Auth 1.7.0 to 1.7.2 (possible up to `0.1.0-beta.184`) creates accounts
+  again: migration `038` makes the `account.issuer` column those releases added nullable. Before, a Google sign-in or a password sign-up
+  failed on the insert and could leave a user without an account.
+- A request hook (`config/hooks/proxy.ts`) that throws no longer lets the request continue as if it had returned `null`: core's proxy answers
+  a fixed `500` (`Internal Server Error`) and logs the error once on the server. The response carries nothing of the error. A hook that has
+  not answered within 5 seconds fails the request the same way.
+- `createProxy({ authenticatedPaths })` refuses an entry that is not a literal path prefix (`/account/:path*`, `/account/*`, `/account(.*)`,
+  `/[tenant]/billing`, encoded or `..` segments) with an error that names the supported syntax; they matched only their own text and protected nothing.
+- `nextspark prepare` and `nextspark build` refuse an invalid `authenticatedPaths` entry written as a string literal in `src/proxy.ts`
+  (`NS_PROXY_AUTHENTICATED_PATH_INVALID`), instead of the server answering `500` to every request after it starts.
+- `pnpm update-core` in a web-mobile project ends by listing the `@nextsparkjs` pins in `mobile/` and in the workspace root's `package.json` that are
+  not at the target version, with the `pnpm install` to run once they are set. It still writes only the `package.json` of the project it runs in.
+- The auth readiness check refuses a `BETTER_AUTH_SECRET` that is a template placeholder or shorter than 32 characters when `NODE_ENV` is
+  `production`; a long secret that contains spaces is accepted. Outside production the startup log shows the warning.
+- The media upload stores each file with the extension of its allow-listed type (`image/jpeg` as `.jpg`, a type core does not know as `.bin`)
+  and checks the file's leading bytes against the declared type before accepting it. The original name is kept for display, sanitized. A
+  QuickTime file that starts with a movie atom (`moov`, `mdat`, ...) instead of `ftyp` is accepted.
+- The user id and the lock timeout of a database transaction are set with bound `set_config` parameters.
+- `sharp` is `^0.35.5` in `@nextsparkjs/core`, and `handlebars` is `^4.7.10` in `@nextsparkjs/plugin-langchain`. The unused `createAPIKey`
+  mock in `lib/auth/api-keys` is removed.
+- Server Actions that write are limited per signed-in user, in the tiers of their REST routes (`write`; `strict` for
+  `transferTeamOwnership` and `deleteAccount`). `deleteEntities` takes at most 100 ids per call.
+- A Server Action that fails answers a fixed message (`Failed to update the record`, `Failed to delete account`, ...) and logs the cause on
+  the server; validation messages and the owner and permission rules keep theirs.
 - The metas of pages and posts are written and read through the entity API. `PATCH /api/v1/pages/:id` and `/posts/:id` with `metas`
   answered 200 and stored nothing, and `?metas=all` returned none, because the metas service looked for an `entityId` column;
   `pages_metas` and `posts_metas` link to their parent with `pageId` and `postId`. The service now reads the parent column from the
@@ -177,30 +196,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   answered 404 there (#241). The users, teams and subscriptions lists of that area and a team's detail no longer leave out what RLS
   hides from a developer, nor members of teams the caller does not belong to.
 - `POST /api/v1/users` with `role: "colaborator"`, which `users.role` does not accept, answers 400; it answered 500.
-- On the `nextspark_app` connection a user's role changes only as the API allows, also outside core's routes (migration 037).
+- On the `nextspark_app` connection a user's role changes only as the API allows, also outside core's routes (migration `037`).
 - A team admin can edit the team on the `nextspark_app` connection; it answered 404 there.
 - A developer can open a user's detail in the superadmin area on the `nextspark_app` connection; it answered 404 there.
 - The RLS policies of `pages_metas`, `posts_metas`, `subscriptions`, `usage`, `usage_events` and `billing_events` match what the API
-  allows (migration 035).
-
-- **The `inviteMember` Server Action sends an invitation instead of adding the user.** It now behaves like
-  `POST /api/v1/teams/:teamId/members`: it creates a pending invitation and emails the invitee, who accepts through the link. The
-  inviter needs the `team.members.invite` permission, can invite only to a role below their own, and shares the REST rate limit (20 per
-  minute). The invitee needs no account yet. The call and its arguments are the same; the result changes. If your code reads
-  `result.data.memberId` or `result.data.userId`, read `result.data.invitationId` (and `email`, `role`, `status: 'pending'`,
-  `expiresAt`) instead, and do not expect the user in the team until they accept. The accept token is never in the result. Core's
-  own invite dialog calls the REST route and is not affected.
-- **The team and profile Server Actions validate their input like their REST routes.** `updateTeam` uses `updateTeamSchema`
-  (`PATCH /api/v1/teams/:teamId`); `updateProfile` uses `updateProfileSchema` (`PATCH /api/v1/users/:id`, exported from
-  `@nextsparkjs/core/lib/users/schema`); `updateAvatar` accepts an `http(s)` URL or a path on the app, not `//host/...`. A bad value
-  answers `success: false` with `<field>: <message>` and stores nothing. `updateProfile` now requires `language` to be a language tag
-  (`en`, `pt-BR`), `country` a two-letter code and `timezone` a valid IANA zone, and `PATCH /api/v1/users/:id` applies the same
-  limits to `firstName`, `lastName` and `language`, the profile fields it stores. `updateAvatar` also refuses a path that a browser
-  reads as another host (`/\t/host`), and `inviteMember` answers `Failed to invite member` to an unexpected failure, as REST
-  answers 500.
+  allows (migration `035`).
 - **`POST /api/v1/teams/:teamId/members` answers `400 VALIDATION_ERROR` to a body that is not JSON** (it answered 500).
 - Core's `TimezoneSelect` offers `Asia/Kolkata` instead of `Asia/Mumbai` (not an IANA zone). A stored `Asia/Mumbai` is kept until the
   user saves the timezone again.
+
+### Documentation
+
+- The upgrade guide and the internationalization setup page show the nested `NextIntlClientProvider` for a project dashboard template with the
+  entity namespaces from `ENTITY_REGISTRY` (through `getConfiguredClientNamespaces`) next to the template's own; the earlier example left the
+  entity screens under it without messages.
+- The rate limiting and custom endpoints guides describe the default limit of a project's API routes, the opt-out and what counts as a
+  route's own limit; the Blocks API page says its endpoints are public on purpose and lists their limits.
+- The permissions and roles, migrations, service layer, teams and middleware guides describe the developer role, migrations `035` to
+  `037` and who acts on whom.
+- The upgrade guide for 0.x projects covers Better Auth 1.7 and migration `038`; the migrations guide says a column added to an auth table
+  is nullable or has a default; the update-core page says what it leaves alone in a web-mobile workspace.
+- The PostgreSQL requirements page explains that `sslmode=require` encrypts without validating the certificate, and how to ask for
+  `verify-full` and a private CA (`NODE_EXTRA_CA_CERTS`).
 
 ## [0.1.0-beta.198] - 2026-10-09
 
