@@ -248,9 +248,13 @@ export function SimpleRelationSelect({
   // The list only holds the first `limit` records (the API caps limit at 100),
   // so a typed term is also searched server-side; hits merge into the options.
   const filterKey = JSON.stringify(filter ?? {})
+  // Entity whose API answered 400 SEARCH_NOT_SUPPORTED: asking again would fail the same way.
+  const searchUnsupportedRef = React.useRef<string | null>(null)
   React.useEffect(() => {
     const term = search.trim()
-    if (usePropertyMode || term.length < 2 || parseChildEntity(entityType).isChild) return
+    // While the first page loads it would replace the hits (setOptions): search again once it lands.
+    if (usePropertyMode || loading || term.length < 2 || parseChildEntity(entityType).isChild) return
+    if (searchUnsupportedRef.current === entityType) return
     const apiPath = getEntityApiPath(entityType)
     if (!apiPath) return
 
@@ -269,7 +273,13 @@ export function SimpleRelationSelect({
         }
 
         const response = await fetchWithTeam(url.toString(), { method: 'GET', credentials: 'include' })
-        if (cancelled || !response.ok) return
+        if (cancelled) return
+        if (response.status === 400) {
+          const body = await response.json().catch(() => null)
+          if (body?.code === 'SEARCH_NOT_SUPPORTED') searchUnsupportedRef.current = entityType
+          return
+        }
+        if (!response.ok) return
         const result = await response.json()
         if (cancelled || !result.success || !Array.isArray(result.data)) return
 
@@ -295,7 +305,7 @@ export function SimpleRelationSelect({
       clearTimeout(timer)
       setSearching(false)
     }
-  }, [search, entityType, parentId, titleField, usePropertyMode, userFiltered, limit, filterKey])
+  }, [search, loading, entityType, parentId, titleField, usePropertyMode, userFiltered, limit, filterKey])
 
   // Load selected options details by IDs
   const loadSelectedOptions = React.useCallback(async (ids: string[]) => {

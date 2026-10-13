@@ -101,9 +101,34 @@ describe('SimpleRelationSelect server-side search', () => {
     expect(pending).toHaveLength(2)
     const res = (data: Array<Record<string, unknown>>) => ({ ok: true, json: () => Promise.resolve({ success: true, data }) } as Response)
     await act(async () => { pending[1](res([outside])) })
-    await act(async () => { pending[0](res([{ id: 'a1', name: 'Alpha Stale' }])) })
+    await act(async () => { pending[0](res([{ id: 'a1', name: 'Zeta Stale' }])) })
     expect(await screen.findByText('Zeta Industries')).toBeInTheDocument()
-    expect(screen.queryByText('Alpha Stale')).not.toBeInTheDocument()
+    expect(screen.queryByText('Zeta Stale')).not.toBeInTheDocument()
+  })
+
+  it('does not search while the first page loads, and searches once it lands (the page would wipe the hits)', async () => {
+    let firstPage!: (r: Response) => void
+    fetchWithTeam.mockImplementation((raw: string) =>
+      new URL(raw).searchParams.has('search')
+        ? json([outside])
+        : new Promise<Response>(resolve => { firstPage = resolve }))
+    await openAndType('Zeta')
+    await advance(1000)
+    expect(searchCalls()).toHaveLength(0)
+    await act(async () => { firstPage({ ok: true, json: () => Promise.resolve({ success: true, data: first20 }) } as Response) })
+    await advance(300)
+    expect(searchCalls()).toHaveLength(1)
+    expect(await screen.findByText('Zeta Industries')).toBeInTheDocument()
+  })
+
+  it('stops searching after a 400 SEARCH_NOT_SUPPORTED', async () => {
+    mockApi(() => Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({ success: false, code: 'SEARCH_NOT_SUPPORTED' }) } as Response))
+    await openAndType('ze')
+    await advance(300)
+    await type('zet')
+    await advance(300)
+    expect(searchCalls()).toHaveLength(1)
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
   })
 
   it('keeps parentId, userFiltered and filter in the search request', async () => {
