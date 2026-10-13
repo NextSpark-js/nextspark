@@ -19,8 +19,9 @@ import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { parseMarkdownFile } from '@nextsparkjs/core/lib/docs/parser'
 import { DocsBreadcrumbs } from '@nextsparkjs/core/components/docs/docs-breadcrumbs'
 import { DocsContent } from '@nextsparkjs/core/components/docs/docs-content'
+import { requireAreaAccess } from '../../../../_internal/area-access'
 import { SuperadminDocsSidebar } from '@nextsparkjs/core/components/docs/superadmin-docs-sidebar'
-import path from 'path'
+import { resolveRegistryDoc } from '@nextsparkjs/core/lib/docs/registry-doc'
 import type { Metadata } from 'next'
 import { generateStaticParams as listDocsParams } from './page'
 
@@ -36,17 +37,19 @@ export async function generateStaticParams() {
   return params.length > 0 ? params : [{ section: '_', page: '_' }]
 }
 
-/** The parsed document of a section/page pair, or null when the registry has none. */
+/**
+ * The parsed document of a section/page pair, or null when it is not a superadmin doc. Reachable as a server reference, so it
+ * takes only the two names and reads only the registry's files under `docs/superadmin`. The access check (`requireAreaAccess`) runs in the page before it is called.
+ */
 async function loadDoc(sectionSlug: string, pageSlug: string) {
   'use cache'
   cacheLife('max')
 
-  const section = DOCS_REGISTRY.superadmin.find(s => s.slug === sectionSlug)
-  const page = section?.pages.find(p => p.slug === pageSlug)
-  if (!section || !page) return null
+  const doc = resolveRegistryDoc(DOCS_REGISTRY.superadmin, 'superadmin', sectionSlug, pageSlug)
+  if (!doc) return null
 
-  const { metadata, html } = await parseMarkdownFile(path.join(process.cwd(), page.path))
-  return { sectionTitle: section.title, metadata, html }
+  const { metadata, html } = await parseMarkdownFile(doc.filePath)
+  return { sectionTitle: doc.sectionTitle, metadata, html }
 }
 
 export async function generateMetadata({ params }: SuperadminDocsPageProps): Promise<Metadata> {
@@ -68,6 +71,7 @@ export async function generateMetadata({ params }: SuperadminDocsPageProps): Pro
 
 export default async function SuperadminDocsDetailPage({ params }: SuperadminDocsPageProps) {
   const { section: sectionSlug, page: pageSlug } = await params
+  await requireAreaAccess('superadmin')
 
   const doc = await loadDoc(sectionSlug, pageSlug)
   if (!doc) notFound()

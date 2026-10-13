@@ -25,20 +25,43 @@ import { buildPublicSelectClause, getResolvedBlocks, type PublishedItem } from '
 import { bindPublicItemRoutes, type PublicItemSource } from './public-item-route'
 import { behindSuspense } from './suspended-route'
 
-/** One published row: the arguments are the cache key, so they are plain strings. */
-async function readPublishedItem(entitySlug: string, tableName: string, selectClause: string, slug: string): Promise<PublishedItem | null> {
+/**
+ * A Next.js build registers a `'use cache'` function as a server reference, so whoever reaches it can call it with any
+ * arguments. These two take only plain identifiers, validate them before anything else and derive the rest (table,
+ * select clause, published status) themselves; an argument that does not fit answers "not found", not data.
+ */
+const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
+const ITEM_SLUG = /^[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/
+const MAX_PATTERN_IDS = 50
+
+/** The public entities whose routes this process built, by slug: where a cached read finds the entity's config. */
+const publicEntities = new Map<string, EntityConfig>()
+
+function registerEntity(config: EntityConfig) {
+  if (config.access?.basePath !== undefined) publicEntities.set(config.slug, config)
+}
+
+/** One published row of a public entity: the arguments are the cache key, so they are plain strings. */
+export async function readPublishedItem(entitySlug: string, slug: string): Promise<PublishedItem | null> {
   'use cache'
   cacheLife({ stale: 300, revalidate: 3600, expire: 86400 })
+
+  if (typeof entitySlug !== 'string' || typeof slug !== 'string' || !IDENTIFIER.test(entitySlug) || slug.length > 200 || !ITEM_SLUG.test(slug)) return null
+  const entity = publicEntities.get(entitySlug)
+  const tableName = entity && (entity.tableName || entity.slug)
+  if (!entity || !IDENTIFIER.test(tableName!)) return null
   cacheTag(`entity:${entitySlug}`, `public-item:${entitySlug}:${slug}`)
 
-  const result = await query<PublishedItem>(`SELECT ${selectClause} FROM "${tableName}" WHERE slug = $1 AND status = 'published'`, [slug])
+  const result = await query<PublishedItem>(`SELECT ${buildPublicSelectClause(entity)} FROM "${tableName}" WHERE slug = $1 AND status = 'published'`, [slug])
   return result.rows[0] || null
 }
 
 /** The published patterns of some ids. */
-async function readPatterns(ids: string[]): Promise<Pattern[]> {
+export async function readPatterns(ids: string[]): Promise<Pattern[]> {
   'use cache'
   cacheLife({ stale: 300, revalidate: 900, expire: 86400 })
+
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > MAX_PATTERN_IDS || !ids.every(id => typeof id === 'string' && IDENTIFIER.test(id))) return []
   cacheTag('patterns')
 
   return PatternsResolverService.getByIds(ids)
@@ -46,8 +69,9 @@ async function readPatterns(ids: string[]): Promise<Pattern[]> {
 
 const cachedSource: PublicItemSource = {
   async fetchItem(entity: EntityConfig, slug: string) {
+    registerEntity(entity)
     try {
-      return await readPublishedItem(entity.slug, entity.tableName || entity.slug, buildPublicSelectClause(entity), slug)
+      return await readPublishedItem(entity.slug, slug)
     } catch (error) {
       console.error(`[fetchPublishedItem] Error fetching ${entity.slug}:`, error)
       return null

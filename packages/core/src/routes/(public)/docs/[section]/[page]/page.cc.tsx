@@ -18,7 +18,7 @@ import { DocsBreadcrumbs } from '@nextsparkjs/core/components/docs/docs-breadcru
 import { DocsContent } from '@nextsparkjs/core/components/docs/docs-content'
 import { sel } from '@nextsparkjs/core/selectors/public'
 import { getTranslations } from 'next-intl/server'
-import path from 'path'
+import { resolveRegistryDoc } from '@nextsparkjs/core/lib/docs/registry-doc'
 import type { Metadata } from 'next'
 
 interface DocsPageProps {
@@ -44,17 +44,19 @@ export async function generateStaticParams() {
   return params.length > 0 ? params : [{ section: '_', page: '_' }]
 }
 
-/** The parsed document of a section/page pair, or null when the registry has none. */
+/**
+ * The parsed document of a section/page pair, or null when it is not a public doc. Reachable as a server reference, so it
+ * takes only the two names and reads only the registry's files under `docs/public`.
+ */
 async function loadDoc(sectionSlug: string, pageSlug: string) {
   'use cache'
   cacheLife('max')
 
-  const section = DOCS_REGISTRY.public.find(s => s.slug === sectionSlug)
-  const page = section?.pages.find(p => p.slug === pageSlug)
-  if (!section || !page) return null
+  const doc = resolveRegistryDoc(DOCS_REGISTRY.public, 'public', sectionSlug, pageSlug)
+  if (!doc) return null
 
-  const { metadata, html } = await parseMarkdownFile(path.join(process.cwd(), page.path))
-  return { sectionTitle: section.title, metadata, html }
+  const { metadata, html } = await parseMarkdownFile(doc.filePath)
+  return { sectionTitle: doc.sectionTitle, metadata, html }
 }
 
 export async function generateMetadata({ params }: DocsPageProps): Promise<Metadata> {

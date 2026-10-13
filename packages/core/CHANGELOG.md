@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The cached reads of the public item pages, the patterns they reference and the docs pages take only plain names, validate them first and work out the rest (table, columns, published status, docs files) themselves; an argument that does not fit answers not found.
 - A request hook (`config/hooks/proxy.ts`) that throws no longer lets the request continue as if it had returned `null`: core's proxy answers
   a fixed `500` (`Internal Server Error`) and logs the error once on the server. The response carries nothing of the error.
 - `createProxy({ authenticatedPaths })` refuses an entry that is not a literal path prefix (`/account/:path*`, `/account/*`, `/account(.*)`,
