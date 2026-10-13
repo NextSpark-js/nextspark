@@ -350,6 +350,8 @@ function mergeThemeHeaders(response: NextResponse, themeResponse: NextResponse |
 
 /** How long the project's request hook may take; `createProxy({ hookTimeoutMs })` changes it */
 const DEFAULT_HOOK_TIMEOUT_MS = 5_000
+/** Node clamps a longer timer delay to 1 ms, which would fail every hooked request. */
+const MAX_HOOK_TIMEOUT_MS = 2_147_483_647
 
 /** The hook's result, or a rejection once it has had `ms`. The hook is not cancelled: its own outbound calls need their own AbortSignal.timeout. */
 function withHookTimeout<T>(hook: Promise<T>, ms: number): Promise<T> {
@@ -725,8 +727,8 @@ export function createProxy(options: ProxyOptions = {}): (request: NextRequest) 
     }
   }
   const hookTimeoutMs = options.hookTimeoutMs ?? DEFAULT_HOOK_TIMEOUT_MS
-  if (!Number.isFinite(hookTimeoutMs) || hookTimeoutMs <= 0) {
-    throw new Error(`createProxy: hookTimeoutMs is a number of milliseconds above 0. Got ${JSON.stringify(options.hookTimeoutMs)}`)
+  if (!Number.isFinite(hookTimeoutMs) || hookTimeoutMs <= 0 || hookTimeoutMs > MAX_HOOK_TIMEOUT_MS) {
+    throw new Error(`createProxy: hookTimeoutMs is a number of milliseconds above 0 and at most ${MAX_HOOK_TIMEOUT_MS}. Got ${JSON.stringify(options.hookTimeoutMs)}`)
   }
   const authenticatedPaths = [...AUTHENTICATED_PATHS, ...extra]
   return function proxy(request: NextRequest) {

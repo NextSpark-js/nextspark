@@ -440,7 +440,7 @@ describe('project-hook proxy composition (#204)', () => {
       expect((await createProxy({ hookTimeoutMs: 1000 })(request('/'))).status).not.toBe(500)
     })
 
-    test.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('createProxy refuses hookTimeoutMs %p', (hookTimeoutMs) => {
+    test.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])('createProxy refuses hookTimeoutMs %p', (hookTimeoutMs) => {
       expect(() => createProxy({ hookTimeoutMs })).toThrow(/hookTimeoutMs/)
     })
   })
