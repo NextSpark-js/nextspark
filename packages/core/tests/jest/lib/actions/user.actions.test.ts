@@ -362,6 +362,7 @@ describe('User Server Actions', () => {
       ['a backslash path', '/\\evil.example/p.png'],
       ['a tab inside //', '/\t/evil.example/p.png'],
       ['a newline inside //', '/\n/evil.example'],
+      ['a // that does not parse as a URL', '//['],
     ])('rejects %s', async (_label, value) => {
       const formData = new FormData()
       formData.append('avatar', value)
