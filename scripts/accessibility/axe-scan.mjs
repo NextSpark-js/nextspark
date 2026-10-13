@@ -56,7 +56,7 @@ export async function waitForMail(mails, to, { from = 0, ms = 15000, everyMs = 2
 }
 
 /** The local Resend stand-in: keeps what was sent so the OTP can be read back. */
-function startFakeResend(port) {
+export function startFakeResend(port) {
   const mails = []
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://x')
@@ -79,7 +79,7 @@ function startFakeResend(port) {
   })
 }
 
-async function waitFor(url, ms) {
+export async function waitFor(url, ms) {
   const end = Date.now() + ms
   while (Date.now() < end) {
     try { if ((await fetch(url, { signal: AbortSignal.timeout(5000) })).ok) return true } catch { /* not up yet */ }
