@@ -103,13 +103,16 @@ describe('passwordless preset (#126)', () => {
   test('in production the passwordless default serves no password endpoint unless the theme declares it', () => {
     const env = process.env as Record<string, string | undefined>
     const previous = env.NODE_ENV
+    const previousSecret = env.BETTER_AUTH_SECRET
     env.NODE_ENV = 'production'
+    env.BETTER_AUTH_SECRET = 'Zq7-Lm2_Rt8+Vb4/Nc6=Hd1.Ys5~Wa3x'
     try {
       expect(loadWithThemeAuth(undefined).betterAuthOptions.emailAndPassword.enabled).toBe(false)
       expect(loadWithThemeAuth({ emailAndPassword: { enabled: true } }).betterAuthOptions.emailAndPassword.enabled).toBe(true)
       expect(loadWithThemeAuth({ methods: ['email-password', 'google'] }).betterAuthOptions.emailAndPassword.enabled).toBe(true)
     } finally {
       env.NODE_ENV = previous
+      env.BETTER_AUTH_SECRET = previousSecret
     }
   })
 
