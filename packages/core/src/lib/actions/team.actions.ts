@@ -46,6 +46,7 @@ import { TeamInvitationService } from '../services/team-invitation.service'
 import { updateTeamSchema } from '../teams/schema'
 import type { ZodError } from 'zod'
 import { formatZodError } from './validation'
+import { actionRateLimitError } from './rate-limit'
 import type { Team, TeamRole, TeamMember } from '../teams/types'
 import type { EntityActionResult, EntityActionVoidResult } from './types'
 import { getInvitableRoles } from '../teams/permissions'
@@ -172,6 +173,9 @@ export async function updateTeam(
       return { success: false, error: permResult.error }
     }
 
+    const limited = await actionRateLimitError(userId, 'write')
+    if (limited) return { success: false, error: limited }
+
     // 4. Validate the fields with the schema of PATCH /api/v1/teams/:teamId
     const parsed = updateTeamSchema.safeParse(data)
     if (!parsed.success) {
@@ -260,6 +264,9 @@ export async function inviteMember(
       return { success: false, error: 'Authentication required' }
     }
 
+    const limited = await actionRateLimitError(session.user.id, 'write')
+    if (limited) return { success: false, error: limited }
+
     const result = await TeamInvitationService.create({
       teamId,
       actor: { id: session.user.id, email: session.user.email },
@@ -343,6 +350,9 @@ export async function removeMember(
     if (permResult.success === false) {
       return { success: false, error: permResult.error }
     }
+
+    const limited = await actionRateLimitError(userId, 'write')
+    if (limited) return { success: false, error: limited }
 
     // 4. Get the member to find their userId
     // The memberId is the user's ID in the context of team actions
@@ -440,6 +450,9 @@ export async function updateMemberRole(
     }
     const { userId } = authResult
 
+    const limited = await actionRateLimitError(userId, 'write')
+    if (limited) return { success: false, error: limited }
+
     // 3. Get requestor's role
     const requestorRole = await TeamMemberService.getRole(teamId, userId)
     if (!requestorRole) {
@@ -522,6 +535,9 @@ export async function transferTeamOwnership(
     if (authResult.success === false) {
       return { success: false, error: authResult.error }
     }
+
+    const limited = await actionRateLimitError(authResult.userId, 'strict')
+    if (limited) return { success: false, error: limited }
 
     await TeamMemberService.transferOwnership(teamId, newOwnerId, authResult.userId)
 

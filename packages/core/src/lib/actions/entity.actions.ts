@@ -44,6 +44,8 @@ import { GenericEntityService } from '../services/generic-entity.service'
 import { entityRegistry } from '../entities/registry'
 import { getAuthorizationSession } from '../auth/authorization-session'
 import { checkPermission } from '../permissions/check'
+import { actionRateLimitError } from './rate-limit'
+import { MAX_BATCH_DELETE_IDS } from './types'
 import type {
   EntityActionResult,
   EntityActionVoidResult,
@@ -153,6 +155,9 @@ export async function createEntity<T = unknown>(
       return { success: false, error: 'Permission denied' }
     }
 
+    const limited = await actionRateLimitError(userId, 'write')
+    if (limited) return { success: false, error: limited }
+
     // 4. Create entity via service
     const result = await GenericEntityService.create<T>(
       entitySlug,
@@ -242,6 +247,9 @@ export async function updateEntity<T = unknown>(
     if (!hasPermission) {
       return { success: false, error: 'Permission denied' }
     }
+
+    const limited = await actionRateLimitError(userId, 'write')
+    if (limited) return { success: false, error: limited }
 
     // 4. Update entity via service
     // SECURITY: Pass teamId to prevent cross-team access for multi-team users
@@ -333,6 +341,9 @@ export async function deleteEntity(
     if (!hasPermission) {
       return { success: false, error: 'Permission denied' }
     }
+
+    const limited = await actionRateLimitError(userId, 'write')
+    if (limited) return { success: false, error: limited }
 
     // 4. Delete entity via service
     // SECURITY: Pass teamId to prevent cross-team access for multi-team users
@@ -541,6 +552,10 @@ export async function deleteEntities(
       return { success: false, error: 'At least one ID is required' }
     }
 
+    if (ids.length > MAX_BATCH_DELETE_IDS) {
+      return { success: false, error: `At most ${MAX_BATCH_DELETE_IDS} IDs can be deleted per call` }
+    }
+
     const entityConfig = entityRegistry.get(entitySlug)
     if (!entityConfig) {
       return {
@@ -561,6 +576,9 @@ export async function deleteEntities(
     if (!hasPermission) {
       return { success: false, error: 'Permission denied' }
     }
+
+    const limited = await actionRateLimitError(userId, 'write')
+    if (limited) return { success: false, error: limited }
 
     // Use efficient batch delete (hooks are executed if enabled)
     // SECURITY: Pass teamId to prevent cross-team access for multi-team users

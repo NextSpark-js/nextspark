@@ -13,6 +13,8 @@ const mockCheckRateLimit = jest.fn()
 const mockAuthenticateRequest = jest.fn()
 const mockGetSession = jest.fn()
 
+jest.mock('@/core/lib/actions/rate-limit', () => ({ actionRateLimitError: jest.fn().mockResolvedValue(null) }))
+
 jest.mock('@/core/lib/db', () => ({
   ...jest.requireActual('@/core/lib/db'),
   queryWithRLS: jest.fn(),

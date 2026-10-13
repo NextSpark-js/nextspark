@@ -26,6 +26,8 @@ const mockQueryOne = jest.fn(async (sql: string) => {
   if (sql.includes('FROM "users"')) return { role: 'member' }
   return null
 })
+jest.mock('@/core/lib/actions/rate-limit', () => ({ actionRateLimitError: jest.fn().mockResolvedValue(null) }))
+
 jest.mock('@/core/lib/db', () => ({
   queryOne: (sql: string) => mockQueryOne(sql),
   queryOneWithRLS: jest.fn(),

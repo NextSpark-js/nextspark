@@ -19,6 +19,9 @@ import { GenericEntityService } from '@/core/lib/services/generic-entity.service
 import { entityRegistry } from '@/core/lib/entities/registry'
 
 // Mock GenericEntityService
+// The per-user limit is covered in actions-rate-limit.test.ts
+jest.mock('@/core/lib/actions/rate-limit', () => ({ actionRateLimitError: jest.fn().mockResolvedValue(null) }))
+
 jest.mock('@/core/lib/services/generic-entity.service', () => ({
   GenericEntityService: {
     create: jest.fn(),

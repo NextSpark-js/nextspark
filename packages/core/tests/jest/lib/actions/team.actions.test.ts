@@ -14,6 +14,9 @@ import { TeamService } from '@/core/lib/services/team.service'
 import { TeamMemberService } from '@/core/lib/services/team-member.service'
 
 // Mock TeamService
+// The per-user limit is covered in actions-rate-limit.test.ts
+jest.mock('@/core/lib/actions/rate-limit', () => ({ actionRateLimitError: jest.fn().mockResolvedValue(null) }))
+
 jest.mock('@/core/lib/services/team.service', () => ({
   TeamService: {
     update: jest.fn(),

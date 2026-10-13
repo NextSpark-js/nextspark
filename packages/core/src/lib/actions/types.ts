@@ -115,6 +115,12 @@ export interface ActionAuthContext {
 // ============================================
 
 /**
+ * Most ids one deleteEntities call takes. Each id runs its hooks, a SELECT and a DELETE in turn, so the
+ * cost of a call grows with the list; split a larger delete into calls of at most this many.
+ */
+export const MAX_BATCH_DELETE_IDS = 100
+
+/**
  * Result of batch delete operation
  */
 export interface BatchDeleteResult {

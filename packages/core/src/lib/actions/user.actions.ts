@@ -36,6 +36,7 @@ import { getAuthorizationSession } from '../auth/authorization-session'
 import { UserService, type UpdateUserPayload } from '../services/user.service'
 import { updateProfileSchema, avatarImageSchema } from '../users/schema'
 import { formatZodError } from './validation'
+import { actionRateLimitError } from './rate-limit'
 import type { EntityActionResult, EntityActionVoidResult } from './types'
 
 // ============================================================================
@@ -109,6 +110,9 @@ export async function updateProfile(
     }
 
     const userId = session.user.id
+
+    const limited = await actionRateLimitError(userId, 'write')
+    if (limited) return { success: false, error: limited }
 
     // 2. Validate input
     if (!data || Object.keys(data).length === 0) {
@@ -194,6 +198,9 @@ export async function updateAvatar(
     }
 
     const userId = session.user.id
+
+    const limited = await actionRateLimitError(userId, 'write')
+    if (limited) return { success: false, error: limited }
 
     // 2. Extract avatar URL from FormData
     const avatarValue = formData.get('avatar') ?? formData.get('image')
@@ -296,6 +303,9 @@ export async function deleteAccount(): Promise<EntityActionVoidResult> {
     }
 
     const userId = session.user.id
+
+    const limited = await actionRateLimitError(userId, 'strict')
+    if (limited) return { success: false, error: limited }
 
     // 2. Anonymize the account: scrubs user metadata, frees the UNIQUE email,
     // strips PII, revokes every session + stored credential, deactivates the

@@ -13,6 +13,9 @@ import {
 import { UserService } from '@/core/lib/services/user.service'
 
 // Mock UserService
+// The per-user limit is covered in actions-rate-limit.test.ts
+jest.mock('@/core/lib/actions/rate-limit', () => ({ actionRateLimitError: jest.fn().mockResolvedValue(null) }))
+
 jest.mock('@/core/lib/services/user.service', () => ({
   UserService: {
     updateUser: jest.fn(),
