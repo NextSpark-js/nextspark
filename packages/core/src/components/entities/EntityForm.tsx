@@ -51,15 +51,18 @@ interface FormData {
 /**
  * Validate form data against entity configuration
  */
-function validateFormData(
+export function validateFormData(
   data: FormData,
-  entityConfig: EntityConfig
+  entityConfig: EntityConfig,
+  hiddenFields: string[] = []
 ): Record<string, string> {
   const errors: Record<string, string> = {}
 
   entityConfig.fields.forEach(field => {
     // Skip fields that are not shown in form (they are handled by backend)
     if (!field.display.showInForm) return
+    // A hidden field is rendered (and filled) elsewhere by the theme: an error on it would be invisible
+    if (hiddenFields.includes(field.name)) return
 
     const value = data[field.name]
 
@@ -249,7 +252,7 @@ export function EntityForm({
     e.preventDefault()
 
     // Validate form
-    const errors = validateFormData(formData, entityConfig)
+    const errors = validateFormData(formData, entityConfig, hiddenFields)
     const allErrors = { ...errors, ...validationErrors }
 
     if (Object.keys(allErrors).length > 0) {
@@ -265,7 +268,7 @@ export function EntityForm({
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, entityConfig, validationErrors, onSubmit])
+  }, [formData, entityConfig, hiddenFields, validationErrors, onSubmit])
 
   const allErrors = { ...localValidationErrors, ...validationErrors }
   const hasErrors = Object.keys(allErrors).length > 0
