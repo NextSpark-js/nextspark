@@ -47,7 +47,7 @@ function renderedGroups(file: string): TranslationGroup[] {
   if (relative.includes('/components/dashboard/') || relative.includes('/components/billing/') ||
       relative.includes('/components/entities/') || relative.includes('/components/media/') ||
       relative.includes('/components/patterns/') || relative.includes('/components/permissions/') ||
-      relative.includes('/components/settings/') || relative.includes('/components/teams/') ||
+      relative.includes('/components/settings/') || relative.includes('/components/teams/') || relative.includes('/components/ui/simple-relation-select') ||
       relative.includes('/utils/dev/TranslationDebugger') || relative.includes('/hooks/useContentTranslation')) return ['dashboard']
   if (relative.includes('/hooks/useValidationSchemas')) return ['auth', 'dashboard']
   if (relative.startsWith('plugins/langchain/components/observability/')) return ['superadmin']

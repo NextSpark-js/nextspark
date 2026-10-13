@@ -4,6 +4,7 @@ import * as React from "react"
 import { Button } from './button'
 import { Badge } from './badge'
 import { X } from "lucide-react"
+import { useTranslations } from 'next-intl'
 import { parseClientChildEntity as parseChildEntity, getClientEntityApiPath as getEntityApiPath } from '../../lib/entities/client-entity-meta'
 import { fetchWithTeam } from '../../lib/api/entities'
 
@@ -79,7 +80,10 @@ export function SimpleRelationSelect({
   filter,
   id,
 }: SimpleRelationSelectProps) {
+  const t = useTranslations('common')
   const [open, setOpen] = React.useState(false)
+  const [search, setSearch] = React.useState('')
+  const [searching, setSearching] = React.useState(false)
   const [options, setOptions] = React.useState<SimpleEntityOption[]>([])
   const [propertyOptionsState, setPropertyOptionsState] = React.useState<SimplePropertyOption[]>([])
   const [loading, setLoading] = React.useState(false)
@@ -234,6 +238,64 @@ export function SimpleRelationSelect({
       loadOptions()
     }
   }, [entityType, parentId, options.length, loading, loadOptions])
+
+  // handleSelect closes the popover with setOpen(false) without going through
+  // onOpenChange, so the search is cleared by an effect on `open`.
+  React.useEffect(() => {
+    if (!open) setSearch('')
+  }, [open])
+
+  // The list only holds the first `limit` records (the API caps limit at 100),
+  // so a typed term is also searched server-side; hits merge into the options.
+  const filterKey = JSON.stringify(filter ?? {})
+  React.useEffect(() => {
+    const term = search.trim()
+    if (usePropertyMode || term.length < 2 || parseChildEntity(entityType).isChild) return
+    const apiPath = getEntityApiPath(entityType)
+    if (!apiPath) return
+
+    // Cleanup flips `cancelled`, so only the latest search can write state.
+    let cancelled = false
+    setSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const url = new URL(withBasePath(`/api/v1/${apiPath}`), window.location.origin)
+        url.searchParams.set('search', term)
+        url.searchParams.set('limit', String(limit))
+        if (parentId) url.searchParams.set('parentId', parentId)
+        if (userFiltered) url.searchParams.set('userFiltered', 'true')
+        for (const [key, val] of Object.entries(JSON.parse(filterKey) as Record<string, string>)) {
+          url.searchParams.set(key, val)
+        }
+
+        const response = await fetchWithTeam(url.toString(), { method: 'GET', credentials: 'include' })
+        if (cancelled || !response.ok) return
+        const result = await response.json()
+        if (cancelled || !result.success || !Array.isArray(result.data)) return
+
+        const found = result.data.map((item: Record<string, unknown>) => ({
+          id: String(item.id || ''),
+          title: String(item[titleField || 'name'] || item.name || item.title || item.id || ''),
+          subtitle: String(item.industry || item.description || ''),
+          entityType: entityType
+        }))
+        setOptions(prev => {
+          const known = new Set(prev.map(o => o.id))
+          return [...prev, ...found.filter((o: SimpleEntityOption) => !known.has(o.id))]
+        })
+      } catch (error) {
+        console.error(`Error searching options for ${entityType}:`, error)
+      } finally {
+        if (!cancelled) setSearching(false)
+      }
+    }, 300)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+      setSearching(false)
+    }
+  }, [search, entityType, parentId, titleField, usePropertyMode, userFiltered, limit, filterKey])
 
   // Load selected options details by IDs
   const loadSelectedOptions = React.useCallback(async (ids: string[]) => {
@@ -599,10 +661,10 @@ export function SimpleRelationSelect({
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
           <CommandList>
             <CommandEmpty>
-              {loading ? "Loading..." : "No options found."}
+              {loading || searching ? t('status.loading') : "No options found."}
             </CommandEmpty>
             <CommandGroup>
               {usePropertyMode ? (

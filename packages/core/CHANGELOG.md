@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `SimpleRelationSelect` searches the related entity on the server as you type (debounced, two characters or more) and merges the hits into its options, so a record outside the first page of results can be found.
 - The cached reads of the public item pages, the patterns they reference and the docs pages take only plain names, validate them first and work out the rest (table, columns, published status, docs files) themselves; an argument that does not fit answers not found.
 - A project whose database was migrated while it ran Better Auth 1.7.0 to 1.7.2 (possible up to `0.1.0-beta.184`) creates accounts
   again: migration 038 makes the `account.issuer` column those releases added nullable. Before, a Google sign-in or a password sign-up
