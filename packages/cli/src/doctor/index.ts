@@ -13,6 +13,7 @@ import chalk from '../utils/colors.js'
 import { checkDependencies } from './checks/dependencies.js'
 import { checkConfigs } from './checks/config.js'
 import { checkDatabase } from './checks/database.js'
+import { checkAuthSchema } from './checks/auth-schema.js'
 import { checkImports } from './checks/imports.js'
 
 /**
@@ -103,6 +104,7 @@ export async function runHealthCheck(): Promise<HealthCheckResult[]> {
     { name: 'Dependencies', fn: checkDependencies },
     { name: 'Configuration', fn: checkConfigs },
     { name: 'Database', fn: checkDatabase },
+    { name: 'Auth schema', fn: () => checkAuthSchema() },
     { name: 'Imports', fn: checkImports },
   ]
 

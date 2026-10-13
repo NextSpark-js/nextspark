@@ -43,12 +43,9 @@ function parseEnvFile(content: string): Record<string, string> {
 }
 
 /**
- * Check if DATABASE_URL is configured
+ * The variables of the project's .env.local and .env (.env.local first)
  */
-export async function checkDatabase(): Promise<HealthCheckResult> {
-  const cwd = process.cwd()
-
-  // Check .env file
+export async function readProjectEnv(cwd = process.cwd()): Promise<Record<string, string>> {
   const envPath = path.join(cwd, '.env')
   const envLocalPath = path.join(cwd, '.env.local')
 
@@ -73,6 +70,18 @@ export async function checkDatabase(): Promise<HealthCheckResult> {
       // Ignore read errors
     }
   }
+
+  return envVars
+}
+
+/**
+ * Check if DATABASE_URL is configured
+ */
+export async function checkDatabase(): Promise<HealthCheckResult> {
+  const cwd = process.cwd()
+  const envPath = path.join(cwd, '.env')
+  const envLocalPath = path.join(cwd, '.env.local')
+  const envVars = await readProjectEnv(cwd)
 
   // Also check environment variable directly
   const databaseUrl = envVars['DATABASE_URL'] || process.env.DATABASE_URL

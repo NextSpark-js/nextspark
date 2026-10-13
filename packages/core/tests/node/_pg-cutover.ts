@@ -23,7 +23,7 @@ async function freePort() {
   return port
 }
 
-/** A throwaway cluster with core's migrations (no sample data), an owner client and an app client. */
+/** A throwaway cluster with core's migrations (no sample data), an owner client and an app client, and their URLs. */
 export async function cutoverDatabase(t: TestContext) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-rls-pg-'))
   const port = await freePort()
@@ -33,8 +33,9 @@ export async function cutoverDatabase(t: TestContext) {
     execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
     fs.rmSync(dir, { recursive: true, force: true })
   })
+  const url = (user: string) => `postgresql://${user}@127.0.0.1:${port}/postgres?sslmode=disable`
   const connect = async (user: string) => {
-    const client = new pg.Client({ connectionString: `postgresql://${user}@127.0.0.1:${port}/postgres?sslmode=disable` })
+    const client = new pg.Client({ connectionString: url(user) })
     // the cluster stops under it at the end of the test
     client.on('error', () => {})
     await client.connect()
@@ -48,7 +49,7 @@ export async function cutoverDatabase(t: TestContext) {
   // the documented cutover: a login without BYPASSRLS that inherits nextspark_app
   await owner.query('CREATE ROLE app_login LOGIN NOSUPERUSER NOBYPASSRLS INHERIT IN ROLE nextspark_app')
   const app = await connect('app_login')
-  return { owner, app }
+  return { owner, app, ownerUrl: url('owner'), appUrl: url('app_login') }
 }
 
 /** Runs `sql` on the app connection as `userId`, in its own transaction, as lib/db.ts does. */

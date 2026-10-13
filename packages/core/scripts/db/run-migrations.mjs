@@ -4,6 +4,7 @@ import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runAndRec
 import { getConfig } from '../build/registry/config.mjs';
 import { isSampleDataMigration, sampleDataPolicy } from './sample-data.mjs';
 import { setProjectEnv } from './ssl-config.mjs';
+import { authSchemaProblems, authSchemaReport } from './check-auth-schema.mjs';
 
 const projectConfig = getConfig();
 const projectRoot = projectConfig.projectRoot;
@@ -698,8 +699,29 @@ async function runAllMigrations() {
   
   console.log("\n📋 PHASE 2: Entity migrations");
   await runEntityMigrations();
-  
+
+  // A theme or project migration can leave an auth table Better Auth refuses to start on
+  await checkAuthSchema();
+
   console.log("\n🎉 All migrations completed successfully!");
+}
+
+async function checkAuthSchema() {
+  const client = migrationClient(MIGRATION_URL, TIME_LIMIT);
+  let problems;
+  try {
+    await client.connect();
+    problems = await authSchemaProblems(client);
+  } catch (error) {
+    console.error("❌ Could not check the auth tables:", error.message);
+    process.exit(1);
+  } finally {
+    await client.end().catch(() => {});
+  }
+  if (problems.length > 0) {
+    console.error(`\n❌ ${authSchemaReport(problems)}`);
+    process.exit(1);
+  }
 }
 
 let MIGRATIONS;
