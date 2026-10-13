@@ -534,6 +534,7 @@ export async function listEntities<T = unknown>(
  * @param ids - Array of entity IDs to delete
  * @param config - Optional configuration for revalidation/redirect
  * @returns Count of deleted entities
+ * @remarks Takes at most `MAX_BATCH_DELETE_IDS` (100) ids per call; a longer list is refused.
  *
  * @example
  * ```typescript

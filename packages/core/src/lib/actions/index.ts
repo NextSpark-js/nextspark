@@ -106,3 +106,4 @@ export type {
   ActionAuthContext,
   BatchDeleteResult,
 } from './types'
+export { MAX_BATCH_DELETE_IDS } from './types'

@@ -134,7 +134,7 @@ await deleteEntity('products', productId, {
 
 ### deleteEntities (Batch)
 
-Delete multiple entities at once.
+Delete multiple entities at once. At most 100 ids per call (`MAX_BATCH_DELETE_IDS`); a longer list is refused.
 
 ```typescript
 const result = await deleteEntities('products', ['id1', 'id2', 'id3'])
