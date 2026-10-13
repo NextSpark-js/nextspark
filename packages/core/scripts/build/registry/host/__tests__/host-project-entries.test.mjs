@@ -238,3 +238,17 @@ test('an invalid createProxy authenticatedPaths entry is refused at prepare, not
     cleanup()
   }
 })
+
+test('an authenticatedPaths array that is not only string literals is left to createProxy at start', async () => {
+  const { authenticatedPathLiterals, proxyPathDiagnostics } = await import('../proxy-paths.mjs')
+  const { root, cleanup } = project()
+  try {
+    for (const array of ["[`/acc${x}`]", "[R['/x/*']]", "[f('/x/*')]", "['/a' + '/b']", "[...BASE, '/x/*']"]) {
+      write(root, 'src/proxy.ts', `export const proxy = createProxy({ authenticatedPaths: ${array} })\n`)
+      assert.deepEqual(proxyPathDiagnostics(root), [], array)
+    }
+    assert.deepEqual(authenticatedPathLiterals("createProxy({ authenticatedPaths: [`/a`, \"/b\", '/c',] })"), ['/a', '/b', '/c'])
+  } finally {
+    cleanup()
+  }
+})

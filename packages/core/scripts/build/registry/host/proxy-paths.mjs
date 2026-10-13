@@ -3,7 +3,7 @@
  *
  * The entries are read by `createProxy` when the server starts, so a bad one used to build fine and then answer 500 to
  * every request. `nextspark prepare` (so `nextspark build`) reads the string literals of the array in the project's
- * proxy and refuses the ones `createProxy` would refuse. An array built from variables is not read: createProxy still
+ * proxy and refuses the ones `createProxy` would refuse. An array that is not only string literals is not read: createProxy still
  * checks it at start. The rules are those of createProxy in src/proxy/index.ts; the node test keeps the two together.
  *
  * @module core/scripts/build/registry/host/proxy-paths
@@ -34,19 +34,34 @@ export function authenticatedPathProblem(entry) {
   return null
 }
 
-/** The string literals of every `authenticatedPaths: [ ... ]` array in `source` (comments aside). */
+/**
+ * The string literals of every `authenticatedPaths: [ ... ]` array in `source` (comments aside) whose elements are all
+ * plain literals ('..', "..", or a backtick string without `${`), separated by commas. An array with anything else in it
+ * (an identifier, a call, an index, a spread, an interpolation, `+`) is skipped whole: its value is only known at run
+ * time, where createProxy checks it.
+ */
 export function authenticatedPathLiterals(source) {
   const code = withoutComments(source)
   const found = []
   for (const start of code.matchAll(/\bauthenticatedPaths\s*:\s*\[/g)) {
+    const entries = []
     let i = start.index + start[0].length
-    for (; i < code.length && code[i] !== ']'; i++) {
+    let plain = true
+    for (;;) {
+      while (/\s/.test(code[i] ?? '')) i++
+      if (code[i] === ']') break
       const quote = code[i]
-      if (quote !== "'" && quote !== '"' && quote !== '`') continue
+      if (quote !== "'" && quote !== '"' && quote !== '`') { plain = false; break }
       let value = ''
       for (i++; i < code.length && code[i] !== quote; i++) value += code[i] === '\\' ? code[++i] ?? '' : code[i]
-      found.push(value)
+      if (i >= code.length || (quote === '`' && value.includes('${'))) { plain = false; break }
+      entries.push(value)
+      i++
+      while (/\s/.test(code[i] ?? '')) i++
+      if (code[i] === ',') i++
+      else if (code[i] !== ']') { plain = false; break }
     }
+    if (plain) found.push(...entries)
   }
   return found
 }

@@ -20,7 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A request hook that throws now answers `500`.** Before, the error was logged and the request went on to core's checks and the page. A hook
   that relied on that (an optional rule that fails when its data source is down) catches its own error and returns `null`. There is no option
-  to continue after a hook error.
+  to continue after a hook error. `executeProjectMiddleware` from `@nextsparkjs/core/lib/middleware` now rethrows the hook's error instead of
+  logging it and returning `null`; a custom proxy that calls it catches the error and answers its own.
 - **`authenticatedPaths` entries written as patterns are refused.** `/account/:path*`, `/account/*` and `/account(.*)` were accepted and
   gated nothing; use the literal prefix, `/account`, which covers the path and everything under it. A dynamic segment such as
   `/[tenant]/billing` cannot be gated by prefix: gate its fixed parent, or check the session in the page or layout.

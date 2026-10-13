@@ -690,12 +690,8 @@ export async function executeProjectMiddleware(
   const entry = Object.values(MIDDLEWARE_REGISTRY).find(candidate => candidate.exists)
   if (!entry) return null
 
-  try {
-    return await entry.middleware(request, coreSession)
-  } catch (error) {
-    console.error('Error executing the project request hook:', error)
-    return null
-  }
+  // A hook's error is not caught here: core's proxy turns it into a fixed 500
+  return entry.middleware(request, coreSession)
 }
 ```
 
