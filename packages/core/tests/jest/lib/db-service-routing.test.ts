@@ -2,7 +2,7 @@
  * DB service-context routing tests (RLS Enforcement Layer, beta.167)
  *
  * Validates the two-pool routing that makes the RLS cutover possible:
- * - calls WITH a userId  -> app pool (RLS), and a `SET LOCAL app.user_id` is set
+ * - calls WITH a userId  -> app pool (RLS), and `app.user_id` is set with set_config
  * - calls WITHOUT userId  -> service pool (bypass), no GUC
  * - `{ service: true }`   -> service pool even when a userId is present (no GUC)
  * - bare query/queryOne/queryRows -> service pool (system ops)
@@ -87,7 +87,7 @@ describe('db.ts service-context routing', () => {
   function setLocalCalls(client: MockClient): string[] {
     return client.query.mock.calls
       .map((c) => String(c[0]))
-      .filter((sql) => sql.includes('SET LOCAL app.user_id'));
+      .filter((sql) => sql.includes("set_config('app.user_id'"));
   }
 
   test('two distinct pools are created (app + service)', () => {
@@ -102,6 +102,15 @@ describe('db.ts service-context routing', () => {
     expect(pools[APP].connect).toHaveBeenCalledTimes(1);
     expect(pools[SVC].connect).not.toHaveBeenCalled();
     expect(setLocalCalls(pools[APP].__client)).toHaveLength(1);
+  });
+
+  test('the user id travels as a bound parameter, never inside the SQL text', async () => {
+    const { db, pools } = loadDb();
+    await db.queryWithRLS('SELECT 1', [], USER_ID);
+
+    const call = pools[APP].__client.query.mock.calls.find((c) => String(c[0]).includes('set_config'));
+    expect(call?.[0]).toBe("SELECT set_config('app.user_id', $1, true)");
+    expect(call?.[1]).toEqual([USER_ID]);
   });
 
   test('queryWithRLS WITHOUT userId -> service pool + NO GUC', async () => {

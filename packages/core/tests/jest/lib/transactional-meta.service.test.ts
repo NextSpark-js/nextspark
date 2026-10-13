@@ -31,4 +31,15 @@ describe('TransactionalMetaService - parent column of the metas table', () => {
     expect(sql).toContain('ON CONFLICT ("pageId", "metaKey")');
     expect(sql).not.toContain('"entityId"');
   });
+
+  test('the RLS user and the lock timeout are bound parameters of set_config', async () => {
+    mockQuery.mockResolvedValue({ rows: [{ column: 'pageId' }], rowCount: 1 });
+
+    await TransactionalMetaService.updateWithLock('pages', 'page-1', 'counter', () => ({ n: 1 }), "u'1", { lockTimeout: 1500 });
+
+    const calls = mockClientQuery.mock.calls;
+    expect(calls).toContainEqual(["SELECT set_config('app.user_id', $1, true)", ["u'1"]]);
+    expect(calls).toContainEqual(["SELECT set_config('lock_timeout', $1, true)", ['1500ms']]);
+    expect(calls.map(([text]) => String(text)).join('\n')).not.toContain('SET LOCAL');
+  });
 });

@@ -151,12 +151,10 @@ export class TransactionalMetaService {
         await client.query('BEGIN')
 
         // Set RLS context - MUST match existing db.ts convention
-        await client.query(
-          `SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`
-        )
+        await client.query("SELECT set_config('app.user_id', $1, true)", [userId])
 
         // Set lock timeout to prevent indefinite waiting
-        await client.query(`SET LOCAL lock_timeout = '${opts.lockTimeout}ms'`)
+        await client.query("SELECT set_config('lock_timeout', $1, true)", [`${opts.lockTimeout}ms`])
 
         // SELECT FOR UPDATE - acquires row-level lock
         const selectQuery = `
@@ -310,9 +308,7 @@ export class TransactionalMetaService {
       await client.query('BEGIN')
 
       // Set RLS context - MUST match existing db.ts convention
-      await client.query(
-        `SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`
-      )
+      await client.query("SELECT set_config('app.user_id', $1, true)", [userId])
 
       // DELETE with RETURNING to check if row existed
       const deleteQuery = `

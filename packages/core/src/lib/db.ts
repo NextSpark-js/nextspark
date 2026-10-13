@@ -259,9 +259,8 @@ export async function queryWithRLS<T = unknown>(
     if (userId && !useService) {
       // Validate userId format before using in SET LOCAL
       validateUserId(userId);
-      // PostgreSQL doesn't accept parameters in SET LOCAL, must use string interpolation
-      // Safe: userId is validated above and comes from our auth system
-      await client.query(`SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`);
+      // SET LOCAL takes no parameters; set_config(..., true) is the same transaction-local setting
+      await client.query("SELECT set_config('app.user_id', $1, true)", [userId]);
     }
 
     // Execute the actual query
@@ -314,9 +313,8 @@ export async function mutateWithRLS<T = unknown>(
     if (userId && !useService) {
       // Validate userId format before using in SET LOCAL
       validateUserId(userId);
-      // PostgreSQL doesn't accept parameters in SET LOCAL, must use string interpolation
-      // Safe: userId is validated above and comes from our auth system
-      await client.query(`SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`);
+      // SET LOCAL takes no parameters; set_config(..., true) is the same transaction-local setting
+      await client.query("SELECT set_config('app.user_id', $1, true)", [userId]);
     }
 
     const result = await client.query(query, params);
@@ -361,9 +359,8 @@ export async function getTransactionClient(userId?: string | null, options?: RLS
     if (userId && !useService) {
       // Validate userId format before using in SET LOCAL
       validateUserId(userId);
-      // PostgreSQL doesn't accept parameters in SET LOCAL, must use string interpolation
-      // Safe: userId is validated above and comes from our auth system
-      await client.query(`SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`);
+      // SET LOCAL takes no parameters; set_config(..., true) is the same transaction-local setting
+      await client.query("SELECT set_config('app.user_id', $1, true)", [userId]);
     }
   } catch (error) {
     // Release client if transaction setup fails to prevent connection leak
