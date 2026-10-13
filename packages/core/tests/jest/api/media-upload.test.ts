@@ -35,6 +35,7 @@ jest.mock('@nextsparkjs/core/lib/services/media.service', () => ({
 }))
 
 jest.mock('@nextsparkjs/core/lib/media/utils', () => ({
+  ...jest.requireActual<object>('@nextsparkjs/core/lib/media/utils'),
   extractImageDimensions: mockExtractImageDimensions,
 }))
 
@@ -66,10 +67,14 @@ describe('POST /api/v1/media/upload', () => {
     return POST({ formData: jest.fn().mockResolvedValue(formData) } as never)
   }
 
-  const imageFile = () => Object.assign(
-    new File(['image'], 'upload.png', { type: 'image/png' }),
-    { arrayBuffer: jest.fn().mockResolvedValue(new TextEncoder().encode('image').buffer) }
+  const PNG_BYTES = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])
+
+  const fileOf = (name: string, type: string, bytes: Uint8Array) => Object.assign(
+    new File([bytes], name, { type }),
+    { arrayBuffer: jest.fn().mockResolvedValue(bytes.buffer) }
   )
+
+  const imageFile = () => fileOf('upload.png', 'image/png', PNG_BYTES)
 
   it('uploads files when files contains only File values', async () => {
     const response = await upload([imageFile()])
@@ -77,6 +82,28 @@ describe('POST /api/v1/media/upload', () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toMatchObject({ count: 1 })
     expect(mockPut).toHaveBeenCalledTimes(1)
+  })
+
+  it('stores the extension of the allow-listed type, not the one in the client file name', async () => {
+    const response = await upload([fileOf('page.html', 'image/png', PNG_BYTES)])
+
+    expect(response.status).toBe(200)
+    expect(mockPut.mock.calls[0][0]).toMatch(/^uploads\/temp\/\d+_[a-z0-9]+\.png$/)
+  })
+
+  it('refuses bytes that do not match the declared type', async () => {
+    const html = new TextEncoder().encode('<html><script>alert(1)</script></html>')
+    const response = await upload([fileOf('x.png', 'image/png', html)])
+
+    expect(response.status).toBe(400)
+    expect(mockPut).not.toHaveBeenCalled()
+    expect(mockCreateMedia).not.toHaveBeenCalled()
+  })
+
+  it('keeps a sanitized version of the original name for display', async () => {
+    await upload([fileOf('my <b>photo</b>.png', 'image/png', PNG_BYTES)])
+
+    expect(mockCreateMedia.mock.calls[0][2]).toMatchObject({ filename: 'my-b-photo-b-.png' })
   })
 
   it('ignores string values when files also contains a File', async () => {

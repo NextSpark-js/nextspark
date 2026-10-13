@@ -8,7 +8,8 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MEDIA_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
-import { extractImageDimensions } from '@nextsparkjs/core/lib/media/utils'
+import { extractImageDimensions, sanitizeFilename } from '@nextsparkjs/core/lib/media/utils'
+import { bytesMatchMime, extensionForMime } from '@nextsparkjs/core/lib/media/file-signature'
 import type { Media } from '@nextsparkjs/core/lib/media/types'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
@@ -142,8 +143,8 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       // Generate unique filename
       const timestamp = Date.now()
       const randomString = Math.random().toString(36).substring(2, 15)
-      const extension = file.name.split('.').pop() || 'bin'
-      const fileName = `${timestamp}_${randomString}.${extension}`
+      // The extension follows the allow-listed type, never the client's file name
+      const fileName = `${timestamp}_${randomString}.${extensionForMime(file.type)}`
 
       try {
         let uploadedUrl: string
@@ -151,6 +152,14 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
         // Read file buffer once - needed for both Vercel Blob and local storage
         // Important: File stream can only be read once, so we buffer it first
         const fileBuffer = Buffer.from(await file.arrayBuffer())
+
+        if (!bytesMatchMime(fileBuffer, file.type)) {
+          return createApiError(
+            `File ${sanitizeFilename(file.name)} does not match its declared type ${file.type}.`,
+            400,
+            { declaredType: file.type }
+          )
+        }
 
         if (useVercelBlob) {
           // Try Vercel Blob first - use buffer with content type
@@ -188,7 +197,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
             teamId,
             {
               url: uploadedUrl,
-              filename: file.name,
+              filename: sanitizeFilename(file.name),
               fileSize: file.size,
               mimeType: file.type,
               width: dimensions?.width ?? null,
