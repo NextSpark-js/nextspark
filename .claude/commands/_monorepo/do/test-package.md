@@ -363,6 +363,7 @@ Login is **passwordless by default**. There is no password to fill, and `CYPRESS
    grep 'is your verification code' "$TEST_DIR/dev.log" | tail -1
    # 📧 EMAIL INTERCEPTED ... Subject: 846899 is your verification code - test-package
    ```
+   The code is sent after the request answers (Better Auth's background tasks), so it can reach the log a moment later: if the line is not there yet, wait a second and grep again (up to ~15 s).
 4. Fill the **Sign-in code** textbox with the 6 digits and submit.
 
 **Expect:** redirect to `/dashboard`, heading "Welcome back, Super", sidebar links **Dashboard, Media, Pages, Posts, Tasks**.
