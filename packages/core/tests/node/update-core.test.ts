@@ -90,7 +90,7 @@ if (!fs.existsSync(path.join(root, 'pnpm-workspace.yaml'))) root = process.cwd()
 const lockfile = path.join(root, 'pnpm-lock.yaml')
 const lastInstall = path.join(root, 'node_modules', '.fake-last-install')
 const listed = fs.existsSync(path.join(root, 'pnpm-workspace.yaml'))
-  ? fs.readFileSync(path.join(root, 'pnpm-workspace.yaml'), 'utf8').split('\\n').map((line) => line.match(/^\\s*-\\s*'([^'*]+)'\\s*$/)?.[1]).filter(Boolean)
+  ? [...fs.readFileSync(path.join(root, 'pnpm-workspace.yaml'), 'utf8').matchAll(/(?:^\\s*-\\s*|[\\[,]\\s*)(?:'([^'*]+)'|"([^"*]+)"|([\\w.\\/-]+))(?=\\s*(?:[,\\]#]|$))/gm)].map((m) => m[1] || m[2] || m[3])
   : []
 const importers = [root, ...listed.map((dir) => path.join(root, dir))].filter((dir) => fs.existsSync(path.join(dir, 'package.json')))
 
@@ -798,6 +798,42 @@ test('in a web-mobile project it lists the @nextsparkjs pins in mobile/ and the 
   assert.match(result.stdout, /Not moved: [^\n]*other packages of the workspace[^\n]*\n {4}\.\.\/package\.json: @nextsparkjs\/ai-workflow 0\.1\.0-beta\.188\n {4}\.\.\/mobile\/package\.json: @nextsparkjs\/mobile 0\.1\.0-beta\.188\n {2}Set each to 0\.1\.0-beta\.189, then run: pnpm --dir \.\. install\n/)
   assert.doesNotMatch(result.stdout, /workspace:\*/)
   assert.equal(JSON.parse(fs.readFileSync(path.join(repo, 'mobile/package.json'), 'utf8')).dependencies['@nextsparkjs/mobile'], FROM)
+})
+
+/** A web-mobile project whose workspace yaml is `yaml`, with a directory per name in `dirs` pinning @nextsparkjs/mobile at FROM. */
+function webMobileWith(t: Parameters<typeof createProject>[0], yaml: string, dirs: string[]) {
+  const web = createProject(t, { webMobile: true })
+  const repo = path.dirname(web)
+  fs.writeFileSync(path.join(repo, 'pnpm-workspace.yaml'), yaml)
+  for (const dir of dirs) {
+    fs.mkdirSync(path.join(repo, dir), { recursive: true })
+    fs.writeFileSync(path.join(repo, dir, 'package.json'), JSON.stringify({ name: dir, dependencies: { '@nextsparkjs/mobile': FROM } }))
+  }
+  git(repo, 'add', '-A')
+  git(repo, 'commit', '-q', '-m', 'Workspace')
+  return web
+}
+
+test('only the packages: list of the workspace yaml names directories; onlyBuiltDependencies and the like do not', (t) => {
+  const web = webMobileWith(t, [
+    'allowBuilds:',
+    "  esbuild: true",
+    'onlyBuiltDependencies:',
+    "  - 'esbuild'",
+    'packages:',
+    "  - 'web'",
+    "  - 'mobile'",
+    'minimumReleaseAgeExclude:',
+    "  - '@nextsparkjs/*'",
+    "  - esbuild",
+    '',
+  ].join('\n'), ['mobile', 'esbuild'])
+
+  const result = runUpdateCore(web, ['--version', TO])
+
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.stdout, /\.\.\/mobile\/package\.json: @nextsparkjs\/mobile 0\.1\.0-beta\.188/)
+  assert.doesNotMatch(result.stdout, /esbuild\/package\.json/)
 })
 
 test('it lists nothing when no other package of the workspace pins a @nextsparkjs package off the target', (t) => {

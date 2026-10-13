@@ -382,20 +382,44 @@ function installRoot(cwd, top) {
 }
 
 /**
+ * The plain directories the `packages:` list of a pnpm-workspace.yaml names, block or
+ * inline, without comments or quotes. Other lists in the file (onlyBuiltDependencies,
+ * minimumReleaseAgeExclude, ...) are not read, and neither are globs or negations.
+ */
+function workspaceDirectories(yaml) {
+  const entries = []
+  let inPackages = false
+  for (const raw of yaml.split('\n')) {
+    if (/^\s*(#|$)/.test(raw)) continue
+    const line = raw.replace(/\s+#.*$/, '')
+    if (/^\S/.test(line)) {
+      const key = line.match(/^packages:\s*(.*?)\s*$/)
+      inPackages = key !== null && key[1] === ''
+      const inline = key?.[1].match(/^\[(.*)\]$/)
+      if (inline) entries.push(...inline[1].split(','))
+    } else if (inPackages) {
+      const item = line.match(/^\s*-\s*(.+?)\s*$/)
+      if (item) entries.push(item[1])
+    }
+  }
+  return entries
+    .map((entry) => entry.trim().replace(/^(['"])(.*)\1$/, '$2'))
+    .filter((entry) => entry && !/[*!]/.test(entry))
+}
+
+/**
  * The @nextsparkjs pins that sit in the workspace's other manifests and aren't
  * at `target`: update-core writes only the package.json of the project it runs
  * in. In a web-mobile project those are the workspace root's own package.json
  * and the directories pnpm-workspace.yaml lists, mobile/ among them.
- * ponytail: only plain directory entries in pnpm-workspace.yaml are read, not
- * globs; a project that lists `apps/*` gets no report for those.
+ * ponytail: only plain directory entries of `packages:` are read, not globs; a
+ * project that lists `apps/*` gets no report for those.
  */
 function otherWorkspacePins(cwd, root, target) {
   if (!root) return []
   let listed = []
   try {
-    listed = fs.readFileSync(path.join(root, 'pnpm-workspace.yaml'), 'utf8').split('\n')
-      .map((line) => line.match(/^\s*-\s*['"]?([^'"*#\s]+)['"]?\s*$/)?.[1])
-      .filter(Boolean)
+    listed = workspaceDirectories(fs.readFileSync(path.join(root, 'pnpm-workspace.yaml'), 'utf8'))
   } catch {}
 
   const pins = []
