@@ -133,20 +133,20 @@ export const GET = withRateLimitTier(async (request: NextRequest, { params }: Ro
 
     // Execute all queries in parallel.
     //
-    // The team_members queries run on the service (RLS-bypass) pool: team_members
-    // has no superadmin/developer bypass policy, so with the acting admin's own
-    // id as RLS context the SELECT policy silently ANDs "teams the actor belongs
-    // to" on top of WHERE "userId" = $1 and under-reports multi-team users.
-    // Authorization is already enforced above (superadmin/developer role check)
-    // and the WHERE clause scopes the rows to the subject user.
+    // All four run on the service (RLS-bypass) pool. users and team_members show
+    // a developer only themself and their teammates, and team_members has no
+    // superadmin bypass policy either, so with the acting admin's own id as RLS
+    // context the user was "not found" for a developer and multi-team users were
+    // under-reported. Authorization is already enforced above (superadmin/developer
+    // role check) and the WHERE clauses scope the rows to the subject user.
     const [userResults, teamsResults, countsResults, metasResults] = await Promise.all([
-      queryWithRLS(userQuery, [userId], session.user.id) as Promise<UserResult[]>,
+      queryWithRLS(userQuery, [userId], session.user.id, { service: true }) as Promise<UserResult[]>,
       queryWithRLS(teamsQuery, [userId], session.user.id, { service: true }) as Promise<TeamMembershipResult[]>,
       queryWithRLS(countsQuery, [userId], session.user.id, { service: true }) as Promise<{
         totalTeams: number;
         ownedTeams: number;
       }[]>,
-      queryWithRLS(metasQuery, [userId], session.user.id) as Promise<UserMetaResult[]>
+      queryWithRLS(metasQuery, [userId], session.user.id, { service: true }) as Promise<UserMetaResult[]>
     ]);
 
     // Check if user exists

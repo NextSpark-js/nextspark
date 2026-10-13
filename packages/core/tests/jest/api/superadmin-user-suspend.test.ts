@@ -14,7 +14,7 @@ jest.mock('@nextsparkjs/core/lib/db', () => ({ queryWithRLS: (...args: unknown[]
 const invalidateApiKeyCache = jest.fn()
 jest.mock('@nextsparkjs/core/lib/api/auth', () => ({ invalidateApiKeyCache: (hash: string) => invalidateApiKeyCache(hash) }))
 
-import { PATCH } from '../../../src/routes/api/superadmin/users/[userId]/route'
+import { GET, PATCH } from '../../../src/routes/api/superadmin/users/[userId]/route'
 
 const USERS: Record<string, string> = { 'sa-1': 'superadmin', 'sa-2': 'superadmin', 'dev-1': 'developer', 'mem-1': 'member', 'sus-1': 'suspended' }
 
@@ -103,5 +103,17 @@ describe('change-role', () => {
   it('only a superadmin grants the developer role', async () => {
     as('dev-1')
     expect((await patch('mem-1', { action: 'change-role', role: 'developer' })).status).toBe(403)
+  })
+})
+
+describe('GET', () => {
+  it('reads the user and their metadata on the service connection, so a developer sees them under RLS', async () => {
+    as('dev-1')
+    const response = await GET(new NextRequest('http://localhost/api/superadmin/users/mem-1'), { params: Promise.resolve({ userId: 'mem-1' }) } as never)
+    expect(response.status).toBe(200)
+    for (const table of ['"users"', '"users_metas"']) {
+      const [call] = queryWithRLS.mock.calls.filter(([s]: [string]) => s.includes(`FROM ${table}`))
+      expect(call[3]).toEqual({ service: true })
+    }
   })
 })
