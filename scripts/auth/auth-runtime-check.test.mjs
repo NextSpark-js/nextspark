@@ -39,18 +39,27 @@ http.createServer((req, res) => {
     if (url === '/api/auth/email-otp/send-verification-otp') {
       const n = (sends.get('all') ?? 0) + 1
       sends.set('all', n)
+      if (broken === 'otp-send') return send(500, {})
       if (n > 3 && broken !== 'rate-limit') return send(429, { message: 'Too many requests' })
-      if (!data.email.endsWith('@example.com') && broken !== 'blocked-domain') return send(403, { code: 'DOMAIN_NOT_ALLOWED' })
+      if (!data.email.endsWith('@example.com')) {
+        if (broken === 'blocked-domain') { /* answers 200 below */ }
+        else if (broken === 'blocked-mail') { send(403, { code: 'DOMAIN_NOT_ALLOWED' }); return fetch(process.env.RESEND_BASE_URL + '/emails', { method: 'POST', body: JSON.stringify({ to: [data.email], subject: '654321 is your code' }) }) }
+        else return send(403, { code: 'DOMAIN_NOT_ALLOWED' })
+      }
       send(200, { success: true })
       if (broken !== 'otp-mail') await fetch(process.env.RESEND_BASE_URL + '/emails', { method: 'POST', body: JSON.stringify({ to: [data.email], subject: '123456 is your code' }) })
       return
     }
     if (url === '/api/auth/sign-in/email-otp') {
+      if (broken === 'crash') process.exit(1)
+      if (broken === 'hang') return
+      if (broken === 'otp-verify') return send(401, { code: 'INVALID_OTP' })
       if (data.otp !== '123456') return send(400, { code: 'INVALID_OTP' })
       signedIn = true
+      if (broken === 'otp-verify-cookie') return send(200, { ok: true })
       return send(200, { ok: true }, { 'set-cookie': 'better-auth.session_token=tok; Path=/; HttpOnly' })
     }
-    if (url === '/api/auth/get-session') return send(200, signedIn && broken !== 'get-session' ? { user: { email: 'auth-runtime@example.com' } } : null)
+    if (url === '/api/auth/get-session') return send(200, signedIn && broken !== 'get-session' ? { session: { token: 'SECRET-TOKEN-VALUE' }, user: { email: 'auth-runtime@example.com' } } : null)
     if (url === '/api/auth/sign-out') { if (broken !== 'sign-out') signedIn = false; return send(200, { success: true }, { 'set-cookie': 'better-auth.session_token=; Max-Age=0; Path=/' }) }
     send(404, {})
   })
@@ -90,10 +99,30 @@ test('without --allowed-domain the blocked-domain step is skipped, with a note',
 })
 
 // Each break is one step's behaviour gone wrong; the run must exit 1 and say which step
-;['otp-mail', 'get-session', 'blocked-domain', 'sign-out', 'rate-limit'].forEach((step, i) => {
-  test(`a break in ${step} exits 1 and names the step`, () => {
-    const r = run(['--app', fakeProject(), '--port', String(39560 + i * 2), '--allowed-domain', 'example.com'], { FAKE_BREAK: step })
+const BREAKS = [
+  ['otp-send', 'otp-send'],
+  ['otp-mail', 'otp-mail'],
+  ['otp-verify', 'otp-verify'],
+  ['otp-verify-cookie', 'otp-verify'],
+  ['get-session', 'get-session'],
+  ['blocked-domain', 'blocked-domain'],
+  ['blocked-mail', 'blocked-domain'],
+  ['sign-out', 'sign-out'],
+  ['rate-limit', 'rate-limit'],
+  ['crash', 'otp-verify'],
+  ['hang', 'otp-verify'],
+]
+BREAKS.forEach(([broken, step], i) => {
+  test(`a break in ${broken} exits 1 and names the step ${step}`, () => {
+    const r = run(['--app', fakeProject(), '--port', String(39560 + i * 2), '--allowed-domain', 'example.com', '--request-timeout', '1500'], { FAKE_BREAK: broken })
     assert.equal(r.status, 1, r.stdout + r.stderr)
     assert.match(r.stderr, new RegExp(`step "${step}" failed`))
   })
+})
+
+test('a failed message never carries the session token', () => {
+  const r = run(['--app', fakeProject(), '--port', '39600', '--allowed-domain', 'example.com'], { FAKE_BREAK: 'sign-out' })
+  assert.equal(r.status, 1, r.stdout + r.stderr)
+  assert.match(r.stderr, /\[redacted\]/)
+  assert.doesNotMatch(r.stdout + r.stderr, /SECRET-TOKEN-VALUE/)
 })
