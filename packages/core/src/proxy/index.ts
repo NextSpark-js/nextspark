@@ -348,6 +348,18 @@ function mergeThemeHeaders(response: NextResponse, themeResponse: NextResponse |
   return response
 }
 
+/** How long the project's request hook may take; `createProxy({ hookTimeoutMs })` changes it */
+const DEFAULT_HOOK_TIMEOUT_MS = 5_000
+
+/** The hook's result, or a rejection once it has had `ms`. The hook is not cancelled: its own outbound calls need their own AbortSignal.timeout. */
+function withHookTimeout<T>(hook: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`the project request hook did not answer within ${ms} ms`)), ms)
+  })
+  return Promise.race([hook, timeout]).finally(() => clearTimeout(timer))
+}
+
 /** The answer when the project's request hook throws: fixed, with nothing of the error (it is only in the server log). */
 function hookFailed(request: NextRequest): NextResponse {
   return syncSessionHint(request, new NextResponse('Internal Server Error', { status: 500, headers: { 'cache-control': 'no-store' } }))
@@ -452,7 +464,7 @@ function warnLegacyDocsAccess(docsConfig: Parameters<typeof legacyDocsAccessMess
   console.warn(`[NextSpark] ${message}`)
 }
 
-async function handle(request: NextRequest, authenticatedPaths: readonly string[]): Promise<NextResponse> {
+async function handle(request: NextRequest, authenticatedPaths: readonly string[], hookTimeoutMs: number): Promise<NextResponse> {
   const originalTarget = requestTarget(request)
   const sanitizedHeaders = sanitizeRequestHeaders(request)
   // The project hook is an extension hook, not a replacement security
@@ -461,12 +473,12 @@ async function handle(request: NextRequest, authenticatedPaths: readonly string[
   let themeResponse: NextResponse | null = null
   if (hasProjectMiddleware()) {
     try {
-      themeResponse = await executeProjectMiddleware(
-        requestForTheme(request, sanitizedHeaders),
-        null
+      themeResponse = await withHookTimeout(
+        Promise.resolve(executeProjectMiddleware(requestForTheme(request, sanitizedHeaders), null)),
+        hookTimeoutMs
       )
     } catch (error) {
-      // Fail closed: a hook that denies (maintenance mode, an allow-list) and then throws must not let the request through
+      // Fail closed: a hook that denies (maintenance mode, an allow-list) and then throws or stalls must not let the request through
       console.error('Error executing the project request hook:', error)
       return hookFailed(request)
     }
@@ -679,6 +691,12 @@ export interface ProxyOptions {
    * and auth routes, /docs, /api/v1) is refused: it would not be gated.
    */
   authenticatedPaths?: readonly string[]
+  /**
+   * Milliseconds the project's request hook (`config/hooks/proxy.ts`) may take before the request fails
+   * with the same fixed 500 as a hook that throws. Default 5000. The hook is not cancelled: give its
+   * outbound calls their own `AbortSignal.timeout`.
+   */
+  hookTimeoutMs?: number
 }
 
 /**
@@ -706,9 +724,13 @@ export function createProxy(options: ProxyOptions = {}): (request: NextRequest) 
       throw new Error(`createProxy: authenticatedPaths entry ${JSON.stringify(prefix)} overlaps ${before}, which core's proxy handles before the authenticated paths (public pages, auth, docs.publicAccess, /api/v1 with its own authentication), so it would not need a session there`)
     }
   }
+  const hookTimeoutMs = options.hookTimeoutMs ?? DEFAULT_HOOK_TIMEOUT_MS
+  if (!Number.isFinite(hookTimeoutMs) || hookTimeoutMs <= 0) {
+    throw new Error(`createProxy: hookTimeoutMs is a number of milliseconds above 0. Got ${JSON.stringify(options.hookTimeoutMs)}`)
+  }
   const authenticatedPaths = [...AUTHENTICATED_PATHS, ...extra]
   return function proxy(request: NextRequest) {
-    return handle(request, authenticatedPaths)
+    return handle(request, authenticatedPaths, hookTimeoutMs)
   }
 }
 

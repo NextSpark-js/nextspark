@@ -41,7 +41,7 @@ jest.mock('next/server', () => {
 
 import { auth } from '@nextsparkjs/core/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { proxy } from '@nextsparkjs/core/proxy'
+import { proxy, createProxy } from '@nextsparkjs/core/proxy'
 
 const FORGED_IDENTITY = {
   'x-user-id': 'forged-user',
@@ -409,6 +409,40 @@ describe('project-hook proxy composition (#204)', () => {
     } finally {
       consoleError.mockRestore()
     }
+  })
+
+  describe('hook time limit', () => {
+    test('a hook that never answers fails closed with the same fixed 500 as a throwing hook', async () => {
+      mockedGetSession.mockResolvedValue({ user: { id: 'u1', role: 'member' } })
+      mockExecuteThemeMiddleware.mockImplementationOnce(() => new Promise(() => {}))
+      const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
+      try {
+        const response = await createProxy({ hookTimeoutMs: 20 })(request('/dashboard'))
+
+        expect(response.status).toBe(500)
+        expect(await response.text()).toBe('Internal Server Error')
+        expect(response.headers.get('cache-control')).toBe('no-store')
+        expect(consoleError).toHaveBeenCalledWith('Error executing the project request hook:', expect.objectContaining({
+          message: 'the project request hook did not answer within 20 ms',
+        }))
+      } finally {
+        consoleError.mockRestore()
+      }
+    })
+
+    test('a hook that answers within the limit is untouched', async () => {
+      mockedGetSession.mockResolvedValue({ user: { id: 'u1', role: 'member' } })
+      mockExecuteThemeMiddleware.mockImplementationOnce(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        return null
+      })
+
+      expect((await createProxy({ hookTimeoutMs: 1000 })(request('/'))).status).not.toBe(500)
+    })
+
+    test.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('createProxy refuses hookTimeoutMs %p', (hookTimeoutMs) => {
+      expect(() => createProxy({ hookTimeoutMs })).toThrow(/hookTimeoutMs/)
+    })
   })
 
   test('keeps basePath and query when a theme rewrite is denied', async () => {
