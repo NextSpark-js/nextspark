@@ -21,7 +21,6 @@ export interface UpdateUserPayload {
   country?: string
   timezone?: string
   language?: string
-  role?: UserRole
 }
 
 // Database user type (matches database schema)
@@ -305,7 +304,6 @@ export class UserService {
         country: 'country',
         timezone: 'timezone',
         language: 'language',
-        role: 'role',
       }
 
       // Build SET clause dynamically
