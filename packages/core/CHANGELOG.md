@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `/[tenant]/billing`, encoded or `..` segments) with an error that names the supported syntax; they matched only their own text and protected nothing.
 - `nextspark prepare` and `nextspark build` refuse an invalid `authenticatedPaths` entry written as a string literal in `src/proxy.ts`
   (`NS_PROXY_AUTHENTICATED_PATH_INVALID`), instead of the server answering `500` to every request after it starts.
+- The upgrade guide and the internationalization setup page show the nested `NextIntlClientProvider` for a project dashboard template with the
+  entity namespaces from `ENTITY_REGISTRY` (through `getConfiguredClientNamespaces`) next to the template's own; the earlier example left the
+  entity screens under it without messages.
 
 ### Upgrading
 

@@ -220,19 +220,22 @@ Core now sends each route group only the message namespaces it uses; the rest st
 // templates/dashboard/reports/layout.tsx
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
-import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
+import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 export default async function ReportsLayout({ children }: { children: React.ReactNode }) {
   const messages = await getMessages()
+  const { dashboard } = getConfiguredClientNamespaces({ entityRegistry: ENTITY_REGISTRY, appConfig: APP_CONFIG_MERGED })
   return (
-    <NextIntlClientProvider messages={selectMessages(messages, 'dashboard', ['reports'])}>
+    <NextIntlClientProvider messages={selectMessages(messages, 'dashboard', ['reports', ...dashboard])}>
       {children}
     </NextIntlClientProvider>
   )
 }
 ```
 
-The group is `'root'`, `'public'`, `'auth'`, `'dashboard'`, `'superadmin'` or `'devtools'`. There is no config key. The nested provider replaces the dashboard's messages for everything under it. If that part of the dashboard also renders entity screens, add those entities' names to the list. See [Project template namespace outside its route group](../11-internationalization/02-setup-and-configuration.md#project-template-namespace-outside-its-route-group).
+The group is `'root'`, `'public'`, `'auth'`, `'dashboard'`, `'superadmin'` or `'devtools'`. There is no config key. The nested provider replaces the dashboard's messages for everything under it, so list what the dashboard sends too: `getConfiguredClientNamespaces` gives the entity names from `ENTITY_REGISTRY` and the navigation namespaces from the app config, the same list core's dashboard layout sends. A list with only `['reports']` leaves every entity screen under it without messages (`MISSING_MESSAGE`). See [Project template namespace outside its route group](../11-internationalization/02-setup-and-configuration.md#project-template-namespace-outside-its-route-group).
 
 ### Files under the old `app/` that stop migrate
 

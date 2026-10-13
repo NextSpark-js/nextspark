@@ -437,6 +437,34 @@ export default async function BlogLayout({children}: {children: React.ReactNode}
 }
 ```
 
+A nested provider replaces the messages of the layout above it. Under the
+dashboard that includes the entities' namespaces and the navigation ones, which
+core builds from the generated registry and the app config. Build the list the
+same way, with the group's own extras added:
+
+```tsx
+// templates/dashboard/reports/layout.tsx
+import { NextIntlClientProvider } from 'next-intl'
+import { getMessages } from 'next-intl/server'
+import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
+import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
+
+export default async function ReportsLayout({children}: {children: React.ReactNode}) {
+  const messages = await getMessages()
+  const { dashboard } = getConfiguredClientNamespaces({ entityRegistry: ENTITY_REGISTRY, appConfig: APP_CONFIG_MERGED })
+  return (
+    <NextIntlClientProvider messages={selectMessages(messages, 'dashboard', ['reports', ...dashboard])}>
+      {children}
+    </NextIntlClientProvider>
+  )
+}
+```
+
+Without `...dashboard`, a client component under this layout that reads an
+entity's name or a navigation label logs `MISSING_MESSAGE`. Use
+`'superadmin'` and its list the same way under the superadmin group.
+
 Use a nested server layout even when the page itself is a client component.
 Do not move `getMessages` to a client component and do not read headers to
 infer a group. Add the namespace to the matching group in core only when the
