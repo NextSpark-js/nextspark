@@ -147,6 +147,17 @@ describe('validateScopesForUser', () => {
   });
 });
 
+describe('validateScopesForUser for a developer', () => {
+  it('grants a developer everything regardless of team context, as a superadmin', async () => {
+    mockQueryOne.mockResolvedValue({ role: 'developer' });
+
+    const result = await validateScopesForUser('user-1', null, ['pets:read', '*']);
+
+    expect(result).toEqual({ valid: true, allowedScopes: ['pets:read', '*'], deniedScopes: [] });
+    expect(mockListByUser).not.toHaveBeenCalled();
+  });
+});
+
 describe('canCreateApiKeys', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -154,6 +165,13 @@ describe('canCreateApiKeys', () => {
 
   it('allows a superadmin', async () => {
     mockQueryOne.mockResolvedValue({ role: 'superadmin' });
+
+    await expect(canCreateApiKeys('user-1')).resolves.toBe(true);
+    expect(mockListByUser).not.toHaveBeenCalled();
+  });
+
+  it('allows a developer, as a superadmin', async () => {
+    mockQueryOne.mockResolvedValue({ role: 'developer' });
 
     await expect(canCreateApiKeys('user-1')).resolves.toBe(true);
     expect(mockListByUser).not.toHaveBeenCalled();

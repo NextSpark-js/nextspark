@@ -11,7 +11,7 @@
   "dashboard": {
     "title": "Sector7",
     "subtitle": "Super-Administrator-Kontrollzentrum",
-    "restrictedAccess": "Zugangsbeschraenkter Bereich - Nur fuer Superadmin",
+    "restrictedAccess": "Zugangsbeschraenkter Bereich - Nur fuer Superadmin und Developer",
     "systemStatus": "Systemstatus",
     "systemVersion": "Plattformversion",
     "securityLevel": "Sicherheitsstufe",

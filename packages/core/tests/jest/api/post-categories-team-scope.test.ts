@@ -36,11 +36,11 @@ jest.mock('@nextsparkjs/core/lib/db', () => ({ query: (sql: string, params?: unk
 import { GET as list, POST } from '../../../src/routes/api/v1/post-categories/route'
 import { PUT, DELETE } from '../../../src/routes/api/v1/post-categories/[id]/route'
 
-type Who = 'anon' | 'owna' | 'mema' | 'ownb' | 'memb' | 'super'
+type Who = 'anon' | 'owna' | 'mema' | 'ownb' | 'memb' | 'super' | 'dev'
 function as(who: Who, team?: string) {
   auth.mockResolvedValue(who === 'anon'
     ? { success: false, type: 'none', user: null }
-    : { success: true, type: 'session', user: { id: who, role: who === 'super' ? 'superadmin' : 'member' } })
+    : { success: true, type: 'session', user: { id: who, role: who === 'super' ? 'superadmin' : who === 'dev' ? 'developer' : 'member' } })
   return team ? { 'x-team-id': team } : {}
 }
 const req = (method: string, path: string, headers: Record<string, string>, body?: unknown) =>
@@ -96,6 +96,12 @@ describe('update and delete', () => {
     expect(sqlOf('UPDATE')).toHaveLength(0)
     expect((await PUT(req('PUT', '/cat-global', as('super'), { name: 'Renamed' }), params('cat-global'))).status).toBe(200)
     expect((await DELETE(req('DELETE', '/cat-global', as('super')), params('cat-global'))).status).toBe(200)
+  })
+
+  it('a developer has every superadmin capability: changes a category without a team and reads any team', async () => {
+    expect((await PUT(req('PUT', '/cat-global', as('dev'), { name: 'Renamed' }), params('cat-global'))).status).toBe(200)
+    expect((await DELETE(req('DELETE', '/cat-global', as('dev')), params('cat-global'))).status).toBe(200)
+    expect((await list(req('GET', '', as('dev', 'team-b')), undefined as never)).status).toBe(200)
   })
 })
 

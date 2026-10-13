@@ -158,9 +158,9 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
     // Validar que el usuario pueda crear API keys con estos scopes.
     // Scope minting is TEAM-role based (see validateScopesForUser) — resolve
     // the team this key is being minted for, unless the caller is a global
-    // superadmin, which validateScopesForUser bypasses regardless of team.
+    // superadmin or developer, which validateScopesForUser bypasses regardless of team.
     let teamId: string | null = null;
-    if (authResult.user!.role !== 'superadmin') {
+    if (authResult.user!.role !== 'superadmin' && authResult.user!.role !== 'developer') {
       const teamResult = await resolveTeamContext(req, authResult);
       if (teamResult instanceof NextResponse) {
         return teamResult;

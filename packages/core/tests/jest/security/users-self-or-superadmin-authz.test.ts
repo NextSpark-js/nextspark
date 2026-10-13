@@ -1,6 +1,6 @@
 /**
- * /api/v1/users/:id (and its meta routes) answer only for the user themselves or
- * a superadmin. Row-level security does not cover a deployment that still
+ * /api/v1/users/:id (and its meta routes) answer only for the user themselves,
+ * a superadmin or a developer. Row-level security does not cover a deployment that still
  * connects as the table owner, so the handlers must decide it.
  */
 import { readFileSync } from 'fs'
@@ -19,13 +19,13 @@ describe('canAccessUser', () => {
     // Exact, like the routes' SQL: another case of the email may be another account's row
     expect(canAccessUser(as('u1', 'member'), 'U1@x.test')).toBe(false)
   })
-  it('refuses another user, whatever their team or role', () => {
+  it('refuses another user to a member, whatever their team', () => {
     expect(canAccessUser(as('u1', 'member'), 'u2')).toBe(false)
-    expect(canAccessUser(as('u1', 'developer'), 'u2')).toBe(false)
     expect(canAccessUser(as('u1', 'member'), 'u2@x.test')).toBe(false)
   })
-  it('allows a superadmin session', () => {
+  it('allows a superadmin or developer session (a developer has every superadmin capability)', () => {
     expect(canAccessUser(as('sa', 'superadmin'), 'u2')).toBe(true)
+    expect(canAccessUser(as('u1', 'developer'), 'u2')).toBe(true)
   })
   it('requires the scope on a superadmin API key', () => {
     const key = as('sa', 'superadmin', { type: 'api-key', scopes: ['users:read'] } as Partial<DualAuthResult>)

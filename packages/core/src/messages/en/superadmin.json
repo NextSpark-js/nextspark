@@ -11,7 +11,7 @@
   "dashboard": {
     "title": "Sector7",
     "subtitle": "Super Administrator Control Panel",
-    "restrictedAccess": "Restricted Access Area - Superadmin Only",
+    "restrictedAccess": "Restricted Access Area - Superadmin and Developer Only",
     "systemStatus": "System Status",
     "systemVersion": "Platform Version",
     "securityLevel": "Security Level",

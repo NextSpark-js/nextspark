@@ -61,7 +61,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
     // Security check: users can only access their own data unless admin
     const userRole = session.user.role as UserRole
-    if (targetUserId !== session.user.id && !['admin', 'superadmin'].includes(userRole)) {
+    if (targetUserId !== session.user.id && !['superadmin', 'developer'].includes(userRole)) {
       return NextResponse.json(
         { error: 'Permission denied' },
         { status: 403 }
@@ -120,7 +120,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
     const userRole = session.user.role as UserRole
 
     // Security check: users can only update their own data unless admin
-    if (userId !== session.user.id && !['admin', 'superadmin'].includes(userRole)) {
+    if (userId !== session.user.id && !['superadmin', 'developer'].includes(userRole)) {
       return NextResponse.json(
         { error: 'Only admins can update other users data' },
         { status: 403 }
@@ -192,7 +192,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const userRole = session.user.role as UserRole
 
     // Only admins can perform bulk operations
-    if (!['admin', 'superadmin'].includes(userRole)) {
+    if (!['superadmin', 'developer'].includes(userRole)) {
       return NextResponse.json(
         { error: 'Admin access required for bulk operations' },
         { status: 403 }

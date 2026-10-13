@@ -26,6 +26,19 @@ describe('Admin API Authentication', () => {
       expect(isSuperAdmin(authResult)).toBe(true)
     })
 
+    it('should return true for a developer, session or API key (developer has every superadmin capability)', () => {
+      for (const type of ['session', 'api-key'] as const) {
+        const authResult: DualAuthResult = {
+          success: true,
+          type,
+          user: { id: '1', role: 'developer', email: 'dev@test.com' },
+          scopes: ['users:read']
+        }
+        expect(isSuperAdmin(authResult)).toBe(true)
+        expect(hasAdminPermission(authResult, 'users:read')).toBe(true)
+      }
+    })
+
     it('should return false for session with member role', () => {
       const authResult: DualAuthResult = {
         success: true,

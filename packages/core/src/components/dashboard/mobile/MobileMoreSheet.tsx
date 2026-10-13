@@ -15,7 +15,7 @@ import { Shield, LogOut } from 'lucide-react'
 import { sel } from '../../../lib/test'
 import { TeamSwitcherCompact } from '../../teams/TeamSwitcherCompact'
 import { useTranslations } from 'next-intl'
-import { useIsSuperAdmin } from '../../app/guards/SuperAdminGuard'
+import { useCanAccessAdmin } from '../../app/guards/SuperAdminGuard'
 import { useState } from 'react'
 import { MOBILE_NAV_CONFIG } from '../../../lib/config/config-client'
 import { getIcon } from '../../../lib/config/icon-map'
@@ -79,7 +79,7 @@ export function MobileMoreSheet({ isOpen, onOpenChange }: MobileMoreSheetProps) 
   const tCommon = useTranslations('common')
   // Use root namespace for dynamic config-based translations (supports both core and theme namespaces)
   const t = useTranslations()
-  const isSuperAdmin = useIsSuperAdmin()
+  const canAccessAdmin = useCanAccessAdmin()
   const [isSigningOut, setIsSigningOut] = useState(false)
 
   const handleSignOut = async () => {
@@ -142,8 +142,8 @@ export function MobileMoreSheet({ isOpen, onOpenChange }: MobileMoreSheetProps) 
             />
           ))}
 
-          {/* Admin Panel - Solo para superadmin */}
-          {isSuperAdmin && (
+          {/* Admin Panel: superadmin and developer */}
+          {canAccessAdmin && (
             <>
               <Separator className="my-2" />
               <Link

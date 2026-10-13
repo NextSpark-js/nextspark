@@ -58,7 +58,7 @@ function SuperadminDashboard() {
         <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded-lg text-sm">
           <Shield className="h-4 w-4 text-destructive" />
           <span className="text-destructive font-medium">
-            Restricted Access Area - Superadmin Only
+            Restricted Access Area - Superadmin and Developer Only
           </span>
         </div>
       </div>

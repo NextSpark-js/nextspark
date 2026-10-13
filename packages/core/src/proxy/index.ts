@@ -547,8 +547,7 @@ async function handle(request: NextRequest, authenticatedPaths: readonly string[
 
     const role = session.user?.role
     if (
-      (area === 'admin' && role !== 'superadmin') ||
-      (area === 'superadmin' && role !== 'superadmin' && role !== 'developer') ||
+      ((area === 'admin' || area === 'superadmin') && role !== 'superadmin' && role !== 'developer') ||
       (area === 'devtools' && role !== 'developer')
     ) {
       return { response: redirectAccessDenied(request), session, injectIdentity: false }

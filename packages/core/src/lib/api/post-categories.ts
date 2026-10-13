@@ -6,7 +6,8 @@ import { checkPermission } from '../permissions/check'
  * Post categories (`taxonomies` rows of type `post_category`) belong to a team: they are created in the caller's
  * team (`x-team-id`) and read, changed and deleted only there, under the same team-role permissions as the posts
  * entity (`posts.list`, `posts.create`, `posts.update`, `posts.delete`). Rows without a team (the only kind before
- * categories were scoped) stay readable by every team and by visitors; only a superadmin can change or delete them.
+ * categories were scoped) stay readable by every team and by visitors; only a superadmin or a developer can change or
+ * delete them.
  */
 
 /** A refusal the route returns as it is. */
@@ -14,8 +15,9 @@ export type Refusal = { response: NextResponse }
 
 const deny = (status: number, code: string, error: string): Refusal => ({ response: NextResponse.json({ success: false, error, code }, { status }) })
 
-// Stricter than the RLS policy of migration 030 (is_superadmin(), which also accepts a developer of the System Admin Team)
-const isSuperadmin = (auth: DualAuthResult) => auth.user?.role === 'superadmin'
+// A superadmin or a developer (a developer has every superadmin capability). The RLS policy of migration 030
+// (is_superadmin()) accepts a developer only as a member of the System Admin Team.
+const isSuperadmin = (auth: DualAuthResult) => auth.user?.role === 'superadmin' || auth.user?.role === 'developer'
 
 /**
  * The team whose categories a read sees, besides the rows without a team. No `x-team-id`: none (a visitor, or a
@@ -37,7 +39,7 @@ export interface CategoryWriter {
   userId: string
   /** The caller's team (`x-team-id`), when the caller holds `posts.<action>` there. */
   teamId: string | null
-  /** A superadmin may change or delete the rows without a team. */
+  /** A superadmin or a developer may change or delete the rows without a team. */
   superadmin: boolean
 }
 

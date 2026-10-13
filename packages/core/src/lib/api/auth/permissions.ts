@@ -9,11 +9,11 @@ import type { DualAuthResult } from './dual-auth'
 import { hasRequiredScope } from './dual-auth'
 
 /**
- * Verifica si el usuario autenticado es superadmin
- * Funciona tanto para sesiones como para API keys
+ * Whether the caller holds the superadmin capabilities: a superadmin or a developer (a developer can do everything a
+ * superadmin can, plus devtools). Works for sessions and API keys.
  *
  * @param authResult - Resultado de autenticacion dual
- * @returns true si el usuario es superadmin
+ * @returns true for a superadmin or a developer
  */
 export function isSuperAdmin(authResult: DualAuthResult): boolean {
   if (!authResult.success || !authResult.user) {
@@ -21,7 +21,7 @@ export function isSuperAdmin(authResult: DualAuthResult): boolean {
   }
 
   // Verificar rol en el usuario (funciona para session y api-key)
-  return authResult.user.role === 'superadmin'
+  return authResult.user.role === 'superadmin' || authResult.user.role === 'developer'
 }
 
 /**
@@ -56,8 +56,8 @@ export function hasAdminPermission(
 
 /**
  * Whether the caller may read or edit the user `target` (an id or an email, as
- * the /users/:id routes accept both): the user themselves, or a superadmin.
- * An API key is its owner, so it gets the same answer, but a superadmin key
+ * the /users/:id routes accept both): the user themselves, or a superadmin or developer.
+ * An API key is its owner, so it gets the same answer, but a superadmin or developer key
  * must also carry `requiredScope`.
  *
  * Application-layer check: row-level security does not cover a deployment that

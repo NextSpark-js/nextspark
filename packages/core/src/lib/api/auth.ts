@@ -300,7 +300,7 @@ export async function getApiKeyUser(auth: ApiKeyAuth) {
 /**
  * Verifica si un usuario puede crear API keys.
  *
- * Superadmin is a GLOBAL role (`users.role`) and is always allowed. Any
+ * Superadmin and developer are GLOBAL roles (`users.role`) and are always allowed. Any
  * other user is allowed only if they hold a team role that itself grants
  * `admin:api-keys`/`admin:users`-equivalent scopes for at least one team —
  * i.e. the same source of truth `validateScopesForUser` uses, checked
@@ -317,7 +317,7 @@ export async function canCreateApiKeys(userId: string): Promise<boolean> {
       return false;
     }
 
-    if (user.role === 'superadmin') {
+    if (user.role === 'superadmin' || user.role === 'developer') {
       return true;
     }
 
@@ -336,8 +336,8 @@ export async function canCreateApiKeys(userId: string): Promise<boolean> {
  * Valida que los scopes solicitados sean permitidos para el usuario, en el
  * contexto de un team específico.
  *
- * Superadmin is a GLOBAL role (`users.role`) — it never appears in
- * `AVAILABLE_ROLES` (team roles), so it's special-cased here rather than
+ * Superadmin and developer are GLOBAL roles (`users.role`) — they never appear in
+ * `AVAILABLE_ROLES` (team roles), so they're special-cased here rather than
  * inside the scope registry. Every other user is resolved through their
  * TEAM role for `teamId` (not their global `users.role` — NextSpark's
  * entity authorization model is team-scoped, see `app.config.ts`), and the
@@ -369,7 +369,7 @@ export async function validateScopesForUser(
       };
     }
 
-    if (user.role === 'superadmin') {
+    if (user.role === 'superadmin' || user.role === 'developer') {
       return {
         valid: true,
         allowedScopes: requestedScopes,

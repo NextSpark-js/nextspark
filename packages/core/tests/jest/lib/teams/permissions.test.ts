@@ -10,7 +10,7 @@
  * any role, including one above the actor's own level.
  */
 
-import { canInviteToRole, canManageRole, validateRoleTransition } from '@/core/lib/teams/permissions'
+import { canInviteToRole, canManageRole, checkTeamPermission, validateRoleTransition } from '@/core/lib/teams/permissions'
 
 describe('teams/permissions', () => {
   describe('canManageRole', () => {
@@ -84,6 +84,16 @@ describe('teams/permissions', () => {
 
         expect(result.allowed).toBe(false)
       })
+    })
+  })
+
+  describe('checkTeamPermission', () => {
+    it.each(['superadmin', 'developer'])('a %s holds every team permission, member of the team or not', (role) => {
+      expect(checkTeamPermission(role as never, null, 'team.delete' as never)).toBe(true)
+    })
+
+    it('a member outside the team holds none', () => {
+      expect(checkTeamPermission('member', null, 'team.delete' as never)).toBe(false)
     })
   })
 })

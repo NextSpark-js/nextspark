@@ -17,7 +17,7 @@ const updateCategorySchema = z.object({
   isActive: z.boolean().optional()
 })
 
-/** The post category `id` that `writer` may change: of their team, or (superadmin) without a team; else 404/403. */
+/** The post category `id` that `writer` may change: of their team, or (superadmin or developer) without a team; else 404/403. */
 async function findCategory(id: string, writer: CategoryWriter): Promise<{ teamId: string | null } | Refusal> {
   const found = await dbQuery<{ teamId: string | null }>(
     'SELECT "teamId" FROM taxonomies WHERE id = $1 AND type = \'post_category\' AND ("teamId" IS NULL OR "teamId" = $2)',
@@ -28,7 +28,7 @@ async function findCategory(id: string, writer: CategoryWriter): Promise<{ teamI
   }
   if (found.rows[0].teamId === null && !writer.superadmin) {
     return { response: NextResponse.json(
-      { success: false, error: 'Only a superadmin can change a category shared by every team', code: 'PERMISSION_DENIED' },
+      { success: false, error: 'Only a superadmin or a developer can change a category shared by every team', code: 'PERMISSION_DENIED' },
       { status: 403 }
     ) }
   }
@@ -68,7 +68,7 @@ export const GET = withRateLimitTier(async (
 }, 'read');
 
 // PUT /api/v1/post-categories/:id - Update category (one of the caller's team, with posts.update there; one
-// without a team: superadmin only)
+// without a team: superadmin or developer only)
 export const PUT = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -201,7 +201,7 @@ export const PUT = withRateLimitTier(async (
 }, 'write');
 
 // DELETE /api/v1/post-categories/:id - Delete category (one of the caller's team, with posts.delete there; one
-// without a team: superadmin only)
+// without a team: superadmin or developer only)
 export const DELETE = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

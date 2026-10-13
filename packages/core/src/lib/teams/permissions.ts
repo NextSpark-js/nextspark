@@ -31,7 +31,7 @@ import {
 /**
  * Global user roles (simplified Phase 2)
  */
-export type UserRole = 'member' | 'superadmin'
+export type UserRole = 'member' | 'superadmin' | 'developer'
 
 /**
  * Team-specific permissions
@@ -167,10 +167,10 @@ export function getRolePermissions(
  * Check team permission with simplified Phase 2 roles
  *
  * This is the recommended function for permission checking.
- * - Superadmin: bypasses all permissions (returns true)
+ * - Superadmin and developer: bypass all permissions (returns true)
  * - Member: checks team role for permission
  *
- * @param userRole - The user's global role ('member' or 'superadmin')
+ * @param userRole - The user's global role ('member', 'superadmin' or 'developer')
  * @param teamRole - The user's role in the team (null if not a member)
  * @param permission - The permission to check
  * @returns True if the user has the permission
@@ -180,8 +180,8 @@ export function checkTeamPermission(
   teamRole: string | null,
   permission: TeamPermission
 ): boolean {
-  // Superadmin bypasses all permissions
-  if (userRole === 'superadmin') {
+  // Superadmin and developer bypass all permissions
+  if (userRole === 'superadmin' || userRole === 'developer') {
     return true
   }
 

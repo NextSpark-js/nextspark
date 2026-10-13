@@ -135,6 +135,9 @@ describe('proxy role-gated areas', () => {
     ['/devtools/config', 'developer', 'next'],
     ['/devtools/config', 'superadmin', 'redirect'],
     ['/devtools/config', 'member', 'redirect'],
+    ['/admin/settings', 'superadmin', 'next'],
+    ['/admin/settings', 'developer', 'next'],
+    ['/admin/settings', 'member', 'redirect'],
   ])('%s signed in as %s: %s', async (path, role, outcome) => {
     mockedGetSession.mockResolvedValue(signedInAs(role))
 
