@@ -392,7 +392,8 @@ function workspaceDirectories(yaml) {
   for (const raw of yaml.split('\n')) {
     if (/^\s*(#|$)/.test(raw)) continue
     const line = raw.replace(/\s+#.*$/, '')
-    if (/^\S/.test(line)) {
+    // A list item may sit at column 0 under its key, so only a line not starting with a dash is a key
+    if (/^[^\s-]/.test(line)) {
       const key = line.match(/^packages:\s*(.*?)\s*$/)
       inPackages = key !== null && key[1] === ''
       const inline = key?.[1].match(/^\[(.*)\]$/)

@@ -836,7 +836,7 @@ test('only the packages: list of the workspace yaml names directories; onlyBuilt
   assert.doesNotMatch(result.stdout, /esbuild\/package\.json/)
 })
 
-test('a trailing comment, a quoted name with a space and the inline form of packages: are read', (t) => {
+test('a trailing comment, a quoted name with a space, the inline form and unindented items of packages: are read', (t) => {
   const web = webMobileWith(t, 'packages:\n  - web\n  - mobile   # the app\n  - "my app"\n', ['mobile', 'my app'])
   const inline = webMobileWith(t, "packages: ['web', 'mobile']  # all\n", ['mobile'])
 
@@ -848,6 +848,12 @@ test('a trailing comment, a quoted name with a space and the inline form of pack
   const second = runUpdateCore(inline, ['--version', TO])
   assert.equal(second.status, 0, second.output)
   assert.match(second.stdout, /\.\.\/mobile\/package\.json: @nextsparkjs\/mobile/)
+
+  // YAML allows the items at the same column as their key
+  const flush = webMobileWith(t, 'packages:\n- web\n- mobile\n', ['mobile'])
+  const third = runUpdateCore(flush, ['--version', TO])
+  assert.equal(third.status, 0, third.output)
+  assert.match(third.stdout, /\.\.\/mobile\/package\.json: @nextsparkjs\/mobile/)
 })
 
 test('when web/ is already on the target it still lists the pins left in mobile/', (t) => {
