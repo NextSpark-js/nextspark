@@ -231,17 +231,19 @@ const result = await updateTeam(teamId, {
 
 ### inviteMember
 
-Add a user to the team (requires owner or admin role).
+Send an invitation to join the team (requires a role with the `team.members.invite` permission). It follows
+`POST /api/v1/teams/:teamId/members`: a pending invitation and an email, through `TeamInvitationService`, with the same
+role-hierarchy, duplicate and rate-limit rules. Nobody is added until the invitee accepts.
 
 ```typescript
 const result = await inviteMember(
   teamId,
-  'user@example.com',  // User must already exist
-  'member'             // 'member' | 'admin' | 'viewer'
+  'user@example.com',  // May not have an account yet
+  'member'             // A role below the inviter's own
 )
 
 if (result.success) {
-  console.log('Invited:', result.data.memberId)
+  console.log('Invitation sent:', result.data.invitationId, result.data.status) // 'pending'
 }
 ```
 

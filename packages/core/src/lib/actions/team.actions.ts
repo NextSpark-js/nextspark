@@ -42,9 +42,12 @@ import { headers, cookies } from 'next/headers'
 import { getAuthorizationSession } from '../auth/authorization-session'
 import { TeamService, type UpdateTeamPayload } from '../services/team.service'
 import { TeamMemberService } from '../services/team-member.service'
+import { TeamInvitationService } from '../services/team-invitation.service'
+import { updateTeamSchema } from '../teams/schema'
+import { actionErrorMessage, formatZodError } from './validation'
 import type { Team, TeamRole, TeamMember } from '../teams/types'
 import type { EntityActionResult, EntityActionVoidResult } from './types'
-import { canInviteToRole, getInvitableRoles } from '../teams/permissions'
+import { getInvitableRoles } from '../teams/permissions'
 import { APP_CONFIG_MERGED } from '../config/config-sync'
 
 // ============================================================================
@@ -57,19 +60,21 @@ import { APP_CONFIG_MERGED } from '../config/config-sync'
 export interface UpdateTeamData {
   name?: string
   slug?: string
-  description?: string
-  avatarUrl?: string
+  description?: string | null
+  avatarUrl?: string | null
   settings?: Record<string, unknown>
 }
 
 /**
- * Result of invite member action
+ * Result of invite member action: the pending invitation (the accept token goes only in the email)
  */
 export interface InviteMemberResult {
-  memberId: string
-  userId: string
+  invitationId: string
   teamId: string
+  email: string
   role: TeamRole
+  status: 'pending'
+  expiresAt: string
 }
 
 // ============================================================================
@@ -166,14 +171,19 @@ export async function updateTeam(
       return { success: false, error: permResult.error }
     }
 
-    // 4. Build update payload
-    const updatePayload: UpdateTeamPayload = {}
+    // 4. Validate the fields with the schema of PATCH /api/v1/teams/:teamId
+    const parsed = updateTeamSchema.safeParse(data)
+    if (!parsed.success) {
+      return { success: false, error: formatZodError(parsed.error) }
+    }
 
-    if (data.name !== undefined) updatePayload.name = data.name
-    if (data.slug !== undefined) updatePayload.slug = data.slug
-    if (data.description !== undefined) updatePayload.description = data.description
-    if (data.avatarUrl !== undefined) updatePayload.avatarUrl = data.avatarUrl
-    if (data.settings !== undefined) updatePayload.settings = data.settings
+    const updatePayload: UpdateTeamPayload = {}
+    const fields = parsed.data
+    if (fields.name !== undefined) updatePayload.name = fields.name
+    if (fields.slug !== undefined) updatePayload.slug = fields.slug
+    if (fields.description !== undefined) updatePayload.description = fields.description
+    if (fields.avatarUrl !== undefined) updatePayload.avatarUrl = fields.avatarUrl
+    if (fields.settings !== undefined) updatePayload.settings = fields.settings
 
     if (Object.keys(updatePayload).length === 0) {
       return { success: false, error: 'No valid fields provided for update' }
@@ -209,22 +219,23 @@ export async function updateTeam(
 // ============================================================================
 
 /**
- * Invite a user to join the team
+ * Invite a person to join the team
  *
- * Requires owner or admin role in the team.
- * The user must already exist in the system.
+ * Creates a pending invitation and emails the invitee, as `POST /api/v1/teams/:teamId/members` does (the same
+ * service, so the same permission, role-hierarchy and duplicate rules). Nobody is added to the team: the invitee
+ * accepts through the link in the email. The invitee does not need an account yet.
  *
  * @param teamId - The team ID
- * @param email - Email of the user to invite
- * @param role - Role to assign (member, admin, viewer)
- * @returns Created membership data wrapped in EntityActionResult
+ * @param email - Email of the person to invite
+ * @param role - Role the invitee gets on accepting (below the inviter's own)
+ * @returns The pending invitation (without its accept token) wrapped in EntityActionResult
  *
  * @example
  * ```typescript
  * const result = await inviteMember('team-123', 'user@example.com', 'member')
  *
  * if (result.success) {
- *   console.log('Member invited:', result.data.memberId)
+ *   console.log('Invitation sent:', result.data.invitationId)
  * }
  * ```
  */
@@ -234,79 +245,47 @@ export async function inviteMember(
   role: TeamRole = APP_CONFIG_MERGED.teams.roles.defaultTeamRole as TeamRole
 ): Promise<EntityActionResult<InviteMemberResult>> {
   try {
-    // 1. Validate inputs
     if (!teamId?.trim()) {
       return { success: false, error: 'Team ID is required' }
     }
 
-    if (!email?.trim()) {
+    if (typeof email !== 'string' || !email.trim()) {
       return { success: false, error: 'Email is required' }
     }
 
-    // Validate role against the registry-derived invitable set (excludes 'owner';
-    // reflects the theme's declarative teams.roles set). Cannot invite as owner.
-    const validRoles = getInvitableRoles()
-    if (!validRoles.includes(role)) {
-      return { success: false, error: `Invalid role. Must be one of: ${validRoles.join(', ')}` }
+    const headersList = await headers()
+    const session = await getAuthorizationSession(headersList)
+    if (!session?.user?.id) {
+      return { success: false, error: 'Authentication required' }
     }
 
-    // 2. Get auth context
-    const authResult = await getAuthUser()
-    if (authResult.success === false) {
-      return { success: false, error: authResult.error }
-    }
-    const { userId } = authResult
-
-    // 3. Verify permission (owner or admin)
-    const permResult = await verifyTeamPermission(userId, teamId, ['owner', 'admin'])
-    if (permResult.success === false) {
-      return { success: false, error: permResult.error }
-    }
-
-    // The role granted must be below the inviter's own, as for a role change (an admin does not add admins)
-    const inviterRole = await TeamMemberService.getRole(teamId, userId)
-    if (!inviterRole || !canInviteToRole(inviterRole, role)) {
-      return { success: false, error: 'You cannot invite members to a role equal to or higher than your own' }
-    }
-
-    // 4. Find user by email
-    const { UserService } = await import('../services/user.service')
-    const targetUser = await UserService.getUserByEmail(email, userId)
-
-    if (!targetUser) {
-      return { success: false, error: 'User not found. They must create an account first.' }
-    }
-
-    // 5. Check if already a member
-    const existingMember = await TeamMemberService.getByTeamAndUser(teamId, targetUser.id)
-    if (existingMember) {
-      return { success: false, error: 'User is already a member of this team' }
-    }
-
-    // 6. Add member to team
-    const member = await TeamMemberService.add(teamId, targetUser.id, role, {
-      invitedBy: userId,
+    const result = await TeamInvitationService.create({
+      teamId,
+      actor: { id: session.user.id, email: session.user.email },
+      input: { email, role },
     })
+    if (result.success === false) {
+      return { success: false, error: result.error }
+    }
 
-    // 7. Revalidate team-related paths
     revalidatePath('/dashboard/settings/team')
     revalidatePath('/dashboard/settings/team/members')
 
+    const { invitation } = result
     return {
       success: true,
       data: {
-        memberId: member.id,
-        userId: member.userId,
-        teamId: member.teamId,
-        role: member.role,
+        invitationId: invitation.id,
+        teamId: invitation.teamId,
+        email: invitation.email,
+        role: invitation.role,
+        status: 'pending',
+        expiresAt: new Date(invitation.expiresAt).toISOString(),
       },
     }
   } catch (error) {
-    console.error('[inviteMember] Error:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to invite member',
-    }
+    if (!(error instanceof Error && error.name === 'ZodError')) console.error('[inviteMember] Error:', error)
+    return { success: false, error: actionErrorMessage(error, 'Failed to invite member') }
   }
 }
 

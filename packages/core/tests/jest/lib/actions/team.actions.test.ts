@@ -7,7 +7,6 @@
 
 import {
   updateTeam,
-  inviteMember,
   removeMember,
   updateMemberRole,
 } from '@/core/lib/actions/team.actions'
@@ -31,13 +30,6 @@ jest.mock('@/core/lib/services/team-member.service', () => ({
     add: jest.fn(),
     remove: jest.fn(),
     updateRole: jest.fn(),
-  },
-}))
-
-// Mock UserService (for inviteMember)
-jest.mock('@/core/lib/services/user.service', () => ({
-  UserService: {
-    getUserByEmail: jest.fn(),
   },
 }))
 
@@ -155,17 +147,6 @@ describe('Team Server Actions', () => {
       }
     })
 
-    it('inviteMember returns error when user is not authenticated', async () => {
-      setupUnauthenticatedUser()
-
-      const result = await inviteMember('team-123', 'user@example.com', 'member')
-
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error).toBe('Authentication required')
-      }
-    })
-
     it('removeMember returns error when user is not authenticated', async () => {
       setupUnauthenticatedUser()
 
@@ -198,17 +179,6 @@ describe('Team Server Actions', () => {
       setupPermissionDenied()
 
       const result = await updateTeam('team-123', { name: 'New Name' })
-
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error).toContain('Permission denied')
-      }
-    })
-
-    it('returns error when user lacks permission to invite member', async () => {
-      setupPermissionDenied()
-
-      const result = await inviteMember('team-123', 'user@example.com', 'member')
 
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -318,112 +288,37 @@ describe('Team Server Actions', () => {
   })
 
   // ===========================================
-  // inviteMember
+  // updateTeam: the arguments are parsed with updateTeamSchema, as PATCH /api/v1/teams/:teamId does
   // ===========================================
 
-  describe('inviteMember', () => {
+  describe('updateTeam validation', () => {
     beforeEach(() => {
-      mockTeamMemberService.getRole.mockResolvedValue('owner')
+      mockTeamService.isSlugAvailable.mockResolvedValue(true)
     })
 
-    it('an admin adds members, not admins (the role-change rule)', async () => {
-      const { UserService } = require('@/core/lib/services/user.service')
-      UserService.getUserByEmail.mockResolvedValue({ id: 'user-789', email: 'new@example.com' })
-      mockTeamMemberService.getByTeamAndUser.mockResolvedValue(null)
-      mockTeamMemberService.add.mockResolvedValue(mockMember)
-      mockTeamMemberService.getRole.mockResolvedValue('admin')
+    it.each([
+      ['an object as name', { name: { a: 1 } }, 'name'],
+      ['a one-character name', { name: 'a' }, 'name'],
+      ['a name over 100 characters', { name: 'x'.repeat(101) }, 'name'],
+      ['an object as description', { description: { a: 1 } }, 'description'],
+      ['an avatar that is not a URL', { avatarUrl: 'not a url' }, 'avatarUrl'],
+      ['settings that is not an object', { settings: 'not-an-object' }, 'settings'],
+      ['a slug with capitals', { slug: 'Not A Slug' }, 'slug'],
+    ])('rejects %s without touching the service', async (_label, data, field) => {
+      const result = await updateTeam('team-123', data as never)
 
-      const refused = await inviteMember('team-123', 'new@example.com', 'admin')
-      expect(refused.success).toBe(false)
-      expect(mockTeamMemberService.add).not.toHaveBeenCalled()
-
-      expect((await inviteMember('team-123', 'new@example.com', 'member')).success).toBe(true)
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error.startsWith(`${field}:`)).toBe(true)
+      expect(mockTeamService.update).not.toHaveBeenCalled()
     })
 
-    it('invites member successfully', async () => {
-      const { UserService } = require('@/core/lib/services/user.service')
-      UserService.getUserByEmail.mockResolvedValue({ id: 'user-789', email: 'new@example.com' })
-      mockTeamMemberService.getByTeamAndUser.mockResolvedValue(null)
-      mockTeamMemberService.add.mockResolvedValue(mockMember)
+    it('passes null to clear the description and the avatar, as REST does', async () => {
+      mockTeamService.update.mockResolvedValue(mockTeam)
 
-      const result = await inviteMember('team-123', 'new@example.com', 'member')
+      const result = await updateTeam('team-123', { description: null, avatarUrl: null })
 
       expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.memberId).toBe('member-789')
-        expect(result.data.role).toBe('member')
-      }
-      expect(mockTeamMemberService.add).toHaveBeenCalledWith(
-        'team-123',
-        'user-789',
-        'member',
-        { invitedBy: 'user-456' }
-      )
-    })
-
-    it('returns error when team ID is missing', async () => {
-      const result = await inviteMember('', 'user@example.com', 'member')
-
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error).toBe('Team ID is required')
-      }
-    })
-
-    it('returns error when email is missing', async () => {
-      const result = await inviteMember('team-123', '', 'member')
-
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error).toBe('Email is required')
-      }
-    })
-
-    it('returns error when trying to invite as owner', async () => {
-      const result = await inviteMember('team-123', 'user@example.com', 'owner')
-
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error).toContain('Invalid role')
-      }
-    })
-
-    it('returns error when user not found', async () => {
-      const { UserService } = require('@/core/lib/services/user.service')
-      UserService.getUserByEmail.mockResolvedValue(null)
-
-      const result = await inviteMember('team-123', 'nonexistent@example.com', 'member')
-
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error).toContain('User not found')
-      }
-    })
-
-    it('returns error when user is already a member', async () => {
-      const { UserService } = require('@/core/lib/services/user.service')
-      UserService.getUserByEmail.mockResolvedValue({ id: 'user-789', email: 'existing@example.com' })
-      mockTeamMemberService.getByTeamAndUser.mockResolvedValue(mockMember)
-
-      const result = await inviteMember('team-123', 'existing@example.com', 'member')
-
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error).toContain('already a member')
-      }
-    })
-
-    it('revalidates team paths after invite', async () => {
-      const { revalidatePath } = require('next/cache')
-      const { UserService } = require('@/core/lib/services/user.service')
-      UserService.getUserByEmail.mockResolvedValue({ id: 'user-789', email: 'new@example.com' })
-      mockTeamMemberService.getByTeamAndUser.mockResolvedValue(null)
-      mockTeamMemberService.add.mockResolvedValue(mockMember)
-
-      await inviteMember('team-123', 'new@example.com', 'member')
-
-      expect(revalidatePath).toHaveBeenCalledWith('/dashboard/settings/team')
-      expect(revalidatePath).toHaveBeenCalledWith('/dashboard/settings/team/members')
+      expect(mockTeamService.update).toHaveBeenCalledWith('team-123', { description: null, avatarUrl: null }, 'user-456')
     })
   })
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { queryWithRLS, queryOneWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import {
   createApiResponse,
   createApiError,
@@ -10,16 +10,10 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { isSuperAdmin } from '@nextsparkjs/core/lib/api/auth/permissions'
-import { checkRateLimit, withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { RATE_LIMITS } from '@nextsparkjs/core/lib/api/keys'
-import { inviteMemberSchema, memberListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
-import { TeamMemberService, MembershipService } from '@nextsparkjs/core/lib/services'
-import { canInviteToRole } from '@nextsparkjs/core/lib/teams/permissions'
-import type { TeamMember, TeamInvitation, TeamRole, Team } from '@nextsparkjs/core/lib/teams/types'
-import { EmailFactory } from '@nextsparkjs/core/lib/email/factory'
-import { sendTeamInvitationEmail } from '@nextsparkjs/core/lib/email/send'
-import { I18N_CONFIG, APP_NAME } from '@nextsparkjs/core/lib/config'
-import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { memberListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
+import { TeamMemberService, MembershipService, TeamInvitationService } from '@nextsparkjs/core/lib/services'
+import type { TeamMember } from '@nextsparkjs/core/lib/teams/types'
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -169,171 +163,21 @@ export const POST = withRateLimitTier(withApiLogging(
         return authResult.rateLimitResponse as NextResponse
       }
 
-      // Apply specific rate limit for creating invitations (20 req/min)
-      const rateLimitConfig = RATE_LIMITS['teams:invite']
-      const rateLimitKey = `invite:create:${authResult.user!.id}`
-      const rateLimit = checkRateLimit(rateLimitKey, rateLimitConfig.requests, rateLimitConfig.windowMs)
+      const result = await TeamInvitationService.create({
+        teamId: (await params).teamId,
+        actor: { id: authResult.user!.id, email: authResult.user!.email },
+        input: await req.json().catch(() => undefined), // unparsable body: the schema answers 400
+      })
 
-      if (!rateLimit.allowed) {
-        const response = createApiError(
-          'Rate limit exceeded. Please try again later.',
-          429,
-          { retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000) },
-          'RATE_LIMIT_EXCEEDED'
-        )
+      if (result.success === false) {
+        // A permission refusal carries its reason next to `error`; the rest use the standard error body
+        const response = result.code === 'FORBIDDEN'
+          ? NextResponse.json({ success: false, error: result.error, ...result.details }, { status: result.status })
+          : createApiError(result.error, result.status, result.details ?? null, result.code)
         return addCorsHeaders(response, req)
       }
 
-      const { teamId } = await params
-
-      // Validate that teamId is not empty
-      if (!teamId || teamId.trim() === '') {
-        const response = createApiError('Team ID is required', 400, null, 'MISSING_TEAM_ID')
-        return addCorsHeaders(response, req)
-      }
-
-      // Check if user has permission to invite members using MembershipService
-      const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('team.members.invite')
-
-      if (!actionResult.allowed) {
-        const response = NextResponse.json(
-          {
-            success: false,
-            error: actionResult.message,
-            reason: actionResult.reason,
-            meta: actionResult.meta,
-          },
-          { status: 403 }
-        )
-        return addCorsHeaders(response, req)
-      }
-
-      // Get user's role for role hierarchy validation
-      const userRole = membership.role as TeamRole
-
-      const body = await req.json()
-      const validatedData = inviteMemberSchema.parse(body)
-
-      // Check role hierarchy via the merged permissions registry — users can
-      // only invite to roles below their own (the role-change rule)
-      if (!canInviteToRole(userRole, validatedData.role)) {
-        const response = createApiError(
-          `You cannot invite members to a role higher than your own. Your role: ${userRole}, requested role: ${validatedData.role}`,
-          403,
-          null,
-          'ROLE_HIERARCHY_VIOLATION'
-        )
-        return addCorsHeaders(response, req)
-      }
-
-      // Check if user already exists and is already a member
-      const existingUser = await queryOneWithRLS<{ id: string }>(
-        'SELECT id FROM "users" WHERE email = $1',
-        [validatedData.email],
-        authResult.user!.id
-      )
-
-      if (existingUser) {
-        // Check if already a member
-        const existingMember = await queryOneWithRLS<{ id: string }>(
-          'SELECT id FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
-          [teamId, existingUser.id],
-          authResult.user!.id
-        )
-
-        if (existingMember) {
-          const response = createApiError('User is already a member of this team', 409, null, 'ALREADY_MEMBER')
-          return addCorsHeaders(response, req)
-        }
-      }
-
-      // Check if there's already a pending invitation for this email
-      const existingInvitation = await queryOneWithRLS<TeamInvitation>(
-        `SELECT * FROM "team_invitations"
-         WHERE "teamId" = $1 AND email = $2 AND status = 'pending'`,
-        [teamId, validatedData.email],
-        authResult.user!.id
-      )
-
-      if (existingInvitation) {
-        const response = createApiError(
-          'A pending invitation already exists for this email',
-          409,
-          null,
-          'INVITATION_EXISTS'
-        )
-        return addCorsHeaders(response, req)
-      }
-
-      // Get team info for email
-      const team = await queryOneWithRLS<Team>(
-        'SELECT * FROM "teams" WHERE id = $1',
-        [teamId],
-        authResult.user!.id
-      )
-
-      if (!team) {
-        const response = createApiError('Team not found', 404, null, 'TEAM_NOT_FOUND')
-        return addCorsHeaders(response, req)
-      }
-
-      // Create invitation
-      const token = globalThis.crypto.randomUUID()
-      const expiresAt = new Date()
-      expiresAt.setDate(expiresAt.getDate() + 7) // Expires in 7 days
-
-      const result = await mutateWithRLS(
-        `INSERT INTO "team_invitations" ("teamId", email, role, status, token, "invitedBy", "expiresAt")
-         VALUES ($1, $2, $3, 'pending', $4, $5, $6)
-         RETURNING *`,
-        [teamId, validatedData.email, validatedData.role, token, authResult.user!.id, expiresAt.toISOString()],
-        authResult.user!.id
-      )
-
-      const invitation = result.rows[0]
-
-      // Build accept URL
-      const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173').replace(/\/$/, '')
-      const acceptUrl = `${baseUrl}${withBasePath(`/accept-invite/${token}`)}`
-
-      // Send invitation email
-      try {
-        const emailProvider = EmailFactory.getInstance()
-        const inviterName = authResult.user!.email // Use email as inviter name
-        const emailContent = await sendTeamInvitationEmail({
-          inviteeEmail: validatedData.email,
-          inviterName,
-          teamName: team.name,
-          role: validatedData.role,
-          acceptUrl,
-          expiresIn: '7 days',
-          appName: process.env.NEXT_PUBLIC_APP_NAME || APP_NAME,
-        }, I18N_CONFIG.defaultLocale)
-
-        await emailProvider.send({
-          to: validatedData.email,
-          subject: emailContent.subject,
-          html: emailContent.html
-        })
-
-        // Development only (to accept an invitation without an inbox): the accept URL is a credential
-        if (process.env.NODE_ENV === 'development') {
-          console.log('\n' + '🎫'.repeat(30))
-          console.log('📨 TEAM INVITATION CREATED')
-          console.log('🎫'.repeat(30))
-          console.log(`📧 To: ${validatedData.email}`)
-          console.log(`👤 Invited by: ${inviterName}`)
-          console.log(`🏢 Team: ${team.name}`)
-          console.log(`👑 Role: ${validatedData.role}`)
-          console.log(`🔗 Accept URL: ${acceptUrl}`)
-          console.log('🎫'.repeat(30) + '\n')
-        }
-      } catch (emailError) {
-        // Log error but don't fail the invitation creation
-        console.error('Failed to send invitation email:', emailError)
-        if (process.env.NODE_ENV === 'development') console.log(`⚠️ Email failed but invitation created. Accept URL: ${acceptUrl}`)
-      }
+      const invitation = result.invitation
 
       const response = createApiResponse(invitation, { created: true }, 201)
       return addCorsHeaders(response, req)

@@ -28,8 +28,8 @@ export interface TeamWithDetails extends Team {
 export interface UpdateTeamPayload {
   name?: string
   slug?: string
-  description?: string
-  avatarUrl?: string
+  description?: string | null
+  avatarUrl?: string | null
   settings?: Record<string, unknown>
 }
 
