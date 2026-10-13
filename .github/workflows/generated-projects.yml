@@ -16,6 +16,7 @@ on:
       - 'scripts/security/**'
       - 'scripts/deploy/**'
       - 'scripts/accessibility/**'
+      - 'scripts/auth/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -150,6 +151,57 @@ jobs:
           name: starter-axe-report
           path: ${{ runner.temp }}/project/axe-report.json
           if-no-files-found: ignore
+
+  # Better Auth as the starter ships it, not as core's Jest sees it (Jest maps `better-auth` to a mock, so a Better Auth
+  # upgrade can break every auth request with every suite green). The starter is built in domain-open mode, started with
+  # a stand-in for Resend, and driven over HTTP: sign-in by email OTP, get-session, a blocked domain, sign-out and the
+  # OTP rate limit. Its own job because domain-open is a build-time config change the other jobs must not carry.
+  auth-runtime:
+    needs: pack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: dbuser
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_OLDEST }}
+
+      - name: Create the project
+        uses: ./.github/actions/create-project
+        with:
+          theme: starter
+          preset: saas
+
+      # Only example.com may register: the check asks for a code at another domain and expects a 403 and no mail
+      - name: Allow only example.com to register (domain-open)
+        working-directory: ${{ runner.temp }}/project/app
+        run: |
+          sed -i "s#mode: 'open' as const,#mode: 'domain-open' as const,\n      allowedDomains: ['example.com'],#" config/app.config.ts
+          grep -q "mode: 'domain-open'" config/app.config.ts
+          grep -q "allowedDomains: \['example.com'\]" config/app.config.ts
+
+      - name: Migrate, build and serve the project
+        uses: ./.github/actions/build-project
+
+      - name: Check sign-in, session, sign-out and rate limit on the real Better Auth
+        run: node scripts/auth/auth-runtime-check.mjs --app "$PROJECT/app" --port 3980 --allowed-domain example.com
 
   # The package managers a generated project supports. The project's pnpm comes from Corepack, and the step after the
   # create fails if the pnpm that ran in the project is not the matrix one.
