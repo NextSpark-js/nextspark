@@ -69,6 +69,8 @@ If you add a new "first-membership" writer, route it the same way or it will bre
   `{ service: true }` after the route's own role check (superadmin or developer). `team_members` has no bypass
   policy at all, so these routes cannot rely on `can_bypass_rls()`. The role check is the authorization; each
   statement stays scoped to its subject (`WHERE id = $1`, ...). The `/api/v1/*` routes keep RLS.
+- **`users.role`** changes on the app pool only for a caller that passes `can_bypass_rls()`, and never on the
+  caller's own row: migration 037's `users_rls_role_guard` trigger. On the service pool it does nothing.
 
 **Other legitimate service-pool actors** (no request user → service pool by routing, since they
 call with no `userId`): Better Auth login/verification, the **scheduled-actions processor**,

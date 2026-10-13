@@ -27,7 +27,13 @@ suspended            no session and no API key (set only by the suspend action)
 
 ### Role Assignment
 
-**On signup** every user gets the default role (`member`); a user cannot set their own role:
+**On signup** every user gets the default role (`member`). A user cannot set their own role, at either layer:
+
+- the application: Better Auth does not accept `role` as input (below), and no route or action lets a user change it;
+- the database: on the RLS-enforced connection (`nextspark_app`), the `users_rls_role_guard` trigger (migration 037)
+  refuses a change of `users.role` on the caller's own row, and any role change by a caller that does not pass
+  `can_bypass_rls()`. On the service connection it does nothing.
+
 
 ```typescript
 // Better Auth additionalFields (lib/auth.ts)
@@ -50,6 +56,7 @@ role: {
 | **Only a developer grants `developer`** | 403 |
 | Nobody changes their own role | 400 |
 | Nobody changes or deletes another superadmin | 403 |
+| **Only a developer changes, suspends or deletes a developer** (their profile and metadata included) | 403 |
 | A suspended user comes back only through `unsuspend` | 400 |
 
 A superadmin is created by the owner directly in the database.

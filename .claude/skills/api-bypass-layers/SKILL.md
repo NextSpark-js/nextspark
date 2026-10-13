@@ -257,7 +257,9 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
 - DB-level: Final defense, superadmin and developer always trusted at the data layer.
 
 The app-level role checks (`isSuperAdmin`/`hasAdminPermission`, the proxy and area guards, API-key minting) accept
-both roles too. Only a developer grants the developer role (`lib/auth/assignable-roles.ts`).
+both roles too. Only a developer grants the developer role, and only a developer changes, suspends or deletes a developer
+(`lib/auth/assignable-roles.ts`: `canGrantUserRole`, `canActOnUser`). At the DB level, migration 037 lets `users.role`
+change through RLS only for `can_bypass_rls()`, never on the caller's own row.
 
 ## RLS Helper Functions
 

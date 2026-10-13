@@ -67,6 +67,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Only a developer grants the developer role.** A superadmin who sends `role: "developer"` gets 403 from `PATCH /api/superadmin/users/:id`
   (`change-role`), `PATCH /api/v1/users/:id` and `POST /api/v1/users`. The superadmin users table offers the developer role only to a
   developer. Give a first developer the role in the database, as the first superadmin.
+- **Run `pnpm db:migrate`: core adds `037_users_role_guard.sql`.** It adds a trigger on `users` (idempotent); only a project that runs
+  the application as `nextspark_app` sees a difference. There, `users.role` changes only when the caller passes `can_bypass_rls()`, and
+  never on the caller's own row. Core's routes already work that way, and suspend on the service connection. Code of your own that
+  changes a role on the request user's connection must be a superadmin's or a developer's request, on another user, or use the service
+  connection after its own checks.
+- **Only a developer changes, suspends or deletes a developer.** A superadmin gets 403 for a developer target from
+  `PATCH`/`DELETE /api/superadmin/users/:id`, `PATCH`/`DELETE /api/v1/users/:id` and the writes of `/api/v1/users/:id/meta/:key`
+  (the metadata writes also refuse another superadmin, as the users routes do).
 
 ### Changed
 
@@ -79,6 +87,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `/api/v1/users/:id` follows the rules of `/api/superadmin/users/:id`: nobody changes or deletes another superadmin (403), nobody changes
   their own role (400), a suspended user comes back only through `unsuspend` (400), and `role` accepts only `member` and `developer`
   (`superadmin` is 400). `POST /api/v1/users` accepts the same roles. Both share `lib/auth/assignable-roles.ts` with the superadmin route.
+- `UserService.updateUser` no longer accepts `role` (`UpdateUserPayload`): it writes profile fields only. Roles change through the routes
+  above.
 - The `/api/superadmin` routes read and write on the service connection after their role check, for a superadmin as for a developer.
 
 ### Fixed
@@ -91,6 +101,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   answered 404 there (#241). The users, teams and subscriptions lists of that area and a team's detail no longer leave out what RLS
   hides from a developer, nor members of teams the caller does not belong to.
 - `POST /api/v1/users` with `role: "colaborator"`, which `users.role` does not accept, answers 400; it answered 500.
+- On the `nextspark_app` connection a user's role changes only as the API allows, also outside core's routes (migration 037).
 - A team admin can edit the team on the `nextspark_app` connection; it answered 404 there.
 - A developer can open a user's detail in the superadmin area on the `nextspark_app` connection; it answered 404 there.
 - The RLS policies of `pages_metas`, `posts_metas`, `subscriptions`, `usage`, `usage_events` and `billing_events` match what the API
