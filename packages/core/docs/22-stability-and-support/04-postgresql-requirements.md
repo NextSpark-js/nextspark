@@ -43,6 +43,8 @@ Since migration `036_developer_rls_bypass.sql`, `can_bypass_rls()` (and its alia
 
 Since migration `037_users_role_guard.sql`, on the `nextspark_app` connection `users.role` changes only when the caller passes `can_bypass_rls()`, and never on the caller's own row. On the service connection nothing changes.
 
+Since migration `039_team_members_admin_insert.sql`, a team's owner or admin adds another user to the team on the `nextspark_app` connection, with a role below their own (the owner any role but owner, an admin any role but owner and admin), the hierarchy `033` gives role changes and removals. A member or viewer adds nobody, and self-join stays as `032` left it. Core's own flows still add members on the service connection.
+
 For each user request the application sets `app.user_id` with `SET LOCAL` inside a transaction (`queryWithRLS` in `src/lib/db.ts`); the policies read it through `get_auth_user_id()`. It does not use `SET ROLE`. A query with no user context runs on the service connection. The service connection is chosen by credential, never by request input. Set `DATABASE_SERVICE_URL` before pointing `DATABASE_URL` at `nextspark_app`: sign-in and the other system operations are meant to run on the service connection, and without it they fall back to the RLS-evaluated one.
 
 ### The migration role
@@ -50,7 +52,7 @@ For each user request the application sets `app.user_id` with `SET LOCAL` inside
 The role in `MIGRATE_DATABASE_URL` (or `DATABASE_URL`, if unset) must be able to:
 
 - create roles: migration `001` creates `authenticated`, `anon` and `service_role` when they do not exist, and migration `022` creates `nextspark_app` (`CREATE ROLE` needs the `CREATEROLE` attribute or a superuser);
-- create tables, indexes, functions and triggers in `public`, enable row-level security, and create policies (the core migrations contain 80 `CREATE POLICY` statements);
+- create tables, indexes, functions and triggers in `public`, enable row-level security, and create policies (the core migrations contain 81 `CREATE POLICY` statements);
 - create the `pgcrypto` extension, or find it already installed;
 - grant privileges on its own objects to `nextspark_app` and to `authenticated`, and grant `nextspark_app` to the migration role itself, so that role can `SET ROLE` to it in an isolation test. That last grant is attempted and skipped with a notice if it fails.
 

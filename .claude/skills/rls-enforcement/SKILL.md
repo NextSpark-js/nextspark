@@ -65,6 +65,10 @@ yet). These run on the **service pool**, authorized at the API/action layer (not
 
 If you add a new "first-membership" writer, route it the same way or it will break under RLS.
 
+Adding *another* user as the acting owner or admin passes RLS under the actor's own GUC since migration 039
+(`team_members_insert_policy` accepts `auth_can_manage_member`, the hierarchy 033 uses for UPDATE/DELETE).
+`TeamMemberService.add` still uses the service pool: its GUC is the target member, not the actor.
+
 - The **`/api/superadmin/*` routes** (session only, global admin area): every read and write runs with
   `{ service: true }` after the route's own role check (superadmin or developer). `team_members` has no bypass
   policy at all, so these routes cannot rely on `can_bypass_rls()`. The role check is the authorization; each

@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   redirected to `/auth-error?error=SIGNUP_RESTRICTED`, like the other registration refusals, instead of a JSON `403` on the browser callback.
   A verified address with a pending invitation signs up with Google. A form_post OAuth callback is not gated by the auth route either: in
   single-tenant mode outside `invitation-only`, a new user through one is created and joins the global team, as through the GET callback.
+- Migration `039_team_members_admin_insert.sql`: on the `nextspark_app` connection a team's owner or admin adds another user with a role
+  below their own (`auth_can_manage_member`, the hierarchy 033 uses for role changes and removals), as the members API invites one. A member
+  or viewer adds nobody, and self-join is unchanged. Before, every membership added for someone else needed the service connection.
 - With `security.cspNonce: true` in `config/app.config.ts`, the request-time root layout (`cacheComponents` off) reads the `x-nonce` request header the project's request hook forwards and passes it to next-themes, so the inline script that applies the stored theme before paint is allowed by a nonce-only `script-src`. Without the flag nothing changes (the layout reads no request header). With Cache Components on, Next.js does not support a nonce-based `script-src` (the prerendered shell carries every framework script without a nonce); the CSP guide says what to use instead.
 - `SubscriptionProvider` fetches the team's subscription only for a role with `team.billing.view`. Any other role gets a neutral, ready context (no plan, no features or limits, no error, a `refetch` that does nothing) and makes no request, so every billing hook and component keeps working; a `403` or `404` gives the same neutral state, and a server error stays observable and retried. While the team or the role is not known yet, nothing is fetched.
 - `nextspark db:migrate` and `db:seed` use an exported `DATABASE_URL`, `MIGRATE_DATABASE_URL`, `MIGRATION_TIMEOUT_SECONDS` or `NEXT_PUBLIC_ACTIVE_THEME` over the same variable in the project `.env`, which only fills what the environment leaves unset. Both accept `--no-env-file`, and the runner prints the host and database it will migrate (never the user, password or URL) before it runs. Upgrading: a job that exports `DATABASE_URL` while a `.env` is present now migrates the exported database, not the `.env` one.
@@ -58,6 +61,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading
 
+- `pnpm db:migrate` applies `039_team_members_admin_insert.sql`, which re-creates `team_members_insert_policy`. A project that re-created
+  that policy in its own migration (to let owners and admins add members) loses it: `db:migrate` runs core's migrations first and does not
+  run an executed project migration again, so after the upgrade the policy is core's. When the project's had the same expression as 039
+  (self-join, or `auth_can_manage_member("teamId", role)`), nothing changes and the project migration is no longer needed; a
+  different expression has to be applied again in a new project migration. Since 033, a `SELECT ... FOR SHARE` or `FOR UPDATE` on
+  `team_members` on the `nextspark_app` connection also has to pass the UPDATE policy, so a plain member's lock finds no row of another
+  member: run such a lock on the service connection, or in a `SECURITY DEFINER` function behind its own membership check.
 - A job that exports `DATABASE_URL` (or `MIGRATE_DATABASE_URL`) while a project `.env` is present now migrates the exported database, not the `.env` one. Pass `--no-env-file` to `pnpm db:migrate` to ignore the `.env` altogether.
 - **Better Auth 1.7: core moves to `better-auth ~1.7.7`** (from `~1.6.30`), with `@better-fetch/fetch` `1.3.2` and `zod` `^4.5.4`.
   `pnpm update-core` does not change these in a project's `package.json` (it lists them at the end, with the `pnpm add` to run): set `"better-auth": "~1.7.7"` and

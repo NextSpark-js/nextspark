@@ -67,8 +67,8 @@ test('an existing user accepts or declines their own invitation, and only that',
   await assert.rejects(as('outsider', `INSERT INTO "team_members" ("teamId", "userId", role) VALUES ('team-a', 'outsider', 'member')`), RLS)
   // an expired invitation does not let its invitee in
   await assert.rejects(as('outsider', `INSERT INTO "team_members" ("teamId", "userId", role) VALUES ('team-b', 'outsider', 'member')`), RLS)
-  // a member does not add someone else, even someone invited
-  await assert.rejects(as('owna', `INSERT INTO "team_members" ("teamId", "userId", role) VALUES ('team-a', 'inv', 'member')`), RLS)
+  // a plain member does not add someone else, even someone invited (an owner or admin does: migration 039)
+  await assert.rejects(as('mema', `INSERT INTO "team_members" ("teamId", "userId", role) VALUES ('team-a', 'inv', 'member')`), RLS)
   // the invitee does not change the invitation's role or team
   await assert.rejects(as('inv', `UPDATE "team_invitations" SET role = 'admin' WHERE id = 'inv-a'`), RLS)
   await assert.rejects(as('inv', `UPDATE "team_invitations" SET "teamId" = 'team-b' WHERE id = 'inv-a'`), RLS)
@@ -103,6 +103,52 @@ test('an existing user accepts or declines their own invitation, and only that',
   // nobody else answers someone's invitation
   await owner.query(`INSERT INTO team_invitations (id, "teamId", email, role, token, "invitedBy") VALUES ('inv-c', 'team-b', 'mema@example.test', 'member', 'token-c', 'ownb')`)
   assert.equal((await as('memb', `UPDATE "team_invitations" SET status = 'accepted' WHERE id = 'inv-c'`)).rowCount, 0)
+})
+
+test('039: owner and admin add a member with a role below their own, as POST /api/v1/teams/:teamId/members invites one', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
+  const { owner, app } = await cutoverDatabase(t)
+  await seed(owner)
+  await owner.query(`
+    INSERT INTO users (id, email, name, role, "emailVerified") VALUES ('vwa', 'vwa@example.test', 'Viewer A', 'member', true), ('new', 'new@example.test', 'New', 'member', true);
+    INSERT INTO team_members ("teamId", "userId", role) VALUES ('team-a', 'vwa', 'viewer');
+  `)
+  // each insert runs in its own transaction as nextspark_app, rolled back, so every case starts from the seed
+  const added = async (actor: string, userId: string, role: string, teamId = 'team-a') => {
+    await app.query('BEGIN')
+    try {
+      await app.query(`SELECT set_config('app.user_id', $1, true)`, [actor])
+      const result = await app.query(`INSERT INTO "team_members" ("teamId", "userId", role, "invitedBy") VALUES ($1, $2, $3, $4) RETURNING role`, [teamId, userId, role, actor])
+      return result.rows[0].role as string
+    } catch (error) {
+      if (RLS.test(String(error))) return 'refused'
+      throw error
+    } finally {
+      await app.query('ROLLBACK')
+    }
+  }
+
+  // the owner adds admin, member and viewer; never a second owner
+  for (const role of ['admin', 'member', 'viewer']) assert.equal(await added('owna', 'new', role), role)
+  assert.equal(await added('owna', 'new', 'owner'), 'refused')
+  // an admin adds member and viewer; not another admin, not an owner
+  for (const role of ['member', 'viewer']) assert.equal(await added('adma', 'new', role), role)
+  assert.equal(await added('adma', 'new', 'admin'), 'refused')
+  assert.equal(await added('adma', 'new', 'owner'), 'refused')
+  // a member or a viewer adds nobody, not even with the lowest role
+  assert.equal(await added('mema', 'new', 'viewer'), 'refused')
+  assert.equal(await added('vwa', 'new', 'viewer'), 'refused')
+  // the owner of another team, or someone outside it, adds nobody to team A
+  assert.equal(await added('ownb', 'new', 'member'), 'refused')
+  assert.equal(await added('outsider', 'new', 'member'), 'refused')
+
+  // self-join is as 032 left it: an invitation's role, the owner of an empty team they own, nothing else
+  assert.equal(await added('inv', 'inv', 'member'), 'member')
+  assert.equal(await added('inv', 'inv', 'admin'), 'refused')
+  assert.equal(await added('outsider', 'outsider', 'member'), 'refused')
+  await owner.query(`INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-new', 'New', 'team-new', 'new')`)
+  assert.equal(await added('new', 'new', 'owner', 'team-new'), 'owner')
+  // nothing was kept
+  assert.equal((await owner.query(`SELECT count(*)::int AS n FROM team_members WHERE "userId" IN ('new', 'inv', 'outsider')`)).rows[0].n, 0)
 })
 
 test('team_members follow the API: owner and admin manage lower roles, nobody touches the owner row, anyone else leaves', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {

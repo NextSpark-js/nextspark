@@ -231,50 +231,39 @@ CREATE POLICY "teams_delete_policy" ON public."teams"
 ### Team Members Policies
 
 ```sql
--- Team members visible to members of the same team
+-- A user sees their own memberships and the members of their teams (migration 032)
 CREATE POLICY "team_members_select_policy" ON public."team_members"
   FOR SELECT TO authenticated
   USING (
-    "teamId" IN (
-      SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
-    )
+    "userId" = public.get_auth_user_id()
+    OR "teamId" IN (SELECT public.get_user_team_ids(public.get_auth_user_id()))
   );
 
--- Owners and admins can add members
+-- Self-join (the role of a pending invitation, or the owner of an empty team they own: migration 032),
+-- or the owner or an admin adding a role below their own (migration 039)
 CREATE POLICY "team_members_insert_policy" ON public."team_members"
   FOR INSERT TO authenticated
   WITH CHECK (
-    "teamId" IN (
-      SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
-      AND role IN ('owner', 'admin')
-    )
+    ("userId" = public.get_auth_user_id() AND public.auth_can_join_team("teamId", role))
+    OR public.auth_can_manage_member("teamId", role)
   );
 
--- Owners and admins can update roles
+-- The owner changes any row but the owner's, an admin a row that is neither owner nor admin (migration 033)
 CREATE POLICY "team_members_update_policy" ON public."team_members"
   FOR UPDATE TO authenticated
-  USING (
-    "teamId" IN (
-      SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
-      AND role IN ('owner', 'admin')
-    )
-  );
+  USING (public.auth_can_manage_member("teamId", role))
+  WITH CHECK (public.auth_can_manage_member("teamId", role));
 
--- Owners and admins can remove members (except themselves)
+-- The same hierarchy removes members; anyone but the owner leaves on their own (migration 033)
 CREATE POLICY "team_members_delete_policy" ON public."team_members"
   FOR DELETE TO authenticated
   USING (
-    "teamId" IN (
-      SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
-      AND role IN ('owner', 'admin')
-    )
-    AND "userId" != public.get_auth_user_id()
+    public.auth_can_manage_member("teamId", role)
+    OR ("userId" = public.get_auth_user_id() AND role <> 'owner')
   );
 ```
+
+`auth_can_manage_member(team, role)` is true when `role` is not `owner` and the caller is the team's owner, or its admin and `role` is not `admin`. A `SELECT ... FOR SHARE` or `FOR UPDATE` on `team_members` also has to pass the UPDATE policy, so on the `nextspark_app` connection it returns no row the caller cannot manage.
 
 ### Team Invitations Policies
 
