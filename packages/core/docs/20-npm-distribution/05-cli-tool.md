@@ -84,6 +84,16 @@ Options:
   --version     Show version
 ```
 
+## Database commands
+
+`db:migrate` and `db:seed` (also `db migrate` / `db seed`) take one option:
+
+| Option | Effect |
+|---|---|
+| `--no-env-file` | Ignore the project `.env`; the connection comes only from the exported environment |
+
+Precedence: an exported `DATABASE_URL`, `MIGRATE_DATABASE_URL`, `MIGRATION_TIMEOUT_SECONDS` or `NEXT_PUBLIC_ACTIVE_THEME` beats the same variable in `.env`; the `.env` fills what the environment leaves unset. Before the first migration the runner prints the destination (host and database name only, never the user, password or URL). See [Database Migrations](../10-backend/02-migrations.md#running-migrations).
+
 ## Using in package.json
 
 Consumer projects can invoke the locally installed CLI explicitly through pnpm:

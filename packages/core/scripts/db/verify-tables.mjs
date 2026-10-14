@@ -2,24 +2,28 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
 import { scriptClient } from './ssl-config.mjs';
+import { rememberSecrets, scrub } from './destination.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Read .env manually to avoid cache issues
+// An exported DATABASE_URL beats the project .env (as in run-migrations.mjs); the .env, read by hand
+// to avoid cache issues, only fills it in when the environment leaves it unset
+let DATABASE_URL = process.env.DATABASE_URL || null;
 const envPath = path.join(process.cwd(), '.env');
-const envContent = fs.readFileSync(envPath, 'utf8');
-const envLines = envContent.split('\n');
-
-let DATABASE_URL = null;
-envLines.forEach(line => {
-  if (line && !line.startsWith('#')) {
-    const [key, ...valueParts] = line.split('=');
-    if (key?.trim() === 'DATABASE_URL' && valueParts.length > 0) {
-      DATABASE_URL = valueParts.join('=').replace(/^["']|["']$/g, '').trim();
+if (!DATABASE_URL && fs.existsSync(envPath)) {
+  fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+    if (line && !line.startsWith('#')) {
+      const [key, ...valueParts] = line.split('=');
+      if (key?.trim() === 'DATABASE_URL' && valueParts.length > 0) {
+        DATABASE_URL = valueParts.join('=').replace(/^["']|["']$/g, '').trim();
+      }
     }
-  }
-});
+  });
+}
+
+// An error from the server can name the role: it is printed without the user, the password or the URL
+rememberSecrets(DATABASE_URL);
 
 async function verifyTables() {
   const client = scriptClient(DATABASE_URL);
@@ -130,7 +134,7 @@ async function verifyTables() {
     await client.end();
     console.log("\n✅ Verification complete!");
   } catch (error) {
-    console.error("❌ Error:", error.message);
+    console.error("❌ Error:", scrub(error.message));
   }
 }
 

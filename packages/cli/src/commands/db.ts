@@ -35,9 +35,25 @@ function loadProjectEnv(projectRoot: string): Record<string, string> {
 }
 
 /**
+ * The environment the runner starts with: the project .env fills what the
+ * process environment leaves unset, so an exported variable always wins.
+ * `envFile: false` (--no-env-file) ignores the .env altogether.
+ */
+export function resolveDbEnv(
+  projectRoot: string,
+  processEnv: NodeJS.ProcessEnv,
+  options: { envFile?: boolean } = {},
+): NodeJS.ProcessEnv {
+  const projectEnv = options.envFile === false ? {} : loadProjectEnv(projectRoot);
+  const env = { ...projectEnv, ...processEnv };
+  env.DATABASE_URL = processEnv.DATABASE_URL || projectEnv.DATABASE_URL;
+  return env;
+}
+
+/**
  * Run database migrations
  */
-export async function dbMigrateCommand(options: { sampleData?: boolean } = {}): Promise<void> {
+export async function dbMigrateCommand(options: { sampleData?: boolean; envFile?: boolean } = {}): Promise<void> {
   const spinner = ora('Preparing to run migrations...').start();
 
   try {
@@ -54,26 +70,28 @@ export async function dbMigrateCommand(options: { sampleData?: boolean } = {}): 
 
     spinner.succeed('Core package found');
 
-    // Load project .env file, falling back to process.env (e.g. Vercel/CI)
-    const projectEnv = loadProjectEnv(projectRoot);
-    const DATABASE_URL = projectEnv.DATABASE_URL || process.env.DATABASE_URL;
+    // An exported variable beats the project .env; --no-env-file skips the file
+    const env = resolveDbEnv(projectRoot, process.env, options);
+    const DATABASE_URL = env.DATABASE_URL;
 
     // Validate required environment variables
     if (!DATABASE_URL) {
       spinner.fail('DATABASE_URL not found in environment');
-      console.error(chalk.red('Please configure DATABASE_URL in your .env file or environment variables'));
+      console.error(chalk.red('Please configure DATABASE_URL in your environment or, unless --no-env-file is set, in your .env file'));
       process.exit(1);
     }
 
     spinner.start('Running database migrations...');
 
-    const migrateProcess = spawn('node', [migrationsScript, ...(options.sampleData ? ['--sample-data'] : [])], {
+    const migrateProcess = spawn('node', [
+      migrationsScript,
+      ...(options.sampleData ? ['--sample-data'] : []),
+      ...(options.envFile === false ? ['--no-env-file'] : []),
+    ], {
       cwd: projectRoot,
       stdio: 'inherit',
       env: {
-        ...process.env,
-        ...projectEnv,
-        DATABASE_URL,
+        ...env,
         NEXTSPARK_CORE_DIR: coreDir,
       },
     });
@@ -106,9 +124,9 @@ export async function dbMigrateCommand(options: { sampleData?: boolean } = {}): 
  * Run the migrations and apply the sample data (development only).
  * The migration script refuses the sample data when NODE_ENV is production.
  */
-export async function dbSeedCommand(): Promise<void> {
+export async function dbSeedCommand(options: { envFile?: boolean } = {}): Promise<void> {
   console.log(chalk.cyan('ℹ️  Running the migrations with the sample data (development only; never applied when NODE_ENV is production)...'));
   console.log(chalk.yellow('   Never use a database seeded this way in production: its sample accounts share a documented password.\n'));
 
-  await dbMigrateCommand({ sampleData: true });
+  await dbMigrateCommand({ sampleData: true, envFile: options.envFile });
 }

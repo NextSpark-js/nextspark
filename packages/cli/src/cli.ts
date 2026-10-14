@@ -208,23 +208,27 @@ const db = program
 db
   .command('migrate')
   .description('Run database migrations')
-  .action(() => dbMigrateCommand());
+  .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
+  .action((opts: { envFile: boolean }) => dbMigrateCommand({ envFile: opts.envFile }));
 
 db
   .command('seed')
   .description('Run migrations with the sample data (development only)')
-  .action(dbSeedCommand);
+  .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
+  .action((opts: { envFile: boolean }) => dbSeedCommand({ envFile: opts.envFile }));
 
 // Shorthand aliases for database commands
 program
   .command('db:migrate')
   .description('Run database migrations (alias)')
-  .action(() => dbMigrateCommand());
+  .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
+  .action((opts: { envFile: boolean }) => dbMigrateCommand({ envFile: opts.envFile }));
 
 program
   .command('db:seed')
   .description('Run migrations with the sample data, development only (alias)')
-  .action(dbSeedCommand);
+  .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
+  .action((opts: { envFile: boolean }) => dbSeedCommand({ envFile: opts.envFile }));
 
 // Setup AI workflow
 program

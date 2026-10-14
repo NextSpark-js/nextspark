@@ -10,7 +10,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { getCoreDir } from '../../utils/paths.js'
 import type { HealthCheckResult } from '../index.js'
-import { readProjectEnv } from './database.js'
+import { resolveDatabaseUrl } from './database.js'
 
 export async function checkAuthSchema(coreDir = getCoreDir()): Promise<HealthCheckResult> {
   const name = 'Auth schema'
@@ -18,7 +18,7 @@ export async function checkAuthSchema(coreDir = getCoreDir()): Promise<HealthChe
   if (!existsSync(script)) {
     return { name, status: 'warn', message: 'This @nextsparkjs/core does not check the auth tables', fix: 'Update @nextsparkjs/core' }
   }
-  const databaseUrl = (await readProjectEnv())['DATABASE_URL'] || process.env.DATABASE_URL
+  const databaseUrl = await resolveDatabaseUrl()
   if (!databaseUrl) {
     return { name, status: 'warn', message: 'Not checked: DATABASE_URL not configured', fix: 'Add DATABASE_URL to .env' }
   }

@@ -4,6 +4,7 @@ import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runAndRec
 import { getConfig } from '../build/registry/config.mjs';
 import { isSampleDataMigration, sampleDataPolicy } from './sample-data.mjs';
 import { setProjectEnv } from './ssl-config.mjs';
+import { describeDestination, rememberSecrets, scrub } from './destination.mjs';
 import { authSchemaProblems, authSchemaReport } from './check-auth-schema.mjs';
 
 const projectConfig = getConfig();
@@ -11,18 +12,19 @@ const projectRoot = projectConfig.projectRoot;
 const packageRoot = projectConfig.coreDir;
 const PROJECT_NAME = projectConfig.projectName;
 
-// Read environment variables: prefer .env file if it exists, fallback to process.env (e.g. Vercel/CI).
-// `--no-env-file` skips the .env file, so the connection comes only from the
-// environment this process was started with (the template verifier uses it that way).
+// An exported variable beats the project .env (as dotenv, Next.js and Prisma do): the .env
+// only fills what the environment leaves unset. `--no-env-file` skips the .env file, so the
+// connection comes only from the environment this process was started with (the template
+// verifier uses it that way).
 const envPath = path.join(projectRoot, '.env');
 const readEnvFile = !process.argv.includes('--no-env-file');
 
-let DATABASE_URL = process.env.DATABASE_URL ?? null;
+let DATABASE_URL = process.env.DATABASE_URL || null;
 // Migrations and seeds run as the table OWNER. After the runtime cutover the app
 // connects DATABASE_URL as the non-owner `nextspark_app` role, so the owner
 // credential for migrations is provided separately via MIGRATE_DATABASE_URL.
 // Falls back to DATABASE_URL when unset (pre-cutover: same owner connection).
-let MIGRATE_DATABASE_URL = process.env.MIGRATE_DATABASE_URL ?? null;
+let MIGRATE_DATABASE_URL = process.env.MIGRATE_DATABASE_URL || null;
 let MIGRATION_TIMEOUT_SECONDS = process.env.MIGRATION_TIMEOUT_SECONDS;
 // Only read to tell which theme a 0.x project came from (see legacyTheme below)
 let ACTIVE_THEME = process.env.NEXT_PUBLIC_ACTIVE_THEME || null;
@@ -39,16 +41,16 @@ if (readEnvFile && fs.existsSync(envPath)) {
       const value = valueParts.join('=').replace(/^["']|["']$/g, '').trim();
 
       if (key?.trim() === 'DATABASE_URL' && valueParts.length > 0) {
-        DATABASE_URL = value;
+        DATABASE_URL ||= value;
       }
       if (key?.trim() === 'MIGRATE_DATABASE_URL' && valueParts.length > 0) {
-        MIGRATE_DATABASE_URL = value;
+        MIGRATE_DATABASE_URL ||= value;
       }
       if (key?.trim() === 'MIGRATION_TIMEOUT_SECONDS' && valueParts.length > 0) {
-        MIGRATION_TIMEOUT_SECONDS = value;
+        MIGRATION_TIMEOUT_SECONDS ||= value;
       }
       if (key?.trim() === 'NEXT_PUBLIC_ACTIVE_THEME' && valueParts.length > 0) {
-        ACTIVE_THEME = value || ACTIVE_THEME;
+        ACTIVE_THEME ||= value || null;
       }
       // `export NODE_ENV=...` counts too; sample-data.mjs reads the value itself (case, trailing comment)
       const name = key?.trim().replace(/^export\s+/, '');
@@ -66,6 +68,11 @@ if (!DATABASE_URL) {
 
 // The URL used for the actual migration connection (owner credential).
 const MIGRATION_URL = MIGRATE_DATABASE_URL || DATABASE_URL;
+
+// Name the destination before anything runs: host and database only, never the user, password or URL.
+// Error messages from the server can name the role, so they go through scrub() too.
+rememberSecrets(MIGRATION_URL, DATABASE_URL, MIGRATE_DATABASE_URL);
+console.log(`🎯 Migrating ${describeDestination(MIGRATION_URL)}\n`);
 
 // How long each migration may run, when MIGRATION_TIMEOUT_SECONDS asks for a limit
 // (see migration-time-limit.mjs). Without it, a migration runs for as long as it takes.
@@ -166,7 +173,7 @@ async function runMigrations() {
     await client.end();
     console.log("\n✅ All migrations completed successfully!");
   } catch (error) {
-    console.error("❌ Migration error:", error.message);
+    console.error("❌ Migration error:", scrub(error.message));
     process.exit(1);
   }
 }
@@ -682,7 +689,7 @@ async function runEntityMigrations() {
     console.log(`   - Content migrations: ${totalContentMigrations}`);
     console.log(`   - Entity migrations: ${totalEntityMigrations}`);
   } catch (error) {
-    console.error("❌ Entity migration error:", error.message);
+    console.error("❌ Entity migration error:", scrub(error.message));
     await client.end();
     process.exit(1);
   }
@@ -713,7 +720,7 @@ async function checkAuthSchema() {
     await client.connect();
     problems = await authSchemaProblems(client);
   } catch (error) {
-    console.error("❌ Could not check the auth tables:", error.message);
+    console.error("❌ Could not check the auth tables:", scrub(error.message));
     process.exit(1);
   } finally {
     await client.end().catch(() => {});

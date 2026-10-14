@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `nextspark db:migrate` and `db:seed` use an exported `DATABASE_URL`, `MIGRATE_DATABASE_URL`, `MIGRATION_TIMEOUT_SECONDS` or `NEXT_PUBLIC_ACTIVE_THEME` over the same variable in the project `.env`, which only fills what the environment leaves unset; `nextspark doctor` and `db:verify-tables` read `DATABASE_URL` the same way. Both commands accept `--no-env-file`, and the runner prints the host and database it will migrate before it runs. Neither that line nor an error message from the server shows the user, the password or the URL.
 - `EntityForm` no longer validates the fields listed in `hiddenFields`: a theme that hides a required field and renders it elsewhere could not submit, with the error on an invisible field.
 - `SimpleRelationSelect` searches the related entity on the server as you type (debounced, two characters or more) and merges the hits into its options, so a record outside the first page of results can be found.
 - The superadmin users table offers an action only when the API would accept it: the row menu of a developer (or of the viewer's own account) shows no role, verify, suspend or delete to anyone but a developer, and says so in the viewer's language; a suspended user has no role change, as the API refuses it; the superadmins table offers a developer demote to member, suspend and delete on another superadmin, and nobody else.
@@ -44,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading
 
+- A job that exports `DATABASE_URL` (or `MIGRATE_DATABASE_URL`) while a project `.env` is present now migrates the exported database, not the `.env` one. Pass `--no-env-file` to `pnpm db:migrate` to ignore the `.env` altogether.
 - **Better Auth 1.7: core moves to `better-auth ~1.7.7`** (from `~1.6.30`), with `@better-fetch/fetch` `1.3.2` and `zod` `^4.5.4`.
   `pnpm update-core` does not change these in a project's `package.json`: set `"better-auth": "~1.7.7"` and
   `"@better-fetch/fetch": "1.3.2"`, and `zod` to `^4.5.4` or later if the project declares it (or forces an older zod 4 with an

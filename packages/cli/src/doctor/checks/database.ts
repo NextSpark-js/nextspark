@@ -75,29 +75,33 @@ export async function readProjectEnv(cwd = process.cwd()): Promise<Record<string
 }
 
 /**
+ * The DATABASE_URL db:migrate would use: an exported one beats the project's .env files.
+ */
+export async function resolveDatabaseUrl(cwd = process.cwd(), processEnv: NodeJS.ProcessEnv = process.env): Promise<string | undefined> {
+  return processEnv.DATABASE_URL || (await readProjectEnv(cwd))['DATABASE_URL'] || undefined
+}
+
+/**
  * Check if DATABASE_URL is configured
  */
 export async function checkDatabase(): Promise<HealthCheckResult> {
   const cwd = process.cwd()
   const envPath = path.join(cwd, '.env')
   const envLocalPath = path.join(cwd, '.env.local')
-  const envVars = await readProjectEnv(cwd)
 
-  // Also check environment variable directly
-  const databaseUrl = envVars['DATABASE_URL'] || process.env.DATABASE_URL
+  // The same precedence as db:migrate: the exported variable first, then the .env files
+  const databaseUrl = await resolveDatabaseUrl(cwd)
 
-  // No .env files found
-  if (!await fs.pathExists(envPath) && !await fs.pathExists(envLocalPath)) {
-    return {
-      name: 'Database',
-      status: 'warn',
-      message: 'No .env file found',
-      fix: 'Copy .env.example to .env and configure DATABASE_URL',
-    }
-  }
-
-  // DATABASE_URL not configured
+  // DATABASE_URL not configured: with no .env file either, the file is what to create (an exported variable needs none)
   if (!databaseUrl) {
+    if (!await fs.pathExists(envPath) && !await fs.pathExists(envLocalPath)) {
+      return {
+        name: 'Database',
+        status: 'warn',
+        message: 'No .env file found',
+        fix: 'Copy .env.example to .env and configure DATABASE_URL',
+      }
+    }
     return {
       name: 'Database',
       status: 'warn',

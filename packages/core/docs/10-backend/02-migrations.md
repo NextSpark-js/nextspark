@@ -253,7 +253,7 @@ CREATE TRIGGER users_metas_set_updated_at
 DATABASE_URL=postgresql://user:pass@host:5432/database
 ```
 
-**Which source wins.** The database scripts read `.env` **after** the environment, so a `DATABASE_URL` (or `MIGRATE_DATABASE_URL`) in the project `.env` wins over the same variable set in the shell or in CI: a job that exports `DATABASE_URL` with a `.env` present migrates the `.env` database. To point one run elsewhere, set `MIGRATE_DATABASE_URL` in the environment (it is preferred over `DATABASE_URL` and is not overridden unless `.env` also sets it). `pnpm db:migrate` itself has no option to skip `.env`: for a run that must use only the environment, move `.env` aside for that run.
+**Which source wins.** An exported variable beats the project `.env`: `DATABASE_URL`, `MIGRATE_DATABASE_URL`, `MIGRATION_TIMEOUT_SECONDS` and `NEXT_PUBLIC_ACTIVE_THEME` set in the shell or in CI are used as they are, and the `.env` only fills the ones the environment leaves unset. With only a `.env`, nothing changes. `MIGRATE_DATABASE_URL` is preferred over `DATABASE_URL` for the migration connection. `pnpm db:migrate --no-env-file` (and `pnpm db:seed --no-env-file`) skips the `.env` altogether, so the run uses only the environment. Before it runs anything, `db:migrate` prints the destination it resolved, host and database name only (`Migrating host db.example.com, database app`); it never prints the user, the password or the URL, and an error message from the server is printed with them replaced by `***`. `nextspark doctor` and `db:verify-tables` read `DATABASE_URL` with the same precedence.
 
 **Required:**
 - PostgreSQL connection string

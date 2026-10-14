@@ -110,7 +110,7 @@
 import pg from 'pg';
 import { timeLimitedClient, timeLimitParametersIn } from './connection-time-limits.mjs';
 import { scriptClient } from './ssl-config.mjs';
-
+import { scrub } from './destination.mjs';
 const { Client, DatabaseError, escapeIdentifier, escapeLiteral } = pg;
 
 const CONNECT_MS = 10000;
@@ -849,7 +849,7 @@ async function standardConformingStrings(client) {
 
 /** The line the runner prints for a migration that failed. */
 export function migrationFailure(file, error) {
-  return error instanceof MigrationNotRecordedError ? error.message : `Failed to execute ${file}: ${error.message}`;
+  return scrub(error instanceof MigrationNotRecordedError ? error.message : `Failed to execute ${file}: ${error.message}`);
 }
 
 /**

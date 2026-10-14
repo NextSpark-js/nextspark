@@ -79,7 +79,7 @@ A production server without SSL, such as a local PostgreSQL used to test a produ
 
 ### Local Postgres
 
-The database scripts read `.env` **after** the environment, so a `DATABASE_URL` (or `MIGRATE_DATABASE_URL`) in the project `.env` wins over the same variable set in the shell or in CI: a job that exports `DATABASE_URL` with a `.env` present migrates the `.env` database. To point one run elsewhere, set `MIGRATE_DATABASE_URL` in the environment (it is preferred over `DATABASE_URL` and is not overridden unless `.env` also sets it). `pnpm db:migrate` itself has no option to skip `.env`: for a run that must use only the environment, move `.env` aside for that run.
+An exported `DATABASE_URL` (or `MIGRATE_DATABASE_URL`) beats the same variable in the project `.env`; the `.env` only fills what the environment leaves unset, and `--no-env-file` skips it. `db:migrate` prints the host and database it will migrate before it runs. See [Running Migrations](../10-backend/02-migrations.md#running-migrations).
 
 ## Poolers and timeouts
 
