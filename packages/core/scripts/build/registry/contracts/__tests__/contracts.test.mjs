@@ -415,6 +415,95 @@ test('two entities that would export the same name, and an entity that cannot be
   }
 })
 
+// #227: a slug may have an underscore again (a 0.x `campaign_members` entity keeps its name, its table and its URLs)
+const MEMBERS_CONFIG = `export const campaignMemberEntityConfig = {
+  slug: 'campaign_members',
+  tableName: 'members_table',
+  enabled: true,
+  names: { singular: 'campaign member', plural: 'Campaign members' },
+  access: { api: true },
+  fields: [{ name: 'budget', type: 'number', required: false, display: { label: 'Budget' }, api: {} }],
+}
+`
+
+test('an entity slug may have an underscore: the contract, its api path and the columns of its (explicit) table', async () => {
+  const root = project({
+    'entities/campaign_members/campaign_members.config.ts': MEMBERS_CONFIG,
+    'entities/campaign_members/migrations/001_members.sql': 'CREATE TABLE "members_table" (id TEXT PRIMARY KEY, budget NUMERIC(10, 2));\n',
+  })
+  try {
+    const plan = await planContracts({ entities: await entitiesOf(root), projectRoot: root, coreRoot: CORE_ROOT })
+    assert.deepEqual(plan.diagnostics, [])
+    assert.ok(plan.files.some(file => file.path === 'src/entities/campaign_members.ts'))
+    const members = plan.files.find(file => file.path === 'src/entities/campaign_members.ts').content
+    assert.match(members, /export const campaignMembersApiPath = '\/api\/v1\/campaign_members'/)
+    assert.match(members, /slug: 'campaign_members'/)
+    // the column type comes from the entity's tableName, not from the slug: NUMERIC arrives as a string
+    assert.match(members, /budget: z\.string\(\)\.nullish\(\)/)
+    assert.match(plan.files.find(file => file.path === 'src/entities/index.ts').content, /export \* from '\.\/campaign_members'/)
+  } finally {
+    clean(root)
+  }
+})
+
+test('a slug still has to start with a letter and use only a-z, 0-9, - and _; "a_b" and "a-b" would clash', async () => {
+  const bad = project({ 'entities/Bad/bad.config.ts': "export const badEntityConfig = { slug: 'Bad_Slug', fields: [] }\n" })
+  try {
+    const plan = await planContracts({ entities: await entitiesOf(bad), projectRoot: bad, coreRoot: CORE_ROOT })
+    assert.ok(plan.diagnostics.some(d => d.code === 'NS_CONTRACTS_BAD_SLUG'), JSON.stringify(plan.diagnostics))
+  } finally {
+    clean(bad)
+  }
+  const clash = project({
+    'entities/a_b/a_b.config.ts': "export const aUnderscoreEntityConfig = { slug: 'a_b', names: { singular: 'ab' }, fields: [] }\n",
+    'entities/a-b/a-b.config.ts': "export const aHyphenEntityConfig = { slug: 'a-b', names: { singular: 'ab' }, fields: [] }\n",
+  })
+  try {
+    const plan = await planContracts({ entities: await entitiesOf(clash), projectRoot: clash, coreRoot: CORE_ROOT })
+    assert.ok(plan.diagnostics.some(d => d.code === 'NS_CONTRACTS_NAME_CLASH'), JSON.stringify(plan.diagnostics))
+  } finally {
+    clean(clash)
+  }
+})
+
+test('nextspark prepare serves an entity whose slug has an underscore: routes, registries, api path, table name', { timeout: 180_000 }, async () => {
+  const root = project({
+    'entities/campaign_members/campaign_members.config.ts': MEMBERS_CONFIG,
+    'entities/campaign_members/messages/en.json': '{"title":"Members"}\n',
+    'config/permissions.config.ts': [
+      'export const PERMISSIONS_CONFIG_OVERRIDES = {',
+      '  entities: {',
+      '    campaign_members: [',
+      "      { action: 'create', label: 'Create', description: 'Create', roles: ['owner', 'admin'] },",
+      "      { action: 'list', label: 'List', description: 'List', roles: ['owner', 'admin', 'member'] },",
+      '    ],',
+      '  },',
+      '}',
+      '',
+    ].join('\n'),
+  })
+  try {
+    const result = await prepareHost(config(root), { mode: 'production' })
+    assert.equal(result.contracts.files > 0, true)
+    for (const route of ['page.tsx', 'create/page.tsx', '[id]/page.tsx', '[id]/edit/page.tsx', 'layout.tsx']) {
+      assert.ok(existsSync(join(root, 'src/app/dashboard/(main)/campaign_members', route)), `the dashboard route ${route}`)
+    }
+    const registries = join(root, '.nextspark/registries')
+    const entityRegistry = readFileSync(join(registries, 'entity-registry.ts'), 'utf8')
+    assert.match(entityRegistry, /'campaign_members': \{/)
+    assert.match(entityRegistry, /tableName: campaignMemberEntityConfig\.tableName \|\| campaignMemberEntityConfig\.slug/)
+    assert.match(readFileSync(join(registries, 'route-handlers.ts'), 'utf8'), /path: '\/api\/v1\/campaign_members'/)
+    assert.match(readFileSync(join(registries, 'entity-types.ts'), 'utf8'), /export type EntityName = 'campaign_members'/)
+    assert.match(readFileSync(join(registries, 'translation-registry.ts'), 'utf8'), /campaign_members/)
+    const permissions = readFileSync(join(registries, 'permissions-registry.ts'), 'utf8')
+    assert.match(permissions, /campaign_members\.create/)
+    assert.match(permissions, /campaign_members\.list/)
+    assert.deepEqual((await checkHost(config(root))).problems, [])
+  } finally {
+    clean(root)
+  }
+})
+
 test('publishing: only files the record owns are replaced or deleted, a foreign file stops the run, an unchanged file is not touched', () => {
   const root = temp()
   try {

@@ -201,6 +201,19 @@ function collectContentMigrations(migrationsPath, sourceType, sourceName) {
   }));
 }
 
+// `nextspark migrate --rename-entity-slugs` renames an entity directory and writes the old name in
+// <entity>/.renamed-from as `old -> new`, so the rows recorded under the old name are taken over (see
+// executeEntityMigration). It counts only in the directory it names: a copy of that directory under another
+// name, or a directory renamed again, ignores it.
+function readRenamedFrom(entityPath, entityName) {
+  try {
+    const match = /^([a-z][a-z0-9_-]*)\s*->\s*([a-z][a-z0-9_-]*)$/.exec(fs.readFileSync(path.join(entityPath, '.renamed-from'), 'utf8').trim());
+    return match && match[2] === entityName && match[1] !== entityName ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 // Helper: Collect all entity migration files recursively
 function collectEntityMigrations(baseDir, sourceType, sourceName, depth = 0) {
   const migrations = [];
@@ -214,6 +227,7 @@ function collectEntityMigrations(baseDir, sourceType, sourceName, depth = 0) {
 
     const entityPath = path.join(baseDir, entry.name);
     const entityName = entry.name;
+    const renamedFrom = readRenamedFrom(entityPath, entityName);
 
     // Check for migrations in this entity
     const migrationsPath = path.join(entityPath, 'migrations');
@@ -228,6 +242,7 @@ function collectEntityMigrations(baseDir, sourceType, sourceName, depth = 0) {
           sourceType,
           sourceName,
           entityName,
+          renamedFrom,
           filename: file,
           fullPath: path.join(migrationsPath, file),
           isSampleData: isSampleDataMigration(file, fs.readFileSync(path.join(migrationsPath, file), 'utf8')),
@@ -317,9 +332,10 @@ function legacyKey({ sourceType, sourceName }, theme) {
   return null;
 }
 
-// The underscore spelling a 0.x entity directory had (see executeEntityMigration), or null
-function legacyEntityName(entityName) {
-  const legacyName = entityName.replaceAll('-', '_');
+// The name an entity directory had before it was renamed (see executeEntityMigration), or null: the one its
+// .renamed-from says, else the underscore spelling of a 0.x directory
+function legacyEntityName({ entityName, renamedFrom }) {
+  const legacyName = renamedFrom ?? entityName.replaceAll('-', '_');
   if (legacyName === entityName || MIGRATIONS.allEntityMigrations.some(m => m.entityName === legacyName)) return null;
   return legacyName;
 }
@@ -359,8 +375,8 @@ async function legacyTheme(client) {
     const fromTheme = rows.filter(row => row.source_type === 'theme');
     for (const row of fromTheme) entityThemes.add(row.source_name);
     pending.entity = MIGRATIONS.allEntityMigrations
-      .filter(m => m.sourceType === 'project' && runs(m) && legacyEntityName(m.entityName) && !own.has(`${m.entityName}\0${m.filename}`))
-      .some(m => fromTheme.some(row => row.entity_name === legacyEntityName(m.entityName) && row.filename === m.filename));
+      .filter(m => m.sourceType === 'project' && runs(m) && legacyEntityName(m) && !own.has(`${m.entityName}\0${m.filename}`))
+      .some(m => fromTheme.some(row => row.entity_name === legacyEntityName(m) && row.filename === m.filename));
   }
   if (!pending.content && !pending.entity) return null;
   const names = [...new Set([...(pending.content ? contentThemes : []), ...(pending.entity ? entityThemes : [])])].sort();
@@ -435,22 +451,34 @@ async function executeEntityMigration(client, migration) {
     return false;
   }
 
-  // An entity slug is a lowercase identifier with hyphens, so a 0.x campaign_members
-  // directory became campaign-members: the same entity, recorded under the old name.
-  // Only that exact rename counts, not while a directory still has the old name, and only
-  // from where this entity lived before: a project entity from the theme it came from,
-  // a plugin entity from the same plugin.
-  const legacyName = legacyEntityName(entityName);
-  const origin = sourceType === 'project' ? LEGACY_THEME && ['theme', LEGACY_THEME]
-    : sourceType === 'plugin' ? ['plugin', sourceName] : null;
-  if (legacyName && origin) {
-    const taken = await client.query(
-      `INSERT INTO "_entity_migrations" (entity_name, source_type, source_name, filename, executed_at)
-       SELECT $1, $2, $3, filename, executed_at FROM "_entity_migrations"
-       WHERE entity_name = $4 AND filename = $5 AND source_type = $6 AND source_name = $7
-       ON CONFLICT DO NOTHING`,
-      [entityName, sourceType, sourceName, legacyName, filename, ...origin]
-    );
+  // An entity directory renamed since its migrations ran: the same entity, recorded under the old name.
+  // Two kinds of rename count, and only those: a 0.x campaign_members directory that is now
+  // campaign-members (from where this entity lived before: a project entity from the theme it came
+  // from, a plugin entity from the same plugin), and a directory that `nextspark migrate
+  // --rename-entity-slugs` renamed, which says so in .renamed-from (from where the entity is recorded now).
+  const legacyName = legacyEntityName(migration);
+  const origins = [];
+  if (legacyName) {
+    if (LEGACY_THEME && sourceType === 'project') origins.push(['theme', LEGACY_THEME]);
+    if (sourceType === 'plugin') origins.push(['plugin', sourceName]);
+    if (migration.renamedFrom) origins.push([sourceType, sourceName]);
+  }
+  for (const origin of origins) {
+    // The row of a directory `migrate` renamed is moved, so it can be taken only once; a 0.x spelling is copied
+    const moved = migration.renamedFrom && origin[0] === sourceType && origin[1] === sourceName;
+    const taken = moved
+      ? await client.query(
+        `UPDATE "_entity_migrations" SET entity_name = $1
+         WHERE entity_name = $2 AND filename = $3 AND source_type = $4 AND source_name = $5`,
+        [entityName, legacyName, filename, ...origin]
+      )
+      : await client.query(
+        `INSERT INTO "_entity_migrations" (entity_name, source_type, source_name, filename, executed_at)
+         SELECT $1, $2, $3, filename, executed_at FROM "_entity_migrations"
+         WHERE entity_name = $4 AND filename = $5 AND source_type = $6 AND source_name = $7
+         ON CONFLICT DO NOTHING`,
+        [entityName, sourceType, sourceName, legacyName, filename, ...origin]
+      );
     if (taken.rowCount > 0) {
       console.log(`${indent}⏭️  ${filename}: already applied as entity ${legacyName}; recorded for ${entityName}`);
       return false;

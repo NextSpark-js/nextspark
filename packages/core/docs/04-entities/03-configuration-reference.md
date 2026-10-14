@@ -68,7 +68,9 @@ El slug es la **única fuente de verdad** y define todos los nombres derivados a
 **Convenciones:**
 - Usar minúsculas
 - Plural (ej: `tasks`, `products`, `users`)
-- Separar con guiones si es necesario (ej: `blog-posts`)
+- Separar con guiones si es necesario (ej: `blog-posts`); el guion bajo también es válido (`campaign_members`): el slug empieza con una letra minúscula y usa `a-z`, `0-9`, `-` y `_`
+- El slug debe ser igual al nombre del directorio de la entidad; `a_b` y `a-b` exportan los mismos nombres de contrato, así que no pueden convivir
+- Si el slug cambia (por ejemplo `campaign_members` a `campaign-members` con `nextspark migrate --rename-entity-slugs`), la tabla se conserva con `tableName`, y cambian el namespace i18n, las permission keys, los scopes de API keys y la URL `/api/v1/{slug}`
 
 ```typescript
 {

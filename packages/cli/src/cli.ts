@@ -197,6 +197,7 @@ program
   .option('-y, --yes', 'Perform the move after printing the report')
   .option('--no-prepare', 'Convert the files but do not run nextspark prepare afterwards')
   .option('--no-simulate', 'With --dry-run: do not convert a temporary copy to run the generated-host plan')
+  .option('--rename-entity-slugs', 'Rename entity slugs that have an underscore to hyphens (optional: an underscore is valid) and report what else to update')
   .addOption(new Option('--simulation-nonce <nonce>').hideHelp())
   .action(migrateCommand);
 

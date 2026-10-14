@@ -348,6 +348,8 @@ export async function readEntityContract({ file, exportName, projectRoot, source
   if (api.state === 'value' && api.value === false) return { skipped: 'the entity has no external API (access.api is false)' }
   const shared_ = read(object, configFile, ['access', 'shared'], sources)
   const singular = read(object, configFile, ['names', 'singular'], sources)
+  // The table the migrations create: `tableName` when the entity sets one, else the slug
+  const tableName = read(object, configFile, ['tableName'], sources)
 
   const fieldsProperty = property(object, 'fields', ts)
   let fields = []
@@ -409,7 +411,7 @@ export async function readEntityContract({ file, exportName, projectRoot, source
       taxonomies,
       childEntities: childEntities.value,
       fields,
-      columnTypes: readColumnTypes(slug.value, migrationDirs),
+      columnTypes: readColumnTypes(tableName.state === 'value' && typeof tableName.value === 'string' ? tableName.value : slug.value, migrationDirs),
       warnings,
     },
   }

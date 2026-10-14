@@ -96,7 +96,7 @@ New projects are created with Cache Components and PPR on. An upgraded project k
 
 ## Coming from 0.1.0-beta.18x
 
-Things a project that jumped from `0.1.0-beta.184` (or a neighbouring release) to the root-first layout met, none of which the steps above warn about. Do the first two before `pnpm db:migrate`, and the rest while you update callers and routes; a renamed entity directory is taken over by `pnpm db:migrate` from `0.1.0-beta.198` and needs its `_entity_migrations` rows re-keyed first on an earlier core (see [Entity slugs with an underscore](#entity-slugs-with-an-underscore)).
+Things a project that jumped from `0.1.0-beta.184` (or a neighbouring release) to the root-first layout met, none of which the steps above warn about. Do the first two before `pnpm db:migrate`, and the rest while you update callers and routes; a renamed entity directory is taken over by `pnpm db:migrate` from `0.1.0-beta.198` and needs its `_entity_migrations` rows re-keyed first on an earlier core; an underscore slug needs no rename at all (see [Entity slugs with an underscore](#entity-slugs-with-an-underscore)).
 
 ### Better Auth: a NOT NULL `issuer` column on `account`
 
@@ -160,9 +160,18 @@ Counters are per client address and tier across all routes (in `0.1.0-beta.184` 
 
 ### Entity slugs with an underscore
 
-Portable contracts need a slug that matches `^[a-z][a-z0-9-]*$`. `nextspark prepare` (so also the last step of `migrate --yes`, and the prediction of `migrate --dry-run`) refuses an entity whose `slug` has an underscore with `NS_CONTRACTS_BAD_SLUG`. `nextspark migrate` does not rename or warn about the slug in advance, so you do it by hand. `prepare` also requires the slug to equal the entity's directory name (`NS_HOST_ENTITY_SLUG_MISMATCH`), so rename both: `entities/campaign_members/` becomes `entities/campaign-members/` (update the imports that point into it), and its `slug` becomes `'campaign-members'`.
+An underscore is valid in an entity slug again (`campaign_members`): a slug starts with a lowercase letter and then uses `a-z`, `0-9`, `-` and `_`. Nothing has to be renamed. Between `0.1.0-beta.192` and `0.1.0-beta.199`, `nextspark prepare` refused such a slug with `NS_CONTRACTS_BAD_SLUG`; a project that renamed `campaign_members` to `campaign-members` to get past it can stay as it is, or rename it back (the directory, the `slug`, the permission key, the scopes and the URLs, as below, in the other direction). Two entities whose slugs differ only in `_` against `-` (`a_b` and `a-b`) export the same names and are refused (`NS_CONTRACTS_NAME_CLASH`).
 
-An entity's table name and its meta table (`<table>_metas`) derive from the slug, so keep the table by setting it explicitly; the SQL does not change:
+`nextspark migrate` lists the underscore slugs it finds under **Entity slugs with an underscore**, and renames them to hyphens only when you ask: `nextspark migrate --rename-entity-slugs` (with `--dry-run` it prints the whole report and writes nothing), or yes to the question it asks in a terminal. `--yes` alone never renames. The rename:
+
+- renames `entities/campaign_members/` to `entities/campaign-members/`, sets `slug: 'campaign-members'` and, unless the config already has one, `tableName: 'campaign_members'` (the SQL table and its `campaign_members_metas` do not change);
+- rewrites the module specifiers that point into the directory (`from`, `import()`, `require()`, `jest.mock()` and `vi.mock()` of `@/entities/campaign_members/...`, and of `../campaign_members/...` from another entity; the same text in a comment or a URL string is left alone) and the entity key of `config/permissions.config.ts`, which the registry build validates against the slugs. It reads `slug` and `tableName` as top-level properties of the config (a mention in a comment does not count), and reads every edit back: if the config does not end up with the new slug and the old table, or the permissions key is not where it should be, every file and directory is put back and migrate stops;
+- writes `entities/campaign-members/.renamed-from` (`campaign_members -> campaign-members`), so `pnpm db:migrate` records the migrations already applied under `campaign_members` for the new name instead of running them again (one line per migration: `001_x.sql: already applied as entity campaign_members; recorded for campaign-members`; check that no `CREATE` ran);
+- prints the report below: the permission keys, the `UPDATE "api_key"` that rewrites the scopes (printed, never run), the old URL and a snippet to keep `/api/v1/campaign_members` as an alias for one release with a `Deprecation` header (a manual step: it edits `next.config`), the translations and the `_entity_migrations` re-key for a core that is older than this release.
+
+A skipped entity is listed with the reason and left alone: its slug differs from its directory name or is not a string literal, its `tableName` is not a string literal, the hyphenated name is taken, or it has child entities (their tables are named `<directory>_<child>`, so renaming the directory would point them at tables that do not exist). The printed rollback removes the renamed directory too, and is printed even when the rename stops partway.
+
+Renaming by hand follows the same steps. `prepare` requires the slug to equal the entity's directory name (`NS_HOST_ENTITY_SLUG_MISMATCH`), so rename both, and keep the table by setting it explicitly (the table name and its meta table, `<table>_metas`, derive from the slug otherwise):
 
 ```ts
 export const campaignMembersEntityConfig: EntityConfig = {
@@ -172,22 +181,28 @@ export const campaignMembersEntityConfig: EntityConfig = {
 }
 ```
 
-`pnpm db:migrate` records an entity's migrations under its directory name, so after the rename it would look as if none of that entity's migrations had run.
+`pnpm db:migrate` records an entity's migrations under its directory name, so a rename made by hand makes it look as if none of that entity's migrations had run.
 
-- **From `0.1.0-beta.198`,** `pnpm db:migrate` recognises this: when `entities/campaign-members/` has no recorded migrations and `_entity_migrations` has rows for `campaign_members` from the same origin (the old theme, or the same plugin), it records them for the new name instead of running them again, and prints one line per migration, for example `001_x.sql: already applied as entity campaign_members; recorded for campaign-members`. Check that the log shows those lines and that no `CREATE` ran.
+- **From this release,** a directory with a `.renamed-from` file (what `migrate --rename-entity-slugs` writes) is taken over as described above, from where the entity is recorded now. A directory renamed by hand from `campaign_members` to `campaign-members` is taken over only as before: from `0.1.0-beta.198`, when `entities/campaign-members/` has no recorded migrations and `_entity_migrations` has rows for `campaign_members` from the old theme or the same plugin. Add a `.renamed-from` file containing `campaign_members -> campaign-members` to take over rows recorded for the project. The file counts only in the directory it names (a copy of the directory under another name ignores it), and it moves the rows to the new name, so they can be taken once.
 - **On an earlier core,** re-key the rows **before** the next `pnpm db:migrate` (take a backup first). Only before `0.1.0-beta.198`:
 
   ```sql
   UPDATE "_entity_migrations" SET entity_name = 'campaign-members' WHERE entity_name = 'campaign_members';
   ```
 
-What the new slug changes, and what a project updates:
+- **To go back** after `pnpm db:migrate` has moved the rows to the new name, put the directory and slug back and restore the rows. `migrate` prints this with your real names and never runs it (take a backup first):
+
+  ```sql
+  UPDATE "_entity_migrations" SET entity_name = 'campaign_members' WHERE entity_name = 'campaign-members' AND source_type = 'project';
+  ```
+
+What a rename changes, and what a project updates:
 
 | Where the old slug appears | Update |
 | --- | --- |
 | Role permissions: the `entities` key in `config/permissions.config.ts`, and every `campaign_members.<action>` string | The new slug (`campaign-members.create`) |
 | API keys: stored `scopes` are `<slug>:read`, `<slug>:write` and `<slug>:delete` | A key holding `campaign_members:read` no longer matches (scopes are compared exactly; a key with `*` is unaffected): rewrite the stored scopes with the `UPDATE` below, or issue new keys |
-| URLs: `/api/v1/campaign_members` is now `/api/v1/campaign-members` (there is no alias for the old one) | Every client: mobile app, integrations, scripts |
+| URLs: `/api/v1/campaign_members` is now `/api/v1/campaign-members` (no alias unless you add the one the report prints) | Every client: mobile app, integrations, scripts |
 | Translations: the entity's i18n namespace is its directory name, so it follows the rename | `useTranslations('campaign_members')` becomes `useTranslations('campaign-members')`; the entity's own `messages/` files move with the directory, but keys for it in the project's other message files move under the new name |
 
 ```sql

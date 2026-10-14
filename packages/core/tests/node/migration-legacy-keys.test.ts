@@ -8,7 +8,9 @@
  * names, or NEXT_PUBLIC_ACTIVE_THEME when it names several; otherwise nothing
  * runs. An entity whose directory went from campaign_members to
  * campaign-members (slugs are lowercase identifiers with hyphens) keeps its
- * entity migrations too.
+ * entity migrations too, and so does a root-first entity that `nextspark migrate
+ * --rename-entity-slugs` renamed (its .renamed-from file); an entity that keeps its
+ * underscore slug keeps them without any of this.
  *
  * The test starts a throwaway cluster with initdb and pg_ctl on a free port, and
  * is skipped when they are not on the PATH.
@@ -29,12 +31,21 @@ const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--versio
 
 type TestContext = { name: string; after: (fn: () => void | Promise<void>) => void }
 
+/** A free port: any, or the first free one of the 20 from NS_TEST_PORT_BASE when a machine reserves a range. */
 async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
+  const base = Number(process.env.NS_TEST_PORT_BASE) || 0
+  for (let candidate = base; candidate <= base + (base ? 19 : 0); candidate++) {
+    const server = net.createServer()
+    try {
+      await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(candidate, '127.0.0.1', resolve) })
+    } catch {
+      continue
+    }
+    const { port } = server.address() as net.AddressInfo
+    await new Promise(resolve => server.close(resolve))
+    return port
+  }
+  throw new Error(`no free port from NS_TEST_PORT_BASE=${base}`)
 }
 
 /** A throwaway cluster with one s138_ database, stopped and removed after the test. */
@@ -316,4 +327,103 @@ test('(j) renamed entities with migrations of their own, recorded under the old 
   assert.equal(second.status, 0, second.output)
   assert.doesNotMatch(second.output, /already applied as/)
   assert.equal(await value(client, 'SELECT count(*)::int FROM "_entity_migrations"'), 6)
+})
+
+test('(k) an entity renamed by `migrate --rename-entity-slugs` (.renamed-from) keeps the migrations it ran as a project entity: the rows move to its name', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+  const { url, client } = await throwawayDatabase(t, 'k')
+  await legacyDatabase(client, [])
+  await client.query(`
+    CREATE TABLE campaign_members (id int);
+    INSERT INTO "_entity_migrations" (entity_name, source_type, source_name, filename) VALUES ('campaign_members', 'project', 'fixture', '001_campaign_members.sql');
+  `)
+  // Not idempotent, so a migration that runs again fails the run
+  const root = project(t, {
+    'entities/campaign-members/.renamed-from': 'campaign_members -> campaign-members\n',
+    'entities/campaign-members/migrations/001_campaign_members.sql': 'CREATE TABLE campaign_members (id int);',
+    'entities/campaign-members/migrations/002_campaign_members_name.sql': 'ALTER TABLE campaign_members ADD COLUMN name text;',
+  })
+
+  const first = migrate(root, url, { LABEL: '(k) renamed by migrate' })
+  assert.equal(first.status, 0, first.output)
+  assert.match(first.output, /001_campaign_members\.sql: already applied as entity campaign_members; recorded for campaign-members/)
+  assert.doesNotMatch(first.output, /🔄 001_campaign_members/)
+  assert.deepEqual(await rows(client, 'SELECT entity_name, source_type, filename FROM "_entity_migrations" ORDER BY entity_name, filename'), [
+    ['campaign-members', 'project', '001_campaign_members.sql'],
+    ['campaign-members', 'project', '002_campaign_members_name.sql'],
+  ])
+  assert.equal(await value(client, `SELECT count(*)::int FROM information_schema.columns WHERE table_name = 'campaign_members' AND column_name = 'name'`), 1)
+
+  const second = migrate(root, url, { LABEL: '(k) second run' })
+  assert.equal(second.status, 0, second.output)
+  assert.doesNotMatch(second.output, /already applied as|🔄 \d+_/)
+})
+
+test('(l) the same hyphenated directory without .renamed-from is not taken over: it is a new entity', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+  const { url, client } = await throwawayDatabase(t, 'l')
+  await legacyDatabase(client, [])
+  await client.query(`INSERT INTO "_entity_migrations" (entity_name, source_type, source_name, filename) VALUES ('campaign_members', 'project', 'fixture', '001_campaign_members.sql');`)
+  const root = project(t, { 'entities/campaign-members/migrations/001_campaign_members.sql': 'CREATE TABLE campaign_members_v2 (id int);' })
+
+  const result = migrate(root, url, { LABEL: '(l) no marker' })
+  assert.equal(result.status, 0, result.output)
+  assert.doesNotMatch(result.output, /already applied as entity/)
+  assert.equal(await value(client, `SELECT to_regclass('campaign_members_v2')::text`), 'campaign_members_v2')
+})
+
+test('(m) an entity that keeps its underscore slug does not run its migrations again, with or without a theme to come from', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+  const { url, client } = await throwawayDatabase(t, 'm')
+  await legacyDatabase(client, [], [['campaign_members', '001_campaign_members.sql']])
+  await client.query('CREATE TABLE campaign_members (id int);')
+  const root = project(t, {
+    'entities/campaign_members/migrations/001_campaign_members.sql': 'CREATE TABLE campaign_members (id int);',
+    'entities/campaign_members/migrations/002_campaign_members_name.sql': 'ALTER TABLE campaign_members ADD COLUMN name text;',
+  })
+
+  const first = migrate(root, url, { LABEL: '(m) underscore kept' })
+  assert.equal(first.status, 0, first.output)
+  assert.match(first.output, /001_campaign_members\.sql \(already executed\)/)
+  assert.doesNotMatch(first.output, /already applied as entity/)
+  assert.equal(await value(client, `SELECT count(*)::int FROM information_schema.columns WHERE table_name = 'campaign_members' AND column_name = 'name'`), 1)
+  assert.deepEqual(await rows(client, 'SELECT entity_name, source_type, filename FROM "_entity_migrations" ORDER BY filename'), [
+    ['campaign_members', 'theme', '001_campaign_members.sql'],
+    ['campaign_members', 'project', '002_campaign_members_name.sql'],
+  ])
+})
+
+test('(n) a .renamed-from that names another target is ignored: a copied or renamed-again directory is a new entity', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+  const { url, client } = await throwawayDatabase(t, 'n')
+  await legacyDatabase(client, [])
+  await client.query(`INSERT INTO "_entity_migrations" (entity_name, source_type, source_name, filename) VALUES ('campaign_members', 'project', 'fixture', '001_campaign_members.sql');`)
+  // `cp -r entities/campaign-members entities/campaign-tasks` carries the marker of the directory it was copied from
+  const root = project(t, {
+    'entities/campaign-tasks/.renamed-from': 'campaign_members -> campaign-members\n',
+    'entities/campaign-tasks/migrations/001_campaign_members.sql': 'CREATE TABLE campaign_tasks_created (id int);',
+  })
+
+  const result = migrate(root, url, { LABEL: '(n) marker for another target' })
+  assert.equal(result.status, 0, result.output)
+  assert.doesNotMatch(result.output, /already applied as entity/)
+  assert.equal(await value(client, `SELECT to_regclass('campaign_tasks_created')::text`), 'campaign_tasks_created')
+  assert.equal(await value(client, `SELECT count(*)::int FROM "_entity_migrations" WHERE entity_name = 'campaign_members'`), 1, 'the old rows stay where they were')
+})
+
+test('(o) the rows of a renamed entity can be taken once: a second directory naming the same old entity runs its own migrations', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+  const { url, client } = await throwawayDatabase(t, 'o')
+  await legacyDatabase(client, [])
+  await client.query(`INSERT INTO "_entity_migrations" (entity_name, source_type, source_name, filename) VALUES ('campaign_members', 'project', 'fixture', '001_campaign_members.sql');`)
+  const root = project(t, {
+    'entities/campaign-members/.renamed-from': 'campaign_members -> campaign-members\n',
+    'entities/campaign-members/migrations/001_campaign_members.sql': 'CREATE TABLE should_not_run_members (id int);',
+    'entities/campaign-tasks/.renamed-from': 'campaign_members -> campaign-tasks\n',
+    'entities/campaign-tasks/migrations/001_campaign_members.sql': 'CREATE TABLE tasks_ran (id int);',
+  })
+
+  const result = migrate(root, url, { LABEL: '(o) taken once' })
+  assert.equal(result.status, 0, result.output)
+  assert.equal((result.output.match(/already applied as entity campaign_members/g) ?? []).length, 1, result.output)
+  const takenBy = await rows(client, `SELECT entity_name FROM "_entity_migrations" WHERE filename = '001_campaign_members.sql' ORDER BY entity_name`)
+  assert.equal(takenBy.length, 2)
+  assert.equal(await value(client, `SELECT count(*)::int FROM "_entity_migrations" WHERE entity_name = 'campaign_members'`), 0)
+  const tables = (await value(client, `SELECT (to_regclass('should_not_run_members') IS NOT NULL)::int + (to_regclass('tasks_ran') IS NOT NULL)::int`)) as number
+  assert.equal(tables, 1, 'exactly one of the two directories ran its CREATE')
 })

@@ -1,5 +1,5 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, rmdirSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, readSync, readlinkSync, realpathSync, renameSync, rmSync, rmdirSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { randomBytes } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -14,6 +14,7 @@ import { pathToFileURL } from 'node:url';
 import { adaptProxySource, planProxyFile, type ProxyFileName } from '../utils/proxy-file.js';
 import { isPreviousTemplate, readPreviousTemplates, type PreviousTemplates as PreviousTemplateHashes } from '../utils/previous-templates.js';
 import { contentHash, readSyncState } from '../utils/sync-state.js';
+import { applyEntityRenames, entityRenameReport, planEntitySlugs, renamedDirectories, type EntitySlugPlan, type ReportSection } from '../utils/migrate-entity-slugs.js';
 
 interface MigrateOptions {
   dryRun?: boolean;
@@ -25,6 +26,8 @@ interface MigrateOptions {
   simulate?: boolean;
   /** Hidden: proof that this process is the simulation's child (see simulationVerified). */
   simulationNonce?: string;
+  /** `--rename-entity-slugs`: rename the entity slugs that have an underscore to hyphens (never required). */
+  renameEntitySlugs?: boolean;
 }
 
 interface FileChange {
@@ -101,6 +104,8 @@ interface MigrateReport {
     generatorImportRewriteWarnings: string[];
   };
   imports: { themeOccurrences: number; themeFiles: number; pluginOccurrences: number; pluginFiles: number };
+  /** Entity slugs with an underscore are valid; the rename to hyphens is offered, and happens only when asked for. */
+  entitySlugs: EntitySlugPlan & { rename: boolean; report: ReportSection[] };
   toolingReferences: ToolingReference[];
   collisions: {
     reserved: { path: string; reason: string }[];
@@ -1732,6 +1737,7 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     coreScripts: scripts,
     rootTemplates: compareRoot(host.root, templates),
     imports,
+    entitySlugs: { ...planEntitySlugs(host.root, selectedTheme.name), rename: false, report: [] },
     toolingReferences: toolingReferences(repository),
     collisions: { ...collisions(host.root, themeDirectory), renamed: movePlan?.renamed ?? [] },
     untracked,
@@ -1825,6 +1831,14 @@ function printReport(report: MigrateReport, dryRun: boolean): void {
     `theme: ${report.imports.themeOccurrences} occurrence(s) in ${report.imports.themeFiles} file(s)`,
     `plugins: ${report.imports.pluginOccurrences} occurrence(s) in ${report.imports.pluginFiles} file(s)`,
   ]);
+  section('Entity slugs with an underscore', report.entitySlugs.renames.length + report.entitySlugs.skipped.length === 0
+    ? ['none']
+    : [
+      'An underscore is valid in an entity slug; nothing here needs to change. To rename them to hyphens anyway, run migrate with --rename-entity-slugs (or answer yes when it asks).',
+      ...report.entitySlugs.renames.map(rename => `${rename.oldSlug} -> ${rename.newSlug} (tableName ${rename.setsTableName ? `'${rename.tableName}' will be set` : `'${rename.tableName}' is kept`})${report.entitySlugs.rename ? ': will be renamed' : ''}`),
+      ...report.entitySlugs.skipped.map(item => `${item.name}: not renamable, ${item.reason}`),
+    ]);
+  for (const part of report.entitySlugs.report) section(part.title, part.lines);
   section('Tooling contents/ references', report.toolingReferences.length
     ? report.toolingReferences.map(reference => `${reference.path}:${reference.line || 'script'} (${reference.kind})${reference.relativeDepth ? ' [relative-depth]' : ''}: ${reference.text}`)
     : ['none']);
@@ -3390,6 +3404,8 @@ function rollbackState(repository: string, hostRoot: string, plan: MovePlan, rep
     if (!existsSync(join(hostRoot, path))) destinations.add(pathFrom(repository, join(hostRoot, path)));
   }
   if (report.config.plannedCreation) destinations.add(pathFrom(repository, join(hostRoot, 'nextspark.config.ts')));
+  // Renamed entity directories are new, untracked paths; the old ones come back through `checkout`
+  if (report.entitySlugs.rename) for (const directory of renamedDirectories(report.entitySlugs)) destinations.add(pathFrom(repository, join(hostRoot, directory)));
   // Overrides and moved project files created from the app tree
   for (const file of [...report.appConversion.overrides, ...report.appConversion.projectFiles]) destinations.add(pathFrom(repository, join(hostRoot, file.destination)));
   if (report.envExample.action === 'move') destinations.add(pathFrom(repository, join(hostRoot, '.env.example')));
@@ -3793,6 +3809,28 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
   }
 }
 
+/** One line from an interactive terminal; anything but yes is no. */
+function askYesNo(question: string): boolean {
+  process.stdout.write(`${question} [y/N] `);
+  const buffer = Buffer.alloc(256);
+  let line = '';
+  while (!line.includes('\n')) {
+    const read = readSync(0, buffer, 0, buffer.length, null);
+    if (read === 0) break;
+    line += buffer.toString('utf8', 0, read);
+  }
+  const answer = line.trim().toLowerCase();
+  return answer === 'y' || answer === 'yes';
+}
+
+/** Rename the entity slugs the user asked to rename, and print what changed and what the project still has to update. */
+function renameEntitySlugs(repository: string, hostRoot: string, plan: MigrateReport['entitySlugs']): string[] {
+  const applied = applyEntityRenames(hostRoot, plan.renames);
+  section('Entity slugs renamed', applied.changed);
+  for (const part of entityRenameReport(hostRoot, plan, true)) section(part.title, part.lines);
+  return renamedDirectories(plan).map(directory => pathFrom(repository, join(hostRoot, directory)));
+}
+
 export async function migrateCommand(options: MigrateOptions): Promise<void> {
   let rollback: string[] | null = null;
   let writesStarted = false;
@@ -3812,6 +3850,10 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       throw new MigrateAnalysisError(unfinished.message);
     }
     const { report, plan: appPlan } = await analyze(process.cwd());
+    if (options.renameEntitySlugs && report.entitySlugs.renames.length > 0) {
+      report.entitySlugs.rename = true;
+      report.entitySlugs.report = entityRenameReport(resolve(repositoryRoot(process.cwd()), report.hostRoot.path), report.entitySlugs, false);
+    }
     if (options.dryRun) {
       if (appPlan && report.appConversion.unsimulable.length > 0) {
         report.hostPlan.reason = `not simulated: ${report.appConversion.unsimulable.length} blocker(s) make it impossible to convert a copy (symbolic links or files that collide): fix ${report.appConversion.unsimulable.map(line => line.split(': ')[0]).join(', ')} and run the dry run again to see the host conflicts`;
@@ -3840,24 +3882,51 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     if (!cleanWorkingTree(repository, report.untracked)) throw new MigrateAnalysisError(`Refusing to move files on a dirty git tree. Commit, stash, or remove untracked files first.${report.untracked.some(file => /(^|\/)(node_modules|\.next)\/$/.test(file)) ? ' node_modules/ or .next/ is untracked: add it to .gitignore and commit that first.' : ''}`);
     const theme = report.activeTheme.name;
     const hostRoot = resolve(repository, report.hostRoot.path);
+    // Only when asked for: the flag (known above), or a yes at this prompt. --yes answers the move, not this.
+    let slugsAnswered = false;
+    if (!report.entitySlugs.rename && report.entitySlugs.renames.length > 0 && !options.yes && process.stdin.isTTY
+      && askYesNo(`Rename the entity slug${report.entitySlugs.renames.length > 1 ? 's' : ''} ${report.entitySlugs.renames.map(rename => rename.oldSlug).join(', ')} to hyphens? (an underscore is valid; this sets tableName and prints what else to update)`)) {
+      report.entitySlugs.rename = true;
+      slugsAnswered = true;
+      report.entitySlugs.report = entityRenameReport(hostRoot, report.entitySlugs, false);
+      for (const part of report.entitySlugs.report) section(part.title, part.lines);
+    }
+    const renameSlugs = report.entitySlugs.rename;
     // A root-first project (no contents/, no app tree) has nothing to move: only unchanged copies of earlier proxy and
-    // instrumentation templates to replace
+    // instrumentation templates to replace, and the entity slugs when asked
     if (!existsSync(join(hostRoot, 'contents')) && appPlan === null) {
       const templatesDir = templateDirectory(hostRoot, repository);
       const upgrades = entryUpgrades(hostRoot, templatesDir);
-      if (upgrades.length === 0) {
+      if (upgrades.length === 0 && !renameSlugs) {
         console.log('Nothing to migrate: the project is root-first already, and its proxy and instrumentation files are not unchanged copies of an earlier core template (see the warnings above for any to change by hand).');
         return;
       }
-      section('Root-first project', upgrades.map(upgrade => `${upgrade.file}: an unchanged copy of an earlier core template, replaced with the current one`));
-      if (!options.yes) {
-        if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to replace these files.');
-        process.stdout.write('Replace these files? [y/N] ');
-        const answer = readFileSync(0, 'utf8').trim().toLowerCase();
-        if (answer !== 'y' && answer !== 'yes') throw new MigrateAnalysisError('Migration cancelled.');
+      if (upgrades.length > 0) {
+        section('Root-first project', upgrades.map(upgrade => `${upgrade.file}: an unchanged copy of an earlier core template, replaced with the current one`));
+        if (!options.yes) {
+          if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to replace these files.');
+          process.stdout.write('Replace these files? [y/N] ');
+          const answer = readFileSync(0, 'utf8').trim().toLowerCase();
+          if (answer !== 'y' && answer !== 'yes') throw new MigrateAnalysisError('Migration cancelled.');
+        }
+      }
+      if (renameSlugs && upgrades.length === 0 && !options.yes && !slugsAnswered) {
+        if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to rename the entity slugs.');
+        if (!askYesNo('Rename the entity slugs?')) throw new MigrateAnalysisError('Migration cancelled.');
+      }
+      // The rename edits imports anywhere in the project, so its rollback is the whole tree (it was clean)
+      const created = renamedDirectories(report.entitySlugs).map(directory => pathFrom(repository, join(hostRoot, directory)));
+      const renameRollback = `git -C ${shellQuote(repository)} checkout -- . && git -C ${shellQuote(repository)} clean -fd -- ${created.map(shellQuote).join(' ')}`;
+      if (renameSlugs) {
+        // set before the first write: a rename that fails partway still prints it
+        rollback = [renameRollback];
+        writesStarted = true;
       }
       applyEntryUpgrades(hostRoot, templatesDir);
-      console.log('  Commit the change. Rollback: git checkout -- ' + upgrades.map(upgrade => shellQuote(pathFrom(repository, join(hostRoot, upgrade.file)))).join(' '));
+      if (renameSlugs) renameEntitySlugs(repository, hostRoot, report.entitySlugs);
+      console.log(renameSlugs
+        ? `  Commit the change. Rollback: ${renameRollback}`
+        : '  Commit the change. Rollback: git checkout -- ' + upgrades.map(upgrade => shellQuote(pathFrom(repository, join(hostRoot, upgrade.file)))).join(' '));
       return;
     }
     // A project that is root-first already (no contents/) only has an app tree left to convert
@@ -3928,6 +3997,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     const result = appTreeOnly
       ? null
       : applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme as string, plan, aliasesBeforeMove as AliasCatalog, report.envExample, report.config.plugins, hadLegacyApp ? report.rootProxyFiles.customizations : []);
+    if (renameSlugs) renameEntitySlugs(repository, hostRoot, report.entitySlugs);
     let nextUpdated = false;
     {
       const thumbnails = filesIn(hostRoot).filter(file => isBlockConfig(file) && !inAiWorkflowDirectory(repository, file) && countBlockThumbnails(readFileSync(file, 'utf8')) > 0);

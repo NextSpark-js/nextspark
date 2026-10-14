@@ -28,13 +28,12 @@ export function generateEntityRegistry(entities, config) {
   }).join('\n')
 
   const registryEntries = entities.map(entity => {
-    // NEW STRUCTURE: Derive table name from slug automatically
-    // For regular entities: use slug as tableName
+    // The entity's `tableName` when it sets one, else its slug
     // For child entities: use parent_slug + '_' + entity_slug
     const tableName = entity.exportName ? (
       entity.parent
         ? `'${entity.parent}_' + (${entity.exportName}.slug || '${entity.name}')`
-        : `${entity.exportName}.slug || '${entity.name}'`
+        : `${entity.exportName}.tableName || ${entity.exportName}.slug || '${entity.name}'`
     ) : (
       entity.parent
         ? `'${entity.parent}_${entity.name}'`
@@ -160,7 +159,7 @@ export function generateEntityRegistryClient(entities, config) {
       ? `${entity.exportName}.slug || '${entity.name}'`
       : fallbackApiPath
     const displayNameRef = entity.exportName ? `${entity.exportName}.names?.singular || ${entity.exportName}.slug || '${entity.name}'` : `'${entity.name}'`
-    const tableNameRef = entity.exportName ? `${entity.exportName}.slug` : `'${entity.name}'`
+    const tableNameRef = entity.exportName ? `${entity.exportName}.tableName || ${entity.exportName}.slug` : `'${entity.name}'`
 
     return `  '${entity.name}': {
     name: '${entity.name}',

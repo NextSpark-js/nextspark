@@ -106,8 +106,8 @@ export async function planContracts({ entities, projectRoot, coreRoot, plugins =
       continue
     }
     if (read.skipped) continue
-    if (!/^[a-z][a-z0-9-]*$/.test(read.contract.slug)) {
-      diagnostics.push({ code: 'NS_CONTRACTS_BAD_SLUG', message: `entity "${entity.name}": slug ${JSON.stringify(read.contract.slug)} is not a lowercase identifier a module can be named after` })
+    if (!/^[a-z][a-z0-9_-]*$/.test(read.contract.slug)) {
+      diagnostics.push({ code: 'NS_CONTRACTS_BAD_SLUG', message: `entity "${entity.name}": slug ${JSON.stringify(read.contract.slug)} is not a lowercase identifier a module can be named after (a letter, then letters, digits, - or _)` })
       continue
     }
     for (const warning of read.contract.warnings) warnings.push(`${read.contract.slug}: ${warning}`)

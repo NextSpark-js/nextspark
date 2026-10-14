@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An underscore is valid in an entity slug again (`campaign_members`; a slug starts with a letter and uses `a-z`, `0-9`, `-` and `_`): `nextspark prepare` no longer refuses it with `NS_CONTRACTS_BAD_SLUG`, and the contract reads the columns of an entity's `tableName`. `nextspark migrate --rename-entity-slugs` renames those slugs to hyphens when asked (the flag, or yes to its question; `--yes` alone never renames): it sets `tableName` to the old table, rewrites the imports and the permissions config key, and prints the permission keys, the `UPDATE "api_key"` for scopes (never run), the old URL as a manual alias snippet and the translations. `db:migrate` takes over the migrations of a directory whose `.renamed-from` file (`old -> new`) names it, moving their rows to the new name instead of running them again. The generated entity registry now uses an entity's `tableName` for its table (`getEntityTableName('ai-history')` is `ai_history`, as the table is).
 - `registration.mode: 'invitation-only'`: every registration gate (the registration guard plugin, the user-creation hook, the auth route
   and the `/signup` page) asks one helper, `TeamService.isBootstrapDone()`: the global team in single-tenant mode, any team in the other
   modes. In every teams mode, including single-tenant, a first email-code sign-in for a verified address with a pending invitation
@@ -61,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading
 
+- An entity you renamed from `campaign_members` to `campaign-members` to get past `NS_CONTRACTS_BAD_SLUG` can stay as it is. To rename the other underscore slugs of a project, `nextspark migrate --rename-entity-slugs` does it and prints the permission keys, API key scopes (SQL to run yourself), URLs and translations to update; see the upgrade guide, "Entity slugs with an underscore".
 - `pnpm db:migrate` applies `039_team_members_admin_insert.sql`, which re-creates `team_members_insert_policy`. A project that re-created
   that policy in its own migration (to let owners and admins add members) loses it: `db:migrate` runs core's migrations first and does not
   run an executed project migration again, so after the upgrade the policy is core's. When the project's had the same expression as 039

@@ -4489,3 +4489,222 @@ test('a partial plan with no conflicts says it is partial (N8)', async () => {
     await rm(root, { recursive: true, force: true })
   }
 })
+
+// #227: an underscore in an entity slug is valid; migrate renames it to hyphens only when asked
+const MEMBERS_CONFIG = `export const campaignMemberEntityConfig = {
+  slug: 'campaign_members',
+  enabled: true,
+  names: { singular: 'campaign member', plural: 'Campaign members' },
+  fields: [],
+}
+`
+const PERMISSIONS = `export const PERMISSIONS_CONFIG_OVERRIDES = {
+  entities: {
+    campaign_members: [
+      { action: 'create', label: 'Create', description: 'Create', roles: ['owner'] },
+      { action: 'list', label: 'List', description: 'List', roles: ['owner'] },
+    ],
+  },
+}
+`
+
+async function entitySlugsFixture(): Promise<string> {
+  const { root } = await moveFixture()
+  const theme = 'contents/themes/acme'
+  await write(root, `${theme}/entities/campaign_members/campaign_members.config.ts`, MEMBERS_CONFIG)
+  await write(root, `${theme}/entities/campaign_members/migrations/001_members.sql`, 'CREATE TABLE campaign_members (id int);\n')
+  await write(root, `${theme}/entities/campaign_members/messages/en.json`, '{"title":"Members"}\n')
+  await write(root, `${theme}/entities/orders/orders.config.ts`, "import { campaignMemberEntityConfig } from '../campaign_members/campaign_members.config'\nexport const orderEntityConfig = { slug: 'orders', related: campaignMemberEntityConfig }\n")
+  await write(root, `${theme}/config/permissions.config.ts`, PERMISSIONS)
+  await write(root, `${theme}/lib/members.ts`, "import { campaignMemberEntityConfig } from '../entities/campaign_members/campaign_members.config'\nexport const can = 'campaign_members.create'\nexport const url = '/api/v1/campaign_members'\nexport { campaignMemberEntityConfig }\n")
+  await commitFixture(root)
+  return root
+}
+
+test('migrate keeps an entity slug with an underscore as it is, and says the rename is optional (dry run, JSON, and --yes)', async () => {
+  const root = await entitySlugsFixture()
+  try {
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const slugs = JSON.parse(dryRun.stdout).entitySlugs
+    assert.deepEqual(slugs.renames, [{ name: 'campaign_members', oldSlug: 'campaign_members', newSlug: 'campaign-members', tableName: 'campaign_members', setsTableName: true }])
+    assert.equal(slugs.rename, false)
+    assert.deepEqual(slugs.report, [])
+    const text = run(root, ['--dry-run'])
+    assert.match(text.stdout, /Entity slugs with an underscore\n {2}An underscore is valid in an entity slug; nothing here needs to change\./)
+    assert.match(text.stdout, /campaign_members -> campaign-members \(tableName 'campaign_members' will be set\)\n/)
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'entities/campaign_members/campaign_members.config.ts'), 'utf8'), MEMBERS_CONFIG)
+    assert.equal(existsSync(join(root, 'entities/campaign-members')), false)
+    assert.equal(existsSync(join(root, 'entities/campaign_members/.renamed-from')), false)
+    assert.doesNotMatch(result.stdout, /UPDATE "api_key"/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate --dry-run --rename-entity-slugs writes nothing and prints the full report', async () => {
+  const root = await entitySlugsFixture()
+  try {
+    const before = git_status(root)
+    const result = run(root, ['--dry-run', '--rename-entity-slugs'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(git_status(root), before)
+    assert.match(result.stdout, /campaign_members -> campaign-members \(tableName 'campaign_members' will be set\): will be renamed/)
+    assert.match(result.stdout, /Permission keys\n {2}campaign_members -> campaign-members: the "entities" key in the permissions config will be renamed; the permissions it grants are now campaign-members\.create, campaign-members\.list/)
+    assert.match(result.stdout, /UPDATE "api_key"\n {2}SET scopes = array_replace\(array_replace\(array_replace\(scopes,\n {2} {2}'campaign_members:read', 'campaign-members:read'\),/)
+    assert.match(result.stdout, /WHERE scopes && ARRAY\['campaign_members:read', 'campaign_members:write', 'campaign_members:delete'\];/)
+    assert.match(result.stdout, /\{ source: '\/api\/v1\/campaign_members', destination: '\/api\/v1\/campaign-members' \}/)
+    assert.match(result.stdout, /key: 'Deprecation', value: 'true'/)
+    assert.match(result.stdout, /UPDATE "_entity_migrations" SET entity_name = 'campaign-members' WHERE entity_name = 'campaign_members';/)
+    assert.match(result.stdout, /UPDATE "_entity_migrations" SET entity_name = 'campaign_members' WHERE entity_name = 'campaign-members' AND source_type = 'project';/)
+    const json = JSON.parse(run(root, ['--dry-run', '--json', '--rename-entity-slugs']).stdout).entitySlugs
+    assert.equal(json.rename, true)
+    assert.deepEqual(json.report.map((part: { title: string }) => part.title), ['Entity slugs renamed to hyphens', 'Permission keys', 'API keys (SQL printed, never run)', 'URLs', 'Translations', 'Entity migrations'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate --yes --rename-entity-slugs renames the directory, sets tableName and updates what the host needs', async () => {
+  const root = await entitySlugsFixture()
+  try {
+    const result = run(root, ['--yes', '--rename-entity-slugs'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(existsSync(join(root, 'entities/campaign_members')), false)
+    const config = await readFile(join(root, 'entities/campaign-members/campaign_members.config.ts'), 'utf8')
+    assert.match(config, /^ {2}slug: 'campaign-members',\n {2}tableName: 'campaign_members',$/m)
+    assert.equal(await readFile(join(root, 'entities/campaign-members/.renamed-from'), 'utf8'), 'campaign_members -> campaign-members\n')
+    assert.ok(existsSync(join(root, 'entities/campaign-members/migrations/001_members.sql')))
+    assert.ok(existsSync(join(root, 'entities/campaign-members/messages/en.json')))
+    // imports into the directory follow it: from the project and from another entity
+    assert.match(await readFile(join(root, 'lib/members.ts'), 'utf8'), /from '\.\.\/entities\/campaign-members\/campaign_members\.config'/)
+    assert.match(await readFile(join(root, 'entities/orders/orders.config.ts'), 'utf8'), /from '\.\.\/campaign-members\/campaign_members\.config'/)
+    // the permissions config key is what the registry build validates; the code that checks a key is reported, not edited
+    assert.match(await readFile(join(root, 'config/permissions.config.ts'), 'utf8'), /^ {4}'campaign-members': \[$/m)
+    assert.match(await readFile(join(root, 'lib/members.ts'), 'utf8'), /'campaign_members\.create'/)
+    assert.match(result.stdout, /Entity slugs renamed\n {2}entities\/campaign_members -> entities\/campaign-members/)
+    assert.match(result.stdout, /code that checks them by string, update by hand: lib\/members\.ts:2/)
+    assert.match(result.stdout, /callers in the project source: lib\/members\.ts:3/)
+    assert.match(result.stdout, /UPDATE "api_key"/)
+    // nothing ran against a database, and the rollback names the new directory
+    assert.match(result.stdout, /clean -fdx -- .*entities\/campaign-members/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate --rename-entity-slugs on a root-first project renames and prints its own rollback; without the flag it has nothing to do', async () => {
+  const root = await rootFirstFixture({
+    'entities/campaign_members/campaign_members.config.ts': MEMBERS_CONFIG.replace("slug: 'campaign_members',", "slug: 'campaign_members',\n  tableName: 'members_table',"),
+    'config/permissions.config.ts': PERMISSIONS,
+    'lib/members.ts': "import { campaignMemberEntityConfig } from '@/entities/campaign_members/campaign_members.config'\nexport { campaignMemberEntityConfig }\n",
+  })
+  try {
+    const without = run(root, ['--yes'])
+    assert.equal(without.status, 0, `${without.stdout}\n${without.stderr}`)
+    assert.match(without.stdout, /Nothing to migrate: the project is root-first already/)
+    assert.equal(existsSync(join(root, 'entities/campaign_members')), true)
+
+    const result = run(root, ['--yes', '--rename-entity-slugs'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.doesNotMatch(result.stdout, /Nothing to migrate/)
+    const config = await readFile(join(root, 'entities/campaign-members/campaign_members.config.ts'), 'utf8')
+    // a tableName the config already sets is kept
+    assert.match(config, /slug: 'campaign-members',\n {2}tableName: 'members_table',/)
+    assert.equal((config.match(/tableName/g) ?? []).length, 1)
+    assert.match(await readFile(join(root, 'lib/members.ts'), 'utf8'), /@\/entities\/campaign-members\/campaign_members\.config/)
+    assert.match(result.stdout, /was already 'members_table' and is kept/)
+    assert.match(result.stdout, /Rollback: git -C .* checkout -- \. && git -C .* clean -fd -- .*entities\/campaign-members/)
+    // the printed rollback restores the project
+    git(root, ['checkout', '--', '.'])
+    git(root, ['clean', '-fd', '--', 'entities/campaign-members'])
+    assert.equal(git_status(root), '')
+    assert.equal(await readFile(join(root, 'entities/campaign_members/campaign_members.config.ts'), 'utf8').then(text => text.includes("slug: 'campaign_members'")), true)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate leaves an underscore entity alone when it cannot be renamed safely, and says why', async () => {
+  const root = await rootFirstFixture({
+    'entities/foo_bar/foo_bar.config.ts': "export const fooEntityConfig = { slug: 'foo_bar' }\n",
+    'entities/foo-bar/foo-bar.config.ts': "export const dashedEntityConfig = { slug: 'foo-bar' }\n",
+    'entities/baz_qux/baz_qux.config.ts': "export const bazEntityConfig = { slug: 'bazqux_other' }\n",
+  })
+  try {
+    const result = run(root, ['--dry-run', '--rename-entity-slugs'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /foo_bar: not renamable, an entity named "foo-bar" already exists/)
+    assert.match(result.stdout, /baz_qux: not renamable, its slug "bazqux_other" differs from its directory name/)
+    const json = JSON.parse(run(root, ['--dry-run', '--json', '--rename-entity-slugs']).stdout).entitySlugs
+    assert.deepEqual(json.renames, [])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate --rename-entity-slugs that fails partway prints the rollback and leaves the tree as it was', async () => {
+  const root = await rootFirstFixture({
+    'entities/campaign_members/campaign_members.config.ts': MEMBERS_CONFIG,
+    'entities/order_items/order_items.config.ts': "export const c = { slug: 'order_items' }\n",
+    // an entity key the rename cannot rewrite: it is an object, not a list
+    'config/permissions.config.ts': "export const P = {\n  entities: {\n    order_items: { create: ['owner'] },\n  },\n}\n",
+  })
+  try {
+    const result = run(root, ['--yes', '--rename-entity-slugs'])
+    assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stderr, /could not rename the "order_items" key of config\/permissions\.config\.ts; nothing was left changed/)
+    assert.match(result.stderr + result.stdout, /checkout -- \. && git -C .* clean -fd -- 'entities\/campaign-members' 'entities\/order-items'/)
+    assert.equal(git_status(root), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+/** The CLI on a pseudo-terminal that answers its first question with `answer`; null when python3 is missing. */
+function runOnTerminal(root: string, args: string[], answer: string): { status: number, output: string } | null {
+  const script = [
+    'import os, pty, sys',
+    'pid, fd = pty.fork()',
+    'if pid == 0: os.execvpe(sys.argv[1], sys.argv[1:], os.environ)',
+    "os.write(fd, (os.environ['ANSWER'] + '\\n').encode())",
+    "out = b''",
+    'while True:',
+    '    try: chunk = os.read(fd, 4096)',
+    '    except OSError: break',
+    '    if not chunk: break',
+    '    out += chunk',
+    '_, state = os.waitpid(pid, 0)',
+    'sys.stdout.buffer.write(out)',
+    'sys.exit(os.waitstatus_to_exitcode(state))',
+  ].join('\n')
+  const result = spawnSync('python3', ['-I', '-c', script, process.execPath, cliEntry, 'migrate', ...args], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: MIGRATE_CHILD_TIMEOUT_MS,
+    env: { ...process.env, ...offlineMigrateEnv(), ANSWER: answer },
+  })
+  return result.error ? null : { status: result.status ?? -1, output: result.stdout }
+}
+
+test('on a terminal, migrate asks before renaming an underscore slug: yes renames, anything else does not', async () => {
+  for (const [answer, renamed] of [['y', true], ['n', false]] as const) {
+    const root = await rootFirstFixture({
+      'entities/campaign_members/campaign_members.config.ts': MEMBERS_CONFIG,
+      'config/permissions.config.ts': PERMISSIONS,
+    })
+    try {
+      const result = runOnTerminal(root, [], answer)
+      if (!result) return
+      assert.match(result.output, /Rename the entity slug campaign_members to hyphens\? .*\[y\/N\]/, result.output)
+      assert.equal(existsSync(join(root, 'entities/campaign-members')), renamed, `${answer}: ${result.output}`)
+      assert.equal(existsSync(join(root, 'entities/campaign_members')), !renamed)
+      if (!renamed) assert.match(result.output, /Nothing to migrate/)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  }
+})
