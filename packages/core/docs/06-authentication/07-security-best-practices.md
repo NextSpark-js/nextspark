@@ -604,6 +604,10 @@ The CSP is configured with environment-aware settings:
 - `base-uri 'self'`: Prevents base tag injection attacks
 - `frame-ancestors 'self'`: Blocks cross-origin framing while allowing same-origin page builder previews
 
+#### Nonce-based CSP
+
+For `script-src 'self' 'nonce-…'`, set the nonce in the project's request hook, forward it as `x-nonce` and set `security.cspNonce: true` in `config/app.config.ts`: core's root layout then passes it to next-themes so the theme bootstrap script is not blocked. This needs the request-time root layout (`cacheComponents` off): with Cache Components on, Next.js does not support a nonce-based `script-src` (its prerendered shell carries every framework script without a nonce), so use hashes or `experimental.sri` instead. See [Nonce-based CSP](../10-backend/06-middleware.md#nonce-based-csp).
+
 #### Customizing CSP
 
 If you integrate additional third-party services, update the CSP in your `next.config.mjs`:

@@ -5,6 +5,7 @@
 
 import type { Metadata } from "next"
 import { Suspense } from "react"
+import { headers } from "next/headers"
 import { Geist, Geist_Mono } from "next/font/google"
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
@@ -19,6 +20,7 @@ import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
 import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { PluginService } from '@nextsparkjs/core/lib/services/plugin.service'
+import { APP_CONFIG_MERGED } from "@nextsparkjs/core/lib/config/config-client"
 import { getThemeSettings } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
 
 const geistSans = Geist({
@@ -40,6 +42,11 @@ const defaultMetadata: Metadata = {
 
 export const metadata: Metadata = defaultMetadata
 
+// `security.cspNonce: true` in app.config opts the root layout into reading the request's nonce: a read of
+// the request headers makes every page under it render per request, so it is off unless asked for
+// (the config is a build-time constant)
+const cspNonceEnabled = () => APP_CONFIG_MERGED.security?.cspNonce === true
+
 let pluginsInitialized = false
 
 export default async function RootLayout({
@@ -56,6 +63,10 @@ export default async function RootLayout({
   const messages = await getMessages({ locale })
   const { defaultMode, allowUserToggle, forcedThemeRoutes } = await getThemeSettings()
   const billingHints = await getBillingResourceHints()
+  // The nonce the project's request hook forwards (config/hooks/proxy.ts sets `x-nonce`): the inline script
+  // next-themes writes to apply the stored theme before paint carries it, so a nonce-only `script-src` does
+  // not block it. Without the flag, or without a nonce, nothing changes.
+  const nonce = cspNonceEnabled() ? ((await headers()).get('x-nonce') ?? undefined) : undefined
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -72,6 +83,7 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider locale={locale} messages={selectMessages(messages, 'root')}>
           <NextThemeProvider
+            nonce={nonce}
             attribute="class"
             defaultTheme={defaultMode}
             // When allowUserToggle is false, force the theme and ignore localStorage/system
