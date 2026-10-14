@@ -22,6 +22,7 @@ jest.mock('@/core/lib/services/team.service', () => ({
 
 // Import after mock is set up
 import { registrationGuardPlugin } from '@/core/lib/auth/registration-guard-plugin'
+import { withSignupContext } from '@/core/lib/auth-context'
 
 /**
  * Helper to create a mock Better Auth context for the plugin hooks
@@ -147,22 +148,24 @@ describe('Registration Guard Plugin', () => {
       })
     })
 
-    test('passes through with invite header when team exists', async () => {
+    test('a token the client sends (header or query) is no invitation', async () => {
       mockBootstrapDone = true
-      const ctx = createMockCtx('/sign-up/social', {
-        inviteHeader: 'valid-token-123',
-      })
-      const result = await handler(ctx)
-      expect(result).toBe(ctx)
+      for (const options of [{ inviteHeader: 'any-token' }, { inviteQueryParam: 'any-token' }]) {
+        await expect(handler(createMockCtx('/sign-up/email', options))).rejects.toMatchObject({
+          status: 'FORBIDDEN',
+          body: { code: 'SIGNUP_RESTRICTED' },
+        })
+      }
     })
 
-    test('passes through with invite query param when team exists', async () => {
+    test('passes through inside the signup context signup-with-invite sets after validating the invitation', async () => {
       mockBootstrapDone = true
-      const ctx = createMockCtx('/sign-up/social', {
-        inviteQueryParam: 'valid-token-456',
+      const ctx = createMockCtx('/sign-up/email')
+      await expect(withSignupContext({ skipTeamCreation: true, invitedTeamId: 'team-1' }, () => handler(ctx))).resolves.toBe(ctx)
+      // a context without the invitation flow (a signup intent only) does not
+      await expect(withSignupContext({ signupIntent: 'owner' }, () => handler(ctx))).rejects.toMatchObject({
+        body: { code: 'SIGNUP_RESTRICTED' },
       })
-      const result = await handler(ctx)
-      expect(result).toBe(ctx)
     })
   })
 

@@ -12,6 +12,7 @@
 
 import { AUTH_CONFIG } from '../config';
 import { TeamService } from '../services/team.service';
+import { shouldSkipTeamCreation } from '../auth-context';
 import { isDomainAllowed } from './registration-helpers';
 import { registrationError } from './registration-errors';
 import type { BetterAuthPlugin } from 'better-auth';
@@ -34,18 +35,13 @@ export const registrationGuardPlugin = (): BetterAuthPlugin => {
           handler: async (ctx) => {
             const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
-            // Block OAuth in invitation-only mode (unless invite token present or first user)
-            if (registrationMode === 'invitation-only') {
-              const request = ctx.request;
-              const url = request ? new URL(request.url) : null;
-              const hasInviteToken = request?.headers.get('x-invite-token') ||
-                                   url?.searchParams.get('inviteToken');
-
-              if (!hasInviteToken) {
-                // Allow first user bootstrap
-                if (await TeamService.isBootstrapDone()) {
-                  throw registrationError('SIGNUP_RESTRICTED');
-                }
+            // In invitation-only mode, sign-up needs the invitation flow: the
+            // signup context signup-with-invite sets once it has validated the
+            // token on the server (as the user-creation hook checks), never a
+            // token the client sends. The first user bootstraps without one.
+            if (registrationMode === 'invitation-only' && !shouldSkipTeamCreation()) {
+              if (await TeamService.isBootstrapDone()) {
+                throw registrationError('SIGNUP_RESTRICTED');
               }
             }
 

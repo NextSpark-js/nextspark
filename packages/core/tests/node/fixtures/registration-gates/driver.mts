@@ -6,7 +6,7 @@
 import { NextRequest } from 'next/server'
 
 type Step =
-  | { op: 'password'; email: string }
+  | { op: 'password'; email: string; inviteToken?: string }
   | { op: 'otp'; email: string }
   | { op: 'google'; email: string }
   | { op: 'invite'; email: string; token: string }
@@ -44,8 +44,11 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 
 async function run(step: Step) {
   switch (step.op) {
-    case 'password':
-      return outcome(await authRoute.POST(json('/api/auth/sign-up/email', { email: step.email, password: PASSWORD, name: 'Password User' })))
+    case 'password': {
+      const query = step.inviteToken ? `?inviteToken=${step.inviteToken}` : ''
+      const headers: Record<string, string> = step.inviteToken ? { 'x-invite-token': step.inviteToken } : {}
+      return outcome(await authRoute.POST(json(`/api/auth/sign-up/email${query}`, { email: step.email, password: PASSWORD, name: 'Password User' }, headers)))
+    }
     case 'otp': {
       // the stored sign-in code, as send-verification-otp writes it (Better Auth stores codes in plain text by default)
       const { internalAdapter } = await auth.$context

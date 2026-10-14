@@ -128,7 +128,9 @@ Registration mode restrictions are enforced at multiple layers:
 
 5. **LoginForm** (`components/auth/forms/LoginForm.tsx`): Hides the email login option for `domain-restricted` mode. Shows signup link for `open` and `domain-open` modes.
 
-6. **Sign-in code request** (`lib/auth/registration-guard-plugin.ts`, before `/email-otp/send-verification-otp`): in `domain-restricted` and `domain-open`, a `sign-in` code for an address outside `allowedDomains` is refused before any email is sent.
+6. **Sign-up request** (`lib/auth/registration-guard-plugin.ts`, before `/sign-up/*` in Better Auth): refuses sign-up in `invitation-only` once the bootstrap is over, unless the request runs inside the signup context `/api/v1/auth/signup-with-invite` sets after validating the invitation on the server. A token sent by the client (header or query) is not taken as an invitation.
+
+7. **Sign-in code request** (`lib/auth/registration-guard-plugin.ts`, before `/email-otp/send-verification-otp`): in `domain-restricted` and `domain-open`, a `sign-in` code for an address outside `allowedDomains` is refused before any email is sent.
 
 Every refusal above answers `403` with a code in the JSON body: `DOMAIN_NOT_ALLOWED` or `SIGNUP_RESTRICTED`. A Google sign-in is redirected to `/auth-error?error=<code>` instead. The login, sign-up and auth error pages show a translated message for both codes, and no response, redirect or log names the allowed domains.
 

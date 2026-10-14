@@ -17,7 +17,7 @@ const skip = !HAS_POSTGRES && 'initdb/pg_ctl not on PATH'
 const FIXTURE = path.join(CORE, 'tests/node/fixtures/registration-gates')
 const ORIGIN = 'http://localhost:5173'
 
-type Step = { op: 'password' | 'otp' | 'google'; email: string } | { op: 'invite'; email: string; token: string }
+type Step = { op: 'password'; email: string; inviteToken?: string } | { op: 'otp' | 'google'; email: string } | { op: 'invite'; email: string; token: string }
 type Result = Step & { status: number; code?: string; location?: string }
 
 function runSteps(databaseUrl: string, teams: string, steps: Step[]): Result[] {
@@ -113,4 +113,31 @@ test('single-tenant invitation-only: unchanged, the global team closes sign-up',
   assert.ok(refused(results[0]) && refused(results[1]), JSON.stringify(results))
   assert.equal(results[2].status, 200, JSON.stringify(results[2]))
   assert.deepEqual(await users(owner), ['first@example.test', 'invited-otp@example.test'])
+})
+
+test('signup-with-invite with a password: a valid invitation creates the account in the invited team, an unknown or expired token creates nothing', { skip, timeout: 300000 }, async t => {
+  const { owner, ownerUrl } = await cutoverDatabase(t)
+  runSteps(ownerUrl, 'multi-tenant', [{ op: 'password', email: 'first@example.test' }])
+  await invite(owner, 'invited@example.test', 'token-valid')
+  await invite(owner, 'late@example.test', 'token-expired', true)
+
+  const results = runSteps(ownerUrl, 'multi-tenant', [
+    { op: 'invite', email: 'invited@example.test', token: 'token-valid' },
+    { op: 'invite', email: 'nobody@example.test', token: 'token-unknown' },
+    { op: 'invite', email: 'late@example.test', token: 'token-expired' },
+    // a direct password sign-up carrying a token is refused (here by the route gate; the plugin's own check is in its Jest test)
+    { op: 'password', email: 'late@example.test', inviteToken: 'token-expired' },
+  ])
+  assert.equal(results[0].status, 201, JSON.stringify(results[0]))
+  assert.deepEqual([results[1].status, results[1].code], [404, 'INVITATION_NOT_FOUND'])
+  assert.deepEqual([results[2].status, results[2].code], [410, 'INVITATION_EXPIRED'])
+  assert.ok(refused(results[3]), JSON.stringify(results[3]))
+
+  assert.deepEqual(await users(owner), ['first@example.test', 'invited@example.test'])
+  const { rows } = await owner.query(`
+    SELECT t."ownerId" = f.id AS "firstsTeam", m.role, i.status FROM team_members m
+    JOIN users u ON u.id = m."userId" JOIN teams t ON t.id = m."teamId"
+    JOIN users f ON f.email = 'first@example.test' JOIN team_invitations i ON i.token = 'token-valid'
+    WHERE u.email = 'invited@example.test'`)
+  assert.deepEqual(rows, [{ firstsTeam: true, role: 'member', status: 'accepted' }])
 })
