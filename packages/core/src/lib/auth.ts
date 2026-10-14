@@ -378,16 +378,16 @@ export const auth = betterAuth({
         before: async (user: { email: string; [key: string]: unknown }, ctx?: { path?: string } | null) => {
           const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
-          // In 'invitation-only' mode, block new user creation (except via invitation flow or first user)
-          if (registrationMode === 'invitation-only') {
-            if (!shouldSkipTeamCreation()) {
-              // shouldSkipTeamCreation() is true during invitation flow
-              // If it's false, check if this is the first user (team bootstrap)
-              const existingTeam = await TeamService.getGlobal();
-              if (existingTeam) {
-                // Team exists, so this is not the first user - block it
-                throw registrationError('SIGNUP_RESTRICTED', ctx);
-              }
+          // In 'invitation-only' mode, a new user needs the invitation flow
+          // (shouldSkipTeamCreation(), set by signup-with-invite once it has
+          // validated the token) or a verified address with a pending
+          // invitation (an email code, or a provider that verified it),
+          // unless they are the first user (bootstrap). Password sign-up is
+          // also refused earlier, in the registration guard plugin.
+          if (registrationMode === 'invitation-only' && !shouldSkipTeamCreation()) {
+            const invited = user.emailVerified === true && await hasPendingInvitationForEmail(user.email);
+            if (await TeamService.isBootstrapDone() && !invited) {
+              throw registrationError('SIGNUP_RESTRICTED', ctx);
             }
           }
 

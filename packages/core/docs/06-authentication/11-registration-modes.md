@@ -65,7 +65,12 @@ auth: {
 
 ### `invitation-only`
 
-Users can only register via an invitation link. The first user bootstraps the team without an invite; all subsequent users require one. Requires a working email service (Resend).
+Users can only register via an invitation link. The first user bootstraps the platform without an invite: in `single-tenant` until the global team exists, in the other team modes until any team exists. If no team exists after the first user (for example with `signupIntent.skipTeamForNonOwnerIntents`, or when creating the first team fails), registration stays open until one does. After that, a new account is created only:
+
+- through the invitation link (`/api/v1/auth/signup-with-invite`, with or without a password), or
+- by a first email-code sign-in for an address with a pending, unexpired invitation: the code proves the address, and the account then accepts its invitation instead of getting a team of its own.
+
+A password sign-up on `/api/auth/sign-up/email` is refused with `SIGNUP_RESTRICTED`, invitation or not, since it does not prove the address. Requires a working email service (Resend).
 
 ```typescript
 auth: {
@@ -115,7 +120,7 @@ Registration mode restrictions are enforced at multiple layers:
 
 1. **Route handler** (`packages/core/src/routes/api/auth/[...all]/route.ts`): Blocks email signup for `domain-restricted` and `invitation-only` modes at the API level.
 
-2. **Database hook — user create** (`lib/auth.ts` → `databaseHooks.user.create.before`): Validates email domain for `domain-restricted` and `domain-open` modes before user creation. Blocks signup in `invitation-only` when a team already exists.
+2. **Database hook — user create** (`lib/auth.ts` → `databaseHooks.user.create.before`): Validates email domain for `domain-restricted` and `domain-open` modes before user creation. Blocks signup in `invitation-only` once the first-user bootstrap is over (`TeamService.isBootstrapDone()`, which every gate shares), unless the account comes from the invitation link or its address has a pending invitation.
 
 3. **Database hook — session create** (`lib/auth.ts` → `databaseHooks.session.create.before`): Validates email domain on every login attempt for `domain-restricted` and `domain-open` modes, preventing existing users outside allowed domains from logging in.
 

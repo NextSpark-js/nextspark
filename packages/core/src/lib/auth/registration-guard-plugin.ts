@@ -42,9 +42,8 @@ export const registrationGuardPlugin = (): BetterAuthPlugin => {
                                    url?.searchParams.get('inviteToken');
 
               if (!hasInviteToken) {
-                // Allow first user bootstrap (no team exists yet)
-                const teamExists = await TeamService.hasGlobal();
-                if (teamExists) {
+                // Allow first user bootstrap
+                if (await TeamService.isBootstrapDone()) {
                   throw registrationError('SIGNUP_RESTRICTED');
                 }
               }

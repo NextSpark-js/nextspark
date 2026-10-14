@@ -8,6 +8,7 @@
 import { TeamService } from '@/core/lib/services/team.service'
 import { queryOneWithRLS, queryWithRLS, getServiceTransactionClient } from '@/core/lib/db'
 import type { Team } from '@/core/lib/teams/types'
+import { TEAMS_CONFIG } from '@/core/lib/config'
 
 // Mock database functions
 jest.mock('@/core/lib/db', () => ({
@@ -126,6 +127,29 @@ describe('TeamService', () => {
       const result = await TeamService.hasGlobal()
 
       expect(result).toBe(false)
+    })
+  })
+
+  describe('isBootstrapDone', () => {
+    const mode = TEAMS_CONFIG.mode
+    afterEach(() => { TEAMS_CONFIG.mode = mode })
+
+    it('single-tenant: the global team ends the bootstrap', async () => {
+      TEAMS_CONFIG.mode = 'single-tenant'
+      mockQueryOneWithRLS.mockResolvedValue(null)
+      expect(await TeamService.isBootstrapDone()).toBe(false)
+      mockQueryOneWithRLS.mockResolvedValue(mockTeam)
+      expect(await TeamService.isBootstrapDone()).toBe(true)
+      expect(mockQueryOneWithRLS).toHaveBeenLastCalledWith(expect.stringContaining('"isGlobal" = TRUE'), [])
+    })
+
+    it('multi-tenant: any team ends the bootstrap, global or not', async () => {
+      TEAMS_CONFIG.mode = 'multi-tenant'
+      mockQueryOneWithRLS.mockResolvedValue(null)
+      expect(await TeamService.isBootstrapDone()).toBe(false)
+      mockQueryOneWithRLS.mockResolvedValue({ '?column?': 1 })
+      expect(await TeamService.isBootstrapDone()).toBe(true)
+      expect(mockQueryOneWithRLS).toHaveBeenLastCalledWith('SELECT 1 FROM "teams" LIMIT 1', [])
     })
   })
 

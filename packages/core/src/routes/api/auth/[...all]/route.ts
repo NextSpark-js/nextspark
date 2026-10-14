@@ -143,9 +143,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Invitation-only mode OR single-tenant teams mode: existing behavior
     if (registrationMode === 'invitation-only' || isPublicSignupRestricted(teamsMode)) {
-      const teamExists = await TeamService.hasGlobal();
-
-      if (teamExists) {
+      if (await TeamService.isBootstrapDone()) {
         const errorResponse = NextResponse.json(
           {
             error: 'Registration is closed',

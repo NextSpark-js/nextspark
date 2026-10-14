@@ -115,6 +115,19 @@ export class TeamService {
   }
 
   /**
+   * Is the first-user bootstrap over? Until it is, the registration gates
+   * (invitation-only, and public sign-up in single-tenant mode) let the first
+   * user in. Single-tenant: the global team exists. Other modes create no
+   * global team, so there: any team exists.
+   *
+   * Every registration gate asks this, so they cannot disagree.
+   */
+  static async isBootstrapDone(): Promise<boolean> {
+    if (TEAMS_CONFIG.mode === 'single-tenant') return this.hasGlobal()
+    return (await queryOneWithRLS('SELECT 1 FROM "teams" LIMIT 1', [])) !== null
+  }
+
+  /**
    * Get all teams for a user with detailed information
    *
    * @param userId - The user ID

@@ -20,7 +20,7 @@ jest.mock('@nextsparkjs/core/lib/config', () => ({
   TEAMS_CONFIG: { mode: 'multi-tenant' },
 }))
 jest.mock('@nextsparkjs/core/lib/teams/helpers', () => ({ isPublicSignupRestricted: () => false }))
-jest.mock('@nextsparkjs/core/lib/services', () => ({ TeamService: { hasGlobal: jest.fn(async () => false) } }))
+jest.mock('@nextsparkjs/core/lib/services', () => ({ TeamService: { isBootstrapDone: jest.fn(async () => false) } }))
 jest.mock('@nextsparkjs/core/lib/api/helpers', () => ({
   handleCorsPreflightRequest: jest.fn(async () => new Response(null, { status: 200 })),
   addCorsHeaders: jest.fn(async (response: Response) => response),

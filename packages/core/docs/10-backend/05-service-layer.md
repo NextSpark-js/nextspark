@@ -367,6 +367,8 @@ const slug = await TeamService.generateSlug('Acme Corporation')
 // Single-tenant mode
 const globalTeam = await TeamService.getGlobal()
 const hasGlobal = await TeamService.hasGlobal()
+// Registration gates: is the first-user bootstrap over? (single-tenant: the global team; otherwise any team)
+const bootstrapDone = await TeamService.isBootstrapDone()
 
 // Get team owner
 const owner = await TeamService.getOwner(teamId)

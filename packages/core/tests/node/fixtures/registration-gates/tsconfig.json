@@ -1,0 +1,38 @@
+{
+  "extends": "../../../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../../../..",
+    "paths": {
+      "@nextsparkjs/core": [
+        "./src/index.ts"
+      ],
+      "@nextsparkjs/core/*": [
+        "./src/*"
+      ],
+      "@nextsparkjs/registries/theme-registry": [
+        "./tests/node/fixtures/registration-gates/theme-registry.ts"
+      ],
+      "@nextsparkjs/registries/permissions-registry": [
+        "./tests/node/fixtures/registration-gates/permissions-registry.ts"
+      ],
+      "@nextsparkjs/registries/entity-types": [
+        "./tests/node/fixtures/registration-gates/entity-types.ts"
+      ],
+      "@nextsparkjs/registries/namespace-registry": [
+        "./tests/node/fixtures/registration-gates/namespace-registry.ts"
+      ],
+      "@nextsparkjs/registries/plugin-registry": [
+        "./tests/node/fixtures/registration-gates/plugin-registry.ts"
+      ],
+      "@nextsparkjs/registries/route-handlers": [
+        "./tests/node/fixtures/registration-gates/route-handlers.ts"
+      ],
+      "@nextsparkjs/registries/*": [
+        "./tests/jest/__mocks__/@nextsparkjs/registries/*"
+      ],
+      "server-only": [
+        "./tests/node/fixtures/registration-gates/server-only.ts"
+      ]
+    }
+  }
+}

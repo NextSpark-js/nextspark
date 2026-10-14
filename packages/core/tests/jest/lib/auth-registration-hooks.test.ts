@@ -11,7 +11,8 @@ import { describe, test, expect, beforeEach, jest } from '@jest/globals'
 const { APIError } = jest.requireActual<{ APIError: new (...args: any[]) => Error & { status: string; body?: { code?: string; message?: string } } }>('better-auth')
 const mockBetterAuth = jest.fn(() => ({ api: { getSession: jest.fn() }, $Infer: {} }))
 const mockQuery = jest.fn<(sql: string, params: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>>()
-const mockGetGlobal = jest.fn<() => Promise<unknown>>()
+const mockBootstrapDone = jest.fn<() => Promise<boolean>>()
+const mockQueryOne = jest.fn<(sql: string, params: unknown[]) => Promise<unknown>>()
 
 jest.mock('better-auth', () => ({
   betterAuth: (...args: unknown[]) => mockBetterAuth(...(args as [])),
@@ -21,12 +22,12 @@ jest.mock('better-auth/plugins', () => ({ emailOTP: jest.fn(() => ({ id: 'email-
 jest.mock('better-auth/next-js', () => ({ nextCookies: jest.fn(() => ({ id: 'next-cookies' })) }))
 jest.mock('pg', () => ({ Pool: jest.fn(() => ({ query: mockQuery, on: jest.fn() })) }))
 jest.mock('@/core/lib/db', () => ({
-  queryOne: jest.fn(),
+  queryOne: (sql: string, params: unknown[]) => mockQueryOne(sql, params),
   parseSSLConfig: jest.fn(() => false),
   stripSSLParams: jest.fn((url: string) => url),
 }))
 jest.mock('@/core/lib/email', () => ({ EmailFactory: { create: jest.fn(() => ({ send: jest.fn() })) } }))
-jest.mock('@/core/lib/services/team.service', () => ({ TeamService: { getGlobal: () => mockGetGlobal() } }))
+jest.mock('@/core/lib/services/team.service', () => ({ TeamService: { isBootstrapDone: () => mockBootstrapDone() } }))
 
 type Hook = (data: Record<string, unknown>, ctx?: unknown) => Promise<unknown>
 
@@ -61,7 +62,8 @@ describe('lib/auth.ts registration hooks', () => {
     jest.spyOn(console, 'log').mockImplementation(() => {})
     jest.spyOn(console, 'warn').mockImplementation(() => {})
     mockQuery.mockReset()
-    mockGetGlobal.mockReset()
+    mockBootstrapDone.mockReset()
+    mockQueryOne.mockReset()
   })
 
   test('user.create: a domain outside allowedDomains is a 403 DOMAIN_NOT_ALLOWED, and the log has no full email', async () => {
@@ -106,8 +108,8 @@ describe('lib/auth.ts registration hooks', () => {
     await expect(userCreate(user)).resolves.toBe(user)
   })
 
-  test('user.create: invitation-only with a team already there is a 403 SIGNUP_RESTRICTED', async () => {
-    mockGetGlobal.mockResolvedValue({ id: 'team-1' })
+  test('user.create: invitation-only after the bootstrap is a 403 SIGNUP_RESTRICTED', async () => {
+    mockBootstrapDone.mockResolvedValue(true)
     const { userCreate } = hooksWith({ mode: 'invitation-only' })
     const result = await rejection(userCreate({ email: 'someone@other.example' }))
     expect(result.status).toBe('FORBIDDEN')
@@ -115,10 +117,29 @@ describe('lib/auth.ts registration hooks', () => {
   })
 
   test('user.create: invitation-only lets the first user in', async () => {
-    mockGetGlobal.mockResolvedValue(null)
+    mockBootstrapDone.mockResolvedValue(false)
     const { userCreate } = hooksWith({ mode: 'invitation-only' })
     const user = { email: 'first@other.example' }
     await expect(userCreate(user)).resolves.toBe(user)
+  })
+
+  test('user.create: invitation-only lets in a verified address with a pending invitation', async () => {
+    mockBootstrapDone.mockResolvedValue(true)
+    mockQueryOne.mockResolvedValue({ id: 'inv-1' })
+    const { userCreate } = hooksWith({ mode: 'invitation-only' })
+    const user = { email: 'invited@other.example', emailVerified: true }
+    await expect(userCreate(user)).resolves.toBe(user)
+    expect(mockQueryOne.mock.calls[0]).toEqual([expect.stringContaining("status = 'pending'"), ['invited@other.example']])
+  })
+
+  test('user.create: invitation-only refuses an unverified address even with a pending invitation', async () => {
+    mockBootstrapDone.mockResolvedValue(true)
+    mockQueryOne.mockResolvedValue({ id: 'inv-1' })
+    const { userCreate } = hooksWith({ mode: 'invitation-only' })
+    for (const user of [{ email: 'invited@other.example', emailVerified: false }, { email: 'invited@other.example' }]) {
+      const result = await rejection(userCreate(user))
+      expect(result.code).toBe('SIGNUP_RESTRICTED')
+    }
   })
 
   test('session.create: an existing user outside allowedDomains is a 403 DOMAIN_NOT_ALLOWED', async () => {

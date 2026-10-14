@@ -1,0 +1,116 @@
+/**
+ * The registration gates on core's real auth routes and Better Auth (Jest maps better-auth to a mock): password
+ * sign-up, a first email-code sign-in, signup-with-invite and the Google callback, run by
+ * fixtures/registration-gates/driver.mts against a throwaway cluster with core's migrations. Only Google's token
+ * exchange is stubbed.
+ *
+ * Skipped when initdb and pg_ctl are not on the PATH.
+ */
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import path from 'node:path'
+import pg from 'pg'
+import { CORE, HAS_POSTGRES, cutoverDatabase } from './_pg-cutover'
+
+const skip = !HAS_POSTGRES && 'initdb/pg_ctl not on PATH'
+const FIXTURE = path.join(CORE, 'tests/node/fixtures/registration-gates')
+const ORIGIN = 'http://localhost:5173'
+
+type Step = { op: 'password' | 'otp' | 'google'; email: string } | { op: 'invite'; email: string; token: string }
+type Result = Step & { status: number; code?: string; location?: string }
+
+function runSteps(databaseUrl: string, teams: string, steps: Step[]): Result[] {
+  const appConfig = {
+    teams: { mode: teams },
+    auth: {
+      registration: { mode: 'invitation-only' },
+      methods: ['email-otp', 'email-password', 'google'],
+      emailAndPassword: { enabled: true },
+    },
+  }
+  const run = spawnSync(process.execPath, ['--import', 'tsx', path.join(FIXTURE, 'driver.mts')], {
+    cwd: CORE,
+    encoding: 'utf8',
+    timeout: 120000,
+    env: {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      NODE_ENV: 'test',
+      TSX_TSCONFIG_PATH: path.join(FIXTURE, 'tsconfig.json'),
+      DATABASE_URL: databaseUrl,
+      BETTER_AUTH_SECRET: 'registration-gates-secret-0123456789abcdef',
+      BETTER_AUTH_URL: ORIGIN,
+      NEXT_PUBLIC_APP_URL: ORIGIN,
+      GOOGLE_CLIENT_ID: '1234567890-registrationgates.apps.googleusercontent.com',
+      GOOGLE_CLIENT_SECRET: 'registration-gates-google-secret',
+      EMAIL_PROVIDER: 'resend',
+      RESEND_API_KEY: 're_registrationgatesregistrationgates',
+      RESEND_FROM_EMAIL: 'noreply@example.test',
+      DISABLE_RATE_LIMITING: 'true',
+      REGISTRATION_GATES_APP_CONFIG: JSON.stringify(appConfig),
+      REGISTRATION_GATES_STEPS: JSON.stringify(steps),
+    },
+  })
+  const results = run.stdout.split('\n').filter(l => l.startsWith('RESULT ')).map(l => JSON.parse(l.slice(7)) as Result)
+  assert.equal(results.length, steps.length, `the driver ran every step\n${run.stdout}\n${run.stderr}`)
+  return results
+}
+
+const users = async (owner: pg.Client) =>
+  (await owner.query<{ email: string }>('SELECT email FROM users ORDER BY email')).rows.map(r => r.email)
+
+async function invite(owner: pg.Client, email: string, token: string, expired = false) {
+  await owner.query(
+    `INSERT INTO team_invitations ("teamId", email, role, token, "invitedBy", "expiresAt")
+     SELECT id, $1, 'member', $2, "ownerId", now() + ($3 || ' days')::interval FROM teams ORDER BY "createdAt" LIMIT 1`,
+    [email, token, expired ? '-1' : '7'],
+  )
+}
+
+const refused = (r: Result) => r.code === 'SIGNUP_RESTRICTED' || r.location?.includes('error=SIGNUP_RESTRICTED')
+
+test('multi-tenant invitation-only: the first sign-up bootstraps, then sign-up needs an invitation', { skip, timeout: 300000 }, async t => {
+  const { owner, ownerUrl } = await cutoverDatabase(t)
+
+  // empty database: the first sign-up is the bootstrap and gets its own (not global) team
+  const [first] = runSteps(ownerUrl, 'multi-tenant', [{ op: 'password', email: 'first@example.test' }])
+  assert.equal(first.status, 200, JSON.stringify(first))
+  assert.deepEqual((await owner.query('SELECT "isGlobal" FROM teams')).rows, [{ isGlobal: false }])
+
+  // one team exists: no invitation, no account
+  await invite(owner, 'invited-otp@example.test', 'token-otp')
+  await invite(owner, 'invited-password@example.test', 'token-password')
+  const results = runSteps(ownerUrl, 'multi-tenant', [
+    { op: 'password', email: 'stranger-password@example.test' },
+    { op: 'otp', email: 'stranger-otp@example.test' },
+    { op: 'google', email: 'stranger-google@example.test' },
+    // a pending invitation proves nothing about who posts its address with a password: that goes through signup-with-invite
+    { op: 'password', email: 'invited-password@example.test' },
+    // the code proves the address, so an invited address signs up with it
+    { op: 'otp', email: 'invited-otp@example.test' },
+  ])
+  for (const r of results.slice(0, 4)) assert.ok(refused(r), `refused: ${JSON.stringify(r)}`)
+  assert.equal(results[4].status, 200, JSON.stringify(results[4]))
+  assert.deepEqual(await users(owner), ['first@example.test', 'invited-otp@example.test'])
+  // the invited account waits for its invitation instead of getting a team of its own
+  assert.equal((await owner.query('SELECT count(*)::int AS n FROM teams')).rows[0].n, 1)
+})
+
+test('single-tenant invitation-only: unchanged, the global team closes sign-up', { skip, timeout: 300000 }, async t => {
+  const { owner, ownerUrl } = await cutoverDatabase(t)
+
+  const [first] = runSteps(ownerUrl, 'single-tenant', [{ op: 'password', email: 'first@example.test' }])
+  assert.equal(first.status, 200, JSON.stringify(first))
+  assert.deepEqual((await owner.query('SELECT "isGlobal" FROM teams')).rows, [{ isGlobal: true }])
+
+  await invite(owner, 'invited-otp@example.test', 'token-otp')
+  const results = runSteps(ownerUrl, 'single-tenant', [
+    { op: 'password', email: 'stranger-password@example.test' },
+    { op: 'otp', email: 'stranger-otp@example.test' },
+    { op: 'otp', email: 'invited-otp@example.test' },
+  ])
+  assert.ok(refused(results[0]) && refused(results[1]), JSON.stringify(results))
+  assert.equal(results[2].status, 200, JSON.stringify(results[2]))
+  assert.deepEqual(await users(owner), ['first@example.test', 'invited-otp@example.test'])
+})

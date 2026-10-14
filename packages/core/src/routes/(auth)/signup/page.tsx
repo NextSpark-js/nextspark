@@ -5,7 +5,7 @@ import { AUTH_CONFIG } from '@nextsparkjs/core/lib/config'
 import { resolveAuthMethods } from '@nextsparkjs/core/lib/auth/auth-methods'
 import { TeamService } from '@nextsparkjs/core/lib/services'
 
-// This page reads DB state (TeamService.hasGlobal) and redirect()s during render,
+// This page reads DB state (TeamService.isBootstrapDone) and redirect()s during render,
 // so it must render per-request and never be statically prerendered at build time.
 export const dynamic = 'force-dynamic'
 
@@ -32,11 +32,10 @@ async function SignupPage({ searchParams }: { searchParams?: Promise<Record<stri
   }
 
   // In invitation-only mode, allow the first user to register
-  // (when no global team exists yet). Subsequent users need invitations.
+  // (until the bootstrap is over). Subsequent users need invitations.
   if (registrationMode === 'invitation-only') {
-    const hasGlobalTeam = await TeamService.hasGlobal()
-    if (hasGlobalTeam) {
-      // A team exists, so this is not the first user - redirect to login
+    if (await TeamService.isBootstrapDone()) {
+      // Not the first user - redirect to login
       // Invitation links use /accept-invite/[token] route, not /signup
       redirect('/login')
     }

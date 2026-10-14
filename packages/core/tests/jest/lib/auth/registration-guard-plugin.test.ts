@@ -8,7 +8,7 @@ const mockAuthConfig = {
   },
 }
 
-let mockHasGlobal = false
+let mockBootstrapDone = false
 
 jest.mock('@/core/lib/config', () => ({
   AUTH_CONFIG: mockAuthConfig,
@@ -16,7 +16,7 @@ jest.mock('@/core/lib/config', () => ({
 
 jest.mock('@/core/lib/services/team.service', () => ({
   TeamService: {
-    hasGlobal: jest.fn(() => Promise.resolve(mockHasGlobal)),
+    isBootstrapDone: jest.fn(() => Promise.resolve(mockBootstrapDone)),
   },
 }))
 
@@ -55,7 +55,7 @@ describe('Registration Guard Plugin', () => {
   let handler: (ctx: any) => Promise<any>
 
   beforeEach(() => {
-    mockHasGlobal = false
+    mockBootstrapDone = false
     plugin = registrationGuardPlugin()
     const hook = plugin.hooks!.before![0]
     matcher = hook.matcher as (ctx: any) => boolean
@@ -123,14 +123,14 @@ describe('Registration Guard Plugin', () => {
     })
 
     test('allows first user when no team exists', async () => {
-      mockHasGlobal = false
+      mockBootstrapDone = false
       const ctx = createMockCtx('/sign-up/social')
       const result = await handler(ctx)
       expect(result).toBe(ctx)
     })
 
     test('throws a 403 SIGNUP_RESTRICTED APIError when team exists and no invite token', async () => {
-      mockHasGlobal = true
+      mockBootstrapDone = true
       const ctx = createMockCtx('/sign-up/social')
       await expect(handler(ctx)).rejects.toMatchObject({
         name: 'APIError',
@@ -140,7 +140,7 @@ describe('Registration Guard Plugin', () => {
     })
 
     test('treats a missing request as having no invite token', async () => {
-      mockHasGlobal = true
+      mockBootstrapDone = true
       await expect(handler({ path: '/sign-up/social' })).rejects.toMatchObject({
         status: 'FORBIDDEN',
         body: { code: 'SIGNUP_RESTRICTED' },
@@ -148,7 +148,7 @@ describe('Registration Guard Plugin', () => {
     })
 
     test('passes through with invite header when team exists', async () => {
-      mockHasGlobal = true
+      mockBootstrapDone = true
       const ctx = createMockCtx('/sign-up/social', {
         inviteHeader: 'valid-token-123',
       })
@@ -157,7 +157,7 @@ describe('Registration Guard Plugin', () => {
     })
 
     test('passes through with invite query param when team exists', async () => {
-      mockHasGlobal = true
+      mockBootstrapDone = true
       const ctx = createMockCtx('/sign-up/social', {
         inviteQueryParam: 'valid-token-456',
       })
