@@ -1,13 +1,14 @@
 /**
  * Better Auth Plugin: Registration Guard
  *
- * This plugin intercepts OAuth signup attempts BEFORE user creation to enforce
- * registration mode restrictions at the earliest possible point.
+ * Refuses a sign-up the registration mode does not allow before Better Auth
+ * runs it, and a sign-in code for a domain outside allowedDomains before it is
+ * sent.
  *
- * Security layers:
- * 1. This plugin (OAuth pre-validation)
- * 2. API route handler (endpoint blocking)
- * 3. Database hooks (final validation)
+ * OAuth callbacks are not matched: a callback cannot tell a new user from an
+ * existing one before the provider answers, so the user-creation hook
+ * (lib/auth.ts) refuses only an account that would be created, and the callback
+ * turns its refusal into a redirect to the error page.
  */
 
 import { AUTH_CONFIG } from '../config';
@@ -23,15 +24,8 @@ export const registrationGuardPlugin = (): BetterAuthPlugin => {
     hooks: {
       before: [
         {
-          // Intercept social signup attempts
-          matcher: (ctx) => {
-            const path = ctx.path || '';
-            return (
-              path.includes('/sign-up/social') ||
-              path.includes('/callback/') ||
-              path.includes('/sign-up')
-            );
-          },
+          // Sign-up endpoints (/sign-up/email); never an OAuth callback, which may be an existing user's sign-in
+          matcher: (ctx) => (ctx.path || '').includes('/sign-up'),
           handler: async (ctx) => {
             const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 

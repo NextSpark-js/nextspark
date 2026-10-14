@@ -17,7 +17,7 @@ const skip = !HAS_POSTGRES && 'initdb/pg_ctl not on PATH'
 const FIXTURE = path.join(CORE, 'tests/node/fixtures/registration-gates')
 const ORIGIN = 'http://localhost:5173'
 
-type Step = { op: 'password'; email: string; inviteToken?: string } | { op: 'otp' | 'google'; email: string } | { op: 'invite'; email: string; token: string }
+type Step = { op: 'password'; email: string; inviteToken?: string } | { op: 'otp'; email: string } | { op: 'google'; email: string; emailVerified?: boolean } | { op: 'invite'; email: string; token: string }
 type Result = Step & { status: number; code?: string; location?: string }
 
 function runSteps(databaseUrl: string, teams: string, steps: Step[]): Result[] {
@@ -141,3 +141,36 @@ test('signup-with-invite with a password: a valid invitation creates the account
     WHERE u.email = 'invited@example.test'`)
   assert.deepEqual(rows, [{ firstsTeam: true, role: 'member', status: 'accepted' }])
 })
+
+for (const teams of ['single-tenant', 'multi-tenant']) {
+  test(`${teams} invitation-only: the Google callback signs in an existing user and redirects a new address to the error page`, { skip, timeout: 300000 }, async t => {
+    const { owner, ownerUrl } = await cutoverDatabase(t)
+    // the first user bootstraps with Google
+    const [first] = runSteps(ownerUrl, teams, [{ op: 'google', email: 'first@example.test' }])
+    assert.equal(first.status, 302, JSON.stringify(first))
+    assert.ok(!first.location?.includes('auth-error'), JSON.stringify(first))
+
+    await invite(owner, 'invited@example.test', 'token-google')
+    await invite(owner, 'unverified@example.test', 'token-unverified')
+    const [again, stranger, unverified, invited] = runSteps(ownerUrl, teams, [
+      { op: 'google', email: 'first@example.test' },
+      { op: 'google', email: 'stranger@example.test' },
+      // an invited address the provider has not verified proves nothing
+      { op: 'google', email: 'unverified@example.test', emailVerified: false },
+      { op: 'google', email: 'invited@example.test' },
+    ])
+    // the existing user signs in as usual
+    assert.equal(again.status, 302, JSON.stringify(again))
+    assert.ok(!again.location?.includes('auth-error'), JSON.stringify(again))
+    // a new address without an invitation goes to the error page every other registration refusal uses
+    assert.equal(stranger.status, 302, JSON.stringify(stranger))
+    assert.match(stranger.location ?? '', /\/auth-error\?error=SIGNUP_RESTRICTED(&|$)/)
+    assert.equal(unverified.status, 302, JSON.stringify(unverified))
+    assert.match(unverified.location ?? '', /\/auth-error\?error=SIGNUP_RESTRICTED(&|$)/)
+    // an invited, verified address signs up
+    assert.equal(invited.status, 302, JSON.stringify(invited))
+    assert.ok(!invited.location?.includes('auth-error'), JSON.stringify(invited))
+    assert.deepEqual(await users(owner), ['first@example.test', 'invited@example.test'])
+    assert.equal((await owner.query(`SELECT count(*)::int AS n FROM session s JOIN users u ON u.id = s."userId" WHERE u.email = 'first@example.test'`)).rows[0].n, 2)
+  })
+}

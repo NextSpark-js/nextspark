@@ -75,9 +75,9 @@ describe('Registration Guard Plugin', () => {
       expect(matcher(ctx)).toBe(true)
     })
 
-    test('matches /callback/ paths', () => {
-      const ctx = createMockCtx('/callback/google')
-      expect(matcher(ctx)).toBe(true)
+    test('does not match OAuth callbacks: an existing user signs in through them, and the user-creation hook refuses a new one', () => {
+      expect(matcher(createMockCtx('/callback/google'))).toBe(false)
+      expect(matcher(createMockCtx('/oauth2/callback/google'))).toBe(false)
     })
 
     test('matches /sign-up path', () => {

@@ -8,7 +8,7 @@ import { NextRequest } from 'next/server'
 type Step =
   | { op: 'password'; email: string; inviteToken?: string }
   | { op: 'otp'; email: string }
-  | { op: 'google'; email: string }
+  | { op: 'google'; email: string; emailVerified?: boolean }
   | { op: 'invite'; email: string; token: string }
 
 const CORE_SRC = new URL('../../../../src/', import.meta.url)
@@ -31,12 +31,13 @@ async function outcome(res: Response) {
 
 // Google's token exchange: an unsigned id token for the address of the current step
 let googleEmail = ''
+let googleEmailVerified = true
 const realFetch = globalThis.fetch
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
   if (url.startsWith('https://oauth2.googleapis.com/token')) {
     const part = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
-    const idToken = `${part({ alg: 'none', typ: 'JWT' })}.${part({ sub: `google-${googleEmail}`, email: googleEmail, email_verified: true, name: 'Google User', iss: 'https://accounts.google.com', aud: process.env.GOOGLE_CLIENT_ID, exp: Math.floor(Date.now() / 1000) + 600, iat: Math.floor(Date.now() / 1000) })}.`
+    const idToken = `${part({ alg: 'none', typ: 'JWT' })}.${part({ sub: `google-${googleEmail}`, email: googleEmail, email_verified: googleEmailVerified, name: 'Google User', iss: 'https://accounts.google.com', aud: process.env.GOOGLE_CLIENT_ID, exp: Math.floor(Date.now() / 1000) + 600, iat: Math.floor(Date.now() / 1000) })}.`
     return new Response(JSON.stringify({ access_token: 'stub-access', id_token: idToken, token_type: 'Bearer', expires_in: 600, scope: 'openid email profile' }), { headers: { 'content-type': 'application/json' } })
   }
   return realFetch(input, init)
@@ -57,6 +58,7 @@ async function run(step: Step) {
     }
     case 'google': {
       googleEmail = step.email
+      googleEmailVerified = step.emailVerified ?? true
       const start = await authRoute.POST(json('/api/auth/sign-in/social', { provider: 'google', callbackURL: '/dashboard' }))
       const { url } = await start.json() as { url: string }
       const state = new URL(url).searchParams.get('state')!

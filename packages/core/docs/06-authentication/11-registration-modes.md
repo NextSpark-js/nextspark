@@ -68,9 +68,9 @@ auth: {
 Users can only register via an invitation link. The first user bootstraps the platform without an invite: in `single-tenant` until the global team exists, in the other team modes until any team exists. If no team exists after the first user (for example with `signupIntent.skipTeamForNonOwnerIntents`, or when creating the first team fails), registration stays open until one does. After that, a new account is created only:
 
 - through the invitation link (`/api/v1/auth/signup-with-invite`, with or without a password), or
-- by a first email-code sign-in for an address with a pending, unexpired invitation: the code proves the address, and the account then accepts its invitation instead of getting a team of its own.
+- by a first email-code or Google sign-in for a verified address with a pending, unexpired invitation: the code or the provider proves the address, and the account then accepts its invitation instead of getting a team of its own.
 
-A password sign-up on `/api/auth/sign-up/email` is refused with `SIGNUP_RESTRICTED`, invitation or not, since it does not prove the address. Requires a working email service (Resend).
+A password sign-up on `/api/auth/sign-up/email` is refused with `SIGNUP_RESTRICTED`, invitation or not, since it does not prove the address. Existing users sign in as usual, with Google too; a Google sign-in for a new address without an invitation is redirected to `/auth-error?error=SIGNUP_RESTRICTED`. Requires a working email service (Resend).
 
 ```typescript
 auth: {
@@ -118,7 +118,7 @@ auth: {
 
 Registration mode restrictions are enforced at multiple layers:
 
-1. **Route handler** (`packages/core/src/routes/api/auth/[...all]/route.ts`): Blocks email signup for `domain-restricted` and `invitation-only` modes at the API level.
+1. **Route handler** (`packages/core/src/routes/api/auth/[...all]/route.ts`): Blocks email signup for `domain-restricted` and `invitation-only` modes at the API level. OAuth callbacks are not gated there: they may be an existing user's sign-in, so the user-creation hook below decides for a new account.
 
 2. **Database hook — user create** (`lib/auth.ts` → `databaseHooks.user.create.before`): Validates email domain for `domain-restricted` and `domain-open` modes before user creation. Blocks signup in `invitation-only` once the first-user bootstrap is over (`TeamService.isBootstrapDone()`, which every gate shares), unless the account comes from the invitation link or its address has a pending invitation.
 

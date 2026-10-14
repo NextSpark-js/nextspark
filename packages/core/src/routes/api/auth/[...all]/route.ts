@@ -107,24 +107,27 @@ export async function POST(req: NextRequest) {
   ];
 
   const isSignupAttempt = signupEndpoints.some(endpoint => pathname.includes(endpoint));
+  // An OAuth callback POSTed by a form_post provider is not gated here: it may be
+  // an existing user's sign-in. The user-creation hook (lib/auth.ts) refuses a
+  // new account the registration mode does not allow, and the callback redirects
+  // that refusal to /auth-error.
   const isOAuthCallback = pathname.includes('/api/auth/callback/');
-  const isSignupRequest = isSignupAttempt || isOAuthCallback;
 
   // A first-time OTP sign-in (emailOTP plugin with disableSignUp:false) auto-creates
   // the user, so it is an implicit signup that can also carry an intent. It is a
-  // sign-in endpoint, so it is deliberately NOT part of `isSignupRequest` above
+  // sign-in endpoint, so it is deliberately NOT part of `isSignupAttempt` above
   // (no registration-mode gating) — it only participates in the intent wrapping
   // below, exactly like header/OAuth signup.
   const isOtpSignin = pathname.includes('/sign-in/email-otp');
 
-  if (isSignupRequest) {
+  if (isSignupAttempt) {
     const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
     const teamsMode = TEAMS_CONFIG.mode;
 
     // --- Registration mode enforcement ---
 
     // 1. Domain-restricted mode: block email signup, allow OAuth (validated in database hooks)
-    if (registrationMode === 'domain-restricted' && isSignupAttempt && !isOAuthCallback) {
+    if (registrationMode === 'domain-restricted') {
       // Block direct email/password signup in domain-restricted mode
       // Only Google OAuth is allowed (domain validation happens in database hooks)
       const errorResponse = NextResponse.json(
