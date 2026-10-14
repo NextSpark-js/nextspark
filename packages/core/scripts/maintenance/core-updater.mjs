@@ -22,7 +22,10 @@ import { spawn, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+
+import { addCommands, dependenciesBelowCore } from './dependency-floors.mjs'
 
 const SCOPE = '@nextsparkjs/'
 const CORE_PACKAGE = '@nextsparkjs/core'
@@ -73,7 +76,9 @@ What gets updated:
 What update-core itself never writes:
   Other packages of a web-mobile workspace (mobile/, the root package.json): it lists their
                           @nextsparkjs pins that are not at the target, with the install to run
-  The rest of package.json (name, scripts, other dependencies)
+  The rest of package.json (name, scripts, other dependencies): it lists the ones
+                          below what the new core needs (better-auth, zod, next, ...), with the
+                          pnpm add that moves them
   next.config.mjs, tsconfig.json, i18n.ts, proxy.ts or middleware.ts, instrumentation.ts
                           Project files: nextspark sync:app, which used to update them, was
                           removed in 0.1.0-beta.192. nextspark prepare replaces src/proxy.ts,
@@ -443,6 +448,38 @@ function reportOtherPins(out, pins, target, cwd, root) {
   out('\n  Not moved: these @nextsparkjs pins are in other packages of the workspace, which update-core never writes:')
   for (const { file, name, spec } of pins) out(`    ${file}: ${name} ${spec}`)
   out(`  Set each to ${target}, then run: pnpm${path.relative(cwd, root) ? ` --dir ${shellWord(path.relative(cwd, root))}` : ''} install`)
+}
+
+/** The semver package: the one the installed nextspark CLI resolves, or else the one next to this script. */
+function loadSemver(cwd) {
+  const cli = installedCli(cwd)
+  for (const from of [cli && realPath(cli), fileURLToPath(import.meta.url)]) {
+    if (!from) continue
+    try {
+      return createRequire(from)('semver')
+    } catch {}
+  }
+  return null
+}
+
+/**
+ * Says which dependencies the project declares below what the installed core needs and the
+ * `pnpm add` that moves them; prints nothing when there are none. update-core never writes them.
+ */
+function reportDependenciesBelowCore(out, cwd, manifest) {
+  const coreManifest = readJson(path.join(cwd, 'node_modules', CORE_PACKAGE, 'package.json'))
+  if (!coreManifest) return
+  const semver = loadSemver(cwd)
+  if (!semver) {
+    out('\n  Could not compare the project\'s dependencies with the ones core needs: no semver package is installed with the nextspark CLI.')
+    return
+  }
+  const below = dependenciesBelowCore(manifest, coreManifest, semver)
+  if (below.length === 0) return
+  out(`\n  Not moved: these dependencies in package.json are below what ${CORE_PACKAGE} ${coreManifest.version} needs, and update-core never writes dependencies other than the @nextsparkjs packages:`)
+  for (const { name, declared, required } of below) out(`    ${name} ${declared} (core needs ${required})`)
+  out('  Move them, from this directory:')
+  for (const command of addCommands(below)) out(`    ${command}`)
 }
 
 /**
@@ -919,6 +956,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
   if (packages.every(({ name, spec }) => spec === target && installedVersion(cwd, name) === target)) {
     out(`\n   Already on ${target}: every @nextsparkjs package in package.json is pinned to it and node_modules holds it. Nothing was changed.`)
     reportOtherPins(out, otherWorkspacePins(cwd, root, target), target, cwd, root)
+    reportDependenciesBelowCore(out, cwd, manifest)
     out('')
     return 0
   }
@@ -1051,6 +1089,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     if (branch) out(`  Branch: ${branch}`)
     if (newMigrations.length > 0) out(`  New core migrations: ${newMigrations.length}`)
     reportOtherPins(out, otherPins, target, cwd, root)
+    reportDependenciesBelowCore(out, cwd, manifest)
     out('\n  Next steps:')
     const nextSteps = ['Review: git status && git diff', 'Test: pnpm build && pnpm dev']
     if (newMigrations.length > 0) nextSteps.push('Migrate: pnpm db:migrate')

@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A job that exports `DATABASE_URL` (or `MIGRATE_DATABASE_URL`) while a project `.env` is present now migrates the exported database, not the `.env` one. Pass `--no-env-file` to `pnpm db:migrate` to ignore the `.env` altogether.
 - **Better Auth 1.7: core moves to `better-auth ~1.7.7`** (from `~1.6.30`), with `@better-fetch/fetch` `1.3.2` and `zod` `^4.5.4`.
-  `pnpm update-core` does not change these in a project's `package.json`: set `"better-auth": "~1.7.7"` and
+  `pnpm update-core` does not change these in a project's `package.json` (it lists them at the end, with the `pnpm add` to run): set `"better-auth": "~1.7.7"` and
   `"@better-fetch/fetch": "1.3.2"`, and `zod` to `^4.5.4` or later if the project declares it (or forces an older zod 4 with an
   override), then `pnpm install`. Better Auth's tables are the same in 1.6 and 1.7; a project that never ran Better Auth 1.7.0 to
   1.7.2 has no schema change beyond migration 038. Rolling back to `~1.6.30` is a version change only.
@@ -149,6 +149,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `pnpm update-core` ends by listing the dependencies the project declares below what the new core needs (`better-auth`, `@better-fetch/fetch`, `zod`, `next`, ...), with the exact `pnpm add` that moves them, and prints nothing when none is below. It still never writes third-party dependencies.
 - **Better Auth `~1.7.7`.** The support matrix and the stability page name it as the line 1.0 ships with. The monorepo forces zod
   `4.6.5` (it was `4.4.3`, older than Better Auth 1.7 needs). A generated project gets `better-auth ~1.7.7`, `@better-fetch/fetch 1.3.2`
   and `zod ^4.5.4`. Behavior kept across the move:

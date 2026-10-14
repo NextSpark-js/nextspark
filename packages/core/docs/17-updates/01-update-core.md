@@ -50,7 +50,7 @@ pnpm install
 
 ### What `update-core` Itself Never Writes
 
-- The rest of `package.json`: name, scripts, other dependencies
+- The rest of `package.json`: name, scripts, other dependencies. The run ends by listing the ones it declares below what the new core needs (see [After a Successful Update](#after-a-successful-update))
 - `api/`, `blocks/`, `components/`, `config/`, `entities/`, `lib/`, `messages/`, `migrations/`, `plugins/`, `public/`, `styles/`, `templates/`, and `tests/`: project-owned root-first source
 - `next.config.mjs`, `tsconfig.json`, `i18n.ts`, `instrumentation.ts`, `proxy.ts` or `middleware.ts`: project files. `nextspark sync:app`, which used to update them, was [removed in 0.1.0-beta.192](./05-sync-app-removal.md); a change a new release needs in one of them is in its release notes. One exception: `nextspark prepare`, which update-core runs, replaces a `src/proxy.ts`, `src/middleware.ts` or `instrumentation.ts` that is byte for byte a template an earlier core shipped with the current template (a facade over `@nextsparkjs/core/proxy` or `@nextsparkjs/core/instrumentation`), and says so. A file with any change of yours is kept, and prepare prints the replacement to make (`NS_PROXY_FACADE_MISSING`, `NS_INSTRUMENTATION_FACADE_MISSING`)
 - `.env*`: environment files
@@ -233,6 +233,19 @@ Registry lookups go through `pnpm view`, so they use the registry your project's
 ```
 
 `New core migrations` and the `db:migrate` step only appear when the new core brings migrations the previous one didn't have.
+
+When core raises the version line of a dependency your project also declares (Better Auth, `zod`, `next`, ...), the update does not touch it, and the run ends by listing the ones left below what the new core needs, with the `pnpm add` that moves them:
+
+```
+  Not moved: these dependencies in package.json are below what @nextsparkjs/core 0.1.0-beta.199 needs, and update-core never writes dependencies other than the @nextsparkjs packages:
+    @better-fetch/fetch 1.3.1 (core needs 1.3.2)
+    better-auth ~1.6.33 (core needs ~1.7.7)
+    zod ^4.1.5 (core needs ^4.5.4)
+  Move them, from this directory:
+    pnpm add '@better-fetch/fetch@1.3.2' 'better-auth@~1.7.7' 'zod@^4.5.4'
+```
+
+The comparison is between the lowest version your declared range allows and the lowest version core's `dependencies` and `peerDependencies` range allows. Nothing is printed when no dependency is below. Until you move them, the lockfile holds two copies, and code of yours that imports the package gets the older one while core uses its own.
 
 ---
 
