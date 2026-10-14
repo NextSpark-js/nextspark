@@ -34,6 +34,9 @@ const createUserSchema = z.object({
 
 
 
+/** The columns `?search=` matches, and the only names `?searchField=` accepts (a relation select asks for its titleField). */
+const USER_SEARCH_FIELDS = ['email', 'name', 'firstName', 'lastName'] as const;
+
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request);
@@ -72,6 +75,26 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     if (filters.role) {
       whereClause += ` AND role = $${paramCount}`;
       queryParams.push(filters.role);
+      paramCount++;
+    }
+
+    // search: email, name, first and last name. A searchField must be one of them; the names written into the SQL
+    // are the constants above, never the caller's value.
+    const { searchParams } = new URL(req.url);
+    const searchField = searchParams.get('searchField');
+    if (searchField && !(USER_SEARCH_FIELDS as readonly string[]).includes(searchField)) {
+      const response = createApiError(
+        `Unknown search field for users: ${searchField}`,
+        400,
+        { invalidKeys: [searchField], allowedKeys: [...USER_SEARCH_FIELDS] },
+        'INVALID_SEARCH_FIELD'
+      );
+      return addCorsHeaders(response, req);
+    }
+    const search = searchParams.get('search')?.trim();
+    if (search) {
+      whereClause += ` AND (${USER_SEARCH_FIELDS.map(field => `"${field}" ILIKE $${paramCount}`).join(' OR ')})`;
+      queryParams.push(`%${search}%`);
       paramCount++;
     }
 

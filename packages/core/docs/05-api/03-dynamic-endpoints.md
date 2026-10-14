@@ -159,7 +159,8 @@ export const OPTIONS = handleGenericOptions // CORS
 | `fields` | LIST, READ | Select specific fields |
 | `distinct` | LIST | Get distinct values (with `fields`) |
 | `ids` | LIST | Get specific IDs (comma-separated) |
-| `search` | LIST | Search across searchable fields |
+| `search` | LIST | Search `name`, `title`, `slug` and `content` (the ones the entity declares), and the field `searchField` names |
+| `searchField` | LIST | One more field to search with `search`: a text field of the entity (`text`, `textarea`, `email`, `url`, `phone`, `markdown`, `richtext`; not `api.searchable: false`). A relation select sends its `titleField`, so a record is found by the label it shows |
 | `from` / `to` | LIST | Date range filtering |
 | `dateField` | LIST | Field for date range |
 | `metas` | LIST, READ | Include metadata |
@@ -175,7 +176,8 @@ ignored, so a typo never produces a plausible-looking but wrong result:
 |-----------|--------|--------|
 | `{field}` is not a declared entity field (e.g. `?statuz=active`) | 400 | `INVALID_FILTER` — `details.invalidKeys` lists the offending keys |
 | `sortBy` is neither an entity field nor `id`/`createdAt`/`updatedAt`/`teamId` | 400 | `INVALID_SORT_FIELD` |
-| `search` on an entity with none of `name`/`title`/`slug`/`content` | 400 | `SEARCH_NOT_SUPPORTED` |
+| `search` on an entity with none of `name`/`title`/`slug`/`content` (and no `searchField`) | 400 | `SEARCH_NOT_SUPPORTED` |
+| `searchField` is not in the allowlist built from the entity's own config (not a field, not a text field, or `api.searchable: false`) | 400 | `INVALID_SEARCH_FIELD` — `details.allowedKeys` lists the accepted names; the name never reaches SQL |
 | `fields=X&distinct=true` where `X` is not an entity field | 400 | `INVALID_FIELD` |
 
 Filtering a `date`/`datetime` field with a bare calendar day

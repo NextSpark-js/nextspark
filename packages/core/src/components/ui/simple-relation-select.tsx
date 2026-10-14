@@ -85,6 +85,9 @@ export function SimpleRelationSelect({
   const [search, setSearch] = React.useState('')
   const [searching, setSearching] = React.useState(false)
   const [options, setOptions] = React.useState<SimpleEntityOption[]>([])
+  // The ids the server answered for a term. While the typed term is that term, the list is exactly these: they matched
+  // on a field the label does not show (slug, content, ...), so the command list must not filter them out again.
+  const [serverHits, setServerHits] = React.useState<{ term: string; ids: Set<string> } | null>(null)
   const [propertyOptionsState, setPropertyOptionsState] = React.useState<SimplePropertyOption[]>([])
   const [loading, setLoading] = React.useState(false)
   const [selectedOptions, setSelectedOptions] = React.useState<SimpleEntityOption[]>([])
@@ -242,7 +245,10 @@ export function SimpleRelationSelect({
   // handleSelect closes the popover with setOpen(false) without going through
   // onOpenChange, so the search is cleared by an effect on `open`.
   React.useEffect(() => {
-    if (!open) setSearch('')
+    if (!open) {
+      setSearch('')
+      setServerHits(null)
+    }
   }, [open])
 
   // The list only holds the first `limit` records (the API caps limit at 100),
@@ -250,6 +256,9 @@ export function SimpleRelationSelect({
   const filterKey = JSON.stringify(filter ?? {})
   // Entity whose API answered 400 SEARCH_NOT_SUPPORTED: asking again would fail the same way.
   const searchUnsupportedRef = React.useRef<string | null>(null)
+  // Entity whose API refused `searchField` (the titleField is not a field it can search, or a custom route does not know
+  // the parameter): its searches go without it, on the fields the API searches by default.
+  const searchFieldRefusedRef = React.useRef<string | null>(null)
   React.useEffect(() => {
     const term = search.trim()
     // While the first page loads it would replace the hits (setOptions): search again once it lands.
@@ -263,21 +272,30 @@ export function SimpleRelationSelect({
     setSearching(true)
     const timer = setTimeout(async () => {
       try {
-        const url = new URL(withBasePath(`/api/v1/${apiPath}`), window.location.origin)
-        url.searchParams.set('search', term)
-        url.searchParams.set('limit', String(limit))
-        if (parentId) url.searchParams.set('parentId', parentId)
-        if (userFiltered) url.searchParams.set('userFiltered', 'true')
-        for (const [key, val] of Object.entries(JSON.parse(filterKey) as Record<string, string>)) {
-          url.searchParams.set(key, val)
+        // The API matches name, title, slug and content, and the titleField too: the label a person types
+        const ask = (withSearchField: boolean) => {
+          const url = new URL(withBasePath(`/api/v1/${apiPath}`), window.location.origin)
+          url.searchParams.set('search', term)
+          if (withSearchField && titleField) url.searchParams.set('searchField', titleField)
+          url.searchParams.set('limit', String(limit))
+          if (parentId) url.searchParams.set('parentId', parentId)
+          if (userFiltered) url.searchParams.set('userFiltered', 'true')
+          for (const [key, val] of Object.entries(JSON.parse(filterKey) as Record<string, string>)) {
+            url.searchParams.set(key, val)
+          }
+          return fetchWithTeam(url.toString(), { method: 'GET', credentials: 'include' })
         }
 
-        const response = await fetchWithTeam(url.toString(), { method: 'GET', credentials: 'include' })
+        const sendsSearchField = Boolean(titleField) && searchFieldRefusedRef.current !== entityType
+        let response = await ask(sendsSearchField)
         if (cancelled) return
         if (response.status === 400) {
           const body = await response.json().catch(() => null)
           if (body?.code === 'SEARCH_NOT_SUPPORTED') searchUnsupportedRef.current = entityType
-          return
+          if (!sendsSearchField || (body?.code !== 'INVALID_SEARCH_FIELD' && body?.code !== 'INVALID_FILTER')) return
+          searchFieldRefusedRef.current = entityType
+          response = await ask(false)
+          if (cancelled) return
         }
         if (!response.ok) return
         const result = await response.json()
@@ -293,6 +311,7 @@ export function SimpleRelationSelect({
           const known = new Set(prev.map(o => o.id))
           return [...prev, ...found.filter((o: SimpleEntityOption) => !known.has(o.id))]
         })
+        setServerHits({ term, ids: new Set(found.map((o: SimpleEntityOption) => o.id)) })
       } catch (error) {
         console.error(`Error searching options for ${entityType}:`, error)
       } finally {
@@ -606,6 +625,8 @@ export function SimpleRelationSelect({
     }
   }
 
+  const showingServerHits = !usePropertyMode && serverHits !== null && serverHits.term === search.trim()
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -670,7 +691,7 @@ export function SimpleRelationSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
-        <Command>
+        <Command shouldFilter={!showingServerHits}>
           <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
           <CommandList>
             <CommandEmpty>
@@ -723,8 +744,8 @@ export function SimpleRelationSelect({
                   ))
                 })()
               ) : (
-                // Render regular entity options
-                options.map((option) => (
+                // Render regular entity options (the server's hits for the typed term, else everything the command list filters)
+                (showingServerHits ? options.filter(option => serverHits?.ids.has(option.id)) : options).map((option) => (
                   <CommandItem
                     key={option.id}
                     value={option.id}

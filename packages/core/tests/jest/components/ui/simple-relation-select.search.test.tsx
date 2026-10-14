@@ -171,3 +171,78 @@ describe('SimpleRelationSelect server-side search', () => {
     expect(searchCalls()).toHaveLength(0)
   })
 })
+
+// #249: a server hit is shown whatever field it matched, and the titleField is searched
+describe('SimpleRelationSelect server hits and titleField (#249)', () => {
+  it('keeps a hit that matched on a field the label does not show (slug, content)', async () => {
+    // typed "acme-wid": the title is "Widget Co", the match was on its slug
+    mockApi(() => json([{ id: 'w1', name: 'Widget Co', slug: 'acme-widget' }]))
+    await openAndType('acme-wid')
+    await advance(300)
+    expect(await screen.findByText('Widget Co')).toBeInTheDocument()
+    expect(screen.queryByText('Client 0')).not.toBeInTheDocument()
+  })
+
+  it('asks the API to search the titleField, and finds users by email', async () => {
+    mockApi(() => json([{ id: 'u1', email: 'ann@example.test', name: 'A' }]))
+    await openAndType('ann@exa', { entityType: 'users', titleField: 'email' })
+    await advance(300)
+    const [call] = searchCalls()
+    expect(call.pathname).toBe('/api/v1/users')
+    expect(call.searchParams.get('search')).toBe('ann@exa')
+    expect(call.searchParams.get('searchField')).toBe('email')
+    expect(await screen.findByText('ann@example.test')).toBeInTheDocument()
+  })
+
+  it('sends no searchField when the relation has no titleField', async () => {
+    mockApi(() => json([outside]))
+    await openAndType('zeta')
+    await advance(300)
+    expect(searchCalls()[0].searchParams.has('searchField')).toBe(false)
+  })
+
+  it('shows the first page filtered by the term until the server answers', async () => {
+    mockApi(() => deferred())
+    await openAndType('Client 1')
+    await advance(300)
+    expect(screen.getByText('Client 1')).toBeInTheDocument()
+    expect(screen.queryByText('Client 5')).not.toBeInTheDocument()
+  })
+
+  it('a term the server has not answered yet is not shown the previous term\'s hits', async () => {
+    mockApi(url => json(url.searchParams.get('search') === 'zeta' ? [outside] : []))
+    await openAndType('zeta')
+    await advance(300)
+    expect(await screen.findByText('Zeta Industries')).toBeInTheDocument()
+    await type('client 7')
+    expect(screen.queryByText('Zeta Industries')).not.toBeInTheDocument()
+    expect(screen.getByText('Client 7')).toBeInTheDocument()
+  })
+
+  it('retries without searchField when the API refuses it, and stops sending it for that entity', async () => {
+    let first = true
+    mockApi(url => {
+      if (url.searchParams.has('searchField')) {
+        first = false
+        return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({ success: false, code: 'INVALID_SEARCH_FIELD' }) } as Response)
+      }
+      return json([outside])
+    })
+    await openAndType('zeta', { titleField: 'name' })
+    await advance(300)
+    expect(await screen.findByText('Zeta Industries')).toBeInTheDocument()
+    expect(first).toBe(false)
+    expect(searchCalls().map(call => call.searchParams.has('searchField'))).toEqual([true, false])
+    await type('zeta2')
+    await advance(300)
+    expect(searchCalls().map(call => call.searchParams.has('searchField'))).toEqual([true, false, false])
+  })
+
+  it('does not retry on a 400 that is not about searchField', async () => {
+    mockApi(() => Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({ success: false, code: 'SEARCH_NOT_SUPPORTED' }) } as Response))
+    await openAndType('zeta', { titleField: 'name' })
+    await advance(300)
+    expect(searchCalls()).toHaveLength(1)
+  })
+})
+

@@ -346,7 +346,7 @@ function isEntityField(entityConfig: EntityConfig, fieldName: string): boolean {
  * - `sort` / `order`: aliases of `sortBy` / `sortOrder` (PublicEntityGrid).
  */
 const LIST_RESERVED_PARAMS = new Set([
-  'page', 'limit', 'fields', 'distinct', 'ids', 'parentId', 'search',
+  'page', 'limit', 'fields', 'distinct', 'ids', 'parentId', 'search', 'searchField',
   'sortBy', 'sortOrder', 'sort', 'order', 'child', 'meta', 'metas',
   'includeMeta', 'userId', 'from', 'to', 'dateField', 'userFiltered',
 ])
@@ -356,6 +356,20 @@ const TAXONOMY_FILTER_PARAMS = ['categoryId', 'taxonomyId', 'taxonomyType']
 
 /** Fields `?search=` matches against (any that the entity declares). */
 const SEARCHABLE_FIELDS = ['name', 'title', 'slug', 'content']
+
+/** Field types whose value is text a person types: the ones `?searchField=` may add to the search. */
+const SEARCHABLE_TEXT_TYPES = ['text', 'textarea', 'email', 'url', 'phone', 'markdown', 'richtext']
+
+/**
+ * The fields `?searchField=` may name: text fields of the entity (declared, `api.searchable` not false), and the
+ * default search fields it declares. It comes only from the entity's own config; the caller's value is compared with
+ * it and never reaches SQL otherwise.
+ */
+export function searchFieldAllowlist(entityConfig: EntityConfig): string[] {
+  return entityConfig.fields
+    .filter((field: EntityField) => SEARCHABLE_FIELDS.includes(field.name) || (SEARCHABLE_TEXT_TYPES.includes(field.type) && field.api?.searchable !== false))
+    .map((field: EntityField) => field.name)
+}
 
 /** Base columns every entity table has that may be used for `?sortBy=`. */
 const SORTABLE_BASE_FIELDS = ['id', 'createdAt', 'updatedAt', 'teamId']
@@ -931,10 +945,24 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
       return addCorsHeaders(response, request)
     }
 
-    // `search` only works against name/title/slug/content; an entity with none
-    // of them cannot honour it, so say so instead of returning every row.
+    // `search` matches name/title/slug/content, and the one more field `searchField` names (a relation select asks for
+    // its titleField, the label a person types). The name is checked against the entity's own fields, and an entity with
+    // nothing to search says so instead of returning every row.
     const searchParam = url.searchParams.get('search')
-    const searchableFields = SEARCHABLE_FIELDS.filter(name => isEntityField(entityConfig, name))
+    const searchFieldParam = url.searchParams.get('searchField')
+    const allowedSearchFields = searchFieldAllowlist(entityConfig)
+    // the name written into SQL is the config's own, found by the caller's string, never the caller's string
+    const searchField = allowedSearchFields.find(name => name === searchFieldParam)
+    if (searchFieldParam && !searchField) {
+      const response = createApiError(
+        `Unknown search field for ${entityConfig.slug}: ${searchFieldParam}`,
+        400,
+        { invalidKeys: [searchFieldParam], allowedKeys: allowedSearchFields },
+        'INVALID_SEARCH_FIELD'
+      )
+      return addCorsHeaders(response, request)
+    }
+    const searchableFields = [...new Set([...SEARCHABLE_FIELDS.filter(name => isEntityField(entityConfig, name)), ...(searchField ? [searchField] : [])])]
     if (searchParam && searchParam.trim() !== '' && searchableFields.length === 0) {
       const response = createApiError(
         `Entity ${entityConfig.slug} has no searchable field (${SEARCHABLE_FIELDS.join(', ')}); the search parameter is not supported`,
@@ -1216,11 +1244,11 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
         whereConditions.push(`t."status" = 'published'`)
       }
 
-      // Add search filter (searches in name, title, slug, and content fields).
-      // Support for the entity was validated above (SEARCH_NOT_SUPPORTED).
+      // Add search filter (name, title, slug and content, and the validated `searchField`).
+      // Support for the entity was validated above (SEARCH_NOT_SUPPORTED, INVALID_SEARCH_FIELD): every name here is a field of the entity.
       if (searchParam && searchParam.trim() !== '' && searchableFields.length > 0) {
         const searchTerm = searchParam.trim()
-        const searchConditions = searchableFields.map(name => `t.${name} ILIKE $${paramIndex}`)
+        const searchConditions = searchableFields.map(name => `t."${name.replace(/"/g, '""')}" ILIKE $${paramIndex}`)
         whereConditions.push(`(${searchConditions.join(' OR ')})`)
         queryParams.push(`%${searchTerm}%`)
         paramIndex++

@@ -59,7 +59,7 @@ describe('handleGenericList — #97 list parameter validation', () => {
 
       expect(response.status).toBe(200)
       const [sql, params] = listSql()
-      expect(sql).toContain('t.name ILIKE $')
+      expect(sql).toContain('t."name" ILIKE $')
       expect(params).toContain('%rex%')
     })
   })

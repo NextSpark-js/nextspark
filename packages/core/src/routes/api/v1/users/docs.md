@@ -73,7 +73,8 @@ Returns all users in the current team.
 **Query Parameters:**
 - `limit` (number, optional): Maximum records to return. Default: 20
 - `offset` (number, optional): Number of records to skip. Default: 0
-- `search` (string, optional): Search by name or email
+- `search` (string, optional): Search by email, name, first name or last name (case-insensitive, partial)
+- `searchField` (string, optional): One of `email`, `name`, `firstName`, `lastName` (what a relation select with that `titleField` sends); any other name is a `400` `INVALID_SEARCH_FIELD`
 
 ### Get User by ID
 `GET /api/v1/users/[id]`

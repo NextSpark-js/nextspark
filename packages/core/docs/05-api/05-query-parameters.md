@@ -448,9 +448,12 @@ Full-text search across multiple text fields.
 
 ```typescript
 {
-  search?: string  // Search query (case-insensitive)
+  search?: string       // Search query (case-insensitive)
+  searchField?: string  // One more field to search with `search` (a text field of the entity)
 }
 ```
+
+The generic handler searches `name`, `title`, `slug` and `content` (the ones the entity declares). `searchField` adds one text field of the entity to those, for a record that is found by a label none of the four holds: a relation select sends its `titleField`. The name is checked against the entity's own fields (type `text`, `textarea`, `email`, `url`, `phone`, `markdown` or `richtext`, and not `api.searchable: false`); any other name answers `400` `INVALID_SEARCH_FIELD` and nothing is queried.
 
 ### Example
 
