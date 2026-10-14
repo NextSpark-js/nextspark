@@ -33,15 +33,18 @@ import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/transla
  * providers, the sidebars) would ship to those routes.
  */
 type LayoutProps = { children: ReactNode }
-type Layout = ComponentType<LayoutProps>
 
+/**
+ * The wrappers hand every prop to the layout they wrap: `children`, and the parallel route slots a project layout declares
+ * (`@modal` -> `modal`). Only `children` is put behind a Suspense boundary here; a slot that reads request data has its own.
+ */
 function staticMessagesWrapper(group: 'auth' | 'public' | 'devtools') {
-  return (ResolvedLayout: Layout) =>
-    function LayoutWithStaticMessages({ children }: LayoutProps) {
+  return <P extends LayoutProps>(ResolvedLayout: ComponentType<P>) =>
+    function LayoutWithStaticMessages(props: P) {
       return (
         <StaticIntlProvider locale={DEFAULT_LOCALE} messages={selectMessages(STATIC_MESSAGES, group)}>
-          <ResolvedLayout>
-            <Suspense fallback={null}>{children}</Suspense>
+          <ResolvedLayout {...props}>
+            <Suspense fallback={null}>{props.children}</Suspense>
           </ResolvedLayout>
         </StaticIntlProvider>
       )
@@ -64,8 +67,8 @@ async function RequestMessages({ group, extraNamespaces, children }: LayoutProps
 }
 
 function requestMessagesWrapper(group: 'dashboard' | 'superadmin') {
-  return (ResolvedLayout: Layout) =>
-    function LayoutWithRequestMessages({ children }: LayoutProps) {
+  return <P extends LayoutProps>(ResolvedLayout: ComponentType<P>) =>
+    function LayoutWithRequestMessages(props: P) {
       const configured = getConfiguredClientNamespaces({ entityRegistry: ENTITY_REGISTRY, appConfig: APP_CONFIG_MERGED })
       return (
         <Suspense fallback={null}>
@@ -73,7 +76,7 @@ function requestMessagesWrapper(group: 'dashboard' | 'superadmin') {
             <DynamicMarker />
           </Suspense>
           <RequestMessages group={group} extraNamespaces={configured[group]}>
-            <ResolvedLayout>{children}</ResolvedLayout>
+            <ResolvedLayout {...props} />
           </RequestMessages>
         </Suspense>
       )

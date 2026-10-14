@@ -7,11 +7,12 @@ import RootLayout from '../layout'
  * The generated host composes a project root layout with this wrapper instead of replacing
  * core's layout: the project's layout renders inside the providers, so it can never drop them.
  */
-export function withRootLayout(ProjectLayout: ComponentType<{ children: ReactNode }>) {
-  return function RootLayoutWithProjectLayout({ children }: { children: ReactNode }) {
+export function withRootLayout<P extends { children: ReactNode }>(ProjectLayout: ComponentType<P>) {
+  // Every prop goes to the project's layout: `children`, and the parallel route slots (`@modal` -> `modal`) it declares
+  return function RootLayoutWithProjectLayout(props: P) {
     return (
       <RootLayout>
-        <ProjectLayout>{children}</ProjectLayout>
+        <ProjectLayout {...props} />
       </RootLayout>
     )
   }

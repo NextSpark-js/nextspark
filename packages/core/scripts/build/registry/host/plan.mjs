@@ -51,6 +51,11 @@
  * core serves under its dynamic `[entity]` (`route.ts`, `[id]/route.ts`, `[id]/child/[childType]/route.ts`, ...): the
  * generated route is the static `/api/v1/<entity>/...`, which Next resolves before `[entity]` (notice ENTITY_API_OVERRIDDEN).
  *
+ * Parallel route slots (`templates/@modal/page.tsx`) are generated beside the layout that renders them (a project layout
+ * declares the slot as a prop, `modal`), and the core wrappers hand every prop of the composed layout to the project's
+ * (#228). Next.js fails the build for a slot that has no `default` file, so one without it is a notice here
+ * (`NS_HOST_SLOT_DEFAULT_MISSING`) that names the file to add.
+ *
  * Next.js refuses two pages for one URL and two dynamic segments of the same kind with different
  * names at one level; both are diagnostics here, with the routes named, instead of a build failure.
  *
@@ -82,6 +87,7 @@ export const PLAN_NOTICES = Object.freeze({
   ENTITY_API_OVERRIDDEN: 'NS_HOST_ENTITY_API_OVERRIDDEN',
   CORE_API_REPLACED: 'NS_HOST_CORE_API_REPLACED',
   AREA_FILE_UNGUARDED: 'NS_HOST_AREA_FILE_UNGUARDED',
+  SLOT_DEFAULT_MISSING: 'NS_HOST_SLOT_DEFAULT_MISSING',
 })
 
 export const DEFAULT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js']
@@ -424,8 +430,47 @@ export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], plug
     }
   }
 
+  notices.push(...slotDefaultNotices(routes))
+
   const clean = routes.map(({ layer, ...route }) => ({ ...route, origin: layer }))
   return { routes: clean.sort((a, b) => compareTargets(a.target, b.target)), diagnostics, notices }
+}
+
+/**
+ * The parallel route slots the plan serves (`@modal`, at any depth) that have no `default` file in their directory:
+ * Next.js fails the build for each ("Missing required default.js file for parallel route"), so the plan names the file.
+ */
+export function slotDefaultNotices(routes) {
+  const slots = new Map()
+  const defaults = new Set()
+  for (const route of routes) {
+    const parts = posix.dirname(route.target).split('/')
+    if (route.kind === 'default') defaults.add(posix.dirname(route.target))
+    parts.forEach((part, index) => {
+      if (!part.startsWith('@')) return
+      const root = parts.slice(0, index + 1).join('/')
+      if (!slots.has(root)) slots.set(root, [])
+      slots.get(root).push(route)
+    })
+  }
+  return [...slots]
+    .filter(([root]) => !defaults.has(root))
+    .sort(([a], [b]) => compareTargets(a, b))
+    .map(([root, inside]) => {
+      const first = inside[0]
+      // The slot's directory in the source tree: what `source` says up to and including `@modal/`
+      const name = `${posix.basename(root)}/`
+      const at = first.layer === 'core' ? -1 : first.source.indexOf(`/${name}`)
+      const where = at === -1 ? null : first.source.slice(0, at + 1 + name.length)
+      return {
+        code: PLAN_NOTICES.SLOT_DEFAULT_MISSING,
+        target: `${root}/default.tsx`,
+        by: inside.map(route => route.source),
+        message:
+          `src/app/${root}: the parallel route slot "${posix.basename(root)}" has no default file, and Next.js fails the build without one. ` +
+          `Add ${where ? `${where}default.tsx` : 'a default.tsx next to its pages'}, returning null (or what to show for a URL the slot has no page for)`,
+      }
+    })
 }
 
 /**

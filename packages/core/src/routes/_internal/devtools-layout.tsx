@@ -71,13 +71,13 @@ export function DevLayout({ children, serverChecked }: GuardedProps) {
  * route's default is `withDevtoolsMessages(DevLayout)`; a host that resolves a project override of the
  * layout wraps that instead, so the override gets the same messages and the same check.
  */
-export function withDevtoolsMessages(ResolvedDevLayout: ComponentType<DevLayoutProps>) {
-  return async function DevLayoutWithMessages({ children }: DevLayoutProps) {
+export function withDevtoolsMessages<P extends DevLayoutProps>(ResolvedDevLayout: ComponentType<P>) {
+  return async function DevLayoutWithMessages(props: P) {
     await requireAreaAccess('devtools')
     const messages = await getMessages()
     return (
       <NextIntlClientProvider messages={selectMessages(messages, 'devtools')}>
-        <ResolvedDevLayout>{children}</ResolvedDevLayout>
+        <ResolvedDevLayout {...props} />
       </NextIntlClientProvider>
     )
   }
@@ -90,12 +90,12 @@ export function withDevtoolsMessages(ResolvedDevLayout: ComponentType<DevLayoutP
  * /devtools checks again, see area-access). Shared by the message wrappers of both rendering modes
  * (`withDevtoolsGuard` here, and in `group-layouts.cc`).
  */
-export function guardDevtoolsLayout(ProjectLayout: ComponentType<DevLayoutProps>, serverChecked = false) {
-  return function GuardedDevLayout({ children }: DevLayoutProps) {
+export function guardDevtoolsLayout<P extends DevLayoutProps>(ProjectLayout: ComponentType<P>, serverChecked = false) {
+  return function GuardedDevLayout(props: P) {
     return (
       <DashboardProviders>
         <DeveloperGuard serverChecked={serverChecked}>
-          <ProjectLayout>{children}</ProjectLayout>
+          <ProjectLayout {...props} />
         </DeveloperGuard>
       </DashboardProviders>
     )
@@ -106,6 +106,6 @@ export function guardDevtoolsLayout(ProjectLayout: ComponentType<DevLayoutProps>
  * The composition of a project's devtools layout with core (the generated host): messages, then
  * `guardDevtoolsLayout` around the project's layout.
  */
-export function withDevtoolsGuard(ProjectLayout: ComponentType<DevLayoutProps>) {
+export function withDevtoolsGuard<P extends DevLayoutProps>(ProjectLayout: ComponentType<P>) {
   return withDevtoolsMessages(guardDevtoolsLayout(ProjectLayout))
 }

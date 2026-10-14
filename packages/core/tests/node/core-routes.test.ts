@@ -277,7 +277,7 @@ test('the Cache Components root layout puts the page behind Suspense and the gro
   assert.match(ppr, /<Suspense fallback=\{null\}>\{children\}<\/Suspense>/)
   assert.doesNotMatch(ppr, /<main/, 'each area of the app renders its own <main>')
   const groups = fs.readFileSync(path.join(ROUTES, '_internal/group-layouts.cc.tsx'), 'utf8')
-  assert.match(groups, /<Suspense fallback=\{null\}>\{children\}<\/Suspense>/, 'the static wrappers put the group pages behind Suspense')
+  assert.match(groups, /<Suspense fallback=\{null\}>\{(?:props\.)?children\}<\/Suspense>/, 'the static wrappers put the group pages behind Suspense')
   assert.match(groups, /DynamicMarker/, 'the request-messages wrappers declare their area request-time')
 })
 
@@ -369,13 +369,13 @@ test('the role-gated areas check the role on the server in the group wrapper of 
     }
     // ISR: the wrapper awaits the check before anything else, so a page load without the role gets a 307
     const isr = fs.readFileSync(sourceOf(entry.compose!.specifier), 'utf8')
-    const body = isr.slice(isr.indexOf(`export function ${messages}(`))
+    const body = isr.slice(isr.search(new RegExp(`export function ${messages}\\b`)))
     assert.match(body, new RegExp(`async function \\w+\\([^)]*\\) \\{\\s*await requireAreaAccess\\('${area}'\\)`), `${messages} (ISR) checks '${area}' first`)
     // Cache Components: the area's own module puts the check (in its own Suspense boundary) inside the messages, for
     // core's default layout and for a composed override alike
     const cc = fs.readFileSync(sourceOf(variant.compose!.specifier), 'utf8')
-    assert.ok(cc.includes(`export const ${ccMessages} = (Layout: ComponentType<`) && cc.includes(`=> ${messages}(withAreaGate('${area}', Layout))`), `${ccMessages} checks '${area}'`)
-    assert.ok(cc.includes(`export const ${guard} = (ProjectLayout: ComponentType<`) && cc.includes(`=> ${ccMessages}(`), `${guard} goes through ${ccMessages}`)
+    assert.ok(new RegExp(`export const ${ccMessages} = <P extends \\w+>\\(Layout: ComponentType<P>\\)`).test(cc) && cc.includes(`=> ${messages}(withAreaGate('${area}', Layout))`), `${ccMessages} checks '${area}'`)
+    assert.ok(new RegExp(`export const ${guard} = <P extends \\w+>\\(ProjectLayout: ComponentType<P>\\)`).test(cc) && cc.includes(`=> ${ccMessages}(`), `${guard} goes through ${ccMessages}`)
     assert.match(fs.readFileSync(sourceOf(variant.specifier), 'utf8'), new RegExp(`export default ${ccMessages}\\(`), `core's ${target} variant renders through ${ccMessages}`)
   }
   assert.match(accessSource, /async function AreaGate\([^)]*\) \{\s*await requireAreaAccess\(area\)/)
@@ -404,7 +404,7 @@ test('a group layout with a role guard is composed only through a wrapper that p
     for (const composed of [entry, variantOf(target)]) {
       assert.equal(composed.compose?.wrapper, wrapper, `${target} (${composed.specifier}) is composed with ${wrapper}`)
       const source = fs.readFileSync(sourceOf(composed.compose!.specifier), 'utf8')
-      assert.ok(source.includes(`export function ${wrapper}(`) || source.includes(`export const ${wrapper} =`), `${wrapper} is exported by ${composed.compose!.specifier}`)
+      assert.ok(new RegExp(`export (?:function ${wrapper}\\b|const ${wrapper} =)`).test(source), `${wrapper} is exported by ${composed.compose!.specifier}`)
       // The Cache Components module puts the server-side role check between the messages and the helper
       const viaMessages = composed === entry ? messages : messages.replace(/Messages$/, 'AreaMessages')
       // ISR: the guard shows its loading state until the client session loads; Cache Components: the guard is told the
@@ -415,13 +415,13 @@ test('a group layout with a role guard is composed only through a wrapper that p
     }
     // The helper the wrapper uses is the one that puts the guard around the project layout, whatever the mode
     const base = fs.readFileSync(sourceOf(entry.compose!.specifier), 'utf8')
-    const start = base.indexOf(`export function ${helper}(`)
+    const start = base.search(new RegExp(`export function ${helper}\\b`))
     assert.ok(start >= 0, `${helper} is exported`)
     const body = base.slice(start)
     const at = (needle: string) => body.indexOf(needle)
     const open = `<${guard} serverChecked={serverChecked}>`
-    assert.ok(at(open) > 0 && at('<ProjectLayout>') > at(open) && at('</ProjectLayout>') < at(`</${guard}>`), `${helper}: <${guard}> wraps <ProjectLayout>`)
-    assert.match(body, new RegExp(`^export function ${helper}\\(ProjectLayout: [^,]+, serverChecked = false\\)`), `${helper}: serverChecked is off unless asked`)
+    assert.ok(at(open) > 0 && at('<ProjectLayout {...props} />') > at(open) && at('<ProjectLayout {...props} />') < at(`</${guard}>`), `${helper}: <${guard}> wraps <ProjectLayout> and hands it every prop`)
+    assert.match(body, new RegExp(`^export function ${helper}<P extends \\w+>\\(ProjectLayout: [^,]+, serverChecked = false\\)`), `${helper}: serverChecked is off unless asked`)
     // The Cache Components variant of core's own layout still renders core's layout (which holds the guard itself),
     // telling its guard that the server checked the role
     const ccLayout = fs.readFileSync(sourceOf(variantOf(target).specifier), 'utf8')

@@ -24,12 +24,12 @@ export const metadata: Metadata = defaultMetadata
  * default is `withPublicMessages(DefaultPublicLayout)` (./default-public-layout); a host that resolves a project override of the
  * layout wraps that instead, so the override gets the same messages.
  */
-export function withPublicMessages(PublicLayout: ComponentType<{ children: React.ReactNode }>) {
-  return async function PublicLayoutWithMessages({ children }: { children: React.ReactNode }) {
+export function withPublicMessages<P extends { children: React.ReactNode }>(PublicLayout: ComponentType<P>) {
+  return async function PublicLayoutWithMessages(props: P) {
     const messages = await getMessages()
     return (
       <NextIntlClientProvider messages={selectMessages(messages, 'public')}>
-        <PublicLayout>{children}</PublicLayout>
+        <PublicLayout {...props} />
       </NextIntlClientProvider>
     )
   }

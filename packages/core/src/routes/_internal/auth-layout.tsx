@@ -28,12 +28,12 @@ export const metadata: Metadata = defaultMetadata
  * default is `withAuthMessages(DefaultAuthLayout)` (./default-auth-layout); a host that resolves a project override of the
  * layout wraps that instead, so the override gets the same messages.
  */
-export function withAuthMessages(AuthLayout: ComponentType<{ children: React.ReactNode }>) {
-  return async function AuthLayoutWithMessages({ children }: { children: React.ReactNode }) {
+export function withAuthMessages<P extends { children: React.ReactNode }>(AuthLayout: ComponentType<P>) {
+  return async function AuthLayoutWithMessages(props: P) {
     const messages = await getMessages()
     return (
       <NextIntlClientProvider messages={selectMessages(messages, 'auth')}>
-        <AuthLayout>{children}</AuthLayout>
+        <AuthLayout {...props} />
       </NextIntlClientProvider>
     )
   }

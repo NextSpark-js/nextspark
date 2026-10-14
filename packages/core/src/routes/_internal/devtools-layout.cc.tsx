@@ -7,7 +7,7 @@ import { withAreaGate } from './area-access'
  * Core's devtools layout in Cache Components mode (the route's default): the mode's messages around the server-side
  * role check (area-access), which renders the layout only for developer sessions.
  */
-export const withDevtoolsAreaMessages = (Layout: ComponentType<DevLayoutProps>) => withDevtoolsMessages(withAreaGate('devtools', Layout))
+export const withDevtoolsAreaMessages = <P extends DevLayoutProps>(Layout: ComponentType<P>) => withDevtoolsMessages(withAreaGate('devtools', Layout))
 
 /**
  * What a project's devtools layout is composed with in Cache Components mode (the manifest's `compose` of that
@@ -16,4 +16,4 @@ export const withDevtoolsAreaMessages = (Layout: ComponentType<DevLayoutProps>) 
  * renders the area while the client session loads. A module of its own so only the devtools route group imports the
  * guard, the role check and their client components.
  */
-export const withDevtoolsGuard = (ProjectLayout: ComponentType<DevLayoutProps>) => withDevtoolsAreaMessages(guardDevtoolsLayout(ProjectLayout, true))
+export const withDevtoolsGuard = <P extends DevLayoutProps>(ProjectLayout: ComponentType<P>) => withDevtoolsAreaMessages(guardDevtoolsLayout(ProjectLayout, true))

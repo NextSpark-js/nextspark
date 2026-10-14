@@ -33,5 +33,5 @@ test("core's default public layout does not put the page behind a Suspense bound
   // that does not override templates/(public)/layout; the Cache Components wrapper adds its own boundary.
   const source = read('default-public-layout.tsx')
   assert.doesNotMatch(source, /<Suspense/)
-  assert.match(read('group-layouts.cc.tsx'), /<Suspense fallback=\{null\}>\{children\}<\/Suspense>/)
+  assert.match(read('group-layouts.cc.tsx'), /<Suspense fallback=\{null\}>\{(?:props\.)?children\}<\/Suspense>/)
 })

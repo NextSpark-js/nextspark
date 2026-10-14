@@ -40,6 +40,18 @@ Next.js reads segment config (`dynamic`, `revalidate`, ...) statically from the 
 
 - **Replace a page or layout:** put a file at the same path in `templates/` (`templates/dashboard/page.tsx` replaces core's dashboard page). Core protects a few routes that cannot be replaced; the generator says which.
 - **Add a page:** the same, at a path core has no route for.
+- **Parallel routes (slots):** a project layout declares a slot as a prop and renders it, and the slot's files sit beside the layout in `templates/`:
+
+  ```tsx
+  // templates/layout.tsx (the same for templates/(auth)/layout.tsx, templates/dashboard/layout.tsx, ...)
+  export default function Layout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
+    return <>{children}{modal}</>
+  }
+  // templates/@modal/page.tsx  -> what the slot shows at /
+  // templates/@modal/default.tsx -> what it shows everywhere else: `export default function Default() { return null }`
+  ```
+
+  The host generates `src/app/@modal/*` beside `src/app/layout.tsx`. Core composes its own layout around the project's (the root layout, `(auth)`, `(public)`, `/superadmin`, `/devtools`) and hands the project's layout every prop it receives, so `modal` arrives with `children` and `params`. Next.js 16 fails the build for a slot that has no `default.tsx`: `nextspark prepare` names the missing file (`NS_HOST_SLOT_DEFAULT_MISSING`) before that. Core's wrappers put only `children` behind a Suspense boundary: with Cache Components, a slot page that reads request data (`cookies()`, `searchParams`) needs a `Suspense` of its own.
 - **Add or replace a Route Handler:** `api/<path>/route.ts` is served at `/api/<path>`. Core owns `/api/v1/**` and each plugin owns `/api/plugins/<name>/**`: a project route there is refused, and a deliberate override of a core handler goes through `templates/api/v1/.../route.ts`. The generic handler of one of your entities can be replaced the same way, at `templates/api/v1/<entity>/route.ts`, `[id]/route.ts`, `[id]/child/[childType]/route.ts` or `[id]/child/[childType]/[childId]/route.ts` (auth, permissions and hooks are then yours: [overriding an entity's API](../05-api/04-custom-endpoints.md#overriding-an-entitys-api)).
 - **API Explorer docs:** `docs.md` and `presets.ts` next to a handler are what the explorer shows; core's live next to its route modules in the package.
 - **Billing webhook hooks:** `billing.webhookExtensions` in `nextspark.config.ts` names the module that adds one-time payment handling to core's Stripe or Polar webhook.

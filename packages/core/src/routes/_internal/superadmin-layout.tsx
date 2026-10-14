@@ -92,14 +92,14 @@ export function SuperadminLayout({ children, serverChecked }: GuardedProps) {
  * route's default is `withSuperadminMessages(SuperadminLayout)`; a host that resolves a project override of the
  * layout wraps that instead, so the override gets the same messages and the same check.
  */
-export function withSuperadminMessages(ResolvedSuperadminLayout: ComponentType<SuperadminLayoutProps>) {
-  return async function SuperadminLayoutWithMessages({ children }: SuperadminLayoutProps) {
+export function withSuperadminMessages<P extends SuperadminLayoutProps>(ResolvedSuperadminLayout: ComponentType<P>) {
+  return async function SuperadminLayoutWithMessages(props: P) {
     await requireAreaAccess('superadmin')
     const messages = await getMessages()
     const configuredNamespaces = getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED })
     return (
       <NextIntlClientProvider messages={selectMessages(messages, 'superadmin', configuredNamespaces.superadmin)}>
-        <ResolvedSuperadminLayout>{children}</ResolvedSuperadminLayout>
+        <ResolvedSuperadminLayout {...props} />
       </NextIntlClientProvider>
     )
   }
@@ -113,8 +113,8 @@ export function withSuperadminMessages(ResolvedSuperadminLayout: ComponentType<S
  * area-access). Shared by the message wrappers of both rendering modes (`withSuperadminGuard` here, and
  * in `group-layouts.cc`).
  */
-export function guardSuperadminLayout(ProjectLayout: ComponentType<SuperadminLayoutProps>, serverChecked = false) {
-  return function GuardedSuperadminLayout({ children }: SuperadminLayoutProps) {
+export function guardSuperadminLayout<P extends SuperadminLayoutProps>(ProjectLayout: ComponentType<P>, serverChecked = false) {
+  return function GuardedSuperadminLayout(props: P) {
     return (
       <Suspense fallback={
         <div className="min-h-screen flex items-center justify-center">
@@ -123,7 +123,7 @@ export function guardSuperadminLayout(ProjectLayout: ComponentType<SuperadminLay
       }>
         <DashboardProviders>
           <SuperAdminGuard serverChecked={serverChecked}>
-            <ProjectLayout>{children}</ProjectLayout>
+            <ProjectLayout {...props} />
           </SuperAdminGuard>
         </DashboardProviders>
       </Suspense>
@@ -135,6 +135,6 @@ export function guardSuperadminLayout(ProjectLayout: ComponentType<SuperadminLay
  * The composition of a project's superadmin layout with core (the generated host): messages, then
  * `guardSuperadminLayout` around the project's layout.
  */
-export function withSuperadminGuard(ProjectLayout: ComponentType<SuperadminLayoutProps>) {
+export function withSuperadminGuard<P extends SuperadminLayoutProps>(ProjectLayout: ComponentType<P>) {
   return withSuperadminMessages(guardSuperadminLayout(ProjectLayout))
 }
