@@ -31,7 +31,7 @@ export const ROLE_DESCRIPTIONS: Record<string, string> = {
 
 export const TEAM_PERMISSIONS_BY_ROLE: Record<string, string[]> = {
   owner: ['team.view', 'team.edit', 'team.delete', 'team.members.view', 'team.members.invite', 'team.members.remove', 'team.members.update_role', 'team.settings.view', 'team.settings.edit'],
-  admin: ['team.view', 'team.edit', 'team.members.view', 'team.members.invite', 'team.members.remove', 'team.members.update_role', 'team.settings.view', 'team.settings.edit'],
+  admin: ['team.view', 'team.edit', 'team.members.view', 'team.members.invite', 'team.members.remove', 'team.members.update_role', 'team.settings.view', 'team.settings.edit', 'team.billing.view'],
   editor: ['team.view', 'team.edit', 'team.members.view'],
   member: ['team.view', 'team.members.view'],
   viewer: ['team.view'],

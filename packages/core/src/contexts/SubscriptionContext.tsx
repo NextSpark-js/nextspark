@@ -3,6 +3,7 @@
 import { createContext, useContext, ReactNode, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTeam } from '../hooks/useTeam'
+import { usePermission, useTeamRole } from '../lib/permissions/hooks'
 import { SubscriptionWithPlan } from '../lib/billing/types'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { ApiError } from '../lib/api/api-error'
@@ -57,11 +58,20 @@ export interface SubscriptionContextValue {
 const SubscriptionContext = createContext<SubscriptionContextValue | undefined>(undefined)
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
-  const { team } = useTeam()
+  const { team, isLoading: teamLoading } = useTeam()
+  const role = useTeamRole()
+  const allowed = usePermission('team.billing.view')
+
+  // The subscription route answers only to roles with team.billing.view (the
+  // same registry check the route makes, owner included). While the team or the role is not known yet,
+  // nothing is fetched and the context is not ready; without the permission it
+  // is neutral and ready, so members and viewers see no error and no request.
+  const pending = teamLoading || !team || !role
+  const canView = !pending && allowed
 
   // Fetch active subscription for current team
   const {
-    data: subscription,
+    data: fetched,
     isLoading,
     isFetched,
     error,
@@ -75,7 +85,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       // This route is copied into each project only at creation time. Keep the
       // legacy 404-as-no-subscription response working for projects created
       // before .190, until that legacy generated route is no longer supported.
-      if (response.status === 404) return null
+      // A 403 (a role change, or a permission race) is the same: no plan data.
+      if (response.status === 404 || response.status === 403) return null
       if (!response.ok) {
         throw new ApiError('Failed to fetch subscription', { status: response.status })
       }
@@ -85,7 +96,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       // subscription is the normal state for a team that has not subscribed.
       return data.data?.subscription ?? null
     },
-    enabled: !!team && BILLING_REGISTRY.plans.length > 0,
+    enabled: canView && BILLING_REGISTRY.plans.length > 0,
     // A 4xx, such as the 403 a role without billing access gets, comes back the
     // same on every attempt, so only other failures are retried.
     retry: (failureCount, error) =>
@@ -94,6 +105,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false
   })
+
+  // Without the permission the query is off and whatever it cached is ignored
+  const subscription = canView ? fetched : null
+  const neutral = !pending && !canView
 
   // Compute features and limits from plan config (FIX2)
   const features = useMemo(() => {
@@ -148,11 +163,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     isActive: subscription?.status === 'active',
     isPastDue: subscription?.status === 'past_due',
     isCanceled: subscription?.status === 'canceled',
-    isLoading,
-    isReady: isFetched,
-    error: error as Error | null,
+    isLoading: neutral ? false : isLoading,
+    isReady: neutral || isFetched,
+    error: neutral ? null : (error as Error | null),
     refetch: () => {
-      refetch()
+      if (canView) refetch()
     },
     features,
     limits,
