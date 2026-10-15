@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Child entity routes authenticate the caller, check the parent's permissions and team, validate the body and bind every value.
 - `SimpleRelationSelect` shows what the server found for the typed term, without filtering it again by the option's title: a record that matched on its `slug` or `content` stays in the list. It asks the API to search the relation's `titleField` too (`?searchField=`), so `users` with `titleField: 'email'` are found by email. `GET /api/v1/{entity}?search=` accepts `searchField` for a text field of the entity (an allowlist built from its config; any other name is a `400` `INVALID_SEARCH_FIELD`), and `GET /api/v1/users` now implements `search` and `searchField` (email, name, first name, last name). The search conditions quote their column names.
 - Core's composed layouts (the root layout, `(auth)`, `(public)`, `/superadmin`, `/devtools` and the dashboard message wrappers) hand every prop to a project layout, so a parallel route slot it declares (`@modal` -> `modal`) arrives with `children` and `params`. `nextspark prepare` names a project slot with no `default.tsx` (`NS_HOST_SLOT_DEFAULT_MISSING`), for which Next.js 16 fails the build.
 - An underscore is valid in an entity slug again (`campaign_members`; a slug starts with a letter and uses `a-z`, `0-9`, `-` and `_`): `nextspark prepare` no longer refuses it with `NS_CONTRACTS_BAD_SLUG`, and the contract reads the columns of an entity's `tableName`. `nextspark migrate --rename-entity-slugs` renames those slugs to hyphens when asked (the flag, or yes to its question; `--yes` alone never renames): it sets `tableName` to the old table, rewrites the imports and the permissions config key, and prints the permission keys, the `UPDATE "api_key"` for scopes (never run), the old URL as a manual alias snippet and the translations. `db:migrate` takes over the migrations of a directory whose `.renamed-from` file (`old -> new`) names it, moving their rows to the new name instead of running them again. The generated entity registry now uses an entity's `tableName` for its table (`getEntityTableName('ai-history')` is `ai_history`, as the table is).
@@ -64,6 +65,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading
 
+- The child entity routes (`/api/v1/<entity>/:id/child/<childType>` and `.../:childId`) need what `/api/v1/<entity>/:id` needs:
+  a session or an API key with the parent's `<entity>:read` scope (GET) or `<entity>:write` scope (POST, PUT, DELETE), an
+  `x-team-id` header for a team the caller belongs to, and the parent's `<entity>.read` or `<entity>.update` permission in that
+  team. A parent the caller cannot read answers 404. The body is checked against the child entity's fields: an unknown field, a
+  value of the wrong type or a body that is not a JSON object answers 400. Core's dashboard components already send the session
+  and the team; a client of your own that called these routes without them now gets 401 or 400.
 - An entity you renamed from `campaign_members` to `campaign-members` to get past `NS_CONTRACTS_BAD_SLUG` can stay as it is. To rename the other underscore slugs of a project, `nextspark migrate --rename-entity-slugs` does it and prints the permission keys, API key scopes (SQL to run yourself), URLs and translations to update; see the upgrade guide, "Entity slugs with an underscore".
 - `pnpm db:migrate` applies `039_team_members_admin_insert.sql`, which re-creates `team_members_insert_policy`. A project that re-created
   that policy in its own migration (to let owners and admins add members) loses it: `db:migrate` runs core's migrations first and does not

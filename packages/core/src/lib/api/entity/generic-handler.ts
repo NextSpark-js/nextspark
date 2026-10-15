@@ -18,6 +18,7 @@ import { resolveEntityFromUrl, validateEntityOperation } from './resolver'
 import { generateEntitySchemas } from '../../entities/schema-generator'
 import { publicSlugIssue, otherBasePathSegments } from '../../entities/public-slug'
 import { getAllEntityConfigs } from '../../entities/registry'
+import { getChildEntities } from '../../entities/queries'
 import { entityResponseSystemColumns, taxonomyResponseFields } from '../../entities/portable/response-shape'
 import { queryWithRLS, mutateWithRLS, queryOneWithRLS, getTransactionClient } from '../../db'
 import {
@@ -650,6 +651,80 @@ async function resolveOwnershipFilter(
 
   const filterValue = linkedRow ? linkedRow[valueField] ?? null : null
   return { applies: true, field: ownershipFilter.field, value: filterValue }
+}
+
+/**
+ * The WHERE conditions (on alias `t`) and bound values that select record `id` only when the caller may read it:
+ * the team, the owner for a non-shared entity, the role-based ownership filter and soft delete — what a by-id
+ * read applies. `null` when an ownership filter applies and the caller has no linked record (nothing is visible).
+ */
+async function visibleRecordScope(
+  entityConfig: EntityConfig,
+  id: string,
+  { userId, teamId, isBypass }: { userId: string | null; teamId: string | null; isBypass: boolean }
+): Promise<{ where: string[]; params: unknown[] } | null> {
+  const params: unknown[] = [id]
+  const where = ['t.id = $1']
+
+  // Team isolation (Phase 2)
+  if (teamId) where.push(`t."teamId" = $${params.push(teamId)}`)
+
+  // Private to its owner unless shared; an admin bypass sees every user's records
+  if (userId && !entityConfig.access?.shared && !isBypass) where.push(`t."userId" = $${params.push(userId)}`)
+
+  if (userId && teamId) {
+    const ownership = await resolveOwnershipFilter(entityConfig, userId, teamId, isBypass)
+    if (ownership.applies) {
+      if (ownership.value === null) return null
+      where.push(`t."${ownership.field}" = $${params.push(ownership.value)}`)
+    }
+  }
+
+  if (entityConfig.table?.softDelete && !isBypass) where.push(`t."deletedAt" IS NULL`)
+
+  return { where, params }
+}
+
+/**
+ * How one validated field value is bound in an INSERT or UPDATE: the placeholder's cast and the value. A relation
+ * keeps a single id, a user field its id, and relation-multi, tags, multiselect and other objects go in as JSONB.
+ */
+function bindFieldValue(field: Pick<EntityField, 'type'>, value: unknown): { cast: '' | '::jsonb'; value: unknown } {
+  if (field.type === 'relation') {
+    let relationId: unknown = null
+    if (Array.isArray(value) && value.length > 0) {
+      const firstItem = value[0]
+      relationId = typeof firstItem === 'object' && firstItem && 'id' in firstItem ? firstItem.id : firstItem
+    } else if (typeof value === 'object' && value && 'id' in value) {
+      relationId = (value as { id: unknown }).id
+    } else if (typeof value === 'string') {
+      relationId = value
+    }
+    // An empty id is no relation
+    if (typeof relationId === 'string' && relationId.trim() === '') relationId = null
+    return { cast: '', value: relationId }
+  }
+  // relation-multi may arrive as a JSON string (the schema's transform) OR as a raw JS array when the field declared
+  // `defaultValue: []` and the client omitted the key. A raw `[]` handed to pg-node casts to the Postgres array
+  // literal `{}::jsonb`, which breaks every consumer that expects `Array.isArray(row.field)`.
+  if (field.type === 'relation-multi') {
+    return { cast: '::jsonb', value: typeof value === 'string' ? value : JSON.stringify(Array.isArray(value) ? value : []) }
+  }
+  if (field.type === 'tags') return { cast: '::jsonb', value: JSON.stringify(Array.isArray(value) ? value : []) }
+  // SQL NULL, not JSONB "null"
+  if ((field.type === 'multiselect' || field.type === 'user') && value === null) return { cast: '', value: null }
+  // A user field stores the id (FK to users): an array of user objects, a single id string, or nothing
+  if (field.type === 'user') {
+    if (Array.isArray(value) && value.length > 0) {
+      const userId = value[0]?.id
+      return { cast: '', value: userId ? String(userId) : null }
+    }
+    return { cast: '', value: typeof value === 'string' ? value : null }
+  }
+  if (field.type === 'multiselect' || Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+    return { cast: '::jsonb', value: JSON.stringify(value) }
+  }
+  return { cast: '', value }
 }
 
 /**
@@ -1663,75 +1738,9 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
         // Always quote column names to handle reserved keywords (e.g., "order", "user", "type")
         const columnName = `"${key}"`
         insertFields.push(columnName)
-
-        // Handle relation fields specially - extract single ID from array or object
-        if (field.type === 'relation') {
-          let relationId = null
-          if (Array.isArray(value) && value.length > 0) {
-            const firstItem = value[0]
-            relationId = typeof firstItem === 'object' && firstItem && 'id' in firstItem ? firstItem.id : firstItem
-          } else if (typeof value === 'object' && value && 'id' in value) {
-            relationId = (value as { id: unknown }).id
-          } else if (typeof value === 'string') {
-            relationId = value
-          }
-
-          // Check if relationId is empty string and convert to null
-          if (typeof relationId === 'string' && relationId.trim() === '') {
-            relationId = null
-          }
-
-          placeholders.push(`$${paramCount++}`)
-          values.push(relationId)
-        }
-        // Handle relation-multi fields. Value may arrive as a JSON string
-        // (historical Zod transform path) OR as a raw JS array when the
-        // field declared `defaultValue: []` and the client omitted the key
-        // from the payload. Normalize so the JSONB cast always receives a
-        // valid JSON string — passing a raw `[]` JS array to pg-node casts
-        // to the Postgres array literal `{}::jsonb`, which then breaks every
-        // downstream consumer that assumes `Array.isArray(row.field) === true`.
-        else if (field.type === 'relation-multi') {
-          placeholders.push(`$${paramCount++}::jsonb`)
-          values.push(
-            typeof value === 'string'
-              ? value
-              : JSON.stringify(Array.isArray(value) ? value : []),
-          )
-        }
-        // Handle tags as JSONB (consistent with database schema)
-        else if (field.type === 'tags') {
-          placeholders.push(`$${paramCount++}::jsonb`)
-          values.push(JSON.stringify(Array.isArray(value) ? value : []))
-        }
-        // Handle null values for user/multiselect fields - store as SQL NULL not JSONB "null"
-        else if ((field.type === 'multiselect' || field.type === 'user') && value === null) {
-          placeholders.push(`$${paramCount++}`)
-          values.push(null)
-        }
-        // Handle user field - extract just the ID (assumes FK to users table)
-        else if (field.type === 'user') {
-          placeholders.push(`$${paramCount++}`)
-          // Value can be: array of user objects [{id: "...", ...}], single ID string, or null
-          if (Array.isArray(value) && value.length > 0) {
-            // Extract the ID from the first user object
-            const userId = value[0]?.id
-            values.push(userId ? String(userId) : null)
-          } else if (typeof value === 'string') {
-            values.push(value)
-          } else {
-            values.push(null)
-          }
-        }
-        // Handle multiselect and other complex types as JSONB
-        else if (field.type === 'multiselect' ||
-            Array.isArray(value) || (typeof value === 'object' && value !== null)) {
-          placeholders.push(`$${paramCount++}::jsonb`)
-          values.push(JSON.stringify(value))
-        } else {
-          placeholders.push(`$${paramCount++}`)
-          values.push(value)
-        }
+        const bound = bindFieldValue(field, value)
+        placeholders.push(`$${paramCount++}${bound.cast}`)
+        values.push(bound.value)
       }
     })
 
@@ -1992,55 +2001,18 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
       && userId === null
       && entityConfig.fields.some((f: EntityField) => f.name === 'status')
 
-    // Build query based on access type and team context
-    let query: string
-    let queryParams: unknown[]
-    let paramIndex = 1
+    const scope = await visibleRecordScope(entityConfig, id, { userId, teamId, isBypass })
+    if (!scope) {
+      // No linked record found → deny access
+      const response = createApiError('Item not found', 404)
+      return addCorsHeaders(response, request)
+    }
 
-    // Start with base query
-    query = `
+    let query = `
       SELECT ${fields}
       FROM "${tableName}" t
-      WHERE t.id = $${paramIndex++}
+      WHERE ${scope.where.join(' AND ')}
     `
-    queryParams = [id]
-
-    // Add team filter if team context provided (Phase 2 - Team Isolation)
-    if (teamId) {
-      query += ` AND t."teamId" = $${paramIndex++}`
-      queryParams.push(teamId)
-    }
-
-    // Add user filter if authenticated AND not shared (CASE 1)
-    // Skip when admin bypass is active (allows cross-team/cross-user access)
-    if (userId && !entityConfig.access?.shared && !isBypass) {
-      query += ` AND t."userId" = $${paramIndex++}`
-      queryParams.push(userId)
-    }
-
-    // Apply role-based ownership filter if configured
-    if (userId && teamId) {
-      const readOwnershipFilter = await resolveOwnershipFilter(
-        entityConfig,
-        userId,
-        teamId,
-        isBypass
-      )
-      if (readOwnershipFilter.applies) {
-        if (readOwnershipFilter.value === null) {
-          // No linked record found → deny access
-          const response = createApiError('Item not found', 404)
-          return addCorsHeaders(response, request)
-        }
-        query += ` AND t."${readOwnershipFilter.field}" = $${paramIndex++}`
-        queryParams.push(readOwnershipFilter.value)
-      }
-    }
-
-    // Soft delete filter: hide deleted rows for non-bypass users
-    if (entityConfig.table?.softDelete && !isBypass) {
-      query += ` AND t."deletedAt" IS NULL`
-    }
 
     // Anonymous public access: force published-only, ignoring nothing the
     // caller sent since there's no filter param on a by-id read to trust (#171)
@@ -2048,7 +2020,7 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
       query += ` AND t."status" = 'published'`
     }
 
-    const items = await queryWithRLS(query, queryParams, userId)
+    const items = await queryWithRLS(query, scope.params, userId)
 
     if (!items[0]) {
       const response = createApiError('Item not found', 404)
@@ -2332,71 +2304,9 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
       if (field && !field.api?.readOnly) {
         // Add quotes for camelCase fields (any field with uppercase letters)
         const columnName = `"${key}"`
-
-        // Handle relation fields specially - extract single ID from array or object
-        if (field.type === 'relation') {
-          let relationId = null
-          if (Array.isArray(value) && value.length > 0) {
-            const firstItem = value[0]
-            relationId = typeof firstItem === 'object' && firstItem && 'id' in firstItem ? firstItem.id : firstItem
-          } else if (typeof value === 'object' && value && 'id' in value) {
-            relationId = (value as { id: unknown }).id
-          } else if (typeof value === 'string') {
-            relationId = value
-          }
-
-          // Check if relationId is empty string and convert to null
-          if (typeof relationId === 'string' && relationId.trim() === '') {
-            relationId = null
-          }
-
-          updates.push(`${columnName} = $${paramCount++}`)
-          values.push(relationId)
-        }
-        // Handle relation-multi fields. Same normalization as the INSERT
-        // path above: string passthrough; raw JS array → JSON.stringify so
-        // the JSONB cast receives `[]` not the Postgres array literal `{}`.
-        else if (field.type === 'relation-multi') {
-          updates.push(`${columnName} = $${paramCount++}::jsonb`)
-          values.push(
-            typeof value === 'string'
-              ? value
-              : JSON.stringify(Array.isArray(value) ? value : []),
-          )
-        }
-        // Handle tags as JSONB (consistent with database schema)
-        else if (field.type === 'tags') {
-          updates.push(`${columnName} = $${paramCount++}::jsonb`)
-          values.push(JSON.stringify(Array.isArray(value) ? value : []))
-        }
-        // Handle null values for user/multiselect fields - store as SQL NULL not JSONB "null"
-        else if ((field.type === 'multiselect' || field.type === 'user') && value === null) {
-          updates.push(`${columnName} = $${paramCount++}`)
-          values.push(null)
-        }
-        // Handle user field - extract just the ID (assumes FK to users table)
-        else if (field.type === 'user') {
-          updates.push(`${columnName} = $${paramCount++}`)
-          // Value can be: array of user objects [{id: "...", ...}], single ID string, or null
-          if (Array.isArray(value) && value.length > 0) {
-            // Extract the ID from the first user object
-            const userId = value[0]?.id
-            values.push(userId ? String(userId) : null)
-          } else if (typeof value === 'string') {
-            values.push(value)
-          } else {
-            values.push(null)
-          }
-        }
-        // Handle multiselect and other complex types as JSONB
-        else if (field.type === 'multiselect' ||
-            Array.isArray(value) || (typeof value === 'object' && value !== null)) {
-          updates.push(`${columnName} = $${paramCount++}::jsonb`)
-          values.push(JSON.stringify(value))
-        } else {
-          updates.push(`${columnName} = $${paramCount++}`)
-          values.push(value)
-        }
+        const bound = bindFieldValue(field, value)
+        updates.push(`${columnName} = $${paramCount++}${bound.cast}`)
+        values.push(bound.value)
       }
     })
 
@@ -2731,6 +2641,222 @@ async function handleGenericDeleteImpl(request: NextRequest, audit: AuditContext
     const response = createApiError('Internal server error', 500)
     return addCorsHeaders(response, request)
   }
+}
+
+// ==========================================
+// CHILD ENTITIES (/api/v1/[entity]/[id]/child/[childType]/[childId])
+// ==========================================
+
+type ChildOperation = 'list' | 'create' | 'update' | 'delete'
+type ChildRouteParams = { params: Promise<{ entity: string; id: string; childType: string; childId?: string }> }
+
+/** Columns the child routes own: never written from the body, ignored when a client sends a row back. */
+const CHILD_MANAGED_KEYS = new Set(['id', 'parentId', 'createdAt', 'updatedAt'])
+
+interface ChildContext {
+  userId: string
+  parentId: string
+  childTable: string
+  childFields: EntityField[]
+  idStrategy: string
+  /** The validated body (create/update only) */
+  data: Record<string, unknown>
+}
+
+/**
+ * Everything the child routes share, in the order the entity handlers use: the parent entity and the child type
+ * from the registry, authentication with the PARENT's `<slug>:read|write` scope, the body validated against the
+ * child's generated schema (writes, before any statement), the team context, the parent's `<slug>.read|update`
+ * permission, and the parent record looked up with the same team/owner/ownership scoping as a by-id read. A child
+ * has no permissions or access rules of its own (the permissions registry defines none): it is part of its parent,
+ * so reading children needs the parent readable, and creating, changing or deleting one is an update of the parent.
+ */
+async function resolveChildContext(
+  request: NextRequest,
+  audit: AuditContext,
+  { params }: ChildRouteParams,
+  operation: ChildOperation
+): Promise<ChildContext | NextResponse> {
+  const { id: parentId, childType } = await params
+  const notFound = (message: string) => addCorsHeaders(createApiError(message, 404, undefined, 'NOT_FOUND'), request)
+
+  const resolution = await resolveEntityFromUrl(request.nextUrl.pathname)
+  if (!resolution.isValidEntity || !resolution.entityConfig) return notFound('Entity not found')
+  const parentConfig = resolution.entityConfig
+
+  const child = getChildEntities(resolution.entityName).find(entry => entry.name === childType)
+  if (!child) return notFound('Child entity not found')
+
+  const write = operation !== 'list'
+  const authResult = await authenticateRequest(request, { requiredScope: `${parentConfig.slug}:${write ? 'write' : 'read'}` })
+  audit.auth = authResult
+  if (!authResult.success) return createAuthFailureResponse(authResult)
+  if (authResult.rateLimitResponse) return authResult.rateLimitResponse as NextResponse
+  const userId = authResult.user!.id
+
+  // The child's fields, as entity fields, minus the columns the routes own
+  const childFields = (child.config.fields as Array<Partial<EntityField> & { name: string }>)
+    .filter(field => !CHILD_MANAGED_KEYS.has(field.name))
+    .map(field => ({
+      ...field,
+      api: { searchable: false, sortable: false, readOnly: false, ...field.api },
+      display: field.display ?? { label: field.name, showInList: true, showInDetail: true, showInForm: true, order: 1 },
+    }) as EntityField)
+
+  let data: Record<string, unknown> = {}
+  if (operation === 'create' || operation === 'update') {
+    let raw: unknown
+    try {
+      raw = await request.json()
+    } catch {
+      return addCorsHeaders(createApiError('Invalid JSON body', 400, undefined, 'INVALID_JSON'), request)
+    }
+    const input = raw && typeof raw === 'object' && !Array.isArray(raw)
+      ? Object.fromEntries(Object.entries(raw).filter(([key]) => !CHILD_MANAGED_KEYS.has(key)))
+      : raw
+    const childEntity = { slug: childType, fields: childFields } as EntityConfig
+    const schemas = generateEntitySchemas(childEntity, { includeChildEntities: false })
+    const validation = (operation === 'create' ? schemas.create : schemas.update).safeParse(input)
+    if (!validation.success) {
+      return addCorsHeaders(createApiError(validationErrorMessage(validation.error.issues), 400, validation.error.issues, 'VALIDATION_ERROR'), request)
+    }
+    data = validation.data as Record<string, unknown>
+    const xssField = checkNameFieldXss(childEntity, data)
+    if (xssField) {
+      return addCorsHeaders(createApiError(`Field '${xssField}' must not contain HTML markup`, 400, undefined, 'INVALID_FIELD_VALUE'), request)
+    }
+  }
+
+  const teamValidation = await validateTeamContextWithBypass(request, authResult, userId)
+  if (teamValidation.valid === false) return teamValidation.error
+  const { teamId, isBypass } = teamValidation
+  if (write && !teamId) {
+    return addCorsHeaders(createApiError('Team context required for update operations. Include x-team-id header.', 400, undefined, 'TEAM_CONTEXT_REQUIRED'), request)
+  }
+  // As the entity handlers: a read under admin bypass skips the role check, a write always runs it
+  if (teamId && (write || !isBypass)) {
+    const permDenied = await checkAuthPermission(authResult, parentConfig.slug, write ? 'update' : 'read', teamId, request)
+    if (permDenied) return permDenied
+  }
+
+  // The parent must be a record this caller can read; otherwise its children do not exist for them
+  const scope = await visibleRecordScope(parentConfig, parentId, { userId, teamId, isBypass })
+  const parent = scope && await noRowOnMalformedId(queryWithRLS<{ id: string }>(
+    `SELECT t.id FROM "${getTableName(parentConfig)}" t WHERE ${scope.where.join(' AND ')}`,
+    scope.params,
+    userId
+  ))
+  if (!parent?.[0]) return notFound('Item not found')
+
+  const idStrategy = (child.config as { idStrategy?: { type?: string } }).idStrategy?.type || 'uuid'
+  return { userId, parentId, childTable: child.tableName, childFields, idStrategy, data }
+}
+
+/**
+ * An id the id column's type cannot hold (text on a uuid column, letters on a serial one: SQLSTATE 22P02) matches no
+ * row, so the lookup answers 404 like any unknown id instead of failing. Used where the ids are the only values a
+ * client controls that the schema has not already typed.
+ */
+async function noRowOnMalformedId<T>(rows: Promise<T[]>): Promise<T[]> {
+  try {
+    return await rows
+  } catch (error) {
+    if (asPgError(error)?.code === '22P02') return []
+    throw error
+  }
+}
+
+/** Column list and bound values for the validated fields; column names come only from the child's config. */
+function childColumns(ctx: ChildContext, firstParam: number) {
+  const columns: string[] = []
+  const placeholders: string[] = []
+  const values: unknown[] = []
+  for (const field of ctx.childFields) {
+    if (field.api.readOnly || !(field.name in ctx.data)) continue
+    const bound = bindFieldValue(field, ctx.data[field.name])
+    columns.push(`"${field.name}"`)
+    placeholders.push(`$${firstParam + values.length}${bound.cast}`)
+    values.push(bound.value)
+  }
+  return { columns, placeholders, values }
+}
+
+async function runChildHandler(
+  request: NextRequest,
+  context: ChildRouteParams,
+  operation: ChildOperation,
+  run: (ctx: ChildContext, childId: string | undefined) => Promise<NextResponse>
+): Promise<NextResponse> {
+  return runWithAuditLog(request, async audit => {
+    try {
+      const ctx = await resolveChildContext(request, audit, context, operation)
+      if (!('childTable' in ctx)) return ctx
+      return addCorsHeaders(await run(ctx, (await context.params).childId), request)
+    } catch (error) {
+      console.error('Error in child entity handler:', error)
+      return addCorsHeaders(createApiError('Internal server error', 500), request)
+    }
+  })
+}
+
+/** GET /api/v1/[entity]/[id]/child/[childType] */
+export async function handleChildList(request: NextRequest, context: ChildRouteParams): Promise<NextResponse> {
+  return runChildHandler(request, context, 'list', async ctx => {
+    const rows = await queryWithRLS<Record<string, unknown>>(
+      `SELECT * FROM "${ctx.childTable}" WHERE "parentId" = $1 ORDER BY "createdAt" DESC`,
+      [ctx.parentId],
+      ctx.userId
+    )
+    return createApiResponse(rows)
+  })
+}
+
+/** POST /api/v1/[entity]/[id]/child/[childType] */
+export async function handleChildCreate(request: NextRequest, context: ChildRouteParams): Promise<NextResponse> {
+  return runChildHandler(request, context, 'create', async ctx => {
+    const head = ctx.idStrategy === 'serial' ? ['"parentId"'] : ['id', '"parentId"']
+    const headValues: unknown[] = ctx.idStrategy === 'serial' ? [ctx.parentId] : [globalThis.crypto.randomUUID(), ctx.parentId]
+    const { columns, placeholders, values } = childColumns(ctx, headValues.length + 1)
+    const { rows } = await mutateWithRLS<Record<string, unknown>>(
+      `INSERT INTO "${ctx.childTable}" (${[...head, ...columns, '"createdAt"', '"updatedAt"'].join(', ')})
+       VALUES (${[...headValues.map((_, i) => `$${i + 1}`), ...placeholders, 'NOW()', 'NOW()'].join(', ')})
+       RETURNING *`,
+      [...headValues, ...values],
+      ctx.userId
+    )
+    return createApiResponse(rows[0])
+  })
+}
+
+/** PUT /api/v1/[entity]/[id]/child/[childType]/[childId] */
+export async function handleChildUpdate(request: NextRequest, context: ChildRouteParams): Promise<NextResponse> {
+  return runChildHandler(request, context, 'update', async (ctx, childId) => {
+    const { columns, placeholders, values } = childColumns(ctx, 3)
+    if (columns.length === 0) return createApiError('No fields to update', 400, undefined, 'VALIDATION_ERROR')
+    const rows = await noRowOnMalformedId(mutateWithRLS<Record<string, unknown>>(
+      `UPDATE "${ctx.childTable}"
+       SET ${[...columns.map((column, i) => `${column} = ${placeholders[i]}`), '"updatedAt" = NOW()'].join(', ')}
+       WHERE "id" = $1 AND "parentId" = $2
+       RETURNING *`,
+      [childId, ctx.parentId, ...values],
+      ctx.userId
+    ).then(result => result.rows))
+    return rows[0] ? createApiResponse(rows[0]) : createApiError('Child entity not found', 404, undefined, 'NOT_FOUND')
+  })
+}
+
+/** DELETE /api/v1/[entity]/[id]/child/[childType]/[childId] */
+export async function handleChildDelete(request: NextRequest, context: ChildRouteParams): Promise<NextResponse> {
+  return runChildHandler(request, context, 'delete', async (ctx, childId) => {
+    const rows = await noRowOnMalformedId(mutateWithRLS<{ id: string }>(
+      `DELETE FROM "${ctx.childTable}" WHERE "id" = $1 AND "parentId" = $2 RETURNING id`,
+      [childId, ctx.parentId],
+      ctx.userId
+    ).then(result => result.rows))
+    return rows[0]
+      ? NextResponse.json({ success: true, message: 'Child entity deleted successfully', id: rows[0].id })
+      : createApiError('Child entity not found', 404, undefined, 'NOT_FOUND')
+  })
 }
 
 /**
