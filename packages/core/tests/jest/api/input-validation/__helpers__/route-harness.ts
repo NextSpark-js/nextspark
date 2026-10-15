@@ -22,20 +22,25 @@ const mockTxMutate = jest.fn()
 const mockTxQuery = jest.fn()
 const mockTxCommit = jest.fn()
 const mockTxRollback = jest.fn()
+const mockTx = () => ({
+  query: (...args: unknown[]) => mockTxQuery(...args),
+  mutate: (...args: unknown[]) => mockTxMutate(...args),
+  commit: async () => mockTxCommit(),
+  rollback: async () => mockTxRollback(),
+})
 jest.mock('@/core/lib/db', () => ({
   queryWithRLS: (...args: unknown[]) => mockQueryWithRLS(...args),
   queryOneWithRLS: (...args: unknown[]) => mockQueryOneWithRLS(...args),
   mutateWithRLS: (...args: unknown[]) => mockMutateWithRLS(...args),
   queryWithService: (...args: unknown[]) => mockQueryWithRLS(...args),
   mutateWithService: (...args: unknown[]) => mockMutateWithRLS(...args),
-  getTransactionClient: async () => ({
-    query: (...args: unknown[]) => mockTxQuery(...args),
-    mutate: (...args: unknown[]) => mockTxMutate(...args),
-    commit: async () => mockTxCommit(),
-    rollback: async () => mockTxRollback(),
-  }),
+  queryOne: (...args: unknown[]) => mockQueryOneWithRLS(...args),
+  queryRows: (...args: unknown[]) => mockQueryWithRLS(...args),
+  getTransactionClient: async () => mockTx(),
+  getServiceTransactionClient: async () => mockTx(),
 }))
 
+const mockGetSession = jest.fn()
 const mockAuthenticateRequest = jest.fn()
 jest.mock('@/core/lib/api/auth/dual-auth', () => ({
   authenticateRequest: (...args: unknown[]) => mockAuthenticateRequest(...args),
@@ -50,14 +55,14 @@ jest.mock('@/core/lib/api/auth/dual-auth', () => ({
 jest.mock('@/core/lib/api/rate-limit', () => ({
   withRateLimitTier: (handler: unknown) => handler,
   withAddressRateLimit: (handler: unknown) => handler,
-  checkRateLimit: jest.fn(),
+  checkRateLimit: () => ({ allowed: true, limit: 100, remaining: 99, resetTime: Date.now() + 60_000 }),
   addRateLimitHeaders: jest.fn(),
   apiKeyRateLimitResponse: jest.fn(),
 }))
 
 // What lib/api/helpers imports and the routes under test do not exercise.
 jest.mock('@/core/lib/api/auth', () => ({ validateApiKey: jest.fn(), getValidatedApiKey: jest.fn(() => null) }))
-jest.mock('@/core/lib/auth', () => ({ auth: { api: { getSession: jest.fn() } } }))
+jest.mock('@/core/lib/auth', () => ({ auth: { api: { getSession: (...args: unknown[]) => mockGetSession(...args) } } }))
 jest.mock('@/core/lib/config', () => ({ getApplicationConfig: jest.fn(() => ({})) }))
 jest.mock('@/core/lib/services/meta.service', () => ({ MetaService: {} }))
 jest.mock('@/core/lib/services/scope.service', () => ({
@@ -103,15 +108,19 @@ export function allWrites(): Array<[string, unknown[]]> {
 
 function reset() {
   jest.clearAllMocks()
-  jest.spyOn(console, 'error').mockImplementation(() => undefined)
-  jest.spyOn(console, 'log').mockImplementation(() => undefined)
-  jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+  if (process.env.S192_DEBUG !== '1') {
+    // the routes log every rejection; the output is not the subject here
+    jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    jest.spyOn(console, 'log').mockImplementation(() => undefined)
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+  }
   mockQueryWithRLS.mockResolvedValue([])
   mockQueryOneWithRLS.mockResolvedValue(null)
   mockMutateWithRLS.mockResolvedValue({ rows: [], rowCount: 0 })
   mockTxMutate.mockResolvedValue({ rows: [], rowCount: 0 })
   mockTxQuery.mockResolvedValue({ rows: [], rowCount: 0 })
   mockAuthenticateRequest.mockResolvedValue(sessionAs(SUPERADMIN))
+  mockGetSession.mockResolvedValue({ user: SUPERADMIN, session: { id: 'session-1' } })
 }
 
 export const routeHarness = {
@@ -125,6 +134,7 @@ export const routeHarness = {
     txCommit: mockTxCommit,
     txRollback: mockTxRollback,
     authenticateRequest: mockAuthenticateRequest,
+    getSession: mockGetSession,
   },
 }
 
@@ -143,13 +153,13 @@ export const noWrites = () => expect(allWrites()).toEqual([])
  */
 export function describeMalformedBodies(
   invoke: (body: BodyKind) => Promise<ResponseLike>,
-  options: { defects?: string[]; status?: number; code?: string | RegExp } = {},
+  options: { defects?: string[]; status?: number; code?: string | RegExp; codeless?: boolean } = {},
 ) {
   const defects = new Set(options.defects ?? [])
   describe.each(MALFORMED_BODIES)('%s', (label, body) => {
     const run = async () => {
       const response = await invoke(body)
-      await expectCleanRejection(response, { status: options.status ?? 400, code: options.code })
+      await expectCleanRejection(response, { status: options.status ?? 400, code: options.code, codeless: options.codeless })
       noWrites()
     }
     if (defects.has(label)) knownDefect('is rejected with 4xx and writes nothing', run)
@@ -161,13 +171,13 @@ export function describeMalformedBodies(
 export function describeRejectedValues(
   invoke: (body: BodyKind) => Promise<ResponseLike>,
   cases: Array<[string, unknown]>,
-  options: { defects?: string[]; status?: number; code?: string | RegExp } = {},
+  options: { defects?: string[]; status?: number; code?: string | RegExp; codeless?: boolean } = {},
 ) {
   const defects = new Set(options.defects ?? [])
   describe.each(cases)('%s', (label, value) => {
     const run = async () => {
       const response = await invoke(asJson(value))
-      await expectCleanRejection(response, { status: options.status ?? 400, code: options.code })
+      await expectCleanRejection(response, { status: options.status ?? 400, code: options.code, codeless: options.codeless })
       noWrites()
     }
     if (defects.has(label)) knownDefect('is rejected with 4xx and writes nothing', run)
