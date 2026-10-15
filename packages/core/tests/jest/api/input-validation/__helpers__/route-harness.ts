@@ -157,6 +157,14 @@ export const routeHarness = {
 /** A case that misbehaves today: `test.failing`, or a plain `test` when S192_SHOW_DEFECTS=1 (to read the failure reasons). */
 const knownDefect: typeof test = (process.env.S192_SHOW_DEFECTS === '1' ? test : test.failing) as typeof test
 
+/** What Postgres does with a LIMIT / OFFSET it cannot take: a NaN or negative number, as a parameter or written into the text. */
+export function pgRejectsPaging(sql: string, params: unknown[] = []) {
+  const bad = params.some(p => typeof p === 'number' && !Number.isFinite(p))
+    || /\b(LIMIT|OFFSET)\s+(NaN|Infinity|-\d)/.test(sql)
+    || /\b(LIMIT|OFFSET)\s+\$\d+/.test(sql) && (params as unknown[]).some(p => typeof p === 'number' && p < 0)
+  if (bad) throw Object.assign(new Error('LIMIT/OFFSET rejected by the database'), { code: '2201W' })
+}
+
 export const noWrites = () => expect(allWrites()).toEqual([])
 
 /**
