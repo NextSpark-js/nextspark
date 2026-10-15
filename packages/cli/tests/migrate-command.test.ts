@@ -1832,6 +1832,57 @@ else process.exit(2)
   }
 })
 
+test('the previous core lookup runs the pnpm the project pins, not the default Corepack fetches in an empty directory', async () => {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-pinned-pnpm-'))
+  let server: Awaited<ReturnType<typeof tarballServer>> | null = null
+  try {
+    const page = 'export default function Page() { return <main>beta.183</main> }\n'
+    const packageFile = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+    packageFile.packageManager = 'pnpm@10.34.6'
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await write(root, 'app/page.tsx', page)
+    await commitFixture(root)
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await write(root, 'next.config.mjs', 'export default { cacheComponents: true }\n')
+    await write(root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192' }))
+    await write(root, 'node_modules/next/package.json', JSON.stringify({ name: 'next', version: '16.2.0' }))
+    await write(root, 'node_modules/@nextsparkjs/core/templates/next.config.mjs', 'export default {}\n')
+    await commitFixture(root)
+
+    await write(support, 'package/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.183' }))
+    await write(support, 'package/templates/app/page.tsx', page)
+    const archive = join(support, 'nextsparkjs-core-0.1.0-beta.183.tgz')
+    await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+    server = await tarballServer(archive)
+    // What Corepack does: a pnpm run where no package.json pins a version is not the one in use, and here it fails
+    const bin = join(support, 'bin')
+    await write(bin, 'pnpm', `#!/usr/bin/env node
+const { readFileSync } = require('node:fs')
+const args = process.argv.slice(2)
+let pinned = null
+try { pinned = JSON.parse(readFileSync('package.json', 'utf8')).packageManager } catch {}
+if (pinned !== 'pnpm@10.34.6') { console.error('corepack: no pinned pnpm here'); process.exit(1) }
+if (args[0] === 'view') process.stdout.write(process.env.FAKE_TARBALL_URL)
+else if (args[0] === 'config') process.stdout.write(args[2] === '@nextsparkjs:registry' ? process.env.FAKE_REGISTRY : 'undefined')
+else process.exit(2)
+`)
+    await chmod(join(bin, 'pnpm'), 0o755)
+
+    const dryRun = await runAsync(root, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}`, FAKE_TARBALL_URL: server.url, FAKE_REGISTRY: new URL(server.url).origin, npm_config_registry: new URL(server.url).origin })
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.equal(report.appTemplates.previousTemplateMethod, 'pnpm view tarball')
+    assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['page.tsx'])
+  } finally {
+    await server?.close()
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
 test('migrate sends host-scoped tarball auth without exposing the token', async () => {
   const { root, support, archive } = await historicalCoreFixture()
   const server = await tarballServer(archive)

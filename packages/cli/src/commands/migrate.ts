@@ -477,6 +477,15 @@ function didProcessTimeOut(error: unknown): boolean {
     && (('code' in error && error.code === 'ETIMEDOUT') || ('signal' in error && error.signal === 'SIGTERM'));
 }
 
+/** The `packageManager` of the nearest package.json at or above `start`, when it names pnpm. */
+function projectPnpmPackageManager(start: string): string | null {
+  for (let directory = resolve(start); ; directory = dirname(directory)) {
+    const value = readJson(join(directory, 'package.json'))?.packageManager;
+    if (typeof value === 'string') return /^pnpm@/.test(value) ? value : null;
+    if (dirname(directory) === directory) return null;
+  }
+}
+
 function coreVersionFromSpecifier(specifier: string): string | null {
   const normalized = normalizedDeclaredVersion(specifier);
   if (/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(normalized)) return normalized;
@@ -689,7 +698,7 @@ function tarballAuthorization(tarball: URL, directory: string, environment: Node
  * with pnpm instead. Failure is deliberately non-fatal: old files remain
  * conservative customizations and the report says why.
  */
-async function previousCoreTemplates(version: string | null, currentVersion: string | null): Promise<PreviousTemplateLookup> {
+async function previousCoreTemplates(version: string | null, currentVersion: string | null, hostRoot: string | null = null): Promise<PreviousTemplateLookup> {
   if (!version || version === currentVersion) return { templates: null, unavailableReason: null };
   const cached = previousTemplatesCache.get(version);
   if (cached !== undefined) return cached;
@@ -697,6 +706,11 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
   const directory = mkdtempSync(join(tmpdir(), 'nextspark-migrate-core-'));
   const budget = networkBudget(previousCoreNetworkTimeoutMs());
   try {
+    // The lookup runs in an empty directory, where Corepack knows no `packageManager` and fetches its own default pnpm
+    // (a download that can outlast the budget, and that Node 22's Corepack cannot do for pnpm 12). Hand it the
+    // project's pnpm, from the nearest `packageManager` at or above the project, so it picks the one already in use.
+    const packageManager = hostRoot ? projectPnpmPackageManager(hostRoot) : null;
+    if (packageManager) writeFileSync(join(directory, 'package.json'), JSON.stringify({ packageManager }));
     // Never let a project's workspace policies influence this historical
     // lookup. In particular, pnpm 12 can apply minimumReleaseAge and build
     // policies to pack even though view succeeded a moment earlier.
@@ -1535,7 +1549,7 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
   // not look up previous templates again after the tree starts changing.
   const appRoot = await appRootFor(host.root, templates ? dirname(templates) : null);
   const previousLookup = hasUnclassifiedLegacyAppFiles(host.root, appRoot) || hasUnclassifiedRootProxyFiles(host.root)
-    ? await previousCoreTemplates(previousEvidence?.version ?? null, currentCore)
+    ? await previousCoreTemplates(previousEvidence?.version ?? null, currentCore, host.root)
     : { templates: null, unavailableReason: null };
   const { evidence: generatedEvidence, appTemplates } = classifyApp(host.root, appRoot, previousLookup.templates, previousEvidence, previousLookup.unavailableReason, selectedTheme.name);
   const rootProxyFiles = compareRootProxyFiles(host.root, templates, previousLookup.templates);
