@@ -24,8 +24,10 @@ runs:
       shell: bash
       working-directory: ${{ runner.temp }}/project/app
       run: |
-        sed -i 's#^DATABASE_URL=.*#DATABASE_URL=postgresql://dbuser:postgres@localhost:5432/app?sslmode=disable#' .env
-        sed -i 's#^NODE_ENV=.*#NODE_ENV="production"#' .env
+        # -i.bak and not a bare -i: the BSD sed of the macOS runner takes the next word as the backup suffix
+        sed -i.bak 's#^DATABASE_URL=.*#DATABASE_URL=postgresql://dbuser:postgres@localhost:5432/app?sslmode=disable#' .env
+        sed -i.bak 's#^NODE_ENV=.*#NODE_ENV="production"#' .env
+        rm -f .env.bak
 
     - name: Migrate the project
       shell: bash
@@ -37,7 +39,8 @@ runs:
       shell: bash
       working-directory: ${{ runner.temp }}/project/app
       run: |
-        sed -i 's#cacheComponents: true#cacheComponents: false#' next.config.mjs
+        sed -i.bak 's#cacheComponents: true#cacheComponents: false#' next.config.mjs
+        rm -f next.config.mjs.bak
         grep -q 'cacheComponents: false' next.config.mjs
 
     - name: Build the project

@@ -785,6 +785,12 @@ pnpm release --current
 
 ---
 
+## Release candidate checks
+
+Before a release candidate is called ready, these run on the exact commit that is going to be published:
+
+- **macOS arm64, by hand.** The `macos` job of the *Generated projects* workflow already creates the starter from the packed packages, builds it and serves it on a macOS arm64 runner on every push to `main`. At each RC, someone does the same on a Mac with Apple silicon: pack (`./scripts/packages/pack.sh --all`), create a starter from the tarballs, `pnpm install`, `pnpm db:migrate`, `pnpm build`, `pnpm start`, and request `/login` and `/`. Note the macOS version, the Node and pnpm versions and the result in the RC report.
+
 ## Release Workflow Example
 
 Complete workflow for a minor release:

@@ -401,3 +401,48 @@ jobs:
         uses: ./.github/actions/build-project
         with:
           migrate-only: 'true'
+
+  # macOS arm64 (G0 decision 7): the starter created from the tarballs, built and served on the macOS runner, then /login
+  # and / requested. The runner has no PostgreSQL service, so Homebrew's postgresql@17 is installed and started here,
+  # in this job only. One Node and one pnpm version: the Linux jobs carry the matrix. Every RC also gets this by hand.
+  macos:
+    name: macos arm64 (starter, node 22.14.0)
+    needs: pack
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check the runner is arm64
+        run: test "$(uname -m)" = arm64
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_OLDEST }}
+
+      # Homebrew's initdb allows local connections without a password; the role is a superuser, as the Linux jobs'
+      # POSTGRES_USER is, because the migrations create roles
+      - name: Install and start PostgreSQL 17
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          brew install postgresql@17
+          brew services start postgresql@17
+          export PATH="$(brew --prefix postgresql@17)/bin:$PATH"
+          for _ in $(seq 1 30); do pg_isready -h localhost && break; sleep 2; done
+          pg_isready -h localhost
+          psql -h localhost -d postgres -v ON_ERROR_STOP=1 -c "CREATE ROLE dbuser SUPERUSER LOGIN PASSWORD 'postgres'"
+          createdb -h localhost -O dbuser app
+
+      - name: Create the project
+        uses: ./.github/actions/create-project
+        with:
+          theme: starter
+          preset: saas
+
+      - name: Migrate, build and serve the project
+        uses: ./.github/actions/build-project
+        with:
+          pages: /
