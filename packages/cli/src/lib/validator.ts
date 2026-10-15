@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
+import semver from 'semver'
 import type { NextSparkPackageJson, ValidationResult, PeerDepIssue } from '../types/nextspark-package.js'
 
 export function validatePlugin(
@@ -45,6 +46,26 @@ export function validatePlugin(
           required: required as string,
           installed: null,
           severity: 'warning'
+        })
+        continue
+      }
+
+      // compare the installed version, not the range the project declares
+      let version: string | null = null
+      try {
+        version = JSON.parse(
+          readFileSync(join(process.cwd(), 'node_modules', name, 'package.json'), 'utf-8')
+        ).version
+      } catch {
+        // not installed yet: nothing to compare
+      }
+      // a range semver cannot parse (workspace:^, npm:...) cannot be compared: skip it
+      if (version && semver.validRange(required as string) && !semver.satisfies(version, required as string, { includePrerelease: true })) {
+        peerDepIssues.push({
+          name,
+          required: required as string,
+          installed: version,
+          severity: 'error'
         })
       }
     }

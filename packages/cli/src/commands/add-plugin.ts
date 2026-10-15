@@ -8,7 +8,7 @@ import { installWorkspaceDependencies, dependencyInstallNotice } from '../lib/wo
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { printExperimentalNotice } from '../utils/experimental.js'
-import type { DependencyOwner, InstallOptions, PostinstallContext } from '../types/nextspark-package.js'
+import type { DependencyOwner, InstallOptions, PeerDepIssue, PostinstallContext } from '../types/nextspark-package.js'
 
 interface AddPluginOptions extends InstallOptions {
   installingPlugins?: Set<string>
@@ -17,6 +17,19 @@ interface AddPluginOptions extends InstallOptions {
    * this call then records its own there instead of installing them.
    */
   pendingDependencies?: DependencyOwner[]
+}
+
+/** Prints a missing peer as a warning; an installed one outside the range throws, before anything is written. */
+export function reportPeerDepIssues(issues: PeerDepIssue[]): void {
+  for (const issue of issues.filter(i => i.severity !== 'error')) {
+    console.log(chalk.yellow(`  ⚠ Peer dependency ${issue.name}@${issue.required} is not installed in this project`))
+  }
+  const errors = issues.filter(i => i.severity === 'error')
+  if (errors.length > 0) {
+    throw new Error(
+      `Incompatible peer dependencies:\n${errors.map(i => `  ✗ ${i.name}: the plugin requires ${i.required}, installed ${i.installed}`).join('\n')}`
+    )
+  }
 }
 
 export async function addPlugin(
@@ -53,6 +66,7 @@ export async function addPlugin(
     if (validation.warnings.length > 0) {
       validation.warnings.forEach(w => console.log(chalk.yellow(`  ⚠ ${w}`)))
     }
+    reportPeerDepIssues(validation.peerDepIssues)
 
     // Install
     spinner.text = 'Installing plugin...'
