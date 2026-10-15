@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
+import { parsePaginationParams } from '@nextsparkjs/core/lib/api/pagination'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
@@ -38,8 +39,9 @@ const getHandler = async (request: NextRequest) => {
     const { searchParams } = new URL(request.url)
 
     // Pagination parameters
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100) // Max 100
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const { limit } = parsePaginationParams(request, 10) // 1..100, a value that is not a number falls back to 10
+    const requestedOffset = parseInt(searchParams.get('offset') ?? '', 10)
+    const offset = Number.isSafeInteger(requestedOffset) ? Math.max(0, requestedOffset) : 0
 
     // Filter parameters
     const category = searchParams.get('category') // Optional category filter

@@ -122,9 +122,7 @@ describe('createEntity', () => {
     expect(writes()).toEqual([])
   })
 
-  // The service validates with validateEntityData, which does not apply the field's declared maxLength; the API handlers
-  // do (through the generated schema). A name over the maximum is stored (finding F24).
-  test.failing.each([
+  test.each([
     ['a name over the declared maximum', { name: 'x'.repeat(101) }],
     ['a name far over the declared maximum', { name: 'x'.repeat(500_000) }],
   ])('refuses %s and writes nothing', async (_label, data) => {
@@ -132,8 +130,17 @@ describe('createEntity', () => {
     expect(writes()).toEqual([])
   })
 
-  // data that is not an object reaches the service and is dereferenced there; today the action still answers
-  // success:false with the generic fallback, so the shape holds (the raw error is only logged)
+  // the required rule is the API's: whitespace is empty, and the length is measured after trimming
+  test('refuses a required name of only whitespace and writes nothing', async () => {
+    expectRefused(await createEntity('pets', { name: '   ' }) as Result)
+    expect(writes()).toEqual([])
+  })
+
+  test('accepts a name whose padding alone would go over the maximum', async () => {
+    const result = await createEntity('pets', { name: `  ${'x'.repeat(100)}  ` }) as Result
+    expect(result.success).toBe(true)
+  })
+
   test.each([['null', null], ['text', 'Rex'], ['a number', 42], ['an array', [{ name: 'Rex' }]]])('data given %s is refused with a fixed text and writes nothing', async (_label, data) => {
     expectRefused(await createEntity('pets', asAny(data)) as Result)
     expect(writes()).toEqual([])
@@ -156,10 +163,25 @@ describe('createEntity', () => {
     expect(writes()[0][1]).toContain(name)
   })
 
-  // The config argument comes from the caller and is used as given: any string is revalidated and redirected to (finding F22).
-  test.failing('does not redirect to an address outside the app', async () => {
-    await createEntity('pets', { name: 'Rex' }, { redirectTo: 'https://elsewhere.example/landing' })
-    expect(mockRedirect).not.toHaveBeenCalledWith('https://elsewhere.example/landing')
+  test.each([
+    ['an absolute address', 'https://elsewhere.example/landing'],
+    ['a protocol-relative address', '//elsewhere.example/landing'],
+    ['a backslash after the slash', '/\\elsewhere.example/landing'],
+    ['a path with a control character', '/dashboard\n/x'],
+    ['a scheme', 'javascript:alert(1)'],
+    ['a relative path', 'dashboard/pets'],
+  ])('does not redirect to %s', async (_label, target) => {
+    await createEntity('pets', { name: 'Rex' }, { redirectTo: target })
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  test('redirects to a path on the app and revalidates only paths on the app', async () => {
+    await createEntity('pets', { name: 'Rex' }, { redirectTo: '/dashboard/pets', revalidatePaths: ['/dashboard/overview', 'https://elsewhere.example/x', '//elsewhere.example'] })
+    expect(mockRedirect).toHaveBeenCalledWith('/dashboard/pets')
+    const revalidated = mockRevalidatePath.mock.calls.map(([path]) => path)
+    expect(revalidated).toContain('/dashboard/overview')
+    expect(revalidated).not.toContain('https://elsewhere.example/x')
+    expect(revalidated).not.toContain('//elsewhere.example')
   })
 })
 
@@ -212,6 +234,11 @@ describe('updateEntity / deleteEntity / getEntity / entityExists — ids', () =>
     expectRefused(await updateEntity('pets', 'pet-1', asAny(data)) as Result)
     expect(writes()).toEqual([])
   })
+
+  test.each([['an empty string', ''], ['whitespace', '   '], ['null', null]])('updateEntity refuses a required name set to %s and writes nothing', async (_label, name) => {
+    expectRefused(await updateEntity('pets', 'pet-1', asAny({ name })) as Result)
+    expect(writes()).toEqual([])
+  })
 })
 
 describe('listEntities / countEntities — options', () => {
@@ -225,8 +252,7 @@ describe('listEntities / countEntities — options', () => {
     if (!result.success) expectRefused(result)
   })
 
-  // limit and offset are handed to LIMIT / OFFSET as given by GenericEntityService.list (finding F3)
-  test.failing.each([
+  test.each([
     ['a negative limit', { limit: -5 }],
     ['a limit of NaN', { limit: Number.NaN }],
     ['a limit far over any sane maximum', { limit: 10_000_000 }],

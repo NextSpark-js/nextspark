@@ -19,16 +19,17 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     }
     const { blockSlug, props } = parsed.data
 
-    const block = BLOCK_REGISTRY[blockSlug]
+    // own keys only: `constructor`, `toString` and the like are not blocks
+    const block = Object.hasOwn(BLOCK_REGISTRY, blockSlug) ? BLOCK_REGISTRY[blockSlug] : undefined
 
     if (!block) {
-      return NextResponse.json({ error: 'Block not found' }, { status: 404 })
+      return createApiError('Block not found', 404, undefined, 'NOT_FOUND')
     }
 
     // Each block's schema, imported statically by the generated registry and picked by slug
-    const schema = (BLOCK_SCHEMAS as Record<string, z.ZodType | undefined>)[blockSlug]
+    const schema = Object.hasOwn(BLOCK_SCHEMAS, blockSlug) ? (BLOCK_SCHEMAS as Record<string, z.ZodType | undefined>)[blockSlug] : undefined
     if (!schema) {
-      return NextResponse.json({ error: 'Block schema not found' }, { status: 500 })
+      return createApiError('Block schema not found', 500, undefined, 'INTERNAL_ERROR')
     }
 
     try {
@@ -45,7 +46,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     }
   } catch (err) {
     console.error('Error validating block:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write');
 

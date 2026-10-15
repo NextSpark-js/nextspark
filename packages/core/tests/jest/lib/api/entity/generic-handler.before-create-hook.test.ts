@@ -46,6 +46,7 @@ jest.mock('@nextsparkjs/core/lib/db', () => ({
 }))
 
 jest.mock('@nextsparkjs/core/lib/api/helpers', () => ({
+  readJsonObject: async (request: { json: () => Promise<unknown> }) => ({ data: await request.json() }),
   createApiResponse: jest.fn(),
   createApiError: jest.fn(),
   parsePaginationParams: jest.fn(),

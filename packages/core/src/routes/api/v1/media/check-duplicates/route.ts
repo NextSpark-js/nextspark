@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
-import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { createApiResponse, createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/helpers'
 import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
+import { checkDuplicatesSchema, MAX_MEDIA_BATCH } from '@nextsparkjs/core/lib/media/schemas'
 
 /**
  * POST /api/v1/media/check-duplicates
@@ -34,12 +35,15 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
-    const body = await request.json()
-    const files = body.files as { filename: string; fileSize: number }[]
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
+    const parsed = checkDuplicatesSchema.safeParse(body)
 
-    if (!files || !Array.isArray(files) || files.length === 0) {
-      return createApiError('files array is required', 400)
+    if (!parsed.success) {
+      return createApiError(`files must be a list of 1 to ${MAX_MEDIA_BATCH} entries with a filename and a fileSize`, 400, { errors: parsed.error.issues }, 'VALIDATION_ERROR')
     }
+    const { files } = parsed.data
 
     const duplicates: { filename: string; fileSize: number; existing: { id: string; url: string; createdAt: string }[] }[] = []
 
@@ -62,7 +66,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     return createApiResponse({ duplicates })
   } catch (error) {
     console.error('Error checking duplicates:', error)
-    return createApiError('Failed to check duplicates', 500)
+    return createApiError('Failed to check duplicates', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'read')
 

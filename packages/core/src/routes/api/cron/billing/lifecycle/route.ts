@@ -45,7 +45,8 @@ export async function GET(request: NextRequest) {
       const count = await SubscriptionService.processExpiredTrials()
       results.expireTrials = { processed: count, errors: [] }
     } catch (error) {
-      results.expireTrials.errors.push(error instanceof Error ? error.message : 'Unknown error')
+      console.error('[lifecycle-cron] expireTrials failed:', error)
+      results.expireTrials.errors.push('expireTrials failed')
     }
 
     // 2. Handle past_due grace period (jobs.ts function returns {processed, errors})
@@ -58,7 +59,8 @@ export async function GET(request: NextRequest) {
         const count = await UsageService.processMonthlyReset()
         results.resetUsage = { processed: count, errors: [] }
       } catch (error) {
-        results.resetUsage.errors.push(error instanceof Error ? error.message : 'Unknown error')
+        console.error('[lifecycle-cron] resetUsage failed:', error)
+        results.resetUsage.errors.push('resetUsage failed')
       }
     }
 
@@ -85,7 +87,7 @@ export async function GET(request: NextRequest) {
     return Response.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Internal server error'
       },
       { status: 500 }
     )

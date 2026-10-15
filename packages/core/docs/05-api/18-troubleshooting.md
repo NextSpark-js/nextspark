@@ -665,7 +665,8 @@ curl https://yourdomain.com/api/health
 | `RATE_LIMIT_EXCEEDED` | Too many requests | Wait and retry |
 | `SERVER_ERROR` | Internal server error | Check logs, contact support |
 | `INVALID_FILTER` | Malformed filter | Check filter syntax |
-| `INVALID_PAGINATION` | Invalid page/limit | Use valid values |
+| `INVALID_JSON` | Body missing, not JSON, or not a JSON object | Send a JSON object with `Content-Type: application/json` |
+| `UNSUPPORTED_MEDIA_TYPE` | Upload body is not `multipart/form-data` | Send the files as `FormData` |
 
 ---
 

@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
     if (!auth.success || !auth.user) return createAuthFailureResponse(auth)
 
     // 2. Parse and validate request body
-    const body = await request.json()
+    // an unreadable body is validated as null: the schema answers 400
+    const body = await request.json().catch(() => null)
     const validationResult = RequestSchema.safeParse(body)
 
     if (!validationResult.success) {

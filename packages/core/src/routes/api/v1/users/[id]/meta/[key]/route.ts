@@ -27,6 +27,7 @@ import {
   withApiLogging,
   handleCorsPreflightRequest,
   addCorsHeaders,
+  readJsonObject,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { canAccessUser } from '@nextsparkjs/core/lib/api/auth/permissions'
@@ -134,10 +135,12 @@ export const GET = withRateLimitTier(withApiLogging(async (
     })
     return addCorsHeaders(response, req)
   } catch (error) {
+    console.error('Error fetching user metadata:', error)
     const response = createApiError(
       'Failed to fetch user metadata',
       500,
-      error instanceof Error ? error.message : undefined
+      undefined,
+      'INTERNAL_ERROR'
     )
     return addCorsHeaders(response, req)
   }
@@ -212,7 +215,9 @@ export const PUT = withRateLimitTier(withApiLogging(async (
     }
 
     // Parse and validate request body
-    const body = await req.json()
+    const parsedBody = await readJsonObject(req)
+    if (parsedBody.error) return addCorsHeaders(parsedBody.error, req)
+    const body = parsedBody.data
     const validatedData = metadataValueSchema.parse(body)
 
     // Validate value size (max 1MB)
@@ -259,10 +264,12 @@ export const PUT = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req)
     }
 
+    console.error('Error updating user metadata:', error)
     const response = createApiError(
       'Failed to update user metadata',
       500,
-      error instanceof Error ? error.message : undefined
+      undefined,
+      'INTERNAL_ERROR'
     )
     return addCorsHeaders(response, req)
   }
@@ -344,10 +351,12 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
     })
     return addCorsHeaders(response, req)
   } catch (error) {
+    console.error('Error deleting user metadata:', error)
     const response = createApiError(
       'Failed to delete user metadata',
       500,
-      error instanceof Error ? error.message : undefined
+      undefined,
+      'INTERNAL_ERROR'
     )
     return addCorsHeaders(response, req)
   }

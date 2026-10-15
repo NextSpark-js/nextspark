@@ -1,5 +1,6 @@
 import { getAuthorizationSession } from "@nextsparkjs/core/lib/auth/authorization-session";
 import { NextResponse } from "next/server";
+import { createApiError } from '@nextsparkjs/core/lib/api/helpers';
 import { readFile, stat } from "fs/promises";
 import { join } from "path";
 import matter from "gray-matter";
@@ -23,13 +24,7 @@ export const GET = withRateLimitTier(async (
     const session = await getAuthorizationSession(request.headers);
 
     if (!session?.user || session.user.role !== "developer") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Developer access required",
-        },
-        { status: 403 }
-      );
+      return createApiError("Developer access required", 403, undefined, 'FORBIDDEN');
     }
 
     // Await params in Next.js 15
@@ -37,13 +32,7 @@ export const GET = withRateLimitTier(async (
     const pathSegments = resolvedParams.path;
 
     if (!pathSegments || pathSegments.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Path is required",
-        },
-        { status: 400 }
-      );
+      return createApiError("Path is required", 400, undefined, 'VALIDATION_ERROR');
     }
 
     // Security: Prevent path traversal attacks
@@ -51,13 +40,7 @@ export const GET = withRateLimitTier(async (
       (segment) => segment.includes("..") || segment.includes("/")
     );
     if (hasTraversal) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid path",
-        },
-        { status: 400 }
-      );
+      return createApiError("Invalid path", 400, undefined, 'VALIDATION_ERROR');
     }
 
     const filePath = join(
@@ -72,22 +55,10 @@ export const GET = withRateLimitTier(async (
     try {
       const stats = await stat(filePath);
       if (!stats.isFile()) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Path is not a file",
-          },
-          { status: 400 }
-        );
+        return createApiError("Path is not a file", 400, undefined, 'VALIDATION_ERROR');
       }
     } catch {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "File not found",
-        },
-        { status: 404 }
-      );
+      return createApiError("File not found", 404, undefined, 'NOT_FOUND');
     }
 
     // Read file content
@@ -110,17 +81,7 @@ export const GET = withRateLimitTier(async (
     );
   } catch (error) {
     console.error("[API] /api/devtools/tests/[...path] error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: process.env.NODE_ENV === "production"
-          ? "Failed to load test file"
-          : error instanceof Error
-            ? error.message
-            : "Unknown error",
-      },
-      { status: 500 }
-    );
+    return createApiError("Failed to load test file", 500, undefined, 'INTERNAL_ERROR');
   }
 }, 'read');
 

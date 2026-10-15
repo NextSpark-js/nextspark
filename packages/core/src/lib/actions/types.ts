@@ -83,12 +83,13 @@ export interface ListEntityResult<T> {
  * Controls revalidation and redirection behavior
  */
 export interface ActionConfig {
-  /** Paths to revalidate after mutation (uses revalidatePath) */
+  /** Paths to revalidate after mutation (uses revalidatePath). Only paths on this app: one leading "/", no scheme, no "//"; others are ignored. */
   revalidatePaths?: string[]
   /** Tags to revalidate after mutation (uses revalidateTag) */
   revalidateTags?: string[]
   /**
    * Redirect after successful mutation.
+   * Only a path on this app (one leading "/", no scheme, no "//"); any other value is ignored.
    * WARNING: Uses Next.js redirect() which throws NEXT_REDIRECT.
    * When redirectTo is set, the action will NOT return data - it redirects instead.
    */

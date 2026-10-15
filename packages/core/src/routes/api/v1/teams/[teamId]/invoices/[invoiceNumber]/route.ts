@@ -85,7 +85,7 @@ export const GET = withRateLimitTier(withApiLogging(
         FROM "invoices"
         WHERE "teamId" = $1 AND "invoiceNumber" = $2
         LIMIT 1`,
-        [teamId, decodeURIComponent(invoiceNumber)],
+        [teamId, invoiceNumber],
         authResult.user!.id
       )
 

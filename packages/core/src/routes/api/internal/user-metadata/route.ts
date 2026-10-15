@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
 import { MetaService } from '@nextsparkjs/core/lib/services/meta.service'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
@@ -14,25 +15,27 @@ export const POST = withRateLimitTier(async (req: NextRequest) => {
       return createAuthFailureResponse(authResult)
     }
 
-    const body = await req.json()
+    const parsedBody = await readJsonObject(req)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
     const { userId, metadata } = body
 
     if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+      return createApiError('User ID is required', 400, undefined, 'VALIDATION_ERROR')
     }
 
     if (userId !== authResult.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return createApiError('Forbidden', 403, undefined, 'FORBIDDEN')
     }
 
     if (!metadata || typeof metadata !== 'object') {
-      return NextResponse.json({ error: 'Metadata is required' }, { status: 400 })
+      return createApiError('Metadata is required', 400, undefined, 'VALIDATION_ERROR')
     }
 
     // Defaults only fill in what is missing. The caller picks them from a read
     // of the user's meta that may be stale by now, so a preference saved in
     // between (a theme change, a collapsed sidebar) is kept.
-    await MetaService.mergeEntityMetaGroups('user', userId, metadata, userId, { defaults: true })
+    await MetaService.mergeEntityMetaGroups('user', userId, metadata as Record<string, unknown>, userId, { defaults: true })
 
     return NextResponse.json({
       success: true,
@@ -41,9 +44,7 @@ export const POST = withRateLimitTier(async (req: NextRequest) => {
   } catch (error) {
     // Log error for debugging but don't expose details to client
     console.error('Error creating user metadata:', error)
-    return NextResponse.json({
-      error: 'Internal server error'
-    }, { status: 500 })
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write');
 

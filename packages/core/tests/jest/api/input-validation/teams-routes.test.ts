@@ -49,8 +49,7 @@ describe('POST /api/v1/teams', () => {
   const invoke = (body: Body) => createTeam(makeReq('POST', '/api/v1/teams', body), undefined as never)
 
   describe('bodies', () => {
-    // an unreadable body or a JSON null is thrown outside the schema parse and answered 500 (finding F8)
-    describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON'] })
+    describeMalformedBodies(invoke)
   })
 
   describe('values', () => {
@@ -96,8 +95,7 @@ describe('POST /api/v1/teams', () => {
 describe('GET /api/v1/teams — query parameters', () => {
   const list = (query: string) => listTeams(makeReq('GET', `/api/v1/teams${query}`), undefined as never)
 
-  // The list query is parsed by the schema inside a handler whose catch answers every error 500 (finding F9).
-  test.failing.each([
+  test.each([
     ['a page of zero', '?page=0'],
     ['a negative page', '?page=-1'],
     ['a page of text', '?page=abc'],
@@ -132,7 +130,7 @@ describe('PATCH /api/v1/teams/[teamId]', () => {
   const invoke = (body: Body, teamId = 'team-1') => patchTeam(makeReq('PATCH', `/api/v1/teams/${teamId}`, body), idParams({ teamId }))
 
   describe('bodies', () => {
-    describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON'] })
+    describeMalformedBodies(invoke)
   })
 
   describe('values', () => {
@@ -174,7 +172,7 @@ describe('PATCH /api/v1/teams/[teamId]', () => {
 describe('POST /api/v1/teams/switch', () => {
   const invoke = (body: Body) => switchTeam(makeReq('POST', '/api/v1/teams/switch', body), undefined as never)
 
-  describeMalformedBodies(invoke)
+  describeMalformedBodies(invoke, { code: /^(INVALID_JSON|VALIDATION_ERROR)$/ })
 
   describeRejectedValues(invoke, [
     ['an empty object', {}],
@@ -194,7 +192,7 @@ describe('POST /api/v1/teams/switch', () => {
 describe('GET /api/v1/teams/[teamId]/members — query parameters', () => {
   const list = (query: string) => listMembers(makeReq('GET', `/api/v1/teams/team-1/members${query}`), idParams({ teamId: 'team-1' }))
 
-  test.failing.each([
+  test.each([
     ['a page of zero', '?page=0'],
     ['a page of text', '?page=abc'],
     ['a limit over the maximum', '?limit=500'],
@@ -209,7 +207,7 @@ describe('PATCH /api/v1/teams/[teamId]/members/[memberId]', () => {
   const invoke = (body: Body) => patchMember(makeReq('PATCH', '/api/v1/teams/team-1/members/member-1', body), idParams({ teamId: 'team-1', memberId: 'member-1' }))
   beforeEach(() => { mocks.queryOneWithRLS.mockResolvedValue({ id: 'member-1', teamId: 'team-1', userId: 'user-9', role: 'member' }) })
 
-  describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON'] })
+  describeMalformedBodies(invoke)
 
   describeRejectedValues(invoke, [
     ['an empty object', {}],
@@ -230,7 +228,7 @@ describe('PATCH /api/v1/teams/[teamId]/members/[memberId]', () => {
 describe('POST /api/v1/teams/[teamId]/transfer-ownership', () => {
   const invoke = (body: Body) => transferOwnership(makeReq('POST', '/api/v1/teams/team-1/transfer-ownership', body), idParams({ teamId: 'team-1' }))
 
-  describeMalformedBodies(invoke)
+  describeMalformedBodies(invoke, { code: 'HTTP_400' })
 
   describeRejectedValues(invoke, [
     ['an empty object', {}],

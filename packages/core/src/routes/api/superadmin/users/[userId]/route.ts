@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { suspendUser, unsuspendUser } from '@nextsparkjs/core/lib/auth/suspension';
 import { ASSIGNABLE_USER_ROLES, canActOnUser, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
@@ -57,28 +58,19 @@ export const GET = withRateLimitTier(async (request: NextRequest, { params }: Ro
 
     // Check if user is authenticated
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - No session found' },
-        { status: 401 }
-      );
+      return createApiError('Unauthorized - No session found', 401, undefined, 'AUTHENTICATION_REQUIRED');
     }
 
     // Check if user is superadmin or developer
     if (session.user.role !== 'superadmin' && session.user.role !== 'developer') {
-      return NextResponse.json(
-        { error: 'Forbidden - Superadmin or developer access required' },
-        { status: 403 }
-      );
+      return createApiError('Forbidden - Superadmin or developer access required', 403, undefined, 'FORBIDDEN');
     }
 
     const { userId } = await params;
 
     // Validate userId
     if (!userId || typeof userId !== 'string') {
-      return NextResponse.json(
-        { error: 'Invalid user ID' },
-        { status: 400 }
-      );
+      return createApiError('Invalid user ID', 400, undefined, 'VALIDATION_ERROR');
     }
 
     // Query user details
@@ -150,10 +142,7 @@ export const GET = withRateLimitTier(async (request: NextRequest, { params }: Ro
 
     // Check if user exists
     if (!userResults || userResults.length === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return createApiError('User not found', 404, undefined, 'NOT_FOUND');
     }
 
     const user = userResults[0];
@@ -213,13 +202,7 @@ export const GET = withRateLimitTier(async (request: NextRequest, { params }: Ro
   } catch (error) {
     console.error('Error fetching user details:', error);
 
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: 'Failed to retrieve user details'
-      },
-      { status: 500 }
-    );
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to retrieve user details' });
   }
 }, 'strict');
 
@@ -249,48 +232,35 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
 
     // Check if user is authenticated
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - No session found' },
-        { status: 401 }
-      );
+      return createApiError('Unauthorized - No session found', 401, undefined, 'AUTHENTICATION_REQUIRED');
     }
 
     // Check if user is superadmin or developer
     if (session.user.role !== 'superadmin' && session.user.role !== 'developer') {
-      return NextResponse.json(
-        { error: 'Forbidden - Superadmin or developer access required' },
-        { status: 403 }
-      );
+      return createApiError('Forbidden - Superadmin or developer access required', 403, undefined, 'FORBIDDEN');
     }
 
     const { userId } = await params;
 
     // Validate userId
     if (!userId || typeof userId !== 'string') {
-      return NextResponse.json(
-        { error: 'Invalid user ID' },
-        { status: 400 }
-      );
+      return createApiError('Invalid user ID', 400, undefined, 'VALIDATION_ERROR');
     }
 
     // Prevent self-modification
     if (userId === session.user.id) {
-      return NextResponse.json(
-        { error: 'Cannot modify your own account' },
-        { status: 400 }
-      );
+      return createApiError('Cannot modify your own account', 400, undefined, 'VALIDATION_ERROR');
     }
 
     // Parse request body
-    const body: UserActionBody = await request.json();
+    const parsedBody = await readJsonObject(request);
+    if (parsedBody.error) return parsedBody.error;
+    const body: UserActionBody = parsedBody.data as unknown as UserActionBody;
     const { action, role } = body;
 
     // Validate action
     if (!action || !['change-role', 'suspend', 'unsuspend', 'verify-email'].includes(action)) {
-      return NextResponse.json(
-        { error: 'Invalid action. Must be one of: change-role, suspend, unsuspend, verify-email' },
-        { status: 400 }
-      );
+      return createApiError('Invalid action. Must be one of: change-role, suspend, unsuspend, verify-email', 400, undefined, 'VALIDATION_ERROR');
     }
 
     // Check if target user exists and get their current role
@@ -302,20 +272,14 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
     const userCheck = await queryWithRLS(checkUserQuery, [userId], session.user.id, { service: true }) as { id: string; role: string }[];
 
     if (!userCheck || userCheck.length === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return createApiError('User not found', 404, undefined, 'NOT_FOUND');
     }
 
     const targetUser = userCheck[0];
 
     // The developer role ranks above superadmin: only a developer acts on a developer or a superadmin
     if (!canActOnUser(session.user.role, targetUser.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden - Only a developer can modify a developer or superadmin account' },
-        { status: 403 }
-      );
+      return createApiError('Forbidden - Only a developer can modify a developer or superadmin account', 403, undefined, 'FORBIDDEN');
     }
 
     let updateQuery = '';
@@ -326,23 +290,14 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
         // The roles users.role accepts (check_users_role) besides superadmin, which is not granted here, and suspended,
         // which the suspend action sets with its sign-out
         if (!role || !(ASSIGNABLE_USER_ROLES as readonly string[]).includes(role)) {
-          return NextResponse.json(
-            { error: 'Invalid role. Must be one of: member, developer' },
-            { status: 400 }
-          );
+          return createApiError('Invalid role. Must be one of: member, developer', 400, undefined, 'VALIDATION_ERROR');
         }
         // A suspended account comes back only through unsuspend
         if (targetUser.role === 'suspended') {
-          return NextResponse.json(
-            { error: 'User is suspended. Use the unsuspend action to restore access, then change the role' },
-            { status: 400 }
-          );
+          return createApiError('User is suspended. Use the unsuspend action to restore access, then change the role', 400, undefined, 'VALIDATION_ERROR');
         }
         if (!canGrantUserRole(session.user.role, role)) {
-          return NextResponse.json(
-            { error: 'Forbidden - Only a developer can grant the developer role' },
-            { status: 403 }
-          );
+          return createApiError('Forbidden - Only a developer can grant the developer role', 403, undefined, 'FORBIDDEN');
         }
         updateQuery = `
           UPDATE "users"
@@ -356,7 +311,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
       case 'suspend': {
         const suspended = await suspendUser(userId, session.user.id);
         if (!suspended) {
-          return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+          return createApiError('Failed to update user', 500, undefined, 'INTERNAL_ERROR');
         }
         return NextResponse.json({
           success: true,
@@ -370,10 +325,10 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
 
       case 'unsuspend':
         if (targetUser.role !== 'suspended') {
-          return NextResponse.json({ error: 'User is not suspended' }, { status: 400 });
+          return createApiError('User is not suspended', 400, undefined, 'VALIDATION_ERROR');
         }
         if (!(await unsuspendUser(userId, session.user.id))) {
-          return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+          return createApiError('Failed to update user', 500, undefined, 'INTERNAL_ERROR');
         }
         return NextResponse.json({
           success: true,
@@ -398,10 +353,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
     const result = await queryWithRLS(updateQuery, updateParams, session.user.id, { service: true }) as { id: string }[];
 
     if (!result || result.length === 0) {
-      return NextResponse.json(
-        { error: 'Failed to update user' },
-        { status: 500 }
-      );
+      return createApiError('Failed to update user', 500, undefined, 'INTERNAL_ERROR');
     }
 
     return NextResponse.json({
@@ -419,13 +371,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
   } catch (error) {
     console.error('Error performing user action:', error);
 
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: 'Failed to perform user action'
-      },
-      { status: 500 }
-    );
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to perform user action' });
   }
 }, 'strict');
 
@@ -447,36 +393,24 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
 
     // Check if user is authenticated
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - No session found' },
-        { status: 401 }
-      );
+      return createApiError('Unauthorized - No session found', 401, undefined, 'AUTHENTICATION_REQUIRED');
     }
 
     // Check if user is superadmin or developer
     if (session.user.role !== 'superadmin' && session.user.role !== 'developer') {
-      return NextResponse.json(
-        { error: 'Forbidden - Superadmin or developer access required' },
-        { status: 403 }
-      );
+      return createApiError('Forbidden - Superadmin or developer access required', 403, undefined, 'FORBIDDEN');
     }
 
     const { userId } = await params;
 
     // Validate userId
     if (!userId || typeof userId !== 'string') {
-      return NextResponse.json(
-        { error: 'Invalid user ID' },
-        { status: 400 }
-      );
+      return createApiError('Invalid user ID', 400, undefined, 'VALIDATION_ERROR');
     }
 
     // Prevent self-deletion
     if (userId === session.user.id) {
-      return NextResponse.json(
-        { error: 'Cannot delete your own account' },
-        { status: 400 }
-      );
+      return createApiError('Cannot delete your own account', 400, undefined, 'VALIDATION_ERROR');
     }
 
     // Check if target user exists and get their role
@@ -487,20 +421,14 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
     const userCheck = await queryWithRLS(checkUserQuery, [userId], session.user.id, { service: true }) as { id: string; role: string; email: string }[];
 
     if (!userCheck || userCheck.length === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return createApiError('User not found', 404, undefined, 'NOT_FOUND');
     }
 
     const targetUser = userCheck[0];
 
     // Only a developer deletes a developer or a superadmin
     if (!canActOnUser(session.user.role, targetUser.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden - Only a developer can delete a developer or superadmin account' },
-        { status: 403 }
-      );
+      return createApiError('Forbidden - Only a developer can delete a developer or superadmin account', 403, undefined, 'FORBIDDEN');
     }
 
     // Delete in order to respect foreign key constraints:
@@ -567,13 +495,7 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
   } catch (error) {
     console.error('Error deleting user:', error);
 
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: 'Failed to delete user'
-      },
-      { status: 500 }
-    );
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to delete user' });
   }
 }, 'strict');
 

@@ -17,6 +17,7 @@ import type { EntityConfig, ChildEntityDefinition, HookContext } from './types'
 import { getEntityConfig } from './registry'
 import { executeEntityHooks } from './hooks'
 import { getAuthorizationSession } from '../auth/authorization-session'
+import { readJsonObject } from '../api/helpers'
 import type { UserRole } from '../../types/user.types'
 
 export interface APIGeneratorOptions {
@@ -212,7 +213,9 @@ function createPOSTHandler(
       // Plan limits are no longer enforced - simplified system
       // All authenticated users have unlimited access to enabled entities
 
-      const body = await request.json()
+      const parsedBody = await readJsonObject(request)
+      if (parsedBody.error) return parsedBody.error
+      const body = parsedBody.data
 
       // Validation
       const schema = generateCreateSchema(entityConfig, options.customValidation)
@@ -322,7 +325,9 @@ function createPATCHHandler(
         return NextResponse.json({ error: 'ID required' }, { status: 400 })
       }
 
-      const body = await request.json()
+      const parsedBody = await readJsonObject(request)
+      if (parsedBody.error) return parsedBody.error
+      const body = parsedBody.data
 
       // Validation
       const schema = generateUpdateSchema(entityConfig, options.customValidation)

@@ -9,7 +9,8 @@ import {
   parseMetaParams,
   includeEntityMetadataForSingle,
   handleEntityMetadataInResponse,
-  processEntityMetadata
+  processEntityMetadata,
+  readJsonObject,
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { canAccessUser, hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions';
@@ -122,7 +123,9 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
-    const body = await req.json();
+    const parsedBody = await readJsonObject(req);
+    if (parsedBody.error) return addCorsHeaders(parsedBody.error, req);
+    const body = parsedBody.data;
     const { metas, ...userData } = body;
     const validatedData = updateUserSchema.parse(userData);
 
@@ -235,7 +238,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
     }
 
     // Handle metadata if provided (usando helper compartido)
-    const metadataWasProvided = metas && typeof metas === 'object' && Object.keys(metas).length > 0;
+    const metadataWasProvided = Boolean(metas && typeof metas === 'object' && Object.keys(metas).length > 0);
     
     if (metadataWasProvided) {
       await processEntityMetadata('user', (updatedUser as { id: string }).id, metas, authResult.user!.id);

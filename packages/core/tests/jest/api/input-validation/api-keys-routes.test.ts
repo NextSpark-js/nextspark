@@ -23,8 +23,7 @@ describe('POST /api/v1/api-keys', () => {
   const invoke = (body: Body) => createKey(makeReq('POST', '/api/v1/api-keys', body), undefined as never)
 
   describe('bodies', () => {
-    // an unreadable body is thrown outside the schema parse and answered 500 (finding F8)
-    describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON'] })
+    describeMalformedBodies(invoke)
   })
 
   describe('values', () => {
@@ -78,8 +77,7 @@ describe('PATCH /api/v1/api-keys/[id]', () => {
   const invoke = (body: Body, id = 'key-1') => patchKey(makeReq('PATCH', `/api/v1/api-keys/${id}`, body), idParams({ id }))
 
   describe('bodies', () => {
-    // an unreadable body and a JSON null are not guarded: 500 (finding F8)
-    describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON null'] })
+    describeMalformedBodies(invoke)
   })
 
   describe('values', () => {
@@ -95,8 +93,7 @@ describe('PATCH /api/v1/api-keys/[id]', () => {
       noWrites()
     })
 
-    // POST caps the name at API_KEY_LIMITS.maxKeyNameLength; PATCH does not (finding F14)
-    test.failing.each([
+    test.each([
       ['a name over the documented maximum', 'x'.repeat(API_KEY_LIMITS.maxKeyNameLength + 1)],
       ['a name far over the documented maximum', 'x'.repeat(500_000)],
       ['a name that is empty', ''],

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
 import { categoryReadTeam, categoryWriter, type CategoryWriter, type Refusal } from '@nextsparkjs/core/lib/api/post-categories'
 import { query as dbQuery } from '@nextsparkjs/core/lib/db'
 import * as z from 'zod'
@@ -24,13 +25,10 @@ async function findCategory(id: string, writer: CategoryWriter): Promise<{ teamI
     [id, writer.teamId]
   )
   if (found.rows.length === 0) {
-    return { response: NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 }) }
+    return { response: createApiError('Category not found', 404, undefined, 'NOT_FOUND') }
   }
   if (found.rows[0].teamId === null && !writer.superadmin) {
-    return { response: NextResponse.json(
-      { success: false, error: 'Only a superadmin or a developer can change a category shared by every team', code: 'PERMISSION_DENIED' },
-      { status: 403 }
-    ) }
+    return { response: createApiError('Only a superadmin or a developer can change a category shared by every team', 403, undefined, 'PERMISSION_DENIED') }
   }
   return found.rows[0]
 }
@@ -54,7 +52,7 @@ export const GET = withRateLimitTier(async (
     )
 
     if (result.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 })
+      return createApiError('Category not found', 404, undefined, 'NOT_FOUND')
     }
 
     return NextResponse.json({
@@ -63,7 +61,7 @@ export const GET = withRateLimitTier(async (
     })
   } catch (err) {
     console.error('Error in post-categories API:', err)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'read');
 
@@ -78,7 +76,9 @@ export const PUT = withRateLimitTier(async (
     const writer = await categoryWriter(request, 'update')
     if ('response' in writer) return writer.response
 
-    const body = await request.json()
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
     const data = updateCategorySchema.parse(body)
     const { id } = await params
 
@@ -92,10 +92,7 @@ export const PUT = withRateLimitTier(async (
         [data.slug, id, row.teamId]
       )
       if (slugCheck.rows.length > 0) {
-        return NextResponse.json(
-          { success: false, error: 'A category with this slug already exists' },
-          { status: 409 }
-        )
+        return createApiError('A category with this slug already exists', 409, undefined, 'CONFLICT')
       }
     }
 
@@ -106,18 +103,12 @@ export const PUT = withRateLimitTier(async (
         [data.parentId, row.teamId]
       )
       if (parentCheck.rows.length === 0) {
-        return NextResponse.json({
-          success: false,
-          error: 'Parent category not found'
-        }, { status: 400 })
+        return createApiError('Parent category not found', 400, undefined, 'VALIDATION_ERROR')
       }
 
       // Prevent circular reference
       if (data.parentId === id) {
-        return NextResponse.json({
-          success: false,
-          error: 'A category cannot be its own parent'
-        }, { status: 400 })
+        return createApiError('A category cannot be its own parent', 400, undefined, 'VALIDATION_ERROR')
       }
     }
 
@@ -183,7 +174,7 @@ export const PUT = withRateLimitTier(async (
     const result = await dbQuery(query, values)
 
     if (result.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 })
+      return createApiError('Category not found', 404, undefined, 'NOT_FOUND')
     }
 
     return NextResponse.json({
@@ -193,10 +184,9 @@ export const PUT = withRateLimitTier(async (
   } catch (err) {
     console.error('Error in post-categories API PUT:', err)
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: 'Validation error', details: err.issues }, { status: 400 })
+      return createApiError('Validation error', 400, err.issues, 'VALIDATION_ERROR')
     }
-    const errorMessage = err instanceof Error ? err.message : 'Internal server error'
-    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 })
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write');
 
@@ -248,7 +238,7 @@ export const DELETE = withRateLimitTier(async (
         [id, row.teamId]
       )
       if (result.rows.length === 0) {
-        return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 })
+        return createApiError('Category not found', 404, undefined, 'NOT_FOUND')
       }
       return NextResponse.json({
         success: true,
@@ -257,7 +247,7 @@ export const DELETE = withRateLimitTier(async (
     }
   } catch (err) {
     console.error('Error in post-categories API DELETE:', err)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write');
 

@@ -106,14 +106,15 @@ describe('handleGenericList', () => {
     )
   })
 
-  it('validates pagination parameters', async () => {
+  it('clamps pagination parameters', async () => {
     const request = new NextRequest('http://localhost/api/v1/tasks?page=-1&limit=1000')
     const response = await handleGenericList(request, { params: { entity: 'tasks' } })
 
     const json = await response.json()
 
-    expect(response.status).toBe(400)
-    expect(json.code).toBe('INVALID_PAGINATION')
+    expect(response.status).toBe(200)
+    expect(json.info.page).toBe(1)
+    expect(json.info.limit).toBe(100)
   })
 
   it('handles database errors', async () => {

@@ -2,11 +2,11 @@
  * S192 — input validation of the superadmin and devtools routes:
  *   /api/superadmin/users, /users/[userId], /teams, /teams/[teamId], /subscriptions,
  *   /api/devtools/tests/[...path], /api/v1/devtools/docs, /api/v1/devtools/scheduled-actions (+ /run).
- * These routes answer `{ error: '<fixed text>' }` without a `code` field (finding F11).
+ * These routes answer `{ error: '<fixed text>' }` with a stable `code`.
  */
 
 import { NextRequest } from 'next/server'
-import { routeHarness, makeReq, asJson, idParams, noWrites, describeMalformedBodies, describeRejectedValues, expectCleanRejection, sessionAs, SUPERADMIN, DEVELOPER, pgRejectsPaging } from './__helpers__/route-harness'
+import { routeHarness, makeReq, asJson, idParams, noWrites, describeMalformedBodies, describeRejectedValues, expectCleanRejection, bodyOf, sessionAs, SUPERADMIN, DEVELOPER, pgRejectsPaging } from './__helpers__/route-harness'
 
 const mockSession = jest.fn()
 jest.mock('@/core/lib/auth/authorization-session', () => ({ getAuthorizationSession: (...a: unknown[]) => mockSession(...a) }))
@@ -73,12 +73,11 @@ describe('GET /api/superadmin/users — query parameters', () => {
 
   test('a caller who is not a superadmin or developer is answered 403 before any query', async () => {
     mockSession.mockResolvedValue({ user: { id: 'u', role: 'member' } })
-    await expectCleanRejection(await get(''), { status: 403, codeless: true })
+    await expectCleanRejection(await get(''), { status: 403 })
     expect(mocks.queryWithRLS).not.toHaveBeenCalled()
   })
 
-  // page and limit go through parseInt + Math.max/min, which keep NaN; the value is written into the statement (finding F3)
-  test.failing.each([
+  test.each([
     ['a page of text', '?page=abc'],
     ['a limit of text', '?limit=many'],
   ])('answers %s without a server error', async (_label, query) => {
@@ -88,7 +87,7 @@ describe('GET /api/superadmin/users — query parameters', () => {
 
 describe('GET /api/superadmin/teams — query parameters', () => {
   const get = paging(superadminTeams as never, '/api/superadmin/teams')
-  test.failing.each([
+  test.each([
     ['a page of text', '?page=abc'],
     ['a limit of text', '?limit=many'],
   ])('answers %s without a server error', async (_label, query) => {
@@ -110,8 +109,7 @@ describe('GET /api/superadmin/subscriptions — query parameters', () => {
     expect((await get(query)).status).toBe(200)
   })
 
-  // page and limit are read with parseInt and no clamp at all (finding F3)
-  test.failing.each([
+  test.each([
     ['a page of zero', '?page=0'],
     ['a negative page', '?page=-3'],
     ['a page of text', '?page=abc'],
@@ -121,7 +119,7 @@ describe('GET /api/superadmin/subscriptions — query parameters', () => {
     expect((await get(query)).status).toBeLessThan(500)
   })
 
-  test.failing('caps the limit (the other list endpoints stop at 100)', async () => {
+  test('caps the limit (the other list endpoints stop at 100)', async () => {
     await get('?limit=1000000')
     const call = (mocks.queryWithRLS.mock.calls as Array<[string, unknown[]]>).find(([sql]) => /LIMIT \$\d+ OFFSET/.test(sql))!
     expect(call[1].some(p => typeof p === 'number' && p > 100)).toBe(false)
@@ -134,8 +132,7 @@ describe('/api/superadmin/users/[userId]', () => {
 
   describe('PATCH — bodies', () => {
     beforeEach(() => { mocks.queryWithRLS.mockResolvedValue([{ id: 'user-7', role: 'member' }]) })
-    // an unreadable body and a JSON null are thrown inside a try whose catch answers 500 (finding F8)
-    describeMalformedBodies(patch, { codeless: true, defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON null'] })
+    describeMalformedBodies(patch, {})
   })
 
   describe('PATCH — values', () => {
@@ -149,10 +146,10 @@ describe('/api/superadmin/users/[userId]', () => {
       ['a role change to a role that does not exist', { action: 'change-role', role: 'emperor' }],
       ['a role change to a role given a number', { action: 'change-role', role: 7 }],
       ['a role change to a role given an array', { action: 'change-role', role: ['member'] }],
-    ], { codeless: true })
+    ], {})
 
     test('an action on the caller own account is answered 400 and nothing is written', async () => {
-      await expectCleanRejection(await patch(asJson({ action: 'suspend' }), 'admin-1'), { status: 400, codeless: true })
+      await expectCleanRejection(await patch(asJson({ action: 'suspend' }), 'admin-1'), { status: 400 })
       noWrites()
     })
   })
@@ -160,7 +157,7 @@ describe('/api/superadmin/users/[userId]', () => {
   describe('ids that match nothing (user ids are text)', () => {
     beforeEach(() => { mocks.queryWithRLS.mockResolvedValue([]) })
     test.each([['text', 'not-a-uuid'], ['an over-long string', 'a'.repeat(5000)], ['non-ASCII text', 'usuaria-日本語']])('PATCH %s is answered 404 and changes nothing', async (_label, id) => {
-      await expectCleanRejection(await patch(asJson({ action: 'suspend' }), id), { status: 404, codeless: true })
+      await expectCleanRejection(await patch(asJson({ action: 'suspend' }), id), { status: 404 })
       noWrites()
     })
     test.each([['GET', superadminUser], ['DELETE', superadminDeleteUser]] as const)('%s of an unknown id is answered 404', async (_label, handler) => {
@@ -187,12 +184,12 @@ describe('GET /api/devtools/tests/[...path]', () => {
     ['a segment holding a slash', ['a/b.cy.ts']],
   ])('%s is answered 400 and no file is read', async (_label, path) => {
     const fs = jest.requireMock('fs/promises') as { readFile: jest.Mock }
-    await expectCleanRejection(await get(path), { status: 400, codeless: true })
+    await expectCleanRejection(await get(path), { status: 400 })
     expect(fs.readFile).not.toHaveBeenCalled()
   })
 
   test('a file that does not exist is answered 404', async () => {
-    await expectCleanRejection(await get(['no-such-file.bdd.md']), { status: 404, codeless: true })
+    await expectCleanRejection(await get(['no-such-file.bdd.md']), { status: 404 })
   })
 
   test('a segment that is empty or an over-long string is answered without a server error', async () => {
@@ -212,7 +209,7 @@ describe('GET /api/v1/devtools/docs', () => {
     ['a path with a backslash', '?path=api%5Cthings%5Cdocs.md'],
   ])('%s is answered 400 and no file is read', async (_label, query) => {
     const fs = jest.requireMock('fs/promises') as { readFile: jest.Mock }
-    await expectCleanRejection(await get(query), { status: 400, codeless: true })
+    await expectCleanRejection(await get(query), { status: 400 })
     expect(fs.readFile).not.toHaveBeenCalled()
   })
 
@@ -233,8 +230,7 @@ describe('/api/v1/devtools/scheduled-actions', () => {
     expect((await list(query)).status).toBe(200)
   })
 
-  // page and limit are read with parseInt and no clamp (finding F3)
-  test.failing.each([
+  test.each([
     ['a page of zero', '?page=0'],
     ['a negative page', '?page=-2'],
     ['a page of text', '?page=abc'],
@@ -253,29 +249,27 @@ describe('/api/v1/devtools/scheduled-actions', () => {
       const invoke = (body: Body) => handler(makeReq('POST', url, body) as never)
       const nothingScheduled = () => { expect(mockSchedule).not.toHaveBeenCalled(); expect(mockExecute).not.toHaveBeenCalled() }
 
-      // the handler has no try/catch: an unreadable body or a null body throws out of the route (finding F8)
       describe('bodies', () => {
-        describeMalformedBodies(invoke, { codeless: true, defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON null'] })
+        describeMalformedBodies(invoke, {})
       })
 
       describeRejectedValues(invoke, [
         ['an empty object', {}],
         ['an action id that is empty', { actionId: '' }],
-      ], { codeless: true })
+      ], {})
 
-      // the id is handed to the query whatever its type (finding F21)
-      test.failing.each([
+      test.each([
         ['an action id given a number', { actionId: 5 }],
         ['an action id given an object', { actionId: { id: 'x' } }],
         ['an action id given an array', { actionId: ['x'] }],
       ])('rejects %s with 400 before it queries', async (_label, value) => {
-        await expectCleanRejection(await invoke(asJson(value)), { status: 400, codeless: true })
+        await expectCleanRejection(await invoke(asJson(value)), { status: 400, code: 'VALIDATION_ERROR' })
         expect(mocks.queryWithRLS).not.toHaveBeenCalled()
       })
 
       test('an action id that matches nothing is answered 404', async () => {
         mocks.queryWithRLS.mockResolvedValue([])
-        await expectCleanRejection(await invoke(asJson({ actionId: 'not-a-uuid' })), { status: 404, codeless: true })
+        await expectCleanRejection(await invoke(asJson({ actionId: 'not-a-uuid' })), { status: 404 })
         nothingScheduled()
       })
     })
@@ -308,5 +302,11 @@ describe('the cron endpoints (their only input is a secret in a header)', () => 
     const response = await cronBillingLifecycle(makeReq('GET', '/api/cron/billing/lifecycle', undefined, headers))
     expect(response.status).toBe(401)
     expect(mockExpireTrials).not.toHaveBeenCalled()
+  })
+
+  test('a failed job is reported with a fixed text, and the cause is not in the body', async () => {
+    mockExpireTrials.mockRejectedValue(new Error('connection to server at "10.0.0.5", port 5432 failed'))
+    const response = await cronBillingLifecycle(makeReq('GET', '/api/cron/billing/lifecycle', undefined, { authorization: `Bearer ${SECRET}` }))
+    expect(JSON.stringify(await bodyOf(response))).not.toContain('10.0.0.5')
   })
 })

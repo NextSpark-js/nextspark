@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import {
   canAccessDevtoolsApi,
@@ -34,70 +35,65 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     return createDevtoolsAccessDeniedResponse()
   }
 
-  // Parse request body
-  const body = await request.json()
-  const { actionId } = body
-
-  if (!actionId) {
-    return NextResponse.json({
-      success: false,
-      error: 'actionId is required'
-    }, { status: 400 })
-  }
-
-  // Fetch the pending action
-  const actions = await queryWithRLS<ScheduledAction>(
-    `SELECT
-      id,
-      "actionType",
-      status,
-      payload,
-      "teamId",
-      "scheduledAt",
-      attempts,
-      "maxRetries",
-      "recurringInterval",
-      "recurrenceType",
-      "lockGroup"
-    FROM "scheduled_actions"
-    WHERE id = $1`,
-    [actionId],
-    null
-  )
-
-  if (actions.length === 0) {
-    return NextResponse.json({
-      success: false,
-      error: 'Action not found'
-    }, { status: 404 })
-  }
-
-  const action = actions[0]
-
-  // Only allow running pending actions
-  if (action.status !== 'pending') {
-    return NextResponse.json({
-      success: false,
-      error: 'Only pending actions can be executed'
-    }, { status: 400 })
-  }
-
   try {
-    // Execute the action immediately
-    await executeAction(action)
+    // Parse request body
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
+    const { actionId } = body
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        executed: true
-      }
-    })
+    if (typeof actionId !== 'string' || !actionId) {
+      return createApiError('actionId must be a string', 400, undefined, 'VALIDATION_ERROR')
+    }
+
+    // Fetch the pending action
+    const actions = await queryWithRLS<ScheduledAction>(
+      `SELECT
+        id,
+        "actionType",
+        status,
+        payload,
+        "teamId",
+        "scheduledAt",
+        attempts,
+        "maxRetries",
+        "recurringInterval",
+        "recurrenceType",
+        "lockGroup"
+      FROM "scheduled_actions"
+      WHERE id = $1`,
+      [actionId],
+      null
+    )
+
+    if (actions.length === 0) {
+      return createApiError('Action not found', 404, undefined, 'NOT_FOUND')
+    }
+
+    const action = actions[0]
+
+    // Only allow running pending actions
+    if (action.status !== 'pending') {
+      return createApiError('Only pending actions can be executed', 400, undefined, 'VALIDATION_ERROR')
+    }
+
+    try {
+      // Execute the action immediately
+      await executeAction(action)
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          executed: true
+        }
+      })
+    } catch (error) {
+      console.error('[DevTools] Failed to execute action:', error)
+      return createApiError('Failed to execute action', 500, undefined, 'INTERNAL_ERROR')
+    }
   } catch (error) {
-    console.error('[DevTools] Failed to execute action:', error)
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to execute action'
-    }, { status: 500 })
+    console.error('[DevTools] Failed to run scheduled action:', error)
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write');
 

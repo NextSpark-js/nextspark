@@ -33,7 +33,8 @@ import {
   processEntityMetadata,
   handleEntityMetadataInResponse,
   addCorsHeaders,
-  handleCorsPreflightRequest
+  handleCorsPreflightRequest,
+  readJsonObject
 } from '../helpers'
 import { beforeEntityCreate, afterEntityCreate, beforeEntityUpdate, afterEntityUpdate, beforeEntityDelete, afterEntityDelete, beforeEntityRead, afterEntityRead } from '../../entities/entity-hooks'
 import { logGenericHandlerUsage, type AuditContext } from './audit-log'
@@ -1083,7 +1084,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
 
       if (isJsonbField) {
         // JSONB array field - extract elements and return distinct values
-        return handleDistinctJsonbField(entityConfig, fieldName, url, userId)
+        return handleDistinctJsonbField(entityConfig, fieldName, url, userId, parsePaginationParams(request, 50).limit)
       } else {
         // Regular field - return distinct values
         fields = `DISTINCT "${fieldName}" as value, "${fieldName}" as label, '${entityConfig.slug}' as "entityType"`
@@ -1545,13 +1546,9 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
     }
 
     // Parse request body
-    let body
-    try {
-      body = await request.json()
-    } catch {
-      const response = createApiError('Invalid JSON body', 400)
-      return addCorsHeaders(response, request)
-    }
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return addCorsHeaders(parsedBody.error, request)
+    const body = parsedBody.data
 
     // Separate metadata from entity data
     const { metas, ...entityData } = body
@@ -1849,7 +1846,7 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
     }
 
     // Handle metadata if provided
-    const metadataWasProvided = metas && typeof metas === 'object' && Object.keys(metas).length > 0
+    const metadataWasProvided = Boolean(metas && typeof metas === 'object' && Object.keys(metas).length > 0)
     if (metadataWasProvided) {
       await processEntityMetadata(
           resolution.entityName,
@@ -2020,7 +2017,7 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
       query += ` AND t."status" = 'published'`
     }
 
-    const items = await queryWithRLS(query, scope.params, userId)
+    const items = await noRowOnMalformedId(queryWithRLS(query, scope.params, userId))
 
     if (!items[0]) {
       const response = createApiError('Item not found', 404)
@@ -2140,13 +2137,9 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
     if (permDenied) return permDenied
 
     // Parse request body
-    let body
-    try {
-      body = await request.json()
-    } catch {
-      const response = createApiError('Invalid JSON body', 400)
-      return addCorsHeaders(response, request)
-    }
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return addCorsHeaders(parsedBody.error, request)
+    const body = parsedBody.data
 
     // Separate metadata from entity data
     const { metas, ...entityData } = body
@@ -2205,11 +2198,11 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
     // A slug that is not changing is not judged: rows written before the rule (or by SQL) stay editable (#215)
     let slugIssue = publicSlugIssue(entityConfig, validatedData as Record<string, unknown>, otherBasePathSegments(entityConfig, getAllEntityConfigs()))
     if (slugIssue) {
-      const current = await queryWithRLS<{ slug: string | null }>(
+      const current = await noRowOnMalformedId(queryWithRLS<{ slug: string | null }>(
         `SELECT "slug" FROM "${tableName}" WHERE id = $1 AND "teamId" = $2`,
         [id, teamId],
         authResult.user!.id
-      )
+      ))
       if (current[0]?.slug === (validatedData as Record<string, unknown>).slug) slugIssue = null
     }
     if (slugIssue) {
@@ -2258,11 +2251,11 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
     // carries the status read here (statusRead), so a publish that lands in between is not undone unchecked.
     let statusRead: { status: unknown } | undefined
     if ('status' in entityData && entityConfig.fields.some((f: EntityField) => f.name === 'status') && declaredPublishPermission(entityConfig.slug)) {
-      statusRead = (await queryWithRLS<{ status: unknown }>(
+      statusRead = (await noRowOnMalformedId(queryWithRLS<{ status: unknown }>(
         `SELECT "status" FROM "${tableName}" WHERE id = $1 AND "teamId" = $2`,
         [id, teamId],
         authResult.user!.id
-      ))[0]
+      )))[0]
       if (statusRead && publishPermissionFor(entityConfig.slug, (validatedData as Record<string, unknown>).status, statusRead.status)) {
         const publishDenied = await checkAuthPermission(authResult, entityConfig.slug, 'publish', teamId, request)
         if (publishDenied) return publishDenied
@@ -2311,7 +2304,7 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
     })
 
     // Allow updates with only metas (no entity fields)
-    const metadataWasProvided = metas && typeof metas === 'object' && Object.keys(metas).length > 0
+    const metadataWasProvided = Boolean(metas && typeof metas === 'object' && Object.keys(metas).length > 0)
 
     if (updates.length === 0 && !metadataWasProvided) {
       const response = createApiError('No fields to update', 400)
@@ -2371,16 +2364,16 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
         RETURNING *
       `
 
-      const result = await mutateWithRLS(updateQuery, values, authResult.user!.id)
+      const result = { rows: await noRowOnMalformedId(mutateWithRLS(updateQuery, values, authResult.user!.id).then(r => r.rows)) }
 
       if (!result.rows || result.rows.length === 0) {
         // The status changed between the permission check and the UPDATE: the caller reloads and tries again
         if (statusRead) {
-          const [now] = await queryWithRLS<{ status: unknown }>(
+          const [now] = await noRowOnMalformedId(queryWithRLS<{ status: unknown }>(
             `SELECT "status" FROM "${tableName}" WHERE id = $1 AND "teamId" = $2`,
             [id, teamId],
             authResult.user!.id
-          )
+          ))
           if (now && now.status !== statusRead.status) {
             return addCorsHeaders(createApiError('The record changed while it was being saved. Reload it and try again.', 409, undefined, 'STATUS_CHANGED'), request)
           }
@@ -2401,7 +2394,7 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
         selectValues.push(teamId)
       }
 
-      const result = await queryWithRLS(selectQuery, selectValues, authResult.user!.id)
+      const result = await noRowOnMalformedId(queryWithRLS(selectQuery, selectValues, authResult.user!.id))
 
       if (!result || result.length === 0) {
         const response = createApiError('Item not found', 404)
@@ -2596,7 +2589,7 @@ async function handleGenericDeleteImpl(request: NextRequest, audit: AuditContext
       `
     }
 
-    const result = await mutateWithRLS(deleteQuery, deleteParams, authResult.user!.id)
+    const result = { rows: await noRowOnMalformedId(mutateWithRLS(deleteQuery, deleteParams, authResult.user!.id).then(r => r.rows)) }
 
     if (!result.rows || result.rows.length === 0) {
       const response = createApiError('Item not found', 404)
@@ -2755,7 +2748,7 @@ async function resolveChildContext(
 /**
  * An id the id column's type cannot hold (text on a uuid column, letters on a serial one: SQLSTATE 22P02) matches no
  * row, so the lookup answers 404 like any unknown id instead of failing. Used where the ids are the only values a
- * client controls that the schema has not already typed.
+ * client controls that the schema has not already typed (the child routes, and the by-id read, update and delete).
  */
 async function noRowOnMalformedId<T>(rows: Promise<T[]>): Promise<T[]> {
   try {
@@ -2873,11 +2866,11 @@ async function handleDistinctJsonbField(
     entityConfig: EntityConfig,
     fieldName: string,
     url: URL,
-    userId: string | null
+    userId: string | null,
+    limit: number
 ): Promise<NextResponse> {
   const tableName = getTableName(entityConfig)
   const parentId = url.searchParams.get('parentId')
-  const limit = parseInt(url.searchParams.get('limit') || '50')
 
   let query: string
   const queryParams: unknown[] = []

@@ -142,10 +142,11 @@ describe('POST /api/internal/user-metadata', () => {
     expect((await response.json()).error).toBe('Internal server error')
   })
 
-  test('answers 500 for a malformed body', async () => {
+  test('answers 400 INVALID_JSON for a malformed body', async () => {
     const response = await postMetadata(undefined, 'invalid-json-{')
 
-    expect(response.status).toBe(500)
+    expect(response.status).toBe(400)
+    expect((await response.json()).code).toBe('INVALID_JSON')
     expect(mockMutateWithRLS).not.toHaveBeenCalled()
   })
 

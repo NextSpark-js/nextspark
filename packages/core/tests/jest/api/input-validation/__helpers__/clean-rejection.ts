@@ -33,7 +33,7 @@ export async function bodyOf(response: ResponseLike): Promise<Record<string, unk
 /** 4xx, a non-empty stable `code` (or the exact one asked for), and nothing internal in the body. */
 export async function expectCleanRejection(
   response: ResponseLike,
-  expected: { status?: number; code?: string | RegExp; codeless?: boolean } = {},
+  expected: { status?: number; code?: string | RegExp } = {},
 ): Promise<Record<string, unknown>> {
   const body = await bodyOf(response)
   const text = JSON.stringify(body)
@@ -43,14 +43,11 @@ export async function expectCleanRejection(
   if (expected.status !== undefined) expect(response.status).toBe(expected.status)
 
   const code = body.code ?? (body.error as { code?: unknown } | undefined)?.code
-  if (expected.codeless) {
-    // routes outside the /api/v1 envelope answer { error: '<fixed text>' }: the stable part is the text
-    expect(typeof body.error).toBe('string')
-    expect(String(body.error)).not.toBe('')
-  } else {
-    expect(typeof code).toBe('string')
-    expect(String(code)).not.toBe('')
-  }
+  expect(typeof code).toBe('string')
+  expect(String(code)).not.toBe('')
+  // the text stays in `error` for clients that read it
+  expect(typeof body.error === 'string' || typeof (body.error as { message?: unknown } | undefined)?.message === 'string').toBe(true)
+  expect(String(typeof body.error === 'string' ? body.error : (body.error as { message: string }).message)).not.toBe('')
   if (typeof expected.code === 'string') expect(code).toBe(expected.code)
   if (expected.code instanceof RegExp) expect(String(code)).toMatch(expected.code)
 

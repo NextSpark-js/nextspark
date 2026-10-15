@@ -104,8 +104,8 @@ List media files with pagination, filtering, sorting, and full-text search. Retu
 | `orderDir` | string | `desc` | Sort direction: `asc`, `desc` |
 | `type` | string | `all` | Filter by type: `image`, `video`, `all` |
 | `search` | string | - | Search by filename, title, alt text, or caption |
-| `tagIds` | string | - | Comma-separated tag IDs to filter by |
-| `tagSlugs` | string | - | Comma-separated tag slugs to filter by |
+| `tagIds` | string | - | Comma-separated tag IDs to filter by (at most 100) |
+| `tagSlugs` | string | - | Comma-separated tag slugs to filter by (at most 100) |
 
 ### Request
 
@@ -287,7 +287,9 @@ curl -X POST "https://yourdomain.com/api/v1/media/upload" \
 
 - File type must be in `MEDIA_CONFIG.allowedMimeTypes`
 - File size must not exceed `MEDIA_CONFIG.maxSizeMB` (general), `maxSizeImageMB` (images), or `maxSizeVideoMB` (videos)
-- Empty files are skipped
+- At most 100 files per request (`400`, code `TOO_MANY_FILES`)
+- A file of zero bytes is refused (`400`, code `EMPTY_FILE`)
+- The body must be `multipart/form-data` (`415`, code `UNSUPPORTED_MEDIA_TYPE`)
 
 ---
 
@@ -303,7 +305,7 @@ Check if files with the same filename and file size already exist in the media l
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `files` | array | Yes | Array of `{ filename: string, fileSize: number }` objects |
+| `files` | array | Yes | 1 to 100 `{ filename: string, fileSize: number }` objects (`400` otherwise) |
 
 ### Request
 
@@ -593,7 +595,7 @@ Returns the updated list of tags for the media item:
 PUT /api/v1/media/:id/tags
 ```
 
-Replace all tags on a media item with the provided set.
+Replace all tags on a media item with the provided set (at most 100 tag ids).
 
 ```bash
 curl -X PUT "https://yourdomain.com/api/v1/media/550e8400-e29b-41d4-a716-446655440000/tags" \
@@ -703,7 +705,7 @@ Create a new media tag. The slug is auto-generated from the name. If a tag with 
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `name` | string | Yes | Tag display name |
+| `name` | string | Yes | Tag display name, 1 to 100 characters |
 
 ### Request
 

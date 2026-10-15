@@ -1,5 +1,6 @@
 import { getAuthorizationSession } from "@nextsparkjs/core/lib/auth/authorization-session";
 import { NextResponse } from "next/server";
+import { createApiError } from '@nextsparkjs/core/lib/api/error-response';
 import { getEntityRegistry } from "@nextsparkjs/core/lib/entities/queries";
 import type { EntityConfig, ChildEntityDefinition } from "@nextsparkjs/core/lib/entities/types";
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -47,13 +48,7 @@ export const GET = withRateLimitTier(async (request: Request) => {
     const session = await getAuthorizationSession(request.headers);
 
     if (!session?.user || session.user.role !== "developer") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Developer access required",
-        },
-        { status: 403 }
-      );
+      return createApiError("Developer access required", 403, undefined, 'FORBIDDEN');
     }
 
     // Build entity info array
@@ -101,17 +96,7 @@ export const GET = withRateLimitTier(async (request: Request) => {
     );
   } catch (error) {
     console.error("[API] /api/devtools/config/entities error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: process.env.NODE_ENV === "production"
-          ? "Failed to load entity configuration"
-          : error instanceof Error
-            ? error.message
-            : "Unknown error",
-      },
-      { status: 500 }
-    );
+    return createApiError("Failed to load entity configuration", 500, undefined, 'INTERNAL_ERROR');
   }
 }, 'read');
 

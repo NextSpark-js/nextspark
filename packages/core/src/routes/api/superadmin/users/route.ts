@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createApiError } from '@nextsparkjs/core/lib/api/error-response';
+import { parsePaginationParams } from '@nextsparkjs/core/lib/api/pagination';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import type { User } from '@nextsparkjs/core/types/user.types';
@@ -32,18 +34,12 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
     // Check if user is authenticated
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - No session found' },
-        { status: 401 }
-      );
+      return createApiError('Unauthorized - No session found', 401, undefined, 'AUTHENTICATION_REQUIRED');
     }
 
     // Check if user is superadmin or developer
     if (session.user.role !== 'superadmin' && session.user.role !== 'developer') {
-      return NextResponse.json(
-        { error: 'Forbidden - Superadmin or developer access required' },
-        { status: 403 }
-      );
+      return createApiError('Forbidden - Superadmin or developer access required', 403, undefined, 'FORBIDDEN');
     }
 
     // Parse query params
@@ -52,9 +48,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const roleFilter = searchParams.get('role') || '';
     const statusFilter = searchParams.get('status') || '';
     const tab = searchParams.get('tab') || 'users'; // users, superadmins, all
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')));
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = parsePaginationParams(request, 20);
 
     // Build WHERE conditions
     const buildWhereClause = (isSuperadmin: boolean) => {
@@ -124,7 +118,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       FROM "users"
       ${regularWhere.whereClause}
       ORDER BY "createdAt" DESC
-      ${tab === 'users' ? `LIMIT ${limit} OFFSET ${offset}` : ''}
+      ${tab === 'users' ? `LIMIT $${regularWhere.params.length + 1} OFFSET $${regularWhere.params.length + 2}` : ''}
     `;
 
     const regularCountQuery = `
@@ -148,7 +142,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       FROM "users"
       ${superadminWhere.whereClause}
       ORDER BY "createdAt" DESC
-      ${tab === 'superadmins' ? `LIMIT ${limit} OFFSET ${offset}` : ''}
+      ${tab === 'superadmins' ? `LIMIT $${superadminWhere.params.length + 1} OFFSET $${superadminWhere.params.length + 2}` : ''}
     `;
 
     const superadminCountQuery = `
@@ -193,9 +187,9 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       teamRoleDistribution,
       teamsCount
     ] = await Promise.all([
-      queryWithRLS(regularUsersQuery, regularWhere.params, session.user.id, { service: true }) as Promise<User[]>,
+      queryWithRLS(regularUsersQuery, tab === 'users' ? [...regularWhere.params, limit, offset] : regularWhere.params, session.user.id, { service: true }) as Promise<User[]>,
       queryWithRLS(regularCountQuery, regularWhere.params, session.user.id, { service: true }) as Promise<{ total: number }[]>,
-      queryWithRLS(superadminsQuery, superadminWhere.params, session.user.id, { service: true }) as Promise<User[]>,
+      queryWithRLS(superadminsQuery, tab === 'superadmins' ? [...superadminWhere.params, limit, offset] : superadminWhere.params, session.user.id, { service: true }) as Promise<User[]>,
       queryWithRLS(superadminCountQuery, superadminWhere.params, session.user.id, { service: true }) as Promise<{ total: number }[]>,
       queryWithRLS(statusDistributionQuery, [], session.user.id, { service: true }) as Promise<{ status: string; count: number }[]>,
       queryWithRLS(teamRoleDistributionQuery, [], session.user.id, { service: true }) as Promise<{ role: string; count: number }[]>,
@@ -288,13 +282,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   } catch (error) {
     console.error('Error fetching users data:', error);
 
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: 'Failed to retrieve users data'
-      },
-      { status: 500 }
-    );
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to retrieve users data' });
   }
 }, 'strict');
 
@@ -305,10 +293,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
  * Currently returns not implemented.
  */
 export const POST = withRateLimitTier(async () => {
-  return NextResponse.json(
-    { error: 'Not implemented yet' },
-    { status: 501 }
-  );
+  return createApiError('Not implemented yet', 501, undefined, 'HTTP_501');
 }, 'strict');
 
 /**
@@ -318,10 +303,7 @@ export const POST = withRateLimitTier(async () => {
  * Currently returns not implemented.
  */
 export const PUT = withRateLimitTier(async () => {
-  return NextResponse.json(
-    { error: 'Not implemented yet' },
-    { status: 501 }
-  );
+  return createApiError('Not implemented yet', 501, undefined, 'HTTP_501');
 }, 'strict');
 
 export const OPTIONS = corsPreflight;

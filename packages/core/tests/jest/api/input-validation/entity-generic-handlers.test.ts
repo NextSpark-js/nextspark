@@ -6,7 +6,6 @@
  * query parameters, pagination out of range, extra fields. Each must come back 4xx with a stable code,
  * nothing internal in the body, and no write reaching the data layer.
  *
- * `test.failing` marks a case that today misbehaves; the finding is in the S192 report.
  */
 
 import { harness, makeRequest, SESSION_AUTH, PETS_ENTITY } from '../entity/__helpers__/generic-handler-harness'
@@ -81,17 +80,13 @@ beforeEach(() => {
 const noWrites = () => expect(writesFrom(mocks.mutateWithRLS)).toEqual([])
 
 describe('POST /api/v1/[entity] — malformed bodies', () => {
-  // A JSON null makes the handler destructure null and answer 500 (S192 finding F1).
-  const KNOWN_DEFECTS = new Set(['a JSON null'])
-
   describe.each(MALFORMED_BODIES)('%s', (label, body) => {
     const run = async () => {
       const response = await post(body)
-      await expectCleanRejection(response, { status: 400 })
+      await expectCleanRejection(response, { status: 400, code: 'INVALID_JSON' })
       noWrites()
     }
-    if (KNOWN_DEFECTS.has(label)) test.failing('is rejected with 400 and writes nothing', run)
-    else test('is rejected with 400 and writes nothing', run)
+    test('is rejected with 400 and writes nothing', run)
   })
 })
 
@@ -127,14 +122,13 @@ describe('POST /api/v1/[entity] — field values', () => {
     noWrites()
   })
 
-  // Trimming happens after the required-check, so a whitespace-only value passes as present (finding F4).
-  test.failing('rejects a required text field that is only whitespace with 400 VALIDATION_ERROR', async () => {
+  test('rejects a required text field that is only whitespace with 400 VALIDATION_ERROR', async () => {
     const response = await post(jsonBody({ name: '   ' }))
     await expectCleanRejection(response, { status: 400, code: 'VALIDATION_ERROR' })
     noWrites()
   })
 
-  test.failing('rejects a text value containing a NUL character with 400 (the database cannot store it)', async () => {
+  test('rejects a text value containing a NUL character with 400 (the database cannot store it)', async () => {
     const response = await post(jsonBody({ name: 'Rex\u0000Jr' }))
     await expectCleanRejection(response, { status: 400 })
     noWrites()
@@ -182,28 +176,24 @@ describe('POST /api/v1/[entity] — an entity with no required field', () => {
     mocks.resolveEntityFromUrl.mockResolvedValue({ isValidEntity: true, entityConfig: optional, entityName: 'pets' })
   })
 
-  // A bare number, string or boolean is not an object; today it is read as an empty object and a blank row is created (finding F1).
-  test.failing.each([
+  test.each([
     ['a JSON number', 42],
     ['a JSON boolean', true],
   ])('rejects %s in place of an object with 400 and writes nothing', async (_label, value) => {
     const response = await post(jsonBody(value))
-    await expectCleanRejection(response, { status: 400 })
+    await expectCleanRejection(response, { status: 400, code: 'INVALID_JSON' })
     noWrites()
   })
 })
 
 describe('PATCH /api/v1/[entity]/[id] — malformed bodies and values', () => {
-  const KNOWN_DEFECTS = new Set(['a JSON null'])
-
   describe.each(MALFORMED_BODIES)('%s', (label, body) => {
     const run = async () => {
       const response = await patch(body)
-      await expectCleanRejection(response, { status: 400 })
+      await expectCleanRejection(response, { status: 400, code: 'INVALID_JSON' })
       noWrites()
     }
-    if (KNOWN_DEFECTS.has(label)) test.failing('is rejected with 400 and writes nothing', run)
-    else test('is rejected with 400 and writes nothing', run)
+    test('is rejected with 400 and writes nothing', run)
   })
 
   test.each([
@@ -267,8 +257,6 @@ describe('ids that are not UUIDs', () => {
     })
   })
 
-  // An entity whose id column is declared uuid (the CRM template has some) makes the database reject the id; the
-  // handlers do not check the shape first, so that rejection is a 500 (finding F2, low).
   describe('on a table whose id column is a uuid type', () => {
     const badId = 'not-a-uuid'
     beforeEach(() => {
@@ -276,18 +264,18 @@ describe('ids that are not UUIDs', () => {
       mocks.mutateWithRLS.mockImplementation(async (sql: string, params: unknown[] = []) => { pgRejects(sql, params, badId); return { rows: [], rowCount: 0 } })
     })
 
-    test.failing('GET answers 4xx', async () => {
+    test('GET answers 404', async () => {
       const response = await handleGenericRead(requestWith('GET', `http://localhost/api/v1/pets/${badId}`), ctx(badId)) as unknown as Res
-      await expectCleanRejection(response)
+      await expectCleanRejection(response, { status: 404 })
     })
 
-    test.failing('PATCH answers 4xx', async () => {
-      await expectCleanRejection(await patch(jsonBody({ name: 'Rex' }), badId))
+    test('PATCH answers 404', async () => {
+      await expectCleanRejection(await patch(jsonBody({ name: 'Rex' }), badId), { status: 404 })
     })
 
-    test.failing('DELETE answers 4xx', async () => {
+    test('DELETE answers 404', async () => {
       const response = await handleGenericDelete(requestWith('DELETE', `http://localhost/api/v1/pets/${badId}`), ctx(badId)) as unknown as Res
-      await expectCleanRejection(response)
+      await expectCleanRejection(response, { status: 404 })
     })
   })
 })
@@ -326,7 +314,6 @@ describe('GET /api/v1/[entity] — query parameters', () => {
   })
 
   describe('pagination out of range', () => {
-    // Every pagination value that reaches the database must be a finite number: NaN is a type error there (finding F3).
     const reachesDatabaseAsNumbers = () => {
       for (const [sql, params] of mocks.queryWithRLS.mock.calls as Array<[string, unknown[]]>) {
         pgRejects(sql, params)
@@ -347,7 +334,7 @@ describe('GET /api/v1/[entity] — query parameters', () => {
       reachesDatabaseAsNumbers()
     })
 
-    test.failing.each([
+    test.each([
       ['a page that is not a number', '?page=abc'],
       ['a limit that is not a number', '?limit=many'],
     ])('answers %s with 4xx or a clamped 200, never a 500 (the offset becomes NaN)', async (_label, query) => {

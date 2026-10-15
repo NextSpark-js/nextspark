@@ -53,7 +53,7 @@ export const teamMemberSchema = z.object({
 export const teamInvitationSchema = z.object({
   id: z.string().uuid(),
   teamId: z.string(),
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Invalid email address').max(254, 'Email address is too long'),
   role: teamRoleSchema,
   status: invitationStatusSchema,
   token: z.string().uuid(),
@@ -114,7 +114,7 @@ export const adminUpdateTeamSchema = z.object({
 export const updateTeamSchema = ownerUpdateTeamSchema.extend(adminUpdateTeamSchema.shape)
 
 export const inviteMemberSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Invalid email address').max(254, 'Email address is too long'),
   role: z.string().refine(
     (role) => getInvitableRoles().includes(role),
     // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131

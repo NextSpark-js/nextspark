@@ -51,9 +51,9 @@ describe('POST /api/v1/teams/[teamId]/members — values', () => {
     noWrites()
   })
 
-  // No maximum length is declared for the address (finding F10, low): it is stored as sent, so only "not a 500" holds.
-  test('an e-mail far over any sane length does not cause a server error', async () => {
+  test('an e-mail address over 254 characters is answered 400 VALIDATION_ERROR and writes nothing', async () => {
     const response = await invoke(asJson({ email: `${'a'.repeat(100_000)}@example.test`, role: 'member' }))
-    expect(response.status).toBeLessThan(500)
+    await expectCleanRejection(response, { status: 400, code: 'VALIDATION_ERROR' })
+    noWrites()
   })
 })

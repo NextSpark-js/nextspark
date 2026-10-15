@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
-import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { createApiResponse, createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/helpers'
 import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
+import { createMediaTagSchema, MAX_TAG_NAME_LENGTH } from '@nextsparkjs/core/lib/media/schemas'
 
 /**
  * GET /api/v1/media-tags
@@ -66,14 +67,16 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
-    const body = await request.json()
-    const { name } = body
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
+    const parsed = createMediaTagSchema.safeParse(body)
 
-    if (!name || typeof name !== 'string' || !name.trim()) {
-      return createApiError('Tag name is required', 400)
+    if (!parsed.success) {
+      return createApiError(`Tag name is required (1 to ${MAX_TAG_NAME_LENGTH} characters)`, 400, { errors: parsed.error.issues }, 'VALIDATION_ERROR')
     }
 
-    const tag = await MediaService.createTag(name, authResult.user!.id, teamId)
+    const tag = await MediaService.createTag(parsed.data.name, authResult.user!.id, teamId)
     return createApiResponse(tag, undefined, 201)
   } catch (error) {
     console.error('[Media Tags API] Error creating tag:', error)

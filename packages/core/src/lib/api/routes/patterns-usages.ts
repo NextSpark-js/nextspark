@@ -18,6 +18,7 @@ import {
   withApiLogging,
   handleCorsPreflightRequest,
   addCorsHeaders,
+  parsePaginationParams,
 } from '../helpers'
 import { authenticateRequest, createAuthFailureResponse } from '../auth/dual-auth'
 import { PatternUsageService } from '../../services'
@@ -84,9 +85,7 @@ export function createPatternUsagesHandlers() {
         // Parse query parameters
         const url = new URL(req.url)
         const entityType = url.searchParams.get('entityType') || undefined
-        const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100)
-        const page = Math.max(parseInt(url.searchParams.get('page') || '1', 10), 1)
-        const offset = (page - 1) * limit
+        const { page, limit, offset } = parsePaginationParams(req, 50)
 
         // Get usages with entity info
         const result = await PatternUsageService.getUsagesWithEntityInfo(

@@ -1,3 +1,4 @@
+import * as z from 'zod';
 import { API_CONFIG } from '../config/config-client';
 
 /**
@@ -211,6 +212,9 @@ export const API_KEY_LIMITS = {
   maxKeyNameLength: 100,
   keyExpirationDays: 365
 } as const;
+
+/** The rule for an API key's name, on create and on rename. */
+export const apiKeyNameSchema = z.string().min(1, 'Name is required').max(API_KEY_LIMITS.maxKeyNameLength, 'Name too long');
 
 /**
  * Configuración de rate limiting por scope

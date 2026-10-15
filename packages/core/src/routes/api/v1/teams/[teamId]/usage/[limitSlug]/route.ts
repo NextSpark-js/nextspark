@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { validateAndAuthenticateRequest, createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { validateAndAuthenticateRequest, createApiResponse, createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/helpers'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { SubscriptionService, UsageService, MembershipService } from '@nextsparkjs/core/lib/services'
@@ -76,9 +76,10 @@ export const POST = withRateLimitTier(async function POST(request: NextRequest, 
       )
     }
 
-    const body = await request.json()
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
     const data = trackUsageSchema.parse({
-      ...body,
+      ...parsedBody.data,
       limitSlug,
     })
 
@@ -90,9 +91,11 @@ export const POST = withRateLimitTier(async function POST(request: NextRequest, 
 
     return createApiResponse(result, { created: true }, 201)
   } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      return createApiError('Validation error', 400, (error as { issues?: unknown[] }).issues, 'VALIDATION_ERROR')
+    }
     console.error('[Billing API] Error tracking usage:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Failed to track usage'
-    return createApiError(errorMessage, 500)
+    return createApiError('Failed to track usage', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write')
 

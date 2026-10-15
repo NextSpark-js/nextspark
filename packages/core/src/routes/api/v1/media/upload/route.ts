@@ -10,6 +10,7 @@ import { MEDIA_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { extractImageDimensions, sanitizeFilename } from '@nextsparkjs/core/lib/media/utils'
 import { bytesMatchMime, extensionForMime } from '@nextsparkjs/core/lib/media/file-signature'
+import { MAX_MEDIA_BATCH } from '@nextsparkjs/core/lib/media/schemas'
 import type { Media } from '@nextsparkjs/core/lib/media/types'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
@@ -90,12 +91,26 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
 
     if (!isVercelBlobConfigured() && !localFallbackAllowed()) return storageNotConfigured()
 
-    const formData = await request.formData()
+    let formData: FormData
+    try {
+      formData = await request.formData()
+    } catch {
+      return createApiError('Request body must be multipart/form-data', 415, undefined, 'UNSUPPORTED_MEDIA_TYPE')
+    }
     const files = Array.from(formData.getAll('files') as unknown[])
       .filter((value): value is File => value instanceof File)
 
     if (files.length === 0) {
-      return createApiError('No files uploaded', 400)
+      return createApiError('No files uploaded', 400, undefined, 'NO_FILES')
+    }
+
+    if (files.length > MAX_MEDIA_BATCH) {
+      return createApiError(`At most ${MAX_MEDIA_BATCH} files per upload`, 400, undefined, 'TOO_MANY_FILES')
+    }
+
+    const emptyFile = files.find(file => !file.size)
+    if (emptyFile) {
+      return createApiError(`File ${sanitizeFilename(emptyFile.name)} is empty`, 400, undefined, 'EMPTY_FILE')
     }
 
     const uploadedUrls: string[] = []
@@ -105,10 +120,6 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     console.log(`📤 [Media Upload] Storage mode: ${useVercelBlob ? 'Vercel Blob' : 'Local Storage'}`)
 
     for (const file of files) {
-      if (!file.size) {
-        continue // Skip empty files
-      }
-
       // Validate file type using config (theme-overridable)
       const allowedTypes = MEDIA_CONFIG?.allowedMimeTypes ?? [
         'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
@@ -224,11 +235,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
           console.error(`❌ Error stack:`, fileError.stack)
         }
 
-        return createApiError(
-          `Failed to upload file ${file.name}`,
-          500,
-          { fileName: file.name, error: errorMessage }
-        )
+        return createApiError(`Failed to upload file ${sanitizeFilename(file.name)}`, 500, undefined, 'INTERNAL_ERROR')
       }
     }
 
@@ -243,11 +250,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
 
   } catch (error) {
     console.error('Error uploading files:', error)
-    return createApiError(
-      'Failed to upload files',
-      500,
-      { error: error instanceof Error ? error.message : String(error) }
-    )
+    return createApiError('Failed to upload files', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write');
 
@@ -292,11 +295,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
   } catch (error) {
     console.error('Error in media upload GET:', error)
-    return createApiError(
-      'Failed to get upload info',
-      500,
-      { error: error instanceof Error ? error.message : String(error) }
-    )
+    return createApiError('Failed to get upload info', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'read');
 

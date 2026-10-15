@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
 import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
@@ -42,13 +43,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   const teamId = request.headers.get('x-team-id') || authResult.user.defaultTeamId
 
   if (!teamId) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'No team context available. Please provide x-team-id header.'
-      },
-      { status: 400 }
-    )
+    return createApiError('No team context available. Please provide x-team-id header.', 400, undefined, 'VALIDATION_ERROR')
   }
 
   // 3. Permission check using MembershipService
@@ -56,27 +51,13 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   const actionResult = membership.canPerformAction('team.billing.manage')
 
   if (!actionResult.allowed) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: actionResult.message,
-        reason: actionResult.reason,
-        meta: actionResult.meta,
-      },
-      { status: 403 }
-    )
+    return createApiError(actionResult.message, 403, undefined, 'ACTION_NOT_ALLOWED', { reason: actionResult.reason, meta: actionResult.meta })
   }
 
   // 4. Parse and validate request body
-  let body: Record<string, unknown>
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json(
-      { success: false, error: 'Invalid JSON body' },
-      { status: 400 }
-    )
-  }
+  const parsedBody = await readJsonObject(request)
+  if (parsedBody.error) return parsedBody.error
+  const body = parsedBody.data
 
   // Check if this is a reactivation request
   if (body.action === 'reactivate') {
@@ -86,10 +67,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   // Otherwise, it's a cancel request
   const parseResult = cancelSchema.safeParse(body)
   if (!parseResult.success) {
-    return NextResponse.json(
-      { success: false, error: 'Invalid request body', details: parseResult.error.issues },
-      { status: 400 }
-    )
+    return createApiError('Invalid request body', 400, parseResult.error.issues, 'VALIDATION_ERROR')
   }
 
   const { immediate, reason } = parseResult.data
@@ -98,10 +76,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   const subscription = await SubscriptionService.getActive(teamId)
 
   if (!subscription || !subscription.externalSubscriptionId) {
-    return NextResponse.json(
-      { success: false, error: 'No active subscription found' },
-      { status: 404 }
-    )
+    return createApiError('No active subscription found', 404, undefined, 'NOT_FOUND')
   }
 
   // 6. Cancel via billing gateway
@@ -142,13 +117,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     })
   } catch (error) {
     console.error('[cancel] Error canceling subscription:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to cancel subscription'
-      },
-      { status: 500 }
-    )
+    return createApiError('Failed to cancel subscription', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'strict');
 
@@ -159,17 +128,11 @@ async function handleReactivation(teamId: string) {
   const subscription = await SubscriptionService.getActive(teamId)
 
   if (!subscription || !subscription.externalSubscriptionId) {
-    return NextResponse.json(
-      { success: false, error: 'No active subscription found' },
-      { status: 404 }
-    )
+    return createApiError('No active subscription found', 404, undefined, 'NOT_FOUND')
   }
 
   if (!subscription.cancelAtPeriodEnd) {
-    return NextResponse.json(
-      { success: false, error: 'Subscription is not scheduled for cancellation' },
-      { status: 400 }
-    )
+    return createApiError('Subscription is not scheduled for cancellation', 400, undefined, 'VALIDATION_ERROR')
   }
 
   try {
@@ -196,13 +159,7 @@ async function handleReactivation(teamId: string) {
     })
   } catch (error) {
     console.error('[cancel] Error reactivating subscription:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to reactivate subscription'
-      },
-      { status: 500 }
-    )
+    return createApiError('Failed to reactivate subscription', 500, undefined, 'INTERNAL_ERROR')
   }
 }
 

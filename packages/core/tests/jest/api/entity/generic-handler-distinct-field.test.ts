@@ -81,6 +81,16 @@ describe('handleGenericList — #96 distinct field name is validated against ent
     expect(mocks.queryWithRLS).not.toHaveBeenCalled()
   })
 
+  it.each([['text', 'abc', 50], ['a negative number', '-1', 1], ['far over the maximum', '100000', 100], ['the default when absent', '', 50]])('the JSONB distinct limit given %s is bound as %s', async (_label, raw, expected) => {
+    const params: Record<string, string> = { fields: 'hashtags', distinct: 'true' }
+    if (raw) params.limit = raw
+    const response = await handleGenericList(makeRequest({ url: listUrl(params), headers: TEAM_HEADERS })) as unknown as { status: number }
+    expect(response.status).toBe(200)
+    const [, values] = mocks.queryWithRLS.mock.calls[0] as [string, unknown[]]
+    expect(values).toContain(expected)
+    expect(values.every(v => typeof v !== 'number' || Number.isFinite(v))).toBe(true)
+  })
+
   it('regression: the sibling non-distinct ?fields= branch keeps stripping unknown names', async () => {
     const request = makeRequest({ url: listUrl({ fields: 'name,bogus' }), headers: TEAM_HEADERS })
     const response = await handleGenericList(request) as unknown as { status: number }

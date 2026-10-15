@@ -6,6 +6,7 @@ import {
   withApiLogging,
   handleCorsPreflightRequest,
   addCorsHeaders,
+  readJsonObject,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
@@ -83,7 +84,9 @@ export const PATCH = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response, req)
       }
 
-      const body = await req.json()
+      const parsedBody = await readJsonObject(req)
+      if (parsedBody.error) return addCorsHeaders(parsedBody.error, req)
+      const body = parsedBody.data
       const validatedData = updateMemberRoleSchema.parse(body)
 
       // Validate role transition

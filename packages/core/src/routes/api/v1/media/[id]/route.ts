@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
-import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { createApiResponse, createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/helpers'
 import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
@@ -94,7 +94,9 @@ export const PATCH = withRateLimitTier(async (
     const { id } = await params
 
     // 5. Parse and validate request body
-    const body = await request.json()
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
     const parsed = updateMediaSchema.safeParse(body)
 
     if (!parsed.success) {
@@ -113,10 +115,7 @@ export const PATCH = withRateLimitTier(async (
     return createApiResponse(media)
   } catch (error) {
     console.error('[Media API] Error updating media:', error)
-    return createApiError(
-      error instanceof Error ? error.message : 'Failed to update media',
-      500
-    )
+    return createApiError('Failed to update media', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write')
 

@@ -1,5 +1,6 @@
 import { getAuthorizationSession } from "@nextsparkjs/core/lib/auth/authorization-session";
 import { NextResponse } from "next/server";
+import { createApiError } from '@nextsparkjs/core/lib/api/helpers';
 import { readdir, stat } from "fs/promises";
 import { join } from "path";
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -66,13 +67,7 @@ export const GET = withRateLimitTier(async (request: Request) => {
     const session = await getAuthorizationSession(request.headers);
 
     if (!session?.user || session.user.role !== "developer") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Developer access required",
-        },
-        { status: 403 }
-      );
+      return createApiError("Developer access required", 403, undefined, 'FORBIDDEN');
     }
 
     const testsBasePath = join(
@@ -114,17 +109,7 @@ export const GET = withRateLimitTier(async (request: Request) => {
     );
   } catch (error) {
     console.error("[API] /api/devtools/tests error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: process.env.NODE_ENV === "production"
-          ? "Failed to load test files"
-          : error instanceof Error
-            ? error.message
-            : "Unknown error",
-      },
-      { status: 500 }
-    );
+    return createApiError("Failed to load test files", 500, undefined, 'INTERNAL_ERROR');
   }
 }, 'read');
 

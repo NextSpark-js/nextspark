@@ -140,11 +140,17 @@ jest.mock('@/core/lib/api/helpers', () => ({
   }),
   addCorsHeaders: async (response: unknown) => response,
   handleCorsPreflightRequest: async () => ({ status: 200 }),
-  parsePaginationParams: (request: { url: string }) => {
-    const { searchParams } = new URL(request.url)
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '10')))
-    return { page, limit, offset: (page - 1) * limit }
+  // the real, dependency-free pagination module
+  parsePaginationParams: (...args: unknown[]) => (jest.requireActual('@/core/lib/api/pagination').parsePaginationParams as (...a: unknown[]) => unknown)(...args),
+  // mirrors the real helper: the object, or a 400 INVALID_JSON in `error`
+  readJsonObject: async (request: { json: () => Promise<unknown> }) => {
+    const invalid = (message: string) => ({
+      error: { status: 400, body: { success: false, error: message, code: 'INVALID_JSON' }, async json() { return this.body } },
+    })
+    let body: unknown
+    try { body = await request.json() } catch { return invalid('Request body must be valid JSON') }
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) return invalid('Request body must be a JSON object')
+    return { data: body as Record<string, unknown> }
   },
   createPaginationMeta: (page: number, limit: number, total: number) => ({
     page, limit, total, totalPages: Math.ceil(total / limit), hasNextPage: page * limit < total, hasPrevPage: page > 1,

@@ -154,9 +154,6 @@ export const routeHarness = {
 // Matrices
 // ---------------------------------------------------------------------------
 
-/** A case that misbehaves today: `test.failing`, or a plain `test` when S192_SHOW_DEFECTS=1 (to read the failure reasons). */
-const knownDefect: typeof test = (process.env.S192_SHOW_DEFECTS === '1' ? test : test.failing) as typeof test
-
 /** What Postgres does with a LIMIT / OFFSET it cannot take: a NaN or negative number, as a parameter or written into the text. */
 export function pgRejectsPaging(sql: string, params: unknown[] = []) {
   const bad = params.some(p => typeof p === 'number' && !Number.isFinite(p))
@@ -168,22 +165,19 @@ export function pgRejectsPaging(sql: string, params: unknown[] = []) {
 export const noWrites = () => expect(allWrites()).toEqual([])
 
 /**
- * One test per malformed-body class for an endpoint that takes a JSON object. `defects` lists the classes that
- * misbehave today (S192 findings); they run as `test.failing` so the suite stays green and the defect stays visible.
+ * One test per malformed-body class for an endpoint that takes a JSON object.
  */
 export function describeMalformedBodies(
   invoke: (body: BodyKind) => Promise<ResponseLike>,
-  options: { defects?: string[]; status?: number; code?: string | RegExp; codeless?: boolean } = {},
+  options: { status?: number; code?: string | RegExp } = {},
 ) {
-  const defects = new Set(options.defects ?? [])
   describe.each(MALFORMED_BODIES)('%s', (label, body) => {
     const run = async () => {
       const response = await invoke(body)
-      await expectCleanRejection(response, { status: options.status ?? 400, code: options.code, codeless: options.codeless })
+      await expectCleanRejection(response, { status: options.status ?? 400, code: options.code ?? 'INVALID_JSON' })
       noWrites()
     }
-    if (defects.has(label)) knownDefect('is rejected with 4xx and writes nothing', run)
-    else test('is rejected with 4xx and writes nothing', run)
+    test('is rejected with 4xx and writes nothing', run)
   })
 }
 
@@ -191,17 +185,15 @@ export function describeMalformedBodies(
 export function describeRejectedValues(
   invoke: (body: BodyKind) => Promise<ResponseLike>,
   cases: Array<[string, unknown]>,
-  options: { defects?: string[]; status?: number; code?: string | RegExp; codeless?: boolean } = {},
+  options: { status?: number; code?: string | RegExp } = {},
 ) {
-  const defects = new Set(options.defects ?? [])
   describe.each(cases)('%s', (label, value) => {
     const run = async () => {
       const response = await invoke(asJson(value))
-      await expectCleanRejection(response, { status: options.status ?? 400, code: options.code, codeless: options.codeless })
+      await expectCleanRejection(response, { status: options.status ?? 400, code: options.code })
       noWrites()
     }
-    if (defects.has(label)) knownDefect('is rejected with 4xx and writes nothing', run)
-    else test('is rejected with 4xx and writes nothing', run)
+    test('is rejected with 4xx and writes nothing', run)
   })
 }
 

@@ -275,42 +275,8 @@ export function createApiResponse<T>(data: T, responseMeta?: Record<string, unkn
   }, { status });
 }
 
-/**
- * Crea una respuesta de error estandarizada para la API
- */
-export function createApiError(
-  message: string, 
-  status: number = 400, 
-  details?: unknown,
-  code?: string
-) {
-  return NextResponse.json({
-    success: false,
-    error: message,
-    code: code || `HTTP_${status}`,
-    details,
-    info: {
-      timestamp: new Date().toISOString()
-    }
-  }, { status });
-}
-
-/**
- * Parsea y valida parámetros de paginación
- */
-export function parsePaginationParams(request: NextRequest): {
-  page: number;
-  limit: number;
-  offset: number;
-} {
-  const { searchParams } = new URL(request.url);
-  
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
-  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '10')));
-  const offset = (page - 1) * limit;
-  
-  return { page, limit, offset };
-}
+export { createApiError, readJsonObject } from './error-response';
+export { parsePaginationParams, MAX_PAGE_SIZE } from './pagination';
 
 /**
  * Crea metadatos de paginación para respuestas

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
 import { queryOneWithRLS, mutateWithRLS, queryOne } from '@nextsparkjs/core/lib/db'
 import { profileSchema } from '@nextsparkjs/core/lib/validation'
@@ -14,7 +15,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const session = await getAuthorizationSession(sessionHeaders)
     
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createApiError('Unauthorized', 401, undefined, 'AUTHENTICATION_REQUIRED')
     }
     
     // Get user profile data including the new fields
@@ -25,7 +26,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     )
     
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return createApiError('User not found', 404, undefined, 'NOT_FOUND')
     }
     
     // Get auth method (check if user has password or uses OAuth) - using direct query for auth table
@@ -52,7 +53,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     return NextResponse.json(result)
   } catch (error) {
     console.error('Error fetching user profile:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'read');
 
@@ -62,17 +63,19 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
     const session = await getAuthorizationSession(sessionHeaders)
     
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createApiError('Unauthorized', 401, undefined, 'AUTHENTICATION_REQUIRED')
     }
     
-    const body = await request.json()
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
     const { meta, ...profileData } = body
     
     // Handle metadata-only updates (nested format)
     if (meta && Object.keys(profileData).length === 0) {
       // Each group (uiPreferences, ...) is merged into the stored one: the
       // theme toggle sends only `theme`, the sidebar only `sidebarCollapsed`.
-      await MetaService.mergeEntityMetaGroups('user', session.user.id, meta, session.user.id)
+      await MetaService.mergeEntityMetaGroups('user', session.user.id, meta as Record<string, unknown>, session.user.id)
 
       return NextResponse.json({ 
         message: 'Settings updated successfully',
@@ -85,10 +88,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
       // Validate the request body
       const validationResult = profileSchema.safeParse(profileData)
       if (!validationResult.success) {
-        return NextResponse.json({ 
-          error: 'Invalid data', 
-          details: validationResult.error.issues 
-        }, { status: 400 })
+        return createApiError('Invalid data', 400, validationResult.error.issues, 'VALIDATION_ERROR')
       }
       
       const { firstName, lastName, country, timezone, language } = validationResult.data
@@ -106,13 +106,13 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
       const updatedUser = result.rows[0]
       
       if (!updatedUser) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+        return createApiError('User not found', 404, undefined, 'NOT_FOUND')
       }
     }
 
     // Handle metadata updates if provided (nested format), merged like above
     if (meta) {
-      await MetaService.mergeEntityMetaGroups('user', session.user.id, meta, session.user.id)
+      await MetaService.mergeEntityMetaGroups('user', session.user.id, meta as Record<string, unknown>, session.user.id)
     }
 
     return NextResponse.json({
@@ -121,10 +121,10 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
     })
   } catch (error) {
     if (error instanceof MetaValueTooLargeError) {
-      return NextResponse.json({ error: error.message }, { status: 413 })
+      return createApiError(error.message, 413, undefined, 'PAYLOAD_TOO_LARGE')
     }
     console.error('Error updating user profile:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write');
 

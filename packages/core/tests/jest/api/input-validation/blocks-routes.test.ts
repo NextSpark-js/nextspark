@@ -1,7 +1,7 @@
 /**
  * S192 — input validation of /api/v1/blocks (GET), /api/v1/blocks/[slug] (GET) and /api/v1/blocks/validate (POST).
  * The registries are plain objects, so a slug that names an object property ("constructor") is a lookup that
- * must still answer "not found" (finding F18).
+ * must still answer "not found".
  */
 
 import { NextRequest } from 'next/server'
@@ -49,7 +49,7 @@ describe('GET /api/v1/blocks/[slug]', () => {
   })
 
   // The registry is a plain object: these names are found on its prototype and answered 200 with empty fields.
-  test.failing.each([['constructor'], ['toString'], ['hasOwnProperty'], ['__proto__']])('the slug %s is answered 404', async (slug) => {
+  test.each([['constructor'], ['toString'], ['hasOwnProperty'], ['__proto__']])('the slug %s is answered 404', async (slug) => {
     expect((await get(slug)).status).toBe(404)
   })
 })
@@ -88,7 +88,7 @@ describe('POST /api/v1/blocks/validate', () => {
     expect(response.status).toBe(200)
   })
 
-  test.failing.each([['constructor'], ['toString'], ['hasOwnProperty']])('the block slug %s is answered 404, not 500', async (blockSlug) => {
-    await expectCleanRejection(await invoke(asJson({ blockSlug, props: {} })), { status: 404, codeless: true })
+  test.each([['constructor'], ['toString'], ['hasOwnProperty']])('the block slug %s is answered 404, not 500', async (blockSlug) => {
+    await expectCleanRejection(await invoke(asJson({ blockSlug, props: {} })), { status: 404 })
   })
 })

@@ -98,7 +98,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         success: false,
         error: 'Internal server error',
         code: 'PROCESSING_ERROR',
-        details: error instanceof Error ? error.message : 'Unknown error',
         info: {
           timestamp: new Date().toISOString(),
           executionTime

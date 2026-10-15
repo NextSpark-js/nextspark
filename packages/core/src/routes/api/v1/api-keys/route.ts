@@ -5,16 +5,17 @@ import {
   createApiError,
   withApiLogging,
   handleCorsPreflightRequest,
-  addCorsHeaders
+  addCorsHeaders,
+  readJsonObject,
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth';
-import { ApiKeyManager, API_SCOPES, API_KEY_LIMITS } from '@nextsparkjs/core/lib/api/keys';
+import { ApiKeyManager, API_SCOPES, API_KEY_LIMITS, apiKeyNameSchema } from '@nextsparkjs/core/lib/api/keys';
 import { validateScopesForUser } from '@nextsparkjs/core/lib/api/auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import * as z from 'zod';
 
 const createApiKeySchema = z.object({
-  name: z.string().min(1, 'Name is required').max(API_KEY_LIMITS.maxKeyNameLength, 'Name too long'),
+  name: apiKeyNameSchema,
   scopes: z.array(z.string()).min(1, 'At least one scope is required'),
   expiresAt: z.string().datetime().optional()
 });
@@ -137,7 +138,9 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
       return authResult.rateLimitResponse as NextResponse;
     }
 
-    const body = await req.json();
+    const parsedBody = await readJsonObject(req);
+    if (parsedBody.error) return addCorsHeaders(parsedBody.error, req);
+    const body = parsedBody.data;
     const validatedData = createApiKeySchema.parse(body);
 
     // Validar que los scopes sean válidos

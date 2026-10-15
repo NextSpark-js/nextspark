@@ -6,7 +6,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { validateAndAuthenticateRequest, createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { validateAndAuthenticateRequest, createApiResponse, createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/helpers'
 import { PlanService } from '@nextsparkjs/core/lib/services'
 import { createPlanSchema } from '@nextsparkjs/core/lib/billing/schema'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
@@ -42,8 +42,9 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   }
 
   try {
-    const body = await request.json()
-    const data = createPlanSchema.parse(body)
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const data = createPlanSchema.parse(parsedBody.data)
 
     const { rows } = await mutateWithRLS(
       `
@@ -73,6 +74,9 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
 
     return createApiResponse(rows[0], { created: true }, 201)
   } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      return createApiError('Validation error', 400, (error as { issues?: unknown[] }).issues, 'VALIDATION_ERROR')
+    }
     const errorMessage = error instanceof Error ? error.message : ''
     if (errorMessage.includes('duplicate') || errorMessage.includes('unique')) {
       return createApiError('Plan slug already exists', 400)

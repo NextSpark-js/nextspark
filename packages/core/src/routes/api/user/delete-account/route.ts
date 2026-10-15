@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createApiError } from '@nextsparkjs/core/lib/api/error-response';
 import { auth } from "@nextsparkjs/core/lib/auth";
 import { getAuthorizationSession } from "@nextsparkjs/core/lib/auth/authorization-session";
 import { withRateLimitTier } from "@nextsparkjs/core/lib/api/rate-limit";
@@ -11,7 +12,7 @@ export const DELETE = withRateLimitTier(async (req: NextRequest) => {
     const session = await getAuthorizationSession(req.headers);
 
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createApiError("Unauthorized", 401, undefined, 'AUTHENTICATION_REQUIRED');
     }
 
     const userId = session.user.id;
@@ -38,23 +39,14 @@ export const DELETE = withRateLimitTier(async (req: NextRequest) => {
       });
     } catch (dbError) {
       if ((dbError as { code?: string })?.code === "OWNS_TEAMS") {
-        return NextResponse.json(
-          { error: (dbError as Error).message },
-          { status: 409 }
-        );
+        return createApiError((dbError as Error).message, 409, undefined, 'CONFLICT');
       }
       console.error("Failed to delete user account:", dbError);
-      return NextResponse.json(
-        { error: "Failed to delete account" },
-        { status: 500 }
-      );
+      return createApiError("Failed to delete account", 500, undefined, 'INTERNAL_ERROR');
     }
   } catch (error) {
     console.error("Delete account error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return createApiError("Internal server error", 500, undefined, 'INTERNAL_ERROR');
   }
 }, 'strict');
 

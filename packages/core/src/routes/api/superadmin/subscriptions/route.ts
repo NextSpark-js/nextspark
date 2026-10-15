@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createApiError } from '@nextsparkjs/core/lib/api/error-response';
+import { parsePaginationParams } from '@nextsparkjs/core/lib/api/pagination';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -62,18 +64,12 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
     // Check if user is authenticated
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - No session found' },
-        { status: 401 }
-      );
+      return createApiError('Unauthorized - No session found', 401, undefined, 'AUTHENTICATION_REQUIRED');
     }
 
     // Check if user is superadmin or developer
     if (session.user.role !== 'superadmin' && session.user.role !== 'developer') {
-      return NextResponse.json(
-        { error: 'Forbidden - Superadmin or developer access required' },
-        { status: 403 }
-      );
+      return createApiError('Forbidden - Superadmin or developer access required', 403, undefined, 'FORBIDDEN');
     }
 
     // Parse query params
@@ -82,9 +78,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const plan = searchParams.get('plan');
     const interval = searchParams.get('interval');
     const search = searchParams.get('search');
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '20', 10);
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = parsePaginationParams(request, 20);
 
     // Build WHERE clause
     const conditions: string[] = [];
@@ -307,13 +301,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   } catch (error) {
     console.error('Error fetching subscriptions:', error);
 
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: 'Failed to retrieve subscriptions data'
-      },
-      { status: 500 }
-    );
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to retrieve subscriptions data' });
   }
 }, 'strict');
 

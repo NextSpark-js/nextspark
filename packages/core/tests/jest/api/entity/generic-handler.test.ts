@@ -137,6 +137,7 @@ jest.mock('@/core/lib/services/usage.service', () => ({
 // `metas`/`child`/pagination query params, so the "not requested" branches
 // are what's exercised, matching the real functions' behavior in that case.
 jest.mock('@/core/lib/api/helpers', () => ({
+  readJsonObject: async (request: { json: () => Promise<unknown> }) => ({ data: await request.json() }),
   createApiResponse: (data: unknown, meta?: Record<string, unknown>, status = 200) => ({
     status,
     body: { success: true, data, info: { timestamp: new Date().toISOString(), ...meta } },

@@ -14,8 +14,7 @@ beforeEach(() => routeHarness.reset())
 
 describe('POST /api/v1/users — bodies', () => {
   const invoke = (body: Parameters<typeof makeReq>[2]) => createUser(makeReq('POST', '/api/v1/users', body), undefined as never)
-  // a non-JSON or missing body, and a JSON null, throw outside the schema parse and are answered 500 (finding F8)
-  describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON null'] })
+  describeMalformedBodies(invoke)
 })
 
 describe('POST /api/v1/users — values', () => {
@@ -87,10 +86,10 @@ describe('GET /api/v1/users — query parameters', () => {
     expect(response.status).toBe(200)
   })
 
-  test.failing.each([
+  test.each([
     ['a page of text', '?page=abc'],
     ['a limit of text', '?limit=many'],
-  ])('answers %s without a 500 (the offset becomes NaN, finding F3)', async (_label, query) => {
+  ])('answers %s without a 500 (the offset is never NaN)', async (_label, query) => {
     mocks.queryWithRLS.mockImplementation(async (_sql: string, params: unknown[] = []) => {
       if (params.some(p => typeof p === 'number' && !Number.isFinite(p))) throw Object.assign(new Error('invalid input syntax for type bigint: "NaN"'), { code: '22P02' })
       return [{ count: 0 }]
@@ -116,7 +115,7 @@ describe('/api/v1/users/[id]', () => {
 
   describe('PATCH — bodies', () => {
     beforeEach(() => { mocks.queryOneWithRLS.mockResolvedValue({ id: 'user-1', role: 'member' }) })
-    describeMalformedBodies(body => patch(body), { defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON null'] })
+    describeMalformedBodies(body => patch(body), )
   })
 
   describe('PATCH — values', () => {

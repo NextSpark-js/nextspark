@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import * as z from 'zod'
 import { auth } from '@nextsparkjs/core/lib/auth'
 import { queryOneWithRLS, mutateWithRLS, getTransactionClient } from '@nextsparkjs/core/lib/db'
 import {
@@ -7,6 +8,7 @@ import {
   withApiLogging,
   handleCorsPreflightRequest,
   addCorsHeaders,
+  readJsonObject,
 } from '@nextsparkjs/core/lib/api/helpers'
 import type { TeamInvitation, TeamMember } from '@nextsparkjs/core/lib/teams/types'
 import { AUTH_CONFIG, I18N_CONFIG } from '@nextsparkjs/core/lib/config'
@@ -21,14 +23,15 @@ export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request)
 }
 
-interface SignupWithInviteBody {
-  email: string
+// Types only: a missing field keeps its own MISSING_FIELDS answer below. Nothing is looked up before this passes.
+const signupWithInviteSchema = z.object({
+  email: z.string().max(254).optional(),
   /** Ignored when password login is off: the account then signs in with an email code. */
-  password?: string
-  firstName?: string
-  lastName?: string
-  inviteToken: string
-}
+  password: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  inviteToken: z.string().optional(),
+})
 
 // POST /api/v1/auth/signup-with-invite - Create account and auto-accept invitation
 export const POST = withRateLimitTier(withApiLogging(
@@ -38,8 +41,14 @@ export const POST = withRateLimitTier(withApiLogging(
       // (OTP-only): the invitee signs in with an email code.
       const passwordLogin = isPasswordLoginEnabled(AUTH_CONFIG)
 
-      const body: SignupWithInviteBody = await req.json()
-      const { email, password, firstName, lastName, inviteToken } = body
+      const parsedBody = await readJsonObject(req)
+      if (parsedBody.error) return addCorsHeaders(parsedBody.error, req)
+      const parsedFields = signupWithInviteSchema.safeParse(parsedBody.data)
+      if (!parsedFields.success) {
+        const response = createApiError('Invalid request body', 400, parsedFields.error.issues, 'VALIDATION_ERROR')
+        return addCorsHeaders(response, req)
+      }
+      const { email, password, firstName, lastName, inviteToken } = parsedFields.data
 
       // Validate required fields
       if (!email || (passwordLogin && !password) || !inviteToken) {

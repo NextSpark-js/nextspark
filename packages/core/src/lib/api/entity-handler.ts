@@ -13,6 +13,7 @@ import { entityRegistry, ensureInitialized } from '../entities/registry';
 import {
   createApiResponse,
   createApiError,
+  readJsonObject,
   parsePaginationParams,
   createPaginationMeta,
   parseMetaParams,
@@ -261,12 +262,9 @@ export function createEntityListHandlers(
         return createApiError('Create operation not supported', 405);
       }
 
-      let body;
-      try {
-        body = await request.json();
-      } catch {
-        return createApiError('Invalid JSON body', 400);
-      }
+      const parsedBody = await readJsonObject(request);
+      if (parsedBody.error) return parsedBody.error;
+      const body = parsedBody.data;
 
       // Separate metadata from main entity data
       const { metas, ...entityData } = body;
@@ -409,12 +407,9 @@ export function createEntityDetailHandlers(
         return createApiError('Update operation not supported', 405);
       }
 
-      let body;
-      try {
-        body = await request.json();
-      } catch {
-        return createApiError('Invalid JSON body', 400);
-      }
+      const parsedBody = await readJsonObject(request);
+      if (parsedBody.error) return parsedBody.error;
+      const body = parsedBody.data;
 
       // Separate metadata from main entity data
       const { metas, ...entityData } = body;

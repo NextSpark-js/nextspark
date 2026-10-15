@@ -7,6 +7,7 @@ import {
   withApiLogging,
   handleCorsPreflightRequest,
   addCorsHeaders,
+  readJsonObject,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { isSuperAdmin } from '@nextsparkjs/core/lib/api/auth/permissions'
@@ -170,6 +171,11 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     const response = createApiResponse(teamsWithMembers, paginationMeta)
     return addCorsHeaders(response, req)
   } catch (error) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      const zodError = error as { issues?: unknown[] }
+      const response = createApiError('Validation error', 400, zodError.issues, 'VALIDATION_ERROR')
+      return addCorsHeaders(response, req)
+    }
     console.error('Error fetching teams:', error)
     const response = createApiError('Internal server error', 500)
     return addCorsHeaders(response, req)
@@ -191,7 +197,9 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
       return authResult.rateLimitResponse as NextResponse
     }
 
-    const body = await req.json()
+    const parsedBody = await readJsonObject(req)
+    if (parsedBody.error) return addCorsHeaders(parsedBody.error, req)
+    const body = parsedBody.data
     const validatedData = createTeamSchema.parse(body)
 
     const { mode, options } = APP_CONFIG_MERGED.teams

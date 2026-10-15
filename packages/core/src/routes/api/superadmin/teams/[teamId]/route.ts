@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createApiError } from '@nextsparkjs/core/lib/api/error-response';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -78,18 +79,12 @@ export const GET = withRateLimitTier(async (
 
     // Check if user is authenticated
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - No session found' },
-        { status: 401 }
-      );
+      return createApiError('Unauthorized - No session found', 401, undefined, 'AUTHENTICATION_REQUIRED');
     }
 
     // Check if user is superadmin or developer
     if (session.user.role !== 'superadmin' && session.user.role !== 'developer') {
-      return NextResponse.json(
-        { error: 'Forbidden - Superadmin or developer access required' },
-        { status: 403 }
-      );
+      return createApiError('Forbidden - Superadmin or developer access required', 403, undefined, 'FORBIDDEN');
     }
 
     // Query for team details
@@ -197,10 +192,7 @@ export const GET = withRateLimitTier(async (
     ]);
 
     if (!teamResult || teamResult.length === 0) {
-      return NextResponse.json(
-        { error: 'Team not found' },
-        { status: 404 }
-      );
+      return createApiError('Team not found', 404, undefined, 'NOT_FOUND');
     }
 
     const team = teamResult[0];
@@ -284,13 +276,7 @@ export const GET = withRateLimitTier(async (
   } catch (error) {
     console.error('Error fetching team data:', error);
 
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: 'Failed to retrieve team data'
-      },
-      { status: 500 }
-    );
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to retrieve team data' });
   }
 }, 'strict');
 

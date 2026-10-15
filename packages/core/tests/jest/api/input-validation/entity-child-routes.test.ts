@@ -143,7 +143,7 @@ describe('POST child — malformed bodies', () => {
 
   // The child's generated schema is the entity schema: a text field without a declared maxLength has no limit,
   // exactly as on /api/v1/[entity]. A default cap is a schema-generator change, outside these routes.
-  test.failing('rejects a text field far over a sane length with 400 and sends no statement', async () => {
+  test('rejects a text field far over a sane length with 400 and sends no statement', async () => {
     await expectCleanRejection(await call('POST', { body: json({ note: 'x'.repeat(2_000_000) }) }), { status: 400, code: 'VALIDATION_ERROR' })
     noStatements()
   })

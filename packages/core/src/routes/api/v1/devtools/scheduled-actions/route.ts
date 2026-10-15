@@ -8,6 +8,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
+import { parsePaginationParams } from '@nextsparkjs/core/lib/api/pagination'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import {
   canAccessDevtoolsApi,
@@ -39,8 +41,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams
   const status = searchParams.get('status') as ScheduledActionStatus | null
   const actionType = searchParams.get('action_type')
-  const page = parseInt(searchParams.get('page') || '1', 10)
-  const limit = parseInt(searchParams.get('limit') || '20', 10)
+  const { page, limit, offset } = parsePaginationParams(request, 20)
 
   // Build query
   const conditions: string[] = []
@@ -69,7 +70,6 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   const total = parseInt(countResult[0]?.count || '0', 10)
 
   // Query actions with pagination
-  const offset = (page - 1) * limit
   const actionsQuery = `
     SELECT
       id,
@@ -150,88 +150,82 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     return createDevtoolsAccessDeniedResponse()
   }
 
-  // Parse request body
-  const body = await request.json()
-  const { actionId } = body
+  try {
+    // Parse request body
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
+    const { actionId } = body
 
-  if (!actionId) {
-    return NextResponse.json({
-      success: false,
-      error: 'actionId is required'
-    }, { status: 400 })
-  }
-
-  // Fetch the failed action
-  const actions = await queryWithRLS<ScheduledAction>(
-    `SELECT
-      id,
-      "actionType",
-      status,
-      payload,
-      "teamId",
-      "lockGroup"
-    FROM "scheduled_actions"
-    WHERE id = $1`,
-    [actionId],
-    null
-  )
-
-  if (actions.length === 0) {
-    return NextResponse.json({
-      success: false,
-      error: 'Action not found'
-    }, { status: 404 })
-  }
-
-  const failedAction = actions[0]
-
-  // Only allow retrying failed actions
-  if (failedAction.status !== 'failed') {
-    return NextResponse.json({
-      success: false,
-      error: 'Only failed actions can be retried'
-    }, { status: 400 })
-  }
-
-  // Check if there's already a pending action with the same actionType and payload
-  // Use JSONB containment operator for reliable comparison
-  const existingPending = await queryWithRLS<{ id: string }>(
-    `SELECT id
-     FROM "scheduled_actions"
-     WHERE "actionType" = $1
-       AND payload @> $2::jsonb
-       AND $2::jsonb @> payload
-       AND status = 'pending'
-     LIMIT 1`,
-    [failedAction.actionType, JSON.stringify(failedAction.payload)],
-    null
-  )
-
-  if (existingPending.length > 0) {
-    return NextResponse.json({
-      success: false,
-      error: 'A pending action with the same payload already exists',
-      existingActionId: existingPending[0].id
-    }, { status: 409 })
-  }
-
-  // Create a new action with the same payload
-  const newActionId = await scheduleAction(
-    failedAction.actionType,
-    failedAction.payload,
-    {
-      scheduledAt: new Date(), // Schedule immediately
-      teamId: failedAction.teamId ?? undefined,
-      lockGroup: failedAction.lockGroup ?? undefined
+    if (typeof actionId !== 'string' || !actionId) {
+      return createApiError('actionId must be a string', 400, undefined, 'VALIDATION_ERROR')
     }
-  )
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      newActionId
+    // Fetch the failed action
+    const actions = await queryWithRLS<ScheduledAction>(
+      `SELECT
+        id,
+        "actionType",
+        status,
+        payload,
+        "teamId",
+        "lockGroup"
+      FROM "scheduled_actions"
+      WHERE id = $1`,
+      [actionId],
+      null
+    )
+
+    if (actions.length === 0) {
+      return createApiError('Action not found', 404, undefined, 'NOT_FOUND')
     }
-  })
+
+    const failedAction = actions[0]
+
+    // Only allow retrying failed actions
+    if (failedAction.status !== 'failed') {
+      return createApiError('Only failed actions can be retried', 400, undefined, 'VALIDATION_ERROR')
+    }
+
+    // Check if there's already a pending action with the same actionType and payload
+    // Use JSONB containment operator for reliable comparison
+    const existingPending = await queryWithRLS<{ id: string }>(
+      `SELECT id
+       FROM "scheduled_actions"
+       WHERE "actionType" = $1
+         AND payload @> $2::jsonb
+         AND $2::jsonb @> payload
+         AND status = 'pending'
+       LIMIT 1`,
+      [failedAction.actionType, JSON.stringify(failedAction.payload)],
+      null
+    )
+
+    if (existingPending.length > 0) {
+      return createApiError('A pending action with the same payload already exists', 409, undefined, 'ACTION_ALREADY_PENDING', { existingActionId: existingPending[0].id })
+    }
+
+    // Create a new action with the same payload
+    const newActionId = await scheduleAction(
+      failedAction.actionType,
+      failedAction.payload,
+      {
+        scheduledAt: new Date(), // Schedule immediately
+        teamId: failedAction.teamId ?? undefined,
+        lockGroup: failedAction.lockGroup ?? undefined
+      }
+    )
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        newActionId
+      }
+    })
+  } catch (error) {
+    console.error('[DevTools] Failed to retry scheduled action:', error)
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
+  }
 }, 'write');
 
 export const OPTIONS = corsPreflight

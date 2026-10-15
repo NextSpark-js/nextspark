@@ -1,19 +1,20 @@
 import { NextRequest } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
-import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { createApiResponse, createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/helpers'
 import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import * as z from 'zod'
+import { MAX_MEDIA_BATCH } from '@nextsparkjs/core/lib/media/schemas'
 
 const addTagSchema = z.object({
   tagId: z.string().min(1),
 })
 
 const setTagsSchema = z.object({
-  tagIds: z.array(z.string().min(1)),
+  tagIds: z.array(z.string().min(1)).max(MAX_MEDIA_BATCH),
 })
 
 /**
@@ -93,7 +94,9 @@ export const POST = withRateLimitTier(async (
       return createApiError('Media not found', 404)
     }
 
-    const body = await request.json()
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
     const parsed = addTagSchema.safeParse(body)
 
     if (!parsed.success) {
@@ -149,7 +152,9 @@ export const PUT = withRateLimitTier(async (
       return createApiError('Media not found', 404)
     }
 
-    const body = await request.json()
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
     const parsed = setTagsSchema.safeParse(body)
 
     if (!parsed.success) {

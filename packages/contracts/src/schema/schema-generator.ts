@@ -181,6 +181,30 @@ function stripKeys(data: unknown, keys: Set<string>): unknown {
 }
 
 /**
+ * Longest text accepted for a field that declares no `maxLength`, in characters: 64 KB for a `text` field and
+ * 1 MB for the long ones (textarea, markdown, richtext, code). Declare `maxLength` on the field to raise or lower it.
+ */
+export const DEFAULT_TEXT_MAX_LENGTH = 65_536
+export const DEFAULT_LONG_TEXT_MAX_LENGTH = 1_048_576
+
+/**
+ * The reason a text value is refused, or null: a NUL character (no text column can store one) or a value over the
+ * field's `maxLength` (the default cap above when the field declares none). Responses (non-strict) keep only the
+ * declared `maxLength`, so a stored value is never refused on the way out.
+ */
+export function textValueIssue(field: EntityField, value: string, strict: boolean): string | null {
+  if (value.includes('\u0000')) {
+    return `${field.display.label} cannot contain NUL characters`
+  }
+  const limit = field.maxLength
+    ?? (strict ? (field.type === 'text' ? DEFAULT_TEXT_MAX_LENGTH : DEFAULT_LONG_TEXT_MAX_LENGTH) : undefined)
+  if (limit && value.length > limit) {
+    return `${field.display.label} cannot exceed ${limit} characters`
+  }
+  return null
+}
+
+/**
  * Generate base schema from entity fields
  */
 function generateBaseSchema(
@@ -241,12 +265,17 @@ function generateFieldSchema(
         // Convert numbers to strings (e.g., year field: 2025 -> "2025")
         const strVal = typeof val === 'number' ? String(val) : val
         const trimmed = strict ? strVal.trim() : strVal
-        // Enforce maxLength if defined on field
-        if (field.maxLength && trimmed.length > field.maxLength) {
+        // A value of only whitespace is as empty as '' for a required field
+        if (field.required && strict && trimmed === '') {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `${field.display.label} cannot exceed ${field.maxLength} characters`
+            message: `${field.display.label} is required`
           })
+          return z.NEVER
+        }
+        const textIssue = textValueIssue(field, trimmed, strict)
+        if (textIssue) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: textIssue })
           return z.NEVER
         }
         return trimmed
@@ -878,9 +907,13 @@ function generateFieldSchema(
     case 'markdown':
     case 'richtext':
     case 'code':
-      schema = z.string()
-      if (strict) {
-        schema = (schema as z.ZodString).trim()
+      {
+        const longText = z.string().superRefine((val, ctx) => {
+          const textIssue = textValueIssue(field, val, strict)
+          if (textIssue) ctx.addIssue({ code: z.ZodIssueCode.custom, message: textIssue })
+        })
+        // responses keep the plain string: a stored value is never refused on the way out
+        schema = strict ? z.string().trim().pipe(longText) : z.string()
       }
       break
 

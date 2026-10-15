@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError } from '@nextsparkjs/core/lib/api/error-response'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
@@ -29,13 +30,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     authResult.user.defaultTeamId
 
   if (!teamId) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'No team context available. Please provide x-team-id header.'
-      },
-      { status: 400 }
-    )
+    return createApiError('No team context available. Please provide x-team-id header.', 400, undefined, 'VALIDATION_ERROR')
   }
 
   // 3. Permission check using MembershipService
@@ -43,15 +38,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   const actionResult = membership.canPerformAction('team.billing.manage')
 
   if (!actionResult.allowed) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: actionResult.message,
-        reason: actionResult.reason,
-        meta: actionResult.meta,
-      },
-      { status: 403 }
-    )
+    return createApiError(actionResult.message, 403, undefined, 'ACTION_NOT_ALLOWED', { reason: actionResult.reason, meta: actionResult.meta })
   }
 
   // 4. Get subscription with payment provider customer ID
@@ -59,13 +46,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const subscription = await SubscriptionService.getActive(teamId)
 
     if (!subscription?.externalCustomerId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'No billing account found. Please upgrade to a paid plan first.'
-        },
-        { status: 400 }
-      )
+      return createApiError('No billing account found. Please upgrade to a paid plan first.', 400, undefined, 'VALIDATION_ERROR')
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
@@ -83,13 +64,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     })
   } catch (error) {
     console.error('[portal] Error creating portal session:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to create portal session'
-      },
-      { status: 500 }
-    )
+    return createApiError('Failed to create portal session', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write');
 

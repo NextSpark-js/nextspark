@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError } from '@nextsparkjs/core/lib/api/error-response'
 import { BLOCK_REGISTRY, BLOCK_CATEGORIES } from '@nextsparkjs/registries/block-registry'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
@@ -42,7 +43,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     })
   } catch (err) {
     console.error('Error listing blocks:', err)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'read');
 

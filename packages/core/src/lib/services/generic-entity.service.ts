@@ -36,6 +36,7 @@ import {
   afterEntityDelete,
 } from '../entities/entity-hooks'
 import type { EntityConfig, EntityField } from '../entities/types'
+import { textValueIssue } from '../entities/portable/schema-generator'
 import { checkPermission, declaredPublishPermission, publishPermissionFor } from '../permissions/check'
 
 // ============================================
@@ -64,6 +65,8 @@ const SYSTEM_FIELDS = ['id', 'userId', 'teamId', 'createdAt', 'updatedAt']
 
 // Default pagination values
 const DEFAULT_LIMIT = 20
+/** Most rows one list call returns. */
+const MAX_PAGE_SIZE = 100
 const DEFAULT_ORDER_BY = 'createdAt'
 const DEFAULT_ORDER_DIR = 'desc'
 
@@ -236,6 +239,11 @@ function validateFieldType(field: EntityField, value: unknown): string | null {
       if (typeof value !== 'string') {
         return `Field "${field.name}" must be a string`
       }
+      {
+        // the same length and NUL rules as the API's generated schema
+        const textIssue = textValueIssue(field, value.trim(), true)
+        if (textIssue) return `Field "${field.name}": ${textIssue}`
+      }
       break
     case 'number':
     case 'range':
@@ -317,8 +325,10 @@ export function validateEntityData(
   for (const field of entityConfig.fields) {
     const value = data[field.name]
 
-    // 1. Validate required fields (only on create, not update)
-    if (!isUpdate && field.required && (value === undefined || value === null || value === '')) {
+    // 1. Validate required fields: on create the value must be present, on update a value that is sent must not be
+    //    empty; text of only whitespace is empty, as in the API's generated schema
+    const isEmpty = value === null || value === '' || (typeof value === 'string' && !value.trim())
+    if (field.required && (isUpdate ? isEmpty : value === undefined || isEmpty)) {
       errors.push(`Field "${field.name}" is required`)
       continue
     }
@@ -432,14 +442,18 @@ export class GenericEntityService {
     const allFields = [...SYSTEM_FIELDS, ...fieldNames]
 
     const {
-      limit = DEFAULT_LIMIT,
-      offset = 0,
+      limit: requestedLimit = DEFAULT_LIMIT,
+      offset: requestedOffset = 0,
       orderBy = DEFAULT_ORDER_BY,
       orderDir = DEFAULT_ORDER_DIR,
       where = {},
       search,
       teamId,
     } = options
+
+    // A window the database can serve: a whole number of at most MAX_PAGE_SIZE rows from a non-negative offset
+    const limit = Number.isSafeInteger(requestedLimit) ? Math.min(MAX_PAGE_SIZE, Math.max(1, requestedLimit)) : DEFAULT_LIMIT
+    const offset = Number.isSafeInteger(requestedOffset) ? Math.max(0, requestedOffset) : 0
 
     // Add teamId to where if provided
     const effectiveWhere = teamId ? { ...where, teamId } : where

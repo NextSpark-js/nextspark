@@ -11,6 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError } from '@nextsparkjs/core/lib/api/error-response'
 import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { existsSync } from 'fs'
@@ -101,34 +102,22 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   const docPath = searchParams.get('path')
 
   if (!docPath) {
-    return NextResponse.json(
-      { error: 'Missing path parameter' },
-      { status: 400 }
-    )
+    return createApiError('Missing path parameter', 400, undefined, 'VALIDATION_ERROR')
   }
 
   // Validate path to prevent directory traversal
   if (docPath.includes('..')) {
-    return NextResponse.json(
-      { error: 'Invalid path: directory traversal not allowed' },
-      { status: 400 }
-    )
+    return createApiError('Invalid path: directory traversal not allowed', 400, undefined, 'VALIDATION_ERROR')
   }
 
   // Validate path matches allowed patterns
   if (!isValidPath(docPath)) {
-    return NextResponse.json(
-      { error: 'Invalid path: does not match allowed patterns' },
-      { status: 400 }
-    )
+    return createApiError('Invalid path: does not match allowed patterns', 400, undefined, 'VALIDATION_ERROR')
   }
 
   // Only allow .md files
   if (!docPath.endsWith('.md')) {
-    return NextResponse.json(
-      { error: 'Only markdown files are allowed' },
-      { status: 400 }
-    )
+    return createApiError('Only markdown files are allowed', 400, undefined, 'VALIDATION_ERROR')
   }
 
   try {
@@ -146,10 +135,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
     // Check if file exists
     if (!fullPath) {
-      return NextResponse.json(
-        { error: 'Document not found' },
-        { status: 404 }
-      )
+      return createApiError('Document not found', 404, undefined, 'NOT_FOUND')
     }
 
     // Read the markdown file
@@ -158,10 +144,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     return NextResponse.json({ content })
   } catch (error) {
     console.error('Error reading documentation:', error)
-    return NextResponse.json(
-      { error: 'Failed to read document' },
-      { status: 500 }
-    )
+    return createApiError('Failed to read document', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'read');
 

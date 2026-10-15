@@ -110,6 +110,8 @@ The API v1 uses **standardized error responses** across all endpoints. Every err
 | **403** | Forbidden | Valid auth but insufficient permissions |
 | **404** | Not Found | Resource or endpoint doesn't exist |
 | **405** | Method Not Allowed | HTTP method not supported |
+| **413** | Payload Too Large | A stored value is larger than the route accepts |
+| **415** | Unsupported Media Type | An upload that is not `multipart/form-data` |
 | **422** | Unprocessable Entity | Validation failed |
 | **429** | Too Many Requests | Rate limit exceeded |
 
@@ -139,7 +141,19 @@ The API v1 uses **standardized error responses** across all endpoints. Every err
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
 | `VALIDATION_FAILED` | 422 | One or more fields failed validation |
-| `INVALID_REQUEST` | 400 | Malformed request (invalid JSON, etc.) |
+| `INVALID_REQUEST` | 400 | Malformed request |
+| `INVALID_JSON` | 400 | The body is missing, is not JSON, or is JSON that is not an object (`null`, a number, a string, a boolean, an array) |
+| `VALIDATION_ERROR` | 400 | A field is missing, has the wrong type or is over its maximum length (`details` lists the issues) |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | `POST /api/v1/media/upload` with a body that is not `multipart/form-data` |
+| `NO_FILES`, `EMPTY_FILE`, `TOO_MANY_FILES` | 400 | A media upload with no file, with a file of zero bytes, or with more than 100 files |
+| `PAYLOAD_TOO_LARGE` | 413 | A metadata value over its size limit |
+| `AUTHENTICATION_REQUIRED` | 401 | No session or API key on `/api/user`, `/api/superadmin`, `/api/devtools`, `/api/internal`, billing and post-categories routes |
+| `ACTION_NOT_ALLOWED` | 403 | A billing route refused the action for the team's plan or role (`reason` and `meta` say why) |
+| `INVALID_NAME`, `INVALID_NAME_TYPE` | 400 | `PATCH /api/v1/api-keys/:id` with a name that is empty, over 100 characters, or not text |
+| `SLUG_EXISTS` | 400 | `POST /api/v1/post-categories` with a slug the team already uses (`PUT` answers `409` `CONFLICT`) |
+| `ACTION_ALREADY_PENDING` | 409 | Retrying a scheduled action whose payload already has a pending one (`existingActionId`) |
+| `CONFLICT` | 409 | A category slug already used (`PUT /api/v1/post-categories/:id`), or `DELETE /api/user/delete-account` when the account cannot be removed |
+| `HTTP_<status>` | any | The code of an error raised without a specific one, for example `HTTP_501` |
 | `MISSING_REQUIRED_FIELD` | 422 | Required field not provided |
 | `INVALID_FIELD_TYPE` | 422 | Field has wrong data type |
 | `INVALID_ENUM_VALUE` | 422 | Value not in allowed enum |
@@ -164,6 +178,7 @@ The API v1 uses **standardized error responses** across all endpoints. Every err
 |------|-------------|-------------|
 | `INTERNAL_SERVER_ERROR` | 500 | Unexpected server error |
 | `DATABASE_ERROR` | 500 | Database operation failed |
+| `INTERNAL_ERROR` | 500 | Unexpected server error on a route outside the entity handlers; the body carries a fixed message, the details are in the server log |
 | `SERVICE_UNAVAILABLE` | 503 | Server temporarily unavailable |
 
 ---
@@ -314,8 +329,8 @@ Content-Type: application/json
 # Response (400)
 {
   "success": false,
-  "error": "Invalid JSON format",
-  "code": "INVALID_REQUEST"
+  "error": "Request body must be valid JSON",
+  "code": "INVALID_JSON"
 }
 ```
 

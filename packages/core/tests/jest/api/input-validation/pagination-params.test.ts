@@ -1,6 +1,6 @@
 /**
  * S192 — parsePaginationParams (lib/api/helpers.ts), the helper behind the list endpoints' `page` / `limit`.
- * Out-of-range values are clamped; a value that is not a number must not reach the database as NaN (finding F3).
+ * Out-of-range values are clamped; a value that is not a number must not reach the database as NaN.
  */
 
 jest.mock('@/core/lib/api/auth', () => ({ validateApiKey: jest.fn() }))
@@ -34,7 +34,7 @@ describe('parsePaginationParams — values out of range are clamped', () => {
 
 describe('parsePaginationParams — values that are not numbers', () => {
   // parseInt gives NaN, Math.max/min keep NaN, and the offset reaches the database as NaN: a type error there, so a 500.
-  test.failing.each([
+  test.each([
     ['a page of text', '?page=abc'],
     ['a limit of text', '?limit=many'],
     ['an empty-looking page', '?page=%20'],
@@ -44,7 +44,7 @@ describe('parsePaginationParams — values that are not numbers', () => {
     expect([page, limit, offset].every(Number.isFinite)).toBe(true)
   })
 
-  test.failing('a page too large to be an integer gives a finite offset', () => {
+  test('a page too large to be an integer gives a finite offset', () => {
     const { offset } = parse('?page=99999999999999999999999&limit=100')
     expect(Number.isSafeInteger(offset)).toBe(true)
   })

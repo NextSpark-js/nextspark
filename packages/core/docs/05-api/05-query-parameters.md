@@ -107,6 +107,9 @@ GET /api/v1/tasks?page=1&limit=20
 GET /api/v1/tasks?limit=1000  // ❌ Capped at 100
 
 // Actual response: limit=100
+
+// A page or limit that is not a number takes its default
+GET /api/v1/tasks?page=abc&limit=many  // page=1, the default limit
 ```
 
 ### Best Practices

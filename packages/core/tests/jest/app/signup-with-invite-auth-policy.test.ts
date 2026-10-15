@@ -28,6 +28,7 @@ jest.mock('@nextsparkjs/core/lib/config', () => ({
   I18N_CONFIG: { defaultLocale: 'en' },
 }))
 jest.mock('@nextsparkjs/core/lib/api/helpers', () => ({
+  readJsonObject: async (request: { json: () => Promise<unknown> }) => ({ data: await request.json() }),
   createApiResponse: jest.fn((data: object, _meta: unknown, status = 200) => NextResponse.json({ data }, { status })),
   createApiError: jest.fn((message: string, status: number, _details: unknown, code: string) =>
     NextResponse.json({ error: message, code }, { status })),

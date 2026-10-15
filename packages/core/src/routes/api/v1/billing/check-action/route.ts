@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { SubscriptionService } from '@nextsparkjs/core/lib/services'
 import * as z from 'zod'
@@ -32,26 +33,13 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   }
 
   // 2. Parse and validate request body
-  let body
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json(
-      { success: false, error: 'Invalid JSON body' },
-      { status: 400 }
-    )
-  }
+  const parsedBody = await readJsonObject(request)
+  if (parsedBody.error) return parsedBody.error
+  const body = parsedBody.data
 
   const parseResult = checkActionSchema.safeParse(body)
   if (!parseResult.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Validation failed',
-        details: parseResult.error.issues
-      },
-      { status: 400 }
-    )
+    return createApiError('Validation failed', 400, parseResult.error.issues, 'VALIDATION_ERROR')
   }
 
   const { action, teamId: bodyTeamId } = parseResult.data
@@ -63,13 +51,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     authResult.user.defaultTeamId
 
   if (!teamId) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'No team context available. Please provide teamId in body or x-team-id header.'
-      },
-      { status: 400 }
-    )
+    return createApiError('No team context available. Please provide teamId in body or x-team-id header.', 400, undefined, 'VALIDATION_ERROR')
   }
 
   // 4. Check action using SubscriptionService (RBAC + features + quotas)

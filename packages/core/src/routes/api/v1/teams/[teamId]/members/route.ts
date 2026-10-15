@@ -140,6 +140,11 @@ export const GET = withRateLimitTier(withApiLogging(
       const response = createApiResponse(members, paginationMeta)
       return addCorsHeaders(response, req)
     } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        const zodError = error as { issues?: unknown[] }
+        const response = createApiError('Validation error', 400, zodError.issues, 'VALIDATION_ERROR')
+        return addCorsHeaders(response, req)
+      }
       console.error('Error fetching team members:', error)
       const response = createApiError('Internal server error', 500)
       return addCorsHeaders(response, req)

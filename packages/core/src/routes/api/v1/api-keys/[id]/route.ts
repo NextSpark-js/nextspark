@@ -18,10 +18,12 @@ import {
   createApiError,
   withApiLogging,
   handleCorsPreflightRequest,
-  addCorsHeaders
+  addCorsHeaders,
+  readJsonObject,
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { invalidateApiKeyCache } from '@nextsparkjs/core/lib/api/auth';
+import { apiKeyNameSchema } from '@nextsparkjs/core/lib/api/keys';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 // Handle CORS preflight
@@ -152,7 +154,9 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
-    const body = await req.json();
+    const parsedBody = await readJsonObject(req);
+    if (parsedBody.error) return addCorsHeaders(parsedBody.error, req);
+    const body = parsedBody.data;
     
     // Only allow updating name and status
     const allowedUpdates = ['name', 'status'];
@@ -162,11 +166,19 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
 
     for (const field of allowedUpdates) {
       if (body[field] !== undefined) {
-        if (field === 'name' && typeof body[field] !== 'string') {
-          const response = createApiError('Name must be a string', 400, null, 'INVALID_NAME_TYPE');
-          return addCorsHeaders(response, req);
+        if (field === 'name') {
+          const nameCheck = apiKeyNameSchema.safeParse(body[field]);
+          if (!nameCheck.success) {
+            const response = createApiError(
+              typeof body[field] === 'string' ? nameCheck.error.issues[0].message : 'Name must be a string',
+              400,
+              null,
+              typeof body[field] === 'string' ? 'INVALID_NAME' : 'INVALID_NAME_TYPE'
+            );
+            return addCorsHeaders(response, req);
+          }
         }
-        if (field === 'status' && !['active', 'inactive', 'expired'].includes(body[field])) {
+        if (field === 'status' && !['active', 'inactive', 'expired'].includes(body[field] as string)) {
           const response = createApiError('status must be active, inactive, or expired', 400, null, 'INVALID_STATUS_TYPE');
           return addCorsHeaders(response, req);
         }

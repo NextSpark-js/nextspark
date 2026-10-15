@@ -73,7 +73,7 @@ describe('GET /api/v1/media — query parameters', () => {
     expect((await list(query)).status).toBe(200)
   })
 
-  test.failing('refuses a tag list with thousands of entries instead of passing it to the query (finding F15)', async () => {
+  test('refuses a tag list with thousands of entries instead of passing it to the query', async () => {
     const tagIds = Array.from({ length: 5000 }, (_, i) => `t${i}`).join(',')
     await expectCleanRejection(await list(`?tagIds=${tagIds}`), { status: 400 })
   })
@@ -83,8 +83,7 @@ describe('PATCH /api/v1/media/[id]', () => {
   const invoke = (body: Body, id = 'media-1') => patchMedia(makeReq('PATCH', `/api/v1/media/${id}`, body), idParams({ id }))
 
   describe('bodies', () => {
-    // an unreadable body is thrown inside a try whose catch answers 500 with the parser message as the error (finding F8/F12)
-    describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON'] })
+    describeMalformedBodies(invoke)
   })
 
   describe('values', () => {
@@ -117,8 +116,7 @@ describe('PATCH /api/v1/media/[id]', () => {
     })
   })
 
-  // the 500 body carries the thrown error's message as its error text (finding F12)
-  test.failing('the server-error body does not repeat internal error text', async () => {
+  test('the server-error body does not repeat internal error text', async () => {
     media.update.mockRejectedValue(new Error('connection to server at "10.0.0.5", port 5432 failed'))
     const response = await invoke(asJson({ title: 'ok' }))
     expect(JSON.stringify(await bodyOf(response))).not.toContain('10.0.0.5')
@@ -146,8 +144,8 @@ describe('/api/v1/media/[id]/tags', () => {
   const add = (body: Body) => addMediaTag(makeReq('POST', '/api/v1/media/media-1/tags', body), idParams({ id: 'media-1' }))
   const set = (body: Body) => setMediaTags(makeReq('PUT', '/api/v1/media/media-1/tags', body), idParams({ id: 'media-1' }))
 
-  describe('POST — bodies', () => { describeMalformedBodies(add, { defects: ['a missing body', 'an empty body', 'a body that is not JSON'] }) })
-  describe('PUT — bodies', () => { describeMalformedBodies(set, { defects: ['a missing body', 'an empty body', 'a body that is not JSON'] }) })
+  describe('POST — bodies', () => { describeMalformedBodies(add) })
+  describe('PUT — bodies', () => { describeMalformedBodies(set) })
 
   describe('POST — values', () => {
     describeRejectedValues(add, [
@@ -167,7 +165,7 @@ describe('/api/v1/media/[id]/tags', () => {
       ['tag ids holding an empty string', { tagIds: [''] }],
     ])
 
-    test.failing('refuses a list with thousands of tag ids instead of passing it on (finding F15)', async () => {
+    test('refuses a list with thousands of tag ids instead of passing it on', async () => {
       const response = await set(asJson({ tagIds: Array.from({ length: 5000 }, (_, i) => `t${i}`) }))
       await expectCleanRejection(response, { status: 400 })
     })
@@ -177,8 +175,7 @@ describe('/api/v1/media/[id]/tags', () => {
 describe('POST /api/v1/media/check-duplicates', () => {
   const invoke = (body: Body) => checkDuplicates(makeReq('POST', '/api/v1/media/check-duplicates', body), undefined as never)
 
-  // the body is read as `body.files` before it is checked: unreadable bodies and null are 500 (finding F8)
-  describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON null'] })
+  describeMalformedBodies(invoke)
 
   describeRejectedValues(invoke, [
     ['no files', {}],
@@ -187,7 +184,7 @@ describe('POST /api/v1/media/check-duplicates', () => {
     ['an empty file list', { files: [] }],
   ])
 
-  test.failing.each([
+  test.each([
     ['an entry that is null', [null]],
     ['an entry that is text', ['a.png']],
     ['an entry without a file name', [{ fileSize: 10 }]],
@@ -197,17 +194,16 @@ describe('POST /api/v1/media/check-duplicates', () => {
     expect(media.findDuplicates).not.toHaveBeenCalled()
   })
 
-  // one query per entry and no maximum on the list (finding F15)
-  test.failing('refuses a list of thousands of files instead of running a query for each', async () => {
-    await invoke(asJson({ files: Array.from({ length: 5000 }, (_, i) => ({ filename: `f${i}.png`, fileSize: 1 })) }))
-    expect(media.findDuplicates.mock.calls.length).toBeLessThanOrEqual(100)
+  test('refuses a list of thousands of files instead of running a query for each', async () => {
+    await expectCleanRejection(await invoke(asJson({ files: Array.from({ length: 5000 }, (_, i) => ({ filename: `f${i}.png`, fileSize: 1 })) })), { status: 400, code: 'VALIDATION_ERROR' })
+    expect(media.findDuplicates).not.toHaveBeenCalled()
   })
 })
 
 describe('POST /api/v1/media-tags', () => {
   const invoke = (body: Body) => createMediaTag(makeReq('POST', '/api/v1/media-tags', body), undefined as never)
 
-  describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON null'] })
+  describeMalformedBodies(invoke)
 
   describeRejectedValues(invoke, [
     ['an empty object', {}],
@@ -217,8 +213,7 @@ describe('POST /api/v1/media-tags', () => {
     ['a name given an array', { name: ['a'] }],
   ])
 
-  // no maximum length on a tag name (finding F15)
-  test.failing('refuses a tag name far over any sane length', async () => {
+  test('refuses a tag name far over any sane length', async () => {
     await expectCleanRejection(await invoke(asJson({ name: 'x'.repeat(500_000) })), { status: 400 })
     expect(media.createTag).not.toHaveBeenCalled()
   })
@@ -278,21 +273,18 @@ describe('POST /api/v1/media/upload', () => {
     expect(filename.length).toBeGreaterThan(0)
   })
 
-  // A body that is not multipart makes formData() throw; the catch answers 500 and repeats the parser message (finding F16).
-  test.failing('a body that is not multipart is answered 4xx without internal text', async () => {
-    await expectCleanRejection(await sendUnreadable(), {})
+  test('a body that is not multipart is answered 415 without internal text', async () => {
+    await expectCleanRejection(await sendUnreadable(), { status: 415, code: 'UNSUPPORTED_MEDIA_TYPE' })
     writesNothing()
   })
 
-  // A file of zero bytes is skipped without a word and the request answers 200 "uploaded" with a count of 0 (finding F17).
-  test.failing('a file of zero bytes is answered 400 instead of 200 with a count of 0', async () => {
+  test('a file of zero bytes is answered 400 instead of 200 with a count of 0', async () => {
     const response = await send([fileOf('empty.png', 'image/png', new Uint8Array())])
-    await expectCleanRejection(response, { status: 400 })
+    await expectCleanRejection(response, { status: 400, code: 'EMPTY_FILE' })
   })
 
-  // No maximum number of files per request (finding F15).
-  test.failing('refuses hundreds of files in one request', async () => {
+  test('refuses hundreds of files in one request', async () => {
     const response = await send(Array.from({ length: 500 }, () => fileOf('a.png', 'image/png', PNG)))
-    await expectCleanRejection(response, { status: 400 })
+    await expectCleanRejection(response, { status: 400, code: 'TOO_MANY_FILES' })
   })
 })

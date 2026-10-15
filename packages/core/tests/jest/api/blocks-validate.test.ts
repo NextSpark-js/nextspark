@@ -57,7 +57,7 @@ describe('POST /api/v1/blocks/validate', () => {
     expect((await validate({ blockSlug: 'missing', props: {} })).status).toBe(404)
     const response = await validate({ blockSlug: 'no-schema', props: {} })
     expect(response.status).toBe(500)
-    expect(await response.json()).toEqual({ error: 'Block schema not found' })
+    expect(await response.json()).toMatchObject({ error: 'Block schema not found', code: 'INTERNAL_ERROR' })
   })
 
   it('answers 400 with the API validation error shape for a body that does not match the request schema', async () => {

@@ -121,8 +121,7 @@ describe('POST /api/v1/teams/[teamId]/usage/[limitSlug]', () => {
   const NOTHING_TRACKED = () => expect(mockTrack).not.toHaveBeenCalled()
 
   describe('bodies', () => {
-    // anything unreadable, and any wrong value, is thrown inside a try whose catch answers 500 (finding F9)
-    describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON null', 'a JSON array in place of an object', 'a JSON string', 'a JSON number', 'a JSON boolean'] })
+    describeMalformedBodies(invoke)
   })
 
   describe('values', () => {
@@ -130,7 +129,7 @@ describe('POST /api/v1/teams/[teamId]/usage/[limitSlug]', () => {
       ['a delta given text', { delta: 'one', action: 'create' }],
       ['a delta given an object', { delta: { n: 1 }, action: 'create' }],
       ['an action given a number', { delta: 1, action: 5 }],
-    ], { code: 'VALIDATION_ERROR', defects: ['a delta given text', 'a delta given an object', 'an action given a number'] })
+    ], { code: 'VALIDATION_ERROR' })
 
     test('nothing is tracked for any of them', async () => {
       await invoke(asJson({ delta: 'one', action: 'create' }))
@@ -142,7 +141,6 @@ describe('POST /api/v1/teams/[teamId]/usage/[limitSlug]', () => {
 describe('GET /api/v1/teams/[teamId]/invitations — pagination read by hand', () => {
   const list = (query: string) => listTeamInvitations(makeReq('GET', `/api/v1/teams/team-1/invitations${query}`), idParams({ teamId: 'team-1' }))
 
-  // page and limit are read with parseInt and no clamp: a negative or non-numeric value reaches LIMIT / OFFSET (finding F3).
   beforeEach(() => {
     mocks.queryWithRLS.mockImplementation(async (sql: string, params: unknown[] = []) => {
       const [, , limit, offset] = params as [string, string, number?, number?]
@@ -153,7 +151,7 @@ describe('GET /api/v1/teams/[teamId]/invitations — pagination read by hand', (
     })
   })
 
-  test.failing.each([
+  test.each([
     ['a page of zero', '?page=0'],
     ['a negative page', '?page=-3'],
     ['a page of text', '?page=abc'],
@@ -163,7 +161,7 @@ describe('GET /api/v1/teams/[teamId]/invitations — pagination read by hand', (
     expect((await list(query)).status).toBeLessThan(500)
   })
 
-  test.failing('caps the limit at the same maximum as the other list endpoints (100)', async () => {
+  test('caps the limit at the same maximum as the other list endpoints (100)', async () => {
     await list('?limit=100000')
     const listCall = (mocks.queryWithRLS.mock.calls as Array<[string, unknown[]]>).find(([sql]) => sql.includes('LIMIT'))!
     expect(listCall[1][2]).toBeLessThanOrEqual(100)
@@ -182,8 +180,7 @@ describe('GET /api/v1/teams/[teamId]/invoices/[invoiceNumber]', () => {
     expect((await get(invoiceNumber)).status).toBe(404)
   })
 
-  // The route decodes the already-decoded parameter once more; a literal percent sign that is not an escape throws (finding F13).
-  test.failing.each([
+  test.each([
     ['a trailing percent sign', '100%'],
     ['a broken percent escape', '%E0%A4%A'],
   ])('an invoice number with %s is answered 404, not 500', async (_label, invoiceNumber) => {

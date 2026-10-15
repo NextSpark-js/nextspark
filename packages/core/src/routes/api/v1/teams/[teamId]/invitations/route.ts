@@ -4,6 +4,7 @@ import {
   createApiResponse,
   createApiError,
   createPaginationMeta,
+  parsePaginationParams,
   withApiLogging,
   handleCorsPreflightRequest,
   addCorsHeaders,
@@ -59,10 +60,8 @@ export const GET = withRateLimitTier(withApiLogging(
 
       // Parse query parameters
       const { searchParams } = new URL(req.url)
-      const page = parseInt(searchParams.get('page') || '1', 10)
-      const limit = parseInt(searchParams.get('limit') || '50', 10)
+      const { page, limit, offset } = parsePaginationParams(req, 50)
       const status = searchParams.get('status') || 'pending'
-      const offset = (page - 1) * limit
 
       // Fetch team invitations — explicit column list, deliberately excluding
       // "token": it is a bearer credential that grants the invitee's role to

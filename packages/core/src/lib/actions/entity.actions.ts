@@ -59,6 +59,19 @@ import type {
   ActionAuthContext,
 } from './types'
 
+/**
+ * A path on this app: one "/" first, no "//" or "\\" after it (a browser reads either as another host), no scheme and
+ * no control characters. `redirectTo` and `revalidatePaths` take only these; anything else is ignored.
+ */
+function isAppPath(path: unknown): path is string {
+  return typeof path === 'string'
+    && path.startsWith('/')
+    && !path.startsWith('//')
+    && !path.includes('\\')
+    && !/[\u0000-\u001f\u007f]/.test(path)
+}
+
+
 // ============================================================================
 // AUTH HELPERS
 // ============================================================================
@@ -171,7 +184,7 @@ export async function createEntity<T = unknown>(
     revalidatePath(`/dashboard/${entitySlug}`)
 
     if (config?.revalidatePaths) {
-      config.revalidatePaths.forEach(path => revalidatePath(path))
+      config.revalidatePaths.filter(isAppPath).forEach(path => revalidatePath(path))
     }
 
     if (config?.revalidateTags) {
@@ -179,7 +192,7 @@ export async function createEntity<T = unknown>(
     }
 
     // 6. Redirect if configured
-    if (config?.redirectTo) {
+    if (config?.redirectTo && isAppPath(config.redirectTo)) {
       redirect(config.redirectTo)
     }
 
@@ -267,7 +280,7 @@ export async function updateEntity<T = unknown>(
     revalidatePath(`/dashboard/${entitySlug}/${id}`)
 
     if (config?.revalidatePaths) {
-      config.revalidatePaths.forEach(path => revalidatePath(path))
+      config.revalidatePaths.filter(isAppPath).forEach(path => revalidatePath(path))
     }
 
     if (config?.revalidateTags) {
@@ -275,7 +288,7 @@ export async function updateEntity<T = unknown>(
     }
 
     // 6. Redirect if configured
-    if (config?.redirectTo) {
+    if (config?.redirectTo && isAppPath(config.redirectTo)) {
       redirect(config.redirectTo)
     }
 
@@ -358,7 +371,7 @@ export async function deleteEntity(
     revalidatePath(`/dashboard/${entitySlug}`)
 
     if (config?.revalidatePaths) {
-      config.revalidatePaths.forEach(path => revalidatePath(path))
+      config.revalidatePaths.filter(isAppPath).forEach(path => revalidatePath(path))
     }
 
     if (config?.revalidateTags) {
@@ -366,7 +379,7 @@ export async function deleteEntity(
     }
 
     // 6. Redirect if configured
-    if (config?.redirectTo) {
+    if (config?.redirectTo && isAppPath(config.redirectTo)) {
       redirect(config.redirectTo)
     }
 
@@ -593,7 +606,7 @@ export async function deleteEntities(
     revalidatePath(`/dashboard/${entitySlug}`)
 
     if (config?.revalidatePaths) {
-      config.revalidatePaths.forEach(path => revalidatePath(path))
+      config.revalidatePaths.filter(isAppPath).forEach(path => revalidatePath(path))
     }
 
     if (config?.revalidateTags) {
@@ -601,7 +614,7 @@ export async function deleteEntities(
     }
 
     // Redirect if configured
-    if (config?.redirectTo) {
+    if (config?.redirectTo && isAppPath(config.redirectTo)) {
       redirect(config.redirectTo)
     }
 

@@ -39,6 +39,7 @@ import { POST as signupWithInvite } from '@/app/api/v1/auth/signup-with-invite/r
 import { POST as createCategory } from '@/app/api/v1/post-categories/route'
 import { PUT as patchCategory } from '@/app/api/v1/post-categories/[id]/route'
 import { GET as patternUsages } from '@/app/api/v1/patterns/[id]/usages/route'
+import { createPatternUsagesHandlers } from '@/core/lib/api/routes/patterns-usages'
 import { POST as seedUserMetadata } from '@/app/api/internal/user-metadata/route'
 import { POST as cspReport } from '@/app/api/csp-report/route'
 import { POST as stripeWebhook } from '@/app/api/v1/billing/webhooks/stripe/route'
@@ -61,46 +62,45 @@ describe('billing — POST /cancel, /change-plan, /check-action, /checkout', () 
   // These routes catch an unreadable body themselves and answer 400 { success: false, error }, without a `code`.
   describe('cancel', () => {
     const invoke = (body: Body) => cancelBilling(makeReq('POST', '/api/v1/billing/cancel', body, TEAM), undefined as never)
-    // a JSON null is dereferenced (`body.action`) outside any try: the handler throws instead of answering (finding F8)
-    describeMalformedBodies(invoke, { codeless: true, defects: ['a JSON null'] })
+    describeMalformedBodies(invoke, {})
     describeRejectedValues(invoke, [
       ['immediate given text', { immediate: 'yes' }],
       ['a reason given a number', { reason: 5 }],
-    ], { codeless: true })
+    ], {})
   })
 
   describe('change-plan', () => {
     const invoke = (body: Body) => changePlan(makeReq('POST', '/api/v1/billing/change-plan', body, TEAM), undefined as never)
-    describeMalformedBodies(invoke, { codeless: true })
+    describeMalformedBodies(invoke, {})
     describeRejectedValues(invoke, [
       ['an empty object', {}],
       ['a plan slug given a number', { planSlug: 5 }],
       ['a plan slug that is empty', { planSlug: '' }],
       ['an interval that does not exist', { planSlug: 'pro', billingInterval: 'weekly' }],
-    ], { codeless: true })
+    ], {})
     test('nothing is changed for any of them', () => { expect(sub.changePlan).not.toHaveBeenCalled() })
   })
 
   describe('check-action', () => {
     const invoke = (body: Body) => checkAction(makeReq('POST', '/api/v1/billing/check-action', body, TEAM), undefined as never)
-    describeMalformedBodies(invoke, { codeless: true })
+    describeMalformedBodies(invoke, {})
     describeRejectedValues(invoke, [
       ['an empty object', {}],
       ['an action given a number', { action: 5 }],
       ['an action that is empty', { action: '' }],
       ['a team id that is not a UUID', { action: 'create', teamId: 'not-a-uuid' }],
       ['a team id given a number', { action: 'create', teamId: 5 }],
-    ], { codeless: true })
+    ], {})
   })
 
   describe('checkout', () => {
     const invoke = (body: Body) => checkout(makeReq('POST', '/api/v1/billing/checkout', body, TEAM), undefined as never)
-    describeMalformedBodies(invoke, { codeless: true })
+    describeMalformedBodies(invoke, {})
     describeRejectedValues(invoke, [
       ['an empty object', {}],
       ['a plan slug given a number', { planSlug: 5 }],
       ['a billing period that does not exist', { planSlug: 'pro', billingPeriod: 'weekly' }],
-    ], { codeless: true })
+    ], {})
   })
 })
 
@@ -108,9 +108,8 @@ describe('POST /api/v1/billing/plans', () => {
   const invoke = (body: Body) => createPlan(makeReq('POST', '/api/v1/billing/plans', body, { cookie: 'session=1' }), undefined as never)
   beforeEach(() => { mocks.getSession.mockResolvedValue({ user: { ...SUPERADMIN }, session: { id: 's1' } }) })
 
-  // The ZodError and an unreadable body both fall into a catch that answers 500 "Failed to create plan" (finding F9).
   describe('bodies', () => {
-    describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON array in place of an object', 'a JSON null', 'a JSON string', 'a JSON number', 'a JSON boolean'] })
+    describeMalformedBodies(invoke)
   })
   describe('values', () => {
     describeRejectedValues(invoke, [
@@ -124,7 +123,7 @@ describe('POST /api/v1/billing/plans', () => {
       ['a currency of two letters', { slug: 'pro', name: 'Pro', currency: 'us' }],
       ['features given text', { slug: 'pro', name: 'Pro', features: 'all' }],
       ['limits holding text', { slug: 'pro', name: 'Pro', limits: { projects: 'many' } }],
-    ], { defects: ['a slug with capitals', 'a slug over 50 characters', 'a name over 100 characters', 'a description over 500 characters', 'a price given text', 'a negative price', 'a fractional price', 'a currency of two letters', 'features given text', 'limits holding text'] })
+    ], )
   })
 })
 
@@ -133,8 +132,7 @@ describe('POST /api/v1/auth/signup-with-invite', () => {
   const GOOD = { email: 'ana@example.test', password: 'correct horse', inviteToken: 'tok-1' }
 
   describe('bodies', () => {
-    // an unreadable body and a JSON null are not guarded: 500 (finding F8)
-    describeMalformedBodies(invoke, { defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON null'] })
+    describeMalformedBodies(invoke)
   })
 
   describe('values', () => {
@@ -146,8 +144,7 @@ describe('POST /api/v1/auth/signup-with-invite', () => {
       ['a missing token', { email: GOOD.email, password: GOOD.password }],
     ], { code: /MISSING_FIELDS|INVALID_EMAIL|INVALID_PASSWORD/ })
 
-    // The checks read `password.length` and test the e-mail as text, so a number or an object slips past them (finding F19).
-    test.failing.each([
+    test.each([
       ['a password given a number', { ...GOOD, password: 12345678 }],
       ['a password given an object', { ...GOOD, password: { length: 99 } }],
       ['a token given an object', { ...GOOD, inviteToken: { a: 1 } }],
@@ -168,17 +165,17 @@ describe('/api/v1/post-categories', () => {
   const patch = (body: Body, id = 'cat-1') => patchCategory(makeReq('PUT', `/api/v1/post-categories/${id}`, body, TEAM), idParams({ id }))
 
   describe('POST — bodies', () => {
-    describeMalformedBodies(create, { codeless: true, defects: ['a missing body', 'an empty body', 'a body that is not JSON'] })
+    describeMalformedBodies(create, {})
   })
   describe('PUT — bodies', () => {
-    describeMalformedBodies(patch, { codeless: true, defects: ['a missing body', 'an empty body', 'a body that is not JSON'] })
+    describeMalformedBodies(patch, {})
   })
   describe('POST — values', () => {
     describeRejectedValues(create, [
       ['an empty object', {}],
       ['a name given a number', { name: 5 }],
       ['a name given an object', { name: { en: 'News' } }],
-    ], { codeless: true })
+    ], {})
   })
 })
 
@@ -199,8 +196,7 @@ describe('GET /api/v1/patterns/[id]/usages — pagination read by hand', () => {
     expect((await get(query)).status).toBe(200)
   })
 
-  // limit and page are read with parseInt and clamped on one side only (finding F3)
-  test.failing.each([
+  test.each([
     ['a limit of text', '?limit=many'],
     ['a page of text', '?page=abc'],
     ['a negative limit', '?limit=-5'],
@@ -216,20 +212,39 @@ describe('GET /api/v1/patterns/[id]/usages — pagination read by hand', () => {
   })
 })
 
+// the public factory apps export as their route reads page and limit by the same rule
+describe('createPatternUsagesHandlers().GET — page and limit', () => {
+  const { GET } = createPatternUsagesHandlers()
+  beforeEach(() => { mocks.queryOneWithRLS.mockResolvedValue({ id: 'pattern-1' }); mocks.authenticateRequest.mockResolvedValue(sessionAs(MEMBER)) })
+
+  test.each([
+    ['a limit of text', '?limit=many', 50, 0],
+    ['a page of text', '?page=abc', 50, 0],
+    ['a negative limit', '?limit=-5', 1, 0],
+    ['a limit over the maximum', '?limit=100000&page=2', 100, 100],
+  ])('%s reaches the service as a finite window', async (_label, query, limit, offset) => {
+    const { PatternUsageService } = jest.requireMock('@/core/lib/services') as { PatternUsageService: { getUsagesWithEntityInfo: jest.Mock } }
+    PatternUsageService.getUsagesWithEntityInfo.mockClear()
+    const response = await GET(makeReq('GET', `/api/v1/patterns/pattern-1/usages${query}`) as never, idParams({ id: 'pattern-1' }) as never)
+    expect(response.status).toBe(200)
+    expect(PatternUsageService.getUsagesWithEntityInfo.mock.calls[0][2]).toMatchObject({ limit, offset })
+  })
+})
+
 describe('POST /api/internal/user-metadata', () => {
   const invoke = (body: Body) => seedUserMetadata(makeReq('POST', '/api/internal/user-metadata', body), undefined as never)
   beforeEach(() => { mocks.authenticateRequest.mockResolvedValue(sessionAs(MEMBER)) })
 
   describe('bodies', () => {
-    describeMalformedBodies(invoke, { codeless: true, defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON null'] })
+    describeMalformedBodies(invoke, {})
   })
   describeRejectedValues(invoke, [
     ['an empty object', {}],
     ['metadata given text', { userId: MEMBER.id, metadata: 'x' }],
     ['metadata missing', { userId: MEMBER.id }],
-  ], { codeless: true })
+  ], {})
   test('another user id is answered 403 and merges nothing', async () => {
-    await expectCleanRejection(await invoke(asJson({ userId: 'someone-else', metadata: { a: 1 } })), { status: 403, codeless: true })
+    await expectCleanRejection(await invoke(asJson({ userId: 'someone-else', metadata: { a: 1 } })), { status: 403 })
     expect(mockMerge).not.toHaveBeenCalled()
   })
 })

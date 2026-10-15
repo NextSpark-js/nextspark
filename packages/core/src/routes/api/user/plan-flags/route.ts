@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
 import { getUserPlanAndFlags, updateUserPlan, updateUserFlags } from '@nextsparkjs/core/lib/user-data'
 import * as z from 'zod'
@@ -34,10 +35,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const session = await getAuthorizationSession(request.headers)
 
     if (!session) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+      return createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_REQUIRED')
     }
 
     const { searchParams } = new URL(request.url)
@@ -47,13 +45,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     })
 
     if (!validation.success) {
-      return NextResponse.json(
-        { 
-          error: 'Invalid parameters',
-          details: validation.error.flatten().fieldErrors 
-        },
-        { status: 400 }
-      )
+      return createApiError('Invalid parameters', 400, validation.error.flatten().fieldErrors, 'VALIDATION_ERROR')
     }
 
     const { userId } = validation.data
@@ -62,10 +54,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     // Security check: users can only access their own data unless admin
     const userRole = session.user.role as UserRole
     if (targetUserId !== session.user.id && !['superadmin', 'developer'].includes(userRole)) {
-      return NextResponse.json(
-        { error: 'Permission denied' },
-        { status: 403 }
-      )
+      return createApiError('Permission denied', 403, undefined, 'FORBIDDEN')
     }
 
     // Get user plan and flags
@@ -80,10 +69,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
   } catch (error) {
     console.error('GET user plan-flags error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'read');
 
@@ -97,23 +83,16 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
     const session = await getAuthorizationSession(request.headers)
 
     if (!session) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+      return createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_REQUIRED')
     }
 
-    const body = await request.json()
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
     const validation = planFlagsUpdateSchema.safeParse(body)
 
     if (!validation.success) {
-      return NextResponse.json(
-        { 
-          error: 'Invalid request body',
-          details: validation.error.flatten().fieldErrors 
-        },
-        { status: 400 }
-      )
+      return createApiError('Invalid request body', 400, validation.error.flatten().fieldErrors, 'VALIDATION_ERROR')
     }
 
     const { userId, plan, flags } = validation.data
@@ -121,10 +100,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
 
     // Security check: users can only update their own data unless admin
     if (userId !== session.user.id && !['superadmin', 'developer'].includes(userRole)) {
-      return NextResponse.json(
-        { error: 'Only admins can update other users data' },
-        { status: 403 }
-      )
+      return createApiError('Only admins can update other users data', 403, undefined, 'FORBIDDEN')
     }
 
     const results: { plan?: boolean; flags?: boolean } = {}
@@ -133,10 +109,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
     if (plan) {
       const planSuccess = await updateUserPlan(userId, plan)
       if (!planSuccess) {
-        return NextResponse.json(
-          { error: 'Failed to update user plan' },
-          { status: 500 }
-        )
+        return createApiError('Failed to update user plan', 500, undefined, 'INTERNAL_ERROR')
       }
       results.plan = true
     }
@@ -145,10 +118,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
     if (flags) {
       const flagsSuccess = await updateUserFlags(userId, flags)
       if (!flagsSuccess) {
-        return NextResponse.json(
-          { error: 'Failed to update user flags' },
-          { status: 500 }
-        )
+        return createApiError('Failed to update user flags', 500, undefined, 'INTERNAL_ERROR')
       }
       results.flags = true
     }
@@ -166,10 +136,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
 
   } catch (error) {
     console.error('PATCH user plan-flags error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write');
 
@@ -183,23 +150,19 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const session = await getAuthorizationSession(request.headers)
 
     if (!session) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+      return createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_REQUIRED')
     }
 
     const userRole = session.user.role as UserRole
 
     // Only admins can perform bulk operations
     if (!['superadmin', 'developer'].includes(userRole)) {
-      return NextResponse.json(
-        { error: 'Admin access required for bulk operations' },
-        { status: 403 }
-      )
+      return createApiError('Admin access required for bulk operations', 403, undefined, 'FORBIDDEN')
     }
 
-    const body = await request.json()
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
     const bulkSchema = z.object({
       updates: z.array(z.object({
         userId: z.string(),
@@ -211,13 +174,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const validation = bulkSchema.safeParse(body)
 
     if (!validation.success) {
-      return NextResponse.json(
-        { 
-          error: 'Invalid bulk request',
-          details: validation.error.flatten().fieldErrors 
-        },
-        { status: 400 }
-      )
+      return createApiError('Invalid bulk request', 400, validation.error.flatten().fieldErrors, 'VALIDATION_ERROR')
     }
 
     const { updates } = validation.data
@@ -243,10 +200,11 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
           success: true
         })
       } catch (error) {
+        console.error('Error updating plan flags:', error)
         results.push({
           userId: update.userId,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: 'Update failed'
         })
       }
     }
@@ -264,10 +222,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
 
   } catch (error) {
     console.error('POST bulk user plan-flags error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'strict');
 

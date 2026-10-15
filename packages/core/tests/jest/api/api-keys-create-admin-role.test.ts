@@ -14,6 +14,7 @@ jest.mock('@nextsparkjs/core/lib/api/auth/dual-auth', () => ({
 const validateScopesForUser = jest.fn()
 jest.mock('@nextsparkjs/core/lib/api/auth', () => ({ validateScopesForUser: (...args: unknown[]) => validateScopesForUser(...args) }))
 jest.mock('@nextsparkjs/core/lib/api/helpers', () => ({
+  readJsonObject: async (request: { json: () => Promise<unknown> }) => ({ data: await request.json() }),
   createApiResponse: (data: unknown, _meta: unknown, status = 200) => NextResponse.json(data, { status }),
   createApiError: (error: string, status: number) => NextResponse.json({ error }, { status }),
   withApiLogging: (handler: unknown) => handler,

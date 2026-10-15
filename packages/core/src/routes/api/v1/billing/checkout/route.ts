@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
@@ -30,26 +31,13 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   }
 
   // 2. Parse and validate request body
-  let body
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json(
-      { success: false, error: 'Invalid JSON body' },
-      { status: 400 }
-    )
-  }
+  const parsedBody = await readJsonObject(request)
+  if (parsedBody.error) return parsedBody.error
+  const body = parsedBody.data
 
   const parseResult = checkoutSchema.safeParse(body)
   if (!parseResult.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Validation failed',
-        details: parseResult.error.issues
-      },
-      { status: 400 }
-    )
+    return createApiError('Validation failed', 400, parseResult.error.issues, 'VALIDATION_ERROR')
   }
 
   const { planSlug, billingPeriod } = parseResult.data
@@ -60,13 +48,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     authResult.user.defaultTeamId
 
   if (!teamId) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'No team context available. Please provide x-team-id header.'
-      },
-      { status: 400 }
-    )
+    return createApiError('No team context available. Please provide x-team-id header.', 400, undefined, 'VALIDATION_ERROR')
   }
 
   // 4. Permission check using MembershipService
@@ -74,15 +56,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   const actionResult = membership.canPerformAction('team.billing.manage')
 
   if (!actionResult.allowed) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: actionResult.message,
-        reason: actionResult.reason,
-        meta: actionResult.meta,
-      },
-      { status: 403 }
-    )
+    return createApiError(actionResult.message, 403, undefined, 'ACTION_NOT_ALLOWED', { reason: actionResult.reason, meta: actionResult.meta })
   }
 
   // 5. Check existing subscription
@@ -101,10 +75,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       )
 
       if (!result.success) {
-        return NextResponse.json(
-          { success: false, error: result.error },
-          { status: 400 }
-        )
+        return createApiError(result.error ?? 'Request refused', 400, undefined, 'VALIDATION_ERROR')
       }
 
       // No redirect needed — plan changed immediately via API
@@ -143,13 +114,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     })
   } catch (error) {
     console.error('[checkout] Error:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to process checkout'
-      },
-      { status: 500 }
-    )
+    return createApiError('Failed to process checkout', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write');
 

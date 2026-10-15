@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createApiError } from '@nextsparkjs/core/lib/api/error-response';
+import { parsePaginationParams } from '@nextsparkjs/core/lib/api/pagination';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { SYSTEM_ADMIN_TEAM_ID } from '@nextsparkjs/core/lib/api/auth/dual-auth';
@@ -40,27 +42,19 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
     // Check if user is authenticated
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - No session found' },
-        { status: 401 }
-      );
+      return createApiError('Unauthorized - No session found', 401, undefined, 'AUTHENTICATION_REQUIRED');
     }
 
     // Check if user is superadmin or developer
     if (session.user.role !== 'superadmin' && session.user.role !== 'developer') {
-      return NextResponse.json(
-        { error: 'Forbidden - Superadmin or developer access required' },
-        { status: 403 }
-      );
+      return createApiError('Forbidden - Superadmin or developer access required', 403, undefined, 'FORBIDDEN');
     }
 
     // Parse query params
     const searchParams = request.nextUrl.searchParams;
     const search = searchParams.get('search') || '';
     const type = searchParams.get('type') as 'user' | 'system' | null;
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')));
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = parsePaginationParams(request, 20);
 
     // Build WHERE clause
     const whereConditions: string[] = [];
@@ -179,13 +173,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   } catch (error) {
     console.error('Error fetching teams data:', error);
 
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: 'Failed to retrieve teams data'
-      },
-      { status: 500 }
-    );
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to retrieve teams data' });
   }
 }, 'strict');
 

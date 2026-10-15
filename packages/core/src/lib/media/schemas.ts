@@ -18,6 +18,25 @@ export const updateMediaSchema = z.object({
   caption: z.string().max(1000).nullable().optional(),
 })
 
+/** Most tag ids, duplicate-check entries and files one media request carries. */
+export const MAX_MEDIA_BATCH = 100
+
+/** Longest tag name, in characters. */
+export const MAX_TAG_NAME_LENGTH = 100
+
+const commaList = z.string().transform(s => (s ? s.split(',').filter(Boolean) : [])).pipe(z.array(z.string()).max(MAX_MEDIA_BATCH))
+
+export const createMediaTagSchema = z.object({
+  name: z.string().trim().min(1).max(MAX_TAG_NAME_LENGTH),
+})
+
+export const checkDuplicatesSchema = z.object({
+  files: z.array(z.object({
+    filename: z.string().min(1).max(255),
+    fileSize: z.number().int().min(0),
+  })).min(1).max(MAX_MEDIA_BATCH),
+})
+
 export const mediaListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   offset: z.coerce.number().int().min(0).optional().default(0),
@@ -25,6 +44,6 @@ export const mediaListQuerySchema = z.object({
   orderDir: z.enum(['asc', 'desc']).optional().default('desc'),
   type: z.enum(['image', 'video', 'all']).optional().default('all'),
   search: z.string().optional(),
-  tagIds: z.string().transform(s => s ? s.split(',').filter(Boolean) : []).optional(),
-  tagSlugs: z.string().transform(s => s ? s.split(',').filter(Boolean) : []).optional(),
+  tagIds: commaList.optional(),
+  tagSlugs: commaList.optional(),
 })

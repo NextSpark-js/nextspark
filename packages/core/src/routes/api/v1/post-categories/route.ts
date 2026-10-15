@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
 import { categoryReadTeam, categoryWriter } from '@nextsparkjs/core/lib/api/post-categories'
 import { query as dbQuery } from '@nextsparkjs/core/lib/db'
 import * as z from 'zod'
@@ -50,7 +51,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     })
   } catch (error) {
     console.error('Error fetching post categories:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'read');
 
@@ -62,7 +63,9 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     if ('response' in writer) return writer.response
     const teamId = writer.teamId!
 
-    const body = await request.json()
+    const parsedBody = await readJsonObject(request)
+    if (parsedBody.error) return parsedBody.error
+    const body = parsedBody.data
     const data = createCategorySchema.parse(body)
 
     // Auto-generate slug if not provided
@@ -75,11 +78,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     )
 
     if (existing.rows.length > 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'Slug already exists',
-        message: `A category with slug "${slug}" already exists`
-      }, { status: 400 })
+      return createApiError('Slug already exists', 400, undefined, 'SLUG_EXISTS', { message: `A category with slug "${slug}" already exists` })
     }
 
     // Verify parentId exists if provided (in the team, or without a team)
@@ -89,10 +88,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
         [data.parentId, teamId]
       )
       if (parentCheck.rows.length === 0) {
-        return NextResponse.json({
-          success: false,
-          error: 'Parent category not found'
-        }, { status: 400 })
+        return createApiError('Parent category not found', 400, undefined, 'VALIDATION_ERROR')
       }
     }
 
@@ -119,10 +115,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     return NextResponse.json({ success: true, data: result.rows[0] }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: 'Validation error', details: error.issues }, { status: 400 })
+      return createApiError('Validation error', 400, error.issues, 'VALIDATION_ERROR')
     }
     console.error('Error creating post category:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR')
   }
 }, 'write');
 

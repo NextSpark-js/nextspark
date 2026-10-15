@@ -1,7 +1,7 @@
 /**
  * S192 — input validation of the signed-in user's routes:
  *   /api/user/profile (PATCH), /api/user/plan-flags (GET, PATCH, POST), /api/v1/users/[id]/meta/[key] (PUT, GET).
- * The /api/user/* routes answer `{ error: '<fixed text>' }` without a `code` field (finding F11).
+ * The /api/user/* routes answer `{ error: '<fixed text>' }` with a stable `code`.
  */
 
 import { routeHarness, makeReq, asJson, idParams, noWrites, describeMalformedBodies, describeRejectedValues, expectCleanRejection, sessionAs, MEMBER, SUPERADMIN } from './__helpers__/route-harness'
@@ -46,8 +46,7 @@ describe('PATCH /api/user/profile', () => {
   const invoke = (body: Body) => patchProfile(makeReq('PATCH', '/api/user/profile', body), undefined as never)
 
   describe('bodies', () => {
-    // an unreadable body and a JSON null are thrown or destructured unguarded (500); a bare number or boolean reads as an empty update and answers 200 (finding F8)
-    describeMalformedBodies(invoke, { codeless: true, defects: ['a missing body', 'an empty body', 'a body that is not JSON', 'a JSON null', 'a JSON number', 'a JSON boolean'] })
+    describeMalformedBodies(invoke, {})
   })
 
   describe('values', () => {
@@ -59,7 +58,7 @@ describe('PATCH /api/user/profile', () => {
       ['a country that is empty', { ...VALID_PROFILE, country: '' }],
       ['a timezone given an array', { ...VALID_PROFILE, timezone: ['UTC'] }],
       ['only some of the profile fields', { firstName: 'Ana' }],
-    ], { codeless: true })
+    ], {})
 
     test.each([['accented Latin', 'María José', 'Núñez'], ['CJK', '太郎', '山田'], ['right-to-left', 'محمد', 'الأحمد'], ['emoji', 'Ana 🐕‍🦺', 'Pérez 🚀']])('stores a %s name unchanged', async (_label, firstName, lastName) => {
       const response = await invoke(asJson({ ...VALID_PROFILE, firstName, lastName }))
@@ -76,7 +75,7 @@ describe('/api/user/plan-flags', () => {
   const nothingUpdated = () => { expect(mockUpdatePlan).not.toHaveBeenCalled(); expect(mockUpdateFlags).not.toHaveBeenCalled() }
 
   describe('PATCH — bodies', () => {
-    describeMalformedBodies(patch, { codeless: true, defects: ['a missing body', 'an empty body', 'a body that is not JSON'] })
+    describeMalformedBodies(patch, {})
   })
 
   describe('PATCH — values', () => {
@@ -88,7 +87,7 @@ describe('/api/user/plan-flags', () => {
       ['flags given text', { userId: 'user-1', flags: 'vip' }],
       ['flags that do not exist', { userId: 'user-1', flags: ['demigod'] }],
       ['flags given an object', { userId: 'user-1', flags: { vip: true } }],
-    ], { codeless: true })
+    ], {})
 
     test('nothing is updated for a body that fails validation', async () => {
       await patch(asJson({ userId: 'user-1', plan: 'platinum' }))
@@ -98,7 +97,7 @@ describe('/api/user/plan-flags', () => {
 
   describe('POST (bulk) — bodies and limits', () => {
     beforeEach(() => { mockSession.mockResolvedValue({ user: { id: 'admin-1', email: 'a@test.com', role: 'superadmin' } }) })
-    describeMalformedBodies(bulk, { codeless: true, defects: ['a missing body', 'an empty body', 'a body that is not JSON'] })
+    describeMalformedBodies(bulk, {})
 
     describeRejectedValues(bulk, [
       ['updates missing', {}],
@@ -107,7 +106,7 @@ describe('/api/user/plan-flags', () => {
       ['an update without a user id', { updates: [{ plan: 'free' }] }],
       ['an update with a plan that does not exist', { updates: [{ userId: 'u1', plan: 'platinum' }] }],
       ['more than 100 updates', { updates: Array.from({ length: 101 }, (_, index) => ({ userId: `u${index}`, plan: 'free' })) }],
-    ], { codeless: true })
+    ], {})
 
     test('exactly 100 updates are processed', async () => {
       const response = await bulk(asJson({ updates: Array.from({ length: 100 }, (_, index) => ({ userId: `u${index}`, plan: 'free' })) }))
@@ -117,7 +116,7 @@ describe('/api/user/plan-flags', () => {
 
     test('a caller who is not an admin is refused before the body is read', async () => {
       mockSession.mockResolvedValue({ user: { id: 'user-1', email: 'u@test.com', role: 'member' } })
-      await expectCleanRejection(await bulk(asJson({ updates: [] })), { status: 403, codeless: true })
+      await expectCleanRejection(await bulk(asJson({ updates: [] })), { status: 403 })
       nothingUpdated()
     })
   })
@@ -138,8 +137,7 @@ describe('/api/v1/users/[id]/meta/[key]', () => {
   const put = (body: Body, key = 'theme', id = 'user-1') => putMeta(makeReq('PUT', `/api/v1/users/${id}/meta/${key}`, body), idParams({ id, key }))
 
   describe('PUT — bodies', () => {
-    // an unreadable body is thrown inside a try whose catch answers 500 and repeats the parser message (finding F8/F12)
-    describeMalformedBodies(put, { defects: ['a missing body', 'an empty body', 'a body that is not JSON'] })
+    describeMalformedBodies(put)
   })
 
   describe('PUT — values', () => {
@@ -173,7 +171,7 @@ describe('/api/v1/users/[id]/meta/[key]', () => {
     })
   })
 
-  test.failing('the server-error body does not repeat internal error text', async () => {
+  test('the server-error body does not repeat internal error text', async () => {
     mocks.authenticateRequest.mockResolvedValue(sessionAs(SUPERADMIN))
     mockUpdateUserMeta.mockRejectedValue(new Error('connection to server at "10.0.0.5", port 5432 failed'))
     const response = await put(asJson({ value: 1 })) as unknown as { json(): Promise<unknown> }
