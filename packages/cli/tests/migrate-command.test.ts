@@ -13,7 +13,7 @@ import type { AddressInfo } from 'node:net'
 import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
-import { simulationEnvironment } from '../src/commands/migrate.js'
+import { projectPnpmPackageManager, simulationEnvironment } from '../src/commands/migrate.js'
 import { BUILD_ALLOWLIST, addBuildAllowlist, addCompatRewrites, addWorkspaceGlob, dropLegacyBuildList, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, hostFrameworkFixes, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
 
 let cliEntry: string
@@ -1878,6 +1878,124 @@ else process.exit(2)
     assert.deepEqual(report.appTemplates.generatedByPreviousTemplate, ['page.tsx'])
   } finally {
     await server?.close()
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('the pnpm pin comes from the nearest package.json at or above the project, and only when it names pnpm', async () => {
+  const base = await mkdtemp(join(tmpdir(), 'nextspark-migrate-pin-'))
+  try {
+    await write(base, 'package.json', JSON.stringify({ packageManager: 'pnpm@10.34.6' }))
+    await write(base, 'app/package.json', JSON.stringify({ name: 'app' }))
+    assert.equal(projectPnpmPackageManager(join(base, 'app')), 'pnpm@10.34.6', 'the pin of a parent package.json')
+    await write(base, 'app/package.json', JSON.stringify({ name: 'app', packageManager: 'pnpm@9.0.0' }))
+    assert.equal(projectPnpmPackageManager(join(base, 'app')), 'pnpm@9.0.0', 'the nearest pin wins')
+    await write(base, 'app/package.json', JSON.stringify({ name: 'app', packageManager: 'yarn@4.0.0' }))
+    assert.equal(projectPnpmPackageManager(join(base, 'app')), null, 'a pin of another manager is not used, and does not fall through to a parent')
+    for (const [value, expected] of [
+      ['pnpm@https://example.test/pnpm.tgz', null],
+      ['pnpm@latest', null],
+      ['pnpm@^10.0.0', null],
+      ['pnpm@10.34.6+sha512.abc123', 'pnpm@10.34.6+sha512.abc123'],
+    ] as const) {
+      await write(base, 'app/package.json', JSON.stringify({ name: 'app', packageManager: value }))
+      assert.equal(projectPnpmPackageManager(join(base, 'app')), expected, value)
+    }
+  } finally {
+    await rm(base, { recursive: true, force: true })
+  }
+})
+
+test('the simulation hands the project pnpm pin to the migrate it runs in a copy', () => {
+  assert.equal(simulationEnvironment('t', 'pnpm@10.34.6').NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER, 'pnpm@10.34.6')
+  assert.equal('NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER' in simulationEnvironment('t', null), false)
+})
+
+test('a dry run in a simulation takes the pnpm pin from the variable the real run hands over, and a real run does not', async () => {
+  for (const simulation of [true, false]) {
+    const { root } = await moveFixture()
+    const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-pin-env-'))
+    let server: Awaited<ReturnType<typeof tarballServer>> | null = null
+    try {
+      const page = 'export default function Page() { return <main>beta.183</main> }\n'
+      const packageFile = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+      packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+      await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+      await write(root, 'app/page.tsx', page)
+      await commitFixture(root)
+      packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+      await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+      await write(root, 'next.config.mjs', 'export default { cacheComponents: true }\n')
+      await write(root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192' }))
+      await write(root, 'node_modules/next/package.json', JSON.stringify({ name: 'next', version: '16.2.0' }))
+      await write(root, 'node_modules/@nextsparkjs/core/templates/next.config.mjs', 'export default {}\n')
+      await commitFixture(root)
+      await write(support, 'package/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.183' }))
+      await write(support, 'package/templates/app/page.tsx', page)
+      const archive = join(support, 'nextsparkjs-core-0.1.0-beta.183.tgz')
+      await tar.c({ cwd: support, file: archive, gzip: true }, ['package'])
+      server = await tarballServer(archive)
+      const bin = join(support, 'bin')
+      // the project pins nothing: only a pin handed over in the variable makes this pnpm answer
+      await write(bin, 'pnpm', `#!/usr/bin/env node
+const { readFileSync } = require('node:fs')
+const args = process.argv.slice(2)
+let pinned = null
+try { pinned = JSON.parse(readFileSync('package.json', 'utf8')).packageManager } catch {}
+if (pinned !== 'pnpm@10.34.6') { console.error('corepack: no pinned pnpm here'); process.exit(1) }
+if (args[0] === 'view') process.stdout.write(process.env.FAKE_TARBALL_URL)
+else if (args[0] === 'config') process.stdout.write(args[2] === '@nextsparkjs:registry' ? process.env.FAKE_REGISTRY : 'undefined')
+else process.exit(2)
+`)
+      await chmod(join(bin, 'pnpm'), 0o755)
+      const dryRun = await runAsync(root, ['--dry-run', '--json'], {
+        PATH: `${bin}:${process.env.PATH}`, FAKE_TARBALL_URL: server.url, FAKE_REGISTRY: new URL(server.url).origin, npm_config_registry: new URL(server.url).origin,
+        NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER: 'pnpm@10.34.6',
+        ...(simulation ? { NEXTSPARK_MIGRATE_SIMULATION: '1' } : {}),
+      })
+      const report = JSON.parse(dryRun.stdout)
+      if (simulation) assert.equal(report.appTemplates.previousTemplateMethod, 'pnpm view tarball')
+      else assert.match(report.appTemplates.previousTemplateUnavailableReason, /pnpm could not retrieve/)
+    } finally {
+      await server?.close()
+      await rm(root, { recursive: true, force: true })
+      await rm(support, { recursive: true, force: true })
+    }
+  }
+})
+
+test('a project pinned to another package manager gets no package.json in the previous core lookup', async () => {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-yarn-pin-'))
+  try {
+    const packageFile = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+    packageFile.packageManager = 'yarn@4.0.0'
+    await write(root, 'app/page.tsx', 'export default function Page() { return <main>beta.183</main> }\n')
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await commitFixture(root)
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await write(root, 'next.config.mjs', 'export default { cacheComponents: true }\n')
+    await write(root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192' }))
+    await write(root, 'node_modules/next/package.json', JSON.stringify({ name: 'next', version: '16.2.0' }))
+    await write(root, 'node_modules/@nextsparkjs/core/templates/next.config.mjs', 'export default {}\n')
+    await commitFixture(root)
+    const bin = join(support, 'bin')
+    // records whether the directory it ran in held a package.json, then fails like an unreachable registry
+    await write(bin, 'pnpm', `#!/usr/bin/env node
+require('node:fs').appendFileSync(process.env.FAKE_LOG, String(require('node:fs').existsSync('package.json')) + '\\n')
+process.exit(1)
+`)
+    await chmod(join(bin, 'pnpm'), 0o755)
+    const log = join(support, 'calls.log')
+    const dryRun = await runAsync(root, ['--dry-run', '--json'], { PATH: `${bin}:${process.env.PATH}`, FAKE_LOG: log })
+    const report = JSON.parse(dryRun.stdout)
+    assert.match(report.appTemplates.previousTemplateUnavailableReason, /pnpm could not retrieve/)
+    const calls = (await readFile(log, 'utf8')).trim().split('\n')
+    assert.ok(calls.length > 0 && calls.every(call => call === 'false'), `pnpm ran where a package.json existed: ${calls.join(',')}`)
+  } finally {
     await rm(root, { recursive: true, force: true })
     await rm(support, { recursive: true, force: true })
   }

@@ -477,11 +477,14 @@ function didProcessTimeOut(error: unknown): boolean {
     && (('code' in error && error.code === 'ETIMEDOUT') || ('signal' in error && error.signal === 'SIGTERM'));
 }
 
-/** The `packageManager` of the nearest package.json at or above `start`, when it names pnpm. */
-function projectPnpmPackageManager(start: string): string | null {
+/** An exact pnpm pin, `pnpm@<version>` with Corepack's optional hash suffix: never a range, a tag or a URL, which Corepack would fetch. */
+const PNPM_PIN = /^pnpm@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z]+\.[0-9A-Fa-f]+)?$/;
+
+/** The `packageManager` of the nearest package.json at or above `start`, when it is an exact pnpm pin. */
+export function projectPnpmPackageManager(start: string): string | null {
   for (let directory = resolve(start); ; directory = dirname(directory)) {
     const value = readJson(join(directory, 'package.json'))?.packageManager;
-    if (typeof value === 'string') return /^pnpm@/.test(value) ? value : null;
+    if (typeof value === 'string') return PNPM_PIN.test(value) ? value : null;
     if (dirname(directory) === directory) return null;
   }
 }
@@ -709,7 +712,11 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
     // The lookup runs in an empty directory, where Corepack knows no `packageManager` and fetches its own default pnpm
     // (a download that can outlast the budget, and that Node 22's Corepack cannot do for pnpm 12). Hand it the
     // project's pnpm, from the nearest `packageManager` at or above the project, so it picks the one already in use.
-    const packageManager = hostRoot ? projectPnpmPackageManager(hostRoot) : null;
+    // The simulation's clone lives in the temp directory, away from where the pin is, so the real run hands it over.
+    // (read only there: in a real run a stray variable must not override the project's own pin)
+    const handedOver = process.env.NEXTSPARK_MIGRATE_SIMULATION === '1' ? process.env.NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER : undefined;
+    const packageManager = (handedOver && PNPM_PIN.test(handedOver) ? handedOver : null)
+      ?? (hostRoot ? projectPnpmPackageManager(hostRoot) : null);
     if (packageManager) writeFileSync(join(directory, 'package.json'), JSON.stringify({ packageManager }));
     // Never let a project's workspace policies influence this historical
     // lookup. In particular, pnpm 12 can apply minimumReleaseAge and build
@@ -3657,12 +3664,12 @@ function firstErrorLine(output: string): string | null {
 const SIMULATION_ENV = /^(?:PATH|HOME|TMPDIR|NODE_OPTIONS|SystemRoot|USERPROFILE|APPDATA|LOCALAPPDATA|PATHEXT|ComSpec|TEMP|TMP)$/i;
 
 /** The simulation's children get only what they need: PATH, HOME, TMPDIR, NODE_OPTIONS, COREPACK_*, on Windows SystemRoot/USERPROFILE/APPDATA/LOCALAPPDATA/PATHEXT/ComSpec/TEMP/TMP, the package-manager settings, NEXTSPARK_* and the active theme migrate resolved (which may come from the environment, not from .env.example). */
-export function simulationEnvironment(theme: string | null): NodeJS.ProcessEnv {
+export function simulationEnvironment(theme: string | null, packageManager: string | null = null): NodeJS.ProcessEnv {
   const kept: NodeJS.ProcessEnv = {};
   for (const [name, value] of Object.entries(process.env)) {
     if (SIMULATION_ENV.test(name) || /^(?:npm_config_|NPM_CONFIG_|pnpm_config_|PNPM_CONFIG_|COREPACK_|NEXTSPARK_)/.test(name)) kept[name] = value;
   }
-  return { ...kept, ...(theme ? { NEXT_PUBLIC_ACTIVE_THEME: theme } : {}), NEXTSPARK_MIGRATE_SIMULATION: '1', NEXTSPARK_AUTH_PREFLIGHT: 'off' };
+  return { ...kept, ...(theme ? { NEXT_PUBLIC_ACTIVE_THEME: theme } : {}), ...(packageManager ? { NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER: packageManager } : {}), NEXTSPARK_MIGRATE_SIMULATION: '1', NEXTSPARK_AUTH_PREFLIGHT: 'off' };
 }
 
 interface SimulationChild {
@@ -3766,7 +3773,7 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
     const prepareModule = copiedTemplates ? join(dirname(copiedTemplates), 'scripts', 'build', 'registry', 'host', 'prepare.mjs') : null;
     // The core the project uses decides: one that exports predictHost answers without running the registry build
     const hasPredict = prepareModule !== null && existsSync(prepareModule) && /export\s+(?:async\s+)?function\s+predictHost\b/.test(readFileSync(prepareModule, 'utf8'));
-    const simulationEnv = simulationEnvironment(report.activeTheme.name);
+    const simulationEnv = simulationEnvironment(report.activeTheme.name, projectPnpmPackageManager(resolve(repository, report.hostRoot.path)));
     const nonce = randomBytes(16).toString('hex');
     writeFileSync(join(copy, '.git', SIMULATION_MARKER), nonce);
     const migrated = await runAndCollect(process.execPath, [process.argv[1], 'migrate', '--yes', '--simulation-nonce', nonce, ...(hasPredict ? ['--no-prepare'] : [])], {
