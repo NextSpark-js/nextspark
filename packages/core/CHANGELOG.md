@@ -258,6 +258,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Core's `TimezoneSelect` offers `Asia/Kolkata` instead of `Asia/Mumbai` (not an IANA zone). A stored `Asia/Mumbai` is kept until the
   user saves the timezone again.
 
+### CI
+
+- PostgreSQL 18 joins the migrate matrix: the `verify` job of *Project template migrations* and the `migrate` job of *Generated projects* run every core migration and every template's migrations on 15 (verify only), 16, 17 and 18. PostgreSQL 18 is listed as supported.
+
 ## [0.1.0-beta.198] - 2026-10-09
 
 ### Upgrading from 0.1.0-beta.197

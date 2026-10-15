@@ -1,12 +1,12 @@
 # PostgreSQL requirements
 
-> **Status:** written requirements for 1.0 (issue [#204](https://github.com/NextSpark-js/nextspark/issues/204), G0), checked against the core migrations and the database code at `0.1.0-beta.197`. NextSpark supports **standard PostgreSQL 15, 16 and 17**. Neon, Supabase and Amazon RDS are **not verified**.
+> **Status:** written requirements for 1.0 (issue [#204](https://github.com/NextSpark-js/nextspark/issues/204), G0), checked against the core migrations and the database code at `0.1.0-beta.197`. NextSpark supports **standard PostgreSQL 15, 16, 17 and 18**. Neon, Supabase and Amazon RDS are **not verified**.
 
 This page lists what a PostgreSQL server and its roles must provide for NextSpark to run. Version support and what CI tests are in [Support matrix](./02-support-matrix.md). Setup steps are in [Database setup](../02-getting-started/03-database-setup.md); the row-level security design is in [RLS policies](../10-backend/03-rls-policies.md).
 
 ## Server
 
-- PostgreSQL 15, 16 or 17. PostgreSQL 18 is untested.
+- PostgreSQL 15, 16, 17 or 18. PostgreSQL 18 is verified in CI: the `verify (<template>, postgres 18)` jobs of `theme-migrations.yml` and the `migrate (<template>, postgres 18)` jobs of `generated-projects.yml` run every core migration and every template's migrations on it.
 - SSL available, for any server that is not on the same host as the application. See [SSL](#ssl).
 - The `pgcrypto` extension, which migration `001_better_auth_and_functions.sql` creates with `CREATE EXTENSION IF NOT EXISTS pgcrypto`. It is the only extension the core migrations create. On a managed server where extensions are installed by an administrator, create it before the first migration.
 
@@ -96,7 +96,7 @@ See [Environment configuration](../02-getting-started/05-environment-configurati
 
 | Provider | Status |
 | --- | --- |
-| Self-hosted PostgreSQL 15, 16 or 17 | Supported. |
+| Self-hosted PostgreSQL 15, 16, 17 or 18 | Supported. |
 | Neon | Not verified. |
 | Supabase | Not verified. The migrations tolerate its pre-created roles, but no CI job runs against it. |
 | Amazon RDS | Not verified. |

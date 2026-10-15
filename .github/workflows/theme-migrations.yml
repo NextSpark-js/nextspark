@@ -34,8 +34,8 @@ jobs:
         # Install-once templates are extracted into clean root-first projects;
         # default verifies the repository's root-first apps/dev project.
         theme: [blog, crm, default, productivity, starter]
-        # 15 is the supported version; 16 and 17 are checked so a migration that only breaks on a newer server shows up
-        postgres: ['15', '16', '17']
+        # 15 is the base version the builds use; 16, 17 and 18 are checked so a migration that only breaks on a newer server shows up
+        postgres: ['15', '16', '17', '18']
     services:
       postgres:
         image: postgres:${{ matrix.postgres }}

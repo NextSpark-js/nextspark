@@ -36,7 +36,7 @@ The floor is 10.34.6 because pnpm 10.16 fails on a warm store cache with `ERR_PN
 
 | Axis | Supported for 1.0 | Tested in CI today |
 | --- | --- | --- |
-| PostgreSQL | Standard PostgreSQL 15, 16 and 17, with the [written requirements](./04-postgresql-requirements.md). PostgreSQL 18 is untested. | 15 for every build. 15, 16 and 17 for the migrations of every template, core migrations included (`theme-migrations.yml`; `generated-projects.yml` also migrates each created project on 16 and 17). |
+| PostgreSQL | Standard PostgreSQL 15, 16, 17 and 18, with the [written requirements](./04-postgresql-requirements.md). | 15 for every build. 15, 16, 17 and 18 for the migrations of every template, core migrations included: PostgreSQL 18 is verified in CI by `theme-migrations.yml` (`verify`) and by `generated-projects.yml` (`migrate`, which also migrates each created project on 16, 17 and 18). |
 | Neon, Supabase, Amazon RDS | **Not verified.** They may work if they meet the requirements. None is tested for 1.0 and none is promised. | No. |
 
 ## Deployment
