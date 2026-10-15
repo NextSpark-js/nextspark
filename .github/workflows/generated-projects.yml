@@ -17,6 +17,7 @@ on:
       - 'scripts/deploy/**'
       - 'scripts/accessibility/**'
       - 'scripts/auth/**'
+      - 'scripts/plugins/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -349,6 +350,41 @@ jobs:
         with:
           name: standalone-logs
           path: ${{ runner.temp }}/standalone-logs
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The plugin matrix (G0 decision 6) on a starter made from the tarballs: a local and a packaged plugin load and register
+  # (build, and the local plugin's route answers), a name collision between two packaged plugins is refused, a core peer
+  # range that cannot be met is reported, and removing both leaves the generated files of the untouched starter. The script
+  # is the one to run locally; no database is needed. Ordering and cycles are unit-tested in packages/core.
+  plugin-matrix:
+    needs: pack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_OLDEST }}
+
+      - name: Create the project
+        uses: ./.github/actions/create-project
+        with:
+          theme: starter
+          preset: saas
+
+      - name: Check the plugin matrix
+        run: node scripts/plugins/verify-plugin-matrix.mjs --app "$PROJECT/app" --packages "$PROJECT/.packages" --logs "$RUNNER_TEMP/plugin-matrix-logs" --serve
+
+      - name: Upload the logs
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-matrix-logs
+          path: ${{ runner.temp }}/plugin-matrix-logs
           if-no-files-found: ignore
           retention-days: 7
 

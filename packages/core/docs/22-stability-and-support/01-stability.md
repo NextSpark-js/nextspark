@@ -61,6 +61,18 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 | CLI: `add:theme`, `add:plugin`, `add:mobile`, and `@nextsparkjs/testing` | |
 | Vercel deployment | See [Vercel deployment](../14-deployment/03-vercel-deployment.md). |
 
+## Plugins in CI
+
+The first-party plugins stay experimental; the plugin system itself is checked on every push to `main` by the `plugin-matrix` job of the *Generated projects* workflow (`scripts/plugins/verify-plugin-matrix.mjs`), on a starter made from the packed packages:
+
+- a local plugin and a packaged plugin (`@nextsparkjs/plugin-walkme`) are both enabled, the project builds, both are in the generated registries, and the local plugin's API route answers from `next start`;
+- two packaged plugins that declare the same `nextspark.name` make `nextspark prepare` stop, naming both packages and the plugin name;
+- a packaged plugin whose `@nextsparkjs/core` peer range cannot be met is reported by the package manager at install; the CLI has no check of its own (`add:plugin` only reports a missing peer);
+- removing both plugins, and the packages, leaves exactly the generated files (`.nextspark`, `src`) the untouched starter has, after `prepare` and after a build;
+- the order of the `plugins` list is the order of the registries, the catalog is sorted by name, and a cycle in plugins' `dependencies` is not an error: nothing orders plugins by `dependencies` (unit tests in `packages/core/scripts/build/registry/__tests__/plugin-ordering.test.mjs`).
+
+A packaged plugin ships its TypeScript source, which Next compiles only for the packages in `transpilePackages`: add the plugin's package name next to `@nextsparkjs/core` in `next.config.mjs`, or the build stops with "Unknown module type" on the plugin's `plugin.config.ts`. Local plugins need nothing.
+
 ## Deprecated
 
 | Surface | Notes |

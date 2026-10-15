@@ -262,6 +262,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - PostgreSQL 18 joins the migrate matrix: the `verify` job of *Project template migrations* and the `migrate` job of *Generated projects* run every core migration and every template's migrations on 15 (verify only), 16, 17 and 18. PostgreSQL 18 is listed as supported.
 - A `macos` job in *Generated projects* creates the starter from the packed packages on a macOS arm64 runner (`macos-latest`, PostgreSQL 17 from Homebrew), builds it, serves it and requests `/login` and `/`. The support matrix lists macOS arm64 as tested, and the release procedure asks for the same check by hand at each release candidate. `.github/actions/build-project` uses `sed -i.bak` so it also runs with the BSD `sed` of macOS.
+- A `plugin-matrix` job in *Generated projects* (`scripts/plugins/verify-plugin-matrix.mjs`) checks plugins on a starter made from the packed packages: a local and a packaged plugin load and register, two packaged plugins with one name are refused, an unmet core peer range is reported at install, and removing the plugins leaves no generated leftovers. Node tests in `packages/core/scripts/build/registry/__tests__/plugin-ordering.test.mjs` cover the order of the `plugins` list and a cycle in plugins' `dependencies`. The stability page describes the matrix and says that a packaged plugin's package name goes in `transpilePackages`.
 
 ## [0.1.0-beta.198] - 2026-10-09
 
