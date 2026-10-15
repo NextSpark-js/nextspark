@@ -5,7 +5,8 @@
  *
  *   baseline    `nextspark prepare` on the untouched starter; the generated files (.nextspark, src) are hashed
  *   load        a local plugin (plugins/local-demo, with an API route) and a packaged one (@nextsparkjs/plugin-walkme from
- *               the tarballs) are enabled: `nextspark build` passes, both are in the catalog and the registries, and
+ *               the tarballs) are enabled: `nextspark prepare` refuses the packaged one until its package is in
+ *               transpilePackages (the script adds it), then `nextspark build` passes, both are in the catalog and the registries, and
  *               with --serve the local plugin's route answers from `next start`
  *   collision   a second packaged plugin that declares the same `nextspark.name` makes `nextspark prepare` fail, naming
  *               both packages and the plugin name
@@ -172,12 +173,6 @@ const steps = [
     assert(Object.keys(state.baseline).length > 0, 'prepare generated nothing')
   }],
   ['load: a local and a packaged plugin', async (state) => {
-    // A packaged plugin ships its TypeScript source, which Next compiles only for the packages in transpilePackages:
-    // without this line the build stops with "Unknown module type" on the plugin's plugin.config.ts.
-    state.nextConfig = read('next.config.mjs')
-    const transpile = "transpilePackages: ['@nextsparkjs/core']"
-    assert(state.nextConfig.includes(transpile), `next.config.mjs has no ${transpile} to extend`)
-    writeFileSync(path.join(app, 'next.config.mjs'), state.nextConfig.replace(transpile, `transpilePackages: ['@nextsparkjs/core', '${WALKME}']`))
     mkdirSync(path.join(app, 'plugins', 'local-demo', 'api', 'ping'), { recursive: true })
     writeFileSync(path.join(app, 'plugins', 'local-demo', 'plugin.config.ts'), `import { definePlugin } from '@nextsparkjs/core/types/plugin'
 export const localDemoPluginConfig = definePlugin({ name: 'local-demo', capabilities: ['server'] })
@@ -189,6 +184,15 @@ export default localDemoPluginConfig
 `)
     must('load-add-packaged', 'pnpm', ['add', '-w', `file:${path.relative(app, path.join(packages, walkmeTarball))}`])
     setPlugins(['local-demo', WALKME])
+    // A packaged plugin ships its TypeScript source, which Next compiles only for the packages in transpilePackages:
+    // without this line the build stops with "Unknown module type" on the plugin's plugin.config.ts. Prepare refuses first.
+    state.nextConfig = read('next.config.mjs')
+    const transpile = "transpilePackages: ['@nextsparkjs/core']"
+    assert(state.nextConfig.includes(transpile), `next.config.mjs has no ${transpile} to extend`)
+    const refused = run('load-prepare-refused', 'pnpm', ['build:registries'])
+    assert(!refused.ok, 'prepare passed with a packaged plugin missing from transpilePackages')
+    assert(refused.output.includes('NS_PLUGIN_TRANSPILE_MISSING') && refused.output.includes(WALKME), `prepare refused without naming NS_PLUGIN_TRANSPILE_MISSING and ${WALKME}:\n${refused.output.split('\n').slice(-12).join('\n')}`)
+    writeFileSync(path.join(app, 'next.config.mjs'), state.nextConfig.replace(transpile, `transpilePackages: ['@nextsparkjs/core', '${WALKME}']`))
     must('load-prepare', 'pnpm', ['build:registries'])
     const catalog = read('.nextspark/registries/plugin-catalog.ts')
     for (const name of ['local-demo', 'walkme']) assert(catalog.includes(`"${name}": {`), `plugin-catalog.ts does not list ${name}`)

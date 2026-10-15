@@ -14,6 +14,12 @@ The plugin is available as an npm package or can be copied directly into your pr
 pnpm add @nextsparkjs/plugin-walkme
 ```
 
+The package ships TypeScript source, so add it to `transpilePackages` in `next.config.mjs`; `nextspark prepare` stops with `NS_PLUGIN_TRANSPILE_MISSING` until you do:
+
+```js
+transpilePackages: ['@nextsparkjs/core', '@nextsparkjs/plugin-walkme'],
+```
+
 ### Manual
 
 Copy the `plugins/walkme/` directory to `plugins/walkme/` in your NextSpark project.

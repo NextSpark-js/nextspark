@@ -35,6 +35,7 @@ import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { projectFiles } from '../../safe-fs.mjs'
+import { packagedPluginTranspile } from './transpile.mjs'
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 import { getConfig } from '../config.mjs'
 import { resolveNextPackage } from './facade-emitter.mjs'
@@ -96,6 +97,8 @@ function describeDiagnostic(diagnostic) {
  * planning and emission diagnostic.
  */
 export async function renderHostFiles(config, { devStatus = false, cache } = {}) {
+  const transpile = packagedPluginTranspile({ projectRoot: config.project?.root ?? config.projectRoot, plugins: config.plugins ?? [] })
+  if (transpile.diagnostics.length > 0) throw Object.assign(new PrepareError(transpile.diagnostics), { notices: transpile.notices, stage: 'plan' })
   const manifest = await config.loadCoreRoutes()
   if (!manifest) throw new NoCoreRouteManifestError(config.coreRoot ?? '(unknown core)')
   const declared = await withDeclaredCapabilities(config.plugins ?? [], { projectRoot: config.projectRoot })
@@ -118,7 +121,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     extensions: config.extensions,
   })
   const { routes } = planned
-  const notices = [...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot)]
+  const notices = [...transpile.notices, ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot)]
   const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics, ...proxyPathDiagnostics(config.projectRoot)]
   if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices, stage: 'plan' })
   const rendered = await renderHost({

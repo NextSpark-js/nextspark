@@ -719,3 +719,49 @@ export function dropLegacyBuildList(text: string): string {
   const indent = /^\{\r?\n([ \t]+)"/.exec(text)?.[1] ?? 2;
   return `${JSON.stringify(pkg, null, indent)}${text.endsWith('\n') ? '\n' : ''}`;
 }
+
+/** The source without its comments; a `/*` or `//` inside a string literal stays. */
+function withoutComments(source: string): string {
+  let out = '';
+  for (let i = 0; i < source.length; i++) {
+    const c = source[i];
+    if (c === "'" || c === '"' || c === '`') {
+      let j = i + 1;
+      while (j < source.length && source[j] !== c) j += source[j] === '\\' ? 2 : 1;
+      out += source.slice(i, j + 1);
+      i = j;
+    } else if (c === '/' && source[i + 1] === '*') {
+      const end = source.indexOf('*/', i + 2);
+      i = end < 0 ? source.length : end + 1;
+    } else if (c === '/' && source[i + 1] === '/') {
+      while (i < source.length && source[i] !== '\n') i++;
+      out += '\n';
+    } else out += c;
+  }
+  return out;
+}
+
+/**
+ * The packaged plugins `nextspark prepare` would refuse: the ones a next.config (or its absence, `source` null) does not list in a
+ * literal `transpilePackages` array. A config that cannot be read statically (a spread, a variable) refuses nothing here; prepare
+ * warns about it. Same reading rule as core's host/transpile.mjs, which the CLI cannot import from the installed core.
+ */
+export function missingTranspilePackages(source: string | null, packaged: readonly string[]): { missing: string[]; line: string } {
+  if (packaged.length === 0) return { missing: [], line: '' };
+  let listed: string[] = [];
+  if (source !== null) {
+    const text = withoutComments(source);
+    const key = /\btranspilePackages\s*:\s*/.exec(text);
+    if (!key) {
+      if (/\btranspilePackages\b/.test(text) || /\.\.\.\s*[A-Za-z_$(]/.test(text)) return { missing: [], line: '' };
+    } else {
+      const array = /^\[([^\]]*)\]/.exec(text.slice(key.index + key[0].length));
+      const entries = array ? array[1].split(',').map(entry => entry.trim()).filter(Boolean) : null;
+      const names = entries?.map(entry => /^(['"`])([^'"`$]*)\1$/.exec(entry)?.[2]);
+      if (!names || names.includes(undefined)) return { missing: [], line: '' };
+      listed = names as string[];
+    }
+  }
+  const missing = packaged.filter(name => !listed.includes(name));
+  return { missing, line: `transpilePackages: [${[...listed, ...missing].map(name => `'${name}'`).join(', ')}],` };
+}

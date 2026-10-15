@@ -1112,6 +1112,7 @@ test('migrate creates a missing root-first config from required local and packag
       dependencies: { next: '~16.3.8', '@nextsparkjs/plugin-langchain': '^1.0.0' },
     }))
     await write(root, 'contents/themes/acme/package.json', JSON.stringify({ requiredPlugins: ['local', '@nextsparkjs/plugin-langchain', 'missing'] }))
+    await write(root, 'next.config.mjs', "export default { transpilePackages: ['@nextsparkjs/core', '@nextsparkjs/plugin-langchain'] }\n")
     await commitFixture(root)
 
     const dryRun = run(root, ['--dry-run', '--json'])
@@ -1120,6 +1121,29 @@ test('migrate creates a missing root-first config from required local and packag
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.equal(await readFile(join(root, 'nextspark.config.ts'), 'utf8'), "import { defineConfig } from '@nextsparkjs/core/lib/config'\n\nexport default defineConfig({\n  plugins: [\"@nextsparkjs/plugin-langchain\",\"local\"],\n})\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate stops before writing when a packaged plugin it enables is not in transpilePackages', async () => {
+  const { root } = await moveFixture()
+  try {
+    await rm(join(root, 'nextspark.config.ts'))
+    await write(root, 'package.json', JSON.stringify({
+      name: 'fixture', packageManager: 'pnpm@9.0.0',
+      dependencies: { next: '~16.3.8', '@nextsparkjs/plugin-langchain': '^1.0.0' },
+    }))
+    await write(root, 'contents/themes/acme/package.json', JSON.stringify({ requiredPlugins: ['@nextsparkjs/plugin-langchain'] }))
+    await write(root, 'next.config.mjs', "export default { transpilePackages: ['@nextsparkjs/core'] }\n")
+    await commitFixture(root)
+
+    const result = run(root, ['--yes'])
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /Refusing to migrate: 1 blocker\(s\).*Nothing was written/)
+    assert.match(result.stderr, /@nextsparkjs\/plugin-langchain: a packaged plugin ships TypeScript source/)
+    assert.ok(result.stderr.includes("transpilePackages: ['@nextsparkjs/core', '@nextsparkjs/plugin-langchain'],"), result.stderr)
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
   } finally {
     await rm(root, { recursive: true, force: true })
   }

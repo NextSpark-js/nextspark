@@ -55,6 +55,20 @@ packaged plugins are enabled only by the `plugins` list in
 `nextspark.config.ts`; there is no fallback to a theme config and no scan of
 `node_modules`.
 
+A packaged plugin ships TypeScript source, so its package must also be in
+`transpilePackages` in `next.config.*`:
+
+```js
+transpilePackages: ['@nextsparkjs/core', '@scope/plugin-name'],
+```
+
+`nextspark prepare` checks this before it generates anything and stops with
+`NS_PLUGIN_TRANSPILE_MISSING`, naming the package and the line to set; without
+it `next build` fails with "Unknown module type". `prepare` reads the config as
+text, so a `transpilePackages` it cannot read (a spread, a variable) is only a
+warning (`NS_PLUGIN_TRANSPILE_UNREADABLE`): check the list yourself. Local
+plugins under `plugins/` are not affected.
+
 ## Validation and discovery
 
 `defineConfig` validates the public shape. Compiler commands search upward for
