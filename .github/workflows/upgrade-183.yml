@@ -1,0 +1,77 @@
+name: Upgrade from 0.1.0-beta.183
+
+# The oldest supported upgrade, checked every week and on demand (G0 decision 9). A project as the published
+# create-nextspark-app@0.1.0-beta.183 makes it, with the edits the upgrade guide worries about, is upgraded with the
+# `nextspark migrate` of this repository's main: migrate, install, prepare, db:migrate, build, start. The same script is
+# run by hand at each release candidate (see the release candidate checks in docs/17-updates/02-release-version).
+# It reads only the npm registry and this repository; it needs no secret.
+on:
+  # a pull request that changes this workflow or its script runs it, since a schedule and a dispatch only exist on main
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/upgrade-183.yml'
+      - 'scripts/upgrade/**'
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A pull request cancels its own older run; the weekly and manual runs each get their own group, so none is dropped
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_OLDEST: 22.14.0
+
+jobs:
+  upgrade:
+    name: upgrade from beta.183 (node 22.14.0, pnpm 10.34.6)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: dbuser
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up the repository
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_OLDEST }}
+
+      - name: Pack the packages
+        run: ./scripts/packages/pack.sh --all --output "$RUNNER_TEMP/packages"
+        env:
+          SKIP_MOBILE_VERIFY: '1'
+
+      - name: Upgrade a 0.1.0-beta.183 project
+        run: node scripts/upgrade/verify-upgrade-183.mjs --packages "$RUNNER_TEMP/packages" --work "$RUNNER_TEMP/upgrade-183" --logs "$RUNNER_TEMP/upgrade-183-logs" --pnpm 10.34.6
+        env:
+          PGHOST: localhost
+          PGUSER: dbuser
+          PGPASSWORD: postgres
+
+      - name: Upload the logs
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upgrade-183-logs
+          path: ${{ runner.temp }}/upgrade-183-logs
+          if-no-files-found: ignore
+          retention-days: 7

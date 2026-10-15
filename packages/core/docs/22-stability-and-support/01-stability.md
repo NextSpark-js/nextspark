@@ -25,7 +25,7 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 | `definePlugin` and the plugin system | The first-party plugins are experimental, see below. |
 | `starter` template | The other templates are experimental. |
 | Web app, `saas` preset | The default preset of `create-nextspark-app`. |
-| `nextspark migrate` from 0.x | Supported from `0.1.0-beta.183`. Availability window in [Stability and versioning policy](./03-versioning-policy.md#upgrading-from-0x). |
+| `nextspark migrate` from 0.x | Supported from `0.1.0-beta.183`, which a weekly CI job upgrades (`upgrade-183.yml`) and which is run by hand at each release candidate. Availability window in [Stability and versioning policy](./03-versioning-policy.md#upgrading-from-0x). |
 | Email (Resend) and i18n | |
 | Superadmin and devtools | Stable as protected areas. |
 | Stable CLI: `create-nextspark-app`; `nextspark` `dev`, `build`, `prepare`, `db:*`, `doctor`, `migrate`; and `update-core` (a bin of `@nextsparkjs/core`, run as `pnpm update-core`) | No programmatic API. |
