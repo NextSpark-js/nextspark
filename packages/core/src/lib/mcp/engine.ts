@@ -18,7 +18,7 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
+import { JSONRPCMessageSchema, type JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 import * as z from 'zod'
 import type { EntityConfig } from '../entities/types'
 import { StatelessJsonRpcTransport } from './transport'
@@ -195,16 +195,29 @@ export function createMcpEngine(
 
     const transport = new StatelessJsonRpcTransport()
     await server.connect(transport)
+    // A message that is not a JSON-RPC envelope is answered -32600 right away: the SDK never replies to it, so the
+    // transport would otherwise hold the connection until its timeout.
+    const handleOne = async (message: unknown): Promise<JSONRPCMessage | null> => {
+      if (!JSONRPCMessageSchema.safeParse(message).success) {
+        const id = (message as { id?: unknown } | null)?.id
+        return {
+          jsonrpc: '2.0',
+          id: typeof id === 'string' || typeof id === 'number' ? id : null,
+          error: { code: -32600, message: 'Invalid Request' },
+        } as unknown as JSONRPCMessage
+      }
+      return transport.handleMessage(message as JSONRPCMessage)
+    }
     try {
       if (Array.isArray(body)) {
         const responses: JSONRPCMessage[] = []
         for (const message of body) {
-          const response = await transport.handleMessage(message as JSONRPCMessage)
+          const response = await handleOne(message)
           if (response) responses.push(response)
         }
         return responses.length ? responses : null
       }
-      return await transport.handleMessage(body as JSONRPCMessage)
+      return await handleOne(body)
     } finally {
       await transport.close()
     }

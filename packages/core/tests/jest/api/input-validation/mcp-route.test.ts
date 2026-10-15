@@ -69,9 +69,7 @@ describe('POST /api/mcp — bodies', () => {
     expect(executeEntityOperation).not.toHaveBeenCalled()
   })
 
-  // A message that is not a JSON-RPC request object makes the transport throw (`'method' in 42`) or wait for a reply the
-  // SDK never sends: 500, or no answer until the transport's own 30-second timeout (finding F20).
-  test.failing.each([
+  test.each([
     ['a JSON null', 'null'],
     ['a JSON string', '"tools/list"'],
     ['a JSON number', '42'],
@@ -83,6 +81,8 @@ describe('POST /api/mcp — bodies', () => {
     const response = await post(raw(text))
     if (response === 'hang') throw new Error('no answer within 1.5 s')
     expect(response.status).toBeLessThan(500)
+    const body = (await bodyOf(response)) as { error?: { code: number } } | Array<{ error?: { code: number } }>
+    expect((Array.isArray(body) ? body[0] : body).error?.code).toBe(-32600)
     expect(executeEntityOperation).not.toHaveBeenCalled()
   })
 
