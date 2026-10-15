@@ -42,10 +42,12 @@ jest.mock('@/core/lib/db', () => ({
 
 const mockGetSession = jest.fn()
 const mockAuthenticateRequest = jest.fn()
+const mockResolveTeamContext = jest.fn()
 jest.mock('@/core/lib/api/auth/dual-auth', () => ({
   authenticateRequest: (...args: unknown[]) => mockAuthenticateRequest(...args),
   hasRequiredScope: () => true,
   canBypassTeamContext: async () => false,
+  resolveTeamContext: (...args: unknown[]) => mockResolveTeamContext(...args),
   createAuthFailureResponse: (authResult: { error?: { code: string; status: number; message: string } }) => {
     const failure = authResult.error ?? { code: 'AUTHENTICATION_FAILED', status: 401, message: 'Authentication required' }
     return NextResponse.json({ success: false, error: failure.message, code: failure.code }, { status: failure.status })
@@ -61,12 +63,18 @@ jest.mock('@/core/lib/api/rate-limit', () => ({
 }))
 
 // What lib/api/helpers imports and the routes under test do not exercise.
-jest.mock('@/core/lib/api/auth', () => ({ validateApiKey: jest.fn(), getValidatedApiKey: jest.fn(() => null) }))
+const mockValidateScopesForUser = jest.fn()
+jest.mock('@/core/lib/api/auth', () => ({
+  validateApiKey: jest.fn(),
+  getValidatedApiKey: jest.fn(() => null),
+  invalidateApiKeyCache: jest.fn(),
+  validateScopesForUser: (...args: unknown[]) => mockValidateScopesForUser(...args),
+}))
 jest.mock('@/core/lib/auth', () => ({ auth: { api: { getSession: (...args: unknown[]) => mockGetSession(...args) } } }))
 jest.mock('@/core/lib/config', () => ({ getApplicationConfig: jest.fn(() => ({})) }))
 jest.mock('@/core/lib/services/meta.service', () => ({ MetaService: {} }))
 jest.mock('@/core/lib/services/scope.service', () => ({
-  ScopeService: { getAllowedFilters: () => ['role'], getBaseScopes: () => [], getRoleScopes: () => [], getFlagScopes: () => [], getRestrictionRules: () => ({}) },
+  ScopeService: { getAllowedFilters: () => ['role'], getBaseScopes: () => [], getRoleScopes: (role: string) => (role === 'superadmin' ? ['*'] : []), getFlagScopes: () => [], getRestrictionRules: () => ({}) },
 }))
 jest.mock('@/core/lib/entities/registry', () => ({ getEntityConfig: jest.fn() }))
 jest.mock('@/core/lib/entities/queries', () => ({ getChildEntities: jest.fn(), getEntity: jest.fn(), setEntityRegistry: jest.fn() }))
@@ -121,6 +129,8 @@ function reset() {
   mockTxQuery.mockResolvedValue({ rows: [], rowCount: 0 })
   mockAuthenticateRequest.mockResolvedValue(sessionAs(SUPERADMIN))
   mockGetSession.mockResolvedValue({ user: SUPERADMIN, session: { id: 'session-1' } })
+  mockResolveTeamContext.mockResolvedValue('team-1')
+  mockValidateScopesForUser.mockResolvedValue({ valid: true, deniedScopes: [], allowedScopes: [] })
 }
 
 export const routeHarness = {
@@ -135,6 +145,8 @@ export const routeHarness = {
     txRollback: mockTxRollback,
     authenticateRequest: mockAuthenticateRequest,
     getSession: mockGetSession,
+    resolveTeamContext: mockResolveTeamContext,
+    validateScopesForUser: mockValidateScopesForUser,
   },
 }
 
