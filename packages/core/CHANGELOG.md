@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `create-nextspark-app` installs `@vercel/blob@^2.8.2` (before: any version), the range core declares, so a later major is not pulled into a new project. The file-upload guide shows the same range.
 - `/signup` keeps `callbackUrl` (a path on the app only), `fromInvite` and `email` when it redirects to `/login` (passwordless preset, `invitation-only` after the bootstrap, `domain-restricted`), so an invited person returns to `/accept-invite/<token>` after signing in and the invitation is accepted (#263).
 - `nextspark add:plugin` compares each peer dependency's range with the version installed in `node_modules` (prereleases included). An incompatible one stops the command with an error naming the required and the installed version, before anything is written; a missing peer is printed as a warning and the install goes on.
 - `nextspark prepare` checks that a packaged plugin's package is in `transpilePackages` (next.config) before it generates anything, and stops with `NS_PLUGIN_TRANSPILE_MISSING`, naming the package and the line to set; `next build` otherwise fails with "Unknown module type" on the plugin's TypeScript source. `next.config` is read as text: a `transpilePackages` it cannot read (a spread, a variable) is a warning (`NS_PLUGIN_TRANSPILE_UNREADABLE`). `nextspark migrate` refuses the same case before it writes anything, showing the line to add. Local plugins are not affected.

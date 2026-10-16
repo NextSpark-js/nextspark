@@ -305,7 +305,7 @@ export const ESSENTIAL_DEPENDENCIES = [
   // Must be direct project deps, not phantom-hoisted from @nextsparkjs/core,
   // otherwise `next build` fails to resolve them under pnpm.
   'gray-matter',
-  '@vercel/blob',
+  '@vercel/blob@^2.8.2',
 ] as const
 
 export async function createProject(options: ProjectOptions): Promise<void> {

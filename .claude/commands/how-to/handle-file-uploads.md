@@ -193,7 +193,7 @@ The required package is already included:
 
 ```json
 {
-  "@vercel/blob": "^2.0.0"
+  "@vercel/blob": "^2.8.2"
 }
 ```
 
