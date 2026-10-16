@@ -76,7 +76,8 @@
       "@types/node": "20.19.27",
       "zod@^4": "4.6.5",
       "sharp": "^0.35.5",
-      "handlebars": "^4.7.10"
+      "handlebars": "^4.7.10",
+      "@cypress/request>qs": "^6.16.0"
     }
   },
   "engines": {
