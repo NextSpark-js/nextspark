@@ -482,7 +482,7 @@
     "@uiw/react-codemirror": "^4.25.4",
     "@upstash/ratelimit": "^2.0.3",
     "@upstash/redis": "^1.20.6",
-    "@vercel/blob": "^2.0.0",
+    "@vercel/blob": "^2.8.2",
     "better-auth": "~1.7.7",
     "chalk": "^5.4.1",
     "class-variance-authority": "^0.7.1",

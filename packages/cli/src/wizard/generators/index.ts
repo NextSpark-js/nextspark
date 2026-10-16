@@ -356,7 +356,7 @@ export async function updatePackageJson(
     // Declared as direct deps so `next build` can resolve them under pnpm
     // (they would otherwise only exist as transitive @nextsparkjs/core deps).
     'gray-matter': '^4.0.3',
-    '@vercel/blob': '^2.0.0',
+    '@vercel/blob': '^2.8.2',
   }
 
   for (const [name, version] of Object.entries(depsToAdd)) {
