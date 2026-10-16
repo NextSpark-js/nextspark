@@ -88,13 +88,25 @@ source that has one gets `NS_HOST_UNSUPPORTED_EXPORT` saying that NextSpark's ge
 Next.js accepts it.
 
 Segment config and `cacheComponents` (verified by probe builds with `next build --webpack` and
-`--turbopack`, Next.js 16.3.5):
+`--turbopack`, Next.js 16.3.5; `ensureStatic` by the probe build below, Next.js 16.4.2):
 
 - invalid with `cacheComponents: true` (build error "Route segment config "X" is not compatible with
   `nextConfig.cacheComponents`"): `dynamic`, `dynamicParams`, `fetchCache`, `revalidate`, **`runtime`**
   (not listed in Next's docs, but even `runtime = 'nodejs'` fails);
-- require `cacheComponents: true`: `instant`, `prefetch`, `ensureStatic` (a Server Component module only; `ensureStatic` is new in 16.4);
+- require `cacheComponents: true`: `instant`, `prefetch`, `ensureStatic` (a Server Component module only);
 - `unstable_dynamicStaleTime` is page-only (a layout fails the build).
+
+`ensureStatic` (new in Next.js 16.4) was probe-built with `next build` (Turbopack) on 16.4.2, once as a hand-written
+`app/page.tsx` / `app/layout.tsx` and once as the facade this emitter writes for the same source:
+
+| Case | Next.js 16.4.2 (hand-written) | Host facade |
+| --- | --- | --- |
+| page, `'navigation'` / `'shell'`, `cacheComponents: true` | builds | `export const ensureStatic = ...` forwarded as a literal; builds |
+| layout, `'navigation'`, `cacheComponents: true` | builds | forwarded; builds |
+| page or layout, `cacheComponents: false` | build error: Route "/page" cannot use `export const ensureStatic = ...` without enabling `cacheComponents` | refused before the build, `NS_HOST_CACHE_COMPONENTS_CONFLICT` |
+| page, value `'sometimes'` | build error: Invalid ensureStatic value, must be "auto", "shell", "prefetch", "navigation" or false | refused, `NS_HOST_INVALID_SEGMENT_CONFIG_VALUE` |
+| page with a dynamic part behind `<Suspense>`, no `ensureStatic` | builds (partial prerender) | builds |
+| the same page with `'navigation'` | build error: "encountered uncached or runtime data on a route that must be fully static" | the same build error: the facade keeps the enforcement |
 
 Literal values are accepted exactly as `next/dist/build/analysis/extract-const-value.js` reads them
 (no negative numbers, no parentheses, no identifiers) and then validated with Next's own

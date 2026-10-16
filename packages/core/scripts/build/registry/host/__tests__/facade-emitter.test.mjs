@@ -344,6 +344,7 @@ test(`${DIAGNOSTICS.INVALID_SEGMENT_CONFIG_VALUE}: literals Next.js's schema rej
   }
 })
 
+// ensureStatic (16.4.2) was probe-built as a hand-written route and as this emitter's facade; the results are in host/README.md
 test(`${DIAGNOSTICS.CACHE_COMPONENTS_CONFLICT}: keys cacheComponents forbids, and keys that need it`, async () => {
   for (const name of ROUTE_EXPORT_TABLE.segmentConfig.invalidWithCacheComponents) {
     const result = await plan('page', sourceFor('page', exportLineFor(name)), { cacheComponents: true })
