@@ -3936,7 +3936,10 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
         return;
       }
       if (upgrades.length > 0) {
-        section('Root-first project', upgrades.map(upgrade => `${upgrade.file}: an unchanged copy of an earlier core template, replaced with the current one`));
+        section('Root-first project', [
+          ...upgrades.map(upgrade => `${upgrade.file}: an unchanged copy of an earlier core template, replaced with the current one`),
+          ...(rangeUpdate ? [`package.json: next and eslint-config-next set to ${report.nextRange.required}`] : []),
+        ]);
         if (!options.yes) {
           if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to replace these files.');
           process.stdout.write('Replace these files? [y/N] ');
@@ -3944,6 +3947,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
           if (answer !== 'y' && answer !== 'yes') throw new MigrateAnalysisError('Migration cancelled.');
         }
       }
+      if (rangeUpdate && upgrades.length === 0 && renameSlugs) section('Root-first project', [`package.json: next and eslint-config-next set to ${report.nextRange.required}`]);
       if (renameSlugs && upgrades.length === 0 && !options.yes && !slugsAnswered) {
         if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to rename the entity slugs.');
         if (!askYesNo('Rename the entity slugs?')) throw new MigrateAnalysisError('Migration cancelled.');

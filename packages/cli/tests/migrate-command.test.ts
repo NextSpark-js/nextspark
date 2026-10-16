@@ -4925,3 +4925,26 @@ test('migrate on a root-first project on an earlier Next.js sets next and eslint
     await rm(root, { recursive: true, force: true })
   }
 })
+
+// The earlier proxy template and the earlier Next.js minor are both work: the report lists both, one --yes does both
+test('migrate on a root-first project lists the package.json range next to the proxy template it replaces, and does both', async () => {
+  const oldProxy = "import { auth } from '@nextsparkjs/core/lib/auth'\nexport async function proxy() { return auth }\nexport const config = { matcher: ['/((?!_next/static/|_next/image$|favicon\\\\.ico$).*)'] }\nconst areas = ['/superadmin', '/devtools']\n"
+  const facade = await readFile(join(CORE_SOURCE, 'templates/proxy.ts'), 'utf8')
+  const root = await rootFirstFixture({
+    'package.json': JSON.stringify({ name: 'root-first', packageManager: 'pnpm@9.0.0', dependencies: { next: '16.3.8', '@nextsparkjs/core': '0.1.0-beta.192' } }, null, 2) + '\n',
+    'src/proxy.ts': oldProxy,
+    'node_modules/@nextsparkjs/core/templates/proxy.ts': facade,
+    'node_modules/@nextsparkjs/core/templates/instrumentation.ts': await readFile(join(CORE_SOURCE, 'templates/instrumentation.ts'), 'utf8'),
+    'node_modules/@nextsparkjs/core/scripts/build/registry/host/previous-templates.json': JSON.stringify({ 'proxy.ts': [sha(oldProxy)], 'instrumentation.ts': [] }),
+  })
+  try {
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /Root-first project\n {2}src\/proxy\.ts: an unchanged copy of an earlier core template, replaced with the current one\n {2}package\.json: next and eslint-config-next set to ~16\.4\.2/)
+    assert.equal(await readFile(join(root, 'src/proxy.ts'), 'utf8'), facade)
+    assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).dependencies.next, '~16.4.2')
+    assert.match(result.stdout, /Rollback: git checkout -- 'src\/proxy\.ts' 'package\.json'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
