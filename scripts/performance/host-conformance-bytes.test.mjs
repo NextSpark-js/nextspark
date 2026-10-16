@@ -315,3 +315,10 @@ test('Turbopack 16.4: [script, [id, factory, id, factory]] registers modules lik
   // a nested array anywhere else is not a registration
   assert.deepEqual(scan('foo(["x",[1,(e,t,r)=>{e.r(2)}]])').factoryIds, [])
 })
+
+test('a one-element array holding a function inside a Turbopack factory is application code, not a crash', () => {
+  const text = turbopack(1, `var a=[()=>1];${ERROR})`)
+  assert.doesNotThrow(() => scan(text))
+  assert.deepEqual(scan(text).factoryIds, [1])
+  assert.deepEqual(scan(turbopack(1, 'var a=[()=>1];t.s(["default",0,a])')).factoryIds, [1])
+})

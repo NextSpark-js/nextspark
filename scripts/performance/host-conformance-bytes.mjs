@@ -132,7 +132,8 @@ export function factoryOf(fn, ts) {
   // Turbopack module: [script, id, factory, id, factory, ...] - factories at even indexes >= 2.
   const previous = parent.elements[index - 1]
   // Next.js 16.4 may put a nested list in element 1; the flat pairs then start at element 2 instead of 1.
-  const flatStart = ts.isArrayLiteralExpression(parent.elements[1]) ? 2 : 1
+  const second = parent.elements[1]
+  const flatStart = second && ts.isArrayLiteralExpression(second) ? 2 : 1
   if (container === 'turbopack' && index >= flatStart + 1 && (index - flatStart) % 2 === 1 && previous && ts.isNumericLiteral(previous)) {
     return { kind: 'turbopack-module', node: fn, id: Number(previous.text), context: paramName(0) }
   }
