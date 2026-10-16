@@ -4901,3 +4901,27 @@ test('on a terminal, migrate asks before renaming an underscore slug: yes rename
     }
   }
 })
+
+// A root-first project on an earlier Next.js minor has nothing else to migrate: --yes still sets the range the report names
+test('migrate on a root-first project on an earlier Next.js sets next and eslint-config-next, and asks for --yes without a terminal', async () => {
+  const root = await rootFirstFixture({
+    'package.json': JSON.stringify({ name: 'root-first', packageManager: 'pnpm@9.0.0', dependencies: { next: '16.3.8', '@nextsparkjs/core': '0.1.0-beta.192' }, devDependencies: { 'eslint-config-next': '~16.3.8' } }, null, 2) + '\n',
+  })
+  try {
+    const without = run(root, [])
+    assert.notEqual(without.status, 0)
+    assert.match(`${without.stdout}\n${without.stderr}`, /rerun with --yes to set next and eslint-config-next to ~16\.4\.2/)
+    assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).dependencies.next, '16.3.8')
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.doesNotMatch(result.stdout, /Nothing to migrate/)
+    assert.match(result.stdout, /next and eslint-config-next set to ~16\.4\.2\. Run your package manager's install, then nextspark prepare/)
+    assert.match(result.stdout, /Rollback: git checkout -- 'package\.json'/)
+    const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    assert.equal(pkg.dependencies.next, '~16.4.2')
+    assert.equal(pkg.devDependencies['eslint-config-next'], '~16.4.2')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

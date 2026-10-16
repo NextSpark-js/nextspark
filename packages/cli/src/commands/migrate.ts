@@ -3929,7 +3929,9 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     if (!existsSync(join(hostRoot, 'contents')) && appPlan === null) {
       const templatesDir = templateDirectory(hostRoot, repository);
       const upgrades = entryUpgrades(hostRoot, templatesDir);
-      if (upgrades.length === 0 && !renameSlugs) {
+      // A project still on an earlier Next.js minor has work left even when nothing else does: the range the report names
+      const rangeUpdate = !simulation && report.nextRange.members.some(member => member.action === 'update');
+      if (upgrades.length === 0 && !renameSlugs && !rangeUpdate) {
         console.log('Nothing to migrate: the project is root-first already, and its proxy and instrumentation files are not unchanged copies of an earlier core template (see the warnings above for any to change by hand).');
         return;
       }
@@ -3946,6 +3948,10 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
         if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to rename the entity slugs.');
         if (!askYesNo('Rename the entity slugs?')) throw new MigrateAnalysisError('Migration cancelled.');
       }
+      if (rangeUpdate && upgrades.length === 0 && !renameSlugs && !options.yes) {
+        if (!process.stdin.isTTY) throw new MigrateAnalysisError(`Review the report above, then rerun with --yes to set next and eslint-config-next to ${report.nextRange.required}.`);
+        if (!askYesNo(`Set next and eslint-config-next to ${report.nextRange.required}?`)) throw new MigrateAnalysisError('Migration cancelled.');
+      }
       // The rename edits imports anywhere in the project, so its rollback is the whole tree (it was clean)
       const created = renamedDirectories(report.entitySlugs).map(directory => pathFrom(repository, join(hostRoot, directory)));
       const renameRollback = `git -C ${shellQuote(repository)} checkout -- . && git -C ${shellQuote(repository)} clean -fd -- ${created.map(shellQuote).join(' ')}`;
@@ -3956,9 +3962,16 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       }
       applyEntryUpgrades(hostRoot, templatesDir);
       if (renameSlugs) renameEntitySlugs(repository, hostRoot, report.entitySlugs);
+      const rangeFile = join(hostRoot, 'package.json');
+      if (rangeUpdate) {
+        assertContained(repository, rangeFile);
+        writeFileSync(rangeFile, updateNextRange(readFileSync(rangeFile, 'utf8'), report.nextRange));
+        console.log(`  ${pathFrom(repository, rangeFile)}: next and eslint-config-next set to ${report.nextRange.required}. Run your package manager's install, then nextspark prepare.`);
+      }
+      const touched = [...upgrades.map(upgrade => join(hostRoot, upgrade.file)), ...(rangeUpdate ? [rangeFile] : [])];
       console.log(renameSlugs
         ? `  Commit the change. Rollback: ${renameRollback}`
-        : '  Commit the change. Rollback: git checkout -- ' + upgrades.map(upgrade => shellQuote(pathFrom(repository, join(hostRoot, upgrade.file)))).join(' '));
+        : '  Commit the change. Rollback: git checkout -- ' + touched.map(file => shellQuote(pathFrom(repository, file))).join(' '));
       return;
     }
     // A project that is root-first already (no contents/) only has an app tree left to convert

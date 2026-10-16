@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `nextspark migrate --yes` sets `next` and `eslint-config-next` to the supported range on a root-first project that has nothing else to migrate. It reported the range it would set and then ended with "Nothing to migrate", leaving `package.json` as it was; without `--yes` and without a terminal it now stops and asks for `--yes`.
 - `create-nextspark-app` installs `@vercel/blob@^2.8.2` (before: any version), the range core declares, so a later major is not pulled into a new project. The file-upload guide shows the same range.
 - `/signup` keeps `callbackUrl` (a path on the app only), `fromInvite` and `email` when it redirects to `/login` (passwordless preset, `invitation-only` after the bootstrap, `domain-restricted`), so an invited person returns to `/accept-invite/<token>` after signing in and the invitation is accepted (#263).
 - `nextspark add:plugin` compares each peer dependency's range with the version installed in `node_modules` (prereleases included). An incompatible one stops the command with an error naming the required and the installed version, before anything is written; a missing peer is printed as a warning and the install goes on.
