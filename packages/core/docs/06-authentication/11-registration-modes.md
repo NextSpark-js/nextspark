@@ -70,7 +70,7 @@ Users can only register via an invitation link. The first user bootstraps the pl
 - through the invitation link (`/api/v1/auth/signup-with-invite`, with or without a password), or
 - by a first email-code or Google sign-in for a verified address with a pending, unexpired invitation: the code or the provider proves the address, and the account then accepts its invitation instead of getting a team of its own.
 
-A password sign-up on `/api/auth/sign-up/email` is refused with `SIGNUP_RESTRICTED`, invitation or not, since it does not prove the address. Existing users sign in as usual, with Google too; a Google sign-in for a new address without an invitation is redirected to `/auth-error?error=SIGNUP_RESTRICTED`. Requires a working email service (Resend).
+A password sign-up on `/api/auth/sign-up/email` is refused with `SIGNUP_RESTRICTED`, invitation or not, since it does not prove the address. Existing users sign in as usual, with Google too; a Google sign-in for a new address without an invitation is redirected to `/auth-error?error=SIGNUP_RESTRICTED`. Once the bootstrap is over, `/signup` sends visitors to `/login`; when it comes from an invitation page it carries `callbackUrl` (a path on the app only), `fromInvite` and `email` along, so signing in returns to `/accept-invite/<token>` and accepts the invitation. Requires a working email service (Resend).
 
 ```typescript
 auth: {
