@@ -25,7 +25,8 @@ import { createHash } from 'node:crypto'
  * Facade artifacts are an enumerated set of shapes:
  *   - `webpack-esm-marker`: `require.r(exports)` (+ its comma) in a webpack module factory;
  *   - `turbopack-reexport`: `context.s([],N),context.i(N),` in a Turbopack factory, together
- *     with that factory's group argument `,F` of `context.s([...],F)`.
+ *     with that factory's group argument `,F` of `context.s([...],F)`. Next.js 16.4 leaves only the
+ *     group argument `,F` (the re-export module is folded into its target).
  * The caller compares the artifacts of both hosts against a fixed expected list; only artifacts
  * on that list are cut before labeling and comparing. Anything else stays a difference.
  */
@@ -43,11 +44,28 @@ function leftmost(node, ts) {
 }
 
 /**
+ * Next.js 16.4 (Turbopack) wraps a chunk that carries its own `"use strict"` as
+ * `(()=>{"use strict";(...).push([...])})();`: the registration is then the only statement, after the
+ * directive, of the body of an arrow function called at the top of the file.
+ */
+function isStrictWrapper(statement, ts) {
+  const block = statement.parent
+  if (!ts.isBlock(block) || !ts.isArrowFunction(block.parent) || block.parent.parameters.length !== 0) return false
+  const parenthesized = block.parent.parent
+  if (!ts.isParenthesizedExpression(parenthesized) || !ts.isCallExpression(parenthesized.parent) || parenthesized.parent.expression !== parenthesized || parenthesized.parent.arguments.length !== 0) return false
+  const top = parenthesized.parent.parent
+  if (!ts.isExpressionStatement(top) || !ts.isSourceFile(top.parent)) return false
+  const [directive, ...rest] = block.statements
+  return rest.length === 1 && rest[0] === statement && ts.isExpressionStatement(directive) && ts.isStringLiteral(directive.expression) && directive.expression.text === 'use strict'
+}
+
+/**
  * The bundler whose top-level chunk registration `array` is, or null. Only these two containers,
  * as Next.js 16.3.5 emits them, register modules:
  *   webpack:   (self.webpackChunk_N_E = self.webpackChunk_N_E || []).push([[chunkIds], { id: factory }, entry?])
  *   Turbopack: (globalThis.TURBOPACK || (globalThis.TURBOPACK = [])).push([script, id, factory, ...])
- * and only as a statement directly in the chunk's source file.
+ * and only as a statement directly in the chunk's source file (Turbopack 16.4 also as the only statement after
+ * `"use strict"` of a top-level `(()=>{...})()`).
  */
 export function chunkContainer(array, ts) {
   if (!array || !ts.isArrayLiteralExpression(array)) return null
@@ -60,14 +78,16 @@ export function chunkContainer(array, ts) {
   while (statement && ts.isBinaryExpression(statement) && statement.operatorToken.kind === ts.SyntaxKind.CommaToken && leftmost(statement, ts) === call) {
     statement = statement.parent
   }
-  if (!statement || !ts.isExpressionStatement(statement) || !ts.isSourceFile(statement.parent) || leftmost(statement.expression, ts) !== call) return null
+  if (!statement || !ts.isExpressionStatement(statement) || leftmost(statement.expression, ts) !== call) return null
+  const wrapped = !ts.isSourceFile(statement.parent)
+  if (wrapped && !isStrictWrapper(statement, ts)) return null
   const target = unwrapParens(call.expression.expression, ts)
   if (!ts.isBinaryExpression(target)) return null
   const globalProperty = (node, name) =>
     ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression) && ['self', 'globalThis'].includes(node.expression.text) &&
     (typeof name === 'string' ? node.name.text === name : name.test(node.name.text))
   // webpack: X.webpackChunk_* = X.webpackChunk_* || []
-  if (target.operatorToken.kind === ts.SyntaxKind.EqualsToken && globalProperty(target.left, /^webpackChunk/)) {
+  if (!wrapped && target.operatorToken.kind === ts.SyntaxKind.EqualsToken && globalProperty(target.left, /^webpackChunk/)) {
     return ts.isObjectLiteralExpression(array.elements[1] ?? {}) && ts.isArrayLiteralExpression(array.elements[0] ?? {}) ? 'webpack' : null
   }
   // Turbopack: globalThis.TURBOPACK || (globalThis.TURBOPACK = [])
@@ -98,13 +118,22 @@ export function factoryOf(fn, ts) {
     return null
   }
   if (!ts.isArrayLiteralExpression(parent)) return null
+  // Turbopack 16.4 also registers [script, [id, factory, id, factory, ...]]: the pairs sit in element 1.
+  const registration = parent.parent
+  if (registration && ts.isArrayLiteralExpression(registration) && registration.elements[1] === parent && chunkContainer(registration, ts) === 'turbopack') {
+    const slot = parent.elements.indexOf(fn)
+    const id = parent.elements[slot - 1]
+    return slot % 2 === 1 && id && ts.isNumericLiteral(id) ? { kind: 'turbopack-module', node: fn, id: Number(id.text), context: paramName(0) } : null
+  }
   const container = chunkContainer(parent, ts)
   const index = parent.elements.indexOf(fn)
   // webpack entry callback: element 2 of the registration.
   if (container === 'webpack' && index === 2) return { kind: 'webpack-entry', node: fn, id: null, require: paramName(0) }
   // Turbopack module: [script, id, factory, id, factory, ...] - factories at even indexes >= 2.
   const previous = parent.elements[index - 1]
-  if (container === 'turbopack' && index >= 2 && index % 2 === 0 && previous && ts.isNumericLiteral(previous)) {
+  // Next.js 16.4 may put a nested list in element 1; the flat pairs then start at element 2 instead of 1.
+  const flatStart = ts.isArrayLiteralExpression(parent.elements[1]) ? 2 : 1
+  if (container === 'turbopack' && index >= flatStart + 1 && (index - flatStart) % 2 === 1 && previous && ts.isNumericLiteral(previous)) {
     return { kind: 'turbopack-module', node: fn, id: Number(previous.text), context: paramName(0) }
   }
   return null
@@ -277,9 +306,12 @@ export function scanChunk({ text, ts, file = 'chunk.js' }) {
       moduleGroups.push(array.elements[1].properties.map(property => [property.getStart(sourceFile), property.getEnd()]))
     } else if (container === 'turbopack') {
       const pairs = []
-      for (let index = 1; index + 1 < array.elements.length; index += 2) {
-        pairs.push([array.elements[index].getStart(sourceFile), array.elements[index + 1].getEnd()])
+      const addPairs = (list, from) => {
+        for (let index = from; index + 1 < list.length; index += 2) pairs.push([list[index].getStart(sourceFile), list[index + 1].getEnd()])
       }
+      const nested = array.elements[1] && ts.isArrayLiteralExpression(array.elements[1]) ? array.elements[1] : null
+      if (nested) addPairs(nested.elements, 0)
+      addPairs(array.elements, nested ? 2 : 1)
       moduleGroups.push(pairs)
     }
   }
@@ -335,10 +367,16 @@ export function scanChunk({ text, ts, file = 'chunk.js' }) {
         node.arguments[0].elements.length > 0 && ts.isNumericLiteral(node.arguments[1])) {
       const factory = isParam(node.expression.expression, 'context', ts)
       const artifact = factory && artifacts.find(a => a.type === 'turbopack-reexport' && a.factoryId === factory.id && !a.group)
-      if (artifact && Number(node.arguments[1].text) === factory.id) {
+      if (factory && Number(node.arguments[1].text) === factory.id) {
         const span = [node.arguments[0].getEnd(), node.arguments[1].getEnd()]
-        artifact.group = text.slice(...span)
-        artifact.spans.push(span)
+        if (artifact) {
+          artifact.group = text.slice(...span)
+          artifact.spans.push(span)
+        } else if (factory.kind === 'turbopack-module' && !artifacts.some(a => a.type === 'turbopack-reexport' && a.factoryId === factory.id)) {
+          // Next.js 16.4 (Turbopack): the re-export module is folded into the module it re-exports, so only the group
+          // argument `,F` of `context.s([...],F)` is left, without the `context.s([],F),context.i(F),` prelude.
+          artifacts.push({ type: 'turbopack-reexport', factoryId: factory.id, spans: [span], text: '', group: text.slice(...span) })
+        }
       }
     }
     ts.forEachChild(node, attachGroup)

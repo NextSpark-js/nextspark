@@ -3,7 +3,7 @@
  * normalized only where the factory's module-system parameter (resolved lexically) uses them,
  * facade artifacts are found by exact shape, and only artifacts on the exact expected list are
  * excused. Includes the review's probes (shadowed `n`, an added `n.r(t),`, an added
- * `t.s([],99),t.i(99)`), which must all be differences. Chunk samples are real Next.js 16.3.5
+ * `t.s([],99),t.i(99)`), which must all be differences. Chunk samples are real Next.js 16.3.5 and 16.4.2
  * output from the host-conformance fixture.
  *
  * Run: node --test scripts/performance/host-conformance-bytes.test.mjs
@@ -86,6 +86,18 @@ test('webpack ESM marker: found with its exact shape on the factory it belongs t
 test('Turbopack empty re-export: registration and group argument are one artifact', () => {
   const { artifacts } = scan(turbopack(1204, 'var e=t.i(2285);t.s([],65385),t.i(65385),t.s(["default",0,1],1204)'))
   assert.deepEqual(artifacts.map(a => [a.type, a.factoryId, a.shape, a.bytes]), [['turbopack-reexport', 1204, 't.s([],#),t.i(#),,#', 30]])
+})
+
+test('Turbopack 16.4: the re-export folded into its target leaves the group argument alone as the artifact', () => {
+  // Real 16.4.2 output: the generated host's module is `t.s([...],1204)`, the manual host's is `t.s([...])`.
+  const generated = turbopack(1204, `${ERROR},1204)`)
+  const manual = turbopack(1204, `${ERROR})`)
+  assert.deepEqual(scan(generated).artifacts.map(a => [a.type, a.factoryId, a.shape, a.bytes]), [['turbopack-reexport', 1204, ',#', 5]])
+  assert.deepEqual(scan(manual).artifacts, [])
+  assert.ok(size(generated) > size(manual))
+  assert.equal(size(generated, a => a.type === 'turbopack-reexport'), size(manual))
+  // a group argument that is not the module's own id is code, not an artifact
+  assert.deepEqual(scan(turbopack(1204, `${ERROR},99)`)).artifacts, [])
 })
 
 test('review probe 2: an added n.r(t), is a byte difference unless it is on the expected list', () => {
@@ -275,4 +287,31 @@ test('CSS: identical content under other file names is equal; a missing file is 
   assert.deepEqual(manual, generated)
   assert.notDeepEqual(manual, cssDigests(['static/css/gone.css'], () => null))
   assert.deepEqual(cssDigests(['b.css', 'a.css'], file => (file === 'a.css' ? 'x{}' : 'y{}')), cssDigests(['a.css', 'b.css'], file => (file === 'a.css' ? 'x{}' : 'y{}')))
+})
+
+test('Turbopack 16.4: a registration wrapped as (()=>{"use strict";...push(...)})() is a chunk registration', () => {
+  const wrapped = body => `(()=>{"use strict";(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,38419,t=>{"use strict";${body}}])})();`
+  assert.deepEqual(scan(wrapped(`${ERROR},38419)`)).artifacts.map(a => [a.type, a.factoryId, a.shape]), [['turbopack-reexport', 38419, ',#']])
+  assert.deepEqual(scan(wrapped(`${ERROR})`)).factoryIds, [38419])
+  // anything else in the wrapper, or a wrapper that is not at the top of the file, is application code
+  const other = `(()=>{"use strict";foo();(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["x",1,t=>{${ERROR})}])})();`
+  assert.deepEqual(scan(other).factoryIds, [])
+  const nested = `foo(()=>{"use strict";(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["x",1,t=>{${ERROR})}])});`
+  assert.deepEqual(scan(nested).factoryIds, [])
+})
+
+test('Turbopack 16.4: [script, [id, factory, id, factory]] registers modules like the flat form', () => {
+  const nested = `(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,[93678,(e,t,r)=>{e.r(13123)},87053,(e,t,r)=>{e.i(93678)}]]);`
+  const flat = `(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,93678,(e,t,r)=>{e.r(13123)},87053,(e,t,r)=>{e.i(93678)}]);`
+  assert.deepEqual(scan(nested).factoryIds, [93678, 87053])
+  assert.deepEqual(scan(flat).factoryIds, [93678, 87053])
+  assert.deepEqual(scan(nested).idTokens.map(t => [t.value, t.role]), scan(flat).idTokens.map(t => [t.value, t.role]))
+  assert.equal(scan(nested).moduleGroups[0].length, 2)
+  // flat pairs after the nested list (Next.js 16.4.2 output)
+  const mixed = `(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,[93678,(e,t,r)=>{e.r(13123)}],13123,(e,t,r)=>{e.i(93678)}]);`
+  assert.deepEqual(scan(mixed).factoryIds, [93678, 13123])
+  assert.deepEqual(scan(mixed).moduleGroups[0].length, 2)
+  assert.deepEqual(scan(mixed).idTokens.map(t => [t.value, t.role]), [[93678, 'declaration'], [13123, 'reference'], [13123, 'declaration'], [93678, 'reference']])
+  // a nested array anywhere else is not a registration
+  assert.deepEqual(scan('foo(["x",[1,(e,t,r)=>{e.r(2)}]])').factoryIds, [])
 })

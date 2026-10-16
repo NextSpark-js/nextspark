@@ -1,6 +1,6 @@
 {
-  "$comment": "Exact client-JS facade artifacts each variant of the host-conformance fixture may show (scripts/performance/host-conformance.mjs). Fixed data, not learned from the build being judged: derived once from clean builds (fix round 3, 2026-09-28) and reviewed. Each entry: artifact type, module identity (route:<target in src/app>), the only host that may carry it, its exact shape (module ids as #), and the exact number of occurrences across that host's client chunks (global-error's factory sits in 2 Turbopack chunks). Every other artifact must be identical in both hosts. The set of (artifact, module, host) must also match the plan-derived rules; change this file only after reviewing a clean run. Stage 4 (2026-09-29): the per-entity route `dashboard/(main)/widgets/error.tsx` is a directive-carrying facade of the fake core's entity error module, so the generated Turbopack host has the same re-export artifact as route:error.tsx (reviewed on a clean run; the plan-derived rule lists it too).",
-  "next": "16.3.8",
+  "$comment": "Exact client-JS facade artifacts each variant of the host-conformance fixture may show (scripts/performance/host-conformance.mjs). Fixed data, not learned from the build being judged: derived once from clean builds (fix round 3, 2026-09-28) and reviewed. Each entry: artifact type, module identity (route:<target in src/app>), the only host that may carry it, its exact shape (module ids as #), and the exact number of occurrences across that host's client chunks (global-error's factory sits in 2 Turbopack chunks). Every other artifact must be identical in both hosts. The set of (artifact, module, host) must also match the plan-derived rules; change this file only after reviewing a clean run. Next.js 16.4.2 (2026-10-16): Turbopack folds a re-export module into the module it re-exports, so the artifact is only the group argument `,F` of `context.s([...],F)` (shape `,#`), same modules, hosts and counts as before (global-error's factory sits in 2 chunks, one of them wrapped in an arrow function that is called at once, after a use strict directive); the webpack entries are unchanged. Stage 4 (2026-09-29): the per-entity route `dashboard/(main)/widgets/error.tsx` is a directive-carrying facade of the fake core's entity error module, so the generated Turbopack host has the same re-export artifact as route:error.tsx (reviewed on a clean run; the plan-derived rule lists it too).",
+  "next": "16.4.2",
   "variants": {
     "webpack/isr": [
       {
@@ -25,21 +25,21 @@
         "artifact": "turbopack-reexport",
         "module": "route:error.tsx",
         "host": "generated",
-        "shape": "t.s([],#),t.i(#),,#",
+        "shape": ",#",
         "count": 1
       },
       {
         "artifact": "turbopack-reexport",
         "module": "route:dashboard/(main)/widgets/error.tsx",
         "host": "generated",
-        "shape": "t.s([],#),t.i(#),,#",
+        "shape": ",#",
         "count": 1
       },
       {
         "artifact": "turbopack-reexport",
         "module": "route:global-error.tsx",
         "host": "generated",
-        "shape": "e.s([],#),e.i(#),,#",
+        "shape": ",#",
         "count": 2
       }
     ],
@@ -48,21 +48,21 @@
         "artifact": "turbopack-reexport",
         "module": "route:error.tsx",
         "host": "generated",
-        "shape": "t.s([],#),t.i(#),,#",
+        "shape": ",#",
         "count": 1
       },
       {
         "artifact": "turbopack-reexport",
         "module": "route:dashboard/(main)/widgets/error.tsx",
         "host": "generated",
-        "shape": "t.s([],#),t.i(#),,#",
+        "shape": ",#",
         "count": 1
       },
       {
         "artifact": "turbopack-reexport",
         "module": "route:global-error.tsx",
         "host": "generated",
-        "shape": "e.s([],#),e.i(#),,#",
+        "shape": ",#",
         "count": 2
       }
     ]
