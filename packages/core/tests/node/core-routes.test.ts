@@ -492,7 +492,7 @@ test('a per-entity route\'s core module graph never imports the generated client
 test('the default /signup page redirects outside Suspense (a real 307); the Cache Components variant renders it behind its own boundary', () => {
   const legacy = fs.readFileSync(path.join(ROUTES, '(auth)/signup/page.tsx'), 'utf8')
   const cc = fs.readFileSync(path.join(ROUTES, '(auth)/signup/page.cc.tsx'), 'utf8')
-  assert.match(legacy, /redirect\('\/login'\)/)
+  assert.match(legacy, /redirect\(loginUrl\(params\)\)/)
   assert.doesNotMatch(legacy, /<Suspense|import { Suspense/, 'redirect() thrown inside a Suspense boundary reaches the browser as a 200 with a meta refresh')
   assert.match(cc, /import SignupPage, \{ metadata \} from '\.\/page'/)
   assert.match(cc, /<Suspense fallback=\{null\}>\s*<SignupPage searchParams=\{searchParams\} \/>\s*<\/Suspense>/, 'a page that redirects needs a boundary under the segment the dev server validates')
@@ -501,8 +501,10 @@ test('the default /signup page redirects outside Suspense (a real 307); the Cach
 test('/signup redirects to /login under the passwordless preset unless it opens an invitation', () => {
   const legacy = fs.readFileSync(path.join(ROUTES, '(auth)/signup/page.tsx'), 'utf8')
   // signup-with-invite registers with or without a password, so an invitation link keeps the form
-  assert.match(legacy, /const invited = typeof \(await searchParams\)\?\.inviteToken === 'string'/)
-  assert.match(legacy, /if \(!invited && !resolveAuthMethods\(AUTH_CONFIG\)\.includes\('email-password'\)\) \{\s*redirect\('\/login'\)/)
+  assert.match(legacy, /const params = \(await searchParams\) \?\? \{\}/)
+  assert.match(legacy, /const invited = typeof params\.inviteToken === 'string'/)
+  // the redirect keeps the invitation context (callbackUrl, fromInvite, email) for /login (#263)
+  assert.match(legacy, /if \(!invited && !resolveAuthMethods\(AUTH_CONFIG\)\.includes\('email-password'\)\) \{\s*redirect\(loginUrl\(params\)\)/)
 })
 
 /**
