@@ -82,6 +82,11 @@ prologue, static imports, `export { … } from '<string>'`, `export { … }` of 
 `registry` grammar: static imports plus `export const X = <object/array literal>` whose leaves are literals or imported
 identifiers (no computed keys, spreads, methods, getters or calls).
 
+Exports Next.js accepts but the host deliberately does not forward are listed under `notForwarded` in the table
+(`unstable_paramMatching` and `unstable_generateParamMatching` in a page or layout, unstable APIs in Next.js 16.4): a
+source that has one gets `NS_HOST_UNSUPPORTED_EXPORT` saying that NextSpark's generated host does not forward it and that
+Next.js accepts it.
+
 Segment config and `cacheComponents` (verified by probe builds with `next build --webpack` and
 `--turbopack`, Next.js 16.3.5):
 

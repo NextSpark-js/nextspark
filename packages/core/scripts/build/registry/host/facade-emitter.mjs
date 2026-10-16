@@ -448,6 +448,16 @@ export function planFacade({ kind, target, specifier, file, analysis, cacheCompo
     }
 
     const form = spec.exports[name]
+    if (!form && ROUTE_EXPORT_TABLE.notForwarded.kinds.includes(kind) && ROUTE_EXPORT_TABLE.notForwarded.names.includes(name)) {
+      report(
+        DIAGNOSTICS.UNSUPPORTED_EXPORT,
+        `NextSpark's generated host does not forward the unstable "${name}" export (Next.js ${ROUTE_EXPORT_TABLE.next} accepts it in a ${kind} file, ` +
+          'but it is an unstable API and the host emits only the exports it knows); remove it from this module, or move the code that needs it out of this route',
+        name,
+        line
+      )
+      continue
+    }
     if (!form) {
       report(
         DIAGNOSTICS.UNSUPPORTED_EXPORT,

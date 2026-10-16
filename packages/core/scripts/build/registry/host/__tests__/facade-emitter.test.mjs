@@ -119,9 +119,9 @@ test("route handler methods are Next.js's HTTP_METHODS", () => {
 
 test("page and layout exports include Next.js's TS-plugin ALLOWED_EXPORTS (except legacy config on layouts)", () => {
   const { ALLOWED_EXPORTS } = requireFromCore('next/dist/server/typescript/constant')
-  // 16.4 added the unstable param-matching exports. The table does not list them on purpose: a source that exports
-  // one is refused (NS_HOST_UNSUPPORTED_EXPORT) until the owner decides whether the host forwards unstable APIs.
-  const NOT_FORWARDED = new Set(['unstable_paramMatching', 'unstable_generateParamMatching'])
+  // 16.4 added the unstable param-matching exports. The table lists them under notForwarded on purpose: a source that
+  // exports one is refused with its own NS_HOST_UNSUPPORTED_EXPORT wording (tested below).
+  const NOT_FORWARDED = new Set(ROUTE_EXPORT_TABLE.notForwarded.names)
   for (const name of ALLOWED_EXPORTS) {
     if (NOT_FORWARDED.has(name)) continue
     assert.ok(ROUTE_EXPORT_TABLE.kinds.page.exports[name], `page: ${name}`)
@@ -393,6 +393,21 @@ test(`${DIAGNOSTICS.MISSING_DEFAULT}: component and metadata files without a def
     assert.deepEqual(codes(await plan(kind, `${prefix}export type Nothing = never`)), [DIAGNOSTICS.MISSING_DEFAULT], kind)
   }
 })
+
+// Next.js 16.4 accepts these in a page or layout; the host refuses them on purpose and says so
+for (const name of ROUTE_EXPORT_TABLE.notForwarded.names) {
+  for (const kind of ROUTE_EXPORT_TABLE.notForwarded.kinds) {
+    test(`${DIAGNOSTICS.UNSUPPORTED_EXPORT}: ${name} in a ${kind} is refused as a NextSpark policy, not as unsupported by Next.js`, async () => {
+      const result = await plan(kind, sourceFor(kind, `export function ${name}() { return [] }`))
+      assert.deepEqual(codes(result), [DIAGNOSTICS.UNSUPPORTED_EXPORT])
+      const [diagnostic] = result.diagnostics
+      assert.equal(diagnostic.exportName, name)
+      assert.match(diagnostic.message, new RegExp(`^NextSpark's generated host does not forward the unstable "${name}" export \\(Next\\.js ${ROUTE_EXPORT_TABLE.next.replace(/\./g, '\\.')} accepts it in a ${kind} file`))
+      assert.match(diagnostic.message, /remove it from this module/)
+      assert.doesNotMatch(diagnostic.message, /does not support/)
+    })
+  }
+}
 
 test(`${DIAGNOSTICS.UNSUPPORTED_EXPORT}: exports Next.js does not support for the kind`, async () => {
   const cases = [

@@ -45,6 +45,11 @@
       "ensureStatic"
     ]
   },
+  "notForwarded": {
+    "$comment": "Exports Next.js accepts in these kinds that the generated host deliberately does not forward (unstable APIs). A source that has one gets NS_HOST_UNSUPPORTED_EXPORT with its own wording, not the generic 'Next.js does not support' text.",
+    "kinds": ["page", "layout"],
+    "names": ["unstable_paramMatching", "unstable_generateParamMatching"]
+  },
   "forms": {
     "default": "export { default } from '<source>'",
     "reexport": "export { <name> } from '<source>' under the same name (never export *, which Next does not see). Exception for generateStaticParams, generateSitemaps and generateImageMetadata when the source exports them under an alias: Next reads these statically through specifier.orig, so the facade keeps the source local name with an import/export pair, import { <name> as <local> } from '<source>' + export { <local> as <name> }, and is read exactly like the source",
