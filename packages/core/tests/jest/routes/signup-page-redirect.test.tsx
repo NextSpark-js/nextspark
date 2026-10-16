@@ -33,13 +33,13 @@ beforeEach(() => {
   redirect.mockClear()
   isBootstrapDone.mockResolvedValue(true)
   authConfig.registration.mode = 'open'
-  delete authConfig.methods
+  authConfig.methods = ['email-password']
 })
 
 describe.each([
   ['invitation-only after the bootstrap', () => { authConfig.registration.mode = 'invitation-only' }],
   ['domain-restricted', () => { authConfig.registration.mode = 'domain-restricted' }],
-  ['passwordless preset without an invite token', () => { authConfig.methods = ['email-code'] }],
+  ['passwordless preset without an invite token', () => { authConfig.methods = ['email-otp'] }],
 ])('%s', (_name, setup) => {
   beforeEach(setup)
   const { inviteToken, ...noToken } = invite
@@ -57,7 +57,22 @@ describe.each([
   })
 })
 
-test('an invite token does not turn into a query on /login', async () => {
+// What accept-invite sends: the real #263 case. inviteToken skips the passwordless check, so the
+// invitation-only redirect is the one that runs; the default methods are the passwordless preset.
+test('invitation-only after the bootstrap, with the invite token: keeps the invitation, not the token', async () => {
+  authConfig.registration.mode = 'invitation-only'
+  delete authConfig.methods
+  expect(await redirectedTo(invite)).toBe(kept)
+})
+
+test('domain-restricted, with the invite token: keeps the invitation, not the token', async () => {
   authConfig.registration.mode = 'domain-restricted'
   expect(await redirectedTo(invite)).toBe(kept)
+})
+
+test('invitation-only before the bootstrap: renders the form, no redirect', async () => {
+  authConfig.registration.mode = 'invitation-only'
+  isBootstrapDone.mockResolvedValue(false)
+  expect(await SignupPage({ searchParams: Promise.resolve(invite) })).toBeTruthy()
+  expect(redirect).not.toHaveBeenCalled()
 })
