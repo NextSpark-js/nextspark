@@ -14,7 +14,7 @@ const semver = createRequire(path.join(CORE_DIR, '../cli/package.json'))('semver
 
 const core = {
   dependencies: { 'better-auth': '~1.7.7', '@better-fetch/fetch': '1.3.2', zod: '^4.5.4', '@nextsparkjs/ui': '0.1.0-beta.199' },
-  peerDependencies: { next: '~16.3.8', react: '^18.2.0 || ^19.0.0' },
+  peerDependencies: { next: '~16.4.2', react: '^18.2.0 || ^19.0.0' },
 }
 
 test('a .198 project is behind on all three dependencies core raised', () => {

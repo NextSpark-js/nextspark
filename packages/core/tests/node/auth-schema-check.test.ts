@@ -69,7 +69,7 @@ test('db:migrate stops when a project migration leaves an auth column Better Aut
   fs.mkdirSync(migrations, { recursive: true })
   fs.mkdirSync(path.join(root, 'config'), { recursive: true })
   fs.writeFileSync(path.join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.3.8' } }))
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.4.2' } }))
   fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'packages: []\n')
   fs.writeFileSync(path.join(root, 'config/theme.config.ts'), "export const themeConfig = { name: 'fixture' }\n")
   const migrate = () => {

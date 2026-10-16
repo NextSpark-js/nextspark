@@ -36,7 +36,7 @@ async function fixture() {
   await writeFile(join(root, 'core/scripts/build/registry/host/previous-templates.json'), JSON.stringify({ 'proxy.ts': [sha256(OLD_PROXY)], 'instrumentation.ts': [sha256(OLD_INSTRUMENTATION)] }))
   const project = join(root, 'project')
   await mkdir(join(project, 'node_modules/next'), { recursive: true })
-  await writeFile(join(project, 'node_modules/next/package.json'), JSON.stringify({ version: '16.3.8' }))
+  await writeFile(join(project, 'node_modules/next/package.json'), JSON.stringify({ version: '16.4.2' }))
   await writeFile(join(project, 'package.json'), '{}')
   return { templates, project, cleanup: () => rm(root, { recursive: true, force: true }) }
 }

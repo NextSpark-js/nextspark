@@ -25,7 +25,7 @@ const packageJson = (name) => JSON.stringify({ name: `@example/plugin-${name}`, 
 
 test('plugins load in the order `plugins` lists them, local and packaged alike', async () => {
   const root = await project({
-    'package.json': JSON.stringify({ dependencies: { next: '16.3.8', '@example/plugin-zeta': '1.0.0' } }),
+    'package.json': JSON.stringify({ dependencies: { next: '16.4.2', '@example/plugin-zeta': '1.0.0' } }),
     'plugins/alpha/plugin.config.ts': pluginConfig('alpha'),
     'plugins/mid/plugin.config.ts': pluginConfig('mid'),
     'node_modules/@example/plugin-zeta/package.json': packageJson('zeta'),

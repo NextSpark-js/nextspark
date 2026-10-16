@@ -16,7 +16,7 @@ const SCRIPT = path.join(CORE_DIR, 'scripts/create-plugin.mjs')
 
 function generate(name: string): { dir: string; files: Map<string, string> } {
   const project = fs.mkdtempSync(path.join(os.tmpdir(), 'create-plugin-'))
-  fs.writeFileSync(path.join(project, 'package.json'), JSON.stringify({ name: 'scratch', private: true, dependencies: { next: '~16.3.8' } }))
+  fs.writeFileSync(path.join(project, 'package.json'), JSON.stringify({ name: 'scratch', private: true, dependencies: { next: '~16.4.2' } }))
   fs.writeFileSync(path.join(project, 'nextspark.config.ts'), 'export default {}\n')
   execFileSync('node', [SCRIPT, name], { cwd: project, stdio: 'pipe' })
   const dir = path.join(project, 'plugins', name)

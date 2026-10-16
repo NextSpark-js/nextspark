@@ -86,17 +86,17 @@ export const COMPAT_NOTE = 'These rewrites exist for already-installed clients (
 // ---------------------------------------------------------------------------------------------
 // F11: the Next.js range
 
-export const REQUIRED_NEXT_RANGE = '~16.3.8';
+export const REQUIRED_NEXT_RANGE = '~16.4.2';
 
 export interface NextRangeCheck {
   required: string;
   members: { name: 'next' | 'eslint-config-next'; section: 'dependencies' | 'devDependencies'; value: string; action: 'ok' | 'update' | 'check'; note?: string }[];
 }
 
-/** True when a plain range stays inside `~16.3.8`: `16.3.x`, `~16.3.x`, `=16.3.x` with x >= 8. */
+/** True when a plain range stays inside `~16.4.2`: `16.4.x`, `~16.4.x`, `=16.4.x` with x >= 2. */
 function insideRequiredRange(value: string): boolean {
-  const match = /^[~=]?\s*v?16\.3\.(\d+)$/.exec(value.trim());
-  return match !== null && Number(match[1]) >= 8;
+  const match = /^[~=]?\s*v?16\.4\.(\d+)$/.exec(value.trim());
+  return match !== null && Number(match[1]) >= 2;
 }
 
 const INDIRECT_SPEC = /^(?:catalog|workspace|npm|link|file|git\+?|github|https?):/;
@@ -185,7 +185,7 @@ const compareVersions = (left: number[], right: number[]): number => left[0] - r
 interface Bound { version: number[]; inclusive: boolean }
 interface Interval { lower: Bound | null; upper: Bound | null }
 
-/** The first version above everything a partial version (`16`, `16.3`) covers. */
+/** The first version above everything a partial version (`16`, `16.4`) covers. */
 const nextAbove = (base: number[]): number[] => base[1] === -1 ? [base[0] + 1, 0, 0] : base[2] === -1 ? [base[0], base[1] + 1, 0] : [base[0], base[1], base[2] + 1];
 const floorOf = (base: number[]): number[] => [base[0], Math.max(base[1], 0), Math.max(base[2], 0)];
 

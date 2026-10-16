@@ -265,7 +265,7 @@ export default fixturePluginConfig
     assert(exists('nextspark.config.ts') && exists('src/proxy.ts'), 'migrate wrote no nextspark.config.ts and src/proxy.ts')
     state.config = read('nextspark.config.ts')
     assert(/fixtureplug/.test(state.config) && /langchain/.test(state.config), `nextspark.config.ts does not list both plugins:\n${state.config}`)
-    // migrate moved next and eslint-config-next to ~16.3.8, so the lockfile no longer matches (the guide's step 6)
+    // migrate moved next and eslint-config-next to ~16.4.2, so the lockfile no longer matches (the guide's step 6)
     must('install-after-migrate', 'pnpm', ['install', '--no-frozen-lockfile'])
     must('prepare', 'pnpm', ['exec', 'nextspark', 'prepare'])
     must('prepare-check', 'pnpm', ['exec', 'nextspark', 'prepare', '--check'])

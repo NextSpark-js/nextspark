@@ -42,7 +42,7 @@ Cada plugin DEBE tener un `package.json` con esta estructura:
   },
   "peerDependencies": {
     "@nextsparkjs/core": "workspace:*",
-    "next": "~16.3.8",
+    "next": "~16.4.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^4.0.0"

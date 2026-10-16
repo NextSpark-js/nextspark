@@ -78,7 +78,7 @@ test('with the real core manifest, the root and group layouts compose a project 
     writeFileSync(join(root, path), content)
   }
   put('nextspark.config.ts', 'export default { plugins: [] }\n')
-  put('package.json', JSON.stringify({ name: 'slots-project', dependencies: { next: '16.3.8' } }))
+  put('package.json', JSON.stringify({ name: 'slots-project', dependencies: { next: '16.4.2' } }))
   put('config/theme.config.ts', "export const slotsThemeConfig = { name: 'slots' }\n")
   put('templates/layout.tsx', LAYOUT)
   put('templates/@modal/page.tsx', PAGE('Modal'))

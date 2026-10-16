@@ -78,7 +78,7 @@ function project(t: TestContext, files: Record<string, string>) {
   const all = {
     'packages/core/migrations/001_core.sql': 'CREATE TABLE core_marker (id int);',
     'nextspark.config.ts': 'export default { plugins: [] }\n',
-    'package.json': JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.3.8' } }),
+    'package.json': JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.4.2' } }),
     'pnpm-workspace.yaml': 'packages: []\n',
     'config/theme.config.ts': "export const themeConfig = { name: 'fixture' }\n",
     ...files,

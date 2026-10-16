@@ -28,15 +28,15 @@ const { target, content } = await emitFacade({
 Every problem is a `FacadeEmitError` carrying all diagnostics (`code`, `file`, `line`, `exportName`,
 `message`); nothing is dropped silently.
 
-## Export table (Next.js 16.3.8)
+## Export table (Next.js 16.4.2)
 
 Source of truth: `next-route-exports.json`. The tests fail when the installed Next.js version differs,
 when Next's `AppSegmentConfigSchemaKeys` or `HTTP_METHODS` change, and when this rendering is stale.
 
 | Kind | File | Default | Re-exported | Literal segment config | Facade directive |
 | --- | --- | --- | --- | --- | --- |
-| page | `page` | required | `generateMetadata`, `metadata`, `generateViewport`, `viewport`, `generateStaticParams` | `revalidate`, `dynamicParams`, `dynamic`, `fetchCache`, `instant`, `prefetch`, `unstable_dynamicStaleTime`, `preferredRegion`, `runtime`, `maxDuration`, `config` | - |
-| layout | `layout` | required | `generateMetadata`, `metadata`, `generateViewport`, `viewport`, `generateStaticParams` | `revalidate`, `dynamicParams`, `dynamic`, `fetchCache`, `instant`, `prefetch`, `preferredRegion`, `runtime`, `maxDuration` | - |
+| page | `page` | required | `generateMetadata`, `metadata`, `generateViewport`, `viewport`, `generateStaticParams` | `revalidate`, `dynamicParams`, `dynamic`, `fetchCache`, `instant`, `prefetch`, `ensureStatic`, `unstable_dynamicStaleTime`, `preferredRegion`, `runtime`, `maxDuration`, `config` | - |
+| layout | `layout` | required | `generateMetadata`, `metadata`, `generateViewport`, `viewport`, `generateStaticParams` | `revalidate`, `dynamicParams`, `dynamic`, `fetchCache`, `instant`, `prefetch`, `ensureStatic`, `preferredRegion`, `runtime`, `maxDuration` | - |
 | template | `template` | required | - | - | - |
 | loading | `loading` | required | - | - | - |
 | error | `error` | required | - | - | 'use client' (source must be client) |
@@ -71,8 +71,8 @@ export { listSlugs as generateStaticParams }
 Metadata image kinds accept Next's one-digit variants (`icon1`, `apple-icon9`, `opengraph-image2`,
 `twitter-image3`), mapped to the base kind.
 
-The emitter resolves `next/package.json` once (project first, then core) and accepts only `~16.3.8`: the table's
-`next` is the verified baseline, and any stable 16.3.x patch at or above it is accepted, while other minors/majors,
+The emitter resolves `next/package.json` once (project first, then core) and accepts only `~16.4.2`: the table's
+`next` is the verified baseline, and any stable 16.4.x patch at or above it is accepted, while other minors/majors,
 lower patches and prereleases are refused (`NS_HOST_UNSUPPORTED_NEXT_VERSION`). It loads Next's segment config
 schema from that same package root.
 Every emitted facade is also validated by `static-imports.mjs` against an allowed grammar: a `'use client'`
@@ -88,7 +88,7 @@ Segment config and `cacheComponents` (verified by probe builds with `next build 
 - invalid with `cacheComponents: true` (build error "Route segment config "X" is not compatible with
   `nextConfig.cacheComponents`"): `dynamic`, `dynamicParams`, `fetchCache`, `revalidate`, **`runtime`**
   (not listed in Next's docs, but even `runtime = 'nodejs'` fails);
-- require `cacheComponents: true`: `instant`, `prefetch`;
+- require `cacheComponents: true`: `instant`, `prefetch`, `ensureStatic` (a Server Component module only; `ensureStatic` is new in 16.4);
 - `unstable_dynamicStaleTime` is page-only (a layout fails the build).
 
 Literal values are accepted exactly as `next/dist/build/analysis/extract-const-value.js` reads them
