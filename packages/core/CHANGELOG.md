@@ -205,7 +205,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `@vercel/blob` is declared as `^2.8.2` (it was `^2.0.0`): projects that install core get 2.8.2 or later, and generated projects declare the same range.
+- Raised floors: `@vercel/blob` `^2.8.2` (was `^2.0.0`) and `@modelcontextprotocol/sdk` `^1.31.0` (was `^1.30.0`): projects that install core get at least those versions, and generated projects declare the same `@vercel/blob` range.
 - `pnpm update-core` ends by listing the dependencies the project declares below what the new core needs (`better-auth`, `@better-fetch/fetch`, `zod`, `next`, ...), with the exact `pnpm add` that moves them, and prints nothing when none is below. It still never writes third-party dependencies.
 - **Better Auth `~1.7.7`.** The support matrix and the stability page name it as the line 1.0 ships with. The monorepo forces zod
   `4.6.5` (it was `4.4.3`, older than Better Auth 1.7 needs). A generated project gets `better-auth ~1.7.7`, `@better-fetch/fetch 1.3.2`
