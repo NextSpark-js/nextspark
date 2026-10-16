@@ -32,6 +32,7 @@ pnpm add next@~16.4.2 react@^19.2.4 react-dom@^19.2.4
 // next.config.mjs
 const nextConfig = {
   cacheComponents: true,
+  partialPrefetching: false, // Next.js 16.4 warns when it is unset; see the CHANGELOG
   // ... existing config
 }
 ```
