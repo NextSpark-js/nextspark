@@ -10,6 +10,8 @@ export function hostConfig() {
   return {
     distDir: `.next-${bundler}-${mode}`,
     cacheComponents: mode === 'cc',
+    // Next.js 16.4 warns when cacheComponents is on and this is unset; false is today's prefetching, as in the template
+    partialPrefetching: false,
     // Mode-only routes are named page.isr.tsx / page.cc.tsx in both hosts.
     pageExtensions: [`${mode}.tsx`, `${mode}.ts`, 'tsx', 'ts'],
     // The shared source and the fake core live outside each host directory.

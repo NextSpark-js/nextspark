@@ -78,6 +78,8 @@ const nextConfig = {
   basePath,
   // Cache Components + PPR is the default rendering mode. For legacy ISR, remove this line or set it to false.
   cacheComponents: true,
+  // `true` doubled the RSC payload in authenticated documents on Next.js 16.4.2, so it stays false (see CHANGELOG); unset warns
+  partialPrefetching: false,
   // `next dev` under an AI agent would append its agent-rules block to the tracked AGENTS.md (Next 16.3+); the project's
   // own AGENTS.md is the guidance, and the tree stays clean
   agentRules: false,
