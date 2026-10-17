@@ -38,7 +38,7 @@ NextSpark is a SaaS framework built on Next.js 16. It provides everything you ne
 
 ## Features
 
-- **Authentication** — Email/password, Google OAuth, magic links with [Better Auth](https://better-auth.com)
+- **Authentication** — Email/password, Google OAuth, email one-time codes with [Better Auth](https://better-auth.com)
 - **Payments** *(experimental)* — Stripe and Polar integration with subscriptions, usage billing, and customer portal
 - **Teams** — Multi-tenant team management with roles and invitations
 - **Permissions** — Granular role-based access control system

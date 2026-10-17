@@ -29,7 +29,7 @@ npx nextspark init
 
 ## Features
 
-- **Authentication** - Email/password, Google OAuth, magic links with Better Auth
+- **Authentication** - Email/password, Google OAuth, email one-time codes with Better Auth
 - **Payments** - Stripe integration with subscriptions and usage billing
 - **Teams** - Multi-tenant team management with roles and permissions
 - **Database** - PostgreSQL with migrations and type-safe queries
