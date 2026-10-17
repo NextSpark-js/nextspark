@@ -228,6 +228,62 @@ describeWithPostgres('billing webhook deduplication', () => {
     expect((await db.query(`SELECT status FROM billing_webhook_events WHERE "eventId" = 'evt_dead'`)).rows[0].status).toBe('processed')
   })
 
+  test('a stale delivery that completes or fails after a takeover does not touch the newer claim', async () => {
+    const backdate = (eventId: string) => db.query(
+      `UPDATE billing_webhook_events SET "claimedAt" = "claimedAt" - make_interval(secs => $1 + 1) WHERE "eventId" = $2`,
+      [webhookEvents.WEBHOOK_CLAIM_LEASE_SECONDS, eventId]
+    )
+    const row = async (eventId: string) =>
+      (await db.query(`SELECT status, "claimedAt"::text AS "claimedAt" FROM billing_webhook_events WHERE "eventId" = $1`, [eventId])).rows
+
+    for (const [eventId, ending] of [['evt_stale_completes', 'completes'], ['evt_stale_fails', 'fails']] as const) {
+      let finishStale!: () => void
+      const staleHandle = new Promise<void>(resolve => { finishStale = resolve })
+      const stale = webhookEvents.processWebhookEventOnce('stripe', eventId, 'x', async () => {
+        await staleHandle
+        if (ending === 'fails') throw new Error('stale delivery failed')
+      })
+      // the stale delivery holds its claim; its lease runs out
+      while ((await row(eventId)).length === 0) await sleep(5)
+      await backdate(eventId)
+      const staleClaim = (await row(eventId))[0]
+
+      let finishNewer!: () => void
+      const newerHandle = new Promise<void>(resolve => { finishNewer = resolve })
+      const newer = webhookEvents.processWebhookEventOnce('stripe', eventId, 'x', () => newerHandle)
+      // the newer delivery has taken the claim over
+      while ((await row(eventId))[0].claimedAt === staleClaim.claimedAt) await sleep(5)
+      const newerClaim = (await row(eventId))[0]
+
+      finishStale()
+      if (ending === 'fails') await expect(stale).rejects.toThrow('stale delivery failed')
+      else expect(await stale).toBe('processed')
+      expect(await row(eventId)).toEqual([newerClaim])
+      expect(newerClaim.status).toBe('processing')
+
+      finishNewer()
+      expect(await newer).toBe('processed')
+      expect((await row(eventId))[0].status).toBe('processed')
+    }
+  })
+
+  test('two concurrent takeovers of one stale lease run handle once', async () => {
+    await db.query(
+      `INSERT INTO billing_webhook_events (gateway, "eventId", status, "claimedAt")
+       VALUES ('stripe', 'evt_stale_race', 'processing', now() - make_interval(secs => $1 + 1))`,
+      [webhookEvents.WEBHOOK_CLAIM_LEASE_SECONDS]
+    )
+    const handle = jest.fn(async () => { await sleep(200) })
+
+    const outcomes = await Promise.all([
+      webhookEvents.processWebhookEventOnce('stripe', 'evt_stale_race', 'x', handle),
+      webhookEvents.processWebhookEventOnce('stripe', 'evt_stale_race', 'x', handle),
+    ])
+
+    expect(handle).toHaveBeenCalledTimes(1)
+    expect(outcomes.sort()).toEqual(['in_progress', 'processed'])
+  })
+
   test('a live claim makes another delivery wait (in_progress), and the same id on another gateway is its own event', async () => {
     await db.query(`INSERT INTO billing_webhook_events (gateway, "eventId") VALUES ('stripe', 'evt_live')`)
     const handle = jest.fn(async () => {})
