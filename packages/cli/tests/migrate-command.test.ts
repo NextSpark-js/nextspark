@@ -4948,3 +4948,129 @@ test('migrate on a root-first project lists the package.json range next to the p
     await rm(root, { recursive: true, force: true })
   }
 })
+
+// #265: the fixes the report lists for --yes are not reserved for a project that moves files; a root-first project gets them too
+const ROOT_FIRST_PACKAGE = (extra: Record<string, unknown> = {}, dependencies: Record<string, string> = {}) => JSON.stringify({ name: 'root-first', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.4.2', '@nextsparkjs/core': '0.1.0-beta.192', ...dependencies }, ...extra }, null, 2) + '\n'
+
+test('migrate on a root-first project moves pnpm.onlyBuiltDependencies into pnpm-workspace.yaml and asks for --yes without a terminal', async () => {
+  const root = await rootFirstFixture({
+    'package.json': ROOT_FIRST_PACKAGE({ pnpm: { onlyBuiltDependencies: ['my-native-dep'], overrides: { foo: '1.0.0' } } }),
+  })
+  try {
+    const without = run(root, [])
+    assert.notEqual(without.status, 0)
+    assert.match(`${without.stdout}\n${without.stderr}`, /rerun with --yes to apply the changes listed above/)
+    assert.equal(existsSync(join(root, 'pnpm-workspace.yaml')), false)
+    assert.deepEqual(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).pnpm.onlyBuiltDependencies, ['my-native-dep'])
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.doesNotMatch(result.stdout, /Nothing to migrate/)
+    assert.match(result.stdout, /pnpm-workspace\.yaml: build-script allowlist/)
+    const yaml = await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8')
+    for (const name of ['my-native-dep', 'sharp']) assert.match(yaml, new RegExp(`- '${name}'`))
+    assert.deepEqual(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).pnpm, { overrides: { foo: '1.0.0' } })
+    // the rollback names the file it edited and the one it created
+    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'package\.json'[^\n]* clean -fdx -- 'pnpm-workspace\.yaml'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate on a root-first project raises the host react range to the version a member resolves', async () => {
+  const root = await rootFirstFixture({
+    'package.json': ROOT_FIRST_PACKAGE({}, { react: '^19.0.0', 'react-dom': '^19.0.0' }),
+    'packages/widgets/package.json': JSON.stringify({ name: 'widgets', version: '1.0.0' }, null, 2) + '\n',
+    'node_modules/react/package.json': JSON.stringify({ name: 'react', version: '19.1.0' }),
+    'packages/widgets/node_modules/react/package.json': JSON.stringify({ name: 'react', version: '19.2.4' }),
+  })
+  try {
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.hostFramework.map((fix: { name: string, to: string, manual: boolean }) => [fix.name, fix.to, fix.manual]), [['react', '^19.2.4', false]])
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.doesNotMatch(result.stdout, /Nothing to migrate/)
+    const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    assert.equal(pkg.dependencies.react, '^19.2.4')
+    assert.equal(pkg.dependencies['react-dom'], '^19.0.0')
+    assert.match(result.stdout, /Rollback: git checkout -- 'package\.json'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate on a root-first project updates the peer ranges of a workspace member', async () => {
+  const root = await rootFirstFixture({
+    'pnpm-workspace.yaml': "packages:\n  - '.'\n  - 'packages/*'\n",
+    'packages/kit/package.json': JSON.stringify({ name: 'kit', version: '1.0.0', peerDependencies: { next: '^15.0.0' } }, null, 2) + '\n',
+  })
+  try {
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.doesNotMatch(result.stdout, /Nothing to migrate/)
+    assert.deepEqual(JSON.parse(await readFile(join(root, 'packages/kit/package.json'), 'utf8')).peerDependencies, { next: '~16.4.2' })
+    assert.match(result.stdout, /Rollback: git checkout -- 'packages\/kit\/package\.json'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate on a root-first project removes the old block thumbnail lines', async () => {
+  const root = await rootFirstFixture({
+    'blocks/hero/config.ts': "export const config = {\n  slug: 'hero',\n  thumbnail: '/theme/blocks/hero/thumbnail.png',\n}\n",
+  })
+  try {
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.doesNotMatch(result.stdout, /Nothing to migrate/)
+    assert.equal(await readFile(join(root, 'blocks/hero/config.ts'), 'utf8'), "export const config = {\n  slug: 'hero',\n}\n")
+    assert.match(result.stdout, /Rollback: git checkout -- 'blocks\/hero\/config\.ts'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate on a root-first project creates packages/contracts when a mobile app needs it', async () => {
+  const root = await rootFirstFixture({
+    'pnpm-workspace.yaml': "packages:\n  - '.'\n  - 'mobile'\n",
+    'mobile/package.json': JSON.stringify({ name: 'mobile', dependencies: { '@nextsparkjs/mobile': '^0.1.0' } }, null, 2) + '\n',
+  })
+  try {
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.doesNotMatch(result.stdout, /Nothing to migrate/)
+    assert.equal(JSON.parse(await readFile(join(root, 'packages/contracts/package.json'), 'utf8')).name, '@project/contracts')
+    assert.equal(JSON.parse(await readFile(join(root, 'mobile/package.json'), 'utf8')).dependencies['@project/contracts'], 'workspace:*')
+    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- [^\n]*'mobile\/package\.json'[^\n]* clean -fdx -- 'packages\/contracts'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate on a root-first project adds no compatibility rewrite and does not list one', async () => {
+  const root = await rootFirstFixture({ 'lib/client.ts': "fetch('/api/v1/theme/acme/me')\n" })
+  try {
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.compatRewrites.entries, [])
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /Nothing to migrate/)
+    assert.equal(await readFile(join(root, 'next.config.mjs'), 'utf8'), 'export default {}\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate on a root-first project with nothing to do prints Nothing to migrate and writes nothing', async () => {
+  const root = await rootFirstFixture()
+  try {
+    for (const args of [['--yes'], []]) {
+      const result = run(root, args)
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+      assert.match(result.stdout, /Nothing to migrate/)
+    }
+    assert.equal(spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).stdout, '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

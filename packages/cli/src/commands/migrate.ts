@@ -1626,7 +1626,9 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
   }
   const urlMoves = apiUrlMoves(hostFiles, host.root);
   // F9: the URLs core's dispatchers served keep answering through native Next rewrites, for installed clients
-  const compatEntries = compatRewrites(
+  // A root-first project (no contents/, no app tree) moves no API route in this run: its routes already answer at /api/**
+  const rootFirst = !existsSync(join(host.root, 'contents')) && !appPlan;
+  const compatEntries = rootFirst ? [] : compatRewrites(
     themeDirectory && (existsSync(join(themeDirectory, 'api')) || urlMoves.some(move => move.from.startsWith('/api/v1/theme/'))) ? selectedTheme.name : null,
     plugins.filter(plugin => existsSync(join(pluginsDirectory, plugin.name, 'api'))).map(plugin => plugin.name),
   );
@@ -3863,6 +3865,108 @@ function renameEntitySlugs(repository: string, hostRoot: string, plan: MigrateRe
   return renamedDirectories(plan).map(directory => pathFrom(repository, join(hostRoot, directory)));
 }
 
+/** Peer ranges of workspace members (L8): edited before any move, so a plugin's manifest changes where it still is. */
+function applyPeerRanges(repository: string, report: MigrateReport): void {
+  for (const member of report.memberPeers.filter(entry => entry.updates.length > 0)) {
+    const manifest = join(repository, member.path);
+    assertContained(repository, manifest);
+    writeFileSync(manifest, updatePeerRanges(readFileSync(manifest, 'utf8'), member.updates));
+    console.log(`  ${member.path}: peer ranges set to ${member.updates.map(update => `${update.name} ${update.to}`).join(', ')}.`);
+  }
+}
+
+/** The fixes the report lists for --yes that every path of migrate applies, whether or not it moves files. Returns whether next was set. */
+async function applyHostFixes(repository: string, hostRoot: string, report: MigrateReport, simulation: boolean): Promise<boolean> {
+  let nextUpdated = false;
+  const thumbnails = filesIn(hostRoot).filter(file => isBlockConfig(file) && !inAiWorkflowDirectory(repository, file) && countBlockThumbnails(readFileSync(file, 'utf8')) > 0);
+  for (const file of thumbnails) {
+    assertContained(repository, file);
+    writeFileSync(file, removeBlockThumbnails(readFileSync(file, 'utf8')));
+  }
+  if (thumbnails.length > 0) console.log(`  Block configs: removed the old thumbnail line from ${thumbnails.length} file(s).`);
+  const nextConfig = nextConfigFiles(hostRoot)[0];
+  if (report.compatRewrites.entries.length > 0 && nextConfig) {
+    const edit = addCompatRewrites(readFileSync(nextConfig, 'utf8'), basename(nextConfig), report.compatRewrites.entries);
+    if ('error' in edit) throw new MigrateAnalysisError(`${edit.error}. Merge these rewrites by hand:\n${edit.snippet}`);
+    assertContained(repository, nextConfig);
+    writeFileSync(nextConfig, edit.source);
+    console.log(`  ${pathFrom(repository, nextConfig)}: rewrites ${report.compatRewrites.entries.map(entry => entry.source).join(', ')} added for already-installed clients (${report.compatRewrites.note})`);
+  }
+  const hostPackageFile = join(hostRoot, 'package.json');
+  if (!simulation && report.nextRange.members.some(member => member.action === 'update')) {
+    assertContained(repository, hostPackageFile);
+    writeFileSync(hostPackageFile, updateNextRange(readFileSync(hostPackageFile, 'utf8'), report.nextRange));
+    nextUpdated = true;
+    console.log(`  ${pathFrom(repository, hostPackageFile)}: next and eslint-config-next set to ${report.nextRange.required}. Run your package manager's install, then nextspark prepare.`);
+  }
+  if (!simulation && report.pnpmBuilds && !report.pnpmBuilds.error) {
+    const workspaceFile = join(hostRoot, 'pnpm-workspace.yaml');
+    assertContained(repository, workspaceFile);
+    const edit = addBuildAllowlist(existsSync(workspaceFile) ? readFileSync(workspaceFile, 'utf8') : null, [...new Set([...report.pnpmBuilds.fromPackageJson, ...BUILD_ALLOWLIST])].sort());
+    if ('error' in edit) throw new MigrateAnalysisError(edit.error);
+    writeFileSync(workspaceFile, edit.text);
+    writeFileSync(hostPackageFile, dropLegacyBuildList(readFileSync(hostPackageFile, 'utf8')));
+    console.log(`  pnpm-workspace.yaml: build-script allowlist (allowBuilds, onlyBuiltDependencies) ${report.pnpmBuilds.createsFile ? 'created' : 'updated'} from package.json pnpm.onlyBuiltDependencies, which is removed (pnpm 11 and later ignore it). Run your package manager's install.`);
+  }
+  const frameworkFixes = report.hostFramework.filter(fix => !fix.manual);
+  if (!simulation && frameworkFixes.length > 0) {
+    writeFileSync(hostPackageFile, updateHostFramework(readFileSync(hostPackageFile, 'utf8'), frameworkFixes));
+    console.log(`  ${pathFrom(repository, hostPackageFile)}: ${frameworkFixes.map(fix => `${fix.name} ${fix.to}`).join(', ')} (the range now accepts the version the members resolve). Run your package manager's install.`);
+  }
+  if (report.contractsPackage.needed) {
+    const manifests = packageFiles(repository).map(file => ({ file, pkg: readJson(file) })).filter((entry): entry is { file: string; pkg: Record<string, unknown> } => entry.pkg !== null);
+    const created = planContractsPackage(repository, hostRoot, manifests).plan;
+    if (created) for (const line of await applyContractsPackage(repository, created)) console.log(`  Contracts: ${line}.`);
+  }
+  return nextUpdated;
+}
+
+/**
+ * What applyPeerRanges and applyHostFixes would write on a root-first project, from the report: the lines to confirm,
+ * the tracked files they change and the paths they create (the rollback names both). Compat rewrites are not here:
+ * a root-first project moves no API route, so the report lists none.
+ */
+function rootFirstFixes(repository: string, hostRoot: string, report: MigrateReport): { lines: string[]; modified: string[]; created: string[]; range: boolean } {
+  const lines: string[] = [];
+  const modified = new Set<string>();
+  const created = new Set<string>();
+  const hostPackage = pathFrom(repository, join(hostRoot, 'package.json'));
+  const workspaceFile = pathFrom(repository, join(hostRoot, 'pnpm-workspace.yaml'));
+  const range = report.nextRange.members.some(member => member.action === 'update');
+  for (const member of report.memberPeers.filter(entry => entry.updates.length > 0)) {
+    lines.push(`${member.path}: peer ranges set to ${member.updates.map(update => `${update.name} ${update.to}`).join(', ')}`);
+    modified.add(member.path);
+  }
+  for (const block of report.blockThumbnails) {
+    lines.push(`${block.path}: ${block.lines} old thumbnail line(s) removed`);
+    modified.add(block.path);
+  }
+  if (range) {
+    lines.push(`package.json: next and eslint-config-next set to ${report.nextRange.required}`);
+    modified.add(hostPackage);
+  }
+  if (report.pnpmBuilds && !report.pnpmBuilds.error) {
+    lines.push(`pnpm-workspace.yaml: build-script allowlist ${report.pnpmBuilds.createsFile ? 'created' : 'updated'}; pnpm.onlyBuiltDependencies removed from package.json`);
+    (report.pnpmBuilds.createsFile ? created : modified).add(workspaceFile);
+    modified.add(hostPackage);
+  }
+  const frameworkFixes = report.hostFramework.filter(fix => !fix.manual);
+  if (frameworkFixes.length > 0) {
+    lines.push(`package.json: ${frameworkFixes.map(fix => `${fix.name} ${fix.to}`).join(', ')}`);
+    modified.add(hostPackage);
+  }
+  if (report.contractsPackage.needed) {
+    lines.push(`${report.contractsPackage.path}: created, listed in the workspace, and ${report.contractsPackage.mobile} depends on it`);
+    if (report.contractsPackage.mobile) modified.add(`${report.contractsPackage.mobile}/package.json`);
+    modified.add('pnpm-workspace.yaml');
+    if (report.contractsPackage.createsDirectory) created.add(report.contractsPackage.path);
+    else for (const name of ['package.json', 'tsconfig.json', 'README.md']) if (!existsSync(join(repository, report.contractsPackage.path, name))) created.add(`${report.contractsPackage.path}/${name}`);
+  }
+  // A path that does not exist yet is created, not modified
+  for (const path of [...modified]) if (!existsSync(join(repository, path))) { modified.delete(path); created.add(path); }
+  return { lines, modified: [...modified], created: [...created], range };
+}
+
 export async function migrateCommand(options: MigrateOptions): Promise<void> {
   let rollback: string[] | null = null;
   let writesStarted = false;
@@ -3929,53 +4033,56 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     if (!existsSync(join(hostRoot, 'contents')) && appPlan === null) {
       const templatesDir = templateDirectory(hostRoot, repository);
       const upgrades = entryUpgrades(hostRoot, templatesDir);
-      // A project still on an earlier Next.js minor has work left even when nothing else does: the range the report names
-      const rangeUpdate = !simulation && report.nextRange.members.some(member => member.action === 'update');
-      if (upgrades.length === 0 && !renameSlugs && !rangeUpdate) {
+      // The fixes the report lists for --yes count as work even when nothing else does (the simulation writes none of them)
+      const fixes = simulation ? { lines: [], modified: [], created: [], range: false } : rootFirstFixes(repository, hostRoot, report);
+      const rangeOnly = fixes.range && fixes.lines.length === 1;
+      if (upgrades.length === 0 && !renameSlugs && fixes.lines.length === 0) {
         console.log('Nothing to migrate: the project is root-first already, and its proxy and instrumentation files are not unchanged copies of an earlier core template (see the warnings above for any to change by hand).');
         return;
       }
-      if (upgrades.length > 0) {
+      if (upgrades.length > 0 || (fixes.lines.length > 0 && (!rangeOnly || renameSlugs))) {
         section('Root-first project', [
           ...upgrades.map(upgrade => `${upgrade.file}: an unchanged copy of an earlier core template, replaced with the current one`),
-          ...(rangeUpdate ? [`package.json: next and eslint-config-next set to ${report.nextRange.required}`] : []),
+          ...fixes.lines,
         ]);
-        if (!options.yes) {
-          if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to replace these files.');
-          process.stdout.write('Replace these files? [y/N] ');
-          const answer = readFileSync(0, 'utf8').trim().toLowerCase();
-          if (answer !== 'y' && answer !== 'yes') throw new MigrateAnalysisError('Migration cancelled.');
-        }
       }
-      if (rangeUpdate && upgrades.length === 0 && renameSlugs) section('Root-first project', [`package.json: next and eslint-config-next set to ${report.nextRange.required}`]);
+      if (upgrades.length > 0 && !options.yes) {
+        if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to replace these files.');
+        process.stdout.write('Replace these files? [y/N] ');
+        const answer = readFileSync(0, 'utf8').trim().toLowerCase();
+        if (answer !== 'y' && answer !== 'yes') throw new MigrateAnalysisError('Migration cancelled.');
+      }
       if (renameSlugs && upgrades.length === 0 && !options.yes && !slugsAnswered) {
         if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to rename the entity slugs.');
         if (!askYesNo('Rename the entity slugs?')) throw new MigrateAnalysisError('Migration cancelled.');
       }
-      if (rangeUpdate && upgrades.length === 0 && !renameSlugs && !options.yes) {
-        if (!process.stdin.isTTY) throw new MigrateAnalysisError(`Review the report above, then rerun with --yes to set next and eslint-config-next to ${report.nextRange.required}.`);
-        if (!askYesNo(`Set next and eslint-config-next to ${report.nextRange.required}?`)) throw new MigrateAnalysisError('Migration cancelled.');
+      if (fixes.lines.length > 0 && upgrades.length === 0 && !renameSlugs && !options.yes) {
+        if (!process.stdin.isTTY) throw new MigrateAnalysisError(rangeOnly
+          ? `Review the report above, then rerun with --yes to set next and eslint-config-next to ${report.nextRange.required}.`
+          : 'Review the report above, then rerun with --yes to apply the changes listed above.');
+        if (!askYesNo(rangeOnly ? `Set next and eslint-config-next to ${report.nextRange.required}?` : 'Apply the changes listed above?')) throw new MigrateAnalysisError('Migration cancelled.');
       }
       // The rename edits imports anywhere in the project, so its rollback is the whole tree (it was clean)
       const created = renamedDirectories(report.entitySlugs).map(directory => pathFrom(repository, join(hostRoot, directory)));
       const renameRollback = `git -C ${shellQuote(repository)} checkout -- . && git -C ${shellQuote(repository)} clean -fd -- ${created.map(shellQuote).join(' ')}`;
-      if (renameSlugs) {
-        // set before the first write: a rename that fails partway still prints it
-        rollback = [renameRollback];
+      // Otherwise: the files this run edits (tracked, restored by checkout) and the ones it creates (cleaned)
+      const edited = [...new Set([...upgrades.map(upgrade => pathFrom(repository, join(hostRoot, upgrade.file))), ...fixes.modified])].map(shellQuote).join(' ');
+      const fixRollback = fixes.created.length > 0
+        ? `git -C ${shellQuote(repository)} checkout -- ${edited} && git -C ${shellQuote(repository)} --literal-pathspecs clean -fdx -- ${fixes.created.map(shellQuote).join(' ')}`
+        : `git checkout -- ${edited}`;
+      const rollbackLine = renameSlugs ? renameRollback : fixRollback;
+      if (renameSlugs || fixes.lines.length > 0) {
+        // set before the first write: a run that fails partway still prints it
+        rollback = [rollbackLine];
         writesStarted = true;
       }
       applyEntryUpgrades(hostRoot, templatesDir);
       if (renameSlugs) renameEntitySlugs(repository, hostRoot, report.entitySlugs);
-      const rangeFile = join(hostRoot, 'package.json');
-      if (rangeUpdate) {
-        assertContained(repository, rangeFile);
-        writeFileSync(rangeFile, updateNextRange(readFileSync(rangeFile, 'utf8'), report.nextRange));
-        console.log(`  ${pathFrom(repository, rangeFile)}: next and eslint-config-next set to ${report.nextRange.required}. Run your package manager's install, then nextspark prepare.`);
+      if (!simulation) {
+        applyPeerRanges(repository, report);
+        await applyHostFixes(repository, hostRoot, report, simulation);
       }
-      const touched = [...upgrades.map(upgrade => join(hostRoot, upgrade.file)), ...(rangeUpdate ? [rangeFile] : [])];
-      console.log(renameSlugs
-        ? `  Commit the change. Rollback: ${renameRollback}`
-        : '  Commit the change. Rollback: git checkout -- ' + touched.map(file => shellQuote(pathFrom(repository, file))).join(' '));
+      console.log(`  Commit the change. Rollback: ${rollbackLine}`);
       return;
     }
     // A project that is root-first already (no contents/) only has an app tree left to convert
@@ -4037,58 +4144,12 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     writeFileSync(join(migrationRollbackBackup(hostRoot), MIGRATION_ROLLBACK_COMMANDS_FILE), `${rollback.join('\n')}\n`);
     writesStarted = true;
     // L8: before the move, so a plugin's manifest is edited where it still is and moves with the change
-    for (const member of report.memberPeers.filter(entry => entry.updates.length > 0)) {
-      const manifest = join(repository, member.path);
-      assertContained(repository, manifest);
-      writeFileSync(manifest, updatePeerRanges(readFileSync(manifest, 'utf8'), member.updates));
-      console.log(`  ${member.path}: peer ranges set to ${member.updates.map(update => `${update.name} ${update.to}`).join(', ')}.`);
-    }
+    applyPeerRanges(repository, report);
     const result = appTreeOnly
       ? null
       : applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme as string, plan, aliasesBeforeMove as AliasCatalog, report.envExample, report.config.plugins, hadLegacyApp ? report.rootProxyFiles.customizations : []);
     if (renameSlugs) renameEntitySlugs(repository, hostRoot, report.entitySlugs);
-    let nextUpdated = false;
-    {
-      const thumbnails = filesIn(hostRoot).filter(file => isBlockConfig(file) && !inAiWorkflowDirectory(repository, file) && countBlockThumbnails(readFileSync(file, 'utf8')) > 0);
-      for (const file of thumbnails) {
-        assertContained(repository, file);
-        writeFileSync(file, removeBlockThumbnails(readFileSync(file, 'utf8')));
-      }
-      if (thumbnails.length > 0) console.log(`  Block configs: removed the old thumbnail line from ${thumbnails.length} file(s).`);
-      const nextConfig = nextConfigFiles(hostRoot)[0];
-      if (report.compatRewrites.entries.length > 0 && nextConfig) {
-        const edit = addCompatRewrites(readFileSync(nextConfig, 'utf8'), basename(nextConfig), report.compatRewrites.entries);
-        if ('error' in edit) throw new MigrateAnalysisError(`${edit.error}. Merge these rewrites by hand:\n${edit.snippet}`);
-        assertContained(repository, nextConfig);
-        writeFileSync(nextConfig, edit.source);
-        console.log(`  ${pathFrom(repository, nextConfig)}: rewrites ${report.compatRewrites.entries.map(entry => entry.source).join(', ')} added for already-installed clients (${report.compatRewrites.note})`);
-      }
-      const hostPackageFile = join(hostRoot, 'package.json');
-      if (!simulation && report.nextRange.members.some(member => member.action === 'update')) {
-        writeFileSync(hostPackageFile, updateNextRange(readFileSync(hostPackageFile, 'utf8'), report.nextRange));
-        nextUpdated = true;
-        console.log(`  ${pathFrom(repository, hostPackageFile)}: next and eslint-config-next set to ${report.nextRange.required}. Run your package manager's install, then nextspark prepare.`);
-      }
-      if (!simulation && report.pnpmBuilds && !report.pnpmBuilds.error) {
-        const workspaceFile = join(hostRoot, 'pnpm-workspace.yaml');
-        assertContained(repository, workspaceFile);
-        const edit = addBuildAllowlist(existsSync(workspaceFile) ? readFileSync(workspaceFile, 'utf8') : null, [...new Set([...report.pnpmBuilds.fromPackageJson, ...BUILD_ALLOWLIST])].sort());
-        if ('error' in edit) throw new MigrateAnalysisError(edit.error);
-        writeFileSync(workspaceFile, edit.text);
-        writeFileSync(hostPackageFile, dropLegacyBuildList(readFileSync(hostPackageFile, 'utf8')));
-        console.log(`  pnpm-workspace.yaml: build-script allowlist (allowBuilds, onlyBuiltDependencies) ${report.pnpmBuilds.createsFile ? 'created' : 'updated'} from package.json pnpm.onlyBuiltDependencies, which is removed (pnpm 11 and later ignore it). Run your package manager's install.`);
-      }
-      const frameworkFixes = report.hostFramework.filter(fix => !fix.manual);
-      if (!simulation && frameworkFixes.length > 0) {
-        writeFileSync(hostPackageFile, updateHostFramework(readFileSync(hostPackageFile, 'utf8'), frameworkFixes));
-        console.log(`  ${pathFrom(repository, hostPackageFile)}: ${frameworkFixes.map(fix => `${fix.name} ${fix.to}`).join(', ')} (the range now accepts the version the members resolve). Run your package manager's install.`);
-      }
-      if (report.contractsPackage.needed) {
-        const manifests = packageFiles(repository).map(file => ({ file, pkg: readJson(file) })).filter((entry): entry is { file: string; pkg: Record<string, unknown> } => entry.pkg !== null);
-        const created = planContractsPackage(repository, hostRoot, manifests).plan;
-        if (created) for (const line of await applyContractsPackage(repository, created)) console.log(`  Contracts: ${line}.`);
-      }
-    }
+    const nextUpdated = await applyHostFixes(repository, hostRoot, report, simulation);
     if (appPlan) {
       const converted = applyAppConversion(hostRoot, appPlan);
       console.log(`  App tree: removed ${converted.removed} generated file(s); converted ${converted.overrides} customized core file(s) into overrides and moved ${converted.moved - converted.overrides} project file(s).`);
