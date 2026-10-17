@@ -75,6 +75,9 @@ describeWithPostgres('billing webhook deduplication', () => {
       INSERT INTO plans (id, slug, name) VALUES ('plan-1', 'pro', 'Pro');
       INSERT INTO subscriptions (id, "teamId", "planId", status, "currentPeriodStart", "currentPeriodEnd", "externalSubscriptionId")
         VALUES ('sub-1', 'team-1', 'plan-1', 'active', now(), now() + interval '30 days', 'sub_stripe_1');
+      INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-2', 'Team 2', 'team-2', 'u1');
+      INSERT INTO subscriptions (id, "teamId", "planId", status, "currentPeriodStart", "currentPeriodEnd", "externalCustomerId")
+        VALUES ('sub-2', 'team-2', 'plan-1', 'trialing', now(), now() + interval '30 days', 'cus_polar_1');
     `)
 
     // lib/db.ts opens its pools on import, from DATABASE_URL
@@ -192,6 +195,24 @@ describeWithPostgres('billing webhook deduplication', () => {
     expect(await responseOf(await handler(polarRequest(event)))).toEqual({ status: 200, body: { received: true } })
     expect(await responseOf(await handler(polarRequest(event))))
       .toEqual({ status: 200, body: { received: true, status: 'duplicate' } })
+  })
+
+  test('Polar: subscription.created, .updated and .canceled for a known subscription answer 200 (#282)', async () => {
+    const handler = createPolarWebhookHandler()
+    const subscription = async () =>
+      (await db.query(`SELECT status, "externalSubscriptionId" AS "externalId" FROM subscriptions WHERE id = 'sub-2'`)).rows[0]
+
+    const created = { id: 'evt_polar_sub_created', type: 'subscription.created', data: { id: 'sub_polar_1', customerId: 'cus_polar_1', status: 'active' } }
+    expect(await responseOf(await handler(polarRequest(created)))).toEqual({ status: 200, body: { received: true } })
+    expect(await subscription()).toEqual({ status: 'active', externalId: 'sub_polar_1' })
+
+    const updated = { id: 'evt_polar_sub_updated_known', type: 'subscription.updated', data: { id: 'sub_polar_1', status: 'past_due' } }
+    expect(await responseOf(await handler(polarRequest(updated)))).toEqual({ status: 200, body: { received: true } })
+    expect((await subscription()).status).toBe('past_due')
+
+    const canceled = { id: 'evt_polar_sub_canceled', type: 'subscription.canceled', data: { id: 'sub_polar_1' } }
+    expect(await responseOf(await handler(polarRequest(canceled)))).toEqual({ status: 200, body: { received: true } })
+    expect((await subscription()).status).toBe('canceled')
   })
 
   test('a claim older than the lease, left by a delivery that died, is taken over by the retry', async () => {

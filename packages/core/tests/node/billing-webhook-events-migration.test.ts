@@ -2,6 +2,7 @@
  * 040 adds billing_webhook_events (#266), where the billing webhooks claim each event once. db:migrate applies it on a
  * fresh database and on one at 039, and running it again changes nothing. RLS is on with no policy: on the
  * nextspark_app cutover a signed-in user neither reads nor writes it; the service connection does.
+ * 041 adds 'polar' to subscriptions."paymentProvider" (#282).
  *
  * The test starts a throwaway cluster with initdb and pg_ctl on a free port, and is skipped when they are not on the
  * PATH.
@@ -123,4 +124,31 @@ test('on the nextspark_app cutover a signed-in user neither reads nor writes bil
   )
   assert.equal((await as('u1', `DELETE FROM billing_webhook_events WHERE "eventId" = 'evt_1'`)).rowCount, 0)
   assert.equal((await owner.query('SELECT count(*)::int AS n FROM billing_webhook_events')).rows[0].n, 1)
+})
+
+async function providerCheck(client: pg.Client) {
+  const { rows } = await client.query(
+    `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+     WHERE conrelid = 'public.subscriptions'::regclass AND conname = 'subscriptions_paymentProvider_check'`,
+  )
+  return rows.map(r => r.def)
+}
+
+test('041 adds polar to subscriptions."paymentProvider", keeps a provider a project added, and is idempotent (#282)', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
+  const { url, client } = await throwawayDatabase(t)
+  const run = migrate(t, url)
+  assert.equal(run.status, 0, run.output)
+  assert.match(run.output, /Successfully executed 041_subscriptions_payment_provider_polar\.sql/)
+  const accepted = `CHECK (("paymentProvider" = ANY (ARRAY['stripe'::text, 'paddle'::text, 'lemonsqueezy'::text, 'polar'::text])))`
+  assert.deepEqual(await providerCheck(client), [accepted])
+
+  const migration041 = fs.readFileSync(path.join(CORE, 'migrations/041_subscriptions_payment_provider_polar.sql'), 'utf8')
+  await client.query(migration041)
+  assert.deepEqual(await providerCheck(client), [accepted])
+
+  // a project that had added its own provider to 013's list
+  await client.query(`ALTER TABLE subscriptions DROP CONSTRAINT "subscriptions_paymentProvider_check";
+    ALTER TABLE subscriptions ADD CONSTRAINT "subscriptions_paymentProvider_check" CHECK ("paymentProvider" IN ('stripe', 'mercadopago'))`)
+  await client.query(migration041)
+  assert.deepEqual(await providerCheck(client), [`CHECK (("paymentProvider" = ANY (ARRAY['stripe'::text, 'mercadopago'::text, 'polar'::text])))`])
 })

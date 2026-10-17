@@ -77,15 +77,15 @@ async function handlePolarWebhook(request: NextRequest, loadExtensions: PolarWeb
           break
 
         case 'subscription.created':
-          await handleSubscriptionCreated(event.data, eventId)
+          await handleSubscriptionCreated(event.data)
           break
 
         case 'subscription.updated':
-          await handleSubscriptionUpdated(event.data, eventId)
+          await handleSubscriptionUpdated(event.data)
           break
 
         case 'subscription.canceled':
-          await handleSubscriptionCanceled(event.data, eventId)
+          await handleSubscriptionCanceled(event.data)
           break
 
         case 'order.paid':
@@ -193,7 +193,7 @@ async function handleCheckoutUpdated(data: Record<string, unknown>, eventId: str
  * Handle subscription.created
  * New subscription was created in Polar
  */
-async function handleSubscriptionCreated(data: Record<string, unknown>, eventId: string) {
+async function handleSubscriptionCreated(data: Record<string, unknown>) {
   const polarSubId = data.id as string
   const polarCustomerId = data.customerId as string | undefined
   const status = mapPolarStatus(data.status as string)
@@ -211,9 +211,6 @@ async function handleSubscriptionCreated(data: Record<string, unknown>, eventId:
        WHERE "externalCustomerId" = $3`,
       [polarSubId, status, polarCustomerId]
     )
-
-    // Log webhook event for idempotency tracking
-    await logWebhookEvent(polarCustomerId, 'subscription.created', eventId)
   }
 }
 
@@ -221,7 +218,7 @@ async function handleSubscriptionCreated(data: Record<string, unknown>, eventId:
  * Handle subscription.updated
  * Subscription status or plan changed
  */
-async function handleSubscriptionUpdated(data: Record<string, unknown>, eventId: string) {
+async function handleSubscriptionUpdated(data: Record<string, unknown>) {
   const polarSubId = data.id as string
   const status = mapPolarStatus(data.status as string)
   const cancelAtPeriodEnd = (data.cancelAtPeriodEnd as boolean) ?? false
@@ -237,16 +234,13 @@ async function handleSubscriptionUpdated(data: Record<string, unknown>, eventId:
      WHERE "externalSubscriptionId" = $3`,
     [status, cancelAtPeriodEnd, polarSubId]
   )
-
-  // Log webhook event for idempotency tracking
-  await logWebhookEventBySubId(polarSubId, 'subscription.updated', eventId)
 }
 
 /**
  * Handle subscription.canceled
  * Subscription was canceled (revoked) in Polar
  */
-async function handleSubscriptionCanceled(data: Record<string, unknown>, eventId: string) {
+async function handleSubscriptionCanceled(data: Record<string, unknown>) {
   const polarSubId = data.id as string
 
   console.log(`[polar-webhook] Subscription canceled ${polarSubId}`)
@@ -259,9 +253,6 @@ async function handleSubscriptionCanceled(data: Record<string, unknown>, eventId
      WHERE "externalSubscriptionId" = $1`,
     [polarSubId]
   )
-
-  // Log webhook event for idempotency tracking
-  await logWebhookEventBySubId(polarSubId, 'subscription.canceled', eventId)
 }
 
 /**
@@ -413,57 +404,5 @@ async function logBillingEvent(params: {
       params.currency,
       JSON.stringify({ polarEventId: params.polarEventId })
     ]
-  )
-}
-
-/**
- * Log a webhook event by customer ID for idempotency tracking.
- * Used by subscription handlers that don't involve payments.
- */
-async function logWebhookEvent(
-  polarCustomerId: string,
-  eventType: string,
-  polarEventId: string
-) {
-  const sub = await queryOne<{ id: string }>(
-    `SELECT id FROM subscriptions WHERE "externalCustomerId" = $1 LIMIT 1`,
-    [polarCustomerId]
-  )
-
-  if (!sub) {
-    console.warn(`[polar-webhook] No subscription found for customer ${polarCustomerId}, cannot log webhook event`)
-    return
-  }
-
-  await query(
-    `INSERT INTO "billing_events" ("subscriptionId", type, status, amount, currency, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [sub.id, 'webhook', eventType, 0, 'usd', JSON.stringify({ polarEventId })]
-  )
-}
-
-/**
- * Log a webhook event by external subscription ID for idempotency tracking.
- * Used by subscription handlers that identify by subscription ID.
- */
-async function logWebhookEventBySubId(
-  polarSubId: string,
-  eventType: string,
-  polarEventId: string
-) {
-  const sub = await queryOne<{ id: string }>(
-    `SELECT id FROM subscriptions WHERE "externalSubscriptionId" = $1 LIMIT 1`,
-    [polarSubId]
-  )
-
-  if (!sub) {
-    console.warn(`[polar-webhook] No subscription found for polar sub ${polarSubId}, cannot log webhook event`)
-    return
-  }
-
-  await query(
-    `INSERT INTO "billing_events" ("subscriptionId", type, status, amount, currency, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [sub.id, 'webhook', eventType, 0, 'usd', JSON.stringify({ polarEventId })]
   )
 }
