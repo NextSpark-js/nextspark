@@ -401,6 +401,8 @@ try {
 
 Write `handle` so it can run again after it failed half-way: a retry runs it from the start.
 
+Call the helper outside any open transaction of your own: it runs each statement on its own (autocommit), and inside a long transaction the claim's timestamps would be the transaction's start, so a live claim could look stale before its lease ends.
+
 ---
 
 ## Webhook Extensions
