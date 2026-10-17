@@ -688,12 +688,11 @@ export async function POST(request: NextRequest) {
   // MANDATORY signature verification
   const event = verifyWebhookSignature(payload, signature)
 
-  // Idempotency check
-  const existing = await db.query(`SELECT ... WHERE stripeEventId = $1`)
-  if (existing) return { received: true, status: 'duplicate' }
-
-  // Handle events
-  switch (event.type) { /* ... */ }
+  // Claim the event, handle it once (billing_webhook_events)
+  const outcome = await processWebhookEventOnce('stripe', event.id, event.type, async () => {
+    switch (event.type) { /* ... */ }
+  })
+  return webhookOutcomeResponse(outcome)
 }
 ```
 

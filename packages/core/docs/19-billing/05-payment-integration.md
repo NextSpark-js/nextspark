@@ -253,29 +253,28 @@ async function handleStripeWebhook(request: NextRequest) {
     return Response.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  // Idempotency check (deduplicate retries)
-  const existing = await queryOne(
-    `SELECT id FROM "billing_events" WHERE metadata->>'stripeEventId' = $1`,
-    [event.id]
-  )
-  if (existing) return Response.json({ received: true, status: 'duplicate' })
-
-  switch (event.type) {
-    case 'checkout.session.completed':
-      await handleCheckoutCompleted(event.data, event.id, stripeWebhookExtensions)
-      break
-    case 'invoice.paid':
-      await handleInvoicePaid(event.data, event.id)
-      break
-    case 'customer.subscription.updated':
-      await handleSubscriptionUpdated(event.data, event.id)
-      break
-    case 'customer.subscription.deleted':
-      await handleSubscriptionDeleted(event.data, event.id)
-      break
+  // Claim the event and handle it once (see "Webhook Deduplication" below)
+  try {
+    const outcome = await processWebhookEventOnce('stripe', event.id, event.type, async () => {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          await handleCheckoutCompleted(event.data, event.id, stripeWebhookExtensions)
+          break
+        case 'invoice.paid':
+          await handleInvoicePaid(event.data, event.id)
+          break
+        case 'customer.subscription.updated':
+          await handleSubscriptionUpdated(event.data, event.id)
+          break
+        case 'customer.subscription.deleted':
+          await handleSubscriptionDeleted(event.data, event.id)
+          break
+      }
+    })
+    return webhookOutcomeResponse(outcome)
+  } catch {
+    return Response.json({ error: 'Handler failed' }, { status: 500 })
   }
-
-  return Response.json({ received: true })
 }
 ```
 
@@ -336,31 +335,30 @@ async function handlePolarWebhook(request: NextRequest) {
     return Response.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  // Idempotency check
+  // Claim the event and handle it once (see "Webhook Deduplication" below)
   const eventId = event.id || headers['webhook-id']
-  const existing = await queryOne(
-    `SELECT id FROM "billing_events" WHERE metadata->>'polarEventId' = $1`,
-    [eventId]
-  )
-  if (existing) return Response.json({ received: true, status: 'duplicate' })
-
-  switch (event.type) {
-    case 'checkout.updated':
-      await handleCheckoutUpdated(event.data, eventId)
-      break
-    case 'subscription.created':
-    case 'subscription.updated':
-    case 'subscription.canceled':
-      await handleSubscriptionEvent(event.type, event.data, eventId)
-      break
-    case 'order.paid':
-      // Dispatches to polarWebhookExtensions.onOneTimePaymentCompleted
-      // when there's no subscriptionId (one-time purchase)
-      await handleOrderPaid(event.data, eventId, polarWebhookExtensions)
-      break
+  try {
+    const outcome = await processWebhookEventOnce('polar', eventId, event.type, async () => {
+      switch (event.type) {
+        case 'checkout.updated':
+          await handleCheckoutUpdated(event.data, eventId)
+          break
+        case 'subscription.created':
+        case 'subscription.updated':
+        case 'subscription.canceled':
+          await handleSubscriptionEvent(event.type, event.data, eventId)
+          break
+        case 'order.paid':
+          // Dispatches to polarWebhookExtensions.onOneTimePaymentCompleted
+          // when there's no subscriptionId (one-time purchase)
+          await handleOrderPaid(event.data, eventId, polarWebhookExtensions)
+          break
+      }
+    })
+    return webhookOutcomeResponse(outcome)
+  } catch {
+    return Response.json({ error: 'Handler failed' }, { status: 500 })
   }
-
-  return Response.json({ received: true })
 }
 ```
 
@@ -370,6 +368,38 @@ async function handlePolarWebhook(request: NextRequest) {
 2. Add endpoint: `https://your-app.com/api/v1/billing/webhooks/polar`
 3. Select events: `checkout.updated`, `order.paid`, `subscription.created`, `subscription.updated`, `subscription.canceled`
 4. Copy the webhook secret to `POLAR_WEBHOOK_SECRET`
+
+### Webhook Deduplication
+
+Gateways deliver an event more than once: retries after a timeout or an error, and sometimes two deliveries at the same time. Each event is processed once through one table and one helper.
+
+**The table.** `billing_webhook_events` (migration `040_billing_webhook_events.sql`) holds one row per event, with `UNIQUE (gateway, "eventId")`. `status` is `processing` while a delivery handles the event and `processed` once it succeeded; `"claimedAt"` is when the delivery claimed it. RLS is on with no policy: only the service connection, which webhooks use, reads and writes it.
+
+**The helper.** `processWebhookEventOnce(gateway, eventId, eventType, handle)` from `@nextsparkjs/core/lib/billing/webhook-events` claims the event with an `INSERT ... ON CONFLICT` on that constraint, so of two concurrent deliveries only one gets the row back, and runs `handle` only for that one. It returns:
+
+| Outcome | When | `webhookOutcomeResponse(outcome)` |
+|---------|------|-----------------------------------|
+| `processed` | this delivery claimed the event and `handle` succeeded | 200 `{ received: true }` |
+| `duplicate` | an earlier delivery already processed it | 200 `{ received: true, status: 'duplicate' }` |
+| `in_progress` | another delivery is processing it right now | 409, so the gateway retries later |
+
+When `handle` throws, the claim is deleted and the error rethrown: answer 500 and the gateway's retry processes the event. When the process dies while handling, the claim stays `processing`; after `WEBHOOK_CLAIM_LEASE_SECONDS` (5 minutes) the next retry takes it over.
+
+**A new gateway.** Verify the signature, then wrap all event handling in the helper, with the gateway's name and its own event id:
+
+```typescript
+import { processWebhookEventOnce, webhookOutcomeResponse } from '@nextsparkjs/core/lib/billing/webhook-events'
+
+const event = gateway.verifyWebhookSignature(payload, signature)
+try {
+  const outcome = await processWebhookEventOnce('paddle', event.id, event.type, () => handlePaddleEvent(event))
+  return webhookOutcomeResponse(outcome)
+} catch {
+  return Response.json({ error: 'Handler failed' }, { status: 500 })
+}
+```
+
+Write `handle` so it can run again after it failed half-way: a retry runs it from the start.
 
 ---
 

@@ -20,6 +20,7 @@ import { query, queryOne } from '@nextsparkjs/core/lib/db'
 
 // Polar webhook verification - import from gateway
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
+import { processWebhookEventOnce, webhookOutcomeResponse } from '@nextsparkjs/core/lib/billing/webhook-events'
 import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/polar-webhook'
 
 /** Loads a project's Polar webhook extensions; core's route passes none. */
@@ -63,49 +64,40 @@ async function handlePolarWebhook(request: NextRequest, loadExtensions: PolarWeb
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  // 3. Check for duplicate events (idempotency)
+  // 3. Claim the event and handle it once (see lib/billing/webhook-events.ts)
   const eventId = event.id || headers['webhook-id']
 
-  const existing = await queryOne(
-    `SELECT id FROM "billing_events" WHERE metadata->>'polarEventId' = $1`,
-    [eventId]
-  )
-
-  if (existing) {
-    console.log(`[polar-webhook] Event ${eventId} already processed, skipping`)
-    return NextResponse.json({ received: true, status: 'duplicate' })
-  }
-
-  // 4. Handle events
   try {
-    console.log(`[polar-webhook] Processing event type: ${event.type}`)
+    const outcome = await processWebhookEventOnce('polar', eventId, event.type, async () => {
+      console.log(`[polar-webhook] Processing event type: ${event.type}`)
 
-    switch (event.type) {
-      case 'checkout.updated':
-        await handleCheckoutUpdated(event.data, eventId)
-        break
+      switch (event.type) {
+        case 'checkout.updated':
+          await handleCheckoutUpdated(event.data, eventId)
+          break
 
-      case 'subscription.created':
-        await handleSubscriptionCreated(event.data, eventId)
-        break
+        case 'subscription.created':
+          await handleSubscriptionCreated(event.data, eventId)
+          break
 
-      case 'subscription.updated':
-        await handleSubscriptionUpdated(event.data, eventId)
-        break
+        case 'subscription.updated':
+          await handleSubscriptionUpdated(event.data, eventId)
+          break
 
-      case 'subscription.canceled':
-        await handleSubscriptionCanceled(event.data, eventId)
-        break
+        case 'subscription.canceled':
+          await handleSubscriptionCanceled(event.data, eventId)
+          break
 
-      case 'order.paid':
-        await handleOrderPaid(event.data, eventId, await loadExtensions())
-        break
+        case 'order.paid':
+          await handleOrderPaid(event.data, eventId, await loadExtensions())
+          break
 
-      default:
-        console.log(`[polar-webhook] Unhandled event type: ${event.type}`)
-    }
-
-    return NextResponse.json({ received: true })
+        default:
+          console.log(`[polar-webhook] Unhandled event type: ${event.type}`)
+      }
+    })
+    if (outcome !== 'processed') console.log(`[polar-webhook] Event ${eventId}: ${outcome}, skipping`)
+    return webhookOutcomeResponse(outcome) as NextResponse
   } catch (error) {
     console.error('[polar-webhook] Handler error:', error)
     return NextResponse.json({ error: 'Handler failed' }, { status: 500 })
@@ -318,9 +310,8 @@ async function handleOrderPaid(
       )
     }
   } else {
-    // One-time purchase — delegate to project-level extension.
-    // Write idempotency record FIRST so Polar retries are deduplicated by the
-    // outer billing_events check, mirroring the subscriptionId branch above.
+    // One-time purchase — log it, then delegate to project-level extension.
+    // Retries are deduplicated by the claim in handlePolarWebhook.
     const metadata = (data.metadata as Record<string, string>) ?? {}
     const teamId = metadata.teamId ?? ''
     const userId = metadata.userId ?? ''
@@ -333,18 +324,6 @@ async function handleOrderPaid(
       : null
 
     if (subForIdempotency) {
-      // Check for existing billing event with this polarEventId (idempotency guard).
-      // We use an explicit SELECT instead of ON CONFLICT because billing_events
-      // has no unique constraint on metadata->>'polarEventId'.
-      const existingEvent = await queryOne(
-        `SELECT id FROM "billing_events" WHERE "subscriptionId" = $1 AND metadata->>'polarEventId' = $2`,
-        [subForIdempotency.id, eventId]
-      )
-      if (existingEvent) {
-        console.log(`[polar-webhook] One-time order ${eventId} already processed (idempotency), skipping`)
-        return
-      }
-
       await query(
         `INSERT INTO "billing_events" ("subscriptionId", type, status, amount, currency, metadata)
          VALUES ($1, $2, $3, $4, $5, $6)`,

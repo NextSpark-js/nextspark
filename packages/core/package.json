@@ -186,6 +186,10 @@
       "types": "./dist/lib/billing/polar-webhook.d.ts",
       "import": "./dist/lib/billing/polar-webhook.js"
     },
+    "./lib/billing/webhook-events": {
+      "types": "./dist/lib/billing/webhook-events.d.ts",
+      "import": "./dist/lib/billing/webhook-events.js"
+    },
     "./lib/services/index": {
       "types": "./dist/lib/services/index.d.ts",
       "import": "./dist/lib/services/index.js"

@@ -25,6 +25,7 @@ import { NextRequest } from 'next/server'
 import { getBillingGateway } from './gateways/factory'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { query, queryOne } from '../db'
+import { processWebhookEventOnce, webhookOutcomeResponse } from './webhook-events'
 import type Stripe from 'stripe'
 import type { InvoiceStatus, OneTimePaymentContext } from './types'
 
@@ -84,49 +85,38 @@ export async function handleStripeWebhook(
     return Response.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  // 3. Check for duplicate events (idempotency)
-  const eventId = event.id
-
-  const existing = await queryOne(
-    `SELECT id FROM "billing_events" WHERE metadata->>'stripeEventId' = $1`,
-    [eventId]
-  )
-
-  if (existing) {
-    console.log(`[stripe-webhook] Event ${eventId} already processed, skipping`)
-    return Response.json({ received: true, status: 'duplicate' })
-  }
-
-  // 4. Handle events
+  // 3. Claim the event and handle it once (see webhook-events.ts)
   try {
-    console.log(`[stripe-webhook] Processing event type: ${event.type}`)
+    const outcome = await processWebhookEventOnce('stripe', event.id, event.type, async () => {
+      console.log(`[stripe-webhook] Processing event type: ${event.type}`)
 
-    switch (event.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, extensions)
-        break
+      switch (event.type) {
+        case 'checkout.session.completed':
+          await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, extensions)
+          break
 
-      case 'invoice.paid':
-        await handleInvoicePaid(event.data.object as Stripe.Invoice)
-        break
+        case 'invoice.paid':
+          await handleInvoicePaid(event.data.object as Stripe.Invoice)
+          break
 
-      case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.Invoice)
-        break
+        case 'invoice.payment_failed':
+          await handlePaymentFailed(event.data.object as Stripe.Invoice)
+          break
 
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
-        break
+        case 'customer.subscription.updated':
+          await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
+          break
 
-      case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
-        break
+        case 'customer.subscription.deleted':
+          await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+          break
 
-      default:
-        console.log(`[stripe-webhook] Unhandled event type: ${event.type}`)
-    }
-
-    return Response.json({ received: true })
+        default:
+          console.log(`[stripe-webhook] Unhandled event type: ${event.type}`)
+      }
+    })
+    if (outcome !== 'processed') console.log(`[stripe-webhook] Event ${event.id}: ${outcome}, skipping`)
+    return webhookOutcomeResponse(outcome)
   } catch (error) {
     console.error('[stripe-webhook] Handler error:', error)
     return Response.json({ error: 'Handler failed' }, { status: 500 })
