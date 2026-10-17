@@ -4078,7 +4078,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       const renameRollback = `${git} checkout -- . && ${git} clean -fd -- ${created.map(shellQuote).join(' ')}${fixes.created.length > 0 ? ` && ${git} --literal-pathspecs clean -fdx -- ${fixes.created.map(shellQuote).join(' ')}` : ''}`;
       // Otherwise: the files this run edits (tracked, restored by checkout) and the ones it creates (cleaned)
       const edited = [...new Set([...upgrades.map(upgrade => pathFrom(repository, join(hostRoot, upgrade.file))), ...fixes.modified])].map(shellQuote).join(' ');
-      const fixRollback = `${git} checkout -- ${edited}${fixes.created.length > 0 ? ` && ${git} --literal-pathspecs clean -fdx -- ${fixes.created.map(shellQuote).join(' ')}` : ''}`;
+      const fixRollback = [edited && `${git} checkout -- ${edited}`, fixes.created.length > 0 && `${git} --literal-pathspecs clean -fdx -- ${fixes.created.map(shellQuote).join(' ')}`].filter(Boolean).join(' && ');
       const rollbackLine = renameSlugs ? renameRollback : fixRollback;
       if (renameSlugs || fixes.lines.length > 0) {
         // set before the first write: a run that fails partway still prints it

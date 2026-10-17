@@ -5102,6 +5102,7 @@ test('migrate on a root-first project creates the missing nextspark.config.ts an
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
     assert.match(await readFile(join(root, 'nextspark.config.ts'), 'utf8'), /defineConfig\(\{\n  plugins: \[\],/)
     assert.match(result.stdout, /clean -fdx -- 'nextspark\.config\.ts'/)
+    assert.doesNotMatch(result.stdout, /checkout -- +&&/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
