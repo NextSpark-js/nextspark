@@ -4917,7 +4917,7 @@ test('migrate on a root-first project on an earlier Next.js sets next and eslint
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
     assert.match(result.stdout, /next and eslint-config-next set to ~16\.4\.2\. Run your package manager's install, then nextspark prepare/)
-    assert.match(result.stdout, /Rollback: git checkout -- 'package\.json'/)
+    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'package\.json'/)
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
     assert.equal(pkg.dependencies.next, '~16.4.2')
     assert.equal(pkg.devDependencies['eslint-config-next'], '~16.4.2')
@@ -4943,7 +4943,7 @@ test('migrate on a root-first project lists the package.json range next to the p
     assert.match(result.stdout, /Root-first project\n {2}src\/proxy\.ts: an unchanged copy of an earlier core template, replaced with the current one\n {2}package\.json: next and eslint-config-next set to ~16\.4\.2/)
     assert.equal(await readFile(join(root, 'src/proxy.ts'), 'utf8'), facade)
     assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).dependencies.next, '~16.4.2')
-    assert.match(result.stdout, /Rollback: git checkout -- 'src\/proxy\.ts' 'package\.json'/)
+    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'src\/proxy\.ts' 'package\.json'/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -4993,7 +4993,7 @@ test('migrate on a root-first project raises the host react range to the version
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
     assert.equal(pkg.dependencies.react, '^19.2.4')
     assert.equal(pkg.dependencies['react-dom'], '^19.0.0')
-    assert.match(result.stdout, /Rollback: git checkout -- 'package\.json'/)
+    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'package\.json'/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5009,7 +5009,7 @@ test('migrate on a root-first project updates the peer ranges of a workspace mem
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
     assert.deepEqual(JSON.parse(await readFile(join(root, 'packages/kit/package.json'), 'utf8')).peerDependencies, { next: '~16.4.2' })
-    assert.match(result.stdout, /Rollback: git checkout -- 'packages\/kit\/package\.json'/)
+    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'packages\/kit\/package\.json'/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5024,7 +5024,7 @@ test('migrate on a root-first project removes the old block thumbnail lines', as
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
     assert.equal(await readFile(join(root, 'blocks/hero/config.ts'), 'utf8'), "export const config = {\n  slug: 'hero',\n}\n")
-    assert.match(result.stdout, /Rollback: git checkout -- 'blocks\/hero\/config\.ts'/)
+    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'blocks\/hero\/config\.ts'/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5070,6 +5070,81 @@ test('migrate on a root-first project with nothing to do prints Nothing to migra
       assert.match(result.stdout, /Nothing to migrate/)
     }
     assert.equal(spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).stdout, '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate on a root-first project renames core script paths in package.json', async () => {
+  const root = await rootFirstFixture({
+    'package.json': ROOT_FIRST_PACKAGE({ scripts: { 'test:theme': 'node node_modules/@nextsparkjs/core/scripts/test/jest-theme.mjs' } }),
+  })
+  try {
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.coreScripts.renamed, ['test:theme'])
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.doesNotMatch(result.stdout, /Nothing to migrate/)
+    assert.doesNotMatch(await readFile(join(root, 'package.json'), 'utf8'), /jest-theme\.mjs/)
+    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'package\.json'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate on a root-first project creates the missing nextspark.config.ts and rolls it back', async () => {
+  const root = await rootFirstFixture()
+  try {
+    await rm(join(root, 'nextspark.config.ts'))
+    await commitFixture(root)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.doesNotMatch(result.stdout, /Nothing to migrate/)
+    assert.match(await readFile(join(root, 'nextspark.config.ts'), 'utf8'), /defineConfig\(\{\n  plugins: \[\],/)
+    assert.match(result.stdout, /clean -fdx -- 'nextspark\.config\.ts'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate on a root-first project without a terminal writes nothing when --rename-entity-slugs comes with other fixes', async () => {
+  const root = await rootFirstFixture({
+    'package.json': ROOT_FIRST_PACKAGE({ pnpm: { onlyBuiltDependencies: ['my-native-dep'] } }),
+    'entities/campaign_members/campaign_members.config.ts': MEMBERS_CONFIG,
+    'config/permissions.config.ts': PERMISSIONS,
+  })
+  try {
+    const result = run(root, ['--rename-entity-slugs'])
+    assert.notEqual(result.status, 0)
+    assert.match(`${result.stdout}\n${result.stderr}`, /rerun with --yes to apply the changes listed above/)
+    assert.equal(spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).stdout, '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the rollback of a slug rename on a root-first project also cleans the files the fixes create', async () => {
+  const root = await rootFirstFixture({
+    'package.json': ROOT_FIRST_PACKAGE({ pnpm: { onlyBuiltDependencies: ['my-native-dep'] } }),
+    'entities/campaign_members/campaign_members.config.ts': MEMBERS_CONFIG,
+    'config/permissions.config.ts': PERMISSIONS,
+  })
+  try {
+    const result = run(root, ['--rename-entity-slugs', '--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.ok(existsSync(join(root, 'pnpm-workspace.yaml')))
+    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- \. [^\n]*--literal-pathspecs clean -fdx -- 'pnpm-workspace\.yaml'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the report says generated root proxy files are left in place when the project has no app tree', async () => {
+  const root = await rootFirstFixture()
+  try {
+    const out = run(root, ['--dry-run']).stdout
+    assert.match(out, /Root proxy files\n\s+proven generated, left in place \(no app tree to convert\)/)
+    assert.doesNotMatch(out, /proven generated and will remove/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

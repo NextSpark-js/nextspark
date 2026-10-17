@@ -1842,7 +1842,9 @@ function printReport(report: MigrateReport, dryRun: boolean): void {
     ? report.apiUrlMoves.map(move => `${move.file}:${move.line}: ${move.from} -> ${move.to}`)
     : ['none found in the project source']);
   section('Root proxy files', [
-    `proven generated and will remove: ${paths(report.rootProxyFiles.generated)}`,
+    report.appConversion.root === null
+      ? `proven generated, left in place (no app tree to convert): ${paths(report.rootProxyFiles.generated)}`
+      : `proven generated and will remove: ${paths(report.rootProxyFiles.generated)}`,
     `kept customizations: ${paths(report.rootProxyFiles.customizations)}`,
   ]);
   section('Post-migration route-root guard', [
@@ -3941,6 +3943,14 @@ function rootFirstFixes(repository: string, hostRoot: string, report: MigrateRep
     lines.push(`${block.path}: ${block.lines} old thumbnail line(s) removed`);
     modified.add(block.path);
   }
+  if (report.config.plannedCreation) {
+    lines.push(`nextspark.config.ts: created (plugins: ${report.config.plugins.join(', ') || 'none'})`);
+    created.add(pathFrom(repository, join(hostRoot, 'nextspark.config.ts')));
+  }
+  if (report.coreScripts.renamed.length > 0) {
+    lines.push(`package.json: core script paths renamed (${report.coreScripts.renamed.join(', ')})`);
+    modified.add(hostPackage);
+  }
   if (range) {
     lines.push(`package.json: next and eslint-config-next set to ${report.nextRange.required}`);
     modified.add(hostPackage);
@@ -4052,24 +4062,23 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
         const answer = readFileSync(0, 'utf8').trim().toLowerCase();
         if (answer !== 'y' && answer !== 'yes') throw new MigrateAnalysisError('Migration cancelled.');
       }
+      if (fixes.lines.length > 0 && upgrades.length === 0 && !options.yes) {
+        if (!process.stdin.isTTY) throw new MigrateAnalysisError(rangeOnly && !renameSlugs
+          ? `Review the report above, then rerun with --yes to set next and eslint-config-next to ${report.nextRange.required}.`
+          : 'Review the report above, then rerun with --yes to apply the changes listed above.');
+        if (!askYesNo(rangeOnly && !renameSlugs ? `Set next and eslint-config-next to ${report.nextRange.required}?` : 'Apply the changes listed above?')) throw new MigrateAnalysisError('Migration cancelled.');
+      }
       if (renameSlugs && upgrades.length === 0 && !options.yes && !slugsAnswered) {
         if (!process.stdin.isTTY) throw new MigrateAnalysisError('Review the report above, then rerun with --yes to rename the entity slugs.');
         if (!askYesNo('Rename the entity slugs?')) throw new MigrateAnalysisError('Migration cancelled.');
       }
-      if (fixes.lines.length > 0 && upgrades.length === 0 && !renameSlugs && !options.yes) {
-        if (!process.stdin.isTTY) throw new MigrateAnalysisError(rangeOnly
-          ? `Review the report above, then rerun with --yes to set next and eslint-config-next to ${report.nextRange.required}.`
-          : 'Review the report above, then rerun with --yes to apply the changes listed above.');
-        if (!askYesNo(rangeOnly ? `Set next and eslint-config-next to ${report.nextRange.required}?` : 'Apply the changes listed above?')) throw new MigrateAnalysisError('Migration cancelled.');
-      }
       // The rename edits imports anywhere in the project, so its rollback is the whole tree (it was clean)
       const created = renamedDirectories(report.entitySlugs).map(directory => pathFrom(repository, join(hostRoot, directory)));
-      const renameRollback = `git -C ${shellQuote(repository)} checkout -- . && git -C ${shellQuote(repository)} clean -fd -- ${created.map(shellQuote).join(' ')}`;
+      const git = `git -C ${shellQuote(repository)}`;
+      const renameRollback = `${git} checkout -- . && ${git} clean -fd -- ${created.map(shellQuote).join(' ')}${fixes.created.length > 0 ? ` && ${git} --literal-pathspecs clean -fdx -- ${fixes.created.map(shellQuote).join(' ')}` : ''}`;
       // Otherwise: the files this run edits (tracked, restored by checkout) and the ones it creates (cleaned)
       const edited = [...new Set([...upgrades.map(upgrade => pathFrom(repository, join(hostRoot, upgrade.file))), ...fixes.modified])].map(shellQuote).join(' ');
-      const fixRollback = fixes.created.length > 0
-        ? `git -C ${shellQuote(repository)} checkout -- ${edited} && git -C ${shellQuote(repository)} --literal-pathspecs clean -fdx -- ${fixes.created.map(shellQuote).join(' ')}`
-        : `git checkout -- ${edited}`;
+      const fixRollback = `${git} checkout -- ${edited}${fixes.created.length > 0 ? ` && ${git} --literal-pathspecs clean -fdx -- ${fixes.created.map(shellQuote).join(' ')}` : ''}`;
       const rollbackLine = renameSlugs ? renameRollback : fixRollback;
       if (renameSlugs || fixes.lines.length > 0) {
         // set before the first write: a run that fails partway still prints it
@@ -4079,6 +4088,10 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       applyEntryUpgrades(hostRoot, templatesDir);
       if (renameSlugs) renameEntitySlugs(repository, hostRoot, report.entitySlugs);
       if (!simulation) {
+        // the order of applyMove: config, then scripts, before the fixes that edit package.json by text
+        if (report.config.plannedCreation && writeRootFirstConfig(hostRoot, report.config.plugins)) console.log('  nextspark.config.ts: created.');
+        const renamed = report.coreScripts.renamed.length > 0 ? rewriteCoreScripts(hostRoot) : 0;
+        if (renamed > 0) console.log(`  package.json: ${renamed} script(s) renamed to the current core script paths.`);
         applyPeerRanges(repository, report);
         await applyHostFixes(repository, hostRoot, report, simulation);
       }
