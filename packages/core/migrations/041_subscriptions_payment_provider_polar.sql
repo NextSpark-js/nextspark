@@ -18,7 +18,7 @@ BEGIN
 
   IF def IS NULL THEN
     ALTER TABLE public."subscriptions" ADD CONSTRAINT "subscriptions_paymentProvider_check"
-      CHECK ("paymentProvider" IN ('stripe', 'paddle', 'lemonsqueezy', 'polar'));
+      CHECK ("paymentProvider" IN ('stripe', 'paddle', 'lemonsqueezy', 'polar')) NOT VALID; -- existing rows are not checked
     RETURN;
   END IF;
 
