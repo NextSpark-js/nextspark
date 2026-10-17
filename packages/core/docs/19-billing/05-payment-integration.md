@@ -835,23 +835,7 @@ export const POST = withRateLimitTier(handleWebhook, 'strict')
 
 ### Idempotency
 
-Payment providers retry failed webhooks. Always check for duplicates before processing:
-
-```typescript
-// Stripe webhooks store event ID in metadata
-const existing = await queryOne(
-  `SELECT id FROM "billing_events" WHERE metadata->>'stripeEventId' = $1`,
-  [event.id]
-)
-
-// Polar webhooks use the webhook-id header
-const existing = await queryOne(
-  `SELECT id FROM "billing_events" WHERE metadata->>'polarEventId' = $1`,
-  [eventId]
-)
-
-if (existing) return Response.json({ received: true, status: 'duplicate' })
-```
+Payment providers retry webhooks, so each handler claims the event with `processWebhookEventOnce` right after verifying the signature. See [Webhook Deduplication](#webhook-deduplication).
 
 ## Dashboard & Metadata Methods
 
