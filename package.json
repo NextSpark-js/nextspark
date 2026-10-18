@@ -98,7 +98,8 @@
       "jest-util>picomatch": "^4.0.4",
       "tinyglobby>picomatch": "^4.0.4",
       "minimatch@^9": "^9.0.7",
-      "brace-expansion@^2": "^2.1.6"
+      "brace-expansion@^2": "^2.1.6",
+      "tsup>rollup": "^4.59.0"
     }
   },
   "engines": {
