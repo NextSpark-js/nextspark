@@ -16,6 +16,8 @@ let mockBasePath = ''
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: mockRouterPush }) }))
 jest.mock('@/core/hooks/useAuth', () => ({ useAuth: () => mockUseAuth() }))
 jest.mock('@/core/lib/base-path', () => ({ withBasePath: (path: string) => `${mockBasePath}${path}` }))
+// jsdom 26 (jest 30) makes window.location unforgeable, so the page load is observed at loadLoginPage, whose own call is tested in load-login-page.test.ts
+jest.mock('@/core/lib/auth/load-login-page', () => ({ loadLoginPage: () => mockAssign(`${mockBasePath}/login`) }))
 jest.mock('@/core/hooks/useEnsureUserMetadata', () => ({ useEnsureUserMetadata: jest.fn() }))
 jest.mock('@/core/hooks/useAuthMethodDetector', () => ({ useAuthMethodDetector: jest.fn() }))
 jest.mock('@/core/providers/DashboardProviders', () => ({ DashboardProviders: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
@@ -30,7 +32,6 @@ beforeEach(() => {
   mockAssign.mockReset()
   mockRouterPush.mockReset()
   mockBasePath = ''
-  Object.defineProperty(window, 'location', { configurable: true, value: { ...window.location, assign: mockAssign } })
 })
 
 describe.each([

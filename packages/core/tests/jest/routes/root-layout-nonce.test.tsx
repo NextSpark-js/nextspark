@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * The root layout hands the request nonce to next-themes, so the inline script it
  * writes to apply the stored theme is allowed by a nonce-only `script-src`.
  * The nonce is the one the project's request hook forwards as `x-nonce`.
@@ -55,16 +57,10 @@ jest.mock('next/navigation', () => ({ usePathname: () => '/' }))
 
 import RootLayout from '@/core/routes/layout'
 
-// next-themes writes the nonce only where there is no `window`, as on the server
+// next-themes writes the nonce only where there is no `window`, as on the server (the node environment has none)
 async function render(): Promise<string> {
   const tree = await RootLayout({ children: <main>page</main> })
-  const browser = Object.getOwnPropertyDescriptor(globalThis, 'window')
-  Reflect.deleteProperty(globalThis, 'window')
-  try {
-    return renderToStaticMarkup(tree)
-  } finally {
-    if (browser) Object.defineProperty(globalThis, 'window', browser)
-  }
+  return renderToStaticMarkup(tree)
 }
 
 // next-themes' bootstrap is the only inline script the layout writes

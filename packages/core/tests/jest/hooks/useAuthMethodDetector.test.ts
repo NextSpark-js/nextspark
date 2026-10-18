@@ -30,7 +30,6 @@ jest.mock('@/core/hooks/useLastAuthMethod', () => ({
 
 // Mock window and history
 const mockReplaceState = jest.fn()
-const originalWindow = global.window
 
 describe('useAuthMethodDetector Hook', () => {
   beforeEach(() => {
@@ -43,23 +42,14 @@ describe('useAuthMethodDetector Hook', () => {
     // Reset the useLastAuthMethod mock object
     mockUseLastAuthMethod.saveAuthMethod = mockSaveAuthMethod
 
-    // Setup window mock
-    Object.defineProperty(global, 'window', {
-      value: {
-        location: {
-          href: 'http://localhost:3000/dashboard'
-        },
-        history: {
-          replaceState: mockReplaceState
-        }
-      },
-      writable: true
-    })
+    // jsdom's window cannot be replaced (jest 30), so only history.replaceState is watched
+    mockReplaceState.mockReset()
+    jest.spyOn(window.history, 'replaceState').mockImplementation((...args: unknown[]) => mockReplaceState(...args))
   })
 
   afterEach(() => {
     jest.clearAllMocks()
-    global.window = originalWindow
+    jest.restoreAllMocks()
   })
 
   describe('OAuth Detection', () => {
@@ -143,16 +133,9 @@ describe('useAuthMethodDetector Hook', () => {
       // Mock console.warn to track warning calls
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
 
-      // Mock window with location but no history (simulating server-side rendering)
-      const originalWindow = global.window
-      Object.defineProperty(global, 'window', {
-        value: {
-          location: {
-            href: 'http://localhost:3000/dashboard'
-          }
-          // No history property to simulate undefined condition
-        },
-        writable: true
+      // Mock history.replaceState as if the page had no history (simulating server-side rendering)
+      mockReplaceState.mockImplementation(() => {
+        throw new TypeError("Cannot read properties of undefined (reading 'replaceState')")
       })
 
       // The hook should still run successfully despite missing history
@@ -161,8 +144,6 @@ describe('useAuthMethodDetector Hook', () => {
       // The auth method should still be saved
       expect(mockSaveAuthMethod).toHaveBeenCalledWith('google')
 
-      // Restore window
-      global.window = originalWindow
       consoleSpy.mockRestore()
     })
   })

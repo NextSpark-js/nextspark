@@ -428,7 +428,7 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "14.6.1",
     "@types/fs-extra": "^11.0.4",
-    "@types/jest": "^29.5.14",
+    "@types/jest": "30.0.0",
     "@types/node": "^20",
     "@types/pg": "^8.15.5",
     "@types/react": "^19",
@@ -438,10 +438,10 @@
     "cypress": "^15.8.2",
     "esbuild": "^0.27.3",
     "glob": "^13.0.6",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
+    "jest": "~30.5.2",
+    "jest-environment-jsdom": "~30.5.2",
     "tailwindcss": "^4",
-    "ts-jest": "^29.2.5",
+    "ts-jest": "^29.4.15",
     "tsup": "^8.5.1"
   },
   "dependencies": {

@@ -37,6 +37,8 @@ jest.mock('@/core/lib/auth-client', () => ({
 }))
 
 jest.mock('@/core/lib/base-path', () => ({ withBasePath: (path: string) => `${mockBasePath}${path}`, basePath: () => mockBasePath }))
+// jsdom 26 (jest 30) makes window.location unforgeable, so the page load is observed at loadLoginPage, whose own call is tested in load-login-page.test.ts
+jest.mock('@/core/lib/auth/load-login-page', () => ({ loadLoginPage: () => mockAssign(`${mockBasePath}/login`) }))
 
 jest.mock('@/core/hooks/useLastAuthMethod', () => ({
   useLastAuthMethod: () => ({ saveAuthMethod: jest.fn() }),
@@ -57,7 +59,6 @@ beforeEach(() => {
   mockSessionRefetch.mockReset().mockResolvedValue(undefined)
   mockAssign.mockReset()
   mockBasePath = ''
-  Object.defineProperty(window, 'location', { configurable: true, value: { ...window.location, assign: mockAssign } })
 })
 
 describe('useAuth and the query cache', () => {

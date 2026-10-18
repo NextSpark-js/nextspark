@@ -99,7 +99,12 @@
       "tinyglobby>picomatch": "^4.0.4",
       "minimatch@^9": "^9.0.7",
       "brace-expansion@^2": "^2.1.6",
-      "tsup>rollup": "^4.59.0"
+      "tsup>rollup": "^4.59.0",
+      "eslint-plugin-import>minimatch": "^3.1.5",
+      "eslint-plugin-jsx-a11y>minimatch": "^3.1.5",
+      "eslint-plugin-react>minimatch": "^3.1.5",
+      "minimatch@^3>brace-expansion": "^1.1.20",
+      "flat-cache>flatted": "^3.4.2"
     }
   },
   "engines": {

@@ -781,21 +781,10 @@ describe('PluginService', () => {
       await expect(PluginService.initializeAll()).resolves.not.toThrow()
     })
 
-    it('should execute onLoad hooks for plugins in server environment', async () => {
-      // Note: This test simulates server environment by deleting window
-      // but jsdom might restore it. We verify the method executes without throwing.
-
-      // Mock window as undefined to trigger server-side code path
-      const originalWindow = global.window
-      const windowGetter = jest.spyOn(global as any, 'window', 'get')
-      windowGetter.mockReturnValue(undefined)
-
-      try {
-        // Verify initialization runs without throwing
-        await expect(PluginService.initializeAll()).resolves.not.toThrow()
-      } finally {
-        windowGetter.mockRestore()
-      }
+    it('should return without running onLoad hooks when window is defined', async () => {
+      // jsdom 26 (jest 30) does not let a test hide window, so only the client-side early return runs here
+      expect(typeof window).not.toBe('undefined')
+      await expect(PluginService.initializeAll()).resolves.toBeUndefined()
     })
 
     // Skip: Debug logging tests require NEXTSPARK_DEBUG_PLUGINS=true at module load time
