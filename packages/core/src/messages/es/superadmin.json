@@ -45,8 +45,9 @@
       "mrr": "MRR",
       "signups": {
         "title": "Registros, últimos 30 días",
-        "description": "{count} usuarios nuevos en los últimos 30 días (UTC)"
-      }
+        "description": "{count, plural, one {# usuario nuevo} other {# usuarios nuevos}} en los últimos 30 días (UTC)"
+      },
+      "unavailable": "Métricas no disponibles"
     }
   },
   "users": {

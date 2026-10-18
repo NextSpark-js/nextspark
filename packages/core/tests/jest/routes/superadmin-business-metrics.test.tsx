@@ -57,6 +57,37 @@ it('shows a zero MRR when nothing is paying', async () => {
   expect(screen.getByText('$0.00')).toBeInTheDocument()
 })
 
+it('renders a muted card, logs the error and does not throw when the service fails', async () => {
+  const error = jest.spyOn(console, 'error').mockImplementation(() => {})
+  const failure = new Error('statement timeout')
+  getBusinessMetrics.mockRejectedValue(failure)
+  render(await BusinessMetrics())
+  expect(screen.getByText('unavailable')).toBeInTheDocument()
+  expect(error).toHaveBeenCalledWith('[superadmin] business metrics', failure)
+  error.mockRestore()
+})
+
+/** The page with its async metrics component run (react-dom cannot render async components here). */
+async function renderPage() {
+  const expand = async (node: React.ReactNode): Promise<React.ReactNode> => {
+    if (Array.isArray(node)) return Promise.all(node.map(expand))
+    if (!React.isValidElement(node)) return node
+    if (node.type === BusinessMetrics) return BusinessMetrics()
+    const children = (node.props as { children?: React.ReactNode }).children
+    return children === undefined ? node : React.cloneElement(node, undefined, await expand(children))
+  }
+  render(<>{await expand((SuperadminDashboard as () => React.ReactElement)())}</>)
+}
+
+it('keeps the rest of the page when the metrics fail', async () => {
+  jest.spyOn(console, 'error').mockImplementation(() => {})
+  getBusinessMetrics.mockRejectedValue(new Error('down'))
+  await renderPage()
+  expect(screen.getByText('unavailable')).toBeInTheDocument()
+  expect(screen.getByText('Super Admin Panel')).toBeInTheDocument()
+  expect(screen.getByText('User Management')).toBeInTheDocument()
+})
+
 describe('access to the page', () => {
   const Page = withSuperadminAccess(SuperadminDashboard)
 
@@ -78,14 +109,10 @@ describe('access to the page', () => {
     expect(page.type).toBe(SuperadminDashboard)
   })
 
-  it('puts the metrics at the top of the page', () => {
-    const types: unknown[] = []
-    const walk = (node: React.ReactNode): void => {
-      if (!React.isValidElement(node)) return void (Array.isArray(node) && node.forEach(walk))
-      types.push(node.type)
-      React.Children.forEach((node.props as { children?: React.ReactNode }).children, walk)
-    }
-    walk((SuperadminDashboard as () => React.ReactElement)())
-    expect(types).toContain(BusinessMetrics)
+  it('puts the metrics before the quick actions', async () => {
+    await renderPage()
+    const metrics = document.querySelector('[data-cy="superadmin-metrics"]')!
+    expect(metrics).not.toBeNull()
+    expect(metrics.compareDocumentPosition(screen.getByText('User Management')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 import { getLocale, getTranslations } from "next-intl/server";
 import { sel } from "../../../lib/selectors";
+import { formatPrice } from "../../../lib/billing/helpers";
 import { getBusinessMetrics } from "../../../lib/services/business-metrics.service";
 
 /**
@@ -8,11 +9,25 @@ import { getBusinessMetrics } from "../../../lib/services/business-metrics.servi
  * area's role check (area-access): the service itself checks nothing.
  */
 export async function BusinessMetrics() {
-  const [t, locale, metrics] = await Promise.all([getTranslations("superadmin.dashboard.metrics"), getLocale(), getBusinessMetrics()]);
+  const [t, locale] = await Promise.all([getTranslations("superadmin.dashboard.metrics"), getLocale()]);
+  let metrics;
+  try {
+    metrics = await getBusinessMetrics();
+  } catch (error) {
+    // the superadmin home must not fail because of its metrics
+    console.error("[superadmin] business metrics", error);
+    return (
+      <Card className="bg-muted/30" data-cy={sel('superadmin.dashboard.metrics.unavailable')}>
+        <CardHeader>
+          <CardDescription>{t("unavailable")}</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
   const number = new Intl.NumberFormat(locale);
   const money = (cents: number, currency: string) => {
     try {
-      return new Intl.NumberFormat(locale, { style: "currency", currency: currency.toUpperCase() }).format(cents / 100);
+      return formatPrice(cents, currency, locale);
     } catch {
       return `${number.format(cents / 100)} ${currency.toUpperCase()}`; // a currency code Intl does not know
     }

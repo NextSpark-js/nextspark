@@ -95,6 +95,7 @@ export const SUPERADMIN_SELECTORS = {
       container: 'superadmin-metrics',
       card: 'superadmin-metric-{name}',
       signups: 'superadmin-metric-signups',
+      unavailable: 'superadmin-metrics-unavailable',
     },
     quickActions: {
       container: 'superadmin-quick-actions',
