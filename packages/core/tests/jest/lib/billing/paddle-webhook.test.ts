@@ -299,6 +299,15 @@ describeWithPostgres('Paddle webhook', () => {
     ])
   })
 
+  test('transaction.paid and transaction.completed delivered at the same time record one payment', async () => {
+    const at = { occurredAt: '2026-12-02T00:00:00Z' }
+    const paid = transactionEvent('transaction.paid', { subscription_id: 'sub_three' }, customFor('team-3'), 'txn_together', at)
+    const completed = transactionEvent('transaction.completed', { subscription_id: 'sub_three' }, customFor('team-3'), 'txn_together', at)
+    const answers = await Promise.all([post(paid), post(completed)])
+    expect(answers.map(answer => answer.status)).toEqual([200, 200])
+    expect((await billingEvents('sub-3')).filter(event => event.externalPaymentId === 'txn_together')).toHaveLength(1)
+  })
+
   test('a handled event with no data.id or occurred_at is refused with 400 and claims nothing', async () => {
     const before = await claims()
     const noOccurredAt = JSON.stringify({ event_id: nextEventId(), event_type: 'subscription.updated', data: { id: 'sub_three', status: 'canceled' } })

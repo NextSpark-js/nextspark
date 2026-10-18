@@ -241,6 +241,8 @@ async function handleTransactionEvent(event: PaddleEvent) {
   const totals = (transaction.details as { totals?: { grand_total?: unknown } } | undefined)?.totals
   const record = async (subscriptionId: string, unbound: boolean) => {
     if (succeeded) {
+      // paid and completed may arrive together: both lock the same row first (boundRow or the binding helper, FOR
+      // UPDATE), so the second one runs this SELECT after the first committed and sees its row
       const recorded = await queryOne<{ id: string }>(
         `SELECT id FROM "billing_events" WHERE type = 'payment' AND status = 'succeeded' AND "externalPaymentId" = $1 LIMIT 1`,
         [transaction.id]
