@@ -17,7 +17,13 @@ overrides:
   '@expo/cli>compression': ^1.8.2
   '@expo/xcpretty>js-yaml': ^4.3.2
   '@expo/metro-config>browserslist': ^4.28.7
-  picomatch@^4: ^4.0.4
+  '@expo/cli>picomatch': ^4.0.4
+  '@expo/metro-config>picomatch': ^4.0.4
+  '@parcel/watcher>picomatch': ^4.0.4
+  jest-haste-map>picomatch: ^4.0.4
+  jest-message-util>picomatch: ^4.0.4
+  jest-util>picomatch: ^4.0.4
+  tinyglobby>picomatch: ^4.0.4
   minimatch@^9: ^9.0.7
   brace-expansion@^2: ^2.1.6
 
@@ -2423,7 +2429,7 @@ packages:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
     peerDependencies:
-      picomatch: ^4.0.4
+      picomatch: ^3 || ^4
     peerDependenciesMeta:
       picomatch:
         optional: true
@@ -7801,7 +7807,7 @@ snapshots:
       chalk: 4.1.2
       ci-info: 3.9.0
       graceful-fs: 4.2.11
-      picomatch: 2.3.1
+      picomatch: 4.0.7
 
   jest-util@30.5.1:
     dependencies:

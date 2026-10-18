@@ -75,7 +75,13 @@
       "@expo/cli>compression": "^1.8.2",
       "@expo/xcpretty>js-yaml": "^4.3.2",
       "@expo/metro-config>browserslist": "^4.28.7",
-      "picomatch@^4": "^4.0.4",
+      "@expo/cli>picomatch": "^4.0.4",
+      "@expo/metro-config>picomatch": "^4.0.4",
+      "@parcel/watcher>picomatch": "^4.0.4",
+      "jest-haste-map>picomatch": "^4.0.4",
+      "jest-message-util>picomatch": "^4.0.4",
+      "jest-util>picomatch": "^4.0.4",
+      "tinyglobby>picomatch": "^4.0.4",
       "minimatch@^9": "^9.0.7",
       "brace-expansion@^2": "^2.1.6"
     }

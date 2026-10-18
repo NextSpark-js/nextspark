@@ -78,6 +78,8 @@
       "sharp": "^0.35.5",
       "handlebars": "^4.7.10",
       "@cypress/request>qs": "^6.16.0",
+      "@nextsparkjs/mobile>react": "19.3.0",
+      "@nextsparkjs/mobile>react-test-renderer": "19.3.0",
       "react-devtools-core>shell-quote": "^1.9.0",
       "react-devtools-core>ws": "^7.5.11",
       "react-native>ws": "^7.5.11",
@@ -88,7 +90,13 @@
       "@expo/cli>compression": "^1.8.2",
       "@expo/xcpretty>js-yaml": "^4.3.2",
       "@babel/preset-env>@babel/plugin-transform-modules-systemjs": "^7.29.4",
-      "picomatch@^4": "^4.0.4",
+      "@expo/cli>picomatch": "^4.0.4",
+      "@expo/metro-config>picomatch": "^4.0.4",
+      "@parcel/watcher>picomatch": "^4.0.4",
+      "jest-haste-map>picomatch": "^4.0.4",
+      "jest-message-util>picomatch": "^4.0.4",
+      "jest-util>picomatch": "^4.0.4",
+      "tinyglobby>picomatch": "^4.0.4",
       "minimatch@^9": "^9.0.7",
       "brace-expansion@^2": "^2.1.6"
     }
