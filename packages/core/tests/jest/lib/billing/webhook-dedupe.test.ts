@@ -324,6 +324,35 @@ describeWithPostgres('billing webhook deduplication', () => {
     expect(outcomes.sort()).toEqual(['in_progress', 'processed'])
   })
 
+  test('a delivery whose COMMIT was applied but not acknowledged does not delete the processed event', async () => {
+    const { servicePool } = require('@nextsparkjs/core/lib/db')
+    const realConnect = servicePool.connect.bind(servicePool)
+    // the transaction's client: its COMMIT reaches the server, then the answer is lost
+    const connectSpy = jest.spyOn(servicePool, 'connect').mockImplementation(((callback?: unknown) => {
+      if (callback) return realConnect(callback)
+      connectSpy.mockRestore()
+      return realConnect().then((client: { query: (text: string, params?: unknown[]) => Promise<unknown> }) => {
+        const realClientQuery = client.query.bind(client)
+        client.query = async (text: string, params?: unknown[]) => {
+          const result = await realClientQuery(text, params)
+          if (text !== 'COMMIT') return result
+          client.query = realClientQuery
+          throw new Error('Connection terminated unexpectedly')
+        }
+        return client
+      })
+    }) as never)
+
+    try {
+      await expect(webhookEvents.processWebhookEventOnce('stripe', 'evt_commit_ack_lost', 'x', async () => {}))
+        .rejects.toThrow('Connection terminated unexpectedly')
+    } finally {
+      connectSpy.mockRestore()
+    }
+    expect((await db.query(`SELECT status FROM billing_webhook_events WHERE "eventId" = 'evt_commit_ack_lost'`)).rows)
+      .toEqual([{ status: 'processed' }])
+  })
+
   describe('cleanup of processed events', () => {
     const insertEvent = (eventId: string, status: string, ageDays: number) => db.query(
       `INSERT INTO billing_webhook_events (gateway, "eventId", status, "claimedAt", "processedAt")

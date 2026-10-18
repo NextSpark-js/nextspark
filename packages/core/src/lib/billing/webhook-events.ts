@@ -96,8 +96,9 @@ export async function processWebhookEventOnce(
     })
   } catch (error) {
     if (error === CLAIM_LOST) return 'in_progress'
+    // status: a COMMIT the server applied but whose answer was lost throws here too, and must not delete the event
     await servicePool.query(
-      `DELETE FROM "billing_webhook_events" WHERE id = $1 AND "claimedAt" = $2::timestamptz`,
+      `DELETE FROM "billing_webhook_events" WHERE id = $1 AND "claimedAt" = $2::timestamptz AND status = 'processing'`,
       [claim.id, claim.claimedAt]
     )
     throw error
