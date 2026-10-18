@@ -381,9 +381,17 @@ Gateways deliver an event more than once: retries after a timeout or an error, a
 |---------|------|-----------------------------------|
 | `processed` | this delivery claimed the event and `handle` succeeded | 200 `{ received: true }` |
 | `duplicate` | an earlier delivery already processed it | 200 `{ received: true, status: 'duplicate' }` |
-| `in_progress` | another delivery is processing it right now | 409, so the gateway retries later |
+| `in_progress` | another delivery is processing it right now, or took this delivery's claim over while it ran | 409, so the gateway retries later |
 
-When `handle` throws, the claim is deleted and the error rethrown: answer 500 and the gateway's retry processes the event. When the process dies while handling, the claim stays `processing`; after `WEBHOOK_CLAIM_LEASE_SECONDS` (5 minutes) the next retry takes it over.
+**One transaction.** The claim commits on its own connection first, so a concurrent delivery sees it. Then `handle` and the update that marks the event `processed` run in one transaction on the service connection (`withServiceTransaction` from `@nextsparkjs/core/lib/db`):
+
+- `handle` throws: every row it wrote rolls back, the claim is deleted and the error rethrown. Answer 500; the gateway's retry processes the event from a clean state, so an audit row is not written twice.
+- The final update matches no claim, because the lease ran out and a retry took the event over: everything rolls back and the outcome is `in_progress`. The newer delivery owns the event.
+- The process dies while handling: the transaction rolls back with the connection, and the claim stays `processing`. After `WEBHOOK_CLAIM_LEASE_SECONDS` (5 minutes) the next retry takes it over.
+
+Inside `handle`, `query`, `queryRows` and `queryOne` from `@nextsparkjs/core/lib/db` use that transaction, and so do `queryWithRLS`, `queryOneWithRLS` and `mutateWithRLS` when they run on the service connection (no `userId`, or `{ service: true }`). Two kinds of call open their own connection and commit on their own, so a failed delivery keeps what they wrote and the retry writes it again: a `*WithRLS` call with a `userId`, and `getTransactionClient()` / `getServiceTransactionClient()`. A statement that fails inside the transaction aborts it: catching the error and going on makes every later statement fail, and the delivery is retried.
+
+What `handle` does outside Postgres does not roll back. Core's Stripe and Polar handlers do nothing outside Postgres (they only log). A project's `onOneTimePaymentCompleted` runs inside `handle`, as its last step. If it sends an email or calls an API and the delivery then fails, the retry does it again: when the extension itself throws after the call, when the final update or the commit fails, or when another delivery took the claim over. Make such calls idempotent (an idempotency key, or a check of your own), or accept that they can repeat.
 
 **A new gateway.** Verify the signature, then wrap all event handling in the helper, with the gateway's name and its own event id:
 
@@ -399,9 +407,16 @@ try {
 }
 ```
 
-Write `handle` so it can run again after it failed half-way: a retry runs it from the start.
+In `handle`, write to the database with the db helpers above, so the writes join the transaction. Call other services (email, a gateway's API, outbound webhooks) after the helper returns `processed` when you can: by then the transaction has committed. A call that has to happen inside `handle` repeats when the delivery is retried. Keep the transaction short: no network calls inside it that you can move out.
 
-Call the helper outside any open transaction of your own: it runs each statement on its own (autocommit), and inside a long transaction the claim's timestamps would be the transaction's start, so a live claim could look stale before its lease ends.
+The claim, and its release after a failure, always run on their own pool connection, outside any transaction of the caller.
+
+**Cleanup.** A processed row only matters while the gateway may still redeliver its event, so processed rows are deleted after a retention period, with no cron:
+
+- After an event is processed, at most once every 10 minutes per process, the helper deletes up to 1000 `processed` rows whose `"processedAt"` is older than the retention. Rows in `processing` are never deleted: the lease handles them.
+- The DELETE is not awaited, and an error is logged and swallowed, so the cleanup never changes or delays the webhook's answer. A batch that did not finish, or a process that stopped before it ran, is caught up by the next run. The partial index on `"processedAt"` (migration `042_billing_webhook_events_processed_at_index.sql`) serves it.
+- The retention is `webhookEventRetentionDays` in `config/billing.config.ts`, 30 days by default (`WEBHOOK_EVENT_RETENTION_DAYS`). A value that is not a positive number uses the default.
+- Keep it longer than any gateway redelivers an event. Stripe retries automatically for up to 3 days in live mode, and an event can be resent by hand for up to 15 days from the Dashboard and 30 days from the Stripe CLI. Polar retries up to 10 times with exponential backoff (it does not publish the total window) and lets you trigger a redelivery from its dashboard. An event redelivered after its row was deleted is processed again.
 
 ---
 

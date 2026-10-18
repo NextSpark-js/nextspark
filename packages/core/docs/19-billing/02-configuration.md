@@ -41,8 +41,13 @@ interface BillingConfig {
 
   /** Action to feature/limit mappings */
   actionMappings: ActionMappings
+
+  /** Days a processed webhook event is kept for deduplication (optional, default 30) */
+  webhookEventRetentionDays?: number
 }
 ```
+
+`webhookEventRetentionDays` sets how long `billing_webhook_events` keeps a processed event, so a redelivery is still answered as a duplicate. Keep it longer than every gateway redelivers an event; see [Webhook Deduplication](./05-payment-integration.md#webhook-deduplication).
 
 ## Complete Example
 
