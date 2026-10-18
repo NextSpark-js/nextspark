@@ -407,7 +407,7 @@ try {
 }
 ```
 
-In `handle`, write to the database with the db helpers above, so the writes join the transaction. Call other services (email, a gateway's API, outbound webhooks) after the helper returns `processed` when you can: by then the transaction has committed. A call that has to happen inside `handle` repeats when the delivery is retried. Keep the transaction short: no network calls inside it that you can move out.
+In `handle`, write to the database with the db helpers above, so the writes join the transaction. Call other services (email, a gateway's API, outbound webhooks) after the helper returns `processed` when you can: by then the transaction has committed. A call that has to happen inside `handle` repeats when the delivery is retried. Keep the transaction short: no network calls inside it that you can move out. Every delivery holds one service-pool client for the whole of `handle`; if `handle` asks the same pool for a second connection (a `*WithRLS` call with a `userId` when `DATABASE_SERVICE_URL` is unset, or `getTransactionClient()`), enough concurrent deliveries can take every client and wait on each other.
 
 The claim, and its release after a failure, always run on their own pool connection, outside any transaction of the caller.
 
