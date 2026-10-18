@@ -428,7 +428,7 @@ test('a group layout with a role guard is composed only through a wrapper that p
     assert.match(ccLayout, /export default with\w+AreaMessages\(ServerChecked(SuperadminLayout|DevLayout)\)/)
     assert.match(base, /export function ServerChecked(SuperadminLayout|DevLayout)\(\{ children \}: \w+LayoutProps\) \{\s+return <\1Body serverChecked>\{children\}<\/\1Body>/)
     // ...and the ISR layout does not
-    assert.doesNotMatch(fs.readFileSync(sourceOf(entry.specifier), 'utf8'), /serverChecked/)
+    assert.doesNotMatch(fs.readFileSync(sourceOf(entry.specifier), 'utf8'), /serverChecked/i)
     // A Next layout receives only the props Next declares, and the webpack build's generated types (.next/types) reject
     // a default export that declares another one (#291): the exported layouts take `children` alone
     assert.match(base, /export function (SuperadminLayout|DevLayout)\(\{ children \}: \w+LayoutProps\)/, `${entry.specifier}: the layout core exports takes only the props of a Next layout`)

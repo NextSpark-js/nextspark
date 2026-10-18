@@ -56,6 +56,8 @@ import * as superadminIsr from '../../../src/routes/_internal/superadmin-layout'
 import * as devtoolsIsr from '../../../src/routes/_internal/devtools-layout'
 import SuperadminLayoutCc from '../../../src/routes/superadmin/layout.cc'
 import DevtoolsLayoutCc from '../../../src/routes/devtools/layout.cc'
+import SuperadminLayoutIsr from '../../../src/routes/superadmin/layout'
+import DevtoolsLayoutIsr from '../../../src/routes/devtools/layout'
 
 const session = (role: string) => ({ session: { id: 's' }, user: { id: 'u', role } })
 const LOGIN = (path: string) => `NEXT_REDIRECT:/login?callbackUrl=${encodeURIComponent(path)}`
@@ -334,9 +336,9 @@ describe("the area guards are told the server checked the role only behind that 
     expand(tree, stopAt).filter(element => typeof element.type === 'function' && element.type.name === guard).map(element => (element.props as { serverChecked?: boolean }).serverChecked)
 
   it.each([
-    ['superadmin', 'SuperAdminGuard', superadminCc.withSuperadminGuard, superadminIsr.withSuperadminGuard, SuperadminLayoutCc],
-    ['devtools', 'DeveloperGuard', devtoolsCc.withDevtoolsGuard, devtoolsIsr.withDevtoolsGuard, DevtoolsLayoutCc],
-  ] as const)('%s: Cache Components layouts pass serverChecked inside the gate; the ISR composition does not', async (_area, guard, ccGuard, isrGuard, ccLayout) => {
+    ['superadmin', 'SuperAdminGuard', superadminCc.withSuperadminGuard, superadminIsr.withSuperadminGuard, SuperadminLayoutCc, SuperadminLayoutIsr],
+    ['devtools', 'DeveloperGuard', devtoolsCc.withDevtoolsGuard, devtoolsIsr.withDevtoolsGuard, DevtoolsLayoutCc, DevtoolsLayoutIsr],
+  ] as const)('%s: Cache Components layouts pass serverChecked inside the gate; the ISR composition does not', async (_area, guard, ccGuard, isrGuard, ccLayout, isrLayout) => {
     // Cache Components: core's layout and a composed override, behind the gate (the gate itself is async: open it)
     for (const tree of [(ccGuard(Layout) as unknown as (p: { children: React.ReactNode }) => React.ReactElement)({ children: 'x' }), (ccLayout as unknown as (p: { children: React.ReactNode }) => React.ReactElement)({ children: 'x' })]) {
       const [gate] = expand(tree).filter(element => typeof element.type === 'function' && element.type.name === 'AreaGate') as Array<React.ReactElement<{ children: React.ReactNode }>>
@@ -348,5 +350,9 @@ describe("the area guards are told the server checked the role only behind that 
     getTypedSession.mockResolvedValue(session('developer'))
     const isr = await (isrGuard(Layout) as unknown as (p: { children: React.ReactNode }) => Promise<React.ReactElement>)({ children: 'x' })
     expect(guardProps(isr, guard)).toEqual([false])
+    // ...and so does core's own ISR layout (its default export): no flag, so the guard keeps its loading state
+    const isrDefault = await (isrLayout as unknown as (p: { children: React.ReactNode }) => Promise<React.ReactElement>)({ children: 'x' })
+    expect(guardProps(isrDefault, guard).filter(Boolean)).toEqual([])
+    expect(guardProps(isrDefault, guard)).toHaveLength(1)
   })
 })
