@@ -436,7 +436,6 @@
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "30.0.0",
     "@types/node": "^20",
-    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.15.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
