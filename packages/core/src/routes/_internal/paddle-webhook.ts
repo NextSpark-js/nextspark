@@ -11,7 +11,8 @@
  * - A subscription event updates the row whose "externalSubscriptionId" is the Paddle subscription id. Only when there
  *   is none yet (subscription.created, or another event that arrived before it), and only for a subscription with a
  *   plan's price, it binds to the team named in the custom data when the team token is valid for that team and price
- *   (lib/billing/paddle-webhook.ts): to the row subscription-binding.ts picks for the team.
+ *   (lib/billing/paddle-webhook.ts): to the row subscription-binding.ts picks for the team. An unbound subscription
+ *   that is canceled, or an event older than the last one applied to an ended row, binds nothing.
  * - A transaction event (a payment) is recorded on the row of its subscription_id. Before the subscription is bound,
  *   or for a one-time purchase, a verified team's payment is recorded on the team's row without changing it.
  * - An event older than the one last applied to a row (occurred_at) does not move it back: Paddle does not guarantee
@@ -202,6 +203,11 @@ async function subscriptionRowFor(event: PaddleEvent, externalId: string): Promi
     return bound
   }
 
+  if (event.data.status === 'canceled') {
+    // an ended subscription that was never bound to us has nothing to grant (a late event of a replaced subscription)
+    console.warn(`[paddle-webhook] Event ${event.id}: subscription ${externalId} is canceled and not bound to a row, ignoring`)
+    return null
+  }
   const planPrice = planPriceOf(event.data)
   if (!planPrice) {
     // a subscription with no plan's price (a recurring add-on, another product) never takes over a team's row
@@ -222,6 +228,8 @@ async function subscriptionRowFor(event: PaddleEvent, externalId: string): Promi
     gateway: 'paddle',
     eventId: event.id,
     bind: { provider: 'paddle', externalSubscriptionId: externalId },
+    // a late event of an older subscription does not reactivate a row a newer one has bound and ended
+    notOlderThan: { at: event.occurredAt, metadataKey: 'paddleOccurredAt' },
   })
 }
 

@@ -277,6 +277,26 @@ describeWithPostgres('Paddle webhook', () => {
     expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: 'sub_one_again', status: 'active' })
   })
 
+  test('a late event of an older subscription does not reactivate a row a newer one has bound and ended', async () => {
+    // B (sub_one_again) ends too: the row is canceled and bound to B
+    expect((await post(subscriptionEvent('subscription.canceled', { status: 'canceled', canceled_at: '2027-12-01T00:00:00Z', current_billing_period: null },
+      customFor('team-1'), 'sub_one_again', { occurredAt: '2027-12-01T00:00:00Z' }))).status).toBe(200)
+    expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: 'sub_one_again', status: 'canceled' })
+
+    // a delivery of A (sub_one) from before its cancellation, as active, arrives days late
+    expect(await post(subscriptionEvent('subscription.updated', {}, customFor('team-1'), 'sub_one', { occurredAt: '2027-10-14T00:00:00Z' })))
+      .toEqual({ status: 200, body: { received: true } })
+    expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: 'sub_one_again', status: 'canceled' })
+    // A's cancellation delivered again, newer than B's: an unbound canceled subscription binds nothing
+    expect((await post(subscriptionEvent('subscription.canceled', { status: 'canceled', current_billing_period: null }, customFor('team-1'), 'sub_one',
+      { occurredAt: '2027-12-05T00:00:00Z' }))).status).toBe(200)
+    expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: 'sub_one_again', status: 'canceled' })
+
+    // a new subscription after B ended still binds
+    expect((await post(subscriptionEvent('subscription.created', {}, customFor('team-1'), 'sub_one_third', { occurredAt: '2027-12-10T00:00:00Z' }))).status).toBe(200)
+    expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: 'sub_one_third', status: 'active', hasCanceledAt: false })
+  })
+
   test('a failed payment and its recovery are recorded; the status follows the subscription events', async () => {
     expect((await post(subscriptionEvent('subscription.created', {}, customFor('team-3'), 'sub_three', { occurredAt: '2026-10-02T00:00:00Z' }))).status).toBe(200)
     expect(await row('sub-3')).toMatchObject({ externalSubscriptionId: 'sub_three', status: 'active', plan: 'pro' })

@@ -254,6 +254,12 @@ async function subscriptionRowFor(event: LemonSqueezyEvent, externalId: string):
     return bound
   }
 
+  if (event.data.attributes.status === 'expired') {
+    // an ended subscription that was never bound to us has nothing to grant (a late event of a replaced subscription);
+    // `cancelled` is still running until ends_at, so it may still bind
+    console.warn(`[lemonsqueezy-webhook] Event ${event.id}: subscription ${externalId} is expired and not bound to a row, ignoring`)
+    return null
+  }
   const variantId = idOrNull(event.data.attributes.variant_id)
   const teamId = verifiedTeamId(event, variantId ? [variantId] : [])
   if (!planForVariant(variantId)) {
@@ -274,6 +280,8 @@ async function subscriptionRowFor(event: LemonSqueezyEvent, externalId: string):
     gateway: 'lemonsqueezy',
     eventId: event.id,
     bind: { provider: 'lemonsqueezy', externalSubscriptionId: externalId },
+    // a late event of an older subscription does not reactivate a row a newer one has bound and ended
+    notOlderThan: { at: String(event.data.attributes.updated_at), metadataKey: 'lemonSqueezyUpdatedAt' },
   })
   if (!row) return null
   // the row tracked another subscription before: the new one starts its own order of updates

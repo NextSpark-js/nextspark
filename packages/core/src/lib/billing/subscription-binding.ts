@@ -31,22 +31,43 @@ const CURRENT_STATUSES = ['active', 'trialing', 'past_due']
  * `bind`, when given, refuses a current row that is already bound to another subscription, of the same provider or of
  * another one (logged as an error): a second live subscription is not applied over the first, and a team switching
  * providers cancels the old subscription first. An ended row is always reused.
+ *
+ * `notOlderThan`, when given, refuses an ENDED row whose last applied change of that provider is newer than the event
+ * (`at`): the provider's own stamp in `metadata[metadataKey]`, the event time of the last event it applied to the row.
+ * A late delivery of an older subscription's event then cannot reactivate a row that a newer subscription has since
+ * bound and ended. A row without the stamp is not refused: no event of this provider ever ended it. "updatedAt" is not
+ * used: it is our clock, and the trial job moves it, so a paid subscription whose webhook arrives after the job
+ * expired the trial would be refused. A current row is not checked: its own bind rules apply.
  */
 export async function subscriptionRowForNewSubscription(
   teamId: string,
-  context: { gateway: string; eventId: string; bind?: { provider: string; externalSubscriptionId: string } }
+  context: {
+    gateway: string
+    eventId: string
+    bind?: { provider: string; externalSubscriptionId: string }
+    notOlderThan?: { at: string; metadataKey: string }
+  }
 ): Promise<BindableSubscriptionRow | null> {
-  const row = await queryOne<BindableSubscriptionRow>(
-    `SELECT id, "teamId", status, "paymentProvider", "externalSubscriptionId", metadata
+  const found = await queryOne<BindableSubscriptionRow & { olderThanRow: boolean | null }>(
+    `SELECT id, "teamId", status, "paymentProvider", "externalSubscriptionId", metadata,
+            $3::timestamptz < (metadata->>$4::text)::timestamptz AS "olderThanRow"
      FROM subscriptions
      WHERE "teamId" = $1
      ORDER BY (status = ANY($2::text[])) DESC, "createdAt" DESC
      LIMIT 1
      FOR UPDATE`,
-    [teamId, CURRENT_STATUSES]
+    [teamId, CURRENT_STATUSES, context.notOlderThan?.at ?? null, context.notOlderThan?.metadataKey ?? null]
   )
-  if (!row) {
+  if (!found) {
     console.error(`[${context.gateway}-webhook] Event ${context.eventId}: team ${teamId} has no subscription row, the subscription is not applied`)
+    return null
+  }
+  const { olderThanRow, ...row } = found
+  if (context.notOlderThan && olderThanRow && !CURRENT_STATUSES.includes(row.status)) {
+    console.warn(
+      `[${context.gateway}-webhook] Event ${context.eventId}: team ${teamId}'s subscription row ended after this event ` +
+      `(${row.paymentProvider ?? 'no provider'} ${row.externalSubscriptionId ?? 'no subscription'}, ${row.status}); a late event is not applied`
+    )
     return null
   }
   const bind = context.bind

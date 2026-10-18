@@ -271,6 +271,27 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
     expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: '556', status: 'active' })
   })
 
+  test('a late event of an older subscription does not reactivate a row a newer one has bound and ended', async () => {
+    // 556 expires too: the row is expired and bound to 556
+    expect((await post(subscriptionEvent('subscription_expired', {
+      status: 'expired', cancelled: true, ends_at: '2027-12-01T00:00:00.000000Z', updated_at: '2027-12-01T00:00:00.000000Z',
+    }, customFor('team-1'), '556'))).status).toBe(200)
+    expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: '556', status: 'expired' })
+
+    // a delivery of 555 from before its expiry, as active, arrives late
+    expect(await post(subscriptionEvent('subscription_updated', { status: 'active', updated_at: '2027-10-14T00:00:00.000000Z' }, customFor('team-1'), '555')))
+      .toEqual({ status: 200, body: { received: true } })
+    expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: '556', status: 'expired' })
+    // 555's expiry delivered again, newer than 556's: an unbound expired subscription binds nothing
+    expect((await post(subscriptionEvent('subscription_expired', { status: 'expired', cancelled: true, updated_at: '2027-12-05T00:00:00.000000Z' },
+      customFor('team-1'), '555'))).status).toBe(200)
+    expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: '556', status: 'expired' })
+
+    // a new subscription after 556 ended still binds
+    expect((await post(subscriptionEvent('subscription_created', { updated_at: '2027-12-10T00:00:00.000000Z' }, customFor('team-1'), '557'))).status).toBe(200)
+    expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: '557', status: 'active', hasCanceledAt: false })
+  })
+
   test('a payment failure is recorded and marks the row past_due; the recovery marks it active', async () => {
     // team-3 subscribes: bound, active
     expect((await post(subscriptionEvent('subscription_created', { updated_at: '2026-10-02T00:00:00.000000Z' }, customFor('team-3'), '777'))).status).toBe(200)
