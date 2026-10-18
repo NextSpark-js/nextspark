@@ -13,6 +13,7 @@ import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
+import { isBillingOperationNotSupported } from '@nextsparkjs/core/lib/billing/gateways/errors'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
@@ -116,6 +117,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       }
     })
   } catch (error) {
+    // a request the configured provider cannot serve (Lemon Squeezy: immediate cancellation)
+    if (isBillingOperationNotSupported(error)) {
+      return createApiError(error.message, 400, undefined, 'NOT_SUPPORTED')
+    }
     console.error('[cancel] Error canceling subscription:', error)
     return createApiError('Failed to cancel subscription', 500, undefined, 'INTERNAL_ERROR')
   }
