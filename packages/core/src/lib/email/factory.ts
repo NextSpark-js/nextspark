@@ -1,8 +1,10 @@
 import type { EmailProvider } from './types';
 import { ResendProvider } from './providers/resend';
 import { ConsoleProvider } from './providers/console';
+import { SmtpProvider } from './providers/smtp';
+import { parseSmtpConfig, smtpEnvironmentFrom } from './smtp-config';
 
-export type EmailProviderType = 'resend' | 'console' | 'auto';
+export type EmailProviderType = 'resend' | 'smtp' | 'console' | 'auto';
 
 export interface EmailFactoryOptions {
   provider?: EmailProviderType;
@@ -42,6 +44,17 @@ export class EmailFactory {
         throw new Error('Resend API key is required when using Resend provider');
       }
       selectedProvider = new ResendProvider(resendApiKey, defaultFrom);
+    } else if (provider === 'smtp') {
+      // Env is validated here; nodemailer itself loads on the first send
+      const smtpConfig = parseSmtpConfig(smtpEnvironmentFrom(process.env));
+      const fromEmail = process.env.RESEND_FROM_EMAIL;
+      if (!defaultFrom && !fromEmail) {
+        throw new Error('RESEND_FROM_EMAIL is required when using the SMTP provider');
+      }
+      selectedProvider = new SmtpProvider(
+        smtpConfig,
+        defaultFrom || `${process.env.RESEND_FROM_NAME || 'App'} <${fromEmail}>`
+      );
     } else {
       // Auto mode: seleccionar basado en el entorno
       if (process.env.NODE_ENV === 'development' && !process.env.FORCE_RESEND_IN_DEV) {
