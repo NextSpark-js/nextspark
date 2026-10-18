@@ -179,6 +179,43 @@ describe('an invitation email that could not be sent', () => {
   })
 })
 
+describe('the rollback of an invitation whose email was not sent', () => {
+  const isDelete = (sql: unknown) => String(sql).startsWith('DELETE FROM "team_invitations"')
+
+  beforeEach(() => {
+    mockSend.mockResolvedValue({ id: '', success: false, error: 'provider detail 550' })
+  })
+
+  it('a delete that throws is logged, and the inviter still gets EMAIL_SEND_FAILED', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    mockMutate.mockImplementation(async (sql: unknown) => {
+      if (isDelete(sql)) throw new Error('connection terminated')
+      return { rows: [INVITATION], rowCount: 1 }
+    })
+
+    const res = await rest('new@example.com', 'member')
+    expect(res.status).toBe(503)
+    expect((await res.json()).code).toBe('EMAIL_SEND_FAILED')
+    expect(await inviteMember('team-1', 'new@example.com', 'member'))
+      .toEqual({ success: false, error: 'The invitation email could not be sent. Try again later.' })
+    expect(consoleError.mock.calls.some(([message]) => String(message).includes('could not be removed after its email failed'))).toBe(true)
+    consoleError.mockRestore()
+  })
+
+  it('a delete that removes no row is logged as a warning, and the inviter still gets EMAIL_SEND_FAILED', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    const consoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+    mockMutate.mockImplementation(async (sql: unknown) =>
+      isDelete(sql) ? { rows: [], rowCount: 0 } : { rows: [INVITATION], rowCount: 1 })
+
+    const res = await rest('new@example.com', 'member')
+    expect(res.status).toBe(503)
+    expect((await res.json()).code).toBe('EMAIL_SEND_FAILED')
+    expect(consoleWarn.mock.calls.some(([message]) => String(message).includes('was not removed after its email failed'))).toBe(true)
+    jest.restoreAllMocks()
+  })
+})
+
 describe('inviteMember refuses what POST /api/v1/teams/:teamId/members refuses', () => {
   const cases: Array<[string, World, string, string, number]> = [
     ['an admin inviting an admin', { role: 'admin' }, 'admin', 'new@example.com', 403],

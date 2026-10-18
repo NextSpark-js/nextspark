@@ -169,7 +169,13 @@ export class TeamInvitationService {
     } catch (emailError) {
       // An invitation nobody received must not look sent: remove it, so the inviter sees the error and can retry
       console.error('Failed to send invitation email:', emailError)
-      await mutateWithRLS('DELETE FROM "team_invitations" WHERE id = $1', [invitation.id], actor.id)
+      try {
+        const removed = await mutateWithRLS('DELETE FROM "team_invitations" WHERE id = $1', [invitation.id], actor.id)
+        if (removed.rowCount === 0) console.warn(`Invitation ${invitation.id} was not removed after its email failed (no row deleted); the inviter can cancel it`)
+      } catch (deleteError) {
+        // The inviter still gets the send failure; the pending row can be cancelled from the members page
+        console.error(`Invitation ${invitation.id} could not be removed after its email failed:`, deleteError)
+      }
       return {
         success: false,
         status: 503,
