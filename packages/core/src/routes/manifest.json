@@ -239,6 +239,11 @@
   },
   {
     "kind": "route",
+    "target": "api/v1/billing/webhooks/paddle/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/billing/webhooks/paddle/route"
+  },
+  {
+    "kind": "route",
     "target": "api/v1/billing/webhooks/polar/route.ts",
     "specifier": "@nextsparkjs/core/routes/api/v1/billing/webhooks/polar/route"
   },
