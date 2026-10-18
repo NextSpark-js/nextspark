@@ -34,37 +34,43 @@ jest.mock('@nextsparkjs/core/lib/media/storage', () => ({
   selectStorageDriver: mockSelectStorageDriver,
 }))
 
-// MediaService.createOnce's contract (one record per URL, `prepare` under the lock, not run when the URL has one)
+// MediaService's contract: hasUrl is one query; createOnce (the only caller that holds a pool connection)
+// runs beforeInsert and the INSERT under a lock on the URL, neither when the URL has a record
 const records = new Map<string, Record<string, unknown>>()
 let failInsert = false
 let queue: Promise<unknown> = Promise.resolve()
+const mockCreateOnce = jest.fn((userId: string, teamId: string, data: { url: string }, beforeInsert: () => Promise<void>) => {
+  const run = queue.then(async () => {
+    if (records.has(data.url)) return null
+    await beforeInsert()
+    if (failInsert) throw new Error('db down')
+    const media = { id: `media-${records.size + 1}`, userId, teamId, ...data }
+    records.set(data.url, media)
+    return media
+  })
+  queue = run.catch(() => {})
+  return run
+})
 jest.mock('@nextsparkjs/core/lib/services/media.service', () => ({
   MediaService: {
-    createOnce: (userId: string, teamId: string, url: string, prepare: () => Promise<Record<string, unknown>>) => {
-      const run = queue.then(async () => {
-        if (records.has(url)) return null
-        const data = await prepare()
-        if (failInsert) throw new Error('db down')
-        const media = { id: `media-${records.size + 1}`, userId, teamId, url, ...data }
-        records.set(url, media)
-        return media
-      })
-      queue = run.catch(() => {})
-      return run
-    },
+    hasUrl: async (url: string) => records.has(url),
+    createOnce: (...args: Parameters<typeof mockCreateOnce>) => mockCreateOnce(...args),
   },
 }))
 
 import { POST as presign } from '@/app/api/v1/media/upload/presign/route'
 import { POST as confirm } from '@/app/api/v1/media/upload/confirm/route'
 import { signUploadClaim } from '@/core/lib/media/upload-token'
+import { PendingObjectChangedError } from '@/core/lib/media/storage/errors'
 
 const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13])
 const HTML = new TextEncoder().encode('<html><script>alert(1)</script></html>')
 
-/** In-memory S3: pending objects, promoted objects, and every discard. */
+/** In-memory S3: pending objects (with an ETag per PUT), promoted objects, and every discard. */
 function memoryDriver() {
-  const pending = new Map<string, { bytes: Uint8Array; contentType: string }>()
+  let version = 0
+  const pending = new Map<string, { bytes: Uint8Array; contentType: string; etag?: string }>()
+  const promotions: Array<{ name: string; contentType: string; etag: string | null }> = []
   const uploads = new Map<string, Uint8Array>()
   const discarded: string[] = []
   const deleted: string[] = []
@@ -80,14 +86,17 @@ function memoryDriver() {
         expiresAt: new Date(Date.now() + 300_000),
         size,
       }),
-      stat: async (name: string) => {
+      stat: jest.fn(async (name: string) => {
         const object = pending.get(name)
-        return object ? { size: object.bytes.length, contentType: object.contentType } : null
-      },
+        if (object) object.etag ??= `"v${++version}"`
+        return object ? { size: object.bytes.length, contentType: object.contentType, etag: object.etag! } : null
+      }),
       readStart: async (name: string, bytes: number) => pending.get(name)!.bytes.subarray(0, bytes),
-      promote: async (name: string) => {
-        uploads.set(name, pending.get(name)!.bytes)
-        pending.delete(name)
+      promote: async (name: string, contentType: string, etag: string | null) => {
+        promotions.push({ name, contentType, etag })
+        const object = pending.get(name)!
+        if ((object.etag ??= `"v${++version}"`) !== etag) throw new PendingObjectChangedError()
+        uploads.set(name, object.bytes)
       },
       discard: async (name: string) => {
         discarded.push(name)
@@ -96,7 +105,7 @@ function memoryDriver() {
       getPublicUrl: (name: string) => `https://cdn.test/uploads/${name}`,
     },
   }
-  return { driver, pending, uploads, discarded, deleted }
+  return { driver, pending, uploads, discarded, deleted, promotions }
 }
 
 let storage: ReturnType<typeof memoryDriver>
@@ -126,6 +135,7 @@ beforeEach(() => {
   process.env.BETTER_AUTH_SECRET = 'test-secret-that-is-long-enough-0123456789'
   records.clear()
   failInsert = false
+  mockCreateOnce.mockClear()
   storage = memoryDriver()
   mockSelectStorageDriver.mockReturnValue({ driver: storage.driver, developmentFallback: false })
   mockAuthenticateRequest.mockResolvedValue({ success: true, user: USER })
@@ -195,8 +205,38 @@ describe('POST /api/v1/media/upload/confirm', () => {
       height: 3,
     })
     expect(storage.uploads.has(name)).toBe(true)
-    expect(storage.pending.has(name)).toBe(false)
+    expect(storage.promotions).toEqual([{ name, contentType: 'image/png', etag: '"v1"' }])
+    // The pending object is removed after the record exists, not inside the transaction
+    expect(storage.discarded).toEqual([name])
     expect(records.size).toBe(1)
+  })
+
+  it('a confirm whose stat never resolves holds no pool connection', async () => {
+    const { token } = await uploadDirect(PNG)
+    storage.driver.direct.stat.mockImplementation(() => new Promise(() => {}))
+    void confirm(request({ token }))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(storage.driver.direct.stat).toHaveBeenCalled()
+    expect(mockCreateOnce).not.toHaveBeenCalled()
+  })
+
+  it('refuses an object replaced after the checks (ETag changed), and deletes it', async () => {
+    const { token, name } = await uploadDirect(PNG)
+    const realStat = storage.driver.direct.stat.getMockImplementation()!
+    storage.driver.direct.stat.mockImplementation(async (n: string) => {
+      const answer = await realStat(n)
+      // Another PUT through the still-valid presigned URL, between the checks and the copy
+      storage.pending.set(n, { bytes: PNG, contentType: 'image/png', etag: '"other"' })
+      return answer
+    })
+    const { status, body } = await confirmWith(token)
+
+    expect(status).toBe(409)
+    expect(body.code).toBe('UPLOAD_CHANGED')
+    expect(storage.uploads.size).toBe(0)
+    expect(storage.discarded).toEqual([name])
+    expect(records.size).toBe(0)
   })
 
   it('a replayed confirm creates no second record', async () => {
@@ -205,10 +245,15 @@ describe('POST /api/v1/media/upload/confirm', () => {
 
     // The presigned URL may still be valid: a new PUT into pending is not promoted over the confirmed file
     storage.pending.set(name, { bytes: PNG, contentType: 'image/png' })
+    storage.driver.direct.stat.mockClear()
     const replay = await confirmWith(token)
 
     expect(replay).toMatchObject({ status: 409, body: { code: 'UPLOAD_ALREADY_CONFIRMED' } })
     expect(records.size).toBe(1)
+    // Answered by the cheap check, before any storage call or transaction
+    expect(storage.driver.direct.stat).not.toHaveBeenCalled()
+    expect(mockCreateOnce).toHaveBeenCalledTimes(1)
+    expect(storage.promotions).toHaveLength(1)
   })
 
   it('concurrent confirms of one token create one record', async () => {

@@ -1,24 +1,31 @@
 import { createReadStream } from 'fs'
-import { mkdir, stat, unlink, writeFile } from 'fs/promises'
+import { lstat, mkdir, unlink, writeFile } from 'fs/promises'
 import { isAbsolute, join, resolve } from 'path'
 import { Readable } from 'stream'
-import { mimeForExtension } from '../file-signature'
+import { isInlineType, mimeForExtension } from '../file-signature'
 import type { StorageDriver } from './index'
-import { assertObjectName, isObjectName } from './names'
+import { assertObjectName, isLegacyObjectName, isObjectName } from './names'
 
 /** Where the files route serves the local driver's objects (routes/api/v1/media/files/[name]). */
 export const LOCAL_FILES_URL_PREFIX = '/api/v1/media/files/'
 
 /**
- * Files in one directory on the server's disk. Object names have no separators
- * (`isObjectName`), so every path is `root/<name>` and cannot leave the root.
+ * Files in one directory on the server's disk. Only names of the shape the server
+ * generates are served or deleted (`isObjectName`): no separators, so every path is
+ * `root/<name>` and cannot leave the root, and no other file that happens to sit in
+ * the directory (`package.json`, ...) is reachable.
  */
 export class LocalStorageDriver implements StorageDriver {
   readonly name = 'local' as const
   readonly root: string
 
   /** `dir` is absolute or relative to the project (the server's working directory). */
-  constructor(dir: string, private readonly urlPrefix: string = LOCAL_FILES_URL_PREFIX) {
+  /** `legacyNames`: also accept the development fallback's older names (its own directory only). */
+  constructor(
+    dir: string,
+    private readonly urlPrefix: string = LOCAL_FILES_URL_PREFIX,
+    private readonly legacyNames = false
+  ) {
     // A runtime directory, not a build input: keeps Turbopack from tracing the whole project into the output
     this.root = isAbsolute(dir) ? dir : resolve(/* turbopackIgnore: true */ process.cwd(), dir)
   }
@@ -33,10 +40,14 @@ export class LocalStorageDriver implements StorageDriver {
   async delete(url: string): Promise<void> {
     if (!url.startsWith(this.urlPrefix)) return
     const name = url.slice(this.urlPrefix.length)
-    if (!isObjectName(name)) return
+    if (!this.accepts(name)) return
     await unlink(join(this.root, name)).catch((error: NodeJS.ErrnoException) => {
       if (error.code !== 'ENOENT') throw error
     })
+  }
+
+  private accepts(name: string): boolean {
+    return isObjectName(name) || (this.legacyNames && isLegacyObjectName(name))
   }
 
   /**
@@ -45,9 +56,10 @@ export class LocalStorageDriver implements StorageDriver {
    * server could not have generated.
    */
   async serve(name: string, range: string | null): Promise<Response> {
-    if (!isObjectName(name)) return new Response('Not found', { status: 404 })
+    if (!this.accepts(name)) return new Response('Not found', { status: 404 })
     const path = join(this.root, name)
-    const info = await stat(path).catch(() => null)
+    // lstat: a symlink placed in the directory is not followed
+    const info = await lstat(path).catch(() => null)
     if (!info?.isFile()) return new Response('Not found', { status: 404 })
 
     const size = info.size
@@ -58,7 +70,7 @@ export class LocalStorageDriver implements StorageDriver {
       'Cache-Control': 'public, max-age=31536000, immutable',
       'Accept-Ranges': 'bytes',
     })
-    if (!contentType) headers.set('Content-Disposition', 'attachment')
+    if (!contentType || !isInlineType(contentType)) headers.set('Content-Disposition', 'attachment')
 
     let start = 0
     let end = size - 1

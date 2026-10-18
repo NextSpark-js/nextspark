@@ -212,19 +212,28 @@ export class MediaService {
   }
 
   /**
-   * Create the record for a URL only if none has it yet. `prepare` runs first,
-   * under a lock on the URL, and returns the rest of the record; it is not run
-   * when the URL already has a record. Direct-upload confirms use it, so a
-   * replayed or concurrent confirm neither creates a second record nor touches
-   * the stored file again.
+   * Whether a record (any status) already has this URL. A cheap check outside any
+   * transaction; `createOnce` repeats it under its lock.
+   */
+  static async hasUrl(url: string, userId: string): Promise<boolean> {
+    if (!userId?.trim()) throw new Error('User ID is required')
+    return !!(await queryOneWithRLS('SELECT 1 FROM "media" WHERE url = $1 LIMIT 1', [url], userId))
+  }
+
+  /**
+   * Create the record for a URL only if none has it yet, running `beforeInsert`
+   * (one storage call: the direct-upload copy) under a lock on the URL. Neither
+   * runs when the URL already has a record, so a replayed or concurrent confirm
+   * neither creates a second record nor touches the stored file again. Do every
+   * other check before calling this: the lock holds a pool connection.
    *
    * @returns The new record, or null when the URL already had one
    */
   static async createOnce(
     userId: string,
     teamId: string,
-    url: string,
-    prepare: () => Promise<Omit<CreateMediaInput, 'url'>>
+    data: CreateMediaInput,
+    beforeInsert: () => Promise<void>
   ): Promise<Media | null> {
     if (!userId?.trim()) throw new Error('User ID is required')
     if (!teamId?.trim()) throw new Error('Team ID is required')
@@ -232,13 +241,13 @@ export class MediaService {
     const tx = await getTransactionClient(userId)
     try {
       // Held until COMMIT/ROLLBACK; each later statement sees what a previous holder committed
-      await tx.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`media-url:${url}`])
+      await tx.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`media-url:${data.url}`])
       // ponytail: no index on media.url, so this is a sequential scan; add one if confirms get slow
-      if (await tx.queryOne('SELECT 1 FROM "media" WHERE url = $1 LIMIT 1', [url])) {
+      if (await tx.queryOne('SELECT 1 FROM "media" WHERE url = $1 LIMIT 1', [data.url])) {
         await tx.rollback()
         return null
       }
-      const data = { ...(await prepare()), url }
+      await beforeInsert()
       const created = await tx.queryOne<Media>(INSERT_MEDIA, insertParams(userId, teamId, data))
       if (!created) throw new Error('Failed to create media record')
       await tx.commit()

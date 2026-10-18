@@ -21,6 +21,14 @@ export function extensionForMime(mimeType: string): string {
   return EXTENSION_BY_MIME[mimeType] ?? 'bin'
 }
 
+// Raster images and video: rendered by the browser, never run. Anything else is stored and served as a download.
+const INLINE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm'])
+
+/** Whether a stored file of this type may be shown inline; any other type gets `Content-Disposition: attachment`. */
+export function isInlineType(mimeType: string): boolean {
+  return INLINE_TYPES.has(mimeType)
+}
+
 /** Type to serve a stored file with, from the extension the server gave it; undefined for `bin` or an unknown one. */
 export function mimeForExtension(extension: string): string | undefined {
   return Object.keys(EXTENSION_BY_MIME).find((mimeType) => EXTENSION_BY_MIME[mimeType] === extension)

@@ -4,11 +4,11 @@ import { assertObjectName } from './names'
 
 export const isVercelBlobToken = (token: string | undefined): boolean => !!token && token.startsWith('vercel_blob_')
 
-/** Public Blob stores answer on <store>.public.blob.vercel-storage.com. */
+/** Public Blob stores answer on <store>.public.blob.vercel-storage.com; uploads live under uploads/temp/. */
 const isBlobUrl = (url: string) => {
   try {
-    const { protocol, hostname } = new URL(url)
-    return protocol === 'https:' && hostname.endsWith('.blob.vercel-storage.com')
+    const { protocol, hostname, pathname } = new URL(url)
+    return protocol === 'https:' && hostname.endsWith('.blob.vercel-storage.com') && pathname.startsWith('/uploads/temp/')
   } catch {
     return false
   }

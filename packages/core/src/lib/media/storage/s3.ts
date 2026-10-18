@@ -1,4 +1,6 @@
 import type { DirectUploads, PresignedUpload, StorageDriver } from './index'
+import { isInlineType } from '../file-signature'
+import { PendingObjectChangedError } from './errors'
 import { assertObjectName, isObjectName, PRESIGN_EXPIRES_SECONDS } from './names'
 
 /**
@@ -110,7 +112,7 @@ export class S3StorageDriver implements StorageDriver {
       presignUpload: (name, contentType, size) => this.presignUpload(name, contentType, size),
       stat: (name) => this.stat(PENDING + name),
       readStart: (name, bytes) => this.readStart(PENDING + name, bytes),
-      promote: (name) => this.promote(name),
+      promote: (name, contentType, etag) => this.promote(name, contentType, etag),
       discard: (name) => this.deleteKey(PENDING + name),
       getPublicUrl: (name) => this.publicUrl(name),
     }
@@ -120,6 +122,12 @@ export class S3StorageDriver implements StorageDriver {
     const endpoint = new URL(this.config.endpoint)
     if (this.config.forcePathStyle) return new URL(`${this.config.endpoint}/${this.config.bucket}/${key}`)
     return new URL(`${endpoint.protocol}//${this.config.bucket}.${endpoint.host}/${key}`)
+  }
+
+  /** An http: endpoint on another host: signed, but the files travel unencrypted. */
+  sendsInClear(): boolean {
+    const { protocol, hostname } = new URL(this.config.endpoint)
+    return protocol === 'http:' && !['localhost', '127.0.0.1', '[::1]'].includes(hostname) && !hostname.startsWith('127.')
   }
 
   private publicUrl(name: string): string {
@@ -160,7 +168,7 @@ export class S3StorageDriver implements StorageDriver {
 
   async put(name: string, body: Buffer, contentType: string): Promise<string> {
     assertObjectName(name)
-    const response = await this.request('PUT', UPLOADS + name, { 'content-type': contentType }, body)
+    const response = await this.request('PUT', UPLOADS + name, storedHeaders(contentType), body)
     if (!response.ok) await S3StorageDriver.fail('PUT', response)
     return this.publicUrl(name)
   }
@@ -191,13 +199,14 @@ export class S3StorageDriver implements StorageDriver {
     }
   }
 
-  private async stat(key: string): Promise<{ size: number; contentType: string | null } | null> {
+  private async stat(key: string): Promise<{ size: number; contentType: string | null; etag: string | null } | null> {
     const response = await this.request('HEAD', key)
     if (response.status === 404) return null
     if (!response.ok) await S3StorageDriver.fail('HEAD', response)
     return {
       size: Number(response.headers.get('content-length') ?? NaN),
       contentType: response.headers.get('content-type'),
+      etag: response.headers.get('etag'),
     }
   }
 
@@ -219,18 +228,38 @@ export class S3StorageDriver implements StorageDriver {
     return out.subarray(0, length)
   }
 
-  private async promote(name: string): Promise<void> {
+  private async promote(name: string, contentType: string, etag: string | null): Promise<void> {
     assertObjectName(name)
     const response = await this.request('PUT', UPLOADS + name, {
       'x-amz-copy-source': `/${this.config.bucket}/${PENDING}${name}`,
+      // Only the bytes that were checked: a PUT to the still-valid presigned URL in between fails the copy
+      ...(etag && { 'x-amz-copy-source-if-match': etag }),
+      // Drop whatever metadata the client sent with its PUT (Content-Disposition, Cache-Control, x-amz-meta-*...)
+      'x-amz-metadata-directive': 'REPLACE',
+      ...storedHeaders(contentType),
     })
-    // CopyObject can answer 200 with an error document
-    const text = await response.text().catch(() => '')
+    if (response.status === 412) throw new PendingObjectChangedError()
+    // CopyObject can answer 200 with an error document; reading that answer can fail after the copy happened
+    let text: string
+    try {
+      text = await response.text()
+    } catch (error) {
+      await this.deleteKey(UPLOADS + name).catch(() => {})
+      throw error
+    }
     if (!response.ok || text.includes('<Error>')) {
+      await this.deleteKey(UPLOADS + name).catch(() => {})
       const code = /<Code>([A-Za-z]{1,64})<\/Code>/.exec(text)?.[1]
       throw new Error(`S3 COPY failed with status ${response.status}${code ? ` (${code})` : ''}`)
     }
-    // A pending copy left behind is removed by the bucket's lifecycle rule
-    await this.deleteKey(PENDING + name).catch(() => {})
+  }
+}
+
+/** Metadata of a stored object, all chosen by the server from the verified type. */
+function storedHeaders(contentType: string): Record<string, string> {
+  return {
+    'content-type': contentType,
+    'cache-control': 'public, max-age=31536000, immutable',
+    ...(!isInlineType(contentType) && { 'content-disposition': 'attachment' }),
   }
 }

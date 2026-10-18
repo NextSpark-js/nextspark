@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterAll, afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals'
@@ -13,6 +13,7 @@ jest.mock('@vercel/blob', () => ({ put: mockPut, del: mockDel }))
 import { selectStorageDriver, logStorageAtStartup, newObjectName, isObjectName } from '@/core/lib/media/storage'
 import { parseS3Config, S3StorageDriver } from '@/core/lib/media/storage/s3'
 import { LocalStorageDriver } from '@/core/lib/media/storage/local'
+import { PendingObjectChangedError } from '@/core/lib/media/storage/errors'
 import { VercelBlobStorageDriver } from '@/core/lib/media/storage/vercel-blob'
 
 // setup.ts swaps Response, Headers and crypto.subtle for mocks; the drivers (and aws4fetch) need the real ones
@@ -40,7 +41,11 @@ describe('object names', () => {
     expect(newObjectName('text/html')).toMatch(/\.bin$/)
   })
 
-  it.each(['../x.png', 'a/b.png', '..', '.env', 'x.png/..', 'x', 'x.PNG', 'x..png', 'x.png\0', '%2e%2e%2fx.png', ''])(
+  it.each([
+    '../x.png', 'a/b.png', '..', '.env', 'x.png/..', 'x', 'x.PNG', 'x..png', 'x.png\0', '%2e%2e%2fx.png', '',
+    // Files that may sit next to the uploads: only the generated shape is accepted
+    'package.json', 'server.js', 'next.config.mjs', 'OK_1.gif', '1700000000000_abc.png', '1700000000000_0123456789ABCDEF0123456789abcdef.png',
+  ])(
     'refuse %j',
     (name) => expect(isObjectName(name)).toBe(false)
   )
@@ -65,6 +70,11 @@ describe('selectStorageDriver', () => {
   it('resolves a relative UPLOADS_DIR against the project', () => {
     const local = selectStorageDriver(env({ STORAGE_DRIVER: 'local', UPLOADS_DIR: 'var/uploads' }))
     expect((local.driver as LocalStorageDriver).root).toBe(join(process.cwd(), 'var/uploads'))
+  })
+
+  it('reads STORAGE_DRIVER in any case', () => {
+    expect(selectStorageDriver(env({ ...S3_ENV, STORAGE_DRIVER: 'S3' })).driver).toBeInstanceOf(S3StorageDriver)
+    expect(selectStorageDriver(env({ STORAGE_DRIVER: ' Local ', UPLOADS_DIR: '/srv/uploads' })).driver).toBeInstanceOf(LocalStorageDriver)
   })
 
   it('names the variable for each misconfiguration', () => {
@@ -156,8 +166,15 @@ describe('S3StorageDriver', () => {
     expect(calls).toHaveLength(1)
     expect(calls[0]).toMatchObject({ method: 'PUT', url: `http://127.0.0.1:9000/media/uploads/${NAME}` })
     expect(calls[0].headers.get('content-type')).toBe('image/png')
+    expect(calls[0].headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+    expect(calls[0].headers.has('content-disposition')).toBe(false)
     expect(calls[0].headers.get('authorization')).toMatch(/^AWS4-HMAC-SHA256 Credential=AKIDSECRETVALUE1\/\d{8}\/us-east-1\/s3\/aws4_request, SignedHeaders=[a-z0-9;-]+, Signature=[0-9a-f]{64}$/)
     expect([...calls[0].headers.keys()].some((h) => h.startsWith('x-amz-acl') || h.startsWith('x-amz-grant'))).toBe(false)
+  })
+
+  it('stores a type outside the raster/video table as a download', async () => {
+    await driver().put(NAME.replace('.png', '.pdf'), Buffer.from('%PDF-1.7'), 'application/pdf')
+    expect(calls[0].headers.get('content-disposition')).toBe('attachment')
   })
 
   it('uses virtual-hosted URLs unless S3_FORCE_PATH_STYLE=true', async () => {
@@ -213,25 +230,33 @@ describe('S3StorageDriver', () => {
   it('stats, reads the start of, promotes and discards the pending object', async () => {
     const s3 = driver()
     respond = (call) => {
-      if (call.method === 'HEAD') return new Response(null, { status: 200, headers: { 'content-length': '1234', 'content-type': 'image/png' } })
+      if (call.method === 'HEAD') return new Response(null, { status: 200, headers: { 'content-length': '1234', 'content-type': 'image/png', etag: '"abc123"' } })
       if (call.method === 'GET') return new Response(new Uint8Array(100_000), { status: 200 })
       return new Response(call.method === 'DELETE' ? null : '<CopyObjectResult/>', { status: call.method === 'DELETE' ? 204 : 200 })
     }
 
-    expect(await s3.direct.stat(NAME)).toEqual({ size: 1234, contentType: 'image/png' })
+    expect(await s3.direct.stat(NAME)).toEqual({ size: 1234, contentType: 'image/png', etag: '"abc123"' })
     expect(calls[0]).toMatchObject({ method: 'HEAD', url: `http://127.0.0.1:9000/media/pending/${NAME}` })
 
     // A service that ignores Range: only the asked bytes are kept
     expect((await s3.direct.readStart(NAME, 64)).length).toBe(64)
     expect(calls[1].headers.get('range')).toBe('bytes=0-63')
 
-    await s3.direct.promote(NAME)
+    await s3.direct.promote(NAME, 'image/png', '"abc123"')
     expect(calls[2]).toMatchObject({ method: 'PUT', url: `http://127.0.0.1:9000/media/uploads/${NAME}` })
     expect(calls[2].headers.get('x-amz-copy-source')).toBe(`/media/pending/${NAME}`)
-    expect(calls[3]).toMatchObject({ method: 'DELETE', url: `http://127.0.0.1:9000/media/pending/${NAME}` })
+    // Only the checked bytes, with metadata chosen by the server
+    expect(calls[2].headers.get('x-amz-copy-source-if-match')).toBe('"abc123"')
+    expect(calls[2].headers.get('x-amz-metadata-directive')).toBe('REPLACE')
+    expect(calls[2].headers.get('content-type')).toBe('image/png')
+    expect(calls[2].headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+    expect(calls[2].headers.has('content-disposition')).toBe(false)
+    expect(calls[2].headers.get('authorization')).toMatch(/SignedHeaders=[^,]*x-amz-copy-source-if-match[^,]*x-amz-metadata-directive/)
+    // The pending object stays until the caller discards it (after its COMMIT)
+    expect(calls).toHaveLength(3)
 
     await s3.direct.discard(NAME)
-    expect(calls[4]).toMatchObject({ method: 'DELETE', url: `http://127.0.0.1:9000/media/pending/${NAME}` })
+    expect(calls[3]).toMatchObject({ method: 'DELETE', url: `http://127.0.0.1:9000/media/pending/${NAME}` })
     expect(s3.direct.getPublicUrl(NAME)).toBe(`https://cdn.example.org/media/uploads/${NAME}`)
   })
 
@@ -240,9 +265,38 @@ describe('S3StorageDriver', () => {
     expect(await driver().direct.stat(NAME)).toBeNull()
   })
 
-  it('a copy that answers 200 with an error document fails', async () => {
-    respond = () => new Response('<Error><Code>InternalError</Code></Error>', { status: 200 })
-    await expect(driver().direct.promote(NAME)).rejects.toThrow('S3 COPY failed with status 200 (InternalError)')
+  it('a copy that answers 200 with an error document fails, and removes what it may have copied', async () => {
+    respond = (call) => call.method === 'DELETE' ? new Response(null, { status: 204 }) : new Response('<Error><Code>InternalError</Code></Error>', { status: 200 })
+    await expect(driver().direct.promote(NAME, 'image/png', '"e"')).rejects.toThrow('S3 COPY failed with status 200 (InternalError)')
+    expect(calls[1]).toMatchObject({ method: 'DELETE', url: `http://127.0.0.1:9000/media/uploads/${NAME}` })
+  })
+
+  it('a copy whose answer cannot be read removes the copied object', async () => {
+    respond = (call) => {
+      if (call.method === 'DELETE') return new Response(null, { status: 204 })
+      const broken = new ReadableStream({ start: (c) => c.error(new Error('connection reset')) })
+      return new Response(broken, { status: 200 })
+    }
+    await expect(driver().direct.promote(NAME, 'image/png', '"e"')).rejects.toThrow()
+    expect(calls[1]).toMatchObject({ method: 'DELETE', url: `http://127.0.0.1:9000/media/uploads/${NAME}` })
+  })
+
+  it('a changed pending object (412 on if-match) is a PendingObjectChangedError', async () => {
+    respond = () => new Response('<Error><Code>PreconditionFailed</Code></Error>', { status: 412 })
+    await expect(driver().direct.promote(NAME, 'image/png', '"old"')).rejects.toBeInstanceOf(PendingObjectChangedError)
+  })
+
+  it('a copy of a type outside the raster/video table is stored as a download', async () => {
+    respond = () => new Response('<CopyObjectResult/>', { status: 200 })
+    await driver().direct.promote(NAME.replace('.png', '.pdf'), 'application/pdf', '"e"')
+    expect(calls[0].headers.get('content-disposition')).toBe('attachment')
+  })
+
+  it('knows an http: endpoint on another host sends files in clear', () => {
+    expect(driver().sendsInClear()).toBe(false)
+    expect(driver({ S3_ENDPOINT: 'http://minio.internal:9000' }).sendsInClear()).toBe(true)
+    expect(driver({ S3_ENDPOINT: 'https://minio.internal:9000' }).sendsInClear()).toBe(false)
+    expect(driver({ S3_ENDPOINT: 'http://localhost:9000' }).sendsInClear()).toBe(false)
   })
 })
 
@@ -308,6 +362,41 @@ describe('LocalStorageDriver', () => {
     expect((await local.serve(NAME, 'bytes=0-1,4-5')).status).toBe(200)
   })
 
+  it('sends a type outside the raster/video table as a download', async () => {
+    const name = NAME.replace('.png', '.pdf')
+    await local.put(name, Buffer.from('%PDF-1.7'), 'application/pdf')
+    const response = await local.serve(name, null)
+    expect(response.headers.get('content-type')).toBe('application/pdf')
+    expect(response.headers.get('content-disposition')).toBe('attachment')
+  })
+
+  it('serves only generated names, never another file in the directory, nor a symlink', async () => {
+    mkdirSync(join(root, 'uploads'), { recursive: true })
+    writeFileSync(join(root, 'uploads', 'package.json'), '{}')
+    expect((await local.serve('package.json', null)).status).toBe(404)
+    await local.delete('/api/v1/media/files/package.json')
+    expect(existsSync(join(root, 'uploads', 'package.json'))).toBe(true)
+
+    writeFileSync(outside, PNG)
+    const link = NAME.replace('0123', '9999')
+    symlinkSync(outside, join(root, 'uploads', link))
+    expect((await local.serve(link, null)).status).toBe(404)
+  })
+
+  it('accepts the old development-fallback names only where asked', async () => {
+    const legacy = '1700000000000_k3j4h5g6f7d8s.png'
+    const dev = new LocalStorageDriver(join(root, 'dev'), '/uploads/temp/', true)
+    mkdirSync(join(root, 'dev'), { recursive: true })
+    writeFileSync(join(root, 'dev', legacy), PNG)
+    writeFileSync(join(root, 'uploads', legacy), PNG)
+    expect((await local.serve(legacy, null)).status).toBe(404)
+    expect((await dev.serve(legacy, null)).status).toBe(200)
+    await dev.delete(`/uploads/temp/${legacy}`)
+    expect(existsSync(join(root, 'dev', legacy))).toBe(false)
+    await local.delete(`/api/v1/media/files/${legacy}`)
+    expect(existsSync(join(root, 'uploads', legacy))).toBe(true)
+  })
+
   it('sends an unknown extension as a download', async () => {
     const name = NAME.replace('.png', '.bin')
     await local.put(name, Buffer.from('<html>'), 'text/html')
@@ -350,6 +439,7 @@ describe('VercelBlobStorageDriver', () => {
     await blob.delete('https://store.public.blob.vercel-storage.com/uploads/temp/x.png')
     await blob.delete('/uploads/temp/x.png')
     await blob.delete('https://evil.example.org/?u=.blob.vercel-storage.com')
+    await blob.delete('https://other.public.blob.vercel-storage.com/brand/logo.png')
     expect(mockDel).toHaveBeenCalledTimes(1)
   })
 })
@@ -383,6 +473,16 @@ describe('logStorageAtStartup', () => {
     logStorageAtStartup(env({ ...S3_ENV, S3_ENDPOINT: 'ftp://hidden-host' }))
     expect(error).toHaveBeenCalledWith(expect.stringContaining('S3_ENDPOINT is malformed'))
     expect(String(error.mock.calls[0][0])).not.toMatch(/hidden-host|very-secret|AKIDSECRET/)
+  })
+
+  it('warns about an http: S3 endpoint on another host', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    logStorageAtStartup(env({ ...S3_ENV, S3_ENDPOINT: 'http://minio.internal:9000' }))
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('S3_ENDPOINT uses http:'))
+    expect(String(warn.mock.calls[0][0])).not.toContain('minio.internal')
+    warn.mockClear()
+    logStorageAtStartup(env(S3_ENV))
+    expect(warn).not.toHaveBeenCalled()
   })
 
   it('says nothing when STORAGE_DRIVER is unset', () => {

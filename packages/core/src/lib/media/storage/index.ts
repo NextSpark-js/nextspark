@@ -16,6 +16,7 @@ import { LocalStorageDriver } from './local'
 import { VercelBlobStorageDriver, isVercelBlobToken } from './vercel-blob'
 
 export { newObjectName, isObjectName, PRESIGN_EXPIRES_SECONDS } from './names'
+export { PendingObjectChangedError } from './errors'
 
 export type StorageDriverName = 'vercel-blob' | 's3' | 'local'
 
@@ -43,11 +44,16 @@ export interface PresignedUpload {
  */
 export interface DirectUploads {
   presignUpload(name: string, contentType: string, size: number): Promise<PresignedUpload>
-  /** Size and type of the pending object, null when there is none. */
-  stat(name: string): Promise<{ size: number; contentType: string | null } | null>
+  /** Size, type and ETag of the pending object, null when there is none. */
+  stat(name: string): Promise<{ size: number; contentType: string | null; etag: string | null } | null>
   /** Up to `bytes` leading bytes of the pending object. */
   readStart(name: string, bytes: number): Promise<Uint8Array>
-  promote(name: string): Promise<void>
+  /**
+   * Copies the pending object to where `getPublicUrl` points, only if its ETag is still `etag`
+   * (else `PendingObjectChangedError`), with metadata the server sets: `contentType`, a long cache,
+   * and `attachment` for a type that is not shown inline. The pending object stays; `discard` it after.
+   */
+  promote(name: string, contentType: string, etag: string | null): Promise<void>
   /** Deletes the pending object. */
   discard(name: string): Promise<void>
   getPublicUrl(name: string): string
@@ -68,7 +74,7 @@ const misconfigured = (label: string, problems: string[], variables: string[]): 
  * Cheap to call per request: nothing is loaded or contacted here.
  */
 export function selectStorageDriver(env: NodeJS.ProcessEnv = process.env): StorageSelection {
-  const choice = env.STORAGE_DRIVER?.trim()
+  const choice = env.STORAGE_DRIVER?.trim().toLowerCase()
   const production = env.NODE_ENV === 'production'
 
   switch (choice) {
@@ -111,7 +117,7 @@ export function selectStorageDriver(env: NodeJS.ProcessEnv = process.env): Stora
  * startup, and a container's disk is gone on redeploy.
  */
 export function developmentFallbackDriver(): LocalStorageDriver {
-  return new LocalStorageDriver(join(process.cwd(), 'public', 'uploads', 'temp'), '/uploads/temp/')
+  return new LocalStorageDriver(join(process.cwd(), 'public', 'uploads', 'temp'), '/uploads/temp/', true)
 }
 
 let localWarned = false
@@ -130,11 +136,15 @@ function warnLocalOnce(driver: LocalStorageDriver): void {
   )
 }
 
-/** Logs, once at server start, a misconfigured driver; selecting the local driver logs its caveats. */
+/** Logs, once at server start, a misconfigured driver and an http: S3 endpoint; selecting the local driver logs its caveats. */
 export function logStorageAtStartup(env: NodeJS.ProcessEnv = process.env): void {
   if (!env.STORAGE_DRIVER?.trim()) return
   const selection = selectStorageDriver(env)
   if ('message' in selection) {
     console.error(`[storage] ${selection.message} Uploads answer 503 until it is fixed.`)
+    return
+  }
+  if (selection.driver instanceof S3StorageDriver && selection.driver.sendsInClear()) {
+    console.warn('[storage] S3_ENDPOINT uses http: to a host that is not this machine, so uploaded files travel unencrypted. Use an https: endpoint.')
   }
 }

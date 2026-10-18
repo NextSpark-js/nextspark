@@ -4,7 +4,7 @@ Upload and manage media files.
 
 ## Overview
 
-The Media API provides endpoints for uploading images and videos to Vercel Blob storage. All operations require authentication and appropriate scopes.
+The Media API provides endpoints for uploading images and videos to the storage driver `STORAGE_DRIVER` selects: Vercel Blob, any S3-compatible service, or a directory on the server (see `docs/21-media-library/05-configuration.md`). Production without a driver answers `503 STORAGE_NOT_CONFIGURED`. All operations except serving local files require authentication and appropriate scopes.
 
 ## Authentication
 
@@ -61,13 +61,29 @@ Get information about the upload endpoint configuration.
   "success": true,
   "data": {
     "message": "Media upload endpoint is active",
-    "storage": "Vercel Blob",
-    "uploadPath": "uploads/temp/",
-    "supportedTypes": ["image/jpeg", "image/png", "image/gif", "image/webp", "video/mp4", "video/webm"],
+    "storage": "s3",
+    "directUpload": true,
+    "supportedTypes": ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp", "video/mp4", "video/mpeg", "video/quicktime", "video/webm"],
     "maxFileSize": "10MB"
   }
 }
 ```
+
+`storage` is the selected driver (`vercel-blob`, `s3`, `local`) or `Not configured (...)`; `directUpload` says whether presign/confirm are available.
+
+### Direct Upload (s3 driver)
+`POST /api/v1/media/upload/presign` then `PUT` to storage, then `POST /api/v1/media/upload/confirm`
+
+**Required Scope:** `media:write` (and the `media.upload` permission), on both calls.
+
+1. Presign: body `{ "filename": "photo.jpg", "mimeType": "image/jpeg", "size": 482113 }`. Answers `{ upload: { url, method: "PUT", headers, expiresAt }, token }`; the URL is valid 5 minutes and accepts only that type and size.
+2. `PUT` the bytes to `upload.url` with `upload.headers`.
+3. Confirm: body `{ "token": "..." }`. Answers `{ media, url }`. The server checks size, type and file signature before creating the record; see the error table in `docs/21-media-library/02-api-reference.md`.
+
+### Serve Local Files
+`GET /api/v1/media/files/:name`
+
+Public. With `STORAGE_DRIVER=local`, serves an uploaded file (type from its extension, `nosniff`, byte ranges); 404 for any other driver or any name the server did not generate.
 
 ## Supported File Types
 
@@ -87,18 +103,18 @@ Get information about the upload endpoint configuration.
 
 | Limit | Value |
 |-------|-------|
-| Maximum file size | 10 MB |
-| Maximum files per request | No limit |
-| Storage | Vercel Blob (public access) |
+| Maximum file size | 10 MB (`media.maxSizeMB`, per type `maxSizeImageMB` / `maxSizeVideoMB`) |
+| Maximum files per request | 100 |
+| Storage | The selected driver (public URLs) |
 
 ## File Naming
 
 Files are renamed on upload using the pattern:
 ```
-{timestamp}_{randomString}.{extension}
+{timestamp}_{32 hex digits}.{extension of the allowed type}
 ```
 
-Example: `1704816000000_a1b2c3d4e5f.jpg`
+Example: `1704816000000_9f2c4e0b7a1d4c3e8b6f5a2d1c0e9b8a.jpg`
 
 ## Error Responses
 
@@ -107,11 +123,14 @@ Example: `1704816000000_a1b2c3d4e5f.jpg`
 | 400 | Bad Request - No files uploaded or invalid file type |
 | 401 | Unauthorized - Authentication required |
 | 403 | Forbidden - Insufficient permissions |
-| 500 | Server Error - Upload to Vercel Blob failed |
+| 409 | Conflict - Direct upload already confirmed, or changed after its checks |
+| 410 | Gone - Direct upload token expired |
+| 500 | Server Error - The storage failed |
+| 503 | Storage not configured (`STORAGE_NOT_CONFIGURED`) |
 
 ## Usage Notes
 
-- Files are uploaded to `uploads/temp/` directory
+- Vercel Blob stores under `uploads/temp/`, S3 under `uploads/` (direct uploads wait under `pending/`, which a bucket lifecycle rule should expire), local in `UPLOADS_DIR`
 - All uploaded files are publicly accessible
-- Consider implementing cleanup for temporary files
-- The API validates file types by MIME type, not just extension
+- Deleting a media item also deletes its file
+- The API validates file types by MIME type and by the file's leading bytes, not by extension
