@@ -21,7 +21,7 @@ config/billing.config.ts
 // core/lib/billing/config-types.ts
 
 interface BillingConfig {
-  /** Payment provider: stripe | polar | lemonsqueezy (paddle, mercadopago: not yet implemented) */
+  /** Payment provider: stripe | polar | lemonsqueezy | paddle (mercadopago: not yet implemented) */
   provider: PaymentProvider
 
   /** Default currency (ISO 4217) */
@@ -368,6 +368,11 @@ LEMONSQUEEZY_API_KEY=...
 LEMONSQUEEZY_STORE_ID=12345
 LEMONSQUEEZY_WEBHOOK_SECRET=...
 
+# Paddle (see 10-paddle.md)
+PADDLE_API_KEY=pdl_sdbx_apikey_...
+PADDLE_WEBHOOK_SECRET=pdl_ntfset_...
+PADDLE_ENVIRONMENT=sandbox
+
 # Cron job protection (required for all providers)
 CRON_SECRET=your-secure-cron-secret
 ```
@@ -381,6 +386,8 @@ Get Price IDs from your payment provider's dashboard and add them to `providerPr
 **Polar:** Go to your Polar organization -> Products -> Create Product -> Copy the Product Price ID
 
 **Lemon Squeezy:** Store -> Products -> create a subscription product with one variant per interval -> copy each variant's ID ([Lemon Squeezy](./09-lemon-squeezy.md#2-plans-map-to-variants))
+
+**Paddle:** Catalog -> Products -> create a product per plan with one recurring price per interval -> copy each price ID (starts with `pri_`; sandbox and live have their own) ([Paddle](./10-paddle.md#2-plans-map-to-prices))
 
 ```typescript
 {

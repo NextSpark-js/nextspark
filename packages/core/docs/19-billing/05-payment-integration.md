@@ -5,7 +5,7 @@ description: Multi-provider payment integration for subscription payments
 
 # Payment Provider Integration
 
-> **Experimental:** Billing (Stripe, Polar and Lemon Squeezy) is not part of the stable 1.0 surface and may change without a deprecation period.
+> **Experimental:** Billing (Stripe, Polar, Lemon Squeezy and Paddle) is not part of the stable 1.0 surface and may change without a deprecation period.
 
 The billing system supports multiple payment providers through a **Gateway Factory** pattern. Providers are abstracted behind a unified `BillingGateway` interface, so consumer code never imports from a specific provider.
 
@@ -24,7 +24,8 @@ core/lib/billing/gateways/
 ├── factory.ts       # getBillingGateway() singleton factory
 ├── stripe.ts        # StripeGateway implements BillingGateway
 ├── polar.ts         # PolarGateway implements BillingGateway
-└── lemonsqueezy.ts  # LemonSqueezyGateway implements BillingGateway (REST API, no SDK)
+├── lemonsqueezy.ts  # LemonSqueezyGateway implements BillingGateway (REST API, no SDK)
+└── paddle.ts        # PaddleGateway implements BillingGateway (Paddle Billing REST API, no SDK)
 ```
 
 ### Gateway Factory Pattern
@@ -93,7 +94,7 @@ Set the provider in your theme's `billing.config.ts`:
 
 ```typescript
 export const billingConfig: BillingConfig = {
-  provider: 'stripe',  // or 'polar', or 'lemonsqueezy' (see 09-lemon-squeezy.md)
+  provider: 'stripe',  // or 'polar', 'lemonsqueezy' (09-lemon-squeezy.md), 'paddle' (10-paddle.md)
   // ...
 }
 ```
@@ -117,6 +118,11 @@ POLAR_SERVER=sandbox   # 'sandbox' or 'production'
 LEMONSQUEEZY_API_KEY=...
 LEMONSQUEEZY_STORE_ID=12345
 LEMONSQUEEZY_WEBHOOK_SECRET=...
+
+# === Paddle (10-paddle.md) ===
+PADDLE_API_KEY=pdl_sdbx_apikey_...
+PADDLE_WEBHOOK_SECRET=pdl_ntfset_...
+PADDLE_ENVIRONMENT=sandbox   # 'sandbox' or 'production'
 
 # === Cron (required for all providers) ===
 CRON_SECRET=your-secure-secret
@@ -378,6 +384,10 @@ async function handlePolarWebhook(request: NextRequest) {
 ### Lemon Squeezy Webhooks
 
 `POST /api/v1/billing/webhooks/lemonsqueezy` verifies `X-Signature` (hex HMAC-SHA256 of the raw body) and derives its event id, since Lemon Squeezy sends none. Setup, the event list and how the team is bound: [Lemon Squeezy](./09-lemon-squeezy.md#the-webhook).
+
+### Paddle Webhooks
+
+`POST /api/v1/billing/webhooks/paddle` verifies `Paddle-Signature` (`ts=...;h1=...`, HMAC-SHA256 of `<ts>:<raw body>`, timestamp within five seconds) and deduplicates by Paddle's `event_id`. Setup, the event list, sandbox isolation and how the team is bound: [Paddle](./10-paddle.md#the-webhook).
 
 ### Webhook Deduplication
 
