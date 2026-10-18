@@ -1,6 +1,6 @@
 /**
  * The startup auth readiness check in core's register() (src/instrumentation/index.ts),
- * which apps/dev/instrumentation.ts and the generated project's
+ * which apps/dev/src/instrumentation.ts and the generated project's
  * packages/core/templates/instrumentation.ts re-export, and in the host upgrade
  * snippet in the passwordless docs: when loading core's runtime-readiness
  * fails, register() still resolves, logs only fixed text, never what the
@@ -31,7 +31,7 @@ function documentedSnippet(): string {
 }
 
 const SOURCES: [string, () => string][] = [
-  ['apps/dev/instrumentation.ts', () => fs.readFileSync(path.join(REPO_ROOT, 'apps/dev/instrumentation.ts'), 'utf8')],
+  ['apps/dev/src/instrumentation.ts', () => fs.readFileSync(path.join(REPO_ROOT, 'apps/dev/src/instrumentation.ts'), 'utf8')],
   ['packages/core/templates/instrumentation.ts', () => fs.readFileSync(path.join(REPO_ROOT, 'packages/core/templates/instrumentation.ts'), 'utf8')],
   ['docs startup snippet', documentedSnippet],
 ]

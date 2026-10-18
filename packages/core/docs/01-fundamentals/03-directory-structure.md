@@ -51,7 +51,7 @@ generated adapter.
 Reserved Next.js entry points are not project-template source. The request
 entry lives at `src/proxy.ts`, a few lines that re-export
 `@nextsparkjs/core/proxy`; project request behavior is exported as `proxyHook`
-from `config/hooks/proxy.ts`. Server startup lives in `instrumentation.ts`,
+from `config/hooks/proxy.ts`. Server startup lives in `src/instrumentation.ts`,
 which re-exports `register()` from `@nextsparkjs/core/instrumentation`; startup
 code of the project's own goes in that file's `register()`, after it calls
 core's.

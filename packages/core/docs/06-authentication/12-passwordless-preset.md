@@ -269,7 +269,7 @@ try {
 
 Keep the import inside the `try`: if loading core's config fails, startup continues and the log carries no error details.
 
-If the project has no `instrumentation.ts` at all — every host generated before this file existed, and any beta.192 project packaged before the wizard started copying it — create one at the project root with the current template's content (`packages/core/templates/instrumentation.ts`), verbatim, below. Core's `register()` also initializes scheduled actions, so a file of your own that only made the auth-readiness call would silently drop that initialization. No `next.config.mjs` flag is needed: Next.js 15 and later run `instrumentation.ts` automatically.
+If the project has no `instrumentation.ts` at all — every host generated before this file existed, and any beta.192 project packaged before the wizard started copying it — create `src/instrumentation.ts` (beside `src/app`, where `next build` looks for it; a root one is left out of standalone and webpack builds) with the current template's content (`packages/core/templates/instrumentation.ts`), verbatim, below. Core's `register()` also initializes scheduled actions, so a file of your own that only made the auth-readiness call would silently drop that initialization. No `next.config.mjs` flag is needed: Next.js 15 and later run `instrumentation.ts` automatically.
 
 ```ts
 /**

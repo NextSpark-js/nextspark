@@ -1,7 +1,7 @@
 /**
  * apps/dev is the integration app the root scripts build and run, and it
  * runs the proxy and startup a generated project gets: its src/proxy.ts and
- * instrumentation.ts are the files the scaffold writes
+ * src/instrumentation.ts are the files the scaffold writes
  * (packages/core/templates/), facades over @nextsparkjs/core/proxy and
  * @nextsparkjs/core/instrumentation, which apps/dev's tsconfig paths resolve
  * to packages/core/src.
@@ -20,10 +20,15 @@ test('apps/dev has its proxy beside src/app, where Next discovers it', () => {
   assert.equal(fs.existsSync(path.join(REPO_ROOT, 'apps/dev/proxy.ts')), false, 'a root proxy is ignored when the app lives under src/app')
 })
 
+test('apps/dev has its instrumentation beside src/app, where next build discovers it (#297)', () => {
+  assert.ok(fs.existsSync(path.join(REPO_ROOT, 'apps/dev/src/instrumentation.ts')), 'apps/dev/src/instrumentation.ts is missing')
+  assert.equal(fs.existsSync(path.join(REPO_ROOT, 'apps/dev/instrumentation.ts')), false, 'a root instrumentation.ts is left out of standalone and webpack builds when the app lives under src/app')
+})
+
 test("apps/dev's proxy.ts and instrumentation.ts are the scaffold's files", () => {
   for (const [appsDev, template] of [
     ['apps/dev/src/proxy.ts', 'packages/core/templates/proxy.ts'],
-    ['apps/dev/instrumentation.ts', 'packages/core/templates/instrumentation.ts'],
+    ['apps/dev/src/instrumentation.ts', 'packages/core/templates/instrumentation.ts'],
   ]) {
     assert.equal(
       fs.readFileSync(path.join(REPO_ROOT, appsDev), 'utf8'),

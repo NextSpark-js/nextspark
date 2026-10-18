@@ -1,7 +1,7 @@
 /**
  * The project's request proxy and startup files as facades over core (#203, S114)
  *
- * The scaffold writes `src/proxy.ts` and `instrumentation.ts` into the project, and the project owns them. Up to
+ * The scaffold writes `src/proxy.ts` and `src/instrumentation.ts` into the project, and the project owns them. Up to
  * 0.1.0-beta.197 they were full copies of core's code (674 lines of proxy), so a project kept whatever proxy it was
  * created with. They are now a few lines that re-export `@nextsparkjs/core/proxy` and `@nextsparkjs/core/instrumentation`.
  *
@@ -28,10 +28,18 @@ export const INSTRUMENTATION_FACADE_WARNING = 'NS_INSTRUMENTATION_FACADE_MISSING
 export const PROXY_TEMPLATE_REPLACED = 'NS_PROXY_TEMPLATE_REPLACED'
 export const INSTRUMENTATION_TEMPLATE_REPLACED = 'NS_INSTRUMENTATION_TEMPLATE_REPLACED'
 export const ENTRY_NOT_REPLACED = 'NS_PROJECT_ENTRY_NOT_REPLACED'
+export const INSTRUMENTATION_NOT_LOADED = 'NS_INSTRUMENTATION_NOT_LOADED'
+export const INSTRUMENTATION_MOVED = 'NS_INSTRUMENTATION_MOVED'
 
 /** The request-interception files the proxy rules look at, and the startup files. Next loads one of each. */
 const PROXY_ENTRIES = Object.freeze(['src/proxy.ts', 'src/middleware.ts'])
 const INSTRUMENTATION_ENTRIES = Object.freeze(['instrumentation.ts', 'src/instrumentation.ts'])
+/**
+ * #297: with the app in src/app, `next build` looks for the instrumentation hook in src/ only. Turbopack still compiles
+ * a root instrumentation.ts, so `next start` ran it, but a standalone build leaves it out and webpack never builds it.
+ */
+const ROOT_INSTRUMENTATION = 'instrumentation.ts'
+const SRC_INSTRUMENTATION = 'src/instrumentation.ts'
 
 const sha256 = text => createHash('sha256').update(text).digest('hex')
 
@@ -131,9 +139,32 @@ function entries(projectRoot) {
 /** The facade notices for `projectRoot`'s proxy and instrumentation files, read-only. */
 export function projectEntryNotices(projectRoot, { templatesDir = TEMPLATES_DIR, previous = PREVIOUS } = {}) {
   if (!projectRoot || !existsSync(join(templatesDir, 'proxy.ts'))) return []
-  return entries(projectRoot)
-    .map(({ kind, file, source }) => kind === 'proxy.ts' ? proxyFacadeNotice(file, source, previous) : instrumentationFacadeNotice(file, source, previous))
-    .filter(Boolean)
+  return [
+    ...entries(projectRoot).map(({ kind, file, source }) => kind === 'proxy.ts' ? proxyFacadeNotice(file, source, previous) : instrumentationFacadeNotice(file, source, previous)),
+    rootInstrumentationNotice(projectRoot, templatesDir, previous),
+  ].filter(Boolean)
+}
+
+/** A root instrumentation.ts that prepare may move to src/: no src/instrumentation.ts, and a current or earlier template. */
+function movableRootInstrumentation(projectRoot, templatesDir, previous) {
+  if (isCorePackage(projectRoot) || !existsSync(join(projectRoot, ROOT_INSTRUMENTATION)) || existsSync(join(projectRoot, SRC_INSTRUMENTATION))) return false
+  const source = readFileSync(join(projectRoot, ROOT_INSTRUMENTATION), 'utf8')
+  return source === currentTemplate('instrumentation.ts', SRC_INSTRUMENTATION, templatesDir) || isPreviousTemplate('instrumentation.ts', source, previous)
+}
+
+function rootInstrumentationNotice(projectRoot, templatesDir, previous) {
+  if (isCorePackage(projectRoot) || !existsSync(join(projectRoot, ROOT_INSTRUMENTATION))) return null
+  const notLoaded = `${ROOT_INSTRUMENTATION} is at the project root, where Next.js does not load it when the app is in src/app: a standalone or webpack build never runs its register(), so the startup checks and scheduled actions do not run. `
+  return {
+    code: INSTRUMENTATION_NOT_LOADED,
+    target: ROOT_INSTRUMENTATION,
+    message: notLoaded + (
+      movableRootInstrumentation(projectRoot, templatesDir, previous)
+        ? `It is an unchanged core template, and nextspark prepare moves it to ${SRC_INSTRUMENTATION}.`
+        : existsSync(join(projectRoot, SRC_INSTRUMENTATION))
+          ? `${SRC_INSTRUMENTATION} is the one Next.js loads: move what the root file does into it, then delete the root file.`
+          : `Move it: git mv ${ROOT_INSTRUMENTATION} ${SRC_INSTRUMENTATION} (an import relative to the file needs one more ../).`),
+  }
 }
 
 /**
@@ -145,6 +176,24 @@ export function projectEntryNotices(projectRoot, { templatesDir = TEMPLATES_DIR,
 export function upgradeProjectEntries(projectRoot, { templatesDir = TEMPLATES_DIR, previous = PREVIOUS } = {}) {
   if (!projectRoot || !existsSync(join(templatesDir, 'proxy.ts'))) return []
   const replaced = []
+  if (movableRootInstrumentation(projectRoot, templatesDir, previous)) {
+    const files = projectFiles(projectRoot)
+    try {
+      files.writeFileSync(join(projectRoot, SRC_INSTRUMENTATION), currentTemplate('instrumentation.ts', SRC_INSTRUMENTATION, templatesDir))
+      files.unlinkSync(join(projectRoot, ROOT_INSTRUMENTATION))
+      replaced.push({
+        code: INSTRUMENTATION_MOVED,
+        target: ROOT_INSTRUMENTATION,
+        message: `${ROOT_INSTRUMENTATION} was an unchanged core template at the project root, where Next.js does not load it when the app is in src/app; it is now ${SRC_INSTRUMENTATION}, re-exporting @nextsparkjs/core/instrumentation. Commit the change.`,
+      })
+    } catch (error) {
+      replaced.push({
+        code: ENTRY_NOT_REPLACED,
+        target: ROOT_INSTRUMENTATION,
+        message: `${ROOT_INSTRUMENTATION} is an unchanged core template at the project root, where Next.js does not load it when the app is in src/app, and nextspark prepare could not move it: ${String(error?.message ?? error).replace(/\s+/g, ' ')} Move it: git mv ${ROOT_INSTRUMENTATION} ${SRC_INSTRUMENTATION}.`,
+      })
+    }
+  }
   for (const { kind, file, source } of entries(projectRoot)) {
     const template = currentTemplate(kind, file, templatesDir)
     if (source === template || !isPreviousTemplate(kind, source, previous)) continue

@@ -50,7 +50,7 @@ import { webhookRoutes } from './webhooks.mjs'
 import { coreRouteRateLimit } from './rate-limit.mjs'
 import { proxyAreaNotices } from './proxy-areas.mjs'
 import { proxyPathDiagnostics } from './proxy-paths.mjs'
-import { ENTRY_NOT_REPLACED, projectEntryNotices, upgradeProjectEntries } from './project-entries.mjs'
+import { ENTRY_NOT_REPLACED, INSTRUMENTATION_MOVED, INSTRUMENTATION_NOT_LOADED, projectEntryNotices, upgradeProjectEntries } from './project-entries.mjs'
 import { HostPlanError, compareTargets, planHost } from './plan.mjs'
 import { DEV_DIAGNOSTIC_FILE, DEV_STATUS_FILE, devDiagnosticModule, devFailureDiagnostic, renderHost } from './render.mjs'
 import {
@@ -267,8 +267,10 @@ async function generateAndPublish(config, { mode, devStatus, cache }) {
       const replacedFiles = new Set(replaced.filter(notice => notice.code !== ENTRY_NOT_REPLACED).map(notice => notice.target))
       // A copy that could not be written gets NS_PROJECT_ENTRY_NOT_REPLACED in place of the notice saying prepare replaces it
       const failedFiles = new Set(replaced.filter(notice => notice.code === ENTRY_NOT_REPLACED).map(notice => notice.target))
+      // A root instrumentation.ts replaced where it is stays not loaded: only the move answers NS_INSTRUMENTATION_NOT_LOADED
+      const moved = replaced.some(notice => notice.code === INSTRUMENTATION_MOVED)
       const kept = notices.filter(notice =>
-        !(replacedFiles.has(notice.target) && /^NS_(?:PROXY|INSTRUMENTATION)_/.test(notice.code)) &&
+        (notice.code === INSTRUMENTATION_NOT_LOADED ? !moved : !(replacedFiles.has(notice.target) && /^NS_(?:PROXY|INSTRUMENTATION)_/.test(notice.code))) &&
         !(failedFiles.has(notice.target) && /^NS_(?:PROXY|INSTRUMENTATION)_FACADE_MISSING$/.test(notice.code)))
       return { routes, files, record, notices: [...replaced, ...kept], ...published, contracts: contractsResult }
     } catch (error) {

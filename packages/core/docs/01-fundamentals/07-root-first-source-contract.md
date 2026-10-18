@@ -54,7 +54,8 @@ my-project/
 │
 ├── src/
 │   ├── app/                     # GENERATED Next.js adapter; never edit
-│   └── proxy.ts                 # Next.js 16 request entry: re-exports @nextsparkjs/core/proxy
+│   ├── proxy.ts                 # Next.js 16 request entry: re-exports @nextsparkjs/core/proxy
+│   └── instrumentation.ts       # Next.js startup entry: re-exports @nextsparkjs/core/instrumentation
 └── .nextspark/
     └── registries/              # GENERATED registries and manifests; never edit
 ```
@@ -154,7 +155,7 @@ Project-template source may not provide these names at the project root:
 | --- | --- |
 | `middleware.*` | Reserved by Next.js. A migrated theme middleware hook moves to `config/hooks/proxy.ts` and is composed by the framework request entry under `src/`. |
 | `proxy.*` | Reserved for the Next.js/framework request entry under `src/`. Project request behavior belongs in `config/hooks/proxy.ts`. |
-| `instrumentation.*` | Reserved for the Next.js/framework instrumentation entry. Project instrumentation behavior belongs in `config/hooks/instrumentation.ts`. |
+| `instrumentation.*` | Reserved for the Next.js/framework instrumentation entry under `src/` (next to `src/app`, the only place `next build` takes it from). Project instrumentation behavior belongs in `config/hooks/instrumentation.ts`. |
 | `app/` | Must not coexist with generated `src/app/`. Route source belongs in `templates/` or `api/`. |
 | `pages/` | Unsupported Pages Router root. Route source belongs in `templates/` or `api/`. |
 | `src/` | Reserved for generated host integration, beginning with `src/app/`. Project modules use the named root directories. |

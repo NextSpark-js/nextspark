@@ -6,13 +6,15 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { chmodSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import {
   ENTRY_NOT_REPLACED,
   INSTRUMENTATION_FACADE_WARNING,
+  INSTRUMENTATION_MOVED,
+  INSTRUMENTATION_NOT_LOADED,
   INSTRUMENTATION_TEMPLATE_REPLACED,
   PROXY_FACADE_WARNING,
   PROXY_TEMPLATE_REPLACED,
@@ -72,30 +74,30 @@ test('unchanged copies are replaced with the current templates and reported; edi
   const { root, cleanup } = project()
   try {
     write(root, 'src/proxy.ts', OLD_PROXY)
-    write(root, 'instrumentation.ts', OLD_INSTRUMENTATION)
+    write(root, 'src/instrumentation.ts', OLD_INSTRUMENTATION)
     assert.deepEqual(projectEntryNotices(root, { previous }).map(notice => notice.code), [PROXY_FACADE_WARNING, INSTRUMENTATION_FACADE_WARNING])
     assert.match(projectEntryNotices(root, { previous })[0].message, /is an unchanged copy of an earlier core proxy template; nextspark prepare replaces it/)
 
     const replaced = upgradeProjectEntries(root, { previous })
-    assert.deepEqual(replaced.map(notice => [notice.code, notice.target]), [[PROXY_TEMPLATE_REPLACED, 'src/proxy.ts'], [INSTRUMENTATION_TEMPLATE_REPLACED, 'instrumentation.ts']])
+    assert.deepEqual(replaced.map(notice => [notice.code, notice.target]), [[PROXY_TEMPLATE_REPLACED, 'src/proxy.ts'], [INSTRUMENTATION_TEMPLATE_REPLACED, 'src/instrumentation.ts']])
     assert.equal(readFileSync(join(root, 'src/proxy.ts'), 'utf8'), PROXY)
-    assert.equal(readFileSync(join(root, 'instrumentation.ts'), 'utf8'), INSTRUMENTATION)
+    assert.equal(readFileSync(join(root, 'src/instrumentation.ts'), 'utf8'), INSTRUMENTATION)
     assert.deepEqual(projectEntryNotices(root, { previous }), [], 'the facades get no notice')
     assert.deepEqual(upgradeProjectEntries(root, { previous }), [], 'a second run changes nothing')
 
     const edited = OLD_PROXY.replace('return null', "return request.nextUrl.pathname === '/x' ? null : null")
     write(root, 'src/proxy.ts', edited)
-    write(root, 'instrumentation.ts', `${OLD_INSTRUMENTATION}// mine\n`)
+    write(root, 'src/instrumentation.ts', `${OLD_INSTRUMENTATION}// mine\n`)
     assert.deepEqual(upgradeProjectEntries(root, { previous }), [])
     assert.equal(readFileSync(join(root, 'src/proxy.ts'), 'utf8'), edited)
     const notices = projectEntryNotices(root, { previous })
-    assert.deepEqual(notices.map(notice => [notice.code, notice.target]), [[PROXY_FACADE_WARNING, 'src/proxy.ts'], [INSTRUMENTATION_FACADE_WARNING, 'instrumentation.ts']])
+    assert.deepEqual(notices.map(notice => [notice.code, notice.target]), [[PROXY_FACADE_WARNING, 'src/proxy.ts'], [INSTRUMENTATION_FACADE_WARNING, 'src/instrumentation.ts']])
     assert.ok(notices[0].message.includes("cp node_modules/@nextsparkjs/core/templates/proxy.ts src/proxy.ts"), 'the notice carries the exact replacement')
     assert.ok(!notices.some(notice => /[\r\n]/.test(notice.message)), 'one line each: the CLI shows a notice with a line break quoted')
     assert.match(notices[0].message, /config\/hooks\/proxy\.ts/)
     assert.match(notices[0].message, /createProxy\(\{ authenticatedPaths/)
     assert.match(notices[0].message, /A role check of your own .* goes in that page or its layout/)
-    assert.ok(notices[1].message.includes("cp node_modules/@nextsparkjs/core/templates/instrumentation.ts instrumentation.ts. The template is export { register } from '@nextsparkjs/core/instrumentation'"))
+    assert.ok(notices[1].message.includes("cp node_modules/@nextsparkjs/core/templates/instrumentation.ts src/instrumentation.ts. The template is export { register } from '@nextsparkjs/core/instrumentation'"))
     assert.match(notices[1].message, /registerNextSpark/)
   } finally {
     cleanup()
@@ -108,17 +110,17 @@ test('a copy that cannot be written is left as it is with a warning that says wh
     write(root, 'old-proxy.ts', OLD_PROXY)
     write(root, 'src/.keep', '')
     symlinkSync(join(root, 'old-proxy.ts'), join(root, 'src/proxy.ts'))
-    write(root, 'instrumentation.ts', OLD_INSTRUMENTATION)
+    write(root, 'src/instrumentation.ts', OLD_INSTRUMENTATION)
     const notices = upgradeProjectEntries(root, { previous })
-    assert.deepEqual(notices.map(notice => [notice.code, notice.target]), [[ENTRY_NOT_REPLACED, 'src/proxy.ts'], [INSTRUMENTATION_TEMPLATE_REPLACED, 'instrumentation.ts']])
+    assert.deepEqual(notices.map(notice => [notice.code, notice.target]), [[ENTRY_NOT_REPLACED, 'src/proxy.ts'], [INSTRUMENTATION_TEMPLATE_REPLACED, 'src/instrumentation.ts']])
     assert.match(notices[0].message, /could not replace it: .*symlink.* cp node_modules\/@nextsparkjs\/core\/templates\/proxy\.ts src\/proxy\.ts/)
     assert.ok(!/[\r\n]/.test(notices[0].message))
     assert.equal(readFileSync(join(root, 'old-proxy.ts'), 'utf8'), OLD_PROXY, 'nothing written through the symlink')
 
-    write(root, 'instrumentation.ts', OLD_INSTRUMENTATION)
-    chmodSync(join(root, 'instrumentation.ts'), 0o444)
-    assert.deepEqual(upgradeProjectEntries(root, { previous }).map(notice => [notice.code, notice.target]), [[ENTRY_NOT_REPLACED, 'src/proxy.ts'], [ENTRY_NOT_REPLACED, 'instrumentation.ts']])
-    assert.equal(readFileSync(join(root, 'instrumentation.ts'), 'utf8'), OLD_INSTRUMENTATION)
+    write(root, 'src/instrumentation.ts', OLD_INSTRUMENTATION)
+    chmodSync(join(root, 'src/instrumentation.ts'), 0o444)
+    assert.deepEqual(upgradeProjectEntries(root, { previous }).map(notice => [notice.code, notice.target]), [[ENTRY_NOT_REPLACED, 'src/proxy.ts'], [ENTRY_NOT_REPLACED, 'src/instrumentation.ts']])
+    assert.equal(readFileSync(join(root, 'src/instrumentation.ts'), 'utf8'), OLD_INSTRUMENTATION)
   } finally {
     cleanup()
   }
@@ -140,7 +142,7 @@ test('a proxy built with createProxy, or re-exporting core\'s, gets neither the 
   const { root, cleanup } = project()
   try {
     write(root, 'src/proxy.ts', "import { createProxy } from '@nextsparkjs/core/proxy'\nexport const proxy = createProxy({ authenticatedPaths: ['/account'] })\nexport const config = { matcher: ['/((?!_next/static/|_next/image$|favicon\\\\.ico$).*)'] }\n")
-    write(root, 'instrumentation.ts', "import { register as registerNextSpark } from '@nextsparkjs/core/instrumentation'\nexport async function register() {\n  await registerNextSpark()\n}\n")
+    write(root, 'src/instrumentation.ts', "import { register as registerNextSpark } from '@nextsparkjs/core/instrumentation'\nexport async function register() {\n  await registerNextSpark()\n}\n")
     assert.deepEqual(projectEntryNotices(root), [])
     assert.deepEqual(proxyAreaNotices(root), [])
     write(root, 'src/proxy.ts', PROXY)
@@ -169,14 +171,14 @@ test('prepare replaces the 0.1.0-beta.197 templates once the generation is out, 
   try {
     symlinkSync(join(CORE_ROOT, 'node_modules'), join(root, 'node_modules'), 'dir')
     write(root, 'src/proxy.ts', BETA_197_PROXY)
-    write(root, 'instrumentation.ts', BETA_197_INSTRUMENTATION)
+    write(root, 'src/instrumentation.ts', BETA_197_INSTRUMENTATION)
     const predicted = await predictHost({ ...host.config, projectRoot: root })
-    assert.deepEqual(predicted.notices.filter(notice => /_FACADE_MISSING$/.test(notice.code)).map(notice => notice.target), ['src/proxy.ts', 'instrumentation.ts'])
+    assert.deepEqual(predicted.notices.filter(notice => /_FACADE_MISSING$/.test(notice.code)).map(notice => notice.target), ['src/proxy.ts', 'src/instrumentation.ts'])
     assert.equal(readFileSync(join(root, 'src/proxy.ts'), 'utf8'), BETA_197_PROXY, 'a prediction writes nothing')
 
     const result = await prepareHost({ ...host.config, projectRoot: root }, { mode: 'production' })
     assert.equal(readFileSync(join(root, 'src/proxy.ts'), 'utf8'), PROXY)
-    assert.equal(readFileSync(join(root, 'instrumentation.ts'), 'utf8'), INSTRUMENTATION)
+    assert.equal(readFileSync(join(root, 'src/instrumentation.ts'), 'utf8'), INSTRUMENTATION)
     assert.deepEqual(result.notices.filter(notice => /^NS_(?:PROXY|INSTRUMENTATION)_/.test(notice.code)).map(notice => notice.code), [PROXY_TEMPLATE_REPLACED, INSTRUMENTATION_TEMPLATE_REPLACED])
   } finally {
     host.cleanup()
@@ -192,13 +194,80 @@ test('prepare still succeeds when the 0.1.0-beta.197 proxy cannot be replaced, a
     write(root, 'old-proxy.ts', BETA_197_PROXY)
     write(root, 'src/.keep', '')
     symlinkSync(join(root, 'old-proxy.ts'), join(root, 'src/proxy.ts'))
-    write(root, 'instrumentation.ts', BETA_197_INSTRUMENTATION)
+    write(root, 'src/instrumentation.ts', BETA_197_INSTRUMENTATION)
     const result = await prepareHost({ ...host.config, projectRoot: root }, { mode: 'production' })
     const codes = result.notices.filter(notice => notice.target === 'src/proxy.ts').map(notice => notice.code)
     assert.ok(codes.includes(ENTRY_NOT_REPLACED), codes.join(' '))
     assert.ok(!codes.includes(PROXY_FACADE_WARNING), 'no notice saying prepare replaces a file it could not replace')
     assert.equal(readFileSync(join(root, 'old-proxy.ts'), 'utf8'), BETA_197_PROXY)
-    assert.equal(readFileSync(join(root, 'instrumentation.ts'), 'utf8'), INSTRUMENTATION)
+    assert.equal(readFileSync(join(root, 'src/instrumentation.ts'), 'utf8'), INSTRUMENTATION)
+  } finally {
+    host.cleanup()
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+/**
+ * #297: with the app in src/app, next build looks for the instrumentation hook in src/ only, so a root
+ * instrumentation.ts is left out of a standalone build (Turbopack) or not built at all (webpack).
+ */
+test('a root instrumentation.ts that is a core template moves to src/; a second run changes nothing', () => {
+  for (const source of [INSTRUMENTATION, OLD_INSTRUMENTATION]) {
+    const { root, cleanup } = project()
+    try {
+      write(root, 'src/proxy.ts', PROXY)
+      write(root, 'instrumentation.ts', source)
+      const before = projectEntryNotices(root, { previous }).filter(notice => notice.code === INSTRUMENTATION_NOT_LOADED)
+      assert.equal(before.length, 1)
+      assert.match(before[0].message, /does not load it when the app is in src\/app.*nextspark prepare moves it to src\/instrumentation\.ts\.$/)
+
+      const moved = upgradeProjectEntries(root, { previous })
+      assert.deepEqual(moved.map(notice => [notice.code, notice.target]), [[INSTRUMENTATION_MOVED, 'instrumentation.ts']])
+      assert.equal(existsSync(join(root, 'instrumentation.ts')), false)
+      assert.equal(readFileSync(join(root, 'src/instrumentation.ts'), 'utf8'), INSTRUMENTATION)
+      assert.deepEqual(projectEntryNotices(root, { previous }), [])
+      assert.deepEqual(upgradeProjectEntries(root, { previous }), [])
+    } finally {
+      cleanup()
+    }
+  }
+})
+
+test('a root instrumentation.ts of the project is kept, with a notice that says how to move it', () => {
+  const { root, cleanup } = project()
+  try {
+    const own = "import { register as registerNextSpark } from '@nextsparkjs/core/instrumentation'\nexport async function register() {\n  await registerNextSpark()\n}\n"
+    write(root, 'instrumentation.ts', own)
+    assert.deepEqual(upgradeProjectEntries(root, { previous }), [])
+    assert.equal(readFileSync(join(root, 'instrumentation.ts'), 'utf8'), own)
+    const [notice] = projectEntryNotices(root, { previous })
+    assert.deepEqual([notice.code, notice.target], [INSTRUMENTATION_NOT_LOADED, 'instrumentation.ts'])
+    assert.match(notice.message, /git mv instrumentation\.ts src\/instrumentation\.ts/)
+
+    // with src/instrumentation.ts there too, that one is loaded: the root one is not moved over it, even unchanged
+    write(root, 'instrumentation.ts', INSTRUMENTATION)
+    write(root, 'src/instrumentation.ts', own)
+    assert.deepEqual(upgradeProjectEntries(root, { previous }), [])
+    assert.equal(readFileSync(join(root, 'src/instrumentation.ts'), 'utf8'), own)
+    assert.match(projectEntryNotices(root, { previous }).find(n => n.code === INSTRUMENTATION_NOT_LOADED).message, /src\/instrumentation\.ts is the one Next\.js loads/)
+  } finally {
+    cleanup()
+  }
+})
+
+test('prepare moves a root core template to src/instrumentation.ts and drops the notice it had', async () => {
+  const host = tempHost({ 'templates/about/page.tsx': PAGE('About') })
+  const root = mkdtempSync(join(tmpdir(), 'nextspark-entries-project-'))
+  try {
+    symlinkSync(join(CORE_ROOT, 'node_modules'), join(root, 'node_modules'), 'dir')
+    write(root, 'src/proxy.ts', PROXY)
+    write(root, 'instrumentation.ts', INSTRUMENTATION)
+    const predicted = await predictHost({ ...host.config, projectRoot: root })
+    assert.ok(predicted.notices.some(notice => notice.code === INSTRUMENTATION_NOT_LOADED))
+    const result = await prepareHost({ ...host.config, projectRoot: root }, { mode: 'production' })
+    assert.deepEqual(result.notices.filter(notice => /^NS_INSTRUMENTATION_/.test(notice.code)).map(notice => notice.code), [INSTRUMENTATION_MOVED])
+    assert.equal(existsSync(join(root, 'instrumentation.ts')), false)
+    assert.equal(readFileSync(join(root, 'src/instrumentation.ts'), 'utf8'), INSTRUMENTATION)
   } finally {
     host.cleanup()
     rmSync(root, { recursive: true, force: true })
@@ -208,7 +277,7 @@ test('prepare still succeeds when the 0.1.0-beta.197 proxy cannot be replaced, a
 test('prepare shows the facade notices and a copy it could not replace as warnings, not as info', () => {
   const source = readFileSync(join(CORE_ROOT, 'scripts/build/registry/host/prepare-cli.mjs'), 'utf8')
   const warnings = source.match(/const WARNING_NOTICES = new Set\(\[([^\]]*)\]\)/)?.[1] ?? ''
-  for (const code of [PROXY_FACADE_WARNING, INSTRUMENTATION_FACADE_WARNING, ENTRY_NOT_REPLACED]) assert.ok(warnings.includes(`'${code}'`), code)
+  for (const code of [PROXY_FACADE_WARNING, INSTRUMENTATION_FACADE_WARNING, INSTRUMENTATION_NOT_LOADED, ENTRY_NOT_REPLACED]) assert.ok(warnings.includes(`'${code}'`), code)
 })
 
 test('an invalid createProxy authenticatedPaths entry is refused at prepare, not only when the server starts', async () => {
