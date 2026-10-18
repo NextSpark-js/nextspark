@@ -212,7 +212,7 @@ test('prepare still succeeds when the 0.1.0-beta.197 proxy cannot be replaced, a
  * instrumentation.ts is left out of a standalone build (Turbopack) or not built at all (webpack).
  */
 test('a root instrumentation.ts that is a core template moves to src/; a second run changes nothing', () => {
-  for (const source of [INSTRUMENTATION, OLD_INSTRUMENTATION]) {
+  for (const source of [INSTRUMENTATION, INSTRUMENTATION.replace(/\n/g, '\r\n'), OLD_INSTRUMENTATION]) {
     const { root, cleanup } = project()
     try {
       write(root, 'src/proxy.ts', PROXY)
@@ -249,8 +249,25 @@ test('a root instrumentation.ts of the project is kept, with a notice that says 
     write(root, 'src/instrumentation.ts', own)
     assert.deepEqual(upgradeProjectEntries(root, { previous }), [])
     assert.equal(readFileSync(join(root, 'src/instrumentation.ts'), 'utf8'), own)
-    assert.match(projectEntryNotices(root, { previous }).find(n => n.code === INSTRUMENTATION_NOT_LOADED).message, /src\/instrumentation\.ts is the one Next\.js loads/)
+    assert.match(projectEntryNotices(root, { previous }).find(n => n.code === INSTRUMENTATION_NOT_LOADED).message, /which one runs depends on the bundler.*merge what the root file does into src\/instrumentation\.ts, then delete the root file/)
   } finally {
+    cleanup()
+  }
+})
+
+test('a move that wrote src/ but could not delete the root file says both exist and the root one can go', { skip: process.getuid?.() === 0 && 'root deletes from read-only directories' }, () => {
+  const { root, cleanup } = project()
+  try {
+    write(root, 'src/proxy.ts', PROXY)
+    write(root, 'instrumentation.ts', INSTRUMENTATION)
+    chmodSync(root, 0o555)
+    const notices = upgradeProjectEntries(root, { previous })
+    chmodSync(root, 0o755)
+    assert.deepEqual(notices.map(notice => [notice.code, notice.target]), [[ENTRY_NOT_REPLACED, 'instrumentation.ts']])
+    assert.match(notices[0].message, /wrote the current template to src\/instrumentation\.ts but could not delete the root file: .* Both files now exist; delete instrumentation\.ts\.$/)
+    assert.equal(readFileSync(join(root, 'src/instrumentation.ts'), 'utf8'), INSTRUMENTATION)
+  } finally {
+    chmodSync(root, 0o755)
     cleanup()
   }
 })

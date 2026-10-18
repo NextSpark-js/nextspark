@@ -149,7 +149,7 @@ export function projectEntryNotices(projectRoot, { templatesDir = TEMPLATES_DIR,
 function movableRootInstrumentation(projectRoot, templatesDir, previous) {
   if (isCorePackage(projectRoot) || !existsSync(join(projectRoot, ROOT_INSTRUMENTATION)) || existsSync(join(projectRoot, SRC_INSTRUMENTATION))) return false
   const source = readFileSync(join(projectRoot, ROOT_INSTRUMENTATION), 'utf8')
-  return source === currentTemplate('instrumentation.ts', SRC_INSTRUMENTATION, templatesDir) || isPreviousTemplate('instrumentation.ts', source, previous)
+  return source.replace(/\r\n/g, '\n') === currentTemplate('instrumentation.ts', SRC_INSTRUMENTATION, templatesDir) || isPreviousTemplate('instrumentation.ts', source, previous)
 }
 
 function rootInstrumentationNotice(projectRoot, templatesDir, previous) {
@@ -162,7 +162,7 @@ function rootInstrumentationNotice(projectRoot, templatesDir, previous) {
       movableRootInstrumentation(projectRoot, templatesDir, previous)
         ? `It is an unchanged core template, and nextspark prepare moves it to ${SRC_INSTRUMENTATION}.`
         : existsSync(join(projectRoot, SRC_INSTRUMENTATION))
-          ? `${SRC_INSTRUMENTATION} is the one Next.js loads: move what the root file does into it, then delete the root file.`
+          ? `With both files, which one runs depends on the bundler (Turbopack takes the root one, webpack ${SRC_INSTRUMENTATION}): merge what the root file does into ${SRC_INSTRUMENTATION}, then delete the root file.`
           : `Move it: git mv ${ROOT_INSTRUMENTATION} ${SRC_INSTRUMENTATION} (an import relative to the file needs one more ../).`),
   }
 }
@@ -178,8 +178,10 @@ export function upgradeProjectEntries(projectRoot, { templatesDir = TEMPLATES_DI
   const replaced = []
   if (movableRootInstrumentation(projectRoot, templatesDir, previous)) {
     const files = projectFiles(projectRoot)
+    let written = false
     try {
       files.writeFileSync(join(projectRoot, SRC_INSTRUMENTATION), currentTemplate('instrumentation.ts', SRC_INSTRUMENTATION, templatesDir))
+      written = true
       files.unlinkSync(join(projectRoot, ROOT_INSTRUMENTATION))
       replaced.push({
         code: INSTRUMENTATION_MOVED,
@@ -190,7 +192,9 @@ export function upgradeProjectEntries(projectRoot, { templatesDir = TEMPLATES_DI
       replaced.push({
         code: ENTRY_NOT_REPLACED,
         target: ROOT_INSTRUMENTATION,
-        message: `${ROOT_INSTRUMENTATION} is an unchanged core template at the project root, where Next.js does not load it when the app is in src/app, and nextspark prepare could not move it: ${String(error?.message ?? error).replace(/\s+/g, ' ')} Move it: git mv ${ROOT_INSTRUMENTATION} ${SRC_INSTRUMENTATION}.`,
+        message: written
+          ? `${ROOT_INSTRUMENTATION} is an unchanged core template at the project root; nextspark prepare wrote the current template to ${SRC_INSTRUMENTATION} but could not delete the root file: ${String(error?.message ?? error).replace(/\s+/g, ' ')} Both files now exist; delete ${ROOT_INSTRUMENTATION}.`
+          : `${ROOT_INSTRUMENTATION} is an unchanged core template at the project root, where Next.js does not load it when the app is in src/app, and nextspark prepare could not move it: ${String(error?.message ?? error).replace(/\s+/g, ' ')} Move it: git mv ${ROOT_INSTRUMENTATION} ${SRC_INSTRUMENTATION}.`,
       })
     }
   }
