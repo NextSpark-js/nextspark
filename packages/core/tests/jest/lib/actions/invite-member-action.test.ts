@@ -106,7 +106,7 @@ beforeEach(() => {
   mockCheckRateLimit.mockReturnValue({ allowed: true, resetTime: Date.now() + 60_000 })
   mockAuthenticateRequest.mockResolvedValue({ success: true, user: ACTOR })
   mockGetSession.mockResolvedValue({ user: ACTOR, session: { id: 's1' } })
-  mockSend.mockResolvedValue(undefined)
+  mockSend.mockResolvedValue({ id: 'email-1', success: true })
   world()
 })
 
@@ -150,6 +150,32 @@ describe('inviteMember creates a pending invitation', () => {
     mockGetSession.mockResolvedValue(null)
     expect(await inviteMember('team-1', 'new@example.com', 'member')).toEqual({ success: false, error: 'Authentication required' })
     expect(mockMutate).not.toHaveBeenCalled()
+  })
+})
+
+describe('an invitation email that could not be sent', () => {
+  const deletes = () => mockMutate.mock.calls.filter(([sql]) => String(sql).startsWith('DELETE FROM "team_invitations"'))
+
+  it.each([
+    ['the provider answers success: false', () => mockSend.mockResolvedValue({ id: '', success: false, error: 'provider detail 550' })],
+    ['the provider throws', () => mockSend.mockRejectedValue(new Error('provider detail 550'))],
+  ])('%s: the invitation is removed and both callers answer EMAIL_SEND_FAILED', async (_name, failSend) => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    failSend()
+
+    const action = await inviteMember('team-1', 'new@example.com', 'member')
+    expect(action).toEqual({ success: false, error: 'The invitation email could not be sent. Try again later.' })
+    expect(deletes()).toHaveLength(1)
+    expect(deletes()[0][1]).toEqual(['inv-1'])
+
+    const res = await rest('new@example.com', 'member')
+    const body = await res.json()
+    expect(res.status).toBe(503)
+    expect(body.code).toBe('EMAIL_SEND_FAILED')
+    // the provider's text stays in the server log
+    expect(JSON.stringify(body)).not.toContain('provider detail')
+    expect(String(consoleError.mock.calls.flat().map(String))).toContain('provider detail 550')
+    consoleError.mockRestore()
   })
 })
 

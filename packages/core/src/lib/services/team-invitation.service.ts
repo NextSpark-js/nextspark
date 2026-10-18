@@ -151,7 +151,8 @@ export class TeamInvitationService {
         I18N_CONFIG.defaultLocale
       )
 
-      await emailProvider.send({ to: email, subject: emailContent.subject, html: emailContent.html })
+      const sent = await emailProvider.send({ to: email, subject: emailContent.subject, html: emailContent.html })
+      if (!sent.success) throw new Error(sent.error || 'The email provider did not send the invitation')
 
       // Development only (to accept an invitation without an inbox): the accept URL is a credential
       if (process.env.NODE_ENV === 'development') {
@@ -166,9 +167,15 @@ export class TeamInvitationService {
         console.log('🎫'.repeat(30) + '\n')
       }
     } catch (emailError) {
-      // Log error but don't fail the invitation creation
+      // An invitation nobody received must not look sent: remove it, so the inviter sees the error and can retry
       console.error('Failed to send invitation email:', emailError)
-      if (process.env.NODE_ENV === 'development') console.log(`⚠️ Email failed but invitation created. Accept URL: ${acceptUrl}`)
+      await mutateWithRLS('DELETE FROM "team_invitations" WHERE id = $1', [invitation.id], actor.id)
+      return {
+        success: false,
+        status: 503,
+        code: 'EMAIL_SEND_FAILED',
+        error: 'The invitation email could not be sent. Try again later.',
+      }
     }
 
     return { success: true, invitation }

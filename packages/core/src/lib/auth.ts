@@ -26,6 +26,7 @@ import { resolveOtpConfig } from './auth/otp-config';
 import { isPasswordLoginEnabled } from './auth/auth-methods';
 import { evaluateSessionSecret } from './auth/readiness';
 import { isRuntimeEmailAvailable } from './auth/runtime-readiness';
+import { trackCodeSend } from './auth/code-send';
 import { resolveSocialProviders, socialSignUpProvider } from './auth/social-providers';
 import { getTrustedOrigins } from './utils/cors';
 import { withBasePath } from './base-path';
@@ -316,15 +317,26 @@ export const auth = betterAuth({
     // request before Better Auth can invoke it.
     ...(isRuntimeEmailAvailable()
       ? [emailOTP({
-          async sendVerificationOTP({ email, otp, type }) {
-            const template = await sendOtpVerificationEmail({
-              email,
-              otp,
-              type,
-              appName: process.env.NEXT_PUBLIC_APP_NAME || APP_NAME,
-              expiresIn: otpConfig.expiresIn,
-            }, I18N_CONFIG.defaultLocale);
-            await getEmailService().send({ to: email, ...template });
+          sendVerificationOTP({ email, otp, type }) {
+            const send = (async () => {
+              try {
+                const template = await sendOtpVerificationEmail({
+                  email,
+                  otp,
+                  type,
+                  appName: process.env.NEXT_PUBLIC_APP_NAME || APP_NAME,
+                  expiresIn: otpConfig.expiresIn,
+                }, I18N_CONFIG.defaultLocale);
+                const response = await getEmailService().send({ to: email, ...template });
+                if (!response.success) throw new Error(response.error || 'the email provider did not send it');
+              } catch (error) {
+                // The provider's error stays in the server log
+                console.error(`[auth] The ${type} code email could not be sent:`, error);
+                throw new Error(`The ${type} code email could not be sent`);
+              }
+            })();
+            // A failed sign-in code send becomes the route's EMAIL_SEND_FAILED (lib/auth/code-send)
+            return type === 'sign-in' ? trackCodeSend(send) : send;
           },
           otpLength: otpConfig.otpLength,
           expiresIn: otpConfig.expiresIn,

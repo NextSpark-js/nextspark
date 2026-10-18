@@ -33,6 +33,25 @@ The readiness diagnostics name the variable that holds the problem:
 `EMAIL_FROM_SANDBOX` for a bad `EMAIL_FROM`, and the `RESEND_FROM_EMAIL_*` codes
 when the address comes from `RESEND_FROM_EMAIL`.
 
+## When an email cannot be sent
+
+A provider can refuse a send at runtime: an unverified sender, a rejected
+password, a server that is down. What the caller sees depends on the email:
+
+| Email | When the send fails |
+|---|---|
+| Sign-in code | The code request answers `503` with `{ "code": "EMAIL_SEND_FAILED" }`, and the login form shows a translated "could not send" message. The answer is the same for every address, known or not |
+| Verification and password-reset codes | The request still succeeds: these go only to existing accounts, so an error would reveal which addresses have one |
+| Password reset link | The request still succeeds, for the same reason |
+| Verification link after sign-up | The sign-up succeeds; the user can ask for the email again |
+| Verification link sent again | The request fails (Better Auth's own behavior) |
+| Team invitation | The invitation is not created, and the invite request answers `503` with `EMAIL_SEND_FAILED` so the inviter can retry |
+| Security notifications | Retried as a scheduled action |
+
+The provider's own error text never reaches the client. The server log has it,
+in a line such as `[auth] The sign-in code email could not be sent: ...` or
+`Failed to send invitation email: ...`.
+
 ## SMTP
 
 SMTP covers SendGrid, Mailgun, Amazon SES, Postmark and your own mail server.
@@ -50,9 +69,8 @@ pnpm add nodemailer
 It is loaded the first time an email is sent. If `EMAIL_PROVIDER=smtp` is set
 and the package is missing, the send fails and the server log shows
 "EMAIL_PROVIDER=smtp needs the nodemailer package, which is not installed or not
-included in the deployment". The sign-in code route still answers success when
-the send fails (this is true of every provider), so check
-the server log if no code arrives.
+included in the deployment". The sign-in code request answers `EMAIL_SEND_FAILED`
+(see [When an email cannot be sent](#when-an-email-cannot-be-sent)).
 
 #### Standalone deployments
 

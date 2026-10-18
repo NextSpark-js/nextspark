@@ -30,7 +30,7 @@ jest.mock('@/core/lib/db', () => ({
   stripSSLParams: jest.fn((url: string) => url),
 }))
 jest.mock('@/core/lib/email', () => ({
-  EmailFactory: { create: jest.fn(() => ({ send: jest.fn() })) },
+  EmailFactory: { create: jest.fn(() => ({ send: jest.fn(async () => ({ id: 'e', success: true })) })) },
 }))
 jest.mock('@/core/lib/email/send', () => ({
   sendOtpVerificationEmail: (...args: unknown[]) => mockSendOtpVerificationEmail(...(args as [])),

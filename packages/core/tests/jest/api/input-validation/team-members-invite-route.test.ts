@@ -8,7 +8,7 @@ import { routeHarness, makeReq, idParams, describeMalformedBodies, describeRejec
 
 const mockMembership = { role: 'owner', canPerformAction: jest.fn(() => ({ allowed: true })) }
 jest.mock('@/core/lib/services/membership.service', () => ({ MembershipService: { get: async () => mockMembership } }))
-jest.mock('@/core/lib/email/factory', () => ({ EmailFactory: { getInstance: () => ({ send: jest.fn() }) } }))
+jest.mock('@/core/lib/email/factory', () => ({ EmailFactory: { getInstance: () => ({ send: jest.fn(async () => ({ id: 'email-1', success: true })) }) } }))
 jest.mock('@/core/lib/email/send', () => ({ sendTeamInvitationEmail: jest.fn().mockResolvedValue({ subject: 's', html: 'h' }) }))
 jest.mock('@/core/lib/services', () => ({
   MembershipService: { get: async () => mockMembership },

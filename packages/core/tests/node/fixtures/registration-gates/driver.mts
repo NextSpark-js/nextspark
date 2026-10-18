@@ -1,7 +1,8 @@
 /**
  * Runs the registration steps of REGISTRATION_GATES_STEPS through core's real auth routes and Better Auth (no mocks),
  * and prints one `RESULT <json>` line per step. Only the providers' endpoints are stubbed: Google's and Apple's token
- * endpoints answer with an id token for the step's address, GitHub's token and user API with the step's profile.
+ * endpoints answer with an id token for the step's address, GitHub's token and user API with the step's profile, and
+ * a `send-code` step replaces the email provider with one that sends, answers { success: false } or throws.
  * Started by registration-gates.test.ts and social-providers.test.ts under tsx with this folder's tsconfig.
  */
 import { createPrivateKey, createPublicKey, sign } from 'node:crypto'
@@ -18,11 +19,14 @@ type Step =
   | { op: 'apple'; email: string; emailVerified?: boolean; firstName?: string; lastName?: string }
   // A native app's Sign in with Apple: /sign-in/social with an id token signed by APPLE_PRIVATE_KEY (Apple's keys are stubbed with its public half)
   | { op: 'apple-id-token'; email: string; emailVerified: boolean }
+  // POST /email-otp/send-verification-otp with an email provider that sends, fails or throws
+  | { op: 'send-code'; email: string; type?: 'sign-in' | 'email-verification' | 'forget-password'; provider: 'ok' | 'fail' | 'throw' }
 
 const CORE_SRC = new URL('../../../../src/', import.meta.url)
 const authRoute = await import(new URL('routes/api/auth/[...all]/route.ts', CORE_SRC).href)
 const inviteRoute = await import(new URL('routes/api/v1/auth/signup-with-invite/route.ts', CORE_SRC).href)
 const { auth } = await import(new URL('lib/auth.ts', CORE_SRC).href)
+const { EmailFactory } = await import(new URL('lib/email/factory.ts', CORE_SRC).href)
 
 const ORIGIN = process.env.NEXT_PUBLIC_APP_URL!
 const PASSWORD = 'correct-horse-battery-staple'
@@ -142,6 +146,23 @@ async function run(step: Step) {
       const res = await authRoute.POST(json('/api/auth/sign-in/social', { provider: 'apple', idToken: { token: `${input}.${signature}` } }))
       const text = await res.clone().text()
       return { ...(await outcome(res)), body: text.slice(0, 300), setsSession: res.headers.getSetCookie().some(c => c.includes('session_token')) }
+    }
+    case 'send-code': {
+      let sends = 0
+      const provider = step.provider
+      EmailFactory.create = () => ({
+        send: async () => {
+          sends++
+          if (provider === 'throw') throw new Error('stub provider detail: connection reset')
+          return provider === 'ok' ? { id: 'stub', success: true } : { id: '', success: false, error: 'stub provider detail: domain not verified' }
+        },
+        verify: async () => true,
+      })
+      const res = await authRoute.POST(json('/api/auth/email-otp/send-verification-otp', { email: step.email, type: step.type ?? 'sign-in' }))
+      const body = await res.clone().text()
+      // a send handed to the background (a verification or reset code) settles after the response
+      await new Promise(resolve => setTimeout(resolve, 200))
+      return { ...(await outcome(res)), body, sends }
     }
     case 'invite':
       return outcome(await inviteRoute.POST(json('/api/v1/auth/signup-with-invite', { email: step.email, password: PASSWORD, firstName: 'Invited', inviteToken: step.token })))

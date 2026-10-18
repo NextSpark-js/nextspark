@@ -33,6 +33,16 @@ describe('useAuthActions registration-policy codes', () => {
       .rejects.toMatchObject({ code: 'DOMAIN_NOT_ALLOWED', message: domainError.message })
   })
 
+  test('sendOtp keeps EMAIL_SEND_FAILED, a code the email provider could not send', async () => {
+    mockSendOtp.mockResolvedValue({
+      data: null,
+      error: { status: 503, code: 'EMAIL_SEND_FAILED', message: 'The email could not be sent. Try again later.' },
+    })
+    const { result } = renderHook(() => useAuthActions())
+
+    await expect(result.current.sendOtp('a@nextspark.dev')).rejects.toMatchObject({ code: 'EMAIL_SEND_FAILED' })
+  })
+
   test('other Better Auth codes are not passed on (the forms derive those from the message)', async () => {
     mockOtpSignIn.mockResolvedValue({ data: null, error: { status: 400, code: 'INVALID_OTP', message: 'Invalid OTP' } })
     const { result } = renderHook(() => useAuthActions())

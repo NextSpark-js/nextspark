@@ -17,10 +17,10 @@ import { SIGNUP_INTENT_HEADER } from '../lib/api/client-headers'
 import type { AuthError } from '../types/auth'
 import type { SocialLoginMethod } from '../lib/config/types'
 
-// Keeps a registration-policy code (DOMAIN_NOT_ALLOWED, SIGNUP_RESTRICTED) so forms can show their own message for it
+// Keeps a registration-policy code (DOMAIN_NOT_ALLOWED, SIGNUP_RESTRICTED) or EMAIL_SEND_FAILED so forms can show their own message for it
 function toAuthError(error: { message?: string; code?: string }, fallback: string): AuthError {
   const authError: AuthError = new Error(error.message || fallback)
-  if (error.code === 'DOMAIN_NOT_ALLOWED' || error.code === 'SIGNUP_RESTRICTED') authError.code = error.code
+  if (error.code === 'DOMAIN_NOT_ALLOWED' || error.code === 'SIGNUP_RESTRICTED' || error.code === 'EMAIL_SEND_FAILED') authError.code = error.code
   return authError
 }
 

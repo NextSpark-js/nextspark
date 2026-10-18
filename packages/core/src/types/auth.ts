@@ -21,6 +21,7 @@ export type AuthErrorCode =
   | 'UNKNOWN_ERROR'
   | 'DOMAIN_NOT_ALLOWED'
   | 'SIGNUP_RESTRICTED'
+  | 'EMAIL_SEND_FAILED'
 
 /**
  * Authentication error with code mapping

@@ -14,6 +14,7 @@ import { dispatchSecurityNotificationsForRequest } from "@nextsparkjs/core/lib/a
 import { verifyEmailPageUrl } from "@nextsparkjs/core/lib/auth/verify-email-link";
 import { withBasePathRequest } from "@nextsparkjs/core/lib/base-path";
 import { getAuthReadinessResponse } from "@nextsparkjs/core/lib/auth/runtime-readiness";
+import { withCodeSendOutcome } from "@nextsparkjs/core/lib/auth/code-send";
 
 const handlers = toNextJsHandler(auth);
 
@@ -191,10 +192,13 @@ export async function POST(req: NextRequest) {
   const authReq = withBasePathRequest(req);
 
   // Wrap with CORS headers for cross-origin requests (mobile apps, etc.)
+  // A sign-in code that could not be emailed answers EMAIL_SEND_FAILED instead of Better Auth's 200
   const response = await wrapAuthHandlerWithCors(
-    signupIntent
-      ? () => withSignupContext({ signupIntent }, () => handlers.POST(authReq))
-      : () => handlers.POST(authReq),
+    () => withCodeSendOutcome(
+      signupIntent
+        ? () => withSignupContext({ signupIntent }, () => handlers.POST(authReq))
+        : () => handlers.POST(authReq)
+    ),
     req
   );
 

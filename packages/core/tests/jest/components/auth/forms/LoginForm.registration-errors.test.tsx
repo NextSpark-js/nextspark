@@ -143,6 +143,15 @@ describe('LoginForm — registration-policy codes', () => {
     await waitFor(() => expect(byCy('auth.login.errorAlert')).toHaveTextContent('registrationErrors.signupRestricted'))
   })
 
+  test('sending a code: EMAIL_SEND_FAILED shows the translated could-not-send message and stays on the email step', async () => {
+    mockSendOtp.mockRejectedValue(Object.assign(new Error('The email could not be sent. Try again later.'), { code: 'EMAIL_SEND_FAILED' }))
+    await requestCode('someone@nextspark.dev')
+
+    await waitFor(() => expect(byCy('auth.login.errorAlert')).toHaveTextContent('emailErrors.sendFailed'))
+    expect(byCy('auth.login.errorAlert')).not.toHaveTextContent('could not be sent')
+    expect(byCy('auth.login.otpCodeInput')).not.toBeInTheDocument()
+  })
+
   test('an error without a code keeps the existing handling', async () => {
     mockSignInWithOtp.mockRejectedValue(new Error('Invalid OTP'))
     await requestCode('someone@nextspark.dev')
