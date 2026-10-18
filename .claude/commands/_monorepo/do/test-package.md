@@ -516,7 +516,7 @@ rm -rf .next
 pnpm build 2>&1 | tee build.log
 ```
 
-**The readiness check fails the build when no login method in `auth.methods` can authenticate.** The test `.env` has no `RESEND_FROM_EMAIL` and no Google credentials (and the console email provider does not count), so a plain `pnpm build` can stop with diagnostics such as `RESEND_FROM_EMAIL_MISSING` / `GOOGLE_CLIENT_ID_MISSING`. That is the product working as designed, not a defect. Then run the documented **runtime-only build** (providers whose credentials are injected only at runtime): delete any placeholder line such as `RESEND_API_KEY=re_dummy...` from `.env` (a placeholder fails even with the variable below; only *absent* values are deferred), then:
+**The readiness check fails the build when no login method in `auth.methods` can authenticate.** The test `.env` has no `EMAIL_FROM` and no Google credentials (and the console email provider does not count), so a plain `pnpm build` can stop with diagnostics such as `EMAIL_FROM_MISSING` / `GOOGLE_CLIENT_ID_MISSING`. That is the product working as designed, not a defect. Then run the documented **runtime-only build** (providers whose credentials are injected only at runtime): delete any placeholder line such as `RESEND_API_KEY=re_dummy...` from `.env` (a placeholder fails even with the variable below; only *absent* values are deferred), then:
 
 ```bash
 NEXTSPARK_AUTH_RUNTIME_ONLY=email,google pnpm build 2>&1 | tee build.log
@@ -638,7 +638,7 @@ If ANY step fails:
 | Issue | Cause | Fix |
 |-------|-------|-----|
 | `zsh: no matches found: *.tgz` | zsh aborts a glob with no match | `setopt nonomatch` (Step 3) or `rm -f ./*.tgz` |
-| `pnpm build` fails with `RESEND_FROM_EMAIL_MISSING` / `*_PLACEHOLDER` | Auth readiness check: no login method can authenticate | Runtime-only build (Step 12); remove placeholder values from `.env` |
+| `pnpm build` fails with `EMAIL_FROM_MISSING` / `*_PLACEHOLDER` | Auth readiness check: no login method can authenticate | Runtime-only build (Step 12); remove placeholder values from `.env` |
 | `EUNSUPPORTEDPROTOCOL: workspace:*` | Used `npm pack` instead of `pnpm pack` | **Always use `pnpm pack`** - it converts `workspace:*` to real versions |
 | `Module not found: @nextsparkjs/ui` | UI package not installed | Ensure UI tarball is in `.packages/` |
 | `Module not found: better-auth/next-js` | Missing peer dependency | `pnpm add better-auth` |

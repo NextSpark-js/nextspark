@@ -152,10 +152,10 @@ Add these variables to your .env file:
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
 
 # Sender email (must be verified domain in Resend)
-RESEND_FROM_EMAIL=noreply@yourdomain.com
+EMAIL_FROM=noreply@yourdomain.com
 
 # Optional: Sender name
-RESEND_FROM_NAME=Your App Name
+EMAIL_FROM_NAME=Your App Name
 ```
 
 **📋 Optional Variables:**

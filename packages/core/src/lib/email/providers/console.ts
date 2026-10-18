@@ -1,12 +1,15 @@
 import type { EmailProvider, EmailOptions, EmailResponse } from '../types';
+import { defaultFromHeader } from '../sender';
 
 export class ConsoleProvider implements EmailProvider {
   private enabled: boolean;
   private logLevel: 'full' | 'summary' | 'links-only';
+  private defaultFrom?: string;
 
-  constructor(options?: { enabled?: boolean; logLevel?: 'full' | 'summary' | 'links-only' }) {
+  constructor(options?: { enabled?: boolean; logLevel?: 'full' | 'summary' | 'links-only'; defaultFrom?: string }) {
     this.enabled = options?.enabled ?? true;
     this.logLevel = options?.logLevel ?? 'summary';
+    this.defaultFrom = options?.defaultFrom ?? defaultFromHeader();
   }
 
   async send(options: EmailOptions): Promise<EmailResponse> {
@@ -37,7 +40,7 @@ export class ConsoleProvider implements EmailProvider {
     } else if (this.logLevel === 'summary') {
       console.log('📮 To:', Array.isArray(options.to) ? options.to.join(', ') : options.to);
       console.log('📝 Subject:', options.subject);
-      console.log('✉️  From:', options.from || 'default');
+      console.log('✉️  From:', options.from || this.defaultFrom || 'default');
       
       // Extraer y mostrar links importantes
       const links = this.extractLinks(options.html || '');
@@ -57,7 +60,7 @@ export class ConsoleProvider implements EmailProvider {
       // Full log
       console.log('🆔 Email ID:', emailId);
       console.log('📮 To:', Array.isArray(options.to) ? options.to.join(', ') : options.to);
-      console.log('✉️  From:', options.from || 'default');
+      console.log('✉️  From:', options.from || this.defaultFrom || 'default');
       console.log('📝 Subject:', options.subject);
       
       if (options.cc) {

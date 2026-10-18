@@ -93,7 +93,7 @@ async function main() {
         NEXT_PUBLIC_APP_URL: origin,
         NEXTSPARK_AUTH_RUNTIME_ONLY: 'email,google',
         RESEND_API_KEY: 're_authruntimeauthruntimeauthruntime',
-        RESEND_FROM_EMAIL: 'noreply@example.com',
+        EMAIL_FROM: 'noreply@example.com',
         RESEND_BASE_URL: `http://127.0.0.1:${resendPort}`,
       },
     })

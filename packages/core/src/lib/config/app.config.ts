@@ -366,7 +366,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
      *   methods: ['email-otp', 'email-password', 'google']  // both, code first
      *
      * Requirements: an email provider for the code (RESEND_API_KEY +
-     * RESEND_FROM_EMAIL) and GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET for Google.
+     * EMAIL_FROM) and GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET for Google.
      * See docs/06-authentication/12-passwordless-preset.md.
      */
     methods: ['email-otp', 'google'] as AuthLoginMethod[],

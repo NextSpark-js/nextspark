@@ -91,9 +91,11 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 ```bash
 # Resend for transactional emails
 RESEND_API_KEY=re_your_resend_api_key
-RESEND_FROM_EMAIL=noreply@yourdomain.com
-RESEND_FROM_NAME=Your App Name
+EMAIL_FROM=noreply@yourdomain.com
+EMAIL_FROM_NAME=Your App Name
 ```
+
+`EMAIL_FROM` and `EMAIL_FROM_NAME` are the sender of every email provider. A deployment that still sets `RESEND_FROM_EMAIL` / `RESEND_FROM_NAME` keeps working: those are read when the `EMAIL_FROM` variables are unset, and when both are set `EMAIL_FROM` wins.
 
 To send through SendGrid, Mailgun, SES, Postmark or your own server instead, set `EMAIL_PROVIDER=smtp` and the `SMTP_*` variables, and run `pnpm add nodemailer`: see `docs/06-authentication/13-email-providers.md`.
 

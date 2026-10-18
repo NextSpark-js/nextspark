@@ -192,7 +192,7 @@ BETTER_AUTH_SECRET=your-secret-key
 
 # Email (Resend)
 RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL=noreply@yourdomain.com
+EMAIL_FROM=noreply@yourdomain.com
 
 # Vercel deployment
 VERCEL_TEAM=your-team-slug

@@ -81,7 +81,7 @@ await loginWithOtp('user@example.com', '123456') // creates the session; first s
 
 `loginWithOtp` stores the user and the session token and loads the teams exactly
 like `login()`. The code is delivered through the backend's email provider
-(Resend in the default setup — `RESEND_API_KEY` / `RESEND_FROM_EMAIL`).
+(Resend in the default setup — `RESEND_API_KEY` / `EMAIL_FROM`).
 
 ### Google
 

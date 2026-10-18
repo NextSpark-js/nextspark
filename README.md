@@ -75,7 +75,7 @@ When the development server starts, Next.js prints its local URL (port 3000 by d
 
 ## Test a Production Build Locally
 
-Set `DATABASE_URL` in `.env` for local Postgres with `?sslmode=disable`. Unless you entered a provider's credentials in the wizard, a new project has no sign-in provider that works in production (the one-time-code email only prints to the console, which is development-only), so `pnpm build` stops with `Production auth readiness failed` until you either set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (and/or `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`) in `.env`, or declare that your host injects them at runtime. Then run the build and server on the same URL:
+Set `DATABASE_URL` in `.env` for local Postgres with `?sslmode=disable`. Unless you entered a provider's credentials in the wizard, a new project has no sign-in provider that works in production (the one-time-code email only prints to the console, which is development-only), so `pnpm build` stops with `Production auth readiness failed` until you either set `RESEND_API_KEY` and `EMAIL_FROM` (and/or `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`) in `.env`, or declare that your host injects them at runtime. Then run the build and server on the same URL:
 
 ```bash
 NEXTSPARK_AUTH_RUNTIME_ONLY=email,google pnpm build && PORT=3000 pnpm start

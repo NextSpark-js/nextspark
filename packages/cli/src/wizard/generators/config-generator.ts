@@ -381,6 +381,9 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
 # Without a key, emails are printed in the server log and are not sent.
 # To send email, uncomment this and set a real Resend API key.
 # RESEND_API_KEY="re_..."
+# The sender of every email provider (RESEND_FROM_EMAIL is still read when it is unset)
+# EMAIL_FROM_NAME=
+# EMAIL_FROM=
 
 ${oauthSection}`
 

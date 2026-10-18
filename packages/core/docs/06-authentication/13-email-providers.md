@@ -6,12 +6,32 @@ team invitations through one email provider, chosen with `EMAIL_PROVIDER`:
 | `EMAIL_PROVIDER` | Sends through | Needs |
 |---|---|---|
 | `console` | Prints the email in the server log (development only) | nothing |
-| `resend` | [Resend](https://resend.com) | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` |
-| `smtp` | Any SMTP server, through [nodemailer](https://nodemailer.com) | `SMTP_HOST`, `RESEND_FROM_EMAIL`, the `nodemailer` package |
+| `resend` | [Resend](https://resend.com) | `RESEND_API_KEY`, `EMAIL_FROM` |
+| `smtp` | Any SMTP server, through [nodemailer](https://nodemailer.com) | `SMTP_HOST`, `EMAIL_FROM`, the `nodemailer` package |
 | `auto` (default) | `console` in development; Resend when `RESEND_API_KEY` is set, otherwise `console` | |
 
 `auto` never selects `smtp`: choose it explicitly. A production build refuses
 to start local sign-in on `console`.
+
+## The sender
+
+Every provider sends from the same address:
+
+| Variable | Meaning |
+|---|---|
+| `EMAIL_FROM` | The sender address, for example `noreply@example.com`. Resend and SMTP need it; the console provider prints it |
+| `EMAIL_FROM_NAME` | The display name, `App` when unset |
+
+`RESEND_FROM_EMAIL` and `RESEND_FROM_NAME`, the names used before, still work:
+each one is read when its `EMAIL_FROM` counterpart is unset or empty. When both
+are set to different values, `EMAIL_FROM` wins and the server logs one warning
+naming the two variables (never their values). Projects that only set
+`RESEND_FROM_*` need no change; to move, rename the variables.
+
+The readiness diagnostics name the variable that holds the problem:
+`EMAIL_FROM_MISSING` when neither is set, `EMAIL_FROM_MALFORMED` or
+`EMAIL_FROM_SANDBOX` for a bad `EMAIL_FROM`, and the `RESEND_FROM_EMAIL_*` codes
+when the address comes from `RESEND_FROM_EMAIL`.
 
 ## SMTP
 
@@ -61,10 +81,7 @@ for projects that use Resend.
 | `SMTP_SECURE` | no | `true` or `false` (exactly). `true` opens the connection with TLS, normally on port 465. `false` starts in plain text and upgrades with STARTTLS (required when `SMTP_USER` is set, except for `localhost`, `127.0.0.0/8` and `::1`), as on port 587. Unset: `true` when `SMTP_PORT=465`, otherwise `false` |
 | `SMTP_USER` | no | The SMTP username. Set together with `SMTP_PASS`, or leave both unset for a server that does not authenticate |
 | `SMTP_PASS` | no | The SMTP password |
-| `RESEND_FROM_EMAIL` | yes | The sender address: the same variable Resend uses. `RESEND_FROM_NAME` is the display name |
-
-The sender setting keeps its `RESEND_` name: it is the one default-from setting
-for every provider.
+| `EMAIL_FROM` | yes | The sender address, the same for every provider (see [The sender](#the-sender)). `EMAIL_FROM_NAME` is the display name |
 
 The values are checked when the provider is selected. A wrong or incomplete set
 fails with an error that names the variables and never prints their values, for
@@ -116,7 +133,7 @@ SMTP_PORT=25
 SMTP_SECURE=false
 ```
 
-Every example also needs `RESEND_FROM_EMAIL` (a sender the service has
+Every example also needs `EMAIL_FROM` (a sender the service has
 verified) and, except the unauthenticated server, `SMTP_USER` and `SMTP_PASS`.
 
 ## Readiness
@@ -124,7 +141,7 @@ verified) and, except the unauthenticated server, `SMTP_USER` and `SMTP_PASS`.
 The auth readiness check (the production `nextspark build` check, the startup
 log and the request gates) treats a complete SMTP configuration as working email
 for the one-time code, verification, password recovery and invitations. A
-complete configuration is `SMTP_HOST` and `RESEND_FROM_EMAIL`, with `SMTP_PORT`
+complete configuration is `SMTP_HOST` and `EMAIL_FROM`, with `SMTP_PORT`
 and `SMTP_SECURE` well formed when set and `SMTP_USER` / `SMTP_PASS` set
 together. An incomplete one is reported with the variables by name, for example
 `SMTP_HOST_MISSING` or `SMTP_PORT_MALFORMED`. If a host injects the variables only at runtime,

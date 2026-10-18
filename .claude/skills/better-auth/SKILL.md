@@ -747,7 +747,7 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 
 # Email (Resend)
 RESEND_API_KEY=your-resend-key
-RESEND_FROM_EMAIL=noreply@yourdomain.com
+EMAIL_FROM=noreply@yourdomain.com
 ```
 
 ## Anti-Patterns

@@ -215,12 +215,12 @@ re_xxxxxxxxxxxxxxxxxxxxx
 ```
 
 ```text
-RESEND_FROM_EMAIL
+EMAIL_FROM
 noreply@yourdomain.com
 ```
 
 ```text
-RESEND_FROM_NAME
+EMAIL_FROM_NAME
 Your App Name
 ```
 

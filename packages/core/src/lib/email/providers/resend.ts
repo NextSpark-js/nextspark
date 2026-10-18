@@ -1,5 +1,6 @@
 import { Resend, type CreateEmailOptions } from 'resend';
 import type { EmailProvider, EmailOptions, EmailResponse } from '../types';
+import { defaultFromHeader } from '../sender';
 
 export class ResendProvider implements EmailProvider {
   private client: Resend;
@@ -11,7 +12,8 @@ export class ResendProvider implements EmailProvider {
     }
     
     this.client = new Resend(apiKey);
-    this.defaultFrom = defaultFrom || `${process.env.RESEND_FROM_NAME || 'App'} <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`;
+    // Without a configured sender, Resend's testing sender (it only delivers to the account owner)
+    this.defaultFrom = defaultFrom || defaultFromHeader(process.env, 'onboarding@resend.dev')!;
   }
 
   async send(options: EmailOptions): Promise<EmailResponse> {

@@ -159,6 +159,26 @@ test('the resend.dev testing sender is not a production sender', async () => {
   }
 })
 
+test('EMAIL_FROM is the sender; without it or RESEND_FROM_EMAIL the diagnostic names EMAIL_FROM', async () => {
+  const project = await fixture(methods(['email-otp']))
+  const { RESEND_FROM_EMAIL: _fallback, ...withoutSender } = VALID_EMAIL
+  try {
+    const withEmailFrom = run(project.root, ['prepare', '--production'], { ...withoutSender, EMAIL_FROM: 'auth@example.test' })
+    assert.equal(withEmailFrom.status, 0, withEmailFrom.output)
+    assertNoValues(withEmailFrom.output, { EMAIL_FROM: 'auth@example.test' })
+
+    const neither = run(project.root, ['prepare', '--production'], withoutSender)
+    assert.equal(neither.status, 1, neither.output)
+    assert.match(neither.output, /EMAIL_FROM_MISSING/)
+
+    const sandbox = run(project.root, ['prepare', '--production'], { ...VALID_EMAIL, EMAIL_FROM: 'onboarding@resend.dev' })
+    assert.equal(sandbox.status, 1, sandbox.output)
+    assert.match(sandbox.output, /EMAIL_FROM_SANDBOX/)
+  } finally {
+    await project.cleanup()
+  }
+})
+
 test('OAuth-only with valid-shape Google passes and ignores the unused email provider', async () => {
   const project = await fixture(methods(['google']))
   try {

@@ -106,7 +106,7 @@ export function validateGoogleClientSecret(value: string): ValidationResult {
 /**
  * `RESEND_API_KEY`/`GOOGLE_CLIENT_ID` are restrictive enough (`[A-Za-z0-9_-]`
  * plus a few structural characters) that this can never trigger for them.
- * `RESEND_FROM_EMAIL` (`EMAIL_PATTERN` only excludes whitespace/`@`/`<`/`>`)
+ * `EMAIL_FROM` (`EMAIL_PATTERN` only excludes whitespace/`@`/`<`/`>`)
  * and especially `GOOGLE_CLIENT_SECRET` (`/^\S+$/`, otherwise unconstrained)
  * can contain a quote, `#`, or backslash — and this project's `dotenv`
  * (v17, verified empirically, see wizard-sign-in-provider.test.ts) does not

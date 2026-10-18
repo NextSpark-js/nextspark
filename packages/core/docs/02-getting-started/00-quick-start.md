@@ -102,8 +102,8 @@ NEXT_PUBLIC_APP_URL="http://localhost:3010"
 
 # 5. Email service (for auth emails - get free API key from resend.com)
 RESEND_API_KEY="re_xxxxx"
-RESEND_FROM_EMAIL="noreply@yourdomain.com"
-RESEND_FROM_NAME="Your App Name"
+EMAIL_FROM="noreply@yourdomain.com"
+EMAIL_FROM_NAME="Your App Name"
 ```
 
 **Quick Setup Checklist:**
@@ -112,8 +112,8 @@ RESEND_FROM_NAME="Your App Name"
 - [ ] BETTER_AUTH_URL - Use `http://localhost:3010` for local dev
 - [ ] NEXT_PUBLIC_APP_URL - Same as BETTER_AUTH_URL
 - [ ] RESEND_API_KEY - Get free key from [resend.com](https://resend.com)
-- [ ] RESEND_FROM_EMAIL - Your verified email domain
-- [ ] RESEND_FROM_NAME - Display name for emails
+- [ ] EMAIL_FROM - Your verified email domain
+- [ ] EMAIL_FROM_NAME - Display name for emails
 
 **Don't have Supabase?**
 - Create free account: [supabase.com](https://supabase.com)

@@ -717,7 +717,7 @@ BETTER_AUTH_URL="http://localhost:3010"
 grep RESEND_API_KEY .env.local
 
 # Verify email is verified in Resend dashboard
-grep RESEND_FROM_EMAIL .env.local
+grep -E '^(EMAIL_FROM|RESEND_FROM_EMAIL)=' .env.local
 ```
 
 **Test email sending:**
@@ -753,7 +753,7 @@ grep RESEND_API_KEY .env.local
 
 ```bash
 # Check sender email is verified
-grep RESEND_FROM_EMAIL .env.local
+grep -E '^(EMAIL_FROM|RESEND_FROM_EMAIL)=' .env.local
 
 # In Resend dashboard:
 # Domains → Verify your domain

@@ -116,7 +116,7 @@ auth: {
 
 | Variable | Needed for |
 |----------|-----------|
-| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (`RESEND_FROM_NAME` optional) | Delivering the sign-in code. The preset reuses the existing email integration (Resend) — no extra provider. Any SMTP server works too: see [Email Providers](./13-email-providers.md). |
+| `RESEND_API_KEY`, `EMAIL_FROM` (`EMAIL_FROM_NAME` optional) | Delivering the sign-in code. The preset reuses the existing email integration (Resend) — no extra provider. Any SMTP server works too: see [Email Providers](./13-email-providers.md). |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | "Continue with Google". Without them set `providers.google.enabled: false` or drop `'google'` from `methods`. |
 | `BETTER_AUTH_SECRET`, `NEXT_PUBLIC_APP_URL` | Better Auth itself (unchanged). |
 
@@ -176,7 +176,7 @@ minutes per IP) to every `POST /api/auth/*`, OTP requests included.
 
 The auth route evaluates the resolved server `AUTH_CONFIG` together with the runtime environment before invoking Better Auth providers. `GET /api/auth/readiness` returns only a safe status and the methods that can actually be offered (`availableMethods`); it never returns credential values or detailed credential diagnostics. Login screens use this endpoint, including the configured Next.js `basePath`, and render loading, unavailable, or error states instead of buttons that are known to fail.
 
-In production, email OTP requires a valid `RESEND_API_KEY` and a non-placeholder `RESEND_FROM_EMAIL` on a verified domain; the console provider is development-only. Google requires a valid `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Requests for unavailable providers receive a non-secret `503 AUTH_METHOD_UNAVAILABLE` response before provider code runs, while the server log records safe diagnostic codes and remediation messages.
+In production, email OTP requires a valid `RESEND_API_KEY` and a non-placeholder `EMAIL_FROM` on a verified domain; the console provider is development-only. Google requires a valid `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Requests for unavailable providers receive a non-secret `503 AUTH_METHOD_UNAVAILABLE` response before provider code runs, while the server log records safe diagnostic codes and remediation messages.
 
 `auth.methods` remains the list of methods advertised by the UI. In production it also decides the email/password API while `auth.emailAndPassword.enabled` is undeclared (see above): declare `true` to keep those endpoints or `false` to disable them everywhere, and `auth.providers.google.enabled: false` to disable Google endpoints. Session inspection and sign-out remain available even when no new login method is ready, so existing sessions can still be inspected and ended.
 
@@ -244,7 +244,7 @@ The runtime gate is complemented by the production readiness check below. Wizard
 
 ## Production readiness check
 
-`pnpm exec nextspark prepare --production`, and therefore `pnpm exec nextspark build` (with or without `--no-registry`), runs core's `scripts/build/auth-readiness.mjs` after the registry step and before `next build`. It loads the project's `config/app.config.ts` auth settings, reads the same variables as the runtime gate (`EMAIL_PROVIDER`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) from the build environment overlaid on the project `.env`, and fails the build when no method in `auth.methods` can authenticate. Missing, empty, placeholder, and malformed values do not count, and neither does the console email provider or the `resend.dev` testing sender. Output names diagnostic codes, variables, and methods, never their values. Non-production `prepare`, `dev`, and `--watch` do not run it.
+`pnpm exec nextspark prepare --production`, and therefore `pnpm exec nextspark build` (with or without `--no-registry`), runs core's `scripts/build/auth-readiness.mjs` after the registry step and before `next build`. It loads the project's `config/app.config.ts` auth settings, reads the same variables as the runtime gate (`EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM` or `RESEND_FROM_EMAIL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) from the build environment overlaid on the project `.env`, and fails the build when no method in `auth.methods` can authenticate. Missing, empty, placeholder, and malformed values do not count, and neither does the console email provider or the `resend.dev` testing sender. Output names diagnostic codes, variables, and methods, never their values. Non-production `prepare`, `dev`, and `--watch` do not run it.
 
 | Variable | Effect |
 |---|---|

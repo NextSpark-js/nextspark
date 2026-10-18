@@ -218,8 +218,8 @@ NEXT_PUBLIC_APP_URL="http://localhost:3010"
 
 # === EMAIL SERVICE (REQUIRED) ===
 RESEND_API_KEY="re_xxxxx"
-RESEND_FROM_EMAIL="noreply@yourdomain.com"
-RESEND_FROM_NAME="Your App Name"
+EMAIL_FROM="noreply@yourdomain.com"
+EMAIL_FROM_NAME="Your App Name"
 ```
 
 **Generate BETTER_AUTH_SECRET:**

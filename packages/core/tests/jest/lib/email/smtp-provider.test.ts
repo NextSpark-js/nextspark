@@ -125,7 +125,7 @@ describe('EmailFactory with EMAIL_PROVIDER=smtp', () => {
 
   beforeEach(() => {
     for (const key of Object.keys(process.env)) {
-      if (/^(SMTP_|RESEND_|EMAIL_PROVIDER)/.test(key)) delete process.env[key]
+      if (/^(SMTP_|RESEND_|EMAIL_PROVIDER|EMAIL_FROM)/.test(key)) delete process.env[key]
     }
     EmailFactory.reset()
   })
@@ -158,7 +158,7 @@ describe('EmailFactory with EMAIL_PROVIDER=smtp', () => {
 
   test('requires a sender', () => {
     Object.assign(process.env, smtpEnv, { RESEND_FROM_EMAIL: '' })
-    expect(() => EmailFactory.create()).toThrow('RESEND_FROM_EMAIL is required when using the SMTP provider')
+    expect(() => EmailFactory.create()).toThrow('EMAIL_FROM is required when using the SMTP provider')
   })
 
   test('auto never selects SMTP', () => {

@@ -17,8 +17,8 @@ Complete reference for all environment variables used in NextSpark. This guide c
 | `BETTER_AUTH_URL` | ⬜ | `http://localhost:3010` | App URL for auth; defaults to `NEXT_PUBLIC_APP_URL`, and a generated project's `.env` does not set it |
 | `NEXT_PUBLIC_APP_URL` | ✅ | `http://localhost:3010` | Public app URL |
 | `RESEND_API_KEY` | ✅ | `re_xxxxx` | Email service key |
-| `RESEND_FROM_EMAIL` | ✅ | `noreply@domain.com` | Sender email |
-| `RESEND_FROM_NAME` | ✅ | `App Name` | Sender display name |
+| `EMAIL_FROM` | ✅ | `noreply@domain.com` | Sender email, for every email provider (`RESEND_FROM_EMAIL` is read when unset) |
+| `EMAIL_FROM_NAME` | ✅ | `App Name` | Sender display name (`RESEND_FROM_NAME` is read when unset) |
 | `GOOGLE_CLIENT_ID` | ⬜ | `xxxx.apps.googleusercontent.com` | Google OAuth |
 | `GOOGLE_CLIENT_SECRET` | ⬜ | `GOCSPX-xxxxx` | Google OAuth secret |
 
@@ -42,8 +42,8 @@ NEXT_PUBLIC_APP_URL="http://localhost:3010"
 
 # === EMAIL SERVICE (REQUIRED) ===
 RESEND_API_KEY="re_xxxxx"
-RESEND_FROM_EMAIL="noreply@yourdomain.com"
-RESEND_FROM_NAME="Your App Name"
+EMAIL_FROM="noreply@yourdomain.com"
+EMAIL_FROM_NAME="Your App Name"
 ```
 
 ---
@@ -169,14 +169,14 @@ Project selection is not configured through the environment. Commands discover t
 RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxxx"
 ```
 
-**RESEND_FROM_EMAIL:**
+**EMAIL_FROM:**
 ```bash
-RESEND_FROM_EMAIL="noreply@yourdomain.com"
+EMAIL_FROM="noreply@yourdomain.com"
 ```
 
-**RESEND_FROM_NAME:**
+**EMAIL_FROM_NAME:**
 ```bash
-RESEND_FROM_NAME="Your App Name"
+EMAIL_FROM_NAME="Your App Name"
 ```
 
 **Setup:**
@@ -242,7 +242,7 @@ STRIPE_WEBHOOK_SECRET="whsec_xxxxx"
 DATABASE_URL="postgresql://localhost:5432/dev"
 BETTER_AUTH_URL="http://localhost:3010"
 NEXT_PUBLIC_APP_URL="http://localhost:3010"
-RESEND_FROM_EMAIL="onboarding@resend.dev"  # Test mode
+EMAIL_FROM="onboarding@resend.dev"  # Test mode
 ```
 
 ### Production (Vercel)
@@ -253,7 +253,7 @@ Set in Vercel Dashboard → Environment Variables:
 DATABASE_URL="postgresql://production-url"
 BETTER_AUTH_URL="https://yourdomain.com"
 NEXT_PUBLIC_APP_URL="https://yourdomain.com"
-RESEND_FROM_EMAIL="noreply@yourdomain.com"
+EMAIL_FROM="noreply@yourdomain.com"
 ```
 
 ---
@@ -292,7 +292,7 @@ DATABASE_URL="postgresql://user:my%40pass%3Aword@host:port/db"
 
 **8 Required Variables:**
 - DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL
-- RESEND_API_KEY, RESEND_FROM_EMAIL, RESEND_FROM_NAME
+- RESEND_API_KEY, EMAIL_FROM, EMAIL_FROM_NAME
 
 **Best Practices:**
 - Never commit `.env` files

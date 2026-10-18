@@ -1,5 +1,6 @@
 import type { AuthConfig, AuthLoginMethod, SocialLoginMethod } from '../config/types'
 import { findSmtpProblems, smtpEnvironmentFrom, SMTP_VARIABLES, type SmtpEnvironment, type SmtpVariable } from '../email/smtp-config'
+import { resolveEmailSender, type SenderAddressVariable } from '../email/sender'
 import { DEFAULT_AUTH_METHODS, SOCIAL_LOGIN_METHODS, isAuthLoginMethod, isSocialLoginMethod } from './auth-methods'
 
 /**
@@ -33,7 +34,8 @@ export interface AuthReadinessInput {
        */
       provider?: string
       resendApiKey?: string
-      /** The sender of both Resend and SMTP: RESEND_FROM_EMAIL. */
+      /** The sender of both Resend and SMTP: EMAIL_FROM, or RESEND_FROM_EMAIL when EMAIL_FROM is unset (lib/email/sender). */
+      emailFrom?: string
       resendFromEmail?: string
       /** Raw SMTP_* values; only judged when the provider is exactly `smtp` (`auto` never selects it). */
       smtp?: SmtpEnvironment
@@ -89,10 +91,7 @@ export type AuthReadinessDiagnosticCode =
   | 'RESEND_API_KEY_MISSING'
   | 'RESEND_API_KEY_PLACEHOLDER'
   | 'RESEND_API_KEY_MALFORMED'
-  | 'RESEND_FROM_EMAIL_MISSING'
-  | 'RESEND_FROM_EMAIL_PLACEHOLDER'
-  | 'RESEND_FROM_EMAIL_MALFORMED'
-  | 'RESEND_FROM_EMAIL_SANDBOX'
+  | `${SenderAddressVariable}_${'MISSING' | 'PLACEHOLDER' | 'MALFORMED' | 'SANDBOX'}`
   | `${SmtpVariable}_${'MISSING' | 'PLACEHOLDER' | 'MALFORMED'}`
   | `${Uppercase<SocialLoginMethod>}_RUNTIME_VALIDATION_REQUIRED`
   | `${SocialCredentialVariable}_${'MISSING' | 'PLACEHOLDER' | 'MALFORMED'}`
@@ -190,7 +189,7 @@ export function evaluateSessionSecret(input: AuthReadinessInput): AuthReadinessD
 
 function credentialDiagnostic(
   method: AuthReadinessDiagnostic['method'],
-  field: 'RESEND_API_KEY' | 'RESEND_FROM_EMAIL' | 'BETTER_AUTH_SECRET' | SmtpVariable | SocialCredentialVariable,
+  field: 'RESEND_API_KEY' | SenderAddressVariable | 'BETTER_AUTH_SECRET' | SmtpVariable | SocialCredentialVariable,
   state: Exclude<CredentialState, 'valid'>
 ): AuthReadinessDiagnostic {
   return {
@@ -200,8 +199,16 @@ function credentialDiagnostic(
     message:
       (field === 'SMTP_USER' || field === 'SMTP_PASS') && state === 'missing'
         ? `${field} is missing; SMTP_USER and SMTP_PASS must be set together or both left unset.`
-        : `${field} is ${state}; provide a syntactically valid value.`,
+        : field === 'EMAIL_FROM' && state === 'missing'
+          ? 'EMAIL_FROM is missing; set the sender address (RESEND_FROM_EMAIL is still read when EMAIL_FROM is unset).'
+          : `${field} is ${state}; provide a syntactically valid value.`,
   }
+}
+
+/** The configured sender, resolved like the providers resolve it. */
+function senderOf(input: AuthReadinessInput) {
+  const email = input.configuration?.email
+  return resolveEmailSender({ EMAIL_FROM: email?.emailFrom, RESEND_FROM_EMAIL: email?.resendFromEmail })
 }
 
 /** A runtime-only build may defer missing fields, but never a concrete invalid one. */
@@ -237,7 +244,7 @@ function selectEmailProvider(
     // The factory falls back to console when forced but no API key is set.
     return email?.forceResendInDevelopment && email.resendApiKey ? 'resend' : 'console'
   }
-  const hasResendConfiguration = Boolean(email?.resendApiKey?.trim() || email?.resendFromEmail?.trim())
+  const hasResendConfiguration = Boolean(email?.resendApiKey?.trim() || senderOf(input).address)
   return hasResendConfiguration || (input.stage === 'build' && email?.runtimeOnly) ? 'resend' : 'console'
 }
 
@@ -272,11 +279,12 @@ function evaluateEmailConfiguration(
   }
 
   const apiKeyState = credentialState(email?.resendApiKey, RESEND_API_KEY_PATTERN)
-  let fromEmailState: CredentialState | 'sandbox' = credentialState(email?.resendFromEmail, EMAIL_PATTERN)
+  const sender = senderOf(input)
+  let fromEmailState: CredentialState | 'sandbox' = credentialState(sender.address, EMAIL_PATTERN)
   if (
     fromEmailState === 'valid' &&
     input.environment === 'production' &&
-    RESEND_SANDBOX_SENDER_PATTERN.test(email?.resendFromEmail?.trim() ?? '')
+    RESEND_SANDBOX_SENDER_PATTERN.test(sender.address ?? '')
   ) {
     fromEmailState = 'sandbox'
   }
@@ -293,23 +301,23 @@ function evaluateEmailConfiguration(
   if (fromEmailState === 'sandbox') {
     diagnostics.push({
       method: 'email',
-      code: 'RESEND_FROM_EMAIL_SANDBOX',
+      code: `${sender.addressVariable}_SANDBOX`,
       severity: 'error',
       message:
-        'RESEND_FROM_EMAIL uses the resend.dev testing sender, which only delivers to the Resend account owner; ' +
+        `${sender.addressVariable} uses the resend.dev testing sender, which only delivers to the Resend account owner; ` +
         'use a sender on a domain verified in Resend.',
     })
   } else if (fromEmailState !== 'valid') {
-    diagnostics.push(credentialDiagnostic('email', 'RESEND_FROM_EMAIL', fromEmailState))
+    diagnostics.push(credentialDiagnostic('email', sender.addressVariable, fromEmailState))
   }
 
   return apiKeyState === 'valid' && fromEmailState === 'valid' ? 'available' : 'invalid'
 }
 
 /**
- * A complete SMTP configuration: the SMTP_* contract plus the sender, which is
- * the same RESEND_FROM_EMAIL Resend uses. Checks syntax only, never reaches
- * the server.
+ * A complete SMTP configuration: the SMTP_* contract plus the sender, the same
+ * EMAIL_FROM (or RESEND_FROM_EMAIL) Resend uses. Checks syntax only, never
+ * reaches the server.
  */
 function evaluateSmtpConfiguration(
   input: AuthReadinessInput,
@@ -318,12 +326,13 @@ function evaluateSmtpConfiguration(
   const email = input.configuration?.email
   const smtp = email?.smtp ?? {}
   const problems = new Map(findSmtpProblems(smtp).map(({ variable, state }) => [variable, state]))
-  const states: Array<{ variable: SmtpVariable | 'RESEND_FROM_EMAIL'; state: CredentialState }> = SMTP_VARIABLES.map(
+  const states: Array<{ variable: SmtpVariable | SenderAddressVariable; state: CredentialState }> = SMTP_VARIABLES.map(
     (variable) => ({ variable, state: problems.get(variable) ?? ('valid' as CredentialState) })
   )
   const host = states[0]
   if (host.state === 'valid' && isPlaceholder(smtp.host?.trim() ?? '')) host.state = 'placeholder'
-  states.push({ variable: 'RESEND_FROM_EMAIL', state: credentialState(email?.resendFromEmail, EMAIL_PATTERN) })
+  const sender = senderOf(input)
+  states.push({ variable: sender.addressVariable, state: credentialState(sender.address, EMAIL_PATTERN) })
 
   if (canDeferAtBuild(input, email?.runtimeOnly, states.map(({ state }) => state))) {
     diagnostics.push({
@@ -419,7 +428,7 @@ function evaluateSocialConfiguration(
 
 /**
  * Maps the provider environment contract (EMAIL_PROVIDER, RESEND_API_KEY,
- * RESEND_FROM_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, FORCE_RESEND_IN_DEV, and the built-in social providers'
+ * EMAIL_FROM, RESEND_FROM_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, FORCE_RESEND_IN_DEV, and the built-in social providers'
  * variables in SOCIAL_CREDENTIALS) onto evaluator configuration. Shared by the runtime
  * adapter and the production build check so both read the same variables.
  */
@@ -431,6 +440,7 @@ export function authReadinessConfigurationFromEnv(
     email: {
       provider: env.EMAIL_PROVIDER,
       resendApiKey: env.RESEND_API_KEY,
+      emailFrom: env.EMAIL_FROM,
       resendFromEmail: env.RESEND_FROM_EMAIL,
       smtp: smtpEnvironmentFrom(env),
       forceResendInDevelopment: Boolean(env.FORCE_RESEND_IN_DEV),

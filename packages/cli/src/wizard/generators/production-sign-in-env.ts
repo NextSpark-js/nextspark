@@ -75,7 +75,7 @@ function buildMarkerBlock(result: ProductionSignInResult): string {
       MARKER_START,
       '# LOCAL-ONLY: no production sign-in provider is configured.',
       '# This project is NOT production-ready for sign-in yet. Fix it by either:',
-      '#   1. Setting RESEND_API_KEY + RESEND_FROM_EMAIL above (email sign-in code), and/or',
+      '#   1. Setting RESEND_API_KEY + EMAIL_FROM above (email sign-in code), and/or',
       '#      GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET above ("Continue with Google"), or',
       '#   2. Declaring runtime-only injection (credentials supplied outside this file,',
       '#      e.g. by your host) with NEXTSPARK_AUTH_RUNTIME_ONLY=email,google.',
@@ -133,8 +133,8 @@ export async function writeProductionSignInEnv(
   if (result.resend) {
     assertValid('RESEND_API_KEY', validateResendApiKey(result.resend.apiKey))
     assertValid('RESEND_API_KEY', validateEnvSafeValue(result.resend.apiKey))
-    assertValid('RESEND_FROM_EMAIL', validateResendFromEmail(result.resend.fromEmail))
-    assertValid('RESEND_FROM_EMAIL', validateEnvSafeValue(result.resend.fromEmail))
+    assertValid('EMAIL_FROM', validateResendFromEmail(result.resend.fromEmail))
+    assertValid('EMAIL_FROM', validateEnvSafeValue(result.resend.fromEmail))
   }
   if (result.google) {
     assertValid('GOOGLE_CLIENT_ID', validateGoogleClientId(result.google.clientId))
@@ -153,7 +153,8 @@ export async function writeProductionSignInEnv(
 
   if (result.resend) {
     content = setEnvVar(content, 'RESEND_API_KEY', result.resend.apiKey)
-    content = setEnvVar(content, 'RESEND_FROM_EMAIL', result.resend.fromEmail)
+    // The sender every email provider reads; core still falls back to RESEND_FROM_EMAIL when it is unset
+    content = setEnvVar(content, 'EMAIL_FROM', result.resend.fromEmail)
   }
 
   if (result.google) {

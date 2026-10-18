@@ -97,7 +97,7 @@ function coreResendOutcome(apiKey: string, fromEmail: string): string {
     stage: 'runtime',
     environment: 'production',
     authConfig: { methods: ['email-otp'] },
-    configuration: { email: { resendApiKey: apiKey, resendFromEmail: fromEmail } },
+    configuration: { email: { resendApiKey: apiKey, emailFrom: fromEmail } },
   }).outcome
 }
 
@@ -125,7 +125,7 @@ const RESEND_API_KEY_CASES: FieldCase[] = [
   { label: 'fully <wrapped> placeholder', value: '<your-resend-key>', expectValid: false },
 ]
 
-const RESEND_FROM_EMAIL_CASES: FieldCase[] = [
+const EMAIL_FROM_CASES: FieldCase[] = [
   { label: 'synthetic valid address', value: VALID_RESEND_EMAIL, expectValid: true },
   { label: 'empty', value: '', expectValid: false },
   { label: 'malformed shape', value: 'not-an-email', expectValid: false },
@@ -165,8 +165,8 @@ test('parity: RESEND_API_KEY — wizard verdict matches evaluateAuthReadiness ve
   }
 })
 
-test('parity: RESEND_FROM_EMAIL — wizard verdict matches evaluateAuthReadiness verdict for every case', () => {
-  for (const { label, value, expectValid } of RESEND_FROM_EMAIL_CASES) {
+test('parity: EMAIL_FROM — wizard verdict matches evaluateAuthReadiness verdict for every case', () => {
+  for (const { label, value, expectValid } of EMAIL_FROM_CASES) {
     const wizardValid = validateResendFromEmail(value) === true
     const coreValid = coreResendOutcome(VALID_RESEND_KEY, value) === 'ready'
     assert.equal(wizardValid, expectValid, `wizard: ${label}`)
@@ -239,8 +239,8 @@ DATABASE_URL="postgresql://user:password@localhost:5432/database"
 
 # EMAIL (Resend)
 # RESEND_API_KEY="re_..."
-RESEND_FROM_NAME=
-RESEND_FROM_EMAIL=
+EMAIL_FROM_NAME=
+EMAIL_FROM=
 
 # GOOGLE OAUTH
 # GOOGLE_CLIENT_ID="your-google-client-id"
@@ -275,7 +275,7 @@ test('postponing writes the local-only marker and no provider values, and never 
   })
 })
 
-test('choosing Resend writes RESEND_API_KEY/RESEND_FROM_EMAIL to .env only, and leaves Google untouched', async () => {
+test('choosing Resend writes RESEND_API_KEY/EMAIL_FROM to .env only, and leaves Google untouched', async () => {
   await withTempProject(async (root) => {
     const synthetic = { apiKey: 're_synthetic1234567890abcdef', fromEmail: 'hello@synthetic-example-co.test' }
 
@@ -283,7 +283,7 @@ test('choosing Resend writes RESEND_API_KEY/RESEND_FROM_EMAIL to .env only, and 
 
     const env = await readFile(join(root, '.env'), 'utf8')
     assert.match(env, /^RESEND_API_KEY="re_synthetic1234567890abcdef"$/m)
-    assert.match(env, /^RESEND_FROM_EMAIL="hello@synthetic-example-co\.test"$/m)
+    assert.match(env, /^EMAIL_FROM="hello@synthetic-example-co\.test"$/m)
     assert.doesNotMatch(env, /^GOOGLE_CLIENT_ID=/m, 'Google is untouched when only Resend was chosen')
     assert.match(env, /Configured for production sign-in: Resend/)
 

@@ -86,7 +86,7 @@ Selection, a genuinely interactive run (not `--yes`, not `--quick`, not a
 `--preset` run) asks how to handle it:
 
 - **Resend** — a masked prompt for `RESEND_API_KEY` and the sender address
-  (`RESEND_FROM_EMAIL`). Values are validated against the same shape core's
+  (`EMAIL_FROM`). Values are validated against the same shape core's
   auth readiness check expects (e.g. `re_...` keys, no `@resend.dev` /
   `@yourdomain.com` sender).
 - **Google OAuth** — a masked prompt for `GOOGLE_CLIENT_ID` and

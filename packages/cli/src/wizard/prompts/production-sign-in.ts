@@ -3,7 +3,7 @@
  *
  * NextSpark projects default to passwordless sign-in (email one-time code +
  * Google OAuth). Neither path works in production without a provider:
- * - Resend (RESEND_API_KEY + RESEND_FROM_EMAIL) delivers the sign-in code.
+ * - Resend (RESEND_API_KEY + EMAIL_FROM) delivers the sign-in code.
  *   Without it, emails only print to the dev server log.
  * - Google OAuth (GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET) is only offered
  *   when the wizard's own Google OAuth choice (Step 8) enabled it.
@@ -129,7 +129,7 @@ export function getProductionSignInChoices(
     {
       name: 'Resend (transactional email for the sign-in code)',
       value: 'resend',
-      description: 'Sets RESEND_API_KEY and RESEND_FROM_EMAIL',
+      description: 'Sets RESEND_API_KEY and EMAIL_FROM',
     },
   ]
 
@@ -176,7 +176,7 @@ export function describeProductionSignInReadiness(result: ProductionSignInResult
   if (result.postponed) {
     return [
       'Sign-in: LOCAL-ONLY — no production provider configured yet.',
-      'Set RESEND_API_KEY + RESEND_FROM_EMAIL and/or GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET in .env,',
+      'Set RESEND_API_KEY + EMAIL_FROM and/or GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET in .env,',
       'or declare runtime injection with NEXTSPARK_AUTH_RUNTIME_ONLY=email,google before deploying.',
     ]
   }
@@ -196,7 +196,7 @@ async function promptResendCredentials(): Promise<ResendCredentials> {
   })
 
   const fromEmail = await input({
-    message: 'Sender email address (RESEND_FROM_EMAIL):',
+    message: 'Sender email address (EMAIL_FROM):',
     validate: withEnvSafety(validateResendFromEmail),
   })
 

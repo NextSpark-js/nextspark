@@ -276,7 +276,7 @@ if (!['owner', 'admin'].includes(member?.role)) {
 1. **Email service not configured:**
 ```env
 RESEND_API_KEY=your_api_key
-RESEND_FROM_EMAIL=noreply@yourdomain.com
+EMAIL_FROM=noreply@yourdomain.com
 ```
 
 2. **Email in spam folder:**

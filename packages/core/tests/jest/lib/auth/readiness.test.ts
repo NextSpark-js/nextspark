@@ -1032,7 +1032,7 @@ describe('evaluateAuthReadiness SMTP provider', () => {
       'SMTP_PORT_MALFORMED',
       'SMTP_SECURE_MALFORMED',
       'SMTP_PASS_MISSING',
-      'RESEND_FROM_EMAIL_MISSING',
+      'EMAIL_FROM_MISSING',
       'AUTH_NO_AVAILABLE_METHOD',
     ])
   })
@@ -1071,5 +1071,77 @@ describe('evaluateAuthReadiness SMTP provider', () => {
 
   test('without runtimeOnly a build with nothing set is invalid', () => {
     expect(evaluate({ smtp: {}, resendFromEmail: undefined }, { stage: 'build' }).outcome).toBe('invalid')
+  })
+})
+
+describe('evaluateAuthReadiness sender variable (EMAIL_FROM, RESEND_FROM_EMAIL as the fallback)', () => {
+  const evaluate = (email: Record<string, unknown>, environment: 'production' | 'development' = 'production') =>
+    evaluateAuthReadiness({
+      ...productionWeb,
+      environment,
+      authConfig: { methods: ['email-otp'] },
+      configuration: { email: { provider: 'resend', resendApiKey: validResendApiKey, ...email } },
+    })
+
+  test('EMAIL_FROM alone is a complete sender', () => {
+    expect(evaluate({ emailFrom: 'auth@example.com' }).outcome).toBe('ready')
+  })
+
+  test('RESEND_FROM_EMAIL alone still works', () => {
+    expect(evaluate({ resendFromEmail: 'auth@example.com' }).outcome).toBe('ready')
+  })
+
+  test('with neither set, the diagnostic names EMAIL_FROM', () => {
+    const result = evaluate({})
+    expect(result.outcome).toBe('invalid')
+    expect(diagnosticCodes(result)).toEqual(['EMAIL_FROM_MISSING', 'AUTH_NO_AVAILABLE_METHOD'])
+    expect(result.diagnostics[0].message).toMatch(/EMAIL_FROM is missing.*RESEND_FROM_EMAIL/)
+  })
+
+  test('a blank EMAIL_FROM counts as unset, so the fallback is used', () => {
+    expect(evaluate({ emailFrom: '  ', resendFromEmail: 'auth@example.com' }).outcome).toBe('ready')
+  })
+
+  test('when both are set, EMAIL_FROM is judged and named', () => {
+    const result = evaluate({ emailFrom: 'not-an-email', resendFromEmail: 'auth@example.com' })
+    expect(diagnosticCodes(result)).toEqual(['EMAIL_FROM_MALFORMED', 'AUTH_NO_AVAILABLE_METHOD'])
+    expect(evaluate({ emailFrom: 'auth@example.com', resendFromEmail: 'not-an-email' }).outcome).toBe('ready')
+  })
+
+  test('a problem in the fallback names RESEND_FROM_EMAIL, the variable that holds it', () => {
+    expect(diagnosticCodes(evaluate({ resendFromEmail: 'noreply@yourdomain.com' }))).toContain('RESEND_FROM_EMAIL_PLACEHOLDER')
+    expect(diagnosticCodes(evaluate({ resendFromEmail: 'hello@resend.dev' }))).toContain('RESEND_FROM_EMAIL_SANDBOX')
+  })
+
+  test('the sandbox sender in EMAIL_FROM names EMAIL_FROM', () => {
+    const result = evaluate({ emailFrom: 'hello@resend.dev' })
+    expect(diagnosticCodes(result)).toContain('EMAIL_FROM_SANDBOX')
+    expect(result.diagnostics[0].message).toMatch(/^EMAIL_FROM uses the resend.dev testing sender/)
+  })
+
+  test('SMTP reads the same sender', () => {
+    const smtp = (email: Record<string, unknown>) =>
+      evaluateAuthReadiness({
+        ...productionWeb,
+        authConfig: { methods: ['email-otp'] },
+        configuration: { email: { provider: 'smtp', smtp: { host: 'smtp.example.org' }, ...email } },
+      })
+    expect(smtp({ emailFrom: 'auth@example.org' }).outcome).toBe('ready')
+    expect(smtp({ resendFromEmail: 'auth@example.org' }).outcome).toBe('ready')
+    expect(diagnosticCodes(smtp({}))).toEqual(['EMAIL_FROM_MISSING', 'AUTH_NO_AVAILABLE_METHOD'])
+  })
+
+  test('auto in production selects Resend from an EMAIL_FROM alone, as the factory reads it', () => {
+    const result = evaluateAuthReadiness({
+      ...productionWeb,
+      authConfig: { methods: ['email-otp'] },
+      configuration: { email: { provider: 'auto', emailFrom: 'auth@example.com' } },
+    })
+    expect(diagnosticCodes(result)).toEqual(['RESEND_API_KEY_MISSING', 'AUTH_NO_AVAILABLE_METHOD'])
+  })
+
+  test('the environment adapter reads both variables', () => {
+    const { email } = authReadinessConfigurationFromEnv({ EMAIL_FROM: 'a@example.com', RESEND_FROM_EMAIL: 'b@example.com' })
+    expect(email).toMatchObject({ emailFrom: 'a@example.com', resendFromEmail: 'b@example.com' })
   })
 })

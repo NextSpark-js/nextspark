@@ -327,7 +327,7 @@ DATABASE_URL=postgresql://...
 
 # Email (required for invitations)
 RESEND_API_KEY=...
-RESEND_FROM_EMAIL=noreply@yourdomain.com
+EMAIL_FROM=noreply@yourdomain.com
 
 # App URL (required for invitation links)
 NEXT_PUBLIC_APP_URL=https://yourdomain.com
