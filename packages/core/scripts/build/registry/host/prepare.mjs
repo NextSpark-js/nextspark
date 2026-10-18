@@ -13,7 +13,7 @@
  *   project,           // { root, importBase, label }
  *   entities,          // async ({ manifest }) => ({ routes, diagnostics }) - per-entity routes (entity-routes.mjs)
  *   webhooks,          // () => ({ routes, diagnostics }) - composed billing webhook routes (webhooks.mjs)
- *   sitemap,           // ({ cacheComponents, modes }) => sitemapPlan(...) - composes core's sitemap and robots routes (sitemap.mjs)
+ *   sitemap,           // () => sitemapPlan(...) - composes core's sitemap and robots routes (sitemap.mjs)
  *   stylesheet,        // the project's global stylesheet specifier the root layout imports
  *   modes, pageExtensions, cacheComponents,   // see render.mjs
  *   registries,        // async ({ mode }) => [{ path, content, grammar }] - staged registry files
@@ -117,7 +117,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     entityRoutes: entityPlan.routes,
     entityNames: entityPlan.entities,
     webhooks: webhookPlan.routes,
-    sitemap: config.sitemap ? config.sitemap({ cacheComponents: config.cacheComponents, modes: config.modes ?? [] }) : undefined,
+    sitemap: config.sitemap ? config.sitemap() : undefined,
     plugins: declared.plugins,
     project: config.project,
     modes: config.modes ?? [],
@@ -547,7 +547,7 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
         projectRoot: config.projectRoot,
         resolveFile: specifier => resolveCoreRouteFile(coreRoot, specifier),
       }),
-    sitemap: host => sitemapPlan({ ...host, sitemap: currentConfig().sitemap, resolveFile: specifier => resolveCoreRouteFile(coreRoot, specifier) }),
+    sitemap: () => sitemapPlan({ sitemap: currentConfig().sitemap, resolveFile: specifier => resolveCoreRouteFile(coreRoot, specifier) }),
     // Project and plugin API routes get core's default rate limit (rate-limit.mjs)
     rateLimit: coreRouteRateLimit(specifier => resolveCoreRouteFile(coreRoot, specifier)),
     registries: stagedRegistryBuild({ projectRoot: config.projectRoot, coreRoot, env }),

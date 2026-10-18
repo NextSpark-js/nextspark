@@ -7,15 +7,15 @@
  * same route without them.
  *
  * Visibility. An entry is listed exactly when the public item page would render it, no more:
- * - the entity is a builder entity with a base path and `access.public: true` (the host writes a public route for
- *   no other), read through the service connection like `fetchPublishedItem`;
+ * - the entity is a builder entity with a base path, and the sitemap requires `access.public: true`; its rows are read
+ *   through the service connection like `fetchPublishedItem`;
  * - the row is `status = 'published'`: drafts, scheduled and archived rows are never selected, a deleted row is gone;
  * - its slug is one the route answers (`ITEM_SLUG`, not a static-file name, no `/` without `allowNestedSlugs`).
  *
  * Caching. Both rendering modes use the same in-process cache: the sitemap is built at most once an hour per
  * server process (a failed read only for a minute), concurrent requests share one build, and a refresh that fails
- * keeps serving the last good document. `revalidate` / `'use cache'` are not used: the first needs a build-time
- * database and the second only exists with Cache Components. # ponytail: per-process cache, so N instances query
+ * keeps serving the last good document (a read that comes back `failed` included). `connection()` opens the
+ * function, so neither mode reads the database at build; `revalidate` / `'use cache'` are not used. # ponytail: per-process cache, so N instances query
  * N times an hour; move to `'use cache'` + cacheLife when Cache Components is the only mode.
  *
  * Size. One sitemap holds 50,000 URLs (the protocol's ceiling). Past it the list is cut (entries sorted by slug,
@@ -24,6 +24,7 @@
  */
 
 import type { MetadataRoute } from 'next'
+import { connection } from 'next/server'
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { query } from '@nextsparkjs/core/lib/db'
 import { I18N_CONFIG } from '@nextsparkjs/core/lib/config/i18n-config-client'
@@ -74,7 +75,8 @@ export function createSitemapRoute(options: SitemapRouteOptions = {}, read = rea
   const refresh = async () => {
     try {
       const { sitemap, failed } = await read(options)
-      current = { sitemap, until: now() + (failed ? RETRY_MS : FRESH_MS) }
+      // a partial read (an entity could not be read) never replaces a good document
+      current = failed && current ? { sitemap: current.sitemap, until: now() + RETRY_MS } : { sitemap, until: now() + (failed ? RETRY_MS : FRESH_MS) }
     } catch (error) {
       console.error('[sitemap] refresh failed:', error)
       if (!current) throw error
@@ -84,6 +86,8 @@ export function createSitemapRoute(options: SitemapRouteOptions = {}, read = rea
   }
 
   return async function sitemap(): Promise<MetadataRoute.Sitemap> {
+    // Request time only, before any I/O: a build (either mode) renders nothing here and opens no connection.
+    await connection()
     if (current && now() < current.until) return current.sitemap
     inflight ??= refresh().finally(() => {
       inflight = undefined

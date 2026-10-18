@@ -31,17 +31,11 @@ const ROBOTS_MODULE = `${CORE_ROUTES_SPECIFIER}_internal/robots-route`
  * @param {object} input
  * @param {{ enabled?: boolean, urls?: string[], exclude?: string[] }|undefined} input.sitemap - nextspark.config.ts `sitemap`
  * @param {(specifier: string) => string|null} input.resolveFile - core module specifier -> file
- * @param {boolean} [input.cacheComponents] - the host's setting
- * @param {string[]} [input.modes] - cache modes the host serves (a host that builds both omits `dynamic`)
  */
-export function sitemapPlan({ sitemap, resolveFile, cacheComponents, modes = [] }) {
+export function sitemapPlan({ sitemap, resolveFile }) {
   const factory = (name, specifier) => ({ name, specifier, file: resolveFile(specifier) })
   return {
     enabled: sitemap?.enabled !== false,
-    // The route reads the database, so a legacy host must not freeze the document at build time (and a build
-    // with no database would freeze a partial one): it answers on request, behind the route's own hour-long cache.
-    // Cache Components rejects the setting, and serves the route on request because it reads uncached data.
-    dynamic: cacheComponents !== true && !modes.includes('cc'),
     urls: sitemap?.urls ?? [],
     exclude: sitemap?.exclude ?? [],
     sitemapFactory: factory('createSitemapRoute', SITEMAP_MODULE),
@@ -59,13 +53,13 @@ function staticPublicPath(route) {
   return `/${segments.join('/')}`
 }
 
-const composed = (route, source, factory, args, literals = []) => ({
+const composed = (route, source, factory, args) => ({
   ...route,
   specifier: null,
   file: null,
   generated: true,
   source,
-  entityRoute: { name: route.kind, exportName: route.kind, source, reexport: [], named: [], literals, default: { factory, args } },
+  entityRoute: { name: route.kind, exportName: route.kind, source, reexport: [], named: [], literals: [], default: { factory, args } },
 })
 
 /**
@@ -83,7 +77,7 @@ export function applySitemap(routes, plan) {
   for (const route of routes) {
     const core = route.origin === 'core'
     if (core && route.kind === 'sitemap' && route.target === 'sitemap.ts') {
-      if (plan.enabled) out.push(composed(route, source, plan.sitemapFactory, [{ literal: { staticPaths, urls: plan.urls, exclude: plan.exclude } }], plan.dynamic ? [{ name: 'dynamic', value: 'force-dynamic' }] : []))
+      if (plan.enabled) out.push(composed(route, source, plan.sitemapFactory, [{ literal: { staticPaths, urls: plan.urls, exclude: plan.exclude } }]))
     } else if (core && route.kind === 'robots' && route.target === 'robots.ts' && !plan.enabled) {
       out.push(composed(route, source, plan.robotsFactory, [{ literal: { sitemap: false } }]))
     } else {

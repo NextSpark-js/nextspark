@@ -8,6 +8,7 @@
  * (`query` of lib/db in the route), injected so this module needs no connection to be tested.
  */
 
+import { RESERVED_SLUGS } from '../constants/reserved-slugs'
 import { isServableSlug } from '../entities/public-item-slug'
 import type { EntityConfig } from '../entities/types'
 import { isSitemapEntity, type SitemapEntity, type SitemapRow } from './sitemap'
@@ -25,7 +26,10 @@ export async function readPublishedEntries(config: EntityConfig, run: RunQuery, 
     `SELECT slug, MAX("updatedAt") AS "updatedAt" FROM "${table}" WHERE status = 'published' GROUP BY slug ORDER BY slug LIMIT $1`,
     [limit]
   )
-  return rows.filter(row => isServableSlug(config, row.slug))
+  // an entity at the site root is shadowed by core's routes for these first segments (a row written before the slug rule)
+  const atRoot = (config.access?.basePath ?? config.builder?.public?.basePath) === '/'
+  const shadowed = (slug: string) => atRoot && (RESERVED_SLUGS as readonly string[]).includes(slug.split('/')[0].toLowerCase())
+  return rows.filter(row => isServableSlug(config, row.slug) && !shadowed(row.slug))
 }
 
 /**

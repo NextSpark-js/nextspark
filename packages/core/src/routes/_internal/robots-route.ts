@@ -1,11 +1,8 @@
 import type { MetadataRoute } from 'next'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
-/** The auth pages core serves (src/routes/(auth)): signed-out utility screens with nothing to index. */
-const AUTH_PAGES = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/accept-invite', '/auth-error']
-
 /**
- * The `robots()` of /robots.txt: public pages are crawlable, the authenticated areas, the auth pages and the API are not,
+ * The `robots()` of /robots.txt: public pages are crawlable, the authenticated areas and the API are not,
  * and the sitemap is advertised with its absolute URL, base path included (#273). The generated host composes the
  * route with `{ sitemap: false }` when nextspark.config.ts sets `sitemap.enabled: false`.
  */
@@ -16,7 +13,7 @@ export function createRobotsRoute({ sitemap = true }: { sitemap?: boolean } = {}
       rules: {
         userAgent: '*',
         allow: withBasePath('/'),
-        disallow: ['/dashboard', '/superadmin', '/devtools', '/api', ...AUTH_PAGES].map(withBasePath),
+        disallow: ['/dashboard', '/superadmin', '/devtools', '/api'].map(withBasePath),
       },
       ...(sitemap ? { sitemap: `${origin}${withBasePath('/sitemap.xml')}` } : {}),
     }

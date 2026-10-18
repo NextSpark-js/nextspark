@@ -4,6 +4,7 @@
 import { buildSitemap, isExcluded, isSitemapEntity, localizedUrl, type BuildSitemapInput, type SitemapEntity } from '@/core/lib/seo/sitemap'
 import { readPublishedEntries } from '@/core/lib/seo/sitemap-entries'
 import type { EntityConfig } from '@/core/lib/entities/types'
+import { resolveSitemap } from 'next/dist/build/webpack/loaders/metadata/resolve-route-data'
 
 const entity = (overrides: Record<string, unknown> = {}): EntityConfig =>
   ({
@@ -131,6 +132,26 @@ describe('buildSitemap', () => {
   })
 })
 
+describe('the rendered document', () => {
+  it('is well-formed XML whatever the paths hold, with a & in a static page, an extra url and a slug', () => {
+    const sitemap = buildSitemap({
+      ...BASE,
+      staticPaths: ['/terms&conditions', "/it's"],
+      urls: ['/a&b=c', '/q"<x>'],
+      entities: [{ config: entity(), rows: [{ slug: 'a&b' }] }],
+    })
+    const xml = resolveSitemap(sitemap)
+
+    const parsed = new DOMParser().parseFromString(xml, 'application/xml')
+    expect(parsed.getElementsByTagName('parsererror')).toHaveLength(0)
+    const locs = Array.from(parsed.getElementsByTagName('loc')).map(loc => loc.textContent)
+    expect(locs).toContain('https://example.com/terms&conditions')
+    expect(locs).toContain('https://example.com/a&b=c')
+    expect(locs).toContain('https://example.com/blog/a%26b')
+    expect(xml).toContain('<loc>https://example.com/terms&amp;conditions</loc>')
+  })
+})
+
 describe('isExcluded', () => {
   it('matches an exact path, or the prefix before a trailing *', () => {
     expect(isExcluded('/a', ['/a'])).toBe(true)
@@ -165,6 +186,15 @@ describe('readPublishedEntries', () => {
     // the site root without nested slugs: `[slug]`, one segment only
     const root = entity({ access: { public: true, basePath: '/' } })
     expect((await readPublishedEntries(root, run)).map(r => r.slug)).toEqual(['ok', 'v1.0'])
+  })
+
+  it('drops a slug of an entity at the site root that one of core\'s routes answers', async () => {
+    const run = jest.fn().mockResolvedValue({ rows: ['about', 'dashboard', 'Login', 'login-help', 'api/x'].map(row) })
+    const root = entity({ access: { public: true, basePath: '/', allowNestedSlugs: true } })
+
+    expect((await readPublishedEntries(root, run)).map(r => r.slug)).toEqual(['about', 'login-help'])
+    // under a base path of its own nothing is shadowed
+    expect((await readPublishedEntries(entity(), run)).map(r => r.slug)).toEqual(['about', 'dashboard', 'Login', 'login-help', 'api/x'])
   })
 
   it('refuses a table name that is not an identifier, without querying', async () => {

@@ -62,6 +62,9 @@ export function isExcluded(path: string, exclude: readonly string[] = []): boole
 
 const encodePath = (path: string) => path.split('/').map(encodeURIComponent).join('/')
 
+/** Next writes `<loc>` and `href` as they are given, so what goes into the XML is escaped here: a `&` in a path stays valid. */
+const xml = (url: string) => url.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
+
 function lastModified(value: SitemapRow['updatedAt']): Date | undefined {
   if (!value) return undefined
   const date = value instanceof Date ? value : new Date(value)
@@ -94,7 +97,7 @@ export function buildSitemap(input: BuildSitemapInput): MetadataRoute.Sitemap {
   for (const path of input.urls ?? []) add(path)
 
   const alternates = (path: string) => {
-    const url = (locale: string) => localizedUrl(origin, basePath, path, locale)
+    const url = (locale: string) => xml(localizedUrl(origin, basePath, path, locale))
     return {
       languages: {
         ...Object.fromEntries(locales.map(locale => [locale, url(locale)])),
@@ -103,7 +106,7 @@ export function buildSitemap(input: BuildSitemapInput): MetadataRoute.Sitemap {
     }
   }
   return [...found].map(([path, lastmod]) => ({
-    url: localizedUrl(origin, basePath, path),
+    url: xml(localizedUrl(origin, basePath, path)),
     ...(lastmod ? { lastModified: lastmod } : {}),
     alternates: alternates(path),
   }))

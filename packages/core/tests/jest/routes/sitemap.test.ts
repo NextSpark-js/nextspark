@@ -126,6 +126,25 @@ describe('the cache', () => {
     expect(read).toHaveBeenCalledTimes(2)
   })
 
+  it('keeps the good document when a later read comes back failed (a partial one), and tries again after a minute', async () => {
+    let now = 0
+    const read = jest
+      .fn()
+      .mockResolvedValueOnce({ sitemap: doc('good'), failed: false })
+      .mockResolvedValueOnce({ sitemap: doc('partial'), failed: true })
+      .mockResolvedValue({ sitemap: doc('recovered'), failed: false })
+    const sitemap = createSitemapRoute({}, read, () => now)
+
+    await expect(sitemap()).resolves.toEqual(doc('good'))
+    now += 61 * 60 * 1000
+    await expect(sitemap()).resolves.toEqual(doc('good'))
+    now += 30_000
+    await expect(sitemap()).resolves.toEqual(doc('good'))
+    expect(read).toHaveBeenCalledTimes(2)
+    now += 31_000
+    await expect(sitemap()).resolves.toEqual(doc('recovered'))
+  })
+
   it('keeps serving the last good document when a refresh fails, and fails when there is none', async () => {
     const error = jest.spyOn(console, 'error').mockImplementation(() => {})
     let now = 0

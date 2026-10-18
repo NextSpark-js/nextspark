@@ -167,7 +167,7 @@ test('composed-facade accepts exactly the compositions of core wrappers over imp
     `import Template from '@/t'\n${imp('withRootLayout', 'root-layout')}${imp('withPublicMessages', 'public-layout')}export default withRootLayout(withPublicMessages(Template))`,
     `import { stripeWebhookExtensions } from '@/lib/billing/stripe-webhook-extensions'\n${imp('createStripeWebhookRoute', 'billing-webhooks')}export const POST = createStripeWebhookRoute(stripeWebhookExtensions)`,
     `import { c } from '@/c'\n${imp('createPublicItemMetadata', 'public-item-route')}export const generateMetadata = createPublicItemMetadata(c)\nexport const revalidate = 3600`,
-    `${imp('createSitemapRoute', 'sitemap-route')}export default createSitemapRoute({"staticPaths":["/support"],"urls":[],"exclude":["/legal/*"]})\nexport const dynamic = "force-dynamic"`,
+    `${imp('createSitemapRoute', 'sitemap-route')}export default createSitemapRoute({"staticPaths":["/support"],"urls":[],"exclude":["/legal/*"]})`,
     `${imp('createRobotsRoute', 'robots-route')}export default createRobotsRoute({"sitemap":false})`,
     `import { widgets } from '@/w'\nimport { createEntityListRoute as list } from '${CORE}entity-list-route'\nexport default list(widgets)`,
   ]) {

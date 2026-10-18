@@ -117,6 +117,7 @@ class MockNextResponse {
 }
 
 module.exports = {
+  connection: async () => {},
   NextRequest: MockNextRequest,
   NextResponse: MockNextResponse
 }

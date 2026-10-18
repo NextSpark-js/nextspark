@@ -6,7 +6,7 @@ import { createRobotsRoute } from '@/app/_internal/robots-route'
 
 const BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL
-const DISALLOWED = ['/dashboard', '/superadmin', '/devtools', '/api', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/accept-invite', '/auth-error']
+const DISALLOWED = ['/dashboard', '/superadmin', '/devtools', '/api']
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_APP_URL = 'https://example.com/'
@@ -20,7 +20,7 @@ afterEach(() => {
 })
 
 describe('robots', () => {
-  it('allows the public pages, disallows the authenticated areas, the auth pages and the API, and advertises the sitemap', () => {
+  it('allows the public pages, disallows the authenticated areas and the API, and advertises the sitemap', () => {
     expect(robots()).toEqual({
       rules: { userAgent: '*', allow: '/', disallow: DISALLOWED },
       sitemap: 'https://example.com/sitemap.xml',

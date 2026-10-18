@@ -150,6 +150,18 @@ describe('nextspark.config.ts source contract', () => {
     expect(validateNextSparkConfig({ sitemap: {} }).valid).toBe(true)
   })
 
+  it('accepts URL path characters, including & and percent-encoded bytes, and rejects empty, dot and encoded-dot segments and a trailing slash', () => {
+    const valid = ['/', '/terms&conditions', '/a/b-c_d.e~f', "/it's", '/caf%C3%A9', '/a:b@c,d;e=f', '/x/%2Fy']
+    expect(validateNextSparkConfig({ sitemap: { urls: valid } }).valid).toBe(true)
+    const invalid = ['/a//b', '//a', '/a/./b', '/a/../b', '/%2e%2e/x', '/%2E/x', '/a/%2e', '/pricing/', '/a%', '/a%zz', '/a"b', '/a<b>', '/é', '/a|b', '/a\\b', '/a[b]']
+    for (const entry of invalid) {
+      const result = validateNextSparkConfig({ sitemap: { urls: [entry], exclude: [entry] } })
+      expect(result.valid).toBe(false)
+      if (!result.valid) expect(result.errors).toHaveLength(2)
+    }
+    expect(validateNextSparkConfig({ sitemap: { exclude: ['/legal/*', '/*'] } }).valid).toBe(true)
+  })
+
   it('rejects malformed sitemap settings, naming each', () => {
     const result = validateNextSparkConfig({
       sitemap: { enabled: 'no', urls: ['pricing', '//evil.com', '/a?b=1', '/a b', '/x/../y', '/p*', 3, '/ok', '/ok'], exclude: ['/a*b', '/ok/*'], extra: 1 },
@@ -159,13 +171,13 @@ describe('nextspark.config.ts source contract', () => {
     expect(result.errors).toEqual([
       'sitemap.extra is not supported.',
       'sitemap.enabled must be a boolean; received string.',
-      'sitemap.urls[0] must be a path from the app root such as "/pricing" (no query, fragment or spaces); received "pricing".',
-      'sitemap.urls[1] must be a path from the app root such as "/pricing" (no query, fragment or spaces); received "//evil.com".',
-      'sitemap.urls[2] must be a path from the app root such as "/pricing" (no query, fragment or spaces); received "/a?b=1".',
-      'sitemap.urls[3] must be a path from the app root such as "/pricing" (no query, fragment or spaces); received "/a b".',
-      'sitemap.urls[4] must be a path from the app root such as "/pricing" (no query, fragment or spaces); received "/x/../y".',
+      'sitemap.urls[0] must be a path from the app root such as "/pricing" (URL path characters only: no query, fragment, spaces, empty or dot segments, or trailing "/"); received "pricing".',
+      'sitemap.urls[1] must be a path from the app root such as "/pricing" (URL path characters only: no query, fragment, spaces, empty or dot segments, or trailing "/"); received "//evil.com".',
+      'sitemap.urls[2] must be a path from the app root such as "/pricing" (URL path characters only: no query, fragment, spaces, empty or dot segments, or trailing "/"); received "/a?b=1".',
+      'sitemap.urls[3] must be a path from the app root such as "/pricing" (URL path characters only: no query, fragment, spaces, empty or dot segments, or trailing "/"); received "/a b".',
+      'sitemap.urls[4] must be a path from the app root such as "/pricing" (URL path characters only: no query, fragment, spaces, empty or dot segments, or trailing "/"); received "/x/../y".',
       'sitemap.urls[5] may not contain "*"; received "/p*".',
-      'sitemap.urls[6] must be a path from the app root such as "/pricing" (no query, fragment or spaces); received 3.',
+      'sitemap.urls[6] must be a path from the app root such as "/pricing" (URL path characters only: no query, fragment, spaces, empty or dot segments, or trailing "/"); received 3.',
       'sitemap.urls contains duplicate entry "/ok".',
       'sitemap.exclude[0] may only use "*" as the last character, to exclude a prefix such as "/legal/*"; received "/a*b".',
     ])

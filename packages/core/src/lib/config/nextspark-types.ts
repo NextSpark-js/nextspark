@@ -226,7 +226,10 @@ function validateApp(value: unknown, errors: string[]): void {
   validateOptionalString(value.description, 'app.description', errors)
 }
 
-/** A path of this app: from the root, no query, fragment, whitespace, `..` or `//`; `*` only as the last character when `wildcard`. */
+/** URL path characters (RFC 3986 pchar and `/`); `%` only as a `%XX` triplet, `*` is checked apart. */
+const URL_PATH = /^\/(?:[A-Za-z0-9\-._~!$&'()+,;=:@/]|%[0-9A-Fa-f]{2}|\*)*$/
+
+/** A path of this app: from the root, URL path characters only, no empty or dot segment (`//`, `.`, `..`, `%2e`), no trailing `/` but `/`; `*` only as the last character when `wildcard`. */
 function validateSitemapPaths(value: unknown, path: string, wildcard: boolean, errors: string[]): void {
   if (value === undefined) return
   if (!Array.isArray(value)) {
@@ -236,8 +239,13 @@ function validateSitemapPaths(value: unknown, path: string, wildcard: boolean, e
   const seen = new Set<string>()
   value.forEach((entry, index) => {
     const where = `${path}[${index}]`
-    if (typeof entry !== 'string' || !entry.startsWith('/') || entry.startsWith('//') || /[\s?#\\]/.test(entry) || entry.split('/').includes('..')) {
-      errors.push(`${where} must be a path from the app root such as "/pricing" (no query, fragment or spaces); received ${JSON.stringify(entry)}.`)
+    const segments = typeof entry === 'string' ? entry.split('/').slice(1) : []
+    if (
+      typeof entry !== 'string' ||
+      !URL_PATH.test(entry) ||
+      (entry !== '/' && segments.some(segment => segment === '' || /^(?:\.|%2e){1,2}$/i.test(segment)))
+    ) {
+      errors.push(`${where} must be a path from the app root such as "/pricing" (URL path characters only: no query, fragment, spaces, empty or dot segments, or trailing "/"); received ${JSON.stringify(entry)}.`)
       return
     }
     if (!wildcard && entry.includes('*')) {
