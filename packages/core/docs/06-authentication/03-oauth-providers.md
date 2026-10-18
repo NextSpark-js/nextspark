@@ -237,6 +237,7 @@ auth: { methods: ['email-otp', 'google', 'microsoft'] }
 
 - **Scopes**: `openid profile email User.Read offline_access` (Better Auth's defaults); the profile photo comes from Microsoft Graph.
 - **Mapping**: `given_name` / `family_name` when present, otherwise the name split; the default role and language.
+- **Tenant**: for a B2B app, `MICROSOFT_TENANT_ID=organizations` (work and school accounts only) is the safe choice. Personal accounts can sign up only if their ID token carries a verified-email claim; whether they do with the optional claims of step 6 is what plan case 3 records.
 - **Email**: from the ID token. On the multi-tenant endpoints Better Auth checks that the token's issuer is its own tenant.
   - Verified (see step 6): sign-up, sign-in and linking.
   - Not verified, or no verified-email claim: no new account (`SOCIAL_EMAIL_UNVERIFIED`) and no linking (`account_not_linked`). An Entra administrator can set any address on a work account, so an unverified one must not be trusted.
@@ -273,6 +274,10 @@ auth: { methods: ['email-otp', 'google', 'apple'] }
 
 - **Client secret**: Apple wants an ES256 JWT signed with the `.p8` key (`iss` = team id, `sub` = Services ID, `aud` = `https://appleid.apple.com`, header `kid` = key id). NextSpark signs it at startup with Node's crypto (`createAppleClientSecret` in `lib/auth/social-providers.ts`), valid for 180 days (Apple's limit is six months), and signs a new one a day before it expires on a server that runs that long. A key that is not a P-256 EC key turns Apple off with an error in the log. There is no `APPLE_CLIENT_SECRET` to rotate by hand.
 - **form_post**: Apple answers with a cross-site `POST` to the callback. Better Auth turns it into a `GET` on the same callback, where the browser sends the sign-in cookies. NextSpark adds `https://appleid.apple.com` to Better Auth's trusted origins when Apple is on, as Better Auth's Apple guide asks.
+- **Native apps**: with `APPLE_APP_BUNDLE_IDENTIFIER` set, id-token sign-in (`/sign-in/social` with `idToken`) accepts only tokens issued for that bundle id, not for the Services ID; the web flow is not affected.
+- **Logs**: the GET callback's `user` query parameter carries the first-consent name and email, so exclude it from request logging (proxy, load balancer, access logs).
+- **Key check**: readiness parses `APPLE_PRIVATE_KEY` the way the signer does, so a key that is not P-256 (an RSA key, or garbage inside the PEM armor) leaves Apple not ready: no button, and its sign-in answers 503 `APPLE_PRIVATE_KEY_MALFORMED`.
+- **Rate limit**: Apple's form_post `POST /api/auth/callback/apple` is not charged to the `auth` rate limit (Better Auth only redirects it to the GET callback), so an Apple sign-in costs one request of that limit, like the others.
 - **Name**: Apple sends the name only on the user's first consent, in the form post. Better Auth reads it there; the mapping splits it into `firstName` / `lastName`. Later sign-ins carry no name and do not change the stored one. If the first sign-in fails after consent, the name is lost: the user removes the app at appleid.apple.com → Sign in with Apple, and consents again.
 - **Email**:
   - Shared address (`email_verified: true`): sign-up, sign-in, and linking to an existing verified account with that address.
@@ -303,6 +308,7 @@ GITLAB_CLIENT_SECRET=...
 - The callback URL is `<origin><basePath>/api/auth/callback/<id>`.
 - There is no button: start the sign-in from your own UI or a client: `authClient.signIn.social({ provider: 'discord', callbackURL: '/dashboard' })`.
 - The mapping splits a `name` / `given_name` / `family_name` from the profile when there is one and assigns the default role and language; the registration gates and the unverified-email rule apply as for the built-ins.
+- Non-secret options a provider requires go in `options`. For example `cognito` needs `{ domain, region, userPoolId }` (`providers: { cognito: { options: { domain: 'auth.example.com', region: 'eu-west-1', userPoolId: 'eu-west-1_abc123' } } }`). A provider Better Auth refuses to build with the given options is left off with a startup warning naming its id, and the rest of auth keeps working.
 - A provider that needs other credentials than a client id and secret (for example TikTok's `clientKey`) is not covered by the variable convention.
 
 ## OAuth Flow
@@ -626,7 +632,7 @@ Setup for every plan: a fresh database, `teams.mode: 'multi-tenant'`, the provid
 | 2. Sign-up (`open`) | account A, primary email verified on GitHub | `/dashboard`; user with `firstName`/`lastName` from the GitHub name (or the login), default role and language, `emailVerified` true, an `account` row `github` |
 | 3. Sign-in | account A again | `/dashboard`, a second session, no second user |
 | 4. Linking | create a user by email code with B's primary address, then sign in with GitHub as B | same user, now with a `github` account row |
-| 5. Unverified email | an account whose primary email is unverified on GitHub (add and set primary an address without confirming it) | new address: `/auth-error?error=SOCIAL_EMAIL_UNVERIFIED`, no user; existing user with that address: `account_not_linked`, no link |
+| 5. No readable email | `providers: { github: { options: { disableDefaultScope: true, scope: ['read:user'] } } }` (no `user:email`), restart, sign in. Without `user:email` Better Auth cannot read `/user/emails`, so it never learns that GitHub verified the address | account whose email is private on its profile: `/auth-error?error=email_not_found`; account with a public profile email: `/auth-error?error=SOCIAL_EMAIL_UNVERIFIED`. No user either way. (GitHub only lets a verified address be primary, so the unverified-primary case cannot be produced with a real account: it is covered by `tests/node/social-providers.test.ts` only.) |
 | 6. basePath callback | `basePath: '/app'`, callback URL `.../app/api/auth/callback/github` in the OAuth App | sign-in completes and returns under `/app` |
 | 7. `invitation-only` | empty database: A bootstraps; then B without invitation; then invite B and sign in | A: `/dashboard`; B uninvited: `/auth-error?error=SIGNUP_RESTRICTED`, no user; B invited: user created, invitation accepted from its link |
 
@@ -665,6 +671,7 @@ Run on an HTTPS domain registered in the Services ID (a tunnel works).
 | 1. Off without credentials | `providers: { discord: {} }`, no variables | a startup warning naming `DISCORD_CLIENT_ID`/`DISCORD_CLIENT_SECRET`; `sign-in/social` with `discord` fails in Better Auth |
 | 2. API sign-in | variables set; `authClient.signIn.social({ provider: 'discord', callbackURL: '/dashboard' })` | `/dashboard`, user created; no button on /login |
 | 3. Unknown id | `providers: { nope: {} }` | startup warning, the app starts, nothing else changes |
+| 4. Missing required options | `providers: { cognito: {} }` with `COGNITO_CLIENT_ID`/`COGNITO_CLIENT_SECRET` set | startup warning naming `cognito`; email code and the other providers keep working |
 
 ## Next Steps
 
