@@ -406,7 +406,7 @@ async function validateApiKey(key: string) {
 ## Next Steps
 
 1. **[Better Auth Integration](./02-better-auth-integration.md)** - Detailed Better Auth configuration
-2. **[OAuth Providers](./03-oauth-providers.md)** - Google OAuth setup
+2. **[OAuth Providers](./03-oauth-providers.md)** - Google, GitHub, Microsoft and Apple setup, and the provider map
 3. **[API Key Management](./04-api-keys.md)** - API key system details
 4. **[Session Management](./05-session-management.md)** - Session handling
 5. **[Permissions and Roles](./06-permissions-and-roles.md)** - RBAC system

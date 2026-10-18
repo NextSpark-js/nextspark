@@ -623,7 +623,7 @@ advanced: {
 
 ## Next Steps
 
-1. **[OAuth Providers](./03-oauth-providers.md)** - Set up Google OAuth
+1. **[OAuth Providers](./03-oauth-providers.md)** - Set up Google, GitHub, Microsoft and Apple sign-in
 2. **[Session Management](./05-session-management.md)** - Deep dive into sessions
 3. **[Security Best Practices](./07-security-best-practices.md)** - Security implementation
 
