@@ -5,7 +5,7 @@ description: Multi-provider payment integration for subscription payments
 
 # Payment Provider Integration
 
-> **Experimental:** Billing (Stripe and Polar) is not part of the stable 1.0 surface and may change without a deprecation period.
+> **Experimental:** Billing (Stripe, Polar and Lemon Squeezy) is not part of the stable 1.0 surface and may change without a deprecation period.
 
 The billing system supports multiple payment providers through a **Gateway Factory** pattern. Providers are abstracted behind a unified `BillingGateway` interface, so consumer code never imports from a specific provider.
 
@@ -23,7 +23,8 @@ core/lib/billing/gateways/
 ├── types.ts         # Provider-agnostic result types
 ├── factory.ts       # getBillingGateway() singleton factory
 ├── stripe.ts        # StripeGateway implements BillingGateway
-└── polar.ts         # PolarGateway implements BillingGateway
+├── polar.ts         # PolarGateway implements BillingGateway
+└── lemonsqueezy.ts  # LemonSqueezyGateway implements BillingGateway (REST API, no SDK)
 ```
 
 ### Gateway Factory Pattern
@@ -92,7 +93,7 @@ Set the provider in your theme's `billing.config.ts`:
 
 ```typescript
 export const billingConfig: BillingConfig = {
-  provider: 'stripe',  // or 'polar'
+  provider: 'stripe',  // or 'polar', or 'lemonsqueezy' (see 09-lemon-squeezy.md)
   // ...
 }
 ```
@@ -111,6 +112,11 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 POLAR_ACCESS_TOKEN=pat_...
 POLAR_WEBHOOK_SECRET=whsec_...
 POLAR_SERVER=sandbox   # 'sandbox' or 'production'
+
+# === Lemon Squeezy (09-lemon-squeezy.md) ===
+LEMONSQUEEZY_API_KEY=...
+LEMONSQUEEZY_STORE_ID=12345
+LEMONSQUEEZY_WEBHOOK_SECRET=...
 
 # === Cron (required for all providers) ===
 CRON_SECRET=your-secure-secret
@@ -368,6 +374,10 @@ async function handlePolarWebhook(request: NextRequest) {
 2. Add endpoint: `https://your-app.com/api/v1/billing/webhooks/polar`
 3. Select events: `checkout.updated`, `order.paid`, `subscription.created`, `subscription.updated`, `subscription.canceled`
 4. Copy the webhook secret to `POLAR_WEBHOOK_SECRET`
+
+### Lemon Squeezy Webhooks
+
+`POST /api/v1/billing/webhooks/lemonsqueezy` verifies `X-Signature` (hex HMAC-SHA256 of the raw body) and derives its event id, since Lemon Squeezy sends none. Setup, the event list and how the team is bound: [Lemon Squeezy](./09-lemon-squeezy.md#the-webhook).
 
 ### Webhook Deduplication
 
