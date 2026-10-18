@@ -149,7 +149,6 @@ const config: Partial<AppConfig> = {
     acceptedTypes: ['image/*', 'video/*', 'application/pdf'],
     allowedMimeTypes: [
       'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-      'image/svg+xml',                // Add SVG support
       'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
       'application/pdf',              // Add PDF support
     ],
@@ -158,6 +157,8 @@ const config: Partial<AppConfig> = {
 
 export default config
 ```
+
+Types outside the raster and video table (`image/jpeg`, `image/png`, `image/gif`, `image/webp`, `video/*` above), such as PDF, are stored and served as downloads (`Content-Disposition: attachment`). SVG is deliberately not in this example: an SVG can carry script, its bytes have no signature the upload can check, and a bucket serves it with the type it was stored with from an origin the app does not control (often a sibling domain of the app). Allowing it is only safe from an origin that shares no cookies with the app and sends `Content-Security-Policy: sandbox`.
 
 The theme configuration is deep-merged with the core defaults at build time. Any properties not specified in the theme fall back to the core defaults.
 
@@ -503,7 +504,7 @@ In development, the fallback writes files to `{cwd}/public/uploads/temp/{timesta
 
 A production server never writes uploads to `public/`: Next serves `public/` from what it indexed at startup, so a file written while the server runs answers 404 until a restart, and a container's disk does not survive a redeploy. Self-hosted deployments (standalone, `next start`, Docker) use `s3` or `local`.
 
-Every driver stores files under a name the server generates (`{timestamp}_{random}.{ext}`, the extension from the allow-listed type), never the client's file name, with the validated `Content-Type`. Deleting a media item (`DELETE /api/v1/media/:id`) also deletes its file through the driver; a page that embedded the file's URL loses the image.
+Every driver stores files under a name the server generates (`{timestamp}_{random}.{ext}`, the extension from the allow-listed type), never the client's file name, with the validated `Content-Type`. With `s3` the server also sets `Cache-Control: public, max-age=31536000, immutable` and, for a type outside the raster/video table, `Content-Disposition: attachment`; whatever metadata a client sent with a direct upload is replaced when the upload is confirmed. Deleting a media item (`DELETE /api/v1/media/:id`) also deletes its file through the driver; a page that embedded the file's URL loses the image.
 
 ### Vercel Blob (`vercel-blob`)
 
@@ -560,7 +561,9 @@ A browser `PUT` to the bucket needs a CORS rule for the app's origin:
 
 (AWS S3 and R2 take this JSON in the bucket's CORS settings; B2 and Spaces have an equivalent form; MinIO sets allowed origins server-wide.)
 
-A presigned object lands under `pending/` and is copied to `uploads/` only when the confirm accepts it; a rejected one is deleted. An upload that is never confirmed (the user closed the tab) stays under `pending/`. Add a **lifecycle rule that expires objects under the `pending/` prefix after 1 day**: AWS S3, R2, Backblaze B2 and Spaces support prefix rules in the bucket settings, and MinIO with `mc ilm rule add --prefix pending/ --expire-days 1 <alias>/<bucket>`. A prefix rule was chosen over object tags because every one of these services supports it. A confirm is accepted up to one hour after the presign, well inside that day.
+A presigned object lands under `pending/` and is copied to `uploads/` only when the confirm accepts it; a rejected one is deleted. An upload that is never confirmed (the user closed the tab) stays under `pending/`. Add a **lifecycle rule that expires objects under the `pending/` prefix after 1 day**: AWS S3, R2, Backblaze B2 and Spaces support prefix rules in the bucket settings, and MinIO with `mc ilm rule add --prefix pending/ --expire-days 1 <alias>/<bucket>`. A prefix rule was chosen over object tags because every one of these services supports it. A confirm is accepted up to one hour after the presign, well inside that day. The confirm copies only the bytes it checked (`x-amz-copy-source-if-match` with the ETag it read): an object replaced in between is refused and deleted.
+
+The confirm token is signed with a key derived from `BETTER_AUTH_SECRET`. Rotating the secret makes the tokens of uploads in progress invalid (confirm answers `400 INVALID_UPLOAD_TOKEN`); their pending objects are removed by the lifecycle rule. A rotation also ends every session, so do it outside busy hours.
 
 #### Standalone deployments
 
@@ -580,7 +583,9 @@ The glob matches nothing when aws4fetch is not installed.
 |----------|----------|-------------|
 | `UPLOADS_DIR` | Yes | Directory for uploaded files, absolute or relative to the project (the server's working directory) |
 
-Files are served by `GET /api/v1/media/files/{name}`, with the `Content-Type` of their stored extension (an unknown one as a download), `X-Content-Type-Options: nosniff`, a one-year immutable cache and byte ranges for video. A name the server could not have generated (any `/`, `..`, or other character outside letters, digits, `_` and `-` before the extension) answers 404, so nothing outside `UPLOADS_DIR` is reachable. New files are served at once; no restart is needed.
+Files are served by `GET /api/v1/media/files/{name}`, with the `Content-Type` of their stored extension (a type outside the raster/video table, or an unknown one, as a download), `X-Content-Type-Options: nosniff`, a one-year immutable cache and byte ranges for video. Only names of the shape the server generates (`{milliseconds}_{32 hex digits}.{ext}`) are served or deleted, and a symbolic link is not followed: any other name answers 404, so neither a path outside `UPLOADS_DIR` nor another file that happens to sit in it (`package.json`...) is reachable. New files are served at once; no restart is needed.
+
+Each request reads the file through the Node.js server and the route has no rate limit (an `<img>` per request would count against any). On a public site, put a CDN or the reverse proxy's cache (nginx `proxy_cache`, Caddy, Cloudflare) in front of `/api/v1/media/files/`: the responses are immutable for a year, so the cache absorbs the traffic.
 
 The server logs a warning once, at startup (or at the first upload when `instrumentation.ts` does not run):
 

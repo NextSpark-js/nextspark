@@ -334,7 +334,7 @@ Same authentication, scope (`media:write`) and permission (`media.upload`) as [U
 }
 ```
 
-The server names the object; the client's file name is only kept for display. The URL is valid for 5 minutes and its signature covers the `Content-Type` and the declared size: the storage refuses a `PUT` with another type, another length, or extra `x-amz-*` headers (such as an ACL).
+The server names the object; the client's file name is only kept for display. The URL is valid for 5 minutes and its signature covers the `Content-Type` and the declared size: the storage refuses a `PUT` with another type or another length. AWS S3 also refuses extra `x-amz-*` headers that are not signed (such as an ACL), and so did versitygw in our tests; check your service. Any other metadata a client sends (`Content-Disposition`, `Cache-Control`, `x-amz-meta-*` where accepted) is replaced on confirm.
 
 ### 2. Upload
 
@@ -352,7 +352,7 @@ POST /api/v1/media/upload/confirm
 { "token": "eyJuYW1lIjoi..." }
 ```
 
-The token is signed by the server and names the object, the user and team that presigned it, the type and size, and a deadline (one hour). The server then reads the stored object's size and type (HEAD) and its first bytes (a ranged GET), checks them against the declared type, the size limit and the file signature, copies the object from `pending/` to `uploads/`, and creates the media record. The response is the record:
+The token is signed by the server and names the object, the user and team that presigned it, the type and size, and a deadline (one hour). The server then reads the stored object's size and type (HEAD) and its first bytes (a ranged GET), checks them against the declared type, the size limit and the file signature, all before taking any database lock. Then it copies the object from `pending/` to `uploads/` (only if its ETag is still the one it checked, with metadata set by the server: the type, a one-year immutable `Cache-Control`, and `attachment` for a type outside the raster/video table), creates the media record, and deletes the pending object. The response is the record:
 
 ```json
 { "success": true, "data": { "media": { "id": "...", "url": "https://cdn.example.com/uploads/1706000000_9f2c...e1.jpg", "...": "..." }, "url": "https://cdn.example.com/uploads/1706000000_9f2c...e1.jpg" } }
@@ -367,6 +367,7 @@ The token is signed by the server and names the object, the user and team that p
 | `400` | `FILE_TOO_LARGE`, `FILE_SIZE_MISMATCH` | Over the limit, or not the declared size | deleted |
 | `400` | `FILE_TYPE_MISMATCH`, `FILE_TYPE_NOT_ALLOWED` | Stored with another type, bytes that do not match the type, or a type no longer allowed | deleted |
 | `409` | `UPLOAD_ALREADY_CONFIRMED` | The token was already confirmed; concurrent or replayed confirms create one record | untouched |
+| `409` | `UPLOAD_CHANGED` | The object was replaced (another `PUT` to the presigned URL) after the checks | deleted |
 
 An upload that is never confirmed stays under `pending/`; a bucket lifecycle rule removes it ([Configuration](./05-configuration.md#direct-uploads-cors-and-unconfirmed-objects)).
 
@@ -378,7 +379,7 @@ An upload that is never confirmed stays under `pending/`; a bucket lifecycle rul
 GET /api/v1/media/files/:name
 ```
 
-With `STORAGE_DRIVER=local`, the URL of every uploaded file. Public, like a Blob or bucket URL. Answers the file with the `Content-Type` of its stored extension (an unknown one as a download), `X-Content-Type-Options: nosniff` and `Cache-Control: public, max-age=31536000, immutable`; a `Range: bytes=start-end` header gets `206`. Any name the server could not have generated, and any request while another driver is selected, answers `404`.
+With `STORAGE_DRIVER=local`, the URL of every uploaded file. Public, like a Blob or bucket URL. Answers the file with the `Content-Type` of its stored extension (a type outside the raster/video table, or an unknown one, as a download), `X-Content-Type-Options: nosniff` and `Cache-Control: public, max-age=31536000, immutable`; a `Range: bytes=start-end` header gets `206`. Any name not of the generated shape, a symbolic link, and any request while another driver is selected answer `404`. No rate limit: put a CDN or a reverse-proxy cache in front on a public site.
 
 ---
 
