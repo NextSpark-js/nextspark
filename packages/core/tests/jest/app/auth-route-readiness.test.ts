@@ -36,7 +36,10 @@ jest.mock('@nextsparkjs/core/lib/auth/security-notifications', () => ({
 jest.mock('@nextsparkjs/core/lib/auth/verify-email-link', () => ({ verifyEmailPageUrl: jest.fn(() => null) }))
 jest.mock('@nextsparkjs/core/lib/base-path', () => ({ withBasePathRequest: (request: Request) => request }))
 
+import { generateKeyPairSync } from 'node:crypto'
 import { GET, POST } from '@/app/api/auth/[...all]/route'
+
+const APPLE_PEM = generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString()
 
 const ENV_KEYS = [
   'NODE_ENV',
@@ -142,6 +145,36 @@ describe('shipped auth route runtime readiness integration', () => {
 
     expect(response.status).toBe(200)
     expect(mockPost).toHaveBeenCalledTimes(1)
+  })
+
+  test('a form_post callback (Apple) is not charged to the auth rate limit; other POSTs are', async () => {
+    mockRateLimit.mockResolvedValue({ allowed: false, limit: 5, resetTime: 0 })
+    mockAuthConfig.methods = ['email-otp', 'google', 'apple']
+    setProductionEnv({
+      APPLE_CLIENT_ID: 'com.example.web',
+      APPLE_TEAM_ID: 'TEAM123456',
+      APPLE_KEY_ID: 'KEY1234567',
+      APPLE_PRIVATE_KEY: APPLE_PEM,
+    } as never)
+
+    const callback = await POST(nextRequest('/base/api/auth/callback/apple', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'code=c&state=s',
+    }))
+    expect(callback.status).toBe(200)
+    expect(mockPost).toHaveBeenCalledTimes(1)
+    expect(mockRateLimit).not.toHaveBeenCalled()
+
+    const signIn = await POST(nextRequest('/api/auth/sign-in/social', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ provider: 'apple' }),
+    }))
+    expect(signIn.status).toBe(429)
+    expect(mockRateLimit).toHaveBeenCalledTimes(1)
+    mockRateLimit.mockResolvedValue({ allowed: true, limit: 5, resetTime: 0 })
+    for (const key of ['APPLE_CLIENT_ID', 'APPLE_TEAM_ID', 'APPLE_KEY_ID', 'APPLE_PRIVATE_KEY']) delete process.env[key]
   })
 
   test('serves public method availability without invoking Better Auth', async () => {

@@ -75,9 +75,11 @@ export async function POST(req: NextRequest) {
   // Rate limiting: 5 requests per 15 minutes per IP (tier: auth).
   // Protects login/signup against brute-force and credential stuffing attacks.
   // Per client address (lib/api/client-ip, set by NEXTSPARK_CLIENT_IP_SOURCE).
+  // A form_post provider's callback (Apple) is not charged: Better Auth only redirects it to the GET callback.
+  const isCallbackPost = req.nextUrl.pathname.includes('/api/auth/callback/')
   const clientIp = getClientIp(req.headers)
-  const rateLimitResult = await checkDistributedRateLimit(`auth:ip:${clientIp}`, 'auth')
-  if (!rateLimitResult.allowed) {
+  const rateLimitResult = isCallbackPost ? null : await checkDistributedRateLimit(`auth:ip:${clientIp}`, 'auth')
+  if (rateLimitResult && !rateLimitResult.allowed) {
     return wrapAuthHandlerWithCors(async () => new NextResponse(JSON.stringify({ error: 'Too many requests' }), {
       status: 429,
       headers: {
