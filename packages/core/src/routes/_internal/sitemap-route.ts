@@ -1,6 +1,6 @@
 /**
  * /sitemap.xml (#273): the project's public pages and the published entries of its public entities, once per
- * URL with hreflang alternates for every enabled locale (lib/seo/sitemap.ts builds the document).
+ * URL (lib/seo/sitemap.ts builds the document).
  *
  * The generated host composes `src/app/sitemap.ts` from this factory with the project's `sitemap` settings
  * (nextspark.config.ts) and the static public pages it found as literals; core's own `routes/sitemap.ts` is the
@@ -27,7 +27,6 @@ import type { MetadataRoute } from 'next'
 import { connection } from 'next/server'
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { query } from '@nextsparkjs/core/lib/db'
-import { I18N_CONFIG } from '@nextsparkjs/core/lib/config/i18n-config-client'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import { buildSitemap, type SitemapConfig } from '@nextsparkjs/core/lib/seo/sitemap'
 import { readEntities, SITEMAP_MAX_URLS } from '@nextsparkjs/core/lib/seo/sitemap-entries'
@@ -53,8 +52,6 @@ export async function readSitemap(options: SitemapRouteOptions): Promise<{ sitem
   const sitemap = buildSitemap({
     origin: (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, ''),
     basePath: (process.env.__NEXT_ROUTER_BASEPATH || '').replace(/\/+$/, ''),
-    locales: I18N_CONFIG.supportedLocales,
-    defaultLocale: I18N_CONFIG.defaultLocale,
     staticPaths: options.staticPaths,
     entities,
     urls: options.urls,

@@ -197,9 +197,9 @@ Each entry has `lastmod` from the row's `updatedAt`.
 
 A row is listed exactly when its public page renders it. The sitemap reads the same table with the same rule as the page (`status = 'published'`, as the service role, since the page is public), so a draft, a scheduled or an archived row never appears and a deleted row is gone. A slug the route answers not found for (`logo.png`, a name with a space) is dropped. Entities that are private, team-scoped (`access.public` not `true`) or without a base path are not even queried.
 
-### Languages (`hreflang`)
+### One URL per page
 
-The app chooses the language of a visitor from a cookie, the account and `Accept-Language`, not from the URL: there is no `/es/` prefix and every locale is served at the same URL. So an entry is one `<url>` (a repeated `<loc>` is invalid) and its `<xhtml:link rel="alternate" hreflang>` lines name that URL for **every enabled locale** (`i18n.supportedLocales` of `app.config.ts`) plus `x-default` (the `defaultLocale`). If your project serves localized URLs (a locale prefix of your own), replace the sitemap with your own `templates/sitemap.ts` and list the real URLs.
+The app chooses the language of a visitor from a cookie, the account and `Accept-Language`, not from the URL: there is no `/es/` prefix and every locale is served at the same URL. So an entry is one `<url>` (a repeated `<loc>` is invalid) and the sitemap carries no `hreflang` alternates: they would all name the same URL. If your project serves localized URLs (a locale prefix of your own), replace the sitemap with your own `templates/sitemap.ts` and list the real URLs with their alternates.
 
 Under a Next `basePath`, every URL carries the prefix.
 
@@ -228,16 +228,19 @@ Replace the whole sitemap with `templates/sitemap.ts` (default export returning 
 ```
 User-Agent: *
 Allow: /
-Disallow: /dashboard
-Disallow: /superadmin
-Disallow: /devtools
-Disallow: /api
-Disallow: /login
-...
+Disallow: /dashboard$
+Disallow: /dashboard/
+Disallow: /superadmin$
+Disallow: /superadmin/
+Disallow: /devtools$
+Disallow: /devtools/
+Disallow: /api$
+Disallow: /api/
+
 Sitemap: https://example.com/sitemap.xml
 ```
 
-The sitemap URL is absolute, built from `NEXT_PUBLIC_APP_URL` and the base path. **Set `NEXT_PUBLIC_APP_URL` to your public origin in production**: without it the URLs say `http://localhost:3000`. Crawlers read only the host root: under a Next `basePath` the file is served at `/<base>/robots.txt` and the one at the root is the deployment's concern.
+Each area is listed twice, `/api$` for the path itself and `/api/` for its subpaths, so `/apiary` stays crawlable. The sitemap URL is absolute, built from `NEXT_PUBLIC_APP_URL` and the base path. **Set `NEXT_PUBLIC_APP_URL` to your public origin in production**: without it the URLs say `http://localhost:3000`. Crawlers read only the host root: under a Next `basePath` the file is served at `/<base>/robots.txt` and the one at the root is the deployment's concern.
 
 ### Caching and size
 

@@ -1,13 +1,13 @@
 /**
- * The sitemap of a project (#273): which URLs, with which hreflang alternates. Pure: it gets the already-read
+ * The sitemap of a project (#273): which URLs, with which lastmod. Pure: it gets the already-read
  * entries and the configuration, so the visibility rules live where the entries are read
  * (routes/_internal/sitemap-entries.ts) and everything here is testable without a database.
  *
  * URL format. The app picks the language of a visitor from a cookie, the account and Accept-Language
  * (docs/11-internationalization/06-locale-switching.md), not from the URL: there is no `/es/...` prefix and every
- * locale is served at the same URL. So an entry is one `<url>` (not one per locale: a repeated `<loc>` is invalid)
- * and its `alternates.languages` name that same URL for every enabled locale plus `x-default`. `localizedUrl` is
- * the one place that would change if the app gains a locale prefix.
+ * locale is served at the same URL. So an entry is one `<url>` (a repeated `<loc>` is invalid) and carries no hreflang
+ * alternates: they would all name the same URL. `localizedUrl` is the one place that would change if the app gains
+ * a locale prefix.
  */
 
 import type { MetadataRoute } from 'next'
@@ -41,15 +41,15 @@ export interface BuildSitemapInput extends Pick<SitemapConfig, 'urls' | 'exclude
   origin: string
   /** The Next `basePath`, or ''. */
   basePath?: string
-  /** The enabled locales, and the one `x-default` points at. */
-  locales: readonly string[]
-  defaultLocale: string
   /** Static public pages of the project (`/support`), found by the host at build time. */
   staticPaths?: readonly string[]
   entities?: readonly SitemapEntity[]
 }
 
-/** The URL a locale's visitors use for `path` (the same URL for every locale, see the module comment). */
+/**
+ * The URL a locale's visitors use for `path` (the same URL for every locale, see the module comment).
+ * ponytail: add `alternates.languages` (and x-default) to buildSitemap when locale-prefixed URLs exist, one `localizedUrl` per locale.
+ */
 export function localizedUrl(origin: string, basePath: string, path: string, _locale?: string): string {
   const prefixed = path === '/' ? basePath || '/' : `${basePath}${path}`
   return `${origin}${prefixed}`
@@ -62,7 +62,7 @@ export function isExcluded(path: string, exclude: readonly string[] = []): boole
 
 const encodePath = (path: string) => path.split('/').map(encodeURIComponent).join('/')
 
-/** Next writes `<loc>` and `href` as they are given, so what goes into the XML is escaped here: a `&` in a path stays valid. */
+/** Next writes `<loc>` as it is given, so what goes into the XML is escaped here: a `&` in a path stays valid. */
 const xml = (url: string) => url.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
 
 function lastModified(value: SitemapRow['updatedAt']): Date | undefined {
@@ -77,7 +77,7 @@ export function isSitemapEntity(config: EntityConfig): boolean {
 }
 
 export function buildSitemap(input: BuildSitemapInput): MetadataRoute.Sitemap {
-  const { origin, basePath = '', locales, defaultLocale, exclude } = input
+  const { origin, basePath = '', exclude } = input
   const found = new Map<string, Date | undefined>() // path -> lastmod; first one wins, in order
 
   const add = (path: string, lastmod?: Date) => {
@@ -96,18 +96,8 @@ export function buildSitemap(input: BuildSitemapInput): MetadataRoute.Sitemap {
   }
   for (const path of input.urls ?? []) add(path)
 
-  const alternates = (path: string) => {
-    const url = (locale: string) => xml(localizedUrl(origin, basePath, path, locale))
-    return {
-      languages: {
-        ...Object.fromEntries(locales.map(locale => [locale, url(locale)])),
-        'x-default': url(defaultLocale),
-      },
-    }
-  }
   return [...found].map(([path, lastmod]) => ({
     url: xml(localizedUrl(origin, basePath, path)),
     ...(lastmod ? { lastModified: lastmod } : {}),
-    alternates: alternates(path),
   }))
 }

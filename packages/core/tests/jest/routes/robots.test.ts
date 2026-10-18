@@ -1,12 +1,16 @@
 /**
  * #214: core's /robots.txt route.
  */
+import { resolveRobots } from 'next/dist/build/webpack/loaders/metadata/resolve-route-data'
 import robots from '@/app/robots'
 import { createRobotsRoute } from '@/app/_internal/robots-route'
 
 const BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL
-const DISALLOWED = ['/dashboard', '/superadmin', '/devtools', '/api']
+const AREAS = ['/dashboard', '/superadmin', '/devtools', '/api']
+// each area by itself and its subpaths: `/api` alone would also block `/apiary`
+const blocked = (prefix = '') => AREAS.flatMap(path => [`${prefix}${path}$`, `${prefix}${path}/`])
+const DISALLOWED = blocked()
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_APP_URL = 'https://example.com/'
@@ -34,8 +38,21 @@ describe('robots', () => {
   it('follows the base path', () => {
     process.env.__NEXT_ROUTER_BASEPATH = '/app'
     expect(robots()).toEqual({
-      rules: { userAgent: '*', allow: '/app', disallow: DISALLOWED.map(path => `/app${path}`) },
+      rules: { userAgent: '*', allow: '/app', disallow: blocked('/app') },
       sitemap: 'https://example.com/app/sitemap.xml',
     })
+  })
+
+  it('renders exactly the area lines and the Sitemap line', () => {
+    expect(resolveRobots(robots())).toBe(
+      [
+        'User-Agent: *',
+        'Allow: /',
+        ...DISALLOWED.map(path => `Disallow: ${path}`),
+        '',
+        'Sitemap: https://example.com/sitemap.xml',
+        '',
+      ].join('\n'),
+    )
   })
 })

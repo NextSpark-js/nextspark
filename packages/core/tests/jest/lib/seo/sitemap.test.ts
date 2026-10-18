@@ -1,7 +1,7 @@
 /**
- * #273: the sitemap builder - which URLs, hreflang, lastmod, extra and excluded paths, base path - and the rows it is given.
+ * #273: the sitemap builder - which URLs, lastmod, extra and excluded paths, base path - and the rows it is given.
  */
-import { buildSitemap, isExcluded, isSitemapEntity, localizedUrl, type BuildSitemapInput, type SitemapEntity } from '@/core/lib/seo/sitemap'
+import { buildSitemap, isExcluded, isSitemapEntity, type BuildSitemapInput, type SitemapEntity } from '@/core/lib/seo/sitemap'
 import { readPublishedEntries } from '@/core/lib/seo/sitemap-entries'
 import type { EntityConfig } from '@/core/lib/entities/types'
 import { resolveSitemap } from 'next/dist/build/webpack/loaders/metadata/resolve-route-data'
@@ -18,14 +18,12 @@ const entity = (overrides: Record<string, unknown> = {}): EntityConfig =>
 
 const BASE: BuildSitemapInput = {
   origin: 'https://example.com',
-  locales: ['en', 'es'],
-  defaultLocale: 'en',
 }
 
 const urls = (sitemap: ReturnType<typeof buildSitemap>) => sitemap.map(entry => entry.url)
 
 describe('buildSitemap', () => {
-  it('lists static pages and published entries, once per URL, with every enabled locale and x-default', () => {
+  it('lists static pages and published entries, once per URL, with no hreflang alternates', () => {
     const sitemap = buildSitemap({
       ...BASE,
       staticPaths: ['/', '/support'],
@@ -36,21 +34,7 @@ describe('buildSitemap', () => {
     expect(sitemap.at(-1)).toEqual({
       url: 'https://example.com/blog/first-post',
       lastModified: new Date('2026-01-02T03:04:05.000Z'),
-      alternates: {
-        languages: {
-          en: 'https://example.com/blog/first-post',
-          es: 'https://example.com/blog/first-post',
-          'x-default': 'https://example.com/blog/first-post',
-        },
-      },
     })
-  })
-
-  it('points x-default at the default locale, whichever it is', () => {
-    const [entry] = buildSitemap({ ...BASE, locales: ['en', 'es', 'pt-BR'], defaultLocale: 'es', staticPaths: ['/'] })
-
-    expect(Object.keys(entry.alternates!.languages!)).toEqual(['en', 'es', 'pt-BR', 'x-default'])
-    expect(entry.alternates!.languages!['x-default']).toBe(localizedUrl('https://example.com', '', '/', 'es'))
   })
 
   it('sets lastModified from updatedAt (a Date or a string) and none for static pages or an unreadable date', () => {
@@ -73,15 +57,10 @@ describe('buildSitemap', () => {
     expect(urls(sitemap)).toEqual(['https://example.com/about', 'https://example.com/docs/intro'])
   })
 
-  it('follows the base path, in every URL and every alternate', () => {
+  it('follows the base path', () => {
     const sitemap = buildSitemap({ ...BASE, basePath: '/app', staticPaths: ['/', '/support'], entities: [{ config: entity(), rows: [{ slug: 'x' }] }] })
 
     expect(urls(sitemap)).toEqual(['https://example.com/app', 'https://example.com/app/support', 'https://example.com/app/blog', 'https://example.com/app/blog/x'])
-    expect(sitemap[1].alternates!.languages).toEqual({
-      en: 'https://example.com/app/support',
-      es: 'https://example.com/app/support',
-      'x-default': 'https://example.com/app/support',
-    })
   })
 
   it('leaves out an entity that is not public: no builder, no public access, no base path', () => {
@@ -149,6 +128,7 @@ describe('the rendered document', () => {
     expect(locs).toContain('https://example.com/a&b=c')
     expect(locs).toContain('https://example.com/blog/a%26b')
     expect(xml).toContain('<loc>https://example.com/terms&amp;conditions</loc>')
+    expect(xml).not.toContain('xhtml:link')
   })
 })
 

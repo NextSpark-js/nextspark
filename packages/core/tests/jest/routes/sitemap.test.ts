@@ -65,7 +65,6 @@ describe('readSitemap', () => {
 
     expect(failed).toBe(false)
     expect(sitemap.map(entry => entry.url)).toEqual(['https://example.com/support', 'https://example.com/blog', 'https://example.com/blog/hello', 'https://example.com/about'])
-    expect(Object.keys(sitemap[0].alternates!.languages!)).toContain('x-default')
   })
 
   it('lists what the other entities returned when one cannot be read, and says it failed', async () => {

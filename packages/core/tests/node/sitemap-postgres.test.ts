@@ -85,7 +85,7 @@ test('the sitemap lists exactly the published rows of the public entities, as th
 
   const { entities, failed } = await readEntities(configs, run)
   assert.equal(failed, false)
-  const sitemap = buildSitemap({ origin: 'https://example.com', locales: ['en', 'es'], defaultLocale: 'en', entities })
+  const sitemap = buildSitemap({ origin: 'https://example.com', entities })
   const byUrl = new Map(sitemap.map(entry => [entry.url, entry]))
 
   assert.deepEqual([...byUrl.keys()], [
@@ -99,7 +99,6 @@ test('the sitemap lists exactly the published rows of the public entities, as th
   // the same slug in two locales is one URL, dated by its latest edit
   assert.deepEqual(byUrl.get('https://example.com/about')!.lastModified, new Date('2026-03-01T00:00:00Z'))
   assert.deepEqual(byUrl.get('https://example.com/blog/hello-world')!.lastModified, new Date('2026-02-01T00:00:00Z'))
-  assert.deepEqual(Object.keys(byUrl.get('https://example.com/about')!.alternates!.languages!), ['en', 'es', 'x-default'])
   // a draft, scheduled or archived row, a file name, and a team-scoped entity's published row are all absent
   for (const absent of ['contact', 'soon', 'old']) assert.equal(byUrl.has(`https://example.com/${absent}`), false, absent)
   for (const absent of ['work-in-progress', 'logo.png', 'robots.txt']) assert.equal(byUrl.has(`https://example.com/blog/${absent}`), false, absent)
