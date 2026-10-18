@@ -384,6 +384,39 @@ export interface ScheduledActionsConfig {
   }
 }
 
+/** The optional categories a visitor can grant. `necessary` is always on and not listed. */
+export type ConsentOptionalCategory = 'analytics' | 'marketing'
+
+/**
+ * Cookie consent (#272). Opt-in everywhere: until the visitor chooses, `analytics` and `marketing` are off.
+ * Off by default; `enabled: true` in app.config.ts renders the banner and the configured loaders.
+ */
+export interface ConsentConfig {
+  /** Master switch. Off: no banner, no loaders, and `useConsent()` reports everything as granted. */
+  enabled: boolean
+  /** Name of the first-party cookie that stores the choice. Default `nextspark_consent`. */
+  cookieName?: string
+  /** Lifetime of the choice in days, kept between 180 and 365 (6 to 12 months). Default 180. */
+  maxAgeDays?: number
+  /** Bump it to ask everyone again. A change of `categories` asks again on its own. Default 1. */
+  version?: number | string
+  /** The optional categories the banner offers. Default `['analytics', 'marketing']`. */
+  categories?: ConsentOptionalCategory[]
+  /** Analytics scripts core loads once `analytics` is granted. Each is off until it is configured. */
+  loaders?: {
+    plausible?: {
+      /** The site's domain, as registered in Plausible. */
+      domain?: string
+      /** Script URL of a self-hosted Plausible. Default `https://plausible.io/js/script.js`. */
+      scriptUrl?: string
+    }
+    googleAnalytics?: {
+      /** GA4 measurement id, `G-XXXXXXXXXX`. */
+      measurementId?: string
+    }
+  }
+}
+
 /**
  * Media Library Configuration
  *
@@ -798,6 +831,9 @@ export interface AppConfig {
 
   /** Media library configuration */
   media?: MediaConfig
+
+  /** Cookie consent: banner, consent API and analytics loaders. Off unless `enabled` (#272). */
+  consent?: ConsentConfig
 
   /** Security options of the rendered app */
   security?: {

@@ -1,0 +1,22 @@
+{
+  "title": "Ihre Datenschutzoptionen",
+  "description": "Wir verwenden Cookies, damit die App funktioniert und – nur mit Ihrer Zustimmung – um zu verstehen, wie sie genutzt wird, und sie zu verbessern. Sie können Ihre Auswahl jederzeit ändern.",
+  "acceptAll": "Alle akzeptieren",
+  "rejectAll": "Alle ablehnen",
+  "settings": "Einstellungen",
+  "save": "Auswahl speichern",
+  "close": "Schließen",
+  "alwaysOn": "Immer aktiv",
+  "necessary": {
+    "title": "Notwendig",
+    "description": "Erforderlich, damit die App funktioniert, zum Beispiel für die Anmeldung und das Merken Ihrer Auswahl. Sie können nicht deaktiviert werden."
+  },
+  "analytics": {
+    "title": "Analyse",
+    "description": "Helfen uns zu verstehen, wie die App genutzt wird, damit wir sie verbessern können."
+  },
+  "marketing": {
+    "title": "Marketing",
+    "description": "Werden verwendet, um Werbung zu messen und zu personalisieren."
+  }
+}

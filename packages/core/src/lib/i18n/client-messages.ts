@@ -32,6 +32,12 @@ export const NAMESPACE_GROUPS = {
   devtools: ['common', 'dev', 'devtools', 'permissions'],
 } as const
 
+/**
+ * Namespaces the `root` group carries only while the feature that renders them is on: the root layouts add them
+ * to `selectMessages(…, 'root', …)` when `consent.enabled`, so a project without cookie consent ships none of them.
+ */
+export const OPTIONAL_ROOT_NAMESPACES = ['consent'] as const
+
 export type TranslationGroup = keyof typeof NAMESPACE_GROUPS
 type Messages = Record<string, unknown>
 

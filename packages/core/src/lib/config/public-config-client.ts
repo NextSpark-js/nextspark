@@ -11,12 +11,16 @@ import { DEFAULT_APP_CONFIG } from './app.config'
 import { mergeConfigs } from '../utils/config-merge'
 import { resolveAuthMethods } from '../auth/auth-methods'
 import { resolveOtpConfig } from '../auth/otp-config'
+import { resolveConsentConfig } from '../consent/cookie'
 
 const appConfig = mergeConfigs(DEFAULT_APP_CONFIG, APP_CONFIG_OVERRIDES)
 
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || appConfig.app.name
 export const APP_DESCRIPTION = appConfig.app.description
 export const DOCS_CONFIG = appConfig.docs
+
+/** Cookie consent (#272), defaults filled in. `enabled` is false unless app.config turns it on. */
+export const CONSENT_CONFIG = resolveConsentConfig(appConfig.consent)
 
 const methods = resolveAuthMethods(appConfig.auth)
 export const PUBLIC_AUTH_CONFIG = {

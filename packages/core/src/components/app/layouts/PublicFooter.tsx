@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { Separator } from '../../ui/separator'
 import { useTranslations } from 'next-intl'
 import { sel } from '@nextsparkjs/core/selectors/public'
-import { APP_NAME } from '../../../lib/config/public-config-client'
+import { APP_NAME, CONSENT_CONFIG } from '../../../lib/config/public-config-client'
+import { CookieSettingsLink } from '../../consent/CookieSettingsLink'
 import { CurrentYear } from './CurrentYear'
 
 export function PublicFooter() {
@@ -96,6 +97,7 @@ export function PublicFooter() {
           </div>
 
           <div className="flex items-center space-x-6 text-sm text-muted-foreground">
+            {CONSENT_CONFIG.enabled && <CookieSettingsLink label={t('cookieSettings')} />}
             <p className="text-center md:text-left">
               Built with ❤️ using{" "}
               <Link

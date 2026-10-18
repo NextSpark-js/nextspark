@@ -1,0 +1,22 @@
+{
+  "title": "Your privacy choices",
+  "description": "We use cookies to keep the app working and, only if you agree, to understand how it is used and to improve it. You can change your choice at any time.",
+  "acceptAll": "Accept all",
+  "rejectAll": "Reject all",
+  "settings": "Settings",
+  "save": "Save preferences",
+  "close": "Close",
+  "alwaysOn": "Always on",
+  "necessary": {
+    "title": "Necessary",
+    "description": "Needed for the app to work, such as signing in and remembering your choices. They cannot be turned off."
+  },
+  "analytics": {
+    "title": "Analytics",
+    "description": "Help us understand how the app is used so we can improve it."
+  },
+  "marketing": {
+    "title": "Marketing",
+    "description": "Used to measure and personalize advertising."
+  }
+}

@@ -257,6 +257,18 @@
       "stability": "experimental"
     },
     {
+      "subpath": "./lib/consent",
+      "reason": "documented",
+      "area": "Consent",
+      "note": "useConsent, getConsentState, openConsentSettings and the nextspark:consent event: the client side of the cookie consent API plugins and project code read (cookie consent guide)."
+    },
+    {
+      "subpath": "./lib/consent/server",
+      "reason": "documented",
+      "area": "Consent",
+      "note": "getConsent, the server-side reader of the consent cookie (cookie consent guide)."
+    },
+    {
       "subpath": "./lib/blocks/sanitize-html",
       "reason": "template-import",
       "area": "Blocks"

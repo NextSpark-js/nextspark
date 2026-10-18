@@ -25,8 +25,10 @@ import { Geist, Geist_Mono } from "next/font/google"
 
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { StaticIntlProvider } from "@nextsparkjs/core/providers/static-intl-provider"
-import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { OPTIONAL_ROOT_NAMESPACES, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
+import { CONSENT_CONFIG } from "@nextsparkjs/core/lib/config/public-config-client"
+import { LazyConsentManager } from "@nextsparkjs/core/components/consent/LazyConsentManager"
 import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
@@ -72,7 +74,7 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <StaticIntlProvider locale={DEFAULT_LOCALE} messages={selectMessages(STATIC_MESSAGES, 'root')}>
+        <StaticIntlProvider locale={DEFAULT_LOCALE} messages={selectMessages(STATIC_MESSAGES, 'root', CONSENT_CONFIG.enabled ? OPTIONAL_ROOT_NAMESPACES : [])}>
           <NextThemeProvider
             attribute="class"
             defaultTheme={DEFAULT_THEME_MODE}
@@ -95,6 +97,9 @@ export default async function RootLayout({
                 <Suspense fallback={null}>{children}</Suspense>
                 <SessionCookieRefresher />
                 <Suspense><Toaster position="bottom-left" /></Suspense>
+                {/* The banner reads the cookie in the browser, so it fits the static shell. A request nonce is not
+                    available here: see the consent docs for a nonce-based script-src. */}
+                {CONSENT_CONFIG.enabled && <LazyConsentManager />}
               </QueryProvider>
             </CustomThemeProvider>
           </NextThemeProvider>

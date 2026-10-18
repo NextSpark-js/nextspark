@@ -9,13 +9,15 @@ import { headers } from "next/headers"
 import { Geist, Geist_Mono } from "next/font/google"
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
-import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { OPTIONAL_ROOT_NAMESPACES, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
 import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
 import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
+import { CONSENT_CONFIG } from "@nextsparkjs/core/lib/config/public-config-client"
+import { LazyConsentManager } from "@nextsparkjs/core/components/consent/LazyConsentManager"
 import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
 import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
@@ -81,7 +83,7 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NextIntlClientProvider locale={locale} messages={selectMessages(messages, 'root')}>
+        <NextIntlClientProvider locale={locale} messages={selectMessages(messages, 'root', CONSENT_CONFIG.enabled ? OPTIONAL_ROOT_NAMESPACES : [])}>
           <NextThemeProvider
             nonce={nonce}
             attribute="class"
@@ -117,6 +119,8 @@ export default async function RootLayout({
                 <SessionCookieRefresher />
                 {children}
                 <Suspense><Toaster position="bottom-left" /></Suspense>
+                {/* Cookie consent (#272): the banner and the analytics loaders, which load their script with this nonce */}
+                {CONSENT_CONFIG.enabled && <LazyConsentManager nonce={nonce} />}
               </QueryProvider>
             </CustomThemeProvider>
           </NextThemeProvider>

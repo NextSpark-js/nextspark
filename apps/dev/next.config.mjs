@@ -50,6 +50,35 @@ const applyWebpackFallbacks = (config, { isServer }) => {
   return config
 }
 
+/**
+ * What the CSP allows for the analytics loaders of cookie consent (#272): the script and connect origins, and for Google
+ * Analytics the image origins its pixel fallback uses. Nothing is added for a loader that is not configured. The loaders
+ * read the same NEXT_PUBLIC_* variables as the defaults of `consent.loaders` in app.config; a loader set in app.config
+ * only needs its origins added to the directives below by hand.
+ */
+const originOf = (url) => {
+  try {
+    return new URL(url).origin
+  } catch {
+    return undefined
+  }
+}
+
+const consentCspOrigins = (env = process.env) => {
+  const origins = { script: [], connect: [], img: [] }
+  if (env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN) {
+    const plausible = originOf(env.NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL) ?? 'https://plausible.io'
+    origins.script.push(plausible)
+    origins.connect.push(plausible)
+  }
+  if (env.NEXT_PUBLIC_GA_MEASUREMENT_ID) {
+    origins.script.push('https://www.googletagmanager.com')
+    origins.connect.push('https://www.google-analytics.com', 'https://*.google-analytics.com', 'https://*.analytics.google.com', 'https://*.googletagmanager.com')
+    origins.img.push('https://www.google-analytics.com', 'https://*.google-analytics.com', 'https://*.googletagmanager.com')
+  }
+  return origins
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   basePath,
@@ -149,15 +178,17 @@ const nextConfig = {
     // 2. Pass nonce to all Script components: <Script nonce={nonce} />
     // 3. Update CSP: script-src 'self' 'nonce-${nonce}'
     // See: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
+    const consent = consentCspOrigins()
+    const withConsent = (list) => list.map((origin) => ` ${origin}`).join('')
     const cspDirectives = [
       "default-src 'self'",
       // unsafe-inline required for Next.js hydration; unsafe-eval only in dev for hot reload
-      `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com`,
+      `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com${withConsent(consent.script)}`,
       "style-src 'self' 'unsafe-inline'",
-      `img-src 'self' data: blob: ${allowedImageDomains}`,
+      `img-src 'self' data: blob: ${allowedImageDomains}${withConsent(consent.img)}`,
       "font-src 'self' data:",
       // wss: needed for Next.js hot reload in development
-      `connect-src 'self' https://api.stripe.com${!isProduction ? ' wss:' : ''}`,
+      `connect-src 'self' https://api.stripe.com${!isProduction ? ' wss:' : ''}${withConsent(consent.connect)}`,
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
       // Allow embedding in iframes from same origin (needed for page builder preview)
       "frame-ancestors 'self'",

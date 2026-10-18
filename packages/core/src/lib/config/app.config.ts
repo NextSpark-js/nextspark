@@ -452,6 +452,31 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   },
 
   // =============================================================================
+  // COOKIE CONSENT (#272)
+  // =============================================================================
+  /**
+   * Off by default. `enabled: true` shows the banner (necessary / analytics / marketing, opt-in) and holds the
+   * configured loaders and the Amplitude plugin back until `analytics` is granted. The loader values default to the
+   * NEXT_PUBLIC_* variables next.config.mjs reads for the CSP, so the script and its origin stay in step.
+   */
+  consent: {
+    enabled: process.env.NEXT_PUBLIC_CONSENT_ENABLED === 'true',
+    cookieName: 'nextspark_consent',
+    maxAgeDays: 180,
+    version: 1,
+    categories: ['analytics', 'marketing'] as ('analytics' | 'marketing')[],
+    loaders: {
+      plausible: {
+        domain: process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || undefined,
+        scriptUrl: process.env.NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL || undefined,
+      },
+      googleAnalytics: {
+        measurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || undefined,
+      },
+    },
+  },
+
+  // =============================================================================
   // MOBILE NAVIGATION CONFIGURATION
   // =============================================================================
   mobileNav: {

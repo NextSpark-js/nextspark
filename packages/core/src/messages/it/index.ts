@@ -3,6 +3,7 @@ import auth from './auth.json'
 import billing from './billing.json'
 import buttons from './buttons.json'
 import common from './common.json'
+import consent from './consent.json'
 import dashboard from './dashboard.json'
 import devtools from './devtools.json'
 import docs from './docs.json'
@@ -26,6 +27,7 @@ export default {
   billing,
   buttons,
   common,
+  consent,
   dashboard,
   devtools,
   docs,

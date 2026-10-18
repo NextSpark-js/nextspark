@@ -1,0 +1,22 @@
+{
+  "title": "Le tue scelte sulla privacy",
+  "description": "Usiamo i cookie per far funzionare l'app e, solo se acconsenti, per capire come viene usata e migliorarla. Puoi cambiare la tua scelta in qualsiasi momento.",
+  "acceptAll": "Accetta tutto",
+  "rejectAll": "Rifiuta tutto",
+  "settings": "Impostazioni",
+  "save": "Salva preferenze",
+  "close": "Chiudi",
+  "alwaysOn": "Sempre attivi",
+  "necessary": {
+    "title": "Necessari",
+    "description": "Servono al funzionamento dell'app, per esempio per accedere e ricordare le tue scelte. Non possono essere disattivati."
+  },
+  "analytics": {
+    "title": "Analitici",
+    "description": "Ci aiutano a capire come viene usata l'app per poterla migliorare."
+  },
+  "marketing": {
+    "title": "Marketing",
+    "description": "Servono a misurare e personalizzare la pubblicità."
+  }
+}

@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import {
   NAMESPACE_GROUPS,
+  OPTIONAL_ROOT_NAMESPACES,
   getConfiguredClientNamespaces,
   type TranslationGroup,
   selectMessages,
@@ -44,6 +45,8 @@ function renderedGroups(file: string): TranslationGroup[] {
   if (relative.includes('/components/users/')) return ['superadmin']
   if (relative.includes('/components/app/guards/')) return ['superadmin', 'devtools']
   if (relative.includes('/providers/query-provider')) return ['root']
+  // the cookie consent banner renders in the root layout, and its namespace is an optional one of the root group
+  if (relative.includes('/components/consent/')) return ['root']
   if (relative.includes('/components/dashboard/') || relative.includes('/components/billing/') ||
       relative.includes('/components/entities/') || relative.includes('/components/media/') ||
       relative.includes('/components/patterns/') || relative.includes('/components/permissions/') ||
@@ -162,7 +165,8 @@ test('every literal client translation namespace is provided by each rendered ro
       }
       for (const group of groups) {
         for (const namespace of namespaces) {
-          if (!NAMESPACE_GROUPS[group].includes(namespace as never)) {
+          const optional = group === 'root' && (OPTIONAL_ROOT_NAMESPACES as readonly string[]).includes(namespace)
+          if (!optional && !NAMESPACE_GROUPS[group].includes(namespace as never)) {
             missing.push(`${path.relative(ROOT, file)}: ${namespace} missing from ${group}`)
           }
         }

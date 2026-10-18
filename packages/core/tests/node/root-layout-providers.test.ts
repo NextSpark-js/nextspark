@@ -62,11 +62,11 @@ test('root layouts serialize only their shared client-message group', () => {
   const root = fs.readFileSync(implementationOf('layout.tsx'), 'utf8')
   const ppr = fs.readFileSync(implementationOf('layout.ppr.tsx'), 'utf8')
 
-  assert.match(root, /selectMessages\(messages, 'root'\)/,
+  assert.match(root, /selectMessages\(messages, 'root'(?:, CONSENT_CONFIG\.enabled \? OPTIONAL_ROOT_NAMESPACES : \[\])?\)/,
     'the request layout narrows getMessages() before crossing the RSC boundary')
   assert.doesNotMatch(root, /<NextIntlClientProvider[^>]*messages=\{messages\}/,
     'the request layout must not pass the complete catalog to the root provider')
-  assert.match(ppr, /selectMessages\(STATIC_MESSAGES, 'root'\)/,
+  assert.match(ppr, /selectMessages\(STATIC_MESSAGES, 'root'(?:, CONSENT_CONFIG\.enabled \? OPTIONAL_ROOT_NAMESPACES : \[\])?\)/,
     'the PPR layout narrows STATIC_MESSAGES before crossing the RSC boundary')
 })
 

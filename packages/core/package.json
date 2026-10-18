@@ -202,6 +202,14 @@
       "types": "./dist/lib/api/rate-limit.d.ts",
       "import": "./dist/lib/api/rate-limit.js"
     },
+    "./lib/consent": {
+      "types": "./dist/lib/consent/index.d.ts",
+      "import": "./dist/lib/consent/index.js"
+    },
+    "./lib/consent/server": {
+      "types": "./dist/lib/consent/server.d.ts",
+      "import": "./dist/lib/consent/server.js"
+    },
     "./lib/*": {
       "types": "./dist/lib/*.d.ts",
       "import": "./dist/lib/*.js"

@@ -1,0 +1,22 @@
+{
+  "title": "Vos choix de confidentialité",
+  "description": "Nous utilisons des cookies pour faire fonctionner l'application et, uniquement si vous l'acceptez, pour comprendre comment elle est utilisée et l'améliorer. Vous pouvez modifier votre choix à tout moment.",
+  "acceptAll": "Tout accepter",
+  "rejectAll": "Tout refuser",
+  "settings": "Paramètres",
+  "save": "Enregistrer les préférences",
+  "close": "Fermer",
+  "alwaysOn": "Toujours actifs",
+  "necessary": {
+    "title": "Nécessaires",
+    "description": "Indispensables au fonctionnement de l'application, comme la connexion et la mémorisation de vos choix. Ils ne peuvent pas être désactivés."
+  },
+  "analytics": {
+    "title": "Statistiques",
+    "description": "Nous aident à comprendre comment l'application est utilisée afin de l'améliorer."
+  },
+  "marketing": {
+    "title": "Marketing",
+    "description": "Servent à mesurer et à personnaliser la publicité."
+  }
+}

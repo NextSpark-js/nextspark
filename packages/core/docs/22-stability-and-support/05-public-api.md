@@ -137,6 +137,13 @@ The reason in each row is one of `template-import` (a stable template imports it
 | --- | --- |
 | `./lib/scheduled-actions` | documented (experimental) — registerScheduledAction, scheduleAction and the rest of the scheduled-actions API (scheduled actions guides). |
 
+### Consent
+
+| Subpath | Why it is public |
+| --- | --- |
+| `./lib/consent` | documented — useConsent, getConsentState, openConsentSettings and the `nextspark:consent` event: the client side of the cookie consent API (cookie consent guide). |
+| `./lib/consent/server` | documented — getConsent, the server-side reader of the consent cookie (cookie consent guide). |
+
 ### Blocks
 
 | Subpath | Why it is public |
