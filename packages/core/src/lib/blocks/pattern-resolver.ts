@@ -50,7 +50,7 @@ import { isPatternReference } from '../../types/pattern-reference'
  */
 export function resolvePatternReferences(
   blocks: (BlockInstance | PatternReference)[],
-  patternCache: Map<string, Pattern>
+  patternCache: Map<string, Pick<Pattern, 'id' | 'blocks'>>
 ): BlockInstance[] {
   const resolved: BlockInstance[] = []
 

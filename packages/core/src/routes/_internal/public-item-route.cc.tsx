@@ -59,8 +59,8 @@ export async function readPublishedItem(entitySlug: string, slug: string): Promi
   return result.rows[0] || null
 }
 
-/** The published patterns of some ids. */
-export async function readPatterns(ids: string[]): Promise<Pattern[]> {
+/** The published patterns of some ids: only what a page renders of each (its id and blocks). */
+export async function readPatterns(ids: string[]): Promise<Pick<Pattern, 'id' | 'blocks'>[]> {
   'use cache'
   cacheLife({ stale: 300, revalidate: 900, expire: 86400 })
 
@@ -69,7 +69,7 @@ export async function readPatterns(ids: string[]): Promise<Pattern[]> {
   if (valid.length === 0) return []
   cacheTag('patterns')
 
-  return PatternsResolverService.getByIds(valid)
+  return (await PatternsResolverService.getByIds(valid)).map(({ id, blocks }) => ({ id, blocks }))
 }
 
 const cachedSource: PublicItemSource = {

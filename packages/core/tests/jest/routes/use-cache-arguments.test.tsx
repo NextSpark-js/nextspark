@@ -141,6 +141,13 @@ describe('readPatterns', () => {
     expect(cacheTag).toHaveBeenCalledWith('patterns')
   })
 
+  it('returns only what a page renders of a pattern: its id and blocks', async () => {
+    const blocks = [{ id: 'b1', blockSlug: 'hero', props: {} }]
+    getByIds.mockResolvedValue([{ id: 'abc-123', userId: 'u1', teamId: 't1', title: 'T', slug: 's', status: 'published', description: 'd', blocks, createdAt: 'c', updatedAt: 'u' }])
+    const patterns = await readPatterns(['abc-123'])
+    expect(patterns).toStrictEqual([{ id: 'abc-123', blocks }])
+  })
+
   it('drops only the malformed ids, the others are still read', async () => {
     await readPatterns(['good-1', "x') OR 1=1 --", 7 as never, 'good-2'])
     expect(getByIds).toHaveBeenCalledWith(['good-1', 'good-2'])

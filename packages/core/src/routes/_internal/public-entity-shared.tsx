@@ -102,7 +102,7 @@ export function buildPublicSelectClause(entity: EntityConfig): string {
  */
 export async function getResolvedBlocks(
   blocks: (BlockInstance | PatternReference)[],
-  getPatterns: (ids: string[]) => Promise<Pattern[]> = ids => PatternsResolverService.getByIds(ids)
+  getPatterns: (ids: string[]) => Promise<Pick<Pattern, 'id' | 'blocks'>[]> = ids => PatternsResolverService.getByIds(ids)
 ): Promise<BlockInstance[]> {
   // Extract pattern IDs from blocks array
   const patternIds = extractPatternIds(blocks)
