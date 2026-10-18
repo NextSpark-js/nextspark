@@ -24,13 +24,14 @@ async function ArchiveGrid({ config, searchParams }: { config: EntityConfig; sea
   return <PublicEntityGrid entityType={config.slug} entitySlug={config.slug} searchParams={await searchParams} />
 }
 
-/** @param config - the entity's config (`ui.public.hasArchivePage` decides whether the archive is served) */
+/** @param config - the entity's config (`access.public: true` and `ui.public.hasArchivePage` decide whether the archive is served) */
 export function createPublicArchiveRoute(config: EntityConfig) {
   return function PublicArchiveRoute({ searchParams }: { searchParams: SearchParams }) {
+    if (config.access?.public !== true) notFound()
     if (!config.ui?.public?.hasArchivePage) notFound()
-    // An archive at the entity's own path (no basePath) is served only for an enabled, public entity
+    // An archive at the entity's own path (no basePath) is served only for an enabled entity
     const hasBasePath = Boolean(config.access?.basePath ?? config.builder?.public?.basePath)
-    if (!hasBasePath && !(config.access?.public && config.enabled)) notFound()
+    if (!hasBasePath && !config.enabled) notFound()
     return (
       <div className="container mx-auto px-4 py-8" data-cy="public-archive-page">
         <div className="mb-8">

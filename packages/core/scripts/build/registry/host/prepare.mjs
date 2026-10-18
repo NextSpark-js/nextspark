@@ -116,6 +116,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     coreRoutes: manifest.routes,
     entityRoutes: entityPlan.routes,
     entityNames: entityPlan.entities,
+    withheld: entityPlan.withheld,
     webhooks: webhookPlan.routes,
     sitemap: config.sitemap ? config.sitemap() : undefined,
     plugins: declared.plugins,
@@ -124,7 +125,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     extensions: config.extensions,
   })
   const { routes } = planned
-  const notices = [...transpile.notices, ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot)]
+  const notices = [...transpile.notices, ...(entityPlan.notices ?? []), ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot)]
   const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics, ...proxyPathDiagnostics(config.projectRoot)]
   if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices, stage: 'plan' })
   const rendered = await renderHost({

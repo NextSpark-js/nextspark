@@ -82,6 +82,9 @@ Public URLs are configured via `access.basePath` (NOT in builder config):
 | Option | Type | Description |
 |--------|------|-------------|
 | `access.basePath` | `string` | Base path for public URLs (e.g., `/blog` for posts) |
+| `access.public` | `boolean` | Must be `true` for the entity to get public routes at its base path |
+
+> **Note**: A builder entity needs `access.public: true` to get public item and archive routes. With `access.public` false or unset, `nextspark prepare` writes none and says so (`NS_HOST_ENTITY_NOT_PUBLIC`).
 
 > **Note**: The `builder.public.basePath` location is deprecated. Use `access.basePath` instead.
 

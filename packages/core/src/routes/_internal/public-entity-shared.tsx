@@ -35,6 +35,12 @@ const SEO_FIELDS = ['seoTitle', 'seoDescription', 'ogImage']
  */
 const OPTIONAL_CONTENT_FIELDS = ['excerpt', 'featuredImage']
 
+/**
+ * The public routes serve an entity's published items only with `access.public: true`; the host writes them only
+ * for such an entity, and the routes and the readers here check it again.
+ */
+export const isPublicEntity = (entity: EntityConfig) => entity.access?.public === true
+
 export interface PublishedItem {
   id: string
   slug: string
@@ -143,6 +149,7 @@ export async function fetchPublishedItem(
   entity: EntityConfig,
   slug: string
 ): Promise<PublishedItem | null> {
+  if (!isPublicEntity(entity)) return null
   try {
     const tableName = entity.tableName || entity.slug
     const selectClause = buildPublicSelectClause(entity)

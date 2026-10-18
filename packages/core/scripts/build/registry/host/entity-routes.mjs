@@ -8,7 +8,7 @@
  *
  * - dashboard: `dashboard/(main)/<entity>/{layout,error,loading,page,create/page,[id]/page,[id]/edit/page}`
  *   for every entity the dashboard serves. URLs are the ones core's former `[entity]` routes had.
- * - public: a builder entity with `access.basePath` gets `(public)<basePath>/[...slug]` (item pages,
+ * - public: a builder entity with `access.basePath` and `access.public: true` gets `(public)<basePath>/[...slug]` (item pages,
  *   nested slugs included, as the catch-all served them; `[slug]` / `[...slug]` at the root for basePath
  *   `/`) and, with an archive page, `(public)<basePath>`. A public entity with an archive page and no
  *   builder basePath gets `(public)/<entity>/[[...rest]]` (the catch-all's archive fallback answered any
@@ -40,6 +40,12 @@ export const ENTITY_DIAGNOSTICS = Object.freeze({
   SLUG_MISMATCH: 'NS_HOST_ENTITY_SLUG_MISMATCH',
   BASE_PATH: 'NS_HOST_ENTITY_BASE_PATH',
   CORE_API_NAMESPACE: 'NS_HOST_ENTITY_CORE_API_NAMESPACE',
+})
+
+/** Information about the entity routes that is not a problem (printed by prepare). */
+export const ENTITY_NOTICES = Object.freeze({
+  // A builder entity with a base path but without `access.public: true`: no public route is written for it
+  NOT_PUBLIC: 'NS_HOST_ENTITY_NOT_PUBLIC',
 })
 
 /**
@@ -201,11 +207,14 @@ const arg = {
  * @param {boolean} [input.cacheComponents] - the host's setting (public item pages revalidate only without it)
  * @param {string[]} [input.modes] - cache modes the host serves (a host that builds both omits `revalidate`)
  * @param {Record<string, string>} [input.modules] - the specifiers of the modules the routes import (`ENTITY_MODULES`)
- * @returns {{ routes: object[], diagnostics: object[], entities: string[] }} `entities`: the names of the entities the host serves (the ones a project may override the API of)
+ * @returns {{ routes: object[], diagnostics: object[], notices: object[], withheld: object[], entities: string[] }} `entities`: the names of the entities the host serves (the ones a project may override the API of);
+ *   `withheld`: `{ source, targets }` per builder entity whose public routes were not written, with the item template targets its route would have taken
  */
 export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cacheComponents, modes = [], modules = ENTITY_MODULES }) {
   const routes = []
   const diagnostics = []
+  const notices = []
+  const withheld = []
   const dedicated = name => coreRoutes.some(route => route.target.startsWith(`dashboard/(main)/${name}/`))
   const revalidates = cacheComponents !== true && !modes.includes('cc')
   // A host that builds in Cache Components mode only gets the cached item source; one that builds both (the
@@ -301,6 +310,25 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
       }
     }
     if (basePath.state === 'unknown' || f.builderEnabled.state === 'unknown') continue
+    // A builder entity with a base path is served publicly only when `access.public` is literally true
+    if (builder && basePath.state === 'value' && !hasValue(f.isPublic, true)) {
+      if (f.isPublic.state === 'unknown') {
+        diagnostics.push({
+          code: ENTITY_DIAGNOSTICS.NOT_STATIC,
+          message: `${source}: \`access.public\` is not a literal, and it decides whether the host writes the entity's public routes; write it as a literal (a boolean)`,
+        })
+      } else {
+        notices.push({
+          code: ENTITY_NOTICES.NOT_PUBLIC,
+          message: `${source}: no public item or archive route was written for base path ${JSON.stringify(String(basePath.value))}: a builder entity needs \`access.public: true\` for them; set it to serve the entity's published items publicly, or keep it false or unset to keep the entity private`,
+        })
+      }
+      // The project's item templates at these URLs are not routes of their own: planHost leaves them out and says so
+      const path = String(basePath.value)
+      const items = path === '/' ? ['(public)/[slug]/page.tsx', '(public)/[...slug]/page.tsx', '(public)/[entity]/page.tsx'] : [`(public)${path}/[slug]/page.tsx`, `(public)${path}/[...slug]/page.tsx`]
+      withheld.push({ source, targets: items })
+      continue
+    }
 
     const publicComposed = (kind, target, exportsSpec, extra = {}) => ({
       kind,
@@ -356,7 +384,7 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
   for (const route of routes) {
     if (route.entityRoute?.reexport) route.entityRoute.reexport = route.entityRoute.reexport.map(entry => ({ ...entry, file: resolveFile(entry.specifier) }))
   }
-  return { routes, diagnostics, entities: routableEntities(entities).map(entity => entity.name) }
+  return { routes, diagnostics, notices, withheld, entities: routableEntities(entities).map(entity => entity.name) }
 }
 
 /**

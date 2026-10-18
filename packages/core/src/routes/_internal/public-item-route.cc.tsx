@@ -21,7 +21,7 @@ import { PatternsResolverService } from '@nextsparkjs/core/lib/blocks/patterns-r
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
 import type { Pattern, PatternReference } from '@nextsparkjs/core/types/pattern-reference'
-import { buildPublicSelectClause, getResolvedBlocks, type PublishedItem } from './public-entity-shared'
+import { buildPublicSelectClause, getResolvedBlocks, isPublicEntity, type PublishedItem } from './public-entity-shared'
 import { ITEM_SLUG, MAX_ITEM_SLUG_LENGTH } from '@nextsparkjs/core/lib/entities/public-item-slug'
 import { bindPublicItemRoutes, type PublicItemSource } from './public-item-route'
 import { behindSuspense } from './suspended-route'
@@ -52,7 +52,7 @@ export async function readPublishedItem(entitySlug: string, slug: string): Promi
   // Not a "not found": the entry would be cached untagged under the key the page uses once it is registered. A throw is not cached.
   if (!entity) throw new Error(`[readPublishedItem] no route of this process serves the entity "${entitySlug}"`)
   const tableName = entity.tableName || entity.slug
-  if (!IDENTIFIER.test(tableName)) return null
+  if (!isPublicEntity(entity) || !IDENTIFIER.test(tableName)) return null
   cacheTag(`entity:${entitySlug}`, `public-item:${entitySlug}:${slug}`)
 
   const result = await query<PublishedItem>(`SELECT ${buildPublicSelectClause(entity)} FROM "${tableName}" WHERE slug = $1 AND status = 'published'`, [slug])

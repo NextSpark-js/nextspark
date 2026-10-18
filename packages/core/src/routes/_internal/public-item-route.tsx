@@ -14,7 +14,7 @@ import { PageRenderer } from '@nextsparkjs/core/components/public/pageBuilder'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
 import type { PatternReference } from '@nextsparkjs/core/types/pattern-reference'
-import { fetchPublishedItem, getResolvedBlocks, type PublishedItem } from './public-entity-shared'
+import { fetchPublishedItem, getResolvedBlocks, isPublicEntity, type PublishedItem } from './public-entity-shared'
 import { STATIC_FILE_EXTENSION } from '@nextsparkjs/core/lib/entities/public-item-slug'
 
 export { STATIC_FILE_EXTENSION }
@@ -82,7 +82,7 @@ async function renderDefaultPublicItem(source: PublicItemSource, entity: EntityC
 function itemRoute(source: PublicItemSource, config: EntityConfig, Template?: ComponentType<PublicItemTemplateProps>) {
   return async function PublicItemRoute({ params, searchParams }: ItemRouteProps) {
     const slug = slugOf((await params).slug)
-    if (isFileRequest(slug)) notFound()
+    if (!isPublicEntity(config) || isFileRequest(slug)) notFound()
     if (Template) return <Template params={Promise.resolve({ slug })} searchParams={searchParams} />
 
     const item = await renderDefaultPublicItem(source, config, slug)
@@ -95,7 +95,7 @@ function itemRoute(source: PublicItemSource, config: EntityConfig, Template?: Co
 function itemMetadata(source: PublicItemSource, config: EntityConfig) {
   return async function generatePublicItemMetadata({ params }: Pick<ItemRouteProps, 'params'>): Promise<Metadata> {
     const slug = slugOf((await params).slug)
-    if (isFileRequest(slug)) return { title: 'Not Found' }
+    if (!isPublicEntity(config) || isFileRequest(slug)) return { title: 'Not Found' }
     const item = await source.fetchItem(config, slug)
     if (item) {
       return {

@@ -11,12 +11,13 @@ jest.mock('@nextsparkjs/core/components/public/pageBuilder', () => ({ PageRender
 jest.mock('../../../src/routes/_internal/public-entity-shared', () => ({
   fetchPublishedItem: (...args: unknown[]) => fetchPublishedItem(...args),
   getResolvedBlocks: jest.fn(),
+  isPublicEntity: jest.requireActual('../../../src/routes/_internal/public-entity-shared').isPublicEntity,
 }))
 
 import { createPublicItemRoute, createPublicItemMetadata } from '../../../src/routes/_internal/public-item-route'
 import type { EntityConfig } from '../../../src/lib/entities/types'
 
-const config = { slug: 'pages' } as unknown as EntityConfig
+const config = { slug: 'pages', access: { public: true } } as unknown as EntityConfig
 const props = (slug: string | string[]) => ({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) })
 
 beforeEach(() => {

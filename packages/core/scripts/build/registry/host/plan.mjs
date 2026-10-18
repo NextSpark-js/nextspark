@@ -89,6 +89,7 @@ export const PLAN_NOTICES = Object.freeze({
   CORE_API_REPLACED: 'NS_HOST_CORE_API_REPLACED',
   AREA_FILE_UNGUARDED: 'NS_HOST_AREA_FILE_UNGUARDED',
   SLOT_DEFAULT_MISSING: 'NS_HOST_SLOT_DEFAULT_MISSING',
+  ENTITY_TEMPLATE_NOT_USED: 'NS_HOST_ENTITY_TEMPLATE_NOT_USED',
 })
 
 export const DEFAULT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js']
@@ -245,6 +246,7 @@ function dynamicKind(segment) {
  * @param {object[]} input.coreRoutes - `loadCoreRouteManifest(...).routes`
  * @param {object[]} [input.entityRoutes] - `planEntityRoutes(...).routes`: per-entity route candidates
  * @param {string[]} [input.entityNames] - `planEntityRoutes(...).entities`: the entities whose `/api/v1/<entity>/...` a project template may override
+ * @param {object[]} [input.withheld] - `planEntityRoutes(...).withheld`: item template targets of builder entities without public routes (left out, with a notice)
  * @param {{ name: string, root: string, importBase: string, capabilities?: string[] }[]} [input.plugins] - enabled plugins; a plugin
  *   that declares no `capabilities` is legacy (server + web + build)
  * @param {{ root: string, importBase?: string, label?: string }} input.project - project source root
@@ -254,7 +256,7 @@ function dynamicKind(segment) {
  * @param {object} [input.sitemap] - `sitemapPlan(...)`: composes core's sitemap and robots routes with the project's settings
  * @returns {{ routes: object[], diagnostics: object[], notices: object[] }}
  */
-export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], plugins = [], project, modes = [], extensions = DEFAULT_EXTENSIONS, webhooks = {}, sitemap }) {
+export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], withheld = [], plugins = [], project, modes = [], extensions = DEFAULT_EXTENSIONS, webhooks = {}, sitemap }) {
   const diagnostics = []
   const pattern = sourceFilePattern(modes, extensions)
   const candidates = [
@@ -310,7 +312,16 @@ export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], plug
     ...surfaceRoutes({ dir: join(project.root, 'api'), importBase: projectBase, surface: 'api', toTarget: path => `api/${path}`, layer: 'project', label: projectLabel, pattern, diagnostics, namespace: target => (API_V1.test(target) || API_PLUGINS.test(target) ? PROJECT_API_HINT : null) }),
   ]
   for (const route of projectRoutes) route.source = route.source.replace(/^\.\//, '')
-  const notices = replaceEntityDashboards(candidates, projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`)))
+  // An item template of a builder entity without public routes runs only as that route's template: it is left out
+  const withheldBy = new Map(withheld.flatMap(entry => entry.targets.map(target => [target, entry])))
+  const unusedTemplates = new Set(projectRoutes.filter(route => withheldBy.has(route.target) && route.specifier.startsWith(`${projectBase}/templates/`)))
+  const notices = [...unusedTemplates].map(route => ({
+    code: PLAN_NOTICES.ENTITY_TEMPLATE_NOT_USED,
+    target: route.target,
+    message: `${route.source}: not used: it is an item page template of ${withheldBy.get(route.target).source}, which has no public routes without \`access.public: true\`; set it, or move the file`,
+  }))
+  projectRoutes.splice(0, projectRoutes.length, ...projectRoutes.filter(route => !unusedTemplates.has(route)))
+  notices.push(...replaceEntityDashboards(candidates, projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`))))
   notices.push(...coreApiNotices(projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`) && API_V1.test(route.target) && servedSlots.has(slotOf(route))), candidates))
   notices.push(...entityApiNotices(projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`) && !servedSlots.has(slotOf(route)) && entityApiOf(route.target, route.mode))))
   candidates.push(...projectRoutes)

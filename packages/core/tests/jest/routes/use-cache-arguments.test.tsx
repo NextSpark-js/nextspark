@@ -58,9 +58,9 @@ afterAll(() => {
   fs.rmSync(projectDir, { recursive: true, force: true })
 })
 
-const pages = { slug: 'pages', tableName: 'pages', fields: [{ name: 'slug' }, { name: 'excerpt' }], access: { basePath: '/' } } as unknown as EntityConfig
-const legacy = { slug: 'posts', tableName: 'posts', fields: [], access: {}, builder: { enabled: true, public: { basePath: '/blog' } } } as unknown as EntityConfig
-const oddTable = { slug: 'odd', tableName: 'odd"; DROP TABLE users;--', fields: [], access: { basePath: '/odd' } } as unknown as EntityConfig
+const pages = { slug: 'pages', tableName: 'pages', fields: [{ name: 'slug' }, { name: 'excerpt' }], access: { public: true, basePath: '/' } } as unknown as EntityConfig
+const legacy = { slug: 'posts', tableName: 'posts', fields: [], access: { public: true }, builder: { enabled: true, public: { basePath: '/blog' } } } as unknown as EntityConfig
+const oddTable = { slug: 'odd', tableName: 'odd"; DROP TABLE users;--', fields: [], access: { public: true, basePath: '/odd' } } as unknown as EntityConfig
 const props = (slug: string) => ({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) })
 
 beforeEach(() => {

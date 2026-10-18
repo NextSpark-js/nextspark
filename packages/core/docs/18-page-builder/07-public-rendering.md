@@ -12,12 +12,13 @@ Pages take priority over entity archives, allowing you to create custom landing 
 
 ## Route generation
 
-`nextspark prepare` (and `nextspark dev`, which regenerates on changes) writes a **concrete public route for every builder entity** from its `access.basePath` configuration; there is no catch-all route and no runtime matching of the URL against the entity registry.
+`nextspark prepare` (and `nextspark dev`, which regenerates on changes) writes a **concrete public route for every builder entity with `access.public: true`** from its `access.basePath` configuration; there is no catch-all route and no runtime matching of the URL against the entity registry.
 
 ### How it works
 
-1. **Entity facts**: the host reads `access.basePath`, `builder.enabled`, `ui.public.hasArchivePage` and `access.allowNestedSlugs` from each entity config, as literals.
-2. **Route per entity**: a builder entity with a basePath gets `(public)<basePath>/[...slug]/page.tsx` (item pages; `[slug]` when nested slugs are off), and `(public)<basePath>/page.tsx` when it has an archive page.
+1. **Entity facts**: the host reads `access.public`, `access.basePath`, `builder.enabled`, `ui.public.hasArchivePage` and `access.allowNestedSlugs` from each entity config, as literals.
+2. **Route per entity**: a builder entity with a basePath and `access.public: true` gets `(public)<basePath>/[...slug]/page.tsx` (item pages; `[slug]` when nested slugs are off), and `(public)<basePath>/page.tsx` when it has an archive page.
+   A builder entity with a basePath and `access.public` false or unset gets no public route: `nextspark prepare` prints `Warning: [NS_HOST_ENTITY_NOT_PUBLIC]` naming the entity and the setting. A project item template at that entity's item URL is not used either (`Warning: [NS_HOST_ENTITY_TEMPLATE_NOT_USED]`, naming the file). Its items stay available in the dashboard only. The public routes check `access.public: true` again at request time and answer `notFound()` without it.
 3. **Template override**: a project template at `templates/(public)/<basePath>/[...slug]/page.tsx` is composed into that route at generation time.
 4. **Default rendering**: `PageRenderer` renders the block content.
 

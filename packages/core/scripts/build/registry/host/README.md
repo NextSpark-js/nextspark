@@ -247,7 +247,11 @@ spread and no expression. A host with another core (the conformance fixture) pas
   in the core route manifest (`ACCESS_ROUTES`); a Cache Components variant keeps the access of the entry it replaces.
 - **One route per entity** (`entity-routes.mjs`). For every entity of the project and of enabled plugins, the host writes
   `dashboard/(main)/<entity>/{layout,error,loading,page,create/page,[id]/page,[id]/edit/page}` and, for builder entities with
-  `access.basePath`, the public item route (`(public)<basePath>/[...slug]`, `[slug]` at `/`) and archive route; a public
+  `access.basePath` and `access.public: true`, the public item route (`(public)<basePath>/[...slug]`, `[slug]` at `/`) and archive
+  route. A builder entity with a base path and `access.public` false or unset gets neither: `NS_HOST_ENTITY_NOT_PUBLIC` (a notice,
+  printed as `Warning:`) names it and the setting, a project item template at its item URL
+  (`templates/(public)<basePath>/[slug]` or `[...slug]`, `[slug]`, `[...slug]` or `[entity]` at `/`) is not used and is reported as
+  `NS_HOST_ENTITY_TEMPLATE_NOT_USED` (`Warning:`), and the routes answer notFound() for it at request time too; a public
   entity with an archive page and no basePath gets `(public)/<entity>/[[...rest]]`. Each is a facade over the entity's config and
   one factory of its own core module (`routes/_internal/entity-*-route`, `public-*-route`): a route's module graph holds one
   entity config and only the client components its page renders, and nothing looks an entity or a template up by a key.
@@ -259,7 +263,7 @@ spread and no expression. A host with another core (the conformance fixture) pas
   What decides the routes is read from the config's source as literals (`enabled`, `ui.dashboard.showInMenu`,
   `access.basePath`, `access.allowNestedSlugs`, `access.public`, `builder.enabled`, `ui.public.hasArchivePage`; the config
   object must be an object literal): a flag that cannot be read keeps the dashboard route (core's checks answer notFound()),
-  and one that decides a public route is a diagnostic. An entity's `slug` must equal its directory name.
+  and one that decides a public route is a diagnostic (`access.public` too, for a builder entity with a base path). An entity's `slug` must equal its directory name.
   **The template replaces** (`NS_HOST_ENTITY_ROUTES_REPLACED`, a notice, not an error): a project page or Route Handler under
   `templates/`, in a directory other than `dashboard/(main)/<entity>/` (another route group, `templates/dashboard/(staff)/<entity>/...`),
   that **collides** with the entity's generated dashboard routes takes their URL over, as its static segment took core's `[entity]`

@@ -164,6 +164,7 @@ Define el alcance y disponibilidad de la entidad.
 **Comportamiento:**
 - `true`: Usuarios anónimos pueden leer (requiere RLS apropiado)
 - `false`: Solo usuarios autenticados
+- En una entidad con `builder.enabled` y `access.basePath`, solo `true` genera las rutas públicas de ítem y de archivo; con `false` o sin valor, `nextspark prepare` no las escribe y lo informa (`NS_HOST_ENTITY_NOT_PUBLIC`)
 
 ```typescript
 {

@@ -148,7 +148,7 @@ test('a config file is found from its import specifier: the project\'s, a plugin
 // ---------------------------------------------------------------------------
 
 async function plan(w, entities, factsByName, { coreRoutes = [], plugins = [], modes = [], cacheComponents } = {}) {
-  const { routes: entityRoutes, diagnostics: entityDiagnostics } = planEntityRoutes({
+  const { routes: entityRoutes, diagnostics: entityDiagnostics, notices: entityNotices = [], withheld } = planEntityRoutes({
     entities,
     facts: new Map(Object.entries(factsByName)),
     coreRoutes,
@@ -156,8 +156,8 @@ async function plan(w, entities, factsByName, { coreRoutes = [], plugins = [], m
     cacheComponents,
     modes,
   })
-  const planned = planHost({ coreRoutes, entityRoutes, plugins, project: { root: w.source } })
-  return { routes: planned.routes, diagnostics: [...entityDiagnostics, ...planned.diagnostics], notices: planned.notices }
+  const planned = planHost({ coreRoutes, entityRoutes, withheld, plugins, project: { root: w.source } })
+  return { routes: planned.routes, diagnostics: [...entityDiagnostics, ...planned.diagnostics], notices: [...entityNotices, ...planned.notices] }
 }
 const factsOf = async body => ({ facts: await facts(body) })
 const render = async routes => renderHost({ routes, projectRoot: CORE_ROOT })
@@ -353,10 +353,94 @@ test('a builder entity with a basePath gets an item route under it (nested slugs
   }
 })
 
+test('a builder entity with a base path gets public routes only with `access.public: true`; otherwise prepare says none was written', async () => {
+  const w = world()
+  try {
+    const shapes = {
+      posts: BLOG,
+      hidden: BLOG.replace("'posts'", "'hidden'").replace('public: true, ', 'public: false, '),
+      unset: BLOG.replace("'posts'", "'unset'").replace('public: true, ', ''),
+      legacy: "slug: 'legacy', enabled: true, access: { public: false }, ui: { public: { hasArchivePage: true } }, builder: { enabled: true, public: { basePath: '/legacy' } }",
+      home: "slug: 'home', enabled: true, access: { basePath: '/' }, builder: { enabled: true }",
+    }
+    const names = Object.keys(shapes)
+    const { routes, diagnostics, notices } = await plan(w, names.map(name => entity(name, `${name}EntityConfig`)), Object.fromEntries(await Promise.all(names.map(async name => [name, await factsOf(shapes[name])]))))
+    assert.deepEqual(diagnostics, [])
+    assert.deepEqual(targets(routes).filter(target => target.startsWith('(public)')), ['(public)/blog/[...slug]/page.tsx', '(public)/blog/page.tsx'])
+    const notPublic = notices.filter(notice => notice.code === 'NS_HOST_ENTITY_NOT_PUBLIC')
+    assert.deepEqual(notPublic.map(notice => notice.message.split(':')[0]), ['entities/hidden (hiddenEntityConfig)', 'entities/unset (unsetEntityConfig)', 'entities/legacy (legacyEntityConfig)', 'entities/home (homeEntityConfig)'])
+    for (const notice of notPublic) assert.match(notice.message, /no public item or archive route was written.*`access\.public: true`/)
+  } finally {
+    w.cleanup()
+  }
+})
+
+test('a project item template at the URL of a builder entity without `access.public: true` is not used, and prepare says which file', async () => {
+  const templates = {
+    'templates/(public)/blog/[slug]/page.tsx': PAGE,
+    'templates/(public)/docs/[...slug]/page.tsx': PAGE,
+    'templates/(public)/[slug]/page.tsx': PAGE,
+    'templates/about/page.tsx': PAGE,
+  }
+  const w = world(templates)
+  try {
+    const shapes = {
+      posts: BLOG.replace('public: true, ', 'public: false, '),
+      docs: "slug: 'docs', enabled: true, access: { basePath: '/docs' }, builder: { enabled: true }",
+      pages: "slug: 'pages', enabled: true, access: { public: false, basePath: '/' }, builder: { enabled: true }",
+    }
+    const names = Object.keys(shapes)
+    const { routes, diagnostics, notices } = await plan(w, names.map(name => entity(name, `${name}EntityConfig`)), Object.fromEntries(await Promise.all(names.map(async name => [name, await factsOf(shapes[name])]))))
+    assert.deepEqual(diagnostics, [])
+    assert.deepEqual(targets(routes).filter(target => target.startsWith('(public)')), [])
+    assert.ok(targets(routes).includes('about/page.tsx'), 'a template at another URL is kept')
+    const unused = notices.filter(notice => notice.code === 'NS_HOST_ENTITY_TEMPLATE_NOT_USED')
+    assert.deepEqual(unused.map(notice => notice.message.split(':')[0]).sort(), ['templates/(public)/[slug]/page.tsx', 'templates/(public)/blog/[slug]/page.tsx', 'templates/(public)/docs/[...slug]/page.tsx'])
+    for (const notice of unused) assert.match(notice.message, /`access\.public: true`/)
+    // The same templates next to public entities are composed as before
+    const open = await plan(w, names.map(name => entity(name, `${name}EntityConfig`)), Object.fromEntries(await Promise.all(names.map(async name => [name, await factsOf(shapes[name].replace(/public: false, /, '').replace("access: { ", "access: { public: true, "))]))))
+    assert.deepEqual(open.notices.filter(notice => notice.code === 'NS_HOST_ENTITY_TEMPLATE_NOT_USED'), [])
+    assert.ok(targets(open.routes).includes('(public)/blog/[...slug]/page.tsx'))
+  } finally {
+    w.cleanup()
+  }
+})
+
+test('prepare prints both notices of a builder entity without public routes as warnings, not as info', async () => {
+  const { readFileSync } = await import('node:fs')
+  const source = readFileSync(join(CORE_ROOT, 'scripts/build/registry/host/prepare-cli.mjs'), 'utf8')
+  const warnings = source.match(/const WARNING_NOTICES = new Set\(\[([^\]]*)\]\)/)?.[1] ?? ''
+  for (const code of ['NS_HOST_ENTITY_NOT_PUBLIC', PLAN_NOTICES.ENTITY_TEMPLATE_NOT_USED]) assert.ok(warnings.includes(`'${code}'`), code)
+})
+
+test('an `access.public` the host cannot read is a diagnostic for a builder entity with a base path, and writes no public route', async () => {
+  const w = world()
+  try {
+    const { routes, diagnostics } = await plan(w, [entity('posts', 'postsEntityConfig')], { posts: await factsOf(BLOG.replace('public: true', 'public: IS_PUBLIC')) })
+    assert.deepEqual(targets(routes).filter(target => target.startsWith('(public)')), [])
+    assert.deepEqual(diagnostics.map(d => d.code), [ENTITY_DIAGNOSTICS.NOT_STATIC])
+    assert.match(diagnostics[0].message, /entities\/posts \(postsEntityConfig\): `access\.public` is not a literal/)
+  } finally {
+    w.cleanup()
+  }
+})
+
+test('the entity plan\'s notices reach prepare\'s result (the lines nextspark prepare and build print)', async () => {
+  const { predictHost } = await import('../prepare.mjs')
+  const { tempHost } = await import('./host-helpers.mjs')
+  const notice = { code: 'NS_HOST_ENTITY_NOT_PUBLIC', message: 'entities/hidden (hiddenEntityConfig): no public item or archive route was written' }
+  const host = tempHost({}, { entities: async () => ({ routes: [], diagnostics: [], notices: [notice], entities: [] }) })
+  try {
+    assert.deepEqual((await predictHost(host.config)).notices, [notice])
+  } finally {
+    host.cleanup()
+  }
+})
+
 test('the root basePath gives [slug] (a single segment), or [...slug] when the entity allows nested slugs', async () => {
   const w = world()
   try {
-    const root = "slug: 'pages', enabled: true, access: { basePath: '/' }, builder: { enabled: true }"
+    const root = "slug: 'pages', enabled: true, access: { public: true, basePath: '/' }, builder: { enabled: true }"
     const single = await plan(w, [entity('pages', 'pagesEntityConfig')], { pages: await factsOf(root) })
     assert.deepEqual(targets(single.routes).filter(target => target.startsWith('(public)')), ['(public)/[slug]/page.tsx'])
     const nested = await plan(w, [entity('pages', 'pagesEntityConfig')], { pages: await factsOf(root.replace("basePath: '/'", "basePath: '/', allowNestedSlugs: true")) })
@@ -405,9 +489,9 @@ test('a basePath the host cannot turn into a route is a diagnostic naming the en
       w,
       [entity('a', 'aEntityConfig'), entity('b', 'bEntityConfig'), entity('c', 'cEntityConfig')],
       {
-        a: await factsOf("slug: 'a', access: { basePath: BASE }, builder: { enabled: true }"),
-        b: await factsOf("slug: 'b', access: { basePath: '/blog/[x]' }, builder: { enabled: true }"),
-        c: await factsOf("slug: 'c', access: { basePath: '/c' }, builder: { enabled: ON }"),
+        a: await factsOf("slug: 'a', access: { public: true, basePath: BASE }, builder: { enabled: true }"),
+        b: await factsOf("slug: 'b', access: { public: true, basePath: '/blog/[x]' }, builder: { enabled: true }"),
+        c: await factsOf("slug: 'c', access: { public: true, basePath: '/c' }, builder: { enabled: ON }"),
       }
     )
     assert.deepEqual(targets(routes).filter(target => target.startsWith('(public)')), [])
@@ -422,7 +506,7 @@ test('a basePath the host cannot turn into a route is a diagnostic naming the en
 test('two entities that would serve one public route are a collision naming both', async () => {
   const w = world()
   try {
-    const root = "enabled: true, access: { basePath: '/' }, builder: { enabled: true }"
+    const root = "enabled: true, access: { public: true, basePath: '/' }, builder: { enabled: true }"
     const { diagnostics } = await plan(w, [entity('pages', 'pagesEntityConfig'), entity('docs', 'docsEntityConfig')], { pages: await factsOf(`slug: 'pages', ${root}`), docs: await factsOf(`slug: 'docs', ${root}`) })
     assert.deepEqual(diagnostics.map(d => d.code), [PLAN_DIAGNOSTICS.COLLISION])
     assert.match(diagnostics[0].message, /\(public\)\/\[slug\]\/page\.tsx: two core files provide this route: entities\/docs \(docsEntityConfig\) public route and entities\/pages \(pagesEntityConfig\) public route/)
@@ -668,7 +752,7 @@ test('a public entity route that Next.js could not tell from a core route is a d
     const { diagnostics } = await plan(
       w,
       [entity('pages', 'pagesEntityConfig')],
-      { pages: await factsOf("slug: 'pages', enabled: true, access: { basePath: '/' }, builder: { enabled: true }") },
+      { pages: await factsOf("slug: 'pages', enabled: true, access: { public: true, basePath: '/' }, builder: { enabled: true }") },
       { coreRoutes: [{ kind: 'page', target: '(auth)/[token]/page.tsx', specifier: '@nextsparkjs/core/routes/t', file: '/core/t.tsx', protected: false }] }
     )
     assert.deepEqual(diagnostics.map(d => d.code), [PLAN_DIAGNOSTICS.DYNAMIC_SEGMENT_CONFLICT])
