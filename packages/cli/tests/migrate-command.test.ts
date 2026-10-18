@@ -1570,6 +1570,33 @@ test('migrate late failure rollback restores all newly-created migration paths t
   }
 })
 
+test('migrate late failure rollback removes the src/instrumentation.ts prepare moved the root template to', async () => {
+  const { root } = await moveFixture({ brokenImport: true })
+  try {
+    await installConversionCore(root)
+    // prepare moves an unchanged root instrumentation.ts template to src/ (#297)
+    await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare-cli.mjs', "import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs'\nmkdirSync('src/app', { recursive: true })\nmkdirSync('.nextspark', { recursive: true })\nwriteFileSync('src/app/generated-by-prepare.txt', 'ok\\n')\nif (existsSync('instrumentation.ts')) renameSync('instrumentation.ts', 'src/instrumentation.ts')\nwriteFileSync('.nextspark/generation.json', JSON.stringify({ valid: true }) + '\\n')\nconsole.log('fixture prepare done')\n")
+    const rootInstrumentation = "export { register } from '@nextsparkjs/core/instrumentation'\n"
+    await write(root, 'instrumentation.ts', rootInstrumentation)
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+    await commitFixture(root)
+
+    const failed = run(root, ['--yes'], { NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
+    assert.notEqual(failed.status, 0)
+    assert.match(failed.stdout, /MIGRATION FAILED: migration introduced broken imports/)
+    await access(join(root, 'src/instrumentation.ts'))
+    const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
+    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+
+    assert.equal(await readFile(join(root, 'instrumentation.ts'), 'utf8'), rootInstrumentation)
+    await assert.rejects(access(join(root, 'src/instrumentation.ts')), 'only the root file again, not both')
+    assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate late failure rollback keeps the user-owned state that already lived in .nextspark', async () => {
   const { root } = await moveFixture({ brokenImport: true })
   try {

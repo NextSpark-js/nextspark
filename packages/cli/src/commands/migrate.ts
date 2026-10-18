@@ -3284,6 +3284,7 @@ function migrationRollbackPaths(hostRoot: string, plan: MovePlan, report: Migrat
     'middleware.ts',
     'src/proxy.ts',
     'src/middleware.ts',
+    'src/instrumentation.ts',
     ...GENERATED_HOST_ROLLBACK_PATHS,
   ]);
   if (!hadLegacyApp) paths.delete('app');
@@ -3436,7 +3437,8 @@ function rollbackState(repository: string, hostRoot: string, plan: MovePlan, rep
   const destinations = new Set(plan.moves.map(item => pathFrom(repository, item.destination)));
   // sync:app can create these integration files before it creates its state.
   // Only clean names that did not exist before migration, never user-owned files.
-  for (const path of [...ROOT_TEMPLATE_FILES, 'proxy.ts', 'middleware.ts', 'src/proxy.ts', 'src/middleware.ts', 'src/app/globals.css', '.gitignore']) {
+  // prepare moves an unchanged root instrumentation.ts template to src/instrumentation.ts (#297)
+  for (const path of [...ROOT_TEMPLATE_FILES, 'proxy.ts', 'middleware.ts', 'src/proxy.ts', 'src/middleware.ts', 'src/instrumentation.ts', 'src/app/globals.css', '.gitignore']) {
     if (!existsSync(join(hostRoot, path))) destinations.add(pathFrom(repository, join(hostRoot, path)));
   }
   if (report.config.plannedCreation) destinations.add(pathFrom(repository, join(hostRoot, 'nextspark.config.ts')));
