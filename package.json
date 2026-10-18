@@ -79,6 +79,7 @@
       "handlebars": "^4.7.10",
       "@cypress/request>qs": "^6.16.0",
       "@nextsparkjs/mobile>react": "19.3.0",
+      "@nextsparkjs/mobile>react-dom": "19.3.0",
       "@nextsparkjs/mobile>react-test-renderer": "19.3.0",
       "react-devtools-core>shell-quote": "^1.9.0",
       "react-devtools-core>ws": "^7.5.11",
