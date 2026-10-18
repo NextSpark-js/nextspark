@@ -38,17 +38,20 @@ In Lemon Squeezy a product has variants, and each variant has its own price and 
 - Checkout sells the variant of the plan and interval.
 - The webhook finds the plan from the subscription's `variant_id`, so a change of variant (an upgrade in the Lemon Squeezy portal, or `updateSubscriptionPlan`) moves the team to that plan and interval.
 - A free trial is a setting of the variant in Lemon Squeezy; `trialDays` in `billing.config.ts` is not sent.
-- A variant that is no plan's is a one-time product (see [One-time orders](#one-time-orders)).
+- A variant that is no plan's is a one-time product (see [One-time orders](#one-time-orders)). A subscription of such a variant (a recurring add-on) is never bound to a team's row: the webhook logs it and answers `200`.
 
 ### 3. Environment variables
 
 ```env
 LEMONSQUEEZY_API_KEY=        # Settings -> API; a test-mode key works on test data only
 LEMONSQUEEZY_STORE_ID=       # the numeric store id (Settings -> Stores)
-LEMONSQUEEZY_WEBHOOK_SECRET= # the signing secret you set on the webhook (6 to 40 characters)
+LEMONSQUEEZY_WEBHOOK_SECRET= # the signing secret you set on the webhook; use 16 to 40 random characters
+# LEMONSQUEEZY_TEAM_TOKEN_SECRET= # optional: the key of the checkout team token; defaults to the webhook secret
 ```
 
-All three are required. They are checked when the factory selects the gateway (the first `getBillingGateway()` call), and a missing or malformed one fails with an error naming every such variable and never a value, for example `Lemon Squeezy billing is misconfigured: LEMONSQUEEZY_STORE_ID is missing; LEMONSQUEEZY_WEBHOOK_SECRET is missing.` A failed selection is not cached: the next call reads the environment again.
+The first three are required. They are checked when the factory selects the gateway (the first `getBillingGateway()` call), and a missing or malformed one fails with an error naming every such variable and never a value, for example `Lemon Squeezy billing is misconfigured: LEMONSQUEEZY_STORE_ID is missing; LEMONSQUEEZY_WEBHOOK_SECRET is missing.` A failed selection is not cached: the next call reads the environment again. Lemon Squeezy accepts a signing secret of 6 characters; one shorter than 16 is logged as a warning at selection (by name, never the value), not refused.
+
+`LEMONSQUEEZY_TEAM_TOKEN_SECRET` keys the team token (see [How the team is bound](#how-the-team-is-bound)). Set it to a long random value so the webhook secret can be rotated without invalidating the checkouts that are open.
 
 ### 4. Webhook
 
@@ -68,7 +71,7 @@ In Lemon Squeezy, Settings → Webhooks → add a webhook:
 | `getCustomer` / `createCustomer` | `GET /v1/customers/:id` / `POST /v1/customers` (name defaults to the email) |
 | `updateSubscriptionPlan` | `PATCH /v1/subscriptions/:id` with `variant_id`; `prorationBehavior: 'none'` → `disable_prorations`, `'always_invoice'` → `invoice_immediately` |
 | `cancelSubscriptionAtPeriodEnd` | `DELETE /v1/subscriptions/:id`: the subscription is `cancelled` and runs until `ends_at` |
-| `cancelSubscriptionImmediately` | **not supported**: Lemon Squeezy always keeps the grace period, so it throws, and `POST /api/v1/billing/cancel` with `immediate: true` answers 500 |
+| `cancelSubscriptionImmediately` | **not supported**: Lemon Squeezy always keeps the grace period, so it throws `BillingOperationNotSupportedError`, and `POST /api/v1/billing/cancel` with `immediate: true` answers `400` with `code: 'NOT_SUPPORTED'` and the message |
 | `reactivateSubscription` | `PATCH /v1/subscriptions/:id` with `cancelled: false` (before `ends_at`) |
 | `verifyWebhookSignature` | `X-Signature` is the hex HMAC-SHA256 of the raw body with the signing secret, compared in constant time |
 
@@ -80,19 +83,21 @@ API errors are thrown as `Lemon Squeezy API <METHOD> <path> failed with status <
 
 1. Reads the raw body and verifies `X-Signature` before parsing it. No signature, or a wrong one: `400`, and nothing is written.
 2. Claims the event once in `billing_webhook_events` with `processWebhookEventOnce('lemonsqueezy', ...)` (see [Webhook Deduplication](./05-payment-integration.md#webhook-deduplication)). A replay answers `200 { status: 'duplicate' }`; a handler that fails releases the claim, rolls back its writes and answers `500`, so Lemon Squeezy retries.
-3. Ignores an event whose `data.attributes.store_id` is not `LEMONSQUEEZY_STORE_ID`.
-4. Maps the event as below. An event not listed is answered `200` and recorded as processed.
+3. In production (`NODE_ENV=production`), ignores a test-mode event (`meta.test_mode: true`): it answers `200 { status: 'ignored_test_mode' }`, logs a warning and writes nothing, so a store's test-mode webhook pointed at production never grants entitlements for test payments.
+4. Refuses with `400` an event it maps (below) that has no `data.id` or no `data.attributes.updated_at`, with an error log and nothing claimed: it can be neither keyed apart from other events nor ordered, and the 400 shows the delivery as failed in Lemon Squeezy's webhook log instead of hiding it behind a 200.
+5. Ignores an event whose `data.attributes.store_id` is not `LEMONSQUEEZY_STORE_ID`.
+6. Maps the event as below. An event not listed is answered `200` and recorded as processed. `order_refunded`, `subscription_payment_refunded` and `subscription_payment_recovered` are not handled: a refund changes no row and calls no extension (a refunded one-time purchase stays granted), and `recovered` always comes with `subscription_payment_success`, which is handled.
 
 ### Idempotency key
 
-Lemon Squeezy deliveries carry no event id: `meta` has `event_name`, `custom_data`, `test_mode` and `webhook_id`, which names the webhook endpoint, not the event. The event id is derived from the event and the object it carries:
+Lemon Squeezy deliveries carry no event id: `meta` has `event_name`, `custom_data`, `test_mode` and `webhook_id`, which names the webhook endpoint, not the event. The event id is derived from the event, the object it carries and the raw body:
 
 ```
-<meta.event_name>:<data.type>:<data.id>:<data.attributes.updated_at>
-e.g. subscription_updated:subscriptions:12345:2026-10-01T10:00:00.000000Z
+<meta.event_name>:<data.type>:<data.id>:<data.attributes.updated_at>:<SHA-256 hex of the raw body>
+e.g. subscription_updated:subscriptions:12345:2026-10-01T10:00:00.000000Z:9f86d08188...
 ```
 
-A redelivery has the same body, so the same id. A later event about the same object has a newer `updated_at` or another name. Two different events with the same name, object and `updated_at` would carry the same object state, so processing one of them is enough. Lemon Squeezy retries a failed delivery three times (about 5, 25 and 125 seconds later), far inside the retention of processed events.
+A redelivery (a retry, or a resend from the dashboard) is byte-identical, so it has the same id and is a duplicate. `updated_at` has a resolution of one second (`.000000Z`), and Lemon Squeezy sends `subscription_updated` after nearly every change, so two changes of one subscription within a second (a plan change and its payment, a change and a cancel) share the first four parts; their bodies differ, so the hash keeps them apart and both are applied. The first four parts keep the id readable in logs. Lemon Squeezy retries a failed delivery three times (about 5, 25 and 125 seconds later), far inside the retention of processed events.
 
 ### Events
 
@@ -119,13 +124,13 @@ An event older than the last one applied to the row (its `updated_at` is earlier
 
 The webhook never trusts an id from the payload alone:
 
-- **The team token.** Lemon Squeezy returns a checkout's custom data as `meta.custom_data`, and the payload is signed, but anyone can also put custom data in a checkout link by hand (`?checkout[custom][teamId]=...`). So the checkouts the gateway creates carry `teamToken`, an HMAC-SHA256 of the team id with `LEMONSQUEEZY_WEBHOOK_SECRET`, and the webhook trusts `custom_data.teamId` only when the token matches.
-- **Subscription events** update the row whose `externalSubscriptionId` is the Lemon Squeezy subscription id (with `paymentProvider = 'lemonsqueezy'`). Only when no row has it yet, which is `subscription_created` or an event that arrived before it, the event binds to the current row (`active`, `trialing` or `past_due`) of the verified team, and only when that row is not bound to another Lemon Squeezy subscription. A row that is bound and an event whose custom data names another team: ignored.
-- **Payment events** update the row of their `subscription_id`. The first payment can arrive before `subscription_created`: when its custom data has a verified team of ours, the delivery answers `500` so Lemon Squeezy retries it after the subscription is bound.
-- **One-time orders** need a verified team that exists.
-- Anything else (no verified team, an unknown team or subscription, another store): logged with a warning and answered `200`, with no row written.
+- **The team token.** Lemon Squeezy returns a checkout's custom data as `meta.custom_data`, and the payload is signed, but anyone can also put custom data in a checkout link by hand (`?checkout[custom][teamId]=...`). So the checkouts the gateway creates carry `teamToken`, an HMAC-SHA256 of the team id and the checkout's variant id, keyed by `LEMONSQUEEZY_TEAM_TOKEN_SECRET` (or the webhook secret when it is unset). The webhook trusts `custom_data.teamId` only when the token matches that team and the variant the event is about, so a token seen on one checkout cannot bind a subscription or an order of another variant.
+- **Subscription events** update the row whose `externalSubscriptionId` is the Lemon Squeezy subscription id (with `paymentProvider = 'lemonsqueezy'`); such a row also takes status and period changes when its variant is no plan's (the plan is kept). Only when no row has it yet, which is `subscription_created` or an event that arrived before it, and only for a plan's variant, the event binds to the verified team: to its current row (`active`, `trialing` or `past_due`), or, when its subscription ended, to its latest row, which is then active again. A current row bound to another live Lemon Squeezy subscription is not taken over. A row that is bound and an event whose custom data names another team: ignored. Stripe and Polar bind a new subscription by the same rule (`lib/billing/subscription-binding.ts`).
+- **Payment events** update the row of their `subscription_id`. The first payment can arrive before `subscription_created` binds the subscription: when its custom data has a team token valid for one of the plan variants (an invoice names no variant), the payment is recorded on the team's row, once through the claim, and answered `200`; the row's status is left to the subscription events (the `past_due` → `active` flip is only for bound rows). Without a verified team it is ignored.
+- **One-time orders** need a team token valid for the order's variant, and a team that exists.
+- Anything else (no verified team, an unknown team or subscription, another store): logged and answered `200`, with no row written. Events that look like ours but cannot be applied are logged with `console.error`: a team token that does not match, a verified team with no subscription row, a second live subscription for a team, a subscription of a variant that is no plan's. Each of these may be a payment that was taken and not applied; check them.
 
-Rotating `LEMONSQUEEZY_WEBHOOK_SECRET` makes the tokens of earlier checkouts invalid. Subscriptions already bound are not affected (they are found by their id); a checkout opened before the rotation and paid after it is not bound. Rotate when no checkout is pending, or bind such a subscription by hand.
+Changing the token key (`LEMONSQUEEZY_TEAM_TOKEN_SECRET`, or the webhook secret when that is unset) makes the tokens of open checkouts invalid. Subscriptions already bound are not affected (they are found by their id); a checkout opened before the change and paid after it is not bound, and the event is logged as an error. Keep the token key when you rotate the webhook secret.
 
 ### One-time orders
 
@@ -152,7 +157,7 @@ Orders of a plan's variant are left to the subscription events Lemon Squeezy sen
 
 ## Test mode
 
-Lemon Squeezy's test mode is per API key: a key created in test mode works on the store's test data only, and its checkouts take test cards. Use a test-mode key and a test-mode webhook in development; switch both to live mode for production. `meta.test_mode` and `test_mode` on each object say which mode an event came from; the handler treats both modes the same.
+Lemon Squeezy's test mode is per API key: a key created in test mode works on the store's test data only, and its checkouts take test cards. Use a test-mode key and a test-mode webhook in development; switch both to live mode for production. `meta.test_mode` says which mode an event came from. With `NODE_ENV=production` the handler ignores test-mode events (`200 { status: 'ignored_test_mode' }`, a warning in the log); in any other environment it applies both modes the same, so a local or staging app can run the whole flow on test data.
 
 ## Manual test plan (test mode)
 
@@ -161,15 +166,15 @@ The automated tests use hand-built payloads in the documented shapes, never a re
 1. **Store.** In test mode, create a subscription product "Pro" with a monthly and a yearly variant, and a single-payment product "Credits". Put the two variant ids in `providerPriceIds` of `pro`.
 2. **Environment.** Set `LEMONSQUEEZY_API_KEY` (test mode), `LEMONSQUEEZY_STORE_ID` and `LEMONSQUEEZY_WEBHOOK_SECRET`; start the app; expose it with a tunnel (for example `cloudflared tunnel --url http://localhost:3000`) and add the webhook with the tunnel URL and every event above.
 3. **Misconfiguration.** Unset `LEMONSQUEEZY_STORE_ID` and open the billing page's upgrade: the server log names `LEMONSQUEEZY_STORE_ID` and no value. Restore it.
-4. **Checkout.** As a team owner, upgrade to Pro monthly and pay with the test Visa card. Expected: Lemon Squeezy's webhook log shows `order_created`, `subscription_created` and `subscription_payment_success` answered `200`; the team's row has `paymentProvider = 'lemonsqueezy'`, the Lemon Squeezy subscription id, plan `pro`, `billingInterval = 'monthly'`; `billing_events` has a `lifecycle` row and a `payment` / `succeeded` row.
+4. **Checkout.** As a team owner, upgrade to Pro monthly and pay with the test Visa card. Expected: Lemon Squeezy's webhook log shows `order_created`, `subscription_created` and `subscription_payment_success` answered `200`; the team's row has `paymentProvider = 'lemonsqueezy'`, the Lemon Squeezy subscription id, plan `pro`, `billingInterval = 'monthly'`; `billing_events` has a `lifecycle` row and a `payment` / `succeeded` row. In the webhook log, open the `subscription_payment_success` request body and record whether it carries `meta.custom_data` (the handler needs it to record a first payment that arrives before `subscription_created`).
 5. **Replay.** In the webhook log, resend `subscription_created`. Expected: `200 {"received":true,"status":"duplicate"}`, no new rows.
 6. **Bad signature.** `curl -X POST <url> -H 'X-Signature: 00' -d '{}'`. Expected: `400 {"error":"Invalid signature"}`.
 7. **Portal.** Open "Manage billing". Expected: the Lemon Squeezy customer portal of that customer.
 8. **Change plan.** Change to Pro yearly from the app. Expected: `subscription_updated`, the row's `billingInterval = 'yearly'`.
 9. **Cancel and resume.** Cancel from the app (at period end). Expected: `subscription_cancelled`, `cancelAtPeriodEnd = true`, status still `active`. Reactivate. Expected: `subscription_resumed`, `cancelAtPeriodEnd = false`.
-10. **Immediate cancel.** `POST /api/v1/billing/cancel` with `{"immediate": true}`. Expected: `500`, and the subscription is unchanged in Lemon Squeezy.
+10. **Immediate cancel.** `POST /api/v1/billing/cancel` with `{"immediate": true}`. Expected: `400` with `code: 'NOT_SUPPORTED'` and a message saying Lemon Squeezy cannot cancel immediately, and the subscription is unchanged in Lemon Squeezy.
 11. **Payment failure.** Subscribe a second team with the test card that fails on renewal (or use the dashboard's webhook simulation for `subscription_payment_failed`). Expected: `past_due` and a `payment` / `failed` row.
-12. **Expiry.** Cancel and, in the dashboard, end the subscription (or simulate `subscription_expired`). Expected: `status = 'expired'`.
+12. **Expiry and a new subscription.** Cancel and, in the dashboard, end the subscription (or simulate `subscription_expired`). Expected: `status = 'expired'`. Then upgrade the same team again. Expected: the same row is `active` on the new Lemon Squeezy subscription id.
 13. **One-time order.** With an extension that logs its input, buy "Credits" through `createOneTimeCheckout`. Expected: `order_created` reaches the extension with the team id; a hand-made checkout link with `?checkout[custom][teamId]=<another team>` does not.
 14. Record the webhook log, the rows and the server log of each step with the result.
 
