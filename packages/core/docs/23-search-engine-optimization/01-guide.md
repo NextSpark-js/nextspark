@@ -230,17 +230,21 @@ User-Agent: *
 Allow: /
 Disallow: /dashboard$
 Disallow: /dashboard/
+Disallow: /dashboard?
 Disallow: /superadmin$
 Disallow: /superadmin/
+Disallow: /superadmin?
 Disallow: /devtools$
 Disallow: /devtools/
+Disallow: /devtools?
 Disallow: /api$
 Disallow: /api/
+Disallow: /api?
 
 Sitemap: https://example.com/sitemap.xml
 ```
 
-Each area is listed twice, `/api$` for the path itself and `/api/` for its subpaths, so `/apiary` stays crawlable. The sitemap URL is absolute, built from `NEXT_PUBLIC_APP_URL` and the base path. **Set `NEXT_PUBLIC_APP_URL` to your public origin in production**: without it the URLs say `http://localhost:3000`. Crawlers read only the host root: under a Next `basePath` the file is served at `/<base>/robots.txt` and the one at the root is the deployment's concern.
+Each area is listed three times, `/api$` for the path itself, `/api/` for its subpaths and `/api?` for its query URLs, so `/apiary` stays crawlable. The sitemap URL is absolute, built from `NEXT_PUBLIC_APP_URL` and the base path. **Set `NEXT_PUBLIC_APP_URL` to your public origin in production**: without it the URLs say `http://localhost:3000`. Crawlers read only the host root: under a Next `basePath` the file is served at `/<base>/robots.txt` and the one at the root is the deployment's concern.
 
 ### Caching and size
 

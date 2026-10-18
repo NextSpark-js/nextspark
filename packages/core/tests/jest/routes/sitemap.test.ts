@@ -15,7 +15,7 @@ jest.mock('@nextsparkjs/registries/entity-registry', () => {
     ENTITY_REGISTRY: {
       posts: { source: 'project', config: config('posts', { public: true, basePath: '/blog' }) },
       pages: { source: 'project', config: config('pages', { public: true, basePath: '/' }) },
-      // team-scoped / private / not built by the host: never read
+      // team-scoped / private / never read by the sitemap
       tasks: { source: 'project', config: config('tasks', { public: false, shared: false }, undefined) },
       notes: { source: 'project', config: config('notes', { public: false, basePath: '/notes' }) },
       drafts: { source: 'project', config: config('drafts', { basePath: '/drafts' }) },

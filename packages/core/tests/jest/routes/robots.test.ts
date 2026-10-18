@@ -8,9 +8,14 @@ import { createRobotsRoute } from '@/app/_internal/robots-route'
 const BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL
 const AREAS = ['/dashboard', '/superadmin', '/devtools', '/api']
-// each area by itself and its subpaths: `/api` alone would also block `/apiary`
-const blocked = (prefix = '') => AREAS.flatMap(path => [`${prefix}${path}$`, `${prefix}${path}/`])
+// each area by itself, its subpaths and its query URLs: `/api` alone would also block `/apiary`
+const blocked = (prefix = '') => AREAS.flatMap(path => ['$', '/', '?'].map(end => `${prefix}${path}${end}`))
 const DISALLOWED = blocked()
+
+// Google's matching: `*` is any run, a trailing `$` anchors the end, the rest is a prefix of path + query
+const matches = (rule: string, url: string) =>
+  new RegExp('^' + rule.replace(/[.+?^{}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\$$/, '$')).test(url)
+const isBlocked = (url: string) => (robots().rules as { disallow: string[] }).disallow.some(rule => matches(rule, url))
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_APP_URL = 'https://example.com/'
@@ -54,5 +59,12 @@ describe('robots', () => {
         '',
       ].join('\n'),
     )
+  })
+
+  it('blocks each area, its subpaths and its query URLs, and nothing else', () => {
+    for (const url of ['/api', '/api/v1/x', '/api?x=1', '/dashboard', '/dashboard/teams', '/dashboard?tab=1', '/superadmin', '/devtools?x']) {
+      expect(isBlocked(url)).toBe(true)
+    }
+    for (const url of ['/', '/apiary', '/dashboards-guide', '/support', '/blog/api']) expect(isBlocked(url)).toBe(false)
   })
 })

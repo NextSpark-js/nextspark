@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
-/** Each area is blocked by itself (`/api$`) and its subpaths (`/api/`), so `/apiary` stays crawlable. */
+/** Each area is blocked by itself (`/api$`), its subpaths (`/api/`) and its query URLs (`/api?`), so `/apiary` stays crawlable. */
 const DISALLOWED = ['/dashboard', '/superadmin', '/devtools', '/api']
 
 /**
@@ -16,7 +16,7 @@ export function createRobotsRoute({ sitemap = true }: { sitemap?: boolean } = {}
       rules: {
         userAgent: '*',
         allow: withBasePath('/'),
-        disallow: DISALLOWED.flatMap(path => [`${withBasePath(path)}$`, `${withBasePath(path)}/`]),
+        disallow: DISALLOWED.flatMap(path => ['$', '/', '?'].map(end => `${withBasePath(path)}${end}`)),
       },
       ...(sitemap ? { sitemap: `${origin}${withBasePath('/sitemap.xml')}` } : {}),
     }

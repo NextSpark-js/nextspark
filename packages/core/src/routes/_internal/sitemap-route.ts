@@ -39,7 +39,7 @@ export interface SitemapRouteOptions extends Pick<SitemapConfig, 'urls' | 'exclu
   staticPaths?: string[]
 }
 
-/** The entities of the project and its plugins, which are the ones the host writes public routes for. */
+/** The entities of the project and its plugins; core's own are never read. */
 export function projectEntities(): EntityConfig[] {
   return Object.values(ENTITY_REGISTRY)
     .filter(entry => entry.source !== 'core')

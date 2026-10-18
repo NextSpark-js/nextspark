@@ -71,7 +71,7 @@ function lastModified(value: SitemapRow['updatedAt']): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date
 }
 
-/** The public entity pages are served only for a builder entity with a base path; `access.public` must be explicit. */
+/** The sitemap lists only builder entities with a base path and `access.public: true`. */
 export function isSitemapEntity(config: EntityConfig): boolean {
   return config.builder?.enabled === true && config.access?.public === true && getEntityItemPath(config, 'x') !== undefined
 }
