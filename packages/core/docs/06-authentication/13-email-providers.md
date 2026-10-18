@@ -48,6 +48,11 @@ password, a server that is down. What the caller sees depends on the email:
 | Team invitation | The invitation is not created, and the invite request answers `503` with `EMAIL_SEND_FAILED` so the inviter can retry |
 | Security notifications | Retried as a scheduled action |
 
+A sign-in code request waits for the provider before it answers, for up to 10
+seconds; a provider that has not answered by then counts as a failed send
+(`EMAIL_SEND_FAILED`). Resend calls and each stage of an SMTP exchange also give
+up after 10 seconds.
+
 The provider's own error text never reaches the client. The server log has it,
 in a line such as `[auth] The sign-in code email could not be sent: ...` or
 `Failed to send invitation email: ...`.

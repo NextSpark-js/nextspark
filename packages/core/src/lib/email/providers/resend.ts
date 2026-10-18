@@ -1,6 +1,8 @@
-import { Resend, type CreateEmailOptions } from 'resend';
+import { Resend, type CreateEmailOptions, type CreateEmailRequestOptions } from 'resend';
 import type { EmailProvider, EmailOptions, EmailResponse } from '../types';
 import { defaultFromHeader } from '../sender';
+
+const RESEND_TIMEOUT_MS = 10_000;
 
 export class ResendProvider implements EmailProvider {
   private client: Resend;
@@ -37,7 +39,10 @@ export class ResendProvider implements EmailProvider {
       if (options.bcc) emailData.bcc = options.bcc;
       if (options.headers) emailData.headers = options.headers;
 
-      const { data, error } = await this.client.emails.send(emailData);
+      // resend 5 does not type `signal`, but passes its request options to fetch as they are; an aborted
+      // request comes back as { error }, so a silent API ends as a failed send instead of hanging
+      const requestOptions = { signal: AbortSignal.timeout(RESEND_TIMEOUT_MS) } as CreateEmailRequestOptions;
+      const { data, error } = await this.client.emails.send(emailData, requestOptions);
 
       if (error) {
         return {

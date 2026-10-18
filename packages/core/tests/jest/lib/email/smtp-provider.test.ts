@@ -53,7 +53,8 @@ describe('SmtpProvider', () => {
 
     expect(response.success).toBe(true)
     expect(response.id).toEqual(expect.stringContaining('@'))
-    expect(createTransport).toHaveBeenCalledWith(config)
+    // the config plus bounded timeouts, so a silent server releases the socket
+    expect(createTransport).toHaveBeenCalledWith({ ...config, connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 10_000 })
     expect(JSON.parse(sent[0].message)).toMatchObject({
       from: { name: 'App', address: 'no-reply@example.org' },
       to: [{ address: 'a@example.org' }, { address: 'b@example.org' }],
@@ -144,7 +145,7 @@ describe('EmailFactory with EMAIL_PROVIDER=smtp', () => {
     expect(provider).toBeInstanceOf(SmtpProvider)
     await provider.send({ to: 'a@example.org', subject: 's', text: 't' })
 
-    expect(spy).toHaveBeenCalledWith({ host: 'smtp.example.org', port: 2525, secure: false })
+    expect(spy).toHaveBeenCalledWith({ host: 'smtp.example.org', port: 2525, secure: false, connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 10_000 })
     expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({ from: 'My App <auth@example.org>' }))
     spy.mockRestore()
   })

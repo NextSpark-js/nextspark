@@ -136,3 +136,24 @@ describe('the providers read the sender', () => {
     expect(message).not.toContain('old@example.com')
   })
 })
+
+describe('ResendProvider bounds the API call', () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  test('the send carries an abort signal to fetch, and an aborted request is a failed send', async () => {
+    // An already-aborted signal stands in for AbortSignal.timeout(10 s) firing
+    const timeout = jest.spyOn(AbortSignal, 'timeout').mockImplementation(() => AbortSignal.abort())
+    const fetchSpy = jest.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+      init?.signal?.throwIfAborted()
+      return new Response('{}')
+    })
+    jest.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    const response = await new ResendProvider('re_1234567890abcdefghijklmnop', 'App <a@example.com>')
+      .send({ to: 'b@example.com', subject: 's', text: 't' })
+
+    expect(timeout).toHaveBeenCalledWith(10_000)
+    expect(fetchSpy.mock.calls[0][1]?.signal?.aborted).toBe(true)
+    expect(response.success).toBe(false)
+  })
+})

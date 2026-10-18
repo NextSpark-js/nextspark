@@ -27,6 +27,9 @@ async function loadNodemailer(): Promise<typeof import('nodemailer')> {
   }
 }
 
+/** Each stage of an SMTP exchange gives up after this, so a silent server releases the socket (nodemailer's defaults are minutes). */
+const SMTP_TIMEOUT_MS = 10_000
+
 export class SmtpProvider implements EmailProvider {
   private transporter?: Promise<Transporter>
 
@@ -37,7 +40,12 @@ export class SmtpProvider implements EmailProvider {
 
   private getTransporter(): Promise<Transporter> {
     this.transporter ??= loadNodemailer()
-      .then((nodemailer) => nodemailer.createTransport(this.config))
+      .then((nodemailer) => nodemailer.createTransport({
+        ...this.config,
+        connectionTimeout: SMTP_TIMEOUT_MS,
+        greetingTimeout: SMTP_TIMEOUT_MS,
+        socketTimeout: SMTP_TIMEOUT_MS,
+      }))
       .catch((error) => {
         // A failed load must not be cached: installing the package and retrying should work.
         this.transporter = undefined
