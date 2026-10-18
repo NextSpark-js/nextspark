@@ -16,8 +16,9 @@
  *
  * The team token: Lemon Squeezy returns a checkout's custom data in its webhooks (meta.custom_data), but anyone can
  * also put custom data in a checkout link by hand (`checkout[custom][teamId]=...`). So the checkouts this app creates
- * carry `teamToken`, an HMAC of the team id with the webhook signing secret, and the webhook binds an order or a new
- * subscription to a team only when the token matches.
+ * carry `teamToken`, an HMAC of the team id and the checkout's variant id, and the webhook binds a new subscription or
+ * an order to a team only when the token matches that team and the variant the event is about. The key is
+ * LEMONSQUEEZY_TEAM_TOKEN_SECRET, or the webhook signing secret when it is unset.
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto'
@@ -51,13 +52,19 @@ export interface LemonSqueezyWebhookExtensions {
   ) => Promise<void>
 }
 
-/** The token a checkout carries next to the team id: hex HMAC-SHA256 of the team id with the webhook secret. */
-export function lemonSqueezyTeamToken(teamId: string, webhookSecret: string): string {
-  return createHmac('sha256', webhookSecret).update(`nextspark-lemonsqueezy-team:${teamId}`).digest('hex')
+/** The key of the team token: LEMONSQUEEZY_TEAM_TOKEN_SECRET, else LEMONSQUEEZY_WEBHOOK_SECRET; null when neither is set. */
+export function lemonSqueezyTeamTokenSecret(env: NodeJS.ProcessEnv = process.env): string | null {
+  return env.LEMONSQUEEZY_TEAM_TOKEN_SECRET?.trim() || env.LEMONSQUEEZY_WEBHOOK_SECRET?.trim() || null
 }
 
-/** True when `token` is the team token of `teamId`; constant-time. */
-export function isValidLemonSqueezyTeamToken(teamId: string, token: unknown, webhookSecret: string): boolean {
+/** The token a checkout of `variantId` carries next to the team id: hex HMAC-SHA256 of both. */
+export function lemonSqueezyTeamToken(teamId: string, variantId: string, secret: string): string {
+  return createHmac('sha256', secret).update(`nextspark-lemonsqueezy-team:${teamId}:${variantId}`).digest('hex')
+}
+
+/** True when `token` is the team token of `teamId` for one of `variantIds`; constant-time per variant. */
+export function isValidLemonSqueezyTeamToken(teamId: string, variantIds: string[], token: unknown, secret: string): boolean {
   if (typeof token !== 'string' || !/^[0-9a-f]{64}$/.test(token)) return false
-  return timingSafeEqual(Buffer.from(lemonSqueezyTeamToken(teamId, webhookSecret), 'hex'), Buffer.from(token, 'hex'))
+  const given = Buffer.from(token, 'hex')
+  return variantIds.some(variantId => timingSafeEqual(Buffer.from(lemonSqueezyTeamToken(teamId, variantId, secret), 'hex'), given))
 }

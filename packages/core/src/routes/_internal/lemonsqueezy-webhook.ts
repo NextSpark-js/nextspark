@@ -4,17 +4,22 @@
  * Processes Lemon Squeezy webhook events for the subscription lifecycle:
  * 1. Verifies X-Signature (hex HMAC-SHA256 of the raw body) before parsing anything.
  * 2. Claims the event once in billing_webhook_events. Lemon Squeezy sends no event id, so the id is derived from
- *    (event_name, data.type, data.id, data.attributes.updated_at): see lemonSqueezyEventId in the gateway.
+ *    (event_name, data.type, data.id, data.attributes.updated_at, sha256 of the raw body): see lemonSqueezyEventId.
  * 3. Maps the event to the subscription row and billing_events.
  *
  * Binding to our records, never to ids from the payload alone:
  * - A subscription event updates the row whose "externalSubscriptionId" is the Lemon Squeezy subscription id. Only
- *   when there is none yet (subscription_created, or an event that arrived before it) it binds to the team named in
- *   the custom data, and only when the custom data's team token is valid (lemonsqueezy-webhook.ts) and the team's
- *   current subscription row is not bound to another Lemon Squeezy subscription.
- * - A payment event updates the row of its subscription_id; one-time orders need a valid team token.
- * - Events of another store (data.attributes.store_id is not LEMONSQUEEZY_STORE_ID) are ignored.
+ *   when there is none yet (subscription_created, or an event that arrived before it), and only for a plan's variant,
+ *   it binds to the team named in the custom data when the team token is valid for that team and variant
+ *   (lemonsqueezy-webhook.ts): to the team's current row, else its latest row (subscription-binding.ts), unless that
+ *   current row is bound to another live Lemon Squeezy subscription.
+ * - A payment event updates the row of its subscription_id. Before the subscription is bound, a verified team's payment
+ *   is recorded against the team's row without changing it.
+ * - One-time orders need a valid team token for the order's variant.
+ * - Events of another store (data.attributes.store_id is not LEMONSQUEEZY_STORE_ID) are ignored, and so are test-mode
+ *   events when NODE_ENV is production.
  * - An older event than the one last applied to a row (data.attributes.updated_at) does not move it back.
+ * Events that look like ours (a team token) but cannot be applied are logged as errors: a payment may be unapplied.
  *
  * Like the Stripe and Polar handlers it uses direct query() calls on the service connection: webhooks have no user.
  */
@@ -24,7 +29,12 @@ import { query, queryOne } from '@nextsparkjs/core/lib/db'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { processWebhookEventOnce, webhookOutcomeResponse } from '@nextsparkjs/core/lib/billing/webhook-events'
-import { isValidLemonSqueezyTeamToken, type LemonSqueezyWebhookExtensions } from '@nextsparkjs/core/lib/billing/lemonsqueezy-webhook'
+import {
+  isValidLemonSqueezyTeamToken,
+  lemonSqueezyTeamTokenSecret,
+  type LemonSqueezyWebhookExtensions,
+} from '@nextsparkjs/core/lib/billing/lemonsqueezy-webhook'
+import { subscriptionRowForNewSubscription } from '@nextsparkjs/core/lib/billing/subscription-binding'
 
 /** Loads a project's Lemon Squeezy webhook extensions; core's route passes none. */
 export type LemonSqueezyWebhookExtensionsLoader = () => Promise<LemonSqueezyWebhookExtensions>
@@ -44,8 +54,16 @@ interface LemonSqueezyEvent {
   custom: Record<string, string>
 }
 
-/** Thrown for an event that is ours but arrived before the event that creates its row: answer 500 so it is retried. */
-class RetryLater extends Error {}
+const SUBSCRIPTION_EVENTS = new Set([
+  'subscription_created', 'subscription_updated', 'subscription_cancelled', 'subscription_resumed',
+  'subscription_expired', 'subscription_paused', 'subscription_unpaused',
+])
+const PAYMENT_EVENTS = new Set(['subscription_payment_success', 'subscription_payment_failed'])
+
+/** The events this handler applies; each needs data.id and data.attributes.updated_at to be keyed and ordered. */
+function isHandled(name: string): boolean {
+  return SUBSCRIPTION_EVENTS.has(name) || PAYMENT_EVENTS.has(name) || name === 'order_created'
+}
 
 /**
  * The Lemon Squeezy webhook Route Handler, before rate limiting. The project hook for one-time orders
@@ -65,14 +83,30 @@ async function handleLemonSqueezyWebhook(request: NextRequest, loadExtensions: L
 
   // 2. Verify the signature (MANDATORY), then parse
   let event: LemonSqueezyEvent
+  let testMode: boolean
   try {
     const gateway = await getBillingGateway()
     const verified = gateway.verifyWebhookSignature(payload, signature)
-    const body = verified.data as { meta?: { custom_data?: Record<string, unknown> }; data: Resource }
+    const body = verified.data as { meta?: { custom_data?: Record<string, unknown>; test_mode?: unknown }; data: Resource }
     event = { id: verified.id, name: verified.type, data: body.data, custom: stringValues(body.meta?.custom_data) }
+    testMode = body.meta?.test_mode === true
   } catch (error) {
     console.error('[lemonsqueezy-webhook] Signature verification failed:', error)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+  }
+
+  // A store's test-mode webhook pointed at production must not grant entitlements for test payments
+  if (testMode && process.env.NODE_ENV === 'production') {
+    console.warn(`[lemonsqueezy-webhook] Event ${event.id} is a test-mode event, ignored in production`)
+    return NextResponse.json({ received: true, status: 'ignored_test_mode' })
+  }
+
+  // An event this handler applies needs an object id and updated_at: without them it can be neither keyed apart from
+  // other events nor ordered. 400, so the delivery shows as failed in Lemon Squeezy's webhook log, and nothing is claimed.
+  const attributes = event.data?.attributes
+  if (isHandled(event.name) && (!idOrNull(event.data?.id) || !stringOrNull(attributes?.updated_at))) {
+    console.error(`[lemonsqueezy-webhook] Event ${event.id} (${event.name}) has no data.id or data.attributes.updated_at, refused`)
+    return NextResponse.json({ error: 'Event has no data.id or data.attributes.updated_at' }, { status: 400 })
   }
 
   // 3. Claim the event and handle it once (see lib/billing/webhook-events.ts)
@@ -95,29 +129,10 @@ async function handleEvent(event: LemonSqueezyEvent, loadExtensions: LemonSqueez
     return
   }
 
-  switch (event.name) {
-    case 'subscription_created':
-    case 'subscription_updated':
-    case 'subscription_cancelled':
-    case 'subscription_resumed':
-    case 'subscription_expired':
-    case 'subscription_paused':
-    case 'subscription_unpaused':
-      await handleSubscriptionEvent(event)
-      break
-
-    case 'subscription_payment_success':
-    case 'subscription_payment_failed':
-      await handlePaymentEvent(event)
-      break
-
-    case 'order_created':
-      await handleOrderCreated(event, loadExtensions)
-      break
-
-    default:
-      console.log(`[lemonsqueezy-webhook] Unhandled event type: ${event.name}`)
-  }
+  if (SUBSCRIPTION_EVENTS.has(event.name)) await handleSubscriptionEvent(event)
+  else if (PAYMENT_EVENTS.has(event.name)) await handlePaymentEvent(event)
+  else if (event.name === 'order_created') await handleOrderCreated(event, loadExtensions)
+  else console.log(`[lemonsqueezy-webhook] Unhandled event type: ${event.name}`)
 }
 
 // ===========================================
@@ -202,19 +217,24 @@ async function handleSubscriptionEvent(event: LemonSqueezyEvent) {
   console.log(`[lemonsqueezy-webhook] Subscription ${subscription.id} of team ${row.teamId}: ${attributes.status} -> ${status}`)
 }
 
-/**
- * The subscription row an event about Lemon Squeezy subscription `externalId` applies to, locked for the update:
- * the row already bound to it, or else the current row of the team in the custom data, when its token is valid and
- * that row is not bound to another Lemon Squeezy subscription. Null (and a warning) when there is none.
- */
-async function subscriptionRowFor(event: LemonSqueezyEvent, externalId: string): Promise<SubscriptionRow | null> {
-  const claimed = event.custom.teamId
-  const bound = await queryOne<SubscriptionRow>(
+/** The row bound to Lemon Squeezy subscription `externalId`, locked; null when none is. */
+async function boundRow(externalId: string): Promise<SubscriptionRow | null> {
+  return queryOne<SubscriptionRow>(
     `SELECT ${ROW_COLUMNS} FROM subscriptions
      WHERE "paymentProvider" = 'lemonsqueezy' AND "externalSubscriptionId" = $1
      ORDER BY "createdAt" DESC LIMIT 1 FOR UPDATE`,
     [externalId]
   )
+}
+
+/**
+ * The subscription row an event about Lemon Squeezy subscription `externalId` applies to, locked for the update:
+ * the row already bound to it; or else, for a plan's variant and a team token valid for that team and variant, the
+ * row subscription-binding.ts picks for the team. Null (and a log line) when there is none.
+ */
+async function subscriptionRowFor(event: LemonSqueezyEvent, externalId: string): Promise<SubscriptionRow | null> {
+  const claimed = event.custom.teamId
+  const bound = await boundRow(externalId)
   if (bound) {
     if (claimed && claimed !== bound.teamId) {
       console.warn(`[lemonsqueezy-webhook] Event ${event.id}: the custom data names another team than the subscription's, ignoring`)
@@ -223,27 +243,31 @@ async function subscriptionRowFor(event: LemonSqueezyEvent, externalId: string):
     return bound
   }
 
-  const teamId = verifiedTeamId(event)
+  const variantId = idOrNull(event.data.attributes.variant_id)
+  const teamId = verifiedTeamId(event, variantId ? [variantId] : [])
+  if (!planForVariant(variantId)) {
+    // a variant that is no plan's (a recurring add-on, another product of the store) never takes over a team's row
+    const log = teamId ? console.error : console.warn
+    log(`[lemonsqueezy-webhook] Event ${event.id}: subscription ${externalId} is of variant ${variantId}, which is no plan's; not applied`)
+    return null
+  }
   if (!teamId) {
-    console.warn(`[lemonsqueezy-webhook] Event ${event.id}: subscription ${externalId} is not ours and has no verified team, ignoring`)
+    if (claimed) {
+      console.error(`[lemonsqueezy-webhook] Event ${event.id}: subscription ${externalId} names team ${claimed} without a valid team token; not applied`)
+    } else {
+      console.warn(`[lemonsqueezy-webhook] Event ${event.id}: subscription ${externalId} is not ours and has no verified team, ignoring`)
+    }
     return null
   }
-  const current = await queryOne<SubscriptionRow>(
-    `SELECT ${ROW_COLUMNS} FROM subscriptions
-     WHERE "teamId" = $1 AND status IN ('active', 'trialing', 'past_due')
-     LIMIT 1 FOR UPDATE`,
-    [teamId]
-  )
-  if (!current) {
-    console.warn(`[lemonsqueezy-webhook] Event ${event.id}: team ${teamId} has no current subscription row, ignoring`)
-    return null
-  }
-  if (current.paymentProvider === 'lemonsqueezy' && current.externalSubscriptionId && current.externalSubscriptionId !== externalId) {
-    console.warn(`[lemonsqueezy-webhook] Event ${event.id}: team ${teamId} already has Lemon Squeezy subscription ${current.externalSubscriptionId}, not binding ${externalId}`)
-    return null
-  }
-  // a row that tracked another subscription starts over: an older event of the new one may arrive later
-  return { ...current, syncedAt: current.externalSubscriptionId === externalId ? current.syncedAt : null }
+  const row = await subscriptionRowForNewSubscription(teamId, {
+    gateway: 'lemonsqueezy',
+    eventId: event.id,
+    bind: { provider: 'lemonsqueezy', externalSubscriptionId: externalId },
+  })
+  if (!row) return null
+  // the row tracked another subscription before: the new one starts its own order of updates
+  const syncedAt = row.externalSubscriptionId === externalId ? stringOrNull(row.metadata?.lemonSqueezyUpdatedAt) : null
+  return { id: row.id, teamId: row.teamId, paymentProvider: row.paymentProvider, externalSubscriptionId: row.externalSubscriptionId, syncedAt }
 }
 
 // ===========================================
@@ -254,19 +278,34 @@ async function handlePaymentEvent(event: LemonSqueezyEvent) {
   const invoice = event.data
   const attributes = invoice.attributes
   const externalId = idOrNull(attributes.subscription_id)
-  const row = externalId
-    ? await queryOne<SubscriptionRow>(
-        `SELECT ${ROW_COLUMNS} FROM subscriptions
-         WHERE "paymentProvider" = 'lemonsqueezy' AND "externalSubscriptionId" = $1
-         ORDER BY "createdAt" DESC LIMIT 1 FOR UPDATE`,
-        [externalId]
-      )
-    : null
+  const succeeded = event.name === 'subscription_payment_success'
+  const urls = attributes.urls as { invoice_url?: string | null } | undefined
+  const record = (subscriptionId: string, unbound: boolean) => logBillingEvent(
+    subscriptionId,
+    'payment',
+    succeeded ? 'succeeded' : 'failed',
+    cents(attributes.total),
+    currencyOf(attributes.currency),
+    { lemonSqueezyEventId: event.id, billingReason: attributes.billing_reason ?? null, ...(unbound && { lemonSqueezySubscriptionId: externalId }) },
+    invoice.id,
+    urls?.invoice_url ?? null
+  )
 
+  const row = externalId ? await boundRow(externalId) : null
   if (!row) {
-    // the first payment can arrive before subscription_created bound the row: a verified team means it is ours
-    if (verifiedTeamId(event)) throw new RetryLater(`subscription ${externalId} is not bound yet; retrying ${event.name} later`)
-    console.warn(`[lemonsqueezy-webhook] Event ${event.id}: subscription ${externalId} is not ours, ignoring`)
+    // The first payment can arrive before subscription_created binds the subscription. An invoice names no variant, so
+    // the token is checked against every plan variant. The payment is recorded on the team's row; the row itself is
+    // left to the subscription events.
+    const teamId = verifiedTeamId(event, planVariantIds())
+    if (!teamId) {
+      const log = event.custom.teamId ? console.error : console.warn
+      log(`[lemonsqueezy-webhook] Event ${event.id}: subscription ${externalId} is not ours and has no verified team, ignoring`)
+      return
+    }
+    const teamRow = await subscriptionRowForNewSubscription(teamId, { gateway: 'lemonsqueezy', eventId: event.id })
+    if (!teamRow) return
+    await record(teamRow.id, true)
+    console.log(`[lemonsqueezy-webhook] Payment for subscription ${externalId}, not bound yet, recorded for team ${teamId}`)
     return
   }
   if (event.custom.teamId && event.custom.teamId !== row.teamId) {
@@ -274,24 +313,12 @@ async function handlePaymentEvent(event: LemonSqueezyEvent) {
     return
   }
 
-  const succeeded = event.name === 'subscription_payment_success'
   if (succeeded) {
     await query(`UPDATE subscriptions SET status = 'active', "updatedAt" = NOW() WHERE id = $1 AND status = 'past_due'`, [row.id])
   } else {
     await query(`UPDATE subscriptions SET status = 'past_due', "updatedAt" = NOW() WHERE id = $1 AND status IN ('active', 'trialing')`, [row.id])
   }
-
-  const urls = attributes.urls as { invoice_url?: string | null } | undefined
-  await logBillingEvent(
-    row.id,
-    'payment',
-    succeeded ? 'succeeded' : 'failed',
-    cents(attributes.total),
-    currencyOf(attributes.currency),
-    { lemonSqueezyEventId: event.id, billingReason: attributes.billing_reason ?? null },
-    invoice.id,
-    urls?.invoice_url ?? null
-  )
+  await record(row.id, false)
   console.log(`[lemonsqueezy-webhook] Payment ${succeeded ? 'succeeded' : 'failed'} for subscription ${externalId}`)
 }
 
@@ -318,10 +345,12 @@ async function handleOrderCreated(event: LemonSqueezyEvent, loadExtensions: Lemo
     return
   }
 
-  const teamId = verifiedTeamId(event)
+  const variantId = idOrNull(item.variant_id)
+  const teamId = verifiedTeamId(event, variantId ? [variantId] : [])
   const team = teamId ? await queryOne<{ id: string }>(`SELECT id FROM teams WHERE id = $1`, [teamId]) : null
   if (!teamId || !team) {
-    console.warn(`[lemonsqueezy-webhook] One-time order ${order.id} has no verified team of ours, ignoring`)
+    const log = event.custom.teamId ? console.error : console.warn
+    log(`[lemonsqueezy-webhook] One-time order ${order.id} has no verified team of ours, ignoring`)
     return
   }
 
@@ -375,6 +404,12 @@ function mapStatus(status: string): string {
   return statusMap[status] ?? 'active'
 }
 
+/** Every plan variant id in the billing config. */
+function planVariantIds(): string[] {
+  return BILLING_REGISTRY.plans.flatMap(plan => [plan.providerPriceIds?.monthly, plan.providerPriceIds?.yearly])
+    .filter((id): id is string => typeof id === 'string' && id !== '')
+}
+
 /** The plan and interval whose providerPriceIds hold this variant id. */
 function planForVariant(variantId: unknown): { slug: string; interval: 'monthly' | 'yearly' } | null {
   const id = idOrNull(variantId)
@@ -386,13 +421,17 @@ function planForVariant(variantId: unknown): { slug: string; interval: 'monthly'
   return null
 }
 
-/** The custom data's teamId when its team token is valid, else null. */
-function verifiedTeamId(event: LemonSqueezyEvent): string | null {
+/**
+ * The custom data's teamId when its team token is valid for that team and one of `variantIds`, else null. A token that
+ * is present but does not match is logged as an error: a hand-written link, or a token secret that changed after the
+ * checkout opened.
+ */
+function verifiedTeamId(event: LemonSqueezyEvent, variantIds: string[]): string | null {
   const { teamId, teamToken } = event.custom
-  const secret = process.env.LEMONSQUEEZY_WEBHOOK_SECRET?.trim()
-  if (!teamId || !secret) return null
-  if (isValidLemonSqueezyTeamToken(teamId, teamToken, secret)) return teamId
-  console.warn(`[lemonsqueezy-webhook] Event ${event.id}: the custom data's team token is missing or invalid`)
+  const secret = lemonSqueezyTeamTokenSecret()
+  if (!teamId || !teamToken || !secret) return null
+  if (isValidLemonSqueezyTeamToken(teamId, variantIds, teamToken, secret)) return teamId
+  console.error(`[lemonsqueezy-webhook] Event ${event.id}: the team token of team ${teamId} does not match`)
   return null
 }
 

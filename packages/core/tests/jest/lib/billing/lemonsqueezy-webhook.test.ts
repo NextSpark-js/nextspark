@@ -56,10 +56,10 @@ async function responseOf(response: Response) {
   return { status: response.status, body: await response.json() }
 }
 
-let teamToken: (teamId: string) => string
+let teamToken: (teamId: string, variantId?: string) => string
 
-/** custom data as our checkout sets it: the team and its token. */
-const customFor = (teamId: string) => ({ teamId, teamToken: teamToken(teamId), planSlug: 'pro', billingPeriod: 'monthly' })
+/** custom data as our checkout sets it: the team and its token for the checkout's variant (1001: pro monthly). */
+const customFor = (teamId: string, variantId = '1001') => ({ teamId, teamToken: teamToken(teamId, variantId), planSlug: 'pro', billingPeriod: 'monthly' })
 
 function subscriptionEvent(name: string, attributes: Record<string, unknown>, custom: Record<string, unknown> | null, id = '555') {
   return JSON.stringify({
@@ -148,8 +148,9 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
   const billingEvents = async (subscriptionId: string) => (await db.query(
     `SELECT type, status, amount, currency, "externalPaymentId", metadata FROM billing_events WHERE "subscriptionId" = $1 ORDER BY "createdAt", id`,
     [subscriptionId])).rows
-  const claim = async (eventId: string) => (await db.query(
-    `SELECT status FROM billing_webhook_events WHERE gateway = 'lemonsqueezy' AND "eventId" = $1`, [eventId])).rows[0]?.status ?? null
+  /** The claim of an event, by its id without the body hash. */
+  const claim = async (eventIdPrefix: string) => (await db.query(
+    `SELECT status FROM billing_webhook_events WHERE gateway = 'lemonsqueezy' AND "eventId" LIKE $1 || ':%'`, [eventIdPrefix])).rows[0]?.status ?? null
   const counts = async () => (await db.query(
     `SELECT (SELECT count(*) FROM subscriptions)::int AS subscriptions, (SELECT count(*) FROM billing_events)::int AS events`)).rows[0]
 
@@ -186,7 +187,7 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
     const { createLemonSqueezyWebhookHandler } = require('@nextsparkjs/core/routes/_internal/lemonsqueezy-webhook')
     handler = (extensions = {}) => createLemonSqueezyWebhookHandler(async () => extensions)
     const { lemonSqueezyTeamToken } = require('@nextsparkjs/core/lib/billing/lemonsqueezy-webhook')
-    teamToken = (teamId: string) => lemonSqueezyTeamToken(teamId, SECRET)
+    teamToken = (teamId: string, variantId = '1001') => lemonSqueezyTeamToken(teamId, variantId, SECRET)
     closePool = () => require('@nextsparkjs/core/lib/db').pool.end()
     jest.spyOn(console, 'log').mockImplementation(() => {})
     jest.spyOn(console, 'warn').mockImplementation(() => {})
@@ -260,6 +261,16 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
     expect(await row('sub-1')).toMatchObject({ status: 'expired' })
   })
 
+  test('after the expiry, a new subscription of the team is applied to its latest row (#300)', async () => {
+    expect((await post(subscriptionEvent('subscription_created', { updated_at: '2027-11-01T00:00:00.000000Z' }, customFor('team-1'), '556'))).status).toBe(200)
+    expect(await row('sub-1')).toMatchObject({
+      externalSubscriptionId: '556', status: 'active', cancelAtPeriodEnd: false, hasCanceledAt: false, plan: 'pro', billingInterval: 'monthly',
+    })
+    // the expired subscription's events no longer reach the row
+    expect((await post(subscriptionEvent('subscription_updated', { status: 'expired', updated_at: '2027-11-02T00:00:00.000000Z' }, null, '555'))).status).toBe(200)
+    expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: '556', status: 'active' })
+  })
+
   test('a payment failure is recorded and marks the row past_due; the recovery marks it active', async () => {
     // team-3 subscribes: bound, active
     expect((await post(subscriptionEvent('subscription_created', { updated_at: '2026-10-02T00:00:00.000000Z' }, customFor('team-3'), '777'))).status).toBe(200)
@@ -277,6 +288,57 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
       ['failed', 2900, 'usd', 'inv-f'],
       ['succeeded', 2900, 'usd', 'inv-s'],
     ])
+  })
+
+  test('two updates within the same second are both applied (the key includes the body hash)', async () => {
+    const at = '2026-11-06T00:00:00.000000Z'
+    expect(await post(subscriptionEvent('subscription_updated', { variant_id: 1002, updated_at: at }, null, '777'))).toEqual({ status: 200, body: { received: true } })
+    expect(await row('sub-3')).toMatchObject({ billingInterval: 'yearly' })
+    expect(await post(subscriptionEvent('subscription_updated', { variant_id: 1001, updated_at: at }, null, '777'))).toEqual({ status: 200, body: { received: true } })
+    expect(await row('sub-3')).toMatchObject({ billingInterval: 'monthly' })
+    // a byte-identical redelivery is still one event
+    expect(await post(subscriptionEvent('subscription_updated', { variant_id: 1001, updated_at: at }, null, '777'))).toEqual({ status: 200, body: { received: true, status: 'duplicate' } })
+  })
+
+  test('a handled event with no data.id or updated_at is refused with 400 and claims nothing', async () => {
+    const before = (await db.query(`SELECT count(*)::int AS n FROM billing_webhook_events`)).rows[0].n
+    const noUpdatedAt = subscriptionEvent('subscription_updated', {}, null, '777')
+    expect(await post(noUpdatedAt)).toEqual({ status: 400, body: { error: 'Event has no data.id or data.attributes.updated_at' } })
+    const noId = JSON.stringify({ meta: { event_name: 'order_created' }, data: { type: 'orders', attributes: { store_id: Number(STORE), updated_at: '2026-10-01T00:00:00.000000Z' } } })
+    expect((await post(noId)).status).toBe(400)
+    expect((await db.query(`SELECT count(*)::int AS n FROM billing_webhook_events`)).rows[0].n).toBe(before)
+  })
+
+  test('a subscription of a variant that is no plan\'s, or a token of another variant, binds nothing', async () => {
+    await db.query(`
+      INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-5', 'Team 5', 'team-5', 'u1');
+      INSERT INTO subscriptions (id, "teamId", "planId", status, "currentPeriodStart", "currentPeriodEnd")
+        VALUES ('sub-5', 'team-5', 'plan-free', 'active', now(), now() + interval '30 days');
+    `)
+    const sub5 = await row('sub-5')
+    const errors = console.error as jest.Mock
+    errors.mockClear()
+    // a recurring add-on bought through createOneTimeCheckout: its token is valid, its variant is no plan's
+    await post(subscriptionEvent('subscription_created', { variant_id: 3001, updated_at: '2026-10-05T00:00:00.000000Z' }, customFor('team-5', '3001'), '851'))
+    expect(errors).toHaveBeenCalledWith(expect.stringContaining('is of variant 3001, which is no plan\'s'))
+    // a plan variant with the token of another variant (a token of a cheap checkout reused)
+    await post(subscriptionEvent('subscription_created', { variant_id: 1002, updated_at: '2026-10-05T00:00:00.000000Z' }, customFor('team-5', '3001'), '852'))
+    expect(errors).toHaveBeenCalledWith(expect.stringContaining('the team token of team team-5 does not match'))
+    expect(await row('sub-5')).toEqual(sub5)
+  })
+
+  test('in production, a test-mode event is answered 200 and ignored', async () => {
+    const sub5 = await row('sub-5')
+    const nodeEnv = process.env.NODE_ENV
+    ;(process.env as Record<string, string>).NODE_ENV = 'production'
+    try {
+      const body = subscriptionEvent('subscription_created', { updated_at: '2026-10-06T00:00:00.000000Z' }, customFor('team-5'), '853')
+      expect(await post(body)).toEqual({ status: 200, body: { received: true, status: 'ignored_test_mode' } })
+      expect(await claim('subscription_created:subscriptions:853:2026-10-06T00:00:00.000000Z')).toBeNull()
+    } finally {
+      ;(process.env as Record<string, string>).NODE_ENV = nodeEnv as string
+    }
+    expect(await row('sub-5')).toEqual(sub5)
   })
 
   test('an unknown team or subscription creates no rows and binds nothing to the wrong team', async () => {
@@ -310,7 +372,7 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
   })
 
   test('a failing handler releases the claim and rolls back its writes; the retry processes the event', async () => {
-    const body = orderEvent('9002', { ...customFor('team-3'), type: 'credit_pack' })
+    const body = orderEvent('9002', { ...customFor('team-3', '3001'), type: 'credit_pack' })
     const failing = jest.fn(async () => { throw new Error('credit service down') })
     const before = await counts()
 
@@ -340,19 +402,22 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
     expect(await counts()).toEqual(before)
   })
 
-  test('a first payment that arrives before its subscription_created is retried, then recorded', async () => {
+  test('a first payment that arrives before its subscription_created is recorded for the verified team, once', async () => {
     await db.query(`
       INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-4', 'Team 4', 'team-4', 'u1');
       INSERT INTO subscriptions (id, "teamId", "planId", status, "currentPeriodStart", "currentPeriodEnd")
         VALUES ('sub-4', 'team-4', 'plan-free', 'active', now(), now() + interval '30 days');
     `)
+    const sub4 = await row('sub-4')
     const payment = invoiceEvent('subscription_payment_success', { subscription_id: 888, billing_reason: 'initial', updated_at: '2026-10-04T00:00:00.000000Z' }, customFor('team-4'), 'inv-first')
-    expect((await post(payment)).status).toBe(500)
-    expect(await claim('subscription_payment_success:subscription-invoices:inv-first:2026-10-04T00:00:00.000000Z')).toBeNull()
+    expect(await post(payment)).toEqual({ status: 200, body: { received: true } })
+    expect(await row('sub-4')).toEqual(sub4) // the row is left to the subscription events
+    expect(await post(payment)).toEqual({ status: 200, body: { received: true, status: 'duplicate' } })
 
     expect((await post(subscriptionEvent('subscription_created', { updated_at: '2026-10-04T00:00:00.000000Z' }, customFor('team-4'), '888'))).status).toBe(200)
-    expect(await post(payment)).toEqual({ status: 200, body: { received: true } })
-    expect((await billingEvents('sub-4')).filter(event => event.type === 'payment').map(event => [event.status, event.externalPaymentId]))
-      .toEqual([['succeeded', 'inv-first']])
+    expect(await row('sub-4')).toMatchObject({ externalSubscriptionId: '888', plan: 'pro' })
+    expect((await billingEvents('sub-4')).filter(event => event.type === 'payment').map(event => [event.status, event.externalPaymentId, event.metadata.lemonSqueezySubscriptionId]))
+      .toEqual([['succeeded', 'inv-first', '888']])
   })
+
 })

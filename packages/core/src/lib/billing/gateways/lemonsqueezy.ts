@@ -10,17 +10,18 @@
  * - Checkout passes the team through `checkout_data.custom`, which Lemon Squeezy returns in every order and
  *   subscription webhook as `meta.custom_data`.
  * - Cancelling (DELETE /v1/subscriptions/:id) always keeps a grace period until `ends_at`: there is no immediate
- *   cancellation, so cancelSubscriptionImmediately throws.
+ *   cancellation, so cancelSubscriptionImmediately throws BillingOperationNotSupportedError (400 NOT_SUPPORTED).
  * - The customer portal is a pre-signed URL (valid 24 hours) on the customer object; it takes no return URL.
  * - Webhooks are signed with X-Signature: the hex HMAC-SHA256 of the raw body with the webhook's signing secret.
  *   Deliveries carry no event id, so lemonSqueezyEventId() derives one.
  */
 
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { PlanService } from '../../services/plan.service'
-import { lemonSqueezyTeamToken } from '../lemonsqueezy-webhook'
+import { lemonSqueezyTeamToken, lemonSqueezyTeamTokenSecret } from '../lemonsqueezy-webhook'
 import type { BillingGateway } from './interface'
+import { BillingOperationNotSupportedError } from './errors'
 import type {
   CheckoutSessionResult,
   PortalSessionResult,
@@ -41,7 +42,12 @@ export interface LemonSqueezyConfig {
   apiKey: string
   storeId: string
   webhookSecret: string
+  /** The key of the checkout team token: LEMONSQUEEZY_TEAM_TOKEN_SECRET, else the webhook secret */
+  teamTokenSecret: string
 }
+
+/** Below this length the webhook secret only gets a warning: Lemon Squeezy accepts 6 characters. */
+const RECOMMENDED_SECRET_LENGTH = 16
 
 /**
  * The Lemon Squeezy settings from the environment. Throws one error naming every variable that is missing or
@@ -59,7 +65,7 @@ export function lemonSqueezyConfigFromEnv(env: NodeJS.ProcessEnv = process.env):
   if (problems.length > 0) {
     throw new Error(`Lemon Squeezy billing is misconfigured: ${problems.join('; ')}.`)
   }
-  return { apiKey, storeId, webhookSecret }
+  return { apiKey, storeId, webhookSecret, teamTokenSecret: lemonSqueezyTeamTokenSecret(env) ?? webhookSecret }
 }
 
 /** A JSON:API resource as Lemon Squeezy returns it. */
@@ -81,13 +87,15 @@ export function isValidLemonSqueezySignature(rawBody: string | Buffer, signature
 
 /**
  * The id a delivery is deduplicated by. Lemon Squeezy sends no event id (meta has event_name, custom_data, test_mode
- * and webhook_id, which names the endpoint, not the event), so it is derived from the event name and the object the
- * event carries: `<event_name>:<data.type>:<data.id>:<data.attributes.updated_at>`. A redelivery of the same event has
- * the same body, so the same id; a later event about the same object has a newer `updated_at` or another name.
+ * and webhook_id, which names the endpoint, not the event), so it is derived from the event, the object it carries and
+ * the raw body: `<event_name>:<data.type>:<data.id>:<data.attributes.updated_at>:<sha256 hex of the raw body>`.
+ * A redelivery is byte-identical, so it has the same id. `updated_at` has a resolution of one second, so two changes
+ * of one object within a second share the first four parts; the body hash tells them apart.
  */
-export function lemonSqueezyEventId(body: { meta?: { event_name?: unknown }; data?: Partial<Resource> }): string {
+export function lemonSqueezyEventId(body: { meta?: { event_name?: unknown }; data?: Partial<Resource> }, rawBody: string | Buffer): string {
   const data = body.data ?? {}
-  return [body.meta?.event_name, data.type, data.id, data.attributes?.updated_at].map(part => String(part ?? '')).join(':')
+  const parts = [body.meta?.event_name, data.type, data.id, data.attributes?.updated_at].map(part => String(part ?? ''))
+  return [...parts, createHash('sha256').update(rawBody).digest('hex')].join(':')
 }
 
 /** Calls the Lemon Squeezy API; throws with the API's error detail (never the key) on a non-2xx answer. */
@@ -136,6 +144,9 @@ export class LemonSqueezyGateway implements BillingGateway {
 
   constructor(env: NodeJS.ProcessEnv = process.env) {
     this.config = lemonSqueezyConfigFromEnv(env)
+    if (this.config.webhookSecret.length < RECOMMENDED_SECRET_LENGTH) {
+      console.warn(`[lemonsqueezy] LEMONSQUEEZY_WEBHOOK_SECRET is shorter than ${RECOMMENDED_SECRET_LENGTH} characters; use a longer random secret`)
+    }
   }
 
   private request(method: string, path: string, body?: unknown) {
@@ -144,10 +155,10 @@ export class LemonSqueezyGateway implements BillingGateway {
 
   /**
    * POST /v1/checkouts for one variant. The custom data comes back in the webhooks as meta.custom_data, with the
-   * team token that lets the webhook trust its teamId (lemonsqueezy-webhook.ts).
+   * team token (of this team and variant) that lets the webhook trust its teamId (lemonsqueezy-webhook.ts).
    */
   private async createCheckout(variantId: string, data: Record<string, string> & { teamId: string }, successUrl: string, email?: string, quantity?: number): Promise<CheckoutSessionResult> {
-    const custom = { ...data, teamToken: lemonSqueezyTeamToken(data.teamId, this.config.webhookSecret) }
+    const custom = { ...data, teamToken: lemonSqueezyTeamToken(data.teamId, variantId, this.config.teamTokenSecret) }
     const checkout = await this.request('POST', '/checkouts', {
       data: {
         type: 'checkouts',
@@ -209,7 +220,7 @@ export class LemonSqueezyGateway implements BillingGateway {
     if (typeof meta?.event_name !== 'string' || !body.data || typeof body.data !== 'object') {
       throw new Error('Lemon Squeezy webhook has no meta.event_name or data')
     }
-    return { id: lemonSqueezyEventId(body), type: meta.event_name, data: body }
+    return { id: lemonSqueezyEventId(body, payload), type: meta.event_name, data: body }
   }
 
   async getCustomer(customerId: string): Promise<CustomerResult> {
@@ -252,7 +263,7 @@ export class LemonSqueezyGateway implements BillingGateway {
   }
 
   async cancelSubscriptionImmediately(_subscriptionId: string): Promise<SubscriptionResult> {
-    throw new Error(
+    throw new BillingOperationNotSupportedError(
       'Lemon Squeezy cannot cancel a subscription immediately: a cancelled subscription runs until the end of its billing period. Cancel at period end instead.'
     )
   }

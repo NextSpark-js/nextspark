@@ -7,7 +7,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals'
-import { createHmac } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 
 jest.mock('@/core/lib/registries/billing-registry', () => ({
   BILLING_REGISTRY: {
@@ -27,11 +27,13 @@ import {
   lemonSqueezyConfigFromEnv,
   lemonSqueezyEventId,
 } from '@/core/lib/billing/gateways/lemonsqueezy'
-import { isValidLemonSqueezyTeamToken, lemonSqueezyTeamToken } from '@/core/lib/billing/lemonsqueezy-webhook'
+import { isValidLemonSqueezyTeamToken, lemonSqueezyTeamToken, lemonSqueezyTeamTokenSecret } from '@/core/lib/billing/lemonsqueezy-webhook'
 import { getBillingGateway, resetBillingGateway } from '@/core/lib/billing/gateways/factory'
+import { isBillingOperationNotSupported } from '@/core/lib/billing/gateways/errors'
 
 const SECRET = 'ls_webhook_secret_mock'
 const ENV = { LEMONSQUEEZY_API_KEY: 'ls_api_key_mock', LEMONSQUEEZY_STORE_ID: '4242', LEMONSQUEEZY_WEBHOOK_SECRET: SECRET }
+const sha256 = (body: string) => createHash('sha256').update(body).digest('hex')
 
 const sign = (body: string, secret = SECRET) => createHmac('sha256', secret).update(body).digest('hex')
 
@@ -79,7 +81,27 @@ describe('Lemon Squeezy Gateway', () => {
 
   describe('configuration', () => {
     test('reads the three variables', () => {
-      expect(lemonSqueezyConfigFromEnv(ENV)).toEqual({ apiKey: 'ls_api_key_mock', storeId: '4242', webhookSecret: SECRET })
+      expect(lemonSqueezyConfigFromEnv(ENV)).toEqual({ apiKey: 'ls_api_key_mock', storeId: '4242', webhookSecret: SECRET, teamTokenSecret: SECRET })
+    })
+
+    test('LEMONSQUEEZY_TEAM_TOKEN_SECRET, when set, keys the team token instead of the webhook secret', () => {
+      expect(lemonSqueezyConfigFromEnv({ ...ENV, LEMONSQUEEZY_TEAM_TOKEN_SECRET: 'team_token_secret' }).teamTokenSecret).toBe('team_token_secret')
+      expect(lemonSqueezyTeamTokenSecret({ ...ENV, LEMONSQUEEZY_TEAM_TOKEN_SECRET: ' ' })).toBe(SECRET)
+      expect(lemonSqueezyTeamTokenSecret({})).toBeNull()
+    })
+
+    test('a webhook secret shorter than 16 characters is a warning at selection, not a failure', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+      try {
+        expect(new LemonSqueezyGateway({ ...ENV, LEMONSQUEEZY_WEBHOOK_SECRET: 'short1' })).toBeInstanceOf(LemonSqueezyGateway)
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('LEMONSQUEEZY_WEBHOOK_SECRET is shorter than 16 characters'))
+        expect(warn.mock.calls.flat().join(' ')).not.toContain('short1')
+        warn.mockClear()
+        new LemonSqueezyGateway({ ...ENV, LEMONSQUEEZY_WEBHOOK_SECRET: 'a'.repeat(16) })
+        expect(warn).not.toHaveBeenCalled()
+      } finally {
+        warn.mockRestore()
+      }
     })
 
     test('names every missing variable, and no value', () => {
@@ -131,7 +153,7 @@ describe('Lemon Squeezy Gateway', () => {
             product_options: { redirect_url: 'https://app.test/billing?success=true', enabled_variants: [1001] },
             checkout_data: {
               email: 'owner@example.test',
-              custom: { teamId: 'team-1', planSlug: 'pro', billingPeriod: 'monthly', teamToken: lemonSqueezyTeamToken('team-1', SECRET) },
+              custom: { teamId: 'team-1', planSlug: 'pro', billingPeriod: 'monthly', teamToken: lemonSqueezyTeamToken('team-1', '1001', SECRET) },
             },
           },
           relationships: {
@@ -183,7 +205,7 @@ describe('Lemon Squeezy Gateway', () => {
       expect(data.attributes.checkout_data.custom).toEqual({
         type: 'credit_pack',
         teamId: 'team-1',
-        teamToken: lemonSqueezyTeamToken('team-1', SECRET),
+        teamToken: lemonSqueezyTeamToken('team-1', '3001', SECRET),
       })
     })
 
@@ -252,6 +274,7 @@ describe('Lemon Squeezy Gateway', () => {
 
     test('cancelSubscriptionImmediately is refused without calling the API', async () => {
       await expect(gateway.cancelSubscriptionImmediately('555')).rejects.toThrow(/cannot cancel a subscription immediately/)
+      expect(isBillingOperationNotSupported(await gateway.cancelSubscriptionImmediately('555').catch(e => e))).toBe(true)
       expect(mockFetch).not.toHaveBeenCalled()
     })
 
@@ -270,7 +293,7 @@ describe('Lemon Squeezy Gateway', () => {
 
     test('a valid signature returns the event with its derived id', () => {
       const event = gateway.verifyWebhookSignature(body, sign(body))
-      expect(event.id).toBe('subscription_updated:subscriptions:555:2026-10-01T10:00:00.000000Z')
+      expect(event.id).toBe(`subscription_updated:subscriptions:555:2026-10-01T10:00:00.000000Z:${sha256(body)}`)
       expect(event.type).toBe('subscription_updated')
       expect(event.data).toEqual(JSON.parse(body))
     })
@@ -314,21 +337,28 @@ describe('Lemon Squeezy Gateway', () => {
 
     test('the event id is stable for a redelivery and differs per event name and update', () => {
       const parsed = JSON.parse(body)
-      expect(lemonSqueezyEventId(parsed)).toBe(lemonSqueezyEventId(JSON.parse(body)))
-      expect(lemonSqueezyEventId({ ...parsed, meta: { event_name: 'subscription_cancelled' } })).not.toBe(lemonSqueezyEventId(parsed))
-      expect(lemonSqueezyEventId({ ...parsed, data: { ...parsed.data, attributes: { updated_at: '2026-10-02T10:00:00.000000Z' } } }))
-        .not.toBe(lemonSqueezyEventId(parsed))
+      const id = (value: typeof parsed) => lemonSqueezyEventId(value, JSON.stringify(value))
+      expect(lemonSqueezyEventId(parsed, body)).toBe(lemonSqueezyEventId(JSON.parse(body), Buffer.from(body)))
+      expect(id({ ...parsed, meta: { event_name: 'subscription_cancelled' } })).not.toBe(id(parsed))
+      expect(id({ ...parsed, data: { ...parsed.data, attributes: { updated_at: '2026-10-02T10:00:00.000000Z' } } })).not.toBe(id(parsed))
+      // same name, object and second, another state: another id
+      const sameSecond = { ...parsed, data: { ...parsed.data, attributes: { ...parsed.data.attributes, variant_id: 1002 } } }
+      expect(id(sameSecond).split(':').slice(0, -1)).toEqual(id(parsed).split(':').slice(0, -1))
+      expect(id(sameSecond)).not.toBe(id(parsed))
     })
   })
 
   describe('team token', () => {
-    test('is valid only for its team and secret', () => {
-      const token = lemonSqueezyTeamToken('team-1', SECRET)
-      expect(isValidLemonSqueezyTeamToken('team-1', token, SECRET)).toBe(true)
-      expect(isValidLemonSqueezyTeamToken('team-2', token, SECRET)).toBe(false)
-      expect(isValidLemonSqueezyTeamToken('team-1', token, 'other')).toBe(false)
-      expect(isValidLemonSqueezyTeamToken('team-1', undefined, SECRET)).toBe(false)
-      expect(isValidLemonSqueezyTeamToken('team-1', 'abc', SECRET)).toBe(false)
+    test('is valid only for its team, variant and secret', () => {
+      const token = lemonSqueezyTeamToken('team-1', '1001', SECRET)
+      expect(isValidLemonSqueezyTeamToken('team-1', ['1001'], token, SECRET)).toBe(true)
+      expect(isValidLemonSqueezyTeamToken('team-1', ['1002', '1001'], token, SECRET)).toBe(true)
+      expect(isValidLemonSqueezyTeamToken('team-1', ['1002'], token, SECRET)).toBe(false)
+      expect(isValidLemonSqueezyTeamToken('team-1', [], token, SECRET)).toBe(false)
+      expect(isValidLemonSqueezyTeamToken('team-2', ['1001'], token, SECRET)).toBe(false)
+      expect(isValidLemonSqueezyTeamToken('team-1', ['1001'], token, 'other')).toBe(false)
+      expect(isValidLemonSqueezyTeamToken('team-1', ['1001'], undefined, SECRET)).toBe(false)
+      expect(isValidLemonSqueezyTeamToken('team-1', ['1001'], 'abc', SECRET)).toBe(false)
     })
   })
 
