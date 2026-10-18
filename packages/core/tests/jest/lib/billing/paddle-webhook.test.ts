@@ -287,14 +287,27 @@ describeWithPostgres('Paddle webhook', () => {
     expect(await post(subscriptionEvent('subscription.updated', {}, customFor('team-1'), 'sub_one', { occurredAt: '2027-10-14T00:00:00Z' })))
       .toEqual({ status: 200, body: { received: true } })
     expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: 'sub_one_again', status: 'canceled' })
-    // A's cancellation delivered again, newer than B's: an unbound canceled subscription binds nothing
-    expect((await post(subscriptionEvent('subscription.canceled', { status: 'canceled', current_billing_period: null }, customFor('team-1'), 'sub_one',
-      { occurredAt: '2027-12-05T00:00:00Z' }))).status).toBe(200)
-    expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: 'sub_one_again', status: 'canceled' })
 
     // a new subscription after B ended still binds
     expect((await post(subscriptionEvent('subscription.created', {}, customFor('team-1'), 'sub_one_third', { occurredAt: '2027-12-10T00:00:00Z' }))).status).toBe(200)
     expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: 'sub_one_third', status: 'active', hasCanceledAt: false })
+  })
+
+  test('a subscription canceled right away, whose cancel arrives before its created, ends canceled', async () => {
+    // team-8's previous subscription ended: its row is canceled
+    await db.query(`
+      INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-8', 'Team 8', 'team-8', 'u1');
+      INSERT INTO subscriptions (id, "teamId", "planId", status, "currentPeriodStart", "currentPeriodEnd", "canceledAt")
+        VALUES ('sub-8', 'team-8', 'plan-free', 'canceled', now() - interval '60 days', now() - interval '30 days', now() - interval '30 days');
+    `)
+    // B is bought and canceled immediately; the cancel is delivered first (Paddle does not guarantee the order)
+    expect(await post(subscriptionEvent('subscription.canceled', { status: 'canceled', canceled_at: '2026-10-20T00:00:10Z', current_billing_period: null },
+      customFor('team-8'), 'sub_eight', { occurredAt: '2026-10-20T00:00:10Z' }))).toEqual({ status: 200, body: { received: true } })
+    expect(await row('sub-8')).toMatchObject({ externalSubscriptionId: 'sub_eight', paymentProvider: 'paddle', status: 'canceled' })
+    // then B's creation, active and older: the row stays canceled on B
+    expect(await post(subscriptionEvent('subscription.created', {}, customFor('team-8'), 'sub_eight', { occurredAt: '2026-10-20T00:00:00Z' })))
+      .toEqual({ status: 200, body: { received: true } })
+    expect(await row('sub-8')).toMatchObject({ externalSubscriptionId: 'sub_eight', status: 'canceled', cancelAtPeriodEnd: false })
   })
 
   test('a failed payment and its recovery are recorded; the status follows the subscription events', async () => {

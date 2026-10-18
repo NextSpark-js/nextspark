@@ -282,14 +282,28 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
     expect(await post(subscriptionEvent('subscription_updated', { status: 'active', updated_at: '2027-10-14T00:00:00.000000Z' }, customFor('team-1'), '555')))
       .toEqual({ status: 200, body: { received: true } })
     expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: '556', status: 'expired' })
-    // 555's expiry delivered again, newer than 556's: an unbound expired subscription binds nothing
-    expect((await post(subscriptionEvent('subscription_expired', { status: 'expired', cancelled: true, updated_at: '2027-12-05T00:00:00.000000Z' },
-      customFor('team-1'), '555'))).status).toBe(200)
-    expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: '556', status: 'expired' })
 
     // a new subscription after 556 ended still binds
     expect((await post(subscriptionEvent('subscription_created', { updated_at: '2027-12-10T00:00:00.000000Z' }, customFor('team-1'), '557'))).status).toBe(200)
     expect(await row('sub-1')).toMatchObject({ externalSubscriptionId: '557', status: 'active', hasCanceledAt: false })
+  })
+
+  test('a subscription whose expiry arrives before its created ends expired', async () => {
+    // team-9's previous subscription ended: its row is expired
+    await db.query(`
+      INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-9', 'Team 9', 'team-9', 'u1');
+      INSERT INTO subscriptions (id, "teamId", "planId", status, "currentPeriodStart", "currentPeriodEnd")
+        VALUES ('sub-9', 'team-9', 'plan-free', 'expired', now() - interval '60 days', now() - interval '30 days');
+    `)
+    // B's expiry is delivered first
+    expect(await post(subscriptionEvent('subscription_expired', {
+      status: 'expired', cancelled: true, ends_at: '2026-10-20T00:00:10.000000Z', updated_at: '2026-10-20T00:00:10.000000Z',
+    }, customFor('team-9'), '901'))).toEqual({ status: 200, body: { received: true } })
+    expect(await row('sub-9')).toMatchObject({ externalSubscriptionId: '901', paymentProvider: 'lemonsqueezy', status: 'expired' })
+    // then B's creation, active and older: the row stays expired on B
+    expect(await post(subscriptionEvent('subscription_created', { updated_at: '2026-10-20T00:00:00.000000Z' }, customFor('team-9'), '901')))
+      .toEqual({ status: 200, body: { received: true } })
+    expect(await row('sub-9')).toMatchObject({ externalSubscriptionId: '901', status: 'expired' })
   })
 
   test('a payment failure is recorded and marks the row past_due; the recovery marks it active', async () => {
@@ -327,6 +341,9 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
     expect(await post(noUpdatedAt)).toEqual({ status: 400, body: { error: 'Event has no data.id or data.attributes.updated_at' } })
     const noId = JSON.stringify({ meta: { event_name: 'order_created' }, data: { type: 'orders', attributes: { store_id: Number(STORE), updated_at: '2026-10-01T00:00:00.000000Z' } } })
     expect((await post(noId)).status).toBe(400)
+    // an updated_at that is not a date cannot be ordered either
+    expect(await post(subscriptionEvent('subscription_updated', { updated_at: 'not-a-date' }, null, '777')))
+      .toEqual({ status: 400, body: { error: 'Event has no data.id or data.attributes.updated_at' } })
     expect((await db.query(`SELECT count(*)::int AS n FROM billing_webhook_events`)).rows[0].n).toBe(before)
   })
 

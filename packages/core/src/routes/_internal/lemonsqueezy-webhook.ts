@@ -115,7 +115,8 @@ async function handleLemonSqueezyWebhook(request: NextRequest, loadExtensions: L
   // An event this handler applies needs an object id and updated_at: without them it can be neither keyed apart from
   // other events nor ordered. 400, so the delivery shows as failed in Lemon Squeezy's webhook log, and nothing is claimed.
   const attributes = event.data?.attributes
-  if (isHandled(event.name) && (!idOrNull(event.data?.id) || !stringOrNull(attributes?.updated_at))) {
+  const updatedAt = stringOrNull(attributes?.updated_at)
+  if (isHandled(event.name) && (!idOrNull(event.data?.id) || !updatedAt || Number.isNaN(Date.parse(updatedAt)))) {
     console.error(`[lemonsqueezy-webhook] Event ${event.id} (${event.name}) has no data.id or data.attributes.updated_at, refused`)
     return NextResponse.json({ error: 'Event has no data.id or data.attributes.updated_at' }, { status: 400 })
   }
@@ -254,12 +255,6 @@ async function subscriptionRowFor(event: LemonSqueezyEvent, externalId: string):
     return bound
   }
 
-  if (event.data.attributes.status === 'expired') {
-    // an ended subscription that was never bound to us has nothing to grant (a late event of a replaced subscription);
-    // `cancelled` is still running until ends_at, so it may still bind
-    console.warn(`[lemonsqueezy-webhook] Event ${event.id}: subscription ${externalId} is expired and not bound to a row, ignoring`)
-    return null
-  }
   const variantId = idOrNull(event.data.attributes.variant_id)
   const teamId = verifiedTeamId(event, variantId ? [variantId] : [])
   if (!planForVariant(variantId)) {
