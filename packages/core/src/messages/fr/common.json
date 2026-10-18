@@ -253,5 +253,6 @@
   "debug": {
     "hidePrefix": "Pour masquer : retirez ",
     "hideSuffix": " de l'URL"
-  }
+  },
+  "cookieSettings": "Paramètres des cookies"
 }

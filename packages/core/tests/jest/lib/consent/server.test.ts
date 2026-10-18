@@ -24,6 +24,11 @@ describe('getConsent', () => {
     expect((await getConsent({ get: () => header(true) }, config)).categories.analytics).toBe(true)
   })
 
+  it('reads it from a Request or NextRequest, an object with `headers`', async () => {
+    expect((await getConsent({ headers: new Headers({ cookie: header(true) }) }, config)).categories.analytics).toBe(true)
+    expect((await getConsent(new Request('https://example.com/', { headers: { cookie: header(false, true) } }), config)).categories.marketing).toBe(true)
+  })
+
   it('grants nothing optional without a cookie, with a bad one or with one from another version', async () => {
     const none = { hasChosen: false, categories: { necessary: true, analytics: false, marketing: false } }
     expect(await getConsent(new Headers(), config)).toEqual(none)

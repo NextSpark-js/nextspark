@@ -95,6 +95,16 @@ describe('parseConsentCookie', () => {
   })
 })
 
+describe('a timestamp in the future', () => {
+  it('counts as no choice beyond one day ahead, and as a choice within it (clock skew)', () => {
+    const now = Date.now()
+    const at = (t: number) => cookieValue(serializeConsentCookie({ necessary: true, analytics: true, marketing: true }, config, { now: t }))
+    expect(parseConsentCookie(at(now + 2 * DAY), config, now).hasChosen).toBe(false)
+    expect(parseConsentCookie(at(9e15), config, now).hasChosen).toBe(false)
+    expect(parseConsentCookie(at(now + DAY / 2), config, now).hasChosen).toBe(true)
+  })
+})
+
 describe('readCookie', () => {
   it('finds one cookie in a header, whatever its neighbours', () => {
     expect(readCookie('a=1; nextspark_consent=abc%20d; b=2', 'nextspark_consent')).toBe('abc%20d')

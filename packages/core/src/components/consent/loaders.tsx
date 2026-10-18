@@ -48,10 +48,19 @@ declare global {
   }
 }
 
+/**
+ * gtag.js sets `_ga` and `_ga_<id>` on the highest domain it can (`.example.com` for `www.example.com`), so the
+ * host-only expiry is not enough: each cookie is also expired for every dotted suffix of the hostname. A write for a
+ * public suffix is ignored by the browser.
+ */
 function deleteGaCookies() {
+  const labels = location.hostname.split('.')
+  const suffixes = labels.slice(0, -1).map((_, i) => labels.slice(i).join('.'))
   for (const part of document.cookie.split(';')) {
     const name = part.split('=')[0].trim()
-    if (name === '_ga' || name.startsWith('_ga_')) document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`
+    if (name !== '_ga' && !name.startsWith('_ga_')) continue
+    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`
+    for (const suffix of suffixes) document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax; Domain=.${suffix}`
   }
 }
 

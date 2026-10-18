@@ -1,8 +1,10 @@
 import { CONSENT_CONFIG } from '../config/public-config-client'
 import { GRANTED, parseConsentCookie, readCookie, type ConsentState, type ResolvedConsentConfig } from './cookie'
 
-/** Where to read the `Cookie` header from: a Headers object, a request-like, or the header's value. */
-type CookieSource = { get(name: string): string | null } | string | null | undefined
+type HeadersLike = { get(name: string): string | null }
+
+/** Where to read the `Cookie` header from: a Headers object, a Request or NextRequest, or the header's value. */
+type CookieSource = HeadersLike | { headers: HeadersLike } | string | null | undefined
 
 /**
  * The visitor's consent as the request carries it (#272), for server components that must not render a marketing
@@ -14,7 +16,8 @@ type CookieSource = { get(name: string): string | null } | string | null | undef
  */
 export async function getConsent(source?: CookieSource, config: ResolvedConsentConfig = CONSENT_CONFIG): Promise<ConsentState> {
   if (!config.enabled) return { categories: GRANTED, hasChosen: true }
-  const resolved = source === undefined ? await (await import('next/headers')).headers() : source
-  const header = typeof resolved === 'string' ? resolved : resolved?.get('cookie')
+  const resolved: CookieSource = source === undefined ? await (await import('next/headers')).headers() : source
+  const headers = (resolved && typeof resolved === 'object' && 'headers' in resolved ? resolved.headers : resolved) as HeadersLike | string | null | undefined
+  const header = typeof headers === 'string' ? headers : headers?.get('cookie')
   return parseConsentCookie(readCookie(header, config.cookieName), config)
 }

@@ -20,7 +20,7 @@ import { GoogleAnalyticsLoader, PlausibleLoader } from './loaders'
 
 const never = () => () => {}
 
-export function ConsentManager({ nonce }: { nonce?: string }) {
+export function ConsentManager({ nonce, openOnMount = false }: { nonce?: string; openOnMount?: boolean }) {
   const { categories, hasChosen, accept, reject, update } = useConsent()
   const t = useTranslations('consent')
   const id = useId()
@@ -41,7 +41,10 @@ export function ConsentManager({ nonce }: { nonce?: string }) {
       setReopened(true)
     }
     window.addEventListener(CONSENT_OPEN_EVENT, reopen)
+    if (openOnMount) reopen()
     return () => window.removeEventListener(CONSENT_OPEN_EVENT, reopen)
+  // openOnMount is read once: a click that came in before this chunk was loaded
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {

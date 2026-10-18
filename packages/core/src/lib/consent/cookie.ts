@@ -87,7 +87,8 @@ export function parseConsentCookie(raw: string | undefined, config: ResolvedCons
   try {
     const value = JSON.parse(decodeURIComponent(raw)) as { v?: unknown; g?: unknown; t?: unknown }
     if (value.v !== config.version || !Array.isArray(value.g) || typeof value.t !== 'number') return NO_CHOICE
-    if (value.t + config.maxAgeDays * DAY_MS < now) return NO_CHOICE
+    // expired, or dated more than a day ahead (a clock far off, or a forged value, which would never expire)
+    if (value.t + config.maxAgeDays * DAY_MS < now || value.t > now + DAY_MS) return NO_CHOICE
     return { categories: categoriesFrom(value.g, config), hasChosen: true }
   } catch {
     return NO_CHOICE

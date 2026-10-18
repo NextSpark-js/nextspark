@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu'
-import { Menu, X, LogOut, User, Settings, CreditCard, HelpCircle, Shield, PanelLeft, PanelLeftClose, Key, Code, Layers, Tags } from 'lucide-react'
+import { Cookie, Menu, X, LogOut, User, Settings, CreditCard, HelpCircle, Shield, PanelLeft, PanelLeftClose, Key, Code, Layers, Tags } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { ThemeToggle } from '../../app/misc/ThemeToggle'
 import { NotificationsDropdown } from '../misc/NotificationsDropdown'
@@ -23,11 +23,12 @@ import { QuickCreateDropdown } from '../misc/QuickCreateDropdown'
 import { cn } from '../../../lib/utils'
 import { withBasePathIfInApp } from '../../../lib/base-path'
 import { sel } from '../../../lib/test'
+import { CONSENT_OPEN_EVENT } from '../../../lib/consent/cookie'
 import { useTranslations } from 'next-intl'
 import { useIsSuperAdmin } from '../../app/guards/SuperAdminGuard'
 import { useIsDeveloper } from '../../app/guards/DeveloperGuard'
 import { DynamicNavigation } from '../navigation/DynamicNavigation'
-import { isTopbarFeatureEnabled, getTopbarFeatureConfig, TOPBAR_CONFIG, APP_NAME } from '../../../lib/config/config-client'
+import { isTopbarFeatureEnabled, getTopbarFeatureConfig, TOPBAR_CONFIG, APP_NAME, APP_CONFIG_MERGED } from '../../../lib/config/config-client'
 
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
 
@@ -450,6 +451,16 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
 
                     return null
                   })}
+                  {/* Cookie consent (#272): withdraw or change the choice from inside the dashboard */}
+                  {APP_CONFIG_MERGED.consent?.enabled === true && (
+                    <DropdownMenuItem
+                      onClick={() => window.dispatchEvent(new CustomEvent(CONSENT_OPEN_EVENT))}
+                      data-cy="consent-open-dashboard"
+                    >
+                      <Cookie className="mr-2 h-4 w-4" aria-hidden="true" />
+                      {t('cookieSettings')}
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               ) : (

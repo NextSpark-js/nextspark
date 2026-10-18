@@ -29,7 +29,7 @@ export const APP_CONFIG_OVERRIDES = {
 
 | Option | Default | |
 | --- | --- | --- |
-| `enabled` | `false` (or `NEXT_PUBLIC_CONSENT_ENABLED=true`) | Without it there is no banner and no loader, and `useConsent()` reports everything as granted. |
+| `enabled` | `false`; `NEXT_PUBLIC_CONSENT_ENABLED=true` is only its default, so a value in `app.config.ts` wins | Without it there is no banner and no loader, and `useConsent()` reports everything as granted. |
 | `cookieName` | `nextspark_consent` | |
 | `maxAgeDays` | `180` | Held between 180 and 365. |
 | `version` | `1` | A change of `version`, or of the offered `categories`, makes the stored choice invalid and asks again. |
@@ -38,6 +38,8 @@ export const APP_CONFIG_OVERRIDES = {
 | `loaders.googleAnalytics.measurementId` | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Without it there is no Google Analytics loader. |
 
 The values are read when the app is built.
+
+The `NEXT_PUBLIC_*` loader variables are the loaders' source: `next.config.mjs` reads the same variables to put the vendors' origins in the CSP. A loader value set in `app.config.ts` overrides the variable, and then its origins must be added to the CSP by hand. The variables add their CSP origins **even with consent off**, so leave them unset if you do not use the loaders.
 
 The banner is shown on public, authentication and dashboard pages alike: analytics may run anywhere, so the choice is asked wherever the visitor lands. It is a bar fixed at the bottom of the window. It takes no space in the page, does not cover it with an overlay and does not trap focus.
 
@@ -94,11 +96,11 @@ export default async function Page() {
 }
 ```
 
-`getConsent()` reads the current request's headers, which makes the page render per request. It also takes a `Headers` object, a request or a `Cookie` header string: `getConsent(request.headers)`.
+`getConsent()` reads the current request's headers, which makes the page render per request. It also takes a `Headers` object, a `Request` or `NextRequest`, or a `Cookie` header string: `getConsent(request)`.
 
 ### The footer link
 
-The public footer shows a "Cookie settings" link when consent is enabled. A project footer can call `openConsentSettings()` from its own button.
+The public footer shows a "Cookie settings" link when consent is enabled, and so does the dashboard's user menu, so a choice made in the dashboard can be withdrawn there. A project footer or menu can call `openConsentSettings()` from its own button. A click before the banner's chunk has loaded is kept: the banner opens on its settings as soon as it is there.
 
 ## Loaders
 
@@ -112,7 +114,7 @@ The public footer shows a "Cookie settings" link when consent is enabled. A proj
 Revoking `analytics` stops further tracking at once:
 
 - **Plausible**: core sets Plausible's own ignore flag (`localStorage.plausible_ignore`), which the script checks before every event.
-- **Google Analytics**: core sets consent mode to `denied`, sets `window['ga-disable-<id>']` (Google's opt-out switch, which stops measurement altogether, cookieless pings included) and deletes the `_ga` and `_ga_*` cookies of the site.
+- **Google Analytics**: core sets consent mode to `denied` with a consent `update`, which is Google's documented runtime switch, and deletes the `_ga` and `_ga_*` cookies of the site (host-only and for every parent domain of the host, where gtag.js sets them). It also sets `window['ga-disable-<id>']`: Google documents that flag as set before any `gtag()` call on each page, so it is fully effective from the next page load, where nothing is loaded anyway. Until that reload the loaded tag may still send consent-mode cookieless pings.
 - **Amplitude**: the plugin opts out (below).
 
 It cannot undo what was already sent, and it cannot unload a script that already ran: it stays in memory until the next page load, where it is not loaded again. Granting `analytics` again lifts the flags without a second initialisation. Cookies that a vendor set on its own domain are not reachable from the page.
@@ -130,7 +132,7 @@ If you set a loader in `app.config.ts` only, add those origins to the directives
 
 **A strict nonce policy** (`script-src 'nonce-…' 'strict-dynamic'`, see [Middleware](../10-backend/06-middleware.md)) works with the loaders when the root layout can read the nonce: set `security: { cspNonce: true }` in `app.config.ts`, and turn `cacheComponents` off, because a prerendered layout cannot carry a per-request nonce. The layout then gives the nonce to the banner component, and the loaders put it on the scripts they add. If your policy also sets `connect-src` or `img-src`, add the origins in the table above to it: `strict-dynamic` covers scripts, not connections.
 
-With Cache Components (the default) the banner and the loaders work, with no nonce: use core's policy above, or a hash-based one.
+With Cache Components (the default) the banner and the loaders work, with no nonce: use core's policy above, or a hash-based one. The root layout is prerendered there, so the banner's text is in the default locale.
 
 The banner itself needs nothing from the policy: it adds no inline script and no inline style.
 
