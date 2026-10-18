@@ -12,6 +12,8 @@
 - [List Media](#list-media)
 - [Create Media Record](#create-media-record)
 - [Upload Files](#upload-files)
+- [Direct Upload (S3)](#direct-upload-s3)
+- [Serve Local Files](#serve-local-files)
 - [Check Duplicates](#check-duplicates)
 - [Get Single Media](#get-single-media)
 - [Update Media Metadata](#update-media-metadata)
@@ -75,10 +77,13 @@ fetch('/api/v1/media', { credentials: 'include' })
 | **GET** | `/api/v1/media` | List media (paginated, filterable) | `media:read` |
 | **POST** | `/api/v1/media` | Create media record | `media:write` |
 | **POST** | `/api/v1/media/upload` | Upload files | `media:write` |
+| **POST** | `/api/v1/media/upload/presign` | Presign a direct upload (`s3` driver) | `media:write` |
+| **POST** | `/api/v1/media/upload/confirm` | Confirm a direct upload, create the record | `media:write` |
+| **GET** | `/api/v1/media/files/[name]` | Serve a file of the `local` driver | public |
 | **POST** | `/api/v1/media/check-duplicates` | Check for duplicates by filename+size | `media:read` |
 | **GET** | `/api/v1/media/[id]` | Get single media | `media:read` |
 | **PATCH** | `/api/v1/media/[id]` | Update media metadata | `media:write` |
-| **DELETE** | `/api/v1/media/[id]` | Delete media (soft delete) | `media:delete` |
+| **DELETE** | `/api/v1/media/[id]` | Delete media (soft delete) and its file | `media:delete` |
 | **GET** | `/api/v1/media/[id]/tags` | Get media tags | `media:read` |
 | **POST** | `/api/v1/media/[id]/tags` | Add tag to media | `media:write` |
 | **DELETE** | `/api/v1/media/[id]/tags` | Remove tag from media | `media:delete` |
@@ -220,7 +225,7 @@ curl -X POST "https://yourdomain.com/api/v1/media" \
 POST /api/v1/media/upload
 ```
 
-Upload one or more files via multipart form data. Files are stored in Vercel Blob (when `BLOB_READ_WRITE_TOKEN` is configured) or, in development only, the local filesystem as fallback. In production without a token the endpoint answers `503` with code `STORAGE_NOT_CONFIGURED`. Image dimensions are automatically extracted. A media record is created in the database for each uploaded file.
+Upload one or more files via multipart form data, through the app server. Files are stored by the driver `STORAGE_DRIVER` selects (Vercel Blob, S3-compatible, local disk; see [Configuration](./05-configuration.md#environment-variables)) or, in development without one, `public/uploads/temp/`. In production without a driver the endpoint answers `503` with code `STORAGE_NOT_CONFIGURED`. Image dimensions are automatically extracted. A media record is created in the database for each uploaded file.
 
 ### Request
 
@@ -279,9 +284,12 @@ curl -X POST "https://yourdomain.com/api/v1/media/upload" \
 
 | Mode | Condition | URL Pattern |
 |------|-----------|-------------|
-| **Vercel Blob** | `BLOB_READ_WRITE_TOKEN` starts with `vercel_blob_` | `https://blob.vercel-storage.com/uploads/temp/...` |
-| **Local Storage** | Development only: no blob token or blob upload fails | `/uploads/temp/...` |
-| **Not configured** | Production with no blob token | `503`, code `STORAGE_NOT_CONFIGURED`, `details.missing: "BLOB_READ_WRITE_TOKEN"` |
+| **Vercel Blob** (`storage: "vercel-blob"`) | `STORAGE_DRIVER=vercel-blob`, or unset with `BLOB_READ_WRITE_TOKEN` starting with `vercel_blob_` | `https://<store>.public.blob.vercel-storage.com/uploads/temp/...` |
+| **S3-compatible** (`storage: "s3"`) | `STORAGE_DRIVER=s3` | `{S3_PUBLIC_URL}/uploads/...` |
+| **Local disk** (`storage: "local"`) | `STORAGE_DRIVER=local` | `/api/v1/media/files/...` |
+| **Development fallback** (`storage: "local"`) | Development only: no driver, or a Blob upload fails | `/uploads/temp/...` |
+| **Not configured** | Production with no driver | `503`, code `STORAGE_NOT_CONFIGURED`, `details.missing: "BLOB_READ_WRITE_TOKEN"` |
+| **Misconfigured** | `STORAGE_DRIVER` set, a variable missing or malformed | `503`, code `STORAGE_NOT_CONFIGURED`, `details.invalid: ["S3_BUCKET", ...]` (names only) |
 
 ### Validation
 
@@ -290,6 +298,87 @@ curl -X POST "https://yourdomain.com/api/v1/media/upload" \
 - At most 100 files per request (`400`, code `TOO_MANY_FILES`)
 - A file of zero bytes is refused (`400`, code `EMPTY_FILE`)
 - The body must be `multipart/form-data` (`415`, code `UNSUPPORTED_MEDIA_TYPE`)
+
+---
+
+## Direct Upload (S3)
+
+With `STORAGE_DRIVER=s3` a client can send a file straight to the bucket, so large files skip the app server. It takes three requests; the bucket needs a CORS rule for browser uploads ([Configuration](./05-configuration.md#direct-uploads-cors-and-unconfirmed-objects)). Other drivers answer `400`, code `DIRECT_UPLOAD_UNSUPPORTED`.
+
+### 1. Presign
+
+```
+POST /api/v1/media/upload/presign
+```
+
+Same authentication, scope (`media:write`) and permission (`media.upload`) as [Upload Files](#upload-files).
+
+```json
+{ "filename": "photo.jpg", "mimeType": "image/jpeg", "size": 482113 }
+```
+
+`mimeType` must be allowed and `size` (bytes) within the limit for its type, or `400` with code `FILE_TYPE_NOT_ALLOWED` / `FILE_TOO_LARGE`.
+
+```json
+{
+  "success": true,
+  "data": {
+    "upload": {
+      "url": "https://<bucket host>/pending/1706000000_9f2c...e1.jpg?X-Amz-Expires=300&X-Amz-Signature=...",
+      "method": "PUT",
+      "headers": { "Content-Type": "image/jpeg" },
+      "expiresAt": "2026-10-18T12:05:00.000Z"
+    },
+    "token": "eyJuYW1lIjoi..."
+  }
+}
+```
+
+The server names the object; the client's file name is only kept for display. The URL is valid for 5 minutes and its signature covers the `Content-Type` and the declared size: the storage refuses a `PUT` with another type, another length, or extra `x-amz-*` headers (such as an ACL).
+
+### 2. Upload
+
+```bash
+curl -X PUT "$UPLOAD_URL" -H "Content-Type: image/jpeg" --data-binary @photo.jpg
+```
+
+### 3. Confirm
+
+```
+POST /api/v1/media/upload/confirm
+```
+
+```json
+{ "token": "eyJuYW1lIjoi..." }
+```
+
+The token is signed by the server and names the object, the user and team that presigned it, the type and size, and a deadline (one hour). The server then reads the stored object's size and type (HEAD) and its first bytes (a ranged GET), checks them against the declared type, the size limit and the file signature, copies the object from `pending/` to `uploads/`, and creates the media record. The response is the record:
+
+```json
+{ "success": true, "data": { "media": { "id": "...", "url": "https://cdn.example.com/uploads/1706000000_9f2c...e1.jpg", "...": "..." }, "url": "https://cdn.example.com/uploads/1706000000_9f2c...e1.jpg" } }
+```
+
+| Status | Code | When | Object |
+|--------|------|------|--------|
+| `400` | `INVALID_UPLOAD_TOKEN` | The token is not one the server issued (altered, forged, malformed) | untouched |
+| `403` | `UPLOAD_NOT_YOURS` | The token was issued to another user or team | untouched |
+| `410` | `UPLOAD_EXPIRED` | More than an hour since the presign | deleted |
+| `404` | `UPLOAD_NOT_FOUND` | Nothing was uploaded | |
+| `400` | `FILE_TOO_LARGE`, `FILE_SIZE_MISMATCH` | Over the limit, or not the declared size | deleted |
+| `400` | `FILE_TYPE_MISMATCH`, `FILE_TYPE_NOT_ALLOWED` | Stored with another type, bytes that do not match the type, or a type no longer allowed | deleted |
+| `409` | `UPLOAD_ALREADY_CONFIRMED` | The token was already confirmed; concurrent or replayed confirms create one record | untouched |
+
+An upload that is never confirmed stays under `pending/`; a bucket lifecycle rule removes it ([Configuration](./05-configuration.md#direct-uploads-cors-and-unconfirmed-objects)).
+
+---
+
+## Serve Local Files
+
+```
+GET /api/v1/media/files/:name
+```
+
+With `STORAGE_DRIVER=local`, the URL of every uploaded file. Public, like a Blob or bucket URL. Answers the file with the `Content-Type` of its stored extension (an unknown one as a download), `X-Content-Type-Options: nosniff` and `Cache-Control: public, max-age=31536000, immutable`; a `Range: bytes=start-end` header gets `206`. Any name the server could not have generated, and any request while another driver is selected, answers `404`.
 
 ---
 
@@ -470,7 +559,7 @@ curl -X PATCH "https://yourdomain.com/api/v1/media/550e8400-e29b-41d4-a716-44665
 DELETE /api/v1/media/:id
 ```
 
-Soft delete a media item by setting its status to `deleted`. The file remains in storage but is hidden from all queries.
+Soft delete a media item by setting its status to `deleted`, and delete its file through the storage driver. A file stored by another driver than the current one (an older URL) is left in place; a failed file delete is logged and the media item is still deleted.
 
 ### Request
 

@@ -473,28 +473,121 @@ cy.get('[data-cy="media-detail-save"]').click()
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `BLOB_READ_WRITE_TOKEN` | No | Vercel Blob token (must start with `vercel_blob_`). When set, uploads go to Vercel Blob. When absent, development uploads go to the local filesystem and **production uploads fail with `503 STORAGE_NOT_CONFIGURED`**. |
+Uploads go to a **storage driver**, chosen with `STORAGE_DRIVER`:
+
+| `STORAGE_DRIVER` | Stores files in | Direct uploads | Needs |
+|------------------|-----------------|----------------|-------|
+| `vercel-blob` | Vercel Blob | No | `BLOB_READ_WRITE_TOKEN` |
+| `s3` | Any S3-compatible service: AWS S3, Cloudflare R2, MinIO, Backblaze B2, DigitalOcean Spaces | Yes | the `S3_*` variables and `pnpm add aws4fetch` |
+| `local` | A directory on the server's disk | No | `UPLOADS_DIR` |
+| unset | Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set; otherwise `public/uploads/temp/` in development, and nothing in production | No | |
+
+A driver is checked when it is selected (on each upload, and once at server start, which logs the problem). A missing or malformed variable makes uploads answer `503 STORAGE_NOT_CONFIGURED`; the message and the log name the variables, never their values.
 
 ### Storage Behavior
 
 ```text
-BLOB_READ_WRITE_TOKEN set?
+STORAGE_DRIVER set?
   |
-  YES --> Use Vercel Blob (publicly accessible URLs)
-  |         On failure --> development: fallback to local storage
-  |                        production: 500, nothing is written
+  YES --> that driver; a misconfigured one answers 503 STORAGE_NOT_CONFIGURED
   |
-  NO  --> NODE_ENV=production? --> 503 STORAGE_NOT_CONFIGURED (no file is written)
-          otherwise            --> Use local storage (public/uploads/temp/)
+  NO  --> BLOB_READ_WRITE_TOKEN set?
+            YES --> Vercel Blob (publicly accessible URLs)
+            |         On failure --> development: fallback to local storage
+            |                        production: 500, nothing is written
+            NO  --> NODE_ENV=production? --> 503 STORAGE_NOT_CONFIGURED (no file is written)
+                    otherwise            --> public/uploads/temp/ (development fallback)
 ```
 
-In development, local storage writes files to `{cwd}/public/uploads/temp/{timestamp}_{random}.{ext}` and serves them via the Next.js public directory at `/uploads/temp/...` (Next indexes `public/` at startup: restart the dev server if a new file answers 404).
+In development, the fallback writes files to `{cwd}/public/uploads/temp/{timestamp}_{random}.{ext}` and serves them via the Next.js public directory at `/uploads/temp/...` (Next indexes `public/` at startup: restart the dev server if a new file answers 404).
 
-### Self-hosting needs a storage provider
+A production server never writes uploads to `public/`: Next serves `public/` from what it indexed at startup, so a file written while the server runs answers 404 until a restart, and a container's disk does not survive a redeploy. Self-hosted deployments (standalone, `next start`, Docker) use `s3` or `local`.
 
-A production server never writes uploads to `public/`: Next serves `public/` from what it indexed at startup, so a file written while the server runs answers 404 until a restart, and a container's disk does not survive a redeploy. Without `BLOB_READ_WRITE_TOKEN`, `POST /api/v1/media/upload` answers `503` with code `STORAGE_NOT_CONFIGURED` and the media library shows that message. Self-hosted deployments (standalone, `next start`, Docker) must set a Vercel Blob token; the app can run anywhere, only the file storage is Vercel Blob.
+Every driver stores files under a name the server generates (`{timestamp}_{random}.{ext}`, the extension from the allow-listed type), never the client's file name, with the validated `Content-Type`. Deleting a media item (`DELETE /api/v1/media/:id`) also deletes its file through the driver; a page that embedded the file's URL loses the image.
+
+### Vercel Blob (`vercel-blob`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `BLOB_READ_WRITE_TOKEN` | Yes | Vercel Blob read/write token (starts with `vercel_blob_`). Files go to `uploads/temp/` with public access. |
+
+### S3-compatible (`s3`)
+
+```bash
+pnpm add aws4fetch
+```
+
+The driver signs requests with [aws4fetch](https://github.com/mhart/aws4fetch) (SigV4 over `fetch`, no other dependencies). It is an optional peer dependency of `@nextsparkjs/core`, loaded only when `STORAGE_DRIVER=s3`; without it uploads fail with "STORAGE_DRIVER=s3 needs the aws4fetch package, which is not installed or not included in the deployment".
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `S3_ENDPOINT` | Yes | The service's S3 API origin, `http(s)://host[:port]`, no path |
+| `S3_REGION` | Yes | Region used in the signature (`auto` for R2) |
+| `S3_BUCKET` | Yes | Bucket name |
+| `S3_ACCESS_KEY_ID` | Yes | Access key with read, write and delete on the bucket |
+| `S3_SECRET_ACCESS_KEY` | Yes | Its secret |
+| `S3_PUBLIC_URL` | Yes | Base URL files are served from: the bucket's public URL or a CDN in front of it. Media URLs are `{S3_PUBLIC_URL}/uploads/{name}` |
+| `S3_FORCE_PATH_STYLE` | No | `true` for `{endpoint}/{bucket}/{key}` URLs (MinIO, most self-hosted servers); default `false`, `{bucket}.{endpoint host}/{key}` |
+
+The driver never sets an ACL or a public-read flag, and a client never chooses one: what is public is decided by the bucket. Make `uploads/` readable by everyone (a bucket policy, or a public bucket or custom domain) and keep `pending/` private when the service allows it. A bucket name with dots does not work with virtual-hosted URLs over HTTPS; use `S3_FORCE_PATH_STYLE=true`.
+
+Examples (credentials come from the service's console):
+
+| Service | `S3_ENDPOINT` | `S3_REGION` | `S3_FORCE_PATH_STYLE` | `S3_PUBLIC_URL` |
+|---------|---------------|-------------|-----------------------|-----------------|
+| AWS S3 | `https://s3.us-east-1.amazonaws.com` | `us-east-1` | `false` | `https://my-bucket.s3.us-east-1.amazonaws.com` or a CloudFront URL |
+| Cloudflare R2 | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` | `auto` | `true` | The bucket's custom domain or `https://pub-<id>.r2.dev` |
+| MinIO | `http://localhost:9000` (or your host) | `us-east-1` (or the server's region) | `true` | `http://localhost:9000/my-bucket` |
+| Backblaze B2 | `https://s3.<region>.backblazeb2.com`, e.g. `https://s3.us-west-004.backblazeb2.com` | `<region>`, e.g. `us-west-004` | `false` | `https://<bucket>.s3.<region>.backblazeb2.com` (public bucket) or a CDN |
+| DigitalOcean Spaces | `https://<region>.digitaloceanspaces.com`, e.g. `https://nyc3.digitaloceanspaces.com` | `<region>`, e.g. `nyc3` | `false` | `https://<bucket>.<region>.cdn.digitaloceanspaces.com` |
+
+#### Direct uploads, CORS and unconfirmed objects
+
+With `s3`, a client can upload straight to the bucket instead of through the app server (`POST /api/v1/media/upload/presign`, then `PUT`, then `POST /api/v1/media/upload/confirm`; see [the API reference](./02-api-reference.md#direct-upload-s3)). The media library in the dashboard keeps uploading through the app server, which works with every driver.
+
+A browser `PUT` to the bucket needs a CORS rule for the app's origin:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://app.example.com"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+(AWS S3 and R2 take this JSON in the bucket's CORS settings; B2 and Spaces have an equivalent form; MinIO sets allowed origins server-wide.)
+
+A presigned object lands under `pending/` and is copied to `uploads/` only when the confirm accepts it; a rejected one is deleted. An upload that is never confirmed (the user closed the tab) stays under `pending/`. Add a **lifecycle rule that expires objects under the `pending/` prefix after 1 day**: AWS S3, R2, Backblaze B2 and Spaces support prefix rules in the bucket settings, and MinIO with `mc ilm rule add --prefix pending/ --expire-days 1 <alias>/<bucket>`. A prefix rule was chosen over object tags because every one of these services supports it. A confirm is accepted up to one hour after the presign, well inside that day.
+
+#### Standalone deployments
+
+`output: 'standalone'` copies only the files Next.js can trace, and aws4fetch is imported at runtime past the bundler. Projects created from the template include it through `outputFileTracingIncludes` in `next.config.mjs`; an existing project or a custom config adds the entry:
+
+```js
+outputFileTracingIncludes: {
+  '/**/*': ['./node_modules/aws4fetch/**/*'],
+},
+```
+
+The glob matches nothing when aws4fetch is not installed.
+
+### Local disk (`local`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `UPLOADS_DIR` | Yes | Directory for uploaded files, absolute or relative to the project (the server's working directory) |
+
+Files are served by `GET /api/v1/media/files/{name}`, with the `Content-Type` of their stored extension (an unknown one as a download), `X-Content-Type-Options: nosniff`, a one-year immutable cache and byte ranges for video. A name the server could not have generated (any `/`, `..`, or other character outside letters, digits, `_` and `-` before the extension) answers 404, so nothing outside `UPLOADS_DIR` is reachable. New files are served at once; no restart is needed.
+
+The server logs a warning once, at startup (or at the first upload when `instrumentation.ts` does not run):
+
+- **Volumes:** a container's or a build's disk is replaced on redeploy. Point `UPLOADS_DIR` at a persistent volume. With `output: 'standalone'` the server runs from `.next/standalone`, so a relative `UPLOADS_DIR` lands inside the build output: use an absolute path outside `.next`, for example `UPLOADS_DIR=/data/uploads` with a Docker volume mounted at `/data/uploads`.
+- **Instances:** files are not shared between servers. Run a single instance, or use `s3`.
+
+---
 
 ---
 
