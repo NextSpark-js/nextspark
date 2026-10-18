@@ -22,6 +22,8 @@ export interface SmtpConfig {
   host: string
   port: number
   secure: boolean
+  /** Refuse to send in clear text: credentials are never offered to a remote host without STARTTLS. */
+  requireTLS?: boolean
   auth?: { user: string; pass: string }
 }
 
@@ -30,7 +32,7 @@ export interface SmtpProblem {
   state: 'missing' | 'malformed'
 }
 
-const HOST_PATTERN = /^[A-Za-z0-9.:-]+$/
+const HOST_PATTERN = /^[A-Za-z0-9._:-]+$/
 const PORT_PATTERN = /^\d{1,5}$/
 
 export function smtpEnvironmentFrom(env: Record<string, string | undefined>): SmtpEnvironment {
@@ -73,10 +75,16 @@ export function findSmtpProblems(input: SmtpEnvironment): SmtpProblem[] {
   return problems
 }
 
+/** localhost, 127.0.0.0/8 and ::1 (the only hosts where clear text does not cross a network). */
+function isLoopback(host: string): boolean {
+  return host === 'localhost' || host === '::1' || /^127(\.\d{1,3}){3}$/.test(host)
+}
+
 /**
  * Throws an error naming the offending variables when the configuration is
- * incomplete. An unset port is nodemailer's own default: 465 when secure,
- * otherwise 587 (STARTTLS when the server offers it).
+ * incomplete. An unset port is 465 when secure, otherwise 587. An unset
+ * SMTP_SECURE means implicit TLS on port 465 and STARTTLS elsewhere (nodemailer's
+ * own rule); with credentials, STARTTLS is required unless the host is loopback.
  */
 export function parseSmtpConfig(input: SmtpEnvironment): SmtpConfig {
   const problems = findSmtpProblems(input)
@@ -85,12 +93,13 @@ export function parseSmtpConfig(input: SmtpEnvironment): SmtpConfig {
       `SMTP email provider is misconfigured: ${problems.map((p) => `${p.variable} is ${p.state}`).join('; ')}.`
     )
   }
-  const secure = input.secure?.trim() === 'true'
-  const config: SmtpConfig = {
-    host: input.host!.trim(),
-    port: isSet(input.port) ? Number(input.port.trim()) : secure ? 465 : 587,
-    secure,
+  const port = isSet(input.port) ? Number(input.port.trim()) : undefined
+  const secure = isSet(input.secure) ? input.secure.trim() === 'true' : port === 465
+  const host = input.host!.trim()
+  const config: SmtpConfig = { host, port: port ?? (secure ? 465 : 587), secure }
+  if (isSet(input.user)) {
+    config.auth = { user: input.user.trim(), pass: input.pass! }
+    if (!secure && !isLoopback(host)) config.requireTLS = true
   }
-  if (isSet(input.user)) config.auth = { user: input.user.trim(), pass: input.pass! }
   return config
 }

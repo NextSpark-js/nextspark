@@ -29,7 +29,7 @@ describe('SmtpProvider without nodemailer installed', () => {
     expect(response).toEqual({
       id: '',
       success: false,
-      error: 'EMAIL_PROVIDER=smtp needs the nodemailer package, which is not installed. Run `pnpm add nodemailer`.',
+      error: expect.stringMatching(/^EMAIL_PROVIDER=smtp needs the nodemailer package, which is not installed or not included in the deployment\. Run `pnpm add nodemailer`;.*13-email-providers\.md\.$/),
     })
     expect(await provider.verify()).toBe(false)
   })
@@ -41,12 +41,31 @@ describe('SmtpProvider without nodemailer installed', () => {
       })
     )
     const response = await new SmtpProvider(config, 'a@example.org').send(message)
-    expect(response.error).toContain('Run `pnpm add nodemailer`.')
+    expect(response.error).toContain('Run `pnpm add nodemailer`')
   })
 
   test('another missing module is not reworded', async () => {
     importFails(Object.assign(new Error("Cannot find module 'libmime'"), { code: 'MODULE_NOT_FOUND' }))
     const response = await new SmtpProvider(config, 'a@example.org').send(message)
     expect(response.error).toBe("Cannot find module 'libmime'")
+  })
+})
+
+describe('a failed load is not cached', () => {
+  test('the first send fails with MODULE_NOT_FOUND, the second succeeds once the package is there', async () => {
+    let installed = false
+    const sendMail = jest.fn(async () => ({ messageId: '<m@example.org>' }))
+    jest.doMock('nodemailer', () => {
+      if (!installed) throw Object.assign(new Error("Cannot find module 'nodemailer'"), { code: 'MODULE_NOT_FOUND' })
+      return { createTransport: () => ({ sendMail }) }
+    })
+    const provider = new SmtpProvider(config, 'a@example.org')
+
+    expect((await provider.send(message)).success).toBe(false)
+    installed = true
+    jest.resetModules()
+    const second = await provider.send(message)
+
+    expect(second).toEqual({ id: '<m@example.org>', success: true })
   })
 })

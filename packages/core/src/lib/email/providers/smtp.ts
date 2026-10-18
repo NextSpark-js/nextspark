@@ -19,7 +19,8 @@ async function loadNodemailer(): Promise<typeof import('nodemailer')> {
       /['"]nodemailer['"]/.test((error as Error).message)
     ) {
       throw new Error(
-        'EMAIL_PROVIDER=smtp needs the nodemailer package, which is not installed. Run `pnpm add nodemailer`.'
+        'EMAIL_PROVIDER=smtp needs the nodemailer package, which is not installed or not included in the deployment. ' +
+          'Run `pnpm add nodemailer`; with output: \'standalone\' see docs/06-authentication/13-email-providers.md.'
       )
     }
     throw error
