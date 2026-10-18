@@ -31,6 +31,7 @@ export type {
   Team,
   AuthSession,
   AuthLoginMethod,
+  SocialLoginMethod,
   LoginResponse,
   OtpLoginResponse,
   SocialSignInResponse,

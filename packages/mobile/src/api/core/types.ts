@@ -40,8 +40,15 @@ export interface AuthSession {
  * Login methods the mobile login screen can offer (mirrors the web
  * `AUTH_CONFIG.methods`). Configure them in `src/config/app.config.ts`.
  * Default preset: passwordless — `['email-otp', 'google']`.
+ *
+ * The same union as core's `AuthLoginMethod` (lib/config/types.ts): mobile cannot import core, so it is written
+ * out here, and a test fails if the two differ. The login screen draws a button for the methods it has a flow for
+ * (`email-otp`, `email-password`, `google`) and nothing for `github`, `microsoft` or `apple`.
  */
-export type AuthLoginMethod = 'email-otp' | 'google' | 'email-password'
+export type AuthLoginMethod = 'email-otp' | SocialLoginMethod | 'email-password'
+
+/** The social providers core can sign in with. */
+export type SocialLoginMethod = 'google' | 'github' | 'microsoft' | 'apple'
 
 /**
  * Login response from Better Auth (`/sign-in/email`).
