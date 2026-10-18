@@ -8,7 +8,7 @@ team invitations through one email provider, chosen with `EMAIL_PROVIDER`:
 | `console` | Prints the email in the server log (development only) | nothing |
 | `resend` | [Resend](https://resend.com) | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` |
 | `smtp` | Any SMTP server, through [nodemailer](https://nodemailer.com) | `SMTP_HOST`, `RESEND_FROM_EMAIL`, the `nodemailer` package |
-| `auto` (default) | `console` in development; Resend when a Resend variable is set, otherwise `console` | |
+| `auto` (default) | `console` in development; Resend when `RESEND_API_KEY` is set, otherwise `console` | |
 
 `auto` never selects `smtp`: choose it explicitly. A production build refuses
 to start local sign-in on `console`.
@@ -28,21 +28,40 @@ pnpm add nodemailer
 ```
 
 It is loaded the first time an email is sent. If `EMAIL_PROVIDER=smtp` is set
-and the package is missing, the send fails with
-`EMAIL_PROVIDER=smtp needs the nodemailer package, which is not installed. Run `pnpm add nodemailer`.`
-(in the server log; the caller sees its usual "failed to send" error).
+and the package is missing, the send fails and the server log shows
+"EMAIL_PROVIDER=smtp needs the nodemailer package, which is not installed or not
+included in the deployment". The sign-in code route still answers success when
+the send fails (this is true of every provider), so check
+the server log if no code arrives.
+
+#### Standalone deployments
+
+`output: 'standalone'` copies only the files Next.js can trace, and nodemailer is
+loaded at runtime past the bundler, so it would be left out of
+`.next/standalone/node_modules`. Projects created with the current template
+already include it. For an existing project, or a custom `next.config`, add this
+to `outputFileTracingIncludes` (keep the entries already there):
+
+```js
+outputFileTracingIncludes: {
+  '/**/*': ['./node_modules/nodemailer/**/*'],
+},
+```
+
+The glob matches nothing when nodemailer is not installed, so it is safe to keep
+for projects that use Resend.
 
 ### 2. Set the variables
 
 | Variable | Required | Meaning |
 |---|---|---|
 | `EMAIL_PROVIDER` | yes | `smtp` |
-| `SMTP_HOST` | yes | The server's host name |
+| `SMTP_HOST` | yes | The server's host name or IP address (IPv6 without brackets) |
 | `SMTP_PORT` | no | An integer from 1 to 65535. Unset: `465` when `SMTP_SECURE=true`, otherwise `587` |
-| `SMTP_SECURE` | no | `true` or `false` (exactly). `true` opens the connection with TLS, normally on port 465. `false` (default) starts in plain text and upgrades with STARTTLS when the server offers it, as it does on port 587 |
+| `SMTP_SECURE` | no | `true` or `false` (exactly). `true` opens the connection with TLS, normally on port 465. `false` starts in plain text and upgrades with STARTTLS (required when `SMTP_USER` is set, except for `localhost`, `127.0.0.0/8` and `::1`), as on port 587. Unset: `true` when `SMTP_PORT=465`, otherwise `false` |
 | `SMTP_USER` | no | The SMTP username. Set together with `SMTP_PASS`, or leave both unset for a server that does not authenticate |
 | `SMTP_PASS` | no | The SMTP password |
-| `RESEND_FROM_EMAIL` | yes | The sender address (also the name Resend uses). `RESEND_FROM_NAME` is the display name |
+| `RESEND_FROM_EMAIL` | yes | The sender address: the same variable Resend uses. `RESEND_FROM_NAME` is the display name |
 
 The sender setting keeps its `RESEND_` name: it is the one default-from setting
 for every provider.

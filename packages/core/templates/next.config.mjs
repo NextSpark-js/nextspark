@@ -97,6 +97,9 @@ const nextConfig = {
     '/docs/**/*': ['./docs/**/*', './plugins/*/docs/**/*'],
     '/superadmin/docs/**/*': ['./docs/**/*', './plugins/*/docs/**/*'],
     '/devtools/tests/**/*': ['./tests/**/*', './plugins/*/tests/**/*'],
+    // nodemailer (EMAIL_PROVIDER=smtp) is imported at runtime past the bundler, so the tracer cannot see it;
+    // without this `output: 'standalone'` leaves it out. Matches nothing when it is not installed.
+    '/**/*': ['./node_modules/nodemailer/**/*'],
   },
   // Optimize imports from @nextsparkjs/core to reduce bundle size and improve tree-shaking
   modularizeImports: {
