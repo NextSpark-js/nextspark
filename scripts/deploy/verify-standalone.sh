@@ -6,6 +6,7 @@
 # migrates a PostgreSQL database, builds with `output: 'standalone'`, copies the standalone output, `.next/static` and
 # `public/` to a separate directory (the recipe in 14-deployment/01-deployment-overview), hides the project, and runs
 # `node server.js` there. Then it checks:
+#   startup the server runs core's register() (instrumentation): its startup line, and an exit with a weak secret
 #   mode A  the server alone on http://localhost:<port>
 #   mode B  the same server behind a Node TLS proxy that sends X-Forwarded-Proto: https (what nginx does)
 # Each mode checks health, public pages, static assets, sign-in by one-time code (a local stand-in for Resend), a protected
@@ -198,6 +199,16 @@ start_server() { # start_server <env-file> <port> <log> <pid-file>: node server.
   ( cd "$WORK/deploy" && set -a && . "$1" && set +a && export PORT="$2" HOSTNAME=127.0.0.1 && exec node server.js ) > "$3" 2>&1 &
   echo $! > "$4"; PIDS+=("$!")
 }
+weak_secret_start() { # sets WEAK_SECRET to how node server.js ended with a weak BETTER_AUTH_SECRET: up to 60 s
+  ( cd "$WORK/deploy" && set -a && . "$WORK/a.env" && set +a && export PORT="$PORT_A" HOSTNAME=127.0.0.1 BETTER_AUTH_SECRET=short && exec node server.js ) > "$LOGS/server-weak-secret.log" 2>&1 &
+  local pid=$!
+  PIDS+=("$pid")
+  for _ in $(seq 1 60); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
+  if kill -0 "$pid" 2>/dev/null; then WEAK_SECRET="still running"; stop_pid "$pid"
+  elif wait "$pid"; then WEAK_SECRET="exited 0"
+  else WEAK_SECRET="exited non-zero"; fi
+  forget_pid "$pid"
+}
 urlenc() { node -e 'console.log(encodeURIComponent(process.argv[1]))' "$1"; }
 write_env() { # write_env <file> <public-url> <db> <ip-source>; user and password are percent-encoded: the file is also sourced by sh
   cat > "$1" <<EOT
@@ -277,6 +288,17 @@ start_server "$WORK/a.env" "$PORT_A" "$LOGS/server-a.log" "$WORK/a.pid"
 wait_for "http://localhost:$PORT_A/api/health" || { tail -30 "$LOGS/server-a.log"; die "standalone server (mode A) did not answer"; }
 run_checks A "http://localhost:$PORT_A" > "$LOGS/checks-a.log"; cat "$LOGS/checks-a.log"
 stop_pid "$(cat "$WORK/a.pid")"; forget_pid "$(cat "$WORK/a.pid")"
+
+# Core's register() (instrumentation) runs in the standalone server: it logs its startup line, and in production it
+# stops a server whose session secret is weak (#297)
+LABEL=startup
+WEAK_SECRET=""
+weak_secret_start
+{
+  row "server.js printed the [Instrumentation] startup line" 1 "$(grep -c '^\[Instrumentation\] Initializing' "$LOGS/server-a.log")"
+  row "server.js with a weak BETTER_AUTH_SECRET exits non-zero" "exited non-zero" "$WEAK_SECRET"
+  row "  and says why" 1 "$(grep -c '^\[auth-readiness\] BETTER_AUTH_SECRET_.* The server will not start\.$' "$LOGS/server-weak-secret.log")"
+} > "$LOGS/checks-startup.log"; cat "$LOGS/checks-startup.log"
 
 # --- 5. mode B: the same server behind a TLS proxy --------------------------------------------------------------------------
 if [[ $SKIP_PROXY != true ]]; then

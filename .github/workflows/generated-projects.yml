@@ -300,7 +300,8 @@ jobs:
           probes: 'true'
 
   # Standalone output (`output: 'standalone'`): a starter built with it, copied without the checkout to a separate directory
-  # and served there with `node server.js`, alone and behind a TLS proxy. The script is the one to run locally.
+  # and served there with `node server.js`, alone and behind a TLS proxy. It also checks that the server runs core's
+  # instrumentation (its startup line, and an exit with a weak secret). The script is the one to run locally.
   standalone:
     needs: pack
     runs-on: ubuntu-24.04
