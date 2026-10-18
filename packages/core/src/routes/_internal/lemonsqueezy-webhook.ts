@@ -41,6 +41,9 @@ export type LemonSqueezyWebhookExtensionsLoader = () => Promise<LemonSqueezyWebh
 
 const noExtensions: LemonSqueezyWebhookExtensionsLoader = async () => ({})
 
+/** The error about ignored test-mode events is logged once per process. */
+let reportedIgnoredTestMode = false
+
 interface Resource {
   type: string
   id: string
@@ -95,9 +98,17 @@ async function handleLemonSqueezyWebhook(request: NextRequest, loadExtensions: L
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  // A store's test-mode webhook pointed at production must not grant entitlements for test payments
-  if (testMode && process.env.NODE_ENV === 'production') {
-    console.warn(`[lemonsqueezy-webhook] Event ${event.id} is a test-mode event, ignored in production`)
+  // A store's test-mode webhook pointed at production must not grant entitlements for test payments. A production
+  // build that runs on test data (staging, previews) opts in with LEMONSQUEEZY_ACCEPT_TEST_MODE=true.
+  if (testMode && process.env.NODE_ENV === 'production' && process.env.LEMONSQUEEZY_ACCEPT_TEST_MODE?.trim() !== 'true') {
+    if (!reportedIgnoredTestMode) {
+      reportedIgnoredTestMode = true
+      console.error(
+        '[lemonsqueezy-webhook] Test-mode events are ignored in production. ' +
+        'If this deployment runs on test data (staging, a preview), set LEMONSQUEEZY_ACCEPT_TEST_MODE=true.'
+      )
+    }
+    console.log(`[lemonsqueezy-webhook] Event ${event.id} is a test-mode event, ignored`)
     return NextResponse.json({ received: true, status: 'ignored_test_mode' })
   }
 

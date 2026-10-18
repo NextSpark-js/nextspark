@@ -327,18 +327,49 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
     expect(await row('sub-5')).toEqual(sub5)
   })
 
-  test('in production, a test-mode event is answered 200 and ignored', async () => {
+  test('in production, test-mode events are ignored with one error per process, unless LEMONSQUEEZY_ACCEPT_TEST_MODE=true', async () => {
     const sub5 = await row('sub-5')
-    const nodeEnv = process.env.NODE_ENV
-    ;(process.env as Record<string, string>).NODE_ENV = 'production'
+    const env = process.env as Record<string, string | undefined>
+    const nodeEnv = env.NODE_ENV
+    const errors = console.error as jest.Mock
+    errors.mockClear()
+    env.NODE_ENV = 'production'
     try {
-      const body = subscriptionEvent('subscription_created', { updated_at: '2026-10-06T00:00:00.000000Z' }, customFor('team-5'), '853')
-      expect(await post(body)).toEqual({ status: 200, body: { received: true, status: 'ignored_test_mode' } })
+      const first = subscriptionEvent('subscription_created', { updated_at: '2026-10-06T00:00:00.000000Z' }, customFor('team-5'), '853')
+      const second = subscriptionEvent('subscription_created', { updated_at: '2026-10-06T00:00:01.000000Z' }, customFor('team-5'), '853')
+      expect(await post(first)).toEqual({ status: 200, body: { received: true, status: 'ignored_test_mode' } })
+      expect(await post(second)).toEqual({ status: 200, body: { received: true, status: 'ignored_test_mode' } })
+      expect(errors.mock.calls.filter(([message]) => String(message).includes('LEMONSQUEEZY_ACCEPT_TEST_MODE=true'))).toHaveLength(1)
       expect(await claim('subscription_created:subscriptions:853:2026-10-06T00:00:00.000000Z')).toBeNull()
+      expect(await row('sub-5')).toEqual(sub5)
+
+      // staging or a preview on test data: an explicit opt-in
+      env.LEMONSQUEEZY_ACCEPT_TEST_MODE = 'true'
+      expect(await post(first)).toEqual({ status: 200, body: { received: true } })
+      expect(await row('sub-5')).toMatchObject({ externalSubscriptionId: '853', paymentProvider: 'lemonsqueezy', plan: 'pro' })
     } finally {
-      ;(process.env as Record<string, string>).NODE_ENV = nodeEnv as string
+      env.NODE_ENV = nodeEnv
+      delete env.LEMONSQUEEZY_ACCEPT_TEST_MODE
     }
-    expect(await row('sub-5')).toEqual(sub5)
+  })
+
+  test('a team with a live subscription of another provider is not switched by a new one', async () => {
+    await db.query(`
+      INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-6', 'Team 6', 'team-6', 'u1');
+      INSERT INTO subscriptions (id, "teamId", "planId", status, "currentPeriodStart", "currentPeriodEnd", "paymentProvider", "externalSubscriptionId")
+        VALUES ('sub-6', 'team-6', 'plan-pro', 'active', now(), now() + interval '30 days', 'stripe', 'sub_stripe_live');
+    `)
+    const sub6 = await row('sub-6')
+    const errors = console.error as jest.Mock
+    errors.mockClear()
+    expect((await post(subscriptionEvent('subscription_created', { updated_at: '2026-10-07T00:00:00.000000Z' }, customFor('team-6'), '861'))).status).toBe(200)
+    expect(errors).toHaveBeenCalledWith(expect.stringMatching(/Event subscription_created:subscriptions:861:.*team team-6 has a live stripe subscription sub_stripe_live; lemonsqueezy subscription 861 is not applied/))
+    expect(await row('sub-6')).toEqual(sub6)
+
+    // once the Stripe subscription has ended, the same team's new Lemon Squeezy subscription is applied
+    await db.query(`UPDATE subscriptions SET status = 'canceled', "canceledAt" = now() WHERE id = 'sub-6'`)
+    expect((await post(subscriptionEvent('subscription_created', { updated_at: '2026-10-07T00:00:01.000000Z' }, customFor('team-6'), '861'))).status).toBe(200)
+    expect(await row('sub-6')).toMatchObject({ externalSubscriptionId: '861', paymentProvider: 'lemonsqueezy', status: 'active', hasCanceledAt: false })
   })
 
   test('an unknown team or subscription creates no rows and binds nothing to the wrong team', async () => {

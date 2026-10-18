@@ -28,8 +28,9 @@ const CURRENT_STATUSES = ['active', 'trialing', 'past_due']
  * The team's row for a new paid subscription, or null when the team has no row at all (logged as an error with the
  * event id: the payment cannot be applied).
  *
- * `bind`, when given, refuses a current row that is already bound to another subscription of the same provider
- * (logged as an error): a second live subscription is not applied over the first. An ended row is always reused.
+ * `bind`, when given, refuses a current row that is already bound to another subscription, of the same provider or of
+ * another one (logged as an error): a second live subscription is not applied over the first, and a team switching
+ * providers cancels the old subscription first. An ended row is always reused.
  */
 export async function subscriptionRowForNewSubscription(
   teamId: string,
@@ -49,18 +50,21 @@ export async function subscriptionRowForNewSubscription(
     return null
   }
   const bind = context.bind
-  if (
-    bind &&
-    CURRENT_STATUSES.includes(row.status) &&
-    row.paymentProvider === bind.provider &&
-    row.externalSubscriptionId &&
-    row.externalSubscriptionId !== bind.externalSubscriptionId
-  ) {
-    console.error(
-      `[${context.gateway}-webhook] Event ${context.eventId}: team ${teamId} already has live subscription ${row.externalSubscriptionId}, ` +
-      `${bind.externalSubscriptionId} is not applied`
-    )
-    return null
+  if (bind && CURRENT_STATUSES.includes(row.status) && row.externalSubscriptionId) {
+    if (row.paymentProvider !== bind.provider) {
+      console.error(
+        `[${context.gateway}-webhook] Event ${context.eventId}: team ${teamId} has a live ${row.paymentProvider ?? 'unknown'} subscription ` +
+        `${row.externalSubscriptionId}; ${bind.provider} subscription ${bind.externalSubscriptionId} is not applied (cancel the ${row.paymentProvider ?? 'other'} one first)`
+      )
+      return null
+    }
+    if (row.externalSubscriptionId !== bind.externalSubscriptionId) {
+      console.error(
+        `[${context.gateway}-webhook] Event ${context.eventId}: team ${teamId} already has live subscription ${row.externalSubscriptionId}, ` +
+        `${bind.externalSubscriptionId} is not applied`
+      )
+      return null
+    }
   }
   return row
 }
