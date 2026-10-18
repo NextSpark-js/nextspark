@@ -15,6 +15,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { ViewRef } from "../native/refs";
 
 // Dialog Root
 export interface DialogProps extends Omit<ModalProps, "visible"> {
@@ -69,7 +70,7 @@ export interface DialogHeaderProps extends ViewProps {
   className?: string;
 }
 
-export const DialogHeader = React.forwardRef<View, DialogHeaderProps>(
+export const DialogHeader = React.forwardRef<ViewRef, DialogHeaderProps>(
   (
     {
       children,
@@ -106,7 +107,7 @@ export interface DialogTitleProps extends ViewProps {
   className?: string;
 }
 
-export const DialogTitle = React.forwardRef<View, DialogTitleProps>(
+export const DialogTitle = React.forwardRef<ViewRef, DialogTitleProps>(
   (
     {
       children,
@@ -148,7 +149,7 @@ export interface DialogDescriptionProps extends ViewProps {
   className?: string;
 }
 
-export const DialogDescription = React.forwardRef<View, DialogDescriptionProps>(
+export const DialogDescription = React.forwardRef<ViewRef, DialogDescriptionProps>(
   (
     {
       children,
@@ -188,7 +189,7 @@ export interface DialogContentProps extends ViewProps {
   className?: string;
 }
 
-export const DialogContent = React.forwardRef<View, DialogContentProps>(
+export const DialogContent = React.forwardRef<ViewRef, DialogContentProps>(
   (
     {
       children,
@@ -214,7 +215,7 @@ export interface DialogFooterProps extends ViewProps {
   className?: string;
 }
 
-export const DialogFooter = React.forwardRef<View, DialogFooterProps>(
+export const DialogFooter = React.forwardRef<ViewRef, DialogFooterProps>(
   (
     {
       children,
@@ -251,7 +252,7 @@ export interface DialogCloseProps {
   className?: string;
 }
 
-export const DialogClose = React.forwardRef<View, DialogCloseProps>(
+export const DialogClose = React.forwardRef<ViewRef, DialogCloseProps>(
   (
     {
       children,

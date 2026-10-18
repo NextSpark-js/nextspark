@@ -8,11 +8,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
-  splash: {
-    image: './assets/splash.png',
-    resizeMode: 'contain',
-    backgroundColor: '#ffffff',
-  },
   assetBundlePatterns: ['**/*'],
   ios: {
     supportsTablet: true,
@@ -34,6 +29,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Production: set via EAS environment variables
     apiUrl: process.env.EXPO_PUBLIC_API_URL,
   },
-  plugins: ['expo-router', 'expo-secure-store'],
+  plugins: [
+    'expo-router',
+    'expo-secure-store',
+    ['expo-splash-screen', { image: './assets/splash.png', resizeMode: 'contain', backgroundColor: '#ffffff' }],
+  ],
   scheme: 'myapp',
 })

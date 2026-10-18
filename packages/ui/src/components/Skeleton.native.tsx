@@ -17,6 +17,7 @@ import Animated, {
   withSequence,
 } from "react-native-reanimated";
 import { useTheme } from "../native/ThemeContext";
+import type { ViewRef } from "../native/refs";
 
 export interface SkeletonProps extends ViewProps {
   // API compatibility props
@@ -26,7 +27,7 @@ export interface SkeletonProps extends ViewProps {
 // Wrapper to avoid React version type conflicts
 const AnimatedBox = Animated.View as unknown as typeof View;
 
-export const Skeleton = React.forwardRef<View, SkeletonProps>(
+export const Skeleton = React.forwardRef<ViewRef, SkeletonProps>(
   (
     {
       style,
@@ -63,7 +64,7 @@ export const Skeleton = React.forwardRef<View, SkeletonProps>(
     return (
       <AnimatedBox
         ref={ref}
-        style={[styles.base, colorStyles.base, animatedStyle, style as ViewStyle]}
+        style={[styles.base, colorStyles.base, animatedStyle as unknown as ViewStyle, style as ViewStyle]}
         {...props}
       />
     );
@@ -73,7 +74,7 @@ export const Skeleton = React.forwardRef<View, SkeletonProps>(
 Skeleton.displayName = "Skeleton";
 
 // Common skeleton patterns
-export const SkeletonText = React.forwardRef<View, SkeletonProps>(
+export const SkeletonText = React.forwardRef<ViewRef, SkeletonProps>(
   (
     {
       style,
@@ -97,7 +98,7 @@ export const SkeletonText = React.forwardRef<View, SkeletonProps>(
 
 SkeletonText.displayName = "SkeletonText";
 
-export const SkeletonTitle = React.forwardRef<View, SkeletonProps>(
+export const SkeletonTitle = React.forwardRef<ViewRef, SkeletonProps>(
   (
     {
       style,
@@ -121,7 +122,7 @@ export const SkeletonTitle = React.forwardRef<View, SkeletonProps>(
 
 SkeletonTitle.displayName = "SkeletonTitle";
 
-export const SkeletonAvatar = React.forwardRef<View, SkeletonProps>(
+export const SkeletonAvatar = React.forwardRef<ViewRef, SkeletonProps>(
   (
     {
       style,
@@ -145,7 +146,7 @@ export const SkeletonAvatar = React.forwardRef<View, SkeletonProps>(
 
 SkeletonAvatar.displayName = "SkeletonAvatar";
 
-export const SkeletonCard = React.forwardRef<View, SkeletonProps>(
+export const SkeletonCard = React.forwardRef<ViewRef, SkeletonProps>(
   (
     {
       style,

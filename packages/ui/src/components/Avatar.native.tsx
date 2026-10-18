@@ -14,6 +14,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { ImageRef, ViewRef } from "../native/refs";
 
 export type AvatarSize = "sm" | "default" | "lg" | "xl";
 
@@ -42,7 +43,7 @@ export interface AvatarProps extends ViewProps {
   className?: string;
 }
 
-export const Avatar = React.forwardRef<View, AvatarProps>(
+export const Avatar = React.forwardRef<ViewRef, AvatarProps>(
   (
     {
       size = "default",
@@ -74,7 +75,7 @@ export interface AvatarImageProps extends Omit<ImageProps, "source" | "src"> {
   className?: string;
 }
 
-export const AvatarImage = React.forwardRef<Image, AvatarImageProps>(
+export const AvatarImage = React.forwardRef<ImageRef, AvatarImageProps>(
   (
     {
       src,
@@ -109,7 +110,7 @@ export interface AvatarFallbackProps extends ViewProps {
   className?: string;
 }
 
-export const AvatarFallback = React.forwardRef<View, AvatarFallbackProps>(
+export const AvatarFallback = React.forwardRef<ViewRef, AvatarFallbackProps>(
   (
     {
       size = "default",

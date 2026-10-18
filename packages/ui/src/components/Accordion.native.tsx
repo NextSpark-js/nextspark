@@ -19,6 +19,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { ViewRef } from "../native/refs";
 
 // Enable LayoutAnimation on Android
 if (
@@ -75,7 +76,7 @@ export interface AccordionProps {
   className?: string;
 }
 
-const Accordion = React.forwardRef<View, AccordionProps>(
+const Accordion = React.forwardRef<ViewRef, AccordionProps>(
   (
     {
       type = "single",
@@ -158,7 +159,7 @@ export interface AccordionItemProps {
   className?: string;
 }
 
-const AccordionItem = React.forwardRef<View, AccordionItemProps>(
+const AccordionItem = React.forwardRef<ViewRef, AccordionItemProps>(
   ({ value, children, style, className }, ref) => {
     const { colors } = useTheme();
     const { expandedItems } = useAccordionContext();
@@ -196,7 +197,7 @@ export interface AccordionTriggerProps {
   className?: string;
 }
 
-const AccordionTrigger = React.forwardRef<View, AccordionTriggerProps>(
+const AccordionTrigger = React.forwardRef<ViewRef, AccordionTriggerProps>(
   ({ children, style, textStyle, className }, ref) => {
     const { colors } = useTheme();
     const { toggleItem } = useAccordionContext();
@@ -250,7 +251,7 @@ export interface AccordionContentProps {
   className?: string;
 }
 
-const AccordionContent = React.forwardRef<View, AccordionContentProps>(
+const AccordionContent = React.forwardRef<ViewRef, AccordionContentProps>(
   ({ children, style, className }, ref) => {
     const { isExpanded } = useAccordionItemContext();
 

@@ -15,6 +15,7 @@ import {
   type PanResponderGestureState,
 } from "react-native"
 import { useTheme } from "../native/ThemeContext"
+import type { ViewRef } from "../native/refs";
 
 export interface SliderProps {
   /** Current value (0-100 by default, or use min/max) */
@@ -39,7 +40,7 @@ export interface SliderProps {
   className?: string
 }
 
-const Slider = React.forwardRef<View, SliderProps>(
+const Slider = React.forwardRef<ViewRef, SliderProps>(
   (
     {
       value: controlledValue,

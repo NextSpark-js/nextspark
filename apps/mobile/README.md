@@ -75,7 +75,7 @@ From the devKeyring:
 
 ## Tech Stack
 
-- **Framework:** Expo SDK 52 with Expo Router
+- **Framework:** Expo SDK 58 with Expo Router
 - **Language:** TypeScript
 - **State:** TanStack Query v5
 - **Storage:** expo-secure-store (auth token)

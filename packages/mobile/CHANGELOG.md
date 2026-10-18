@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Tested with Expo SDK 58 (React Native 0.88, React 19.3). The `expo-device` peer range no longer stops at `<9.0.0`, so SDK 58 (`expo-device` `~58.0.5`) satisfies it; the other peer ranges are unchanged and still accept Expo SDK 54 and later. The `mobile/` template and the `create-nextspark-app` wizard install the SDK 58 set, with `expo-splash-screen` configured through its config plugin and `@expo/metro-runtime` declared.
+
 ## [0.1.0-beta.198] - 2026-10-09
 
 ### Upgrading from 0.1.0-beta.197

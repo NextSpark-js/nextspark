@@ -10,6 +10,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { TextRef } from "../native/refs";
 
 export interface LabelProps extends TextProps {
   required?: boolean;
@@ -18,7 +19,7 @@ export interface LabelProps extends TextProps {
   htmlFor?: string; // Ignored in RN
 }
 
-export const Label = React.forwardRef<Text, LabelProps>(
+export const Label = React.forwardRef<TextRef, LabelProps>(
   (
     {
       children,

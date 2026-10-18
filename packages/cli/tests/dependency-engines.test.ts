@@ -5,8 +5,8 @@
  * at least a day before, which pnpm 10.16 and later and pnpm 11 pick under the release-age policy the
  * project declares. The NextSpark packages are pinned to the CLI's own version and left out.
  *
- * mobile/ of a web-mobile project is left out too: Expo SDK 54 runs on React Native 0.81, which
- * requires Node 20.19.4.
+ * mobile/ of a web-mobile project is left out too: Expo SDK 58 runs on React Native 0.88, which
+ * requires Node 22.13.
  */
 import assert from 'node:assert/strict'
 import fs from 'node:fs'

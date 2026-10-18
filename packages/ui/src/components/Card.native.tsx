@@ -14,6 +14,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { ViewRef } from "../native/refs";
 
 // Card Root
 export interface CardProps extends ViewProps {
@@ -21,7 +22,7 @@ export interface CardProps extends ViewProps {
   className?: string;
 }
 
-export const Card = React.forwardRef<View, CardProps>(
+export const Card = React.forwardRef<ViewRef, CardProps>(
   (
     {
       children,
@@ -60,7 +61,7 @@ export interface PressableCardProps extends PressableProps {
   className?: string;
 }
 
-export const PressableCard = React.forwardRef<View, PressableCardProps>(
+export const PressableCard = React.forwardRef<ViewRef, PressableCardProps>(
   (
     {
       children,
@@ -107,7 +108,7 @@ export interface CardHeaderProps extends ViewProps {
   className?: string;
 }
 
-export const CardHeader = React.forwardRef<View, CardHeaderProps>(
+export const CardHeader = React.forwardRef<ViewRef, CardHeaderProps>(
   (
     {
       children,
@@ -135,7 +136,7 @@ export interface CardTitleProps extends ViewProps {
   className?: string;
 }
 
-export const CardTitle = React.forwardRef<View, CardTitleProps>(
+export const CardTitle = React.forwardRef<ViewRef, CardTitleProps>(
   (
     {
       children,
@@ -177,7 +178,7 @@ export interface CardDescriptionProps extends ViewProps {
   className?: string;
 }
 
-export const CardDescription = React.forwardRef<View, CardDescriptionProps>(
+export const CardDescription = React.forwardRef<ViewRef, CardDescriptionProps>(
   (
     {
       children,
@@ -217,7 +218,7 @@ export interface CardContentProps extends ViewProps {
   className?: string;
 }
 
-export const CardContent = React.forwardRef<View, CardContentProps>(
+export const CardContent = React.forwardRef<ViewRef, CardContentProps>(
   (
     {
       children,
@@ -243,7 +244,7 @@ export interface CardFooterProps extends ViewProps {
   className?: string;
 }
 
-export const CardFooter = React.forwardRef<View, CardFooterProps>(
+export const CardFooter = React.forwardRef<ViewRef, CardFooterProps>(
   (
     {
       children,

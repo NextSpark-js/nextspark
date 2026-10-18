@@ -9,6 +9,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { TextInputRef } from "../native/refs";
 
 export interface TextareaProps extends Omit<TextInputProps, "style"> {
   label?: string;
@@ -21,7 +22,7 @@ export interface TextareaProps extends Omit<TextInputProps, "style"> {
   containerClassName?: string;
 }
 
-export const Textarea = React.forwardRef<TextInput, TextareaProps>(
+export const Textarea = React.forwardRef<TextInputRef, TextareaProps>(
   (
     {
       label,

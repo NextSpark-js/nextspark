@@ -10,6 +10,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { ViewRef } from "../native/refs";
 
 export type ButtonVariant =
   | "default"
@@ -35,7 +36,7 @@ export interface ButtonProps extends Omit<PressableProps, "children"> {
   textClassName?: string;
 }
 
-export const Button = React.forwardRef<View, ButtonProps>(
+export const Button = React.forwardRef<ViewRef, ButtonProps>(
   (
     {
       variant = "default",

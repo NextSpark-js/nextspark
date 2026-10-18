@@ -19,11 +19,19 @@ const WORKSPACE_SOURCES = [
   path.resolve(__dirname, '../../../../packages/mobile/src') + path.sep,
   path.resolve(__dirname, '../../../../packages/contracts/src') + path.sep,
 ]
+const CONTRACTS_SRC = path.resolve(__dirname, '../../../../packages/contracts/src') + path.sep
 const APP_ROOT = path.resolve(__dirname, '../..')
 
 module.exports = (request, options) => {
   const isBarePackage = !request.startsWith('.') && !path.isAbsolute(request)
   const requestedFromPackageSrc = WORKSPACE_SOURCES.some(source => (options.basedir + path.sep).startsWith(source))
+
+  // zod always comes from the contracts' own install: pnpm run puts the app's private hoist (.pnpm/node_modules)
+  // on NODE_PATH, and a transitive zod 3 of Expo's tooling lives there, which has no z.looseObject
+  const fromContracts = (options.basedir + path.sep).startsWith(CONTRACTS_SRC)
+  if (isBarePackage && fromContracts && (request === 'zod' || request.startsWith('zod/'))) {
+    return options.defaultResolver(request, options)
+  }
 
   if (isBarePackage && requestedFromPackageSrc) {
     try {

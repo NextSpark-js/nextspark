@@ -26,7 +26,8 @@ const babelNames = () => {
 }
 const expoPlugins = () => {
   const m = read('app.config.ts').match(/plugins:\s*\[([^\]]*)\]/)
-  return m ? [...m[1].matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]) : []
+  // `['name', { options }]` entries: the options hold values, not package names
+  return m ? [...m[1].replace(/\{[^}]*\}/g, '').matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]) : []
 }
 
 // Packages that a declared one loads by bare name at build time from the PROJECT (pnpm does not
@@ -54,6 +55,6 @@ test('template dependency ranges agree with apps/mobile for the shared build pac
   for (const n of ['react-native-css-interop', 'nativewind', 'expo', 'react-native-reanimated']) {
     assert.equal(pkg.dependencies[n], dev.dependencies[n], n)
   }
-  // Pinned exactly: Expo SDK 54 expects 0.5.1 (expo-doctor), where apps/mobile keeps its caret
-  assert.equal(pkg.dependencies['react-native-worklets'], '0.5.1')
+  // Pinned exactly: Expo SDK 58 expects 0.13.0 (expo-doctor)
+  assert.equal(pkg.dependencies['react-native-worklets'], '0.13.0')
 })

@@ -10,6 +10,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { ViewRef } from "../native/refs";
 
 export interface SeparatorProps extends ViewProps {
   orientation?: "horizontal" | "vertical";
@@ -17,7 +18,7 @@ export interface SeparatorProps extends ViewProps {
   className?: string;
 }
 
-export const Separator = React.forwardRef<View, SeparatorProps>(
+export const Separator = React.forwardRef<ViewRef, SeparatorProps>(
   (
     {
       orientation = "horizontal",

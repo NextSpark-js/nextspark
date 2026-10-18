@@ -24,13 +24,13 @@ test('the wizard declares the same mobile packages as the shipped template', asy
     const wizard = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'))
     const template = JSON.parse(fs.readFileSync(path.join(TEMPLATE_DIR, 'package.json.template'), 'utf8'))
     assert.deepEqual(names(wizard), names(template))
-    // Expo SDK 54 expects these exactly; expo-doctor fails otherwise
+    // Expo SDK 58 expects these exactly; expo-doctor fails otherwise
     for (const n of ['react-native-worklets', '@types/react']) {
       const pick = (p: any) => p.dependencies?.[n] ?? p.devDependencies?.[n]
       assert.equal(pick(wizard), pick(template), `${n} must be pinned the same in both`)
     }
-    assert.equal(wizard.dependencies['react-native-worklets'], '0.5.1')
-    assert.equal(wizard.devDependencies['@types/react'], '~19.1.10')
+    assert.equal(wizard.dependencies['react-native-worklets'], '0.13.0')
+    assert.equal(wizard.devDependencies['@types/react'], '^19')
     for (const n of ['react-native-css-interop', 'react-native-worklets', 'babel-preset-expo']) {
       assert.ok(wizard.dependencies[n], `${n} must be declared`)
     }

@@ -15,6 +15,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { ViewRef } from "../native/refs";
 
 export interface SelectOption {
   label: string;
@@ -34,7 +35,7 @@ export interface SelectProps extends ViewProps {
   className?: string;
 }
 
-export const Select = React.forwardRef<View, SelectProps>(
+export const Select = React.forwardRef<ViewRef, SelectProps>(
   (
     {
       options,

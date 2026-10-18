@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
 import type { ThemeColors } from "../native/types";
+import type { ViewRef } from "../native/refs";
 
 export type BadgeVariant =
   | "default"
@@ -75,7 +76,7 @@ function getDotColors(colors: ThemeColors) {
   } as const;
 }
 
-export const Badge = React.forwardRef<View, BadgeProps>(
+export const Badge = React.forwardRef<ViewRef, BadgeProps>(
   (
     {
       variant = "default",
@@ -136,7 +137,7 @@ export interface PressableBadgeProps extends Omit<PressableProps, "children"> {
   textClassName?: string;
 }
 
-export const PressableBadge = React.forwardRef<View, PressableBadgeProps>(
+export const PressableBadge = React.forwardRef<ViewRef, PressableBadgeProps>(
   (
     {
       variant = "outline",

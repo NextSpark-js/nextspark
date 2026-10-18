@@ -16,6 +16,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useTheme } from "../native/ThemeContext";
+import type { ViewRef } from "../native/refs";
 
 export interface SwitchProps extends Omit<PressableProps, "onPress"> {
   checked?: boolean;
@@ -27,7 +28,7 @@ export interface SwitchProps extends Omit<PressableProps, "onPress"> {
 // Wrapper to avoid React version type conflicts
 const AnimatedThumb = Animated.View as unknown as typeof View;
 
-export const Switch = React.forwardRef<View, SwitchProps>(
+export const Switch = React.forwardRef<ViewRef, SwitchProps>(
   (
     {
       checked = false,
@@ -72,7 +73,7 @@ export const Switch = React.forwardRef<View, SwitchProps>(
         disabled={disabled}
         {...props}
       >
-        <AnimatedThumb style={[styles.thumb, colorStyles.thumb, thumbStyle]} />
+        <AnimatedThumb style={[styles.thumb, colorStyles.thumb, thumbStyle as unknown as ViewStyle]} />
       </Pressable>
     );
   }

@@ -106,34 +106,37 @@ export const VERSIONS = {
 
   // Core dependencies
   TANSTACK_QUERY: '^5.62.0',
-  EXPO: '^54.0.0',
-  REACT: '19.1.0',
-  // What Expo SDK 54 expects (expo-doctor); web's ^19 would otherwise resolve to a newer minor
-  TYPES_REACT: '~19.1.10',
-  REACT_NATIVE: '0.81.5',
+  EXPO: '~58.0.14',
+  REACT: '19.3.0',
+  TYPES_REACT: '^19',
+  REACT_NATIVE: '0.88.0',
   TYPESCRIPT: '^5.3.0',
 
   // Expo modules (use ~ for patch compatibility)
-  EXPO_CONSTANTS: '~18.0.13',
+  EXPO_CONSTANTS: '~58.0.12',
   // Native dev client: `expo run:ios|android` builds a debug app that needs it to open the bundler
-  EXPO_DEV_CLIENT: '~6.0.21',
-  EXPO_DEVICE: '~8.0.10',
+  EXPO_DEV_CLIENT: '~58.0.14',
+  EXPO_DEVICE: '~58.0.5',
   // babel.config.js names it as a preset
-  BABEL_PRESET_EXPO: '~54.0.12',
-  EXPO_LINKING: '~8.0.11',
-  EXPO_ROUTER: '~6.0.22',
-  EXPO_SECURE_STORE: '~15.0.8',
-  EXPO_STATUS_BAR: '~3.0.9',
+  BABEL_PRESET_EXPO: '~58.0.17',
+  EXPO_LINKING: '~58.0.13',
+  EXPO_ROUTER: '~58.0.23',
+  // expo-router's peer; unlisted, pnpm auto-installs the oldest release that matches
+  EXPO_METRO_RUNTIME: '~58.0.14',
+  EXPO_SECURE_STORE: '~58.0.2',
+  // app.config.ts configures the splash screen through its plugin (the top-level splash key is gone in SDK 58)
+  EXPO_SPLASH_SCREEN: '~58.0.10',
+  EXPO_STATUS_BAR: '~58.0.3',
 
   // React Native modules
-  RN_GESTURE_HANDLER: '~2.28.0',
-  RN_REANIMATED: '~4.1.1',
-  RN_SAFE_AREA: '~5.6.0',
-  RN_SCREENS: '~4.16.0',
-  RN_SVG: '15.12.1',
-  RN_WEB: '^0.21.0',
+  RN_GESTURE_HANDLER: '~3.3.0',
+  RN_REANIMATED: '4.7.1',
+  RN_SAFE_AREA: '~5.10.1',
+  RN_SCREENS: '~4.30.0',
+  RN_SVG: '15.16.0',
+  RN_WEB: '~0.21.4',
   // reanimated's babel plugin (added by babel-preset-expo) loads it from the project
-  RN_WORKLETS: '0.5.1',
+  RN_WORKLETS: '0.13.0',
   // Lets @nextsparkjs/mobile empty the native cookie store on sign-out.
   // Exact version: the package has a single maintainer.
   RN_COOKIE_MANAGER: '6.4.1',
@@ -154,7 +157,8 @@ export const VERSIONS = {
   // Dev dependencies
   BABEL_CORE: '^7.25.0',
   JEST: '^29.7.0',
-  JEST_EXPO: '^54.0.16',
+  JEST_EXPO: '~58.0.11',
+  RN_JEST_PRESET: '^0.88.0',
   TESTING_LIBRARY_JEST_NATIVE: '^5.4.3',
   TESTING_LIBRARY_RN: '^13.3.3',
 } as const
@@ -479,6 +483,7 @@ export async function createMobilePackageJson(mobileDir: string, config: WizardC
       '@nextsparkjs/ui': VERSIONS.NEXTSPARK_UI,
       // The generated API contracts: the app imports these types instead of writing them by hand
       [CONTRACTS_PACKAGE_NAME]: 'workspace:*',
+      '@expo/metro-runtime': VERSIONS.EXPO_METRO_RUNTIME,
       '@preeternal/react-native-cookie-manager': VERSIONS.RN_COOKIE_MANAGER,
       '@tanstack/react-query': VERSIONS.TANSTACK_QUERY,
       'babel-preset-expo': VERSIONS.BABEL_PRESET_EXPO,
@@ -489,6 +494,7 @@ export async function createMobilePackageJson(mobileDir: string, config: WizardC
       'expo-linking': VERSIONS.EXPO_LINKING,
       'expo-router': VERSIONS.EXPO_ROUTER,
       'expo-secure-store': VERSIONS.EXPO_SECURE_STORE,
+      'expo-splash-screen': VERSIONS.EXPO_SPLASH_SCREEN,
       'expo-status-bar': VERSIONS.EXPO_STATUS_BAR,
       'lucide-react-native': VERSIONS.LUCIDE_RN,
       'nativewind': VERSIONS.NATIVEWIND,
@@ -516,6 +522,7 @@ export async function createMobilePackageJson(mobileDir: string, config: WizardC
       '@types/node': '^22.10.7',
       '@types/react': VERSIONS.TYPES_REACT,
       'jest': VERSIONS.JEST,
+      '@react-native/jest-preset': VERSIONS.RN_JEST_PRESET,
       'jest-expo': VERSIONS.JEST_EXPO,
       'react-test-renderer': VERSIONS.REACT,
       'typescript': VERSIONS.TYPESCRIPT
@@ -548,11 +555,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'portrait',
   icon: './${DIRS.ASSETS}/icon.png',
   userInterfaceStyle: 'automatic',
-  splash: {
-    image: './${DIRS.ASSETS}/splash.png',
-    resizeMode: 'contain',
-    backgroundColor: '#ffffff',
-  },
   assetBundlePatterns: ['**/*'],
   ios: {
     supportsTablet: true,
@@ -574,7 +576,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Production: set via EAS environment variables
     apiUrl: process.env.EXPO_PUBLIC_API_URL,
   },
-  plugins: ['expo-router', 'expo-secure-store'],
+  plugins: [
+    'expo-router',
+    'expo-secure-store',
+    ['expo-splash-screen', { image: './${DIRS.ASSETS}/splash.png', resizeMode: 'contain', backgroundColor: '#ffffff' }],
+  ],
   scheme: '${config.projectSlug}',
 })
 `

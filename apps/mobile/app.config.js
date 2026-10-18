@@ -12,11 +12,6 @@ export default {
     scheme: 'nextspark',
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
-    splash: {
-      image: './assets/icon.png',
-      resizeMode: 'contain',
-      backgroundColor: '#ffffff',
-    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.nextspark.mobile',
@@ -33,7 +28,11 @@ export default {
       output: 'static',
       favicon: './assets/icon.png',
     },
-    plugins: ['expo-router', 'expo-secure-store'],
+    plugins: [
+      'expo-router',
+      'expo-secure-store',
+      ['expo-splash-screen', { image: './assets/icon.png', resizeMode: 'contain', backgroundColor: '#ffffff' }],
+    ],
     experiments: {
       typedRoutes: true,
     },

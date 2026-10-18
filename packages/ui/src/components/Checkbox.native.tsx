@@ -13,6 +13,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { ViewRef } from "../native/refs";
 
 export interface CheckboxProps extends Omit<PressableProps, "onPress"> {
   checked?: boolean;
@@ -23,7 +24,7 @@ export interface CheckboxProps extends Omit<PressableProps, "onPress"> {
   className?: string;
 }
 
-export const Checkbox = React.forwardRef<View, CheckboxProps>(
+export const Checkbox = React.forwardRef<ViewRef, CheckboxProps>(
   (
     {
       checked = false,

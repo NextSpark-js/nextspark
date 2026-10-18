@@ -6,6 +6,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { ViewRef } from "../native/refs";
 
 export interface ProgressProps {
   /** Progress value from 0 to 100 */
@@ -16,7 +17,7 @@ export interface ProgressProps {
   className?: string;
 }
 
-const Progress = React.forwardRef<View, ProgressProps>(
+const Progress = React.forwardRef<ViewRef, ProgressProps>(
   ({ value = 0, style, className }, ref) => {
     const { colors } = useTheme();
     const animatedWidth = useRef(new Animated.Value(value)).current;

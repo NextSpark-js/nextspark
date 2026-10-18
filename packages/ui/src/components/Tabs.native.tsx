@@ -8,6 +8,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import type { ViewRef } from "../native/refs";
 
 // Context for Tabs state
 interface TabsContextValue {
@@ -37,7 +38,7 @@ export interface TabsProps {
   defaultValue?: string;
 }
 
-const Tabs = React.forwardRef<View, TabsProps>(
+const Tabs = React.forwardRef<ViewRef, TabsProps>(
   ({ value, onValueChange, children, style, className, defaultValue }, ref) => {
     const contextValue = useMemo(
       () => ({ value, onValueChange }),
@@ -63,7 +64,7 @@ export interface TabsListProps {
   className?: string;
 }
 
-const TabsList = React.forwardRef<View, TabsListProps>(
+const TabsList = React.forwardRef<ViewRef, TabsListProps>(
   ({ children, style, className }, ref) => {
     const { colors } = useTheme();
 
@@ -94,7 +95,7 @@ export interface TabsTriggerProps {
   className?: string;
 }
 
-const TabsTrigger = React.forwardRef<View, TabsTriggerProps>(
+const TabsTrigger = React.forwardRef<ViewRef, TabsTriggerProps>(
   ({ value, children, disabled, style, textStyle, className }, ref) => {
     const { colors } = useTheme();
     const { value: activeValue, onValueChange } = useTabsContext();
@@ -142,7 +143,7 @@ export interface TabsContentProps {
   className?: string;
 }
 
-const TabsContent = React.forwardRef<View, TabsContentProps>(
+const TabsContent = React.forwardRef<ViewRef, TabsContentProps>(
   ({ value, children, style, className }, ref) => {
     const { value: activeValue } = useTabsContext();
 
