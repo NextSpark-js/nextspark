@@ -431,6 +431,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 4. Old sessions invalidated
 5. Users required to sign in again
 
+With `BETTER_AUTH_SECRETS` (`<version>:<secret>` entries, the current one first), sessions are signed with the first entry, but a `BETTER_AUTH_SECRET` that is still set keeps being used to read data written under it. Do not leave a weak one around: remove it, or keep it only as long as it is a strong secret.
+
 ## HTTPS Enforcement
 
 ### Production Configuration

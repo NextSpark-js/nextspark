@@ -996,6 +996,26 @@ describe('evaluateAuthReadiness session secret', () => {
   test('the environment adapter reads BETTER_AUTH_SECRET', () => {
     expect(authReadinessConfigurationFromEnv({ BETTER_AUTH_SECRET: 'abc' }).betterAuthSecret).toBe('abc')
   })
+
+  // The build check and the runtime readiness judge the secret the auth library signs with (#297)
+  const fromEnv = (env: Record<string, string>) =>
+    evaluateAuthReadiness({
+      ...productionWeb,
+      authConfig: { methods: ['email-otp'] },
+      configuration: { ...authReadinessConfigurationFromEnv(env), email },
+    })
+
+  test('the environment adapter flags a short AUTH_SECRET, by name', () => {
+    const result = fromEnv({ AUTH_SECRET: 'short-auth-secret' })
+    expect(result.outcome).toBe('invalid')
+    expect(result.diagnostics[0]).toMatchObject({ code: 'BETTER_AUTH_SECRET_MALFORMED', severity: 'error' })
+    expect(result.diagnostics[0].message).toMatch(/^AUTH_SECRET is shorter than 32 characters/)
+    expect(JSON.stringify(result)).not.toContain('short-auth-secret')
+  })
+
+  test('the environment adapter passes a strong BETTER_AUTH_SECRETS next to a short BETTER_AUTH_SECRET', () => {
+    expect(fromEnv({ BETTER_AUTH_SECRETS: '2:Zq7-Lm2_Rt8+Vb4/Nc6=Hd1.Ys5~Wa3x,1:old', BETTER_AUTH_SECRET: 'short' }).outcome).toBe('ready')
+  })
 })
 
 describe('evaluateAuthReadiness SMTP provider', () => {

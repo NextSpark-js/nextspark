@@ -563,7 +563,7 @@ A browser `PUT` to the bucket needs a CORS rule for the app's origin:
 
 A presigned object lands under `pending/` and is copied to `uploads/` only when the confirm accepts it; a rejected one is deleted. An upload that is never confirmed (the user closed the tab) stays under `pending/`. Add a **lifecycle rule that expires objects under the `pending/` prefix after 1 day**: AWS S3, R2, Backblaze B2 and Spaces support prefix rules in the bucket settings, and MinIO with `mc ilm rule add --prefix pending/ --expire-days 1 <alias>/<bucket>`. A prefix rule was chosen over object tags because every one of these services supports it. A confirm is accepted up to one hour after the presign, well inside that day. The confirm copies only the bytes it checked (`x-amz-copy-source-if-match` with the ETag it read): an object replaced in between is refused and deleted.
 
-The confirm token is signed with a key derived from `BETTER_AUTH_SECRET`. Rotating the secret makes the tokens of uploads in progress invalid (confirm answers `400 INVALID_UPLOAD_TOKEN`); their pending objects are removed by the lifecycle rule. A rotation also ends every session, so do it outside busy hours.
+The confirm token is signed with a key derived from the session secret: the first entry of `BETTER_AUTH_SECRETS`, else `BETTER_AUTH_SECRET`, else `AUTH_SECRET`. Rotating the secret makes the tokens of uploads in progress invalid (confirm answers `400 INVALID_UPLOAD_TOKEN`); their pending objects are removed by the lifecycle rule. A rotation also ends every session, so do it outside busy hours.
 
 #### Standalone deployments
 

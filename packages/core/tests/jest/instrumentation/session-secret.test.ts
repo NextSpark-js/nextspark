@@ -82,7 +82,11 @@ describe('register() session secret check', () => {
     ['AUTH_SECRET alone', { AUTH_SECRET: 'short-auth-secret' }, 'AUTH_SECRET is shorter'],
     ['BETTER_AUTH_SECRETS with a short first entry', { BETTER_AUTH_SECRETS: `2:short-current, 1:${RANDOM}`, BETTER_AUTH_SECRET: RANDOM }, 'The first entry of BETTER_AUTH_SECRETS'],
     ['BETTER_AUTH_SECRETS with a placeholder first entry', { BETTER_AUTH_SECRETS: '1:your-secret-key-min-32-chars' }, 'is a placeholder'],
-    ['BETTER_AUTH_SECRETS without a version', { BETTER_AUTH_SECRETS: RANDOM }, 'The first entry of BETTER_AUTH_SECRETS'],
+    ['BETTER_AUTH_SECRETS without a version', { BETTER_AUTH_SECRETS: RANDOM }, 'BETTER_AUTH_SECRETS must be'],
+    ['BETTER_AUTH_SECRETS with a malformed later entry', { BETTER_AUTH_SECRETS: `2:${RANDOM},bad` }, 'BETTER_AUTH_SECRETS must be'],
+    ['BETTER_AUTH_SECRETS with a non-integer version', { BETTER_AUTH_SECRETS: `x:${RANDOM}` }, 'BETTER_AUTH_SECRETS must be'],
+    ['BETTER_AUTH_SECRETS with a version twice', { BETTER_AUTH_SECRETS: `1:${RANDOM},1:${RANDOM}x` }, 'BETTER_AUTH_SECRETS must be'],
+    ['BETTER_AUTH_SECRETS with an empty later secret', { BETTER_AUTH_SECRETS: `2:${RANDOM},1:` }, 'BETTER_AUTH_SECRETS must be'],
   ])('production exits with 1 for a weak effective secret: %s, without logging it', async (_label, vars, reason) => {
     delete env.BETTER_AUTH_SECRET
     Object.assign(env, vars)

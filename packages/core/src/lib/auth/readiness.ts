@@ -21,10 +21,12 @@ export interface AuthReadinessInput {
   authConfig?: Pick<AuthConfig, 'methods' | 'providers' | 'emailAndPassword'> | null
   configuration?: {
     /**
-     * Raw BETTER_AUTH_SECRET. Only a present value is judged: a missing one is
+     * The session secret (effectiveSessionSecret). Only a present value is judged: a missing one is
      * left to the auth library, and a runtime-only build never sees it.
      */
     betterAuthSecret?: string
+    /** Where betterAuthSecret came from (effectiveSessionSecret), for the message; BETTER_AUTH_SECRET when unset */
+    betterAuthSecretVariable?: (typeof SESSION_SECRET_VARIABLES)[number]
     email?: {
       /**
        * Raw EMAIL_PROVIDER. Exactly `auto`, `resend`, `smtp` or `console`; undefined or
@@ -178,13 +180,14 @@ export function evaluateSessionSecret(input: AuthReadinessInput): AuthReadinessD
     BETTER_AUTH_SECRET_MIN_LENGTH
   )
   if (state === 'missing' || state === 'valid') return null
+  const name = sessionSecretName(input.configuration?.betterAuthSecretVariable ?? 'BETTER_AUTH_SECRET')
   return {
     ...credentialDiagnostic('auth', 'BETTER_AUTH_SECRET', state),
     severity: input.environment === 'production' ? 'error' : 'warning',
     message:
       state === 'placeholder'
-        ? 'BETTER_AUTH_SECRET is a placeholder; set a random secret of at least 32 characters.'
-        : `BETTER_AUTH_SECRET is shorter than ${BETTER_AUTH_SECRET_MIN_LENGTH} characters; set a random secret of at least 32 characters.`,
+        ? `${name} is a placeholder; set a random secret of at least 32 characters.`
+        : `${name} is shorter than ${BETTER_AUTH_SECRET_MIN_LENGTH} characters; set a random secret of at least 32 characters.`,
   }
 }
 
@@ -211,6 +214,27 @@ export function effectiveSessionSecret(
 }
 
 /**
+ * Whether every BETTER_AUTH_SECRETS entry is one the auth library accepts (parseSecretsEnv and validateSecretsArray in
+ * better-auth 1.7.7): `<version>:<secret>`, a non-negative integer version (parseInt), a non-empty secret, no version
+ * twice. The library checks this on the first auth request; the server start checks it before.
+ */
+function sessionSecretsListValid(list: string): boolean {
+  const versions = new Set<number>()
+  for (const raw of list.split(',')) {
+    const entry = raw.trim()
+    const colon = entry.indexOf(':')
+    if (colon === -1) return false
+    const version = parseInt(entry.slice(0, colon), 10)
+    if (!Number.isInteger(version) || version < 0 || versions.has(version) || !entry.slice(colon + 1).trim()) return false
+    versions.add(version)
+  }
+  return true
+}
+
+const sessionSecretName = (variable: (typeof SESSION_SECRET_VARIABLES)[number]) =>
+  variable === 'BETTER_AUTH_SECRETS' ? 'The first entry of BETTER_AUTH_SECRETS' : variable
+
+/**
  * What makes the effective session secret unfit for production, as a code and a fixed message that never carry the
  * value; null when it is fit. A secret that is not set at all is a problem only with `requirePresent`: the server
  * start requires one, the build (which may get its secrets later) does not.
@@ -225,9 +249,12 @@ export function sessionSecretProblem(
       ? { code: 'BETTER_AUTH_SECRET_MISSING', message: 'No session secret is set: set BETTER_AUTH_SECRET (or BETTER_AUTH_SECRETS, or AUTH_SECRET) to a random secret of at least 32 characters.' }
       : null
   }
+  if (effective.variable === 'BETTER_AUTH_SECRETS' && !sessionSecretsListValid(env.BETTER_AUTH_SECRETS ?? '')) {
+    return { code: 'BETTER_AUTH_SECRET_MALFORMED', message: 'BETTER_AUTH_SECRETS must be comma-separated <version>:<secret> entries, each with its own non-negative integer version and a secret.' }
+  }
   const state = credentialState(effective.value, /./, BETTER_AUTH_SECRET_MIN_LENGTH)
   if (state === 'valid') return null
-  const name = effective.variable === 'BETTER_AUTH_SECRETS' ? 'The first entry of BETTER_AUTH_SECRETS' : effective.variable
+  const name = sessionSecretName(effective.variable)
   return state === 'placeholder'
     ? { code: 'BETTER_AUTH_SECRET_PLACEHOLDER', message: `${name} is a placeholder; set a random secret of at least 32 characters.` }
     : { code: 'BETTER_AUTH_SECRET_MALFORMED', message: `${name} is shorter than ${BETTER_AUTH_SECRET_MIN_LENGTH} characters; set a random secret of at least 32 characters.` }
@@ -481,8 +508,11 @@ function evaluateSocialConfiguration(
 export function authReadinessConfigurationFromEnv(
   env: Record<string, string | undefined>
 ): NonNullable<AuthReadinessInput['configuration']> {
+  // The secret sessions are signed with, as the auth library resolves it (#297)
+  const secret = effectiveSessionSecret(env)
   return {
-    betterAuthSecret: env.BETTER_AUTH_SECRET,
+    betterAuthSecret: secret?.value,
+    betterAuthSecretVariable: secret?.variable,
     email: {
       provider: env.EMAIL_PROVIDER,
       resendApiKey: env.RESEND_API_KEY,

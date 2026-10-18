@@ -1,11 +1,14 @@
 /**
  * The token a presign hands out and a confirm must bring back. It binds the
  * pending object to the user and team that asked for it, the declared type and
- * size, and a deadline; it is signed with a key derived from BETTER_AUTH_SECRET,
+ * size, and a deadline; it is signed with a key derived from the session secret
+ * (effectiveSessionSecret: the one the auth library signs with),
  * so a client cannot name an object it was not given.
  */
 
 import { createHmac, timingSafeEqual } from 'crypto'
+
+import { effectiveSessionSecret } from '../auth/readiness'
 
 export interface UploadClaim {
   /** Object name (storage/names.ts) */
@@ -24,8 +27,8 @@ export interface UploadClaim {
 export const CONFIRM_WINDOW_SECONDS = 3600
 
 function key(): Buffer {
-  const secret = process.env.BETTER_AUTH_SECRET
-  if (!secret) throw new Error('BETTER_AUTH_SECRET is missing')
+  const secret = effectiveSessionSecret(process.env)?.value
+  if (!secret) throw new Error('No session secret is set: set BETTER_AUTH_SECRET (or BETTER_AUTH_SECRETS, or AUTH_SECRET)')
   return createHmac('sha256', secret).update('nextspark:media-upload-token:v1').digest()
 }
 
