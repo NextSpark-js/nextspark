@@ -24,7 +24,7 @@ declare module '@nextsparkjs/registries/billing-registry' {
   // type-annotates its return values against that hand-written type.
   export type PlanType = 'free' | 'paid' | 'enterprise'
   export type PlanVisibility = 'public' | 'hidden' | 'invite_only'
-  export type PaymentProvider = 'stripe' | 'polar'
+  export type PaymentProvider = 'stripe' | 'polar' | 'lemonsqueezy'
 
   export interface FeatureDefinition {
     name: string

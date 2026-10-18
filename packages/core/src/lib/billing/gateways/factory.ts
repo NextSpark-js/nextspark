@@ -54,14 +54,17 @@ async function loadGateway(): Promise<BillingGateway> {
       const { PolarGateway } = await import('./polar')
       return new PolarGateway()
     }
+    case 'lemonsqueezy': {
+      const { LemonSqueezyGateway } = await import('./lemonsqueezy')
+      return new LemonSqueezyGateway()
+    }
     // Future providers (each one only enters the bundle when configured):
     // case 'paddle': { const { PaddleGateway } = await import('./paddle'); return new PaddleGateway() }
-    // case 'lemonsqueezy': { ... }
     // case 'mercadopago': { ... }
     default:
       throw new Error(
         `Unsupported billing provider: "${provider}". ` +
-        `Supported providers: stripe, polar. ` +
+        `Supported providers: stripe, polar, lemonsqueezy. ` +
         `Check your billing.config.ts provider setting.`
       )
   }

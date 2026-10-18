@@ -8,9 +8,10 @@
 
 import type { PlanType, PlanVisibility, PaymentProvider } from './types'
 
-// Extension types for lib/billing/{stripe,polar}-webhook-extensions.ts; the webhook modules themselves are internal.
+// Extension types for lib/billing/{stripe,polar,lemonsqueezy}-webhook-extensions.ts; the webhook modules themselves are internal.
 export type { StripeWebhookExtensions } from './stripe-webhook'
 export type { PolarWebhookExtensions } from './polar-webhook'
+export type { LemonSqueezyWebhookExtensions } from './lemonsqueezy-webhook'
 
 // ===========================================
 // FEATURE & LIMIT DEFINITIONS
@@ -53,7 +54,7 @@ export interface PlanDefinition {
   features: string[]
   /** Map of limitSlug -> value (-1 means unlimited) */
   limits: Record<string, number>
-  /** Price IDs for the configured payment provider (monthly and yearly) */
+  /** Price IDs for the configured payment provider (monthly and yearly): Stripe price ids, Polar product ids, Lemon Squeezy variant ids */
   providerPriceIds?: {
     monthly?: string | null
     yearly?: string | null
@@ -87,7 +88,7 @@ export interface ActionMappings {
 // ===========================================
 
 export interface BillingConfig {
-  /** Payment provider: stripe, polar */
+  /** Payment provider: stripe, polar, lemonsqueezy */
   provider: PaymentProvider
 
   /** Default currency (ISO 4217) */
