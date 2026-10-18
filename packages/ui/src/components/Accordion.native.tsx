@@ -76,7 +76,7 @@ export interface AccordionProps {
   className?: string;
 }
 
-const Accordion = React.forwardRef<ViewRef, AccordionProps>(
+const Accordion: React.ForwardRefExoticComponent<AccordionProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, AccordionProps>(
   (
     {
       type = "single",
@@ -159,7 +159,7 @@ export interface AccordionItemProps {
   className?: string;
 }
 
-const AccordionItem = React.forwardRef<ViewRef, AccordionItemProps>(
+const AccordionItem: React.ForwardRefExoticComponent<AccordionItemProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, AccordionItemProps>(
   ({ value, children, style, className }, ref) => {
     const { colors } = useTheme();
     const { expandedItems } = useAccordionContext();
@@ -197,7 +197,7 @@ export interface AccordionTriggerProps {
   className?: string;
 }
 
-const AccordionTrigger = React.forwardRef<ViewRef, AccordionTriggerProps>(
+const AccordionTrigger: React.ForwardRefExoticComponent<AccordionTriggerProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, AccordionTriggerProps>(
   ({ children, style, textStyle, className }, ref) => {
     const { colors } = useTheme();
     const { toggleItem } = useAccordionContext();
@@ -251,7 +251,7 @@ export interface AccordionContentProps {
   className?: string;
 }
 
-const AccordionContent = React.forwardRef<ViewRef, AccordionContentProps>(
+const AccordionContent: React.ForwardRefExoticComponent<AccordionContentProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, AccordionContentProps>(
   ({ children, style, className }, ref) => {
     const { isExpanded } = useAccordionItemContext();
 

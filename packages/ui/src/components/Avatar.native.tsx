@@ -43,7 +43,7 @@ export interface AvatarProps extends ViewProps {
   className?: string;
 }
 
-export const Avatar = React.forwardRef<ViewRef, AvatarProps>(
+export const Avatar: React.ForwardRefExoticComponent<AvatarProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, AvatarProps>(
   (
     {
       size = "default",
@@ -75,7 +75,7 @@ export interface AvatarImageProps extends Omit<ImageProps, "source" | "src"> {
   className?: string;
 }
 
-export const AvatarImage = React.forwardRef<ImageRef, AvatarImageProps>(
+export const AvatarImage: React.ForwardRefExoticComponent<AvatarImageProps & React.RefAttributes<ImageRef>> = React.forwardRef<ImageRef, AvatarImageProps>(
   (
     {
       src,
@@ -110,7 +110,7 @@ export interface AvatarFallbackProps extends ViewProps {
   className?: string;
 }
 
-export const AvatarFallback = React.forwardRef<ViewRef, AvatarFallbackProps>(
+export const AvatarFallback: React.ForwardRefExoticComponent<AvatarFallbackProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, AvatarFallbackProps>(
   (
     {
       size = "default",

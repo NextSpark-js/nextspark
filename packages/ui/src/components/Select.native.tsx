@@ -35,7 +35,7 @@ export interface SelectProps extends ViewProps {
   className?: string;
 }
 
-export const Select = React.forwardRef<ViewRef, SelectProps>(
+export const Select: React.ForwardRefExoticComponent<SelectProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, SelectProps>(
   (
     {
       options,

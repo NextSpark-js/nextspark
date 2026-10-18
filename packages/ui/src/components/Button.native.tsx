@@ -36,7 +36,7 @@ export interface ButtonProps extends Omit<PressableProps, "children"> {
   textClassName?: string;
 }
 
-export const Button = React.forwardRef<ViewRef, ButtonProps>(
+export const Button: React.ForwardRefExoticComponent<ButtonProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, ButtonProps>(
   (
     {
       variant = "default",

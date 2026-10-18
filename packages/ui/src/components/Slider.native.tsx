@@ -40,7 +40,7 @@ export interface SliderProps {
   className?: string
 }
 
-const Slider = React.forwardRef<ViewRef, SliderProps>(
+const Slider: React.ForwardRefExoticComponent<SliderProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, SliderProps>(
   (
     {
       value: controlledValue,

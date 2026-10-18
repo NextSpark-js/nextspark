@@ -17,7 +17,7 @@ export interface ProgressProps {
   className?: string;
 }
 
-const Progress = React.forwardRef<ViewRef, ProgressProps>(
+const Progress: React.ForwardRefExoticComponent<ProgressProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, ProgressProps>(
   ({ value = 0, style, className }, ref) => {
     const { colors } = useTheme();
     const animatedWidth = useRef(new Animated.Value(value)).current;

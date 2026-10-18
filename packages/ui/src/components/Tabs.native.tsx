@@ -38,7 +38,7 @@ export interface TabsProps {
   defaultValue?: string;
 }
 
-const Tabs = React.forwardRef<ViewRef, TabsProps>(
+const Tabs: React.ForwardRefExoticComponent<TabsProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, TabsProps>(
   ({ value, onValueChange, children, style, className, defaultValue }, ref) => {
     const contextValue = useMemo(
       () => ({ value, onValueChange }),
@@ -64,7 +64,7 @@ export interface TabsListProps {
   className?: string;
 }
 
-const TabsList = React.forwardRef<ViewRef, TabsListProps>(
+const TabsList: React.ForwardRefExoticComponent<TabsListProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, TabsListProps>(
   ({ children, style, className }, ref) => {
     const { colors } = useTheme();
 
@@ -95,7 +95,7 @@ export interface TabsTriggerProps {
   className?: string;
 }
 
-const TabsTrigger = React.forwardRef<ViewRef, TabsTriggerProps>(
+const TabsTrigger: React.ForwardRefExoticComponent<TabsTriggerProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, TabsTriggerProps>(
   ({ value, children, disabled, style, textStyle, className }, ref) => {
     const { colors } = useTheme();
     const { value: activeValue, onValueChange } = useTabsContext();
@@ -143,7 +143,7 @@ export interface TabsContentProps {
   className?: string;
 }
 
-const TabsContent = React.forwardRef<ViewRef, TabsContentProps>(
+const TabsContent: React.ForwardRefExoticComponent<TabsContentProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, TabsContentProps>(
   ({ value, children, style, className }, ref) => {
     const { value: activeValue } = useTabsContext();
 

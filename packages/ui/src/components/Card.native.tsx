@@ -22,7 +22,7 @@ export interface CardProps extends ViewProps {
   className?: string;
 }
 
-export const Card = React.forwardRef<ViewRef, CardProps>(
+export const Card: React.ForwardRefExoticComponent<CardProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, CardProps>(
   (
     {
       children,
@@ -61,7 +61,7 @@ export interface PressableCardProps extends PressableProps {
   className?: string;
 }
 
-export const PressableCard = React.forwardRef<ViewRef, PressableCardProps>(
+export const PressableCard: React.ForwardRefExoticComponent<PressableCardProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, PressableCardProps>(
   (
     {
       children,
@@ -108,7 +108,7 @@ export interface CardHeaderProps extends ViewProps {
   className?: string;
 }
 
-export const CardHeader = React.forwardRef<ViewRef, CardHeaderProps>(
+export const CardHeader: React.ForwardRefExoticComponent<CardHeaderProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, CardHeaderProps>(
   (
     {
       children,
@@ -136,7 +136,7 @@ export interface CardTitleProps extends ViewProps {
   className?: string;
 }
 
-export const CardTitle = React.forwardRef<ViewRef, CardTitleProps>(
+export const CardTitle: React.ForwardRefExoticComponent<CardTitleProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, CardTitleProps>(
   (
     {
       children,
@@ -178,7 +178,7 @@ export interface CardDescriptionProps extends ViewProps {
   className?: string;
 }
 
-export const CardDescription = React.forwardRef<ViewRef, CardDescriptionProps>(
+export const CardDescription: React.ForwardRefExoticComponent<CardDescriptionProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, CardDescriptionProps>(
   (
     {
       children,
@@ -218,7 +218,7 @@ export interface CardContentProps extends ViewProps {
   className?: string;
 }
 
-export const CardContent = React.forwardRef<ViewRef, CardContentProps>(
+export const CardContent: React.ForwardRefExoticComponent<CardContentProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, CardContentProps>(
   (
     {
       children,
@@ -244,7 +244,7 @@ export interface CardFooterProps extends ViewProps {
   className?: string;
 }
 
-export const CardFooter = React.forwardRef<ViewRef, CardFooterProps>(
+export const CardFooter: React.ForwardRefExoticComponent<CardFooterProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, CardFooterProps>(
   (
     {
       children,

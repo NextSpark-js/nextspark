@@ -22,7 +22,7 @@ export interface TextareaProps extends Omit<TextInputProps, "style"> {
   containerClassName?: string;
 }
 
-export const Textarea = React.forwardRef<TextInputRef, TextareaProps>(
+export const Textarea: React.ForwardRefExoticComponent<TextareaProps & React.RefAttributes<TextInputRef>> = React.forwardRef<TextInputRef, TextareaProps>(
   (
     {
       label,

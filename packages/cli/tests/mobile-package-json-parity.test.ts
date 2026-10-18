@@ -30,7 +30,7 @@ test('the wizard declares the same mobile packages as the shipped template', asy
       assert.equal(pick(wizard), pick(template), `${n} must be pinned the same in both`)
     }
     assert.equal(wizard.dependencies['react-native-worklets'], '0.13.0')
-    assert.equal(wizard.devDependencies['@types/react'], '^19')
+    assert.equal(wizard.devDependencies['@types/react'], '~19.3.0')
     for (const n of ['react-native-css-interop', 'react-native-worklets', 'babel-preset-expo']) {
       assert.ok(wizard.dependencies[n], `${n} must be declared`)
     }

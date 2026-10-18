@@ -108,7 +108,7 @@ export const VERSIONS = {
   TANSTACK_QUERY: '^5.62.0',
   EXPO: '~58.0.14',
   REACT: '19.3.0',
-  TYPES_REACT: '^19',
+  TYPES_REACT: '~19.3.0',
   REACT_NATIVE: '0.88.0',
   TYPESCRIPT: '^5.3.0',
 

@@ -76,7 +76,7 @@ function getDotColors(colors: ThemeColors) {
   } as const;
 }
 
-export const Badge = React.forwardRef<ViewRef, BadgeProps>(
+export const Badge: React.ForwardRefExoticComponent<BadgeProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, BadgeProps>(
   (
     {
       variant = "default",
@@ -137,7 +137,7 @@ export interface PressableBadgeProps extends Omit<PressableProps, "children"> {
   textClassName?: string;
 }
 
-export const PressableBadge = React.forwardRef<ViewRef, PressableBadgeProps>(
+export const PressableBadge: React.ForwardRefExoticComponent<PressableBadgeProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, PressableBadgeProps>(
   (
     {
       variant = "outline",

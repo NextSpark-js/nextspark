@@ -28,7 +28,7 @@ export interface SwitchProps extends Omit<PressableProps, "onPress"> {
 // Wrapper to avoid React version type conflicts
 const AnimatedThumb = Animated.View as unknown as typeof View;
 
-export const Switch = React.forwardRef<ViewRef, SwitchProps>(
+export const Switch: React.ForwardRefExoticComponent<SwitchProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, SwitchProps>(
   (
     {
       checked = false,

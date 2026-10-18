@@ -27,7 +27,7 @@ export interface SkeletonProps extends ViewProps {
 // Wrapper to avoid React version type conflicts
 const AnimatedBox = Animated.View as unknown as typeof View;
 
-export const Skeleton = React.forwardRef<ViewRef, SkeletonProps>(
+export const Skeleton: React.ForwardRefExoticComponent<SkeletonProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, SkeletonProps>(
   (
     {
       style,
@@ -74,7 +74,7 @@ export const Skeleton = React.forwardRef<ViewRef, SkeletonProps>(
 Skeleton.displayName = "Skeleton";
 
 // Common skeleton patterns
-export const SkeletonText = React.forwardRef<ViewRef, SkeletonProps>(
+export const SkeletonText: React.ForwardRefExoticComponent<SkeletonProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, SkeletonProps>(
   (
     {
       style,
@@ -98,7 +98,7 @@ export const SkeletonText = React.forwardRef<ViewRef, SkeletonProps>(
 
 SkeletonText.displayName = "SkeletonText";
 
-export const SkeletonTitle = React.forwardRef<ViewRef, SkeletonProps>(
+export const SkeletonTitle: React.ForwardRefExoticComponent<SkeletonProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, SkeletonProps>(
   (
     {
       style,
@@ -122,7 +122,7 @@ export const SkeletonTitle = React.forwardRef<ViewRef, SkeletonProps>(
 
 SkeletonTitle.displayName = "SkeletonTitle";
 
-export const SkeletonAvatar = React.forwardRef<ViewRef, SkeletonProps>(
+export const SkeletonAvatar: React.ForwardRefExoticComponent<SkeletonProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, SkeletonProps>(
   (
     {
       style,
@@ -146,7 +146,7 @@ export const SkeletonAvatar = React.forwardRef<ViewRef, SkeletonProps>(
 
 SkeletonAvatar.displayName = "SkeletonAvatar";
 
-export const SkeletonCard = React.forwardRef<ViewRef, SkeletonProps>(
+export const SkeletonCard: React.ForwardRefExoticComponent<SkeletonProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, SkeletonProps>(
   (
     {
       style,

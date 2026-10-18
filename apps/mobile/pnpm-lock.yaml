@@ -138,7 +138,7 @@ importers:
         specifier: ^22.10.7
         version: 22.20.2
       '@types/react':
-        specifier: ^19
+        specifier: ~19.3.0
         version: 19.3.0
       expo-modules-core:
         specifier: ~58.0.22

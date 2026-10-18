@@ -70,7 +70,7 @@ export interface DialogHeaderProps extends ViewProps {
   className?: string;
 }
 
-export const DialogHeader = React.forwardRef<ViewRef, DialogHeaderProps>(
+export const DialogHeader: React.ForwardRefExoticComponent<DialogHeaderProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, DialogHeaderProps>(
   (
     {
       children,
@@ -107,7 +107,7 @@ export interface DialogTitleProps extends ViewProps {
   className?: string;
 }
 
-export const DialogTitle = React.forwardRef<ViewRef, DialogTitleProps>(
+export const DialogTitle: React.ForwardRefExoticComponent<DialogTitleProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, DialogTitleProps>(
   (
     {
       children,
@@ -149,7 +149,7 @@ export interface DialogDescriptionProps extends ViewProps {
   className?: string;
 }
 
-export const DialogDescription = React.forwardRef<ViewRef, DialogDescriptionProps>(
+export const DialogDescription: React.ForwardRefExoticComponent<DialogDescriptionProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, DialogDescriptionProps>(
   (
     {
       children,
@@ -189,7 +189,7 @@ export interface DialogContentProps extends ViewProps {
   className?: string;
 }
 
-export const DialogContent = React.forwardRef<ViewRef, DialogContentProps>(
+export const DialogContent: React.ForwardRefExoticComponent<DialogContentProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, DialogContentProps>(
   (
     {
       children,
@@ -215,7 +215,7 @@ export interface DialogFooterProps extends ViewProps {
   className?: string;
 }
 
-export const DialogFooter = React.forwardRef<ViewRef, DialogFooterProps>(
+export const DialogFooter: React.ForwardRefExoticComponent<DialogFooterProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, DialogFooterProps>(
   (
     {
       children,
@@ -252,7 +252,7 @@ export interface DialogCloseProps {
   className?: string;
 }
 
-export const DialogClose = React.forwardRef<ViewRef, DialogCloseProps>(
+export const DialogClose: React.ForwardRefExoticComponent<DialogCloseProps & React.RefAttributes<ViewRef>> = React.forwardRef<ViewRef, DialogCloseProps>(
   (
     {
       children,

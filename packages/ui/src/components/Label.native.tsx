@@ -19,7 +19,7 @@ export interface LabelProps extends TextProps {
   htmlFor?: string; // Ignored in RN
 }
 
-export const Label = React.forwardRef<TextRef, LabelProps>(
+export const Label: React.ForwardRefExoticComponent<LabelProps & React.RefAttributes<TextRef>> = React.forwardRef<TextRef, LabelProps>(
   (
     {
       children,
