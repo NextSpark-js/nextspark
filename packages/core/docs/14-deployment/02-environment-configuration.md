@@ -95,6 +95,8 @@ RESEND_FROM_EMAIL=noreply@yourdomain.com
 RESEND_FROM_NAME=Your App Name
 ```
 
+To send through SendGrid, Mailgun, SES, Postmark or your own server instead, set `EMAIL_PROVIDER=smtp` and the `SMTP_*` variables, and run `pnpm add nodemailer`: see `docs/06-authentication/13-email-providers.md`.
+
 ### Vercel Deployment
 
 ```bash

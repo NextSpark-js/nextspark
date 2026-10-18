@@ -116,7 +116,7 @@ auth: {
 
 | Variable | Needed for |
 |----------|-----------|
-| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (`RESEND_FROM_NAME` optional) | Delivering the sign-in code. The preset reuses the existing email integration (Resend) — no extra provider. |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (`RESEND_FROM_NAME` optional) | Delivering the sign-in code. The preset reuses the existing email integration (Resend) — no extra provider. Any SMTP server works too: see [Email Providers](./13-email-providers.md). |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | "Continue with Google". Without them set `providers.google.enabled: false` or drop `'google'` from `methods`. |
 | `BETTER_AUTH_SECRET`, `NEXT_PUBLIC_APP_URL` | Better Auth itself (unchanged). |
 
