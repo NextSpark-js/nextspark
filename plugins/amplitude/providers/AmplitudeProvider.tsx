@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { useConsent } from '@nextsparkjs/core/lib/consent';
 import { AmplitudeCore } from '../lib/amplitude-core';
 import { amplitudePlugin } from '../plugin.config';
 import { AmplitudePluginConfig, AmplitudePluginContext, ConsentState, isAmplitudeAPIKey } from '../types/amplitude.types';
@@ -10,6 +11,11 @@ export const AmplitudeProvider: React.FC<{ children: React.ReactNode; overrideCo
   overrideConfig 
 }) => {
   const [isInitialized, setIsInitialized] = useState(false);
+  // Core's cookie consent (#272). With it off in app.config nothing is gated and the plugin behaves as before.
+  const { enabled: coreConsentEnabled, categories: coreConsent } = useConsent();
+  const analyticsAllowed = !coreConsentEnabled || coreConsent.analytics;
+  const analyticsAllowedRef = useRef(analyticsAllowed);
+  analyticsAllowedRef.current = analyticsAllowed;
   const [error, setError] = useState<Error | null>(null);
   const [consent, setConsent] = useState<ConsentState>({ 
     analytics: false, 
@@ -47,7 +53,8 @@ export const AmplitudeProvider: React.FC<{ children: React.ReactNode; overrideCo
         console.warn(`[Amplitude] Initialization failed, retrying in ${RETRY_DELAY_MS}ms (attempt ${retryCount.current}/${MAX_RETRIES})`);
         
         setTimeout(() => {
-          initializeAmplitude(config);
+          // consent revoked while waiting: do not initialise behind its back
+          if (analyticsAllowedRef.current) initializeAmplitude(config);
         }, RETRY_DELAY_MS);
       } else {
         setError(error);
@@ -74,17 +81,22 @@ export const AmplitudeProvider: React.FC<{ children: React.ReactNode; overrideCo
   }, []);
 
   useEffect(() => {
-    if (pluginConfig && !configLoading && !configError && !isInitialized && !error) {
+    if (analyticsAllowed && pluginConfig && !configLoading && !configError && !isInitialized && !error) {
       currentConfig.current = { ...pluginConfig, ...overrideConfig };
       initializeAmplitude(currentConfig.current);
     }
-  }, [pluginConfig, configLoading, configError, isInitialized, error, initializeAmplitude, overrideConfig]);
+  }, [analyticsAllowed, pluginConfig, configLoading, configError, isInitialized, error, initializeAmplitude, overrideConfig]);
+
+  // Revoking analytics consent opts out (nothing more is tracked); granting it again opts back in
+  useEffect(() => {
+    if (isInitialized) AmplitudeCore.setOptOut(!analyticsAllowed);
+  }, [isInitialized, analyticsAllowed]);
 
   const contextValue: AmplitudePluginContext = {
     amplitude: AmplitudeCore,
     isInitialized,
     config: currentConfig.current,
-    consent,
+    consent: coreConsentEnabled ? { ...consent, analytics: coreConsent.analytics } : consent,
     updateConsent,
     error,
   };

@@ -48,6 +48,14 @@
 - **Fallback automático** para keys faltantes
 - **Integration con sistema i18n** de la aplicación
 
+## 🍪 **Consentimiento de cookies del core**
+
+Con `consent: { enabled: true }` en `app.config.ts`, el plugin lee el mismo consentimiento que el banner del core
+(`useConsent()` de `@nextsparkjs/core/lib/consent`): **no se inicializa antes de que se conceda `analytics`**, se
+inicializa al concederlo y **se da de baja (opt-out) al revocarlo**: descarta los eventos y vacía la cola, sin una
+segunda inicialización si se vuelve a conceder. Con el consentimiento desactivado en la config, el plugin se comporta
+como antes. Ver la guía de cookie consent del core.
+
 ## 🚀 **Instalación y Configuración**
 
 ### **1. Configuración Básica**

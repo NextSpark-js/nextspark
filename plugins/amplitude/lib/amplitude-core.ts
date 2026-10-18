@@ -5,6 +5,7 @@ import { DataSanitizer } from './security';
 
 class AmplitudeCoreWrapper {
   private initialized = false;
+  private optedOut = false;
   private config: AmplitudePluginConfig | null = null;
   private eventQueue: EventQueue;
   private healthCheckInterval: NodeJS.Timeout | null = null;
@@ -44,10 +45,26 @@ class AmplitudeCoreWrapper {
     }
   }
 
+  /**
+   * Opt out of tracking (analytics consent revoked) or back in. While opted out every call is dropped and the events
+   * still queued are discarded; the SDK stays initialised, so granting consent again needs no second init.
+   */
+  public setOptOut(optedOut: boolean): void {
+    this.optedOut = optedOut;
+    if (optedOut) {
+      this.eventQueue.clear();
+    }
+  }
+
+  public isOptedOut(): boolean {
+    return this.optedOut;
+  }
+
   public async track(eventType: EventType, properties?: EventProperties): Promise<void> {
     if (!this.initialized) {
       throw new Error('Amplitude not initialized');
     }
+    if (this.optedOut) return;
 
     const startTime = Date.now();
     
@@ -89,6 +106,7 @@ class AmplitudeCoreWrapper {
     if (!this.initialized) {
       throw new Error('Amplitude not initialized');
     }
+    if (this.optedOut) return;
 
     try {
       // Sanitize user properties
@@ -110,6 +128,7 @@ class AmplitudeCoreWrapper {
     if (!this.initialized) {
       throw new Error('Amplitude not initialized');
     }
+    if (this.optedOut) return;
 
     try {
       // Sanitize user properties
@@ -155,6 +174,7 @@ class AmplitudeCoreWrapper {
     
     this.eventQueue.shutdown();
     this.initialized = false;
+    this.optedOut = false;
     
     console.log('[Amplitude Core] Shutdown complete');
   }
