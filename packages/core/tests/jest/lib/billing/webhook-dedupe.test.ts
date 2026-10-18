@@ -169,6 +169,45 @@ describeWithPostgres('billing webhook deduplication', () => {
     expect(onOneTimePaymentCompleted).toHaveBeenCalledTimes(2)
   })
 
+  test('a handler that throws after writing a billing_events row keeps none of its writes, and the retry writes one', async () => {
+    const onOneTimePaymentCompleted = jest.fn()
+      .mockRejectedValueOnce(new Error('credits service down'))
+      .mockResolvedValueOnce(undefined)
+    const handler = createPolarWebhookHandler(async () => ({ onOneTimePaymentCompleted }))
+    const event = polarOrder('evt_polar_rollback')
+    const auditRows = async () =>
+      (await db.query(`SELECT count(*)::int AS n FROM billing_events WHERE metadata->>'polarEventId' = $1`, [event.id])).rows[0].n
+    const claims = async () =>
+      (await db.query(`SELECT status FROM billing_webhook_events WHERE "eventId" = $1`, [event.id])).rows
+
+    expect((await handler(polarRequest(event))).status).toBe(500)
+    expect(await auditRows()).toBe(0)
+    expect(await claims()).toEqual([])
+
+    expect(await responseOf(await handler(polarRequest(event)))).toEqual({ status: 200, body: { received: true } })
+    expect(await auditRows()).toBe(1)
+    expect(await claims()).toEqual([{ status: 'processed' }])
+  })
+
+  test('when the final update matches no claim, nothing the handler wrote is kept', async () => {
+    const { query } = require('@nextsparkjs/core/lib/db')
+    const audit = () => db.query(`SELECT count(*)::int AS n FROM billing_events WHERE metadata->>'evt' = 'evt_lost_claim'`)
+
+    const outcome = await webhookEvents.processWebhookEventOnce('stripe', 'evt_lost_claim', 'x', async () => {
+      await query(
+        `INSERT INTO billing_events ("subscriptionId", type, status, amount, currency, metadata)
+         VALUES ('sub-1', 'payment', 'succeeded', 1, 'usd', '{"evt": "evt_lost_claim"}')`
+      )
+      // another delivery took the claim over meanwhile: the token no longer matches
+      await db.query(`UPDATE billing_webhook_events SET "claimedAt" = clock_timestamp() WHERE "eventId" = 'evt_lost_claim'`)
+    })
+
+    expect(outcome).toBe('in_progress')
+    expect((await audit()).rows[0].n).toBe(0)
+    expect((await db.query(`SELECT status FROM billing_webhook_events WHERE "eventId" = 'evt_lost_claim'`)).rows)
+      .toEqual([{ status: 'processing' }])
+  })
+
   test('Stripe: an event that writes no billing_events row is deduplicated', async () => {
     const event = {
       id: 'evt_stripe_sub_updated',
@@ -257,7 +296,8 @@ describeWithPostgres('billing webhook deduplication', () => {
 
       finishStale()
       if (ending === 'fails') await expect(stale).rejects.toThrow('stale delivery failed')
-      else expect(await stale).toBe('processed')
+      // its writes are rolled back, and the gateway is told to retry: the newer delivery may still fail
+      else expect(await stale).toBe('in_progress')
       expect(await row(eventId)).toEqual([newerClaim])
       expect(newerClaim.status).toBe('processing')
 

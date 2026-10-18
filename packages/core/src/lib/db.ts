@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Pool, PoolClient } from 'pg';
 import { createPool } from './db-pool';
 import { isValidUUID } from './utils/uuid';
@@ -144,6 +145,42 @@ const servicePool: Pool =
       });
 
 /**
+ * The service-pool transaction opened by withServiceTransaction() for the code it runs. `query`, `queryRows`,
+ * `queryOne` and the *WithRLS calls that run on the service pool (no userId, or `service: true`) use its client, so
+ * they commit or roll back together. `open` turns false once the transaction ends: work that outlives it (a promise
+ * nobody awaited) goes back to the pool instead of reusing a released client.
+ */
+const serviceTransaction = new AsyncLocalStorage<{ client: PoolClient; open: boolean }>();
+
+function openServiceTransaction(): PoolClient | null {
+  const tx = serviceTransaction.getStore();
+  return tx?.open ? tx.client : null;
+}
+
+/**
+ * Runs `fn` in one transaction on the service (RLS-bypass) pool: it commits when `fn` resolves and rolls back when it
+ * throws. Inside `fn`, the db helpers above use that transaction. Calls with a userId (app pool, RLS evaluated) and
+ * getTransactionClient() still open their own connection and commit on their own.
+ */
+export async function withServiceTransaction<T>(fn: () => Promise<T>): Promise<T> {
+  const client = await acquireClient(true);
+  const tx = { client, open: true };
+  try {
+    await client.query('BEGIN');
+    const result = await serviceTransaction.run(tx, fn);
+    tx.open = false;
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    tx.open = false;
+    await client.query('ROLLBACK').catch(() => {}); // the original error matters, not a failed rollback on a dead client
+    throw error;
+  } finally {
+    releaseClient(client);
+  }
+}
+
+/**
  * Validate userId format to prevent SQL injection in SET LOCAL commands
  *
  * Security behavior:
@@ -248,6 +285,8 @@ export async function queryWithRLS<T = unknown>(
   options?: RLSOptions
 ): Promise<T[]> {
   const useService = shouldUseService(userId, options);
+  const tx = useService ? openServiceTransaction() : null;
+  if (tx) return (await tx.query(query, params)).rows;
   const client = await acquireClient(useService);
 
   try {
@@ -305,6 +344,11 @@ export async function mutateWithRLS<T = unknown>(
   options?: RLSOptions
 ): Promise<{ rows: T[], rowCount: number }> {
   const useService = shouldUseService(userId, options);
+  const tx = useService ? openServiceTransaction() : null;
+  if (tx) {
+    const result = await tx.query(query, params);
+    return { rows: result.rows, rowCount: result.rowCount || 0 };
+  }
   const client = await acquireClient(useService);
 
   try {
@@ -413,7 +457,7 @@ export async function query<T = unknown>(
 ): Promise<{ rows: T[]; rowCount: number }> {
   // No-RLS-context calls are system operations by definition → service pool
   // (bypass). Pre-cutover this is the same target as `pool` (owner).
-  const result = await servicePool.query(text, params);
+  const result = await (openServiceTransaction() ?? servicePool).query(text, params);
   return {
     rows: result.rows,
     rowCount: result.rowCount || 0
@@ -428,7 +472,7 @@ export async function queryRows<T = unknown>(
   text: string,
   params?: unknown[]
 ): Promise<T[]> {
-  const result = await servicePool.query(text, params);
+  const result = await (openServiceTransaction() ?? servicePool).query(text, params);
   return result.rows;
 }
 
@@ -440,7 +484,7 @@ export async function queryOne<T = unknown>(
   text: string,
   params?: unknown[]
 ): Promise<T | null> {
-  const result = await servicePool.query(text, params);
+  const result = await (openServiceTransaction() ?? servicePool).query(text, params);
   return result.rows[0] || null;
 }
 
