@@ -21,6 +21,7 @@ import { query, queryOne } from '@nextsparkjs/core/lib/db'
 // Polar webhook verification - import from gateway
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { processWebhookEventOnce, webhookOutcomeResponse } from '@nextsparkjs/core/lib/billing/webhook-events'
+import { subscriptionRowForNewSubscription } from '@nextsparkjs/core/lib/billing/subscription-binding'
 import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/polar-webhook'
 
 /** Loads a project's Polar webhook extensions; core's route passes none. */
@@ -147,6 +148,10 @@ async function handleCheckoutUpdated(data: Record<string, unknown>, eventId: str
     console.warn(`[polar-webhook] Plan ${planSlug} not found in database, keeping current plan`)
   }
 
+  // The team's current row, or its latest one when its subscription ended (#300)
+  const row = await subscriptionRowForNewSubscription(teamId, { gateway: 'polar', eventId })
+  if (!row) return
+
   // Update subscription with Polar IDs
   if (planId) {
     await query(
@@ -157,10 +162,11 @@ async function handleCheckoutUpdated(data: Record<string, unknown>, eventId: str
            "planId" = $3,
            "billingInterval" = $4,
            status = 'active',
+           "canceledAt" = NULL,
+           "cancelAtPeriodEnd" = false,
            "updatedAt" = NOW()
-       WHERE "teamId" = $5
-         AND status IN ('active', 'trialing', 'past_due')`,
-      [subscriptionId || null, customerId || null, planId, billingPeriod, teamId]
+       WHERE id = $5`,
+      [subscriptionId || null, customerId || null, planId, billingPeriod, row.id]
     )
   } else {
     await query(
@@ -169,10 +175,11 @@ async function handleCheckoutUpdated(data: Record<string, unknown>, eventId: str
            "externalCustomerId" = $2,
            "paymentProvider" = 'polar',
            status = 'active',
+           "canceledAt" = NULL,
+           "cancelAtPeriodEnd" = false,
            "updatedAt" = NOW()
-       WHERE "teamId" = $3
-         AND status IN ('active', 'trialing', 'past_due')`,
-      [subscriptionId || null, customerId || null, teamId]
+       WHERE id = $3`,
+      [subscriptionId || null, customerId || null, row.id]
     )
   }
 
@@ -180,7 +187,7 @@ async function handleCheckoutUpdated(data: Record<string, unknown>, eventId: str
   const amount = data.amount as number | undefined
   const currency = data.currency as string | undefined
   await logBillingEvent({
-    teamId,
+    subscriptionId: row.id,
     type: 'payment',
     status: 'succeeded',
     amount: amount || 0,
@@ -376,28 +383,18 @@ function mapPolarStatus(polarStatus: string): string {
  * Also serves as idempotency record (polarEventId in metadata).
  */
 async function logBillingEvent(params: {
-  teamId: string
+  subscriptionId: string
   type: string
   status: string
   amount: number
   currency: string
   polarEventId: string
 }) {
-  const sub = await queryOne<{ id: string }>(
-    `SELECT id FROM subscriptions WHERE "teamId" = $1 LIMIT 1`,
-    [params.teamId]
-  )
-
-  if (!sub) {
-    console.warn(`[polar-webhook] No subscription found for team ${params.teamId}, cannot log billing event`)
-    return
-  }
-
   await query(
     `INSERT INTO "billing_events" ("subscriptionId", type, status, amount, currency, metadata)
      VALUES ($1, $2, $3, $4, $5, $6)`,
     [
-      sub.id,
+      params.subscriptionId,
       params.type,
       params.status,
       params.amount,

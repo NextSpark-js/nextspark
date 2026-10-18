@@ -459,4 +459,62 @@ describeWithPostgres('billing webhook deduplication', () => {
     expect(await webhookEvents.processWebhookEventOnce('polar', 'evt_live', 'x', handle)).toBe('processed')
     expect(handle).toHaveBeenCalledTimes(1)
   })
+
+  describe('a team whose subscription ended checks out again (#300)', () => {
+    const rowOf = async (id: string) => (await db.query(
+      `SELECT status, "externalSubscriptionId", "externalCustomerId", "paymentProvider", "cancelAtPeriodEnd", "canceledAt" IS NOT NULL AS "hasCanceledAt"
+       FROM subscriptions WHERE id = $1`, [id])).rows[0]
+
+    beforeAll(async () => {
+      await db.query(`
+        INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-ended-stripe', 'Ended Stripe', 'team-ended-stripe', 'u1'), ('team-ended-polar', 'Ended Polar', 'team-ended-polar', 'u1'), ('team-no-row', 'No Row', 'team-no-row', 'u1');
+        -- an expired subscription and, older, a canceled one: the latest row is reused
+        INSERT INTO subscriptions (id, "teamId", "planId", status, "currentPeriodStart", "currentPeriodEnd", "createdAt", "paymentProvider", "externalSubscriptionId", "canceledAt") VALUES
+          ('sub-ended-stripe-old', 'team-ended-stripe', 'plan-1', 'canceled', now() - interval '90 days', now() - interval '60 days', now() - interval '90 days', 'stripe', 'sub_stripe_older', now() - interval '60 days'),
+          ('sub-ended-stripe', 'team-ended-stripe', 'plan-1', 'expired', now() - interval '40 days', now() - interval '10 days', now() - interval '40 days', 'stripe', 'sub_stripe_ended', now() - interval '10 days'),
+          ('sub-ended-polar', 'team-ended-polar', 'plan-1', 'canceled', now() - interval '40 days', now() - interval '10 days', now() - interval '40 days', 'polar', 'sub_polar_ended', now() - interval '10 days');
+      `)
+    })
+
+    test('Stripe: checkout.session.completed activates the latest row on the new subscription', async () => {
+      const event = {
+        id: 'evt_stripe_resubscribe',
+        type: 'checkout.session.completed',
+        data: { object: { id: 'cs_resubscribe', subscription: 'sub_stripe_new', customer: 'cus_stripe_new', amount_total: 2900, currency: 'usd', metadata: { teamId: 'team-ended-stripe', planSlug: 'pro', billingPeriod: 'monthly' } } },
+      }
+      expect(await responseOf(await handleStripeWebhook(stripeRequest(event)))).toEqual({ status: 200, body: { received: true } })
+      expect(await rowOf('sub-ended-stripe')).toEqual({
+        status: 'active', externalSubscriptionId: 'sub_stripe_new', externalCustomerId: 'cus_stripe_new', paymentProvider: 'stripe', cancelAtPeriodEnd: false, hasCanceledAt: false,
+      })
+      expect((await rowOf('sub-ended-stripe-old')).status).toBe('canceled')
+      expect((await db.query(`SELECT type, status, amount FROM billing_events WHERE "subscriptionId" = 'sub-ended-stripe'`)).rows).toEqual([{ type: 'payment', status: 'succeeded', amount: 2900 }])
+    })
+
+    test('Polar: checkout.updated activates the latest row on the new subscription', async () => {
+      const event = {
+        id: 'evt_polar_resubscribe',
+        type: 'checkout.updated',
+        data: { status: 'succeeded', subscriptionId: 'sub_polar_new', customerId: 'cus_polar_new', amount: 2900, currency: 'usd', metadata: { teamId: 'team-ended-polar', planSlug: 'pro', billingPeriod: 'monthly' } },
+      }
+      const handler = createPolarWebhookHandler()
+      expect(await responseOf(await handler(polarRequest(event)))).toEqual({ status: 200, body: { received: true } })
+      expect(await rowOf('sub-ended-polar')).toEqual({
+        status: 'active', externalSubscriptionId: 'sub_polar_new', externalCustomerId: 'cus_polar_new', paymentProvider: 'polar', cancelAtPeriodEnd: false, hasCanceledAt: false,
+      })
+    })
+
+    test('a team with no subscription row logs an error with the event id and writes nothing', async () => {
+      const errors = console.error as jest.Mock
+      errors.mockClear()
+      const before = (await db.query(`SELECT (SELECT count(*) FROM subscriptions)::int + (SELECT count(*) FROM billing_events)::int AS n`)).rows[0].n
+      const event = {
+        id: 'evt_stripe_no_row',
+        type: 'checkout.session.completed',
+        data: { object: { id: 'cs_no_row', subscription: 'sub_x', customer: 'cus_x', amount_total: 2900, currency: 'usd', metadata: { teamId: 'team-no-row', planSlug: 'pro' } } },
+      }
+      expect((await handleStripeWebhook(stripeRequest(event))).status).toBe(200)
+      expect(errors).toHaveBeenCalledWith(expect.stringContaining('Event evt_stripe_no_row: team team-no-row has no subscription row'))
+      expect((await db.query(`SELECT (SELECT count(*) FROM subscriptions)::int + (SELECT count(*) FROM billing_events)::int AS n`)).rows[0].n).toBe(before)
+    })
+  })
 })

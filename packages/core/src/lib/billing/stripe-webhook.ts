@@ -26,6 +26,7 @@ import { getBillingGateway } from './gateways/factory'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { query, queryOne } from '../db'
 import { processWebhookEventOnce, webhookOutcomeResponse } from './webhook-events'
+import { subscriptionRowForNewSubscription } from './subscription-binding'
 import type Stripe from 'stripe'
 import type { InvoiceStatus, OneTimePaymentContext } from './types'
 
@@ -92,7 +93,7 @@ export async function handleStripeWebhook(
 
       switch (event.type) {
         case 'checkout.session.completed':
-          await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, extensions)
+          await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, event.id, extensions)
           break
 
         case 'invoice.paid':
@@ -130,6 +131,7 @@ export async function handleStripeWebhook(
  */
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
+  eventId: string,
   extensions?: StripeWebhookExtensions
 ) {
   const teamId = session.metadata?.teamId || session.client_reference_id
@@ -180,6 +182,10 @@ async function handleCheckoutCompleted(
     console.warn(`[stripe-webhook] Plan ${planSlug} not found in database, keeping current plan`)
   }
 
+  // The team's current row, or its latest one when its subscription ended (#300)
+  const row = await subscriptionRowForNewSubscription(teamId, { gateway: 'stripe', eventId })
+  if (!row) return
+
   // Update subscription with Stripe IDs AND new plan (direct query - webhook has no user context)
   if (planId) {
     await query(
@@ -190,10 +196,11 @@ async function handleCheckoutCompleted(
            "planId" = $3,
            "billingInterval" = $4,
            status = 'active',
+           "canceledAt" = NULL,
+           "cancelAtPeriodEnd" = false,
            "updatedAt" = NOW()
-       WHERE "teamId" = $5
-         AND status IN ('active', 'trialing', 'past_due')`,
-      [subscriptionId, customerId, planId, billingPeriod, teamId]
+       WHERE id = $5`,
+      [subscriptionId, customerId, planId, billingPeriod, row.id]
     )
   } else {
     // Fallback: update without changing plan (should not happen normally)
@@ -203,16 +210,17 @@ async function handleCheckoutCompleted(
            "externalCustomerId" = $2,
            "paymentProvider" = 'stripe',
            status = 'active',
+           "canceledAt" = NULL,
+           "cancelAtPeriodEnd" = false,
            "updatedAt" = NOW()
-       WHERE "teamId" = $3
-         AND status IN ('active', 'trialing', 'past_due')`,
-      [subscriptionId, customerId, teamId]
+       WHERE id = $3`,
+      [subscriptionId, customerId, row.id]
     )
   }
 
   // Log billing event
   await logBillingEvent({
-    teamId,
+    subscriptionId: row.id,
     type: 'payment',
     status: 'succeeded',
     amount: session.amount_total || 0,
@@ -400,28 +408,18 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
  * Uses direct query (bypasses RLS) since webhooks have no user context
  */
 async function logBillingEvent(params: {
-  teamId: string
+  subscriptionId: string
   type: string
   status: string
   amount: number
   currency: string
   stripeEventId: string
 }) {
-  const sub = await queryOne<{ id: string }>(
-    `SELECT id FROM subscriptions WHERE "teamId" = $1 LIMIT 1`,
-    [params.teamId]
-  )
-
-  if (!sub) {
-    console.warn(`[stripe-webhook] No subscription found for team ${params.teamId}, cannot log billing event`)
-    return
-  }
-
   await query(
     `INSERT INTO "billing_events" ("subscriptionId", type, status, amount, currency, metadata)
      VALUES ($1, $2, $3, $4, $5, $6)`,
     [
-      sub.id,
+      params.subscriptionId,
       params.type,
       params.status,
       params.amount,
