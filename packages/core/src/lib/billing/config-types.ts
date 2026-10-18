@@ -54,7 +54,7 @@ export interface PlanDefinition {
   features: string[]
   /** Map of limitSlug -> value (-1 means unlimited) */
   limits: Record<string, number>
-  /** Price IDs for the configured payment provider (monthly and yearly): Stripe price ids, Polar product ids, Lemon Squeezy variant ids */
+  /** Price IDs for the configured payment provider (monthly and yearly): Stripe price ids, Polar product ids, Lemon Squeezy variant ids, Paddle price ids */
   providerPriceIds?: {
     monthly?: string | null
     yearly?: string | null
@@ -88,7 +88,7 @@ export interface ActionMappings {
 // ===========================================
 
 export interface BillingConfig {
-  /** Payment provider: stripe, polar, lemonsqueezy */
+  /** Payment provider: stripe, polar, lemonsqueezy, paddle */
   provider: PaymentProvider
 
   /** Default currency (ISO 4217) */

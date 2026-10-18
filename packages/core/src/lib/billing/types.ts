@@ -47,8 +47,8 @@ export type PaymentProvider =
   | 'stripe'
   | 'polar'
   | 'lemonsqueezy'
+  | 'paddle'
   // Future providers (type-defined, not yet implemented in gateway factory):
-  // | 'paddle'
   // | 'mercadopago'
 export type BillingInterval = 'monthly' | 'yearly'
 

@@ -75,12 +75,12 @@ describe('Billing Schema - Enum Validations', () => {
       expect(paymentProviderSchema.safeParse('stripe').success).toBe(true)
       expect(paymentProviderSchema.safeParse('polar').success).toBe(true)
       expect(paymentProviderSchema.safeParse('lemonsqueezy').success).toBe(true)
+      expect(paymentProviderSchema.safeParse('paddle').success).toBe(true)
     })
 
     test('should reject unimplemented or invalid payment providers', () => {
       expect(paymentProviderSchema.safeParse('paypal').success).toBe(false)
       expect(paymentProviderSchema.safeParse('braintree').success).toBe(false)
-      expect(paymentProviderSchema.safeParse('paddle').success).toBe(false)
       expect(paymentProviderSchema.safeParse('mercadopago').success).toBe(false)
     })
   })
