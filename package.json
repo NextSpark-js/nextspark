@@ -46,11 +46,11 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
-    "@cypress/grep": "^7.0.0",
+    "@cypress/grep": "^5.1.0",
     "@testing-library/cypress": "^10.1.0",
     "allure-cypress": "^3.0.0",
     "axe-core": "4.14.0",
-    "cypress": "^16.2.0",
+    "cypress": "^15.21.1",
     "dotenv": "^16.4.5",
     "dotenv-cli": "^11.0.0",
     "jiti": "^2.6.1",
