@@ -173,6 +173,21 @@ describe('shipped auth route runtime readiness integration', () => {
     }))
     expect(signIn.status).toBe(429)
     expect(mockRateLimit).toHaveBeenCalledTimes(1)
+
+    // Only a path ending in /callback/<id> is exempt, not one that merely contains the marker.
+    const suffixed = await POST(nextRequest('/api/auth/sign-in/email/api/auth/callback/x', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    }))
+    expect(suffixed.status).toBe(429)
+    const encoded = await POST(nextRequest('/api/auth/callback/..%2Fsign-in/email', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    }))
+    expect(encoded.status).toBe(429)
+    expect(mockRateLimit).toHaveBeenCalledTimes(3)
     mockRateLimit.mockResolvedValue({ allowed: true, limit: 5, resetTime: 0 })
     for (const key of ['APPLE_CLIENT_ID', 'APPLE_TEAM_ID', 'APPLE_KEY_ID', 'APPLE_PRIVATE_KEY']) delete process.env[key]
   })

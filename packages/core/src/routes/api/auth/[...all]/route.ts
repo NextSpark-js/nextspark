@@ -76,7 +76,9 @@ export async function POST(req: NextRequest) {
   // Protects login/signup against brute-force and credential stuffing attacks.
   // Per client address (lib/api/client-ip, set by NEXTSPARK_CLIENT_IP_SOURCE).
   // A form_post provider's callback (Apple) is not charged: Better Auth only redirects it to the GET callback.
-  const isCallbackPost = req.nextUrl.pathname.includes('/api/auth/callback/')
+  const requestPath = req.nextUrl.pathname
+  const authPath = requestPath.slice(requestPath.indexOf('/api/auth/') + '/api/auth/'.length)
+  const isCallbackPost = /^callback\/[^/]+\/?$/.test(authPath)
   const clientIp = getClientIp(req.headers)
   const rateLimitResult = isCallbackPost ? null : await checkDistributedRateLimit(`auth:ip:${clientIp}`, 'auth')
   if (rateLimitResult && !rateLimitResult.allowed) {
