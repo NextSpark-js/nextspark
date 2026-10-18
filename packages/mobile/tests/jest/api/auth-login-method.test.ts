@@ -15,11 +15,11 @@ const social: SocialLoginMethod[] = ['google', 'github', 'microsoft', 'apple']
 // @ts-expect-error not a method core knows
 const unknown: AuthLoginMethod = 'facebook'
 
-/** The string literals of `export type <name> = ...` in a source file. */
-const literals = (file: string, name: string) => {
+/** The members of `export type <name> = ...` in a source file: its string literals and the types it references. */
+const members = (file: string, name: string) => {
   const declaration = readFileSync(file, 'utf8').match(new RegExp(`export type ${name} =([^\\n]*)`))
   if (!declaration) throw new Error(`${name} not found in ${file}`)
-  return [...declaration[1].matchAll(/'([^']+)'/g)].map((match) => match[1]).sort()
+  return [...declaration[1].matchAll(/'([^']+)'|\b([A-Z]\w+)\b/g)].map((match) => match[1] ?? match[2]).sort()
 }
 
 describe('AuthLoginMethod', () => {
@@ -32,14 +32,15 @@ describe('AuthLoginMethod', () => {
   it('is the union core declares (core cannot be imported from mobile, so the two are compared as written)', () => {
     const core = join(REPO, 'packages/core/src/lib/config/types.ts')
     const mobile = join(PACKAGE, 'src/api/core/types.ts')
-    expect(literals(mobile, 'SocialLoginMethod')).toEqual(literals(core, 'SocialLoginMethod'))
-    // `AuthLoginMethod = 'email-otp' | SocialLoginMethod | 'email-password'` in both
-    expect(literals(mobile, 'AuthLoginMethod')).toEqual(literals(core, 'AuthLoginMethod'))
+    expect(members(mobile, 'SocialLoginMethod')).toEqual(members(core, 'SocialLoginMethod'))
+    // `AuthLoginMethod = 'email-otp' | SocialLoginMethod | 'email-password'` in both; a type core adds to it is a difference
+    expect(members(mobile, 'AuthLoginMethod')).toEqual(members(core, 'AuthLoginMethod'))
   })
 })
 
 describe('the login screen of the template', () => {
-  const login = readFileSync(join(PACKAGE, 'templates/app/login.tsx'), 'utf8')
+  // apps/mobile/app is the tracked source of packages/mobile/templates/app (generated and ignored: pack syncs it)
+  const login = readFileSync(join(REPO, 'apps/mobile/app/login.tsx'), 'utf8')
 
   it('names only the methods it has a native flow for, so github, microsoft and apple render nothing', () => {
     const named = new Set([...login.matchAll(/methods\.includes\('([^']+)'\)/g)].map((match) => match[1]))
@@ -47,9 +48,5 @@ describe('the login screen of the template', () => {
     for (const method of ['github', 'microsoft', 'apple']) expect(login).not.toMatch(new RegExp(`['"\`]${method}['"\`]`))
     // a button per method read off the list would draw one for every provider
     expect(login).not.toMatch(/methods\.(map|filter|flatMap|forEach)\(/)
-  })
-
-  it('is the screen apps/mobile runs', () => {
-    expect(readFileSync(join(REPO, 'apps/mobile/app/login.tsx'), 'utf8')).toBe(login)
   })
 })
