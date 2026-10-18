@@ -110,8 +110,8 @@ export interface BillingConfig {
 
   /**
    * Days a processed webhook event is kept in billing_webhook_events, so a redelivery is still a duplicate
-   * (default 30). Keep it longer than every gateway redelivers an event: Stripe retries for 3 days and resends by
-   * hand for up to 30.
+   * (default 30; a value below 3 is raised to 3, one that is not a finite number uses the default). Keep it longer
+   * than every gateway redelivers an event: Stripe retries for 3 days and resends by hand for up to 30.
    */
   webhookEventRetentionDays?: number
 }

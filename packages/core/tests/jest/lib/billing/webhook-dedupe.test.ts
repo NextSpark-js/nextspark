@@ -354,11 +354,37 @@ describeWithPostgres('billing webhook deduplication', () => {
     })
 
     test('takes its retention from the billing config', async () => {
-      await insertEvent('two-days', 'processed', 2)
-      registry().webhookEventRetentionDays = 1
+      await insertEvent('six-days', 'processed', 6)
+      await insertEvent('four-days', 'processed', 4)
+      registry().webhookEventRetentionDays = 5
 
       expect(await webhookEvents.cleanUpProcessedWebhookEvents()).toBe(1)
-      expect(await cleanupEvents()).toEqual([])
+      expect(await cleanupEvents()).toEqual(['four-days'])
+    })
+
+    test('raises a retention below the floor to 3 days, and warns once', async () => {
+      await insertEvent('two-days', 'processed', 2)
+      await insertEvent('four-days', 'processed', 4)
+      registry().webhookEventRetentionDays = 1
+      const warnings = console.warn as jest.Mock
+      warnings.mockClear()
+
+      expect(await webhookEvents.cleanUpProcessedWebhookEvents()).toBe(1)
+      expect(await webhookEvents.cleanUpProcessedWebhookEvents()).toBe(0)
+      expect(await cleanupEvents()).toEqual(['two-days'])
+      expect(warnings.mock.calls).toEqual([[expect.stringMatching(/webhookEventRetentionDays is 1.*3 days/)]])
+    })
+
+    test('a retention that is not a finite number uses the default', async () => {
+      for (const configured of [Infinity, NaN]) {
+        await insertEvent('old-processed', 'processed', 31)
+        await insertEvent('recent-processed', 'processed', 29)
+        registry().webhookEventRetentionDays = configured
+
+        expect(await webhookEvents.cleanUpProcessedWebhookEvents()).toBe(1)
+        expect(await cleanupEvents()).toEqual(['recent-processed'])
+        await db.query(`DELETE FROM billing_webhook_events WHERE gateway = 'cleanup'`)
+      }
     })
 
     test('runs after a processed event, at most once per interval', async () => {

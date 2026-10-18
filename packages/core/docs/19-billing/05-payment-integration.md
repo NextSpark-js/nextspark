@@ -415,7 +415,7 @@ The claim, and its release after a failure, always run on their own pool connect
 
 - After an event is processed, at most once every 10 minutes per process, the helper deletes up to 1000 `processed` rows whose `"processedAt"` is older than the retention. Rows in `processing` are never deleted: the lease handles them.
 - The DELETE is not awaited, and an error is logged and swallowed, so the cleanup never changes or delays the webhook's answer. A batch that did not finish, or a process that stopped before it ran, is caught up by the next run. The partial index on `"processedAt"` (migration `042_billing_webhook_events_processed_at_index.sql`) serves it.
-- The retention is `webhookEventRetentionDays` in `config/billing.config.ts`, 30 days by default (`WEBHOOK_EVENT_RETENTION_DAYS`). A value that is not a positive number uses the default.
+- The retention is `webhookEventRetentionDays` in `config/billing.config.ts`, 30 days by default (`WEBHOOK_EVENT_RETENTION_DAYS`). A value that is not a finite number uses the default. The floor is 3 days (`WEBHOOK_EVENT_RETENTION_MIN_DAYS`): a lower value is raised to 3, with one warning per process naming the value set.
 - Keep it longer than any gateway redelivers an event. Stripe retries automatically for up to 3 days in live mode, and an event can be resent by hand for up to 15 days from the Dashboard and 30 days from the Stripe CLI. Polar retries up to 10 times with exponential backoff (it does not publish the total window) and lets you trigger a redelivery from its dashboard. An event redelivered after its row was deleted is processed again.
 
 ---

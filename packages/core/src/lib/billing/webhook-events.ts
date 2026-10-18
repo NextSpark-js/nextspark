@@ -16,7 +16,7 @@
  * taken over while `handle` ran (its lease ran out) rolls back and gets 'in_progress' too.
  * What `handle` does outside Postgres (emails, API calls) is not rolled back: a retry does it again.
  *
- * Processed rows are kept for the billing config's `webhookEventRetentionDays` (30 by default), longer than any
+ * Processed rows are kept for the billing config's `webhookEventRetentionDays` (30 by default, 3 at least), longer than any
  * gateway redelivers an event. After a processed event, at most once per CLEANUP_INTERVAL_MS per process, a bounded
  * DELETE removes older ones without being awaited; its errors are logged, never returned.
  *
@@ -35,11 +35,14 @@ export type WebhookEventOutcome = 'processed' | 'duplicate' | 'in_progress'
 
 /** How long a processed event is kept when the billing config does not set `webhookEventRetentionDays`. */
 export const WEBHOOK_EVENT_RETENTION_DAYS = 30
+/** The shortest retention: Stripe retries an event automatically for up to 3 days. */
+export const WEBHOOK_EVENT_RETENTION_MIN_DAYS = 3
 
 // ponytail: 1000 rows every 10 minutes per process (144k a day); raise the batch if a project processes more events.
 const CLEANUP_INTERVAL_MS = 10 * 60 * 1000
 const CLEANUP_BATCH = 1000
 let nextCleanupAt = 0
+let warnedRetentionFloor = false
 
 const CLAIM_LOST = new Error('The webhook event claim was taken over by another delivery')
 
@@ -106,8 +109,7 @@ export async function processWebhookEventOnce(
 
 /** Deletes up to CLEANUP_BATCH processed events older than the retention; returns how many it deleted. */
 export async function cleanUpProcessedWebhookEvents(): Promise<number> {
-  const configured = BILLING_REGISTRY.webhookEventRetentionDays
-  const days = typeof configured === 'number' && configured > 0 ? configured : WEBHOOK_EVENT_RETENTION_DAYS
+  const days = retentionDays()
   const result = await servicePool.query(
     // ctid = ANY(ARRAY(...)): the batch is found through the "processedAt" index and deleted by row address
     `DELETE FROM "billing_webhook_events" WHERE ctid = ANY (ARRAY(
@@ -118,6 +120,20 @@ export async function cleanUpProcessedWebhookEvents(): Promise<number> {
     [days, CLEANUP_BATCH]
   )
   return result.rowCount ?? 0
+}
+
+/** The billing config's retention: the default when it is not a finite number, and at least the floor. */
+function retentionDays(): number {
+  const configured = BILLING_REGISTRY.webhookEventRetentionDays
+  if (typeof configured !== 'number' || !Number.isFinite(configured)) return WEBHOOK_EVENT_RETENTION_DAYS
+  if (configured >= WEBHOOK_EVENT_RETENTION_MIN_DAYS) return configured
+  if (!warnedRetentionFloor) {
+    warnedRetentionFloor = true
+    console.warn(
+      `[webhook-events] webhookEventRetentionDays is ${configured}; using the minimum of ${WEBHOOK_EVENT_RETENTION_MIN_DAYS} days`
+    )
+  }
+  return WEBHOOK_EVENT_RETENTION_MIN_DAYS
 }
 
 function cleanUpNowAndThen(): void {
