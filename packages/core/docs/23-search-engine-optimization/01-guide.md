@@ -8,7 +8,7 @@ Everything here is code you write in your project (`templates/`, `lib/`, `nextsp
 
 | Piece | Where it comes from |
 |-------|---------------------|
-| `/robots.txt` | Core's `robots` route. Public pages are allowed; `/dashboard`, `/superadmin`, `/devtools`, `/api` and the auth pages (`/login`, `/signup`, ...) are disallowed. It names the sitemap. |
+| `/robots.txt` | Core's `robots` route. Public pages are allowed; `/dashboard`, `/superadmin`, `/devtools` and `/api` are disallowed. It names the sitemap. |
 | `/sitemap.xml` | Core's `sitemap` route, composed by `nextspark prepare` with your static public pages and your `sitemap` settings. |
 | `<title>` and Open Graph tags of a page-builder item | `generateMetadata` of the public item route: `seoTitle`, `seoDescription` and `ogImage` (or `featuredImage`) of the entry. |
 | `noindex` on a missing public page | Under Cache Components the not-found page of a public item carries `<meta name="robots" content="noindex">` (see [Public rendering](../18-page-builder/07-public-rendering.md)). |
@@ -214,7 +214,7 @@ export default defineConfig({
   sitemap: {
     enabled: true,                          // false: no /sitemap.xml and no Sitemap line in robots.txt
     urls: ['/pricing', '/changelog'],       // extra paths, from the app root
-    exclude: ['/legal/*', '/blog/draft-*'], // exact paths, or prefixes ending in *
+    exclude: ['/legal/*', '/blog/draft-*'], // exact paths, or prefixes ending in * (`/legal/*` does not exclude `/legal`)
   },
 })
 ```
@@ -262,4 +262,4 @@ One sitemap file holds 50,000 URLs, the protocol's limit. Past that the list is 
 - `metadataBase` is set; every public page has a unique `title` and `description` and a canonical URL.
 - Posts and pages have a `seoTitle`, `seoDescription` and an `ogImage` in the page builder.
 - `curl -I https://your-host/sitemap.xml` answers `200` with `application/xml`, and `/robots.txt` names it.
-- Content that must stay private is not `published`: a builder entity with a base path serves its published rows on its public routes, `access.public` or not, and the sitemap lists only the entities that set `access.public: true`.
+- Content that must stay private is not `published`.
