@@ -91,6 +91,11 @@ export const SUPERADMIN_SELECTORS = {
       title: 'superadmin-dashboard-title',
       badge: 'superadmin-dashboard-badge',
     },
+    metrics: {
+      container: 'superadmin-metrics',
+      card: 'superadmin-metric-{name}',
+      signups: 'superadmin-metric-signups',
+    },
     quickActions: {
       container: 'superadmin-quick-actions',
       users: 'superadmin-quick-users',

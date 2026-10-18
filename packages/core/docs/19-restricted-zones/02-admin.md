@@ -46,6 +46,22 @@ const canAccess = useCanAccessAdmin();
 | `/admin/teams` | `teams/page.tsx` | Team management list |
 | `/admin/teams/[teamId]` | `teams/[teamId]/page.tsx` | Individual team details |
 
+## Business Metrics
+
+The top of `/superadmin` shows five numbers, computed live from Postgres on every request (no job, no cache table, no migration). The queries live in `lib/services/business-metrics.service.ts` and run on the service connection; the page is rendered only for `superadmin` and `developer` sessions (the area's server-side role check), and the service checks nothing itself, so call it only from pages under `/superadmin`.
+
+| Metric | Definition |
+|--------|------------|
+| Total users | Rows of `users`. |
+| Sign-ups | `users."createdAt"` per UTC day for the last 30 days (today and the 29 before), days with no sign-ups included as zero. |
+| Paying teams | Teams with a paying subscription. |
+| Paying users | Distinct payers of those subscriptions: the subscription's `userId`, or the team owner for a team-level subscription. Members who only use a paid team are not counted. |
+| MRR | Monthly recurring revenue of the paying subscriptions, in cents, **per currency**: the plan's `priceMonthly` for monthly subscriptions, `priceYearly / 12` for yearly ones. |
+
+A **paying subscription** has `status = 'active'` (trialing, `past_due`, paused, canceled and expired are not counted), is on a plan whose type is not `free`, belongs to a team that is not soft-deleted, and has a price above zero for its billing interval (an enterprise plan without a price counts for nothing). A subscription with `cancelAtPeriodEnd` still counts until its `currentPeriodEnd`, as a payment gateway reports MRR. The schema has no quantity, seats, discount or per-subscription price, so the plan's price is the price; MRR is computed from the `subscriptions` and `plans` tables and never calls a gateway. Plans carry their own `currency` (default `usd`): amounts in different currencies are shown side by side and never added.
+
+The sign-ups query reads `users` once (a sequential scan: about 80 ms at 500,000 users); an index on `users("createdAt")` would make it a range scan on a much larger table, and core does not add one.
+
 ## Layout Structure
 
 ```text

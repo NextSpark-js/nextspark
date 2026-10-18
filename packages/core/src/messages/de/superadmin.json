@@ -37,6 +37,16 @@
       "online": "Online",
       "active": "Aktiv",
       "version": "v1.0.0"
+    },
+    "metrics": {
+      "totalUsers": "Benutzer gesamt",
+      "payingUsers": "Zahlende Benutzer",
+      "payingTeams": "Zahlende Teams",
+      "mrr": "MRR",
+      "signups": {
+        "title": "Registrierungen, letzte 30 Tage",
+        "description": "{count} neue Benutzer in den letzten 30 Tagen (UTC)"
+      }
     }
   },
   "users": {

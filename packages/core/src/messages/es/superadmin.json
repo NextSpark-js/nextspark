@@ -37,6 +37,16 @@
       "online": "En línea",
       "active": "Activo",
       "version": "v1.0.0"
+    },
+    "metrics": {
+      "totalUsers": "Usuarios totales",
+      "payingUsers": "Usuarios que pagan",
+      "payingTeams": "Equipos que pagan",
+      "mrr": "MRR",
+      "signups": {
+        "title": "Registros, últimos 30 días",
+        "description": "{count} usuarios nuevos en los últimos 30 días (UTC)"
+      }
     }
   },
   "users": {

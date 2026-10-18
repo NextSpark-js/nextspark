@@ -2,7 +2,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@next
 import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Users, BarChart3, Settings, Shield } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 import { sel } from "@nextsparkjs/core/lib/selectors"
+import { BusinessMetrics } from "@nextsparkjs/core/components/superadmin/misc/BusinessMetrics"
 
 /**
  * Superadmin Dashboard
@@ -62,6 +64,10 @@ function SuperadminDashboard() {
           </span>
         </div>
       </div>
+
+      <Suspense fallback={<div className="h-40 rounded-lg border bg-muted/30 animate-pulse" />}>
+        <BusinessMetrics />
+      </Suspense>
 
       {/* Quick Actions Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
