@@ -246,7 +246,8 @@ function dynamicKind(segment) {
  * @param {object[]} input.coreRoutes - `loadCoreRouteManifest(...).routes`
  * @param {object[]} [input.entityRoutes] - `planEntityRoutes(...).routes`: per-entity route candidates
  * @param {string[]} [input.entityNames] - `planEntityRoutes(...).entities`: the entities whose `/api/v1/<entity>/...` a project template may override
- * @param {object[]} [input.withheld] - `planEntityRoutes(...).withheld`: item template targets of builder entities without public routes (left out, with a notice)
+ * @param {object[]} [input.withheld] - `planEntityRoutes(...).withheld`: builder entities without public routes; a project or plugin page or
+ *   Route Handler at one of their item URLs (`<basePath>/<one dynamic segment>`, any route group, cache mode or param name) is left out, with a notice
  * @param {{ name: string, root: string, importBase: string, capabilities?: string[] }[]} [input.plugins] - enabled plugins; a plugin
  *   that declares no `capabilities` is legacy (server + web + build)
  * @param {{ root: string, importBase?: string, label?: string }} input.project - project source root
@@ -266,6 +267,25 @@ export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], with
 
   const slotKey = (target, mode) => slotOf({ target, mode })
 
+  // The item URLs of builder entities without public routes: no other source serves a page or Route Handler there
+  const withheldUrls = withheld.map(entry => ({ ...entry, segments: entry.basePath.split('/').filter(Boolean) }))
+  const withheldBy = route => {
+    if (route.kind !== 'page' && route.kind !== 'route') return null
+    const served = servedUrlSegments(route.target)
+    return withheldUrls.find(entry => served.length === entry.segments.length + 1 && entry.segments.every((segment, index) => served[index] === segment) && dynamicKind(served.at(-1))) ?? null
+  }
+  const notices = []
+  const leaveOut = route => {
+    const entry = withheldBy(route)
+    if (!entry) return false
+    notices.push({
+      code: PLAN_NOTICES.ENTITY_TEMPLATE_NOT_USED,
+      target: route.target,
+      message: `${route.source}: not used: it is at an item URL of ${entry.source}, which has no public routes without \`access.public: true\`; set it, or move the file`,
+    })
+    return true
+  }
+
   for (const plugin of [...plugins].sort((a, b) => compareTargets(a.name, b.name))) {
     const label = `plugins/${plugin.name}`
     const capabilities = capabilitiesOf(plugin)
@@ -275,6 +295,7 @@ export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], with
     ]
     // The host takes only what the plugin declares: pages and layouts need 'web', Route Handlers need 'server'.
     for (const route of contributed) {
+      if (leaveOut(route)) continue
       const capability = route.source.startsWith(`${label}/api/`) || route.kind === 'route' ? 'server' : 'web'
       if (capabilities.includes(capability)) {
         candidates.push(route)
@@ -312,15 +333,7 @@ export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], with
     ...surfaceRoutes({ dir: join(project.root, 'api'), importBase: projectBase, surface: 'api', toTarget: path => `api/${path}`, layer: 'project', label: projectLabel, pattern, diagnostics, namespace: target => (API_V1.test(target) || API_PLUGINS.test(target) ? PROJECT_API_HINT : null) }),
   ]
   for (const route of projectRoutes) route.source = route.source.replace(/^\.\//, '')
-  // An item template of a builder entity without public routes runs only as that route's template: it is left out
-  const withheldBy = new Map(withheld.flatMap(entry => entry.targets.map(target => [target, entry])))
-  const unusedTemplates = new Set(projectRoutes.filter(route => withheldBy.has(route.target) && route.specifier.startsWith(`${projectBase}/templates/`)))
-  const notices = [...unusedTemplates].map(route => ({
-    code: PLAN_NOTICES.ENTITY_TEMPLATE_NOT_USED,
-    target: route.target,
-    message: `${route.source}: not used: it is an item page template of ${withheldBy.get(route.target).source}, which has no public routes without \`access.public: true\`; set it, or move the file`,
-  }))
-  projectRoutes.splice(0, projectRoutes.length, ...projectRoutes.filter(route => !unusedTemplates.has(route)))
+  projectRoutes.splice(0, projectRoutes.length, ...projectRoutes.filter(route => !leaveOut(route)))
   notices.push(...replaceEntityDashboards(candidates, projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`))))
   notices.push(...coreApiNotices(projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`) && API_V1.test(route.target) && servedSlots.has(slotOf(route))), candidates))
   notices.push(...entityApiNotices(projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`) && !servedSlots.has(slotOf(route)) && entityApiOf(route.target, route.mode))))

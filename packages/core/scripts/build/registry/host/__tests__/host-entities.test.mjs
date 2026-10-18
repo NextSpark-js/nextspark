@@ -156,7 +156,7 @@ async function plan(w, entities, factsByName, { coreRoutes = [], plugins = [], m
     cacheComponents,
     modes,
   })
-  const planned = planHost({ coreRoutes, entityRoutes, withheld, plugins, project: { root: w.source } })
+  const planned = planHost({ coreRoutes, entityRoutes, withheld, plugins, modes, project: { root: w.source } })
   return { routes: planned.routes, diagnostics: [...entityDiagnostics, ...planned.diagnostics], notices: [...entityNotices, ...planned.notices] }
 }
 const factsOf = async body => ({ facts: await facts(body) })
@@ -404,6 +404,77 @@ test('a project item template at the URL of a builder entity without `access.pub
   } finally {
     w.cleanup()
   }
+})
+
+// A private /blog (posts) and a private / (pages): the URLs their item routes would serve
+const PRIVATE_SHAPES = {
+  posts: BLOG.replace('public: true, ', 'public: false, '),
+  pages: "slug: 'pages', enabled: true, access: { basePath: '/' }, builder: { enabled: true }",
+}
+const privatePlan = async (w, options) =>
+  plan(w, [entity('posts', 'postsEntityConfig'), entity('pages', 'pagesEntityConfig')], { posts: await factsOf(PRIVATE_SHAPES.posts), pages: await factsOf(PRIVATE_SHAPES.pages) }, options)
+/** A route that would answer /blog/<x> or /<x> (any group, any mode, any dynamic segment). */
+const atWithheldUrl = target => {
+  const segments = target.split('/').slice(0, -1).filter(part => !/^\(.*\)$/.test(part) && !part.startsWith('@'))
+  const item = segments.at(-1) ?? ''
+  return /^\[/.test(item) && (segments.length === 1 || (segments.length === 2 && segments[0] === 'blog'))
+}
+const unusedFiles = notices => notices.filter(notice => notice.code === PLAN_NOTICES.ENTITY_TEMPLATE_NOT_USED).map(notice => notice.message.split(': ')[0]).sort()
+
+test('a cache-mode item template (page.cc.tsx, page.isr.tsx) at the URL of a builder entity without public routes is not used either', async () => {
+  for (const modes of [['cc'], ['isr', 'cc']]) {
+    const files = { 'templates/(public)/blog/[slug]/page.cc.tsx': PAGE, 'templates/(public)/[...slug]/page.cc.tsx': PAGE, ...(modes.includes('isr') ? { 'templates/(public)/blog/[slug]/page.isr.tsx': PAGE } : {}) }
+    const w = world(files)
+    try {
+      const { routes, notices } = await privatePlan(w, { modes })
+      assert.deepEqual(targets(routes).filter(atWithheldUrl), [], modes.join(','))
+      assert.deepEqual(unusedFiles(notices), Object.keys(files).sort(), modes.join(','))
+    } finally {
+      w.cleanup()
+    }
+  }
+})
+
+test('a plugin\'s item template at the URL of a builder entity without public routes is not used, and the notice names the plugin file', async () => {
+  const w = world({ 'plugins/plug/templates/(public)/blog/[slug]/page.tsx': PAGE, 'plugins/plug/templates/(public)/[...slug]/page.tsx': PAGE, 'plugins/plug/templates/(public)/plug-info/page.tsx': PAGE })
+  try {
+    const { routes, notices } = await privatePlan(w, { plugins: [{ name: 'plug', root: join(w.source, 'plugins/plug'), importBase: '@/plugins/plug' }] })
+    assert.deepEqual(targets(routes).filter(atWithheldUrl), [])
+    assert.ok(targets(routes).includes('(public)/plug-info/page.tsx'), 'the plugin\'s own page is kept')
+    assert.deepEqual(unusedFiles(notices), ['plugins/plug/templates/(public)/[...slug]/page.tsx', 'plugins/plug/templates/(public)/blog/[slug]/page.tsx'])
+  } finally {
+    w.cleanup()
+  }
+})
+
+test('probe: no source, mode, group or dynamic segment name emits a route at the URL of a builder entity without public routes', async () => {
+  const { loadCoreRouteManifest } = await import('../core-routes.mjs')
+  const manifest = await loadCoreRouteManifest({ coreRoot: CORE_ROOT })
+  assert.deepEqual(manifest.routes.map(route => route.target).filter(target => /(?:^|\/)(?:page|route)\.[^/]+$/.test(target) && atWithheldUrl(target)), [], 'core serves nothing at these URLs')
+  const sources = { project: path => `templates/${path}`, plugin: path => `plugins/plug/templates/${path}` }
+  const plugins = w => [{ name: 'plug', root: join(w.source, 'plugins/plug'), importBase: '@/plugins/plug' }]
+  let tried = 0
+  for (const [source, place] of Object.entries(sources)) {
+    for (const [modes, suffix] of [[[], ''], [['isr', 'cc'], '.isr'], [['isr', 'cc'], '.cc'], [['cc'], '.cc']]) {
+      for (const group of ['(public)/', '(marketing)/', '']) {
+        for (const segment of ['[slug]', '[id]', '[...slug]', '[...rest]', '[[...slug]]', '[entity]']) {
+          for (const [base, kind] of [['blog/', 'page'], ['', 'page'], ['blog/', 'route']]) {
+            const file = place(`${group}${base}${segment}/${kind}${suffix}.tsx`)
+            const w = world({ [file]: kind === 'page' ? PAGE : ROUTE })
+            try {
+              const { routes, notices } = await privatePlan(w, { modes, plugins: plugins(w), coreRoutes: manifest.routes })
+              assert.deepEqual(targets(routes).filter(atWithheldUrl), [], file)
+              assert.deepEqual(unusedFiles(notices), [file], `${file}: a notice names it`)
+              tried++
+            } finally {
+              w.cleanup()
+            }
+          }
+        }
+      }
+    }
+  }
+  assert.equal(tried, 2 * 4 * 3 * 6 * 3)
 })
 
 test('prepare prints both notices of a builder entity without public routes as warnings, not as info', async () => {

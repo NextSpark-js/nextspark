@@ -208,7 +208,7 @@ const arg = {
  * @param {string[]} [input.modes] - cache modes the host serves (a host that builds both omits `revalidate`)
  * @param {Record<string, string>} [input.modules] - the specifiers of the modules the routes import (`ENTITY_MODULES`)
  * @returns {{ routes: object[], diagnostics: object[], notices: object[], withheld: object[], entities: string[] }} `entities`: the names of the entities the host serves (the ones a project may override the API of);
- *   `withheld`: `{ source, targets }` per builder entity whose public routes were not written, with the item template targets its route would have taken
+ *   `withheld`: `{ source, basePath }` per builder entity whose public routes were not written (planHost serves nothing at its item URLs)
  */
 export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cacheComponents, modes = [], modules = ENTITY_MODULES }) {
   const routes = []
@@ -323,10 +323,8 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
           message: `${source}: no public item or archive route was written for base path ${JSON.stringify(String(basePath.value))}: a builder entity needs \`access.public: true\` for them; set it to serve the entity's published items publicly, or keep it false or unset to keep the entity private`,
         })
       }
-      // The project's item templates at these URLs are not routes of their own: planHost leaves them out and says so
-      const path = String(basePath.value)
-      const items = path === '/' ? ['(public)/[slug]/page.tsx', '(public)/[...slug]/page.tsx', '(public)/[entity]/page.tsx'] : [`(public)${path}/[slug]/page.tsx`, `(public)${path}/[...slug]/page.tsx`]
-      withheld.push({ source, targets: items })
+      // A page or Route Handler of the project or a plugin at the entity's item URLs is not a route of its own: planHost leaves it out and says so
+      withheld.push({ source, basePath: String(basePath.value) })
       continue
     }
 
