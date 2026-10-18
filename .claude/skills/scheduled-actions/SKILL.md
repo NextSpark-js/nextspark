@@ -71,10 +71,10 @@ Cron Endpoint (/api/v1/cron/process) - Called every ~1 minute
    └─ Processes actions where scheduledAt <= now
 ```
 
-### Server Initialization (instrumentation.ts)
+### Server Initialization (src/instrumentation.ts)
 
 ```typescript
-// instrumentation.ts (root of project)
+// src/instrumentation.ts (beside src/app, where next build looks for it)
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const {
