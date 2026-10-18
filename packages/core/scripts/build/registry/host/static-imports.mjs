@@ -93,6 +93,9 @@ export const CORE_COMPOSITION_WRAPPERS = Object.freeze({
   [`${INTERNAL}public-item-route.cc`]: ['createPublicItemRoute', 'createPublicItemMetadata'],
   [`${INTERNAL}public-archive-route`]: ['createPublicArchiveRoute', 'createPublicArchiveMetadata'],
   [`${INTERNAL}billing-webhooks`]: ['createStripeWebhookRoute', 'createPolarWebhookRoute'],
+  // /sitemap.xml and /robots.txt with the project's settings (sitemap.mjs).
+  [`${INTERNAL}sitemap-route`]: ['createSitemapRoute'],
+  [`${INTERNAL}robots-route`]: ['createRobotsRoute'],
   // The default rate limit of project and plugin API routes (rate-limit.mjs).
   [`${INTERNAL}route-rate-limit`]: ['withReadRateLimit', 'withWriteRateLimit'],
   [DEV_STATUS_SPECIFIER]: [DEV_STATUS_WRAPPER],
@@ -100,6 +103,16 @@ export const CORE_COMPOSITION_WRAPPERS = Object.freeze({
 
 /** The callees that take the array of child entity names as their second argument. */
 const CHILD_NAMES_CALLEES = new Set(['createEntityDetailRoute'])
+/** The callees whose first argument is a JSON literal of settings (nextspark.config.ts `sitemap`, the static public pages). */
+const LITERAL_SETTINGS_CALLEES = new Set(['createSitemapRoute', 'createRobotsRoute'])
+
+/** Whether `node` is pure data: strings, booleans, and arrays and objects of them (no identifiers, calls or spreads). */
+function isJsonLiteral(node, ts) {
+  if (ts.isStringLiteral(node) || node.kind === ts.SyntaxKind.TrueKeyword || node.kind === ts.SyntaxKind.FalseKeyword) return true
+  if (ts.isArrayLiteralExpression(node)) return node.elements.every(element => isJsonLiteral(element, ts))
+  if (ts.isObjectLiteralExpression(node)) return node.properties.every(property => ts.isPropertyAssignment(property) && ts.isStringLiteral(property.name) && isJsonLiteral(property.initializer, ts))
+  return false
+}
 
 function hasModifier(node, kind) {
   return Boolean(node.modifiers?.some(modifier => modifier.kind === kind))
@@ -254,13 +267,15 @@ function compositionProblem(node, ts, imported, importedFrom, wrappers) {
   for (const [index, argument] of node.arguments.entries()) {
     if (ts.isIdentifier(argument)) {
       if (!imported.has(argument.text)) return `"${argument.text}" is not an imported name`
+    } else if (index === 0 && LITERAL_SETTINGS_CALLEES.has(callee) && ts.isObjectLiteralExpression(argument) && isJsonLiteral(argument, ts)) {
+      continue
     } else if (ts.isArrayLiteralExpression(argument) && index === 1 && CHILD_NAMES_CALLEES.has(callee)) {
       if (!argument.elements.every(element => ts.isStringLiteral(element))) return 'the child entity names are string literals'
     } else if (ts.isCallExpression(argument)) {
       const nested = compositionProblem(argument, ts, imported, importedFrom, wrappers)
       if (nested) return nested
     } else {
-      return 'arguments are imported names or nested compositions (only createEntityDetailRoute takes a second argument that is an array of child entity names)'
+      return 'arguments are imported names or nested compositions (only createEntityDetailRoute takes a second argument that is an array of child entity names, and createSitemapRoute / createRobotsRoute a JSON literal of settings)'
     }
   }
   return null

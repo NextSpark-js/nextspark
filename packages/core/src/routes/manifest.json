@@ -732,6 +732,11 @@
     "specifier": "@nextsparkjs/core/routes/robots"
   },
   {
+    "kind": "sitemap",
+    "target": "sitemap.ts",
+    "specifier": "@nextsparkjs/core/routes/sitemap"
+  },
+  {
     "kind": "page",
     "target": "superadmin/docs/[section]/[page]/page.tsx",
     "specifier": "@nextsparkjs/core/routes/superadmin/docs/[section]/[page]/page"

@@ -22,6 +22,7 @@ import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
 import type { Pattern, PatternReference } from '@nextsparkjs/core/types/pattern-reference'
 import { buildPublicSelectClause, getResolvedBlocks, type PublishedItem } from './public-entity-shared'
+import { ITEM_SLUG, MAX_ITEM_SLUG_LENGTH } from '@nextsparkjs/core/lib/entities/public-item-slug'
 import { bindPublicItemRoutes, type PublicItemSource } from './public-item-route'
 import { behindSuspense } from './suspended-route'
 
@@ -31,7 +32,6 @@ import { behindSuspense } from './suspended-route'
  * select clause, published status) themselves; an argument that does not fit answers "not found", not data.
  */
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
-const ITEM_SLUG = /^[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/
 const MAX_PATTERN_IDS = 50
 
 /** The public entities whose routes this process built, by slug: where a cached read finds the entity's config. */
@@ -47,7 +47,7 @@ export async function readPublishedItem(entitySlug: string, slug: string): Promi
   'use cache'
   cacheLife({ stale: 300, revalidate: 3600, expire: 86400 })
 
-  if (typeof entitySlug !== 'string' || typeof slug !== 'string' || !IDENTIFIER.test(entitySlug) || slug.length > 200 || !ITEM_SLUG.test(slug)) return null
+  if (typeof entitySlug !== 'string' || typeof slug !== 'string' || !IDENTIFIER.test(entitySlug) || slug.length > MAX_ITEM_SLUG_LENGTH || !ITEM_SLUG.test(slug)) return null
   const entity = publicEntities.get(entitySlug)
   // Not a "not found": the entry would be cached untagged under the key the page uses once it is registered. A throw is not cached.
   if (!entity) throw new Error(`[readPublishedItem] no route of this process serves the entity "${entitySlug}"`)

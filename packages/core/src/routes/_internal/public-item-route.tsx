@@ -15,6 +15,9 @@ import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
 import type { PatternReference } from '@nextsparkjs/core/types/pattern-reference'
 import { fetchPublishedItem, getResolvedBlocks, type PublishedItem } from './public-entity-shared'
+import { STATIC_FILE_EXTENSION } from '@nextsparkjs/core/lib/entities/public-item-slug'
+
+export { STATIC_FILE_EXTENSION }
 import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
@@ -29,14 +32,6 @@ export interface ItemRouteProps {
   params: Promise<{ slug: string | string[] }>
   searchParams: SearchParams
 }
-
-/**
- * The extensions of the static files a browser or crawler asks a site for. A request for one that reaches an item route
- * (`/favicon.ico`, `/robots.txt`, `/apple-touch-icon.png`) is not an item: it answers not found at once, without reading the
- * database or rendering a template. A slug may contain a dot (`release-1.0`, `v2.5`), so only these extensions on the last
- * segment count.
- */
-export const STATIC_FILE_EXTENSION = /\.(?:ico|png|jpe?g|gif|svg|webp|avif|txt|xml|json|webmanifest|map|js|css|woff2?)$/i
 
 const isFileRequest = (slug: string) => STATIC_FILE_EXTENSION.test(slug)
 

@@ -167,6 +167,8 @@ test('composed-facade accepts exactly the compositions of core wrappers over imp
     `import Template from '@/t'\n${imp('withRootLayout', 'root-layout')}${imp('withPublicMessages', 'public-layout')}export default withRootLayout(withPublicMessages(Template))`,
     `import { stripeWebhookExtensions } from '@/lib/billing/stripe-webhook-extensions'\n${imp('createStripeWebhookRoute', 'billing-webhooks')}export const POST = createStripeWebhookRoute(stripeWebhookExtensions)`,
     `import { c } from '@/c'\n${imp('createPublicItemMetadata', 'public-item-route')}export const generateMetadata = createPublicItemMetadata(c)\nexport const revalidate = 3600`,
+    `${imp('createSitemapRoute', 'sitemap-route')}export default createSitemapRoute({"staticPaths":["/support"],"urls":[],"exclude":["/legal/*"]})\nexport const dynamic = "force-dynamic"`,
+    `${imp('createRobotsRoute', 'robots-route')}export default createRobotsRoute({"sitemap":false})`,
     `import { widgets } from '@/w'\nimport { createEntityListRoute as list } from '${CORE}entity-list-route'\nexport default list(widgets)`,
   ]) {
     assert.deepEqual(await checkComposed(source), [], source)
@@ -226,6 +228,10 @@ const COMPOSITION_REJECTS = {
   'a call in a segment config': `${imp('withRootLayout', 'root-layout')}export const revalidate = withRootLayout(1)\nexport const dynamic = Number(1)`,
   'a let composition': `${imp('createStripeWebhookRoute', 'billing-webhooks')}import { e } from '@/e'\nexport let POST = createStripeWebhookRoute(e)`,
   'a function declaration': `${imp('createStripeWebhookRoute', 'billing-webhooks')}import { e } from '@/e'\nexport function GET() { return createStripeWebhookRoute(e) }`,
+  'settings that are not a JSON literal': `${imp('createSitemapRoute', 'sitemap-route')}import { paths } from '@/p'\nexport default createSitemapRoute({"staticPaths":paths})`,
+  'settings with a call': `${imp('createSitemapRoute', 'sitemap-route')}export default createSitemapRoute({"staticPaths":[String(1)]})`,
+  'settings with a spread': `${imp('createSitemapRoute', 'sitemap-route')}import { more } from '@/m'\nexport default createSitemapRoute({...more})`,
+  'a literal argument for another wrapper': `${imp('createStripeWebhookRoute', 'billing-webhooks')}export const POST = createStripeWebhookRoute({"a":"b"})`,
   'an IIFE': `${imp('createStripeWebhookRoute', 'billing-webhooks')}import { e } from '@/e'\nexport const POST = (() => createStripeWebhookRoute(e))()`,
 }
 for (const [label, spec] of Object.entries(COMPOSITION_REJECTS)) {

@@ -69,6 +69,7 @@ import { readdirSync } from 'node:fs'
 import { join, posix, relative, sep } from 'node:path'
 
 import { kindForFileStem } from './facade-emitter.mjs'
+import { applySitemap } from './sitemap.mjs'
 import { PLUGIN_DIAGNOSTICS, capabilitiesOf } from '../discovery/plugin-capabilities.mjs'
 
 export const PLAN_DIAGNOSTICS = Object.freeze({
@@ -250,9 +251,10 @@ function dynamicKind(segment) {
  * @param {string[]} [input.modes] - cache-mode file suffixes the host understands (`page.isr.tsx`)
  * @param {string[]} [input.extensions] - source extensions
  * @param {Record<string, object>} [input.webhooks] - composed webhook routes by target (`webhookRoutes`)
+ * @param {object} [input.sitemap] - `sitemapPlan(...)`: composes core's sitemap and robots routes with the project's settings
  * @returns {{ routes: object[], diagnostics: object[], notices: object[] }}
  */
-export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], plugins = [], project, modes = [], extensions = DEFAULT_EXTENSIONS, webhooks = {} }) {
+export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], plugins = [], project, modes = [], extensions = DEFAULT_EXTENSIONS, webhooks = {}, sitemap }) {
   const diagnostics = []
   const pattern = sourceFilePattern(modes, extensions)
   const candidates = [
@@ -433,7 +435,7 @@ export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], plug
   notices.push(...slotDefaultNotices(routes))
 
   const clean = routes.map(({ layer, ...route }) => ({ ...route, origin: layer }))
-  return { routes: clean.sort((a, b) => compareTargets(a.target, b.target)), diagnostics, notices }
+  return { routes: applySitemap(clean, sitemap).sort((a, b) => compareTargets(a.target, b.target)), diagnostics, notices }
 }
 
 /**

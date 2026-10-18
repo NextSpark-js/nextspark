@@ -13,6 +13,7 @@
  *   project,           // { root, importBase, label }
  *   entities,          // async ({ manifest }) => ({ routes, diagnostics }) - per-entity routes (entity-routes.mjs)
  *   webhooks,          // () => ({ routes, diagnostics }) - composed billing webhook routes (webhooks.mjs)
+ *   sitemap,           // ({ cacheComponents, modes }) => sitemapPlan(...) - composes core's sitemap and robots routes (sitemap.mjs)
  *   stylesheet,        // the project's global stylesheet specifier the root layout imports
  *   modes, pageExtensions, cacheComponents,   // see render.mjs
  *   registries,        // async ({ mode }) => [{ path, content, grammar }] - staged registry files
@@ -44,6 +45,7 @@ import { discoverAllEntities } from '../discovery/all-entities.mjs'
 import { PluginCapabilityError, withDeclaredCapabilities } from '../discovery/plugin-capabilities.mjs'
 import { ContractsPublishError, checkContractsPlan, preflightContractsPlan, projectContracts, publishContractsPlan } from '../contracts/index.mjs'
 import { planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
+import { sitemapPlan } from './sitemap.mjs'
 import { webhookRoutes } from './webhooks.mjs'
 import { coreRouteRateLimit } from './rate-limit.mjs'
 import { proxyAreaNotices } from './proxy-areas.mjs'
@@ -115,6 +117,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     entityRoutes: entityPlan.routes,
     entityNames: entityPlan.entities,
     webhooks: webhookPlan.routes,
+    sitemap: config.sitemap ? config.sitemap({ cacheComponents: config.cacheComponents, modes: config.modes ?? [] }) : undefined,
     plugins: declared.plugins,
     project: config.project,
     modes: config.modes ?? [],
@@ -544,6 +547,7 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
         projectRoot: config.projectRoot,
         resolveFile: specifier => resolveCoreRouteFile(coreRoot, specifier),
       }),
+    sitemap: host => sitemapPlan({ ...host, sitemap: currentConfig().sitemap, resolveFile: specifier => resolveCoreRouteFile(coreRoot, specifier) }),
     // Project and plugin API routes get core's default rate limit (rate-limit.mjs)
     rateLimit: coreRouteRateLimit(specifier => resolveCoreRouteFile(coreRoot, specifier)),
     registries: stagedRegistryBuild({ projectRoot: config.projectRoot, coreRoot, env }),

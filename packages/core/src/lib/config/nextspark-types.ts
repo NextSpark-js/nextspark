@@ -48,6 +48,16 @@ export interface NextSparkConfig {
     description?: string
   }
 
+  /** /sitemap.xml and the `Sitemap:` line of /robots.txt, wired by the generated host (`nextspark prepare`). See docs/23-search-engine-optimization. */
+  sitemap?: {
+    /** `false` serves no sitemap and leaves robots.txt without the line. Default `true`. */
+    enabled?: boolean
+    /** Extra paths from the app root, such as `/pricing` (the base path is added). */
+    urls?: string[]
+    /** Paths left out: an exact path or a prefix ending in `*` (`/legal/*`). */
+    exclude?: string[]
+  }
+
   /** Billing hooks the generated host wires (`nextspark prepare`). */
   billing?: {
     /**
@@ -86,6 +96,7 @@ const ROOT_FIELDS = new Set([
   'auth',
   'app',
   'billing',
+  'sitemap',
 ])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -215,6 +226,42 @@ function validateApp(value: unknown, errors: string[]): void {
   validateOptionalString(value.description, 'app.description', errors)
 }
 
+/** A path of this app: from the root, no query, fragment, whitespace, `..` or `//`; `*` only as the last character when `wildcard`. */
+function validateSitemapPaths(value: unknown, path: string, wildcard: boolean, errors: string[]): void {
+  if (value === undefined) return
+  if (!Array.isArray(value)) {
+    errors.push(`${path} must be an array of paths; received ${receivedType(value)}.`)
+    return
+  }
+  const seen = new Set<string>()
+  value.forEach((entry, index) => {
+    const where = `${path}[${index}]`
+    if (typeof entry !== 'string' || !entry.startsWith('/') || entry.startsWith('//') || /[\s?#\\]/.test(entry) || entry.split('/').includes('..')) {
+      errors.push(`${where} must be a path from the app root such as "/pricing" (no query, fragment or spaces); received ${JSON.stringify(entry)}.`)
+      return
+    }
+    if (!wildcard && entry.includes('*')) {
+      errors.push(`${where} may not contain "*"; received ${JSON.stringify(entry)}.`)
+    } else if (entry.slice(0, -1).includes('*')) {
+      errors.push(`${where} may only use "*" as the last character, to exclude a prefix such as "/legal/*"; received ${JSON.stringify(entry)}.`)
+    }
+    if (seen.has(entry)) errors.push(`${path} contains duplicate entry "${entry}".`)
+    seen.add(entry)
+  })
+}
+
+function validateSitemap(value: unknown, errors: string[]): void {
+  if (value === undefined) return
+  if (!isRecord(value)) {
+    errors.push(`sitemap must be an object; received ${receivedType(value)}.`)
+    return
+  }
+  validateKnownFields(value, ['enabled', 'urls', 'exclude'], 'sitemap.', errors)
+  validateOptionalBoolean(value.enabled, 'sitemap.enabled', errors)
+  validateSitemapPaths(value.urls, 'sitemap.urls', false, errors)
+  validateSitemapPaths(value.exclude, 'sitemap.exclude', true, errors)
+}
+
 function validateBilling(value: unknown, errors: string[]): void {
   if (value === undefined) return
   if (!isRecord(value)) {
@@ -254,6 +301,7 @@ export function validateNextSparkConfig(value: unknown): NextSparkConfigValidati
   validateAuth(value.auth, errors)
   validateApp(value.app, errors)
   validateBilling(value.billing, errors)
+  validateSitemap(value.sitemap, errors)
 
   if (errors.length > 0) return { valid: false, errors }
 

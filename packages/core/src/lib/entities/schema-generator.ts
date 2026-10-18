@@ -272,6 +272,13 @@ export function getEntityBasePath(entity: EntityConfig): string | undefined {
   return entity.access?.basePath ?? entity.builder?.public?.basePath
 }
 
+/** The public path of an item (`/blog/my-post`; `/about` under basePath `/`), or undefined for an entity without a base path. */
+export function getEntityItemPath(entity: EntityConfig, slug: string): string | undefined {
+  const basePath = getEntityBasePath(entity)
+  if (!basePath) return undefined
+  return basePath === '/' ? `/${slug}` : `${basePath}/${slug}`
+}
+
 /**
  * Match a URL path to an entity based on access.basePath
  * Uses longest-match strategy to handle nested paths

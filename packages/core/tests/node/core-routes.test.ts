@@ -80,7 +80,7 @@ test('entries have the shape of the conformance fixture: kind, target, specifier
 
 test('the manifest lists exactly the route files under src/routes, and every variant is one of them', () => {
   // _ folders hold helpers, variants replace a manifest route, presets.ts belongs to the API Explorer
-  const routeLike = /(^|\/)(page|layout|loading|error|not-found|template|default|route|global-error|global-not-found|forbidden|unauthorized|robots)\.(tsx|ts)$/
+  const routeLike = /(^|\/)(page|layout|loading|error|not-found|template|default|route|global-error|global-not-found|forbidden|unauthorized|robots|sitemap)\.(tsx|ts)$/
   const isVariant = (file: string) => variantEntries.some(variant => variant.specifier === `${ROUTES_SUBPATH}/${file.replace(/\.(tsx|ts)$/, '')}`)
   const files = walk(ROUTES)
     .filter(file => !file.split('/').some(part => part.startsWith('_')) && routeLike.test(file) && !isVariant(file))
