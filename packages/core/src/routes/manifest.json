@@ -319,8 +319,23 @@
   },
   {
     "kind": "route",
+    "target": "api/v1/media/files/[name]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/media/files/[name]/route"
+  },
+  {
+    "kind": "route",
     "target": "api/v1/media/route.ts",
     "specifier": "@nextsparkjs/core/routes/api/v1/media/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/media/upload/confirm/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/media/upload/confirm/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/v1/media/upload/presign/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/media/upload/presign/route"
   },
   {
     "kind": "route",

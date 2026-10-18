@@ -416,12 +416,16 @@
     "test:all": "pnpm test && pnpm test:node"
   },
   "peerDependencies": {
+    "aws4fetch": "^1.0.20",
     "next": "~16.4.2",
     "nodemailer": "^10.1.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "peerDependenciesMeta": {
+    "aws4fetch": {
+      "optional": true
+    },
     "nodemailer": {
       "optional": true
     }
@@ -441,6 +445,7 @@
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.1",
     "allure-cypress": "^3.4.4",
+    "aws4fetch": "^1.0.20",
     "cypress": "^15.21.1",
     "esbuild": "^0.27.3",
     "glob": "^13.0.6",

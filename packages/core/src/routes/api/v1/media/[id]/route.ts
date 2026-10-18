@@ -7,6 +7,7 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { updateMediaSchema } from '@nextsparkjs/core/lib/media/schemas'
+import { selectStorageDriver } from '@nextsparkjs/core/lib/media/storage'
 
 /**
  * GET /api/v1/media/:id
@@ -122,8 +123,9 @@ export const PATCH = withRateLimitTier(async (
 /**
  * DELETE /api/v1/media/:id
  *
- * Soft delete a media item (sets status to 'deleted').
- * The file remains in storage but is hidden from queries.
+ * Soft delete a media item (sets status to 'deleted') and remove its file
+ * through the storage driver. A file the current driver did not store (another
+ * driver's URL) is left alone, and a failed removal does not fail the delete.
  *
  * Authentication: Requires valid session or API key with media:delete scope
  * RLS: Can only delete media from teams the user is a member of
@@ -154,10 +156,18 @@ export const DELETE = withRateLimitTier(async (
     const { id } = await params
 
     // 5. Soft delete media with team isolation
-    const deleted = await MediaService.softDelete(id, authResult.user!.id, teamId)
+    const media = await MediaService.getById(id, authResult.user!.id, teamId)
 
-    if (!deleted) {
+    if (!media || !await MediaService.softDelete(id, authResult.user!.id, teamId)) {
       return createApiError('Media not found', 404)
+    }
+
+    // 6. Remove the file; only the request that soft-deleted the record gets here
+    const { driver } = selectStorageDriver()
+    try {
+      await driver?.delete(media.url)
+    } catch (storageError) {
+      console.error('[Media API] Media deleted, but its file could not be removed from storage:', storageError)
     }
 
     return createApiResponse({ message: 'Media deleted successfully' })

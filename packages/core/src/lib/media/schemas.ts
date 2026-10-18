@@ -47,3 +47,15 @@ export const mediaListQuerySchema = z.object({
   tagIds: commaList.optional(),
   tagSlugs: commaList.optional(),
 })
+
+/** POST /api/v1/media/upload/presign: what the client is about to upload directly to storage */
+export const presignUploadSchema = z.object({
+  filename: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(100),
+  size: z.number().int().positive(),
+})
+
+/** POST /api/v1/media/upload/confirm: the token the presign returned */
+export const confirmUploadSchema = z.object({
+  token: z.string().min(1).max(4096),
+})

@@ -97,9 +97,10 @@ const nextConfig = {
     '/docs/**/*': ['./docs/**/*', './plugins/*/docs/**/*'],
     '/superadmin/docs/**/*': ['./docs/**/*', './plugins/*/docs/**/*'],
     '/devtools/tests/**/*': ['./tests/**/*', './plugins/*/tests/**/*'],
-    // nodemailer (EMAIL_PROVIDER=smtp) is imported at runtime past the bundler, so the tracer cannot see it;
-    // without this `output: 'standalone'` leaves it out. Matches nothing when it is not installed.
-    '/**/*': ['./node_modules/nodemailer/**/*'],
+    // nodemailer (EMAIL_PROVIDER=smtp) and aws4fetch (STORAGE_DRIVER=s3) are imported at runtime past the
+    // bundler, so the tracer cannot see them; without this `output: 'standalone'` leaves them out. Each glob
+    // matches nothing when its package is not installed.
+    '/**/*': ['./node_modules/nodemailer/**/*', './node_modules/aws4fetch/**/*'],
   },
   // Optimize imports from @nextsparkjs/core to reduce bundle size and improve tree-shaking
   modularizeImports: {

@@ -7,7 +7,7 @@
  * @module MediaService
  */
 
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '../db'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS, getTransactionClient } from '../db'
 import type {
   Media,
   CreateMediaInput,
@@ -16,6 +16,18 @@ import type {
   MediaListResult,
   MediaTag,
 } from '../media/types'
+
+const INSERT_MEDIA = `INSERT INTO "media" (
+        "userId", "teamId", url, filename, "fileSize", "mimeType",
+        width, height, title, alt, caption, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active')
+      RETURNING *`
+
+const insertParams = (userId: string, teamId: string, data: CreateMediaInput) => [
+  userId, teamId, data.url, data.filename, data.fileSize,
+  data.mimeType, data.width ?? null, data.height ?? null,
+  data.title ?? null, data.alt ?? null, data.caption ?? null,
+]
 
 export class MediaService {
   // ============================================
@@ -193,22 +205,48 @@ export class MediaService {
     if (!userId?.trim()) throw new Error('User ID is required')
     if (!teamId?.trim()) throw new Error('Team ID is required')
 
-    const result = await mutateWithRLS<Media>(
-      `INSERT INTO "media" (
-        "userId", "teamId", url, filename, "fileSize", "mimeType",
-        width, height, title, alt, caption, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active')
-      RETURNING *`,
-      [
-        userId, teamId, data.url, data.filename, data.fileSize,
-        data.mimeType, data.width ?? null, data.height ?? null,
-        data.title ?? null, data.alt ?? null, data.caption ?? null,
-      ],
-      userId
-    )
+    const result = await mutateWithRLS<Media>(INSERT_MEDIA, insertParams(userId, teamId, data), userId)
 
     if (!result.rows[0]) throw new Error('Failed to create media record')
     return result.rows[0]
+  }
+
+  /**
+   * Create the record for a URL only if none has it yet. `prepare` runs first,
+   * under a lock on the URL, and returns the rest of the record; it is not run
+   * when the URL already has a record. Direct-upload confirms use it, so a
+   * replayed or concurrent confirm neither creates a second record nor touches
+   * the stored file again.
+   *
+   * @returns The new record, or null when the URL already had one
+   */
+  static async createOnce(
+    userId: string,
+    teamId: string,
+    url: string,
+    prepare: () => Promise<Omit<CreateMediaInput, 'url'>>
+  ): Promise<Media | null> {
+    if (!userId?.trim()) throw new Error('User ID is required')
+    if (!teamId?.trim()) throw new Error('Team ID is required')
+
+    const tx = await getTransactionClient(userId)
+    try {
+      // Held until COMMIT/ROLLBACK; each later statement sees what a previous holder committed
+      await tx.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`media-url:${url}`])
+      // ponytail: no index on media.url, so this is a sequential scan; add one if confirms get slow
+      if (await tx.queryOne('SELECT 1 FROM "media" WHERE url = $1 LIMIT 1', [url])) {
+        await tx.rollback()
+        return null
+      }
+      const data = { ...(await prepare()), url }
+      const created = await tx.queryOne<Media>(INSERT_MEDIA, insertParams(userId, teamId, data))
+      if (!created) throw new Error('Failed to create media record')
+      await tx.commit()
+      return created
+    } catch (error) {
+      await tx.rollback()
+      throw error
+    }
   }
 
   /**

@@ -43,6 +43,14 @@ export async function register(): Promise<void> {
       console.error('[auth-readiness] startup readiness check could not run; per-request gates still apply')
     }
 
+    // A misconfigured STORAGE_DRIVER, and the local driver's volume caveat, show at startup, not on the first upload
+    try {
+      const { logStorageAtStartup } = await import('../lib/media/storage')
+      logStorageAtStartup()
+    } catch {
+      console.error('[storage] startup storage check could not run; uploads still check it per request')
+    }
+
     console.log('[Instrumentation] Initializing scheduled actions system...')
 
     try {

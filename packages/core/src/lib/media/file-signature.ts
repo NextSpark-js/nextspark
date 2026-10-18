@@ -21,6 +21,11 @@ export function extensionForMime(mimeType: string): string {
   return EXTENSION_BY_MIME[mimeType] ?? 'bin'
 }
 
+/** Type to serve a stored file with, from the extension the server gave it; undefined for `bin` or an unknown one. */
+export function mimeForExtension(extension: string): string | undefined {
+  return Object.keys(EXTENSION_BY_MIME).find((mimeType) => EXTENSION_BY_MIME[mimeType] === extension)
+}
+
 const startsWith = (bytes: Uint8Array, signature: number[], offset = 0) =>
   signature.every((value, index) => bytes[offset + index] === value)
 

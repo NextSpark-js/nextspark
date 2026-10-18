@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server'
-import { put } from '@vercel/blob'
 import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
@@ -9,49 +8,16 @@ import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MEDIA_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { extractImageDimensions, sanitizeFilename } from '@nextsparkjs/core/lib/media/utils'
-import { bytesMatchMime, extensionForMime } from '@nextsparkjs/core/lib/media/file-signature'
+import { bytesMatchMime } from '@nextsparkjs/core/lib/media/file-signature'
 import { MAX_MEDIA_BATCH } from '@nextsparkjs/core/lib/media/schemas'
+import { allowedMimeTypes, maxSizeMBFor } from '@nextsparkjs/core/lib/media/upload-limits'
+import { developmentFallbackDriver, newObjectName, selectStorageDriver } from '@nextsparkjs/core/lib/media/storage'
 import type { Media } from '@nextsparkjs/core/lib/media/types'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
 
-// Check if Vercel Blob is configured
-// NOTE: We use Vercel Blob even in development when available because some external APIs
-// (like social media platforms) cannot access localhost URLs - they need publicly accessible URLs
-const isVercelBlobConfigured = () => {
-  const token = process.env.BLOB_READ_WRITE_TOKEN
-  return !!token && token.startsWith('vercel_blob_')
-}
-
-// Next serves public/ from what it indexed at startup, so a file written there while a production server
-// runs answers 404 until a restart (and a container's disk is gone on redeploy anyway): production without
-// Blob is a setup error, not a place to write. Development keeps the local fallback.
+// NOTE: Vercel Blob is used even in development when its token is set, because some external APIs
+// (like social media platforms) cannot access localhost URLs - they need publicly accessible URLs.
+// The driver comes from STORAGE_DRIVER (lib/media/storage); production without one answers 503.
 const localFallbackAllowed = () => process.env.NODE_ENV !== 'production'
-
-const storageNotConfigured = () => createApiError(
-  'Media storage is not configured: set BLOB_READ_WRITE_TOKEN (a Vercel Blob read/write token, starts with "vercel_blob_") to upload files in production.',
-  503,
-  { missing: 'BLOB_READ_WRITE_TOKEN' },
-  API_ERROR_CODES.STORAGE_NOT_CONFIGURED
-)
-
-// Local storage fallback (development only) - accepts buffer directly
-// Used when Vercel Blob is not configured or fails
-async function uploadToLocalStorageBuffer(buffer: Buffer, fileName: string): Promise<string> {
-  const uploadDir = join(process.cwd(), 'public', 'uploads', 'temp')
-
-  // Create directory if it doesn't exist
-  if (!existsSync(uploadDir)) {
-    await mkdir(uploadDir, { recursive: true })
-  }
-
-  const filePath = join(uploadDir, fileName)
-  await writeFile(filePath, buffer)
-
-  // Return relative URL that can be served from public folder
-  return `/uploads/temp/${fileName}`
-}
 
 /**
  * POST /api/v1/media/upload
@@ -60,8 +26,9 @@ async function uploadToLocalStorageBuffer(buffer: Buffer, fileName: string): Pro
  * Enhanced version that creates database records for uploaded files.
  *
  * Features:
- * - Uploads files to Vercel Blob; development without a token falls back to local storage,
- *   production without one answers 503 STORAGE_NOT_CONFIGURED
+ * - Stores files with the driver STORAGE_DRIVER selects (Vercel Blob, S3-compatible, local disk);
+ *   development without one falls back to public/uploads/temp, production answers 503 STORAGE_NOT_CONFIGURED
+ * - Large files can skip the app server with a presigned upload (upload/presign, then upload/confirm)
  * - Creates media records in database for tracking
  * - Extracts image dimensions automatically
  * - Returns both legacy URLs array and new media records array
@@ -89,7 +56,11 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
-    if (!isVercelBlobConfigured() && !localFallbackAllowed()) return storageNotConfigured()
+    const selection = selectStorageDriver()
+    if (!selection.driver) {
+      return createApiError(selection.message, 503, selection.details, API_ERROR_CODES.STORAGE_NOT_CONFIGURED)
+    }
+    const driver = selection.driver
 
     let formData: FormData
     try {
@@ -115,16 +86,13 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
 
     const uploadedUrls: string[] = []
     const uploadedMedia: Media[] = []
-    const useVercelBlob = isVercelBlobConfigured()
+    let storage = driver.name
 
-    console.log(`📤 [Media Upload] Storage mode: ${useVercelBlob ? 'Vercel Blob' : 'Local Storage'}`)
+    console.log(`📤 [Media Upload] Storage driver: ${driver.name}`)
 
     for (const file of files) {
       // Validate file type using config (theme-overridable)
-      const allowedTypes = MEDIA_CONFIG?.allowedMimeTypes ?? [
-        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-        'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
-      ]
+      const allowedTypes = allowedMimeTypes()
 
       if (!allowedTypes.includes(file.type)) {
         return createApiError(
@@ -135,13 +103,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       }
 
       // Determine max size based on file type category (theme-overridable)
-      const defaultMaxSizeMB = MEDIA_CONFIG?.maxSizeMB ?? 10
-      let maxSizeMB = defaultMaxSizeMB
-      if (file.type.startsWith('image/') && MEDIA_CONFIG?.maxSizeImageMB != null) {
-        maxSizeMB = MEDIA_CONFIG.maxSizeImageMB
-      } else if (file.type.startsWith('video/') && MEDIA_CONFIG?.maxSizeVideoMB != null) {
-        maxSizeMB = MEDIA_CONFIG.maxSizeVideoMB
-      }
+      const maxSizeMB = maxSizeMBFor(file.type)
       const maxSize = maxSizeMB * 1024 * 1024
       if (file.size > maxSize) {
         return createApiError(
@@ -151,11 +113,8 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
         )
       }
 
-      // Generate unique filename
-      const timestamp = Date.now()
-      const randomString = Math.random().toString(36).substring(2, 15)
-      // The extension follows the allow-listed type, never the client's file name
-      const fileName = `${timestamp}_${randomString}.${extensionForMime(file.type)}`
+      // Generated by the server; the extension follows the allow-listed type, never the client's file name
+      const fileName = newObjectName(file.type)
 
       try {
         let uploadedUrl: string
@@ -172,28 +131,17 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
           )
         }
 
-        if (useVercelBlob) {
-          // Try Vercel Blob first - use buffer with content type
-          try {
-            const blob = await put(`uploads/temp/${fileName}`, fileBuffer, {
-              access: 'public',
-              addRandomSuffix: false,
-              contentType: file.type
-            })
-            uploadedUrl = blob.url
-            console.log(`✅ [Media Upload] Uploaded to Vercel Blob: ${uploadedUrl}`)
-          } catch (blobError) {
-            // A failed put in production is an error, not a file that is never served
-            if (!localFallbackAllowed()) throw blobError
-            // Fallback to local storage if Vercel Blob fails
-            console.warn(`⚠️ [Media Upload] Vercel Blob failed, falling back to local storage:`, blobError)
-            uploadedUrl = await uploadToLocalStorageBuffer(fileBuffer, fileName)
-            console.log(`✅ [Media Upload] Uploaded to local storage (fallback): ${uploadedUrl}`)
-          }
-        } else {
-          // Use local storage directly
-          uploadedUrl = await uploadToLocalStorageBuffer(fileBuffer, fileName)
-          console.log(`✅ [Media Upload] Uploaded to local storage: ${uploadedUrl}`)
+        try {
+          uploadedUrl = await driver.put(fileName, fileBuffer, file.type)
+          console.log(`✅ [Media Upload] Stored with ${driver.name}: ${uploadedUrl}`)
+        } catch (storageError) {
+          // A failed put in production is an error, not a file that is never served. Development
+          // falls back to public/uploads/temp when Blob fails.
+          if (driver.name !== 'vercel-blob' || !localFallbackAllowed()) throw storageError
+          console.warn(`⚠️ [Media Upload] Vercel Blob failed, falling back to local storage:`, storageError)
+          uploadedUrl = await developmentFallbackDriver().put(fileName, fileBuffer, file.type)
+          storage = 'local'
+          console.log(`✅ [Media Upload] Uploaded to local storage (fallback): ${uploadedUrl}`)
         }
 
         uploadedUrls.push(uploadedUrl)
@@ -245,7 +193,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       urls: uploadedUrls,          // LEGACY: backward compatible
       media: uploadedMedia,        // NEW: full media records
       count: uploadedUrls.length,
-      storage: useVercelBlob ? 'vercel-blob' : 'local'
+      storage
     })
 
   } catch (error) {
@@ -279,15 +227,15 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
-    const useVercelBlob = isVercelBlobConfigured()
+    const selection = selectStorageDriver()
 
     // This could be used for cleanup or management
     const maxSizeMB = MEDIA_CONFIG?.maxSizeMB ?? 10
     return createApiResponse({
       message: 'Media upload endpoint is active',
-      storage: useVercelBlob ? 'Vercel Blob' : localFallbackAllowed() ? 'Local Storage' : 'Not configured (set BLOB_READ_WRITE_TOKEN)',
-      uploadPath: 'uploads/temp/',
-      supportedTypes: MEDIA_CONFIG?.allowedMimeTypes ?? ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
+      storage: selection.driver ? selection.driver.name : 'Not configured (set STORAGE_DRIVER or BLOB_READ_WRITE_TOKEN)',
+      directUpload: !!selection.driver?.direct,
+      supportedTypes: allowedMimeTypes(),
       maxFileSize: `${maxSizeMB}MB`,
       ...(MEDIA_CONFIG?.maxSizeImageMB != null && { maxImageSize: `${MEDIA_CONFIG.maxSizeImageMB}MB` }),
       ...(MEDIA_CONFIG?.maxSizeVideoMB != null && { maxVideoSize: `${MEDIA_CONFIG.maxSizeVideoMB}MB` }),
