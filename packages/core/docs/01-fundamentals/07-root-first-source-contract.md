@@ -93,6 +93,7 @@ export default defineConfig({
 | `features.superadmin` | `boolean` | `true` | No | Include superadmin contributions. |
 | `features.aiChat` | `boolean` | `true` | No | Include AI chat contributions. |
 | `billing.webhookExtensions` | `{ stripe?: string; polar?: string }` | absent | No | Paths (from the project root) of the modules that extend core's billing webhooks. `nextspark prepare` imports each one statically into the generated webhook route: `stripe` must export `stripeWebhookExtensions`, `polar` must export `polarWebhookExtensions`. |
+| `sitemap` | `{ enabled?: boolean; urls?: string[]; exclude?: string[] }` | `enabled: true` | No | `/sitemap.xml` and the `Sitemap:` line of `/robots.txt`. `urls` adds paths from the app root, `exclude` removes exact paths or prefixes ending in `*`; `enabled: false` serves no sitemap. `nextspark prepare` writes them into the generated sitemap route. See [SEO guide](../23-search-engine-optimization/01-guide.md). |
 
 No compiler-read field is required because the root-first defaults are complete. The file itself is required so root discovery is deterministic and invalid configuration can fail before generation.
 
