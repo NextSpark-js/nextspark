@@ -10,7 +10,7 @@ import { extractImageDimensions } from '@nextsparkjs/core/lib/media/utils'
 import { bytesMatchMime } from '@nextsparkjs/core/lib/media/file-signature'
 import { confirmUploadSchema } from '@nextsparkjs/core/lib/media/schemas'
 import { allowedMimeTypes, maxSizeMBFor } from '@nextsparkjs/core/lib/media/upload-limits'
-import { PendingObjectChangedError, selectStorageDriver } from '@nextsparkjs/core/lib/media/storage'
+import { PendingObjectChangedError, selectStorageDriver } from '@nextsparkjs/core/lib/media/storage/index'
 import { readUploadClaim } from '@nextsparkjs/core/lib/media/upload-token'
 
 /** Leading bytes read back for the signature check (and image dimensions when they are in it). */

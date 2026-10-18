@@ -8,7 +8,7 @@ import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { sanitizeFilename } from '@nextsparkjs/core/lib/media/utils'
 import { presignUploadSchema } from '@nextsparkjs/core/lib/media/schemas'
 import { allowedMimeTypes, maxSizeMBFor } from '@nextsparkjs/core/lib/media/upload-limits'
-import { newObjectName, selectStorageDriver } from '@nextsparkjs/core/lib/media/storage'
+import { newObjectName, selectStorageDriver } from '@nextsparkjs/core/lib/media/storage/index'
 import { CONFIRM_WINDOW_SECONDS, signUploadClaim } from '@nextsparkjs/core/lib/media/upload-token'
 
 /**

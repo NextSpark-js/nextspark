@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { selectStorageDriver } from '@nextsparkjs/core/lib/media/storage'
+import { selectStorageDriver } from '@nextsparkjs/core/lib/media/storage/index'
 import { LocalStorageDriver } from '@nextsparkjs/core/lib/media/storage/local'
 
 /**

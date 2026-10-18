@@ -11,7 +11,7 @@ import { extractImageDimensions, sanitizeFilename } from '@nextsparkjs/core/lib/
 import { bytesMatchMime } from '@nextsparkjs/core/lib/media/file-signature'
 import { MAX_MEDIA_BATCH } from '@nextsparkjs/core/lib/media/schemas'
 import { allowedMimeTypes, maxSizeMBFor } from '@nextsparkjs/core/lib/media/upload-limits'
-import { developmentFallbackDriver, newObjectName, selectStorageDriver } from '@nextsparkjs/core/lib/media/storage'
+import { developmentFallbackDriver, newObjectName, selectStorageDriver } from '@nextsparkjs/core/lib/media/storage/index'
 import type { Media } from '@nextsparkjs/core/lib/media/types'
 
 // NOTE: Vercel Blob is used even in development when its token is set, because some external APIs

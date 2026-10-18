@@ -7,7 +7,7 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { updateMediaSchema } from '@nextsparkjs/core/lib/media/schemas'
-import { selectStorageDriver } from '@nextsparkjs/core/lib/media/storage'
+import { selectStorageDriver } from '@nextsparkjs/core/lib/media/storage/index'
 
 /**
  * GET /api/v1/media/:id
