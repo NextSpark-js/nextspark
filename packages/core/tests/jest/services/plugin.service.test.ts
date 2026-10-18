@@ -775,16 +775,11 @@ describe('PluginService', () => {
       }
     })
 
+    // The server path (onLoad hooks, the init-once flag, a failing plugin) runs in plugin.service.server.test.ts,
+    // under the node environment: jsdom 26 does not let a test hide window
     it('should call initializeAll without throwing', async () => {
-      // In jsdom environment, window is always defined
-      // This test just ensures the method doesn't throw
+      // In jsdom environment, window is always defined, so this is the client-side early return
       await expect(PluginService.initializeAll()).resolves.not.toThrow()
-    })
-
-    it('should return without running onLoad hooks when window is defined', async () => {
-      // jsdom 26 (jest 30) does not let a test hide window, so only the client-side early return runs here
-      expect(typeof window).not.toBe('undefined')
-      await expect(PluginService.initializeAll()).resolves.toBeUndefined()
     })
 
     // Skip: Debug logging tests require NEXTSPARK_DEBUG_PLUGINS=true at module load time
@@ -816,29 +811,6 @@ describe('PluginService', () => {
       // onLoad should not be called additionally in browser
       const callsAfter = mockOnLoad.mock.calls.length
       expect(callsAfter).toBe(callsBefore)
-    })
-
-    it('should continue with other plugins if one fails', async () => {
-      // @ts-ignore
-      delete global.window
-
-      // Mock one plugin to throw error
-      const { PLUGIN_REGISTRY } = require('@/core/lib/registries/plugin-registry')
-      const mockOnLoad = PLUGIN_REGISTRY['test-plugin'].config.hooks.onLoad
-
-      // Create a new mock that rejects once then resolves
-      mockOnLoad.mockImplementationOnce(() => Promise.reject(new Error('Load failed')))
-
-      // Should not throw - it should catch and continue
-      await expect(PluginService.initializeAll()).resolves.not.toThrow()
-    })
-
-    it('should handle plugins without onLoad hook', async () => {
-      // @ts-ignore
-      delete global.window
-
-      // Should not throw for plugins without hooks
-      await expect(PluginService.initializeAll()).resolves.not.toThrow()
     })
 
     // Skip: Debug logging tests require NEXTSPARK_DEBUG_PLUGINS=true at module load time
