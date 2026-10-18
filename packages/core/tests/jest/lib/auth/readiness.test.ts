@@ -714,7 +714,7 @@ describe('evaluateAuthReadiness EmailFactory provider parity', () => {
     expect(result.outcome).toBe('ready')
   })
 
-  test.each(['smtp', 'Console', 'RESEND', ' resend', 'resend ', 'Auto', '   '])(
+  test.each(['SMTP', 'Console', 'RESEND', ' resend', 'resend ', 'Auto', '   '])(
     'rejects the provider token %p instead of normalizing it',
     (provider) => {
       for (const environment of ['development', 'production'] as const) {
@@ -729,7 +729,7 @@ describe('evaluateAuthReadiness EmailFactory provider parity', () => {
         expect(diagnosticCodes(result)).toEqual(['EMAIL_PROVIDER_UNSUPPORTED', 'AUTH_NO_AVAILABLE_METHOD'])
         // The message is static, so the raw token is never echoed.
         expect(result.diagnostics[0].message).toBe(
-          'EMAIL_PROVIDER must be exactly auto, resend or console (case- and whitespace-sensitive).'
+          'EMAIL_PROVIDER must be exactly auto, resend, smtp or console (case- and whitespace-sensitive).'
         )
       }
     }
@@ -911,6 +911,11 @@ describe('build check assumptions', () => {
       EMAIL_PROVIDER: 'resend',
       RESEND_API_KEY: 're_1234567890abcdefghijklmnop',
       RESEND_FROM_EMAIL: 'auth@example.com',
+      SMTP_HOST: 'smtp.example.org',
+      SMTP_PORT: '587',
+      SMTP_SECURE: 'false',
+      SMTP_USER: 'mailer',
+      SMTP_PASS: 'pw',
       FORCE_RESEND_IN_DEV: '1',
       GOOGLE_CLIENT_ID: '123456789-abcdef.apps.googleusercontent.com',
       GOOGLE_CLIENT_SECRET: 'GOCSPX-production-secret',
@@ -928,6 +933,7 @@ describe('build check assumptions', () => {
         provider: 'resend',
         resendApiKey: 're_1234567890abcdefghijklmnop',
         resendFromEmail: 'auth@example.com',
+        smtp: { host: 'smtp.example.org', port: '587', secure: 'false', user: 'mailer', pass: 'pw' },
         forceResendInDevelopment: true,
       },
       google: {
@@ -989,5 +995,81 @@ describe('evaluateAuthReadiness session secret', () => {
 
   test('the environment adapter reads BETTER_AUTH_SECRET', () => {
     expect(authReadinessConfigurationFromEnv({ BETTER_AUTH_SECRET: 'abc' }).betterAuthSecret).toBe('abc')
+  })
+})
+
+describe('evaluateAuthReadiness SMTP provider', () => {
+  const smtp = { host: 'smtp.example.org', port: '587', secure: 'false', user: 'mailer', pass: 'pw' }
+  const evaluate = (email: Record<string, unknown>, overrides: Record<string, unknown> = {}) =>
+    evaluateAuthReadiness({
+      ...productionWeb,
+      authConfig: { methods: ['email-otp'] },
+      configuration: { email: { provider: 'smtp', resendFromEmail: 'auth@example.org', smtp, ...email } },
+      ...overrides,
+    })
+  const codes = (result: ReturnType<typeof evaluateAuthReadiness>) => result.diagnostics.map(({ code }) => code)
+
+  test('a complete configuration makes OTP, and password email delivery, available', () => {
+    const otp = evaluate({})
+    const password = evaluate({}, { authConfig: { methods: ['email-password'] } })
+    expect(otp.outcome).toBe('ready')
+    expect(otp.availableMethods).toEqual(['email-otp'])
+    expect(otp.diagnostics).toEqual([])
+    expect(password.availableMethods).toEqual(['email-password'])
+  })
+
+  test('host alone with the sender is complete; the port may be omitted', () => {
+    expect(evaluate({ smtp: { host: 'smtp.example.org' } }).outcome).toBe('ready')
+    expect(evaluate({ smtp: { host: 'smtp.example.org', secure: 'true' } }).outcome).toBe('ready')
+  })
+
+  test('an incomplete configuration is invalid and names the variables', () => {
+    const result = evaluate({ smtp: { port: '99999', secure: 'yes', user: 'mailer' }, resendFromEmail: undefined })
+    expect(result.outcome).toBe('invalid')
+    expect(result.availableMethods).toEqual([])
+    expect(codes(result)).toEqual([
+      'SMTP_HOST_MISSING',
+      'SMTP_PORT_MALFORMED',
+      'SMTP_SECURE_MALFORMED',
+      'SMTP_PASS_MISSING',
+      'RESEND_FROM_EMAIL_MISSING',
+      'AUTH_NO_AVAILABLE_METHOD',
+    ])
+  })
+
+  test('user and pass come together', () => {
+    expect(codes(evaluate({ smtp: { host: 'h.example.org', pass: 'pw' } }))).toContain('SMTP_USER_MISSING')
+    expect(codes(evaluate({ smtp: { host: 'h.example.org', user: 'mailer' } }))).toContain('SMTP_PASS_MISSING')
+    expect(evaluate({ smtp: { host: 'h.example.org' } }).outcome).toBe('ready')
+  })
+
+  test('a placeholder host is reported, never the values', () => {
+    const result = evaluate({ smtp: { ...smtp, host: 'your-smtp-host', pass: 'super-secret-pass' } })
+    expect(codes(result)).toContain('SMTP_HOST_PLACEHOLDER')
+    expect(JSON.stringify(result)).not.toMatch(/super-secret-pass|your-smtp-host/)
+  })
+
+  test('auto never selects SMTP, even with SMTP variables set', () => {
+    const result = evaluate({ provider: 'auto', resendFromEmail: undefined })
+    expect(result.outcome).toBe('invalid')
+    expect(codes(result)).toContain('EMAIL_PROVIDER_DEVELOPMENT_ONLY')
+  })
+
+  test('is available in development too', () => {
+    expect(evaluate({}, { environment: 'development' }).outcome).toBe('ready')
+  })
+
+  test('a runtime-only build defers missing values but not a malformed one', () => {
+    const deferred = evaluate({ runtimeOnly: true, smtp: {}, resendFromEmail: undefined }, { stage: 'build' })
+    expect(deferred.outcome).toBe('deferred')
+    expect(deferred.deferredMethods).toEqual(['email-otp'])
+    const malformed = evaluate({ runtimeOnly: true, smtp: { ...smtp, port: 'abc' } }, { stage: 'build' })
+    expect(malformed.outcome).toBe('invalid')
+    expect(codes(malformed)).toContain('SMTP_PORT_MALFORMED')
+    expect(evaluate({ runtimeOnly: true }, { stage: 'build' }).outcome).toBe('ready')
+  })
+
+  test('without runtimeOnly a build with nothing set is invalid', () => {
+    expect(evaluate({ smtp: {}, resendFromEmail: undefined }, { stage: 'build' }).outcome).toBe('invalid')
   })
 })

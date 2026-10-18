@@ -196,7 +196,7 @@ async function main() {
     console.log(`   Login methods: ${result.declaredMethods.join(', ')}`)
     for (const diagnostic of result.diagnostics) console.log(`❌ ${diagnosticLine(diagnostic)}`)
     console.log('   Fix: set the variables named above in .env or the build environment (email: EMAIL_PROVIDER=resend,')
-    console.log('   RESEND_API_KEY, RESEND_FROM_EMAIL; Google: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET; GitHub: GITHUB_CLIENT_ID,')
+    console.log('   RESEND_API_KEY, RESEND_FROM_EMAIL, or EMAIL_PROVIDER=smtp, SMTP_HOST, RESEND_FROM_EMAIL; Google: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET; GitHub: GITHUB_CLIENT_ID,')
     console.log('   GITHUB_CLIENT_SECRET; Microsoft: MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET; Apple: APPLE_CLIENT_ID, APPLE_TEAM_ID,')
     console.log('   APPLE_KEY_ID, APPLE_PRIVATE_KEY), or change auth.methods.')
     console.log('   Credentials injected only at runtime: declare them with NEXTSPARK_AUTH_RUNTIME_ONLY=email,google,github (the providers you use);')

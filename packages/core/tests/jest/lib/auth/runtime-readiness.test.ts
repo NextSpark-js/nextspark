@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 import {
   getPublicAuthReadiness,
   getRuntimeAuthReadiness,
+  isRuntimeEmailAvailable,
   logAuthReadinessAtStartup,
   withAuthRequestReadiness,
 } from '@/core/lib/auth/runtime-readiness'
@@ -407,5 +408,45 @@ describe('startup auth readiness log', () => {
     expect(() => logAuthReadinessAtStartup({ authConfig, env: production })).not.toThrow()
     expect(console.error).toHaveBeenCalledTimes(1)
     expect(JSON.stringify((console.error as jest.Mock).mock.calls[0])).not.toContain('config exploded')
+  })
+})
+
+describe('runtime auth readiness with SMTP', () => {
+  const smtpEmail = { EMAIL_PROVIDER: 'smtp', SMTP_HOST: 'smtp.example.org', RESEND_FROM_EMAIL: 'auth@example.org' }
+
+  test('a complete SMTP configuration makes email available for OTP, recovery and invitations', () => {
+    const result = getPublicAuthReadiness({
+      authConfig: { methods: ['email-otp', 'google'], emailAndPassword: { enabled: true } },
+      env: { ...production, ...smtpEmail },
+    })
+
+    expect(result.availableMethods).toEqual(['email-otp'])
+    expect(result.capabilities).toEqual({ invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: true })
+    expect(isRuntimeEmailAvailable({ env: { ...production, ...smtpEmail } })).toBe(true)
+  })
+
+  test('an incomplete one reports the variables and turns email off', () => {
+    const env = { ...production, ...smtpEmail, SMTP_HOST: undefined, SMTP_PORT: 'abc' }
+    const result = getRuntimeAuthReadiness({ authConfig: { methods: ['email-otp'] }, env })
+
+    expect(result.outcome).toBe('invalid')
+    expect(result.diagnostics.map(({ code }) => code)).toEqual(
+      expect.arrayContaining(['SMTP_HOST_MISSING', 'SMTP_PORT_MALFORMED'])
+    )
+    expect(isRuntimeEmailAvailable({ env })).toBe(false)
+  })
+
+  test('the OTP route is served with SMTP configured and refused without a host', async () => {
+    const options = { authConfig: { methods: ['email-otp' as const] } }
+    const send = () =>
+      request('/api/auth/email-otp/send-verification-otp', { method: 'POST' })
+    const served = await withAuthRequestReadiness(send(), okHandler, { ...options, env: { ...production, ...smtpEmail } })
+    const refused = await withAuthRequestReadiness(send(), okHandler, {
+      ...options,
+      env: { ...production, ...smtpEmail, SMTP_HOST: undefined },
+    })
+
+    expect(served.status).toBe(200)
+    expect(refused.status).toBe(503)
   })
 })
