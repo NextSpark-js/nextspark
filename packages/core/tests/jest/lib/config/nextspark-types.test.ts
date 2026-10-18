@@ -112,13 +112,13 @@ describe('nextspark.config.ts source contract', () => {
 
   it('accepts billing webhook extension modules, one path per provider', () => {
     const result = validateNextSparkConfig({
-      billing: { webhookExtensions: { stripe: './lib/billing/stripe-webhook-extensions', polar: './lib/billing/polar-webhook-extensions' } },
+      billing: { webhookExtensions: { stripe: './lib/billing/stripe-webhook-extensions', polar: './lib/billing/polar-webhook-extensions', lemonsqueezy: './lib/billing/lemonsqueezy-webhook-extensions' } },
     })
 
     expect(result.valid).toBe(true)
     if (!result.valid) return
     expect(result.config.billing).toEqual({
-      webhookExtensions: { stripe: './lib/billing/stripe-webhook-extensions', polar: './lib/billing/polar-webhook-extensions' },
+      webhookExtensions: { stripe: './lib/billing/stripe-webhook-extensions', polar: './lib/billing/polar-webhook-extensions', lemonsqueezy: './lib/billing/lemonsqueezy-webhook-extensions' },
     })
     expect(validateNextSparkConfig({ billing: {} }).valid).toBe(true)
     expect(validateNextSparkConfig({ billing: { webhookExtensions: {} } }).valid).toBe(true)

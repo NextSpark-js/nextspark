@@ -234,6 +234,11 @@
   },
   {
     "kind": "route",
+    "target": "api/v1/billing/webhooks/lemonsqueezy/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/billing/webhooks/lemonsqueezy/route"
+  },
+  {
+    "kind": "route",
     "target": "api/v1/billing/webhooks/polar/route.ts",
     "specifier": "@nextsparkjs/core/routes/api/v1/billing/webhooks/polar/route"
   },

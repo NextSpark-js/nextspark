@@ -10,14 +10,15 @@
  *     webhookExtensions: {
  *       stripe: './lib/billing/stripe-webhook-extensions', // exports `stripeWebhookExtensions`
  *       polar: './lib/billing/polar-webhook-extensions',   // exports `polarWebhookExtensions`
+ *       lemonsqueezy: './lib/billing/lemonsqueezy-webhook-extensions', // exports `lemonsqueezyWebhookExtensions`
  *     },
  *   },
  * })
  * ```
  *
  * The host then replaces core's webhook route with a composed facade that statically imports that module and hands
- * it to core's handler (`createStripeWebhookRoute` / `createPolarWebhookRoute`). Nothing is loaded by a path chosen at
- * runtime, and a project without the setting keeps core's route (no extensions).
+ * it to core's handler (`createStripeWebhookRoute` / `createPolarWebhookRoute` / `createLemonSqueezyWebhookRoute`).
+ * Nothing is loaded by a path chosen at runtime, and a project without the setting keeps core's route (no extensions).
  *
  * @module core/scripts/build/registry/host/webhooks
  */
@@ -38,6 +39,7 @@ const BILLING_WEBHOOKS_MODULE = `${CORE_ROUTES_SPECIFIER}_internal/billing-webho
 export const WEBHOOK_PROVIDERS = Object.freeze({
   stripe: { target: 'api/v1/billing/webhooks/stripe/route.ts', wrapper: 'createStripeWebhookRoute', exportName: 'stripeWebhookExtensions' },
   polar: { target: 'api/v1/billing/webhooks/polar/route.ts', wrapper: 'createPolarWebhookRoute', exportName: 'polarWebhookExtensions' },
+  lemonsqueezy: { target: 'api/v1/billing/webhooks/lemonsqueezy/route.ts', wrapper: 'createLemonSqueezyWebhookRoute', exportName: 'lemonsqueezyWebhookExtensions' },
 })
 
 const EXTENSIONS = ['ts', 'tsx', 'mts', 'js', 'jsx', 'mjs']

@@ -3,7 +3,7 @@
  *
  * A project declares its extension modules in nextspark.config.ts
  * (`billing.webhookExtensions`); the generated host's webhook routes import them statically and
- * pass them here. Core's own routes (`api/v1/billing/webhooks/{stripe,polar}`) are the same
+ * pass them here. Core's own routes (`api/v1/billing/webhooks/{stripe,polar,lemonsqueezy}`) are the same
  * handlers without extensions.
  *
  * Rate limiting: 500 requests/hour per IP (tier: webhook). Signature verification is the primary
@@ -13,8 +13,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleStripeWebhook, type StripeWebhookExtensions } from '@nextsparkjs/core/lib/billing/stripe-webhook'
 import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/polar-webhook'
+import type { LemonSqueezyWebhookExtensions } from '@nextsparkjs/core/lib/billing/lemonsqueezy-webhook'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { createPolarWebhookHandler } from './polar-webhook'
+import { createLemonSqueezyWebhookHandler } from './lemonsqueezy-webhook'
 
 /** The Stripe webhook `POST`, with the project's one-time payment extensions. */
 export function createStripeWebhookRoute(extensions: StripeWebhookExtensions = {}) {
@@ -29,4 +31,9 @@ export function createStripeWebhookRoute(extensions: StripeWebhookExtensions = {
 /** The Polar webhook `POST`, with the project's one-time payment extensions. */
 export function createPolarWebhookRoute(extensions: PolarWebhookExtensions = {}) {
   return withRateLimitTier(createPolarWebhookHandler(async () => extensions), 'webhook')
+}
+
+/** The Lemon Squeezy webhook `POST`, with the project's one-time payment extensions. */
+export function createLemonSqueezyWebhookRoute(extensions: LemonSqueezyWebhookExtensions = {}) {
+  return withRateLimitTier(createLemonSqueezyWebhookHandler(async () => extensions), 'webhook')
 }

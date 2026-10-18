@@ -204,19 +204,20 @@ test('billing.webhookExtensions replaces core\'s webhook route with a composed f
   const w = world({
     'lib/billing/stripe-webhook-extensions.ts': 'export const stripeWebhookExtensions = {}\n',
     'lib/billing/polar-webhook-extensions.tsx': 'export const polarWebhookExtensions = {}\n',
+    'lib/billing/lemonsqueezy-webhook-extensions.ts': 'export const lemonsqueezyWebhookExtensions = {}\n',
   })
   try {
-    w.write('core/billing-webhooks.ts', 'export function createStripeWebhookRoute(e) { return () => e }\nexport function createPolarWebhookRoute(e) { return () => e }\n')
+    w.write('core/billing-webhooks.ts', 'export function createStripeWebhookRoute(e) { return () => e }\nexport function createPolarWebhookRoute(e) { return () => e }\nexport function createLemonSqueezyWebhookRoute(e) { return () => e }\n')
     const resolveFile = () => join(w.root, 'core/billing-webhooks.ts')
     const { routes: hooks, diagnostics } = webhookRoutes({
-      webhookExtensions: { stripe: './lib/billing/stripe-webhook-extensions', polar: 'lib/billing/polar-webhook-extensions.tsx' },
+      webhookExtensions: { stripe: './lib/billing/stripe-webhook-extensions', polar: 'lib/billing/polar-webhook-extensions.tsx', lemonsqueezy: './lib/billing/lemonsqueezy-webhook-extensions' },
       projectRoot: w.source,
       resolveFile,
     })
     assert.deepEqual(diagnostics, [])
     const route = target => ({ kind: 'route', target, specifier: `@nextsparkjs/core/routes/${target.replace(/\.ts$/, '')}`, file: join(w.root, 'core/layout.tsx'), protected: true })
     const planned = planHost({
-      coreRoutes: [route('api/v1/billing/webhooks/stripe/route.ts'), route('api/v1/billing/webhooks/polar/route.ts')],
+      coreRoutes: [route('api/v1/billing/webhooks/stripe/route.ts'), route('api/v1/billing/webhooks/polar/route.ts'), route('api/v1/billing/webhooks/lemonsqueezy/route.ts')],
       webhooks: hooks,
       project: { root: w.source },
     })
@@ -234,6 +235,7 @@ test('billing.webhookExtensions replaces core\'s webhook route with a composed f
       ].join('\n')
     )
     assert.match(contentOf(result, 'api/v1/billing/webhooks/polar/route.ts'), /import \{ polarWebhookExtensions \} from "@\/lib\/billing\/polar-webhook-extensions"/)
+    assert.match(contentOf(result, 'api/v1/billing/webhooks/lemonsqueezy/route.ts'), /import \{ lemonsqueezyWebhookExtensions \} from "@\/lib\/billing\/lemonsqueezy-webhook-extensions"\n.*\nexport const POST = createLemonSqueezyWebhookRoute\(lemonsqueezyWebhookExtensions\)/)
     for (const file of result.files) assert.deepEqual(validateGeneratedModule({ ts, source: file.content, file: file.path, grammar: file.grammar }), [], file.path)
   } finally {
     w.cleanup()

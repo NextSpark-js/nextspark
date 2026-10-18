@@ -62,12 +62,14 @@ export interface NextSparkConfig {
   billing?: {
     /**
      * Modules extending core's billing webhooks, as paths from the project root. The generated host imports
-     * each one statically into its webhook route: `stripe` must export `stripeWebhookExtensions` and `polar`
-     * `polarWebhookExtensions` (one-time payments: credit packs, lifetime deals, upsells).
+     * each one statically into its webhook route: `stripe` must export `stripeWebhookExtensions`, `polar`
+     * `polarWebhookExtensions` and `lemonsqueezy` `lemonsqueezyWebhookExtensions` (one-time payments: credit packs,
+     * lifetime deals, upsells).
      */
     webhookExtensions?: {
       stripe?: string
       polar?: string
+      lemonsqueezy?: string
     }
   }
 }
@@ -283,9 +285,10 @@ function validateBilling(value: unknown, errors: string[]): void {
     errors.push(`billing.webhookExtensions must be an object; received ${receivedType(extensions)}.`)
     return
   }
-  validateKnownFields(extensions, ['stripe', 'polar'], 'billing.webhookExtensions.', errors)
+  validateKnownFields(extensions, ['stripe', 'polar', 'lemonsqueezy'], 'billing.webhookExtensions.', errors)
   validateOptionalString(extensions.stripe, 'billing.webhookExtensions.stripe', errors)
   validateOptionalString(extensions.polar, 'billing.webhookExtensions.polar', errors)
+  validateOptionalString(extensions.lemonsqueezy, 'billing.webhookExtensions.lemonsqueezy', errors)
 }
 
 /** Validate and normalize a nextspark.config.ts value without loading the file. */
