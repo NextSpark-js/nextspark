@@ -111,6 +111,8 @@ export const VERSIONS = {
   TYPES_REACT: '~19.3.0',
   REACT_NATIVE: '0.88.0',
   TYPESCRIPT: '^5.3.0',
+  // Expo SDK 58 lists typescript ~6.0.3, jest ~30.5.2 and @types/jest 30.0.0; the web project keeps TYPESCRIPT
+  TYPESCRIPT_MOBILE: '~6.0.3',
 
   // Expo modules (use ~ for patch compatibility)
   EXPO_CONSTANTS: '~58.0.12',
@@ -156,7 +158,8 @@ export const VERSIONS = {
 
   // Dev dependencies
   BABEL_CORE: '^7.25.0',
-  JEST: '^29.7.0',
+  JEST: '~30.5.2',
+  TYPES_JEST: '30.0.0',
   JEST_EXPO: '~58.0.11',
   RN_JEST_PRESET: '^0.88.0',
   TESTING_LIBRARY_JEST_NATIVE: '^5.4.3',
@@ -518,14 +521,14 @@ export async function createMobilePackageJson(mobileDir: string, config: WizardC
       '@babel/core': VERSIONS.BABEL_CORE,
       '@testing-library/jest-native': VERSIONS.TESTING_LIBRARY_JEST_NATIVE,
       '@testing-library/react-native': VERSIONS.TESTING_LIBRARY_RN,
-      '@types/jest': '^29.5.0',
+      '@types/jest': VERSIONS.TYPES_JEST,
       '@types/node': '^22.10.7',
       '@types/react': VERSIONS.TYPES_REACT,
       'jest': VERSIONS.JEST,
       '@react-native/jest-preset': VERSIONS.RN_JEST_PRESET,
       'jest-expo': VERSIONS.JEST_EXPO,
       'react-test-renderer': VERSIONS.REACT,
-      'typescript': VERSIONS.TYPESCRIPT
+      'typescript': VERSIONS.TYPESCRIPT_MOBILE
     }
   }
 

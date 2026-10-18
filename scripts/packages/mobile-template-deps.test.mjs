@@ -57,4 +57,7 @@ test('template dependency ranges agree with apps/mobile for the shared build pac
   }
   // Pinned exactly: Expo SDK 58 expects 0.13.0 (expo-doctor)
   assert.equal(pkg.dependencies['react-native-worklets'], '0.13.0')
+  for (const n of ['jest', '@types/jest', 'typescript', '@types/react']) {
+    assert.equal(pkg.devDependencies[n], dev.devDependencies[n], n)
+  }
 })

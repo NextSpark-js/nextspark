@@ -25,12 +25,16 @@ test('the wizard declares the same mobile packages as the shipped template', asy
     const template = JSON.parse(fs.readFileSync(path.join(TEMPLATE_DIR, 'package.json.template'), 'utf8'))
     assert.deepEqual(names(wizard), names(template))
     // Expo SDK 58 expects these exactly; expo-doctor fails otherwise
-    for (const n of ['react-native-worklets', '@types/react']) {
+    for (const n of ['react-native-worklets', '@types/react', 'jest', '@types/jest', 'typescript']) {
       const pick = (p: any) => p.dependencies?.[n] ?? p.devDependencies?.[n]
       assert.equal(pick(wizard), pick(template), `${n} must be pinned the same in both`)
     }
     assert.equal(wizard.dependencies['react-native-worklets'], '0.13.0')
     assert.equal(wizard.devDependencies['@types/react'], '~19.3.0')
+    // The versions Expo's SDK 58 list (api.expo.dev/v2/versions/latest) gives for the test and type tooling
+    assert.equal(wizard.devDependencies.jest, '~30.5.2')
+    assert.equal(wizard.devDependencies['@types/jest'], '30.0.0')
+    assert.equal(wizard.devDependencies.typescript, '~6.0.3')
     for (const n of ['react-native-css-interop', 'react-native-worklets', 'babel-preset-expo']) {
       assert.ok(wizard.dependencies[n], `${n} must be declared`)
     }
