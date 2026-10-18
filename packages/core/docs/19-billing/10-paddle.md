@@ -53,7 +53,9 @@ The browser needs no Paddle variable from core. The payment link page (below) lo
 
 ### 4. Default payment link
 
-Paddle opens a checkout on a page of your own site that loads Paddle.js. Under Paddle → Checkout → Checkout settings, set the **default payment link** to that page; the domain must be approved (Paddle → Settings → Website approval). Without it Paddle creates no checkout URL, and the checkout route fails with an error that says so.
+Paddle opens a checkout on a page of your own site that loads Paddle.js. Under Paddle → Checkout → Checkout settings, set the **default payment link** to that page; the domain must be approved (Paddle → Settings → Website approval). Core ships no such page: the project owns it, with its own client-side token.
+
+Without a default payment link Paddle creates no checkout URL: `POST /api/v1/billing/checkout` answers `500 Failed to process checkout`, and the server log shows `Paddle returned no checkout URL for transaction txn_…: set a default payment link (Paddle > Checkout > Checkout settings)`. A link to a page that does not initialise Paddle.js, or a domain that is not approved, shows up instead as a page where no checkout opens.
 
 The gateway creates a transaction and sends the user to its `checkout.url`: the default payment link with `?_ptxn=<transaction id>`. On that page Paddle.js opens the checkout for the transaction by itself:
 
@@ -69,6 +71,47 @@ The gateway creates a transaction and sends the user to its `checkout.url`: the 
 ```
 
 A transaction has no success or cancel URL: the page sets them. The `successUrl` and `cancelUrl` the checkout route passes are not used by Paddle.
+
+**Next.js App Router example.** A client page at the default payment link, for example `app/(public)/pay/page.tsx` with the link set to `https://<your-app>/pay`. It uses Paddle's loader package (`pnpm add @paddle/paddle-js`), which downloads Paddle.js from Paddle's CDN, and opens the checkout for the transaction in `?_ptxn=`:
+
+```tsx
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { initializePaddle } from '@paddle/paddle-js'
+
+export default function PayPage() {
+  const transactionId = useSearchParams().get('_ptxn')
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN
+    if (!transactionId || !token) {
+      setFailed(true)
+      return
+    }
+    const id = transactionId
+    initializePaddle({
+      // a sandbox client-side token needs the sandbox environment
+      environment: process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === 'production' ? 'production' : 'sandbox',
+      token,
+      // Paddle sends the buyer here once the checkout completes
+      checkout: { settings: { successUrl: `${window.location.origin}/dashboard/settings/billing?success=true` } },
+    }).then((paddle) => {
+      if (paddle) paddle.Checkout.open({ transactionId: id })
+      else setFailed(true)
+    })
+  }, [transactionId])
+
+  return <main>{failed ? <p>The checkout could not be opened.</p> : <p>Opening the checkout…</p>}</main>
+}
+```
+
+- `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` is a **client-side token** (Developer tools → Authentication), never the API key. It is public by design.
+- `NEXT_PUBLIC_PADDLE_ENVIRONMENT` mirrors `PADDLE_ENVIRONMENT` for the browser; a sandbox token opens no checkout in the production environment and the other way round.
+- `useSearchParams` needs a `<Suspense>` boundary above it when the route is statically rendered: wrap the page's content in one, or read `searchParams` in a server page and pass the id down.
+- Serve the page under a path the app's proxy lets signed-out users open if buyers can reach it without a session (Paddle's own emails link to it to update a payment method).
 
 ### 5. Webhook
 
@@ -108,7 +151,7 @@ Base URL `https://sandbox-api.paddle.com` or `https://api.paddle.com` by `PADDLE
 
 ### Idempotency key and order
 
-The key is Paddle's `event_id` (`evt_...`). Paddle documents it as the id to deduplicate by; one event delivered to several destinations, retried, or replayed keeps its `event_id` (each delivery has its own `notification_id`, which is not used). A redelivery answers `200 {"received":true,"status":"duplicate"}`.
+The key is Paddle's `event_id` (`evt_...`). Paddle documents it as the id to deduplicate by, and documents that a replay creates a new notification for the same `event_id`; a retry is a new delivery of the same event. Each delivery has its own `notification_id`, which is not used. A redelivery answers `200 {"received":true,"status":"duplicate"}`.
 
 Paddle does not guarantee the order of delivery. Each subscription row stores the `occurred_at` of the last event applied to it (`metadata.paddleOccurredAt`), and an older event of the same subscription does not move it back. The comparison is done in Postgres, at microsecond precision. Transaction events only record payments, so their order does not matter.
 
@@ -124,6 +167,7 @@ Every subscription event carries the whole subscription entity: the row is set f
 | `subscription.canceled` | `canceled`, `cancelAtPeriodEnd = false`, `canceledAt` | lifecycle / succeeded |
 | `transaction.paid`, `transaction.completed` | — | payment / succeeded, once per transaction (`externalPaymentId` = transaction id, amount = `details.totals.grand_total`) |
 | `transaction.payment_failed` | — | payment / failed, one per failed attempt |
+| `adjustment.created`, `adjustment.updated` (refunds, credits, chargebacks) | — | not recorded: a refunded payment stays `succeeded` |
 | anything else | — | — (`200`, recorded as processed) |
 
 Status map: `active` → `active`, `trialing` → `trialing`, `past_due` → `past_due`, `paused` → `paused`, `canceled` → `canceled`. A scheduled cancellation keeps the subscription `active` with `cancelAtPeriodEnd = true` until it takes effect. Payment events do not change the status: Paddle sends `subscription.past_due` and `subscription.updated` with every status change, and those carry the order the row needs.
@@ -158,7 +202,7 @@ The automated tests use hand-built payloads in the documented shapes, never a re
 2. **Payment link page.** Add a page that loads Paddle.js as above (sandbox environment, client-side token), approve the domain (a tunnel URL, for example `cloudflared tunnel --url http://localhost:3000`) and set it as the default payment link.
 3. **Environment.** Set `PADDLE_API_KEY` (sandbox), `PADDLE_WEBHOOK_SECRET`, `PADDLE_ENVIRONMENT=sandbox`; start the app; add the notification destination with the tunnel URL and the events above.
 4. **Misconfiguration.** Set `PADDLE_ENVIRONMENT=production` with the sandbox key and open the upgrade: the server log names `PADDLE_API_KEY` and `PADDLE_ENVIRONMENT`, no value. Restore it.
-5. **Checkout.** As a team owner, upgrade to Pro monthly and pay with Paddle's test card. Expected: the notification log shows `transaction.paid`, `subscription.created`, `subscription.activated` and `transaction.completed` answered `200`; the team's row has `paymentProvider = 'paddle'`, the `sub_...` id, plan `pro`, `billingInterval = 'monthly'`; `billing_events` has lifecycle rows and one `payment / succeeded` row for the transaction. Open the `subscription.created` payload and record that `custom_data` carries `teamId` and `teamToken`.
+5. **Checkout.** As a team owner, upgrade to Pro monthly and pay with Paddle's test card. Expected: the notification log shows `transaction.paid`, `subscription.created`, `subscription.activated` and `transaction.completed` answered `200`; the team's row has `paymentProvider = 'paddle'`, the `sub_...` id, plan `pro`, `billingInterval = 'monthly'`; `billing_events` has lifecycle rows and one `payment / succeeded` row for the transaction. Open the `subscription.created` payload and record that `custom_data` carries `teamId` and `teamToken`. Repeat with a price that has tax (a buyer address in a taxed country) and with a discount, and compare the payment row's `amount` (`details.totals.grand_total`) with the amount the Paddle dashboard shows as charged for that transaction; record both. If they differ, the field to use is `details.totals.total` or `payout_totals`.
 6. **Replay and retry.** Replay `subscription.created` from the notification log. Expected: `200 {"received":true,"status":"duplicate"}`, no new rows. Then force a failed delivery: stop the tunnel, trigger an event (for example change the plan), wait for Paddle to log the failed attempt, start the tunnel again and wait for the automatic retry. Expected: the retry is answered `200`. For both the replay and the retry, record the `ts` of the `Paddle-Signature` header (log it temporarily, or read it in the notification log) against the time the request arrived: a `ts` close to the arrival means each delivery is signed again, and five seconds is enough; a `ts` of the first attempt means retries need `PADDLE_WEBHOOK_TOLERANCE_SECONDS`.
 7. **Bad and stale signature.** `curl -X POST <url> -H 'Paddle-Signature: ts=1;h1=00' -d '{}'`. Expected: `400 {"error":"Invalid signature"}`. Resend a captured body with its original header a minute later: `400`.
 8. **Portal.** Open "Manage billing". Expected: the Paddle customer portal of that customer.
