@@ -46,11 +46,11 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
-    "@cypress/grep": "^5.0.1",
+    "@cypress/grep": "^7.0.0",
     "@testing-library/cypress": "^10.1.0",
     "allure-cypress": "^3.0.0",
     "axe-core": "4.14.0",
-    "cypress": "^15.8.2",
+    "cypress": "^16.2.0",
     "dotenv": "^16.4.5",
     "dotenv-cli": "^11.0.0",
     "jiti": "^2.6.1",
@@ -104,7 +104,9 @@
       "eslint-plugin-jsx-a11y>minimatch": "^3.1.5",
       "eslint-plugin-react>minimatch": "^3.1.5",
       "minimatch@^3>brace-expansion": "^1.1.20",
-      "flat-cache>flatted": "^3.4.2"
+      "flat-cache>flatted": "^3.4.2",
+      "@cypress/request>form-data": "~4.0.6",
+      "cypress>tmp": "~0.2.6"
     }
   },
   "engines": {
