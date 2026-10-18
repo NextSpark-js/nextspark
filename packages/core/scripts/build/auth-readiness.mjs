@@ -176,6 +176,11 @@ async function main() {
   const configuration = evaluator.authReadinessConfigurationFromEnv(env)
   configuration.email.runtimeOnly = runtimeOnly.has('email')
   for (const id of SOCIAL_PROVIDERS) configuration[id].runtimeOnly = runtimeOnly.has(id)
+  if (env.APPLE_PRIVATE_KEY?.trim()) {
+    // The same key check the runtime and the client-secret signer use; never the key itself in the output
+    const { isAppleSigningKey } = await import(pathToFileURL(join(coreDir, 'dist/lib/auth/apple-key.js')).href)
+    configuration.apple.privateKeyUsable = isAppleSigningKey(env.APPLE_PRIVATE_KEY)
+  }
 
   const result = evaluator.evaluateAuthReadiness({
     profile: 'web-local-auth',
@@ -194,7 +199,7 @@ async function main() {
     console.log('   RESEND_API_KEY, RESEND_FROM_EMAIL; Google: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET; GitHub: GITHUB_CLIENT_ID,')
     console.log('   GITHUB_CLIENT_SECRET; Microsoft: MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET; Apple: APPLE_CLIENT_ID, APPLE_TEAM_ID,')
     console.log('   APPLE_KEY_ID, APPLE_PRIVATE_KEY), or change auth.methods.')
-    console.log('   Credentials injected only at runtime: declare them with NEXTSPARK_AUTH_RUNTIME_ONLY=email,google;')
+    console.log('   Credentials injected only at runtime: declare them with NEXTSPARK_AUTH_RUNTIME_ONLY=email,google,github (the providers you use);')
     console.log('   they are validated again when the server starts and on every login request.')
     if (result.diagnostics.some(({ code }) => code.startsWith('BETTER_AUTH_SECRET_'))) {
       console.log('   BETTER_AUTH_SECRET must be a random value of at least 32 characters, for example the output of: openssl rand -base64 32')

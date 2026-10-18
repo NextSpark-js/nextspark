@@ -5,6 +5,7 @@ import type { AuthConfig, AuthLoginMethod, SocialLoginMethod } from '../config/t
 import { SOCIAL_PROVIDER_LABELS, isPasswordLoginEnabled, isSocialLoginMethod } from './auth-methods'
 import { warnClientIpSourceAtStartup } from '../api/client-ip'
 import { warnSampleAccountsAtStartup } from './sample-accounts'
+import { isAppleSigningKey } from './apple-key'
 import {
   authReadinessConfigurationFromEnv,
   evaluateAuthReadiness,
@@ -48,8 +49,14 @@ function runtimeInput(options: RuntimeAuthReadinessOptions = {}) {
     stage: 'runtime' as const,
     environment: env.NODE_ENV === 'production' ? 'production' as const : 'development' as const,
     authConfig: options.authConfig === undefined ? AUTH_CONFIG : options.authConfig,
-    configuration: authReadinessConfigurationFromEnv(env),
+    configuration: withAppleKeyCheck(authReadinessConfigurationFromEnv(env), env),
   }
+}
+
+/** Apple is ready only with a key the client-secret signer accepts, not just a PEM-shaped one. */
+function withAppleKeyCheck(configuration: ReturnType<typeof authReadinessConfigurationFromEnv>, env: RuntimeEnvironment) {
+  if (env.APPLE_PRIVATE_KEY?.trim() && configuration.apple) configuration.apple.privateKeyUsable = isAppleSigningKey(env.APPLE_PRIVATE_KEY)
+  return configuration
 }
 
 /** Server-owned runtime adapter for the pure readiness evaluator. */

@@ -4,6 +4,7 @@
  * sign-in and callback.
  */
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals'
+import { generateKeyPairSync } from 'node:crypto'
 import { evaluateAuthReadiness, authReadinessConfigurationFromEnv } from '@/core/lib/auth/readiness'
 import {
   getPublicAuthReadiness,
@@ -18,8 +19,10 @@ const apple = {
   APPLE_CLIENT_ID: 'com.example.web',
   APPLE_TEAM_ID: 'TEAM123456',
   APPLE_KEY_ID: 'KEY1234567',
-  APPLE_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg\n-----END PRIVATE KEY-----',
+  APPLE_PRIVATE_KEY: generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
 }
+// PEM-shaped, but no key inside
+const ARMORED_GARBAGE = '-----BEGIN PRIVATE KEY-----\nMIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg\n-----END PRIVATE KEY-----'
 const google = { GOOGLE_CLIENT_ID: '123456789-abcdef.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'GOCSPX-production-secret' }
 const production = { NODE_ENV: 'production' }
 const all = { ...production, ...github, ...microsoft, ...apple, ...google }
@@ -89,6 +92,40 @@ describe('evaluateAuthReadiness: GitHub, Microsoft, Apple', () => {
     const result = evaluate(['github'], all, 'runtime', { github: { enabled: false } })
     expect(result.availableMethods).toEqual([])
     expect(result.diagnostics.map(({ code }) => code)).toEqual(['AUTH_ALL_METHODS_DISABLED'])
+  })
+})
+
+describe('Apple readiness checks the key the way the signer reads it', () => {
+  const originalError = console.error
+  beforeEach(() => { console.error = jest.fn() })
+  afterEach(() => { console.error = originalError })
+  const pem = (type: 'ec' | 'rsa', namedCurve?: string) =>
+    (type === 'ec' ? generateKeyPairSync('ec', { namedCurve: namedCurve! }) : generateKeyPairSync('rsa', { modulusLength: 1024 })).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString()
+  const handler = jest.fn(async () => new Response('better-auth', { status: 200 }))
+  const options = (key: string) => ({ authConfig: { methods: ['apple' as const] }, env: { ...production, ...apple, APPLE_PRIVATE_KEY: key } })
+
+  test('a P-256 key (also one-line with \\n escapes) is ready', () => {
+    const key = pem('ec', 'P-256')
+    expect(isRuntimeSocialProviderAvailable('apple', options(key))).toBe(true)
+    expect(isRuntimeSocialProviderAvailable('apple', options(key.trim().replace(/\n/g, '\\n')))).toBe(true)
+  })
+
+  test.each([
+    ['an RSA key', () => pem('rsa')],
+    ['a P-384 key', () => pem('ec', 'P-384')],
+    ['garbage inside valid armor', () => ARMORED_GARBAGE],
+  ])('%s is not ready: no button, and the sign-in is refused with 503 before Better Auth', async (_name, key) => {
+    const settings = options(key())
+    expect(isRuntimeSocialProviderAvailable('apple', settings)).toBe(false)
+    expect(getPublicAuthReadiness(settings).availableMethods).toEqual([])
+    const blocked = await withAuthRequestReadiness(new Request('https://example.com/api/auth/sign-in/social', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider: 'apple' }),
+    }), handler, settings)
+    expect(blocked.status).toBe(503)
+    expect(console.error).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      diagnostics: expect.arrayContaining([expect.objectContaining({ code: 'APPLE_PRIVATE_KEY_MALFORMED' })]),
+    }))
+    expect(handler).not.toHaveBeenCalled()
   })
 })
 

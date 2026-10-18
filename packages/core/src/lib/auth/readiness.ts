@@ -51,6 +51,12 @@ export interface AuthReadinessInput {
       teamId?: string
       keyId?: string
       privateKey?: string
+      /**
+       * Whether the key parses as the P-256 key Apple signs with, supplied by
+       * an adapter that can parse keys (lib/auth/apple-key); this evaluator
+       * only checks the PEM's shape. `false` makes the key malformed.
+       */
+      privateKeyUsable?: boolean
       runtimeOnly?: boolean
     }
   }
@@ -331,7 +337,7 @@ const SOCIAL_CREDENTIALS: Record<SocialLoginMethod, { label: string; fields: rea
       { key: 'teamId', variable: 'APPLE_TEAM_ID', pattern: APPLE_ID_PATTERN },
       { key: 'keyId', variable: 'APPLE_KEY_ID', pattern: APPLE_ID_PATTERN },
       // The .p8 file's contents; newlines may be written as \n in .env
-      { key: 'privateKey', variable: 'APPLE_PRIVATE_KEY', pattern: /^-----BEGIN PRIVATE KEY-----(?:\s|\\n)[\s\S]+(?:\s|\\n)-----END PRIVATE KEY-----$/ },
+      { key: 'privateKey', variable: 'APPLE_PRIVATE_KEY', pattern: /^(?:\\n)*-----BEGIN PRIVATE KEY-----(?:\s|\\n)[\s\S]+(?:\s|\\n)-----END PRIVATE KEY-----(?:\\n)*$/ },
     ],
   },
 }
@@ -342,10 +348,11 @@ function evaluateSocialConfiguration(
   diagnostics: AuthReadinessDiagnostic[]
 ): 'available' | 'invalid' | 'deferred' {
   const { label, fields } = SOCIAL_CREDENTIALS[provider]
-  const configuration = (input.configuration?.[provider] ?? {}) as Record<string, unknown> & { runtimeOnly?: boolean }
+  const configuration = (input.configuration?.[provider] ?? {}) as Record<string, unknown> & { runtimeOnly?: boolean; privateKeyUsable?: boolean }
   const states = fields.map((field) => {
     const value = configuration[field.key]
-    const state = credentialState(typeof value === 'string' ? value : undefined, field.pattern, field.minimumLength)
+    let state = credentialState(typeof value === 'string' ? value : undefined, field.pattern, field.minimumLength)
+    if (field.key === 'privateKey' && state === 'valid' && configuration.privateKeyUsable === false) state = 'malformed'
     return { field, state }
   }).filter(({ field, state }) => !(field.optional && state === 'missing'))
 

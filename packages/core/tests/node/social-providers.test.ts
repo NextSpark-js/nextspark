@@ -14,7 +14,7 @@ import { generateKeyPairSync, verify } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import pg from 'pg'
-import { socialProviderList } from 'better-auth/social-providers'
+import { socialProviderList, socialProviders } from 'better-auth/social-providers'
 import { CORE, HAS_POSTGRES, cutoverDatabase } from './_pg-cutover'
 
 const skip = !HAS_POSTGRES && 'initdb/pg_ctl not on PATH'
@@ -26,7 +26,8 @@ type Step =
   | { op: 'otp'; email: string }
   | { op: 'github'; email: string; emailVerified?: boolean; name?: string | null; noEmail?: boolean; id?: number }
   | { op: 'apple'; email: string; emailVerified?: boolean; firstName?: string; lastName?: string }
-type Result = Step & { status: number; code?: string; location?: string; responseMode?: string; postStatus?: number; postLocation?: string; appleClientSecret?: string }
+  | { op: 'apple-id-token'; email: string; emailVerified: boolean }
+type Result = Step & { body?: string; setsSession?: boolean; status: number; code?: string; location?: string; responseMode?: string; postStatus?: number; postLocation?: string; appleClientSecret?: string }
 
 function runSteps(databaseUrl: string, registration: string, steps: Step[]): Result[] {
   const appConfig = {
@@ -78,7 +79,7 @@ async function accounts(owner: pg.Client) {
 test('the Jest mock of better-auth/social-providers lists what the installed Better Auth knows', async () => {
   // a CommonJS file in an ESM package: read its list rather than import it
   const mock = fs.readFileSync(path.join(CORE, 'tests/jest/__mocks__/better-auth-social-providers.js'), 'utf8')
-  assert.deepEqual(JSON.parse(mock.match(/socialProviderList: (\[.*\])/)![1]).sort(), [...socialProviderList].sort())
+  assert.deepEqual(JSON.parse(mock.match(/const socialProviderList = (\[.*\])/)![1]).sort(), [...socialProviderList].sort())
 })
 
 test('open registration: GitHub signs up a verified address, maps the profile, and refuses what it cannot trust', { skip, timeout: 300000 }, async t => {
@@ -169,4 +170,24 @@ test('Apple: form_post callback, a client secret signed with the .p8 key, the na
     { email: 'abc123@privaterelay.appleid.com', providers: 'apple', firstName: 'Hidden', lastName: 'Mail' },
     { email: 'tim@example.test', providers: 'apple', firstName: 'Tim', lastName: 'Apple' },
   ])
+})
+
+test("the installed Better Auth refuses cognito without domain, region and userPoolId, as the Jest mock does", () => {
+  const credentials = { clientId: 'cognito-id', clientSecret: 'cognito-secret' }
+  assert.throws(() => socialProviders.cognito(credentials as never))
+  assert.doesNotThrow(() => socialProviders.cognito({ ...credentials, domain: 'auth.example.com', region: 'eu-west-1', userPoolId: 'eu-west-1_abc' } as never))
+})
+
+test('Apple id-token sign-in (native apps): an unverified email is refused with SOCIAL_EMAIL_UNVERIFIED, a verified one signs in', { skip, timeout: 300000 }, async t => {
+  const { owner, ownerUrl } = await cutoverDatabase(t)
+  const [unverified, verified] = runSteps(ownerUrl, 'open', [
+    { op: 'apple-id-token', email: 'native-unverified@example.test', emailVerified: false },
+    { op: 'apple-id-token', email: 'native@example.test', emailVerified: true },
+  ])
+  assert.ok(unverified.status >= 400, JSON.stringify(unverified))
+  assert.match(unverified.body ?? '', /SOCIAL_EMAIL_UNVERIFIED/, JSON.stringify(unverified))
+  assert.equal(unverified.setsSession, false)
+  assert.equal(verified.status, 200, JSON.stringify(verified))
+  assert.equal(verified.setsSession, true, JSON.stringify(verified))
+  assert.deepEqual((await accounts(owner)).map(({ email, providers }) => ({ email, providers })), [{ email: 'native@example.test', providers: 'apple' }])
 })

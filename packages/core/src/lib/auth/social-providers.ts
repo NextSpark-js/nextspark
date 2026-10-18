@@ -19,11 +19,12 @@
 
 import 'server-only'
 
-import { createPrivateKey, sign } from 'node:crypto'
-import { socialProviderList } from 'better-auth/social-providers'
+import { sign } from 'node:crypto'
+import { socialProviderList, socialProviders as betterAuthProviders } from 'better-auth/social-providers'
 import type { AuthConfig, SocialLoginMethod } from '../config/types'
 import { SOCIAL_LOGIN_METHODS, isSocialLoginMethod, resolveAuthMethods } from './auth-methods'
 import { isRuntimeSocialProviderAvailable } from './runtime-readiness'
+import { appleSigningKey } from './apple-key'
 
 type Env = Record<string, string | undefined>
 type Profile = Record<string, unknown>
@@ -110,11 +111,8 @@ export function createAppleClientSecret(key: AppleSigningKey, now = Date.now(), 
     aud: 'https://appleid.apple.com',
     sub: key.clientId,
   })}`
-  const privateKey = createPrivateKey(key.privateKey.replace(/\\n/g, '\n'))
-  // Any other key would sign too, and Apple would refuse the secret at the first sign-in
-  if (privateKey.asymmetricKeyDetails?.namedCurve !== 'prime256v1') throw new Error('APPLE_PRIVATE_KEY is not a P-256 EC key')
   const signature = sign('sha256', Buffer.from(input), {
-    key: privateKey,
+    key: appleSigningKey(key.privateKey),
     // JWS wants r||s, not DER
     dsaEncoding: 'ieee-p1363',
   })
@@ -204,7 +202,16 @@ export function resolveSocialProviders({ authConfig, defaults, env = process.env
       console.warn(`[Auth] auth.providers.${id} is off: set ${prefix}_CLIENT_ID and ${prefix}_CLIENT_SECRET`)
       continue
     }
-    providers[id] = { ...entry.options, mapProfileToUser: socialProfileMapper(id, defaults), clientId, clientSecret }
+    const options = { ...entry.options, mapProfileToUser: socialProfileMapper(id, defaults), clientId, clientSecret }
+    try {
+      // Built here as Better Auth will build it: a provider missing a required option (cognito without
+      // domain, region and userPoolId) throws, and Better Auth would then fail every auth request
+      betterAuthProviders[id as keyof typeof betterAuthProviders](options as never)
+    } catch {
+      console.warn(`[Auth] auth.providers.${id} is off: Better Auth refused its options (see its provider docs for the required ones)`)
+      continue
+    }
+    providers[id] = options
   }
 
   return providers

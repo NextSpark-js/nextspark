@@ -112,10 +112,13 @@ describe('resolveSocialProviders: built-in providers', () => {
     expect(decode(renewed).payload.exp).toBe(Math.floor((start + (APPLE_CLIENT_SECRET_LIFETIME_SECONDS - 60 * 60) * 1000) / 1000) + APPLE_CLIENT_SECRET_LIFETIME_SECONDS)
   })
 
-  test('a well-formed PEM that is not an EC key turns Apple off instead of breaking the auth instance', () => {
+  test('a well-formed PEM that is not a P-256 key leaves Apple off (not ready) instead of breaking the auth instance', () => {
     const rsa = generateKeyPairSync('rsa', { modulusLength: 1024 }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString()
-    expect(resolve({ methods: ['apple', 'github'] }, { ...env, APPLE_PRIVATE_KEY: rsa })).not.toHaveProperty('apple')
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('APPLE_PRIVATE_KEY'))
+    const p384 = generateKeyPairSync('ec', { namedCurve: 'P-384' }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString()
+    for (const key of [rsa, p384]) {
+      expect(Object.keys(resolve({ methods: ['apple', 'github'] }, { ...env, APPLE_PRIVATE_KEY: key }))).toEqual(['github'])
+    }
+    expect(() => createAppleClientSecret({ teamId: 'TEAM123456', keyId: 'KEY1234567', clientId: 'com.example.web', privateKey: rsa })).toThrow('P-256')
   })
 })
 
@@ -133,6 +136,18 @@ describe('resolveSocialProviders: the map\'s other providers', () => {
     expect(resolve({ providers: { discord: {} } }, { DISCORD_CLIENT_ID: 'discord-id' })).toEqual({})
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET'))
     expect(resolve({ providers: { discord: { enabled: false } } }, discord)).toEqual({})
+  })
+
+  test('a provider Better Auth refuses to build (cognito without its options) is off with a warning naming only the id', () => {
+    const credentials = { COGNITO_CLIENT_ID: 'cognito-id', COGNITO_CLIENT_SECRET: 'cognito-secret' }
+    expect(resolve({ providers: { cognito: {}, discord: {} } }, { ...credentials, DISCORD_CLIENT_ID: 'd', DISCORD_CLIENT_SECRET: 's' })).not.toHaveProperty('cognito')
+    const warned = (console.warn as jest.Mock).mock.calls.flat().join(' ')
+    expect(warned).toContain('auth.providers.cognito is off')
+    expect(warned).not.toContain('cognito-secret')
+    expect(warned).not.toContain('cognito-id')
+    // with domain, region and userPoolId it is on
+    const options = { domain: 'auth.example.com', region: 'eu-west-1', userPoolId: 'eu-west-1_abc' }
+    expect(resolve({ providers: { cognito: { options } } }, credentials).cognito).toMatchObject({ ...options, clientId: 'cognito-id' })
   })
 
   test('an id Better Auth does not know is ignored with a warning (Better Auth would not start on it)', () => {
