@@ -8,10 +8,10 @@ import { AmplitudeCore } from '../../../../../plugins/amplitude/lib/amplitude-co
 import { useConsent } from '@nextsparkjs/core/lib/consent'
 import { resolveConsentConfig } from '@nextsparkjs/core/lib/consent/cookie'
 
-jest.mock('../../../../../plugins/amplitude/lib/amplitude-core', () => ({ AmplitudeCore: { init: jest.fn(), setOptOut: jest.fn() } }))
+jest.mock('../../../../../plugins/amplitude/lib/amplitude-core', () => ({ AmplitudeCore: { init: jest.fn(), setOptOut: jest.fn(), isInitialized: jest.fn() } }))
 jest.mock('../../../../../plugins/amplitude/plugin.config', () => ({ amplitudePlugin: {} }))
 
-const mockCore = AmplitudeCore as unknown as { init: jest.Mock; setOptOut: jest.Mock }
+const mockCore = AmplitudeCore as unknown as { init: jest.Mock; setOptOut: jest.Mock; isInitialized: jest.Mock }
 const mockConfigs = { on: resolveConsentConfig({ enabled: true }), off: resolveConsentConfig({ enabled: false }) }
 let mockMode: 'on' | 'off' = 'on'
 jest.mock('@nextsparkjs/core/lib/config/public-config-client', () => ({
@@ -33,6 +33,7 @@ beforeEach(() => {
   document.cookie.split(';').forEach((c) => (document.cookie = `${c.split('=')[0].trim()}=; Max-Age=0; Path=/`))
   mockCore.init.mockReset().mockResolvedValue(undefined)
   mockCore.setOptOut.mockReset()
+  mockCore.isInitialized.mockReset().mockReturnValue(false)
   mockMode = 'on'
   jest.spyOn(console, 'log').mockImplementation(() => {})
 })
@@ -93,5 +94,28 @@ describe('AmplitudeProvider and core consent', () => {
     await flush()
     expect(mockCore.init).toHaveBeenCalledTimes(1)
     expect(mockCore.setOptOut).toHaveBeenLastCalledWith(false)
+  })
+})
+
+describe('a failed init that is retrying', () => {
+  afterEach(() => jest.useRealTimers())
+
+  it('does not retry behind a revoke, and a grant that comes back does not initialise twice', async () => {
+    jest.useFakeTimers()
+    const first = mockCore.init.mockRejectedValueOnce(new Error('boom'))
+    mockCore.init.mockImplementation(async () => void mockCore.isInitialized.mockReturnValue(true))
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+    render(<AmplitudeProvider overrideConfig={{ apiKey, errorRetryDelayMs: 1000, errorRetryAttempts: 3 } as never}><Probe /></AmplitudeProvider>)
+    act(() => consent.accept())
+    await act(async () => { await Promise.resolve() })
+    expect(first).toHaveBeenCalledTimes(1)
+
+    act(() => consent.reject())
+    act(() => consent.accept())
+    await act(async () => { await Promise.resolve() })
+    expect(mockCore.init).toHaveBeenCalledTimes(2)
+
+    await act(async () => { jest.advanceTimersByTime(5000) })
+    expect(mockCore.init).toHaveBeenCalledTimes(2)
   })
 })

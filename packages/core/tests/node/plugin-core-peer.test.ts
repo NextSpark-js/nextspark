@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { FIRST_DEFINE_PLUGIN_CORE, checkAllPlugins, checkPluginCorePeer, compareVersions, importsCoreAtRuntime, minimumOfRange, parseVersion } from '../../../../scripts/packages/plugin-core-peer.mjs'
+import { FIRST_CONSENT_CORE, FIRST_DEFINE_PLUGIN_CORE, checkAllPlugins, checkPluginCorePeer, compareVersions, importsCoreAtRuntime, minimumOfRange, parseVersion } from '../../../../scripts/packages/plugin-core-peer.mjs'
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../../..')
 
@@ -101,4 +101,23 @@ test('a plugin with only type imports, or with tests importing core, needs no pe
 
 test('every plugin in plugins/ that imports core declares a satisfying core peer', () => {
   assert.deepEqual(checkAllPlugins(join(REPO_ROOT, 'plugins')), [])
+})
+
+test('a plugin importing lib/consent needs a core peer from the release that has it', () => {
+  const CONSENT = "import { useConsent } from '@nextsparkjs/core/lib/consent'\nexport const x = useConsent\n"
+  for (const [range, ok] of [['>=0.1.0-beta.192', false], ['>=0.1.0-beta.198', false], [`>=${FIRST_CONSENT_CORE}`, true], ['^0.2.0', true]] as const) {
+    const { dir, cleanup } = plugin({ 'plugin.config.ts': IMPORT, 'providers/P.tsx': CONSENT }, { '@nextsparkjs/core': range })
+    try {
+      const problems = checkPluginCorePeer(dir)
+      if (ok) assert.deepEqual(problems, [], range)
+      else assert.match(problems[0] ?? '', /first with lib\/consent/, range)
+    } finally {
+      cleanup()
+    }
+  }
+})
+
+test('the Amplitude plugin keeps a core peer that has lib/consent', () => {
+  const manifest = JSON.parse(readFileSync(join(REPO_ROOT, 'plugins/amplitude/package.json'), 'utf8'))
+  assert.ok(compareVersions(minimumOfRange(manifest.peerDependencies['@nextsparkjs/core'])!, parseVersion(FIRST_CONSENT_CORE)!) >= 0)
 })

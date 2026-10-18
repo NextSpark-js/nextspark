@@ -9,6 +9,10 @@ import { join } from 'node:path'
 /** The first core release that exports `definePlugin`. */
 export const FIRST_DEFINE_PLUGIN_CORE = '0.1.0-beta.192'
 
+/** The first core release that has `@nextsparkjs/core/lib/consent` (cookie consent, #272); a plugin importing it needs at least this. */
+export const FIRST_CONSENT_CORE = '0.1.0-beta.199'
+const CONSENT_IMPORT = /['"]@nextsparkjs\/core\/lib\/consent(?:\/[^'"]*)?['"]/
+
 const VERSION = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/
 
 export function parseVersion(text) {
@@ -90,6 +94,10 @@ export function checkPluginCorePeer(pluginDir, { minimum = FIRST_DEFINE_PLUGIN_C
   if (!lowest) return [`${name}: @nextsparkjs/core peer "${range}" has no readable minimum; use ">=${minimum}"`]
   if (compareVersions(lowest, parseVersion(minimum)) < 0) {
     return [`${name}: @nextsparkjs/core peer "${range}" accepts releases older than ${minimum}, the first that exports definePlugin`]
+  }
+  const usesConsent = importing.some(file => CONSENT_IMPORT.test(readFileSync(file, 'utf8')))
+  if (usesConsent && compareVersions(lowest, parseVersion(FIRST_CONSENT_CORE)) < 0) {
+    return [`${name}: @nextsparkjs/core peer "${range}" accepts releases older than ${FIRST_CONSENT_CORE}, the first with lib/consent that the plugin imports`]
   }
   return []
 }

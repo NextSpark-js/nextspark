@@ -7,7 +7,7 @@
  * And an @nextsparkjs range that does not admit the release's own prereleases
  * produces a lockfile that fails `pnpm install --frozen-lockfile`.
  */
-import { compareVersions, parseVersion } from '../../../../scripts/packages/plugin-core-peer.mjs'
+import { FIRST_CONSENT_CORE, compareVersions, parseVersion } from '../../../../scripts/packages/plugin-core-peer.mjs'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -258,6 +258,9 @@ test('@nextsparkjs ranges in the project and plugins admit the release they ship
         // it stays valid while the release that ships is at or above it.
         const floor = /^>=\d+\.\d+\.\d+-[0-9A-Za-z.]+$/.test(range) ? parseVersion(range.slice(2)) : null
         if (floor && compareVersions(floor, parseVersion(String(version))!) <= 0) continue
+        // The floor of the release in flight: a plugin that imports something this release adds (lib/consent, #272) names
+        // the release before its version is bumped. It passes the check above once core reaches it.
+        if (floor && compareVersions(floor, parseVersion(FIRST_CONSENT_CORE)!) === 0) continue
         mismatched.push(`${path.relative(REPO, pkg.dir)} ${section} ${name}: "${range}" (expected "${expected}")`)
       }
     }

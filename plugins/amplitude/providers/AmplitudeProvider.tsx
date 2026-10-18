@@ -14,8 +14,7 @@ export const AmplitudeProvider: React.FC<{ children: React.ReactNode; overrideCo
   // Core's cookie consent (#272). With it off in app.config nothing is gated and the plugin behaves as before.
   const { enabled: coreConsentEnabled, categories: coreConsent } = useConsent();
   const analyticsAllowed = !coreConsentEnabled || coreConsent.analytics;
-  const analyticsAllowedRef = useRef(analyticsAllowed);
-  analyticsAllowedRef.current = analyticsAllowed;
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [consent, setConsent] = useState<ConsentState>({ 
     analytics: false, 
@@ -35,6 +34,11 @@ export const AmplitudeProvider: React.FC<{ children: React.ReactNode; overrideCo
   const RETRY_DELAY_MS = pluginConfig?.errorRetryDelayMs || 1000;
 
   const initializeAmplitude = useCallback(async (config: AmplitudePluginConfig) => {
+    // a grant that comes back before a pending retry fired already initialised it: do not init twice
+    if (AmplitudeCore.isInitialized()) {
+      setIsInitialized(true);
+      return;
+    }
     if (!config.apiKey || !isAmplitudeAPIKey(config.apiKey)) {
       throw new Error('Invalid Amplitude API key');
     }
@@ -52,9 +56,9 @@ export const AmplitudeProvider: React.FC<{ children: React.ReactNode; overrideCo
         retryCount.current++;
         console.warn(`[Amplitude] Initialization failed, retrying in ${RETRY_DELAY_MS}ms (attempt ${retryCount.current}/${MAX_RETRIES})`);
         
-        setTimeout(() => {
-          // consent revoked while waiting: do not initialise behind its back
-          if (analyticsAllowedRef.current) initializeAmplitude(config);
+        retryTimer.current = setTimeout(() => {
+          retryTimer.current = null;
+          initializeAmplitude(config);
         }, RETRY_DELAY_MS);
       } else {
         setError(error);
@@ -79,6 +83,16 @@ export const AmplitudeProvider: React.FC<{ children: React.ReactNode; overrideCo
       }
     }
   }, []);
+
+  // a retry waiting to initialise belongs to the consent state it was scheduled in
+  useEffect(() => {
+    return () => {
+      if (retryTimer.current) {
+        clearTimeout(retryTimer.current);
+        retryTimer.current = null;
+      }
+    };
+  }, [analyticsAllowed]);
 
   useEffect(() => {
     if (analyticsAllowed && pluginConfig && !configLoading && !configError && !isInitialized && !error) {
