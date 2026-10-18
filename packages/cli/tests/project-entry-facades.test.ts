@@ -107,11 +107,11 @@ test("migrate's facade warnings carry the exact replacement and match core prepa
     for (const [proxySource, instrumentationSource] of [[OLD_PROXY, OLD_INSTRUMENTATION], [`${OLD_PROXY}// mine\n`, `${OLD_INSTRUMENTATION}// mine\n`]]) {
       await mkdir(join(root, 'src'), { recursive: true })
       await writeFile(join(root, 'src/proxy.ts'), proxySource)
-      await writeFile(join(root, 'instrumentation.ts'), instrumentationSource)
+      await writeFile(join(root, 'src/instrumentation.ts'), instrumentationSource)
       const prepare = core.projectEntryNotices(root, { previous }) as { code: string, message: string }[]
       const migrate = [
         proxyFacadeWarning('src/proxy.ts', proxySource, PROXY, previous),
-        instrumentationFacadeWarning('instrumentation.ts', instrumentationSource, INSTRUMENTATION, previous),
+        instrumentationFacadeWarning('src/instrumentation.ts', instrumentationSource, INSTRUMENTATION, previous),
       ]
       assert.deepEqual(migrate, prepare.map(notice => `[${notice.code}] ${notice.message}`))
       assert.ok(migrate[0]?.startsWith(`[${PROXY_FACADE_WARNING}] `))

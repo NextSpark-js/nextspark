@@ -131,7 +131,9 @@ let cachedTemplatesDir: string | null = null;
  * packages/core/docs/06-authentication/12-passwordless-preset.md's "Startup
  * re-validation" section) — force: false so a project's own instrumentation.ts
  * is left alone; an unchanged copy of an earlier template is replaced
- * (copyProjectFiles).
+ * (copyProjectFiles). It goes in src/, beside src/app: `next build` looks for
+ * the hook there only, and leaves a root one out of standalone and webpack
+ * builds (#297).
  */
 export const PROJECT_ROOT_ITEMS: Array<{ src: string; dest: string; force: boolean }> = [
   // lib/ ships project-local modules the generated routes load (e.g.
@@ -152,7 +154,7 @@ export const PROJECT_ROOT_ITEMS: Array<{ src: string; dest: string; force: boole
   { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
   { src: 'eslint.config.mjs', dest: 'eslint.config.mjs', force: false },
   { src: 'scripts/cy-run-prod.cjs', dest: 'scripts/cy-run-prod.cjs', force: false },
-  { src: 'instrumentation.ts', dest: 'instrumentation.ts', force: false },
+  { src: 'instrumentation.ts', dest: 'src/instrumentation.ts', force: false },
 ]
 
 /** Whether the project's `instrumentation.ts` is byte for byte an earlier core template, so core's to replace. */
@@ -171,6 +173,9 @@ async function copyProjectFiles(config: WizardConfig): Promise<ProxyFileResult |
   for (const item of PROJECT_ROOT_ITEMS) {
     const srcPath = path.join(templatesDir, item.src)
     const destPath = path.join(projectDir, item.dest)
+
+    // A project's own root instrumentation.ts stays the only one: nextspark prepare moves it or says how (#297)
+    if (item.src === 'instrumentation.ts' && await fs.pathExists(path.join(projectDir, 'instrumentation.ts'))) continue
 
     if (await fs.pathExists(srcPath)) {
       if (item.force || !await fs.pathExists(destPath) || await isUnchangedEarlierTemplate(item.src, destPath, templatesDir)) {
