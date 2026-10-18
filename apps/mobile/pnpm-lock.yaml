@@ -4,6 +4,23 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  react-devtools-core>shell-quote: ^1.9.0
+  react-devtools-core>ws: ^7.5.11
+  react-native>ws: ^7.5.11
+  '@react-native/dev-middleware>ws': ^7.5.11
+  metro>ws: ^7.5.11
+  '@expo/cli>ws': ^8.21.0
+  jsdom>ws: ^8.21.0
+  '@expo/plist>@xmldom/xmldom': ^0.8.15
+  plist>@xmldom/xmldom: ^0.8.15
+  '@expo/cli>compression': ^1.8.2
+  '@expo/xcpretty>js-yaml': ^4.3.2
+  '@expo/metro-config>browserslist': ^4.28.7
+  picomatch@^4: ^4.0.4
+  minimatch@^9: ^9.0.7
+  brace-expansion@^2: ^2.1.6
+
 importers:
 
   .:
@@ -2406,7 +2423,7 @@ packages:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
     peerDependencies:
-      picomatch: ^3 || ^4
+      picomatch: ^4.0.4
     peerDependenciesMeta:
       picomatch:
         optional: true
