@@ -25,6 +25,9 @@ export const AUTH_SELECTORS = {
     // Buttons
     submit: 'login-submit',
     googleSignin: 'login-google-signin',
+    githubSignin: 'login-github-signin',
+    microsoftSignin: 'login-microsoft-signin',
+    appleSignin: 'login-apple-signin',
     showEmail: 'login-show-email',
     hideEmail: 'login-hide-email',
     // Links
@@ -62,6 +65,9 @@ export const AUTH_SELECTORS = {
     confirmPassword: 'signup-confirm-password',
     submitButton: 'signup-submit',
     googleButton: 'signup-google',
+    githubButton: 'signup-github',
+    microsoftButton: 'signup-microsoft',
+    appleButton: 'signup-apple',
     loginLink: 'signup-login-link',
     inviteBanner: 'signup-invite-banner',
     error: 'signup-error',

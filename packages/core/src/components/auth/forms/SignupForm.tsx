@@ -10,7 +10,11 @@ import { useAuthActions } from '../../../hooks/useAuth'
 import { useAuthReadiness } from '../../../hooks/useAuthReadiness'
 import { safeCallbackPath } from '../../../lib/auth/callback-url'
 import { registrationErrorKey } from '../../../lib/auth/registration-error-keys'
-import type { AuthError } from '../../../types/auth'
+import { SOCIAL_PROVIDER_LABELS, isSocialLoginMethod } from '../../../lib/auth/auth-methods'
+import type { AuthError, AuthProviderWithNull } from '../../../types/auth'
+import type { SocialLoginMethod } from '../../../lib/config/types'
+import { SOCIAL_ICONS } from '../../ui/social-icons'
+import { cn } from '../../../lib/utils'
 import { withBasePath } from '../../../lib/base-path'
 import { Button } from '../../ui/button'
 import { Input } from '../../ui/input'
@@ -29,21 +33,21 @@ import { toast } from 'sonner'
 
 type SignupFormData = z.infer<typeof signupSchema>
 
-type AuthProvider = 'email' | 'google' | null
-
 export function SignupForm() {
   const router = useRouter()
-  const [loadingProvider, setLoadingProvider] = useState<AuthProvider>(null)
+  const [loadingProvider, setLoadingProvider] = useState<AuthProviderWithNull>(null)
   const [error, setError] = useState<string | null>(null)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [registeredEmail, setRegisteredEmail] = useState('')
   const [resendingEmail, setResendingEmail] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
-  const { signUp, googleSignIn, resendVerificationEmail } = useAuthActions()
+  const { signUp, googleSignIn, socialSignIn, resendVerificationEmail } = useAuthActions()
   const t = useTranslations('auth')
   const readiness = useAuthReadiness()
-  const googleAvailable = readiness.availableMethods.includes('google')
+  // The built-in social providers that are ready, in the configured order
+  const socialMethods = readiness.availableMethods.filter(isSocialLoginMethod)
+  const socialAvailable = socialMethods.length > 0
   const otpAvailable = readiness.availableMethods.includes('email-otp')
 
   // Read invitation-related params from URL
@@ -173,6 +177,18 @@ export function SignupForm() {
       await googleSignIn(callbackUrl || undefined)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('signup.errors.googleFailed'))
+    } finally {
+      setLoadingProvider(null)
+    }
+  }
+
+  const handleSocialSignUp = async (provider: Exclude<SocialLoginMethod, 'google'>) => {
+    setLoadingProvider(provider)
+    setError(null)
+    try {
+      await socialSignIn(provider, callbackUrl || undefined)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('signup.errors.socialFailed', { provider: SOCIAL_PROVIDER_LABELS[provider] }))
     } finally {
       setLoadingProvider(null)
     }
@@ -571,7 +587,7 @@ export function SignupForm() {
         </form>
         )}
 
-        {!formAvailable && !googleAvailable && (
+        {!formAvailable && !socialAvailable && (
           <Alert
             role="alert"
             data-cy={sel(
@@ -600,14 +616,14 @@ export function SignupForm() {
           </Alert>
         )}
 
-        {inviteToken && !formAvailable && googleAvailable && (
+        {inviteToken && !formAvailable && socialAvailable && (
           <Alert role="alert" className="mb-4" data-cy={sel('auth.signup.inviteUnavailable')}>
             <AlertCircle className="h-4 w-4" aria-hidden="true" />
             <AlertDescription>{t('signup.inviteUnavailable')}</AlertDescription>
           </Alert>
         )}
 
-        {googleAvailable && (
+        {socialAvailable && (
           <>
             {formAvailable && (
             <div className="relative my-4">
@@ -622,12 +638,36 @@ export function SignupForm() {
             </div>
             )}
 
+            {socialMethods.map((provider, index) => {
+              if (provider !== 'google') {
+                const Icon = SOCIAL_ICONS[provider]
+                return (
+                  <Button
+                    key={provider}
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleSocialSignUp(provider)}
+                    disabled={!!loadingProvider}
+                    className={cn('w-full', index > 0 && 'mt-2')}
+                    data-cy={sel(`auth.signup.${provider}Button`)}
+                  >
+                    {loadingProvider === provider ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Icon className="mr-2" />
+                    )}
+                    {t(`signup.form.continueWith${SOCIAL_PROVIDER_LABELS[provider]}`)}
+                  </Button>
+                )
+              }
+              return (
             <Button
+              key="google"
               type="button"
               variant="outline"
               onClick={handleGoogleSignUp}
               disabled={!!loadingProvider}
-              className="w-full"
+              className={cn('w-full', index > 0 && 'mt-2')}
               data-cy={sel('auth.signup.googleButton')}
             >
               {loadingProvider === 'google' ? (
@@ -642,6 +682,8 @@ export function SignupForm() {
               )}
               {t('signup.form.continueWithGoogle')}
             </Button>
+              )
+            })}
           </>
         )}
         </CardContent>

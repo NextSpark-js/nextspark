@@ -11,8 +11,8 @@
  * messages and method names - never a configuration value.
  *
  * Contract (see docs/06-authentication/12-passwordless-preset.md):
- * - NEXTSPARK_AUTH_RUNTIME_ONLY: comma list of `email` and/or `google` whose
- *   credentials are injected only at runtime. Missing values of a declared
+ * - NEXTSPARK_AUTH_RUNTIME_ONLY: comma list of `email`, `google`, `github`,
+ *   `microsoft` and/or `apple` whose credentials are injected only at runtime. Missing values of a declared
  *   provider are deferred to the runtime check; concrete invalid ones still fail.
  * - NEXTSPARK_AUTH_PREFLIGHT=off: the one bypass. Skips this check with a
  *   warning; the runtime gates and the startup check still apply.
@@ -39,7 +39,8 @@ const env = process.env
 const projectRoot = findProjectRoot(process.cwd())
 const LOAD_TIMEOUT_MS = 15_000
 
-const RUNTIME_ONLY_PROVIDERS = ['email', 'google']
+const SOCIAL_PROVIDERS = ['google', 'github', 'microsoft', 'apple']
+const RUNTIME_ONLY_PROVIDERS = ['email', ...SOCIAL_PROVIDERS]
 const BYPASS = 'NEXTSPARK_AUTH_PREFLIGHT=off'
 
 function fail(code, message, remediation = []) {
@@ -81,7 +82,7 @@ async function projectAuthConfig() {
   const auth = validAuthSubset(loaded.auth)
   if (!auth) {
     fail('AUTH_CONFIG_UNREADABLE', `the project's config/app.config.ts has auth settings of an unsupported shape.`, [
-      'auth.methods must be an array of method names; auth.providers.google.enabled and auth.emailAndPassword.enabled must be true or false.',
+      'auth.methods must be an array of method names; auth.providers.<google|github|microsoft|apple>.enabled and auth.emailAndPassword.enabled must be true or false.',
     ])
   }
   return auth
@@ -129,13 +130,14 @@ function loadThemeAuth(appConfigPath, exportName) {
 /** The evaluator's authConfig from the loaded subset, or null when a field has an unexpected type. */
 function validAuthSubset(subset) {
   if (!subset || typeof subset !== 'object') return null
-  const { methods, googleEnabled, emailAndPasswordEnabled } = subset
+  const { methods, providersEnabled = {}, emailAndPasswordEnabled } = subset
   const optionalBoolean = (value) => value === undefined || typeof value === 'boolean'
   if (methods !== undefined && !(Array.isArray(methods) && methods.every((method) => typeof method === 'string'))) return null
-  if (!optionalBoolean(googleEnabled) || !optionalBoolean(emailAndPasswordEnabled)) return null
+  if (!SOCIAL_PROVIDERS.every((id) => optionalBoolean(providersEnabled[id])) || !optionalBoolean(emailAndPasswordEnabled)) return null
+  const providers = Object.fromEntries(SOCIAL_PROVIDERS.filter((id) => providersEnabled[id] !== undefined).map((id) => [id, { enabled: providersEnabled[id] }]))
   return {
     methods,
-    providers: googleEnabled === undefined ? undefined : { google: { enabled: googleEnabled } },
+    providers: Object.keys(providers).length ? providers : undefined,
     emailAndPassword: emailAndPasswordEnabled === undefined ? undefined : { enabled: emailAndPasswordEnabled },
   }
 }
@@ -173,7 +175,7 @@ async function main() {
   const authConfig = await projectAuthConfig()
   const configuration = evaluator.authReadinessConfigurationFromEnv(env)
   configuration.email.runtimeOnly = runtimeOnly.has('email')
-  configuration.google.runtimeOnly = runtimeOnly.has('google')
+  for (const id of SOCIAL_PROVIDERS) configuration[id].runtimeOnly = runtimeOnly.has(id)
 
   const result = evaluator.evaluateAuthReadiness({
     profile: 'web-local-auth',
@@ -189,7 +191,9 @@ async function main() {
     console.log(`   Login methods: ${result.declaredMethods.join(', ')}`)
     for (const diagnostic of result.diagnostics) console.log(`❌ ${diagnosticLine(diagnostic)}`)
     console.log('   Fix: set the variables named above in .env or the build environment (email: EMAIL_PROVIDER=resend,')
-    console.log('   RESEND_API_KEY, RESEND_FROM_EMAIL; Google: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET), or change auth.methods.')
+    console.log('   RESEND_API_KEY, RESEND_FROM_EMAIL; Google: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET; GitHub: GITHUB_CLIENT_ID,')
+    console.log('   GITHUB_CLIENT_SECRET; Microsoft: MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET; Apple: APPLE_CLIENT_ID, APPLE_TEAM_ID,')
+    console.log('   APPLE_KEY_ID, APPLE_PRIVATE_KEY), or change auth.methods.')
     console.log('   Credentials injected only at runtime: declare them with NEXTSPARK_AUTH_RUNTIME_ONLY=email,google;')
     console.log('   they are validated again when the server starts and on every login request.')
     if (result.diagnostics.some(({ code }) => code.startsWith('BETTER_AUTH_SECRET_'))) {

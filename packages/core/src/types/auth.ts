@@ -1,7 +1,9 @@
+import type { SocialLoginMethod } from '../lib/config/types'
+
 /**
  * Authentication provider types
  */
-export type AuthProvider = 'email' | 'google'
+export type AuthProvider = 'email' | SocialLoginMethod
 export type AuthProviderWithNull = AuthProvider | null
 
 /**

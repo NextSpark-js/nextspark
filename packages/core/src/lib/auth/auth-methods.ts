@@ -2,7 +2,7 @@
  * Login Methods & Presets
  *
  * Pure helpers around `AuthConfig.methods` — the list of login methods an app
- * offers (`'email-otp'`, `'google'`, `'email-password'`), in priority order.
+ * offers (`'email-otp'`, a social provider, `'email-password'`), in priority order.
  * Safe to import from server and client code: no side effects, types only.
  *
  * Portfolio policy (#126): the DEFAULT is the passwordless preset — a one-time
@@ -10,10 +10,21 @@
  * preset (or any combination) from their app.config.ts.
  */
 
-import type { AuthConfig, AuthLoginMethod, AuthPreset } from '../config/types'
+import type { AuthConfig, AuthLoginMethod, AuthPreset, SocialLoginMethod } from '../config/types'
+
+/** The built-in social providers: a button, a readiness check and a profile mapping each. */
+export const SOCIAL_LOGIN_METHODS: readonly SocialLoginMethod[] = ['google', 'github', 'microsoft', 'apple']
+
+/** Brand names, the same in every language. */
+export const SOCIAL_PROVIDER_LABELS: Readonly<Record<SocialLoginMethod, string>> = {
+  google: 'Google',
+  github: 'GitHub',
+  microsoft: 'Microsoft',
+  apple: 'Apple',
+}
 
 /** Every method the core knows how to render/serve. */
-export const AUTH_LOGIN_METHODS: readonly AuthLoginMethod[] = ['email-otp', 'google', 'email-password']
+export const AUTH_LOGIN_METHODS: readonly AuthLoginMethod[] = ['email-otp', ...SOCIAL_LOGIN_METHODS, 'email-password']
 
 /** Named bundles of login methods. Arrays are in UI priority order. */
 export const AUTH_PRESETS: Readonly<Record<AuthPreset, readonly AuthLoginMethod[]>> = {
@@ -57,6 +68,10 @@ export function resolveAuthMethods(
     return [...DEFAULT_AUTH_METHODS]
   }
   return valid
+}
+
+export function isSocialLoginMethod(value: unknown): value is SocialLoginMethod {
+  return typeof value === 'string' && (SOCIAL_LOGIN_METHODS as readonly string[]).includes(value)
 }
 
 export function isAuthMethodEnabled(methods: readonly AuthLoginMethod[], method: AuthLoginMethod): boolean {

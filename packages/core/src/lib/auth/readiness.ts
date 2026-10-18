@@ -1,5 +1,5 @@
-import type { AuthConfig, AuthLoginMethod } from '../config/types'
-import { DEFAULT_AUTH_METHODS, isAuthLoginMethod } from './auth-methods'
+import type { AuthConfig, AuthLoginMethod, SocialLoginMethod } from '../config/types'
+import { DEFAULT_AUTH_METHODS, SOCIAL_LOGIN_METHODS, isAuthLoginMethod, isSocialLoginMethod } from './auth-methods'
 
 /**
  * @internal Pure readiness inputs; integration is intentionally deferred.
@@ -41,14 +41,34 @@ export interface AuthReadinessInput {
       /** Missing values are expected to be injected after the build. */
       runtimeOnly?: boolean
     }
-    google?: {
+    google?: SocialProviderConfiguration
+    github?: SocialProviderConfiguration
+    /** `tenantId` is optional (MICROSOFT_TENANT_ID, default `common`); a present one must be well formed. */
+    microsoft?: SocialProviderConfiguration & { tenantId?: string }
+    /** Apple signs its own client secret from the .p8 key: no clientSecret. */
+    apple?: {
       clientId?: string
-      clientSecret?: string
-      /** Missing values are expected to be injected after the build. */
+      teamId?: string
+      keyId?: string
+      privateKey?: string
       runtimeOnly?: boolean
     }
   }
 }
+
+interface SocialProviderConfiguration {
+  clientId?: string
+  clientSecret?: string
+  /** Missing values are expected to be injected after the build. */
+  runtimeOnly?: boolean
+}
+
+/** The environment variable each built-in provider's credential comes from. */
+type SocialCredentialVariable =
+  | 'GOOGLE_CLIENT_ID' | 'GOOGLE_CLIENT_SECRET'
+  | 'GITHUB_CLIENT_ID' | 'GITHUB_CLIENT_SECRET'
+  | 'MICROSOFT_CLIENT_ID' | 'MICROSOFT_CLIENT_SECRET' | 'MICROSOFT_TENANT_ID'
+  | 'APPLE_CLIENT_ID' | 'APPLE_TEAM_ID' | 'APPLE_KEY_ID' | 'APPLE_PRIVATE_KEY'
 
 export type AuthReadinessDiagnosticCode =
   | 'AUTH_NO_AVAILABLE_METHOD'
@@ -63,13 +83,8 @@ export type AuthReadinessDiagnosticCode =
   | 'RESEND_FROM_EMAIL_PLACEHOLDER'
   | 'RESEND_FROM_EMAIL_MALFORMED'
   | 'RESEND_FROM_EMAIL_SANDBOX'
-  | 'GOOGLE_RUNTIME_VALIDATION_REQUIRED'
-  | 'GOOGLE_CLIENT_ID_MISSING'
-  | 'GOOGLE_CLIENT_ID_PLACEHOLDER'
-  | 'GOOGLE_CLIENT_ID_MALFORMED'
-  | 'GOOGLE_CLIENT_SECRET_MISSING'
-  | 'GOOGLE_CLIENT_SECRET_PLACEHOLDER'
-  | 'GOOGLE_CLIENT_SECRET_MALFORMED'
+  | `${Uppercase<SocialLoginMethod>}_RUNTIME_VALIDATION_REQUIRED`
+  | `${SocialCredentialVariable}_${'MISSING' | 'PLACEHOLDER' | 'MALFORMED'}`
   | 'BETTER_AUTH_SECRET_PLACEHOLDER'
   | 'BETTER_AUTH_SECRET_MALFORMED'
 
@@ -82,7 +97,7 @@ export type AuthReadinessDiagnosticCode =
  * intentional, so they produce no per-method diagnostic.
  */
 export interface AuthReadinessDiagnostic {
-  method: 'auth' | 'email' | 'google' | 'email-password'
+  method: 'auth' | 'email' | SocialLoginMethod | 'email-password'
   code: AuthReadinessDiagnosticCode
   severity: 'error' | 'warning'
   message: string
@@ -112,6 +127,9 @@ const EMAIL_PROVIDER_TOKENS: readonly string[] = ['auto', 'resend', 'console']
 
 const RESEND_API_KEY_PATTERN = /^re_[A-Za-z0-9_-]{16,}$/
 const GOOGLE_CLIENT_ID_PATTERN = /^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/
+const SECRET_PATTERN = /^\S+$/
+const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const APPLE_ID_PATTERN = /^[A-Z0-9]{10}$/
 /** Shorter secrets are below the length the auth library itself warns about. */
 const BETTER_AUTH_SECRET_MIN_LENGTH = 32
 const EMAIL_PATTERN = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/
@@ -161,7 +179,7 @@ export function evaluateSessionSecret(input: AuthReadinessInput): AuthReadinessD
 
 function credentialDiagnostic(
   method: AuthReadinessDiagnostic['method'],
-  field: 'RESEND_API_KEY' | 'RESEND_FROM_EMAIL' | 'GOOGLE_CLIENT_ID' | 'GOOGLE_CLIENT_SECRET' | 'BETTER_AUTH_SECRET',
+  field: 'RESEND_API_KEY' | 'RESEND_FROM_EMAIL' | 'BETTER_AUTH_SECRET' | SocialCredentialVariable,
   state: Exclude<CredentialState, 'valid'>
 ): AuthReadinessDiagnostic {
   return {
@@ -271,37 +289,86 @@ function evaluateEmailConfiguration(
   return apiKeyState === 'valid' && fromEmailState === 'valid' ? 'available' : 'invalid'
 }
 
-function evaluateGoogleConfiguration(
+interface SocialCredentialField {
+  key: string
+  variable: SocialCredentialVariable
+  pattern: RegExp
+  minimumLength?: number
+  /** A missing optional value is fine; a present one must still be valid. */
+  optional?: boolean
+}
+
+/** What each built-in provider needs, in the order its diagnostics are reported. */
+const SOCIAL_CREDENTIALS: Record<SocialLoginMethod, { label: string; fields: readonly SocialCredentialField[] }> = {
+  google: {
+    label: 'Google',
+    fields: [
+      { key: 'clientId', variable: 'GOOGLE_CLIENT_ID', pattern: GOOGLE_CLIENT_ID_PATTERN },
+      { key: 'clientSecret', variable: 'GOOGLE_CLIENT_SECRET', pattern: SECRET_PATTERN, minimumLength: 8 },
+    ],
+  },
+  github: {
+    label: 'GitHub',
+    fields: [
+      { key: 'clientId', variable: 'GITHUB_CLIENT_ID', pattern: /^[A-Za-z0-9._-]+$/, minimumLength: 10 },
+      { key: 'clientSecret', variable: 'GITHUB_CLIENT_SECRET', pattern: SECRET_PATTERN, minimumLength: 8 },
+    ],
+  },
+  microsoft: {
+    label: 'Microsoft',
+    fields: [
+      { key: 'clientId', variable: 'MICROSOFT_CLIENT_ID', pattern: GUID_PATTERN },
+      { key: 'clientSecret', variable: 'MICROSOFT_CLIENT_SECRET', pattern: SECRET_PATTERN, minimumLength: 8 },
+      // common, organizations, consumers, a tenant GUID or a verified domain
+      { key: 'tenantId', variable: 'MICROSOFT_TENANT_ID', pattern: /^[A-Za-z0-9.-]+$/, optional: true },
+    ],
+  },
+  apple: {
+    label: 'Apple',
+    fields: [
+      // The Services ID, reverse-DNS (com.example.web)
+      { key: 'clientId', variable: 'APPLE_CLIENT_ID', pattern: /^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/ },
+      { key: 'teamId', variable: 'APPLE_TEAM_ID', pattern: APPLE_ID_PATTERN },
+      { key: 'keyId', variable: 'APPLE_KEY_ID', pattern: APPLE_ID_PATTERN },
+      // The .p8 file's contents; newlines may be written as \n in .env
+      { key: 'privateKey', variable: 'APPLE_PRIVATE_KEY', pattern: /^-----BEGIN PRIVATE KEY-----(?:\s|\\n)[\s\S]+(?:\s|\\n)-----END PRIVATE KEY-----$/ },
+    ],
+  },
+}
+
+function evaluateSocialConfiguration(
   input: AuthReadinessInput,
+  provider: SocialLoginMethod,
   diagnostics: AuthReadinessDiagnostic[]
 ): 'available' | 'invalid' | 'deferred' {
-  const google = input.configuration?.google
-  const clientIdState = credentialState(google?.clientId, GOOGLE_CLIENT_ID_PATTERN)
-  const clientSecretState = credentialState(google?.clientSecret, /^\S+$/, 8)
-  if (canDeferAtBuild(input, google?.runtimeOnly, [clientIdState, clientSecretState])) {
+  const { label, fields } = SOCIAL_CREDENTIALS[provider]
+  const configuration = (input.configuration?.[provider] ?? {}) as Record<string, unknown> & { runtimeOnly?: boolean }
+  const states = fields.map((field) => {
+    const value = configuration[field.key]
+    const state = credentialState(typeof value === 'string' ? value : undefined, field.pattern, field.minimumLength)
+    return { field, state }
+  }).filter(({ field, state }) => !(field.optional && state === 'missing'))
+
+  if (canDeferAtBuild(input, configuration.runtimeOnly, states.map(({ state }) => state))) {
     diagnostics.push({
-      method: 'google',
-      code: 'GOOGLE_RUNTIME_VALIDATION_REQUIRED',
+      method: provider,
+      code: `${provider.toUpperCase() as Uppercase<SocialLoginMethod>}_RUNTIME_VALIDATION_REQUIRED`,
       severity: 'warning',
-      message: 'Google credentials are runtime-only and must be validated before serving local authentication.',
+      message: `${label} credentials are runtime-only and must be validated before serving local authentication.`,
     })
     return 'deferred'
   }
 
-  if (clientIdState !== 'valid') {
-    diagnostics.push(credentialDiagnostic('google', 'GOOGLE_CLIENT_ID', clientIdState))
+  for (const { field, state } of states) {
+    if (state !== 'valid') diagnostics.push(credentialDiagnostic(provider, field.variable, state))
   }
-  if (clientSecretState !== 'valid') {
-    diagnostics.push(credentialDiagnostic('google', 'GOOGLE_CLIENT_SECRET', clientSecretState))
-  }
-
-  return clientIdState === 'valid' && clientSecretState === 'valid' ? 'available' : 'invalid'
+  return states.every(({ state }) => state === 'valid') ? 'available' : 'invalid'
 }
 
 /**
  * Maps the provider environment contract (EMAIL_PROVIDER, RESEND_API_KEY,
- * RESEND_FROM_EMAIL, FORCE_RESEND_IN_DEV, GOOGLE_CLIENT_ID,
- * GOOGLE_CLIENT_SECRET) onto evaluator configuration. Shared by the runtime
+ * RESEND_FROM_EMAIL, FORCE_RESEND_IN_DEV, and the built-in social providers'
+ * variables in SOCIAL_CREDENTIALS) onto evaluator configuration. Shared by the runtime
  * adapter and the production build check so both read the same variables.
  */
 export function authReadinessConfigurationFromEnv(
@@ -318,6 +385,21 @@ export function authReadinessConfigurationFromEnv(
     google: {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
+    },
+    github: {
+      clientId: env.GITHUB_CLIENT_ID,
+      clientSecret: env.GITHUB_CLIENT_SECRET,
+    },
+    microsoft: {
+      clientId: env.MICROSOFT_CLIENT_ID,
+      clientSecret: env.MICROSOFT_CLIENT_SECRET,
+      tenantId: env.MICROSOFT_TENANT_ID,
+    },
+    apple: {
+      clientId: env.APPLE_CLIENT_ID,
+      teamId: env.APPLE_TEAM_ID,
+      keyId: env.APPLE_KEY_ID,
+      privateKey: env.APPLE_PRIVATE_KEY,
     },
   }
 }
@@ -365,7 +447,7 @@ export function evaluateAuthReadiness(input: AuthReadinessInput): AuthReadinessR
   const diagnostics: AuthReadinessDiagnostic[] = secretDiagnostic ? [secretDiagnostic] : []
 
   const passwordEnabled = input.authConfig?.emailAndPassword?.enabled !== false
-  const googleEnabled = input.authConfig?.providers?.google?.enabled !== false
+  const socialEnabled = (provider: SocialLoginMethod) => input.authConfig?.providers?.[provider]?.enabled !== false
 
   const providerBackedEmailMethods = declaredMethods.filter(
     (method) => method === 'email-otp' || (method === 'email-password' && passwordEnabled)
@@ -376,10 +458,11 @@ export function evaluateAuthReadiness(input: AuthReadinessInput): AuthReadinessR
     if (emailStatus === 'deferred') providerBackedEmailMethods.forEach((method) => deferred.add(method))
   }
 
-  if (declaredMethods.includes('google') && googleEnabled) {
-    const googleStatus = evaluateGoogleConfiguration(input, diagnostics)
-    if (googleStatus === 'available') available.add('google')
-    if (googleStatus === 'deferred') deferred.add('google')
+  for (const provider of SOCIAL_LOGIN_METHODS) {
+    if (!declaredMethods.includes(provider) || !socialEnabled(provider)) continue
+    const status = evaluateSocialConfiguration(input, provider, diagnostics)
+    if (status === 'available') available.add(provider)
+    if (status === 'deferred') deferred.add(provider)
   }
 
   const availableMethods = declaredMethods.filter((method) => available.has(method))
@@ -403,7 +486,7 @@ export function evaluateAuthReadiness(input: AuthReadinessInput): AuthReadinessR
   }
 
   const allDisabled = declaredMethods.every(
-    (method) => (method === 'google' && !googleEnabled) || (method === 'email-password' && !passwordEnabled)
+    (method) => (isSocialLoginMethod(method) && !socialEnabled(method)) || (method === 'email-password' && !passwordEnabled)
   )
   diagnostics.push(allDisabled
     ? {

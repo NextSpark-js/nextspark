@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { Fragment, useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import type { ComponentType } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -21,16 +21,18 @@ import { Separator } from '../../ui/separator'
 import { LastUsedBadge } from '../../ui/last-used-badge'
 import { Mail, Lock, Loader2, AlertCircle, Users, KeyRound } from 'lucide-react'
 import { GoogleIcon } from '../../ui/google-icon'
+import { SOCIAL_ICONS } from '../../ui/social-icons'
+import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/selectors/auth-sel'
 import { useTranslations } from 'next-intl'
 import { AuthTranslationPreloader } from '../../../lib/i18n/AuthTranslationPreloader'
 import { PUBLIC_AUTH_CONFIG } from '../../../lib/config/public-config-client'
 import type { DevKeyringConfig } from '../../../lib/config/types'
-import { getPrimaryEmailMethod } from '../../../lib/auth/auth-methods'
+import { SOCIAL_PROVIDER_LABELS, getPrimaryEmailMethod, isSocialLoginMethod } from '../../../lib/auth/auth-methods'
 import { registrationErrorKey } from '../../../lib/auth/registration-error-keys'
 import { DEFAULT_OTP_CONFIG, formatOtpCountdown, getOtpSecondsRemaining } from '../../../lib/auth/otp-config'
 import type { AuthProviderWithNull, AuthErrorCode, AuthError } from '../../../types/auth'
-import type { AuthLoginMethod } from '../../../lib/config/types'
+import type { AuthLoginMethod, SocialLoginMethod } from '../../../lib/config/types'
 
 // Keep DevKeyring and its Radix UI dependencies out of production login chunks.
 // Next substitutes NODE_ENV at build time, making both requires unreachable in
@@ -47,7 +49,11 @@ const DevKeyring: ComponentType<{ config: DevKeyringConfig }> | null = process.e
 /**
  * Maps error codes to internationalization keys for better user experience
  */
-function getErrorMessageFromCode(error: Error | AuthError, t: (key: string, options?: any) => string, context: 'email' | 'google' | 'otp'): string {
+function getErrorMessageFromCode(
+  error: Error | AuthError,
+  t: (key: string, options?: any) => string,
+  context: 'email' | 'google' | 'otp' | Exclude<SocialLoginMethod, 'google'>
+): string {
   const authError = error as AuthError
   const errorCode = authError.code || getErrorCodeFromMessage(error.message)
   const registrationKey = registrationErrorKey(authError.code)
@@ -65,27 +71,31 @@ function getErrorMessageFromCode(error: Error | AuthError, t: (key: string, opti
     return error.message || t('login.messages.otpVerifyFailed')
   }
 
-  const baseKey = context === 'email' ? 'login.errors' : 'login.errors.google'
+  const baseKey = context === 'email' ? 'login.errors' : context === 'google' ? 'login.errors.google' : 'login.errors.social'
+  // The other providers' messages name the provider
+  const provider = context === 'email' || context === 'google' ? undefined : SOCIAL_PROVIDER_LABELS[context]
 
   switch (errorCode) {
     case 'INVALID_CREDENTIALS':
-      return t(`${baseKey}.invalidCredentials`, { defaultValue: error.message })
+      return t(`${baseKey}.invalidCredentials`, { provider, defaultValue: error.message })
     case 'USER_NOT_FOUND':
-      return t(`${baseKey}.userNotFound`, { defaultValue: error.message })
+      return t(`${baseKey}.userNotFound`, { provider, defaultValue: error.message })
     case 'EMAIL_NOT_VERIFIED':
-      return t(`${baseKey}.emailNotVerified`, { defaultValue: error.message })
+      return t(`${baseKey}.emailNotVerified`, { provider, defaultValue: error.message })
     case 'ACCOUNT_LOCKED':
-      return t(`${baseKey}.accountLocked`, { defaultValue: error.message })
+      return t(`${baseKey}.accountLocked`, { provider, defaultValue: error.message })
     case 'RATE_LIMITED':
-      return t(`${baseKey}.rateLimited`, { defaultValue: error.message })
+      return t(`${baseKey}.rateLimited`, { provider, defaultValue: error.message })
     case 'OAUTH_ERROR':
-      return t(`${baseKey}.oauthError`, { defaultValue: error.message })
+      return t(`${baseKey}.oauthError`, { provider, defaultValue: error.message })
     case 'NETWORK_ERROR':
-      return t(`${baseKey}.networkError`, { defaultValue: error.message })
+      return t(`${baseKey}.networkError`, { provider, defaultValue: error.message })
     case 'SERVER_ERROR':
-      return t(`${baseKey}.serverError`, { defaultValue: error.message })
+      return t(`${baseKey}.serverError`, { provider, defaultValue: error.message })
     default:
-      return error.message || t(context === 'email' ? 'login.messages.signInFailed' : 'login.messages.googleSignInFailed')
+      return error.message || (provider
+        ? t('login.messages.socialSignInFailed', { provider })
+        : t(context === 'email' ? 'login.messages.signInFailed' : 'login.messages.googleSignInFailed'))
   }
 }
 
@@ -205,7 +215,9 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
   // Non-secret UI settings remain static; login methods come from the runtime
   // readiness endpoint so unavailable providers are never advertised.
   const registrationMode = PUBLIC_AUTH_CONFIG.registration.mode
-  const googleEnabled = methods.includes('google')
+  // The built-in social providers that are ready, in the configured order: a button each
+  const socialMethods = methods.filter(isSocialLoginMethod)
+  const socialEnabled = socialMethods.length > 0
   // Server-validated login methods — passwordless preset by default:
   // one-time code by email + Google, no password field.
   const otpEnabled = methods.includes('email-otp')
@@ -236,8 +248,8 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
   const [loadingProvider, setLoadingProvider] = useState<AuthProviderWithNull>(null)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
-  // Show email form by default when Google is disabled
-  const [showEmailForm, setShowEmailForm] = useState(!googleEnabled)
+  // Show email form by default when no social provider is offered
+  const [showEmailForm, setShowEmailForm] = useState(!socialEnabled)
   const [emailMode, setEmailMode] = useState<EmailMode>(primaryEmailMode)
   // Passwordless (one-time code) state
   const [otpStep, setOtpStep] = useState<'email' | 'code'>('email')
@@ -249,7 +261,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
   const [otpSentAt, setOtpSentAt] = useState<number | null>(null)
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(otpExpiresIn)
   const isProcessingRef = useRef(false)
-  const { signIn, googleSignIn, sendOtp, signInWithOtp } = useAuthActions()
+  const { signIn, googleSignIn, socialSignIn, sendOtp, signInWithOtp } = useAuthActions()
   const { lastMethod, isReady } = useLastAuthMethod()
   const t = useTranslations('auth')
   const loginSchema = useMemo(() => buildLoginSchema(t), [t])
@@ -437,6 +449,28 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
     }
   }, [googleSignIn, t, loadingProvider, callbackUrl])
 
+  const handleSocialSignIn = useCallback(async (provider: Exclude<SocialLoginMethod, 'google'>) => {
+    if (isProcessingRef.current || loadingProvider) return
+
+    const label = SOCIAL_PROVIDER_LABELS[provider]
+    isProcessingRef.current = true
+    setLoadingProvider(provider)
+    setError(null)
+    setStatusMessage(t('login.messages.socialSigningIn', { provider: label }))
+    try {
+      await socialSignIn(provider, callbackUrl || undefined)
+      setStatusMessage(t('login.messages.socialSignInSuccess', { provider: label }))
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(t('login.messages.socialSignInFailed', { provider: label }))
+      const errorMessage = getErrorMessageFromCode(error, t, provider)
+      setError(errorMessage)
+      setStatusMessage(t('login.messages.socialSignInError', { provider: label, error: errorMessage }))
+    } finally {
+      setLoadingProvider(null)
+      isProcessingRef.current = false
+    }
+  }, [socialSignIn, t, loadingProvider, callbackUrl])
+
   return (
     <>
       <AuthTranslationPreloader />
@@ -481,51 +515,36 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
             </Alert>
           )}
 
-          {/* Google Sign In - Primary Option (hidden when Google is disabled) */}
-          {googleEnabled && (
-            <>
-              {isReady && lastMethod === 'google' ? (
-                <LastUsedBadge text={t('login.form.lastUsed')}>
-                  <Button
-                    type="button"
-                    size="lg"
-                    onClick={handleGoogleSignIn}
-                    disabled={!!loadingProvider}
-                    className="w-full mb-6"
-                    aria-label={t('login.form.continueWithGoogleAria')}
-                                        data-cy={sel('auth.login.googleSignin')}
-                  >
-                    {loadingProvider === 'google' ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                    ) : (
-                      <GoogleIcon className="mr-2" data-cy="google-icon" />
-                    )}
-                    {t('login.form.continueWithGoogle')}
-                  </Button>
-                </LastUsedBadge>
-              ) : (
-                <Button
-                  type="button"
-                  size="lg"
-                  onClick={handleGoogleSignIn}
-                  disabled={!!loadingProvider}
-                  className="w-full mb-6"
-                  aria-label={t('login.form.continueWithGoogleAria')}
-                                    data-cy={sel('auth.login.googleSignin')}
-                >
-                  {loadingProvider === 'google' ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <GoogleIcon className="mr-2" data-cy="google-icon" />
-                  )}
-                  {t('login.form.continueWithGoogle')}
-                </Button>
-              )}
-            </>
-          )}
+          {/* Social sign-in - Primary options, one button per ready built-in provider in the configured order */}
+          {socialMethods.map((provider, index) => {
+            const isLast = index === socialMethods.length - 1
+            const label = SOCIAL_PROVIDER_LABELS[provider]
+            const Icon = provider === 'google' ? GoogleIcon : SOCIAL_ICONS[provider]
+            const button = (
+              <Button
+                type="button"
+                size="lg"
+                onClick={provider === 'google' ? handleGoogleSignIn : () => handleSocialSignIn(provider)}
+                disabled={!!loadingProvider}
+                className={cn('w-full', isLast ? 'mb-6' : 'mb-3')}
+                aria-label={t(`login.form.continueWith${label}Aria`)}
+                data-cy={sel(`auth.login.${provider}Signin`)}
+              >
+                {loadingProvider === provider ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Icon className="mr-2" data-cy={`${provider}-icon`} />
+                )}
+                {t(`login.form.continueWith${label}`)}
+              </Button>
+            )
+            return isReady && lastMethod === provider
+              ? <LastUsedBadge key={provider} text={t('login.form.lastUsed')}>{button}</LastUsedBadge>
+              : <Fragment key={provider}>{button}</Fragment>
+          })}
 
           {/* Email Login Link (hidden when Google is disabled or in domain-restricted mode, unless DevKeyring is active) */}
-          {!showEmailForm && googleEnabled && emailLoginAllowed && (
+          {!showEmailForm && socialEnabled && emailLoginAllowed && (
             <div className="text-center">
               {isReady && lastMethod === 'email' ? (
                 <LastUsedBadge text={t('login.form.lastUsed')}>
@@ -556,7 +575,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
           {/* Email Form - Shown when requested (hidden in domain-restricted mode, unless DevKeyring is active) */}
           {showEmailForm && emailLoginAllowed && (
             <>
-              {googleEnabled && (
+              {socialEnabled && (
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
                     <Separator className="w-full" />
@@ -751,7 +770,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
                     </div>
                   )}
 
-                  {googleEnabled && (
+                  {socialEnabled && (
                     <div className="text-center">
                       <button
                         type="button"
@@ -915,7 +934,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
                   </div>
                 )}
 
-                {googleEnabled && (
+                {socialEnabled && (
                   <div className="text-center mt-4">
                     <button
                       type="button"

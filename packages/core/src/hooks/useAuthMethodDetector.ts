@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useLastAuthMethod } from './useLastAuthMethod'
+import { isSocialLoginMethod } from '../lib/auth/auth-methods'
 
 /**
  * Hook to detect and save authentication method from URL parameters
@@ -15,9 +16,9 @@ export function useAuthMethodDetector() {
   useEffect(() => {
     const authMethod = searchParams.get('auth_method')
 
-    if (authMethod === 'google') {
+    if (isSocialLoginMethod(authMethod)) {
       // Save the auth method when coming from OAuth redirect
-      saveAuthMethod('google')
+      saveAuthMethod(authMethod)
 
       // Clean the URL parameter without causing a reload
       if (typeof window !== 'undefined') {

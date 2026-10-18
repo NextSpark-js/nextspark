@@ -914,6 +914,15 @@ describe('build check assumptions', () => {
       FORCE_RESEND_IN_DEV: '1',
       GOOGLE_CLIENT_ID: '123456789-abcdef.apps.googleusercontent.com',
       GOOGLE_CLIENT_SECRET: 'GOCSPX-production-secret',
+      GITHUB_CLIENT_ID: 'Ov23liGitHubClient01',
+      GITHUB_CLIENT_SECRET: 'github-secret',
+      MICROSOFT_CLIENT_ID: 'microsoft-client',
+      MICROSOFT_CLIENT_SECRET: 'microsoft-secret',
+      MICROSOFT_TENANT_ID: 'organizations',
+      APPLE_CLIENT_ID: 'com.example.web',
+      APPLE_TEAM_ID: 'TEAM123456',
+      APPLE_KEY_ID: 'KEY1234567',
+      APPLE_PRIVATE_KEY: 'pem',
     })).toEqual({
       email: {
         provider: 'resend',
@@ -925,6 +934,9 @@ describe('build check assumptions', () => {
         clientId: '123456789-abcdef.apps.googleusercontent.com',
         clientSecret: 'GOCSPX-production-secret',
       },
+      github: { clientId: 'Ov23liGitHubClient01', clientSecret: 'github-secret' },
+      microsoft: { clientId: 'microsoft-client', clientSecret: 'microsoft-secret', tenantId: 'organizations' },
+      apple: { clientId: 'com.example.web', teamId: 'TEAM123456', keyId: 'KEY1234567', privateKey: 'pem' },
     })
   })
 })

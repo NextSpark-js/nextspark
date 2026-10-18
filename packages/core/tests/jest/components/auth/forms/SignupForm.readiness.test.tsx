@@ -15,8 +15,9 @@ const mockSearch = { value: '' }
 const mockPush = jest.fn()
 
 jest.mock('@/core/hooks/useAuthReadiness', () => ({ useAuthReadiness: () => readiness }))
+const mockSocialSignIn = jest.fn(async () => {})
 jest.mock('@/core/hooks/useAuth', () => ({
-  useAuthActions: () => ({ signUp: jest.fn(), googleSignIn: jest.fn(), resendVerificationEmail: jest.fn() }),
+  useAuthActions: () => ({ signUp: jest.fn(), googleSignIn: jest.fn(), socialSignIn: mockSocialSignIn, resendVerificationEmail: jest.fn() }),
 }))
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -62,6 +63,32 @@ describe('SignupForm runtime readiness', () => {
 
     expect(byCy('auth.signup.googleButton')).toBeInTheDocument()
     expect(byCy('auth.signup.submitButton')).not.toBeInTheDocument()
+  })
+
+  // #279: a button for each ready built-in provider, none for one that is not ready
+  test('offers GitHub, Microsoft and Apple only when the server reports them ready', () => {
+    readiness.state = 'ready'
+    readiness.availableMethods = ['email-password', 'apple', 'github']
+    render(<SignupForm />)
+
+    expect(byCy('auth.signup.submitButton')).toBeInTheDocument()
+    expect(byCy('auth.signup.appleButton')).toHaveTextContent('signup.form.continueWithApple')
+    expect(byCy('auth.signup.githubButton')).toHaveTextContent('signup.form.continueWithGitHub')
+    expect(byCy('auth.signup.microsoftButton')).not.toBeInTheDocument()
+    expect(byCy('auth.signup.googleButton')).not.toBeInTheDocument()
+
+    fireEvent.click(byCy('auth.signup.githubButton')!)
+    expect(mockSocialSignIn).toHaveBeenCalledWith('github', undefined)
+  })
+
+  test('a social provider alone is enough to offer sign-up, as Google alone was', () => {
+    readiness.state = 'ready'
+    readiness.availableMethods = ['microsoft']
+    render(<SignupForm />)
+
+    expect(byCy('auth.signup.microsoftButton')).toBeInTheDocument()
+    expect(byCy('auth.signup.noMethods')).not.toBeInTheDocument()
+    expect(byCy('auth.signup.otpOnly')).not.toBeInTheDocument()
   })
 
   test('shows no methods without broken controls', () => {

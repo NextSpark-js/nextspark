@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- GitHub, Microsoft (Entra ID and personal accounts, `MICROSOFT_TENANT_ID`, default `common`) and Apple sign-in next to Google, each with its variables, readiness check, profile mapping and a login and sign-up button once listed in `auth.methods` and ready. Apple's client secret is signed at runtime from `APPLE_TEAM_ID`, `APPLE_KEY_ID` and `APPLE_PRIVATE_KEY`. `auth.providers` is now a provider map: any other Better Auth social provider listed there works through the API with `<ID>_CLIENT_ID` / `<ID>_CLIENT_SECRET`, without a button. Every provider's callback goes through the same registration gates; a provider other than Google that has not verified the email creates no account (`SOCIAL_EMAIL_UNVERIFIED`) and links to none. Google behaves as before. Setup, callback URLs and test plans: `docs/06-authentication/03-oauth-providers.md` (#279).
+
 ### Changed
 
 - **Expo SDK 58 for new mobile projects.** `create-nextspark-app` and the web-mobile template declare Expo `~58.0.14`, React Native `0.88.0`, React `19.3.0` and the matching `expo-*` and `react-native-*` releases (before: SDK 54, React Native 0.81.5), and `app.config.ts` sets the splash screen through the `expo-splash-screen` plugin. Node.js 22.13+ (22 line) or 24.3+ is needed for the mobile tooling. The native ref types of `@nextsparkjs/ui` changed: every exported component is annotated as `ForwardRefExoticComponent<Props & RefAttributes<ViewRef>>` (or `TextRef`, `ImageRef`, `TextInputRef`), where the ref is the instance type of the `react-native` the consumer has installed, so a `ref` typechecks on React Native 0.81 and 0.88 alike. The support matrix and the stability table name the new pair; `@nextsparkjs/mobile` and `@nextsparkjs/ui` keep accepting Expo SDK 54 and later.

@@ -81,6 +81,16 @@ describe('useAuth sign-in destinations', () => {
     expect(callbackURL).toMatch(BETTER_AUTH_RELATIVE_CALLBACK)
   })
 
+  test.each(['github', 'microsoft', 'apple'] as const)('%s sign-in starts its own provider and marks the return page with it', async (provider) => {
+    const { result } = renderHook(() => useAuth())
+
+    await act(async () => {
+      await result.current.socialSignIn(provider, '/reports?cols=*')
+    })
+
+    expect(mockSignInSocial.mock.calls[0][0]).toEqual({ provider, callbackURL: `/reports?cols=%2A&auth_method=${provider}` })
+  })
+
   test('the password reset email returns to the reset-password page', async () => {
     const { result } = renderHook(() => useAuth())
 

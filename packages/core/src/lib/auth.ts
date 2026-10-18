@@ -25,7 +25,8 @@ import { resolveSessionConfig } from './auth/session-config';
 import { resolveOtpConfig } from './auth/otp-config';
 import { isPasswordLoginEnabled } from './auth/auth-methods';
 import { evaluateSessionSecret } from './auth/readiness';
-import { isRuntimeEmailAvailable, isRuntimeGoogleAvailable } from './auth/runtime-readiness';
+import { isRuntimeEmailAvailable } from './auth/runtime-readiness';
+import { resolveSocialProviders, socialSignUpProvider } from './auth/social-providers';
 import { getTrustedOrigins } from './utils/cors';
 import { withBasePath } from './base-path';
 import { getBetterAuthIpHeaders } from './api/client-ip';
@@ -76,15 +77,6 @@ export interface UserWithEmail {
   firstName?: string;
 }
 
-interface GoogleProfile {
-  email: string;
-  name: string;
-  given_name?: string;
-  family_name?: string;
-  picture?: string;
-  email_verified?: boolean;
-}
-
 const isProd = process.env.NODE_ENV === 'production';
 const betterAuthIpHeaders = getBetterAuthIpHeaders();
 const baseUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173';
@@ -130,6 +122,17 @@ const sessionConfig = resolveSessionConfig(AUTH_CONFIG);
 // resolved values through PUBLIC_AUTH_CONFIG.otp, so the countdown it shows is
 // derived from what the server enforces instead of restating it.
 const otpConfig = resolveOtpConfig(AUTH_CONFIG);
+
+// The social provider map (lib/auth/social-providers): the built-in providers
+// auth.methods or auth.providers lists whose credentials are ready (Google is
+// listed by default), and the other Better Auth providers auth.providers lists
+// with <ID>_CLIENT_ID / <ID>_CLIENT_SECRET set.
+const socialProviders = resolveSocialProviders({
+  authConfig: AUTH_CONFIG,
+  defaults: { language: I18N_CONFIG.defaultLocale, role: USER_ROLES_CONFIG.defaultRole },
+});
+// Apple answers the callback with a cross-site form POST from this origin
+const SOCIAL_TRUSTED_ORIGINS = socialProviders.apple ? ['https://appleid.apple.com'] : [];
 
 /**
  * Resolves the current signup request's intent to a configured NON-owner team
@@ -276,30 +279,7 @@ export const auth = betterAuth({
     // the effective verification-link lifetime remains unchanged.
     expiresIn: 60 * 60, // 1 hour
   },
-  socialProviders: isRuntimeGoogleAvailable()
-    ? {
-        google: {
-          clientId: process.env.GOOGLE_CLIENT_ID!,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-          mapProfileToUser: (profile: GoogleProfile) => {
-            // Google provides given_name and family_name separately
-            const firstName = profile.given_name || profile.name.split(' ')[0] || '';
-            const lastName = profile.family_name || profile.name.split(' ').slice(1).join(' ') || '';
-
-            return {
-              email: profile.email,
-              name: profile.name, // Better Auth expects 'name' field
-              firstName: firstName, // Use given_name if available, otherwise split name
-              lastName: lastName, // Use family_name if available, otherwise split name
-              language: I18N_CONFIG.defaultLocale, // Assign default language for Google OAuth users
-              role: USER_ROLES_CONFIG.defaultRole, // Assign default role for Google OAuth users
-              image: profile.picture,
-              emailVerified: profile.email_verified || false,
-            };
-          },
-        },
-      }
-    : {},
+  socialProviders,
   baseURL: baseUrl,
   // Better Auth serves its routes, and builds its OAuth redirect_uri and email
   // links, under baseURL + basePath. Under a Next.js basePath that is
@@ -319,7 +299,10 @@ export const auth = betterAuth({
   // adding a wildcard entry (e.g. "https://*.vercel.app") to
   // api.cors.additionalOrigins — better-auth's own trustedOrigins matching
   // already supports the same wildcard syntax as isOriginAllowed() above.
-  trustedOrigins: async (request?: Request) => getTrustedOrigins(APP_CONFIG_MERGED, request?.headers.get('origin')),
+  trustedOrigins: async (request?: Request) => [
+    ...getTrustedOrigins(APP_CONFIG_MERGED, request?.headers.get('origin')),
+    ...SOCIAL_TRUSTED_ORIGINS,
+  ],
   // Redirect auth errors to our custom error page instead of Better Auth's default.
   // Better Auth redirects to this path as-is, outside the Next.js router.
   onAPIError: {
@@ -399,6 +382,17 @@ export const auth = betterAuth({
               console.log(`[Auth] Blocked registration for a user at ${user.email.split('@').pop()}: domain not in allowedDomains`);
               throw registrationError('DOMAIN_NOT_ALLOWED', ctx);
             }
+          }
+
+          // A provider that has not verified the address proves nothing about
+          // who owns it: an account created from it could be waiting for the
+          // owner when they later sign in with an email code. Google keeps its
+          // behaviour from before the provider map (it verifies the addresses
+          // it signs in).
+          const provider = socialSignUpProvider(ctx as Parameters<typeof socialSignUpProvider>[0]);
+          if (provider && provider !== 'google' && user.emailVerified !== true) {
+            console.log(`[Auth] Refused a ${provider} sign-up: the provider has not verified the email address`);
+            throw registrationError('SOCIAL_EMAIL_UNVERIFIED', ctx);
           }
 
           return user;

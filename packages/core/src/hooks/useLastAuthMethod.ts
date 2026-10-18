@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import type { AuthMethod } from '../types/auth'
+import type { AuthMethod, AuthProvider } from '../types/auth'
+import { isSocialLoginMethod } from '../lib/auth/auth-methods'
 
 const LAST_AUTH_METHOD_KEY = 'last-auth-method'
 
@@ -14,7 +15,7 @@ export function useLastAuthMethod() {
     const timer = setTimeout(() => {
       try {
         const stored = localStorage.getItem(LAST_AUTH_METHOD_KEY)
-        if (stored === 'email' || stored === 'google') {
+        if (stored === 'email' || isSocialLoginMethod(stored)) {
           setLastMethod(stored)
         }
       } catch (error) {
@@ -28,7 +29,7 @@ export function useLastAuthMethod() {
     return () => clearTimeout(timer)
   }, [])
 
-  const saveAuthMethod = useCallback((method: 'email' | 'google') => {
+  const saveAuthMethod = useCallback((method: AuthProvider) => {
     try {
       localStorage.setItem(LAST_AUTH_METHOD_KEY, method)
       setLastMethod(method)

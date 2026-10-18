@@ -1,8 +1,8 @@
 import 'server-only'
 
 import { AUTH_CONFIG } from '../config'
-import type { AuthConfig, AuthLoginMethod } from '../config/types'
-import { isPasswordLoginEnabled } from './auth-methods'
+import type { AuthConfig, AuthLoginMethod, SocialLoginMethod } from '../config/types'
+import { SOCIAL_PROVIDER_LABELS, isPasswordLoginEnabled, isSocialLoginMethod } from './auth-methods'
 import { warnClientIpSourceAtStartup } from '../api/client-ip'
 import { warnSampleAccountsAtStartup } from './sample-accounts'
 import {
@@ -105,7 +105,7 @@ export function getPublicAuthReadiness(options: RuntimeAuthReadinessOptions = {}
 }
 
 function evaluateProvider(
-  method: Extract<AuthLoginMethod, 'email-otp' | 'google'>,
+  method: Extract<AuthLoginMethod, 'email-otp'> | SocialLoginMethod,
   options: RuntimeAuthReadinessOptions,
 ): AuthReadinessResult {
   const authConfig = options.authConfig === undefined ? AUTH_CONFIG : options.authConfig
@@ -123,8 +123,20 @@ export function isRuntimeEmailAvailable(options: RuntimeAuthReadinessOptions = {
   return evaluateProvider('email-otp', options).availableMethods.includes('email-otp')
 }
 
+/**
+ * A built-in social provider's credentials are well formed and it is not
+ * switched off in `auth.providers`. Whether it is listed (and gets a button)
+ * is not part of it, as for Google before the provider map.
+ */
+export function isRuntimeSocialProviderAvailable(
+  provider: SocialLoginMethod,
+  options: RuntimeAuthReadinessOptions = {},
+): boolean {
+  return evaluateProvider(provider, options).availableMethods.includes(provider)
+}
+
 export function isRuntimeGoogleAvailable(options: RuntimeAuthReadinessOptions = {}): boolean {
-  return evaluateProvider('google', options).availableMethods.includes('google')
+  return isRuntimeSocialProviderAvailable('google', options)
 }
 
 function authRoutePath(pathname: string): string | null {
@@ -240,21 +252,23 @@ export async function getAuthReadinessResponse(
     }
   }
 
-  const socialProvider = route === '/sign-in/social' ? await requestedSocialProvider(request) : null
-  const isGoogleOperation =
-    (route === '/sign-in/social' && (socialProvider === null || socialProvider === 'google')) ||
-    route === '/callback/google'
-  if (isGoogleOperation) {
-    method = 'google'
-    const readiness = evaluateProvider('google', options)
+  // A built-in provider's sign-in and callback need its readiness; a request
+  // naming no provider is treated as Google, as before. Other providers of the
+  // map are left to Better Auth, which answers for one it does not serve.
+  const requested = route === '/sign-in/social'
+    ? (await requestedSocialProvider(request)) ?? 'google'
+    : route.startsWith('/callback/') ? route.slice('/callback/'.length) : null
+  if (isSocialLoginMethod(requested)) {
+    method = requested
+    const readiness = evaluateProvider(requested, options)
     diagnostics = readiness.diagnostics
-    if (authConfig?.providers?.google?.enabled === false) {
+    if (authConfig?.providers?.[requested]?.enabled === false) {
       return unavailableResponse(method, [{
-        code: 'GOOGLE_POLICY_DISABLED',
-        message: 'Google authentication is disabled by auth.providers.google.enabled.',
+        code: `${requested.toUpperCase()}_POLICY_DISABLED`,
+        message: `${SOCIAL_PROVIDER_LABELS[requested]} authentication is disabled by auth.providers.${requested}.enabled.`,
       }], pathname)
     }
-    if (!readiness.availableMethods.includes('google')) {
+    if (!readiness.availableMethods.includes(requested)) {
       return unavailableResponse(method, diagnostics, pathname)
     }
   }

@@ -72,6 +72,14 @@ describe('useAuthMethodDetector Hook', () => {
       expect(mockSaveAuthMethod).toHaveBeenCalledWith('google')
     })
 
+    test.each(['github', 'microsoft', 'apple'])('should save the %s OAuth return as the last method', (provider) => {
+      mockSearchParams.get.mockReturnValue(provider)
+
+      renderHook(() => useAuthMethodDetector())
+
+      expect(mockSaveAuthMethod).toHaveBeenCalledWith(provider)
+    })
+
     test('should not save auth method when parameter is missing', () => {
       mockSearchParams.get.mockReturnValue(null)
 

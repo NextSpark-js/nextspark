@@ -436,14 +436,35 @@ export interface AuthRegistrationConfig {
 /**
  * Auth Providers Configuration
  */
+export interface AuthProviderEntry {
+  /** `false` turns the provider off everywhere (button and API). Default: on. */
+  enabled?: boolean
+  /**
+   * Extra non-secret Better Auth options for this provider (for example
+   * `{ issuer: 'https://gitlab.example.com' }` for a self-hosted GitLab).
+   * Credentials never go here: app.config.ts is bundled for the browser.
+   */
+  options?: Record<string, unknown>
+}
+
+/**
+ * Auth Providers Configuration: the social provider map.
+ *
+ * - `google`, `github`, `microsoft`, `apple` are built in: listed in `methods`
+ *   they get a login/sign-up button once their credentials are ready; listed
+ *   only here they work through the API. `enabled: false` switches one off
+ *   everywhere. The core default lists `google: { enabled: true }`.
+ * - Any other key is a Better Auth social provider id (`discord`, `gitlab`,
+ *   `linkedin`, ...). Listing it enables it through the API, with its
+ *   credentials read from `<ID>_CLIENT_ID` / `<ID>_CLIENT_SECRET`. It gets no
+ *   button. An id Better Auth does not know is ignored with a warning.
+ */
 export interface AuthProvidersConfig {
-  google?: {
-    /**
-     * Whether Google OAuth button is shown in login/signup.
-     * Defaults to true when GOOGLE_CLIENT_ID env var is set.
-     */
-    enabled?: boolean
-  }
+  google?: AuthProviderEntry
+  github?: AuthProviderEntry
+  microsoft?: AuthProviderEntry
+  apple?: AuthProviderEntry
+  [providerId: string]: AuthProviderEntry | undefined
 }
 
 /**
@@ -577,10 +598,16 @@ export interface AuthOtpConfig {
  *   account, so no separate signup form is needed.
  * - `'google'`: Google OAuth (needs GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET;
  *   also gated by `providers.google.enabled`).
+ * - `'github'`, `'microsoft'`, `'apple'`: the other built-in social providers
+ *   (credentials in docs/06-authentication/03-oauth-providers.md; also gated
+ *   by `providers.<id>.enabled`).
  * - `'email-password'`: classic email + password, with signup and
  *   forgot/reset-password flows.
  */
-export type AuthLoginMethod = 'email-otp' | 'google' | 'email-password'
+export type AuthLoginMethod = 'email-otp' | SocialLoginMethod | 'email-password'
+
+/** The social providers the core ships a button, readiness check and profile mapping for. */
+export type SocialLoginMethod = 'google' | 'github' | 'microsoft' | 'apple'
 
 /**
  * Named bundles of login methods (see `AUTH_PRESETS` in

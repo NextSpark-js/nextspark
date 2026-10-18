@@ -142,6 +142,43 @@ describe('lib/auth.ts registration hooks', () => {
     }
   })
 
+  // The gates are one hook for every provider (#279): a GitHub, Microsoft or Apple callback goes through the same checks as Google's
+  test('user.create: a non-Google OAuth callback meets the same registration gates', async () => {
+    mockBootstrapDone.mockResolvedValue(true)
+    mockQueryOne.mockResolvedValue(null)
+    const invitationOnly = hooksWith({ mode: 'invitation-only' })
+    for (const id of ['github', 'microsoft', 'apple', 'discord']) {
+      const result = await rejection(invitationOnly.userCreate({ email: 'stranger@other.example', emailVerified: true }, { path: '/callback/:id', params: { id } }))
+      expect(result).toEqual({ status: 'FORBIDDEN', code: 'SIGNUP_RESTRICTED', message: 'SIGNUP_RESTRICTED' })
+    }
+    const domains = hooksWith(domainOpen)
+    const result = await rejection(domains.userCreate({ email: 'a@other.example', emailVerified: true }, { path: '/callback/:id', params: { id: 'github' } }))
+    expect(result).toEqual({ status: 'FORBIDDEN', code: 'DOMAIN_NOT_ALLOWED', message: 'DOMAIN_NOT_ALLOWED' })
+  })
+
+  test('user.create: a social sign-up from an address the provider has not verified is refused, except Google as before', async () => {
+    const { userCreate } = hooksWith({ mode: 'open' })
+    for (const ctx of [
+      { path: '/callback/:id', params: { id: 'github' } },
+      { path: '/callback/microsoft' },
+      // an id token from a native app
+      { path: '/sign-in/social', body: { provider: 'apple', idToken: { token: 't' } } },
+    ]) {
+      for (const user of [{ email: 'a@other.example', emailVerified: false }, { email: 'a@other.example' }]) {
+        const result = await rejection(userCreate(user, ctx))
+        expect(result.code).toBe('SOCIAL_EMAIL_UNVERIFIED')
+      }
+      const verified = { email: 'a@other.example', emailVerified: true }
+      await expect(userCreate(verified, ctx)).resolves.toBe(verified)
+    }
+    expect((await rejection(userCreate({ email: 'a@other.example' }, { path: '/callback/:id', params: { id: 'github' } }))).message).toBe('SOCIAL_EMAIL_UNVERIFIED')
+    // Google keeps its behaviour, and a sign-up that is not social is not concerned
+    const google = { email: 'a@other.example', emailVerified: false }
+    await expect(userCreate(google, { path: '/callback/:id', params: { id: 'google' } })).resolves.toBe(google)
+    const password = { email: 'a@other.example', emailVerified: false }
+    await expect(userCreate(password, { path: '/sign-up/email' })).resolves.toBe(password)
+  })
+
   test('session.create: an existing user outside allowedDomains is a 403 DOMAIN_NOT_ALLOWED', async () => {
     mockQuery.mockImplementation(async (sql) =>
       ({ rows: [sql.includes('SELECT role') ? { role: 'member' } : { email: 'old@other.example' }] }))

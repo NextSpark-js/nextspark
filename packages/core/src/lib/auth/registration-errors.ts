@@ -8,11 +8,12 @@
 
 import { APIError } from 'better-auth'
 
-export type RegistrationErrorCode = 'DOMAIN_NOT_ALLOWED' | 'SIGNUP_RESTRICTED'
+export type RegistrationErrorCode = 'DOMAIN_NOT_ALLOWED' | 'SIGNUP_RESTRICTED' | 'SOCIAL_EMAIL_UNVERIFIED'
 
 const MESSAGES: Record<RegistrationErrorCode, string> = {
   DOMAIN_NOT_ALLOWED: "This email's domain can't sign in here. Use your organization's email.",
   SIGNUP_RESTRICTED: 'Registration requires an invitation. Contact an administrator.',
+  SOCIAL_EMAIL_UNVERIFIED: "This account's email isn't verified by the provider. Verify it there, or sign in another way.",
 }
 
 /**

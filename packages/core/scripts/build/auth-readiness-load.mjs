@@ -47,7 +47,8 @@ try {
       ok: true,
       auth: auth === undefined || auth === null ? null : {
         methods: auth.methods,
-        googleEnabled: auth.providers?.google?.enabled,
+        // The built-in social providers' switches (auth.providers.<id>.enabled)
+        providersEnabled: Object.fromEntries(['google', 'github', 'microsoft', 'apple'].map((id) => [id, auth.providers?.[id]?.enabled])),
         emailAndPasswordEnabled: auth.emailAndPassword?.enabled,
       },
     })

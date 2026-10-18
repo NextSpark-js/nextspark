@@ -15,6 +15,7 @@ import { setUserLocaleClient } from '../lib/locale-client'
 import { I18N_CONFIG } from '../lib/config/i18n-config-client'
 import { SIGNUP_INTENT_HEADER } from '../lib/api/client-headers'
 import type { AuthError } from '../types/auth'
+import type { SocialLoginMethod } from '../lib/config/types'
 
 // Keeps a registration-policy code (DOMAIN_NOT_ALLOWED, SIGNUP_RESTRICTED) so forms can show their own message for it
 function toAuthError(error: { message?: string; code?: string }, fallback: string): AuthError {
@@ -31,7 +32,7 @@ type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 // 2. Dashboard load: useEnsureUserMetadata hook
 
 /**
- * The page Google sign-in returns to, marked with `auth_method=google`.
+ * The page a social sign-in returns to, marked with `auth_method=<provider>`.
  *
  * Better Auth accepts a relative callbackURL only when its query is made of
  * word characters and `-.+/=&%@`, and no hash, so the query is written back
@@ -39,9 +40,9 @@ type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
  * sign-in with INVALID_CALLBACK_URL. Setting the marker replaces one already in
  * the query rather than adding a second.
  */
-function googleCallbackURL(redirectTo?: string): string {
+function socialCallbackURL(provider: SocialLoginMethod, redirectTo?: string): string {
   const url = new URL(safeCallbackPath(redirectTo) ?? '/dashboard', 'http://callback.invalid')
-  url.searchParams.set('auth_method', 'google')
+  url.searchParams.set('auth_method', provider)
   return withBasePath(`${url.pathname}${url.search.replace(/\*/g, '%2A')}`)
 }
 
@@ -206,14 +207,16 @@ export function useAuthActions() {
     return data
   }
 
-  const handleGoogleSignIn = async (redirectTo?: string) => {
+  const handleSocialSignIn = async (provider: SocialLoginMethod, redirectTo?: string) => {
     // For OAuth, Better Auth handles the redirect automatically
     // The method will be saved on the dashboard page after successful redirect
     await authClient.signIn.social({
-      provider: 'google',
-      callbackURL: googleCallbackURL(redirectTo)
+      provider,
+      callbackURL: socialCallbackURL(provider, redirectTo)
     })
   }
+
+  const handleGoogleSignIn = (redirectTo?: string) => handleSocialSignIn('google', redirectTo)
 
   const handleResetPassword = async (email: string) => {
     try {
@@ -347,6 +350,7 @@ export function useAuthActions() {
     signUp: handleSignUp,
     signOut: handleSignOut,
     googleSignIn: handleGoogleSignIn,
+    socialSignIn: handleSocialSignIn,
     sendOtp: handleSendOtp,
     signInWithOtp: handleOtpSignIn,
     resetPassword: handleResetPassword,

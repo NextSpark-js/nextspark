@@ -6,6 +6,7 @@
 const KEYS: Record<string, string> = {
   DOMAIN_NOT_ALLOWED: 'registrationErrors.domainNotAllowed',
   SIGNUP_RESTRICTED: 'registrationErrors.signupRestricted',
+  SOCIAL_EMAIL_UNVERIFIED: 'registrationErrors.socialEmailUnverified',
 }
 
 export function registrationErrorKey(code: unknown): string | null {

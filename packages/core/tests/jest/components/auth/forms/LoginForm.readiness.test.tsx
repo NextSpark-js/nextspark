@@ -1,15 +1,18 @@
 /** @jest-environment jsdom */
 import { beforeEach, describe, expect, jest, test } from '@jest/globals'
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 
 const readiness: { state: 'loading' | 'ready' | 'unavailable' | 'error'; availableMethods: string[] } = {
   state: 'loading',
   availableMethods: [],
 }
 
+const mockSocialSignIn = jest.fn(async () => {})
+const mockGoogleSignIn = jest.fn(async () => {})
+
 jest.mock('@/core/hooks/useAuthReadiness', () => ({ useAuthReadiness: () => readiness }))
 jest.mock('@/core/hooks/useAuth', () => ({
-  useAuthActions: () => ({ signIn: jest.fn(), googleSignIn: jest.fn(), sendOtp: jest.fn(), signInWithOtp: jest.fn() }),
+  useAuthActions: () => ({ signIn: jest.fn(), googleSignIn: mockGoogleSignIn, socialSignIn: mockSocialSignIn, sendOtp: jest.fn(), signInWithOtp: jest.fn() }),
 }))
 jest.mock('@/core/hooks/useLastAuthMethod', () => ({
   useLastAuthMethod: () => ({ lastMethod: null, isReady: true }),
@@ -80,5 +83,38 @@ describe('LoginForm runtime readiness states', () => {
     expect(byCy('auth.login.googleSignin')).toBeInTheDocument()
     expect(byCy('auth.login.showEmail')).not.toBeInTheDocument()
     expect(byCy('auth.login.otpForm')).not.toBeInTheDocument()
+  })
+
+  // #279: a button for each ready built-in provider, none for one that is not ready
+  test('renders GitHub, Microsoft and Apple buttons only when the server reports them ready', () => {
+    readiness.state = 'ready'
+    readiness.availableMethods = ['github', 'email-otp', 'apple']
+    render(<LoginForm />)
+
+    const github = byCy('auth.login.githubSignin')!
+    expect(github).toHaveTextContent('login.form.continueWithGitHub')
+    expect(github).toHaveAttribute('aria-label', 'login.form.continueWithGitHubAria')
+    expect(github.querySelector('[data-cy="github-icon"]')).toBeInTheDocument()
+    expect(byCy('auth.login.appleSignin')).toHaveTextContent('login.form.continueWithApple')
+    expect(byCy('auth.login.microsoftSignin')).not.toBeInTheDocument()
+    expect(byCy('auth.login.googleSignin')).not.toBeInTheDocument()
+    // a social option is offered, so the email form waits behind its link as it does with Google
+    expect(byCy('auth.login.showEmail')).toBeInTheDocument()
+  })
+
+  test('keeps the configured order and starts each provider\'s own sign-in', () => {
+    readiness.state = 'ready'
+    readiness.availableMethods = ['microsoft', 'google', 'github']
+    render(<LoginForm />)
+
+    const order = Array.from(document.querySelectorAll('[data-cy$="Signin"]')).map((el) => el.getAttribute('data-cy'))
+    expect(order).toEqual(['auth.login.microsoftSignin', 'auth.login.googleSignin', 'auth.login.githubSignin'])
+    // Google's button is the one it always was
+    expect(byCy('auth.login.googleSignin')).toHaveAttribute('aria-label', 'login.form.continueWithGoogleAria')
+    expect(byCy('auth.login.googleSignin')!.querySelector('[data-cy="google-icon"]')).toBeInTheDocument()
+
+    fireEvent.click(byCy('auth.login.microsoftSignin')!)
+    expect(mockSocialSignIn).toHaveBeenCalledWith('microsoft', undefined)
+    expect(mockGoogleSignIn).not.toHaveBeenCalled()
   })
 })
