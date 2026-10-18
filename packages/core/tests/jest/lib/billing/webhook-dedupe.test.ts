@@ -324,6 +324,77 @@ describeWithPostgres('billing webhook deduplication', () => {
     expect(outcomes.sort()).toEqual(['in_progress', 'processed'])
   })
 
+  describe('cleanup of processed events', () => {
+    const insertEvent = (eventId: string, status: string, ageDays: number) => db.query(
+      `INSERT INTO billing_webhook_events (gateway, "eventId", status, "claimedAt", "processedAt")
+       VALUES ('cleanup', $1, $2, now() - make_interval(days => $3), CASE WHEN $2 = 'processed' THEN now() - make_interval(days => $3) END)`,
+      [eventId, status, ageDays]
+    )
+    const cleanupEvents = async () =>
+      (await db.query(`SELECT "eventId" FROM billing_webhook_events WHERE gateway = 'cleanup' ORDER BY "eventId"`)).rows.map(r => r.eventId)
+    /** Past the cleanup interval of the last run: Date.now() one more hour ahead while `fn` runs. */
+    let hoursAhead = 0
+    async function anHourLater<T>(fn: () => Promise<T>): Promise<T> {
+      const now = Date.now()
+      const spy = jest.spyOn(Date, 'now').mockReturnValue(now + ++hoursAhead * 3600_000)
+      try { return await fn() } finally { spy.mockRestore() }
+    }
+    const registry = () => require('@nextsparkjs/registries/billing-registry').BILLING_REGISTRY
+
+    beforeEach(() => db.query(`DELETE FROM billing_webhook_events WHERE gateway = 'cleanup'`))
+    afterEach(() => { delete registry().webhookEventRetentionDays })
+
+    test('removes processed events older than the retention, and keeps recent ones and every processing one', async () => {
+      await insertEvent('old-processed', 'processed', 31)
+      await insertEvent('recent-processed', 'processed', 29)
+      await insertEvent('old-processing', 'processing', 31)
+
+      expect(await webhookEvents.cleanUpProcessedWebhookEvents()).toBe(1)
+      expect(await cleanupEvents()).toEqual(['old-processing', 'recent-processed'])
+    })
+
+    test('takes its retention from the billing config', async () => {
+      await insertEvent('two-days', 'processed', 2)
+      registry().webhookEventRetentionDays = 1
+
+      expect(await webhookEvents.cleanUpProcessedWebhookEvents()).toBe(1)
+      expect(await cleanupEvents()).toEqual([])
+    })
+
+    test('runs after a processed event, at most once per interval', async () => {
+      await insertEvent('old-processed', 'processed', 31)
+
+      expect(await anHourLater(() => webhookEvents.processWebhookEventOnce('stripe', 'evt_cleanup_1', 'x', async () => {}))).toBe('processed')
+      for (let i = 0; i < 100 && (await cleanupEvents()).length > 0; i++) await sleep(10)
+      expect(await cleanupEvents()).toEqual([])
+
+      // within the interval of the last run: the next processed event does not clean up
+      await insertEvent('old-processed-2', 'processed', 31)
+      expect(await webhookEvents.processWebhookEventOnce('stripe', 'evt_cleanup_2', 'x', async () => {})).toBe('processed')
+      await sleep(50)
+      expect(await cleanupEvents()).toEqual(['old-processed-2'])
+    })
+
+    test('a cleanup that fails does not change the outcome of the webhook', async () => {
+      const { servicePool } = require('@nextsparkjs/core/lib/db')
+      const realQuery = servicePool.query.bind(servicePool)
+      const querySpy = jest.spyOn(servicePool, 'query').mockImplementation(((text: string, params?: unknown[]) =>
+        /^\s*DELETE FROM "billing_webhook_events" WHERE ctid/.test(text) ? Promise.reject(new Error('cleanup failed')) : realQuery(text, params)) as never)
+      const errors = console.error as jest.Mock
+      errors.mockClear()
+      try {
+        const event = stripeCheckout('evt_cleanup_fails')
+        expect(await anHourLater(async () => responseOf(await handleStripeWebhook(stripeRequest(event)))))
+          .toEqual({ status: 200, body: { received: true } })
+        for (let i = 0; i < 100 && errors.mock.calls.length === 0; i++) await sleep(10)
+        expect(errors.mock.calls).toEqual([[expect.stringContaining('cleanup'), expect.objectContaining({ message: 'cleanup failed' })]])
+        expect((await db.query(`SELECT status FROM billing_webhook_events WHERE "eventId" = $1`, [event.id])).rows).toEqual([{ status: 'processed' }])
+      } finally {
+        querySpy.mockRestore()
+      }
+    })
+  })
+
   test('a live claim makes another delivery wait (in_progress), and the same id on another gateway is its own event', async () => {
     await db.query(`INSERT INTO billing_webhook_events (gateway, "eventId") VALUES ('stripe', 'evt_live')`)
     const handle = jest.fn(async () => {})

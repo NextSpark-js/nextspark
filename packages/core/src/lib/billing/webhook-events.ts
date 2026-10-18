@@ -16,17 +16,30 @@
  * taken over while `handle` ran (its lease ran out) rolls back and gets 'in_progress' too.
  * What `handle` does outside Postgres (emails, API calls) is not rolled back: a retry does it again.
  *
+ * Processed rows are kept for the billing config's `webhookEventRetentionDays` (30 by default), longer than any
+ * gateway redelivers an event. After a processed event, at most once per CLEANUP_INTERVAL_MS per process, a bounded
+ * DELETE removes older ones without being awaited; its errors are logged, never returned.
+ *
  * Usage in a gateway's handler:
  *   const outcome = await processWebhookEventOnce('paddle', event.id, event.type, () => handleEvent(event))
  *   return webhookOutcomeResponse(outcome)
  */
 
+import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { query, servicePool, withServiceTransaction } from '../db'
 
 /** How long a claim blocks other deliveries before a retry may take it over. */
 export const WEBHOOK_CLAIM_LEASE_SECONDS = 300
 
 export type WebhookEventOutcome = 'processed' | 'duplicate' | 'in_progress'
+
+/** How long a processed event is kept when the billing config does not set `webhookEventRetentionDays`. */
+export const WEBHOOK_EVENT_RETENTION_DAYS = 30
+
+// ponytail: 1000 rows every 10 minutes per process (144k a day); raise the batch if a project processes more events.
+const CLEANUP_INTERVAL_MS = 10 * 60 * 1000
+const CLEANUP_BATCH = 1000
+let nextCleanupAt = 0
 
 const CLAIM_LOST = new Error('The webhook event claim was taken over by another delivery')
 
@@ -87,7 +100,33 @@ export async function processWebhookEventOnce(
     throw error
   }
 
+  cleanUpNowAndThen()
   return 'processed'
+}
+
+/** Deletes up to CLEANUP_BATCH processed events older than the retention; returns how many it deleted. */
+export async function cleanUpProcessedWebhookEvents(): Promise<number> {
+  const configured = BILLING_REGISTRY.webhookEventRetentionDays
+  const days = typeof configured === 'number' && configured > 0 ? configured : WEBHOOK_EVENT_RETENTION_DAYS
+  const result = await servicePool.query(
+    // ctid = ANY(ARRAY(...)): the batch is found through the "processedAt" index and deleted by row address
+    `DELETE FROM "billing_webhook_events" WHERE ctid = ANY (ARRAY(
+       SELECT ctid FROM "billing_webhook_events"
+       WHERE status = 'processed' AND "processedAt" < now() - make_interval(secs => $1 * 86400)
+       LIMIT $2
+     ))`,
+    [days, CLEANUP_BATCH]
+  )
+  return result.rowCount ?? 0
+}
+
+function cleanUpNowAndThen(): void {
+  const now = Date.now()
+  if (now < nextCleanupAt) return
+  nextCleanupAt = now + CLEANUP_INTERVAL_MS
+  cleanUpProcessedWebhookEvents().catch(error => {
+    console.error('[webhook-events] The cleanup of processed webhook events failed:', error)
+  })
 }
 
 /** The webhook response for an outcome: 200 for processed and duplicate, 409 for in progress so the gateway retries. */

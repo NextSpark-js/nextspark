@@ -3,6 +3,7 @@
  * fresh database and on one at 039, and running it again changes nothing. RLS is on with no policy: on the
  * nextspark_app cutover a signed-in user neither reads nor writes it; the service connection does.
  * 041 adds 'polar' to subscriptions."paymentProvider" (#282).
+ * 042 adds the partial index the cleanup of processed events uses (#266).
  *
  * The test starts a throwaway cluster with initdb and pg_ctl on a free port, and is skipped when they are not on the
  * PATH.
@@ -151,4 +152,43 @@ test('041 adds polar to subscriptions."paymentProvider", keeps a provider a proj
     ALTER TABLE subscriptions ADD CONSTRAINT "subscriptions_paymentProvider_check" CHECK ("paymentProvider" IN ('stripe', 'mercadopago'))`)
   await client.query(migration041)
   assert.deepEqual(await providerCheck(client), [`CHECK (("paymentProvider" = ANY (ARRAY['stripe'::text, 'mercadopago'::text, 'polar'::text])))`])
+})
+
+async function processedAtIndex(client: pg.Client) {
+  const { rows } = await client.query(
+    `SELECT indexdef FROM pg_indexes WHERE tablename = 'billing_webhook_events' AND indexname = 'billing_webhook_events_processed_at_idx'`,
+  )
+  return rows.map(r => r.indexdef)
+}
+
+const PROCESSED_AT_INDEX = 'CREATE INDEX billing_webhook_events_processed_at_idx ON public.billing_webhook_events USING btree ("processedAt") WHERE (status = \'processed\'::text)'
+
+test('db:migrate adds the processedAt index on a fresh database and on one at 041, and applying it again changes nothing (#266)', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
+  const fresh = await throwawayDatabase(t)
+  const freshRun = migrate(t, fresh.url)
+  assert.equal(freshRun.status, 0, freshRun.output)
+  assert.match(freshRun.output, /Successfully executed 042_billing_webhook_events_processed_at_index\.sql/)
+  assert.deepEqual(await processedAtIndex(fresh.client), [PROCESSED_AT_INDEX])
+
+  // a database an earlier db:migrate brought to 041, with events in it
+  const { url, client } = await throwawayDatabase(t)
+  await client.query(`CREATE TABLE "_migrations" (id SERIAL PRIMARY KEY, filename TEXT UNIQUE NOT NULL, executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`)
+  const before = fs.readdirSync(path.join(CORE, 'migrations')).filter(f => f.endsWith('.sql') && f < '042' && f !== '090_sample_data.sql').sort()
+  assert.equal(before.at(-1), '041_subscriptions_payment_provider_polar.sql')
+  for (const file of before) {
+    await client.query(fs.readFileSync(path.join(CORE, 'migrations', file), 'utf8'))
+    await client.query('INSERT INTO "_migrations" (filename) VALUES ($1)', [file])
+  }
+  await client.query(`INSERT INTO billing_webhook_events (gateway, "eventId", status, "processedAt") VALUES ('stripe', 'evt_1', 'processed', now())`)
+  assert.deepEqual(await processedAtIndex(client), [])
+
+  const run = migrate(t, url)
+  assert.equal(run.status, 0, run.output)
+  assert.match(run.output, /Running 042_billing_webhook_events_processed_at_index\.sql/)
+  assert.doesNotMatch(run.output, /Running 041_/)
+  assert.deepEqual(await processedAtIndex(client), [PROCESSED_AT_INDEX])
+
+  await client.query(fs.readFileSync(path.join(CORE, 'migrations/042_billing_webhook_events_processed_at_index.sql'), 'utf8'))
+  assert.deepEqual(await processedAtIndex(client), [PROCESSED_AT_INDEX])
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM billing_webhook_events')).rows[0].n, 1)
 })

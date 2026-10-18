@@ -64,6 +64,7 @@ declare module '@nextsparkjs/registries/billing-registry' {
     features: Record<string, FeatureDefinition>
     limits: Record<string, LimitDefinition>
     actionMappings: ActionMappings
+    webhookEventRetentionDays?: number
   }
 
   export const BILLING_REGISTRY: BillingConfig
