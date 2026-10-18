@@ -95,6 +95,7 @@ export type AuthReadinessDiagnosticCode =
   | `${SmtpVariable}_${'MISSING' | 'PLACEHOLDER' | 'MALFORMED'}`
   | `${Uppercase<SocialLoginMethod>}_RUNTIME_VALIDATION_REQUIRED`
   | `${SocialCredentialVariable}_${'MISSING' | 'PLACEHOLDER' | 'MALFORMED'}`
+  | 'BETTER_AUTH_SECRET_MISSING'
   | 'BETTER_AUTH_SECRET_PLACEHOLDER'
   | 'BETTER_AUTH_SECRET_MALFORMED'
 
@@ -185,6 +186,51 @@ export function evaluateSessionSecret(input: AuthReadinessInput): AuthReadinessD
         ? 'BETTER_AUTH_SECRET is a placeholder; set a random secret of at least 32 characters.'
         : `BETTER_AUTH_SECRET is shorter than ${BETTER_AUTH_SECRET_MIN_LENGTH} characters; set a random secret of at least 32 characters.`,
   }
+}
+
+/** The variables the auth library reads the session secret from, in its order. */
+export const SESSION_SECRET_VARIABLES = ['BETTER_AUTH_SECRETS', 'BETTER_AUTH_SECRET', 'AUTH_SECRET'] as const
+
+/**
+ * The secret sessions are signed with and the variable it comes from, resolved as better-auth 1.7.7's
+ * createAuthContext does with core's options (`secret: process.env.BETTER_AUTH_SECRET`, no `secrets`): the first
+ * `<version>:<secret>` entry of BETTER_AUTH_SECRETS when that variable is not empty, else BETTER_AUTH_SECRET, else
+ * AUTH_SECRET. null when none is set. A first entry without a colon has an empty value (the library refuses it).
+ */
+export function effectiveSessionSecret(
+  env: Record<string, string | undefined>
+): { variable: (typeof SESSION_SECRET_VARIABLES)[number]; value: string } | null {
+  if (env.BETTER_AUTH_SECRETS) {
+    const first = env.BETTER_AUTH_SECRETS.split(',')[0].trim()
+    const colon = first.indexOf(':')
+    return { variable: 'BETTER_AUTH_SECRETS', value: colon === -1 ? '' : first.slice(colon + 1).trim() }
+  }
+  if (env.BETTER_AUTH_SECRET) return { variable: 'BETTER_AUTH_SECRET', value: env.BETTER_AUTH_SECRET }
+  if (env.AUTH_SECRET) return { variable: 'AUTH_SECRET', value: env.AUTH_SECRET }
+  return null
+}
+
+/**
+ * What makes the effective session secret unfit for production, as a code and a fixed message that never carry the
+ * value; null when it is fit. A secret that is not set at all is a problem only with `requirePresent`: the server
+ * start requires one, the build (which may get its secrets later) does not.
+ */
+export function sessionSecretProblem(
+  env: Record<string, string | undefined>,
+  { requirePresent }: { requirePresent: boolean }
+): { code: AuthReadinessDiagnosticCode; message: string } | null {
+  const effective = effectiveSessionSecret(env)
+  if (!effective) {
+    return requirePresent
+      ? { code: 'BETTER_AUTH_SECRET_MISSING', message: 'No session secret is set: set BETTER_AUTH_SECRET (or BETTER_AUTH_SECRETS, or AUTH_SECRET) to a random secret of at least 32 characters.' }
+      : null
+  }
+  const state = credentialState(effective.value, /./, BETTER_AUTH_SECRET_MIN_LENGTH)
+  if (state === 'valid') return null
+  const name = effective.variable === 'BETTER_AUTH_SECRETS' ? 'The first entry of BETTER_AUTH_SECRETS' : effective.variable
+  return state === 'placeholder'
+    ? { code: 'BETTER_AUTH_SECRET_PLACEHOLDER', message: `${name} is a placeholder; set a random secret of at least 32 characters.` }
+    : { code: 'BETTER_AUTH_SECRET_MALFORMED', message: `${name} is shorter than ${BETTER_AUTH_SECRET_MIN_LENGTH} characters; set a random secret of at least 32 characters.` }
 }
 
 function credentialDiagnostic(

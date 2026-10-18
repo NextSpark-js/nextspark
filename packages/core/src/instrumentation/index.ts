@@ -16,17 +16,12 @@ export async function register(): Promise<void> {
   // Only run on server (not during build or in edge runtime). Kept as an if block, not
   // an early return, so the bundler drops the imports below from the edge build.
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Sessions are signed with BETTER_AUTH_SECRET: a production server never starts with a template
-    // value or a short one. The next build collects page data with NODE_ENV=production too, and
-    // the build's own readiness check already judges the secret there.
+    // Sessions are signed with the secret the auth library resolves from BETTER_AUTH_SECRETS, BETTER_AUTH_SECRET or
+    // AUTH_SECRET: a production server never starts without one, or with a template value or a short one. The next
+    // build collects page data with NODE_ENV=production too, and the build's own readiness check judges it there.
     if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
-      const { evaluateSessionSecret } = await import('../lib/auth/readiness')
-      const bad = evaluateSessionSecret({
-        profile: 'web-local-auth',
-        stage: 'runtime',
-        environment: 'production',
-        configuration: { betterAuthSecret: process.env.BETTER_AUTH_SECRET },
-      })
+      const { sessionSecretProblem } = await import('../lib/auth/readiness')
+      const bad = sessionSecretProblem(process.env, { requirePresent: true })
       if (bad) {
         // Code and fixed message only, never the value
         console.error(`[auth-readiness] ${bad.code}: ${bad.message} The server will not start.`)

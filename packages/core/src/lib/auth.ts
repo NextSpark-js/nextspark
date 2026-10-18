@@ -24,7 +24,7 @@ import { registrationError } from './auth/registration-errors';
 import { resolveSessionConfig } from './auth/session-config';
 import { resolveOtpConfig } from './auth/otp-config';
 import { isPasswordLoginEnabled } from './auth/auth-methods';
-import { evaluateSessionSecret } from './auth/readiness';
+import { sessionSecretProblem } from './auth/readiness';
 import { isRuntimeEmailAvailable } from './auth/runtime-readiness';
 import { trackCodeSend } from './auth/code-send';
 import { resolveSocialProviders, socialSignUpProvider } from './auth/social-providers';
@@ -199,18 +199,12 @@ async function applySignupIntentRole(
   }
 }
 
-// Sessions are signed with this secret, so a production server never builds a working
-// instance around a template value or a short one: every auth request then fails with a 500.
-if (
-  process.env.NODE_ENV === 'production' &&
-  evaluateSessionSecret({
-    profile: 'web-local-auth',
-    stage: 'runtime',
-    environment: 'production',
-    configuration: { betterAuthSecret: process.env.BETTER_AUTH_SECRET },
-  })
-) {
-  throw new Error('BETTER_AUTH_SECRET is a placeholder or shorter than 32 characters; set a random secret of at least 32 characters');
+// Sessions are signed with the secret the auth library resolves (BETTER_AUTH_SECRETS, BETTER_AUTH_SECRET or
+// AUTH_SECRET), so a production server never builds a working instance around a template value or a short one:
+// every auth request then fails with a 500. One that is not set is left to the library and to register().
+const sessionSecret = process.env.NODE_ENV === 'production' ? sessionSecretProblem(process.env, { requirePresent: false }) : null;
+if (sessionSecret) {
+  throw new Error(`${sessionSecret.code}: ${sessionSecret.message}`);
 }
 
 export const auth = betterAuth({

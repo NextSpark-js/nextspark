@@ -55,7 +55,7 @@ function standInProject(source: string): string {
 Object.assign(error, { code: '${SENTINEL}' })
 throw error
 `)
-  fs.writeFileSync(path.join(core, 'lib/auth/readiness.js'), 'export function evaluateSessionSecret() { return null }\n')
+  fs.writeFileSync(path.join(core, 'lib/auth/readiness.js'), 'export function sessionSecretProblem() { return null }\n')
   fs.writeFileSync(path.join(core, 'lib/scheduled-actions/index.js'), "export function initializeScheduledActions() { console.log('SCHEDULED_ACTIONS_INITIALIZED') }\nexport async function initializeRecurringActions() {}\n")
   const coreInstrumentation = ts.transpileModule(fs.readFileSync(path.join(REPO_ROOT, 'packages/core/src/instrumentation/index.ts'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
