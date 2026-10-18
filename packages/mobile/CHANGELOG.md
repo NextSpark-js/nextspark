@@ -7,14 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- `AuthLoginMethod` includes `'github'`, `'microsoft'` and `'apple'` (and the new `SocialLoginMethod`), the methods core accepts in `auth.methods`, so a mobile `app.config.ts` that lists them type-checks. The login screen draws no button for them: mobile has a native flow for email code, email and password, and Google only (#286).
+## [0.1.0-beta.199] - 2026-10-18
 
 ### Changed
 
 - Tested with Expo SDK 58 (React Native 0.88, React 19.3). The `expo-device` peer range no longer stops at `<9.0.0`, so SDK 58 (`expo-device` `~58.0.5`) satisfies it; the other peer ranges are unchanged and still accept Expo SDK 54 and later. The `mobile/` template and the `create-nextspark-app` wizard install the SDK 58 set, with `expo-splash-screen` configured through its config plugin and `@expo/metro-runtime` declared.
 - The `mobile/` template and `create-nextspark-app` declare the test and type tooling Expo SDK 58 lists: `jest` `~30.5.2`, `@types/jest` `30.0.0` and `typescript` `~6.0.3` (before: Jest 29 and TypeScript 5). The template `tsconfig.json` sets `"types": ["jest", "node"]` and `nativewind-env.d.ts` declares `*.css`, which TypeScript 6 needs to check `import "./globals.css"`; a project that upgrades `typescript` to 6 adds the same two lines and drops `baseUrl` from its `tsconfig.json` (TypeScript 6 reports it as deprecated). `@testing-library/react-native` stays on 13; version 14 makes `render` and `renderHook` asynchronous.
+
+### Fixed
+
+- `AuthLoginMethod` includes `'github'`, `'microsoft'` and `'apple'` (and the new `SocialLoginMethod`), the methods core accepts in `auth.methods`, so a mobile `app.config.ts` that lists them type-checks. The login screen draws no button for them: mobile has a native flow for email code, email and password, and Google only (#286).
 
 ## [0.1.0-beta.198] - 2026-10-09
 
