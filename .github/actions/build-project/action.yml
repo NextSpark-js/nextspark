@@ -13,6 +13,11 @@ inputs:
   legacy-isr:
     description: Turn cacheComponents off in next.config.mjs before the build (legacy ISR)
     default: 'false'
+  webpack:
+    description: >-
+      Build once with webpack (`next build --webpack`) before the build that is served. Its type check runs on the
+      `.next/types` Next generates for webpack, which flags a layout that takes a prop Next does not declare (#291).
+    default: 'false'
   probes:
     description: Run the security probes against the build and the server
     default: 'false'
@@ -42,6 +47,14 @@ runs:
         sed -i.bak 's#cacheComponents: true#cacheComponents: false#' next.config.mjs
         rm -f next.config.mjs.bak
         grep -q 'cacheComponents: false' next.config.mjs
+
+    - name: Build the project with webpack
+      if: inputs.webpack == 'true' && inputs.migrate-only != 'true'
+      shell: bash
+      working-directory: ${{ runner.temp }}/project/app
+      run: pnpm build --webpack
+      env:
+        NEXTSPARK_AUTH_RUNTIME_ONLY: email,google
 
     - name: Build the project
       if: inputs.migrate-only != 'true'

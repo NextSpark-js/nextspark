@@ -256,7 +256,9 @@ jobs:
       - name: Migrate, build and serve the project
         uses: ./.github/actions/build-project
 
-  # Legacy ISR is supported and not the default: the same starter with cacheComponents off.
+  # Legacy ISR is supported and not the default: the same starter with cacheComponents off. Also built once with webpack
+  # (the default is Turbopack): its type check caught layouts that took props Next does not declare (#291). That build took
+  # 71 s on a laptop, the cost this job adds; the Cache Components layouts were checked the same way and pass.
   legacy-isr:
     needs: pack
     runs-on: ubuntu-24.04
@@ -294,6 +296,7 @@ jobs:
         uses: ./.github/actions/build-project
         with:
           legacy-isr: 'true'
+          webpack: 'true'
           probes: 'true'
 
   # Standalone output (`output: 'standalone'`): a starter built with it, copied without the checkout to a separate directory
