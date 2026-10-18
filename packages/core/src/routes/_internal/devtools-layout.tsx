@@ -23,6 +23,9 @@ export interface DevLayoutProps {
 /** `serverChecked`: see DeveloperGuard (only the Cache Components module passes it, after its role check). */
 type GuardedProps = DevLayoutProps & { serverChecked?: boolean }
 
+// A Next layout receives only the props Next declares (`children` and the parallel route slots): the exported layouts
+// below take `DevLayoutProps` and set `serverChecked` themselves, as Next's generated types (webpack builds) require.
+
 /**
  * Developer Area Layout
  *
@@ -31,7 +34,7 @@ type GuardedProps = DevLayoutProps & { serverChecked?: boolean }
  * Includes responsive design for mobile and desktop.
  * Uses purple/violet color scheme to differentiate from Admin Panel (red).
  */
-export function DevLayout({ children, serverChecked }: GuardedProps) {
+function DevLayoutBody({ children, serverChecked }: GuardedProps) {
   const pluginNavItems = getAllPluginNavItems('devtools')
   return (
     <DashboardProviders>
@@ -63,6 +66,15 @@ export function DevLayout({ children, serverChecked }: GuardedProps) {
       </DeveloperGuard>
     </DashboardProviders>
   );
+}
+
+export function DevLayout({ children }: DevLayoutProps) {
+  return <DevLayoutBody>{children}</DevLayoutBody>
+}
+
+/** `DevLayout` for the Cache Components module: its role check ran first, so the guard renders while the session loads. */
+export function ServerCheckedDevLayout({ children }: DevLayoutProps) {
+  return <DevLayoutBody serverChecked>{children}</DevLayoutBody>
 }
 
 /**

@@ -25,6 +25,9 @@ export interface SuperadminLayoutProps {
 /** `serverChecked`: see SuperAdminGuard (only the Cache Components module passes it, after its role check). */
 type GuardedProps = SuperadminLayoutProps & { serverChecked?: boolean }
 
+// A Next layout receives only the props Next declares (`children` and the parallel route slots): the exported layouts
+// below take `SuperadminLayoutProps` and set `serverChecked` themselves, as Next's generated types (webpack builds) require.
+
 /**
  * Wrapped in Suspense so PPR doesn't fail during prerender.
  */
@@ -74,7 +77,7 @@ function SuperadminContent({ children, serverChecked }: GuardedProps) {
  * Protected layout for the superadmin area (superadmin and developer) with dedicated sidebar navigation.
  * Owns the narrowly scoped client catalog for superadmin routes.
  */
-export function SuperadminLayout({ children, serverChecked }: GuardedProps) {
+function SuperadminLayoutBody({ children, serverChecked }: GuardedProps) {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
@@ -84,6 +87,15 @@ export function SuperadminLayout({ children, serverChecked }: GuardedProps) {
       <SuperadminContent serverChecked={serverChecked}>{children}</SuperadminContent>
     </Suspense>
   )
+}
+
+export function SuperadminLayout({ children }: SuperadminLayoutProps) {
+  return <SuperadminLayoutBody>{children}</SuperadminLayoutBody>
+}
+
+/** `SuperadminLayout` for the Cache Components module: its role check ran first, so the guard renders while the session loads. */
+export function ServerCheckedSuperadminLayout({ children }: SuperadminLayoutProps) {
+  return <SuperadminLayoutBody serverChecked>{children}</SuperadminLayoutBody>
 }
 
 /**
