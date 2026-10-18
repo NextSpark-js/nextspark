@@ -39,6 +39,20 @@ const DASHBOARD_URLS = { sandbox: 'https://sandbox-vendors.paddle.com', producti
 const REQUEST_TIMEOUT_MS = 15_000
 /** Paddle's SDKs reject a signature whose timestamp is more than five seconds away from now. */
 export const PADDLE_SIGNATURE_TOLERANCE_SECONDS = 5
+/** The range PADDLE_WEBHOOK_TOLERANCE_SECONDS may set; outside it the default is used, with a warning at selection. */
+const TOLERANCE_RANGE = { min: 5, max: 300 }
+
+/**
+ * The signature tolerance from PADDLE_WEBHOOK_TOLERANCE_SECONDS: an integer from 5 to 300, else the default (`valid` is
+ * false when the variable is set to something else).
+ */
+export function paddleWebhookToleranceFromEnv(env: NodeJS.ProcessEnv = process.env): { seconds: number; valid: boolean } {
+  const raw = env.PADDLE_WEBHOOK_TOLERANCE_SECONDS?.trim()
+  if (!raw) return { seconds: PADDLE_SIGNATURE_TOLERANCE_SECONDS, valid: true }
+  const seconds = /^\d+$/.test(raw) ? Number(raw) : NaN
+  if (seconds >= TOLERANCE_RANGE.min && seconds <= TOLERANCE_RANGE.max) return { seconds, valid: true }
+  return { seconds: PADDLE_SIGNATURE_TOLERANCE_SECONDS, valid: false }
+}
 
 export type PaddleEnvironment = keyof typeof API_URLS
 
@@ -48,6 +62,8 @@ export interface PaddleConfig {
   environment: PaddleEnvironment
   /** The key of the checkout team token: PADDLE_TEAM_TOKEN_SECRET, else the webhook secret */
   teamTokenSecret: string
+  /** How far a signature's timestamp may be from now: PADDLE_WEBHOOK_TOLERANCE_SECONDS, else 5 */
+  webhookToleranceSeconds: number
 }
 
 /**
@@ -69,7 +85,13 @@ export function paddleConfigFromEnv(env: NodeJS.ProcessEnv = process.env): Paddl
   if (problems.length > 0) {
     throw new Error(`Paddle billing is misconfigured: ${problems.join('; ')}.`)
   }
-  return { apiKey, webhookSecret, environment: environment as PaddleEnvironment, teamTokenSecret: paddleTeamTokenSecret(env) ?? webhookSecret }
+  return {
+    apiKey,
+    webhookSecret,
+    environment: environment as PaddleEnvironment,
+    teamTokenSecret: paddleTeamTokenSecret(env) ?? webhookSecret,
+    webhookToleranceSeconds: paddleWebhookToleranceFromEnv(env).seconds,
+  }
 }
 
 /**
@@ -175,6 +197,12 @@ export class PaddleGateway implements BillingGateway {
 
   constructor(env: NodeJS.ProcessEnv = process.env) {
     this.config = paddleConfigFromEnv(env)
+    if (!paddleWebhookToleranceFromEnv(env).valid) {
+      console.warn(
+        `[paddle] PADDLE_WEBHOOK_TOLERANCE_SECONDS must be an integer from ${TOLERANCE_RANGE.min} to ${TOLERANCE_RANGE.max}; ` +
+        `using the default of ${PADDLE_SIGNATURE_TOLERANCE_SECONDS} seconds`
+      )
+    }
     if (this.config.environment === 'sandbox' && env.NODE_ENV === 'production') {
       console.warn('[paddle] PADDLE_ENVIRONMENT is sandbox in a production build: checkouts take no real payments (fine for staging, not for a live site)')
     }
@@ -236,7 +264,7 @@ export class PaddleGateway implements BillingGateway {
     const signature = typeof signatureOrHeaders === 'string'
       ? signatureOrHeaders
       : signatureOrHeaders['paddle-signature'] ?? signatureOrHeaders['Paddle-Signature']
-    if (!isValidPaddleSignature(payload, signature, this.config.webhookSecret)) {
+    if (!isValidPaddleSignature(payload, signature, this.config.webhookSecret, undefined, this.config.webhookToleranceSeconds)) {
       throw new Error('Paddle webhook verification failed: the signature does not match the body, or its timestamp is outside the tolerance')
     }
     const body = JSON.parse(typeof payload === 'string' ? payload : payload.toString('utf-8')) as Record<string, unknown>

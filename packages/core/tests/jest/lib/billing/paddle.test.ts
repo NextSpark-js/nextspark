@@ -21,7 +21,7 @@ jest.mock('@/core/lib/registries/billing-registry', () => ({
   },
 }))
 
-import { PaddleGateway, isValidPaddleSignature, paddleConfigFromEnv } from '@/core/lib/billing/gateways/paddle'
+import { PaddleGateway, isValidPaddleSignature, paddleConfigFromEnv, paddleWebhookToleranceFromEnv } from '@/core/lib/billing/gateways/paddle'
 import { isValidPaddleTeamToken, paddleTeamToken, paddleTeamTokenSecret } from '@/core/lib/billing/paddle-webhook'
 import { getBillingGateway, resetBillingGateway } from '@/core/lib/billing/gateways/factory'
 
@@ -83,7 +83,7 @@ describe('Paddle Gateway', () => {
 
   describe('configuration', () => {
     test('reads the three variables', () => {
-      expect(paddleConfigFromEnv(ENV)).toEqual({ apiKey: 'pdl_sdbx_apikey_mock', webhookSecret: SECRET, environment: 'sandbox', teamTokenSecret: SECRET })
+      expect(paddleConfigFromEnv(ENV)).toEqual({ apiKey: 'pdl_sdbx_apikey_mock', webhookSecret: SECRET, environment: 'sandbox', teamTokenSecret: SECRET, webhookToleranceSeconds: 5 })
     })
 
     test('PADDLE_TEAM_TOKEN_SECRET, when set, keys the team token instead of the webhook secret', () => {
@@ -115,6 +115,27 @@ describe('Paddle Gateway', () => {
         .toThrow('Paddle billing is misconfigured: PADDLE_API_KEY is a live key but PADDLE_ENVIRONMENT is sandbox.')
       // a key without the environment prefix (made before 2025) is accepted for either
       expect(paddleConfigFromEnv({ ...ENV, PADDLE_API_KEY: 'a1b2c3', PADDLE_ENVIRONMENT: 'production' }).environment).toBe('production')
+    })
+
+    test('PADDLE_WEBHOOK_TOLERANCE_SECONDS sets the signature window from 5 to 300 seconds; anything else warns and keeps 5', () => {
+      expect(paddleWebhookToleranceFromEnv({})).toEqual({ seconds: 5, valid: true })
+      expect(paddleWebhookToleranceFromEnv({ PADDLE_WEBHOOK_TOLERANCE_SECONDS: ' 60 ' })).toEqual({ seconds: 60, valid: true })
+      expect(paddleWebhookToleranceFromEnv({ PADDLE_WEBHOOK_TOLERANCE_SECONDS: '300' })).toEqual({ seconds: 300, valid: true })
+      for (const value of ['4', '301', '0', '-10', '10.5', 'ten', '1e2']) {
+        expect(paddleWebhookToleranceFromEnv({ PADDLE_WEBHOOK_TOLERANCE_SECONDS: value })).toEqual({ seconds: 5, valid: false })
+      }
+      expect(paddleConfigFromEnv({ ...ENV, PADDLE_WEBHOOK_TOLERANCE_SECONDS: '60' }).webhookToleranceSeconds).toBe(60)
+
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+      try {
+        new PaddleGateway({ ...ENV, PADDLE_WEBHOOK_TOLERANCE_SECONDS: '3600' })
+        expect(warn).toHaveBeenCalledWith('[paddle] PADDLE_WEBHOOK_TOLERANCE_SECONDS must be an integer from 5 to 300; using the default of 5 seconds')
+        warn.mockClear()
+        new PaddleGateway({ ...ENV, PADDLE_WEBHOOK_TOLERANCE_SECONDS: '60' })
+        expect(warn).not.toHaveBeenCalled()
+      } finally {
+        warn.mockRestore()
+      }
     })
 
     test('the gateway validates the environment when it is created (selection time)', () => {
@@ -337,6 +358,13 @@ describe('Paddle Gateway', () => {
       expect(isValidPaddleSignature(body, header(body, NOW - 6), SECRET, NOW)).toBe(false)
       expect(isValidPaddleSignature(body, header(body, NOW + 6), SECRET, NOW)).toBe(false)
       expect(() => gateway.verifyWebhookSignature(body, header(body, NOW - 3600))).toThrow('Paddle webhook verification failed')
+    })
+
+    test('the gateway verifies with the configured tolerance', () => {
+      const wide = new PaddleGateway({ ...ENV, PADDLE_WEBHOOK_TOLERANCE_SECONDS: '60' })
+      expect(() => gateway.verifyWebhookSignature(body, header(body, NOW - 30))).toThrow('Paddle webhook verification failed')
+      expect(wide.verifyWebhookSignature(body, header(body, NOW - 30)).id).toBe('evt_1')
+      expect(() => wide.verifyWebhookSignature(body, header(body, NOW - 61))).toThrow('Paddle webhook verification failed')
     })
 
     test('a malformed header is rejected before comparing', () => {

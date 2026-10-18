@@ -44,6 +44,7 @@ PADDLE_API_KEY=pdl_sdbx_apikey_...   # Developer tools → Authentication
 PADDLE_WEBHOOK_SECRET=pdl_ntfset_... # the secret key of the notification destination
 PADDLE_ENVIRONMENT=sandbox           # sandbox or production
 # PADDLE_TEAM_TOKEN_SECRET=          # optional: the key of the checkout team token; defaults to the webhook secret
+# PADDLE_WEBHOOK_TOLERANCE_SECONDS=5 # optional: the signature's timestamp window, an integer from 5 to 300 seconds
 ```
 
 All three are required. They are checked when the factory selects the gateway; one error names every missing or malformed variable, never a value. An API key whose prefix names the other environment (`pdl_sdbx_` with `production`, `pdl_live_` with `sandbox`) is refused; keys made before Paddle added the prefix are accepted for either. A production build (`NODE_ENV=production`) with `PADDLE_ENVIRONMENT=sandbox` logs a warning: fine for staging, never for a live site.
@@ -100,6 +101,8 @@ Base URL `https://sandbox-api.paddle.com` or `https://api.paddle.com` by `PADDLE
 `POST /api/v1/billing/webhooks/paddle`:
 
 1. Reads the raw body and verifies `Paddle-Signature` before parsing anything: the header is `ts=<unix seconds>;h1=<hex>`, and `h1` is the HMAC-SHA256 of `<ts>:<raw body>` with the destination's secret. During a secret rotation Paddle sends one `h1` per secret; any one matching is enough. The comparison is constant-time, and a timestamp more than five seconds from the server's clock is refused (Paddle's SDKs use the same tolerance), so a captured delivery cannot be replayed later. A missing, malformed, wrong or stale signature answers `400` and nothing is claimed or written. Keep the server clock synchronised (NTP).
+
+   `PADDLE_WEBHOOK_TOLERANCE_SECONDS` widens the window (an integer from 5 to 300). A value outside that range logs a warning when the gateway is selected, naming the variable, and the five-second default is used. Paddle's docs do not say whether a retry or a dashboard replay is signed again with a new `ts`; step 6 of the manual plan records it. Widen the window only if that record shows retries refused as stale, or a clock you cannot keep in sync: the wider it is, the longer a captured delivery could be replayed (a replayed event is still deduplicated by its `event_id`).
 2. A handled event without `data.id` or `occurred_at` answers `400`: it can be neither bound nor ordered.
 3. Claims the event once in `billing_webhook_events` (see [webhook deduplication](./05-payment-integration.md#webhook-deduplication)) and applies it.
 
@@ -155,7 +158,7 @@ The automated tests use hand-built payloads in the documented shapes, never a re
 3. **Environment.** Set `PADDLE_API_KEY` (sandbox), `PADDLE_WEBHOOK_SECRET`, `PADDLE_ENVIRONMENT=sandbox`; start the app; add the notification destination with the tunnel URL and the events above.
 4. **Misconfiguration.** Set `PADDLE_ENVIRONMENT=production` with the sandbox key and open the upgrade: the server log names `PADDLE_API_KEY` and `PADDLE_ENVIRONMENT`, no value. Restore it.
 5. **Checkout.** As a team owner, upgrade to Pro monthly and pay with Paddle's test card. Expected: the notification log shows `transaction.paid`, `subscription.created`, `subscription.activated` and `transaction.completed` answered `200`; the team's row has `paymentProvider = 'paddle'`, the `sub_...` id, plan `pro`, `billingInterval = 'monthly'`; `billing_events` has lifecycle rows and one `payment / succeeded` row for the transaction. Open the `subscription.created` payload and record that `custom_data` carries `teamId` and `teamToken`.
-6. **Replay.** Replay `subscription.created` from the notification log. Expected: `200 {"received":true,"status":"duplicate"}`, no new rows.
+6. **Replay and retry.** Replay `subscription.created` from the notification log. Expected: `200 {"received":true,"status":"duplicate"}`, no new rows. Then force a failed delivery: stop the tunnel, trigger an event (for example change the plan), wait for Paddle to log the failed attempt, start the tunnel again and wait for the automatic retry. Expected: the retry is answered `200`. For both the replay and the retry, record the `ts` of the `Paddle-Signature` header (log it temporarily, or read it in the notification log) against the time the request arrived: a `ts` close to the arrival means each delivery is signed again, and five seconds is enough; a `ts` of the first attempt means retries need `PADDLE_WEBHOOK_TOLERANCE_SECONDS`.
 7. **Bad and stale signature.** `curl -X POST <url> -H 'Paddle-Signature: ts=1;h1=00' -d '{}'`. Expected: `400 {"error":"Invalid signature"}`. Resend a captured body with its original header a minute later: `400`.
 8. **Portal.** Open "Manage billing". Expected: the Paddle customer portal of that customer.
 9. **Change plan.** Change to Pro yearly from the app. Expected: `subscription.updated`, `billingInterval = 'yearly'`; any other item on the subscription is still there.
