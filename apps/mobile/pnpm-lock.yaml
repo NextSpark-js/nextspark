@@ -1222,7 +1222,7 @@ packages:
   '@preeternal/react-native-cookie-manager@6.4.1':
     resolution: {integrity: sha512-RuVvkOxlR2qmZMYOHr5FRFSaGDA0QGSF/wL+OFlYQ5ih2e4vkjbrlobsYJaZTkt/ABGV5T5TCgkRACFC2heLQw==}
     peerDependencies:
-      react: 19.2.4
+      react: '*'
       react-native: '*'
 
   '@radix-ui/primitive@1.1.7':
@@ -1468,7 +1468,7 @@ packages:
     engines: {node: ^22.13.0 || ^24.3.0 || >= 26.0.0}
     peerDependencies:
       '@types/react': ^19.2.0
-      react: 19.2.4
+      react: '*'
       react-native: 0.88.0
     peerDependenciesMeta:
       '@types/react':
@@ -3781,7 +3781,7 @@ packages:
     hasBin: true
     peerDependencies:
       '@types/react': ^19.1.1
-      react: 19.2.4
+      react: ^19.3.0
     peerDependenciesMeta:
       '@types/react':
         optional: true
