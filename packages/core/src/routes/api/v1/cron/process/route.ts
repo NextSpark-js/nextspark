@@ -16,6 +16,7 @@ import {
   cleanupOldActions
 } from '@nextsparkjs/core/lib/scheduled-actions'
 import type { ProcessResult } from '@nextsparkjs/core/lib/scheduled-actions'
+import { secretsMatch } from '@nextsparkjs/core/lib/security/secret-compare'
 
 /**
  * Process pending scheduled actions
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    if (!cronSecret || cronSecret !== expectedSecret) {
+    if (!secretsMatch(cronSecret, expectedSecret)) {
       console.warn('[Cron] Unauthorized cron request attempt')
       return NextResponse.json(
         {

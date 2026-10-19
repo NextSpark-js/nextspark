@@ -20,13 +20,14 @@
 import { NextRequest } from 'next/server'
 import { handlePastDueGracePeriod } from '@nextsparkjs/core/lib/billing/jobs'
 import { SubscriptionService, UsageService } from '@nextsparkjs/core/lib/services'
+import { secretsMatch } from '@nextsparkjs/core/lib/security/secret-compare'
 
 export async function GET(request: NextRequest) {
   // Verify CRON_SECRET (MANDATORY for security)
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || !secretsMatch(authHeader, `Bearer ${cronSecret}`)) {
     console.error('[lifecycle-cron] Unauthorized attempt to access cron endpoint')
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
