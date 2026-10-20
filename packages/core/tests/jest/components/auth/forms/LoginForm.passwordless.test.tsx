@@ -376,7 +376,7 @@ describe('LoginForm — theme overrides the preset', () => {
     expect(byCy('auth.login.useOtp')).not.toBeInTheDocument()
   })
 
-  test('password sign-in stays busy after a success, and releases on a failure or an empty result (#347)', async () => {
+  test('password sign-in stays busy after a success (#347)', async () => {
     setPreset(['email-password', 'google'])
     mockSignIn.mockResolvedValueOnce({ user: { id: 'u1' } })
     render(<LoginForm />)
