@@ -82,7 +82,8 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * A foreign key does not apply row-level security and relation-multi is JSONB with no foreign key, so every id of the
  * fields present in `data` is looked up with one `SELECT` per field, through the caller's RLS, on the table of the
  * related entity. An id that does not exist and one the caller cannot see are indistinguishable. Fields absent from
- * `data`, empty values, read-only fields (unless `includeReadOnly`, for writers that do store them) and relations to something that is not a registered entity are not checked.
+ * `data`, empty values, relations to something that is not a registered entity and read-only fields are not checked;
+ * `includeReadOnly` checks the last too, for writers that do store them.
  */
 export async function findInvalidRelationField(
   fields: EntityField[],

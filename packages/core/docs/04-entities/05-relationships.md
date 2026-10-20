@@ -546,7 +546,7 @@ A foreign key does not apply row-level security, and `relation-multi` is stored 
 - Empty values (no relation) and fields the request does not carry are not checked.
 - A field whose `relation.entity` is not a registered entity is not checked.
 - Server actions (`createEntity` / `updateEntity`) run the same check inside `GenericEntityService.create` and `update`, before writing. A refused field fails the action with `Validation failed: Field '<name>' refers to a record that does not exist or is not available`, and nothing is written. Read-only fields are checked too, because the service writes them. A `relation` takes an id, an `{ id }` object or an array (its first item is the one stored); a `relation-multi` takes an array or a JSON string of an array, whose items must each be an id or `{ id }`. An item of any other shape, or a string that is not a JSON array, is refused; a `relation-multi` given a bare object holds no ids and is stored as an empty list.
-- `GenericEntityService.create` / `update` (exported from `@nextsparkjs/core/services`) reject references to records the `userId` they receive cannot see, including ones a `before_*` hook adds. Code that calls the service with a service-level `userId` must account for this.
+- `GenericEntityService.create` / `update` (exported from `@nextsparkjs/core/services`) validate references against the records the `userId` they receive can see, including ones a `before_*` hook adds. Code that calls the service with a service-level `userId` should account for it.
 - A `23503` foreign key violation answers a generic message; the database detail only goes to the server log.
 
 ### In Code (Zod)

@@ -109,12 +109,6 @@ function getTableName(entityConfig: EntityConfig): string {
 /**
  * Get field names from EntityConfig.fields (with validation)
  */
-/** A relation is stored the way the check read it (single id, or JSONB for relation-multi); other fields go as given. */
-function bindForWrite(entityConfig: EntityConfig, name: string, value: unknown): { cast: string; value: unknown } {
-  const field = entityConfig.fields.find((f: EntityField) => f.name === name)
-  return field && (field.type === 'relation' || field.type === 'relation-multi') ? bindFieldValue(field, value) : { cast: '', value }
-}
-
 function getFieldNames(entityConfig: EntityConfig): string[] {
   if (!entityConfig.fields || !Array.isArray(entityConfig.fields)) {
     return []
@@ -123,6 +117,12 @@ function getFieldNames(entityConfig: EntityConfig): string[] {
     validateSqlIdentifier(field.name, 'field')
     return field.name
   })
+}
+
+/** A relation is stored the way the check read it (single id, or JSONB for relation-multi); other fields go as given. */
+function bindForWrite(entityConfig: EntityConfig, name: string, value: unknown): { cast: string; value: unknown } {
+  const field = entityConfig.fields.find((f: EntityField) => f.name === name)
+  return field && (field.type === 'relation' || field.type === 'relation-multi') ? bindFieldValue(field, value) : { cast: '', value }
 }
 
 /**

@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- `GenericEntityService.create` / `update` (exported from `@nextsparkjs/core/services`) and the server actions now reject `relation` / `relation-multi` references to records the given `userId` cannot see, including ones a `before_*` hook adds, and store relations the way they were checked. Callers that pass a service-level `userId` should account for this (#343).
+- `GenericEntityService.create` / `update` (exported from `@nextsparkjs/core/services`) validate `relation` / `relation-multi` references against the records the given `userId` can see, including ones a `before_*` hook adds, and store relation fields normalized like the REST API. Callers that pass a service-level `userId` should account for it (#343).
 
 ## [0.1.0-beta.199] - 2026-10-18
 
