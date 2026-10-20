@@ -706,6 +706,21 @@ async function rejectInvisibleRelations(
  * Returns true if user is a member, false otherwise
  */
 /**
+ * `access.api: false` closes the entity to external callers: a request that
+ * authenticated with an API key (even one that then failed scope enforcement)
+ * gets the same 404 `enabled: false` gives, for every route of this handler.
+ * Session requests (the dashboard) are unaffected. Returns null when allowed.
+ */
+async function rejectApiKeyOnClosedEntity(
+  authResult: DualAuthResult,
+  entityConfig: EntityConfig,
+  request: NextRequest
+): Promise<NextResponse | null> {
+  if (authResult.type !== 'api-key' || entityConfig.access?.api !== false) return null
+  return addCorsHeaders(createApiError('Entity not found', 404), request)
+}
+
+/**
  * Check entity-level, team-role-based permissions for the authenticated
  * identity — session user, or API-key owner (API keys carry the same real
  * `users.id` a session would, resolved to a `team_members` role the same
@@ -884,6 +899,8 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     // point, which rejects an API key lacking it (fail closed, #93).
     const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:read` })
     audit.auth = authResult
+    const apiClosed = await rejectApiKeyOnClosedEntity(authResult, resolution.entityConfig, request)
+    if (apiClosed) return apiClosed
     let userId: string | null = null
     let teamId: string | null = null
     let isBypass = false  // Track if admin bypass is active (skip userId filter)
@@ -1509,6 +1526,8 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
     // entry point, which rejects an API key lacking it (fail closed, #93).
     const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:write` })
     audit.auth = authResult
+    const apiClosed = await rejectApiKeyOnClosedEntity(authResult, resolution.entityConfig, request)
+    if (apiClosed) return apiClosed
 
     if (!authResult.success) {
       return createAuthFailureResponse(authResult)
@@ -1905,6 +1924,8 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
     // point, which rejects an API key lacking it (fail closed, #93).
     const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:read` })
     audit.auth = authResult
+    const apiClosed = await rejectApiKeyOnClosedEntity(authResult, resolution.entityConfig, request)
+    if (apiClosed) return apiClosed
     let userId: string | null = null
     let teamId: string | null = null
     let isBypass = false  // Track if admin bypass is active (skip userId filter)
@@ -2085,6 +2106,8 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
     // entry point, which rejects an API key lacking it (fail closed, #93).
     const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:write` })
     audit.auth = authResult
+    const apiClosed = await rejectApiKeyOnClosedEntity(authResult, resolution.entityConfig, request)
+    if (apiClosed) return apiClosed
 
     if (!authResult.success) {
       return createAuthFailureResponse(authResult)
@@ -2477,6 +2500,8 @@ async function handleGenericDeleteImpl(request: NextRequest, audit: AuditContext
     // at the entry point, which rejects an API key lacking it (fail closed, #93).
     const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:delete` })
     audit.auth = authResult
+    const apiClosed = await rejectApiKeyOnClosedEntity(authResult, resolution.entityConfig, request)
+    if (apiClosed) return apiClosed
 
     if (!authResult.success) {
       return createAuthFailureResponse(authResult)
@@ -2667,6 +2692,8 @@ async function resolveChildContext(
   const write = operation !== 'list'
   const authResult = await authenticateRequest(request, { requiredScope: `${parentConfig.slug}:${write ? 'write' : 'read'}` })
   audit.auth = authResult
+  const apiClosed = await rejectApiKeyOnClosedEntity(authResult, parentConfig, request)
+  if (apiClosed) return apiClosed
   if (!authResult.success) return createAuthFailureResponse(authResult)
   if (authResult.rateLimitResponse) return authResult.rateLimitResponse as NextResponse
   const userId = authResult.user!.id
