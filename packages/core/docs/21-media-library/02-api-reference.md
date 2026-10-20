@@ -392,7 +392,7 @@ const { media } = await upload.mutateAsync({
 })
 ```
 
-`mutateAsync(files)` with a plain `File[]` still works. A refused presign, a failed `PUT` or a rejected confirm rejects the mutation with the error message and creates no record (a `PUT` that never gets confirmed is removed by the bucket's lifecycle rule). With several files on the direct path, files confirmed before the failing one keep their records.
+`mutateAsync(files)` with a plain `File[]` still works. The hook (and the entity upload fields that use it) needs a `QueryClientProvider` and a `NextIntlClientProvider` that carries the `media` messages namespace; the dashboard route group provides both. A refused presign, a failed `PUT` or a rejected confirm rejects the mutation with the error message and creates no record (a `PUT` that never gets confirmed is removed by the bucket's lifecycle rule). With several files on the direct path, files confirmed before the failing one keep their records.
 
 ---
 
