@@ -338,7 +338,7 @@ await scheduleRecurringAction('billing:check', {}, 'daily')
 await scheduleRecurringAction('billing:check', {}, 'daily')
 ```
 
-- Only a `pending` row counts. The processor marks the row it just ran `completed` before it schedules the next occurrence, so rescheduling is never blocked. A `running` row does not count: if the process dies mid-handler the row stays `running` forever, and counting it would stop the action from ever being registered again. A registration that lands during a run is found by the reschedule (it goes through the same check), which inserts nothing.
+- Only a `pending` row counts. The processor marks the row it just ran `completed` before it schedules the next occurrence, so rescheduling is never blocked. A `running` row does not count: if the process dies mid-handler the row stays `running` forever, and counting it would stop the action from ever being registered again. A registration that lands during a run is found by the reschedule (it goes through the same check), which inserts nothing. This holds for runs that succeed; a run that fails and is retried can leave a second `pending` row until one of them completes.
 - The interval, `scheduledAt` and `lockGroup` are not part of the key; changing the interval of a registered action does not replace the existing row. To change the interval of a recurring action that is already registered, delete its `pending` row.
 - Concurrent registrations (several cold starts at once) are serialized with a transaction advisory lock on `actionType` and `teamId`, so exactly one row results.
 - Actions that are not recurring are not affected.
