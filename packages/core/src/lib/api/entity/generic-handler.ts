@@ -475,20 +475,17 @@ function mapConstraintViolation(
         'CHECK_CONSTRAINT_VIOLATION'
       )
     case '23503':
+      // `detail` names the other table and the key; it goes to the server log, not to the caller
+      console.error(`[generic-handler] foreign key violation on ${operation}:`, { constraint, table, detail })
       if (operation === 'delete') {
         return createApiError(
-          detail || 'Cannot delete: this record is referenced by other records',
+          'Cannot delete: this record is referenced by other records',
           409,
           { constraint },
           'FOREIGN_KEY_VIOLATION'
         )
       }
-      return createApiError(
-        detail ? `Referenced record does not exist: ${detail}` : 'Referenced record does not exist',
-        422,
-        { constraint, detail },
-        'FOREIGN_KEY_VIOLATION'
-      )
+      return createApiError('Referenced record does not exist', 422, { constraint }, 'FOREIGN_KEY_VIOLATION')
     default:
       return null
   }
@@ -726,6 +723,64 @@ function bindFieldValue(field: Pick<EntityField, 'type'>, value: unknown): { cas
     return { cast: '::jsonb', value: JSON.stringify(value) }
   }
   return { cast: '', value }
+}
+
+/**
+ * The ids a `relation` / `relation-multi` value holds, as the INSERT or UPDATE would store them.
+ */
+function relationIds(field: Pick<EntityField, 'type'>, value: unknown): string[] {
+  const bound = bindFieldValue(field, value).value
+  let raw: unknown[] = []
+  if (field.type === 'relation-multi') {
+    try {
+      const parsed = typeof bound === 'string' ? JSON.parse(bound) : bound
+      raw = Array.isArray(parsed) ? parsed : []
+    } catch {
+      raw = []
+    }
+  } else {
+    raw = [bound]
+  }
+  return [...new Set(
+    raw
+      .map(item => (item && typeof item === 'object' && 'id' in item ? (item as { id: unknown }).id : item))
+      .filter((id): id is string | number => (typeof id === 'string' && id.trim() !== '') || typeof id === 'number')
+      .map(String)
+  )]
+}
+
+/**
+ * A relation id must name a record the caller can see (#343). A foreign key does not apply row-level security, and
+ * relation-multi is JSONB with no foreign key at all, so the handler checks every id of the fields in `data`
+ * before writing: one `SELECT` per field, through the caller's RLS, on the table of the entity the field relates to.
+ * An id that does not exist and one the caller cannot see get the same 400. Fields absent from `data`, empty values
+ * and relations to something that is not a registered entity are not checked.
+ */
+async function rejectInvisibleRelations(
+  fields: EntityField[],
+  data: Record<string, unknown>,
+  userId: string,
+  request: NextRequest
+): Promise<NextResponse | null> {
+  for (const field of fields) {
+    if ((field.type !== 'relation' && field.type !== 'relation-multi') || !(field.name in data) || field.api?.readOnly) continue
+    const ids = relationIds(field, data[field.name])
+    const target = field.relation?.entity && getAllEntityConfigs().find(entity => entity.slug === field.relation?.entity)
+    if (ids.length === 0 || !target) continue
+    const visible = await noRowOnMalformedId(queryWithRLS<{ id: string | number }>(
+      `SELECT id FROM "${getTableName(target)}" WHERE id = ANY($1)`,
+      [ids],
+      userId
+    ))
+    const seen = new Set(visible.map(row => String(row.id).toLowerCase()))
+    if (ids.some(id => !seen.has(id.toLowerCase()))) {
+      return addCorsHeaders(
+        createApiError(`Field '${field.name}' refers to a record that does not exist or is not available`, 400, undefined, 'INVALID_REFERENCE'),
+        request
+      )
+    }
+  }
+  return null
 }
 
 /**
@@ -1689,6 +1744,9 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
     }
     const checkStoredStatus = createStatus === undefined && !!createStatusField && !!declaredPublishPermission(entityConfig.slug)
 
+    const invalidCreateReference = await rejectInvisibleRelations(entityConfig.fields, validatedData as Record<string, unknown>, authResult.user!.id, request)
+    if (invalidCreateReference) return invalidCreateReference
+
     if (idStrategy === 'serial') {
       // SERIAL: Let database generate ID via DEFAULT/SERIAL
       // Always include userId to track who created the record (even for shared entities)
@@ -2262,6 +2320,14 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
       }
     }
 
+    const invalidUpdateReference = await rejectInvisibleRelations(
+      entityConfig.fields,
+      Object.fromEntries(Object.entries(validatedData as Record<string, unknown>).filter(([key]) => key in entityData)),
+      authResult.user!.id,
+      request
+    )
+    if (invalidUpdateReference) return invalidUpdateReference
+
     // Build dynamic UPDATE query
     const updates: string[] = []
     const values: unknown[] = []
@@ -2740,6 +2806,11 @@ async function resolveChildContext(
     userId
   ))
   if (!parent?.[0]) return notFound('Item not found')
+
+  if (write) {
+    const invalidReference = await rejectInvisibleRelations(childFields, data, userId, request)
+    if (invalidReference) return invalidReference
+  }
 
   const idStrategy = (child.config as { idStrategy?: { type?: string } }).idStrategy?.type || 'uuid'
   return { userId, parentId, childTable: child.tableName, childFields, idStrategy, data }

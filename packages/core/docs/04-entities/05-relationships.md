@@ -538,6 +538,15 @@ ALTER TABLE tasks
   ADD COLUMN hashtags TEXT[];
 ```
 
+### Referenced records must be visible to the caller
+
+A foreign key does not apply row-level security, and `relation-multi` is stored as JSONB, which has no foreign key at all. So the generic handler checks the ids itself before it writes, on create, update and child entity writes: for each `relation` or `relation-multi` field in the request it runs one query on the related entity's table as the caller. Only records the caller can see are accepted.
+
+- An id that does not exist and an id the caller cannot see get the same `400` (`INVALID_REFERENCE`).
+- Empty values (no relation) and fields the request does not carry are not checked.
+- A field whose `relation.entity` is not a registered entity is not checked.
+- A `23503` foreign key violation answers a generic message; the database detail only goes to the server log.
+
 ### In Code (Zod)
 
 ```typescript
