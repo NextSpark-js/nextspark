@@ -726,7 +726,9 @@ async function checkAuthPermission(
 async function validateTeamMembership(userId: string, teamId: string): Promise<boolean> {
   try {
     const member = await queryOneWithRLS<{ id: string }>(
-      'SELECT id FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
+      // A membership of a deleted team (a join that raced its deletion) grants nothing
+      `SELECT id FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2
+         AND EXISTS (SELECT 1 FROM "teams" WHERE id = $1 AND "deletedAt" IS NULL)`,
       [teamId, userId],
       userId
     )

@@ -118,6 +118,20 @@ describe('signup-with-invite password policy', () => {
     expect(await signUp.json()).toMatchObject({ email: 'invitee@example.com', password: 'CorrectHorse1!' })
   })
 
+  test('a team deleted after the invitation was read answers 404 TEAM_NOT_FOUND; the account stays created', async () => {
+    mockAuthConfig.emailAndPassword = { enabled: false }
+    mockTx.queryOne.mockResolvedValue(null as never)
+
+    const response = await POST(request({ password: 'CorrectHorse1!' }))
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toMatchObject({ code: 'TEAM_NOT_FOUND' })
+    expect(mockCreateUser).toHaveBeenCalledTimes(1)
+    expect(mockTx.query).not.toHaveBeenCalled()
+    expect(mockTx.rollback).toHaveBeenCalledTimes(1)
+    expect(mockTx.commit).not.toHaveBeenCalled()
+  })
+
   describe('refusals while creating the OTP-only account', () => {
     beforeEach(() => {
       mockAuthConfig.emailAndPassword = { enabled: false }

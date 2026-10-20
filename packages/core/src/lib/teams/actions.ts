@@ -106,6 +106,7 @@ export async function getGlobalTeam(): Promise<Team | null> {
   // We get the first one ordered by creation date
   const team = await queryOneWithRLS<Team>(
     `SELECT * FROM "teams"
+     WHERE "deletedAt" IS NULL
      ORDER BY "createdAt" ASC
      LIMIT 1`,
     []
@@ -159,7 +160,7 @@ export async function addUserToGlobalTeam(
   // this self-join under their own GUC. This onboarding write is a system op.
   await queryWithRLS(
     `INSERT INTO "team_members" ("teamId", "userId", role, "invitedBy", "joinedAt")
-     VALUES ($1, $2, $3, $4, NOW())`,
+     SELECT t.id, $2, $3, $4, NOW() FROM "teams" t WHERE t.id = $1 AND t."deletedAt" IS NULL`,
     [team.id, userId, role, invitedBy || null],
     userId,
     { service: true }
@@ -296,7 +297,7 @@ export async function getTeamWithMemberCount(
       COUNT(DISTINCT tm.id) as "memberCount"
     FROM "teams" t
     LEFT JOIN "team_members" tm ON t.id = tm."teamId"
-    WHERE t.id = $1
+    WHERE t.id = $1 AND t."deletedAt" IS NULL
     GROUP BY t.id`,
     [teamId],
     userId
@@ -370,6 +371,7 @@ export async function isSlugAvailable(
   slug: string,
   excludeTeamId?: string
 ): Promise<boolean> {
+  // No deletedAt filter: the slug of a deleted team stays reserved until the purge (unique index)
   let query = 'SELECT id FROM "teams" WHERE slug = $1'
   const params: any[] = [slug]
 

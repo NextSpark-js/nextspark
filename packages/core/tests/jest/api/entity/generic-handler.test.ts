@@ -537,3 +537,18 @@ describe('#93 — generic handlers declare the entity scope at the auth entry po
     expect((response as { status: number }).status).toBe(200);
   });
 });
+
+describe('#314 — a membership of a deleted team grants nothing', () => {
+  it('the membership check counts only memberships of an active team', async () => {
+    mockAuthenticateRequest.mockResolvedValue(API_KEY_AUTH(['pets:read']));
+    routeQueryOneWithRLS('member');
+    mockCheckPermission.mockResolvedValue(true);
+
+    await handleGenericList(makeRequest({ headers: { 'x-team-id': 'team-1' } }));
+
+    const membershipSql = mockQueryOneWithRLS.mock.calls
+      .map(([sql]: [string]) => sql)
+      .find((sql: string) => sql.includes('SELECT id FROM "team_members"'));
+    expect(membershipSql).toMatch(/EXISTS \(SELECT 1 FROM "teams" WHERE id = \$1 AND "deletedAt" IS NULL\)/);
+  });
+});

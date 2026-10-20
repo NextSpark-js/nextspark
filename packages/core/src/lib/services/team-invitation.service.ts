@@ -123,14 +123,23 @@ export class TeamInvitationService {
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 7) // Expires in 7 days
 
+    // The share lock makes a concurrent TeamService.delete wait for this insert, so it cannot
+    // leave a pending invitation behind in a team it just deleted.
     const result = await mutateWithRLS<TeamInvitation>(
       `INSERT INTO "team_invitations" ("teamId", email, role, status, token, "invitedBy", "expiresAt")
-       VALUES ($1, $2, $3, 'pending', $4, $5, $6)
+       SELECT t.id, $2, $3, 'pending', $4, $5, $6 FROM "teams" t
+       WHERE t.id = $1 AND t."deletedAt" IS NULL
+       FOR SHARE OF t
        RETURNING *`,
       [teamId, email, role, token, actor.id, expiresAt.toISOString()],
-      actor.id
+      actor.id,
+      // Service connection: FOR SHARE on teams is subject to the update policy (owners only); the permission to invite was checked above
+      { service: true }
     )
     const invitation = result.rows[0]
+    if (!invitation) {
+      return { success: false, status: 404, code: 'TEAM_NOT_FOUND', error: 'Team not found' }
+    }
 
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173').replace(/\/$/, '')
     const acceptUrl = `${baseUrl}${withBasePath(`/accept-invite/${token}`)}`

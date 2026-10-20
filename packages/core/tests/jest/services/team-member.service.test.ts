@@ -185,6 +185,16 @@ describe('TeamMemberService', () => {
       )
     })
 
+    it('adds only into an active team, and a deleted team is not found', async () => {
+      mockQueryOneWithRLS.mockResolvedValue(null)
+      mockMutateWithRLS.mockResolvedValue({ rows: [], rowCount: 0 })
+
+      await expect(TeamMemberService.add('team-456', 'user-789', 'member')).rejects.toThrow('Team not found')
+
+      const sql = String(mockMutateWithRLS.mock.calls[0][0])
+      expect(sql).toMatch(/"deletedAt" IS NULL\s+FOR SHARE/)
+    })
+
     it('throws error when already a member', async () => {
       mockQueryOneWithRLS.mockResolvedValue(mockMember)
 

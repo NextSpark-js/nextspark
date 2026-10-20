@@ -58,6 +58,18 @@ describe('DELETE /api/v1/teams/:teamId', () => {
     expect(body.code).toBe('TEAM_DELETE_VETOED')
   })
 
+  it.each([
+    ['The global team cannot be deleted', 'GLOBAL_TEAM_DELETE_FORBIDDEN'],
+    ['The system admin team cannot be deleted', 'SYSTEM_TEAM_DELETE_FORBIDDEN'],
+  ])('answers 403 %s', async (message, code) => {
+    mockDelete.mockRejectedValue(new Error(message))
+
+    const response = await call()
+
+    expect(response.status).toBe(403)
+    expect((await response.json()).code).toBe(code)
+  })
+
   it('answers 404 for a team that is unknown or already deleted', async () => {
     mockDelete.mockRejectedValue(new Error('Team not found'))
 

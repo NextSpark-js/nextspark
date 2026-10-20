@@ -467,7 +467,7 @@ export class TeamService {
 
   /**
    * Delete team (soft delete)
-   * Only the owner can delete a team.
+   * Only the owner can delete a team, never the global team or the system admin team.
    *
    * Runs the `team.before_delete` filter hooks first: a hook that throws vetoes the
    * deletion (TeamDeleteVetoedError carrying its message) and nothing changes. Then,
@@ -504,6 +504,14 @@ export class TeamService {
 
     if (team.ownerId !== userId) {
       throw new Error('Only team owner can delete the team')
+    }
+
+    // Deleting either would reopen the first-user bootstrap (isBootstrapDone) or drop the platform admin team.
+    if (team.isGlobal) {
+      throw new Error('The global team cannot be deleted')
+    }
+    if ((team as Team & { metadata?: { systemAdmin?: boolean } }).metadata?.systemAdmin === true) {
+      throw new Error('The system admin team cannot be deleted')
     }
 
     const hooks = getGlobalHooks()

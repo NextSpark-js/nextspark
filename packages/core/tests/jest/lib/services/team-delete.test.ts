@@ -95,6 +95,16 @@ describe('TeamService.delete', () => {
     expect(mockTx.commit).not.toHaveBeenCalled()
   })
 
+  test('the single-tenant global team and the system admin team cannot be deleted', async () => {
+    mockQueryOneWithRLS.mockResolvedValue({ ...team, isGlobal: true })
+    await expect(TeamService.delete('team-1', 'owner-1')).rejects.toThrow('The global team cannot be deleted')
+
+    mockQueryOneWithRLS.mockResolvedValue({ ...team, isGlobal: false, metadata: { systemAdmin: true } })
+    await expect(TeamService.delete('team-1', 'owner-1')).rejects.toThrow('The system admin team cannot be deleted')
+
+    expect(mockTx.mutate).not.toHaveBeenCalled()
+  })
+
   test('team.before_delete can veto with a message and leaves the team intact', async () => {
     const after = jest.fn()
     getGlobalHooks().addFilter(TEAM_BEFORE_DELETE_HOOK, async () => {

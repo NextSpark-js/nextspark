@@ -281,6 +281,16 @@ export const DELETE = withRateLimitTier(withApiLogging(
           return addCorsHeaders(response, req)
         }
 
+        if (error instanceof Error && error.message === 'The global team cannot be deleted') {
+          const response = createApiError(error.message, 403, null, 'GLOBAL_TEAM_DELETE_FORBIDDEN')
+          return addCorsHeaders(response, req)
+        }
+
+        if (error instanceof Error && error.message === 'The system admin team cannot be deleted') {
+          const response = createApiError(error.message, 403, null, 'SYSTEM_TEAM_DELETE_FORBIDDEN')
+          return addCorsHeaders(response, req)
+        }
+
         if (error instanceof Error && error.message === 'Personal teams cannot be deleted') {
           const response = createApiError('Personal teams cannot be deleted', 403, null, 'PERSONAL_TEAM_DELETE_FORBIDDEN')
           return addCorsHeaders(response, req)

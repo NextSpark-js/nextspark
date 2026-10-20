@@ -187,9 +187,13 @@ export class TeamMemberService {
     // team, so the membership-based team_members insert policy would deny every
     // add under real RLS. The actor's authorization to add members is enforced
     // at the API/action layer (verifyTeamPermission), not by RLS.
+    // Only into an active team: the share lock makes a concurrent TeamService.delete wait for this
+    // insert, so it cannot leave a membership behind in a team it just deleted.
     const result = await mutateWithRLS<TeamMember>(
       `INSERT INTO "team_members" ("teamId", "userId", role, "invitedBy", "joinedAt")
-       VALUES ($1, $2, $3, $4, NOW())
+       SELECT t.id, $2, $3, $4, NOW() FROM "teams" t
+       WHERE t.id = $1 AND t."deletedAt" IS NULL
+       FOR SHARE OF t
        RETURNING *`,
       [teamId, userId, role, options.invitedBy || null],
       userId,
@@ -197,7 +201,7 @@ export class TeamMemberService {
     )
 
     if (!result.rows[0]) {
-      throw new Error('Failed to add team member')
+      throw new Error('Team not found')
     }
 
     return result.rows[0]

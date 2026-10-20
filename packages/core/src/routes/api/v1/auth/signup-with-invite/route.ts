@@ -260,7 +260,10 @@ export const POST = withRateLimitTier(withApiLogging(
           [invitation.teamId]
         )
         if (!activeTeam) {
-          throw new Error('The team of this invitation no longer exists')
+          // The team was deleted after the invitation was read: the account above stays created (without a team)
+          await tx.rollback()
+          const response = createApiError('Team not found', 404, null, 'TEAM_NOT_FOUND')
+          return addCorsHeaders(response, req)
         }
 
         // Add user as team member
