@@ -194,19 +194,23 @@ PATCH /api/v1/teams/:teamId
 
 ### Delete Team
 
-Delete a team. Only the owner can delete.
+Delete a team. Only the owner can delete. This is a soft delete: access is revoked at once and the team is removed for good after the retention. See [Team Deletion](./11-team-deletion.md).
 
 ```http
 DELETE /api/v1/teams/:teamId
 ```
 
-**Response (204 No Content):**
+**Response (200 OK):**
 
-Empty response on success.
+```json
+{ "success": true, "data": { "deleted": true, "id": "team_abc123" } }
+```
 
 **Error Responses:**
 
 - `403 Forbidden` - Not team owner
+- `404 Not Found` - Unknown or already deleted team
+- `409 Conflict` - A `team.before_delete` hook refused the deletion (`TEAM_DELETE_VETOED`, the message says why)
 
 ---
 

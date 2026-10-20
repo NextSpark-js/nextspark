@@ -252,7 +252,7 @@ if (!['owner', 'admin'].includes(member?.role)) {
 
 **Solution:**
 1. Use a different slug
-2. Check if team was soft-deleted (not supported yet)
+2. Check if the slug belongs to a deleted team: its slug stays reserved until the retention passes and the team is purged (see [Team Deletion](./11-team-deletion.md))
 3. Verify slug format: lowercase alphanumeric with hyphens
 
 ```typescript

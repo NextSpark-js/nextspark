@@ -355,3 +355,4 @@ app/
 - [Entity Integration](./07-entity-integration.md) - Adding teamId to entities
 - [Configuration](./09-configuration.md) - Dashboard and UI settings
 - [Troubleshooting](./10-troubleshooting.md) - Common issues and solutions
+- [Team Deletion](./11-team-deletion.md) - Soft delete, retention, purge and hooks

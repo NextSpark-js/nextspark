@@ -293,6 +293,10 @@ export const themeAppConfig: DeepPartial<AppConfig> = {
 
 **Note:** The signup team is always created. This setting only controls creation of additional teams.
 
+### deletedRetentionDays Option
+
+A deleted team is kept for `teams.options.deletedRetentionDays` days (default `30`) before the `teams:purge-deleted` scheduled action removes it. See [Team Deletion](./11-team-deletion.md).
+
 ### Session Context
 
 Server code learns the active team from the `activeTeamId` cookie, which `POST /api/v1/teams/switch` sets to `<session id>:<team id>` for a signed-in browser (an API key gets `400 SESSION_REQUIRED` and sends `x-team-id` instead):
