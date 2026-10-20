@@ -307,7 +307,7 @@ Each entity's behavior is controlled by its configuration:
 |----------|-------------|
 | `access.public` | Whether non-authenticated users can read |
 | `access.shared` | Whether all team members can see all records |
-| `access.api` | Whether entity has API endpoints |
+| `access.api` | `false` rejects API-key requests to every method and child route of the entity with `404 Entity not found`; session requests (the dashboard) are still served. `enabled: false` disables both |
 | `access.metadata` | Whether entity supports metadata system |
 | `ui.features.searchable` | Whether search is enabled |
 | `ui.features.sortable` | Whether sorting is enabled |

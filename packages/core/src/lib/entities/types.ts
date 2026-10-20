@@ -156,7 +156,12 @@ export interface EntityConfig {
   access: {
     /** If accessible without authentication, requires RLS (anon can select) */
     public: boolean
-    /** If has external API via API key */
+    /**
+     * External API access via API key. `false` closes the REST API (`/api/v1/<slug>`, every method and
+     * child route) and the MCP server to API-key requests, which get 404 "Entity not found" like a
+     * disabled entity. Session requests (the dashboard) are not affected; `enabled: false` turns
+     * everything off. `true` (or unset in a partial config) serves both.
+     */
     api: boolean
     /** If supports metadata system */
     metadata: boolean

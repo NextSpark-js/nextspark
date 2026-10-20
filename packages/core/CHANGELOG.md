@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Entities declared with `access.api: false` no longer answer to API-key requests on the REST API (`/api/v1/<entity>`, every method and child route): they get `404 Entity not found`, like an entity with `enabled: false`. Session requests (the dashboard) are served as before, and the MCP server already skipped these entities. If you reach such an entity with an API key today, set `access.api: true` to keep doing so (#312).
 - `GenericEntityService.create` / `update` (exported from `@nextsparkjs/core/services`) validate `relation` / `relation-multi` references against the records the given `userId` can see, including ones a `before_*` hook adds, and store relation fields normalized like the REST API. Callers that pass a service-level `userId` should account for it (#343).
 
 ## [0.1.0-beta.199] - 2026-10-18
