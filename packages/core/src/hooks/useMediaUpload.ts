@@ -103,7 +103,7 @@ function putToStorage(
     const cancelled = () => new DOMException('Upload cancelled', 'AbortError')
     if (signal?.aborted) return reject(cancelled())
     const xhr = new XMLHttpRequest()
-    xhr.open(target.method || 'PUT', target.url)
+    xhr.open('PUT', target.url) // the presign route only issues PUT URLs
     for (const [name, value] of Object.entries(target.headers ?? {})) {
       if (!FORBIDDEN_HEADERS.includes(name.toLowerCase())) xhr.setRequestHeader(name, value)
     }
