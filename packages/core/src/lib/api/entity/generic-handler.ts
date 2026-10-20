@@ -702,22 +702,20 @@ async function rejectInvisibleRelations(
 }
 
 /**
- * Validate that user is a member of the specified team
- * Returns true if user is a member, false otherwise
- */
-/**
  * `access.api: false` closes the entity to external callers: a request that
  * authenticated with an API key (even one that then failed scope enforcement)
- * gets the same 404 `enabled: false` gives, for every route of this handler.
+ * gets the same 404 as a slug that does not exist, for every route of this handler.
+ * `code` is the error code the caller's own "not found" answer carries.
  * Session requests (the dashboard) are unaffected. Returns null when allowed.
  */
 async function rejectApiKeyOnClosedEntity(
   authResult: DualAuthResult,
   entityConfig: EntityConfig,
-  request: NextRequest
+  request: NextRequest,
+  code?: string
 ): Promise<NextResponse | null> {
   if (authResult.type !== 'api-key' || entityConfig.access?.api !== false) return null
-  return addCorsHeaders(createApiError('Entity not found', 404), request)
+  return addCorsHeaders(createApiError('Entity not found', 404, undefined, code), request)
 }
 
 /**
@@ -770,6 +768,10 @@ async function checkAuthPermission(
   return null
 }
 
+/**
+ * Validate that user is a member of the specified team
+ * Returns true if user is a member, false otherwise
+ */
 async function validateTeamMembership(userId: string, teamId: string): Promise<boolean> {
   try {
     const member = await queryOneWithRLS<{ id: string }>(
@@ -2686,14 +2688,16 @@ async function resolveChildContext(
   if (!resolution.isValidEntity || !resolution.entityConfig) return notFound('Entity not found')
   const parentConfig = resolution.entityConfig
 
-  const child = getChildEntities(resolution.entityName).find(entry => entry.name === childType)
-  if (!child) return notFound('Child entity not found')
-
+  // The API-key guard runs before the childType lookup, so a closed parent answers like a missing one
   const write = operation !== 'list'
   const authResult = await authenticateRequest(request, { requiredScope: `${parentConfig.slug}:${write ? 'write' : 'read'}` })
   audit.auth = authResult
-  const apiClosed = await rejectApiKeyOnClosedEntity(authResult, parentConfig, request)
+  const apiClosed = await rejectApiKeyOnClosedEntity(authResult, parentConfig, request, 'NOT_FOUND')
   if (apiClosed) return apiClosed
+
+  const child = getChildEntities(resolution.entityName).find(entry => entry.name === childType)
+  if (!child) return notFound('Child entity not found')
+
   if (!authResult.success) return createAuthFailureResponse(authResult)
   if (authResult.rateLimitResponse) return authResult.rateLimitResponse as NextResponse
   const userId = authResult.user!.id
