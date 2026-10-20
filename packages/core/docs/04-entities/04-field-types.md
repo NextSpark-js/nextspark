@@ -532,6 +532,42 @@ Select with integrated search.
 
 ## Media Types
 
+### How `file`, `image`, `video` and `audio` store their value
+
+These four types upload the file when the user picks it, through the media library upload (`useMediaUpload`: direct to the storage with the `s3` driver, through `/api/v1/media/upload` otherwise; see [Media API](../21-media-library/02-api-reference.md#in-the-browser-usemediaupload)). The upload creates a media record, and the field stores an **array of objects** with what the API returned:
+
+```json
+[{ "id": "<media id>", "name": "report.pdf", "size": 48213, "type": "application/pdf", "url": "<URL returned by the API>" }]
+```
+
+- `id` is the media record's id and `url` its URL: absolute for `s3` and Vercel Blob, a path of the app (`/api/v1/media/files/...`) for the local driver. `video` items also carry a `thumbnail` and `audio` items a `duration` when the browser could read them.
+- A `blob:` URL is never stored. While the upload runs the form shows its progress (and a cancel button); if it fails, or the file breaks a limit, the error is shown under the field and nothing is added to the value. The generated schemas reject `blob:` URLs.
+- `image` also accepts a plain URL string (or `null`) as a value, for entities that store one image as text; the upload component writes the array form. To reuse an item that is already in the library, use the `media-library` type.
+- Rows saved by an earlier version may hold a `blob:` URL; they are not migrated, and the schemas now reject them on update until the file is replaced.
+- The server decides which types it takes: a type outside `media.allowedMimeTypes` (images and videos by default) is refused with a visible error. To upload `file` or `audio` values such as PDFs or MP3s, add their types to `media.allowedMimeTypes` in the app config ([Media configuration](../21-media-library/05-configuration.md)).
+
+Optional field settings (all four types; unset values keep the component default):
+
+| Setting | Type | Meaning |
+|---------|------|---------|
+| `maxFiles` | `number` | Maximum number of files in the field (default 5; 3 for `video`) |
+| `maxSize` | `number` | Maximum size in MB of each file (default 10 for `file`, 5 for `image`, 100 for `video`, 50 for `audio`); the server's own limit applies as well |
+| `acceptedTypes` | `string[]` | MIME types or extensions: `'application/pdf'`, `'image/*'`, `'.pdf'` |
+| `multiple` | `boolean` | `true` by default; `false` allows one file |
+
+```typescript
+{
+  name: 'contract',
+  type: 'file',
+  required: false,
+  maxFiles: 2,
+  maxSize: 5,
+  acceptedTypes: ['application/pdf'],
+  display: { label: 'Contract', showInForm: true, /* ... */ },
+  api: { searchable: false, sortable: false, readOnly: false }
+}
+```
+
 ### 16. file
 
 Generic file upload.
