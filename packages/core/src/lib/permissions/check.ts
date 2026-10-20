@@ -11,10 +11,12 @@ import { queryOneWithRLS } from '../db'
  */
 async function getTeamMemberRole(userId: string, teamId: string): Promise<string | null> {
   const result = await queryOneWithRLS<{ role: string }>(
-    `SELECT role
-     FROM "team_members"
-     WHERE "userId" = $1
-       AND "teamId" = $2
+    `SELECT tm.role
+     FROM "team_members" tm
+     INNER JOIN "teams" t ON t.id = tm."teamId"
+     WHERE tm."userId" = $1
+       AND tm."teamId" = $2
+       AND t."deletedAt" IS NULL
      LIMIT 1`,
     [userId, teamId]
   )

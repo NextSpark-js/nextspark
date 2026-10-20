@@ -35,6 +35,11 @@ export interface TeamsConfigOptions {
    * Note: Only applies to multi-tenant mode. Signup team is always created.
    */
   allowCreateTeams?: boolean
+  /**
+   * Days a deleted team is kept before the `teams:purge-deleted` scheduled action
+   * removes it for good. Default: 30. `0` purges on the next run.
+   */
+  deletedRetentionDays?: number
 }
 
 /**

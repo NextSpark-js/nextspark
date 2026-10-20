@@ -6,7 +6,7 @@ const mockFindUserByEmail = jest.fn()
 const mockCreateUser = jest.fn()
 const mockQueryOne = jest.fn()
 const mockMutate = jest.fn()
-const mockTx = { query: jest.fn(), commit: jest.fn(), rollback: jest.fn() }
+const mockTx = { query: jest.fn(), queryOne: jest.fn(), commit: jest.fn(), rollback: jest.fn() }
 const mockAuthConfig: { methods: string[]; emailAndPassword: { enabled?: boolean }; registration?: Record<string, unknown> } = {
   methods: ['email-otp', 'google'],
   emailAndPassword: { enabled: false },
@@ -70,6 +70,7 @@ describe('signup-with-invite password policy', () => {
     jest.clearAllMocks()
     mockQueryOne.mockResolvedValue(invitation as never)
     mockTx.query.mockResolvedValue([{ id: 'member-1' }] as never)
+    mockTx.queryOne.mockResolvedValue({ '?column?': 1 } as never) // the team is active
     mockFindUserByEmail.mockResolvedValue(null as never)
     mockCreateUser.mockResolvedValue({ id: 'user-1' } as never)
   })

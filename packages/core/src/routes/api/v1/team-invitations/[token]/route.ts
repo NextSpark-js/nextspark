@@ -43,7 +43,7 @@ export const GET = withRateLimitTier(withApiLogging(
         FROM "team_invitations" ti
         INNER JOIN "teams" t ON ti."teamId" = t.id
         INNER JOIN "users" u ON ti."invitedBy" = u.id
-        WHERE ti.token = $1`,
+        WHERE ti.token = $1 AND t."deletedAt" IS NULL`,
         [token]
       )
 

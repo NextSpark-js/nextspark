@@ -254,6 +254,15 @@ export const POST = withRateLimitTier(withApiLogging(
       const tx = await getTransactionClient(userId, { service: true })
 
       try {
+        // The team must still be active; the share lock makes a concurrent TeamService.delete wait for this join
+        const activeTeam = await tx.queryOne(
+          'SELECT 1 FROM "teams" WHERE id = $1 AND "deletedAt" IS NULL FOR SHARE',
+          [invitation.teamId]
+        )
+        if (!activeTeam) {
+          throw new Error('The team of this invitation no longer exists')
+        }
+
         // Add user as team member
         const [member] = await tx.query<TeamMember>(
           `INSERT INTO "team_members" ("teamId", "userId", role, "invitedBy", "joinedAt")

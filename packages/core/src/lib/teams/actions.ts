@@ -410,8 +410,7 @@ export async function switchActiveTeam(
 }
 
 /**
- * Delete team
- * No special protection needed (all teams can be deleted)
+ * Delete team (soft delete, see TeamService.delete)
  *
  * @param teamId - The team ID
  * @param userId - The user ID (must be owner)
@@ -420,30 +419,7 @@ export async function deleteTeam(
   teamId: string,
   userId: string
 ): Promise<void> {
-  // Verify user is owner
-  const hasPermission = await checkTeamPermission(userId, teamId, ['owner'])
-
-  if (!hasPermission) {
-    throw new Error('Only team owner can delete the team')
-  }
-
-  // Get team to verify it exists
-  const team = await queryOneWithRLS<Team>(
-    'SELECT * FROM "teams" WHERE id = $1',
-    [teamId],
-    userId
-  )
-
-  if (!team) {
-    throw new Error('Team not found')
-  }
-
-  // Delete team (members and invitations will cascade)
-  await queryWithRLS(
-    'DELETE FROM "teams" WHERE id = $1',
-    [teamId],
-    userId
-  )
-
-  console.log(`Team ${teamId} deleted by user ${userId}`)
+  // The same soft delete (and hooks) as the service; a hard DELETE here would skip both
+  const { TeamService } = await import('../services/team.service')
+  await TeamService.delete(teamId, userId)
 }

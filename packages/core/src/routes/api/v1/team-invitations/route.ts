@@ -51,7 +51,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     const offset = (page - 1) * limit
 
     // Build WHERE clause based on filters
-    let whereClause = 'WHERE ti.email = $1'
+    let whereClause = 'WHERE ti.email = $1 AND t."deletedAt" IS NULL'
     const queryValues: unknown[] = [userEmail]
     let paramCount = 2
 

@@ -12,13 +12,15 @@
 import { isActionRegistered } from '../registry'
 import { registerPatternCacheInvalidationHandler } from './invalidate-pattern-cache'
 import { registerSecurityNotificationAction } from './security-notification'
+import { registerPurgeDeletedTeamsAction } from './purge-deleted-teams'
 
-export { registerPatternCacheInvalidationHandler, registerSecurityNotificationAction }
+export { registerPatternCacheInvalidationHandler, registerSecurityNotificationAction, registerPurgeDeletedTeamsAction }
 
 /** Every action type core enqueues, with the function that registers its handler. */
 const CORE_HANDLERS: Record<string, () => void> = {
   'pattern:invalidate-cache': registerPatternCacheInvalidationHandler,
   'auth:security-notification': registerSecurityNotificationAction,
+  'teams:purge-deleted': registerPurgeDeletedTeamsAction,
 }
 
 /**

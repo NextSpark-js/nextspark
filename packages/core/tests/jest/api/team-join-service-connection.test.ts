@@ -49,6 +49,7 @@ describe('team join writes', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    mockTx.queryOne.mockResolvedValue({ '?column?': 1 }) // the team is active
   })
   afterEach(() => jest.restoreAllMocks())
 
@@ -94,6 +95,19 @@ describe('team join writes', () => {
     expect(mockTx.query).not.toHaveBeenCalled()
     expect(mockTx.rollback).toHaveBeenCalledTimes(1)
     expect(mockTx.commit).not.toHaveBeenCalled()
+  })
+
+  it('accepting joins no one to a team deleted meanwhile', async () => {
+    mockDb.queryOneWithRLS.mockResolvedValueOnce(pending).mockResolvedValueOnce(null)
+    mockTx.queryOne.mockResolvedValue(null)
+
+    const response = await accept(json('http://localhost:3000/api/v1/team-invitations/tok/accept'), { params: Promise.resolve({ token: 'tok' }) })
+
+    expect(response.status).toBe(404)
+    expect(mockTx.queryOne.mock.calls[0][0]).toMatch(/"deletedAt" IS NULL FOR SHARE/)
+    expect(mockTx.mutate).not.toHaveBeenCalled()
+    expect(mockTx.query).not.toHaveBeenCalled()
+    expect(mockTx.rollback).toHaveBeenCalledTimes(1)
   })
 
   it('another email\'s invitation never reaches the service connection', async () => {

@@ -7,9 +7,37 @@
  * @module TeamService
  */
 
-import { queryOneWithRLS, queryWithRLS, getServiceTransactionClient } from '../db'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS, getServiceTransactionClient } from '../db'
 import type { Team, TeamRole } from '../teams/types'
 import { TEAMS_CONFIG } from '../config'
+import { getGlobalHooks } from '../plugins/hook-system'
+import { scheduleAction } from '../scheduled-actions/scheduler'
+
+/** Filter hook run before a team is deleted: throw to veto, the message reaches the caller. */
+export const TEAM_BEFORE_DELETE_HOOK = 'team.before_delete'
+/** Action hook run after a team was deleted (soft-deleted, memberships revoked). */
+export const TEAM_DELETED_HOOK = 'team.deleted'
+/** Scheduled action that removes the teams deleted longer ago than the retention. */
+export const PURGE_DELETED_TEAMS_ACTION = 'teams:purge-deleted'
+/** Days a deleted team is kept when `teams.options.deletedRetentionDays` is not set. */
+export const DELETED_TEAM_RETENTION_DAYS = 30
+
+/** A `team.before_delete` hook refused the deletion; the team is untouched. */
+export class TeamDeleteVetoedError extends Error {
+  readonly code = 'TEAM_DELETE_VETOED'
+  constructor(message: string) {
+    super(message)
+    this.name = 'TeamDeleteVetoedError'
+  }
+}
+
+/** Retention of deleted teams in days: the configured value, or the default when it is not a number >= 0. */
+export function getDeletedTeamRetentionDays(): number {
+  const configured = TEAMS_CONFIG?.options?.deletedRetentionDays
+  return typeof configured === 'number' && Number.isFinite(configured) && configured >= 0
+    ? configured
+    : DELETED_TEAM_RETENTION_DAYS
+}
 
 // ===========================================
 // TYPES
@@ -58,7 +86,7 @@ export class TeamService {
     }
 
     return queryOneWithRLS<Team>(
-      'SELECT * FROM "teams" WHERE id = $1',
+      'SELECT * FROM "teams" WHERE id = $1 AND "deletedAt" IS NULL',
       [teamId],
       userId
     )
@@ -79,7 +107,7 @@ export class TeamService {
     }
 
     return queryOneWithRLS<Team>(
-      'SELECT * FROM "teams" WHERE slug = $1',
+      'SELECT * FROM "teams" WHERE slug = $1 AND "deletedAt" IS NULL',
       [slug]
     )
   }
@@ -95,7 +123,7 @@ export class TeamService {
    */
   static async getGlobal(): Promise<Team | null> {
     return queryOneWithRLS<Team>(
-      `SELECT * FROM "teams" WHERE "isGlobal" = TRUE LIMIT 1`,
+      `SELECT * FROM "teams" WHERE "isGlobal" = TRUE AND "deletedAt" IS NULL LIMIT 1`,
       []
     )
   }
@@ -124,7 +152,7 @@ export class TeamService {
    */
   static async isBootstrapDone(): Promise<boolean> {
     if (TEAMS_CONFIG.mode === 'single-tenant') return this.hasGlobal()
-    return (await queryOneWithRLS('SELECT 1 FROM "teams" LIMIT 1', [])) !== null
+    return (await queryOneWithRLS('SELECT 1 FROM "teams" WHERE "deletedAt" IS NULL LIMIT 1', [])) !== null
   }
 
   /**
@@ -163,7 +191,7 @@ export class TeamService {
       FROM "teams" t
       INNER JOIN "team_members" tm ON t.id = tm."teamId"
       LEFT JOIN "team_members" tm2 ON t.id = tm2."teamId"
-      WHERE tm."userId" = $1
+      WHERE tm."userId" = $1 AND t."deletedAt" IS NULL
       GROUP BY t.id, t.name, t.slug, t.description, t."ownerId", t."avatarUrl",
                t."isGlobal", t.settings, t."createdAt", t."updatedAt", tm.role, tm."joinedAt"
       ORDER BY
@@ -204,7 +232,7 @@ export class TeamService {
         COUNT(DISTINCT tm.id) as "memberCount"
       FROM "teams" t
       LEFT JOIN "team_members" tm ON t.id = tm."teamId"
-      WHERE t.id = $1
+      WHERE t.id = $1 AND t."deletedAt" IS NULL
       GROUP BY t.id`,
       [teamId],
       userId
@@ -248,7 +276,7 @@ export class TeamService {
       `SELECT u.id, u.name, u.email, u.image
        FROM "teams" t
        INNER JOIN "users" u ON t."ownerId" = u.id
-       WHERE t.id = $1`,
+       WHERE t.id = $1 AND t."deletedAt" IS NULL`,
       [teamId]
     )
   }
@@ -268,7 +296,7 @@ export class TeamService {
     }
 
     return queryWithRLS<Team>(
-      `SELECT * FROM "teams" WHERE "ownerId" = $1 ORDER BY "createdAt" DESC`,
+      `SELECT * FROM "teams" WHERE "ownerId" = $1 AND "deletedAt" IS NULL ORDER BY "createdAt" DESC`,
       [userId],
       userId
     )
@@ -424,7 +452,7 @@ export class TeamService {
     const result = await queryOneWithRLS<Team>(
       `UPDATE "teams"
        SET ${updates.join(', ')}
-       WHERE id = $${paramIndex}
+       WHERE id = $${paramIndex} AND "deletedAt" IS NULL
        RETURNING *`,
       params,
       userId
@@ -438,8 +466,15 @@ export class TeamService {
   }
 
   /**
-   * Delete team
-   * Only the owner can delete a team
+   * Delete team (soft delete)
+   * Only the owner can delete a team.
+   *
+   * Runs the `team.before_delete` filter hooks first: a hook that throws vetoes the
+   * deletion (TeamDeleteVetoedError carrying its message) and nothing changes. Then,
+   * in one transaction, sets `deletedAt`, revokes every membership and deletes the
+   * pending invitations. The row stays until the `teams:purge-deleted` scheduled
+   * action removes it once the retention has passed. The `team.deleted` action hooks
+   * run last.
    *
    * @param teamId - Team ID
    * @param userId - User ID (must be owner)
@@ -458,7 +493,7 @@ export class TeamService {
 
     // Get team to verify it exists and check ownership
     const team = await queryOneWithRLS<Team>(
-      'SELECT * FROM "teams" WHERE id = $1',
+      'SELECT * FROM "teams" WHERE id = $1 AND "deletedAt" IS NULL',
       [teamId],
       userId
     )
@@ -471,12 +506,73 @@ export class TeamService {
       throw new Error('Only team owner can delete the team')
     }
 
-    // Delete team (members and invitations will cascade)
-    await queryWithRLS(
-      'DELETE FROM "teams" WHERE id = $1',
-      [teamId],
-      userId
+    const hooks = getGlobalHooks()
+    try {
+      await hooks.applyFiltersStrict(TEAM_BEFORE_DELETE_HOOK, { teamId, team, userId })
+    } catch (error) {
+      throw new TeamDeleteVetoedError(error instanceof Error ? error.message : 'Team deletion was refused')
+    }
+
+    // Service transaction: revoking other members' rows is not something the owner's RLS allows.
+    // Ownership was checked above and is part of the UPDATE, so a transfer in between cannot be raced.
+    const tx = await getServiceTransactionClient()
+    try {
+      // "isGlobal" is cleared so the partial unique index does not keep a replacement from being created.
+      const marked = await tx.mutate(
+        `UPDATE "teams" SET "deletedAt" = NOW(), "isGlobal" = FALSE, "updatedAt" = NOW()
+         WHERE id = $1 AND "ownerId" = $2 AND "deletedAt" IS NULL`,
+        [teamId, userId]
+      )
+      if (marked.rowCount === 0) {
+        throw new Error('Team not found')
+      }
+      await tx.query('DELETE FROM "team_members" WHERE "teamId" = $1', [teamId])
+      await tx.query(`DELETE FROM "team_invitations" WHERE "teamId" = $1 AND status = 'pending'`, [teamId])
+      await tx.commit()
+    } catch (error) {
+      await tx.rollback()
+      throw error
+    }
+
+    // The deletion is done: neither of these can undo it. The purge also gets scheduled by the next
+    // run of any earlier one, and a project may run it on its own schedule.
+    try {
+      const purgeAt = new Date(Date.now() + getDeletedTeamRetentionDays() * 86_400_000)
+      await scheduleAction(PURGE_DELETED_TEAMS_ACTION, {}, { scheduledAt: purgeAt })
+    } catch (error) {
+      console.error(`[TeamService] Could not schedule the purge of deleted teams:`, error)
+    }
+    await hooks.doAction(TEAM_DELETED_HOOK, { teamId, team, userId })
+  }
+
+  /**
+   * Physically remove the teams deleted more than `retentionDays` ago (default: the
+   * configured retention). Members, invitations and subscriptions go with them (FK
+   * cascade). Run by the `teams:purge-deleted` scheduled action.
+   *
+   * @returns Number of teams removed
+   */
+  static async purgeDeleted(retentionDays: number = getDeletedTeamRetentionDays()): Promise<number> {
+    const result = await mutateWithRLS(
+      `DELETE FROM "teams"
+       WHERE "deletedAt" IS NOT NULL
+         AND "deletedAt" < NOW() - make_interval(secs => $1::float8 * 86400)`,
+      [retentionDays],
+      null // System operation
     )
+    return result.rowCount
+  }
+
+  /**
+   * When the oldest team still waiting to be purged expires, or null if none waits.
+   */
+  static async getNextPurgeAt(retentionDays: number = getDeletedTeamRetentionDays()): Promise<Date | null> {
+    const row = await queryOneWithRLS<{ deletedAt: string | Date | null }>(
+      `SELECT MIN("deletedAt") AS "deletedAt" FROM "teams" WHERE "deletedAt" IS NOT NULL`,
+      []
+    )
+    if (!row?.deletedAt) return null
+    return new Date(new Date(row.deletedAt).getTime() + retentionDays * 86_400_000)
   }
 
   // ===========================================
@@ -613,7 +709,7 @@ export class TeamService {
     }
 
     const result = await queryOneWithRLS<{ id: string }>(
-      'SELECT id FROM "teams" WHERE id = $1 LIMIT 1',
+      'SELECT id FROM "teams" WHERE id = $1 AND "deletedAt" IS NULL LIMIT 1',
       [teamId]
     )
 

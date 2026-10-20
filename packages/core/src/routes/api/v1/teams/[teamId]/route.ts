@@ -11,7 +11,7 @@ import {
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { updateTeamSchema } from '@nextsparkjs/core/lib/teams/schema'
-import { TeamService, MembershipService } from '@nextsparkjs/core/lib/services'
+import { TeamService, TeamDeleteVetoedError, MembershipService } from '@nextsparkjs/core/lib/services'
 import type { Team, TeamRole } from '@nextsparkjs/core/lib/teams/types'
 
 // Handle CORS preflight
@@ -63,7 +63,7 @@ export const GET = withRateLimitTier(withApiLogging(
           $2::text as "userRole"
         FROM "teams" t
         LEFT JOIN "team_members" tm ON t.id = tm."teamId"
-        WHERE t.id = $1
+        WHERE t.id = $1 AND t."deletedAt" IS NULL
         GROUP BY t.id`,
         [teamId, userRole.role],
         authResult.user!.id
@@ -185,7 +185,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
       const query = `
         UPDATE "teams"
         SET ${updates.join(', ')}
-        WHERE id = $${paramCount}
+        WHERE id = $${paramCount} AND "deletedAt" IS NULL
         RETURNING *
       `
 
@@ -203,7 +203,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
           COUNT(DISTINCT tm.id) as "memberCount"
         FROM "teams" t
         LEFT JOIN "team_members" tm ON t.id = tm."teamId"
-        WHERE t.id = $1
+        WHERE t.id = $1 AND t."deletedAt" IS NULL
         GROUP BY t.id`,
         [teamId],
         authResult.user!.id
@@ -268,6 +268,11 @@ export const DELETE = withRateLimitTier(withApiLogging(
             null,
             'INSUFFICIENT_PERMISSIONS'
           )
+          return addCorsHeaders(response, req)
+        }
+
+        if (error instanceof TeamDeleteVetoedError) {
+          const response = createApiError(error.message, 409, null, error.code)
           return addCorsHeaders(response, req)
         }
 

@@ -11,9 +11,11 @@ import type { Team } from '@/core/lib/teams/types'
 import { TEAMS_CONFIG } from '@/core/lib/config'
 
 // Mock database functions
+jest.mock('@/core/lib/scheduled-actions/scheduler', () => ({ scheduleAction: jest.fn().mockResolvedValue('action-1') }))
 jest.mock('@/core/lib/db', () => ({
   queryOneWithRLS: jest.fn(),
   queryWithRLS: jest.fn(),
+  mutateWithRLS: jest.fn(),
   // Team creation runs on the SERVICE transaction (RLS bypass) — see TeamService.create
   getServiceTransactionClient: jest.fn(),
 }))
@@ -52,7 +54,7 @@ describe('TeamService', () => {
 
       expect(result).toEqual(mockTeam)
       expect(mockQueryOneWithRLS).toHaveBeenCalledWith(
-        'SELECT * FROM "teams" WHERE id = $1',
+        'SELECT * FROM "teams" WHERE id = $1 AND "deletedAt" IS NULL',
         ['team-123'],
         'user-456'
       )
@@ -80,7 +82,7 @@ describe('TeamService', () => {
 
       expect(result).toEqual(mockTeam)
       expect(mockQueryOneWithRLS).toHaveBeenCalledWith(
-        'SELECT * FROM "teams" WHERE slug = $1',
+        'SELECT * FROM "teams" WHERE slug = $1 AND "deletedAt" IS NULL',
         ['test-team']
       )
     })
@@ -149,7 +151,7 @@ describe('TeamService', () => {
       expect(await TeamService.isBootstrapDone()).toBe(false)
       mockQueryOneWithRLS.mockResolvedValue({ '?column?': 1 })
       expect(await TeamService.isBootstrapDone()).toBe(true)
-      expect(mockQueryOneWithRLS).toHaveBeenLastCalledWith('SELECT 1 FROM "teams" LIMIT 1', [])
+      expect(mockQueryOneWithRLS).toHaveBeenLastCalledWith('SELECT 1 FROM "teams" WHERE "deletedAt" IS NULL LIMIT 1', [])
     })
   })
 
@@ -307,17 +309,17 @@ describe('TeamService', () => {
   })
 
   describe('delete', () => {
-    it('deletes team when user is owner', async () => {
+    // The lifecycle (soft delete, hooks, purge) is covered in tests/jest/lib/services/team-delete.test.ts
+    it('soft-deletes the team when user is owner', async () => {
+      const tx = { mutate: jest.fn().mockResolvedValue({ rowCount: 1 }), query: jest.fn().mockResolvedValue([]), commit: jest.fn(), rollback: jest.fn() }
+      mockGetServiceTransactionClient.mockResolvedValue(tx as never)
       mockQueryOneWithRLS.mockResolvedValue(mockTeam)
-      mockQueryWithRLS.mockResolvedValue([])
 
       await TeamService.delete('team-123', 'user-456')
 
-      expect(mockQueryWithRLS).toHaveBeenCalledWith(
-        'DELETE FROM "teams" WHERE id = $1',
-        ['team-123'],
-        'user-456'
-      )
+      expect(tx.mutate.mock.calls[0][0]).toContain('"deletedAt" = NOW()')
+      expect(tx.mutate.mock.calls[0][1]).toEqual(['team-123', 'user-456'])
+      expect(mockQueryWithRLS).not.toHaveBeenCalled()
     })
 
     it('throws error when user is not owner', async () => {

@@ -114,7 +114,7 @@ export class TeamInvitationService {
       }
     }
 
-    const team = await queryOneWithRLS<Team>('SELECT * FROM "teams" WHERE id = $1', [teamId], actor.id)
+    const team = await queryOneWithRLS<Team>('SELECT * FROM "teams" WHERE id = $1 AND "deletedAt" IS NULL', [teamId], actor.id)
     if (!team) {
       return { success: false, status: 404, code: 'TEAM_NOT_FOUND', error: 'Team not found' }
     }

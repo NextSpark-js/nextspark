@@ -122,6 +122,17 @@ export const POST = withRateLimitTier(withApiLogging(
       const tx = await getServiceTransactionClient()
 
       try {
+        // The team must still be active; the share lock makes a concurrent TeamService.delete wait for this join
+        const activeTeam = await tx.queryOne(
+          'SELECT 1 FROM "teams" WHERE id = $1 AND "deletedAt" IS NULL FOR SHARE',
+          [invitation.teamId]
+        )
+        if (!activeTeam) {
+          await tx.rollback()
+          const response = createApiError('Team not found', 404, null, 'TEAM_NOT_FOUND')
+          return addCorsHeaders(response, req)
+        }
+
         const claimed = await tx.mutate(
           `UPDATE "team_invitations"
            SET status = 'accepted', "acceptedAt" = NOW(), "updatedAt" = CURRENT_TIMESTAMP
