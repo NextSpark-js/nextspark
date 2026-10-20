@@ -405,7 +405,7 @@ describe('PatternUsageService', () => {
   // ===========================================
   describe('getExistingPatternIds', () => {
     it('returns empty set when given empty input', async () => {
-      const result = await PatternUsageService.getExistingPatternIds([], mockUserId)
+      const result = await PatternUsageService.getExistingPatternIds([], mockUserId, mockTeamId)
 
       expect(result).toBeInstanceOf(Set)
       expect(result.size).toBe(0)
@@ -419,7 +419,7 @@ describe('PatternUsageService', () => {
         { id: 'pat-003' }
       ])
 
-      const result = await PatternUsageService.getExistingPatternIds(patternIds, mockUserId)
+      const result = await PatternUsageService.getExistingPatternIds(patternIds, mockUserId, mockTeamId)
 
       expect(result).toBeInstanceOf(Set)
       expect(result.size).toBe(2)
@@ -428,7 +428,7 @@ describe('PatternUsageService', () => {
       expect(result.has('pat-003')).toBe(true)
       expect(mockQueryWithRLS).toHaveBeenCalledWith(
         expect.stringContaining('SELECT id FROM patterns'),
-        [patternIds],
+        [patternIds, mockTeamId],
         mockUserId
       )
     })
@@ -438,7 +438,8 @@ describe('PatternUsageService', () => {
 
       const result = await PatternUsageService.getExistingPatternIds(
         ['pat-deleted-001'],
-        mockUserId
+        mockUserId,
+        mockTeamId
       )
 
       expect(result).toBeInstanceOf(Set)
@@ -449,12 +450,24 @@ describe('PatternUsageService', () => {
       const patternIds = ['pat-001', 'pat-002']
       mockQueryWithRLS.mockResolvedValue([{ id: 'pat-001' }])
 
-      await PatternUsageService.getExistingPatternIds(patternIds, mockUserId)
+      await PatternUsageService.getExistingPatternIds(patternIds, mockUserId, mockTeamId)
 
       // Should use ANY() for array parameter
       expect(mockQueryWithRLS).toHaveBeenCalledWith(
         expect.stringContaining('ANY($1::text[])'),
-        [patternIds],
+        [patternIds, mockTeamId],
+        mockUserId
+      )
+    })
+
+    it('only matches patterns of the given team', async () => {
+      mockQueryWithRLS.mockResolvedValue([])
+
+      await PatternUsageService.getExistingPatternIds(['pat-001'], mockUserId, mockTeamId)
+
+      expect(mockQueryWithRLS).toHaveBeenCalledWith(
+        expect.stringContaining('"teamId" = $2'),
+        [['pat-001'], mockTeamId],
         mockUserId
       )
     })

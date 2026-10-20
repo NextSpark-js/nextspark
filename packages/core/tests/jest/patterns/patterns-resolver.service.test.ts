@@ -29,25 +29,25 @@ describe('PatternsResolverService', () => {
 
   describe('getByIds', () => {
     test('should return empty array for empty input array', async () => {
-      const result = await PatternsResolverService.getByIds([])
+      const result = await PatternsResolverService.getByIds([], 'team-1')
       expect(result).toEqual([])
       expect(mockQuery).not.toHaveBeenCalled()
     })
 
     test('should return empty array for null input', async () => {
-      const result = await PatternsResolverService.getByIds(null as any)
+      const result = await PatternsResolverService.getByIds(null as any, 'team-1')
       expect(result).toEqual([])
       expect(mockQuery).not.toHaveBeenCalled()
     })
 
     test('should return empty array for undefined input', async () => {
-      const result = await PatternsResolverService.getByIds(undefined as any)
+      const result = await PatternsResolverService.getByIds(undefined as any, 'team-1')
       expect(result).toEqual([])
       expect(mockQuery).not.toHaveBeenCalled()
     })
 
     test('should return empty array when all IDs are empty strings', async () => {
-      const result = await PatternsResolverService.getByIds(['', '  ', '\t'])
+      const result = await PatternsResolverService.getByIds(['', '  ', '\t'], 'team-1')
       expect(result).toEqual([])
       expect(mockQuery).not.toHaveBeenCalled()
     })
@@ -80,19 +80,19 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      const result = await PatternsResolverService.getByIds(['pattern-123'])
+      const result = await PatternsResolverService.getByIds(['pattern-123'], 'team-1')
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('SELECT'),
-        ['pattern-123']
+        ['pattern-123', 'team-1']
       )
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('WHERE id IN ($1)'),
-        ['pattern-123']
+        ['pattern-123', 'team-1']
       )
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('AND status = \'published\''),
-        ['pattern-123']
+        ['pattern-123', 'team-1']
       )
 
       expect(result).toHaveLength(1)
@@ -158,11 +158,11 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      const result = await PatternsResolverService.getByIds(['pattern-1', 'pattern-2'])
+      const result = await PatternsResolverService.getByIds(['pattern-1', 'pattern-2'], 'team-1')
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('WHERE id IN ($1, $2)'),
-        ['pattern-1', 'pattern-2']
+        ['pattern-1', 'pattern-2', 'team-1']
       )
 
       expect(result).toHaveLength(2)
@@ -195,12 +195,12 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      const result = await PatternsResolverService.getByIds(['pattern-1', 'pattern-2'])
+      const result = await PatternsResolverService.getByIds(['pattern-1', 'pattern-2'], 'team-1')
 
       // Verify query includes status filter
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('AND status = \'published\''),
-        ['pattern-1', 'pattern-2']
+        ['pattern-1', 'pattern-2', 'team-1']
       )
 
       // Only published pattern is returned
@@ -231,7 +231,7 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      const result = await PatternsResolverService.getByIds(['pattern-123'])
+      const result = await PatternsResolverService.getByIds(['pattern-123'], 'team-1')
 
       expect(result).toHaveLength(1)
       expect(result[0].description).toBeUndefined()
@@ -259,7 +259,7 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      const result = await PatternsResolverService.getByIds(['pattern-123'])
+      const result = await PatternsResolverService.getByIds(['pattern-123'], 'team-1')
 
       expect(result).toHaveLength(1)
       expect(result[0].description).toBe('This is a description')
@@ -311,7 +311,7 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      const result = await PatternsResolverService.getByIds(['pattern-123'])
+      const result = await PatternsResolverService.getByIds(['pattern-123'], 'team-1')
 
       expect(result).toHaveLength(1)
       expect(result[0].blocks).toEqual(complexBlocks)
@@ -344,7 +344,7 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      const result = await PatternsResolverService.getByIds(['pattern-123'])
+      const result = await PatternsResolverService.getByIds(['pattern-123'], 'team-1')
 
       expect(result).toHaveLength(1)
       expect(result[0].blocks).toEqual([])
@@ -372,7 +372,7 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      const result = await PatternsResolverService.getByIds(['pattern-123'])
+      const result = await PatternsResolverService.getByIds(['pattern-123'], 'team-1')
 
       expect(result).toHaveLength(1)
       expect(result[0].blocks).toEqual([])
@@ -387,7 +387,7 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      const result = await PatternsResolverService.getByIds(['non-existent-id'])
+      const result = await PatternsResolverService.getByIds(['non-existent-id'], 'team-1')
 
       expect(result).toEqual([])
     })
@@ -401,12 +401,12 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      await PatternsResolverService.getByIds(['pattern-1', '', '  ', 'pattern-2', '\t'])
+      await PatternsResolverService.getByIds(['pattern-1', '', '  ', 'pattern-2', '\t'], 'team-1')
 
       // Should only query with valid IDs
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('WHERE id IN ($1, $2)'),
-        ['pattern-1', 'pattern-2']
+        ['pattern-1', 'pattern-2', 'team-1']
       )
     })
 
@@ -415,7 +415,7 @@ describe('PatternsResolverService', () => {
 
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
-      const result = await PatternsResolverService.getByIds(['pattern-123'])
+      const result = await PatternsResolverService.getByIds(['pattern-123'], 'team-1')
 
       expect(result).toEqual([])
       expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -441,12 +441,12 @@ describe('PatternsResolverService', () => {
         'pattern-456',
       ]
 
-      await PatternsResolverService.getByIds(maliciousIds)
+      await PatternsResolverService.getByIds(maliciousIds, 'team-1')
 
       // Verify parameterized query is used
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('WHERE id IN ($1, $2, $3)'),
-        maliciousIds
+        [...maliciousIds, 'team-1']
       )
     })
 
@@ -461,12 +461,12 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      await PatternsResolverService.getByIds(manyIds)
+      await PatternsResolverService.getByIds(manyIds, 'team-1')
 
       // Verify all IDs are passed to query
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('WHERE id IN'),
-        manyIds
+        [...manyIds, 'team-1']
       )
     })
 
@@ -479,7 +479,7 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      await PatternsResolverService.getByIds(['id-1', 'id-2', 'id-3'])
+      await PatternsResolverService.getByIds(['id-1', 'id-2', 'id-3'], 'team-1')
 
       const queryCall = mockQuery.mock.calls[0]
       const sql = queryCall[0] as string
@@ -487,6 +487,27 @@ describe('PatternsResolverService', () => {
       // Verify placeholders are correct
       expect(sql).toContain('WHERE id IN ($1, $2, $3)')
     })
+
+    test('scopes the read to the team of the page (a pattern of another team is not returned)', async () => {
+      mockQuery.mockResolvedValue({ rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] })
+
+      const result = await PatternsResolverService.getByIds(['id-1', 'id-2'], 'team-A')
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('AND "teamId" = $3'),
+        ['id-1', 'id-2', 'team-A']
+      )
+      expect(result).toEqual([])
+    })
+
+    test.each([['undefined', undefined], ['null', null], ['an empty string', '']])(
+      'resolves nothing, without a query, when the team is %s',
+      async (_label, team) => {
+        const result = await PatternsResolverService.getByIds(['id-1'], team as any)
+        expect(result).toEqual([])
+        expect(mockQuery).not.toHaveBeenCalled()
+      }
+    )
 
     test('should map database fields correctly', async () => {
       const mockPattern = {
@@ -510,7 +531,7 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      const result = await PatternsResolverService.getByIds(['pattern-123'])
+      const result = await PatternsResolverService.getByIds(['pattern-123'], 'team-1')
 
       expect(result[0]).toEqual({
         id: 'pattern-123',
@@ -533,7 +554,7 @@ describe('PatternsResolverService', () => {
 
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
-      const result = await PatternsResolverService.getByIds(['pattern-123'])
+      const result = await PatternsResolverService.getByIds(['pattern-123'], 'team-1')
 
       expect(result).toEqual([])
       expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -555,7 +576,7 @@ describe('PatternsResolverService', () => {
 
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
-      const result = await PatternsResolverService.getByIds(['pattern-123'])
+      const result = await PatternsResolverService.getByIds(['pattern-123'], 'team-1')
 
       expect(result).toEqual([])
 
@@ -596,7 +617,7 @@ describe('PatternsResolverService', () => {
         fields: [],
       })
 
-      const result = await PatternsResolverService.getByIds(['pattern-123'])
+      const result = await PatternsResolverService.getByIds(['pattern-123'], 'team-1')
 
       expect(result[0].blocks[0].props.count).toBe(42)
       expect(result[0].blocks[0].props.enabled).toBe(true)

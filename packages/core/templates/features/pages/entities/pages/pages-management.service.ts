@@ -8,6 +8,7 @@
  */
 
 import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { filterPatternReferencesToTeam } from '@nextsparkjs/core/lib/blocks/team-pattern-references'
 import type {
   Block,
   PageFull,
@@ -192,6 +193,9 @@ export class PagesManagementService {
         throw new Error('Slug and title are required')
       }
 
+      // Pattern references are scoped to the team of the page: keep only those of data.teamId
+      const blocks = (await filterPatternReferencesToTeam(data.blocks || [], userId, data.teamId)) as Block[]
+
       const id = crypto.randomUUID()
       const now = new Date().toISOString()
 
@@ -214,7 +218,7 @@ export class PagesManagementService {
           data.teamId,
           data.slug,
           data.title,
-          JSON.stringify(data.blocks || []),
+          JSON.stringify(blocks),
           data.locale || 'en',
           data.status || 'draft',
           data.seoTitle || null,

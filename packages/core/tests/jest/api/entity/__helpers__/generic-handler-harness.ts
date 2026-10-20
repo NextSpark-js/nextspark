@@ -116,7 +116,7 @@ jest.mock('@nextsparkjs/registries/billing-registry', () => ({
 }))
 
 jest.mock('@/core/lib/services/pattern-usage.service', () => ({
-  PatternUsageService: { track: jest.fn(), untrack: jest.fn() },
+  PatternUsageService: { track: jest.fn(), untrack: jest.fn(), getExistingPatternIds: jest.fn(async () => new Set()) },
 }))
 jest.mock('@/core/lib/services/subscription.service', () => ({
   SubscriptionService: { getActive: jest.fn(), canPerformAction: jest.fn() },

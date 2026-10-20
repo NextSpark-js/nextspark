@@ -41,14 +41,10 @@ import { beforeEntityCreate, afterEntityCreate, beforeEntityUpdate, afterEntityU
 import { logGenericHandlerUsage, type AuditContext } from './audit-log'
 import { checkPermission, declaredPublishPermission, publishPermissionFor } from '../../permissions/check'
 import type { Permission } from '../../permissions/types'
-import { extractPatternIds } from '../../blocks/pattern-resolver'
-import { isPatternReference } from '../../../types/pattern-reference'
-import { PatternUsageService } from '../../services/pattern-usage.service'
+import { filterPatternReferencesToTeam } from '../../blocks/team-pattern-references'
 import { SubscriptionService } from '../../services/subscription.service'
 import { UsageService } from '../../services/usage.service'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
-import type { BlockInstance } from '../../../types/blocks'
-import type { PatternReference } from '../../../types/pattern-reference'
 
 // ==========================================
 // NAME FIELD XSS GUARD
@@ -508,51 +504,6 @@ function hookRejectionStatus(error: unknown): number {
     }
   }
   return 400
-}
-
-// ==========================================
-// PATTERN REFERENCE HELPER FUNCTIONS
-// ==========================================
-
-/**
- * Filter out PatternReferences to deleted patterns
- *
- * This enables lazy cleanup - patterns can be deleted without updating all entities.
- * When an entity is saved, any references to deleted patterns are automatically filtered out.
- *
- * @param blocks - Array of blocks that may contain pattern references
- * @param userId - User ID for RLS
- * @returns Filtered array with orphaned pattern references removed
- */
-async function filterOrphanedPatternReferences(
-  blocks: unknown[],
-  userId: string
-): Promise<unknown[]> {
-  if (!Array.isArray(blocks) || blocks.length === 0) return blocks
-
-  // Extract pattern IDs referenced in blocks
-  const patternIds = extractPatternIds(blocks as (BlockInstance | PatternReference)[])
-  if (patternIds.length === 0) return blocks
-
-  // Check which patterns still exist
-  const existingIds = await PatternUsageService.getExistingPatternIds(patternIds, userId)
-
-  // If all patterns exist, return blocks unchanged
-  if (existingIds.size === patternIds.length) return blocks
-
-  // Filter out references to deleted patterns
-  const filtered = blocks.filter(block => {
-    if (isPatternReference(block)) {
-      const exists = existingIds.has(block.ref)
-      if (!exists) {
-        console.info(`[generic-handler] Filtering orphaned PatternReference: ${block.ref}`)
-      }
-      return exists
-    }
-    return true
-  })
-
-  return filtered
 }
 
 /**
@@ -1711,8 +1662,8 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
     if (builderRequest && entityHasBuilder && 'blocks' in (validatedData as Record<string, unknown>)) {
       let blocksValue = (validatedData as Record<string, unknown>).blocks as unknown[]
 
-      // Filter orphaned pattern references (lazy cleanup)
-      blocksValue = await filterOrphanedPatternReferences(blocksValue, authResult.user!.id)
+      // Keep only references to patterns of this record's team (this also drops deleted ones)
+      blocksValue = await filterPatternReferencesToTeam(blocksValue, authResult.user!.id, teamId)
 
       insertFields.push('"blocks"')
       placeholders.push(`$${paramCount++}::jsonb`)
@@ -2284,8 +2235,8 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
     if (builderRequest && entityHasBuilder && 'blocks' in entityData) {
       let blocksData = entityData.blocks as unknown[]
 
-      // Filter orphaned pattern references (lazy cleanup)
-      blocksData = await filterOrphanedPatternReferences(blocksData, authResult.user!.id)
+      // Keep only references to patterns of this record's team (this also drops deleted ones)
+      blocksData = await filterPatternReferencesToTeam(blocksData, authResult.user!.id, teamId)
 
       updates.push(`"blocks" = $${paramCount++}::jsonb`)
       values.push(JSON.stringify(blocksData))

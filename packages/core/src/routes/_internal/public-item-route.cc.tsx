@@ -59,17 +59,21 @@ export async function readPublishedItem(entitySlug: string, slug: string): Promi
   return result.rows[0] || null
 }
 
-/** The published patterns of some ids: only what a page renders of each (its id and blocks). */
-export async function readPatterns(ids: string[]): Promise<Pick<Pattern, 'id' | 'blocks'>[]> {
+/**
+ * The published patterns of some ids that belong to `teamId` (the team of the page): only what a page renders of
+ * each (its id and blocks). The team check is the resolver's own (a pattern of another team is not returned), so it
+ * holds for whoever calls this; the team is part of the cache key.
+ */
+export async function readPatterns(ids: string[], teamId: string): Promise<Pick<Pattern, 'id' | 'blocks'>[]> {
   'use cache'
   cacheLife({ stale: 300, revalidate: 900, expire: 86400 })
 
-  if (!Array.isArray(ids) || ids.length > MAX_PATTERN_IDS) return []
+  if (!Array.isArray(ids) || ids.length > MAX_PATTERN_IDS || typeof teamId !== 'string' || !IDENTIFIER.test(teamId)) return []
   const valid = ids.filter(id => typeof id === 'string' && IDENTIFIER.test(id))
   if (valid.length === 0) return []
   cacheTag('patterns')
 
-  return (await PatternsResolverService.getByIds(valid)).map(({ id, blocks }) => ({ id, blocks }))
+  return (await PatternsResolverService.getByIds(valid, teamId)).map(({ id, blocks }) => ({ id, blocks }))
 }
 
 const cachedSource: PublicItemSource = {
@@ -82,7 +86,7 @@ const cachedSource: PublicItemSource = {
       return null
     }
   },
-  resolveBlocks: (blocks: (BlockInstance | PatternReference)[]) => getResolvedBlocks(blocks, readPatterns),
+  resolveBlocks: (blocks: (BlockInstance | PatternReference)[], teamId: string | undefined) => getResolvedBlocks(blocks, teamId, readPatterns),
 }
 
 const cachedRoutes = bindPublicItemRoutes(cachedSource)

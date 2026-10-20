@@ -432,17 +432,19 @@ export class PatternUsageService {
    *
    * @param patternIds - Array of pattern IDs to check
    * @param userId - User ID for RLS
-   * @returns Set of pattern IDs that exist
+   * @param teamId - Team the patterns must belong to (the team of the record that references them)
+   * @returns Set of pattern IDs that exist in that team
    */
   static async getExistingPatternIds(
     patternIds: string[],
-    userId: string
+    userId: string,
+    teamId: string
   ): Promise<Set<string>> {
     if (!patternIds.length) return new Set()
 
     const result = await queryWithRLS<{ id: string }>(
-      `SELECT id FROM patterns WHERE id = ANY($1::text[])`,
-      [patternIds],
+      `SELECT id FROM patterns WHERE id = ANY($1::text[]) AND "teamId" = $2`,
+      [patternIds, teamId],
       userId
     )
 

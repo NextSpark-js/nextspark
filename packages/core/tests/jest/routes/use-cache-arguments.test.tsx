@@ -137,20 +137,32 @@ describe('readPublishedItem', () => {
 describe('readPatterns', () => {
   it('reads the published patterns of valid ids, tagged for revalidation', async () => {
     getByIds.mockResolvedValue([{ id: 'abc-123' }])
-    await expect(readPatterns(['abc-123', '2f1c0a9e-aaaa-bbbb-cccc-000000000001'])).resolves.toEqual([{ id: 'abc-123' }])
+    await expect(readPatterns(['abc-123', '2f1c0a9e-aaaa-bbbb-cccc-000000000001'], 'team-1')).resolves.toEqual([{ id: 'abc-123' }])
     expect(cacheTag).toHaveBeenCalledWith('patterns')
   })
 
   it('returns only what a page renders of a pattern: its id and blocks', async () => {
     const blocks = [{ id: 'b1', blockSlug: 'hero', props: {} }]
     getByIds.mockResolvedValue([{ id: 'abc-123', userId: 'u1', teamId: 't1', title: 'T', slug: 's', status: 'published', description: 'd', blocks, createdAt: 'c', updatedAt: 'u' }])
-    const patterns = await readPatterns(['abc-123'])
+    const patterns = await readPatterns(['abc-123'], 'team-1')
     expect(patterns).toStrictEqual([{ id: 'abc-123', blocks }])
   })
 
   it('drops only the malformed ids, the others are still read', async () => {
-    await readPatterns(['good-1', "x') OR 1=1 --", 7 as never, 'good-2'])
-    expect(getByIds).toHaveBeenCalledWith(['good-1', 'good-2'])
+    await readPatterns(['good-1', "x') OR 1=1 --", 7 as never, 'good-2'], 'team-1')
+    expect(getByIds).toHaveBeenCalledWith(['good-1', 'good-2'], 'team-1')
+  })
+
+  it('hands the team to the resolver, so a pattern of another team is not returned whoever calls', async () => {
+    getByIds.mockResolvedValue([])
+    await expect(readPatterns(['abc-123'], 'team-A')).resolves.toEqual([])
+    expect(getByIds).toHaveBeenCalledWith(['abc-123'], 'team-A')
+  })
+
+  it.each([[undefined], [null], [''], ["t') OR 1=1 --"], [{ id: 'team-A' }], [['team-A']], [7]])('answers [] without a query for the team %j', async team => {
+    await expect(readPatterns(['abc-123'], team as never)).resolves.toEqual([])
+    expect(getByIds).not.toHaveBeenCalled()
+    expect(cacheTag).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -161,7 +173,7 @@ describe('readPatterns', () => {
     ['an object', { length: 1, 0: 'a' }],
     ['too many ids', Array.from({ length: 51 }, (_, i) => `id${i}`)],
   ])('answers [] without a query for %s', async (_label, ids) => {
-    await expect(readPatterns(ids as never)).resolves.toEqual([])
+    await expect(readPatterns(ids as never, 'team-1')).resolves.toEqual([])
     expect(getByIds).not.toHaveBeenCalled()
     expect(cacheTag).not.toHaveBeenCalled()
   })

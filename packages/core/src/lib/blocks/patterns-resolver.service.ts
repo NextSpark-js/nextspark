@@ -41,20 +41,23 @@ export class PatternsResolverService {
    * Get multiple patterns by IDs (batch fetch)
    *
    * Used for resolving pattern references in public pages.
-   * Only fetches PUBLISHED patterns (drafts are not shown publicly).
+   * Only fetches PUBLISHED patterns (drafts are not shown publicly), and only those of the team of the page that
+   * references them: a pattern owned by another team is skipped, so the page renders without it.
    *
    * @param ids - Array of pattern IDs
-   * @returns Array of published patterns
+   * @param teamId - Team of the page being rendered (a missing team resolves nothing)
+   * @returns Array of published patterns of that team
    *
    * @example
    * const patternRefs = [{ ref: 'uuid-1' }, { ref: 'uuid-2' }]
    * const patterns = await PatternsResolverService.getByIds(
-   *   patternRefs.map(p => p.ref)
+   *   patternRefs.map(p => p.ref),
+   *   page.teamId
    * )
    */
-  static async getByIds(ids: string[]): Promise<Pattern[]> {
+  static async getByIds(ids: string[], teamId: string): Promise<Pattern[]> {
     try {
-      if (!Array.isArray(ids) || ids.length === 0) {
+      if (!Array.isArray(ids) || ids.length === 0 || typeof teamId !== 'string' || !teamId) {
         return []
       }
 
@@ -84,8 +87,9 @@ export class PatternsResolverService {
         FROM "patterns"
         WHERE id IN (${placeholders})
           AND status = 'published'
+          AND "teamId" = $${validIds.length + 1}
         `,
-        validIds
+        [...validIds, teamId]
       )
 
       return result.rows.map((pattern) => ({

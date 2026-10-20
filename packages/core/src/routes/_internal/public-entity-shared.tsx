@@ -22,7 +22,7 @@ import type { Pattern } from '@nextsparkjs/core/types/pattern-reference'
  * Base fields that all builder-enabled entities have (from migrations)
  * These are the minimum fields needed for public page rendering
  */
-const BASE_PUBLIC_FIELDS = ['id', 'slug', 'title', 'status', 'blocks', 'locale', 'createdAt', 'userId']
+const BASE_PUBLIC_FIELDS = ['id', 'slug', 'title', 'status', 'blocks', 'locale', 'createdAt', 'userId', 'teamId']
 
 /**
  * Optional SEO fields that may exist on builder entities
@@ -59,6 +59,8 @@ export interface PublishedItem {
   locale?: string
   createdAt?: string
   userId?: string
+  /** The team of the page: the patterns it references are resolved within it. */
+  teamId?: string
 }
 
 /**
@@ -96,13 +98,15 @@ export function buildPublicSelectClause(entity: EntityConfig): string {
  * This ensures public pages show the actual pattern content.
  *
  * @param blocks - Blocks array which may contain pattern references
+ * @param teamId - Team of the page: only patterns of that team are expanded, a reference to any other is skipped
  * @param getPatterns - where the referenced patterns are read from (the database; the Cache Components
  *   host passes a cached read)
  * @returns Resolved blocks array with patterns expanded
  */
 export async function getResolvedBlocks(
   blocks: (BlockInstance | PatternReference)[],
-  getPatterns: (ids: string[]) => Promise<Pick<Pattern, 'id' | 'blocks'>[]> = ids => PatternsResolverService.getByIds(ids)
+  teamId: string | undefined,
+  getPatterns: (ids: string[], teamId: string) => Promise<Pick<Pattern, 'id' | 'blocks'>[]> = (ids, team) => PatternsResolverService.getByIds(ids, team)
 ): Promise<BlockInstance[]> {
   // Extract pattern IDs from blocks array
   const patternIds = extractPatternIds(blocks)
@@ -114,7 +118,7 @@ export async function getResolvedBlocks(
 
   try {
     // Batch fetch all referenced patterns (only published ones)
-    const patterns = await getPatterns(patternIds)
+    const patterns = teamId ? await getPatterns(patternIds, teamId) : []
 
     // Build pattern cache (Map for O(1) lookup)
     const patternCache = new Map(patterns.map((p) => [p.id, p]))

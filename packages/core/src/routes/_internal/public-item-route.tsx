@@ -46,7 +46,7 @@ export interface PublicItemSource {
   /** The published item of `slug`, or null. */
   fetchItem(entity: EntityConfig, slug: string): Promise<PublishedItem | null>
   /** The item's blocks with pattern references expanded (public pages show the pattern's content). */
-  resolveBlocks(blocks: (BlockInstance | PatternReference)[]): Promise<BlockInstance[]>
+  resolveBlocks(blocks: (BlockInstance | PatternReference)[], teamId: string | undefined): Promise<BlockInstance[]>
 }
 
 const databaseSource: PublicItemSource = { fetchItem: fetchPublishedItem, resolveBlocks: getResolvedBlocks }
@@ -57,7 +57,7 @@ async function renderDefaultPublicItem(source: PublicItemSource, entity: EntityC
   if (!item) return null
 
   // Resolve pattern references before rendering: this expands pattern blocks inline for public display
-  const resolvedBlocks = await source.resolveBlocks(item.blocks as (BlockInstance | PatternReference)[])
+  const resolvedBlocks = await source.resolveBlocks(item.blocks as (BlockInstance | PatternReference)[], item.teamId)
 
   return (
     <div className="min-h-screen bg-background" data-cy="public-entity-page" data-entity={entity.slug} data-slug={slug}>
