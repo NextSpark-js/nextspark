@@ -376,6 +376,39 @@ describe('LoginForm — theme overrides the preset', () => {
     expect(byCy('auth.login.useOtp')).not.toBeInTheDocument()
   })
 
+  test('password sign-in stays busy after a success, and releases on a failure or an empty result (#347)', async () => {
+    setPreset(['email-password', 'google'])
+    mockSignIn.mockResolvedValueOnce({ user: { id: 'u1' } })
+    render(<LoginForm />)
+    fireEvent.click(byCy('auth.login.showEmail')!)
+    fireEvent.change(byCy('auth.login.emailInput')!, { target: { value: 'ada@example.com' } })
+    fireEvent.change(byCy('auth.login.passwordInput')!, { target: { value: 'Secret123!' } })
+
+    fireEvent.click(byCy('auth.login.submit')!)
+    await waitFor(() => expect(mockSignIn).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(byCy('auth.login.submit')).toBeDisabled()
+    fireEvent.click(byCy('auth.login.submit')!)
+    expect(mockSignIn).toHaveBeenCalledTimes(1)
+  })
+
+  test('password sign-in releases the form when it fails or returns no session (#347)', async () => {
+    setPreset(['email-password', 'google'])
+    mockSignIn.mockRejectedValueOnce(new Error('Invalid credentials')).mockResolvedValueOnce(null)
+    render(<LoginForm />)
+    fireEvent.click(byCy('auth.login.showEmail')!)
+    fireEvent.change(byCy('auth.login.emailInput')!, { target: { value: 'ada@example.com' } })
+    fireEvent.change(byCy('auth.login.passwordInput')!, { target: { value: 'Secret123!' } })
+
+    fireEvent.click(byCy('auth.login.submit')!)
+    await waitFor(() => expect(byCy('auth.login.submit')).not.toBeDisabled())
+    fireEvent.click(byCy('auth.login.submit')!)
+    await waitFor(() => expect(mockSignIn).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(byCy('auth.login.submit')).not.toBeDisabled())
+  })
+
   test('both methods: the first configured email method opens first and the user can switch', () => {
     setPreset(['email-password', 'email-otp', 'google'])
     render(<LoginForm />)

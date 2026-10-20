@@ -274,6 +274,15 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
   const fromInvite = searchParams.get('fromInvite') === 'true'
   const callbackUrl = safeCallbackPath(searchParams.get('callbackUrl'))
 
+  // With Cache Components a /login the user left stays mounted (hidden) and its effects re-run when it is shown
+  // again, so Back after a sign-in gets a fresh form instead of one left busy by the last success.
+  useEffect(() => {
+    setLoadingProvider(null)
+    isProcessingRef.current = false
+    setOtpStep('email')
+    setOtpCode('')
+  }, [])
+
   // Auto-show email form when coming from invitation
   useEffect(() => {
     if (fromInvite && inviteEmail) {
@@ -374,12 +383,14 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
     setStatusMessage(t('login.messages.otpVerifying'))
 
     try {
-      await signInWithOtp({
+      const result = await signInWithOtp({
         email: otpEmail,
         otp: parsed.data,
         redirectTo: callbackUrl || undefined,
       })
       setStatusMessage(t('login.messages.signInSuccess'))
+      // No session came back, so nothing navigates: release the form instead of leaving it busy
+      if (!result) setLoadingProvider(null)
     } catch (err) {
       const error = err instanceof Error ? err : new Error(t('login.messages.otpVerifyFailed'))
       const errorMessage = getErrorMessageFromCode(error, t, 'otp')
@@ -412,11 +423,12 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
     setStatusMessage(t('login.messages.signingIn'))
 
     try {
-      await signIn({
+      const result = await signIn({
         ...data,
         redirectTo: callbackUrl || undefined,
       })
       setStatusMessage(t('login.messages.signInSuccess'))
+      if (!result) setLoadingProvider(null)
     } catch (err) {
       const error = err instanceof Error ? err : new Error(t('login.messages.signInFailed'))
       const errorMessage = getErrorMessageFromCode(error, t, 'email')
