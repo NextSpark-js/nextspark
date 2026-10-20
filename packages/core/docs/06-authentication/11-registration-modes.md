@@ -65,7 +65,7 @@ auth: {
 
 ### `invitation-only`
 
-Users can only register via an invitation link. The first user bootstraps the platform without an invite: in `single-tenant` until the global team exists, in the other team modes until any team exists. If no team exists after the first user (for example with `signupIntent.skipTeamForNonOwnerIntents`, or when creating the first team fails), registration stays open until one does. After that, a new account is created only:
+Users can only register via an invitation link. The first user bootstraps the platform without an invite: in `single-tenant` until the global team exists, in the other team modes until any team exists. If no team exists after the first user (for example with `signupIntent.skipTeamForNonOwnerIntents`; a signup whose team creation fails is rolled back), registration stays open until one does. After that, a new account is created only:
 
 - through the invitation link (`/api/v1/auth/signup-with-invite`, with or without a password), or
 - by a first email-code or Google sign-in for a verified address with a pending, unexpired invitation: the code or the provider proves the address, and the account then accepts its invitation instead of getting a team of its own.

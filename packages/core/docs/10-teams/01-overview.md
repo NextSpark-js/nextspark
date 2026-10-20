@@ -50,6 +50,10 @@ The teams system supports **3 different operational modes** configured via `app.
 - Full team switching capability
 - Complete invitation system
 
+#### When the team cannot be created at signup
+
+The team is created right after the user, in the same signup request. If that fails (in any mode), the signup fails with `TEAM_CREATION_FAILED` and the new user is removed, so the person can sign up again; a user is never left without a team that nothing can fix. If the removal fails too, or the account predates this behavior, the first authenticated session request of a user with no team creates the personal team (`single-user` and `multi-tenant` only), under a per-user lock, so concurrent requests create exactly one. Not repaired: a signup that is team-less on purpose (`signupIntent.skipTeamForNonOwnerIntents`), a user with a pending invitation, a user who has ever belonged to or owned a team (including a deleted one), and `single-tenant` accounts (they join the global team).
+
 ### Configuration Example
 
 ```typescript
