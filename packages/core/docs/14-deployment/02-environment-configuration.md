@@ -55,7 +55,7 @@ The auth base URL (the host of the links and callbacks Better Auth builds) is re
 1. `BETTER_AUTH_URL`
 2. `NEXT_PUBLIC_APP_URL`
 3. `https://${VERCEL_URL}`, only when `VERCEL_ENV` is `preview`
-4. `http://localhost:5173`
+4. a localhost URL (the built-in fallback for local development)
 
 A Vercel preview deployment without the first two variables therefore uses its own deployment URL. Production
 never uses `VERCEL_URL`: set `BETTER_AUTH_URL` or `NEXT_PUBLIC_APP_URL` there.
