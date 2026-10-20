@@ -7,7 +7,7 @@
 
 import { GenericEntityService, validateEntityData } from '@/core/lib/services/generic-entity.service'
 import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@/core/lib/db'
-import { entityRegistry } from '@/core/lib/entities/registry'
+import { entityRegistry, getAllEntityConfigs } from '@/core/lib/entities/registry'
 
 // Mock database functions
 // A transaction's statements go through mutateWithRLS too; commit/rollback are recorded on mockTx.
@@ -27,6 +27,7 @@ jest.mock('@/core/lib/entities/registry', () => ({
   entityRegistry: {
     get: jest.fn(),
   },
+  getAllEntityConfigs: jest.fn(),
 }))
 
 // Mock hooks
@@ -934,3 +935,75 @@ describe('GenericEntityService publish permission', () => {
   })
 })
 
+
+// ===========================================
+// relation references (#343): server actions reach the service
+// ===========================================
+
+describe('GenericEntityService relation references', () => {
+  const taskConfig = {
+    ...mockEntityConfig,
+    fields: [
+      { name: 'title', type: 'text' },
+      { name: 'client', type: 'relation', relation: { entity: 'clients', titleField: 'name' } },
+      { name: 'tags', type: 'relation-multi', relation: { entity: 'clients', titleField: 'name' } },
+    ],
+  }
+  const A = '11111111-1111-4111-8111-111111111111'
+  const B = '22222222-2222-4222-8222-222222222222'
+  const mockAll = getAllEntityConfigs as jest.Mock
+  const visible = (...ids: string[]) => mockQueryWithRLS.mockResolvedValue(ids.map(id => ({ id })) as never)
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockEntityRegistry.get.mockReturnValue(taskConfig as any)
+    mockAll.mockReturnValue([{ slug: 'clients', tableName: 'clients' }])
+    mockQueryOneWithRLS.mockResolvedValue(mockEntityRow as never)
+    mockMutateWithRLS.mockResolvedValue({ rows: [mockEntityRow], rowCount: 1 } as any)
+  })
+
+  it('create writes when every id is visible, checking through the caller RLS', async () => {
+    visible(A)
+    await GenericEntityService.create('test_entities', 'user-456', 'team-789', { title: 'x', client: A })
+    expect(mockQueryWithRLS).toHaveBeenCalledWith('SELECT id FROM "clients" WHERE id = ANY($1)', [[A]], 'user-456')
+    expect(mockMutateWithRLS).toHaveBeenCalledTimes(1)
+  })
+
+  it('create refuses an id the caller cannot see, and writes nothing', async () => {
+    visible()
+    await expect(GenericEntityService.create('test_entities', 'user-456', 'team-789', { title: 'x', client: A }))
+      .rejects.toThrow("Validation failed: Field 'client' refers to a record that does not exist or is not available")
+    expect(mockMutateWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('update refuses a relation-multi with one invisible id, accepts array and object shapes', async () => {
+    visible(A)
+    await expect(GenericEntityService.update('test_entities', 'entity-123', 'user-456', { tags: [A, B] }, 'team-789'))
+      .rejects.toThrow("Field 'tags'")
+    expect(mockMutateWithRLS).not.toHaveBeenCalled()
+    visible(A, B)
+    await GenericEntityService.update('test_entities', 'entity-123', 'user-456', { tags: [{ id: A }, B] }, 'team-789')
+    expect(mockMutateWithRLS).toHaveBeenCalledTimes(1)
+  })
+
+  it('fails closed on items that are neither an id nor { id }', async () => {
+    await expect(GenericEntityService.update('test_entities', 'entity-123', 'user-456', { tags: [{ name: 'x' }] }, 'team-789'))
+      .rejects.toThrow("Field 'tags'")
+    expect(mockQueryWithRLS).not.toHaveBeenCalled()
+    expect(mockMutateWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('ignores absent fields and empty values', async () => {
+    await GenericEntityService.update('test_entities', 'entity-123', 'user-456', { title: 'only' }, 'team-789')
+    await GenericEntityService.update('test_entities', 'entity-123', 'user-456', { client: '' , tags: [] }, 'team-789')
+    expect(mockQueryWithRLS).not.toHaveBeenCalled()
+    expect(mockMutateWithRLS).toHaveBeenCalledTimes(2)
+  })
+
+  it('compares ids exactly: an uppercase uuid matches, a different text id does not', async () => {
+    visible(A)
+    await GenericEntityService.create('test_entities', 'user-456', 'team-789', { client: A.toUpperCase() })
+    visible('Abc')
+    await expect(GenericEntityService.create('test_entities', 'user-456', 'team-789', { client: 'abc' })).rejects.toThrow("Field 'client'")
+  })
+})

@@ -646,6 +646,15 @@ describe('Entity Server Actions', () => {
       }
     })
 
+    it('tells the client which relation field was refused (#343)', async () => {
+      const message = "Validation failed: Field 'client' refers to a record that does not exist or is not available"
+      mockGenericEntityService.create.mockRejectedValue(new Error(message))
+      mockGenericEntityService.update.mockRejectedValue(new Error(message))
+
+      expect(await createEntity('test_entities', { client: 'x' })).toEqual({ success: false, error: message })
+      expect(await updateEntity('test_entities', 'id-1', { client: 'x' })).toEqual({ success: false, error: message })
+    })
+
     it('logs errors to console', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
       mockGenericEntityService.create.mockRejectedValue(new Error('Test error'))

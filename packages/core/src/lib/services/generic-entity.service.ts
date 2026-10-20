@@ -36,6 +36,7 @@ import {
   afterEntityDelete,
 } from '../entities/entity-hooks'
 import type { EntityConfig, EntityField } from '../entities/types'
+import { findInvalidRelationField } from '../entities/relation-references'
 import { textValueIssue } from '../entities/portable/schema-generator'
 import { checkPermission, declaredPublishPermission, publishPermissionFor } from '../permissions/check'
 
@@ -546,6 +547,11 @@ export class GenericEntityService {
       throw new Error(`Validation failed: ${validation.errors.join(', ')}`)
     }
 
+    const invalidRelation = await findInvalidRelationField(entityConfig.fields, finalData, userId)
+    if (invalidRelation) {
+      throw new Error(`Validation failed: Field '${invalidRelation}' refers to a record that does not exist or is not available`)
+    }
+
     // Creating a record as published also needs `<slug>.publish` when the entity declares it. Without a status the
     // field's configured default counts; without one either, the stored row is checked after the INSERT.
     const statusField = entityConfig.fields.find((f: EntityField) => f.name === 'status')
@@ -672,6 +678,11 @@ export class GenericEntityService {
     const validation = validateEntityData(entityConfig, finalData, true)
     if (!validation.valid) {
       throw new Error(`Validation failed: ${validation.errors.join(', ')}`)
+    }
+
+    const invalidRelation = await findInvalidRelationField(entityConfig.fields, finalData, userId)
+    if (invalidRelation) {
+      throw new Error(`Validation failed: Field '${invalidRelation}' refers to a record that does not exist or is not available`)
     }
 
     // Moving a record into or out of published also needs `<slug>.publish` when the entity declares it.

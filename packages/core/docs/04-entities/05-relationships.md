@@ -545,6 +545,7 @@ A foreign key does not apply row-level security, and `relation-multi` is stored 
 - An id that does not exist and an id the caller cannot see get the same `400` (`INVALID_REFERENCE`).
 - Empty values (no relation) and fields the request does not carry are not checked.
 - A field whose `relation.entity` is not a registered entity is not checked.
+- Server actions (`createEntity` / `updateEntity`) run the same check inside `GenericEntityService.create` and `update`, before writing. A refused field fails the action with `Validation failed: Field '<name>' refers to a record that does not exist or is not available`, and nothing is written. Values may be a single id, an `{ id }` object or an array of either; anything else is refused.
 - A `23503` foreign key violation answers a generic message; the database detail only goes to the server log.
 
 ### In Code (Zod)
