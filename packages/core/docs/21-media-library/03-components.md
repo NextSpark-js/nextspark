@@ -440,7 +440,7 @@ The media components use TanStack Query hooks defined in `core/hooks/useMedia.ts
 | `useMediaItem(id)` | Query | Fetch single media item by ID |
 | `useDeleteMedia()` | Mutation | Soft delete a media item |
 | `useUpdateMedia()` | Mutation | Update media metadata |
-| `useMediaUpload()` | Mutation | Upload files via FormData |
+| `useMediaUpload()` | Mutation | Upload files: direct to the storage when the driver supports it, via FormData otherwise ([details](./02-api-reference.md#in-the-browser-usemediaupload)) |
 | `useMediaTags()` | Query | Fetch all available media tags |
 | `useMediaItemTags(mediaId)` | Query | Fetch tags for a specific media item |
 | `useAddMediaTag()` | Mutation | Add a tag to a media item |

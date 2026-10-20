@@ -371,6 +371,28 @@ The token is signed by the server and names the object, the user and team that p
 
 An upload that is never confirmed stays under `pending/`; a bucket lifecycle rule removes it ([Configuration](./05-configuration.md#direct-uploads-cors-and-unconfirmed-objects)).
 
+### In the browser: `useMediaUpload`
+
+The `useMediaUpload` hook (used by `MediaUploadZone` and the entity upload fields) picks the flow for you:
+
+1. The first upload asks `GET /api/v1/media/upload` which driver is active (`directUpload`, `supportedTypes`, `maxFileSize`, `maxImageSize`, `maxVideoSize`). The answer is cached in the `QueryClient`, so later uploads do not ask again.
+2. Before any byte is sent, each file is checked against those type and size limits; a violation rejects the upload with the server's message. This happens on both paths.
+3. If `directUpload` is `true` (the `s3` driver), each file goes presign, `PUT` straight to the storage, confirm. The `PUT` is an `XMLHttpRequest`, so the hook reports progress and can cancel it.
+4. Otherwise (`local`, `vercel-blob`), or when the capabilities cannot be read (for example the user lacks `media.read`), the files are posted as `multipart/form-data` to `POST /api/v1/media/upload`, as before. This path reports progress only at 0 and 1, because `fetch` has no upload progress.
+
+```tsx
+const upload = useMediaUpload()
+const controller = new AbortController()
+
+const { media } = await upload.mutateAsync({
+  files: [file],
+  onProgress: (fraction) => setProgress(fraction), // 0 to 1
+  signal: controller.signal,                       // controller.abort() cancels
+})
+```
+
+`mutateAsync(files)` with a plain `File[]` still works. A refused presign, a failed `PUT` or a rejected confirm rejects the mutation with the error message and creates no record (a `PUT` that never gets confirmed is removed by the bucket's lifecycle rule). With several files on the direct path, files confirmed before the failing one keep their records.
+
 ---
 
 ## Serve Local Files
