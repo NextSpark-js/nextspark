@@ -188,8 +188,8 @@ solo aplican si exponés la Data API / PostgREST de Supabase directamente (ver
 
 **Comportamiento:**
 - `true`: Endpoints disponibles con autenticación vía API key o sesión
-- `false`: Cierra solo el acceso externo. Las requests con API key a `/api/v1/<slug>` (todos los métodos y las rutas de child entities) y al servidor MCP responden `404 Entity not found`, igual que una entidad con `enabled: false`. Las requests con sesión (el dashboard) siguen funcionando
-- `enabled: false` apaga la entidad para ambos tipos de autenticación
+- `false`: Cierra solo el acceso externo. Las requests con API key a `/api/v1/<slug>` (todos los métodos y las rutas de child entities) responden `404 Entity not found`, igual que un slug que no existe. El servidor MCP no expone tools para esa entidad. Las requests con sesión (el dashboard) siguen funcionando
+- `enabled: false` apaga la entidad para ambos tipos de autenticación (las operaciones responden `405`)
 
 ```typescript
 {
