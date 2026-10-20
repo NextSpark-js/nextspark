@@ -7,6 +7,7 @@
 
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../../teams/active-team-cookie'
 import { getUserDefaultTeamId } from '../../teams/dashboard-team'
+import { repairMissingPersonalTeam } from '../../auth/personal-team-repair'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../../auth'
 import { validateApiKey } from '../auth'
@@ -305,8 +306,8 @@ async function trySessionAuth(request: NextRequest): Promise<DualAuthResult> {
       return { success: false, type: 'none', user: null }
     }
 
-    // Get user's default team
-    const defaultTeamId = await getUserDefaultTeamId(session.user.id)
+    // Get user's default team; a user that should have a personal team and has none gets it now (#324)
+    const defaultTeamId = (await getUserDefaultTeamId(session.user.id)) ?? (await repairMissingPersonalTeam(session.user.id))
 
     return {
       success: true,

@@ -464,8 +464,26 @@ export const auth = betterAuth({
                 console.warn(`[Teams] Unknown teams mode: ${teamsMode}`);
             }
           } catch (error) {
-            // Log error but don't fail user creation
+            // The sign-up fails with it (#324): a user without a team cannot create one (single-user and
+            // single-tenant never allow it), so the row is removed and the person signs up again. This hook runs
+            // after the user is committed, hence the compensating delete; it leaves any user that already owns or
+            // belongs to a team. If the delete fails too, the first authenticated request repairs the user
+            // (lib/auth/personal-team-repair).
             console.error(`[Teams] Failed to create team for user ${user.id}:`, error);
+            try {
+              await pool.query(
+                `DELETE FROM "users" WHERE id = $1
+                   AND NOT EXISTS (SELECT 1 FROM "team_members" WHERE "userId" = $1)
+                   AND NOT EXISTS (SELECT 1 FROM "teams" WHERE "ownerId" = $1)`,
+                [user.id]
+              );
+            } catch (cleanupError) {
+              console.error(`[Teams] Failed to remove user ${user.id} after the team failure:`, cleanupError);
+            }
+            throw new APIError('INTERNAL_SERVER_ERROR', {
+              code: 'TEAM_CREATION_FAILED',
+              message: 'Your account could not be set up. Please try again.',
+            });
           }
         }
       }
