@@ -14,6 +14,7 @@ import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factor
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
+import { resolveAppUrl } from '@nextsparkjs/core/lib/utils/base-url'
 
 export const POST = withRateLimitTier(async (request: NextRequest) => {
   // 1. Dual authentication; the API-key scope is declared at the entry
@@ -49,7 +50,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       return createApiError('No billing account found. Please upgrade to a paid plan first.', 400, undefined, 'VALIDATION_ERROR')
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
+    const appUrl = resolveAppUrl()
     const returnUrl = `${appUrl}/dashboard/settings/billing`
 
     const gateway = await getBillingGateway()

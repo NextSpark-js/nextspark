@@ -6,6 +6,7 @@
 
 import { getClientEntityApiPath, getClientEntityConfigs } from '../entities/client-entity-meta'
 import { withBasePath, withBasePathIfInApp } from '../base-path'
+import { resolveAppUrl } from '../utils/base-url'
 import { BUILDER_SOURCE_HEADER, TEAM_ID_HEADER } from './client-headers'
 
 export interface EntityData {
@@ -73,7 +74,7 @@ function getApiBaseUrl(): string {
     return window.location.origin
   } else {
     // Server-side - use environment variable or localhost fallback
-    return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
+    return resolveAppUrl()
   }
 }
 

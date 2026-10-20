@@ -118,6 +118,33 @@ describe('signup-with-invite password policy', () => {
     expect(await signUp.json()).toMatchObject({ email: 'invitee@example.com', password: 'CorrectHorse1!' })
   })
 
+  describe('the sign-up request URL (#315)', () => {
+    const keys = ['NEXT_PUBLIC_APP_URL', 'VERCEL_ENV', 'VERCEL_URL'] as const
+    const saved = Object.fromEntries(keys.map(k => [k, process.env[k]]))
+    afterEach(() => {
+      for (const k of keys) {
+        if (saved[k] === undefined) delete process.env[k]
+        else process.env[k] = saved[k]
+      }
+    })
+
+    test.each([
+      ['the variable set', { NEXT_PUBLIC_APP_URL: 'https://app.example.com', VERCEL_ENV: 'preview', VERCEL_URL: 'p.vercel.app' }, 'https://app.example.com'],
+      ['a preview without it', { VERCEL_ENV: 'preview', VERCEL_URL: 'p.vercel.app' }, 'https://p.vercel.app'],
+      ['production without it', { VERCEL_ENV: 'production', VERCEL_URL: 'p.vercel.app' }, 'http://localhost:5173'],
+    ])('with %s the request goes to %s', async (_label, env, origin) => {
+      mockAuthConfig.emailAndPassword = { enabled: true }
+      mockHandler.mockResolvedValue(Response.json({ user: { id: 'user-2' } }) as never)
+      for (const k of keys) delete process.env[k]
+      Object.assign(process.env, env)
+
+      const response = await POST(request({ password: 'CorrectHorse1!' }))
+
+      expect(response.status).toBe(201)
+      expect((mockHandler.mock.calls[0][0] as Request).url).toBe(`${origin}/api/auth/sign-up/email`)
+    })
+  })
+
   test('a team deleted after the invitation was read answers 404 TEAM_NOT_FOUND; the account stays created', async () => {
     mockAuthConfig.emailAndPassword = { enabled: false }
     mockTx.queryOne.mockResolvedValue(null as never)

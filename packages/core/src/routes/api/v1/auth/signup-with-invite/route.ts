@@ -17,6 +17,7 @@ import { withSignupContext } from '@nextsparkjs/core/lib/auth-context'
 import { isRegistrationRefusal } from '@nextsparkjs/core/lib/auth/registration-errors'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { resolveAppUrl } from '@nextsparkjs/core/lib/utils/base-url'
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -132,7 +133,7 @@ export const POST = withRateLimitTier(withApiLogging(
       const name = firstName && lastName ? `${firstName} ${lastName}` : firstName || ''
       if (passwordLogin) {
         // Better Auth's sign-up creates the user and its password account
-        const signUpRequest = new Request(`${process.env.NEXT_PUBLIC_APP_URL}${withBasePath('/api/auth/sign-up/email')}`, {
+        const signUpRequest = new Request(`${resolveAppUrl()}${withBasePath('/api/auth/sign-up/email')}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

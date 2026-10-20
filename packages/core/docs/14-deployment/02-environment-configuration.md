@@ -58,8 +58,15 @@ The auth base URL (the host of the links and callbacks Better Auth builds) is re
 4. `http://localhost:5173`
 
 A Vercel preview deployment without the first two variables therefore uses its own deployment URL. Production
-never uses `VERCEL_URL`: set `BETTER_AUTH_URL` or `NEXT_PUBLIC_APP_URL` there. Other parts of the app that read
-`NEXT_PUBLIC_APP_URL` directly are not affected by this order.
+never uses `VERCEL_URL`: set `BETTER_AUTH_URL` or `NEXT_PUBLIC_APP_URL` there.
+
+The links the app builds outside Better Auth (the invitation email, the billing return URLs, the invited sign-up
+call and the server-side entity API client) use the same order without its first step: `NEXT_PUBLIC_APP_URL`,
+the preview `VERCEL_URL`, then localhost. They ignore `BETTER_AUTH_URL`, which may carry a path. The CSP report,
+sitemap and robots routes and the client-side code still read `NEXT_PUBLIC_APP_URL` only.
+
+A Preview scope that sets `NEXT_PUBLIC_APP_URL` (a staging domain, for example) never reaches `VERCEL_URL`, by
+design: an explicit value always wins.
 
 ### Database
 

@@ -15,6 +15,7 @@ import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/se
 import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
+import { resolveAppUrl } from '@nextsparkjs/core/lib/utils/base-url'
 
 const checkoutSchema = z.object({
   planSlug: z.string().min(1, 'Plan slug is required'),
@@ -90,7 +91,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     }
 
     // No existing provider subscription — create a new checkout session
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
+    const appUrl = resolveAppUrl()
     const successUrl = `${appUrl}/dashboard/settings/billing?success=true`
     const cancelUrl = `${appUrl}/dashboard/settings/billing?canceled=true`
 

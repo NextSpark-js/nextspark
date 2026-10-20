@@ -18,6 +18,7 @@ import { EmailFactory } from '../email/factory'
 import { sendTeamInvitationEmail } from '../email/send'
 import { I18N_CONFIG, APP_NAME } from '../config'
 import { withBasePath } from '../base-path'
+import { resolveAppUrl } from '../utils/base-url'
 import type { Team, TeamInvitation, TeamRole } from '../teams/types'
 
 export interface CreateInvitationParams {
@@ -141,7 +142,7 @@ export class TeamInvitationService {
       return { success: false, status: 404, code: 'TEAM_NOT_FOUND', error: 'Team not found' }
     }
 
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173').replace(/\/$/, '')
+    const baseUrl = resolveAppUrl().replace(/\/$/, '')
     const acceptUrl = `${baseUrl}${withBasePath(`/accept-invite/${token}`)}`
 
     try {
