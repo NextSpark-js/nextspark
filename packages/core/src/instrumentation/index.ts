@@ -46,6 +46,9 @@ export async function register(): Promise<void> {
       console.error('[storage] startup storage check could not run; uploads still check it per request')
     }
 
+    // Production only, not awaited: one warning when DATABASE_URL's role skips RLS, never a delay or an error at start
+    void import('../lib/rls-runtime').then(({ logRlsBypassAtStartup }) => logRlsBypassAtStartup()).catch(() => {})
+
     console.log('[Instrumentation] Initializing scheduled actions system...')
 
     try {

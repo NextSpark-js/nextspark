@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A production server warns once at start when the role in `DATABASE_URL` skips row-level security, and `nextspark doctor` reports it.** A role skips RLS when it is a superuser, has `BYPASSRLS`, or owns the tables with RLS (without `FORCE ROW LEVEL SECURITY`), which is the default until the `nextspark_app` cutover. The server only warns: it still starts, and the warning is not repeated or shown outside production. A database that cannot be reached, or whose catalogs the role cannot read, gives no warning. The doctor's "Row-level security" check shows `superuser`, `bypassrls` and how many RLS tables the role owns. See [RLS policies](./docs/10-backend/03-rls-policies.md#runtime-role--cutover) (#345).
+
 ## [0.1.0-beta.199] - 2026-10-18
 
 ### Upgrading from 0.1.0-beta.198

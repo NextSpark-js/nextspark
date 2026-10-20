@@ -70,7 +70,9 @@ DATABASE_URL="postgresql://postgres.xxxxx:password@aws-0-us-east-1.pooler.supaba
 - URL-encode special characters in password
 - Get from: Supabase Dashboard → Settings → Database → Connection pooling
 - After the **RLS cutover** (beta.167), this connects as the non-owner role
-  `nextspark_app`. Before the cutover it stays the owner/admin connection.
+  `nextspark_app`. Before the cutover it stays the owner/admin connection, which skips RLS:
+  `nextspark doctor` reports it, and a production server logs one warning at start. See
+  [Runtime role + cutover](../10-backend/03-rls-policies.md#runtime-role--cutover).
 
 ### DATABASE_SERVICE_URL (optional)
 

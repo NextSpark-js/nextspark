@@ -976,6 +976,34 @@ Authorization for them is enforced at the API/action layer, not by RLS.
 5. Verify: login works (Better Auth via service); a plain member's LIST/READ is
    team-scoped; cross-tenant access is denied.
 
+**Where the default comes from.** Migrations run as the owner, and `DATABASE_URL` is the
+only connection a fresh project has, so the application connects as the owner too. An
+owner, a superuser and a role with `BYPASSRLS` skip every policy, and
+`DATABASE_SERVICE_URL` falls back to `DATABASE_URL`, so before the cutover nothing
+changes, and nothing in the application filters by RLS either. Application checks that
+rely on it (for example, which related records a user can see) let everything through.
+
+**Checking which role you have.** `nextspark doctor` runs the "Row-level security"
+check against `DATABASE_URL`: it prints the role, `superuser`, `bypassrls` and how many
+tables with RLS the role owns, and warns when RLS is not applied. The same query runs
+once when a production server starts (not in development, not during `next build`) and
+logs one `[rls]` warning if the role skips RLS, nothing otherwise. The warning does not
+stop or delay the start, and it is silent when the database is unreachable or the role
+cannot read `pg_roles`. By hand:
+
+```sql
+SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user;
+SELECT count(*) FROM pg_class
+ WHERE relkind IN ('r','p') AND relrowsecurity
+   AND relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+   AND NOT relforcerowsecurity;  -- tables the role owns and RLS skips
+```
+
+RLS applies when `rolsuper` and `rolbypassrls` are false and the count is 0. After the
+cutover, the doctor passes and the start logs nothing. A later release may add a strict
+mode that refuses to start in production unless the bypass is accepted explicitly; today
+the check only reports.
+
 ### Fail-closed permission enforcement (`generic-handler.ts`)
 
 - LIST and READ now check the session entity permission (previously only

@@ -33,7 +33,7 @@ A default Neon project's owner role has `BYPASSRLS`, so on Neon RLS is not evalu
 3. Set `DATABASE_SERVICE_URL` to a role that bypasses RLS (a dedicated owner or `BYPASSRLS` role).
 4. Set `DATABASE_URL` to the `nextspark_app` login.
 5. Set `MIGRATE_DATABASE_URL` to the owner, so later migrations and seeds still run as the owner.
-6. Check that sign-in works, that a plain member lists only their team's rows, and that cross-team access is denied.
+6. Run `nextspark doctor`: its "Row-level security" check passes once `DATABASE_URL` is a role that is subject to RLS (before the switch it warns, and a production server logs one `[rls]` warning at start). Check that sign-in works, that a plain member lists only their team's rows, and that cross-team access is denied.
 
 Before 0.1.0-beta.198, creating a team and accepting an invitation as an existing user answered 500 on the `nextspark_app` connection. Both now write their rows on the service connection after the route's own checks, and migration `032_team_join_policies.sql` lets the creator read their new team and lets a user add only themself to a team: as the owner of a team they own that has no member yet, or with the role of a pending, unexpired invitation to their email. Run `pnpm db:migrate` before the cutover, and add both flows to the check in step 6.
 
