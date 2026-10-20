@@ -17,6 +17,12 @@ const mockTransactionClient = {
   rollback: mockTransactionRollback
 }
 
+// Params of the INSERT sent through the transaction client (recurring actions are inserted there)
+const txInsertParams = () => {
+  const call = mockTransactionQuery.mock.calls.find(c => String(c[0]).includes('INSERT')) as unknown[]
+  return call[1] as unknown[]
+}
+
 // Mock database functions
 jest.mock('@/core/lib/db', () => ({
   mutateWithRLS: jest.fn(),
@@ -138,7 +144,7 @@ describe('Scheduled Actions Scheduler', () => {
     test('should set recurringInterval when provided', async () => {
       await scheduleAction('webhook:send', { test: 'data' }, { recurringInterval: 'daily' })
 
-      const params = mockMutateWithRLS.mock.calls[0][1]
+      const params = txInsertParams()
       expect(params[6]).toBe('daily')
     })
 
@@ -190,7 +196,7 @@ describe('Scheduled Actions Scheduler', () => {
         recurrenceType: 'rolling'
       })
 
-      const params = mockMutateWithRLS.mock.calls[0][1]
+      const params = txInsertParams()
       expect(params[9]).toBe('rolling')
     })
 
@@ -224,7 +230,7 @@ describe('Scheduled Actions Scheduler', () => {
         recurrenceType: 'fixed'
       })
 
-      const params = mockMutateWithRLS.mock.calls[0][1]
+      const params = txInsertParams()
       expect(params[1]).toBe('billing:check')        // actionType
       expect(params[2]).toBe('pending')                // status
       expect(params[3]).toEqual(payload)               // payload
@@ -343,12 +349,14 @@ describe('Scheduled Actions Scheduler', () => {
       )
     })
 
-    test('should skip deduplication for recurring actions', async () => {
+    test('should skip the entityId window for recurring actions', async () => {
       const payload = { entityId: 'task-123', entityType: 'task', data: {} }
       await scheduleAction('webhook:send', payload, { recurringInterval: 'daily' })
 
-      // Should not use transaction client for recurring actions
-      expect(mockGetTransactionClient).not.toHaveBeenCalled()
+      // The window check (payload->>'entityId') is not used; the recurring key is
+      const sqls = mockTransactionQuery.mock.calls.map(c => String(c[0])).join('\n')
+      expect(sqls).not.toContain("payload->>'entityId'")
+      expect(sqls).toContain('"recurringInterval" IS NOT NULL')
     })
   })
 
@@ -357,13 +365,14 @@ describe('Scheduled Actions Scheduler', () => {
       const actionId = await scheduleRecurringAction('billing:check', {}, 'daily')
 
       expect(actionId).toBeDefined()
-      expect(mockMutateWithRLS).toHaveBeenCalledTimes(1)
+      expect(mockMutateWithRLS).not.toHaveBeenCalled()
+      expect(mockTransactionCommit).toHaveBeenCalledTimes(1)
     })
 
     test('should set recurringInterval from interval parameter', async () => {
       await scheduleRecurringAction('billing:check', { test: 'data' }, 'hourly')
 
-      const params = mockMutateWithRLS.mock.calls[0][1]
+      const params = txInsertParams()
       expect(params[6]).toBe('hourly')
     })
 
@@ -372,10 +381,11 @@ describe('Scheduled Actions Scheduler', () => {
 
       for (const interval of intervals) {
         jest.clearAllMocks()
-        mockMutateWithRLS.mockResolvedValue({ rowCount: 1, rows: [] })
+        mockTransactionQuery.mockResolvedValue([])
+        mockGetTransactionClient.mockResolvedValue(mockTransactionClient as any)
         await scheduleRecurringAction('test:action', {}, interval)
 
-        const params = mockMutateWithRLS.mock.calls[0][1]
+        const params = txInsertParams()
         expect(params[6]).toBe(interval)
       }
     })
@@ -385,7 +395,7 @@ describe('Scheduled Actions Scheduler', () => {
         recurrenceType: 'rolling'
       })
 
-      const params = mockMutateWithRLS.mock.calls[0][1]
+      const params = txInsertParams()
       expect(params[6]).toBe('every-30-minutes')
       expect(params[9]).toBe('rolling')
     })
@@ -393,7 +403,7 @@ describe('Scheduled Actions Scheduler', () => {
     test('should accept teamId option', async () => {
       await scheduleRecurringAction('billing:check', {}, 'daily', { teamId: 'team-789' })
 
-      const params = mockMutateWithRLS.mock.calls[0][1]
+      const params = txInsertParams()
       expect(params[4]).toBe('team-789')
     })
 
@@ -401,7 +411,7 @@ describe('Scheduled Actions Scheduler', () => {
       const firstRun = new Date('2025-01-01T00:00:00Z')
       await scheduleRecurringAction('billing:check', {}, 'daily', { scheduledAt: firstRun })
 
-      const params = mockMutateWithRLS.mock.calls[0][1]
+      const params = txInsertParams()
       expect(params[5]).toBe(firstRun.toISOString())
     })
 
@@ -410,8 +420,58 @@ describe('Scheduled Actions Scheduler', () => {
         lockGroup: 'billing:global'
       })
 
-      const params = mockMutateWithRLS.mock.calls[0][1]
+      const params = txInsertParams()
       expect(params[7]).toBe('billing:global')
+    })
+  })
+
+  describe('scheduleRecurringAction idempotence', () => {
+    const existingRow = (sqlIncludes: string, rows: unknown[]) =>
+      mockTransactionQuery.mockImplementation(async (sql: string) => (String(sql).includes(sqlIncludes) ? rows : []))
+
+    test('does not insert when a pending or running row with the same key exists', async () => {
+      existingRow('SELECT id', [{ id: 'existing-1' }])
+
+      const id = await scheduleRecurringAction('sweep', {}, 'daily', { teamId: 'team-1' })
+
+      expect(id).toBe('existing-1')
+      expect(mockTransactionQuery.mock.calls.some(c => String(c[0]).includes('INSERT'))).toBe(false)
+      expect(mockTransactionCommit).toHaveBeenCalledTimes(1)
+    })
+
+    test('keys on actionType, teamId and payload, only against pending or running recurring rows', async () => {
+      await scheduleRecurringAction('sweep', { a: 1 }, 'daily', { teamId: 'team-1' })
+
+      const [lockSql, lockParams] = mockTransactionQuery.mock.calls[0] as [string, unknown[]]
+      expect(lockSql).toContain('pg_advisory_xact_lock')
+      expect(lockParams).toEqual(['recurring:sweep:team-1'])
+      const [selectSql, selectParams] = mockTransactionQuery.mock.calls[1] as [string, unknown[]]
+      expect(selectSql).toContain("status IN ('pending', 'running')")
+      expect(selectSql).toContain('payload IS NOT DISTINCT FROM $3::jsonb')
+      expect(selectSql).toContain('"teamId" IS NOT DISTINCT FROM $2')
+      expect(selectParams).toEqual(['sweep', 'team-1', '{"a":1}'])
+    })
+
+    test('a different team uses a different lock key', async () => {
+      await scheduleRecurringAction('sweep', {}, 'daily')
+      expect((mockTransactionQuery.mock.calls[0] as unknown[])[1]).toEqual(['recurring:sweep:'])
+    })
+
+    test('rolls back when the insert fails', async () => {
+      mockTransactionQuery.mockImplementation(async (sql: string) => {
+        if (String(sql).includes('INSERT')) throw new Error('boom')
+        return []
+      })
+
+      await expect(scheduleRecurringAction('sweep', {}, 'daily')).rejects.toThrow('boom')
+      expect(mockTransactionRollback).toHaveBeenCalledTimes(1)
+    })
+
+    test('a non-recurring action never takes the recurring path', async () => {
+      await scheduleAction('sweep', {})
+
+      expect(mockGetTransactionClient).not.toHaveBeenCalled()
+      expect(mockMutateWithRLS).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -505,7 +565,7 @@ describe('Scheduled Actions Scheduler', () => {
 
     test('should propagate database errors from scheduleRecurringAction', async () => {
       const dbError = new Error('Database connection failed')
-      mockMutateWithRLS.mockRejectedValue(dbError)
+      mockTransactionQuery.mockRejectedValue(dbError)
 
       await expect(scheduleRecurringAction('test:action', {}, 'daily')).rejects.toThrow(
         'Database connection failed'
