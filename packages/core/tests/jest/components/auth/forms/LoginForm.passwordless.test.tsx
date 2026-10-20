@@ -178,6 +178,44 @@ describe('LoginForm — passwordless preset (default: email OTP + Google)', () =
     )
   })
 
+  async function reachCodeStep() {
+    fireEvent.click(byCy('auth.login.showEmail')!)
+    fireEvent.change(byCy('auth.login.otpEmailInput')!, { target: { value: 'ada@example.com' } })
+    fireEvent.click(byCy('auth.login.otpSend')!)
+    await waitFor(() => expect(byCy('auth.login.otpCodeInput')).toBeInTheDocument())
+    fireEvent.change(byCy('auth.login.otpCodeInput')!, { target: { value: '123456' } })
+  }
+
+  test('stays busy after a successful verify, so the used code is never sent twice (#347)', async () => {
+    render(<LoginForm />)
+    await reachCodeStep()
+
+    fireEvent.click(byCy('auth.login.otpSubmit')!)
+    await waitFor(() => expect(mockSignInWithOtp).toHaveBeenCalledTimes(1))
+    // Let the handler settle: the navigation has not unmounted the form yet
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(byCy('auth.login.otpSubmit')).toBeDisabled()
+    fireEvent.click(byCy('auth.login.otpSubmit')!)
+    fireEvent.submit(byCy('auth.login.otpForm')!)
+    expect(mockSignInWithOtp).toHaveBeenCalledTimes(1)
+  })
+
+  test('releases the form when the verify fails so the user can retry (#347)', async () => {
+    mockSignInWithOtp.mockRejectedValueOnce(new Error('Invalid or expired code'))
+    render(<LoginForm />)
+    await reachCodeStep()
+
+    fireEvent.click(byCy('auth.login.otpSubmit')!)
+    await waitFor(() => expect(byCy('auth.login.otpSubmit')).not.toBeDisabled())
+    expect(byCy('auth.login.otpCodeInput')).not.toBeDisabled()
+
+    fireEvent.click(byCy('auth.login.otpSubmit')!)
+    await waitFor(() => expect(mockSignInWithOtp).toHaveBeenCalledTimes(2))
+  })
+
   test('the notice counts the code down and reports it expired (#186)', async () => {
     jest.useFakeTimers()
     try {

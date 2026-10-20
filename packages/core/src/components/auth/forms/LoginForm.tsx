@@ -385,9 +385,9 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
       const errorMessage = getErrorMessageFromCode(error, t, 'otp')
       setError(errorMessage)
       setStatusMessage(t('login.messages.signInError', { error: errorMessage }))
-    } finally {
       setLoadingProvider(null)
     }
+    // On success the form stays busy until the navigation unmounts it: the single-use code cannot be sent twice.
   }, [loadingProvider, otpCode, otpCodeSchema, otpEmail, signInWithOtp, callbackUrl, t])
 
   const {
@@ -422,9 +422,9 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
       const errorMessage = getErrorMessageFromCode(error, t, 'email')
       setError(errorMessage)
       setStatusMessage(t('login.messages.signInError', { error: errorMessage }))
-    } finally {
       setLoadingProvider(null)
     }
+    // On success the form stays busy until the navigation unmounts it.
   }, [signIn, t, loadingProvider, callbackUrl])
 
   const handleGoogleSignIn = useCallback(async () => {
