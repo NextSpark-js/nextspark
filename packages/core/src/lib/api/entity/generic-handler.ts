@@ -481,7 +481,7 @@ function mapConstraintViolation(
         return createApiError(
           'Cannot delete: this record is referenced by other records',
           409,
-          { constraint },
+          undefined,
           'FOREIGN_KEY_VIOLATION'
         )
       }
@@ -728,26 +728,32 @@ function bindFieldValue(field: Pick<EntityField, 'type'>, value: unknown): { cas
 /**
  * The ids a `relation` / `relation-multi` value holds, as the INSERT or UPDATE would store them.
  */
-function relationIds(field: Pick<EntityField, 'type'>, value: unknown): string[] {
+function relationIds(field: Pick<EntityField, 'type'>, value: unknown): string[] | null {
   const bound = bindFieldValue(field, value).value
-  let raw: unknown[] = []
+  let raw: unknown[]
   if (field.type === 'relation-multi') {
     try {
       const parsed = typeof bound === 'string' ? JSON.parse(bound) : bound
-      raw = Array.isArray(parsed) ? parsed : []
+      if (!Array.isArray(parsed)) return null
+      raw = parsed
     } catch {
-      raw = []
+      return null
     }
   } else {
-    raw = [bound]
+    raw = bound === null ? [] : [bound]
   }
-  return [...new Set(
-    raw
-      .map(item => (item && typeof item === 'object' && 'id' in item ? (item as { id: unknown }).id : item))
-      .filter((id): id is string | number => (typeof id === 'string' && id.trim() !== '') || typeof id === 'number')
-      .map(String)
-  )]
+  const ids: string[] = []
+  for (const item of raw) {
+    const id = item && typeof item === 'object' && 'id' in item ? (item as { id: unknown }).id : item
+    // Anything that is not a string, a number or `{ id }` cannot be checked, so it is not written
+    if (typeof id !== 'string' && typeof id !== 'number') return null
+    if (typeof id === 'string' && id.trim() === '') continue
+    ids.push(String(id))
+  }
+  return [...new Set(ids)]
 }
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * A relation id must name a record the caller can see (#343). A foreign key does not apply row-level security, and
@@ -764,7 +770,12 @@ async function rejectInvisibleRelations(
 ): Promise<NextResponse | null> {
   for (const field of fields) {
     if ((field.type !== 'relation' && field.type !== 'relation-multi') || !(field.name in data) || field.api?.readOnly) continue
+    const invalid = () => addCorsHeaders(
+      createApiError(`Field '${field.name}' refers to a record that does not exist or is not available`, 400, undefined, 'INVALID_REFERENCE'),
+      request
+    )
     const ids = relationIds(field, data[field.name])
+    if (!ids) return invalid()
     const target = field.relation?.entity && getAllEntityConfigs().find(entity => entity.slug === field.relation?.entity)
     if (ids.length === 0 || !target) continue
     const visible = await noRowOnMalformedId(queryWithRLS<{ id: string | number }>(
@@ -772,13 +783,9 @@ async function rejectInvisibleRelations(
       [ids],
       userId
     ))
-    const seen = new Set(visible.map(row => String(row.id).toLowerCase()))
-    if (ids.some(id => !seen.has(id.toLowerCase()))) {
-      return addCorsHeaders(
-        createApiError(`Field '${field.name}' refers to a record that does not exist or is not available`, 400, undefined, 'INVALID_REFERENCE'),
-        request
-      )
-    }
+    // Exact match; only a uuid, which the database returns lowercase whatever the input case, is compared lowercased
+    const seen = new Set(visible.map(row => String(row.id)))
+    if (ids.some(id => !seen.has(UUID_PATTERN.test(id) ? id.toLowerCase() : id))) return invalid()
   }
   return null
 }

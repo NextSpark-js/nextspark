@@ -862,6 +862,7 @@ instead of a generic `500`:
 | `23514` CHECK constraint violation | 422 | `CHECK_CONSTRAINT_VIOLATION` — `details.constraint` names the constraint |
 | `23503` foreign key violation on create/update (dangling reference) | 422 | `FOREIGN_KEY_VIOLATION` |
 | `23503` foreign key violation on delete (row still referenced) | 409 | `FOREIGN_KEY_VIOLATION` |
+| `relation` / `relation-multi` id that does not exist or is not visible to the caller (same answer for both) | 400 | `INVALID_REFERENCE` |
 
 ---
 

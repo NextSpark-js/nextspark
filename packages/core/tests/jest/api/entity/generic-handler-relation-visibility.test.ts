@@ -5,7 +5,7 @@
  */
 
 import { harness, makeRequest, SESSION_AUTH, PETS_ENTITY } from './__helpers__/generic-handler-harness'
-import { handleGenericCreate, handleGenericUpdate, handleChildCreate } from '@/core/lib/api/entity/generic-handler'
+import { handleGenericCreate, handleGenericUpdate, handleChildCreate, handleGenericDelete } from '@/core/lib/api/entity/generic-handler'
 import type { EntityConfig } from '@/core/lib/entities/types'
 
 const mockGetAllEntityConfigs = jest.fn()
@@ -36,7 +36,8 @@ const lookups = () => mocks.queryWithRLS.mock.calls.filter(([sql]: [string]) => 
 /** The ids the caller sees in the target table; everything else is hidden. */
 function visibleClients(...ids: string[]) {
   mocks.queryWithRLS.mockImplementation(async (sql: string, params: unknown[]) => {
-    if (sql.startsWith('SELECT id FROM "clients"')) return (params[0] as string[]).filter(id => ids.includes(id)).map(id => ({ id }))
+    if (sql.startsWith('SELECT id FROM "clients"')) // like a uuid column: the input matches whatever its case, the row comes back as stored
+      return ids.filter(stored => (params[0] as string[]).some(id => id === stored || (/^[0-9a-f-]{36}$/i.test(id) && id.toLowerCase() === stored))).map(id => ({ id }))
     return [{ id: 'pet-1' }]
   })
 }
@@ -100,6 +101,26 @@ describe('relation ids on create', () => {
   })
 })
 
+describe('relation id edge cases', () => {
+  it('fails closed on a relation-multi item that is not a string, a number or { id }', async () => {
+    for (const friendIds of [[{ name: 'x' }], [true], [['c-mine']], [null]]) {
+      const res = await create({ name: 'Rex', friendIds })
+      expect(res.status).toBe(400)
+      expect(res.body.code).toBe('INVALID_REFERENCE')
+    }
+    expect(writes()).toHaveLength(0)
+    expect(lookups()).toHaveLength(0)
+  })
+
+  it('accepts { id } items and compares ids exactly, except for a uuid in other case', async () => {
+    const uuid = '0b7e6c1a-1111-4222-8333-444455556666'
+    visibleClients('c-mine', uuid)
+    expect((await create({ name: 'Rex', friendIds: [{ id: 'c-mine' }] })).status).toBe(201)
+    expect((await create({ name: 'Rex', clientId: 'C-MINE' })).status).toBe(400)
+    expect((await create({ name: 'Rex', clientId: uuid.toUpperCase() })).status).toBe(201)
+  })
+})
+
 describe('relation ids on update', () => {
   it('rejects an invisible id and keeps working for a visible one or a cleared relation', async () => {
     expect((await update({ clientId: 'c-other' })).status).toBe(400)
@@ -153,6 +174,21 @@ describe('foreign key violations do not echo the database detail', () => {
     expect(JSON.stringify(res.body)).not.toContain('secret_table')
     expect(res.body.code).toBe('FOREIGN_KEY_VIOLATION')
     expect(spy).toHaveBeenCalledWith(expect.stringContaining('foreign key violation'), expect.objectContaining({ detail: expect.stringContaining('secret_table') }))
+    spy.mockRestore()
+  })
+
+  it('does not name the constraint on the 409 of a delete', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    mocks.mutateWithRLS.mockRejectedValue(Object.assign(new Error('fk'), {
+      code: '23503', constraint: 'cards_petId_fkey', detail: 'referenced from table "cards"',
+    }))
+    mocks.queryWithRLS.mockResolvedValue([{ id: 'pet-1' }])
+    const res = await handleGenericDelete(
+      makeRequest({ method: 'DELETE', url: 'http://localhost/api/v1/pets/pet-1', headers: HEADERS }),
+      { params: Promise.resolve({ entity: 'pets', id: 'pet-1' }) }
+    ) as unknown as Res
+    expect(res.status).toBe(409)
+    expect(JSON.stringify(res.body)).not.toContain('cards')
     spy.mockRestore()
   })
 })
