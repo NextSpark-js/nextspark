@@ -36,7 +36,7 @@ import {
   afterEntityDelete,
 } from '../entities/entity-hooks'
 import type { EntityConfig, EntityField } from '../entities/types'
-import { findInvalidRelationField } from '../entities/relation-references'
+import { bindFieldValue, findInvalidRelationField } from '../entities/relation-references'
 import { textValueIssue } from '../entities/portable/schema-generator'
 import { checkPermission, declaredPublishPermission, publishPermissionFor } from '../permissions/check'
 
@@ -109,6 +109,12 @@ function getTableName(entityConfig: EntityConfig): string {
 /**
  * Get field names from EntityConfig.fields (with validation)
  */
+/** A relation is stored the way the check read it (single id, or JSONB for relation-multi); other fields go as given. */
+function bindForWrite(entityConfig: EntityConfig, name: string, value: unknown): { cast: string; value: unknown } {
+  const field = entityConfig.fields.find((f: EntityField) => f.name === name)
+  return field && (field.type === 'relation' || field.type === 'relation-multi') ? bindFieldValue(field, value) : { cast: '', value }
+}
+
 function getFieldNames(entityConfig: EntityConfig): string[] {
   if (!entityConfig.fields || !Array.isArray(entityConfig.fields)) {
     return []
@@ -547,7 +553,7 @@ export class GenericEntityService {
       throw new Error(`Validation failed: ${validation.errors.join(', ')}`)
     }
 
-    const invalidRelation = await findInvalidRelationField(entityConfig.fields, finalData, userId)
+    const invalidRelation = await findInvalidRelationField(entityConfig.fields, finalData, userId, { includeReadOnly: true })
     if (invalidRelation) {
       throw new Error(`Validation failed: Field '${invalidRelation}' refers to a record that does not exist or is not available`)
     }
@@ -574,9 +580,10 @@ export class GenericEntityService {
 
     for (const field of fieldNames) {
       if (field in finalData && finalData[field] !== undefined) {
+        const bound = bindForWrite(entityConfig, field, finalData[field])
         fields.push(field)
-        values.push(finalData[field])
-        placeholders.push(`$${paramIndex}`)
+        values.push(bound.value)
+        placeholders.push(`$${paramIndex}${bound.cast}`)
         paramIndex++
       }
     }
@@ -680,7 +687,7 @@ export class GenericEntityService {
       throw new Error(`Validation failed: ${validation.errors.join(', ')}`)
     }
 
-    const invalidRelation = await findInvalidRelationField(entityConfig.fields, finalData, userId)
+    const invalidRelation = await findInvalidRelationField(entityConfig.fields, finalData, userId, { includeReadOnly: true })
     if (invalidRelation) {
       throw new Error(`Validation failed: Field '${invalidRelation}' refers to a record that does not exist or is not available`)
     }
@@ -698,8 +705,9 @@ export class GenericEntityService {
 
     for (const field of fieldNames) {
       if (field in finalData) {
-        setClauses.push(`${quoteField(field)} = $${paramIndex}`)
-        values.push(finalData[field])
+        const bound = bindForWrite(entityConfig, field, finalData[field])
+        setClauses.push(`${quoteField(field)} = $${paramIndex}${bound.cast}`)
+        values.push(bound.value)
         paramIndex++
       }
     }

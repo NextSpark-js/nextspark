@@ -82,15 +82,16 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * A foreign key does not apply row-level security and relation-multi is JSONB with no foreign key, so every id of the
  * fields present in `data` is looked up with one `SELECT` per field, through the caller's RLS, on the table of the
  * related entity. An id that does not exist and one the caller cannot see are indistinguishable. Fields absent from
- * `data`, empty values, read-only fields and relations to something that is not a registered entity are not checked.
+ * `data`, empty values, read-only fields (unless `includeReadOnly`, for writers that do store them) and relations to something that is not a registered entity are not checked.
  */
 export async function findInvalidRelationField(
   fields: EntityField[],
   data: Record<string, unknown>,
-  userId: string
+  userId: string,
+  { includeReadOnly = false }: { includeReadOnly?: boolean } = {}
 ): Promise<string | null> {
   for (const field of fields) {
-    if ((field.type !== 'relation' && field.type !== 'relation-multi') || !(field.name in data) || field.api?.readOnly) continue
+    if ((field.type !== 'relation' && field.type !== 'relation-multi') || !(field.name in data) || (field.api?.readOnly && !includeReadOnly)) continue
     const ids = relationIds(field, data[field.name])
     if (!ids) return field.name
     const target = field.relation?.entity && getAllEntityConfigs().find(entity => entity.slug === field.relation?.entity)

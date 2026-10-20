@@ -993,9 +993,48 @@ describe('GenericEntityService relation references', () => {
     expect(mockMutateWithRLS).not.toHaveBeenCalled()
   })
 
+  it('binds relations as the check read them: SQL and parameters reaching the database', async () => {
+    visible(A, B)
+    const run = async (data: Record<string, unknown>) => {
+      mockMutateWithRLS.mockClear()
+      await GenericEntityService.update('test_entities', 'entity-123', 'user-456', data, 'team-789')
+      return mockMutateWithRLS.mock.calls[0] as unknown as [string, unknown[]]
+    }
+    let [sql, params] = await run({ tags: [A, { id: B }] })
+    expect(sql).toContain('tags = $1::jsonb')
+    expect(params[0]).toBe(JSON.stringify([A, { id: B }]))
+    ;[sql, params] = await run({ tags: JSON.stringify([A]) })
+    expect(sql).toContain('tags = $1::jsonb')
+    expect(params[0]).toBe(JSON.stringify([A]))
+    // a loose object holds no ids: it is stored (and checked) as an empty list, never as the raw object
+    ;[sql, params] = await run({ tags: { id: A } })
+    expect(params[0]).toBe('[]')
+    ;[sql, params] = await run({ client: [{ id: A }, B] })
+    expect(sql).toContain('client = $1,')
+    expect(sql).not.toContain('client = $1::jsonb')
+    expect(params[0]).toBe(A)
+    mockQueryWithRLS.mockResolvedValue([{ id: 7 }] as never)
+    // a bare number is no relation value (as in REST): stored as null, nothing to check; inside an array it is an id
+    ;[sql, params] = await run({ client: 7 })
+    expect(params[0]).toBeNull()
+    ;[sql, params] = await run({ client: [7] })
+    expect(params[0]).toBe(7)
+    mockMutateWithRLS.mockClear()
+    visible(A)
+    await GenericEntityService.create('test_entities', 'user-456', 'team-789', { tags: [A] })
+    expect(mockMutateWithRLS.mock.calls[0][0]).toContain('$3::jsonb')
+    expect(mockMutateWithRLS.mock.calls[0][1]).toEqual(['user-456', 'team-789', JSON.stringify([A])])
+  })
+
+  it('checks read-only relation fields too, since the service writes them', async () => {
+    mockEntityRegistry.get.mockReturnValue({ ...taskConfig, fields: [{ name: 'client', type: 'relation', api: { readOnly: true }, relation: { entity: 'clients', titleField: 'name' } }] } as any)
+    visible()
+    await expect(GenericEntityService.create('test_entities', 'user-456', 'team-789', { client: A })).rejects.toThrow("Field 'client'")
+  })
+
   it('ignores absent fields and empty values', async () => {
     await GenericEntityService.update('test_entities', 'entity-123', 'user-456', { title: 'only' }, 'team-789')
-    await GenericEntityService.update('test_entities', 'entity-123', 'user-456', { client: '' , tags: [] }, 'team-789')
+    await GenericEntityService.update('test_entities', 'entity-123', 'user-456', { client: '', tags: [] }, 'team-789')
     expect(mockQueryWithRLS).not.toHaveBeenCalled()
     expect(mockMutateWithRLS).toHaveBeenCalledTimes(2)
   })
