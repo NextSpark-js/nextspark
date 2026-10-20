@@ -18,6 +18,9 @@ After step 1:
 - Its slug stays reserved until the purge (the unique index still covers the row).
 - Data your project keeps outside the cascade (tables with a plain `teamId` column and no foreign key) is not touched. Clean it in a `team.deleted` hook, or purge it yourself.
 
+- Nothing can join it: adding a member, creating an invitation, accepting one and `signup-with-invite` all refuse a deleted team (`signup-with-invite` answers `404 TEAM_NOT_FOUND`; if the team was deleted while the sign-up ran, the account stays created, without a team).
+- Superadmin and developer requests bypass the membership checks, so the generic entity handler still operates on the entities of a deleted team until the purge.
+
 There is no restore: step 1 revokes the memberships.
 
 ## Retention
@@ -47,7 +50,7 @@ Runs before anything changes. **Throw to veto**: the team stays intact and the r
 
 ```typescript
 import { getGlobalHooks } from '@nextsparkjs/core/lib/plugins/hook-system'
-import { TEAM_BEFORE_DELETE_HOOK } from '@nextsparkjs/core/services'
+import { TEAM_BEFORE_DELETE_HOOK } from '@nextsparkjs/core/lib/services'
 
 getGlobalHooks().addFilter(TEAM_BEFORE_DELETE_HOOK, async ({ teamId }) => {
   if (await hasActiveContract(teamId)) {
@@ -56,7 +59,7 @@ getGlobalHooks().addFilter(TEAM_BEFORE_DELETE_HOOK, async ({ teamId }) => {
 })
 ```
 
-Hook names are `TEAM_BEFORE_DELETE_HOOK` (`team.before_delete`) and `TEAM_DELETED_HOOK` (`team.deleted`), exported from `team.service`.
+Hook names are `TEAM_BEFORE_DELETE_HOOK` (`team.before_delete`) and `TEAM_DELETED_HOOK` (`team.deleted`), exported from `@nextsparkjs/core/lib/services`.
 
 ### `team.deleted` (action)
 
@@ -72,4 +75,4 @@ Register hooks once at server start (for example in a plugin's `onLoad`).
 
 ## API
 
-`DELETE /api/v1/teams/:teamId` answers `200 { deleted: true, id }`; `403 INSUFFICIENT_PERMISSIONS` (not the owner), `404 TEAM_NOT_FOUND` (unknown or already deleted) and `409 TEAM_DELETE_VETOED` (a hook refused).
+`DELETE /api/v1/teams/:teamId` answers `200 { deleted: true, id }`; `403 INSUFFICIENT_PERMISSIONS` (not the owner), `403 GLOBAL_TEAM_DELETE_FORBIDDEN` / `403 SYSTEM_TEAM_DELETE_FORBIDDEN` (the single-tenant global team and the system admin team, which would reopen the first-user bootstrap or drop the platform admin team, cannot be deleted), `404 TEAM_NOT_FOUND` (unknown or already deleted) and `409 TEAM_DELETE_VETOED` (a hook refused).
