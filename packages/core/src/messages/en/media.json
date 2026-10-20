@@ -36,7 +36,18 @@
     "duplicateFound": "{count, plural, one {# file already exists} other {# files already exist}} in your library",
     "duplicateConfirm": "Upload anyway?",
     "duplicateSkip": "Skip duplicates",
-    "duplicateUploadAll": "Upload All"
+    "duplicateUploadAll": "Upload All",
+    "typeNotAllowed": "File type {type} not allowed.",
+    "typeNotAccepted": "File type not allowed. Accepted types: {types}",
+    "tooLargeNamed": "File {name} is too large. Maximum size is {max}MB.",
+    "tooManyFiles": "At most {max} files per upload",
+    "cancelled": "Upload cancelled",
+    "noFileReturned": "The upload returned no file",
+    "failed": "Upload failed",
+    "storageFailed": "Upload to storage failed",
+    "storageFailedStatus": "Upload to storage failed with status {status}",
+    "uploadingName": "Uploading {name}",
+    "cancelUpload": "Cancel upload of {name}"
   },
   "grid": {
     "selected": "Selected",

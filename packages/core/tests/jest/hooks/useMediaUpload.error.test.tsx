@@ -4,6 +4,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useMediaUpload } from '../../../src/hooks/useMediaUpload'
 
+jest.mock('next-intl', () => {
+  // the real English messages, so the assertions read what a user would
+  const media = require('../../../src/messages/en/media.json')
+  return {
+    useTranslations: () => (key: string, values: Record<string, unknown> = {}) =>
+      (key.split('.').reduce((node: any, part) => node[part], media) as string).replace(/\{(\w+)\}/g, (_, name) => String(values[name])),
+  }
+})
+
 describe('useMediaUpload', () => {
   it('surfaces the upload error message (MediaUploadZone shows it in a toast)', async () => {
     const message = 'Media storage is not configured: set BLOB_READ_WRITE_TOKEN'

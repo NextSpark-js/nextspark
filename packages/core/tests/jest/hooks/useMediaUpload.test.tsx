@@ -1,8 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals'
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useMediaUpload } from '../../../src/hooks/useMediaUpload'
+
+jest.mock('next-intl', () => {
+  // the real English messages, so the assertions read what a user would
+  const media = require('../../../src/messages/en/media.json')
+  return {
+    useTranslations: () => (key: string, values: Record<string, unknown> = {}) =>
+      (key.split('.').reduce((node: any, part) => node[part], media) as string).replace(/\{(\w+)\}/g, (_, name) => String(values[name])),
+  }
+})
 
 const image = (name = 'a.png', size = 4) => new File([new Uint8Array(size)], name, { type: 'image/png' })
 const MEDIA = { id: 'm1', url: 'https://cdn.example.test/m1.png' }
@@ -41,18 +50,18 @@ const caps = (over: Record<string, unknown> = {}) => ({
   directUpload: true, storage: 's3', supportedTypes: ['image/png'], maxFileSize: '10MB', ...over,
 })
 
-type Route = (url: string, init?: RequestInit) => unknown
-let calls: Array<{ url: string; method: string }>
+type Route = (url: string, init?: RequestInit) => unknown | Promise<unknown>
+let calls: Array<{ url: string; method: string; signal?: AbortSignal | null }>
 
 function mockFetch(routes: Record<string, Route>) {
   calls = []
   global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
     const method = init?.method ?? 'GET'
-    calls.push({ url, method })
+    calls.push({ url, method, signal: init?.signal })
     const route = routes[`${method} ${url}`]
     if (!route) throw new Error(`unexpected request ${method} ${url}`)
-    const out = route(url, init) as { status?: number; body: unknown }
+    const out = await route(url, init) as { status?: number; body: unknown }
     return Response.json(out.body, { status: out.status ?? 200 })
   }) as never
 }
@@ -174,6 +183,28 @@ describe('useMediaUpload', () => {
     })
   })
 
+  describe('cancelling', () => {
+    it('does not hand the abort signal to the confirm: once the PUT is done, the confirm completes', async () => {
+      let release!: () => void
+      const gate = new Promise<void>(resolve => { release = resolve })
+      mockFetch({
+        [GET_CAPS]: ok(caps()),
+        [PRESIGN]: presigned,
+        [CONFIRM]: async () => { await gate; return { body: { success: true, data: { media: MEDIA } } } },
+      })
+      const result = setup()
+      const controller = new AbortController()
+
+      const upload = result.current.mutateAsync({ files: [image()], signal: controller.signal })
+      await waitFor(() => expect(calls.some(c => `${c.method} ${c.url}` === CONFIRM)).toBe(true))
+      controller.abort() // after the PUT, during the confirm
+      release()
+
+      await expect(upload).resolves.toMatchObject({ media: [MEDIA] })
+      expect(calls.find(c => `${c.method} ${c.url}` === CONFIRM)?.signal).toBeFalsy()
+    })
+  })
+
   describe('with a driver that does not (local, Vercel Blob)', () => {
     it('posts the file to /api/v1/media/upload and does not presign', async () => {
       mockFetch({
@@ -203,6 +234,15 @@ describe('useMediaUpload', () => {
   })
 
   describe('limits (both paths)', () => {
+    it.each([true, false])('refuses more files than the server takes in one call, before sending anything (directUpload: %s)', async (directUpload) => {
+      mockFetch({ [GET_CAPS]: ok(caps({ directUpload })) })
+      const result = setup()
+      const files = Array.from({ length: 101 }, (_, i) => image(`f${i}.png`))
+
+      await expect(run(result, files)).rejects.toThrow('At most 100 files per upload')
+      expect(calls).toHaveLength(0)
+    })
+
     it.each([true, false])('rejects a type the server does not accept before sending anything (directUpload: %s)', async (directUpload) => {
       mockFetch({ [GET_CAPS]: ok(caps({ directUpload })) })
       const result = setup()

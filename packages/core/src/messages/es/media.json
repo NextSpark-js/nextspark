@@ -36,7 +36,18 @@
     "duplicateFound": "{count, plural, one {# archivo ya existe} other {# archivos ya existen}} en tu biblioteca",
     "duplicateConfirm": "¿Subir de todos modos?",
     "duplicateSkip": "Omitir duplicados",
-    "duplicateUploadAll": "Subir Todos"
+    "duplicateUploadAll": "Subir Todos",
+    "typeNotAllowed": "Tipo de archivo {type} no permitido.",
+    "typeNotAccepted": "Tipo de archivo no permitido. Tipos aceptados: {types}",
+    "tooLargeNamed": "El archivo {name} es demasiado grande. El tamaño máximo es {max}MB.",
+    "tooManyFiles": "Como máximo {max} archivos por subida",
+    "cancelled": "Subida cancelada",
+    "noFileReturned": "La subida no devolvió ningún archivo",
+    "failed": "Error al subir",
+    "storageFailed": "Error al subir al almacenamiento",
+    "storageFailedStatus": "Error al subir al almacenamiento con estado {status}",
+    "uploadingName": "Subiendo {name}",
+    "cancelUpload": "Cancelar la subida de {name}"
   },
   "grid": {
     "selected": "Seleccionado",

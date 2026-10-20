@@ -377,8 +377,9 @@ The `useMediaUpload` hook (used by `MediaUploadZone` and the entity upload field
 
 1. The first upload asks `GET /api/v1/media/upload` which driver is active (`directUpload`, `supportedTypes`, `maxFileSize`, `maxImageSize`, `maxVideoSize`). The answer is cached in the `QueryClient`, so later uploads do not ask again.
 2. Before any byte is sent, each file is checked against those type and size limits; a violation rejects the upload with the server's message. This happens on both paths.
-3. If `directUpload` is `true` (the `s3` driver), each file goes presign, `PUT` straight to the storage, confirm. The `PUT` is an `XMLHttpRequest`, so the hook reports progress and can cancel it.
-4. Otherwise (`local`, `vercel-blob`), or when the capabilities cannot be read (for example the user lacks `media.read`), the files are posted as `multipart/form-data` to `POST /api/v1/media/upload`, as before. This path reports progress only at 0 and 1, because `fetch` has no upload progress.
+3. At most 100 files go in one call, on both paths (the server's batch limit); more are refused before anything is sent.
+4. If `directUpload` is `true` (the `s3` driver), each file goes presign, `PUT` straight to the storage, confirm. The `PUT` is an `XMLHttpRequest`, so the hook reports progress and can cancel it. Cancelling covers the presign and the PUT; once the bytes are stored the confirm runs to completion.
+5. Otherwise (`local`, `vercel-blob`), or when the capabilities cannot be read (for example the user lacks `media.read`), the files are posted as `multipart/form-data` to `POST /api/v1/media/upload`, as before. This path reports progress only at 0 and 1, because `fetch` has no upload progress.
 
 ```tsx
 const upload = useMediaUpload()

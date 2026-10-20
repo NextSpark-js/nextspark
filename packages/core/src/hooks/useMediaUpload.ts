@@ -9,8 +9,13 @@
 'use client'
 
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import type { Media } from '../lib/media/types'
 import { withBasePath } from '../lib/base-path'
+import { MAX_MEDIA_BATCH } from '../lib/media/schemas'
+
+/** next-intl's translator for the `media` namespace */
+type Translate = (key: string, values?: Record<string, string | number>) => string
 
 interface UploadResult {
   urls: string[]
@@ -35,7 +40,7 @@ export interface MediaUploadRequest {
   files: File[]
   /** Fraction of the bytes sent, 0 to 1. Intermediate values only on the direct path (a `fetch` body reports none). */
   onProgress?: (fraction: number) => void
-  /** Aborting it stops the upload; the mutation rejects with an `AbortError`. */
+  /** Aborting it cancels the presign and the PUT; once the PUT is done the confirm runs to completion. The mutation rejects with an `AbortError`. */
   signal?: AbortSignal
 }
 
@@ -47,6 +52,7 @@ async function loadCapabilities(queryClient: QueryClient): Promise<UploadCapabil
     return await queryClient.fetchQuery({
       queryKey: CAPABILITIES_KEY,
       staleTime: Infinity,
+      gcTime: Infinity,
       retry: false,
       queryFn: async () => {
         const res = await fetch(withBasePath('/api/v1/media/upload'))
@@ -62,21 +68,21 @@ async function loadCapabilities(queryClient: QueryClient): Promise<UploadCapabil
 const megabytes = (value?: string) => (value ? parseFloat(value) : undefined)
 
 /** The server's size and type rules, applied before any byte is sent (both paths). */
-function checkFile(file: File, caps: UploadCapabilities | null) {
+function checkFile(file: File, caps: UploadCapabilities | null, t: Translate) {
   if (!caps) return
   if (caps.supportedTypes && !caps.supportedTypes.includes(file.type)) {
-    throw new Error(`File type ${file.type || 'unknown'} not allowed.`)
+    throw new Error(t('upload.typeNotAllowed', { type: file.type || 'unknown' }))
   }
   const limit =
     (file.type.startsWith('image/') ? megabytes(caps.maxImageSize) : undefined) ??
     (file.type.startsWith('video/') ? megabytes(caps.maxVideoSize) : undefined) ??
     megabytes(caps.maxFileSize)
   if (limit != null && file.size > limit * 1024 * 1024) {
-    throw new Error(`File ${file.name} is too large. Maximum size is ${limit}MB.`)
+    throw new Error(t('upload.tooLargeNamed', { name: file.name, max: limit }))
   }
 }
 
-async function postJson<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+async function postJson<T>(path: string, body: unknown, failed: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(withBasePath(path), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -84,8 +90,8 @@ async function postJson<T>(path: string, body: unknown, signal?: AbortSignal): P
     signal,
   })
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({ error: `Upload failed with status ${res.status}` }))
-    throw new Error(errorData.error || 'Upload failed')
+    const errorData = await res.json().catch(() => ({ error: `${failed} (${res.status})` }))
+    throw new Error(errorData.error || failed)
   }
   return (await res.json()).data as T
 }
@@ -97,10 +103,11 @@ function putToStorage(
   target: { url: string; method?: string; headers?: Record<string, string> },
   file: File,
   onProgress: (loaded: number) => void,
+  t: Translate,
   signal?: AbortSignal
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const cancelled = () => new DOMException('Upload cancelled', 'AbortError')
+    const cancelled = () => new DOMException(t('upload.cancelled'), 'AbortError')
     if (signal?.aborted) return reject(cancelled())
     const xhr = new XMLHttpRequest()
     xhr.open('PUT', target.url) // the presign route only issues PUT URLs
@@ -113,8 +120,8 @@ function putToStorage(
     xhr.onload = () =>
       xhr.status >= 200 && xhr.status < 300
         ? resolve()
-        : reject(new Error(`Upload to storage failed with status ${xhr.status}`))
-    xhr.onerror = () => reject(new Error('Upload to storage failed'))
+        : reject(new Error(t('upload.storageFailedStatus', { status: xhr.status })))
+    xhr.onerror = () => reject(new Error(t('upload.storageFailed')))
     xhr.onabort = () => reject(cancelled())
     signal?.addEventListener('abort', () => xhr.abort(), { once: true })
     xhr.send(file)
@@ -122,7 +129,7 @@ function putToStorage(
 }
 
 /** Direct upload (S3): presign, PUT to the storage, confirm. The file never reaches the app server. */
-async function uploadDirect(files: File[], { onProgress, signal }: MediaUploadRequest, storage?: string): Promise<UploadResult> {
+async function uploadDirect(files: File[], { onProgress, signal }: MediaUploadRequest, t: Translate, storage?: string): Promise<UploadResult> {
   const total = files.reduce((sum, file) => sum + file.size, 0) || 1
   let sent = 0
   const media: Media[] = []
@@ -132,12 +139,13 @@ async function uploadDirect(files: File[], { onProgress, signal }: MediaUploadRe
     const { upload, token } = await postJson<{
       upload: { url: string; method?: string; headers?: Record<string, string> }
       token: string
-    }>('/api/v1/media/upload/presign', { filename: file.name, mimeType: file.type, size: file.size }, signal)
+    }>('/api/v1/media/upload/presign', { filename: file.name, mimeType: file.type, size: file.size }, t('upload.failed'), signal)
     // A failed PUT stops here: no confirm, so no record (the unconfirmed object expires with the bucket's lifecycle rule)
-    await putToStorage(upload, file, (loaded) => onProgress?.((sent + loaded) / total), signal)
+    await putToStorage(upload, file, (loaded) => onProgress?.((sent + loaded) / total), t, signal)
     sent += file.size
-    // A rejected confirm leaves no record either: the server discards the object it refused
-    const confirmed = await postJson<{ media: Media }>('/api/v1/media/upload/confirm', { token }, signal)
+    // The confirm is not cancellable: once the bytes are stored, finishing it is what keeps them from being orphaned.
+    // A rejected confirm leaves no record: the server discards the object it refused.
+    const confirmed = await postJson<{ media: Media }>('/api/v1/media/upload/confirm', { token }, t('upload.failed'))
     media.push(confirmed.media)
     onProgress?.(sent / total)
   }
@@ -145,7 +153,7 @@ async function uploadDirect(files: File[], { onProgress, signal }: MediaUploadRe
 }
 
 /** Server upload (local, Vercel Blob): one multipart POST to /api/v1/media/upload. */
-async function uploadThroughServer(files: File[], { onProgress, signal }: MediaUploadRequest): Promise<UploadResult> {
+async function uploadThroughServer(files: File[], { onProgress, signal }: MediaUploadRequest, t: Translate): Promise<UploadResult> {
   const formData = new FormData()
   files.forEach((file) => formData.append('files', file))
   onProgress?.(0)
@@ -158,9 +166,9 @@ async function uploadThroughServer(files: File[], { onProgress, signal }: MediaU
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({
-      error: `Upload failed with status ${res.status}`
+      error: `${t('upload.failed')} (${res.status})`
     }))
-    throw new Error(errorData.error || 'Upload failed')
+    throw new Error(errorData.error || t('upload.failed'))
   }
 
   const json = await res.json()
@@ -179,6 +187,7 @@ async function uploadThroughServer(files: File[], { onProgress, signal }: MediaU
  */
 export function useMediaUpload() {
   const queryClient = useQueryClient()
+  const t = useTranslations('media') as Translate
 
   return useMutation({
     mutationFn: async (input: File[] | MediaUploadRequest): Promise<UploadResult> => {
@@ -188,10 +197,15 @@ export function useMediaUpload() {
         throw new Error('No files provided')
       }
 
-      const caps = await loadCapabilities(queryClient)
-      files.forEach((file) => checkFile(file, caps))
+      // Same limit as POST /api/v1/media/upload, whichever path the files take
+      if (files.length > MAX_MEDIA_BATCH) {
+        throw new Error(t('upload.tooManyFiles', { max: MAX_MEDIA_BATCH }))
+      }
 
-      return caps?.directUpload ? uploadDirect(files, request, caps.storage) : uploadThroughServer(files, request)
+      const caps = await loadCapabilities(queryClient)
+      files.forEach((file) => checkFile(file, caps, t))
+
+      return caps?.directUpload ? uploadDirect(files, request, t, caps.storage) : uploadThroughServer(files, request, t)
     },
     onSuccess: () => {
       // Invalidate media list queries to show new uploads
