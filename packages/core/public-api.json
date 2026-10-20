@@ -274,6 +274,11 @@
       "area": "Blocks"
     },
     {
+      "subpath": "./lib/blocks/team-pattern-references",
+      "reason": "template-import",
+      "area": "Blocks"
+    },
+    {
       "subpath": "./hooks/useSubscription",
       "reason": "documented",
       "area": "Billing",

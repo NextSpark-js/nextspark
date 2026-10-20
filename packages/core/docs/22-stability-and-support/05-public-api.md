@@ -149,6 +149,7 @@ The reason in each row is one of `template-import` (a stable template imports it
 | Subpath | Why it is public |
 | --- | --- |
 | `./lib/blocks/sanitize-html` | template-import |
+| `./lib/blocks/team-pattern-references` | template-import |
 
 ### Billing
 
