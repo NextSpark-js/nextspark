@@ -17,13 +17,14 @@ import { mediaRefSchema } from './media-ref'
 import { builderBlocksSchema } from './response-shape'
 
 /**
- * URL of a stored file: absolute (S3, Vercel Blob) or a path of this app (local driver).
- * A `blob:` URL only exists in the tab that made it, so it is never a stored value.
+ * URL of a stored file: an absolute http(s) URL (S3, Vercel Blob) or a path of this app (local driver).
+ * Other schemes (a `blob:` URL only exists in the tab that made it) and `//host` or `/\host` are not stored files.
  */
+const STORED_URL = /^(?:https?:\/\/|\/(?![\/\\]))/i
 const storedUrlSchema = z
   .string()
-  .refine((val) => !val.toLowerCase().startsWith('blob:'), 'A blob: URL is not a stored file')
-  .pipe(z.union([z.string().url(), z.string().regex(/^\/(?!\/)/)]))
+  .regex(STORED_URL, 'Must be an http(s) URL or a path of this app')
+  .pipe(z.union([z.string().url(), z.string().startsWith('/')]))
 
 /** One uploaded file: the items of `file`, `video`, `audio` and multi-`image` fields. */
 export const fileObjectSchema = z.object({
@@ -763,8 +764,8 @@ function generateFieldSchema(
           if (val === '' || val === null || val === undefined) {
             return null
           }
-          // Check if it looks like a URL (starts with http, https or /); a blob: URL is not a stored file
-          if (val.startsWith('http') || val.startsWith('/')) {
+          // Check if it looks like a URL (http(s) or a path of this app); a blob: URL is not a stored file
+          if (STORED_URL.test(val)) {
             return val
           }
           ctx.addIssue({

@@ -12,7 +12,7 @@
     "src/index.ts": "698536544f65cca015ccb70ad2fe6fecf19b16b48a6ab7cbd04991c20ebfbfd8",
     "src/schema/media-ref.ts": "50c76514c825668f761c26c8dd02041754dda8621b91fd102c97d529b5a89cb7",
     "src/schema/response-shape.ts": "90d2ea9dd869e409810ad4fb74207a6bc7034754353af1cc178123d48dd5cc56",
-    "src/schema/schema-generator.ts": "199ee7293c51e5810ba2228bf5e9129b00177c8162763deaccdd57fb7450ce7c",
+    "src/schema/schema-generator.ts": "d1bbc3a1f647c05859ba250ef3f9391acd92c896d115385b0adeb3dee5657b02",
     "src/schema/system-fields.ts": "7dd4e743dae8f6151c53dde60e9704629fbb85edac8ac39a6a2cd75e6dbb4289",
     "src/schema/types.ts": "935b3f6506afba88267dea68902d5f241a406858b8d759beba5fd84efbf3bc02"
   }

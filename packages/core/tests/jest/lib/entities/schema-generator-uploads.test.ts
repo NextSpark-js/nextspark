@@ -46,8 +46,14 @@ describe.each(['attachment', 'clip', 'voice', 'cover'])('%s', (name) => {
     expect(schemas.create.safeParse({ [name]: [item(url)] }).success).toBe(false)
   })
 
-  it('rejects a protocol-relative URL', () => {
-    expect(schemas.create.safeParse({ [name]: [item('//evil.example.test/a.bin')] }).success).toBe(false)
+  it.each([
+    'javascript:alert(1)',
+    'data:text/html;base64,PGI+',
+    '//host.example.test/a.bin',
+    '/\\host.example.test/a.bin',
+    'ftp://host.example.test/a.bin',
+  ])('rejects %s', (url) => {
+    expect(schemas.create.safeParse({ [name]: [item(url)] }).success).toBe(false)
   })
 })
 
@@ -57,7 +63,13 @@ describe('image as a single URL', () => {
     expect(schemas.create.safeParse({ cover: '/api/v1/media/files/a.png' }).success).toBe(true)
   })
 
-  it('rejects a blob: URL', () => {
-    expect(schemas.create.safeParse({ cover: 'blob:http://localhost/9f1c0c1e' }).success).toBe(false)
+  it.each([
+    'blob:http://localhost/9f1c0c1e',
+    'javascript:alert(1)',
+    'data:image/png;base64,AAAA',
+    '//host.example.test/a.png',
+    '/\\host.example.test/a.png',
+  ])('rejects %s', (url) => {
+    expect(schemas.create.safeParse({ cover: url }).success).toBe(false)
   })
 })
