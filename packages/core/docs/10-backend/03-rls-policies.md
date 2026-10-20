@@ -979,8 +979,8 @@ Authorization for them is enforced at the API/action layer, not by RLS.
 **Where the default comes from.** Migrations run as the owner, and `DATABASE_URL` is the
 only connection a fresh project has, so the application connects as the owner too. An
 owner, a superuser and a role with `BYPASSRLS` skip every policy, and
-`DATABASE_SERVICE_URL` falls back to `DATABASE_URL`, so before the cutover nothing
-changes, so RLS filters nothing. Application checks that
+`DATABASE_SERVICE_URL` falls back to `DATABASE_URL`. Before the cutover nothing
+changes, and RLS filters nothing. Application checks that
 rely on it (for example, which related records a user can see) let everything through.
 
 **Checking which role you have.** `nextspark doctor` runs the "Row-level security"
