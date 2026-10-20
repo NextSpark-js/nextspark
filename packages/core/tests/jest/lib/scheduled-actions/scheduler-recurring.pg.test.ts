@@ -75,14 +75,35 @@ describePg('scheduleRecurringAction (real PostgreSQL)', () => {
     expect(await count()).toBe(3)
   })
 
-  test('a running row blocks the registration; a completed one does not', async () => {
+  test('only a pending row blocks the registration: a stale running row (function died mid-handler) or a completed one does not', async () => {
     await scheduleRecurringAction('sweep', {}, 'daily')
-    await pool.query(`UPDATE t348.scheduled_actions SET status = 'running'`)
+    await pool.query(`UPDATE t348.scheduled_actions SET status = 'running', "updatedAt" = now() - interval '3 days'`)
     await scheduleRecurringAction('sweep', {}, 'daily')
-    expect(await count()).toBe(1)
+    expect(await count(`status = 'pending'`)).toBe(1)
     await pool.query(`UPDATE t348.scheduled_actions SET status = 'completed'`)
     await scheduleRecurringAction('sweep', {}, 'daily')
-    expect(await count()).toBe(2)
+    expect(await count(`status = 'pending'`)).toBe(1)
+    expect(await count()).toBe(3)
+  })
+
+  test('a registration that lands during a run is found by the reschedule, which inserts nothing', async () => {
+    await scheduleRecurringAction('sweep', {}, 'daily')
+    await pool.query(`UPDATE t348.scheduled_actions SET status = 'running'`)
+    await scheduleRecurringAction('sweep', {}, 'daily') // cold start during the run
+    await pool.query(`UPDATE t348.scheduled_actions SET status = 'completed' WHERE status = 'running'`)
+    await scheduleAction('sweep', {}, { recurringInterval: 'daily', recurrenceType: 'fixed' }) // the reschedule
+    expect(await count(`status = 'pending'`)).toBe(1)
+  })
+
+  test('accumulated duplicates drain: each run completes one and its reschedule finds another pending', async () => {
+    for (let i = 0; i < 3; i++) {
+      await pool.query(`INSERT INTO t348.scheduled_actions (id, "actionType", payload, "scheduledAt", "recurringInterval") VALUES ($1, 'sweep', '{}', now(), 'daily')`, [`dup-${i}`])
+    }
+    for (let run = 0; run < 2; run++) {
+      await pool.query(`UPDATE t348.scheduled_actions SET status = 'completed' WHERE id = (SELECT id FROM t348.scheduled_actions WHERE status = 'pending' LIMIT 1)`)
+      await scheduleAction('sweep', {}, { recurringInterval: 'daily' })
+    }
+    expect(await count(`status = 'pending'`)).toBe(1)
   })
 
   test('the processor flow (completed, then rescheduled) creates the next one, once even if registration races it', async () => {

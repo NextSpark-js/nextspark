@@ -382,7 +382,7 @@ function scheduleAction(
   options?: ScheduleOptions
 ): Promise<string>
 
-// Recurring action (idempotent: returns the ID of the existing pending or running row
+// Recurring action (idempotent: returns the ID of the existing pending row
 // with the same actionType, teamId and payload instead of inserting another one)
 function scheduleRecurringAction(
   actionType: string,

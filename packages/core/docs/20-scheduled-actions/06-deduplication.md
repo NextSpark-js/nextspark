@@ -330,7 +330,7 @@ const actionId = await scheduleAction('webhook:send', payload)
 
 ### Recurring Actions
 
-Recurring actions skip the `entityId` time window, but registering one is **idempotent**: if a row with the same `actionType`, `teamId` and `payload` (compared as `jsonb`, so key order does not matter) is still `pending` or `running`, no row is inserted and the existing ID is returned.
+Recurring actions skip the `entityId` time window, but registering one is **idempotent**: if a row with the same `actionType`, `teamId` and `payload` (compared as `jsonb`, so key order does not matter) is still `pending`, no row is inserted and the existing ID is returned.
 
 ```typescript
 // Safe on every cold start: the second call inserts nothing
@@ -338,8 +338,8 @@ await scheduleRecurringAction('billing:check', {}, 'daily')
 await scheduleRecurringAction('billing:check', {}, 'daily')
 ```
 
-- A `completed` or `failed` row does not count: the processor marks the row it just ran `completed` before it schedules the next occurrence, so rescheduling is never blocked. A `running` row does count, because it schedules its own next occurrence when it finishes.
-- The interval, `scheduledAt` and `lockGroup` are not part of the key; changing the interval of a registered action does not replace the existing row.
+- Only a `pending` row counts. The processor marks the row it just ran `completed` before it schedules the next occurrence, so rescheduling is never blocked. A `running` row does not count: if the process dies mid-handler the row stays `running` forever, and counting it would stop the action from ever being registered again. A registration that lands during a run is found by the reschedule (it goes through the same check), which inserts nothing.
+- The interval, `scheduledAt` and `lockGroup` are not part of the key; changing the interval of a registered action does not replace the existing row. To change the interval of a recurring action that is already registered, delete its `pending` row.
 - Concurrent registrations (several cold starts at once) are serialized with a transaction advisory lock on `actionType` and `teamId`, so exactly one row results.
 - Actions that are not recurring are not affected.
 

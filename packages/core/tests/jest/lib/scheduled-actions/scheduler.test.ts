@@ -429,7 +429,7 @@ describe('Scheduled Actions Scheduler', () => {
     const existingRow = (sqlIncludes: string, rows: unknown[]) =>
       mockTransactionQuery.mockImplementation(async (sql: string) => (String(sql).includes(sqlIncludes) ? rows : []))
 
-    test('does not insert when a pending or running row with the same key exists', async () => {
+    test('does not insert when a pending row with the same key exists', async () => {
       existingRow('SELECT id', [{ id: 'existing-1' }])
 
       const id = await scheduleRecurringAction('sweep', {}, 'daily', { teamId: 'team-1' })
@@ -446,7 +446,7 @@ describe('Scheduled Actions Scheduler', () => {
       expect(lockSql).toContain('pg_advisory_xact_lock')
       expect(lockParams).toEqual(['recurring:sweep:team-1'])
       const [selectSql, selectParams] = mockTransactionQuery.mock.calls[1] as [string, unknown[]]
-      expect(selectSql).toContain("status IN ('pending', 'running')")
+      expect(selectSql).toContain("status = 'pending'")
       expect(selectSql).toContain('payload IS NOT DISTINCT FROM $3::jsonb')
       expect(selectSql).toContain('"teamId" IS NOT DISTINCT FROM $2')
       expect(selectParams).toEqual(['sweep', 'team-1', '{"a":1}'])

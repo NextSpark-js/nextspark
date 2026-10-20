@@ -85,9 +85,11 @@ export async function scheduleAction(
   if (recurringInterval) {
     // Registering a recurring action is idempotent against the database: a cold start on a serverless
     // host runs the registration again, and the process-level flag in the initializer does not survive it.
-    // Key: actionType + teamId + payload (jsonb equality), against rows still 'pending' or 'running'.
+    // Key: actionType + teamId + payload (jsonb equality), against rows still 'pending'.
     // Not 'completed': the processor marks the executed row completed BEFORE it reschedules the next one.
-    // A 'running' row is skipped because it reschedules itself when it finishes.
+    // Not 'running': nothing moves a row out of 'running' if the function dies mid-handler, and that row would
+    // block the registration forever. The reschedule goes through this same guard, so a registration that lands
+    // during a run is found by the reschedule, which returns it instead of inserting another.
     // The lock serializes concurrent registrations of the same actionType + teamId (the payload is left
     // out of the lock key because its text form is not stable), so the check and the insert are atomic.
     const client = await getTransactionClient(null)
@@ -102,7 +104,7 @@ export async function scheduleAction(
            AND "teamId" IS NOT DISTINCT FROM $2
            AND payload IS NOT DISTINCT FROM $3::jsonb
            AND "recurringInterval" IS NOT NULL
-           AND status IN ('pending', 'running')
+           AND status = 'pending'
          LIMIT 1`,
         [actionType, teamId, payload === undefined ? null : JSON.stringify(payload)]
       )
@@ -235,7 +237,7 @@ export async function scheduleAction(
  * Schedule a recurring action
  * Convenience function that sets recurringInterval
  *
- * Idempotent: if a 'pending' or 'running' recurring row with the same actionType, teamId and payload
+ * Idempotent: if a 'pending' recurring row with the same actionType, teamId and payload
  * already exists, no row is inserted and that row's ID is returned. Safe to call on every cold start.
  *
  * @param actionType - Action identifier

@@ -155,7 +155,7 @@ await scheduleRecurringAction('social:refresh-tokens', {}, 'every-30-minutes', {
 })
 ```
 
-Registering is idempotent: if a `pending` or `running` row with the same `actionType`, `teamId` and payload exists, nothing is inserted, so a theme can call it on every cold start without checking the table first.
+Registering is idempotent: if a `pending` row with the same `actionType`, `teamId` and payload exists, nothing is inserted, so a theme can call it on every cold start without checking the table first.
 
 Supported intervals:
 - `every-30-minutes` - Every 30 minutes
