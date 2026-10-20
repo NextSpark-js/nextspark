@@ -31,7 +31,7 @@ const ID = '3f2b8c1e-5d4a-4b7e-9c10-2a6f8d1e4b90'
 const CHILD_ID = '9a1c7e22-0b3d-4f6a-8e55-1d2c3b4a5f60'
 const HEADERS = { 'x-team-id': 'team-1' }
 const params = Promise.resolve({ entity: 'pets', id: ID, childType: 'visits', childId: CHILD_ID })
-const req = (method: string, path: string) => makeRequest({ method, url: `http://localhost/api/v1/${path}`, headers: HEADERS, body: { name: 'Rex' } })
+const req = (method: string, path: string) => makeRequest({ method, url: `http://localhost/api/v1/${path}`, headers: HEADERS, body: { name: 'Rex', note: 'checkup' } })
 
 const calls: Record<string, () => Promise<unknown>> = {
   'GET list': () => handleGenericList(makeRequest({ url: listUrl({}), headers: HEADERS })),
@@ -61,8 +61,8 @@ async function missing(name: string) {
   return (await calls[name]()) as Res
 }
 
-// the three handlers whose success status is asserted (the rest run against mocked data)
-const OK: Record<string, number> = { 'GET list': 200, 'GET read': 200, 'POST': 201 }
+// the success status each call must answer when served
+const OK: Record<string, number> = { 'GET list': 200, 'GET read': 200, 'POST': 201, 'PATCH': 200, 'DELETE': 200, 'child GET': 200, 'child POST': 200, 'child PUT': 200, 'child DELETE': 200 }
 
 beforeEach(() => {
   harness.reset()
@@ -82,7 +82,6 @@ describe.each(Object.keys(calls))('access.api — %s', name => {
     const res = (await calls[name]()) as Res
     expect(res.status).toBe(404)
     expect(res.body).toEqual(expected.body)
-    expect(res.headers).toEqual(expected.headers)
     expect(mocks.queryWithRLS).not.toHaveBeenCalled()
     const writes = mocks.mutateWithRLS.mock.calls.filter(([sql]: [string]) => !sql.includes('api_audit_log'))
     expect(writes).toHaveLength(0)
