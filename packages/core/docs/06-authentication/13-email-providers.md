@@ -15,9 +15,9 @@ to start local sign-in on `console`.
 
 ### Production without a provider
 
-With `NODE_ENV=production` and no real provider (no `RESEND_API_KEY` and
-`EMAIL_PROVIDER` not set to `smtp`), `auto` does not fall back to `console`.
-Creating the provider, importing the module and building the app still work,
+With `NODE_ENV=production` and `EMAIL_PROVIDER` unset or `auto` and no `RESEND_API_KEY`,
+`auto` does not fall back to `console`. (With `EMAIL_PROVIDER=resend` and no
+key, `create()` throws, as it always has.) Creating the provider, importing the module and building the app still work,
 but every send fails with an error whose message starts with
 `EMAIL_PROVIDER_NOT_CONFIGURED` and names the variables to set
 (`RESEND_API_KEY` and `EMAIL_FROM`, or `EMAIL_PROVIDER=smtp` with `SMTP_HOST`
@@ -25,8 +25,11 @@ and `EMAIL_FROM`). A sign-in code or reset link is never silently written to
 the server log.
 
 Development and test keep using `console`. Setting `EMAIL_PROVIDER=console`
-explicitly is still accepted in production as a conscious choice; the server
-logs a warning because emails are printed, not sent.
+explicitly is still accepted by the factory in production as a conscious
+choice, for emails outside sign-in such as invitations and notifications; the
+server logs a warning because emails are printed, not sent. Local sign-in stays
+blocked on `console` in production: the readiness check reports
+`EMAIL_PROVIDER_DEVELOPMENT_ONLY`.
 
 ## The sender
 
