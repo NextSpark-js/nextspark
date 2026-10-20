@@ -45,7 +45,8 @@ function nameParts(given: unknown, family: unknown, full: unknown): { firstName:
 
 interface GoogleProfile {
   email: string
-  name: string
+  /** Google can omit it; the mapping falls back to given + family name, then the email's local part. */
+  name?: string
   given_name?: string
   family_name?: string
   picture?: string
@@ -63,11 +64,12 @@ export function socialProfileMapper(provider: string, defaults: SocialProfileDef
     case 'google':
       return (profile: GoogleProfile) => {
         // Google provides given_name and family_name separately
-        const firstName = profile.given_name || profile.name.split(' ')[0] || ''
-        const lastName = profile.family_name || profile.name.split(' ').slice(1).join(' ') || ''
+        const { firstName, lastName } = nameParts(profile.given_name, profile.family_name, profile.name)
+        // Better Auth expects a non-empty 'name' string
+        const name = profile.name || `${firstName} ${lastName}`.trim() || (typeof profile.email === 'string' ? profile.email.split('@')[0] : '')
         return {
           email: profile.email,
-          name: profile.name, // Better Auth expects 'name' field
+          name,
           firstName,
           lastName,
           language: defaults.language,

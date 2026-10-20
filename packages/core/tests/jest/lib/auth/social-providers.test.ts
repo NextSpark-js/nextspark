@@ -172,6 +172,26 @@ describe('profile mappings', () => {
     expect((socialProfileMapper('google', defaults) as (p: object) => { emailVerified: boolean })({ email: 'a@b.c', name: 'A' }).emailVerified).toBe(false)
   })
 
+  test('Google without a name: given + family, then the email local part, and never throws (#308)', () => {
+    const map = socialProfileMapper('google', defaults) as (p: object) => { name: string; firstName: string; lastName: string }
+    expect(map({ email: 'ada@example.com', given_name: 'Ada', family_name: 'Lovelace' })).toMatchObject({ name: 'Ada Lovelace', firstName: 'Ada', lastName: 'Lovelace' })
+    expect(map({ email: 'ada@example.com', given_name: 'Ada' })).toMatchObject({ name: 'Ada', firstName: 'Ada', lastName: '' })
+    expect(map({ email: 'ada@example.com' })).toMatchObject({ name: 'ada', firstName: '', lastName: '' })
+  })
+
+  test('every provider\'s mapper runs on a minimal profile without throwing (#308)', () => {
+    const minimal: Record<string, object> = {
+      google: { email: 'a@b.c' },
+      github: { id: 1, login: 'octocat' },
+      microsoft: { sub: 'x' },
+      apple: { sub: 'x' },
+      discord: { id: '1', username: 'x' },
+    }
+    for (const [provider, profile] of Object.entries(minimal)) {
+      expect(() => (socialProfileMapper(provider, defaults) as (p: object) => object)(profile)).not.toThrow()
+    }
+  })
+
   test('GitHub splits the name, falls back to the login, and leaves email and its verification to Better Auth', () => {
     const map = socialProfileMapper('github', defaults) as (p: object) => object
     expect(map({ login: 'octocat', name: 'The Octo Cat', email: 'o@example.com' })).toEqual({ firstName: 'The', lastName: 'Octo Cat', language: 'en', role: 'member' })
