@@ -382,7 +382,8 @@ function scheduleAction(
   options?: ScheduleOptions
 ): Promise<string>
 
-// Recurring action (always returns new ID, bypasses deduplication)
+// Recurring action (idempotent: returns the ID of the existing pending or running row
+// with the same actionType, teamId and payload instead of inserting another one)
 function scheduleRecurringAction(
   actionType: string,
   payload: unknown,

@@ -155,6 +155,8 @@ await scheduleRecurringAction('social:refresh-tokens', {}, 'every-30-minutes', {
 })
 ```
 
+Registering is idempotent: if a `pending` or `running` row with the same `actionType`, `teamId` and payload exists, nothing is inserted, so a theme can call it on every cold start without checking the table first.
+
 Supported intervals:
 - `every-30-minutes` - Every 30 minutes
 - `hourly` - Every hour
@@ -276,8 +278,7 @@ instrumentation.ts::register()
         |
         +-- SCHEDULED_ACTIONS_REGISTRY[themeName].registerRecurringActions()
             |
-            +-- Check DB for existing recurring actions
-            +-- Create new ones if needed
+            +-- scheduleRecurringAction() skips a row that already exists in the DB
 ```
 
 The cron endpoint does not initialize anything. The processor registers the core handlers itself before it runs an action, so core action types work in any server instance; your handlers come from `instrumentation.ts`, which runs when each server instance starts.
