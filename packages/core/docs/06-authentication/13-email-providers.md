@@ -8,10 +8,25 @@ team invitations through one email provider, chosen with `EMAIL_PROVIDER`:
 | `console` | Prints the email in the server log (development only) | nothing |
 | `resend` | [Resend](https://resend.com) | `RESEND_API_KEY`, `EMAIL_FROM` |
 | `smtp` | Any SMTP server, through [nodemailer](https://nodemailer.com) | `SMTP_HOST`, `EMAIL_FROM`, the `nodemailer` package |
-| `auto` (default) | `console` in development; Resend when `RESEND_API_KEY` is set, otherwise `console` | |
+| `auto` (default) | `console` in development; Resend when `RESEND_API_KEY` is set; otherwise `console` outside production, and in production sending fails (see below) | |
 
 `auto` never selects `smtp`: choose it explicitly. A production build refuses
 to start local sign-in on `console`.
+
+### Production without a provider
+
+With `NODE_ENV=production` and no real provider (no `RESEND_API_KEY` and
+`EMAIL_PROVIDER` not set to `smtp`), `auto` does not fall back to `console`.
+Creating the provider, importing the module and building the app still work,
+but every send fails with an error whose message starts with
+`EMAIL_PROVIDER_NOT_CONFIGURED` and names the variables to set
+(`RESEND_API_KEY` and `EMAIL_FROM`, or `EMAIL_PROVIDER=smtp` with `SMTP_HOST`
+and `EMAIL_FROM`). A sign-in code or reset link is never silently written to
+the server log.
+
+Development and test keep using `console`. Setting `EMAIL_PROVIDER=console`
+explicitly is still accepted in production as a conscious choice; the server
+logs a warning because emails are printed, not sent.
 
 ## The sender
 

@@ -1,4 +1,4 @@
-import type { EmailProvider } from './types';
+import type { EmailProvider, EmailResponse } from './types';
 import { ResendProvider } from './providers/resend';
 import { ConsoleProvider } from './providers/console';
 import { SmtpProvider } from './providers/smtp';
@@ -15,6 +15,23 @@ export interface EmailFactoryOptions {
     enabled?: boolean;
     logLevel?: 'full' | 'summary' | 'links-only';
   };
+}
+
+/**
+ * The provider auto mode returns in production when nothing real is configured. It is built so import,
+ * `create()` and the build keep working; the failure is at `send()`, where a sign-in code would otherwise only
+ * be printed to the server log.
+ */
+class UnconfiguredProvider implements EmailProvider {
+  async send(): Promise<EmailResponse> {
+    const error = new Error(
+      'EMAIL_PROVIDER_NOT_CONFIGURED: no email provider is configured in production. ' +
+      'Set RESEND_API_KEY and EMAIL_FROM to send through Resend, or EMAIL_PROVIDER=smtp with SMTP_HOST and EMAIL_FROM ' +
+      'to send through SMTP. EMAIL_PROVIDER=console prints emails to the server log instead.'
+    );
+    (error as Error & { code?: string }).code = 'EMAIL_PROVIDER_NOT_CONFIGURED';
+    throw error;
+  }
 }
 
 export class EmailFactory {
@@ -39,6 +56,9 @@ export class EmailFactory {
     let selectedProvider: EmailProvider;
 
     if (provider === 'console') {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('⚠️ EMAIL_PROVIDER=console in production: emails are printed to the server log, not sent');
+      }
       selectedProvider = new ConsoleProvider(consoleOptions);
     } else if (provider === 'resend') {
       if (!resendApiKey) {
@@ -65,10 +85,12 @@ export class EmailFactory {
       } else if (resendApiKey) {
         // En producción o si hay API key, usar Resend
         selectedProvider = new ResendProvider(resendApiKey, defaultFrom);
+      } else if (process.env.NODE_ENV === 'production') {
+        // Sin proveedor real en producción, send() falla (EMAIL_PROVIDER_NOT_CONFIGURED); create() y el build no
+        console.warn('⚠️ No email provider configured in production: sending will fail (set RESEND_API_KEY, or EMAIL_PROVIDER=smtp)');
+        selectedProvider = new UnconfiguredProvider();
       } else {
-        // Si no hay API key, usar console como fallback
-        // NOTE: En producción real, el email service debería validar que hay API key
-        // antes de intentar enviar emails. Esto solo permite que el build pase.
+        // Fuera de producción (dev con Resend forzado, test), console como fallback
         console.warn('⚠️ No email API key found, using Console provider as fallback');
         selectedProvider = new ConsoleProvider(consoleOptions);
       }
