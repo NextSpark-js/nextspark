@@ -14,7 +14,7 @@ jest.mock('../../../src/routes/_internal/public-entity-shared', () => ({
   isPublicEntity: jest.requireActual('../../../src/routes/_internal/public-entity-shared').isPublicEntity,
 }))
 
-import { createPublicItemRoute, createPublicItemMetadata } from '../../../src/routes/_internal/public-item-route'
+import { createPublicItemRoute, createPublicItemMetadata, bindPublicItemRoutes } from '../../../src/routes/_internal/public-item-route'
 import type { EntityConfig } from '../../../src/lib/entities/types'
 
 const config = { slug: 'pages', access: { public: true } } as unknown as EntityConfig
@@ -43,6 +43,14 @@ describe('public item route and a request for a file', () => {
     expect(notFound).not.toHaveBeenCalled()
     expect(element).toBeTruthy()
     expect(fetchPublishedItem).toHaveBeenCalledWith(config, Array.isArray(slug) ? slug.join('/') : slug)
+  })
+
+  it('resolves the pattern references with the team of the item (#344)', async () => {
+    const blocks = [{ type: 'pattern', ref: 'p1', id: 'r1' }]
+    const resolveBlocks = jest.fn().mockResolvedValue([])
+    const source = { fetchItem: jest.fn().mockResolvedValue({ id: '1', title: 'T', slug: 'x', blocks, locale: 'en', teamId: 'team-A' }), resolveBlocks }
+    await bindPublicItemRoutes(source as never).createPublicItemRoute(config)(props('x'))
+    expect(resolveBlocks).toHaveBeenCalledWith(blocks, 'team-A')
   })
 
   it('runs a project template for a slug with a dot', async () => {

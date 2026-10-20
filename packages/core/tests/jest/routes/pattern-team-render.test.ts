@@ -6,7 +6,7 @@
 const query = jest.fn()
 jest.mock('@nextsparkjs/core/lib/db', () => ({ query: (...a: unknown[]) => query(...a) }))
 
-import { getResolvedBlocks } from '../../../src/routes/_internal/public-entity-shared'
+import { getResolvedBlocks, buildPublicSelectClause } from '../../../src/routes/_internal/public-entity-shared'
 import { PatternsResolverService } from '../../../src/lib/blocks/patterns-resolver.service'
 
 const heroBlock = { id: 'h', blockSlug: 'hero', props: {} }
@@ -56,6 +56,10 @@ describe('getResolvedBlocks with the team of the page', () => {
     const blocks = await getResolvedBlocks(page, 'team-A')
     expect(blocks.map(b => b.blockSlug)).toEqual(['hero'])
   })
+})
+
+it('the public read selects the team of the page, which the render needs', () => {
+  expect(buildPublicSelectClause({ slug: 'pages', fields: [] } as never).split(', ')).toContain('"teamId"')
 })
 
 describe('PatternsResolverService.getByIds across teams', () => {

@@ -286,15 +286,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 NextSpark does not emit `generateStaticParams` for these routes on purpose. With it, Next would cache the not-found page of every slug that does not exist as a 404 for the whole hour (until a write through the app expires it), and each unknown URL a visitor or a bot asks for would leave its own cache file on the server, so the cache grows without bound. A template that reads `headers()` or `cookies()` would also fail with a 500 in a cached route.
 
 If a project wants ISR caching anyway, it takes that on itself: a page that exports `generateStaticParams` (a template's own export is not read: only its default export is used) served from the project's own route, plus a CDN or WAF rule that keeps unknown slugs out of the cache.
-### Pattern References Are Scoped to the Team of the Page
-
-A pattern belongs to one team (`patterns."teamId"`) and a page can reference only the patterns of its own team. There is no flag that shares a pattern across teams; an explicit one would be a follow-up, not something today's rule assumes.
-
-- **On save**, the generic handler and `PagesManagementService.create` (in the `pages` templates) keep only the references to patterns of the team the page is written to. A reference to a pattern of another team is dropped, even when the user belongs to both teams (row-level security alone would let it through, since it matches every team of the user). Deleted patterns are dropped the same way.
-- **On render**, `PatternsResolverService.getByIds(ids, teamId)` reads the published patterns of the page's team only; a reference to any other pattern is skipped and the rest of the page renders. The check is in the resolver, so it holds for every caller, and the team is part of the key of the cached read (`readPatterns(ids, teamId)`), so a team never reads another's cached entry. After a user leaves a team nothing needs to be revalidated: what a page renders depends on its own team, not on who edited it.
-- **Modes:** `teamId` is set on every record in every mode (`team`, `private`, `shared`, `public`), so the rule is the same: the team the record was written to.
-- **The cached read as an entry point:** a `'use cache'` function is a server reference, so it can in principle be called with arbitrary arguments. `readPatterns` accepts only plain identifiers and returns the id and blocks of published patterns, which are public content wherever a page embeds them. It filters by the `teamId` it is given, so a caller needs both a pattern id and its team id to read it; it does not know which page asks, so it is not an access check by itself. Whether a client can reach it was not verified.
-- **Pages saved before this rule** that still reference a pattern of another team stop rendering that pattern, and the reference is dropped the next time the page is saved.
 
 ### On-Demand Revalidation
 
@@ -304,6 +295,16 @@ Every write of an entity that has public pages (`access.basePath`) expires its c
 - **ISR (`cacheComponents` off):** `revalidatePath` with the route group the generator puts these routes in: `/(public)<basePath>` (layout: the item pages and the archive) or `/(public)/[slug]` / `/(public)/[...slug]` for an entity at `/`. Next tags a page by its route file path, group included, so a path without `(public)` expires nothing.
 
 A deleted or unpublished item shows the not-found page on the next request, an edit shows the new content. A write outside a request (a script) has no cache to expire and is not affected. A project's own item template that reads the database itself is not cached by core and needs nothing.
+
+## Pattern References Are Scoped to the Team of the Page
+
+A pattern belongs to one team (`patterns."teamId"`) and a page can reference only the patterns of its own team. There is no flag that shares a pattern across teams; an explicit one would be a follow-up, not something today's rule assumes.
+
+- **On save**, the generic handler and `PagesManagementService.create` (in the `pages` templates) keep only the references to patterns of the team the page is written to. A reference to a pattern of another team is dropped, even when the user belongs to both teams (row-level security alone would let it through, since it matches every team of the user). Deleted patterns are dropped the same way.
+- **On render**, `PatternsResolverService.getByIds(ids, teamId)` reads the published patterns of the page's team only; a reference to any other pattern is skipped and the rest of the page renders. The check is in the resolver, so it holds for every caller, and the team is part of the key of the cached read (`readPatterns(ids, teamId)`), so a team never reads another's cached entry. After a user leaves a team nothing needs to be revalidated: what a page renders depends on its own team, not on who edited it.
+- **Modes:** `teamId` is set on every record in every entity isolation mode (`private`, `shared`) and every teams mode, so the rule is the same: the team the record was written to.
+- **The cached read as an entry point:** a `'use cache'` function is a server reference, so it can in principle be called with arbitrary arguments. `readPatterns` accepts only plain identifiers and returns the id and blocks of published patterns, which are public content wherever a page embeds them. It filters by the `teamId` it is given, so a caller needs both a pattern id and its team id to read it; it does not know which page asks, so it is not an access check by itself. Whether a client can reach it was not verified.
+- **Pages saved before this rule** that still reference a pattern of another team stop rendering that pattern, and the reference is dropped the next time its blocks are saved.
 
 ## Error Handling
 
