@@ -43,7 +43,7 @@ export function FileUpload({
 }: FileUploadProps) {
   const [isDragOver, setIsDragOver] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const { pending, error, uploadFiles, cancel } = useFieldUpload()
+  const { pending, error, uploadFiles, cancel, reserved } = useFieldUpload()
   // An upload finishes after a render: add to the value as it is then, not as it was when the files were chosen
   const valueRef = React.useRef(value)
   valueRef.current = value
@@ -86,7 +86,7 @@ export function FileUpload({
     const errors: string[] = []
 
     Array.from(files).forEach((file) => {
-      if (value.length + accepted.length >= maxFiles) {
+      if (value.length + reserved() + accepted.length >= maxFiles) {
         errors.push(`Maximum ${maxFiles} files allowed`)
         return
       }

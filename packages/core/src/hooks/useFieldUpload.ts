@@ -10,6 +10,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useMediaUpload } from './useMediaUpload'
 
 export interface PendingUpload {
@@ -41,14 +42,22 @@ export function matchesAcceptedType(file: File, acceptedTypes?: string[]): boole
 
 export function useFieldUpload() {
   const upload = useMediaUpload()
+  const t = useTranslations('media')
   const [pending, setPending] = useState<PendingUpload[]>([])
   const [error, setError] = useState<string | null>(null)
   const controllers = useRef(new Map<string, AbortController>())
+  const unmounted = useRef(false)
+  // Files chosen and not yet settled, queued ones included: they count toward the field's maximum
+  const reserved = useRef(0)
 
-  // Leaving the form cancels what is still in flight
+  // Leaving the form cancels what is in flight and stops the files still waiting in a batch
   useEffect(() => {
     const active = controllers.current
-    return () => active.forEach((controller) => controller.abort())
+    unmounted.current = false
+    return () => {
+      unmounted.current = true
+      active.forEach((controller) => controller.abort())
+    }
   }, [])
 
   const cancel = (id: string) => controllers.current.get(id)?.abort()
@@ -61,8 +70,10 @@ export function useFieldUpload() {
     const failures = [...rejected]
     const stored: FieldUploadResult[] = []
     setError(failures.length > 0 ? failures.join(' ') : null)
+    reserved.current += files.length
 
     for (const file of files) {
+      if (unmounted.current) break
       const id = `${Date.now()}-${Math.random()}`
       const controller = new AbortController()
       controllers.current.set(id, controller)
@@ -76,12 +87,12 @@ export function useFieldUpload() {
         })
         const media = result.media?.[0]
         const url = media?.url ?? result.urls?.[0]
-        if (!url) throw new Error('The upload returned no file')
+        if (!url) throw new Error(t('upload.noFileReturned'))
         stored.push({ file, id: media?.id ?? url, url })
       } catch (uploadError) {
         // A cancelled upload is the user's choice, not an error to show
         if (!controller.signal.aborted) {
-          failures.push(`${file.name}: ${uploadError instanceof Error ? uploadError.message : 'Upload failed'}`)
+          failures.push(`${file.name}: ${uploadError instanceof Error ? uploadError.message : t('upload.failed')}`)
         }
       } finally {
         controllers.current.delete(id)
@@ -89,9 +100,15 @@ export function useFieldUpload() {
       }
     }
 
+    reserved.current -= files.length
+    // Nothing is reported to a form that is gone
+    if (unmounted.current) return []
     setError(failures.length > 0 ? failures.join(' ') : null)
     return stored
   }
 
-  return { pending, error, uploadFiles, cancel }
+  /** Message for a file outside the field's `acceptedTypes`. */
+  const typeNotAccepted = (acceptedTypes: string[] = []) => t('upload.typeNotAccepted', { types: acceptedTypes.join(', ') })
+
+  return { pending, error, uploadFiles, cancel, reserved: () => reserved.current, typeNotAccepted }
 }

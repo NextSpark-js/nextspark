@@ -47,7 +47,7 @@ export function AudioUpload({
   const [playingId, setPlayingId] = React.useState<string | null>(null)
   const [progress, setProgress] = React.useState<Record<string, number>>({})
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const { pending, error, uploadFiles, cancel } = useFieldUpload()
+  const { pending, error, uploadFiles, cancel, reserved, typeNotAccepted } = useFieldUpload()
   // An upload finishes after a render: add to the value as it is then, not as it was when the files were chosen
   const valueRef = React.useRef(value)
   valueRef.current = value
@@ -86,7 +86,7 @@ export function AudioUpload({
       }
 
       if (!matchesAcceptedType(file, acceptedTypes)) {
-        resolve(`File type not allowed. Accepted types: ${acceptedTypes?.join(", ")}`)
+        resolve(typeNotAccepted(acceptedTypes))
         return
       }
 
@@ -119,7 +119,7 @@ export function AudioUpload({
     const errors: string[] = []
 
     for (const file of Array.from(files)) {
-      if (value.length + accepted.length >= maxAudios) {
+      if (value.length + reserved() + accepted.length >= maxAudios) {
         errors.push(`Maximum ${maxAudios} audio files allowed`)
         break
       }

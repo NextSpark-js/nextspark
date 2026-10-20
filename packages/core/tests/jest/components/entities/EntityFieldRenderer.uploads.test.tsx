@@ -12,7 +12,14 @@ jest.mock('@/core/hooks/useMediaUpload', () => ({
   useMediaUpload: () => ({ mutateAsync }),
 }))
 jest.mock('@/core/lib/auth-client', () => ({ useSession: () => ({ data: null, isPending: false }) }))
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('next-intl', () => {
+  // the real English messages, so the assertions read what a user would
+  const media = require('../../../../src/messages/en/media.json')
+  return {
+    useTranslations: () => (key: string, values: Record<string, unknown> = {}) =>
+      (key.split('.').reduce((node: any, part) => node[part], media) as string).replace(/\{(\w+)\}/g, (_, name) => String(values[name])),
+  }
+})
 jest.mock('next/image', () => ({ __esModule: true, default: () => null }))
 
 import { EntityFieldRenderer } from '@/core/components/entities/EntityFieldRenderer'
@@ -38,7 +45,7 @@ function setup(f: EntityField, value: unknown = []) {
     const input = view.container.querySelector('input[type="file"]') as HTMLInputElement
     return act(async () => { fireEvent.change(input, { target: { files } }) })
   }
-  return { onChange, choose, input: () => view.container.querySelector('input[type="file"]') as HTMLInputElement }
+  return { onChange, choose, unmount: view.unmount, input: () => view.container.querySelector('input[type="file"]') as HTMLInputElement }
 }
 
 const stored = (id: string, url: string) => ({ urls: [url], media: [{ id, url }], count: 1, storage: 'local' })
@@ -145,6 +152,39 @@ describe.each(CASES)('$type field', ({ type, file: make }) => {
     await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1))
     expect((onChange.mock.calls[0][0] as unknown[])).toHaveLength(1)
     expect(await screen.findByRole('alert')).toHaveTextContent('Second failed')
+  })
+})
+
+const hang = ({ signal }: { signal?: AbortSignal }) => new Promise((_, reject) => {
+  signal?.addEventListener('abort', () => reject(new DOMException('cancelled', 'AbortError')))
+})
+
+describe('leaving the form', () => {
+  it('stops a batch: files still waiting are not uploaded and the value is not touched', async () => {
+    mutateAsync.mockImplementation(hang)
+    const { onChange, choose, unmount } = setup(field('file'))
+
+    await choose(file('a.pdf', 'application/pdf'), file('b.pdf', 'application/pdf'), file('c.pdf', 'application/pdf'))
+    expect(mutateAsync).toHaveBeenCalledTimes(1)
+    await act(async () => { unmount() })
+
+    await new Promise(resolve => setTimeout(resolve, 20))
+    expect(mutateAsync).toHaveBeenCalledTimes(1)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+})
+
+describe('files still uploading count toward the limit', () => {
+  it('multiple: false - a second file picked before the first finishes is refused', async () => {
+    mutateAsync.mockImplementation(hang)
+    const { onChange, choose } = setup(field('file', { multiple: false }))
+
+    await choose(file('a.pdf', 'application/pdf'))
+    await choose(file('b.pdf', 'application/pdf'))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/maximum 1/i)
+    expect(mutateAsync).toHaveBeenCalledTimes(1)
+    expect(onChange).not.toHaveBeenCalled()
   })
 })
 
