@@ -30,6 +30,7 @@ import { trackCodeSend } from './auth/code-send';
 import { resolveSocialProviders, socialSignUpProvider } from './auth/social-providers';
 import { getTrustedOrigins } from './utils/cors';
 import { withBasePath } from './base-path';
+import { resolveBaseUrl } from './utils/base-url';
 import { getBetterAuthIpHeaders } from './api/client-ip';
 import { isRateLimitingDisabled } from './api/rate-limit-disabled';
 import { runAfterResponse } from './auth/background-tasks';
@@ -80,7 +81,7 @@ export interface UserWithEmail {
 
 const isProd = process.env.NODE_ENV === 'production';
 const betterAuthIpHeaders = getBetterAuthIpHeaders();
-const baseUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173';
+const baseUrl = resolveBaseUrl();
 
 // Providers are created only inside callbacks that actually send email. This
 // keeps an OAuth-only project independent from unused/bad email configuration.
