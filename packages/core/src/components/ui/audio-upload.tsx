@@ -6,6 +6,8 @@ import { Button } from './button'
 import { Progress } from './progress'
 import { cn } from '../../lib/utils'
 import { withBasePathIfInApp } from '../../lib/base-path'
+import { matchesAcceptedType, useFieldUpload } from '../../hooks/useFieldUpload'
+import { UploadStatus } from './upload-status'
 
 export interface UploadedAudio {
   id: string
@@ -24,6 +26,8 @@ interface AudioUploadProps {
   className?: string
   multiple?: boolean
   acceptedFormats?: string[]
+  /** MIME types or extensions; narrows what `acceptedFormats` allows */
+  acceptedTypes?: string[]
   showPlayer?: boolean
 }
 
@@ -36,12 +40,17 @@ export function AudioUpload({
   className,
   multiple = true,
   acceptedFormats = ["mp3", "wav", "ogg", "m4a", "aac"],
+  acceptedTypes,
   showPlayer = true,
 }: AudioUploadProps) {
   const [isDragOver, setIsDragOver] = React.useState(false)
   const [playingId, setPlayingId] = React.useState<string | null>(null)
   const [progress, setProgress] = React.useState<Record<string, number>>({})
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const { pending, error, uploadFiles, cancel } = useFieldUpload()
+  // An upload finishes after a render: add to the value as it is then, not as it was when the files were chosen
+  const valueRef = React.useRef(value)
+  valueRef.current = value
   const audioRefs = React.useRef<Record<string, HTMLAudioElement>>({})
 
   const formatFileSize = (bytes: number) => {
@@ -76,6 +85,11 @@ export function AudioUpload({
         return
       }
 
+      if (!matchesAcceptedType(file, acceptedTypes)) {
+        resolve(`File type not allowed. Accepted types: ${acceptedTypes?.join(", ")}`)
+        return
+      }
+
       resolve(null)
     })
   }
@@ -100,11 +114,12 @@ export function AudioUpload({
   const handleFiles = async (files: FileList) => {
     if (disabled) return
 
-    const newAudios: UploadedAudio[] = []
+    const accepted: File[] = []
+    const durations = new Map<File, number | undefined>()
     const errors: string[] = []
 
     for (const file of Array.from(files)) {
-      if (value.length + newAudios.length >= maxAudios) {
+      if (value.length + accepted.length >= maxAudios) {
         errors.push(`Maximum ${maxAudios} audio files allowed`)
         break
       }
@@ -115,25 +130,18 @@ export function AudioUpload({
         continue
       }
 
-      const duration = await getAudioDuration(file)
-      
-      const uploadedAudio: UploadedAudio = {
-        id: `${Date.now()}-${Math.random()}`,
-        name: file.name,
-        size: file.size,
-        url: URL.createObjectURL(file),
-        duration,
-      }
-
-      newAudios.push(uploadedAudio)
+      durations.set(file, await getAudioDuration(file))
+      accepted.push(file)
     }
 
-    if (errors.length > 0) {
-      console.warn("Audio upload errors:", errors)
-    }
+    // The value gets the id and URL the API returns; a file that fails to upload adds nothing
+    const uploaded = await uploadFiles(accepted, errors)
 
-    if (newAudios.length > 0) {
-      onChange([...value, ...newAudios])
+    if (uploaded.length > 0) {
+      onChange([
+        ...valueRef.current,
+        ...uploaded.map(({ file, id, url }): UploadedAudio => ({ id, name: file.name, size: file.size, url, duration: durations.get(file) })),
+      ])
     }
   }
 
@@ -257,6 +265,8 @@ export function AudioUpload({
           disabled={disabled}
         />
       </div>
+
+      <UploadStatus pending={pending} error={error} onCancel={cancel} />
 
       {/* Audios List */}
       {value.length > 0 && (

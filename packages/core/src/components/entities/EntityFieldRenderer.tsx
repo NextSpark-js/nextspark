@@ -224,6 +224,15 @@ function renderFormField(
     'aria-invalid': !!error,
   }
 
+  // Limits of the upload fields come from the field config; what is not set keeps the component's default.
+  // `multiple` is on unless the field says `multiple: false` (which also means a maximum of one file).
+  const upload = {
+    max: field.multiple === false ? 1 : field.maxFiles,
+    maxSize: field.maxSize,
+    acceptedTypes: field.acceptedTypes,
+    multiple: field.multiple ?? true,
+  }
+
   switch (field.type) {
     // Basic text inputs
     case 'text':
@@ -520,7 +529,10 @@ function renderFormField(
           value={Array.isArray(value) ? value : []}
           onChange={onChange}
           disabled={disabled}
-          multiple={true}
+          multiple={upload.multiple}
+          maxFiles={upload.max}
+          maxSize={upload.maxSize}
+          acceptedTypes={upload.acceptedTypes}
         />
       )
 
@@ -530,7 +542,10 @@ function renderFormField(
           value={Array.isArray(value) ? value : []}
           onChange={onChange}
           disabled={disabled}
-          multiple={true}
+          multiple={upload.multiple}
+          maxImages={upload.max}
+          maxSize={upload.maxSize}
+          acceptedTypes={upload.acceptedTypes}
         />
       )
 
@@ -540,7 +555,10 @@ function renderFormField(
           value={Array.isArray(value) ? value : []}
           onChange={onChange}
           disabled={disabled}
-          multiple={true}
+          multiple={upload.multiple}
+          maxVideos={upload.max}
+          maxSize={upload.maxSize}
+          acceptedTypes={upload.acceptedTypes}
         />
       )
 
@@ -550,7 +568,10 @@ function renderFormField(
           value={Array.isArray(value) ? value : []}
           onChange={onChange}
           disabled={disabled}
-          multiple={true}
+          multiple={upload.multiple}
+          maxAudios={upload.max}
+          maxSize={upload.maxSize}
+          acceptedTypes={upload.acceptedTypes}
         />
       )
 

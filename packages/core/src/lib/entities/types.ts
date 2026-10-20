@@ -520,6 +520,18 @@ export interface EntityField {
   /** Maximum length for text/textarea fields */
   maxLength?: number
 
+  /** Maximum number of files for file, image, video and audio fields (component default when unset) */
+  maxFiles?: number
+
+  /** Maximum size in MB of each file for file, image, video and audio fields (component default when unset) */
+  maxSize?: number
+
+  /** Accepted MIME types or extensions ("image/*", "application/pdf", ".pdf") for file, image, video and audio fields */
+  acceptedTypes?: string[]
+
+  /** Whether file, image, video and audio fields take several files (default true; false means one) */
+  multiple?: boolean
+
   /** Display configuration */
   display: FieldDisplay
 

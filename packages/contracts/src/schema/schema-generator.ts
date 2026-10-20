@@ -16,12 +16,21 @@ import type { EntityConfig, EntityField, ChildEntityDefinition } from './types'
 import { mediaRefSchema } from './media-ref'
 import { builderBlocksSchema } from './response-shape'
 
+/**
+ * URL of a stored file: absolute (S3, Vercel Blob) or a path of this app (local driver).
+ * A `blob:` URL only exists in the tab that made it, so it is never a stored value.
+ */
+const storedUrlSchema = z
+  .string()
+  .refine((val) => !val.toLowerCase().startsWith('blob:'), 'A blob: URL is not a stored file')
+  .pipe(z.union([z.string().url(), z.string().regex(/^\/(?!\/)/)]))
+
 /** One uploaded file: the items of `file`, `video`, `audio` and multi-`image` fields. */
 export const fileObjectSchema = z.object({
   id: z.string(),
   name: z.string(),
   size: z.number(),
-  url: z.string().url(),
+  url: storedUrlSchema,
   type: z.string().optional(),
 })
 
@@ -749,13 +758,13 @@ function generateFieldSchema(
       // 3. null/undefined/empty string (when no image)
       schema = z.union([
         // Simple URL string
-        z.string().url(),
+        storedUrlSchema,
         z.string().transform((val, ctx) => {
           if (val === '' || val === null || val === undefined) {
             return null
           }
-          // Check if it looks like a URL (starts with http, https, or blob:)
-          if (val.startsWith('http') || val.startsWith('blob:') || val.startsWith('/')) {
+          // Check if it looks like a URL (starts with http, https or /); a blob: URL is not a stored file
+          if (val.startsWith('http') || val.startsWith('/')) {
             return val
           }
           ctx.addIssue({

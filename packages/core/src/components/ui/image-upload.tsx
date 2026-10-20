@@ -7,6 +7,8 @@ import { Button } from './button'
 import { Dialog, DialogContent, DialogTrigger } from './dialog'
 import { cn } from '../../lib/utils'
 import { withBasePathIfInApp } from '../../lib/base-path'
+import { matchesAcceptedType, useFieldUpload } from '../../hooks/useFieldUpload'
+import { UploadStatus } from './upload-status'
 
 export interface UploadedImage {
   id: string
@@ -23,6 +25,8 @@ interface ImageUploadProps {
   onChange: (images: UploadedImage[]) => void
   maxImages?: number
   maxSize?: number // in MB
+  /** MIME types or extensions, narrower than the image/* the component already requires */
+  acceptedTypes?: string[]
   disabled?: boolean
   className?: string
   multiple?: boolean
@@ -35,6 +39,7 @@ export function ImageUpload({
   onChange,
   maxImages = 5,
   maxSize = 5, // 5MB default
+  acceptedTypes,
   disabled = false,
   className,
   multiple = true,
@@ -43,6 +48,10 @@ export function ImageUpload({
 }: ImageUploadProps) {
   const [isDragOver, setIsDragOver] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const { pending, error, uploadFiles, cancel } = useFieldUpload()
+  // An upload finishes after a render: add to the value as it is then, not as it was when the files were chosen
+  const valueRef = React.useRef(value)
+  valueRef.current = value
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes"
@@ -64,6 +73,11 @@ export function ImageUpload({
         return
       }
 
+      if (!matchesAcceptedType(file, acceptedTypes)) {
+        resolve(`File type not allowed. Accepted types: ${acceptedTypes?.join(", ")}`)
+        return
+      }
+
       // Validate image dimensions if needed
       const img = document.createElement('img')
       img.onload = () => {
@@ -80,11 +94,11 @@ export function ImageUpload({
   const handleFiles = async (files: FileList) => {
     if (disabled) return
 
-    const newImages: UploadedImage[] = []
+    const accepted: File[] = []
     const errors: string[] = []
 
     for (const file of Array.from(files)) {
-      if (value.length + newImages.length >= maxImages) {
+      if (value.length + accepted.length >= maxImages) {
         errors.push(`Maximum ${maxImages} images allowed`)
         break
       }
@@ -95,23 +109,17 @@ export function ImageUpload({
         continue
       }
 
-      const uploadedImage: UploadedImage = {
-        id: `${Date.now()}-${Math.random()}`,
-        name: file.name,
-        size: file.size,
-        url: URL.createObjectURL(file),
-        alt: file.name.split(".")[0],
-      }
-
-      newImages.push(uploadedImage)
+      accepted.push(file)
     }
 
-    if (errors.length > 0) {
-      console.warn("Image upload errors:", errors)
-    }
+    // The value gets the id and URL the API returns; a file that fails to upload adds nothing
+    const uploaded = await uploadFiles(accepted, errors)
 
-    if (newImages.length > 0) {
-      onChange([...value, ...newImages])
+    if (uploaded.length > 0) {
+      onChange([
+        ...valueRef.current,
+        ...uploaded.map(({ file, id, url }): UploadedImage => ({ id, name: file.name, size: file.size, url, alt: file.name.split(".")[0] })),
+      ])
     }
   }
 
@@ -196,12 +204,14 @@ export function ImageUpload({
           ref={inputRef}
           type="file"
           multiple={multiple && maxImages > 1}
-          accept="image/*"
+          accept={acceptedTypes?.length ? acceptedTypes.join(",") : "image/*"}
           onChange={handleInputChange}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           disabled={disabled}
         />
       </div>
+
+      <UploadStatus pending={pending} error={error} onCancel={cancel} />
 
       {/* Images Grid */}
       {value.length > 0 && showPreview && (

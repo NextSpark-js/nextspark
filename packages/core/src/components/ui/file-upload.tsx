@@ -6,6 +6,8 @@ import { Button } from './button'
 import { Progress } from './progress'
 import { cn } from '../../lib/utils'
 import { withBasePathIfInApp } from '../../lib/base-path'
+import { useFieldUpload } from '../../hooks/useFieldUpload'
+import { UploadStatus } from './upload-status'
 
 export interface UploadedFile {
   id: string
@@ -41,6 +43,10 @@ export function FileUpload({
 }: FileUploadProps) {
   const [isDragOver, setIsDragOver] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const { pending, error, uploadFiles, cancel } = useFieldUpload()
+  // An upload finishes after a render: add to the value as it is then, not as it was when the files were chosen
+  const valueRef = React.useRef(value)
+  valueRef.current = value
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes"
@@ -73,14 +79,14 @@ export function FileUpload({
     return null
   }
 
-  const handleFiles = (files: FileList) => {
+  const handleFiles = async (files: FileList) => {
     if (disabled) return
 
-    const newFiles: UploadedFile[] = []
+    const accepted: File[] = []
     const errors: string[] = []
 
     Array.from(files).forEach((file) => {
-      if (value.length + newFiles.length >= maxFiles) {
+      if (value.length + accepted.length >= maxFiles) {
         errors.push(`Maximum ${maxFiles} files allowed`)
         return
       }
@@ -91,25 +97,17 @@ export function FileUpload({
         return
       }
 
-      const uploadedFile: UploadedFile = {
-        id: `${Date.now()}-${Math.random()}`,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: URL.createObjectURL(file),
-        uploadProgress: 100, // Simulate immediate upload for demo
-      }
-
-      newFiles.push(uploadedFile)
+      accepted.push(file)
     })
 
-    if (errors.length > 0) {
-      console.warn("File upload errors:", errors)
-      // You could show these errors in a toast or alert
-    }
+    // The value gets the id and URL the API returns; a file that fails to upload adds nothing
+    const uploaded = await uploadFiles(accepted, [...new Set(errors)])
 
-    if (newFiles.length > 0) {
-      onChange([...value, ...newFiles])
+    if (uploaded.length > 0) {
+      onChange([
+        ...valueRef.current,
+        ...uploaded.map(({ file, id, url }): UploadedFile => ({ id, name: file.name, size: file.size, type: file.type, url })),
+      ])
     }
   }
 
@@ -187,6 +185,8 @@ export function FileUpload({
           disabled={disabled}
         />
       </div>
+
+      <UploadStatus pending={pending} error={error} onCancel={cancel} />
 
       {/* Files List */}
       {value.length > 0 && (

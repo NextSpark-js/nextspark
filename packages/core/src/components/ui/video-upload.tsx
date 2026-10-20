@@ -6,6 +6,8 @@ import { X, Play, Download, Video } from "lucide-react"
 import { Button } from './button'
 import { cn } from '../../lib/utils'
 import { withBasePathIfInApp } from '../../lib/base-path'
+import { matchesAcceptedType, useFieldUpload } from '../../hooks/useFieldUpload'
+import { UploadStatus } from './upload-status'
 
 export interface UploadedVideo {
   id: string
@@ -25,6 +27,8 @@ interface VideoUploadProps {
   className?: string
   multiple?: boolean
   acceptedFormats?: string[]
+  /** MIME types or extensions; narrows what `acceptedFormats` allows */
+  acceptedTypes?: string[]
 }
 
 export function VideoUpload({
@@ -36,9 +40,14 @@ export function VideoUpload({
   className,
   multiple = true,
   acceptedFormats = ["mp4", "mov", "avi", "mkv", "webm"],
+  acceptedTypes,
 }: VideoUploadProps) {
   const [isDragOver, setIsDragOver] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const { pending, error, uploadFiles, cancel } = useFieldUpload()
+  // An upload finishes after a render: add to the value as it is then, not as it was when the files were chosen
+  const valueRef = React.useRef(value)
+  valueRef.current = value
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes"
@@ -69,6 +78,11 @@ export function VideoUpload({
       const fileExtension = file.name.split(".").pop()?.toLowerCase()
       if (fileExtension && !acceptedFormats.includes(fileExtension)) {
         resolve(`Unsupported format. Accepted formats: ${acceptedFormats.join(", ")}`)
+        return
+      }
+
+      if (!matchesAcceptedType(file, acceptedTypes)) {
+        resolve(`File type not allowed. Accepted types: ${acceptedTypes?.join(", ")}`)
         return
       }
 
@@ -107,11 +121,12 @@ export function VideoUpload({
   const handleFiles = async (files: FileList) => {
     if (disabled) return
 
-    const newVideos: UploadedVideo[] = []
+    const accepted: File[] = []
+    const thumbnails = new Map<File, string>()
     const errors: string[] = []
 
     for (const file of Array.from(files)) {
-      if (value.length + newVideos.length >= maxVideos) {
+      if (value.length + accepted.length >= maxVideos) {
         errors.push(`Maximum ${maxVideos} videos allowed`)
         break
       }
@@ -122,25 +137,18 @@ export function VideoUpload({
         continue
       }
 
-      const thumbnail = await generateThumbnail(file)
-      
-      const uploadedVideo: UploadedVideo = {
-        id: `${Date.now()}-${Math.random()}`,
-        name: file.name,
-        size: file.size,
-        url: URL.createObjectURL(file),
-        thumbnail,
-      }
-
-      newVideos.push(uploadedVideo)
+      thumbnails.set(file, await generateThumbnail(file))
+      accepted.push(file)
     }
 
-    if (errors.length > 0) {
-      console.warn("Video upload errors:", errors)
-    }
+    // The value gets the id and URL the API returns; a file that fails to upload adds nothing
+    const uploaded = await uploadFiles(accepted, errors)
 
-    if (newVideos.length > 0) {
-      onChange([...value, ...newVideos])
+    if (uploaded.length > 0) {
+      onChange([
+        ...valueRef.current,
+        ...uploaded.map(({ file, id, url }): UploadedVideo => ({ id, name: file.name, size: file.size, url, thumbnail: thumbnails.get(file) })),
+      ])
     }
   }
 
@@ -221,6 +229,8 @@ export function VideoUpload({
           disabled={disabled}
         />
       </div>
+
+      <UploadStatus pending={pending} error={error} onCancel={cancel} />
 
       {/* Videos List */}
       {value.length > 0 && (
