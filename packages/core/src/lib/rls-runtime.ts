@@ -10,7 +10,7 @@ export interface RlsRuntimeRow {
   role: string
   superuser: boolean
   bypassRls: boolean
-  /** RLS-enabled tables of the current schema that the role owns and that do not FORCE row-level security */
+  /** RLS-enabled tables of the current schema that the role owns, directly or through an inherited role, and that do not FORCE row-level security */
   ownedTables: number
   /** RLS-enabled tables in the current schema */
   rlsTables: number
@@ -22,7 +22,7 @@ type Run = (sql: string) => Promise<{ rows: RlsRuntimeRow[] }>
 
 export const RLS_RUNTIME_SQL = `
   SELECT r.rolname AS role, r.rolsuper AS superuser, r.rolbypassrls AS "bypassRls",
-         count(c.oid) FILTER (WHERE c.relowner = r.oid AND NOT c.relforcerowsecurity)::int AS "ownedTables",
+         count(c.oid) FILTER (WHERE pg_has_role(r.oid, c.relowner, 'USAGE') AND NOT c.relforcerowsecurity)::int AS "ownedTables",
          count(c.oid)::int AS "rlsTables"
   FROM pg_roles r
   LEFT JOIN pg_class c ON c.relkind IN ('r', 'p') AND c.relrowsecurity AND c.relnamespace = to_regnamespace(current_schema())

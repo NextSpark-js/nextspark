@@ -980,7 +980,7 @@ Authorization for them is enforced at the API/action layer, not by RLS.
 only connection a fresh project has, so the application connects as the owner too. An
 owner, a superuser and a role with `BYPASSRLS` skip every policy, and
 `DATABASE_SERVICE_URL` falls back to `DATABASE_URL`, so before the cutover nothing
-changes, and nothing in the application filters by RLS either. Application checks that
+changes, so RLS filters nothing. Application checks that
 rely on it (for example, which related records a user can see) let everything through.
 
 **Checking which role you have.** `nextspark doctor` runs the "Row-level security"
@@ -995,14 +995,14 @@ cannot read `pg_roles`. By hand:
 SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user;
 SELECT count(*) FROM pg_class
  WHERE relkind IN ('r','p') AND relrowsecurity
-   AND relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+   AND relnamespace = to_regnamespace(current_schema())
+   AND pg_has_role(current_user, relowner, 'USAGE')  -- owned directly or through an inherited role
    AND NOT relforcerowsecurity;  -- tables the role owns and RLS skips
 ```
 
 RLS applies when `rolsuper` and `rolbypassrls` are false and the count is 0. After the
-cutover, the doctor passes and the start logs nothing. A later release may add a strict
-mode that refuses to start in production unless the bypass is accepted explicitly; today
-the check only reports.
+cutover, the doctor passes and the start logs nothing. The check only reports; it never
+stops the server.
 
 ### Fail-closed permission enforcement (`generic-handler.ts`)
 

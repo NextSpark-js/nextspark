@@ -12,7 +12,7 @@ import { scriptClient } from './ssl-config.mjs'
 
 export const RLS_RUNTIME_SQL = `
   SELECT r.rolname AS role, r.rolsuper AS superuser, r.rolbypassrls AS "bypassRls",
-         count(c.oid) FILTER (WHERE c.relowner = r.oid AND NOT c.relforcerowsecurity)::int AS "ownedTables",
+         count(c.oid) FILTER (WHERE pg_has_role(r.oid, c.relowner, 'USAGE') AND NOT c.relforcerowsecurity)::int AS "ownedTables",
          count(c.oid)::int AS "rlsTables"
   FROM pg_roles r
   LEFT JOIN pg_class c ON c.relkind IN ('r', 'p') AND c.relrowsecurity AND c.relnamespace = to_regnamespace(current_schema())

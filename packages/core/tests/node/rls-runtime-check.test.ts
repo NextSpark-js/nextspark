@@ -7,6 +7,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
+import pg from 'pg'
 import { CORE, HAS_POSTGRES, cutoverDatabase } from './_pg-cutover'
 import { rlsRuntime, rlsRuntimeVerdict } from '../../scripts/db/check-rls-runtime.mjs'
 import { logRlsBypassAtStartup, readRlsRuntime, rlsRuntimeVerdict as tsVerdict } from '../../src/lib/rls-runtime'
@@ -64,6 +65,24 @@ test('the owner skips RLS, nextspark_app does not; the script and the startup wa
   } finally {
     console.warn = warn
   }
+})
+
+test('a login that inherits the owner role is bypassed, as row_security_active() says', { skip, timeout: 240000 }, async t => {
+  const { owner, ownerUrl } = await cutoverDatabase(t)
+  await owner.query('CREATE ROLE grp_owner NOLOGIN NOSUPERUSER NOBYPASSRLS')
+  await owner.query(eachRlsTable('OWNER TO grp_owner'))
+  await owner.query('CREATE ROLE deployer LOGIN NOSUPERUSER NOBYPASSRLS IN ROLE grp_owner')
+  const url = ownerUrl.replace('owner@', 'deployer@')
+  const client = new pg.Client({ connectionString: url })
+  client.on('error', () => {})
+  await client.connect()
+  t.after(() => client.end())
+  assert.equal((await client.query(`SELECT row_security_active('users'::regclass) AS active`)).rows[0].active, false)
+  const row = await rlsRuntime(client)
+  assert.equal(row.role, 'deployer')
+  assert.ok(row.ownedTables > 0)
+  assert.equal(rlsRuntimeVerdict(row), 'bypassed')
+  assert.equal(check(url).status, 1)
 })
 
 test('a non-superuser owner is bypassed, and FORCE ROW LEVEL SECURITY makes it subject to RLS', { skip, timeout: 240000 }, async t => {
