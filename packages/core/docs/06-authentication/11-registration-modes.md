@@ -132,6 +132,8 @@ Registration mode restrictions are enforced at multiple layers:
 
 7. **Sign-in code request** (`lib/auth/registration-guard-plugin.ts`, before `/email-otp/send-verification-otp`): in `domain-restricted` and `domain-open`, a `sign-in` code for an address outside `allowedDomains` is refused before any email is sent.
 
+A sign-up that fails afterwards because the new user's team could not be created (`TEAM_CREATION_FAILED`, `500`) removes the user, but the `after` hook runs when the user is already committed: an email sign-up has already sent its verification email (its link finds no user) and set the session cookies, and the session cookie cache (when enabled) still answers for its `maxAge` (5 minutes by default) wherever it is read without skipping the cache. The API routes skip it, so every API request answers `401` at once.
+
 Every refusal above answers `403` with a code in the JSON body: `DOMAIN_NOT_ALLOWED` or `SIGNUP_RESTRICTED`. A Google sign-in is redirected to `/auth-error?error=<code>` instead. The login, sign-up and auth error pages show a translated message for both codes, and no response, redirect or log names the allowed domains.
 
 ## Types

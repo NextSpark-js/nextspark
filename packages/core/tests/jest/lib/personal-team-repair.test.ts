@@ -85,26 +85,27 @@ describeWithPostgres('repairMissingPersonalTeam', () => {
 
   const count = async (sql: string, params: unknown[] = []) => (await owner.query(sql, params)).rows[0].n as number
 
-  test('concurrent first requests of one user create exactly one team, and each gets its id', async () => {
+  test('concurrent first requests of one user create exactly one team, and every request answers with it or, while another holds the lock, nothing', async () => {
     const ids = await Promise.all(Array.from({ length: 10 }, () => repair('orphan')))
 
     const teams = (await owner.query(`SELECT "teamId", role FROM team_members WHERE "userId" = 'orphan'`)).rows
     expect(teams).toHaveLength(1)
     expect(teams[0].role).toBe('owner')
     expect(await count(`SELECT count(*)::int AS n FROM teams WHERE "ownerId" = 'orphan'`)).toBe(1)
-    expect(new Set(ids)).toEqual(new Set([teams[0].teamId]))
+    expect(ids).toContain(teams[0].teamId)
+    expect(ids.every(id => id === undefined || id === teams[0].teamId)).toBe(true)
   })
 
   test('a user that has a team is left alone', async () => {
-    expect(await repair('orphan')).toBeUndefined()
-    expect(await repair('member')).toBeUndefined()
+    expect(await repair('orphan')).toBeDefined() // its existing team
+    expect(await repair('member')).toBe('t-member')
     expect(await count(`SELECT count(*)::int AS n FROM teams WHERE "ownerId" IN ('orphan', 'member')`)).toBe(2)
   })
 
   test.each([
     ['a deliberate team-less signup', 'teamless'],
     ['a pending invitation', 'invited'],
-    ['a user whose only team was deleted', 'former'],
+    ['an owner whose only team was deleted (the membership row remains)', 'former'],
   ])('not repaired: %s', async (_label, userId) => {
     expect(await repair(userId)).toBeUndefined()
     expect(await count(`SELECT count(*)::int AS n FROM teams WHERE "ownerId" = $1 AND "deletedAt" IS NULL`, [userId])).toBe(0)
@@ -114,4 +115,28 @@ describeWithPostgres('repairMissingPersonalTeam', () => {
   test('an unknown user is not repaired and nothing throws', async () => {
     expect(await repair('nobody')).toBeUndefined()
   })
+
+  test('a member removed from their only team (membership row deleted, never an owner) gets a personal team', async () => {
+    await owner.query(`INSERT INTO users (id, email, name, role, "emailVerified") VALUES ('removed', 'removed@example.test', 'Removed', 'member', true)`)
+    const id = await repair('removed')
+    expect(id).toBeDefined()
+    expect(await count(`SELECT count(*)::int AS n FROM team_members WHERE "userId" = 'removed' AND "teamId" = $1`, [id])).toBe(1)
+  })
+
+  test('more concurrent repairs than the pool has connections: no stall, one team per user', async () => {
+    const users = Array.from({ length: 30 }, (_, i) => `${i.toString(36).padStart(4, '0')}-bulk`) // TeamService.create's slug takes the first 4 characters of the id
+    await owner.query(`INSERT INTO users (id, email, name, role, "emailVerified") SELECT u, u || '@example.test', u, 'member', true FROM unnest($1::text[]) u`, [users])
+    const started = Date.now()
+    // every user three times at once, and one user thirty times
+    const results = await Promise.all([
+      ...users.flatMap(u => [repair(u), repair(u), repair(u)]),
+      ...Array.from({ length: 30 }, () => repair(users[0])),
+    ])
+    expect(Date.now() - started).toBeLessThan(8000)
+    expect(results.filter(r => r === undefined).length).toBeLessThan(results.length) // some answered before the winner finished
+    for (const u of users) {
+      expect(await count(`SELECT count(*)::int AS n FROM teams WHERE "ownerId" = $1`, [u])).toBe(1)
+      expect(await count(`SELECT count(*)::int AS n FROM team_members WHERE "userId" = $1`, [u])).toBe(1)
+    }
+  }, 30000)
 })

@@ -159,8 +159,9 @@ function resolveNonOwnerSignupRole(): string | null {
 /**
  * Records the resolved signup intent on the user's metadata so the application can
  * recognise a deliberately team-less account (vs a half-finished owner). Uses the
- * privileged pool — this hook runs with no user GUC. Best-effort; the caller's
- * try/catch keeps a failure here from aborting user creation.
+ * privileged pool — this hook runs with no user GUC. Not best-effort: without the
+ * meta the account would look like a half-finished owner and be given a team, so a
+ * failure here fails the sign-up like any other team failure (the caller's catch).
  */
 async function recordSignupIntentMeta(userId: string, intent: string): Promise<void> {
   // metaValue is jsonb — encode the plain intent string as a JSON string
