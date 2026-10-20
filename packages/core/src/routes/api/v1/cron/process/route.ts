@@ -59,8 +59,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     console.log('[Cron] Starting scheduled actions processing')
 
-    // Process pending actions (batch of 10 max)
-    const processResult: ProcessResult = await processPendingActions(10)
+    // Process pending actions (batch size from scheduledActions.batchSize, 10 by default)
+    const processResult: ProcessResult = await processPendingActions()
 
     // Optionally run cleanup (every 24th run if called every hour)
     // For now, run cleanup every time (can be optimized later)
