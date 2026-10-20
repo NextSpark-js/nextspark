@@ -566,7 +566,8 @@ export function FieldTypesGallery() {
     },
   ]
 
-  const renderFieldSection = (title: string, description: string, fields: EntityField[]) => (
+  // `demo` renders the fields disabled: the upload fields would otherwise upload for real (and the devtools group has no media messages)
+  const renderFieldSection = (title: string, description: string, fields: EntityField[], demo = false) => (
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold">{title}</h3>
@@ -598,6 +599,7 @@ export function FieldTypesGallery() {
                   value={fieldValues[field.name]}
                   onChange={(value) => updateFieldValue(field.name, value)}
                   mode="form"
+                  disabled={demo}
                 />
               </div>
 
@@ -710,8 +712,9 @@ export function FieldTypesGallery() {
         <TabsContent value="media" className="space-y-6">
           {renderFieldSection(
             "Media Upload Fields",
-            "File upload fields with preview and management capabilities",
-            mediaFields
+            "File upload fields with preview and management capabilities (display only here: uploads are disabled)",
+            mediaFields,
+            true
           )}
         </TabsContent>
 

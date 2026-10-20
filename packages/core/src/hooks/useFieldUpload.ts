@@ -47,7 +47,7 @@ export function useFieldUpload() {
   const [error, setError] = useState<string | null>(null)
   const controllers = useRef(new Map<string, AbortController>())
   const unmounted = useRef(false)
-  // Files chosen and not yet settled, queued ones included: they count toward the field's maximum
+  // Slots of the field's maximum taken by files chosen and not yet settled (being checked, queued or uploading)
   const reserved = useRef(0)
 
   // Leaving the form cancels what is in flight and stops the files still waiting in a batch
@@ -63,15 +63,13 @@ export function useFieldUpload() {
   const cancel = (id: string) => controllers.current.get(id)?.abort()
 
   /**
-   * Uploads the files; `rejected` are messages for files the caller already refused (limits).
+   * Uploads the files, whose slots the caller took with `claim`; `rejected` are messages for files already refused (limits).
    * Resolves with the files that were stored. The error state holds the rejections and failures.
    */
   const uploadFiles = async (files: File[], rejected: string[] = []): Promise<FieldUploadResult[]> => {
     const failures = [...rejected]
     const stored: FieldUploadResult[] = []
     setError(failures.length > 0 ? failures.join(' ') : null)
-    reserved.current += files.length
-
     for (const file of files) {
       if (unmounted.current) break
       const id = `${Date.now()}-${Math.random()}`
@@ -100,6 +98,7 @@ export function useFieldUpload() {
       }
     }
 
+    // The slots go back when the batch ends: the caller adds the stored files to the value right after
     reserved.current -= files.length
     // Nothing is reported to a form that is gone
     if (unmounted.current) return []
@@ -107,8 +106,20 @@ export function useFieldUpload() {
     return stored
   }
 
+  /**
+   * Takes slots for the files just chosen, before anything is awaited, so a second pick sees them.
+   * Returns how many of `requested` fit under `max` given the `current` value length; each slot is
+   * given back by `release` (a file refused by validation) or by the end of its upload.
+   */
+  const claim = (requested: number, max: number, current: number): number => {
+    const granted = Math.max(0, Math.min(requested, max - current - reserved.current))
+    reserved.current += granted
+    return granted
+  }
+  const release = (count = 1) => { reserved.current -= count }
+
   /** Message for a file outside the field's `acceptedTypes`. */
   const typeNotAccepted = (acceptedTypes: string[] = []) => t('upload.typeNotAccepted', { types: acceptedTypes.join(', ') })
 
-  return { pending, error, uploadFiles, cancel, reserved: () => reserved.current, typeNotAccepted }
+  return { pending, error, uploadFiles, cancel, claim, release, typeNotAccepted }
 }

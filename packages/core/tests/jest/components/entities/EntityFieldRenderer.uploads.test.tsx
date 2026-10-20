@@ -188,6 +188,22 @@ describe('files still uploading count toward the limit', () => {
   })
 })
 
+describe('slots are taken at pick time', () => {
+  it('multiple: false - a second pick while the first file is still being checked is refused', async () => {
+    // the image never finishes loading: the first pick is stuck in validation
+    Object.defineProperty(HTMLImageElement.prototype, 'src', { configurable: true, set() { /* never loads */ } })
+    mutateAsync.mockResolvedValue(stored('media-1', '/api/v1/media/files/a.png'))
+    const { onChange, choose } = setup(field('image', { multiple: false }))
+
+    await choose(file('a.png', 'image/png'))
+    await choose(file('b.png', 'image/png'))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/maximum 1/i)
+    expect(mutateAsync).not.toHaveBeenCalled()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+})
+
 describe('multiple', () => {
   it('false limits the field to one file (the input takes one)', () => {
     const { input } = setup(field('file', { multiple: false }))

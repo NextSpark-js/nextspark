@@ -44,7 +44,7 @@ export function VideoUpload({
 }: VideoUploadProps) {
   const [isDragOver, setIsDragOver] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const { pending, error, uploadFiles, cancel, reserved, typeNotAccepted } = useFieldUpload()
+  const { pending, error, uploadFiles, cancel, claim, release, typeNotAccepted } = useFieldUpload()
   // An upload finishes after a render: add to the value as it is then, not as it was when the files were chosen
   const valueRef = React.useRef(value)
   valueRef.current = value
@@ -125,14 +125,15 @@ export function VideoUpload({
     const thumbnails = new Map<File, string>()
     const errors: string[] = []
 
-    for (const file of Array.from(files)) {
-      if (value.length + reserved() + accepted.length >= maxVideos) {
-        errors.push(`Maximum ${maxVideos} videos allowed`)
-        break
-      }
+    // Slots are taken before anything is awaited, so a second pick counts these files
+    const picked = Array.from(files)
+    const granted = claim(picked.length, maxVideos, valueRef.current.length)
+    if (granted < picked.length) errors.push(`Maximum ${maxVideos} videos allowed`)
 
+    for (const file of picked.slice(0, granted)) {
       const error = await validateVideo(file)
       if (error) {
+        release()
         errors.push(`${file.name}: ${error}`)
         continue
       }
