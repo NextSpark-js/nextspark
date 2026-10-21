@@ -38,12 +38,12 @@ ALTER TABLE public."your_entity" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "your_entity_team_isolation" ON public."your_entity"
   FOR ALL TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   )
   WITH CHECK (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 ```
 
@@ -150,7 +150,7 @@ RLS policies filter by team membership:
 CREATE POLICY "team_isolation" ON public."your_entity"
   FOR ALL TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   );
 ```
 
@@ -191,12 +191,12 @@ ALTER TABLE public."tasks" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "tasks_team_isolation" ON public."tasks"
   FOR ALL TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   )
   WITH CHECK (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 ```
 

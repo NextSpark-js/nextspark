@@ -135,23 +135,23 @@ ALTER TABLE "table_name" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "users_can_view_own" ON "table_name"
   FOR SELECT
   TO authenticated
-  USING ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 
 CREATE POLICY "users_can_create_own" ON "table_name"
   FOR INSERT
   TO authenticated
-  WITH CHECK ("userId" = public.get_auth_user_id());
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 CREATE POLICY "users_can_update_own" ON "table_name"
   FOR UPDATE
   TO authenticated
-  USING ("userId" = public.get_auth_user_id())
-  WITH CHECK ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()))
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 CREATE POLICY "users_can_delete_own" ON "table_name"
   FOR DELETE
   TO authenticated
-  USING ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- ============================================
 -- TRIGGERS
@@ -215,10 +215,10 @@ CREATE POLICY "users_metas_owner_or_admin_all" ON "users_metas"
   FOR ALL
   TO authenticated
   USING (
-    "userId" = public.get_auth_user_id()
+    "userId" = (SELECT public.get_auth_user_id())
     OR EXISTS (
       SELECT 1 FROM "user"
-      WHERE id = public.get_auth_user_id()
+      WHERE id = (SELECT public.get_auth_user_id())
         AND role IN ('admin', 'superadmin')
     )
   );
@@ -469,7 +469,7 @@ ALTER TABLE "tasks" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "users_can_view_own_tasks" ON "tasks"
   FOR SELECT
   TO authenticated
-  USING ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Triggers
 DROP TRIGGER IF EXISTS tasks_set_updated_at ON "tasks";
@@ -679,7 +679,7 @@ ALTER TABLE "new_entity" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "users_can_view_own" ON "new_entity"
   FOR SELECT TO authenticated
-  USING ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Trigger
 DROP TRIGGER IF EXISTS new_entity_set_updated_at ON "new_entity";
@@ -728,10 +728,10 @@ CREATE POLICY "admin_or_owner_access" ON "tasks"
   FOR ALL
   TO authenticated
   USING (
-    "userId" = public.get_auth_user_id()
+    "userId" = (SELECT public.get_auth_user_id())
     OR EXISTS (
       SELECT 1 FROM "user"
-      WHERE id = public.get_auth_user_id()
+      WHERE id = (SELECT public.get_auth_user_id())
         AND role IN ('admin', 'superadmin')
     )
   );

@@ -191,7 +191,7 @@ CREATE POLICY "teams_select_policy" ON public."teams"
   USING (
     id IN (
       SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
+      WHERE "userId" = (SELECT public.get_auth_user_id())
     )
   );
 
@@ -199,20 +199,20 @@ CREATE POLICY "teams_select_policy" ON public."teams"
 CREATE POLICY "teams_insert_policy" ON public."teams"
   FOR INSERT TO authenticated
   WITH CHECK (
-    "ownerId" = public.get_auth_user_id()
+    "ownerId" = (SELECT public.get_auth_user_id())
   );
 
 -- Only owners and admins can update teams (migration 035)
 CREATE POLICY "teams_update_policy" ON public."teams"
   FOR UPDATE TO authenticated
   USING (
-    public.is_superadmin()
-    OR "ownerId" = public.get_auth_user_id()
+    (SELECT public.is_superadmin())
+    OR "ownerId" = (SELECT public.get_auth_user_id())
     OR public.auth_team_role(id) IN ('owner', 'admin')
   )
   WITH CHECK (
-    public.is_superadmin()
-    OR "ownerId" = public.get_auth_user_id()
+    (SELECT public.is_superadmin())
+    OR "ownerId" = (SELECT public.get_auth_user_id())
     OR public.auth_team_role(id) IN ('owner', 'admin')
   );
 -- The teams_rls_update_limits trigger: on the RLS connection an admin changes only name, slug, description,
@@ -223,8 +223,8 @@ CREATE POLICY "teams_update_policy" ON public."teams"
 CREATE POLICY "teams_delete_policy" ON public."teams"
   FOR DELETE TO authenticated
   USING (
-    "ownerId" = public.get_auth_user_id()
-    OR public.is_superadmin()
+    "ownerId" = (SELECT public.get_auth_user_id())
+    OR (SELECT public.is_superadmin())
   );
 ```
 
@@ -235,8 +235,8 @@ CREATE POLICY "teams_delete_policy" ON public."teams"
 CREATE POLICY "team_members_select_policy" ON public."team_members"
   FOR SELECT TO authenticated
   USING (
-    "userId" = public.get_auth_user_id()
-    OR "teamId" IN (SELECT public.get_user_team_ids(public.get_auth_user_id()))
+    "userId" = (SELECT public.get_auth_user_id())
+    OR "teamId" IN (SELECT public.get_user_team_ids((SELECT public.get_auth_user_id())))
   );
 
 -- Self-join (the role of a pending invitation, or the owner of an empty team they own: migration 032),
@@ -244,7 +244,7 @@ CREATE POLICY "team_members_select_policy" ON public."team_members"
 CREATE POLICY "team_members_insert_policy" ON public."team_members"
   FOR INSERT TO authenticated
   WITH CHECK (
-    ("userId" = public.get_auth_user_id() AND public.auth_can_join_team("teamId", role))
+    ("userId" = (SELECT public.get_auth_user_id()) AND public.auth_can_join_team("teamId", role))
     OR public.auth_can_manage_member("teamId", role)
   );
 
@@ -259,7 +259,7 @@ CREATE POLICY "team_members_delete_policy" ON public."team_members"
   FOR DELETE TO authenticated
   USING (
     public.auth_can_manage_member("teamId", role)
-    OR ("userId" = public.get_auth_user_id() AND role <> 'owner')
+    OR ("userId" = (SELECT public.get_auth_user_id()) AND role <> 'owner')
   );
 ```
 
@@ -272,11 +272,11 @@ CREATE POLICY "team_members_delete_policy" ON public."team_members"
 CREATE POLICY "invitations_select_policy" ON public."team_invitations"
   FOR SELECT TO authenticated
   USING (
-    email = (SELECT email FROM public."users" WHERE id = public.get_auth_user_id())
+    email = (SELECT email FROM public."users" WHERE id = (SELECT public.get_auth_user_id()))
     OR
     "teamId" IN (
       SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
+      WHERE "userId" = (SELECT public.get_auth_user_id())
     )
   );
 
@@ -286,10 +286,10 @@ CREATE POLICY "invitations_insert_policy" ON public."team_invitations"
   WITH CHECK (
     "teamId" IN (
       SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
+      WHERE "userId" = (SELECT public.get_auth_user_id())
       AND role IN ('owner', 'admin')
     )
-    AND "invitedBy" = public.get_auth_user_id()
+    AND "invitedBy" = (SELECT public.get_auth_user_id())
     AND status = 'pending'
   );
 ```
@@ -313,12 +313,12 @@ ALTER TABLE public."your_entity" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "your_entity_team_isolation" ON public."your_entity"
   FOR ALL TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   )
   WITH CHECK (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 ```
 

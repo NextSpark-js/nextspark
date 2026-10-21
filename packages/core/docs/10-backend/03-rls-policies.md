@@ -150,7 +150,7 @@ ALTER TABLE "tasks" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "users_can_view_own_tasks" ON "tasks"
   FOR SELECT
   TO authenticated
-  USING ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 ```
 
 **Important:** Enabling RLS without policies blocks ALL access to the table.
@@ -174,28 +174,28 @@ CREATE POLICY "users_can_view_own_tasks" ON "tasks"
 CREATE POLICY "Users self and staff read" ON "users"
   FOR SELECT TO authenticated
   USING (
-    public.can_bypass_rls()
-    OR id = public.get_auth_user_id()
+    (SELECT public.can_bypass_rls())
+    OR id = (SELECT public.get_auth_user_id())
     OR public.auth_user_can_see_user(id)
   );
 -- writes: identity is managed by the auth service; a user may edit ITS OWN row.
 CREATE POLICY "Users service insert" ON "users"
-  FOR INSERT TO authenticated WITH CHECK (public.can_bypass_rls());
+  FOR INSERT TO authenticated WITH CHECK ((SELECT public.can_bypass_rls()));
 CREATE POLICY "Users self update" ON "users"
   FOR UPDATE TO authenticated
-  USING (public.can_bypass_rls() OR id = public.get_auth_user_id())
-  WITH CHECK (public.can_bypass_rls() OR id = public.get_auth_user_id());
+  USING ((SELECT public.can_bypass_rls()) OR id = (SELECT public.get_auth_user_id()))
+  WITH CHECK ((SELECT public.can_bypass_rls()) OR id = (SELECT public.get_auth_user_id()));
 
 -- account / session: only the owner reads its own rows; writes are service-only.
 CREATE POLICY "Account self read" ON "account"
   FOR SELECT TO authenticated
-  USING (public.can_bypass_rls() OR "userId" = public.get_auth_user_id());
+  USING ((SELECT public.can_bypass_rls()) OR "userId" = (SELECT public.get_auth_user_id()));
 CREATE POLICY "Account service write" ON "account"
-  FOR ALL TO authenticated USING (public.can_bypass_rls()) WITH CHECK (public.can_bypass_rls());
+  FOR ALL TO authenticated USING ((SELECT public.can_bypass_rls())) WITH CHECK ((SELECT public.can_bypass_rls()));
 
 -- verification (no userId — email/reset tokens): service-only.
 CREATE POLICY "Verification service all" ON "verification"
-  FOR ALL TO authenticated USING (public.can_bypass_rls()) WITH CHECK (public.can_bypass_rls());
+  FOR ALL TO authenticated USING ((SELECT public.can_bypass_rls())) WITH CHECK ((SELECT public.can_bypass_rls()));
 ```
 
 **How does login still work if these are locked down?** Better Auth reads/writes
@@ -218,18 +218,18 @@ CREATE POLICY "users_metas_owner_or_admin_all" ON "user_metas"
   FOR ALL
   TO authenticated
   USING (
-    "userId" = public.get_auth_user_id()
+    "userId" = (SELECT public.get_auth_user_id())
     OR EXISTS (
       SELECT 1 FROM "user"
-      WHERE id = public.get_auth_user_id()
+      WHERE id = (SELECT public.get_auth_user_id())
         AND role IN ('admin', 'superadmin')
     )
   )
   WITH CHECK (
-    "userId" = public.get_auth_user_id()
+    "userId" = (SELECT public.get_auth_user_id())
     OR EXISTS (
       SELECT 1 FROM "user"
-      WHERE id = public.get_auth_user_id()
+      WHERE id = (SELECT public.get_auth_user_id())
         AND role IN ('admin', 'superadmin')
     )
   );
@@ -250,27 +250,59 @@ ALTER TABLE "tasks" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "users_can_view_own_tasks" ON "tasks"
   FOR SELECT
   TO authenticated
-  USING ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Users can create tasks for themselves
 CREATE POLICY "users_can_create_own_tasks" ON "tasks"
   FOR INSERT
   TO authenticated
-  WITH CHECK ("userId" = public.get_auth_user_id());
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Users can update their own tasks
 CREATE POLICY "users_can_update_own_tasks" ON "tasks"
   FOR UPDATE
   TO authenticated
-  USING ("userId" = public.get_auth_user_id())
-  WITH CHECK ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()))
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Users can delete their own tasks
 CREATE POLICY "users_can_delete_own_tasks" ON "tasks"
   FOR DELETE
   TO authenticated
-  USING ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 ```
+
+### Call the helpers as `(SELECT ...)`
+
+Write the helper functions in a policy wrapped in a sub-select: `(SELECT public.get_auth_user_id())`, `(SELECT public.is_superadmin())`, `(SELECT public.can_bypass_rls())`. The call has no reference to the row, so Postgres evaluates it once per statement (an `InitPlan`) and reuses the result; called bare, it can be evaluated for every row the policy checks. The result is the same either way, and on a 100,000-row table with a team policy a full scan went from about 1.7 s to about 15 ms.
+
+`get_user_team_ids()` returns an array, and `ANY ((SELECT ...))` would read the sub-select as a set of rows, so cast the array:
+
+```sql
+USING (
+  (SELECT public.is_superadmin())
+  OR "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+)
+```
+
+The entity templates and core's policies use this form. Migration `043_rls_helpers_select_wrapper.sql` rewrites, in place, every policy of the `public` schema that still calls a helper without it, including the entity tables you created from the earlier templates and your own policies, keeping each policy's name, command and roles. Running `pnpm db:migrate` is the whole upgrade; there is nothing to do by hand.
+
+Two things to check on your side:
+
+- If a migration of yours drops and recreates a policy (`DROP POLICY IF EXISTS ...; CREATE POLICY ...`), it brings the bare calls back for that table. Write the wrapped form there, or run the same rewrite again.
+- The rewrite only touches policy expressions. The bodies of functions and triggers keep calling the helpers directly, which is correct there.
+
+To list the policies that still have a bare call:
+
+```sql
+SELECT tablename, policyname
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND (coalesce(qual, '') || ' ' || coalesce(with_check, ''))
+      ~ '(?<!SELECT )(?<![.\w])(?<!get_user_team_ids\()(get_user_team_ids|is_superadmin|can_bypass_rls|get_auth_user_id)\(\)';
+```
+
+`ALTER POLICY` takes an `ACCESS EXCLUSIVE` lock on each table for the length of the migration's transaction. It only edits the catalog, so it lasts milliseconds, unless a long transaction is already open on that table.
 
 ---
 
@@ -366,26 +398,26 @@ Users can only access their own records:
 CREATE POLICY "users_can_view_own" ON "entity"
   FOR SELECT
   TO authenticated
-  USING ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Create records for themselves
 CREATE POLICY "users_can_create_own" ON "entity"
   FOR INSERT
   TO authenticated
-  WITH CHECK ("userId" = public.get_auth_user_id());
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Update own records
 CREATE POLICY "users_can_update_own" ON "entity"
   FOR UPDATE
   TO authenticated
-  USING ("userId" = public.get_auth_user_id())
-  WITH CHECK ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()))
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Delete own records
 CREATE POLICY "users_can_delete_own" ON "entity"
   FOR DELETE
   TO authenticated
-  USING ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 ```
 
 ### Pattern 2: Owner or Admin Access
@@ -397,18 +429,18 @@ CREATE POLICY "owner_or_admin_access" ON "tasks"
   FOR ALL
   TO authenticated
   USING (
-    "userId" = public.get_auth_user_id()
+    "userId" = (SELECT public.get_auth_user_id())
     OR EXISTS (
       SELECT 1 FROM "user"
-      WHERE id = public.get_auth_user_id()
+      WHERE id = (SELECT public.get_auth_user_id())
         AND role IN ('admin', 'superadmin')
     )
   )
   WITH CHECK (
-    "userId" = public.get_auth_user_id()
+    "userId" = (SELECT public.get_auth_user_id())
     OR EXISTS (
       SELECT 1 FROM "user"
-      WHERE id = public.get_auth_user_id()
+      WHERE id = (SELECT public.get_auth_user_id())
         AND role IN ('admin', 'superadmin')
     )
   );
@@ -429,8 +461,8 @@ CREATE POLICY "public_read" ON "blog_posts"
 CREATE POLICY "owner_write" ON "blog_posts"
   FOR ALL
   TO authenticated
-  USING ("userId" = public.get_auth_user_id())
-  WITH CHECK ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()))
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 ```
 
 ### Pattern 4: Shared Resources
@@ -447,8 +479,8 @@ CREATE POLICY "shared_read" ON "shared_resources"
 CREATE POLICY "owner_modify" ON "shared_resources"
   FOR ALL
   TO authenticated
-  USING ("userId" = public.get_auth_user_id())
-  WITH CHECK ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()))
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 ```
 
 ### Pattern 5: Team-Based Access
@@ -462,7 +494,7 @@ CREATE POLICY "team_access" ON "projects"
   USING (
     "teamId" IN (
       SELECT "teamId" FROM "team_members"
-      WHERE "userId" = public.get_auth_user_id()
+      WHERE "userId" = (SELECT public.get_auth_user_id())
     )
   );
 ```
