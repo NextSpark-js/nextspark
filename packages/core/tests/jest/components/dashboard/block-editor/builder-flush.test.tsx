@@ -136,6 +136,40 @@ describe('builder refetch after a save', () => {
     expect((document.querySelector('[data-cy="field"]') as HTMLInputElement).value).toBe('newer')
   })
 
+  test('a stale cached copy is replaced by the fresh fetch on mount', async () => {
+    current = { ...stored, blocks: [{ id: 'b1', blockSlug: 'hero', props: { title: 'fresh' } }] }
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(['pages', 'p1'], { success: true, data: stored }) // props.title is 'a'
+    render(
+      <QueryClientProvider client={client}>
+        <BuilderEditorView entitySlug="pages" entityConfig={entityConfig as never} mode="edit" id="p1" />
+      </QueryClientProvider>
+    )
+    await waitFor(() => expect(screen.getByTestId('select')).toBeInTheDocument())
+    await waitFor(() => {
+      fireEvent.click(screen.getByTestId('select'))
+      expect((document.querySelector('[data-cy="field"]') as HTMLInputElement).value).toBe('fresh')
+    })
+  })
+
+  test('the copy after a save replaces the form when nothing was typed meanwhile', async () => {
+    const input = await openBlock()
+    fireEvent.change(input, { target: { value: 'first' } })
+    act(() => { jest.advanceTimersByTime(600) })
+    // the server normalises what it stores
+    fetchMock.mockImplementation(async (_url, init) => {
+      if (init?.method !== 'PATCH') return new Response(JSON.stringify({ success: true, data: current }), { status: 200 })
+      current = { ...stored, blocks: [{ id: 'b1', blockSlug: 'hero', props: { title: 'FIRST' } }] }
+      return new Response(JSON.stringify({ success: true, data: { id: 'p1' } }), { status: 200 })
+    })
+    fireEvent.click(document.querySelector('[data-cy="saveButton"]') as HTMLElement)
+    await waitFor(() => expect(patchBodies()).toHaveLength(1))
+    await waitFor(() => {
+      fireEvent.click(screen.getByTestId('select'))
+      expect((document.querySelector('[data-cy="field"]') as HTMLInputElement).value).toBe('FIRST')
+    })
+  })
+
   test('opening a different entity still replaces the blocks', async () => {
     current = stored
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })

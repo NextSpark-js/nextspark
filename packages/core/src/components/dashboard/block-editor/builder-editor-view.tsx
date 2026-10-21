@@ -171,31 +171,50 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     blocksRef.current = blocks
   }, [blocks])
 
-  // The entity the form was last filled from: a refetch of the same entity (after a save) must not
-  // replace edits made while the save was running
-  const initializedFor = useRef<string | null>(null)
+  // What the form holds, as one string, to tell whether it was edited since the server's copy was applied
+  const formSnapshot = (v: { title: string; slug: string; status: string; blocks: BlockInstance[]; pageSettings: PageSettings; entityFields: Record<string, unknown> }) =>
+    JSON.stringify([v.title, v.slug, v.status, v.blocks, v.pageSettings, v.entityFields])
+  const formValuesRef = useRef({ title, slug, status, blocks, pageSettings, entityFields })
+  formValuesRef.current = { title, slug, status, blocks, pageSettings, entityFields }
+  // The entity the form was filled from, the server copy last applied, and what the last save sent (as snapshots)
+  const appliedFor = useRef<string | null>(null)
+  const appliedSnapshot = useRef<string | null>(null)
+  const sentSnapshot = useRef<string | null>(null)
 
-  // Initialize form with entity data (edit mode)
+  // Initialize form with entity data (edit mode). A refetch of the same entity (a fresher copy after the cache,
+  // or the copy after a save) is applied only while the form has no edits of its own, so it never replaces
+  // what was typed since the last fill or while a save was running.
   useEffect(() => {
     if (mode === 'edit' && entityData?.data) {
-      const key = `${entitySlug}/${id}`
-      if (initializedFor.current === key) return
-      initializedFor.current = key
       const entity = entityData.data
-      setTitle(entity.title ?? '')
-      setSlug(entity.slug ?? '')
-      setSlugManuallyEdited(true) // In edit mode, don't auto-generate slug
-      setStatus(entity.status || 'draft')
-      setBlocks(entity.blocks || [])
-      setPageSettings(entity.settings || { seo: {}, customFields: [] })
-
-      // Set entity-specific fields
       const fields: Record<string, unknown> = {}
       entityConfig.builder?.sidebarFields?.forEach(field => {
         if (entity[field] !== undefined) {
           fields[field] = entity[field]
         }
       })
+      const values = {
+        title: entity.title ?? '',
+        slug: entity.slug ?? '',
+        status: entity.status || 'draft',
+        blocks: (entity.blocks || []) as BlockInstance[],
+        pageSettings: (entity.settings || { seo: {}, customFields: [] }) as PageSettings,
+        entityFields: fields,
+      }
+      const key = `${entitySlug}/${id}`
+      if (appliedFor.current === key) {
+        const current = formSnapshot(formValuesRef.current)
+        if (current !== appliedSnapshot.current && current !== sentSnapshot.current) return
+      }
+      appliedFor.current = key
+      appliedSnapshot.current = formSnapshot(values)
+      sentSnapshot.current = null
+      setTitle(values.title)
+      setSlug(values.slug)
+      setSlugManuallyEdited(true) // In edit mode, don't auto-generate slug
+      setStatus(values.status)
+      setBlocks(values.blocks)
+      setPageSettings(values.pageSettings)
       setEntityFields(fields)
     }
   }, [entityData, entityConfig, mode, entitySlug, id])
@@ -248,6 +267,10 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
 
   // Save/Create mutation
   const saveMutation = useMutation({
+    // The form as the request carries it (its blocks include the flushed edit): the refetch after the save may replace it
+    onMutate: (data: Record<string, unknown>) => {
+      sentSnapshot.current = formSnapshot({ ...formValuesRef.current, blocks: data.blocks as BlockInstance[] })
+    },
     mutationFn: async (data: Record<string, unknown>) => {
       const url = mode === 'create'
         ? `/api/v1/${entitySlug}`
