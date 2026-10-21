@@ -33,6 +33,20 @@ describe('QueryProvider', () => {
     expect(defaults.mutations).toEqual({ retry: 2 })
   })
 
+  it('keeps the same client across re-renders, ignoring changed props', () => {
+    const { Probe, get } = capture()
+    const ui = (retry: number) => (
+      <QueryProvider defaultOptions={{ queries: { retry } }}>
+        <Probe />
+      </QueryProvider>
+    )
+    const { rerender } = render(ui(3))
+    const first = get()
+    rerender(ui(5))
+    expect(get()).toBe(first)
+    expect(get().getDefaultOptions().queries?.retry).toBe(3)
+  })
+
   it('without props provides the shared client with the current defaults', () => {
     const { Probe, get } = capture()
     render(<QueryProvider><Probe /></QueryProvider>)

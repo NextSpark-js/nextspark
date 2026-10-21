@@ -24,7 +24,10 @@ interface QueryProviderProps {
   children: ReactNode
   /** Use this client instead of the shared one. `defaultOptions` is then ignored. */
   client?: QueryClient
-  /** Merged (queries and mutations separately) over the defaults when no `client` is passed. */
+  /**
+   * Merged (queries and mutations separately) over the defaults when no `client` is passed.
+   * Read once at mount: a changed `defaultOptions` is ignored while the provider stays mounted.
+   */
   defaultOptions?: DefaultOptions
 }
 

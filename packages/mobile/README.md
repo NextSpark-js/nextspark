@@ -130,7 +130,7 @@ TanStack Query provider for data fetching. Configures default options for querie
 **Props:**
 - `children: ReactNode` - Your app components
 - `client?: QueryClient` - Use your own client (for example one with a `MutationCache`, or a fresh client per test) instead of the shared `queryClient`. `defaultOptions` is ignored when a client is passed.
-- `defaultOptions?: DefaultOptions` - Merged over the defaults (`staleTime` 5 minutes, `retry: 1` for queries, `retry: 0` for mutations, no refetch on window focus) in a client the provider creates. Without either prop the shared client is used, unchanged.
+- `defaultOptions?: DefaultOptions` - Merged over the defaults (`staleTime` 5 minutes, `retry: 1` for queries, `retry: 0` for mutations, no refetch on window focus) in a client the provider creates. Without either prop the shared client is used, unchanged. `defaultOptions` is read once at mount; a changed value is ignored while the provider stays mounted.
 
 ### Hooks
 
