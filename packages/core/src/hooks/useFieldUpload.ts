@@ -13,6 +13,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMediaUpload } from './useMediaUpload'
 
+/** How long a video or audio file may take to report its metadata before it uploads without a thumbnail or duration. */
+export const MEDIA_PROBE_TIMEOUT_MS = 10_000
+
 export interface PendingUpload {
   id: string
   name: string

@@ -6,7 +6,7 @@ import { X, Play, Download, Video } from "lucide-react"
 import { Button } from './button'
 import { cn } from '../../lib/utils'
 import { withBasePathIfInApp } from '../../lib/base-path'
-import { matchesAcceptedType, useFieldUpload } from '../../hooks/useFieldUpload'
+import { matchesAcceptedType, useFieldUpload, MEDIA_PROBE_TIMEOUT_MS } from '../../hooks/useFieldUpload'
 import { UploadStatus } from './upload-status'
 
 export interface UploadedVideo {
@@ -94,12 +94,15 @@ export function VideoUpload({
     return new Promise((resolve) => {
       const video = document.createElement('video')
       video.preload = 'metadata'
+      // A file that fires none of these events would hold its upload slot forever: upload it without a thumbnail
+      const timer = setTimeout(() => resolve(''), MEDIA_PROBE_TIMEOUT_MS)
       
       video.onloadedmetadata = () => {
         video.currentTime = video.duration / 2 // Middle of video
       }
       
       video.onseeked = () => {
+        clearTimeout(timer)
         const canvas = document.createElement('canvas')
         canvas.width = video.videoWidth
         canvas.height = video.videoHeight
@@ -111,6 +114,7 @@ export function VideoUpload({
       }
       
       video.onerror = () => {
+        clearTimeout(timer)
         resolve('') // Return empty string if thumbnail generation fails
       }
       

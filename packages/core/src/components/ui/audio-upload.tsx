@@ -6,7 +6,7 @@ import { Button } from './button'
 import { Progress } from './progress'
 import { cn } from '../../lib/utils'
 import { withBasePathIfInApp } from '../../lib/base-path'
-import { matchesAcceptedType, useFieldUpload } from '../../hooks/useFieldUpload'
+import { matchesAcceptedType, useFieldUpload, MEDIA_PROBE_TIMEOUT_MS } from '../../hooks/useFieldUpload'
 import { UploadStatus } from './upload-status'
 
 export interface UploadedAudio {
@@ -98,12 +98,16 @@ export function AudioUpload({
     return new Promise((resolve) => {
       const audio = document.createElement('audio')
       audio.preload = 'metadata'
+      // A file that fires neither event would hold its upload slot forever: upload it without a duration
+      const timer = setTimeout(() => resolve(undefined), MEDIA_PROBE_TIMEOUT_MS)
       
       audio.onloadedmetadata = () => {
+        clearTimeout(timer)
         resolve(audio.duration)
       }
       
       audio.onerror = () => {
+        clearTimeout(timer)
         resolve(undefined)
       }
       
