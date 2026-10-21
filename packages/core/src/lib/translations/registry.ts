@@ -168,16 +168,22 @@ async function loadEntityTranslationsFromRegistry(
  * 2. Theme translations can override/extend core
  * 3. Entity translations can override/extend both (highest priority)
  *
- * Uses globalThis cache to prevent re-loading on each request
+ * Uses globalThis cache in production to prevent re-loading on each request;
+ * development re-merges on every call so edited message files show up without a restart
  */
 export async function loadMergedTranslations(
   locale: SupportedLocale
 ): Promise<Record<string, unknown>> {
   const cacheKey = `${locale}-${getCurrentThemeName()}`
 
+  // Development: no merged-result cache. Messages arrive through bundler imports
+  // that HMR re-evaluates when a file changes, so only the merge is cached in
+  // production, where the bundle never changes.
+  const useCache = process.env.NODE_ENV === 'production'
+
   // Check cache first
   const cache = getTranslationCache()
-  if (cache.has(cacheKey)) {
+  if (useCache && cache.has(cacheKey)) {
     if (DEBUG_I18N) {
       console.log(`[i18n] Cache hit for ${cacheKey}`)
     }
@@ -221,6 +227,8 @@ export async function loadMergedTranslations(
   } catch {
     // No entity messages, ok
   }
+
+  if (!useCache) return mergedMessages
 
   // Store in cache
   cache.set(cacheKey, mergedMessages)

@@ -267,6 +267,8 @@ export default getRequestConfig(async ({ locale: requestedLocale }) => {
 2. **Translation Loading**: Loads the merged translations (core + theme + entities) for the locale
 3. **next-intl Configuration**: Returns locale and messages to next-intl
 
+The merged result is cached for the life of the process in production only. In development it is merged again on every call, so an edited message file shows up on the next request (the bundler re-evaluates the changed file) without restarting the server.
+
 ### next.config.js Configuration
 
 next-intl requires configuration in your Next.js config:
