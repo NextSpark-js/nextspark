@@ -10,7 +10,8 @@ export const NAMESPACE_GROUPS = {
   root: ['permissions'],
 
   // PublicNavbar, PublicFooter and the public docs components.
-  public: ['auth', 'common', 'docs', 'footer', 'home', 'navigation', 'public', 'validation', 'blog'],
+  // 'permissions' is for the QueryProvider that GroupProviders mounts when the root layout does not.
+  public: ['auth', 'common', 'docs', 'footer', 'home', 'navigation', 'permissions', 'public', 'validation', 'blog'],
 
   // Auth forms and validation hooks, and the QueryProvider that GroupProviders mounts when the root layout does not.
   auth: ['auth', 'common', 'permissions', 'validation'],

@@ -7,8 +7,9 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { ApiError } from '../lib/api/api-error'
 
-// NEXT_PUBLIC_RQ_DEVTOOLS is inlined when the app is built: with it off, the condition is a constant and the import below is
-// not part of the bundle at all; with it on, the devtools load as their own chunk after hydration, never in a route's main JS.
+// NEXT_PUBLIC_RQ_DEVTOOLS is inlined when the app is built. Set to any value other than 'true' (the env template sets false),
+// the condition is a constant and the import below does not enter the build; left undefined, the devtools stay an async chunk
+// that is never loaded; set to 'true', they load as their own chunk after hydration, never in a route's main JS.
 const ReactQueryDevtools =
   process.env.NEXT_PUBLIC_RQ_DEVTOOLS === 'true'
     ? dynamic(() => import('@tanstack/react-query-devtools').then((mod) => mod.ReactQueryDevtools), { ssr: false })

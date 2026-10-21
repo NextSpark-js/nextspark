@@ -24,6 +24,8 @@ module.exports = {
     '^@nextsparkjs/core/selectors$': path.join(dist, 'lib/selectors/index.js'),
     '^@nextsparkjs/core/lib/selectors$': path.join(dist, 'lib/selectors/index.js'),
     '^@nextsparkjs/core/selectors/(.*)$': path.join(dist, 'lib/selectors/by-domain/$1.js'),
+    // Exported as ./actions, built to lib/actions
+    '^@nextsparkjs/core/actions$': path.join(dist, 'lib/actions/index.js'),
     '^@nextsparkjs/core/(.*)$': path.join(dist, '$1'),
     '^@nextsparkjs/core$': path.join(dist, 'index.js'),
     '^server-only$': path.join(mocks, 'server-only.js'),

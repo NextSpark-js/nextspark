@@ -408,7 +408,7 @@ function Button({ className, ...props }) {
 
 ## App-wide providers and the React Query devtools
 
-**Devtools.** `QueryProvider` loads the React Query devtools with `next/dynamic` (`ssr: false`), and only when `NEXT_PUBLIC_RQ_DEVTOOLS=true` was set at build time. With the variable off the import is not part of the build at all; with it on, the devtools are an async chunk that loads after hydration, never part of a route's main JavaScript.
+**Devtools.** `QueryProvider` loads the React Query devtools with `next/dynamic` (`ssr: false`), and only when `NEXT_PUBLIC_RQ_DEVTOOLS=true` was set at build time. With the variable set to any value other than `'true'` (the env template sets `false`) the import does not enter the build; left undefined, the devtools are an async chunk that is never loaded; with `'true'`, that chunk loads after hydration, never as part of a route's main JavaScript. The statically loaded size of `QueryProvider` is practically the same either way, because TanStack's devtools wrapper already loads its core lazily: the change guarantees the devtools never ship unless asked for, not a measured saving.
 
 **Where the providers mount.** By default the root layout mounts `QueryProvider` (React Query) and the `Toaster` for every route. Set `providers.scope` in `config/app.config.ts` to mount them per route group instead:
 
@@ -419,9 +419,9 @@ export const APP_CONFIG_OVERRIDES = {
 }
 ```
 
-With `'groups'` the root layout mounts neither. The `(auth)` group (also a project's override of its layout), and the dashboard, superadmin and devtools areas (through `DashboardProviders`) mount them with `GroupProviders`, so those routes behave as before; the `(public)` group does not. `GroupProviders` renders its children as they are when a query cache already exists above it, so wrapping a layout in it never creates a second cache or shows a toast twice, whatever the scope.
+With `'groups'` the root layout mounts neither. The `(auth)` group (also a project's override of its layout) mounts them with `GroupProviders`, and the dashboard, superadmin and devtools areas get them from the fallback of `DashboardProviders` (which mounts the full stack when the root has none), so those routes behave as before; the `(public)` group does not. No saving has been measured for the `'groups'` scope on a public page with a real build; treat it as an option to try and measure in your project (the route JavaScript budget check is the tool for it). `GroupProviders` renders its children as they are when a query cache already exists above it, so wrapping a layout in it never creates a second cache or shows a toast twice, whatever the scope.
 
-A public page of your own that uses React Query hooks (`useQuery`, `useMutation`, the entity hooks) or shows toasts needs its layout wrapped:
+A public page of your own that uses React Query hooks (`useQuery`, `useMutation`, the entity hooks) or shows toasts needs its layout wrapped (the `public` message group carries the `permissions` namespace `QueryProvider` reads, so the wrapper works inside the public layout):
 
 ```tsx
 import { GroupProviders } from '@nextsparkjs/core/providers/group-providers'
