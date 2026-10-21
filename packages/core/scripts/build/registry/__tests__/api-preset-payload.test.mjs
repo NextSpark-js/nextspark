@@ -20,11 +20,11 @@ silenceConsoleOutput()
 const file = body =>
   `export default defineApiEndpoint({\n  endpoint: '/api/x',\n  summary: 'S',\n  presets: [\n    {\n      id: 'a',\n      title: 'A',\n      method: 'POST',\n${body}\n    }\n  ]\n})\n`
 
-async function discover(presetsTs) {
+async function discover(presetsTs, where = 'api/x/presets.ts') {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-preset-payload-'))
   try {
-    await mkdir(dirname(join(root, 'api/x/presets.ts')), { recursive: true })
-    await writeFile(join(root, 'api/x/presets.ts'), presetsTs)
+    await mkdir(dirname(join(root, where)), { recursive: true })
+    await writeFile(join(root, where), presetsTs)
     const { presets } = await discoverApiPresets({ projectRoot: root, projectSourceDir: root, projectName: 'p', coreDir: join(root, 'core') })
     return presets[0]?.presets[0]
   } finally {
@@ -60,6 +60,25 @@ test('a preset without a payload still builds', async () => {
   const preset = await discover(file(`      tags: ['t']`))
   assert.equal(preset.id, 'a')
   assert.equal('payload' in preset, false)
+})
+
+test('escapes decode, exponents parse, a __proto__ key stays an own property', async () => {
+  const preset = await discover(file(`      payload: { s: 'a\\nb\\u00e9\\x41\\u{1F600}', n: 1e3, "__proto__": 1 }`))
+  assert.equal(preset.payload.s, 'a\nbéA\u{1F600}')
+  assert.equal(preset.payload.n, 1000)
+  assert.deepEqual(Object.keys(preset.payload), ['s', 'n', '__proto__'])
+})
+
+test('a raw newline inside a quoted string is rejected; webhookpayload is not the payload', async () => {
+  await assert.rejects(discover(file(`      payload: { s: 'a\nb' }`)), /unterminated string/)
+  const preset = await discover(file(`      webhookpayload: { a: bad },\n      payload: { ok: 1 }`))
+  assert.deepEqual(preset.payload, { ok: 1 })
+})
+
+test('an unparseable payload fails the build from entity folders and core routes too', async () => {
+  const bad = file('      payload: { a: bad }')
+  await assert.rejects(discover(bad, 'entities/foo/api/presets.ts'), /entities\/foo\/api\/presets\.ts:9: cannot parse/)
+  await assert.rejects(discover(bad, 'core/src/routes/api/v1/foo/presets.ts'), /core\/src\/routes\/api\/v1\/foo\/presets\.ts:9: cannot parse/)
 })
 
 test('a payload that cannot be parsed fails the build naming file and line', async () => {

@@ -84,7 +84,7 @@ function parseLiteral(content, start, filePath) {
   let i = start
   const fail = what => {
     const line = content.slice(0, i).split('\n').length
-    throw new PresetPayloadError(`${filePath}:${line}: cannot parse the preset payload (${what}); use plain literals only`)
+    throw new PresetPayloadError(`${filePath}:${line}: cannot parse the preset payload (${what}); a payload takes plain literals only: strings, numbers, booleans, null, objects and arrays)`)
   }
   const skip = () => {
     for (;;) {
@@ -118,7 +118,13 @@ function parseLiteral(content, start, filePath) {
         continue
       }
       const e = content[i++]
-      if (e === 'u' || e === 'x') {
+      if (e === 'u' && content[i] === '{') {
+        const end = content.indexOf('}', i)
+        const hex = content.slice(i + 1, end)
+        if (end === -1 || !/^[0-9a-fA-F]{1,6}$/.test(hex) || parseInt(hex, 16) > 0x10ffff) fail('bad escape')
+        out += String.fromCodePoint(parseInt(hex, 16))
+        i = end + 1
+      } else if (e === 'u' || e === 'x') {
         const len = e === 'u' ? 4 : 2
         const hex = content.slice(i, i + len)
         if (!new RegExp(`^[0-9a-fA-F]{${len}}$`).test(hex)) fail('bad escape')
@@ -150,7 +156,7 @@ function parseLiteral(content, start, filePath) {
         skip()
         if (content[i] !== ':') fail("expected ':'")
         i++
-        obj[key] = value()
+        Object.defineProperty(obj, key, { value: value(), enumerable: true, writable: true, configurable: true }) // keeps a __proto__ key an own property
         skip()
         if (content[i] === ',') i++
         else if (content[i] !== '}') fail("expected ',' or '}'")
@@ -257,10 +263,11 @@ function parsePresetFile(content, filePath) {
       }
 
       // Extract payload object (can be nested)
-      const payloadObj = extractNestedObject(presetBlock, 'payload')
-      if (payloadObj) {
+      // (a `payload:` inside a string before the real key would still be matched)
+      const payloadMatch = /(?<![\w$])payload\s*:\s*\{/.exec(presetBlock)
+      if (payloadMatch) {
         // An unparseable payload throws (file:line) and stops the build; it is never stored as {}
-        const payloadStart = presetStart + presetBlock.search(/payload:\s*\{/) + presetBlock.match(/payload:\s*\{/)[0].length - 1
+        const payloadStart = presetStart + payloadMatch.index + payloadMatch[0].length - 1
         preset.payload = parseLiteral(content, payloadStart, filePath)
       }
 
