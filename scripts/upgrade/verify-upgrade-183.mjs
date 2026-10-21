@@ -16,7 +16,12 @@
  *               the Route Handler answer; the moved files hold the user's edits
  *
  *   node scripts/upgrade/verify-upgrade-183.mjs --packages <tarball dir> [--work DIR] [--logs DIR] [--pnpm 10.34.6]
- *        [--port 4950] [--database upgrade183_ci] [--keep]
+ *        [--port 4950] [--database upgrade183_ci] [--from 0.1.0-beta.183] [--keep]
+ *
+ * --from      the published create-nextspark-app release the project starts from (default 0.1.0-beta.183, the weekly job).
+ *             upgrade-older.yml runs the same steps from 0.1.0-beta.163, .170 and .182. Only releases from .163 up to .183
+ *             work: before .163 the published launcher installs the current core instead of its own version, so it does not
+ *             create an old project (see the upgrade guide, "Supported starting versions")
  *
  * --packages  the tarballs `scripts/packages/pack.sh --all` writes (cli, core, ui and testing are used)
  * --work      scratch directory outside this repository (default: a new one under $TMPDIR); must be new or empty;
@@ -36,7 +41,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
-const FIXTURE_VERSION = '0.1.0-beta.183'
+const DEFAULT_FROM = '0.1.0-beta.183'
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 const { values } = parseArgs({
@@ -47,15 +52,20 @@ const { values } = parseArgs({
     pnpm: { type: 'string', default: '10.34.6' },
     port: { type: 'string', default: '4950' },
     database: { type: 'string', default: 'upgrade183_ci' },
+    from: { type: 'string', default: DEFAULT_FROM },
     keep: { type: 'boolean', default: false },
   },
 })
 const usage = (message) => {
-  console.error(`${message}\nusage: verify-upgrade-183.mjs --packages <tarball dir> [--work DIR] [--logs DIR] [--pnpm VERSION] [--port N] [--database NAME] [--keep]`)
+  console.error(`${message}\nusage: verify-upgrade-183.mjs --packages <tarball dir> [--work DIR] [--logs DIR] [--pnpm VERSION] [--port N] [--database NAME] [--from VERSION] [--keep]`)
   process.exit(2)
 }
 if (!values.packages || !existsSync(values.packages)) usage('--packages must be a directory of tarballs')
 if (!/^[a-z0-9_]+$/.test(values.database)) usage('--database takes lower-case letters, digits and underscores')
+// ponytail: the creatable range is hard-coded; before .163 the launcher installs the current core (see the header)
+const fromBuild = /^0\.1\.0-beta\.(\d+)$/.exec(values.from)?.[1]
+if (!fromBuild || Number(fromBuild) < 163 || Number(fromBuild) > 183) usage('--from takes a published 0.1.0-beta.N between 163 and 183')
+const FIXTURE_VERSION = values.from
 const packages = path.resolve(values.packages)
 const tarball = (name) => {
   const file = readdirSync(packages).find(entry => entry.startsWith(`${name}-`) && entry.endsWith('.tgz') && /^\d/.test(entry.slice(name.length + 1)))
@@ -196,21 +206,21 @@ const steps = [
     assert(exists('contents/themes/app/config/theme.config.ts'), 'the project has no contents/themes/app: it is not the 0.x layout')
     assert(JSON.parse(read('package.json')).dependencies?.['@nextsparkjs/core'] === FIXTURE_VERSION || JSON.parse(read('package.json')).devDependencies?.['@nextsparkjs/core'] === FIXTURE_VERSION, `the project's core is not ${FIXTURE_VERSION}`)
   }],
-  ['migrate its database with the .183 CLI', async (state) => {
+  [`migrate its database with the .${fromBuild} CLI`, async (state) => {
     run('drop-database', 'dropdb', ['--if-exists', values.database])
     must('create-database', 'createdb', [values.database])
     const env183 = read('.env').replace(/^DATABASE_URL=.*$/m, `DATABASE_URL="${databaseUrl()}"`)
     write('.env', env183)
     must('db-migrate-183', 'pnpm', ['db:migrate'])
     state.before = migrationRows()
-    assert(state.before.length > 0, 'the .183 db:migrate recorded no migration')
+    assert(state.before.length > 0, `the .${fromBuild} db:migrate recorded no migration`)
   }],
   ['customize it and commit', async () => {
     const theme = 'contents/themes/app'
     // 1. an edited theme template
     const support = `${theme}/templates/(public)/support/page.tsx`
     const original = read(support)
-    assert(original.includes('Get help with the Starter theme.'), 'the support template of the .183 theme changed: update the fixture')
+    assert(original.includes('Get help with the Starter theme.'), 'the support template of the starting theme changed: update the fixture')
     write(support, original.replace('Get help with the Starter theme.', CUSTOM.support))
     // 2. a new entity with migrations, copied from tasks
     copyEntity(path.join(app, theme, 'entities/tasks'), path.join(app, theme, 'entities/widgets'), toWidgets)
@@ -243,7 +253,7 @@ export default fixturePluginConfig
     write('.gitignore', `${read('.gitignore').replace(/\n*$/, '\n')}node_modules/\n.next/\n`)
     must('git-init', 'git', ['init', '-q'])
     must('git-add', 'git', ['add', '-A'])
-    must('git-commit', 'git', ['-c', 'user.email=fixture@example.test', '-c', 'user.name=fixture', 'commit', '-q', '-m', 'fixture: a 0.1.0-beta.183 project'])
+    must('git-commit', 'git', ['-c', 'user.email=fixture@example.test', '-c', 'user.name=fixture', 'commit', '-q', '-m', 'fixture: a ' + FIXTURE_VERSION + ' project'])
   }],
   ['bump the packages to this tree', async () => {
     const manifest = JSON.parse(read('package.json'))
@@ -364,5 +374,5 @@ try {
   run('drop-database-end', 'dropdb', ['--if-exists', values.database], { cwd: work })
   if (!values.keep && !failed) rmSync(work, { recursive: true, force: true })
 }
-console.log(failed ? 'upgrade from 0.1.0-beta.183: failed' : 'upgrade from 0.1.0-beta.183: all steps passed')
+console.log(failed ? `upgrade from ${FIXTURE_VERSION}: failed` : `upgrade from ${FIXTURE_VERSION}: all steps passed`)
 process.exit(failed ? 1 : 0)

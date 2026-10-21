@@ -2,6 +2,14 @@
 
 This is the one upgrade path, supported from `0.1.0-beta.183` (the oldest release `nextspark migrate` is tested from; for anything older, first go to `0.1.0-beta.183`). A 0.x project (a `contents/themes/<theme>` layout, or a root-first project whose `src/app` was committed) upgrades to `0.1.0-beta.192` or a later release (the latest is the one to use) in two steps: install the new packages, then run `nextspark migrate` once. After that `src/app` is generated, git-ignored, and yours to leave alone. See the [generated host workflow](../01-fundamentals/08-generated-host.md) for how a project changes routes afterwards.
 
+## Supported starting versions
+
+| Starting release | Status |
+| --- | --- |
+| `0.1.0-beta.183` and later | Supported. The weekly *Upgrade from 0.1.0-beta.183* job (`upgrade-183.yml`) upgrades a project made by that release, and the same script is run by hand at each release candidate. |
+| `0.1.0-beta.163` to `0.1.0-beta.182` | Checked, not promised. The weekly *Upgrade from older releases* job (`upgrade-older.yml`) runs the same steps from `0.1.0-beta.163` (the oldest that can be created), `.170` and `.182`: it creates the project with that published `create-nextspark-app`, adds the edits this guide is about, runs `nextspark migrate` of `main`, installs, runs `prepare` and `db:migrate`, builds and requests the pages, and fails when any step fails. These releases share one layout (the same template files; they differ in a few generated routes and pages), so the three entries stand for the whole range. A start in between is expected to work the same way, but only these three are run. |
+| Before `0.1.0-beta.163` | Not supported and not checked. The published `create-nextspark-app` of those releases installs the current `@nextsparkjs/core` and `@nextsparkjs/cli` instead of its own version, so it no longer creates a project of that age and CI has nothing to start from. Go to `0.1.0-beta.183` first, then follow this guide. |
+
 ## Steps
 
 1. Commit or stash everything: migrate refuses to move files on a dirty git tree. Work on a new branch.
