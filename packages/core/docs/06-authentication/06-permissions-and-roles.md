@@ -324,23 +324,23 @@ RLS policies enforce data isolation at the PostgreSQL level:
 -- Users can only see their own tasks
 CREATE POLICY "tasks_select_own" ON "tasks"
   FOR SELECT
-  USING ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Users can only create tasks for themselves
 CREATE POLICY "tasks_insert_own" ON "tasks"
   FOR INSERT
-  WITH CHECK ("userId" = public.get_auth_user_id());
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Users can only update their own tasks
 CREATE POLICY "tasks_update_own" ON "tasks"
   FOR UPDATE
-  USING ("userId" = public.get_auth_user_id())
-  WITH CHECK ("userId" = public.get_auth_user_id());
+  USING ("userId" = (SELECT public.get_auth_user_id()))
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 -- A superadmin or a developer deletes any task
 CREATE POLICY "tasks_delete_admin" ON "tasks"
   FOR DELETE
-  USING (public.can_bypass_rls());
+  USING ((SELECT public.can_bypass_rls()));
 ```
 
 ### Helper Functions

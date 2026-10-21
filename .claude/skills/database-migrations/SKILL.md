@@ -125,8 +125,8 @@ REFERENCES public."Parent"(id) ON DELETE CASCADE
 CREATE POLICY "Entity owner can do all"
 ON public."Entity"
 FOR ALL TO authenticated
-USING ("userId" = public.get_auth_user_id())
-WITH CHECK ("userId" = public.get_auth_user_id());
+USING ("userId" = (SELECT public.get_auth_user_id()))
+WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 ```
 
 ### Case 2: Team-Based Access
@@ -137,7 +137,7 @@ FOR ALL TO authenticated
 USING (
   "teamId" IN (
     SELECT "teamId" FROM public."members"
-    WHERE "userId" = public.get_auth_user_id()
+    WHERE "userId" = (SELECT public.get_auth_user_id())
   )
 )
 WITH CHECK (...);
@@ -218,7 +218,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public."parent" p
     WHERE p.id = "parentId"
-      AND p."userId" = public.get_auth_user_id()
+      AND p."userId" = (SELECT public.get_auth_user_id())
   )
 )
 WITH CHECK (...);

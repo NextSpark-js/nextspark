@@ -210,8 +210,8 @@ ALTER TABLE "{table_name}" ENABLE ROW LEVEL SECURITY;
 -- which bypasses RLS by credential — no `TO service_role` policy is needed.)
 CREATE POLICY "{table_name}_owner_access" ON "{table_name}"
   FOR ALL TO authenticated
-  USING (public.can_bypass_rls() OR "userId" = public.get_auth_user_id())
-  WITH CHECK (public.can_bypass_rls() OR "userId" = public.get_auth_user_id());
+  USING ((SELECT public.can_bypass_rls()) OR "userId" = (SELECT public.get_auth_user_id()))
+  WITH CHECK ((SELECT public.can_bypass_rls()) OR "userId" = (SELECT public.get_auth_user_id()));
 '''
 
     sql += f'''
@@ -269,19 +269,19 @@ ALTER TABLE "{table_name}_metas" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "{table_name}_metas_owner_access" ON "{table_name}_metas"
   FOR ALL TO authenticated
   USING (
-    public.can_bypass_rls()
+    (SELECT public.can_bypass_rls())
     OR EXISTS (
       SELECT 1 FROM "{table_name}" p
       WHERE p.id = "{table_name}_metas"."entityId"
-        AND p."userId" = public.get_auth_user_id()
+        AND p."userId" = (SELECT public.get_auth_user_id())
     )
   )
   WITH CHECK (
-    public.can_bypass_rls()
+    (SELECT public.can_bypass_rls())
     OR EXISTS (
       SELECT 1 FROM "{table_name}" p
       WHERE p.id = "{table_name}_metas"."entityId"
-        AND p."userId" = public.get_auth_user_id()
+        AND p."userId" = (SELECT public.get_auth_user_id())
     )
   );
 

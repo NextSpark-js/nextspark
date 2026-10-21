@@ -174,22 +174,22 @@ ON public."{child_table}"
 FOR ALL TO authenticated
 USING (
   -- Superadmin bypass
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
   -- Team isolation via parent
   EXISTS (
     SELECT 1 FROM public."{parent_table}" t
     WHERE t.id = "parentId"
-      AND t."teamId" = ANY(public.get_user_team_ids())
+      AND t."teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   )
 )
 WITH CHECK (
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
   EXISTS (
     SELECT 1 FROM public."{parent_table}" t
     WHERE t.id = "parentId"
-      AND t."teamId" = ANY(public.get_user_team_ids())
+      AND t."teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   )
 );
 '''

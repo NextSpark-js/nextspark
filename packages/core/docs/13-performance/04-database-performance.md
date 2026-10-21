@@ -280,14 +280,16 @@ WHERE "userId" = $1
 -- RLS policy (applied to every query)
 CREATE POLICY "Users can view own tasks"
 ON "tasks" FOR SELECT
-USING ("userId" = get_auth_user_id());
+USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Every query becomes:
 SELECT * FROM "tasks"
-WHERE "userId" = get_auth_user_id()  -- Added by RLS
+WHERE "userId" = (SELECT public.get_auth_user_id())  -- Added by RLS
   AND status = 'active'              -- Your filter
 ORDER BY "createdAt" DESC;
 ```
+
+Call the helper functions inside `(SELECT ...)`, as above: Postgres then evaluates them once per statement instead of possibly once per row (a full scan of a 100,000-row table with a team policy went from about 1.7 s to about 15 ms). See [Call the helpers as `(SELECT ...)`](../10-backend/03-rls-policies.md#call-the-helpers-as-select-).
 
 ### Critical: Index on RLS Column
 

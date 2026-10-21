@@ -516,7 +516,7 @@ CREATE POLICY "order_items_via_parent" ON "order_items"
     EXISTS (
       SELECT 1 FROM "orders"
       WHERE "orders".id = "parentId"
-      AND "orders"."userId" = public.get_auth_user_id()
+      AND "orders"."userId" = (SELECT public.get_auth_user_id())
     )
   );
 ```

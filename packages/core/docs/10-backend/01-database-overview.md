@@ -220,16 +220,16 @@ CREATE TRIGGER update_entity_name_updated_at
 ALTER TABLE "entity_name" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own records" ON "entity_name"
-  FOR SELECT USING ("userId" = public.get_auth_user_id());
+  FOR SELECT USING ("userId" = (SELECT public.get_auth_user_id()));
 
 CREATE POLICY "Users can create own records" ON "entity_name"
-  FOR INSERT WITH CHECK ("userId" = public.get_auth_user_id());
+  FOR INSERT WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 CREATE POLICY "Users can update own records" ON "entity_name"
-  FOR UPDATE USING ("userId" = public.get_auth_user_id());
+  FOR UPDATE USING ("userId" = (SELECT public.get_auth_user_id()));
 
 CREATE POLICY "Users can delete own records" ON "entity_name"
-  FOR DELETE USING ("userId" = public.get_auth_user_id());
+  FOR DELETE USING ("userId" = (SELECT public.get_auth_user_id()));
 ```
 
 **Standard Fields:**

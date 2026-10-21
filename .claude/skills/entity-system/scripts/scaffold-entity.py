@@ -476,15 +476,15 @@ ON public."{table_name}"
 FOR ALL TO authenticated
 USING (
   -- Superadmin bypass
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
   -- Team isolation: user must be member of the team
-  "teamId" = ANY(public.get_user_team_ids())
+  "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
 )
 WITH CHECK (
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
-  "teamId" = ANY(public.get_user_team_ids())
+  "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
 );
 '''
 
@@ -557,22 +557,22 @@ ON public."{table_name}_metas"
 FOR ALL TO authenticated
 USING (
   -- Superadmin bypass
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
   -- Team isolation via parent
   EXISTS (
     SELECT 1 FROM public."{table_name}" t
     WHERE t.id = "entityId"
-      AND t."teamId" = ANY(public.get_user_team_ids())
+      AND t."teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   )
 )
 WITH CHECK (
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
   EXISTS (
     SELECT 1 FROM public."{table_name}" t
     WHERE t.id = "entityId"
-      AND t."teamId" = ANY(public.get_user_team_ids())
+      AND t."teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   )
 );
 '''

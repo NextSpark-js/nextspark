@@ -285,12 +285,15 @@ USING (
 )
 ```
 
-The entity templates and core's policies use this form. Migration `043_rls_helpers_select_wrapper.sql` rewrites, in place, every policy of the `public` schema that still calls a helper without it, including the entity tables you created from the earlier templates and your own policies, keeping each policy's name, command and roles. Running `pnpm db:migrate` is the whole upgrade; there is nothing to do by hand.
+The entity templates and core's policies use this form. Migration `043_rls_helpers_select_wrapper.sql` rewrites, in the database, every policy of the `public` schema that still calls a helper without it, including the entity tables you created from the earlier templates and your own policies, keeping each policy's name, command and roles. `pnpm db:migrate` applies it. A policy it cannot rewrite safely stays as it was and the migration prints a warning naming it (for example one with a quoted string that contains a helper call, or one Postgres rejects after the rewrite); wrap those by hand.
 
-Two things to check on your side:
+The migration changes the database, not your `.sql` files. A project's own entity migration files are applied after core's on a fresh database, in CI and by a new developer, so they would create the bare form again. Update them by hand: wrap each helper call in a `CREATE POLICY` (`public.get_auth_user_id()` becomes `(SELECT public.get_auth_user_id())`, and `= ANY (public.get_user_team_ids())` becomes `= ANY ((SELECT public.get_user_team_ids())::text[])`; the same cast goes after `ALL`). The same goes for a migration of yours that drops and recreates a policy. To run the rewrite again on a database, for example after such a migration, apply the file; it is idempotent:
 
-- If a migration of yours drops and recreates a policy (`DROP POLICY IF EXISTS ...; CREATE POLICY ...`), it brings the bare calls back for that table. Write the wrapped form there, or run the same rewrite again.
-- The rewrite only touches policy expressions. The bodies of functions and triggers keep calling the helpers directly, which is correct there.
+```bash
+psql "$DATABASE_URL" -f node_modules/@nextsparkjs/core/migrations/043_rls_helpers_select_wrapper.sql
+```
+
+The rewrite only touches policy expressions. The bodies of functions and triggers keep calling the helpers directly, which is correct there.
 
 To list the policies that still have a bare call:
 
@@ -302,7 +305,7 @@ WHERE schemaname = 'public'
       ~ '(?<!SELECT )(?<![.\w])(?<!get_user_team_ids\()(get_user_team_ids|is_superadmin|can_bypass_rls|get_auth_user_id)\(\)';
 ```
 
-`ALTER POLICY` takes an `ACCESS EXCLUSIVE` lock on each table for the length of the migration's transaction. It only edits the catalog, so it lasts milliseconds, unless a long transaction is already open on that table.
+`ALTER POLICY` takes an `ACCESS EXCLUSIVE` lock on each table, and the migration keeps the locks it has taken until its transaction ends, while it waits for the next table. On a quiet database that is milliseconds. Behind a long-running transaction on one of the tables, reads of the tables it already holds queue until that transaction ends, and a transaction that touches those tables in a different order can deadlock with it. Run it in a quiet window, or set a limit first: with `SET lock_timeout = '5s'` a timeout makes the migration fail as a whole with nothing changed, and it is safe to retry.
 
 ---
 
@@ -951,7 +954,7 @@ CREATE POLICY "allow_all" ON "tasks"
 USING ("userId" = 'user-123')
 
 -- ✅ GOOD - Dynamic user
-USING ("userId" = public.get_auth_user_id())
+USING ("userId" = (SELECT public.get_auth_user_id()))
 ```
 
 ---
