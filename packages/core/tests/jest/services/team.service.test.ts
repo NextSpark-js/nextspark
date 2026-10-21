@@ -289,9 +289,23 @@ describe('TeamService', () => {
         const result = await TeamService.create('user-123')
 
         const [first, second] = insertedSlugs()
-        expect(second).toMatch(new RegExp(`^${first}-[a-z0-9]+$`))
+        expect(second).toMatch(new RegExp(`^${first}-[a-z0-9]{4}$`))
+        // a taken slug is a no-op the code retries, not an error that aborts the transaction
+        for (const [sql] of mockTx.queryOne.mock.calls.filter(([s]) => String(s).includes('INSERT INTO "teams"'))) {
+          expect(String(sql)).toContain('ON CONFLICT (slug) DO NOTHING')
+        }
         expect(result).toEqual(mockTeam)
         expect(mockTx.commit).toHaveBeenCalled()
+      })
+
+      it('never retries with an empty suffix', async () => {
+        const random = jest.spyOn(Math, 'random').mockReturnValue(0)
+        mockTx.queryOne.mockResolvedValueOnce(null).mockResolvedValueOnce(mockTeam).mockResolvedValueOnce(null)
+        await TeamService.create('user-123')
+        random.mockRestore()
+
+        const [first, second] = insertedSlugs()
+        expect(second).toBe(`${first}-0000`)
       })
 
       it('gives up after a bounded number of attempts', async () => {

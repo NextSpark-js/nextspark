@@ -353,7 +353,7 @@ export class TeamService {
       const isGlobal = TEAMS_CONFIG.mode === 'single-tenant'
       let team: Team | null = null
       for (let attempt = 0; attempt < SLUG_ATTEMPTS && !team; attempt++) {
-        const slug = attempt === 0 ? teamSlug : `${teamSlug}-${Math.random().toString(36).slice(2, 6)}`
+        const slug = attempt === 0 ? teamSlug : `${teamSlug}-${Math.random().toString(36).slice(2, 6).padEnd(4, '0')}`
         team = await tx.queryOne<Team>(
           `INSERT INTO "teams" (name, slug, "ownerId", "isGlobal")
            VALUES ($1, $2, $3, $4)
