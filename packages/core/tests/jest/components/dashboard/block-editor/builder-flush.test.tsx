@@ -44,10 +44,12 @@ jest.mock('@/core/components/dashboard/block-editor/block-settings-panel', () =>
 
 const entityConfig = { name: 'pages', apiPath: 'pages', displayName: 'Pages', features: { enabled: true }, access: { basePath: '/' }, builder: { enabled: true } }
 const stored = { id: 'p1', title: 'About', slug: 'about', status: 'draft', blocks: [{ id: 'b1', blockSlug: 'hero', props: { title: 'a' } }] }
+let current = stored
 const fetchMock = jest.fn<typeof fetch>()
 const patchBodies = () => fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH').map(([, init]) => JSON.parse(String(init?.body)))
 
-async function openBlock() {
+async function openBlock(entity = stored) {
+  current = entity
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } })
   render(
     <QueryClientProvider client={client}>
@@ -67,7 +69,7 @@ beforeEach(() => {
   fetchMock.mockReset()
   fetchMock.mockImplementation(async (_url, init) => init?.method === 'PATCH'
     ? new Response(JSON.stringify({ success: true, data: { id: 'p1' } }), { status: 200 })
-    : new Response(JSON.stringify({ success: true, data: stored }), { status: 200 }))
+    : new Response(JSON.stringify({ success: true, data: current }), { status: 200 }))
   global.fetch = fetchMock
 })
 afterEach(() => jest.useRealTimers())
@@ -87,11 +89,21 @@ describe('builder save inside the settings debounce window', () => {
     expect(patchBodies()[0].status).toBe(status)
   })
 
-  test('a save without edits sends the stored blocks and the form sends no onChange of its own', async () => {
+  test('update of a published page saves the edit made less than 500 ms ago', async () => {
+    const input = await openBlock({ ...stored, status: 'published' })
+    fireEvent.change(input, { target: { value: 'edited' } })
+    fireEvent.click(document.querySelector('[data-cy="publishButton"]') as HTMLElement)
+
+    await waitFor(() => expect(patchBodies()).toHaveLength(1))
+    expect(patchBodies()[0].blocks[0].props).toEqual({ title: 'edited' })
+    expect(patchBodies()[0].status).toBe('published')
+  })
+
+  test('a save without edits sends the stored blocks unchanged', async () => {
     await openBlock()
     fireEvent.click(document.querySelector('[data-cy="publishButton"]') as HTMLElement)
 
     await waitFor(() => expect(patchBodies()).toHaveLength(1))
-    expect(patchBodies()[0].blocks[0].props).toEqual({ title: 'a' })
+    expect(patchBodies()[0].blocks).toEqual(stored.blocks)
   })
 })

@@ -339,8 +339,6 @@ export function DynamicForm({ fieldDefinitions, values, onChange, flushRef }: Dy
   const [formValues, setFormValues] = useState(values)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
-  // Track if we're syncing from parent to prevent feedback loop
-  const isSyncingFromParent = useRef(false)
   // Track the debounce timer
   const debounceTimer = useRef<NodeJS.Timeout | null>(null)
   // True between a user edit and the moment it is scheduled (a parent sync is not an edit)
@@ -364,7 +362,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange, flushRef }: Dy
     if (!flushRef) return
     flushRef.current = flush
     return () => {
-      flushRef.current = null
+      if (flushRef.current === flush) flushRef.current = null
     }
   }, [flushRef, flush])
 
@@ -381,13 +379,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange, flushRef }: Dy
     flush()
 
     edited.current = false
-    isSyncingFromParent.current = true
     setFormValues(values)
-
-    // Reset the flag after state update
-    requestAnimationFrame(() => {
-      isSyncingFromParent.current = false
-    })
   }, [values, flush])
 
   useEffect(() => {
@@ -396,8 +388,8 @@ export function DynamicForm({ fieldDefinitions, values, onChange, flushRef }: Dy
 
   // Debounced update to parent - only when user makes changes
   useEffect(() => {
-    // Don't trigger parent update when syncing from parent or when nothing was edited
-    if (isSyncingFromParent.current || !edited.current) {
+    // A parent sync is not an edit: only handleFieldChange sets `edited`
+    if (!edited.current) {
       return
     }
     edited.current = false

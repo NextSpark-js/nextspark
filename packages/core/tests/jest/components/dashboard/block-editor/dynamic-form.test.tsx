@@ -117,6 +117,17 @@ describe('DynamicForm debounce and flush', () => {
     expect(onChange).toHaveBeenCalledTimes(1)
   })
 
+  test('a keystroke right after the parent echo is delivered', () => {
+    const { onChange, view, ui } = setup()
+    type('ab')
+    act(() => { jest.advanceTimersByTime(500) })
+    view.rerender(ui({ title: 'ab' })) // echo, and the next keystroke before any animation frame
+    type('abc')
+    view.unmount()
+    expect(onChange).toHaveBeenCalledTimes(2)
+    expect(onChange).toHaveBeenLastCalledWith({ title: 'abc' })
+  })
+
   test('a new callback identity alone does not send anything', () => {
     const { onChange, view, ui } = setup()
     view.rerender(ui({ title: 'a' }, jest.fn()))
