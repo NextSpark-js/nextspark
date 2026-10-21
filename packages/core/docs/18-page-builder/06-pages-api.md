@@ -383,7 +383,7 @@ CREATE TABLE pages (
 
   -- Constraints
   CONSTRAINT unique_slug_locale UNIQUE(slug, locale),
-  CONSTRAINT valid_slug CHECK (slug ~ '^[a-z0-9\-]+$')
+  CONSTRAINT valid_slug CHECK (slug ~ '^[a-z0-9\-]+$')  -- see "The constraint follows allowNestedSlugs"
 );
 ```
 
@@ -395,6 +395,17 @@ A dot is not allowed (`v1.2` is not a slug; use `v1-2`). The error is `400` with
 ones that would be refused if their slug were written again with `SELECT id, slug FROM pages WHERE slug !~ '^[a-z0-9]+(-[a-z0-9]+)*$' OR length(slug) NOT BETWEEN 2 AND 100`.
 A slug that is not changing is never judged: editing such a page in the builder, or a `PATCH` that carries its stored slug, works; only a change to the slug is validated.
 The 100-character cap is new for blog posts and categories, whose columns allow more.
+
+### The constraint follows `allowNestedSlugs`
+
+The pages table's `valid_slug` CHECK follows `access.allowNestedSlugs` of the pages entity. With `false` (the default) it allows one segment, `^[a-z0-9-]+$`; with `true`, segments of the same characters joined by single `/` (`^[a-z0-9-]+(/[a-z0-9-]+)*$`): `qa/home` is stored, `/qa`, `qa/` and `qa//home` are not. The application judges each segment further (2 to 100 characters per slug, no leading, trailing or repeated hyphen, reserved first segment); the constraint is the looser safety net.
+
+Migration `004_pages_slug_check` of the pages entity replaces the constraint when `pnpm db:migrate` runs it: the runner reads `allowNestedSlugs` from `entities/pages/pages.config.ts` (a literal `true`; anything else counts as `false`) and passes it to the migration. The constraint is added `NOT VALID`, so rows already stored never stop the migration. A migration runs once: after you change the option, replace the constraint yourself, for example for `true`:
+
+```sql
+ALTER TABLE public.pages DROP CONSTRAINT IF EXISTS valid_slug;
+ALTER TABLE public.pages ADD CONSTRAINT valid_slug CHECK (slug ~ '^[a-z0-9-]+(/[a-z0-9-]+)*$') NOT VALID;
+```
 
 ## Reserved Slugs
 

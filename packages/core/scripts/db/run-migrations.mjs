@@ -5,6 +5,7 @@ import { getConfig } from '../build/registry/config.mjs';
 import { isSampleDataMigration, sampleDataPolicy } from './sample-data.mjs';
 import { setProjectEnv } from './ssl-config.mjs';
 import { describeDestination, rememberSecrets, scrub } from './destination.mjs';
+import { nestedSlugsSetting } from './nested-slugs.mjs';
 import { authSchemaProblems, authSchemaReport } from './check-auth-schema.mjs';
 
 const projectConfig = getConfig();
@@ -507,6 +508,8 @@ async function runEntityMigrations() {
 
   try {
     await client.connect();
+    // 004_pages_slug_check.sql reads it: the slug CHECK of pages follows access.allowNestedSlugs
+    await client.query("SELECT set_config('nextspark.pages_allow_nested_slugs', $1, false)", [await nestedSlugsSetting(projectRoot)]);
     console.log("🔄 Running content & entity migrations (sample_data deferred)...\n");
     console.log(`📌 Project: ${PROJECT_NAME}\n`);
 
