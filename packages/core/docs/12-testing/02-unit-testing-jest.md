@@ -41,6 +41,36 @@ module.exports = {
 }
 ```
 
+### Jest preset for projects
+
+A project that installs `@nextsparkjs/core` extends `@nextsparkjs/core/jest-preset` instead of repeating core's module mappers. The starter's `tests/jest/jest.config.cjs` already does:
+
+```javascript
+const corePreset = require('@nextsparkjs/core/jest-preset')
+
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'jsdom',
+  moduleNameMapper: {
+    ...corePreset.moduleNameMapper,
+    '^@/(.*)$': '<rootDir>/$1', // your own mappers go after the preset's
+  },
+  transform: { ...corePreset.transform, '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: 'tests/jest/tsconfig.jest.json' }] },
+  transformIgnorePatterns: corePreset.transformIgnorePatterns,
+}
+```
+
+The preset provides:
+
+- `moduleNameMapper` entries that point `@nextsparkjs/core`, its subpaths and `@nextsparkjs/core/selectors` (and `selectors/<domain>`) at the built package, and `server-only` at the empty mock core ships, so a test can import a module that imports `server-only`.
+- A `transform` that rewrites core's ESM build to CommonJS (it handles `.js`, `.mjs` and `.cjs`, not your `.ts`/`.tsx`), and the `transformIgnorePatterns` that let it through.
+
+It sets no test environment, setup file or project aliases. For a setup file, use your own or `@nextsparkjs/core/jest-setup`.
+
+A project generated before the preset keeps working with its own `jest.config.cjs`. To adopt the preset, replace the `@nextsparkjs/core` entries of `moduleNameMapper` and the `transformIgnorePatterns` with the spread above.
+
+Core's package `exports` also carry a `default` condition next to `import` on every subpath, so a tool that resolves with `require` finds the files without a custom mapper (it still needs a transform for the ESM build).
+
 ### Running Tests
 
 ```bash

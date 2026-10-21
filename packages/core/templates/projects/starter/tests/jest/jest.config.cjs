@@ -6,6 +6,9 @@
  */
 
 const path = require('path')
+// Module mappers for @nextsparkjs/core (including selectors and server-only), the transform of core's ESM build and
+// the transform ignore patterns. Your own mappers go after the preset's (Jest uses the first pattern that matches).
+const corePreset = require('@nextsparkjs/core/jest-preset')
 
 // Paths relative to this config file
 const themeTestsRoot = __dirname
@@ -34,15 +37,9 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
 
-  // Module resolution for npm mode
-  // Explicitly resolve @nextsparkjs/core subpaths to dist directory
-  // Jest doesn't respect package.json exports, so we map directly to dist files
+  // Module resolution
   moduleNameMapper: {
-    '^@nextsparkjs/core/lib/(.*)$': '<rootDir>/node_modules/@nextsparkjs/core/dist/lib/$1',
-    '^@nextsparkjs/core/hooks/(.*)$': '<rootDir>/node_modules/@nextsparkjs/core/dist/hooks/$1',
-    '^@nextsparkjs/core/components/(.*)$': '<rootDir>/node_modules/@nextsparkjs/core/dist/components/$1',
-    '^@nextsparkjs/core/(.*)$': '<rootDir>/node_modules/@nextsparkjs/core/dist/$1',
-    '^@nextsparkjs/core$': '<rootDir>/node_modules/@nextsparkjs/core/dist/index.js',
+    ...corePreset.moduleNameMapper,
     '^@/entities/(.*)$': '<rootDir>/entities/$1',
     '^@/plugins/(.*)$': '<rootDir>/plugins/$1',
     '^@/(.*)$': '<rootDir>/$1',
@@ -60,16 +57,14 @@ module.exports = {
   // Transform configuration
   // Use tsconfig.jest.json for JSX support (jsx: "react-jsx" instead of "preserve")
   transform: {
+    ...corePreset.transform,
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: path.join(themeTestsRoot, 'tsconfig.jest.json'),
     }],
   },
 
   // Transform ignore patterns
-  transformIgnorePatterns: [
-    'node_modules/(?!(uncrypto|better-auth|@noble|.*jose.*|remark.*|unified.*|@nextsparkjs/core/tests|.*\\.mjs$))',
-    'node_modules/\\.pnpm/(?!(.*uncrypto.*|.*better-auth.*|.*@noble.*|.*jose.*|.*remark.*|.*unified.*|@nextsparkjs.*core.*tests|.*\\.mjs$))',
-  ],
+  transformIgnorePatterns: corePreset.transformIgnorePatterns,
 
   // File extensions
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],

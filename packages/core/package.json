@@ -37,324 +37,403 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./next": {
       "types": "./dist/next.d.ts",
-      "import": "./dist/next.js"
+      "import": "./dist/next.js",
+      "default": "./dist/next.js"
     },
     "./i18n": {
       "types": "./dist/i18n.d.ts",
-      "import": "./dist/i18n.js"
+      "import": "./dist/i18n.js",
+      "default": "./dist/i18n.js"
     },
     "./proxy": {
       "types": "./dist/proxy/index.d.ts",
-      "import": "./dist/proxy/index.js"
+      "import": "./dist/proxy/index.js",
+      "default": "./dist/proxy/index.js"
     },
     "./instrumentation": {
       "types": "./dist/instrumentation/index.d.ts",
-      "import": "./dist/instrumentation/index.js"
+      "import": "./dist/instrumentation/index.js",
+      "default": "./dist/instrumentation/index.js"
     },
     "./config/protected-paths": {
       "types": "./dist/config/protected-paths.d.ts",
-      "import": "./dist/config/protected-paths.js"
+      "import": "./dist/config/protected-paths.js",
+      "default": "./dist/config/protected-paths.js"
     },
     "./globals.css": "./globals.css",
     "./styles/utilities.css": "./styles/utilities.css",
     "./styles/docs.css": "./styles/docs.css",
     "./lib/middleware": {
       "types": "./dist/lib/middleware/index.d.ts",
-      "import": "./dist/lib/middleware/index.js"
+      "import": "./dist/lib/middleware/index.js",
+      "default": "./dist/lib/middleware/index.js"
     },
     "./lib/services": {
       "types": "./dist/lib/services/index.d.ts",
-      "import": "./dist/lib/services/index.js"
+      "import": "./dist/lib/services/index.js",
+      "default": "./dist/lib/services/index.js"
     },
     "./lib/mcp": {
       "types": "./dist/lib/mcp/index.d.ts",
-      "import": "./dist/lib/mcp/index.js"
+      "import": "./dist/lib/mcp/index.js",
+      "default": "./dist/lib/mcp/index.js"
     },
     "./lib/config": {
       "types": "./dist/lib/config/index.d.ts",
-      "import": "./dist/lib/config/index.js"
+      "import": "./dist/lib/config/index.js",
+      "default": "./dist/lib/config/index.js"
     },
     "./lib/teams/*": {
       "types": "./dist/lib/teams/*.d.ts",
-      "import": "./dist/lib/teams/*.js"
+      "import": "./dist/lib/teams/*.js",
+      "default": "./dist/lib/teams/*.js"
     },
     "./lib/translations/*": {
       "types": "./dist/lib/translations/*.d.ts",
-      "import": "./dist/lib/translations/*.js"
+      "import": "./dist/lib/translations/*.js",
+      "default": "./dist/lib/translations/*.js"
     },
     "./lib": {
       "types": "./dist/lib/index.d.ts",
-      "import": "./dist/lib/index.js"
+      "import": "./dist/lib/index.js",
+      "default": "./dist/lib/index.js"
     },
     "./lib/api": {
       "types": "./dist/lib/api/index.d.ts",
-      "import": "./dist/lib/api/index.js"
+      "import": "./dist/lib/api/index.js",
+      "default": "./dist/lib/api/index.js"
     },
     "./lib/api/api-error": {
       "types": "./dist/lib/api/api-error.d.ts",
-      "import": "./dist/lib/api/api-error.js"
+      "import": "./dist/lib/api/api-error.js",
+      "default": "./dist/lib/api/api-error.js"
     },
     "./lib/api/routes": {
       "types": "./dist/lib/api/routes/index.d.ts",
-      "import": "./dist/lib/api/routes/index.js"
+      "import": "./dist/lib/api/routes/index.js",
+      "default": "./dist/lib/api/routes/index.js"
     },
     "./lib/email": {
       "types": "./dist/lib/email/index.d.ts",
-      "import": "./dist/lib/email/index.js"
+      "import": "./dist/lib/email/index.js",
+      "default": "./dist/lib/email/index.js"
     },
     "./lib/oauth": {
       "types": "./dist/lib/oauth/index.d.ts",
-      "import": "./dist/lib/oauth/index.js"
+      "import": "./dist/lib/oauth/index.js",
+      "default": "./dist/lib/oauth/index.js"
     },
     "./lib/scheduled-actions": {
       "types": "./dist/lib/scheduled-actions/index.d.ts",
-      "import": "./dist/lib/scheduled-actions/index.js"
+      "import": "./dist/lib/scheduled-actions/index.js",
+      "default": "./dist/lib/scheduled-actions/index.js"
     },
     "./lib/scheduled-actions/handlers": {
       "types": "./dist/lib/scheduled-actions/handlers/index.d.ts",
-      "import": "./dist/lib/scheduled-actions/handlers/index.js"
+      "import": "./dist/lib/scheduled-actions/handlers/index.js",
+      "default": "./dist/lib/scheduled-actions/handlers/index.js"
     },
     "./lib/auth/*": {
       "types": "./dist/lib/auth/*.d.ts",
-      "import": "./dist/lib/auth/*.js"
+      "import": "./dist/lib/auth/*.js",
+      "default": "./dist/lib/auth/*.js"
     },
     "./lib/auth/security-notifications": {
       "types": "./dist/lib/auth/security-notifications/index.d.ts",
-      "import": "./dist/lib/auth/security-notifications/index.js"
+      "import": "./dist/lib/auth/security-notifications/index.js",
+      "default": "./dist/lib/auth/security-notifications/index.js"
     },
     "./lib/permissions/system": {
       "types": "./dist/lib/permissions/system.d.ts",
-      "import": "./dist/lib/permissions/system.js"
+      "import": "./dist/lib/permissions/system.js",
+      "default": "./dist/lib/permissions/system.js"
     },
     "./lib/permissions/types": {
       "types": "./dist/lib/permissions/types.d.ts",
-      "import": "./dist/lib/permissions/types.js"
+      "import": "./dist/lib/permissions/types.js",
+      "default": "./dist/lib/permissions/types.js"
     },
     "./lib/permissions/check": {
       "types": "./dist/lib/permissions/check.d.ts",
-      "import": "./dist/lib/permissions/check.js"
+      "import": "./dist/lib/permissions/check.js",
+      "default": "./dist/lib/permissions/check.js"
     },
     "./lib/permissions/init": {
       "types": "./dist/lib/permissions/init.d.ts",
-      "import": "./dist/lib/permissions/init.js"
+      "import": "./dist/lib/permissions/init.js",
+      "default": "./dist/lib/permissions/init.js"
     },
     "./lib/config/config-sync": {
       "types": "./dist/lib/config/config-sync.d.ts",
-      "import": "./dist/lib/config/config-sync.js"
+      "import": "./dist/lib/config/config-sync.js",
+      "default": "./dist/lib/config/config-sync.js"
     },
     "./lib/blocks/*": {
       "types": "./dist/lib/blocks/*.d.ts",
-      "import": "./dist/lib/blocks/*.js"
+      "import": "./dist/lib/blocks/*.js",
+      "default": "./dist/lib/blocks/*.js"
     },
     "./lib/plugins/env-loader": {
       "types": "./dist/lib/plugins/env-loader.d.ts",
-      "import": "./dist/lib/plugins/env-loader.js"
+      "import": "./dist/lib/plugins/env-loader.js",
+      "default": "./dist/lib/plugins/env-loader.js"
     },
     "./lib/billing/gateways/factory": {
       "types": "./dist/lib/billing/gateways/factory.d.ts",
-      "import": "./dist/lib/billing/gateways/factory.js"
+      "import": "./dist/lib/billing/gateways/factory.js",
+      "default": "./dist/lib/billing/gateways/factory.js"
     },
     "./lib/billing/gateways/stripe": {
       "types": "./dist/lib/billing/gateways/stripe.d.ts",
-      "import": "./dist/lib/billing/gateways/stripe.js"
+      "import": "./dist/lib/billing/gateways/stripe.js",
+      "default": "./dist/lib/billing/gateways/stripe.js"
     },
     "./lib/billing/gateways/polar": {
       "types": "./dist/lib/billing/gateways/polar.d.ts",
-      "import": "./dist/lib/billing/gateways/polar.js"
+      "import": "./dist/lib/billing/gateways/polar.js",
+      "default": "./dist/lib/billing/gateways/polar.js"
     },
     "./lib/billing/gateways/interface": {
       "types": "./dist/lib/billing/gateways/interface.d.ts",
-      "import": "./dist/lib/billing/gateways/interface.js"
+      "import": "./dist/lib/billing/gateways/interface.js",
+      "default": "./dist/lib/billing/gateways/interface.js"
     },
     "./lib/billing/gateways/types": {
       "types": "./dist/lib/billing/gateways/types.d.ts",
-      "import": "./dist/lib/billing/gateways/types.js"
+      "import": "./dist/lib/billing/gateways/types.js",
+      "default": "./dist/lib/billing/gateways/types.js"
     },
     "./lib/billing/config-types": {
       "types": "./dist/lib/billing/config-types.d.ts",
-      "import": "./dist/lib/billing/config-types.js"
+      "import": "./dist/lib/billing/config-types.js",
+      "default": "./dist/lib/billing/config-types.js"
     },
     "./lib/billing/stripe-webhook": {
       "types": "./dist/lib/billing/stripe-webhook.d.ts",
-      "import": "./dist/lib/billing/stripe-webhook.js"
+      "import": "./dist/lib/billing/stripe-webhook.js",
+      "default": "./dist/lib/billing/stripe-webhook.js"
     },
     "./lib/billing/polar-webhook": {
       "types": "./dist/lib/billing/polar-webhook.d.ts",
-      "import": "./dist/lib/billing/polar-webhook.js"
+      "import": "./dist/lib/billing/polar-webhook.js",
+      "default": "./dist/lib/billing/polar-webhook.js"
     },
     "./lib/billing/webhook-events": {
       "types": "./dist/lib/billing/webhook-events.d.ts",
-      "import": "./dist/lib/billing/webhook-events.js"
+      "import": "./dist/lib/billing/webhook-events.js",
+      "default": "./dist/lib/billing/webhook-events.js"
     },
     "./lib/services/index": {
       "types": "./dist/lib/services/index.d.ts",
-      "import": "./dist/lib/services/index.js"
+      "import": "./dist/lib/services/index.js",
+      "default": "./dist/lib/services/index.js"
     },
     "./lib/api/auth/dual-auth": {
       "types": "./dist/lib/api/auth/dual-auth.d.ts",
-      "import": "./dist/lib/api/auth/dual-auth.js"
+      "import": "./dist/lib/api/auth/dual-auth.js",
+      "default": "./dist/lib/api/auth/dual-auth.js"
     },
     "./lib/api/rate-limit": {
       "types": "./dist/lib/api/rate-limit.d.ts",
-      "import": "./dist/lib/api/rate-limit.js"
+      "import": "./dist/lib/api/rate-limit.js",
+      "default": "./dist/lib/api/rate-limit.js"
     },
     "./lib/consent": {
       "types": "./dist/lib/consent/index.d.ts",
-      "import": "./dist/lib/consent/index.js"
+      "import": "./dist/lib/consent/index.js",
+      "default": "./dist/lib/consent/index.js"
     },
     "./lib/consent/server": {
       "types": "./dist/lib/consent/server.d.ts",
-      "import": "./dist/lib/consent/server.js"
+      "import": "./dist/lib/consent/server.js",
+      "default": "./dist/lib/consent/server.js"
     },
     "./lib/*": {
       "types": "./dist/lib/*.d.ts",
-      "import": "./dist/lib/*.js"
+      "import": "./dist/lib/*.js",
+      "default": "./dist/lib/*.js"
     },
     "./emails/*": {
       "types": "./dist/emails/*.d.ts",
-      "import": "./dist/emails/*.js"
+      "import": "./dist/emails/*.js",
+      "default": "./dist/emails/*.js"
     },
     "./hooks": {
       "types": "./dist/hooks/index.d.ts",
-      "import": "./dist/hooks/index.js"
+      "import": "./dist/hooks/index.js",
+      "default": "./dist/hooks/index.js"
     },
     "./hooks/teams": {
       "types": "./dist/hooks/teams/index.d.ts",
-      "import": "./dist/hooks/teams/index.js"
+      "import": "./dist/hooks/teams/index.js",
+      "default": "./dist/hooks/teams/index.js"
     },
     "./hooks/*": {
       "types": "./dist/hooks/*.d.ts",
-      "import": "./dist/hooks/*.js"
+      "import": "./dist/hooks/*.js",
+      "default": "./dist/hooks/*.js"
     },
     "./contexts": {
       "types": "./dist/contexts/index.d.ts",
-      "import": "./dist/contexts/index.js"
+      "import": "./dist/contexts/index.js",
+      "default": "./dist/contexts/index.js"
     },
     "./providers": {
       "types": "./dist/providers/index.d.ts",
-      "import": "./dist/providers/index.js"
+      "import": "./dist/providers/index.js",
+      "default": "./dist/providers/index.js"
     },
     "./types": {
       "types": "./dist/types/index.d.ts",
-      "import": "./dist/types/index.js"
+      "import": "./dist/types/index.js",
+      "default": "./dist/types/index.js"
     },
     "./components/ui": {
       "types": "./dist/components/ui/index.d.ts",
-      "import": "./dist/components/ui/index.js"
+      "import": "./dist/components/ui/index.js",
+      "default": "./dist/components/ui/index.js"
     },
     "./components/devtools": {
       "types": "./dist/components/devtools/index.d.ts",
-      "import": "./dist/components/devtools/index.js"
+      "import": "./dist/components/devtools/index.js",
+      "default": "./dist/components/devtools/index.js"
     },
     "./components/devtools/*": {
       "types": "./dist/components/devtools/*.d.ts",
-      "import": "./dist/components/devtools/*.js"
+      "import": "./dist/components/devtools/*.js",
+      "default": "./dist/components/devtools/*.js"
     },
     "./components/devtools/api-tester": {
       "types": "./dist/components/devtools/api-tester/index.d.ts",
-      "import": "./dist/components/devtools/api-tester/index.js"
+      "import": "./dist/components/devtools/api-tester/index.js",
+      "default": "./dist/components/devtools/api-tester/index.js"
     },
     "./components/devtools/api-explorer": {
       "types": "./dist/components/devtools/api-explorer/index.d.ts",
-      "import": "./dist/components/devtools/api-explorer/index.js"
+      "import": "./dist/components/devtools/api-explorer/index.js",
+      "default": "./dist/components/devtools/api-explorer/index.js"
     },
     "./components/devtools/bdd": {
       "types": "./dist/components/devtools/bdd/index.d.ts",
-      "import": "./dist/components/devtools/bdd/index.js"
+      "import": "./dist/components/devtools/bdd/index.js",
+      "default": "./dist/components/devtools/bdd/index.js"
     },
     "./components/billing": {
       "types": "./dist/components/billing/index.d.ts",
-      "import": "./dist/components/billing/index.js"
+      "import": "./dist/components/billing/index.js",
+      "default": "./dist/components/billing/index.js"
     },
     "./components/permissions": {
       "types": "./dist/components/permissions/index.d.ts",
-      "import": "./dist/components/permissions/index.js"
+      "import": "./dist/components/permissions/index.js",
+      "default": "./dist/components/permissions/index.js"
     },
     "./components/entities/wrappers": {
       "types": "./dist/components/entities/wrappers/index.d.ts",
-      "import": "./dist/components/entities/wrappers/index.js"
+      "import": "./dist/components/entities/wrappers/index.js",
+      "default": "./dist/components/entities/wrappers/index.js"
     },
     "./components/public/entities": {
       "types": "./dist/components/public/entities/index.d.ts",
-      "import": "./dist/components/public/entities/index.js"
+      "import": "./dist/components/public/entities/index.js",
+      "default": "./dist/components/public/entities/index.js"
     },
     "./components/public/pageBuilder": {
       "types": "./dist/components/public/pageBuilder/index.d.ts",
-      "import": "./dist/components/public/pageBuilder/index.js"
+      "import": "./dist/components/public/pageBuilder/index.js",
+      "default": "./dist/components/public/pageBuilder/index.js"
     },
     "./components/public": {
       "types": "./dist/components/public/index.d.ts",
-      "import": "./dist/components/public/index.js"
+      "import": "./dist/components/public/index.js",
+      "default": "./dist/components/public/index.js"
     },
     "./components/superadmin/filters": {
       "types": "./dist/components/superadmin/filters/index.d.ts",
-      "import": "./dist/components/superadmin/filters/index.js"
+      "import": "./dist/components/superadmin/filters/index.js",
+      "default": "./dist/components/superadmin/filters/index.js"
     },
     "./components/dashboard": {
       "types": "./dist/components/dashboard/index.d.ts",
-      "import": "./dist/components/dashboard/index.js"
+      "import": "./dist/components/dashboard/index.js",
+      "default": "./dist/components/dashboard/index.js"
     },
     "./components/dashboard/layouts": {
       "types": "./dist/components/dashboard/layouts/index.d.ts",
-      "import": "./dist/components/dashboard/layouts/index.js"
+      "import": "./dist/components/dashboard/layouts/index.js",
+      "default": "./dist/components/dashboard/layouts/index.js"
     },
     "./components/dashboard/mobile": {
       "types": "./dist/components/dashboard/mobile/index.d.ts",
-      "import": "./dist/components/dashboard/mobile/index.js"
+      "import": "./dist/components/dashboard/mobile/index.js",
+      "default": "./dist/components/dashboard/mobile/index.js"
     },
     "./components/patterns": {
       "types": "./dist/components/patterns/index.d.ts",
-      "import": "./dist/components/patterns/index.js"
+      "import": "./dist/components/patterns/index.js",
+      "default": "./dist/components/patterns/index.js"
     },
     "./components/patterns/pages": {
       "types": "./dist/components/patterns/pages/index.d.ts",
-      "import": "./dist/components/patterns/pages/index.js"
+      "import": "./dist/components/patterns/pages/index.js",
+      "default": "./dist/components/patterns/pages/index.js"
     },
     "./components/app": {
       "types": "./dist/components/app/index.d.ts",
-      "import": "./dist/components/app/index.js"
+      "import": "./dist/components/app/index.js",
+      "default": "./dist/components/app/index.js"
     },
     "./components/app/layouts": {
       "types": "./dist/components/app/layouts/index.d.ts",
-      "import": "./dist/components/app/layouts/index.js"
+      "import": "./dist/components/app/layouts/index.js",
+      "default": "./dist/components/app/layouts/index.js"
     },
     "./components/app/layouts/PublicNavbar": {
       "types": "./dist/components/app/layouts/PublicNavbar.d.ts",
-      "import": "./dist/components/app/layouts/PublicNavbar.js"
+      "import": "./dist/components/app/layouts/PublicNavbar.js",
+      "default": "./dist/components/app/layouts/PublicNavbar.js"
     },
     "./components/app/layouts/PublicFooter": {
       "types": "./dist/components/app/layouts/PublicFooter.d.ts",
-      "import": "./dist/components/app/layouts/PublicFooter.js"
+      "import": "./dist/components/app/layouts/PublicFooter.js",
+      "default": "./dist/components/app/layouts/PublicFooter.js"
     },
     "./components/*": {
       "types": "./dist/components/*.d.ts",
-      "import": "./dist/components/*.js"
+      "import": "./dist/components/*.js",
+      "default": "./dist/components/*.js"
     },
     "./contexts/*": {
       "types": "./dist/contexts/*.d.ts",
-      "import": "./dist/contexts/*.js"
+      "import": "./dist/contexts/*.js",
+      "default": "./dist/contexts/*.js"
     },
     "./providers/*": {
       "types": "./dist/providers/*.d.ts",
-      "import": "./dist/providers/*.js"
+      "import": "./dist/providers/*.js",
+      "default": "./dist/providers/*.js"
     },
     "./types/*": {
       "types": "./dist/types/*.d.ts",
-      "import": "./dist/types/*.js"
+      "import": "./dist/types/*.js",
+      "default": "./dist/types/*.js"
     },
     "./utils/*": {
       "types": "./dist/utils/*.d.ts",
-      "import": "./dist/utils/*.js"
+      "import": "./dist/utils/*.js",
+      "default": "./dist/utils/*.js"
     },
     "./routes/manifest.json": "./dist/routes/manifest.json",
     "./routes/variants.json": "./dist/routes/variants.json",
     "./routes/*": {
       "types": "./dist/routes/*.d.ts",
-      "import": "./dist/routes/*.js"
+      "import": "./dist/routes/*.js",
+      "default": "./dist/routes/*.js"
     },
     "./messages/*": "./dist/messages/*",
     "./templates/*": "./dist/templates/*",
@@ -362,37 +441,46 @@
     "./config/*": "./dist/config/*",
     "./scripts/*": "./scripts/*",
     "./jest-setup": "./tests/jest/setup.ts",
+    "./jest-preset": "./jest-preset.cjs",
     "./selectors": {
       "types": "./dist/lib/selectors/index.d.ts",
-      "import": "./dist/lib/selectors/index.js"
+      "import": "./dist/lib/selectors/index.js",
+      "default": "./dist/lib/selectors/index.js"
     },
     "./selectors/*": {
       "types": "./dist/lib/selectors/by-domain/*.d.ts",
-      "import": "./dist/lib/selectors/by-domain/*.js"
+      "import": "./dist/lib/selectors/by-domain/*.js",
+      "default": "./dist/lib/selectors/by-domain/*.js"
     },
     "./lib/selectors": {
       "types": "./dist/lib/selectors/index.d.ts",
-      "import": "./dist/lib/selectors/index.js"
+      "import": "./dist/lib/selectors/index.js",
+      "default": "./dist/lib/selectors/index.js"
     },
     "./lib/test": {
       "types": "./dist/lib/test/index.d.ts",
-      "import": "./dist/lib/test/index.js"
+      "import": "./dist/lib/test/index.js",
+      "default": "./dist/lib/test/index.js"
     },
     "./actions": {
       "types": "./dist/lib/actions/index.d.ts",
-      "import": "./dist/lib/actions/index.js"
+      "import": "./dist/lib/actions/index.js",
+      "default": "./dist/lib/actions/index.js"
     },
     "./lib/actions": {
       "types": "./dist/lib/actions/index.d.ts",
-      "import": "./dist/lib/actions/index.js"
+      "import": "./dist/lib/actions/index.js",
+      "default": "./dist/lib/actions/index.js"
     },
     "./entities/*": {
       "types": "./dist/entities/*.d.ts",
-      "import": "./dist/entities/*.js"
+      "import": "./dist/entities/*.js",
+      "default": "./dist/entities/*.js"
     },
     "./entities/patterns/*": {
       "types": "./dist/entities/patterns/*.d.ts",
-      "import": "./dist/entities/patterns/*.js"
+      "import": "./dist/entities/patterns/*.js",
+      "default": "./dist/entities/patterns/*.js"
     }
   },
   "files": [
@@ -402,6 +490,8 @@
     "migrations",
     "src/entities",
     "src/lib/entities/portable",
+    "jest-preset.cjs",
+    "jest-esm-transform.cjs",
     "tests/jest/setup.ts",
     "tests/jest/__mocks__",
     "globals.css",
