@@ -67,14 +67,128 @@ function extractNestedObject(content, key) {
   return content.slice(startIndex, endIndex + 1)
 }
 
+/** A preset payload that is not a plain literal: the build stops instead of shipping an empty payload. */
+export class PresetPayloadError extends Error {}
+
+/**
+ * Parse the object/array literal that starts at `content[start]` into a value: JSON data plus the JS
+ * literal syntax a payload uses (unquoted keys, single/double/backtick strings without interpolation,
+ * comments, trailing commas). Anything else throws a PresetPayloadError naming file:line.
+ *
+ * @param {string} content - Whole file content (for the line number)
+ * @param {number} start - Index of the opening brace
+ * @param {string} filePath - File path for the error message
+ * @returns {*} Parsed value
+ */
+function parseLiteral(content, start, filePath) {
+  let i = start
+  const fail = what => {
+    const line = content.slice(0, i).split('\n').length
+    throw new PresetPayloadError(`${filePath}:${line}: cannot parse the preset payload (${what}); use plain literals only`)
+  }
+  const skip = () => {
+    for (;;) {
+      while (/\s/.test(content[i] ?? '')) i++
+      if (content.startsWith('//', i)) {
+        const end = content.indexOf('\n', i)
+        i = end === -1 ? content.length : end
+      } else if (content.startsWith('/*', i)) {
+        const end = content.indexOf('*/', i + 2)
+        if (end === -1) fail('unterminated comment')
+        i = end + 2
+      } else return
+    }
+  }
+  const ESCAPES = { n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', v: '\v', 0: '\0' }
+  const string = () => {
+    const quote = content[i++]
+    let out = ''
+    for (;;) {
+      const c = content[i]
+      if (c === undefined) fail('unterminated string')
+      if (c === quote) {
+        i++
+        return out
+      }
+      if (c === '\n' && quote !== '`') fail('unterminated string')
+      if (quote === '`' && c === '$' && content[i + 1] === '{') fail('template literal with interpolation')
+      i++
+      if (c !== '\\') {
+        out += c
+        continue
+      }
+      const e = content[i++]
+      if (e === 'u' || e === 'x') {
+        const len = e === 'u' ? 4 : 2
+        const hex = content.slice(i, i + len)
+        if (!new RegExp(`^[0-9a-fA-F]{${len}}$`).test(hex)) fail('bad escape')
+        out += String.fromCharCode(parseInt(hex, 16))
+        i += len
+      } else if (e !== '\n') out += ESCAPES[e] ?? e // an escaped newline is a line continuation
+    }
+  }
+  const value = () => {
+    skip()
+    const c = content[i]
+    if (c === '{') {
+      i++
+      const obj = {}
+      for (;;) {
+        skip()
+        if (content[i] === '}') {
+          i++
+          return obj
+        }
+        let key
+        if (/['"`]/.test(content[i] ?? '')) key = string()
+        else {
+          const m = /^(?:[A-Za-z_$][\w$]*|\d+)/.exec(content.slice(i, i + 200))
+          if (!m) fail('expected a property name')
+          key = m[0]
+          i += key.length
+        }
+        skip()
+        if (content[i] !== ':') fail("expected ':'")
+        i++
+        obj[key] = value()
+        skip()
+        if (content[i] === ',') i++
+        else if (content[i] !== '}') fail("expected ',' or '}'")
+      }
+    }
+    if (c === '[') {
+      i++
+      const arr = []
+      for (;;) {
+        skip()
+        if (content[i] === ']') {
+          i++
+          return arr
+        }
+        arr.push(value())
+        skip()
+        if (content[i] === ',') i++
+        else if (content[i] !== ']') fail("expected ',' or ']'")
+      }
+    }
+    if (c === '"' || c === "'" || c === '`') return string()
+    const m = /^(?:-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?|true|false|null)(?![\w$])/.exec(content.slice(i, i + 64))
+    if (!m) fail('not a literal value')
+    i += m[0].length
+    return m[0] === 'true' ? true : m[0] === 'false' ? false : m[0] === 'null' ? null : Number(m[0])
+  }
+  return value()
+}
+
 /**
  * Parse preset configuration from TypeScript file content
  * Extracts the configuration from defineApiEndpoint() or direct export
  *
  * @param {string} content - File content
+ * @param {string} filePath - File path named in the error of a payload that cannot be parsed
  * @returns {Object|null} Parsed preset config
  */
-function parsePresetFile(content) {
+function parsePresetFile(content, filePath) {
   try {
     // Extract endpoint (optional - can be derived from entity/route)
     const endpointMatch = content.match(/endpoint:\s*['"`]([^'"`]+)['"`]/)
@@ -145,20 +259,9 @@ function parsePresetFile(content) {
       // Extract payload object (can be nested)
       const payloadObj = extractNestedObject(presetBlock, 'payload')
       if (payloadObj) {
-        try {
-          // Try to parse as JSON after cleaning up
-          const cleanedPayload = payloadObj
-            .replace(/(['"`])(\w+)(['"`]):/g, '"$2":') // Convert quoted keys to double quotes
-            .replace(/(\w+):/g, '"$1":') // Convert unquoted keys to double quotes
-            .replace(/:\s*['`]([^'`]*)['`]/g, ': "$1"') // Convert string values to double quotes
-            .replace(/,\s*}/g, '}') // Remove trailing commas
-            .replace(/,\s*]/g, ']') // Remove trailing commas in arrays
-            .replace(/""+/g, '"') // Fix double quotes
-          preset.payload = JSON.parse(cleanedPayload)
-        } catch {
-          // If JSON parse fails, store as empty object
-          preset.payload = {}
-        }
+        // An unparseable payload throws (file:line) and stops the build; it is never stored as {}
+        const payloadStart = presetStart + presetBlock.search(/payload:\s*\{/) + presetBlock.match(/payload:\s*\{/)[0].length - 1
+        preset.payload = parseLiteral(content, payloadStart, filePath)
       }
 
       // Extract sessionConfig object
@@ -202,6 +305,7 @@ function parsePresetFile(content) {
 
     return { endpoint, summary, presets }
   } catch (error) {
+    if (error instanceof PresetPayloadError) throw error
     verbose(`Error parsing preset file: ${error.message}`)
     return null
   }
@@ -393,7 +497,7 @@ async function discoverEntityFolders(config, results, processedEndpoints) {
       if (existsSync(presetsPath)) {
         try {
           const content = await readFile(presetsPath, 'utf-8')
-          const presetConfig = parsePresetFile(content)
+          const presetConfig = parsePresetFile(content, getStoragePath(presetsPath, config))
 
           // Use derived endpoint if not specified in file
           const finalEndpoint = presetConfig?.endpoint || endpoint
@@ -411,6 +515,7 @@ async function discoverEntityFolders(config, results, processedEndpoints) {
 
           processedEndpoints.add(finalEndpoint)
         } catch (error) {
+          if (error instanceof PresetPayloadError) throw error
           log(`  ERROR: Failed to parse entity presets "${entityName}": ${error.message}`, 'error')
         }
       } else if (existsSync(docsPath)) {
@@ -419,6 +524,7 @@ async function discoverEntityFolders(config, results, processedEndpoints) {
       }
     }
   } catch (error) {
+    if (error instanceof PresetPayloadError) throw error
     log(`Error discovering entity folders: ${error.message}`, 'error')
   }
 }
@@ -482,7 +588,7 @@ async function discoverThemeRoutes(config, results, processedEndpoints) {
       if (existsSync(presetsPath)) {
         try {
           const content = await readFile(presetsPath, 'utf-8')
-          const presetConfig = parsePresetFile(content)
+          const presetConfig = parsePresetFile(content, getStoragePath(presetsPath, config))
           const finalEndpoint = presetConfig?.endpoint || endpoint
 
           results.presets.push({
@@ -498,6 +604,7 @@ async function discoverThemeRoutes(config, results, processedEndpoints) {
 
           processedEndpoints.add(finalEndpoint)
         } catch (error) {
+          if (error instanceof PresetPayloadError) throw error
           log(`  ERROR: Failed to parse theme route presets: ${error.message}`, 'error')
         }
       } else if (existsSync(docsPath)) {
@@ -581,7 +688,7 @@ async function discoverCoreRoutes(config, results, processedEndpoints) {
       }
 
       const content = await readFile(presetsPath, 'utf-8')
-      const presetConfig = parsePresetFile(content)
+      const presetConfig = parsePresetFile(content, getStoragePath(presetsPath, config))
 
       const slug = basename(routeDir)
       const finalEndpoint = presetConfig?.endpoint || endpoint
@@ -599,6 +706,7 @@ async function discoverCoreRoutes(config, results, processedEndpoints) {
 
       processedEndpoints.add(finalEndpoint)
     } catch (error) {
+      if (error instanceof PresetPayloadError) throw error
       log(`  ERROR: Failed to parse core route presets: ${error.message}`, 'error')
     }
   }
