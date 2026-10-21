@@ -451,7 +451,7 @@ import { Button, Card, CardHeader, CardContent, Badge } from "@nextsparkjs/ui"
 
 function TaskCard({ task }) {
   return (
-    <Card className="mb-4">
+    <Card style={{ marginBottom: 16 }}>
       <CardHeader>
         <Badge variant={task.priority}>{task.priority}</Badge>
       </CardHeader>

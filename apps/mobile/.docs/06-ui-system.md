@@ -269,7 +269,7 @@ import { Button, Card, CardContent, Badge, Input } from "@/src/components/ui"
   <CardHeader>
     <CardTitle>Create Task</CardTitle>
   </CardHeader>
-  <CardContent className="gap-4">
+  <CardContent style={{ gap: 16 }}>
     <Input placeholder="Task title" value={title} onChangeText={...} />
     <Button onPress={handleSubmit}>Save</Button>
   </CardContent>
