@@ -90,7 +90,7 @@ nextspark db:seed      # Seed sample data
 ```bash
 nextspark migrate --dry-run   # Read-only report
 nextspark migrate --yes       # Move to the root-first layout and convert a committed app tree
-nextspark migrate --check     # Read-only: list the obsolete local copies a migrated project still holds (exit 1 if any; add --json)
+nextspark migrate --check     # Read-only: list the obsolete local copies a migrated project still holds (exit 1 if any, 2 if the check cannot run; add --json)
 nextspark migrate --rename-entity-slugs   # Also rename entity slugs with an underscore to hyphens (optional) and print what else to update
 ```
 

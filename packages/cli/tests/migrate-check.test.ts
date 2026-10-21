@@ -170,7 +170,7 @@ test('--check refuses to be combined with an option that writes', () => {
   const root = project()
   for (const flag of ['--yes', '--dry-run', '--rename-entity-slugs']) {
     const result = check(root, [flag])
-    assert.equal(result.status, 1, flag)
+    assert.equal(result.status, 2, flag)
     assert.match(result.stderr, /--check only reads/)
   }
 })
@@ -186,4 +186,42 @@ test('--dry-run --json carries the same findings under obsoleteCopies and keeps 
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
   const report = JSON.parse(result.stdout)
   assert.deepEqual(report.obsoleteCopies.findings.map((finding: { kind: string }) => finding.kind), ['ignore-build-errors'])
+})
+
+const manifestWith = (extra: Record<string, unknown>) => JSON.stringify({ ...JSON.parse(BASE['package.json']), ...extra })
+
+test('an override that is a reference, a local file or the declared range is deliberate and not a finding', () => {
+  assert.deepEqual(kinds(project({ 'package.json': manifestWith({ pnpm: { overrides: { '@nextsparkjs/core': '$@nextsparkjs/core' } } }) })), [])
+  assert.deepEqual(kinds(project({ 'package.json': manifestWith({ overrides: { '@nextsparkjs/core': '$@nextsparkjs/core' } }) })), [])
+  assert.deepEqual(kinds(project({ 'package.json': manifestWith({ pnpm: { overrides: { '@nextsparkjs/core': '0.1.0-beta.200' } } }) })), [], 'equal to the declared range')
+  assert.deepEqual(kinds(project({ 'package.json': manifestWith({ pnpm: { overrides: { '@nextsparkjs/core': 'file:../packages/core', '@nextsparkjs/ui': 'catalog:' } } }) })), [])
+  assert.deepEqual(kinds(project({ 'pnpm-workspace.yaml': "overrides:\n  '@nextsparkjs/core': 0.1.0-beta.200\n  '@nextsparkjs/ui': file:../ui\n" })), [])
+  const noted = JSON.parse(check(project({ 'package.json': manifestWith({ pnpm: { overrides: { '@nextsparkjs/core': '$@nextsparkjs/core' } } }) }), ['--json']).stdout)
+  assert.equal(noted.notes.length, 1)
+})
+
+test('an override whose value really differs from the declared range is a finding', () => {
+  assert.deepEqual(kinds(project({ 'package.json': manifestWith({ pnpm: { overrides: { '@nextsparkjs/core': '0.1.0-beta.150' } } }) })), ['dependency-override'])
+  assert.deepEqual(kinds(project({ 'pnpm-workspace.yaml': "overrides:\n  '@nextsparkjs/core': 0.1.0-beta.150\n" })), ['dependency-override'])
+})
+
+test('a comment inside a pnpm-workspace.yaml section is not a finding, and a flow-style table on one line is read', () => {
+  assert.deepEqual(kinds(project({ 'pnpm-workspace.yaml': "overrides:\n  # keep @nextsparkjs/core aligned\n\n  left-pad: 1.3.0\n" })), [])
+  assert.deepEqual(kinds(project({ 'pnpm-workspace.yaml': "overrides: { '@nextsparkjs/core': 0.1.0-beta.150, left-pad: 1.3.0 }\n" })), ['dependency-override'])
+  assert.deepEqual(kinds(project({ 'pnpm-workspace.yaml': "patchedDependencies: { '@nextsparkjs/core@1': patches/core.patch }\n" })), ['patched-dependency'])
+})
+
+test('a command error under --check exits 2, and the instrumentation suggestion names src/instrumentation.ts', () => {
+  const bare = mkdtempSync(join(tmpdir(), 'nextspark-migrate-check-bare-'))
+  roots.push(bare)
+  const failed = check(bare)
+  assert.equal(failed.status, 2, `${failed.stdout}\n${failed.stderr}`)
+  const old = 'export async function register() {}\n'
+  const root = project({
+    'instrumentation.ts': old,
+    'node_modules/@nextsparkjs/core/scripts/build/registry/host/previous-templates.json': JSON.stringify({ 'proxy.ts': [], 'instrumentation.ts': [sha(old)] }),
+  })
+  const message = (JSON.parse(check(root, ['--json']).stdout) as { obsoleteCopies: { message: string }[] }).obsoleteCopies[0].message
+  assert.match(message, /templates\/instrumentation\.ts src\/instrumentation\.ts/)
+  assert.doesNotMatch(message, /instrumentation\.ts instrumentation\.ts/)
 })
