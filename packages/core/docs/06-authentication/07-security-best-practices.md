@@ -634,7 +634,9 @@ Merge order and duplicates:
 - `redirects` and `headers` follow core's rules, in the order you write them. Next.js applies every header rule that matches a path and the later rule wins for the same header key, so a header you set again overrides core's value for the paths you match.
 - `csp` only appends. A source that is already in the directive is not repeated, nothing core allows is removed, and a directive core does not set (for example `worker-src`) is added. The one exception is a directive whose value is `'none'` (for example `object-src`): a source cannot be combined with it, so adding one replaces `'none'`.
 - To replace the policy altogether, send your own `Content-Security-Policy` header in `headers`; being later, it takes precedence over core's. Do this deliberately: the default directives no longer apply to the paths it matches.
-- `rewrites` is only added to the config when the file provides it.
+- `rewrites` is only added to the config when the file provides it. It is an array, or Next's `{ beforeFiles, afterFiles, fallback }` object (each an array).
+
+The file is checked when the config loads, and a problem stops it with an error that names `next.config.extend.mjs` and the key: the default export must be an object (not a function, and no named exports) with only the keys `headers`, `redirects`, `rewrites` and `csp`; `headers`, `redirects` and `rewrites` must be arrays (or functions returning them); `csp` must be an object whose names are lowercase directives (`script-src`, not `Script-Src`) and whose values are a source or a non-empty array of sources, each with no spaces, `;` or `,` (one source per entry, so a value cannot add a second directive).
 
 #### Nonce-based CSP
 

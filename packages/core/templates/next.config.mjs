@@ -113,15 +113,59 @@ const consentCspOrigins = (env = process.env) => {
  *              or a directive core does not set. Nothing core allows is removed; to replace the policy, send your own
  *              Content-Security-Policy header in `headers`.
  */
-const extensionFile = path.join(__dirname, 'next.config.extend.mjs')
-const extension = fs.existsSync(extensionFile) ? ((await import(pathToFileURL(extensionFile).href)).default ?? {}) : {}
-const resolveRules = async (value) => (typeof value === 'function' ? await value() : value) ?? []
+const EXTENSION_FILE = 'next.config.extend.mjs'
+const extensionError = (key, problem) => new Error(`${EXTENSION_FILE}: "${key}" ${problem}`)
+const CSP_DIRECTIVE = /^[a-z-]+$/
+const CSP_SOURCE = /^[^\s;,]+$/
+
+/** The extension's default export, checked: any problem stops the config with an error naming the file and the key. */
+const loadExtension = async () => {
+  const file = path.join(__dirname, EXTENSION_FILE)
+  if (!fs.existsSync(file)) return {}
+  const mod = await import(pathToFileURL(file).href)
+  const named = Object.keys(mod).filter((key) => key !== 'default')
+  if (named.length > 0) throw extensionError(named[0], 'is a named export; export one object with export default { headers, redirects, rewrites, csp }')
+  const value = mod.default
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw extensionError('default', 'must be an object: export default { headers, redirects, rewrites, csp }')
+  }
+  for (const key of Object.keys(value)) {
+    if (!['headers', 'redirects', 'rewrites', 'csp'].includes(key)) throw extensionError(key, 'is not a known key (headers, redirects, rewrites, csp)')
+  }
+  if (value.csp !== undefined) {
+    if (typeof value.csp !== 'object' || value.csp === null || Array.isArray(value.csp)) throw extensionError('csp', "must be an object of directive names to sources: { 'script-src': ['https://cdn.example.com'] }")
+    for (const [name, sources] of Object.entries(value.csp)) {
+      if (!CSP_DIRECTIVE.test(name)) throw extensionError(`csp.${name}`, 'is not a directive name (lowercase letters and hyphens, for example script-src)')
+      const list = typeof sources === 'string' ? [sources] : sources
+      if (!Array.isArray(list) || list.length === 0) throw extensionError(`csp.${name}`, 'must be a source or a non-empty array of sources')
+      for (const source of list) {
+        if (typeof source !== 'string' || !CSP_SOURCE.test(source)) throw extensionError(`csp.${name}`, `has an invalid source ${JSON.stringify(source)}: one source per entry, with no spaces, ";" or ","`)
+      }
+    }
+  }
+  return value
+}
+const extension = await loadExtension()
+
+/** The rules of one key: a value or a function returning one, checked to be an array (rewrites may also be Next's { beforeFiles, afterFiles, fallback }). */
+const resolveRules = async (key, value) => {
+  const rules = typeof value === 'function' ? await value() : value
+  if (rules === undefined) return []
+  if (Array.isArray(rules)) return rules
+  if (key === 'rewrites' && typeof rules === 'object' && rules !== null) {
+    for (const [phase, list] of Object.entries(rules)) {
+      if (!['beforeFiles', 'afterFiles', 'fallback'].includes(phase) || !Array.isArray(list)) throw extensionError(`rewrites.${phase}`, 'must be beforeFiles, afterFiles or fallback, each an array of rewrites')
+    }
+    return rules
+  }
+  throw extensionError(key, key === 'rewrites' ? 'must be an array of rewrites or { beforeFiles, afterFiles, fallback }' : 'must be an array of rules')
+}
 
 /** Appends `additions` to the matching directives of `directives` (an array of "name sources" strings), skipping sources already there. */
 const addCspSources = (directives, additions = {}) => {
   const result = [...directives]
   for (const [name, sources] of Object.entries(additions)) {
-    const extra = [sources].flat().filter(Boolean)
+    const extra = [sources].flat()
     const index = result.findIndex((directive) => directive.split(' ')[0] === name)
     if (index === -1) {
       result.push([name, ...extra].join(' '))
@@ -200,9 +244,9 @@ const nextConfig = {
   ...(process.env.TURBOPACK ? {} : { webpack: applyWebpackFallbacks }),
   // The project's own redirects come from next.config.extend.mjs, after these.
   async redirects() {
-    return [...roleGatedAreaRedirects(), ...(await resolveRules(extension.redirects))]
+    return [...roleGatedAreaRedirects(), ...(await resolveRules('redirects', extension.redirects))]
   },
-  ...(extension.rewrites ? { async rewrites() { return resolveRules(extension.rewrites) } } : {}),
+  ...(extension.rewrites ? { async rewrites() { return resolveRules('rewrites', extension.rewrites) } } : {}),
   async headers() {
     const isProduction = process.env.NODE_ENV === 'production';
 
@@ -312,7 +356,7 @@ const nextConfig = {
         source: '/:path*',
         headers: securityHeaders
       },
-      ...(await resolveRules(extension.headers)),
+      ...(await resolveRules('headers', extension.headers)),
       // No CORS headers here: core's API routes answer CORS per request (addCorsHeaders), so the
       // origins in api.cors.allowedOrigins and CORS_ADDITIONAL_ORIGINS get their grant in production too
     ]

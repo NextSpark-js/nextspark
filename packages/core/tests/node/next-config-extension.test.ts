@@ -40,13 +40,54 @@ async function load(extension: string | null, nodeEnv = 'production') {
 const cspOf = (rules: Rule[]) =>
   new Map(rules.flatMap(r => r.headers).find(h => h.key === 'Content-Security-Policy')!.value.split('; ').map(d => [d.split(' ')[0], d] as [string, string]))
 
-test('an empty extension, or none, leaves the config as core ships it', async () => {
-  const none = await load(null)
-  const empty = await load('export default {}\n')
-  assert.deepEqual(empty, none)
-  assert.equal(none.rewrites, undefined)
-  assert.ok(!none.keys.includes('rewrites'))
-  assert.equal(none.headers.length, 1)
+const BASELINE = JSON.parse(fs.readFileSync(path.join(REPO, 'packages/core/tests/fixtures/next-config-baseline.json'), 'utf8')) as Record<string, { keys: string[]; headers: Rule[]; redirects: Array<{ source: string }> }>
+const CONSENT_VARS = ['NEXT_PUBLIC_PLAUSIBLE_DOMAIN', 'NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL', 'NEXT_PUBLIC_GA_MEASUREMENT_ID']
+
+test('without an extension file, or with an empty one, the config is the one core shipped before the extension existed', async () => {
+  // The fixture is that config's output, captured from the template before this feature (production and development)
+  const saved = Object.fromEntries(CONSENT_VARS.map(name => [name, process.env[name]]))
+  for (const name of CONSENT_VARS) delete process.env[name]
+  try {
+    for (const nodeEnv of ['production', 'development']) {
+      const expected = BASELINE[nodeEnv]
+      for (const extension of [null, 'export default {}\n']) {
+        const out = await load(extension, nodeEnv)
+        assert.deepEqual(out.keys, [...expected.keys].sort(), `${nodeEnv} keys`)
+        assert.deepEqual(out.headers, expected.headers, `${nodeEnv} headers`)
+        assert.deepEqual(out.redirects, expected.redirects, `${nodeEnv} redirects`)
+        assert.equal(out.rewrites, undefined)
+      }
+    }
+  } finally {
+    for (const name of CONSENT_VARS) if (saved[name] !== undefined) process.env[name] = saved[name]
+  }
+})
+
+const INVALID: Array<[string, string, RegExp]> = [
+  ['a csp value that smuggles a second directive', "export default { csp: { 'script-src': 'https://a.com; img-src *' } }", /next\.config\.extend\.mjs: "csp\.script-src" has an invalid source/],
+  ['a csp source with a comma', "export default { csp: { 'script-src': ['https://a.com,https://b.com'] } }", /"csp\.script-src" has an invalid source/],
+  ['a csp array', "export default { csp: ['https://a.com'] }", /next\.config\.extend\.mjs: "csp" must be an object/],
+  ['an upper-case directive', "export default { csp: { 'Script-Src': ['https://a.com'] } }", /"csp\.Script-Src" is not a directive name/],
+  ['an empty directive', "export default { csp: { 'worker-src': [] } }", /"csp\.worker-src" must be a source or a non-empty array/],
+  ['an empty source', "export default { csp: { 'worker-src': [''] } }", /"csp\.worker-src" has an invalid source/],
+  ['headers as an object', "export default { headers: { source: '/', headers: [] } }", /next\.config\.extend\.mjs: "headers" must be an array of rules/],
+  ['redirects as a string', "export default { redirects: '/a' }", /"redirects" must be an array of rules/],
+  ['a function returning a non-array', "export default { headers: () => ({}) }", /"headers" must be an array of rules/],
+  ['rewrites with an unknown phase', "export default { rewrites: { before: [] } }", /"rewrites\.before" must be beforeFiles, afterFiles or fallback/],
+  ['an unknown key', "export default { header: [] }", /"header" is not a known key/],
+  ['a function as the default export', "export default () => ({})", /"default" must be an object/],
+  ['no default export', "export const headers = []", /"headers" is a named export/],
+]
+
+for (const [name, extension, message] of INVALID) {
+  test(`an extension with ${name} stops the config with an error that names the file and the key`, async () => {
+    await assert.rejects(() => load(extension), message)
+  })
+}
+
+test('rewrites may be the object Next accepts, or a function returning an array', async () => {
+  assert.deepEqual((await load("export default { rewrites: async () => [{ source: '/a', destination: '/b' }] }")).rewrites, [{ source: '/a', destination: '/b' }])
+  assert.deepEqual((await load("export default { rewrites: { afterFiles: [], fallback: [] } }")).rewrites, { afterFiles: [], fallback: [] })
 })
 
 test('redirects and headers of the extension come after core’s; rewrites are added', async () => {
