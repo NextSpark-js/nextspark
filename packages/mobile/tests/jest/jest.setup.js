@@ -1,3 +1,6 @@
+// React Native sets this global; tests run as development unless they override it
+global.__DEV__ = true
+
 // In-memory storage for SecureStore mock (must be declared before jest.mock)
 const mockSecureStoreData = new Map()
 

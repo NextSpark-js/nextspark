@@ -381,3 +381,49 @@ describe('getApiUrl fallback host', () => {
     process.env.EXPO_PUBLIC_API_URL = ORIGINAL_ENV
   })
 })
+
+describe('getApiUrl outside development (__DEV__ false)', () => {
+  const ORIGINAL_ENV = process.env.EXPO_PUBLIC_API_URL
+  const g = globalThis as { __DEV__?: boolean }
+
+  afterEach(() => {
+    if (ORIGINAL_ENV === undefined) delete process.env.EXPO_PUBLIC_API_URL
+    else process.env.EXPO_PUBLIC_API_URL = ORIGINAL_ENV
+    g.__DEV__ = true
+  })
+
+  function load(dev: boolean, extraApiUrl: string | undefined, envUrl: string | undefined) {
+    jest.resetModules()
+    g.__DEV__ = dev
+    if (envUrl === undefined) delete process.env.EXPO_PUBLIC_API_URL
+    else process.env.EXPO_PUBLIC_API_URL = envUrl
+    jest.doMock('expo-constants', () => ({
+      expoConfig: { extra: extraApiUrl ? { apiUrl: extraApiUrl } : {}, hostUri: '192.168.1.2:8081' },
+    }))
+    return () => (require('../../../src/api/client') as typeof import('../../../src/api/client')).getApiUrl()
+  }
+
+  it.each([false, true])('uses extra.apiUrl (__DEV__ %s)', (dev) => {
+    expect(load(dev, 'https://extra.example', 'https://env.example')()).toBe('https://extra.example')
+  })
+
+  it.each([false, true])('uses EXPO_PUBLIC_API_URL (__DEV__ %s)', (dev) => {
+    expect(load(dev, undefined, 'https://env.example')()).toBe('https://env.example')
+  })
+
+  it('keeps the dev server host chain when __DEV__ is true and nothing is configured', () => {
+    expect(load(true, undefined, undefined)()).toBe('http://192.168.1.2:3000')
+  })
+
+  it('throws naming both sources when __DEV__ is false and nothing is configured', () => {
+    expect(load(false, undefined, undefined)).toThrow(/extra\.apiUrl.*EXPO_PUBLIC_API_URL/)
+  })
+
+  it('fails loading the client module in a release build without a URL', () => {
+    jest.resetModules()
+    g.__DEV__ = false
+    delete process.env.EXPO_PUBLIC_API_URL
+    jest.doMock('expo-constants', () => ({ expoConfig: { extra: {}, hostUri: null } }))
+    expect(() => require('../../../src/api/client')).toThrow(/API URL is not configured/)
+  })
+})

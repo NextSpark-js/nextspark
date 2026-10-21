@@ -53,6 +53,9 @@ function isLoopbackHost(host: string): boolean {
  * 4. Fallback to http://localhost:3000 (http://10.0.2.2:3000 on the Android
  *    emulator only; a physical Android device keeps localhost)
  *
+ * Steps 3 and 4 apply only when `__DEV__` is true: without 1 or 2, a release
+ * build throws instead of falling back to localhost.
+ *
  * @returns The resolved API URL
  * @example
  * ```ts
@@ -72,6 +75,14 @@ export function getApiUrl(): string {
   // 2. From environment variable (EXPO_PUBLIC_API_URL)
   const envUrl = process.env.EXPO_PUBLIC_API_URL
   if (envUrl) return envUrl
+
+  // Outside development there is no dev server to detect and a localhost
+  // fallback would only fail later with a generic network error.
+  if (!__DEV__) {
+    throw new Error(
+      'API URL is not configured. Release builds need an explicit API URL: set `extra.apiUrl` in app.config.ts or the EXPO_PUBLIC_API_URL environment variable at build time.'
+    )
+  }
 
   // 3. Auto-detect from Expo dev server (development mode). hostUri's host
   // is the dev machine's own network address as Metro sees it. A physical
