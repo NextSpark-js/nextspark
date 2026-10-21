@@ -509,7 +509,9 @@ async function runEntityMigrations() {
   try {
     await client.connect();
     // 004_pages_slug_check.sql reads it: the slug CHECK of pages follows access.allowNestedSlugs
-    await client.query("SELECT set_config('nextspark.pages_allow_nested_slugs', $1, false)", [await nestedSlugsSetting(projectRoot)]);
+    const nested = await nestedSlugsSetting(projectRoot);
+    if (nested.warning) console.warn(`⚠️  ${nested.warning}`);
+    await client.query("SELECT set_config('nextspark.pages_allow_nested_slugs', $1, false)", [nested.setting]);
     console.log("🔄 Running content & entity migrations (sample_data deferred)...\n");
     console.log(`📌 Project: ${PROJECT_NAME}\n`);
 

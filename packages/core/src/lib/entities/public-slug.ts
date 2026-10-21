@@ -45,6 +45,8 @@ export function validatePublicSlug(entity: SlugScope, slug: string, taken: reado
   if (segments.length > 1 && !(atRoot ? entity.access?.allowNestedSlugs : basePathOf(entity))) {
     return 'Slug cannot contain slashes'
   }
+  // the templates' tables cap the whole slug (CHECK slug_length), not each segment
+  if (slug.length > 100) return 'Slug cannot be longer than 100 characters'
   for (const [index, segment] of segments.entries()) {
     const reason = validatePageSlug(segment, { checkReserved: atRoot && index === 0, reserved: taken })
     if (reason) return reason

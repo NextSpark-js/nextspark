@@ -55,6 +55,7 @@ describe('validatePublicSlug', () => {
     expect(validatePublicSlug(custom, 'a/b')).toBe('Slug cannot contain slashes')
     expect(validatePublicSlug(nestedPages, 'qa/block/home-qa-us')).toBeNull()
     expect(validatePublicSlug(nestedPages, 'qa/Bad')).toEqual(expect.any(String))
+    expect(validatePublicSlug(nestedPages, `${'a'.repeat(60)}/${'a'.repeat(60)}`)).toBe('Slug cannot be longer than 100 characters')
     expect(validatePublicSlug(nestedPages, 'dashboard/x')).toBe('Slug "dashboard" is reserved by the system')
     expect(validatePublicSlug(posts, 'ab/cd')).toBeNull()
   })

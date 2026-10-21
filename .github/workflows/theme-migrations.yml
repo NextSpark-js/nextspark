@@ -8,6 +8,7 @@ on:
       - 'packages/core/migrations/**'
       - 'packages/core/scripts/db/**'
       - 'packages/core/templates/projects/**/migrations/**'
+      - 'packages/core/templates/features/**'
       - 'apps/dev/migrations/**'
       - 'apps/dev/**/migrations/**'
       - 'apps/dev/plugins/**/migrations/**'
