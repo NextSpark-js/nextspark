@@ -606,6 +606,36 @@ The CSP is configured with environment-aware settings:
 - `base-uri 'self'`: Prevents base tag injection attacks
 - `frame-ancestors 'self'`: Blocks cross-origin framing while allowing same-origin page builder previews
 
+#### Extending the headers, redirects, rewrites and CSP
+
+`next.config.mjs` is a project file that upgrades do not update. Put your own additions in `next.config.extend.mjs`, next to it, which upgrades, `nextspark migrate` and `nextspark prepare` never touch. The file is optional (without it the config is exactly what core ships) and default-exports an object with any of `headers`, `redirects`, `rewrites` and `csp`. Each of the first three can be a value or a function returning one, sync or async.
+
+```js
+// next.config.extend.mjs
+export default {
+  // Header rules, added after core's. For a path both match, your value of a header wins
+  headers: [
+    { source: '/embed/:path*', headers: [{ key: 'Cache-Control', value: 'no-store' }] },
+  ],
+  // Redirects, added after core's
+  redirects: [{ source: '/old-pricing', destination: '/pricing', permanent: true }],
+  // Rewrites (core has none): an array, or { beforeFiles, afterFiles, fallback }
+  rewrites: [{ source: '/blog/:slug', destination: '/posts/:slug' }],
+  // Sources appended to a CSP directive, or a directive core does not set
+  csp: {
+    'script-src': ['https://cdn.example.com'],
+    'worker-src': ["'self'", 'blob:'],
+  },
+}
+```
+
+Merge order and duplicates:
+
+- `redirects` and `headers` follow core's rules, in the order you write them. Next.js applies every header rule that matches a path and the later rule wins for the same header key, so a header you set again overrides core's value for the paths you match.
+- `csp` only appends. A source that is already in the directive is not repeated, nothing core allows is removed, and a directive core does not set (for example `worker-src`) is added. The one exception is a directive whose value is `'none'` (for example `object-src`): a source cannot be combined with it, so adding one replaces `'none'`.
+- To replace the policy altogether, send your own `Content-Security-Policy` header in `headers`; being later, it takes precedence over core's. Do this deliberately: the default directives no longer apply to the paths it matches.
+- `rewrites` is only added to the config when the file provides it.
+
 #### Nonce-based CSP
 
 For `script-src 'self' 'nonce-…'`, set the nonce in the project's request hook, forward it as `x-nonce` and set `security.cspNonce: true` in `config/app.config.ts`: core's root layout then passes it to next-themes so the theme bootstrap script is not blocked. This needs the request-time root layout (`cacheComponents` off): with Cache Components on, Next.js does not support a nonce-based `script-src` (its prerendered shell carries every framework script without a nonce), so use hashes or `experimental.sri` instead. See [Nonce-based CSP](../10-backend/06-middleware.md#nonce-based-csp).

@@ -1,6 +1,7 @@
 import createNextIntlPlugin from 'next-intl/plugin';
+import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,6 +103,38 @@ const consentCspOrigins = (env = process.env) => {
   return origins
 }
 
+/**
+ * Your own additions live in `next.config.extend.mjs` next to this file, which upgrades never touch. It is optional; without
+ * it the config below is exactly what core ships. It default-exports an object with any of:
+ *   headers:   rules (or a function returning them), added after core's, so for a path both match, your value of a header wins
+ *   redirects: rules (or a function), added after core's
+ *   rewrites:  an array, or `{ beforeFiles, afterFiles, fallback }` (or a function returning either); core has none
+ *   csp:       `{ 'script-src': ['https://cdn.example.com'], ... }` sources appended to a directive of the Content-Security-Policy,
+ *              or a directive core does not set. Nothing core allows is removed; to replace the policy, send your own
+ *              Content-Security-Policy header in `headers`.
+ */
+const extensionFile = path.join(__dirname, 'next.config.extend.mjs')
+const extension = fs.existsSync(extensionFile) ? ((await import(pathToFileURL(extensionFile).href)).default ?? {}) : {}
+const resolveRules = async (value) => (typeof value === 'function' ? await value() : value) ?? []
+
+/** Appends `additions` to the matching directives of `directives` (an array of "name sources" strings), skipping sources already there. */
+const addCspSources = (directives, additions = {}) => {
+  const result = [...directives]
+  for (const [name, sources] of Object.entries(additions)) {
+    const extra = [sources].flat().filter(Boolean)
+    const index = result.findIndex((directive) => directive.split(' ')[0] === name)
+    if (index === -1) {
+      result.push([name, ...extra].join(' '))
+      continue
+    }
+    const present = result[index].split(' ').slice(1)
+    // 'none' cannot be combined with a source: adding one replaces it
+    const kept = present.length === 1 && present[0] === "'none'" ? [] : present
+    result[index] = [name, ...kept, ...extra.filter((source) => !kept.includes(source))].join(' ')
+  }
+  return result
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   basePath,
@@ -165,10 +198,11 @@ const nextConfig = {
   // (on 15 with --turbopack, on 16 unless given --webpack), and next-intl picks
   // its own webpack or Turbopack setup from the same variable.
   ...(process.env.TURBOPACK ? {} : { webpack: applyWebpackFallbacks }),
-  // Add the project's own redirects after these.
+  // The project's own redirects come from next.config.extend.mjs, after these.
   async redirects() {
-    return [...roleGatedAreaRedirects()]
+    return [...roleGatedAreaRedirects(), ...(await resolveRules(extension.redirects))]
   },
+  ...(extension.rewrites ? { async rewrites() { return resolveRules(extension.rewrites) } } : {}),
   async headers() {
     const isProduction = process.env.NODE_ENV === 'production';
 
@@ -205,7 +239,7 @@ const nextConfig = {
     // See: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
     const consent = consentCspOrigins()
     const withConsent = (list) => list.map((origin) => ` ${origin}`).join('')
-    const cspDirectives = [
+    const coreCspDirectives = [
       "default-src 'self'",
       // unsafe-inline required for Next.js hydration; unsafe-eval only in dev for hot reload
       `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com${withConsent(consent.script)}`,
@@ -225,6 +259,7 @@ const nextConfig = {
       `report-uri ${basePath}/api/csp-report`,
       "report-to csp-endpoint",
     ];
+    const cspDirectives = addCspSources(coreCspDirectives, extension.csp)
 
     // Security headers for all routes
     const securityHeaders = [
@@ -277,6 +312,7 @@ const nextConfig = {
         source: '/:path*',
         headers: securityHeaders
       },
+      ...(await resolveRules(extension.headers)),
       // No CORS headers here: core's API routes answer CORS per request (addCorsHeaders), so the
       // origins in api.cors.allowedOrigins and CORS_ADDITIONAL_ORIGINS get their grant in production too
     ]
