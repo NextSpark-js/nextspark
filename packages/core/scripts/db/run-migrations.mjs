@@ -108,6 +108,8 @@ async function runMigrations() {
     await client.query("SELECT set_config('nextspark.seed_sample_data', $1, false)", [SAMPLE_DATA.apply ? 'on' : 'off']);
     client.on('notice', notice => {
       if (notice.message?.startsWith('Sample accounts:')) console.log(`🔐 ${notice.message}`);
+      // a migration that leaves something as it was says so (043: a policy it did not rewrite)
+      else if (notice.severity === 'WARNING' && notice.message?.includes('left unchanged')) console.log(`⚠️  ${notice.message}`);
     });
     
     // Create migrations tracking table
