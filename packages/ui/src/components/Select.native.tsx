@@ -174,7 +174,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   trigger: {
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 4,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

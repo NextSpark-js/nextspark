@@ -14,6 +14,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { useTheme } from "../native/ThemeContext";
+import { warnIgnoredClassName } from "../native/warnIgnoredClassName";
 import type { ViewRef } from "../native/refs";
 
 // Card Root
@@ -27,11 +28,12 @@ export const Card: React.ForwardRefExoticComponent<CardProps & React.RefAttribut
     {
       children,
       style,
-      className, // Ignored in RN
+      className,
       ...props
     },
     ref
   ) => {
+    warnIgnoredClassName("Card", className);
     const { colors } = useTheme();
 
     const colorStyles = useMemo(
@@ -66,11 +68,12 @@ export const PressableCard: React.ForwardRefExoticComponent<PressableCardProps &
     {
       children,
       style,
-      className, // Ignored in RN
+      className,
       ...props
     },
     ref
   ) => {
+    warnIgnoredClassName("PressableCard", className);
     const { colors } = useTheme();
 
     const colorStyles = useMemo(
@@ -113,11 +116,12 @@ export const CardHeader: React.ForwardRefExoticComponent<CardHeaderProps & React
     {
       children,
       style,
-      className, // Ignored in RN
+      className,
       ...props
     },
     ref
   ) => {
+    warnIgnoredClassName("CardHeader", className);
     return (
       <View ref={ref} style={[styles.header, style as ViewStyle]} {...props}>
         {children}
@@ -142,11 +146,12 @@ export const CardTitle: React.ForwardRefExoticComponent<CardTitleProps & React.R
       children,
       style,
       textStyle,
-      className, // Ignored in RN
+      className,
       ...props
     },
     ref
   ) => {
+    warnIgnoredClassName("CardTitle", className);
     const { colors } = useTheme();
 
     const colorStyles = useMemo(
@@ -184,11 +189,12 @@ export const CardDescription: React.ForwardRefExoticComponent<CardDescriptionPro
       children,
       style,
       textStyle,
-      className, // Ignored in RN
+      className,
       ...props
     },
     ref
   ) => {
+    warnIgnoredClassName("CardDescription", className);
     const { colors } = useTheme();
 
     const colorStyles = useMemo(
@@ -223,11 +229,12 @@ export const CardContent: React.ForwardRefExoticComponent<CardContentProps & Rea
     {
       children,
       style,
-      className, // Ignored in RN
+      className,
       ...props
     },
     ref
   ) => {
+    warnIgnoredClassName("CardContent", className);
     return (
       <View ref={ref} style={[style as ViewStyle]} {...props}>
         {children}
@@ -249,11 +256,12 @@ export const CardFooter: React.ForwardRefExoticComponent<CardFooterProps & React
     {
       children,
       style,
-      className, // Ignored in RN
+      className,
       ...props
     },
     ref
   ) => {
+    warnIgnoredClassName("CardFooter", className);
     const { colors } = useTheme();
 
     const colorStyles = useMemo(

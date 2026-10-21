@@ -18,6 +18,8 @@ const path = require('path')
 const WORKSPACE_SOURCES = [
   path.resolve(__dirname, '../../../../packages/mobile/src') + path.sep,
   path.resolve(__dirname, '../../../../packages/contracts/src') + path.sep,
+  // The native UI components, rendered directly by tests/jest/ui
+  path.resolve(__dirname, '../../../../packages/ui/src') + path.sep,
 ]
 const CONTRACTS_SRC = path.resolve(__dirname, '../../../../packages/contracts/src') + path.sep
 const APP_ROOT = path.resolve(__dirname, '../..')

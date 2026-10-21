@@ -181,19 +181,19 @@ const sizeStyles: Record<
   { container: ViewStyle; text: TextStyle }
 > = {
   default: {
-    container: { height: 44, paddingHorizontal: 16 }, // h-11
+    container: { minHeight: 44, paddingVertical: 4, paddingHorizontal: 16 }, // h-11
     text: { fontSize: 16 }, // text-base
   },
   sm: {
-    container: { height: 36, paddingHorizontal: 12 }, // h-9
+    container: { minHeight: 36, paddingVertical: 4, paddingHorizontal: 12 }, // h-9
     text: { fontSize: 14 }, // text-sm
   },
   lg: {
-    container: { height: 48, paddingHorizontal: 24 }, // h-12
+    container: { minHeight: 48, paddingVertical: 4, paddingHorizontal: 24 }, // h-12
     text: { fontSize: 18 }, // text-lg
   },
   icon: {
-    container: { height: 40, width: 40, paddingHorizontal: 0 }, // h-10 w-10
+    container: { minHeight: 40, paddingVertical: 4, width: 40, paddingHorizontal: 0 }, // h-10 w-10
     text: { fontSize: 16 },
   },
 };

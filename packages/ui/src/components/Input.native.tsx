@@ -99,7 +99,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   input: {
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 4,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
