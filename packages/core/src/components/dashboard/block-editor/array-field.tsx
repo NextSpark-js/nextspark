@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../ui/select'
-import { ImageUpload } from '../../ui/image-upload'
+import { ImageUpload, type UploadedImage } from '../../ui/image-upload'
 import { RichTextEditor } from '../../ui/rich-text-editor'
 import { MediaLibrary } from '../../media/MediaLibrary'
 import { Card, CardContent, CardHeader } from '../../ui/card'
@@ -28,6 +28,14 @@ interface ArrayFieldProps {
   field: FieldDefinition
   value: unknown[]
   onChange: (value: unknown[]) => void
+}
+
+// The image field stores a URL string; data saved as an upload object (or a list of them) still shows
+function toUploadedImages(stored: unknown): UploadedImage[] {
+  if (Array.isArray(stored)) return stored as UploadedImage[]
+  if (stored && typeof stored === 'object') return [stored as UploadedImage]
+  const url = stored ? String(stored) : ''
+  return url ? [{ id: url, name: '', size: 0, url }] : []
 }
 
 function ArrayMediaLibraryField({
@@ -215,8 +223,8 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
       case 'image':
         return (
           <ImageUpload
-            value={Array.isArray(fieldValue) ? fieldValue : (fieldValue ? [String(fieldValue)] : [])}
-            onChange={(newValue) => handleItemFieldChange(itemIndex, itemField.name, newValue[0] || '')}
+            value={toUploadedImages(fieldValue)}
+            onChange={(newValue) => handleItemFieldChange(itemIndex, itemField.name, newValue[0]?.url ?? '')}
             maxImages={1}
             data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}
           />
