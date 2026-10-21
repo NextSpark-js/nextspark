@@ -308,6 +308,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
       }
     },
     onError: (error: Error & { slugIssue?: boolean }) => {
+      sentSnapshot.current = null // nothing was saved: the form must not pass for what the server holds
       if (error.slugIssue) setSlugError(error.message)
       toast.error(error.message)
     },

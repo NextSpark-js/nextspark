@@ -170,6 +170,38 @@ describe('builder refetch after a save', () => {
     })
   })
 
+  test('a failed save leaves the unsaved edit in place when a later refetch brings other data', async () => {
+    current = stored
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <BuilderEditorView entitySlug="pages" entityConfig={entityConfig as never} mode="edit" id="p1" />
+      </QueryClientProvider>
+    )
+    await waitFor(() => expect(screen.getByTestId('select')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('select'))
+    await waitFor(() => expect(document.querySelector('[data-cy="field"]')).not.toBeNull())
+    act(() => { jest.advanceTimersByTime(20) })
+    fireEvent.change(document.querySelector('[data-cy="field"]') as HTMLInputElement, { target: { value: 'unsaved' } })
+    act(() => { jest.advanceTimersByTime(600) })
+
+    fetchMock.mockImplementation(async (_url, init) => init?.method === 'PATCH'
+      ? new Response(JSON.stringify({ error: 'Server error' }), { status: 500 })
+      : new Response(JSON.stringify({ success: true, data: current }), { status: 200 }))
+    fireEvent.click(document.querySelector('[data-cy="saveButton"]') as HTMLElement)
+    await waitFor(() => expect(patchBodies()).toHaveLength(1))
+    await waitFor(() => expect(client.isMutating()).toBe(0))
+
+    // someone else changed the page; the refetch must differ from the cached copy to reach the form
+    current = { ...stored, title: 'Other title', blocks: [{ id: 'b1', blockSlug: 'hero', props: { title: 'theirs' } }] }
+    const getsBefore = fetchMock.mock.calls.filter(([, init]) => !init?.method || init.method === 'GET').length
+    await act(async () => { await client.invalidateQueries({ queryKey: ['pages', 'p1'] }) })
+    expect(fetchMock.mock.calls.filter(([, init]) => !init?.method || init.method === 'GET').length).toBeGreaterThan(getsBefore)
+
+    await act(async () => { jest.advanceTimersByTime(700) })
+    expect((document.querySelector('[data-cy="field"]') as HTMLInputElement).value).toBe('unsaved')
+  })
+
   test('opening a different entity still replaces the blocks', async () => {
     current = stored
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
