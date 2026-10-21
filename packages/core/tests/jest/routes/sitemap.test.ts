@@ -67,6 +67,20 @@ describe('readSitemap', () => {
     expect(sitemap.map(entry => entry.url)).toEqual(['https://example.com/support', 'https://example.com/blog', 'https://example.com/blog/hello', 'https://example.com/about'])
   })
 
+  it('lists the preview deployment URL when the variable is not set (#349)', async () => {
+    delete process.env.NEXT_PUBLIC_APP_URL
+    process.env.VERCEL_ENV = 'preview'
+    process.env.VERCEL_URL = 'my-app-git-branch.vercel.app'
+    mockQuery.mockResolvedValue({ rows: [] })
+    try {
+      const { sitemap } = await readSitemap({ staticPaths: ['/support'] })
+      expect(sitemap[0].url).toBe('https://my-app-git-branch.vercel.app/support')
+    } finally {
+      delete process.env.VERCEL_ENV
+      delete process.env.VERCEL_URL
+    }
+  })
+
   it('lists what the other entities returned when one cannot be read, and says it failed', async () => {
     const error = jest.spyOn(console, 'error').mockImplementation(() => {})
     mockQuery.mockImplementation(async (sql: string) => {

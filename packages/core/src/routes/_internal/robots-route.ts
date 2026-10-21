@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { resolveAppUrl } from '@nextsparkjs/core/lib/utils/base-url'
 
 /** Each area is blocked by itself (`/api$`), its subpaths (`/api/`) and its query URLs (`/api?`), so `/apiary` stays crawlable. */
 const DISALLOWED = ['/dashboard', '/superadmin', '/devtools', '/api']
@@ -11,7 +12,7 @@ const DISALLOWED = ['/dashboard', '/superadmin', '/devtools', '/api']
  */
 export function createRobotsRoute({ sitemap = true }: { sitemap?: boolean } = {}) {
   return function robots(): MetadataRoute.Robots {
-    const origin = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
+    const origin = resolveAppUrl().replace(/\/+$/, '')
     return {
       rules: {
         userAgent: '*',

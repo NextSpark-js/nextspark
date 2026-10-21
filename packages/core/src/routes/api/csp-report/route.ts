@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import type { RateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { getClientIp } from '@nextsparkjs/core/lib/api/client-ip';
+import { resolveAppUrl } from '@nextsparkjs/core/lib/utils/base-url';
 
 // Dynamic import for rate limiting - graceful fallback if not available
 let checkDistributedRateLimit: ((id: string, tier: RateLimitTier) => Promise<{ allowed: boolean; limit: number; remaining: number; resetTime: number; retryAfter?: number }>) | null = null;
@@ -53,9 +54,9 @@ interface CSPViolationReport {
   };
 }
 
-// Get allowed origin from environment or use localhost fallback
+// The app's own URL (see resolveAppUrl)
 const getAllowedOrigin = () => {
-  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  return resolveAppUrl();
 };
 
 export async function POST(request: NextRequest) {

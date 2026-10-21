@@ -40,6 +40,18 @@ describe('robots', () => {
     expect(createRobotsRoute({ sitemap: false })()).toEqual({ rules: { userAgent: '*', allow: '/', disallow: DISALLOWED } })
   })
 
+  it('advertises the preview deployment URL when the variable is not set (#349)', () => {
+    delete process.env.NEXT_PUBLIC_APP_URL
+    process.env.VERCEL_ENV = 'preview'
+    process.env.VERCEL_URL = 'my-app-git-branch.vercel.app'
+    try {
+      expect(robots().sitemap).toBe('https://my-app-git-branch.vercel.app/sitemap.xml')
+    } finally {
+      delete process.env.VERCEL_ENV
+      delete process.env.VERCEL_URL
+    }
+  })
+
   it('follows the base path', () => {
     process.env.__NEXT_ROUTER_BASEPATH = '/app'
     expect(robots()).toEqual({

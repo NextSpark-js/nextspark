@@ -30,6 +30,7 @@ import { query } from '@nextsparkjs/core/lib/db'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import { buildSitemap, type SitemapConfig } from '@nextsparkjs/core/lib/seo/sitemap'
 import { readEntities, SITEMAP_MAX_URLS } from '@nextsparkjs/core/lib/seo/sitemap-entries'
+import { resolveAppUrl } from '@nextsparkjs/core/lib/utils/base-url'
 
 const FRESH_MS = 60 * 60 * 1000
 const RETRY_MS = 60 * 1000
@@ -50,7 +51,7 @@ export function projectEntities(): EntityConfig[] {
 export async function readSitemap(options: SitemapRouteOptions): Promise<{ sitemap: MetadataRoute.Sitemap; failed: boolean }> {
   const { entities, failed } = await readEntities(projectEntities(), query)
   const sitemap = buildSitemap({
-    origin: (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, ''),
+    origin: resolveAppUrl().replace(/\/+$/, ''),
     basePath: (process.env.__NEXT_ROUTER_BASEPATH || '').replace(/\/+$/, ''),
     staticPaths: options.staticPaths,
     entities,

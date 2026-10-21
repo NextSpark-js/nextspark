@@ -9,6 +9,8 @@
  * - Instagram Graph API (via Facebook Pages - requires Instagram Business Account linked to Page)
  */
 
+import { resolveAppUrl } from '@nextsparkjs/core/lib/utils/base-url'
+
 // Facebook OAuth endpoints (for Facebook Page + Instagram Graph API publishing)
 // Must match the Graph API version used in providers/facebook.ts
 const FACEBOOK_API_VERSION = 'v21.0'
@@ -125,7 +127,7 @@ export async function exchangeCodeForToken(
 export function getOAuthConfig(): OAuthConfig {
   const facebookClientId = process.env.FACEBOOK_CLIENT_ID?.trim() || process.env.FACEBOOK_APP_ID?.trim()
   const facebookClientSecret = process.env.FACEBOOK_CLIENT_SECRET?.trim() || process.env.FACEBOOK_APP_SECRET?.trim()
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173').trim()
+  const baseUrl = resolveAppUrl().trim()
 
   if (!facebookClientId || !facebookClientSecret) {
     throw new Error(

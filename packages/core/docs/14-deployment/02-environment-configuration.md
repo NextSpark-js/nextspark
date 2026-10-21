@@ -61,9 +61,12 @@ A Vercel preview deployment without the first two variables therefore uses its o
 never uses `VERCEL_URL`: set `BETTER_AUTH_URL` or `NEXT_PUBLIC_APP_URL` there.
 
 The links the app builds outside Better Auth (the invitation email, the billing return URLs, the invited sign-up
-call and the server-side entity API client) use the same order without its first step: `NEXT_PUBLIC_APP_URL`,
-the preview `VERCEL_URL`, then localhost. They ignore `BETTER_AUTH_URL`, which may carry a path. The CSP report,
-sitemap and robots routes and the client-side code still read `NEXT_PUBLIC_APP_URL` only.
+call, the server-side entity API client, the CSP report endpoint, the sitemap and robots routes, and the OAuth
+redirect URI of the social media publisher plugin) use the same order without its first step: `NEXT_PUBLIC_APP_URL`,
+the preview `VERCEL_URL`, then localhost. They ignore `BETTER_AUTH_URL`, which may carry a path. The client-side
+code (`useOrigin`, the auth client) reads `window.location`, or `NEXT_PUBLIC_APP_URL` where there is no window, and
+stays outside this order. The CORS allow-lists read the configured `NEXT_PUBLIC_APP_URL` and `BETTER_AUTH_URL`
+values on purpose: they list origins an operator chose.
 
 A Preview scope that sets `NEXT_PUBLIC_APP_URL` (a staging domain, for example) never reaches `VERCEL_URL`, by
 design: an explicit value always wins.
