@@ -64,7 +64,6 @@ const getHandler = async (request: NextRequest) => {
     console.log('[social-connect] OAuth Config:', {
       facebookClientId: oauthConfig.facebookClientId,
       redirectUri: oauthConfig.redirectUri,
-      baseUrl: process.env.NEXT_PUBLIC_APP_URL,
       platform
     })
 
