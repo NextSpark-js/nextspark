@@ -80,6 +80,12 @@
       "note": "API presets for entity api folders."
     },
     {
+      "subpath": "./jest-preset",
+      "reason": "template-import",
+      "area": "Configuration",
+      "note": "Jest preset for a project's tests: module mappers for core (selectors and server-only included) and the transform of core's ESM build."
+    },
+    {
       "subpath": "./components/ui",
       "reason": "template-import",
       "area": "UI components",

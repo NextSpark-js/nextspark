@@ -65,6 +65,7 @@ The reason in each row is one of `template-import` (a stable template imports it
 | `./types/plugin` | config-contract — definePlugin and the PluginConfig types. |
 | `./types/theme` | config-contract — Project theme configuration types (theme.config.ts). |
 | `./types/api-presets` | template-import — API presets for entity api folders. |
+| `./jest-preset` | template-import — Jest preset for a project's tests: module mappers for core (selectors and server-only included) and the transform of core's ESM build. |
 
 ### UI components
 
