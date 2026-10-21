@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `QueryProvider` accepts optional `client` and `defaultOptions` props: an injected `QueryClient` is the one provided to the tree, and `defaultOptions` are merged over the current defaults in a client the provider creates. Without props the shared `queryClient` and its defaults are unchanged (#336).
+- The `mobile/` template's `app.config.ts` lists `blockedPermissions` in its `android` block, empty, with a commented list of permissions libraries commonly add to the manifest (camera, audio recording, storage), and the README explains how to review the merged manifest (#337).
 
 ### Fixed
 

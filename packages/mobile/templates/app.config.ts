@@ -19,6 +19,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#ffffff',
     },
     package: 'com.mycompany.myapp',
+    // Permissions libraries add to the merged AndroidManifest.xml that your app never uses.
+    // Review the merged manifest of a release build, then uncomment what you do not need.
+    blockedPermissions: [
+      // 'android.permission.CAMERA',
+      // 'android.permission.RECORD_AUDIO',
+      // 'android.permission.READ_EXTERNAL_STORAGE',
+      // 'android.permission.WRITE_EXTERNAL_STORAGE',
+    ],
   },
   web: {
     favicon: './assets/favicon.png',

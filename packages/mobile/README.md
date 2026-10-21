@@ -314,6 +314,20 @@ Steps 3 and 4 apply in development only (`__DEV__` true). A release build needs 
 
 Both the `preview` and `production` profiles produce release builds, so each needs `EXPO_PUBLIC_API_URL`, in the profile's `env` or as an EAS environment variable.
 
+## Android permissions
+
+Native libraries add Android permissions through their own manifests (camera, audio recording, external storage), and they end up in the release build whether or not your app uses them. The `android` block of the template `app.config.ts` has a `blockedPermissions` list, empty by default, with the usual candidates commented out.
+
+To review it, run a prebuild (`npx expo prebuild --platform android`) and read the merged manifest under `android/app/build/intermediates/merged_manifests/` after a release build, or `android/app/src/main/AndroidManifest.xml` for what Expo itself wrote. Every `uses-permission` entry your app has no feature for (for example `RECORD_AUDIO` when nothing records audio) goes in `blockedPermissions`:
+
+```typescript
+android: {
+  blockedPermissions: ['android.permission.RECORD_AUDIO'],
+}
+```
+
+Block only what the app does not use: a blocked permission that a feature needs makes that feature fail on Android.
+
 ## Examples
 
 ### Complete Login Flow
