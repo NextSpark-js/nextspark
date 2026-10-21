@@ -50,8 +50,8 @@ In `app.config.ts`:
 export default {
   // ...
   extra: {
-    // Leave EXPO_PUBLIC_API_URL unset to auto-detect the local backend; only
-    // set it to override that detection (see "Environment Configuration").
+    // In development, leave EXPO_PUBLIC_API_URL unset to auto-detect the local
+    // backend. Release builds must set it (see "Environment Configuration").
     apiUrl: process.env.EXPO_PUBLIC_API_URL,
   },
 }
@@ -287,6 +287,8 @@ The API URL is resolved in this order:
 2. **Environment variable** `EXPO_PUBLIC_API_URL`
 3. **Auto-detect** from Expo dev server: uses the LAN host Expo reports as-is on every platform, including a physical Android device on the same network. The Android emulator is the one exception — a loopback host there (Expo started with `--localhost`, which a physical device reaches through `adb reverse tcp:8081 tcp:8081`; the tunnel alone leaves the host as the LAN address) is translated to its `10.0.2.2` alias for the host machine
 4. **Fallback** to `http://localhost:3000` (`http://10.0.2.2:3000` on the Android emulator)
+
+Steps 3 and 4 apply in development only (`__DEV__` true). A release build needs step 1 or 2: with neither, the client throws "API URL is not configured" when it loads, instead of sending every request to a localhost URL. Set the variable at build time (it is read when `app.config.ts` is evaluated, so EAS needs it in the build profile's `env`, below).
 
 **Development:**
 ```bash

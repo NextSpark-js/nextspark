@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A release build (`__DEV__` false) with neither `extra.apiUrl` nor `EXPO_PUBLIC_API_URL` now throws a clear "API URL is not configured" error when the client loads, instead of sending every request to a localhost URL. Development keeps the dev server host and localhost fallbacks (#317).
+
 ## [0.1.0-beta.199] - 2026-10-18
 
 ### Changed
