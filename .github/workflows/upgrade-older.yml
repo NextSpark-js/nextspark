@@ -1,8 +1,8 @@
 name: Upgrade from older releases
 
 # The same upgrade check as upgrade-183.yml, from older releases. The entries differ in what the published project has:
-# .167 (the oldest that can be updated; it adds core migration 022), .178 (the last before core migrations 023 and 024, with
-# the newest login and signup pages of the range) and .180 (the first whose database already has 023 and 024).
+# .167 (the oldest that can be updated; it adds core migration 022), .178 (identical to .179, the last before core migrations 023
+# and 024, with the newest login and signup pages of the range) and .180 (the first whose database already has 023 and 024).
 # Each entry creates a project as that published create-nextspark-app makes it, customizes it, upgrades it with the
 # `nextspark migrate` of this repository's main, then installs, prepares, runs db:migrate, builds and serves it; the job
 # fails when any step fails. .163-.166 are not in the matrix (their database cannot be updated) and older releases cannot
