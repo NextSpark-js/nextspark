@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Creating a team no longer fails when its generated slug is already taken.** `TeamService.create` builds the slug from the whole user id instead of its first four characters, and when the insert finds the slug taken it retries with a random suffix, up to three attempts in all. Existing slugs are not changed.
 - **An image field inside a block's array item stores the image URL again.** `ArrayField` kept the whole upload object (`{ id, name, size, type, url }`) where blocks read a URL string. It now stores the `url`, shows a stored URL when the editor reopens, and still reads values saved as an upload object.
 - **The page builder keeps what was typed while a save was running.** `BuilderEditorView` fills the form from the entity once per entity instead of on every refetch, so the refetch that follows a save no longer replaces newer edits with the saved copy. Opening a different entity still replaces the blocks.
 - **A video or audio file that never reports its metadata no longer holds its upload slot.** The thumbnail and duration checks of the `video` and `audio` upload fields give up after `MEDIA_PROBE_TIMEOUT_MS` (10 s), and the file uploads without a thumbnail or duration.

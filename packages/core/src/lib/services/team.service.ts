@@ -61,6 +61,9 @@ export interface UpdateTeamPayload {
   settings?: Record<string, unknown>
 }
 
+/** How many slugs `create` tries before it gives up (the first is the generated one). */
+const SLUG_ATTEMPTS = 3
+
 // ===========================================
 // SERVICE
 // ===========================================
@@ -334,7 +337,8 @@ export class TeamService {
 
     // Generate team slug and name
     const timestamp = Date.now().toString(36)
-    const teamSlug = `team-${timestamp}-${userId.substring(0, 4).toLowerCase()}`
+    // The whole id (as the slug rule allows it), so two users cannot share a slug by a common prefix
+    const teamSlug = `team-${timestamp}-${userId.toLowerCase().replace(/[^a-z0-9]/g, '')}`
     const teamName = name || (user.name ? `${user.name}'s Team` : 'My Team')
 
     // Use a SERVICE transaction (RLS bypass) to ensure atomicity. This bootstrap
@@ -345,14 +349,19 @@ export class TeamService {
     const tx = await getServiceTransactionClient()
 
     try {
-      // 1. Create team
+      // 1. Create team. A taken slug (unique) yields no row: try again with a random suffix, a bounded number of times
       const isGlobal = TEAMS_CONFIG.mode === 'single-tenant'
-      const team = await tx.queryOne<Team>(
-        `INSERT INTO "teams" (name, slug, "ownerId", "isGlobal")
-         VALUES ($1, $2, $3, $4)
-         RETURNING *`,
-        [teamName, teamSlug, userId, isGlobal]
-      )
+      let team: Team | null = null
+      for (let attempt = 0; attempt < SLUG_ATTEMPTS && !team; attempt++) {
+        const slug = attempt === 0 ? teamSlug : `${teamSlug}-${Math.random().toString(36).slice(2, 6)}`
+        team = await tx.queryOne<Team>(
+          `INSERT INTO "teams" (name, slug, "ownerId", "isGlobal")
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (slug) DO NOTHING
+           RETURNING *`,
+          [teamName, slug, userId, isGlobal]
+        )
+      }
 
       if (!team) {
         throw new Error('Failed to create team')

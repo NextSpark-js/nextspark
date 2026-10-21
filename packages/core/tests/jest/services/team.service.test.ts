@@ -260,6 +260,48 @@ describe('TeamService', () => {
       expect(mockTx.commit).toHaveBeenCalled()
     })
 
+    describe('slug', () => {
+      const insertedSlugs = () => mockTx.queryOne.mock.calls.filter(([sql]) => String(sql).includes('INSERT INTO "teams"')).map(([, params]) => (params as string[])[1])
+
+      beforeEach(() => {
+        mockTx.queryOne.mockReset()
+        mockQueryOneWithRLS.mockResolvedValue({ id: 'abcd-1', email: 'a@test.com', name: null })
+      })
+
+      it('derives the slug from the whole user id, so a shared prefix does not collide', async () => {
+        const now = jest.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000)
+        mockTx.queryOne.mockResolvedValue(mockTeam)
+        await TeamService.create('abcd1111')
+        mockQueryOneWithRLS.mockResolvedValue({ id: 'abcd2222', email: 'b@test.com', name: null })
+        await TeamService.create('abcd2222')
+        now.mockRestore()
+
+        const [first, second] = insertedSlugs()
+        expect(first).not.toBe(second)
+        expect(first).toMatch(/^team-[a-z0-9]+-abcd1111$/)
+      })
+
+      it('retries a taken slug with a new suffix and then succeeds', async () => {
+        mockTx.queryOne
+          .mockResolvedValueOnce(null) // slug taken: ON CONFLICT DO NOTHING returns no row
+          .mockResolvedValueOnce(mockTeam)
+          .mockResolvedValueOnce(null) // no free plan
+        const result = await TeamService.create('user-123')
+
+        const [first, second] = insertedSlugs()
+        expect(second).toMatch(new RegExp(`^${first}-[a-z0-9]+$`))
+        expect(result).toEqual(mockTeam)
+        expect(mockTx.commit).toHaveBeenCalled()
+      })
+
+      it('gives up after a bounded number of attempts', async () => {
+        mockTx.queryOne.mockResolvedValue(null)
+        await expect(TeamService.create('user-123')).rejects.toThrow('Failed to create team')
+        expect(insertedSlugs()).toHaveLength(3)
+        expect(mockTx.rollback).toHaveBeenCalled()
+      })
+    })
+
     it('throws error for empty userId', async () => {
       await expect(TeamService.create('')).rejects.toThrow('User ID is required')
     })
