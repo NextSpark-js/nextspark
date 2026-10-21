@@ -96,6 +96,10 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
   const { isCollapsed } = useSidebar()
 
   const [blocks, setBlocks] = useState<BlockInstance[]>([])
+  // The settings form debounces edits (500 ms): a save inside that window flushes it and reads
+  // the blocks from this ref, since the state update has not rendered yet
+  const blocksRef = useRef(blocks)
+  const flushSettingsRef = useRef<(() => void) | null>(null)
   const [selectedBlockIds, setSelectedBlockIds] = useState<Set<string>>(new Set())
   const lastSelectedIdRef = useRef<string | null>(null)
   const [title, setTitle] = useState('')
@@ -162,6 +166,10 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     },
     enabled: mode === 'edit' && !!id,
   })
+
+  useEffect(() => {
+    blocksRef.current = blocks
+  }, [blocks])
 
   // Initialize form with entity data (edit mode)
   useEffect(() => {
@@ -311,19 +319,25 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     return true
   }, [title, slug, slugChanged, showSlug, entityConfig])
 
+  // Sends the settings form's pending edit and returns the blocks including it
+  const latestBlocks = useCallback(() => {
+    flushSettingsRef.current?.()
+    return blocksRef.current
+  }, [])
+
   const handleSave = useCallback(() => {
     if (!validateFields()) return
 
     const data: Record<string, unknown> = {
       title,
       ...(slugChanged ? { slug } : {}),
-      blocks,
+      blocks: latestBlocks(),
       status,
       settings: pageSettings,
       ...entityFields,
     }
     saveMutation.mutate(data)
-  }, [title, slug, blocks, status, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
+  }, [title, slug, latestBlocks, status, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
 
   const handleSaveDraft = useCallback(() => {
     if (!validateFields()) return
@@ -331,13 +345,13 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     const data: Record<string, unknown> = {
       title,
       ...(slugChanged ? { slug } : {}),
-      blocks,
+      blocks: latestBlocks(),
       status: 'draft',
       settings: pageSettings,
       ...entityFields,
     }
     saveMutation.mutate(data)
-  }, [title, slug, blocks, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
+  }, [title, slug, latestBlocks, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
 
   const handlePublish = useCallback(() => {
     if (!validateFields()) return
@@ -345,13 +359,13 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     const data: Record<string, unknown> = {
       title,
       ...(slugChanged ? { slug } : {}),
-      blocks,
+      blocks: latestBlocks(),
       status: 'published',
       settings: pageSettings,
       ...entityFields,
     }
     saveMutation.mutate(data)
-  }, [title, slug, blocks, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
+  }, [title, slug, latestBlocks, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
 
   // --- Multi-selection helpers ---
   const selectedBlockId = useMemo(() => {
@@ -592,6 +606,9 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
   }, [blocks, setSelectedBlockId])
 
   const handleUpdateBlockProps = useCallback((blockId: string, props: Record<string, unknown>) => {
+    blocksRef.current = blocksRef.current.map(block =>
+      block.id === blockId ? { ...block, props } : block
+    )
     setBlocks(prev => prev.map(block =>
       block.id === blockId ? { ...block, props } : block
     ))
@@ -1032,6 +1049,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
               }
             }}
             onClose={handleClearSelection}
+            flushRef={flushSettingsRef}
           />
         </div>
       </div>

@@ -1,0 +1,97 @@
+/**
+ * @jest-environment jsdom
+ */
+
+// #327: a save that happens inside the settings form's 500 ms debounce window still carries the last edit.
+
+import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BuilderEditorView } from '@/core/components/dashboard/block-editor/builder-editor-view'
+import { DynamicForm } from '@/core/components/dashboard/block-editor/dynamic-form'
+import type { FieldDefinition } from '@/core/types/blocks'
+
+jest.mock('uuid', () => ({ v4: () => 'uuid' }))
+jest.mock('sonner', () => ({ toast: { error: jest.fn(), success: jest.fn() } }))
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
+jest.mock('next/link', () => ({ __esModule: true, default: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }))
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('@/core/contexts/sidebar-context', () => ({ useSidebar: () => ({ isCollapsed: false }) }))
+jest.mock('@/core/lib/services/block.service', () => ({ BlockService: { getForScope: () => [] } }))
+jest.mock('@/core/lib/test', () => ({ sel: (path: string) => path.split('.').pop() }))
+jest.mock('@/core/components/dashboard/block-editor/block-picker', () => new Proxy({}, { get: () => () => null }))
+jest.mock('@/core/components/dashboard/block-editor/block-canvas', () => new Proxy({}, { get: () => () => null }))
+jest.mock('@/core/components/dashboard/block-editor/batch-action-bar', () => new Proxy({}, { get: () => () => null }))
+jest.mock('@/core/components/dashboard/block-editor/page-settings-panel', () => new Proxy({}, { get: () => () => null }))
+jest.mock('@/core/components/dashboard/block-editor/entity-fields-sidebar', () => new Proxy({}, { get: () => () => null }))
+jest.mock('@/core/components/dashboard/block-editor/config-panel', () => new Proxy({}, { get: () => () => null }))
+// DynamicForm's widgets the text field does not use
+jest.mock('@/core/components/ui/image-upload', () => ({ ImageUpload: () => null }))
+jest.mock('@/core/components/ui/rich-text-editor', () => ({ RichTextEditor: () => null }))
+jest.mock('@/core/components/media/MediaLibrary', () => ({ MediaLibrary: () => null }))
+jest.mock('@/core/components/dashboard/block-editor/array-field', () => ({ ArrayField: () => null }))
+jest.mock('@/core/lib/api/entities', () => ({ fetchWithTeam: jest.fn() }))
+// A button to select the stored block, and the real form inside a stand-in for the settings panel
+jest.mock('@/core/components/dashboard/block-editor/block-preview-canvas', () => ({
+  BlockPreviewCanvas: ({ blocks, onSelectBlock }: { blocks: { id: string }[]; onSelectBlock: (id: string) => void }) => (
+    <button data-testid="select" onClick={() => onSelectBlock(blocks[0].id)} />
+  ),
+}))
+jest.mock('@/core/components/dashboard/block-editor/block-settings-panel', () => ({
+  BlockSettingsPanel: ({ block, onUpdateProps, flushRef }: { block?: { props: Record<string, unknown> }; onUpdateProps: (p: Record<string, unknown>) => void; flushRef?: { current: (() => void) | null } }) =>
+    block ? <DynamicForm fieldDefinitions={[{ name: 'title', type: 'text', label: 'Title' }] as FieldDefinition[]} values={block.props} onChange={onUpdateProps} flushRef={flushRef} /> : null,
+}))
+
+const entityConfig = { name: 'pages', apiPath: 'pages', displayName: 'Pages', features: { enabled: true }, access: { basePath: '/' }, builder: { enabled: true } }
+const stored = { id: 'p1', title: 'About', slug: 'about', status: 'draft', blocks: [{ id: 'b1', blockSlug: 'hero', props: { title: 'a' } }] }
+const fetchMock = jest.fn<typeof fetch>()
+const patchBodies = () => fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH').map(([, init]) => JSON.parse(String(init?.body)))
+
+async function openBlock() {
+  const client = new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } })
+  render(
+    <QueryClientProvider client={client}>
+      <BuilderEditorView entitySlug="pages" entityConfig={entityConfig as never} mode="edit" id="p1" />
+    </QueryClientProvider>
+  )
+  await waitFor(() => expect(screen.getByTestId('select')).toBeInTheDocument())
+  fireEvent.click(screen.getByTestId('select'))
+  await waitFor(() => expect(document.querySelector('[data-cy="field"]')).not.toBeNull())
+  const input = document.querySelector('[data-cy="field"]')
+  act(() => { jest.advanceTimersByTime(20) }) // lets the form's mount-time sync settle
+  return input as HTMLInputElement
+}
+
+beforeEach(() => {
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] })
+  fetchMock.mockReset()
+  fetchMock.mockImplementation(async (_url, init) => init?.method === 'PATCH'
+    ? new Response(JSON.stringify({ success: true, data: { id: 'p1' } }), { status: 200 })
+    : new Response(JSON.stringify({ success: true, data: stored }), { status: 200 }))
+  global.fetch = fetchMock
+})
+afterEach(() => jest.useRealTimers())
+
+describe('builder save inside the settings debounce window', () => {
+  test.each([
+    ['saveButton', 'draft'],
+    ['publishButton', 'published'],
+  ])('%s saves the edit made less than 500 ms ago', async (button, status) => {
+    const input = await openBlock()
+    fireEvent.change(input, { target: { value: 'edited' } })
+    act(() => { jest.advanceTimersByTime(100) })
+    fireEvent.click(document.querySelector(`[data-cy="${button}"]`) as HTMLElement)
+
+    await waitFor(() => expect(patchBodies()).toHaveLength(1))
+    expect(patchBodies()[0].blocks[0].props).toEqual({ title: 'edited' })
+    expect(patchBodies()[0].status).toBe(status)
+  })
+
+  test('a save without edits sends the stored blocks and the form sends no onChange of its own', async () => {
+    await openBlock()
+    fireEvent.click(document.querySelector('[data-cy="publishButton"]') as HTMLElement)
+
+    await waitFor(() => expect(patchBodies()).toHaveLength(1))
+    expect(patchBodies()[0].blocks[0].props).toEqual({ title: 'a' })
+  })
+})

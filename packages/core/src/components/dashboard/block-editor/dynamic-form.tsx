@@ -36,6 +36,8 @@ interface DynamicFormProps {
   fieldDefinitions: FieldDefinition[]
   values: Record<string, unknown>
   onChange: (values: Record<string, unknown>) => void
+  /** Optional: receives a function that sends the pending (debounced) edit to `onChange` right away. */
+  flushRef?: { current: (() => void) | null }
 }
 
 interface FieldGroup {
@@ -329,8 +331,10 @@ function RelationshipField({
  * (text, select, media, relationship, date, array, etc.).
  *
  * Updates are debounced (500ms) to avoid excessive re-renders while the user types.
+ * A pending update is sent immediately on unmount, on blur, when the parent replaces
+ * `values` and when `flushRef.current()` is called, so the last edit is never dropped.
  */
-export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormProps) {
+export function DynamicForm({ fieldDefinitions, values, onChange, flushRef }: DynamicFormProps) {
   const t = useTranslations('admin.blockEditor.form')
   const [formValues, setFormValues] = useState(values)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
@@ -339,6 +343,30 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
   const isSyncingFromParent = useRef(false)
   // Track the debounce timer
   const debounceTimer = useRef<NodeJS.Timeout | null>(null)
+  // True between a user edit and the moment it is scheduled (a parent sync is not an edit)
+  const edited = useRef(false)
+  // The edit waiting for the debounce, or null when there is nothing to send
+  const pending = useRef<Record<string, unknown> | null>(null)
+  const onChangeRef = useRef(onChange)
+
+  // Sends the pending edit now. Does nothing when there is none.
+  const flush = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current)
+      debounceTimer.current = null
+    }
+    const next = pending.current
+    pending.current = null
+    if (next) onChangeRef.current(next)
+  }, [])
+
+  useEffect(() => {
+    if (!flushRef) return
+    flushRef.current = flush
+    return () => {
+      flushRef.current = null
+    }
+  }, [flushRef, flush])
 
   // Organize fields into groups and ungrouped
   const { ungrouped, groups } = useMemo(
@@ -348,12 +376,11 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
 
   // Sync formValues when parent values change (e.g., when switching blocks)
   useEffect(() => {
-    // Clear any pending debounced update when values change from parent
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current)
-      debounceTimer.current = null
-    }
+    // Send what was typed before the parent values replace the local state. onChangeRef still
+    // holds the previous render's callback here, so it reaches the block that was edited.
+    flush()
 
+    edited.current = false
     isSyncingFromParent.current = true
     setFormValues(values)
 
@@ -361,28 +388,36 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
     requestAnimationFrame(() => {
       isSyncingFromParent.current = false
     })
-  }, [values])
+  }, [values, flush])
+
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
 
   // Debounced update to parent - only when user makes changes
   useEffect(() => {
-    // Don't trigger parent update when syncing from parent
-    if (isSyncingFromParent.current) {
+    // Don't trigger parent update when syncing from parent or when nothing was edited
+    if (isSyncingFromParent.current || !edited.current) {
       return
     }
+    edited.current = false
+    pending.current = formValues
 
-    debounceTimer.current = setTimeout(() => {
-      onChange(formValues)
-    }, 500)
+    debounceTimer.current = setTimeout(flush, 500)
 
     return () => {
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current)
       }
     }
-  }, [formValues, onChange])
+  }, [formValues, flush])
+
+  // Do not lose the last edit when the form goes away
+  useEffect(() => flush, [flush])
 
   /** Updates a single field value in local form state. Memoized to avoid re-creating child components. */
   const handleFieldChange = useCallback((fieldName: string, value: unknown) => {
+    edited.current = true
     setFormValues(prev => ({
       ...prev,
       [fieldName]: value
@@ -784,7 +819,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
   }
 
   return (
-    <div className="space-y-4" data-cy={sel('blockEditor.blockPropertiesPanel.form.container')}>
+    <div className="space-y-4" onBlur={flush} data-cy={sel('blockEditor.blockPropertiesPanel.form.container')}>
       {/* Render ungrouped fields first - array fields get special collapsible treatment */}
       {ungrouped
         .filter(field => evaluateCondition(field.condition, formValues))

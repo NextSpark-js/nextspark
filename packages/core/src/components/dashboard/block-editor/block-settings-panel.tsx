@@ -21,6 +21,8 @@ interface BlockSettingsPanelProps {
   onUpdateProps: (props: Record<string, unknown>) => void
   onRemove: () => void
   onClose?: () => void
+  /** Optional: filled with a function that sends the form's pending edit to `onUpdateProps` right away. */
+  flushRef?: { current: (() => void) | null }
 }
 
 /**
@@ -49,6 +51,7 @@ export function BlockSettingsPanel({
   onUpdateProps,
   onRemove,
   onClose,
+  flushRef,
 }: BlockSettingsPanelProps) {
   const t = useTranslations('admin.builder.settingsPanel')
   const tMulti = useTranslations('admin.builder.multiSelect')
@@ -293,6 +296,7 @@ export function BlockSettingsPanel({
                     fieldDefinitions={groupedFields!.content}
                     values={block.props}
                     onChange={onUpdateProps}
+                    flushRef={flushRef}
                   />
                 ) : (
                   <EmptyTabMessage message={t('tabs.noContentFields')} />
@@ -305,6 +309,7 @@ export function BlockSettingsPanel({
                     fieldDefinitions={groupedFields!.design}
                     values={block.props}
                     onChange={onUpdateProps}
+                    flushRef={flushRef}
                   />
                 ) : (
                   <EmptyTabMessage message={t('tabs.noDesignFields')} />
@@ -317,6 +322,7 @@ export function BlockSettingsPanel({
                     fieldDefinitions={groupedFields!.advanced}
                     values={block.props}
                     onChange={onUpdateProps}
+                    flushRef={flushRef}
                   />
                 ) : (
                   <EmptyTabMessage message={t('tabs.noAdvancedFields')} />
