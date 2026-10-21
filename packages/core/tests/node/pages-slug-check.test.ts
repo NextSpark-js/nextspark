@@ -47,7 +47,7 @@ async function throwawayDatabase(t: TestContext) {
 }
 
 /** A project with the starter's pages entity: its config with the option set, and its migrations (without 004 when asked). */
-function project(t: TestContext, nested: boolean | string, withSlugMigration = true) {
+function project(t: TestContext, nested: boolean | string | ((config: string) => string), withSlugMigration = true) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pages-slug-project-'))
   t.after(() => fs.rmSync(root, { recursive: true, force: true }))
   fs.mkdirSync(path.join(root, 'config'), { recursive: true })
@@ -59,7 +59,10 @@ function project(t: TestContext, nested: boolean | string, withSlugMigration = t
   if (!withSlugMigration) fs.rmSync(path.join(entity, 'migrations', MIGRATION))
   const config = fs.readFileSync(path.join(PAGES, 'pages.config.ts'), 'utf8')
   assert.match(config, /basePath: '\/',/)
-  fs.writeFileSync(path.join(entity, 'pages.config.ts'), config.replace("basePath: '/',", typeof nested === 'string' ? nested : `basePath: '/',\n    allowNestedSlugs: ${nested},`))
+  const edited = typeof nested === 'function' ? nested(config)
+    : typeof nested === 'string' ? config.replace("basePath: '/',", nested)
+    : config.replace("basePath: '/',", `basePath: '/',\n    allowNestedSlugs: ${nested},`)
+  fs.writeFileSync(path.join(entity, 'pages.config.ts'), edited)
   return root
 }
 
@@ -106,6 +109,31 @@ test('a base path other than / accepts nested slugs without allowNestedSlugs, as
   assert.equal(validatePublicSlug({ access: { basePath: '/docs' } }, 'ab/cd'), null)
   await insert(client, 'a/b')
   assert.equal(await rejected(client, 'a//b'), true)
+})
+
+test('what the app decides is what the CHECK follows: no base path, an empty one and the legacy one', { skip, timeout: 240000 }, async t => {
+  const cases: [string, (config: string) => string, boolean, object][] = [
+    ['no basePath with allowNestedSlugs', config => config.replace("basePath: '/',", 'allowNestedSlugs: true,'), false, { access: { allowNestedSlugs: true } }],
+    ["basePath '' with allowNestedSlugs", config => config.replace("basePath: '/',", "basePath: '',\n    allowNestedSlugs: true,"), false, { access: { basePath: '', allowNestedSlugs: true } }],
+    ['builder.public.basePath', config => config.replace("basePath: '/',", '').replace('builder: {', "builder: {\n    public: { basePath: '/docs' },"), true, { builder: { public: { basePath: '/docs' } } }],
+  ]
+  for (const [name, edit, accepted, entity] of cases) {
+    const { url, client } = await throwawayDatabase(t)
+    const run = migrate(project(t, edit), url)
+    assert.equal(run.status, 0, `${name}: ${run.output}`)
+    assert.doesNotMatch(run.output, /could not read/, name)
+    assert.equal(validatePublicSlug(entity, 'ab/cd') === null, accepted, name)
+    assert.equal(await rejected(client, 'a/b'), !accepted, name)
+  }
+})
+
+test('a project without entities/pages is not warned about', { skip, timeout: 240000 }, async t => {
+  const { url } = await throwawayDatabase(t)
+  const root = project(t, true)
+  fs.rmSync(path.join(root, 'entities'), { recursive: true })
+  const run = migrate(root, url)
+  assert.equal(run.status, 0, run.output)
+  assert.doesNotMatch(run.output, /could not read/)
 })
 
 test('a config that cannot be read warns once, keeps the single-segment rule and does not fail the run', { skip, timeout: 240000 }, async t => {
