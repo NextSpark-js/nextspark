@@ -239,7 +239,7 @@ const nextConfig = {
     // See: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
     const consent = consentCspOrigins()
     const withConsent = (list) => list.map((origin) => ` ${origin}`).join('')
-    const coreCspDirectives = [
+    const cspDirectives = [
       "default-src 'self'",
       // unsafe-inline required for Next.js hydration; unsafe-eval only in dev for hot reload
       `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com${withConsent(consent.script)}`,
@@ -259,7 +259,7 @@ const nextConfig = {
       `report-uri ${basePath}/api/csp-report`,
       "report-to csp-endpoint",
     ];
-    const cspDirectives = addCspSources(coreCspDirectives, extension.csp)
+    const mergedCsp = addCspSources(cspDirectives, extension.csp)
 
     // Security headers for all routes
     const securityHeaders = [
@@ -293,7 +293,7 @@ const nextConfig = {
       },
       {
         key: 'Content-Security-Policy',
-        value: cspDirectives.join('; ')
+        value: mergedCsp.join('; ')
       },
     ];
 
