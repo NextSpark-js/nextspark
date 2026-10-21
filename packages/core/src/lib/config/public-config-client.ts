@@ -22,6 +22,9 @@ export const DOCS_CONFIG = appConfig.docs
 /** Cookie consent (#272), defaults filled in. `enabled` is false unless app.config turns it on. */
 export const CONSENT_CONFIG = resolveConsentConfig(appConfig.consent)
 
+/** Whether the root layout mounts the React Query provider and the toaster (`providers.scope`, `'root'` unless app.config says `'groups'`). */
+export const ROOT_PROVIDERS = appConfig.providers?.scope !== 'groups'
+
 const methods = resolveAuthMethods(appConfig.auth)
 export const PUBLIC_AUTH_CONFIG = {
   registration: { mode: appConfig.auth?.registration?.mode ?? 'open' },

@@ -6,14 +6,14 @@
  * `getTranslations` and do not serialize it to the browser.
  */
 export const NAMESPACE_GROUPS = {
-  // QueryProvider is mounted in the root layout on every route.
+  // QueryProvider is mounted in the root layout on every route (unless `providers.scope` is 'groups').
   root: ['permissions'],
 
   // PublicNavbar, PublicFooter and the public docs components.
   public: ['auth', 'common', 'docs', 'footer', 'home', 'navigation', 'public', 'validation', 'blog'],
 
-  // Auth forms and validation hooks.
-  auth: ['auth', 'common', 'validation'],
+  // Auth forms and validation hooks, and the QueryProvider that GroupProviders mounts when the root layout does not.
+  auth: ['auth', 'common', 'permissions', 'validation'],
 
   // DashboardShell, settings, entity, media, billing and page-builder UI.
   dashboard: [

@@ -2,10 +2,17 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { ApiError } from '../lib/api/api-error'
+
+// NEXT_PUBLIC_RQ_DEVTOOLS is inlined when the app is built: with it off, the condition is a constant and the import below is
+// not part of the bundle at all; with it on, the devtools load as their own chunk after hydration, never in a route's main JS.
+const ReactQueryDevtools =
+  process.env.NEXT_PUBLIC_RQ_DEVTOOLS === 'true'
+    ? dynamic(() => import('@tanstack/react-query-devtools').then((mod) => mod.ReactQueryDevtools), { ssr: false })
+    : null
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const t = useTranslations('permissions')
@@ -44,9 +51,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-        {process.env.NEXT_PUBLIC_RQ_DEVTOOLS === 'true' && (
-            <ReactQueryDevtools initialIsOpen={false} />
-        )}
+      {ReactQueryDevtools && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   )
 }

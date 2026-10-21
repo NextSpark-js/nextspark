@@ -38,9 +38,13 @@ jest.mock('@nextsparkjs/core/lib/i18n/client-messages', () => ({
   selectMessages: (...args: unknown[]) => mockSelectMessages(...args),
 }))
 let mockConsentEnabled = true
+let mockRootProviders = true
 jest.mock('@nextsparkjs/core/lib/config/public-config-client', () => ({
   get CONSENT_CONFIG() {
     return { enabled: mockConsentEnabled }
+  },
+  get ROOT_PROVIDERS() {
+    return mockRootProviders
   },
 }))
 jest.mock('@nextsparkjs/core/components/consent/LazyConsentManager', () => ({
@@ -59,9 +63,9 @@ jest.mock('@nextsparkjs/core/lib/services/plugin.service', () => ({
 jest.mock('@nextsparkjs/core/lib/theme/ThemeProvider', () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
-jest.mock('@nextsparkjs/core/components/ui/sonner', () => ({ Toaster: () => null }))
+jest.mock('@nextsparkjs/core/components/ui/sonner', () => ({ Toaster: () => <i data-toaster="" /> }))
 jest.mock('@nextsparkjs/core/providers/query-provider', () => ({
-  QueryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  QueryProvider: ({ children }: { children: React.ReactNode }) => <div data-query-provider="">{children}</div>,
 }))
 jest.mock('@nextsparkjs/core/providers/TranslationContextManager', () => ({ TranslationContextManager: () => null }))
 jest.mock('@nextsparkjs/core/components/auth/SessionCookieRefresher', () => ({ SessionCookieRefresher: () => null }))
@@ -75,6 +79,7 @@ async function render(): Promise<string> {
 
 beforeEach(() => {
   mockConsentEnabled = true
+  mockRootProviders = true
   mockCspNonce = true
   mockNonce = 'abc123'
   mockSelectMessages.mockClear()
@@ -102,5 +107,23 @@ describe('root layout and cookie consent', () => {
   it('renders nothing of it when consent is off, the default', async () => {
     mockConsentEnabled = false
     expect(await render()).not.toContain('data-consent')
+  })
+})
+
+describe('root layout providers scope (providers.scope)', () => {
+  it('mounts the query provider and the toaster around the page by default', async () => {
+    const html = await render()
+    expect(html).toContain('<div data-query-provider="">')
+    expect(html).toContain('<i data-toaster=""></i>')
+    expect(html).toMatch(/<div data-query-provider="">.*<main>page<\/main>.*<i data-toaster=""><\/i>.*<aside data-consent/)
+  })
+
+  it('mounts neither with the groups scope, and still renders the page, the refresher and the consent banner', async () => {
+    mockRootProviders = false
+    const html = await render()
+    expect(html).not.toContain('data-query-provider')
+    expect(html).not.toContain('data-toaster')
+    expect(html).toContain('<main>page</main>')
+    expect(html).toContain('data-consent="banner"')
   })
 })

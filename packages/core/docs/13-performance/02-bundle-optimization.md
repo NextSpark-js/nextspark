@@ -406,6 +406,35 @@ function Button({ className, ...props }) {
 
 ---
 
+## App-wide providers and the React Query devtools
+
+**Devtools.** `QueryProvider` loads the React Query devtools with `next/dynamic` (`ssr: false`), and only when `NEXT_PUBLIC_RQ_DEVTOOLS=true` was set at build time. With the variable off the import is not part of the build at all; with it on, the devtools are an async chunk that loads after hydration, never part of a route's main JavaScript.
+
+**Where the providers mount.** By default the root layout mounts `QueryProvider` (React Query) and the `Toaster` for every route. Set `providers.scope` in `config/app.config.ts` to mount them per route group instead:
+
+```ts
+// config/app.config.ts
+export const APP_CONFIG_OVERRIDES = {
+  providers: { scope: 'groups' },
+}
+```
+
+With `'groups'` the root layout mounts neither. The `(auth)` group (also a project's override of its layout), and the dashboard, superadmin and devtools areas (through `DashboardProviders`) mount them with `GroupProviders`, so those routes behave as before; the `(public)` group does not. `GroupProviders` renders its children as they are when a query cache already exists above it, so wrapping a layout in it never creates a second cache or shows a toast twice, whatever the scope.
+
+A public page of your own that uses React Query hooks (`useQuery`, `useMutation`, the entity hooks) or shows toasts needs its layout wrapped:
+
+```tsx
+import { GroupProviders } from '@nextsparkjs/core/providers/group-providers'
+
+export default function PricingLayout({ children }: { children: React.ReactNode }) {
+  return <GroupProviders>{children}</GroupProviders>
+}
+```
+
+`useAuth`, which the public navbar uses, works without a query cache. The cookie consent banner does not need one either. Check the public pages and components you added before switching, since a query hook without a provider throws. The default scope keeps today's behavior; the setting is read when the app is built.
+
+---
+
 ## Analyzing Bundle Size
 
 ### webpack-bundle-analyzer

@@ -22,6 +22,7 @@ jest.mock('@nextsparkjs/core/lib/i18n/client-messages', () => ({ selectMessages:
 jest.mock('@nextsparkjs/core/lib/config/config-client', () => ({ APP_CONFIG_MERGED: {} }))
 jest.mock('@nextsparkjs/core/components/app/guards/SuperAdminGuard', () => ({ SuperAdminGuard: ({ children }: { children: React.ReactNode }) => children }))
 jest.mock('@nextsparkjs/core/components/app/guards/DeveloperGuard', () => ({ DeveloperGuard: ({ children }: { children: React.ReactNode }) => children }))
+jest.mock('@nextsparkjs/core/providers/group-providers', () => ({ GroupProviders: ({ children }: { children: React.ReactNode }) => children }))
 jest.mock('@nextsparkjs/core/providers/DashboardProviders', () => ({ DashboardProviders: ({ children }: { children: React.ReactNode }) => children }))
 jest.mock('@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar', () => ({ SuperadminSidebar: () => null }))
 jest.mock('@nextsparkjs/core/components/devtools/DevtoolsSidebar', () => ({ DevtoolsSidebar: () => null }))
@@ -38,6 +39,7 @@ import { withPublicMessages } from '../../../src/routes/_internal/public-layout'
 import { withSuperadminGuard } from '../../../src/routes/_internal/superadmin-layout'
 import { withDevtoolsGuard } from '../../../src/routes/_internal/devtools-layout'
 import * as cc from '../../../src/routes/_internal/group-layouts.cc'
+import { withAuthMessages as withAuthGroupMessagesCc } from '../../../src/routes/_internal/auth-layout.cc'
 import { withSuperadminGuard as withSuperadminGuardCc } from '../../../src/routes/_internal/superadmin-layout.cc'
 import { withDevtoolsGuard as withDevtoolsGuardCc } from '../../../src/routes/_internal/devtools-layout.cc'
 
@@ -82,6 +84,7 @@ const WRAPPERS: [string, (layout: React.ComponentType<Slots>) => (props: Slots) 
   ['withSuperadminGuard (ISR)', withSuperadminGuard],
   ['withDevtoolsGuard (ISR)', withDevtoolsGuard],
   ['withAuthMessages (Cache Components)', cc.withAuthMessages],
+  ['withAuthMessages with the auth providers (Cache Components)', withAuthGroupMessagesCc],
   ['withPublicMessages (Cache Components)', cc.withPublicMessages],
   ['withDevtoolsMessages (Cache Components)', cc.withDevtoolsMessages],
   ['withSuperadminMessages (Cache Components)', cc.withSuperadminMessages],

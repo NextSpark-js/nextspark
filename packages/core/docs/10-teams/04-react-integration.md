@@ -13,7 +13,7 @@ The `TeamContext` provides global team state and switching functionality.
 
 ### Setup
 
-`TeamProvider` and `SubscriptionProvider` are mounted by `DashboardProviders` in the layouts of the areas that work with a team: `dashboard/`, `superadmin/` and `devtools/`. The root layout provides `QueryProvider` and `Toaster` to every route but no team providers, so public pages never fetch a signed-in visitor's teams or re-sync the `activeTeamId` cookie.
+`TeamProvider` and `SubscriptionProvider` are mounted by `DashboardProviders` in the layouts of the areas that work with a team: `dashboard/`, `superadmin/` and `devtools/`. The root layout provides `QueryProvider` and `Toaster` to every route (unless `providers.scope` is `'groups'`, see [Bundle Optimization](../13-performance/02-bundle-optimization.md#app-wide-providers-and-the-react-query-devtools)) but no team providers, so public pages never fetch a signed-in visitor's teams or re-sync the `activeTeamId` cookie.
 
 A route group of your own that uses team hooks mounts them the same way:
 

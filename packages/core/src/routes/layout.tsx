@@ -16,7 +16,7 @@ import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
 import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
 import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
-import { CONSENT_CONFIG } from "@nextsparkjs/core/lib/config/public-config-client"
+import { CONSENT_CONFIG, ROOT_PROVIDERS } from "@nextsparkjs/core/lib/config/public-config-client"
 import { LazyConsentManager } from "@nextsparkjs/core/components/consent/LazyConsentManager"
 import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
@@ -70,6 +70,21 @@ export default async function RootLayout({
   // not block it. Without the flag, or without a nonce, nothing changes.
   const nonce = cspNonceEnabled() ? ((await headers()).get('x-nonce') ?? undefined) : undefined
 
+  const content = (
+    <>
+      <TranslationContextManager />
+      {/* Real session-cookie renewal for installed PWAs: the render-time
+          session reads above (getUserLocale/getThemeSettings) cannot
+          write cookies, so the rolling refresh is triggered from the
+          client through the auth Route Handler instead. */}
+      <SessionCookieRefresher />
+      {children}
+      {ROOT_PROVIDERS && <Suspense><Toaster position="bottom-left" /></Suspense>}
+      {/* Cookie consent (#272): the banner and the analytics loaders, which load their script with this nonce */}
+      {CONSENT_CONFIG.enabled && <LazyConsentManager nonce={nonce} />}
+    </>
+  )
+
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
@@ -110,18 +125,9 @@ export default async function RootLayout({
                   dashboard, superadmin and devtools layouts, not here: on a public page they
                   would fetch a signed-in visitor's teams and subscription and re-sync the
                   activeTeamId cookie for nothing. */}
-              <QueryProvider>
-                <TranslationContextManager />
-                {/* Real session-cookie renewal for installed PWAs: the render-time
-                    session reads above (getUserLocale/getThemeSettings) cannot
-                    write cookies, so the rolling refresh is triggered from the
-                    client through the auth Route Handler instead. */}
-                <SessionCookieRefresher />
-                {children}
-                <Suspense><Toaster position="bottom-left" /></Suspense>
-                {/* Cookie consent (#272): the banner and the analytics loaders, which load their script with this nonce */}
-                {CONSENT_CONFIG.enabled && <LazyConsentManager nonce={nonce} />}
-              </QueryProvider>
+              {/* `providers.scope: 'groups'` leaves React Query and the toaster to the route groups (GroupProviders);
+                  the default mounts them here for every route. */}
+              {ROOT_PROVIDERS ? <QueryProvider>{content}</QueryProvider> : content}
             </CustomThemeProvider>
           </NextThemeProvider>
         </NextIntlClientProvider>

@@ -104,3 +104,19 @@ test('every authenticated area mounts DashboardProviders', () => {
     'dashboard delegates its client shell (and DashboardProviders) to core',
   )
 })
+
+test('with providers.scope "groups" the (auth) layouts mount GroupProviders, and no other group layout module imports it', () => {
+  // The root layouts keep QueryProvider and mount it only while ROOT_PROVIDERS holds
+  for (const layout of ['layout.tsx', 'layout.ppr.tsx']) {
+    const source = fs.readFileSync(implementationOf(layout), 'utf8')
+    assert.match(source, /ROOT_PROVIDERS \? <QueryProvider>\{content\}<\/QueryProvider> : content/, layout)
+    assert.match(source, /\{ROOT_PROVIDERS && <Suspense><Toaster /, `${layout} mounts the toaster only with the root providers`)
+  }
+  // Both modes' auth wrappers put the auth layout in GroupProviders (an override of the layout included)
+  assert.ok(renderedElements(path.join(ROUTES, '_internal/auth-layout.tsx')).has('GroupProviders'))
+  assert.ok(renderedElements(path.join(ROUTES, '_internal/auth-layout.cc.tsx')).has('GroupProviders'))
+  // The public group imports these modules: none of them may reach the query provider
+  for (const file of ['_internal/group-layouts.cc.tsx', '_internal/public-layout.tsx', '_internal/public-layout.cc.tsx', '_internal/default-public-layout.tsx']) {
+    assert.doesNotMatch(fs.readFileSync(path.join(ROUTES, file), 'utf8'), /group-providers|query-provider/, file)
+  }
+})

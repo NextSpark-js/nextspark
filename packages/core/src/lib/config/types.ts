@@ -850,6 +850,16 @@ export interface AppConfig {
     cspNonce?: boolean
   }
 
+  /**
+   * Where the app-wide client providers (React Query and the toaster) mount. Read when the app is built.
+   * `'root'` (default): the root layout mounts them for every route. `'groups'`: the root layout does not; the `(auth)`
+   * group, the dashboard, superadmin and devtools areas mount them (`GroupProviders`), and a public page that uses
+   * React Query hooks or toasts needs its layout wrapped in `GroupProviders` from `@nextsparkjs/core/providers/group-providers`.
+   */
+  providers?: {
+    scope?: 'root' | 'groups'
+  }
+
   /** Authentication and registration configuration */
   auth?: AuthConfig
 

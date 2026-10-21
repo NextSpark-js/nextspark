@@ -27,7 +27,7 @@ import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/
 import { StaticIntlProvider } from "@nextsparkjs/core/providers/static-intl-provider"
 import { OPTIONAL_ROOT_NAMESPACES, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
-import { CONSENT_CONFIG } from "@nextsparkjs/core/lib/config/public-config-client"
+import { CONSENT_CONFIG, ROOT_PROVIDERS } from "@nextsparkjs/core/lib/config/public-config-client"
 import { LazyConsentManager } from "@nextsparkjs/core/components/consent/LazyConsentManager"
 import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
@@ -61,6 +61,19 @@ export default async function RootLayout({
 }>) {
   const billingHints = await getBillingResourceHints()
 
+  const content = (
+    <>
+      {/* The boundary every page falls back to when it reads runtime data (params, cookies, headers) and
+          no layout below has put one around it; the group layouts' own boundaries keep their shells. */}
+      <Suspense fallback={null}>{children}</Suspense>
+      <SessionCookieRefresher />
+      {ROOT_PROVIDERS && <Suspense><Toaster position="bottom-left" /></Suspense>}
+      {/* The banner reads the cookie in the browser, so it fits the static shell. A request nonce is not
+          available here: see the consent docs for a nonce-based script-src. */}
+      {CONSENT_CONFIG.enabled && <LazyConsentManager />}
+    </>
+  )
+
   return (
     <html lang={DEFAULT_LOCALE} suppressHydrationWarning>
       <head>
@@ -91,16 +104,9 @@ export default async function RootLayout({
                   dashboard, superadmin and devtools layouts, not here: on a public page they
                   would fetch a signed-in visitor's teams and subscription and re-sync the
                   activeTeamId cookie for nothing. */}
-              <QueryProvider>
-                {/* The boundary every page falls back to when it reads runtime data (params, cookies, headers) and
-                    no layout below has put one around it; the group layouts' own boundaries keep their shells. */}
-                <Suspense fallback={null}>{children}</Suspense>
-                <SessionCookieRefresher />
-                <Suspense><Toaster position="bottom-left" /></Suspense>
-                {/* The banner reads the cookie in the browser, so it fits the static shell. A request nonce is not
-                    available here: see the consent docs for a nonce-based script-src. */}
-                {CONSENT_CONFIG.enabled && <LazyConsentManager />}
-              </QueryProvider>
+              {/* `providers.scope: 'groups'` leaves React Query and the toaster to the route groups (GroupProviders);
+                  the default mounts them here for every route. */}
+              {ROOT_PROVIDERS ? <QueryProvider>{content}</QueryProvider> : content}
             </CustomThemeProvider>
           </NextThemeProvider>
         </StaticIntlProvider>
