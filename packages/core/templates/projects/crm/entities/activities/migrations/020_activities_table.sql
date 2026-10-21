@@ -88,19 +88,19 @@ DROP POLICY IF EXISTS "activities_delete_policy" ON "activities";
 
 CREATE POLICY "activities_select_policy" ON "activities"
   FOR SELECT
-  USING ("teamId" = ANY(public.get_user_team_ids()) OR public.is_superadmin());
+  USING ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]) OR (SELECT public.is_superadmin()));
 
 CREATE POLICY "activities_insert_policy" ON "activities"
   FOR INSERT
-  WITH CHECK ("teamId" = ANY(public.get_user_team_ids()));
+  WITH CHECK ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]));
 
 CREATE POLICY "activities_update_policy" ON "activities"
   FOR UPDATE
-  USING ("teamId" = ANY(public.get_user_team_ids()) OR public.is_superadmin());
+  USING ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]) OR (SELECT public.is_superadmin()));
 
 CREATE POLICY "activities_delete_policy" ON "activities"
   FOR DELETE
-  USING ("teamId" = ANY(public.get_user_team_ids()) OR public.is_superadmin());
+  USING ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]) OR (SELECT public.is_superadmin()));
 
 -- ============================================
 -- TRIGGER updatedAt

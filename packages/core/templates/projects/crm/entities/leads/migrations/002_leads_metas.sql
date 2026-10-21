@@ -69,8 +69,8 @@ USING (
   EXISTS (
     SELECT 1 FROM public."leads" l
     WHERE l.id = "entityId"
-      AND (l."userId" = public.get_auth_user_id()
-           OR l."assignedTo" = public.get_auth_user_id())
+      AND (l."userId" = (SELECT public.get_auth_user_id())
+           OR l."assignedTo" = (SELECT public.get_auth_user_id()))
   )
 );
 
@@ -82,7 +82,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM public."leads" l
     WHERE l.id = "entityId"
-      AND l."userId" = public.get_auth_user_id()
+      AND l."userId" = (SELECT public.get_auth_user_id())
   )
 );
 
@@ -94,16 +94,16 @@ USING (
   EXISTS (
     SELECT 1 FROM public."leads" l
     WHERE l.id = "entityId"
-      AND (l."userId" = public.get_auth_user_id()
-           OR l."assignedTo" = public.get_auth_user_id())
+      AND (l."userId" = (SELECT public.get_auth_user_id())
+           OR l."assignedTo" = (SELECT public.get_auth_user_id()))
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public."leads" l
     WHERE l.id = "entityId"
-      AND (l."userId" = public.get_auth_user_id()
-           OR l."assignedTo" = public.get_auth_user_id())
+      AND (l."userId" = (SELECT public.get_auth_user_id())
+           OR l."assignedTo" = (SELECT public.get_auth_user_id()))
   )
 );
 
@@ -115,6 +115,6 @@ USING (
   EXISTS (
     SELECT 1 FROM public."leads" l
     WHERE l.id = "entityId"
-      AND l."userId" = public.get_auth_user_id()
+      AND l."userId" = (SELECT public.get_auth_user_id())
   )
 );

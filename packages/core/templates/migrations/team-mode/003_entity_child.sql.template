@@ -70,22 +70,22 @@ ON public."{{PARENT_ENTITY}}_{{ENTITY_NAME}}"
 FOR ALL TO authenticated
 USING (
   -- Superadmin bypass
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
   -- Team isolation via parent entity
   EXISTS (
     SELECT 1 FROM public."{{PARENT_ENTITY}}" p
     WHERE p.id = "parentId"
-      AND p."teamId" = ANY(public.get_user_team_ids())
+      AND p."teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   )
 )
 WITH CHECK (
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
   EXISTS (
     SELECT 1 FROM public."{{PARENT_ENTITY}}" p
     WHERE p.id = "parentId"
-      AND p."teamId" = ANY(public.get_user_team_ids())
+      AND p."teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   )
 );
 

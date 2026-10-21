@@ -82,31 +82,31 @@ DROP POLICY IF EXISTS "contacts_delete_policy" ON "contacts";
 CREATE POLICY "contacts_select_policy" ON "contacts"
   FOR SELECT
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can create contacts
 CREATE POLICY "contacts_insert_policy" ON "contacts"
   FOR INSERT
   WITH CHECK (
-    "teamId" = ANY(public.get_user_team_ids())
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   );
 
 -- Policy: Team members can update contacts
 CREATE POLICY "contacts_update_policy" ON "contacts"
   FOR UPDATE
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can delete contacts
 CREATE POLICY "contacts_delete_policy" ON "contacts"
   FOR DELETE
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- ============================================

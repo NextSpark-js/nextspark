@@ -72,14 +72,14 @@ USING (
   EXISTS (
     SELECT 1 FROM public."ai_history"
     WHERE "ai_history".id = "ai_history_metas"."entityId"
-    AND "ai_history"."userId" = public.get_auth_user_id()
+    AND "ai_history"."userId" = (SELECT public.get_auth_user_id())
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public."ai_history"
     WHERE "ai_history".id = "ai_history_metas"."entityId"
-    AND "ai_history"."userId" = public.get_auth_user_id()
+    AND "ai_history"."userId" = (SELECT public.get_auth_user_id())
   )
 );
 

@@ -67,8 +67,8 @@ DROP POLICY IF EXISTS "{{ENTITY_NAME_PASCAL}} owner can do all" ON public."{{ENT
 CREATE POLICY "{{ENTITY_NAME_PASCAL}} owner can do all"
 ON public."{{ENTITY_NAME}}"
 FOR ALL TO authenticated
-USING ("userId" = public.get_auth_user_id())
-WITH CHECK ("userId" = public.get_auth_user_id());
+USING ("userId" = (SELECT public.get_auth_user_id()))
+WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 -- ============================
 -- OPTIONAL: ADMIN OVERRIDE
@@ -81,14 +81,14 @@ WITH CHECK ("userId" = public.get_auth_user_id());
 -- USING (
 --   EXISTS (
 --     SELECT 1 FROM public."users" u
---     WHERE u.id = public.get_auth_user_id()
+--     WHERE u.id = (SELECT public.get_auth_user_id())
 --       AND u.role IN ('admin', 'superadmin')
 --   )
 -- )
 -- WITH CHECK (
 --   EXISTS (
 --     SELECT 1 FROM public."users" u
---     WHERE u.id = public.get_auth_user_id()
+--     WHERE u.id = (SELECT public.get_auth_user_id())
 --       AND u.role IN ('admin', 'superadmin')
 --   )
 -- );

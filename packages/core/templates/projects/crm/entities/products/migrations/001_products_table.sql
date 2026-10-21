@@ -82,19 +82,19 @@ DROP POLICY IF EXISTS "products_delete_policy" ON "products";
 
 CREATE POLICY "products_select_policy" ON "products"
   FOR SELECT
-  USING ("teamId" = ANY(public.get_user_team_ids()) OR public.is_superadmin());
+  USING ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]) OR (SELECT public.is_superadmin()));
 
 CREATE POLICY "products_insert_policy" ON "products"
   FOR INSERT
-  WITH CHECK ("teamId" = ANY(public.get_user_team_ids()));
+  WITH CHECK ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]));
 
 CREATE POLICY "products_update_policy" ON "products"
   FOR UPDATE
-  USING ("teamId" = ANY(public.get_user_team_ids()) OR public.is_superadmin());
+  USING ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]) OR (SELECT public.is_superadmin()));
 
 CREATE POLICY "products_delete_policy" ON "products"
   FOR DELETE
-  USING ("teamId" = ANY(public.get_user_team_ids()) OR public.is_superadmin());
+  USING ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]) OR (SELECT public.is_superadmin()));
 
 -- ============================================
 -- TRIGGER updatedAt

@@ -46,19 +46,19 @@ DROP POLICY IF EXISTS "pages_metas_auth_all" ON "pages_metas";
 CREATE POLICY "pages_metas_auth_all"
 ON "pages_metas" FOR ALL TO authenticated
 USING (
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR EXISTS (
     SELECT 1 FROM public."pages" p
     WHERE p.id = "pages_metas"."pageId"
-      AND p."teamId" = ANY(public.get_user_team_ids())
+      AND p."teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   )
 )
 WITH CHECK (
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR EXISTS (
     SELECT 1 FROM public."pages" p
     WHERE p.id = "pages_metas"."pageId"
-      AND p."teamId" = ANY(public.get_user_team_ids())
+      AND p."teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   )
 );
 

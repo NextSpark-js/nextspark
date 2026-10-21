@@ -81,14 +81,14 @@ USING (
   EXISTS (
     SELECT 1 FROM public."{{ENTITY_NAME}}" e
     WHERE e.id = "entityId"
-      AND e."userId" = public.get_auth_user_id()
+      AND e."userId" = (SELECT public.get_auth_user_id())
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public."{{ENTITY_NAME}}" e
     WHERE e.id = "entityId"
-      AND e."userId" = public.get_auth_user_id()
+      AND e."userId" = (SELECT public.get_auth_user_id())
   )
 );
 

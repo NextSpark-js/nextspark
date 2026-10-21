@@ -77,13 +77,13 @@ DROP POLICY IF EXISTS "langchain_token_usage_owner_insert" ON public."langchain_
 CREATE POLICY "langchain_token_usage_owner_select"
 ON public."langchain_token_usage"
 FOR SELECT TO authenticated
-USING ("userId" = public.get_auth_user_id());
+USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Users can insert their own usage records
 CREATE POLICY "langchain_token_usage_owner_insert"
 ON public."langchain_token_usage"
 FOR INSERT TO authenticated
-WITH CHECK ("userId" = public.get_auth_user_id());
+WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 -- ============================================
 -- MATERIALIZED VIEW: Daily Aggregation

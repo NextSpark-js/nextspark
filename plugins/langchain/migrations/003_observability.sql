@@ -222,13 +222,13 @@ DROP POLICY IF EXISTS "langchain_traces_superadmin_access" ON public."langchain_
 CREATE POLICY "langchain_traces_owner_access"
 ON public."langchain_traces"
 FOR ALL TO authenticated
-USING ("userId" = public.get_auth_user_id());
+USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Superadmins can view all traces
 CREATE POLICY "langchain_traces_superadmin_access"
 ON public."langchain_traces"
 FOR ALL TO authenticated
-USING (public.is_superadmin());
+USING ((SELECT public.is_superadmin()));
 
 -- ============================================
 -- RLS: Spans Table (Inherit from traces)
@@ -246,7 +246,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public."langchain_traces" t
     WHERE t."traceId" = "langchain_spans"."traceId"
-      AND t."userId" = public.get_auth_user_id()
+      AND t."userId" = (SELECT public.get_auth_user_id())
   )
 );
 
@@ -254,4 +254,4 @@ USING (
 CREATE POLICY "langchain_spans_superadmin_access"
 ON public."langchain_spans"
 FOR ALL TO authenticated
-USING (public.is_superadmin());
+USING ((SELECT public.is_superadmin()));

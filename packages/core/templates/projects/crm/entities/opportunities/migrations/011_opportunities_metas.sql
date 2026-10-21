@@ -69,7 +69,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public."opportunities" c
     WHERE c.id = "entityId"
-      AND c."userId" = public.get_auth_user_id()
+      AND c."userId" = (SELECT public.get_auth_user_id())
   )
 );
 
@@ -80,7 +80,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM public."opportunities" c
     WHERE c.id = "entityId"
-      AND c."userId" = public.get_auth_user_id()
+      AND c."userId" = (SELECT public.get_auth_user_id())
   )
 );
 
@@ -91,14 +91,14 @@ USING (
   EXISTS (
     SELECT 1 FROM public."opportunities" c
     WHERE c.id = "entityId"
-      AND c."userId" = public.get_auth_user_id()
+      AND c."userId" = (SELECT public.get_auth_user_id())
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public."opportunities" c
     WHERE c.id = "entityId"
-      AND c."userId" = public.get_auth_user_id()
+      AND c."userId" = (SELECT public.get_auth_user_id())
   )
 );
 
@@ -109,6 +109,6 @@ USING (
   EXISTS (
     SELECT 1 FROM public."opportunities" c
     WHERE c.id = "entityId"
-      AND c."userId" = public.get_auth_user_id()
+      AND c."userId" = (SELECT public.get_auth_user_id())
   )
 );

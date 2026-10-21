@@ -79,5 +79,5 @@ DROP POLICY IF EXISTS "langchain_sessions_owner_policy" ON public."langchain_ses
 CREATE POLICY "langchain_sessions_owner_policy"
 ON public."langchain_sessions"
 FOR ALL TO authenticated
-USING ("userId" = public.get_auth_user_id())
-WITH CHECK ("userId" = public.get_auth_user_id());
+USING ("userId" = (SELECT public.get_auth_user_id()))
+WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));

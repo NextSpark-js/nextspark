@@ -93,13 +93,13 @@ ON public."tasks"
 FOR ALL TO authenticated
 USING (
   -- Superadmin bypass
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
   -- Team isolation: user must be member of the team
-  "teamId" = ANY(public.get_user_team_ids())
+  "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
 )
 WITH CHECK (
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
-  "teamId" = ANY(public.get_user_team_ids())
+  "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
 );

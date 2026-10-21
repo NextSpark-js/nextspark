@@ -70,19 +70,19 @@ DROP POLICY IF EXISTS "pipelines_delete_policy" ON "pipelines";
 
 CREATE POLICY "pipelines_select_policy" ON "pipelines"
   FOR SELECT
-  USING ("teamId" = ANY(public.get_user_team_ids()) OR public.is_superadmin());
+  USING ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]) OR (SELECT public.is_superadmin()));
 
 CREATE POLICY "pipelines_insert_policy" ON "pipelines"
   FOR INSERT
-  WITH CHECK ("teamId" = ANY(public.get_user_team_ids()));
+  WITH CHECK ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]));
 
 CREATE POLICY "pipelines_update_policy" ON "pipelines"
   FOR UPDATE
-  USING ("teamId" = ANY(public.get_user_team_ids()) OR public.is_superadmin());
+  USING ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]) OR (SELECT public.is_superadmin()));
 
 CREATE POLICY "pipelines_delete_policy" ON "pipelines"
   FOR DELETE
-  USING ("teamId" = ANY(public.get_user_team_ids()) OR public.is_superadmin());
+  USING ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]) OR (SELECT public.is_superadmin()));
 
 -- ============================================
 -- TRIGGER updatedAt

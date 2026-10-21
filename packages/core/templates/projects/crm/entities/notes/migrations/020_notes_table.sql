@@ -71,29 +71,29 @@ DROP POLICY IF EXISTS "notes_delete_policy" ON "notes";
 CREATE POLICY "notes_select_policy" ON "notes"
   FOR SELECT
   USING (
-    (NOT "isPrivate" AND "teamId" = ANY(public.get_user_team_ids()))
-    OR ("isPrivate" AND "userId" = public.get_auth_user_id())
-    OR public.is_superadmin()
+    (NOT "isPrivate" AND "teamId" = ANY ((SELECT public.get_user_team_ids())::text[]))
+    OR ("isPrivate" AND "userId" = (SELECT public.get_auth_user_id()))
+    OR (SELECT public.is_superadmin())
   );
 
 CREATE POLICY "notes_insert_policy" ON "notes"
   FOR INSERT
-  WITH CHECK ("teamId" = ANY(public.get_user_team_ids()));
+  WITH CHECK ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]));
 
 CREATE POLICY "notes_update_policy" ON "notes"
   FOR UPDATE
   USING (
-    "userId" = public.get_auth_user_id()
-    OR ("teamId" = ANY(public.get_user_team_ids()) AND NOT "isPrivate")
-    OR public.is_superadmin()
+    "userId" = (SELECT public.get_auth_user_id())
+    OR ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]) AND NOT "isPrivate")
+    OR (SELECT public.is_superadmin())
   );
 
 CREATE POLICY "notes_delete_policy" ON "notes"
   FOR DELETE
   USING (
-    "userId" = public.get_auth_user_id()
-    OR ("teamId" = ANY(public.get_user_team_ids()) AND NOT "isPrivate")
-    OR public.is_superadmin()
+    "userId" = (SELECT public.get_auth_user_id())
+    OR ("teamId" = ANY ((SELECT public.get_user_team_ids())::text[]) AND NOT "isPrivate")
+    OR (SELECT public.is_superadmin())
   );
 
 -- ============================================

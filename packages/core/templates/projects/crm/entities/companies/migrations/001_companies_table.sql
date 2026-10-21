@@ -98,31 +98,31 @@ DROP POLICY IF EXISTS "companies_delete_policy" ON "companies";
 CREATE POLICY "companies_select_policy" ON "companies"
   FOR SELECT
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can create companies
 CREATE POLICY "companies_insert_policy" ON "companies"
   FOR INSERT
   WITH CHECK (
-    "teamId" = ANY(public.get_user_team_ids())
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   );
 
 -- Policy: Team members can update companies
 CREATE POLICY "companies_update_policy" ON "companies"
   FOR UPDATE
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can delete companies
 CREATE POLICY "companies_delete_policy" ON "companies"
   FOR DELETE
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- ============================================

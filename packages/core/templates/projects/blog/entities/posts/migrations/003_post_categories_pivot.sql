@@ -28,7 +28,7 @@ CREATE POLICY "post_categories_all_policy" ON "post_categories"
     EXISTS (
       SELECT 1 FROM "posts" p
       WHERE p.id = "postId"
-      AND p."teamId" = ANY(public.get_user_team_ids())
+      AND p."teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
     )
   );
 

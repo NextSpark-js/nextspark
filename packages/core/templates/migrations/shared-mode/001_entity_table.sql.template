@@ -96,8 +96,8 @@ WITH CHECK (true);
 --
 -- CREATE POLICY "{{ENTITY_NAME_PASCAL}} owner can update"
 -- ON public."{{ENTITY_NAME}}" FOR UPDATE TO authenticated
--- USING ("userId" = public.get_auth_user_id());
+-- USING ("userId" = (SELECT public.get_auth_user_id()));
 --
 -- CREATE POLICY "{{ENTITY_NAME_PASCAL}} owner can delete"
 -- ON public."{{ENTITY_NAME}}" FOR DELETE TO authenticated
--- USING ("userId" = public.get_auth_user_id());
+-- USING ("userId" = (SELECT public.get_auth_user_id()));

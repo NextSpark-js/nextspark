@@ -93,31 +93,31 @@ DROP POLICY IF EXISTS "opportunities_delete_policy" ON "opportunities";
 CREATE POLICY "opportunities_select_policy" ON "opportunities"
   FOR SELECT
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can create opportunities
 CREATE POLICY "opportunities_insert_policy" ON "opportunities"
   FOR INSERT
   WITH CHECK (
-    "teamId" = ANY(public.get_user_team_ids())
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   );
 
 -- Policy: Team members can update opportunities
 CREATE POLICY "opportunities_update_policy" ON "opportunities"
   FOR UPDATE
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can delete opportunities
 CREATE POLICY "opportunities_delete_policy" ON "opportunities"
   FOR DELETE
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- ============================================

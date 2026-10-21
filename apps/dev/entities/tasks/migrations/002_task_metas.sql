@@ -65,21 +65,21 @@ ON public."tasks_metas"
 FOR ALL TO authenticated
 USING (
   -- Superadmin bypass
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
   -- Team isolation via parent task
   EXISTS (
     SELECT 1 FROM public."tasks" t
     WHERE t.id = "entityId"
-      AND t."teamId" = ANY(public.get_user_team_ids())
+      AND t."teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   )
 )
 WITH CHECK (
-  public.is_superadmin()
+  (SELECT public.is_superadmin())
   OR
   EXISTS (
     SELECT 1 FROM public."tasks" t
     WHERE t.id = "entityId"
-      AND t."teamId" = ANY(public.get_user_team_ids())
+      AND t."teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   )
 );

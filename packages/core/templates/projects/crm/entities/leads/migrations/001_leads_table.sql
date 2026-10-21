@@ -97,31 +97,31 @@ DROP POLICY IF EXISTS "leads_delete_policy" ON "leads";
 CREATE POLICY "leads_select_policy" ON "leads"
   FOR SELECT
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can create leads
 CREATE POLICY "leads_insert_policy" ON "leads"
   FOR INSERT
   WITH CHECK (
-    "teamId" = ANY(public.get_user_team_ids())
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   );
 
 -- Policy: Team members can update leads
 CREATE POLICY "leads_update_policy" ON "leads"
   FOR UPDATE
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can delete leads (permission checked at app level)
 CREATE POLICY "leads_delete_policy" ON "leads"
   FOR DELETE
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- ============================================

@@ -24,7 +24,7 @@ async function freePort() {
 }
 
 /** A throwaway cluster with core's migrations (no sample data), an owner client and an app client, and their URLs. */
-export async function cutoverDatabase(t: TestContext) {
+export async function cutoverDatabase(t: TestContext, { except = [] as string[] } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-rls-pg-'))
   const port = await freePort()
   execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
@@ -43,7 +43,7 @@ export async function cutoverDatabase(t: TestContext) {
     return client
   }
   const owner = await connect('owner')
-  for (const file of fs.readdirSync(path.join(CORE, 'migrations')).filter(f => f.endsWith('.sql') && f !== '090_sample_data.sql').sort()) {
+  for (const file of fs.readdirSync(path.join(CORE, 'migrations')).filter(f => f.endsWith('.sql') && f !== '090_sample_data.sql' && !except.includes(f)).sort()) {
     await owner.query(fs.readFileSync(path.join(CORE, 'migrations', file), 'utf8'))
   }
   // the documented cutover: a login without BYPASSRLS that inherits nextspark_app

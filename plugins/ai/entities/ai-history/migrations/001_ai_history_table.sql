@@ -74,20 +74,20 @@ ALTER TABLE "ai_history" ENABLE ROW LEVEL SECURITY;
 -- Policies for ai_history table
 DROP POLICY IF EXISTS "Users can view own ai history" ON "ai_history";
 CREATE POLICY "Users can view own ai history" ON "ai_history"
-  FOR SELECT USING ("userId" = public.get_auth_user_id());
+  FOR SELECT USING ("userId" = (SELECT public.get_auth_user_id()));
 
 DROP POLICY IF EXISTS "Users can insert own ai history" ON "ai_history";
 CREATE POLICY "Users can insert own ai history" ON "ai_history"
-  FOR INSERT WITH CHECK ("userId" = public.get_auth_user_id());
+  FOR INSERT WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 DROP POLICY IF EXISTS "Users can update own ai history" ON "ai_history";
 CREATE POLICY "Users can update own ai history" ON "ai_history"
-  FOR UPDATE USING ("userId" = public.get_auth_user_id())
-  WITH CHECK ("userId" = public.get_auth_user_id());
+  FOR UPDATE USING ("userId" = (SELECT public.get_auth_user_id()))
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 DROP POLICY IF EXISTS "Users can delete own ai history" ON "ai_history";
 CREATE POLICY "Users can delete own ai history" ON "ai_history"
-  FOR DELETE USING ("userId" = public.get_auth_user_id());
+  FOR DELETE USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Admins can manage all ai history
 DROP POLICY IF EXISTS "Admins can manage all ai history" ON "ai_history";
@@ -95,14 +95,14 @@ CREATE POLICY "Admins can manage all ai history" ON "ai_history"
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM "users"
-      WHERE id = public.get_auth_user_id()
+      WHERE id = (SELECT public.get_auth_user_id())
         AND role IN ('admin','superadmin')
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM "users"
-      WHERE id = public.get_auth_user_id()
+      WHERE id = (SELECT public.get_auth_user_id())
         AND role IN ('admin','superadmin')
     )
   );

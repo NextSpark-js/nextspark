@@ -32,31 +32,31 @@ DROP POLICY IF EXISTS "lists_delete_policy" ON "lists";
 CREATE POLICY "lists_select_policy" ON "lists"
   FOR SELECT TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can create lists
 CREATE POLICY "lists_insert_policy" ON "lists"
   FOR INSERT TO authenticated
   WITH CHECK (
-    "teamId" = ANY(public.get_user_team_ids())
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   );
 
 -- Policy: Team members can update lists
 CREATE POLICY "lists_update_policy" ON "lists"
   FOR UPDATE TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can delete lists (owner only at app level)
 CREATE POLICY "lists_delete_policy" ON "lists"
   FOR DELETE TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Trigger for updatedAt

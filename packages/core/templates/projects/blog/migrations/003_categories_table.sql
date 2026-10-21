@@ -42,28 +42,28 @@ DROP POLICY IF EXISTS "categories_public_select_policy" ON "categories";
 CREATE POLICY "categories_select_policy" ON "categories"
   FOR SELECT TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 CREATE POLICY "categories_insert_policy" ON "categories"
   FOR INSERT TO authenticated
   WITH CHECK (
-    "teamId" = ANY(public.get_user_team_ids())
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   );
 
 CREATE POLICY "categories_update_policy" ON "categories"
   FOR UPDATE TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 CREATE POLICY "categories_delete_policy" ON "categories"
   FOR DELETE TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Public can see all categories (for public pages)

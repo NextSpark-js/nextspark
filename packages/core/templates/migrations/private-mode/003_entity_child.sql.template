@@ -71,14 +71,14 @@ USING (
   EXISTS (
     SELECT 1 FROM public."{{PARENT_ENTITY}}" p
     WHERE p.id = "parentId"
-      AND p."userId" = public.get_auth_user_id()
+      AND p."userId" = (SELECT public.get_auth_user_id())
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public."{{PARENT_ENTITY}}" p
     WHERE p.id = "parentId"
-      AND p."userId" = public.get_auth_user_id()
+      AND p."userId" = (SELECT public.get_auth_user_id())
   )
 );
 

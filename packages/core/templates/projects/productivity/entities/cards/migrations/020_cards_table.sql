@@ -42,31 +42,31 @@ DROP POLICY IF EXISTS "cards_delete_policy" ON "cards";
 CREATE POLICY "cards_select_policy" ON "cards"
   FOR SELECT TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can create cards
 CREATE POLICY "cards_insert_policy" ON "cards"
   FOR INSERT TO authenticated
   WITH CHECK (
-    "teamId" = ANY(public.get_user_team_ids())
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
   );
 
 -- Policy: Team members can update cards
 CREATE POLICY "cards_update_policy" ON "cards"
   FOR UPDATE TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Policy: Team members can delete cards
 CREATE POLICY "cards_delete_policy" ON "cards"
   FOR DELETE TO authenticated
   USING (
-    "teamId" = ANY(public.get_user_team_ids())
-    OR public.is_superadmin()
+    "teamId" = ANY ((SELECT public.get_user_team_ids())::text[])
+    OR (SELECT public.is_superadmin())
   );
 
 -- Trigger for updatedAt
