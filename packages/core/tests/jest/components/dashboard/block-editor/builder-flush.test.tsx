@@ -107,3 +107,54 @@ describe('builder save inside the settings debounce window', () => {
     expect(patchBodies()[0].blocks).toEqual(stored.blocks)
   })
 })
+
+// #354: the refetch after a save must not overwrite what was typed while the save was running.
+describe('builder refetch after a save', () => {
+  const gets = () => fetchMock.mock.calls.filter(([, init]) => !init?.method || init.method === 'GET').length
+
+  test('keeps an edit made while the save request was in flight', async () => {
+    const input = await openBlock()
+    fireEvent.change(input, { target: { value: 'first' } })
+    let finishSave!: () => void
+    fetchMock.mockImplementation(async (_url, init) => {
+      if (init?.method !== 'PATCH') return new Response(JSON.stringify({ success: true, data: current }), { status: 200 })
+      await new Promise<void>((resolve) => { finishSave = resolve })
+      current = { ...stored, blocks: [{ id: 'b1', blockSlug: 'hero', props: { title: 'first' } }] }
+      return new Response(JSON.stringify({ success: true, data: { id: 'p1' } }), { status: 200 })
+    })
+    fireEvent.click(document.querySelector('[data-cy="saveButton"]') as HTMLElement)
+    await waitFor(() => expect(patchBodies()).toHaveLength(1))
+
+    // typed after the request went out, and sent to the parent by the form's debounce
+    fireEvent.change(input, { target: { value: 'newer' } })
+    act(() => { jest.advanceTimersByTime(600) })
+    const getsBefore = gets()
+    await act(async () => { finishSave() })
+
+    // the entity was fetched again after the save, and the editor still holds the newer text
+    await waitFor(() => expect(gets()).toBeGreaterThan(getsBefore))
+    expect((document.querySelector('[data-cy="field"]') as HTMLInputElement).value).toBe('newer')
+  })
+
+  test('opening a different entity still replaces the blocks', async () => {
+    current = stored
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const view = (id: string) => (
+      <QueryClientProvider client={client}>
+        <BuilderEditorView entitySlug="pages" entityConfig={entityConfig as never} mode="edit" id={id} />
+      </QueryClientProvider>
+    )
+    const { rerender } = render(view('p1'))
+    await waitFor(() => expect(screen.getByTestId('select')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('select'))
+    await waitFor(() => expect((document.querySelector('[data-cy="field"]') as HTMLInputElement).value).toBe('a'))
+
+    current = { ...stored, id: 'p2', blocks: [{ id: 'b2', blockSlug: 'hero', props: { title: 'other' } }] }
+    rerender(view('p2'))
+    // the block list is the other entity's: selecting its first block shows its text
+    await waitFor(() => {
+      fireEvent.click(screen.getByTestId('select'))
+      expect((document.querySelector('[data-cy="field"]') as HTMLInputElement).value).toBe('other')
+    })
+  })
+})

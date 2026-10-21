@@ -171,9 +171,16 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     blocksRef.current = blocks
   }, [blocks])
 
+  // The entity the form was last filled from: a refetch of the same entity (after a save) must not
+  // replace edits made while the save was running
+  const initializedFor = useRef<string | null>(null)
+
   // Initialize form with entity data (edit mode)
   useEffect(() => {
     if (mode === 'edit' && entityData?.data) {
+      const key = `${entitySlug}/${id}`
+      if (initializedFor.current === key) return
+      initializedFor.current = key
       const entity = entityData.data
       setTitle(entity.title ?? '')
       setSlug(entity.slug ?? '')
@@ -191,7 +198,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
       })
       setEntityFields(fields)
     }
-  }, [entityData, entityConfig, mode])
+  }, [entityData, entityConfig, mode, entitySlug, id])
 
   // Track unsaved changes (edit mode only)
   useEffect(() => {
