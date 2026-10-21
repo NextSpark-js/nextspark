@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `QueryProvider` accepts optional `client` and `defaultOptions` props: an injected `QueryClient` is the one provided to the tree, and `defaultOptions` are merged over the current defaults in a client the provider creates. Without props the shared `queryClient` and its defaults are unchanged (#336).
+
 ### Fixed
 
 - A release build (`__DEV__` false) with neither `extra.apiUrl` nor `EXPO_PUBLIC_API_URL` now throws a clear "API URL is not configured" error when the client loads, instead of sending every request to a localhost URL. Development keeps the dev server host and localhost fallbacks (#317).
