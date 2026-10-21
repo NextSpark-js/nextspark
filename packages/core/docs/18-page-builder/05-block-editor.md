@@ -454,11 +454,20 @@ export const myThemeConfig: ThemeConfig = {
 ```
 
 ```tsx
-// components/builder/rating-field.tsx
+// components/builder/rating-field.tsx: the module theme.config.ts imports. Keep it small.
+'use client'
+import dynamic from 'next/dynamic'
+
+// the real component, and whatever UI it pulls in, loads only when the editor shows a `rating` field
+export const RatingField = dynamic(() => import('./rating-field-impl'))
+```
+
+```tsx
+// components/builder/rating-field-impl.tsx
 'use client'
 import type { FieldRendererProps } from '@nextsparkjs/core/components/dashboard/block-editor/editor-extensions'
 
-export function RatingField({ value, onChange, dataCy }: FieldRendererProps) {
+export default function RatingFieldImpl({ value, onChange, dataCy }: FieldRendererProps) {
   return (
     <input type="number" min={1} max={5} value={Number(value) || 1} data-cy={dataCy}
       onChange={(e) => onChange(Number(e.target.value))} />
@@ -466,11 +475,13 @@ export function RatingField({ value, onChange, dataCy }: FieldRendererProps) {
 }
 ```
 
+**Keep what `theme.config.ts` imports light.** The theme configuration is also loaded by the server registry and reaches the bundle of the proxy, so a static import of a renderer, and of every UI library it imports, ends up there too. Import only a thin wrapper (as above, with `next/dynamic`, or a small component that has no heavy dependencies) and put the real component behind a dynamic import. The same applies to the panels of `components.builder` below.
+
 Code that runs on the client before the editor renders can also call `registerFieldRenderer(type, Renderer)` from the same module. It returns a function that removes the renderer again, and it wins over a renderer of the theme configuration for the same type. A field type outside the built-in list is valid in a `FieldDefinition` (`type: 'rating'`); without a renderer it falls back to a text input. The built-in renderers stay in the `switch` of `dynamic-form.tsx` and `array-field.tsx`: they are the defaults used when no renderer is registered for the type.
 
 ### Replacing Editor Panels
 
-The editor renders its `TreeView` (inside the block picker), `BlockPicker` and `ConfigPanel` unless you give it other components. Pass them with the `components` prop of `BuilderEditorView`, or set them once for the project in `theme.config.ts` as `components.builder`; the prop wins over the theme for the same panel.
+The editor renders its `TreeView` (inside the block picker), `BlockPicker` and `ConfigPanel` unless you give it other components. Pass them with the `components` prop of `BuilderEditorView`, or set them once for the project in `theme.config.ts` as `components.builder`; the prop wins over the theme for the same panel. `theme.config.ts` is the normal way for a project: the `components` prop only works from a client component (a server component cannot pass functions as props).
 
 ```tsx
 export const myThemeConfig: ThemeConfig = {

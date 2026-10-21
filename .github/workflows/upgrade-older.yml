@@ -1,11 +1,13 @@
 name: Upgrade from older releases
 
-# The same upgrade check as upgrade-183.yml, from the older releases that can still be created: 0.1.0-beta.163 (the oldest
-# create-nextspark-app that installs its own core instead of the current one), .170 and .182 (the newest before .183).
+# The same upgrade check as upgrade-183.yml, from older releases. The entries differ in what the published project has:
+# .167 (the oldest that can be updated; it adds core migration 022), .178 (the last before core migrations 023 and 024, with
+# the newest login and signup pages of the range) and .180 (the first whose database already has 023 and 024).
 # Each entry creates a project as that published create-nextspark-app makes it, customizes it, upgrades it with the
 # `nextspark migrate` of this repository's main, then installs, prepares, runs db:migrate, builds and serves it; the job
-# fails when any step fails. Releases before .163 are not in the matrix because they cannot be created (see "Supported
-# starting versions" in packages/core/docs/17-updates/06-upgrade-0x-projects.md). The .183 start keeps its own workflow.
+# fails when any step fails. .163-.166 are not in the matrix (their database cannot be updated) and older releases cannot
+# be created at all: see "Supported starting versions" in packages/core/docs/17-updates/06-upgrade-0x-projects.md.
+# The .183 start keeps its own workflow.
 # It reads only the npm registry and this repository; it needs no secret.
 on:
   # a pull request that changes this workflow or the script runs it, since a schedule and a dispatch only exist on main
@@ -39,9 +41,9 @@ jobs:
       fail-fast: false
       matrix:
         from:
-          - 0.1.0-beta.163
-          - 0.1.0-beta.170
-          - 0.1.0-beta.182
+          - 0.1.0-beta.167
+          - 0.1.0-beta.178
+          - 0.1.0-beta.180
     services:
       postgres:
         image: postgres:15

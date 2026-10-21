@@ -19,9 +19,10 @@
  *        [--port 4950] [--database upgrade183_ci] [--from 0.1.0-beta.183] [--keep]
  *
  * --from      the published create-nextspark-app release the project starts from (default 0.1.0-beta.183, the weekly job).
- *             upgrade-older.yml runs the same steps from 0.1.0-beta.163, .170 and .182. Only releases from .163 up to .183
- *             work: before .163 the published launcher installs the current core instead of its own version, so it does not
- *             create an old project (see the upgrade guide, "Supported starting versions")
+ *             upgrade-older.yml runs the same steps from 0.1.0-beta.167, .178 and .180. Only .167 up to .183 are accepted:
+ *             before .163 the published launcher installs the current core instead of its own version, and a database made
+ *             by .163-.166 cannot be updated (team_members.role changed from ENUM to TEXT in .167 with no conversion
+ *             migration); see the upgrade guide, "Supported starting versions"
  *
  * --packages  the tarballs `scripts/packages/pack.sh --all` writes (cli, core, ui and testing are used)
  * --work      scratch directory outside this repository (default: a new one under $TMPDIR); must be new or empty;
@@ -62,9 +63,9 @@ const usage = (message) => {
 }
 if (!values.packages || !existsSync(values.packages)) usage('--packages must be a directory of tarballs')
 if (!/^[a-z0-9_]+$/.test(values.database)) usage('--database takes lower-case letters, digits and underscores')
-// ponytail: the creatable range is hard-coded; before .163 the launcher installs the current core (see the header)
-const fromBuild = /^0\.1\.0-beta\.(\d+)$/.exec(values.from)?.[1]
-if (!fromBuild || Number(fromBuild) < 163 || Number(fromBuild) > 183) usage('--from takes a published 0.1.0-beta.N between 163 and 183')
+// ponytail: the range is hard-coded (see the header); no leading zeros, so `beta.0170` is not a release
+const fromBuild = /^0\.1\.0-beta\.([1-9]\d*)$/.exec(values.from)?.[1]
+if (!fromBuild || Number(fromBuild) < 167 || Number(fromBuild) > 183) usage('--from takes a published 0.1.0-beta.N between 167 and 183')
 const FIXTURE_VERSION = values.from
 const packages = path.resolve(values.packages)
 const tarball = (name) => {
@@ -260,6 +261,9 @@ export default fixturePluginConfig
     for (const [name, file] of Object.entries(tarballs)) {
       for (const field of ['dependencies', 'devDependencies']) if (manifest[field]?.[name]) manifest[field][name] = `file:${file}`
     }
+    // The packed core and cli depend on their siblings at an exact version that may not be published (core on ui, cli on
+    // core); an override makes every dependent, direct or not, take the tarball too
+    manifest.pnpm = { ...manifest.pnpm, overrides: { ...manifest.pnpm?.overrides, ...Object.fromEntries(Object.entries(tarballs).map(([name, file]) => [name, `file:${file}`])) } }
     write('package.json', `${JSON.stringify(manifest, null, 2)}\n`)
     must('install-bumped', 'pnpm', ['install', '--no-frozen-lockfile'])
     must('git-commit-bump', 'git', ['add', '-A'])

@@ -111,4 +111,19 @@ describe('editor panels from the theme configuration', () => {
     expect(screen.queryByTestId('theme-config')).not.toBeInTheDocument()
     expect(screen.getByTestId('theme-picker')).toBeInTheDocument()
   })
+
+  test('the prop wins over the theme for BlockPicker and TreeView too', () => {
+    const PropTree = () => null
+    const ThemeTree = () => null
+    themeComponents().builder = {
+      TreeView: ThemeTree,
+      BlockPicker: () => <div data-testid="theme-picker" />,
+    }
+    renderBuilder({
+      TreeView: PropTree,
+      BlockPicker: ({ TreeView }: { TreeView?: unknown }) => <div data-testid="prop-picker" data-prop-tree={String(TreeView === PropTree)} />,
+    })
+    expect(screen.queryByTestId('theme-picker')).not.toBeInTheDocument()
+    expect(screen.getByTestId('prop-picker')).toHaveAttribute('data-prop-tree', 'true')
+  })
 })

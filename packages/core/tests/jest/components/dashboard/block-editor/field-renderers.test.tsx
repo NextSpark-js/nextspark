@@ -6,6 +6,8 @@
 // switch. A project can add a type, replace a built-in one, or supply them from the theme configuration.
 
 import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals'
+import { readFileSync } from 'fs'
+import path from 'path'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { DynamicForm } from '@/core/components/dashboard/block-editor/dynamic-form'
 import { ArrayField } from '@/core/components/dashboard/block-editor/array-field'
@@ -64,8 +66,23 @@ function form(fields: FieldDefinition[], values: Record<string, unknown> = {}) {
 }
 
 describe('empty registry', () => {
+  // field-switch-output.html is the output of the `switch` before the registry existed (captured from the code
+  // of the previous commit): the form for 15 field types with an array of the same, then an ArrayField on its own
+  test('the output of the switch is the one captured before the registry existed', () => {
+    const types = ['text', 'textarea', 'rich-text', 'url', 'number', 'select', 'image', 'media-library', 'checkbox', 'radio', 'color', 'date', 'time', 'datetime', 'weird']
+    const options = [{ label: 'A', value: 'a' }]
+    const fields = types.map((t) => ({ name: `f_${t}`, type: t, label: t, options })) as FieldDefinition[]
+    const arrayField = { name: 'arr', type: 'array', label: 'Arr', itemFields: types.filter((t) => t !== 'checkbox').map((t) => ({ name: `i_${t}`, type: t, label: t, options })) } as FieldDefinition
+    fields.push(arrayField)
+    const { view } = form(fields, { arr: [{ i_text: 'x' }], f_text: 'q' })
+    const array = render(<ArrayField field={arrayField} value={[{ i_text: 'y' }, {}]} onChange={jest.fn()} />)
+    const normalize = (html: string) => html.replace(/radix-_r_[a-z0-9]+_/g, 'radix')
+    const expected = readFileSync(path.join(__dirname, 'fixtures', 'field-switch-output.html'), 'utf8')
+    expect(`${normalize(view.container.innerHTML)}\n${normalize(array.container.innerHTML)}`).toBe(expected)
+  })
+
   test('DynamicForm renders the same markup after a registration is removed again', () => {
-    const html = (container: HTMLElement) => container.innerHTML.replace(/radix-_r_\d+_/g, 'radix')
+    const html = (container: HTMLElement) => container.innerHTML.replace(/radix-_r_[a-z0-9]+_/g, 'radix')
     const { view } = form(formFields, { title: 'a' })
     const before = html(view.container)
     registerFieldRenderer('text', rating)()
