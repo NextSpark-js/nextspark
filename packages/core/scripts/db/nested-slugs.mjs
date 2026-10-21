@@ -22,7 +22,7 @@ export async function nestedSlugsSetting(projectRoot) {
     if (!exportName) return off('no exported *EntityConfig');
     const { facts, error } = await readEntityFacts({ source, file, exportName, projectRoot });
     if (!facts) return off(error ?? 'unreadable');
-    // validatePublicSlug: at the root `allowNestedSlugs` decides; at any other base path (even '') nested slugs are fine; with none, they are not
+    // validatePublicSlug: at the root `allowNestedSlugs` decides; at any other non-empty base path nested slugs are fine; with none (an empty one counts as none), they are not
     const basePath = facts.basePath.state === 'absent' ? facts.legacyBasePath : facts.basePath;
     if (basePath.state === 'unknown') return off('basePath is not a literal');
     if (basePath.state === 'absent') return { setting: 'off' };
