@@ -51,8 +51,8 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
   };
 
   return (
-    <PressableCard className="mx-4 my-1.5" onPress={onPress}>
-      <CardContent className="gap-2">
+    <PressableCard style={{ marginHorizontal: 16, marginVertical: 6 }} onPress={onPress}>
+      <CardContent style={{ gap: 8 }}>
         {/* Title */}
         <Text weight="semibold" className="text-base" numberOfLines={2}>
           {task.title}

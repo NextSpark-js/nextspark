@@ -139,7 +139,7 @@ export function TaskForm({
     >
       {/* Error Display */}
       {error && (
-        <Card className="mb-4 border-destructive bg-red-50">
+        <Card style={{ marginBottom: 16, borderColor: "#ef4444", backgroundColor: "#fef2f2" }}>
           <Text variant="error">{error}</Text>
         </Card>
       )}

@@ -14,7 +14,7 @@ interface CustomerCardProps {
 
 export function CustomerCard({ customer, onPress }: CustomerCardProps) {
   return (
-    <PressableCard className="mx-4 my-1.5" onPress={onPress}>
+    <PressableCard style={{ marginHorizontal: 16, marginVertical: 6 }} onPress={onPress}>
       <CardContent>
         {/* Header: Name + Account Badge */}
         <View className="mb-3 flex-row items-center justify-between">

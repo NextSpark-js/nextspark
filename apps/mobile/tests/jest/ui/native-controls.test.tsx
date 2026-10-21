@@ -4,7 +4,15 @@ import { render } from '@testing-library/react-native'
 import { Button } from '../../../../../packages/ui/src/components/Button.native'
 import { Input } from '../../../../../packages/ui/src/components/Input.native'
 import { Select } from '../../../../../packages/ui/src/components/Select.native'
-import { Card, CardContent, PressableCard } from '../../../../../packages/ui/src/components/Card.native'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  PressableCard,
+} from '../../../../../packages/ui/src/components/Card.native'
 
 // Jest has no layout engine, so a rendered fontScale cannot be measured: these tests pin the
 // style contract that lets the control grow (minHeight, no fixed height) and keeps the size at
@@ -56,6 +64,29 @@ describe('Card className', () => {
     expect(warn).toHaveBeenCalledTimes(1)
     expect(warn.mock.calls[0][0]).toContain('CardContent')
     expect(warn.mock.calls[0][0]).toContain('style')
+  })
+
+  it('is silent outside development', () => {
+    const g = globalThis as unknown as { __DEV__: boolean }
+    const previous = g.__DEV__
+    g.__DEV__ = false
+    try {
+      render(<CardFooter className="p-4" />)
+    } finally {
+      g.__DEV__ = previous
+    }
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['CardHeader', CardHeader],
+    ['CardTitle', CardTitle],
+    ['CardDescription', CardDescription],
+    ['CardFooter', CardFooter],
+  ] as const)('warns for %s', (name, Part) => {
+    render(<Part className="p-4" />)
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0][0]).toContain(`${name}:`)
   })
 
   it('warns for Card and PressableCard', () => {

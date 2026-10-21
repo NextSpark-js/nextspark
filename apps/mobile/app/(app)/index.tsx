@@ -68,7 +68,7 @@ export default function HomeScreen() {
             <Text style={styles.cardIcon}>💳</Text>
           </View>
           <Text style={styles.cardValue}>Gratis</Text>
-          <Button variant="link" size="sm" style={{ alignSelf: 'flex-start', height: 'auto', paddingHorizontal: 0 }}>
+          <Button variant="link" size="sm" style={{ alignSelf: 'flex-start', height: 'auto', minHeight: 0, paddingVertical: 0, paddingHorizontal: 0 }}>
             Actualizar plan →
           </Button>
         </View>
