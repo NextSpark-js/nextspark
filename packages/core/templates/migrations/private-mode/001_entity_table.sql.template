@@ -63,7 +63,7 @@ DROP POLICY IF EXISTS "{{ENTITY_NAME_PASCAL}} owner can do all" ON public."{{ENT
 -- RLS: PRIVATE TO OWNER
 -- ============================
 -- Only the owner can access their own records
--- Uses Better Auth's get_auth_user_id() function
+-- Uses Better Auth's get_auth_user_id helper function
 CREATE POLICY "{{ENTITY_NAME_PASCAL}} owner can do all"
 ON public."{{ENTITY_NAME}}"
 FOR ALL TO authenticated

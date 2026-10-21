@@ -15,7 +15,8 @@ const MIGRATION = '043_rls_helpers_select_wrapper.sql'
 const HELPERS = 'get_user_team_ids|is_superadmin|can_bypass_rls|get_auth_user_id'
 // a call that is not wrapped: not after SELECT, and not the argument of the one-argument get_user_team_ids( form
 const UNWRAPPED = new RegExp(`(?<!SELECT )(?<![\\w.])(?<!get_user_team_ids\\()(?:public\\.)?(?:${HELPERS})\\(\\)`)
-const UNWRAPPED_QUALIFIED = new RegExp(`(?<!SELECT )(?<![\\w])public\\.(?:${HELPERS})\\(\\)`, 'g')
+const UNWRAPPED_FILE = new RegExp(UNWRAPPED.source, 'g')
+const UNWRAPPED_ANY = /\b(?:ANY|ALL) ?\((?:public\.)?get_user_team_ids\(\)\)/
 
 const POLICIES = `SELECT tablename, policyname, permissive, roles::text AS roles, cmd, qual, with_check
   FROM pg_policies WHERE schemaname = 'public' ORDER BY tablename, policyname`
@@ -25,7 +26,7 @@ function unwrap(value: string | null) {
   if (value === null) return null
   return value
     .replace(/\(\s*SELECT (\w+\(\)) AS \w+\)/g, '$1')
-    .replace(/ANY \((get_user_team_ids\(\))::text\[\]\)/g, 'ANY ($1)')
+    .replace(/(ANY|ALL) \((get_user_team_ids\(\))::text\[\]\)/g, '$1 ($2)')
 }
 
 // The shapes the entity templates had before: team isolation, a superadmin bypass and an owner check
@@ -44,7 +45,14 @@ const OLD_TEMPLATE_TABLES = `
   CREATE POLICY ent_child_all ON ent_child FOR ALL TO authenticated USING (
     EXISTS (SELECT 1 FROM ent_team p WHERE p.id = "parentId" AND (p."teamId" = ANY(public.get_user_team_ids()) OR public.is_superadmin()))
   );
-  GRANT ALL ON ent_team, ent_user, ent_child TO authenticated;
+  -- a project policy with <> ALL, and one with a helper name inside a string (data, not a call)
+  CREATE TABLE ent_all (id serial PRIMARY KEY, "teamId" text NOT NULL);
+  ALTER TABLE ent_all ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY ent_all_other ON ent_all FOR SELECT TO authenticated USING ("teamId" <> ALL (public.get_user_team_ids()));
+  CREATE TABLE ent_lit (id serial PRIMARY KEY, "userId" text NOT NULL, title text);
+  ALTER TABLE ent_lit ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY ent_lit_select ON ent_lit FOR SELECT TO authenticated USING (title <> 'is_superadmin()' AND "userId" = public.get_auth_user_id());
+  GRANT ALL ON ent_team, ent_user, ent_child, ent_all, ent_lit TO authenticated;
   GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
   INSERT INTO users (id, email, name, role, "emailVerified") VALUES
     ('owna', 'owna@example.test', 'Owner A', 'member', true),
@@ -57,6 +65,8 @@ const OLD_TEMPLATE_TABLES = `
   INSERT INTO ent_team ("teamId", "userId", title) SELECT 'team-b', 'ownb', 'b' || g FROM generate_series(1, 2) g;
   INSERT INTO ent_user ("userId", title) VALUES ('owna', 'mine-a'), ('ownb', 'mine-b');
   INSERT INTO ent_child ("parentId") SELECT id FROM ent_team;
+  INSERT INTO ent_all ("teamId") VALUES ('team-a'), ('team-b'), ('team-c');
+  INSERT INTO ent_lit ("userId", title) VALUES ('owna', 'x'), ('owna', 'is_superadmin()'), ('ownb', 'y');
 `
 
 test('migration 043 wraps the helper calls of existing policies and changes nothing else', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
@@ -66,7 +76,7 @@ test('migration 043 wraps the helper calls of existing policies and changes noth
   const visible = async () => {
     const seen: Record<string, unknown> = {}
     for (const user of ['owna', 'ownb', 'root', 'outsider']) {
-      for (const table of ['ent_team', 'ent_user', 'ent_child', 'team_members', 'teams']) {
+      for (const table of ['ent_team', 'ent_user', 'ent_child', 'ent_all', 'ent_lit', 'team_members', 'teams']) {
         seen[`${user}/${table}`] = (await as(user, `SELECT * FROM ${table} ORDER BY 1, 2`)).rows
       }
     }
@@ -81,7 +91,26 @@ test('migration 043 wraps the helper calls of existing policies and changes noth
   await assert.rejects(as('owna', `INSERT INTO ent_team ("teamId", title) VALUES ('team-b', 'x')`), /row-level security/)
   await owner.query(`DELETE FROM ent_team WHERE title = 'new'`)
 
-  await owner.query(fs.readFileSync(path.join(CORE, 'migrations', MIGRATION), 'utf8'))
+  // one ALTER POLICY is refused (an event trigger fails the first one): that policy stays as it was, with a warning
+  await owner.query(`
+    CREATE SEQUENCE fail_first;
+    CREATE FUNCTION refuse_first() RETURNS event_trigger LANGUAGE plpgsql AS $$
+    BEGIN IF nextval('fail_first') = 1 THEN RAISE EXCEPTION 'refused'; END IF; END $$;
+    CREATE EVENT TRIGGER refuse_first ON ddl_command_start WHEN TAG IN ('ALTER POLICY') EXECUTE FUNCTION refuse_first();
+  `)
+  const warnings: string[] = []
+  owner.on('notice', n => warnings.push(n.message))
+  const migration = fs.readFileSync(path.join(CORE, 'migrations', MIGRATION), 'utf8')
+  await owner.query(migration)
+  const refused = warnings.filter(w => /left unchanged: refused/.test(w))
+  assert.equal(refused.length, 1, warnings.join('\n'))
+  // the policy with a helper name inside a string is left alone, with a warning
+  assert.ok(warnings.some(w => /ent_lit_select on ent_lit left unchanged: a string literal/.test(w)))
+  const stillUnwrapped = (await owner.query(POLICIES)).rows.filter(p => UNWRAPPED.test(`${p.qual} ${p.with_check}`)).map(p => p.policyname)
+  assert.equal(stillUnwrapped.filter(n => n !== 'ent_lit_select').length, 1, stillUnwrapped.join(', '))
+  // with nothing refusing, the rest is rewritten
+  await owner.query('DROP EVENT TRIGGER refuse_first')
+  await owner.query(migration)
   const policiesAfter = (await owner.query(POLICIES)).rows
 
   // the same policies, with the same commands and roles, and expressions that differ only by the wrapper
@@ -90,8 +119,13 @@ test('migration 043 wraps the helper calls of existing policies and changes noth
     policiesAfter.map(p => ({ ...p, qual: unwrap(p.qual), with_check: unwrap(p.with_check) })),
     policiesBefore,
   )
-  for (const p of policiesAfter) assert.doesNotMatch(`${p.qual} ${p.with_check}`, UNWRAPPED, `${p.tablename}.${p.policyname} is still unwrapped`)
-  assert.ok(policiesAfter.filter(p => p.qual !== policiesBefore.find(b => b.tablename === p.tablename && b.policyname === p.policyname)?.qual).length >= 40)
+  for (const p of policiesAfter) {
+    if (p.policyname === 'ent_lit_select') continue
+    assert.doesNotMatch(`${p.qual} ${p.with_check}`, UNWRAPPED, `${p.tablename}.${p.policyname} is still unwrapped`)
+  }
+  // <> ALL is cast like ANY, and the string is untouched
+  assert.match(policiesAfter.find(p => p.policyname === 'ent_all_other').qual, /<> ALL \(\( SELECT get_user_team_ids\(\) AS get_user_team_ids\)::text\[\]\)/)
+  assert.match(policiesAfter.find(p => p.policyname === 'ent_lit_select').qual, /'is_superadmin\(\)'::text\) AND \("userId" = get_auth_user_id\(\)\)/)
 
   // who sees what, and who may write what, is the same
   assert.deepEqual(await visible(), seenBefore)
@@ -101,7 +135,7 @@ test('migration 043 wraps the helper calls of existing policies and changes noth
   await as('root', `INSERT INTO ent_team ("teamId", title) VALUES ('team-b', 'root')`)
 
   // a second run alters nothing
-  await owner.query(fs.readFileSync(path.join(CORE, 'migrations', MIGRATION), 'utf8'))
+  await owner.query(migration)
   assert.deepEqual((await owner.query(POLICIES)).rows, policiesAfter)
 })
 
@@ -123,28 +157,27 @@ test('a wrapped helper is evaluated once per statement: the plan has an InitPlan
   assert.match(await plan(), /InitPlan/)
 })
 
+const SKIP_DIRS = new Set(['node_modules', '.git', '.claude', '.next', 'dist', '.turbo'])
 function* sqlFiles(dir: string): Generator<string> {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'node_modules') continue
+    if (SKIP_DIRS.has(entry.name)) continue
     const file = path.join(dir, entry.name)
     if (entry.isDirectory()) yield* sqlFiles(file)
     else if (/\.sql(\.template)?$/.test(entry.name)) yield file
   }
 }
 
-test('the entity templates, the generated projects and the plugins write the helper calls wrapped', () => {
+test('the entity templates, the generated projects, the themes and the plugins write the helper calls wrapped', () => {
   const root = path.resolve(CORE, '../..')
-  const files = [
-    ...sqlFiles(path.join(CORE, 'templates')),
-    ...sqlFiles(path.join(root, 'apps/dev/entities')),
-    ...sqlFiles(path.join(root, 'plugins')),
-  ].filter(file => file.includes(`${path.sep}migrations${path.sep}`))
-  assert.ok(files.length > 40)
+  const coreMigrations = path.join(CORE, 'migrations') + path.sep
+  // every migration file of the repository but core's own (those are applied history, rewritten by 043)
+  const files = [...sqlFiles(root)].filter(file => file.includes(`${path.sep}migrations${path.sep}`) && !file.startsWith(coreMigrations))
+  assert.ok(files.length > 60, `${files.length} files`)
   for (const file of files) {
-    // comments included: the policies a template leaves commented out are copied from it
-    const text = fs.readFileSync(file, 'utf8')
-    assert.equal(text.match(UNWRAPPED_QUALIFIED), null, `${path.relative(root, file)} calls an RLS helper without (SELECT ...)`)
-    assert.doesNotMatch(text, new RegExp(`ANY ?\\((?:public\\.)?get_user_team_ids\\(\\)\\)`), `${path.relative(root, file)} passes the helper to ANY unwrapped`)
+    // comments included: the policies a template leaves commented out are copied from it; function bodies are not policies
+    const text = fs.readFileSync(file, 'utf8').replace(/\$(\w*)\$[\s\S]*?\$\1\$/g, '')
+    assert.equal(text.match(UNWRAPPED_FILE), null, `${path.relative(root, file)} calls an RLS helper without (SELECT ...)`)
+    assert.doesNotMatch(text, UNWRAPPED_ANY, `${path.relative(root, file)} passes the helper to ANY or ALL unwrapped`)
   }
   const team = fs.readFileSync(path.join(CORE, 'templates/migrations/team-mode/001_entity_table.sql.template'), 'utf8')
   assert.match(team, /\(SELECT public\.is_superadmin\(\)\)/)
