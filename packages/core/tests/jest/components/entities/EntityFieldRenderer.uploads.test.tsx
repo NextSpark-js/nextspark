@@ -62,6 +62,8 @@ beforeEach(() => {
     set() { setTimeout(() => (this as HTMLMediaElement).onerror?.(new Event('error')), 0) },
   })
   global.URL.createObjectURL = jest.fn(() => 'blob:http://localhost/local-only')
+  global.URL.revokeObjectURL = jest.fn()
+  HTMLMediaElement.prototype.load = jest.fn()
 })
 
 describe.each(CASES)('$type field', ({ type, file: make }) => {

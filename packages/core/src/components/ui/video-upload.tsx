@@ -94,31 +94,37 @@ export function VideoUpload({
     return new Promise((resolve) => {
       const video = document.createElement('video')
       video.preload = 'metadata'
-      // A file that fires none of these events would hold its upload slot forever: upload it without a thumbnail
-      const timer = setTimeout(() => resolve(''), MEDIA_PROBE_TIMEOUT_MS)
-      
+      const src = URL.createObjectURL(file)
+      // One way out for success, error and timeout: free the element and the object URL, then answer.
+      // A file that fires none of the events would hold its upload slot forever, so it uploads without a thumbnail.
+      const settle = (thumbnail: string) => {
+        clearTimeout(timer)
+        video.onloadedmetadata = video.onseeked = video.onerror = null
+        URL.revokeObjectURL(src)
+        video.removeAttribute('src')
+        video.load()
+        resolve(thumbnail)
+      }
+      const timer = setTimeout(() => settle(''), MEDIA_PROBE_TIMEOUT_MS)
+
       video.onloadedmetadata = () => {
         video.currentTime = video.duration / 2 // Middle of video
       }
-      
+
       video.onseeked = () => {
-        clearTimeout(timer)
         const canvas = document.createElement('canvas')
         canvas.width = video.videoWidth
         canvas.height = video.videoHeight
-        
+
         const ctx = canvas.getContext('2d')
         ctx?.drawImage(video, 0, 0, canvas.width, canvas.height)
-        
-        resolve(canvas.toDataURL())
+
+        settle(canvas.toDataURL())
       }
-      
-      video.onerror = () => {
-        clearTimeout(timer)
-        resolve('') // Return empty string if thumbnail generation fails
-      }
-      
-      video.src = URL.createObjectURL(file)
+
+      video.onerror = () => settle('') // Empty string if thumbnail generation fails
+
+      video.src = src
     })
   }
 

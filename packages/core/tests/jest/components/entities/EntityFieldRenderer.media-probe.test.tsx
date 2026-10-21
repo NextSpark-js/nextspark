@@ -31,6 +31,8 @@ beforeEach(() => {
   // the element never fires loadedmetadata, seeked or error
   Object.defineProperty(HTMLMediaElement.prototype, 'src', { configurable: true, set() {} })
   global.URL.createObjectURL = jest.fn(() => 'blob:http://localhost/local-only')
+  global.URL.revokeObjectURL = jest.fn()
+  HTMLMediaElement.prototype.load = jest.fn()
 })
 afterEach(() => jest.useRealTimers())
 
@@ -51,5 +53,31 @@ describe.each(CASES)('$type field', ({ type, file, extra }) => {
     const [item] = onChange.mock.calls[0][0] as Array<Record<string, unknown>>
     expect(item).toMatchObject({ id: 'm1', url: '/f/x' })
     expect(item.thumbnail || item.duration).toBeFalsy()
+    // the object URL made for the check is released
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:http://localhost/local-only')
+  })
+})
+
+describe('audio field', () => {
+  it('still stores the duration of a file that loads, and releases the object URL', async () => {
+    // the element reports its metadata as soon as it gets a source
+    Object.defineProperty(HTMLMediaElement.prototype, 'src', {
+      configurable: true,
+      set() {
+        Object.defineProperty(this, 'duration', { value: 42, configurable: true })
+        setTimeout(() => (this as HTMLMediaElement).onloadedmetadata?.(new Event('loadedmetadata')), 0)
+      },
+    })
+    mutateAsync.mockResolvedValue({ urls: ['/f/x'], media: [{ id: 'm1', url: '/f/x' }], count: 1, storage: 'local' })
+    const onChange = jest.fn()
+    const { container } = render(<EntityFieldRenderer field={field('audio')} value={[]} onChange={onChange} mode="form" />)
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement
+
+    await act(async () => { fireEvent.change(input, { target: { files: [CASES[1].file] } }) })
+    await act(async () => { jest.advanceTimersByTime(1) })
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect((onChange.mock.calls[0][0] as Array<Record<string, unknown>>)[0].duration).toBe(42)
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:http://localhost/local-only')
   })
 })

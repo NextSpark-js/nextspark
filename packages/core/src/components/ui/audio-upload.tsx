@@ -98,20 +98,24 @@ export function AudioUpload({
     return new Promise((resolve) => {
       const audio = document.createElement('audio')
       audio.preload = 'metadata'
-      // A file that fires neither event would hold its upload slot forever: upload it without a duration
-      const timer = setTimeout(() => resolve(undefined), MEDIA_PROBE_TIMEOUT_MS)
-      
-      audio.onloadedmetadata = () => {
+      const src = URL.createObjectURL(file)
+      // One way out for success, error and timeout: free the element and the object URL, then answer.
+      // A file that fires neither event would hold its upload slot forever, so it uploads without a duration.
+      const settle = (duration: number | undefined) => {
         clearTimeout(timer)
-        resolve(audio.duration)
+        audio.onloadedmetadata = audio.onerror = null
+        URL.revokeObjectURL(src)
+        audio.removeAttribute('src')
+        audio.load()
+        resolve(duration)
       }
-      
-      audio.onerror = () => {
-        clearTimeout(timer)
-        resolve(undefined)
-      }
-      
-      audio.src = URL.createObjectURL(file)
+      const timer = setTimeout(() => settle(undefined), MEDIA_PROBE_TIMEOUT_MS)
+
+      audio.onloadedmetadata = () => settle(audio.duration)
+
+      audio.onerror = () => settle(undefined)
+
+      audio.src = src
     })
   }
 
