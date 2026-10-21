@@ -69,6 +69,7 @@ const INVALID: Array<[string, string, RegExp]> = [
   ['a csp array', "export default { csp: ['https://a.com'] }", /next\.config\.extend\.mjs: "csp" must be an object/],
   ['an upper-case directive', "export default { csp: { 'Script-Src': ['https://a.com'] } }", /"csp\.Script-Src" is not a directive name/],
   ['an empty directive', "export default { csp: { 'worker-src': [] } }", /"csp\.worker-src" must be a source or a non-empty array/],
+  ['a csp source with a control character', "export default { csp: { 'script-src': ['https://a.com\\u0000'] } }", /"csp\.script-src" has an invalid source/],
   ['an empty source', "export default { csp: { 'worker-src': [''] } }", /"csp\.worker-src" has an invalid source/],
   ['headers as an object', "export default { headers: { source: '/', headers: [] } }", /next\.config\.extend\.mjs: "headers" must be an array of rules/],
   ['redirects as a string', "export default { redirects: '/a' }", /"redirects" must be an array of rules/],

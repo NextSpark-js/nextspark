@@ -116,7 +116,7 @@ const consentCspOrigins = (env = process.env) => {
 const EXTENSION_FILE = 'next.config.extend.mjs'
 const extensionError = (key, problem) => new Error(`${EXTENSION_FILE}: "${key}" ${problem}`)
 const CSP_DIRECTIVE = /^[a-z-]+$/
-const CSP_SOURCE = /^[^\s;,]+$/
+const CSP_SOURCE = /^[\x21-\x7e]+$/
 
 /** The extension's default export, checked: any problem stops the config with an error naming the file and the key. */
 const loadExtension = async () => {
@@ -139,7 +139,7 @@ const loadExtension = async () => {
       const list = typeof sources === 'string' ? [sources] : sources
       if (!Array.isArray(list) || list.length === 0) throw extensionError(`csp.${name}`, 'must be a source or a non-empty array of sources')
       for (const source of list) {
-        if (typeof source !== 'string' || !CSP_SOURCE.test(source)) throw extensionError(`csp.${name}`, `has an invalid source ${JSON.stringify(source)}: one source per entry, with no spaces, ";" or ","`)
+        if (typeof source !== 'string' || !CSP_SOURCE.test(source) || /[;,]/.test(source)) throw extensionError(`csp.${name}`, `has an invalid source ${JSON.stringify(source)}: one source per entry, with no spaces, ";" or ","`)
       }
     }
   }
