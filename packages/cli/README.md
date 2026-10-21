@@ -93,7 +93,7 @@ nextspark migrate --yes       # Move to the root-first layout and convert a comm
 nextspark migrate --rename-entity-slugs   # Also rename entity slugs with an underscore to hyphens (optional) and print what else to update
 ```
 
-See [Upgrading a 0.x project](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/17-updates/06-upgrade-0x-projects.md).
+See [Upgrading a 0.x project](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/17-updates/06-upgrade-0x-projects.md), and its [Cleanup after upgrading](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/17-updates/06-upgrade-0x-projects.md#cleanup-after-upgrading) checklist for workarounds core now replaces.
 
 ## Requirements
 
