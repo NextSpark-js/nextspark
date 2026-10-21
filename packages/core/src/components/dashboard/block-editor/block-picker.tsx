@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, type ComponentType } from 'react'
 import { useTranslations } from 'next-intl'
 import { useEntityTranslation } from '../../../hooks/useContentTranslation'
 import { useQuery } from '@tanstack/react-query'
@@ -12,7 +12,7 @@ import { ScrollArea } from '../../ui/scroll-area'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 import { getCategoryConfig } from './category-helpers'
-import { TreeView } from './tree-view'
+import { TreeView as DefaultTreeView, type TreeViewProps } from './tree-view'
 import { PatternCard } from './pattern-card'
 import type { BlockConfig, BlockInstance } from '../../../types/blocks'
 import type { PatternReference } from '../../../types/pattern-reference'
@@ -41,7 +41,7 @@ function buildApiHeaders(): HeadersInit {
   return headers
 }
 
-interface BlockPickerProps {
+export interface BlockPickerProps {
   blocks: BlockConfig[]
   onAddBlock: (blockSlug: string) => void
   onAddPattern?: (patternId: string) => void
@@ -61,6 +61,8 @@ interface BlockPickerProps {
   onRemoveBlock?: (id: string) => void
   onPasteBlock?: () => void
   clipboardCount?: number
+  /** Replaces the Layout tab's tree. It receives the TreeView props. Default: the built-in TreeView. */
+  TreeView?: ComponentType<TreeViewProps>
 }
 
 export function BlockPicker({
@@ -83,6 +85,7 @@ export function BlockPicker({
   onRemoveBlock,
   onPasteBlock,
   clipboardCount = 0,
+  TreeView = DefaultTreeView,
 }: BlockPickerProps) {
   const t = useTranslations('admin.builder')
   const { t: tPatterns } = useEntityTranslation('patterns')

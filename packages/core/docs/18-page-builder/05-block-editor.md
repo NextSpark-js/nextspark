@@ -415,19 +415,87 @@ const handleReorderBlocks = (newBlocks: BlockInstance[]) => {
 
 ### Adding Custom Field Types
 
-Extend DynamicForm to support new field types:
+`DynamicForm` and the items of an `ArrayField` ask a registry of renderers, keyed by field type, before their built-in `switch`. A project can add a renderer for a new type or replace the one of a built-in type without changing core. With nothing registered the form renders exactly as before.
 
-```typescript
-// In dynamic-form.tsx
-const renderField = (field: FieldDefinition) => {
-  switch (field.type) {
-    // Add custom type
-    case 'my-custom-type':
-      return <MyCustomInput value={value} onChange={handleChange} />
-    // ...
-  }
+A renderer is a React component that receives `FieldRendererProps`:
+
+| Prop | Meaning |
+|------|---------|
+| `field` | The `FieldDefinition` being edited (the item field inside an array) |
+| `value` | The current value, with the field's `default` applied |
+| `onChange(value)` | Stores a new value for the field |
+| `context` | `'form'` for a field of the settings form, `'array-item'` for a field inside an array item |
+| `compact` | `true` for a form field inside a collapsible group |
+| `parent` | `{ field, index }` of the array field and item, when `context` is `'array-item'` |
+| `dataCy` | The `data-cy` value the built-in renderer would use |
+
+The label, required marker and help text are drawn around the renderer, as for the built-in types.
+
+Register renderers from the theme configuration (`theme.config.ts`), which the editor reads on the client:
+
+```tsx
+import type { ThemeConfig } from '@nextsparkjs/core/types/theme'
+import { RatingField } from './components/builder/rating-field'
+import { PlainTextField } from './components/builder/plain-text-field'
+
+export const myThemeConfig: ThemeConfig = {
+  name: 'my-theme',
+  displayName: 'My Theme',
+  version: '1.0.0',
+  components: {
+    builder: {
+      fieldRenderers: {
+        rating: RatingField,        // a new type: { name: 'stars', type: 'rating', ... }
+        text: PlainTextField,       // replaces the built-in `text` renderer
+      },
+    },
+  },
 }
 ```
+
+```tsx
+// components/builder/rating-field.tsx
+'use client'
+import type { FieldRendererProps } from '@nextsparkjs/core/components/dashboard/block-editor/editor-extensions'
+
+export function RatingField({ value, onChange, dataCy }: FieldRendererProps) {
+  return (
+    <input type="number" min={1} max={5} value={Number(value) || 1} data-cy={dataCy}
+      onChange={(e) => onChange(Number(e.target.value))} />
+  )
+}
+```
+
+Code that runs on the client before the editor renders can also call `registerFieldRenderer(type, Renderer)` from the same module. It returns a function that removes the renderer again, and it wins over a renderer of the theme configuration for the same type. A field type outside the built-in list is valid in a `FieldDefinition` (`type: 'rating'`); without a renderer it falls back to a text input. The built-in renderers stay in the `switch` of `dynamic-form.tsx` and `array-field.tsx`: they are the defaults used when no renderer is registered for the type.
+
+### Replacing Editor Panels
+
+The editor renders its `TreeView` (inside the block picker), `BlockPicker` and `ConfigPanel` unless you give it other components. Pass them with the `components` prop of `BuilderEditorView`, or set them once for the project in `theme.config.ts` as `components.builder`; the prop wins over the theme for the same panel.
+
+```tsx
+export const myThemeConfig: ThemeConfig = {
+  // ...
+  components: {
+    builder: {
+      TreeView: MyTree,          // receives the TreeView props
+      BlockPicker: MyPicker,     // receives the BlockPicker props, including `TreeView`
+      ConfigPanel: MyConfigPanel // receives the ConfigPanel props
+    },
+  },
+}
+```
+
+```tsx
+<BuilderEditorView
+  entitySlug="pages"
+  entityConfig={entityConfig}
+  mode="edit"
+  id={id}
+  components={{ TreeView: MyTree }}
+/>
+```
+
+Each replacement receives the props of the component it replaces (`TreeViewProps`, `BlockPickerProps`, `ConfigPanelProps`, exported from `tree-view`, `block-picker` and `config-panel` in the same folder). The built-in `BlockPicker` renders the `TreeView` override in its Layout tab; a replacement `BlockPicker` receives it as its `TreeView` prop and decides what to do with it. Panels that are not replaced stay as they are.
 
 ### Styling the Editor
 

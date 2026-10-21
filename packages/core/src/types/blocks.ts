@@ -353,6 +353,8 @@ export type FieldType =
   | 'time'
   | 'datetime'
   | 'relationship'
+  // A project can register a renderer for any other string (see registerFieldRenderer)
+  | (string & {})
 
 /**
  * Field definition for dynamic form generation

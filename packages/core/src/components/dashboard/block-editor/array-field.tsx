@@ -23,6 +23,7 @@ import { sel } from '../../../lib/test'
 import type { FieldDefinition } from '../../../types/blocks'
 import type { Media } from '../../../lib/media/types'
 import { withBasePathIfInApp } from '../../../lib/base-path'
+import { resolveFieldRenderer } from './editor-extensions'
 
 interface ArrayFieldProps {
   field: FieldDefinition
@@ -148,6 +149,22 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
   // Render a single field within an item
   const renderItemField = (itemField: FieldDefinition, itemIndex: number, itemValue: Record<string, unknown>) => {
     const fieldValue = itemValue[itemField.name] ?? itemField.default ?? ''
+
+    // Same registry as the form: a renderer registered by the project takes the place of the built-in one
+    const Custom = resolveFieldRenderer(itemField.type)
+    if (Custom) {
+      return (
+        <Custom
+          field={itemField}
+          value={fieldValue}
+          onChange={(newValue) => handleItemFieldChange(itemIndex, itemField.name, newValue)}
+          context="array-item"
+          compact={false}
+          parent={{ field, index: itemIndex }}
+          dataCy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}
+        />
+      )
+    }
 
     switch (itemField.type) {
       case 'text':

@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover'
 import { Button } from '../../ui/button'
 import { format } from 'date-fns'
 import { ArrayField } from './array-field'
+import { resolveFieldRenderer } from './editor-extensions'
 import { fetchWithTeam } from '../../../lib/api/entities'
 import type { FieldDefinition, MediaRef } from '../../../types/blocks'
 import { resolveMediaUrl } from '../../../types/blocks'
@@ -435,6 +436,21 @@ export function DynamicForm({ fieldDefinitions, values, onChange, flushRef }: Dy
    */
   const renderField = (field: FieldDefinition, compact = false) => {
     const value = formValues[field.name] ?? field.default ?? ''
+
+    // A renderer registered by the project takes the place of the built-in one for its type
+    const Custom = resolveFieldRenderer(field.type)
+    if (Custom) {
+      return (
+        <Custom
+          field={field}
+          value={value}
+          onChange={(newValue) => handleFieldChange(field.name, newValue)}
+          context="form"
+          compact={compact}
+          dataCy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
+        />
+      )
+    }
 
     switch (field.type) {
       case 'text':

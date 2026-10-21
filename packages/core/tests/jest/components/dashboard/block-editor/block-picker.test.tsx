@@ -332,6 +332,22 @@ describe('BlockPicker', () => {
       expect(screen.getByTestId('tree-view-mock')).toBeInTheDocument()
     })
 
+    // #339: the TreeView prop replaces the Layout tab's tree and receives the TreeView props
+    test('renders the TreeView override in the layout tab with the TreeView props', () => {
+      const Custom = jest.fn((props: { emptyMessage?: string; selectedBlockId: string | null; blocks: unknown[] }) => (
+        <div data-testid="custom-tree">{props.emptyMessage}</div>
+      ))
+      const onSelectBlock = jest.fn()
+      render(<BlockPicker {...defaultProps} onSelectBlock={onSelectBlock} TreeView={Custom as never} />)
+      fireEvent.click(screen.getByText('Layout'))
+
+      expect(screen.getByTestId('custom-tree')).toHaveTextContent('No blocks added yet')
+      expect(screen.queryByTestId('tree-view-mock')).not.toBeInTheDocument()
+      expect(Custom.mock.calls[0][0]).toMatchObject({
+        blocks: [], selectedBlockId: null, onSelectBlock, onReorder: defaultProps.onReorderBlocks,
+      })
+    })
+
     test('shows patterns tab when showPatternsTab is true', () => {
       render(<BlockPicker {...defaultProps} showPatternsTab={true} />)
 

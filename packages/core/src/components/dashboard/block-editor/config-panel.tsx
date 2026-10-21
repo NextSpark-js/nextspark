@@ -48,7 +48,7 @@ interface TaxonomyItem {
   color?: string
 }
 
-interface ConfigPanelProps {
+export interface ConfigPanelProps {
   entityConfig: ClientEntityConfig
   entityFields: Record<string, unknown>
   onEntityFieldChange: (field: string, value: unknown) => void

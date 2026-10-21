@@ -25,7 +25,7 @@ import { TreeViewNode } from './tree-view-node'
 import { isPatternReference, type PatternReference } from '../../../types/pattern-reference'
 import type { BlockInstance } from '../../../types/blocks'
 
-interface TreeViewProps {
+export interface TreeViewProps {
   blocks: (BlockInstance | PatternReference)[]
   selectedBlockId: string | null
   selectedBlockIds?: Set<string>

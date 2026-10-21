@@ -22,7 +22,7 @@ import { ArrowLeft, Save, ExternalLink, Eye, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { sel } from '../../../lib/test'
-import { BlockPicker } from './block-picker'
+import { BlockPicker as DefaultBlockPicker } from './block-picker'
 import { BlockCanvas } from './block-canvas'
 import { BlockPreviewCanvas } from './block-preview-canvas'
 import { BlockSettingsPanel } from './block-settings-panel'
@@ -32,7 +32,8 @@ import { EntityFieldsSidebar } from './entity-fields-sidebar'
 import { StatusSelector, type StatusOption } from './status-selector'
 import { BlockService } from '../../../lib/services/block.service'
 import { ViewportToggle, type ViewportMode } from './viewport-toggle'
-import { ConfigPanel } from './config-panel'
+import { ConfigPanel as DefaultConfigPanel } from './config-panel'
+import { resolveEditorComponents, type EditorComponents } from './editor-extensions'
 import { useSidebar } from '../../../contexts/sidebar-context'
 import { cn } from '../../../lib/utils'
 import type { BlockInstance } from '../../../types/blocks'
@@ -87,9 +88,16 @@ export interface BuilderEditorViewProps {
   id?: string  // undefined = create mode
   mode: 'create' | 'edit'
   onEntityFieldChange?: (field: string, value: unknown) => void
+  /**
+   * Replaces the editor's panels. Each one receives the props of the component it replaces;
+   * `BlockPicker` also receives the `TreeView` override. Falls back to `components.builder` of the
+   * theme configuration, then to the built-in panels.
+   */
+  components?: EditorComponents
 }
 
-export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntityFieldChange: onEntityFieldChangeProp }: BuilderEditorViewProps) {
+export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntityFieldChange: onEntityFieldChangeProp, components }: BuilderEditorViewProps) {
+  const { TreeView, BlockPicker = DefaultBlockPicker, ConfigPanel = DefaultConfigPanel } = resolveEditorComponents(components)
   const router = useRouter()
   const t = useTranslations('admin.builder')
   const queryClient = useQueryClient()
@@ -983,6 +991,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
         {/* Left Sidebar - Always visible with tabs inside */}
         <div className="w-80 border-r overflow-hidden shrink-0 shadow-sm">
           <BlockPicker
+            TreeView={TreeView}
             blocks={availableBlocks}
             onAddBlock={handleAddBlock}
             onAddPattern={handleAddPattern}
