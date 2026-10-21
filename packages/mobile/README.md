@@ -288,7 +288,7 @@ The API URL is resolved in this order:
 3. **Auto-detect** from Expo dev server: uses the LAN host Expo reports as-is on every platform, including a physical Android device on the same network. The Android emulator is the one exception — a loopback host there (Expo started with `--localhost`, which a physical device reaches through `adb reverse tcp:8081 tcp:8081`; the tunnel alone leaves the host as the LAN address) is translated to its `10.0.2.2` alias for the host machine
 4. **Fallback** to `http://localhost:3000` (`http://10.0.2.2:3000` on the Android emulator)
 
-Steps 3 and 4 apply in development only (`__DEV__` true). A release build needs step 1 or 2: with neither, the client throws "API URL is not configured" when it loads, instead of sending every request to a localhost URL. Set the variable at build time (it is read when `app.config.ts` is evaluated, so EAS needs it in the build profile's `env`, below).
+Steps 3 and 4 apply in development only (`__DEV__` true). A release build needs step 1 or 2: with neither, the client throws "API URL is not configured" when it loads, instead of sending every request to a localhost URL. Set the variable at build time (it is read when `app.config.ts` is evaluated, so EAS needs it in the profile's `env` (below) or as an EAS environment variable).
 
 **Development:**
 ```bash
@@ -309,6 +309,8 @@ Steps 3 and 4 apply in development only (`__DEV__` true). A release build needs 
   }
 }
 ```
+
+Both the `preview` and `production` profiles produce release builds, so each needs `EXPO_PUBLIC_API_URL`, in the profile's `env` or as an EAS environment variable.
 
 ## Examples
 

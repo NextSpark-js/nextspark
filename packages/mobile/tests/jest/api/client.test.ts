@@ -382,7 +382,7 @@ describe('getApiUrl fallback host', () => {
   })
 })
 
-describe('getApiUrl outside development (__DEV__ false)', () => {
+describe('getApiUrl by __DEV__ and URL source', () => {
   const ORIGINAL_ENV = process.env.EXPO_PUBLIC_API_URL
   const g = globalThis as { __DEV__?: boolean }
 
@@ -417,6 +417,14 @@ describe('getApiUrl outside development (__DEV__ false)', () => {
 
   it('throws naming both sources when __DEV__ is false and nothing is configured', () => {
     expect(load(false, undefined, undefined)).toThrow(/extra\.apiUrl.*EXPO_PUBLIC_API_URL/)
+  })
+
+  it('throws the clear error, not a ReferenceError, when __DEV__ is not defined at all', () => {
+    jest.resetModules()
+    delete g.__DEV__
+    delete process.env.EXPO_PUBLIC_API_URL
+    jest.doMock('expo-constants', () => ({ expoConfig: { extra: {}, hostUri: null } }))
+    expect(() => require('../../../src/api/client')).toThrow(/API URL is not configured/)
   })
 
   it('fails loading the client module in a release build without a URL', () => {

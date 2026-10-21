@@ -17,7 +17,7 @@ cd apps/mobile
 pnpm install
 ```
 
-2. No API URL configuration is needed by default. Leave `EXPO_PUBLIC_API_URL`
+2. No API URL configuration is needed by default (development; release builds require it). Leave `EXPO_PUBLIC_API_URL`
 unset: the client auto-detects it from the Expo dev server's own address, as
 Metro reports it - a LAN address in Metro's default mode, which is what the
 Android emulator gets too. The emulator only gets translated to its

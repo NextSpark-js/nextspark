@@ -78,7 +78,7 @@ export function getApiUrl(): string {
 
   // Outside development there is no dev server to detect and a localhost
   // fallback would only fail later with a generic network error.
-  if (!__DEV__) {
+  if (typeof __DEV__ === 'undefined' || !__DEV__) {
     throw new Error(
       'API URL is not configured. Release builds need an explicit API URL: set `extra.apiUrl` in app.config.ts or the EXPO_PUBLIC_API_URL environment variable at build time.'
     )
