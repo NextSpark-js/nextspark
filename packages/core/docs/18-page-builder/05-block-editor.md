@@ -532,7 +532,7 @@ export const myThemeConfig: ThemeConfig = {
 A hook receives `(payload, context)`. `payload` is the body the editor sends (`title`, `slug` when it changed, `blocks`, `status`, `settings` and the entity's own fields); `context` is `{ action: 'draft' | 'update' | 'publish', mode, entitySlug, id }`. It may answer:
 
 - nothing, or `true`: the save goes on.
-- `{ veto: 'message' }`: nothing is sent and the message is shown as an error.
+- `{ veto: 'message' }`: nothing is sent and the message is shown as an error. `false` also vetoes, with the generic "The page was not saved".
 - `{ data: payload }`: the save goes on with that payload instead (the next hook sees it too). Treat the `payload` you receive as read-only and return a changed copy.
 
 A hook that throws, rejects or returns `data` that is not an object is reported as an error ("The page was not saved: ...") and nothing is sent. While a hook is pending the save buttons are disabled, and they come back when it ends, whatever the outcome; a hook that never settles keeps them disabled, so give a slow check its own timeout. With no hook configured the editor saves exactly as before.

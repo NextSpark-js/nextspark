@@ -144,6 +144,14 @@ describe('before-save and before-publish hooks', () => {
     expect(onBeforePublish).not.toHaveBeenCalled()
   })
 
+  test('a hook that returns false vetoes the save', async () => {
+    const b = renderBuilder({ onBeforeSave: () => false })
+    await b.ready()
+    b.draft()
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('messages.saveBlocked'))
+    expect(writes()).toHaveLength(0)
+  })
+
   test('an empty veto still says that the page was not saved', async () => {
     const b = renderBuilder({ onBeforeSave: () => ({ veto: '' }) })
     await b.ready()

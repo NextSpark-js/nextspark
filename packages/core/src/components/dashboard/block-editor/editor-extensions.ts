@@ -104,9 +104,9 @@ export interface BuilderSaveContext {
 
 /**
  * What a hook may answer. Nothing (or `true`) lets the save go on; `{ veto: 'message' }` stops it and shows the
- * message in the editor; `{ data }` lets it go on with that payload instead of the editor's.
+ * message in the editor (`false` vetoes without one); `{ data }` lets it go on with that payload instead of the editor's.
  */
-export type BuilderHookResult = void | undefined | true | { veto: string } | { data: BuilderSavePayload }
+export type BuilderHookResult = void | undefined | boolean | { veto: string } | { data: BuilderSavePayload }
 
 /** Treat `payload` as read-only: return `{ data }` to change what is sent. */
 export type BuilderHook = (payload: BuilderSavePayload, context: BuilderSaveContext) => BuilderHookResult | Promise<BuilderHookResult>
@@ -149,6 +149,8 @@ export async function runBeforeSaveHooks(hooks: EditorHooks, payload: BuilderSav
     } catch (error) {
       return { error: error instanceof Error && error.message ? error.message : String(error) }
     }
+    // `false` is a veto without a message (the editor says the page was not saved)
+    if (result === false) return { veto: '' }
     if (result && typeof result === 'object') {
       if ('veto' in result) return { veto: typeof result.veto === 'string' ? result.veto : '' }
       if ('data' in result) {
