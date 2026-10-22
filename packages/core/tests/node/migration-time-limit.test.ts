@@ -1646,20 +1646,22 @@ const FIRST_CORE_MIGRATION = (() => {
   return { file, sql: fs.readFileSync(path.join(dir, file), 'utf8') }
 })()
 
-test('the project-template migration verifier ends by itself when a migration hangs, naming it', { timeout: 30000 }, async t => {
+test('the project-template migration verifier ends by itself when a migration hangs, naming it', { timeout: 40000 }, async t => {
   const server = await standInPostgres(t, sql => (sql === FIRST_CORE_MIGRATION.sql ? 'stuck' : 'ok'))
 
+  // The limit is a few seconds, not a fraction of one: the verifier is a child process that connects and checks
+  // the server before the first migration, and a slow runner must not spend the limit on that.
   const result = await run(t, VERIFY, ['default'], {
     cwd: CORE,
-    env: cleanEnv({ VERIFY_THEME_DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '0.5' }),
-    killAfterMs: 20000,
+    env: cleanEnv({ VERIFY_THEME_DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '4' }),
+    killAfterMs: 25000,
   })
 
   assert.equal(result.status, 1, result.output)
-  assert.match(result.output, /Each migration may run for 0\.5 s; MIGRATION_TIMEOUT_SECONDS changes that/)
+  assert.match(result.output, /Each migration may run for 4 s; MIGRATION_TIMEOUT_SECONDS changes that/)
   assert.match(
     result.output,
-    new RegExp(`Failed to execute ${FIRST_CORE_MIGRATION.file.replace('.', '\\.')}: did not finish within 0\\.5 s`)
+    new RegExp(`Failed to execute ${FIRST_CORE_MIGRATION.file.replace('.', '\\.')}: did not finish within 4 s`)
   )
   assert.match(result.output, /Theme "default" migrations failed \(exit code 1\)/)
 })
