@@ -8,6 +8,8 @@ import type { EntityConfig } from '../lib/entities/types'
 export interface UseEntityQueryOptions {
   entityConfig: EntityConfig
   pageSize?: number
+  /** 1-based page to request. Defaults to 1. */
+  page?: number
   includeChildren?: boolean
   search?: string
   filters?: Record<string, unknown>
@@ -28,6 +30,7 @@ export function useEntityQuery(options: UseEntityQueryOptions) {
   const {
     entityConfig,
     pageSize = 10,
+    page = 1,
     includeChildren = false,
     search = '',
     filters = {},
@@ -52,6 +55,7 @@ export function useEntityQuery(options: UseEntityQueryOptions) {
     activeTeamId,
     {
       pageSize,
+      page,
       includeChildren,
       search,
       filters,
@@ -65,6 +69,7 @@ export function useEntityQuery(options: UseEntityQueryOptions) {
       const queryParams: Record<string, string> = {
         limit: String(pageSize),
       }
+      if (page > 1) queryParams.page = String(page)
 
       if (search) queryParams.search = search
       if (includeChildren) queryParams.child = 'all'
@@ -102,9 +107,16 @@ export function useEntityQuery(options: UseEntityQueryOptions) {
       return {
         items: data.items || data.data || data[entityConfig.slug] || [],
         total: data.total || data.info?.total || 0,
-        page: data.page || 1,
+        page: data.page || data.info?.page || page,
         totalPages: Math.ceil((data.total || 0) / pageSize),
       }
+    },
+    // Keep the previous page visible while another page of the same list loads.
+    // Any other change (search, filters, sort, ...) behaves as before.
+    placeholderData: (previous, previousQuery) => {
+      const sameList = (key: readonly unknown[]) => JSON.stringify(key.map((part) =>
+        part && typeof part === 'object' && 'page' in part ? { ...part, page: 0 } : part))
+      return previousQuery && sameList(previousQuery.queryKey) === sameList(queryKey) ? previous : undefined
     },
     enabled: enabled && !!user,
     staleTime,

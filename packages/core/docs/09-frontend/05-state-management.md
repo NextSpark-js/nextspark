@@ -135,6 +135,8 @@ export function useEntityQuery(options: UseEntityQueryOptions) {
 }
 ```
 
+To read a page other than the first, pass the optional `page` option (1-based, default `1`): `useEntityQuery({ entityConfig, pageSize: 20, page })` sends `?limit=20&page=<page>`, keeps each page under its own query key, and shows the previous page's items (`isPlaceholderData` is `true`) while the next one loads. Without `page` the request is the same as before.
+
 ### Mutations with Optimistic Updates
 
 ```typescript
