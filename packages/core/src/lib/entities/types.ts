@@ -6,6 +6,7 @@
  */
 
 import type { ZodSchema } from 'zod'
+import type { ValidationMessageKind } from './portable/types'
 
 /** Generic icon component type - compatible with lucide-react, @phosphor-icons/react, etc. */
 export type EntityIcon = React.ComponentType<{ className?: string }>
@@ -585,6 +586,20 @@ export interface EntityField {
 export interface FieldDisplay {
   /** Display label */
   label: string
+
+  /**
+   * Message key of the label (for example `entities.pets.fields.name`). Validation messages use it, through the
+   * `translate` option of `generateEntitySchemas`, to name the field in the user's language; `label` when it
+   * has none or the translator has no message for it. Forms render `label`.
+   */
+  labelKey?: string
+
+  /**
+   * Replaces the validation message of a kind for this field (`required`, `email`, `url`, `min`, `max`, `oneOf`, ...;
+   * see ValidationMessageKind). `{label}` and the values of the kind (`{min}`, `{max}`, `{values}`) are filled in.
+   * Wins over the translated and the default text.
+   */
+  validationMessages?: Partial<Record<ValidationMessageKind, string>>
   
   /** Help text/description */
   description?: string

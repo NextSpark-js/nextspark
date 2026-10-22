@@ -12,8 +12,18 @@ export interface FieldOption {
   label?: string
 }
 
+/** The validation messages the schema generator can say, each overridable per field and translatable. */
+export type ValidationMessageKind =
+  | 'required' | 'nul' | 'maxLength' | 'email' | 'url' | 'phone' | 'number' | 'min' | 'max' | 'range'
+  | 'date' | 'dateFormat' | 'datetime' | 'datetimeFormat' | 'json' | 'jsonArray' | 'oneOf'
+  | 'currency' | 'country' | 'imageUrl'
+
 export interface FieldDisplay {
   label: string
+  /** Message key of the label, translated through the generator's `translate` option; `label` when it has none. */
+  labelKey?: string
+  /** Replaces the validation message of a kind for this field; `{label}` and the kind's values are filled in. */
+  validationMessages?: Partial<Record<ValidationMessageKind, string>>
   description?: string
   showInList?: boolean
   showInDetail?: boolean

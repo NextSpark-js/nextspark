@@ -44,5 +44,27 @@
   },
   "terms": {
     "required": "Devi accettare i termini e le condizioni"
+  },
+  "entity": {
+    "required": "{label} è obbligatorio",
+    "nul": "{label} non può contenere caratteri NUL",
+    "maxLength": "{label} non può superare {max} caratteri",
+    "email": "{label} deve essere un indirizzo email valido",
+    "url": "{label} deve essere un URL valido",
+    "phone": "{label} deve essere un numero di telefono valido",
+    "number": "{label} deve essere un numero valido",
+    "min": "{label} deve essere almeno {min}",
+    "max": "{label} deve essere al massimo {max}",
+    "range": "{label} deve essere un intervallo di esattamente 2 numeri",
+    "date": "{label} deve essere una data valida",
+    "dateFormat": "{label} deve essere una data valida (AAAA-MM-GG)",
+    "datetime": "{label} deve essere una data e ora valida",
+    "datetimeFormat": "{label} deve essere una data e ora valida (ISO 8601)",
+    "json": "{label} deve essere un JSON valido",
+    "jsonArray": "{label} deve essere un array JSON valido",
+    "oneOf": "{label} deve essere uno tra: {values}",
+    "currency": "{label} deve essere un codice valuta valido di 3 lettere",
+    "country": "{label} deve essere un codice paese valido di 2 lettere",
+    "imageUrl": "{label} deve essere un URL di immagine valido"
   }
 }

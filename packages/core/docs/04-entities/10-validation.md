@@ -412,6 +412,16 @@ const schema = z.object({
 })
 ```
 
+### Entity validation messages
+
+The schemas generated from an entity say, by default, `"<label> is required"`, `"<label> must be a valid email address"`, `"<label> must be at least <min>"` and so on, in English with the field's `display.label`. Three options change that; without any of them the text is the same as always.
+
+- **`translate`** (option of `generateEntitySchemas`, in `lib/entities/schema-generator`): a `(key, values) => string | undefined` function that returns the message for a key, or `undefined` to keep the English text. The keys are `validation.entity.<kind>`, where `<kind>` is `required`, `nul`, `maxLength`, `email`, `url`, `phone`, `number`, `min`, `max`, `range`, `date`, `dateFormat`, `datetime`, `datetimeFormat`, `json`, `jsonArray`, `oneOf`, `currency`, `country` or `imageUrl`. `values` carries `label` and the numbers of the kind (`min`, `max`, `values`). Core ships these keys in `messages/<locale>/validation.json` for `de`, `en`, `es`, `fr`, `it` and `pt` (the `en` texts are the default ones), and `createValidationTranslator(...catalogs)` (`lib/entities/validation-translator`) builds the function from message catalogs, the first catalog with a key winning: `generateEntitySchemas(entityConfig, { translate: createValidationTranslator(projectMessages, es) })`.
+- **`display.labelKey`**: the label is a plain string, rendered as it is, so a translated name comes from a key you declare (`labelKey: 'pets.fields.name'`). Messages call `translate` with that key and use the result as `{label}`; when there is no `labelKey`, or the translator has no message for it, they use `display.label`.
+- **`display.validationMessages`**: replaces one message of one field, for every language (`{ required: 'Tell us the {label}', min: '{label} starts at {min}' }`). It wins over the translated and the default text.
+
+The generic REST routes and the server actions keep answering in English: they do not pick a language per request, and the generated contracts package ships schemas built without `translate`.
+
 ## Async Validation
 
 ### In Zod

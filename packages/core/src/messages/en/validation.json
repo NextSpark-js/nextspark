@@ -44,5 +44,27 @@
   },
   "terms": {
     "required": "Please agree to the terms and conditions"
+  },
+  "entity": {
+    "required": "{label} is required",
+    "nul": "{label} cannot contain NUL characters",
+    "maxLength": "{label} cannot exceed {max} characters",
+    "email": "{label} must be a valid email address",
+    "url": "{label} must be a valid URL",
+    "phone": "{label} must be a valid phone number",
+    "number": "{label} must be a valid number",
+    "min": "{label} must be at least {min}",
+    "max": "{label} must be at most {max}",
+    "range": "{label} must be a range with exactly 2 numbers",
+    "date": "{label} must be a valid date",
+    "dateFormat": "{label} must be a valid date (YYYY-MM-DD)",
+    "datetime": "{label} must be a valid datetime",
+    "datetimeFormat": "{label} must be a valid datetime (ISO 8601)",
+    "json": "{label} must be valid JSON",
+    "jsonArray": "{label} must be a valid JSON array",
+    "oneOf": "{label} must be one of: {values}",
+    "currency": "{label} must be a valid 3-letter currency code",
+    "country": "{label} must be a valid 2-letter country code",
+    "imageUrl": "{label} must be a valid image URL"
   }
 }

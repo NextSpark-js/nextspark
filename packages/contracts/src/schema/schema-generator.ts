@@ -12,7 +12,7 @@
 
 import * as z from 'zod'
 import { SYSTEM_FIELD_NAMES } from './system-fields'
-import type { EntityConfig, EntityField, ChildEntityDefinition } from './types'
+import type { EntityConfig, EntityField, ChildEntityDefinition, ValidationMessageKind } from './types'
 import { mediaRefSchema } from './media-ref'
 import { builderBlocksSchema } from './response-shape'
 
@@ -45,7 +45,62 @@ export const addressSchema = z.object({
   fullAddress: z.string().optional(),
 })
 
+/**
+ * Looks up a message by key in the caller's catalogs: `values` fills its `{placeholders}`. Returns undefined when it has
+ * no message for the key, which leaves the English text. The keys asked for are `validation.entity.<kind>` (see
+ * ValidationMessageKind) and, for a field that declares `display.labelKey`, that key itself.
+ */
+export type ValidationTranslator = (key: string, values: Record<string, string | number>) => string | undefined
+
+/** The text of each validation message when nothing translates it (what the generator always said). */
+const ENGLISH_VALIDATION_MESSAGES: Record<ValidationMessageKind, string> = {
+  required: '{label} is required',
+  nul: '{label} cannot contain NUL characters',
+  maxLength: '{label} cannot exceed {max} characters',
+  email: '{label} must be a valid email address',
+  url: '{label} must be a valid URL',
+  phone: '{label} must be a valid phone number',
+  number: '{label} must be a valid number',
+  min: '{label} must be at least {min}',
+  max: '{label} must be at most {max}',
+  range: '{label} must be a range with exactly 2 numbers',
+  date: '{label} must be a valid date',
+  dateFormat: '{label} must be a valid date (YYYY-MM-DD)',
+  datetime: '{label} must be a valid datetime',
+  datetimeFormat: '{label} must be a valid datetime (ISO 8601)',
+  json: '{label} must be valid JSON',
+  jsonArray: '{label} must be a valid JSON array',
+  oneOf: '{label} must be one of: {values}',
+  currency: '{label} must be a valid 3-letter currency code',
+  country: '{label} must be a valid 2-letter country code',
+  imageUrl: '{label} must be a valid image URL',
+}
+
+const fillTemplate = (template: string, values: Record<string, string | number | undefined>) =>
+  template.replace(/\{(\w+)\}/g, (placeholder, name: string) => (values[name] === undefined ? placeholder : String(values[name])))
+
+/**
+ * The validation message of a field: the field's own `display.validationMessages[kind]`, else the translator's
+ * `validation.entity.<kind>`, else the English text. `{label}` is the field's label, translated by its `display.labelKey`
+ * when it declares one and the translator has it.
+ */
+export function fieldValidationMessage(
+  field: Pick<EntityField, 'display'>,
+  kind: ValidationMessageKind,
+  params: Record<string, string | number | undefined> = {},
+  translate?: ValidationTranslator
+): string {
+  const labelKey = field.display.labelKey
+  const values = { label: (labelKey && translate?.(labelKey, {})) || field.display.label, ...params }
+  const own = field.display.validationMessages?.[kind]
+  if (own !== undefined) return fillTemplate(own, values)
+  const defined = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as Record<string, string | number>
+  return translate?.(`validation.entity.${kind}`, defined) ?? fillTemplate(ENGLISH_VALIDATION_MESSAGES[kind], values)
+}
+
 export interface SchemaGenerationOptions {
+  /** Translates the validation messages and the field labels (see ValidationTranslator); English without it. */
+  translate?: ValidationTranslator
   includeReadOnly?: boolean
   includeChildEntities?: boolean
   customValidation?: Record<string, z.ZodSchema>
@@ -71,17 +126,18 @@ export function generateEntitySchemas(
     includeReadOnly = false,
     includeChildEntities = true,
     customValidation = {},
-    strict = true
+    strict = true,
+    translate
   } = options
 
   // Generate base field definitions for validation
-  generateBaseSchema(entityConfig, customValidation, strict)
+  generateBaseSchema(entityConfig, customValidation, strict, translate)
 
   // Create schema (exclude read-only fields)
   const createFields = entityConfig.fields
     .filter(field => !field.api.readOnly || includeReadOnly)
     .reduce((acc, field) => {
-      const fieldSchema = generateFieldSchema(field, customValidation, strict)
+      const fieldSchema = generateFieldSchema(field, customValidation, strict, translate)
       if (fieldSchema) {
         acc[field.name] = fieldSchema
       }
@@ -90,7 +146,7 @@ export function generateEntitySchemas(
 
   // Add child entities to create schema
   if (includeChildEntities && entityConfig.childEntities) {
-    const childrenSchema = generateChildrenSchema(entityConfig.childEntities, strict)
+    const childrenSchema = generateChildrenSchema(entityConfig.childEntities, strict, translate)
     if (Object.keys(childrenSchema).length > 0) {
       createFields.children = z.object(childrenSchema).optional()
     }
@@ -132,7 +188,7 @@ export function generateEntitySchemas(
 
   // Response schema (includes all fields including read-only)
   const responseFields = entityConfig.fields.reduce((acc, field) => {
-    const fieldSchema = generateFieldSchema(field, customValidation, false) // Less strict for responses
+    const fieldSchema = generateFieldSchema(field, customValidation, false, translate) // Less strict for responses
     if (fieldSchema) {
       acc[field.name] = fieldSchema
     }
@@ -149,7 +205,7 @@ export function generateEntitySchemas(
   if (includeChildEntities && entityConfig.childEntities) {
     childSchemas = {}
     Object.entries(entityConfig.childEntities).forEach(([childName, childConfig]) => {
-      childSchemas![childName] = generateChildEntitySchema(childConfig, false)
+      childSchemas![childName] = generateChildEntitySchema(childConfig, false, translate)
       responseFields[childName] = z.array(childSchemas![childName]).optional()
     })
 
@@ -202,14 +258,15 @@ export const DEFAULT_LONG_TEXT_MAX_LENGTH = 1_048_576
  * field's `maxLength` (the default cap above when the field declares none). Responses (non-strict) keep only the
  * declared `maxLength`, so a stored value is never refused on the way out.
  */
-export function textValueIssue(field: EntityField, value: string, strict: boolean): string | null {
+export function textValueIssue(field: EntityField, value: string, strict: boolean, translate?: ValidationTranslator): string | null {
+  const msg = (kind: ValidationMessageKind, params?: Record<string, string | number | undefined>) => fieldValidationMessage(field, kind, params, translate)
   if (value.includes('\u0000')) {
-    return `${field.display.label} cannot contain NUL characters`
+    return msg('nul')
   }
   const limit = field.maxLength
     ?? (strict ? (field.type === 'text' ? DEFAULT_TEXT_MAX_LENGTH : DEFAULT_LONG_TEXT_MAX_LENGTH) : undefined)
   if (limit && value.length > limit) {
-    return `${field.display.label} cannot exceed ${limit} characters`
+    return msg('maxLength', { max: limit })
   }
   return null
 }
@@ -220,10 +277,11 @@ export function textValueIssue(field: EntityField, value: string, strict: boolea
 function generateBaseSchema(
   entityConfig: EntityConfig,
   customValidation: Record<string, z.ZodSchema>,
-  strict: boolean
+  strict: boolean,
+  translate?: ValidationTranslator
 ): z.ZodSchema {
   const fields = entityConfig.fields.reduce((acc, field) => {
-    const fieldSchema = generateFieldSchema(field, customValidation, strict)
+    const fieldSchema = generateFieldSchema(field, customValidation, strict, translate)
     if (fieldSchema) {
       acc[field.name] = fieldSchema
     }
@@ -239,8 +297,11 @@ function generateBaseSchema(
 function generateFieldSchema(
   field: EntityField,
   customValidation: Record<string, z.ZodSchema>,
-  strict: boolean = true
+  strict: boolean = true,
+  translate?: ValidationTranslator
 ): z.ZodTypeAny | null {
+  const msg = (kind: ValidationMessageKind, params?: Record<string, string | number | undefined>) => fieldValidationMessage(field, kind, params, translate)
+
   // Use custom validation if provided
   if (customValidation[field.name]) {
     return field.required ? customValidation[field.name] : customValidation[field.name].optional()
@@ -264,7 +325,7 @@ function generateFieldSchema(
           if (field.required) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} is required`
+              message: msg('required')
             })
             return z.NEVER
           }
@@ -279,11 +340,11 @@ function generateFieldSchema(
         if (field.required && strict && trimmed === '') {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `${field.display.label} is required`
+            message: msg('required')
           })
           return z.NEVER
         }
-        const textIssue = textValueIssue(field, trimmed, strict)
+        const textIssue = textValueIssue(field, trimmed, strict, translate)
         if (textIssue) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: textIssue })
           return z.NEVER
@@ -304,7 +365,7 @@ function generateFieldSchema(
           if (field.required) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} is required`
+              message: msg('required')
             })
             return z.NEVER
           }
@@ -317,7 +378,7 @@ function generateFieldSchema(
         if (!emailRegex.test(emailVal)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `${field.display.label} must be a valid email address`
+            message: msg('email')
           })
           return z.NEVER
         }
@@ -337,7 +398,7 @@ function generateFieldSchema(
           if (field.required) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} is required`
+              message: msg('required')
             })
             return z.NEVER
           }
@@ -360,7 +421,7 @@ function generateFieldSchema(
         } catch {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `${field.display.label} must be a valid URL`
+            message: msg('url')
           })
           return z.NEVER
         }
@@ -379,7 +440,7 @@ function generateFieldSchema(
           if (field.required) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} is required`
+              message: msg('required')
             })
             return z.NEVER
           }
@@ -392,7 +453,7 @@ function generateFieldSchema(
         if (!phoneRegex.test(phoneVal)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `${field.display.label} must be a valid phone number`
+            message: msg('phone')
           })
           return z.NEVER
         }
@@ -410,7 +471,7 @@ function generateFieldSchema(
             if (field.required) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `${field.display.label} is required`
+                message: msg('required')
               })
               return z.NEVER
             }
@@ -420,7 +481,7 @@ function generateFieldSchema(
           if (isNaN(num)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} must be a valid number`
+              message: msg('number')
             })
             return z.NEVER
           }
@@ -435,14 +496,14 @@ function generateFieldSchema(
           if (field.min !== undefined && val < field.min) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} must be at least ${field.min}`
+              message: msg('min', { min: field.min })
             })
             return z.NEVER
           }
           if (field.max !== undefined && val > field.max) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} must be at most ${field.max}`
+              message: msg('max', { max: field.max })
             })
             return z.NEVER
           }
@@ -453,7 +514,7 @@ function generateFieldSchema(
 
     case 'doublerange':
       schema = z.array(z.number()).length(2, {
-        message: `${field.display.label} must be a range with exactly 2 numbers`
+        message: msg('range')
       })
       break
 
@@ -464,13 +525,13 @@ function generateFieldSchema(
     case 'date':
       // Handle date fields - accept multiple formats and normalize to YYYY-MM-DD
       schema = z.union([
-        z.string().date(`${field.display.label} must be a valid date (YYYY-MM-DD)`),
+        z.string().date(msg('dateFormat')),
         z.string().transform((val, ctx) => {
           if (val === '' || val === null || val === undefined) {
             if (field.required) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `${field.display.label} is required`
+                message: msg('required')
               })
               return z.NEVER
             }
@@ -483,7 +544,7 @@ function generateFieldSchema(
             if (isNaN(date.getTime())) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `${field.display.label} must be a valid date`
+                message: msg('date')
               })
               return z.NEVER
             }
@@ -492,7 +553,7 @@ function generateFieldSchema(
           } catch {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} must be a valid date`
+              message: msg('date')
             })
             return z.NEVER
           }
@@ -504,13 +565,13 @@ function generateFieldSchema(
     case 'datetime':
       // Handle datetime fields from HTML5 datetime-local inputs
       schema = z.union([
-        z.string().datetime(`${field.display.label} must be a valid datetime (ISO 8601)`),
+        z.string().datetime(msg('datetimeFormat')),
         z.string().transform((val, ctx) => {
           if (val === '' || val === null || val === undefined) {
             if (field.required) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `${field.display.label} is required`
+                message: msg('required')
               })
               return z.NEVER
             }
@@ -529,7 +590,7 @@ function generateFieldSchema(
             if (isNaN(date.getTime())) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `${field.display.label} must be a valid datetime`
+                message: msg('datetime')
               })
               return z.NEVER
             }
@@ -537,7 +598,7 @@ function generateFieldSchema(
           } catch {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} must be a valid datetime`
+              message: msg('datetime')
             })
             return z.NEVER
           }
@@ -559,7 +620,7 @@ function generateFieldSchema(
               if (field.required) {
                 ctx.addIssue({
                   code: z.ZodIssueCode.custom,
-                  message: `${field.display.label} is required`
+                  message: msg('required')
                 })
                 return z.NEVER
               }
@@ -570,7 +631,7 @@ function generateFieldSchema(
             } catch {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `${field.display.label} must be valid JSON`
+                message: msg('json')
               })
               return z.NEVER
             }
@@ -599,7 +660,7 @@ function generateFieldSchema(
         // Also handle numbers that might be sent instead of strings (e.g., quarter: 2 instead of "2")
         schema = z.union([
           z.enum(values, {
-            message: `${field.display.label} must be one of: ${values.join(', ')}`
+            message: msg('oneOf', { values: values.join(', ') })
           }),
           z.number(), // Accept numbers and convert to string
           z.literal(''),
@@ -610,7 +671,7 @@ function generateFieldSchema(
             if (field.required) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `${field.display.label} is required`
+                message: msg('required')
               })
               return z.NEVER
             }
@@ -622,7 +683,7 @@ function generateFieldSchema(
           if (!values.includes(strVal)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} must be one of: ${values.join(', ')}`
+              message: msg('oneOf', { values: values.join(', ') })
             })
             return z.NEVER
           }
@@ -647,7 +708,7 @@ function generateFieldSchema(
             if (field.required) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `${field.display.label} is required`
+                message: msg('required')
               })
               return z.NEVER
             }
@@ -666,7 +727,7 @@ function generateFieldSchema(
             if (field.required) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `${field.display.label} is required`
+                message: msg('required')
               })
               return z.NEVER
             }
@@ -689,7 +750,7 @@ function generateFieldSchema(
           if (field.required) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} is required`
+              message: msg('required')
             })
             return z.NEVER
           }
@@ -717,7 +778,7 @@ function generateFieldSchema(
           if (field.required) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} is required`
+              message: msg('required')
             })
             return z.NEVER
           }
@@ -729,11 +790,11 @@ function generateFieldSchema(
       break
 
     case 'currency':
-      schema = z.string().length(3, `${field.display.label} must be a valid 3-letter currency code`)
+      schema = z.string().length(3, msg('currency'))
       break
 
     case 'country':
-      schema = z.string().length(2, `${field.display.label} must be a valid 2-letter country code`)
+      schema = z.string().length(2, msg('country'))
       break
 
     case 'address':
@@ -770,7 +831,7 @@ function generateFieldSchema(
           }
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `${field.display.label} must be a valid image URL`
+            message: msg('imageUrl')
           })
           return z.NEVER
         }),
@@ -812,13 +873,13 @@ function generateFieldSchema(
             }
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} must be a valid JSON array`
+              message: msg('jsonArray')
             })
             return z.NEVER
           } catch {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} must be a valid JSON array`
+              message: msg('jsonArray')
             })
             return z.NEVER
           }
@@ -854,13 +915,13 @@ function generateFieldSchema(
             }
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} must be a valid JSON array`
+              message: msg('jsonArray')
             })
             return z.NEVER
           } catch {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} must be a valid JSON array`
+              message: msg('jsonArray')
             })
             return z.NEVER
           }
@@ -895,7 +956,7 @@ function generateFieldSchema(
           if (field.required) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `${field.display.label} is required`
+              message: msg('required')
             })
             return z.NEVER
           }
@@ -919,7 +980,7 @@ function generateFieldSchema(
     case 'code':
       {
         const longText = z.string().superRefine((val, ctx) => {
-          const textIssue = textValueIssue(field, val, strict)
+          const textIssue = textValueIssue(field, val, strict, translate)
           if (textIssue) ctx.addIssue({ code: z.ZodIssueCode.custom, message: textIssue })
         })
         // responses keep the plain string: a stored value is never refused on the way out
@@ -956,12 +1017,13 @@ function generateFieldSchema(
  */
 function generateChildrenSchema(
   childEntities: Record<string, ChildEntityDefinition>,
-  strict: boolean
+  strict: boolean,
+  translate?: ValidationTranslator
 ): Record<string, z.ZodTypeAny> {
   const childrenSchema: Record<string, z.ZodTypeAny> = {}
 
   Object.entries(childEntities).forEach(([childName, childConfig]) => {
-    childrenSchema[childName] = z.array(generateChildEntitySchema(childConfig, strict)).optional()
+    childrenSchema[childName] = z.array(generateChildEntitySchema(childConfig, strict, translate)).optional()
   })
 
   return childrenSchema
@@ -972,7 +1034,8 @@ function generateChildrenSchema(
  */
 function generateChildEntitySchema(
   childConfig: ChildEntityDefinition,
-  strict: boolean = true
+  strict: boolean = true,
+  translate?: ValidationTranslator
 ): z.ZodSchema {
   const fields: Record<string, z.ZodTypeAny> = {}
 
@@ -997,7 +1060,7 @@ function generateChildEntitySchema(
         order: 1,
       },
     }
-    const fieldSchema = generateFieldSchema(entityField, {}, strict)
+    const fieldSchema = generateFieldSchema(entityField, {}, strict, translate)
     if (fieldSchema) {
       fields[field.name] = fieldSchema
     }

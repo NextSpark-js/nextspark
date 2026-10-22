@@ -44,5 +44,27 @@
   },
   "terms": {
     "required": "Sie muessen die Nutzungsbedingungen akzeptieren"
+  },
+  "entity": {
+    "required": "{label} ist erforderlich",
+    "nul": "{label} darf keine NUL-Zeichen enthalten",
+    "maxLength": "{label} darf höchstens {max} Zeichen lang sein",
+    "email": "{label} muss eine gültige E-Mail-Adresse sein",
+    "url": "{label} muss eine gültige URL sein",
+    "phone": "{label} muss eine gültige Telefonnummer sein",
+    "number": "{label} muss eine gültige Zahl sein",
+    "min": "{label} muss mindestens {min} betragen",
+    "max": "{label} darf höchstens {max} betragen",
+    "range": "{label} muss ein Bereich aus genau 2 Zahlen sein",
+    "date": "{label} muss ein gültiges Datum sein",
+    "dateFormat": "{label} muss ein gültiges Datum sein (JJJJ-MM-TT)",
+    "datetime": "{label} muss ein gültiges Datum mit Uhrzeit sein",
+    "datetimeFormat": "{label} muss ein gültiges Datum mit Uhrzeit sein (ISO 8601)",
+    "json": "{label} muss gültiges JSON sein",
+    "jsonArray": "{label} muss ein gültiges JSON-Array sein",
+    "oneOf": "{label} muss einer der folgenden Werte sein: {values}",
+    "currency": "{label} muss ein gültiger Währungscode mit 3 Buchstaben sein",
+    "country": "{label} muss ein gültiger Ländercode mit 2 Buchstaben sein",
+    "imageUrl": "{label} muss eine gültige Bild-URL sein"
   }
 }

@@ -8,10 +8,10 @@
 
 import * as z from 'zod'
 import type { EntityConfig, EntityField, ChildEntityDefinition } from './types'
-import { generateEntitySchemas, type GeneratedSchemas, type SchemaGenerationOptions } from './portable/schema-generator'
+import { generateEntitySchemas, type GeneratedSchemas, type SchemaGenerationOptions, type ValidationTranslator } from './portable/schema-generator'
 
 export { generateEntitySchemas }
-export type { GeneratedSchemas, SchemaGenerationOptions }
+export type { GeneratedSchemas, SchemaGenerationOptions, ValidationTranslator }
 
 /**
  * Generate TypeScript types from schemas
