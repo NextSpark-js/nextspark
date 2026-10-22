@@ -8,6 +8,7 @@ import {
   checkRateLimit as checkRedisRateLimit,
   maybeRedisConfigured,
   type RateLimitCheckResult as RedisRateLimitResult,
+  getRateLimitTierConfig,
   type RateLimitTier,
 } from '../rate-limit-redis';
 import { checkRequestOrigin } from './request-origin';
@@ -119,7 +120,8 @@ export type { RateLimitTier };
  * falls back to in-memory rate limiting otherwise.
  *
  * @param identifier - Unique identifier (IP, user ID, or combination)
- * @param type - Rate limit tier: 'auth' (5/15min), 'api' (100/1min), 'strict' (10/1hr), 'read' (200/1min), 'write' (50/1min)
+ * @param type - Rate limit tier: 'auth' (5/15min), 'api' (100/1min), 'strict' (10/1hr), 'read' (200/1min), 'write' (50/1min),
+ *   'webhook' (500/1hr), 'ingest' (1000/1min) or a tier declared in `rateLimit.tiers` of app.config
  * @returns Promise with rate limit result
  */
 export async function checkDistributedRateLimit(
@@ -135,35 +137,17 @@ export async function checkDistributedRateLimit(
   if (maybeRedisConfigured()) {
     const result = await checkRedisRateLimit(identifier, type);
 
-    const defaultLimits: Record<RateLimitTier, number> = {
-      auth: 5,
-      api: 100,
-      strict: 10,
-      read: 200,
-      write: 50,
-      webhook: 500,
-    };
-
     return {
       allowed: result.success,
       remaining: result.remaining,
       resetTime: result.reset,
-      limit: result.limit ?? defaultLimits[type],
+      limit: result.limit ?? getRateLimitTierConfig(type).limit,
       retryAfter: result.retryAfter,
     };
   }
 
   // Fallback to in-memory rate limiting
-  const limits: Record<RateLimitTier, { limit: number; windowMs: number }> = {
-    auth: { limit: 5, windowMs: 15 * 60 * 1000 },    // 5 requests per 15 minutes
-    api: { limit: 100, windowMs: 60 * 1000 },         // 100 requests per minute
-    strict: { limit: 10, windowMs: 60 * 60 * 1000 },  // 10 requests per hour
-    read: { limit: 200, windowMs: 60 * 1000 },        // 200 requests per minute
-    write: { limit: 50, windowMs: 60 * 1000 },        // 50 requests per minute
-    webhook: { limit: 500, windowMs: 60 * 60 * 1000 }, // 500 requests per hour
-  };
-
-  const config = limits[type];
+  const config = getRateLimitTierConfig(type);
   const result = checkRateLimit(`${type}:${identifier}`, config.limit, config.windowMs);
 
   return {
@@ -390,6 +374,8 @@ export function getRateLimitCacheStats() {
  * - 'read': 200 requests per minute (for read-only operations like GET)
  * - 'write': 50 requests per minute (for write operations like POST/PUT/DELETE)
  * - 'webhook': 500 requests per hour (for webhook endpoints - signature verification is the primary security layer)
+ * - 'ingest': 1000 requests per minute (for high-volume ingestion endpoints)
+ * - any tier declared in `rateLimit.tiers` of app.config; an undeclared name is limited as 'api'
  *
  * @param handler - The route handler to wrap
  * @param tier - The rate limit tier to apply (default: 'api')

@@ -840,6 +840,16 @@ export interface AppConfig {
   /** Cookie consent: banner, consent API and analytics loaders. Off unless `enabled` (#272). */
   consent?: ConsentConfig
 
+  /**
+   * Rate limit tiers: override the numbers of a built-in tier (`auth`, `api`, `strict`, `read`, `write`,
+   * `webhook`, `ingest`) or declare a tier of your own, then pass its name to `withRateLimitTier`. A custom tier needs
+   * both fields. An invalid or missing value never removes the limit: a built-in tier keeps its default and a custom
+   * tier is limited as `api`. Without this entry, every tier keeps its default.
+   */
+  rateLimit?: {
+    tiers?: Record<string, { limit?: number; windowMs?: number }>
+  }
+
   /** Security options of the rendered app */
   security?: {
     /**

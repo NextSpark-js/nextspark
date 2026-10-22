@@ -7,6 +7,8 @@
  * Falls back gracefully when Redis is not configured or dependencies aren't available.
  */
 
+import { APP_CONFIG_MERGED } from './config/config-client'
+
 // Type definitions for Upstash
 type UpstashRedis = {
   new (config: { url: string; token: string }): unknown
@@ -39,24 +41,10 @@ let redisUnconfiguredLogged = false  // Log once, not on every request
 
 // Lazy-loaded instances
 let redis: unknown | null = null
-let authRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> extends Promise<infer R>
-  ? { limit: (id: string) => Promise<R> } | null
-  : never = null
-let apiRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> extends Promise<infer R>
-  ? { limit: (id: string) => Promise<R> } | null
-  : never = null
-let strictRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> extends Promise<infer R>
-  ? { limit: (id: string) => Promise<R> } | null
-  : never = null
-let readRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> extends Promise<infer R>
-  ? { limit: (id: string) => Promise<R> } | null
-  : never = null
-let writeRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> extends Promise<infer R>
-  ? { limit: (id: string) => Promise<R> } | null
-  : never = null
-let webhookRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> extends Promise<infer R>
-  ? { limit: (id: string) => Promise<R> } | null
-  : never = null
+type Limiter = { limit: (id: string) => Promise<{ success: boolean; remaining: number; reset: number; limit: number }> }
+
+// One limiter per tier and limit, created on first use (a project can change a tier's numbers)
+const limiters = new Map<string, Limiter>()
 
 /**
  * Load Upstash modules dynamically
@@ -79,55 +67,6 @@ async function loadUpstashModules(): Promise<boolean> {
       redis = new Redis({
         url: process.env.UPSTASH_REDIS_REST_URL,
         token: process.env.UPSTASH_REDIS_REST_TOKEN,
-      })
-
-      // Initialize rate limiters
-      authRateLimiterInstance = new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(5, '15 m'),
-        analytics: true,
-        prefix: 'ratelimit:auth',
-        ephemeralCache: new Map(),
-      })
-
-      apiRateLimiterInstance = new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(100, '1 m'),
-        analytics: true,
-        prefix: 'ratelimit:api',
-        ephemeralCache: new Map(),
-      })
-
-      strictRateLimiterInstance = new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(10, '1 h'),
-        analytics: true,
-        prefix: 'ratelimit:strict',
-        ephemeralCache: new Map(),
-      })
-
-      readRateLimiterInstance = new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(200, '1 m'),
-        analytics: true,
-        prefix: 'ratelimit:read',
-        ephemeralCache: new Map(),
-      })
-
-      writeRateLimiterInstance = new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(50, '1 m'),
-        analytics: true,
-        prefix: 'ratelimit:write',
-        ephemeralCache: new Map(),
-      })
-
-      webhookRateLimiterInstance = new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(500, '1 h'),
-        analytics: true,
-        prefix: 'ratelimit:webhook',
-        ephemeralCache: new Map(),
       })
     }
 
@@ -157,27 +96,100 @@ export interface RateLimitCheckResult {
 }
 
 /**
- * Rate limit tiers available for API endpoints
+ * The tiers core ships
  */
-export type RateLimitTier = 'auth' | 'api' | 'strict' | 'read' | 'write' | 'webhook'
+export type BuiltInRateLimitTier = 'auth' | 'api' | 'strict' | 'read' | 'write' | 'webhook' | 'ingest'
 
 /**
- * Default limits for each tier (used in fallback mode when Redis unavailable)
+ * Rate limit tiers available for API endpoints: the built-in ones and any name declared in
+ * `rateLimit.tiers` of app.config (the `string & {}` keeps the built-in names in autocomplete).
  */
-const DEFAULT_TIER_LIMITS: Record<RateLimitTier, number> = {
-  auth: 5,
-  api: 100,
-  strict: 10,
-  read: 200,
-  write: 50,
-  webhook: 500,
+export type RateLimitTier = BuiltInRateLimitTier | (string & {})
+
+export interface RateLimitTierConfig {
+  /** Requests allowed per window */
+  limit: number
+  /** Window length in milliseconds */
+  windowMs: number
+}
+
+/**
+ * Default limits of the built-in tiers (the in-memory path and the Redis path both use them)
+ */
+const DEFAULT_TIERS: Record<BuiltInRateLimitTier, RateLimitTierConfig> = {
+  auth: { limit: 5, windowMs: 15 * 60 * 1000 },
+  api: { limit: 100, windowMs: 60 * 1000 },
+  strict: { limit: 10, windowMs: 60 * 60 * 1000 },
+  read: { limit: 200, windowMs: 60 * 1000 },
+  write: { limit: 50, windowMs: 60 * 1000 },
+  webhook: { limit: 500, windowMs: 60 * 60 * 1000 },
+  ingest: { limit: 1000, windowMs: 60 * 1000 },
+}
+
+const warned = new Set<string>()
+function warnOnce(key: string, message: string) {
+  if (warned.has(key)) return
+  warned.add(key)
+  console.error(`[RateLimit] ${message}`)
+}
+
+const isPositiveInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v > 0
+
+/**
+ * The limit and window of a tier: the default of a built-in tier, with the fields `rateLimit.tiers` of
+ * app.config sets on top, or the declared numbers of a custom tier (both fields required). A tier that is
+ * not built in and not declared, or a declaration with a field that is not a positive integer, never leaves
+ * the endpoint without a limit: an invalid field of a built-in tier keeps its default, and an invalid or
+ * unknown custom tier is limited as the `api` tier (an error is logged once).
+ */
+export function getRateLimitTierConfig(tier: RateLimitTier): RateLimitTierConfig {
+  const base = (DEFAULT_TIERS as Record<string, RateLimitTierConfig | undefined>)[tier]
+  const declared = (APP_CONFIG_MERGED as { rateLimit?: { tiers?: Record<string, Partial<RateLimitTierConfig>> } })
+    .rateLimit?.tiers?.[tier]
+  const fallback = DEFAULT_TIERS.api
+
+  if (!declared) {
+    if (base) return base
+    warnOnce(tier, `Unknown rate limit tier "${tier}": limiting it as "api". Declare it in rateLimit.tiers of app.config.`)
+    return fallback
+  }
+
+  const limit = declared.limit ?? base?.limit
+  const windowMs = declared.windowMs ?? base?.windowMs
+  const badField = (declared.limit !== undefined && !isPositiveInt(declared.limit)) || (declared.windowMs !== undefined && !isPositiveInt(declared.windowMs))
+  if (badField) {
+    warnOnce(tier, `Invalid rate limit tier "${tier}" in rateLimit.tiers: limit and windowMs must be positive integers; using ${base ? 'the default of the tier' : '"api"'}.`)
+    return base ?? fallback
+  }
+  if (!isPositiveInt(limit) || !isPositiveInt(windowMs)) {
+    warnOnce(tier, `Rate limit tier "${tier}" in rateLimit.tiers needs both limit and windowMs: limiting it as "api".`)
+    return fallback
+  }
+  return { limit, windowMs }
+}
+
+function getLimiter(tier: string, { limit, windowMs }: RateLimitTierConfig): Limiter | null {
+  if (!redis || !Ratelimit) return null
+  const key = `${tier}:${limit}:${windowMs}`
+  let limiter = limiters.get(key)
+  if (!limiter) {
+    limiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(limit, `${windowMs} ms`),
+      analytics: true,
+      prefix: `ratelimit:${tier}`,
+      ephemeralCache: new Map(),
+    })
+    limiters.set(key, limiter)
+  }
+  return limiter
 }
 
 /**
  * Check rate limit for a given identifier
  *
  * @param identifier - Unique identifier (e.g., IP address, user ID, or combination)
- * @param type - Rate limit tier: 'auth' (5/15min), 'api' (100/1min), 'strict' (10/1hr), 'read' (200/1min), 'write' (50/1min), 'webhook' (500/1hr)
+ * @param type - Rate limit tier: 'auth' (5/15min), 'api' (100/1min), 'strict' (10/1hr), 'read' (200/1min), 'write' (50/1min), 'webhook' (500/1hr), 'ingest' (1000/1min), or a tier declared in `rateLimit.tiers` of app.config
  * @returns Promise with success status, remaining requests, and reset timestamp
  */
 export async function checkRateLimit(
@@ -187,16 +199,8 @@ export async function checkRateLimit(
   // Try to load modules if not already loaded
   await loadUpstashModules()
 
-  // Select the appropriate limiter
-  const limiterMap: Record<RateLimitTier, typeof authRateLimiterInstance> = {
-    auth: authRateLimiterInstance,
-    api: apiRateLimiterInstance,
-    strict: strictRateLimiterInstance,
-    read: readRateLimiterInstance,
-    write: writeRateLimiterInstance,
-    webhook: webhookRateLimiterInstance,
-  }
-  const limiter = limiterMap[type]
+  const config = getRateLimitTierConfig(type)
+  const limiter = getLimiter(type, config)
 
   // If no limiter (Redis not configured or modules not available), allow all requests.
   // Log once at error level — this is a security degradation, not just a warning.
@@ -211,9 +215,9 @@ export async function checkRateLimit(
     }
     return {
       success: true,
-      remaining: DEFAULT_TIER_LIMITS[type],
+      remaining: config.limit,
       reset: Date.now() + 60000,
-      limit: DEFAULT_TIER_LIMITS[type],
+      limit: config.limit,
     }
   }
 
@@ -233,9 +237,9 @@ export async function checkRateLimit(
     console.error('[RateLimit] Redis error:', error)
     return {
       success: true,
-      remaining: DEFAULT_TIER_LIMITS[type],
+      remaining: config.limit,
       reset: Date.now() + 60000,
-      limit: DEFAULT_TIER_LIMITS[type],
+      limit: config.limit,
     }
   }
 }

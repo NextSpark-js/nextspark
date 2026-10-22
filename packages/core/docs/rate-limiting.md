@@ -144,13 +144,42 @@ Reinicia tu aplicación. En los logs deberías ver que el rate limiting usa Redi
 
 ## Tiers de Rate Limiting
 
-NextSpark incluye tres niveles predefinidos:
+NextSpark incluye estos niveles predefinidos:
 
 | Tier | Límite | Ventana | Uso recomendado |
 |------|--------|---------|-----------------|
 | `auth` | 5 requests | 15 minutos | Login, registro, reset password |
 | `api` | 100 requests | 1 minuto | Endpoints de API generales |
 | `strict` | 10 requests | 1 hora | Operaciones sensibles (cambio email/password) |
+| `read` | 200 requests | 1 minuto | Lecturas (GET) |
+| `write` | 50 requests | 1 minuto | Escrituras (POST/PUT/DELETE) |
+| `webhook` | 500 requests | 1 hora | Webhooks (la firma es la defensa principal) |
+| `ingest` | 1000 requests | 1 minuto | Endpoints de ingesta de alto volumen |
+
+### Ajustar o agregar tiers
+
+En `app.config.ts` podés cambiar los números de un tier existente o declarar tiers propios con `rateLimit.tiers`. Sin esta entrada, todos los tiers conservan los valores de la tabla.
+
+```typescript
+// app.config.ts
+export const APP_CONFIG_OVERRIDES = {
+  rateLimit: {
+    tiers: {
+      write: { limit: 120 },                       // solo cambia el límite; la ventana sigue en 1 minuto
+      exports: { limit: 5, windowMs: 10 * 60_000 }, // tier nuevo: 5 requests cada 10 minutos
+    },
+  },
+}
+```
+
+```typescript
+export const POST = withRateLimitTier(async (req) => { /* ... */ }, 'exports')
+```
+
+- `limit` es la cantidad de requests por ventana y `windowMs` la ventana en milisegundos; ambos deben ser enteros positivos.
+- Un tier existente acepta cualquiera de los dos campos; un tier nuevo necesita los dos.
+- Los nombres de los tiers declarados se aceptan como tipo (`RateLimitTier`) y funcionan igual con Redis y en memoria.
+- Un valor inválido o faltante nunca deja un endpoint sin límite: un tier existente conserva su valor por defecto y un tier nuevo mal declarado se limita como `api`. Lo mismo ocurre con un nombre de tier que no existe ni está declarado (por ejemplo, por un error de tipeo). En los tres casos se registra un error una vez.
 
 ---
 
@@ -235,7 +264,7 @@ El sistema "falla abierto" (fail open): si hay un error de conexión con Redis, 
 
 ### ¿Puedo cambiar los límites?
 
-Actualmente los límites están definidos en el código. En futuras versiones podrán configurarse via `app.config.ts`.
+Sí: ver [Ajustar o agregar tiers](#ajustar-o-agregar-tiers).
 
 ---
 
