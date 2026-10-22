@@ -6,7 +6,8 @@
 
 import { routeHarness, makeReq, asJson, sessionAs, MEMBER } from './input-validation/__helpers__/route-harness'
 
-jest.mock('@nextsparkjs/registries/billing-registry', () => ({ BILLING_REGISTRY: { provider: 'none', plans: [], features: {}, limits: {} } }))
+const mockRegistry = { provider: 'none', plans: [], features: {}, limits: {} }
+jest.mock('@nextsparkjs/registries/billing-registry', () => ({ BILLING_REGISTRY: mockRegistry }))
 
 const mockGetActive = jest.fn()
 const mockChangePlan = jest.fn()
@@ -34,6 +35,7 @@ const endpoints: Array<[string, (req: ReturnType<typeof makeReq>) => Promise<Res
 ]
 
 beforeEach(() => {
+  mockRegistry.provider = 'none'
   routeHarness.reset()
   routeHarness.mocks.authenticateRequest.mockResolvedValue(sessionAs({ ...MEMBER, defaultTeamId: 'team-1' } as typeof MEMBER))
   mockMembershipGet.mockResolvedValue({ role: 'owner', canPerformAction: () => ({ allowed: true }) })
@@ -66,24 +68,33 @@ describe.each(endpoints)('POST /api/v1/billing/%s', (name, invoke, body) => {
 })
 
 describe('webhook routes', () => {
-  test.each([
+  const webhooks = [
     ['stripe', stripeWebhook],
     ['polar', createPolarWebhookRoute()],
     ['lemonsqueezy', createLemonSqueezyWebhookRoute()],
     ['paddle', paddleWebhook],
-  ] as Array<[string, (req: ReturnType<typeof makeReq>, ctx: never) => Promise<Response>]>)('%s answers 404 and verifies nothing', async (name, handler) => {
-    const request = makeReq('POST', `/api/v1/billing/webhooks/${name}`, undefined, {
-      'stripe-signature': 'sig',
-      'paddle-signature': 'ts=1;h1=aa',
-      'x-signature': 'sig',
-      'webhook-id': 'w',
-      'webhook-signature': 's',
-      'webhook-timestamp': '1',
+  ] as Array<[string, (req: ReturnType<typeof makeReq>, ctx: never) => Promise<Response>]>
+
+  // 'none' has no webhook; a custom gateway has its own route, so an event of it is never claimed under a built-in namespace
+  describe.each(['none', 'acme'])('provider %s', (provider) => {
+    beforeEach(() => {
+      mockRegistry.provider = provider
     })
 
-    const response = await handler(request, undefined as never)
+    test.each(webhooks)('%s answers 404 and verifies nothing', async (name, handler) => {
+      const request = makeReq('POST', `/api/v1/billing/webhooks/${name}`, undefined, {
+        'stripe-signature': 'sig',
+        'paddle-signature': 'ts=1;h1=aa',
+        'x-signature': 'sig',
+        'webhook-id': 'w',
+        'webhook-signature': 's',
+        'webhook-timestamp': '1',
+      })
 
-    expect(response.status).toBe(404)
-    expect(mockGetBillingGateway).not.toHaveBeenCalled()
+      const response = await handler(request, undefined as never)
+
+      expect(response.status).toBe(404)
+      expect(mockGetBillingGateway).not.toHaveBeenCalled()
+    })
   })
 })
