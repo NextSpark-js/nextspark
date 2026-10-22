@@ -13,7 +13,7 @@ interface EntityConfig {
   icon: LucideIcon
 
   // 2. ACCESS AND SCOPE CONFIGURATION
-  access: { public: boolean; api: boolean; metadata: boolean; shared?: boolean; basePath?: string }
+  access: { public: boolean; api: boolean; metadata: boolean; shared?: boolean; basePath?: string; fieldVisibility?: { roles: string[]; hideFields: string[] }[] }
 
   // 3. UI/UX FEATURES
   ui: {
@@ -251,6 +251,53 @@ solo aplican si exponés la Data API / PostgREST de Supabase directamente (ver
 **Casos de uso:**
 - `shared: false` → Tareas personales, productos del usuario
 - `shared: true` → Categorías globales, configuraciones del sistema
+
+### `access.fieldVisibility`
+
+Campos que un rol del equipo no recibe de la API de la entidad.
+
+**Tipo:** `Array<{ roles: string[]; hideFields: string[] }> | undefined`
+
+**Comportamiento:**
+- Los campos de `hideFields` no aparecen en las respuestas de listar, leer, crear y actualizar, ni por REST, ni por MCP ni por server actions (`GenericEntityService`)
+- Tampoco sirven para filtrar, ordenar, buscar ni pedir valores distintos (`distinct`): para ese rol se tratan como campos que no existen (`INVALID_FILTER`, `INVALID_SORT_FIELD`, `INVALID_SEARCH_FIELD`, `INVALID_FIELD`)
+- Solo aplica a pedidos autenticados con un rol en el equipo: un pedido público se rige por `access.publicFields`, y el bypass de administrador ve todos los campos. Si un campo está en `publicFields` y en `hideFields`, un pedido público lo recibe y un miembro con ese rol no
+- Los roles que no figuran ven todos los campos; sin la opción, no cambia nada
+
+```typescript
+{
+  access: {
+    fieldVisibility: [
+      { roles: ['member', 'viewer'], hideFields: ['commissionRate', 'internalNotes'] }
+    ]
+  }
+}
+```
+
+No cubre los datos que otras partes agregan a la respuesta, como los hijos pedidos con `child` y los metadatos.
+
+### `access.ownershipFilter.fieldGuards`
+
+Campos que un rol del equipo no puede enviar al **crear** (`POST`) ni al **actualizar** (`PATCH`) un registro.
+
+**Tipo:** `Array<{ roles: string[]; denyFields: string[] }> | undefined`
+
+**Comportamiento:**
+- Si el cuerpo trae alguno de los `denyFields` para ese rol, la API responde `403 FIELD_MODIFICATION_DENIED` y no escribe nada (las server actions lanzan el mismo mensaje)
+- Rige igual para sesión y para API key, según el rol real del usuario en el equipo
+- Se declara dentro de `ownershipFilter`, pero se evalúa aunque el rol no esté en `ownershipFilter.roles`
+
+```typescript
+{
+  access: {
+    ownershipFilter: {
+      roles: ['member'],
+      field: 'ownerId',
+      fieldGuards: [{ roles: ['member'], denyFields: ['commissionRate'] }]
+    }
+  }
+}
+```
 
 ### `access.basePath`
 

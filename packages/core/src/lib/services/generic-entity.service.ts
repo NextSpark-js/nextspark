@@ -38,6 +38,7 @@ import {
 import type { EntityConfig, EntityField } from '../entities/types'
 import { bindFieldValue, findInvalidRelationField } from '../entities/relation-references'
 import { textValueIssue } from '../entities/portable/schema-generator'
+import { roleForFieldRules, hiddenFieldsForRole, deniedWriteFields, omitHiddenFields } from '../entities/field-access'
 import { checkPermission, declaredPublishPermission, publishPermissionFor } from '../permissions/check'
 
 // ============================================
@@ -369,6 +370,22 @@ export function validateEntityData(
   return { valid: errors.length === 0, errors }
 }
 
+/** The fields `access.fieldVisibility` hides from the caller's team role (#325); none when the entity declares no rule. */
+async function hiddenFieldsFor(entityConfig: EntityConfig, userId: string, teamId: string | null | undefined): Promise<Set<string>> {
+  if (!entityConfig.access?.fieldVisibility?.length) return new Set()
+  return hiddenFieldsForRole(entityConfig, await roleForFieldRules(entityConfig, userId, teamId))
+}
+
+/** `access.ownershipFilter.fieldGuards`: throws when the caller's team role may not send a field in `data`. */
+async function assertWritableFields(entityConfig: EntityConfig, userId: string, teamId: string | null | undefined, data: Record<string, unknown>): Promise<void> {
+  if (!entityConfig.access?.ownershipFilter?.fieldGuards?.length) return
+  const role = await roleForFieldRules(entityConfig, userId, teamId)
+  const forbidden = deniedWriteFields(entityConfig, role, data)
+  if (forbidden.length > 0) {
+    throw new Error(`Role '${role}' is not allowed to modify field(s): ${forbidden.join(', ')}`)
+  }
+}
+
 // ============================================
 // GENERIC ENTITY SERVICE
 // ============================================
@@ -417,7 +434,9 @@ export class GenericEntityService {
       userId
     )
 
-    return row ? mapRowToEntity<T>(row) : null
+    if (!row) return null
+    const hidden = await hiddenFieldsFor(entityConfig, userId, teamId ?? (row.teamId as string | undefined))
+    return mapRowToEntity<T>(omitHiddenFields(row, hidden))
   }
 
   /**
@@ -444,9 +463,7 @@ export class GenericEntityService {
 
     const tableName = getTableName(entityConfig)
     const fieldNames = getFieldNames(entityConfig)
-    const searchableFields = getSearchableFields(entityConfig)
     const selectClause = buildSelectClause(fieldNames)
-    const allFields = [...SYSTEM_FIELDS, ...fieldNames]
 
     const {
       limit: requestedLimit = DEFAULT_LIMIT,
@@ -457,6 +474,11 @@ export class GenericEntityService {
       search,
       teamId,
     } = options
+
+    // #325: a hidden field is not a field the caller can filter, sort or search by (it would tell them its values)
+    const hidden = await hiddenFieldsFor(entityConfig, userId, teamId)
+    const searchableFields = getSearchableFields(entityConfig).filter(name => !hidden.has(name))
+    const allFields = [...SYSTEM_FIELDS, ...fieldNames].filter(name => !hidden.has(name))
 
     // A window the database can serve: a whole number of at most MAX_PAGE_SIZE rows from a non-negative offset
     const limit = Number.isSafeInteger(requestedLimit) ? Math.min(MAX_PAGE_SIZE, Math.max(1, requestedLimit)) : DEFAULT_LIMIT
@@ -509,8 +531,14 @@ export class GenericEntityService {
       userId
     )
 
+    // Without a team in the options each row is read with the role the caller has in the row's own team
+    const hiddenByTeam = new Map<unknown, Set<string>>([[teamId, hidden]])
+    for (const row of rows) {
+      if (!hiddenByTeam.has(row.teamId)) hiddenByTeam.set(row.teamId, await hiddenFieldsFor(entityConfig, userId, row.teamId as string))
+    }
+
     return {
-      data: rows.map(row => mapRowToEntity<T>(row)),
+      data: rows.map(row => mapRowToEntity<T>(omitHiddenFields(row, hiddenByTeam.get(row.teamId) ?? hidden))),
       total,
       limit,
       offset,
@@ -543,6 +571,9 @@ export class GenericEntityService {
     if (!entityConfig) {
       throw new Error(`Entity "${entitySlug}" not found in registry`)
     }
+
+    // fieldGuards apply to a create body as they do to an update (#325)
+    await assertWritableFields(entityConfig, userId, teamId, data)
 
     // Execute beforeCreate hooks (can modify data, or throw to cancel the operation)
     const finalData = await beforeEntityCreate(entitySlug, data, userId)
@@ -625,7 +656,7 @@ export class GenericEntityService {
       console.error(`[GenericEntityService] afterCreate hook error for ${entitySlug}:`, err)
     })
 
-    return createdEntity
+    return omitHiddenFields(createdEntity, await hiddenFieldsFor(entityConfig, userId, teamId))
   }
 
   /**
@@ -677,6 +708,9 @@ export class GenericEntityService {
     if (!currentEntity) {
       throw new Error('Entity not found or not authorized')
     }
+
+    const roleTeamId = teamId ?? (currentEntity.teamId as string | undefined)
+    await assertWritableFields(entityConfig, userId, roleTeamId, data)
 
     // Execute beforeUpdate hooks (can modify data, or throw to cancel the operation)
     const finalData = await beforeEntityUpdate(entitySlug, id, data, userId)
@@ -756,7 +790,7 @@ export class GenericEntityService {
       console.error(`[GenericEntityService] afterUpdate hook error for ${entitySlug}:`, err)
     })
 
-    return updatedEntity
+    return omitHiddenFields(updatedEntity, await hiddenFieldsFor(entityConfig, userId, roleTeamId))
   }
 
   /**
@@ -896,7 +930,8 @@ export class GenericEntityService {
 
     const tableName = getTableName(entityConfig)
     const fieldNames = getFieldNames(entityConfig)
-    const allFields = [...SYSTEM_FIELDS, ...fieldNames]
+    const hidden = await hiddenFieldsFor(entityConfig, userId, typeof where.teamId === 'string' ? where.teamId : null)
+    const allFields = [...SYSTEM_FIELDS, ...fieldNames].filter(name => !hidden.has(name))
 
     // Build WHERE clause (pass valid fields for SQL injection prevention)
     const { clause, params } = buildWhereClause(where, allFields)

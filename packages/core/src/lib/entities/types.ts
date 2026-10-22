@@ -192,6 +192,20 @@ export interface EntityConfig {
     publicFields?: string[]
 
     /**
+     * Fields a team role does not get back from this entity's API (list, read, create and update
+     * responses, REST, MCP and server actions), and cannot use to filter, sort or search.
+     * Applies to authenticated requests only (public requests are governed by `publicFields`);
+     * an admin bypass sees every field. Roles not listed see every field. If not defined, all
+     * fields are returned (backwards compatible).
+     */
+    fieldVisibility?: Array<{
+      /** Team roles subject to this rule */
+      roles: string[]
+      /** Fields these roles do not receive */
+      hideFields: string[]
+    }>
+
+    /**
      * Role-based ownership filter for shared entities.
      *
      * When a user's team role matches one of the listed roles, the generic
@@ -231,11 +245,11 @@ export interface EntityConfig {
          */
         softDelete?: boolean
       }
-      /** Per-role field write restrictions on PATCH */
+      /** Per-role field write restrictions on create (POST) and update (PATCH) */
       fieldGuards?: Array<{
         /** Team roles subject to this guard */
         roles: string[]
-        /** Fields these roles cannot include in a PATCH body */
+        /** Fields these roles cannot include in a POST or PATCH body */
         denyFields: string[]
       }>
     }

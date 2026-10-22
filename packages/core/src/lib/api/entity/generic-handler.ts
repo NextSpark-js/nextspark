@@ -20,6 +20,7 @@ import { publicSlugIssue, otherBasePathSegments } from '../../entities/public-sl
 import { getAllEntityConfigs } from '../../entities/registry'
 import { bindFieldValue, findInvalidRelationField } from '../../entities/relation-references'
 import { getChildEntities } from '../../entities/queries'
+import { roleForFieldRules, hiddenFieldsForRole, deniedWriteFields, omitHiddenFields } from '../../entities/field-access'
 import { entityResponseSystemColumns, taxonomyResponseFields } from '../../entities/portable/response-shape'
 import { queryWithRLS, mutateWithRLS, queryOneWithRLS, getTransactionClient } from '../../db'
 import {
@@ -87,6 +88,48 @@ function checkNameFieldXss(
     }
   }
   return null
+}
+
+// ==========================================
+// ROLE-BASED FIELD ACCESS (#325)
+// ==========================================
+
+/**
+ * `access.ownershipFilter.fieldGuards` on a create or update body: 403 when the caller's team role may not send a
+ * field in it. Runs for session and API-key auth alike, keyed on the identity's real team role. Returns null when
+ * allowed (and without a query when the entity declares no guard).
+ */
+async function rejectDeniedFields(
+  request: NextRequest,
+  entityConfig: EntityConfig,
+  userId: string,
+  teamId: string,
+  body: Record<string, unknown>
+): Promise<NextResponse | null> {
+  if (!entityConfig.access?.ownershipFilter?.fieldGuards?.length) return null
+  const role = await roleForFieldRules(entityConfig, userId, teamId)
+  const forbidden = deniedWriteFields(entityConfig, role, body)
+  if (forbidden.length === 0) return null
+  return addCorsHeaders(
+    createApiError(
+      `Role '${role}' is not allowed to modify field(s): ${forbidden.join(', ')}`,
+      403,
+      undefined,
+      'FIELD_MODIFICATION_DENIED'
+    ),
+    request
+  )
+}
+
+/** The fields `access.fieldVisibility` hides from this caller; none for public requests and admin bypass. */
+async function hiddenFieldsFor(
+  entityConfig: EntityConfig,
+  userId: string | null,
+  teamId: string | null,
+  isBypass: boolean
+): Promise<Set<string>> {
+  if (isBypass || !entityConfig.access?.fieldVisibility?.length) return new Set()
+  return hiddenFieldsForRole(entityConfig, await roleForFieldRules(entityConfig, userId, teamId))
 }
 
 // ==========================================
@@ -934,6 +977,11 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     // Build dynamic query from entity configuration
     const entityConfig = resolution.entityConfig
 
+    // #325: the fields this caller's role may not see. They are also not usable to filter, sort or search, which
+    // would tell the caller their values (the checks below treat them as fields that do not exist).
+    const hiddenFields = await hiddenFieldsFor(entityConfig, userId, teamId, isBypass)
+    const userFilterKeys = Object.keys(customFilters)
+
     // #114: let plugins / declared EntityConfig.hooks add extra filter
     // key/value pairs to the effective query (e.g. a business-rule scoping
     // filter) before the parameter validation below runs. Read hooks shape
@@ -954,6 +1002,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     const taxonomyFilterParams = entityConfig.taxonomies?.enabled ? TAXONOMY_FILTER_PARAMS : []
     const invalidFilterKeys = Object.keys(customFilters).filter(
       key => !isEntityField(entityConfig, key) && !taxonomyFilterParams.includes(key)
+        || (userFilterKeys.includes(key) && hiddenFields.has(key))
     )
     if (invalidFilterKeys.length > 0) {
       const response = createApiError(
@@ -961,7 +1010,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
         400,
         {
           invalidKeys: invalidFilterKeys,
-          allowedKeys: [...entityConfig.fields.map((f: EntityField) => f.name), ...taxonomyFilterParams],
+          allowedKeys: [...entityConfig.fields.map((f: EntityField) => f.name).filter(name => !hiddenFields.has(name)), ...taxonomyFilterParams],
         },
         'INVALID_FILTER'
       )
@@ -973,7 +1022,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     // nothing to search says so instead of returning every row.
     const searchParam = url.searchParams.get('search')
     const searchFieldParam = url.searchParams.get('searchField')
-    const allowedSearchFields = searchFieldAllowlist(entityConfig)
+    const allowedSearchFields = searchFieldAllowlist(entityConfig).filter(name => !hiddenFields.has(name))
     // the name written into SQL is the config's own, found by the caller's string, never the caller's string
     const searchField = allowedSearchFields.find(name => name === searchFieldParam)
     if (searchFieldParam && !searchField) {
@@ -985,7 +1034,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
       )
       return addCorsHeaders(response, request)
     }
-    const searchableFields = [...new Set([...SEARCHABLE_FIELDS.filter(name => isEntityField(entityConfig, name)), ...(searchField ? [searchField] : [])])]
+    const searchableFields = [...new Set([...SEARCHABLE_FIELDS.filter(name => isEntityField(entityConfig, name) && !hiddenFields.has(name)), ...(searchField ? [searchField] : [])])]
     if (searchParam && searchParam.trim() !== '' && searchableFields.length === 0) {
       const response = createApiError(
         `Entity ${entityConfig.slug} has no searchable field (${SEARCHABLE_FIELDS.join(', ')}); the search parameter is not supported`,
@@ -999,11 +1048,11 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     // `sortBy` (alias `sort`) must be an entity field or a base column — it is
     // interpolated as an identifier, so this check is also the SQL-injection guard.
     const sortByParam = url.searchParams.get('sortBy') || url.searchParams.get('sort')
-    if (sortByParam && !isEntityField(entityConfig, sortByParam) && !SORTABLE_BASE_FIELDS.includes(sortByParam)) {
+    if (sortByParam && (hiddenFields.has(sortByParam) || !isEntityField(entityConfig, sortByParam) && !SORTABLE_BASE_FIELDS.includes(sortByParam))) {
       const response = createApiError(
         `Invalid sortBy field for ${entityConfig.slug}: ${sortByParam}`,
         400,
-        { allowedFields: [...SORTABLE_BASE_FIELDS, ...entityConfig.fields.map((f: EntityField) => f.name)] },
+        { allowedFields: [...SORTABLE_BASE_FIELDS, ...entityConfig.fields.map((f: EntityField) => f.name)].filter(name => !hiddenFields.has(name)) },
         'INVALID_SORT_FIELD'
       )
       return addCorsHeaders(response, request)
@@ -1017,7 +1066,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
 
       // #96: the name is interpolated as a SQL identifier below (and inside
       // handleDistinctJsonbField), so it must be a declared entity field.
-      if (!isEntityField(entityConfig, fieldName)) {
+      if (!isEntityField(entityConfig, fieldName) || hiddenFields.has(fieldName)) {
         const response = createApiError(
           `Invalid field for distinct query: ${fieldName}`,
           400,
@@ -1039,7 +1088,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     } else if (fieldsParam) {
       // Specific fields requested
       const requestedFields = fieldsParam.split(',').map(f => f.trim())
-      const validFields = requestedFields.filter(fieldName => isEntityField(entityConfig, fieldName))
+      const validFields = requestedFields.filter(fieldName => isEntityField(entityConfig, fieldName) && !hiddenFields.has(fieldName))
 
       fields = ['id', ...validFields]
           .map(fieldName => {
@@ -1278,7 +1327,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
       }
 
       // Add date range filters (from/to) for specified date field
-      if (dateFieldName && (fromDate || toDate)) {
+      if (dateFieldName && !hiddenFields.has(dateFieldName) && (fromDate || toDate)) {
         const field = entityConfig.fields.find((f: EntityField) => f.name === dateFieldName)
 
         // Validate field exists and is a date/datetime type
@@ -1446,7 +1495,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     // final result set before it's returned.
     const shapedData = await afterEntityRead(entityConfig.slug, finalData, { ...customFilters }, userId ?? undefined)
 
-    const response = createApiResponse(shapedData, paginationMeta)
+    const response = createApiResponse(omitHiddenFields(shapedData, hiddenFields), paginationMeta)
     return addCorsHeaders(response, request)
 
   } catch (error) {
@@ -1602,6 +1651,10 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
     // and API-key auth, in addition to the coarse `:write` scope check above.
     const permDenied = await checkAuthPermission(authResult, entityConfig.slug, 'create', teamId, request)
     if (permDenied) return permDenied
+
+    // fieldGuards apply to a create body as they do to an update (#325)
+    const deniedCreate = await rejectDeniedFields(request, entityConfig, authResult.user!.id, teamId, entityData)
+    if (deniedCreate) return deniedCreate
 
     // #118: pre-write extension point, mirroring the beforeEntityUpdate
     // contract. Plugins registered on `entity.<slug>.before_create` receive the
@@ -1835,7 +1888,8 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
       // Don't fail the request if hooks fail
     }
 
-    const response = createApiResponse(responseData, { created: true }, 201)
+    const hiddenFields = await hiddenFieldsFor(entityConfig, authResult.user!.id, teamId, teamValidation.isBypass)
+    const response = createApiResponse(omitHiddenFields(responseData, hiddenFields), { created: true }, 201)
     return addCorsHeaders(response, request)
 
   } catch (error) {
@@ -2024,7 +2078,8 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
     // #114: let plugins / declared EntityConfig.hooks shape or redact the item.
     const [shapedItem] = await afterEntityRead(entityConfig.slug, [finalItem], { id }, userId ?? undefined)
 
-    const response = createApiResponse(shapedItem ?? finalItem)
+    const hiddenFields = await hiddenFieldsFor(entityConfig, userId, teamId, isBypass)
+    const response = createApiResponse(omitHiddenFields(shapedItem ?? finalItem, hiddenFields))
     return addCorsHeaders(response, request)
 
   } catch (error) {
@@ -2103,33 +2158,9 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
     // Generate validation schema from entity configuration
     const entityConfig = resolution.entityConfig
 
-    // Apply field guards based on team role if configured. Runs for both
-    // session and API-key auth — the guard is keyed on the identity's real
-    // team role, same as checkAuthPermission/resolveOwnershipFilter above.
-    const fieldGuards = entityConfig.access?.ownershipFilter?.fieldGuards
-    if (fieldGuards && fieldGuards.length > 0 && authResult.user?.id) {
-      const guardMemberRow = await queryOneWithRLS<{ role: string }>(
-        'SELECT role FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
-        [teamId, authResult.user!.id],
-        authResult.user!.id
-      )
-      if (guardMemberRow) {
-        for (const guard of fieldGuards) {
-          if (guard.roles.includes(guardMemberRow.role)) {
-            const forbidden = guard.denyFields.filter(f => f in entityData)
-            if (forbidden.length > 0) {
-              const response = createApiError(
-                `Role '${guardMemberRow.role}' is not allowed to modify field(s): ${forbidden.join(', ')}`,
-                403,
-                undefined,
-                'FIELD_MODIFICATION_DENIED'
-              )
-              return addCorsHeaders(response, request)
-            }
-          }
-        }
-      }
-    }
+    // Apply field guards based on team role if configured (same rule as create).
+    const deniedUpdate = await rejectDeniedFields(request, entityConfig, authResult.user!.id, teamId, entityData)
+    if (deniedUpdate) return deniedUpdate
     const tableName = getTableName(entityConfig)
     const schemas = generateEntitySchemas(entityConfig)
     const validation = schemas.update.safeParse(omitHandlerManagedKeys(entityConfig, entityData))
@@ -2411,7 +2442,8 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
       // Don't fail the request if hooks fail
     }
 
-    const response = createApiResponse(responseData)
+    const hiddenFields = await hiddenFieldsFor(entityConfig, authResult.user!.id, teamId, teamValidation.isBypass)
+    const response = createApiResponse(omitHiddenFields(responseData, hiddenFields))
     return addCorsHeaders(response, request)
 
   } catch (error) {
