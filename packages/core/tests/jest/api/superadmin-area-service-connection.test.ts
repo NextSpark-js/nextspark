@@ -9,7 +9,7 @@ const session = jest.fn()
 jest.mock('@nextsparkjs/core/lib/auth/authorization-session', () => ({ getAuthorizationSession: () => session() }))
 jest.mock('@nextsparkjs/core/lib/api/rate-limit', () => ({ withRateLimitTier: (handler: unknown) => handler }))
 jest.mock('@nextsparkjs/core/lib/api/auth/dual-auth', () => ({ SYSTEM_ADMIN_TEAM_ID: 'team-nextspark-001' }))
-jest.mock('@nextsparkjs/core/lib/billing/gateways/factory', () => ({ getBillingGateway: async () => ({ getSubscriptionDashboardUrl: () => null, getCustomerDashboardUrl: () => null, getProviderName: () => 'stripe' }) }))
+jest.mock('@nextsparkjs/core/lib/billing/gateways/factory', () => ({ getBillingGatewayOrNull: async () => ({ getSubscriptionDashboardUrl: () => null, getCustomerDashboardUrl: () => null, getProviderName: () => 'stripe' }) }))
 const queryWithRLS = jest.fn()
 jest.mock('@nextsparkjs/core/lib/db', () => ({ queryWithRLS: (...args: unknown[]) => queryWithRLS(...args) }))
 
