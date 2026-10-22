@@ -14,7 +14,7 @@ const entityConfig = { slug: 'tasks', names: { plural: 'tasks', singular: 'task'
 
 const respond = (url: string) => {
   const page = Number(new URL(url, 'http://x').searchParams.get('page') ?? 1)
-  return Promise.resolve(new Response(JSON.stringify({ items: [{ id: `p${page}` }], total: 25 })))
+  return Promise.resolve(new Response(JSON.stringify({ success: true, data: [{ id: `p${page}` }], info: { total: 25, page } })))
 }
 
 function setup(initial: { page?: number }) {
@@ -40,6 +40,7 @@ describe('useEntityQuery page option', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
     expect(mockFetch).toHaveBeenCalledWith('/api/v1/tasks?limit=10')
     expect(result.current.data?.page).toBe(1)
+    expect(result.current.totalPages).toBe(3)
   })
 
   test('page N sends the page param and returns that page', async () => {

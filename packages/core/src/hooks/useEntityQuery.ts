@@ -104,11 +104,12 @@ export function useEntityQuery(options: UseEntityQueryOptions) {
 
       const data = await response.json()
 
+      const total = data.total || data.info?.total || 0
       return {
         items: data.items || data.data || data[entityConfig.slug] || [],
-        total: data.total || data.info?.total || 0,
+        total,
         page: data.page || data.info?.page || page,
-        totalPages: Math.ceil((data.total || 0) / pageSize),
+        totalPages: Math.ceil(total / pageSize),
       }
     },
     // Keep the previous page visible while another page of the same list loads.
