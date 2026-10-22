@@ -59,7 +59,11 @@ export function EntityFormWrapper({
   const { teamId } = useTeam()
 
   const [initialData, setInitialData] = useState<Record<string, unknown>>(propsInitialData || {})
-  const [isLoadingData, setIsLoadingData] = useState(false)
+  // An edit form waits for its record: rendered earlier it would show fields the record turns out not to have
+  const [isLoadingData, setIsLoadingData] = useState(mode === 'edit' && !!id && !(propsInitialData && Object.keys(propsInitialData).length > 0))
+  // Fields the API left out of the loaded record (hidden from this role by access.fieldVisibility, #325): the API
+  // returns every column of the entity, null included, so an absent key can only be a hidden field.
+  const [absentFields, setAbsentFields] = useState<string[]>([])
   // Last failed save, shown inside the form (#97 follow-up). Before, a 400 from
   // the API only reached console.error/onError and the Save button looked inert.
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -76,6 +80,7 @@ export function EntityFormWrapper({
       if (mode === 'edit' && id && entityConfig && signedIn) {
         if (!entityConfig.enabled) {
           onError?.(new Error(`Entity "${entityType}" is disabled`))
+          setIsLoadingData(false)
           return
         }
         
@@ -87,6 +92,7 @@ export function EntityFormWrapper({
           
           if (process.env.NODE_ENV === 'development') console.log(`[EntityFormWrapper] Loaded data:`, data)
           setInitialData(data || {})
+          setAbsentFields(data ? entityConfig.fields.filter(field => !(field.name in data)).map(field => field.name) : [])
         } catch (error) {
           console.error(`[EntityFormWrapper] Error loading data for ${entityType} ${id}:`, error)
           onError?.(error instanceof Error ? error : new Error(`Failed to load ${entityType} data`))
@@ -177,6 +183,7 @@ export function EntityFormWrapper({
           error={submitError}
           className={className}
           teamId={teamId}
+          hiddenFields={absentFields}
         />
       </div>
     </div>

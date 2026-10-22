@@ -262,13 +262,16 @@ export function EntityForm({
 
     setIsSubmitting(true)
     try {
-      await onSubmit(formData)
+      // Editing: a hidden field is neither shown nor sent, so its initial empty value cannot overwrite the stored one
+      await onSubmit(mode === 'edit'
+        ? Object.fromEntries(Object.entries(formData).filter(([name]) => !hiddenFields.includes(name)))
+        : formData)
     } catch (err) {
       console.error('Form submission failed:', err)
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, entityConfig, hiddenFields, validationErrors, onSubmit])
+  }, [formData, entityConfig, hiddenFields, mode, validationErrors, onSubmit])
 
   const allErrors = { ...localValidationErrors, ...validationErrors }
   const hasErrors = Object.keys(allErrors).length > 0
