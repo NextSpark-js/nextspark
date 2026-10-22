@@ -327,6 +327,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
     allowedMimeTypes: [
       'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
       'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
+      'application/pdf', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/ogg',
     ],
   },
 

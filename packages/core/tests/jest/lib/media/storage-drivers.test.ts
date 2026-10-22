@@ -370,6 +370,15 @@ describe('LocalStorageDriver', () => {
     expect(response.headers.get('content-disposition')).toBe('attachment')
   })
 
+  it.each([['mp3', 'audio/mpeg'], ['wav', 'audio/wav'], ['ogg', 'audio/ogg']])('sends .%s as %s, nosniff and a download', async (extension, type) => {
+    const name = NAME.replace('.png', `.${extension}`)
+    await local.put(name, Buffer.from('OggS'), type)
+    const response = await local.serve(name, null)
+    expect(response.headers.get('content-type')).toBe(type)
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(response.headers.get('content-disposition')).toBe('attachment')
+  })
+
   it('serves only generated names, never another file in the directory, nor a symlink', async () => {
     mkdirSync(join(root, 'uploads'), { recursive: true })
     writeFileSync(join(root, 'uploads', 'package.json'), '{}')

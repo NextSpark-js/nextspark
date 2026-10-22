@@ -62,6 +62,7 @@ The media configuration lives in the `media` section of the application config:
     allowedMimeTypes: [
       'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
       'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
+      'application/pdf', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/ogg',
     ],
   }
 }
@@ -150,7 +151,7 @@ const config: Partial<AppConfig> = {
     allowedMimeTypes: [
       'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
       'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
-      'application/pdf',              // Add PDF support
+      'application/pdf', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/ogg',
     ],
   },
 }
@@ -158,7 +159,7 @@ const config: Partial<AppConfig> = {
 export default config
 ```
 
-Types outside the raster and video table (`image/jpeg`, `image/png`, `image/gif`, `image/webp`, `video/*` above), such as PDF, are stored and served as downloads (`Content-Disposition: attachment`). SVG is deliberately not in this example: an SVG can carry script, its bytes have no signature the upload can check, and a bucket serves it with the type it was stored with from an origin the app does not control (often a sibling domain of the app). Allowing it is only safe from an origin that shares no cookies with the app and sends `Content-Security-Policy: sandbox`.
+The defaults already include PDF and audio (MP3, WAV, OGG), so a `file` or `audio` field works in a fresh project. Each of these types is checked against its file signature (`%PDF`, an `ID3` tag or MPEG frame, `RIFF…WAVE`, `OggS`) and refused when the bytes do not match. Types outside the raster and video table (`image/jpeg`, `image/png`, `image/gif`, `image/webp`, `video/*` above), PDF and audio included, are stored and served as downloads (`Content-Disposition: attachment`). SVG is deliberately not in this example: an SVG can carry script, its bytes have no signature the upload can check, and a bucket serves it with the type it was stored with from an origin the app does not control (often a sibling domain of the app). Allowing it is only safe from an origin that shares no cookies with the app and sends `Content-Security-Policy: sandbox`.
 
 The theme configuration is deep-merged with the core defaults at build time. Any properties not specified in the theme fall back to the core defaults.
 

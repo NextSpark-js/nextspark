@@ -5,6 +5,7 @@ export function allowedMimeTypes(): string[] {
   return MEDIA_CONFIG?.allowedMimeTypes ?? [
     'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
     'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
+    'application/pdf', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/ogg',
   ]
 }
 
