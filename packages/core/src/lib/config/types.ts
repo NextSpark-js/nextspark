@@ -837,6 +837,18 @@ export interface AppConfig {
   /** Media library configuration */
   media?: MediaConfig
 
+  /** Dashboard options of the app */
+  dashboard?: {
+    /**
+     * Where a signed-in user lands when no `callbackUrl` asks for another page: a path inside the app
+     * (`'/dashboard/tasks'`), or a map from a user role to a path with a `default` key for the other roles
+     * (`{ default: '/dashboard', superadmin: '/superadmin' }`). It is the default destination of the email,
+     * code and social sign-in, of the dashboard index and of the access-denied redirects. A value that leaves the app
+     * (an absolute URL, `//host`) fails when the server loads. Without it: `/dashboard`.
+     */
+    homeRoute?: string | Record<string, string>
+  }
+
   /** Cookie consent: banner, consent API and analytics loaders. Off unless `enabled` (#272). */
   consent?: ConsentConfig
 

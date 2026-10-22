@@ -19,6 +19,9 @@ export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || appConfig.app.name
 export const APP_DESCRIPTION = appConfig.app.description
 export const DOCS_CONFIG = appConfig.docs
 
+/** `dashboard` of app.config, read by the sign-in flows for the landing route (`homeRoute`). */
+export const DASHBOARD_HOME_CONFIG = appConfig.dashboard
+
 /** Cookie consent (#272), defaults filled in. `enabled` is false unless app.config turns it on. */
 export const CONSENT_CONFIG = resolveConsentConfig(appConfig.consent)
 

@@ -1,6 +1,9 @@
 'use client'
 
 import { useUserProfile } from '@nextsparkjs/core/hooks/useUserProfile'
+import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
+import { resolveHomeRoute } from '@nextsparkjs/core/lib/auth/home-route'
+import { DASHBOARD_HOME_CONFIG } from '@nextsparkjs/core/lib/config/public-config-client'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -25,11 +28,21 @@ function DefaultDashboardPage() {
   const router = useRouter()
   const t = useTranslations('dashboard')
 
+  const { user: authUser } = useAuth()
+
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/login')
     }
   }, [user, isLoading, router])
+
+  // A configured landing route (app.config dashboard.homeRoute) replaces this page for the user's role. Not when the
+  // page carries an error (access denied) or the landing route is this page itself.
+  useEffect(() => {
+    if (!authUser || new URLSearchParams(window.location.search).has('error')) return
+    const home = resolveHomeRoute(DASHBOARD_HOME_CONFIG, (authUser as { role?: string }).role)
+    if (home.split(/[?#]/)[0] !== '/dashboard') router.replace(home)
+  }, [authUser, router])
 
   if (isLoading) {
     return (

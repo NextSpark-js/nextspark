@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from '../../ui/button';
 import { useTranslations } from "next-intl";
+import { accessDeniedPath } from '../../../lib/auth/home-route';
+import { DASHBOARD_HOME_CONFIG } from '../../../lib/config/public-config-client';
 
 interface SuperAdminGuardProps {
   children: React.ReactNode;
@@ -48,7 +50,7 @@ export function SuperAdminGuard({ children, fallback, serverChecked = false }: S
   useEffect(() => {
     // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
     if (mounted && !isPending && session && session.user?.role !== 'superadmin' && session.user?.role !== 'developer') {
-      router.push('/dashboard?error=access_denied');
+      router.push(accessDeniedPath(DASHBOARD_HOME_CONFIG, (session.user as { role?: string }).role));
     }
   }, [mounted, session, isPending, router]);
 

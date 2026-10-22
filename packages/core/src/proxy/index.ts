@@ -25,6 +25,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../lib/auth'
+import { APP_CONFIG_MERGED } from '../lib/config'
+import { accessDeniedPath } from '../lib/auth/home-route'
 import {
   hasProjectMiddleware,
   executeProjectMiddleware,
@@ -174,11 +176,12 @@ function redirectToLogin(request: NextRequest, target: RequestTarget = requestTa
   return NextResponse.redirect(loginUrl)
 }
 
-/** Send a signed-in user without the role an area needs back to the dashboard. */
-function redirectAccessDenied(request: NextRequest): NextResponse {
-  const dashboardUrl = appUrl(request, '/dashboard')
-  dashboardUrl.searchParams.set('error', 'access_denied')
-  return NextResponse.redirect(dashboardUrl)
+/** Send a signed-in user without the role an area needs back to their landing route (the dashboard by default). */
+function redirectAccessDenied(request: NextRequest, role?: string): NextResponse {
+  const [pathname, search = ''] = accessDeniedPath(APP_CONFIG_MERGED.dashboard, role).split('?')
+  const url = appUrl(request, pathname)
+  url.search = search
+  return NextResponse.redirect(url)
 }
 
 /**
@@ -564,7 +567,7 @@ async function handle(request: NextRequest, authenticatedPaths: readonly string[
       ((area === 'admin' || area === 'superadmin') && role !== 'superadmin' && role !== 'developer') ||
       (area === 'devtools' && role !== 'developer')
     ) {
-      return { response: redirectAccessDenied(request), session, injectIdentity: false }
+      return { response: redirectAccessDenied(request, role), session, injectIdentity: false }
     }
 
     return { response: null, session, injectIdentity: isProtectedRoute }

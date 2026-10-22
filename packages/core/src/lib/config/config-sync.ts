@@ -21,6 +21,7 @@ import { mergeConfigs } from '../utils/config-merge'
 import { mergeRolesConfig } from './roles-merge'
 import { resolveAuthMethods } from '../auth/auth-methods'
 import { resolveOtpConfig } from '../auth/otp-config'
+import { assertHomeRoute } from '../auth/home-route'
 // Import team roles from permissions-registry (single source of truth)
 import {
   AVAILABLE_ROLES as REGISTRY_AVAILABLE_ROLES,
@@ -71,6 +72,9 @@ function loadAppConfigInternal() {
 
   // Merge theme config over default config
   const mergedConfig = mergeConfigs(DEFAULT_APP_CONFIG, themeConfigOverrides)
+
+  // A landing route that leaves the app fails here, when the server loads, not at the first sign-in
+  assertHomeRoute(mergedConfig.dashboard)
 
   // Apply special merge for userRoles (additive, not replacement)
   // This ensures core roles are protected and theme additionalRoles are appended

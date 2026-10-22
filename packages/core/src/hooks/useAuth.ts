@@ -8,6 +8,8 @@ import type { SessionUser } from '../lib/auth'
 import { useOrigin } from './useOrigin'
 import { useLastAuthMethod } from './useLastAuthMethod'
 import { safeCallbackPath } from '../lib/auth/callback-url'
+import { resolveHomeRoute } from '../lib/auth/home-route'
+import { DASHBOARD_HOME_CONFIG } from '../lib/config/public-config-client'
 import { withBasePath } from '../lib/base-path'
 import { loadLoginPage } from '../lib/auth/load-login-page'
 import { setSessionHint } from '../lib/auth/session-hint'
@@ -117,7 +119,7 @@ export function useAuthActions() {
       saveAuthMethod('email')
       forgetSignedInData()
       rememberSignedIn(data.user)
-      router.push(safeCallbackPath(redirectTo) ?? '/dashboard')
+      router.push(safeCallbackPath(redirectTo) ?? resolveHomeRoute(DASHBOARD_HOME_CONFIG, (data.user as { role?: string } | undefined)?.role))
     }
 
     return data
@@ -201,7 +203,7 @@ export function useAuthActions() {
       saveAuthMethod('email')
       forgetSignedInData()
       rememberSignedIn(data.user)
-      router.push(safeCallbackPath(redirectTo) ?? '/dashboard')
+      router.push(safeCallbackPath(redirectTo) ?? resolveHomeRoute(DASHBOARD_HOME_CONFIG, (data.user as { role?: string } | undefined)?.role))
     }
 
     return data

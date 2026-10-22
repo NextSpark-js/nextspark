@@ -32,6 +32,8 @@ import { Suspense } from 'react'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getAuthorizationRequestSession } from '@nextsparkjs/core/lib/auth/request-session'
+import { accessDeniedPath } from '@nextsparkjs/core/lib/auth/home-route'
+import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-sync'
 
 export type AccessArea = 'superadmin' | 'devtools'
 
@@ -64,7 +66,7 @@ async function requestSession() {
 export async function requireAreaAccess(area: AccessArea): Promise<void> {
   const { session, pathname } = await requestSession()
   if (!session) redirect(loginPathFor(area, pathname))
-  if (!canEnterArea(area, session.user?.role)) redirect('/dashboard?error=access_denied')
+  if (!canEnterArea(area, session.user?.role)) redirect(accessDeniedPath(APP_CONFIG_MERGED.dashboard, session.user?.role))
 }
 
 function withAreaAccess<P extends object>(area: AccessArea, Segment: ComponentType<P>) {

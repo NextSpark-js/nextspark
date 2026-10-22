@@ -31,6 +31,28 @@ await authClient.signIn.email({
 // 3. Returns user data
 ```
 
+### Landing route after sign-in
+
+By default the sign-in flows (email and password, emailed code, Google) send the user to `/dashboard`, or to the `callbackUrl` of the login URL when it is a path on this app. `dashboard.homeRoute` in `app.config.ts` changes that default, for every user or per role:
+
+```typescript
+// app.config.ts
+export const APP_CONFIG_OVERRIDES = {
+  dashboard: {
+    homeRoute: '/dashboard/tasks',
+    // or, per user role (`default` covers the roles that are not listed):
+    // homeRoute: { default: '/dashboard/tasks', superadmin: '/superadmin' },
+  },
+}
+```
+
+- A `callbackUrl` still wins over `homeRoute`.
+- It applies to email and code sign-in, to the dashboard index (`/dashboard`, which is where a Google sign-in lands and which then moves the user to their route), and to the redirect that follows an access-denied request to `/admin`, `/superadmin` or `/devtools` (the route gets `?error=access_denied`; the dashboard index does not redirect again when the URL carries `error`).
+- The role is the user's role (`session.user.role`), not a team role. A role that is not in the map uses `default`, and `/dashboard` when there is none.
+- Each value must be a path on this app. An absolute URL, `//host` or `/\host` stops the server when it loads, with a message that names the option. A value that still reaches the sign-in flows unchecked is ignored in favor of `/dashboard`.
+- A route that does not exist is not detected: the user sees that page's 404.
+- Without the option nothing changes.
+
 ### Session Data Structure
 
 ```typescript
