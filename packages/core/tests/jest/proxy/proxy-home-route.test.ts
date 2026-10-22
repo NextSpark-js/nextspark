@@ -56,6 +56,13 @@ describe('proxy access-denied redirect', () => {
     expect(await deniedLocation('member', '/devtools/config')).toContain('/dashboard/tasks?error=access_denied')
   })
 
+  test('a landing route inside a closed area does not loop', async () => {
+    mockApp.dashboard = { homeRoute: '/superadmin' }
+    const location = await deniedLocation('member')
+    expect(location).toContain('/dashboard?error=access_denied')
+    expect(location).not.toContain('/superadmin')
+  })
+
   test('a landing route that leaves the app is ignored', async () => {
     mockApp.dashboard = { homeRoute: 'https://evil.example/x' }
     const location = await deniedLocation('member')

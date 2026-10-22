@@ -69,6 +69,18 @@ describe('dashboard index landing route', () => {
     expect(mockReplace).not.toHaveBeenCalled()
   })
 
+  test('a landing route in an area the role cannot open stays (no loop)', () => {
+    mockConfig.dashboard = { homeRoute: '/superadmin' }
+    open()
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  test('a trailing slash on the dashboard itself stays', () => {
+    mockConfig.dashboard = { homeRoute: '/dashboard/' }
+    open()
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
+
   test('a landing route outside the app is never followed', () => {
     mockConfig.dashboard = { homeRoute: 'https://evil.example/x' }
     open()

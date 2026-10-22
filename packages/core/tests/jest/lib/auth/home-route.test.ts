@@ -52,6 +52,31 @@ describe('resolveHomeRoute', () => {
   })
 })
 
+describe('restricted areas and trailing slashes', () => {
+  test.each(['/superadmin', '/admin/settings', '/devtools?x=1'])('%s is not a landing route for a role that cannot open it', (path) => {
+    expect(resolveHomeRoute({ homeRoute: path }, 'member')).toBe('/dashboard')
+    expect(resolveHomeRoute({ homeRoute: { default: path } }, 'member')).toBe('/dashboard')
+    expect(resolveHomeRoute({ homeRoute: path }, undefined)).toBe('/dashboard')
+  })
+
+  test('a role that can open the area keeps it', () => {
+    const config = { homeRoute: { default: '/dashboard', superadmin: '/superadmin', developer: '/devtools' } }
+    expect(resolveHomeRoute(config, 'superadmin')).toBe('/superadmin')
+    expect(resolveHomeRoute(config, 'developer')).toBe('/devtools')
+    expect(resolveHomeRoute({ homeRoute: '/devtools' }, 'superadmin')).toBe('/dashboard')
+  })
+
+  test('the access-denied path never points at the area that denied the user', () => {
+    expect(accessDeniedPath({ homeRoute: '/superadmin' }, 'member')).toBe('/dashboard?error=access_denied')
+    expect(accessDeniedPath({ homeRoute: { default: '/devtools' } }, 'superadmin')).toBe('/dashboard?error=access_denied')
+  })
+
+  test('a trailing slash is dropped, so /dashboard/ is the dashboard', () => {
+    expect(resolveHomeRoute({ homeRoute: '/dashboard/' }, 'member')).toBe('/dashboard')
+    expect(resolveHomeRoute({ homeRoute: '/dashboard/tasks/?view=1' }, 'member')).toBe('/dashboard/tasks?view=1')
+  })
+})
+
 describe('assertHomeRoute', () => {
   test('accepts no option, a path and a map of paths', () => {
     expect(() => assertHomeRoute(undefined)).not.toThrow()

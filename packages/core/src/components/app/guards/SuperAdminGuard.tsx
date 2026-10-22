@@ -50,7 +50,7 @@ export function SuperAdminGuard({ children, fallback, serverChecked = false }: S
   useEffect(() => {
     // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
     if (mounted && !isPending && session && session.user?.role !== 'superadmin' && session.user?.role !== 'developer') {
-      router.push(accessDeniedPath(DASHBOARD_HOME_CONFIG, (session.user as { role?: string }).role));
+      router.push(accessDeniedPath(DASHBOARD_HOME_CONFIG, (session as { user?: { role?: string } }).user?.role));
     }
   }, [mounted, session, isPending, router]);
 

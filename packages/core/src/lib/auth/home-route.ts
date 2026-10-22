@@ -36,10 +36,25 @@ export function assertHomeRoute(dashboardConfig: object | undefined): void {
   assertPath(homeRoute, '')
 }
 
+// The roles each restricted area lets in (the proxy and routes/_internal/area-access apply the same rules)
+const AREA_ROLES: Record<string, readonly string[]> = {
+  admin: ['superadmin', 'developer'],
+  superadmin: ['superadmin', 'developer'],
+  devtools: ['developer'],
+}
+
+/** Whether `path` is inside a restricted area that `role` cannot open. */
+function isClosedArea(path: string, role?: string | null): boolean {
+  const area = path.split(/[/?#]/)[1]?.toLowerCase()
+  if (!area || !hasOwn(AREA_ROLES, area)) return false
+  return !(typeof role === 'string' && AREA_ROLES[area].includes(role))
+}
+
 /**
  * The landing path for a user with `role`: the configured string, the entry of the map for the role or its
  * `default`, else `/dashboard`. A value that is not an in-app path (a config that skipped assertHomeRoute) is
- * never used.
+ * never used, and neither is one inside /admin, /superadmin or /devtools for a role that cannot open it (that
+ * would send the user back to the access-denied redirect forever). A trailing slash of the path is dropped.
  */
 export function resolveHomeRoute(dashboardConfig: object | undefined, role?: string | null): string {
   const homeRoute = (dashboardConfig as { homeRoute?: unknown } | undefined)?.homeRoute
@@ -47,7 +62,11 @@ export function resolveHomeRoute(dashboardConfig: object | undefined, role?: str
   if (isMap(homeRoute)) {
     chosen = typeof role === 'string' && hasOwn(homeRoute, role) ? homeRoute[role] : hasOwn(homeRoute, 'default') ? homeRoute.default : undefined
   }
-  return (typeof chosen === 'string' && safeCallbackPath(chosen)) || DEFAULT_HOME_ROUTE
+  const safe = typeof chosen === 'string' ? safeCallbackPath(chosen) : null
+  if (!safe) return DEFAULT_HOME_ROUTE
+  const url = new URL(safe, 'http://callback.invalid')
+  const path = `${url.pathname.replace(/\/+$/, '') || '/'}${url.search}${url.hash}`
+  return isClosedArea(path, role) ? DEFAULT_HOME_ROUTE : path
 }
 
 /** Where a signed-in user without the role an area needs goes: their landing route with `error=access_denied`. */
