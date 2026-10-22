@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '../../ui/select'
 import { ImageUpload } from '../../ui/image-upload'
+import { toUploadedImages } from './uploaded-images'
 import { RichTextEditor } from '../../ui/rich-text-editor'
 import { MediaLibrary } from '../../media/MediaLibrary'
 import { ChevronDown, ChevronRight, CalendarIcon, ImageIcon, X, Loader2, Check } from 'lucide-react'
@@ -536,8 +537,8 @@ export function DynamicForm({ fieldDefinitions, values, onChange, flushRef }: Dy
       case 'image':
         return (
           <ImageUpload
-            value={Array.isArray(value) ? value : []}
-            onChange={(newValue) => handleFieldChange(field.name, newValue)}
+            value={toUploadedImages(value)}
+            onChange={(newValue) => handleFieldChange(field.name, newValue[0]?.url ?? '')}
             maxImages={1}
             data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
           />
