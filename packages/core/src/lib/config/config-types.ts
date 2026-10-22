@@ -58,6 +58,13 @@ export interface ApiConfig {
    * Additive only: an app can add scopes, never remove or redefine core's.
    */
   scopes?: Record<string, string>
+  /**
+   * Language of the validation messages the generic entity routes answer with (`validation.entity.*` in
+   * core's `messages/<locale>`). Unset (the default) keeps them in English. A locale such as `'es'` answers every
+   * request in it; `'accept-language'` picks, per request, the supported locale the header prefers (English when
+   * it names none). A locale without a catalog also answers in English.
+   */
+  validationLocale?: string
   cors: {
     allowedOrigins: {
       development: string[]

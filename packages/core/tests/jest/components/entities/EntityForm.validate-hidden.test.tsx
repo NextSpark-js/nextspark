@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, jest } from '@jest/globals'
 
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en', useMessages: () => ({}) }))
 jest.mock('@/core/components/entities/EntityFieldRenderer', () => ({ EntityFieldRenderer: () => null }))
 
 import { validateFormData } from '@/core/components/entities/EntityForm'

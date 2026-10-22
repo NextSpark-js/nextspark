@@ -16,6 +16,7 @@ import { authenticateRequest, createAuthFailureResponse, canBypassTeamContext, t
 import type { EntityField, EntityConfig, TaxonomyTypeConfig } from '../../entities/types'
 import { resolveEntityFromUrl, validateEntityOperation } from './resolver'
 import { generateEntitySchemas } from '../../entities/schema-generator'
+import { validationTranslatorFor } from './validation-locale'
 import { publicSlugIssue, otherBasePathSegments } from '../../entities/public-slug'
 import { getAllEntityConfigs } from '../../entities/registry'
 import { bindFieldValue, findInvalidRelationField } from '../../entities/relation-references'
@@ -1557,7 +1558,8 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
     // Generate validation schema from entity configuration
     const entityConfig = resolution.entityConfig
     const tableName = getTableName(entityConfig)
-    const schemas = generateEntitySchemas(entityConfig)
+    const translate = await validationTranslatorFor(request)
+    const schemas = generateEntitySchemas(entityConfig, translate && { translate })
     const validation = schemas.create.safeParse(omitHandlerManagedKeys(entityConfig, entityData))
 
     if (!validation.success) {
@@ -2162,7 +2164,8 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
     const deniedUpdate = await rejectDeniedFields(request, entityConfig, authResult.user!.id, teamId, entityData)
     if (deniedUpdate) return deniedUpdate
     const tableName = getTableName(entityConfig)
-    const schemas = generateEntitySchemas(entityConfig)
+    const translate = await validationTranslatorFor(request)
+    const schemas = generateEntitySchemas(entityConfig, translate && { translate })
     const validation = schemas.update.safeParse(omitHandlerManagedKeys(entityConfig, entityData))
 
     if (!validation.success) {
@@ -2717,7 +2720,7 @@ async function resolveChildContext(
       ? Object.fromEntries(Object.entries(raw).filter(([key]) => !CHILD_MANAGED_KEYS.has(key)))
       : raw
     const childEntity = { slug: childType, fields: childFields } as EntityConfig
-    const schemas = generateEntitySchemas(childEntity, { includeChildEntities: false })
+    const schemas = generateEntitySchemas(childEntity, { includeChildEntities: false, translate: await validationTranslatorFor(request) })
     const validation = (operation === 'create' ? schemas.create : schemas.update).safeParse(input)
     if (!validation.success) {
       return addCorsHeaders(createApiError(validationErrorMessage(validation.error.issues), 400, validation.error.issues, 'VALIDATION_ERROR'), request)

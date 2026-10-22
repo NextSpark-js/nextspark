@@ -7,7 +7,8 @@
 
 'use client'
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useMemo } from 'react'
+import { useLocale, useMessages } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Alert, AlertDescription } from '../ui/alert'
@@ -21,6 +22,9 @@ import {
   Trash2
 } from 'lucide-react'
 import type { EntityConfig } from '../../lib/entities/types'
+import { fieldValidationMessage, type ValidationTranslator } from '../../lib/entities/portable/schema-generator'
+import type { ValidationMessageKind } from '../../lib/entities/portable/types'
+import { createValidationTranslator } from '../../lib/entities/validation-translator'
 import { EntityFieldRenderer } from './EntityFieldRenderer'
 import { sel } from '../../lib/test'
 
@@ -54,9 +58,15 @@ interface FormData {
 export function validateFormData(
   data: FormData,
   entityConfig: EntityConfig,
-  hiddenFields: string[] = []
+  hiddenFields: string[] = [],
+  translate?: ValidationTranslator
 ): Record<string, string> {
   const errors: Record<string, string> = {}
+  // With a translator, a message the field overrides or the catalog has wins; otherwise the English text below stays
+  const message = (field: EntityConfig['fields'][number], kind: ValidationMessageKind, english: string) =>
+    translate && (field.display.validationMessages?.[kind] !== undefined || translate(`validation.entity.${kind}`, { label: field.display.label }) !== undefined)
+      ? fieldValidationMessage(field, kind, {}, translate)
+      : english
 
   entityConfig.fields.forEach(field => {
     // Skip fields that are not shown in form (they are handled by backend)
@@ -68,7 +78,7 @@ export function validateFormData(
 
     // Check required fields
     if (field.required && (!value || (typeof value === 'string' && !value.trim()))) {
-      errors[field.name] = `${field.display.label} is required`
+      errors[field.name] = message(field, 'required', `${field.display.label} is required`)
       return
     }
     
@@ -78,7 +88,7 @@ export function validateFormData(
         case 'email':
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
           if (!emailRegex.test(String(value))) {
-            errors[field.name] = 'Please enter a valid email address'
+            errors[field.name] = message(field, 'email', 'Please enter a valid email address')
           }
           break
           
@@ -91,13 +101,13 @@ export function validateFormData(
             }
             new URL(urlValue)
           } catch {
-            errors[field.name] = 'Please enter a valid URL'
+            errors[field.name] = message(field, 'url', 'Please enter a valid URL')
           }
           break
           
         case 'number':
           if (isNaN(Number(value))) {
-            errors[field.name] = 'Please enter a valid number'
+            errors[field.name] = message(field, 'number', 'Please enter a valid number')
           }
           break
           
@@ -106,7 +116,7 @@ export function validateFormData(
             try {
               JSON.parse(value)
             } catch {
-              errors[field.name] = 'Please enter valid JSON'
+              errors[field.name] = message(field, 'json', 'Please enter valid JSON')
             }
           }
           break
@@ -149,6 +159,13 @@ export function EntityForm({
   hiddenFields = [],
   teamId,
 }: EntityFormProps) {
+  // English keeps the form's own texts; any other active locale reads `validation.entity.*` from the merged messages (#358)
+  const locale = useLocale()
+  const messages = useMessages()
+  const translate = useMemo(
+    () => (locale === 'en' ? undefined : createValidationTranslator(messages as Record<string, unknown>)),
+    [locale, messages]
+  )
   const [formData, setFormData] = useState<FormData>(() => {
     const initial: FormData = {}
 
@@ -252,7 +269,7 @@ export function EntityForm({
     e.preventDefault()
 
     // Validate form
-    const errors = validateFormData(formData, entityConfig, hiddenFields)
+    const errors = validateFormData(formData, entityConfig, hiddenFields, translate)
     const allErrors = { ...errors, ...validationErrors }
 
     if (Object.keys(allErrors).length > 0) {
@@ -268,7 +285,7 @@ export function EntityForm({
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, entityConfig, hiddenFields, validationErrors, onSubmit])
+  }, [formData, entityConfig, hiddenFields, validationErrors, onSubmit, translate])
 
   const allErrors = { ...localValidationErrors, ...validationErrors }
   const hasErrors = Object.keys(allErrors).length > 0

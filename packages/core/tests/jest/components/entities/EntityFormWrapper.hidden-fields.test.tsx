@@ -21,7 +21,7 @@ const CONFIG = {
   fields: [field('title', 'text'), field('secret', 'text'), field('secretFlag', 'boolean'), field('secretNumber', 'number')],
 }
 
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en', useMessages: () => ({}) }))
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), replace: jest.fn() }), useSearchParams: () => new URLSearchParams(), usePathname: () => '/dashboard/tasks' }))
 jest.mock('@/core/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'u1' }, isLoading: false }) }))
 let configResult: { config: unknown; error: string | null } = { config: CONFIG, error: null }

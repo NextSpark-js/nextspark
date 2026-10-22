@@ -420,7 +420,20 @@ The schemas generated from an entity say, by default, `"<label> is required"`, `
 - **`display.labelKey`**: the label is a plain string, rendered as it is, so a translated name comes from a key you declare (`labelKey: 'pets.fields.name'`). Messages call `translate` with that key and use the result as `{label}`; when there is no `labelKey`, or the translator has no message for it, they use `display.label`.
 - **`display.validationMessages`**: replaces one message of one field, for every language (`{ required: 'Tell us the {label}', min: '{label} starts at {min}' }`). It wins over the translated and the default text.
 
-The generic REST routes and the server actions keep answering in English: they do not pick a language per request, and the generated contracts package ships schemas built without `translate`.
+**The dashboard form** (`EntityForm`) answers in the active next-intl locale: for any locale other than `en` it builds the translator from the merged messages of next-intl (`useMessages()`), so the `validation.entity.*` keys of core and of the project apply, and a field's `display.validationMessages` and `labelKey` too. A key no catalog has keeps the form's own English text. In `en` the form keeps its own texts (for example `Please enter a valid email address`) whatever the catalog says, so English apps see no change.
+
+**The generic REST routes** (create and update, child routes included) answer in English unless the app opts in with `api.validationLocale` in `app.config.ts`:
+
+```ts
+api: {
+  validationLocale: 'es',            // every request answers in Spanish
+  // validationLocale: 'accept-language', // per request: the supported locale the Accept-Language header prefers
+}
+```
+
+Unset, the responses are exactly what they were. With `'accept-language'`, a request whose header names no supported locale (or no header) is answered in English. The REST routes read the `validation.entity.*` keys from core's `messages/<locale>/validation.json` (a locale with no catalog answers in English); project message overrides and `labelKey` are not applied on the server. `Accept-Language` is not read unless the option asks for it, and `i18n.defaultLocale` does not change the API language.
+
+The server actions and the generated contracts package ship schemas built without `translate`, so they keep answering in English.
 
 ## Async Validation
 
