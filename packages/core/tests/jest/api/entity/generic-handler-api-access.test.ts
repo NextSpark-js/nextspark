@@ -118,11 +118,9 @@ describe.each(Object.keys(calls))('access.api — %s', name => {
     for (const auth of [API_KEY_AUTH(SCOPES), SESSION_AUTH()]) {
       setup({ ...withAccess({ api: true }), enabled: false } as EntityConfig, auth)
       const res = (await calls[name]()) as Res
-      // child routes resolve the parent only, so a disabled parent is not refused there
-      if (!name.startsWith('child')) {
-        expect(res.status).toBe(405)
-        expect(res.body.error).toMatch(/operation not supported for this entity/)
-      }
+      // #346: the child routes follow their parent, before the data layer is touched
+      expect(res.status).toBe(405)
+      expect(res.body.error).toMatch(/operation not supported for this entity/)
     }
   })
 

@@ -46,6 +46,11 @@ export interface GetUsagesOptions {
   entityType?: string
   limit?: number
   offset?: number
+  /**
+   * The caller is external (an API key). Entities closed to external callers (`access.api: false`, `enabled: false`)
+   * then appear as `entityType` and `entityId` only, with no title, name, email, slug or status.
+   */
+  external?: boolean
 }
 
 export interface GetUsagesResult {
@@ -218,7 +223,7 @@ export class PatternUsageService {
     userId: string,
     options: GetUsagesOptions = {}
   ): Promise<GetUsagesResult> {
-    const { entityType, limit = 50, offset = 0 } = options
+    const { entityType, limit = 50, offset = 0, external = false } = options
 
     // Build WHERE clause
     let whereClause = 'WHERE pu."patternId" = $1'
@@ -256,7 +261,7 @@ export class PatternUsageService {
     )
 
     // Enrich usages with entity info (batch by entityType for efficiency)
-    const enrichedUsages = await this.enrichUsagesWithEntityInfo(usages, userId)
+    const enrichedUsages = await this.enrichUsagesWithEntityInfo(usages, userId, external)
 
     return {
       usages: enrichedUsages,
@@ -272,11 +277,13 @@ export class PatternUsageService {
    *
    * @param usages - Array of pattern usages
    * @param userId - User ID for RLS
+   * @param external - External caller: entities closed to external callers are left without info
    * @returns Usages with entity info added
    */
   private static async enrichUsagesWithEntityInfo(
     usages: PatternUsage[],
-    userId: string
+    userId: string,
+    external = false
   ): Promise<PatternUsageWithEntityInfo[]> {
     if (usages.length === 0) return []
 
@@ -309,6 +316,11 @@ export class PatternUsageService {
       if (!entityConfig) {
         console.warn(`[PatternUsageService] Unknown entity type: ${entityType}, skipping entity info lookup`)
         // Add empty map so we can still return the usage (without enriched info)
+        entityInfoMap.set(entityType, new Map())
+        continue
+      }
+      // Same closing as the entity routes: the usage stays (its ids), the record's own fields do not leave
+      if (external && (entityConfig.access?.api === false || entityConfig.enabled === false)) {
         entityInfoMap.set(entityType, new Map())
         continue
       }

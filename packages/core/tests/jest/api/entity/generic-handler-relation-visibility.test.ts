@@ -4,7 +4,7 @@
  * create, update and child writes. A hidden id and a nonexistent one get the same 400.
  */
 
-import { harness, makeRequest, SESSION_AUTH, PETS_ENTITY } from './__helpers__/generic-handler-harness'
+import { harness, makeRequest, SESSION_AUTH, API_KEY_AUTH, PETS_ENTITY } from './__helpers__/generic-handler-harness'
 import { handleGenericCreate, handleGenericUpdate, handleChildCreate, handleGenericDelete } from '@/core/lib/api/entity/generic-handler'
 import type { EntityConfig } from '@/core/lib/entities/types'
 
@@ -190,5 +190,36 @@ describe('foreign key violations do not echo the database detail', () => {
     expect(res.status).toBe(409)
     expect(JSON.stringify(res.body)).not.toContain('cards')
     spy.mockRestore()
+  })
+})
+
+// #346: the answer for an API key never says whether an id exists in an entity closed to external callers
+describe.each([['access.api: false', { access: { api: false } }], ['enabled: false', { enabled: false }]])('relation to an entity with %s', (_label, closing) => {
+  beforeEach(() => {
+    mockGetAllEntityConfigs.mockReturnValue([{ ...CLIENT, ...closing }, PETS])
+    mocks.authenticateRequest.mockResolvedValue(API_KEY_AUTH(['pets:read', 'pets:write']))
+  })
+
+  it('an API key gets the same 400 for an id that exists and one that does not, without a lookup', async () => {
+    const existing = await create({ name: 'Rex', clientId: 'c-mine' })
+    const missing = await create({ name: 'Rex', clientId: 'c-ghost' })
+    expect(existing.status).toBe(400)
+    expect(existing.body.code).toBe('INVALID_REFERENCE')
+    expect(missing.body).toEqual(existing.body)
+    expect(lookups()).toHaveLength(0)
+    expect(writes()).toHaveLength(0)
+  })
+
+  it('also on update', async () => {
+    const res = await update({ clientId: 'c-mine' })
+    expect(res.body.code).toBe('INVALID_REFERENCE')
+    expect(writes()).toHaveLength(0)
+  })
+
+  it('a session is still checked against what it sees, and served', async () => {
+    mocks.authenticateRequest.mockResolvedValue(SESSION_AUTH())
+    const res = await create({ name: 'Rex', clientId: 'c-mine' })
+    expect(res.status).toBe(201)
+    expect(lookups()).toHaveLength(1)
   })
 })

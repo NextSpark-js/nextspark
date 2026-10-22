@@ -189,7 +189,9 @@ solo aplican si exponés la Data API / PostgREST de Supabase directamente (ver
 **Comportamiento:**
 - `true`: Endpoints disponibles con autenticación vía API key o sesión
 - `false`: Cierra solo el acceso externo. Las requests con API key a `/api/v1/<slug>` (todos los métodos y las rutas de child entities) responden `404 Entity not found`, igual que un slug que no existe. El servidor MCP no expone tools para esa entidad. Las requests con sesión (el dashboard) siguen funcionando
-- `enabled: false` apaga la entidad para ambos tipos de autenticación (en las rutas principales de la entidad las operaciones responden `405`; las child routes no validan `enabled` del padre)
+- `enabled: false` apaga la entidad para ambos tipos de autenticación: las operaciones de la entidad y de sus child routes responden `405`
+- Para una API key, un campo `relation` / `relation-multi` hacia una entidad cerrada (`access.api: false` o `enabled: false`) siempre responde `400 INVALID_REFERENCE`, exista o no el id, y no consulta esa tabla: la respuesta no dice si el id existe. Con sesión se valida contra lo que el usuario ve, como siempre
+- `GET /api/v1/patterns/<id>/usages` con API key muestra los usos de una entidad cerrada solo con `entityType` y `entityId` (sin título, nombre, email, slug ni estado); con sesión devuelve todos los campos
 
 ```typescript
 {

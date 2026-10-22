@@ -637,15 +637,17 @@ async function visibleRecordScope(
 
 /**
  * A relation id must name a record the caller can see (#343); the check lives in `relation-references` and is shared
- * with GenericEntityService. Here it becomes the 400 `INVALID_REFERENCE`.
+ * with GenericEntityService. Here it becomes the 400 `INVALID_REFERENCE`. An API key (`external`) is told the same
+ * about any id of an entity closed to external callers, so the answer never says whether such an id exists (#346).
  */
 async function rejectInvisibleRelations(
   fields: EntityField[],
   data: Record<string, unknown>,
   userId: string,
-  request: NextRequest
+  request: NextRequest,
+  external: boolean
 ): Promise<NextResponse | null> {
-  const field = await findInvalidRelationField(fields, data, userId)
+  const field = await findInvalidRelationField(fields, data, userId, { external })
   return !field ? null : addCorsHeaders(
     createApiError(`Field '${field}' refers to a record that does not exist or is not available`, 400, undefined, 'INVALID_REFERENCE'),
     request
@@ -1636,7 +1638,7 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
     }
     const checkStoredStatus = createStatus === undefined && !!createStatusField && !!declaredPublishPermission(entityConfig.slug)
 
-    const invalidCreateReference = await rejectInvisibleRelations(entityConfig.fields, validatedData as Record<string, unknown>, authResult.user!.id, request)
+    const invalidCreateReference = await rejectInvisibleRelations(entityConfig.fields, validatedData as Record<string, unknown>, authResult.user!.id, request, authResult.type === 'api-key')
     if (invalidCreateReference) return invalidCreateReference
 
     if (idStrategy === 'serial') {
@@ -2220,7 +2222,8 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
       entityConfig.fields,
       Object.fromEntries(Object.entries(validatedData as Record<string, unknown>).filter(([key]) => key in entityData)),
       authResult.user!.id,
-      request
+      request,
+      authResult.type === 'api-key'
     )
     if (invalidUpdateReference) return invalidUpdateReference
 
@@ -2641,6 +2644,12 @@ async function resolveChildContext(
   if (!resolution.isValidEntity || !resolution.entityConfig) return notFound('Entity not found')
   const parentConfig = resolution.entityConfig
 
+  // A parent that is not enabled answers 405 on its child routes too, as it does on its own (#346)
+  if (!validateEntityOperation(parentConfig, operation)) {
+    const name = operation[0].toUpperCase() + operation.slice(1)
+    return addCorsHeaders(createApiError(`${name} operation not supported for this entity`, 405), request)
+  }
+
   // The API-key guard runs before the childType lookup, so a closed parent answers like a missing one
   const write = operation !== 'list'
   const authResult = await authenticateRequest(request, { requiredScope: `${parentConfig.slug}:${write ? 'write' : 'read'}` })
@@ -2710,7 +2719,7 @@ async function resolveChildContext(
   if (!parent?.[0]) return notFound('Item not found')
 
   if (write) {
-    const invalidReference = await rejectInvisibleRelations(childFields, data, userId, request)
+    const invalidReference = await rejectInvisibleRelations(childFields, data, userId, request, authResult.type === 'api-key')
     if (invalidReference) return invalidReference
   }
 

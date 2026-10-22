@@ -212,6 +212,29 @@ describe('GET /api/v1/patterns/[id]/usages — pagination read by hand', () => {
   })
 })
 
+// #346: an API key gets the usages of an entity closed to external callers as ids only; a session is served in full
+describe.each([
+  ['the route', () => patternUsages],
+  ['the public factory', () => createPatternUsagesHandlers().GET],
+])('GET /api/v1/patterns/[id]/usages — external flag in %s', (_label, handler) => {
+  beforeEach(() => { mocks.queryOneWithRLS.mockResolvedValue({ id: 'pattern-1' }) })
+  const call = async (auth: unknown) => {
+    const { PatternUsageService } = jest.requireMock('@/core/lib/services') as { PatternUsageService: { getUsagesWithEntityInfo: jest.Mock } }
+    PatternUsageService.getUsagesWithEntityInfo.mockClear()
+    mocks.authenticateRequest.mockResolvedValue(auth)
+    await (handler() as (...args: unknown[]) => Promise<unknown>)(makeReq('GET', '/api/v1/patterns/pattern-1/usages'), idParams({ id: 'pattern-1' }))
+    return PatternUsageService.getUsagesWithEntityInfo.mock.calls[0][2]
+  }
+
+  test('an API key asks for the external view', async () => {
+    expect(await call({ success: true, type: 'api-key', user: MEMBER })).toMatchObject({ external: true })
+  })
+
+  test('a session does not', async () => {
+    expect(await call(sessionAs(MEMBER))).toMatchObject({ external: false })
+  })
+})
+
 // the public factory apps export as their route reads page and limit by the same rule
 describe('createPatternUsagesHandlers().GET — page and limit', () => {
   const { GET } = createPatternUsagesHandlers()

@@ -79,7 +79,7 @@ export const GET = withApiLogging(
       const result = await PatternUsageService.getUsagesWithEntityInfo(
         patternId,
         userId,
-        { entityType, limit, offset }
+        { entityType, limit, offset, external: authResult.type === 'api-key' }
       )
 
       // Create pagination meta
