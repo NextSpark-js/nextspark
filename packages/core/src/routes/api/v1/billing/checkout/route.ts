@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { billingDisabledResponse } from '@nextsparkjs/core/lib/billing/disabled-response'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import * as z from 'zod'
@@ -30,6 +31,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   if (!authResult.success || !authResult.user) {
     return createAuthFailureResponse(authResult)
   }
+
+  // No payment gateway configured (provider: 'none'): a clear 501, not a 500
+  const billingDisabled = billingDisabledResponse()
+  if (billingDisabled) return billingDisabled
 
   // 2. Parse and validate request body
   const parsedBody = await readJsonObject(request)

@@ -4,7 +4,7 @@ import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorizatio
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
-import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory';
+import { getBillingGatewayOrNull } from '@nextsparkjs/core/lib/billing/gateways/factory';
 
 interface TeamResult {
   id: string;
@@ -199,7 +199,7 @@ export const GET = withRateLimitTier(async (
     const subscription = subscriptionResult[0] || null;
 
     // Prepare response data
-    const billingGateway = subscription ? await getBillingGateway() : null
+    const billingGateway = subscription ? await getBillingGatewayOrNull() : null
     const responseData = {
       team: {
         id: team.id,
@@ -221,7 +221,7 @@ export const GET = withRateLimitTier(async (
         role: member.role,
         joinedAt: member.joinedAt
       })),
-      subscription: subscription && billingGateway ? {
+      subscription: subscription ? {
         id: subscription.id,
         plan: {
           id: subscription.planId,
@@ -242,8 +242,8 @@ export const GET = withRateLimitTier(async (
         externalSubscriptionId: subscription.externalSubscriptionId,
         externalCustomerId: subscription.externalCustomerId,
         paymentProvider: subscription.paymentProvider,
-        providerName: billingGateway.getProviderName(),
-        providerDashboardUrl: billingGateway.getSubscriptionDashboardUrl(subscription.externalSubscriptionId),
+        providerName: billingGateway?.getProviderName() ?? null,
+        providerDashboardUrl: billingGateway?.getSubscriptionDashboardUrl(subscription.externalSubscriptionId) ?? null,
         createdAt: subscription.createdAt
       } : null,
       billingHistory: billingEventsResult.map((event) => ({

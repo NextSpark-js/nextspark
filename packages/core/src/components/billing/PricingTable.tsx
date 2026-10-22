@@ -11,6 +11,7 @@ import { Check, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../lib/utils'
 import { ConfirmPlanChangeModal } from './ConfirmPlanChangeModal'
+import { isBillingGatewayDisabled } from '../../lib/billing/provider-mode'
 
 interface PricingTableProps {
   onSelectPlan?: (planSlug: string) => void
@@ -75,6 +76,8 @@ export function PricingTable({ onSelectPlan, className }: PricingTableProps) {
   const [targetPlanSlug, setTargetPlanSlug] = useState<string | null>(null)
   const [changePlanLoading, setChangePlanLoading] = useState(false)
 
+  // Without a payment gateway there is no checkout to start: the table only compares plans
+  const canSelectPlan = !isBillingGatewayDisabled()
   const hasActiveSubscription = !!subscription?.externalSubscriptionId
 
   const handleSelectPlan = (planSlug: string) => {
@@ -222,22 +225,24 @@ export function PricingTable({ onSelectPlan, className }: PricingTableProps) {
                 </div>
 
                 {/* Select Button */}
-                <div className="mt-auto">
-                  <Button
-                    className="w-full"
-                    variant={isCurrentPlan ? 'outline' : 'default'}
-                    disabled={isCurrentPlan}
-                    onClick={() => handleSelectPlan(plan.slug)}
-                    data-cy={`pricing-select-${plan.slug}`}
-                  >
-                    {isCurrentPlan
-                      ? t('currentPlan')
-                      : plan.type === 'enterprise'
-                        ? t('contactSales')
-                        : t('selectPlan')
-                    }
-                  </Button>
-                </div>
+                {canSelectPlan && (
+                  <div className="mt-auto">
+                    <Button
+                      className="w-full"
+                      variant={isCurrentPlan ? 'outline' : 'default'}
+                      disabled={isCurrentPlan}
+                      onClick={() => handleSelectPlan(plan.slug)}
+                      data-cy={`pricing-select-${plan.slug}`}
+                    >
+                      {isCurrentPlan
+                        ? t('currentPlan')
+                        : plan.type === 'enterprise'
+                          ? t('contactSales')
+                          : t('selectPlan')
+                      }
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )

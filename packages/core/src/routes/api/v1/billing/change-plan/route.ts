@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
 import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { billingDisabledResponse } from '@nextsparkjs/core/lib/billing/disabled-response'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
@@ -36,6 +37,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   if (!authResult.success || !authResult.user) {
     return createAuthFailureResponse(authResult)
   }
+
+  // No payment gateway configured (provider: 'none'): a clear 501, not a 500
+  const billingDisabled = billingDisabledResponse()
+  if (billingDisabled) return billingDisabled
 
   // 2. Get team context
   const teamId = request.headers.get('x-team-id') || authResult.user.defaultTeamId

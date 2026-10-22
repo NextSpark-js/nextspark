@@ -27,6 +27,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query, queryOne } from '@nextsparkjs/core/lib/db'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
+import { isBillingGatewayDisabled } from '@nextsparkjs/core/lib/billing/provider-mode'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { processWebhookEventOnce, webhookOutcomeResponse } from '@nextsparkjs/core/lib/billing/webhook-events'
 import {
@@ -77,6 +78,8 @@ export function createLemonSqueezyWebhookHandler(loadExtensions: LemonSqueezyWeb
 }
 
 async function handleLemonSqueezyWebhook(request: NextRequest, loadExtensions: LemonSqueezyWebhookExtensionsLoader): Promise<NextResponse> {
+  // No payment gateway configured (provider: 'none'): there is no webhook to receive
+  if (isBillingGatewayDisabled()) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   // 1. The raw bytes: the signature is over the body exactly as sent
   const payload = Buffer.from(await request.arrayBuffer())
   const signature = request.headers.get('x-signature')

@@ -12,6 +12,7 @@ import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-
 import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
+import { billingDisabledResponse } from '@nextsparkjs/core/lib/billing/disabled-response'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { isBillingOperationNotSupported } from '@nextsparkjs/core/lib/billing/gateways/errors'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
@@ -39,6 +40,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   if (!authResult.success || !authResult.user) {
     return createAuthFailureResponse(authResult)
   }
+
+  // No payment gateway configured (provider: 'none'): a clear 501, not a 500
+  const billingDisabled = billingDisabledResponse()
+  if (billingDisabled) return billingDisabled
 
   // 2. Get team context
   const teamId = request.headers.get('x-team-id') || authResult.user.defaultTeamId

@@ -22,6 +22,7 @@
  */
 
 import { NextRequest } from 'next/server'
+import { isBillingGatewayDisabled } from './provider-mode'
 import { getBillingGateway } from './gateways/factory'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { query, queryOne } from '../db'
@@ -62,6 +63,8 @@ export async function handleStripeWebhook(
   request: NextRequest,
   extensions?: StripeWebhookExtensions
 ): Promise<Response> {
+  // No payment gateway configured (provider: 'none'): there is no webhook to receive
+  if (isBillingGatewayDisabled()) return Response.json({ error: 'Not found' }, { status: 404 })
   // 1. Get raw body and signature
   const payload = await request.text()
   const signature = request.headers.get('stripe-signature')

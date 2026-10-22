@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query, queryOne } from '@nextsparkjs/core/lib/db'
 
 // Polar webhook verification - import from gateway
+import { isBillingGatewayDisabled } from '@nextsparkjs/core/lib/billing/provider-mode'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { processWebhookEventOnce, webhookOutcomeResponse } from '@nextsparkjs/core/lib/billing/webhook-events'
 import { subscriptionRowForNewSubscription } from '@nextsparkjs/core/lib/billing/subscription-binding'
@@ -39,6 +40,8 @@ export function createPolarWebhookHandler(loadExtensions: PolarWebhookExtensions
 }
 
 async function handlePolarWebhook(request: NextRequest, loadExtensions: PolarWebhookExtensionsLoader): Promise<NextResponse> {
+  // No payment gateway configured (provider: 'none'): there is no webhook to receive
+  if (isBillingGatewayDisabled()) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   // 1. Get raw body and ALL headers (Polar needs full headers for verification)
   const payload = await request.text()
   const headers: Record<string, string> = {}

@@ -5,7 +5,7 @@ import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorizatio
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
-import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory';
+import { getBillingGatewayOrNull } from '@nextsparkjs/core/lib/billing/gateways/factory';
 
 interface SubscriptionResult {
   id: string;
@@ -227,7 +227,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const totalPages = Math.ceil(total / limit);
 
     // Format subscriptions
-    const billingGateway = await getBillingGateway()
+    const billingGateway = await getBillingGatewayOrNull()
     const subscriptions = subscriptionsResult.map(sub => ({
       id: sub.id,
       team: {
@@ -255,7 +255,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
       externalSubscriptionId: sub.externalSubscriptionId,
       paymentProvider: sub.paymentProvider,
-      providerDashboardUrl: billingGateway.getSubscriptionDashboardUrl(sub.externalSubscriptionId),
+      providerDashboardUrl: billingGateway?.getSubscriptionDashboardUrl(sub.externalSubscriptionId) ?? null,
       createdAt: sub.createdAt
     }));
 

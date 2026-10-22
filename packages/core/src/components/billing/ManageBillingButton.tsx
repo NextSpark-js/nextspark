@@ -7,6 +7,7 @@ import { Button } from '../ui/button'
 import { useSubscription } from '../../hooks/useSubscription'
 import { toast } from 'sonner'
 import { withBasePath } from '../../lib/base-path'
+import { isBillingGatewayDisabled } from '../../lib/billing/provider-mode'
 
 interface ManageBillingButtonProps {
   className?: string
@@ -35,7 +36,8 @@ export function ManageBillingButton({ className }: ManageBillingButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
 
   // Only show if there's an external customer (payment provider linked)
-  if (!subscription?.externalCustomerId) {
+  // No portal without a payment gateway
+  if (!subscription?.externalCustomerId || isBillingGatewayDisabled()) {
     return null
   }
 
