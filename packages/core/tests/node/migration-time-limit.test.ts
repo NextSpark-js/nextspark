@@ -1649,8 +1649,9 @@ const FIRST_CORE_MIGRATION = (() => {
 test('the project-template migration verifier ends by itself when a migration hangs, naming it', { timeout: 40000 }, async t => {
   const server = await standInPostgres(t, sql => (sql === FIRST_CORE_MIGRATION.sql ? 'stuck' : 'ok'))
 
-  // The limit is a few seconds, not a fraction of one: the verifier is a child process that connects and checks
-  // the server before the first migration, and a slow runner must not spend the limit on that.
+  // The limit is a few seconds, not a fraction of one. The clock starts just before the migration's query, but
+  // the helper operations are bound by the same limit (the side connection of endSession/preparedLeft, queryMs on
+  // BEGIN, the rollback and the reads), and on a slow runner those could exceed 0.5 s.
   const result = await run(t, VERIFY, ['default'], {
     cwd: CORE,
     env: cleanEnv({ VERIFY_THEME_DATABASE_URL: server.url, MIGRATION_TIMEOUT_SECONDS: '4' }),
