@@ -107,6 +107,38 @@ describe('fieldVisibility on responses', () => {
   })
 })
 
+describe('fieldVisibility on the default search and the date range', () => {
+  const wide = (hide: string[]) => ({
+    slug: 'pets',
+    tableName: 'pets',
+    fields: [field('name'), field('title'), { ...field('seen'), type: 'datetime' }],
+    access: { api: true, fieldVisibility: [{ roles: ['member'], hideFields: hide }] },
+  }) as unknown as EntityConfig
+
+  it('searches only the fields the role can see', async () => {
+    use(wide(['title']), 'member')
+    await list({ search: 'x' })
+    expect(listSql()).toContain('t."name" ILIKE')
+    expect(listSql()).not.toContain('t."title" ILIKE')
+
+    mocks.queryWithRLS.mockClear()
+    use(wide(['title']), 'owner')
+    await list({ search: 'x' })
+    expect(listSql()).toContain('t."title" ILIKE')
+  })
+
+  it('does not filter by the range of a hidden date field', async () => {
+    use(wide(['seen']), 'member')
+    await list({ dateField: 'seen', from: '2020-01-01' })
+    expect(listSql()).not.toContain('t."seen" >=')
+
+    mocks.queryWithRLS.mockClear()
+    use(wide(['seen']), 'owner')
+    await list({ dateField: 'seen', from: '2020-01-01' })
+    expect(listSql()).toContain('t."seen" >=')
+  })
+})
+
 describe('fieldVisibility and publicFields', () => {
   const PUBLIC = ENTITY({ public: true, publicFields: ['name', 'secret'], ...VISIBILITY })
 

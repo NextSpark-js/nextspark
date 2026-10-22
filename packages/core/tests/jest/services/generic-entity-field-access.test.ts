@@ -84,6 +84,29 @@ describe('GenericEntityService fieldVisibility', () => {
   })
 })
 
+describe('GenericEntityService list without a team in the options', () => {
+  const ROLE_BY_TEAM: Record<string, string> = { 'team-1': 'member', 'team-2': 'owner' }
+
+  beforeEach(() => {
+    mockGet.mockReturnValue(entity(VISIBILITY))
+    mockQueryOne.mockImplementation(async (_sql: string, params: unknown[]) => ({ role: ROLE_BY_TEAM[params[0] as string] }))
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM "team_members"')) return [{ role: 'member' }, { role: 'owner' }]
+      return [{ ...ROW, teamId: 'team-1' }, { ...ROW, id: 'pet-2', teamId: 'team-2' }]
+    })
+  })
+
+  it('hides a field from each row according to the role in the row\'s own team', async () => {
+    const { data } = await GenericEntityService.list<Record<string, unknown>>('pets', 'u1')
+    expect(data[0]).not.toHaveProperty('secret')
+    expect(data[1]).toHaveProperty('secret', 'hidden-value')
+  })
+
+  it('treats a field hidden from any of the user\'s roles as unknown when filtering', async () => {
+    await expect(GenericEntityService.list('pets', 'u1', { where: { secret: 'x' } })).rejects.toThrow('Invalid filter field: "secret"')
+  })
+})
+
 describe('GenericEntityService fieldGuards', () => {
   it('create denies a guarded field for the role, writing nothing, and allows it for another role', async () => {
     use(GUARDS, 'member')

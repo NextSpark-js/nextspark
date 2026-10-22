@@ -376,6 +376,12 @@ async function hiddenFieldsFor(entityConfig: EntityConfig, userId: string, teamI
   return hiddenFieldsForRole(entityConfig, await roleForFieldRules(entityConfig, userId, teamId))
 }
 
+/** The fields hidden from any role the user holds in any team. */
+async function hiddenFieldsAcrossTeams(entityConfig: EntityConfig, userId: string): Promise<Set<string>> {
+  const roles = await queryWithRLS<{ role: string }>('SELECT DISTINCT role FROM "team_members" WHERE "userId" = $1', [userId], userId)
+  return new Set(roles.flatMap(({ role }) => [...hiddenFieldsForRole(entityConfig, role)]))
+}
+
 /** `access.ownershipFilter.fieldGuards`: throws when the caller's team role may not send a field in `data`. */
 async function assertWritableFields(entityConfig: EntityConfig, userId: string, teamId: string | null | undefined, data: Record<string, unknown>): Promise<void> {
   if (!entityConfig.access?.ownershipFilter?.fieldGuards?.length) return
@@ -476,7 +482,11 @@ export class GenericEntityService {
     } = options
 
     // #325: a hidden field is not a field the caller can filter, sort or search by (it would tell them its values)
-    const hidden = await hiddenFieldsFor(entityConfig, userId, teamId)
+    // Without a team in the options the caller may hold different roles in different teams: nothing hidden from any of
+    // them can be used to filter, sort or search
+    const hidden = teamId || !entityConfig.access?.fieldVisibility?.length
+      ? await hiddenFieldsFor(entityConfig, userId, teamId)
+      : await hiddenFieldsAcrossTeams(entityConfig, userId)
     const searchableFields = getSearchableFields(entityConfig).filter(name => !hidden.has(name))
     const allFields = [...SYSTEM_FIELDS, ...fieldNames].filter(name => !hidden.has(name))
 
@@ -532,7 +542,7 @@ export class GenericEntityService {
     )
 
     // Without a team in the options each row is read with the role the caller has in the row's own team
-    const hiddenByTeam = new Map<unknown, Set<string>>([[teamId, hidden]])
+    const hiddenByTeam = new Map<unknown, Set<string>>(teamId ? [[teamId, hidden]] : [])
     for (const row of rows) {
       if (!hiddenByTeam.has(row.teamId)) hiddenByTeam.set(row.teamId, await hiddenFieldsFor(entityConfig, userId, row.teamId as string))
     }

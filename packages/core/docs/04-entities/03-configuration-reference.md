@@ -274,6 +274,10 @@ Campos que un rol del equipo no recibe de la API de la entidad.
 }
 ```
 
+En las server actions, un `list` sin equipo aplica esto para todos los roles que el usuario tiene en cualquier equipo, y recorta cada fila con el rol que tiene en el equipo de esa fila.
+
+Límite: un valor adivinado en un campo oculto con restricción única puede delatar su existencia por el conflicto que devuelve crear o actualizar.
+
 No cubre los datos que otras partes agregan a la respuesta, como los hijos pedidos con `child` y los metadatos.
 
 ### `access.ownershipFilter.fieldGuards`
