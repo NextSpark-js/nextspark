@@ -22,7 +22,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { builtInWebhookRoutesClosed } from './provider-mode'
+import { builtInWebhookRouteClosed } from './provider-mode'
 import { getBillingGateway } from './gateways/factory'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { query, queryOne } from '../db'
@@ -63,8 +63,8 @@ export async function handleStripeWebhook(
   request: NextRequest,
   extensions?: StripeWebhookExtensions
 ): Promise<Response> {
-  // Provider 'none' or a custom gateway: this built-in route is closed (a custom gateway has its own)
-  if (builtInWebhookRoutesClosed()) return Response.json({ error: 'Not found' }, { status: 404 })
+  // Provider 'none', a custom gateway, or a built-in name a registered gateway replaces: this route is closed
+  if (builtInWebhookRouteClosed('stripe')) return Response.json({ error: 'Not found' }, { status: 404 })
   // 1. Get raw body and signature
   const payload = await request.text()
   const signature = request.headers.get('stripe-signature')

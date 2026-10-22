@@ -4,6 +4,7 @@
  * webhook routes answer 404. Plans, limits and entitlements keep working (they never go through the gateway).
  */
 
+import { registerBillingGateway, clearRegisteredBillingGateways } from '@/core/lib/billing/gateways/registry'
 import { routeHarness, makeReq, asJson, sessionAs, MEMBER } from './input-validation/__helpers__/route-harness'
 
 const mockRegistry = { provider: 'none', plans: [], features: {}, limits: {} }
@@ -67,14 +68,14 @@ describe.each(endpoints)('POST /api/v1/billing/%s', (name, invoke, body) => {
   })
 })
 
-describe('webhook routes', () => {
-  const webhooks = [
-    ['stripe', stripeWebhook],
-    ['polar', createPolarWebhookRoute()],
-    ['lemonsqueezy', createLemonSqueezyWebhookRoute()],
-    ['paddle', paddleWebhook],
-  ] as Array<[string, (req: ReturnType<typeof makeReq>, ctx: never) => Promise<Response>]>
+const webhooks = [
+  ['stripe', stripeWebhook],
+  ['polar', createPolarWebhookRoute()],
+  ['lemonsqueezy', createLemonSqueezyWebhookRoute()],
+  ['paddle', paddleWebhook],
+] as Array<[string, (req: ReturnType<typeof makeReq>, ctx: never) => Promise<Response>]>
 
+describe('webhook routes', () => {
   // 'none' has no webhook; a custom gateway has its own route, so an event of it is never claimed under a built-in namespace
   describe.each(['none', 'acme'])('provider %s', (provider) => {
     beforeEach(() => {
@@ -96,5 +97,45 @@ describe('webhook routes', () => {
       expect(response.status).toBe(404)
       expect(mockGetBillingGateway).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe('a registered gateway that replaces a built-in name', () => {
+  beforeEach(() => {
+    mockRegistry.provider = 'stripe'
+  })
+  afterEach(() => clearRegisteredBillingGateways())
+
+  const hit = (name: string, handler: (req: ReturnType<typeof makeReq>, ctx: never) => Promise<Response>) => {
+    const request = makeReq('POST', `/api/v1/billing/webhooks/${name}`, undefined, {
+      'stripe-signature': 'sig', 'paddle-signature': 'ts=1;h1=aa', 'x-signature': 'sig',
+      'webhook-id': 'w', 'webhook-signature': 's', 'webhook-timestamp': '1',
+    })
+    // the jsdom environment has no body readers on a request
+    Object.assign(request, { text: async () => '{}', arrayBuffer: async () => new ArrayBuffer(2) })
+    return handler(request, undefined as never)
+  }
+
+  test('keeps only its own route: the other three answer 404 and never verify', async () => {
+    registerBillingGateway('stripe', () => ({}) as never)
+
+    for (const [name, handler] of webhooks.filter(([name]) => name !== 'stripe')) {
+      expect((await hit(name, handler)).status).toBe(404)
+    }
+    expect(mockGetBillingGateway).not.toHaveBeenCalled()
+
+    mockGetBillingGateway.mockRejectedValue(new Error('verify'))
+    const own = await hit('stripe', webhooks[0][1])
+    expect(own.status).not.toBe(404)
+    expect(mockGetBillingGateway).toHaveBeenCalled()
+  })
+
+  test('without a registered gateway nothing changes: every route reaches signature verification', async () => {
+    mockGetBillingGateway.mockRejectedValue(new Error('verify'))
+
+    for (const [name, handler] of webhooks) {
+      expect((await hit(name, handler)).status).toBe(400)
+    }
+    expect(mockGetBillingGateway).toHaveBeenCalledTimes(4)
   })
 })

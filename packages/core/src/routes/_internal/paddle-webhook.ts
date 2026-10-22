@@ -29,7 +29,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query, queryOne } from '@nextsparkjs/core/lib/db'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
-import { builtInWebhookRoutesClosed } from '@nextsparkjs/core/lib/billing/provider-mode'
+import { builtInWebhookRouteClosed } from '@nextsparkjs/core/lib/billing/provider-mode'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { processWebhookEventOnce, webhookOutcomeResponse } from '@nextsparkjs/core/lib/billing/webhook-events'
 import { isValidPaddleTeamToken, paddleTeamTokenSecret } from '@nextsparkjs/core/lib/billing/paddle-webhook'
@@ -57,8 +57,8 @@ export function createPaddleWebhookHandler() {
 }
 
 async function handlePaddleWebhook(request: NextRequest): Promise<NextResponse> {
-  // Provider 'none' or a custom gateway: this built-in route is closed (a custom gateway has its own)
-  if (builtInWebhookRoutesClosed()) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  // Provider 'none', a custom gateway, or a built-in name a registered gateway replaces: this route is closed
+  if (builtInWebhookRouteClosed('paddle')) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   // 1. The raw bytes: the signature is over the body exactly as sent
   const payload = Buffer.from(await request.arrayBuffer())
   const signature = request.headers.get('paddle-signature')

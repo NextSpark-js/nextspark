@@ -6,19 +6,24 @@
  */
 
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
+import { getRegisteredBillingGateway } from './gateways/registry'
 
 export const NO_GATEWAY_PROVIDER = 'none'
 
 const BUILT_IN_PROVIDERS = ['stripe', 'polar', 'lemonsqueezy', 'paddle']
 
 /**
- * True when the configured provider is not one of the four built-in ones (no gateway, a custom gateway, or a
- * name nothing serves). The built-in webhook routes answer 404 then: a custom gateway has its own route, and an
- * event of it must not be claimed under a built-in namespace. A registered gateway named after a built-in keeps its route.
+ * True when a built-in webhook route (`stripe`, `polar`, `lemonsqueezy`, `paddle`) must answer 404: the provider is
+ * not a built-in one (no gateway, a custom gateway, a name nothing serves), or it is a built-in name that a
+ * registered gateway replaces and the route is not that provider's own. A custom gateway has its own route, and its
+ * events must never be claimed under another provider's namespace. A built-in provider with no registered gateway
+ * keeps the behavior it had: a route that does not match fails signature verification with a 400.
  */
-export function builtInWebhookRoutesClosed(): boolean {
+export function builtInWebhookRouteClosed(route: string): boolean {
   const provider = BILLING_REGISTRY.provider
-  return typeof provider === 'string' && !BUILT_IN_PROVIDERS.includes(provider)
+  if (typeof provider !== 'string') return false
+  if (!BUILT_IN_PROVIDERS.includes(provider)) return true
+  return provider !== route && getRegisteredBillingGateway(provider) !== undefined
 }
 
 export function isBillingGatewayDisabled(): boolean {

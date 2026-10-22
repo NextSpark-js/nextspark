@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query, queryOne } from '@nextsparkjs/core/lib/db'
 
 // Polar webhook verification - import from gateway
-import { builtInWebhookRoutesClosed } from '@nextsparkjs/core/lib/billing/provider-mode'
+import { builtInWebhookRouteClosed } from '@nextsparkjs/core/lib/billing/provider-mode'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { processWebhookEventOnce, webhookOutcomeResponse } from '@nextsparkjs/core/lib/billing/webhook-events'
 import { subscriptionRowForNewSubscription } from '@nextsparkjs/core/lib/billing/subscription-binding'
@@ -40,8 +40,8 @@ export function createPolarWebhookHandler(loadExtensions: PolarWebhookExtensions
 }
 
 async function handlePolarWebhook(request: NextRequest, loadExtensions: PolarWebhookExtensionsLoader): Promise<NextResponse> {
-  // Provider 'none' or a custom gateway: this built-in route is closed (a custom gateway has its own)
-  if (builtInWebhookRoutesClosed()) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  // Provider 'none', a custom gateway, or a built-in name a registered gateway replaces: this route is closed
+  if (builtInWebhookRouteClosed('polar')) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   // 1. Get raw body and ALL headers (Polar needs full headers for verification)
   const payload = await request.text()
   const headers: Record<string, string> = {}
