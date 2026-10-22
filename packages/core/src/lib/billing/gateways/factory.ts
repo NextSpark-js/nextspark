@@ -11,9 +11,14 @@
 
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import type { BillingGateway } from './interface'
+import { BillingGatewayDisabledError } from './errors'
+import { assertValidBillingGateway, getRegisteredBillingGateway, getRegisteredBillingGatewayNames, type BillingGatewayFactory } from './registry'
+import { isBillingGatewayDisabled } from '../provider-mode'
 
 let gatewayInstance: BillingGateway | null = null
 let gatewayLoading: Promise<BillingGateway> | null = null
+/** The registered factory the cached instance came from (undefined for a built-in): registering another one invalidates the cache. */
+let gatewayFactory: BillingGatewayFactory | undefined
 
 /**
  * Get the billing gateway for the configured payment provider.
@@ -27,13 +32,18 @@ let gatewayLoading: Promise<BillingGateway> | null = null
  * pages, ...) would otherwise ship every provider SDK.
  */
 export async function getBillingGateway(): Promise<BillingGateway> {
-  if (gatewayInstance) {
+  if (isBillingGatewayDisabled()) {
+    throw new BillingGatewayDisabledError()
+  }
+  const registered = getRegisteredBillingGateway(BILLING_REGISTRY.provider)
+  if (gatewayInstance && gatewayFactory === registered) {
     return gatewayInstance
   }
   if (!gatewayLoading) {
-    gatewayLoading = loadGateway()
+    gatewayLoading = loadGateway(registered)
       .then((gateway) => {
         gatewayInstance = gateway
+        gatewayFactory = registered
         return gateway
       })
       .finally(() => {
@@ -43,8 +53,14 @@ export async function getBillingGateway(): Promise<BillingGateway> {
   return gatewayLoading
 }
 
-async function loadGateway(): Promise<BillingGateway> {
+async function loadGateway(registered: BillingGatewayFactory | undefined): Promise<BillingGateway> {
   const provider = BILLING_REGISTRY.provider
+  // A project's registered gateway is resolved before the built-in list, and checked against the contract before any call.
+  if (registered) {
+    const gateway = await registered()
+    assertValidBillingGateway(provider, gateway)
+    return gateway
+  }
   switch (provider) {
     case 'stripe': {
       const { StripeGateway } = await import('./stripe')
@@ -67,7 +83,7 @@ async function loadGateway(): Promise<BillingGateway> {
     default:
       throw new Error(
         `Unsupported billing provider: "${provider}". ` +
-        `Supported providers: stripe, polar, lemonsqueezy, paddle. ` +
+        `Supported providers: ${['stripe', 'polar', 'lemonsqueezy', 'paddle', ...getRegisteredBillingGatewayNames()].join(', ')}. ` +
         `Check your billing.config.ts provider setting.`
       )
   }
@@ -82,6 +98,10 @@ async function loadGateway(): Promise<BillingGateway> {
  * const { preconnect, dnsPrefetch } = await getBillingResourceHints()
  */
 export async function getBillingResourceHints(): Promise<{ preconnect: string[]; dnsPrefetch: string[] }> {
+  // No gateway, no provider origin to warm up: nothing is built, so no SDK is loaded either
+  if (isBillingGatewayDisabled()) {
+    return { preconnect: [], dnsPrefetch: [] }
+  }
   try {
     const gateway = await getBillingGateway()
     return gateway.getResourceHintDomains()
@@ -97,4 +117,10 @@ export async function getBillingResourceHints(): Promise<{ preconnect: string[];
 export function resetBillingGateway(): void {
   gatewayInstance = null
   gatewayLoading = null
+  gatewayFactory = undefined
+}
+
+/** The gateway, or null in no-gateway mode. Any other failure (a misconfigured or malformed gateway) still throws. */
+export async function getBillingGatewayOrNull(): Promise<BillingGateway | null> {
+  return isBillingGatewayDisabled() ? null : getBillingGateway()
 }

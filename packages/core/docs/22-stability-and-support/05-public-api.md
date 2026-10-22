@@ -29,7 +29,7 @@ An internal subpath may change or disappear in a minor release, with no deprecat
 - `routes/*`, `templates/*`, `scripts/*` and `migrations/*`;
 - the testing selectors and helpers, except `./selectors` and `./lib/selectors/selector-factory`;
 - the devtools components;
-- the billing gateways and the webhook handlers (`lib/billing/stripe-webhook` and `polar-webhook` still resolve for one more minor; the webhook extension types are exported from `./lib/billing/config-types`);
+- the built-in billing gateways and the webhook handlers (`lib/billing/stripe-webhook` and `polar-webhook` still resolve for one more minor; the webhook extension types are exported from `./lib/billing/config-types`);
 - `lib/mcp`;
 - the proxy plumbing behind `./proxy`: `lib/middleware`, `lib/auth/session-hint` and `lib/docs/access` (public up to 0.1.0-beta.197; the release after it made the scaffold's `proxy.ts` a facade over `./proxy`);
 - any `lib/*`, `components/*`, `hooks/*` or `utils/*` subpath not on the list.
@@ -156,6 +156,7 @@ The reason in each row is one of `template-import` (a stable template imports it
 
 | Subpath | Why it is public |
 | --- | --- |
+| `./lib/billing/gateways/custom` | documented (experimental) — registerBillingGateway, verifyBillingWebhook and the BillingGateway types, for a project's own payment gateway (custom gateway guide). |
 | `./hooks/useSubscription` | documented (experimental) — Billing is experimental. |
 | `./hooks/useFeature` | documented (experimental) — Billing is experimental. |
 | `./hooks/useQuota` | documented (experimental) — Billing is experimental. |

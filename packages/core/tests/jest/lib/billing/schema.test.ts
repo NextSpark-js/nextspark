@@ -78,10 +78,18 @@ describe('Billing Schema - Enum Validations', () => {
       expect(paymentProviderSchema.safeParse('paddle').success).toBe(true)
     })
 
-    test('should reject unimplemented or invalid payment providers', () => {
-      expect(paymentProviderSchema.safeParse('paypal').success).toBe(false)
-      expect(paymentProviderSchema.safeParse('braintree').success).toBe(false)
-      expect(paymentProviderSchema.safeParse('mercadopago').success).toBe(false)
+    // #322: the name of a gateway the project registers is accepted (the factory still refuses an unregistered one)
+    test('should accept the no-gateway mode and the name of a custom gateway', () => {
+      expect(paymentProviderSchema.safeParse('none').success).toBe(true)
+      expect(paymentProviderSchema.safeParse('mercadopago').success).toBe(true)
+      expect(paymentProviderSchema.safeParse('acme-pay_2').success).toBe(true)
+    })
+
+    test('should reject values that are not a provider name', () => {
+      expect(paymentProviderSchema.safeParse('').success).toBe(false)
+      expect(paymentProviderSchema.safeParse('Pay Pal').success).toBe(false)
+      expect(paymentProviderSchema.safeParse('1pay').success).toBe(false)
+      expect(paymentProviderSchema.safeParse(42).success).toBe(false)
     })
   })
 

@@ -88,7 +88,7 @@ export interface ActionMappings {
 // ===========================================
 
 export interface BillingConfig {
-  /** Payment provider: stripe, polar, lemonsqueezy, paddle */
+  /** Payment provider: stripe, polar, lemonsqueezy, paddle, 'none' (no gateway) or the name of a gateway registered with registerBillingGateway() */
   provider: PaymentProvider
 
   /** Default currency (ISO 4217) */

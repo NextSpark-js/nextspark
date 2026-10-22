@@ -24,7 +24,8 @@ export const subscriptionStatusSchema = z.enum([
   'expired',
 ])
 
-export const paymentProviderSchema = z.enum(['stripe', 'polar', 'lemonsqueezy', 'paddle'])
+/** A built-in provider, 'none' (no gateway) or the name of a gateway the project registers (see gateways/registry.ts). */
+export const paymentProviderSchema = z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/, 'Must be a provider name: lowercase letters, digits, "-" or "_"')
 
 export const billingEventTypeSchema = z.enum(['payment', 'refund', 'invoice', 'credit'])
 

@@ -285,6 +285,13 @@
       "area": "Blocks"
     },
     {
+      "subpath": "./lib/billing/gateways/custom",
+      "reason": "documented",
+      "area": "Billing",
+      "note": "registerBillingGateway, verifyBillingWebhook and the BillingGateway types, for a project's own payment gateway (custom gateway guide).",
+      "stability": "experimental"
+    },
+    {
       "subpath": "./hooks/useSubscription",
       "reason": "documented",
       "area": "Billing",

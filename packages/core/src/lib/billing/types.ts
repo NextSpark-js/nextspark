@@ -48,8 +48,10 @@ export type PaymentProvider =
   | 'polar'
   | 'lemonsqueezy'
   | 'paddle'
-  // Future providers (type-defined, not yet implemented in gateway factory):
-  // | 'mercadopago'
+  /** No gateway: core manages plans, limits and entitlements, with no checkout or webhook. */
+  | 'none'
+  /** The name of a gateway the project registers with registerBillingGateway(). */
+  | (string & {})
 export type BillingInterval = 'monthly' | 'yearly'
 
 export interface Subscription {

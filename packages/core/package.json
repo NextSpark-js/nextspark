@@ -188,6 +188,11 @@
       "import": "./dist/lib/billing/gateways/factory.js",
       "default": "./dist/lib/billing/gateways/factory.js"
     },
+    "./lib/billing/gateways/custom": {
+      "types": "./dist/lib/billing/gateways/custom.d.ts",
+      "import": "./dist/lib/billing/gateways/custom.js",
+      "default": "./dist/lib/billing/gateways/custom.js"
+    },
     "./lib/billing/gateways/stripe": {
       "types": "./dist/lib/billing/gateways/stripe.d.ts",
       "import": "./dist/lib/billing/gateways/stripe.js",
