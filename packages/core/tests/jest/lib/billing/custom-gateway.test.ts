@@ -25,10 +25,19 @@ import {
   clearRegisteredBillingGateways,
   registerBillingGateway,
 } from '@/core/lib/billing/gateways/registry'
-import { BillingGatewayDisabledError } from '@/core/lib/billing/gateways/errors'
+import { BillingGatewayDisabledError, InvalidBillingGatewayError } from '@/core/lib/billing/gateways/errors'
 import { verifyBillingWebhook } from '@/core/lib/billing/gateways/webhook'
 import { StripeGateway } from '@/core/lib/billing/gateways/stripe'
 import type { BillingGateway } from '@/core/lib/billing/gateways/interface'
+
+/** A request as the helper reads it (the jsdom environment has no Request body methods): raw bytes and headers. */
+function fakeRequest(body: string | Buffer, headers: Record<string, string> = {}) {
+  const bytes = Buffer.from(body)
+  return {
+    arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+    headers: new Map(Object.entries(headers)),
+  } as unknown as Request
+}
 
 const SECRET = 'whsec_super_secret_value'
 
@@ -78,6 +87,22 @@ describe('registerBillingGateway', () => {
 
     expect(await getBillingGateway()).toBe(gateway)
     expect(mockLoaded).toEqual([])
+  })
+
+  test('replacing a built-in gateway is logged once, without values', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    registerBillingGateway('stripe', () => makeGateway())
+    registerBillingGateway('stripe', () => makeGateway())
+    registerBillingGateway('acme', () => makeGateway())
+
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalledWith('[billing] A registered gateway replaces the built-in "stripe" gateway.')
+  })
+
+  test('InvalidBillingGatewayError is exported from the public entry', async () => {
+    const custom = await import('@/core/lib/billing/gateways/custom')
+    expect(custom.InvalidBillingGatewayError).toBe(InvalidBillingGatewayError)
   })
 
   test.each(['None', 'none', 'a', 'Acme Pay', '1acme', '', 'x'.repeat(33)])('rejects the name %p', (name) => {
@@ -176,7 +201,7 @@ describe('no-gateway mode (provider: none)', () => {
   })
 
   test('the webhook helper answers 404 and never reads a gateway', async () => {
-    const verified = await verifyBillingWebhook(new Request('http://localhost/hook', { method: 'POST', body: '{}' }))
+    const verified = await verifyBillingWebhook(fakeRequest('{}'))
 
     expect(verified.ok).toBe(false)
     if (!verified.ok) expect(verified.response.status).toBe(404)
@@ -184,17 +209,28 @@ describe('no-gateway mode (provider: none)', () => {
 })
 
 describe('verifyBillingWebhook', () => {
-  const post = (body: string, headers: Record<string, string> = {}) =>
-    new Request('http://localhost/hook', { method: 'POST', body, headers })
+  const post = fakeRequest
 
-  test('passes the raw body and every header to the gateway, and returns its verified event', async () => {
+  test('passes the raw bytes and every header to the gateway, and returns its verified event', async () => {
     const verify = jest.fn(() => ({ id: 'evt_1', type: 'sub.updated', data: { ok: true } }))
     registerBillingGateway('acme', () => makeGateway({ verifyWebhookSignature: verify }))
 
     const verified = await verifyBillingWebhook(post('{"a":1}', { 'x-acme-signature': 'sig' }))
 
     expect(verified).toEqual({ ok: true, event: { id: 'evt_1', type: 'sub.updated', data: { ok: true } } })
-    expect(verify).toHaveBeenCalledWith('{"a":1}', expect.objectContaining({ 'x-acme-signature': 'sig' }))
+    expect(verify).toHaveBeenCalledWith(Buffer.from('{"a":1}'), expect.objectContaining({ 'x-acme-signature': 'sig' }))
+  })
+
+  test('the gateway receives the exact bytes of the body, including ones that are not valid UTF-8', async () => {
+    const verify = jest.fn((_payload: unknown, _headers: unknown) => ({ id: 'evt_1', type: 't', data: {} }))
+    registerBillingGateway('acme', () => makeGateway({ verifyWebhookSignature: verify }))
+    const bytes = Buffer.from([0xef, 0xbb, 0xbf, 0x7b, 0xff, 0xfe, 0x7d])
+
+    await verifyBillingWebhook(fakeRequest(bytes))
+
+    const received = verify.mock.calls[0][0] as Buffer
+    expect(Buffer.isBuffer(received)).toBe(true)
+    expect(received.equals(bytes)).toBe(true)
   })
 
   test('an invalid signature is a 400 and the event is not returned; the log carries no secret', async () => {

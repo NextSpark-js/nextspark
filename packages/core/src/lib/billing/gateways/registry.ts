@@ -18,6 +18,8 @@ export type BillingGatewayFactory = () => BillingGateway | Promise<BillingGatewa
 const STORE = Symbol.for('nextspark.billing.customGateways')
 const NAME_PATTERN = /^[a-z][a-z0-9_-]{1,31}$/
 
+const BUILT_IN_NAMES = ['stripe', 'polar', 'lemonsqueezy', 'paddle']
+
 /** `none` is the no-gateway mode, so it cannot name a gateway. */
 const RESERVED_NAMES = ['none']
 
@@ -55,6 +57,9 @@ export function registerBillingGateway(name: string, factory: BillingGatewayFact
   }
   if (typeof factory !== 'function') {
     throw new InvalidBillingGatewayError(`Billing gateway "${name}" must be registered with a factory function.`)
+  }
+  if (BUILT_IN_NAMES.includes(name) && !store().has(name)) {
+    console.warn(`[billing] A registered gateway replaces the built-in "${name}" gateway.`)
   }
   store().set(name, factory)
 }

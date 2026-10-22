@@ -23,8 +23,8 @@ export async function verifyBillingWebhook(request: Request): Promise<VerifiedBi
     return { ok: false, response: Response.json({ error: 'Not found' }, { status: 404 }) }
   }
 
-  // The raw body and every header: the signature is over the bytes as sent, and providers sign with different headers
-  const payload = await request.text()
+  // The raw bytes (not decoded text) and every header: the signature is over the bytes as sent, and providers sign with different headers
+  const payload = Buffer.from(await request.arrayBuffer())
   const headers: Record<string, string> = {}
   request.headers.forEach((value, key) => {
     headers[key] = value

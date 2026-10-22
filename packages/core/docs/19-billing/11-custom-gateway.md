@@ -36,13 +36,13 @@ export const billingConfig: BillingConfig = {
 ```
 
 - A name is 2 to 32 lowercase letters, digits, `-` or `_`, starting with a letter. `none` is reserved.
-- A registered name is resolved before the built-in list, so registering `stripe` replaces the built-in Stripe gateway. Registering a name again replaces the earlier registration.
+- A registered name is resolved before the built-in list, so registering `stripe` replaces the built-in Stripe gateway. Registering a name again replaces the earlier registration. Replacing a built-in name logs one warning.
 - Register from server code only. `billing.config.ts` is read by client components: keep the gateway, its keys and its SDK out of it.
 - An unregistered name still fails with `Unsupported billing provider: "<name>". Supported providers: stripe, polar, lemonsqueezy, paddle...` (the registered names are added to that list).
 
 ### The contract
 
-When the gateway loads (the first time something asks for it), core checks that every member below is a function and refuses the gateway with `InvalidBillingGatewayError`, naming the missing members, before any call reaches it. A malformed gateway therefore fails when it loads, not in the middle of a charge.
+When the gateway loads (the first time something asks for it), core checks that every member below is a function and refuses the gateway with `InvalidBillingGatewayError` (exported from the same entry), naming the missing members, before any call reaches it. A malformed gateway therefore fails when it loads, not in the middle of a charge.
 
 | Member | What it does |
 | --- | --- |
@@ -61,7 +61,7 @@ When the gateway loads (the first time something asks for it), core checks that 
 
 ### Webhooks
 
-Core adds no webhook endpoint for a custom gateway. Add the route to your project and start it with `verifyBillingWebhook`, which reads the raw body, hands the body and all headers to your gateway's `verifyWebhookSignature`, and answers 400 `Invalid signature` before anything else runs:
+Core adds no webhook endpoint for a custom gateway, and its four built-in webhook routes answer `404` whenever the provider is not one of the four built-ins (a registered gateway named `stripe` keeps the Stripe route). Add the route to your project and start it with `verifyBillingWebhook`, which reads the raw body, hands the body and all headers to your gateway's `verifyWebhookSignature`, and answers 400 `Invalid signature` before anything else runs:
 
 ```typescript
 // src/app/api/billing/acme-webhook/route.ts
@@ -88,7 +88,7 @@ What changes:
 | Surface | Without a gateway |
 | --- | --- |
 | `POST /api/v1/billing/checkout`, `portal`, `cancel`, `change-plan` | After authentication, `501` with `code: "BILLING_GATEWAY_DISABLED"` and the message `Billing is not available: this project runs without a payment gateway.` Anonymous callers still get `401`; nothing is read or written. |
-| `/api/v1/billing/webhooks/*` | `404`. |
+| `/api/v1/billing/webhooks/*` | `404` (also with a custom gateway). |
 | Pricing table and upgrade modal | The plans are listed with their features and limits, with no select button. |
 | Manage billing button | Not rendered. |
 | Page head | No `preconnect` or `dns-prefetch` hints. |
