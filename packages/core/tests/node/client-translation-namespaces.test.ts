@@ -51,7 +51,7 @@ function renderedGroups(file: string): TranslationGroup[] {
       relative.includes('/components/entities/') || relative.includes('/components/media/') ||
       relative.includes('/components/patterns/') || relative.includes('/components/permissions/') ||
       relative.includes('/components/settings/') || relative.includes('/components/teams/') || relative.includes('/components/ui/simple-relation-select') ||
-      relative.includes('/components/ui/upload-status') || relative.includes('/hooks/useFieldUpload') || relative.includes('/hooks/useMediaUpload') ||
+      relative.includes('/components/ui/upload-status') || relative.includes('/components/ui/image-upload') || relative.includes('/hooks/useFieldUpload') || relative.includes('/hooks/useMediaUpload') ||
       relative.includes('/utils/dev/TranslationDebugger') || relative.includes('/hooks/useContentTranslation')) return ['dashboard']
   if (relative.includes('/hooks/useValidationSchemas')) return ['auth', 'dashboard']
   if (relative.startsWith('plugins/langchain/components/observability/')) return ['superadmin']
@@ -129,12 +129,12 @@ const DYNAMIC_TRANSLATION_ALLOWLIST: Record<string, { groups: TranslationGroup[]
     namespaces: 'top-level APP_CONFIG_MERGED.userRoles.displayNames keys',
     reason: 'role display keys resolve from APP_CONFIG_MERGED.userRoles.displayNames.',
   },
-  'packages/core/src/components/app/guards/DeveloperGuard.tsx:36': {
+  'packages/core/src/components/app/guards/DeveloperGuard.tsx:38': {
     groups: ['devtools'],
     namespaces: 'common',
     reason: 'the guard only reads common.* and devtools provides common.',
   },
-  'packages/core/src/components/app/guards/SuperAdminGuard.tsx:36': {
+  'packages/core/src/components/app/guards/SuperAdminGuard.tsx:38': {
     groups: ['superadmin'],
     namespaces: 'common',
     reason: 'the guard only reads common.* and superadmin provides common.',
