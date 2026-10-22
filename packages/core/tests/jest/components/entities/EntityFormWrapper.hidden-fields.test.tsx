@@ -24,7 +24,8 @@ const CONFIG = {
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), replace: jest.fn() }), useSearchParams: () => new URLSearchParams(), usePathname: () => '/dashboard/tasks' }))
 jest.mock('@/core/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'u1' }, isLoading: false }) }))
-jest.mock('@/core/hooks/useEntityConfig', () => ({ useEntityConfig: () => ({ config: CONFIG, isLoading: false, error: null, isOverride: false }) }))
+let configResult: { config: unknown; error: string | null } = { config: CONFIG, error: null }
+jest.mock('@/core/hooks/useEntityConfig', () => ({ useEntityConfig: () => ({ ...configResult, isLoading: false, isOverride: false }) }))
 jest.mock('@/core/hooks/useTeam', () => ({ useTeam: () => ({ teamId: 'team-1' }) }))
 jest.mock('@/core/lib/api/entities', () => ({
   getEntityData: (...args: unknown[]) => mockGetEntityData(...args),
@@ -39,6 +40,7 @@ jest.mock('@/core/components/entities/EntityDetailHeader', () => ({ EntityDetail
 import { EntityFormWrapper } from '@/core/components/entities/wrappers/EntityFormWrapper'
 
 beforeEach(() => {
+  configResult = { config: CONFIG, error: null }
   renderedFields.length = 0
   mockGetEntityData.mockReset().mockResolvedValue({ id: 't1', title: 'Write docs' })
   mockUpdateEntityData.mockReset().mockResolvedValue({})
@@ -68,5 +70,14 @@ describe('EntityFormWrapper edit of a record with fields the API left out', () =
     fireEvent.submit(container.querySelector('form')!)
     await waitFor(() => expect(mockUpdateEntityData).toHaveBeenCalled())
     expect(Object.keys(mockUpdateEntityData.mock.calls[0][2] as object)).toEqual(expect.arrayContaining(['secret', 'secretFlag', 'secretNumber']))
+  })
+})
+
+describe('EntityFormWrapper edit without a usable config', () => {
+  it('shows the config error, not a skeleton waiting for a record that is never requested', async () => {
+    configResult = { config: null, error: 'Entity not found' }
+    const { findByText } = render(<EntityFormWrapper entityType="ghosts" mode="edit" id="g1" />)
+    expect(await findByText('Entity not found')).toBeTruthy()
+    expect(mockGetEntityData).not.toHaveBeenCalled()
   })
 })

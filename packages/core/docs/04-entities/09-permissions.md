@@ -233,7 +233,7 @@ access: {
 - A hidden field cannot be used to filter, sort, search or list distinct values: for that role it behaves as a field that does not exist. A server action that lists without a team applies this for every role the user holds in any team, and strips each row with the role the user has in that row's team.
 - Public requests follow `publicFields`, not `fieldVisibility`, and an admin bypass sees every field. See [`access.fieldVisibility`](./03-configuration-reference.md#accessfieldvisibility).
 - Limit: `fieldVisibility` hides values, not their existence in constraints. If a hidden field has a unique constraint, a create or update that guesses its value can be answered with a conflict, which tells the caller the value exists.
-- The dashboard edit form does not render or send the fields the API left out of the record.
+- The dashboard edit form (`EntityFormWrapper`) does not render or send the fields the API left out of the record: a field absent from the GET cannot be edited from the form.
 
 ## Build-Time Registry
 

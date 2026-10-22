@@ -59,8 +59,9 @@ export function EntityFormWrapper({
   const { teamId } = useTeam()
 
   const [initialData, setInitialData] = useState<Record<string, unknown>>(propsInitialData || {})
-  // An edit form waits for its record: rendered earlier it would show fields the record turns out not to have
-  const [isLoadingData, setIsLoadingData] = useState(mode === 'edit' && !!id && !(propsInitialData && Object.keys(propsInitialData).length > 0))
+  const [isLoadingData, setIsLoadingData] = useState(false)
+  // Whether the load of the record for an edit form has finished (or failed)
+  const [recordLoaded, setRecordLoaded] = useState(false)
   // Fields the API left out of the loaded record (hidden from this role by access.fieldVisibility, #325): the API
   // returns every column of the entity, null included, so an absent key can only be a hidden field.
   const [absentFields, setAbsentFields] = useState<string[]>([])
@@ -80,7 +81,6 @@ export function EntityFormWrapper({
       if (mode === 'edit' && id && entityConfig && signedIn) {
         if (!entityConfig.enabled) {
           onError?.(new Error(`Entity "${entityType}" is disabled`))
-          setIsLoadingData(false)
           return
         }
         
@@ -97,6 +97,7 @@ export function EntityFormWrapper({
           console.error(`[EntityFormWrapper] Error loading data for ${entityType} ${id}:`, error)
           onError?.(error instanceof Error ? error : new Error(`Failed to load ${entityType} data`))
         } finally {
+          setRecordLoaded(true)
           setIsLoadingData(false)
         }
       }
@@ -115,7 +116,8 @@ export function EntityFormWrapper({
         
         onSuccess?.(created?.id)
       } else if (mode === 'edit' && id) {
-        await updateEntityData(entityType, id, data)
+        // Fields the API left out of the record are neither rendered nor sent: their empty initial value would overwrite the stored one
+        await updateEntityData(entityType, id, Object.fromEntries(Object.entries(data).filter(([name]) => !absentFields.includes(name))))
         
         onSuccess?.(id)
       }
@@ -125,9 +127,14 @@ export function EntityFormWrapper({
       setSubmitError(failure.message)
       onError?.(failure)
     }
-  }, [entityType, mode, id, onSuccess, onError])
+  }, [entityType, mode, id, absentFields, onSuccess, onError])
 
-  if (isLoadingConfig || isLoadingData) {
+  // An edit form waits for its record: rendered earlier it would show fields the record turns out not to have.
+  // Only when it will load one (config known and enabled, signed in), so a config error still reaches the Alert below.
+  const awaitingRecord = mode === 'edit' && !!id && !!entityConfig?.enabled && signedIn && !recordLoaded
+    && !(propsInitialData && Object.keys(propsInitialData).length > 0)
+
+  if (isLoadingConfig || isLoadingData || awaitingRecord) {
     // Calculate approximate field count based on entity type or default
     const fieldCount = entityConfig?.fields?.length || 8
     const hasTextareas = true // Most entities have description/notes fields
