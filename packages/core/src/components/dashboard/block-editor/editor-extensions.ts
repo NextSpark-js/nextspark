@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry.client'
-import type { FieldDefinition } from '../../../types/blocks'
+import type { BlockInstance, FieldDefinition } from '../../../types/blocks'
+import type { PageSettings } from './page-settings-panel'
 import type { BlockPickerProps } from './block-picker'
 import type { ConfigPanelProps } from './config-panel'
 import type { TreeViewProps } from './tree-view'
@@ -60,7 +61,7 @@ export interface EditorComponents {
   ConfigPanel?: ComponentType<ConfigPanelProps>
 }
 
-interface ThemeBuilderConfig extends EditorComponents {
+interface ThemeBuilderConfig extends EditorComponents, EditorHooks {
   fieldRenderers?: Record<string, FieldRenderer>
 }
 
@@ -77,4 +78,86 @@ export function resolveEditorComponents(components?: EditorComponents): EditorCo
     BlockPicker: components?.BlockPicker ?? theme?.BlockPicker,
     ConfigPanel: components?.ConfigPanel ?? theme?.ConfigPanel,
   }
+}
+
+// ── Before-save and before-publish hooks ─────────────────────────────────────
+
+/** The body the editor sends to the API: the fixed keys below plus the entity's own fields (`excerpt`, ...). */
+export interface BuilderSavePayload {
+  title: string
+  /** Absent when the stored slug was not changed. */
+  slug?: string
+  blocks: BlockInstance[]
+  status: string
+  settings: PageSettings
+  [field: string]: unknown
+}
+
+export interface BuilderSaveContext {
+  /** `'draft'`: Save draft. `'publish'`: Publish. `'update'`: Update, on a page whose status is already published. */
+  action: 'draft' | 'update' | 'publish'
+  mode: 'create' | 'edit'
+  entitySlug: string
+  /** Undefined in create mode. */
+  id?: string
+}
+
+/**
+ * What a hook may answer. Nothing (or `true`) lets the save go on; `{ veto: 'message' }` stops it and shows the
+ * message in the editor; `{ data }` lets it go on with that payload instead of the editor's.
+ */
+export type BuilderHookResult = void | undefined | true | { veto: string } | { data: BuilderSavePayload }
+
+/** Treat `payload` as read-only: return `{ data }` to change what is sent. */
+export type BuilderHook = (payload: BuilderSavePayload, context: BuilderSaveContext) => BuilderHookResult | Promise<BuilderHookResult>
+
+export interface EditorHooks {
+  /** Runs before every save: Save draft, Update and Publish. */
+  onBeforeSave?: BuilderHook
+  /** Runs after `onBeforeSave`, only when the payload's `status` is `'published'` (Publish, and Update of a published page). */
+  onBeforePublish?: BuilderHook
+}
+
+export type BeforeSaveOutcome =
+  | { payload: BuilderSavePayload }
+  | { veto: string }
+  | { error: string }
+
+/** The hooks that apply: the `hooks` prop first, then the theme configuration (`components.builder`). */
+export function resolveEditorHooks(hooks?: EditorHooks): EditorHooks {
+  const theme = themeBuilderConfig()
+  return {
+    onBeforeSave: hooks?.onBeforeSave ?? theme?.onBeforeSave,
+    onBeforePublish: hooks?.onBeforePublish ?? theme?.onBeforePublish,
+  }
+}
+
+/**
+ * Runs `onBeforeSave` and then, when the payload is being published, `onBeforePublish`. Each sees the payload the
+ * previous one returned. A veto stops at once; a hook that throws or rejects, or returns a payload that is not an
+ * object, ends as `{ error }` with the reason, so the caller can report it and keep the editor usable.
+ */
+export async function runBeforeSaveHooks(hooks: EditorHooks, payload: BuilderSavePayload, context: BuilderSaveContext): Promise<BeforeSaveOutcome> {
+  let current = payload
+  const steps = [['onBeforeSave', () => hooks.onBeforeSave], ['onBeforePublish', () => (current.status === 'published' ? hooks.onBeforePublish : undefined)]] as const
+  for (const [name, pick] of steps) {
+    const hook = pick()
+    if (!hook) continue
+    let result: BuilderHookResult
+    try {
+      result = await hook(current, context)
+    } catch (error) {
+      return { error: error instanceof Error && error.message ? error.message : String(error) }
+    }
+    if (result && typeof result === 'object') {
+      if ('veto' in result) return { veto: typeof result.veto === 'string' ? result.veto : '' }
+      if ('data' in result) {
+        if (!result.data || typeof result.data !== 'object' || Array.isArray(result.data)) {
+          return { error: `${name} returned data that is not an object` }
+        }
+        current = result.data
+      }
+    }
+  }
+  return { payload: current }
 }

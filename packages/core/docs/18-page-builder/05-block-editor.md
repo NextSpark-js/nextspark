@@ -508,6 +508,37 @@ export const myThemeConfig: ThemeConfig = {
 
 Each replacement receives the props of the component it replaces (`TreeViewProps`, `BlockPickerProps`, `ConfigPanelProps`, exported from `tree-view`, `block-picker` and `config-panel` in the same folder). The built-in `BlockPicker` renders the `TreeView` override in its Layout tab; a replacement `BlockPicker` receives it as its `TreeView` prop and decides what to do with it. Panels that are not replaced stay as they are.
 
+### Before-save and Before-publish Hooks
+
+A project can check or adjust a page before the editor sends it. `onBeforeSave` runs before every save (Save draft, Update and Publish) and `onBeforePublish` runs right after it when the status being saved is `published` (Publish, and Update of an already published page). Set them with the `hooks` prop of `BuilderEditorView` or once for the project in `theme.config.ts` under `components.builder` (the prop wins over the theme for the same hook):
+
+```tsx
+// theme.config.ts
+export const myThemeConfig: ThemeConfig = {
+  // ...
+  components: {
+    builder: {
+      onBeforePublish: async (payload) => {
+        if (!payload.blocks.some((block) => block.blockSlug === 'hero')) {
+          return { veto: 'Add a hero block before publishing' } // stops the save, the editor shows the message
+        }
+        // returning nothing lets the save go on
+      },
+    },
+  },
+}
+```
+
+A hook receives `(payload, context)`. `payload` is the body the editor sends (`title`, `slug` when it changed, `blocks`, `status`, `settings` and the entity's own fields); `context` is `{ action: 'draft' | 'update' | 'publish', mode, entitySlug, id }`. It may answer:
+
+- nothing, or `true`: the save goes on.
+- `{ veto: 'message' }`: nothing is sent and the message is shown as an error.
+- `{ data: payload }`: the save goes on with that payload instead (the next hook sees it too). Treat the `payload` you receive as read-only and return a changed copy.
+
+A hook that throws, rejects or returns `data` that is not an object is reported as an error ("The page was not saved: ...") and nothing is sent. While a hook is pending the save buttons are disabled, and they come back when it ends, whatever the outcome; a hook that never settles keeps them disabled, so give a slow check its own timeout. With no hook configured the editor saves exactly as before.
+
+`theme.config.ts` also reaches the bundle of the proxy, so keep the module a hook comes from light: import only what the hook needs, and load anything heavy with a dynamic `import()` inside the hook (as for the field renderers above). The hooks run in the browser, before the request: they are a convenience for the editor's user and can be bypassed by anything that calls the API directly. Rules that must always hold belong in the server-side `beforeUpdate` entity hook (see [Hooks and lifecycle](../04-entities/08-hooks-and-lifecycle.md)), which runs for every write and complements these.
+
 ### Styling the Editor
 
 Override styles using CSS variables or Tailwind:

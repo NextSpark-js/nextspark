@@ -221,7 +221,9 @@
     },
     "messages": {
       "saved": "Salvato con successo",
-      "created": "Creato con successo"
+      "created": "Creato con successo",
+      "saveBlocked": "La pagina non e stata salvata",
+      "hookFailed": "La pagina non e stata salvata: {message}"
     }
   }
 }

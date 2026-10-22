@@ -221,7 +221,9 @@
     },
     "messages": {
       "saved": "Enregistre avec succes",
-      "created": "Cree avec succes"
+      "created": "Cree avec succes",
+      "saveBlocked": "La page n'a pas ete enregistree",
+      "hookFailed": "La page n'a pas ete enregistree : {message}"
     }
   }
 }

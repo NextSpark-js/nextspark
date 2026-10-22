@@ -312,6 +312,8 @@
     "messages": {
       "saved": "Saved successfully",
       "created": "Created successfully",
+      "saveBlocked": "The page was not saved",
+      "hookFailed": "The page was not saved: {message}",
       "blockCopied": "Block copied to clipboard",
       "blockPasted": "Block pasted"
     },

@@ -33,7 +33,15 @@ import { StatusSelector, type StatusOption } from './status-selector'
 import { BlockService } from '../../../lib/services/block.service'
 import { ViewportToggle, type ViewportMode } from './viewport-toggle'
 import { ConfigPanel as DefaultConfigPanel } from './config-panel'
-import { resolveEditorComponents, type EditorComponents } from './editor-extensions'
+import {
+  resolveEditorComponents,
+  resolveEditorHooks,
+  runBeforeSaveHooks,
+  type BuilderSaveContext,
+  type BuilderSavePayload,
+  type EditorComponents,
+  type EditorHooks,
+} from './editor-extensions'
 import { useSidebar } from '../../../contexts/sidebar-context'
 import { cn } from '../../../lib/utils'
 import type { BlockInstance } from '../../../types/blocks'
@@ -94,9 +102,15 @@ export interface BuilderEditorViewProps {
    * theme configuration, then to the built-in panels.
    */
   components?: EditorComponents
+  /**
+   * `onBeforeSave` runs before every save (Save draft, Update, Publish) and `onBeforePublish` after it when the
+   * status being saved is `published`. A hook may veto with a message, or return the payload to send. Each falls back
+   * to the hook of `components.builder` in the theme configuration.
+   */
+  hooks?: EditorHooks
 }
 
-export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntityFieldChange: onEntityFieldChangeProp, components }: BuilderEditorViewProps) {
+export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntityFieldChange: onEntityFieldChangeProp, components, hooks: hooksProp }: BuilderEditorViewProps) {
   const { TreeView, BlockPicker = DefaultBlockPicker, ConfigPanel = DefaultConfigPanel } = resolveEditorComponents(components)
   const router = useRouter()
   const t = useTranslations('admin.builder')
@@ -277,7 +291,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
   const saveMutation = useMutation({
     // The form as the request carries it (its blocks include the flushed edit): the refetch after the save may replace it
     onMutate: (data: Record<string, unknown>) => {
-      sentSnapshot.current = formSnapshot({ ...formValuesRef.current, blocks: data.blocks as BlockInstance[] })
+      sentSnapshot.current = formSnapshot({ ...formValuesRef.current, blocks: Array.isArray(data.blocks) ? (data.blocks as BlockInstance[]) : formValuesRef.current.blocks })
     },
     mutationFn: async (data: Record<string, unknown>) => {
       const url = mode === 'create'
@@ -364,47 +378,55 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     return blocksRef.current
   }, [])
 
+  // The three save buttons go through here, so every trigger the editor gets later runs the project's hooks too.
+  // Without hooks the request goes out at once; with them it waits for the hooks, once at a time. A veto, an error
+  // or a hook that throws shows its message and sends nothing; the buttons come back in every case.
+  const hooks = resolveEditorHooks(hooksProp)
+  const hooksRunning = useRef(false)
+  const [checkingHooks, setCheckingHooks] = useState(false)
+  const submit = useCallback(async (action: BuilderSaveContext['action'], data: BuilderSavePayload) => {
+    if (!hooks.onBeforeSave && !hooks.onBeforePublish) {
+      saveMutation.mutate(data)
+      return
+    }
+    if (hooksRunning.current) return
+    hooksRunning.current = true
+    setCheckingHooks(true)
+    try {
+      const outcome = await runBeforeSaveHooks(hooks, data, { action, mode, entitySlug, id })
+      if ('payload' in outcome) saveMutation.mutate(outcome.payload)
+      else if ('veto' in outcome) toast.error(outcome.veto || t('messages.saveBlocked'))
+      else toast.error(t('messages.hookFailed', { message: outcome.error }))
+    } finally {
+      hooksRunning.current = false
+      setCheckingHooks(false)
+    }
+  }, [hooks, saveMutation, mode, entitySlug, id, t])
+
+  const buildPayload = useCallback((nextStatus: string): BuilderSavePayload => ({
+    title,
+    ...(slugChanged ? { slug } : {}),
+    blocks: latestBlocks(),
+    status: nextStatus,
+    settings: pageSettings,
+    ...entityFields,
+  }), [title, slug, slugChanged, latestBlocks, pageSettings, entityFields])
+
+  // Update of a page that is already published
   const handleSave = useCallback(() => {
     if (!validateFields()) return
-
-    const data: Record<string, unknown> = {
-      title,
-      ...(slugChanged ? { slug } : {}),
-      blocks: latestBlocks(),
-      status,
-      settings: pageSettings,
-      ...entityFields,
-    }
-    saveMutation.mutate(data)
-  }, [title, slug, latestBlocks, status, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
+    void submit('update', buildPayload(status))
+  }, [validateFields, submit, buildPayload, status])
 
   const handleSaveDraft = useCallback(() => {
     if (!validateFields()) return
-
-    const data: Record<string, unknown> = {
-      title,
-      ...(slugChanged ? { slug } : {}),
-      blocks: latestBlocks(),
-      status: 'draft',
-      settings: pageSettings,
-      ...entityFields,
-    }
-    saveMutation.mutate(data)
-  }, [title, slug, latestBlocks, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
+    void submit('draft', buildPayload('draft'))
+  }, [validateFields, submit, buildPayload])
 
   const handlePublish = useCallback(() => {
     if (!validateFields()) return
-
-    const data: Record<string, unknown> = {
-      title,
-      ...(slugChanged ? { slug } : {}),
-      blocks: latestBlocks(),
-      status: 'published',
-      settings: pageSettings,
-      ...entityFields,
-    }
-    saveMutation.mutate(data)
-  }, [title, slug, latestBlocks, pageSettings, entityFields, saveMutation, validateFields, slugChanged])
+    void submit('publish', buildPayload('published'))
+  }, [validateFields, submit, buildPayload])
 
   // --- Multi-selection helpers ---
   const selectedBlockId = useMemo(() => {
@@ -965,7 +987,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
               variant="outline"
               size="sm"
               onClick={handleSaveDraft}
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || checkingHooks}
               data-cy={sel('blockEditor.header.saveButton')}
             >
               {t('header.actions.saveDraft')}
@@ -975,7 +997,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
             <Button
               size="sm"
               onClick={status === 'published' ? handleSave : handlePublish}
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || checkingHooks}
               data-cy={sel('blockEditor.header.publishButton')}
             >
               <span>{status === 'published' ? t('header.actions.update') : t('header.actions.publish')}</span>

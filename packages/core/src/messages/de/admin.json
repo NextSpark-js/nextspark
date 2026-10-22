@@ -221,7 +221,9 @@
     },
     "messages": {
       "saved": "Erfolgreich gespeichert",
-      "created": "Erfolgreich erstellt"
+      "created": "Erfolgreich erstellt",
+      "saveBlocked": "Die Seite wurde nicht gespeichert",
+      "hookFailed": "Die Seite wurde nicht gespeichert: {message}"
     }
   }
 }
