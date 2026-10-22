@@ -8,6 +8,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Copy, Check, Search, TestTube2, CheckCircle2, XCircle, ArrowRight, LayoutGrid, Image as ImageIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useLocalizedText } from '../../hooks/useLocalizedText';
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client';
 import { TAGS_REGISTRY } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
@@ -47,6 +48,7 @@ interface BlockWithCoverage extends BlockConfig {
  */
 export function BlocksViewer() {
   const t = useTranslations("devtools.blocks");
+  const text = useLocalizedText();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
@@ -71,8 +73,8 @@ export function BlocksViewer() {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch =
-          block.name.toLowerCase().includes(query) ||
-          block.description.toLowerCase().includes(query) ||
+          text(block.name).toLowerCase().includes(query) ||
+          text(block.description).toLowerCase().includes(query) ||
           block.slug.toLowerCase().includes(query);
         if (!matchesSearch) return false;
       }
@@ -90,7 +92,7 @@ export function BlocksViewer() {
 
       return true;
     });
-  }, [blocksWithCoverage, searchQuery, categoryFilter, coverageFilter]);
+  }, [blocksWithCoverage, searchQuery, categoryFilter, coverageFilter, text]);
 
   const categories = useMemo(() => {
     const cats = new Set(blocksWithCoverage.map((b) => b.category));
@@ -228,7 +230,7 @@ export function BlocksViewer() {
               {block.thumbnail ? (
                 <img
                   src={withBasePathIfInApp(block.thumbnail.src)}
-                  alt={block.name}
+                  alt={text(block.name)}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -241,13 +243,13 @@ export function BlocksViewer() {
 
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
-                <CardTitle className="text-base">{block.name}</CardTitle>
+                <CardTitle className="text-base">{text(block.name)}</CardTitle>
                 <Badge className={CATEGORY_COLORS[block.category] || "bg-gray-100 text-gray-800"}>
                   {block.category}
                 </Badge>
               </div>
               <CardDescription className="text-xs line-clamp-2">
-                {block.description}
+                {text(block.description)}
               </CardDescription>
             </CardHeader>
 

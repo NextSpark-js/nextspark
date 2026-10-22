@@ -15,9 +15,10 @@ jest.mock('@/core/lib/auth-client', () => ({ useSession: () => ({ data: null, is
 jest.mock('next-intl', () => {
   // the real English messages, so the assertions read what a user would
   const media = require('../../../../src/messages/en/media.json')
+  const imageUpload = require('../../../../src/messages/en/common.json').imageUpload
   return {
-    useTranslations: () => (key: string, values: Record<string, unknown> = {}) =>
-      (key.split('.').reduce((node: any, part) => node[part], media) as string).replace(/\{(\w+)\}/g, (_, name) => String(values[name])),
+    useTranslations: (namespace?: string) => (key: string, values: Record<string, unknown> = {}) =>
+      (key.split('.').reduce((node: any, part) => node[part], namespace === 'common.imageUpload' ? imageUpload : media) as string).replace(/\{(\w+)\}/g, (_, name) => String(values[name])),
   }
 })
 jest.mock('next/image', () => ({ __esModule: true, default: () => null }))

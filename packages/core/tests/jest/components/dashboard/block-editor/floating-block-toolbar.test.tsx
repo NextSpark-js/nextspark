@@ -8,6 +8,7 @@ import { FloatingBlockToolbar } from '@/core/components/dashboard/block-editor/f
 
 // Mock next-intl
 jest.mock('next-intl', () => ({
+  useLocale: () => 'en',
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
       duplicate: 'Duplicate',

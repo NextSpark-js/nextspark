@@ -213,8 +213,9 @@ export async function generateTestBlocksJson(blocks, CONFIG = DEFAULT_CONFIG) {
   const blocksData = {
     available: blocks.map(block => ({
       slug: block.slug,
-      name: block.name,
-      description: block.description,
+      // A text per locale is flattened for the fixture: the English text, else the first one
+      name: typeof block.name === 'string' ? block.name : (block.name.en ?? Object.values(block.name)[0]),
+      description: typeof block.description === 'string' ? block.description : (block.description.en ?? Object.values(block.description)[0] ?? ''),
       category: block.category,
       icon: block.icon,
       scope: block.scope || ['pages', 'posts']

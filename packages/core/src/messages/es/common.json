@@ -254,5 +254,16 @@
     "hidePrefix": "Para ocultar: remueve ",
     "hideSuffix": " de la URL"
   },
-  "cookieSettings": "Configuración de cookies"
+  "cookieSettings": "Configuración de cookies",
+  "imageUpload": {
+    "dragHere": "Arrastra imágenes aquí o",
+    "clickToSelect": "haz clic para seleccionar",
+    "oneImage": "Una imagen",
+    "upToImages": "Hasta {max} imágenes",
+    "maxSizeEach": "máximo {size}MB cada una",
+    "tooLarge": "La imagen es demasiado grande. Máximo {size}MB.",
+    "notImage": "El archivo debe ser una imagen.",
+    "loadFailed": "No se pudo cargar la imagen.",
+    "maxImages": "Se permiten como máximo {max} imágenes"
+  }
 }

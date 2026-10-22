@@ -6,6 +6,7 @@ import { GripVertical, ClipboardCopy, Copy, Trash2, Check } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 import { BlockService } from '../../../lib/services/block.service'
+import { useLocalizedText } from '../../../hooks/useLocalizedText'
 import { DynamicIcon } from '../../ui/dynamic-icon'
 import type { BlockInstance } from '../../../types/blocks'
 import { isPatternReference, type PatternReference } from '../../../types/pattern-reference'
@@ -31,6 +32,7 @@ export function TreeViewNode({
   onRemove,
   isPartOfPattern = false
 }: TreeViewNodeProps) {
+  const text = useLocalizedText()
   const {
     attributes,
     listeners,
@@ -55,7 +57,7 @@ export function TreeViewNode({
     : BlockService.get(block.blockSlug)
 
   const iconName = blockConfig?.icon || 'LayoutGrid'
-  const blockName = blockConfig?.name || (isPatternReference(block) ? 'Pattern' : 'Unknown Block')
+  const blockName = text(blockConfig?.name) || (isPatternReference(block) ? 'Pattern' : 'Unknown Block')
 
   return (
     <div

@@ -452,12 +452,21 @@ export interface BlockExample {
 }
 
 /**
+ * A text that is the same in every language (a string), or one text per locale. A locale without an entry uses the
+ * text of the default locale, then the first one (resolveLocalizedText).
+ */
+export type LocalizedText = string | Record<string, string>
+
+/**
  * Block configuration (metadata about a block type)
  */
 export interface BlockConfig {
   slug: string
-  name: string
-  description: string
+  /** A text, or a text per locale (`{ en: 'Hero', es: 'Portada' }`) shown in the language of the editor. */
+  name: LocalizedText
+  /** Same shape as `name`. */
+  description: LocalizedText
+
   category: BlockCategory
   icon?: string // Lucide icon name
 
@@ -677,6 +686,11 @@ export function isBlockInstance(value: unknown): value is BlockInstance {
   )
 }
 
+function isLocalizedText(value: unknown): value is LocalizedText {
+  if (typeof value === 'string') return true
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && Object.values(value).every((text) => typeof text === 'string')
+}
+
 /**
  * Type guard to check if a value is a valid BlockConfig
  */
@@ -685,8 +699,8 @@ export function isBlockConfig(value: unknown): value is BlockConfig {
   const config = value as Record<string, unknown>
   return (
     typeof config.slug === 'string' &&
-    typeof config.name === 'string' &&
-    typeof config.description === 'string' &&
+    isLocalizedText(config.name) &&
+    isLocalizedText(config.description) &&
     typeof config.category === 'string' &&
     Array.isArray(config.fieldDefinitions)
   )

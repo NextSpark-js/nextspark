@@ -9,6 +9,7 @@ import type { BlockInstance, FieldDefinition } from '@/core/types/blocks'
 
 // Mock next-intl
 jest.mock('next-intl', () => ({
+  useLocale: () => 'en',
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
       'empty.message': 'No block selected',

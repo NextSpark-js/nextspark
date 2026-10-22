@@ -122,6 +122,19 @@ export const config: Omit<BlockConfig, 'fieldDefinitions'> = {
 }
 ```
 
+**Translating the name and description**: `name` and `description` accept a string (the same in every language) or a text per locale. The block picker, the layout tree, the settings panel and the DevTools viewers show the text of the editor's active locale; a locale with no entry uses its language (`es-MX` uses `es`), then the app's default locale, then `en`, then the first entry. A plain string keeps working everywhere.
+
+```typescript
+export const config: Omit<BlockConfig, 'fieldDefinitions'> = {
+  slug: 'pricing-table',
+  name: { en: 'Pricing Table', es: 'Tabla de precios' },
+  description: { en: 'Display pricing plans with features and CTAs', es: 'Muestra planes con sus características' },
+  // ...
+}
+```
+
+Write each text as a string literal: the block registry is built by reading `config.ts`, so a value computed in code (a function call, a variable) is not found and the registry falls back to the slug.
+
 **Available Categories**: `hero`, `content`, `features`, `cta`, `testimonials`, `media`, `forms`, `navigation`, `footer`, `pricing`, `team`, `stats`, `faq`, `newsletter`, `other`
 
 ### Block Scope (Required)

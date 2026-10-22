@@ -71,6 +71,7 @@ export type {
   FieldDefinition,
   BlockCategory,
   BlockConfig,
+  LocalizedText,
   BlockInstance,
   PageMetadata,
   PageSEO,

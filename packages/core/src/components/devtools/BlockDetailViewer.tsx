@@ -16,6 +16,7 @@ import {
 } from '../ui/table';
 import { ArrowLeft, LayoutGrid, TestTube2, CheckCircle2, XCircle, Eye, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useLocalizedText } from '../../hooks/useLocalizedText';
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client';
 import { TAGS_REGISTRY } from '@nextsparkjs/registries/testing-registry';
 import { getBlockComponent } from '../../lib/blocks/loader';
@@ -74,6 +75,7 @@ function BlockPreviewError({ error }: { error: string }) {
  */
 export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
   const t = useTranslations("devtools.blocks.detail");
+  const text = useLocalizedText();
 
   // State for selected example
   const [selectedExampleIndex, setSelectedExampleIndex] = useState(0);
@@ -156,7 +158,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
           {block.thumbnail ? (
             <img
               src={withBasePathIfInApp(block.thumbnail.src)}
-              alt={block.name}
+              alt={text(block.name)}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -166,12 +168,12 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
 
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl font-bold">{block.name}</h1>
+            <h1 className="text-2xl font-bold">{text(block.name)}</h1>
             <Badge className={CATEGORY_COLORS[block.category] || "bg-gray-100 text-gray-800"}>
               {block.category}
             </Badge>
           </div>
-          <p className="text-muted-foreground">{block.description}</p>
+          <p className="text-muted-foreground">{text(block.description)}</p>
 
           <div className="flex items-center gap-4 mt-3">
             {/* Scope */}

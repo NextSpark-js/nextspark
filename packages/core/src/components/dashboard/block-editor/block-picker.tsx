@@ -2,6 +2,7 @@
 
 import { useState, useMemo, type ComponentType } from 'react'
 import { useTranslations } from 'next-intl'
+import { useLocalizedText } from '../../../hooks/useLocalizedText'
 import { useEntityTranslation } from '../../../hooks/useContentTranslation'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Plus, LayoutGrid, LayoutList, Layers, ClipboardPaste } from 'lucide-react'
@@ -88,6 +89,7 @@ export function BlockPicker({
   TreeView = DefaultTreeView,
 }: BlockPickerProps) {
   const t = useTranslations('admin.builder')
+  const text = useLocalizedText()
   const { t: tPatterns } = useEntityTranslation('patterns')
   const [activeTab, setActiveTab] = useState<TabValue>('blocks')
   const [search, setSearch] = useState('')
@@ -116,14 +118,14 @@ export function BlockPicker({
   const filteredBlocks = useMemo(() => {
     return blocks.filter(block => {
       const matchesSearch = search === '' ||
-        block.name.toLowerCase().includes(search.toLowerCase()) ||
-        block.description.toLowerCase().includes(search.toLowerCase())
+        text(block.name).toLowerCase().includes(search.toLowerCase()) ||
+        text(block.description).toLowerCase().includes(search.toLowerCase())
 
       const matchesCategory = !selectedCategory || block.category === selectedCategory
 
       return matchesSearch && matchesCategory
     })
-  }, [blocks, search, selectedCategory])
+  }, [blocks, search, selectedCategory, text])
 
   // Filter patterns
   const filteredPatterns = useMemo(() => {
@@ -295,7 +297,7 @@ export function BlockPicker({
                             className="font-medium text-sm text-foreground"
                             data-cy={sel('blockEditor.blockPicker.blockName', { slug: block.slug })}
                           >
-                            {block.name}
+                            {text(block.name)}
                           </span>
                         </div>
                         <span
@@ -309,7 +311,7 @@ export function BlockPicker({
                         className="text-xs text-muted-foreground line-clamp-2"
                         data-cy={sel('blockEditor.blockPicker.blockDescription', { slug: block.slug })}
                       >
-                        {block.description}
+                        {text(block.description)}
                       </p>
 
                       {/* Hover "+" Button */}

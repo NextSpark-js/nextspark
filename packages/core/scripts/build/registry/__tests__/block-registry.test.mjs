@@ -22,7 +22,7 @@ import {
   generateBlockRegistryLazy,
   generateBlockSchemas
 } from '../generators/block-registry.mjs'
-import { readSchemaExport, thumbnailImport } from '../discovery/blocks.mjs'
+import { readBlockText, readSchemaExport, thumbnailImport } from '../discovery/blocks.mjs'
 import { validateGeneratedModule } from '../host/static-imports.mjs'
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 import { silenceConsoleOutput } from './quiet-console.mjs'
@@ -169,4 +169,38 @@ test('an unreadable thumbnail.png (a directory, no permission) gives no thumbnai
   writeFileSync(join(locked, 'thumbnail.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
   chmodSync(join(locked, 'thumbnail.png'), 0)
   if (process.getuid?.() !== 0) assert.equal(thumbnailImport(locked, 'hero'), null, 'EACCES')
+})
+
+test('discovery reads a block name and description as a string or as a text per locale (#338)', () => {
+  const plain = "export const config = { slug: 'hero', name: 'Hero Section', description: 'Full width', category: 'hero' }"
+  assert.equal(readBlockText(plain, 'name'), 'Hero Section')
+  assert.equal(readBlockText(plain, 'description'), 'Full width')
+
+  const perLocale = `export const config = {
+    slug: 'hero',
+    name: { en: 'Hero Section', es: "Sección de portada", 'pt-BR': 'Seção' },
+    description: {
+      en: 'Full width',
+      es: 'A todo el ancho',
+    },
+    category: 'hero',
+  }`
+  assert.deepEqual(readBlockText(perLocale, 'name'), { en: 'Hero Section', es: 'Sección de portada', 'pt-BR': 'Seção' })
+  assert.deepEqual(readBlockText(perLocale, 'description'), { en: 'Full width', es: 'A todo el ancho' })
+
+  assert.equal(readBlockText("export const config = { slug: 'hero' }", 'name'), undefined)
+  assert.equal(readBlockText('export const config = { name: t("hero") }', 'name'), undefined, 'a computed value is not read')
+})
+
+test('the registry carries a text per locale as an object literal and a string as before (#338)', () => {
+  const localized = {
+    ...block('hero', 'hero'),
+    name: { en: 'Hero Section', es: 'Sección de portada' },
+    description: { en: 'Full width', es: 'A todo el ancho' },
+  }
+  const out = generateBlockRegistryClient([localized, block('cta-section', 'cta')], config)
+  assert.match(out, /name: \{"en":"Hero Section","es":"Sección de portada"\},/)
+  assert.match(out, /description: \{"en":"Full width","es":"A todo el ancho"\},/)
+  assert.match(out, /name: 'cta-section',/)
+  assert.match(out, /description: 'cta-section block',/)
 })

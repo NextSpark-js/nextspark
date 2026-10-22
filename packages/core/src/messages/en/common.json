@@ -254,5 +254,16 @@
     "hidePrefix": "To hide: remove ",
     "hideSuffix": " from the URL"
   },
-  "cookieSettings": "Cookie settings"
+  "cookieSettings": "Cookie settings",
+  "imageUpload": {
+    "dragHere": "Drag images here or",
+    "clickToSelect": "click to select",
+    "oneImage": "One image",
+    "upToImages": "Up to {max} images",
+    "maxSizeEach": "maximum {size}MB each",
+    "tooLarge": "Image is too large. Maximum {size}MB.",
+    "notImage": "The file must be an image.",
+    "loadFailed": "Could not load the image.",
+    "maxImages": "Maximum {max} images allowed"
+  }
 }

@@ -3,6 +3,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useTranslations } from 'next-intl'
+import { useLocalizedText } from '../../../hooks/useLocalizedText'
 import { Button } from '../../ui/button'
 import { Card, CardContent } from '../../ui/card'
 import { Badge } from '../../ui/badge'
@@ -28,6 +29,7 @@ export function SortableBlock({
   onDuplicate,
 }: SortableBlockProps) {
   const t = useTranslations('admin.blockEditor.block')
+  const text = useLocalizedText()
   const {
     attributes,
     listeners,
@@ -89,13 +91,13 @@ export function SortableBlock({
             {/* Block Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
-                <h4 className="font-medium text-sm">{blockConfig.name}</h4>
+                <h4 className="font-medium text-sm">{text(blockConfig.name)}</h4>
                 <Badge variant="outline" className="text-xs capitalize">
                   {blockConfig.category}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground line-clamp-2">
-                {blockConfig.description}
+                {text(blockConfig.description)}
               </p>
 
               {/* Block Props Preview */}

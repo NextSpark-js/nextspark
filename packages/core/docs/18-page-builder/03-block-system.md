@@ -12,8 +12,8 @@ The system distinguishes between **block definitions** and **block usage**:
 // BlockConfig: The definition (what a block CAN be)
 interface BlockConfig {
   slug: string              // Unique identifier: 'hero', 'features-grid'
-  name: string              // Display name: 'Hero Section'
-  description: string       // Brief description
+  name: LocalizedText       // Display name: 'Hero Section', or { en: 'Hero Section', es: 'Portada' }
+  description: LocalizedText // Brief description, same shape as name
   category: BlockCategory   // 'hero', 'content', 'cta', etc.
   icon?: string            // Lucide icon name
   fieldDefinitions: FieldDefinition[]  // Form fields for admin UI

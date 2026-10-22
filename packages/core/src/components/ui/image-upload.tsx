@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import NextImage from "next/image"
 import { X, Eye, Download, Image } from "lucide-react"
 import { Button } from './button'
@@ -20,6 +21,19 @@ export interface UploadedImage {
   height?: number
 }
 
+/** The texts of the component. Each one that is not given comes from the `common.imageUpload` messages of the active locale. */
+export interface ImageUploadLabels {
+  dragHere: string
+  clickToSelect: string
+  oneImage: string
+  upToImages: (max: number) => string
+  maxSizeEach: (size: number) => string
+  tooLarge: (size: number) => string
+  notImage: string
+  loadFailed: string
+  maxImages: (max: number) => string
+}
+
 interface ImageUploadProps {
   value: UploadedImage[]
   onChange: (images: UploadedImage[]) => void
@@ -32,6 +46,8 @@ interface ImageUploadProps {
   multiple?: boolean
   aspectRatio?: "square" | "landscape" | "portrait" | "free"
   showPreview?: boolean
+  /** Replaces some of the texts (the drop zone copy and the validation messages). */
+  labels?: Partial<ImageUploadLabels>
 }
 
 export function ImageUpload({
@@ -45,7 +61,20 @@ export function ImageUpload({
   multiple = true,
   aspectRatio = "free",
   showPreview = true,
+  labels,
 }: ImageUploadProps) {
+  const t = useTranslations('common.imageUpload')
+  const text: ImageUploadLabels = {
+    dragHere: labels?.dragHere ?? t('dragHere'),
+    clickToSelect: labels?.clickToSelect ?? t('clickToSelect'),
+    oneImage: labels?.oneImage ?? t('oneImage'),
+    upToImages: labels?.upToImages ?? ((max) => t('upToImages', { max })),
+    maxSizeEach: labels?.maxSizeEach ?? ((size) => t('maxSizeEach', { size })),
+    tooLarge: labels?.tooLarge ?? ((size) => t('tooLarge', { size })),
+    notImage: labels?.notImage ?? t('notImage'),
+    loadFailed: labels?.loadFailed ?? t('loadFailed'),
+    maxImages: labels?.maxImages ?? ((max) => t('maxImages', { max })),
+  }
   const [isDragOver, setIsDragOver] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
   const { pending, error, uploadFiles, cancel, claim, release, typeNotAccepted } = useFieldUpload()
@@ -64,12 +93,12 @@ export function ImageUpload({
   const validateImage = (file: File): Promise<string | null> => {
     return new Promise((resolve) => {
       if (maxSize && file.size > maxSize * 1024 * 1024) {
-        resolve(`Image is too large. Maximum ${maxSize}MB.`)
+        resolve(text.tooLarge(maxSize))
         return
       }
 
       if (!file.type.startsWith("image/")) {
-        resolve("The file must be an image.")
+        resolve(text.notImage)
         return
       }
 
@@ -85,7 +114,7 @@ export function ImageUpload({
         resolve(null)
       }
       img.onerror = () => {
-        resolve("Could not load the image.")
+        resolve(text.loadFailed)
       }
       img.src = URL.createObjectURL(file)
     })
@@ -100,7 +129,7 @@ export function ImageUpload({
     // Slots are taken before anything is awaited, so a second pick counts these files
     const picked = Array.from(files)
     const granted = claim(picked.length, maxImages, valueRef.current.length)
-    if (granted < picked.length) errors.push(`Maximum ${maxImages} images allowed`)
+    if (granted < picked.length) errors.push(text.maxImages(maxImages))
 
     for (const file of picked.slice(0, granted)) {
       const error = await validateImage(file)
@@ -192,12 +221,12 @@ export function ImageUpload({
           {/* eslint-disable-next-line jsx-a11y/alt-text */}
           <Image className="h-8 w-8 text-muted-foreground" />
           <p className="mt-2 text-sm text-muted-foreground">
-            Drag images here or{" "}
-            <span className="font-medium text-primary">click to select</span>
+            {text.dragHere}{" "}
+            <span className="font-medium text-primary">{text.clickToSelect}</span>
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            {maxImages > 1 ? `Up to ${maxImages} images` : "One image"}
-            {maxSize && `, maximum ${maxSize}MB each`}
+            {maxImages > 1 ? text.upToImages(maxImages) : text.oneImage}
+            {maxSize && `, ${text.maxSizeEach(maxSize)}`}
           </p>
         </div>
         

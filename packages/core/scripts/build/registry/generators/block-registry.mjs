@@ -18,6 +18,14 @@ import { toSafeIdentifier } from './identifier.mjs'
 import { convertCorePath } from '../config.mjs'
 
 /**
+ * A block name or description as a literal: a string stays between single quotes, a text per locale is an object literal.
+ * @param {string|Record<string,string>} value
+ */
+function registryText(value) {
+  return typeof value === 'string' ? `'${value}'` : JSON.stringify(value)
+}
+
+/**
  * The registry entries both halves emit, so the configs cannot drift apart.
  *
  * @param {Array} blocks - Discovered blocks
@@ -37,8 +45,8 @@ function buildRegistryEntries(blocks) {
 
     return `  '${block.slug}': {
     slug: '${block.slug}',
-    name: '${block.name}',
-    description: '${block.description}',
+    name: ${registryText(block.name)},
+    description: ${registryText(block.description)},
     category: '${block.category}' as BlockCategory,
     icon: '${block.icon}',
     componentPath: '${block.paths.component}',

@@ -2,6 +2,7 @@
 
 import { Copy, ClipboardCopy, Trash2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { useLocalizedText } from '../../../hooks/useLocalizedText'
 import { Button } from '../../ui/button'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
@@ -30,7 +31,8 @@ export function FloatingBlockToolbar({
 }: FloatingBlockToolbarProps) {
   const t = useTranslations('admin.builder.floatingToolbar')
   const blockConfig = BLOCK_REGISTRY[blockSlug]
-  const blockName = blockConfig?.name || blockSlug
+  const text = useLocalizedText()
+  const blockName = text(blockConfig?.name) || blockSlug
 
   return (
     <div

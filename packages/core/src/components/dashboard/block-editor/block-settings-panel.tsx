@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useLocalizedText } from '../../../hooks/useLocalizedText'
 import { Button } from '../../ui/button'
 import { Card, CardContent } from '../../ui/card'
 import { Badge } from '../../ui/badge'
@@ -55,6 +56,7 @@ export function BlockSettingsPanel({
 }: BlockSettingsPanelProps) {
   const t = useTranslations('admin.builder.settingsPanel')
   const tMulti = useTranslations('admin.builder.multiSelect')
+  const text = useLocalizedText()
   const [activeTab, setActiveTab] = useState<SettingsTab>('content')
 
   // Memoize grouped fields (only for regular blocks, not pattern references)
@@ -218,7 +220,7 @@ export function BlockSettingsPanel({
             className="text-sm text-foreground"
             data-cy={sel('blockEditor.blockPropertiesPanel.blockName')}
           >
-            {blockConfig.name}
+            {text(blockConfig.name)}
           </span>
         </div>
       </div>

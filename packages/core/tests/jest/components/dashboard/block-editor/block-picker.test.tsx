@@ -21,6 +21,7 @@ jest.mock('@/core/components/dashboard/block-editor/tree-view', () => ({
 
 // Mock next-intl
 jest.mock('next-intl', () => ({
+  useLocale: () => mockLocale(),
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
       'sidebar.tabs.blocks': 'Blocks',
@@ -88,6 +89,8 @@ jest.mock('@/core/components/dashboard/block-editor/category-helpers', () => ({
   }),
 }))
 
+const mockLocale = jest.fn(() => 'en')
+
 describe('BlockPicker', () => {
   const mockBlocks: BlockConfig[] = [
     {
@@ -142,6 +145,50 @@ describe('BlockPicker', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockLocale.mockReturnValue('en')
+  })
+
+  describe('Localized names and descriptions (#338)', () => {
+    const localized = [
+      {
+        name: { en: 'Hero Section', es: 'Sección de portada' },
+        slug: 'hero-section',
+        category: 'hero',
+        description: { en: 'Full-width hero', es: 'Portada a todo el ancho' },
+        scope: ['*'],
+        fields: [],
+      },
+      { name: 'Plain Block', slug: 'plain', category: 'content', description: 'Same in every language', scope: ['*'], fields: [] },
+    ] as unknown as BlockConfig[]
+
+    test.each([
+      ['en', 'Hero Section', 'Full-width hero'],
+      ['es', 'Sección de portada', 'Portada a todo el ancho'],
+    ])('shows the %s name and description', (locale, name, description) => {
+      mockLocale.mockReturnValue(locale)
+      render(<BlockPicker {...defaultProps} blocks={localized} />)
+
+      expect(screen.getByText(name)).toBeInTheDocument()
+      expect(screen.getByText(description)).toBeInTheDocument()
+      // a plain string is the same in every locale
+      expect(screen.getByText('Plain Block')).toBeInTheDocument()
+    })
+
+    test('a locale without an entry falls back to the default locale', () => {
+      mockLocale.mockReturnValue('fr')
+      render(<BlockPicker {...defaultProps} blocks={localized} />)
+
+      expect(screen.getByText('Hero Section')).toBeInTheDocument()
+    })
+
+    test('search matches the text of the active locale', () => {
+      mockLocale.mockReturnValue('es')
+      render(<BlockPicker {...defaultProps} blocks={localized} />)
+
+      fireEvent.change(screen.getByPlaceholderText('Search blocks...'), { target: { value: 'portada' } })
+      expect(screen.getByText('Sección de portada')).toBeInTheDocument()
+      expect(screen.queryByText('Plain Block')).not.toBeInTheDocument()
+    })
   })
 
   describe('Rendering', () => {

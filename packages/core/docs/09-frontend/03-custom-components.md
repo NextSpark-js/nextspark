@@ -49,6 +49,7 @@ Custom components extend the functionality of shadcn/ui primitives to create spe
 - Third-party: Cloud storage integration
 - Validation: File size, type, dimensions
 - Preview: Image manipulation and display
+- Texts: the drop zone copy and the validation messages come from `common.imageUpload` in the core messages of the active locale (`de`, `en`, `es`, `fr`, `it`, `pt`); the `labels` prop replaces any of them (`dragHere`, `clickToSelect`, `oneImage`, `upToImages(max)`, `maxSizeEach(size)`, `tooLarge(size)`, `notImage`, `loadFailed`, `maxImages(max)`), for example `<ImageUpload labels={{ dragHere: 'Drop your photos or' }} />`
 
 **User Select** (`core/components/ui/user-select.tsx`)
 - Domain-specific: User search and selection

@@ -117,6 +117,27 @@ export function thumbnailImport(blockPath, blockSlug) {
 }
 
 /**
+ * The `name` or `description` of a block config: a string, or an object of strings per locale
+ * (`name: { en: 'Hero', es: 'Portada' }`). Returns undefined when the config has neither form.
+ * The config is read as text, so a computed value is not found (the caller falls back to the slug).
+ * @param {string} configContent - The text of the block's config.ts
+ * @param {'name'|'description'} key
+ * @returns {string|Record<string,string>|undefined}
+ */
+export function readBlockText(configContent, key) {
+  const object = configContent.match(new RegExp(`(?:^|[\\s,{])${key}:\\s*\\{([^{}]*)\\}`))
+  if (object) {
+    const texts = {}
+    for (const pair of object[1].matchAll(/(?:^|[\s,])(?:'([\w-]+)'|"([\w-]+)"|([\w-]+))\s*:\s*(?:'([^']*)'|"([^"]*)")/g)) {
+      texts[pair[1] ?? pair[2] ?? pair[3]] = pair[4] ?? pair[5]
+    }
+    if (Object.keys(texts).length > 0) return texts
+  }
+  const text = configContent.match(new RegExp(`${key}:\\s*['"]([^'"]+)['"]`))
+  return text ? text[1] : undefined
+}
+
+/**
  * Discover all blocks in the project root.
  * @param {object} config - Optional configuration object (defaults to DEFAULT_CONFIG)
  * @returns {Promise<Array>} Array of discovered blocks
@@ -180,8 +201,8 @@ export async function discoverBlocks(config = DEFAULT_CONFIG) {
 
         // Extract metadata using regex (simple parsing)
         const slugMatch = configContent.match(/slug:\s*['"]([^'"]+)['"]/)
-        const nameMatch = configContent.match(/name:\s*['"]([^'"]+)['"]/)
-        const descMatch = configContent.match(/description:\s*['"]([^'"]+)['"]/)
+        const blockName = readBlockText(configContent, 'name')
+        const blockDescription = readBlockText(configContent, 'description')
         const categoryMatch = configContent.match(/category:\s*['"]([^'"]+)['"]/)
         const iconMatch = configContent.match(/icon:\s*['"]([^'"]+)['"]/)
         const scopeMatch = configContent.match(/scope:\s*\[([^\]]+)\]/)
@@ -211,8 +232,8 @@ export async function discoverBlocks(config = DEFAULT_CONFIG) {
 
         blocks.push({
           slug: extractedSlug,
-          name: nameMatch ? nameMatch[1] : blockSlug,
-          description: descMatch ? descMatch[1] : '',
+          name: blockName ?? blockSlug,
+          description: blockDescription ?? '',
           category: categoryMatch ? categoryMatch[1] : 'other',
           icon: iconMatch ? iconMatch[1] : 'Box',
           scope,
@@ -231,7 +252,7 @@ export async function discoverBlocks(config = DEFAULT_CONFIG) {
           }
         })
 
-        verbose(`Block discovered: ${extractedSlug} (${blocks[blocks.length - 1].name})`)
+        verbose(`Block discovered: ${extractedSlug} (${JSON.stringify(blocks[blocks.length - 1].name)})`)
       } catch (error) {
         log(`ERROR: Failed to parse block "${blockSlug}": ${error.message}`, 'error')
       }
