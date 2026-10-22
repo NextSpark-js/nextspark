@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query, queryOne } from '@nextsparkjs/core/lib/db'
 
 // Polar webhook verification - import from gateway
-import { builtInWebhookRouteClosed } from '@nextsparkjs/core/lib/billing/provider-mode'
+import { builtInWebhookRouteClosed } from '@nextsparkjs/core/lib/billing/gateways/webhook-routes'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { processWebhookEventOnce, webhookOutcomeResponse } from '@nextsparkjs/core/lib/billing/webhook-events'
 import { subscriptionRowForNewSubscription } from '@nextsparkjs/core/lib/billing/subscription-binding'

@@ -116,16 +116,17 @@ describe('a registered gateway that replaces a built-in name', () => {
     return handler(request, undefined as never)
   }
 
-  test('keeps only its own route: the other three answer 404 and never verify', async () => {
-    registerBillingGateway('stripe', () => ({}) as never)
+  test.each(['stripe', 'polar', 'lemonsqueezy', 'paddle'])('%s registered keeps only its own route: the other three answer 404 and never verify', async (provider) => {
+    mockRegistry.provider = provider
+    registerBillingGateway(provider, () => ({}) as never)
 
-    for (const [name, handler] of webhooks.filter(([name]) => name !== 'stripe')) {
+    for (const [name, handler] of webhooks.filter(([name]) => name !== provider)) {
       expect((await hit(name, handler)).status).toBe(404)
     }
     expect(mockGetBillingGateway).not.toHaveBeenCalled()
 
     mockGetBillingGateway.mockRejectedValue(new Error('verify'))
-    const own = await hit('stripe', webhooks[0][1])
+    const own = await hit(provider, webhooks.find(([name]) => name === provider)![1])
     expect(own.status).not.toBe(404)
     expect(mockGetBillingGateway).toHaveBeenCalled()
   })

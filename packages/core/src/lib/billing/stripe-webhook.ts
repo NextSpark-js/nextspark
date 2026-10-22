@@ -22,7 +22,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { builtInWebhookRouteClosed } from './provider-mode'
+import { builtInWebhookRouteClosed } from './gateways/webhook-routes'
 import { getBillingGateway } from './gateways/factory'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { query, queryOne } from '../db'
