@@ -143,9 +143,11 @@ const isPositiveInt = (v: unknown): v is number => typeof v === 'number' && Numb
  * unknown custom tier is limited as the `api` tier (an error is logged once).
  */
 export function getRateLimitTierConfig(tier: RateLimitTier): RateLimitTierConfig {
-  const base = (DEFAULT_TIERS as Record<string, RateLimitTierConfig | undefined>)[tier]
-  const declared = (APP_CONFIG_MERGED as { rateLimit?: { tiers?: Record<string, Partial<RateLimitTierConfig>> } })
-    .rateLimit?.tiers?.[tier]
+  // own properties only: a name like "constructor" or "__proto__" is an unknown tier, not an inherited member
+  const own = <T extends object>(table: T | undefined): T[keyof T] | undefined =>
+    table && Object.prototype.hasOwnProperty.call(table, tier) ? (table as Record<string, T[keyof T]>)[tier] : undefined
+  const base = own(DEFAULT_TIERS as Record<string, RateLimitTierConfig>)
+  const declared = own((APP_CONFIG_MERGED as { rateLimit?: { tiers?: Record<string, Partial<RateLimitTierConfig>> } }).rateLimit?.tiers)
   const fallback = DEFAULT_TIERS.api
 
   if (!declared) {

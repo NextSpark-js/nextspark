@@ -101,6 +101,10 @@ describe('in-memory path', () => {
     expect(results.filter(Boolean)).toHaveLength(100)
   })
 
+  it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])('the inherited name %s is an unknown tier, limited as api', (name) => {
+    expect(getRateLimitTierConfig(name)).toEqual({ limit: 100, windowMs: 60_000 })
+  })
+
   it.each([
     ['a custom tier with a bad limit', { custom: { limit: 0, windowMs: 1000 } }, 'custom', { limit: 100, windowMs: 60_000 }],
     ['a custom tier with a missing window', { custom: { limit: 5 } }, 'custom', { limit: 100, windowMs: 60_000 }],
