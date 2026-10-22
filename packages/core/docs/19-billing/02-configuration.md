@@ -21,7 +21,7 @@ config/billing.config.ts
 // core/lib/billing/config-types.ts
 
 interface BillingConfig {
-  /** Payment provider: stripe | polar | lemonsqueezy | paddle (mercadopago: not yet implemented) */
+  /** Payment provider: stripe | polar | lemonsqueezy | paddle, 'none' (no gateway) or the name of a gateway you register (11-custom-gateway.md) */
   provider: PaymentProvider
 
   /** Default currency (ISO 4217) */

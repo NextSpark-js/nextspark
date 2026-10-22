@@ -94,7 +94,7 @@ Set the provider in your theme's `billing.config.ts`:
 
 ```typescript
 export const billingConfig: BillingConfig = {
-  provider: 'stripe',  // or 'polar', 'lemonsqueezy' (09-lemon-squeezy.md), 'paddle' (10-paddle.md)
+  provider: 'stripe',  // or 'polar', 'lemonsqueezy' (09-lemon-squeezy.md), 'paddle' (10-paddle.md), 'none' or your own gateway (11-custom-gateway.md)
   // ...
 }
 ```
