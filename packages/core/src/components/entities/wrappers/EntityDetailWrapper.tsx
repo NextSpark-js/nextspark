@@ -409,8 +409,8 @@ export function EntityDetailWrapper({
     )
   }
 
-  // Show loading state for data
-  if (isLoadingData) {
+  // Show loading state for data; before the team is chosen nothing has been requested yet
+  if (isLoadingData || (!teamReady && !data && !dataError)) {
     return <SkeletonEntityDetail />
   }
 

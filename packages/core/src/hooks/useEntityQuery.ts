@@ -133,6 +133,8 @@ export function useEntityQuery(options: UseEntityQueryOptions) {
 
   return {
     ...query,
+    // Held back until the team is chosen: report it as loading, not as an empty result
+    isLoading: query.isLoading || (enabled && !!user && !teamReady),
     items: query.data?.items || [],
     total: query.data?.total || 0,
     totalPages: query.data?.totalPages || 1,
@@ -157,7 +159,7 @@ export function useEntityOne(
   // Including teamId ensures queries are properly scoped per team
   const queryKey = ['entity', entityConfig.slug, activeTeamId, id, { includeChildren }]
 
-  return useQuery({
+  const query = useQuery({
     queryKey,
     queryFn: async () => {
       const params = includeChildren ? '?child=all' : ''
@@ -187,4 +189,7 @@ export function useEntityOne(
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 60,
   })
+
+  // Held back until the team is chosen: report it as loading, not as a missing record
+  return { ...query, isLoading: query.isLoading || (enabled && !!user && !!id && !teamReady) }
 }

@@ -50,6 +50,7 @@ jest.mock('@nextsparkjs/registries/entity-registry.client', () => ({
 jest.mock('@/core/lib/entities/client-config', () => ({ toClientEntityConfig: (c: unknown) => c }))
 jest.mock('@/core/lib/entities/registry.client', () => ({ clientEntityRegistry: { get: () => CONFIG, getBySlug: () => CONFIG } }))
 jest.mock('@/core/components/entities/EntityDetail', () => ({ EntityDetail: () => null }))
+jest.mock('@/core/components/ui/skeleton-detail', () => ({ SkeletonEntityDetail: () => <div data-testid="detail-skeleton" /> }))
 jest.mock('@/core/components/entities/EntityForm', () => ({ EntityForm: () => null }))
 jest.mock('@/core/components/entities/EntityDetailHeader', () => ({ EntityDetailHeader: () => null }))
 jest.mock('@/core/components/dashboard/block-editor/builder-editor-view', () => ({ BuilderEditorView: () => null }))
@@ -108,13 +109,26 @@ describe.each([
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const wrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
     mockTeamContext.mockReturnValue({ isReady: false })
-    const { rerender } = renderHook(hook, { wrapper })
+    const { result, rerender } = renderHook(hook, { wrapper })
     await new Promise(resolve => setTimeout(resolve, 20))
     expect(mockFetchWithTeam).not.toHaveBeenCalled()
+    // held back, not empty: a consumer that paints "empty" on !isLoading must not do it yet
+    expect(result.current.isLoading).toBe(true)
 
     mockTeamContext.mockReturnValue({ isReady: true })
     rerender()
 
     await waitFor(() => expect(mockFetchWithTeam).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+  })
+})
+
+describe('EntityDetailWrapper before the team is ready', () => {
+  test('shows the skeleton, not "No data found"', async () => {
+    mockUseTeam.mockReturnValue({ teamId: undefined, isReady: false })
+    const { queryByTestId, queryByText } = render(<EntityDetailWrapper entityType="tasks" id="r1" />)
+    await new Promise(resolve => setTimeout(resolve, 20))
+    expect(queryByTestId('detail-skeleton')).not.toBeNull()
+    expect(queryByText('No data found for this entity.')).toBeNull()
   })
 })
