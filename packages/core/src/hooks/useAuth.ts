@@ -1,8 +1,7 @@
 'use client'
 
-import { useContext, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { QueryClientContext } from '@tanstack/react-query'
 import { authClient, type ClientSession } from '../lib/auth-client'
 import type { SessionUser } from '../lib/auth'
 import { useOrigin } from './useOrigin'
@@ -13,6 +12,7 @@ import { DASHBOARD_HOME_CONFIG } from '../lib/config/public-config-client'
 import { withBasePath } from '../lib/base-path'
 import { loadLoginPage } from '../lib/auth/load-login-page'
 import { setSessionHint } from '../lib/auth/session-hint'
+import { clearQueryCaches } from '../lib/auth/query-caches'
 import { setUserLocaleClient } from '../lib/locale-client'
 import { I18N_CONFIG } from '../lib/config/i18n-config-client'
 import { SIGNUP_INTENT_HEADER } from '../lib/api/client-headers'
@@ -96,13 +96,12 @@ export function useAuthActions() {
   const router = useRouter()
   const origin = useOrigin()
   const { saveAuthMethod } = useLastAuthMethod()
-  const queryClient = useContext(QueryClientContext)
 
   // Cached queries (teams, entity lists, the subscription) belong to whoever was
   // signed in. The root layout's query client outlives the dashboard that used
-  // to clear it on logout, so it is emptied whenever someone signs in (a sign-out loads a new page, which drops it).
-  const forgetSignedInData = () => queryClient?.clear()
-
+  // to clear it on logout, so every registered cache (lib/auth/query-caches) is emptied whenever someone signs in
+  // (a sign-out loads a new page, which drops them). No React Query import here: a page without a data provider ships none of it.
+  const forgetSignedInData = clearQueryCaches
 
   const handleSignIn = async ({ email, password, redirectTo }: { email: string; password: string; redirectTo?: string }) => {
     const { data, error } = await authClient.signIn.email({

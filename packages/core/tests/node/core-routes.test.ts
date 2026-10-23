@@ -284,8 +284,8 @@ test('the Cache Components root layout puts the page behind Suspense and the gro
 /**
  * A project that overrides the public or auth layout is composed with these modules (and gets its fallback metadata from
  * them): every client component they reach, even one the override never renders, ships on every route of the group. So they
- * import no component, provider (but the messages one, which the root layout ships anyway, and GroupProviders, which the auth
- * layout needs when `providers.scope` is 'groups' and which renders nothing of its own under the default root; #341) or other group's layout (#192).
+ * import no component, provider (but the messages one, which the root layout ships anyway, and GroupToaster, which the auth
+ * layout needs when `providers.scope` is 'groups' and which renders only its children under the default root; #341) or other group's layout (#192).
  */
 test('the composition modules of the public and auth layouts reach no client component', () => {
   const composeModules = [...new Set([...Object.values(COMPOSED_ROUTES), ...variants.cacheComponents.map(entry => entry.compose).filter(Boolean)]
@@ -298,7 +298,7 @@ test('the composition modules of the public and auth layouts reach no client com
     if (seen.has(file)) return
     seen.add(file)
     for (const [, specifier] of fs.readFileSync(file, 'utf8').matchAll(/^(?:import|export)\s[^'"]*?from\s+['"]([^'"]+)['"]/gm)) {
-      if (/@nextsparkjs\/core\/(components\/|providers\/(?!static-intl-provider$|group-providers$))|\/(superadmin|devtools|default-(public|auth))-layout$/.test(specifier)) offenders.push(`${path.relative(ROUTES, file)} -> ${specifier}`)
+      if (/@nextsparkjs\/core\/(components\/|providers\/(?!static-intl-provider$|group-toaster$))|\/(superadmin|devtools|default-(public|auth))-layout$/.test(specifier)) offenders.push(`${path.relative(ROUTES, file)} -> ${specifier}`)
       if (specifier.startsWith('.')) visit(sourceOf(path.posix.join('@nextsparkjs/core/routes', path.relative(ROUTES, path.dirname(file)).split(path.sep).join('/'), specifier)))
     }
   }

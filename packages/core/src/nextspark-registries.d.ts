@@ -459,6 +459,18 @@ declare module '@nextsparkjs/registries/app-config.client' {
 }
 
 // ============================================================================
+// Providers Scope (`providers.scope` of app.config) and the root providers it selects
+// ============================================================================
+declare module '@nextsparkjs/registries/providers-scope' {
+  export const PROVIDERS_SCOPE: 'root' | 'groups'
+}
+
+declare module '@nextsparkjs/registries/root-providers' {
+  export const RootQueryProvider: typeof import('@nextsparkjs/core/providers/query-provider').QueryProvider | null
+  export const RootToaster: typeof import('@nextsparkjs/core/components/ui/sonner').Toaster | null
+}
+
+// ============================================================================
 // Permissions Registry
 //
 // Real shape is entirely different from the old ambient declaration (which

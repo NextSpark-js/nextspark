@@ -26,13 +26,12 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { StaticIntlProvider } from "@nextsparkjs/core/providers/static-intl-provider"
 import { OPTIONAL_ROOT_NAMESPACES, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
-import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
-import { CONSENT_CONFIG, ROOT_PROVIDERS } from "@nextsparkjs/core/lib/config/public-config-client"
+import { RootQueryProvider, RootToaster } from "@nextsparkjs/registries/root-providers"
+import { CONSENT_CONFIG } from "@nextsparkjs/core/lib/config/public-config-client"
 import { LazyConsentManager } from "@nextsparkjs/core/components/consent/LazyConsentManager"
 import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
-import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
 import { DEFAULT_LOCALE, DEFAULT_THEME_MODE, STATIC_MESSAGES } from '@nextsparkjs/registries/translation-registry'
 
 const geistSans = Geist({
@@ -67,7 +66,7 @@ export default async function RootLayout({
           no layout below has put one around it; the group layouts' own boundaries keep their shells. */}
       <Suspense fallback={null}>{children}</Suspense>
       <SessionCookieRefresher />
-      {ROOT_PROVIDERS && <Suspense><Toaster position="bottom-left" /></Suspense>}
+      {RootToaster && <Suspense><RootToaster position="bottom-left" /></Suspense>}
       {/* The banner reads the cookie in the browser, so it fits the static shell. A request nonce is not
           available here: see the consent docs for a nonce-based script-src. */}
       {CONSENT_CONFIG.enabled && <LazyConsentManager />}
@@ -104,9 +103,10 @@ export default async function RootLayout({
                   dashboard, superadmin and devtools layouts, not here: on a public page they
                   would fetch a signed-in visitor's teams and subscription and re-sync the
                   activeTeamId cookie for nothing. */}
-              {/* `providers.scope: 'groups'` leaves React Query and the toaster to the route groups (GroupProviders);
-                  the default mounts them here for every route. */}
-              {ROOT_PROVIDERS ? <QueryProvider>{content}</QueryProvider> : content}
+              {/* RootQueryProvider and RootToaster come from the generated root-providers registry: React Query and the
+                  toaster for every route, or null with `providers.scope: 'groups'`, which leaves them to the route
+                  groups (GroupProviders, GroupToaster, DashboardProviders). */}
+              {RootQueryProvider ? <RootQueryProvider>{content}</RootQueryProvider> : content}
             </CustomThemeProvider>
           </NextThemeProvider>
         </StaticIntlProvider>

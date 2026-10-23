@@ -7,6 +7,7 @@
  */
 
 import { APP_CONFIG_OVERRIDES } from '@nextsparkjs/registries/app-config.client'
+import { PROVIDERS_SCOPE } from '@nextsparkjs/registries/providers-scope'
 import { DEFAULT_APP_CONFIG } from './app.config'
 import { mergeConfigs } from '../utils/config-merge'
 import { resolveAuthMethods } from '../auth/auth-methods'
@@ -25,8 +26,8 @@ export const DASHBOARD_HOME_CONFIG = appConfig.dashboard
 /** Cookie consent (#272), defaults filled in. `enabled` is false unless app.config turns it on. */
 export const CONSENT_CONFIG = resolveConsentConfig(appConfig.consent)
 
-/** Whether the root layout mounts the React Query provider and the toaster (`providers.scope`, `'root'` unless app.config says `'groups'`). */
-export const ROOT_PROVIDERS = appConfig.providers?.scope !== 'groups'
+/** Whether the root layout mounts the React Query provider and the toaster (`providers.scope`, `'root'` unless app.config says `'groups'`; read when the registries are generated). */
+export const ROOT_PROVIDERS = PROVIDERS_SCOPE !== 'groups'
 
 const methods = resolveAuthMethods(appConfig.auth)
 export const PUBLIC_AUTH_CONFIG = {

@@ -67,6 +67,7 @@ import { generateMiddlewareRegistry } from './registry/generators/middleware-reg
 import { generateRouteHandlersRegistry } from './registry/generators/route-handlers.mjs'
 import { generateTranslationRegistry } from './registry/generators/translation-registry.mjs'
 import { generateScopeRegistry } from './registry/generators/scope-registry.mjs'
+import { readProvidersScope, generateProvidersScope, generateRootProviders } from './registry/generators/root-providers.mjs'
 import { generateNamespaceRegistry } from './registry/generators/namespace-registry.mjs'
 import { generateBillingRegistry } from './registry/generators/billing-registry.mjs'
 import { generateUnifiedRegistry } from './registry/generators/unified-registry.mjs'
@@ -97,6 +98,9 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, middlewa
     // Collect the icon names configs can ask for by string (async - reads configs)
     const iconNames = await discoverIcons(blocks, CONFIG)
 
+    // `providers.scope` of app.config, which decides what root-providers.ts exports
+    const providersScope = readProvidersScope(CONFIG.projectRoot)
+
     // Each registry takes only the plugins that declare its surface: the server registries the
     // 'server' plugins, the client registry the 'web' ones (a build-only or mobile-only plugin is in neither).
     const serverPlugins = pluginsFor(plugins, 'server')
@@ -115,6 +119,8 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, middlewa
       { name: 'app-config.client.ts', content: generateAppConfigClient(themes, CONFIG) },
       { name: 'dashboard-config.client.ts', content: generateDashboardConfigClient(themes, CONFIG) },
       { name: 'dev-keyring.client.ts', content: generateDevKeyringClient(themes, CONFIG) },
+      { name: 'providers-scope.ts', content: generateProvidersScope(providersScope) },
+      { name: 'root-providers.ts', content: generateRootProviders(providersScope, CONFIG) },
       { name: 'route-handlers.ts', content: generateRouteHandlersRegistry(serverPlugins, themes, coreRoutes, entities) },
       { name: 'translation-registry.ts', content: generateTranslationRegistry(themes, CONFIG) },
       { name: 'email-registry.ts', content: generateEmailRegistry(emails, CONFIG) },

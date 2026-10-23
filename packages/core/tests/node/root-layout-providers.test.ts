@@ -45,7 +45,7 @@ function renderedElements(file: string): Set<string> {
 test('the root layouts mount no team or subscription provider', () => {
   for (const layout of ['layout.tsx', 'layout.ppr.tsx']) {
     const elements = renderedElements(implementationOf(layout))
-    assert.ok(elements.has('QueryProvider'), `${layout} renders QueryProvider`)
+    assert.ok(elements.has('RootQueryProvider'), `${layout} renders RootQueryProvider`)
     for (const provider of ['TeamProvider', 'SubscriptionProvider']) {
       assert.equal(elements.has(provider), false, `${layout} renders ${provider}`)
     }
@@ -105,16 +105,58 @@ test('every authenticated area mounts DashboardProviders', () => {
   )
 })
 
-test('with providers.scope "groups" the (auth) layouts mount GroupProviders, and no other group layout module imports it', () => {
-  // The root layouts keep QueryProvider and mount it only while ROOT_PROVIDERS holds
+/** Every core source module reachable from `file` through relative and @nextsparkjs/core imports; the generated registries are not followed. */
+function importClosure(file: string, seen = new Set<string>()): Set<string> {
+  if (seen.has(file)) return seen
+  seen.add(file)
+  const SRC = path.resolve(ROUTES, '..')
+  for (const [, specifier] of fs.readFileSync(file, 'utf8').matchAll(/^(?:import|export)\s[^'"]*?from\s+['"]([^'"]+)['"]/gm)) {
+    const base = specifier.startsWith('.') ? path.resolve(path.dirname(file), specifier)
+      : specifier.startsWith('@nextsparkjs/core/') ? path.join(SRC, specifier.slice('@nextsparkjs/core/'.length))
+      : null
+    const target = base && ['.tsx', '.ts', '/index.tsx', '/index.ts'].map(extension => base + extension).find(candidate => fs.existsSync(candidate))
+    if (target) importClosure(target, seen)
+    else seen.add(specifier)
+  }
+  return seen
+}
+
+test('with providers.scope "groups" the root layouts, the public pages and the sign-in forms reach neither React Query nor the toaster', () => {
+  const SRC = path.resolve(ROUTES, '..')
+  const entries = [
+    ...['layout.tsx', 'layout.ppr.tsx'].map(layout => implementationOf(layout)),
+    path.join(SRC, 'hooks/useAuth.ts'),
+    path.join(SRC, 'components/app/layouts/PublicNavbar.tsx'),
+    path.join(SRC, 'components/app/layouts/PublicFooter.tsx'),
+    path.join(SRC, 'components/auth/forms/LoginForm.tsx'),
+    path.join(SRC, 'components/auth/forms/SignupForm.tsx'),
+    path.join(ROUTES, '_internal/default-public-layout.tsx'),
+    path.join(ROUTES, '_internal/auth-layout.tsx'),
+    path.join(ROUTES, '_internal/auth-layout.cc.tsx'),
+  ]
+  const offenders: string[] = []
+  for (const entry of entries) {
+    for (const module of importClosure(entry)) {
+      if (/@tanstack\/react-query|providers\/(query-provider|group-providers)/.test(module)) offenders.push(`${path.relative(SRC, entry)} -> ${module}`)
+      // the toaster component belongs to the auth group (GroupToaster) and to the root providers registry, not to the root layouts or public pages
+      const auth = /auth-layout|LoginForm|SignupForm/.test(entry)
+      if (!auth && /components\/ui\/sonner/.test(module)) offenders.push(`${path.relative(SRC, entry)} -> ${module}`)
+    }
+  }
+  assert.deepEqual(offenders, [])
+})
+
+test('with providers.scope "groups" the (auth) layouts mount GroupToaster, and no other group layout module imports it or GroupProviders', () => {
+  // The root layouts take the providers from the generated root-providers registry: null with the groups scope
   for (const layout of ['layout.tsx', 'layout.ppr.tsx']) {
     const source = fs.readFileSync(implementationOf(layout), 'utf8')
-    assert.match(source, /ROOT_PROVIDERS \? <QueryProvider>\{content\}<\/QueryProvider> : content/, layout)
-    assert.match(source, /\{ROOT_PROVIDERS && <Suspense><Toaster /, `${layout} mounts the toaster only with the root providers`)
+    assert.match(source, /RootQueryProvider \? <RootQueryProvider>\{content\}<\/RootQueryProvider> : content/, layout)
+    assert.match(source, /\{RootToaster && <Suspense><RootToaster /, `${layout} mounts the toaster only with the root providers`)
+    assert.match(source, /from "@nextsparkjs\/registries\/root-providers"/, layout)
   }
-  // Both modes' auth wrappers put the auth layout in GroupProviders (an override of the layout included)
-  assert.ok(renderedElements(path.join(ROUTES, '_internal/auth-layout.tsx')).has('GroupProviders'))
-  assert.ok(renderedElements(path.join(ROUTES, '_internal/auth-layout.cc.tsx')).has('GroupProviders'))
+  // Both modes' auth wrappers put the auth layout in GroupToaster (an override of the layout included)
+  assert.ok(renderedElements(path.join(ROUTES, '_internal/auth-layout.tsx')).has('GroupToaster'))
+  assert.ok(renderedElements(path.join(ROUTES, '_internal/auth-layout.cc.tsx')).has('GroupToaster'))
   // The public group imports these modules: none of them may reach the query provider
   for (const file of ['_internal/group-layouts.cc.tsx', '_internal/public-layout.tsx', '_internal/public-layout.cc.tsx', '_internal/default-public-layout.tsx']) {
     assert.doesNotMatch(fs.readFileSync(path.join(ROUTES, file), 'utf8'), /group-providers|query-provider/, file)

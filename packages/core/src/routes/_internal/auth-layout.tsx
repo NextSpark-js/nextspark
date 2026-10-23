@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
-import { GroupProviders } from '@nextsparkjs/core/providers/group-providers'
+import { GroupToaster } from '@nextsparkjs/core/providers/group-toaster'
 
 export const defaultMetadata: Metadata = {
   title: {
@@ -34,9 +34,9 @@ export function withAuthMessages<P extends { children: React.ReactNode }>(AuthLa
     const messages = await getMessages()
     return (
       <NextIntlClientProvider messages={selectMessages(messages, 'auth')}>
-        <GroupProviders>
+        <GroupToaster>
           <AuthLayout {...props} />
-        </GroupProviders>
+        </GroupToaster>
       </NextIntlClientProvider>
     )
   }

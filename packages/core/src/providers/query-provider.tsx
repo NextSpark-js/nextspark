@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { ApiError } from '../lib/api/api-error'
+import { registerQueryCache } from '../lib/auth/query-caches'
 
 // NEXT_PUBLIC_RQ_DEVTOOLS is inlined when the app is built. Set to any value other than 'true' (the env template sets false),
 // the condition is a constant and the import below does not enter the build; left undefined, the devtools stay an async chunk
@@ -48,6 +49,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         }),
       })
   )
+
+  // Signing in empties this cache (useAuthActions), whichever page the sign-in happens on
+  useEffect(() => registerQueryCache(() => queryClient.clear()), [queryClient])
 
   return (
     <QueryClientProvider client={queryClient}>

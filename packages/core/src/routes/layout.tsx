@@ -14,9 +14,8 @@ import { OPTIONAL_ROOT_NAMESPACES, selectMessages } from '@nextsparkjs/core/lib/
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
-import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
-import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
-import { CONSENT_CONFIG, ROOT_PROVIDERS } from "@nextsparkjs/core/lib/config/public-config-client"
+import { RootQueryProvider, RootToaster } from "@nextsparkjs/registries/root-providers"
+import { CONSENT_CONFIG } from "@nextsparkjs/core/lib/config/public-config-client"
 import { LazyConsentManager } from "@nextsparkjs/core/components/consent/LazyConsentManager"
 import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
@@ -79,7 +78,7 @@ export default async function RootLayout({
           client through the auth Route Handler instead. */}
       <SessionCookieRefresher />
       {children}
-      {ROOT_PROVIDERS && <Suspense><Toaster position="bottom-left" /></Suspense>}
+      {RootToaster && <Suspense><RootToaster position="bottom-left" /></Suspense>}
       {/* Cookie consent (#272): the banner and the analytics loaders, which load their script with this nonce */}
       {CONSENT_CONFIG.enabled && <LazyConsentManager nonce={nonce} />}
     </>
@@ -125,9 +124,10 @@ export default async function RootLayout({
                   dashboard, superadmin and devtools layouts, not here: on a public page they
                   would fetch a signed-in visitor's teams and subscription and re-sync the
                   activeTeamId cookie for nothing. */}
-              {/* `providers.scope: 'groups'` leaves React Query and the toaster to the route groups (GroupProviders);
-                  the default mounts them here for every route. */}
-              {ROOT_PROVIDERS ? <QueryProvider>{content}</QueryProvider> : content}
+              {/* RootQueryProvider and RootToaster come from the generated root-providers registry: React Query and the
+                  toaster for every route, or null with `providers.scope: 'groups'`, which leaves them to the route
+                  groups (GroupProviders, GroupToaster, DashboardProviders). */}
+              {RootQueryProvider ? <RootQueryProvider>{content}</RootQueryProvider> : content}
             </CustomThemeProvider>
           </NextThemeProvider>
         </NextIntlClientProvider>

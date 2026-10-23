@@ -873,11 +873,13 @@ export interface AppConfig {
   }
 
   /**
-   * Where the app-wide client providers (React Query and the toaster) mount. Read when the app is built.
-   * `'root'` (default): the root layout mounts them for every route. `'groups'`: the root layout does not; the `(auth)`
-   * group mounts them (`GroupProviders`), the dashboard, superadmin and devtools areas get them from the fallback of
-   * `DashboardProviders`, and a public page that uses
-   * React Query hooks or toasts needs its layout wrapped in `GroupProviders` from `@nextsparkjs/core/providers/group-providers`.
+   * Where the app-wide client providers (React Query and the toaster) mount. Read from config/app.config.ts when the
+   * registries are generated, so it must be the literal `'root'` or `'groups'`.
+   * `'root'` (default): the root layout mounts them for every route. `'groups'`: the root layout does not, and ships
+   * neither library to a route that does not mount them; the `(auth)` group mounts the toaster (`GroupToaster`), the
+   * dashboard, superadmin and devtools areas get both from the fallback of `DashboardProviders`, and a public or auth
+   * page that uses React Query hooks or toasts needs its layout wrapped in `GroupProviders` from
+   * `@nextsparkjs/core/providers/group-providers`.
    */
   providers?: {
     scope?: 'root' | 'groups'

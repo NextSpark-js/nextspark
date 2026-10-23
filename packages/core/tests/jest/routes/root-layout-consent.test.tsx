@@ -43,8 +43,14 @@ jest.mock('@nextsparkjs/core/lib/config/public-config-client', () => ({
   get CONSENT_CONFIG() {
     return { enabled: mockConsentEnabled }
   },
-  get ROOT_PROVIDERS() {
-    return mockRootProviders
+}))
+// The generated registry: React Query and the toaster for the default scope, null for `providers.scope: 'groups'`
+jest.mock('@nextsparkjs/registries/root-providers', () => ({
+  get RootQueryProvider() {
+    return mockRootProviders ? jest.requireMock('@nextsparkjs/core/providers/query-provider').QueryProvider : null
+  },
+  get RootToaster() {
+    return mockRootProviders ? jest.requireMock('@nextsparkjs/core/components/ui/sonner').Toaster : null
   },
 }))
 jest.mock('@nextsparkjs/core/components/consent/LazyConsentManager', () => ({

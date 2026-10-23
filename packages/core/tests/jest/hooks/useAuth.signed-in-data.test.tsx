@@ -14,8 +14,10 @@
  * again after the next sign-in, sent the user back to /login. The page load drops that state, so the query cache is
  * not emptied by hand on the way out (queries still on the page would refetch into a 401).
  */
+import { useEffect } from 'react'
 import { renderHook, act } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient } from '@tanstack/react-query'
+import { registerQueryCache } from '@/core/lib/auth/query-caches'
 
 const mockSignInEmail = jest.fn()
 const mockSignOut = jest.fn()
@@ -46,11 +48,16 @@ jest.mock('@/core/hooks/useLastAuthMethod', () => ({
 
 import { useAuth } from '@/core/hooks/useAuth'
 
+// useAuth does not import React Query: the provider that owns a cache registers it (QueryProvider does, see
+// providers/query-provider.registration.test.tsx), which this wrapper does for a client that holds the previous user's teams
 function withCachedTeams() {
   const client = new QueryClient()
   client.setQueryData(['user-teams', 'user-a'], [{ team: { id: 'team-a', name: 'Secret A' } }])
-  const wrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
-  return { client, wrapper }
+  function Registered({ children }: { children: React.ReactNode }) {
+    useEffect(() => registerQueryCache(() => client.clear()), [])
+    return <>{children}</>
+  }
+  return { client, wrapper: Registered }
 }
 
 beforeEach(() => {
