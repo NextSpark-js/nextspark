@@ -11,16 +11,20 @@ const replace = jest.fn()
 const usePermission = jest.fn()
 const useTeam = jest.fn()
 const useInvoices = jest.fn()
+const useSubscription = jest.fn()
 
 const router = { replace, push: jest.fn() } // one stable object, like next's router
 jest.mock('next/navigation', () => ({ useRouter: () => router }))
 jest.mock('next/link', () => ({ __esModule: true, default: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }))
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+// `has` is false only for the plan that exists only in the database (slug "nolimit")
+jest.mock('next-intl', () => ({
+  useTranslations: () => Object.assign((key: string) => key, { has: (key: string) => !key.includes('nolimit') }),
+}))
 jest.mock('@nextsparkjs/core/lib/permissions/hooks', () => ({ usePermission: (p: string) => usePermission(p) }))
 jest.mock('@nextsparkjs/core/hooks/useTeam', () => ({ useTeam: () => useTeam() }))
 jest.mock('@nextsparkjs/core/hooks/useInvoices', () => ({ useInvoices: (o: unknown) => useInvoices(o) }))
 jest.mock('@nextsparkjs/core/hooks/useSubscription', () => ({
-  useSubscription: () => ({ planSlug: 'free', plan: null, isActive: true, isReady: true }),
+  useSubscription: () => useSubscription(),
 }))
 jest.mock('@nextsparkjs/core/components/billing', () => ({
   InvoicesTable: () => null,
@@ -33,6 +37,7 @@ import BillingPage from '../../../src/routes/dashboard/settings/billing/page'
 
 beforeEach(() => {
   replace.mockClear()
+  useSubscription.mockReturnValue({ planSlug: 'free', plan: null, isActive: true, isReady: true })
   useInvoices.mockReset()
   useInvoices.mockReturnValue({ data: { data: [], info: { total: 0 } }, isLoading: false })
   usePermission.mockReturnValue(true)
@@ -91,6 +96,24 @@ test('without the permission the invoices are not requested (the route answers 4
 test('with the permission the invoices are requested', () => {
   render(<BillingPage />)
   expect(useInvoices).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }))
+})
+
+test('a plan of the config shows its translated name', () => {
+  render(<BillingPage />)
+  expect(screen.getByText('plans.free.name')).toBeInTheDocument()
+})
+
+test('a plan that exists only in the database shows the name from the API, not a missing message key', () => {
+  useSubscription.mockReturnValue({ planSlug: 'nolimit', plan: { name: 'No Limit' }, isActive: true, isReady: true })
+  render(<BillingPage />)
+  expect(screen.getByText('No Limit')).toBeInTheDocument()
+  expect(screen.queryByText('plans.nolimit.name')).toBeNull()
+})
+
+test('a plan that exists only in the database and has no name falls back to its slug', () => {
+  useSubscription.mockReturnValue({ planSlug: 'nolimit', plan: null, isActive: true, isReady: true })
+  render(<BillingPage />)
+  expect(screen.getByText('nolimit')).toBeInTheDocument()
 })
 
 test('no limits configured: says so instead of an empty card', () => {

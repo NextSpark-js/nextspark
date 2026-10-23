@@ -40,8 +40,8 @@ export function UsageBar({ limitSlug, showLabel = true, className }: UsageBarPro
   const max = quota.max
   const isUnlimited = max === -1
 
-  // Calculate percentage (0-100)
-  const percentUsed = isUnlimited ? 0 : Math.min(Math.round((current / max) * 100), 100)
+  // Calculate percentage (0-100). A limit of 0 allows nothing: used up as soon as there is any usage, else empty
+  const percentUsed = isUnlimited ? 0 : max <= 0 ? (current > 0 ? 100 : 0) : Math.min(Math.round((current / max) * 100), 100)
 
   // Color coding: green (0-74%), yellow (75-89%), red (90-100%)
   const colorVariant =
