@@ -12,6 +12,7 @@ import { bytesMatchMime } from '@nextsparkjs/core/lib/media/file-signature'
 import { MAX_MEDIA_BATCH } from '@nextsparkjs/core/lib/media/schemas'
 import { allowedMimeTypes, maxSizeMBFor } from '@nextsparkjs/core/lib/media/upload-limits'
 import { developmentFallbackDriver, newObjectName, selectStorageDriver } from '@nextsparkjs/core/lib/media/storage/index'
+import { withDisplayUrls } from '@nextsparkjs/core/lib/media/storage/display'
 import type { Media } from '@nextsparkjs/core/lib/media/types'
 
 // NOTE: Vercel Blob is used even in development when its token is set, because some external APIs
@@ -191,7 +192,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     return createApiResponse({
       message: 'Files uploaded successfully',
       urls: uploadedUrls,          // LEGACY: backward compatible
-      media: uploadedMedia,        // NEW: full media records
+      media: await withDisplayUrls(uploadedMedia),        // NEW: full media records
       count: uploadedUrls.length,
       storage
     })

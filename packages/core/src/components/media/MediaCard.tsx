@@ -99,7 +99,7 @@ export const MediaCard = memo(function MediaCard({
           {isImage ? (
             <img
               data-cy={sel('media.grid.thumbnail', { id: media.id })}
-              src={withBasePathIfInApp(media.url)}
+              src={withBasePathIfInApp(media.displayUrl ?? media.url)}
               alt={media.alt || media.filename}
               className="w-full h-full object-cover"
               loading="lazy"

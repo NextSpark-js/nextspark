@@ -6,6 +6,7 @@ import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
+import { withDisplayUrls } from '@nextsparkjs/core/lib/media/storage/display'
 import { mediaListQuerySchema } from '@nextsparkjs/core/lib/media/schemas'
 
 /**
@@ -57,7 +58,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     // 5. Query media list with team isolation
     const result = await MediaService.list(authResult.user!.id, teamId, parsed.data)
 
-    return createApiResponse(result)
+    return createApiResponse({ ...result, data: await withDisplayUrls(result.data) })
   } catch (error) {
     console.error('[Media API] Error listing media:', error)
     return createApiError('Failed to list media', 500)

@@ -189,7 +189,7 @@ export function MediaList({
                 <TableCell>
                   {isImage ? (
                     <img
-                      src={withBasePathIfInApp(media.url)}
+                      src={withBasePathIfInApp(media.displayUrl ?? media.url)}
                       alt={media.alt || media.filename}
                       className="h-10 w-10 rounded object-cover"
                       loading="lazy"

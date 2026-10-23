@@ -128,7 +128,7 @@ export function MediaDetailPanel({ media, onClose, showPreview = true, readOnly 
         <div className="aspect-video w-full bg-neutral-950 rounded-lg overflow-hidden flex items-center justify-center mb-4">
           {isImage ? (
             <img
-              src={withBasePathIfInApp(media.url)}
+              src={withBasePathIfInApp(media.displayUrl ?? media.url)}
               alt={media.alt || media.filename}
               className="w-full h-full object-contain"
             />

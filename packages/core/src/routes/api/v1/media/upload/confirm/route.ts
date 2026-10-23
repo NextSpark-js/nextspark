@@ -11,6 +11,7 @@ import { bytesMatchMime } from '@nextsparkjs/core/lib/media/file-signature'
 import { confirmUploadSchema } from '@nextsparkjs/core/lib/media/schemas'
 import { allowedMimeTypes, maxSizeMBFor } from '@nextsparkjs/core/lib/media/upload-limits'
 import { PendingObjectChangedError, selectStorageDriver } from '@nextsparkjs/core/lib/media/storage/index'
+import { withDisplayUrls } from '@nextsparkjs/core/lib/media/storage/display'
 import { readUploadClaim } from '@nextsparkjs/core/lib/media/upload-token'
 
 /** Leading bytes read back for the signature check (and image dimensions when they are in it). */
@@ -135,7 +136,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
 
     // Best effort: a pending copy left behind is removed by the bucket's lifecycle rule
     await direct.discard(claim.name).catch(() => {})
-    return createApiResponse({ media, url: media.url })
+    return createApiResponse({ media: (await withDisplayUrls([media]))[0], url: media.url })
   } catch (error) {
     console.error('[Media Confirm] Error:', error)
     return createApiError('Failed to confirm the upload', 500, undefined, 'INTERNAL_ERROR')

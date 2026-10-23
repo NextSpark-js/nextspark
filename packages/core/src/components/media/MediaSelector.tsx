@@ -116,7 +116,7 @@ export function MediaSelector({
                 >
                   {isImage ? (
                     <img
-                      src={withBasePathIfInApp(selectedMedia.url)}
+                      src={withBasePathIfInApp(selectedMedia.displayUrl ?? selectedMedia.url)}
                       alt={selectedMedia.alt || selectedMedia.filename}
                       className="w-full h-full object-cover"
                     />

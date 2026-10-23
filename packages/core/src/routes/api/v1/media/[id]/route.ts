@@ -8,6 +8,7 @@ import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { updateMediaSchema } from '@nextsparkjs/core/lib/media/schemas'
 import { selectStorageDriver } from '@nextsparkjs/core/lib/media/storage/index'
+import { withDisplayUrls } from '@nextsparkjs/core/lib/media/storage/display'
 
 /**
  * GET /api/v1/media/:id
@@ -49,7 +50,7 @@ export const GET = withRateLimitTier(async (
       return createApiError('Media not found', 404)
     }
 
-    return createApiResponse(media)
+    return createApiResponse((await withDisplayUrls([media]))[0])
   } catch (error) {
     console.error('[Media API] Error fetching media:', error)
     return createApiError('Failed to fetch media', 500)
@@ -113,7 +114,7 @@ export const PATCH = withRateLimitTier(async (
       return createApiError('Media not found', 404)
     }
 
-    return createApiResponse(media)
+    return createApiResponse((await withDisplayUrls([media]))[0])
   } catch (error) {
     console.error('[Media API] Error updating media:', error)
     return createApiError('Failed to update media', 500, undefined, 'INTERNAL_ERROR')

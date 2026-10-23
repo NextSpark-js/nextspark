@@ -6,6 +6,7 @@ import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
+import { withDisplayUrls } from '@nextsparkjs/core/lib/media/storage/display'
 import { checkDuplicatesSchema, MAX_MEDIA_BATCH } from '@nextsparkjs/core/lib/media/schemas'
 
 /**
@@ -58,7 +59,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
         duplicates.push({
           filename: file.filename,
           fileSize: file.fileSize,
-          existing: existing.map(m => ({ id: m.id, url: m.url, createdAt: m.createdAt })),
+          existing: (await withDisplayUrls(existing)).map(m => ({ id: m.id, url: m.url, displayUrl: m.displayUrl, createdAt: m.createdAt })),
         })
       }
     }
