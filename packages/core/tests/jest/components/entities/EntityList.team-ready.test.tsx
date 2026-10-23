@@ -35,16 +35,19 @@ jest.mock('@/core/lib/api/entities', () => ({
 jest.mock('@/core/components/entities/EntityTable', () => ({ EntityTable: () => null }))
 jest.mock('@/core/components/entities/EntityBulkActions', () => ({ EntityBulkActions: () => null }))
 jest.mock('@/core/components/patterns/PatternDeleteDialog', () => ({ PatternDeleteDialog: () => null }))
+jest.mock('@/core/components/patterns', () => ({ PatternDeleteDialog: () => null }))
 jest.mock('@/core/components/shared/SearchInput', () => ({ SearchInput: () => null }))
 jest.mock('@/core/components/shared/MultiSelectFilter', () => ({ MultiSelectFilter: () => null }))
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn() } }))
 
 import { EntityListWrapper } from '@/core/components/entities/wrappers/EntityListWrapper'
 import PatternsListPage from '@/core/components/patterns/pages/PatternsListPage'
+import PatternsRoutePage from '../../../../src/routes/dashboard/(main)/patterns/page'
 
 const lists: Array<[string, () => React.ReactElement]> = [
   ['EntityListWrapper', () => <EntityListWrapper entityType="pages" />],
   ['PatternsListPage', () => <PatternsListPage />],
+  ['routes/dashboard/(main)/patterns/page', () => <PatternsRoutePage />],
 ]
 
 beforeEach(() => {

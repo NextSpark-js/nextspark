@@ -77,3 +77,14 @@ test('provider none: no upgrade and no add-payment-method action', () => {
   expect(screen.queryByText('billing.paymentMethod.addButton')).toBeNull()
   expect(screen.getByTestId('usage-bar-tasks')).toBeInTheDocument()
 })
+
+test('no limits configured: says so instead of an empty card', () => {
+  const limits = mockRegistry.limits
+  mockRegistry.limits = {}
+  try {
+    render(<BillingPage />)
+    expect(screen.getByText('usage.noLimits')).toBeInTheDocument()
+  } finally {
+    mockRegistry.limits = limits
+  }
+})

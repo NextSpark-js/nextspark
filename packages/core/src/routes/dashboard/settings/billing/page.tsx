@@ -124,7 +124,9 @@ function BillingPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {limitSlugs.length > 0 && (
+              {limitSlugs.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">{tb('usage.noLimits')}</p>
+              ) : (
                 <div className="grid gap-4 md:grid-cols-3">
                   {limitSlugs.map(slug => (
                     <div key={slug} className="p-4 rounded-lg bg-muted/50 space-y-2" data-cy={`billing-usage-${slug}`}>
