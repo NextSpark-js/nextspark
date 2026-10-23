@@ -49,7 +49,7 @@ export const APP_CONFIG_OVERRIDES = {
 - A `callbackUrl` still wins over `homeRoute`.
 - It applies to email and code sign-in, to the dashboard index (`/dashboard`, which is where a Google sign-in lands and which then moves the user to their route), and to the redirect that follows an access-denied request to `/admin`, `/superadmin` or `/devtools` (the route gets `?error=access_denied`; the dashboard index does not redirect again when the URL carries `error`).
 - The role is the user's role (`session.user.role`), not a team role. A role that is not in the map uses `default`, and `/dashboard` when there is none. A route inside `/admin`, `/superadmin` or `/devtools` is used only by the roles that can open that area; any other role gets `/dashboard`, so the access-denied redirect cannot loop. A trailing slash is ignored.
-- Each value must be a path on this app. An absolute URL, `//host` or `/\host` stops the server when it loads, with a message that names the option. A value that still reaches the sign-in flows unchecked is ignored in favor of `/dashboard`.
+- Each value must be a path on this app. An absolute URL, `//host` or `/\host` fails `nextspark build` with a message that names the option. Under `nextspark dev` the server still starts, and every request that loads the config fails with that same message until the value is fixed. A value that still reaches the sign-in flows unchecked is ignored in favor of `/dashboard`.
 - A route that does not exist is not detected: the user sees that page's 404.
 - Without the option nothing changes.
 
