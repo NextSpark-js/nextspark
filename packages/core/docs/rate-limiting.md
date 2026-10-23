@@ -156,6 +156,8 @@ NextSpark incluye estos niveles predefinidos:
 | `webhook` | 500 requests | 1 hora | Webhooks (la firma es la defensa principal) |
 | `ingest` | 1000 requests | 1 minuto | Endpoints de ingesta de alto volumen |
 
+El tier `auth` cobra por dirección de cliente todo `POST` bajo `/api/auth/*`, salvo los callbacks OAuth y `sign-out`; quienes comparten una dirección comparten el cupo. Ver [Sign-in routes](./05-api/07-rate-limiting.md#sign-in-routes-the-auth-tier).
+
 ### Ajustar o agregar tiers
 
 En `app.config.ts` podés cambiar los números de un tier existente o declarar tiers propios con `rateLimit.tiers`. Sin esta entrada, todos los tiers conservan los valores de la tabla.

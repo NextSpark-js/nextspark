@@ -231,6 +231,19 @@ request is counted twice. A route with `dynamic = 'force-static'` is answered fr
 opt it out. `nextspark prepare` lists the opted-out routes in one `Info: [NS_HOST_RATE_LIMIT_OPT_OUT]` line. Core's own
 routes, and Route Handlers outside `api/`, are not touched.
 
+### Sign-in routes (the `auth` tier)
+
+Every `POST` under `/api/auth/*` is charged to the `auth` tier, by client address: **5 requests per 15 minutes** by default. That
+covers sign-in, sign-up, password reset and the email-code routes, so a sign-in with an emailed code costs 2 (send the code,
+then verify it). Not charged: the OAuth `callback/<provider>` routes and `sign-out`, which only works with a valid session cookie.
+The route name is matched whole, so a look-alike path (`sign-out-x`, `sign-in/email?x=/sign-out`) is charged like any other.
+
+People behind the same address (an office, a school, a mobile carrier) share this budget. To change it:
+
+- raise or lower the numbers for the tier in the `APP_CONFIG_OVERRIDES` of `app.config.ts`: `rateLimit: { tiers: { auth: { limit: 20, windowMs: 15 * 60_000 } } }` (a field you leave out keeps its default);
+- set `NEXTSPARK_CLIENT_IP_SOURCE` so the address read is the real one (`vercel`, `cloudflare`, `xff` with
+  `NEXTSPARK_TRUSTED_PROXY_HOPS`, or `header:<name>`). Without it, every person behind a proxy can look like one address.
+
 ### Tiered Limits
 
 **Different limits based on plan:**

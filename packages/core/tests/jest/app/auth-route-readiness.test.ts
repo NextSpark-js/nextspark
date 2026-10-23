@@ -192,6 +192,34 @@ describe('shipped auth route runtime readiness integration', () => {
     for (const key of ['APPLE_CLIENT_ID', 'APPLE_TEAM_ID', 'APPLE_KEY_ID', 'APPLE_PRIVATE_KEY']) delete process.env[key]
   })
 
+  test('sign-out is not charged to the auth rate limit; look-alike paths and other POSTs are', async () => {
+    mockRateLimit.mockResolvedValue({ allowed: false, limit: 5, resetTime: 0 })
+    const post = (pathname: string) => POST(nextRequest(pathname, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    }))
+
+    for (const pathname of ['/api/auth/sign-out', '/api/auth/sign-out/', '/base/api/auth/sign-out']) {
+      expect((await post(pathname)).status).toBe(200)
+    }
+    expect(mockRateLimit).not.toHaveBeenCalled()
+
+    const charged = [
+      '/api/auth/sign-out-x',
+      '/api/auth/sign-out/x',
+      '/api/auth/sign-in/email?x=/sign-out',
+      '/api/auth/sign-in/email/api/auth/sign-out',
+      '/api/auth/x/sign-out',
+      '/api/auth//sign-out',
+      '/api/auth/Sign-Out',
+      '/api/auth/sign-in/email',
+    ]
+    for (const pathname of charged) expect((await post(pathname)).status).toBe(429)
+    expect(mockRateLimit).toHaveBeenCalledTimes(charged.length)
+    mockRateLimit.mockResolvedValue({ allowed: true, limit: 5, resetTime: 0 })
+  })
+
   test('serves public method availability without invoking Better Auth', async () => {
     setProductionEnv({
       GOOGLE_CLIENT_ID: '123456789-abcdef.apps.googleusercontent.com',
