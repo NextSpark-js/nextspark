@@ -45,17 +45,8 @@ END $$;
 -- nextspark_app already exists, the migration role may have neither: the migration
 -- then goes on with a WARNING instead of aborting. Only insufficient_privilege is
 -- caught; any other error still stops the migration.
-DO $$
-BEGIN
-  IF NOT (SELECT rolinherit FROM pg_roles WHERE rolname = 'nextspark_app') THEN
-    ALTER ROLE nextspark_app INHERIT;
-  END IF;
-EXCEPTION WHEN insufficient_privilege THEN
-  RAISE WARNING 'Role setup: could not run ALTER ROLE nextspark_app INHERIT (%). Ask a superuser to run it if nextspark_app is not already INHERIT.', SQLERRM;
-END $$;
-
 -- From PostgreSQL 16 the INHERIT option of a membership is set when it is granted (it is taken from the
--- role attribute only on 15 and before), and the attribute change above can fail for a role this one did not
+-- role attribute only on 15 and before), and the attribute change below can fail for a role this one did not
 -- create. So the check is "can use the privileges" (USAGE: member and inherits), and on 16+ the grant says
 -- WITH INHERIT TRUE.
 DO $$
@@ -69,6 +60,19 @@ BEGIN
   END IF;
 EXCEPTION WHEN insufficient_privilege THEN
   RAISE WARNING 'Role setup: could not run the GRANT of authenticated to nextspark_app (%). Ask a superuser to run it (on PostgreSQL 16 and later: GRANT authenticated TO nextspark_app WITH INHERIT TRUE): policies written TO authenticated do not apply to nextspark_app until it is a member that inherits.', SQLERRM;
+END $$;
+
+-- The role attribute decides inheritance on PostgreSQL 15 and before, so it is set after the membership exists.
+DO $$
+BEGIN
+  IF NOT (SELECT rolinherit FROM pg_roles WHERE rolname = 'nextspark_app') THEN
+    ALTER ROLE nextspark_app INHERIT;
+  END IF;
+EXCEPTION WHEN insufficient_privilege THEN
+  -- no warning when the membership is already usable (PostgreSQL 16+: granted WITH INHERIT TRUE)
+  IF NOT pg_has_role('nextspark_app', 'authenticated', 'USAGE') THEN
+    RAISE WARNING 'Role setup: could not run ALTER ROLE nextspark_app INHERIT (%). Ask a superuser to run it if nextspark_app is not already INHERIT.', SQLERRM;
+  END IF;
 END $$;
 
 -- Allow the migration/validation user to SET ROLE nextspark_app (e.g. an RLS

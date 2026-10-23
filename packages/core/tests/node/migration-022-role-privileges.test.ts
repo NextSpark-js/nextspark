@@ -71,11 +71,11 @@ test('022 without CREATEROLE: warns for each skipped role step and still applies
 
   const warnings = await run022(port, 'limited', 'limiteddb')
   assert.equal(warnings.length, 3, warnings.join('\n'))
-  for (const [i, what] of [/ALTER ROLE nextspark_app INHERIT/, /GRANT of authenticated to nextspark_app/, /comment on role nextspark_app/].entries()) {
+  for (const [i, what] of [/GRANT of authenticated to nextspark_app/, /ALTER ROLE nextspark_app INHERIT/, /comment on role nextspark_app/].entries()) {
     assert.match(warnings[i], /^Role setup: could not/)
     assert.match(warnings[i], what)
   }
-  assert.match(warnings[1], /WITH INHERIT TRUE/)
+  assert.match(warnings[0], /WITH INHERIT TRUE/)
   // the part that needs no role privilege ran
   const { rows } = await admin.query("SELECT has_schema_privilege('nextspark_app', 'public', 'USAGE') AS usage")
   assert.equal(rows[0].usage, true)
@@ -99,8 +99,11 @@ test('022 as CREATEROLE without superuser, with a NOINHERIT nextspark_app create
   await creator.connect()
   await creator.query('CREATE ROLE authenticated')
   await creator.end()
+  // a membership left without INHERIT on PostgreSQL 16+ (a superuser's plain GRANT): a MEMBER check would skip it
+  await admin.query('GRANT authenticated TO nextspark_app')
 
-  await run022(port, 'creator', 'creatordb')
+  const warnings = await run022(port, 'creator', 'creatordb')
+  assert.deepEqual(warnings, [])
   // pg_has_role USAGE is "member and inherits": on PostgreSQL 16 and later the membership has to be granted WITH INHERIT TRUE
   const { rows } = await admin.query("SELECT pg_has_role('nextspark_app', 'authenticated', 'USAGE') AS usage")
   assert.equal(rows[0].usage, true)
