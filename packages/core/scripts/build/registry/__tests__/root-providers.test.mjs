@@ -47,6 +47,19 @@ test('a setting in a comment does not count', () => {
   assert.equal(scopeOf(`export const APP_CONFIG_OVERRIDES = { app: { url: 'https://example.com' }, providers: { scope: 'groups' } }`), 'groups')
 })
 
+test('text inside a string does not count, and a real setting after it still does', () => {
+  assert.equal(scopeOf(`export const APP_CONFIG_OVERRIDES = { note: "providers: { scope: 'groups' }" }`), 'root')
+  assert.equal(scopeOf("export const APP_CONFIG_OVERRIDES = { note: `providers: { scope: 'groups' }`, a: 'x' }"), 'root')
+  assert.equal(scopeOf(`export const APP_CONFIG_OVERRIDES = { note: "providers: { scope: 'root' }", providers: { scope: 'groups' } }`), 'groups')
+})
+
+test('only the literal form is read: quoted keys, a nested object first, the shorthand and a spread give root', () => {
+  assert.equal(scopeOf(`export const APP_CONFIG_OVERRIDES = { 'providers': { 'scope': 'groups' } }`), 'root')
+  assert.equal(scopeOf(`export const APP_CONFIG_OVERRIDES = { providers: { other: { a: 1 }, scope: 'groups' } }`), 'root')
+  assert.equal(scopeOf(`const scope = 'groups'\nexport const APP_CONFIG_OVERRIDES = { providers: { scope } }`), 'root')
+  assert.equal(scopeOf(`import { shared } from './shared'\nexport const APP_CONFIG_OVERRIDES = { providers: { ...shared } }`), 'root')
+})
+
 test('a scope that is not a literal stops the generation instead of being read as root', () => {
   assert.throws(() => scopeOf(`export const APP_CONFIG_OVERRIDES = { providers: { scope: process.env.SCOPE } }`), /must be the literal 'root' or 'groups'/)
   assert.throws(() => scopeOf(`export const APP_CONFIG_OVERRIDES = { providers: { scope: 'everywhere' } }`), /must be the literal/)

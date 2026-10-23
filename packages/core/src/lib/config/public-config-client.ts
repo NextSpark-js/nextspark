@@ -29,6 +29,12 @@ export const CONSENT_CONFIG = resolveConsentConfig(appConfig.consent)
 /** Whether the root layout mounts the React Query provider and the toaster (`providers.scope`, `'root'` unless app.config says `'groups'`; read when the registries are generated). */
 export const ROOT_PROVIDERS = PROVIDERS_SCOPE !== 'groups'
 
+// The registry reads only the literal `providers: { scope: '…' }` of app.config as text; a scope written another way (a spread,
+// a variable, quoted keys) is root there while the merged config says otherwise
+if (process.env.NODE_ENV !== 'production' && (appConfig.providers?.scope === 'groups') !== (PROVIDERS_SCOPE === 'groups')) {
+  console.warn(`[nextspark] providers.scope is '${appConfig.providers?.scope}' in the merged config but the generated registry has '${PROVIDERS_SCOPE}': write it as the literal \`providers: { scope: '…' }\` in config/app.config.ts and regenerate the registries.`)
+}
+
 const methods = resolveAuthMethods(appConfig.auth)
 export const PUBLIC_AUTH_CONFIG = {
   registration: { mode: appConfig.auth?.registration?.mode ?? 'open' },

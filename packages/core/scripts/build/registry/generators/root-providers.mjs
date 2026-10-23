@@ -16,14 +16,27 @@ import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { convertCorePath } from '../config.mjs'
 
-/** The source without comments; the strings stay as they are, so a URL's `//` is not taken for one. */
-function stripComments(source) {
-  return source.replace(/("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (_, string) => string ?? '')
+/**
+ * The source with its comments blanked (same offsets, so a URL's `//` inside a string is not taken for one), and the
+ * ranges of its strings: a match that starts inside one is text, not config.
+ */
+function scan(source) {
+  const strings = []
+  const code = source.replace(/("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (match, string, offset) => {
+    if (string) {
+      strings.push([offset, offset + match.length])
+      return match
+    }
+    return match.replace(/[^\n]/g, ' ')
+  })
+  return { code, inString: index => strings.some(([start, end]) => index > start && index < end) }
 }
 
 /**
  * `providers.scope` of the project's config/app.config.ts: 'root' (the default, also without the file) or 'groups'.
- * Anything else is an error rather than a silent 'root': the setting cannot be read from an expression.
+ * Only the literal form `providers: { scope: '…' }` is read: any other way of writing the setting (quoted keys, a nested
+ * object before `scope`, the shorthand `{ scope }`, a spread) gives 'root', and a comment or a string that holds that text
+ * does not count. In that form a value that is not the literal 'root' or 'groups' stops the generation with an error.
  *
  * @param {string} projectRoot
  * @returns {'root' | 'groups'}
@@ -31,8 +44,8 @@ function stripComments(source) {
 export function readProvidersScope(projectRoot) {
   const appConfigPath = join(projectRoot, 'config', 'app.config.ts')
   if (!existsSync(appConfigPath)) return 'root'
-  const source = stripComments(readFileSync(appConfigPath, 'utf8'))
-  const match = source.match(/\bproviders\s*:\s*\{[^{}]*?\bscope\s*:\s*([^,}\n]+)/)
+  const { code, inString } = scan(readFileSync(appConfigPath, 'utf8'))
+  const match = [...code.matchAll(/\bproviders\s*:\s*\{[^{}]*?\bscope\s*:\s*([^,}\n]+)/g)].find(found => !inString(found.index))
   if (!match) return 'root'
   const value = match[1].trim()
   const literal = value.match(/^(['"])(root|groups)\1(?:\s+as\s+const)?$/)
