@@ -141,6 +141,21 @@ test('the features card is titled with the name of the current plan', () => {
   expect(screen.getByText('billing.features.title {"plan":"plans.pro.name"}')).toBeInTheDocument()
 })
 
+test('a plan with no features, or one that only exists in the database, hides the features card', () => {
+  useSubscription.mockReturnValue({ planSlug: 'nolimit', plan: { name: 'No Limit' }, isActive: true, isReady: true })
+  const { unmount } = render(<BillingPage />)
+  expect(screen.queryByText(/^billing\.features\.title/)).toBeNull()
+  unmount()
+  mockRegistry.plans.push({ slug: 'bare', features: [] })
+  try {
+    useSubscription.mockReturnValue({ planSlug: 'bare', plan: null, isActive: true, isReady: true })
+    render(<BillingPage />)
+    expect(screen.queryByText(/^billing\.features\.title/)).toBeNull()
+  } finally {
+    mockRegistry.plans.pop()
+  }
+})
+
 test('with a gateway: the upsell links to the plans, with no Contact Sales button', () => {
   render(<BillingPage />)
   expect(screen.getByText('billing.upgrade.ready')).toBeInTheDocument()
