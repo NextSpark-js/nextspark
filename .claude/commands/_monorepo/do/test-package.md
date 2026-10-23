@@ -15,7 +15,12 @@ Tests the **REAL user experience** from scratch using 100% LOCAL code. Simulates
 **Usage:**
 ```
 /do:test-package DATABASE_URL="postgresql://user:pass@host:5432/dbname?sslmode=disable"
+/do:test-package DATABASE_URL="..." --skip-perf   # functional test only, no performance phases
 ```
+
+`DATABASE_URL` is any disposable PostgreSQL reachable from this machine. Never point this command at a production database: it runs migrations and seeds sample data.
+
+Unless `--skip-perf` is given, the run also measures performance: dev-server checks (Step 10.7) and SSR, JavaScript size and Web Vitals checks on the production build (Step 12.1 to 12.4). Numbers from a laptop are indicative; what matters is the change between versions.
 
 ---
 
@@ -59,6 +64,10 @@ PROJECTS_DIR="${REPO_ROOT}/../projects"
 TEST_DIR="${PROJECTS_DIR}/test-package"
 PACKAGES_DIR="${REPO_ROOT}/.packages"         # Local tarballs directory
 TEST_PORT=3005
+# Evidence and the performance baseline go here, outside the repo (so the clean-status check still passes)
+RESULTS_DIR="${PROJECTS_DIR}/test-package-results"
+PERF_DIR="${RESULTS_DIR}/perf"
+mkdir -p "$PERF_DIR"
 ```
 
 **Where `create-nextspark-app` looks for tarballs:** a `.packages` directory in the current directory, `../`, `../repo/`, `../../` or `../../repo/`. If `REPO_ROOT` is a git worktree (`.claude/worktrees/NN`), none of those reaches it: create a symlink `ln -s "$REPO_ROOT" "$(dirname "$PROJECTS_DIR")/repo"` (the parent of `projects/` gets a `repo` link to the worktree). If more than one `.packages` is in sight, core and cli take the first one in that order **without a warning**; ui and testing warn ("Found more than one local ... tarball" or "Ignoring local ... not at <version>") and come from the registry. Keep exactly one `.packages` visible.
@@ -71,7 +80,7 @@ TEST_PORT=3005
 
 #### 1.1 Extract DATABASE_URL from input
 
-Look for `DATABASE_URL="..."` in the input string.
+Look for `DATABASE_URL="..."` in the input string. Also look for the flag `--skip-perf`: when present, skip Step 10.7, Steps 12.1 to 12.4 and the Performance section of the report, and run everything else unchanged.
 
 #### 1.2 If DATABASE_URL not found, ASK THE USER:
 
@@ -472,11 +481,40 @@ Verify: page loads without errors.
 `browser_navigate` to `http://localhost:3005/devtools/config`, snapshot, console check.
 Verify: entity configuration visible.
 
-#### 10.7 Close Browser
+#### 10.7 Dev Performance Phase (skip with `--skip-perf`)
+
+Run it with the dev server still up and the browser still signed in. **A dev server is not a production build: do NOT report Web Vitals (LCP, CLS, INP, TTFB) from it as if they were production numbers.** Dev checks only answer "is anything broken or unusually slow while developing". Web Vitals are measured in Step 12.
+
+Report every finding with route, evidence (message text, timing, log line) and severity (high: error or broken page; medium: a warning that repeats or a page that never settles; low: noise).
+
+1. **Console on the key pages.** For each of `/`, `/login`, `/signup`, `/dashboard`, `/dashboard/tasks` (an entity list) and `/dashboard/pages/create` (the page editor): `browser_navigate`, wait for the page to settle, then `browser_console_messages` at level `error` and again at level `warning`. Record each distinct message once, with the routes where it appears. (Visit `/login` and `/signup` in a fresh context or after signing out; a signed-in session redirects them.)
+2. **Hydration warnings.** In the same messages and in `dev.log`, search for `hydrat` (for example `Hydration failed`, `did not match`, `server rendered HTML`). Any hit is at least medium; name the route.
+3. **First-compile time per route.** The first request of a route in dev compiles it. Do this check on a fresh dev server (restart Step 9 if you already visited these routes): request each route once with `curl` and read the time, then the compile lines from the log:
+   ```bash
+   for p in / /login /signup /dashboard /dashboard/tasks /dashboard/pages/create; do
+     echo "$p $(curl -s -o /dev/null -w '%{http_code} %{time_total}s' http://localhost:${TEST_PORT}$p)"
+   done
+   grep -E 'Compiled|compiled in|Ready in' "$TEST_DIR/dev.log" | tail -20
+   ```
+   Signed out, `/dashboard*` answers 307: that time is the redirect, so take the dashboard compile times from the log or from the signed-in browser navigation. Flag a first compile above 10 s as medium. A second request of the same route (warm) should be much faster: report both.
+4. **HMR check.** Edit one i18n message of the generated project, check that the page shows it without a manual reload, then restore the file:
+   ```bash
+   cd "$TEST_DIR"
+   MSG=$(ls messages/en/*.json | head -1)           # any message file the starter ships
+   cp "$MSG" "$PERF_DIR/hmr-backup.json"
+   # change one string value in $MSG to "HMR-CHECK", keeping the JSON valid
+   ```
+   With the page that renders that string open (find the key with `grep -rn "<key>" src contents`), `browser_wait_for` the text `HMR-CHECK` (max 15 s) **without** `browser_navigate`. Record the time until it appears; if it never appears, that is a finding (high). Then restore the file and confirm the page shows the original text again:
+   ```bash
+   cp "$PERF_DIR/hmr-backup.json" "$MSG"
+   ```
+   If no message in the starter can be shown on a page you can reach, say so and mark the check "not run" instead of passing it.
+
+#### 10.8 Close Browser
 
 `browser_close`.
 
-#### 10.8 Full Verification Summary
+#### 10.9 Full Verification Summary
 
 | Test | Area | What it validates |
 |------|------|-------------------|
@@ -489,6 +527,7 @@ Verify: entity configuration visible.
 | DELETE | Pages | Deletion + **public URL stops serving the page (not-found page, 200 + noindex)** |
 | Superadmin | Admin | Panel loads, users list renders |
 | DevTools | Developer | Config, entity overview loads |
+| Dev performance (10.7) | Dev server | Console and hydration cleanliness, first compile, HMR (no Web Vitals) |
 
 ---
 
@@ -543,12 +582,97 @@ echo $! > prod.pid
 sleep 3
 for p in / /login /dashboard; do echo "$p $(curl -s -o /dev/null -w '%{http_code}' http://localhost:${TEST_PORT}$p)"; done
 # Expected: / 200, /login 200, /dashboard 307
-kill "$(cat prod.pid)" 2>/dev/null; lsof -tiTCP:${TEST_PORT} -sTCP:LISTEN | xargs kill 2>/dev/null || true
 ```
+
+Keep this server running for Steps 12.1 to 12.4 (unless `--skip-perf`), then stop it by PID in Step 12.5.
 
 With the runtime-only build, `start.log` shows an `[auth-readiness] no login method can authenticate` error at startup: expected until the credentials are injected; the server keeps serving and the per-request gates refuse unusable methods.
 
 **Sample-data password warning.** On a database seeded with `db:seed`, `next start` also prints `[auth-readiness] 2 account(s) still have a sample-data password` (expected), but only when the production server can reach the database. Production defaults to SSL, so a local Postgres without SSL needs `?sslmode=disable` in `DATABASE_URL` (the usage example at the top already has it). Without it the line is instead `[auth-readiness] could not check for sample-data passwords at startup (query failed: <code or class>)`: the server keeps serving, but the check did not run (`ECONNREFUSED`/`Error` usually mean the connection, often SSL; `42P01` means the database answered but is not migrated; `28P01` is a wrong password). Do not report a missing warning as a pass until you have seen one of the two lines.
+
+#### 12.1 SSR check (skip with `--skip-perf`)
+
+The main content of a public page must be in the HTML the server sends, before any JavaScript runs. For each public route (`/`, `/login`, `/signup`, `/support`, `/docs`, `/blog`, plus `/<slug>` of a page if you still have one), fetch the HTML and check it:
+
+```bash
+for p in / /login /signup /support /docs /blog; do
+  H="$PERF_DIR/ssr$(echo "$p" | tr / _).html"
+  curl -s -o "$H" -w "$p HTTP %{http_code} TTFB %{time_starttransfer}s total %{time_total}s\n" "http://localhost:${TEST_PORT}$p"
+  echo "  title:     $(grep -oE '<title>[^<]*' "$H" | head -1)"
+  echo "  h1:        $(grep -oE '<h1[^>]*>' "$H" | wc -l | tr -d ' ') element(s)"
+  echo "  canonical: $(grep -cE 'rel="canonical"' "$H")  description: $(grep -cE 'name="description"' "$H")  og:title: $(grep -cE 'property="og:title"' "$H")  og:description: $(grep -cE 'property="og:description"' "$H")"
+  echo "  client-render bailout: $(grep -c 'BAILOUT_TO_CLIENT_SIDE_RENDERING' "$H")  skeleton/loading markers: $(grep -ciE 'animate-pulse|skeleton' "$H")"
+done
+```
+
+Also pick one key phrase you saw on each page in the browser and `grep -c` for it in the saved HTML: it must be there. A missing or empty `<title>`, no `<h1>`, a key phrase absent from the HTML, any `BAILOUT_TO_CLIENT_SIDE_RENDERING`, or a body that is only loading markers is a failure of that route (medium to high). A missing canonical or `og:*` tag is low on routes that should not be indexed (`/login`, `/signup`) and medium on content routes. The markers are heuristics: show the matching line before calling it a defect.
+
+#### 12.2 JavaScript per route (skip with `--skip-perf`)
+
+Run the existing per-route checker from the repo against the project you just built. It reads the build output only (no server needed), measures the gzip JavaScript each route loads, and compares it with the budget in `scripts/performance/starter-route-js-budget.json`:
+
+```bash
+cd "$REPO_ROOT"
+node scripts/performance/starter-route-js.mjs --app "$TEST_DIR" --json "$PERF_DIR/route-js.json" | tee "$PERF_DIR/route-js.txt"
+# exit 0: every route within budget; 1: a route is over budget; 2: usage or build-output error
+```
+
+Record the exit code and, per route, the measured size against its `maxGzipBytes`. A route over budget is a failure; add the headroom (budget minus measured) to the table so a shrinking margin shows before it fails. `scripts/performance/README.md` explains how the budget was set. If the checker exits 2, report its message and mark this check "not run".
+
+#### 12.3 Web Vitals and TTFB per route (skip with `--skip-perf`)
+
+Thresholds (good): LCP <= 2.5 s, INP <= 200 ms, CLS <= 0.1. TTFB is reported, with 800 ms as the usual reference. Measure on the production server from Step 12, never on the dev server.
+
+**Tool.** Use the chrome-devtools MCP if it is connected (performance trace and insights). If it is not, use Playwright MCP: `browser_evaluate` for the observers below, or `browser_run_code_unsafe` for a Chromium trace over CDP. If `lighthouse` is already installed (`lighthouse --version` works) it is an acceptable alternative for the public routes; do not install it just for this.
+
+**Routes.** Public: `/`, `/login`, `/signup`, `/support`, `/docs`, `/blog`. Dashboard: `/dashboard` and `/dashboard/tasks`, only if you can hold a signed-in session on this production server. The runtime-only build has no usable login method (see above), so you may not be able to sign in: then list the dashboard routes as "not measured (no session)". Do not substitute dev-server numbers and do not guess.
+
+**LCP, CLS, TTFB** (one `browser_evaluate` per route after `browser_navigate`; the observers are `buffered`, so they report what already happened):
+```js
+async () => {
+  const out = { lcp: null, cls: 0 };
+  new PerformanceObserver(l => { for (const e of l.getEntries()) out.lcp = e.startTime; })
+    .observe({ type: 'largest-contentful-paint', buffered: true });
+  new PerformanceObserver(l => { for (const e of l.getEntries()) if (!e.hadRecentInput) out.cls += e.value; })
+    .observe({ type: 'layout-shift', buffered: true });
+  await new Promise(r => setTimeout(r, 3000));          // let late shifts and the final LCP candidate arrive
+  const nav = performance.getEntriesByType('navigation')[0];
+  out.ttfb = nav.responseStart;
+  return out;
+}
+```
+
+**INP on one simple interaction.** INP needs a real interaction: install the observer, interact, then read it. On each route use one cheap control with no side effects (a menu or theme toggle, a tab, a link that stays on the page):
+```js
+() => {
+  window.__inp = 0;
+  new PerformanceObserver(l => { for (const e of l.getEntries()) window.__inp = Math.max(window.__inp, e.duration); })
+    .observe({ type: 'event', durationThreshold: 16, buffered: true });
+}
+```
+Run it, `browser_click` the control, wait a second, then `browser_evaluate` `() => window.__inp`. This is the longest single interaction, a one-sample stand-in for INP: say so in the report. A route with no safe control is "not measured".
+
+**Cold and warm.** Measure each route twice: the first load after the server start (cold; use a fresh browser context) and a second load of the same URL (warm). Report both and their median; with two runs the median is the midpoint, so if cold and warm differ by more than 20% say so and take a third run. A laptop is noisy: close other heavy processes first and note anything still running.
+
+#### 12.4 Performance summary table (skip with `--skip-perf`)
+
+Build one table, route by metric, and mark every cell that fails its threshold with `FAIL`:
+
+```markdown
+| Route | TTFB ms (cold / warm / median) | LCP ms | CLS | INP ms | JS gzip (measured / budget) | SSR content |
+|-------|--------------------------------|--------|-----|--------|-----------------------------|-------------|
+| /     | 120 / 40 / 80                  | 1400   | 0.02 | 60    | 218 KB / 230 KB             | ok          |
+```
+
+A cell fails when LCP > 2500 ms, INP > 200 ms, CLS > 0.1, JS is over budget, or SSR content is not ok. Save the table, the raw numbers (one JSON file per route is enough) and `route-js.json` in `$PERF_DIR`, together with the version under test (`grep '"version"' "$REPO_ROOT/packages/core/package.json"`), the date, the machine class (laptop or CI) and the Node and Next versions. Do not put these files in the repo.
+
+#### 12.5 Stop the production server
+
+```bash
+kill "$(cat "$TEST_DIR/prod.pid")" 2>/dev/null
+lsof -tiTCP:${TEST_PORT} -sTCP:LISTEN | xargs kill 2>/dev/null || true
+lsof -tiTCP:${TEST_PORT} -sTCP:LISTEN || echo "port ${TEST_PORT} free"
+```
 
 ---
 
@@ -614,6 +738,15 @@ Summarize all results:
 - [ ] `next start`: / 200, /login 200, /dashboard 307
 - [ ] Build log noise counted (MISSING_MESSAGE, ReferenceError)
 - [ ] Browser console checked on every page (`browser_console_messages`)
+
+### Performance (write "skipped (--skip-perf)" when the flag was used)
+- [ ] Dev (10.7, not Web Vitals): console errors and warnings per key page, hydration warnings, first-compile time per route, HMR check (time to show, file restored)
+- [ ] SSR (12.1): title, h1, key text, description/canonical/og tags in the initial HTML; no client-render bailout; findings listed
+- [ ] JS per route (12.2): `starter-route-js.mjs` exit code, measured size vs budget per route
+- [ ] Web Vitals (12.3): LCP, CLS, INP, TTFB per route, cold and warm with the median; tool used (chrome-devtools MCP, Playwright/CDP or Lighthouse); routes "not measured" and why
+- [ ] Summary table (12.4) with every failing cell marked
+- [ ] Baseline saved: the table and raw numbers in `$PERF_DIR` (outside the repo, next to the other results), named with the version under test. Compare with the previous baseline file if there is one and report the change per route.
+- Repeat in the report: the figures come from a laptop and are indicative; the change between versions is what counts
 
 ### Overall: PASS / FAIL
 ```
