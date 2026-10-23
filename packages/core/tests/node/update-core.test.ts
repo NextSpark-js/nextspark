@@ -1432,6 +1432,32 @@ test('raises the dependencies below what the new core needs, then installs again
   assert.ok(result.calls.lastIndexOf('install') < result.calls.indexOf('nextspark prepare'), result.calls.join('\n'))
 })
 
+test('raises only core\'s peer dependencies and better-auth, zod and @better-fetch/fetch; every other dependency below core is listed, not written', (t) => {
+  const pins = { ...BEHIND, next: '~16.3.0', react: '19.1.0', stripe: '^17.0.0', 'lucide-react': '^0.400.0', sonner: '^1.7.0', 'tailwind-merge': '^2.5.0' }
+  const root = createProject(t, { pins })
+  const coreManifest = {
+    dependencies: { ...CORE_NEEDS.dependencies, stripe: '^18.5.0', 'lucide-react': '^0.539.0', sonner: '^2.0.0', 'tailwind-merge': '^3.0.0' },
+    peerDependencies: { next: '~16.4.2', react: '^19.2.0' },
+  }
+  delete (coreManifest.dependencies as Record<string, string>).next
+
+  const result = runUpdateCore(root, ['--version', TO], { coreManifest, installShell: WITH_SEMVER })
+
+  assert.equal(result.status, 0, result.output)
+  const after = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+  const declared = { ...after.dependencies, ...after.devDependencies }
+  assert.deepEqual(
+    ['next', 'react', 'better-auth', '@better-fetch/fetch', 'zod'].map((name) => declared[name]),
+    ['~16.4.2', '^19.2.0', '~1.7.7', '1.3.2', '^4.5.4'],
+  )
+  assert.deepEqual(
+    ['stripe', 'lucide-react', 'sonner', 'tailwind-merge'].map((name) => declared[name]),
+    ['^17.0.0', '^0.400.0', '^1.7.0', '^2.5.0'],
+  )
+  assert.match(result.stdout, /Not moved: these dependencies[^\n]*\n {4}lucide-react \^0\.400\.0 \(core needs \^0\.539\.0\)\n {4}sonner \^1\.7\.0 \(core needs \^2\.0\.0\)\n {4}stripe \^17\.0\.0 \(core needs \^18\.5\.0\)\n {4}tailwind-merge \^2\.5\.0 \(core needs \^3\.0\.0\)\n/)
+  assert.doesNotMatch(result.stdout, /^ {4}(next|react|zod|better-auth) /m)
+})
+
 test('prints nothing about dependencies when the project is aligned with the new core', (t) => {
   const root = createProject(t, { pins: ALIGNED })
 

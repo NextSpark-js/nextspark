@@ -1,8 +1,11 @@
 /**
  * The dependencies a project declares that are below what the @nextsparkjs/core it just
- * installed needs. update-core never writes third-party dependencies, so it lists them,
- * with the `pnpm add` that moves them.
+ * installed needs. update-core raises the ones that cannot sit next to a second copy (see
+ * floorsToRaise) and lists the rest, with the `pnpm add` that moves them.
  */
+
+/** Packages that cannot sit next to a second copy of themselves, raised besides core's peer dependencies. */
+const RAISED_ALWAYS = ['better-auth', '@better-fetch/fetch', 'zod']
 
 const SCOPE = '@nextsparkjs/'
 const PROJECT_FIELDS = ['dependencies', 'devDependencies', 'optionalDependencies']
@@ -32,6 +35,15 @@ export function dependenciesBelowCore(manifest, coreManifest, semver) {
     }
   }
   return below.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/**
+ * The entries of `below` update-core writes by default: core's peer dependencies (next, react,
+ * react-dom and the optional ones the project declares) and RAISED_ALWAYS. The rest is only listed:
+ * core uses its own copy of them, so a project's major version is its own to change.
+ */
+export function floorsToRaise(below, coreManifest) {
+  return below.filter(({ name }) => RAISED_ALWAYS.includes(name) || coreManifest?.peerDependencies?.[name] !== undefined)
 }
 
 /** The `pnpm add` lines for these entries: one for dependencies, and one each with -D for devDependencies and -O for optionalDependencies. */

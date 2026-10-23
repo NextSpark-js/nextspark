@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { addCommands, dependenciesBelowCore } from '../../scripts/maintenance/dependency-floors.mjs'
+import { addCommands, dependenciesBelowCore, floorsToRaise } from '../../scripts/maintenance/dependency-floors.mjs'
 
 const CORE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 // The semver package of the CLI, as update-core resolves it
@@ -52,4 +52,12 @@ test('a dev dependency gets its own pnpm add -D line', () => {
 test('an optional dependency gets its own pnpm add -O line', () => {
   const below = dependenciesBelowCore({ dependencies: { zod: '^4.1.5' }, optionalDependencies: { 'better-auth': '~1.6.33' } }, core, semver)
   assert.deepEqual(addCommands(below), ["pnpm add 'zod@^4.5.4'", "pnpm add -O 'better-auth@~1.7.7'"])
+})
+
+test('floorsToRaise keeps core\'s peer dependencies and the fixed list, and leaves other dependencies to be listed', () => {
+  const manifest = { ...core, dependencies: { ...core.dependencies, stripe: '^18.5.0' } }
+  const project = { dependencies: { 'better-auth': '~1.6.33', zod: '^4.1.5', next: '~16.3.0', react: '^18.0.0', stripe: '^17.0.0' } }
+  const below = dependenciesBelowCore(project, manifest, semver)
+  assert.deepEqual(floorsToRaise(below, manifest).map(({ name }) => name), ['better-auth', 'next', 'react', 'zod'])
+  assert.deepEqual(below.map(({ name }) => name), ['better-auth', 'next', 'react', 'stripe', 'zod'])
 })
