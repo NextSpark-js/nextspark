@@ -235,7 +235,7 @@ routes, and Route Handlers outside `api/`, are not touched.
 
 Every `POST` under `/api/auth/*` is charged to the `auth` tier, by client address: **5 requests per 15 minutes** by default. That
 covers sign-in, sign-up, password reset and the email-code routes, so a sign-in with an emailed code costs 2 (send the code,
-then verify it). Not charged: the OAuth `callback/<provider>` routes and `sign-out`, which only works with a valid session cookie.
+then verify it), and so do the other authenticated `POST`s of Better Auth (`update-user`, `change-email`, ...). Not charged: the OAuth `callback/<provider>` routes and `sign-out`, which only works with a valid session cookie.
 The route name is matched whole, so a look-alike path (`sign-out-x`, `sign-in/email?x=/sign-out`) is charged like any other.
 
 People behind the same address (an office, a school, a mobile carrier) share this budget. To change it:
