@@ -369,7 +369,7 @@
       }
     },
     "features": {
-      "title": "Funcionalidades del Plan Free",
+      "title": "Funcionalidades del plan {plan}",
       "description": "Lo que incluye tu plan actual"
     },
     "messages": {

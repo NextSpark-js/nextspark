@@ -246,7 +246,7 @@ function BillingPage() {
         {planFeatures.length > 0 && (
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>{t('billing.features.title')}</CardTitle>
+            <CardTitle>{t('billing.features.title', { plan: planName })}</CardTitle>
             <CardDescription>
               {t('billing.features.description')}
             </CardDescription>

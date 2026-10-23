@@ -369,7 +369,7 @@
       }
     },
     "features": {
-      "title": "Funzionalita del Piano Gratuito",
+      "title": "Funzionalita del piano {plan}",
       "description": "Cosa include il tuo piano attuale"
     },
     "messages": {

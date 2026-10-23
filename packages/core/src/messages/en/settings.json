@@ -369,7 +369,7 @@
       }
     },
     "features": {
-      "title": "Free Plan Features",
+      "title": "{plan} plan features",
       "description": "What's included in your current plan"
     },
     "messages": {

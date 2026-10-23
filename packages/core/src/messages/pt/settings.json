@@ -369,7 +369,7 @@
       }
     },
     "features": {
-      "title": "Recursos do Plano Gratuito",
+      "title": "Recursos do plano {plan}",
       "description": "O que seu plano atual inclui"
     },
     "messages": {

@@ -369,7 +369,7 @@
       }
     },
     "features": {
-      "title": "Funktionen des kostenlosen Tarifs",
+      "title": "Funktionen des Tarifs {plan}",
       "description": "Was Ihr aktueller Tarif beinhaltet"
     },
     "messages": {

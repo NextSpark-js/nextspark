@@ -18,7 +18,7 @@ jest.mock('next/navigation', () => ({ useRouter: () => router }))
 jest.mock('next/link', () => ({ __esModule: true, default: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }))
 // `has` is false only for the plan that exists only in the database (slug "nolimit")
 jest.mock('next-intl', () => ({
-  useTranslations: () => Object.assign((key: string) => key, { has: (key: string) => !key.includes('nolimit') }),
+  useTranslations: () => Object.assign((key: string, v?: object) => (v ? `${key} ${JSON.stringify(v)}` : key), { has: (key: string) => !key.includes('nolimit') }),
 }))
 jest.mock('@nextsparkjs/core/lib/permissions/hooks', () => ({ usePermission: (p: string) => usePermission(p) }))
 jest.mock('@nextsparkjs/core/hooks/useTeam', () => ({ useTeam: () => useTeam() }))
@@ -133,6 +133,12 @@ test('a plan with "*" lists every feature of the config', () => {
   render(<BillingPage />)
   expect(screen.getByText('features.basic_analytics')).toBeInTheDocument()
   expect(screen.getByText('features.api_access')).toBeInTheDocument()
+})
+
+test('the features card is titled with the name of the current plan', () => {
+  useSubscription.mockReturnValue({ planSlug: 'pro', plan: null, isActive: true, isReady: true })
+  render(<BillingPage />)
+  expect(screen.getByText('billing.features.title {"plan":"plans.pro.name"}')).toBeInTheDocument()
 })
 
 test('with a gateway: the upsell links to the plans, with no Contact Sales button', () => {
