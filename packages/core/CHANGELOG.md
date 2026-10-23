@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **S3 storage: a key prefix per environment.** `STORAGE_S3_KEY_PREFIX` (optional) is added to every key the driver sends to the bucket (upload, presigned `PUT`, checks, copy and its source, delete, signed read) and removed when a stored URL is read back, so environments can share one bucket without reading or overwriting each other's objects. `qa`, `qa/` and `/qa//` are the same prefix; a value with `..` or other than plain folder names is refused by name. Unset or blank, keys and URLs are exactly as before.
+- **S3 storage: private bucket mode.** `STORAGE_S3_PRIVATE=true` stores the unsigned object URL in the media row and signs a short-lived `GET` (`STORAGE_S3_SIGNED_URL_TTL`, seconds, default `3600`) only for URLs of this bucket and prefix; other URLs are untouched. The media API keeps `url` canonical and adds `displayUrl` to the records it returns, the dashboard media library renders it, and `signStoredMediaUrl` (`@nextsparkjs/core/lib/media/storage/display`) signs a URL stored elsewhere (an entity field, a block). `S3_PUBLIC_URL` is not needed in this mode. Off by default.
+- **Docs: large uploads, key prefix, private bucket, CORS.** The media library configuration guide covers the presign and confirm flow for files larger than a platform's request-body limit, variable names to avoid on hosts that reserve `AWS_`, restricting the bucket CORS to the app's origin, and an evaluation of a presigned POST policy against the signed `PUT`.
+
 ## [0.1.0-beta.199] - 2026-10-22
 
 ### Upgrading from 0.1.0-beta.198

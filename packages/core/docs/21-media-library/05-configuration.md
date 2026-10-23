@@ -530,6 +530,9 @@ The driver signs requests with [aws4fetch](https://github.com/mhart/aws4fetch) (
 | `S3_SECRET_ACCESS_KEY` | Yes | Its secret |
 | `S3_PUBLIC_URL` | Yes | Base URL files are served from: the bucket's public URL or a CDN in front of it. Media URLs are `{S3_PUBLIC_URL}/uploads/{name}` |
 | `S3_FORCE_PATH_STYLE` | No | `true` for `{endpoint}/{bucket}/{key}` URLs (MinIO, most self-hosted servers); default `false`, `{bucket}.{endpoint host}/{key}` |
+| `STORAGE_S3_KEY_PREFIX` | No | Folder every object lives under, so environments can share a bucket (see [Key prefix per environment](#key-prefix-per-environment)). Unset or blank: keys are used as they are |
+| `STORAGE_S3_PRIVATE` | No | `true` for a private bucket: stored URLs are the unsigned object URLs and reads are signed (see [Private bucket](#private-bucket)). Default `false` |
+| `STORAGE_S3_SIGNED_URL_TTL` | No | Lifetime of a signed read URL in seconds, 60 to 604800; default `3600`. Only used with `STORAGE_S3_PRIVATE=true` |
 
 The driver never sets an ACL or a public-read flag, and a client never chooses one: what is public is decided by the bucket. Make `uploads/` readable by everyone (a bucket policy, or a public bucket or custom domain) and keep `pending/` private when the service allows it. A bucket name with dots does not work with virtual-hosted URLs over HTTPS; use `S3_FORCE_PATH_STYLE=true`.
 
@@ -542,6 +545,66 @@ Examples (credentials come from the service's console):
 | MinIO | `http://localhost:9000` (or your host) | `us-east-1` (or the server's region) | `true` | `http://localhost:9000/my-bucket` |
 | Backblaze B2 | `https://s3.<region>.backblazeb2.com`, e.g. `https://s3.us-west-004.backblazeb2.com` | `<region>`, e.g. `us-west-004` | `false` | `https://<bucket>.s3.<region>.backblazeb2.com` (public bucket) or a CDN |
 | DigitalOcean Spaces | `https://<region>.digitaloceanspaces.com`, e.g. `https://nyc3.digitaloceanspaces.com` | `<region>`, e.g. `nyc3` | `false` | `https://<bucket>.<region>.cdn.digitaloceanspaces.com` |
+
+#### Key prefix per environment
+
+Environments that share one bucket (for example QA and staging) can each write under their own folder:
+
+```bash
+STORAGE_S3_KEY_PREFIX=qa
+```
+
+The driver puts the prefix in front of every key it sends to the bucket (`qa/uploads/{name}`, `qa/pending/{name}`: the upload, the presigned `PUT`, the existence and type checks, the copy from `pending/` to `uploads/` and its source, the delete and the signed read) and takes it off again when it reads a stored URL back. `qa`, `qa/` and `/qa//` are the same prefix; blank or only slashes means no prefix. A prefix is one or more plain folder names (letters, digits, `.`, `_`, `-`), at most 200 characters; `..`, `.` and anything else makes `STORAGE_S3_KEY_PREFIX` malformed and storage answers `503` until it is fixed.
+
+Media URLs become `{S3_PUBLIC_URL}/qa/uploads/{name}`, so point `S3_PUBLIC_URL` at the bucket root (not at the folder). An environment recognizes only the URLs under its own prefix, compared by whole folder names: with `qa`, a URL under `qa2/` or `staging/` is not its own, is never deleted by it and, in a private bucket, is never signed. The files that are already in the bucket without a prefix keep their stored URLs but stop being recognized as this environment's once a prefix is set; move them under the prefix first (and keep the rows, which store the full URL, in step) or set the prefix on a new bucket. Lifecycle rules on `pending/` become rules on `{prefix}pending/`. Each environment's access key can also be limited to its own prefix in the bucket policy, which is the stronger guarantee.
+
+#### Private bucket
+
+By default files are served from `S3_PUBLIC_URL` and the bucket (or a CDN in front of it) is public. For a bucket that is not:
+
+```bash
+STORAGE_S3_PRIVATE=true
+STORAGE_S3_SIGNED_URL_TTL=3600   # optional, seconds
+```
+
+- The media row stores the canonical object URL, `https://.../{bucket}/{prefix}uploads/{name}` (or the virtual-hosted form), with no signature. `S3_PUBLIC_URL` is not needed and not used. `S3_ENDPOINT` must be `https:` unless it points at this machine, since the signatures travel in URLs.
+- The media API (`GET /api/v1/media`, `GET /api/v1/media/:id`, the `PATCH` response, the upload and confirm responses and `check-duplicates`) keeps `url` as the canonical address and adds `displayUrl`, a signed `GET` URL to put in an `img` or `video` `src`. The dashboard's media library, selector and detail panel render `displayUrl`. Pickers keep storing `url`: a signature is never saved in the database and never logged.
+- A URL is signed only when it belongs to this bucket: same scheme, host and port, no credentials, query or fragment, under this environment's prefix and `uploads/`, with a name the server generated. Anything else (external links, other drivers' files, another environment's objects) is returned as it is.
+- The signing time is rounded down to half the lifetime, so the same URL repeats for a while and browsers can cache it; a URL always has between half and all of its lifetime left. Pick a lifetime longer than a page is expected to stay open.
+- Delete works on the canonical URL as before.
+- Without `STORAGE_S3_PRIVATE`, nothing changes.
+
+What it does not cover: a URL stored somewhere other than a media row (an entity image or file field, a page-builder block, a post's content) is the canonical one and is not usable by a browser by itself. Sign it where the page or response is built with `signStoredMediaUrl(url)` from `@nextsparkjs/core/lib/media/storage/display` (it returns any other URL unchanged), or serve the bucket through a CDN that holds the credentials. The legacy `urls` array of the upload response also carries canonical URLs; read `media[].displayUrl`. Image optimization (`next/image`) fetches the signed URL from the server, so the bucket host must be allowed in `images.remotePatterns`, and a signed URL that expires is not refreshed in a page that stays open.
+
+#### Large files
+
+Serverless platforms reject request bodies above a few MB before the app's code runs, so a large file never reaches `POST /api/v1/media/upload`. Use the direct flow instead: the browser sends the bytes to the bucket and the app only signs and verifies (the `useMediaUpload` hook and the entity upload fields already do this when the driver is `s3`). By hand:
+
+```ts
+// 1. The app signs a PUT for this exact type and size
+const presign = await fetch('/api/v1/media/upload/presign', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'x-team-id': teamId },
+  body: JSON.stringify({ filename: file.name, mimeType: file.type, size: file.size }),
+}).then((r) => r.json())
+const { upload, token } = presign.data
+
+// 2. The browser sends the bytes straight to the bucket, with exactly the headers it was given
+await fetch(upload.url, { method: upload.method, headers: upload.headers, body: file })
+
+// 3. The app checks what arrived and creates the media record
+const confirmed = await fetch('/api/v1/media/upload/confirm', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'x-team-id': teamId },
+  body: JSON.stringify({ token }),
+}).then((r) => r.json())
+```
+
+The presigned URL is valid for 5 minutes and its signature covers the `Content-Type` and the size, so the file must be sent as presigned; the confirm accepts it up to an hour later and rejects a size or type that differs, or bytes that do not match the declared type. See the [API reference](./02-api-reference.md#direct-upload-s3) for the exact request and error codes. The bucket's CORS must allow the app's origin (below). The size limit of the media type still applies at the presign, not the platform's body limit.
+
+#### Variable names on hosts that reserve `AWS_`
+
+Some hosting platforms reserve the `AWS_` prefix for their own runtime and refuse or silently override variables that start with it (`AWS_ACCESS_KEY_ID`, `AWS_REGION`, ...). That is why the driver reads `S3_*` and `STORAGE_S3_*` variables, which are not reserved. Keep it that way: do not rename the credentials to `AWS_*` in your environment settings, and when the service gives you an `AWS_`-named pair, copy the values into `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY`. The driver never reads the platform's own `AWS_*` credentials, so the app cannot pick up a role meant for something else by mistake.
 
 #### Direct uploads, CORS and unconfirmed objects
 
@@ -561,6 +624,12 @@ A browser `PUT` to the bucket needs a CORS rule for the app's origin:
 ```
 
 (AWS S3 and R2 take this JSON in the bucket's CORS settings; B2 and Spaces have an equivalent form; MinIO sets allowed origins server-wide.)
+
+List only the origins the app is served from (one entry per environment, with the scheme and without a trailing slash) and never `*`: the presigned URL already limits what can be written, but a wildcard origin lets any site's script drive uploads with a signed URL it obtained. `PUT` is the only method needed for uploads; reads of a public bucket need `GET`, and none of the rest. Add `"ExposeHeaders": ["ETag"]` only if your own client reads the ETag. A bucket shared by several environments keeps one rule per origin.
+
+##### Presigned POST policy, evaluated
+
+A presigned POST policy (a `multipart/form-data` form with a signed policy document) can fix the exact key, the exact content type and a size range (`content-length-range`) in the document, and it is enforced by the bucket. The signed `PUT` the driver uses already signs `Content-Type` and `Content-Length` as headers, so the bucket refuses a request with another type or another length; for a single object of a size known in advance the two are equivalent. A POST policy would add a size range instead of an exact size (useful when the size is not known at presign time) and a browser form upload with no script. Against it: S3-compatible services implement POST policies unevenly (field handling, `success_action_status`, `x-amz-*` conditions), the metadata the server sets on confirm would be unchanged, the exact-size check the confirm makes still has to run, and the multipart response and error shapes differ from the `PUT` path the client and hook already use. It is not implemented; revisit it if uploads whose size is unknown at presign are needed.
 
 A presigned object lands under `pending/` and is copied to `uploads/` only when the confirm accepts it; a rejected one is deleted. An upload that is never confirmed (the user closed the tab) stays under `pending/`. Add a **lifecycle rule that expires objects under the `pending/` prefix after 1 day**: AWS S3, R2, Backblaze B2 and Spaces support prefix rules in the bucket settings, and MinIO with `mc ilm rule add --prefix pending/ --expire-days 1 <alias>/<bucket>`. A prefix rule was chosen over object tags because every one of these services supports it. A confirm is accepted up to one hour after the presign, well inside that day. The confirm copies only the bytes it checked (`x-amz-copy-source-if-match` with the ETag it read): an object replaced in between is refused and deleted.
 

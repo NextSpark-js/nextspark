@@ -358,6 +358,8 @@ The token is signed by the server and names the object, the user and team that p
 { "success": true, "data": { "media": { "id": "...", "url": "https://cdn.example.com/uploads/1706000000_9f2c...e1.jpg", "...": "..." }, "url": "https://cdn.example.com/uploads/1706000000_9f2c...e1.jpg" } }
 ```
 
+With `STORAGE_S3_PRIVATE=true` every media record the API returns also carries `displayUrl`, a short-lived signed URL to render; `url` stays the canonical address to store. See [Private bucket](./05-configuration.md#private-bucket).
+
 | Status | Code | When | Object |
 |--------|------|------|--------|
 | `400` | `INVALID_UPLOAD_TOKEN` | The token is not one the server issued (altered, forged, malformed) | untouched |
