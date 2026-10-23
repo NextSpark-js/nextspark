@@ -237,7 +237,7 @@ ls "$TEST_DIR/.nextspark/registries/"
 grep '@nextsparkjs' "$TEST_DIR/package.json"   # four `file:` tarball paths: core, cli, ui, testing
 ```
 
-`src/app` is fully generated and git-ignored: after init it already exists (180 files), and `nextspark prepare` (Step 8) regenerates it. Never edit it by hand.
+`src/app` is fully generated and git-ignored: after init it already exists (about 187 files in beta.199), and `nextspark prepare` (Step 8) regenerates it. Never edit it by hand.
 
 **If project generation fails, stop and report the failed command; do not reconstruct a legacy layout manually.**
 
@@ -283,8 +283,10 @@ pnpm exec nextspark db:seed
 
 **Verify:** Command completes without errors. Should show:
 - `Sample data is applied (development)`
-- Phase 1: Core migrations (29 files)
-- Phase 2: Entity migrations (9 for the starter theme: pages, posts, tasks)
+- Phase 1: Core migrations (43 files, so 43 rows in `_migrations` as of beta.199; the number grows with each release)
+- Phase 2: Entity migrations (about 9 for the starter theme: pages, posts, tasks; check `_entity_migrations`)
+
+**A database role that is not a superuser and has no CREATEROLE** (a shared cluster, a managed host) also runs the migrations: migration `022` skips the role steps it has no privilege for and prints `Role setup: could not ...` warnings saying what a superuser can run by hand. The app does not need them to run; only an RLS isolation test that does `SET ROLE nextspark_app` does. If `nextspark_app` does not exist yet, creating it still needs CREATEROLE.
 
 **Seeded users** (table `users`): `superadmin@nextspark.dev` (role `superadmin`), `developer@nextspark.dev` (role `developer`). `db:seed` gives each a `credential` account with the sample-data password, but in this flow they still sign in with an emailed code (the code is in the dev log); the password exists, so the production check in Step 12 reports it.
 
@@ -303,7 +305,7 @@ pnpm exec nextspark prepare   # second run: "0 written" again (everything unchan
 ls -la .nextspark/registries/*.ts
 ```
 
-Should have 31 registry files and report `Generated src/app (180 files) and 31 registries: 0 written ... 211 unchanged` (beta.196). Check for NO path escaping errors (no `\v`, `\t` in file paths).
+Should have about 33 registry files (beta.199) and report `Generated src/app (187 files) and 33 registries: 0 written ... 220 unchanged` (the counts change with the starter and the release; what matters is `0 written`). Check for NO path escaping errors (no `\v`, `\t` in file paths).
 
 ---
 
@@ -377,7 +379,7 @@ Login is **passwordless by default**. There is no password to fill, and `CYPRESS
    The code is sent after the request answers (Better Auth's background tasks), so it can reach the log a moment later: if the line is not there yet, wait a second and grep again (up to ~15 s).
 4. Fill the **Sign-in code** textbox with the 6 digits and submit.
 
-**Expect:** redirect to `/dashboard`, heading "Welcome back, Super", sidebar links **Dashboard, Media, Pages, Posts, Tasks**.
+**Expect:** redirect to `/dashboard`, heading "Dashboard", sidebar links **Dashboard, Media, Pages, Posts, Tasks**.
 
 #### 10.3 Entity CRUD Test: Tasks
 
@@ -706,8 +708,8 @@ Summarize all results:
 
 ### Configuration Phase
 - [ ] .env created with DATABASE_URL
-- [ ] Migrations ran successfully (29 core + 9 entity)
-- [ ] Registries built (31 files, no path errors)
+- [ ] Migrations ran successfully (about 43 core + 9 entity)
+- [ ] Registries built (about 33 files, no path errors)
 
 ### Runtime Phase (Playwright MCP)
 - [ ] Dev server started on port 3005 (`nextspark dev`)
