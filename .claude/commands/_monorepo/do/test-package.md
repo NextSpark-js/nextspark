@@ -69,7 +69,7 @@ RESULTS_DIR="${PROJECTS_DIR}/test-package-results"
 # One subdirectory per run: <core version under test>-<date>, so a run never overwrites the previous baseline
 CORE_VERSION=$(node -p "require('${REPO_ROOT}/packages/core/package.json').version")
 PERF_DIR="${RESULTS_DIR}/perf/${CORE_VERSION}-$(date +%Y%m%d-%H%M)"
-mkdir -p "$PERF_DIR"
+# Not created here: the first performance step that writes (10.7 or 12.1) runs `mkdir -p "$PERF_DIR"`, so --skip-perf leaves nothing behind
 ```
 
 **Where `create-nextspark-app` looks for tarballs:** a `.packages` directory in the current directory, `../`, `../repo/`, `../../` or `../../repo/`. If `REPO_ROOT` is a git worktree (`.claude/worktrees/NN`), none of those reaches it: create a symlink `ln -s "$REPO_ROOT" "$(dirname "$PROJECTS_DIR")/repo"` (the parent of `projects/` gets a `repo` link to the worktree). If more than one `.packages` is in sight, core and cli take the first one in that order **without a warning**; ui and testing warn ("Found more than one local ... tarball" or "Ignoring local ... not at <version>") and come from the registry. Keep exactly one `.packages` visible.
@@ -503,7 +503,7 @@ Report every finding with route, evidence (message text, timing, log line) and s
    ```bash
    cd "$TEST_DIR"
    MSG=messages/en/home.json                        # shown on `/`; if the starter has no such file, use another message file that a page you can open renders (not analytics.json: dashboard only)
-   cp "$MSG" "$PERF_DIR/hmr-backup.json"
+   mkdir -p "$PERF_DIR" && cp "$MSG" "$PERF_DIR/hmr-backup.json"
    # change one string value in $MSG to "HMR-CHECK", keeping the JSON valid
    ```
    With the page that renders that string open (find the key with `grep -rn "<key>" src contents`), `browser_wait_for` the text `HMR-CHECK` (max 15 s) **without** `browser_navigate`. Record the time until it appears; if it never appears, that is a finding (high). Then restore the file and confirm the page shows the original text again:
@@ -597,6 +597,7 @@ With the runtime-only build, `start.log` shows an `[auth-readiness] no login met
 The main content of a public page must be in the HTML the server sends, before any JavaScript runs. For each public route (`/`, `/login`, `/signup`, `/support`, `/docs`, `/blog`, plus `/<slug>` of a page if you still have one), fetch the HTML and check it:
 
 ```bash
+mkdir -p "$PERF_DIR"
 for p in / /login /signup /support /docs /blog; do
   H="$PERF_DIR/ssr$(echo "$p" | tr / _).html"
   curl -s -o "$H" -w "$p HTTP %{http_code} TTFB %{time_starttransfer}s total %{time_total}s\n" "http://localhost:${TEST_PORT}$p"
@@ -747,7 +748,12 @@ Summarize all results:
 - [ ] JS per route (12.2): `starter-route-js.mjs` exit code, measured size vs budget per route
 - [ ] Web Vitals (12.3): LCP, CLS, INP, TTFB per route, cold and warm with the median; tool used (chrome-devtools MCP, Playwright/CDP or Lighthouse); routes "not measured" and why
 - [ ] Summary table (12.4) with every failing cell marked
-- [ ] Baseline saved: the table and raw numbers in `$PERF_DIR` (outside the repo, next to the other results), in this run's own subdirectory `<core version>-<date>`. Compare with the most recent earlier subdirectory (`ls -1 "$RESULTS_DIR/perf" | sort | tail -2`, the one before the current run) and report the change per route; if there is none, say this run is the first baseline.
+- [ ] Baseline saved: the table and raw numbers in `$PERF_DIR` (outside the repo, next to the other results), in this run's own subdirectory `<core version>-<date>`. Compare with the most recent earlier run and report the change per route; if there is none, say this run is the first baseline. Find it by modification time, not by name (names sort wrongly when the version digits change, `beta.99` vs `beta.199`), and only count runs that finished, i.e. that hold a `route-js.json`:
+  ```bash
+  for d in $(ls -1t "$RESULTS_DIR/perf"); do
+    [ "$d" != "$(basename "$PERF_DIR")" ] && [ -f "$RESULTS_DIR/perf/$d/route-js.json" ] && { echo "$d"; break; }
+  done
+  ```
 - Repeat in the report: the figures come from a laptop and are indicative; the change between versions is what counts
 
 ### Overall: PASS / FAIL
@@ -847,7 +853,7 @@ npx create-nextspark-app@<version> test-package --theme starter --yes
 pnpm --config.minimum-release-age=0 dlx create-nextspark-app@<version> test-package --theme starter --yes
 ```
 
-Pin `<version>` (for example `0.1.0-beta.196`). pnpm 11+ ignores versions published less than a day ago (`minimumReleaseAge`), so `pnpm dlx create-nextspark-app@latest` installs the **previous** release during the first day after a publish. Check `grep '@nextsparkjs' package.json` shows the version you asked for, then continue from Step 6. In this flow the Step 5 check "four `file:` tarball paths" (and the matching checklist item) becomes "four `@nextsparkjs/*` entries at `<version>`". Remove `$HOME/published-check` in Cleanup.
+Pin `<version>` (for example `0.1.0-beta.196`). pnpm 11+ ignores versions published less than a day ago (`minimumReleaseAge`), so `pnpm dlx create-nextspark-app@latest` installs the **previous** release during the first day after a publish. Check `grep '@nextsparkjs' package.json` shows the version you asked for, then continue from Step 6. In this flow the Step 5 check "four `file:` tarball paths" (and the matching checklist item) becomes "four `@nextsparkjs/*` entries at `<version>`". Remove `$HOME/published-check` in Cleanup. For the performance baseline (Step 0.3) `CORE_VERSION` is the repo's version, not the published one: in this flow set it from the generated project and recompute the directory before Step 10.7: `CORE_VERSION=$(node -p "require('$TEST_DIR/node_modules/@nextsparkjs/core/package.json').version")`, then `PERF_DIR="${RESULTS_DIR}/perf/${CORE_VERSION}-$(date +%Y%m%d-%H%M)"`.
 
 ---
 
