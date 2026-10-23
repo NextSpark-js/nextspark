@@ -51,7 +51,9 @@ jobs:
           npm_config_registry: http://127.0.0.1:9
 
       - name: Test core Node tests
-        run: pnpm exec tsx --test packages/core/tests/node/*.test.ts
+        # initdb and pg_ctl are not on the PATH of ubuntu-24.04; the tests that start a throwaway cluster
+        # (migration-atomic, migration-022) skip themselves without them.
+        run: PATH="$PATH:/usr/lib/postgresql/16/bin" pnpm exec tsx --test packages/core/tests/node/*.test.ts
         env:
           npm_config_registry: http://127.0.0.1:9
 
