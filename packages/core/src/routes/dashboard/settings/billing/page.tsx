@@ -44,7 +44,7 @@ function BillingPage() {
   const t = useTranslations('settings')
   const tb = useTranslations('billing')
   // A plan that exists only in the database has no message: use its name from the API, else its slug
-  const planName = planSlug && (tb.has(`plans.${planSlug}.name`) ? tb(`plans.${planSlug}.name`) : (plan?.name ?? planSlug))
+  const planName = planSlug ? (tb.has(`plans.${planSlug}.name`) ? tb(`plans.${planSlug}.name`) : (plan?.name ?? planSlug)) : ''
 
   // Fetch invoices for current team (must be before early return). Without the permission the route answers 403,
   // so nothing is requested until the permission is there.
