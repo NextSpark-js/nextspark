@@ -66,7 +66,9 @@ PACKAGES_DIR="${REPO_ROOT}/.packages"         # Local tarballs directory
 TEST_PORT=3005
 # Evidence and the performance baseline go here, outside the repo (so the clean-status check still passes)
 RESULTS_DIR="${PROJECTS_DIR}/test-package-results"
-PERF_DIR="${RESULTS_DIR}/perf"
+# One subdirectory per run: <core version under test>-<date>, so a run never overwrites the previous baseline
+CORE_VERSION=$(node -p "require('${REPO_ROOT}/packages/core/package.json').version")
+PERF_DIR="${RESULTS_DIR}/perf/${CORE_VERSION}-$(date +%Y%m%d-%H%M)"
 mkdir -p "$PERF_DIR"
 ```
 
@@ -489,7 +491,7 @@ Report every finding with route, evidence (message text, timing, log line) and s
 
 1. **Console on the key pages.** For each of `/`, `/login`, `/signup`, `/dashboard`, `/dashboard/tasks` (an entity list) and `/dashboard/pages/create` (the page editor): `browser_navigate`, wait for the page to settle, then `browser_console_messages` at level `error` and again at level `warning`. Record each distinct message once, with the routes where it appears. (Visit `/login` and `/signup` in a fresh context or after signing out; a signed-in session redirects them.)
 2. **Hydration warnings.** In the same messages and in `dev.log`, search for `hydrat` (for example `Hydration failed`, `did not match`, `server rendered HTML`). Any hit is at least medium; name the route.
-3. **First-compile time per route.** The first request of a route in dev compiles it. Do this check on a fresh dev server (restart Step 9 if you already visited these routes): request each route once with `curl` and read the time, then the compile lines from the log:
+3. **First-compile time per route.** The first request of a route in dev compiles it. This check needs a fresh dev server, and by now 10.1-10.6 have already compiled these routes, so the restart is mandatory: stop the server as in Step 11 (by PID; otherwise the new one collides on the test port), run Step 9 again (including `rm -rf .next`), and wait until it answers. The browser session survives the restart (the session lives in the database). Then request each route once with `curl` and read the time, then the compile lines from the log:
    ```bash
    for p in / /login /signup /dashboard /dashboard/tasks /dashboard/pages/create; do
      echo "$p $(curl -s -o /dev/null -w '%{http_code} %{time_total}s' http://localhost:${TEST_PORT}$p)"
@@ -500,7 +502,7 @@ Report every finding with route, evidence (message text, timing, log line) and s
 4. **HMR check.** Edit one i18n message of the generated project, check that the page shows it without a manual reload, then restore the file:
    ```bash
    cd "$TEST_DIR"
-   MSG=$(ls messages/en/*.json | head -1)           # any message file the starter ships
+   MSG=messages/en/home.json                        # shown on `/`; if the starter has no such file, use another message file that a page you can open renders (not analytics.json: dashboard only)
    cp "$MSG" "$PERF_DIR/hmr-backup.json"
    # change one string value in $MSG to "HMR-CHECK", keeping the JSON valid
    ```
@@ -627,7 +629,7 @@ Thresholds (good): LCP <= 2.5 s, INP <= 200 ms, CLS <= 0.1. TTFB is reported, wi
 
 **Routes.** Public: `/`, `/login`, `/signup`, `/support`, `/docs`, `/blog`. Dashboard: `/dashboard` and `/dashboard/tasks`, only if you can hold a signed-in session on this production server. The runtime-only build has no usable login method (see above), so you may not be able to sign in: then list the dashboard routes as "not measured (no session)". Do not substitute dev-server numbers and do not guess.
 
-**LCP, CLS, TTFB** (one `browser_evaluate` per route after `browser_navigate`; the observers are `buffered`, so they report what already happened):
+**LCP, CLS, TTFB.** The CLS below adds up every layout shift without recent input over the whole load. The real CLS is the worst session window, so this sum is an upper bound of it; that is acceptable for a short page load, but a value above 0.1 here deserves a look at the individual shifts before it is called a failure. (One `browser_evaluate` per route after `browser_navigate`; the observers are `buffered`, so they report what already happened):
 ```js
 async () => {
   const out = { lcp: null, cls: 0 };
@@ -646,25 +648,25 @@ async () => {
 ```js
 () => {
   window.__inp = 0;
-  new PerformanceObserver(l => { for (const e of l.getEntries()) window.__inp = Math.max(window.__inp, e.duration); })
+  new PerformanceObserver(l => { for (const e of l.getEntries()) if (e.interactionId > 0) window.__inp = Math.max(window.__inp, e.duration); })
     .observe({ type: 'event', durationThreshold: 16, buffered: true });
 }
 ```
-Run it, `browser_click` the control, wait a second, then `browser_evaluate` `() => window.__inp`. This is the longest single interaction, a one-sample stand-in for INP: say so in the report. A route with no safe control is "not measured".
+Run it, `browser_click` the control, wait a second, then `browser_evaluate` `() => window.__inp`. This is the longest single interaction, a one-sample stand-in for INP: say so in the report. If `__inp` is still 0 no interaction reached the 16 ms threshold: report "< 16 ms", not 0. A route with no safe control is "not measured".
 
-**Cold and warm.** Measure each route twice: the first load after the server start (cold; use a fresh browser context) and a second load of the same URL (warm). Report both and their median; with two runs the median is the midpoint, so if cold and warm differ by more than 20% say so and take a third run. A laptop is noisy: close other heavy processes first and note anything still running.
+**Cold and warm.** Measure each route twice: the first load after the server start (cold; use a fresh browser context) and a second load of the same URL (warm). Report both and their median; with two runs the median is the midpoint, so if cold and warm differ by more than 20% for a metric on a route say so and take a third run of that metric on that route, then report the median of the three. A laptop is noisy: close other heavy processes first and note anything still running.
 
 #### 12.4 Performance summary table (skip with `--skip-perf`)
 
-Build one table, route by metric, and mark every cell that fails its threshold with `FAIL`:
+Build one table, route by metric, giving cold / warm / median for every timing metric (TTFB, LCP, CLS, INP), not only TTFB, and mark every cell that fails its threshold with `FAIL`:
 
 ```markdown
 | Route | TTFB ms (cold / warm / median) | LCP ms | CLS | INP ms | JS gzip (measured / budget) | SSR content |
 |-------|--------------------------------|--------|-----|--------|-----------------------------|-------------|
-| /     | 120 / 40 / 80                  | 1400   | 0.02 | 60    | 218 KB / 230 KB             | ok          |
+| /     | 120 / 40 / 80                  | 1500 / 1300 / 1400 | 0.02 / 0.01 / 0.015 | 70 / 50 / 60 | 218 KB / 230 KB | ok |
 ```
 
-A cell fails when LCP > 2500 ms, INP > 200 ms, CLS > 0.1, JS is over budget, or SSR content is not ok. Save the table, the raw numbers (one JSON file per route is enough) and `route-js.json` in `$PERF_DIR`, together with the version under test (`grep '"version"' "$REPO_ROOT/packages/core/package.json"`), the date, the machine class (laptop or CI) and the Node and Next versions. Do not put these files in the repo.
+A cell fails when LCP > 2500 ms, INP > 200 ms, CLS > 0.1, JS is over budget, or SSR content is not ok. Save the table, the raw numbers (one JSON file per route is enough) and `route-js.json` in `$PERF_DIR` (a subdirectory per run, `<core version>-<date>`, see Step 0.3), together with the version under test (`$CORE_VERSION`), the date, the machine class (laptop or CI) and the Node and Next versions. Do not put these files in the repo.
 
 #### 12.5 Stop the production server
 
@@ -745,7 +747,7 @@ Summarize all results:
 - [ ] JS per route (12.2): `starter-route-js.mjs` exit code, measured size vs budget per route
 - [ ] Web Vitals (12.3): LCP, CLS, INP, TTFB per route, cold and warm with the median; tool used (chrome-devtools MCP, Playwright/CDP or Lighthouse); routes "not measured" and why
 - [ ] Summary table (12.4) with every failing cell marked
-- [ ] Baseline saved: the table and raw numbers in `$PERF_DIR` (outside the repo, next to the other results), named with the version under test. Compare with the previous baseline file if there is one and report the change per route.
+- [ ] Baseline saved: the table and raw numbers in `$PERF_DIR` (outside the repo, next to the other results), in this run's own subdirectory `<core version>-<date>`. Compare with the most recent earlier subdirectory (`ls -1 "$RESULTS_DIR/perf" | sort | tail -2`, the one before the current run) and report the change per route; if there is none, say this run is the first baseline.
 - Repeat in the report: the figures come from a laptop and are indicative; the change between versions is what counts
 
 ### Overall: PASS / FAIL
