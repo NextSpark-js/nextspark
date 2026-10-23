@@ -30,7 +30,7 @@ export interface StorageDriver {
   direct?: DirectUploads
   /**
    * Private bucket (s3 with STORAGE_S3_PRIVATE=true): a short-lived signed GET URL for a stored URL of
-   * this bucket and environment, null for any other URL. Absent on drivers whose URLs are already usable.
+   * this bucket and environment, null for any other URL (and always null with the bucket public). Absent on drivers whose URLs are already usable.
    */
   signedReadUrl?(url: string): Promise<string | null>
 }

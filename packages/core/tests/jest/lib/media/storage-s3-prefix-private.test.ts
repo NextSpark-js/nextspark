@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { afterEach, beforeEach, describe, expect, it } from '@jest/globals'
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals'
 
 import { selectStorageDriver } from '@/core/lib/media/storage'
 import { signStoredMediaUrl, withDisplayUrls } from '@/core/lib/media/storage/display'
@@ -242,22 +242,43 @@ describe('private bucket', () => {
     expect(signed.toString()).not.toContain('very-secret-value-2')
   })
 
-  it('the lifetime is configurable and the validity left is between half and all of it', async () => {
-    const s3 = priv({ STORAGE_S3_SIGNED_URL_TTL: '600' })
-    const signed = new URL((await s3.signedReadUrl(`https://s3.example.org/shared/uploads/${NAME}`))!)
-    expect(signed.searchParams.get('X-Amz-Expires')).toBe('600')
+  const signedAtMs = (signed: URL) => {
     const d = signed.searchParams.get('X-Amz-Date')!
-    const signedAt = Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), +d.slice(9, 11), +d.slice(11, 13), +d.slice(13, 15))
-    const left = signedAt + 600_000 - Date.now()
-    expect(left).toBeGreaterThan(300_000 - 1000)
-    expect(left).toBeLessThanOrEqual(600_000)
+    return Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), +d.slice(9, 11), +d.slice(11, 13), +d.slice(13, 15))
+  }
+  const T0 = 1_700_000_400_000 // a multiple of 600 s, so windows of a 600 s lifetime (300 s) start at T0, T0+300 s...
+  const at = (offsetMs: number) => jest.spyOn(Date, 'now').mockReturnValue(T0 + offsetMs)
+  const OWN = `https://s3.example.org/shared/uploads/${NAME}`
+
+  it('the lifetime is configurable', async () => {
+    const signed = new URL((await priv({ STORAGE_S3_SIGNED_URL_TTL: '600' }).signedReadUrl(OWN))!)
+    expect(signed.searchParams.get('X-Amz-Expires')).toBe('600')
   })
 
-  it('repeats the same URL inside a window, so the browser can cache it', async () => {
-    const s3 = priv()
-    const url = `https://s3.example.org/shared/uploads/${NAME}`
-    const [one, two] = [await s3.signedReadUrl(url), await s3.signedReadUrl(url)]
-    expect(one).toBe(two)
+  it('at the last instant of a window the URL still has at least half its lifetime left', async () => {
+    const spy = at(599_999)
+    try {
+      const signed = new URL((await priv({ STORAGE_S3_SIGNED_URL_TTL: '600' }).signedReadUrl(OWN))!)
+      const left = signedAtMs(signed) + 600_000 - Date.now()
+      expect(left).toBeGreaterThanOrEqual(300_000)
+      expect(left).toBeLessThanOrEqual(600_000)
+    } finally { spy.mockRestore() }
+  })
+
+  it('two instants of the same window give the same URL, another window another URL', async () => {
+    const s3 = priv({ STORAGE_S3_SIGNED_URL_TTL: '600' })
+    const sign = async (offsetMs: number) => {
+      const spy = at(offsetMs)
+      try { return await s3.signedReadUrl(OWN) } finally { spy.mockRestore() }
+    }
+    expect(await sign(300_000)).toBe(await sign(599_999))
+    expect(await sign(299_999)).not.toBe(await sign(300_000))
+  })
+
+  it('an own URL with the host in capitals signs exactly the canonical path', async () => {
+    const s3 = priv({ STORAGE_S3_KEY_PREFIX: 'qa' })
+    const signed = new URL((await s3.signedReadUrl(`https://S3.EXAMPLE.ORG/shared/qa/uploads/${NAME}`))!)
+    expect(`${signed.origin}${signed.pathname}`).toBe(`https://s3.example.org/shared/qa/uploads/${NAME}`)
   })
 
   it('lets every other URL through untouched', async () => {
@@ -273,7 +294,7 @@ describe('private bucket', () => {
       `https://s3.example.org/shared/qa/uploads/${NAME}#x`,
       `http://s3.example.org/shared/qa/uploads/${NAME}`, // another scheme
       `https://s3.example.org:8443/shared/qa/uploads/${NAME}`, // another port
-      `https://s3.example.org.evil.test/shared/qa/uploads/${NAME}`,
+      `https://s3.example.org.other.test/shared/qa/uploads/${NAME}`,
       `https://user:pw@s3.example.org/shared/qa/uploads/${NAME}`,
       `https://s3.example.org/shared/qa/uploads/../uploads/${NAME}`,
       `https://s3.example.org/shared/qa/uploads/%2e%2e/uploads/${NAME}`,
