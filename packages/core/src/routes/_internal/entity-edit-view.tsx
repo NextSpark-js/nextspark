@@ -8,6 +8,7 @@ import { toClientEntityConfig } from '@nextsparkjs/core/lib/entities/client-conf
 import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityFormWrapper'
 import { BuilderEditorView } from '@nextsparkjs/core/components/dashboard/block-editor/builder-editor-view'
 import { getEntityData } from '@nextsparkjs/core/lib/api/entities'
+import { useTeam } from '@nextsparkjs/core/hooks/useTeam'
 
 /**
  * The edit form of one entity's dashboard. The generated host's per-entity routes pass their
@@ -15,6 +16,7 @@ import { getEntityData } from '@nextsparkjs/core/lib/api/entities'
  */
 export function EntityEditView({ entity, id }: { entity: string; id: string }) {
   const router = useRouter()
+  const { isReady: teamReady } = useTeam()
   const [entityConfig, setEntityConfig] = useState<ClientEntityConfig | null>(null)
   const [initialData, setInitialData] = useState<Record<string, unknown> | null>(null)
   const [loading, setLoading] = useState(true)
@@ -23,6 +25,8 @@ export function EntityEditView({ entity, id }: { entity: string; id: string }) {
   const entityId = id
 
   useEffect(() => {
+    // The record is requested once the team is chosen
+    if (!teamReady) return
     async function loadEntityData() {
       if (!entitySlug || !entityId) {
         setLoading(false)
@@ -59,7 +63,7 @@ export function EntityEditView({ entity, id }: { entity: string; id: string }) {
     }
 
     loadEntityData()
-  }, [entitySlug, entityId])
+  }, [entitySlug, entityId, teamReady])
 
   if (loading) {
     return (

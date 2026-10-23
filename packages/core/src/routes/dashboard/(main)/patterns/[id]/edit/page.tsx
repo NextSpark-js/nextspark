@@ -13,6 +13,7 @@ import { clientEntityRegistry, ensureClientInitialized, type ClientEntityConfig 
 import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityFormWrapper'
 import { BuilderEditorView } from '@nextsparkjs/core/components/dashboard/block-editor/builder-editor-view'
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert'
+import { useTeam } from '@nextsparkjs/core/hooks/useTeam'
 import { getEntityData } from '@nextsparkjs/core/lib/api/entities'
 
 function PatternEditPage() {
@@ -25,7 +26,11 @@ function PatternEditPage() {
   const entitySlug = 'patterns'
   const entityId = params.id as string
 
+  const { isReady: teamReady } = useTeam()
+
   useEffect(() => {
+    // The record is requested once the team is chosen
+    if (!teamReady) return
     async function loadEntityData() {
       if (!entityId) {
         setLoading(false)
@@ -60,7 +65,7 @@ function PatternEditPage() {
     }
 
     loadEntityData()
-  }, [entityId])
+  }, [entityId, teamReady])
 
   if (loading) {
     return (

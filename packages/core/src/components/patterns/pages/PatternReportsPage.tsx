@@ -17,6 +17,7 @@ import { Button } from '../../ui/button'
 import { Alert, AlertDescription, AlertTitle } from '../../ui/alert'
 import { Skeleton } from '../../ui/skeleton'
 import { useEntityConfig } from '../../../hooks/useEntityConfig'
+import { useTeam } from '../../../hooks/useTeam'
 import { getEntityData } from '../../../lib/api/entities'
 
 interface PatternData {
@@ -36,6 +37,8 @@ export default function PatternReportsPage() {
 
   // Use the centralized hook for entity configuration
   const { config: entityConfig, isLoading: configLoading } = useEntityConfig('patterns')
+
+  const { isReady: teamReady } = useTeam()
 
   useEffect(() => {
     async function loadPattern() {
@@ -67,10 +70,11 @@ export default function PatternReportsPage() {
       }
     }
 
-    if (entityConfig) {
+    // The record is requested once the team is chosen
+    if (entityConfig && teamReady) {
       loadPattern()
     }
-  }, [patternId, entityConfig])
+  }, [patternId, entityConfig, teamReady])
 
   if (configLoading || dataLoading) {
     return (

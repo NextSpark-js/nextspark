@@ -16,6 +16,7 @@ import { PatternUsageReport } from '@nextsparkjs/core/components/patterns/Patter
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@nextsparkjs/core/components/ui/alert'
 import { Skeleton } from '@nextsparkjs/core/components/ui/skeleton'
+import { useTeam } from '@nextsparkjs/core/hooks/useTeam'
 import { getEntityData } from '@nextsparkjs/core/lib/api/entities'
 
 interface PatternData {
@@ -33,7 +34,11 @@ function PatternReportsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const { isReady: teamReady } = useTeam()
+
   useEffect(() => {
+    // The record is requested once the team is chosen
+    if (!teamReady) return
     async function loadPattern() {
       if (!patternId) {
         setError('Pattern ID is required')
@@ -64,7 +69,7 @@ function PatternReportsPage() {
     }
 
     loadPattern()
-  }, [patternId])
+  }, [patternId, teamReady])
 
   if (loading) {
     return (

@@ -18,6 +18,7 @@ import { getEntityBySlug, type ClientEntityConfig } from '@nextsparkjs/registrie
 import { EntityFormWrapper } from '../../entities/wrappers/EntityFormWrapper'
 import { BuilderEditorView } from '../../dashboard/block-editor/builder-editor-view'
 import { Alert, AlertDescription } from '../../ui/alert'
+import { useTeam } from '../../../hooks/useTeam'
 import { getEntityData } from '../../../lib/api/entities'
 
 export default function PatternEditPage() {
@@ -30,6 +31,8 @@ export default function PatternEditPage() {
 
   const entitySlug = 'patterns'
   const entityId = params.id as string
+
+  const { isReady: teamReady } = useTeam()
 
   useEffect(() => {
     try {
@@ -64,10 +67,11 @@ export default function PatternEditPage() {
       }
     }
 
-    if (entityConfig) {
+    // The record is requested once the team is chosen
+    if (entityConfig && teamReady) {
       loadEntityData()
     }
-  }, [entityId, entityConfig])
+  }, [entityId, entityConfig, teamReady])
 
   if (configLoading || dataLoading) {
     return (

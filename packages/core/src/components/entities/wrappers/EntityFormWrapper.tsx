@@ -56,7 +56,7 @@ export function EntityFormWrapper({
   const { config: entityConfig, isLoading: isLoadingConfig, error: configError, isOverride } = useEntityConfig(entityType)
 
   // Get current team ID for team-scoped operations like user selection
-  const { teamId } = useTeam()
+  const { teamId, isReady: teamReady } = useTeam()
 
   const [initialData, setInitialData] = useState<Record<string, unknown>>(propsInitialData || {})
   const [isLoadingData, setIsLoadingData] = useState(false)
@@ -78,7 +78,7 @@ export function EntityFormWrapper({
     }
 
     const loadInitialData = async () => {
-      if (mode === 'edit' && id && entityConfig && signedIn) {
+      if (mode === 'edit' && id && entityConfig && signedIn && teamReady) {
         if (!entityConfig.enabled) {
           onError?.(new Error(`Entity "${entityType}" is disabled`))
           return
@@ -104,7 +104,7 @@ export function EntityFormWrapper({
     }
 
     loadInitialData()
-  }, [mode, id, entityType, entityConfig, onError, isOverride, propsInitialData, signedIn])
+  }, [mode, id, entityType, entityConfig, onError, isOverride, propsInitialData, signedIn, teamReady])
 
   const handleSubmit = useCallback(async (data: Record<string, unknown>) => {
     setSubmitError(null)

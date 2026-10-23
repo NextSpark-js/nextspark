@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
+import { useOptionalTeamContext } from '../contexts/TeamContext'
 import { fetchWithTeam } from '../lib/api/entities'
 import type { EntityConfig } from '../lib/entities/types'
 
@@ -26,6 +27,11 @@ export interface EntityQueryResult {
   totalPages: number
 }
 
+// Nothing is requested before the team is chosen (no TeamProvider above: nothing to wait for)
+function useTeamReady() {
+  return useOptionalTeamContext()?.isReady ?? true
+}
+
 export function useEntityQuery(options: UseEntityQueryOptions) {
   const {
     entityConfig,
@@ -41,6 +47,7 @@ export function useEntityQuery(options: UseEntityQueryOptions) {
   } = options
 
   const { user } = useAuth()
+  const teamReady = useTeamReady()
 
   // Get active team ID for query key scoping
   const activeTeamId = typeof window !== 'undefined'
@@ -119,7 +126,7 @@ export function useEntityQuery(options: UseEntityQueryOptions) {
         part && typeof part === 'object' && 'page' in part ? { ...part, page: 0 } : part))
       return previousQuery && sameList(previousQuery.queryKey) === sameList(queryKey) ? previous : undefined
     },
-    enabled: enabled && !!user,
+    enabled: enabled && !!user && teamReady,
     staleTime,
     gcTime,
   })
@@ -139,6 +146,7 @@ export function useEntityOne(
   options: { includeChildren?: boolean; enabled?: boolean } = {}
 ) {
   const { user } = useAuth()
+  const teamReady = useTeamReady()
   const { includeChildren = false, enabled = true } = options
 
   // Get active team ID for query key scoping
@@ -175,7 +183,7 @@ export function useEntityOne(
       const data = await response.json()
       return data.data || data.item || data
     },
-    enabled: enabled && !!user && !!id,
+    enabled: enabled && !!user && teamReady && !!id,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 60,
   })

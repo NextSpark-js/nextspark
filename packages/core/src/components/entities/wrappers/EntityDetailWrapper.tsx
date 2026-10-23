@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from '../../ui/alert'
 import { SkeletonEntityDetail } from '../../ui/skeleton-detail'
 import { useEntityConfig } from '../../../hooks/useEntityConfig'
 import { useAuth } from '../../../hooks/useAuth'
+import { useTeam } from '../../../hooks/useTeam'
 import { useRouter } from 'next/navigation'
 import { getEntityData, deleteEntityData, fetchWithTeam } from '../../../lib/api/entities'
 import { TeamDetailSection } from '../../teams/TeamDetailSection'
@@ -52,6 +53,8 @@ export function EntityDetailWrapper({
   // and a load started then is answered with a 401.
   const { user } = useAuth()
   const signedIn = Boolean(user)
+  // The record is requested once the team is chosen: before that the request carries no team (400) or a stale one (403)
+  const { isReady: teamReady } = useTeam()
 
   // Router for navigation
   const router = useRouter()
@@ -139,7 +142,7 @@ export function EntityDetailWrapper({
       prevIdRef.current = id
     }
 
-    if (!entityConfig || !id || !signedIn) return
+    if (!entityConfig || !id || !signedIn || !teamReady) return
     if (dataLoadedRef.current) return // Prevent re-fetching if already loaded
 
     if (!entityConfig.enabled) {
@@ -217,7 +220,7 @@ export function EntityDetailWrapper({
 
     loadEntityData()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityConfig?.slug, entityType, id, signedIn])
+  }, [entityConfig?.slug, entityType, id, signedIn, teamReady])
 
   // Handler functions for child entity operations
   const handleEdit = useCallback(() => {

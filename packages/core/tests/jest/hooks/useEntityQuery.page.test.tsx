@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 jest.mock('@/core/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }))
+jest.mock('@/core/contexts/TeamContext', () => ({ useOptionalTeamContext: () => undefined })) // no TeamProvider: nothing to wait for
 const mockFetch = jest.fn<(url: string) => Promise<Response>>()
 jest.mock('@/core/lib/api/entities', () => ({ fetchWithTeam: (url: string) => mockFetch(url) }))
 

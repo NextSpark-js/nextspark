@@ -26,7 +26,7 @@ jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), repla
 jest.mock('@/core/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'u1' }, isLoading: false }) }))
 let configResult: { config: unknown; error: string | null } = { config: CONFIG, error: null }
 jest.mock('@/core/hooks/useEntityConfig', () => ({ useEntityConfig: () => ({ ...configResult, isLoading: false, isOverride: false }) }))
-jest.mock('@/core/hooks/useTeam', () => ({ useTeam: () => ({ teamId: 'team-1' }) }))
+jest.mock('@/core/hooks/useTeam', () => ({ useTeam: () => ({ teamId: 'team-1', isReady: true }) }))
 jest.mock('@/core/lib/api/entities', () => ({
   getEntityData: (...args: unknown[]) => mockGetEntityData(...args),
   createEntityData: jest.fn(),
