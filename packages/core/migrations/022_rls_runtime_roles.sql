@@ -40,8 +40,26 @@ BEGIN
 END $$;
 
 -- INHERIT membership in `authenticated` so policies `TO authenticated` apply.
-ALTER ROLE nextspark_app INHERIT;
-GRANT authenticated TO nextspark_app;
+-- Changing a role you did not create, or granting a role you have no ADMIN OPTION on,
+-- needs CREATEROLE (or superuser). On a shared cluster or a managed host where
+-- nextspark_app already exists, the migration role may have neither: the migration
+-- then goes on with a WARNING instead of aborting. Only insufficient_privilege is
+-- caught; any other error still stops the migration.
+DO $$
+BEGIN
+  ALTER ROLE nextspark_app INHERIT;
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE WARNING 'Role setup: could not run ALTER ROLE nextspark_app INHERIT (%). Ask a superuser to run it if nextspark_app is not already INHERIT.', SQLERRM;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT pg_has_role('nextspark_app', 'authenticated', 'MEMBER') THEN
+    GRANT authenticated TO nextspark_app;
+  END IF;
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE WARNING 'Role setup: could not run GRANT authenticated TO nextspark_app (%). Ask a superuser to run it: policies written TO authenticated do not apply to nextspark_app until it is a member.', SQLERRM;
+END $$;
 
 -- Allow the migration/validation user to SET ROLE nextspark_app (e.g. an RLS
 -- isolation test suite can run its checks as this role without a LOGIN credential).
@@ -83,5 +101,10 @@ BEGIN
   END IF;
 END $$;
 
-COMMENT ON ROLE nextspark_app IS
-  'Non-owner runtime role for the NextSpark app. Member of authenticated (policies TO authenticated apply). RLS is evaluated for every query once DATABASE_URL connects as this role instead of the table owner.';
+DO $$
+BEGIN
+  COMMENT ON ROLE nextspark_app IS
+    'Non-owner runtime role for the NextSpark app. Member of authenticated (policies TO authenticated apply). RLS is evaluated for every query once DATABASE_URL connects as this role instead of the table owner.';
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE WARNING 'Role setup: could not set the comment on role nextspark_app (%). It is only a description; nothing depends on it.', SQLERRM;
+END $$;

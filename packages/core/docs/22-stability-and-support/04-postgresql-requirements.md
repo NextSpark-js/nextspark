@@ -51,7 +51,7 @@ For each user request the application sets `app.user_id` with `SET LOCAL` inside
 
 The role in `MIGRATE_DATABASE_URL` (or `DATABASE_URL`, if unset) must be able to:
 
-- create roles: migration `001` creates `authenticated`, `anon` and `service_role` when they do not exist, and migration `022` creates `nextspark_app` (`CREATE ROLE` needs the `CREATEROLE` attribute or a superuser);
+- create roles: migration `001` creates `authenticated`, `anon` and `service_role` when they do not exist, and migration `022` creates `nextspark_app` (`CREATE ROLE` needs the `CREATEROLE` attribute or a superuser; when `nextspark_app` already exists, a role without them still migrates: `022` skips `ALTER ROLE ... INHERIT`, `GRANT authenticated TO nextspark_app` and the role comment with a `Role setup: could not ...` warning, and a superuser runs those by hand);
 - create tables, indexes, functions and triggers in `public`, enable row-level security, and create policies (the core migrations contain 81 `CREATE POLICY` statements);
 - create the `pgcrypto` extension, or find it already installed;
 - grant privileges on its own objects to `nextspark_app` and to `authenticated`, and grant `nextspark_app` to the migration role itself, so that role can `SET ROLE` to it in an isolation test. That last grant is attempted and skipped with a notice if it fails.

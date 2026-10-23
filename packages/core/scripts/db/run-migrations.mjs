@@ -110,6 +110,8 @@ async function runMigrations() {
       if (notice.message?.startsWith('Sample accounts:')) console.log(`🔐 ${notice.message}`);
       // a migration that leaves something as it was says so (043: a policy it did not rewrite)
       else if (notice.severity === 'WARNING' && notice.message?.includes('left unchanged')) console.log(`⚠️  ${notice.message}`);
+      // 022: a role step the migration role has no privilege for is skipped, and says what to do by hand
+      else if (notice.severity === 'WARNING' && notice.message?.startsWith('Role setup:')) console.log(`⚠️  ${notice.message}`);
     });
     
     // Create migrations tracking table
