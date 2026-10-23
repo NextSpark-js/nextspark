@@ -25,7 +25,7 @@ jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), repla
 jest.mock('next/link', () => ({ __esModule: true, default: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }))
 jest.mock('@/core/hooks/useAuth', () => ({ useAuth: () => mockUseAuth() }))
 jest.mock('@/core/hooks/useEntityConfig', () => ({ useEntityConfig: () => ({ config: CONFIG, isLoading: false, error: null, isOverride: false }) }))
-jest.mock('@/core/hooks/useTeam', () => ({ useTeam: () => ({ teamId: 'team-1' }) }))
+jest.mock('@/core/hooks/useTeam', () => ({ useTeam: () => ({ teamId: 'team-1', isReady: true }) }))
 jest.mock('@/core/hooks/useUrlFilters', () => ({ useUrlFilters: () => ({ filters: {}, setFilter: jest.fn() }) }))
 jest.mock('@/core/lib/permissions/hooks', () => ({ usePermission: () => true }))
 jest.mock('@/core/lib/api/entities', () => ({

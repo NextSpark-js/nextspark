@@ -45,7 +45,7 @@ export default function PatternsListPage() {
   const { config: entityConfig, isLoading, error: configError, isOverride } = useEntityConfig(entityType)
 
   // Get current team for relation resolution
-  const { teamId } = useTeam()
+  const { teamId, isReady: teamReady } = useTeam()
 
   // Check permissions
   const canCreate = usePermission(`${entityType}.create` as Permission)
@@ -175,7 +175,7 @@ export default function PatternsListPage() {
 
   // Load data when config is ready AND filters are synced with URL
   useEffect(() => {
-    if (!entityConfig?.slug) return
+    if (!entityConfig?.slug || !teamReady) return
     if (!filtersMatchUrl) return
 
     const isInitial = !hasLoadedRef.current
@@ -186,7 +186,7 @@ export default function PatternsListPage() {
       hasLoadedRef.current = true
       loadData(isInitial)
     }
-  }, [entityConfig?.slug, filtersKey, filtersMatchUrl, loadData])
+  }, [entityConfig?.slug, filtersKey, filtersMatchUrl, loadData, teamReady])
 
   // Handle search input change
   const handleSearch = useCallback((query: string) => {

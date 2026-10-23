@@ -59,7 +59,8 @@ export function EntityListWrapper({
   const { config: entityConfig, isLoading, error: configError, isOverride } = useEntityConfig(entityType)
 
   // Get current team for relation resolution
-  const { teamId } = useTeam()
+  // The list is requested once the team is chosen: before that the request carries no team (400) or a stale one (403)
+  const { teamId, isReady: teamReady } = useTeam()
 
   // Check permissions
   const canCreate = usePermission(`${entityType}.create` as Permission)
@@ -201,7 +202,7 @@ export function EntityListWrapper({
 
   // Load data when config is ready AND filters are synced with URL
   useEffect(() => {
-    if (!entityConfig?.slug || !signedIn) return
+    if (!entityConfig?.slug || !signedIn || !teamReady) return
 
     // Wait for filters to sync with URL params before loading
     if (!filtersMatchUrl) return
@@ -215,7 +216,7 @@ export function EntityListWrapper({
       hasLoadedRef.current = true
       loadData(isInitial)
     }
-  }, [entityConfig?.slug, filtersKey, filtersMatchUrl, loadData, signedIn])
+  }, [entityConfig?.slug, filtersKey, filtersMatchUrl, loadData, signedIn, teamReady])
 
   // Handle search input change
   const handleSearch = useCallback((query: string) => {
