@@ -20,6 +20,8 @@ import {
 import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { getEnabledSettingsPages } from '../../../lib/config/config-client'
+import { usePermission } from '../../../lib/permissions/hooks'
+import type { Permission } from '../../../lib/permissions/types'
 
 // Icon mapping for settings pages
 const settingsIcons = {
@@ -42,6 +44,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
   const pathname = usePathname()
   const [statusMessage, setStatusMessage] = useState('')
   const { hasPassword } = useUserProfile()
+  const canAccessBilling = usePermission('settings.billing' as Permission)
   const { prefetchProfile, prefetchTeams } = usePrefetchSettings()
   const t = useTranslations('common')
   const tSettings = useTranslations('settings')
@@ -67,6 +70,10 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
       if (page.key === 'password' && !hasPassword) {
         return false
       }
+      // The billing page is for roles with settings.billing; for the rest it only redirects back
+      if (page.key === 'billing' && !canAccessBilling) {
+        return false
+      }
       return true
     }).map((page) => ({
       name: page.key,
@@ -76,7 +83,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
       description: tSettings(`overview.${page.key}Description`),
       order: page.order
     }))
-  }, [hasPassword])
+  }, [hasPassword, canAccessBilling])
 
   // Enhanced navigation handler with accessibility feedback
   const handleNavigation = useCallback((itemName: string, itemDescription: string) => {

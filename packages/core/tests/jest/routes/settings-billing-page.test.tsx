@@ -10,6 +10,7 @@ import { render, screen } from '@testing-library/react'
 const replace = jest.fn()
 const usePermission = jest.fn()
 const useTeam = jest.fn()
+const useInvoices = jest.fn()
 
 const router = { replace, push: jest.fn() } // one stable object, like next's router
 jest.mock('next/navigation', () => ({ useRouter: () => router }))
@@ -17,7 +18,7 @@ jest.mock('next/link', () => ({ __esModule: true, default: ({ children }: { chil
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
 jest.mock('@nextsparkjs/core/lib/permissions/hooks', () => ({ usePermission: (p: string) => usePermission(p) }))
 jest.mock('@nextsparkjs/core/hooks/useTeam', () => ({ useTeam: () => useTeam() }))
-jest.mock('@nextsparkjs/core/hooks/useInvoices', () => ({ useInvoices: () => ({ data: { data: [], info: { total: 0 } }, isLoading: false }) }))
+jest.mock('@nextsparkjs/core/hooks/useInvoices', () => ({ useInvoices: (o: unknown) => useInvoices(o) }))
 jest.mock('@nextsparkjs/core/hooks/useSubscription', () => ({
   useSubscription: () => ({ planSlug: 'free', plan: null, isActive: true, isReady: true }),
 }))
@@ -32,6 +33,8 @@ import BillingPage from '../../../src/routes/dashboard/settings/billing/page'
 
 beforeEach(() => {
   replace.mockClear()
+  useInvoices.mockReset()
+  useInvoices.mockReturnValue({ data: { data: [], info: { total: 0 } }, isLoading: false })
   usePermission.mockReturnValue(true)
   useTeam.mockReturnValue({ isReady: true })
   mockRegistry.provider = 'stripe'
@@ -76,6 +79,18 @@ test('provider none: no upgrade and no add-payment-method action', () => {
   expect(screen.queryByText('billing.upgrade.button')).toBeNull()
   expect(screen.queryByText('billing.paymentMethod.addButton')).toBeNull()
   expect(screen.getByTestId('usage-bar-tasks')).toBeInTheDocument()
+})
+
+test('without the permission the invoices are not requested (the route answers 403)', () => {
+  usePermission.mockReturnValue(false)
+  render(<BillingPage />)
+  expect(useInvoices).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }))
+  expect(useInvoices).not.toHaveBeenCalledWith(expect.objectContaining({ enabled: true }))
+})
+
+test('with the permission the invoices are requested', () => {
+  render(<BillingPage />)
+  expect(useInvoices).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }))
 })
 
 test('no limits configured: says so instead of an empty card', () => {

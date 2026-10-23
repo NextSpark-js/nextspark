@@ -39,13 +39,15 @@ function BillingPage() {
   const t = useTranslations('settings')
   const tb = useTranslations('billing')
 
-  // Fetch invoices for current team (must be before early return)
+  // Fetch invoices for current team (must be before early return). Without the permission the route answers 403,
+  // so nothing is requested until the permission is there.
   const {
     data: invoicesData,
     isLoading: invoicesLoading,
   } = useInvoices({
     limit: invoicesLimit,
     offset: 0,
+    enabled: canAccessBilling,
   })
 
   const totalInvoices = invoicesData?.info?.total ?? 0
