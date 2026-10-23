@@ -105,9 +105,11 @@ export function EntityDetail({
   })
 
 
-  // Get fields that should be shown in detail view
+  // Get fields that should be shown in detail view. A key missing from the record was left out by the API
+  // (hidden from this role by access.fieldVisibility, #325; the API returns every column otherwise, null included),
+  // so it is not rendered as an empty value, the same rule as the edit form (EntityFormWrapper).
   const detailFields = entityConfig.fields
-    .filter(field => field.display.showInDetail)
+    .filter(field => field.display.showInDetail && (!data || field.name in data))
     .sort((a, b) => a.display.order - b.display.order)
 
   // Get child entities that should be shown from registry data
