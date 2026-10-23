@@ -14,6 +14,7 @@ A project takes NextSpark from npm: `package.json` pins `@nextsparkjs/core`, `@n
 pnpm update-core                            # Update to the version npm tags latest
 pnpm update-core --version 0.1.0-beta.189   # Update to a specific version
 pnpm update-core --branch                   # Create update/<version> and update there
+pnpm update-core --no-dependency-floors     # Do not raise dependencies to core's ranges; list them
 
 pnpm update-core --list                     # List published versions
 pnpm update-core --check                    # Say whether a newer version is published
@@ -42,7 +43,7 @@ pnpm install
 
 | What | How |
 |------|-----|
-| `package.json` | Only the versions of the `@nextsparkjs` packages, all set to exactly the target. A `^` or `~` range is replaced by the exact version: with a range, `pnpm install` takes the newest published version the range allows, which can be newer than the target. |
+| `package.json` | The versions of the `@nextsparkjs` packages, all set to exactly the target. A `^` or `~` range is replaced by the exact version: with a range, `pnpm install` takes the newest published version the range allows, which can be newer than the target. Then, once the new core is installed, every dependency the project declares below what that core needs (`next`, `better-auth`, `zod`, ...) is set to core's range (the field it was declared in is kept) and installed again, before `nextspark prepare` runs; `--no-dependency-floors` skips this (see [After a Successful Update](#after-a-successful-update)). |
 | `pnpm-lock.yaml`, `node_modules/` | `pnpm install`, run where `pnpm-lock.yaml` is |
 | `src/app/`, `.nextspark/` | `nextspark prepare`, which regenerates the host and the registries from the new core (both are git-ignored) |
 | `.next/` | Removed, so the next build starts clean |
@@ -50,7 +51,7 @@ pnpm install
 
 ### What `update-core` Itself Never Writes
 
-- The rest of `package.json`: name, scripts, other dependencies. The run ends by listing the ones it declares below what the new core needs (see [After a Successful Update](#after-a-successful-update))
+- The rest of `package.json`: name, scripts, and dependencies that are at or above what the new core needs. With `--no-dependency-floors` the run ends by listing the ones below it instead of raising them (see [After a Successful Update](#after-a-successful-update))
 - `api/`, `blocks/`, `components/`, `config/`, `entities/`, `lib/`, `messages/`, `migrations/`, `plugins/`, `public/`, `styles/`, `templates/`, and `tests/`: project-owned root-first source
 - `next.config.mjs`, `tsconfig.json`, `i18n.ts`, `src/instrumentation.ts`, `proxy.ts` or `middleware.ts`: project files. `nextspark sync:app`, which used to update them, was [removed in 0.1.0-beta.192](./05-sync-app-removal.md); a change a new release needs in one of them is in its release notes. Your own headers, redirects, rewrites and CSP sources can live in `next.config.extend.mjs` instead of the Next config, which upgrades leave alone (see [Extending the headers, redirects, rewrites and CSP](../06-authentication/07-security-best-practices.md#extending-the-headers-redirects-rewrites-and-csp)). One exception: `nextspark prepare`, which update-core runs, replaces a `src/proxy.ts`, `src/middleware.ts` or `src/instrumentation.ts` that is byte for byte a template an earlier core shipped with the current template (a facade over `@nextsparkjs/core/proxy` or `@nextsparkjs/core/instrumentation`), and says so; an `instrumentation.ts` at the project root that is such a template moves to `src/instrumentation.ts`, where Next.js loads it (`NS_INSTRUMENTATION_MOVED`). A file with any change of yours is kept, and prepare prints the replacement to make (`NS_PROXY_FACADE_MISSING`, `NS_INSTRUMENTATION_FACADE_MISSING`, `NS_INSTRUMENTATION_NOT_LOADED`)
 - `.env*`: environment files
@@ -234,7 +235,18 @@ Registry lookups go through `pnpm view`, so they use the registry your project's
 
 `New core migrations` and the `db:migrate` step only appear when the new core brings migrations the previous one didn't have.
 
-When core raises the version line of a dependency your project also declares (Better Auth, `zod`, `next`, ...), the update does not touch it, and the run ends by listing the ones left below what the new core needs, with the `pnpm add` that moves them:
+When core raises the version line of a dependency your project also declares (Better Auth, `zod`, `next`, ...), the update raises it, because `nextspark prepare` stops on a `next` below what core supports. The new core is only known once it is installed, so after the first `pnpm install` the update compares your declared ranges with core's, writes core's range for each one below it, and runs `pnpm install` again before `prepare`:
+
+```
+   Raising the dependencies below what @nextsparkjs/core 0.1.0-beta.199 needs:
+     @better-fetch/fetch 1.3.1 -> 1.3.2
+     better-auth ~1.6.33 -> ~1.7.7
+     zod ^4.1.5 -> ^4.5.4
+```
+
+Review them in `git diff` with the rest. A range at or above core's is left as it is. This applies from `0.1.0-beta.199`: the updater that runs is the one installed in your project, so an update that starts on an earlier release runs that release's updater, which only lists them (see [Updating from 0.1.0-beta.198 or earlier](#updating-from-010-beta198-or-earlier)).
+
+With `--no-dependency-floors` the update does not touch them, and the run ends by listing the ones left below what the new core needs, with the `pnpm add` that moves them:
 
 ```
   Not moved: these dependencies in package.json are below what @nextsparkjs/core 0.1.0-beta.199 needs, and update-core never writes dependencies other than the @nextsparkjs packages:
@@ -246,6 +258,16 @@ When core raises the version line of a dependency your project also declares (Be
 ```
 
 The comparison is between the lowest version your declared range allows and the lowest version core's `dependencies` and `peerDependencies` range allows. Nothing is printed when no dependency is below. Until you move them, the lockfile holds two copies, and code of yours that imports the package gets the older one while core uses its own.
+
+### Updating from 0.1.0-beta.198 or earlier
+
+`pnpm update-core` runs the updater installed in your project. An update that starts on `0.1.0-beta.198` or earlier therefore runs that release's updater, which sets the `@nextsparkjs` pins and installs but neither raises nor lists the third-party versions the new core needs, and its `nextspark prepare` stops (`NS_HOST_UNSUPPORTED_NEXT_VERSION` for `next`). Raise them yourself first, then update:
+
+1. Read what the target needs: `npm view @nextsparkjs/core@<target> dependencies peerDependencies`. For `0.1.0-beta.199` that is `next` `~16.4.2`, `better-auth` `~1.7.7`, `@better-fetch/fetch` `1.3.2`, `zod` `^4.5.4`.
+2. `pnpm add 'next@~16.4.2' 'better-auth@~1.7.7' '@better-fetch/fetch@1.3.2' 'zod@^4.5.4'` (and `pnpm add -D 'eslint-config-next@~16.4.2'`) for the ones the project declares, then commit: `update-core` starts only from a clean git tree.
+3. `pnpm update-core --version <target>`.
+
+From the target onward, later updates raise these themselves, and no manual step is needed.
 
 ---
 

@@ -1390,7 +1390,7 @@ test('a project created without an update-core script runs it through the bin co
   assert.match(current.stdout, new RegExp(`@nextsparkjs/core ${manifest.version.replace(/\./g, '\\.')}`))
 })
 
-// #254: the dependencies a project declares below what the new core needs are listed, never written
+// #254, #305: the dependencies a project declares below what the new core needs are raised before prepare runs; with --no-dependency-floors they are listed, never written
 
 /** The semver package the installed CLI resolves; the stand-in install links it into the CLI it installs. */
 const SEMVER_DIR = path.dirname(createRequire(path.join(CORE_DIR, '../cli/package.json')).resolve('semver/package.json'))
@@ -1399,11 +1399,11 @@ const CORE_NEEDS = { dependencies: { 'better-auth': '~1.7.7', '@better-fetch/fet
 const BEHIND = { 'better-auth': '~1.6.33', '@better-fetch/fetch': '1.3.1', zod: '^4.1.5' }
 const ALIGNED = { 'better-auth': '~1.7.7', '@better-fetch/fetch': '1.3.2', zod: '^4.5.4' }
 
-test('lists the dependencies left below what the new core needs, with one pnpm add, and writes none of them', (t) => {
+test('--no-dependency-floors lists the dependencies left below what the new core needs, with one pnpm add, and writes none of them', (t) => {
   const root = createProject(t, { pins: BEHIND })
   const before = fs.readFileSync(path.join(root, 'package.json'), 'utf8')
 
-  const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_NEEDS, installShell: WITH_SEMVER })
+  const result = runUpdateCore(root, ['--version', TO, '--no-dependency-floors'], { coreManifest: CORE_NEEDS, installShell: WITH_SEMVER })
 
   assert.equal(result.status, 0, result.output)
   assert.match(result.stdout, /Not moved: these dependencies in package.json are below what @nextsparkjs\/core 0\.1\.0-beta\.189 needs/)
@@ -1415,6 +1415,21 @@ test('lists the dependencies left below what the new core needs, with one pnpm a
   // Only the @nextsparkjs pins moved
   const after = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
   assert.deepEqual({ ...after.dependencies, ...after.devDependencies }, { ...JSON.parse(before).dependencies, ...JSON.parse(before).devDependencies, '@nextsparkjs/core': TO, '@nextsparkjs/cli': TO, '@nextsparkjs/testing': TO })
+})
+
+test('raises the dependencies below what the new core needs, then installs again before prepare', (t) => {
+  const root = createProject(t, { pins: BEHIND })
+
+  const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_NEEDS, installShell: WITH_SEMVER })
+
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.stdout, /Raising the dependencies below what @nextsparkjs\/core 0\.1\.0-beta\.189 needs:\n {5}@better-fetch\/fetch 1\.3\.1 -> 1\.3\.2\n {5}better-auth ~1\.6\.33 -> ~1\.7\.7\n {5}zod \^4\.1\.5 -> \^4\.5\.4\n/)
+  assert.doesNotMatch(result.stdout, /Not moved/)
+  const after = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+  assert.deepEqual({ ...after.dependencies, ...after.devDependencies }, { ...ALIGNED, ...Object.fromEntries(Object.entries({ ...after.dependencies, ...after.devDependencies }).filter(([name]) => !(name in ALIGNED))) })
+  const installs = result.calls.filter((call) => call === 'install')
+  assert.equal(installs.length, 2, result.calls.join('\n'))
+  assert.ok(result.calls.lastIndexOf('install') < result.calls.indexOf('nextspark prepare'), result.calls.join('\n'))
 })
 
 test('prints nothing about dependencies when the project is aligned with the new core', (t) => {
