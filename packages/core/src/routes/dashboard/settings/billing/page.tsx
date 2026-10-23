@@ -18,7 +18,9 @@ import { sel } from '@nextsparkjs/core/lib/selectors'
 import { useTranslations } from 'next-intl'
 import { useInvoices } from '@nextsparkjs/core/hooks/useInvoices'
 import { useSubscription } from '@nextsparkjs/core/hooks/useSubscription'
-import { InvoicesTable } from '@nextsparkjs/core/components/billing'
+import { InvoicesTable, UsageBar } from '@nextsparkjs/core/components/billing'
+import { isBillingGatewayDisabled } from '@nextsparkjs/core/lib/billing/provider-mode'
+import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 import { useTeam } from '@nextsparkjs/core/hooks/useTeam'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
@@ -29,6 +31,9 @@ function BillingPage() {
   // usePermission is false until the team is chosen, so a redirect waits for it
   const { isReady: teamReady } = useTeam()
   const { planSlug, plan, isActive, isReady } = useSubscription()
+  // Without a payment gateway (provider: 'none') there is no checkout and no payment method to add
+  const hasGateway = !isBillingGatewayDisabled()
+  const limitSlugs = Object.keys(BILLING_REGISTRY.limits)
   const [statusMessage, setStatusMessage] = useState('')
   const [invoicesLimit, setInvoicesLimit] = useState(3)
   const t = useTranslations('settings')
@@ -119,39 +124,39 @@ function BillingPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="text-center p-4 rounded-lg bg-muted/50">
-                  <div className="text-2xl font-bold text-primary">0 / 100</div>
-                  <div className="text-sm text-muted-foreground">{t('billing.usage.tasks')}</div>
+              {limitSlugs.length > 0 && (
+                <div className="grid gap-4 md:grid-cols-3">
+                  {limitSlugs.map(slug => (
+                    <div key={slug} className="p-4 rounded-lg bg-muted/50 space-y-2" data-cy={`billing-usage-${slug}`}>
+                      <div className="text-sm font-medium">{tb(`limits.${slug}`)}</div>
+                      <UsageBar limitSlug={slug} />
+                    </div>
+                  ))}
                 </div>
-                <div className="text-center p-4 rounded-lg bg-muted/50">
-                  <div className="text-2xl font-bold text-primary">1 / 1</div>
-                  <div className="text-sm text-muted-foreground">{t('billing.usage.teamMember')}</div>
-                </div>
-                <div className="text-center p-4 rounded-lg bg-muted/50">
-                  <div className="text-2xl font-bold text-primary">0 / 5</div>
-                  <div className="text-sm text-muted-foreground">{t('billing.usage.projects')}</div>
-                </div>
-              </div>
+              )}
 
-              <Separator />
+              {hasGateway && (
+                <>
+                  <Separator />
 
-              <div className="flex justify-between items-center">
-                <div>
-                  <h4 className="font-medium">{t('billing.upgrade.title')}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {t('billing.upgrade.description')}
-                  </p>
-                </div>
-                  <Link href="/dashboard/settings/plans">
-                    <Button
-                      onClick={handleUpgrade}
-                      data-cy={sel('settings.billing.currentPlan.upgradeButton')}
-                    >
-                      {t('billing.upgrade.button')}
-                    </Button>
-                  </Link>
-              </div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium">{t('billing.upgrade.title')}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {t('billing.upgrade.description')}
+                      </p>
+                    </div>
+                    <Link href="/dashboard/settings/plans">
+                      <Button
+                        onClick={handleUpgrade}
+                        data-cy={sel('settings.billing.currentPlan.upgradeButton')}
+                      >
+                        {t('billing.upgrade.button')}
+                      </Button>
+                    </Link>
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -191,38 +196,40 @@ function BillingPage() {
         </Card>
 
         {/* Payment Method - Full Width */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              {t('billing.paymentMethod.title')}
-            </CardTitle>
-            <CardDescription>
-              {t('billing.paymentMethod.description')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between gap-4 p-4 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">{t('billing.paymentMethod.noMethod')}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {t('billing.paymentMethod.addCard')}
-                  </p>
+        {hasGateway && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                {t('billing.paymentMethod.title')}
+              </CardTitle>
+              <CardDescription>
+                {t('billing.paymentMethod.description')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between gap-4 p-4 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">{t('billing.paymentMethod.noMethod')}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('billing.paymentMethod.addCard')}
+                    </p>
+                  </div>
                 </div>
+                <Button
+                  variant="outline"
+                  onClick={handleAddPayment}
+                  data-cy={sel('settings.billing.paymentMethod.addButton')}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {t('billing.paymentMethod.addButton')}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                onClick={handleAddPayment}
-                data-cy={sel('settings.billing.paymentMethod.addButton')}
-              >
-                <CreditCard className="mr-2 h-4 w-4" aria-hidden="true" />
-                {t('billing.paymentMethod.addButton')}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Plan Features */}
         <Card className="mt-8">
@@ -234,18 +241,6 @@ function BillingPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="flex items-center gap-3">
-                <Check className="h-4 w-4 text-green-500" />
-                <span className="text-sm">{t('billing.features.taskLimit')}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Check className="h-4 w-4 text-green-500" />
-                <span className="text-sm">{t('billing.features.teamMember')}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Check className="h-4 w-4 text-green-500" />
-                <span className="text-sm">{t('billing.features.projectLimit')}</span>
-              </div>
               <div className="flex items-center gap-3">
                 <Check className="h-4 w-4 text-green-500" />
                 <span className="text-sm">{t('billing.features.basicSupport')}</span>
