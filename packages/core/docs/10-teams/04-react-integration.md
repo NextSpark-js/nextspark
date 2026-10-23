@@ -41,6 +41,11 @@ interface TeamContextValue {
   // Loading state
   isLoading: boolean
 
+  // The teams are loaded AND currentTeam is chosen (isLoading ends one render
+  // earlier). A user with no team is ready too. Wait for it before a request or a
+  // permission check that needs a team.
+  isReady: boolean
+
   // Switching state (during team change)
   isSwitching: boolean
 
@@ -67,6 +72,7 @@ function MyComponent() {
     currentTeam,
     userTeams,
     isLoading,
+    isReady,
     isSwitching,
     switchTeam,
     refreshTeams
@@ -75,7 +81,7 @@ function MyComponent() {
   // Always check mode capabilities
   const { canSwitch, canCreate, canInvite } = useTeamsConfig()
 
-  if (isLoading) {
+  if (!isReady) {
     return <div>Loading teams...</div>
   }
 
