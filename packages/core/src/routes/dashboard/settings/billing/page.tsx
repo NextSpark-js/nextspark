@@ -20,11 +20,14 @@ import { useInvoices } from '@nextsparkjs/core/hooks/useInvoices'
 import { useSubscription } from '@nextsparkjs/core/hooks/useSubscription'
 import { InvoicesTable } from '@nextsparkjs/core/components/billing'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
+import { useTeam } from '@nextsparkjs/core/hooks/useTeam'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 
 function BillingPage() {
   const router = useRouter()
   const canAccessBilling = usePermission('settings.billing' as Permission)
+  // usePermission is false until the team is chosen, so a redirect waits for it
+  const { isReady: teamReady } = useTeam()
   const { planSlug, plan, isActive, isReady } = useSubscription()
   const [statusMessage, setStatusMessage] = useState('')
   const [invoicesLimit, setInvoicesLimit] = useState(3)
@@ -57,10 +60,10 @@ function BillingPage() {
 
   // Redirect if user doesn't have billing permission
   useEffect(() => {
-    if (canAccessBilling === false) {
+    if (teamReady && !canAccessBilling) {
       router.replace('/dashboard/settings')
     }
-  }, [canAccessBilling, router])
+  }, [teamReady, canAccessBilling, router])
 
   // Show nothing while checking permissions or redirecting
   if (!canAccessBilling) {

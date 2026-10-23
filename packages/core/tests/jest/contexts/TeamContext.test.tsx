@@ -229,3 +229,53 @@ describe('TeamProvider self-heal', () => {
     await waitFor(() => expect(screen.getByTestId('current-team').textContent).toBe('team-b'))
   })
 })
+
+describe('TeamProvider isReady', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    global.fetch = jest.fn()
+  })
+
+  it('is false until currentTeam is chosen: isLoading ends one render earlier', async () => {
+    ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url === '/api/v1/teams') {
+        return Promise.resolve({ ok: true, json: async () => ({ data: [membershipRow(TEAM_A)] }) })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    })
+    const seen: Array<{ isLoading: boolean; isReady: boolean; team: string | null }> = []
+    function Recorder() {
+      const { isLoading, isReady, currentTeam } = useTeamContext()
+      seen.push({ isLoading, isReady, team: currentTeam?.id ?? null })
+      return null
+    }
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TeamProvider><Recorder /></TeamProvider>
+      </QueryClientProvider>
+    )
+
+    await waitFor(() => expect(seen[seen.length - 1]).toEqual({ isLoading: false, isReady: true, team: 'team-a' }))
+    // the render between "teams loaded" and "team chosen" exists, and is not ready
+    expect(seen.some(s => !s.isLoading && s.team === null && !s.isReady)).toBe(true)
+    expect(seen.some(s => s.isReady && s.team === null)).toBe(false)
+  })
+
+  it('is true for a user with no team: there is nothing left to choose', async () => {
+    ;(global.fetch as jest.Mock).mockImplementation((url: string) =>
+      Promise.resolve({ ok: true, json: async () => (url === '/api/v1/teams' ? { data: [] } : {}) })
+    )
+    function ReadyProbe() {
+      return <div data-testid="ready">{String(useTeamContext().isReady)}</div>
+    }
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TeamProvider><ReadyProbe /></TeamProvider>
+      </QueryClientProvider>
+    )
+
+    await waitFor(() => expect(screen.getByTestId('ready').textContent).toBe('true'))
+  })
+})

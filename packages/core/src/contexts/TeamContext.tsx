@@ -14,6 +14,12 @@ interface TeamContextValue {
   currentTeam: Team | null
   userTeams: UserTeamMembership[]
   isLoading: boolean
+  /**
+   * The teams are loaded AND `currentTeam` (with the `activeTeamId` that API requests send) has been chosen from them.
+   * `isLoading` turns false one render before that, so a request or a permission check that must not run
+   * without a team waits for this. A user with no team is ready too: there is nothing left to choose.
+   */
+  isReady: boolean
   isSwitching: boolean
   canCurrentUserCreateTeam: boolean
   switchTeam: (teamId: string) => Promise<void>
@@ -199,6 +205,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   // Combined loading state
   const isLoading = authLoading || teamsLoading
+  // `isLoading` ends when the teams arrive; currentTeam is set by the effect below, one render later
+  const isReady = !isLoading && (!user || userTeams.length === 0 || currentTeam !== null)
 
   // Calculate if current user can create teams
   const canCurrentUserCreateTeam = useMemo(() => {
@@ -386,6 +394,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         currentTeam,
         userTeams,
         isLoading,
+        isReady,
         isSwitching,
         canCurrentUserCreateTeam,
         switchTeam,
