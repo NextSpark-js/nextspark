@@ -28,10 +28,11 @@ In the order that can stop a build or a start first.
   prepare`, commit, and `pnpm db:migrate`. Running `pnpm update-core --version 0.1.0-beta.199` again only answers "Already on
   0.1.0-beta.199" and does not run `prepare`. To start over instead, run the `git reset --hard ...` line it printed and follow the order.
 - **If your project creates a `QueryClient` of its own outside `QueryProvider`, register it so a sign-in still empties it.** `useAuth` no longer reads the `QueryClientContext`: it empties the caches registered with `registerQueryCache` (`@nextsparkjs/core/lib/auth/query-caches`), where `QueryProvider` registers its own. Add `useEffect(() => registerQueryCache(() => client.clear()), [client])` next to your client; nothing changes for a project that uses only `QueryProvider` (#341).
-- **Run `pnpm db:migrate`: core adds migrations `035` to `042`.** They are idempotent. `035` to `037` and `039` change RLS policies, a function
+- **Run `pnpm db:migrate`: core adds migrations `035` to `043`.** They are idempotent. `035` to `037` and `039` change RLS policies, a function
   and a trigger, so only a project that runs the application as `nextspark_app` (the RLS cutover in
   `22-stability-and-support/04-postgresql-requirements.md`) sees a difference there; `038` also touches the auth tables, `040` creates a
-  table, `041` replaces a CHECK constraint and `042` adds an index. What each means for code of your own that writes these tables:
+  table, `041` replaces a CHECK constraint, `042` adds an index and `043` rewrites the expression of the policies that call the RLS
+  helpers. What each means for code of your own that writes these tables:
   - **`035_team_admin_metas_and_billing_policies.sql`.** On the `nextspark_app` connection:
     - a team's admins update the team, as `PATCH /api/v1/teams/:teamId` allows, but only its name, slug, description, `avatarUrl` and
       `settings`; only a superadmin or a developer (`can_bypass_rls()`, see `036`) changes `teams."ownerId"` (an ownership transfer runs
@@ -78,6 +79,12 @@ In the order that can stop a build or a start first.
   - **`042_billing_webhook_events_processed_at_index.sql`** adds the partial index the cleanup of processed events uses; nothing to change
     in your code. Processed events are deleted after `webhookEventRetentionDays` in `config/billing.config.ts` (30 days by default, at
     least 3).
+  - **`043_rls_helpers_select_wrapper.sql`** rewrites, with `ALTER POLICY`, every policy of the `public` schema that calls
+    `get_user_team_ids()`, `is_superadmin()`, `can_bypass_rls()` or `get_auth_user_id()` without the sub-select, your project's own
+    policies included, as `(SELECT public.helper())`. Names, commands, roles and what each policy allows do not change, and a second run
+    alters nothing. A policy whose expression has a string literal containing a helper call, or whose rewritten expression Postgres
+    rejects, stays as it was with a warning naming it: wrap it by hand. A migration of your own that drops and recreates a policy should
+    write the `(SELECT ...)` form; see [RLS policies](./docs/10-backend/03-rls-policies.md#call-the-helpers-as-select-).
   - **`pnpm db:migrate` stops when an auth table has a NOT NULL column without a default that Better Auth never writes** (`users`,
     `session`, `account`, `verification`), after running the migrations, and names each column; `nextspark doctor` reports the same as
     "Auth schema". Better Auth 1.7.3 and later refuses every auth call, `getSession` included, on such a column: a column a project or
