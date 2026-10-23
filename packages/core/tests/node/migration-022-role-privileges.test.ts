@@ -103,7 +103,14 @@ test('022 as CREATEROLE without superuser, with a NOINHERIT nextspark_app create
   await admin.query('GRANT authenticated TO nextspark_app')
 
   const warnings = await run022(port, 'creator', 'creatordb')
-  assert.deepEqual(warnings, [])
+  // PostgreSQL 16+: COMMENT ON ROLE needs ADMIN OPTION on the role, which `creator` does not have on nextspark_app
+  const version = Number((await admin.query('SHOW server_version_num')).rows[0].server_version_num)
+  if (version >= 160000) {
+    assert.equal(warnings.length, 1, warnings.join('\n'))
+    assert.match(warnings[0], /could not set the comment on role nextspark_app/)
+  } else {
+    assert.deepEqual(warnings, [])
+  }
   // pg_has_role USAGE is "member and inherits": on PostgreSQL 16 and later the membership has to be granted WITH INHERIT TRUE
   const { rows } = await admin.query("SELECT pg_has_role('nextspark_app', 'authenticated', 'USAGE') AS usage")
   assert.equal(rows[0].usage, true)

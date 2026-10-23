@@ -53,7 +53,9 @@ jobs:
       - name: Test core Node tests
         # initdb and pg_ctl are not on the PATH of ubuntu-24.04; the tests that start a throwaway cluster skip
         # themselves without them, so the step fails if the image no longer has them.
-        run: test -x /usr/lib/postgresql/16/bin/initdb && PATH="$PATH:/usr/lib/postgresql/16/bin" pnpm exec tsx --test packages/core/tests/node/*.test.ts
+        run: |
+          test -x /usr/lib/postgresql/16/bin/initdb || { echo "::error::PostgreSQL 16 binaries not found at /usr/lib/postgresql/16/bin"; exit 1; }
+          PATH="$PATH:/usr/lib/postgresql/16/bin" pnpm exec tsx --test packages/core/tests/node/*.test.ts
         env:
           npm_config_registry: http://127.0.0.1:9
 
