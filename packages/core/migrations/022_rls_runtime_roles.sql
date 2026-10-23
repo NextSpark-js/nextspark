@@ -47,18 +47,28 @@ END $$;
 -- caught; any other error still stops the migration.
 DO $$
 BEGIN
-  ALTER ROLE nextspark_app INHERIT;
+  IF NOT (SELECT rolinherit FROM pg_roles WHERE rolname = 'nextspark_app') THEN
+    ALTER ROLE nextspark_app INHERIT;
+  END IF;
 EXCEPTION WHEN insufficient_privilege THEN
   RAISE WARNING 'Role setup: could not run ALTER ROLE nextspark_app INHERIT (%). Ask a superuser to run it if nextspark_app is not already INHERIT.', SQLERRM;
 END $$;
 
+-- From PostgreSQL 16 the INHERIT option of a membership is set when it is granted (it is taken from the
+-- role attribute only on 15 and before), and the attribute change above can fail for a role this one did not
+-- create. So the check is "can use the privileges" (USAGE: member and inherits), and on 16+ the grant says
+-- WITH INHERIT TRUE.
 DO $$
 BEGIN
-  IF NOT pg_has_role('nextspark_app', 'authenticated', 'MEMBER') THEN
-    GRANT authenticated TO nextspark_app;
+  IF NOT pg_has_role('nextspark_app', 'authenticated', 'USAGE') THEN
+    IF current_setting('server_version_num')::int >= 160000 THEN
+      EXECUTE 'GRANT authenticated TO nextspark_app WITH INHERIT TRUE';
+    ELSE
+      GRANT authenticated TO nextspark_app;
+    END IF;
   END IF;
 EXCEPTION WHEN insufficient_privilege THEN
-  RAISE WARNING 'Role setup: could not run GRANT authenticated TO nextspark_app (%). Ask a superuser to run it: policies written TO authenticated do not apply to nextspark_app until it is a member.', SQLERRM;
+  RAISE WARNING 'Role setup: could not run the GRANT of authenticated to nextspark_app (%). Ask a superuser to run it (on PostgreSQL 16 and later: GRANT authenticated TO nextspark_app WITH INHERIT TRUE): policies written TO authenticated do not apply to nextspark_app until it is a member that inherits.', SQLERRM;
 END $$;
 
 -- Allow the migration/validation user to SET ROLE nextspark_app (e.g. an RLS
@@ -102,9 +112,12 @@ BEGIN
 END $$;
 
 DO $$
+DECLARE
+  wanted CONSTANT text := 'Non-owner runtime role for the NextSpark app. Member of authenticated (policies TO authenticated apply). RLS is evaluated for every query once DATABASE_URL connects as this role instead of the table owner.';
 BEGIN
-  COMMENT ON ROLE nextspark_app IS
-    'Non-owner runtime role for the NextSpark app. Member of authenticated (policies TO authenticated apply). RLS is evaluated for every query once DATABASE_URL connects as this role instead of the table owner.';
+  IF shobj_description((SELECT oid FROM pg_roles WHERE rolname = 'nextspark_app'), 'pg_authid') IS DISTINCT FROM wanted THEN
+    EXECUTE format('COMMENT ON ROLE nextspark_app IS %L', wanted);
+  END IF;
 EXCEPTION WHEN insufficient_privilege THEN
   RAISE WARNING 'Role setup: could not set the comment on role nextspark_app (%). It is only a description; nothing depends on it.', SQLERRM;
 END $$;
