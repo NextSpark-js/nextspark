@@ -10,11 +10,5 @@
     "type": "maintainer-path-unix",
     "match": "content:scripts/utils/paths.mjs:25:maintainer-path-unix",
     "reason": "The @example JSDoc for getBasename() uses 'file:///Users/name/file.txt' as an illustrative cross-platform path sample, not a real maintainer path."
-  },
-  {
-    "package": "@nextsparkjs/core",
-    "type": "secret-pem",
-    "match": "content:dist/lib/auth/readiness.js:219:secret-pem",
-    "reason": "A regular expression in the Apple sign-in readiness check (lib/auth/readiness.ts) that validates the shape of APPLE_PRIVATE_KEY; it holds the PEM header and footer text, not a key."
   }
 ]

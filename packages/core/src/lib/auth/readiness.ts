@@ -464,7 +464,7 @@ const SOCIAL_CREDENTIALS: Record<SocialLoginMethod, { label: string; fields: rea
       { key: 'teamId', variable: 'APPLE_TEAM_ID', pattern: APPLE_ID_PATTERN },
       { key: 'keyId', variable: 'APPLE_KEY_ID', pattern: APPLE_ID_PATTERN },
       // The .p8 file's contents; newlines may be written as \n in .env
-      { key: 'privateKey', variable: 'APPLE_PRIVATE_KEY', pattern: /^(?:\\n)*-----BEGIN PRIVATE KEY-----(?:\s|\\n)[\s\S]+(?:\s|\\n)-----END PRIVATE KEY-----(?:\\n)*$/ },
+      { key: 'privateKey', variable: 'APPLE_PRIVATE_KEY', pattern: /^(?:\\n)*-{5}BEGIN PRIVATE KEY-{5}(?:\s|\\n)[\s\S]+(?:\s|\\n)-----END PRIVATE KEY-----(?:\\n)*$/ },
     ],
   },
 }

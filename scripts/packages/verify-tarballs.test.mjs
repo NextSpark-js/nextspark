@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -191,6 +191,27 @@ test('a leaked PEM private key header fails and masks the match', () => {
     const finding = results[0].findings.find((f) => f.type === 'secret-pem')
     assert.ok(finding, JSON.stringify(results[0].findings, null, 2))
     assert.doesNotMatch(finding.message, /MIIEpAIBAAKCAQEA/)
+  })
+})
+
+test('the Apple key shape check ships without a PEM header literal or an allowlist entry, and a real key still fails against the shipped allowlist (#305)', () => {
+  const shipped = join(dirname(SCRIPT), 'verify-tarballs.allowlist.json')
+  assert.deepEqual(loadAllowlist(shipped).filter((entry) => entry.type === 'secret-pem'), [])
+  const source = readFileSync(join(dirname(SCRIPT), '../../packages/core/src/lib/auth/readiness.ts'), 'utf8')
+  assert.doesNotMatch(source, /-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----/)
+  assert.match(source, /-\{5\}BEGIN PRIVATE KEY-\{5\}/)
+
+  withFixtureDir((dir) => {
+    buildFixtureTarball(dir, 'nextsparkjs-fixture-0.1.0-beta.192.tgz', {
+      'package.json': VALID_PKG_JSON(),
+      'dist/index.js': 'export const x = 1;\n',
+      'dist/index.d.ts': 'export declare const x: number;\n',
+      'dist/lib/foo.js': 'export const foo = 1;\n',
+      'dist/lib/foo.d.ts': 'export declare const foo: number;\n',
+      'dist/lib/auth/readiness.js': '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBg\n-----END PRIVATE KEY-----\n',
+    })
+    const results = verifyDirectory(dir, shipped)
+    assert.ok(results[0].findings.some((f) => f.type === 'secret-pem'), JSON.stringify(results[0].findings, null, 2))
   })
 })
 
