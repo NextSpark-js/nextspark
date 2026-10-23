@@ -7,16 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.199] - 2026-10-22
+
 ### Added
 
 - `QueryProvider` accepts optional `client` and `defaultOptions` props: an injected `QueryClient` is the one provided to the tree, and `defaultOptions` are merged over the current defaults in a client the provider creates. Without props the shared `queryClient` and its defaults are unchanged (#336).
 - The `mobile/` template's `app.config.ts` lists `blockedPermissions` in its `android` block, empty, with a commented list of permissions libraries commonly add to the manifest (camera, audio recording, storage), and the README explains how to review the merged manifest (#337).
-
-### Fixed
-
-- A release build (`__DEV__` false) with neither `extra.apiUrl` nor `EXPO_PUBLIC_API_URL` now throws a clear "API URL is not configured" error when the client loads, instead of sending every request to a localhost URL. Development keeps the dev server host and localhost fallbacks (#317).
-
-## [0.1.0-beta.199] - 2026-10-18
 
 ### Changed
 
@@ -26,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `AuthLoginMethod` includes `'github'`, `'microsoft'` and `'apple'` (and the new `SocialLoginMethod`), the methods core accepts in `auth.methods`, so a mobile `app.config.ts` that lists them type-checks. The login screen draws no button for them: mobile has a native flow for email code, email and password, and Google only (#286).
+- A release build (`__DEV__` false) with neither `extra.apiUrl` nor `EXPO_PUBLIC_API_URL` now throws a clear "API URL is not configured" error when the client loads, instead of sending every request to a localhost URL. Development keeps the dev server host and localhost fallbacks (#317).
 
 ## [0.1.0-beta.198] - 2026-10-09
 
