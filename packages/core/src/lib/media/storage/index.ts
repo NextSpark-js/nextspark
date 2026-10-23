@@ -28,6 +28,11 @@ export interface StorageDriver {
   delete(url: string): Promise<void>
   /** Uploads that go from the client straight to storage (s3 only). */
   direct?: DirectUploads
+  /**
+   * Private bucket (s3 with STORAGE_S3_PRIVATE=true): a short-lived signed GET URL for a stored URL of
+   * this bucket and environment, null for any other URL. Absent on drivers whose URLs are already usable.
+   */
+  signedReadUrl?(url: string): Promise<string | null>
 }
 
 export interface PresignedUpload {

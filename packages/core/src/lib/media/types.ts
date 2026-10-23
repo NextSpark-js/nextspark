@@ -9,7 +9,10 @@ export interface Media {
   id: string
   userId: string
   teamId: string
+  /** Canonical, unsigned address: what is stored and matched. */
   url: string
+  /** Short-lived signed address to render, set by the API only for a private bucket. */
+  displayUrl?: string
   filename: string
   fileSize: number
   mimeType: string
