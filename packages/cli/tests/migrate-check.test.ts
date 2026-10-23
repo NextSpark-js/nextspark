@@ -144,6 +144,7 @@ function snapshot(root: string): Record<string, string> {
   const files: Record<string, string> = {}
   const visit = (directory: string) => {
     for (const name of readdirSync(directory)) {
+      if (name === '.git') continue // git rewrites its own housekeeping files; the test checks `git status` instead
       const path = join(directory, name)
       if (statSync(path).isDirectory()) visit(path)
       else files[path.slice(root.length)] = readFileSync(path, 'utf8')
