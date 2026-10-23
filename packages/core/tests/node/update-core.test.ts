@@ -1395,9 +1395,9 @@ test('a project created without an update-core script runs it through the bin co
 /** The semver package the installed CLI resolves; the stand-in install links it into the CLI it installs. */
 const SEMVER_DIR = path.dirname(createRequire(path.join(CORE_DIR, '../cli/package.json')).resolve('semver/package.json'))
 const WITH_SEMVER = `mkdir -p node_modules/@nextsparkjs/cli/node_modules && ln -sfn '${SEMVER_DIR}' node_modules/@nextsparkjs/cli/node_modules/semver`
-const CORE_NEEDS = { dependencies: { 'better-auth': '~1.7.7', '@better-fetch/fetch': '1.3.2', zod: '^4.5.4', next: '15.5.24' }, peerDependencies: { react: '>=18' } }
-const BEHIND = { 'better-auth': '~1.6.33', '@better-fetch/fetch': '1.3.1', zod: '^4.1.5' }
-const ALIGNED = { 'better-auth': '~1.7.7', '@better-fetch/fetch': '1.3.2', zod: '^4.5.4' }
+const CORE_NEEDS = { dependencies: { 'better-auth': '~1.7.7', zod: '^4.5.4', next: '15.5.24' }, peerDependencies: { react: '>=18' } }
+const BEHIND = { 'better-auth': '~1.6.33', zod: '^4.1.5' }
+const ALIGNED = { 'better-auth': '~1.7.7', zod: '^4.5.4' }
 
 test('--no-dependency-floors lists the dependencies left below what the new core needs, with one pnpm add, and writes none of them', (t) => {
   const root = createProject(t, { pins: BEHIND })
@@ -1408,10 +1408,9 @@ test('--no-dependency-floors lists the dependencies left below what the new core
   assert.equal(result.status, 0, result.output)
   assert.match(result.stdout, /Not moved: these dependencies in package.json are below what @nextsparkjs\/core 0\.1\.0-beta\.189 needs/)
   assert.match(result.stdout, /^ {4}better-auth ~1\.6\.33 \(core needs ~1\.7\.7\)$/m)
-  assert.match(result.stdout, /^ {4}@better-fetch\/fetch 1\.3\.1 \(core needs 1\.3\.2\)$/m)
   assert.match(result.stdout, /^ {4}zod \^4\.1\.5 \(core needs \^4\.5\.4\)$/m)
   assert.equal(result.stdout.match(/^ {4}pnpm add .*$/gm)?.length, 1, result.stdout)
-  assert.match(result.stdout, /^ {4}pnpm add '@better-fetch\/fetch@1\.3\.2' 'better-auth@~1\.7\.7' 'zod@\^4\.5\.4'$/m)
+  assert.match(result.stdout, /^ {4}pnpm add 'better-auth@~1\.7\.7' 'zod@\^4\.5\.4'$/m)
   // Only the @nextsparkjs pins moved
   const after = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
   assert.deepEqual({ ...after.dependencies, ...after.devDependencies }, { ...JSON.parse(before).dependencies, ...JSON.parse(before).devDependencies, '@nextsparkjs/core': TO, '@nextsparkjs/cli': TO, '@nextsparkjs/testing': TO })
@@ -1423,7 +1422,7 @@ test('raises the dependencies below what the new core needs, then installs again
   const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_NEEDS, installShell: WITH_SEMVER })
 
   assert.equal(result.status, 0, result.output)
-  assert.match(result.stdout, /Raising the dependencies below what @nextsparkjs\/core 0\.1\.0-beta\.189 needs:\n {5}@better-fetch\/fetch 1\.3\.1 -> 1\.3\.2\n {5}better-auth ~1\.6\.33 -> ~1\.7\.7\n {5}zod \^4\.1\.5 -> \^4\.5\.4\n/)
+  assert.match(result.stdout, /Raising the dependencies below what @nextsparkjs\/core 0\.1\.0-beta\.189 needs:\n {5}better-auth ~1\.6\.33 -> ~1\.7\.7\n {5}zod \^4\.1\.5 -> \^4\.5\.4\n/)
   assert.doesNotMatch(result.stdout, /Not moved/)
   const after = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
   assert.deepEqual({ ...after.dependencies, ...after.devDependencies }, { ...ALIGNED, ...Object.fromEntries(Object.entries({ ...after.dependencies, ...after.devDependencies }).filter(([name]) => !(name in ALIGNED))) })
@@ -1432,8 +1431,8 @@ test('raises the dependencies below what the new core needs, then installs again
   assert.ok(result.calls.lastIndexOf('install') < result.calls.indexOf('nextspark prepare'), result.calls.join('\n'))
 })
 
-test('raises only core\'s peer dependencies and better-auth, zod and @better-fetch/fetch; every other dependency below core is listed, not written', (t) => {
-  const pins = { ...BEHIND, next: '~16.3.0', react: '19.1.0', stripe: '^17.0.0', 'lucide-react': '^0.400.0', sonner: '^1.7.0', 'tailwind-merge': '^2.5.0' }
+test('raises only core\'s peer dependencies and better-auth and zod; every other dependency below core is listed, not written', (t) => {
+  const pins = { ...BEHIND, '@better-fetch/fetch': '1.3.1', next: '~16.3.0', react: '19.1.0', stripe: '^17.0.0', 'lucide-react': '^0.400.0', sonner: '^1.7.0', 'tailwind-merge': '^2.5.0' }
   const root = createProject(t, { pins })
   const coreManifest = {
     dependencies: { ...CORE_NEEDS.dependencies, stripe: '^18.5.0', 'lucide-react': '^0.539.0', sonner: '^2.0.0', 'tailwind-merge': '^3.0.0' },
@@ -1447,15 +1446,17 @@ test('raises only core\'s peer dependencies and better-auth, zod and @better-fet
   const after = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
   const declared = { ...after.dependencies, ...after.devDependencies }
   assert.deepEqual(
-    ['next', 'react', 'better-auth', '@better-fetch/fetch', 'zod'].map((name) => declared[name]),
-    ['~16.4.2', '^19.2.0', '~1.7.7', '1.3.2', '^4.5.4'],
+    ['next', 'react', 'better-auth', 'zod'].map((name) => declared[name]),
+    ['~16.4.2', '^19.2.0', '~1.7.7', '^4.5.4'],
   )
   assert.deepEqual(
     ['stripe', 'lucide-react', 'sonner', 'tailwind-merge'].map((name) => declared[name]),
     ['^17.0.0', '^0.400.0', '^1.7.0', '^2.5.0'],
   )
   assert.match(result.stdout, /Not moved: these dependencies[^\n]*\n {4}lucide-react \^0\.400\.0 \(core needs \^0\.539\.0\)\n {4}sonner \^1\.7\.0 \(core needs \^2\.0\.0\)\n {4}stripe \^17\.0\.0 \(core needs \^18\.5\.0\)\n {4}tailwind-merge \^2\.5\.0 \(core needs \^3\.0\.0\)\n/)
-  assert.doesNotMatch(result.stdout, /^ {4}(next|react|zod|better-auth) /m)
+  // core declares it in no dependency field, so it is neither raised nor listed
+  assert.equal(declared['@better-fetch/fetch'], '1.3.1')
+  assert.doesNotMatch(result.stdout, /^ {4}(next|react|zod|better-auth|@better-fetch\/fetch) /m)
 })
 
 test('prints nothing about dependencies when the project is aligned with the new core', (t) => {

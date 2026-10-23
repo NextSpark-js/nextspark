@@ -5,7 +5,7 @@
  */
 
 /** Packages that cannot sit next to a second copy of themselves, raised besides core's peer dependencies. */
-const RAISED_ALWAYS = ['better-auth', '@better-fetch/fetch', 'zod']
+const RAISED_ALWAYS = ['better-auth', 'zod']
 
 const SCOPE = '@nextsparkjs/'
 const PROJECT_FIELDS = ['dependencies', 'devDependencies', 'optionalDependencies']

@@ -58,7 +58,7 @@ Options:
   --version <version>     Update to this version (e.g. 0.1.0-beta.189)
   --latest                Update to the version npm tags latest (default)
   --branch, -b            Create the branch update/<version> and update there
-  --no-dependency-floors  Do not raise next, react, better-auth, zod and @better-fetch/fetch
+  --no-dependency-floors  Do not raise next, react, better-auth and zod
                           to what the new core needs; list them instead
   --list                  List the published versions
   --check                 Say whether a newer version is published
@@ -70,8 +70,8 @@ What gets updated:
                           the target: a ^ or ~ range is replaced, since pnpm would install
                           the newest version the range allows instead of the target. After the
                           install, the dependencies the project declares below what the new
-                          core needs among core's peer dependencies (next, react, ...) and better-auth,
-                          @better-fetch/fetch and zod are raised to core's range and installed
+                          core needs among core's peer dependencies (next, react, ...) and better-auth
+                          and zod are raised to core's range and installed
                           again, before nextspark prepare runs
   pnpm-lock.yaml, node_modules   Through pnpm install, run where pnpm-lock.yaml is (in a
                           web-mobile project, the directory above web/)
@@ -493,7 +493,7 @@ function reportDependenciesBelowCore(out, cwd, manifest) {
   const found = findDependenciesBelowCore(out, cwd, manifest)
   if (!found || found.below.length === 0) return
   const { coreManifest, below } = found
-  out(`\n  Not moved: these dependencies in package.json are below what ${CORE_PACKAGE} ${coreManifest.version} needs, and update-core did not write them (it raises only core's peer dependencies and better-auth, @better-fetch/fetch and zod, and not with --no-dependency-floors):`)
+  out(`\n  Not moved: these dependencies in package.json are below what ${CORE_PACKAGE} ${coreManifest.version} needs, and update-core did not write them (it raises only core's peer dependencies and better-auth and zod, and not with --no-dependency-floors):`)
   for (const { name, declared, required } of below) out(`    ${name} ${declared} (core needs ${required})`)
   out('  Move them, from this directory:')
   for (const command of addCommands(below)) out(`    ${command}`)
