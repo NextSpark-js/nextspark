@@ -250,6 +250,12 @@
       "note": "getAuthReadinessResponse, which a project that overrides core's auth routes adds to them (passwordless guide), and logAuthReadinessAtStartup for a project instrumentation.ts that does not call core's register()."
     },
     {
+      "subpath": "./lib/auth/query-caches",
+      "reason": "documented",
+      "area": "Request pipeline",
+      "note": "registerQueryCache, how a project that creates its own QueryClient outside QueryProvider has it emptied when someone signs in (bundle optimization guide)."
+    },
+    {
       "subpath": "./lib/teams/active-team-cookie",
       "reason": "documented",
       "area": "Request pipeline",

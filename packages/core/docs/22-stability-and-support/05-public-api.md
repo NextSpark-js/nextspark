@@ -130,6 +130,7 @@ The reason in each row is one of `template-import` (a stable template imports it
 | `./instrumentation` | template-import — register(): the server startup the instrumentation.ts the scaffold writes re-exports. |
 | `./lib/auth` | documented — The Better Auth instance (auth.api.getSession and the other server calls) the authentication and API guides use in project code. |
 | `./lib/auth/runtime-readiness` | documented — getAuthReadinessResponse, which a project that overrides core's auth routes adds to them (passwordless guide), and logAuthReadinessAtStartup for a project instrumentation.ts that does not call core's register(). |
+| `./lib/auth/query-caches` | documented — registerQueryCache, how a project that creates its own QueryClient outside QueryProvider has it emptied when someone signs in (bundle optimization guide). |
 | `./lib/teams/active-team-cookie` | documented — ACTIVE_TEAM_COOKIE and activeTeamIdForSession, how server code reads the active team (teams permissions guide). |
 
 ### Jobs
