@@ -419,9 +419,25 @@ export const APP_CONFIG_OVERRIDES = {
 }
 ```
 
-With `'groups'` the root layout mounts neither. The `(auth)` group (also a project's override of its layout) mounts them with `GroupProviders`, and the dashboard, superadmin and devtools areas get them from the fallback of `DashboardProviders` (which mounts the full stack when the root has none), so those routes behave as before; the `(public)` group does not. Measured on the starter project (production build, gzip, `scripts/performance/starter-route-js.mjs`): the public pages load the same JavaScript with either scope (`/` 223,187 bytes with `'root'` and 223,200 with `'groups'`; `/support`, `/docs`, `/blog`, `/login` and `/signup` differ by 13 bytes each, and the dashboard routes by the same 13), because the React Query library still reaches a public page through `useAuth`, which the public navbar uses; only the provider component moves. The default stays `'root'`. Measure your own project with the route JavaScript budget check before switching. `GroupProviders` renders its children as they are when a query cache already exists above it, so wrapping a layout in it never creates a second cache or shows a toast twice, whatever the scope.
+The value is read from that literal (`'root'` or `'groups'`; any other expression stops the registry generation with an error) when the registries are generated, and the root layouts take their providers from the generated `root-providers` registry: with `'groups'` it exports nothing to mount and imports neither library. It has to work like that because a client component a server layout imports is in the entry chunks of every route, rendered or not. Restart `pnpm dev` after changing it.
 
-A public page of your own that uses React Query hooks (`useQuery`, `useMutation`, the entity hooks) or shows toasts needs its layout wrapped (the `public` message group carries the `permissions` namespace `QueryProvider` reads, so the wrapper works inside the public layout):
+With `'groups'` the root layout mounts neither provider. The `(auth)` group mounts the toaster alone (`GroupToaster`: its forms use toasts but no queries), and the dashboard, superadmin and devtools areas get both from the fallback of `DashboardProviders` (which mounts the full stack when the root has none), so those routes behave as before; the `(public)` group mounts nothing. `useAuth` does not import React Query: on sign-in it empties the caches registered in `lib/auth/query-caches`, where `QueryProvider` registers its own. A cache you create yourself outside `QueryProvider` registers with `registerQueryCache(() => client.clear())` from `@nextsparkjs/core/lib/auth/query-caches` (it returns the function that removes it).
+
+Measured on the starter project (production build, gzip, `scripts/performance/starter-route-js.mjs`, Cache Components on, packed from this repository), the JavaScript each route loads before interaction:
+
+| Route | `'root'` before | `'groups'` before | `'root'` after | `'groups'` after | `'groups'` vs `'root'` after |
+|---|---|---|---|---|---|
+| `/` | 223,187 | 223,200 | 223,290 | 202,759 | -20,531 |
+| `/support` | 188,350 | 188,363 | 188,453 | 167,922 | -20,531 |
+| `/docs` | 233,924 | 233,937 | 234,047 | 213,571 | -20,476 |
+| `/blog` | 262,575 | 262,588 | 262,678 | 242,147 | -20,531 |
+| `/login` | 295,929 | 295,942 | 296,182 | 282,788 | -13,394 |
+| `/signup` | 296,183 | 296,196 | 296,444 | 285,338 | -11,106 |
+| `/dashboard` | 336,581 | 336,594 | 336,703 | 336,373 | -330 |
+
+(The other dashboard routes in the budget differ by the same amount.) Before the change, `'groups'` saved nothing because the root layout imported the providers whichever scope was set; after it, no chunk of `/`, `/support`, `/docs`, `/blog`, `/login` or `/signup` carries React Query, and only `/login` and `/signup` carry the toaster. The default scope costs 0.1 to 0.3 kB on a route (the cache registration), and the default stays `'root'`. Not measured: other templates, and transfer in a browser. Measure your own project with the route JavaScript budget check before switching. `GroupProviders` renders its children as they are when a query cache already exists above it, so wrapping a layout in it never creates a second cache or shows a toast twice, whatever the scope.
+
+A public or auth page of your own that uses React Query hooks (`useQuery`, `useMutation`, the entity hooks) needs its layout wrapped, and so does a public page that shows toasts (the `public` and `auth` message groups carry the `permissions` namespace `QueryProvider` reads, so the wrapper works inside those layouts):
 
 ```tsx
 import { GroupProviders } from '@nextsparkjs/core/providers/group-providers'
@@ -431,7 +447,7 @@ export default function PricingLayout({ children }: { children: React.ReactNode 
 }
 ```
 
-`useAuth`, which the public navbar uses, works without a query cache. The cookie consent banner does not need one either. Check the public pages and components you added before switching, since a query hook without a provider throws. The default scope keeps today's behavior; the setting is read when the app is built.
+`useAuth`, which the public navbar and the login and signup forms use, works without a query cache. The cookie consent banner does not need one either. Check the public and auth pages and components you added before switching, since a query hook without a provider throws. The default scope keeps today's behavior.
 
 ---
 

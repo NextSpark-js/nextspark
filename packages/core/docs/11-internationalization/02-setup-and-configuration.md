@@ -400,7 +400,7 @@ entities). This is deliberate: server components can continue to call
 namespaces used by their **client** subtree:
 
 - the root layout: the shared `permissions` namespace used by `QueryProvider`;
-- `(auth)` also carries `permissions`, for the `QueryProvider` it mounts when `providers.scope` is `'groups'`;
+- `(auth)` also carries `permissions`, for the `QueryProvider` a project's auth page gets by wrapping its layout in `GroupProviders` when `providers.scope` is `'groups'`;
 - `(public)`, `(auth)`, `dashboard`, `superadmin` and `devtools`: their own
   group from `NAMESPACE_GROUPS` in `core/lib/i18n/client-messages`;
 - the generated host's per-entity route groups use the same layouts, so they
