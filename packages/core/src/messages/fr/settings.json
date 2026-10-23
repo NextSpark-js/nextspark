@@ -317,11 +317,6 @@
       "description": "Votre abonnement actuel et limites d'utilisation",
       "free": "Gratuit"
     },
-    "usage": {
-      "tasks": "Taches mensuelles",
-      "teamMember": "Membre de l'equipe",
-      "projects": "Projets"
-    },
     "upgrade": {
       "title": "Besoin de plus de fonctionnalites ?",
       "description": "Passez a Pro pour obtenir des limites plus elevees et des fonctionnalites avancees",
@@ -377,9 +372,6 @@
     "features": {
       "title": "Fonctionnalites du plan gratuit",
       "description": "Ce que comprend votre plan actuel",
-      "taskLimit": "Jusqu'a 100 taches par mois",
-      "teamMember": "1 membre de l'equipe",
-      "projectLimit": "Jusqu'a 5 projets",
       "basicSupport": "Support de base par email",
       "basicDashboard": "Tableau de bord de base",
       "profileManagement": "Gestion du profil"

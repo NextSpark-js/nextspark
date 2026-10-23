@@ -317,11 +317,6 @@
       "description": "Your current subscription and usage limits",
       "free": "Free"
     },
-    "usage": {
-      "tasks": "Monthly tasks",
-      "teamMember": "Team member",
-      "projects": "Projects"
-    },
     "upgrade": {
       "title": "Need more features?",
       "description": "Upgrade to Pro for higher limits and advanced features",
@@ -377,9 +372,6 @@
     "features": {
       "title": "Free Plan Features",
       "description": "What's included in your current plan",
-      "taskLimit": "Up to 100 tasks per month",
-      "teamMember": "1 team member",
-      "projectLimit": "Up to 5 projects",
       "basicSupport": "Basic email support",
       "basicDashboard": "Basic dashboard",
       "profileManagement": "Profile management"

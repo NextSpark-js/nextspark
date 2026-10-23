@@ -317,11 +317,6 @@
       "description": "Ihr aktuelles Abonnement und Nutzungslimits",
       "free": "Kostenlos"
     },
-    "usage": {
-      "tasks": "Monatliche Aufgaben",
-      "teamMember": "Teammitglied",
-      "projects": "Projekte"
-    },
     "upgrade": {
       "title": "Benoetigen Sie mehr Funktionen?",
       "description": "Upgraden Sie auf Pro fuer hoehere Limits und erweiterte Funktionen",
@@ -377,9 +372,6 @@
     "features": {
       "title": "Funktionen des kostenlosen Tarifs",
       "description": "Was Ihr aktueller Tarif beinhaltet",
-      "taskLimit": "Bis zu 100 Aufgaben pro Monat",
-      "teamMember": "1 Teammitglied",
-      "projectLimit": "Bis zu 5 Projekte",
       "basicSupport": "Basis-E-Mail-Support",
       "basicDashboard": "Basis-Dashboard",
       "profileManagement": "Profilverwaltung"

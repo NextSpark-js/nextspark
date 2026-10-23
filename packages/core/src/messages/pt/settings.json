@@ -317,11 +317,6 @@
       "description": "Sua assinatura atual e limites de uso",
       "free": "Gratuito"
     },
-    "usage": {
-      "tasks": "Tarefas mensais",
-      "teamMember": "Membro da equipe",
-      "projects": "Projetos"
-    },
     "upgrade": {
       "title": "Precisa de mais recursos?",
       "description": "Faca upgrade para Pro para obter limites mais altos e recursos avancados",
@@ -377,9 +372,6 @@
     "features": {
       "title": "Recursos do Plano Gratuito",
       "description": "O que seu plano atual inclui",
-      "taskLimit": "Ate 100 tarefas por mes",
-      "teamMember": "1 membro da equipe",
-      "projectLimit": "Ate 5 projetos",
       "basicSupport": "Suporte basico por email",
       "basicDashboard": "Painel basico",
       "profileManagement": "Gerenciamento de perfil"
