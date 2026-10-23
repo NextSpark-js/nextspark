@@ -323,8 +323,7 @@
       "button": "Actualizar Plan",
       "ready": "¿Listo para más?",
       "explore": "Explora nuestros planes Pro y Enterprise",
-      "viewPricing": "Ver Precios",
-      "contactSales": "Contactar Ventas"
+      "viewPricing": "Ver Precios"
     },
     "paymentMethod": {
       "title": "Método de Pago",
@@ -371,10 +370,7 @@
     },
     "features": {
       "title": "Funcionalidades del Plan Free",
-      "description": "Lo que incluye tu plan actual",
-      "basicSupport": "Soporte básico por email",
-      "basicDashboard": "Dashboard básico",
-      "profileManagement": "Gestión de perfil"
+      "description": "Lo que incluye tu plan actual"
     },
     "messages": {
       "upgradeRedirect": "Redirigiendo a página de actualización de plan",

@@ -323,8 +323,7 @@
       "button": "Mettre a niveau le plan",
       "ready": "Pret pour plus ?",
       "explore": "Explorez nos plans Pro et Enterprise",
-      "viewPricing": "Voir les tarifs",
-      "contactSales": "Contacter les ventes"
+      "viewPricing": "Voir les tarifs"
     },
     "paymentMethod": {
       "title": "Methode de paiement",
@@ -371,10 +370,7 @@
     },
     "features": {
       "title": "Fonctionnalites du plan gratuit",
-      "description": "Ce que comprend votre plan actuel",
-      "basicSupport": "Support de base par email",
-      "basicDashboard": "Tableau de bord de base",
-      "profileManagement": "Gestion du profil"
+      "description": "Ce que comprend votre plan actuel"
     },
     "messages": {
       "upgradeRedirect": "Redirection vers la page de mise a niveau du plan",

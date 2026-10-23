@@ -323,8 +323,7 @@
       "button": "Fazer Upgrade do Plano",
       "ready": "Pronto para mais?",
       "explore": "Explore nossos planos Pro e Enterprise",
-      "viewPricing": "Ver Precos",
-      "contactSales": "Contatar Vendas"
+      "viewPricing": "Ver Precos"
     },
     "paymentMethod": {
       "title": "Metodo de Pagamento",
@@ -371,10 +370,7 @@
     },
     "features": {
       "title": "Recursos do Plano Gratuito",
-      "description": "O que seu plano atual inclui",
-      "basicSupport": "Suporte basico por email",
-      "basicDashboard": "Painel basico",
-      "profileManagement": "Gerenciamento de perfil"
+      "description": "O que seu plano atual inclui"
     },
     "messages": {
       "upgradeRedirect": "Redirecionando para pagina de upgrade do plano",

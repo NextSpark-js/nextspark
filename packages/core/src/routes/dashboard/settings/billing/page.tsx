@@ -34,6 +34,11 @@ function BillingPage() {
   // Without a payment gateway (provider: 'none') there is no checkout and no payment method to add
   const hasGateway = !isBillingGatewayDisabled()
   const limitSlugs = Object.keys(BILLING_REGISTRY.limits)
+  // Features of the current plan, as the pricing table lists them: the config's features the plan includes ('*' is all)
+  const planConfig = BILLING_REGISTRY.plans.find(p => p.slug === planSlug)
+  const planFeatures = Object.keys(BILLING_REGISTRY.features).filter(
+    slug => planConfig?.features.includes('*') || planConfig?.features.includes(slug)
+  )
   const [statusMessage, setStatusMessage] = useState('')
   const [invoicesLimit, setInvoicesLimit] = useState(3)
   const t = useTranslations('settings')
@@ -238,6 +243,7 @@ function BillingPage() {
         )}
 
         {/* Plan Features */}
+        {planFeatures.length > 0 && (
         <Card className="mt-8">
           <CardHeader>
             <CardTitle>{t('billing.features.title')}</CardTitle>
@@ -247,42 +253,36 @@ function BillingPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="flex items-center gap-3">
-                <Check className="h-4 w-4 text-green-500" />
-                <span className="text-sm">{t('billing.features.basicSupport')}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Check className="h-4 w-4 text-green-500" />
-                <span className="text-sm">{t('billing.features.basicDashboard')}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Check className="h-4 w-4 text-green-500" />
-                <span className="text-sm">{t('billing.features.profileManagement')}</span>
-              </div>
+              {planFeatures.map(slug => (
+                <div key={slug} className="flex items-center gap-3" data-cy={`billing-feature-${slug}`}>
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">{tb(`features.${slug}`)}</span>
+                </div>
+              ))}
             </div>
 
-            <Separator className="my-6" />
+            {hasGateway && (
+              <>
+                <Separator className="my-6" />
 
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="font-medium">{t('billing.upgrade.ready')}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t('billing.upgrade.explore')}
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <Link href="/dashboard/settings/plans">
-                  <Button variant="outline">
-                    {t('billing.upgrade.viewPricing')}
-                  </Button>
-                </Link>
-                <Button>
-                  {t('billing.upgrade.contactSales')}
-                </Button>
-              </div>
-            </div>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="font-medium">{t('billing.upgrade.ready')}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {t('billing.upgrade.explore')}
+                    </p>
+                  </div>
+                  <Link href="/dashboard/settings/plans">
+                    <Button variant="outline">
+                      {t('billing.upgrade.viewPricing')}
+                    </Button>
+                  </Link>
+                </div>
+              </>
+            )}
           </CardContent>
           </Card>
+        )}
         </div>
       </div>
     </>

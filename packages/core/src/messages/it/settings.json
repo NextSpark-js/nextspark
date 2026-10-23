@@ -323,8 +323,7 @@
       "button": "Aggiorna Piano",
       "ready": "Pronto per di piu?",
       "explore": "Esplora i nostri piani Pro ed Enterprise",
-      "viewPricing": "Vedi Prezzi",
-      "contactSales": "Contatta Vendite"
+      "viewPricing": "Vedi Prezzi"
     },
     "paymentMethod": {
       "title": "Metodo di Pagamento",
@@ -371,10 +370,7 @@
     },
     "features": {
       "title": "Funzionalita del Piano Gratuito",
-      "description": "Cosa include il tuo piano attuale",
-      "basicSupport": "Supporto base via email",
-      "basicDashboard": "Dashboard base",
-      "profileManagement": "Gestione profilo"
+      "description": "Cosa include il tuo piano attuale"
     },
     "messages": {
       "upgradeRedirect": "Reindirizzamento alla pagina di aggiornamento piano",

@@ -323,8 +323,7 @@
       "button": "Upgrade Plan",
       "ready": "Ready for more?",
       "explore": "Explore our Pro and Enterprise plans",
-      "viewPricing": "View Pricing",
-      "contactSales": "Contact Sales"
+      "viewPricing": "View Pricing"
     },
     "paymentMethod": {
       "title": "Payment Method",
@@ -371,10 +370,7 @@
     },
     "features": {
       "title": "Free Plan Features",
-      "description": "What's included in your current plan",
-      "basicSupport": "Basic email support",
-      "basicDashboard": "Basic dashboard",
-      "profileManagement": "Profile management"
+      "description": "What's included in your current plan"
     },
     "messages": {
       "upgradeRedirect": "Redirecting to plan upgrade page",

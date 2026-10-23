@@ -323,8 +323,7 @@
       "button": "Tarif upgraden",
       "ready": "Bereit fuer mehr?",
       "explore": "Entdecken Sie unsere Pro- und Enterprise-Tarife",
-      "viewPricing": "Preise anzeigen",
-      "contactSales": "Vertrieb kontaktieren"
+      "viewPricing": "Preise anzeigen"
     },
     "paymentMethod": {
       "title": "Zahlungsmethode",
@@ -371,10 +370,7 @@
     },
     "features": {
       "title": "Funktionen des kostenlosen Tarifs",
-      "description": "Was Ihr aktueller Tarif beinhaltet",
-      "basicSupport": "Basis-E-Mail-Support",
-      "basicDashboard": "Basis-Dashboard",
-      "profileManagement": "Profilverwaltung"
+      "description": "Was Ihr aktueller Tarif beinhaltet"
     },
     "messages": {
       "upgradeRedirect": "Weiterleitung zur Tarif-Upgrade-Seite",

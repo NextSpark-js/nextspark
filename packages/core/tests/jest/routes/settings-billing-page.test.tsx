@@ -30,7 +30,12 @@ jest.mock('@nextsparkjs/core/components/billing', () => ({
   InvoicesTable: () => null,
   UsageBar: ({ limitSlug }: { limitSlug: string }) => <div data-testid={`usage-bar-${limitSlug}`} />,
 }))
-const mockRegistry = { provider: 'stripe', plans: [], features: {}, limits: { tasks: {}, team_members: {} } }
+const mockRegistry = {
+  provider: 'stripe',
+  plans: [{ slug: 'free', features: ['basic_analytics'] }, { slug: 'pro', features: ['*'] }],
+  features: { basic_analytics: {}, api_access: {} },
+  limits: { tasks: {}, team_members: {} },
+}
 jest.mock('@nextsparkjs/registries/billing-registry', () => ({ BILLING_REGISTRY: mockRegistry }))
 
 import BillingPage from '../../../src/routes/dashboard/settings/billing/page'
@@ -114,6 +119,36 @@ test('a plan that exists only in the database and has no name falls back to its 
   useSubscription.mockReturnValue({ planSlug: 'nolimit', plan: null, isActive: true, isReady: true })
   render(<BillingPage />)
   expect(screen.getByText('nolimit')).toBeInTheDocument()
+})
+
+test('the feature list is the one of the current plan in the config', () => {
+  render(<BillingPage />)
+  expect(screen.getByText('features.basic_analytics')).toBeInTheDocument()
+  expect(screen.queryByText('features.api_access')).toBeNull()
+  expect(screen.queryByText('billing.features.basicSupport')).toBeNull()
+})
+
+test('a plan with "*" lists every feature of the config', () => {
+  useSubscription.mockReturnValue({ planSlug: 'pro', plan: null, isActive: true, isReady: true })
+  render(<BillingPage />)
+  expect(screen.getByText('features.basic_analytics')).toBeInTheDocument()
+  expect(screen.getByText('features.api_access')).toBeInTheDocument()
+})
+
+test('with a gateway: the upsell links to the plans, with no Contact Sales button', () => {
+  render(<BillingPage />)
+  expect(screen.getByText('billing.upgrade.ready')).toBeInTheDocument()
+  expect(screen.getByText('billing.upgrade.viewPricing')).toBeInTheDocument()
+  expect(screen.queryByText('billing.upgrade.contactSales')).toBeNull()
+})
+
+test('provider none: no upsell', () => {
+  mockRegistry.provider = 'none'
+  render(<BillingPage />)
+  expect(screen.getByText('features.basic_analytics')).toBeInTheDocument()
+  expect(screen.queryByText('billing.upgrade.ready')).toBeNull()
+  expect(screen.queryByText('billing.upgrade.explore')).toBeNull()
+  expect(screen.queryByText('billing.upgrade.viewPricing')).toBeNull()
 })
 
 test('no limits configured: says so instead of an empty card', () => {
