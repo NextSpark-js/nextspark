@@ -57,8 +57,7 @@ jest.mock('@nextsparkjs/core/lib/permissions/check', () => ({
   publishPermissionFor: () => null,
   declaredPublishPermission: () => null,
 }))
-import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
-const mockCheckPermission = checkPermission as jest.Mock
+jest.mock('@nextsparkjs/core/lib/entities/queries', () => ({ getChildEntities: jest.fn() }))
 
 jest.mock('@nextsparkjs/core/lib/blocks/pattern-resolver', () => ({
   extractPatternIds: jest.fn(),
@@ -90,12 +89,13 @@ jest.mock('@nextsparkjs/core/lib/entities/pattern-usage-hooks', () => ({
   initPatternUsageHooks: jest.fn(),
 }))
 
-import { handleGenericCreate, handleGenericUpdate } from '@nextsparkjs/core/lib/api/entity/generic-handler'
+import { handleGenericCreate, handleGenericUpdate, handleChildCreate } from '@nextsparkjs/core/lib/api/entity/generic-handler'
 import { authenticateRequest, hasRequiredScope, canBypassTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { resolveEntityFromUrl, validateEntityOperation } from '@nextsparkjs/core/lib/api/entity/resolver'
 import { createApiError, addCorsHeaders } from '@nextsparkjs/core/lib/api/helpers'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { queryOneWithRLS } from '@nextsparkjs/core/lib/db'
+import { getChildEntities } from '@nextsparkjs/core/lib/entities/queries'
 
 const entityConfig = {
   slug: 'items',
@@ -129,6 +129,7 @@ describe('generic routes - validation locale', () => {
     ;(hasRequiredScope as jest.Mock).mockReturnValue(true)
     ;(canBypassTeamContext as jest.Mock).mockResolvedValue(true)
     ;(checkPermission as jest.Mock).mockResolvedValue(true)
+    ;(getChildEntities as jest.Mock).mockReturnValue([{ name: 'notes', config: { fields: [{ name: 'body', type: 'text', required: true, display: { label: 'Body', showInForm: true } }] } }])
     ;(queryOneWithRLS as jest.Mock).mockResolvedValue({ id: 'item-1' })
     ;(createApiError as jest.Mock).mockImplementation(((message: string, status = 400, details?: unknown, code?: string) =>
       NextResponse.json({ success: false, error: message, code, details }, { status })) as any)
@@ -162,5 +163,28 @@ describe('generic routes - validation locale', () => {
     const json = await response.json()
     expect(response.status).toBe(400)
     expect(json.details[0].message).toBe('Title es obligatorio')
+  })
+
+  test('child routes answer in the locale too', async () => {
+    mockGetApplicationConfig.mockResolvedValue({ api: { validationLocale: 'es' } })
+    const response = await handleChildCreate(request(), { params: Promise.resolve({ id: 'item-1', childType: 'notes' }) } as any)
+    expect(response.status).toBe(400)
+    expect((await response.json()).details[0].message).toBe('Body es obligatorio')
+  })
+
+  test('a regional locale falls back to its language', async () => {
+    expect(await createMessage({ validationLocale: 'es-AR' })).toBe('Title es obligatorio')
+  })
+
+  test('a fixed value that is not a locale tag answers in English', async () => {
+    expect(await createMessage({ validationLocale: '../x' })).toBe('Title is required')
+    expect(await createMessage({ validationLocale: '../messages/es' })).toBe('Title is required')
+    expect(await createMessage({ validationLocale: '__proto__' })).toBe('Title is required')
+  })
+
+  test('a message the field declares wins, in English too (same text as the form)', async () => {
+    const own = { ...entityConfig, fields: [{ ...(entityConfig as any).fields[0], display: { label: 'Title', showInForm: true, validationMessages: { required: 'Falta {label}' } } }] }
+    ;(resolveEntityFromUrl as jest.Mock).mockResolvedValue({ entityName: 'items', entityConfig: own, isValidEntity: true })
+    expect(await createMessage({})).toBe('Falta Title')
   })
 })

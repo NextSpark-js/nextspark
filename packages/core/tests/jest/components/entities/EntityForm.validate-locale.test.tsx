@@ -77,4 +77,15 @@ describe('EntityForm locale', () => {
     await waitFor(() => expect(screen.getAllByTestId('field-error').map(node => node.textContent)).toEqual(['name is required']))
     unmount()
   })
+
+  it('a message the field declares wins in English, without a translator', async () => {
+    const own = { slug: 'c', fields: [field('name', 'text', true, { validationMessages: { required: 'Falta {label}' } })] } as unknown as EntityConfig
+    expect(validateFormData({}, own)).toEqual({ name: 'Falta name' })
+  })
+
+  it('a regional English locale keeps the form texts', async () => {
+    const unmount = submitIn('en-GB', { validation: { entity: { required: 'CATALOG {label}' } } })
+    await waitFor(() => expect(screen.getAllByTestId('field-error').map(node => node.textContent)).toEqual(['name is required']))
+    unmount()
+  })
 })

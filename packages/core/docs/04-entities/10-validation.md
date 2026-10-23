@@ -431,7 +431,7 @@ api: {
 }
 ```
 
-Unset, the responses are exactly what they were. With `'accept-language'`, a request whose header names no supported locale (or no header) is answered in English. The REST routes read the `validation.entity.*` keys from core's `messages/<locale>/validation.json` (a locale with no catalog answers in English); project message overrides and `labelKey` are not applied on the server. `Accept-Language` is not read unless the option asks for it, and `i18n.defaultLocale` does not change the API language.
+Unset, the responses are exactly what they were. In the 400 response only `details[].message` is translated; the top-level `error` (`Validation error`, `Unknown field(s): ...`) stays in English. With `'accept-language'`, a request whose header names no supported locale (or no header) is answered in English. The REST routes read the `validation.entity.*` keys from core's `messages/<locale>/validation.json` (a locale with no catalog answers in English); project message overrides and `labelKey` are not applied on the server. `Accept-Language` is not read unless the option asks for it, and `i18n.defaultLocale` does not change the API language.
 
 The server actions and the generated contracts package ship schemas built without `translate`, so they keep answering in English.
 

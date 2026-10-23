@@ -62,9 +62,9 @@ export function validateFormData(
   translate?: ValidationTranslator
 ): Record<string, string> {
   const errors: Record<string, string> = {}
-  // With a translator, a message the field overrides or the catalog has wins; otherwise the English text below stays
+  // A message the field overrides, or the translator's catalog has, wins; otherwise the English text below stays
   const message = (field: EntityConfig['fields'][number], kind: ValidationMessageKind, english: string) =>
-    translate && (field.display.validationMessages?.[kind] !== undefined || translate(`validation.entity.${kind}`, { label: field.display.label }) !== undefined)
+    field.display.validationMessages?.[kind] !== undefined || (translate && translate(`validation.entity.${kind}`, { label: field.display.label }) !== undefined)
       ? fieldValidationMessage(field, kind, {}, translate)
       : english
 
@@ -163,7 +163,7 @@ export function EntityForm({
   const locale = useLocale()
   const messages = useMessages()
   const translate = useMemo(
-    () => (locale === 'en' ? undefined : createValidationTranslator(messages as Record<string, unknown>)),
+    () => (locale.split('-')[0] === 'en' ? undefined : createValidationTranslator(messages as Record<string, unknown>)),
     [locale, messages]
   )
   const [formData, setFormData] = useState<FormData>(() => {
