@@ -9,8 +9,8 @@ import { resolveAppUrl } from '@nextsparkjs/core/lib/utils/base-url'
 // ✅ MINIMAL GENERIC METADATA (cliente puede override con template)
 export const defaultMetadata: Metadata = {
   title: {
-    template: '%s | App',
-    default: 'App',
+    template: `%s | ${APP_NAME}`,
+    default: APP_NAME,
   },
   description: 'Application',
   // The base the relative canonical and og:url of the public pages resolve against (#365)

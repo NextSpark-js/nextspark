@@ -81,7 +81,7 @@ runs:
 
     # The build must carry none of config/dev.config.ts, and the running server must refuse /superadmin and /devtools
     # to a visitor without the role. Both read the project the steps above built.
-    - name: Security probes
+    - name: Security and metadata probes
       if: inputs.probes == 'true' && inputs.migrate-only != 'true'
       shell: bash
       run: |

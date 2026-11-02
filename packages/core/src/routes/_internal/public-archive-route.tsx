@@ -11,7 +11,6 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { PublicEntityGrid } from '@nextsparkjs/core/components/public/entities/PublicEntityGrid'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
-import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
 import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
@@ -54,7 +53,7 @@ export function createPublicArchiveMetadata(config: EntityConfig) {
     // The archive is served at the entity's basePath, or at /<slug> without one (see the host's entity routes)
     const path = config.access?.basePath ?? config.builder?.public?.basePath ?? `/${config.slug}`
     return pageMetadata({
-      title: `${config.names.plural} | ${APP_NAME}`,
+      title: config.names.plural,
       description: `Browse all ${config.names.plural.toLowerCase()}`,
       path,
     })

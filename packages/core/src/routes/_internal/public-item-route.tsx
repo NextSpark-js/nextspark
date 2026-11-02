@@ -18,7 +18,6 @@ import { fetchPublishedItem, getResolvedBlocks, isPublicEntity, type PublishedIt
 import { STATIC_FILE_EXTENSION } from '@nextsparkjs/core/lib/entities/public-item-slug'
 
 export { STATIC_FILE_EXTENSION }
-import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -119,7 +118,7 @@ function itemMetadata(source: PublicItemSource, config: EntityConfig) {
     const item = await source.fetchItem(config, slug)
     if (item) {
       return {
-        title: item.seoTitle || `${item.title} | ${APP_NAME}`,
+        title: item.seoTitle || item.title,
         description: item.seoDescription || item.excerpt || undefined,
         openGraph: {
           title: item.seoTitle || item.title,
