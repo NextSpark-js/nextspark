@@ -548,6 +548,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
         href: '/dashboard/settings/billing',
         icon: 'CreditCard',
         enabled: true,
+        requiresPermission: 'settings.billing',
       },
       {
         id: 'api-keys',

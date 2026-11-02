@@ -14,6 +14,7 @@ jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
 jest.mock('@nextsparkjs/core/hooks/useUserProfile', () => ({
   useUserProfile: () => ({ user: mockAuth.user && { id: 'u1', firstName: 'A', email: 'a@example.com' }, isLoading: false }),
 }))
+jest.mock('@nextsparkjs/core/lib/permissions/hooks', () => ({ usePermission: () => true }))
 jest.mock('@nextsparkjs/core/hooks/useAuth', () => ({ useAuth: () => ({ user: mockAuth.user }) }))
 jest.mock('@nextsparkjs/core/lib/config/public-config-client', () => ({
   get DASHBOARD_HOME_CONFIG() {

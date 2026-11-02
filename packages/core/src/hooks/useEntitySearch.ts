@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from './useAuth'
+import { usePermission } from '../lib/permissions/hooks'
+import type { Permission } from '../lib/permissions/types'
 import { extractUserPlanData } from '../lib/user-data-utils'
 import { getEnabledEntities } from '../lib/entities/registry.client'
 import type { EntityConfig } from '../lib/entities/types'
@@ -44,6 +46,7 @@ export function useEntitySearch(): EntitySearchHookResult {
   const [isSearching, setIsSearching] = useState(false)
   const [results, setResults] = useState<EntitySearchResult[]>([])
   const { user } = useAuth()
+  const canAccessBilling = usePermission('settings.billing' as Permission)
 
   // Get user plan and flags data
   const userPlanData = useMemo(() => {
@@ -112,13 +115,13 @@ export function useEntitySearch(): EntitySearchHookResult {
       }
     ]
 
-    return systemPages.map(page => ({
+    return systemPages.filter(page => page.id !== 'billing' || canAccessBilling).map(page => ({
       ...page,
       entityType: 'system',
       type: 'system' as const,
       priority: 'low' as const
     }))
-  }, [])
+  }, [canAccessBilling])
 
   // Generate entity results with limit information
   const entityResults = useMemo((): EntitySearchResult[] => {

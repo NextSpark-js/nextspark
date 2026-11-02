@@ -11,6 +11,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
+import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
+import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import {
     DropdownMenu,
@@ -42,6 +44,7 @@ import { useQuickCreateEntities } from '@nextsparkjs/core/hooks/useQuickCreateEn
 
 export function CRMTopBar() {
     const { user, signOut, isLoading } = useAuth()
+    const canAccessBilling = usePermission('settings.billing' as Permission)
     const { theme, setTheme } = useTheme()
     const [searchQuery, setSearchQuery] = useState('')
     const [showSearch, setShowSearch] = useState(false)
@@ -213,12 +216,14 @@ export function CRMTopBar() {
                                         Settings
                                     </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem asChild data-cy="crm-topbar-menu-billing">
-                                    <Link href="/dashboard/settings/billing" className="flex items-center">
-                                        <CreditCard className="mr-2 h-4 w-4" />
-                                        Billing
-                                    </Link>
-                                </DropdownMenuItem>
+                                {canAccessBilling && (
+                                    <DropdownMenuItem asChild data-cy="crm-topbar-menu-billing">
+                                        <Link href="/dashboard/settings/billing" className="flex items-center">
+                                            <CreditCard className="mr-2 h-4 w-4" />
+                                            Billing
+                                        </Link>
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     onClick={handleSignOut}

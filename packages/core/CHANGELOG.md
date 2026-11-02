@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Every entry that leads to the billing settings is shown only to users with `settings.billing`.** The settings menu already hid it, but the mobile menu of the top navbar, the mobile "More" sheet (the `Billing` item of the default and starter `mobileNav.moreSheetItems` now sets `requiresPermission: 'settings.billing'`), the search results, the dashboard quick actions, the 403 page's "View plans" link and the top bars of the CRM and productivity templates still listed it for a role that cannot open it. The 403 page now mounts the team providers to read the role. (#368)
 - **The generated route of a public item re-exports the `generateStaticParams` of the project's item template.** It was dropped, so Next.js saw no params for the route and, with Cache Components, postponed its content behind the shell instead of prerendering it. The route now forwards it when the template exports it, with `slug` adapted to the route (a string with the levels joined by `/`, or an array, whichever the template returns; a `'use client'` template is refused, as for any page); slugs it does not list are still served on demand, and a template without the export generates the same route as before (#370).
 
 ## [0.1.0-beta.199] - 2026-11-02

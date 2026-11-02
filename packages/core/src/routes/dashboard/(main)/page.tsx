@@ -2,6 +2,8 @@
 
 import { useUserProfile } from '@nextsparkjs/core/hooks/useUserProfile'
 import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
+import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
+import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 import { resolveHomeRoute } from '@nextsparkjs/core/lib/auth/home-route'
 import { DASHBOARD_HOME_CONFIG } from '@nextsparkjs/core/lib/config/public-config-client'
 import { useRouter } from 'next/navigation'
@@ -29,6 +31,7 @@ function DefaultDashboardPage() {
   const t = useTranslations('dashboard')
 
   const { user: authUser } = useAuth()
+  const canAccessBilling = usePermission('settings.billing' as Permission)
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -160,17 +163,19 @@ function DefaultDashboardPage() {
                 </div>
               </Button>
 
-              <Button 
-                variant="outline" 
-                className="h-auto p-4 flex flex-col items-start gap-2"
-                onClick={() => router.push('/dashboard/settings/billing')}
-              >
-                <CreditCard className="h-5 w-5 text-yellow-500" />
-                <div className="text-left">
-                  <p className="font-medium">{t('quickActions.billing')}</p>
-                  <p className="text-xs text-muted-foreground">{t('quickActions.billingDescription')}</p>
-                </div>
-              </Button>
+              {canAccessBilling && (
+                <Button
+                  variant="outline"
+                  className="h-auto p-4 flex flex-col items-start gap-2"
+                  onClick={() => router.push('/dashboard/settings/billing')}
+                >
+                  <CreditCard className="h-5 w-5 text-yellow-500" />
+                  <div className="text-left">
+                    <p className="font-medium">{t('quickActions.billing')}</p>
+                    <p className="text-xs text-muted-foreground">{t('quickActions.billingDescription')}</p>
+                  </div>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

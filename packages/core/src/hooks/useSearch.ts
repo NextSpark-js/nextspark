@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from './useAuth'
+import { usePermission } from '../lib/permissions/hooks'
+import type { Permission } from '../lib/permissions/types'
 import { getEntityRegistry, type EntityRegistryEntry } from '../lib/entities/queries'
 import type { EntityConfig } from '../lib/entities/types'
 import type { SearchResultType } from '@nextsparkjs/registries/entity-types'
@@ -111,6 +113,7 @@ export function useSearch() {
   const [isSearching, setIsSearching] = useState(false)
   const [results, setResults] = useState<SearchResult[]>([])
   const { user } = useAuth()
+  const canAccessBilling = usePermission('settings.billing' as Permission)
 
   // Generar resultados de búsqueda dinámicamente desde entidades registradas
   const entityResults = useMemo(() => {
@@ -122,9 +125,9 @@ export function useSearch() {
     const systemResults = SYSTEM_PAGES.map((page, index) => ({
       id: `page-${index}`,
       ...page
-    }))
+    })).filter(page => canAccessBilling || page.url !== '/dashboard/settings/billing')
     return [...entityResults, ...systemResults]
-  }, [entityResults])
+  }, [entityResults, canAccessBilling])
 
   // Función de búsqueda
   const performSearch = useMemo(() => {

@@ -14,6 +14,7 @@ jest.mock('@/core/hooks/useAuth', () => ({
     isLoading: false,
   }),
 }))
+jest.mock('@/core/lib/permissions/hooks', () => ({ usePermission: () => true }))
 jest.mock('@/core/contexts/sidebar-context', () => ({ useSidebar: () => ({ isCollapsed: false, toggleSidebar: jest.fn() }) }))
 jest.mock('@/core/components/app/guards/SuperAdminGuard', () => ({ useIsSuperAdmin: () => false }))
 jest.mock('@/core/components/app/guards/DeveloperGuard', () => ({ useIsDeveloper: () => false }))

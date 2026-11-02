@@ -4,6 +4,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '../../../hooks/useAuth'
+import { usePermission } from '../../../lib/permissions/hooks'
+import type { Permission } from '../../../lib/permissions/types'
 import { useSidebar } from '../../../contexts/sidebar-context'
 import { Button } from '../../ui/button'
 import { 
@@ -39,6 +41,7 @@ interface TopNavbarProps {
 
 export function TopNavbar({ entities, className }: TopNavbarProps) {
   const { user, signOut, isLoading } = useAuth()
+  const canAccessBilling = usePermission('settings.billing' as Permission)
   const pathname = usePathname()
   const { isCollapsed, toggleSidebar } = useSidebar()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -662,16 +665,18 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   <Settings className="inline mr-2 h-4 w-4" aria-hidden="true" />
                   Settings
                 </Link>
-                <Link
-                  href="/dashboard/settings/billing"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
-                  onClick={handleMenuClose}
-                  aria-label={t('a11y.goToBilling')}
-                                    data-cy={sel('dashboard.topnav.mobileMenu.linkBilling')}
-                >
-                  <CreditCard className="inline mr-2 h-4 w-4" aria-hidden="true" />
-                  Billing
-                </Link>
+                {canAccessBilling && (
+                  <Link
+                    href="/dashboard/settings/billing"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
+                    onClick={handleMenuClose}
+                    aria-label={t('a11y.goToBilling')}
+                    data-cy={sel('dashboard.topnav.mobileMenu.linkBilling')}
+                  >
+                    <CreditCard className="inline mr-2 h-4 w-4" aria-hidden="true" />
+                    Billing
+                  </Link>
+                )}
                 <button
                   onClick={() => {
                     handleSignOut()

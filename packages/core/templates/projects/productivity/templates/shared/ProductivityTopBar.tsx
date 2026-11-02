@@ -9,6 +9,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useParams } from 'next/navigation'
 import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
+import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
+import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import {
     DropdownMenu,
@@ -47,6 +49,7 @@ interface Board {
 
 export function ProductivityTopBar() {
     const { user, signOut, isLoading } = useAuth()
+    const canAccessBilling = usePermission('settings.billing' as Permission)
     const pathname = usePathname()
     const params = useParams()
     const { theme, setTheme } = useTheme()
@@ -266,12 +269,14 @@ export function ProductivityTopBar() {
                                         Settings
                                     </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                    <Link href="/dashboard/settings/billing" className="flex items-center">
-                                        <CreditCard className="mr-2 h-4 w-4" />
-                                        Billing
-                                    </Link>
-                                </DropdownMenuItem>
+                                {canAccessBilling && (
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/dashboard/settings/billing" className="flex items-center">
+                                            <CreditCard className="mr-2 h-4 w-4" />
+                                            Billing
+                                        </Link>
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     onClick={handleSignOut}

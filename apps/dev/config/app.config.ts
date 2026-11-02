@@ -306,6 +306,7 @@ export const APP_CONFIG_OVERRIDES = {
         href: '/dashboard/settings/billing',
         icon: 'CreditCard',
         enabled: true,
+        requiresPermission: 'settings.billing',
       },
       {
         id: 'api-keys',
