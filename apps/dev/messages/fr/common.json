@@ -2,15 +2,15 @@
   "userRoles": {
     "member": "Membre",
     "superadmin": "Super admin",
-    "developer": "Developpeur"
+    "developer": "Développeur"
   },
   "teamRoles": {
-    "owner": "Proprietaire",
+    "owner": "Propriétaire",
     "admin": "Administrateur",
     "member": "Membre",
     "viewer": "Lecteur",
-    "editor": "Editeur"
+    "editor": "Éditeur"
   },
-  "comingSoon": "Bientot disponible",
-  "soon": "Bientot"
+  "comingSoon": "Bientôt disponible",
+  "soon": "Bientôt"
 }

@@ -1,6 +1,6 @@
 {
   "title": "Documentation",
-  "description": "Documentation complete pour utiliser notre plateforme efficacement.",
+  "description": "Documentation complète pour utiliser notre plateforme efficacement.",
   "sidebar": {
     "label": "Navigation de la documentation",
     "open": "Ouvrir le menu de navigation",
@@ -11,17 +11,17 @@
   },
   "categories": {
     "core": "Core",
-    "theme": "Theme",
+    "theme": "Thème",
     "plugins": "Plugins"
   },
   "breadcrumbs": {
     "home": "Accueil"
   },
   "quickStart": {
-    "title": "Guide de demarrage rapide",
-    "step1": "Creer un compte",
+    "title": "Guide de démarrage rapide",
+    "step1": "Créer un compte",
     "step2": "Configurer le profil",
     "step3": "Explorer le tableau de bord",
-    "step4": "Creer la premiere tache"
+    "step4": "Créer la première tâche"
   }
 }

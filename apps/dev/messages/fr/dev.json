@@ -1,99 +1,99 @@
 {
   "title": "DevTools",
-  "subtitle": "Outils et documentation de developpement",
+  "subtitle": "Outils et documentation de développement",
   "restrictedArea": "Zone restreinte",
-  "developerAccessOnly": "Acces developpeur uniquement",
+  "developerAccessOnly": "Accès développeur uniquement",
   "exitToDashboard": "Retour au tableau de bord",
   "exitToDashboardDescription": "Revenir au tableau de bord principal",
   "returnToDashboard": "Retour au tableau de bord",
-  "goToSector7": "Aller a Sector7",
-  "goToSector7Description": "Acceder a la zone d'administration Sector7",
+  "goToSector7": "Aller à Sector7",
+  "goToSector7Description": "Accéder à la zone d'administration Sector7",
   "superAdminArea": "Zone super admin",
   "nav": {
     "home": "Accueil",
-    "homeDescription": "Tableau de bord developpeur",
+    "homeDescription": "Tableau de bord développeur",
     "styleGallery": "Galerie de styles",
     "styleGalleryDescription": "Vitrine des composants",
     "testCases": "Cas de test",
     "testCasesDescription": "Documentation des tests",
     "config": "Configuration",
-    "configDescription": "Configuration du systeme",
-    "expandSidebar": "Etendre la barre laterale",
-    "collapseSidebar": "Reduire la barre laterale"
+    "configDescription": "Configuration du système",
+    "expandSidebar": "Étendre la barre latérale",
+    "collapseSidebar": "Réduire la barre latérale"
   },
   "home": {
     "welcome": "Bienvenue dans DevTools",
-    "welcomeDescription": "Votre centre d'outils et de documentation de developpement",
-    "intro": "Cette zone fournit un acces aux composants du systeme de design, a la documentation des cas de test et a la configuration du systeme. Utilisez la navigation pour explorer les differentes sections.",
-    "systemInfo": "Informations systeme",
-    "systemInfoDescription": "Votre niveau d'acces et privileges",
-    "accessLevel": "Niveau d'acces",
-    "hierarchy": "Niveau de hierarchie"
+    "welcomeDescription": "Votre centre d'outils et de documentation de développement",
+    "intro": "Cette zone fournit un accès aux composants du système de design, à la documentation des cas de test et à la configuration du système. Utilisez la navigation pour explorer les différentes sections.",
+    "systemInfo": "Informations système",
+    "systemInfoDescription": "Votre niveau d'accès et privilèges",
+    "accessLevel": "Niveau d'accès",
+    "hierarchy": "Niveau de hiérarchie"
   },
   "style": {
     "title": "Galerie de styles",
-    "description": "Composants et themes du systeme de design"
+    "description": "Composants et thèmes du système de design"
   },
   "tests": {
     "title": "Cas de test",
     "description": "Explorer la documentation des tests",
     "fileTree": "Fichiers de test",
     "fileTreeDescription": "Explorer la documentation des tests",
-    "noTests": "Aucun fichier de test trouve",
-    "selectFile": "Selectionnez un fichier a visualiser",
+    "noTests": "Aucun fichier de test trouvé",
+    "selectFile": "Sélectionnez un fichier à visualiser",
     "selectFileDescription": "Choisissez un fichier de test de l'arborescence pour voir son contenu",
     "error": "Erreur lors du chargement du fichier",
     "loading": "Chargement...",
-    "fileNotFound": "Fichier non trouve",
-    "fileNotFoundDescription": "Le fichier de test \"{path}\" n'a pas pu etre trouve.",
-    "backToList": "Retour a la liste"
+    "fileNotFound": "Fichier non trouvé",
+    "fileNotFoundDescription": "Le fichier de test \"{path}\" n'a pas pu être trouvé.",
+    "backToList": "Retour à la liste"
   },
   "config": {
     "title": "Visualiseur de configuration",
-    "description": "Voir la configuration actuelle du systeme",
-    "themeTitle": "Configuration du theme",
-    "themeDescription": "Configuration et metadonnees du theme actuel",
-    "entitiesTitle": "Registre des entites",
-    "entitiesDescription": "{count} entites enregistrees",
+    "description": "Voir la configuration actuelle du système",
+    "themeTitle": "Configuration du thème",
+    "themeDescription": "Configuration et métadonnées du thème actuel",
+    "entitiesTitle": "Registre des entités",
+    "entitiesDescription": "{count} entités enregistrées",
     "copy": "Copier",
-    "copied": "Copie !",
+    "copied": "Copié !",
     "error": "Erreur lors du chargement de la configuration",
     "tabs": {
-      "theme": "Config du theme",
-      "entities": "Entites"
+      "theme": "Config du thème",
+      "entities": "Entités"
     }
   },
   "scheduledActions": {
-    "title": "Actions programmees",
-    "description": "Surveiller et gerer les actions programmees en arriere-plan",
-    "loading": "Chargement des actions programmees...",
-    "empty": "Aucune action programmee trouvee",
-    "emptyDescription": "Les actions programmees apparaitront ici lorsqu'elles seront creees",
+    "title": "Actions programmées",
+    "description": "Surveiller et gérer les actions programmées en arrière-plan",
+    "loading": "Chargement des actions programmées...",
+    "empty": "Aucune action programmée trouvée",
+    "emptyDescription": "Les actions programmées apparaîtront ici lorsqu'elles seront créées",
     "filters": {
       "status": "Statut",
       "allStatuses": "Tous les statuts",
       "actionType": "Type d'action",
       "allTypes": "Tous les types",
       "apply": "Appliquer les filtres",
-      "reset": "Reinitialiser les filtres"
+      "reset": "Réinitialiser les filtres"
     },
     "table": {
       "type": "Type",
       "status": "Statut",
-      "scheduledAt": "Programme pour",
-      "team": "Equipe",
-      "payload": "Donnees",
+      "scheduledAt": "Programmé pour",
+      "team": "Équipe",
+      "payload": "Données",
       "error": "Erreur",
       "noTeam": "Global"
     },
     "status": {
       "pending": "En attente",
       "running": "En cours",
-      "completed": "Termine",
-      "failed": "Echoue"
+      "completed": "Terminé",
+      "failed": "Échoué"
     },
     "pagination": {
-      "previous": "Precedent",
+      "previous": "Précédent",
       "next": "Suivant",
       "page": "Page {page} sur {total}"
     }

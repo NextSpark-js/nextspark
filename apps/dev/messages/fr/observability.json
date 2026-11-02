@@ -1,61 +1,61 @@
 {
-  "title": "Observabilite IA",
+  "title": "Observabilité IA",
   "description": "Surveillez les invocations d'agents LangChain et les traces",
   "loading": "Chargement des traces...",
   "error": "Erreur lors du chargement des traces",
-  "disabled": "L'observabilite est desactivee dans la configuration",
+  "disabled": "L'observabilité est désactivée dans la configuration",
   "loadMore": "Charger plus",
   "loadingMore": "Chargement...",
   "reload": "Recharger",
   "reloading": "Rechargement...",
   "period": {
-    "1h": "Derniere heure",
-    "24h": "Dernieres 24 heures",
+    "1h": "Dernière heure",
+    "24h": "Dernières 24 heures",
     "7d": "7 derniers jours",
     "30d": "30 derniers jours"
   },
   "status": {
     "running": "En cours",
-    "success": "Succes",
+    "success": "Succès",
     "error": "Erreur"
   },
   "filters": {
     "status": "Statut",
     "agent": "Agent",
-    "period": "Periode",
+    "period": "Période",
     "allStatus": "Tous les statuts",
     "allAgents": "Tous les agents",
-    "searchPlaceholder": "Rechercher par ID de trace ou entree..."
+    "searchPlaceholder": "Rechercher par ID de trace ou entrée..."
   },
   "table": {
     "traceId": "ID de trace",
     "input": "Message",
     "agent": "Agent",
     "status": "Statut",
-    "duration": "Duree",
+    "duration": "Durée",
     "tokens": "Tokens",
-    "startedAt": "Demarre",
-    "empty": "Aucune trace trouvee pour la periode et les filtres selectionnes"
+    "startedAt": "Démarré",
+    "empty": "Aucune trace trouvée pour la période et les filtres sélectionnés"
   },
   "detail": {
-    "title": "Detail de la trace",
+    "title": "Détail de la trace",
     "back": "Retour aux traces",
     "agent": "Agent",
-    "model": "Modele",
-    "duration": "Duree",
+    "model": "Modèle",
+    "duration": "Durée",
     "tokens": "Tokens",
     "calls": "Appels",
     "tools": "outils",
-    "input": "Entree",
+    "input": "Entrée",
     "output": "Sortie",
     "error": "Erreur",
     "stackTrace": "Stack Trace",
-    "spans": "Spans d'execution",
+    "spans": "Spans d'exécution",
     "childTraces": "Traces de sous-agents",
-    "noSpans": "Aucun span enregistre pour cette trace",
-    "showDetails": "Afficher les details",
-    "hideDetails": "Masquer les details",
-    "toolInput": "Entree de l'outil",
+    "noSpans": "Aucun span enregistré pour cette trace",
+    "showDetails": "Afficher les détails",
+    "hideDetails": "Masquer les détails",
+    "toolInput": "Entrée de l'outil",
     "toolOutput": "Sortie de l'outil",
     "hiddenSpans": "{count} chains internes masques",
     "showInternalChains": "Afficher tout",
@@ -66,9 +66,9 @@
     "userMessage": "Utilisateur",
     "assistantResponse": "Assistant",
     "toolCall": "Appel d'outil",
-    "toolResult": "Resultat de l'outil",
-    "noSteps": "Aucune etape d'execution enregistree",
+    "toolResult": "Résultat de l'outil",
+    "noSteps": "Aucune étape d'exécution enregistrée",
     "showFull": "Voir complet",
-    "collapse": "Reduire"
+    "collapse": "Réduire"
   }
 }

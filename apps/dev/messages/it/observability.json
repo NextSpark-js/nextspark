@@ -1,9 +1,9 @@
 {
-  "title": "Osservabilita IA",
+  "title": "Osservabilità IA",
   "description": "Monitora invocazioni agenti LangChain e tracce",
   "loading": "Caricamento tracce...",
   "error": "Errore nel caricamento delle tracce",
-  "disabled": "L'osservabilita e disabilitata nella configurazione",
+  "disabled": "L'osservabilità è disabilitata nella configurazione",
   "loadMore": "Carica altro",
   "loadingMore": "Caricamento...",
   "reload": "Ricarica",

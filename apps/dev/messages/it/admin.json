@@ -206,8 +206,8 @@
     "sidebar": {
       "blocks": "Blocchi",
       "fields": "Campi",
-      "fieldsTitle": "Campi Entita",
-      "fieldsDescription": "Configura proprieta aggiuntive",
+      "fieldsTitle": "Campi Entità",
+      "fieldsDescription": "Configura proprietà aggiuntive",
       "noFields": "Nessun campo aggiuntivo disponibile",
       "noCategories": "Nessuna categoria disponibile"
     },

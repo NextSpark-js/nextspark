@@ -3,7 +3,7 @@
     "badge": "Prezzi",
     "title": "Piani per ogni",
     "titleAccent": "team",
-    "description": "Inizia gratis e scala quando il tuo team cresce. Tutti i piani includono le nostre funzionalita principali."
+    "description": "Inizia gratis e scala quando il tuo team cresce. Tutti i piani includono le nostre funzionalità principali."
   },
   "plans": {
     "free": {
@@ -28,7 +28,7 @@
       "description": "Ideale per team in crescita",
       "price": "29",
       "period": "mese",
-      "badge": "Piu Popolare",
+      "badge": "Più Popolare",
       "cta": "Inizia Prova Pro",
       "features": {
         "users": "10 Utenti",
@@ -61,7 +61,7 @@
   },
   "comparison": {
     "title": "Confronto Dettagliato",
-    "description": "Visualizza tutte le funzionalita incluse in ogni piano per prendere la decisione migliore.",
+    "description": "Visualizza tutte le funzionalità incluse in ogni piano per prendere la decisione migliore.",
     "collaboration": {
       "title": "Collaborazione",
       "description": "Strumenti per lavorare in team in modo efficiente con permessi granulari."
@@ -72,7 +72,7 @@
     },
     "security": {
       "title": "Sicurezza",
-      "description": "Crittografia end-to-end e conformita agli standard di sicurezza."
+      "description": "Crittografia end-to-end e conformità agli standard di sicurezza."
     },
     "support": {
       "title": "Supporto",
@@ -81,21 +81,21 @@
   },
   "faq": {
     "title": "Domande Frequenti",
-    "description": "Rispondiamo alle domande piu comuni sui nostri piani e prezzi.",
+    "description": "Rispondiamo alle domande più comuni sui nostri piani e prezzi.",
     "questions": {
       "changePlan": "Posso cambiare piano in qualsiasi momento?",
-      "changePlanAnswer": "Si, puoi cambiare piano in qualsiasi momento dalla tua dashboard. Le modifiche vengono applicate immediatamente.",
+      "changePlanAnswer": "Sì, puoi cambiare piano in qualsiasi momento dalla tua dashboard. Le modifiche vengono applicate immediatamente.",
       "setupCost": "Ci sono costi di configurazione?",
       "setupCostAnswer": "No, tutti i nostri piani includono configurazione gratuita e supporto durante l'implementazione.",
       "paymentMethods": "Quali metodi di pagamento accettate?",
       "paymentMethodsAnswer": "Accettiamo tutte le principali carte di credito, PayPal e bonifici bancari per i piani Enterprise.",
       "annualDiscount": "Ci sono sconti per il pagamento annuale?",
-      "annualDiscountAnswer": "Si, offriamo 2 mesi gratuiti pagando annualmente per i piani Pro ed Enterprise."
+      "annualDiscountAnswer": "Sì, offriamo 2 mesi gratuiti pagando annualmente per i piani Pro ed Enterprise."
     }
   },
   "cta": {
     "title": "Pronto per iniziare?",
-    "description": "Unisciti a migliaia di team che gia si affidano alla nostra piattaforma per i loro progetti.",
+    "description": "Unisciti a migliaia di team che già si affidano alla nostra piattaforma per i loro progetti.",
     "startFree": "Inizia Gratis",
     "contactSales": "Contatta Vendite"
   }

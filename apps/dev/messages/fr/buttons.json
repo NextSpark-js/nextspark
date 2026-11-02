@@ -4,16 +4,16 @@
   "delete": "Supprimer",
   "edit": "Modifier",
   "add": "Ajouter",
-  "update": "Mettre a jour",
+  "update": "Mettre à jour",
   "submit": "Soumettre",
   "close": "Fermer",
   "back": "Retour",
   "next": "Suivant",
-  "previous": "Precedent",
+  "previous": "Précédent",
   "continue": "Continuer",
   "finish": "Terminer",
   "signIn": "Se connecter",
   "signUp": "S'inscrire",
-  "signOut": "Se deconnecter",
-  "signingOut": "Deconnexion..."
+  "signOut": "Se déconnecter",
+  "signingOut": "Déconnexion..."
 }

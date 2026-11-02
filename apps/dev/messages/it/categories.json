@@ -14,7 +14,7 @@
   "empty": "Nessuna categoria trovata",
   "emptyDescription": "Inizia creando la tua prima categoria.",
   "deleteConfirm": "Eliminare categoria?",
-  "deleteDescription": "Sei sicuro di voler eliminare \"{name}\"? Questa azione non puo essere annullata.",
+  "deleteDescription": "Sei sicuro di voler eliminare \"{name}\"? Questa azione non può essere annullata.",
   "saveCategory": "Salva Categoria",
   "saving": "Salvataggio...",
   "deleting": "Eliminazione...",
@@ -30,6 +30,6 @@
     "description": "Post su tecnologia e sviluppo software"
   },
   "errors": {
-    "nameRequired": "Il nome e obbligatorio"
+    "nameRequired": "Il nome è obbligatorio"
   }
 }

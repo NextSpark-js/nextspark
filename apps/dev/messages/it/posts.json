@@ -19,7 +19,7 @@
   "search": "Cerca post...",
   "noPostsFound": "Nessun post trovato",
   "deleteConfirm": "Sei sicuro?",
-  "deleteDescription": "Questo eliminera permanentemente \"{title}\". Questa azione non puo essere annullata.",
+  "deleteDescription": "Questo eliminerà permanentemente \"{title}\". Questa azione non può essere annullata.",
   "savePost": "Salva Post",
   "saving": "Salvataggio...",
   "deleting": "Eliminazione...",
@@ -48,7 +48,7 @@
     "featuredImage": "https://esempio.com/immagine.jpg"
   },
   "errors": {
-    "titleRequired": "Il titolo e obbligatorio",
-    "slugRequired": "Lo slug e obbligatorio"
+    "titleRequired": "Il titolo è obbligatorio",
+    "slugRequired": "Lo slug è obbligatorio"
   }
 }

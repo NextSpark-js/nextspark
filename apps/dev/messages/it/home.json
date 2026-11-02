@@ -15,7 +15,7 @@
   },
   "techStack": {
     "title": "Stack Tecnologico",
-    "description": "Costruito con le tecnologie piu recenti e potenti",
+    "description": "Costruito con le tecnologie più recenti e potenti",
     "latest": "Ultimo",
     "secure": "Sicuro",
     "supabase": "Supabase",
@@ -26,19 +26,19 @@
     "appRouter": "App Router"
   },
   "features": {
-    "title": "Funzionalita",
-    "description": "Tutto cio di cui hai bisogno per costruire un SaaS moderno",
+    "title": "Funzionalità",
+    "description": "Tutto ciò di cui hai bisogno per costruire un SaaS moderno",
     "emailAuth": "Autenticazione Email/Password",
     "googleOAuth": "Google OAuth",
     "protectedRoutes": "Route Protette",
     "emailVerification": "Verifica Email",
     "passwordReset": "Reset Password",
-    "entityManagement": "Sistema Entita",
+    "entityManagement": "Sistema Entità",
     "pluginSystem": "Architettura Plugin",
     "themeSupport": "Supporto Multi-Tema",
     "i18nSystem": "Internazionalizzazione",
     "apiRoutes": "API RESTful",
-    "colorMode": "Modalita Colore",
+    "colorMode": "Modalità Colore",
     "aiIntegration": "Integrazione IA",
     "teams": "Team",
     "memberships": "Abbonamenti",
@@ -46,7 +46,7 @@
   },
   "cta": {
     "readyToStart": "Pronto per Iniziare?",
-    "description": "Unisciti a migliaia di sviluppatori che si affidano al nostro boilerplate per costruire incredibili applicazioni SaaS piu velocemente.",
+    "description": "Unisciti a migliaia di sviluppatori che si affidano al nostro boilerplate per costruire incredibili applicazioni SaaS più velocemente.",
     "viewPricing": "Vedi Prezzi",
     "startFreeTrial": "Inizia Prova Gratuita"
   },

@@ -1,13 +1,13 @@
 {
   "home": "Accueil",
-  "tasks": "Taches",
-  "create": "Creer",
-  "settings": "Parametres",
+  "tasks": "Tâches",
+  "create": "Créer",
+  "settings": "Paramètres",
   "more": "Plus",
   "moreOptions": "Plus d'options",
-  "moreOptionsDescription": "Accedez aux parametres et fonctionnalites supplementaires",
-  "quickCreateDescription": "Creer un nouvel element",
-  "noEntitiesAvailable": "Aucun element disponible a creer",
-  "createNew": "Creer nouveau",
+  "moreOptionsDescription": "Accédez aux paramètres et fonctionnalités supplémentaires",
+  "quickCreateDescription": "Créer un nouvel élément",
+  "noEntitiesAvailable": "Aucun élément disponible à créer",
+  "createNew": "Créer nouveau",
   "greeting": "Bonjour, {name}"
 }

@@ -18,9 +18,9 @@
     "benefit3": "Trigger workflow"
   },
   "hero": {
-    "badge": "Panoramica Funzionalita",
-    "title": "Tutto cio di cui hai bisogno per costruire applicazioni moderne",
-    "description": "La nostra piattaforma fornisce un set completo di funzionalita progettate per accelerare il tuo processo di sviluppo mantenendo sicurezza e scalabilita."
+    "badge": "Panoramica Funzionalità",
+    "title": "Tutto ciò di cui hai bisogno per costruire applicazioni moderne",
+    "description": "La nostra piattaforma fornisce un set completo di funzionalità progettate per accelerare il tuo processo di sviluppo mantenendo sicurezza e scalabilità."
   },
   "highlights": {
     "productionReady": {
@@ -62,7 +62,7 @@
       "title": "Esperienza Utente",
       "features": {
         "darkLight": {
-          "name": "Modalita Chiaro/Scuro",
+          "name": "Modalità Chiaro/Scuro",
           "description": "Cambio tema fluido con rilevamento preferenze di sistema"
         },
         "mobileResponsive": {
