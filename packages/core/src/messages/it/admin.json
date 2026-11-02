@@ -214,16 +214,16 @@
     "sidebar": {
       "blocks": "Blocchi",
       "fields": "Campi",
-      "fieldsTitle": "Campi Entita",
-      "fieldsDescription": "Configura proprieta aggiuntive",
+      "fieldsTitle": "Campi Entità",
+      "fieldsDescription": "Configura proprietà aggiuntive",
       "noFields": "Nessun campo aggiuntivo disponibile",
       "noCategories": "Nessuna categoria disponibile"
     },
     "messages": {
       "saved": "Salvato con successo",
       "created": "Creato con successo",
-      "saveBlocked": "La pagina non e stata salvata",
-      "hookFailed": "La pagina non e stata salvata: {message}"
+      "saveBlocked": "La pagina non è stata salvata",
+      "hookFailed": "La pagina non è stata salvata: {message}"
     }
   }
 }

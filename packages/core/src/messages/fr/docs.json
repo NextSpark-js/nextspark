@@ -1,29 +1,29 @@
 {
   "title": "Documentation",
-  "description": "Apprenez a utiliser notre plateforme",
+  "description": "Apprenez à utiliser notre plateforme",
   "search": {
     "placeholder": "Rechercher dans la documentation...",
     "clear": "Effacer la recherche",
-    "noResults": "Aucun resultat trouve pour \"{query}\""
+    "noResults": "Aucun résultat trouvé pour \"{query}\""
   },
   "categories": {
     "getting-started": "Premiers pas",
     "guides": "Guides",
-    "api": "Reference API",
+    "api": "Référence API",
     "plugins": "Plugins",
     "core": "Core",
-    "theme": "Theme"
+    "theme": "Thème"
   },
   "breadcrumbs": {
     "home": "Accueil"
   },
   "sidebar": {
     "close": "Fermer le menu latéral",
-    "open": "Ouvrir le menu lateral",
+    "open": "Ouvrir le menu latéral",
     "label": "Navigation de la documentation"
   },
   "notFound": {
-    "title": "Page non trouvee",
+    "title": "Page non trouvée",
     "description": "La page de documentation que vous recherchez n'existe pas."
   }
 }

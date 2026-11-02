@@ -14,7 +14,7 @@
     },
     "slug": {
       "label": "Slug",
-      "placeholder": "modele-slug",
+      "placeholder": "modèle-slug",
       "description": "Identifiant convivial pour URL, unique par équipe"
     },
     "status": {

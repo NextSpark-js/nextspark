@@ -5,7 +5,7 @@
     "title": "Benvenuto nelle Impostazioni",
     "description": "Utilizza il menu a sinistra per navigare tra le diverse sezioni delle impostazioni del tuo account.",
     "profileDescription": "Gestisci le tue informazioni personali, nome, email e preferenze di base.",
-    "passwordDescription": "Cambia la tua password attuale con una nuova e piu sicura.",
+    "passwordDescription": "Cambia la tua password attuale con una nuova e più sicura.",
     "securityDescription": "Configura l'autenticazione a due fattori e controlla le tue sessioni attive.",
     "notificationsDescription": "Personalizza come e quando ricevere notifiche via email e push.",
     "billingDescription": "Gestisci il tuo abbonamento, metodi di pagamento e fatture.",
@@ -95,7 +95,7 @@
       "deleteButton": "Elimina Account",
       "dialogTitle": "Elimina Account",
       "dialogDescription": "Stai per eliminare permanentemente il tuo account e tutti i dati associati.",
-      "dialogWarning": "Questa azione e irreversibile e non puo essere annullata.",
+      "dialogWarning": "Questa azione è irreversibile e non può essere annullata.",
       "dialogDetail": "Tutte le tue informazioni del profilo, impostazioni e qualsiasi altro dato saranno eliminati permanentemente dai nostri server.",
       "deleting": "Eliminazione...",
       "confirmDelete": "Elimina Account"
@@ -113,11 +113,11 @@
     "success": {
       "aria": "Password aggiornata con successo",
       "title": "Password Aggiornata!",
-      "description": "La tua password e stata aggiornata con successo."
+      "description": "La tua password è stata aggiornata con successo."
     },
     "form": {
       "title": "Nuova Password",
-      "description": "Aggiorna la tua password con una nuova e piu sicura.",
+      "description": "Aggiorna la tua password con una nuova e più sicura.",
       "currentPassword": "Password Attuale",
       "currentPasswordPlaceholder": "Inserisci la tua password attuale",
       "newPassword": "Nuova Password",
@@ -134,7 +134,7 @@
       "updating": "Aggiornamento password...",
       "updateSuccess": "Password aggiornata con successo",
       "updateError": "Errore nell'aggiornamento della password",
-      "unexpectedError": "Si e verificato un errore imprevisto"
+      "unexpectedError": "Si è verificato un errore imprevisto"
     }
   },
   "security": {
@@ -149,7 +149,7 @@
       "description": "Aggiungi un ulteriore livello di sicurezza al tuo account",
       "enabled": "Attivato",
       "disabled": "Disattivato",
-      "enabledStatus": "Il tuo account e protetto con 2FA",
+      "enabledStatus": "Il tuo account è protetto con 2FA",
       "disabledStatus": "Ti consigliamo di attivare 2FA per maggiore sicurezza",
       "active": "Attivo",
       "inactive": "Inattivo",
@@ -175,7 +175,7 @@
       "terminate": "Termina",
       "terminateDialog": {
         "title": "Termina Sessione",
-        "description": "Sei sicuro di voler terminare questa sessione? Il dispositivo dovra effettuare nuovamente l'accesso.",
+        "description": "Sei sicuro di voler terminare questa sessione? Il dispositivo dovrà effettuare nuovamente l'accesso.",
         "cancel": "Annulla",
         "confirm": "Termina Sessione"
       },
@@ -204,7 +204,7 @@
       "saveSuccess": "Configurazione salvata",
       "saveSuccessDescription": "Le tue impostazioni di sicurezza sono state salvate correttamente.",
       "saveError": "Errore nel salvataggio",
-      "saveErrorDescription": "Si e verificato un problema nel salvataggio delle impostazioni. Riprova."
+      "saveErrorDescription": "Si è verificato un problema nel salvataggio delle impostazioni. Riprova."
     },
     "buttons": {
       "save": "Salva Modifiche",
@@ -240,8 +240,8 @@
         "description": "Avvisi importanti sul tuo account"
       },
       "activity": {
-        "title": "Attivita del Prodotto",
-        "description": "Aggiornamenti sulla tua attivita"
+        "title": "Attività del Prodotto",
+        "description": "Aggiornamenti sulla tua attività"
       },
       "marketing": {
         "title": "Marketing e Promozioni",
@@ -258,7 +258,7 @@
         "description": "Conferma quando cambi la tua password"
       },
       "suspiciousActivity": {
-        "title": "Attivita sospetta",
+        "title": "Attività sospetta",
         "description": "Avvisi su tentativi di accesso non autorizzati"
       },
       "mentions": {
@@ -275,14 +275,14 @@
       },
       "newsletter": {
         "title": "Newsletter settimanale",
-        "description": "Riepilogo di nuove funzionalita e suggerimenti"
+        "description": "Riepilogo di nuove funzionalità e suggerimenti"
       },
       "promotions": {
         "title": "Offerte speciali",
         "description": "Sconti e promozioni esclusive"
       },
       "featureAnnouncements": {
-        "title": "Nuove funzionalita",
+        "title": "Nuove funzionalità",
         "description": "Annunci su nuove caratteristiche del prodotto"
       }
     },
@@ -302,7 +302,7 @@
       "saveSuccess": "Configurazione salvata",
       "saveSuccessDescription": "Le tue preferenze di notifica sono state salvate correttamente.",
       "saveError": "Errore nel salvataggio",
-      "saveErrorDescription": "Si e verificato un problema nel salvataggio delle preferenze. Riprova."
+      "saveErrorDescription": "Si è verificato un problema nel salvataggio delle preferenze. Riprova."
     },
     "buttons": {
       "save": "Salva Modifiche",
@@ -318,10 +318,10 @@
       "free": "Gratuito"
     },
     "upgrade": {
-      "title": "Hai bisogno di piu funzionalita?",
-      "description": "Aggiorna a Pro per ottenere limiti piu alti e funzioni avanzate",
+      "title": "Hai bisogno di più funzionalità?",
+      "description": "Aggiorna a Pro per ottenere limiti più alti e funzioni avanzate",
       "button": "Aggiorna Piano",
-      "ready": "Pronto per di piu?",
+      "ready": "Pronto per di più?",
       "explore": "Esplora i nostri piani Pro ed Enterprise",
       "viewPricing": "Vedi Prezzi"
     },
@@ -369,7 +369,7 @@
       }
     },
     "features": {
-      "title": "Funzionalita del piano {plan}",
+      "title": "Funzionalità del piano {plan}",
       "description": "Cosa include il tuo piano attuale"
     },
     "messages": {

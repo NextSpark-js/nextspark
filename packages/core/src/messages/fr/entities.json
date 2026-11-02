@@ -1,6 +1,6 @@
 {
   "actions": {
-    "create": "Creer {entity}",
+    "create": "Créer {entity}",
     "edit": "Modifier {entity}",
     "delete": "Supprimer {entity}",
     "view": "Voir {entity}",
@@ -8,7 +8,7 @@
     "archive": "Archiver",
     "restore": "Restaurer",
     "save": "Enregistrer {entity}",
-    "update": "Mettre a jour {entity}"
+    "update": "Mettre à jour {entity}"
   },
   "fields": {
     "title": "Titre",
@@ -16,37 +16,37 @@
     "slug": "Slug",
     "status": "Statut",
     "description": "Description",
-    "createdAt": "Cree",
-    "updatedAt": "Mis a jour",
+    "createdAt": "Créé",
+    "updatedAt": "Mis à jour",
     "id": "ID"
   },
   "messages": {
-    "created": "{entity} cree avec succes",
-    "updated": "{entity} mis a jour avec succes",
-    "deleted": "{entity} supprime avec succes",
-    "archived": "{entity} archive avec succes",
-    "restored": "{entity} restaure avec succes",
-    "duplicated": "{entity} duplique avec succes",
-    "confirmDelete": "Etes-vous sur de vouloir supprimer ce {entity} ?",
-    "confirmArchive": "Etes-vous sur de vouloir archiver ce {entity} ?",
-    "deleteWarning": "Cette action ne peut pas etre annulee.",
-    "notFound": "{entity} non trouve",
+    "created": "{entity} créé avec succès",
+    "updated": "{entity} mis à jour avec succès",
+    "deleted": "{entity} supprimé avec succès",
+    "archived": "{entity} archivé avec succès",
+    "restored": "{entity} restauré avec succès",
+    "duplicated": "{entity} dupliqué avec succès",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce {entity} ?",
+    "confirmArchive": "Êtes-vous sûr de vouloir archiver ce {entity} ?",
+    "deleteWarning": "Cette action ne peut pas être annulée.",
+    "notFound": "{entity} non trouvé",
     "loadError": "Erreur lors du chargement de {entity}"
   },
   "list": {
-    "empty": "Aucun {entities} trouve",
+    "empty": "Aucun {entities} trouvé",
     "emptyFiltered": "Aucun {entities} ne correspond aux filtres",
     "loading": "Chargement...",
     "search": "Rechercher...",
     "searchPlaceholder": "Rechercher {entities}...",
-    "noResults": "Aucun resultat trouve",
+    "noResults": "Aucun résultat trouvé",
     "showing": "Affichage de {count} sur {total} {entities}",
-    "selected": "{count} selectionnes"
+    "selected": "{count} sélectionnés"
   },
   "detail": {
-    "back": "Retour a {entities}",
-    "createdAt": "Cree le {date}",
-    "updatedAt": "Mis a jour le {date}",
-    "idCopied": "ID copie dans le presse-papiers"
+    "back": "Retour à {entities}",
+    "createdAt": "Créé le {date}",
+    "updatedAt": "Mis à jour le {date}",
+    "idCopied": "ID copié dans le presse-papiers"
   }
 }

@@ -2,13 +2,13 @@
   "title": "Benvenuto",
   "description": "La tua piattaforma tutto in uno",
   "hero": {
-    "title": "Costruisci piu velocemente con la nostra piattaforma",
-    "subtitle": "Tutto cio di cui hai bisogno per creare applicazioni straordinarie",
+    "title": "Costruisci più velocemente con la nostra piattaforma",
+    "subtitle": "Tutto ciò di cui hai bisogno per creare applicazioni straordinarie",
     "cta": "Inizia"
   },
   "features": {
-    "title": "Funzionalita",
-    "subtitle": "Tutto cio di cui hai bisogno"
+    "title": "Funzionalità",
+    "subtitle": "Tutto ciò di cui hai bisogno"
   },
   "auth": {
     "signIn": "Accedi",

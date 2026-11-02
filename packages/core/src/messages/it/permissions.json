@@ -1,25 +1,25 @@
 {
   "title": "Permessi del Team",
-  "description": "Visualizza e gestisci cosa puo fare ogni ruolo del team",
+  "description": "Visualizza e gestisci cosa può fare ogni ruolo del team",
   "rolesOverview": "Panoramica Ruoli",
-  "rolesOverviewDescription": "Ogni membro del team ha un ruolo che determina a cosa puo accedere e cosa puo fare",
+  "rolesOverviewDescription": "Ogni membro del team ha un ruolo che determina a cosa può accedere e cosa può fare",
   "allPermissions": "Tutti i Permessi",
   "permission": "Permesso",
-  "dangerousAction": "Questa e un'azione potenzialmente pericolosa",
+  "dangerousAction": "Questa è un'azione potenzialmente pericolosa",
   "roleChanged": "Permesso aggiornato",
-  "roleChangedDescription": "I tuoi permessi sono stati aggiornati. La pagina si aggiornera per riflettere le modifiche.",
+  "roleChangedDescription": "I tuoi permessi sono stati aggiornati. La pagina si aggiornerà per riflettere le modifiche.",
   "roles": {
     "owner": {
       "title": "Proprietario",
-      "description": "Accesso completo a tutte le funzionalita e impostazioni del team"
+      "description": "Accesso completo a tutte le funzionalità e impostazioni del team"
     },
     "admin": {
       "title": "Amministratore",
-      "description": "Puo gestire i membri del team e la maggior parte delle impostazioni"
+      "description": "Può gestire i membri del team e la maggior parte delle impostazioni"
     },
     "member": {
       "title": "Membro",
-      "description": "Puo creare e modificare contenuti, accesso limitato alle impostazioni"
+      "description": "Può creare e modificare contenuti, accesso limitato alle impostazioni"
     },
     "viewer": {
       "title": "Visualizzatore",

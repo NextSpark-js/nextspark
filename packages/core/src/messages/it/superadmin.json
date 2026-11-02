@@ -80,7 +80,7 @@
       "noUsers": "Nessun utente trovato",
       "noUsersDescription": "Non ci sono ancora utenti regolari nel sistema.",
       "noSuperadmins": "Nessun superadmin trovato",
-      "noSuperadminsDescription": "Questo e insolito - dovrebbe esserci almeno un superadmin.",
+      "noSuperadminsDescription": "Questo è insolito - dovrebbe esserci almeno un superadmin.",
       "you": "Tu"
     },
     "actions": {
@@ -128,7 +128,7 @@
       "colorTokens": "Token Colore",
       "themeColorVariables": "Variabili colore del tema",
       "themes": "Temi",
-      "lightDarkModes": "Modalita chiara e scura",
+      "lightDarkModes": "Modalità chiara e scura",
       "documentation": "Documentazione",
       "componentCoverage": "Copertura componenti"
     },
@@ -153,11 +153,11 @@
         "description": "Mantenere coerenza visiva e funzionale in tutti i componenti"
       },
       "accessibility": {
-        "title": "Accessibilita",
+        "title": "Accessibilità",
         "description": "Assicurare che tutti i componenti rispettino gli standard WCAG 2.1 AA"
       },
       "scalability": {
-        "title": "Scalabilita",
+        "title": "Scalabilità",
         "description": "Progettare componenti che funzionino a diverse scale e contesti"
       },
       "performance": {
@@ -203,7 +203,7 @@
   "errors": {
     "accessDenied": "Accesso Negato",
     "superadminRequired": "Hai bisogno dei privilegi di superadmin per accedere a questa area.",
-    "restrictedArea": "Questa sezione e riservata solo agli amministratori di sistema. Se ritieni sia un errore, contatta il supporto.",
+    "restrictedArea": "Questa sezione è riservata solo agli amministratori di sistema. Se ritieni sia un errore, contatta il supporto.",
     "sessionNotFound": "Sessione non trovata. Per favore accedi nuovamente.",
     "goBack": "Torna Indietro",
     "dashboard": "Dashboard",

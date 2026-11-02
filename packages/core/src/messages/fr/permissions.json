@@ -1,29 +1,29 @@
 {
-  "title": "Permissions de l'equipe",
-  "description": "Voir et gerer ce que chaque role de l'equipe peut faire",
-  "rolesOverview": "Apercu des roles",
-  "rolesOverviewDescription": "Chaque membre de l'equipe a un role qui determine ce a quoi il peut acceder et ce qu'il peut faire",
+  "title": "Permissions de l'équipe",
+  "description": "Voir et gérer ce que chaque rôle de l'équipe peut faire",
+  "rolesOverview": "Aperçu des rôles",
+  "rolesOverviewDescription": "Chaque membre de l'équipe a un rôle qui détermine ce à quoi il peut accéder et ce qu'il peut faire",
   "allPermissions": "Toutes les permissions",
   "permission": "Permission",
   "dangerousAction": "Ceci est une action potentiellement dangereuse",
-  "roleChanged": "Permission mise a jour",
-  "roleChangedDescription": "Vos permissions ont ete mises a jour. La page va se rafraichir pour refleter les changements.",
+  "roleChanged": "Permission mise à jour",
+  "roleChangedDescription": "Vos permissions ont été mises à jour. La page va se rafraîchir pour refléter les changements.",
   "roles": {
     "owner": {
-      "title": "Proprietaire",
-      "description": "Acces complet a toutes les fonctionnalites et parametres de l'equipe"
+      "title": "Propriétaire",
+      "description": "Accès complet à toutes les fonctionnalités et paramètres de l'équipe"
     },
     "admin": {
       "title": "Administrateur",
-      "description": "Peut gerer les membres de l'equipe et la plupart des parametres"
+      "description": "Peut gérer les membres de l'équipe et la plupart des paramètres"
     },
     "member": {
       "title": "Membre",
-      "description": "Peut creer et modifier du contenu, acces limite aux parametres"
+      "description": "Peut créer et modifier du contenu, accès limité aux paramètres"
     },
     "viewer": {
       "title": "Lecteur",
-      "description": "Acces en lecture seule au contenu de l'equipe"
+      "description": "Accès en lecture seule au contenu de l'équipe"
     }
   }
 }

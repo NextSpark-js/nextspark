@@ -11,9 +11,9 @@
   },
   "quickActions": {
     "title": "Azioni Rapide",
-    "description": "Accedi rapidamente alle funzionalita piu utilizzate",
+    "description": "Accedi rapidamente alle funzionalità più utilizzate",
     "myTasks": "I Miei Task",
-    "myTasksDescription": "Gestisci le attivita",
+    "myTasksDescription": "Gestisci le attività",
     "myProfile": "Il Mio Profilo",
     "myProfileDescription": "Informazioni personali",
     "settings": "Impostazioni",
@@ -26,7 +26,7 @@
     "manageSettings": "Gestisci Impostazioni"
   },
   "activity": {
-    "title": "Attivita Recente",
+    "title": "Attività Recente",
     "description": "Le tue azioni ed eventi recenti",
     "signedIn": "Accesso alla dashboard",
     "justNow": "Proprio ora",

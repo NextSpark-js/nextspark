@@ -8,8 +8,8 @@
     "styleGalleryDescription": "Riferimento componenti e stili",
     "testCases": "Casi di Test",
     "testCasesDescription": "Scenari di test di sviluppo",
-    "features": "Funzionalita",
-    "featuresDescription": "Registro funzionalita e copertura test",
+    "features": "Funzionalità",
+    "featuresDescription": "Registro funzionalità e copertura test",
     "flows": "Flussi",
     "flowsDescription": "Flussi utente",
     "blocks": "Blocchi",
@@ -17,7 +17,7 @@
     "tags": "Tag",
     "tagsDescription": "Panoramica e filtraggio tag di test",
     "config": "Visualizzatore Config",
-    "configDescription": "Configurazione tema ed entita",
+    "configDescription": "Configurazione tema ed entità",
     "api": "Esploratore API",
     "apiDescription": "Naviga tutti gli endpoint API",
     "expandSidebar": "Espandi barra laterale",
@@ -37,12 +37,12 @@
     "error": "Errore caricamento configurazione",
     "tabs": {
       "theme": "Config Tema",
-      "entities": "Entita"
+      "entities": "Entità"
     },
     "themeTitle": "Configurazione del Tema",
     "themeDescription": "Configurazione attiva del tema e override",
-    "entitiesTitle": "Registro Entita",
-    "entitiesDescription": "{count} entita registrate",
+    "entitiesTitle": "Registro Entità",
+    "entitiesDescription": "{count} entità registrate",
     "copied": "Copiato!",
     "copy": "Copia"
   },
@@ -64,20 +64,20 @@
     "error": "Errore caricamento file",
     "dashboard": {
       "title": "Dashboard Copertura Test",
-      "features": "Funzionalita",
+      "features": "Funzionalità",
       "flows": "Flussi",
       "testFiles": "File di Test",
       "tags": "Tag",
       "coverage": "Copertura",
       "gaps": "Lacune di Copertura",
-      "noGaps": "Tutte le funzionalita e i flussi hanno test!",
+      "noGaps": "Tutte le funzionalità e i flussi hanno test!",
       "criticalPath": "Percorso Critico",
       "backToDashboard": "Dashboard",
       "withTests": "con test",
       "withoutTests": "senza test",
       "categories": {
         "core": "Core",
-        "entities": "Entita",
+        "entities": "Entità",
         "content": "Contenuto",
         "settings": "Impostazioni",
         "admin": "Admin"
@@ -128,21 +128,21 @@
     "responseStates": {
       "idle": "Invia una request per vedere la risposta",
       "loading": "Invio request...",
-      "error": "Si e verificato un errore"
+      "error": "Si è verificato un errore"
     }
   },
   "features": {
-    "title": "Registro Funzionalita",
-    "description": "Registro funzionalita con informazioni sulla copertura dei test",
-    "search": "Cerca funzionalita...",
+    "title": "Registro Funzionalità",
+    "description": "Registro funzionalità con informazioni sulla copertura dei test",
+    "search": "Cerca funzionalità...",
     "tests": "test",
     "covered": "Coperto",
     "uncovered": "Senza test",
-    "showing": "Mostrando {count} di {total} funzionalita",
-    "noResults": "Nessuna funzionalita trovata",
+    "showing": "Mostrando {count} di {total} funzionalità",
+    "noResults": "Nessuna funzionalità trovata",
     "noResultsHint": "Prova a modificare i filtri o la ricerca",
     "stats": {
-      "total": "Totale Funzionalita",
+      "total": "Totale Funzionalità",
       "covered": "Con Test",
       "uncovered": "Senza Test",
       "coverage": "Copertura"
@@ -155,7 +155,7 @@
     },
     "categories": {
       "core": "Core",
-      "entities": "Entita",
+      "entities": "Entità",
       "content": "Contenuto",
       "settings": "Impostazioni",
       "admin": "Admin"
@@ -233,7 +233,7 @@
       "fieldsTab": "Campi",
       "preview": "Anteprima",
       "livePreview": "Anteprima Live",
-      "previewDescription": "Questo blocco viene renderizzato con contenuto di esempio per mostrare come apparira sul tuo sito.",
+      "previewDescription": "Questo blocco viene renderizzato con contenuto di esempio per mostrare come apparirà sul tuo sito.",
       "exampleProps": "Props di Esempio",
       "examplePropsDescription": "Le props usate per renderizzare l'anteprima. Copia questo JSON come punto di partenza.",
       "scope": "Ambito",
@@ -245,7 +245,7 @@
       "default": "Default",
       "placeholder": "Placeholder",
       "options": "Opzioni",
-      "yes": "Si",
+      "yes": "Sì",
       "no": "No"
     }
   },
@@ -263,8 +263,8 @@
     "copied": "Copiato!",
     "categories": {
       "layers": "Livelli",
-      "priorities": "Priorita",
-      "features": "Funzionalita",
+      "priorities": "Priorità",
+      "features": "Funzionalità",
       "flows": "Flussi",
       "blocks": "Blocchi",
       "roles": "Ruoli",

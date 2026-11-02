@@ -18,7 +18,7 @@
   "plans": {
     "free": {
       "name": "Gratuito",
-      "description": "Inizia con le funzionalita di base"
+      "description": "Inizia con le funzionalità di base"
     },
     "starter": {
       "name": "Starter",
@@ -39,7 +39,7 @@
   },
 
   "features": {
-    "title": "Funzionalita",
+    "title": "Funzionalità",
     "basic_analytics": "Analisi Base",
     "basic_analytics_description": "Visualizza statistiche e report di utilizzo base",
     "advanced_analytics": "Analisi Avanzate",
@@ -57,9 +57,9 @@
     "sso": "Single Sign-On (SSO)",
     "sso_description": "SSO enterprise con supporto SAML/OIDC",
     "audit_logs": "Log di Audit",
-    "audit_logs_description": "Traccia tutte le azioni degli utenti e le modifiche per la conformita",
+    "audit_logs_description": "Traccia tutte le azioni degli utenti e le modifiche per la conformità",
     "priority_support": "Supporto Prioritario",
-    "priority_support_description": "Supporto prioritario 24/7 con tempi di risposta piu rapidi",
+    "priority_support_description": "Supporto prioritario 24/7 con tempi di risposta più rapidi",
     "dedicated_support": "Supporto Dedicato",
     "dedicated_support_description": "Account manager dedicato e canale di supporto esclusivo",
     "guest_access": "Accesso Ospiti",
@@ -115,15 +115,15 @@
 
   "errors": {
     "quotaExceeded": "Hai raggiunto il limite del tuo piano per {limit}",
-    "featureNotAvailable": "Questa funzionalita non e disponibile nel tuo piano attuale",
-    "upgradeRequired": "Per favore aggiorna il tuo piano per accedere a questa funzionalita"
+    "featureNotAvailable": "Questa funzionalità non è disponibile nel tuo piano attuale",
+    "upgradeRequired": "Per favore aggiorna il tuo piano per accedere a questa funzionalità"
   },
 
   "downgrade": {
     "title": "Avviso Limite Risorse",
     "description": "Le tue risorse attuali superano i limiti del nuovo piano",
     "resource_over": "{resource}: {current} / {limit}",
-    "policy": "Le risorse esistenti rimarranno accessibili. Non potrai crearne di nuove finche non sarai sotto il limite.",
+    "policy": "Le risorse esistenti rimarranno accessibili. Non potrai crearne di nuove finché non sarai sotto il limite.",
     "confirm": "Procedi con il Declassamento",
     "cancel": "Annulla"
   },
@@ -173,16 +173,16 @@
   "quota": {
     "limitReached": "Hai raggiunto il limite di {entity}",
     "limitReachedDetail": "Il tuo piano attuale non consente altri {entity}. Aggiorna il piano per continuare a crescere.",
-    "featureNotIncluded": "Questa funzionalita non e inclusa nel tuo piano",
-    "featureNotIncludedDetail": "Questa funzionalita non e disponibile nel tuo piano attuale.",
-    "upgradePrompt": "Aggiorna il tuo piano per sbloccare piu capacita.",
+    "featureNotIncluded": "Questa funzionalità non è inclusa nel tuo piano",
+    "featureNotIncludedDetail": "Questa funzionalità non è disponibile nel tuo piano attuale.",
+    "upgradePrompt": "Aggiorna il tuo piano per sbloccare più capacità.",
     "viewPlans": "Vedi i Piani",
     "goBack": "Indietro"
   },
 
   "placeholder": {
-    "notReal": "Questo e un placeholder - non e ancora una funzionalita reale",
-    "description": "Questa funzionalita arrivera presto. Aggiorna il tuo piano per ricevere una notifica quando sara disponibile.",
+    "notReal": "Questo è un placeholder - non è ancora una funzionalità reale",
+    "description": "Questa funzionalità arriverà presto. Aggiorna il tuo piano per ricevere una notifica quando sarà disponibile.",
     "benefits": "Cosa otterrai:"
   }
 }

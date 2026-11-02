@@ -29,7 +29,7 @@
     "duplicated": "{entity} duplicato con successo",
     "confirmDelete": "Sei sicuro di voler eliminare questo {entity}?",
     "confirmArchive": "Sei sicuro di voler archiviare questo {entity}?",
-    "deleteWarning": "Questa azione non puo essere annullata.",
+    "deleteWarning": "Questa azione non può essere annullata.",
     "notFound": "{entity} non trovato",
     "loadError": "Errore nel caricamento di {entity}"
   },

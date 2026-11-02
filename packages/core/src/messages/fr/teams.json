@@ -1,106 +1,106 @@
 {
-  "title": "Equipes",
-  "description": "Gerez vos equipes et collaborations",
+  "title": "Équipes",
+  "description": "Gérez vos équipes et collaborations",
 
   "types": {
     "personal": "Personnel",
-    "work": "Equipe de travail"
+    "work": "Équipe de travail"
   },
 
   "roles": {
-    "owner": "Proprietaire",
+    "owner": "Propriétaire",
     "admin": "Administrateur",
     "member": "Membre",
     "viewer": "Lecteur"
   },
 
   "roleDescriptions": {
-    "owner": "Controle total de l'equipe, y compris la suppression et la facturation",
-    "admin": "Peut gerer les membres, la configuration et la plupart des operations",
-    "member": "Peut voir le contenu de l'equipe et collaborer avec d'autres membres",
-    "viewer": "Acces en lecture seule au contenu de l'equipe"
+    "owner": "Contrôle total de l'équipe, y compris la suppression et la facturation",
+    "admin": "Peut gérer les membres, la configuration et la plupart des opérations",
+    "member": "Peut voir le contenu de l'équipe et collaborer avec d'autres membres",
+    "viewer": "Accès en lecture seule au contenu de l'équipe"
   },
 
   "entity": {
-    "description": "Gerez vos equipes, membres et invitations",
-    "plural": "Equipes"
+    "description": "Gérez vos équipes, membres et invitations",
+    "plural": "Équipes"
   },
 
   "actions": {
-    "create": "Creer une equipe",
-    "creating": "Creation...",
-    "edit": "Modifier l'equipe",
-    "delete": "Supprimer l'equipe",
-    "leave": "Quitter l'equipe",
-    "switch": "Changer d'equipe",
-    "manage": "Gerer l'equipe",
+    "create": "Créer une équipe",
+    "creating": "Création...",
+    "edit": "Modifier l'équipe",
+    "delete": "Supprimer l'équipe",
+    "leave": "Quitter l'équipe",
+    "switch": "Changer d'équipe",
+    "manage": "Gérer l'équipe",
     "invite": "Inviter un membre",
     "inviting": "Envoi de l'invitation...",
     "removeMember": "Supprimer le membre",
-    "changeRole": "Changer le role",
+    "changeRole": "Changer le rôle",
     "makeRole": "Faire {role}",
     "cancel": "Annuler",
     "transferOwnership": "Transférer la propriété"
   },
 
   "switcher": {
-    "switchTeam": "Changer d'equipe",
+    "switchTeam": "Changer d'équipe",
     "switchingTo": "Changement vers",
-    "switchComplete": "Changement termine",
-    "loadingTeamData": "Chargement des donnees de l'equipe...",
-    "ready": "Pret !",
+    "switchComplete": "Changement terminé",
+    "loadingTeamData": "Chargement des données de l'équipe...",
+    "ready": "Prêt !",
     "personal": "Personnel",
-    "workTeam": "Equipe de travail",
-    "manageTeams": "Gerer les equipes",
+    "workTeam": "Équipe de travail",
+    "manageTeams": "Gérer les équipes",
     "active": "Actif",
-    "team": "Equipe"
+    "team": "Équipe"
   },
 
   "createTeam": {
-    "title": "Creer une nouvelle equipe",
-    "description": "Creez une nouvelle equipe pour collaborer avec d'autres",
-    "nameLabel": "Nom de l'equipe",
-    "namePlaceholder": "Entrez le nom de l'equipe",
-    "slugLabel": "URL de l'equipe",
+    "title": "Créer une nouvelle équipe",
+    "description": "Créez une nouvelle équipe pour collaborer avec d'autres",
+    "nameLabel": "Nom de l'équipe",
+    "namePlaceholder": "Entrez le nom de l'équipe",
+    "slugLabel": "URL de l'équipe",
     "slugPlaceholder": "url-de-l-equipe",
     "descriptionLabel": "Description",
-    "descriptionPlaceholder": "Decrivez a quoi sert cette equipe",
-    "success": "Equipe creee avec succes",
-    "error": "Erreur lors de la creation de l'equipe"
+    "descriptionPlaceholder": "Décrivez à quoi sert cette équipe",
+    "success": "Équipe créée avec succès",
+    "error": "Erreur lors de la création de l'équipe"
   },
 
   "editTeam": {
-    "title": "Modifier l'equipe",
-    "success": "Equipe mise a jour avec succes",
-    "error": "Erreur lors de la mise a jour de l'equipe",
+    "title": "Modifier l'équipe",
+    "success": "Équipe mise à jour avec succès",
+    "error": "Erreur lors de la mise à jour de l'équipe",
     "saving": "Enregistrement...",
-    "editName": "Modifier le nom de l'equipe",
+    "editName": "Modifier le nom de l'équipe",
     "editDescription": "Modifier la description",
     "saveName": "Enregistrer le nom",
     "saveDescription": "Enregistrer la description",
     "save": "Enregistrer",
     "cancel": "Annuler",
     "editField": "Modifier {field}",
-    "noValue": "Non defini"
+    "noValue": "Non défini"
   },
 
   "validation": {
-    "nameRequired": "Le nom de l'equipe est requis",
-    "nameMinLength": "Le nom doit contenir au moins 2 caracteres",
-    "nameMaxLength": "Le nom doit contenir au maximum 100 caracteres"
+    "nameRequired": "Le nom de l'équipe est requis",
+    "nameMinLength": "Le nom doit contenir au moins 2 caractères",
+    "nameMaxLength": "Le nom doit contenir au maximum 100 caractères"
   },
 
   "deleteTeam": {
-    "title": "Supprimer l'equipe",
-    "description": "Etes-vous sur de vouloir supprimer cette equipe ? Cette action ne peut pas etre annulee.",
-    "confirmButton": "Supprimer l'equipe",
-    "success": "Equipe supprimee avec succes",
-    "error": "Erreur lors de la suppression de l'equipe"
+    "title": "Supprimer l'équipe",
+    "description": "Êtes-vous sûr de vouloir supprimer cette équipe ? Cette action ne peut pas être annulée.",
+    "confirmButton": "Supprimer l'équipe",
+    "success": "Équipe supprimée avec succès",
+    "error": "Erreur lors de la suppression de l'équipe"
   },
 
   "members": {
-    "title": "Membres de l'equipe",
-    "description": "Gerez qui a acces a cette equipe",
+    "title": "Membres de l'équipe",
+    "description": "Gérez qui a accès à cette équipe",
     "empty": "Aucun membre pour le moment",
     "you": "(Vous)",
     "joined": "A rejoint le {date}"
@@ -109,83 +109,83 @@
   "invitations": {
     "expired": "Expirée",
     "title": "Invitations en attente",
-    "description": "Invitations en attente de reponse",
+    "description": "Invitations en attente de réponse",
     "pending": "En attente",
     "empty": "Aucune invitation en attente",
-    "sent": "Envoyee le {date}",
+    "sent": "Envoyée le {date}",
     "expires": "Expire le {date}",
     "expiresAt": "Expire",
-    "invitedBy": "Invite par",
+    "invitedBy": "Invité par",
     "resend": "Renvoyer",
     "cancel": "Annuler l'invitation",
     "cancelTitle": "Annuler l'invitation",
-    "cancelDescription": "Etes-vous sur de vouloir annuler cette invitation ?",
+    "cancelDescription": "Êtes-vous sûr de vouloir annuler cette invitation ?",
     "cancelConfirm": "Oui, Annuler",
-    "cancelSuccess": "Invitation annulee",
+    "cancelSuccess": "Invitation annulée",
     "cancelError": "Erreur lors de l'annulation de l'invitation"
   },
 
   "invite": {
     "limitReached": "Limite de membres de l'équipe atteinte ({limit})",
     "title": "Inviter un membre",
-    "description": "Invitez quelqu'un a rejoindre cette equipe",
+    "description": "Invitez quelqu'un à rejoindre cette équipe",
     "emailLabel": "Adresse email",
     "emailPlaceholder": "collegue@exemple.com",
-    "roleLabel": "Role",
-    "rolePlaceholder": "Selectionnez un role",
+    "roleLabel": "Rôle",
+    "rolePlaceholder": "Sélectionnez un rôle",
     "sendButton": "Envoyer l'invitation",
-    "success": "Invitation envoyee avec succes",
+    "success": "Invitation envoyée avec succès",
     "error": "Erreur lors de l'envoi de l'invitation"
   },
 
   "acceptInvite": {
-    "title": "Invitation a l'equipe",
-    "description": "Vous avez ete invite a rejoindre",
+    "title": "Invitation à l'équipe",
+    "description": "Vous avez été invité à rejoindre",
     "accept": "Accepter l'invitation",
     "decline": "Refuser",
-    "expired": "Cette invitation a expire",
+    "expired": "Cette invitation a expiré",
     "invalid": "Cette invitation n'est plus valide",
-    "success": "Vous avez rejoint l'equipe !",
+    "success": "Vous avez rejoint l'équipe !",
     "error": "Erreur lors de l'acceptation de l'invitation"
   },
 
   "settings": {
-    "title": "Parametres de l'equipe",
-    "general": "General",
+    "title": "Paramètres de l'équipe",
+    "general": "Général",
     "members": "Membres",
     "billing": "Facturation",
     "danger": "Zone de danger"
   },
 
   "errors": {
-    "notFound": "Equipe non trouvee",
-    "notMember": "Vous n'etes pas membre de cette equipe",
+    "notFound": "Équipe non trouvée",
+    "notMember": "Vous n'êtes pas membre de cette équipe",
     "permissionDenied": "Vous n'avez pas la permission d'effectuer cette action",
-    "cannotDeletePersonal": "Impossible de supprimer l'equipe personnelle",
-    "cannotLeaveOwner": "Les proprietaires ne peuvent pas partir. Transferez d'abord la propriete.",
-    "lastAdmin": "Impossible de supprimer le dernier administrateur de l'equipe",
-    "ownerOnlyEdit": "Seuls les proprietaires peuvent modifier le nom et la description de l'equipe"
+    "cannotDeletePersonal": "Impossible de supprimer l'équipe personnelle",
+    "cannotLeaveOwner": "Les propriétaires ne peuvent pas partir. Transférez d'abord la propriété.",
+    "lastAdmin": "Impossible de supprimer le dernier administrateur de l'équipe",
+    "ownerOnlyEdit": "Seuls les propriétaires peuvent modifier le nom et la description de l'équipe"
   },
 
   "empty": {
-    "title": "Aucune equipe pour le moment",
-    "description": "Creez votre premiere equipe pour commencer a collaborer"
+    "title": "Aucune équipe pour le moment",
+    "description": "Créez votre première équipe pour commencer à collaborer"
   },
 
   "fields": {
-    "name": "Nom de l'equipe",
-    "slug": "URL de l'equipe",
+    "name": "Nom de l'équipe",
+    "slug": "URL de l'équipe",
     "description": "Description (optionnelle)",
     "email": "Adresse email",
-    "role": "Votre role",
+    "role": "Votre rôle",
     "joinedAt": "Date d'inscription"
   },
 
   "messages": {
     "cancelling": "Annulation...",
-    "created": "Equipe creee avec succes",
-    "loading": "Chargement des equipes...",
-    "memberInvited": "Membre invite avec succes"
+    "created": "Équipe créée avec succès",
+    "loading": "Chargement des équipes...",
+    "memberInvited": "Membre invité avec succès"
   },
 
   "transferOwnership": {

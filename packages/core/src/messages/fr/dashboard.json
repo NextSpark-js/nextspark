@@ -4,36 +4,36 @@
   "stats": {
     "accountStatus": "Statut du compte",
     "plan": "Plan",
-    "teamMembers": "Membres de l'equipe",
+    "teamMembers": "Membres de l'équipe",
     "usage": "Utilisation",
     "active": "Actif",
     "free": "Gratuit"
   },
   "quickActions": {
     "title": "Actions rapides",
-    "description": "Accedez rapidement aux fonctionnalites les plus utilisees",
-    "myTasks": "Mes taches",
-    "myTasksDescription": "Gerer les taches en attente",
+    "description": "Accédez rapidement aux fonctionnalités les plus utilisées",
+    "myTasks": "Mes tâches",
+    "myTasksDescription": "Gérer les tâches en attente",
     "myProfile": "Mon profil",
     "myProfileDescription": "Informations personnelles",
-    "settings": "Parametres",
-    "settingsDescription": "Parametres du compte",
+    "settings": "Paramètres",
+    "settingsDescription": "Paramètres du compte",
     "billing": "Facturation",
     "billingDescription": "Plan et paiements",
-    "createTask": "Creer une tache",
-    "viewTasks": "Voir les taches",
-    "updateProfile": "Mettre a jour le profil",
-    "manageSettings": "Gerer les parametres"
+    "createTask": "Créer une tâche",
+    "viewTasks": "Voir les tâches",
+    "updateProfile": "Mettre à jour le profil",
+    "manageSettings": "Gérer les paramètres"
   },
   "activity": {
-    "title": "Activite recente",
-    "description": "Vos actions et evenements recents",
+    "title": "Activité récente",
+    "description": "Vos actions et événements récents",
     "signedIn": "Connexion au tableau de bord",
-    "justNow": "A l'instant",
-    "accountCreated": "Compte cree"
+    "justNow": "À l'instant",
+    "accountCreated": "Compte créé"
   },
   "badges": {
-    "verified": "verifie",
+    "verified": "vérifié",
     "basic": "basique",
     "solo": "individuel",
     "low": "faible"

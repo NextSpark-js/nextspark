@@ -4,33 +4,33 @@
     "users": "Utilisateurs",
     "style": "Galerie de styles",
     "analytics": "Analytiques",
-    "config": "Configuration systeme",
+    "config": "Configuration système",
     "exitSector7": "Quitter Sector7",
     "returnToDashboard": "Retour au tableau de bord"
   },
   "dashboard": {
     "title": "Sector7",
-    "subtitle": "Panneau de controle super administrateur",
-    "restrictedAccess": "Zone d'acces restreint - Super admin et developer uniquement",
-    "systemStatus": "Statut du systeme",
+    "subtitle": "Panneau de contrôle super administrateur",
+    "restrictedAccess": "Zone d'accès restreint - Super admin et developer uniquement",
+    "systemStatus": "Statut du système",
     "systemVersion": "Version de la plateforme",
-    "securityLevel": "Niveau de securite",
+    "securityLevel": "Niveau de sécurité",
     "quickActions": {
       "userManagement": {
         "title": "Gestion des utilisateurs",
-        "description": "Voir et gerer tous les utilisateurs et super administrateurs"
+        "description": "Voir et gérer tous les utilisateurs et super administrateurs"
       },
       "styleGallery": {
         "title": "Galerie de styles",
-        "description": "Previsualiser les composants et elements du systeme de design"
+        "description": "Prévisualiser les composants et éléments du système de design"
       },
       "analytics": {
         "title": "Analytiques",
-        "description": "Statistiques de la plateforme et metriques d'utilisation"
+        "description": "Statistiques de la plateforme et métriques d'utilisation"
       },
       "systemConfig": {
-        "title": "Configuration systeme",
-        "description": "Configurations et parametres de l'application"
+        "title": "Configuration système",
+        "description": "Configurations et paramètres de l'application"
       }
     },
     "status": {
@@ -52,58 +52,58 @@
   },
   "users": {
     "title": "Gestion des utilisateurs",
-    "subtitle": "Gerer tous les utilisateurs et super administrateurs",
-    "regularUsers": "Utilisateurs reguliers",
+    "subtitle": "Gérer tous les utilisateurs et super administrateurs",
+    "regularUsers": "Utilisateurs réguliers",
     "superadmins": "Super admins",
     "totalUsers": "Total utilisateurs",
-    "allRegisteredUsers": "Tous les utilisateurs enregistres",
+    "allRegisteredUsers": "Tous les utilisateurs enregistrés",
     "membersCollaboratorsAdmins": "Membres, collaborateurs, administrateurs",
-    "systemAdministrators": "Administrateurs systeme",
-    "roleDistribution": "Distribution des roles",
-    "roles": "roles",
+    "systemAdministrators": "Administrateurs système",
+    "roleDistribution": "Distribution des rôles",
+    "roles": "rôles",
     "refresh": "Actualiser",
-    "lastUpdated": "Derniere mise a jour",
+    "lastUpdated": "Dernière mise à jour",
     "requestedBy": "Demande par",
     "source": "Source",
     "table": {
       "user": "Utilisateur",
       "email": "Email",
-      "role": "Role",
+      "role": "Rôle",
       "status": "Statut",
       "joined": "Inscription",
       "since": "Depuis",
       "actions": "Actions",
       "administrator": "Administrateur",
-      "verified": "Verifie",
+      "verified": "Vérifié",
       "pending": "En attente",
-      "unverified": "Non verifie",
-      "noUsers": "Aucun utilisateur trouve",
-      "noUsersDescription": "Il n'y a pas encore d'utilisateurs reguliers dans le systeme.",
-      "noSuperadmins": "Aucun super admin trouve",
+      "unverified": "Non vérifié",
+      "noUsers": "Aucun utilisateur trouvé",
+      "noUsersDescription": "Il n'y a pas encore d'utilisateurs réguliers dans le système.",
+      "noSuperadmins": "Aucun super admin trouvé",
       "noSuperadminsDescription": "C'est inhabituel - il devrait y avoir au moins un super admin.",
       "you": "Vous"
     },
     "actions": {
       "openMenu": "Ouvrir le menu",
       "viewProfile": "Voir le profil",
-      "editRole": "Modifier le role",
+      "editRole": "Modifier le rôle",
       "sendEmail": "Envoyer un email",
       "sendMessage": "Envoyer un message",
       "suspendUser": "Suspendre l'utilisateur",
-      "adminSettings": "Parametres admin",
-      "revokeAdmin": "Revoquer admin",
+      "adminSettings": "Paramètres admin",
+      "revokeAdmin": "Révoquer admin",
       "restrictedTarget": "Seul un développeur peut modifier ce compte",
       "ownAccount": "Vous ne pouvez pas modifier votre propre compte ici",
       "demoteToMember": "Rétrograder en membre",
       "deleteUser": "Supprimer l'utilisateur"
     },
     "descriptions": {
-      "regularUsersDescription": "Tous les utilisateurs a l'exception des super administrateurs. Inclut les membres, collaborateurs et administrateurs.",
-      "superadminsDescription": "Utilisateurs avec un acces complet au systeme et des privileges administratifs. A manipuler avec une extreme prudence."
+      "regularUsersDescription": "Tous les utilisateurs à l'exception des super administrateurs. Inclut les membres, collaborateurs et administrateurs.",
+      "superadminsDescription": "Utilisateurs avec un accès complet au système et des privilèges administratifs. À manipuler avec une extrême prudence."
     },
     "security": {
-      "notice": "Avis de securite :",
-      "superadminWarning": "L'acces super admin accorde un controle total du systeme. A manipuler avec une extreme prudence."
+      "notice": "Avis de sécurité :",
+      "superadminWarning": "L'accès super admin accorde un contrôle total du système. À manipuler avec une extrême prudence."
     },
     "confirm": {
       "demoteTitle": "Rétrograder en membre",
@@ -120,45 +120,45 @@
   },
   "style": {
     "title": "Galerie de styles",
-    "subtitle": "Vitrine du systeme de design et bibliotheque de composants",
+    "subtitle": "Vitrine du système de design et bibliothèque de composants",
     "exportTokens": "Exporter les tokens",
     "stats": {
       "components": "Composants",
       "availableComponents": "Composants UI disponibles",
       "colorTokens": "Tokens de couleur",
-      "themeColorVariables": "Variables de couleur du theme",
-      "themes": "Themes",
+      "themeColorVariables": "Variables de couleur du thème",
+      "themes": "Thèmes",
       "lightDarkModes": "Modes clair et sombre",
       "documentation": "Documentation",
       "componentCoverage": "Couverture des composants"
     },
     "tabs": {
       "components": "Composants",
-      "theme": "Theme et couleurs",
+      "theme": "Thème et couleurs",
       "guidelines": "Guides"
     },
     "componentLibrary": {
-      "title": "Bibliotheque de composants",
-      "description": "Vitrine complete de tous les composants UI disponibles avec differents etats et variations"
+      "title": "Bibliothèque de composants",
+      "description": "Vitrine complète de tous les composants UI disponibles avec différents états et variations"
     },
     "themeSystem": {
-      "title": "Systeme de themes",
-      "description": "Tokens de couleur, typographie et variables du systeme de design pour les themes clair et sombre"
+      "title": "Système de thèmes",
+      "description": "Tokens de couleur, typographie et variables du système de design pour les thèmes clair et sombre"
     },
     "designPrinciples": {
       "title": "Principes de design",
-      "description": "Principes fondamentaux qui guident notre systeme de design",
+      "description": "Principes fondamentaux qui guident notre système de design",
       "consistency": {
-        "title": "Coherence",
-        "description": "Maintenir la coherence visuelle et fonctionnelle dans tous les composants"
+        "title": "Cohérence",
+        "description": "Maintenir la cohérence visuelle et fonctionnelle dans tous les composants"
       },
       "accessibility": {
-        "title": "Accessibilite",
+        "title": "Accessibilité",
         "description": "S'assurer que tous les composants respectent les standards WCAG 2.1 AA"
       },
       "scalability": {
-        "title": "Evolutivite",
-        "description": "Concevoir des composants qui fonctionnent a differentes echelles et contextes"
+        "title": "Évolutivité",
+        "description": "Concevoir des composants qui fonctionnent à différentes échelles et contextes"
       },
       "performance": {
         "title": "Performance",
@@ -167,54 +167,54 @@
     },
     "usageGuidelines": {
       "title": "Guides d'utilisation",
-      "description": "Comment utiliser efficacement ce systeme de design",
+      "description": "Comment utiliser efficacement ce système de design",
       "colorUsage": {
         "title": "Utilisation des couleurs",
-        "description": "Utiliser des noms de couleurs semantiques (primary, secondary, destructive) au lieu de couleurs specifiques"
+        "description": "Utiliser des noms de couleurs sémantiques (primary, secondary, destructive) au lieu de couleurs spécifiques"
       },
       "typographyScale": {
-        "title": "Echelle typographique",
-        "description": "Suivre l'echelle typographique etablie pour une hierarchie coherente"
+        "title": "Échelle typographique",
+        "description": "Suivre l'échelle typographique établie pour une hiérarchie cohérente"
       },
       "spacingSystem": {
-        "title": "Systeme d'espacement",
-        "description": "Utiliser le systeme de grille de 8px pour un espacement et un alignement coherents"
+        "title": "Système d'espacement",
+        "description": "Utiliser le système de grille de 8px pour un espacement et un alignement cohérents"
       },
       "componentComposition": {
         "title": "Composition de composants",
-        "description": "Combiner les composants de base pour creer des interfaces complexes"
+        "description": "Combiner les composants de base pour créer des interfaces complexes"
       }
     },
     "technicalSpecs": {
-      "title": "Specifications techniques",
-      "description": "Details d'implementation et exigences",
+      "title": "Spécifications techniques",
+      "description": "Détails d'implémentation et exigences",
       "framework": "Framework",
       "styling": "Styles",
       "components": "Composants",
-      "icons": "Icones",
-      "themeSystem": "Systeme de themes",
+      "icons": "Icônes",
+      "themeSystem": "Système de thèmes",
       "buildTool": "Outil de build"
     },
     "resources": {
       "title": "Ressources et liens",
-      "description": "Ressources supplementaires et documentation"
+      "description": "Ressources supplémentaires et documentation"
     }
   },
   "errors": {
-    "accessDenied": "Acces refuse",
-    "superadminRequired": "Vous avez besoin des privileges super admin pour acceder a cette zone.",
-    "restrictedArea": "Cette section est reservee aux administrateurs systeme uniquement. Si vous pensez que c'est une erreur, veuillez contacter le support.",
-    "sessionNotFound": "Session non trouvee. Veuillez vous reconnecter.",
+    "accessDenied": "Accès refusé",
+    "superadminRequired": "Vous avez besoin des privilèges super admin pour accéder à cette zone.",
+    "restrictedArea": "Cette section est réservée aux administrateurs système uniquement. Si vous pensez que c'est une erreur, veuillez contacter le support.",
+    "sessionNotFound": "Session non trouvée. Veuillez vous reconnecter.",
     "goBack": "Retour",
     "dashboard": "Tableau de bord",
     "errorLoadingUsers": "Erreur lors du chargement des utilisateurs",
-    "failedToLoadUserData": "Echec du chargement des donnees utilisateur",
-    "retry": "Reessayer"
+    "failedToLoadUserData": "Échec du chargement des données utilisateur",
+    "retry": "Réessayer"
   },
   "common": {
-    "backToSector7": "Retour a Sector7",
-    "comingSoon": "Bientot disponible",
-    "soon": "Bientot",
+    "backToSector7": "Retour à Sector7",
+    "comingSoon": "Bientôt disponible",
+    "soon": "Bientôt",
     "loading": "Chargement...",
     "error": "Erreur"
   }

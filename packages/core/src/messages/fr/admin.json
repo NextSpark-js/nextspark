@@ -1,9 +1,9 @@
 {
   "pages": {
     "title": "Pages",
-    "description": "Gerez vos pages dynamiques",
+    "description": "Gérez vos pages dynamiques",
     "loading": "Chargement des pages...",
-    "empty": "Aucune page trouvee. Creez votre premiere page pour commencer.",
+    "empty": "Aucune page trouvée. Créez votre première page pour commencer.",
     "search": {
       "placeholder": "Rechercher des pages..."
     },
@@ -12,7 +12,7 @@
       "allLocales": "Toutes les langues",
       "status": "Statut",
       "allStatuses": "Tous les statuts",
-      "published": "Publie",
+      "published": "Publié",
       "draft": "Brouillon"
     },
     "table": {
@@ -20,30 +20,30 @@
       "slug": "Slug",
       "locale": "Langue",
       "status": "Statut",
-      "updated": "Derniere mise a jour"
+      "updated": "Dernière mise à jour"
     },
     "status": {
-      "published": "Publie",
+      "published": "Publié",
       "draft": "Brouillon",
-      "unsaved": "Modifications non enregistrees"
+      "unsaved": "Modifications non enregistrées"
     },
     "actions": {
-      "create": "Creer une page",
+      "create": "Créer une page",
       "edit": "Modifier",
       "view": "Voir",
       "delete": "Supprimer",
       "save": "Enregistrer",
       "saving": "Enregistrement...",
       "publish": "Publier",
-      "preview": "Apercu"
+      "preview": "Aperçu"
     },
     "new": {
-      "title": "Creer une nouvelle page",
-      "description": "Creez une nouvelle page dynamique pour votre site web",
+      "title": "Créer une nouvelle page",
+      "description": "Créez une nouvelle page dynamique pour votre site web",
       "back": "Retour aux pages",
-      "success": "Page creee avec succes",
+      "success": "Page créée avec succès",
       "form": {
-        "title": "Details de la page",
+        "title": "Détails de la page",
         "description": "Entrez les informations de base de votre page",
         "fields": {
           "title": "Titre de la page",
@@ -51,7 +51,7 @@
           "locale": "Langue"
         },
         "placeholders": {
-          "title": "A propos de nous",
+          "title": "À propos de nous",
           "slug": "a-propos-de-nous"
         },
         "hints": {
@@ -59,8 +59,8 @@
         },
         "actions": {
           "cancel": "Annuler",
-          "create": "Creer la page",
-          "creating": "Creation..."
+          "create": "Créer la page",
+          "creating": "Création..."
         }
       }
     },
@@ -77,45 +77,45 @@
         "slug": "slug-de-la-page"
       },
       "status": {
-        "published": "Publie",
-        "unsaved": "Modifications non enregistrees"
+        "published": "Publié",
+        "unsaved": "Modifications non enregistrées"
       },
       "actions": {
         "save": "Enregistrer",
         "saving": "Enregistrement...",
         "publish": "Publier",
-        "preview": "Apercu",
+        "preview": "Aperçu",
         "viewPage": "Voir"
       },
       "viewMode": {
         "layout": "Mise en page",
-        "preview": "Apercu"
+        "preview": "Aperçu"
       },
       "messages": {
-        "saved": "Page enregistree avec succes"
+        "saved": "Page enregistrée avec succès"
       }
     },
     "settings": {
-      "title": "Parametres de la page",
+      "title": "Paramètres de la page",
       "seo": {
-        "title": "Parametres SEO",
+        "title": "Paramètres SEO",
         "metaTitle": "Meta titre",
         "metaTitlePlaceholder": "Entrez le titre pour les moteurs de recherche",
-        "metaTitleHint": "Recommande : 50-60 caracteres",
+        "metaTitleHint": "Recommandé : 50-60 caractères",
         "metaDescription": "Meta description",
-        "metaDescriptionPlaceholder": "Entrez une breve description pour les moteurs de recherche",
-        "characters": "caracteres",
-        "metaKeywords": "Mots-cles",
+        "metaDescriptionPlaceholder": "Entrez une brève description pour les moteurs de recherche",
+        "characters": "caractères",
+        "metaKeywords": "Mots-clés",
         "metaKeywordsPlaceholder": "mot1, mot2, mot3",
-        "metaKeywordsHint": "Mots-cles separes par des virgules",
+        "metaKeywordsHint": "Mots-clés séparés par des virgules",
         "ogImage": "Image sociale (OG Image)",
         "ogImagePlaceholder": "https://exemple.com/image.jpg",
-        "ogImageHint": "Image affichee lors du partage sur les reseaux sociaux"
+        "ogImageHint": "Image affichée lors du partage sur les réseaux sociaux"
       },
       "customFields": {
-        "title": "Champs personnalises",
-        "empty": "Aucun champ personnalise ajoute",
-        "keyPlaceholder": "Cle du champ",
+        "title": "Champs personnalisés",
+        "empty": "Aucun champ personnalisé ajouté",
+        "keyPlaceholder": "Clé du champ",
         "valuePlaceholder": "Valeur du champ",
         "add": "Ajouter un champ"
       }
@@ -123,9 +123,9 @@
   },
   "blockEditor": {
     "picker": {
-      "title": "Bibliotheque de blocs",
+      "title": "Bibliothèque de blocs",
       "description": "Glissez des blocs ou cliquez pour ajouter",
-      "empty": "Aucun bloc trouve",
+      "empty": "Aucun bloc trouvé",
       "search": {
         "placeholder": "Rechercher des blocs..."
       },
@@ -135,51 +135,51 @@
     },
     "canvas": {
       "empty": {
-        "message": "Aucun bloc ajoute pour le moment",
-        "hint": "Glissez des blocs depuis la bibliotheque pour commencer a construire votre page"
+        "message": "Aucun bloc ajouté pour le moment",
+        "hint": "Glissez des blocs depuis la bibliothèque pour commencer à construire votre page"
       }
     },
     "block": {
       "error": {
-        "notFound": "Bloc '{slug}' non trouve"
+        "notFound": "Bloc '{slug}' non trouvé"
       }
     },
     "settings": {
       "empty": {
-        "message": "Aucun bloc selectionne",
-        "hint": "Selectionnez un bloc du canevas pour modifier sa configuration"
+        "message": "Aucun bloc sélectionné",
+        "hint": "Sélectionnez un bloc du canevas pour modifier sa configuration"
       },
       "error": {
-        "notFound": "Configuration du bloc non trouvee"
+        "notFound": "Configuration du bloc non trouvée"
       },
       "noFields": "Ce bloc n'a pas de champs configurables",
       "actions": {
-        "reset": "Reinitialiser",
+        "reset": "Réinitialiser",
         "remove": "Supprimer"
       },
       "tabs": {
         "content": "Contenu",
         "design": "Design",
-        "advanced": "Avance",
+        "advanced": "Avancé",
         "noContentFields": "Aucun champ de contenu disponible",
         "noDesignFields": "Aucun champ de design disponible",
-        "noAdvancedFields": "Aucun champ avance disponible"
+        "noAdvancedFields": "Aucun champ avancé disponible"
       }
     },
     "form": {
-      "selectPlaceholder": "Selectionnez une option",
-      "emptyArray": "Aucun element ajoute",
-      "itemNumber": "Element {number}",
-      "addItem": "Ajouter un element",
-      "itemCount": "{current} sur {max} elements",
+      "selectPlaceholder": "Sélectionnez une option",
+      "emptyArray": "Aucun élément ajouté",
+      "itemNumber": "Élément {number}",
+      "addItem": "Ajouter un élément",
+      "itemCount": "{current} sur {max} éléments",
       "loadingEntity": "Chargement de {entity}...",
-      "failedToLoad": "Echec du chargement de {entity}",
-      "selectedCount": "{count} selectionnes",
-      "noEntityFound": "Aucun {entity} trouve",
-      "selectEntity": "Selectionner {entity}...",
+      "failedToLoad": "Échec du chargement de {entity}",
+      "selectedCount": "{count} sélectionnés",
+      "noEntityFound": "Aucun {entity} trouvé",
+      "selectEntity": "Sélectionner {entity}...",
       "pickDate": "Choisir une date",
-      "arrayItemsCount": "{count} elements",
-      "configured": "configure"
+      "arrayItemsCount": "{count} éléments",
+      "configured": "configuré"
     }
   },
   "builder": {
@@ -192,15 +192,15 @@
     "placeholders": {
       "title": "Entrez le titre...",
       "slug": "url-slug",
-      "excerpt": "Breve description...",
+      "excerpt": "Brève description...",
       "imageUrl": "https://exemple.com/image.jpg"
     },
     "status": {
-      "published": "Publie",
+      "published": "Publié",
       "draft": "Brouillon",
-      "scheduled": "Programme",
-      "archived": "Archive",
-      "unsaved": "Modifications non enregistrees"
+      "scheduled": "Programmé",
+      "archived": "Archivé",
+      "unsaved": "Modifications non enregistrées"
     },
     "actions": {
       "save": "Enregistrer",
@@ -209,21 +209,21 @@
     },
     "viewMode": {
       "layout": "Mise en page",
-      "preview": "Apercu"
+      "preview": "Aperçu"
     },
     "sidebar": {
       "blocks": "Blocs",
       "fields": "Champs",
-      "fieldsTitle": "Champs d'entite",
-      "fieldsDescription": "Configurez les proprietes supplementaires",
-      "noFields": "Aucun champ supplementaire disponible",
-      "noCategories": "Aucune categorie disponible"
+      "fieldsTitle": "Champs d'entité",
+      "fieldsDescription": "Configurez les propriétés supplémentaires",
+      "noFields": "Aucun champ supplémentaire disponible",
+      "noCategories": "Aucune catégorie disponible"
     },
     "messages": {
-      "saved": "Enregistre avec succes",
-      "created": "Cree avec succes",
-      "saveBlocked": "La page n'a pas ete enregistree",
-      "hookFailed": "La page n'a pas ete enregistree : {message}"
+      "saved": "Enregistré avec succès",
+      "created": "Créé avec succès",
+      "saveBlocked": "La page n'a pas été enregistrée",
+      "hookFailed": "La page n'a pas été enregistrée : {message}"
     }
   }
 }
