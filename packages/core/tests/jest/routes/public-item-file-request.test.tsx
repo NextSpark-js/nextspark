@@ -65,6 +65,13 @@ describe('public item route and a request for a file', () => {
     expect(fetchPublishedItem).toHaveBeenCalledWith(config, 'v2.5')
   })
 
+  it('uses a seoTitle as the whole title and adds the app name to any other', async () => {
+    fetchPublishedItem.mockResolvedValue({ id: '1', title: 'T', slug: 'x', blocks: [], seoTitle: 'Full SEO title' })
+    expect((await createPublicItemMetadata(config)({ params: Promise.resolve({ slug: 'x' }) })).title).toEqual({ absolute: 'Full SEO title' })
+    fetchPublishedItem.mockResolvedValue({ id: '1', title: 'T', slug: 'x', blocks: [] })
+    expect((await createPublicItemMetadata(config)({ params: Promise.resolve({ slug: 'x' }) })).title).toBe('T')
+  })
+
   it('leaves a page slug alone', async () => {
     await expect(createPublicItemRoute(config)(props('about'))).rejects.toThrow('NEXT_NOT_FOUND')
     expect(fetchPublishedItem).toHaveBeenCalledWith(config, 'about')

@@ -71,7 +71,7 @@ describe.each([
     expect(notFound).not.toHaveBeenCalled()
     expect(element).toBeTruthy()
     const metadata = await routes.createPublicItemMetadata(config)({ params: Promise.resolve({ slug: 'roadmap' }) })
-    expect(metadata).toMatchObject({ title: 'Row SEO title', description: 'Row SEO description' })
+    expect(metadata).toMatchObject({ title: { absolute: 'Row SEO title' }, description: 'Row SEO description' })
   })
 })
 

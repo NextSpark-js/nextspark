@@ -13,7 +13,8 @@ export const defaultMetadata: Metadata = {
     default: APP_NAME,
   },
   description: 'Application',
-  // The base the relative canonical and og:url of the public pages resolve against (#365)
+  // The base a relative URL in the metadata resolves against (an og:image path); the canonical and og:url of the public
+  // pages are absolute already (pageMetadata)
   metadataBase: new URL(resolveAppUrl()),
   openGraph: { type: 'website', siteName: APP_NAME },
 }

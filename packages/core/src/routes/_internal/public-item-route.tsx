@@ -118,7 +118,7 @@ function itemMetadata(source: PublicItemSource, config: EntityConfig) {
     const item = await source.fetchItem(config, slug)
     if (item) {
       return {
-        title: item.seoTitle || item.title,
+        title: item.seoTitle ? { absolute: item.seoTitle } : item.title,
         description: item.seoDescription || item.excerpt || undefined,
         openGraph: {
           title: item.seoTitle || item.title,
