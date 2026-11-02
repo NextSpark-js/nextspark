@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **The generated route of a public item re-exports the `generateStaticParams` of the project's item template.** It was dropped, so Next.js saw no params for the route and, with Cache Components, postponed its content behind the shell instead of prerendering it. The route now forwards it when the template exports it (a `'use client'` template is refused, as for any page); slugs it does not list are still served on demand, and a template without the export generates the same route as before (#370).
+- **The generated route of a public item re-exports the `generateStaticParams` of the project's item template.** It was dropped, so Next.js saw no params for the route and, with Cache Components, postponed its content behind the shell instead of prerendering it. The route now forwards it when the template exports it, with `slug` adapted to the route (a string with the levels joined by `/`, or an array, whichever the template returns; a `'use client'` template is refused, as for any page); slugs it does not list are still served on demand, and a template without the export generates the same route as before (#370).
 
 ## [0.1.0-beta.199] - 2026-11-02
 

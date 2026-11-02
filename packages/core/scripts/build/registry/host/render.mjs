@@ -150,6 +150,7 @@ function composeDevRootLayout(content) {
 const sha256 = text => createHash('sha256').update(text).digest('hex')
 
 const METADATA_EXPORTS = ['metadata', 'generateMetadata']
+const TEMPLATE_STATIC_PARAMS = 'templateStaticParams'
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/
 
 /** The runtime export names of a core module (what a composed facade imports from it), memoized by content. */
@@ -251,9 +252,17 @@ async function renderEntityRoute(route, ctx) {
   for (const { name, value } of spec.literals ?? []) body.push(`export const ${name} = ${JSON.stringify(value)}`)
 
   if (route.template) {
-    const checked = await checkTemplate(route.template, route, ctx, spec.reexportFromTemplate)
+    const checked = await checkTemplate(route.template, route, ctx, spec.staticParams ? ['generateStaticParams'] : [])
     diagnostics.push(...checked.problems)
-    if (checked.names.length > 0) body.push(`export { ${checked.names.join(', ')} } from ${JSON.stringify(route.template.specifier)}`)
+    if (checked.names.length > 0) {
+      const { factory, catchAll } = spec.staticParams
+      add(factory.specifier, factory.name)
+      claim(factory.name, factory.specifier)
+      claim(TEMPLATE_STATIC_PARAMS, 'the template\'s generateStaticParams')
+      lines.push(`import { generateStaticParams as ${TEMPLATE_STATIC_PARAMS} } from ${JSON.stringify(route.template.specifier)}`)
+      body.push(`export const generateStaticParams = ${factory.name}(${TEMPLATE_STATIC_PARAMS}, ${catchAll})`)
+      diagnostics.push(...(await checkExports({ file: factory.file, specifier: factory.specifier, names: [factory.name], route, ctx })))
+    }
     lines.push(`import ${COMPOSED_TEMPLATE} from ${JSON.stringify(route.template.specifier)}`)
   }
   for (const [specifier, names] of [...imports].sort(([a], [b]) => (a < b ? -1 : 1))) lines.push(`import { ${[...names].sort().join(', ')} } from ${JSON.stringify(specifier)}`)

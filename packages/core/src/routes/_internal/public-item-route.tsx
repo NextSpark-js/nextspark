@@ -38,6 +38,24 @@ const isFileRequest = (slug: string) => STATIC_FILE_EXTENSION.test(slug)
 /** The item slug of a `[slug]` or `[...slug]` route: a nested slug is joined, as the catch-all did. */
 const slugOf = (slug: string | string[]) => (Array.isArray(slug) ? slug.join('/') : slug)
 
+type StaticParam = Record<string, unknown> & { slug?: string | string[] }
+
+/**
+ * The template's `generateStaticParams` in the shape of the generated route (#370). The contract is the template's
+ * props: `slug` is a string with the levels joined by `/` (an array is accepted too). A `[...slug]` route takes
+ * arrays and a `[slug]` route strings, so the slug is converted; the other keys are kept.
+ */
+export function createPublicItemStaticParams(generate: () => StaticParam[] | Promise<StaticParam[]>, catchAll: boolean) {
+  return async function generateStaticParams(): Promise<StaticParam[]> {
+    return (await generate()).map(entry => {
+      const { slug } = entry
+      if (slug === undefined) return entry
+      if (catchAll) return Array.isArray(slug) ? entry : { ...entry, slug: String(slug).split('/') }
+      return Array.isArray(slug) ? { ...entry, slug: slug.join('/') } : entry
+    })
+  }
+}
+
 /**
  * Where a public item comes from. The default reads the database on every render; `public-item-route.cc` (the
  * Cache Components host's module) supplies a cached one.

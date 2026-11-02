@@ -100,4 +100,5 @@ export const createPublicItemMetadata = (...args: Parameters<typeof cachedRoutes
   registerEntity(args[0])
   return cachedRoutes.createPublicItemMetadata(...args)
 }
+export { createPublicItemStaticParams } from './public-item-route'
 export type { PublicItemTemplateProps } from './public-item-route'

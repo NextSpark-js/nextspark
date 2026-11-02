@@ -31,8 +31,8 @@ const CORE_MODULES = {
   [ENTITY_MODULES.edit]: ['core/entity-edit-route.tsx', factories('createEntityEditRoute')],
   [ENTITY_MODULES.detailCc]: ['core/entity-detail-route.cc.tsx', factories('createEntityDetailRoute')],
   [ENTITY_MODULES.editCc]: ['core/entity-edit-route.cc.tsx', factories('createEntityEditRoute')],
-  [ENTITY_MODULES.publicItem]: ['core/public-item-route.tsx', factories('createPublicItemRoute', 'createPublicItemMetadata')],
-  [ENTITY_MODULES.publicItemCc]: ['core/public-item-route.cc.tsx', factories('createPublicItemRoute', 'createPublicItemMetadata')],
+  [ENTITY_MODULES.publicItem]: ['core/public-item-route.tsx', factories('createPublicItemRoute', 'createPublicItemMetadata', 'createPublicItemStaticParams')],
+  [ENTITY_MODULES.publicItemCc]: ['core/public-item-route.cc.tsx', factories('createPublicItemRoute', 'createPublicItemMetadata', 'createPublicItemStaticParams')],
   [ENTITY_MODULES.publicArchive]: ['core/public-archive-route.tsx', factories('createPublicArchiveRoute', 'createPublicArchiveMetadata')],
 }
 
@@ -358,12 +358,13 @@ const PARAMS = "export default function Page() { return null }\nexport async fun
 test('a public item template that exports generateStaticParams has it re-exported by the route (#370)', async () => {
   const pages = "slug: 'pages', enabled: true, access: { public: true, basePath: '/'%, builder: { enabled: true }"
   const roots = {
-    '(public)/blog/[...slug]/page.tsx': ['templates/(public)/blog/[slug]/page.tsx', BLOG, 'posts', '@/templates/(public)/blog/[slug]/page'],
-    '(public)/[slug]/page.tsx': ['templates/(public)/[entity]/page.tsx', pages.replace('%', ' }'), 'pages', '@/templates/(public)/[entity]/page'],
-    '(public)/[...slug]/page.tsx': ['templates/(public)/[entity]/page.tsx', pages.replace('%', ', allowNestedSlugs: true }'), 'pages', '@/templates/(public)/[entity]/page'],
+    '(public)/blog/[...slug]/page.tsx': ['templates/(public)/blog/[slug]/page.tsx', BLOG, 'posts', '@/templates/(public)/blog/[slug]/page', true],
+    '(public)/[slug]/page.tsx': ['templates/(public)/[entity]/page.tsx', pages.replace('%', ' }'), 'pages', '@/templates/(public)/[entity]/page', false],
+    '(public)/[...slug]/page.tsx': ['templates/(public)/[entity]/page.tsx', pages.replace('%', ', allowNestedSlugs: true }'), 'pages', '@/templates/(public)/[entity]/page', true],
   }
-  for (const [target, [file, body, name, specifier]] of Object.entries(roots)) {
-    for (const [source, exported] of [[PARAMS, true], [PAGE, false]]) {
+  const aliased = "export default function Page() { return null }\nconst list = async () => [{ slug: 'x' }]\nexport { list as generateStaticParams }\n"
+  for (const [target, [file, body, name, specifier, catchAll]] of Object.entries(roots)) {
+    for (const [source, exported] of [[PARAMS, true], [aliased, true], [PAGE, false]]) {
       const w = world({ [file]: source })
       try {
         const { routes, diagnostics } = await plan(w, [entity(name, `${name}EntityConfig`)], { [name]: await factsOf(body) })
@@ -371,7 +372,9 @@ test('a public item template that exports generateStaticParams has it re-exporte
         const result = await render(routes)
         assert.deepEqual(result.diagnostics, [], target)
         const content = at(result, target)
-        assert.equal(content.includes(`export { generateStaticParams } from ${JSON.stringify(specifier)}`), exported, `${target}\n${content}`)
+        assert.equal(content.includes(`import { generateStaticParams as templateStaticParams } from ${JSON.stringify(specifier)}`), exported, `${target}\n${content}`)
+        assert.equal(content.includes(`export const generateStaticParams = createPublicItemStaticParams(templateStaticParams, ${catchAll})`), exported, `${target}\n${content}`)
+        assert.equal(content.includes('createPublicItemStaticParams'), exported)
         for (const generated of result.files) assert.deepEqual(validateGeneratedModule({ ts, source: generated.content, file: generated.path, grammar: generated.grammar }), [], generated.path)
       } finally {
         w.cleanup()
