@@ -45,7 +45,7 @@
     "error": "Errore nel caricamento del file",
     "loading": "Caricamento...",
     "fileNotFound": "File Non Trovato",
-    "fileNotFoundDescription": "Il file di test \"{path}\" non e stato trovato.",
+    "fileNotFoundDescription": "Il file di test \"{path}\" non è stato trovato.",
     "backToList": "Torna alla Lista",
     "searchPlaceholder": "Cerca test...",
     "expandAll": "Espandi Tutto",
@@ -58,14 +58,14 @@
     "description": "Visualizza la configurazione attuale del sistema",
     "themeTitle": "Configurazione Tema",
     "themeDescription": "Configurazione e metadati del tema attuale",
-    "entitiesTitle": "Registro Entita",
-    "entitiesDescription": "{count} entita registrate",
+    "entitiesTitle": "Registro Entità",
+    "entitiesDescription": "{count} entità registrate",
     "copy": "Copia",
     "copied": "Copiato!",
     "error": "Errore nel caricamento della configurazione",
     "tabs": {
       "theme": "Config Tema",
-      "entities": "Entita"
+      "entities": "Entità"
     }
   },
   "scheduledActions": {
