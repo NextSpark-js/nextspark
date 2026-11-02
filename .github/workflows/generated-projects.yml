@@ -14,6 +14,7 @@ on:
       - 'scripts/performance/**'
       - 'scripts/packages/**'
       - 'scripts/security/**'
+      - 'scripts/seo/**'
       - 'scripts/deploy/**'
       - 'scripts/accessibility/**'
       - 'scripts/auth/**'

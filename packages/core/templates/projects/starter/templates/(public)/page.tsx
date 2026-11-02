@@ -3,6 +3,13 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { SkeletonLandingPage } from '@nextsparkjs/core/components/ui/skeleton-public'
+import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
+import type { Metadata } from 'next'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('home')
+  return pageMetadata({ title: t('hero.title'), description: t('hero.subtitle'), path: '/' })
+}
 
 // The skeleton is scoped to the home page. A loading.tsx in this route group would wrap every public route, the
 // catch-all that ends in notFound() included, and Next answers 200 for a not-found that renders behind a boundary

@@ -19,6 +19,7 @@ import { DocsContent } from '@nextsparkjs/core/components/docs/docs-content'
 import { sel } from '@nextsparkjs/core/selectors/public'
 import { getTranslations } from 'next-intl/server'
 import { resolveRegistryDoc } from '@nextsparkjs/core/lib/docs/registry-doc'
+import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
 import type { Metadata } from 'next'
 
 interface DocsPageProps {
@@ -64,10 +65,11 @@ export async function generateMetadata({ params }: DocsPageProps): Promise<Metad
   const doc = await loadDoc(sectionSlug, pageSlug)
   if (!doc) return { title: 'Page Not Found' }
 
-  return {
+  return pageMetadata({
     title: `${doc.metadata.title} | Documentation`,
-    description: doc.metadata.description || `Documentation for ${doc.metadata.title}`
-  }
+    description: doc.metadata.description || `Documentation for ${doc.metadata.title}`,
+    path: `/docs/${sectionSlug}/${pageSlug}`
+  })
 }
 
 export default async function DocsPage({ params }: DocsPageProps) {

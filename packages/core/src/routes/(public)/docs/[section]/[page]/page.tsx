@@ -6,6 +6,7 @@ import { DocsContent } from '@nextsparkjs/core/components/docs/docs-content'
 import { sel } from '@nextsparkjs/core/selectors/public'
 import { getTranslations } from 'next-intl/server'
 import path from 'path'
+import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
 import type { Metadata } from 'next'
 
 interface DocsPageProps {
@@ -55,10 +56,11 @@ export async function generateMetadata({ params }: DocsPageProps): Promise<Metad
   const filePath = path.join(process.cwd(), page.path)
   const { metadata } = await parseMarkdownFile(filePath)
 
-  return {
+  return pageMetadata({
     title: `${metadata.title} | Documentation`,
-    description: metadata.description || `Documentation for ${metadata.title}`
-  }
+    description: metadata.description || `Documentation for ${metadata.title}`,
+    path: `/docs/${sectionSlug}/${pageSlug}`
+  })
 }
 
 export default async function DocsPage({ params }: DocsPageProps) {

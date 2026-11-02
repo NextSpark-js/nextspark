@@ -143,6 +143,12 @@
       "area": "Utilities"
     },
     {
+      "subpath": "./lib/seo/page-metadata",
+      "reason": "template-import",
+      "area": "Utilities",
+      "note": "pageMetadata: title, description, canonical link and Open Graph tags of a public page."
+    },
+    {
       "subpath": "./lib/db",
       "reason": "template-import",
       "area": "Data access"

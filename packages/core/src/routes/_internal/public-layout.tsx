@@ -3,6 +3,8 @@ import type { Metadata } from "next"
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
+import { resolveAppUrl } from '@nextsparkjs/core/lib/utils/base-url'
 
 // ✅ MINIMAL GENERIC METADATA (cliente puede override con template)
 export const defaultMetadata: Metadata = {
@@ -11,6 +13,9 @@ export const defaultMetadata: Metadata = {
     default: 'App',
   },
   description: 'Application',
+  // The base the relative canonical and og:url of the public pages resolve against (#365)
+  metadataBase: new URL(resolveAppUrl()),
+  openGraph: { type: 'website', siteName: APP_NAME },
 }
 
 /**

@@ -87,6 +87,8 @@ runs:
       run: |
         node scripts/security/verify-no-dev-credentials.mjs "$PROJECT/app"
         node scripts/security/verify-protected-areas.mjs --base-url http://localhost:3100 --json "$PROJECT/protected-areas.json"
+        # The starter's public pages carry their own title, a canonical link and og:title / og:description (#365)
+        node scripts/seo/verify-public-metadata.mjs --base-url http://localhost:3100 --json "$PROJECT/public-metadata.json"
 
     - name: Print the server log
       if: failure() && inputs.migrate-only != 'true'

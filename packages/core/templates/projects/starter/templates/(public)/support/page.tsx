@@ -1,4 +1,11 @@
 import { getTranslations } from 'next-intl/server'
+import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
+
+export const metadata = pageMetadata({
+  title: 'Support',
+  description: 'Get help with the Starter theme.',
+  path: '/support',
+})
 
 export default async function SupportPage() {
   const t = await getTranslations('common')

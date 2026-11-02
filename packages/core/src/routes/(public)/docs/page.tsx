@@ -3,12 +3,14 @@ import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { sel } from '@nextsparkjs/core/selectors/public'
 import { BookOpen, Folder, FileText, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'Documentation',
-  description: 'Complete documentation for the application'
-}
+  description: 'Complete documentation for the application',
+  path: '/docs'
+})
 
 export default function DocsPage() {
   const sections = DOCS_REGISTRY.public
