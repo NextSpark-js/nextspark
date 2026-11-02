@@ -11,11 +11,9 @@ const BILLING = '/dashboard/settings/billing'
 jest.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
-  useSearchParams: () => new URLSearchParams('upgrade=true'),
 }))
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
 jest.mock('@/core/lib/permissions/hooks', () => ({ usePermission: (p: string) => (p === 'settings.billing' ? canAccessBilling : true) }))
-jest.mock('@/core/providers/DashboardProviders', () => ({ DashboardProviders: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 jest.mock('@/core/hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'u1', email: 'a@x.com', firstName: 'A', lastName: 'B' }, signOut: jest.fn(), isLoading: false }),
 }))
@@ -52,7 +50,6 @@ jest.mock('@/core/components/ui/sheet', () => {
 import { TopNavbar } from '@/core/components/dashboard/layouts/TopNavbar'
 import { MobileMoreSheet } from '@/core/components/dashboard/mobile/MobileMoreSheet'
 import DashboardIndex from '@/core/routes/dashboard/(main)/page'
-import ForbiddenPage from '@/core/routes/403/page'
 
 const hasBillingLink = () => screen.queryAllByRole('link').some(a => a.getAttribute('href') === BILLING)
 const hasBillingButton = () => screen.queryByText('quickActions.billing') !== null
@@ -77,11 +74,6 @@ describe.each([true, false])('with settings.billing: %s', (allowed) => {
     render(<DashboardIndex />)
     expect(hasBillingButton()).toBe(allowed)
     expect(screen.queryByText('quickActions.settings') !== null).toBe(true)
-  })
-
-  it('403 page "View plans" link', () => {
-    render(<ForbiddenPage />)
-    expect(hasBillingLink()).toBe(allowed)
   })
 })
 

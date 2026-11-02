@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useTeamContext } from '../../contexts/TeamContext'
+import { useTeamContext, useOptionalTeamContext } from '../../contexts/TeamContext'
 // Import from ./init to ensure permission registry is initialized on client-side
 import { permissionRegistry } from './init'
 import type { Permission, TeamRole } from './types'
@@ -29,6 +29,23 @@ export function usePermission(permission: Permission): boolean {
     const membership = userTeams.find(t => t.team.id === currentTeam.id)
     if (!membership?.role) return false
 
+    return permissionRegistry.hasPermission(membership.role as TeamRole, permission)
+  }, [currentTeam, userTeams, permission])
+}
+
+/**
+ * Like usePermission, but false (instead of throwing) outside a TeamProvider. For public hooks that can be
+ * used in a tree without one.
+ */
+export function useOptionalPermission(permission: Permission): boolean {
+  const team = useOptionalTeamContext()
+  const currentTeam = team?.currentTeam
+  const userTeams = team?.userTeams
+
+  return useMemo(() => {
+    if (!currentTeam || !userTeams) return false
+    const membership = userTeams.find(t => t.team.id === currentTeam.id)
+    if (!membership?.role) return false
     return permissionRegistry.hasPermission(membership.role as TeamRole, permission)
   }, [currentTeam, userTeams, permission])
 }

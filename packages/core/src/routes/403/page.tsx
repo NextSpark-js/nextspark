@@ -4,14 +4,14 @@ import { AlertTriangle, ArrowLeft, Home } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
-import { DashboardProviders } from '@nextsparkjs/core/providers/DashboardProviders'
-import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
-import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
+import dynamic from 'next/dynamic'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 
+// Loaded only for an upgrade 403: it mounts the team providers to read the role, which other 403s do not need
+const UpgradePlansLink = dynamic(() => import('@nextsparkjs/core/components/billing/UpgradePlansLink'), { ssr: false })
+
 function ForbiddenContent() {
-  const canAccessBilling = usePermission('settings.billing' as Permission)
   const searchParams = useSearchParams()!
   const reason = searchParams.get('reason') || 'You do not have permission to access this resource'
   const upgrade = searchParams.get('upgrade') === 'true'
@@ -37,13 +37,7 @@ function ForbiddenContent() {
               <p className="text-sm text-blue-800">
                 This feature requires an upgrade to your current plan.
               </p>
-              {canAccessBilling && (
-                <Link href="/dashboard/settings/billing" className="block mt-2">
-                  <Button variant="outline" size="sm" className="w-full">
-                    View plans
-                  </Button>
-                </Link>
-              )}
+              <UpgradePlansLink />
             </div>
           )}
 
@@ -86,10 +80,7 @@ function ForbiddenPage() {
         </Card>
       </main>
     }>
-      {/* TeamProvider is not in the root layout; the billing link needs the user's role in the team */}
-      <DashboardProviders>
-        <ForbiddenContent />
-      </DashboardProviders>
+      <ForbiddenContent />
     </Suspense>
   )
 }

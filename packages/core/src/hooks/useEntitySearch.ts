@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from './useAuth'
-import { usePermission } from '../lib/permissions/hooks'
+import { useOptionalPermission } from '../lib/permissions/hooks'
 import type { Permission } from '../lib/permissions/types'
 import { extractUserPlanData } from '../lib/user-data-utils'
 import { getEnabledEntities } from '../lib/entities/registry.client'
@@ -46,7 +46,7 @@ export function useEntitySearch(): EntitySearchHookResult {
   const [isSearching, setIsSearching] = useState(false)
   const [results, setResults] = useState<EntitySearchResult[]>([])
   const { user } = useAuth()
-  const canAccessBilling = usePermission('settings.billing' as Permission)
+  const canAccessBilling = useOptionalPermission('settings.billing' as Permission)
 
   // Get user plan and flags data
   const userPlanData = useMemo(() => {
