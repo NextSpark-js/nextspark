@@ -22,6 +22,18 @@ describe('createPublicItemStaticParams', () => {
     expect(await createPublicItemStaticParams(() => toArray, false)()).toEqual([{ slug: 'a/b' }])
   })
 
+  it('an entry without a slug stays as it is, in both kinds of route', async () => {
+    expect(await createPublicItemStaticParams(() => [{ locale: 'es' }], true)()).toEqual([{ locale: 'es' }])
+    expect(await createPublicItemStaticParams(() => [{ locale: 'es' }], false)()).toEqual([{ locale: 'es' }])
+  })
+
+  it('what Next.js passes reaches the template function', async () => {
+    const generate = jest.fn(async (_props: { params: Promise<Record<string, string>> }) => [{ slug: 'a' }])
+    const props = { params: Promise.resolve({}) }
+    await createPublicItemStaticParams(generate, true)(props)
+    expect(generate).toHaveBeenCalledWith(props)
+  })
+
   it('an async generator works and the other keys of each entry are kept', async () => {
     const generate = createPublicItemStaticParams(async () => [{ slug: 'a/b', locale: 'es' }], true)
     expect(await generate()).toEqual([{ slug: ['a', 'b'], locale: 'es' }])

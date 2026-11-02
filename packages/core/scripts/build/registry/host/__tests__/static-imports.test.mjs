@@ -232,7 +232,10 @@ const COMPOSITION_REJECTS = {
   'settings with a call': `${imp('createSitemapRoute', 'sitemap-route')}export default createSitemapRoute({"staticPaths":[String(1)]})`,
   'settings with a spread': `${imp('createSitemapRoute', 'sitemap-route')}import { more } from '@/m'\nexport default createSitemapRoute({...more})`,
   'a literal argument for another wrapper': `${imp('createStripeWebhookRoute', 'billing-webhooks')}export const POST = createStripeWebhookRoute({"a":"b"})`,
-  'an IIFE': `${imp('createStripeWebhookRoute', 'billing-webhooks')}import { e } from '@/e'\nexport const POST = (() => createStripeWebhookRoute(e))()`,
+  'a boolean for a wrapper that takes none': `${imp('createPublicItemRoute', 'public-item-route')}import { c } from '@/c'\nexport default createPublicItemRoute(c, true)`,
+  'a boolean as the first argument of the static params wrapper': `${imp('createPublicItemStaticParams', 'public-item-route')}import { f } from '@/f'\nexport const generateStaticParams = createPublicItemStaticParams(true, f)`,
+  'a non-boolean flag for the static params wrapper': `${imp('createPublicItemStaticParams', 'public-item-route')}import { f } from '@/f'\nexport const generateStaticParams = createPublicItemStaticParams(f, 1)`,
+  'an IIFE':`${imp('createStripeWebhookRoute', 'billing-webhooks')}import { e } from '@/e'\nexport const POST = (() => createStripeWebhookRoute(e))()`,
 }
 for (const [label, spec] of Object.entries(COMPOSITION_REJECTS)) {
   const [source, grammar] = Array.isArray(spec) ? spec : [spec, 'composed-facade']
