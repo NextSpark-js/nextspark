@@ -179,25 +179,30 @@ async function checkExports({ file, specifier, names, route, ctx }) {
 }
 
 /** A template that composes into a per-entity route needs a default export it can render. */
-async function checkTemplate(template, route, ctx) {
+async function checkTemplate(template, route, ctx, forwarded = []) {
   let source
   try {
     source = await readFile(template.file, 'utf8')
   } catch (error) {
-    return [{ code: 'NS_HOST_SOURCE_UNREADABLE', target: route.target, source: template.source, file: template.file, message: `${template.source}: cannot be read (${error.code ?? error.message})` }]
+    return { problems: [{ code: 'NS_HOST_SOURCE_UNREADABLE', target: route.target, source: template.source, file: template.file, message: `${template.source}: cannot be read (${error.code ?? error.message})` }], names: [] }
   }
   const analysis = await analyzeRouteSource({ source, file: template.file, projectRoot: ctx.projectRoot })
   if (analysis.parseError) {
-    return [{ code: 'NS_HOST_PARSE_ERROR', target: route.target, source: template.source, file: template.file, line: analysis.parseError.line, message: `${template.source}: the module does not parse (${analysis.parseError.message}), so its exports cannot be read` }]
+    return { problems: [{ code: 'NS_HOST_PARSE_ERROR', target: route.target, source: template.source, file: template.file, line: analysis.parseError.line, message: `${template.source}: the module does not parse (${analysis.parseError.message}), so its exports cannot be read` }], names: [] }
   }
   const problems = []
+  // The exports of the template the route forwards, so Next.js reads them from the route file (`generateStaticParams`)
+  const names = forwarded.filter(name => analysis.exports.some(entry => entry.name === name))
+  if (names.length > 0 && analysis.directives.includes('use client')) {
+    problems.push({ code: 'NS_HOST_CLIENT_SERVER_ONLY_EXPORT', target: route.target, source: template.source, file: template.file, message: `${template.source}: "${names.join('", "')}" is exported from a 'use client' module; Next.js resolves it on the server only, so move it to a Server Component module` })
+  }
   if (!analysis.exports.some(entry => entry.name === 'default')) {
     problems.push({ code: 'NS_HOST_MISSING_DEFAULT', target: route.target, source: template.source, file: template.file, message: `${template.source}: a template needs a default export and the module has none` })
   }
   if (analysis.directives.includes('use server')) {
     problems.push({ code: 'NS_HOST_SERVER_ACTIONS_MODULE', target: route.target, source: template.source, file: template.file, message: `${template.source}: a 'use server' module only exports Server Actions and cannot render a route` })
   }
-  return problems
+  return { problems, names }
 }
 
 /**
@@ -246,7 +251,9 @@ async function renderEntityRoute(route, ctx) {
   for (const { name, value } of spec.literals ?? []) body.push(`export const ${name} = ${JSON.stringify(value)}`)
 
   if (route.template) {
-    diagnostics.push(...(await checkTemplate(route.template, route, ctx)))
+    const checked = await checkTemplate(route.template, route, ctx, spec.reexportFromTemplate)
+    diagnostics.push(...checked.problems)
+    if (checked.names.length > 0) body.push(`export { ${checked.names.join(', ')} } from ${JSON.stringify(route.template.specifier)}`)
     lines.push(`import ${COMPOSED_TEMPLATE} from ${JSON.stringify(route.template.specifier)}`)
   }
   for (const [specifier, names] of [...imports].sort(([a], [b]) => (a < b ? -1 : 1))) lines.push(`import { ${[...names].sort().join(', ')} } from ${JSON.stringify(specifier)}`)

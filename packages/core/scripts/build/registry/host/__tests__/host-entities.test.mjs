@@ -353,6 +353,57 @@ test('a builder entity with a basePath gets an item route under it (nested slugs
   }
 })
 
+const PARAMS = "export default function Page() { return null }\nexport async function generateStaticParams() { return [{ slug: 'home' }] }\n"
+
+test('a public item template that exports generateStaticParams has it re-exported by the route (#370)', async () => {
+  const pages = "slug: 'pages', enabled: true, access: { public: true, basePath: '/'%, builder: { enabled: true }"
+  const roots = {
+    '(public)/blog/[...slug]/page.tsx': ['templates/(public)/blog/[slug]/page.tsx', BLOG, 'posts', '@/templates/(public)/blog/[slug]/page'],
+    '(public)/[slug]/page.tsx': ['templates/(public)/[entity]/page.tsx', pages.replace('%', ' }'), 'pages', '@/templates/(public)/[entity]/page'],
+    '(public)/[...slug]/page.tsx': ['templates/(public)/[entity]/page.tsx', pages.replace('%', ', allowNestedSlugs: true }'), 'pages', '@/templates/(public)/[entity]/page'],
+  }
+  for (const [target, [file, body, name, specifier]] of Object.entries(roots)) {
+    for (const [source, exported] of [[PARAMS, true], [PAGE, false]]) {
+      const w = world({ [file]: source })
+      try {
+        const { routes, diagnostics } = await plan(w, [entity(name, `${name}EntityConfig`)], { [name]: await factsOf(body) })
+        assert.deepEqual(diagnostics, [])
+        const result = await render(routes)
+        assert.deepEqual(result.diagnostics, [], target)
+        const content = at(result, target)
+        assert.equal(content.includes(`export { generateStaticParams } from ${JSON.stringify(specifier)}`), exported, `${target}\n${content}`)
+        for (const generated of result.files) assert.deepEqual(validateGeneratedModule({ ts, source: generated.content, file: generated.path, grammar: generated.grammar }), [], generated.path)
+      } finally {
+        w.cleanup()
+      }
+    }
+  }
+})
+
+test('a public item template without generateStaticParams leaves the route exactly as it was (#370)', async () => {
+  const w = world({ 'templates/(public)/blog/[slug]/page.tsx': PAGE })
+  try {
+    const { routes } = await plan(w, [entity('posts', 'postsEntityConfig')], { posts: await factsOf(BLOG) })
+    const content = at(await render(routes), '(public)/blog/[...slug]/page.tsx')
+    assert.doesNotMatch(content, /generateStaticParams/)
+    assert.equal(content.split('\n').filter(line => line.startsWith('export ')).length, 3, content)
+  } finally {
+    w.cleanup()
+  }
+})
+
+test('a client component item template cannot export generateStaticParams (#370)', async () => {
+  const w = world({ 'templates/(public)/blog/[slug]/page.tsx': `'use client'\n${PARAMS}` })
+  try {
+    const { routes } = await plan(w, [entity('posts', 'postsEntityConfig')], { posts: await factsOf(BLOG) })
+    const result = await render(routes)
+    assert.deepEqual(result.diagnostics.map(d => d.code), ['NS_HOST_CLIENT_SERVER_ONLY_EXPORT'])
+    assert.match(result.diagnostics[0].message, /"generateStaticParams" is exported from a 'use client' module/)
+  } finally {
+    w.cleanup()
+  }
+})
+
 test('a builder entity with a base path gets public routes only with `access.public: true`; otherwise prepare says none was written', async () => {
   const w = world()
   try {

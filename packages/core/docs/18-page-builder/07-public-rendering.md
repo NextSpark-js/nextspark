@@ -285,7 +285,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 NextSpark does not emit `generateStaticParams` for these routes on purpose. With it, Next would cache the not-found page of every slug that does not exist as a 404 for the whole hour (until a write through the app expires it), and each unknown URL a visitor or a bot asks for would leave its own cache file on the server, so the cache grows without bound. A template that reads `headers()` or `cookies()` would also fail with a 500 in a cached route.
 
-If a project wants ISR caching anyway, it takes that on itself: a page that exports `generateStaticParams` (a template's own export is not read: only its default export is used) served from the project's own route, plus a CDN or WAF rule that keeps unknown slugs out of the cache.
+If a project wants ISR caching anyway, it takes that on itself: its item template exports `generateStaticParams` (below), plus a CDN or WAF rule that keeps unknown slugs out of the cache.
+
+**A template can export `generateStaticParams`.** When the project's item template (`templates/(public)/<basePath>/[...slug]/page.tsx`, or `templates/(public)/[slug]/page.tsx` for the root base path) exports `generateStaticParams`, the generated route re-exports it, so Next.js prerenders the slugs it lists (with Cache Components, their content is no longer postponed behind the shell). `dynamicParams` stays true: slugs it does not list are still served on demand. The template must be a Server Component to export it (`'use client'` is refused at `nextspark prepare`); without the export, the route is generated as before.
 
 ### On-Demand Revalidation
 

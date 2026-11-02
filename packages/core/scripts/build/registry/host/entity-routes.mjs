@@ -353,6 +353,8 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
         default: { factory: factory('createPublicItemRoute', publicItemModule), args: [config, arg.template()] },
         named: [{ name: 'generateMetadata', factory: factory('createPublicItemMetadata', publicItemModule), args: [config] }],
         literals: revalidates ? [{ name: 'revalidate', value: PUBLIC_REVALIDATE }] : [],
+        // The template's own, when it has one: without it Next.js sees no params and prerenders nothing (#370)
+        reexportFromTemplate: ['generateStaticParams'],
       }
       if (path === '/') {
         const nested = hasValue(f.allowNestedSlugs, true)
