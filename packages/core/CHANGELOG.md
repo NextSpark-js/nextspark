@@ -7,10 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading
+
+- **A project that sets its own `mobileNav.moreSheetItems` in `config/app.config.ts` should add `requiresPermission: 'settings.billing'` to its `billing` item.** The project's array replaces the one of core, so the default does not reach it, and the "More" sheet keeps listing Billing for a role that cannot open it until the item has the permission (#368).
+
 ### Fixed
 
-- **The French and Italian message catalogs use the correct spelling.** They were written without accents ("Fonctionnalites", "Funzionalita", "Etes-vous sur", "Si e verificato"). The values of the `fr` and `it` catalogs of core, the starter template, the starter plugin and the dev app now carry their accents, in one pass; the keys and the ICU placeholders are unchanged. (#369)
-- **Every entry that leads to the billing settings is shown only to users with `settings.billing`.** The settings menu already hid it, but the mobile menu of the top navbar, the mobile "More" sheet (the `Billing` item of the default and starter `mobileNav.moreSheetItems` now sets `requiresPermission: 'settings.billing'`), the search results, the dashboard quick actions, the 403 page's "View plans" link and the top bars of the CRM and productivity templates still listed it for a role that cannot open it. The 403 page now mounts the team providers to read the role. (#368)
+- **The French and Italian message catalogs use the correct spelling.** They were written without accents ("Fonctionnalites", "Funzionalita", "Etes-vous sur", "Si e verificato"). The values of the `fr` and `it` catalogs of core, the starter template and the dev app now carry their accents, in one pass; the keys and the ICU placeholders are unchanged (#369).
+- **Every entry that leads to the billing settings is shown only to users with `settings.billing`.** The settings menu already hid it, but the mobile menu of the top navbar, the mobile "More" sheet (the `Billing` item of the default and starter `mobileNav.moreSheetItems` now sets `requiresPermission: 'settings.billing'`), the search results, the dashboard quick actions, the 403 page's "View plans" link and the top bars of the CRM and productivity templates still listed it for a role that cannot open it. The 403 page mounts the team providers to read the role only for an upgrade 403 (`?upgrade=true`); any other 403 makes no request. `useSearch` and `useEntitySearch` no longer throw outside a `TeamProvider` and treat the permission as missing there (#368).
 - **The generated route of a public item re-exports the `generateStaticParams` of the project's item template.** It was dropped, so Next.js saw no params for the route and, with Cache Components, postponed its content behind the shell instead of prerendering it. The route now forwards it when the template exports it, with `slug` adapted to the route (a string with the levels joined by `/`, or an array, whichever the template returns; a `'use client'` template is refused, as for any page); slugs it does not list are still served on demand, and a template without the export generates the same route as before (#370).
 
 ## [0.1.0-beta.199] - 2026-11-02
