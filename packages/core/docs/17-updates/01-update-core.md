@@ -26,7 +26,7 @@ pnpm update-core --help                     # Help
 
 Run it where the `package.json` that depends on `@nextsparkjs/core` is: the project root, or `web/` in a web-mobile project. `pnpm install` runs where `pnpm-lock.yaml` is, which in a web-mobile project is the directory above `web/`.
 
-In a web-mobile project `update-core` writes only `web/package.json`. `@nextsparkjs` pins in `mobile/package.json` or in the workspace root's `package.json` (`@nextsparkjs/ai-workflow`, say) stay where they were; the run ends by listing each one that is not at the target, and the `pnpm install` to run after you set them.
+In a web-mobile project `update-core` writes `web/package.json` and, for the floors, the project's other workspace packages (see the table below), not their `@nextsparkjs` pins. `@nextsparkjs` pins in `mobile/package.json` or in the workspace root's `package.json` (`@nextsparkjs/ai-workflow`, say) stay where they were; the run ends by listing each one that is not at the target, and the `pnpm install` to run after you set them.
 
 In a web-mobile project whose `web/` has a `pnpm-workspace.yaml` of its own, as projects `create-nextspark-app` generates have had, pnpm 11 takes `web/` for a workspace of its own and installs it before running any script there: `pnpm update-core` fails in that install (`ERR_PNPM_IGNORED_BUILDS`) before `update-core` starts, having written `web/pnpm-lock.yaml` and `web/pnpm-workspace.yaml`. Run it from `web/` as `pnpm --config.verify-deps-before-run=false update-core`, which skips that install.
 
@@ -44,7 +44,7 @@ pnpm install
 | What | How |
 |------|-----|
 | `package.json` | The versions of the `@nextsparkjs` packages, all set to exactly the target. A `^` or `~` range is replaced by the exact version: with a range, `pnpm install` takes the newest published version the range allows, which can be newer than the target. Then, once the new core is installed, the dependencies the project declares below core's *peer* dependencies (`next`, `react`, `react-dom` and the optional ones it declares) and below `better-auth` and `zod`, which cannot sit next to a second copy, are set to core's range (the field it was declared in is kept) and installed again, before `nextspark prepare` runs. Every other dependency below core's range is only listed; `--no-dependency-floors` lists all of them (see [After a Successful Update](#after-a-successful-update)). |
-| `package.json` of the other packages of the workspace | The directories `pnpm-workspace.yaml` lists (`plugins/*`, `mobile`, ...) and the workspace root: `next`, `react`, `react-dom` and the optional peers core declares, `better-auth` and `zod` are raised to the same range as in the project, in `dependencies`, `devDependencies`, `optionalDependencies` and `peerDependencies`, in the same second install, so the lockfile ends with one copy. A peer range that already allows core's version (`>=16`) is kept; `~16.3.8` moves to core's range. The indentation and the final newline of each file are kept, and the run says what changed in each one. A spec that is not a semver range (`workspace:`, `link:`, `file:`, `catalog:`, a tag) is listed, not rewritten. |
+| `package.json` of the workspace packages that are the project's | The packages of the workspace (the importers of `pnpm-lock.yaml`, so the globs and exclusions of `pnpm-workspace.yaml` are the ones pnpm applied) that declare `@nextsparkjs/core` in any field (a local plugin has it as a peer), and the ones the project, or one of those, reaches through `workspace:` or `link:`, along the whole chain: the same rule as `nextspark doctor`. In them, only `next`, `react`, `react-dom`, `better-auth` and `zod` are raised to the range the project gets, in `dependencies`, `devDependencies`, `optionalDependencies` and `peerDependencies`, in the same second install, so the lockfile ends with one copy; core's optional peers (`nodemailer`, ...) are not. A peer range that already allows core's version (`>=16`) or sits above it (`^16.5.0`) is kept; `~16.3.8` moves to core's range. The indentation and the final newline of each file are kept, and the run says what changed in each one. A spec that is not a semver range (`workspace:`, `link:`, `file:`, `catalog:`, a tag) is listed, not rewritten. |
 | `pnpm-lock.yaml`, `node_modules/` | `pnpm install`, run where `pnpm-lock.yaml` is |
 | `src/app/`, `.nextspark/` | `nextspark prepare`, which regenerates the host and the registries from the new core (both are git-ignored) |
 | `.next/` | Removed, so the next build starts clean |
@@ -256,14 +256,16 @@ With `--no-dependency-floors` the update raises none of them, and the run ends b
     pnpm add 'better-auth@~1.7.7' 'zod@^4.5.4'
 ```
 
-Without the option, the same lines are printed for the other packages of the workspace, one `pnpm add` per package (`--filter <name>`, or `-w` for the workspace root; `--save-peer` for a peer dependency):
+With the option, the same lines are printed for the project's other workspace packages, one `pnpm add` per package and field (`--filter <name>`, or `-w` for the workspace root; a package without a name is `--filter ./<its directory>`, relative to where you run the command; `--save-peer` for a peer dependency, which pnpm also adds to `devDependencies`):
 
 ```
-  Not moved: these dependencies in other packages of the workspace are below what @nextsparkjs/core 0.1.0-beta.200 needs, ...:
+  Not moved: these dependencies in packages of the project's workspace are below what @nextsparkjs/core 0.1.0-beta.200 needs, ...:
     plugins/foo/package.json: next ~16.3.8 in peerDependencies (core needs ~16.4.2)
-  Move them, from this directory:
+  Move them, from this directory (--save-peer also adds the package to devDependencies):
     pnpm add --filter acme-foo --save-peer 'next@~16.4.2'
 ```
+
+A package that does not declare `@nextsparkjs/core` and that the project does not reach through `workspace:` or `link:` (another app of the monorepo, `mobile/`), and a package of the workspace outside the git repository, is never written, with or without the option. Its `next`, `better-auth` or `zod` below core's is listed with the `pnpm add` that moves it; its `react` is not looked at.
 
 The comparison is between the lowest version your declared range allows and the lowest version core's `dependencies` and `peerDependencies` range allows. Nothing is printed when no dependency is below. Until you move them, the lockfile holds two copies, and code of yours that imports the package gets the older one while core uses its own.
 

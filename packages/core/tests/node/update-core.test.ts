@@ -158,7 +158,9 @@ const finish = () => {
     process.exit(state.installExit)
   }
   link()
-  const content = frozen ? locked : pins.map(({ name, version, spec }) => name + '@' + version + ' ' + spec + '\\n').join('')
+  // Like pnpm, it keeps the importers the workspace has
+  const importersBlock = locked !== null && locked.includes('importers:') ? locked.slice(locked.indexOf('importers:')) : ''
+  const content = frozen ? locked : pins.map(({ name, version, spec }) => name + '@' + version + ' ' + spec + '\\n').join('') + importersBlock
   if (!frozen) fs.writeFileSync(lockfile, content)
   fs.mkdirSync(path.dirname(lastInstall), { recursive: true })
   fs.writeFileSync(lastInstall, content)
@@ -201,6 +203,8 @@ interface ProjectOptions {
   lockfile?: 'commit' | 'none' | 'ignored'
   /** false creates a non-project directory without the root marker. */
   nextsparkConfig?: boolean
+  /** The importers of the lockfile besides the root and, for web-mobile, web and mobile */
+  importers?: string[]
 }
 
 interface FakeState {
@@ -231,6 +235,11 @@ function git(cwd: string, ...args: string[]) {
   return result.stdout.trim()
 }
 
+/** The `importers:` section of a lockfile with these workspace packages. */
+function importersBlock(ids: string[]) {
+  return `importers:\n${ids.map((id) => `\n  ${id}:\n    dependencies: {}\n`).join('')}`
+}
+
 /** The lockfile the stand-in install writes for these pins, each recorded with `spec` or else its exact version. */
 function lockfileFor(pins: Array<[string, string, string?]>) {
   return pins.map(([name, version, spec = version]) => `${name}@${version} ${spec}\n`).join('')
@@ -241,7 +250,7 @@ function lockfileFor(pins: Array<[string, string, string?]>) {
  * packages installed at `installed`. Returns the directory update-core runs
  * in: web/ for web-mobile.
  */
-function createProject(t: { after: (fn: () => void) => void }, { pins, files = {}, installed = FROM, webMobile = false, git: gitMode = 'commit', lockedSpecs = {}, lockfile = 'commit', nextsparkConfig = true }: ProjectOptions = {}) {
+function createProject(t: { after: (fn: () => void) => void }, { pins, files = {}, installed = FROM, webMobile = false, git: gitMode = 'commit', lockedSpecs = {}, lockfile = 'commit', nextsparkConfig = true, importers = [] }: ProjectOptions = {}) {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'update-core-'))
   t.after(() => fs.rmSync(repo, { recursive: true, force: true }))
   const root = webMobile ? path.join(repo, 'web') : repo
@@ -275,7 +284,7 @@ function createProject(t: { after: (fn: () => void) => void }, { pins, files = {
 
   const declared: Record<string, string> = { ...manifest.dependencies, ...manifest.devDependencies }
   const workspace: Record<string, string> = {
-    'pnpm-lock.yaml': lockfileFor(PACKAGES.map((name) => [name, installed ?? FROM, lockedSpecs[name] ?? declared[name]])),
+    'pnpm-lock.yaml': lockfileFor(PACKAGES.map((name) => [name, installed ?? FROM, lockedSpecs[name] ?? declared[name]])) + importersBlock(['.', ...(webMobile ? ['web', 'mobile'] : []), ...importers]),
     '.gitignore': `node_modules\n.next\n${lockfile === 'ignored' ? 'pnpm-lock.yaml\n' : ''}`,
     'pnpm-workspace.yaml': webMobile ? "packages:\n  - 'web'\n  - 'mobile'\n" : 'packages: []\n',
   }
@@ -791,7 +800,7 @@ test('in a web-mobile project the install runs where pnpm-lock.yaml is, not in w
   assert.deepEqual(result.installDirs, [fs.realpathSync(repo)])
   assert.equal(fs.existsSync(path.join(web, 'pnpm-lock.yaml')), false)
   assert.deepEqual(installedVersions(web), PACKAGES.map(() => TO))
-  assert.equal(fs.readFileSync(path.join(repo, 'pnpm-lock.yaml'), 'utf8'), lockfileFor(PACKAGES.map((name) => [name, TO])))
+  assert.equal(fs.readFileSync(path.join(repo, 'pnpm-lock.yaml'), 'utf8'), lockfileFor(PACKAGES.map((name) => [name, TO])) + importersBlock(['.', 'web', 'mobile']))
   assert.match(result.stdout, /Roll back: git reset --hard \S+ && git clean -fd :\/ && rm -rf \.\.\/node_modules node_modules && pnpm --dir \.\. install --frozen-lockfile\n/)
 })
 
@@ -812,7 +821,7 @@ test('in a web-mobile project it lists the @nextsparkjs pins in mobile/ and the 
 })
 
 /** A web-mobile project whose workspace yaml is `yaml`, with a directory per name in `dirs` pinning @nextsparkjs/mobile at FROM. */
-function webMobileWith(t: Parameters<typeof createProject>[0], yaml: string, dirs: string[]) {
+function webMobileWith(t: Parameters<typeof createProject>[0], yaml: string, dirs: string[], unlisted: string[] = []) {
   const web = createProject(t, { webMobile: true })
   const repo = path.dirname(web)
   fs.writeFileSync(path.join(repo, 'pnpm-workspace.yaml'), yaml)
@@ -820,6 +829,9 @@ function webMobileWith(t: Parameters<typeof createProject>[0], yaml: string, dir
     fs.mkdirSync(path.join(repo, dir), { recursive: true })
     fs.writeFileSync(path.join(repo, dir, 'package.json'), JSON.stringify({ name: dir, dependencies: { '@nextsparkjs/mobile': FROM } }))
   }
+  // pnpm lists the workspace's packages in the lockfile; a directory the yaml does not name is not one
+  const lock = fs.readFileSync(path.join(repo, 'pnpm-lock.yaml'), 'utf8')
+  fs.writeFileSync(path.join(repo, 'pnpm-lock.yaml'), lock.slice(0, lock.indexOf('importers:')) + importersBlock(['.', 'web', ...dirs.filter((dir) => !unlisted.includes(dir)).map((dir) => (dir.includes(' ') ? `'${dir}'` : dir))]))
   git(repo, 'add', '-A')
   git(repo, 'commit', '-q', '-m', 'Workspace')
   return web
@@ -838,7 +850,7 @@ test('only the packages: list of the workspace yaml names directories; onlyBuilt
     "  - '@nextsparkjs/*'",
     "  - esbuild",
     '',
-  ].join('\n'), ['mobile', 'esbuild'])
+  ].join('\n'), ['mobile', 'esbuild'], ['esbuild'])
 
   const result = runUpdateCore(web, ['--version', TO])
 
@@ -974,7 +986,7 @@ test('a ^ or ~ range that starts at the installed target is set to the exact tar
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
   assert.deepEqual(PACKAGES.map((name) => manifest.dependencies[name] ?? manifest.devDependencies[name]), PACKAGES.map(() => TO))
   assert.deepEqual(installedVersions(root), PACKAGES.map(() => TO))
-  assert.equal(fs.readFileSync(path.join(root, 'pnpm-lock.yaml'), 'utf8'), lockfileFor(PACKAGES.map((name) => [name, TO])))
+  assert.equal(fs.readFileSync(path.join(root, 'pnpm-lock.yaml'), 'utf8'), lockfileFor(PACKAGES.map((name) => [name, TO])) + importersBlock(['.']))
 })
 
 test('the rollback installs what the commit\'s lockfile names, and fails without rewriting it when it doesn\'t match the commit\'s package.json', (t) => {
@@ -1475,68 +1487,125 @@ test('prints nothing about dependencies when the project is aligned with the new
   assert.doesNotMatch(result.stdout, /below what|pnpm add|Could not compare/)
 })
 
-// #374: the floors are raised in the other packages of the workspace too, before the install, so the lockfile keeps one copy
+// #374: the floors are raised in the packages of the project's workspace too, before the install, so the lockfile keeps one copy
 
-const CORE_WITH_NEXT_PEER = { dependencies: { 'better-auth': '~1.7.7', zod: '^4.5.4' }, peerDependencies: { next: '~16.4.2', react: '>=18' } }
+const CORE_WITH_NEXT_PEER = { dependencies: { 'better-auth': '~1.7.7', zod: '^4.5.4' }, peerDependencies: { next: '~16.4.2', react: '>=18', nodemailer: '^7.0.0' } }
 const PLUGIN_FILE = 'plugins/foo/package.json'
 const PLUGIN = {
   name: 'acme-foo',
   dependencies: { zod: '4.3.6', 'better-auth': 'workspace:^' },
-  peerDependencies: { next: '~16.3.8', react: '>=16' },
+  peerDependencies: { '@nextsparkjs/core': '*', next: '~16.3.8', react: '>=16', nodemailer: '^6.0.0' },
 }
 // Four-space indent and no final newline: the format the file had is the one it keeps
 const PLUGIN_TEXT = JSON.stringify(PLUGIN, null, 4)
+const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`
+const MEMBERS: Record<string, string> = {
+  [PLUGIN_FILE]: PLUGIN_TEXT,
+  // above the floors, with core as a peer: stays
+  'plugins/bar/package.json': json({ name: 'acme-bar', peerDependencies: { '@nextsparkjs/core': '*', next: '^16.5.0', zod: '^4.7.0' } }),
+  // reached from the project through workspace:*
+  'libs/shared/package.json': json({ name: 'acme-shared', dependencies: { zod: '4.3.6' } }),
+  // another app of the monorepo: not the project's
+  'apps/other/package.json': json({ name: 'acme-other', dependencies: { next: '15.5.0', react: '19.1.0' } }),
+  // depends on @nextsparkjs/mobile, not on core
+  'mobile/package.json': json({ name: 'acme-mobile', dependencies: { '@nextsparkjs/mobile': FROM, react: '19.1.0', expo: '~54.0.0' } }),
+  // not a package of the workspace (pnpm excluded it): it is not in the lockfile
+  'plugins/fixtures/package.json': json({ name: 'acme-fixture', peerDependencies: { '@nextsparkjs/core': '*', next: '~16.3.8' } }),
+}
 
-function workspaceWithPlugin(t: Parameters<typeof createProject>[0]) {
+function workspaceWithMembers(t: Parameters<typeof createProject>[0]) {
   return createProject(t, {
-    pins: { ...ALIGNED, next: '~16.4.2' },
-    files: { 'pnpm-workspace.yaml': "packages:\n  - 'plugins/*'\n", [PLUGIN_FILE]: PLUGIN_TEXT },
+    pins: { ...ALIGNED, next: '~16.4.2', 'acme-shared': 'workspace:*' },
+    files: MEMBERS,
+    importers: ['plugins/foo', 'plugins/bar', 'libs/shared', 'apps/other', 'mobile'],
   })
 }
 
-test('raises next and zod in the manifests of the other workspace packages, keeping their format, before the install', (t) => {
-  const root = workspaceWithPlugin(t)
+const read = (root: string, file: string) => fs.readFileSync(path.join(root, file), 'utf8')
+
+test('raises next and zod in the packages of the project\'s workspace, keeping their format, before the install, and writes no other package', (t) => {
+  const root = workspaceWithMembers(t)
 
   const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER, snapshot: PLUGIN_FILE })
 
   assert.equal(result.status, 0, result.output)
-  const raised = { ...PLUGIN, dependencies: { ...PLUGIN.dependencies, zod: '^4.5.4' }, peerDependencies: { next: '~16.4.2', react: '>=16' } }
-  // zod in dependencies is raised, next as a peer moves to core's range, a broad peer and a workspace: spec stay
-  assert.equal(fs.readFileSync(path.join(root, PLUGIN_FILE), 'utf8'), JSON.stringify(raised, null, 4))
-  assert.match(result.stdout, /Raising the dependencies below[^\n]*\n {3}plugins\/foo\/package\.json:\n {5}next ~16\.3\.8 -> ~16\.4\.2 \(peerDependencies\)\n {5}zod 4\.3\.6 -> \^4\.5\.4 \(dependencies\)\n/)
+  const raised = { ...PLUGIN, dependencies: { ...PLUGIN.dependencies, zod: '^4.5.4' }, peerDependencies: { ...PLUGIN.peerDependencies, next: '~16.4.2' } }
+  // zod in dependencies is raised, next as a peer moves to core's range; a broad peer, an optional peer of core and a workspace: spec stay
+  assert.equal(read(root, PLUGIN_FILE), JSON.stringify(raised, null, 4))
+  assert.equal(read(root, 'libs/shared/package.json'), json({ name: 'acme-shared', dependencies: { zod: '^4.5.4' } }))
+  for (const file of ['plugins/bar/package.json', 'apps/other/package.json', 'mobile/package.json', 'plugins/fixtures/package.json']) assert.equal(read(root, file), MEMBERS[file], file)
+  assert.match(result.stdout, /Raising the dependencies below[^\n]*\n(?:.*\n)*? {3}plugins\/foo\/package\.json:\n {5}next ~16\.3\.8 -> ~16\.4\.2 \(peerDependencies\)\n {5}zod 4\.3\.6 -> \^4\.5\.4 \(dependencies\)\n/)
   // The second install sees the new ranges; the first one, the old ones
   assert.deepEqual(result.snapshots, [PLUGIN_TEXT, JSON.stringify(raised, null, 4)])
   assert.ok(result.calls.lastIndexOf('install') < result.calls.indexOf('nextspark prepare'), result.calls.join('\n'))
-  // the workspace: spec is listed with its explanation and was not rewritten
+  // the workspace: spec is listed with its explanation; the app that is not the project's is listed, without react
   assert.match(result.stdout, /not a semver range[^\n]*\n {4}plugins\/foo\/package\.json: better-auth workspace:\^ in dependencies\n/)
+  assert.match(result.stdout, /never writes[^\n]*\n {4}apps\/other\/package\.json: next 15\.5\.0 in dependencies \(core needs ~16\.4\.2\)\n {2}Move them[^\n]*\n {4}pnpm add --filter acme-other 'next@~16\.4\.2'\n/)
+  assert.doesNotMatch(result.stdout, /nodemailer|react 19|mobile\/package\.json: react/)
 })
 
 test('--no-dependency-floors writes no workspace manifest and lists the pnpm add per package', (t) => {
-  const root = workspaceWithPlugin(t)
+  const root = workspaceWithMembers(t)
 
   const result = runUpdateCore(root, ['--version', TO, '--no-dependency-floors'], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
 
   assert.equal(result.status, 0, result.output)
-  assert.equal(fs.readFileSync(path.join(root, PLUGIN_FILE), 'utf8'), PLUGIN_TEXT)
+  for (const [file, text] of Object.entries(MEMBERS)) assert.equal(read(root, file), text, file)
   assert.match(result.stdout, /^ {4}plugins\/foo\/package\.json: zod 4\.3\.6 in dependencies \(core needs \^4\.5\.4\)$/m)
   assert.match(result.stdout, /^ {4}plugins\/foo\/package\.json: next ~16\.3\.8 in peerDependencies \(core needs ~16\.4\.2\)$/m)
   assert.match(result.stdout, /^ {4}pnpm add --filter acme-foo 'zod@\^4\.5\.4'$/m)
   assert.match(result.stdout, /^ {4}pnpm add --filter acme-foo --save-peer 'next@~16\.4\.2'$/m)
-  assert.doesNotMatch(result.stdout, /react/)
+  assert.match(result.stdout, /^ {4}pnpm add --filter acme-shared 'zod@\^4\.5\.4'$/m)
+  assert.match(result.stdout, /^ {4}pnpm add --filter acme-other 'next@~16\.4\.2'$/m)
+  assert.doesNotMatch(result.stdout, /acme-bar|acme-fixture|acme-mobile|react/)
   assert.equal(result.calls.filter((call) => call === 'install').length, 1)
 })
 
-test('a workspace package that is aligned, with a broad peer range, is not touched and not listed', (t) => {
+test('a package without a name is listed with the --filter path from where the command runs', (t) => {
   const root = createProject(t, {
     pins: { ...ALIGNED, next: '~16.4.2' },
-    files: { 'pnpm-workspace.yaml': "packages:\n  - 'plugins/*'\n", [PLUGIN_FILE]: JSON.stringify({ name: 'acme-foo', dependencies: { zod: '^4.6.0' }, peerDependencies: { next: '>=16', zod: '*' } }, null, 2) },
+    files: { 'libs/anon/package.json': json({ peerDependencies: { '@nextsparkjs/core': '*', next: '~16.3.8' } }) },
+    importers: ['libs/anon'],
   })
-  const before = fs.readFileSync(path.join(root, PLUGIN_FILE), 'utf8')
+
+  const result = runUpdateCore(root, ['--version', TO, '--no-dependency-floors'], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
+
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.stdout, /^ {4}pnpm add --filter \.\/libs\/anon --save-peer 'next@~16\.4\.2'$/m)
+})
+
+test('a package of the workspace outside the git repository is listed, not written', (t) => {
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'update-core-outside-'))
+  t.after(() => fs.rmSync(outside, { recursive: true, force: true }))
+  const file = path.join(outside, 'package.json')
+  const text = json({ name: 'acme-outside', peerDependencies: { '@nextsparkjs/core': '*', next: '~16.3.8' } })
+  fs.writeFileSync(file, text)
+  const root = createProject(t, { pins: { ...ALIGNED, next: '~16.4.2' } })
+  const id = path.relative(root, outside)
+  const lock = path.join(root, 'pnpm-lock.yaml')
+  fs.writeFileSync(lock, `${fs.readFileSync(lock, 'utf8')}\n  ${id}:\n    dependencies: {}\n`)
+  git(root, 'add', '-A')
+  git(root, 'commit', '-q', '-m', 'Outside member')
 
   const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
 
   assert.equal(result.status, 0, result.output)
-  assert.equal(fs.readFileSync(path.join(root, PLUGIN_FILE), 'utf8'), before)
+  assert.equal(fs.readFileSync(file, 'utf8'), text)
+  assert.match(result.stdout, /pnpm add --filter acme-outside --save-peer 'next@~16\.4\.2'/)
+})
+
+test('a package of the project that is aligned, with a peer range above the floor or broad, is not touched and not listed', (t) => {
+  const root = createProject(t, {
+    pins: { ...ALIGNED, next: '~16.4.2' },
+    files: { [PLUGIN_FILE]: json({ name: 'acme-foo', dependencies: { zod: '^4.6.0' }, peerDependencies: { '@nextsparkjs/core': '*', next: '>=16', zod: '^4.7.0', 'react-dom': '*' } }) },
+    importers: ['plugins/foo'],
+  })
+  const before = read(root, PLUGIN_FILE)
+
+  const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
+
+  assert.equal(result.status, 0, result.output)
+  assert.equal(read(root, PLUGIN_FILE), before)
   assert.doesNotMatch(result.stdout, /plugins\/foo|below what/)
   assert.equal(result.calls.filter((call) => call === 'install').length, 1)
 })

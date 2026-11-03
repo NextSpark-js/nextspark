@@ -7,6 +7,9 @@
 /** Packages that cannot sit next to a second copy of themselves, raised besides core's peer dependencies. */
 const RAISED_ALWAYS = ['better-auth', 'zod']
 
+/** What update-core writes in the other packages of the workspace: not core's optional peers, which are not theirs to follow. */
+const WORKSPACE_FLOORS = ['next', 'react', 'react-dom', 'better-auth', 'zod']
+
 const SCOPE = '@nextsparkjs/'
 const PROJECT_FIELDS = ['dependencies', 'devDependencies', 'optionalDependencies']
 const CORE_FIELDS = ['dependencies', 'peerDependencies']
@@ -63,14 +66,17 @@ export function addCommands(below) {
  * dependency fields: `below` as `{ name, field, declared, required }`, and `protocols` for the ones whose spec is not
  * a semver range (`workspace:`, `link:`, `file:`, `catalog:`, a tag), which update-core never rewrites. A dependency is
  * below when its lowest version is lower than the lowest one of core's range; a peer dependency only when core's lowest
- * version is outside the range it declares, so `>=16` stays and `~16.3.8` moves to the range core declares.
+ * version is outside the range it declares and its lowest version is lower too, so `>=16` and `^16.5.0` stay and `~16.3.8`
+ * moves to the range core declares. Only WORKSPACE_FLOORS are looked at; `own` false (a package that is not the
+ * project's) leaves react and react-dom out as well, since an app of its own may be on another React.
  */
-export function workspaceFloors(manifest, coreManifest, semver) {
+export function workspaceFloors(manifest, coreManifest, semver, own = true) {
+  const names = own ? WORKSPACE_FLOORS : WORKSPACE_FLOORS.filter((name) => name !== 'react' && name !== 'react-dom')
   const below = []
   const protocols = []
   for (const field of [...PROJECT_FIELDS, 'peerDependencies']) {
     for (const [name, declared] of Object.entries(manifest?.[field] ?? {})) {
-      if (name.startsWith(SCOPE) || floorsToRaise([{ name }], coreManifest).length === 0) continue
+      if (!names.includes(name) || floorsToRaise([{ name }], coreManifest).length === 0) continue
       const ranges = CORE_FIELDS.map((coreField) => coreManifest?.[coreField]?.[name]).filter((range) => range && semver.validRange(range))
       if (ranges.length === 0) continue
       if (!semver.validRange(declared)) {
@@ -79,7 +85,8 @@ export function workspaceFloors(manifest, coreManifest, semver) {
       }
       const required = ranges.find((range) => {
         const lowest = semver.minVersion(range)
-        return field === 'peerDependencies' ? !semver.satisfies(lowest, declared) : semver.lt(semver.minVersion(declared), lowest)
+        const behind = semver.lt(semver.minVersion(declared), lowest)
+        return field === 'peerDependencies' ? behind && !semver.satisfies(lowest, declared) : behind
       })
       if (required) below.push({ name, field, declared, required })
     }
