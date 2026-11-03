@@ -1,5 +1,5 @@
 import React from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { renderHook, act, waitFor } from '@testing-library/react-native'
 import { AuthProvider, useAuth } from '../../../src/providers/AuthProvider'
 import { apiClient } from '../../../src/api/client'
@@ -226,6 +226,20 @@ describe('AuthProvider', () => {
       expect(apiClient.setTeam).toHaveBeenCalledWith(storedTeam)
     })
 
+    it('resets the query cache when the stored team is no longer one of the user\'s', async () => {
+      const otherTeam = { id: 'team-2', name: 'Other', role: 'member' }
+      ;(authApi.getSession as jest.Mock).mockResolvedValue({ user: storedUser })
+      ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [otherTeam] })
+      ;(apiClient.getTeamId as jest.Mock).mockReturnValue('team-gone')
+      queryClient.setQueryData(['tasks'], [{ id: 'gone-team-task' }])
+
+      const { result } = renderHook(() => useAuth(), { wrapper })
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      expect(result.current.team).toEqual(otherTeam)
+      expect(queryClient.getQueryData(['tasks'])).toBeUndefined()
+    })
+
     it('keeps user AND team from storage when the server is unreachable', async () => {
       ;(authApi.getSession as jest.Mock).mockRejectedValue(new TypeError('Network request failed'))
       expectOfflineInitWarning()
@@ -348,6 +362,31 @@ describe('AuthProvider', () => {
     })
 
     expect(queryClient.getQueryData(['tasks'])).toBeUndefined()
+  })
+
+  it('refetches active queries with the new team already persisted', async () => {
+    const newTeam = { id: 'team-9', name: 'Nine', role: 'owner' }
+    let current = 'team-1'
+    ;(apiClient.setTeam as jest.Mock).mockImplementation(async (t: { id: string }) => { current = t.id })
+    ;(apiClient.getTeamId as jest.Mock).mockImplementation(() => current)
+    const seen: string[] = []
+    const { result } = renderHook(
+      () => {
+        useQuery({ queryKey: ['tasks'], queryFn: async () => { seen.push(apiClient.getTeamId() as string); return [] } })
+        return useAuth()
+      },
+      { wrapper }
+    )
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0))
+    seen.length = 0
+
+    await act(async () => {
+      await result.current.selectTeam(newTeam)
+    })
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0))
+
+    expect(seen.every(id => id === 'team-9')).toBe(true)
   })
 
   describe('login while another session is active', () => {

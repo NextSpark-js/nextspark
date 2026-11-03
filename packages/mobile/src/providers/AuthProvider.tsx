@@ -123,8 +123,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const storedTeamId = apiClient.getTeamId()
         const storedTeam = teamsResponse.data.find(t => t.id === storedTeamId)
 
-        // Prefer the stored team; otherwise the first one
-        await applyTeam(storedTeam ?? teamsResponse.data[0])
+        if (storedTeamId && !storedTeam) {
+          // The stored team is gone: the first one replaces it, and what was cached for the old one must not be served
+          await persistTeam(teamsResponse.data[0])
+          await queryClient.cancelQueries()
+          await queryClient.resetQueries()
+          setTeam(teamsResponse.data[0])
+        } else {
+          // Prefer the stored team; otherwise the first one
+          await applyTeam(storedTeam ?? teamsResponse.data[0])
+        }
       } else {
         // Membership list is authoritative when the server answers: no teams
         // means no active team, even if one was stored
@@ -155,7 +163,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       }
     }
-  }, [applyTeam, resetQueryCache])
+  }, [applyTeam, persistTeam, queryClient, resetQueryCache])
 
   // Initialize auth state from storage
   useEffect(() => {

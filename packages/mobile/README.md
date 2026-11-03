@@ -122,7 +122,7 @@ Authentication context provider. Wrap your app with this provider to enable auth
 - `isLoading: boolean` - Whether auth is loading
 - `login(email, password): Promise<void>` - Login user
 - `logout(): Promise<void>` - Logout user
-- `selectTeam(teamId): Promise<void>` - Switch to different team (cancels and resets the query cache, so screens show their loading state until the new team's data arrives)
+- `selectTeam(team: Team): Promise<void>` - Switch to different team (cancels and resets the query cache, so screens show their loading state until the new team's data arrives)
 
 #### `QueryProvider`
 TanStack Query provider for data fetching. Configures default options for queries and mutations.
