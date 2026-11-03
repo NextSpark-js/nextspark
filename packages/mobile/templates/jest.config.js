@@ -13,6 +13,8 @@ module.exports = {
     // @nextsparkjs/mobile is ESM with an `import` export condition only; Jest resolves with `require`
     // and would fail with ERR_PACKAGE_PATH_NOT_EXPORTED. Point it at the built files Metro loads.
     // The allowlist above makes Jest transform them.
+    // The fixed path holds with pnpm, which always links a direct dependency into the app's own node_modules.
+    // With node-linker=hoisted, npm or yarn the package may sit in a parent node_modules: adjust the path.
     '^@nextsparkjs/mobile$': '<rootDir>/node_modules/@nextsparkjs/mobile/dist/index.js',
     '^@nextsparkjs/mobile/(.*)$': '<rootDir>/node_modules/@nextsparkjs/mobile/dist/$1/index.js',
   },
