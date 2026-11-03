@@ -451,6 +451,11 @@ export async function getEntity<T = unknown>(
       }
     }
 
+    // An `access.api` object without `read` closes the generic reads for the dashboard too (#388)
+    if (!isApiOperationEnabled(entityConfig, 'read')) {
+      return { success: false, error: 'Operation not supported for this entity' }
+    }
+
     // Get auth context from session/cookies
     const authContext = await getAuthContext()
     if (authContext.success === false) {
@@ -518,6 +523,11 @@ export async function listEntities<T = unknown>(
         success: false,
         error: `Entity "${entitySlug}" not found in registry`,
       }
+    }
+
+    // An `access.api` object without `read` closes the generic reads for the dashboard too (#388)
+    if (!isApiOperationEnabled(entityConfig, 'read')) {
+      return { success: false, error: 'Operation not supported for this entity' }
     }
 
     // Get auth context from session/cookies
@@ -689,6 +699,11 @@ export async function entityExists(
       }
     }
 
+    // An `access.api` object without `read` closes the generic reads for the dashboard too (#388)
+    if (!isApiOperationEnabled(entityConfig, 'read')) {
+      return { success: false, error: 'Operation not supported for this entity' }
+    }
+
     // Get auth context from session/cookies
     const authContext = await getAuthContext()
     if (authContext.success === false) {
@@ -748,6 +763,11 @@ export async function countEntities(
         success: false,
         error: `Entity "${entitySlug}" not found in registry`,
       }
+    }
+
+    // An `access.api` object without `read` closes the generic reads for the dashboard too (#388)
+    if (!isApiOperationEnabled(entityConfig, 'read')) {
+      return { success: false, error: 'Operation not supported for this entity' }
     }
 
     // Get auth context from session/cookies

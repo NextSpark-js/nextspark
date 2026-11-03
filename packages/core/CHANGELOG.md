@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- An entity whose `access.api` object has no `read` (for example `{ create: true }`) no longer answers reads through other paths: relation references and pattern usage treat it like `access.api: false` for an API key caller, and the `getEntity`, `listEntities`, `entityExists` and `countEntities` Server Actions refuse with "Operation not supported for this entity", as the write actions already do (#388).
+
 ## [0.1.0-beta.200] - 2026-11-03
 
 ### Upgrading from 0.1.0-beta.199

@@ -10,6 +10,7 @@
 import { queryWithRLS, mutateWithRLS, queryOneWithRLS, queryRows } from '../db'
 import { extractPatternIds } from '../blocks/pattern-resolver'
 import { entityRegistry } from '../entities/registry'
+import { isApiOperationEnabled } from '../entities/api-access'
 import type { BlockInstance } from '../../types/blocks'
 import type { PatternReference } from '../../types/pattern-reference'
 
@@ -47,7 +48,7 @@ export interface GetUsagesOptions {
   limit?: number
   offset?: number
   /**
-   * The caller is external (an API key). Entities closed to external callers (`access.api: false`, `enabled: false`)
+   * The caller is external (an API key). Entities closed to external callers (`access.api: false` or without `read`, `enabled: false`)
    * then appear as `entityType` and `entityId` only, with no title, name, email, slug or status.
    */
   external?: boolean
@@ -320,7 +321,7 @@ export class PatternUsageService {
         continue
       }
       // Same closing as the entity routes: the usage stays (its ids), the record's own fields do not leave
-      if (external && (entityConfig.access?.api === false || entityConfig.enabled === false)) {
+      if (external && (entityConfig.access?.api === false || !isApiOperationEnabled(entityConfig, 'read') || entityConfig.enabled === false)) {
         entityInfoMap.set(entityType, new Map())
         continue
       }

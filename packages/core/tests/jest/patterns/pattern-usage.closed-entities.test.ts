@@ -12,6 +12,7 @@ jest.mock('@/core/lib/entities/registry', () => ({
     get: (slug: string) => ({
       contacts: { slug: 'contacts', access: { api: false } },
       legacy: { slug: 'legacy', enabled: false },
+      writeonly: { slug: 'writeonly', access: { api: { create: true } } },
       pages: { slug: 'pages', access: { api: true } },
     } as Record<string, unknown>)[slug] ?? null,
   },
@@ -34,7 +35,7 @@ function setup(entityType: string) {
 
 beforeEach(() => jest.resetAllMocks())
 
-describe.each([['contacts', 'access.api: false'], ['legacy', 'enabled: false']])('an entity with %s (%s)', (entityType) => {
+describe.each([['contacts', 'access.api: false'], ['legacy', 'enabled: false'], ['writeonly', 'access.api without read (#388)']])('an entity with %s (%s)', (entityType) => {
   it('is reduced to its type and id for an external caller, and its table is not read', async () => {
     setup(entityType)
     const { usages } = await PatternUsageService.getUsagesWithEntityInfo('p-1', 'u-1', { external: true })

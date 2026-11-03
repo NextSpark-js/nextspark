@@ -714,6 +714,19 @@ describe('entity actions honour access.api per operation (#376)', () => {
     expect((await getEntity('test_entities', 'id1')).success).toBe(true)
   })
 
+  it.each([
+    ['getEntity', () => getEntity('test_entities', 'id1')],
+    ['listEntities', () => listEntities('test_entities')],
+    ['entityExists', () => entityExists('test_entities', 'id1')],
+    ['countEntities', () => countEntities('test_entities')],
+  ])('%s is refused before the service is called when read is off (#388)', async (_name, call) => {
+    mockEntityRegistry.get.mockReturnValue({ ...mockEntityConfig, access: { api: { create: true } } } as any)
+    expect(await call()).toEqual(refused)
+    for (const fn of [mockGenericEntityService.getById, mockGenericEntityService.list, mockGenericEntityService.exists, mockGenericEntityService.count]) {
+      expect(fn).not.toHaveBeenCalled()
+    }
+  })
+
   it('enabling the operation serves it', async () => {
     mockEntityRegistry.get.mockReturnValue({ ...mockEntityConfig, access: { api: { create: true } } } as any)
     mockGenericEntityService.create.mockResolvedValue(mockEntity)

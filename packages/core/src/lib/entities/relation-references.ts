@@ -5,6 +5,7 @@
 
 import { queryWithRLS } from '../db'
 import { getAllEntityConfigs } from './registry'
+import { isApiOperationEnabled } from './api-access'
 import type { EntityField } from './types'
 
 /**
@@ -84,7 +85,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * related entity. An id that does not exist and one the caller cannot see are indistinguishable. Fields absent from
  * `data`, empty values, relations to something that is not a registered entity and read-only fields are not checked;
  * `includeReadOnly` checks the last too, for writers that do store them. For an `external` caller (an API key) an id of
- * an entity closed to external callers (`access.api: false`, `enabled: false`) is always invalid and its table is not
+ * an entity closed to external callers (`access.api: false` or without `read`, `enabled: false`) is always invalid and its table is not
  * queried, so the answer says nothing about whether the id exists (#346).
  */
 export async function findInvalidRelationField(
@@ -99,7 +100,7 @@ export async function findInvalidRelationField(
     if (!ids) return field.name
     const target = field.relation?.entity && getAllEntityConfigs().find(entity => entity.slug === field.relation?.entity)
     if (ids.length === 0 || !target) continue
-    if (external && (target.access?.api === false || target.enabled === false)) return field.name
+    if (external && (target.access?.api === false || !isApiOperationEnabled(target, 'read') || target.enabled === false)) return field.name
     let visible: { id: string | number }[]
     try {
       visible = await queryWithRLS<{ id: string | number }>(
