@@ -209,12 +209,14 @@ Un objeto sirve solo las operaciones de la API genérica que habilita, igual par
 |---|---|
 | `GET` (lista, detalle, búsqueda, filtros, `distinct`, `ids`, metadata, `?children=`) | `read` |
 | `POST` | `create` |
-| `PATCH` / `PUT` | `update` |
+| `PATCH` | `update` |
 | `DELETE` | `delete` |
 | child routes: `GET` | `read` |
 | child routes: `POST` / `PUT` / `DELETE` | `update` (cambiar un hijo es actualizar el padre) |
 
 Una operación deshabilitada responde `405` con un header `Allow` que lista los métodos habilitados de esa ruta, antes de autenticar, de leer el body y de tocar la base. El OpenAPI, el API explorer de devtools y las tools del servidor MCP listan solo las operaciones habilitadas. `true` y `false` significan lo mismo que siempre.
+
+**Alcance:** el objeto cierra también las escrituras del dashboard y de las server actions genéricas (`createEntity`, `updateEntity`, `deleteEntity`, `deleteEntities`), que responden `Operation not supported for this entity`. Los botones de esas acciones se ocultan con permisos de rol o se apuntan a la ruta propia.
 
 **Cuándo cerrar las escrituras genéricas:** cuando toda escritura tiene que pasar por reglas que el CRUD genérico no conoce, como una máquina de estados, campos inmutables a partir de cierto estado o efectos que deben correr en el mismo request. Se dejan las lecturas genéricas (listas, detalle, selectores de relaciones) y las escrituras van por una ruta propia:
 

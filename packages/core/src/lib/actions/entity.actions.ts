@@ -42,6 +42,7 @@ import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../teams/active-team
 import { redirect } from 'next/navigation'
 import { GenericEntityService } from '../services/generic-entity.service'
 import { entityRegistry } from '../entities/registry'
+import { isApiOperationEnabled } from '../entities/api-access'
 import { getAuthorizationSession } from '../auth/authorization-session'
 import { checkPermission } from '../permissions/check'
 import { actionRateLimitError } from './rate-limit'
@@ -156,6 +157,11 @@ export async function createEntity<T = unknown>(
       }
     }
 
+    // An `access.api` object that turns this operation off closes the generic write for the dashboard too (#376)
+    if (!isApiOperationEnabled(entityConfig, 'create')) {
+      return { success: false, error: 'Operation not supported for this entity' }
+    }
+
     // 2. Get auth context from session/cookies
     const authContext = await getAuthContext()
     if (authContext.success === false) {
@@ -247,6 +253,11 @@ export async function updateEntity<T = unknown>(
         success: false,
         error: `Entity "${entitySlug}" not found in registry`,
       }
+    }
+
+    // An `access.api` object that turns this operation off closes the generic write for the dashboard too (#376)
+    if (!isApiOperationEnabled(entityConfig, 'update')) {
+      return { success: false, error: 'Operation not supported for this entity' }
     }
 
     // 2. Get auth context from session/cookies
@@ -341,6 +352,11 @@ export async function deleteEntity(
         success: false,
         error: `Entity "${entitySlug}" not found in registry`,
       }
+    }
+
+    // An `access.api` object that turns this operation off closes the generic write for the dashboard too (#376)
+    if (!isApiOperationEnabled(entityConfig, 'delete')) {
+      return { success: false, error: 'Operation not supported for this entity' }
     }
 
     // 2. Get auth context from session/cookies
@@ -577,6 +593,11 @@ export async function deleteEntities(
         success: false,
         error: `Entity "${entitySlug}" not found in registry`,
       }
+    }
+
+    // An `access.api` object that turns this operation off closes the generic write for the dashboard too (#376)
+    if (!isApiOperationEnabled(entityConfig, 'delete')) {
+      return { success: false, error: 'Operation not supported for this entity' }
     }
 
     // Get auth context from session/cookies

@@ -33,10 +33,10 @@ import type { EntityConfig } from '../entities/types'
  * and a route with none left is dropped.
  */
 function entityRoutes(): ApiRouteEntry[] {
-  const configs = Object.values(ENTITY_REGISTRY).map(entry => entry.config as unknown as Partial<EntityConfig>)
   return API_ROUTES_METADATA.entities.flatMap(route => {
-    const config = configs.find(candidate => candidate?.slug === route.source)
-    if (!config) return [route]
+    // fail-closed: a route whose entity is not in the registry is not listed
+    const config = (ENTITY_REGISTRY as Record<string, { config?: unknown } | undefined>)[route.source ?? '']?.config as Partial<EntityConfig> | undefined
+    if (!config) return []
     const methods = enabledRouteMethods(config, route.path.endsWith('/[id]') ? 'item' : 'collection', route.methods)
     return methods.length ? [{ ...route, methods }] : []
   })

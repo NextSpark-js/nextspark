@@ -686,3 +686,37 @@ describe('entity actions active team cookie', () => {
     if (!result.success) expect(result.error).toBe('No active team selected')
   })
 })
+
+describe('entity actions honour access.api per operation (#376)', () => {
+  const closed = { ...mockEntityConfig, access: { api: { read: true } } }
+  const refused = { success: false, error: 'Operation not supported for this entity' }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockEntityRegistry.get.mockReturnValue(closed as any)
+    setupAuthenticatedUser()
+  })
+
+  it.each([
+    ['createEntity', () => createEntity('test_entities', { title: 'x' })],
+    ['updateEntity', () => updateEntity('test_entities', 'id1', { title: 'x' })],
+    ['deleteEntity', () => deleteEntity('test_entities', 'id1')],
+    ['deleteEntities', () => deleteEntities('test_entities', ['id1'])],
+  ])('%s is refused before the service is called', async (_name, call) => {
+    expect(await call()).toEqual(refused)
+    for (const fn of [mockGenericEntityService.create, mockGenericEntityService.update, mockGenericEntityService.delete, mockGenericEntityService.deleteMany]) {
+      expect(fn).not.toHaveBeenCalled()
+    }
+  })
+
+  it('reads are still served', async () => {
+    mockGenericEntityService.getById.mockResolvedValue(mockEntity)
+    expect((await getEntity('test_entities', 'id1')).success).toBe(true)
+  })
+
+  it('enabling the operation serves it', async () => {
+    mockEntityRegistry.get.mockReturnValue({ ...mockEntityConfig, access: { api: { create: true } } } as any)
+    mockGenericEntityService.create.mockResolvedValue(mockEntity)
+    expect((await createEntity('test_entities', { title: 'x' })).success).toBe(true)
+  })
+})
