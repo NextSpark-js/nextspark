@@ -90,9 +90,9 @@ Options:
 
 | Code | Level | Meaning |
 |---|---|---|
-| `NS_DUPLICATE_DEPENDENCY` | warn | `pnpm-lock.yaml` resolves more than one version of `next`, `better-auth` or `zod`. It names the importer that pulls each version and prints the `pnpm add --filter <importer> <pkg>@<range>` that aligns it. |
-| `NS_ZOD_BELOW_CORE` | fail | A `zod` the lockfile resolves is below the range the installed `@nextsparkjs/core` declares; two zod versions break the schema types. It prints the `pnpm add --filter` that raises it. |
-| `NS_QUERY_CLIENT_NOT_REGISTERED` | warn | A file creates `new QueryClient(` and never calls `registerQueryCache`, so that client is not cleared on sign-in. It lists `file:line`; register it with `registerQueryCache(() => client.clear())` from `@nextsparkjs/core/lib/auth/query-caches`. The check looks at one file at a time and does not follow imports. |
+| `NS_DUPLICATE_DEPENDENCY` | warn | `pnpm-lock.yaml` resolves more than one version of `next`, `better-auth` or `zod` that the project can align: the versions its importers declare, plus transitive copies of the same major as one of them (a `zod` 3 next to `zod` 4 is not reported). It names the importer that pulls each version and prints, for each importer below the highest version, `pnpm add --filter <importer> <pkg>@<range>` (with `--save-peer` when the importer declares the package as a peer dependency). Importers that neither declare core nor the package as a peer are left out. Only pnpm lockfile v9 is read; any other version is reported as not checked. |
+| `NS_ZOD_BELOW_CORE` | fail | A `zod` that an importer resolves is below the range the installed `@nextsparkjs/core` declares; two zod versions break the schema types. A transitive `zod` that no importer declares is ignored. It prints the `pnpm add --filter <importer> zod@<range>` that raises it (`--save-peer` for a peer dependency). |
+| `NS_QUERY_CLIENT_NOT_REGISTERED` | warn | A file creates `new QueryClient(` and never calls `registerQueryCache`, so that client is not cleared on sign-in. It lists `file:line`; register it with `registerQueryCache(() => client.clear())` from `@nextsparkjs/core/lib/auth/query-caches`. Test, spec and stories files, generated `src/app`, and directories such as `node_modules`, `tests`, `cypress`, `public` or any starting with a dot are skipped. A server-side client created per request (`cache(() => new QueryClient())`) does not need registering; the check looks at one file at a time and does not follow imports, so register it or ignore the finding. |
 
 ## Database commands
 

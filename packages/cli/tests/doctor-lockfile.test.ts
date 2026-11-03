@@ -6,38 +6,25 @@ import path from 'node:path'
 import { checkDuplicateDependencies, checkZodBelowCore } from '../src/doctor/checks/lockfile.js'
 import { checkQueryClients } from '../src/doctor/checks/query-client.js'
 
-const lockfile = (next: string[], zod: string[]) => `lockfileVersion: '9.0'
+type Importers = Record<string, Record<string, string>>
 
-importers:
+/** A v9 lockfile: importers map package -> resolved version; `extra` are resolved packages nobody declares (transitive). */
+function lockfile(importers: Importers, extra: string[] = [], version = '9.0', field = 'dependencies') {
+  const resolved = new Set<string>(extra)
+  let text = `lockfileVersion: '${version}'\n\nimporters:\n\n`
+  for (const [importer, deps] of Object.entries(importers)) {
+    text += `  ${importer}:\n    ${field}:\n`
+    for (const [pkg, v] of Object.entries(deps)) {
+      resolved.add(`${pkg}@${v}`)
+      text += `      ${pkg}:\n        specifier: x\n        version: ${v}(react@19.2.4)\n`
+    }
+  }
+  text += '\npackages:\n\n'
+  for (const key of resolved) text += `  ${key}:\n    resolution: {integrity: x}\n\n`
+  return text
+}
 
-  .:
-    dependencies:
-      next:
-        specifier: ^16.4.0
-        version: ${next[0]}(react@19.2.4)
-      zod:
-        specifier: ^4.6.7
-        version: ${zod[0]}
-${next[1] || zod[1] ? `
-  plugins/crm:
-    dependencies:
-      next:
-        specifier: ~16.3.8
-        version: ${next[1] ?? next[0]}(react@19.2.4)
-      zod:
-        specifier: 4.3.6
-        version: ${zod[1] ?? zod[0]}
-` : ''}
-packages:
-
-${[...new Set(next)].map(v => `  next@${v}:\n    resolution: {integrity: x}\n`).join('\n')}
-${[...new Set(zod)].map(v => `  zod@${v}:\n    resolution: {integrity: x}\n`).join('\n')}
-snapshots:
-
-  next@${next[0]}(react@19.2.4): {}
-`
-
-/** A project dir with the given lockfile, an installed core whose zod range is ^4.5.4, and extra files. */
+/** A project dir with the lockfile, an installed core whose zod range is ^4.5.4, and extra files. */
 async function inProject<T>(lock: string | null, files: Record<string, string>, run: () => Promise<T>): Promise<T> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-doctor-lock-'))
   const write = (file: string, content: string) => {
@@ -57,39 +44,84 @@ async function inProject<T>(lock: string | null, files: Record<string, string>, 
   }
 }
 
-test('doctor warns NS_DUPLICATE_DEPENDENCY when the lockfile has two next, naming the importer and the fix', async () => {
-  const result = await inProject(lockfile(['16.4.2', '16.3.8'], ['4.6.7']), {}, checkDuplicateDependencies)
+const peerPlugin = { 'plugins/crm/package.json': JSON.stringify({ peerDependencies: { next: '~16.3.8', zod: '4.3.6' } }) }
+
+test('two next versions warn NS_DUPLICATE_DEPENDENCY, naming the importers; the fix leaves out the highest one', async () => {
+  const lock = lockfile({ '.': { next: '16.4.2', [ '@nextsparkjs/core' ]: '0.1.0' }, 'plugins/crm': { next: '16.3.8' } })
+  const result = await inProject(lock, peerPlugin, checkDuplicateDependencies)
   assert.equal(result.status, 'warn')
   assert.equal(result.code, 'NS_DUPLICATE_DEPENDENCY')
   assert.match(result.message, /next 16\.3\.8 \(plugins\/crm\) and 16\.4\.2 \(\.\)/)
-  assert.match(result.fix ?? '', /pnpm add --filter \.\/plugins\/crm next@'\^16\.4\.2'/)
+  assert.equal(result.fix, "Run: pnpm add --filter ./plugins/crm --save-peer next@'^16.4.2'")
 })
 
-test('doctor passes when the lockfile has one version of next, better-auth and zod', async () => {
-  assert.equal((await inProject(lockfile(['16.4.2'], ['4.6.7']), {}, checkDuplicateDependencies)).status, 'pass')
+test('one version of next, better-auth and zod passes', async () => {
+  assert.equal((await inProject(lockfile({ '.': { next: '16.4.2', zod: '4.6.7' } }), {}, checkDuplicateDependencies)).status, 'pass')
 })
 
-test('doctor fails NS_ZOD_BELOW_CORE for a zod below the range of core, and passes inside it', async () => {
-  const failed = await inProject(lockfile(['16.4.2'], ['4.6.7', '4.3.6']), {}, checkZodBelowCore)
+test('a transitive next of the same major as the project\'s warns; a transitive zod 3 next to zod 4 does not', async () => {
+  const warned = await inProject(lockfile({ '.': { next: '16.4.2' } }, ['next@16.3.8']), {}, checkDuplicateDependencies)
+  assert.equal(warned.status, 'warn')
+  assert.match(warned.message, /16\.3\.8 \(a transitive dependency\)/)
+  const lock = lockfile({ '.': { zod: '4.6.7' } }, ['zod@3.25.76'])
+  assert.equal((await inProject(lock, {}, checkDuplicateDependencies)).status, 'pass')
+  assert.equal((await inProject(lock, {}, checkZodBelowCore)).status, 'pass')
+})
+
+test('an importer outside the project is not aligned: its next is not reported', async () => {
+  const lock = lockfile({ '.': { next: '16.4.2', '@nextsparkjs/core': '0.1.0' }, 'apps/other': { next: '15.1.0' } })
+  assert.equal((await inProject(lock, {}, checkDuplicateDependencies)).status, 'pass')
+})
+
+test('a peer dependency is fixed with --save-peer, and attributed even when the lockfile does not list it', async () => {
+  const lock = lockfile({ '.': { next: '16.4.2', zod: '4.6.7' }, 'plugins/crm': { zod: '4.3.6' } }, ['next@16.3.8'])
+  const dup = await inProject(lock, peerPlugin, checkDuplicateDependencies)
+  assert.match(dup.message, /next 16\.3\.8 \(plugins\/crm\) and 16\.4\.2 \(\.\)/)
+  assert.match(dup.fix ?? '', /pnpm add --filter \.\/plugins\/crm --save-peer next@'\^16\.4\.2'/)
+  const zod = await inProject(lock, peerPlugin, checkZodBelowCore)
+  assert.equal(zod.fix, "Run: pnpm add --filter ./plugins/crm --save-peer zod@'^4.5.4'")
+})
+
+test('a lockfile of another version is not passed in silence', async () => {
+  const old = lockfile({ '.': { next: '16.4.2' } }, [], '6.0')
+  for (const check of [checkDuplicateDependencies, checkZodBelowCore]) {
+    const result = await inProject(old, {}, check)
+    assert.equal(result.status, 'warn')
+    assert.match(result.message, /Not checked: lockfile v6\.0/)
+  }
+})
+
+test('zod below the range of core fails NS_ZOD_BELOW_CORE: 4.5.3 fails, 4.5.4 passes', async () => {
+  const failed = await inProject(lockfile({ '.': { zod: '4.6.7' }, 'plugins/crm': { zod: '4.5.3' } }), {}, checkZodBelowCore)
   assert.equal(failed.status, 'fail')
   assert.equal(failed.code, 'NS_ZOD_BELOW_CORE')
-  assert.match(failed.message, /4\.3\.6 is below core's \^4\.5\.4/)
-  assert.match(failed.fix ?? '', /pnpm add --filter \.\/plugins\/crm zod@'\^4\.5\.4'/)
-  assert.equal((await inProject(lockfile(['16.4.2'], ['4.6.7']), {}, checkZodBelowCore)).status, 'pass')
+  assert.match(failed.message, /zod 4\.5\.3 is below core's \^4\.5\.4/)
+  assert.equal(failed.fix, "Run: pnpm add --filter ./plugins/crm zod@'^4.5.4'")
+  assert.equal((await inProject(lockfile({ '.': { zod: '4.5.4' } }), {}, checkZodBelowCore)).status, 'pass')
 })
 
-test('doctor warns NS_QUERY_CLIENT_NOT_REGISTERED with file:line, and skips registered, generated and installed code', async () => {
+test('only the dependency fields of an importer count', async () => {
+  const lock = lockfile({ '.': { zod: '4.3.6' } }, [], '9.0', 'somethingElse')
+  assert.equal((await inProject(lock, {}, checkZodBelowCore)).status, 'pass')
+})
+
+test('NS_QUERY_CLIENT_NOT_REGISTERED reports file:line, and skips registered, commented, test, generated and installed code', async () => {
   const unregistered = "import { QueryClient } from '@tanstack/react-query'\nexport const client = new QueryClient()\n"
-  const registered = unregistered + "registerQueryCache(() => client.clear())\n"
+  const registered = unregistered + 'registerQueryCache(() => client.clear())\n'
   const result = await inProject(null, {
     'components/cache.tsx': unregistered,
     'components/ok.tsx': registered,
+    'components/commented.tsx': '// const client = new QueryClient()\n * new QueryClient()\n',
+    'components/cache.test.tsx': unregistered,
+    'components/cache.spec.ts': unregistered,
+    'tests/helper.tsx': unregistered,
+    'cypress/support.ts': unregistered,
+    '.storybook/main.ts': unregistered,
     'src/app/generated.tsx': unregistered,
     'node_modules/pkg/index.js': unregistered,
   }, checkQueryClients)
   assert.equal(result.status, 'warn')
   assert.equal(result.code, 'NS_QUERY_CLIENT_NOT_REGISTERED')
   assert.match(result.message, /\(components\/cache\.tsx:2\)/)
-  assert.doesNotMatch(result.message, /ok\.tsx|generated|node_modules/)
   assert.equal((await inProject(null, { 'components/ok.tsx': registered }, checkQueryClients)).status, 'pass')
 })
