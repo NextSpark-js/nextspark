@@ -190,7 +190,7 @@ solo aplican si exponés la Data API / PostgREST de Supabase directamente (ver
 - `true`: Endpoints disponibles con autenticación vía API key o sesión
 - `false`: Cierra solo el acceso externo. Las requests con API key a `/api/v1/<slug>` (todos los métodos y las rutas de child entities) responden `404 Entity not found`, igual que un slug que no existe. El servidor MCP no expone tools para esa entidad. Las requests con sesión (el dashboard) siguen funcionando
 - `enabled: false` apaga la entidad para ambos tipos de autenticación: las operaciones de la entidad y de sus child routes responden `405`
-- Para una API key, un campo `relation` / `relation-multi` hacia una entidad cerrada (`access.api: false` o `enabled: false`) siempre responde `400 INVALID_REFERENCE`, exista o no el id, y no consulta esa tabla: la respuesta no dice si el id existe. Con sesión se valida contra lo que el usuario ve, como siempre
+- Para una API key, un campo `relation` / `relation-multi` hacia una entidad cerrada (`access.api: false`, `enabled: false` o un objeto `access.api` sin `read`) siempre responde `400 INVALID_REFERENCE`, exista o no el id, y no consulta esa tabla: la respuesta no dice si el id existe. Con sesión se valida contra lo que el usuario ve, como siempre
 - `GET /api/v1/patterns/<id>/usages` con API key muestra los usos de una entidad cerrada solo con `entityType` y `entityId` (sin título, nombre, email, slug ni estado); con sesión devuelve todos los campos
 
 ```typescript
@@ -216,7 +216,7 @@ Un objeto sirve solo las operaciones de la API genérica que habilita, igual par
 
 Una operación deshabilitada responde `405` con un header `Allow` que lista los métodos habilitados de esa ruta, antes de autenticar, de leer el body y de tocar la base. El OpenAPI, el API explorer de devtools y las tools del servidor MCP listan solo las operaciones habilitadas. `true` y `false` significan lo mismo que siempre.
 
-**Alcance:** el objeto cierra también las escrituras del dashboard y de las server actions genéricas (`createEntity`, `updateEntity`, `deleteEntity`, `deleteEntities`), que responden `Operation not supported for this entity`. Los botones de esas acciones se ocultan con permisos de rol o se apuntan a la ruta propia.
+**Alcance:** el objeto cierra también las operaciones del dashboard y de las server actions genéricas: las escrituras (`createEntity`, `updateEntity`, `deleteEntity`, `deleteEntities`) y, sin `read`, las lecturas (`getEntity`, `listEntities`, `entityExists`, `countEntities`). Todas responden `Operation not supported for this entity`. Los botones de esas acciones se ocultan con permisos de rol o se apuntan a la ruta propia.
 
 **Cuándo cerrar las escrituras genéricas:** cuando toda escritura tiene que pasar por reglas que el CRUD genérico no conoce, como una máquina de estados, campos inmutables a partir de cierto estado o efectos que deben correr en el mismo request. Se dejan las lecturas genéricas (listas, detalle, selectores de relaciones) y las escrituras van por una ruta propia:
 
