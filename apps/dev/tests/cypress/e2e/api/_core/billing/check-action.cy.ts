@@ -162,15 +162,14 @@ describe('Billing API - check-action Endpoint', () => {
       })
     })
 
-    it('BILLING_API_021: Should check wildcard feature access', () => {
-      // Test wildcard feature support (*)
+    it('BILLING_API_021: Should refuse an action that is not in actionMappings', () => {
       billingAPI.checkAction('custom.any_action').then((response: any) => {
         expect(response.status).to.eq(200)
         expect(response.body.success).to.be.true
 
-        // Superadmin with * should allow any action
-        cy.log(`✓ Wildcard feature check works`)
-        cy.log(`Allowed: ${response.body.data.allowed}`)
+        // Not even a superadmin passes an action no mapping names
+        expect(response.body.data.allowed).to.be.false
+        expect(response.body.data.reason).to.eq('unknown_action')
       })
     })
   })

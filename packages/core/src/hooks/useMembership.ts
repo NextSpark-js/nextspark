@@ -100,9 +100,11 @@ export function useMembership() {
     canDo: async (action: string): Promise<{ allowed: boolean; reason?: string }> => {
       try {
         // Resolve action mappings from registry
-        const permissionMapping = BILLING_REGISTRY.actionMappings.permissions?.[action]
-        const featureMapping = BILLING_REGISTRY.actionMappings.features?.[action]
-        const limitMapping = BILLING_REGISTRY.actionMappings.limits?.[action]
+        // Own keys only: `constructor` or `toString` are not mapped actions
+        const own = (map: Record<string, string> | undefined, key: string) => (Object.hasOwn(map ?? {}, key) ? map![key] : undefined)
+        const permissionMapping = own(BILLING_REGISTRY.actionMappings.permissions, action)
+        const featureMapping = own(BILLING_REGISTRY.actionMappings.features, action)
+        const limitMapping = own(BILLING_REGISTRY.actionMappings.limits, action)
 
         // If no mappings exist, allow by default (action not configured for billing checks)
         if (!permissionMapping && !featureMapping && !limitMapping) {

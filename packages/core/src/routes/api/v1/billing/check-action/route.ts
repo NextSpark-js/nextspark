@@ -48,7 +48,9 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   // An action that no mapping names has nothing to check: answering allowed would let a typo in the action (or a
   // mapping that was never written) pass as a permission. It is refused, and the reason says why (#367).
   const { permissions, features, limits } = BILLING_REGISTRY.actionMappings
-  if (!permissions?.[action] && !features?.[action] && !limits?.[action]) {
+  // Own keys only: `constructor` or `toString` are not mapped actions
+  const mapped = [permissions, features, limits].some(map => Object.hasOwn(map ?? {}, action))
+  if (!mapped) {
     return NextResponse.json({
       success: true,
       data: {

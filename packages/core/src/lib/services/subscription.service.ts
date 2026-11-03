@@ -35,6 +35,10 @@ import type {
 // TYPES
 // ===========================================
 
+// Own keys only: an action named `constructor` or `toString` is not a mapped one
+const ownMapping = <T>(map: Record<string, T> | undefined, key: string): T | undefined =>
+  Object.hasOwn(map ?? {}, key) ? map![key] : undefined
+
 export interface CreateSubscriptionOptions {
   billingInterval?: BillingInterval
   trialDays?: number
@@ -999,7 +1003,7 @@ export class SubscriptionService {
     }
 
     // Verify RBAC permission if mapping is defined
-    const requiredPermission = BILLING_REGISTRY.actionMappings.permissions?.[action]
+    const requiredPermission = ownMapping(BILLING_REGISTRY.actionMappings.permissions, action)
     if (requiredPermission) {
       try {
         const { checkTeamPermission } = await import('../teams/permissions')
@@ -1024,7 +1028,7 @@ export class SubscriptionService {
     }
 
     // 2. Feature Check - Verify plan feature
-    const requiredFeature = BILLING_REGISTRY.actionMappings.features[action]
+    const requiredFeature = ownMapping(BILLING_REGISTRY.actionMappings.features, action)
     if (requiredFeature) {
       const hasFeatureAccess = await this.hasFeature(teamId, requiredFeature, userId)
       if (!hasFeatureAccess) {
@@ -1033,7 +1037,7 @@ export class SubscriptionService {
     }
 
     // 3. Quota Check - Verify available limit
-    const consumedLimit = BILLING_REGISTRY.actionMappings.limits[action]
+    const consumedLimit = ownMapping(BILLING_REGISTRY.actionMappings.limits, action)
     if (consumedLimit) {
       const quota = await this.checkQuota(teamId, consumedLimit, userId)
       if (!quota.allowed) {

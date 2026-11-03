@@ -31,8 +31,8 @@ beforeEach(() => {
   routeHarness.mocks.authenticateRequest.mockResolvedValue(sessionAs({ ...MEMBER, defaultTeamId: 'team-1' } as typeof MEMBER))
 })
 
-test('an action that is not in actionMappings is refused with reason unknown_action, without asking the service', async () => {
-  const response = await call('tasks.crate')
+test.each(['tasks.crate', 'constructor', 'toString', '__proto__'])('%s, not in actionMappings, is refused with reason unknown_action, without asking the service', async (action) => {
+  const response = await call(action)
   expect(response.status).toBe(200)
   expect(await response.json()).toMatchObject({ success: true, data: { allowed: false, reason: 'unknown_action' } })
   expect(mockCanPerformAction).not.toHaveBeenCalled()
