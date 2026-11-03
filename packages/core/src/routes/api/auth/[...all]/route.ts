@@ -84,12 +84,12 @@ export async function POST(req: NextRequest) {
     const checks = [await checkDistributedRateLimit(`auth:ip:${getClientIp(req.headers)}`, 'auth')]
     if (charge.by && checks[0].allowed) {
       const email = await readRequestEmail(req)
-      if (email) checks.push(await checkDistributedRateLimit(authIdentifierKey(charge.by, email), 'authIdentifier'))
+      if (email !== undefined) checks.push(await checkDistributedRateLimit(authIdentifierKey(charge.by, email), 'authIdentifier'))
     }
     const blocked = checks.find((result) => !result.allowed)
     if (blocked) {
       const retryAfter = Math.max(1, blocked.retryAfter ?? Math.ceil((blocked.resetTime - Date.now()) / 1000))
-      return wrapAuthHandlerWithCors(async () => new NextResponse(JSON.stringify({ error: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED', retryAfter }), {
+      return wrapAuthHandlerWithCors(async () => new NextResponse(JSON.stringify({ error: 'Too many requests', message: 'Too many requests. Please try again later.', code: 'RATE_LIMIT_EXCEEDED', retryAfter }), {
         status: 429,
         headers: {
           'Content-Type': 'application/json',

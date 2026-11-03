@@ -238,7 +238,7 @@ The list is explicit (`lib/auth/auth-rate-limit.ts`): a route Better Auth adds l
 
 | Route (after `/api/auth/`) | `auth` (per address) | `authIdentifier` (per email) |
 |---|---|---|
-| `email-otp/send-verification-otp`, `email-otp/request-password-reset`, `forget-password/email-otp`, `request-password-reset` | yes | yes, budget "send" |
+| `email-otp/send-verification-otp`, `email-otp/request-password-reset`, `forget-password/email-otp`, `request-password-reset`, `send-verification-email` | yes | yes, budget "send" |
 | `sign-in/email-otp`, `email-otp/check-verification-otp`, `email-otp/verify-email`, `email-otp/reset-password` | yes | yes, budget "verify" |
 | `sign-in/email` (password) | yes | yes, budget "password" |
 | `sign-up/email`, `reset-password` (token) | yes | no |
@@ -247,13 +247,13 @@ The list is explicit (`lib/auth/auth-rate-limit.ts`): a route Better Auth adds l
 Defaults, per 15 minutes:
 
 - `auth`: **60 requests per client address**, shared by everyone behind it (an office, a school, a mobile carrier). A sign-in with an emailed code costs 2 (send the code, then verify it).
-- `authIdentifier`: **5 requests per email and budget**. The email is read from the JSON body (trimmed and lowercased, from a clone of the request) and hashed, so it is never stored or logged in the clear. The three budgets are independent: asking for codes does not use up the attempts to verify one. A request without an email in its body is charged per address only.
+- `authIdentifier`: **5 requests per email and budget**. The email is read from the JSON body (trimmed and lowercased, from a clone of the request) and hashed, so it is never stored or logged in the clear. The three budgets are independent: asking for codes does not use up the attempts to verify one. The email is also read from urlencoded and multipart forms. A request with a body but no readable email shares one fixed budget per route group (`unknown`), so it is not free; a request with no body is charged per address only.
 
 A `429` answers `{ "error": "Too many requests", "code": "RATE_LIMIT_EXCEEDED", "retryAfter": <seconds> }` with a `Retry-After` header. The sign-in screens show the wait in minutes.
 
 To change it:
 
-- set the numbers for either tier in the `APP_CONFIG_OVERRIDES` of `app.config.ts`: `rateLimit: { tiers: { auth: { limit: 120, windowMs: 15 * 60_000 }, authIdentifier: { limit: 10, windowMs: 15 * 60_000 } } }` (a field you leave out keeps its default);
+- set the numbers for either tier in the `APP_CONFIG_OVERRIDES` of `app.config.ts`: `rateLimit: { tiers: { auth: { limit: 120, windowMs: 15 * 60_000 }, authIdentifier: { limit: 10, windowMs: 15 * 60_000 } } }` (a field you leave out keeps its default). Anyone who knows an email can use up that email's budgets for 15 minutes; that is the cost of limiting by identifier;
 - set `NEXTSPARK_CLIENT_IP_SOURCE` so the address read is the real one (`vercel`, `cloudflare`, `xff` with
   `NEXTSPARK_TRUSTED_PROXY_HOPS`, or `header:<name>`). Without it, every person behind a proxy can look like one address.
 

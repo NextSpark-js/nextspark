@@ -26,6 +26,8 @@ const CHARGED: Record<string, 'send' | 'verify' | 'password' | undefined> = {
   'email-otp/reset-password': 'verify',
   // try a password
   'sign-in/email': 'password',
+  // resend the verification link
+  'send-verification-email': 'send',
   // create an account, use a reset token: no email in the request worth counting by
   'sign-up/email': undefined,
   'reset-password': undefined,
@@ -41,17 +43,25 @@ export function authChargeFor(pathname: string): { by: AuthRateLimitBudget | und
   return Object.prototype.hasOwnProperty.call(CHARGED, route) ? { by: CHARGED[route] } : null
 }
 
-/** The key of the per-email budget: the email trimmed and lowercased, hashed so it is never logged or stored in the clear. */
-export function authIdentifierKey(budget: AuthRateLimitBudget, email: string): string {
+/** The key of the per-email budget: the email trimmed and lowercased, hashed so it is never logged or stored in the clear. `null` (a body with no readable email) shares one fixed key per budget. */
+export function authIdentifierKey(budget: AuthRateLimitBudget, email: string | null): string {
+  if (email === null) return `auth:id:${budget}:unknown`
   const digest = createHash('sha256').update(email.trim().toLowerCase()).digest('hex').slice(0, 32)
   return `auth:id:${budget}:${digest}`
 }
 
-/** The email in a JSON body, read from a clone so the stream Better Auth reads is untouched. `null` if there is none. */
-export async function readRequestEmail(req: Request): Promise<string | null> {
+/**
+ * The email in the body (JSON, urlencoded or multipart form, as Better Auth accepts them), read from a clone so the stream
+ * Better Auth reads is untouched. `undefined` when the request has no content type (no body), `null` when it has one and no email can be read.
+ */
+export async function readRequestEmail(req: Request): Promise<string | null | undefined> {
+  const type = (req.headers.get('content-type') ?? '').toLowerCase()
+  if (!type) return undefined // no content type, no body to read: a request Better Auth refuses anyway
   try {
-    const body = await req.clone().json() as { email?: unknown }
-    const email = typeof body?.email === 'string' ? body.email.trim() : ''
+    let value: unknown
+    if (type.includes('application/json')) value = ((await req.clone().json()) as { email?: unknown } | null)?.email
+    else if (type.includes('application/x-www-form-urlencoded') || type.includes('multipart/form-data')) value = (await req.clone().formData()).get('email')
+    const email = typeof value === 'string' ? value.trim() : ''
     return email && email.length <= 320 ? email : null
   } catch {
     return null

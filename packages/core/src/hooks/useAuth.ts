@@ -235,7 +235,7 @@ export function useAuthActions() {
         return {
           success: false,
           data: undefined,
-          error: error.message || 'Failed to send password reset email'
+          error: toAuthError(error, 'Failed to send password reset email').message
         }
       }
       
@@ -266,7 +266,7 @@ export function useAuthActions() {
           return {
             success: false,
             data: undefined,
-            error: error.message || 'Failed to reset password'
+            error: toAuthError(error, 'Failed to reset password').message
           }
         }
         

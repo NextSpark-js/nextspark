@@ -157,7 +157,7 @@ NextSpark incluye estos niveles predefinidos:
 | `webhook` | 500 requests | 1 hora | Webhooks (la firma es la defensa principal) |
 | `ingest` | 1000 requests | 1 minuto | Endpoints de ingesta de alto volumen |
 
-El tier `auth` cobra por dirección de cliente solo los `POST` de `/api/auth/*` de una lista explícita (pedir/verificar código, login con contraseña, registro, reset de contraseña); `sign-out`, la sesión y los callbacks OAuth no se cobran. `authIdentifier` cuenta además por email en pedir y verificar código y en el login con contraseña. Ver [Sign-in routes](./05-api/07-rate-limiting.md#sign-in-routes-the-auth-tier).
+El tier `auth` cobra por dirección de cliente solo los `POST` de `/api/auth/*` de una lista explícita (pedir/verificar código, login con contraseña, registro, reset de contraseña); `sign-out`, la sesión y los callbacks OAuth no se cobran. `authIdentifier` cuenta además por email en pedir y verificar código y en el login con contraseña. Ver [Sign-in routes](./05-api/07-rate-limiting.md#sign-in-routes-the-auth-and-authidentifier-tiers).
 
 ### Ajustar o agregar tiers
 

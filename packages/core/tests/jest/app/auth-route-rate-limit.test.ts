@@ -41,13 +41,15 @@ jest.mock('@nextsparkjs/core/lib/auth/runtime-readiness', () => ({ getAuthReadin
 import { POST } from '@/app/api/auth/[...all]/route'
 
 // jest's NextRequest has no working clone(): give each clone its own copy of the body, as a real one has
-function makeRequest(path: string, text: string, ip: string): NextRequest {
+function makeRequest(path: string, text: string, ip: string, type = 'application/json'): NextRequest {
   const req = new NextRequest(`https://example.com${path}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
+    headers: { 'content-type': type, 'x-forwarded-for': ip },
     body: text,
   }) as NextRequest & { clone: () => NextRequest }
-  req.clone = () => makeRequest(path, text, ip)
+  req.clone = () => makeRequest(path, text, ip, type)
+  // this jest environment's request has no formData(); a real one parses the form the same way
+  if (type.includes('urlencoded')) (req as unknown as { formData: () => Promise<URLSearchParams> }).formData = async () => new URLSearchParams(text)
   return req
 }
 const post = (path: string, body: unknown, ip = '203.0.113.7') => POST(makeRequest(path, JSON.stringify(body), ip))
@@ -101,9 +103,23 @@ describe('auth route rate limit (#364)', () => {
     expect([...counts.keys()].some((key) => /ana@|example\.com/i.test(key))).toBe(false)
   })
 
-  test('a body without an email is charged per address only', async () => {
-    expect((await post('/api/auth/sign-in/email-otp', { otp: '1' })).status).toBe(200)
-    expect([...counts.keys()].some((key) => key.startsWith('authIdentifier:'))).toBe(false)
-    expect(counts.size).toBe(1)
+  test('a form-encoded sign-in is counted per email too', async () => {
+    const form = (email: string) => POST(makeRequest('/api/auth/sign-in/email', `email=${encodeURIComponent(email)}&password=x`, '203.0.113.7', 'application/x-www-form-urlencoded'))
+    for (let i = 0; i < 5; i++) expect((await form(i % 2 ? 'ANA@example.com' : 'ana@example.com')).status).toBe(200)
+    expect((await form('ana@example.com')).status).toBe(429)
+    expect((await form('luis@example.com')).status).toBe(200)
+  })
+
+  test('a body with no readable email shares one fixed budget instead of passing', async () => {
+    for (let i = 0; i < 5; i++) expect((await post('/api/auth/sign-in/email-otp', { otp: '1' })).status).toBe(200)
+    expect((await post('/api/auth/sign-in/email-otp', { otp: '1' })).status).toBe(429)
+    const garbage = () => POST(makeRequest('/api/auth/sign-in/email', '{not json', '198.51.100.5'))
+    for (let i = 0; i < 5; i++) expect((await garbage()).status).toBe(200)
+    expect((await garbage()).status).toBe(429)
+  })
+
+  test('resending the verification email is charged per email', async () => {
+    for (let i = 0; i < 5; i++) expect((await post('/api/auth/send-verification-email', { email: 'ana@example.com' })).status).toBe(200)
+    expect((await post('/api/auth/send-verification-email', { email: 'ana@example.com' })).status).toBe(429)
   })
 })
