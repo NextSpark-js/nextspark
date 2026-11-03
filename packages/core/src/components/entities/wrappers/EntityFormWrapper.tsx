@@ -13,7 +13,7 @@
 
 'use client'
 
-import React, { useCallback, useState, useEffect } from 'react'
+import React, { useCallback, useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { EntityForm } from '../EntityForm'
 import { EntityDetailHeader } from '../EntityDetailHeader'
@@ -69,6 +69,12 @@ export function EntityFormWrapper({
   // the API only reached console.error/onError and the Save button looked inert.
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  // The latest onError, read by the load below without being one of its dependencies: a caller passes an inline
+  // function, so a new one on every render of the caller would load the record again, show the skeleton and
+  // mount the form a second time.
+  const onErrorRef = useRef(onError)
+  onErrorRef.current = onError
+
   // Load initial data for edit mode or use provided initialData for create mode
   useEffect(() => {
     // If initialData was provided via props (quick create), use it
@@ -80,7 +86,7 @@ export function EntityFormWrapper({
     const loadInitialData = async () => {
       if (mode === 'edit' && id && entityConfig && signedIn && teamReady) {
         if (!entityConfig.enabled) {
-          onError?.(new Error(`Entity "${entityType}" is disabled`))
+          onErrorRef.current?.(new Error(`Entity "${entityType}" is disabled`))
           return
         }
         
@@ -95,7 +101,7 @@ export function EntityFormWrapper({
           setAbsentFields(data ? entityConfig.fields.filter(field => !(field.name in data)).map(field => field.name) : [])
         } catch (error) {
           console.error(`[EntityFormWrapper] Error loading data for ${entityType} ${id}:`, error)
-          onError?.(error instanceof Error ? error : new Error(`Failed to load ${entityType} data`))
+          onErrorRef.current?.(error instanceof Error ? error : new Error(`Failed to load ${entityType} data`))
         } finally {
           setRecordLoaded(true)
           setIsLoadingData(false)
@@ -104,7 +110,7 @@ export function EntityFormWrapper({
     }
 
     loadInitialData()
-  }, [mode, id, entityType, entityConfig, onError, isOverride, propsInitialData, signedIn, teamReady])
+  }, [mode, id, entityType, entityConfig, isOverride, propsInitialData, signedIn, teamReady])
 
   const handleSubmit = useCallback(async (data: Record<string, unknown>) => {
     setSubmitError(null)

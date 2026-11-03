@@ -63,6 +63,8 @@ export function EntityDetailWrapper({
   const [data, setData] = useState<Record<string, unknown> | null>(null)
   const [childData, setChildData] = useState<Record<string, Record<string, unknown>[]>>({})
   const [isLoadingData, setIsLoadingData] = useState(false)
+  // Whether the load of the record has finished (or failed): until then the page is the skeleton, never "No data found"
+  const [recordSettled, setRecordSettled] = useState(false)
   const [dataError, setDataError] = useState<string | null>(null)
 
   // Use child entity names passed as props from the server component
@@ -140,6 +142,7 @@ export function EntityDetailWrapper({
     if (prevIdRef.current !== id) {
       dataLoadedRef.current = false
       prevIdRef.current = id
+      setRecordSettled(false)
     }
 
     if (!entityConfig || !id || !signedIn || !teamReady) return
@@ -214,6 +217,7 @@ export function EntityDetailWrapper({
           onError(err instanceof Error ? err : new Error(errorMessage))
         }
       } finally {
+        setRecordSettled(true)
         setIsLoadingData(false)
       }
     }
@@ -409,8 +413,9 @@ export function EntityDetailWrapper({
     )
   }
 
-  // Show loading state for data; before the team is chosen nothing has been requested yet
-  if (isLoadingData || (!teamReady && !data && !dataError)) {
+  // Show loading state for data: before the team is chosen, or before the effect starts the request, nothing has been
+  // requested yet, and the commit in between must not paint "No data found"
+  if (isLoadingData || (!recordSettled && !data && !dataError)) {
     return <SkeletonEntityDetail />
   }
 
