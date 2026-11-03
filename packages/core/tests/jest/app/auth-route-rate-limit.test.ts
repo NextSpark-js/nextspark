@@ -110,6 +110,13 @@ describe('auth route rate limit (#364)', () => {
     expect((await form('luis@example.com')).status).toBe(200)
   })
 
+  test('a mixed content type is read as better-call reads it (form wins over a later json), and the last repeated field counts', async () => {
+    const mixed = (email: string) => POST(makeRequest('/api/auth/sign-in/email', `email=${email}&email=${email}`, '203.0.113.7', 'application/x-www-form-urlencoded; application/json'))
+    for (let i = 0; i < 5; i++) expect((await mixed('ana@example.com')).status).toBe(200)
+    expect((await mixed('ana@example.com')).status).toBe(429)
+    expect([...counts.keys()].filter((k) => k.includes(':unknown')).length).toBe(0)
+  })
+
   test('a body with no readable email shares one fixed budget instead of passing', async () => {
     for (let i = 0; i < 5; i++) expect((await post('/api/auth/sign-in/email-otp', { otp: '1' })).status).toBe(200)
     expect((await post('/api/auth/sign-in/email-otp', { otp: '1' })).status).toBe(429)

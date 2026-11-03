@@ -59,8 +59,10 @@ export async function readRequestEmail(req: Request): Promise<string | null | un
   if (!type) return undefined // no content type, no body to read: a request Better Auth refuses anyway
   try {
     let value: unknown
-    if (type.includes('application/json')) value = ((await req.clone().json()) as { email?: unknown } | null)?.email
-    else if (type.includes('application/x-www-form-urlencoded') || type.includes('multipart/form-data')) value = (await req.clone().formData()).get('email')
+    // Same order as better-call 1.4.0 getBody (dist/utils.mjs), which Better Auth uses to parse the body, so both read the same one:
+    // /^application\/([a-z0-9.+-]*\+)?json/i first, then includes() for urlencoded and multipart. A repeated field keeps the last value there.
+    if (/^application\/([a-z0-9.+-]*\+)?json/i.test(type)) value = ((await req.clone().json()) as { email?: unknown } | null)?.email
+    else if (type.includes('application/x-www-form-urlencoded') || type.includes('multipart/form-data')) value = (await req.clone().formData()).getAll('email').pop()
     const email = typeof value === 'string' ? value.trim() : ''
     return email && email.length <= 320 ? email : null
   } catch {
