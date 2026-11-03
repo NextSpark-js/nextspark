@@ -204,9 +204,10 @@ export function setPackageEntries(content: string, entries: string[]): string {
  */
 export const HOIST_PATTERNS = ['*@nextsparkjs/*', '*expo*', '*react-native*']
 
-/** Whether the file declares `key` at the top level, whatever its value. */
+/** Whether the file declares `key` at the top level, whatever its value or quoting (`'key': v`, `key : v`). */
 export function hasTopLevelKey(content: string, key: string): boolean {
-  return content.split('\n').some(line => line.startsWith(`${key}:`))
+  const declared = new RegExp(`^['"]?${key}['"]?\\s*:`)
+  return content.split('\n').some(line => declared.test(line))
 }
 
 /**

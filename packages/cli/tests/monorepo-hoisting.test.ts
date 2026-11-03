@@ -42,16 +42,36 @@ test('hoisting settings the file already declares are not overwritten or repeate
   assert.equal(addHoistSettings(once), once)
 })
 
-test('doctor warns when a mobile monorepo has the hoisting only in .npmrc, and passes once it is in the workspace file', async () => {
+test('hoisting keys written quoted or with a space before the colon count as declared', () => {
+  for (const own of ["'shamefullyHoist': false\n'publicHoistPattern': []\n", 'shamefullyHoist : false\npublicHoistPattern : []\n']) {
+    const yaml = `packages: []\n${own}`
+    assert.equal(addHoistSettings(yaml), yaml)
+  }
+})
+
+test('doctor warns, from web/ too, when a mobile monorepo has the hoisting only in .npmrc, and passes once it is in the workspace file', async () => {
+  await inTmp(async root => {
+    await mkdir(join(root, 'mobile'))
+    await mkdir(join(root, 'web'))
+    await writeFile(join(root, 'mobile', 'package.json'), '{}')
+    await writeFile(join(root, '.npmrc'), 'public-hoist-pattern[]=*expo*\nshamefully-hoist=true\n')
+    await writeFile(join(root, 'pnpm-workspace.yaml'), "packages:\n  - 'web'\n  - 'mobile'\n")
+    for (const start of [root, join(root, 'web')]) {
+      const warned = await checkHoisting(start)
+      assert.equal(warned.status, 'warn')
+      assert.match(warned.message, /shamefullyHoist and publicHoistPattern/)
+    }
+    await writeFile(join(root, 'pnpm-workspace.yaml'), addHoistSettings("packages:\n  - 'web'\n  - 'mobile'\n"))
+    assert.equal((await checkHoisting(join(root, 'web'))).status, 'pass')
+  })
+})
+
+test('doctor passes when mobile is not in the workspace (a mobile app added beside a web project)', async () => {
   await inTmp(async root => {
     await mkdir(join(root, 'mobile'))
     await writeFile(join(root, 'mobile', 'package.json'), '{}')
-    await writeFile(join(root, '.npmrc'), 'public-hoist-pattern[]=*expo*\nshamefully-hoist=true\n')
+    await writeFile(join(root, '.npmrc'), 'shamefully-hoist=true\n')
     await writeFile(join(root, 'pnpm-workspace.yaml'), "packages:\n  - 'web'\n")
-    const warned = await checkHoisting(root)
-    assert.equal(warned.status, 'warn')
-    assert.match(warned.message, /shamefullyHoist and publicHoistPattern/)
-    await writeFile(join(root, 'pnpm-workspace.yaml'), addHoistSettings("packages:\n  - 'web'\n"))
     assert.equal((await checkHoisting(root)).status, 'pass')
   })
 })

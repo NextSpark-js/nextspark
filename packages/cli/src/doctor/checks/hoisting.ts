@@ -9,18 +9,28 @@
 import fs from 'fs-extra'
 import path from 'path'
 import type { HealthCheckResult } from '../index.js'
-import { hasTopLevelKey, HOIST_PATTERNS } from '../../wizard/generators/workspace-yaml.js'
+import { hasTopLevelKey, HOIST_PATTERNS, readPackageEntries } from '../../wizard/generators/workspace-yaml.js'
 
-export async function checkHoisting(root = process.cwd()): Promise<HealthCheckResult> {
+/** The nearest directory from `start` upwards that holds a pnpm-workspace.yaml (doctor runs from web/ in a generated monorepo). */
+async function findWorkspaceRoot(start: string): Promise<string | null> {
+  for (let dir = start; ; dir = path.dirname(dir)) {
+    if (await fs.pathExists(path.join(dir, 'pnpm-workspace.yaml'))) return dir
+    if (path.dirname(dir) === dir) return null
+  }
+}
+
+export async function checkHoisting(start = process.cwd()): Promise<HealthCheckResult> {
   const name = 'Hoisting'
+  const root = await findWorkspaceRoot(start)
+  const notApplicable = { name, status: 'pass' as const, message: 'Not a web + mobile monorepo' }
+  if (!root) return notApplicable
+  const yaml = await fs.readFile(path.join(root, 'pnpm-workspace.yaml'), 'utf8')
   const npmrc = path.join(root, '.npmrc')
-  const workspace = path.join(root, 'pnpm-workspace.yaml')
-  // Only a monorepo with a mobile app has this requirement
-  if (!(await fs.pathExists(path.join(root, 'mobile', 'package.json'))) || !(await fs.pathExists(workspace)) || !(await fs.pathExists(npmrc))) {
-    return { name, status: 'pass', message: 'Not a web + mobile monorepo' }
+  // Only a workspace that lists mobile has this requirement (a mobile app added to a web project is not one)
+  if (!readPackageEntries(yaml).includes('mobile') || !(await fs.pathExists(path.join(root, 'mobile', 'package.json'))) || !(await fs.pathExists(npmrc))) {
+    return notApplicable
   }
   const rc = await fs.readFile(npmrc, 'utf8')
-  const yaml = await fs.readFile(workspace, 'utf8')
   const missing = [
     /^shamefully-hoist\s*=/m.test(rc) && !hasTopLevelKey(yaml, 'shamefullyHoist') ? 'shamefullyHoist' : '',
     /^public-hoist-pattern/m.test(rc) && !hasTopLevelKey(yaml, 'publicHoistPattern') ? 'publicHoistPattern' : '',
@@ -30,6 +40,6 @@ export async function checkHoisting(root = process.cwd()): Promise<HealthCheckRe
     name,
     status: 'warn',
     message: `${missing.join(' and ')} only in .npmrc: pnpm 11 and later ignore it there, and Metro cannot resolve react-native-css-interop`,
-    fix: `Add to pnpm-workspace.yaml: shamefullyHoist: true, and publicHoistPattern with ${HOIST_PATTERNS.map(pattern => `'${pattern}'`).join(', ')}`,
+    fix: `Add to ${path.join(root, 'pnpm-workspace.yaml')}: shamefullyHoist: true, and publicHoistPattern with ${HOIST_PATTERNS.map(pattern => `'${pattern}'`).join(', ')}`,
   }
 }
