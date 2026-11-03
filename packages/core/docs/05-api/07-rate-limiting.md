@@ -231,16 +231,29 @@ request is counted twice. A route with `dynamic = 'force-static'` is answered fr
 opt it out. `nextspark prepare` lists the opted-out routes in one `Info: [NS_HOST_RATE_LIMIT_OPT_OUT]` line. Core's own
 routes, and Route Handlers outside `api/`, are not touched.
 
-### Sign-in routes (the `auth` tier)
+### Sign-in routes (the `auth` and `authIdentifier` tiers)
 
-Every `POST` under `/api/auth/*` is charged to the `auth` tier, by client address: **5 requests per 15 minutes** by default. That
-covers sign-in, sign-up, password reset and the email-code routes, so a sign-in with an emailed code costs 2 (send the code,
-then verify it), and so do the other authenticated `POST`s of Better Auth (`update-user`, `change-email`, ...). Not charged: the OAuth `callback/<provider>` routes and `sign-out`, which only works with a valid session cookie.
-The route name is matched whole, so a look-alike path (`sign-out-x`, `sign-in/email?x=/sign-out`) is charged like any other.
+Only the `POST`s of `/api/auth/*` that let a caller guess a password or a code, or make the server send an email, are charged.
+The list is explicit (`lib/auth/auth-rate-limit.ts`): a route Better Auth adds later is free until it is listed.
 
-People behind the same address (an office, a school, a mobile carrier) share this budget. To change it:
+| Route (after `/api/auth/`) | `auth` (per address) | `authIdentifier` (per email) |
+|---|---|---|
+| `email-otp/send-verification-otp`, `email-otp/request-password-reset`, `forget-password/email-otp`, `request-password-reset` | yes | yes, budget "send" |
+| `sign-in/email-otp`, `email-otp/check-verification-otp`, `email-otp/verify-email`, `email-otp/reset-password` | yes | yes, budget "verify" |
+| `sign-in/email` (password) | yes | yes, budget "password" |
+| `sign-up/email`, `reset-password` (token) | yes | no |
+| `sign-out`, `get-session`, `update-user`, `callback/<provider>`, `sign-in/social`, and anything not listed | no | no |
 
-- raise or lower the numbers for the tier in the `APP_CONFIG_OVERRIDES` of `app.config.ts`: `rateLimit: { tiers: { auth: { limit: 20, windowMs: 15 * 60_000 } } }` (a field you leave out keeps its default);
+Defaults, per 15 minutes:
+
+- `auth`: **60 requests per client address**, shared by everyone behind it (an office, a school, a mobile carrier). A sign-in with an emailed code costs 2 (send the code, then verify it).
+- `authIdentifier`: **5 requests per email and budget**. The email is read from the JSON body (trimmed and lowercased, from a clone of the request) and hashed, so it is never stored or logged in the clear. The three budgets are independent: asking for codes does not use up the attempts to verify one. A request without an email in its body is charged per address only.
+
+A `429` answers `{ "error": "Too many requests", "code": "RATE_LIMIT_EXCEEDED", "retryAfter": <seconds> }` with a `Retry-After` header. The sign-in screens show the wait in minutes.
+
+To change it:
+
+- set the numbers for either tier in the `APP_CONFIG_OVERRIDES` of `app.config.ts`: `rateLimit: { tiers: { auth: { limit: 120, windowMs: 15 * 60_000 }, authIdentifier: { limit: 10, windowMs: 15 * 60_000 } } }` (a field you leave out keeps its default);
 - set `NEXTSPARK_CLIENT_IP_SOURCE` so the address read is the real one (`vercel`, `cloudflare`, `xff` with
   `NEXTSPARK_TRUSTED_PROXY_HOPS`, or `header:<name>`). Without it, every person behind a proxy can look like one address.
 

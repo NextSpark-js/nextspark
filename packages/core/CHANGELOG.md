@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading
 
+- **The `auth` rate limit tier now defaults to 60 requests per 15 minutes per address (it was 5) and there is a new `authIdentifier` tier, 5 per 15 minutes per email.** A project that set its own `rateLimit.tiers.auth` keeps its numbers, which now apply only to the routes listed in the Changed entry below, so it can usually raise them or drop the override; set `authIdentifier` the same way if 5 per email is too tight (#364).
 - **A project that sets its own `mobileNav.moreSheetItems` in `config/app.config.ts` should add `requiresPermission: 'settings.billing'` to its `billing` item.** The project's array replaces the one of core, so the default does not reach it, and the "More" sheet keeps listing Billing for a role that cannot open it until the item has the permission (#368).
 - **`update-core` now rewrites the `next`, `react`, `react-dom`, `better-auth` and `zod` ranges below what the new core needs in the `package.json` of the workspace packages that declare `@nextsparkjs/core` (a local plugin has it as a peer) or that the project reaches through `workspace:` or `link:`.** Another app of the monorepo and `mobile/` are not written. Review `git diff` after the update; pass `--no-dependency-floors` to get the `pnpm add --filter <package>` lines instead (#374).
 
@@ -18,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The auth rate limit charges only the sign-in routes that need it, and counts codes and passwords per email too.** Every `POST` under `/api/auth/*` was charged to the `auth` tier, 5 per 15 minutes per client address, so a few sign-ins behind a shared address used the whole budget. Now only the routes that ask for or try a code or a password, create an account or reset a password are charged (`email-otp/send-verification-otp`, `sign-in/email-otp`, `email-otp/check-verification-otp`, `email-otp/verify-email`, `email-otp/reset-password`, `email-otp/request-password-reset`, `forget-password/email-otp`, `request-password-reset`, `sign-in/email`, `sign-up/email`, `reset-password`), from an explicit list: sign-out, session calls, OAuth callbacks and a route nobody listed are free. The `auth` tier is 60 per address; asking for a code, trying a code and trying a password also draw from the new `authIdentifier` tier, 5 per email (trimmed and lowercased, hashed, never logged) in an independent budget each. A `429` carries `retryAfter` in the body and `Retry-After`, and the sign-in screens show the wait in minutes in the six catalogs. A failed sign-out shows its reason. See the rate limiting docs (#364).
 - **The upgrade notes of `0.1.0-beta.199` add the required `teamId` of `PatternsResolverService.getByIds` and the second argument of `revalidateTag` on Next.js 16** (#374).
 
 ### Fixed

@@ -148,7 +148,8 @@ NextSpark incluye estos niveles predefinidos:
 
 | Tier | Límite | Ventana | Uso recomendado |
 |------|--------|---------|-----------------|
-| `auth` | 5 requests | 15 minutos | Login, registro, reset password |
+| `auth` | 60 requests | 15 minutos | Login, registro, reset password (por dirección de cliente) |
+| `authIdentifier` | 5 requests | 15 minutos | Pedir y verificar códigos, login con contraseña (por email) |
 | `api` | 100 requests | 1 minuto | Endpoints de API generales |
 | `strict` | 10 requests | 1 hora | Operaciones sensibles (cambio email/password) |
 | `read` | 200 requests | 1 minuto | Lecturas (GET) |
@@ -156,7 +157,7 @@ NextSpark incluye estos niveles predefinidos:
 | `webhook` | 500 requests | 1 hora | Webhooks (la firma es la defensa principal) |
 | `ingest` | 1000 requests | 1 minuto | Endpoints de ingesta de alto volumen |
 
-El tier `auth` cobra por dirección de cliente todo `POST` bajo `/api/auth/*`, salvo los callbacks OAuth y `sign-out`; quienes comparten una dirección comparten el cupo. Ver [Sign-in routes](./05-api/07-rate-limiting.md#sign-in-routes-the-auth-tier).
+El tier `auth` cobra por dirección de cliente solo los `POST` de `/api/auth/*` de una lista explícita (pedir/verificar código, login con contraseña, registro, reset de contraseña); `sign-out`, la sesión y los callbacks OAuth no se cobran. `authIdentifier` cuenta además por email en pedir y verificar código y en el login con contraseña. Ver [Sign-in routes](./05-api/07-rate-limiting.md#sign-in-routes-the-auth-tier).
 
 ### Ajustar o agregar tiers
 

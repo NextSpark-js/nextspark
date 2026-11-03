@@ -135,8 +135,10 @@ See `.env.example` — the "LOGIN METHODS" section.
    false`), runs the usual `databaseHooks` (registration mode, domain checks,
    team bootstrap, signup intent) and issues the session cookie.
 
-Rate limiting: the auth route handler applies the `auth` tier (5 requests / 15
-minutes per IP) to every `POST /api/auth/*`, OTP requests included.
+Rate limiting: the auth route handler applies the `auth` tier (60 requests / 15
+minutes per IP) and the `authIdentifier` tier (5 requests / 15 minutes per email) to
+the OTP request and verify routes. Sign-out and session calls are not charged; see
+[Sign-in routes](../05-api/07-rate-limiting.md#sign-in-routes-the-auth-and-authidentifier-tiers).
 
 ## Templates
 
