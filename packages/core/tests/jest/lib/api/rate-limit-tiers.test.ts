@@ -57,7 +57,7 @@ const id = () => `tiers-test-${++n}`
 
 describe('defaults', () => {
   it('keeps the limit and window of every built-in tier', () => {
-    expect(getRateLimitTierConfig('auth')).toEqual({ limit: 5, windowMs: 15 * 60_000 })
+    expect(getRateLimitTierConfig('auth')).toEqual({ limit: 60, windowMs: 15 * 60_000 })
     expect(getRateLimitTierConfig('api')).toEqual({ limit: 100, windowMs: 60_000 })
     expect(getRateLimitTierConfig('strict')).toEqual({ limit: 10, windowMs: 3_600_000 })
     expect(getRateLimitTierConfig('read')).toEqual({ limit: 200, windowMs: 60_000 })
@@ -109,7 +109,7 @@ describe('in-memory path', () => {
     ['a custom tier with a bad limit', { custom: { limit: 0, windowMs: 1000 } }, 'custom', { limit: 100, windowMs: 60_000 }],
     ['a custom tier with a missing window', { custom: { limit: 5 } }, 'custom', { limit: 100, windowMs: 60_000 }],
     ['a custom tier with NaN', { custom: { limit: Number.NaN, windowMs: 1000 } }, 'custom', { limit: 100, windowMs: 60_000 }],
-    ['a built-in tier with a bad value', { auth: { limit: -3 } }, 'auth', { limit: 5, windowMs: 15 * 60_000 }],
+    ['a built-in tier with a bad value', { auth: { limit: -3 } }, 'auth', { limit: 60, windowMs: 15 * 60_000 }],
     ['a built-in tier with a string value', { read: { windowMs: '1m' } }, 'read', { limit: 200, windowMs: 60_000 }],
   ])('falls back to a limit for %s', (_n, tiers, tier, expected) => {
     mockConfig.rateLimit = { tiers }
@@ -145,7 +145,7 @@ describe('Redis path', () => {
     await checkDistributedRateLimit(id(), 'auth')
     expect(mockCreated).toHaveLength(1)
     expect(mockCreated[0].prefix).toBe('ratelimit:auth')
-    expect(mockCreated[0].limiter).toEqual({ limit: 5, window: '900000 ms' })
+    expect(mockCreated[0].limiter).toEqual({ limit: 60, window: '900000 ms' })
   })
 
   it('limits an undeclared tier as api', async () => {

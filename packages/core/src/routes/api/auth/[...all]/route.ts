@@ -15,6 +15,7 @@ import { verifyEmailPageUrl } from "@nextsparkjs/core/lib/auth/verify-email-link
 import { withBasePathRequest } from "@nextsparkjs/core/lib/base-path";
 import { getAuthReadinessResponse } from "@nextsparkjs/core/lib/auth/runtime-readiness";
 import { withCodeSendOutcome } from "@nextsparkjs/core/lib/auth/code-send";
+import { authChargeFor, authIdentifierKey, readRequestEmail } from "@nextsparkjs/core/lib/auth/auth-rate-limit";
 
 const handlers = toNextJsHandler(auth);
 
@@ -73,28 +74,32 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
 
 // Intercept signup requests to validate registration mode
 export async function POST(req: NextRequest) {
-  // Rate limiting: 5 requests per 15 minutes per IP (tier: auth).
-  // Protects login/signup against brute-force and credential stuffing attacks.
-  // Per client address (lib/api/client-ip, set by NEXTSPARK_CLIENT_IP_SOURCE).
-  // A form_post provider's callback (Apple) is not charged: Better Auth only redirects it to the GET callback.
-  // Neither is sign-out: it needs a valid session cookie, so it is no way to guess a password or a code.
-  // Both are matched whole (after /api/auth/, optional trailing slash), never by prefix.
-  const requestPath = req.nextUrl.pathname
-  const authPath = requestPath.slice(requestPath.indexOf('/api/auth/') + '/api/auth/'.length)
-  const isUnchargedPost = /^(callback\/[^/]+|sign-out)\/?$/.test(authPath)
-  const clientIp = getClientIp(req.headers)
-  const rateLimitResult = isUnchargedPost ? null : await checkDistributedRateLimit(`auth:ip:${clientIp}`, 'auth')
-  if (rateLimitResult && !rateLimitResult.allowed) {
-    return wrapAuthHandlerWithCors(async () => new NextResponse(JSON.stringify({ error: 'Too many requests' }), {
-      status: 429,
-      headers: {
-        'Content-Type': 'application/json',
-        'Retry-After': '900',
-        'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-        'X-RateLimit-Remaining': '0',
-        'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
-      },
-    }), req)
+  // Rate limiting against brute force and credential stuffing, only for the routes lib/auth/auth-rate-limit lists
+  // (an allowlist: sign-out, session reads and updates, OAuth callbacks and a route nobody decided on are free).
+  // A listed route is charged to the `auth` tier per client address (lib/api/client-ip, set by NEXTSPARK_CLIENT_IP_SOURCE)
+  // and, when it asks for or tries a code or a password, also to the `authIdentifier` tier per email, so the per-address
+  // budget can be wide enough for a shared network while one mailbox stays tightly limited.
+  const charge = authChargeFor(req.nextUrl.pathname)
+  if (charge) {
+    const checks = [await checkDistributedRateLimit(`auth:ip:${getClientIp(req.headers)}`, 'auth')]
+    if (charge.by && checks[0].allowed) {
+      const email = await readRequestEmail(req)
+      if (email) checks.push(await checkDistributedRateLimit(authIdentifierKey(charge.by, email), 'authIdentifier'))
+    }
+    const blocked = checks.find((result) => !result.allowed)
+    if (blocked) {
+      const retryAfter = Math.max(1, blocked.retryAfter ?? Math.ceil((blocked.resetTime - Date.now()) / 1000))
+      return wrapAuthHandlerWithCors(async () => new NextResponse(JSON.stringify({ error: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED', retryAfter }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': retryAfter.toString(),
+          'X-RateLimit-Limit': blocked.limit.toString(),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': blocked.resetTime.toString(),
+        },
+      }), req)
+    }
   }
 
   const readinessResponse = await getAuthReadinessResponse(req);

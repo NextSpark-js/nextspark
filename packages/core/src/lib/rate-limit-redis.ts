@@ -98,7 +98,7 @@ export interface RateLimitCheckResult {
 /**
  * The tiers core ships
  */
-export type BuiltInRateLimitTier = 'auth' | 'api' | 'strict' | 'read' | 'write' | 'webhook' | 'ingest'
+export type BuiltInRateLimitTier = 'auth' | 'authIdentifier' | 'api' | 'strict' | 'read' | 'write' | 'webhook' | 'ingest'
 
 /**
  * Rate limit tiers available for API endpoints: the built-in ones and any name declared in
@@ -117,7 +117,8 @@ export interface RateLimitTierConfig {
  * Default limits of the built-in tiers (the in-memory path and the Redis path both use them)
  */
 const DEFAULT_TIERS: Record<BuiltInRateLimitTier, RateLimitTierConfig> = {
-  auth: { limit: 5, windowMs: 15 * 60 * 1000 },
+  auth: { limit: 60, windowMs: 15 * 60 * 1000 },
+  authIdentifier: { limit: 5, windowMs: 15 * 60 * 1000 },
   api: { limit: 100, windowMs: 60 * 1000 },
   strict: { limit: 10, windowMs: 60 * 60 * 1000 },
   read: { limit: 200, windowMs: 60 * 1000 },
@@ -191,7 +192,7 @@ function getLimiter(tier: string, { limit, windowMs }: RateLimitTierConfig): Lim
  * Check rate limit for a given identifier
  *
  * @param identifier - Unique identifier (e.g., IP address, user ID, or combination)
- * @param type - Rate limit tier: 'auth' (5/15min), 'api' (100/1min), 'strict' (10/1hr), 'read' (200/1min), 'write' (50/1min), 'webhook' (500/1hr), 'ingest' (1000/1min), or a tier declared in `rateLimit.tiers` of app.config
+ * @param type - Rate limit tier: 'auth' (60/15min), 'authIdentifier' (5/15min), 'api' (100/1min), 'strict' (10/1hr), 'read' (200/1min), 'write' (50/1min), 'webhook' (500/1hr), 'ingest' (1000/1min), or a tier declared in `rateLimit.tiers` of app.config
  * @returns Promise with success status, remaining requests, and reset timestamp
  */
 export async function checkRateLimit(

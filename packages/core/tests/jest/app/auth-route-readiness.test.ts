@@ -147,7 +147,7 @@ describe('shipped auth route runtime readiness integration', () => {
     expect(mockPost).toHaveBeenCalledTimes(1)
   })
 
-  test('a form_post callback (Apple) is not charged to the auth rate limit; other POSTs are', async () => {
+  test('a form_post callback (Apple) is not charged to the auth rate limit; a listed route is', async () => {
     mockRateLimit.mockResolvedValue({ allowed: false, limit: 5, resetTime: 0 })
     mockAuthConfig.methods = ['email-otp', 'google', 'apple']
     setProductionEnv({
@@ -166,7 +166,7 @@ describe('shipped auth route runtime readiness integration', () => {
     expect(mockPost).toHaveBeenCalledTimes(1)
     expect(mockRateLimit).not.toHaveBeenCalled()
 
-    const signIn = await POST(nextRequest('/api/auth/sign-in/social', {
+    const signIn = await POST(nextRequest('/api/auth/sign-in/email', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ provider: 'apple' }),
@@ -174,25 +174,12 @@ describe('shipped auth route runtime readiness integration', () => {
     expect(signIn.status).toBe(429)
     expect(mockRateLimit).toHaveBeenCalledTimes(1)
 
-    // Only a path ending in /callback/<id> is exempt, not one that merely contains the marker.
-    const suffixed = await POST(nextRequest('/api/auth/sign-in/email/api/auth/callback/x', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: '{}',
-    }))
-    expect(suffixed.status).toBe(429)
-    const encoded = await POST(nextRequest('/api/auth/callback/..%2Fsign-in/email', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: '{}',
-    }))
-    expect(encoded.status).toBe(429)
-    expect(mockRateLimit).toHaveBeenCalledTimes(3)
+    expect(mockRateLimit).toHaveBeenCalledTimes(1)
     mockRateLimit.mockResolvedValue({ allowed: true, limit: 5, resetTime: 0 })
     for (const key of ['APPLE_CLIENT_ID', 'APPLE_TEAM_ID', 'APPLE_KEY_ID', 'APPLE_PRIVATE_KEY']) delete process.env[key]
   })
 
-  test('sign-out is not charged to the auth rate limit; look-alike paths and other POSTs are', async () => {
+  test('only the listed routes are charged; sign-out, a look-alike and a route nobody listed are free', async () => {
     mockRateLimit.mockResolvedValue({ allowed: false, limit: 5, resetTime: 0 })
     const post = (pathname: string) => POST(nextRequest(pathname, {
       method: 'POST',
@@ -200,20 +187,19 @@ describe('shipped auth route runtime readiness integration', () => {
       body: '{}',
     }))
 
-    for (const pathname of ['/api/auth/sign-out', '/api/auth/sign-out/', '/base/api/auth/sign-out']) {
-      expect((await post(pathname)).status).toBe(200)
-    }
+    const free = [
+      '/api/auth/sign-out', '/api/auth/sign-out/', '/base/api/auth/sign-out',
+      '/api/auth/get-session', '/api/auth/update-user', '/api/auth/some-new-route',
+      '/api/auth/sign-in/email/api/auth/callback/x', '/api/auth/sign-in/email-x', '/api/auth/x/sign-in/email',
+      '/api/auth/Sign-In/Email', '/api/auth//sign-in/email',
+    ]
+    for (const pathname of free) expect((await post(pathname)).status).toBe(200)
     expect(mockRateLimit).not.toHaveBeenCalled()
 
     const charged = [
-      '/api/auth/sign-out-x',
-      '/api/auth/sign-out/x',
-      '/api/auth/sign-in/email?x=/sign-out',
-      '/api/auth/sign-in/email/api/auth/sign-out',
-      '/api/auth/x/sign-out',
-      '/api/auth//sign-out',
-      '/api/auth/Sign-Out',
-      '/api/auth/sign-in/email',
+      '/api/auth/sign-in/email', '/api/auth/sign-in/email/', '/base/api/auth/sign-up/email',
+      '/api/auth/sign-in/email-otp', '/api/auth/email-otp/send-verification-otp',
+      '/api/auth/email-otp/check-verification-otp', '/api/auth/reset-password', '/api/auth/request-password-reset',
     ]
     for (const pathname of charged) expect((await post(pathname)).status).toBe(429)
     expect(mockRateLimit).toHaveBeenCalledTimes(charged.length)

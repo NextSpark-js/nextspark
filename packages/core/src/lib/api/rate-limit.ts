@@ -120,7 +120,7 @@ export type { RateLimitTier };
  * falls back to in-memory rate limiting otherwise.
  *
  * @param identifier - Unique identifier (IP, user ID, or combination)
- * @param type - Rate limit tier: 'auth' (5/15min), 'api' (100/1min), 'strict' (10/1hr), 'read' (200/1min), 'write' (50/1min),
+ * @param type - Rate limit tier: 'auth' (60/15min), 'authIdentifier' (5/15min), 'api' (100/1min), 'strict' (10/1hr), 'read' (200/1min), 'write' (50/1min),
  *   'webhook' (500/1hr), 'ingest' (1000/1min) or a tier declared in `rateLimit.tiers` of app.config
  * @returns Promise with rate limit result
  */
@@ -368,7 +368,7 @@ export function getRateLimitCacheStats() {
  * - Rate limits are applied per-tier across ALL endpoints (not per-endpoint)
  *
  * Rate limit tiers:
- * - 'auth': 5 requests per 15 minutes (for authentication endpoints)
+ * - 'auth': 60 per client address and 5 per email, per 15 minutes (for authentication endpoints)
  * - 'api': 100 requests per minute (default, general API endpoints)
  * - 'strict': 10 requests per hour (for sensitive operations)
  * - 'read': 200 requests per minute (for read-only operations like GET)
