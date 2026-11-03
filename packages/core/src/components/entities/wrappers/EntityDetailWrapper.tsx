@@ -137,6 +137,11 @@ export function EntityDetailWrapper({
   const dataLoadedRef = React.useRef(false)
   const prevIdRef = React.useRef<string | null>(null)
 
+  // Cache Components keeps a visited route in a hidden <Activity> and shows it again on navigation, state included.
+  // Hiding runs the cleanups of the effects and showing runs them again, so letting go of the loaded flag here makes
+  // the effect below request the record again: a detail restored after saving an edit shows the saved values (#386).
+  useEffect(() => () => { dataLoadedRef.current = false }, [])
+
   useEffect(() => {
     // Reset loaded state when id changes
     if (prevIdRef.current !== id) {
