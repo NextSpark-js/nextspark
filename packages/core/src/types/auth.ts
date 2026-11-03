@@ -28,6 +28,8 @@ export type AuthErrorCode =
  */
 export interface AuthError extends Error {
   code?: AuthErrorCode
+  /** Seconds to wait, from the `Retry-After` of a 429 (code `RATE_LIMITED`) */
+  retryAfter?: number
 }
 
 /**

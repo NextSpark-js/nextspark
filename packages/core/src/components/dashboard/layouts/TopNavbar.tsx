@@ -106,8 +106,9 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
       setStatusMessage(t('a11y.signingOut'))
       await signOut()
       setStatusMessage(t('a11y.signOutSuccess'))
-    } catch {
-      setStatusMessage(t('a11y.signOutError'))
+    } catch (error) {
+      // the real reason (a failed request, a 429) after the generic text
+      setStatusMessage(error instanceof Error && error.message ? `${t('a11y.signOutError')}: ${error.message}` : t('a11y.signOutError'))
     }
   }, [signOut, t])
 

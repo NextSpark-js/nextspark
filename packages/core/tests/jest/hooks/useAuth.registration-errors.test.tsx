@@ -8,11 +8,12 @@ import { renderHook } from '@testing-library/react'
 
 const mockSendOtp = jest.fn()
 const mockOtpSignIn = jest.fn()
+const mockPasswordSignIn = jest.fn()
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }) }))
 jest.mock('@/core/lib/auth-client', () => ({
   authClient: {
     useSession: jest.fn(),
-    signIn: { email: jest.fn(), emailOtp: (...args: unknown[]) => mockOtpSignIn(...args), social: jest.fn() },
+    signIn: { email: (...args: unknown[]) => mockPasswordSignIn(...args), emailOtp: (...args: unknown[]) => mockOtpSignIn(...args), social: jest.fn() },
     emailOtp: { sendVerificationOtp: (...args: unknown[]) => mockSendOtp(...args) },
   },
 }))
@@ -50,5 +51,17 @@ describe('useAuthActions registration-policy codes', () => {
     const error = await result.current.signInWithOtp({ email: 'a@nextspark.dev', otp: '000000' }).catch((e: Error) => e)
     expect(error).toBeInstanceOf(Error)
     expect((error as { code?: string }).code).toBeUndefined()
+  })
+
+  test('a 429 becomes RATE_LIMITED with the seconds to wait, on the code request, the code check and the password sign-in', async () => {
+    const limited = { status: 429, error: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED', retryAfter: 540 }
+    mockSendOtp.mockResolvedValue({ data: null, error: limited })
+    mockOtpSignIn.mockResolvedValue({ data: null, error: limited })
+    mockPasswordSignIn.mockResolvedValue({ data: null, error: limited })
+    const { result } = renderHook(() => useAuthActions())
+
+    await expect(result.current.sendOtp('a@nextspark.dev')).rejects.toMatchObject({ code: 'RATE_LIMITED', retryAfter: 540 })
+    await expect(result.current.signInWithOtp({ email: 'a@nextspark.dev', otp: '123456' })).rejects.toMatchObject({ code: 'RATE_LIMITED', retryAfter: 540 })
+    await expect(result.current.signIn({ email: 'a@nextspark.dev', password: 'secret1' })).rejects.toMatchObject({ code: 'RATE_LIMITED', retryAfter: 540 })
   })
 })

@@ -55,6 +55,7 @@ jest.mock('next-intl', () => ({
   useTranslations: () => (key: string, options?: Record<string, unknown>) => {
     if (options && typeof options.defaultValue === 'string' && !key.startsWith('login.form')) return options.defaultValue
     if (options && typeof options.email === 'string') return `${key}:${options.email}`
+    if (options && typeof options.minutes === 'number') return `${key}:${options.minutes}`
     if (options && typeof options.time === 'string') return `${key}:${options.time}`
     return key
   },
@@ -150,6 +151,22 @@ describe('LoginForm — registration-policy codes', () => {
     await waitFor(() => expect(byCy('auth.login.errorAlert')).toHaveTextContent('emailErrors.sendFailed'))
     expect(byCy('auth.login.errorAlert')).not.toHaveTextContent('could not be sent')
     expect(byCy('auth.login.otpCodeInput')).not.toBeInTheDocument()
+  })
+
+  test('a 429 shows the wait in minutes, on the code request and on the code check', async () => {
+    mockSendOtp.mockRejectedValueOnce(Object.assign(new Error('Too many requests'), { code: 'RATE_LIMITED', retryAfter: 61 }))
+    await requestCode('someone@nextspark.dev')
+    await waitFor(() => expect(byCy('auth.login.errorAlert')).toHaveTextContent('login.errors.rateLimitedWait:2'))
+    expect(byCy('auth.login.otpCodeInput')).not.toBeInTheDocument()
+  })
+
+  test('a 429 while verifying the code shows the wait too', async () => {
+    mockSignInWithOtp.mockRejectedValue(Object.assign(new Error('Too many requests'), { code: 'RATE_LIMITED', retryAfter: 900 }))
+    await requestCode('someone@nextspark.dev')
+    await waitFor(() => expect(byCy('auth.login.otpCodeInput')).toBeInTheDocument())
+    fireEvent.change(byCy('auth.login.otpCodeInput')!, { target: { value: '123456' } })
+    fireEvent.click(byCy('auth.login.otpSubmit')!)
+    await waitFor(() => expect(byCy('auth.login.errorAlert')).toHaveTextContent('login.errors.rateLimitedWait:15'))
   })
 
   test('an error without a code keeps the existing handling', async () => {

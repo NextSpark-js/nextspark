@@ -19,10 +19,15 @@ import { SIGNUP_INTENT_HEADER } from '../lib/api/client-headers'
 import type { AuthError } from '../types/auth'
 import type { SocialLoginMethod } from '../lib/config/types'
 
-// Keeps a registration-policy code (DOMAIN_NOT_ALLOWED, SIGNUP_RESTRICTED) or EMAIL_SEND_FAILED so forms can show their own message for it
-function toAuthError(error: { message?: string; code?: string }, fallback: string): AuthError {
+// Keeps a registration-policy code (DOMAIN_NOT_ALLOWED, SIGNUP_RESTRICTED) or EMAIL_SEND_FAILED so forms can show their own message for it,
+// and turns a 429 into RATE_LIMITED with the seconds to wait (the auth route answers them in the body as `retryAfter`)
+function toAuthError(error: { message?: string; code?: string; status?: number; retryAfter?: unknown }, fallback: string): AuthError {
   const authError: AuthError = new Error(error.message || fallback)
   if (error.code === 'DOMAIN_NOT_ALLOWED' || error.code === 'SIGNUP_RESTRICTED' || error.code === 'EMAIL_SEND_FAILED') authError.code = error.code
+  if (error.status === 429) {
+    authError.code = 'RATE_LIMITED'
+    if (typeof error.retryAfter === 'number' && error.retryAfter > 0) authError.retryAfter = error.retryAfter
+  }
   return authError
 }
 
@@ -159,7 +164,7 @@ export function useAuthActions() {
     // so the caller shows its error and the page stays as it is
     // undefined, not nothing: Better Auth 1.7 types the argument as required without strictNullChecks (see ClientSession)
     const { error } = await authClient.signOut(undefined)
-    if (error) throw new Error(error.message || 'Failed to sign out')
+    if (error) throw toAuthError(error, 'Failed to sign out')
     setSessionHint(false)
     await waitForSessionToDrop()
     // A full navigation, not router.push: with Cache Components the signed-in pages stay mounted (hidden) after a

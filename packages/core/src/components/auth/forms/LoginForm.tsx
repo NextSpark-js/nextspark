@@ -46,6 +46,13 @@ const DevKeyring: ComponentType<{ config: DevKeyringConfig }> | null = process.e
   ? require('../DevKeyring').DevKeyring
   : null
 
+/** A 429 with the time to wait (the `Retry-After` of the auth route), in minutes */
+function rateLimitedWaitMessage(error: AuthError, t: (key: string, options?: any) => string): string {
+  return error.retryAfter
+    ? t('login.errors.rateLimitedWait', { minutes: Math.ceil(error.retryAfter / 60) })
+    : t('login.errors.rateLimited')
+}
+
 /**
  * Maps error codes to internationalization keys for better user experience
  */
@@ -58,6 +65,8 @@ function getErrorMessageFromCode(
   const errorCode = authError.code || getErrorCodeFromMessage(error.message)
   const registrationKey = registrationErrorKey(authError.code)
   if (registrationKey) return t(registrationKey)
+
+  if (authError.code === 'RATE_LIMITED' && authError.retryAfter) return rateLimitedWaitMessage(authError, t)
 
   if (context === 'otp') {
     const lower = (error.message || '').toLowerCase()
@@ -357,7 +366,11 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
     } catch (err) {
       const error = err instanceof Error ? err : new Error(t('login.messages.otpSendFailed'))
       const registrationKey = registrationErrorKey((error as AuthError).code)
-      const errorMessage = registrationKey ? t(registrationKey) : error.message || t('login.messages.otpSendFailed')
+      const errorMessage = registrationKey
+        ? t(registrationKey)
+        : (error as AuthError).code === 'RATE_LIMITED'
+          ? rateLimitedWaitMessage(error as AuthError, t)
+          : error.message || t('login.messages.otpSendFailed')
       setError(errorMessage)
       setStatusMessage(t('login.messages.signInError', { error: errorMessage }))
     } finally {
