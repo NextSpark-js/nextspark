@@ -10,5 +10,10 @@ module.exports = {
   setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    // @nextsparkjs/mobile is ESM with an `import` export condition only; Jest resolves with `require`
+    // and would fail with ERR_PACKAGE_PATH_NOT_EXPORTED. Point it at the built files Metro loads.
+    // The allowlist above makes Jest transform them.
+    '^@nextsparkjs/mobile$': '<rootDir>/node_modules/@nextsparkjs/mobile/dist/index.js',
+    '^@nextsparkjs/mobile/(.*)$': '<rootDir>/node_modules/@nextsparkjs/mobile/dist/$1/index.js',
   },
 };
