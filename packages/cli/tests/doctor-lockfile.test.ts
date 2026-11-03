@@ -125,3 +125,31 @@ test('NS_QUERY_CLIENT_NOT_REGISTERED reports file:line, and skips registered, co
   assert.match(result.message, /\(components\/cache\.tsx:2\)/)
   assert.equal((await inProject(null, { 'components/ok.tsx': registered }, checkQueryClients)).status, 'pass')
 })
+
+test('a workspace package the project links to is part of the project, along the whole chain, with no peer and no core', async () => {
+  const lock = lockfile({
+    '.': { next: '16.4.2', '@nextsparkjs/core': '0.1.0', '@x/kit': 'link:packages/kit' },
+    'packages/kit': { next: '16.4.2', '@x/shared': 'link:../shared' },
+    'packages/shared': { next: '16.3.8', 'better-auth': '1.6.33' },
+    'apps/other': { next: '15.1.0' },
+  }, ['better-auth@1.7.7'])
+  const result = await inProject(lock, {}, checkDuplicateDependencies)
+  assert.equal(result.status, 'warn')
+  assert.match(result.message, /next 16\.3\.8 \(packages\/shared\) and 16\.4\.2 \(\., packages\/kit\)/)
+  assert.doesNotMatch(result.message, /15\.1\.0/)
+})
+
+test('the printed range is the one core declares for the package', async () => {
+  const lock = lockfile({ '.': { next: '16.4.2', '@nextsparkjs/core': '0.1.0' }, 'plugins/crm': { next: '16.3.8' } })
+  const files = { ...peerPlugin, 'node_modules/@nextsparkjs/core/package.json': JSON.stringify({ peerDependencies: { next: '~16.4.2' } }) }
+  const result = await inProject(lock, files, checkDuplicateDependencies)
+  assert.equal(result.fix, "Run: pnpm add --filter ./plugins/crm --save-peer next@'~16.4.2'")
+})
+
+test('a peer is attributed to every version its range accepts', async () => {
+  const lock = lockfile({ '.': { next: '16.4.2' } }, ['next@16.3.8', 'next@16.3.9']).replace('importers:\n', 'importers:\n\n  plugins/crm: {}\n')
+  const files = { 'plugins/crm/package.json': JSON.stringify({ peerDependencies: { next: '~16.3.8' } }) }
+  const result = await inProject(lock, files, checkDuplicateDependencies)
+  assert.match(result.message, /16\.3\.8 \(plugins\/crm\)/)
+  assert.match(result.message, /16\.3\.9 \(plugins\/crm\)/)
+})

@@ -22,6 +22,8 @@ export interface LockfileView {
   versions: Map<string, Set<string>>
   /** Importers that declare each version directly, per package name. */
   direct: Map<string, Map<string, Set<string>>>
+  /** Every importer listed, with or without dependencies. */
+  importers: Set<string>
 }
 
 function setOf<K, V>(map: Map<K, Set<V>>, key: K): Set<V> {
@@ -39,6 +41,7 @@ export function parseLockfile(text: string): LockfileView {
   const versions = new Map<string, Set<string>>()
   const direct = new Map<string, Map<string, Set<string>>>()
   let lockfileVersion = ''
+  const importerIds = new Set<string>()
   let section = ''
   let importer = ''
   let field = ''
@@ -55,7 +58,7 @@ export function parseLockfile(text: string): LockfileView {
       if (key) setOf(versions, key[1]).add(key[2])
     } else if (section === 'importers') {
       const imp = /^ {2}'?([^'\s:]+)'?:/.exec(line)
-      if (imp) { importer = imp[1]; field = ''; continue }
+      if (imp) { importer = imp[1]; importerIds.add(importer); field = ''; continue }
       const fld = /^ {4}(\w+):/.exec(line)
       if (fld) { field = fld[1]; continue }
       const dep = /^ {6}'?([^'\s:]+)'?:/.exec(line)
@@ -68,7 +71,7 @@ export function parseLockfile(text: string): LockfileView {
       }
     }
   }
-  return { lockfileVersion, versions, direct }
+  return { lockfileVersion, versions, direct, importers: importerIds }
 }
 
 interface Lock {
@@ -78,13 +81,8 @@ interface Lock {
   inProject: (importer: string, pkg: string) => boolean
   /** Importer -> peerDependencies of its package.json. */
   peers: Map<string, Record<string, string>>
-}
-
-/** Every importer of the lockfile, from the direct dependencies it records. */
-function allImporters(view: LockfileView): Set<string> {
-  const all = new Set<string>()
-  for (const byVersion of view.direct.values()) for (const set of byVersion.values()) set.forEach(i => all.add(i))
-  return all
+  /** The range the installed core declares for a package (dependency or peer), if any. */
+  coreRange: (pkg: string) => string | undefined
 }
 
 /** The nearest pnpm-lock.yaml from `start` upwards, parsed. */
@@ -93,8 +91,17 @@ async function readLockfile(start: string): Promise<Lock | null> {
     const file = path.join(dir, 'pnpm-lock.yaml')
     if (await fs.pathExists(file)) {
       const view = parseLockfile(await fs.readFile(file, 'utf8'))
-      const importers = allImporters(view)
+      const importers = view.importers
       const withCore = new Set([...(view.direct.get(CORE) ? [...view.direct.get(CORE)!.values()].flatMap(s => [...s]) : [])])
+      // The project also holds what its core importers reach by `link:` (workspace packages), along the whole chain.
+      const links = new Map<string, Set<string>>()
+      for (const byVersion of view.direct.values()) {
+        for (const [version, from] of byVersion) {
+          if (!version.startsWith('link:')) continue
+          for (const importer of from) setOf(links, importer).add(path.posix.join(importer, version.slice(5)))
+        }
+      }
+      for (const importer of withCore) for (const target of links.get(importer) ?? new Set<string>()) withCore.add(target)
       const peers = new Map<string, Record<string, string>>()
       for (const importer of importers) {
         try {
@@ -107,16 +114,23 @@ async function readLockfile(start: string): Promise<Lock | null> {
         for (const pkg of SINGLE_COPY) {
           const range = declared[pkg]
           if (!range || !semver.validRange(range)) continue
+          let byVersion = view.direct.get(pkg)
+          if (!byVersion) view.direct.set(pkg, (byVersion = new Map()))
+          if ([...byVersion.values()].some(set => set.has(importer))) continue
           for (const version of view.versions.get(pkg) ?? []) {
-            if (!semver.valid(version) || !semver.satisfies(version, range)) continue
-            let byVersion = view.direct.get(pkg)
-            if (!byVersion) view.direct.set(pkg, (byVersion = new Map()))
-            const has = [...byVersion.values()].some(set => set.has(importer))
-            if (!has) setOf(byVersion, version).add(importer)
+            if (semver.valid(version) && semver.satisfies(version, range)) setOf(byVersion, version).add(importer)
           }
         }
       }
+      let core: { dependencies?: Record<string, string>; peerDependencies?: Record<string, string> } = {}
+      for (const base of [start, dir]) {
+        try {
+          core = await fs.readJson(path.join(base, 'node_modules', '@nextsparkjs', 'core', 'package.json'))
+          break
+        } catch { /* try the next directory */ }
+      }
       return {
+        coreRange: pkg => core.dependencies?.[pkg] ?? core.peerDependencies?.[pkg],
         root: dir,
         view,
         inProject: (importer, pkg) => withCore.size === 0 || withCore.has(importer) || peers.get(importer)?.[pkg] !== undefined,
@@ -167,7 +181,7 @@ export async function checkDuplicateDependencies(): Promise<HealthCheckResult> {
     const parts = relevant.map(version => {
       const importers = own(version)
       if (importers.length === 0) return `${version} (a transitive dependency)`
-      if (version !== highest) importers.forEach(importer => fixes.push(addCommand(lock, importer, pkg, `^${highest}`)))
+      if (version !== highest) importers.forEach(importer => fixes.push(addCommand(lock, importer, pkg, lock.coreRange(pkg) ?? `^${highest}`)))
       return `${version} (${importers.join(', ')})`
     })
     found.push(`${pkg} ${parts.join(' and ')}`)
@@ -192,14 +206,7 @@ export async function checkZodBelowCore(): Promise<HealthCheckResult> {
   if (!lock) return { name, status: 'pass', message: 'No pnpm-lock.yaml to check' }
   const stale = unsupported(name, lock)
   if (stale) return stale
-  let range: string | undefined
-  for (const dir of [process.cwd(), lock.root]) {
-    try {
-      const core = await fs.readJson(path.join(dir, 'node_modules', '@nextsparkjs', 'core', 'package.json'))
-      range = core.dependencies?.zod ?? core.peerDependencies?.zod
-      break
-    } catch { /* try the next directory */ }
-  }
+  const range = lock.coreRange('zod')
   const floor = range && semver.validRange(range) ? semver.minVersion(range) : null
   if (!range || !floor) return { name, status: 'pass', message: 'Not checked: core does not declare a zod range' }
   // Only what an importer resolves: a transitive zod (a tool's own copy) is not the project's to align.
