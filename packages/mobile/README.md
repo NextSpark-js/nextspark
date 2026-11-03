@@ -110,7 +110,7 @@ await tasksApi.create({ title: 'New Task' })
 ### Providers
 
 #### `AuthProvider`
-Authentication context provider. Wrap your app with this provider to enable authentication.
+Authentication context provider. Wrap your app with this provider to enable authentication. Must be rendered inside `QueryProvider`.
 
 **Props:**
 - `children: ReactNode` - Your app components

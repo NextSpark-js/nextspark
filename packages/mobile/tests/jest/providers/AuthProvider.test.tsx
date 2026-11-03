@@ -254,12 +254,14 @@ describe('AuthProvider', () => {
     })
 
     it('clears everything when the server answers with no session (stale Keychain after a reinstall)', async () => {
+      queryClient.setQueryData(['customers'], ['cached by the previous session'])
       ;(authApi.getSession as jest.Mock).mockResolvedValue(null)
       ;(apiClient.clearAuth as jest.Mock).mockResolvedValue(undefined)
 
       const { result } = renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
+      expect(queryClient.getQueryCache().getAll()).toHaveLength(0)
       expect(apiClient.clearAuth).toHaveBeenCalled()
       expect(teamsApi.getTeams).not.toHaveBeenCalled()
       expect(result.current.user).toBeNull()
@@ -267,12 +269,14 @@ describe('AuthProvider', () => {
     })
 
     it('clears everything on a 401', async () => {
+      queryClient.setQueryData(['customers'], ['cached by the previous session'])
       ;(authApi.getSession as jest.Mock).mockRejectedValue(new ApiError('Unauthorized', 401))
       ;(apiClient.clearAuth as jest.Mock).mockResolvedValue(undefined)
 
       const { result } = renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
+      expect(queryClient.getQueryCache().getAll()).toHaveLength(0)
       expect(apiClient.clearAuth).toHaveBeenCalled()
       expect(result.current.user).toBeNull()
       expect(result.current.team).toBeNull()
