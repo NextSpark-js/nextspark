@@ -96,6 +96,14 @@ Migrations follow a strict naming pattern:
 - Never change filenames after execution
 - Never delete executed migration files
 
+### Order of Execution
+
+`db:migrate` runs the migrations of all entities and folders together, ordered by the **number the file name starts with**, then by file name. The number is read as a number, not as text: `151_x.sql` runs before `1001_x.sql`. Text order would put `1001_` first. A file whose name does not start with digits runs after the numbered ones. The order never depends on which entity or folder the file is in, so a migration that needs a table from another entity needs a higher number than the migration that creates it.
+
+**Numbering a project migration:** list the numbers already used in `migrations/` and in every `entities/*/migrations/` (and in the plugins you enable), and take the next one up. The width does not matter (`151`, `0152` and `1001` order as 151, 152 and 1001), but keep one width within a project so file listings stay readable. Core and the project templates use three digits.
+
+The ledgers record an applied migration by file name, never by position, so a file added with a number lower than one already applied still runs (once, on the next `db:migrate`) and an applied one is never run again. Give a new migration a number above the highest applied one, because a migration that depends on later schema changes would run against the database as it is, not as the number implies.
+
 ---
 
 ## Migration File Format

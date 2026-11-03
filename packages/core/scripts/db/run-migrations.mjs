@@ -3,6 +3,7 @@ import path from "path";
 import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runAndRecordMigration, migrationFailure } from './migration-time-limit.mjs';
 import { getConfig } from '../build/registry/config.mjs';
 import { isSampleDataMigration, sampleDataPolicy } from './sample-data.mjs';
+import { compareMigrations } from './migration-order.mjs';
 import { setProjectEnv } from './ssl-config.mjs';
 import { describeDestination, rememberSecrets, scrub } from './destination.mjs';
 import { nestedSlugsSetting } from './nested-slugs.mjs';
@@ -127,7 +128,7 @@ async function runMigrations() {
     const migrationsDir = path.join(packageRoot, 'migrations');
     const files = fs.readdirSync(migrationsDir)
       .filter(f => f.endsWith('.sql'))
-      .sort();
+      .sort(compareMigrations);
     
     console.log(`Found ${files.length} migration file(s)\n`);
     
@@ -194,7 +195,7 @@ function collectContentMigrations(migrationsPath, sourceType, sourceName) {
 
   const files = fs.readdirSync(migrationsPath)
     .filter(f => f.endsWith('.sql'))
-    .sort();
+    .sort(compareMigrations);
 
   return files.map(file => ({
     type: 'content',
@@ -239,7 +240,7 @@ function collectEntityMigrations(baseDir, sourceType, sourceName, depth = 0) {
     if (fs.existsSync(migrationsPath)) {
       const files = fs.readdirSync(migrationsPath)
         .filter(f => f.endsWith('.sql'))
-        .sort();
+        .sort(compareMigrations);
 
       for (const file of files) {
         migrations.push({
@@ -592,9 +593,9 @@ async function runEntityMigrations() {
     // =========================================================================
     // PHASE 2B: SEPARATE SCHEMA vs SAMPLE_DATA AND SORT GLOBALLY
     // =========================================================================
-    // Sort by filename globally to handle inter-entity dependencies
-    // e.g., 001_* runs before 010_*, regardless of entity name
-    const sortByFilename = (a, b) => a.filename.localeCompare(b.filename);
+    // Sort by the number in the file name, then by name, globally to handle inter-entity dependencies
+    // e.g., 151_* runs before 1001_*, regardless of entity name (see migration-order.mjs)
+    const sortByFilename = compareMigrations;
 
     const contentSchema = allContentMigrations.filter(m => !m.isSampleData).sort(sortByFilename);
     const contentSampleData = allContentMigrations.filter(m => m.isSampleData && SAMPLE_DATA.apply).sort(sortByFilename);
