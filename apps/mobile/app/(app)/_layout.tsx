@@ -6,7 +6,6 @@ import { useEffect, useState, useMemo } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { Alert, useAuth } from '@nextsparkjs/mobile'
 import { Stack, router } from 'expo-router'
-import { useQueryClient } from '@tanstack/react-query'
 import {
   TopBar,
   BottomTabBar,
@@ -19,7 +18,6 @@ import notificationsData from '@/src/data/notifications.mock.json'
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading, logout } = useAuth()
-  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<TabKey>('home')
   const [moreSheetVisible, setMoreSheetVisible] = useState(false)
   const [createSheetVisible, setCreateSheetVisible] = useState(false)
@@ -110,8 +108,6 @@ export default function AppLayout() {
   }
 
   const handleTeamChange = () => {
-    // Invalidate all queries to refresh data for the new team
-    queryClient.invalidateQueries()
     // Navigate to home to show refreshed data
     setActiveTab('home')
     router.replace('/(app)' as const)

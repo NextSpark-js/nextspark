@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `selectTeam` resets the TanStack Query cache once the new team is persisted, so a screen shows its loading state until the new team's data arrives instead of the lists of the previous team. The app layout no longer calls `invalidateQueries()` on a team change (#387).
+
 ## [0.1.0-beta.200] - 2026-11-03
 
 ### Upgrading from 0.1.0-beta.199

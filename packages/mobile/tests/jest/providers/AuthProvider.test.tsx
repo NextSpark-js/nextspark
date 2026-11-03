@@ -337,6 +337,19 @@ describe('AuthProvider', () => {
     expect(result.current.team).toEqual(newTeam)
   })
 
+  it('drops the previous team\'s cached queries when the team changes', async () => {
+    const newTeam = { id: 'team-9', name: 'Nine', role: 'owner' }
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    queryClient.setQueryData(['tasks'], [{ id: 'old-team-task' }])
+
+    await act(async () => {
+      await result.current.selectTeam(newTeam)
+    })
+
+    expect(queryClient.getQueryData(['tasks'])).toBeUndefined()
+  })
+
   describe('login while another session is active', () => {
     const userA = { id: 'user-a', name: 'A', email: 'a@example.com' }
     const teamA = { id: 'team-a', name: 'Team A', role: 'member' }

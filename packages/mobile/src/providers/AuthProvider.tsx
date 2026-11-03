@@ -244,9 +244,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const selectTeam = useCallback(
     async (newTeam: Team) => {
-      await applyTeam(newTeam)
+      await persistTeam(newTeam)
+      // Reset (not invalidate): the previous team's lists must not be served while the new team's data loads.
+      // After persisting, so the refetch of mounted screens already carries the new team.
+      await queryClient.cancelQueries()
+      await queryClient.resetQueries()
+      setTeam(newTeam)
     },
-    [applyTeam]
+    [persistTeam, queryClient]
   )
 
   const value: AuthContextValue = {
