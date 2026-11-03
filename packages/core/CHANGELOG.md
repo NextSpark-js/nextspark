@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A project that sets its own `mobileNav.moreSheetItems` in `config/app.config.ts` should add `requiresPermission: 'settings.billing'` to its `billing` item.** The project's array replaces the one of core, so the default does not reach it, and the "More" sheet keeps listing Billing for a role that cannot open it until the item has the permission (#368).
 
+### Changed
+
+- **The upgrade notes of `0.1.0-beta.199` add the required `teamId` of `PatternsResolverService.getByIds` and the second argument of `revalidateTag` on Next.js 16** (#374).
+
 ### Fixed
 
 - **The public pages carry a canonical link and Open Graph tags.** In a generated starter, `/`, `/support`, `/docs` and `/blog` rendered no `<link rel="canonical">`, no `og:title` and no `og:description`, and `/` and `/support` shared the title `App`. The public layout now sets `metadataBase` from the app URL (`resolveAppUrl`) and the Open Graph defaults, the starter's home and support pages and core's docs and entity archive pages declare their own title and description through the new `pageMetadata` helper (`@nextsparkjs/core/lib/seo/page-metadata`), which builds the canonical and `og:url` as the absolute URL the sitemap lists (app URL, Next `basePath`, path), and `scripts/seo/verify-public-metadata.mjs` checks the four pages of a served starter in the generated-projects job. The suffix of the public titles is now the name of the app (`Posts | My App`, as the auth pages already do): the layout template was `%s | App` and the entity archive and item pages added the name themselves, which gave `Posts | My App | App`. A `seoTitle` of an item is used as it is, with no suffix (#365).
@@ -242,6 +246,8 @@ In the order that can stop a build or a start first.
 - A project with a packaged plugin (an `@scope/plugin-*` package in `plugins`) that is missing from `transpilePackages` in `next.config.*` now gets a `nextspark prepare` error, `NS_PLUGIN_TRANSPILE_MISSING`, instead of a build error. Add the package to `transpilePackages`, as the message shows.
 - An entity you renamed from `campaign_members` to `campaign-members` to get past `NS_CONTRACTS_BAD_SLUG` can stay as it is. To rename the other underscore slugs of a project, `nextspark migrate --rename-entity-slugs` does it and prints the permission keys, API key scopes (SQL to run yourself), URLs and translations to update; see the upgrade guide, "Entity slugs with an underscore".
 - A job that exports `DATABASE_URL` (or `MIGRATE_DATABASE_URL`) while a project `.env` is present now migrates the exported database, not the `.env` one. Pass `--no-env-file` to `pnpm db:migrate` to ignore the `.env` altogether.
+- **`PatternsResolverService.getByIds(ids, teamId)` takes the team as a required second argument** (#344). Pattern references are scoped to the team of the page, so a call with one argument no longer type-checks (`TS2554`). Pass the `teamId` of the page: `PatternsResolverService.getByIds(ids, page.teamId)`.
+- **`revalidateTag(tag)` with one argument fails `tsc` on Next.js 16** (`TS2554`): it now takes a cache-life profile as its second argument, so call `revalidateTag(tag, { expire: 0 })` to expire the tag immediately, as core does. With `typescript.ignoreBuildErrors: true` (which `nextspark migrate` reports as `ignore-build-errors`) `next build` stays green and the error shows only in `tsc`. (#374)
 - `@nextsparkjs/plugin-amplitude` 0.1.0-beta.199 declares `@nextsparkjs/core >=0.1.0-beta.199` (it imports `lib/consent`): update core before the plugin.
 
 ### Added
