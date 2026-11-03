@@ -37,7 +37,7 @@ test('no core, template or dev app migration changes position against ordering t
       else if (entry.name.endsWith('.sql') && path.basename(dir) === 'migrations') found.push(entry.name)
     }
   }
-  for (const dir of ['packages/core/migrations', 'packages/core/templates', 'apps/dev']) {
+  for (const dir of ['packages/core/migrations', 'packages/core/templates', 'apps/dev', 'plugins']) {
     if (fs.existsSync(path.join(repository, dir))) walk(path.join(repository, dir))
   }
   const names = [...new Set(found)]

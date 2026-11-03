@@ -12,6 +12,7 @@
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { compareMigrations } from '../../../db/migration-order.mjs'
 
 const IDENT = '(?:"([^"]+)"|([A-Za-z_][\\w$]*))'
 const CONSTRAINT_WORDS = /^(?:constraint|primary|foreign|unique|check|exclude|like)\b/i
@@ -88,7 +89,7 @@ export function readColumnTypes(table, directories) {
   const columns = {}
   for (const directory of directories) {
     if (!existsSync(directory)) continue
-    for (const name of readdirSync(directory).filter(entry => entry.endsWith('.sql')).sort()) {
+    for (const name of readdirSync(directory).filter(entry => entry.endsWith('.sql')).sort(compareMigrations)) {
       Object.assign(columns, columnsInSql(readFileSync(join(directory, name), 'utf8'), table))
     }
   }
