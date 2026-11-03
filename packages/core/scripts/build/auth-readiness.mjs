@@ -27,6 +27,7 @@
 
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { findProjectRoot } from './registry/project-mode.mjs'
@@ -158,6 +159,15 @@ async function main() {
     fail('AUTH_RUNTIME_ONLY_UNSUPPORTED', 'NEXTSPARK_AUTH_RUNTIME_ONLY contains an unsupported entry.', [
       `Use a comma-separated list of: ${RUNTIME_ONLY_PROVIDERS.join(', ')} (for example NEXTSPARK_AUTH_RUNTIME_ONLY=email,google).`,
     ])
+  }
+
+  // Warn only: the SMTP provider loads nodemailer on the first send, so the build passes and the first email fails (#373)
+  if (env.EMAIL_PROVIDER === 'smtp') {
+    try {
+      createRequire(join(projectRoot, 'package.json')).resolve('nodemailer')
+    } catch {
+      console.log('⚠️ EMAIL_PROVIDER=smtp needs the nodemailer package, which is not installed: the first email will fail with 503 EMAIL_SEND_FAILED. Run: pnpm add nodemailer')
+    }
   }
 
   let evaluator

@@ -394,6 +394,25 @@ test('a project without app.config.ts is checked against the core defaults when 
   }
 })
 
+test('EMAIL_PROVIDER=smtp without nodemailer installed warns at build; with it installed it does not (#373)', async () => {
+  const project = await fixture(methods(['email-otp']))
+  const smtp = { EMAIL_PROVIDER: 'smtp', SMTP_HOST: 'smtp.example.test', EMAIL_FROM: 'auth@example.test' }
+  try {
+    const missing = run(project.root, ['prepare', '--production'], smtp)
+    assert.equal(missing.status, 0, missing.output)
+    assert.match(missing.output, /needs the nodemailer package[^\n]*pnpm add nodemailer/)
+
+    await mkdir(join(project.root, 'node_modules/nodemailer'), { recursive: true })
+    await writeFile(join(project.root, 'node_modules/nodemailer/package.json'), JSON.stringify({ name: 'nodemailer', main: 'index.js' }))
+    await writeFile(join(project.root, 'node_modules/nodemailer/index.js'), 'module.exports = {}\n')
+    const installed = run(project.root, ['prepare', '--production'], smtp)
+    assert.equal(installed.status, 0, installed.output)
+    assert.doesNotMatch(installed.output, /nodemailer/)
+  } finally {
+    await project.cleanup()
+  }
+})
+
 test('a core whose dist lacks the evaluator, or its exports, fails closed', async () => {
   const project = await fixture(methods(['google']))
   const evaluator = join(project.root, 'node_modules/@nextsparkjs/core/dist/lib/auth/readiness.js')

@@ -511,6 +511,7 @@ test('updates the @nextsparkjs pins of a generated project and leaves the rest o
 
   assert.equal(result.status, 0, result.output)
   assert.match(result.stdout, /Update Complete/)
+  assert.match(result.stdout, /Commit the update, with core\.version\.json/)
   assert.match(result.stdout, new RegExp(`Starting from commit ${head.slice(0, 12)}[^\\n]*\\n {5}git reset --hard ${head.slice(0, 12)} && git clean -fd && rm -rf node_modules && pnpm install --frozen-lockfile\\n[\\s\\S]*\\[2/5\\]`))
 
   const manifestAfter = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))

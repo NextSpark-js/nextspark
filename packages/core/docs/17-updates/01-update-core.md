@@ -229,7 +229,7 @@ Registry lookups go through `pnpm view`, so they use the registry your project's
     1. Review: git status && git diff
     2. Test: pnpm build && pnpm dev
     3. Migrate: pnpm db:migrate
-    4. Commit the update
+    4. Commit the update, with core.version.json
 
   Roll back: git reset --hard 1a2b3c4d5e6f && git clean -fd && rm -rf node_modules && pnpm install --frozen-lockfile
 ```
@@ -293,7 +293,7 @@ From the target onward, later updates raise these themselves, and no manual step
 }
 ```
 
-A project that was never updated has none. It is a record, not what `update-core` goes by: the installed version is always `pnpm update-core --current`, and whether there is anything to update is decided from `package.json` and `node_modules`.
+A project that was never updated has none. `update-core` writes it but does not commit it: the first update leaves it untracked, so commit it with the rest of the update. It is a record, not what `update-core` goes by: the installed version is always `pnpm update-core --current`, and whether there is anything to update is decided from `package.json` and `node_modules`.
 
 ---
 

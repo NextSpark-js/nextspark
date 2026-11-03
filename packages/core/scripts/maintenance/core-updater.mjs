@@ -1251,7 +1251,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     out('\n  Next steps:')
     const nextSteps = ['Review: git status && git diff', 'Test: pnpm build && pnpm dev']
     if (newMigrations.length > 0) nextSteps.push('Migrate: pnpm db:migrate')
-    nextSteps.push(branch ? `Commit on ${branch} and merge it` : 'Commit the update')
+    nextSteps.push(branch ? `Commit on ${branch}, with ${VERSION_FILE}, and merge it` : `Commit the update, with ${VERSION_FILE}`)
     nextSteps.forEach((step, index) => out(`    ${index + 1}. ${step}`))
     out('')
     out(`  Roll back: ${rollback}`)
