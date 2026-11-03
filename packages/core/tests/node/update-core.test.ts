@@ -82,6 +82,7 @@ if (args.filter((arg) => arg !== '--frozen-lockfile').join(' ') !== 'install') {
   process.exit(99)
 }
 fs.appendFileSync(process.env.FAKE_PNPM_LOG + '.cwd', fs.realpathSync(process.cwd()) + '\\n')
+if (state.snapshot) fs.appendFileSync(process.env.FAKE_PNPM_LOG + '.snapshots', fs.readFileSync(path.join(process.cwd(), state.snapshot), 'utf8') + '\\n===\\n')
 
 // Like pnpm, the nearest pnpm-workspace.yaml up from where it runs makes the workspace
 const beta = (version) => Number(version.split('.').pop())
@@ -218,6 +219,8 @@ interface FakeState {
   installLeavesChildMs?: number
   syncExit?: number
   newMigrations?: string[]
+  /** A file, relative to where the install runs, whose content every install records before it runs */
+  snapshot?: string
   /** What the installed @nextsparkjs/core declares besides its name and version: its dependencies, say */
   coreManifest?: Record<string, unknown>
 }
@@ -336,6 +339,7 @@ function fakePnpm(state: FakeState = {}) {
     syncExit: state.syncExit ?? 0,
     newMigrations: state.newMigrations ?? [],
     coreManifest: state.coreManifest ?? {},
+    snapshot: state.snapshot ?? '',
   }))
   fs.writeFileSync(logPath, '')
   return {
@@ -343,6 +347,8 @@ function fakePnpm(state: FakeState = {}) {
     logPath,
     env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, FAKE_PNPM_STATE: statePath, FAKE_PNPM_LOG: logPath },
     calls: () => fs.readFileSync(logPath, 'utf8').split('\n').filter(Boolean),
+    /** What `snapshot` held at the start of each install */
+    snapshots: () => (fs.existsSync(`${logPath}.snapshots`) ? fs.readFileSync(`${logPath}.snapshots`, 'utf8') : '').split('\n===\n').filter(Boolean),
     /** The directory each install ran in */
     installDirs: () => (fs.existsSync(`${logPath}.cwd`) ? fs.readFileSync(`${logPath}.cwd`, 'utf8') : '').split('\n').filter(Boolean),
     remove: () => fs.rmSync(bin, { recursive: true, force: true }),
@@ -360,6 +366,7 @@ function runUpdateCore(root: string, args: string[], state: FakeState = {}) {
       output: `${result.stdout}${result.stderr}`,
       calls: pnpm.calls(),
       installDirs: pnpm.installDirs(),
+      snapshots: pnpm.snapshots(),
     }
   } finally {
     pnpm.remove()
@@ -1466,4 +1473,70 @@ test('prints nothing about dependencies when the project is aligned with the new
 
   assert.equal(result.status, 0, result.output)
   assert.doesNotMatch(result.stdout, /below what|pnpm add|Could not compare/)
+})
+
+// #374: the floors are raised in the other packages of the workspace too, before the install, so the lockfile keeps one copy
+
+const CORE_WITH_NEXT_PEER = { dependencies: { 'better-auth': '~1.7.7', zod: '^4.5.4' }, peerDependencies: { next: '~16.4.2', react: '>=18' } }
+const PLUGIN_FILE = 'plugins/foo/package.json'
+const PLUGIN = {
+  name: 'acme-foo',
+  dependencies: { zod: '4.3.6', 'better-auth': 'workspace:^' },
+  peerDependencies: { next: '~16.3.8', react: '>=16' },
+}
+// Four-space indent and no final newline: the format the file had is the one it keeps
+const PLUGIN_TEXT = JSON.stringify(PLUGIN, null, 4)
+
+function workspaceWithPlugin(t: Parameters<typeof createProject>[0]) {
+  return createProject(t, {
+    pins: { ...ALIGNED, next: '~16.4.2' },
+    files: { 'pnpm-workspace.yaml': "packages:\n  - 'plugins/*'\n", [PLUGIN_FILE]: PLUGIN_TEXT },
+  })
+}
+
+test('raises next and zod in the manifests of the other workspace packages, keeping their format, before the install', (t) => {
+  const root = workspaceWithPlugin(t)
+
+  const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER, snapshot: PLUGIN_FILE })
+
+  assert.equal(result.status, 0, result.output)
+  const raised = { ...PLUGIN, dependencies: { ...PLUGIN.dependencies, zod: '^4.5.4' }, peerDependencies: { next: '~16.4.2', react: '>=16' } }
+  // zod in dependencies is raised, next as a peer moves to core's range, a broad peer and a workspace: spec stay
+  assert.equal(fs.readFileSync(path.join(root, PLUGIN_FILE), 'utf8'), JSON.stringify(raised, null, 4))
+  assert.match(result.stdout, /Raising the dependencies below[^\n]*\n {3}plugins\/foo\/package\.json:\n {5}next ~16\.3\.8 -> ~16\.4\.2 \(peerDependencies\)\n {5}zod 4\.3\.6 -> \^4\.5\.4 \(dependencies\)\n/)
+  // The second install sees the new ranges; the first one, the old ones
+  assert.deepEqual(result.snapshots, [PLUGIN_TEXT, JSON.stringify(raised, null, 4)])
+  assert.ok(result.calls.lastIndexOf('install') < result.calls.indexOf('nextspark prepare'), result.calls.join('\n'))
+  // the workspace: spec is listed with its explanation and was not rewritten
+  assert.match(result.stdout, /not a semver range[^\n]*\n {4}plugins\/foo\/package\.json: better-auth workspace:\^ in dependencies\n/)
+})
+
+test('--no-dependency-floors writes no workspace manifest and lists the pnpm add per package', (t) => {
+  const root = workspaceWithPlugin(t)
+
+  const result = runUpdateCore(root, ['--version', TO, '--no-dependency-floors'], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
+
+  assert.equal(result.status, 0, result.output)
+  assert.equal(fs.readFileSync(path.join(root, PLUGIN_FILE), 'utf8'), PLUGIN_TEXT)
+  assert.match(result.stdout, /^ {4}plugins\/foo\/package\.json: zod 4\.3\.6 in dependencies \(core needs \^4\.5\.4\)$/m)
+  assert.match(result.stdout, /^ {4}plugins\/foo\/package\.json: next ~16\.3\.8 in peerDependencies \(core needs ~16\.4\.2\)$/m)
+  assert.match(result.stdout, /^ {4}pnpm add --filter acme-foo 'zod@\^4\.5\.4'$/m)
+  assert.match(result.stdout, /^ {4}pnpm add --filter acme-foo --save-peer 'next@~16\.4\.2'$/m)
+  assert.doesNotMatch(result.stdout, /react/)
+  assert.equal(result.calls.filter((call) => call === 'install').length, 1)
+})
+
+test('a workspace package that is aligned, with a broad peer range, is not touched and not listed', (t) => {
+  const root = createProject(t, {
+    pins: { ...ALIGNED, next: '~16.4.2' },
+    files: { 'pnpm-workspace.yaml': "packages:\n  - 'plugins/*'\n", [PLUGIN_FILE]: JSON.stringify({ name: 'acme-foo', dependencies: { zod: '^4.6.0' }, peerDependencies: { next: '>=16', zod: '*' } }, null, 2) },
+  })
+  const before = fs.readFileSync(path.join(root, PLUGIN_FILE), 'utf8')
+
+  const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
+
+  assert.equal(result.status, 0, result.output)
+  assert.equal(fs.readFileSync(path.join(root, PLUGIN_FILE), 'utf8'), before)
+  assert.doesNotMatch(result.stdout, /plugins\/foo|below what/)
+  assert.equal(result.calls.filter((call) => call === 'install').length, 1)
 })

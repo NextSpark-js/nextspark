@@ -57,3 +57,43 @@ export function addCommands(below) {
     ...(of('optionalDependencies').length > 0 ? [line(of('optionalDependencies'), ' -O')] : []),
   ]
 }
+
+/**
+ * The same floors (floorsToRaise' packages) in a manifest of another package of the workspace, in all four
+ * dependency fields: `below` as `{ name, field, declared, required }`, and `protocols` for the ones whose spec is not
+ * a semver range (`workspace:`, `link:`, `file:`, `catalog:`, a tag), which update-core never rewrites. A dependency is
+ * below when its lowest version is lower than the lowest one of core's range; a peer dependency only when core's lowest
+ * version is outside the range it declares, so `>=16` stays and `~16.3.8` moves to the range core declares.
+ */
+export function workspaceFloors(manifest, coreManifest, semver) {
+  const below = []
+  const protocols = []
+  for (const field of [...PROJECT_FIELDS, 'peerDependencies']) {
+    for (const [name, declared] of Object.entries(manifest?.[field] ?? {})) {
+      if (name.startsWith(SCOPE) || floorsToRaise([{ name }], coreManifest).length === 0) continue
+      const ranges = CORE_FIELDS.map((coreField) => coreManifest?.[coreField]?.[name]).filter((range) => range && semver.validRange(range))
+      if (ranges.length === 0) continue
+      if (!semver.validRange(declared)) {
+        protocols.push({ name, field, declared })
+        continue
+      }
+      const required = ranges.find((range) => {
+        const lowest = semver.minVersion(range)
+        return field === 'peerDependencies' ? !semver.satisfies(lowest, declared) : semver.lt(semver.minVersion(declared), lowest)
+      })
+      if (required) below.push({ name, field, declared, required })
+    }
+  }
+  const byName = (a, b) => a.name.localeCompare(b.name) || a.field.localeCompare(b.field)
+  return { below: below.sort(byName), protocols: protocols.sort(byName) }
+}
+
+/** The `pnpm add` lines that move `below` in one workspace package: `target` is `--filter <name>`, or `-w` for the workspace root. */
+export function workspaceAddCommands(target, below) {
+  const flags = { dependencies: '', devDependencies: ' -D', optionalDependencies: ' -O', peerDependencies: ' --save-peer' }
+  const word = ({ name, required }) => `'${`${name}@${required}`.replace(/'/g, "'\\''")}'`
+  return Object.entries(flags)
+    .map(([field, flag]) => [below.filter((entry) => entry.field === field), flag])
+    .filter(([entries]) => entries.length > 0)
+    .map(([entries, flag]) => `pnpm add ${target}${flag} ${entries.map(word).join(' ')}`)
+}

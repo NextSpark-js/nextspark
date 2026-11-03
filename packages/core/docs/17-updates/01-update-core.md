@@ -44,6 +44,7 @@ pnpm install
 | What | How |
 |------|-----|
 | `package.json` | The versions of the `@nextsparkjs` packages, all set to exactly the target. A `^` or `~` range is replaced by the exact version: with a range, `pnpm install` takes the newest published version the range allows, which can be newer than the target. Then, once the new core is installed, the dependencies the project declares below core's *peer* dependencies (`next`, `react`, `react-dom` and the optional ones it declares) and below `better-auth` and `zod`, which cannot sit next to a second copy, are set to core's range (the field it was declared in is kept) and installed again, before `nextspark prepare` runs. Every other dependency below core's range is only listed; `--no-dependency-floors` lists all of them (see [After a Successful Update](#after-a-successful-update)). |
+| `package.json` of the other packages of the workspace | The directories `pnpm-workspace.yaml` lists (`plugins/*`, `mobile`, ...) and the workspace root: `next`, `react`, `react-dom` and the optional peers core declares, `better-auth` and `zod` are raised to the same range as in the project, in `dependencies`, `devDependencies`, `optionalDependencies` and `peerDependencies`, in the same second install, so the lockfile ends with one copy. A peer range that already allows core's version (`>=16`) is kept; `~16.3.8` moves to core's range. The indentation and the final newline of each file are kept, and the run says what changed in each one. A spec that is not a semver range (`workspace:`, `link:`, `file:`, `catalog:`, a tag) is listed, not rewritten. |
 | `pnpm-lock.yaml`, `node_modules/` | `pnpm install`, run where `pnpm-lock.yaml` is |
 | `src/app/`, `.nextspark/` | `nextspark prepare`, which regenerates the host and the registries from the new core (both are git-ignored) |
 | `.next/` | Removed, so the next build starts clean |
@@ -253,6 +254,15 @@ With `--no-dependency-floors` the update raises none of them, and the run ends b
     zod ^4.1.5 (core needs ^4.5.4)
   Move them, from this directory:
     pnpm add 'better-auth@~1.7.7' 'zod@^4.5.4'
+```
+
+Without the option, the same lines are printed for the other packages of the workspace, one `pnpm add` per package (`--filter <name>`, or `-w` for the workspace root; `--save-peer` for a peer dependency):
+
+```
+  Not moved: these dependencies in other packages of the workspace are below what @nextsparkjs/core 0.1.0-beta.200 needs, ...:
+    plugins/foo/package.json: next ~16.3.8 in peerDependencies (core needs ~16.4.2)
+  Move them, from this directory:
+    pnpm add --filter acme-foo --save-peer 'next@~16.4.2'
 ```
 
 The comparison is between the lowest version your declared range allows and the lowest version core's `dependencies` and `peerDependencies` range allows. Nothing is printed when no dependency is below. Until you move them, the lockfile holds two copies, and code of yours that imports the package gets the older one while core uses its own.
