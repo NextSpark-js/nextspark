@@ -99,7 +99,7 @@ describe.each([
   })
 
   it('the wrapper’s 429', async () => {
-    const route = withRateLimitTier(async () => NextResponse.json({ ok: true }), 'auth')
+    const route = withRateLimitTier(async () => NextResponse.json({ ok: true }), 'authIdentifier')
     const first = request(origin)
     const ip = first.headers.get('x-forwarded-for')!
     let response = await route(first)
@@ -240,7 +240,7 @@ describe('the admin and developer areas answer CORS only to the app’s own orig
     ['a listed origin', LISTED, NONE],
   ])('%s: the wrapper’s 429 and the origin check’s 403', async (_label, origin, expected) => {
     const path = '/api/superadmin/users'
-    const route = withRateLimitTier(async () => NextResponse.json({ ok: true }), 'auth')
+    const route = withRateLimitTier(async () => NextResponse.json({ ok: true }), 'authIdentifier')
     const first = request(origin, { path })
     const ip = first.headers.get('x-forwarded-for')!
     let response = await route(first)

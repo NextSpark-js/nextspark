@@ -174,7 +174,7 @@ describe('call sites', () => {
     })
 
   it('rate limits count per configured address', async () => {
-    const route = withRateLimitTier(async () => NextResponse.json({ ok: true }), 'auth')
+    const route = withRateLimitTier(async () => NextResponse.json({ ok: true }), 'authIdentifier')
     const statuses: number[] = []
     for (let i = 0; i < 6; i++) {
       const r = request('203.0.113.10')

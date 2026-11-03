@@ -50,14 +50,14 @@ describe('withRateLimitTier', () => {
   })
 
   it('counts requests from one address in one bucket, whatever x-api-key each one carries', async () => {
-    const route = withRateLimitTier(async () => NextResponse.json({ ok: true }), 'auth')
+    const route = withRateLimitTier(async () => NextResponse.json({ ok: true }), 'authIdentifier')
     const statuses: number[] = []
     for (let i = 0; i < 7; i++) {
       const key = `sk_test_${String(i).repeat(64).slice(0, 64)}`
       const request = new NextRequest('https://app.example.com/api/v1/x', { headers: { 'x-api-key': key, 'x-forwarded-for': '198.51.100.7' } })
       statuses.push((await route(request)).status)
     }
-    // The auth tier allows 5 per window
+    // The authIdentifier tier allows 5 per window, as the auth tier did
     expect(statuses).toEqual([200, 200, 200, 200, 200, 429, 429])
 
     // Another address has its own bucket
