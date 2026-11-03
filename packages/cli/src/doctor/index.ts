@@ -18,6 +18,7 @@ import { checkRlsRuntime } from './checks/rls-runtime.js'
 import { checkImports } from './checks/imports.js'
 import { checkDuplicateDependencies, checkZodBelowCore } from './checks/lockfile.js'
 import { checkQueryClients } from './checks/query-client.js'
+import { checkHoisting } from './checks/hoisting.js'
 
 /**
  * Result of a health check
@@ -115,6 +116,7 @@ export async function runHealthCheck(): Promise<HealthCheckResult[]> {
     { name: 'Duplicates', fn: checkDuplicateDependencies },
     { name: 'Zod', fn: checkZodBelowCore },
     { name: 'Query caches', fn: checkQueryClients },
+    { name: 'Hoisting', fn: () => checkHoisting() },
   ]
 
   for (const check of checks) {

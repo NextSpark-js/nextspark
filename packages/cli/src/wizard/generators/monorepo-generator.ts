@@ -9,7 +9,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import type { WizardConfig } from '../types.js'
-import { setPackageEntries } from './workspace-yaml.js'
+import { addHoistSettings, HOIST_PATTERNS, setPackageEntries } from './workspace-yaml.js'
 import { errorWithLines } from '../../utils/shown-path.js'
 import { extractLocalNextSparkRefs, rehomeLocalRefSpec, type LocalNextSparkRef } from './local-package-refs.js'
 import { CONTRACTS_PACKAGE_NAME, writeContractsPackage } from './contracts-package.js'
@@ -301,7 +301,7 @@ export async function createRootPackageJson(targetDir: string, config: WizardCon
 /**
  * Create the pnpm-workspace.yaml file
  */
-async function createPnpmWorkspace(targetDir: string): Promise<void> {
+export async function createPnpmWorkspace(targetDir: string): Promise<void> {
   const entries = [
     DIRS.WEB,
     DIRS.MOBILE,
@@ -320,18 +320,16 @@ async function createPnpmWorkspace(targetDir: string): Promise<void> {
     ? await fs.readFile(workspacePath, 'utf-8')
     : ''
 
-  await fs.writeFile(workspacePath, setPackageEntries(existing, entries))
+  // pnpm 11 reads the hoisting only from here (.npmrc carries it too, for pnpm 10)
+  await fs.writeFile(workspacePath, addHoistSettings(setPackageEntries(existing, entries)))
 }
 
 /**
  * Create the root .npmrc file for proper hoisting
  */
-async function createNpmrc(targetDir: string): Promise<void> {
+export async function createNpmrc(targetDir: string): Promise<void> {
   const npmrcContent = `# Enable proper hoisting for monorepo
-public-hoist-pattern[]=*@nextsparkjs/*
-public-hoist-pattern[]=*expo*
-public-hoist-pattern[]=*react-native*
-shamefully-hoist=true
+${HOIST_PATTERNS.map(pattern => `public-hoist-pattern[]=${pattern}\n`).join('')}shamefully-hoist=true
 `
   await fs.writeFile(path.join(targetDir, FILES.NPMRC), npmrcContent)
 }

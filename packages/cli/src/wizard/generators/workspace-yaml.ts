@@ -197,3 +197,26 @@ export function setPackageEntries(content: string, entries: string[]): string {
 
   return [...block, '', ...lines].join('\n')
 }
+
+/**
+ * The hoisting a web + mobile monorepo needs so Metro resolves react-native-css-interop from the mobile app.
+ * pnpm 10 reads it from `.npmrc`; pnpm 11 and later read it only from `pnpm-workspace.yaml`, so both files carry it.
+ */
+export const HOIST_PATTERNS = ['*@nextsparkjs/*', '*expo*', '*react-native*']
+
+/** Whether the file declares `key` at the top level, whatever its value. */
+export function hasTopLevelKey(content: string, key: string): boolean {
+  return content.split('\n').some(line => line.startsWith(`${key}:`))
+}
+
+/**
+ * Add `shamefullyHoist` and `publicHoistPattern` to the file, leaving everything else in place. A key the file
+ * already declares is the user's and is not touched.
+ */
+export function addHoistSettings(content: string): string {
+  const added: string[] = []
+  if (!hasTopLevelKey(content, 'shamefullyHoist')) added.push('shamefullyHoist: true')
+  if (!hasTopLevelKey(content, 'publicHoistPattern')) added.push('publicHoistPattern:', ...HOIST_PATTERNS.map(pattern => `  - '${pattern}'`))
+  if (added.length === 0) return content
+  return `${content.replace(/\s*$/, '')}\n\n${added.join('\n')}\n`
+}
