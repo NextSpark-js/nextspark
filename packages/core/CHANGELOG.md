@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Upgrading
+## [0.1.0-beta.200] - 2026-11-03
+
+### Upgrading from 0.1.0-beta.199
 
 - **The `auth` rate limit tier now defaults to 60 requests per 15 minutes per address (it was 5) and there is a new `authIdentifier` tier, 5 per 15 minutes per email.** A project that set its own `rateLimit.tiers.auth` keeps its numbers, which now apply only to the routes listed in the Changed entry below, so it can usually raise them or drop the override; set `authIdentifier` the same way if 5 per email is too tight (#364).
 - **A project that sets its own `mobileNav.moreSheetItems` in `config/app.config.ts` should add `requiresPermission: 'settings.billing'` to its `billing` item.** The project's array replaces the one of core, so the default does not reach it, and the "More" sheet keeps listing Billing for a role that cannot open it until the item has the permission (#368).

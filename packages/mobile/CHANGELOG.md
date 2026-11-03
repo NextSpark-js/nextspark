@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.200] - 2026-11-03
+
 ### Fixed
 
 - The `mobile/` template's `jest.config.js` maps `@nextsparkjs/mobile` and its subpaths to the built files, so Jest in a generated app can import the package without extra configuration. The package exports only an `import` condition, which Jest's `require` resolution cannot use, and a test that imported a module using the package failed before any mock applied. The package's `exports` are unchanged, so Metro resolves the same files. A project generated earlier adds the two `moduleNameMapper` entries from the template (#381).
