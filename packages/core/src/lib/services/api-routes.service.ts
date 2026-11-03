@@ -23,6 +23,24 @@ import {
   API_ROUTES_SUMMARY,
   type ApiRouteEntry
 } from '@nextsparkjs/registries/route-handlers'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
+import { enabledRouteMethods } from '../entities/api-access'
+import type { EntityConfig } from '../entities/types'
+
+/**
+ * The entity routes the API explorer lists. The registry metadata lists the full collection and item routes of
+ * every entity; an `access.api` object (#376) turns operations off, so each route keeps only its enabled methods
+ * and a route with none left is dropped.
+ */
+function entityRoutes(): ApiRouteEntry[] {
+  const configs = Object.values(ENTITY_REGISTRY).map(entry => entry.config as unknown as Partial<EntityConfig>)
+  return API_ROUTES_METADATA.entities.flatMap(route => {
+    const config = configs.find(candidate => candidate?.slug === route.source)
+    if (!config) return [route]
+    const methods = enabledRouteMethods(config, route.path.endsWith('/[id]') ? 'item' : 'collection', route.methods)
+    return methods.length ? [{ ...route, methods }] : []
+  })
+}
 
 // Re-export type for convenience
 export type { ApiRouteEntry } from '@nextsparkjs/registries/route-handlers'
@@ -53,7 +71,7 @@ export class ApiRoutesService {
   static getAllRoutes(): ApiRouteEntry[] {
     return [
       ...API_ROUTES_METADATA.core,
-      ...API_ROUTES_METADATA.entities,
+      ...entityRoutes(),
       ...API_ROUTES_METADATA.theme,
       ...API_ROUTES_METADATA.plugins
     ]
@@ -73,7 +91,7 @@ export class ApiRoutesService {
       case 'core':
         return API_ROUTES_METADATA.core
       case 'entity':
-        return API_ROUTES_METADATA.entities
+        return entityRoutes()
       case 'theme':
         return API_ROUTES_METADATA.theme
       case 'plugin':
@@ -98,7 +116,7 @@ export class ApiRoutesService {
    * @returns Array of entity route entries
    */
   static getEntityRoutes(): ApiRouteEntry[] {
-    return API_ROUTES_METADATA.entities
+    return entityRoutes()
   }
 
   /**
@@ -262,7 +280,7 @@ export class ApiRoutesService {
   static getRoutesGroupedByCategory(): Record<RouteCategory, ApiRouteEntry[]> {
     return {
       core: API_ROUTES_METADATA.core,
-      entity: API_ROUTES_METADATA.entities,
+      entity: entityRoutes(),
       theme: API_ROUTES_METADATA.theme,
       plugin: API_ROUTES_METADATA.plugins
     }

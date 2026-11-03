@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateEntityAPI, APIGeneratorOptions } from './api-generator'
 import type { EntityConfig } from './types'
+import { isApiOperationEnabled, allowedMethods as enabledMethods } from './api-access'
 import { getEntityConfig } from './registry'
 import { rateLimit } from '../rate-limit'
 import { validateAPIKey } from '../auth/api-keys'
@@ -140,6 +141,14 @@ function wrapExternalHandler(
         return createErrorResponse(405, 'Method not allowed', {
           allowedMethods
         })
+      }
+
+      // An `access.api` object can turn this operation off (#376): 405 + Allow, before auth and the base handler
+      if (!isApiOperationEnabled(entityConfig, options.action)) {
+        const enabled = [...new Set([...enabledMethods(entityConfig, 'collection'), ...enabledMethods(entityConfig, 'item')])]
+        const response = createErrorResponse(405, 'Operation not supported for this entity', { allowedMethods: enabled })
+        response.headers.set('Allow', enabled.join(', '))
+        return response
       }
 
       // Rate limiting
@@ -445,6 +454,13 @@ export function generateOpenAPISpec(entityName: string) {
         }
       }
     }
+  }
+
+  // Only the operations the entity enables are documented (#376)
+  for (const [path, route] of [[basePath, 'collection'], [`${basePath}/{id}`, 'item']] as const) {
+    const enabled = new Set(enabledMethods(entityConfig, route))
+    for (const method of Object.keys(paths[path])) if (!enabled.has(method.toUpperCase())) delete paths[path][method]
+    if (Object.keys(paths[path]).length === 0) delete paths[path]
   }
 
   return {

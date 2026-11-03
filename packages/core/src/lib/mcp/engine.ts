@@ -21,6 +21,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { JSONRPCMessageSchema, type JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 import * as z from 'zod'
 import type { EntityConfig } from '../entities/types'
+import { isApiOperationEnabled } from '../entities/api-access'
 import { StatelessJsonRpcTransport } from './transport'
 import { generateEntityTools, normalizeDateFields } from './tool-generator'
 import { buildEntitySchemas } from './schema-builder'
@@ -111,8 +112,11 @@ export function createMcpEngine(
     const override = overrides[slug]
     if (override?.exclude) continue
 
+    // `access.api` as an object serves only the operations it enables (#376): list/get are reads, the rest map 1:1
     const operations = defaultOperations.filter(
-      (op) => !override?.excludeOperations?.includes(op)
+      (op) =>
+        !override?.excludeOperations?.includes(op) &&
+        isApiOperationEnabled(entityConfig, op === 'list' || op === 'get' ? 'read' : op)
     )
     if (!operations.length) continue
 

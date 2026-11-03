@@ -184,7 +184,7 @@ solo aplican si exponés la Data API / PostgREST de Supabase directamente (ver
 
 ¿Tiene API externa con API keys?
 
-**Tipo:** `boolean`
+**Tipo:** `boolean | { read?: boolean; create?: boolean; update?: boolean; delete?: boolean }`
 
 **Comportamiento:**
 - `true`: Endpoints disponibles con autenticación vía API key o sesión
@@ -198,6 +198,38 @@ solo aplican si exponés la Data API / PostgREST de Supabase directamente (ver
   access: {
     api: true  // API externa disponible
   }
+}
+```
+
+#### Acceso por operación
+
+Un objeto sirve solo las operaciones de la API genérica que habilita, igual para sesión y para API key. **Una clave que falta vale `false`** (fail-closed: quien usa el objeto está acotando) y una clave desconocida es un error de configuración que falla `nextspark prepare` y el registro de la entidad.
+
+| Método | Operación |
+|---|---|
+| `GET` (lista, detalle, búsqueda, filtros, `distinct`, `ids`, metadata, `?children=`) | `read` |
+| `POST` | `create` |
+| `PATCH` / `PUT` | `update` |
+| `DELETE` | `delete` |
+| child routes: `GET` | `read` |
+| child routes: `POST` / `PUT` / `DELETE` | `update` (cambiar un hijo es actualizar el padre) |
+
+Una operación deshabilitada responde `405` con un header `Allow` que lista los métodos habilitados de esa ruta, antes de autenticar, de leer el body y de tocar la base. El OpenAPI, el API explorer de devtools y las tools del servidor MCP listan solo las operaciones habilitadas. `true` y `false` significan lo mismo que siempre.
+
+**Cuándo cerrar las escrituras genéricas:** cuando toda escritura tiene que pasar por reglas que el CRUD genérico no conoce, como una máquina de estados, campos inmutables a partir de cierto estado o efectos que deben correr en el mismo request. Se dejan las lecturas genéricas (listas, detalle, selectores de relaciones) y las escrituras van por una ruta propia:
+
+```typescript
+// entities/orders/orders.config.ts
+{
+  slug: 'orders',
+  access: {
+    api: { read: true }  // GET genérico; POST, PATCH y DELETE responden 405
+  }
+}
+
+// app/api/orders/[id]/ship/route.ts: la ruta propia aplica el estado y los efectos
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  // authenticate, validar la transición "paid" -> "shipped", escribir y disparar los efectos
 }
 ```
 

@@ -18,7 +18,7 @@ interface AmbientEntityConfig {
   icon?: unknown
   access?: {
     public?: boolean
-    api?: boolean
+    api?: boolean | { read?: boolean; create?: boolean; update?: boolean; delete?: boolean }
     metadata?: boolean
     shared?: boolean
     basePath?: string

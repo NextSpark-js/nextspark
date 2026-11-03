@@ -677,3 +677,17 @@ test('the CLI script prints the contracts line and warnings, and --check reports
     clean(root)
   }
 })
+
+test('access.api as an object: the four operations are read, any other key stops the contract with a message (#376)', async () => {
+  const root = project({
+    'entities/ok/ok.config.ts': "export const okEntityConfig = { slug: 'ok', access: { api: { read: true, create: false } }, fields: [] }\n",
+    'entities/typo/typo.config.ts': "export const typoEntityConfig = { slug: 'typo', access: { api: { reed: true } }, fields: [] }\n",
+  })
+  try {
+    const read = (file, exportName) => readEntityContract({ file: join(root, file), exportName, projectRoot: root })
+    assert.equal((await read('entities/ok/ok.config.ts', 'okEntityConfig')).error, undefined)
+    assert.match((await read('entities/typo/typo.config.ts', 'typoEntityConfig')).error, /unknown operation "reed" in access\.api/)
+  } finally {
+    clean(root)
+  }
+})

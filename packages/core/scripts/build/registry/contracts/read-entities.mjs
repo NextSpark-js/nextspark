@@ -167,6 +167,14 @@ const literal = (node, file, sources) => {
   return { state: 'unknown' }
 }
 
+/** The object literal behind property `name` of an object literal (resolved through imports), or null. */
+function resolveProperty(objectNode, file, name, sources) {
+  const found = property(objectNode, name, sources.ts)
+  if (found.state) return null
+  const next = resolve(found.node, file, sources)
+  return next && sources.ts.isObjectLiteralExpression(next.node) ? next : null
+}
+
 /** The literal at `path` of an object literal node: `{ state: 'value' | 'absent' | 'unknown' }`. */
 function read(objectNode, file, path, sources) {
   const { ts } = sources
@@ -344,6 +352,18 @@ export async function readEntityContract({ file, exportName, projectRoot, source
 
   const enabled = read(object, configFile, ['enabled'], sources)
   if (enabled.state === 'value' && enabled.value === false) return { skipped: 'the entity is disabled' }
+  // `access.api` as an object names the generic operations it serves; a key other than these four is a typo that would
+  // silently close everything, so it stops the build (the same rule as lib/entities/api-access `apiAccessErrors`, #376)
+  const accessObject = resolveProperty(object, configFile, 'access', sources)
+  const apiObject = accessObject && resolveProperty(accessObject.node, accessObject.file, 'api', sources)
+  if (apiObject) {
+    for (const member of apiObject.node.properties) {
+      const key = member.name && (ts.isIdentifier(member.name) || ts.isStringLiteral(member.name)) ? member.name.text : null
+      if (key !== null && !['read', 'create', 'update', 'delete'].includes(key)) {
+        return { error: `has an unknown operation "${key}" in access.api (use read, create, update, delete)` }
+      }
+    }
+  }
   const api = read(object, configFile, ['access', 'api'], sources)
   if (api.state === 'value' && api.value === false) return { skipped: 'the entity has no external API (access.api is false)' }
   const shared_ = read(object, configFile, ['access', 'shared'], sources)

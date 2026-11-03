@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse, canBypassTeamContext, type DualAuthResult } from '../auth/dual-auth'
 import type { EntityField, EntityConfig, TaxonomyTypeConfig } from '../../entities/types'
 import { resolveEntityFromUrl, validateEntityOperation } from './resolver'
+import { isApiOperationEnabled, allowedMethods, type ApiOperation, type ApiRouteKind } from '../../entities/api-access'
 import { generateEntitySchemas } from '../../entities/schema-generator'
 import { validationTranslatorFor } from './validation-locale'
 import { publicSlugIssue, otherBasePathSegments } from '../../entities/public-slug'
@@ -699,6 +700,24 @@ async function rejectInvisibleRelations(
 }
 
 /**
+ * An `access.api` object turns generic operations off (#376): the route answers 405 with an `Allow` header that
+ * lists the methods still enabled. It runs before authentication, the body and the data layer, so a session and an
+ * API key get the same answer. Returns null when the operation is served. Method-to-operation mapping and the
+ * child-route rule live in lib/entities/api-access.
+ */
+async function rejectDisabledOperation(
+  entityConfig: EntityConfig,
+  operation: ApiOperation,
+  route: ApiRouteKind,
+  request: NextRequest
+): Promise<NextResponse | null> {
+  if (isApiOperationEnabled(entityConfig, operation)) return null
+  const response = createApiError('Operation not supported for this entity', 405, undefined, 'METHOD_NOT_ALLOWED')
+  response.headers.set('Allow', allowedMethods(entityConfig, route).join(', '))
+  return addCorsHeaders(response, request)
+}
+
+/**
  * `access.api: false` closes the entity to external callers: a request that
  * authenticated with an API key (even one that then failed scope enforcement)
  * gets the same 404 as a slug that does not exist, for every route of this handler.
@@ -895,6 +914,9 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
       const response = createApiError('List operation not supported for this entity', 405)
       return addCorsHeaders(response, request)
     }
+
+    const listDisabled = await rejectDisabledOperation(resolution.entityConfig, 'read', 'collection', request)
+    if (listDisabled) return listDisabled
 
     // Authenticate request. The entity's `:read` scope is declared at the entry
     // point, which rejects an API key lacking it (fail closed, #93).
@@ -1529,6 +1551,9 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
       return addCorsHeaders(response, request)
     }
 
+    const createDisabled = await rejectDisabledOperation(resolution.entityConfig, 'create', 'collection', request)
+    if (createDisabled) return createDisabled
+
     // Authenticate request. The entity's `:write` scope is declared at the
     // entry point, which rejects an API key lacking it (fail closed, #93).
     const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:write` })
@@ -1933,6 +1958,9 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
       return addCorsHeaders(response, request)
     }
 
+    const readDisabled = await rejectDisabledOperation(resolution.entityConfig, 'read', 'item', request)
+    if (readDisabled) return readDisabled
+
     // Authenticate request. The entity's `:read` scope is declared at the entry
     // point, which rejects an API key lacking it (fail closed, #93).
     const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:read` })
@@ -2115,6 +2143,9 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
       const response = createApiError('Update operation not supported for this entity', 405)
       return addCorsHeaders(response, request)
     }
+
+    const updateDisabled = await rejectDisabledOperation(resolution.entityConfig, 'update', 'item', request)
+    if (updateDisabled) return updateDisabled
 
     // Authenticate request. The entity's `:write` scope is declared at the
     // entry point, which rejects an API key lacking it (fail closed, #93).
@@ -2488,6 +2519,9 @@ async function handleGenericDeleteImpl(request: NextRequest, audit: AuditContext
       return addCorsHeaders(response, request)
     }
 
+    const deleteDisabled = await rejectDisabledOperation(resolution.entityConfig, 'delete', 'item', request)
+    if (deleteDisabled) return deleteDisabled
+
     // Authenticate request. Delete is its own scope (`<slug>:delete`, distinct
     // from `:write` — a write-scoped key must not be able to delete), declared
     // at the entry point, which rejects an API key lacking it (fail closed, #93).
@@ -2684,6 +2718,10 @@ async function resolveChildContext(
     const name = operation[0].toUpperCase() + operation.slice(1)
     return addCorsHeaders(createApiError(`${name} operation not supported for this entity`, 405), request)
   }
+  // Changing a child is an update of the parent record; reading children is a read
+  const childRoute: ApiRouteKind = operation === 'list' || operation === 'create' ? 'childCollection' : 'childItem'
+  const childDisabled = await rejectDisabledOperation(parentConfig, operation === 'list' ? 'read' : 'update', childRoute, request)
+  if (childDisabled) return childDisabled
 
   // The API-key guard runs before the childType lookup, so a closed parent answers like a missing one
   const write = operation !== 'list'

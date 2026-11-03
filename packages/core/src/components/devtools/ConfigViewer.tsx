@@ -24,7 +24,7 @@ interface EntityInfo {
   enabled: boolean;
   access: {
     public: boolean;
-    api: boolean;
+    api: boolean | Partial<Record<"read" | "create" | "update" | "delete", boolean>>;
     metadata: boolean;
     shared: boolean;
   };

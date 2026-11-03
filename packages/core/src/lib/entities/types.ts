@@ -7,6 +7,7 @@
 
 import type { ZodSchema } from 'zod'
 import type { ValidationMessageKind } from './portable/types'
+import type { ApiOperationAccess } from './api-access'
 
 /** Generic icon component type - compatible with lucide-react, @phosphor-icons/react, etc. */
 export type EntityIcon = React.ComponentType<{ className?: string }>
@@ -162,8 +163,13 @@ export interface EntityConfig {
      * child route) to API-key requests, which get 404 "Entity not found" like a slug that does not
      * exist, and the MCP server exposes no tools for it. Session requests (the dashboard) are not
      * affected; `enabled: false` turns everything off. `true` (or unset in a partial config) serves both.
+     *
+     * An object serves only the generic operations it enables, for session and API-key callers alike (#376):
+     * `{ read: true }` answers GET and refuses POST, PATCH and DELETE with `405` and an `Allow` header. A missing
+     * key is `false` (fail-closed) and an unknown key is a configuration error. Use it to keep generic reads while
+     * every write goes through a route of your own that enforces the entity's rules.
      */
-    api: boolean
+    api: boolean | ApiOperationAccess
     /** If supports metadata system */
     metadata: boolean
     /** If shared among all authenticated users (CASE 2 RLS - no userId filter in queries) - REQUIRED since Phase 3 */

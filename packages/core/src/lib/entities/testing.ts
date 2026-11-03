@@ -14,6 +14,7 @@ import type {
 import type { UserRole } from '../../types/user.types'
 import { TestTube } from 'lucide-react'
 import { entityRegistry } from './registry'
+import { apiAccessErrors } from './api-access'
 import { entityPerformanceMonitor } from './performance'
 
 /**
@@ -224,9 +225,7 @@ export function validateEntityConfig(config: EntityConfig): { valid: boolean; er
   }
 
   // Access validation
-  if (typeof config.access?.api !== 'boolean') {
-    errors.push('access.api must be a boolean')
-  }
+  errors.push(...apiAccessErrors(config.access?.api))
   if (typeof config.access?.public !== 'boolean') {
     errors.push('access.public must be a boolean')
   }

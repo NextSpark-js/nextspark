@@ -27,6 +27,7 @@ import type {
   EntityConfigValidation,
 } from './types'
 import type { UserRole } from '../../types/user.types'
+import { apiAccessErrors } from './api-access'
 import {
   getEntityBySlug,
   getRegisteredEntities,
@@ -210,6 +211,9 @@ export class EntityRegistry {
     if (!entityConfig.names?.singular?.trim()) errors.push('Entity singular name is required')
     if (!entityConfig.names?.plural?.trim()) errors.push('Entity plural name is required')
     if (!entityConfig.icon) errors.push('Icon is required')
+
+    // `access.api` may be unset in a partial config (it then serves everything); when set it must be valid (#376)
+    if (entityConfig.access?.api !== undefined) errors.push(...apiAccessErrors(entityConfig.access.api))
 
     // Features validation - enabled is at top level now
     if (typeof entityConfig.enabled !== 'boolean') {

@@ -247,11 +247,12 @@ from a team-role permission problem.
   initial version.
 - **One rate-limit tier for the whole surface** — see [Security Model](#security-model) above;
   size your `'api'` tier limits with MCP traffic in mind.
-- **Per-entity operation granularity only** — `access.api` is all-or-nothing per entity: with
-  `api: false` API-key requests to the REST API and the MCP server are rejected (REST answers
-  `404 Entity not found`), while session requests from the dashboard keep working; use
-  `excludeOperations` in an `entities/<slug>/mcp.ts` override for finer control (e.g. read-only
-  MCP access to an entity that still needs full CRUD via the REST API).
+- **`access.api` is a boolean or a per-operation object** — with `api: false` API-key requests to the REST
+  API and the MCP server are rejected (REST answers `404 Entity not found`), while session requests from the
+  dashboard keep working. With an object (`{ read: true }`) the MCP server registers only the enabled operations
+  (`list` and `get` are `read`) and the REST API answers `405` for the rest. Use `excludeOperations` in an
+  `entities/<slug>/mcp.ts` override to narrow MCP further than REST (e.g. read-only MCP access to an entity that
+  still needs full CRUD via the REST API).
 
 ---
 

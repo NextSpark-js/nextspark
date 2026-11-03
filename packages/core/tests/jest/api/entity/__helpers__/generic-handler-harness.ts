@@ -136,6 +136,7 @@ jest.mock('@/core/lib/api/helpers', () => ({
   createApiError: (message: string, status = 400, details?: unknown, code?: string) => ({
     status,
     body: { success: false, error: message, code: code || `HTTP_${status}`, details },
+    headers: new Headers(),
     async json() { return this.body },
   }),
   addCorsHeaders: async (response: unknown) => response,
