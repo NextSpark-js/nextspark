@@ -35,7 +35,9 @@ export function useQuotaCheck(action: string, enabled = true) {
         body: JSON.stringify({ action }),
       })
       const json = await res.json()
-      return json.data || { allowed: true }
+      // An action no mapping names has no quota to exceed: this gate lets it through (the endpoint refuses it, #367)
+      if (!json.data || json.data.reason === 'unknown_action') return { allowed: true }
+      return json.data
     },
     enabled,
     staleTime: 30_000, // Cache for 30s

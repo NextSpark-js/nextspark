@@ -67,6 +67,7 @@ POST /api/v1/billing/check-action
 - `no_permission` - RBAC check failed
 - `feature_not_in_plan` - Plan doesn't include required feature
 - `quota_exceeded` - Usage limit reached
+- `unknown_action` - the action is not in `actionMappings` (`permissions`, `features` or `limits`). An action with no mapping has nothing to check, so it is refused instead of allowed; add the mapping to `billing.config.ts` to check it. The response carries a `message` naming the action.
 
 ---
 

@@ -202,6 +202,6 @@ export interface OneTimePaymentContext {
 
 export interface CanPerformActionResult {
   allowed: boolean
-  reason?: 'no_permission' | 'feature_not_in_plan' | 'quota_exceeded'
+  reason?: 'no_permission' | 'feature_not_in_plan' | 'quota_exceeded' | 'unknown_action'
   quota?: QuotaInfo
 }

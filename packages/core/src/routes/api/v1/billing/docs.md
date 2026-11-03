@@ -163,6 +163,8 @@ Or if not allowed:
 }
 ```
 
+An action that is not in `actionMappings` (`permissions`, `features` or `limits`) has nothing to check and is refused: `allowed: false`, `reason: "unknown_action"`, with a `message` naming the action. Add the mapping to `billing.config.ts` to check it.
+
 ### Stripe Webhook
 `POST /api/v1/billing/webhooks/stripe`
 

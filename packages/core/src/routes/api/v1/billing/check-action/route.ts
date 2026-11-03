@@ -15,6 +15,7 @@ import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/cor
 import { SubscriptionService } from '@nextsparkjs/core/lib/services'
 import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
 const checkActionSchema = z.object({
@@ -43,6 +44,20 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   }
 
   const { action, teamId: bodyTeamId } = parseResult.data
+
+  // An action that no mapping names has nothing to check: answering allowed would let a typo in the action (or a
+  // mapping that was never written) pass as a permission. It is refused, and the reason says why (#367).
+  const { permissions, features, limits } = BILLING_REGISTRY.actionMappings
+  if (!permissions?.[action] && !features?.[action] && !limits?.[action]) {
+    return NextResponse.json({
+      success: true,
+      data: {
+        allowed: false,
+        reason: 'unknown_action',
+        message: `Action "${action}" is not listed in actionMappings (permissions, features or limits)`
+      }
+    })
+  }
 
   // 3. Get team context (from body, header, or user's default)
   const teamId =
