@@ -10,6 +10,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../api/client'
 import { ApiError } from '../api/client.types'
 import { authApi, teamsApi } from '../api/core'
@@ -43,10 +44,22 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  const queryClient = useQueryClient()
   const [user, setUser] = useState<User | null>(null)
   const [team, setTeam] = useState<Team | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  /**
+   * Drop every cached query. Query keys carry neither the user nor the team,
+   * so whatever the previous session cached would be served to the next one.
+   * In-flight requests are cancelled first so they cannot write into the
+   * emptied cache afterwards.
+   */
+  const resetQueryCache = useCallback(async () => {
+    await queryClient.cancelQueries()
+    queryClient.clear()
+  }, [queryClient])
 
   /**
    * Persist the active team as a full record (id + record) so an offline
@@ -91,6 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (!sessionResponse?.user) {
         // The server answered: there is no session (whatever storage remembers)
         await apiClient.clearAuth()
+        await resetQueryCache()
         setUser(null)
         setTeam(null)
         setTeams([])
@@ -121,6 +135,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // For network errors or other issues, keep credentials to allow retry
       if (error instanceof ApiError && error.status === 401) {
         await apiClient.clearAuth()
+        await resetQueryCache()
         setUser(null)
         setTeam(null)
         setTeams([])
@@ -140,7 +155,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       }
     }
-  }, [applyTeam])
+  }, [applyTeam, resetQueryCache])
 
   // Initialize auth state from storage
   useEffect(() => {
@@ -172,11 +187,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const firstTeam = teamsResponse.data[0]
       await persistTeam(firstTeam)
 
+      // Before the new user is committed, so no screen of theirs reads the old cache
+      await resetQueryCache()
+
       setUser(signedInUser)
       setTeams(teamsResponse.data)
       setTeam(firstTeam)
     },
-    [persistTeam]
+    [persistTeam, resetQueryCache]
   )
 
   const login = useCallback(
@@ -217,11 +235,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await authApi.logout()
     } finally {
       // The app is signed out even if something on the way failed
+      await resetQueryCache()
       setUser(null)
       setTeam(null)
       setTeams([])
     }
-  }, [])
+  }, [resetQueryCache])
 
   const selectTeam = useCallback(
     async (newTeam: Team) => {

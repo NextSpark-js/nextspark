@@ -1,4 +1,5 @@
 import React from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, act, waitFor } from '@testing-library/react-native'
 import { AuthProvider, useAuth } from '../../../src/providers/AuthProvider'
 import { apiClient } from '../../../src/api/client'
@@ -9,8 +10,11 @@ import { ApiError } from '../../../src/api/client.types'
 jest.mock('../../../src/api/client')
 jest.mock('../../../src/api/core')
 
+const queryClient = new QueryClient()
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <AuthProvider>{children}</AuthProvider>
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>{children}</AuthProvider>
+  </QueryClientProvider>
 )
 
 describe('AuthProvider', () => {
@@ -132,6 +136,40 @@ describe('AuthProvider', () => {
 
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
+  })
+
+  it('empties the query cache on logout and does not serve it to the next user', async () => {
+    const userA = { id: 'user-a', email: 'a@example.com' }
+    const userB = { id: 'user-b', email: 'b@example.com' }
+    const teamA = { id: 'team-a', name: 'A' }
+    const teamB = { id: 'team-b', name: 'B' }
+    ;(authApi.logout as jest.Mock).mockResolvedValue({})
+    ;(authApi.login as jest.Mock)
+      .mockResolvedValueOnce({ user: userA })
+      .mockResolvedValueOnce({ user: userB })
+    ;(teamsApi.getTeams as jest.Mock)
+      .mockResolvedValueOnce({ data: [teamA] })
+      .mockResolvedValueOnce({ data: [teamB] })
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      await result.current.login('a@example.com', 'pw')
+    })
+    queryClient.setQueryData(['customers'], ['customer of A'])
+
+    await act(async () => {
+      await result.current.logout()
+    })
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0)
+
+    // Cached again while signed out, then B signs in
+    queryClient.setQueryData(['customers'], ['customer of A'])
+    await act(async () => {
+      await result.current.login('b@example.com', 'pw')
+    })
+    expect(queryClient.getQueryData(['customers'])).toBeUndefined()
   })
 
   it('clears the session state even when signing out fails', async () => {

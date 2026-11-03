@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `AuthProvider` clears the TanStack Query cache on sign-out, when a sign-in completes and when a stored session is found invalid, so a list cached by one session is not served to the next one signed in on the same device. `AuthProvider` now reads the client with `useQueryClient`, so it must be rendered inside `QueryProvider` (the order in the README) (#375).
+
 ## [0.1.0-beta.199] - 2026-11-02
 
 ### Added
