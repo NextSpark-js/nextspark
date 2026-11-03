@@ -77,7 +77,7 @@ What gets updated:
                           again, before nextspark prepare runs
   package.json of the workspace packages that declare @nextsparkjs/core (a local plugin, as a
                           peer) or that the project reaches through workspace: or link:, along
-                          the whole chain (as nextspark doctor reads them)
+                          the whole chain (close to the rule nextspark doctor uses)
                           Only next, react, react-dom, better-auth and zod, in dependencies,
                           devDependencies, optionalDependencies and peerDependencies, in the same
                           install: a peer that already allows core's version (>=16) or is above
@@ -446,8 +446,8 @@ function workspaceManifests(cwd, root) {
 /**
  * The workspace packages update-core writes floors in: the ones that declare @nextsparkjs/core in any field (a
  * local plugin has it as a peer) and the ones the project, or one of those, reaches through `workspace:` or
- * `link:`, along the whole chain. Another app of the monorepo, or mobile/, is not the project's: the same rule
- * as nextspark doctor.
+ * `link:`, along the whole chain. Another app of the monorepo, or mobile/, is not the project's: a rule close to
+ * the one nextspark doctor uses (it also counts peers and follows `link:` in the lockfile).
  */
 function projectMembers(cwd, members, projectManifest) {
   const byName = new Map(members.filter(({ manifest }) => manifest.name).map((member) => [member.manifest.name, member]))

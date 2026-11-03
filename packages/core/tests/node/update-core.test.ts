@@ -1544,6 +1544,25 @@ test('raises next and zod in the packages of the project\'s workspace, keeping t
   assert.doesNotMatch(result.stdout, /nodemailer|react 19|mobile\/package\.json: react/)
 })
 
+test('follows workspace: and link: along the whole chain from the project to a package that does not declare core', (t) => {
+  const root = createProject(t, {
+    pins: { ...ALIGNED, next: '~16.4.2', 'acme-a': 'workspace:*' },
+    files: {
+      'libs/a/package.json': json({ name: 'acme-a', dependencies: { 'acme-b': 'link:../b' } }),
+      'libs/b/package.json': json({ name: 'acme-b', dependencies: { zod: '4.3.6' } }),
+      'libs/c/package.json': json({ name: 'acme-c', dependencies: { zod: '4.3.6' } }),
+    },
+    importers: ['libs/a', 'libs/b', 'libs/c'],
+  })
+
+  const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
+
+  assert.equal(result.status, 0, result.output)
+  // root -> libs/a (workspace:*) -> libs/b (link:../b); libs/c is reached by nothing
+  assert.equal(read(root, 'libs/b/package.json'), json({ name: 'acme-b', dependencies: { zod: '^4.5.4' } }))
+  assert.equal(read(root, 'libs/c/package.json'), json({ name: 'acme-c', dependencies: { zod: '4.3.6' } }))
+})
+
 test('--no-dependency-floors writes no workspace manifest and lists the pnpm add per package', (t) => {
   const root = workspaceWithMembers(t)
 
