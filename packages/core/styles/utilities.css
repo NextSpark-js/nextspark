@@ -4,6 +4,10 @@
    Include this file in your theme's globals.css
    ============================================= */
 
+/* animate-in, animate-out, fade-*, zoom-* and slide-* of the core components
+   (dialog, popover, sheet, dropdown, tooltip, ...): pure CSS, no client JavaScript. */
+@import "tw-animate-css";
+
 /* Accordion animations for Radix UI */
 @keyframes accordion-down {
   from {
