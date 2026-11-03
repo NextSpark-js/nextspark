@@ -84,6 +84,16 @@ Options:
   --version     Show version
 ```
 
+## Doctor codes
+
+`nextspark doctor` reports these findings with a stable code, at the start of the message:
+
+| Code | Level | Meaning |
+|---|---|---|
+| `NS_DUPLICATE_DEPENDENCY` | warn | `pnpm-lock.yaml` resolves more than one version of `next`, `better-auth` or `zod`. It names the importer that pulls each version and prints the `pnpm add --filter <importer> <pkg>@<range>` that aligns it. |
+| `NS_ZOD_BELOW_CORE` | fail | A `zod` the lockfile resolves is below the range the installed `@nextsparkjs/core` declares; two zod versions break the schema types. It prints the `pnpm add --filter` that raises it. |
+| `NS_QUERY_CLIENT_NOT_REGISTERED` | warn | A file creates `new QueryClient(` and never calls `registerQueryCache`, so that client is not cleared on sign-in. It lists `file:line`; register it with `registerQueryCache(() => client.clear())` from `@nextsparkjs/core/lib/auth/query-caches`. The check looks at one file at a time and does not follow imports. |
+
 ## Database commands
 
 `db:migrate` and `db:seed` (also `db migrate` / `db seed`) take one option:

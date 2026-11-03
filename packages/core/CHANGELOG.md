@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A project that sets its own `mobileNav.moreSheetItems` in `config/app.config.ts` should add `requiresPermission: 'settings.billing'` to its `billing` item.** The project's array replaces the one of core, so the default does not reach it, and the "More" sheet keeps listing Billing for a role that cannot open it until the item has the permission (#368).
 
+### Added
+
+- **`nextspark doctor` reports three more findings, each with a stable code.** `NS_DUPLICATE_DEPENDENCY` (warn) when `pnpm-lock.yaml` resolves more than one version of `next`, `better-auth` or `zod`, naming the importer that pulls each version and printing the `pnpm add --filter` that aligns it; `NS_ZOD_BELOW_CORE` (fail) when a resolved `zod` is below the range of the installed core, with the command that raises it; and `NS_QUERY_CLIENT_NOT_REGISTERED` (warn) with `file:line` when a project-owned `QueryClient` is not registered with `registerQueryCache` and so is not cleared on sign-in. `prepare` does not run them (#374).
+
 ### Changed
 
 - **The upgrade notes of `0.1.0-beta.199` add the required `teamId` of `PatternsResolverService.getByIds` and the second argument of `revalidateTag` on Next.js 16** (#374).
