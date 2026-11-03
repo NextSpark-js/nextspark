@@ -59,6 +59,8 @@ Next.js reads segment config (`dynamic`, `revalidate`, ...) statically from the 
 
 Rendering mode: Cache Components with PPR is the default for new projects (their `next.config.mjs` sets `cacheComponents: true` and the host emits the Cache Components / PPR variants of core's layouts and public pages, [PPR guide](../13-performance/ppr-migration.md)). Legacy ISR stays supported: remove the setting or set it to `false`. Next.js is pinned to `~16.4.2`.
 
+With Cache Components, Next.js keeps the last routes the user visited mounted inside React `<Activity mode="hidden">` boundaries (`display: none`) so that going back restores their state. A page left behind therefore stays in the DOM: after saving an edit the edit page's `h1` is still there, and after signing in the sign-in page's `<main>` is. Both are hidden, not rendered to the user or to assistive technology, and are removed when the router evicts the entry. A selector in a test must scope to what is visible (`main:visible`, `getByRole('heading')`, which skips hidden elements) instead of counting `main` or `h1` in the document.
+
 ## Upgrading
 
 A project created before `0.1.0-beta.192` has a committed `src/app`: [upgrade it with `nextspark migrate`](../17-updates/06-upgrade-0x-projects.md). `nextspark sync:app` no longer exists ([timeline](../17-updates/05-sync-app-removal.md)).
