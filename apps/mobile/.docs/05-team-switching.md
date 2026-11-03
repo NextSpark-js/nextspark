@@ -40,14 +40,14 @@ interface Team {
 │                    ▼                                             │
 │  2. selectTeam(newTeam) called                                  │
 │     └── Updates teamId in SecureStore                           │
+│     └── Cancels and resets the query cache                      │
 │     └── Updates team state in AuthProvider                      │
 │                    │                                             │
 │                    ▼                                             │
-│  3. onTeamChange callback triggered                             │
-│     └── queryClient.invalidateQueries()                         │
+│  3. onTeamChange callback triggered (navigation only)           │
 │                    │                                             │
 │                    ▼                                             │
-│  4. All active queries refetch with new x-team-id               │
+│  4. All active queries load again with the new x-team-id        │
 │     └── Dashboard stats update                                   │
 │     └── Tasks list refreshes                                    │
 │     └── Customers list refreshes                                │
@@ -82,9 +82,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Select/switch team
   const selectTeam = useCallback(async (newTeam: Team) => {
-    await apiClient.setTeamId(newTeam.id)  // Persist to storage
+    await persistTeam(newTeam)              // Persist to storage
+    await queryClient.cancelQueries()       // Previous team's requests must not land
+    await queryClient.resetQueries()        // Screens show loading, not the old team's lists
     setTeam(newTeam)                        // Update state
-  }, [])
+  }, [persistTeam, queryClient])
 
   // ... rest of provider
 }
@@ -194,13 +196,10 @@ The app layout handles the team change callback:
 // app/(app)/_layout.tsx
 
 export default function AppLayout() {
-  const queryClient = useQueryClient()
-
   const handleTeamChange = () => {
-    // Invalidate ALL queries to force refetch with new team context
-    queryClient.invalidateQueries()
+    // The query cache was already reset by selectTeam()
 
-    // Navigate to home to show refreshed data
+    // Navigate to home to show the new team's data
     setActiveTab('home')
     router.replace('/(app)/')
   }
@@ -220,16 +219,17 @@ export default function AppLayout() {
 }
 ```
 
-## Query Invalidation
+## Query Reset
 
-When team changes, all cached data is invalidated:
+`selectTeam` cancels in-flight requests and resets the whole query cache, so no screen shows the previous team's lists while the new data loads:
 
 ```typescript
-queryClient.invalidateQueries()
+await queryClient.cancelQueries()
+await queryClient.resetQueries()
 ```
 
 This triggers:
-- Tasks list to refetch → Shows new team's tasks
+- Tasks list to show its loading state, then the new team's tasks
 - Customers list to refetch → Shows new team's customers
 - Dashboard stats to update → Shows correct counts
 
