@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - An entity whose `access.api` object has no `read` (for example `{ create: true }`) no longer answers reads through other paths: relation references and pattern usage treat it like `access.api: false` for an API key caller, and the `getEntity`, `listEntities`, `entityExists` and `countEntities` Server Actions refuse with "Operation not supported for this entity", as the write actions already do (#388).
+- **Core declares `@codemirror/state` and `@codemirror/commands`, so a project resolves one copy of each.** Core depended on `@uiw/react-codemirror` and `@codemirror/lang-json` without declaring them, and depending on what else the project installed two versions of `@codemirror/state` could resolve; CodeMirror then threw "Unrecognized extension value in extension set" and the Body tab of the API explorer crashed. A project that pinned both with a `pnpm.overrides` entry as a workaround can drop it (#384).
 
 ## [0.1.0-beta.200] - 2026-11-03
 

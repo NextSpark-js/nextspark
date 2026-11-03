@@ -284,9 +284,15 @@ importers:
       '@babel/runtime':
         specifier: ^7.0.0
         version: 7.28.4
+      '@codemirror/commands':
+        specifier: ^6.1.0
+        version: 6.10.1
       '@codemirror/lang-json':
         specifier: ^6.0.2
         version: 6.0.2
+      '@codemirror/state':
+        specifier: ^6.1.1
+        version: 6.5.3
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
