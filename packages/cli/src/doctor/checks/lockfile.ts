@@ -24,8 +24,8 @@ export interface LockfileView {
   direct: Map<string, Map<string, Set<string>>>
   /** Every importer listed, with or without dependencies. */
   importers: Set<string>
-  /** `name@version` -> the `name@version` it depends on, from the `snapshots:` section (peer suffixes dropped). */
-  edges: Map<string, Set<string>>
+  /** `name@version` -> the `name@version` of the packages that depend on it, from the `snapshots:` section (peer suffixes dropped). */
+  parents: Map<string, Set<string>>
 }
 
 function setOf<K, V>(map: Map<K, Set<V>>, key: K): Set<V> {
@@ -48,7 +48,7 @@ export function parseLockfile(text: string): LockfileView {
   let importer = ''
   let field = ''
   let name = ''
-  const edges = new Map<string, Set<string>>()
+  const parents = new Map<string, Set<string>>()
   let snapshot = ''
   let inDeps = false
   for (const line of text.split('\n')) {
@@ -64,7 +64,11 @@ export function parseLockfile(text: string): LockfileView {
       const fld = /^ {4}(\w+):/.exec(line)
       if (fld) { inDeps = fld[1] === 'dependencies' || fld[1] === 'optionalDependencies'; continue }
       const dep = inDeps ? /^ {6}'?([^'\s:]+)'?: '?([^'\s(]+)/.exec(line) : null
-      if (dep) setOf(edges, snapshot).add(`${dep[1]}@${dep[2]}`)
+      if (dep) {
+        // an npm alias is written `alias: real-name@version`
+        const child = /^(?:@[^/]+\/)?[^@]+@/.test(dep[2]) ? dep[2] : `${dep[1]}@${dep[2]}`
+        setOf(parents, child).add(snapshot)
+      }
     } else if (section === 'packages') {
       const key = /^ {2}'?((?:@[^/@\s]+\/)?[^@\s']+)@([^:'\s(]+)/.exec(line)
       if (key) setOf(versions, key[1]).add(key[2])
@@ -83,33 +87,7 @@ export function parseLockfile(text: string): LockfileView {
       }
     }
   }
-  return { lockfileVersion, versions, direct, importers: importerIds, edges }
-}
-
-/** Every `name@version` reachable from `roots` through the snapshots' dependencies. */
-function reach(view: LockfileView, roots: Iterable<string>): Set<string> {
-  const seen = new Set<string>()
-  const stack = [...roots]
-  for (let key = stack.pop(); key !== undefined; key = stack.pop()) {
-    if (seen.has(key)) continue
-    seen.add(key)
-    stack.push(...(view.edges.get(key) ?? []))
-  }
-  return seen
-}
-
-/** The copies only the installed core pulls in: reachable from core's dependencies and from nothing else the project declares. */
-function onlyThroughCore(view: LockfileView): Set<string> {
-  const coreRoots: string[] = []
-  const otherRoots: string[] = []
-  for (const [dep, byVersion] of view.direct) {
-    for (const version of byVersion.keys()) {
-      if (version.startsWith('link:')) continue
-      ;(dep === CORE ? coreRoots : otherRoots).push(`${dep}@${version}`)
-    }
-  }
-  const outside = reach(view, otherRoots)
-  return new Set([...reach(view, coreRoots)].filter(key => !outside.has(key)))
+  return { lockfileVersion, versions, direct, importers: importerIds, parents }
 }
 
 interface Lock {
@@ -196,6 +174,35 @@ function addCommand(lock: Lock, importer: string, pkg: string, range: string): s
   return `pnpm add --filter ${importer === '.' ? '.' : `./${importer}`}${peer} ${pkg}@'${range}'`
 }
 
+/** The directory of an installed package in pnpm's virtual store, whatever its peer suffix. */
+function storeManifest(root: string, name: string, version: string): { dependencies?: Record<string, string>; optionalDependencies?: Record<string, string>; peerDependencies?: Record<string, string> } | null {
+  const store = path.join(root, 'node_modules', '.pnpm')
+  const prefix = `${name.replace('/', '+')}@${version}`
+  try {
+    for (const entry of fs.readdirSync(store)) {
+      if (entry !== prefix && !entry.startsWith(`${prefix}_`)) continue
+      return fs.readJsonSync(path.join(store, entry, 'node_modules', name, 'package.json'))
+    }
+  } catch { /* no store: the copy is reported */ }
+  return null
+}
+
+/**
+ * Whether the copy `version` of `pkg` stays because every package that pulls it declares a range that does not accept `top`.
+ * The lockfile keeps only resolved versions, so the declared range is read from the parent's package.json in the store;
+ * a parent that cannot be read, or that accepts `top`, means the project could align it.
+ */
+function pinnedAway(lock: Lock, pkg: string, version: string, top: string): boolean {
+  const parents = [...(lock.view.parents.get(`${pkg}@${version}`) ?? [])]
+  if (parents.length === 0) return false
+  return parents.every(parent => {
+    const at = parent.lastIndexOf('@')
+    const manifest = at > 0 ? storeManifest(lock.root, parent.slice(0, at), parent.slice(at + 1)) : null
+    const range = manifest?.dependencies?.[pkg] ?? manifest?.optionalDependencies?.[pkg] ?? manifest?.peerDependencies?.[pkg]
+    return !!range && !!semver.validRange(range) && !semver.satisfies(top, range)
+  })
+}
+
 /** Warns when the project resolves more than one version of next, better-auth or zod that it can align. */
 export async function checkDuplicateDependencies(): Promise<HealthCheckResult> {
   const name = 'Duplicates'
@@ -210,12 +217,14 @@ export async function checkDuplicateDependencies(): Promise<HealthCheckResult> {
     const own = (version: string) => [...(byVersion.get(version) ?? [])].filter(i => lock.inProject(i, pkg))
     const declared = [...byVersion.keys()].filter(v => semver.valid(v) && own(v).length > 0)
     const majors = new Set(declared.map(v => semver.major(v)))
-    // A copy that only core's own dependencies pull (a pinned transitive of one of them) is not the project's to fix: no pnpm install or add removes it.
-    const throughCore = onlyThroughCore(lock.view)
     // A transitive copy counts when it has the major of a version the project declares; one declared by an importer outside the project does not.
-    const relevant = [...(lock.view.versions.get(pkg) ?? [])].filter(v =>
-      semver.valid(v) && (declared.includes(v) || (!byVersion.has(v) && majors.has(semver.major(v)) && !throughCore.has(`${pkg}@${v}`))))
+    const counted = [...(lock.view.versions.get(pkg) ?? [])].filter(v =>
+      semver.valid(v) && (declared.includes(v) || (!byVersion.has(v) && majors.has(semver.major(v)))))
       .sort(semver.compare)
+    if (counted.length < 2) continue
+    const top = counted[counted.length - 1]
+    // ...unless every package that pulls it declares a range that excludes the highest copy (a pinned `zod`): no install or add removes it.
+    const relevant = counted.filter(v => declared.includes(v) || v === top || !pinnedAway(lock, pkg, v, top))
     if (relevant.length < 2) continue
     const highest = relevant[relevant.length - 1]
     const parts = relevant.map(version => {

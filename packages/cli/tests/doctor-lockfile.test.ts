@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { checkDuplicateDependencies, checkZodBelowCore } from '../src/doctor/checks/lockfile.js'
+import { checkDuplicateDependencies, checkZodBelowCore, parseLockfile } from '../src/doctor/checks/lockfile.js'
+import type { HealthCheckResult } from '../src/doctor/index.js'
 import { checkQueryClients } from '../src/doctor/checks/query-client.js'
 import { checkNextThemesImports } from '../src/doctor/checks/next-themes.js'
 import { nextThemesImportLines } from '../src/utils/next-themes-imports.js'
@@ -70,24 +71,45 @@ test('a transitive next of the same major as the project\'s warns; a transitive 
   assert.equal((await inProject(lock, {}, checkZodBelowCore)).status, 'pass')
 })
 
-/** The lockfile of a project with zod 4.6.7 whose core reaches a pinned zod 4.1.11 through two packages; `also` adds a second root that reaches it. */
-function pinnedZodLock(also = false) {
-  const importer = also ? { zod: '4.6.7', '@nextsparkjs/core': '0.1.0', 'other-tool': '1.0.0' } : { zod: '4.6.7', '@nextsparkjs/core': '0.1.0' }
-  let text = lockfile({ '.': importer }, ['zod@4.1.11', '@vercel/blob@2.8.2', '@vercel/cli-config@0.3.1', 'other-tool@1.0.0'])
+/**
+ * A synthetic lockfile of a project that declares zod 4.6.7, `@nextsparkjs/core` and `big-sdk` itself; `big-sdk` pulls
+ * `cfg-lib`, which pulls zod 4.1.11. The store holds cfg-lib's package.json declaring `range` for zod.
+ */
+async function pinned(range: string | null, run: () => Promise<HealthCheckResult>) {
+  let text = lockfile({ '.': { zod: '4.6.7', '@nextsparkjs/core': '0.1.0', 'big-sdk': '2.0.0' } }, ['zod@4.1.11', 'cfg-lib@0.3.1'])
   text += 'snapshots:\n\n'
-  text += "  '@nextsparkjs/core@0.1.0(react@19.2.4)':\n    dependencies:\n      '@vercel/blob': 2.8.2\n      zod: 4.6.7\n\n"
-  text += "  '@vercel/blob@2.8.2':\n    dependencies:\n      '@vercel/cli-config': 0.3.1\n\n"
-  text += "  '@vercel/cli-config@0.3.1':\n    dependencies:\n      zod: 4.1.11\n\n"
-  text += '  other-tool@1.0.0:\n    dependencies:\n' + (also ? "      '@vercel/cli-config': 0.3.1\n\n" : '      zod: 4.6.7\n\n')
+  text += '  big-sdk@2.0.0:\n    dependencies:\n      cfg-lib: 0.3.1\n\n'
+  text += '  cfg-lib@0.3.1:\n    dependencies:\n      zod: 4.1.11\n\n'
   text += '  zod@4.1.11: {}\n\n  zod@4.6.7: {}\n'
-  return text
+  const files: Record<string, string> = {}
+  if (range !== null) files['node_modules/.pnpm/cfg-lib@0.3.1/node_modules/cfg-lib/package.json'] = JSON.stringify({ name: 'cfg-lib', dependencies: { zod: range } })
+  return inProject(text, files, run)
 }
 
-test('a zod copy only core\'s own dependencies pin is not reported; one the project also reaches is (#394)', async () => {
-  assert.equal((await inProject(pinnedZodLock(), {}, checkDuplicateDependencies)).status, 'pass')
-  const warned = await inProject(pinnedZodLock(true), {}, checkDuplicateDependencies)
+test('a zod copy pinned by every package that pulls it is not reported, even when the project declares the package that pulls it (#394)', async () => {
+  assert.equal((await pinned('4.1.11', checkDuplicateDependencies)).status, 'pass')
+})
+
+test('a zod copy whose parent accepts the highest version, or whose parent cannot be read, is still reported (#394)', async () => {
+  for (const range of ['^4.1.0', null]) {
+    const warned = await pinned(range, checkDuplicateDependencies)
+    assert.equal(warned.status, 'warn', String(range))
+    assert.match(warned.message, /zod 4\.1\.11 \(a transitive dependency\)/)
+  }
+})
+
+test('a better-auth the project declares below the one core brings is still reported with its fix (#394)', async () => {
+  const lock = lockfile({ '.': { 'better-auth': '1.6.0', '@nextsparkjs/core': '0.1.0' } }, ['better-auth@1.7.7'])
+  const core = { 'node_modules/@nextsparkjs/core/package.json': JSON.stringify({ dependencies: { 'better-auth': '~1.7.7', zod: '^4.5.4' } }) }
+  const warned = await inProject(lock, core, checkDuplicateDependencies)
   assert.equal(warned.status, 'warn')
-  assert.match(warned.message, /zod 4\.1\.11 \(a transitive dependency\)/)
+  assert.equal(warned.fix, "Run: pnpm add --filter . better-auth@'~1.7.7'")
+})
+
+test('an npm alias in the snapshots is read as the package it names (#394)', () => {
+  const view = parseLockfile("lockfileVersion: '9.0'\n\nsnapshots:\n\n  wide@1.0.0:\n    dependencies:\n      wide-cjs: string-width@4.2.3\n      '@a/b': 1.0.0\n\n")
+  assert.deepEqual([...view.parents.get('string-width@4.2.3') ?? []], ['wide@1.0.0'])
+  assert.deepEqual([...view.parents.get('@a/b@1.0.0') ?? []], ['wide@1.0.0'])
 })
 
 test('an importer outside the project is not aligned: its next is not reported', async () => {
