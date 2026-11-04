@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`create-nextspark-app` initializes a git repository and makes a first commit.** It runs after the dependencies are installed, so the lockfile is in the commit and `.gitignore` keeps `node_modules` and `.env` out, which lets `nextspark update-core` (it starts only from a clean git tree) run on a new project without a manual `git init`. Nothing is done when `git` is not installed or the directory is already inside a repository; if the commit fails (for example, no `user.name` or `user.email`), the repository stays initialized and the CLI says how to commit. Pass `--no-git` to skip it (#373).
+
 ### Fixed
 
 - An entity whose `access.api` object has no `read` (for example `{ create: true }`) no longer answers reads through other paths: relation references and pattern usage treat it like `access.api: false` for an API key caller, and the `getEntity`, `listEntities`, `entityExists` and `countEntities` Server Actions refuse with "Operation not supported for this entity", as the write actions already do (#388).

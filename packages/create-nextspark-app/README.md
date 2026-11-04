@@ -30,7 +30,12 @@ npx create-nextspark-app my-app --theme starter
 
 # Skip all prompts (use defaults)
 npx create-nextspark-app my-app -y
+
+# Do not create a git repository
+npx create-nextspark-app my-app --no-git
 ```
+
+After the dependencies are installed the project gets a git repository with a first commit (lockfile included, `node_modules` and `.env` ignored), because `nextspark update-core` starts only from a clean git tree. Nothing is created when `git` is not installed or the project sits inside an existing repository; if the commit fails (for example, no `user.name`/`user.email`), the repository is left initialized and the CLI says how to commit.
 
 > **Experimental:** the blog, crm and productivity templates, the first-party plugins (`--plugins`), and billing (Stripe, Polar) are not part of the stable 1.0 surface and may change without a deprecation period. The CLI says so when you select them.
 

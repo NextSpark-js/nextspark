@@ -22,8 +22,9 @@ program
   .option('--description <desc>', 'Project description (non-interactive mode)')
   .option('--theme <theme>', 'Theme to use (starter, blog, crm, productivity, none); blog, crm and productivity are experimental')
   .option('--plugins <plugins>', 'Plugins to install (comma-separated; all but starter are experimental)')
+  .option('--no-git', 'Do not initialize a git repository or make a first commit')
   .option('-y, --yes', 'Skip prompts and use defaults', false)
-  .action(async (projectName: string | undefined, options: { preset?: string; type?: string; name?: string; slug?: string; description?: string; theme?: string; plugins?: string; yes: boolean }) => {
+  .action(async (projectName: string | undefined, options: { preset?: string; type?: string; name?: string; slug?: string; description?: string; theme?: string; plugins?: string; yes: boolean; git: boolean }) => {
     console.log()
     console.log(chalk.bold.cyan('  NextSpark'))
     console.log(chalk.dim('  Create a new SaaS project'))
@@ -42,6 +43,7 @@ program
         theme: options.theme,
         plugins: options.plugins,
         yes: options.yes,
+        git: options.git,
       })
     } catch (error) {
       if (error instanceof Error) {

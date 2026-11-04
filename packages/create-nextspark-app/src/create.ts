@@ -3,6 +3,7 @@ import fs from 'fs-extra'
 import chalk from 'chalk'
 import ora from 'ora'
 import { execFileSync, execSync, spawnSync } from 'node:child_process'
+import { setupGitRepository } from './utils/git.js'
 
 /**
  * Find local tarball for a package (for development testing)
@@ -287,6 +288,8 @@ export interface ProjectOptions {
   theme?: string
   plugins?: string
   yes?: boolean
+  /** false (--no-git) skips the git repository and first commit. Default true. */
+  git?: boolean
 }
 
 /** What create-nextspark-app installs next to the NextSpark packages before the wizard runs. */
@@ -569,6 +572,19 @@ export async function createProject(options: ProjectOptions): Promise<void> {
 
   if (result.status !== 0) {
     throw new Error(`Wizard failed with exit code ${result.status}`)
+  }
+
+  // After the install (the wizard runs it), so the lockfile is in the first commit
+  if (options.git !== false) {
+    const gitResult = setupGitRepository(projectPath)
+    if (gitResult.status === 'committed') {
+      console.log(chalk.green('  ✓ Git repository initialized with a first commit'))
+    } else if (gitResult.status === 'initialized') {
+      console.log(chalk.yellow(`  ⚠ Git repository initialized, but ${gitResult.reason}.`))
+      console.log(chalk.yellow('    Set user.name and user.email (git config), then run: git add -A && git commit'))
+    } else {
+      console.log(chalk.gray(`  Git repository not created: ${gitResult.reason}.`))
+    }
   }
 
   // Note: Wizard handles pnpm install and shows detailed next steps
