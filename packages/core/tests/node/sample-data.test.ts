@@ -262,5 +262,5 @@ test('db:migrate prints what 044 did to the credential accounts, as a warning wh
     DELETE FROM "_migrations" WHERE filename = '044_credential_account_id_is_user_id.sql';
   `)
   const output = migrate(root, url)
-  assert.match(output, /⚠️ {2}Credential accounts: 1 set to accountId = userId; 1 user\(s\) with several credential rows and 0 row\(s\) whose target key is taken left unchanged\. .*db:migrate again/)
+  assert.match(output, /⚠️ {2}Credential accounts: 1 set to accountId = userId; 1 user\(s\) with several credential rows and 0 row\(s\) whose target key is taken left unchanged\. .*DELETE FROM "_migrations" WHERE filename = '044_credential_account_id_is_user_id\.sql'.* and run db:migrate again/)
 })

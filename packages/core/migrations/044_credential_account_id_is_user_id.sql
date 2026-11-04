@@ -11,7 +11,7 @@
 -- - the credential rows of a user that has more than one: which one holds the password in use cannot be told, so
 --   nothing is guessed (a warning counts them; list them with
 --   SELECT "userId" FROM account WHERE "providerId" = 'credential' GROUP BY 1 HAVING count(*) > 1, keep the right row
---   and run the migrations again, or set "accountId" by hand),
+--   then delete its row from _migrations (DELETE FROM "_migrations" WHERE filename = '044_credential_account_id_is_user_id.sql') and run db:migrate again, or set "accountId" by hand),
 -- - a row whose target key ("providerId", "accountId") = ('credential', "userId") another row already holds, since
 --   that pair is unique (see 038).
 -- Idempotent: a second run finds nothing to change.
@@ -44,7 +44,7 @@ BEGIN
   WHERE a."providerId" = 'credential' AND a."accountId" IS DISTINCT FROM a."userId";
 
   IF ambiguous + taken > 0 THEN
-    RAISE WARNING 'Credential accounts: % set to accountId = userId; % user(s) with several credential rows and % row(s) whose target key is taken left unchanged. Those users cannot sign in with a password on Better Auth 1.7: keep one credential row per user and set its "accountId" to the user id (see the upgrade guide), then run db:migrate again.',
+    RAISE WARNING 'Credential accounts: % set to accountId = userId; % user(s) with several credential rows and % row(s) whose target key is taken left unchanged. Those users cannot sign in with a password on Better Auth 1.7: keep one credential row per user and set its "accountId" to the user id (see the upgrade guide), then delete the row of this migration from _migrations (DELETE FROM "_migrations" WHERE filename = ''044_credential_account_id_is_user_id.sql'') and run db:migrate again.',
       fixed, ambiguous, taken;
   ELSE
     RAISE NOTICE 'Credential accounts: % set to accountId = userId.', fixed;
