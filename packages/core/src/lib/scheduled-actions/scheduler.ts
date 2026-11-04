@@ -18,11 +18,9 @@ import type { ScheduleOptions, ScheduleTransaction } from './types'
  * A caller's transaction on the app role fails the INSERT with a bare RLS error; say what to pass instead.
  */
 function explainRlsFailure(error: unknown): unknown {
-  if (error instanceof Error && /row-level security/i.test(error.message)) {
-    return new Error(
-      `${error.message} (scheduled_actions is service-only: the \`tx\` option of scheduleAction must be a transaction on the service connection, e.g. getServiceTransactionClient())`,
-      { cause: error }
-    )
+  // 42501 = insufficient_privilege, which is what RLS raises; the code does not depend on the server's language
+  if (error instanceof Error && (error as { code?: string }).code === '42501') {
+    error.message += ' (scheduled_actions is service-only: the `tx` option of scheduleAction must be a transaction on the service connection, e.g. getServiceTransactionClient())'
   }
   return error
 }
@@ -81,11 +79,12 @@ export async function scheduleAction(
   // With a caller's transaction the caller owns commit and rollback; without one, the client opened here does.
   const tx = options?.tx
   const openClient = async () => tx ?? (await getTransactionClient(null))
+  type OwnedClient = Awaited<ReturnType<typeof getTransactionClient>>
   const finish = async (client: ScheduleTransaction) => {
-    if (!tx) await (client as Awaited<ReturnType<typeof getTransactionClient>>).commit()
+    if (!tx) await (client as OwnedClient).commit()
   }
   const abort = async (client: ScheduleTransaction, error: unknown): Promise<never> => {
-    if (!tx) await (client as Awaited<ReturnType<typeof getTransactionClient>>).rollback()
+    if (!tx) await (client as OwnedClient).rollback()
     throw tx ? explainRlsFailure(error) : error
   }
 

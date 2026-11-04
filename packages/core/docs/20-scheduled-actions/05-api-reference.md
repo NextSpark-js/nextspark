@@ -411,7 +411,7 @@ interface ScheduleOptions {
 
 ### Scheduling Inside Your Own Transaction
 
-By default `scheduleAction` opens its own transaction, so an action enqueued after your write has committed can be lost if the process dies in between, and one enqueued before it outlives a write that rolls back. To commit both or neither, pass the transaction as `tx`:
+By default `scheduleAction` commits on its own, so an action enqueued after your write has committed can be lost if the process dies in between, and one enqueued before it outlives a write that rolls back. To commit both or neither, pass the transaction as `tx`:
 
 ```typescript
 import { getServiceTransactionClient } from '@nextsparkjs/core/lib/db'
@@ -428,9 +428,9 @@ try {
 }
 ```
 
-With `tx`, `scheduleAction` (and `scheduleRecurringAction`, which takes the same option) runs its deduplication check, advisory lock and `INSERT` on that client and does not commit or roll back: that is up to you, and the processor sees the action only after you commit. Without `tx`, nothing changes.
+With `tx`, `scheduleAction` (and `scheduleRecurringAction`, which takes the same option) runs its deduplication check, advisory lock and `INSERT` on that client and does not commit or roll back: that is up to you, and the processor sees the action only after you commit. Because the lock is held until you commit, concurrent callers with the same deduplication or recurring key wait for each other. Without `tx`, nothing changes.
 
-`scheduled_actions` is service-only under RLS, so `tx` must be a transaction on the service connection, as the client of `getServiceTransactionClient()` is. A client of the app role (a transaction opened with a user id) makes the `INSERT` fail with a row-level security error, which `scheduleAction` rethrows with a note to use the service connection. Authorize the request in your own code before opening the service transaction: the service connection bypasses RLS.
+`scheduled_actions` is service-only under RLS, so `tx` must be a transaction on the service connection, as the client of `getServiceTransactionClient()` is. A client of the app role (a transaction opened with a user id) makes the `INSERT` fail with a row-level security error (SQLSTATE `42501`), which `scheduleAction` rethrows with a note to use the service connection. `withServiceTransaction` is not enough for atomicity: inside it, an action without `entityId` joins the surrounding transaction, but one with `entityId` (deduplicated) or a recurring one opens its own connection and commits even if the surrounding transaction rolls back. Use `getServiceTransactionClient()` and `tx`. Authorize the request in your own code before opening the service transaction: the service connection bypasses RLS.
 
 ### Supported Recurring Intervals
 

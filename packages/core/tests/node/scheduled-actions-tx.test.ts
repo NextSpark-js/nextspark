@@ -4,20 +4,24 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { registerHooks } from 'node:module'
+import * as nodeModule from 'node:module'
 import { pathToFileURL } from 'node:url'
 import type pg from 'pg'
 import { cutoverDatabase, HAS_POSTGRES } from './_pg-cutover'
 
 // config-sync needs a generated project; the scheduler only reads the dedupe window from it
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if (specifier.endsWith('config/config-sync')) {
-      return { url: pathToFileURL(new URL('./_config-sync-stub.ts', import.meta.url).pathname).href, shortCircuit: true }
-    }
-    return nextResolve(specifier, context)
-  },
-})
+// module.registerHooks arrived after Node 22.14; the file is skipped where it is missing
+const HAS_HOOKS = typeof (nodeModule as { registerHooks?: unknown }).registerHooks === 'function'
+if (HAS_HOOKS) {
+  (nodeModule as unknown as { registerHooks: (h: { resolve: (specifier: string, context: unknown, next: (s: string, c: unknown) => unknown) => unknown }) => void }).registerHooks({
+    resolve(specifier, context, nextResolve) {
+      if (specifier.endsWith('config/config-sync')) {
+        return { url: pathToFileURL(new URL('./_config-sync-stub.ts', import.meta.url).pathname).href, shortCircuit: true }
+      }
+      return nextResolve(specifier, context)
+    },
+  })
+}
 
 async function setup(t: Parameters<typeof cutoverDatabase>[0]) {
   const db = await cutoverDatabase(t)
@@ -39,7 +43,7 @@ const shapes = [
 ] as const
 
 // one cluster and one load of lib/db for the file: the module keeps its pools for the life of the process
-test('scheduleAction with tx against a real PostgreSQL', { skip: !HAS_POSTGRES }, async (t) => {
+test('scheduleAction with tx against a real PostgreSQL', { skip: !HAS_POSTGRES || !HAS_HOOKS }, async (t) => {
   const { app, core, scheduler, seen } = await setup(t)
   t.mock.method(console, 'log', () => {})
 
@@ -77,7 +81,7 @@ test('scheduleAction with tx against a real PostgreSQL', { skip: !HAS_POSTGRES }
     await app.query('BEGIN')
     await assert.rejects(
       scheduler.scheduleAction('test:app', { x: 1 }, { tx: appTx }),
-      /row-level security[\s\S]*service connection/
+      (error: Error & { code?: string }) => error.code === '42501' && /service connection/.test(error.message)
     )
     await app.query('ROLLBACK')
     assert.equal(await seen(`"actionType" = 'test:app'`), 0)
