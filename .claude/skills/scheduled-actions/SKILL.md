@@ -379,6 +379,24 @@ export async function registerRecurringActions(): Promise<void> {
 
 **Flow:** After processing a recurring action, it auto-reschedules for the next interval.
 
+### Atomic With a Business Write
+
+Pass the caller's service-connection transaction as `tx` so the action and the write commit or roll back together:
+
+```typescript
+const tx = await getServiceTransactionClient() // from '@nextsparkjs/core/lib/db'
+try {
+  await tx.query('INSERT INTO ...', [...])
+  await scheduleAction('type', payload, { tx }) // does not commit; the caller does
+  await tx.commit()
+} catch (error) {
+  await tx.rollback()
+  throw error
+}
+```
+
+`tx` must be on the service connection (`scheduled_actions` is service-only under RLS); an app-role client fails the INSERT. Also accepted by `scheduleRecurringAction`.
+
 ## Recurrence Types
 
 For recurring actions, you can control how the next execution time is calculated using the `recurrenceType` parameter.

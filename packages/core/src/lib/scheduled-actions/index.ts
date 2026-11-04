@@ -33,6 +33,7 @@ export type {
   ScheduledActionDefinition,
   ScheduledActionStatus,
   ScheduleOptions,
+  ScheduleTransaction,
   ProcessResult
 } from './types'
 

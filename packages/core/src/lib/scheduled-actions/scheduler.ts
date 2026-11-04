@@ -12,7 +12,20 @@
 
 import { mutateWithRLS, getTransactionClient } from '../db'
 import { APP_CONFIG_MERGED } from '../config/config-sync'
-import type { ScheduleOptions } from './types'
+import type { ScheduleOptions, ScheduleTransaction } from './types'
+
+/**
+ * A caller's transaction on the app role fails the INSERT with a bare RLS error; say what to pass instead.
+ */
+function explainRlsFailure(error: unknown): unknown {
+  if (error instanceof Error && /row-level security/i.test(error.message)) {
+    return new Error(
+      `${error.message} (scheduled_actions is service-only: the \`tx\` option of scheduleAction must be a transaction on the service connection, e.g. getServiceTransactionClient())`,
+      { cause: error }
+    )
+  }
+  return error
+}
 
 // ===========================================
 // DEDUPLICATION WITH ADVISORY LOCKS
@@ -65,7 +78,18 @@ export async function scheduleAction(
   const maxRetries = options?.maxRetries ?? 3 // Default: 3 retries
   const recurrenceType = options?.recurrenceType || null
 
-  const insertAction = (client: { query: (text: string, params: unknown[]) => Promise<unknown> }) =>
+  // With a caller's transaction the caller owns commit and rollback; without one, the client opened here does.
+  const tx = options?.tx
+  const openClient = async () => tx ?? (await getTransactionClient(null))
+  const finish = async (client: ScheduleTransaction) => {
+    if (!tx) await (client as Awaited<ReturnType<typeof getTransactionClient>>).commit()
+  }
+  const abort = async (client: ScheduleTransaction, error: unknown): Promise<never> => {
+    if (!tx) await (client as Awaited<ReturnType<typeof getTransactionClient>>).rollback()
+    throw tx ? explainRlsFailure(error) : error
+  }
+
+  const insertAction = (client: ScheduleTransaction) =>
     client.query(
       `INSERT INTO "scheduled_actions" (
         id,
@@ -92,7 +116,7 @@ export async function scheduleAction(
     // during a run is found by the reschedule, which returns it instead of inserting another.
     // The lock serializes concurrent registrations of the same actionType + teamId (the payload is left
     // out of the lock key because its text form is not stable), so the check and the insert are atomic.
-    const client = await getTransactionClient(null)
+    const client = await openClient()
 
     try {
       await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`recurring:${actionType}:${teamId ?? ''}`])
@@ -110,18 +134,17 @@ export async function scheduleAction(
       )
 
       if (existing.length > 0) {
-        await client.commit()
+        await finish(client)
         console.log(`[ScheduledActions] Recurring action '${actionType}' already registered: ${existing[0].id}`)
         return existing[0].id
       }
 
       await insertAction(client)
-      await client.commit()
+      await finish(client)
       console.log(`[ScheduledActions] Scheduled action '${actionType}' with ID: ${actionId}${lockGroup ? ` (lockGroup: ${lockGroup})` : ''}`)
       return actionId
     } catch (error) {
-      await client.rollback()
-      throw error
+      await abort(client, error)
     }
   }
 
@@ -129,7 +152,7 @@ export async function scheduleAction(
     // Use a SINGLE transaction for the entire deduplication + insert/update process
     // This ensures the advisory lock is held throughout the operation
     const dedupKey = `${actionType}:${entityId}:${entityType || ''}`
-    const client = await getTransactionClient(null)
+    const client = await openClient()
 
     try {
       // Acquire advisory lock (held until COMMIT)
@@ -157,7 +180,7 @@ export async function scheduleAction(
           [payload, existing[0].id]
         )
 
-        await client.commit()
+        await finish(client)
         console.log(`[ScheduledActions] Duplicate detected, updated payload: ${existing[0].id}`)
         return existing[0].id
       }
@@ -190,13 +213,23 @@ export async function scheduleAction(
         ]
       )
 
-      await client.commit()
+      await finish(client)
       console.log(`[ScheduledActions] Scheduled action '${actionType}' with ID: ${actionId}${lockGroup ? ` (lockGroup: ${lockGroup})` : ''}`)
       return actionId
     } catch (error) {
-      await client.rollback()
-      throw error
+      await abort(client, error)
     }
+  }
+
+  if (tx) {
+    // Deduplication disabled, inside the caller's transaction
+    try {
+      await insertAction(tx)
+    } catch (error) {
+      throw explainRlsFailure(error)
+    }
+    console.log(`[ScheduledActions] Scheduled action '${actionType}' with ID: ${actionId} (in the caller's transaction, visible once it commits)`)
+    return actionId
   }
 
   // Deduplication disabled: create new action directly

@@ -125,6 +125,23 @@ export interface ScheduleOptions {
    * // If scheduled at 12:00 but runs at 12:15, next is 12:45
    */
   recurrenceType?: RecurrenceType
+  /**
+   * Enqueue inside the caller's transaction instead of a transaction of its own: the INSERT goes through
+   * this client, and `scheduleAction` neither commits nor rolls back, so the action is visible only after
+   * the caller commits and does not exist if the caller rolls back.
+   *
+   * `scheduled_actions` is service-only under RLS, so `tx` must be a transaction on the service
+   * connection, for example the client `getServiceTransactionClient()` returns. A client of the app role
+   * makes the INSERT fail with a row-level security error.
+   */
+  tx?: ScheduleTransaction
+}
+
+/**
+ * The part of a transaction client that `scheduleAction` uses (the shape `getServiceTransactionClient()` returns).
+ */
+export interface ScheduleTransaction {
+  query: <T = unknown>(text: string, params?: unknown[]) => Promise<T[]>
 }
 
 /**

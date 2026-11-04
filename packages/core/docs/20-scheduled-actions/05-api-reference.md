@@ -405,8 +405,32 @@ interface ScheduleOptions {
   maxRetries?: number                  // Total attempts before failing (default: 3)
   lockGroup?: string                   // Sequential execution key
   recurrenceType?: 'fixed' | 'rolling' // How next run is calculated (default: 'fixed')
+  tx?: ScheduleTransaction            // Enqueue inside the caller's service-connection transaction
 }
 ```
+
+### Scheduling Inside Your Own Transaction
+
+By default `scheduleAction` opens its own transaction, so an action enqueued after your write has committed can be lost if the process dies in between, and one enqueued before it outlives a write that rolls back. To commit both or neither, pass the transaction as `tx`:
+
+```typescript
+import { getServiceTransactionClient } from '@nextsparkjs/core/lib/db'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions'
+
+const tx = await getServiceTransactionClient()
+try {
+  await tx.query('INSERT INTO "invoices" (id, total) VALUES ($1, $2)', [invoiceId, total])
+  await scheduleAction('invoice:send', { invoiceId }, { tx })
+  await tx.commit() // the invoice and its action become visible together
+} catch (error) {
+  await tx.rollback() // neither exists
+  throw error
+}
+```
+
+With `tx`, `scheduleAction` (and `scheduleRecurringAction`, which takes the same option) runs its deduplication check, advisory lock and `INSERT` on that client and does not commit or roll back: that is up to you, and the processor sees the action only after you commit. Without `tx`, nothing changes.
+
+`scheduled_actions` is service-only under RLS, so `tx` must be a transaction on the service connection, as the client of `getServiceTransactionClient()` is. A client of the app role (a transaction opened with a user id) makes the `INSERT` fail with a row-level security error, which `scheduleAction` rethrows with a note to use the service connection. Authorize the request in your own code before opening the service transaction: the service connection bypasses RLS.
 
 ### Supported Recurring Intervals
 
