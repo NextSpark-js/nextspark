@@ -45,6 +45,19 @@ export async function getThemeSettings(): Promise<ThemeSettings> {
 }
 
 /**
+ * The theme props both root layouts give the theme provider. With `allowUserToggle: false` the default mode is
+ * forced and the system preference is not tracked. Otherwise the visitor's choice applies, and "System" must be
+ * resolvable whatever the default is, since ThemeToggle always offers it (#175).
+ */
+export function themeProviderProps({ defaultMode, allowUserToggle }: Pick<ThemeSettings, 'defaultMode' | 'allowUserToggle'>) {
+  return {
+    defaultTheme: defaultMode,
+    forcedTheme: allowUserToggle ? undefined : defaultMode,
+    enableSystem: allowUserToggle,
+  }
+}
+
+/**
  * Get the default theme mode for the current user
  * Server-side only function
  * @deprecated Use getThemeSettings() instead for full theme configuration

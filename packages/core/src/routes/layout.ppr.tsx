@@ -32,7 +32,8 @@ import { LazyConsentManager } from "@nextsparkjs/core/components/consent/LazyCon
 import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
-import { DEFAULT_LOCALE, DEFAULT_THEME_MODE, STATIC_MESSAGES } from '@nextsparkjs/registries/translation-registry'
+import { getThemeSettings, themeProviderProps } from "@nextsparkjs/core/lib/theme/get-default-theme-mode"
+import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/translation-registry'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,6 +60,8 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   const billingHints = await getBillingResourceHints()
+  // Read from configuration only (no request data), so the shell stays static
+  const themeSettings = await getThemeSettings()
 
   const content = (
     <>
@@ -89,13 +92,8 @@ export default async function RootLayout({
         <StaticIntlProvider locale={DEFAULT_LOCALE} messages={selectMessages(STATIC_MESSAGES, 'root', CONSENT_CONFIG.enabled ? OPTIONAL_ROOT_NAMESPACES : [])}>
           <NextThemeProvider
             attribute="class"
-            defaultTheme={DEFAULT_THEME_MODE}
-            // Always true here: this layout never passes forcedTheme, so
-            // ThemeToggle is unconditionally visible and offers "System" as one
-            // of its 3 choices — gating on DEFAULT_THEME_MODE === 'system' had
-            // the same bug as the non-PPR layout (see #175): a build-time
-            // default of 'light'/'dark' silently broke the "System" option.
-            enableSystem
+            // The same derivation as the default layout: allowUserToggle: false forces defaultMode (#371)
+            {...themeProviderProps(themeSettings)}
             disableTransitionOnChange
           >
             <CustomThemeProvider>

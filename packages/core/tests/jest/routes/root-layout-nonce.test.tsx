@@ -39,6 +39,7 @@ jest.mock('@nextsparkjs/core/lib/billing/gateways/factory', () => ({
 }))
 jest.mock('@nextsparkjs/core/lib/locale', () => ({ getUserLocale: async () => 'en' }))
 jest.mock('@nextsparkjs/core/lib/theme/get-default-theme-mode', () => ({
+  ...jest.requireActual('@nextsparkjs/core/lib/theme/get-default-theme-mode'),
   getThemeSettings: async () => ({ defaultMode: 'light', allowUserToggle: true, forcedThemeRoutes: undefined }),
 }))
 jest.mock('@nextsparkjs/core/lib/services/plugin.service', () => ({

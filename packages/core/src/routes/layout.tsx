@@ -22,7 +22,7 @@ import { TranslationContextManager } from "@nextsparkjs/core/providers/Translati
 import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { PluginService } from '@nextsparkjs/core/lib/services/plugin.service'
 import { APP_CONFIG_MERGED } from "@nextsparkjs/core/lib/config/config-client"
-import { getThemeSettings } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
+import { getThemeSettings, themeProviderProps } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -101,20 +101,8 @@ export default async function RootLayout({
           <NextThemeProvider
             nonce={nonce}
             attribute="class"
-            defaultTheme={defaultMode}
-            // When allowUserToggle is false, force the theme and ignore localStorage/system
-            forcedTheme={!allowUserToggle ? defaultMode : undefined}
-            // Detect OS preference whenever the user can toggle at all. ThemeToggle
-            // always offers "System" as one of its 3 choices when toggling is
-            // allowed, so the provider must be able to resolve it whenever that's
-            // true — gating on `defaultMode === 'system'` looks equivalent at
-            // first render, but defaultMode is the user's last SAVED preference
-            // for a logged-in user (see getThemeSettings), not a static "is
-            // system-matching enabled" flag. That made "System" silently write a
-            // literal, unmatched `class="system"` for anyone whose saved
-            // preference (or the theme's own config default) wasn't already
-            // 'system' — see #175.
-            enableSystem={allowUserToggle}
+            // allowUserToggle: false forces defaultMode; otherwise "System" stays resolvable (#175)
+            {...themeProviderProps({ defaultMode, allowUserToggle })}
             // Force a theme on the routes declared in theme.config.ts (forcedThemeRoutes)
             forcedThemeRoutes={forcedThemeRoutes}
             disableTransitionOnChange
