@@ -94,3 +94,40 @@ test('any other git failure stops migrate with a message instead of treating eve
   assert.equal(result.stdout.includes('obsoleteCopies'), false, result.stdout)
   assert.match(`${result.stdout}${result.stderr}`, /git check-ignore failed \(exit 2\): fatal: fake failure/)
 })
+
+/** `project()` plus a submodule at `name`: its own .gitignore hides hidden/, and shown/ is a visible member. */
+function projectWithSubmodule(name: string): string {
+  const root = project()
+  const source = mkdtempSync(join(tmpdir(), 'nextspark-submodule-source-'))
+  roots.push(source)
+  const member = (version: string) => JSON.stringify({ name: 'm', dependencies: { '@nextsparkjs/core': version } })
+  mkdirSync(join(source, 'shown'), { recursive: true })
+  writeFileSync(join(source, 'shown', 'package.json'), member('0.0.4'))
+  writeFileSync(join(source, '.gitignore'), 'hidden/\n')
+  const inSource = (...args: string[]) => execFileSync('git', args, { cwd: source, stdio: 'ignore' })
+  inSource('init', '--quiet')
+  inSource('config', 'user.email', 'fixture@example.test')
+  inSource('config', 'user.name', 'Fixture')
+  inSource('add', '.')
+  inSource('commit', '--quiet', '-m', 'fixture')
+  execFileSync('git', ['-c', 'protocol.file.allow=always', 'submodule', 'add', '--quiet', source, name], { cwd: root, stdio: 'ignore' })
+  execFileSync('git', ['-c', 'user.email=fixture@example.test', '-c', 'user.name=Fixture', 'commit', '--quiet', '-m', 'submodule'], { cwd: root, stdio: 'ignore' })
+  mkdirSync(join(root, name, 'hidden'), { recursive: true })
+  writeFileSync(join(root, name, 'hidden', 'package.json'), member('0.0.3'))
+  return root
+}
+
+for (const name of ['sub', "it's sub"]) {
+  test(`a submodule (${name}) is asked about itself: what its own .gitignore hides stays unread, the rest is read`, () => {
+    const root = projectWithSubmodule(name)
+    const result = spawnSync(process.execPath, [cliEntry, 'migrate', '--dry-run', '--json'], {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: 30_000,
+      maxBuffer: 64 * 1024 * 1024,
+      env: { ...process.env, npm_config_registry: 'http://127.0.0.1:9', pnpm_config_registry: 'http://127.0.0.1:9' },
+    })
+    assert.equal(result.status, 0, `${result.error?.message ?? ''}${result.stdout.slice(0, 300)}\n${result.stderr}`)
+    assert.deepEqual(members(result.stdout), ['.', `${name}/shown`, 'visible/member'].sort())
+  })
+}

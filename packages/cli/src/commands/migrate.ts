@@ -270,6 +270,8 @@ function checkIgnore(root: string, paths: string[]): Set<string> {
     cwd: root,
     encoding: 'utf8',
     input: `${paths.join('\0')}\0`,
+    // the messages below are matched as text: ask for them untranslated
+    env: { ...process.env, LC_ALL: 'C' },
     // ponytail: one process; the output is at most the input echoed back, so this covers millions of paths
     maxBuffer: 256 * 1024 * 1024,
     timeout: 5 * 60 * 1000,
@@ -278,9 +280,16 @@ function checkIgnore(root: string, paths: string[]): Set<string> {
   if (result.error) throw new MigrateAnalysisError(`Could not ask git which files are ignored (${result.error.message}). Nothing was changed.`);
   if (result.status === 1) return new Set();
   if (result.status === 128 && /not a git repository/i.test(result.stderr)) return new Set();
-  // The superproject cannot answer for a path inside a submodule (git refuses the whole call): ask again without that submodule's paths
-  const submodule = result.status === 128 ? /is in submodule '([^']+)'/.exec(result.stderr)?.[1] : undefined;
-  if (submodule) return checkIgnore(root, paths.filter(path => path !== submodule && !path.startsWith(`${submodule}/`)));
+  // The superproject cannot answer for a path inside a submodule (git refuses the whole call): ask the submodule itself, and the rest again without it
+  const submodule = result.status === 128 ? /is in submodule '(.*)'\s*$/m.exec(result.stderr)?.[1] : undefined;
+  if (submodule) {
+    const inside = paths.filter(path => path.startsWith(`${submodule}/`));
+    const rest = paths.filter(path => !path.startsWith(`${submodule}/`));
+    if (inside.length === 0) throw new MigrateAnalysisError(`git check-ignore refused paths inside the submodule ${submodule}, but none of the paths asked about are inside it. Nothing was changed.`);
+    const ignored = checkIgnore(root, rest);
+    for (const path of checkIgnore(join(root, submodule), inside.map(path => path.slice(submodule.length + 1)))) ignored.add(`${submodule}/${path}`);
+    return ignored;
+  }
   if (result.status !== 0) {
     throw new MigrateAnalysisError(`git check-ignore failed (${result.signal ?? `exit ${result.status}`}): ${result.stderr.trim().split('\n')[0] || 'no message'}. Nothing was changed.`);
   }
