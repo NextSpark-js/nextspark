@@ -1,4 +1,4 @@
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import { execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, readSync, readlinkSync, realpathSync, renameSync, rmSync, rmdirSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { randomBytes } from 'node:crypto';
@@ -250,21 +250,41 @@ function symlinksIn(root: string): string[] {
   return found;
 }
 
-/** Ask git about a small batch without reading the contents of ignored files. */
+/**
+ * Ask git which of these files are ignored, without reading their contents.
+ * git check-ignore exits 0 (some ignored), 1 (none ignored) or 128 (fatal).
+ * Only "git has no say here" (no git binary, or a directory outside any
+ * repository, such as an unpacked archive) means nothing is ignored; any other
+ * failure, including a full buffer or a timeout, stops migrate rather than
+ * reading files git would have skipped.
+ */
 function gitIgnoredPaths(root: string, files: string[]): Set<string> {
   if (files.length === 0) return new Set();
   const paths = files.map(file => pathFrom(root, file));
-  try {
-    const output = execFileSync('git', ['check-ignore', '-z', '--stdin'], {
-      cwd: root,
-      encoding: 'utf8',
-      input: `${paths.join('\0')}\0`,
-      stdio: ['pipe', 'pipe', 'ignore'],
-    });
-    return new Set(output.split('\0').filter(Boolean));
-  } catch {
-    return new Set();
+  return checkIgnore(root, paths);
+}
+
+function checkIgnore(root: string, paths: string[]): Set<string> {
+  if (paths.length === 0) return new Set();
+  const result = spawnSync('git', ['check-ignore', '-z', '--stdin'], {
+    cwd: root,
+    encoding: 'utf8',
+    input: `${paths.join('\0')}\0`,
+    // ponytail: one process; the output is at most the input echoed back, so this covers millions of paths
+    maxBuffer: 256 * 1024 * 1024,
+    timeout: 5 * 60 * 1000,
+  });
+  if ((result.error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') return new Set();
+  if (result.error) throw new MigrateAnalysisError(`Could not ask git which files are ignored (${result.error.message}). Nothing was changed.`);
+  if (result.status === 1) return new Set();
+  if (result.status === 128 && /not a git repository/i.test(result.stderr)) return new Set();
+  // The superproject cannot answer for a path inside a submodule (git refuses the whole call): ask again without that submodule's paths
+  const submodule = result.status === 128 ? /is in submodule '([^']+)'/.exec(result.stderr)?.[1] : undefined;
+  if (submodule) return checkIgnore(root, paths.filter(path => path !== submodule && !path.startsWith(`${submodule}/`)));
+  if (result.status !== 0) {
+    throw new MigrateAnalysisError(`git check-ignore failed (${result.signal ?? `exit ${result.status}`}): ${result.stderr.trim().split('\n')[0] || 'no message'}. Nothing was changed.`);
   }
+  return new Set(result.stdout.split('\0').filter(Boolean));
 }
 
 function fileCount(directory: string): number {
