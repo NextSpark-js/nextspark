@@ -98,12 +98,36 @@ test('a zod copy whose parent accepts the highest version, or whose parent canno
   }
 })
 
-test('a better-auth the project declares below the one core brings is still reported with its fix (#394)', async () => {
-  const lock = lockfile({ '.': { 'better-auth': '1.6.0', '@nextsparkjs/core': '0.1.0' } }, ['better-auth@1.7.7'])
-  const core = { 'node_modules/@nextsparkjs/core/package.json': JSON.stringify({ dependencies: { 'better-auth': '~1.7.7', zod: '^4.5.4' } }) }
-  const warned = await inProject(lock, core, checkDuplicateDependencies)
+/** A project declaring better-auth `declared` next to a core (in the store, with its snapshot) that asks for ~1.7.7 and resolves 1.7.7. */
+async function betterAuthVsCore(declared: string) {
+  let lock = lockfile({ '.': { 'better-auth': declared, '@nextsparkjs/core': '0.1.0' } }, ['better-auth@1.7.7'])
+  lock += "snapshots:\n\n  '@nextsparkjs/core@0.1.0':\n    dependencies:\n      better-auth: 1.7.7\n\n  better-auth@1.7.7: {}\n\n  better-auth@" + declared + ': {}\n'
+  const manifest = JSON.stringify({ name: '@nextsparkjs/core', dependencies: { 'better-auth': '~1.7.7', zod: '^4.5.4' } })
+  const files = {
+    'node_modules/@nextsparkjs/core/package.json': manifest,
+    'node_modules/.pnpm/@nextsparkjs+core@0.1.0/node_modules/@nextsparkjs/core/package.json': manifest,
+  }
+  return inProject(lock, files, checkDuplicateDependencies)
+}
+
+test('a better-auth the project declares below the one core asks for is reported with its fix (#394)', async () => {
+  const warned = await betterAuthVsCore('1.6.0')
   assert.equal(warned.status, 'warn')
   assert.equal(warned.fix, "Run: pnpm add --filter . better-auth@'~1.7.7'")
+})
+
+test('a better-auth the project declares above core\'s range is reported too, and the fix lowers it to core\'s range (#394)', async () => {
+  const warned = await betterAuthVsCore('1.8.0')
+  assert.equal(warned.status, 'warn')
+  assert.match(warned.message, /better-auth 1\.7\.7 \(a transitive dependency\) and 1\.8\.0/)
+  assert.equal(warned.fix, "Run: pnpm add --filter . better-auth@'~1.7.7'")
+})
+
+test('when no parent can be read the fix says to find who pulls the copy, not to reinstall (#394)', async () => {
+  const warned = await pinned(null, checkDuplicateDependencies)
+  assert.equal(warned.status, 'warn')
+  assert.match(warned.fix ?? '', /pnpm why zod/)
+  assert.doesNotMatch(warned.fix ?? '', /pnpm install/)
 })
 
 test('an npm alias in the snapshots is read as the package it names (#394)', () => {

@@ -194,7 +194,8 @@ function storeManifest(root: string, name: string, version: string): { dependenc
  */
 function pinnedAway(lock: Lock, pkg: string, version: string, top: string): boolean {
   const parents = [...(lock.view.parents.get(`${pkg}@${version}`) ?? [])]
-  if (parents.length === 0) return false
+  // core's own range is the one the project has to satisfy: a core that excludes `top` is a mismatch the project fixes, not a pin
+  if (parents.length === 0 || parents.some(parent => parent.startsWith(`${CORE}@`))) return false
   return parents.every(parent => {
     const at = parent.lastIndexOf('@')
     const manifest = at > 0 ? storeManifest(lock.root, parent.slice(0, at), parent.slice(at + 1)) : null
@@ -212,6 +213,7 @@ export async function checkDuplicateDependencies(): Promise<HealthCheckResult> {
   if (stale) return stale
   const found: string[] = []
   const fixes: string[] = []
+  const pulled: string[] = []
   for (const pkg of SINGLE_COPY) {
     const byVersion = lock.view.direct.get(pkg) ?? new Map<string, Set<string>>()
     const own = (version: string) => [...(byVersion.get(version) ?? [])].filter(i => lock.inProject(i, pkg))
@@ -231,9 +233,15 @@ export async function checkDuplicateDependencies(): Promise<HealthCheckResult> {
       const importers = own(version)
       if (importers.length === 0) return `${version} (a transitive dependency)`
       if (version !== highest) importers.forEach(importer => fixes.push(addCommand(lock, importer, pkg, lock.coreRange(pkg) ?? `^${highest}`)))
+      // the highest copy is the project's own and core's range excludes it: lower it to what core asks for
+      const asked = lock.coreRange(pkg)
+      if (version === highest && asked && semver.validRange(asked) && !semver.satisfies(highest, asked)) {
+        importers.forEach(importer => fixes.push(addCommand(lock, importer, pkg, asked)))
+      }
       return `${version} (${importers.join(', ')})`
     })
     found.push(`${pkg} ${parts.join(' and ')}`)
+    pulled.push(pkg)
   }
   if (found.length === 0) return { name, status: 'pass', message: 'One version of next, better-auth and zod' }
   // warn, not fail: the build works with two copies. The reason to align them is that an older copy stays installed.
@@ -244,7 +252,8 @@ export async function checkDuplicateDependencies(): Promise<HealthCheckResult> {
     message: `NS_DUPLICATE_DEPENDENCY: more than one version resolved (${found.join('; ')})`,
     fix: fixes.length > 0
       ? `Run: ${[...new Set(fixes)].join(' && ')}`
-      : 'Raise the packages that pull the older copy, then run: pnpm install',
+      // a pnpm install does not remove a copy that a dependency pins or asks for: find which one
+      : `A dependency pulls the older copy: run ${[...new Set(pulled)].map(pkg => `pnpm why ${pkg}`).join(' && ')} to see which one asks for it`,
   }
 }
 
