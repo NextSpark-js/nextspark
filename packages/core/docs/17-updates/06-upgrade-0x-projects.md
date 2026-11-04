@@ -171,6 +171,12 @@ From `0.1.0-beta.199` there is nothing to do by hand: `pnpm db:migrate` applies 
 
 After the migrations, `pnpm db:migrate` checks the auth tables (`users`, `session`, `account`, `verification`) and stops if one still has a NOT NULL column without a default that Better Auth never writes, naming each column. `nextspark doctor` runs the same check ("Auth schema"). Take a backup first, as for any migration.
 
+### Better Auth 1.7: password accounts need `accountId` = `userId`
+
+Better Auth 1.6 signed a user in with a password on the `credential` account alone; 1.7 also requires that account's `"accountId"` to be the user's id. A `credential` row written with the email there (core's sample accounts up to `0.1.0-beta.200`, or users imported by a script) answers "Invalid email or password" with the right password.
+
+`pnpm db:migrate` applies `044_credential_account_id_is_user_id.sql`, which sets `"accountId" = "userId"` on those rows. It skips other providers, a user with more than one `credential` row (a notice counts them: keep the right row and set `"accountId"` by hand) and a row whose `("providerId", "accountId")` key is taken. It can be run again safely.
+
 ### Migration 029 and the only superadmin
 
 Migration `029_sample_accounts_outside_development.sql` finds accounts whose password is one of the two sample passwords (by the password, never by name), removes that password and their sessions, deactivates their API keys, and sets their role to `member`. If your only `superadmin` or `developer` still has a sample password, nobody can open `/superadmin` or `/devtools` after `pnpm db:migrate`.
