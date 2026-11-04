@@ -581,7 +581,9 @@ export async function createProject(options: ProjectOptions): Promise<void> {
       console.log(chalk.green('  ✓ Git repository initialized with a first commit'))
     } else if (gitResult.status === 'initialized') {
       console.log(chalk.yellow(`  ⚠ Git repository initialized, but ${gitResult.reason}.`))
-      console.log(chalk.yellow('    Set user.name and user.email (git config), then run: git add -A && git commit'))
+      if (gitResult.commitFailed) {
+        console.log(chalk.yellow('    Set user.name and user.email (git config), then run: git add -A && git commit'))
+      }
     } else {
       console.log(chalk.gray(`  Git repository not created: ${gitResult.reason}.`))
     }

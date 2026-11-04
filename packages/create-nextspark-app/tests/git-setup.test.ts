@@ -1,4 +1,4 @@
-import { test } from 'node:test'
+import { test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -11,8 +11,12 @@ const identity = {
   GIT_COMMITTER_NAME: 'T', GIT_COMMITTER_EMAIL: 't@example.com',
 }
 
+const created: string[] = []
+after(() => { for (const dir of created) fs.rmSync(dir, { recursive: true, force: true }) })
+
 function project(files: Record<string, string>): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cna-git-'))
+  created.push(dir)
   for (const [name, content] of Object.entries(files)) {
     fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true })
     fs.writeFileSync(path.join(dir, name), content)
@@ -58,6 +62,7 @@ test('leaves the repository initialized when the commit fails for lack of identi
     GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'user.useConfigOnly', GIT_CONFIG_VALUE_0: 'true',
   }, () => setupGitRepository(dir))
   assert.equal(result.status, 'initialized')
+  assert.equal((result as { commitFailed?: boolean }).commitFailed, true)
   assert.ok(fs.existsSync(path.join(dir, '.git')))
 })
 

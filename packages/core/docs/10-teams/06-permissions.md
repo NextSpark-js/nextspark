@@ -36,7 +36,7 @@ Each team membership has a role stored in `team_members`:
 
 | Role | Level | Description |
 |------|-------|-------------|
-| `owner` | 4 | Team creator, full control (receives every declared permission, even one declared with `roles: []`; see [How owner is resolved](../14-permissions/03-permission-service.md#how-owner-is-resolved)) |
+| `owner` | 4 | Team creator, full control (through `PermissionService`, `usePermission` and `checkPermission` it receives every declared permission, even one declared with `roles: []`; see [How owner is resolved](../14-permissions/03-permission-service.md#how-owner-is-resolved)) |
 | `admin` | 3 | Can manage members and settings |
 | `member` | 2 | Can create/edit own content |
 | `viewer` | 1 | Read-only access |
@@ -338,7 +338,7 @@ export type TeamPermission =
   | 'team.billing.manage'
 
 // Role permissions matrix (internal, not exported directly)
-// owner: all permissions (every declared permission, including one declared with roles: [])
+// owner: whatever the team.* lists include (no owner shortcut here; PermissionService grants owner every declared permission)
 // admin: all except team.delete and team.billing.manage
 // member: team.view, team.members.view, team.settings.view
 // viewer: team.view, team.members.view

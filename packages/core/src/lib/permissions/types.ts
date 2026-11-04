@@ -139,7 +139,11 @@ export interface PermissionAction {
   /** Detailed description of what this permission allows */
   description?: string
 
-  /** Team roles that have this permission */
+  /**
+   * Team roles that have this permission. `owner` also receives it when not listed, and when this is `[]`
+   * ("no role except owner"), through PermissionService. Exception: `team.*` permissions checked by
+   * lib/teams/permissions and check-action read this list as written, with no owner shortcut.
+   */
   roles: TeamRole[]
 
   /** Category for grouping in UI (optional, used by features) */
@@ -163,7 +167,11 @@ export interface EntityPermissionAction {
   /** Detailed description of what this permission allows */
   description?: string
 
-  /** Team roles that have this permission */
+  /**
+   * Team roles that have this permission. `owner` also receives it when not listed, and when this is `[]`
+   * ("no role except owner"), through PermissionService. Exception: `team.*` permissions checked by
+   * lib/teams/permissions and check-action read this list as written, with no owner shortcut.
+   */
   roles: TeamRole[]
 
   /** Whether this is a dangerous/destructive action */

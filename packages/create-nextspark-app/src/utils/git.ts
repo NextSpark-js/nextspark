@@ -6,7 +6,7 @@ export const INITIAL_COMMIT_MESSAGE = 'Initial commit from create-nextspark-app'
 
 export type GitSetupResult =
   | { status: 'committed' }
-  | { status: 'initialized'; reason: string }
+  | { status: 'initialized'; reason: string; commitFailed?: boolean }
   | { status: 'skipped'; reason: string }
 
 function runGit(cwd: string, args: string[]): string {
@@ -55,6 +55,6 @@ export function setupGitRepository(projectPath: string): GitSetupResult {
     runGit(projectPath, ['commit', '-m', INITIAL_COMMIT_MESSAGE])
     return { status: 'committed' }
   } catch (error) {
-    return { status: 'initialized', reason: `the initial commit failed: ${errorText(error)}` }
+    return { status: 'initialized', reason: `the initial commit failed: ${errorText(error)}`, commitFailed: true }
   }
 }

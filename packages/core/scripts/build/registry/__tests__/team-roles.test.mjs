@@ -193,3 +193,25 @@ test('generated registry: no teamRoles → base + custom (no regression)', async
   assert.deepEqual(readRoles(out), ['owner', 'admin', 'member', 'viewer', 'editor'])
   assert.match(out, /export const DEFAULT_TEAM_ROLE: string = "member"/)
 })
+
+// owner receives every declared permission, including one declared with roles: [] (#380)
+test('generated registry: a permission declared with roles: [] is in no role set but owner has it', async () => {
+  const ts = (await import('typescript')).default
+  const actions = [{ action: 'seal', label: 'Seal posts', roles: [] }, { action: 'edit', label: 'Edit posts', roles: ['admin'] }]
+  const out = await generatePermissionsRegistry(
+    { themeName: 'test', importPath: 'overrides-config', teams: [], features: [], roles: null, teamRoles: null, entities: { posts: actions } },
+    [{ name: 'posts', displayName: 'Posts' }], { outputDir: '/tmp/nextspark-test', isNpmMode: false },
+  )
+  // Run the emitted module itself, with its two imports stubbed
+  const js = ts.transpileModule(out, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  const fakeRequire = (id) => (id.includes('overrides-config')
+    ? { PERMISSIONS_CONFIG_OVERRIDES: { entities: { posts: actions } } }
+    : { CORE_PERMISSIONS_CONFIG: { systemPermissions: [], roleDefaults: {}, uiSections: [] } })
+  const mod = { exports: {} }
+  new Function('require', 'module', 'exports', js)(fakeRequire, mod, mod.exports)
+  const reg = mod.exports
+  assert.ok(reg.ALL_PERMISSIONS_SET.has('posts.seal'))
+  assert.equal(reg.PERMISSIONS_BY_ROLE.owner.has('posts.seal'), true)
+  for (const role of ['admin', 'member', 'viewer']) assert.equal(reg.PERMISSIONS_BY_ROLE[role].has('posts.seal'), false)
+  assert.equal(reg.PERMISSIONS_BY_ROLE.admin.has('posts.edit'), true)
+})

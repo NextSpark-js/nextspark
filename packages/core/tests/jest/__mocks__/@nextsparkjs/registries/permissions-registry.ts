@@ -48,7 +48,7 @@ const ENTITY_PERMISSIONS_BY_ROLE: Record<string, string[]> = {
 }
 
 // Declared with `roles: []`: no role lists it, yet it is a declared permission, so the generated registry's
-// ALL_PERMISSIONS (every resolved permission) holds it and owner receives it (#380)
+// ALL_PERMISSIONS (every resolved permission) holds it, in no role set, and owner receives it (#380)
 const NO_ROLE_PERMISSIONS = ['posts.seal']
 
 export const ROLE_PERMISSIONS_ARRAY: Record<string, string[]> = Object.fromEntries(
@@ -57,11 +57,10 @@ export const ROLE_PERMISSIONS_ARRAY: Record<string, string[]> = Object.fromEntri
     [...(TEAM_PERMISSIONS_BY_ROLE[role] ?? []), ...(ENTITY_PERMISSIONS_BY_ROLE[role] ?? [])],
   ])
 )
-ROLE_PERMISSIONS_ARRAY.owner.push(...NO_ROLE_PERMISSIONS)
 
 export const PERMISSIONS_BY_ROLE: Record<string, Set<string>> = Object.fromEntries(
   Object.entries(ROLE_PERMISSIONS_ARRAY).map(([role, perms]) => [role, new Set(perms)])
 )
 
-export const ALL_PERMISSIONS: string[] = Array.from(new Set(Object.values(ROLE_PERMISSIONS_ARRAY).flat()))
+export const ALL_PERMISSIONS: string[] = Array.from(new Set([...Object.values(ROLE_PERMISSIONS_ARRAY).flat(), ...NO_ROLE_PERMISSIONS]))
 export const ALL_PERMISSIONS_SET: Set<string> = new Set(ALL_PERMISSIONS)
