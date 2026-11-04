@@ -540,6 +540,28 @@ test('updates the @nextsparkjs pins of a generated project and leaves the rest o
   assert.equal(record.previousVersion, FROM)
 })
 
+test('an update that reaches 0.1.0-beta.200 points next-themes imports at core\'s theme provider; one that does not leaves them', (t) => {
+  const BETA_200 = '0.1.0-beta.200'
+  const files = {
+    'components/Navbar.tsx': "'use client'\nimport { useTheme } from 'next-themes'\n",
+    'lib/other.ts': "import NextThemes from 'next-themes'\n",
+  }
+  const published = Object.fromEntries(PACKAGES.map((name) => [name, [FROM, TO, BETA_200]]))
+
+  const below = createProject(t, { files })
+  const short = runUpdateCore(below, ['--version', TO], { published })
+  assert.equal(short.status, 0, short.output)
+  assert.doesNotMatch(short.stdout, /Rewriting project code/)
+  assert.equal(fs.readFileSync(path.join(below, 'components/Navbar.tsx'), 'utf8'), files['components/Navbar.tsx'])
+
+  const root = createProject(t, { files })
+  const result = runUpdateCore(root, ['--version', BETA_200], { published, latest: BETA_200 })
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.stdout, /Rewriting project code for 0\.1\.0-beta\.200: [^\n]*\n {5}components\/Navbar\.tsx\n {5}Still loading next-themes, not rewritten [^\n]*lib\/other\.ts/)
+  assert.equal(fs.readFileSync(path.join(root, 'components/Navbar.tsx'), 'utf8'), "'use client'\nimport { useTheme } from '@nextsparkjs/core/providers/theme-provider'\n")
+  assert.equal(fs.readFileSync(path.join(root, 'lib/other.ts'), 'utf8'), files['lib/other.ts'])
+})
+
 test('sets a ^ or ~ range to the exact target, keeping the indentation and the key order of package.json', (t) => {
   const root = createProject(t, { pins: { '@nextsparkjs/cli': `^${FROM}`, '@nextsparkjs/testing': `~${FROM}` } })
   const text = fs.readFileSync(path.join(root, 'package.json'), 'utf8').replace(/^(?: {2})+/gm, (indent) => '\t'.repeat(indent.length / 2))

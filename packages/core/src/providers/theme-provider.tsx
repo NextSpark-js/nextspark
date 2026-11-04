@@ -42,7 +42,7 @@ import * as React from "react"
 import { usePathname } from "next/navigation"
 import { resolveForcedTheme, type ForcedThemeRoutes } from "../lib/theme/forced-theme"
 
-type Attribute = `data-${string}` | "class"
+export type Attribute = `data-${string}` | "class"
 
 /** Extra props of the inline script, as next-themes takes them */
 export interface ScriptProps extends React.DetailedHTMLProps<React.ScriptHTMLAttributes<HTMLScriptElement>, HTMLScriptElement> {
