@@ -65,7 +65,7 @@ test('044 sets accountId = userId on credential rows, and leaves the rest as it 
   const notices: string[] = []
   owner.on('notice', n => notices.push(n.message ?? ''))
   await owner.query(MIGRATION_044)
-  assert.match(notices.join('\n'), /2 user\(s\) with several credential rows left as they are, 1 row\(s\) skipped because the target key is taken/)
+  assert.match(notices.join('\n'), /Credential accounts: 2 set to accountId = userId; 2 user\(s\) with several credential rows and 1 row\(s\) whose target key is taken left unchanged/)
 
   // a-oauth-c (the only credential row of u-oauth) is fixed; the google and github rows are not touched
   assert.deepEqual((await owner.query(`SELECT id, "accountId", "providerId" FROM account ORDER BY id`)).rows, [
@@ -86,7 +86,7 @@ test('044 sets accountId = userId on credential rows, and leaves the rest as it 
   const before = await digest()
   await owner.query(MIGRATION_044)
   assert.equal(await digest(), before)
-  assert.match(notices.at(-1) ?? '', /Credential accounts: 0 set/)
+  assert.match(notices.at(-1) ?? '', /Credential accounts: 0 set .*2 user\(s\).* 1 row/)
 })
 
 test('a real Better Auth 1.7 signs in with the seeded sample account, and with an older seed only after 044', { skip, timeout: 240000 }, async t => {

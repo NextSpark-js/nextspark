@@ -109,6 +109,8 @@ async function runMigrations() {
     await client.query("SELECT set_config('nextspark.seed_sample_data', $1, false)", [SAMPLE_DATA.apply ? 'on' : 'off']);
     client.on('notice', notice => {
       if (notice.message?.startsWith('Sample accounts:')) console.log(`🔐 ${notice.message}`);
+      // 044: credential accounts it fixed, and the ones it left that need a manual step
+      else if (notice.message?.startsWith('Credential accounts:')) console.log(`${notice.severity === 'WARNING' ? '⚠️ ' : '🔐'} ${notice.message}`);
       // a migration that leaves something as it was says so (043: a policy it did not rewrite)
       else if (notice.severity === 'WARNING' && notice.message?.includes('left unchanged')) console.log(`⚠️  ${notice.message}`);
       // 022: a role step the migration role has no privilege for is skipped, and says what to do by hand

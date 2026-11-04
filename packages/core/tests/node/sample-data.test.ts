@@ -250,3 +250,17 @@ test('029 leaves a sample account whose password was changed, and a development 
   assert.equal(await value(devClient, `SELECT count(*)::int FROM account WHERE "userId" = ANY($1) AND password IS NOT NULL`, [SAMPLE_USERS]), 2)
   assert.equal(await value(devClient, `SELECT role FROM users WHERE id = 'test-superadmin-001'`), 'superadmin')
 })
+
+test('db:migrate prints what 044 did to the credential accounts, as a warning when some need a manual step', { skip: !HAS_POSTGRES, timeout: 240000 }, async t => {
+  const { url, client } = await throwawayDatabase(t)
+  const { root } = project(t)
+  assert.match(migrate(root, url), /🔐 Credential accounts: 0 set to accountId = userId\./)
+
+  await client.query(`
+    INSERT INTO users (id, email) VALUES ('u1', 'u1@example.test'), ('u2', 'u2@example.test');
+    INSERT INTO account (id, "accountId", "providerId", "userId") VALUES ('a1', 'u1@example.test', 'credential', 'u1'), ('a2', 'x', 'credential', 'u2'), ('a3', 'y', 'credential', 'u2');
+    DELETE FROM "_migrations" WHERE filename = '044_credential_account_id_is_user_id.sql';
+  `)
+  const output = migrate(root, url)
+  assert.match(output, /⚠️ {2}Credential accounts: 1 set to accountId = userId; 1 user\(s\) with several credential rows and 0 row\(s\) whose target key is taken left unchanged\. .*db:migrate again/)
+})
