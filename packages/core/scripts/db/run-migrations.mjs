@@ -95,6 +95,9 @@ const SAMPLE_DATA = sampleDataPolicy({ argv: process.argv, env: process.env, fil
 // above only builds clients to read their parameters and never connects.
 setProjectEnv(fileEnv);
 
+// The role steps 022 could not run, to say again at the very end of the output
+const roleSetupWarnings = [];
+
 async function runMigrations() {
   const client = migrationClient(MIGRATION_URL, TIME_LIMIT);
   
@@ -106,7 +109,6 @@ async function runMigrations() {
     LEGACY_THEME = await legacyTheme(client);
 
     // 029_sample_accounts_outside_development.sql reads it: a run that applies sample data keeps the sample accounts
-    const roleSetupWarnings = [];
     await client.query("SELECT set_config('nextspark.seed_sample_data', $1, false)", [SAMPLE_DATA.apply ? 'on' : 'off']);
     client.on('notice', notice => {
       if (notice.message?.startsWith('Sample accounts:')) console.log(`🔐 ${notice.message}`);
@@ -185,11 +187,6 @@ async function runMigrations() {
     
     await client.end();
     console.log("\n✅ All migrations completed successfully!");
-    // 022 goes on after a role step it cannot run, in the middle of a long output: say it again at the end
-    if (roleSetupWarnings.length > 0) {
-      console.log("\n⚠️  Needs a superuser, by hand (022 could not run it):");
-      for (const warning of roleSetupWarnings) console.log(`   - ${warning}`);
-    }
   } catch (error) {
     console.error("❌ Migration error:", scrub(error.message));
     process.exit(1);
@@ -761,6 +758,11 @@ async function runAllMigrations() {
   await checkAuthSchema();
 
   console.log("\n🎉 All migrations completed successfully!");
+  // 022 goes on after a role step it cannot run, in the middle of a long output: say it again as the last thing printed
+  if (roleSetupWarnings.length > 0) {
+    console.log("\n⚠️  Needs a superuser, by hand (022 could not run it):");
+    for (const warning of roleSetupWarnings) console.log(`   - ${warning}`);
+  }
 }
 
 async function checkAuthSchema() {

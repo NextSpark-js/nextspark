@@ -44,8 +44,10 @@ async function main() {
     console.log('DATABASE_URL is not set')
     return 2
   }
-  const client = scriptClient(url, { connectionTimeoutMillis: 10000 })
+  let client
   try {
+    // inside the try: a URL that cannot be parsed is "could not read" (exit 2), not an uncaught error (exit 1)
+    client = scriptClient(url, { connectionTimeoutMillis: 10000 })
     await client.connect()
     const row = await rlsRuntime(client)
     if (!row) {
@@ -59,7 +61,7 @@ async function main() {
     console.log(`Could not read the role: ${error.message}`)
     return 2
   } finally {
-    await client.end().catch(() => {})
+    await client?.end().catch(() => {})
   }
 }
 

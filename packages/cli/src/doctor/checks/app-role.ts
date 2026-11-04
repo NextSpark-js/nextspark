@@ -30,7 +30,8 @@ export async function checkAppRole(coreDir = getCoreDir()): Promise<HealthCheckR
   })
   const [message = '', statement = ''] = (run.stdout || '').trim().split('\n').map(line => line.trim())
   if (run.status === 0) return { name, status: 'pass', message }
-  if (run.status === 1) {
+  // exit 1 with no statement is not a verdict (a crash also exits 1): never a warning with an empty fix
+  if (run.status === 1 && statement) {
     return {
       name,
       status: 'warn',

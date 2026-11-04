@@ -6,7 +6,7 @@
  *
  *   node check-app-role.mjs   (DATABASE_URL in the environment)
  *   first line: the report; when the membership is missing, the second line is the statement for a superuser.
- *   exit 0: member, or there is no nextspark_app (no cutover yet); 1: not a member; 2: no DATABASE_URL or the database could not be read.
+ *   exit 0: member; 1: not a member (the second line is the statement); 2: no DATABASE_URL; 3: the roles could not be read.
  */
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -16,6 +16,7 @@ export const APP_ROLE_SQL = `
   SELECT a.oid IS NOT NULL AS "hasAppRole", u.oid IS NOT NULL AS "hasAuthenticated",
          CASE WHEN a.oid IS NOT NULL AND u.oid IS NOT NULL THEN pg_has_role(a.oid, u.oid, 'USAGE') END AS usage,
          CASE WHEN a.oid IS NOT NULL AND u.oid IS NOT NULL THEN pg_has_role(a.oid, u.oid, 'MEMBER') END AS member,
+         a.rolinherit AS inherit,
          current_setting('server_version_num')::int AS version
   FROM (SELECT 1) one
   LEFT JOIN pg_roles a ON a.rolname = 'nextspark_app'
@@ -23,13 +24,17 @@ export const APP_ROLE_SQL = `
 
 /** { status: 'ok' | 'missing', message, fix? } for the row of APP_ROLE_SQL. */
 export function appRoleReport(row) {
-  if (!row.hasAppRole) return { status: 'ok', message: 'No nextspark_app role: the runtime cutover has not been made, nothing to check' }
+  if (!row.hasAppRole) return { status: 'ok', message: 'No nextspark_app role: migration 022 creates it, run `pnpm db:migrate`' }
   if (!row.hasAuthenticated) return { status: 'ok', message: 'No authenticated role: run `pnpm db:migrate`' }
   if (row.usage) return { status: 'ok', message: 'nextspark_app inherits the policies of authenticated' }
   // from PostgreSQL 16 the INHERIT option belongs to the membership; before, to the role
-  const fix = row.version >= 160000
-    ? 'GRANT authenticated TO nextspark_app WITH INHERIT TRUE;'
-    : row.member ? 'ALTER ROLE nextspark_app INHERIT;' : 'GRANT authenticated TO nextspark_app;'
+  let fix = 'GRANT authenticated TO nextspark_app WITH INHERIT TRUE;'
+  if (row.version < 160000) {
+    // 022 creates the role NOINHERIT: the GRANT alone leaves the policies not applying
+    const grant = row.member ? '' : 'GRANT authenticated TO nextspark_app;'
+    const inherit = row.inherit ? '' : 'ALTER ROLE nextspark_app INHERIT;'
+    fix = [grant, inherit].filter(Boolean).join(' ')
+  }
   return {
     status: 'missing',
     message: `nextspark_app is not a member of authenticated that inherits it: the policies written TO authenticated do not apply to it (users/me answers 404 USER_NOT_FOUND, lists come back empty, api_audit_log writes fail with 42501)`,
@@ -43,8 +48,10 @@ async function main() {
     console.log('DATABASE_URL is not set')
     return 2
   }
-  const client = scriptClient(url, { connectionTimeoutMillis: 10000 })
+  let client
   try {
+    // inside the try: a URL that cannot be parsed is "could not check" (exit 3), never "not a member" (exit 1)
+    client = scriptClient(url, { connectionTimeoutMillis: 10000 })
     await client.connect()
     const report = appRoleReport((await client.query(APP_ROLE_SQL)).rows[0])
     console.log(report.message)
@@ -53,9 +60,9 @@ async function main() {
   } catch (error) {
     // never the URL: it holds the password
     console.log(`Could not read the roles: ${error.message}`)
-    return 2
+    return 3
   } finally {
-    await client.end().catch(() => {})
+    await client?.end().catch(() => {})
   }
 }
 
