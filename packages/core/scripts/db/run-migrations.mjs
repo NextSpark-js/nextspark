@@ -106,6 +106,7 @@ async function runMigrations() {
     LEGACY_THEME = await legacyTheme(client);
 
     // 029_sample_accounts_outside_development.sql reads it: a run that applies sample data keeps the sample accounts
+    const roleSetupWarnings = [];
     await client.query("SELECT set_config('nextspark.seed_sample_data', $1, false)", [SAMPLE_DATA.apply ? 'on' : 'off']);
     client.on('notice', notice => {
       if (notice.message?.startsWith('Sample accounts:')) console.log(`🔐 ${notice.message}`);
@@ -114,7 +115,11 @@ async function runMigrations() {
       // a migration that leaves something as it was says so (043: a policy it did not rewrite)
       else if (notice.severity === 'WARNING' && notice.message?.includes('left unchanged')) console.log(`⚠️  ${notice.message}`);
       // 022: a role step the migration role has no privilege for is skipped, and says what to do by hand
-      else if (notice.severity === 'WARNING' && notice.message?.startsWith('Role setup:')) console.log(`⚠️  ${notice.message}`);
+      else if (notice.severity === 'WARNING' && notice.message?.startsWith('Role setup:')) {
+        console.log(`⚠️  ${notice.message}`);
+        // the comment on the role is only a description: nothing to repeat
+        if (!notice.message.includes('only a description')) roleSetupWarnings.push(notice.message);
+      }
     });
     
     // Create migrations tracking table
@@ -180,6 +185,11 @@ async function runMigrations() {
     
     await client.end();
     console.log("\n✅ All migrations completed successfully!");
+    // 022 goes on after a role step it cannot run, in the middle of a long output: say it again at the end
+    if (roleSetupWarnings.length > 0) {
+      console.log("\n⚠️  Needs a superuser, by hand (022 could not run it):");
+      for (const warning of roleSetupWarnings) console.log(`   - ${warning}`);
+    }
   } catch (error) {
     console.error("❌ Migration error:", scrub(error.message));
     process.exit(1);
