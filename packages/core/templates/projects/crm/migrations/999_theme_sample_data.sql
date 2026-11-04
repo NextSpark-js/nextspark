@@ -223,7 +223,7 @@ INSERT INTO "account" (
   (
     'acc-crm-ceo',
     'usr-crm-ceo',
-    'crm_owner_roberto@nextspark.dev',
+    'usr-crm-ceo',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -233,7 +233,7 @@ INSERT INTO "account" (
   (
     'acc-crm-sales-mgr',
     'usr-crm-sales-mgr',
-    'crm_admin_sofia@nextspark.dev',
+    'usr-crm-sales-mgr',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -243,7 +243,7 @@ INSERT INTO "account" (
   (
     'acc-crm-sales-rep',
     'usr-crm-sales-rep',
-    'crm_member_miguel@nextspark.dev',
+    'usr-crm-sales-rep',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -253,7 +253,7 @@ INSERT INTO "account" (
   (
     'acc-crm-marketing',
     'usr-crm-marketing',
-    'crm_member_laura@nextspark.dev',
+    'usr-crm-marketing',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',

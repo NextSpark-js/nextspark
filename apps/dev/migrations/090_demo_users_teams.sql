@@ -354,7 +354,7 @@ INSERT INTO "account" (
   (
     'account-tmt-carlos',
     'usr-carlos-001',
-    'carlos.mendoza@nextspark.dev',
+    'usr-carlos-001',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -363,7 +363,7 @@ INSERT INTO "account" (
   (
     'account-tmt-james',
     'usr-james-002',
-    'james.wilson@nextspark.dev',
+    'usr-james-002',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -372,7 +372,7 @@ INSERT INTO "account" (
   (
     'account-tmt-diego',
     'usr-diego-003',
-    'diego.ramirez@nextspark.dev',
+    'usr-diego-003',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -381,7 +381,7 @@ INSERT INTO "account" (
   (
     'account-tmt-michael',
     'usr-michael-004',
-    'michael.brown@nextspark.dev',
+    'usr-michael-004',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -390,7 +390,7 @@ INSERT INTO "account" (
   (
     'account-tmt-ana',
     'usr-ana-005',
-    'ana.garcia@nextspark.dev',
+    'usr-ana-005',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -399,7 +399,7 @@ INSERT INTO "account" (
   (
     'account-tmt-emily',
     'usr-emily-006',
-    'emily.johnson@nextspark.dev',
+    'usr-emily-006',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -408,7 +408,7 @@ INSERT INTO "account" (
   (
     'account-tmt-sofia',
     'usr-sofia-007',
-    'sofia.lopez@nextspark.dev',
+    'usr-sofia-007',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -417,7 +417,7 @@ INSERT INTO "account" (
   (
     'account-tmt-sarah',
     'usr-sarah-008',
-    'sarah.davis@nextspark.dev',
+    'usr-sarah-008',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',

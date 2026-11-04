@@ -220,7 +220,7 @@ INSERT INTO "account" (
   (
     'acc-blog-marcos',
     'usr-blog-marcos',
-    'blog_author_marcos@nextspark.dev',
+    'usr-blog-marcos',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -230,7 +230,7 @@ INSERT INTO "account" (
   (
     'acc-blog-lucia',
     'usr-blog-lucia',
-    'blog_author_lucia@nextspark.dev',
+    'usr-blog-lucia',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -240,7 +240,7 @@ INSERT INTO "account" (
   (
     'acc-blog-carlos',
     'usr-blog-carlos',
-    'blog_author_carlos@nextspark.dev',
+    'usr-blog-carlos',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866',
@@ -798,16 +798,16 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Accounts (Password: Test1234)
 INSERT INTO "account" (id, "userId", "accountId", "providerId", "password", "createdAt", "updatedAt") VALUES
-  ('acc-blog-diana', 'usr-blog-diana', 'blog_author_diana@nextspark.dev', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '8 months', NOW()),
-  ('acc-blog-elena', 'usr-blog-elena', 'blog_author_elena@nextspark.dev', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '7 months', NOW()),
-  ('acc-blog-felix', 'usr-blog-felix', 'blog_author_felix@nextspark.dev', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '14 months', NOW()),
-  ('acc-blog-gloria', 'usr-blog-gloria', 'blog_author_gloria@nextspark.dev', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '12 months', NOW()),
-  ('acc-blog-hugo', 'usr-blog-hugo', 'blog_author_hugo@nextspark.dev', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '6 months', NOW()),
-  ('acc-blog-iris', 'usr-blog-iris', 'blog_author_iris@nextspark.dev', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '5 months', NOW()),
-  ('acc-blog-jorge', 'usr-blog-jorge', 'blog_author_jorge@nextspark.dev', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '9 months', NOW()),
-  ('acc-blog-karen', 'usr-blog-karen', 'blog_author_karen@nextspark.dev', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '15 months', NOW()),
-  ('acc-blog-leo', 'usr-blog-leo', 'blog_author_leo@nextspark.dev', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '2 months', NOW()),
-  ('acc-blog-maria', 'usr-blog-maria', 'blog_author_maria@nextspark.dev', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '5 days', NOW())
+  ('acc-blog-diana', 'usr-blog-diana', 'usr-blog-diana', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '8 months', NOW()),
+  ('acc-blog-elena', 'usr-blog-elena', 'usr-blog-elena', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '7 months', NOW()),
+  ('acc-blog-felix', 'usr-blog-felix', 'usr-blog-felix', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '14 months', NOW()),
+  ('acc-blog-gloria', 'usr-blog-gloria', 'usr-blog-gloria', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '12 months', NOW()),
+  ('acc-blog-hugo', 'usr-blog-hugo', 'usr-blog-hugo', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '6 months', NOW()),
+  ('acc-blog-iris', 'usr-blog-iris', 'usr-blog-iris', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '5 months', NOW()),
+  ('acc-blog-jorge', 'usr-blog-jorge', 'usr-blog-jorge', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '9 months', NOW()),
+  ('acc-blog-karen', 'usr-blog-karen', 'usr-blog-karen', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '15 months', NOW()),
+  ('acc-blog-leo', 'usr-blog-leo', 'usr-blog-leo', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '2 months', NOW()),
+  ('acc-blog-maria', 'usr-blog-maria', 'usr-blog-maria', 'credential', '3db9e98e2b4d3caca97fdf2783791cbc:34b293de615caf277a237773208858e960ea8aa10f1f5c5c309b632f192cac34d52ceafbd338385616f4929e4b1b6c055b67429c6722ffdb80b01d9bf4764866', NOW() - INTERVAL '5 days', NOW())
 ON CONFLICT ("providerId", "accountId") DO NOTHING;
 
 -- Users meta

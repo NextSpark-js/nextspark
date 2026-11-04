@@ -141,7 +141,7 @@ INSERT INTO "account" (
   (
     'account-superadmin-001',
     'test-superadmin-001',
-    'superadmin@nextspark.dev',
+    'test-superadmin-001',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '22de14d5472248ed0bece911df908b2a:d29576424798ba6845d348a3767c0b0f38a00f2aca461b3b1d34b99a93cab06c86774c6edb183e6d6ec47457649b032a49a7b60a48f6f4f7fbbc4ea40258f19f',
@@ -150,7 +150,7 @@ INSERT INTO "account" (
   (
     'account-developer-001',
     'test-developer-001',
-    'developer@nextspark.dev',
+    'test-developer-001',
     'credential',
     NULL, NULL, NULL, NULL, NULL, NULL,
     '22de14d5472248ed0bece911df908b2a:d29576424798ba6845d348a3767c0b0f38a00f2aca461b3b1d34b99a93cab06c86774c6edb183e6d6ec47457649b032a49a7b60a48f6f4f7fbbc4ea40258f19f',
