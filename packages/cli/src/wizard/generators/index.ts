@@ -39,7 +39,7 @@ import { setPackageEntries } from './workspace-yaml.js'
 import { installThemeAndPlugins } from './theme-plugins-installer.js'
 // DX improvement generators
 import { setupEnvironment } from './env-setup.js'
-import { setupGit, writeGitignore } from './git-init.js'
+import { writeGitignore } from './git-init.js'
 // Production sign-in provider (Step 202)
 import { writeProductionSignInEnv } from './production-sign-in-env.js'
 import { getDefaultProductionSignIn, type ProductionSignInResult } from '../prompts/production-sign-in.js'
@@ -94,7 +94,6 @@ export {
   installThemeAndPlugins,
   // DX generators
   setupEnvironment,
-  setupGit,
   // Production sign-in provider
   writeProductionSignInEnv,
   // Monorepo generators
