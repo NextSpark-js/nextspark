@@ -13,11 +13,42 @@
  * mount effect finds nothing to change.
  */
 
+/*! Portions adapted from next-themes 0.4.6 (https://github.com/pacocoursey/next-themes), under this license:
+
+MIT License
+
+Copyright (c) 2022 Paco Coursey
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 import * as React from "react"
 import { usePathname } from "next/navigation"
 import { resolveForcedTheme, type ForcedThemeRoutes } from "../lib/theme/forced-theme"
 
 type Attribute = `data-${string}` | "class"
+
+/** Extra props of the inline script, as next-themes takes them */
+export interface ScriptProps extends React.DetailedHTMLProps<React.ScriptHTMLAttributes<HTMLScriptElement>, HTMLScriptElement> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the type next-themes 0.4.6 declares
+  [dataAttribute: `data-${string}`]: any
+}
 
 export interface UseThemeProps {
   /** Every theme name, plus "system" when `enableSystem` */
@@ -50,6 +81,8 @@ export interface ThemeProviderProps extends React.PropsWithChildren {
   value?: Record<string, string> | undefined
   /** Nonce of the inline script and of the style that disables transitions */
   nonce?: string
+  /** Props to pass the inline script */
+  scriptProps?: ScriptProps
   /**
    * Routes whose theme is forced regardless of user/system preference
    * (`theme.config.ts` → `forcedThemeRoutes`).
@@ -143,13 +176,14 @@ const script = (
   }
 }
 
-type ScriptProps = Required<Pick<ThemeProviderProps, "attribute" | "storageKey" | "defaultTheme" | "themes" | "enableSystem" | "enableColorScheme">> &
-  Pick<ThemeProviderProps, "forcedTheme" | "value" | "nonce">
+type ThemeScriptProps = Required<Pick<ThemeProviderProps, "attribute" | "storageKey" | "defaultTheme" | "themes" | "enableSystem" | "enableColorScheme">> &
+  Pick<ThemeProviderProps, "forcedTheme" | "value" | "nonce" | "scriptProps">
 
-const ThemeScript = React.memo(function ThemeScript({ forcedTheme, storageKey, attribute, enableSystem, enableColorScheme, defaultTheme, value, themes, nonce }: ScriptProps) {
+const ThemeScript = React.memo(function ThemeScript({ forcedTheme, storageKey, attribute, enableSystem, enableColorScheme, defaultTheme, value, themes, nonce, scriptProps }: ThemeScriptProps) {
   const args = JSON.stringify([attribute, storageKey, defaultTheme, forcedTheme, themes, value, enableSystem, enableColorScheme]).slice(1, -1)
   return (
     <script
+      {...scriptProps}
       suppressHydrationWarning
       // The browser hides a nonce from the DOM after load, so the client renders it empty, as next-themes does
       nonce={isServer ? nonce : ""}
@@ -170,6 +204,7 @@ function ColorModeProvider({
   value,
   children,
   nonce,
+  scriptProps,
 }: Omit<ThemeProviderProps, "forcedThemeRoutes">) {
   const [theme, setThemeState] = React.useState(() => getStoredTheme(storageKey, defaultTheme))
   // Read at the first render in the browser, not first in the mount effect: the effect below then sets the same
@@ -265,6 +300,7 @@ function ColorModeProvider({
         value={value}
         themes={themes}
         nonce={nonce}
+        scriptProps={scriptProps}
       />
       {children}
     </ThemeContext.Provider>

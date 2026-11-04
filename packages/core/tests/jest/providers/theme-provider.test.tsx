@@ -38,6 +38,11 @@ describe('ThemeProvider', () => {
     expect(mockUsePathname).not.toHaveBeenCalled()
   })
 
+  it('puts scriptProps on the blocking script, as next-themes does', () => {
+    const html = renderToString(<ThemeProvider scriptProps={{ id: 'theme-script', 'data-cfasync': 'false' }}><span /></ThemeProvider>)
+    expect(html).toMatch(/<script[^>]*id="theme-script"[^>]*data-cfasync="false"/)
+  })
+
   it('does not read the pathname for an empty route map', () => {
     render(<ThemeProvider forcedThemeRoutes={{}}><span /></ThemeProvider>)
     expect(mockUsePathname).not.toHaveBeenCalled()
