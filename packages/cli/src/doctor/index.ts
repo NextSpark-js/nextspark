@@ -47,22 +47,22 @@ const STATUS_ICONS = {
 } as const
 
 /**
- * Format a health check result for console output
+ * Format a health check result as the lines to print
  */
-function formatResult(result: HealthCheckResult): string {
+function formatResult(result: HealthCheckResult): string[] {
   const icon = STATUS_ICONS[result.status]
   const nameColor = result.status === 'fail' ? chalk.red : result.status === 'warn' ? chalk.yellow : chalk.white
   const name = nameColor(result.name.padEnd(18))
   const message = chalk.gray(result.message)
 
-  let output = `${icon} ${name} ${message}`
+  const lines = [`${icon} ${name} ${message}`]
 
-  // Add fix suggestion on a new line for warnings and failures
+  // The fix goes on a line of its own: one console call per line, because the output guard quotes a call that holds a newline
   if (result.fix && result.status !== 'pass') {
-    output += `\n${' '.repeat(22)}${chalk.cyan('\u2192')} ${chalk.cyan(result.fix)}`
+    lines.push(`${' '.repeat(22)}${chalk.cyan('\u2192')} ${chalk.cyan(result.fix)}`)
   }
 
-  return output
+  return lines
 }
 
 /**
@@ -148,19 +148,8 @@ export async function runDoctorCommand(): Promise<void> {
 
   // Display each result
   for (const result of results) {
-    console.log(formatResult(result))
+    for (const line of formatResult(result)) console.log(line)
   }
 
   showSummary(results)
-}
-
-// Run if executed directly
-const isDirectExecution = process.argv[1]?.includes('doctor') ||
-                          process.argv.includes('doctor')
-
-if (isDirectExecution && typeof require !== 'undefined') {
-  runDoctorCommand().catch((error: Error) => {
-    console.error(chalk.red('An unexpected error occurred:'), error.message)
-    process.exit(1)
-  })
 }
