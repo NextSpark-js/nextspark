@@ -21,7 +21,6 @@ import { promptThemeSelection, type ThemeChoice } from './theme-selection.js'
 import { promptPluginsSelection, getRequiredPlugins, type PluginChoice } from './plugins-selection.js'
 // DX improvement prompts
 import { promptEnvSetup, getDefaultEnvSetupAnswers, type EnvSetupAnswers } from './env-config.js'
-import { promptGitSetup, getDefaultGitSetupAnswers, type GitSetupAnswers } from './git-config.js'
 // Production sign-in provider (#202)
 import {
   promptProductionSignIn,
@@ -52,8 +51,6 @@ export {
   // DX prompts
   promptEnvSetup,
   getDefaultEnvSetupAnswers,
-  promptGitSetup,
-  getDefaultGitSetupAnswers,
   // Production sign-in provider
   promptProductionSignIn,
   getDefaultProductionSignIn,
@@ -61,7 +58,7 @@ export {
   getProductionSignInChoices,
 }
 
-export type { EnvSetupAnswers, GitSetupAnswers, ThemeChoice, PluginChoice, ProductionSignInResult, ProductionSignInChoice }
+export type { EnvSetupAnswers, ThemeChoice, PluginChoice, ProductionSignInResult, ProductionSignInChoice }
 
 /**
  * Run all prompts in sequence (interactive mode - 10 steps)
