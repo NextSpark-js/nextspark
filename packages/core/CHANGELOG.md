@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **With `providers.scope: 'groups'` and Cache Components, a sign-in as another user no longer leaves the previous user's data in a dashboard group that was hidden.** A visited group kept in `<Activity mode="hidden">` drops its effects, so its `QueryProvider` was no longer registered and the sign-in did not empty its cache; shown again, it displayed the previous user's teams and lists. `lib/auth/query-caches` now counts the times the caches were emptied (`getQueryCacheEpoch`) and the provider, when it is shown again after a change, swaps in a new query client and remounts its subtree before paint (emptying the cache would leave the hidden queries showing what they hold). `providers.scope: 'root'` and sign-out (a page load) are unchanged (#363).
+
 ## [0.1.0-beta.200] - 2026-11-04
 
 ### Upgrading from 0.1.0-beta.199

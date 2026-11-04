@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { Fragment, useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
 import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query'
 import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { ApiError } from '../lib/api/api-error'
-import { registerQueryCache } from '../lib/auth/query-caches'
+import { registerQueryCache, getQueryCacheEpoch } from '../lib/auth/query-caches'
 
 // NEXT_PUBLIC_RQ_DEVTOOLS is inlined when the app is built. Set to any value other than 'true' (the env template sets false),
 // the condition is a constant and the import below does not enter the build; left undefined, the devtools stay an async chunk
@@ -31,31 +31,48 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     }, 1500)
   }, [])
 
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 60 * 1000,
-            refetchOnWindowFocus: false,
-          },
+  const createClient = () =>
+    new QueryClient({
+      defaultOptions: {
+        queries: {
+          staleTime: 60 * 1000,
+          refetchOnWindowFocus: false,
         },
-        mutationCache: new MutationCache({
-          onError: (error) => {
-            if (error instanceof ApiError && error.isPermissionDenied()) {
-              handlePermissionDenied()
-            }
-          },
-        }),
-      })
-  )
+      },
+      mutationCache: new MutationCache({
+        onError: (error) => {
+          if (error instanceof ApiError && error.isPermissionDenied()) {
+            handlePermissionDenied()
+          }
+        },
+      }),
+    })
+  // `generation` keys the subtree: a new client needs new observers, which keep the client they were created with.
+  const [{ queryClient, generation }, setClient] = useState(() => ({ queryClient: createClient(), generation: 0 }))
 
-  // Signing in empties this cache (useAuthActions), whichever page the sign-in happens on
-  useEffect(() => registerQueryCache(() => queryClient.clear()), [queryClient])
+  // Signing in empties this cache (useAuthActions), whichever page the sign-in happens on. Cache Components can keep a
+  // visited group in <Activity mode="hidden">, which unmounts its effects, registration included, so a sign-in that
+  // happens meanwhile does not reach it, and emptying the cache would not either: the hidden observers keep the query
+  // they hold. When the group is shown again the layout effect runs (before paint) and, if someone signed in meanwhile,
+  // swaps in a new client and remounts the subtree. The registry holds one entry per mounted provider: no growth.
+  const seenEpoch = useRef(getQueryCacheEpoch())
+  useLayoutEffect(() => {
+    if (seenEpoch.current !== getQueryCacheEpoch()) {
+      seenEpoch.current = getQueryCacheEpoch()
+      queryClient.clear()
+      setClient({ queryClient: createClient(), generation: generation + 1 })
+      return
+    }
+    return registerQueryCache(() => {
+      queryClient.clear()
+      seenEpoch.current = getQueryCacheEpoch()
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- createClient and generation follow queryClient
+  }, [queryClient])
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <Fragment key={generation}>{children}</Fragment>
       {ReactQueryDevtools && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   )
