@@ -3,7 +3,8 @@
  * and its mounted queries are not. A sign-in while it is hidden must not leave the previous user's data on screen
  * when it comes back.
  */
-import { Activity } from 'react'
+import { Activity, startTransition, useLayoutEffect } from 'react'
+import { createRoot } from 'react-dom/client'
 import { act, render, screen } from '@testing-library/react'
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { QueryProvider } from '@/core/providers/query-provider'
@@ -25,6 +26,21 @@ const group = (mode: 'visible' | 'hidden') => (
   <Activity mode={mode}><QueryProvider><Teams /></QueryProvider></Activity>
 )
 
+// Reads the DOM in a microtask after the commit that shows the group, before any later work: what the first frame holds.
+let firstFrame = ''
+function FirstFrame({ n }: { n: number }) {
+  useLayoutEffect(() => {
+    queueMicrotask(() => { firstFrame = document.querySelector('[data-testid=teams]')?.textContent ?? '' })
+  }, [n])
+  return null
+}
+const page = (mode: 'visible' | 'hidden', n: number) => (
+  <>
+    {group(mode)}
+    <FirstFrame n={n} />
+  </>
+)
+
 beforeEach(() => {
   client = undefined
 })
@@ -41,6 +57,30 @@ describe('QueryProvider inside a hidden Activity', () => {
 
     expect(screen.getByTestId('teams').textContent).toBe('no data')
     expect(client!.getQueryCache().getAll().every(q => q.state.data === undefined)).toBe(true)
+  })
+
+  it('paints nothing of the previous user in the first frame when a transition shows it again', async () => {
+    const g = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    g.IS_REACT_ACT_ENVIRONMENT = true
+    const el = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(el)
+    try {
+      await act(async () => root.render(page('visible', 0)))
+      await act(async () => { client!.setQueryData(['user-teams'], 'teams of user 1') })
+      await act(async () => root.render(page('hidden', 1)))
+      clearQueryCaches() // user 2 signs in
+
+      g.IS_REACT_ACT_ENVIRONMENT = false // no act: the passive effects run when React decides
+      firstFrame = ''
+      startTransition(() => root.render(page('visible', 2)))
+      for (let i = 0; i < 50 && !firstFrame; i++) await new Promise(r => setTimeout(r, 0))
+
+      expect(firstFrame).toBe('no data')
+    } finally {
+      g.IS_REACT_ACT_ENVIRONMENT = true
+      await act(async () => root.unmount())
+      el.remove()
+    }
   })
 
   it('keeps its data when nobody signed in while it was hidden', async () => {
