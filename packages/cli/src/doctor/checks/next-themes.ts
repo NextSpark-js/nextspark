@@ -11,7 +11,13 @@ import { findNextThemesImports, NEXT_THEMES_MIGRATION_COMMAND } from '../../util
 
 export async function checkNextThemesImports(): Promise<HealthCheckResult> {
   const name = 'Theme imports'
-  const found = await findNextThemesImports(process.cwd(), getCoreDir())
+  let found: string[]
+  try {
+    found = await findNextThemesImports(process.cwd(), getCoreDir())
+  } catch (error) {
+    // Only a notice: a project whose files cannot be looked at is not failing
+    return { name, status: 'warn', message: `Could not look for imports of next-themes: ${error instanceof Error ? error.message : String(error)}` }
+  }
   if (found.length === 0) return { name, status: 'pass', message: 'No import of next-themes' }
   const shown = found.slice(0, 3).join(', ') + (found.length > 3 ? ` (+${found.length - 3} more)` : '')
   return {

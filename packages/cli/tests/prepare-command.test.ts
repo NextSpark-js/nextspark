@@ -1,11 +1,12 @@
 import { before, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
-import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { buildCli } from './built-cli.js'
+import { runHostPreparation } from '../src/utils/preparation.js'
 
 let cliEntry: string
 before(() => { cliEntry = buildCli() })
@@ -105,6 +106,40 @@ test('prepare points out project code that still imports next-themes, without wr
     assert.match(output, /node node_modules\/@nextsparkjs\/core\/scripts\/maintenance\/code-migrations\.mjs 0\.1\.0-beta\.200/)
     assert.equal(await readFile(join(project.root, 'components/Navbar.tsx'), 'utf8'), navbar)
   } finally {
+    await project.cleanup()
+  }
+})
+
+test('prepare skips the next-themes notice with --check and --contracts-only, and a directory it cannot read does not fail it (#371)', async () => {
+  const project = await fixture('')
+  const locked = join(project.root, 'pgdata')
+  try {
+    const migrations = join(project.root, 'node_modules/@nextsparkjs/core/scripts/maintenance')
+    await mkdir(migrations, { recursive: true })
+    await writeFile(join(migrations, 'code-migrations.mjs'), await readFile(new URL('../../core/scripts/maintenance/code-migrations.mjs', import.meta.url), 'utf8'))
+    await mkdir(join(project.root, 'components'), { recursive: true })
+    await writeFile(join(project.root, 'components/Navbar.tsx'), "import { useTheme } from 'next-themes'\n")
+    for (const args of [['prepare', '--check'], ['prepare', '--contracts-only']]) {
+      const ran = run(project.root, args)
+      assert.equal(ran.status, 0, `${args.join(' ')}\n${ran.stdout}\n${ran.stderr}`)
+      assert.doesNotMatch(`${ran.stdout}${ran.stderr}`, /NS_NEXT_THEMES_IMPORT/, args.join(' '))
+    }
+    // prepare --check prints no success lines at all: ask the preparation itself
+    const core = join(project.root, 'node_modules/@nextsparkjs/core')
+    for (const options of [{ check: true }, { contractsOnly: true }, {}]) {
+      const prepared = await runHostPreparation(core, project.root, options)
+      assert.equal(prepared.code, 0, JSON.stringify(prepared))
+      assert.equal(prepared.successLines.some((line) => line.startsWith('NS_NEXT_THEMES_IMPORT')), Object.keys(options).length === 0, JSON.stringify(options))
+    }
+    if (process.getuid?.() !== 0) {
+      await mkdir(locked)
+      await chmod(locked, 0o000)
+      const ran = run(project.root, ['prepare'])
+      assert.equal(ran.status, 0, `${ran.stdout}\n${ran.stderr}`)
+      assert.match(`${ran.stdout}${ran.stderr}`, /NS_NEXT_THEMES_IMPORT: [^\n]*components\/Navbar\.tsx:1/)
+    }
+  } finally {
+    await chmod(locked, 0o755).catch(() => {})
     await project.cleanup()
   }
 })

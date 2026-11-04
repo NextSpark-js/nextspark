@@ -23,9 +23,17 @@ export async function findNextThemesImports(root: string, coreDir: string): Prom
   return migrations.findNextThemesImports?.(root) ?? []
 }
 
-/** The lines `nextspark prepare`, dev and build print when project code still imports next-themes */
+/**
+ * The lines `nextspark prepare`, dev and build print when project code still imports next-themes. A notice only: if
+ * the files cannot be looked at, it says nothing rather than fail the preparation.
+ */
 export async function nextThemesImportLines(root: string, coreDir: string): Promise<string[]> {
-  const found = await findNextThemesImports(root, coreDir)
+  let found: string[]
+  try {
+    found = await findNextThemesImports(root, coreDir)
+  } catch {
+    return []
+  }
   if (found.length === 0) return []
   return [
     `NS_NEXT_THEMES_IMPORT: project code imports next-themes, whose hook does not see the theme provider core renders: ${found.join(', ')}`,

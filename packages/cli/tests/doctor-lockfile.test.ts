@@ -6,6 +6,7 @@ import path from 'node:path'
 import { checkDuplicateDependencies, checkZodBelowCore } from '../src/doctor/checks/lockfile.js'
 import { checkQueryClients } from '../src/doctor/checks/query-client.js'
 import { checkNextThemesImports } from '../src/doctor/checks/next-themes.js'
+import { nextThemesImportLines } from '../src/utils/next-themes-imports.js'
 
 type Importers = Record<string, Record<string, string>>
 
@@ -178,4 +179,27 @@ test('a peer is attributed to every version its range accepts', async () => {
   const result = await inProject(lock, files, checkDuplicateDependencies)
   assert.match(result.message, /16\.3\.8 \(plugins\/crm\)/)
   assert.match(result.message, /16\.3\.9 \(plugins\/crm\)/)
+})
+
+test('NS_NEXT_THEMES_IMPORT does not fail on a directory the project cannot read', { skip: process.getuid?.() === 0 ? 'root reads every file' : false }, async () => {
+  const result = await inProject(null, withCore({ 'components/Navbar.tsx': "import { useTheme } from 'next-themes'\n", 'pgdata/inside.ts': '' }), async () => {
+    fs.chmodSync('pgdata', 0o000)
+    try {
+      return await checkNextThemesImports()
+    } finally {
+      fs.chmodSync('pgdata', 0o755)
+    }
+  })
+  assert.equal(result.status, 'warn')
+  assert.match(result.message, /components\/Navbar\.tsx:1/)
+})
+
+test('the prepare notice is empty, with no error, for a core without code migrations', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-notice-'))
+  try {
+    fs.writeFileSync(path.join(dir, 'a.ts'), "import { useTheme } from 'next-themes'\n")
+    assert.deepEqual(await nextThemesImportLines(dir, path.join(dir, 'no-core')), [])
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
 })
