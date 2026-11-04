@@ -85,6 +85,30 @@ appendFileSync(process.cwd() + '/runs.txt', JSON.stringify({ cwd: process.cwd(),
   }
 })
 
+test('prepare points out project code that still imports next-themes, without writing it or failing (#371)', async () => {
+  const project = await fixture('')
+  try {
+    const migrations = join(project.root, 'node_modules/@nextsparkjs/core/scripts/maintenance')
+    await mkdir(migrations, { recursive: true })
+    await writeFile(join(migrations, 'code-migrations.mjs'), await readFile(new URL('../../core/scripts/maintenance/code-migrations.mjs', import.meta.url), 'utf8'))
+    const clean = run(project.root, ['prepare'])
+    assert.equal(clean.status, 0, `${clean.stdout}\n${clean.stderr}`)
+    assert.doesNotMatch(`${clean.stdout}${clean.stderr}`, /NS_NEXT_THEMES_IMPORT/)
+
+    const navbar = "'use client'\nimport { useTheme } from 'next-themes'\n"
+    await mkdir(join(project.root, 'components'), { recursive: true })
+    await writeFile(join(project.root, 'components/Navbar.tsx'), navbar)
+    const flagged = run(project.root, ['prepare'])
+    assert.equal(flagged.status, 0, `${flagged.stdout}\n${flagged.stderr}`)
+    const output = `${flagged.stdout}${flagged.stderr}`
+    assert.match(output, /NS_NEXT_THEMES_IMPORT: [^\n]*components\/Navbar\.tsx:2/)
+    assert.match(output, /node node_modules\/@nextsparkjs\/core\/scripts\/maintenance\/code-migrations\.mjs 0\.1\.0-beta\.200/)
+    assert.equal(await readFile(join(project.root, 'components/Navbar.tsx'), 'utf8'), navbar)
+  } finally {
+    await project.cleanup()
+  }
+})
+
 test('a failed prepare reports bounded diagnostics and prevents build from launching Next', async () => {
   const project = await fixture(`
 console.log('❌ registry failed at templates/page.tsx')

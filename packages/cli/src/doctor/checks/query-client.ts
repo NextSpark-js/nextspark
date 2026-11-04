@@ -13,7 +13,7 @@ const TEST_FILE = /\.(test|spec|stories)\.[cm]?[jt]sx?$/
 const SOURCE = /\.(?:[cm]?[jt]s|[jt]sx)$/
 const TYPES = /\.d\.[cm]?ts$/
 
-export async function* sourceFiles(dir: string, root: string): AsyncGenerator<string> {
+async function* sourceFiles(dir: string, root: string): AsyncGenerator<string> {
   for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {

@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { parse } from 'dotenv';
 import { captureChildOutput } from './registry-build.js';
 import { loadCoreWritePlaces } from './core-write-places.js';
+import { nextThemesImportLines } from './next-themes-imports.js';
 
 export interface PreparationOptions {
   production?: boolean;
@@ -219,6 +220,8 @@ export async function runHostPreparation(
       resolve(status === 0 ? { code: 0, successLines: all(), failureLines: [] } : { code: status, successLines: [], failureLines: all() });
     });
   });
+  // A read-only notice: project code still importing next-themes reads no theme from core's provider (#371)
+  if (result.code === 0 && !options.check && !options.contractsOnly) result.successLines.push(...await nextThemesImportLines(projectRoot, coreDir));
   if (result.code !== 0 || !options.production || options.check || options.contractsOnly) return result;
   const auth = await runAuthReadiness(coreDir, projectRoot, env);
   return { ...auth, successLines: [...result.successLines, ...auth.successLines] };
