@@ -66,13 +66,15 @@ describe('ThemeProvider', () => {
 
 describe('ThemeProvider context across hydration (#371)', () => {
   const originalMatchMedia = window.matchMedia
+  let prefersDark = true
 
-  /** A browser whose prefers-color-scheme is dark */
+  /** A browser whose prefers-color-scheme is dark, unless a test says otherwise */
   beforeEach(() => {
+    prefersDark = true
     localStorage.clear()
     document.documentElement.className = ''
     window.matchMedia = jest.fn((query: string) => ({
-      matches: query === '(prefers-color-scheme: dark)',
+      matches: prefersDark && query === '(prefers-color-scheme: dark)',
       media: query,
       onchange: null,
       addListener: jest.fn(),
@@ -121,6 +123,23 @@ describe('ThemeProvider context across hydration (#371)', () => {
     const values = await contextValuesAcrossHydration({ defaultTheme: 'system', enableSystem: true })
     expect(values.at(-1)).toEqual(expect.objectContaining({ theme: 'system', resolvedTheme: 'dark' }))
     expect(document.documentElement.classList.contains('dark')).toBe(true)
+  })
+
+  it.each([
+    ['dark', true],
+    ['light', false],
+  ])('resolves a forced "system" to the device preference (%s) in the blocking script and after hydration', async (scheme, dark) => {
+    prefersDark = dark
+    // What the root layouts pass for allowUserToggle: false with defaultMode 'system'
+    const props = { attribute: 'class' as const, defaultTheme: 'system', forcedTheme: 'system', enableSystem: true }
+    const html = renderToString(<ThemeProvider {...props}><span /></ThemeProvider>)
+    const code = html.match(/<script[^>]*>([\s\S]*?)<\/script>/)?.[1]
+    expect(code).toBeTruthy()
+    new Function(code!)()
+    expect(document.documentElement.className).toBe(scheme)
+    const values = await contextValuesAcrossHydration(props)
+    expect(new Set(values).size).toBe(1)
+    expect(document.documentElement.className).toBe(scheme)
   })
 
   it('stores and applies the theme setTheme chooses', async () => {

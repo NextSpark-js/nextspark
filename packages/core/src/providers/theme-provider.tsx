@@ -130,7 +130,8 @@ const script = (
     if (enableColorScheme && systemThemes.includes(theme)) el.style.colorScheme = theme
   }
   if (forcedTheme) {
-    updateDOM(forcedTheme)
+    // A forced "system" still follows the device
+    updateDOM(forcedTheme === "system" && enableSystem ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : forcedTheme)
   } else {
     try {
       const themeName = localStorage.getItem(storageKey) || defaultTheme
@@ -214,7 +215,7 @@ function ColorModeProvider({
 
   const handleMediaQuery = React.useCallback((media: MediaQueryList | MediaQueryListEvent) => {
     setSystemTheme(getSystemTheme(media))
-    if (theme === "system" && enableSystem && !forcedTheme) applyTheme("system")
+    if ((forcedTheme ?? theme) === "system" && enableSystem) applyTheme("system")
     // eslint-disable-next-line react-hooks/exhaustive-deps -- enableSystem and applyTheme are fixed per layout
   }, [theme, forcedTheme])
 

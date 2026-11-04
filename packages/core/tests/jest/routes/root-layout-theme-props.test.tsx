@@ -66,6 +66,11 @@ describe.each([
     expect(await themePropsOf(layout)).toEqual(expect.objectContaining({ defaultTheme: 'light', forcedTheme: 'light', enableSystem: false }))
   })
 
+  it('forces "system" and tracks the system preference with allowUserToggle: false and defaultMode system', async () => {
+    mockSettings = { defaultMode: 'system', allowUserToggle: false, forcedThemeRoutes: undefined }
+    expect(await themePropsOf(layout)).toEqual(expect.objectContaining({ defaultTheme: 'system', forcedTheme: 'system', enableSystem: true }))
+  })
+
   it('lets the visitor choose, System included, with allowUserToggle: true', async () => {
     mockSettings = { defaultMode: 'light', allowUserToggle: true, forcedThemeRoutes: undefined }
     const props = await themePropsOf(layout)

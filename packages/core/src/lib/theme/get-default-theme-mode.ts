@@ -46,14 +46,15 @@ export async function getThemeSettings(): Promise<ThemeSettings> {
 
 /**
  * The theme props both root layouts give the theme provider. With `allowUserToggle: false` the default mode is
- * forced and the system preference is not tracked. Otherwise the visitor's choice applies, and "System" must be
- * resolvable whatever the default is, since ThemeToggle always offers it (#175).
+ * forced, and the system preference is tracked only when that mode is "system" (the default when theme.config sets
+ * none), so the forced mode resolves to the device's light or dark. Otherwise the visitor's choice applies, and
+ * "System" must be resolvable whatever the default is, since ThemeToggle always offers it (#175, #371).
  */
 export function themeProviderProps({ defaultMode, allowUserToggle }: Pick<ThemeSettings, 'defaultMode' | 'allowUserToggle'>) {
   return {
     defaultTheme: defaultMode,
     forcedTheme: allowUserToggle ? undefined : defaultMode,
-    enableSystem: allowUserToggle,
+    enableSystem: allowUserToggle || defaultMode === 'system',
   }
 }
 
