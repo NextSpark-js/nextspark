@@ -281,8 +281,11 @@ function checkIgnore(root: string, paths: string[]): Set<string> {
   if (result.status === 1) return new Set();
   if (result.status === 128 && /not a git repository/i.test(result.stderr)) return new Set();
   // The superproject cannot answer for a path inside a submodule (git refuses the whole call): ask the submodule itself, and the rest again without it
-  const submodule = result.status === 128 ? /is in submodule '(.*)'\s*$/m.exec(result.stderr)?.[1] : undefined;
-  if (submodule) {
+  const named = result.status === 128 ? /is in submodule '(.*)'\s*$/m.exec(result.stderr)?.[1] : undefined;
+  if (named !== undefined) {
+    // git names the submodule from the repository root, the paths asked about are from `root`
+    const prefix = execFileSync('git', ['rev-parse', '--show-prefix'], { cwd: root, encoding: 'utf8', env: { ...process.env, LC_ALL: 'C' } }).trim();
+    const submodule = named.startsWith(prefix) ? named.slice(prefix.length) : named;
     const inside = paths.filter(path => path.startsWith(`${submodule}/`));
     const rest = paths.filter(path => !path.startsWith(`${submodule}/`));
     if (inside.length === 0) throw new MigrateAnalysisError(`git check-ignore refused paths inside the submodule ${submodule}, but none of the paths asked about are inside it. Nothing was changed.`);

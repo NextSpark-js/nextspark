@@ -33,12 +33,12 @@ const BASE: Record<string, string> = {
 }
 
 /** A committed project (ignored files are not committed) with `bulk` ignored files laid under bulk-cache/. */
-function project(bulk = 0): string {
+function project(bulk = 0, directory = ''): string {
   const root = mkdtempSync(join(tmpdir(), 'nextspark-migrate-ignored-'))
   roots.push(root)
   for (const [file, content] of Object.entries(BASE)) {
-    mkdirSync(dirname(join(root, file)), { recursive: true })
-    writeFileSync(join(root, file), content)
+    mkdirSync(dirname(join(root, directory, file)), { recursive: true })
+    writeFileSync(join(root, directory, file), content)
   }
   const git = (...args: string[]) => execFileSync('git', args, { cwd: root, stdio: 'ignore' })
   git('init', '--quiet')
@@ -96,8 +96,8 @@ test('any other git failure stops migrate with a message instead of treating eve
 })
 
 /** `project()` plus a submodule at `name`: its own .gitignore hides hidden/, and shown/ is a visible member. */
-function projectWithSubmodule(name: string): string {
-  const root = project()
+function projectWithSubmodule(name: string, directory = ''): string {
+  const root = project(0, directory)
   const source = mkdtempSync(join(tmpdir(), 'nextspark-submodule-source-'))
   roots.push(source)
   const member = (version: string) => JSON.stringify({ name: 'm', dependencies: { '@nextsparkjs/core': version } })
@@ -110,12 +110,21 @@ function projectWithSubmodule(name: string): string {
   inSource('config', 'user.name', 'Fixture')
   inSource('add', '.')
   inSource('commit', '--quiet', '-m', 'fixture')
-  execFileSync('git', ['-c', 'protocol.file.allow=always', 'submodule', 'add', '--quiet', source, name], { cwd: root, stdio: 'ignore' })
+  execFileSync('git', ['-c', 'protocol.file.allow=always', 'submodule', 'add', '--quiet', source, join(directory, name)], { cwd: root, stdio: 'ignore' })
   execFileSync('git', ['-c', 'user.email=fixture@example.test', '-c', 'user.name=Fixture', 'commit', '--quiet', '-m', 'submodule'], { cwd: root, stdio: 'ignore' })
-  mkdirSync(join(root, name, 'hidden'), { recursive: true })
-  writeFileSync(join(root, name, 'hidden', 'package.json'), member('0.0.3'))
+  mkdirSync(join(root, directory, name, 'hidden'), { recursive: true })
+  writeFileSync(join(root, directory, name, 'hidden', 'package.json'), member('0.0.3'))
   return root
 }
+
+test('a project in a subdirectory of the repository with a submodule inside it is migrated from there', () => {
+  const root = projectWithSubmodule('sub', 'apps/web')
+  const result = check(join(root, 'apps', 'web'))
+  assert.equal(result.status, 0, `${result.stdout.slice(0, 300)}\n${result.stderr}`)
+  const paths = members(result.stdout)
+  assert.ok(paths.includes('apps/web/sub/shown'), paths.join(', '))
+  assert.ok(!paths.some(path => path.includes('hidden')), paths.join(', '))
+})
 
 for (const name of ['sub', "it's sub"]) {
   test(`a submodule (${name}) is asked about itself: what its own .gitignore hides stays unread, the rest is read`, () => {
