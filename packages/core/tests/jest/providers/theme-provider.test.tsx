@@ -72,17 +72,22 @@ describe('ThemeProvider', () => {
 describe('ThemeProvider context across hydration (#371)', () => {
   const originalMatchMedia = window.matchMedia
   let prefersDark = true
+  /** What the provider listens to for a change of prefers-color-scheme */
+  let mediaListeners: Array<(media: MediaQueryList) => void> = []
 
   /** A browser whose prefers-color-scheme is dark, unless a test says otherwise */
   beforeEach(() => {
     prefersDark = true
+    mediaListeners = []
     localStorage.clear()
     document.documentElement.className = ''
     window.matchMedia = jest.fn((query: string) => ({
-      matches: prefersDark && query === '(prefers-color-scheme: dark)',
+      get matches() {
+        return prefersDark && query === '(prefers-color-scheme: dark)'
+      },
       media: query,
       onchange: null,
-      addListener: jest.fn(),
+      addListener: jest.fn((listener: (media: MediaQueryList) => void) => mediaListeners.push(listener)),
       removeListener: jest.fn(),
       addEventListener: jest.fn(),
       removeEventListener: jest.fn(),
@@ -145,6 +150,17 @@ describe('ThemeProvider context across hydration (#371)', () => {
     const values = await contextValuesAcrossHydration(props)
     expect(new Set(values).size).toBe(1)
     expect(document.documentElement.className).toBe(scheme)
+  })
+
+  it('a forced "system" follows a change of prefers-color-scheme while the page is open', async () => {
+    render(<ThemeProvider attribute="class" defaultTheme="system" forcedTheme="system" enableSystem><span /></ThemeProvider>)
+    expect(document.documentElement.className).toBe('dark')
+    expect(mediaListeners.length).toBeGreaterThan(0)
+    prefersDark = false
+    await act(async () => {
+      for (const listener of mediaListeners) listener(window.matchMedia('(prefers-color-scheme: dark)'))
+    })
+    expect(document.documentElement.className).toBe('light')
   })
 
   it('stores and applies the theme setTheme chooses', async () => {
