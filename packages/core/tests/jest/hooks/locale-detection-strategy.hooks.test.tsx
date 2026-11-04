@@ -34,7 +34,7 @@ import { useAccountPreferencesSync } from '@/core/hooks/useAccountPreferencesSyn
 const BASE = {
   supportedLocales: ['en', 'es'],
   defaultLocale: 'en',
-  cookie: { name: 'locale', maxAge: 1000, secure: false, sameSite: 'lax', path: '/' },
+  cookie: { name: 'locale', maxAge: 365 * 24 * 60 * 60 * 1000, secure: false, sameSite: 'lax', path: '/' },
 }
 
 beforeEach(() => {
