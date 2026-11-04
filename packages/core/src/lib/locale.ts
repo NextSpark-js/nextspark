@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { cookies, headers } from 'next/headers'
 import { I18N_CONFIG, type SupportedLocale } from './config'
-import type { LocaleDetectionSource } from './config/types'
+import { isLocaleFixedFor, isSourceEnabled as isSourceEnabledFor, type LocaleDetectionSource } from './config/locale-detection'
 import { auth } from './auth'
 import { hasSessionCookie } from './auth/session-hint'
 
@@ -14,21 +14,10 @@ function isSupportedLocale(value: unknown): value is SupportedLocale {
  * off with `i18n.localeDetection: false`.
  */
 export function isLocaleFixed(): boolean {
-  return (
-    I18N_CONFIG.supportedLocales.length <= 1 ||
-    I18N_CONFIG.localeDetection === false ||
-    !(['cookie', 'user_database', 'header'] as const).some(isSourceEnabled)
-  )
+  return isLocaleFixedFor(I18N_CONFIG)
 }
 
-/**
- * Whether `i18n.detectionStrategy` lets a source pick the locale. Unset, every
- * source is on. The list chooses sources; the order they are asked in is fixed.
- */
-function isSourceEnabled(source: LocaleDetectionSource): boolean {
-  const strategy = I18N_CONFIG.detectionStrategy
-  return !strategy || strategy.includes(source)
-}
+const isSourceEnabled = (source: LocaleDetectionSource) => isSourceEnabledFor(I18N_CONFIG, source)
 
 /**
  * The supported locale an Accept-Language header prefers most: by quality, then

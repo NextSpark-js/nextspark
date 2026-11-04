@@ -14,7 +14,7 @@ import { loadLoginPage } from '../lib/auth/load-login-page'
 import { setSessionHint } from '../lib/auth/session-hint'
 import { clearQueryCaches } from '../lib/auth/query-caches'
 import { setUserLocaleClient } from '../lib/locale-client'
-import { I18N_CONFIG } from '../lib/config/i18n-config-client'
+import { I18N_CONFIG, copiesAccountLocale } from '../lib/config/i18n-config-client'
 import { SIGNUP_INTENT_HEADER } from '../lib/api/client-headers'
 import type { AuthError } from '../types/auth'
 import type { SocialLoginMethod } from '../lib/config/types'
@@ -61,7 +61,7 @@ function socialCallbackURL(provider: SocialLoginMethod, redirectTo?: string): st
 function rememberSignedIn(user: unknown) {
   setSessionHint(true)
   const language = (user as { language?: unknown } | null | undefined)?.language
-  const localeDetected = I18N_CONFIG.supportedLocales.length > 1 && I18N_CONFIG.localeDetection !== false
+  const localeDetected = copiesAccountLocale()
   if (localeDetected && typeof language === 'string' && I18N_CONFIG.supportedLocales.includes(language as SupportedLocale)) {
     setUserLocaleClient(language)
   }

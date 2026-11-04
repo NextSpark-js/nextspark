@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { I18N_CONFIG } from '../lib/config/i18n-config-client'
+import { I18N_CONFIG, copiesAccountLocale } from '../lib/config/i18n-config-client'
 type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 import { setUserLocaleClient } from '../lib/locale-client'
 import { setSessionHint } from '../lib/auth/session-hint'
@@ -100,7 +100,7 @@ export function useAccountPreferencesSync() {
     setSessionHint(true)
 
     const language = user.language
-    const localeDetected = I18N_CONFIG.supportedLocales.length > 1 && I18N_CONFIG.localeDetection !== false
+    const localeDetected = copiesAccountLocale()
     if (localeDetected && typeof language === 'string' && I18N_CONFIG.supportedLocales.includes(language as SupportedLocale)) {
       if (readCookie(I18N_CONFIG.cookie.name) !== language) setUserLocaleClient(language)
       // The page renders in the cookie's locale, so refreshing helps only once the
