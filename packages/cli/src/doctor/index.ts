@@ -18,6 +18,7 @@ import { checkRlsRuntime } from './checks/rls-runtime.js'
 import { checkImports } from './checks/imports.js'
 import { checkDuplicateDependencies, checkZodBelowCore } from './checks/lockfile.js'
 import { checkQueryClients } from './checks/query-client.js'
+import { checkNextThemesImports } from './checks/next-themes.js'
 import { checkHoisting } from './checks/hoisting.js'
 
 /**
@@ -116,6 +117,7 @@ export async function runHealthCheck(): Promise<HealthCheckResult[]> {
     { name: 'Duplicates', fn: checkDuplicateDependencies },
     { name: 'Zod', fn: checkZodBelowCore },
     { name: 'Query caches', fn: checkQueryClients },
+    { name: 'Theme imports', fn: checkNextThemesImports },
     { name: 'Hoisting', fn: () => checkHoisting() },
   ]
 

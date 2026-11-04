@@ -5,6 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { checkDuplicateDependencies, checkZodBelowCore } from '../src/doctor/checks/lockfile.js'
 import { checkQueryClients } from '../src/doctor/checks/query-client.js'
+import { checkNextThemesImports } from '../src/doctor/checks/next-themes.js'
 
 type Importers = Record<string, Record<string, string>>
 
@@ -124,6 +125,23 @@ test('NS_QUERY_CLIENT_NOT_REGISTERED reports file:line, and skips registered, co
   assert.equal(result.code, 'NS_QUERY_CLIENT_NOT_REGISTERED')
   assert.match(result.message, /\(components\/cache\.tsx:2\)/)
   assert.equal((await inProject(null, { 'components/ok.tsx': registered }, checkQueryClients)).status, 'pass')
+})
+
+test('NS_NEXT_THEMES_IMPORT reports each file:line that loads next-themes, and skips commented, generated and installed code', async () => {
+  const result = await inProject(null, {
+    'components/Navbar.tsx': "'use client'\nimport { useTheme } from 'next-themes'\n",
+    'lib/theme.ts': 'export {\n  useTheme,\n} from "next-themes"\n',
+    'lib/lazy.ts': "export const load = () => import('next-themes')\n",
+    'components/ok.tsx': "import { useTheme } from '@nextsparkjs/core/providers/theme-provider'\n// import { useTheme } from 'next-themes'\n",
+    'src/app/generated.tsx': "import { useTheme } from 'next-themes'\n",
+    'node_modules/pkg/index.js': "import { useTheme } from 'next-themes'\n",
+  }, checkNextThemesImports)
+  assert.equal(result.status, 'warn')
+  assert.equal(result.code, 'NS_NEXT_THEMES_IMPORT')
+  for (const where of ['components/Navbar.tsx:2', 'lib/theme.ts:3', 'lib/lazy.ts:1']) assert.ok(result.message.includes(where), where)
+  assert.ok(!result.message.includes('ok.tsx') && !result.message.includes('generated') && !result.message.includes('pkg'))
+  const clean = await inProject(null, { 'components/ok.tsx': "import { useTheme } from '@nextsparkjs/core/providers/theme-provider'\n" }, checkNextThemesImports)
+  assert.equal(clean.status, 'pass')
 })
 
 test('a workspace package the project links to is part of the project, along the whole chain, with no peer and no core', async () => {
