@@ -86,9 +86,10 @@ What gets updated:
   pnpm-lock.yaml, node_modules   Through pnpm install, run where pnpm-lock.yaml is (in a
                           web-mobile project, the directory above web/)
   Project code            The rewrites a release between the installed version and the target needs,
-                          once the new core is installed, in the project's .ts, .tsx, .js, .jsx and
-                          .mjs files (not node_modules, src/app/, build output or dot directories);
-                          each file changed is listed:
+                          once the new core is installed, in the project's code files (.ts, .tsx,
+                          .js, .jsx, .mjs, .cjs, .mts, .cts; not tests, type declarations, public/,
+                          node_modules, src/app/, build output or dot directories: the files
+                          nextspark doctor looks at); each file changed is listed:
                           0.1.0-beta.200  imports of useTheme, ThemeProvider and their types from
                                           next-themes -> @nextsparkjs/core/providers/theme-provider;
                                           any other use of next-themes is listed, not rewritten

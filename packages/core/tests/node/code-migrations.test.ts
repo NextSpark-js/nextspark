@@ -9,7 +9,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-import { CODE_MIGRATIONS, rewriteNextThemesImports } from '../../scripts/maintenance/code-migrations.mjs'
+import { CODE_MIGRATIONS, findNextThemesImports, nextThemesLines, projectSourceFiles, rewriteNextThemesImports } from '../../scripts/maintenance/code-migrations.mjs'
 
 const CORE = '@nextsparkjs/core/providers/theme-provider'
 
@@ -44,6 +44,36 @@ test('a name core does not export, a default or namespace import, import() and r
     assert.equal(result.leftover, true, text)
   }
   assert.deepEqual(rewriteNextThemesImports("import { useTheme } from 'next-themes-plus'"), { text: "import { useTheme } from 'next-themes-plus'", leftover: false })
+})
+
+test('a comment, a JSDoc, a string or a template literal that mentions an import of next-themes is not code: not rewritten, not reported', () => {
+  for (const text of [
+    "// import { useTheme } from 'next-themes'\n",
+    "/**\n * import { useTheme } from 'next-themes'\n */\n",
+    "const example = \"import { useTheme } from 'next-themes'\"\n",
+    "const doc = `import { useTheme } from 'next-themes'`\n",
+  ]) {
+    const result = rewriteNextThemesImports(text)
+    assert.equal(result.text, text, text)
+    assert.equal(result.leftover, false, text)
+    assert.deepEqual(nextThemesLines(text), [], text)
+  }
+  // An indented statement is still one
+  assert.equal(rewriteNextThemesImports("  import { useTheme } from 'next-themes'").text, `  import { useTheme } from '${CORE}'`)
+})
+
+test('the codemod and the CLI look at the same files: every code extension, not tests, declarations, generated or installed code', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'code-migrations-files-'))
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }))
+  const load = "import { useTheme } from 'next-themes'\n"
+  const looked = ['a.ts', 'b.tsx', 'c.js', 'd.jsx', 'e.mjs', 'f.cjs', 'g.mts', 'h.cts'].map((file) => `lib/${file}`)
+  const skipped = ['lib/a.test.ts', 'lib/b.spec.tsx', 'lib/c.stories.tsx', 'lib/d.d.ts', 'tests/e.ts', 'cypress/f.ts', 'public/g.js', 'src/app/h.tsx', 'node_modules/x/i.js', '.next/j.js', 'lib/readme.md']
+  for (const file of [...looked, ...skipped]) {
+    fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true })
+    fs.writeFileSync(path.join(root, file), load)
+  }
+  assert.deepEqual(projectSourceFiles(root).sort(), looked.sort())
+  assert.deepEqual(findNextThemesImports(root).sort(), looked.map((file) => `${file}:1`).sort())
 })
 
 test('the 0.1.0-beta.200 migration rewrites project code only, is idempotent, and says what it left', (t) => {

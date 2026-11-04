@@ -5,25 +5,31 @@
  * it or above, taking this list from the core it just installed. An update run by an older updater, which has no
  * such step, can run one afterwards from the project:
  *
- *   node node_modules/@nextsparkjs/core/scripts/maintenance/code-migrations.mjs 0.1.0-beta.200 Each one is idempotent and only touches code the project owns: generated `src/app`, `node_modules`,
- * build output and directories starting with a dot are skipped.
+ *   node node_modules/@nextsparkjs/core/scripts/maintenance/code-migrations.mjs 0.1.0-beta.200
+ *
+ * Each one is idempotent and only touches the files `projectSourceFiles` lists, the same ones the CLI looks at to
+ * report what is left (`nextspark doctor`, `nextspark prepare`).
  */
 
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'out', 'coverage'])
-const SOURCE = /\.(?:ts|tsx|js|jsx|mjs)$/
+/** Code files: what a project imports from */
+export const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/
+/** Tests, which mock modules by name, and type declarations are left alone */
+export const SKIPPED_FILE = /\.(?:test|spec|stories)\.[cm]?[jt]sx?$|\.d\.[cm]?ts$/
+/** Installed, built or test code; also every directory starting with a dot and the generated src/app */
+export const SKIPPED_DIRS = new Set(['node_modules', 'dist', 'build', 'out', 'coverage', 'public', 'storybook-static', 'ios', 'android', '__tests__', 'tests', 'cypress'])
 
 /** Code files of the project at `root`, relative to it */
 export function projectSourceFiles(root, dir = root, found = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.') || path.relative(root, full) === path.join('src', 'app')) continue
+      if (SKIPPED_DIRS.has(entry.name) || entry.name.startsWith('.') || path.relative(root, full) === path.join('src', 'app')) continue
       projectSourceFiles(root, full, found)
-    } else if (entry.isFile() && SOURCE.test(entry.name)) {
+    } else if (entry.isFile() && SOURCE_FILE.test(entry.name) && !SKIPPED_FILE.test(entry.name)) {
       found.push(path.relative(root, full))
     }
   }
@@ -33,22 +39,45 @@ export function projectSourceFiles(root, dir = root, found = []) {
 const THEME_PROVIDER = '@nextsparkjs/core/providers/theme-provider'
 /** What next-themes 0.4.6 exports; core's theme provider exports each under the same name */
 const THEME_PROVIDER_NAMES = new Set(['useTheme', 'ThemeProvider', 'ThemeProviderProps', 'UseThemeProps', 'Attribute', 'ScriptProps'])
-/** `import { a, type b } from 'next-themes'`, `import type { … }`, `export { … } from` */
-const NAMED_DECLARATION = /\b(import|export)(\s+type)?(\s*\{([^}]*)\}\s*from\s*)(['"])next-themes\5/g
-/** Any other way of loading next-themes: a default or namespace import, a side-effect import, import(), require() */
-const ANY_USE = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)(['"])next-themes\1/
+/** `import { a, type b } from 'next-themes'`, `import type { … }`, `export { … } from`, as a statement of its own line */
+const NAMED_DECLARATION = /^([ \t]*)(import|export)(\s+type)?(\s*\{([^}]*)\}\s*from\s*)(['"])next-themes\6/gm
+/**
+ * A line that loads next-themes: an import or re-export statement (its `from` line when it spans several), a
+ * side-effect import, import() or require(). A comment or a string that only mentions it is not one.
+ */
+const LOADS_NEXT_THEMES = /^\s*(?:(?:import|export)\b[^'"]*?\bfrom\s*|\}\s*from\s*|import\s*)(['"])next-themes\1|\b(?:import|require)\s*\(\s*(['"])next-themes\2\s*\)/
+const COMMENT_LINE = /^\s*(?:\/\/|\/\*|\*)/
+
+/** The 1-based numbers of the lines of `text` that load next-themes */
+export function nextThemesLines(text) {
+  if (!text.includes('next-themes')) return []
+  const found = []
+  text.split('\n').forEach((line, index) => {
+    if (LOADS_NEXT_THEMES.test(line) && !COMMENT_LINE.test(line)) found.push(index + 1)
+  })
+  return found
+}
+
+/** `file:line` of each line of the project's code that loads next-themes; reads nothing but those files */
+export function findNextThemesImports(root) {
+  const found = []
+  for (const file of projectSourceFiles(root)) {
+    for (const line of nextThemesLines(fs.readFileSync(path.join(root, file), 'utf8'))) found.push(`${file}:${line}`)
+  }
+  return found
+}
 
 /**
  * Points the named imports and re-exports of next-themes at core's theme provider when every name is one core
  * exports. `leftover` says the text still loads next-themes some other way.
  */
 export function rewriteNextThemesImports(text) {
-  const rewritten = text.replace(NAMED_DECLARATION, (match, keyword, type, clause, list, quote) => {
+  const rewritten = text.replace(NAMED_DECLARATION, (match, indent, keyword, type, clause, list, quote) => {
     const names = list.split(',').map((item) => item.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0].trim()).filter(Boolean)
     if (names.length === 0 || !names.every((name) => THEME_PROVIDER_NAMES.has(name))) return match
-    return `${keyword}${type ?? ''}${clause}${quote}${THEME_PROVIDER}${quote}`
+    return `${indent}${keyword}${type ?? ''}${clause}${quote}${THEME_PROVIDER}${quote}`
   })
-  return { text: rewritten, leftover: ANY_USE.test(rewritten) }
+  return { text: rewritten, leftover: nextThemesLines(rewritten).length > 0 }
 }
 
 /** 0.1.0-beta.200: core renders its own theme provider, which the hook of next-themes does not see (#371) */
