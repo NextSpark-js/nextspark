@@ -9,8 +9,7 @@
 import type { IconName } from './icon-map'
 
 /** A source `i18n.detectionStrategy` can turn on. */
-import type { LocaleDetectionSource } from './locale-detection'
-export type { LocaleDetectionSource }
+export type LocaleDetectionSource = 'user_database' | 'cookie' | 'header' | 'default'
 
 /**
  * Teams Mode

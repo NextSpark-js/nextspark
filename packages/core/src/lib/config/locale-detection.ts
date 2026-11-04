@@ -1,10 +1,11 @@
 /**
- * Which sources may pick a request's locale (`i18n.detectionStrategy`). Pure and
- * import-free, so the server resolution (lib/locale) and the client hooks that
- * copy the account's language to the cookie apply the same rule.
+ * Which sources may pick a request's locale (`i18n.detectionStrategy`). Pure, with
+ * a type-only import, so the server resolution (lib/locale) and the client hooks
+ * that copy the account's language to the cookie apply the same rule.
  */
 
-export type LocaleDetectionSource = 'user_database' | 'cookie' | 'header' | 'default'
+import type { LocaleDetectionSource } from './types'
+export type { LocaleDetectionSource }
 
 const SOURCES: readonly unknown[] = ['user_database', 'cookie', 'header', 'default']
 const warned = new Set<string>()
