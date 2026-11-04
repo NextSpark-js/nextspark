@@ -646,7 +646,7 @@ export function Button({
 ```tsx
 // components/custom/BrandLogo.tsx
 import Image from 'next/image'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 
 export function BrandLogo() {
   const { theme } = useTheme()

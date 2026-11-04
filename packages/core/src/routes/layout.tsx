@@ -65,7 +65,7 @@ export default async function RootLayout({
   const { defaultMode, allowUserToggle, forcedThemeRoutes } = await getThemeSettings()
   const billingHints = await getBillingResourceHints()
   // The nonce the project's request hook forwards (config/hooks/proxy.ts sets `x-nonce`): the inline script
-  // next-themes writes to apply the stored theme before paint carries it, so a nonce-only `script-src` does
+  // the theme provider writes to apply the stored theme before paint carries it, so a nonce-only `script-src` does
   // not block it. Without the flag, or without a nonce, nothing changes.
   const nonce = cspNonceEnabled() ? ((await headers()).get('x-nonce') ?? undefined) : undefined
 

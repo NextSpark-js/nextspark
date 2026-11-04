@@ -1,7 +1,7 @@
 "use client"
 
 import { Moon, Sun, Monitor } from "lucide-react"
-import { useTheme } from "next-themes"
+import { useTheme } from "../../../providers/theme-provider"
 
 import { Button } from '../../ui/button'
 import {
@@ -61,7 +61,7 @@ export function ThemeToggle() {
   }, [setTheme, t])
 
   // When the theme is forced — `ui.theme.allowUserToggle: false` or a route
-  // listed in `forcedThemeRoutes` — next-themes ignores setTheme, so a toggle
+  // listed in `forcedThemeRoutes` — the theme provider ignores setTheme, so a toggle
   // would only promise a change it cannot deliver. Hide it instead.
   // `forcedTheme` comes straight from the provider props, so it is identical on
   // the server and the client and safe to read before `mounted`.

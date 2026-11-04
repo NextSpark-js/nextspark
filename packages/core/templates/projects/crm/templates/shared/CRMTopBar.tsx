@@ -39,7 +39,7 @@ import {
 import { useState, useCallback, useMemo } from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 import { useQuickCreateEntities } from '@nextsparkjs/core/hooks/useQuickCreateEntities'
 
 export function CRMTopBar() {

@@ -3,7 +3,7 @@
  *
  * Resolves the theme that must be forced for a given pathname from the
  * `forcedThemeRoutes` map declared in `theme.config.ts`. The result is passed
- * to next-themes' `forcedTheme` prop on the single root ThemeProvider, so the
+ * to the theme provider's `forcedTheme` prop on the single root ThemeProvider, so the
  * blocking script, SSR output and client hydration all agree from the very
  * first paint (no flash, no post-hydration correction).
  *

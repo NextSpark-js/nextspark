@@ -877,7 +877,7 @@ export interface AppConfig {
   /** Security options of the rendered app */
   security?: {
     /**
-     * Pass the request nonce (`x-nonce`, forwarded by the project's request hook) to next-themes,
+     * Pass the request nonce (`x-nonce`, forwarded by the project's request hook) to the theme provider,
      * so a nonce-only `script-src` does not block its bootstrap script. Read when the app is built.
      * Only the request-time root layout (`cacheComponents` off) can carry a nonce.
      */

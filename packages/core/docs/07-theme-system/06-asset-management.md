@@ -85,7 +85,7 @@ apps/dev/public/theme/
 
 ```tsx
 import Image from 'next/image'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 
 export function Logo() {
   const { theme } = useTheme()
@@ -440,7 +440,7 @@ pyftsubset MyFont.ttf \
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 
 export function DynamicLogo() {
   const { theme, systemTheme } = useTheme()

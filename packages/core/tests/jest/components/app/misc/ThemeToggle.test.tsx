@@ -3,7 +3,7 @@
  *
  * Found in the integration E2E run: with `ui.theme.allowUserToggle: false`
  * the root layout forces the theme (#79) but the topbar still rendered the
- * selector, offering a change next-themes would ignore. The same applies to
+ * selector, offering a change the theme provider would ignore. The same applies to
  * routes forced via `forcedThemeRoutes` (#80).
  */
 
@@ -11,7 +11,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 
 const mockUseTheme = jest.fn()
-jest.mock('next-themes', () => ({
+jest.mock('@nextsparkjs/core/providers/theme-provider', () => ({
   useTheme: () => mockUseTheme(),
 }))
 jest.mock('next-intl', () => ({
@@ -26,7 +26,7 @@ import { ThemeToggle } from '@/core/components/app/misc/ThemeToggle'
 describe('ThemeToggle', () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it('renders nothing when next-themes reports a forced theme', () => {
+  it('renders nothing when the theme provider reports a forced theme', () => {
     mockUseTheme.mockReturnValue({ theme: 'dark', forcedTheme: 'dark', setTheme: jest.fn() })
 
     const { container } = render(<ThemeToggle />)

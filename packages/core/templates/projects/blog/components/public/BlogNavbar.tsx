@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Menu, X, Moon, Sun, Search } from 'lucide-react'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 

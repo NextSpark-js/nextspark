@@ -341,7 +341,7 @@ export { Input }
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 
 interface BrandLogoProps {
   size?: 'sm' | 'md' | 'lg'

@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { JsonView, allExpanded, collapseAllNested, defaultStyles, darkStyles } from 'react-json-view-lite'
 import 'react-json-view-lite/dist/index.css'
-import { useTheme } from 'next-themes'
+import { useTheme } from '../../../providers/theme-provider'
 import { ChevronsDownUp, ChevronsUpDown, Copy } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import { Button } from '../../ui/button'

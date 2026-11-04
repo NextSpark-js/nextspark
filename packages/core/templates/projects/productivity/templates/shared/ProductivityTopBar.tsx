@@ -38,7 +38,7 @@ import {
 } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 import { withBasePath, withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface Board {

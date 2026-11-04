@@ -18,7 +18,7 @@ jest.mock('@/core/lib/config/i18n-config-client', () => {
   }
 })
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), refresh: mockRefresh }) }))
-jest.mock('next-themes', () => ({ useTheme: () => ({ setTheme: jest.fn(), forcedTheme: 'light' }) }))
+jest.mock('@nextsparkjs/core/providers/theme-provider', () => ({ useTheme: () => ({ setTheme: jest.fn(), forcedTheme: 'light' }) }))
 jest.mock('@/core/lib/auth-client', () => ({
   authClient: {
     useSession: () => ({ data: null, isPending: true, error: null }),

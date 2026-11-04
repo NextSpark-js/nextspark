@@ -52,7 +52,7 @@ export async function copyStarterTheme(
  * The runtime and dev dependencies a project template declares in its own package.json.
  *
  * copyStarterTheme leaves that file out, so without this the packages the template's source imports
- * (dompurify, next-themes, @dnd-kit/*) never reach the project and its build cannot resolve them.
+ * (dompurify, @dnd-kit/*) never reach the project and its build cannot resolve them.
  */
 export async function readTemplateDependencies(
   templatesDir: string,

@@ -18,7 +18,7 @@ jest.mock('next/navigation', () => ({
 
 const mockSetTheme = jest.fn()
 let mockForcedTheme: string | undefined
-jest.mock('next-themes', () => ({
+jest.mock('@nextsparkjs/core/providers/theme-provider', () => ({
   useTheme: () => ({ setTheme: mockSetTheme, forcedTheme: mockForcedTheme }),
 }))
 

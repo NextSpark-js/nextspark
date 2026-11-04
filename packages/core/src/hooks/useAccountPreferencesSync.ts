@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTheme } from 'next-themes'
+import { useTheme } from '../providers/theme-provider'
 import { I18N_CONFIG, copiesAccountLocale } from '../lib/config/i18n-config-client'
 type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 import { setUserLocaleClient } from '../lib/locale-client'
@@ -10,7 +10,7 @@ import { setSessionHint } from '../lib/auth/session-hint'
 import type { SessionRefreshContext, SessionRefreshResult } from './useSessionCookieRefresh'
 import { withBasePath } from '../lib/base-path'
 
-/** next-themes keeps the visitor's own choice under this localStorage key. */
+/** The theme provider keeps the visitor's own choice under this localStorage key. */
 const THEME_STORAGE_KEY = 'theme'
 const THEME_MODES = ['light', 'dark', 'system']
 

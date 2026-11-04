@@ -23,7 +23,7 @@ jest.mock('next/navigation', () => ({
 }))
 
 const setTheme = jest.fn()
-jest.mock('next-themes', () => ({
+jest.mock('@nextsparkjs/core/providers/theme-provider', () => ({
   useTheme: () => ({ setTheme, forcedTheme: undefined }),
 }))
 

@@ -5,7 +5,7 @@ import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 
 import { Copy, Palette, Monitor, Sun, Moon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "../../../providers/theme-provider";
 import { useEffect, useState } from "react";
 
 /**

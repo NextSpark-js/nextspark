@@ -4,7 +4,7 @@
  * The theme mode the root layout starts from, taken from configuration alone:
  * `defaultMode` and `forcedThemeRoutes` from theme.config.ts, `allowUserToggle`
  * from app.config.ts. Nothing is read from the request, so the pages that use it
- * can be prerendered. A visitor's own choice is next-themes' to apply from
+ * can be prerendered. A visitor's own choice is the theme provider's to apply from
  * localStorage before first paint; a signed-in user's saved choice reaches a
  * browser that has none through SessionCookieRefresher.
  */

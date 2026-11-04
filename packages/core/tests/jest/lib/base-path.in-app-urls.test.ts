@@ -201,6 +201,11 @@ const ALLOWED = [
     why: 'preconnect and dns-prefetch name the billing provider’s origin, not a path this app serves',
   },
   {
+    file: 'packages/core/src/providers/theme-provider.tsx',
+    text: 'script.toString()',
+    why: 'the inline script that applies the stored theme before paint, which carries no URL',
+  },
+  {
     file: 'apps/dev/blocks/video-hero/component.tsx',
     text: 'embedUrl',
     why: 'getEmbedUrl() returns a full YouTube or Vimeo URL, or null',

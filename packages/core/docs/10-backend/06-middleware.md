@@ -101,7 +101,7 @@ its place; an unchanged copy of an earlier template is replaced for you.
 
 A project that sets `script-src 'self' 'nonce-…'` does it in `config/hooks/proxy.ts`: the hook makes a nonce per request, adds it to the `Content-Security-Policy` header of the response, and forwards it to the app as the `x-nonce` request header (the header Next.js documents).
 
-Core's root layout passes that nonce to next-themes' `ThemeProvider`, so the inline script that applies the stored theme before paint is allowed by the policy, once you opt in in `config/app.config.ts`:
+Core's root layout passes that nonce to its `ThemeProvider`, so the inline script that applies the stored theme before paint is allowed by the policy, once you opt in in `config/app.config.ts`:
 
 ```typescript
 // config/app.config.ts
@@ -128,7 +128,7 @@ export function proxyHook(request: NextRequest) {
 
 Without `security.cspNonce` the layout reads no request header and nothing changes. With it, the layout reads the request headers, so every page under it renders per request (as Next.js requires for a nonce); a request without `x-nonce` renders the script without a nonce.
 
-**Cache Components does not support a nonce-based `script-src`.** With `cacheComponents` on (the default for new projects) the root layout is prerendered, and the static shell carries all of Next.js's own inline and bootstrap scripts without a nonce, not only next-themes'. Next.js documents Partial Prerendering as incompatible with nonce-based CSP, and `security.cspNonce` has no effect on that layout. In such a project, either use a policy without nonces (hashes for the inline scripts, optionally Next.js's `experimental.sri` for the bundles), or turn `cacheComponents` off to get the request-time root layout, which reads `x-nonce` with the flag above.
+**Cache Components does not support a nonce-based `script-src`.** With `cacheComponents` on (the default for new projects) the root layout is prerendered, and the static shell carries all of Next.js's own inline and bootstrap scripts without a nonce, not only the theme script. Next.js documents Partial Prerendering as incompatible with nonce-based CSP, and `security.cspNonce` has no effect on that layout. In such a project, either use a policy without nonces (hashes for the inline scripts, optionally Next.js's `experimental.sri` for the bundles), or turn `cacheComponents` off to get the request-time root layout, which reads `x-nonce` with the flag above.
 
 ## Key Features
 

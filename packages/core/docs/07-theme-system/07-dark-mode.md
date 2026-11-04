@@ -1,6 +1,6 @@
 # Dark Mode Support
 
-The theme system includes comprehensive dark mode support with next-themes integration, system preference detection, and user preference persistence.
+The theme system includes comprehensive dark mode support through core's theme provider, system preference detection, and user preference persistence.
 
 ## Overview
 
@@ -14,13 +14,11 @@ Dark mode features:
 
 ## Architecture
 
-### next-themes Integration
+### Theme provider
 
-The application uses `next-themes` for dark mode management:
+Core's `ThemeProvider` (`@nextsparkjs/core/providers/theme-provider`) manages the mode. It is adapted from `next-themes` and keeps its props, its `useTheme()` value and its blocking script, but it reads `prefers-color-scheme` at the first render in the browser, so its context does not change right after hydration. A new context value at that moment would make React render again any part of the page that has not hydrated yet, losing what the visitor typed (#371). Read the mode with core's `useTheme()`: the hook of the `next-themes` package does not see this provider and returns no theme.
 
 ```text
-next-themes Provider
-  ↓
 ThemeProvider (core/providers/theme-provider.tsx)
   ↓
 Application Components
@@ -36,7 +34,7 @@ CSS Variables (.dark class applied to <html>)
 
 ```typescript
 import { ThemeProvider as NextThemeProvider } from '@nextsparkjs/core/providers/theme-provider'
-import { getThemeSettings } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
+import { getThemeSettings, themeProviderProps } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
 
 export default async function RootLayout({ children }) {
   const { defaultMode, allowUserToggle, forcedThemeRoutes } = await getThemeSettings()
@@ -46,11 +44,8 @@ export default async function RootLayout({ children }) {
       <body>
         <NextThemeProvider
           attribute="class"
-          defaultTheme={defaultMode}
-          // When allowUserToggle is false, force the theme and ignore localStorage/system
-          forcedTheme={!allowUserToggle ? defaultMode : undefined}
-          // Resolve "System" whenever the user can toggle: ThemeToggle always offers it (#175)
-          enableSystem={allowUserToggle}
+          // defaultTheme, plus forcedTheme and no system tracking when allowUserToggle is false (#175, #371)
+          {...themeProviderProps({ defaultMode, allowUserToggle })}
           // Force a theme on the routes declared in theme.config.ts
           forcedThemeRoutes={forcedThemeRoutes}
           disableTransitionOnChange
@@ -84,7 +79,7 @@ export default async function RootLayout({ children }) {
 <html lang="en" suppressHydrationWarning>
 ```
 
-**Purpose:** Prevents React hydration warnings when next-themes modifies the DOM before React loads.
+**Purpose:** Prevents React hydration warnings when the theme script modifies the DOM before React loads.
 
 ## CSS Variable Strategy
 
@@ -169,7 +164,7 @@ export function Header() {
 'use client'
 
 import { Moon, Sun, Monitor } from 'lucide-react'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import {
   DropdownMenu,
@@ -249,7 +244,7 @@ When `enableSystem` is true:
 **Media Query:**
 
 ```javascript
-// Automatically handled by next-themes
+// Automatically handled by the theme provider
 window.matchMedia('(prefers-color-scheme: dark)')
 ```
 
@@ -269,7 +264,7 @@ window.matchMedia('(prefers-color-scheme: dark)')
 Theme preference is automatically saved to `localStorage`:
 
 ```javascript
-// Automatically saved by next-themes
+// Automatically saved by the theme provider
 localStorage.setItem('theme', 'dark')
 ```
 
@@ -331,7 +326,7 @@ It reads configuration only: no session, no request data, no request back to the
 
 **Where the rendered theme comes from:**
 1. A route in `forcedThemeRoutes`, or `defaultMode` when `allowUserToggle` is `false` (forced)
-2. The visitor's stored choice (`localStorage`, applied by next-themes before first paint)
+2. The visitor's stored choice (`localStorage`, applied by the theme script before first paint)
 3. Theme config `defaultMode`, falling back to `'system'`
 
 A signed-in user's saved preference is not read while rendering: see [User Profile](#user-profile).
@@ -360,7 +355,7 @@ export const myThemeConfig: ThemeConfig = {
 - The longest matching prefix wins, so `'/embed/preview': 'light'` can override `'/embed': 'dark'`.
 - Query strings, hashes and trailing slashes are ignored.
 
-**How it works:** `getThemeSettings()` reads the map from the project theme and the root layout passes it to `NextThemeProvider` as `forcedThemeRoutes`. The provider (`core/providers/theme-provider.tsx`) resolves it against `usePathname()` on every render and feeds the result to next-themes' `forcedTheme` on the **single root instance**. Because the same provider renders the blocking script and hydrates, there is no light → dark → light flash, and client-side navigations into or out of a forced route switch themes without a reload.
+**How it works:** `getThemeSettings()` reads the map from the project theme and the root layout passes it to `NextThemeProvider` as `forcedThemeRoutes`. The provider (`core/providers/theme-provider.tsx`) resolves it against `usePathname()` on every render and feeds the result to its `forcedTheme` on the **single root instance**. Because the same provider renders the blocking script and hydrates, there is no light → dark → light flash, and client-side navigations into or out of a forced route switch themes without a reload.
 
 Do **not** nest a second `ThemeProvider` or inject your own `<script>` in a nested layout for this: both fight the root provider over the same `<html>` element and produce exactly that flash.
 
@@ -373,7 +368,7 @@ On a forced route `useTheme().forcedTheme` is set; `setTheme()` still stores the
 ```tsx
 'use client'
 
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 
 export function MyComponent() {
   const { theme, setTheme, systemTheme } = useTheme()
@@ -445,7 +440,7 @@ export function MyComponent() {
 // Add test buttons in development
 'use client'
 
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 
 export function ThemeDebugger() {
   const { theme, systemTheme, resolvedTheme } = useTheme()
@@ -465,7 +460,7 @@ export function ThemeDebugger() {
 ```typescript
 // tests/dark-mode.test.tsx
 import { render } from '@testing-library/react'
-import { ThemeProvider } from 'next-themes'
+import { ThemeProvider } from '@nextsparkjs/core/providers/theme-provider'
 
 describe('Dark Mode', () => {
   it('applies dark class when theme is dark', () => {
@@ -489,7 +484,7 @@ describe('Dark Mode', () => {
 ```tsx
 'use client'
 
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 
 export function ThemedImage() {
   const { theme } = useTheme()
@@ -508,7 +503,7 @@ export function ThemedImage() {
 ```tsx
 'use client'
 
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 
 export function ThemedComponent() {
   const { resolvedTheme } = useTheme()
@@ -530,7 +525,7 @@ export function ThemedComponent() {
 ```tsx
 'use client'
 
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 
 export function ThemedChart() {
   const { resolvedTheme } = useTheme()
