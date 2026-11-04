@@ -70,6 +70,26 @@ test('a transitive next of the same major as the project\'s warns; a transitive 
   assert.equal((await inProject(lock, {}, checkZodBelowCore)).status, 'pass')
 })
 
+/** The lockfile of a project with zod 4.6.7 whose core reaches a pinned zod 4.1.11 through two packages; `also` adds a second root that reaches it. */
+function pinnedZodLock(also = false) {
+  const importer = also ? { zod: '4.6.7', '@nextsparkjs/core': '0.1.0', 'other-tool': '1.0.0' } : { zod: '4.6.7', '@nextsparkjs/core': '0.1.0' }
+  let text = lockfile({ '.': importer }, ['zod@4.1.11', '@vercel/blob@2.8.2', '@vercel/cli-config@0.3.1', 'other-tool@1.0.0'])
+  text += 'snapshots:\n\n'
+  text += "  '@nextsparkjs/core@0.1.0(react@19.2.4)':\n    dependencies:\n      '@vercel/blob': 2.8.2\n      zod: 4.6.7\n\n"
+  text += "  '@vercel/blob@2.8.2':\n    dependencies:\n      '@vercel/cli-config': 0.3.1\n\n"
+  text += "  '@vercel/cli-config@0.3.1':\n    dependencies:\n      zod: 4.1.11\n\n"
+  text += '  other-tool@1.0.0:\n    dependencies:\n' + (also ? "      '@vercel/cli-config': 0.3.1\n\n" : '      zod: 4.6.7\n\n')
+  text += '  zod@4.1.11: {}\n\n  zod@4.6.7: {}\n'
+  return text
+}
+
+test('a zod copy only core\'s own dependencies pin is not reported; one the project also reaches is (#394)', async () => {
+  assert.equal((await inProject(pinnedZodLock(), {}, checkDuplicateDependencies)).status, 'pass')
+  const warned = await inProject(pinnedZodLock(true), {}, checkDuplicateDependencies)
+  assert.equal(warned.status, 'warn')
+  assert.match(warned.message, /zod 4\.1\.11 \(a transitive dependency\)/)
+})
+
 test('an importer outside the project is not aligned: its next is not reported', async () => {
   const lock = lockfile({ '.': { next: '16.4.2', '@nextsparkjs/core': '0.1.0' }, 'apps/other': { next: '15.1.0' } })
   assert.equal((await inProject(lock, {}, checkDuplicateDependencies)).status, 'pass')

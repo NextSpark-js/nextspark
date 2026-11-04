@@ -24,6 +24,8 @@ export interface LockfileView {
   direct: Map<string, Map<string, Set<string>>>
   /** Every importer listed, with or without dependencies. */
   importers: Set<string>
+  /** `name@version` -> the `name@version` it depends on, from the `snapshots:` section (peer suffixes dropped). */
+  edges: Map<string, Set<string>>
 }
 
 function setOf<K, V>(map: Map<K, Set<V>>, key: K): Set<V> {
@@ -46,6 +48,9 @@ export function parseLockfile(text: string): LockfileView {
   let importer = ''
   let field = ''
   let name = ''
+  const edges = new Map<string, Set<string>>()
+  let snapshot = ''
+  let inDeps = false
   for (const line of text.split('\n')) {
     const top = /^(\w+):[ \t]*'?([^'\s]*)/.exec(line)
     if (top) {
@@ -53,7 +58,14 @@ export function parseLockfile(text: string): LockfileView {
       if (section === 'lockfileVersion') lockfileVersion = top[2]
       continue
     }
-    if (section === 'packages') {
+    if (section === 'snapshots') {
+      const key = /^ {2}'?((?:@[^/@\s]+\/)?[^@\s']+)@([^:'\s(]+)/.exec(line)
+      if (key) { snapshot = `${key[1]}@${key[2]}`; inDeps = false; continue }
+      const fld = /^ {4}(\w+):/.exec(line)
+      if (fld) { inDeps = fld[1] === 'dependencies' || fld[1] === 'optionalDependencies'; continue }
+      const dep = inDeps ? /^ {6}'?([^'\s:]+)'?: '?([^'\s(]+)/.exec(line) : null
+      if (dep) setOf(edges, snapshot).add(`${dep[1]}@${dep[2]}`)
+    } else if (section === 'packages') {
       const key = /^ {2}'?((?:@[^/@\s]+\/)?[^@\s']+)@([^:'\s(]+)/.exec(line)
       if (key) setOf(versions, key[1]).add(key[2])
     } else if (section === 'importers') {
@@ -71,7 +83,33 @@ export function parseLockfile(text: string): LockfileView {
       }
     }
   }
-  return { lockfileVersion, versions, direct, importers: importerIds }
+  return { lockfileVersion, versions, direct, importers: importerIds, edges }
+}
+
+/** Every `name@version` reachable from `roots` through the snapshots' dependencies. */
+function reach(view: LockfileView, roots: Iterable<string>): Set<string> {
+  const seen = new Set<string>()
+  const stack = [...roots]
+  for (let key = stack.pop(); key !== undefined; key = stack.pop()) {
+    if (seen.has(key)) continue
+    seen.add(key)
+    stack.push(...(view.edges.get(key) ?? []))
+  }
+  return seen
+}
+
+/** The copies only the installed core pulls in: reachable from core's dependencies and from nothing else the project declares. */
+function onlyThroughCore(view: LockfileView): Set<string> {
+  const coreRoots: string[] = []
+  const otherRoots: string[] = []
+  for (const [dep, byVersion] of view.direct) {
+    for (const version of byVersion.keys()) {
+      if (version.startsWith('link:')) continue
+      ;(dep === CORE ? coreRoots : otherRoots).push(`${dep}@${version}`)
+    }
+  }
+  const outside = reach(view, otherRoots)
+  return new Set([...reach(view, coreRoots)].filter(key => !outside.has(key)))
 }
 
 interface Lock {
@@ -172,9 +210,11 @@ export async function checkDuplicateDependencies(): Promise<HealthCheckResult> {
     const own = (version: string) => [...(byVersion.get(version) ?? [])].filter(i => lock.inProject(i, pkg))
     const declared = [...byVersion.keys()].filter(v => semver.valid(v) && own(v).length > 0)
     const majors = new Set(declared.map(v => semver.major(v)))
+    // A copy that only core's own dependencies pull (a pinned transitive of one of them) is not the project's to fix: no pnpm install or add removes it.
+    const throughCore = onlyThroughCore(lock.view)
     // A transitive copy counts when it has the major of a version the project declares; one declared by an importer outside the project does not.
     const relevant = [...(lock.view.versions.get(pkg) ?? [])].filter(v =>
-      semver.valid(v) && (declared.includes(v) || (!byVersion.has(v) && majors.has(semver.major(v)))))
+      semver.valid(v) && (declared.includes(v) || (!byVersion.has(v) && majors.has(semver.major(v)) && !throughCore.has(`${pkg}@${v}`))))
       .sort(semver.compare)
     if (relevant.length < 2) continue
     const highest = relevant[relevant.length - 1]
