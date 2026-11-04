@@ -47,12 +47,17 @@ const ENTITY_PERMISSIONS_BY_ROLE: Record<string, string[]> = {
   viewer: [],
 }
 
+// Declared with `roles: []`: no role lists it, yet it is a declared permission, so the generated registry's
+// ALL_PERMISSIONS (every resolved permission) holds it and owner receives it (#380)
+const NO_ROLE_PERMISSIONS = ['posts.seal']
+
 export const ROLE_PERMISSIONS_ARRAY: Record<string, string[]> = Object.fromEntries(
   AVAILABLE_ROLES.map((role) => [
     role,
     [...(TEAM_PERMISSIONS_BY_ROLE[role] ?? []), ...(ENTITY_PERMISSIONS_BY_ROLE[role] ?? [])],
   ])
 )
+ROLE_PERMISSIONS_ARRAY.owner.push(...NO_ROLE_PERMISSIONS)
 
 export const PERMISSIONS_BY_ROLE: Record<string, Set<string>> = Object.fromEntries(
   Object.entries(ROLE_PERMISSIONS_ARRAY).map(([role, perms]) => [role, new Set(perms)])

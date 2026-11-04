@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Core declares `@codemirror/state` and `@codemirror/commands`, so a project resolves one copy of each.** Core depended on `@uiw/react-codemirror` and `@codemirror/lang-json` without declaring them, and depending on what else the project installed two versions of `@codemirror/state` could resolve; CodeMirror then threw "Unrecognized extension value in extension set" and the Body tab of the API explorer crashed. A project that pinned both with a `pnpm.overrides` entry as a workaround can drop it (#384).
 - **After saving an edit, the entity detail page shows the saved values.** With Cache Components, Next.js keeps a visited route hidden and shows it again on navigation; the detail page restored that way kept the record it had loaded before the edit and did not request it again, so it showed the old values until a manual reload. `EntityDetailWrapper` now requests the record again whenever its route is shown again. (#386)
 
+### Documentation
+
+- **The permission docs say how `owner` is resolved.** `owner` receives every declared permission, including one declared with `roles: []`, which reads as "no role except owner"; to keep an action from everyone else, list `['owner']`. The `PermissionConfig.roles` type comment says so too, and a test pins it. The `lib/teams/permissions` helpers and the RBAC step of `check-action` read the `team.*` role lists as written, and the docs say that as well (#380).
+
 ## [0.1.0-beta.200] - 2026-11-03
 
 ### Upgrading from 0.1.0-beta.199

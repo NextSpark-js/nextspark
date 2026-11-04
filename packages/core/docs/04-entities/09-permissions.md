@@ -53,6 +53,8 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
 }
 ```
 
+> **Owner and `roles`:** `owner` receives every declared permission, including one declared with `roles: []` (read it as "no role except owner"). To keep an action from everyone else, list `['owner']`. See [How owner is resolved](../14-permissions/03-permission-service.md#how-owner-is-resolved).
+
 ### Permission ID Format
 
 Entity permissions use the format `{entity}.{action}`:

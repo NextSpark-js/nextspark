@@ -322,6 +322,14 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
 
 > **Note:** Owner has ALL permissions automatically. Specific permissions for other roles are configured in `permissions.config.ts`.
 
+#### How owner is resolved
+
+`owner` is the team's superuser by design: it is granted **every declared permission**, whatever the `roles` list of that permission says. That includes a permission declared with `roles: []`: read it as "no role except owner". `PermissionService.hasPermission('owner', id)` is true for every declared permission and `canDoAction('owner', action)` is true for any action; the permission hooks (`usePermission`) and `checkPermission` resolve through the same service. Every other role gets only the permissions that list it.
+
+- To keep an action from admins and members, list only `owner` (`roles: ['owner']`).
+- Declaring a permission with `roles: []` does not close it to owner. The only way to keep an action out of owner's hands is not to declare it.
+- The team-management helpers in `lib/teams/permissions` (`hasPermission`, `checkTeamPermission`) read the `team.*` role lists as written, with no owner shortcut, and `POST /api/v1/billing/check-action` uses `checkTeamPermission` for the actions mapped in `actionMappings.permissions`. Owner is therefore granted there only what a `team.*` permission lists, so a `team.*` permission declared with `roles: []` is denied to owner on those paths.
+
 ---
 
 ## Best Practices

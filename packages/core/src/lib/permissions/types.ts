@@ -64,7 +64,7 @@ export interface PermissionConfig {
   /** Category for grouping in UI (e.g., "Customers", "Settings") */
   category: string
 
-  /** Roles that have this permission */
+  /** Roles that have this permission. `owner` also receives it when not listed, and when this is `[]`: it means "no role except owner" */
   roles: TeamRole[]
 
   /** If this is a dangerous action (show warning in UI) */
