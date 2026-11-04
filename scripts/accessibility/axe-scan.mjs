@@ -147,6 +147,11 @@ async function main() {
     // `ready` finds something the page shows only once its client-side data has loaded; axe must not run on the
     // loading state (the task forms and the lists fetch after `networkidle`)
     const scanPage = async (name, { disableRules = [] } = {}) => {
+      // Overlays fade and zoom in (and the menu a dialog replaces fades out): axe reads the colours of a node
+      // mid-animation as low contrast, so it runs once every running finite animation has finished (a spinner or a
+      // pulsing skeleton loops forever and is left out)
+      await page.waitForFunction(() => document.getAnimations().every((a) =>
+        a.playState !== 'running' || a.effect?.getComputedTiming().iterations === Infinity), null, { timeout: 10_000 })
       const results = await new AxeBuilder({ page, axeSource }).withTags(TAGS).disableRules(disableRules).analyze()
       axeVersion = results.testEngine.version
       const found = rowsFromAxe(name, results)
