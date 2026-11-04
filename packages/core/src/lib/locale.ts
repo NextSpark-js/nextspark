@@ -1,6 +1,7 @@
 import { cache } from 'react'
 import { cookies, headers } from 'next/headers'
 import { I18N_CONFIG, type SupportedLocale } from './config'
+import type { LocaleDetectionSource } from './config/types'
 import { auth } from './auth'
 import { hasSessionCookie } from './auth/session-hint'
 
@@ -13,7 +14,20 @@ function isSupportedLocale(value: unknown): value is SupportedLocale {
  * off with `i18n.localeDetection: false`.
  */
 export function isLocaleFixed(): boolean {
-  return I18N_CONFIG.supportedLocales.length <= 1 || I18N_CONFIG.localeDetection === false
+  return (
+    I18N_CONFIG.supportedLocales.length <= 1 ||
+    I18N_CONFIG.localeDetection === false ||
+    !(['cookie', 'user_database', 'header'] as const).some(isSourceEnabled)
+  )
+}
+
+/**
+ * Whether `i18n.detectionStrategy` lets a source pick the locale. Unset, every
+ * source is on. The list chooses sources; the order they are asked in is fixed.
+ */
+function isSourceEnabled(source: LocaleDetectionSource): boolean {
+  const strategy = I18N_CONFIG.detectionStrategy
+  return !strategy || strategy.includes(source)
 }
 
 /**
@@ -54,15 +68,21 @@ export function preferredLocaleFromHeader(header: string | null | undefined): Su
  *    opens makes no session read and no database query.
  * 4. The Accept-Language header.
  * 5. The default locale.
+ *
+ * `i18n.detectionStrategy` turns sources 2, 3 and 4 off (`'cookie'`,
+ * `'user_database'`, `'header'`); the order does not change. Without any of the
+ * three the locale is fixed, as in 1.
  */
 export const getUserLocale = cache(async (): Promise<SupportedLocale> => {
   if (isLocaleFixed()) return I18N_CONFIG.defaultLocale
 
-  try {
-    const cookieLocale = (await cookies()).get(I18N_CONFIG.cookie.name)?.value
-    if (isSupportedLocale(cookieLocale)) return cookieLocale
-  } catch {
-    // No request scope (static generation): nothing to read
+  if (isSourceEnabled('cookie')) {
+    try {
+      const cookieLocale = (await cookies()).get(I18N_CONFIG.cookie.name)?.value
+      if (isSupportedLocale(cookieLocale)) return cookieLocale
+    } catch {
+      // No request scope (static generation): nothing to read
+    }
   }
 
   let requestHeaders: Headers | null = null
@@ -72,7 +92,7 @@ export const getUserLocale = cache(async (): Promise<SupportedLocale> => {
     return I18N_CONFIG.defaultLocale
   }
 
-  if (hasSessionCookie(requestHeaders.get('cookie'))) {
+  if (isSourceEnabled('user_database') && hasSessionCookie(requestHeaders.get('cookie'))) {
     try {
       // `disableRefresh`: this runs while rendering Server Components, where
       // Next.js cannot write cookies. Without it Better Auth's rolling renewal
@@ -90,7 +110,10 @@ export const getUserLocale = cache(async (): Promise<SupportedLocale> => {
     }
   }
 
-  return preferredLocaleFromHeader(requestHeaders.get('accept-language')) ?? I18N_CONFIG.defaultLocale
+  const fromHeader = isSourceEnabled('header')
+    ? preferredLocaleFromHeader(requestHeaders.get('accept-language'))
+    : null
+  return fromHeader ?? I18N_CONFIG.defaultLocale
 })
 
 export async function setUserLocale(locale: string) {

@@ -8,6 +8,9 @@
 // Import icon names type (will be created in next step)
 import type { IconName } from './icon-map'
 
+/** A source `i18n.detectionStrategy` can turn on. */
+export type LocaleDetectionSource = 'user_database' | 'cookie' | 'header' | 'default'
+
 /**
  * Teams Mode
  *
@@ -794,6 +797,15 @@ export interface AppConfig {
      * nothing is read from the request, so pages can be prerendered.
      */
     localeDetection?: boolean
+    /**
+     * Which sources may pick a request's locale: `'cookie'`, `'user_database'`
+     * (the signed-in user's language) and `'header'` (Accept-Language). They
+     * are always asked in that order, then `defaultLocale`; the list only turns
+     * sources on, so `['cookie', 'user_database', 'default']` ignores
+     * Accept-Language. Default: all of them. Without any of the three every page
+     * renders `defaultLocale`.
+     */
+    detectionStrategy?: readonly LocaleDetectionSource[]
     cookie: {
       name: string
       maxAge: number

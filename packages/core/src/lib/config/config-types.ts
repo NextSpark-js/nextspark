@@ -5,6 +5,8 @@
  * These types define the structure but not the values.
  */
 
+import type { LocaleDetectionSource } from './types'
+
 // =============================================================================
 // CORE CONFIGURATION INTERFACES
 // =============================================================================
@@ -12,7 +14,7 @@
 export interface I18nConfig {
   supportedLocales: readonly string[]
   defaultLocale: string
-  detectionStrategy: readonly ('user_database' | 'cookie' | 'header' | 'default')[]
+  detectionStrategy: readonly LocaleDetectionSource[]
   cookie: {
     name: string
     maxAge: number

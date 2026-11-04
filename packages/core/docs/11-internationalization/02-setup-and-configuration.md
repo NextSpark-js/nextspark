@@ -304,6 +304,30 @@ export default withNextIntl(nextConfig)
 4. Default locale
 ```
 
+### `i18n.detectionStrategy`
+
+Which sources may pick the locale. It is an array in `app.config.ts`; unset, all of them are on and nothing changes.
+
+| Value | Source |
+|---|---|
+| `'cookie'` | The locale cookie (1) |
+| `'user_database'` | The signed-in user's language (2) |
+| `'header'` | The `Accept-Language` header (3) |
+| `'default'` | `defaultLocale` (4); always the last resort, listing it is optional |
+
+The list only turns sources on: the order above is fixed, whatever order the array has. Which source wins:
+
+- **Before sign-in** (no session cookie): the locale cookie, else `Accept-Language`, else `defaultLocale`.
+- **After sign-in**: the locale cookie (it is kept in line with the account's language), else the user's language, else `Accept-Language`, else `defaultLocale`.
+
+A product whose audience speaks one language leaves `'header'` out, so the sign-in and sign-up screens render `defaultLocale` even when the device asks for another language, while a stored choice (cookie or account language) still wins:
+
+```typescript
+i18n: { defaultLocale: 'es', detectionStrategy: ['cookie', 'user_database', 'default'] }
+```
+
+With none of `'cookie'`, `'user_database'` and `'header'` (for example `['default']`) the locale is fixed, as with `localeDetection: false`: every page renders `defaultLocale` and the request is not read.
+
 #### 0. Fixed Locale
 
 **When**: `supportedLocales` has a single entry, or `app.config.ts` sets `i18n.localeDetection: false`.
