@@ -50,7 +50,7 @@ Is this dependency...?
 ├── Something specific to this theme/plugin that users don't manage?
 │   └── YES → dependencies (regular)
 │
-└── Already provided by core (next-themes, lucide-react, etc)?
+└── Already provided by core (lucide-react, the theme provider and its useTheme, etc)?
     └── YES → DO NOT ADD - import from core instead
 ```
 
@@ -76,7 +76,7 @@ Is this dependency...?
 ```json
 {
   "peerDependencies": {
-    "next-themes": "^0.4.0"  // WRONG! Core already has this
+    "lucide-react": "^0.539.0"  // WRONG! Core already has this
   }
 }
 ```

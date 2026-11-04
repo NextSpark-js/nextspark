@@ -277,7 +277,7 @@ buildSectionClasses('py-16 px-4', {
 ```
 1. CSS Variables → Define light/dark values in :root and .dark
 2. @custom-variant → Tell Tailwind to use .dark class (NOT prefers-color-scheme)
-3. next-themes  → Manages .dark class on <html>
+3. ThemeProvider → Core's provider manages the .dark class on <html>
 4. Tailwind     → Reads CSS variables and applies dark: variants via class
 ```
 
@@ -285,7 +285,7 @@ buildSectionClasses('py-16 px-4', {
 
 **By default, Tailwind v4 uses `@media (prefers-color-scheme: dark)` for `dark:` variants.**
 
-This causes a mismatch with `next-themes` which uses the `.dark` class on `<html>`.
+This causes a mismatch with core's theme provider, which uses the `.dark` class on `<html>`.
 
 **Required in every theme's `globals.css`:**
 
@@ -305,14 +305,14 @@ This causes a mismatch with `next-themes` which uses the `.dark` class on `<html
 - `dark:bg-slate-800` applies even though app should be light
 
 **With this configuration:**
-- Tailwind respects the `.dark` class from next-themes
+- Tailwind respects the `.dark` class from the theme provider
 - App theme setting is honored regardless of OS preference
 
 ### Theme Provider Setup
 
 ```typescript
-// core/providers/theme-provider.tsx
-import { ThemeProvider as NextThemeProvider } from 'next-themes'
+// The root layouts render core's provider (adapted from next-themes, same props)
+import { ThemeProvider as NextThemeProvider } from '@nextsparkjs/core/providers/theme-provider'
 
 export function ThemeProvider({ children }) {
   return (
@@ -331,7 +331,7 @@ export function ThemeProvider({ children }) {
 ### Theme Toggle
 
 ```typescript
-import { useTheme } from 'next-themes'
+import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme()

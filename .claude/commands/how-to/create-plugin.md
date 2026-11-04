@@ -501,7 +501,6 @@ Result: No conflicts, optimized bundle
   "react-hook-form": "^7.62.0",
   "sonner": "^2.0.7",
   "next-intl": "^4.3.4",
-  "next-themes": "^0.4.6",
   "uuid": "^13.0.0",
   "better-auth": "^1.3.5"
 }
