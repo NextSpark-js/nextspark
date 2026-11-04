@@ -22,9 +22,27 @@ export const SKIPPED_FILE = /\.(?:test|spec|stories)\.[cm]?[jt]sx?$|\.d\.[cm]?ts
 /** Installed, built or test code; also every directory starting with a dot and the generated src/app */
 export const SKIPPED_DIRS = new Set(['node_modules', 'dist', 'build', 'out', 'coverage', 'public', 'storybook-static', 'ios', 'android', '__tests__', 'tests', 'cypress'])
 
-/** Code files of the project at `root`, relative to it */
+/** The text of a file, or null when it cannot be read (permissions, a broken link) */
+function readText(file) {
+  try {
+    return fs.readFileSync(file, 'utf8')
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Code files of the project at `root`, relative to it. A directory that cannot be read (a database volume owned by
+ * another user, say) is skipped: it is not the project's code.
+ */
 export function projectSourceFiles(root, dir = root, found = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+  let entries
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true })
+  } catch {
+    return found
+  }
+  for (const entry of entries) {
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {
       if (SKIPPED_DIRS.has(entry.name) || entry.name.startsWith('.') || path.relative(root, full) === path.join('src', 'app')) continue
@@ -62,7 +80,7 @@ export function nextThemesLines(text) {
 export function findNextThemesImports(root) {
   const found = []
   for (const file of projectSourceFiles(root)) {
-    for (const line of nextThemesLines(fs.readFileSync(path.join(root, file), 'utf8'))) found.push(`${file}:${line}`)
+    for (const line of nextThemesLines(readText(path.join(root, file)) ?? '')) found.push(`${file}:${line}`)
   }
   return found
 }
@@ -86,7 +104,8 @@ function nextThemesImports(root, manifest) {
   const leftover = []
   for (const file of projectSourceFiles(root)) {
     const full = path.join(root, file)
-    const text = fs.readFileSync(full, 'utf8')
+    const text = readText(full)
+    if (text === null) continue
     if (!text.includes('next-themes')) continue
     const result = rewriteNextThemesImports(text)
     if (result.text !== text) {

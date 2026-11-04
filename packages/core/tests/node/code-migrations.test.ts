@@ -49,6 +49,8 @@ test('a name core does not export, a default or namespace import, import() and r
 test('a comment, a JSDoc, a string or a template literal that mentions an import of next-themes is not code: not rewritten, not reported', () => {
   for (const text of [
     "// import { useTheme } from 'next-themes'\n",
+    "// const m = await import('next-themes')\n",
+    "/* require('next-themes') */\n",
     "/**\n * import { useTheme } from 'next-themes'\n */\n",
     "const example = \"import { useTheme } from 'next-themes'\"\n",
     "const doc = `import { useTheme } from 'next-themes'`\n",
@@ -125,4 +127,26 @@ test('run from the project, the module applies the migrations of the version it 
   const unknown = spawnSync(process.execPath, [script, '0.1.0-beta.1'], { cwd: root, encoding: 'utf8' })
   assert.equal(unknown.status, 1)
   assert.match(unknown.stderr, /No code migration for 0\.1\.0-beta\.1/)
+})
+
+test('a directory or a file the project cannot read is skipped: the walk, the report and the migration do not throw', { skip: process.getuid?.() === 0 ? 'root reads every file' : false }, (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'code-migrations-unreadable-'))
+  const locked = path.join(root, 'pgdata')
+  const lockedFile = path.join(root, 'lib', 'locked.ts')
+  fs.mkdirSync(locked)
+  fs.writeFileSync(path.join(locked, 'inside.ts'), "import { useTheme } from 'next-themes'\n")
+  fs.mkdirSync(path.join(root, 'lib'))
+  fs.writeFileSync(lockedFile, "import { useTheme } from 'next-themes'\n")
+  fs.writeFileSync(path.join(root, 'lib', 'open.ts'), "import { useTheme } from 'next-themes'\n")
+  fs.chmodSync(locked, 0o000)
+  fs.chmodSync(lockedFile, 0o000)
+  t.after(() => {
+    fs.chmodSync(locked, 0o755)
+    fs.chmodSync(lockedFile, 0o644)
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+  assert.deepEqual(projectSourceFiles(root).sort(), ['lib/locked.ts', 'lib/open.ts'])
+  assert.deepEqual(findNextThemesImports(root), ['lib/open.ts:1'])
+  const migration = CODE_MIGRATIONS.find((entry: { version: string }) => entry.version === '0.1.0-beta.200')
+  assert.deepEqual(migration.run(root, {}).changed, ['lib/open.ts'])
 })
