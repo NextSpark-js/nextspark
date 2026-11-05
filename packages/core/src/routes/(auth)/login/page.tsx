@@ -1,14 +1,12 @@
 import type { Metadata } from 'next'
 import { LoginForm } from '@nextsparkjs/core/components/auth/forms/LoginForm'
+import { authPageMetadata } from '@nextsparkjs/core/routes/_internal/auth-metadata'
 
 export const dynamic = 'force-dynamic'
 
-const defaultMetadata: Metadata = {
-  title: 'Sign In',
-  description: 'Sign in to your account to access the platform',
+export function generateMetadata(): Promise<Metadata> {
+  return authPageMetadata('login.title', 'login.description')
 }
-
-export const metadata: Metadata = defaultMetadata
 
 function LoginPage() {
   return <LoginForm />

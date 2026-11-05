@@ -1,8 +1,7 @@
-import type { Metadata } from 'next'
-import { defaultMetadata } from '../_internal/auth-layout'
+import { generateMetadata } from '../_internal/auth-layout'
 import { DefaultAuthLayout } from '../_internal/default-auth-layout'
 import { withAuthMessages } from '../_internal/auth-layout.cc'
 
-export const metadata: Metadata = defaultMetadata
+export { generateMetadata }
 
 export default withAuthMessages(DefaultAuthLayout)

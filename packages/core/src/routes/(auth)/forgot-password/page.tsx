@@ -51,15 +51,15 @@ function ForgotPasswordPage() {
       const result = await resetPassword(data.email);
 
       if (!result.success) {
-        const errorMsg = result.error || 'Failed to send reset email';
+        const errorMsg = result.error || t('forgotPassword.errors.sendFailed');
         setError(errorMsg);
-        setStatusMessage(`Error: ${errorMsg}`);
+        setStatusMessage(t('forgotPassword.messages.errorPrefix', { error: errorMsg }));
       } else {
         setSuccess(true);
         setStatusMessage(t('forgotPassword.messages.sent'));
       }
     } catch {
-      setError('An unexpected error occurred');
+      setError(t('forgotPassword.errors.unexpectedError'));
       setStatusMessage(t('forgotPassword.messages.error'));
     } finally {
       setLoading(false);
@@ -129,22 +129,22 @@ function ForgotPasswordPage() {
             <div className="space-y-2">
               <h1 className="text-2xl font-bold">{t('forgotPassword.success.title')}</h1>
               <p className="text-muted-foreground">
-                We&apos;ve sent a password reset link to <strong>{email}</strong>
+                {t('forgotPassword.success.description')} <strong>{email}</strong>
               </p>
               <p className="text-muted-foreground">
-                Please check your inbox and click the link to reset your password.
+                {t('forgotPassword.success.checkInbox')}
               </p>
             </div>
 
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Didn&apos;t receive the email?</strong>
+                <strong>{t('forgotPassword.success.didntReceive')}</strong>
                 <br />
-                • Check your spam folder
+                • {t('forgotPassword.success.checkSpam')}
                 <br />
-                • Make sure you entered the correct email address
-                <br />• Wait a few minutes and try again
+                • {t('forgotPassword.success.correctEmail')}
+                <br />• {t('forgotPassword.success.waitAndRetry')}
               </AlertDescription>
             </Alert>
 
@@ -152,7 +152,7 @@ function ForgotPasswordPage() {
               <Button variant="outline" asChild className="flex-1" data-cy={sel('auth.forgotPassword.successBack')}>
                 <Link href="/login">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Login
+                  {t('forgotPassword.success.backToLogin')}
                 </Link>
               </Button>
               <Button
@@ -164,7 +164,7 @@ function ForgotPasswordPage() {
                 className="flex-1"
                 data-cy={sel('auth.forgotPassword.retryButton')}
               >
-                Try Again
+                {t('forgotPassword.success.tryAgain')}
               </Button>
             </div>
           </div>
@@ -195,7 +195,7 @@ function ForgotPasswordPage() {
             <AlertDescription>
               {error}
               <div className="mt-1 text-sm">
-                Please check your email address and try again.
+                {t('forgotPassword.errors.checkEmailRetry')}
               </div>
             </AlertDescription>
           </Alert>
@@ -203,7 +203,7 @@ function ForgotPasswordPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('forgotPassword.form.email')}</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -211,7 +211,7 @@ function ForgotPasswordPage() {
                 id="email"
                 type="email"
                 autoComplete="email"
-                placeholder="email@example.com"
+                placeholder={t('forgotPassword.form.emailPlaceholder')}
                 className="pl-9"
                 data-cy={sel('auth.forgotPassword.email')}
               />
@@ -232,10 +232,10 @@ function ForgotPasswordPage() {
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending reset link...
+                {t('forgotPassword.form.sendingLink')}
               </>
             ) : (
-              'Send Reset Link'
+              t('forgotPassword.form.submitButton')
             )}
           </Button>
         </form>
@@ -247,7 +247,7 @@ function ForgotPasswordPage() {
             data-cy={sel('auth.forgotPassword.backToLogin')}
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Login
+            {t('forgotPassword.backToLogin')}
           </Link>
         </div>
         </CardContent>

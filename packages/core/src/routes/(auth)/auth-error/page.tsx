@@ -1,13 +1,11 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { AuthErrorPage } from '@nextsparkjs/core/components/auth/pages/AuthErrorPage'
+import { authPageMetadata } from '@nextsparkjs/core/routes/_internal/auth-metadata'
 
-const defaultMetadata: Metadata = {
-  title: 'Authentication Error',
-  description: 'There was a problem with authentication',
+export function generateMetadata(): Promise<Metadata> {
+  return authPageMetadata('error.generic.title', 'error.generic.description')
 }
-
-export const metadata: Metadata = defaultMetadata
 
 function AuthErrorPageWrapper() {
   return (

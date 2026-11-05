@@ -5,4 +5,4 @@
  * has it under Cache Components. The form is a Client Component, so the page needs no per-request
  * render.
  */
-export { default, metadata } from './page'
+export { default, generateMetadata } from './page'

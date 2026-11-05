@@ -5,24 +5,27 @@ import { getMessages } from 'next-intl/server'
 import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
 import { GroupToaster } from '@nextsparkjs/core/providers/group-toaster'
-
-export const defaultMetadata: Metadata = {
-  title: {
-    default: `Authentication | ${APP_NAME}`,
-    template: `%s | ${APP_NAME}`,
-  },
-  description: 'Sign in or create an account to access our platform',
-  robots: {
-    index: false,
-    follow: false,
-  },
-}
+import { getAuthTranslations } from '@nextsparkjs/core/lib/i18n/auth-translations'
 
 /**
- * The metadata a project's override of this layout keeps when it declares none (the generated host forwards it from
- * this module, the composition module of the ISR host, so the override's route does not import DefaultAuthLayout).
+ * The metadata of the group's pages that declare none, and the one a project's override of this layout keeps when it
+ * declares none (the generated host forwards it from this module, the composition module of the ISR host, so the
+ * override's route does not import DefaultAuthLayout). The texts follow the language the group renders in.
  */
-export const metadata: Metadata = defaultMetadata
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getAuthTranslations('auth.metadata')
+  return {
+    title: {
+      default: `${t('title')} | ${APP_NAME}`,
+      template: `%s | ${APP_NAME}`,
+    },
+    description: t('description'),
+    robots: {
+      index: false,
+      follow: false,
+    },
+  }
+}
 
 /**
  * Wraps a layout for this route group in the group's client messages. The route's

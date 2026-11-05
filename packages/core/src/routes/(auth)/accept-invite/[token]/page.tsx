@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -22,6 +23,10 @@ interface InvitationInfo {
 
 function AcceptInvitePage() {
   const params = useParams()!
+  const t = useTranslations('auth.acceptInvite')
+  // The invitation is validated and accepted per token and user: a new `t` (another language) must not run that again
+  const tRef = useRef(t)
+  tRef.current = t
   const router = useRouter()
   const { user, isLoading: authLoading } = useAuth()
   const token = params.token as string
@@ -48,14 +53,14 @@ function AcceptInvitePage() {
             setStatus('expired')
           } else {
             setStatus('error')
-            setErrorMessage(data.error || 'Failed to validate invitation')
+            setErrorMessage(data.error || tRef.current('errors.validate'))
           }
           return
         }
 
         const info = {
-          teamName: data.data.teamName || 'Unknown Team',
-          inviterName: data.data.inviterName || 'Someone',
+          teamName: data.data.teamName || tRef.current('unknownTeam'),
+          inviterName: data.data.inviterName || tRef.current('someone'),
           role: data.data.role,
           email: data.data.email
         }
@@ -70,7 +75,7 @@ function AcceptInvitePage() {
         // Check email match
         if ((user.email ?? '').toLowerCase()  !== data.data.email.toLowerCase()) {
           setStatus('email_mismatch')
-          setErrorMessage(`This invitation was sent to ${data.data.email}, but you are logged in as ${user.email}`)
+          setErrorMessage(tRef.current('mismatchDescription', { invitationEmail: data.data.email, userEmail: user.email ?? '' }))
           return
         }
 
@@ -97,14 +102,14 @@ function AcceptInvitePage() {
             setStatus('expired')
           } else {
             setStatus('error')
-            setErrorMessage(acceptData.error || 'Failed to accept invitation')
+            setErrorMessage(acceptData.error || tRef.current('errors.accept'))
           }
           return
         }
 
         setStatus('accepted')
-        toast.success(`Welcome to ${info.teamName}!`, {
-          description: 'You have successfully joined the team'
+        toast.success(tRef.current('welcomeToast', { team: info.teamName }), {
+          description: tRef.current('toastDescription')
         })
 
         // Redirect to dashboard after a short delay
@@ -113,7 +118,7 @@ function AcceptInvitePage() {
         }, 1500)
       } catch {
         setStatus('error')
-        setErrorMessage('Failed to validate invitation')
+        setErrorMessage(tRef.current('errors.validate'))
       }
     }
 
@@ -142,14 +147,14 @@ function AcceptInvitePage() {
           setStatus('expired')
         } else {
           setStatus('error')
-          setErrorMessage(data.error || 'Failed to accept invitation')
+          setErrorMessage(data.error || t('errors.accept'))
         }
         return
       }
 
       setStatus('accepted')
-      toast.success(`Welcome to ${invitationInfo?.teamName}!`, {
-        description: 'You have successfully joined the team'
+      toast.success(t('welcomeToast', { team: invitationInfo?.teamName ?? '' }), {
+        description: t('toastDescription')
       })
 
       // Redirect to dashboard after a short delay
@@ -158,7 +163,7 @@ function AcceptInvitePage() {
       }, 1500)
     } catch {
       setStatus('error')
-      setErrorMessage('Failed to accept invitation')
+      setErrorMessage(t('errors.accept'))
     }
   }
 
@@ -186,7 +191,7 @@ function AcceptInvitePage() {
     return (
       <div className="flex flex-col items-center py-6" data-cy={sel('teams.acceptInvite.loading')}>
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Validating invitation...</p>
+        <p className="mt-4 text-muted-foreground">{t('validating')}</p>
       </div>
     )
   }
@@ -198,10 +203,10 @@ function AcceptInvitePage() {
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Users className="h-6 w-6 text-primary" />
         </div>
-        <h2 className="text-xl font-semibold">Team Invitation</h2>
+        <h2 className="text-xl font-semibold">{t('title')}</h2>
         {invitationInfo && (
           <p className="text-sm text-muted-foreground mt-1">
-            You&apos;ve been invited to join <strong data-cy={sel('teams.acceptInvite.teamName')}>{invitationInfo.teamName}</strong>
+            {t.rich('invitedTo', { team: (chunks) => <strong data-cy={sel('teams.acceptInvite.teamName')}>{chunks}</strong>, name: invitationInfo.teamName })}
           </p>
         )}
       </div>
@@ -211,27 +216,34 @@ function AcceptInvitePage() {
         <div data-cy={sel('teams.acceptInvite.requiresAuth')}>
           <div className="rounded-lg border p-4 space-y-2 bg-muted/50">
             <p className="text-sm text-muted-foreground">
-              <strong data-cy={sel('teams.acceptInvite.inviter')}>{invitationInfo.inviterName}</strong> has invited you to join <strong>{invitationInfo.teamName}</strong> as a <strong data-cy={sel('teams.acceptInvite.role')}>{invitationInfo.role}</strong>.
+              {t.rich('inviteSummary', {
+                inviter: (chunks) => <strong data-cy={sel('teams.acceptInvite.inviter')}>{chunks}</strong>,
+                team: (chunks) => <strong>{chunks}</strong>,
+                role: (chunks) => <strong data-cy={sel('teams.acceptInvite.role')}>{chunks}</strong>,
+                inviterName: invitationInfo.inviterName,
+                teamName: invitationInfo.teamName,
+                roleName: invitationInfo.role,
+              })}
             </p>
             <p className="text-sm text-muted-foreground">
-              This invitation was sent to <strong>{invitationInfo.email}</strong>
+              {t.rich('sentTo', { email: (chunks) => <strong>{chunks}</strong>, address: invitationInfo.email })}
             </p>
           </div>
 
           <div className="space-y-3 mt-6">
             <p className="text-sm text-center text-muted-foreground">
-              Please sign in or create an account to accept this invitation.
+              {t('signInPrompt')}
             </p>
             <Button asChild className="w-full" data-cy={sel('teams.acceptInvite.signin')}>
               <Link href={loginUrl}>
                 <LogIn className="mr-2 h-4 w-4" />
-                Sign In
+                {t('signIn')}
               </Link>
             </Button>
             <Button asChild variant="outline" className="w-full" data-cy={sel('teams.acceptInvite.signup')}>
               <Link href={signupUrl}>
                 <UserPlus className="mr-2 h-4 w-4" />
-                Create Account
+                {t('createAccount')}
               </Link>
             </Button>
           </div>
@@ -243,12 +255,19 @@ function AcceptInvitePage() {
         <div data-cy={sel('teams.acceptInvite.valid')}>
           <div className="rounded-lg border p-4 space-y-2 bg-muted/50">
             <p className="text-sm text-muted-foreground">
-              <strong>{invitationInfo.inviterName}</strong> has invited you to join <strong>{invitationInfo.teamName}</strong> as a <strong>{invitationInfo.role}</strong>.
+              {t.rich('inviteSummary', {
+                inviter: (chunks) => <strong>{chunks}</strong>,
+                team: (chunks) => <strong>{chunks}</strong>,
+                role: (chunks) => <strong>{chunks}</strong>,
+                inviterName: invitationInfo.inviterName,
+                teamName: invitationInfo.teamName,
+                roleName: invitationInfo.role,
+              })}
             </p>
           </div>
 
           <Button onClick={handleAccept} className="w-full mt-6" data-cy={sel('teams.acceptInvite.accept')}>
-            Accept Invitation
+            {t('accept')}
           </Button>
         </div>
       )}
@@ -257,7 +276,7 @@ function AcceptInvitePage() {
       {status === 'accepting' && (
         <div className="flex flex-col items-center py-4" data-cy={sel('teams.acceptInvite.accepting')}>
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">Accepting invitation...</p>
+          <p className="mt-4 text-muted-foreground">{t('accepting')}</p>
         </div>
       )}
 
@@ -265,9 +284,9 @@ function AcceptInvitePage() {
       {status === 'accepted' && (
         <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900" data-cy={sel('teams.acceptInvite.success')}>
           <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-          <AlertTitle className="text-green-800 dark:text-green-200">Welcome to the team!</AlertTitle>
+          <AlertTitle className="text-green-800 dark:text-green-200">{t('successTitle')}</AlertTitle>
           <AlertDescription className="text-green-700 dark:text-green-300">
-            You&apos;ve successfully joined {invitationInfo?.teamName}. Redirecting to your dashboard...
+            {t('successDescription', { team: invitationInfo?.teamName ?? '' })}
           </AlertDescription>
         </Alert>
       )}
@@ -276,11 +295,11 @@ function AcceptInvitePage() {
       {status === 'already_member' && (
         <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900" data-cy={sel('teams.acceptInvite.alreadyMember')}>
           <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          <AlertTitle className="text-blue-800 dark:text-blue-200">Already a member</AlertTitle>
+          <AlertTitle className="text-blue-800 dark:text-blue-200">{t('alreadyTitle')}</AlertTitle>
           <AlertDescription className="text-blue-700 dark:text-blue-300">
-            You&apos;re already a member of this team.
+            {t('alreadyDescription')}
             <Button asChild variant="link" className="p-0 h-auto ml-1">
-              <Link href="/dashboard/settings/teams">Go to Teams</Link>
+              <Link href="/dashboard/settings/teams">{t('goToTeams')}</Link>
             </Button>
           </AlertDescription>
         </Alert>
@@ -290,12 +309,12 @@ function AcceptInvitePage() {
       {status === 'email_mismatch' && (
         <Alert variant="destructive" data-cy={sel('teams.acceptInvite.emailMismatch')}>
           <XCircle className="h-5 w-5" />
-          <AlertTitle>Email mismatch</AlertTitle>
+          <AlertTitle>{t('mismatchTitle')}</AlertTitle>
           <AlertDescription>
             {errorMessage}
             <br />
             <Button asChild variant="link" className="p-0 h-auto">
-              <Link href={loginUrl}>Sign in with a different account</Link>
+              <Link href={loginUrl}>{t('differentAccount')}</Link>
             </Button>
           </AlertDescription>
         </Alert>
@@ -305,9 +324,9 @@ function AcceptInvitePage() {
       {status === 'not_found' && (
         <Alert variant="destructive" data-cy={sel('teams.acceptInvite.notFound')}>
           <XCircle className="h-5 w-5" />
-          <AlertTitle>Invitation not found</AlertTitle>
+          <AlertTitle>{t('notFoundTitle')}</AlertTitle>
           <AlertDescription>
-            This invitation link is invalid or has already been used. Please contact the team owner for a new invitation.
+            {t('notFoundDescription')}
           </AlertDescription>
         </Alert>
       )}
@@ -316,9 +335,9 @@ function AcceptInvitePage() {
       {status === 'expired' && (
         <Alert variant="destructive" data-cy={sel('teams.acceptInvite.expired')}>
           <XCircle className="h-5 w-5" />
-          <AlertTitle>Invitation expired</AlertTitle>
+          <AlertTitle>{t('expiredTitle')}</AlertTitle>
           <AlertDescription>
-            This invitation has expired. Please contact the team owner for a new invitation.
+            {t('expiredDescription')}
           </AlertDescription>
         </Alert>
       )}
@@ -327,8 +346,8 @@ function AcceptInvitePage() {
       {status === 'error' && (
         <Alert variant="destructive" data-cy={sel('teams.acceptInvite.error')}>
           <XCircle className="h-5 w-5" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{errorMessage || 'An error occurred. Please try again.'}</AlertDescription>
+          <AlertTitle>{t('errorTitle')}</AlertTitle>
+          <AlertDescription>{errorMessage || t('errorFallback')}</AlertDescription>
         </Alert>
       )}
     </div>

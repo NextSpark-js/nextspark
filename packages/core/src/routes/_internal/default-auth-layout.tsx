@@ -1,12 +1,14 @@
 import { Suspense } from 'react'
 import { AuthWrapper } from '@nextsparkjs/core/components/auth/layouts/AuthWrapper'
 import { APP_DESCRIPTION, APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
+import { getAuthTranslations } from '@nextsparkjs/core/lib/i18n/auth-translations'
 
 /**
  * Core's default auth layout. A module of its own: the composition module (./auth-layout) and the metadata a
  * project override keeps are imported without it, so an override's route ships none of its client components.
  */
-export function DefaultAuthLayout({ children }: { children: React.ReactNode }) {
+export async function DefaultAuthLayout({ children }: { children: React.ReactNode }) {
+  const t = await getAuthTranslations('auth.layout')
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -31,7 +33,7 @@ export function DefaultAuthLayout({ children }: { children: React.ReactNode }) {
 
         <div className="mt-6 text-center">
           <p className="text-xs text-muted-foreground">
-            Protected with enterprise-grade encryption
+            {t('protected')}
           </p>
         </div>
       </div>

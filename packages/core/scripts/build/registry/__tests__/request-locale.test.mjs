@@ -55,6 +55,10 @@ test('the generated file holds the two settings, and says the public pages keep 
   assert.match(generateRequestLocale({ auth: true, public: false }, true), /REQUEST_LOCALE_AUTH: boolean = true/)
   assert.match(generateRequestLocale({ auth: false, public: true }, true), /REQUEST_LOCALE_PUBLIC: boolean = true\nexport const PUBLIC_IN_DEFAULT_LOCALE: boolean = false/)
   assert.match(generateRequestLocale(OFF, false), /PUBLIC_IN_DEFAULT_LOCALE: boolean = false/)
+  // the auth group the same way (#401)
+  assert.match(generateRequestLocale(OFF, true), /AUTH_IN_DEFAULT_LOCALE: boolean = true/)
+  assert.match(generateRequestLocale({ auth: true, public: false }, true), /AUTH_IN_DEFAULT_LOCALE: boolean = false/)
+  assert.match(generateRequestLocale(OFF, false), /AUTH_IN_DEFAULT_LOCALE: boolean = false/)
 })
 
 test('true as const is accepted, a variable is ignored, and a spread or a quoted key stops the generation', () => {

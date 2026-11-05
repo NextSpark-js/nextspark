@@ -16,6 +16,9 @@ jest.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
 }))
 
+// next-intl is ESM only; the page's texts are not what this test is about
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+
 import VerifyEmailPage from '@/app/(auth)/verify-email/page'
 
 const ORIGINAL_BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH

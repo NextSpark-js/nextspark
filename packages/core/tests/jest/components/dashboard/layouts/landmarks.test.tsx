@@ -14,11 +14,10 @@ jest.mock('@nextsparkjs/core/lib/config/public-config-client', () => ({ APP_NAME
 import { DefaultAuthLayout } from '@/core/routes/_internal/default-auth-layout'
 
 describe('landmarks', () => {
-  it('the default auth layout is the only main of its pages', () => {
+  it('the default auth layout is the only main of its pages', async () => {
+    // a server component: it reads its text from the auth messages
     render(
-      <DefaultAuthLayout>
-        <form aria-label="login" />
-      </DefaultAuthLayout>
+      await DefaultAuthLayout({ children: <form aria-label="login" /> })
     )
     expect(screen.getAllByRole('main')).toHaveLength(1)
     expect(screen.getByRole('main').querySelector('form')).not.toBeNull()

@@ -8,9 +8,9 @@
  * the boundary between the page and the segment it validates.
  */
 import { Suspense } from 'react'
-import SignupPage, { metadata } from './page'
+import SignupPage, { generateMetadata } from './page'
 
-export { metadata }
+export { generateMetadata }
 
 export default function SignupPageCc({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   return (

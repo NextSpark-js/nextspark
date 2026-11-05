@@ -121,8 +121,9 @@ async function getTranslations(namespaceOrOpts) {
   const ns = loadNamespace(locale, namespace)
 
   return function t(key, params) {
-    const value = ns[key]
-    if (value === undefined) {
+    // a dotted key reaches into nested objects, as next-intl's does
+    const value = ns[key] ?? key.split('.').reduce((node, part) => (node && typeof node === 'object' ? node[part] : undefined), ns)
+    if (typeof value !== 'string') {
       throw new Error(`next-intl mock: missing key "${key}" in namespace "${namespace}"`)
     }
     return format(value, params, locale)

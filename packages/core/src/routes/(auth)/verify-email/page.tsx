@@ -2,7 +2,8 @@
 
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from '@nextsparkjs/core/components/ui/button';
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert';
 import { sel } from '@nextsparkjs/core/selectors/auth'
@@ -12,6 +13,10 @@ import { VERIFY_FROM_UI_HEADER } from '@nextsparkjs/core/lib/api/client-headers'
 function VerifyEmailContent() {
   const searchParams = useSearchParams()!;
   const router = useRouter();
+  const t = useTranslations("auth.verifyEmail");
+  // The verification runs once per token: a new `t` (another language) must not run it again
+  const tRef = useRef(t);
+  tRef.current = t;
   const token = searchParams.get("token") || "";
   
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -20,7 +25,7 @@ function VerifyEmailContent() {
   useEffect(() => {
     const handleVerification = async () => {
       if (!token) {
-        setError("No verification token provided");
+        setError(tRef.current("errors.noToken"));
         setStatus('error');
         return;
       }
@@ -37,7 +42,7 @@ function VerifyEmailContent() {
         
         if (!response.ok) {
           const errorText = await response.text();
-          setError(errorText || "Email verification failed");
+          setError(errorText || tRef.current("errors.verificationFailed"));
           setStatus('error');
         } else {
           setStatus('success');
@@ -107,7 +112,7 @@ function VerifyEmailContent() {
           }, 2000);
         }
       } catch {
-        setError("An unexpected error occurred");
+        setError(tRef.current("errors.unexpectedError"));
         setStatus('error');
       }
     };
@@ -119,8 +124,8 @@ function VerifyEmailContent() {
     return (
       <div className="space-y-4" data-cy={sel('auth.verifyEmail.loading')}>
         <div className="text-center">
-          <h2 className="text-xl font-semibold">Verifying Email</h2>
-          <p className="text-sm text-muted-foreground mt-2">Please wait while we verify your email address</p>
+          <h2 className="text-xl font-semibold">{t("loading.title")}</h2>
+          <p className="text-sm text-muted-foreground mt-2">{t("loading.description")}</p>
         </div>
         <div className="flex justify-center py-6">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -136,12 +141,12 @@ function VerifyEmailContent() {
           <div className="flex justify-center mb-2">
             <CheckCircle className="h-12 w-12 text-primary" />
           </div>
-          <h2 className="text-xl font-semibold">Email Verified</h2>
-          <p className="text-sm text-muted-foreground mt-2">Your email has been successfully verified</p>
+          <h2 className="text-xl font-semibold">{t("success.title")}</h2>
+          <p className="text-sm text-muted-foreground mt-2">{t("success.description")}</p>
         </div>
         <Alert>
           <AlertDescription>
-            Redirecting you to the dashboard...
+            {t("success.redirectingDashboard")}
           </AlertDescription>
         </Alert>
       </div>
@@ -154,8 +159,8 @@ function VerifyEmailContent() {
         <div className="flex justify-center mb-2">
           <AlertCircle className="h-12 w-12 text-destructive" />
         </div>
-        <h2 className="text-xl font-semibold">Verification Failed</h2>
-        <p className="text-sm text-muted-foreground mt-2">We couldn&apos;t verify your email address</p>
+        <h2 className="text-xl font-semibold">{t("failed.title")}</h2>
+        <p className="text-sm text-muted-foreground mt-2">{t("failed.description")}</p>
       </div>
       {error && (
         <Alert variant="destructive" data-cy={sel('auth.verifyEmail.errorMessage')}>
@@ -164,10 +169,10 @@ function VerifyEmailContent() {
       )}
       <div className="flex gap-2">
         <Button onClick={() => router.push('/signup')} variant="outline" className="flex-1" data-cy={sel('auth.verifyEmail.backSignup')}>
-          Back to Sign Up
+          {t("backToSignup")}
         </Button>
         <Button onClick={() => router.push('/login')} className="flex-1" data-cy={sel('auth.verifyEmail.goLogin')}>
-          Go to Login
+          {t("goToLogin")}
         </Button>
       </div>
     </div>

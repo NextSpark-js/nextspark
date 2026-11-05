@@ -20,4 +20,4 @@ export function withAuthMessages<P extends { children: ReactNode }>(AuthLayout: 
     )
   })
 }
-export { metadata } from './auth-layout'
+export { generateMetadata } from './auth-layout'

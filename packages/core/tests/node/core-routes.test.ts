@@ -519,7 +519,7 @@ test('the default /signup page redirects outside Suspense (a real 307); the Cach
   const cc = fs.readFileSync(path.join(ROUTES, '(auth)/signup/page.cc.tsx'), 'utf8')
   assert.match(legacy, /redirect\(loginUrl\(params\)\)/)
   assert.doesNotMatch(legacy, /<Suspense|import { Suspense/, 'redirect() thrown inside a Suspense boundary reaches the browser as a 200 with a meta refresh')
-  assert.match(cc, /import SignupPage, \{ metadata \} from '\.\/page'/)
+  assert.match(cc, /import SignupPage, \{ generateMetadata \} from '\.\/page'/)
   assert.match(cc, /<Suspense fallback=\{null\}>\s*<SignupPage searchParams=\{searchParams\} \/>\s*<\/Suspense>/, 'a page that redirects needs a boundary under the segment the dev server validates')
 })
 

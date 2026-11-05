@@ -472,6 +472,8 @@ declare module '@nextsparkjs/registries/request-locale' {
   export const REQUEST_LOCALE_PUBLIC: boolean
   /** A Cache Components host whose `(public)` group keeps the default locale. */
   export const PUBLIC_IN_DEFAULT_LOCALE: boolean
+  /** A Cache Components host whose `(auth)` group keeps the default locale. */
+  export const AUTH_IN_DEFAULT_LOCALE: boolean
 }
 
 declare module '@nextsparkjs/registries/root-providers' {

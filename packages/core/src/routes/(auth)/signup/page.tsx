@@ -5,17 +5,15 @@ import { AUTH_CONFIG } from '@nextsparkjs/core/lib/config'
 import { resolveAuthMethods } from '@nextsparkjs/core/lib/auth/auth-methods'
 import { TeamService } from '@nextsparkjs/core/lib/services'
 import { safeCallbackPath } from '@nextsparkjs/core/lib/auth/callback-url'
+import { authPageMetadata } from '@nextsparkjs/core/routes/_internal/auth-metadata'
 
 // This page reads DB state (TeamService.isBootstrapDone) and redirect()s during render,
 // so it must render per-request and never be statically prerendered at build time.
 export const dynamic = 'force-dynamic'
 
-const defaultMetadata: Metadata = {
-  title: 'Create Account',
-  description: 'Create your account to start using our platform',
+export function generateMetadata(): Promise<Metadata> {
+  return authPageMetadata('signup.title', 'signup.description')
 }
-
-export const metadata: Metadata = defaultMetadata
 
 // No Suspense boundary around the content: redirect() inside one is thrown after the shell was
 // flushed, so it reaches the browser as a 200 with a meta refresh instead of a 307. The page is

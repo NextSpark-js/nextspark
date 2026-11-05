@@ -74,9 +74,10 @@ export function readRequestLocale(projectRoot) {
 }
 
 /**
- * request-locale.ts: the two groups' settings as constants, and whether the public pages are in the default locale.
- * `PUBLIC_IN_DEFAULT_LOCALE` is true for a Cache Components host whose `(public)` group keeps the default locale: the
- * server components of those pages ask for that locale too, so they agree with the layout's navbar and footer.
+ * request-locale.ts: the two groups' settings as constants, and whether each group is in the default locale.
+ * `PUBLIC_IN_DEFAULT_LOCALE` / `AUTH_IN_DEFAULT_LOCALE` is true for a Cache Components host whose `(public)` / `(auth)`
+ * group keeps the default locale: the server components of those pages (and their metadata) ask for that locale too,
+ * so they agree with the layout and read nothing from the request.
  */
 export function generateRequestLocale(flags, ppr) {
   return `/**
@@ -90,5 +91,6 @@ export function generateRequestLocale(flags, ppr) {
 export const REQUEST_LOCALE_AUTH: boolean = ${flags.auth}
 export const REQUEST_LOCALE_PUBLIC: boolean = ${flags.public}
 export const PUBLIC_IN_DEFAULT_LOCALE: boolean = ${Boolean(ppr) && !flags.public}
+export const AUTH_IN_DEFAULT_LOCALE: boolean = ${Boolean(ppr) && !flags.auth}
 `
 }
