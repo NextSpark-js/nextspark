@@ -48,9 +48,4 @@ describe('PublicFooter', () => {
       expect(routes.has(href)).toBe(true)
     }
   })
-
-  test('links Resources only to pages this app actually serves', () => {
-    render(<PublicFooter />)
-    expect(screen.getByText('helpCenter').closest('a')).toHaveAttribute('href', '/support')
-  })
 })

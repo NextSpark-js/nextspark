@@ -118,6 +118,8 @@ export async function proxyHook(request: NextRequest) {
 
 Keep the lookup cheap (the proxy runs on every request). The reserved list above is a starting point: add every top-level route your project defines (a page, a route handler, a metadata file), because anything that is not in the list and not a published slug becomes a 404. The recipe covers `/not-a-page` only; `/blog/[slug]` (two segments) is not covered, so give that route its own check in the same hook. This snippet is a recipe, not covered by the repository's tests: after adding it, confirm with `curl -I https://your-host/not-a-page` that the status is 404.
 
+The default public layout (the one a project without `templates/(public)/layout.tsx` gets) links only the routes core guarantees: `/docs`, sign-in and sign-up. It does not link `/features`, `/pricing`, `/support`, `/about`, `/blog` or `/contact`, since those pages exist only if the project writes them. A project that wants marketing navigation writes its own `templates/(public)/layout.tsx`, as the starter and blog templates do.
+
 The legacy 404 holds while nothing between the root layout and the page is a Suspense boundary: a project `(public)/layout` that wraps `children` in `<Suspense>`, or a `templates/(public)/loading.tsx` (an implicit boundary), brings the 200 back, for `notFound()` and for `redirect()` alike. Put a `loading.tsx` only next to pages that never call `notFound()` or `redirect()`, not at the group level; on the `[slug]` route it brings the 200 back too.
 
 ## PageRenderer Component

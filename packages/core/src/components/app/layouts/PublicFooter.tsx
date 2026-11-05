@@ -10,80 +10,26 @@ export function PublicFooter() {
   const t = useTranslations('footer')
   const appName = APP_NAME
 
-  const footerLinks = {
-    product: [
-      { name: 'features', href: '/features' },
-      { name: 'pricing', href: '/pricing' },
-      { name: 'support', href: '/support' },
-      { name: 'docs', href: '/docs' }
-    ],
-    company: [
-      { name: 'about', href: '/about' },
-      { name: 'blog', href: '/blog' },
-      { name: 'contact', href: '/contact' }
-    ],
-    resources: [
-      { name: 'helpCenter', href: '/support' }
-    ]
-  }
+  // Only the routes core guarantees; a project that wants marketing links writes its own (public)/layout.tsx
+  const footerLinks = [{ name: 'docs', href: '/docs' }]
 
   return (
     <footer className="border-t border-border/40 bg-background" data-cy={sel('public.footer.container')}>
       <div className="container max-w-7xl mx-auto px-4 py-12 md:py-16">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-3">
-          {/* Product */}
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-4">{t('product')}</h3>
-            <ul className="space-y-3">
-              {footerLinks.product.map((link) => (
-                <li key={link.name}>
-                  <Link 
-                    href={link.href}
-                    prefetch={false}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {t(link.name)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-4">{t('company')}</h3>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.name}>
-                  <Link 
-                    href={link.href}
-                    prefetch={false}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {t(link.name)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Resources */}
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-4">{t('resources')}</h3>
-            <ul className="space-y-3">
-              {footerLinks.resources.map((link) => (
-                <li key={link.name}>
-                  <Link 
-                    href={link.href}
-                    prefetch={false}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {t(link.name)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <div>
+          <h3 className="text-sm font-semibold text-foreground mb-4">{t('resources')}</h3>
+          <ul className="space-y-3">
+            {footerLinks.map((link) => (
+              <li key={link.name}>
+                <Link
+                  href={link.href}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {t(link.name)}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <Separator className="my-8" />

@@ -104,10 +104,8 @@ export function PublicNavbar() {
   const tNav = useTranslations('navigation')
   const appName = APP_NAME
 
+  // Only the routes core guarantees; a project that wants marketing links writes its own (public)/layout.tsx
   const navigationItems = [
-    { name: 'features', href: '/features' },
-    { name: 'pricing', href: '/pricing' },
-    { name: 'support', href: '/support' },
     { name: 'docs', href: '/docs' }
   ]
 
@@ -140,7 +138,6 @@ export function PublicNavbar() {
               <Link
                 key={item.name}
                 href={item.href}
-                prefetch={false}
                 className="transition-colors hover:text-foreground/80 text-foreground/60"
               >
                 {tNav(item.name)}
@@ -185,8 +182,7 @@ export function PublicNavbar() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  prefetch={false}
-                  className="px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                    className="px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {tNav(item.name)}
