@@ -14,6 +14,7 @@ import { useState, useCallback, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Eye, Loader2, Check, X, Trash2, ExternalLink } from 'lucide-react'
+import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Input } from '@nextsparkjs/core/components/ui/input'
 import { Label } from '@nextsparkjs/core/components/ui/label'
@@ -59,16 +60,10 @@ interface PageProps {
   params: Promise<{ id: string }>
 }
 
-function getActiveTeamId(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem('activeTeamId')
-}
-
-function buildHeaders(): HeadersInit {
+function buildHeaders(teamId: string | undefined): HeadersInit {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   }
-  const teamId = getActiveTeamId()
   if (teamId) {
     headers['x-team-id'] = teamId
   }
@@ -89,6 +84,7 @@ function generateSlug(title: string): string {
 export default function EditPostPage({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
+  const teamId = useTeamContext().currentTeam?.id
   const [post, setPost] = useState<PostData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -100,9 +96,13 @@ export default function EditPostPage({ params }: PageProps) {
 
   // Fetch post data
   useEffect(() => {
+    // The team comes from the team provider, which resolves it after the first render: a request sent before it has
+    // no team and the API answers 400
+    if (!teamId) return
+
     async function fetchPost() {
       try {
-        const headers = buildHeaders()
+        const headers = buildHeaders(teamId)
         const response = await fetch(withBasePath(`/api/v1/posts/${id}`), {
           credentials: 'include',
           headers,
@@ -128,7 +128,7 @@ export default function EditPostPage({ params }: PageProps) {
     }
 
     fetchPost()
-  }, [id])
+  }, [id, teamId])
 
   // Track changes
   const updatePost = useCallback((updates: Partial<PostData>) => {
@@ -178,7 +178,7 @@ export default function EditPostPage({ params }: PageProps) {
         : post.publishedAt
 
     try {
-      const headers = buildHeaders()
+      const headers = buildHeaders(teamId)
       const response = await fetch(withBasePath(`/api/v1/posts/${id}`), {
         method: 'PATCH',
         headers,
@@ -232,7 +232,7 @@ export default function EditPostPage({ params }: PageProps) {
     setError(null)
 
     try {
-      const headers = buildHeaders()
+      const headers = buildHeaders(teamId)
       const response = await fetch(withBasePath(`/api/v1/posts/${id}`), {
         method: 'DELETE',
         headers,

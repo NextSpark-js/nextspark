@@ -14,6 +14,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Eye, Loader2, Check, X } from 'lucide-react'
+import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Input } from '@nextsparkjs/core/components/ui/input'
 import { Label } from '@nextsparkjs/core/components/ui/label'
@@ -41,16 +42,10 @@ interface PostData {
   featured: boolean
 }
 
-function getActiveTeamId(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem('activeTeamId')
-}
-
-function buildHeaders(): HeadersInit {
+function buildHeaders(teamId: string | undefined): HeadersInit {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   }
-  const teamId = getActiveTeamId()
   if (teamId) {
     headers['x-team-id'] = teamId
   }
@@ -70,6 +65,7 @@ function generateSlug(title: string): string {
 
 export default function CreatePostPage() {
   const router = useRouter()
+  const teamId = useTeamContext().currentTeam?.id
   const [post, setPost] = useState<PostData>({
     title: '',
     slug: '',
@@ -122,7 +118,7 @@ export default function CreatePostPage() {
     const statusToSave = statusOverride ?? post.status
 
     try {
-      const headers = buildHeaders()
+      const headers = buildHeaders(teamId)
       const response = await fetch(withBasePath('/api/v1/posts'), {
         method: 'POST',
         headers,

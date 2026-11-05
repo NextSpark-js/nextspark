@@ -53,6 +53,10 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
   // Get topbar feature configs
   const superadminConfig = getTopbarFeatureConfig<{ enabled: boolean; showToDevelopers?: boolean }>('superadminAccess')
   const devtoolsConfig = getTopbarFeatureConfig<{ enabled: boolean }>('devtoolsAccess')
+  // The help button opens the help center (`/support`) when the project lists it in `topbar.support.links`, else the
+  // first link with a url; with none, there is no button
+  const supportLinks = getTopbarFeatureConfig<{ links?: { url?: string }[] }>('support')?.links ?? []
+  const helpHref = (supportLinks.find(link => link.url === '/support') ?? supportLinks.find(link => link.url))?.url
 
   // Determine visibility
   const showSuperadmin = superadminConfig?.enabled && (isSuperAdmin || (isDeveloper && superadminConfig?.showToDevelopers))
@@ -232,7 +236,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
             )}
 
             {/* Help/Support - Solo visible cuando hay usuario autenticado */}
-            {user && isTopbarFeatureEnabled('support') && (
+            {user && isTopbarFeatureEnabled('support') && helpHref && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -240,8 +244,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 data-cy={sel('dashboard.topnav.help')}
               >
                 <Link 
-                  href="/support"
-                  prefetch={false}
+                  href={helpHref}
                   target="_blank" 
                   rel="noopener noreferrer"
                   aria-label={t('a11y.openHelpCenterNewTab')}
