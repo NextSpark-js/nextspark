@@ -92,7 +92,9 @@ test('the tracked budget is valid and covers public, auth and dashboard routes',
   for (const [url, rule] of routes) {
     assert.equal(rule.public, !url.startsWith('/dashboard'), url)
     // The ceiling is the 0.1.0-beta.193 reference plus 5% (G0 decision 10)
-    assert.ok(rule.maxGzipBytes >= rule.reference193GzipBytes && rule.maxGzipBytes <= Math.ceil(rule.reference193GzipBytes * 1.05), url)
+    // The routes the 'groups' scope makes lighter are held to the 'groups' measurement plus 5% instead (#362)
+    if (rule.referenceGroupsGzipBytes) assert.ok(rule.maxGzipBytes >= rule.referenceGroupsGzipBytes && rule.maxGzipBytes <= Math.ceil(rule.referenceGroupsGzipBytes * 1.05) && rule.maxGzipBytes < rule.reference193GzipBytes, url)
+    else assert.ok(rule.maxGzipBytes >= rule.reference193GzipBytes && rule.maxGzipBytes <= Math.ceil(rule.reference193GzipBytes * 1.05), url)
   }
   assert.deepEqual(validateBudget({ kind: 'x', schemaVersion: 1, dashboardOnlyMarkers: ['ab'], routes: { support: { maxGzipBytes: 0 } } }), [
     'kind must be "starter-route-js-budget" and schemaVersion 1',

@@ -29,7 +29,7 @@ from `.next/build-manifest.json` and the route's client reference manifest; gzip
 against `starter-route-js-budget.json`. No server, browser or session is needed, so dashboard routes are covered too.
 
 The budget is the published 0.1.0-beta.193 starter plus 5% per route (G0 decision 10), rounded up; `reference193GzipBytes`
-is the measured value it comes from. Signed-out routes (`public: true`) also fail when a chunk carries a
+is the measured value it comes from. The starter ships `providers.scope: 'groups'` (#362), which takes about 21 kB off `/`, `/support`, `/docs` and `/blog`: those four routes carry `referenceGroupsGzipBytes` (the same build measured with `'groups'`) and their ceiling is that plus 5%, so putting the providers back in the root layout fails the check. `/login`, `/signup` and the dashboard routes keep the 193 ceilings (their `'groups'` values are within them). Signed-out routes (`public: true`) also fail when a chunk carries a
 `dashboardOnlyMarkers` string (the superadmin and devtools sidebars, the dashboard settings helpers, the team switcher).
 The `template-build` job of the `Generated projects` workflow packs this repository once and, for each project template
 (starter, blog, crm, productivity), creates a project from the tarballs, migrates and builds it against a service
