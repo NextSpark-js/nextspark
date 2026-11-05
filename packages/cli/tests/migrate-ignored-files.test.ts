@@ -82,12 +82,12 @@ test('an answer of "nothing is ignored" (exit 1) is not an error', () => {
   assert.deepEqual(members(result.stdout), ['.', 'bulk-cache/member', 'visible/member'])
 })
 
-/** A PATH whose git fails `check-ignore` with exit 2, after reading its input or before. */
-function failingGit(readsInput: boolean): string {
+/** A PATH whose git answers `check-ignore` with `exit` (2 by default), after reading its input or before. */
+function failingGit(readsInput: boolean, exit = 2): string {
   const real = execFileSync('which', ['git'], { encoding: 'utf8' }).trim()
   const bin = mkdtempSync(join(tmpdir(), 'nextspark-fake-git-'))
   roots.push(bin)
-  writeFileSync(join(bin, 'git'), `#!/bin/sh\nif [ "$1" = check-ignore ]; then ${readsInput ? 'cat >/dev/null; ' : ''}echo 'fatal: fake failure' >&2; exit 2; fi\nexec "${real}" "$@"\n`)
+  writeFileSync(join(bin, 'git'), `#!/bin/sh\nif [ "$1" = check-ignore ]; then ${readsInput ? 'cat >/dev/null; ' : ''}echo 'fatal: fake failure' >&2; exit ${exit}; fi\nexec "${real}" "$@"\n`)
   chmodSync(join(bin, 'git'), 0o755)
   return `${bin}:${process.env.PATH}`
 }
@@ -106,6 +106,14 @@ test('a git that fails before reading all of its input is reported by its exit a
   assert.notEqual(result.status, 0)
   assert.doesNotMatch(`${result.stdout}${result.stderr}`, /EPIPE/)
   assert.match(`${result.stdout}${result.stderr}`, /git check-ignore failed \(exit 2\): fatal: fake failure/)
+})
+
+test('"nothing is ignored" (exit 1) from a git that did not read all of its input is not an answer: migrate stops', () => {
+  // exit 1 is only true of every path when git read every path; with the pipe broken, some were never asked about
+  const result = check(project(5_000), { PATH: failingGit(false, 1) })
+  assert.notEqual(result.status, 0, result.stdout.slice(0, 300))
+  assert.equal(result.stdout.includes('obsoleteCopies'), false, result.stdout.slice(0, 300))
+  assert.match(`${result.stdout}${result.stderr}`, /Could not ask git which files are ignored \(.*EPIPE.*\)\. Nothing was changed\./)
 })
 
 /** `project()` plus a submodule at `name`: its own .gitignore hides hidden/, and shown/ is a visible member. */
