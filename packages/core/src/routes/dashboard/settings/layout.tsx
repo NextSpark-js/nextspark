@@ -105,12 +105,12 @@ function SettingsLayout({
             className="mb-8 hidden lg:block"
             data-cy={sel('settings.sidebar.layout.header')}
           >
-            <h1
+            <p
               className="text-3xl font-bold"
               id="settings-main-heading"
             >
               {t('layout.title')}
-            </h1>
+            </p>
             <p
               className="text-muted-foreground text-sm mt-1"
             >

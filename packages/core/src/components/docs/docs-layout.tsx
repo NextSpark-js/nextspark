@@ -24,7 +24,7 @@ export function DocsLayout({ children }: DocsLayoutProps) {
       {/* Mobile header */}
       <div className="sticky top-0 z-40 lg:hidden border-b bg-background">
         <div className="flex items-center justify-between p-4">
-          <h1 className="text-lg font-semibold">{t('title')}</h1>
+          <p className="text-lg font-semibold">{t('title')}</p>
           <Button
             variant="ghost"
             size="icon"

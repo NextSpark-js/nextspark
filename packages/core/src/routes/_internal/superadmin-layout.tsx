@@ -52,7 +52,7 @@ function SuperadminContent({ children, serverChecked }: GuardedProps) {
                     <div className="h-5 w-5 bg-red-600 rounded-sm"></div>
                   </div>
                   <div>
-                    <h1 className="text-lg font-bold text-red-600">Super Admin</h1>
+                    <p className="text-lg font-bold text-red-600">Super Admin</p>
                     <p className="text-xs text-muted-foreground">Super Admin Area</p>
                   </div>
                 </div>
