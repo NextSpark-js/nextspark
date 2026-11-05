@@ -158,13 +158,14 @@ const literal = (node, file, sources, depth = 0) => {
   const resolved = resolve(node, file, sources)
   const inner = resolved && unwrap(resolved.node, sources.ts)
   const { ts } = sources
-  if (!inner || depth > MAX_DEPTH) return { state: 'unknown' }
+  if (depth > MAX_DEPTH) return { state: 'unknown', reason: 'is nested deeper than 8 levels' }
+  if (!inner) return { state: 'unknown' }
   if (inner.kind === ts.SyntaxKind.NullKeyword) return { state: 'value', value: null }
   if (ts.isArrayLiteralExpression(inner)) {
     const value = []
     for (const element of inner.elements) {
       const item = ts.isSpreadElement(element) || ts.isOmittedExpression(element) ? { state: 'unknown' } : literal(element, resolved.file, sources, depth + 1)
-      if (item.state !== 'value') return { state: 'unknown' }
+      if (item.state !== 'value') return item
       value.push(item.value)
     }
     return { state: 'value', value }
@@ -173,11 +174,11 @@ const literal = (node, file, sources, depth = 0) => {
     const value = {}
     for (const member of inner.properties) {
       const key = ts.isPropertyAssignment(member) ? member.name : null
-      // `__proto__` would set the prototype of the emitted object, not a key
-      const keyName = key && (ts.isIdentifier(key) || ts.isStringLiteral(key)) ? key.text : null
-      if (keyName === null || keyName === '__proto__') return { state: 'unknown' }
+            const keyName = key && (ts.isIdentifier(key) || ts.isStringLiteral(key)) ? key.text : null
+      // A key that Object.prototype has would not be a plain key of the emitted object
+      if (keyName === null || keyName in Object.prototype) return { state: 'unknown' }
       const item = literal(member.initializer, resolved.file, sources, depth + 1)
-      if (item.state !== 'value') return { state: 'unknown' }
+      if (item.state !== 'value') return item
       value[keyName] = item.value
     }
     return { state: 'value', value }
@@ -199,14 +200,18 @@ function resolveProperty(objectNode, file, name, sources) {
 }
 
 /** The literal at `path` of an object literal node: `{ state: 'value' | 'absent' | 'unknown' }`. */
-function read(objectNode, file, path, sources) {
+function read(objectNode, file, path, sources, expected) {
   const { ts } = sources
   let object = objectNode
   let currentFile = file
   for (const [index, key] of path.entries()) {
     const found = property(object, key, ts)
     if (found.state) return found
-    if (index === path.length - 1) return literal(found.node, currentFile, sources)
+    if (index === path.length - 1) {
+      const value = literal(found.node, currentFile, sources)
+      // A literal of another type (`required: []`) is not the flag it stands for
+      return expected && value.state === 'value' && typeof value.value !== expected ? { state: 'unknown' } : value
+    }
     const next = resolve(found.node, currentFile, sources)
     if (!next || !ts.isObjectLiteralExpression(next.node)) return { state: 'unknown' }
     object = next.node
@@ -251,8 +256,8 @@ function readField(element, sources, warn) {
     warn(`field "${label}": its \`type\` is not a literal, so it was left out of the contract`)
     return null
   }
-  const required = read(object, file, ['required'], sources)
-  const readOnly = read(object, file, ['api', 'readOnly'], sources)
+  const required = read(object, file, ['required'], sources, 'boolean')
+  const readOnly = read(object, file, ['api', 'readOnly'], sources, 'boolean')
   const defaultProperty = property(object, 'defaultValue', ts)
   const displayLabel = read(object, file, ['display', 'label'], sources)
   const numeric = key => {
@@ -268,7 +273,7 @@ function readField(element, sources, warn) {
   } else if (!defaultProperty.state) {
     const value = literal(defaultProperty.node, file, sources)
     if (value.state === 'value') defaultValue = { value: value.value }
-    else warn(`field "${label}": \`defaultValue\` is not a literal, so the contract does not apply it`)
+    else warn(`field "${label}": \`defaultValue\` ${value.reason ?? 'is not a literal'}, so the contract does not apply it`)
   }
 
   let options = null
@@ -389,7 +394,7 @@ export async function readEntityContract({ file, exportName, projectRoot, source
   }
   const api = read(object, configFile, ['access', 'api'], sources)
   if (api.state === 'value' && api.value === false) return { skipped: 'the entity has no external API (access.api is false)' }
-  const shared_ = read(object, configFile, ['access', 'shared'], sources)
+  const shared_ = read(object, configFile, ['access', 'shared'], sources, 'boolean')
   const singular = read(object, configFile, ['names', 'singular'], sources)
   // The table the migrations create: `tableName` when the entity sets one, else the slug
   const tableName = read(object, configFile, ['tableName'], sources)
@@ -409,8 +414,8 @@ export async function readEntityContract({ file, exportName, projectRoot, source
     }
   }
 
-  const builder = read(object, configFile, ['builder', 'enabled'], sources)
-  const softDelete = read(object, configFile, ['table', 'softDelete'], sources)
+  const builder = read(object, configFile, ['builder', 'enabled'], sources, 'boolean')
+  const softDelete = read(object, configFile, ['table', 'softDelete'], sources, 'boolean')
   if (builder.state === 'unknown') warn('`builder.enabled` is not a literal, so the entity is treated as not builder-enabled')
   if (softDelete.state === 'unknown') warn('`table.softDelete` is not a literal, so the entity is treated as having no soft delete')
 
@@ -421,7 +426,7 @@ export async function readEntityContract({ file, exportName, projectRoot, source
     warn('`taxonomies` is spread in or computed, so its fields are not in the contract')
   } else if (!taxonomiesProperty.state) {
     const config = resolve(taxonomiesProperty.node, configFile, sources)
-    const enabledFlag = config && ts.isObjectLiteralExpression(config.node) ? read(config.node, config.file, ['enabled'], sources) : { state: 'unknown' }
+    const enabledFlag = config && ts.isObjectLiteralExpression(config.node) ? read(config.node, config.file, ['enabled'], sources, 'boolean') : { state: 'unknown' }
     if (enabledFlag.state === 'value' && enabledFlag.value === true) {
       const types = config && ts.isObjectLiteralExpression(config.node) ? property(config.node, 'types', ts) : { state: 'unknown' }
       const elements = types.state ? null : elementsOf(types.node, config.file, sources)
@@ -430,7 +435,7 @@ export async function readEntityContract({ file, exportName, projectRoot, source
         for (const element of elements) {
           const entry = resolve(element.node, element.file, sources)
           const type = entry && ts.isObjectLiteralExpression(entry.node) ? read(entry.node, entry.file, ['type'], sources) : { state: 'unknown' }
-          const field = entry && ts.isObjectLiteralExpression(entry.node) ? read(entry.node, entry.file, ['field'], sources) : { state: 'unknown' }
+          const field = entry && ts.isObjectLiteralExpression(entry.node) ? read(entry.node, entry.file, ['field'], sources, 'string') : { state: 'unknown' }
           if (type.state === 'value' && field.state === 'value' && typeof type.value === 'string' && /^[A-Za-z_$][\w$]*$/.test(field.value)) taxonomies.push({ type: type.value, field: field.value })
           else warn('a taxonomy type has no literal `type` and `field`, so it is not in the contract')
         }

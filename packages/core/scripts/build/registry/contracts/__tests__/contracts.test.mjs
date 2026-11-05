@@ -705,6 +705,8 @@ export const gadgetEntityConfig = {
     { name: 'd', type: 'json', required: false, defaultValue: [1, 'a', true], display: { label: 'D' }, api: {} },
     { name: 'e', type: 'json', required: false, defaultValue: { a: 1, 'b-c': ['x', { k: null }], f: {} }, display: { label: 'E' }, api: {} },
     { name: 'f', type: 'tags', required: false, defaultValue: NONE, display: { label: 'F' }, api: {} },
+    { name: 'g', type: 'json', required: false, defaultValue: { "a'b": 'x\\\\y\\rz', 'c\\u2028d': ['\\u2029', 'q\\nr'] }, display: { label: 'G' }, api: {} },
+    { name: 'h', type: 'number', required: false, defaultValue: -0, display: { label: 'H' }, api: {} },
   ],
 }\n`
   const root = project({ 'entities/gadgets/gadgets.config.ts': config })
@@ -718,6 +720,8 @@ export const gadgetEntityConfig = {
     assert.match(gadgets, /defaultValue: \[1, 'a', true\],/)
     assert.match(gadgets, /defaultValue: \{ a: 1, 'b-c': \['x', \{ k: null \}\], f: \{\} \},/)
     assert.match(gadgets, /name: 'f', type: 'tags', required: false, defaultValue: \[\],/)
+    // line and paragraph separators are written as escapes, not as raw characters
+    assert.ok(gadgets.includes("'c\\u2028d'") && gadgets.includes("'\\u2029'") && !/[\u2028\u2029]/.test(gadgets))
     // the generated module compiles, and the descriptor holds each default in place (no shared reference between fields)
     const compiled = compile(plan.files)
     try {
@@ -730,6 +734,9 @@ export const gadgetEntityConfig = {
       assert.deepEqual(byName.d, [1, 'a', true])
       assert.deepEqual(byName.e, { a: 1, 'b-c': ['x', { k: null }], f: {} })
       assert.notEqual(byName.a, byName.f)
+      // quotes, backslashes, carriage returns, line and paragraph separators survive the round trip, in keys and in values
+      assert.deepEqual(byName.g, { "a'b": 'x\\y\rz', 'c\u2028d': ['\u2029', 'q\nr'] })
+      assert.ok(Object.is(byName.h, -0))
     } finally {
       compiled.cleanup()
     }
@@ -757,6 +764,35 @@ test('defaultValue: a spread, a call, a computed key and an unresolved identifie
     const warnings = result.contract.warnings.filter(warning => /defaultValue/.test(warning))
     assert.equal(warnings.length, 6, JSON.stringify(result.contract.warnings))
     assert.ok(result.contract.fields.every(field => field.hasDefault && field.defaultValue === undefined))
+  } finally {
+    clean(root)
+  }
+})
+
+test('defaultValue: keys of Object.prototype, a value nested past 8 levels and a flag of the wrong type warn instead of being taken (#399)', async () => {
+  const deep = '['.repeat(10) + ']'.repeat(10)
+  const config = `export const gizmoEntityConfig = {
+  slug: 'gizmos',
+  access: { shared: [] },
+  taxonomies: { enabled: true, types: [{ type: 'tag', field: ['tags'] }] },
+  fields: [
+    { name: 'a', type: 'json', required: false, defaultValue: { constructor: 1 }, display: {}, api: {} },
+    { name: 'b', type: 'json', required: false, defaultValue: { toString: 1 }, display: {}, api: {} },
+    { name: 'c', type: 'json', required: false, defaultValue: ${deep}, display: {}, api: {} },
+    { name: 'd', type: 'text', required: null, defaultValue: 'x', display: {}, api: { readOnly: [] } },
+  ],
+}\n`
+  const root = project({ 'entities/gizmos/gizmos.config.ts': config })
+  try {
+    const { contract } = await readEntityContract({ file: join(root, 'entities/gizmos/gizmos.config.ts'), exportName: 'gizmoEntityConfig', projectRoot: root })
+    const warnings = contract.warnings
+    assert.equal(warnings.filter(warning => /"[ab]": `defaultValue` is not a literal/.test(warning)).length, 2, JSON.stringify(warnings))
+    assert.ok(warnings.some(warning => /"c": `defaultValue` is nested deeper than 8 levels/.test(warning)), JSON.stringify(warnings))
+    assert.ok(warnings.some(warning => /"d": `required` is not a literal/.test(warning)), JSON.stringify(warnings))
+    assert.ok(warnings.some(warning => /"d": `api\.readOnly` is not a literal/.test(warning)), JSON.stringify(warnings))
+    assert.ok(warnings.some(warning => /taxonomy type/.test(warning)), JSON.stringify(warnings))
+    assert.equal(contract.shared, false)
+    assert.deepEqual(contract.taxonomies, [])
   } finally {
     clean(root)
   }
