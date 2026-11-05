@@ -52,6 +52,7 @@ import { proxyAreaNotices } from './proxy-areas.mjs'
 import { proxyPathDiagnostics } from './proxy-paths.mjs'
 import { ENTRY_NOT_REPLACED, INSTRUMENTATION_MOVED, INSTRUMENTATION_NOT_LOADED, projectEntryNotices, upgradeProjectEntries } from './project-entries.mjs'
 import { HostPlanError, compareTargets, planHost } from './plan.mjs'
+import { findQueryHooksWithoutProvider, queryHookNotice } from '../../../maintenance/query-providers.mjs'
 import { DEV_DIAGNOSTIC_FILE, DEV_STATUS_FILE, devDiagnosticModule, devFailureDiagnostic, renderHost } from './render.mjs'
 import {
   GENERATION_FILE,
@@ -125,7 +126,8 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     extensions: config.extensions,
   })
   const { routes } = planned
-  const notices = [...transpile.notices, ...(entityPlan.notices ?? []), ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot)]
+  const queryNotice = queryHookNotice(findQueryHooksWithoutProvider({ projectRoot: config.project?.root ?? config.projectRoot, plugins: declared.plugins, routes }))
+  const notices = [...transpile.notices, ...(entityPlan.notices ?? []), ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot), ...(queryNotice ? [queryNotice] : [])]
   const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics, ...proxyPathDiagnostics(config.projectRoot)]
   if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices, stage: 'plan' })
   const rendered = await renderHost({
