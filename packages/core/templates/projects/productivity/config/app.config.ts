@@ -6,6 +6,9 @@
  */
 
 export const APP_CONFIG_OVERRIDES = {
+  // Mount React Query and the toaster per route group, so public pages do not load them. Set 'root' to mount them in the root layout again.
+  providers: { scope: 'groups' },
+
   // =============================================================================
   // APPLICATION METADATA
   // =============================================================================

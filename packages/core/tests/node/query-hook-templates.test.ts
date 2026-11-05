@@ -9,6 +9,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { readProvidersScope } from '../../scripts/build/registry/generators/root-providers.mjs'
 import { findQueryHooksWithoutProvider } from '../../scripts/maintenance/query-providers.mjs'
 
 const TEMPLATES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../templates/projects')
@@ -30,6 +31,10 @@ test("the four project templates have no finding with providers.scope 'groups'",
   for (const name of NAMES) {
     assert.deepEqual(findQueryHooksWithoutProvider({ projectRoot: path.join(TEMPLATES, name), scope: 'groups' }), [], name)
   }
+})
+
+test("the four project templates declare providers.scope 'groups' (#362)", () => {
+  for (const name of NAMES) assert.equal(readProvidersScope(path.join(TEMPLATES, name)), 'groups', name)
 })
 
 test('the walk reaches the queries of the templates: counting the dashboard as a public area reports them', () => {

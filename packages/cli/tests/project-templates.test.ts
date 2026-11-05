@@ -144,3 +144,9 @@ test('block components take `sel` from lib/block-selectors, not from lib/selecto
   const offenders = blocks.filter(file => /from\s+'(?:\.\.\/)+lib\/selectors'/.test(fs.readFileSync(file, 'utf8')))
   assert.deepEqual(offenders.map(file => path.relative(TEMPLATES, file)), [])
 })
+
+test("every template a new project is copied from declares providers.scope 'groups' (#362)", () => {
+  for (const name of NAMES) {
+    assert.match(fs.readFileSync(path.join(TEMPLATES, 'projects', name, 'config/app.config.ts'), 'utf8'), /^\s*providers: \{ scope: 'groups' \},$/m, name)
+  }
+})
