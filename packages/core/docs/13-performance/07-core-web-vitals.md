@@ -242,7 +242,7 @@ useEffect(() => {
 
 A client component is rendered twice: on the server, to the HTML the browser paints first, and again in the browser to **hydrate** that HTML. If the two renders produce different markup, React cannot reuse the server HTML. It throws the mismatching tree away and renders it again in the browser, and it recreates everything up to the **nearest `<Suspense>` boundary above the component** (the whole root when there is none).
 
-On a public page, a client component loaded with `next/dynamic` and no `<Suspense>` of its own often has no boundary closer than the page. A mismatch inside it then recreates the whole first viewport: the element Chrome had picked as the LCP is removed and a new one is painted, so Chrome reports the later paint as the LCP, and what the user typed before hydration can be lost.
+On a public page, a client component loaded with `next/dynamic()` and no `loading` option has no `<Suspense>` of its own (`dynamic(..., { loading })` wraps the component in one) and often no boundary closer than the page. A mismatch inside it then recreates the whole first viewport: the element Chrome had picked as the LCP is removed and a new one is painted, so Chrome reports the later paint as the LCP, and what the user typed before hydration can be lost.
 
 ```tsx
 // ❌ A mismatch inside <LeadForm> recreates everything up to the nearest boundary,
@@ -258,8 +258,7 @@ export default function Page() {
   )
 }
 
-// ✅ The island has its own boundary: a mismatch only recreates the island, and the fallback
-// reserves its size so nothing around it moves
+// ✅ The island has its own boundary: a mismatch only recreates the island
 export default function Page() {
   return (
     <main>
@@ -271,6 +270,8 @@ export default function Page() {
   )
 }
 ```
+
+`dynamic(() => import('./lead-form'), { loading: () => <div className="h-96" /> })` gives the island a boundary too. React shows the fallback only while the island suspends, so size it like the island where that happens: when Cache Components puts the fallback in the static shell, a same-size fallback keeps the layout from moving once the island arrives.
 
 The boundary limits the damage, it does not remove the mismatch. Fix the cause too.
 
@@ -301,18 +302,20 @@ export function Greeting() {
 
 #### Reading the errors in a production build
 
-A production build of React does not carry the message text, only a code. They appear in the browser console, and **in a production build of Next.js they reach the page as uncaught errors (`pageerror` in Playwright)**, not only through `console.error`:
+A production build of React does not carry the message text, only a code. In a production build of Next.js a hydration mismatch reaches the page as an uncaught error (`pageerror` in Playwright), not only through `console.error`.
 
-| Error | What React reports (React 19.2) |
-|-------|---------------------------------|
-| [#418](https://react.dev/errors/418) | Hydration failed: the server rendered text or HTML that did not match the client, so the tree is regenerated on the client. The `args[]` in the link say which one (`HTML` or `text`). |
-| [#423](https://react.dev/errors/423) | A component threw while hydrating, and React recovered by client rendering the **entire root**: no `<Suspense>` boundary was close enough. |
-| [#422](https://react.dev/errors/422) | The same, recovered by client rendering from the **nearest `<Suspense>` boundary**. |
+| Error | What it means |
+|-------|---------------|
+| [#418](https://react.dev/errors/418) | Hydration failed: the server rendered text or HTML that did not match the client, so the tree is regenerated on the client (up to the nearest `<Suspense>` boundary, or the whole root). The `args[]` in the link say which one (`HTML` or `text`). |
 | [#425](https://react.dev/errors/425) | Text content does not match server-rendered HTML. React 19.2 reports a text mismatch as #418 (`args[]=text`); #425 comes from older React versions. |
+
+When a component **throws** while hydrating, React recovers the same way (client rendering from the nearest boundary, or the entire root when there is none; its internal errors #422 and #423 say which), but Next reports the error the component threw, with its own message, not #422 or #423.
+
+React does not report a mismatch of an **attribute** (`className`, `data-*`) in a production build: the page keeps the server value and nothing is logged. These only show in `pnpm dev`, and the CI check below does not see them either.
 
 A production message reads `Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message`. The link opens the full text. To see which component and which attribute differ, reproduce it with `pnpm dev`: the development build prints `Hydration failed because the server rendered text didn't match the client` together with a diff of the two trees.
 
-NextSpark's own CI builds the starter from the packed packages, loads its public pages in Chromium and fails when one logs any of these errors, so a hydration error in a page you copy from the starter is caught before it ships. Add the same check to your CI: listen to both `page.on('console')` (type `error`) and `page.on('pageerror')`.
+NextSpark's own CI builds the starter from the packed packages, loads its public pages in Chromium and fails when one throws an uncaught error or logs a hydration mismatch. Add the same check to your CI: fail on any `page.on('pageerror')` and on a `page.on('console')` error of type `error` that is a hydration mismatch.
 
 ## Interaction to Next Paint (INP)
 

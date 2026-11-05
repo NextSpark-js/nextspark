@@ -13,9 +13,11 @@
  * NEXTSPARK_AUTH_RUNTIME_ONLY=email,google. Exit 0 when no violation has an impact in --fail-on, 1 when one has,
  * 2 on a usage or environment error. Every violation (any impact) goes to the --json report.
  *
- * The same visit of the public pages also watches the browser for hydration errors (React #418, #422, #423, #425 and
- * their development messages), in the console and as uncaught page errors: one makes the exit code 1 and is listed,
- * with its page, under `hydrationErrors` in the report.
+ * The same visit of the public pages also watches the browser. Every uncaught page error counts, and so does a
+ * console error that is a React hydration mismatch (#418, #425 or their development messages): Next reports a
+ * mismatch, and the error a component throws while hydrating, as uncaught errors. Any of them makes the exit code 1
+ * and is listed, with its page and whether it is a mismatch, under `hydrationErrors` in the report. React in
+ * production does not report a mismatch of an attribute (className, data-*): this check does not see those either.
  */
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
@@ -31,9 +33,10 @@ const TAGS = [...WCAG_TAGS, 'best-practice']
 const TASK_TITLE = 'Axe scan task'
 const IMPACTS = ['critical', 'serious', 'moderate', 'minor']
 
-// What React 19 reports when the server markup does not match the client render: the minified codes of a production
-// build (https://react.dev/errors/<code>) and the development messages, which are the same errors in words
-const HYDRATION_ERROR = /Minified React error #(?:418|422|423|425)\b|Hydration failed|There was an error while hydrating|Text content does not match server-rendered HTML/
+// What React reports when the server markup does not match the client render: #418 (and #425 in older React) in a
+// production build (https://react.dev/errors/<code>), the development messages in a dev one. #422 and #423 are not
+// here: React makes them only when a component throws, and Next then reports the error the component threw.
+const HYDRATION_ERROR = /Minified React error #(?:418|425)\b|Hydration failed|Text content does not match server-rendered HTML/
 
 /** True when `text` is a React hydration error. */
 export function isHydrationError(text) {
@@ -122,7 +125,7 @@ async function main() {
 
   const rows = []
   const hydrationErrors = []
-  let watching = null // the public page being visited, while hydration errors are collected
+  let watching = null // the public page being visited, while its errors are collected
   const scanned = []
   let axeVersion
   let resend, serverProc, browser
@@ -159,11 +162,9 @@ async function main() {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
     const page = await context.newPage()
     // Next logs the error through console.error or, in a production build, rethrows it as an uncaught error
-    const onHydration = (message) => {
-      if (watching && isHydrationError(message)) hydrationErrors.push({ page: watching, message: message.slice(0, 300) })
-    }
-    page.on('console', (m) => { if (m.type() === 'error') onHydration(m.text()) })
-    page.on('pageerror', (e) => onHydration(e.message))
+    const record = (message) => hydrationErrors.push({ page: watching, mismatch: isHydrationError(message), message: message.slice(0, 300) })
+    page.on('console', (m) => { if (watching && m.type() === 'error' && isHydrationError(m.text())) record(m.text()) })
+    page.on('pageerror', (e) => { if (watching) record(e.message) })
 
     // `ready` finds something the page shows only once its client-side data has loaded; axe must not run on the
     // loading state (the task forms and the lists fetch after `networkidle`)
@@ -256,7 +257,7 @@ async function main() {
     console.error(`axe-scan: ${blockers.length} violation node(s) with impact ${failOn.join(' or ')}`)
     process.exitCode = 1
   }
-  for (const e of hydrationErrors) console.error(`axe-scan: hydration error on ${e.page}: ${e.message}`)
+  for (const e of hydrationErrors) console.error(`axe-scan: ${e.mismatch ? 'hydration mismatch' : 'uncaught error'} on ${e.page}: ${e.message}`)
   if (hydrationErrors.length) process.exitCode = 1
 }
 

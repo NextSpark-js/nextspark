@@ -37,13 +37,10 @@ test('counts by impact include every impact', () => {
 test('hydration errors are told apart from other console errors', () => {
   for (const m of [
     'Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message',
-    'Minified React error #422; visit https://react.dev/errors/422 for the full message',
-    'Minified React error #423; visit https://react.dev/errors/423 for the full message',
     'Minified React error #425; visit https://react.dev/errors/425 for the full message',
     "Hydration failed because the server rendered HTML didn't match the client.",
-    'There was an error while hydrating but React was able to recover by instead client rendering the entire root.',
   ]) assert.equal(isHydrationError(m), true, m)
-  for (const m of ['Minified React error #419; visit https://react.dev/errors/419', 'Minified React error #4180', 'Failed to load resource: 404']) {
+  for (const m of ['Minified React error #422; visit https://react.dev/errors/422', 'boom-during-hydration', 'Minified React error #419; visit https://react.dev/errors/419', 'Minified React error #4180', 'Failed to load resource: 404']) {
     assert.equal(isHydrationError(m), false, m)
   }
 })
