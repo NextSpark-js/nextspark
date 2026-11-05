@@ -10,6 +10,7 @@
  */
 
 import { useUserProfile } from '@nextsparkjs/core/hooks/useUserProfile'
+import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -45,25 +46,9 @@ interface RecentPost {
   updatedAt: string
 }
 
-function getActiveTeamId(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem('activeTeamId')
-}
-
-function buildHeaders(): HeadersInit {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  }
-  const teamId = getActiveTeamId()
-  if (teamId) {
-    headers['x-team-id'] = teamId
-  }
-  return headers
-}
-
-async function fetchPosts(): Promise<{ stats: PostStats; recent: RecentPost[] }> {
+async function fetchPosts(teamId: string): Promise<{ stats: PostStats; recent: RecentPost[] }> {
   try {
-    const headers = buildHeaders()
+    const headers: HeadersInit = { 'Content-Type': 'application/json', 'x-team-id': teamId }
 
     // Fetch all posts to get stats
     const response = await fetch(withBasePath('/api/v1/posts?limit=100&sortBy=updatedAt&sortOrder=desc'), {
@@ -128,6 +113,7 @@ function formatDate(dateString: string): string {
 export default function BlogDashboardPage() {
   const { user, isLoading: userLoading } = useUserProfile()
   const router = useRouter()
+  const teamId = useTeamContext().currentTeam?.id
   const [stats, setStats] = useState<PostStats>({ total: 0, published: 0, drafts: 0 })
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
   const [dataLoading, setDataLoading] = useState(true)
@@ -141,16 +127,18 @@ export default function BlogDashboardPage() {
   useEffect(() => {
     async function loadData() {
       setDataLoading(true)
-      const { stats, recent } = await fetchPosts()
+      const { stats, recent } = await fetchPosts(teamId!)
       setStats(stats)
       setRecentPosts(recent)
       setDataLoading(false)
     }
 
-    if (user) {
+    // The team comes from the team provider, which resolves it after the first render: a request sent before it
+    // has no team and the API answers 400
+    if (user && teamId) {
       loadData()
     }
-  }, [user])
+  }, [user, teamId])
 
   if (userLoading) {
     return (

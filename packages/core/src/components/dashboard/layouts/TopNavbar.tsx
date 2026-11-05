@@ -240,7 +240,8 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 data-cy={sel('dashboard.topnav.help')}
               >
                 <Link 
-                  href="/support" 
+                  href="/support"
+                  prefetch={false}
                   target="_blank" 
                   rel="noopener noreferrer"
                   aria-label={t('a11y.openHelpCenterNewTab')}

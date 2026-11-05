@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Input } from '@nextsparkjs/core/components/ui/input'
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
@@ -152,6 +153,7 @@ function getStatusIcon(status: string) {
 
 export default function PostsListPage() {
   const router = useRouter()
+  const teamId = useTeamContext().currentTeam?.id
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -166,9 +168,12 @@ export default function PostsListPage() {
 
   // Fetch posts
   const fetchPosts = useCallback(async () => {
+    // The team comes from the team provider, which resolves it after the first render: a request sent before it has
+    // no team and the API answers 400
+    if (!teamId) return
     try {
       setLoading(true)
-      const headers = buildHeaders()
+      const headers = { ...buildHeaders(), 'x-team-id': teamId }
       const params = new URLSearchParams({
         limit: '100',
         sortBy,
@@ -189,7 +194,7 @@ export default function PostsListPage() {
     } finally {
       setLoading(false)
     }
-  }, [sortBy, sortOrder])
+  }, [sortBy, sortOrder, teamId])
 
   useEffect(() => {
     fetchPosts()
