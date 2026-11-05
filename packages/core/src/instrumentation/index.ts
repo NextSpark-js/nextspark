@@ -61,12 +61,15 @@ export async function register(): Promise<void> {
       // This registers hooks like 'entity.contents.updated' that create scheduled actions
       initializeScheduledActions()
 
-      // Register recurring scheduled actions (token refresh, cleanup jobs, etc.)
-      // These are background tasks that run on a schedule (e.g., every 30 minutes)
-      // Non-blocking: if DB is unavailable at cold start, the server still boots
-      await initializeRecurringActions()
+      // Seed the recurring scheduled actions (token refresh, cleanup jobs, etc.) without holding register():
+      // Next.js serves nothing until it resolves, and after the first boot the seed only finds its rows already
+      // there. Safe to run late or twice: scheduleRecurringAction is idempotent under an advisory lock, and the
+      // cron only needs the handlers above. A failure is logged here and the next boot seeds again.
+      void initializeRecurringActions().catch((error) => {
+        console.warn(`[Instrumentation] ⚠️ Failed to seed recurring actions: ${error instanceof Error ? error.message : error}`)
+      })
 
-      console.log('[Instrumentation] ✅ Scheduled actions initialized')
+      console.log('[Instrumentation] ✅ Scheduled action handlers initialized; recurring actions seeding in the background')
     } catch (error) {
       console.warn(`[Instrumentation] ⚠️ Failed to initialize scheduled actions: ${error instanceof Error ? error.message : error}`)
       console.warn('[Instrumentation] Server will continue without recurring actions')

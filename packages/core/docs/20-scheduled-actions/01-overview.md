@@ -272,7 +272,7 @@ instrumentation.ts::register()
     |       +-- registerTokenRefreshHandler()
     |       +-- registerContentHooks()
     |
-    +-- initializeRecurringActions()
+    +-- initializeRecurringActions()   (started, not awaited: register() does not wait for it)
         |
         +-- Guard: Skip if already initialized
         |
