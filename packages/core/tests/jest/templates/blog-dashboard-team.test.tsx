@@ -34,8 +34,8 @@ beforeEach(() => {
   global.fetch = fetchMock as unknown as typeof fetch
 })
 
-// one promise: `use` suspends for ever on a new one at each render
-const editParams = Promise.resolve({ id: 'p1' })
+// an already-fulfilled promise, so `use` reads it without suspending and the mount effect runs
+const editParams = Object.assign(Promise.resolve({ id: 'p1' }), { status: 'fulfilled', value: { id: 'p1' } })
 const EditPage = () => (
   <Suspense fallback={null}>
     <Edit params={editParams} />
