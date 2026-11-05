@@ -276,8 +276,12 @@ function checkIgnore(root: string, paths: string[]): Set<string> {
     maxBuffer: 256 * 1024 * 1024,
     timeout: 5 * 60 * 1000,
   });
-  if ((result.error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') return new Set();
-  if (result.error) throw new MigrateAnalysisError(`Could not ask git which files are ignored (${result.error.message}). Nothing was changed.`);
+  const error = result.error as NodeJS.ErrnoException | undefined;
+  if (error?.code === 'ENOENT') return new Set();
+  // A git that fails (a refused submodule path, any fatal error) can exit with input still unwritten: its exit and message are
+  // the answer, not the broken pipe. Exit 0 or 1 is an answer only when git read everything, so those stay errors.
+  const failedEarly = error?.code === 'EPIPE' && result.status !== null && result.status > 1;
+  if (error && !failedEarly) throw new MigrateAnalysisError(`Could not ask git which files are ignored (${error.message}). Nothing was changed.`);
   if (result.status === 1) return new Set();
   if (result.status === 128 && /not a git repository/i.test(result.stderr)) return new Set();
   // The superproject cannot answer for a path inside a submodule (git refuses the whole call): ask the submodule itself, and the rest again without it

@@ -82,16 +82,29 @@ test('an answer of "nothing is ignored" (exit 1) is not an error', () => {
   assert.deepEqual(members(result.stdout), ['.', 'bulk-cache/member', 'visible/member'])
 })
 
-test('any other git failure stops migrate with a message instead of treating everything as unignored', () => {
-  const root = project()
+/** A PATH whose git fails `check-ignore` with exit 2, after reading its input or before. */
+function failingGit(readsInput: boolean): string {
   const real = execFileSync('which', ['git'], { encoding: 'utf8' }).trim()
   const bin = mkdtempSync(join(tmpdir(), 'nextspark-fake-git-'))
   roots.push(bin)
-  writeFileSync(join(bin, 'git'), `#!/bin/sh\nif [ "$1" = check-ignore ]; then echo 'fatal: fake failure' >&2; exit 2; fi\nexec "${real}" "$@"\n`)
+  writeFileSync(join(bin, 'git'), `#!/bin/sh\nif [ "$1" = check-ignore ]; then ${readsInput ? 'cat >/dev/null; ' : ''}echo 'fatal: fake failure' >&2; exit 2; fi\nexec "${real}" "$@"\n`)
   chmodSync(join(bin, 'git'), 0o755)
-  const result = check(root, { PATH: `${bin}:${process.env.PATH}` })
+  return `${bin}:${process.env.PATH}`
+}
+
+test('any other git failure stops migrate with a message instead of treating everything as unignored', () => {
+  // the fake reads its input first, so the answer never depends on whether migrate finished writing it
+  const result = check(project(), { PATH: failingGit(true) })
   assert.notEqual(result.status, 0)
   assert.equal(result.stdout.includes('obsoleteCopies'), false, result.stdout)
+  assert.match(`${result.stdout}${result.stderr}`, /git check-ignore failed \(exit 2\): fatal: fake failure/)
+})
+
+test('a git that fails before reading all of its input is reported by its exit and message, not by the broken pipe', () => {
+  // far more input than a pipe holds: writing it to a git that has already exited always breaks the pipe
+  const result = check(project(5_000), { PATH: failingGit(false) })
+  assert.notEqual(result.status, 0)
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /EPIPE/)
   assert.match(`${result.stdout}${result.stderr}`, /git check-ignore failed \(exit 2\): fatal: fake failure/)
 })
 
@@ -140,3 +153,12 @@ for (const name of ['sub', "it's sub"]) {
     assert.deepEqual(members(result.stdout), ['.', `${name}/shown`, 'visible/member'].sort())
   })
 }
+
+test('a submodule with more paths than a pipe holds is still asked about itself, though git stops reading at its first path', () => {
+  const root = projectWithSubmodule('sub')
+  // git refuses at the first path inside the submodule and exits with the rest of the input unread
+  for (let i = 0; i < 5_000; i++) writeFileSync(join(root, 'sub', 'hidden', `generated-output-with-a-deliberately-long-file-name-${i}.txt`), '')
+  const result = check(root)
+  assert.equal(result.status, 0, `${result.stdout.slice(0, 300)}\n${result.stderr}`)
+  assert.deepEqual(members(result.stdout), ['.', 'sub/shown', 'visible/member'])
+})
