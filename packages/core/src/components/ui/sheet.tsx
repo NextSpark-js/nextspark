@@ -5,6 +5,7 @@ import * as SheetPrimitive from "@radix-ui/react-dialog"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from '../../lib/utils'
 import { Cross2Icon } from "@radix-ui/react-icons"
+import { useCommonText } from '../../lib/i18n/common-text'
 
 const Sheet = SheetPrimitive.Root
 
@@ -81,12 +82,18 @@ interface SheetContentProps
    * colors...). The default already meets the 44x44px touch target.
    */
   closeButtonClassName?: string
+  /**
+   * Accessible name of the built-in close button. Defaults to `common.buttons.close` of the active locale's
+   * messages, or "Close" when there is no `NextIntlClientProvider`.
+   */
+  closeLabel?: string
 }
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, closeButtonClassName, children, ...props }, ref) => {
+>(({ side = "right", className, closeButtonClassName, closeLabel, children, ...props }, ref) => {
+  const closeText = useCommonText('buttons', 'close', 'Close', closeLabel)
   const [hasDescription, setHasDescription] = React.useState(false)
   const descriptionCount = React.useRef(0)
 
@@ -110,7 +117,7 @@ const SheetContent = React.forwardRef<
         <SheetDescriptionContext.Provider value={registerDescription}>
           <SheetPrimitive.Close className={cn(sheetCloseButtonClassName, closeButtonClassName)}>
             <Cross2Icon className="h-4 w-4" aria-hidden="true" />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{closeText}</span>
           </SheetPrimitive.Close>
           {children}
           {/*

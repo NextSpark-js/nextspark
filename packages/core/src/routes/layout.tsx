@@ -10,6 +10,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { OPTIONAL_ROOT_NAMESPACES, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { readCommonText } from '@nextsparkjs/core/lib/i18n/common-text'
 
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
@@ -78,7 +79,7 @@ export default async function RootLayout({
           client through the auth Route Handler instead. */}
       <SessionCookieRefresher />
       {children}
-      {RootToaster && <Suspense><RootToaster position="bottom-left" /></Suspense>}
+      {RootToaster && <Suspense><RootToaster position="bottom-left" containerAriaLabel={readCommonText(messages, 'notifications', 'title')} /></Suspense>}
       {/* Cookie consent (#272): the banner and the analytics loaders, which load their script with this nonce */}
       {CONSENT_CONFIG.enabled && <LazyConsentManager nonce={nonce} />}
     </>

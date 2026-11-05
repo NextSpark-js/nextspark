@@ -26,6 +26,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { StaticIntlProvider } from "@nextsparkjs/core/providers/static-intl-provider"
 import { OPTIONAL_ROOT_NAMESPACES, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { readCommonText } from '@nextsparkjs/core/lib/i18n/common-text'
 import { RootQueryProvider, RootToaster } from "@nextsparkjs/registries/root-providers"
 import { CONSENT_CONFIG } from "@nextsparkjs/core/lib/config/public-config-client"
 import { LazyConsentManager } from "@nextsparkjs/core/components/consent/LazyConsentManager"
@@ -69,7 +70,7 @@ export default async function RootLayout({
           no layout below has put one around it; the group layouts' own boundaries keep their shells. */}
       <Suspense fallback={null}>{children}</Suspense>
       <SessionCookieRefresher />
-      {RootToaster && <Suspense><RootToaster position="bottom-left" /></Suspense>}
+      {RootToaster && <Suspense><RootToaster position="bottom-left" containerAriaLabel={readCommonText(STATIC_MESSAGES, 'notifications', 'title')} /></Suspense>}
       {/* The banner reads the cookie in the browser, so it fits the static shell. A request nonce is not
           available here: see the consent docs for a nonce-based script-src. */}
       {CONSENT_CONFIG.enabled && <LazyConsentManager />}

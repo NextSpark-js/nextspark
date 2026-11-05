@@ -51,6 +51,7 @@ module.exports = {
     '^better-auth/next-js$': '<rootDir>/tests/jest/__mocks__/better-auth-next.js',
     '^better-auth/plugins$': '<rootDir>/tests/jest/__mocks__/better-auth-plugins.js',
     '^better-auth/social-providers$': '<rootDir>/tests/jest/__mocks__/better-auth-social-providers.js',
+    '^next-intl$': '<rootDir>/tests/jest/__mocks__/next-intl.js',
     '^next-intl/server$': '<rootDir>/tests/jest/__mocks__/next-intl-server.js',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/jest/setup.ts'],
