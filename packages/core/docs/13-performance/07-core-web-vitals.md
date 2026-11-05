@@ -238,6 +238,82 @@ useEffect(() => {
 
 ---
 
+### 6. Give Client Islands in the First Viewport Their Own Suspense
+
+A client component is rendered twice: on the server, to the HTML the browser paints first, and again in the browser to **hydrate** that HTML. If the two renders produce different markup, React cannot reuse the server HTML. It throws the mismatching tree away and renders it again in the browser, and it recreates everything up to the **nearest `<Suspense>` boundary above the component** (the whole root when there is none).
+
+On a public page, a client component loaded with `next/dynamic` and no `<Suspense>` of its own often has no boundary closer than the page. A mismatch inside it then recreates the whole first viewport: the element Chrome had picked as the LCP is removed and a new one is painted, so Chrome reports the later paint as the LCP, and what the user typed before hydration can be lost.
+
+```tsx
+// ❌ A mismatch inside <LeadForm> recreates everything up to the nearest boundary,
+// which here is the page (or the root)
+const LeadForm = dynamic(() => import('./lead-form'))
+
+export default function Page() {
+  return (
+    <main>
+      <Hero />      {/* the LCP element */}
+      <LeadForm />
+    </main>
+  )
+}
+
+// ✅ The island has its own boundary: a mismatch only recreates the island, and the fallback
+// reserves its size so nothing around it moves
+export default function Page() {
+  return (
+    <main>
+      <Hero />
+      <Suspense fallback={<div className="h-96" />}>
+        <LeadForm />
+      </Suspense>
+    </main>
+  )
+}
+```
+
+The boundary limits the damage, it does not remove the mismatch. Fix the cause too.
+
+#### Common sources of a mismatch
+
+Anything a client component reads during render that is different on the server and in the browser:
+
+- `window`, `document` or `navigator` (`typeof window !== 'undefined'` in the JSX, or `navigator.language`)
+- `Date.now()`, `new Date()` and `Math.random()`
+- Number and date formatting that depends on the locale or the time zone of the browser (`toLocaleString()` without a fixed locale and `timeZone`)
+- `localStorage`, cookies and media queries read during render
+- Third-party scripts that change the DOM before React hydrates, and browser extensions
+- Invalid HTML nesting, such as a `<div>` inside a `<p>`, which the browser rewrites
+
+Render the same value in both places and read the browser value after hydration:
+
+```tsx
+'use client'
+import { useEffect, useState } from 'react'
+
+export function Greeting() {
+  // The first render matches the server; the effect runs only in the browser, after hydration
+  const [language, setLanguage] = useState('en')
+  useEffect(() => setLanguage(navigator.language), [])
+  return <p>{language}</p>
+}
+```
+
+#### Reading the errors in a production build
+
+A production build of React does not carry the message text, only a code. They appear in the browser console, and **in a production build of Next.js they reach the page as uncaught errors (`pageerror` in Playwright)**, not only through `console.error`:
+
+| Error | What React reports (React 19.2) |
+|-------|---------------------------------|
+| [#418](https://react.dev/errors/418) | Hydration failed: the server rendered text or HTML that did not match the client, so the tree is regenerated on the client. The `args[]` in the link say which one (`HTML` or `text`). |
+| [#423](https://react.dev/errors/423) | A component threw while hydrating, and React recovered by client rendering the **entire root**: no `<Suspense>` boundary was close enough. |
+| [#422](https://react.dev/errors/422) | The same, recovered by client rendering from the **nearest `<Suspense>` boundary**. |
+| [#425](https://react.dev/errors/425) | Text content does not match server-rendered HTML. React 19.2 reports a text mismatch as #418 (`args[]=text`); #425 comes from older React versions. |
+
+A production message reads `Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message`. The link opens the full text. To see which component and which attribute differ, reproduce it with `pnpm dev`: the development build prints `Hydration failed because the server rendered text didn't match the client` together with a diff of the two trees.
+
+NextSpark's own CI builds the starter from the packed packages, loads its public pages in Chromium and fails when one logs any of these errors, so a hydration error in a page you copy from the starter is caught before it ships. Add the same check to your CI: listen to both `page.on('console')` (type `error`) and `page.on('pageerror')`.
+
 ## Interaction to Next Paint (INP)
 
 ### What INP Measures

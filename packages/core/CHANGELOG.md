@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- **The Core Web Vitals page explains how a hydration mismatch in a client island without its own `<Suspense>` recreates the first viewport and delays the LCP.** It gives the fix (a boundary with a same-size fallback around the islands of the first viewport), the usual sources of a mismatch (`window`, `navigator`, `Date`, `Math.random`, locale-dependent formatting, third-party scripts) and how to read React errors #418, #422, #423 and #425 in a production build (#389).
 - **The upgrade notes of `0.1.0-beta.200` now list the dependency ranges that a project created from a template moves, and what the `sonner` and `tailwind-merge` major versions change** (#395).
 
 ## [0.1.0-beta.200] - 2026-11-04
