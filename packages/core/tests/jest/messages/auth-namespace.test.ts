@@ -52,9 +52,17 @@ const READERS: Array<[string, string]> = [
 describe('the keys the auth pages read', () => {
   test.each(READERS)('%s only reads keys the catalog holds', (file, prefix) => {
     const source = readFileSync(path.join(__dirname, '../../..', file), 'utf8')
-    const used = [...source.matchAll(/\bt(?:\.rich)?\(\s*['"]([\w.]+)['"]/g)].map(m => `${prefix}.${m[1]}`.replace(/^auth\./, ''))
+    const used = [...source.matchAll(/\b(?:t|tRef\.current)(?:\.rich)?\(\s*['"]([\w.]+)['"]/g)].map(m => `${prefix}.${m[1]}`.replace(/^auth\./, ''))
     expect(used.length).toBeGreaterThan(0)
     expect(used.filter(key => !(`${key}` in ENGLISH))).toEqual([])
+  })
+
+  // A text written in the JSX of a client page is English for everyone: it goes through t()
+  test.each(READERS.slice(0, 4).map(([file]) => file))('%s has no literal text in its JSX', file => {
+    const source = readFileSync(path.join(__dirname, '../../..', file), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+    expect([...source.matchAll(/>\s*[A-Za-z][^<{]*</g)].map(m => m[0].trim())).toEqual([])
   })
 
   test('the metadata of the pages names keys the catalog holds', () => {

@@ -77,6 +77,8 @@ function ResetPasswordContent() {
       if (!result.success) {
         const errorMsg = result.error || t("errors.failed");
         setError(errorMsg);
+        // The server's own answer for an expired or used link ("Invalid token") also offers a new link
+        setTokenError(/token/i.test(result.error ?? ''));
       } else {
         setSuccess(true);
         if (process.env.NODE_ENV === 'development') console.log('Password updated successfully');
