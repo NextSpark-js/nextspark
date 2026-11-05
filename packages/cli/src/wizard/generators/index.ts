@@ -46,6 +46,7 @@ import { getDefaultProductionSignIn, type ProductionSignInResult } from '../prom
 // Monorepo generator
 import { generateMonorepoStructure, isMonorepoProject, getWebDir, reconcileMobileSampleEntities } from './monorepo-generator.js'
 import { isLocalPackageRef } from './local-package-refs.js'
+import { rangeFromCore, readCoreManifest } from './core-ranges.js'
 import { writeProxyFile, type ProxyFileResult } from './proxy-file-writer.js'
 import { isPreviousTemplate, readPreviousTemplates } from '../../utils/previous-templates.js'
 
@@ -361,6 +362,13 @@ export async function updatePackageJson(
     // (they would otherwise only exist as transitive @nextsparkjs/core deps).
     'gray-matter': '^4.0.3',
     '@vercel/blob': '^2.8.2',
+  }
+
+  // The ranges above are the wizard's own; where core declares the same dependency the project takes
+  // core's, so it never starts below it and update-core has nothing to list under "Not moved" (#397).
+  const core = readCoreManifest(cachedTemplatesDir ?? getTemplatesDir())
+  for (const [name, version] of Object.entries(depsToAdd)) {
+    if (!name.startsWith('@nextsparkjs/')) depsToAdd[name] = rangeFromCore(name, version, core)
   }
 
   for (const [name, version] of Object.entries(depsToAdd)) {
