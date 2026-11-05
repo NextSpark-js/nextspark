@@ -58,7 +58,7 @@ Server Start (instrumentation.ts)
 │     ├─ Register action handlers (e.g., content:publish)
 │     └─ Register entity hooks (e.g., on entity.contents.updated)
 │
-└─ initializeRecurringActions()          # Async - creates DB rows (once per server)
+└─ initializeRecurringActions()          # Async (not awaited) - creates DB rows (once per server)
    └─ Calls theme's registerRecurringActions()
       └─ Creates recurring action rows in DB if not exist
          (e.g., social:refresh-tokens every 30 minutes)
@@ -87,8 +87,11 @@ export async function register() {
     // 1. Register handlers + entity hooks (sync, idempotent)
     initializeScheduledActions()
 
-    // 2. Create recurring actions in DB (async, idempotent)
-    await initializeRecurringActions()
+    // 2. Create recurring actions in DB (async, idempotent). Not awaited: Next.js serves no
+    //    request until register() resolves, and the seed is not needed to serve one.
+    void initializeRecurringActions().catch((error) => {
+      console.warn(`Failed to seed recurring actions: ${error instanceof Error ? error.message : error}`)
+    })
 
     console.log('[Instrumentation] ✅ Scheduled actions initialized')
   }
@@ -640,7 +643,7 @@ export async function register() {
     } = await import('@nextsparkjs/core/lib/scheduled-actions')
 
     initializeScheduledActions()         // ✅ Registers handlers + hooks
-    await initializeRecurringActions()   // ✅ Creates recurring actions in DB
+    void initializeRecurringActions().catch(console.warn) // ✅ Seeds recurring actions in DB, not awaited
   }
 }
 ```

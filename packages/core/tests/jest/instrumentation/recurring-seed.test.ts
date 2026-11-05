@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 const initializeScheduledActions = jest.fn()
 const initializeRecurringActions = jest.fn<() => Promise<void>>()
 jest.mock('@/core/lib/auth/runtime-readiness', () => ({ logAuthReadinessAtStartup: jest.fn() }))
+jest.mock('@/core/lib/media/storage', () => ({ logStorageAtStartup: jest.fn() }))
 jest.mock('@/core/lib/scheduled-actions', () => ({
   initializeScheduledActions: () => initializeScheduledActions(),
   initializeRecurringActions: () => initializeRecurringActions(),
