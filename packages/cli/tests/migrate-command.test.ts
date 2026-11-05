@@ -2006,7 +2006,8 @@ else process.exit(2)
         ...(simulation ? { NEXTSPARK_MIGRATE_SIMULATION: '1' } : {}),
       })
       const report = JSON.parse(dryRun.stdout)
-      if (simulation) assert.equal(report.appTemplates.previousTemplateMethod, 'pnpm view tarball')
+      // on a failure, say why the lookup gave nothing: skipped (no reason) or failed (the reason)
+      if (simulation) assert.equal(report.appTemplates.previousTemplateMethod, 'pnpm view tarball', JSON.stringify({ appTemplates: report.appTemplates, stderr: dryRun.stderr.slice(0, 2000) }))
       else assert.match(report.appTemplates.previousTemplateUnavailableReason, /pnpm could not retrieve/)
     } finally {
       await server?.close()
