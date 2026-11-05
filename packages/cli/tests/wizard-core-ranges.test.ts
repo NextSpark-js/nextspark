@@ -34,6 +34,9 @@ for (const template of ['starter', 'blog', 'crm', 'productivity']) {
       for (const name of ['@hookform/resolvers', '@tanstack/react-query', 'lucide-react', 'react-hook-form', 'sonner', 'tailwind-merge']) {
         assert.equal(pkg.dependencies[name], core.dependencies[name], name)
       }
+      // A vetted floor of the wizard that is higher than core's stays.
+      assert.equal(pkg.dependencies['next-intl'], '^4.11.0')
+      assert.ok(semver.gt(semver.minVersion('^4.11.0')!, semver.minVersion(core.dependencies['next-intl'])!), "core's next-intl is no longer below the wizard's floor: update this test")
     } finally {
       process.chdir(previous)
       fs.rmSync(dir, { recursive: true, force: true })

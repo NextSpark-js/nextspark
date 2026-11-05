@@ -28,9 +28,5 @@ export function rangeFromCore(name: string, own: string, core: Record<string, Re
 
 /** core's package.json, from the templates directory it ships (`<core>/templates`). */
 export function readCoreManifest(templatesDir: string): Record<string, Record<string, string> | undefined> {
-  try {
-    return fs.readJsonSync(path.resolve(templatesDir, '..', 'package.json'))
-  } catch {
-    return {}
-  }
+  return fs.readJsonSync(path.resolve(templatesDir, '..', 'package.json'))
 }
