@@ -19,7 +19,7 @@ import path from 'node:path'
 
 export const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
 
-const START_TIMEOUT_SECONDS = 180
+const START_TIMEOUT_SECONDS = 90
 const START_ATTEMPTS = 5
 // what the server logs when its port or its socket file is taken
 const PORT_CONFLICT = /Address already in use|could not bind|could not create lock file|lock file ".*" already exists/i

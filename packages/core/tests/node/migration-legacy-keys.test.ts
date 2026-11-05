@@ -30,7 +30,6 @@ const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
 
 type TestContext = { name: string; after: (fn: () => void | Promise<void>) => void }
 
-/** A free port: any, or the first free one of the 20 from NS_TEST_PORT_BASE when a machine reserves a range. */
 /** A throwaway cluster with one s138_ database, stopped and removed after the test. */
 async function throwawayDatabase(t: TestContext, name: string) {
   const { port, stop } = await startCluster('migration-legacy-pg')

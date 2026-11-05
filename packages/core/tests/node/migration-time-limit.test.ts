@@ -371,10 +371,11 @@ test('the limit is read in seconds, and the server and the client both hold to i
 
 /**
  * How a run says a migration was stopped at a limit of `seconds`. The stand-in server cancels a statement at the same
- * limit the runner holds, and the two clocks start from different moments (the runner's when it sends, the server's
- * when it reads), so on a loaded machine the cancel can land a few ms ahead of the runner's own timeout. That is the
- * outcome the runner words as "the server cancelled it after N ms, before ... ran out", and it is as much a stop at the
- * limit as the other (#402).
+ * limit the runner holds, so which of the two stops it first is not fixed: when the server's cancel comes first the
+ * runner words it "the server cancelled it after N ms, before ... ran out" (a failure seen once, probably because the
+ * stand-in's timer counts from the event loop's cached time at the start of the turn, so it can fire early). Both
+ * are a stop at the limit (#402). Callers also check the statement_timeout the session started with, which is what
+ * pins the limit itself.
  */
 const stoppedAtLimit = (seconds: string) =>
   new RegExp(`did not finish within ${seconds} s \\(MIGRATION_TIMEOUT_SECONDS\\)|the server cancelled it after \\d+ ms, before MIGRATION_TIMEOUT_SECONDS \\(${seconds} s\\) ran out`)
@@ -398,7 +399,7 @@ test('a migration still running at the limit fails the run with its name, and it
   // The server-side timeout and skipped follow-up migration above prove the
   // limit path. Leave generous scheduling headroom for loaded CI workers,
   // while still catching a runner that hangs instead of stopping near it.
-  assert.ok(result.elapsedMs < 15000, `took ${result.elapsedMs} ms`)
+  assert.ok(result.elapsedMs < 9000, `took ${result.elapsedMs} ms`)
   assert.equal(waiting.startup.statement_timeout, '500')
   assert.equal(sessionThatRan(server.sessions, MIGRATIONS['003_after.sql']), undefined)
 })
@@ -524,7 +525,7 @@ test('a migration the server never answers is given up on, and its session ended
   assert.match(result.output, NOTHING_STAYS)
   // See the equivalent bounded assertion above: process wall time includes
   // scheduler delays, but must remain far below the test's 20 second timeout.
-  assert.ok(result.elapsedMs < 15000, `took ${result.elapsedMs} ms`)
+  assert.ok(result.elapsedMs < 9000, `took ${result.elapsedMs} ms`)
   const waiting = sessionThatRan(server.sessions, MIGRATIONS['002_waits.sql'])!
   assert.deepEqual(server.terminated, [waiting.pid])
   assert.equal(waiting.closed, true)
@@ -1502,7 +1503,7 @@ test('a database URL that switches the limits off does not lift them', { timeout
   assert.match(result.output, /Failed to execute 002_waits\.sql: /)
   assert.match(result.output, stoppedAtLimit('0\\.5'))
   assert.match(result.output, /canceling statement due to statement timeout|its session on the server was ended/)
-  assert.ok(result.elapsedMs < 15000, `took ${result.elapsedMs} ms`)
+  assert.ok(result.elapsedMs < 9000, `took ${result.elapsedMs} ms`)
   assert.ok(server.sessions.length > 0)
   for (const session of server.sessions) assert.equal(session.startup.statement_timeout, '500')
 })
@@ -1520,7 +1521,7 @@ test('a database URL that switches the limits off still leaves a server that nev
   assert.equal(result.status, 1, result.output)
   assert.match(result.output, /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\)/)
   assert.match(result.output, /its session on the server was ended/)
-  assert.ok(result.elapsedMs < 15000, `took ${result.elapsedMs} ms`)
+  assert.ok(result.elapsedMs < 9000, `took ${result.elapsedMs} ms`)
   const waiting = sessionThatRan(server.sessions, MIGRATIONS['002_waits.sql'])!
   assert.deepEqual(server.terminated, [waiting.pid])
   assert.equal(waiting.closed, true)
@@ -1672,10 +1673,9 @@ test('the project-template migration verifier ends by itself when a migration ha
 
   assert.equal(result.status, 1, result.output)
   assert.match(result.output, /Each migration may run for 4 s; MIGRATION_TIMEOUT_SECONDS changes that/)
-  assert.match(
-    result.output,
-    new RegExp(`Failed to execute ${FIRST_CORE_MIGRATION.file.replace('.', '\\.')}: (did not finish within 4 s|the server cancelled it after \\d+ ms, before MIGRATION_TIMEOUT_SECONDS \\(4 s\\) ran out)`)
-  )
+  assert.match(result.output, new RegExp(`Failed to execute ${FIRST_CORE_MIGRATION.file.replace('.', '\\.')}: `))
+  assert.match(result.output, stoppedAtLimit('4'))
+  assert.equal(sessionThatRan(server.sessions, FIRST_CORE_MIGRATION.sql)?.startup.statement_timeout, '4000')
   assert.match(result.output, /Theme "default" migrations failed \(exit code 1\)/)
 })
 
