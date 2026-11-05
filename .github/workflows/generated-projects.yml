@@ -137,7 +137,8 @@ jobs:
 
       # axe-core (WCAG 2.0/2.1/2.2 A and AA rules) through Playwright, on the starter's public pages and, signed in by
       # email OTP, its dashboard, task and profile pages. Fails on any serious or critical violation. The versions of
-      # playwright, @axe-core/playwright and axe-core are pinned in the root package.json.
+      # playwright, @axe-core/playwright and axe-core are pinned in the root package.json. The same visit of the public
+      # pages fails the step when the browser logs a React hydration error (#418, #422, #423, #425).
       - name: Install the browser for the accessibility scan
         if: matrix.theme == 'starter' && matrix.node == env.NODE_OLDEST
         run: pnpm exec playwright install --with-deps chromium

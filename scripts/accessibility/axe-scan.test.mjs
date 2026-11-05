@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
-import { blocking, countByImpact, rowsFromAxe, waitForMail } from './axe-scan.mjs'
+import { blocking, countByImpact, isHydrationError, rowsFromAxe, waitForMail } from './axe-scan.mjs'
 
 const results = {
   violations: [
@@ -32,6 +32,20 @@ test('only WCAG rows with a failing impact block', () => {
 
 test('counts by impact include every impact', () => {
   assert.deepEqual(countByImpact(rowsFromAxe('/p', results)), { critical: 1, serious: 3, moderate: 1, minor: 0 })
+})
+
+test('hydration errors are told apart from other console errors', () => {
+  for (const m of [
+    'Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message',
+    'Minified React error #422; visit https://react.dev/errors/422 for the full message',
+    'Minified React error #423; visit https://react.dev/errors/423 for the full message',
+    'Minified React error #425; visit https://react.dev/errors/425 for the full message',
+    "Hydration failed because the server rendered HTML didn't match the client.",
+    'There was an error while hydrating but React was able to recover by instead client rendering the entire root.',
+  ]) assert.equal(isHydrationError(m), true, m)
+  for (const m of ['Minified React error #419; visit https://react.dev/errors/419', 'Minified React error #4180', 'Failed to load resource: 404']) {
+    assert.equal(isHydrationError(m), false, m)
+  }
 })
 
 // Exit codes: 0 clean, 1 violations, 2 anything that stops the scan from running. CI reads 1 as "serious findings".

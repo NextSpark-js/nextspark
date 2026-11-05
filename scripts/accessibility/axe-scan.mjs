@@ -12,6 +12,10 @@
  * The project needs a migrated database (DATABASE_URL in its .env) and a production build made with
  * NEXTSPARK_AUTH_RUNTIME_ONLY=email,google. Exit 0 when no violation has an impact in --fail-on, 1 when one has,
  * 2 on a usage or environment error. Every violation (any impact) goes to the --json report.
+ *
+ * The same visit of the public pages also watches the browser for hydration errors (React #418, #422, #423, #425 and
+ * their development messages), in the console and as uncaught page errors: one makes the exit code 1 and is listed,
+ * with its page, under `hydrationErrors` in the report.
  */
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
@@ -26,6 +30,15 @@ const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 const TAGS = [...WCAG_TAGS, 'best-practice']
 const TASK_TITLE = 'Axe scan task'
 const IMPACTS = ['critical', 'serious', 'moderate', 'minor']
+
+// What React 19 reports when the server markup does not match the client render: the minified codes of a production
+// build (https://react.dev/errors/<code>) and the development messages, which are the same errors in words
+const HYDRATION_ERROR = /Minified React error #(?:418|422|423|425)\b|Hydration failed|There was an error while hydrating|Text content does not match server-rendered HTML/
+
+/** True when `text` is a React hydration error. */
+export function isHydrationError(text) {
+  return HYDRATION_ERROR.test(text)
+}
 
 /** Violations of `results` as flat rows, one per failing node. */
 export function rowsFromAxe(page, results) {
@@ -108,6 +121,8 @@ async function main() {
   const email = 'axe-scan@example.com'
 
   const rows = []
+  const hydrationErrors = []
+  let watching = null // the public page being visited, while hydration errors are collected
   const scanned = []
   let axeVersion
   let resend, serverProc, browser
@@ -143,6 +158,12 @@ async function main() {
     browser = await chromium.launch()
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
     const page = await context.newPage()
+    // Next logs the error through console.error or, in a production build, rethrows it as an uncaught error
+    const onHydration = (message) => {
+      if (watching && isHydrationError(message)) hydrationErrors.push({ page: watching, message: message.slice(0, 300) })
+    }
+    page.on('console', (m) => { if (m.type() === 'error') onHydration(m.text()) })
+    page.on('pageerror', (e) => onHydration(e.message))
 
     // `ready` finds something the page shows only once its client-side data has loaded; axe must not run on the
     // loading state (the task forms and the lists fetch after `networkidle`)
@@ -165,7 +186,11 @@ async function main() {
       await scanPage(name)
     }
 
-    for (const p of ['/', '/login', '/signup', '/forgot-password']) await scan(p, p)
+    for (const p of ['/', '/login', '/signup', '/forgot-password', '/docs']) {
+      watching = p
+      await scan(p, p)
+    }
+    watching = null
 
     // Sign in by OTP, the way the login form does, but through the API so the scan starts signed in.
     const headers = { origin: base, 'content-type': 'application/json' }
@@ -223,7 +248,7 @@ async function main() {
   }
 
   const blockers = blocking(rows, failOn)
-  const report = { axeVersion, failOn, counts: countByImpact(rows), scanned, violations: rows }
+  const report = { axeVersion, failOn, counts: countByImpact(rows), scanned, violations: rows, hydrationErrors }
   if (values.json) writeFileSync(values.json, JSON.stringify(report, null, 2) + '\n')
   for (const r of rows) console.log(`${r.impact.padEnd(8)} ${(r.wcag ? '' : 'bp:') + r.rule.padEnd(28)} ${r.page.padEnd(30)} ${r.target}`)
   console.log(`counts: ${JSON.stringify(report.counts)}`)
@@ -231,6 +256,8 @@ async function main() {
     console.error(`axe-scan: ${blockers.length} violation node(s) with impact ${failOn.join(' or ')}`)
     process.exitCode = 1
   }
+  for (const e of hydrationErrors) console.error(`axe-scan: hydration error on ${e.page}: ${e.message}`)
+  if (hydrationErrors.length) process.exitCode = 1
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
