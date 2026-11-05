@@ -7,8 +7,11 @@
  * @module core/scripts/build/registry/generators/docs-registry
  */
 
-import { existsSync, readdirSync } from 'fs'
+import { existsSync, readdirSync, readFileSync } from 'fs'
 import path from 'path'
+import matter from 'gray-matter'
+import { log } from '../../../utils/index.mjs'
+import { resolveDocTitle } from '../shared/doc-title.cjs'
 
 /**
  * Extract order number from filename (01-example -> 1)
@@ -42,7 +45,7 @@ function slugToTitle(slug) {
  * @param {'public' | 'superadmin'} source - Source type
  * @returns {Array} Array of section metadata
  */
-function scanDocsDirectory(docsPath, source, projectRoot) {
+export function scanDocsDirectory(docsPath, source, projectRoot) {
   if (!existsSync(docsPath)) {
     return []
   }
@@ -67,9 +70,15 @@ function scanDocsDirectory(docsPath, source, projectRoot) {
       const filePath = path.join(sectionPath, file)
       const fileOrder = extractOrder(file)
       const pageSlug = cleanName(file)
-      const pageTitle = slugToTitle(pageSlug)
-
       const relativePath = path.relative(projectRoot, filePath)
+
+      // Same rules as the page itself (frontmatter, first heading, file name), so the sidebar matches its <h1>
+      const { data, content } = matter(readFileSync(filePath, 'utf-8'))
+      const resolved = resolveDocTitle(data.title, content, filePath)
+      const pageTitle = resolved.title
+      if (resolved.source !== 'frontmatter') {
+        log(`${relativePath.split(path.sep).join('/')} has no title; using "${pageTitle}"`, 'warning')
+      }
 
       pages.push({
         slug: pageSlug,

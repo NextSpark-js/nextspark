@@ -375,11 +375,11 @@ describe('resolveDocTitle (#400)', () => {
   const file = '/p/docs/public/01-overview/01-introduction.md'
 
   it('prefers the frontmatter title', () => {
-    expect(resolveDocTitle(' Given ', '# Heading\n', file)).toEqual({ title: 'Given', content: '# Heading\n' })
+    expect(resolveDocTitle(' Given ', '# Heading\n', file)).toEqual({ title: 'Given', content: '# Heading\n', source: 'frontmatter' })
   })
 
   it('takes the first heading and removes it from the body', () => {
-    expect(resolveDocTitle(undefined, '# My `Page`\n\nText\n', file)).toEqual({ title: 'My Page', content: 'Text\n' })
+    expect(resolveDocTitle(undefined, '# My `Page`\n\nText\n', file)).toEqual({ title: 'My Page', content: 'Text\n', source: 'heading' })
   })
 
   it('ignores a # inside a code fence', () => {
@@ -388,7 +388,7 @@ describe('resolveDocTitle (#400)', () => {
   })
 
   it('falls back to the file name, never undefined', () => {
-    expect(resolveDocTitle(undefined, 'No heading', file)).toEqual({ title: 'Introduction', content: 'No heading' })
+    expect(resolveDocTitle(undefined, 'No heading', file)).toEqual({ title: 'Introduction', content: 'No heading', source: 'filename' })
     expect(resolveDocTitle('', 'No heading', file).title).toBe('Introduction')
     expect(resolveDocTitle(42, '## Only h2', file).title).toBe('Introduction')
   })

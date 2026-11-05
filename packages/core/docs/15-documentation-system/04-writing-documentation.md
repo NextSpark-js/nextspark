@@ -95,7 +95,7 @@ description: string     # Page description (SEO, breadcrumbs)
 
 ### Title Fallback
 
-`title` is not required, but give every page one. Without it the page takes the text of its first `#` heading (that heading is then not repeated in the body, since the page renders the title as its own `<h1>`), and without a heading the file name (`01-introduction.md` becomes "Introduction"). The browser title, `og:title`, breadcrumb and `<h1>` all use the same result. The sidebar keeps listing the file name.
+`title` is not required, but give every page one. Without it the page takes the text of its first `#` heading (that heading is then not repeated in the body, since the page renders the title as its own `<h1>`), and without a heading the file name (`01-introduction.md` becomes "Introduction"). The browser title, `og:title`, breadcrumb, `<h1>` and sidebar all use the same result, and the registry build prints `docs/…/x.md has no title; using "…"` for each page that needs the fallback.
 
 ### When to Use Frontmatter
 

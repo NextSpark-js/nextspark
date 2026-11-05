@@ -46,41 +46,5 @@ export function slugToTitle(slug: string): string {
     .join(' ')
 }
 
-/**
- * The title of a docs page and the markdown to render under it.
- *
- * The frontmatter `title` wins. Without one the page takes its first `#` heading (outside code fences) and drops that
- * line from the body, because the page renders the title as its own `<h1>`; without a heading either, it takes the file
- * name (`01-introduction.md` -> `Introduction`). Every route reads the title from here, so `<title>`, `og:title`, the
- * breadcrumb and the `<h1>` never disagree and never show `undefined`.
- */
-export function resolveDocTitle(
-  frontmatterTitle: unknown,
-  content: string,
-  filePath: string
-): { title: string; content: string } {
-  if (typeof frontmatterTitle === 'string' && frontmatterTitle.trim()) {
-    return { title: frontmatterTitle.trim(), content }
-  }
-
-  const lines = content.split('\n')
-  let fence: string | null = null
-  for (let i = 0; i < lines.length; i++) {
-    const marker = lines[i].match(/^\s{0,3}(`{3,}|~{3,})/)
-    if (marker) {
-      if (!fence) fence = marker[1][0]
-      else if (marker[1][0] === fence) fence = null
-      continue
-    }
-    if (fence) continue
-    const heading = lines[i].match(/^ {0,3}#[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/)
-    if (!heading) continue
-    const title = heading[1].replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[`*]/g, '').trim()
-    if (!title) continue
-    lines.splice(i, lines[i + 1]?.trim() === '' ? 2 : 1)
-    return { title, content: lines.join('\n') }
-  }
-
-  const base = (filePath.split(/[\\/]/).pop() ?? '').replace(/\.md$/i, '')
-  return { title: slugToTitle(cleanFilename(base)) || 'Untitled', content }
-}
+// One implementation, shared with the registry generator (the sidebar); see the module for the rules.
+export { resolveDocTitle } from '../../../scripts/build/registry/shared/doc-title.cjs'
