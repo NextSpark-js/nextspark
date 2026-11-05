@@ -152,7 +152,16 @@ export const SHARED_EXPORTS = [
   'addressSchema', 'Address', 'fileObjectSchema', 'FileObject', 'mediaRefSchema', 'MediaRef',
 ]
 
-const propertyLiteral = value => (typeof value === 'string' ? quote(value) : String(value))
+// A literal value as source: arrays and objects are emitted in place, so no default is shared between uses
+const propertyLiteral = value => {
+  if (typeof value === 'string') return quote(value)
+  if (Array.isArray(value)) return `[${value.map(propertyLiteral).join(', ')}]`
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value).map(([key, item]) => `${identifierKey(key)}: ${propertyLiteral(item)}`)
+    return entries.length > 0 ? `{ ${entries.join(', ')} }` : '{}'
+  }
+  return String(value)
+}
 
 const identifierKey = name => (/^[A-Za-z_$][\w$]*$/.test(name) ? name : quote(name))
 

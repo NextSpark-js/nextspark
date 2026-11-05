@@ -154,11 +154,34 @@ function elementsOf(node, file, sources, depth = 0) {
   return elements
 }
 
-const literal = (node, file, sources) => {
+const literal = (node, file, sources, depth = 0) => {
   const resolved = resolve(node, file, sources)
   const inner = resolved && unwrap(resolved.node, sources.ts)
   const { ts } = sources
-  if (!inner) return { state: 'unknown' }
+  if (!inner || depth > MAX_DEPTH) return { state: 'unknown' }
+  if (inner.kind === ts.SyntaxKind.NullKeyword) return { state: 'value', value: null }
+  if (ts.isArrayLiteralExpression(inner)) {
+    const value = []
+    for (const element of inner.elements) {
+      const item = ts.isSpreadElement(element) || ts.isOmittedExpression(element) ? { state: 'unknown' } : literal(element, resolved.file, sources, depth + 1)
+      if (item.state !== 'value') return { state: 'unknown' }
+      value.push(item.value)
+    }
+    return { state: 'value', value }
+  }
+  if (ts.isObjectLiteralExpression(inner)) {
+    const value = {}
+    for (const member of inner.properties) {
+      const key = ts.isPropertyAssignment(member) ? member.name : null
+      // `__proto__` would set the prototype of the emitted object, not a key
+      const keyName = key && (ts.isIdentifier(key) || ts.isStringLiteral(key)) ? key.text : null
+      if (keyName === null || keyName === '__proto__') return { state: 'unknown' }
+      const item = literal(member.initializer, resolved.file, sources, depth + 1)
+      if (item.state !== 'value') return { state: 'unknown' }
+      value[keyName] = item.value
+    }
+    return { state: 'value', value }
+  }
   if (ts.isStringLiteral(inner) || ts.isNoSubstitutionTemplateLiteral(inner)) return { state: 'value', value: inner.text }
   if (ts.isNumericLiteral(inner)) return { state: 'value', value: Number(inner.text) }
   if (ts.isPrefixUnaryExpression(inner) && inner.operator === ts.SyntaxKind.MinusToken && ts.isNumericLiteral(inner.operand)) return { state: 'value', value: -Number(inner.operand.text) }

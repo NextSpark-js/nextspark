@@ -691,3 +691,73 @@ test('access.api as an object: the four operations are read, any other key stops
     clean(root)
   }
 })
+
+test('defaultValue: null, [], {} and nested arrays and objects of literals reach the contract as values (#399)', async () => {
+  const config = `const NONE = []
+export const gadgetEntityConfig = {
+  slug: 'gadgets',
+  names: { singular: 'gadget', plural: 'Gadgets' },
+  fields: [
+    { name: 'title', type: 'text', required: true, display: { label: 'Title' }, api: {} },
+    { name: 'a', type: 'tags', required: false, defaultValue: [], display: { label: 'A' }, api: {} },
+    { name: 'b', type: 'json', required: false, defaultValue: {}, display: { label: 'B' }, api: {} },
+    { name: 'c', type: 'text', required: false, defaultValue: null, display: { label: 'C' }, api: {} },
+    { name: 'd', type: 'json', required: false, defaultValue: [1, 'a', true], display: { label: 'D' }, api: {} },
+    { name: 'e', type: 'json', required: false, defaultValue: { a: 1, 'b-c': ['x', { k: null }], f: {} }, display: { label: 'E' }, api: {} },
+    { name: 'f', type: 'tags', required: false, defaultValue: NONE, display: { label: 'F' }, api: {} },
+  ],
+}\n`
+  const root = project({ 'entities/gadgets/gadgets.config.ts': config })
+  try {
+    const plan = await planContracts({ entities: await entitiesOf(root), projectRoot: root, coreRoot: CORE_ROOT })
+    assert.deepEqual(plan.diagnostics, [])
+    const gadgets = plan.files.find(file => file.path === 'src/entities/gadgets.ts').content
+    assert.match(gadgets, /name: 'a', type: 'tags', required: false, defaultValue: \[\],/)
+    assert.match(gadgets, /name: 'b', type: 'json', required: false, defaultValue: \{\},/)
+    assert.match(gadgets, /name: 'c', type: 'text', required: false, defaultValue: null,/)
+    assert.match(gadgets, /defaultValue: \[1, 'a', true\],/)
+    assert.match(gadgets, /defaultValue: \{ a: 1, 'b-c': \['x', \{ k: null \}\], f: \{\} \},/)
+    assert.match(gadgets, /name: 'f', type: 'tags', required: false, defaultValue: \[\],/)
+    // the generated module compiles, and the descriptor holds each default in place (no shared reference between fields)
+    const compiled = compile(plan.files)
+    try {
+      assert.deepEqual(compiled.diagnostics, [])
+      const entity = compiled.load('src/entities/gadgets.js').gadgetEntity
+      const byName = Object.fromEntries(entity.fields.map(field => [field.name, field.defaultValue]))
+      assert.deepEqual(byName.a, [])
+      assert.deepEqual(byName.b, {})
+      assert.equal(byName.c, null)
+      assert.deepEqual(byName.d, [1, 'a', true])
+      assert.deepEqual(byName.e, { a: 1, 'b-c': ['x', { k: null }], f: {} })
+      assert.notEqual(byName.a, byName.f)
+    } finally {
+      compiled.cleanup()
+    }
+  } finally {
+    clean(root)
+  }
+})
+
+test('defaultValue: a spread, a call, a computed key and an unresolved identifier stay unknown and warn (#399)', async () => {
+  const config = `export const widgetEntityConfig = {
+  slug: 'widgets',
+  fields: [
+    { name: 'a', type: 'json', required: false, defaultValue: [...other], display: {}, api: {} },
+    { name: 'b', type: 'json', required: false, defaultValue: make(), display: {}, api: {} },
+    { name: 'c', type: 'json', required: false, defaultValue: { [key]: 1 }, display: {}, api: {} },
+    { name: 'd', type: 'json', required: false, defaultValue: [unknownName], display: {}, api: {} },
+    { name: 'e', type: 'json', required: false, defaultValue: { ...rest }, display: {}, api: {} },
+    { name: 'f', type: 'json', required: false, defaultValue: { __proto__: {} }, display: {}, api: {} },
+  ],
+}\n`
+  const root = project({ 'entities/widgets/widgets.config.ts': config })
+  try {
+    const result = await readEntityContract({ file: join(root, 'entities/widgets/widgets.config.ts'), exportName: 'widgetEntityConfig', projectRoot: root })
+    assert.equal(result.error, undefined)
+    const warnings = result.contract.warnings.filter(warning => /defaultValue/.test(warning))
+    assert.equal(warnings.length, 6, JSON.stringify(result.contract.warnings))
+    assert.ok(result.contract.fields.every(field => field.hasDefault && field.defaultValue === undefined))
+  } finally {
+    clean(root)
+  }
+})

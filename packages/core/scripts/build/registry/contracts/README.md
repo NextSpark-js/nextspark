@@ -118,3 +118,8 @@ Entity configs are parsed, never executed. `fields` may be an inline array, a `c
 module, and spreads of those. A `fields` that is computed, a field whose `name` is not a literal, an `options` list that is not
 literal: each becomes a `// Warning:` line in the entity module and a line printed by prepare, and the value is typed `string` or
 `unknown` - never left out silently.
+
+A `defaultValue` is read when it is a string, a number, a boolean, `null`, or an array or object of those (nested, empty ones
+included, keys written as identifiers or strings). A spread, a computed key, a call or an identifier that does not resolve to
+one of those is not read: the contract does not apply it, and prepare warns. The default is copied into the contract as written,
+whatever the field `type`, like a string default on a number field.
