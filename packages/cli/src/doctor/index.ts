@@ -20,6 +20,7 @@ import { checkImports } from './checks/imports.js'
 import { checkDuplicateDependencies, checkZodBelowCore } from './checks/lockfile.js'
 import { checkQueryClients } from './checks/query-client.js'
 import { checkNextThemesImports } from './checks/next-themes.js'
+import { checkQueryHooksWithoutProvider } from './checks/query-hooks.js'
 import { checkHoisting } from './checks/hoisting.js'
 
 /**
@@ -120,6 +121,7 @@ export async function runHealthCheck(): Promise<HealthCheckResult[]> {
     { name: 'Zod', fn: checkZodBelowCore },
     { name: 'Query caches', fn: checkQueryClients },
     { name: 'Theme imports', fn: checkNextThemesImports },
+    { name: 'React Query providers', fn: checkQueryHooksWithoutProvider },
     { name: 'Hoisting', fn: () => checkHoisting() },
   ]
 
