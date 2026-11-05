@@ -186,7 +186,24 @@
     "superAdminAreaTitle": "Área de Super Admin",
     "taskSearch": "Búsqueda de tareas",
     "userInfo": "Información del usuario",
-    "userMenuForName": "Menú de usuario para {name}"
+    "userMenuForName": "Menú de usuario para {name}",
+    "actions": "Acciones",
+    "breadcrumb": "Ruta de navegación",
+    "clearSelection": "Borrar selección",
+    "firstPage": "Primera página",
+    "goToNextPage": "Ir a la página siguiente",
+    "goToPreviousPage": "Ir a la página anterior",
+    "lastPage": "Última página",
+    "maximumValue": "Valor máximo",
+    "minimumValue": "Valor mínimo",
+    "more": "Más",
+    "morePages": "Más páginas",
+    "nextPage": "Página siguiente",
+    "openMenu": "Abrir menú",
+    "pagination": "Paginación",
+    "previousPage": "Página anterior",
+    "selectAll": "Seleccionar todo",
+    "selectAllRows": "Seleccionar todas las filas"
   },
   "accessibility": {
     "navigation": {

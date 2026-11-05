@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sel } from '../../../lib/test';
+import { useCommonText } from '../../../lib/i18n/common-text';
 import {
   Table,
   TableBody,
@@ -56,6 +57,7 @@ interface TeamsTableProps {
  * Includes team type badges, owner info, member counts, and actions.
  */
 export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
+  const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu');
   const router = useRouter();
 
   // Navigate to team detail
@@ -188,7 +190,7 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                         className="h-8 w-8 p-0"
                         data-cy={sel('superadmin.teams.table.menuButton', { id: team.id })}
                       >
-                        <span className="sr-only">Open menu</span>
+                        <span className="sr-only">{openMenuText}</span>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>

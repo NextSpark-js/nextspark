@@ -186,7 +186,24 @@
     "superAdminAreaTitle": "Super Admin area",
     "taskSearch": "Task search",
     "userInfo": "User information",
-    "userMenuForName": "User menu for {name}"
+    "userMenuForName": "User menu for {name}",
+    "actions": "Actions",
+    "breadcrumb": "Breadcrumb",
+    "clearSelection": "Clear selection",
+    "firstPage": "First page",
+    "goToNextPage": "Go to next page",
+    "goToPreviousPage": "Go to previous page",
+    "lastPage": "Last page",
+    "maximumValue": "Maximum value",
+    "minimumValue": "Minimum value",
+    "more": "More",
+    "morePages": "More pages",
+    "nextPage": "Next page",
+    "openMenu": "Open menu",
+    "pagination": "Pagination",
+    "previousPage": "Previous page",
+    "selectAll": "Select all",
+    "selectAllRows": "Select all rows"
   },
   "accessibility": {
     "navigation": {

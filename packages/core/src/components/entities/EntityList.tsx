@@ -54,6 +54,7 @@ import {
   ExternalLink
 } from 'lucide-react'
 import { SkeletonEntityList } from '../ui/skeleton-list'
+import { useCommonText } from '../../lib/i18n/common-text'
 import type { EntityConfig } from '../../lib/entities/types'
 import type { Permission } from '../../lib/permissions/types'
 import { EntityFieldRenderer } from './EntityFieldRenderer'
@@ -114,6 +115,9 @@ export function EntityList({
   className,
   teamId,
 }: EntityListProps) {
+  const actionsText = useCommonText('a11y', 'actions', 'Actions')
+  const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu')
+  const selectAllRowsText = useCommonText('a11y', 'selectAllRows', 'Select all rows')
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -358,7 +362,7 @@ export function EntityList({
                     <Checkbox
                       checked={selectedIds.length === data.length && data.length > 0}
                       onCheckedChange={handleSelectAll}
-                      aria-label="Select all rows"
+                      aria-label={selectAllRowsText}
                     />
                   </TableHead>
                 )}
@@ -382,7 +386,7 @@ export function EntityList({
 
                 {enableRowActions && (canUpdate || canDelete) && (
                   <TableHead className="w-12">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{actionsText}</span>
                   </TableHead>
                 )}
               </TableRow>
@@ -453,7 +457,7 @@ export function EntityList({
                               className="h-8 w-8 p-0"
                               data-cy={sel('entities.list.table.row.menuContent', { slug: entityConfig.slug, id: itemId })}
                             >
-                              <span className="sr-only">Open menu</span>
+                              <span className="sr-only">{openMenuText}</span>
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>

@@ -1,6 +1,7 @@
 'use client'
 
 import { Skeleton, SkeletonContainer } from '../../ui/skeleton'
+import { useCommonText } from '../../../lib/i18n/common-text'
 
 /**
  * Structural skeleton shown while the dashboard auth gate resolves the session.
@@ -18,6 +19,7 @@ import { Skeleton, SkeletonContainer } from '../../ui/skeleton'
  * dashboard layout itself (AuthenticatedDashboardLayout) does not use it: it renders the page while the session loads.
  */
 export function DashboardAuthSkeleton() {
+  const loadingText = useCommonText('a11y', 'loading', 'Loading')
   return (
     <div
       className="min-h-screen flex bg-background"
@@ -26,7 +28,7 @@ export function DashboardAuthSkeleton() {
       aria-busy="true"
       aria-live="polite"
     >
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{loadingText}</span>
 
       {/* Sidebar rail */}
       <div

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cn } from '../../lib/utils'
+import { useCommonText } from '../../lib/i18n/common-text'
 
 interface DoubleRangeProps {
   value: [number, number] | undefined
@@ -26,6 +27,8 @@ export function DoubleRange({
   formatLabel = (val) => val.toString(),
   showLabels = true,
 }: DoubleRangeProps) {
+  const minimumValueText = useCommonText('a11y', 'minimumValue', 'Minimum value')
+  const maximumValueText = useCommonText('a11y', 'maximumValue', 'Maximum value')
   const [localValue, setLocalValue] = React.useState<[number, number]>(() => 
     value || [min, max]
   )
@@ -163,7 +166,7 @@ export function DoubleRange({
             onMouseDown={handleMouseDown('min')}
             tabIndex={disabled ? -1 : 0}
             role="slider"
-            aria-label="Minimum value"
+            aria-label={minimumValueText}
             aria-valuemin={min}
             aria-valuemax={max}
             aria-valuenow={localValue[0]}
@@ -180,7 +183,7 @@ export function DoubleRange({
             onMouseDown={handleMouseDown('max')}
             tabIndex={disabled ? -1 : 0}
             role="slider"
-            aria-label="Maximum value"
+            aria-label={maximumValueText}
             aria-valuemin={min}
             aria-valuemax={max}
             aria-valuenow={localValue[1]}

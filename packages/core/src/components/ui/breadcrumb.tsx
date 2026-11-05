@@ -1,16 +1,27 @@
+"use client"
+
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import Link from "next/link"
 import { cn } from '../../lib/utils'
 import { withBasePathIfInApp, withoutBasePath } from '../../lib/base-path'
+import { useCommonText } from '../../lib/i18n/common-text'
 import { ChevronRightIcon, DotsHorizontalIcon } from "@radix-ui/react-icons"
 
+/*
+ * The accessible names default to the active locale's `common.a11y` messages, or English with no
+ * `NextIntlClientProvider`. `aria-label` sets the name of Breadcrumb per use, and `moreLabel` the one of
+ * BreadcrumbEllipsis.
+ */
 const Breadcrumb = React.forwardRef<
   HTMLElement,
   React.ComponentPropsWithoutRef<"nav"> & {
     separator?: React.ReactNode
   }
->(({ ...props }, ref) => <nav ref={ref} aria-label="breadcrumb" {...props} />)
+>(({ ...props }, ref) => {
+  const label = useCommonText('a11y', 'breadcrumb', 'Breadcrumb')
+  return <nav ref={ref} aria-label={label} {...props} />
+})
 Breadcrumb.displayName = "Breadcrumb"
 
 const BreadcrumbList = React.forwardRef<
@@ -139,18 +150,22 @@ BreadcrumbSeparator.displayName = "BreadcrumbSeparator"
 
 const BreadcrumbEllipsis = ({
   className,
+  moreLabel,
   ...props
-}: React.ComponentProps<"span">) => (
-  <span
-    role="presentation"
-    aria-hidden="true"
-    className={cn("flex h-9 w-9 items-center justify-center", className)}
-    {...props}
-  >
-    <DotsHorizontalIcon className="h-4 w-4" />
-    <span className="sr-only">More</span>
-  </span>
-)
+}: React.ComponentProps<"span"> & { moreLabel?: string }) => {
+  const label = useCommonText('a11y', 'more', 'More', moreLabel)
+  return (
+    <span
+      role="presentation"
+      aria-hidden="true"
+      className={cn("flex h-9 w-9 items-center justify-center", className)}
+      {...props}
+    >
+      <DotsHorizontalIcon className="h-4 w-4" />
+      <span className="sr-only">{label}</span>
+    </span>
+  )
+}
 BreadcrumbEllipsis.displayName = "BreadcrumbElipssis"
 
 export {

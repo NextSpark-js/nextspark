@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '../../ui/select';
 import { sel } from '../../../lib/test';
+import { useCommonText } from '../../../lib/i18n/common-text';
 
 interface PaginationControlsProps {
   page: number;
@@ -40,6 +41,10 @@ export function PaginationControls({
   pageSizeOptions = [10, 20, 50, 100],
   context,
 }: PaginationControlsProps) {
+  const firstPageText = useCommonText('a11y', 'firstPage', 'First page');
+  const previousPageText = useCommonText('a11y', 'previousPage', 'Previous page');
+  const nextPageText = useCommonText('a11y', 'nextPage', 'Next page');
+  const lastPageText = useCommonText('a11y', 'lastPage', 'Last page');
   const startItem = total === 0 ? 0 : (page - 1) * limit + 1;
   const endItem = Math.min(page * limit, total);
 
@@ -100,7 +105,7 @@ export function PaginationControls({
             data-cy={sel(`superadmin.${context}.pagination.first`)}
           >
             <ChevronsLeft className="h-4 w-4" />
-            <span className="sr-only">First page</span>
+            <span className="sr-only">{firstPageText}</span>
           </Button>
           <Button
             variant="outline"
@@ -111,7 +116,7 @@ export function PaginationControls({
             data-cy={sel(`superadmin.${context}.pagination.prev`)}
           >
             <ChevronLeft className="h-4 w-4" />
-            <span className="sr-only">Previous page</span>
+            <span className="sr-only">{previousPageText}</span>
           </Button>
           <Button
             variant="outline"
@@ -122,7 +127,7 @@ export function PaginationControls({
             data-cy={sel(`superadmin.${context}.pagination.next`)}
           >
             <ChevronRight className="h-4 w-4" />
-            <span className="sr-only">Next page</span>
+            <span className="sr-only">{nextPageText}</span>
           </Button>
           <Button
             variant="outline"
@@ -133,7 +138,7 @@ export function PaginationControls({
             data-cy={sel(`superadmin.${context}.pagination.last`)}
           >
             <ChevronsRight className="h-4 w-4" />
-            <span className="sr-only">Last page</span>
+            <span className="sr-only">{lastPageText}</span>
           </Button>
         </div>
       </div>

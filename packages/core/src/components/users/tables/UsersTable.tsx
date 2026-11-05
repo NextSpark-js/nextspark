@@ -50,6 +50,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useRoleTranslations } from '../../../lib/role-helpers';
+import { useCommonText } from '../../../lib/i18n/common-text';
 import { useSession, type ClientSession } from '../../../lib/auth-client';
 import type { SessionUser } from '../../../lib/auth';
 import { canActOnUser, canGrantUserRole } from '../../../lib/auth/assignable-roles';
@@ -92,6 +93,7 @@ interface PendingAction {
  * Includes role badges, verification status, and action menus.
  */
 export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
+  const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu');
   const getRoleName = useRoleTranslations();
   const t = useTranslations('superadmin.users.actions');
   const { data: session } = useSession();
@@ -384,7 +386,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                       className="h-8 w-8 p-0"
                       disabled={isMutating}
                     >
-                      <span className="sr-only">Open menu</span>
+                      <span className="sr-only">{openMenuText}</span>
                       {isMutating ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (

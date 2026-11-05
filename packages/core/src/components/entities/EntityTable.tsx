@@ -21,6 +21,7 @@ import { useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { cn } from '../../lib/utils'
+import { useCommonText } from '../../lib/i18n/common-text'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Card, CardContent } from '../ui/card'
@@ -118,6 +119,13 @@ export function EntityTable<T extends { id: string } = { id: string }>({
   headerActions,
   showHeader = true,
 }: EntityTableProps<T>) {
+  const actionsText = useCommonText('a11y', 'actions', 'Actions')
+  const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu')
+  const selectAllText = useCommonText('a11y', 'selectAll', 'Select all')
+  const firstPageText = useCommonText('a11y', 'firstPage', 'First page')
+  const previousPageText = useCommonText('a11y', 'previousPage', 'Previous page')
+  const nextPageText = useCommonText('a11y', 'nextPage', 'Next page')
+  const lastPageText = useCommonText('a11y', 'lastPage', 'Last page')
   const router = useRouter()
   const slug = entityConfig.slug
 
@@ -622,7 +630,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                             if (el) el.indeterminate = someSelected
                           }}
                           onChange={toggleAll}
-                          aria-label="Select all"
+                          aria-label={selectAllText}
                           data-cy={sel('entities.list.table.selectAll', { slug })}
                         />
                       </TableHead>
@@ -654,7 +662,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                     ))}
                     {hasActions && (
                       <TableHead className="w-12">
-                        <span className="sr-only">Actions</span>
+                        <span className="sr-only">{actionsText}</span>
                       </TableHead>
                     )}
                   </TableRow>
@@ -776,7 +784,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                                 data-cy={sel('entities.list.table.row.menu', { slug, id: item.id })}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Open menu</span>
+                                <span className="sr-only">{openMenuText}</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
@@ -875,7 +883,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                       data-cy={sel('entities.list.pagination.first', { slug })}
                     >
                       <ChevronsLeft className="h-4 w-4" />
-                      <span className="sr-only">First page</span>
+                      <span className="sr-only">{firstPageText}</span>
                     </Button>
 
                     {/* Previous page */}
@@ -888,7 +896,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                       data-cy={sel('entities.list.pagination.prev', { slug })}
                     >
                       <ChevronLeft className="h-4 w-4" />
-                      <span className="sr-only">Previous page</span>
+                      <span className="sr-only">{previousPageText}</span>
                     </Button>
 
                     {/* Next page */}
@@ -901,7 +909,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                       data-cy={sel('entities.list.pagination.next', { slug })}
                     >
                       <ChevronRight className="h-4 w-4" />
-                      <span className="sr-only">Next page</span>
+                      <span className="sr-only">{nextPageText}</span>
                     </Button>
 
                     {/* Last page */}
@@ -914,7 +922,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                       data-cy={sel('entities.list.pagination.last', { slug })}
                     >
                       <ChevronsRight className="h-4 w-4" />
-                      <span className="sr-only">Last page</span>
+                      <span className="sr-only">{lastPageText}</span>
                     </Button>
                   </div>
                 </div>

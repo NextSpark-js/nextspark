@@ -44,6 +44,7 @@ import {
   UserMinus
 } from "lucide-react";
 import { useRoleTranslations } from '../../../lib/role-helpers';
+import { useCommonText } from '../../../lib/i18n/common-text';
 import { useSession, type ClientSession } from '../../../lib/auth-client';
 import type { SessionUser } from '../../../lib/auth';
 import { useToast } from '../../../hooks/useToast';
@@ -84,6 +85,7 @@ export function SuperAdminsTable({
   currentUserId,
   onRefresh
 }: SuperAdminsTableProps) {
+  const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu');
 
   const getRoleName = useRoleTranslations();
   const t = useTranslations('superadmin.users');
@@ -248,7 +250,7 @@ export function SuperAdminsTable({
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
+                        <span className="sr-only">{openMenuText}</span>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>

@@ -5,6 +5,7 @@ import { Search, X } from "lucide-react";
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { cn } from '../../../lib/utils';
+import { useCommonText } from '../../../lib/i18n/common-text';
 
 interface SearchInputProps {
   value: string;
@@ -29,6 +30,7 @@ export function SearchInput({
   className,
   "data-cy": dataCy,
 }: SearchInputProps) {
+  const clearSearchText = useCommonText('search', 'clear', 'Clear search');
   const [localValue, setLocalValue] = useState(value);
 
   // Sync local value with external value
@@ -73,7 +75,7 @@ export function SearchInput({
           data-cy={dataCy ? `${dataCy}-clear` : undefined}
         >
           <X className="h-4 w-4" />
-          <span className="sr-only">Clear search</span>
+          <span className="sr-only">{clearSearchText}</span>
         </Button>
       )}
     </div>

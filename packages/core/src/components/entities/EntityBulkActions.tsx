@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
+import { useCommonText } from '../../lib/i18n/common-text'
 import {
   Select,
   SelectContent,
@@ -40,6 +41,7 @@ export function EntityBulkActions({
   onClearSelection,
   config,
 }: EntityBulkActionsProps) {
+  const clearSelectionText = useCommonText('a11y', 'clearSelection', 'Clear selection')
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<string>('')
@@ -175,7 +177,7 @@ export function EntityBulkActions({
           size="icon"
           onClick={onClearSelection}
           className="h-8 w-8"
-          aria-label="Clear selection"
+          aria-label={clearSelectionText}
           data-cy={sel('entities.list.bulk.clearButton', { slug: entitySlug })}
         >
           <X className="h-4 w-4" />
