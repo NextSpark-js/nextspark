@@ -173,7 +173,7 @@ export const productConfig: EntityConfig = {
 ```typescript
 'use client'
 
-import { useEntitySearch } from '@nextsparkjs/core/hooks'
+import { useEntitySearch } from '@nextsparkjs/core/hooks/useEntitySearch'
 
 export function SearchComponent() {
   const {
@@ -239,7 +239,7 @@ export function SearchComponent() {
 ```typescript
 'use client'
 
-import { useEntitySearch } from '@nextsparkjs/core/hooks'
+import { useEntitySearch } from '@nextsparkjs/core/hooks/useEntitySearch'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
@@ -767,7 +767,7 @@ export function useAPISearch(entitySlug: string) {
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useEntitySearch } from '@nextsparkjs/core/hooks'
+import { useEntitySearch } from '@nextsparkjs/core/hooks/useEntitySearch'
 
 interface SearchFilters {
   entityTypes: string[]

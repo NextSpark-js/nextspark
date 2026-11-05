@@ -92,6 +92,7 @@ test('prepare points out project code that still imports next-themes, without wr
     const migrations = join(project.root, 'node_modules/@nextsparkjs/core/scripts/maintenance')
     await mkdir(migrations, { recursive: true })
     await writeFile(join(migrations, 'code-migrations.mjs'), await readFile(new URL('../../core/scripts/maintenance/code-migrations.mjs', import.meta.url), 'utf8'))
+    await writeFile(join(migrations, 'source-files.mjs'), await readFile(new URL('../../core/scripts/maintenance/source-files.mjs', import.meta.url), 'utf8'))
     const clean = run(project.root, ['prepare'])
     assert.equal(clean.status, 0, `${clean.stdout}\n${clean.stderr}`)
     assert.doesNotMatch(`${clean.stdout}${clean.stderr}`, /NS_NEXT_THEMES_IMPORT/)
@@ -117,6 +118,7 @@ test('prepare skips the next-themes notice with --check and --contracts-only, an
     const migrations = join(project.root, 'node_modules/@nextsparkjs/core/scripts/maintenance')
     await mkdir(migrations, { recursive: true })
     await writeFile(join(migrations, 'code-migrations.mjs'), await readFile(new URL('../../core/scripts/maintenance/code-migrations.mjs', import.meta.url), 'utf8'))
+    await writeFile(join(migrations, 'source-files.mjs'), await readFile(new URL('../../core/scripts/maintenance/source-files.mjs', import.meta.url), 'utf8'))
     await mkdir(join(project.root, 'components'), { recursive: true })
     await writeFile(join(project.root, 'components/Navbar.tsx'), "import { useTheme } from 'next-themes'\n")
     for (const args of [['prepare', '--check'], ['prepare', '--contracts-only']]) {

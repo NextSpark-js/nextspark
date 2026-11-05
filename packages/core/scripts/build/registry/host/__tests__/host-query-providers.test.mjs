@@ -56,6 +56,21 @@ test('a public page that uses a query hook is reported, with the import that bri
   assert.equal(find({ ...files, 'templates/(auth)/layout.tsx': WRAPPED_LAYOUT }).length, 1, 'nor does one of another group')
 })
 
+test('a layout covers its pages through a Providers component that renders children, not through an island with a provider of its own', () => {
+  const page = { 'templates/(public)/pricing/page.tsx': QUERY_PAGE }
+  const providers = {
+    'templates/(public)/layout.tsx': "import { Providers } from '@/components/Providers'\nexport default function Layout({ children }) { return <Providers>{children}</Providers> }\n",
+    'components/Providers.tsx': WRAPPED_LAYOUT.replace('Layout', 'Providers'),
+  }
+  assert.deepEqual(find({ ...page, ...providers }), [])
+  const island = {
+    'templates/(public)/layout.tsx': "import { Navbar } from '@/components/Navbar'\nexport default function Layout({ children }) { return <><Navbar />{children}</> }\n",
+    'components/Navbar.tsx': "import { CartIsland } from './CartIsland'\nexport const Navbar = () => <CartIsland />\n",
+    'components/CartIsland.tsx': "import { GroupProviders } from '@nextsparkjs/core/providers/group-providers'\nexport const CartIsland = () => <GroupProviders><button /></GroupProviders>\n",
+  }
+  assert.equal(find({ ...page, ...island }).length, 1)
+})
+
 test('the query import can be a component or a hook the page imports, in the project (relative or @/) and in any depth', () => {
   const found = find({
     'templates/(public)/pricing/page.tsx': "import Table from '@/components/Table'\nexport default () => <Table />\n",

@@ -15,12 +15,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-/** Code files: what a project imports from */
-export const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/
-/** Tests, which mock modules by name, and type declarations are left alone */
-export const SKIPPED_FILE = /\.(?:test|spec|stories)\.[cm]?[jt]sx?$|\.d\.[cm]?ts$/
-/** Installed, built or test code; also every directory starting with a dot and the generated src/app */
-export const SKIPPED_DIRS = new Set(['node_modules', 'dist', 'build', 'out', 'coverage', 'public', 'storybook-static', 'ios', 'android', '__tests__', 'tests', 'cypress'])
+import { SKIPPED_DIRS, SKIPPED_FILE, SOURCE_FILE } from './source-files.mjs'
+
+export { SKIPPED_DIRS, SKIPPED_FILE, SOURCE_FILE }
 
 /** The text of a file, or null when it cannot be read (permissions, a broken link) */
 function readText(file) {

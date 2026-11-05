@@ -25,6 +25,7 @@ import path from 'node:path'
 
 import { readProvidersScope } from '../build/registry/generators/root-providers.mjs'
 import { QUERY_MODULES } from './query-modules.mjs'
+import { SKIPPED_DIRS, SKIPPED_FILE, SOURCE_FILE } from './source-files.mjs'
 
 export const QUERY_HOOK_WARNING = 'NS_QUERY_HOOK_WITHOUT_PROVIDER'
 export const QUERY_HOOK_FIX = "wrap the layout of the route group in GroupProviders (import { GroupProviders } from '@nextsparkjs/core/providers/group-providers')"
@@ -33,10 +34,6 @@ export const QUERY_HOOK_FIX = "wrap the layout of the route group in GroupProvid
 const PROVIDED_AREAS = ['dashboard', 'superadmin', 'devtools']
 /** An import of any of these (by name) in a file means its subtree has a QueryClient */
 const PROVIDER_NAME = /\b(?:GroupProviders|DashboardProviders|QueryProvider|QueryClientProvider)\b/
-/** The code files a project imports from, as code-migrations.mjs counts them (not imported: that module also writes files) */
-const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/
-const SKIPPED_FILE = /\.(?:test|spec|stories)\.[cm]?[jt]sx?$|\.d\.[cm]?ts$/
-const SKIPPED_DIRS = new Set(['node_modules', 'dist', 'build', 'out', 'coverage', 'public', 'storybook-static', 'ios', 'android', '__tests__', 'tests', 'cypress'])
 const REACT_QUERY = '@tanstack/react-query'
 const CORE = '@nextsparkjs/core/'
 const EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts']
@@ -140,9 +137,10 @@ function codeGraph({ projectRoot, plugins }) {
     let known = nodes.get(file)
     if (known) return known
     const text = readText(file)
-    known = { file, provides: false, query: null, deps: [] }
+    known = { file, provides: false, wraps: false, query: null, deps: [] }
     nodes.set(file, known)
     if (text === null) return known
+    const code = blankComments(text)
     for (const entry of importsOf(text)) {
       if (PROVIDER_NAME.test(entry.clause)) known.provides = true
       const id = coreModuleId(entry.specifier)
@@ -150,6 +148,8 @@ function codeGraph({ projectRoot, plugins }) {
       const dep = resolve(file, entry.specifier)
       if (dep) known.deps.push(dep)
     }
+    // A file wraps what its parent gives it when it imports a provider and renders `children`: Providers.tsx, a layout
+    known.wraps = known.provides && /\bchildren\b/.test(code)
     return known
   }
 
@@ -170,13 +170,16 @@ function codeGraph({ projectRoot, plugins }) {
     return null
   }
 
-  /** Whether the file or anything it imports inside the project imports a provider */
+  /**
+   * Whether the file or anything it imports inside the project wraps its children in a provider. A file that imports one
+   * and does not render `children` (an island of the navbar with its own provider) covers nothing else.
+   */
   const providesQuery = start => {
     const seen = new Set([start])
     const queue = [start]
     while (queue.length > 0) {
       const current = node(queue.shift())
-      if (current.provides) return true
+      if (current.wraps) return true
       for (const dep of current.deps) if (!seen.has(dep)) (seen.add(dep), queue.push(dep))
     }
     return false

@@ -15,6 +15,7 @@ const BARREL =
 const PROVIDER = 'a provider the project mounts: importing it is the fix, not the problem'
 const OUTSIDE_THE_DASHBOARD =
   'fails outside the dashboard with any providers.scope (it needs DashboardProviders and a team), so providers.scope is not its cause'
+const LAZY_PROVIDER = 'reaches React Query only through a lazy import (dynamic) of UpgradePlansLink, which mounts DashboardProviders itself: it brings its own provider'
 const CORE_ROUTE = "one of core's own dashboard, superadmin or devtools pages, which have their providers"
 
 /** Reaches React Query and is not looked for, with the reason */
@@ -53,10 +54,58 @@ export const QUERY_MODULES_EXCLUDED = Object.freeze({
   'routes/superadmin/teams/[teamId]/page': CORE_ROUTE,
   'routes/superadmin/users/[userId]/page': CORE_ROUTE,
   'routes/superadmin/users/page': CORE_ROUTE,
+  'routes/_internal/dashboard-main-shared': CORE_ROUTE,
+  'routes/_internal/devtools-layout': CORE_ROUTE,
+  'routes/_internal/devtools-layout.cc': CORE_ROUTE,
+  'routes/_internal/entity-create-route': CORE_ROUTE,
+  'routes/_internal/entity-create-view': CORE_ROUTE,
+  'routes/_internal/entity-detail-route': CORE_ROUTE,
+  'routes/_internal/entity-detail-route.cc': CORE_ROUTE,
+  'routes/_internal/entity-edit-route': CORE_ROUTE,
+  'routes/_internal/entity-edit-route.cc': CORE_ROUTE,
+  'routes/_internal/entity-edit-view': CORE_ROUTE,
+  'routes/_internal/entity-list-route': CORE_ROUTE,
+  'routes/_internal/superadmin-layout': CORE_ROUTE,
+  'routes/_internal/superadmin-layout.cc': CORE_ROUTE,
+  'routes/dashboard/(main)/layout': CORE_ROUTE,
+  'routes/dashboard/(main)/layout.cc': CORE_ROUTE,
+  'routes/dashboard/(main)/media/page': CORE_ROUTE,
+  'routes/dashboard/(main)/page': CORE_ROUTE,
+  'routes/dashboard/(main)/patterns/[id]/edit/page': CORE_ROUTE,
+  'routes/dashboard/(main)/patterns/[id]/reports/page': CORE_ROUTE,
+  'routes/dashboard/(main)/patterns/create/page': CORE_ROUTE,
+  'routes/dashboard/(main)/patterns/page': CORE_ROUTE,
+  'routes/dashboard/features/analytics/page': CORE_ROUTE,
+  'routes/dashboard/features/automation/page': CORE_ROUTE,
+  'routes/dashboard/features/webhooks/page': CORE_ROUTE,
+  'routes/dashboard/layout': CORE_ROUTE,
+  'routes/dashboard/layout.cc': CORE_ROUTE,
+  'routes/dashboard/settings/billing/page': CORE_ROUTE,
+  'routes/dashboard/settings/invoices/[invoiceNumber]/page': CORE_ROUTE,
+  'routes/dashboard/settings/invoices/page': CORE_ROUTE,
+  'routes/dashboard/settings/layout': CORE_ROUTE,
+  'routes/dashboard/settings/notifications/page': CORE_ROUTE,
+  'routes/dashboard/settings/page': CORE_ROUTE,
+  'routes/dashboard/settings/password/page': CORE_ROUTE,
+  'routes/dashboard/settings/plans/page': CORE_ROUTE,
+  'routes/dashboard/settings/security/page': CORE_ROUTE,
+  'routes/dashboard/settings/teams/page': CORE_ROUTE,
+  'routes/dashboard/settings/teams/permissions/page': CORE_ROUTE,
+  'routes/devtools/api/[[...endpoint]]/page': CORE_ROUTE,
+  'routes/devtools/layout': CORE_ROUTE,
+  'routes/devtools/layout.cc': CORE_ROUTE,
+  'routes/devtools/style/page': CORE_ROUTE,
+  'routes/superadmin/layout': CORE_ROUTE,
+  'routes/superadmin/layout.cc': CORE_ROUTE,
+  'routes/superadmin/teams/page': CORE_ROUTE,
+  'routes/403/page': LAZY_PROVIDER,
+  'components/patterns': BARREL,
 })
 
 /** Reaches React Query and is looked for */
 export const QUERY_MODULES = new Set([
+  'components/patterns/PatternDeleteDialog',
+  'components/patterns/PatternUsageReport',
   'components/api/keys/CreateApiKeyDialog',
   'components/billing/FeatureGate',
   'components/billing/ManageBillingButton',

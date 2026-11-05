@@ -196,7 +196,8 @@ test('NS_QUERY_CLIENT_NOT_REGISTERED reports file:line, and skips registered, co
 
 /** The installed core's code migrations, which decide what the next-themes check looks at */
 const CODE_MIGRATIONS = fs.readFileSync(new URL('../../core/scripts/maintenance/code-migrations.mjs', import.meta.url), 'utf8')
-const withCore = (files: Record<string, string>) => ({ 'node_modules/@nextsparkjs/core/scripts/maintenance/code-migrations.mjs': CODE_MIGRATIONS, ...files })
+const SOURCE_FILES = fs.readFileSync(new URL('../../core/scripts/maintenance/source-files.mjs', import.meta.url), 'utf8')
+const withCore = (files: Record<string, string>) => ({ 'node_modules/@nextsparkjs/core/scripts/maintenance/code-migrations.mjs': CODE_MIGRATIONS, 'node_modules/@nextsparkjs/core/scripts/maintenance/source-files.mjs': SOURCE_FILES, ...files })
 
 test('NS_NEXT_THEMES_IMPORT reports each file:line that loads next-themes, and skips commented, generated, test and installed code', async () => {
   const result = await inProject(null, withCore({

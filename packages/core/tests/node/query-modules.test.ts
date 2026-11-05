@@ -26,6 +26,7 @@ const resolveImport = (from: string, specifier: string): string | null => {
   let base: string
   if (specifier.startsWith('.')) base = path.resolve(path.dirname(from), specifier)
   else if (specifier.startsWith('@/core/')) base = path.join(SRC, specifier.slice('@/core/'.length))
+  else if (specifier.startsWith('@nextsparkjs/core/')) base = path.join(SRC, specifier.slice('@nextsparkjs/core/'.length).replace(/\.(?:[cm]?js|[cm]?ts|tsx)$/, ''))
   else return null
   const candidates = [base, `${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts'), path.join(base, 'index.tsx')]
   return candidates.find(candidate => fs.existsSync(candidate) && fs.statSync(candidate).isFile()) ?? null
