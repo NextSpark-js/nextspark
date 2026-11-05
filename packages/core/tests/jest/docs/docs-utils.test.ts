@@ -387,6 +387,23 @@ describe('resolveDocTitle (#400)', () => {
     expect(resolveDocTitle(undefined, body, file).title).toBe('Real')
   })
 
+  it('reads a CRLF doc: the heading is the title and leaves the body', () => {
+    expect(resolveDocTitle(undefined, '# Windows Page\r\n\r\nText\r\nMore\r\n', file)).toEqual({
+      title: 'Windows Page',
+      content: 'Text\r\nMore\r\n',
+      source: 'heading',
+    })
+  })
+
+  it('closes a fence only with the same character, as long and with nothing after it', () => {
+    // a longer fence is not closed by a ``` inside it
+    expect(resolveDocTitle(undefined, '````md\n```\n# inside\n```\n````\n\n# Real\n', file).title).toBe('Real')
+    // a ```js line inside a block is content, not a close: the # after it is still inside
+    expect(resolveDocTitle(undefined, '```\n```js\n# inside\n```\n\n# Real\n', file).title).toBe('Real')
+    // a ~~~ line does not close a ``` block
+    expect(resolveDocTitle(undefined, '```\n~~~\n# inside\n```\n\n# Real\n', file).title).toBe('Real')
+  })
+
   it('falls back to the file name, never undefined', () => {
     expect(resolveDocTitle(undefined, 'No heading', file)).toEqual({ title: 'Introduction', content: 'No heading', source: 'filename' })
     expect(resolveDocTitle('', 'No heading', file).title).toBe('Introduction')

@@ -7,7 +7,7 @@
 
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -28,6 +28,7 @@ test('the registry titles a page like the page does, and warns for a doc without
     sections = scanDocsDirectory(join(root, 'docs', 'public'), 'public', root)
   } finally {
     log.mock.restore()
+    rmSync(root, { recursive: true, force: true })
   }
 
   assert.deepEqual(

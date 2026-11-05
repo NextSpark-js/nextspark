@@ -16,22 +16,26 @@ function resolveDocTitle(frontmatterTitle, content, filePath) {
     return { title: frontmatterTitle.trim(), content, source: 'frontmatter' }
   }
 
-  const lines = content.split('\n')
-  let fence = null
+  const eol = content.includes('\r\n') ? '\r\n' : '\n'
+  const lines = content.split(/\r?\n/)
+  let fence = null // character and length of the opening fence
   for (let i = 0; i < lines.length; i++) {
-    const marker = lines[i].match(/^\s{0,3}(`{3,}|~{3,})/)
-    if (marker) {
-      if (!fence) fence = marker[1][0]
-      else if (marker[1][0] === fence) fence = null
+    const marker = lines[i].match(/^ {0,3}(`{3,}|~{3,})(.*)$/)
+    if (fence) {
+      // closes only with the same character, at least as long, and nothing after it
+      if (marker && marker[1][0] === fence.char && marker[1].length >= fence.length && !marker[2].trim()) fence = null
       continue
     }
-    if (fence) continue
+    if (marker) {
+      fence = { char: marker[1][0], length: marker[1].length }
+      continue
+    }
     const heading = lines[i].match(/^ {0,3}#[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/)
     if (!heading) continue
     const title = heading[1].replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[`*]/g, '').trim()
     if (!title) continue
     lines.splice(i, lines[i + 1]?.trim() === '' ? 2 : 1)
-    return { title, content: lines.join('\n'), source: 'heading' }
+    return { title, content: lines.join(eol), source: 'heading' }
   }
 
   const base = (filePath.split(/[\\/]/).pop() ?? '').replace(/\.md$/i, '').replace(/^\d+-/, '')

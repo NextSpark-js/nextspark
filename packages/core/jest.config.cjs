@@ -57,7 +57,8 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       tsconfig: '<rootDir>/tsconfig.json',
-    }],  },
+    }],
+  },
   // Transform ESM modules that Jest can't parse directly
   transformIgnorePatterns: [
     '/node_modules/(?!(rou3|better-auth|better-call|@better-auth)/)',

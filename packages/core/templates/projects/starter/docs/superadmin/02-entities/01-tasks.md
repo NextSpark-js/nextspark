@@ -3,8 +3,6 @@ title: Tasks Management
 description: Guide for administrators to manage the tasks entity in the application.
 ---
 
-# Tasks Management
-
 Tasks are the core entity in this starter theme. This guide covers administrative operations for managing tasks across all users and teams.
 
 ## Overview
