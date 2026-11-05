@@ -8,12 +8,10 @@
  * they are not on the PATH.
  */
 import { createHmac } from 'node:crypto'
-import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
-import os from 'node:os'
 import path from 'node:path'
 import { Client } from 'pg'
+import { HAS_POSTGRES, startCluster, type ThrowawayCluster } from '../../../support/throwaway-postgres'
 
 jest.mock('@nextsparkjs/registries/billing-registry', () => ({
   BILLING_REGISTRY: {
@@ -27,18 +25,9 @@ jest.mock('@nextsparkjs/registries/billing-registry', () => ({
 }))
 
 const CORE = path.resolve(__dirname, '../../../..')
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
 const describeWithPostgres = HAS_POSTGRES ? describe : describe.skip
 
 const SECRET = 'pdl_ntfset_sandbox_e2e_secret'
-
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
 
 /** The Paddle-Signature header for `body`, signed now (or `ts`) with `secret`. */
 function sign(body: string, secret = SECRET, ts = Math.floor(Date.now() / 1000)) {
@@ -119,7 +108,7 @@ function transactionEvent(name: string, fields: Record<string, unknown>, custom:
 }
 
 describeWithPostgres('Paddle webhook', () => {
-  let dir: string
+  let cluster: ThrowawayCluster
   let db: Client
   let handler: (req: never) => Promise<Response>
   let closePool: () => Promise<void>
@@ -147,10 +136,8 @@ describeWithPostgres('Paddle webhook', () => {
   `)
 
   beforeAll(async () => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'paddle-webhook-pg-'))
-    const port = await freePort()
-    execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
+    cluster = await startCluster('paddle-webhook-pg')
+    const { port } = cluster
     const url = `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable`
     db = new Client({ connectionString: url })
     db.on('error', () => {})
@@ -186,8 +173,7 @@ describeWithPostgres('Paddle webhook', () => {
   afterAll(async () => {
     await closePool?.()
     await db?.end()
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
+    cluster?.stop()
   })
 
   test('a bad, missing, foreign, stale or malformed signature is refused before anything is claimed or written', async () => {

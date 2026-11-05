@@ -5,41 +5,28 @@
  * The test starts a throwaway cluster with initdb and pg_ctl on a free port, runs core's migrations on it, and is
  * skipped when they are not on the PATH.
  */
-import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
-import os from 'node:os'
 import path from 'node:path'
 import { Client } from 'pg'
+import { HAS_POSTGRES, startCluster, type ThrowawayCluster } from '../../support/throwaway-postgres'
 
 // Importing lib/auth builds the Better Auth instance; the repair only needs its invitation helper.
 jest.mock('better-auth', () => ({ betterAuth: () => ({ api: {}, $Infer: {} }), APIError: class extends Error {} }))
 jest.mock('better-auth/plugins', () => ({ emailOTP: () => ({ id: 'email-otp' }) }))
 jest.mock('better-auth/next-js', () => ({ nextCookies: () => ({ id: 'next-cookies' }) }))
 
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
 const describeWithPostgres = HAS_POSTGRES ? describe : describe.skip
 const MIGRATIONS = path.resolve(__dirname, '../../../migrations')
 
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
-
 describeWithPostgres('repairMissingPersonalTeam', () => {
-  let dir: string
+  let cluster: ThrowawayCluster
   let owner: Client
   let db: typeof import('@nextsparkjs/core/lib/db')
   let repair: typeof import('@nextsparkjs/core/lib/auth/personal-team-repair').repairMissingPersonalTeam
 
   beforeAll(async () => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'personal-team-pg-'))
-    const port = await freePort()
-    execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
+    cluster = await startCluster('personal-team-pg')
+    const { port } = cluster
     const url = `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable`
     owner = new Client({ connectionString: url })
     // the cluster stops under it at the end
@@ -79,8 +66,7 @@ describeWithPostgres('repairMissingPersonalTeam', () => {
   afterAll(async () => {
     await db?.pool.end()
     await owner?.end()
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
+    cluster?.stop()
   })
 
   const count = async (sql: string, params: unknown[] = []) => (await owner.query(sql, params)).rows[0].n as number

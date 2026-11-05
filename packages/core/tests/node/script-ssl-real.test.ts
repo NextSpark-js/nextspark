@@ -13,50 +13,36 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import type pg from 'pg'
+import { HAS_POSTGRES, startCluster } from '../support/throwaway-postgres'
 import { NO_SSL_IN_PRODUCTION, scriptClient } from '../../scripts/db/ssl-config.mjs'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
 const SSL_CONFIG = pathToFileURL(path.join(CORE, 'scripts/db/ssl-config.mjs')).href
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
 const HAS_OPENSSL = spawnSync('openssl', ['version']).status === 0
 const PASSWORD = 's111-url-secret'
 
 type TestContext = { after: (fn: () => void | Promise<void>) => void }
 
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
-
 /** A throwaway cluster, with a self-signed certificate for 127.0.0.1 and localhost (pg names an IP host to TLS as localhost) when `ssl` is set; stopped and removed after the test. */
 async function throwawayCluster(t: TestContext, { ssl = false } = {}) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'script-ssl-pg-'))
-  const data = path.join(dir, 'data')
-  const port = await freePort()
-  execFileSync('initdb', ['-D', data, '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-  const certificate = path.join(dir, 'server.crt')
-  let options = `-h 127.0.0.1 -p ${port} -k ${dir}`
-  if (ssl) {
-    const key = path.join(dir, 'server.key')
-    execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=127.0.0.1',
-      '-addext', 'subjectAltName=IP:127.0.0.1,DNS:localhost', '-keyout', key, '-out', certificate], { stdio: 'ignore' })
-    fs.chmodSync(key, 0o600)
-    options += ` -c ssl=on -c ssl_cert_file=${certificate} -c ssl_key_file=${key}`
-  }
-  execFileSync('pg_ctl', ['-D', data, '-l', path.join(dir, 'log'), '-o', options, 'start', '-w'], { stdio: 'ignore' })
-  t.after(() => {
-    execFileSync('pg_ctl', ['-D', data, 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
+  const { dir, port, stop } = await startCluster('script-ssl-pg', {
+    prepare(clusterDir) {
+      if (!ssl) return ''
+      const key = path.join(clusterDir, 'server.key')
+      const cert = path.join(clusterDir, 'server.crt')
+      execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=127.0.0.1',
+        '-addext', 'subjectAltName=IP:127.0.0.1,DNS:localhost', '-keyout', key, '-out', cert], { stdio: 'ignore' })
+      fs.chmodSync(key, 0o600)
+      return `-c ssl=on -c ssl_cert_file=${cert} -c ssl_key_file=${key}`
+    },
   })
+  t.after(stop)
+  const certificate = path.join(dir, 'server.crt')
   return { url: `postgresql://owner:${PASSWORD}@127.0.0.1:${port}/postgres`, certificate }
 }
 

@@ -6,28 +6,17 @@
  * Only the signature check is mocked (it returns the posted event). The test starts a throwaway cluster with initdb
  * and pg_ctl on a free port, and is skipped when they are not on the PATH.
  */
-import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
-import os from 'node:os'
 import path from 'node:path'
 import { Client } from 'pg'
+import { HAS_POSTGRES, startCluster, type ThrowawayCluster } from '../../../support/throwaway-postgres'
 
 jest.mock('@nextsparkjs/core/lib/billing/gateways/factory', () => ({
   getBillingGateway: async () => ({ verifyWebhookSignature: (payload: string) => JSON.parse(payload) }),
 }))
 
 const CORE = path.resolve(__dirname, '../../../..')
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
 const describeWithPostgres = HAS_POSTGRES ? describe : describe.skip
-
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -49,7 +38,7 @@ async function responseOf(response: Response) {
 }
 
 describeWithPostgres('billing webhook deduplication', () => {
-  let dir: string
+  let cluster: ThrowawayCluster
   let db: Client
   let handleStripeWebhook: typeof import('@nextsparkjs/core/lib/billing/stripe-webhook').handleStripeWebhook
   let createPolarWebhookHandler: typeof import('@nextsparkjs/core/routes/_internal/polar-webhook').createPolarWebhookHandler
@@ -57,10 +46,8 @@ describeWithPostgres('billing webhook deduplication', () => {
   let closePool: () => Promise<void>
 
   beforeAll(async () => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'webhook-dedupe-pg-'))
-    const port = await freePort()
-    execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
+    cluster = await startCluster('webhook-dedupe-pg')
+    const { port } = cluster
     const url = `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable`
     db = new Client({ connectionString: url })
     // the cluster stops under it at the end
@@ -95,8 +82,7 @@ describeWithPostgres('billing webhook deduplication', () => {
   afterAll(async () => {
     await closePool?.()
     await db?.end()
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
+    cluster?.stop()
   })
 
   /** A Stripe one-time checkout: it writes no billing_events row and calls the project's extension. */

@@ -10,24 +10,13 @@
  */
 import { test, type TestContext } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
-import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { HAS_POSTGRES, startCluster as startThrowawayCluster } from '../support/throwaway-postgres'
 
 const MIGRATION = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../migrations/022_rls_runtime_roles.sql')
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
-
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
 
 /** Runs 022 as `user` and returns the WARNING messages it raised. */
 async function run022(port: number, user: string, database: string) {
@@ -45,15 +34,8 @@ async function run022(port: number, user: string, database: string) {
 
 /** Starts a throwaway cluster (cleanup registered before it starts) and returns an admin client and the port. */
 async function startCluster(t: TestContext) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'migration-022-pg-'))
-  const port = await freePort()
-  const data = path.join(dir, 'data')
-  t.after(() => {
-    try { execFileSync('pg_ctl', ['-D', data, 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' }) } catch { /* never started */ }
-    fs.rmSync(dir, { recursive: true, force: true })
-  })
-  execFileSync('initdb', ['-D', data, '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-  execFileSync('pg_ctl', ['-D', data, '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
+  const { port, stop } = await startThrowawayCluster('migration-022-pg')
+  t.after(stop)
   const admin = new pg.Client({ connectionString: `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable` })
   await admin.connect()
   t.after(() => admin.end())

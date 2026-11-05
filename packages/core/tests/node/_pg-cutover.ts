@@ -2,37 +2,21 @@
  * A throwaway PostgreSQL cluster with core's migrations, for the node tests of the RLS policies on the documented
  * nextspark_app cutover. Skipped by the callers when initdb and pg_ctl are not on the PATH.
  */
-import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
-import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { HAS_POSTGRES, startCluster } from '../support/throwaway-postgres'
 
 export const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-export const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
+export { HAS_POSTGRES }
 
 type TestContext = { after: (fn: () => void | Promise<void>) => void }
 
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
-
 /** A throwaway cluster with core's migrations (no sample data), an owner client and an app client, and their URLs. */
 export async function cutoverDatabase(t: TestContext, { except = [] as string[] } = {}) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-rls-pg-'))
-  const port = await freePort()
-  execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-  execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
-  t.after(() => {
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
-  })
+  const { port, stop } = await startCluster('team-rls-pg')
+  t.after(stop)
   const url = (user: string) => `postgresql://${user}@127.0.0.1:${port}/postgres?sslmode=disable`
   const connect = async (user: string) => {
     const client = new pg.Client({ connectionString: url(user) })

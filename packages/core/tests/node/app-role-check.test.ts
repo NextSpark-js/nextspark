@@ -11,38 +11,22 @@
  */
 import { test, type TestContext } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { HAS_POSTGRES, startCluster as startThrowawayCluster } from '../support/throwaway-postgres'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
 const CHECK = path.join(CORE, 'scripts/db/check-app-role.mjs')
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
 const OPTS = { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 120000 }
 
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
-
 async function startCluster(t: TestContext) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-role-pg-'))
-  const port = await freePort()
-  const data = path.join(dir, 'data')
-  t.after(() => {
-    try { execFileSync('pg_ctl', ['-D', data, 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' }) } catch { /* never started */ }
-    fs.rmSync(dir, { recursive: true, force: true })
-  })
-  execFileSync('initdb', ['-D', data, '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-  execFileSync('pg_ctl', ['-D', data, '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
+  const { port, stop } = await startThrowawayCluster('app-role-pg')
+  t.after(stop)
   const admin = new pg.Client({ connectionString: `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable` })
   admin.on('error', () => {})
   await admin.connect()

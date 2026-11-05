@@ -7,35 +7,20 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { HAS_POSTGRES, startCluster } from '../support/throwaway-postgres'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
-
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
 
 test('the runner applies 151_ before 1001_, and a second run applies nothing again', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'migration-order-pg-'))
-  const port = await freePort()
-  execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-  execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
-  t.after(() => {
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
-  })
+  const { port, stop } = await startCluster('migration-order-pg')
+  t.after(stop)
   const url = `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable`
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'migration-order-'))

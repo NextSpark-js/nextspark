@@ -7,28 +7,14 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
-import fs from 'node:fs'
 import net from 'node:net'
-import os from 'node:os'
-import path from 'node:path'
 import pg from 'pg'
 import { createPool } from '../../src/lib/db-pool'
-
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
+import { HAS_POSTGRES, startCluster } from '../support/throwaway-postgres'
 
 async function throwawayUrl(t: { after: (fn: () => void) => void }) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'db-pool-pg-'))
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-  execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
-  t.after(() => {
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
-  })
+  const { port, stop } = await startCluster('db-pool-pg')
+  t.after(stop)
   return `postgresql://owner@127.0.0.1:${port}/postgres`
 }
 

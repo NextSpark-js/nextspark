@@ -10,19 +10,18 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
 import { isSampleDataMigration, sampleDataPolicy } from '../../scripts/db/sample-data.mjs'
+import { HAS_POSTGRES, startCluster } from '../support/throwaway-postgres'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
 const DISABLING = '029_sample_accounts_outside_development.sql'
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
 
 type TestContext = { after: (fn: () => void | Promise<void>) => void }
 
@@ -62,24 +61,10 @@ test('older sample data without the name or the marker is recognised by the acco
   assert.equal(isSampleDataMigration('010_teams.sql', fs.readFileSync(path.join(CORE, 'migrations/010_teams_functions_triggers.sql'), 'utf8')), false)
 })
 
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
-
 /** A throwaway cluster with one database, stopped and removed after the test. */
 async function throwawayDatabase(t: TestContext) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sample-data-pg-'))
-  const port = await freePort()
-  execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-  execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
-  t.after(() => {
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
-  })
+  const { port, stop } = await startCluster('sample-data-pg')
+  t.after(stop)
   const url = `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable`
   const client = new pg.Client({ connectionString: url })
   // the cluster stops under it at the end of the test

@@ -8,12 +8,10 @@
  * they are not on the PATH.
  */
 import { createHmac } from 'node:crypto'
-import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
-import os from 'node:os'
 import path from 'node:path'
 import { Client } from 'pg'
+import { HAS_POSTGRES, startCluster, type ThrowawayCluster } from '../../../support/throwaway-postgres'
 
 jest.mock('@nextsparkjs/registries/billing-registry', () => ({
   BILLING_REGISTRY: {
@@ -27,19 +25,10 @@ jest.mock('@nextsparkjs/registries/billing-registry', () => ({
 }))
 
 const CORE = path.resolve(__dirname, '../../../..')
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
 const describeWithPostgres = HAS_POSTGRES ? describe : describe.skip
 
 const SECRET = 'ls_webhook_secret_e2e'
 const STORE = '4242'
-
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
 
 const sign = (body: string, secret = SECRET) => createHmac('sha256', secret).update(body).digest('hex')
 
@@ -133,7 +122,7 @@ function orderEvent(id: string, custom: Record<string, unknown> | null, attribut
 }
 
 describeWithPostgres('Lemon Squeezy webhook', () => {
-  let dir: string
+  let cluster: ThrowawayCluster
   let db: Client
   let handler: (extensions?: object) => (req: never) => Promise<Response>
   let closePool: () => Promise<void>
@@ -155,10 +144,8 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
     `SELECT (SELECT count(*) FROM subscriptions)::int AS subscriptions, (SELECT count(*) FROM billing_events)::int AS events`)).rows[0]
 
   beforeAll(async () => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lemonsqueezy-webhook-pg-'))
-    const port = await freePort()
-    execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
+    cluster = await startCluster('lemonsqueezy-webhook-pg')
+    const { port } = cluster
     const url = `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable`
     db = new Client({ connectionString: url })
     db.on('error', () => {})
@@ -197,8 +184,7 @@ describeWithPostgres('Lemon Squeezy webhook', () => {
   afterAll(async () => {
     await closePool?.()
     await db?.end()
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
+    cluster?.stop()
   })
 
   test('a bad, missing or foreign signature is refused before anything is claimed or written', async () => {

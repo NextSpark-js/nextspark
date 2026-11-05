@@ -8,37 +8,20 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
-import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { HAS_POSTGRES, startCluster } from '../support/throwaway-postgres'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const MIGRATION = fs.readFileSync(path.join(CORE, 'migrations/031_users_role_suspended.sql'), 'utf8')
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
 
 type TestContext = { after: (fn: () => void | Promise<void>) => void }
 
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
-
 async function throwawayDatabase(t: TestContext) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'users-role-pg-'))
-  const port = await freePort()
-  execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-  execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
-  t.after(() => {
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
-  })
+  const { port, stop } = await startCluster('users-role-pg')
+  t.after(stop)
   const client = new pg.Client({ connectionString: `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable` })
   client.on('error', () => {})
   await client.connect()

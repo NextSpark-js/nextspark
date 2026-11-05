@@ -6,34 +6,19 @@
  * The test starts a throwaway cluster with initdb and pg_ctl on a free port, and is skipped when they are not on the
  * PATH.
  */
-import { execFileSync, spawnSync } from 'node:child_process'
-import fs from 'node:fs'
-import net from 'node:net'
-import os from 'node:os'
-import path from 'node:path'
 import { Client } from 'pg'
+import { HAS_POSTGRES, startCluster, type ThrowawayCluster } from '../../support/throwaway-postgres'
 
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
 const describeWithPostgres = HAS_POSTGRES ? describe : describe.skip
 
-async function freePort() {
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  return port
-}
-
 describeWithPostgres('withServiceTransaction', () => {
-  let dir: string
+  let cluster: ThrowawayCluster
   let outside: Client
   let db: typeof import('@nextsparkjs/core/lib/db')
 
   beforeAll(async () => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'service-tx-pg-'))
-    const port = await freePort()
-    execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
+    cluster = await startCluster('service-tx-pg')
+    const { port } = cluster
     const url = `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable`
     outside = new Client({ connectionString: url })
     // the cluster stops under it at the end
@@ -50,8 +35,7 @@ describeWithPostgres('withServiceTransaction', () => {
   afterAll(async () => {
     await db?.pool.end()
     await outside?.end()
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
+    cluster?.stop()
   })
 
   beforeEach(() => outside.query('DELETE FROM notes'))

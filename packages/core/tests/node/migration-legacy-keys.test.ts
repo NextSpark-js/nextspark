@@ -17,47 +17,24 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { HAS_POSTGRES, startCluster } from '../support/throwaway-postgres'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
 
 type TestContext = { name: string; after: (fn: () => void | Promise<void>) => void }
 
 /** A free port: any, or the first free one of the 20 from NS_TEST_PORT_BASE when a machine reserves a range. */
-async function freePort() {
-  const base = Number(process.env.NS_TEST_PORT_BASE) || 0
-  for (let candidate = base; candidate <= base + (base ? 19 : 0); candidate++) {
-    const server = net.createServer()
-    try {
-      await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(candidate, '127.0.0.1', resolve) })
-    } catch {
-      continue
-    }
-    const { port } = server.address() as net.AddressInfo
-    await new Promise(resolve => server.close(resolve))
-    return port
-  }
-  throw new Error(`no free port from NS_TEST_PORT_BASE=${base}`)
-}
-
 /** A throwaway cluster with one s138_ database, stopped and removed after the test. */
 async function throwawayDatabase(t: TestContext, name: string) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'migration-legacy-pg-'))
-  const port = await freePort()
-  execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-  execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
-  t.after(() => {
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
-  })
+  const { port, stop } = await startCluster('migration-legacy-pg')
+  t.after(stop)
   const admin = new pg.Client({ connectionString: `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable` })
   await admin.connect()
   await admin.query(`CREATE DATABASE s138_${name}`)

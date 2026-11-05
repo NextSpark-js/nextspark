@@ -7,14 +7,14 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import pg from 'pg'
 import { CORE, HAS_POSTGRES } from './_pg-cutover'
 import { validatePublicSlug } from '../../src/lib/entities/public-slug'
+import { startCluster } from '../support/throwaway-postgres'
 
 const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
 const PAGES = path.join(CORE, 'templates/projects/starter/entities/pages')
@@ -24,17 +24,8 @@ const skip = !HAS_POSTGRES && 'initdb/pg_ctl not on PATH'
 type TestContext = { after: (fn: () => void | Promise<void>) => void }
 
 async function throwawayDatabase(t: TestContext) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pages-slug-pg-'))
-  const server = net.createServer()
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-  const { port } = server.address() as net.AddressInfo
-  await new Promise(resolve => server.close(resolve))
-  execFileSync('initdb', ['-D', path.join(dir, 'data'), '--auth=trust', '--no-locale', '--encoding=UTF8', '--username', 'owner'], { stdio: 'ignore' })
-  execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), '-l', path.join(dir, 'log'), '-o', `-h 127.0.0.1 -p ${port} -k ${dir}`, 'start', '-w'], { stdio: 'ignore' })
-  t.after(() => {
-    execFileSync('pg_ctl', ['-D', path.join(dir, 'data'), 'stop', '-m', 'immediate', '-w'], { stdio: 'ignore' })
-    fs.rmSync(dir, { recursive: true, force: true })
-  })
+  const { port, stop } = await startCluster('pages-slug-pg')
+  t.after(stop)
   const url = `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable`
   const client = new pg.Client({ connectionString: url })
   // the cluster stops under it at the end of the test
