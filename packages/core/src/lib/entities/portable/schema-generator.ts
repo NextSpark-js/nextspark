@@ -331,7 +331,7 @@ function generateFieldSchema(
           }
           // Return the field's defaultValue (as string) when available,
           // so NOT NULL DEFAULT '' columns receive '' instead of null.
-          return field.defaultValue !== undefined ? String(field.defaultValue) : null
+          return field.defaultValue != null ? String(field.defaultValue) : null
         }
         // Convert numbers to strings (e.g., year field: 2025 -> "2025")
         const strVal = typeof val === 'number' ? String(val) : val
