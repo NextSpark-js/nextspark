@@ -140,6 +140,7 @@ export function PublicNavbar() {
               <Link
                 key={item.name}
                 href={item.href}
+                prefetch={false}
                 className="transition-colors hover:text-foreground/80 text-foreground/60"
               >
                 {tNav(item.name)}
@@ -184,6 +185,7 @@ export function PublicNavbar() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  prefetch={false}
                   className="px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >

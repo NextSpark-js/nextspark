@@ -39,6 +39,7 @@ export function PublicFooter() {
                 <li key={link.name}>
                   <Link 
                     href={link.href}
+                    prefetch={false}
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {t(link.name)}
@@ -56,6 +57,7 @@ export function PublicFooter() {
                 <li key={link.name}>
                   <Link 
                     href={link.href}
+                    prefetch={false}
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {t(link.name)}
@@ -73,6 +75,7 @@ export function PublicFooter() {
                 <li key={link.name}>
                   <Link 
                     href={link.href}
+                    prefetch={false}
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {t(link.name)}

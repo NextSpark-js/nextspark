@@ -12,6 +12,10 @@ pnpm dev
 
 `pnpm dev` genera `src/app` y los registries (`pnpm build:registries` lo hace sin arrancar el servidor).
 
+## Página de inicio
+
+Este template no trae páginas públicas: `/` usa la de core, que redirige a `/dashboard`, y un visitante sin sesión termina en `/login`. Es intencional, la app es privada. Para una landing propia, agregá `templates/(public)/page.tsx` (y, si querés una navegación pública, un `templates/(public)/layout.tsx`).
+
 ## Funcionalidades
 
 ### Kanban Board
