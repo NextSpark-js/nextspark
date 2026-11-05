@@ -20,12 +20,11 @@
  * @module core/scripts/maintenance/query-providers
  */
 
-import fs from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 import { readProvidersScope } from '../build/registry/generators/root-providers.mjs'
 import { QUERY_MODULES } from './query-modules.mjs'
-import { SKIPPED_DIRS, SKIPPED_FILE, SOURCE_FILE } from './code-migrations.mjs'
 
 export const QUERY_HOOK_WARNING = 'NS_QUERY_HOOK_WITHOUT_PROVIDER'
 export const QUERY_HOOK_FIX = "wrap the layout of the route group in GroupProviders (import { GroupProviders } from '@nextsparkjs/core/providers/group-providers')"
@@ -34,6 +33,10 @@ export const QUERY_HOOK_FIX = "wrap the layout of the route group in GroupProvid
 const PROVIDED_AREAS = ['dashboard', 'superadmin', 'devtools']
 /** An import of any of these (by name) in a file means its subtree has a QueryClient */
 const PROVIDER_NAME = /\b(?:GroupProviders|DashboardProviders|QueryProvider|QueryClientProvider)\b/
+/** The code files a project imports from, as code-migrations.mjs counts them (not imported: that module also writes files) */
+const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/
+const SKIPPED_FILE = /\.(?:test|spec|stories)\.[cm]?[jt]sx?$|\.d\.[cm]?ts$/
+const SKIPPED_DIRS = new Set(['node_modules', 'dist', 'build', 'out', 'coverage', 'public', 'storybook-static', 'ios', 'android', '__tests__', 'tests', 'cypress'])
 const REACT_QUERY = '@tanstack/react-query'
 const CORE = '@nextsparkjs/core/'
 const EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts']
@@ -42,7 +45,7 @@ const ROUTE_FILE = /^(?:page|layout|template|default|loading|error|not-found)(?:
 
 const readText = file => {
   try {
-    return fs.readFileSync(file, 'utf8')
+    return readFileSync(file, 'utf8')
   } catch {
     return null
   }
@@ -125,7 +128,7 @@ function codeGraph({ projectRoot, plugins }) {
     const candidates = [base, ...EXTENSIONS.map(ext => base + ext), ...EXTENSIONS.map(ext => stem + ext), ...EXTENSIONS.map(ext => path.join(base, 'index' + ext))]
     const file = candidates.find(candidate => {
       try {
-        return fs.statSync(candidate).isFile()
+        return statSync(candidate).isFile()
       } catch {
         return false
       }
@@ -191,7 +194,7 @@ function templateRoutes(root, layer) {
   const walk = (dir, prefix) => {
     let entries
     try {
-      entries = fs.readdirSync(dir, { withFileTypes: true })
+      entries = readdirSync(dir, { withFileTypes: true })
     } catch {
       return
     }
@@ -211,7 +214,7 @@ function blockFiles(root) {
   const walk = dir => {
     let entries
     try {
-      entries = fs.readdirSync(dir, { withFileTypes: true })
+      entries = readdirSync(dir, { withFileTypes: true })
     } catch {
       return
     }
@@ -340,7 +343,7 @@ export async function findQueryHooksInProject(projectRoot) {
 
 function localPlugins(projectRoot) {
   try {
-    return fs.readdirSync(path.join(projectRoot, 'plugins'), { withFileTypes: true }).filter(entry => entry.isDirectory() && !entry.name.startsWith('.')).map(entry => ({ name: entry.name, root: path.join(projectRoot, 'plugins', entry.name), importBase: `@/plugins/${entry.name}` }))
+    return readdirSync(path.join(projectRoot, 'plugins'), { withFileTypes: true }).filter(entry => entry.isDirectory() && !entry.name.startsWith('.')).map(entry => ({ name: entry.name, root: path.join(projectRoot, 'plugins', entry.name), importBase: `@/plugins/${entry.name}` }))
   } catch {
     return []
   }
