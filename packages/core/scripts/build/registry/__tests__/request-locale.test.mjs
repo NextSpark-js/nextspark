@@ -56,3 +56,15 @@ test('the generated file holds the two settings, and says the public pages keep 
   assert.match(generateRequestLocale({ auth: false, public: true }, true), /REQUEST_LOCALE_PUBLIC: boolean = true\nexport const PUBLIC_IN_DEFAULT_LOCALE: boolean = false/)
   assert.match(generateRequestLocale(OFF, false), /PUBLIC_IN_DEFAULT_LOCALE: boolean = false/)
 })
+
+test('true as const is accepted, a variable is ignored, and a spread or a quoted key stops the generation', () => {
+  assert.deepEqual(read(`export const APP_CONFIG_OVERRIDES = { i18n: { requestLocale: { auth: true as const, public: false as const } } }`), { auth: true, public: false })
+  assert.deepEqual(read(`const shared = { auth: true }\nexport const APP_CONFIG_OVERRIDES = { i18n: { requestLocale: shared } }`), OFF)
+  assert.throws(() => read(`export const APP_CONFIG_OVERRIDES = { i18n: { requestLocale: { ...R } } }`), /cannot read/)
+  assert.throws(() => read(`export const APP_CONFIG_OVERRIDES = { i18n: { requestLocale: { 'auth': true } } }`), /cannot read/)
+})
+
+test('requestLocale is read inside the i18n block, not elsewhere in the file', () => {
+  assert.deepEqual(read(`export const APP_CONFIG_OVERRIDES = { other: { requestLocale: { auth: true } }, i18n: { defaultLocale: 'en' } }`), OFF)
+  assert.deepEqual(read(`export const APP_CONFIG_OVERRIDES = { i18n: { cookie: { a: 1 }, requestLocale: { public: true } }, other: { requestLocale: { auth: true } } }`), { auth: false, public: true })
+})

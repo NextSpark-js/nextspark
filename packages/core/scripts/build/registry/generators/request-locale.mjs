@@ -32,9 +32,11 @@ function scan(source) {
 
 /**
  * `i18n.requestLocale` of the project's config/app.config.ts: `{ auth, public }`, both false without the file or the setting.
- * Only the literal form `requestLocale: { auth: true, public: false }` is read (a spread, a variable or quoted keys give
- * false). In that form a group's value that is not the literal `true` or `false`, or a key that is not `auth` or
- * `public`, stops the generation with an error.
+ * Only the literal form `requestLocale: { auth: true, public: false }` is read, inside the `i18n: { … }` block (a
+ * `requestLocale` elsewhere in the file does not count; `true as const` is accepted). A variable (`requestLocale: shared`)
+ * is not read and gives false (development warns when the merged config says otherwise). Inside the braces, a value that
+ * is not the literal `true` or `false`, a key that is not `auth` or `public`, a quoted key and a spread stop the generation
+ * with an error. The `i18n` block is found by its first `i18n: {` and brace matching, so a nested `i18n` key is not told apart.
  *
  * @param {string} projectRoot
  * @returns {{ auth: boolean, public: boolean }}
@@ -44,7 +46,17 @@ export function readRequestLocale(projectRoot) {
   const appConfigPath = join(projectRoot, 'config', 'app.config.ts')
   if (!existsSync(appConfigPath)) return result
   const { code, inString } = scan(readFileSync(appConfigPath, 'utf8'))
-  const match = [...code.matchAll(/\brequestLocale\s*:\s*\{([^{}]*)\}/g)].find(found => !inString(found.index))
+  const open = [...code.matchAll(/\bi18n\s*:\s*\{/g)].find(found => !inString(found.index))
+  if (!open) return result
+  let depth = 0
+  let end = code.length
+  for (let i = open.index + open[0].length - 1; i < code.length; i++) {
+    if (inString(i)) continue
+    if (code[i] === '{') depth++
+    else if (code[i] === '}' && --depth === 0) { end = i; break }
+  }
+  const block = code.slice(open.index, end)
+  const match = [...block.matchAll(/\brequestLocale\s*:\s*\{([^{}]*)\}/g)].find(found => !inString(open.index + found.index))
   if (!match) return result
   for (const entry of match[1].split(',').map(part => part.trim()).filter(Boolean)) {
     const pair = entry.match(/^(\w+)\s*:\s*(.+)$/)
@@ -52,7 +64,7 @@ export function readRequestLocale(projectRoot) {
     if (!key || !GROUPS.includes(key)) {
       throw new Error(`i18n.requestLocale in config/app.config.ts has ${key ? `an unknown group "${key}"` : `an entry it cannot read ("${entry}")`} (expected ${GROUPS.join(' and ')}): it is read when the registries are generated`)
     }
-    const value = pair[2].trim()
+    const value = pair[2].trim().replace(/\s+as\s+const$/, '')
     if (value !== 'true' && value !== 'false') {
       throw new Error(`i18n.requestLocale.${key} in config/app.config.ts must be the literal true or false (found ${value}): it is read when the registries are generated`)
     }

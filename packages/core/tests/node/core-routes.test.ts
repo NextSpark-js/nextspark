@@ -289,6 +289,16 @@ test('i18n.requestLocale picks the auth and public wrappers from a literal the r
   // the wrappers of the other groups are untouched
   assert.match(groups, /export const withDevtoolsMessages = staticMessagesWrapper\('devtools'\)/)
   assert.match(groups, /export const withDashboardMessages = requestMessagesWrapper\('dashboard'\)/)
+  // dashboard and superadmin keep their plugin and entity namespaces; only auth and public pass none
+  assert.match(groups, /extraNamespaces=\{toRequest \? \[\] : configured\[group\]\}/)
+  assert.match(groups, /const toRequest = group === 'auth' \|\| group === 'public'/)
+})
+
+test('the starter home page asks for its messages with getPublicTranslations, so it agrees with the public layout (#390)', () => {
+  const home = fs.readFileSync(path.join(ROUTES, '../../templates/projects/starter/templates/(public)/page.tsx'), 'utf8')
+  assert.match(home, /@nextsparkjs\/core\/lib\/i18n\/public-translations/)
+  assert.doesNotMatch(home, /\bgetTranslations\(/)
+  assert.equal([...home.matchAll(/getPublicTranslations\('home'\)/g)].length, 2, 'the metadata and the page')
 })
 
 /**
