@@ -281,6 +281,16 @@ test('the Cache Components root layout puts the page behind Suspense and the gro
   assert.match(groups, /DynamicMarker/, 'the request-messages wrappers declare their area request-time')
 })
 
+test('i18n.requestLocale picks the auth and public wrappers from a literal the registry generates, and the off branch is the static wrapper (#390)', () => {
+  const groups = fs.readFileSync(path.join(ROUTES, '_internal/group-layouts.cc.tsx'), 'utf8')
+  assert.match(groups, /from '@nextsparkjs\/registries\/request-locale'/)
+  assert.match(groups, /export const withAuthMessages = REQUEST_LOCALE_AUTH \? requestOrStaticWrapper\('auth'\) : staticMessagesWrapper\('auth'\)/)
+  assert.match(groups, /export const withPublicMessages = REQUEST_LOCALE_PUBLIC \? requestOrStaticWrapper\('public'\) : staticMessagesWrapper\('public'\)/)
+  // the wrappers of the other groups are untouched
+  assert.match(groups, /export const withDevtoolsMessages = staticMessagesWrapper\('devtools'\)/)
+  assert.match(groups, /export const withDashboardMessages = requestMessagesWrapper\('dashboard'\)/)
+})
+
 /**
  * A project that overrides the public or auth layout is composed with these modules (and gets its fallback metadata from
  * them): every client component they reach, even one the override never renders, ships on every route of the group. So they

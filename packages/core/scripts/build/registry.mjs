@@ -65,9 +65,10 @@ import { generateBlockRegistry, generateBlockRegistryClient, generateBlockRegist
 import { generateIconRegistry } from './registry/generators/icon-registry.mjs'
 import { generateMiddlewareRegistry } from './registry/generators/middleware-registry.mjs'
 import { generateRouteHandlersRegistry } from './registry/generators/route-handlers.mjs'
-import { generateTranslationRegistry } from './registry/generators/translation-registry.mjs'
+import { generateTranslationRegistry, detectPPREnabled } from './registry/generators/translation-registry.mjs'
 import { generateScopeRegistry } from './registry/generators/scope-registry.mjs'
 import { readProvidersScope, generateProvidersScope, generateRootProviders } from './registry/generators/root-providers.mjs'
+import { readRequestLocale, generateRequestLocale } from './registry/generators/request-locale.mjs'
 import { generateNamespaceRegistry } from './registry/generators/namespace-registry.mjs'
 import { generateBillingRegistry } from './registry/generators/billing-registry.mjs'
 import { generateUnifiedRegistry } from './registry/generators/unified-registry.mjs'
@@ -100,6 +101,8 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, middlewa
 
     // `providers.scope` of app.config, which decides what root-providers.ts exports
     const providersScope = readProvidersScope(CONFIG.projectRoot)
+    // `i18n.requestLocale` of app.config: which route groups render in the request's locale
+    const requestLocale = readRequestLocale(CONFIG.projectRoot)
 
     // Each registry takes only the plugins that declare its surface: the server registries the
     // 'server' plugins, the client registry the 'web' ones (a build-only or mobile-only plugin is in neither).
@@ -121,6 +124,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, middlewa
       { name: 'dev-keyring.client.ts', content: generateDevKeyringClient(themes, CONFIG) },
       { name: 'providers-scope.ts', content: generateProvidersScope(providersScope) },
       { name: 'root-providers.ts', content: generateRootProviders(providersScope, CONFIG) },
+      { name: 'request-locale.ts', content: generateRequestLocale(requestLocale, detectPPREnabled(CONFIG.projectRoot)) },
       { name: 'route-handlers.ts', content: generateRouteHandlersRegistry(serverPlugins, themes, coreRoutes, entities) },
       { name: 'translation-registry.ts', content: generateTranslationRegistry(themes, CONFIG) },
       { name: 'email-registry.ts', content: generateEmailRegistry(emails, CONFIG) },

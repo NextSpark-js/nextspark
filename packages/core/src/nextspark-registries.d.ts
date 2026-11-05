@@ -465,6 +465,15 @@ declare module '@nextsparkjs/registries/providers-scope' {
   export const PROVIDERS_SCOPE: 'root' | 'groups'
 }
 
+declare module '@nextsparkjs/registries/request-locale' {
+  /** `i18n.requestLocale.auth`: the `(auth)` group renders in the request's locale. */
+  export const REQUEST_LOCALE_AUTH: boolean
+  /** `i18n.requestLocale.public`: the `(public)` group renders in the request's locale. */
+  export const REQUEST_LOCALE_PUBLIC: boolean
+  /** A Cache Components host whose `(public)` group keeps the default locale. */
+  export const PUBLIC_IN_DEFAULT_LOCALE: boolean
+}
+
 declare module '@nextsparkjs/registries/root-providers' {
   export const RootQueryProvider: typeof import('@nextsparkjs/core/providers/query-provider').QueryProvider | null
   export const RootToaster: typeof import('@nextsparkjs/core/components/ui/sonner').Toaster | null

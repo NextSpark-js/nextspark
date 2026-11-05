@@ -372,7 +372,72 @@ With none of `'cookie'`, `'user_database'` and `'header'` (for example `['defaul
 
 Only an array counts: any other value is ignored (every source stays on) and warns in development, as does a name that is not a source.
 
-**Prerendered pages.** With `cacheComponents: true` (the starter's default) the root layout is the static one: public pages such as `/login` are prerendered with `<html lang>` and their messages set to `defaultLocale`, so no per-request detection runs there and the strategy does not apply to them. It applies to the dynamic root layout (`cacheComponents: false`) and to pages that already read the request.
+**Prerendered pages.** With `cacheComponents: true` (the starter's default) the root layout is the static one: public pages such as `/login` are prerendered with `<html lang>` and their messages set to `defaultLocale`, so no per-request detection runs there and the strategy does not apply to them. It applies to the dynamic root layout (`cacheComponents: false`), to the dashboard and superadmin areas, and to pages that already read the request. The next section is how to get the request's language on `/login` and the public pages.
+
+### The language of the prerendered pages (Cache Components)
+
+With Cache Components the `(auth)` and `(public)` route groups provide the messages of `defaultLocale`, fixed when the app is built. Their pages are prerendered, a CDN can serve them, and every visitor reads them in the default language, whatever the device asks for. A product with several `supportedLocales` has four ways to decide this, from the cheapest to the most expensive.
+
+**1. Leave it as it is.** Nothing to configure. Right for a product whose sign-in and landing pages are in one language, with the translated experience behind the sign-in.
+
+**2. Fix the language: `detectionStrategy: ['default']`.** The app renders `defaultLocale` for every request and reads nothing from it, in the dashboard too. Every page stays prerendered. Cost: no visitor gets another language.
+
+**3. `i18n.requestLocale`: the request's language on a route group.**
+
+```typescript
+// config/app.config.ts
+export const APP_CONFIG_OVERRIDES = {
+  i18n: {
+    supportedLocales: ['en', 'es', 'fr'],
+    defaultLocale: 'en',
+    requestLocale: { auth: true, public: false },
+  },
+}
+```
+
+| Setting | Effect |
+|---|---|
+| unset, or `false` | The group keeps the messages of `defaultLocale`; its pages are prerendered, exactly as without the setting |
+| `auth: true` | `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/verify-email` and the other pages of `(auth)` render in the request's language |
+| `public: true` | The home page, the public docs, the blog and the rest of `(public)` render in the request's language, navbar and footer included |
+
+Each group is set on its own. The language is the one `detectionStrategy` allows, in the usual order (cookie, the signed-in user's language, `Accept-Language`, `defaultLocale`); a visitor with no session cookie causes no database read.
+
+What it costs:
+
+- The pages of the group stop being fully prerendered. The build marks them `◐` (partial prerender): the HTML that is served at once is a skeleton, and the page's content is produced on each request and streamed in. The route's JavaScript does not grow in a way you can measure (a few bytes in the starter), but the content is no longer a static file, so a CDN cannot answer it by itself.
+- For `public`, that includes pages whose content comes from a database or a CMS: they are rendered on each request. A product that wants its public pages static, or served by a CDN, leaves `public` off and sets `auth` only.
+- `<html lang>` stays `defaultLocale` (it is part of the static root layout). The group's content is wrapped in an element with the request's `lang`, which screen readers and spell checkers follow. The page's URL is the same in every language, so this is not multilingual SEO.
+- The server components of the `(public)` pages must read the same language as the layout. Use `getPublicTranslations('namespace')` from `@nextsparkjs/core/lib/i18n/public-translations` instead of `getTranslations`: it follows the setting, so a page never shows the navbar in one language and its body in another. The starter's home page and core's public docs page use it.
+
+The setting has no effect when the locale is fixed (one supported locale, `localeDetection: false`, or no detection source): there is no language to read, so the pages stay prerendered, and development builds say so. It is read from `config/app.config.ts` as text when the registries are generated, like `providers.scope`, so write it as the literal `requestLocale: { auth: true }`; a value that is not `true` or `false`, or a group other than `auth` and `public`, stops the generation with an error, and a spread or a variable is ignored (development warns when the merged config and the registry disagree). It applies to Cache Components; the dynamic root layout (`cacheComponents: false`) already renders the request's language everywhere.
+
+A good rule: a SaaS whose sign-in and landing pages are read by visitors in several languages turns `auth` (and probably `public`) on, and pays the per-request render; a static landing page, or a site whose content comes from a database and sits behind a CDN, keeps `public` off.
+
+**4. Your own layout for one group.** A project that overrides `(auth)/layout.tsx` (or `(public)/layout.tsx`) can provide the request's messages itself, for one route or one part of a page, and leave the rest prerendered. Core still wraps the override with the default-language messages; the override puts its own provider inside, behind `Suspense`:
+
+```tsx
+// templates/(auth)/layout.tsx
+import { Suspense, type ReactNode } from 'react'
+import { NextIntlClientProvider } from 'next-intl'
+import { getMessages } from 'next-intl/server'
+
+async function RequestMessages({ children }: { children: ReactNode }) {
+  return <NextIntlClientProvider messages={await getMessages()}>{children}</NextIntlClientProvider>
+}
+
+export default function AuthLayout({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={null}>
+      <RequestMessages>{children}</RequestMessages>
+    </Suspense>
+  )
+}
+```
+
+Cost: the same per-request render as the setting, for the whole subtree you wrap, and the code is yours to keep in step with the namespaces the group needs (pass only those, as `selectMessages` does in core, or the page ships every message).
+
+**URLs with a language prefix (`/es/login`) are not supported.** Putting the language in the URL means moving the whole public tree under a `[locale]` segment: the project's public entity routes (`/[slug]`, `/[entity]`) collide with a dynamic first segment, every link written by hand and every address in an email or an OAuth callback changes, and so do the proxy's redirects and the sitemap. It would also be a new URL for every page of an existing project. The root layout would still need a different structure to set `<html lang>` per language. For that reason it is not offered as a setting; a product that needs one URL per language for search engines has to build that routing itself.
 
 ### Setting User Locale
 

@@ -1,12 +1,14 @@
 import type { ComponentType, ReactNode } from 'react'
 import { Suspense } from 'react'
 import { NextIntlClientProvider } from 'next-intl'
-import { getMessages } from 'next-intl/server'
+import { getLocale, getMessages } from 'next-intl/server'
 import { connection } from 'next/server'
 import { StaticIntlProvider } from '@nextsparkjs/core/providers/static-intl-provider'
 import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
+import { checkRequestLocale, isLocaleFixedFor } from '@nextsparkjs/core/lib/config/locale-detection'
 import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
+import { REQUEST_LOCALE_AUTH, REQUEST_LOCALE_PUBLIC } from '@nextsparkjs/registries/request-locale'
 import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/translation-registry'
 
 /**
@@ -21,6 +23,11 @@ import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/transla
  * - `dashboard` and `superadmin` also need the plugin and entity messages, and the signed-in
  *   user's locale: the wrapper loads them inside a Suspense boundary, so the page's shell is
  *   prerendered and the messages stream in with the request.
+ *
+ * `i18n.requestLocale` turns `(auth)` and `(public)` to the second shape (the registry holds the setting as a literal,
+ * so a project that leaves it off keeps the static wrappers and their prerender): the group's messages are those of the
+ * request's locale, and its content sits in a `<div lang>` of that locale, since `<html lang>` stays the default's. The
+ * setting has no effect when the app's locale is fixed.
  *
  * The static wrappers also put the group's pages behind a Suspense boundary, inside the layout: a page that
  * reads `params`, `searchParams`, cookies or headers (a project's too) then streams in while the layout
@@ -57,25 +64,29 @@ async function DynamicMarker() {
   return null
 }
 
-async function RequestMessages({ group, extraNamespaces, children }: LayoutProps & { group: 'dashboard' | 'superadmin'; extraNamespaces: readonly string[] }) {
+async function RequestMessages({ group, extraNamespaces, markLanguage, children }: LayoutProps & { group: 'auth' | 'public' | 'dashboard' | 'superadmin'; extraNamespaces: readonly string[]; markLanguage?: boolean }) {
   const messages = await getMessages()
-  return (
+  const provider = (
     <NextIntlClientProvider messages={selectMessages(messages, group, extraNamespaces)}>
       {children}
     </NextIntlClientProvider>
   )
+  if (!markLanguage) return provider
+  // `display: contents`: the element takes no part in the layout of the group's pages
+  return <div lang={await getLocale()} style={{ display: 'contents' }}>{provider}</div>
 }
 
-function requestMessagesWrapper(group: 'dashboard' | 'superadmin') {
+function requestMessagesWrapper(group: 'auth' | 'public' | 'dashboard' | 'superadmin') {
   return <P extends LayoutProps>(ResolvedLayout: ComponentType<P>) =>
     function LayoutWithRequestMessages(props: P) {
       const configured = getConfiguredClientNamespaces({ entityRegistry: ENTITY_REGISTRY, appConfig: APP_CONFIG_MERGED })
+      const toRequest = group === 'auth' || group === 'public'
       return (
         <Suspense fallback={null}>
           <Suspense>
             <DynamicMarker />
           </Suspense>
-          <RequestMessages group={group} extraNamespaces={configured[group]}>
+          <RequestMessages group={group} extraNamespaces={toRequest ? [] : configured[group]} markLanguage={toRequest}>
             <ResolvedLayout {...props} />
           </RequestMessages>
         </Suspense>
@@ -83,8 +94,18 @@ function requestMessagesWrapper(group: 'dashboard' | 'superadmin') {
     }
 }
 
-export const withAuthMessages = staticMessagesWrapper('auth')
-export const withPublicMessages = staticMessagesWrapper('public')
+/**
+ * The wrapper of `(auth)` or `(public)` once `i18n.requestLocale` has turned it on (the registry's literal): the request's
+ * locale, or the default locale's static messages when the app's locale is fixed, as it would be without the setting.
+ */
+function requestOrStaticWrapper(group: 'auth' | 'public') {
+  return isLocaleFixedFor(APP_CONFIG_MERGED.i18n) ? staticMessagesWrapper(group) : requestMessagesWrapper(group)
+}
+
+checkRequestLocale(APP_CONFIG_MERGED.i18n, { auth: REQUEST_LOCALE_AUTH, public: REQUEST_LOCALE_PUBLIC })
+
+export const withAuthMessages = REQUEST_LOCALE_AUTH ? requestOrStaticWrapper('auth') : staticMessagesWrapper('auth')
+export const withPublicMessages = REQUEST_LOCALE_PUBLIC ? requestOrStaticWrapper('public') : staticMessagesWrapper('public')
 export const withDevtoolsMessages = staticMessagesWrapper('devtools')
 export const withSuperadminMessages = requestMessagesWrapper('superadmin')
 export const withDashboardMessages = requestMessagesWrapper('dashboard')

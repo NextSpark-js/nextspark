@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`i18n.requestLocale` renders the sign-in pages (`auth`) and the public pages (`public`) in the visitor's language with Cache Components.** Those two groups provide the default language's messages, fixed at build time, so `/login` and the public pages were prerendered in one language whatever the device asked for. `requestLocale: { auth: true, public: false }` turns each group on its own to the language of the request (cookie, account language, `Accept-Language`, as `detectionStrategy` allows), with the content in an element with the right `lang` and `<html lang>` unchanged. The setting is read from `config/app.config.ts` when the registries are generated, so a project that leaves it off ships and prerenders exactly what it did; with it on the group becomes a partial prerender (a skeleton, then the content per request). It has no effect when the locale is fixed. The i18n setup page explains the cost, the alternatives (a fixed language, a layout of the project's own) and why URLs with a language prefix are not supported (#390).
+
 ### Fixed
 
 - **A project the wizard creates no longer starts below the ranges core declares.** The wizard wrote its own copy of the ranges, and several were behind core's (`@hookform/resolvers`, `@tanstack/react-query`, `lucide-react`, `react-hook-form`, `sonner` and `tailwind-merge`, the last two a major version; `jiti` too when `nextspark init` ran without create-nextspark-app), so the first `update-core` listed them under "Not moved". For every dependency it shares with `@nextsparkjs/core`, the wizard now takes the range from the `package.json` of the core it installed, unless its own vetted floor is higher (`next-intl`). The dependencies core does not declare keep the wizard's range, and which packages a project gets is unchanged. A project created earlier keeps its ranges: `update-core` lists them as before. (#397)

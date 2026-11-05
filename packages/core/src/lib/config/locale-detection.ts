@@ -14,6 +14,7 @@ interface DetectionConfig {
   supportedLocales: readonly string[]
   localeDetection?: boolean
   detectionStrategy?: unknown
+  requestLocale?: unknown
 }
 
 /**
@@ -48,6 +49,37 @@ export function isLocaleFixedFor(config: DetectionConfig): boolean {
 /** Whether the account's language may be copied to the locale cookie. */
 export function usesAccountLocale(config: DetectionConfig): boolean {
   return !isLocaleFixedFor(config) && isSourceEnabled(config, 'user_database')
+}
+
+const REQUEST_LOCALE_GROUPS = ['auth', 'public'] as const
+
+/**
+ * Development warnings for `i18n.requestLocale` (which route groups render in the request's locale, with Cache
+ * Components). `generated` is what the registry holds, read from the config file as text when the registries are
+ * generated: a value the merged config has and the registry does not is one the generator could not read.
+ */
+export function checkRequestLocale(config: DetectionConfig, generated: Record<(typeof REQUEST_LOCALE_GROUPS)[number], boolean>) {
+  const setting = config.requestLocale
+  if (setting === undefined) return
+  if (typeof setting !== 'object' || setting === null || Array.isArray(setting)) {
+    warnOnce('requestLocaleShape', 'i18n.requestLocale must be an object like { auth: true, public: false }; ignoring it.')
+    return
+  }
+  for (const [key, value] of Object.entries(setting)) {
+    if (!(REQUEST_LOCALE_GROUPS as readonly string[]).includes(key)) {
+      warnOnce(`requestLocale.${key}`, `i18n.requestLocale has an unknown group "${key}" (expected ${REQUEST_LOCALE_GROUPS.join(' and ')}).`)
+    } else if (typeof value !== 'boolean') {
+      warnOnce(`requestLocale.${key}.type`, `i18n.requestLocale.${key} must be true or false (found ${JSON.stringify(value)}); it counts as false.`)
+    }
+  }
+  for (const group of REQUEST_LOCALE_GROUPS) {
+    if ((setting as Record<string, unknown>)[group] !== true) continue
+    if (!generated[group]) {
+      warnOnce(`requestLocale.${group}.registry`, `i18n.requestLocale.${group} is true in the merged config but the generated registry has false: write it as the literal \`requestLocale: { ${group}: true }\` in config/app.config.ts and regenerate the registries.`)
+    } else if (isLocaleFixedFor(config)) {
+      warnOnce(`requestLocale.${group}.fixed`, `i18n.requestLocale.${group} has no effect: the app renders ${'`defaultLocale`'} for every request (one locale, localeDetection: false or no detection source), so the ${group} pages stay prerendered.`)
+    }
+  }
 }
 
 function warnOnce(key: string, message: string) {

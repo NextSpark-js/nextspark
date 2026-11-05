@@ -806,6 +806,15 @@ export interface AppConfig {
      * renders `defaultLocale`.
      */
     detectionStrategy?: readonly LocaleDetectionSource[]
+    /**
+     * Cache Components only. By default the `(auth)` and `(public)` pages render the default locale's
+     * messages and are prerendered, whatever the visitor's language. Set a group to `true` and its pages
+     * render in the request's locale (same order as `detectionStrategy`): the prerendered part is a skeleton,
+     * and the group's content is produced on each request. Each group is set on its own; write it as the literal
+     * `requestLocale: { auth: true }`, since the build reads it from the file's text. No effect when the locale
+     * is fixed. Default: both false.
+     */
+    requestLocale?: { auth?: boolean; public?: boolean }
     cookie: {
       name: string
       maxAge: number
