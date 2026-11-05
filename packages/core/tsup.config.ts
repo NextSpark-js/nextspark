@@ -44,7 +44,7 @@ async function fixEsmImports(dir: string): Promise<void> {
         /(from\s+['"])(\.\.?\/[^'"]+?)(['"])/g,
         (match, prefix, path, suffix) => {
           // Skip if already has extension
-          if (path.endsWith('.js') || path.endsWith('.json') || path.endsWith('.css')) {
+          if (/\.(js|json|css|cjs|mjs)$/.test(path)) {
             return match
           }
 
@@ -65,7 +65,7 @@ async function fixEsmImports(dir: string): Promise<void> {
       content = content.replace(
         /(import\s*\(\s*['"])(\.\.?\/[^'"]+?)(['"]\s*\))/g,
         (match, prefix, path, suffix) => {
-          if (path.endsWith('.js') || path.endsWith('.json') || path.endsWith('.css')) {
+          if (/\.(js|json|css|cjs|mjs)$/.test(path)) {
             return match
           }
 

@@ -187,7 +187,7 @@ async function main() {
       await scanPage(name)
     }
 
-    for (const p of ['/', '/login', '/signup', '/forgot-password', '/docs']) {
+    for (const p of ['/', '/login', '/signup', '/forgot-password', '/docs', '/docs/overview/introduction']) {
       watching = p
       await scan(p, p)
     }
