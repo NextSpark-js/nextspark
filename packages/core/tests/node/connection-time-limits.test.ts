@@ -385,7 +385,7 @@ test('a time-limited client keeps effective limits and an alternate database aft
   // Reply after queryMs. Before #190 the fallback reconstructed from the URL,
   // so it sent statement_timeout=0, queried the URL database and accepted this
   // delayed reply because its query_timeout was also 0.
-  const server = await socketServer(t, { queryReplyDelayMs: 150 })
+  const server = await socketServer(t, { queryReplyDelayMs: 400 })
   const client = timeLimitedClient(
     `postgresql://dbuser@${encodeURIComponent(server.dir)}/url_database?statement_timeout=0&query_timeout=0`,
     { connectMs: 2000, statementMs: 1000, queryMs: 50 },
@@ -446,6 +446,12 @@ test('a TLS error other than pg\'s precise no-SSL response is not retried as pla
   assert.equal(connections, 1, 'only pg\'s exact no-SSL error permits a second connection')
 })
 
+// The proportions carry the test, not the milliseconds: the answer comes well inside the budget, so a slow runner still
+// reaches the retry, and a retry with a new budget ends a whole answer delay later than one sharing it, so a slow
+// runner is not mistaken for one. Each side has several hundred ms of room.
+const BUDGET_MS = 2000
+const NO_SSL_REPLY_MS = 1200
+
 test('the plaintext retry spends the original connectMs budget instead of starting a second one', { timeout: 10000 }, async t => {
   const dir = fs.mkdtempSync(path.join('/tmp', 'pg-ssl-budget-'))
   const sockets = new Set<net.Socket>()
@@ -456,10 +462,10 @@ test('the plaintext retry spends the original connectMs budget instead of starti
     socket.once('data', chunk => {
       if (connections === 1) {
         assert.equal(chunk.readInt32BE(4), 80877103)
-        setTimeout(() => socket.write('N'), 80)
+        setTimeout(() => socket.write('N'), NO_SSL_REPLY_MS)
       }
       // The fallback gets a startup packet but no answer. Its timeout must be
-      // the ~40 ms left, not a fresh 120 ms connection budget.
+      // what is left of the budget, not a fresh one.
     })
   })
   await new Promise<void>(resolve => server.listen(path.join(dir, '.s.PGSQL.5432'), resolve))
@@ -472,11 +478,12 @@ test('the plaintext retry spends the original connectMs budget instead of starti
   const startedAt = performance.now()
   const client = timeLimitedClient(
     `postgresql://dbuser@${encodeURIComponent(dir)}/nextspark_verify`,
-    { connectMs: 120, statementMs: 1000, queryMs: 1000 },
+    { connectMs: BUDGET_MS, statementMs: 1000, queryMs: 1000 },
   )
   await assert.rejects(client.connect(), /timeout expired/)
   assert.equal(connections, 2, 'the no-SSL response does cause exactly one fallback')
-  assert.ok(performance.now() - startedAt < 180, 'the retry must share connectMs rather than receive a new 120 ms budget')
+  const tookMs = performance.now() - startedAt
+  assert.ok(tookMs < BUDGET_MS + NO_SSL_REPLY_MS / 2, `the retry must share connectMs rather than receive a new ${BUDGET_MS} ms budget (took ${Math.round(tookMs)} ms)`)
 })
 
 test('a socket endpoint other than the target is not connected to', { timeout: 10000 }, async t => {

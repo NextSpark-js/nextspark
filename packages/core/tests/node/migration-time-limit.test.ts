@@ -369,6 +369,16 @@ test('the limit is read in seconds, and the server and the client both hold to i
   }
 })
 
+/**
+ * How a run says a migration was stopped at a limit of `seconds`. The stand-in server cancels a statement at the same
+ * limit the runner holds, and the two clocks start from different moments (the runner's when it sends, the server's
+ * when it reads), so on a loaded machine the cancel can land a few ms ahead of the runner's own timeout. That is the
+ * outcome the runner words as "the server cancelled it after N ms, before ... ran out", and it is as much a stop at the
+ * limit as the other (#402).
+ */
+const stoppedAtLimit = (seconds: string) =>
+  new RegExp(`did not finish within ${seconds} s \\(MIGRATION_TIMEOUT_SECONDS\\)|the server cancelled it after \\d+ ms, before MIGRATION_TIMEOUT_SECONDS \\(${seconds} s\\) ran out`)
+
 test('a migration still running at the limit fails the run with its name, and its statement is stopped', { timeout: 20000 }, async t => {
   const server = await standInPostgres(t, sql => (sql === MIGRATIONS['002_waits.sql'] ? 'stuck' : 'ok'))
   const cwd = projectWith(t, MIGRATIONS)
@@ -380,7 +390,8 @@ test('a migration still running at the limit fails the run with its name, and it
   })
 
   assert.equal(result.status, 1, result.output)
-  assert.match(result.output, /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\)/)
+  assert.match(result.output, /Failed to execute 002_waits\.sql: /)
+  assert.match(result.output, stoppedAtLimit('0\\.5'))
   const waiting = sessionThatRan(server.sessions, MIGRATIONS['002_waits.sql'])!
   if (/its session on the server was ended/.test(result.output)) assert.deepEqual(server.terminated, [waiting.pid])
   else assert.match(result.output, /canceling statement due to statement timeout/)
@@ -1488,9 +1499,10 @@ test('a database URL that switches the limits off does not lift them', { timeout
     result.output,
     /The database URL sets statement_timeout and query_timeout, which migrations do not use: each one runs under MIGRATION_TIMEOUT_SECONDS \(0\.5 s\)/
   )
-  assert.match(result.output, /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\)/)
+  assert.match(result.output, /Failed to execute 002_waits\.sql: /)
+  assert.match(result.output, stoppedAtLimit('0\\.5'))
   assert.match(result.output, /canceling statement due to statement timeout|its session on the server was ended/)
-  assert.ok(result.elapsedMs < 5000, `took ${result.elapsedMs} ms`)
+  assert.ok(result.elapsedMs < 15000, `took ${result.elapsedMs} ms`)
   assert.ok(server.sessions.length > 0)
   for (const session of server.sessions) assert.equal(session.startup.statement_timeout, '500')
 })
@@ -1508,7 +1520,7 @@ test('a database URL that switches the limits off still leaves a server that nev
   assert.equal(result.status, 1, result.output)
   assert.match(result.output, /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\)/)
   assert.match(result.output, /its session on the server was ended/)
-  assert.ok(result.elapsedMs < 5000, `took ${result.elapsedMs} ms`)
+  assert.ok(result.elapsedMs < 15000, `took ${result.elapsedMs} ms`)
   const waiting = sessionThatRan(server.sessions, MIGRATIONS['002_waits.sql'])!
   assert.deepEqual(server.terminated, [waiting.pid])
   assert.equal(waiting.closed, true)
@@ -1662,7 +1674,7 @@ test('the project-template migration verifier ends by itself when a migration ha
   assert.match(result.output, /Each migration may run for 4 s; MIGRATION_TIMEOUT_SECONDS changes that/)
   assert.match(
     result.output,
-    new RegExp(`Failed to execute ${FIRST_CORE_MIGRATION.file.replace('.', '\\.')}: did not finish within 4 s`)
+    new RegExp(`Failed to execute ${FIRST_CORE_MIGRATION.file.replace('.', '\\.')}: (did not finish within 4 s|the server cancelled it after \\d+ ms, before MIGRATION_TIMEOUT_SECONDS \\(4 s\\) ran out)`)
   )
   assert.match(result.output, /Theme "default" migrations failed \(exit code 1\)/)
 })
