@@ -149,6 +149,12 @@
       "note": "pageMetadata: title, description, canonical link and Open Graph tags of a public page."
     },
     {
+      "subpath": "./lib/i18n/public-translations",
+      "reason": "template-import",
+      "area": "Utilities",
+      "note": "getPublicTranslations: getTranslations for a server component of a public page, in the language the public layout provides."
+    },
+    {
       "subpath": "./lib/db",
       "reason": "template-import",
       "area": "Data access"

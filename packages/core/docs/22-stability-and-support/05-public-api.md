@@ -92,6 +92,7 @@ The reason in each row is one of `template-import` (a stable template imports it
 | --- | --- |
 | `./lib/utils` | template-import |
 | `./lib/base-path` | template-import |
+| `./lib/i18n/public-translations` | template-import — `getPublicTranslations`: `getTranslations` for a server component of a public page, in the language the public layout provides. |
 | `./lib/seo/page-metadata` | template-import — `pageMetadata`: title, description, canonical link and Open Graph tags of a public page. |
 
 ### Data access
