@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
+import net from 'node:net'
 import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -66,6 +67,23 @@ http.createServer((req, res) => {
 }).listen(port, '127.0.0.1')
 `
 
+// The check starts the app on a port and a stand-in mail server on the next one, so a test takes a free pair at the
+// moment it runs (#402): a fixed port is one another process, or a run still shutting down, may already hold.
+async function freePortPair() {
+  const listen = (server, port) => new Promise((resolve) => { server.once('error', () => resolve(false)); server.listen(port, '127.0.0.1', () => resolve(true)) })
+  const close = (server) => new Promise((resolve) => server.close(resolve))
+  for (;;) {
+    const first = net.createServer()
+    await listen(first, 0)
+    const port = first.address().port
+    const second = net.createServer()
+    const free = port < 65000 && (await listen(second, port + 1))
+    await close(first)
+    if (free) await close(second)
+    if (free) return port
+  }
+}
+
 const script = fileURLToPath(new URL('./auth-runtime-check.mjs', import.meta.url))
 const run = (args, env = {}) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8', env: { ...process.env, ...env } })
 
@@ -82,18 +100,18 @@ test('a missing --app exits 2', () => {
   assert.equal(run([]).status, 2)
 })
 
-test('an --app that is not a built project exits 2', () => {
-  assert.equal(run(['--app', mkdtempSync(path.join(tmpdir(), 'auth-runtime-')), '--port', '39520']).status, 2)
+test('an --app that is not a built project exits 2', async () => {
+  assert.equal(run(['--app', mkdtempSync(path.join(tmpdir(), 'auth-runtime-')), '--port', String(await freePortPair())]).status, 2)
 })
 
-test('a working auth API passes every step', () => {
-  const r = run(['--app', fakeProject(), '--port', '39530', '--allowed-domain', 'example.com'])
+test('a working auth API passes every step', async () => {
+  const r = run(['--app', fakeProject(), '--port', String(await freePortPair()), '--allowed-domain', 'example.com'])
   assert.equal(r.status, 0, r.stderr)
   for (const step of ['otp-send', 'otp-mail', 'otp-verify', 'get-session', 'blocked-domain', 'sign-out', 'rate-limit']) assert.match(r.stdout, new RegExp(`ok   ${step}`))
 })
 
-test('without --allowed-domain the blocked-domain step is skipped, with a note', () => {
-  const r = run(['--app', fakeProject(), '--port', '39540'])
+test('without --allowed-domain the blocked-domain step is skipped, with a note', async () => {
+  const r = run(['--app', fakeProject(), '--port', String(await freePortPair())])
   assert.equal(r.status, 0, r.stderr)
   assert.match(r.stdout, /skip blocked-domain/)
 })
@@ -112,16 +130,16 @@ const BREAKS = [
   ['crash', 'otp-verify'],
   ['hang', 'otp-verify'],
 ]
-BREAKS.forEach(([broken, step], i) => {
-  test(`a break in ${broken} exits 1 and names the step ${step}`, () => {
-    const r = run(['--app', fakeProject(), '--port', String(39560 + i * 2), '--allowed-domain', 'example.com', '--request-timeout', '1500'], { FAKE_BREAK: broken })
+BREAKS.forEach(([broken, step]) => {
+  test(`a break in ${broken} exits 1 and names the step ${step}`, async () => {
+    const r = run(['--app', fakeProject(), '--port', String(await freePortPair()), '--allowed-domain', 'example.com', '--request-timeout', '1500'], { FAKE_BREAK: broken })
     assert.equal(r.status, 1, r.stdout + r.stderr)
     assert.match(r.stderr, new RegExp(`step "${step}" failed`))
   })
 })
 
-test('a failed message never carries the session token', () => {
-  const r = run(['--app', fakeProject(), '--port', '39600', '--allowed-domain', 'example.com'], { FAKE_BREAK: 'sign-out' })
+test('a failed message never carries the session token', async () => {
+  const r = run(['--app', fakeProject(), '--port', String(await freePortPair()), '--allowed-domain', 'example.com'], { FAKE_BREAK: 'sign-out' })
   assert.equal(r.status, 1, r.stdout + r.stderr)
   assert.match(r.stderr, /\[redacted\]/)
   assert.doesNotMatch(r.stdout + r.stderr, /SECRET-TOKEN-VALUE/)

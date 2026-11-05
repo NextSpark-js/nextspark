@@ -49,21 +49,38 @@ test('hydration errors are told apart from other console errors', () => {
 const script = fileURLToPath(new URL('./axe-scan.mjs', import.meta.url))
 const run = (...args) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8' })
 
+// The scan uses a port and the next one for its Resend stand-in, so a test takes a free pair at the moment it runs (#402).
+async function freePortPair() {
+  const listen = (server, port) => new Promise((resolve) => { server.once('error', () => resolve(false)); server.listen(port, '127.0.0.1', () => resolve(true)) })
+  const close = (server) => new Promise((resolve) => server.close(resolve))
+  for (;;) {
+    const first = net.createServer()
+    await listen(first, 0)
+    const port = first.address().port
+    const second = net.createServer()
+    const free = port < 65000 && (await listen(second, port + 1))
+    await close(first)
+    if (free) await close(second)
+    if (free) return port
+  }
+}
+
 test('a missing --app exits 2', () => {
   assert.equal(run().status, 2)
 })
 
-test('an --app that is not a built project exits 2, not 1', () => {
+test('an --app that is not a built project exits 2, not 1', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'axe-scan-'))
-  assert.equal(run('--app', dir, '--port', '39420').status, 2)
+  assert.equal(run('--app', dir, '--port', String(await freePortPair())).status, 2)
 })
 
 test('a busy port for the Resend stand-in exits 2, not 1', async () => {
+  const port = await freePortPair()
   const busy = net.createServer()
-  await new Promise((resolve) => busy.listen(39431, '127.0.0.1', resolve))
+  await new Promise((resolve) => busy.listen(port + 1, '127.0.0.1', resolve))
   try {
     const dir = mkdtempSync(path.join(tmpdir(), 'axe-scan-'))
-    const result = run('--app', dir, '--port', '39430')
+    const result = run('--app', dir, '--port', String(port))
     assert.equal(result.status, 2)
     assert.match(result.stderr, /EADDRINUSE/)
   } finally {
