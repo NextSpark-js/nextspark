@@ -1,4 +1,7 @@
-# Starter Theme Introduction
+---
+title: Starter Theme Introduction
+description: What the starter theme includes and how to begin building on it.
+---
 
 Welcome to the Starter theme for NextSpark. This minimal theme provides everything you need to begin building your application.
 

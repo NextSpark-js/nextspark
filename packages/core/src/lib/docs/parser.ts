@@ -14,12 +14,14 @@ import rehypeShiki from '@shikijs/rehype'
 import rehypeStringify from 'rehype-stringify'
 import { remarkMermaid } from './remark-mermaid'
 import { remarkDocLinks } from './remark-doc-links'
+import { resolveDocTitle } from './utils'
 
 // Re-export utility functions
 export {
   extractOrderFromFilename,
   cleanFilename,
-  slugToTitle
+  slugToTitle,
+  resolveDocTitle
 } from './utils'
 
 /**
@@ -67,7 +69,8 @@ export async function parseMarkdownFile(filePath: string): Promise<{
   html: string
 }> {
   const fileContent = fs.readFileSync(filePath, 'utf-8')
-  const { data, content } = matter(fileContent)
+  const { data, content: rawContent } = matter(fileContent)
+  const { title, content } = resolveDocTitle(data.title, rawContent, filePath)
 
   const processedContent = await remark()
     .use(remarkGfm) // GitHub Flavored Markdown (tables, strikethrough, etc.)
@@ -79,7 +82,7 @@ export async function parseMarkdownFile(filePath: string): Promise<{
     .process(content)
 
   return {
-    metadata: data as DocMetadata,
+    metadata: { ...data, title } as DocMetadata,
     content,
     html: processedContent.toString()
   }

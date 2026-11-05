@@ -16,6 +16,7 @@ import {
   extractOrderFromFilename,
   cleanFilename,
   slugToTitle,
+  resolveDocTitle,
 } from '@/core/lib/docs/utils'
 import type { DocSectionMeta, DocPageMeta } from '@/core/types/docs'
 
@@ -367,5 +368,28 @@ describe('getActiveSection Logic', () => {
     it('should return null for public docs path', () => {
       expect(getActiveSectionSuperadmin('/docs/getting-started')).toBe(null)
     })
+  })
+})
+
+describe('resolveDocTitle (#400)', () => {
+  const file = '/p/docs/public/01-overview/01-introduction.md'
+
+  it('prefers the frontmatter title', () => {
+    expect(resolveDocTitle(' Given ', '# Heading\n', file)).toEqual({ title: 'Given', content: '# Heading\n' })
+  })
+
+  it('takes the first heading and removes it from the body', () => {
+    expect(resolveDocTitle(undefined, '# My `Page`\n\nText\n', file)).toEqual({ title: 'My Page', content: 'Text\n' })
+  })
+
+  it('ignores a # inside a code fence', () => {
+    const body = '```sh\n# not a title\n```\n\n# Real\n'
+    expect(resolveDocTitle(undefined, body, file).title).toBe('Real')
+  })
+
+  it('falls back to the file name, never undefined', () => {
+    expect(resolveDocTitle(undefined, 'No heading', file)).toEqual({ title: 'Introduction', content: 'No heading' })
+    expect(resolveDocTitle('', 'No heading', file).title).toBe('Introduction')
+    expect(resolveDocTitle(42, '## Only h2', file).title).toBe('Introduction')
   })
 })

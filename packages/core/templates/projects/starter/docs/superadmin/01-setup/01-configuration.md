@@ -1,4 +1,7 @@
-# Admin Configuration
+---
+title: Admin Configuration
+description: Configuration options available to administrators.
+---
 
 This guide covers the configuration options available to administrators.
 

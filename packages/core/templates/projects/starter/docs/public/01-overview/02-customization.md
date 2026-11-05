@@ -1,4 +1,7 @@
-# Customizing the Starter Theme
+---
+title: Customizing the Starter Theme
+description: How to adapt the starter theme to your application.
+---
 
 This guide explains how to customize the starter theme for your needs.
 
