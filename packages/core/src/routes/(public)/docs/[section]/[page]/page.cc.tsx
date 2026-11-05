@@ -17,7 +17,7 @@ import { parseMarkdownFile } from '@nextsparkjs/core/lib/docs/parser'
 import { DocsBreadcrumbs } from '@nextsparkjs/core/components/docs/docs-breadcrumbs'
 import { DocsContent } from '@nextsparkjs/core/components/docs/docs-content'
 import { sel } from '@nextsparkjs/core/selectors/public'
-import { getTranslations } from 'next-intl/server'
+import { getPublicTranslations } from '@nextsparkjs/core/lib/i18n/public-translations'
 import { resolveRegistryDoc } from '@nextsparkjs/core/lib/docs/registry-doc'
 import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
 import type { Metadata } from 'next'
@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: DocsPageProps): Promise<Metad
 
 export default async function DocsPage({ params }: DocsPageProps) {
   const { section: sectionSlug, page: pageSlug } = await params
-  const t = await getTranslations('docs')
+  const t = await getPublicTranslations('docs')
 
   const doc = await loadDoc(sectionSlug, pageSlug)
   if (!doc) notFound()

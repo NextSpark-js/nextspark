@@ -1,13 +1,13 @@
 import { Suspense } from 'react'
-import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { SkeletonLandingPage } from '@nextsparkjs/core/components/ui/skeleton-public'
+import { getPublicTranslations } from '@nextsparkjs/core/lib/i18n/public-translations'
 import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
 import type { Metadata } from 'next'
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('home')
+  const t = await getPublicTranslations('home')
   return pageMetadata({ title: t('hero.title'), description: t('hero.subtitle'), path: '/' })
 }
 
@@ -22,7 +22,7 @@ export default function HomePage() {
 }
 
 async function HomeContent() {
-  const t = await getTranslations('home')
+  const t = await getPublicTranslations('home')
 
   return (
     <div className="flex min-h-screen flex-col" data-cy="home-page">
