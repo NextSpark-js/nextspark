@@ -694,7 +694,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                               e.stopPropagation()
                               toggleOne(item.id, rowIndex, e.shiftKey)
                             }}
-                            aria-label={selectRowText.replace('{n}', String(rowIndex + 1))}
+                            aria-label={selectRowText.replace('{n}', () => String(rowIndex + 1))}
                             data-cy={sel('entities.list.table.row.checkbox', { slug, id: item.id })}
                           />
                         </TableCell>

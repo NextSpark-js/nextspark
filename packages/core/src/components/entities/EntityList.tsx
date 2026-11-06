@@ -409,7 +409,7 @@ export function EntityList({
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={(checked: boolean | 'indeterminate') => handleRowSelect(itemId, !!checked)}
-                          aria-label={selectRowText.replace('{n}', String(itemId))}
+                          aria-label={selectRowText.replace('{n}', () => String(itemId))}
                         />
                       </TableCell>
                     )}

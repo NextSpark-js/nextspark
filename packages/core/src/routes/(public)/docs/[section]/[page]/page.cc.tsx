@@ -75,6 +75,7 @@ export async function generateMetadata({ params }: DocsPageProps): Promise<Metad
 export default async function DocsPage({ params }: DocsPageProps) {
   const { section: sectionSlug, page: pageSlug } = await params
   const t = await getPublicTranslations('docs')
+  const tCommon = await getPublicTranslations('common')
 
   const doc = await loadDoc(sectionSlug, pageSlug)
   if (!doc) notFound()
@@ -83,6 +84,7 @@ export default async function DocsPage({ params }: DocsPageProps) {
   return (
     <div className="max-w-4xl" data-cy={sel('public.docs.pageDetail')}>
       <DocsBreadcrumbs
+        label={tCommon('a11y.breadcrumb')}
         items={[
           { label: t('breadcrumbs.home'), href: '/docs' },
           { label: doc.sectionTitle },

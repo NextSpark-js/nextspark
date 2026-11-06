@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
-import { getTranslations } from 'next-intl/server'
 
 export interface BreadcrumbItem {
   label: string
@@ -9,13 +8,14 @@ export interface BreadcrumbItem {
 
 interface DocsBreadcrumbsProps {
   items: BreadcrumbItem[]
+  /** The accessible name of the nav, in the language of the page. */
+  label?: string
 }
 
-export async function DocsBreadcrumbs({ items }: DocsBreadcrumbsProps) {
-  const t = await getTranslations('common')
+export function DocsBreadcrumbs({ items, label = 'Breadcrumb' }: DocsBreadcrumbsProps) {
   return (
     <nav
-      aria-label={t('a11y.breadcrumb')}
+      aria-label={label}
       className="flex items-center space-x-2 text-sm"
       data-cy="docs-breadcrumbs"
     >

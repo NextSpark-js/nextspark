@@ -5,6 +5,7 @@ import { DocsBreadcrumbs } from '@nextsparkjs/core/components/docs/docs-breadcru
 import { DocsContent } from '@nextsparkjs/core/components/docs/docs-content'
 import { sel } from '@nextsparkjs/core/selectors/public'
 import { getTranslations } from 'next-intl/server'
+import { getPublicTranslations } from '@nextsparkjs/core/lib/i18n/public-translations'
 import path from 'path'
 import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
 import type { Metadata } from 'next'
@@ -67,6 +68,7 @@ export default async function DocsPage({ params }: DocsPageProps) {
   const resolvedParams = await params
   const { section: sectionSlug, page: pageSlug } = resolvedParams
   const t = await getTranslations('docs')
+  const tCommon = await getPublicTranslations('common')
 
   // Find section in public docs
   const section = DOCS_REGISTRY.public.find(s => s.slug === sectionSlug)
@@ -83,6 +85,7 @@ export default async function DocsPage({ params }: DocsPageProps) {
   return (
     <div className="max-w-4xl" data-cy={sel('public.docs.pageDetail')}>
       <DocsBreadcrumbs
+        label={tCommon('a11y.breadcrumb')}
         items={[
           { label: t('breadcrumbs.home'), href: '/docs' },
           { label: section.title },

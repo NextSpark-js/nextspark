@@ -176,7 +176,7 @@ export function MultiSelectFilter({
                 type="button"
                 onClick={(e) => handleRemove(option.value, e)}
                 className="hover:bg-primary/20 rounded-sm p-0.5 transition-colors"
-                aria-label={removeItemText.replace('{name}', option.label)}
+                aria-label={removeItemText.replace('{name}', () => option.label)}
                 data-cy={`${dataCy}-remove-${option.value}`}
               >
                 <X className="h-3 w-3" />
@@ -193,7 +193,7 @@ export function MultiSelectFilter({
               'text-xs text-muted-foreground hover:text-foreground',
               'px-1.5 py-1 transition-colors'
             )}
-            aria-label={clearFilterText.replace('{name}', label)}
+            aria-label={clearFilterText.replace('{name}', () => label)}
             data-cy={`${dataCy}-clear-all`}
           >
             {clearLabel}

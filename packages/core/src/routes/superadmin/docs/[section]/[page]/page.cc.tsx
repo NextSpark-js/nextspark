@@ -15,6 +15,7 @@
 import { notFound } from 'next/navigation'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { parseMarkdownFile } from '@nextsparkjs/core/lib/docs/parser'
+import { getTranslations } from 'next-intl/server'
 import { DocsBreadcrumbs } from '@nextsparkjs/core/components/docs/docs-breadcrumbs'
 import { DocsContent } from '@nextsparkjs/core/components/docs/docs-content'
 import { requireAreaAccess } from '../../../../_internal/area-access'
@@ -72,6 +73,7 @@ export default async function SuperadminDocsDetailPage({ params }: SuperadminDoc
   const doc = await loadDoc(sectionSlug, pageSlug)
   if (!doc) notFound()
   const { metadata, html } = doc
+  const tCommon = await getTranslations('common')
 
   return (
     <div className="flex gap-8" data-cy="superadmin-docs-page">
@@ -81,6 +83,7 @@ export default async function SuperadminDocsDetailPage({ params }: SuperadminDoc
 
       <div className="flex-1 max-w-4xl">
         <DocsBreadcrumbs
+          label={tCommon('a11y.breadcrumb')}
           items={[
             { label: 'Super Admin', href: '/superadmin' },
             { label: 'Documentation', href: '/superadmin/docs' },
