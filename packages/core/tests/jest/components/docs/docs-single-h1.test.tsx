@@ -38,11 +38,16 @@ describe('layouts of core', () => {
     'components/docs/docs-layout.tsx',
     'routes/_internal/superadmin-layout.tsx',
     'routes/dashboard/settings/layout.tsx',
+    'components/devtools/DevtoolsMobileHeader.tsx',
     'routes/layout.tsx',
     'routes/layout.ppr.tsx',
   ]
   test.each(layouts)('%s renders no <h1>', (file) => {
     expect(fs.readFileSync(path.join(srcRoot, file), 'utf8')).not.toMatch(/<h1[\s>]/)
   })
-  // routes/_internal/default-auth-layout.tsx keeps its <h1> (the app name): the auth pages use no <h1> of their own
+  // routes/_internal/default-auth-layout.tsx keeps its <h1> (the app name), so the auth pages use no <h1> of their own:
+  // the success title of forgot-password and reset-password is an <h2>
+  test.each(['routes/(auth)/forgot-password/page.tsx', 'routes/(auth)/reset-password/page.tsx'])('%s renders no <h1>', (file) => {
+    expect(fs.readFileSync(path.join(srcRoot, file), 'utf8')).not.toMatch(/<h1[\s>]/)
+  })
 })

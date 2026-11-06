@@ -127,7 +127,7 @@ function ForgotPasswordPage() {
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold">{t('forgotPassword.success.title')}</h1>
+              <h2 className="text-2xl font-bold">{t('forgotPassword.success.title')}</h2>
               <p className="text-muted-foreground">
                 {t('forgotPassword.success.description')} <strong>{email}</strong>
               </p>

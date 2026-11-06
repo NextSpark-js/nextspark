@@ -99,7 +99,7 @@ function ResetPasswordContent() {
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold">{t("successTitle")}</h1>
+              <h2 className="text-2xl font-bold">{t("successTitle")}</h2>
               <p className="text-muted-foreground">
                 {t("successDescription")}
               </p>

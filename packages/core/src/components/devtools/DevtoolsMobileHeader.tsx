@@ -18,7 +18,7 @@ export function DevtoolsMobileHeader() {
           <div className="h-5 w-5 bg-violet-600 dark:bg-violet-400 rounded-sm"></div>
         </div>
         <div>
-          <h1 className="text-lg font-bold text-violet-600 dark:text-violet-400">{t('title')}</h1>
+          <p className="text-lg font-bold text-violet-600 dark:text-violet-400">{t('title')}</p>
           <p className="text-xs text-muted-foreground">{t('subtitle')}</p>
         </div>
       </div>
