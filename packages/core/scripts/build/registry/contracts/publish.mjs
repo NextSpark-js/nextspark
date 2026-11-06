@@ -183,6 +183,7 @@ export function checkContracts({ root, files }) {
     else if (disk.state === 'not-a-file') problems.push({ state: 'foreign', path: file.path, detail: 'is not a regular file' })
     else if (disk.content !== file.content) problems.push({ state: owned[file.path] ? 'stale' : 'foreign', path: file.path, detail: owned[file.path] ? 'differs from what nextspark prepare generates' : 'exists and nextspark prepare did not write it' })
     else if (!owned[file.path]) problems.push({ state: 'stale', path: CONTRACTS_GENERATION_FILE, detail: `does not record ${file.path}` })
+    else if (owned[file.path] !== sha256(file.content)) problems.push({ state: 'stale', path: CONTRACTS_GENERATION_FILE, detail: `records an outdated hash for ${file.path}; run nextspark prepare to refresh the record` })
   }
   for (const path of Object.keys(owned)) {
     if (!targets.has(path) && diskState(root, path).state !== 'missing') problems.push({ state: 'stale', path, detail: 'is a generated file no entity produces any more' })

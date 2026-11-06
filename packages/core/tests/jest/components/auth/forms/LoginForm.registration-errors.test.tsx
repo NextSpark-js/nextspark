@@ -53,7 +53,6 @@ jest.mock('next/link', () => ({
 
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string, options?: Record<string, unknown>) => {
-    if (options && typeof options.defaultValue === 'string' && !key.startsWith('login.form')) return options.defaultValue
     if (options && typeof options.email === 'string') return `${key}:${options.email}`
     if (options && typeof options.minutes === 'number') return `${key}:${options.minutes}`
     if (options && typeof options.time === 'string') return `${key}:${options.time}`

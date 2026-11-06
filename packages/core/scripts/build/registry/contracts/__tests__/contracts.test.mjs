@@ -519,7 +519,7 @@ test('publishing: only files the record owns are replaced or deleted, a foreign 
     writeFileSync(recordPath, goodRecord.replace(sha(files[0].content), 'f'.repeat(64)))
     const staleHash = checkContracts({ root, files })
     assert.deepEqual(staleHash.problems.map(p => `${p.state} ${p.path}`), ['stale contracts.generation.json'])
-    assert.match(staleHash.problems[0].detail, /nextspark prepare/)
+    assert.match(staleHash.problems[0].detail, /records an outdated hash for src\/index\.ts; run nextspark prepare to refresh the record/)
     // An entry of a file that is gone, another generator and another order of the keys are out of date too
     const record = JSON.parse(goodRecord)
     const variants = {
