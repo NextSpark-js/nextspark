@@ -513,6 +513,17 @@ test('publishing: only files the record owns are replaced or deleted, a foreign 
     assert.deepEqual(readContractsRecord(root).files, { 'src/entities/a.ts': sha(files[1].content), 'src/index.ts': sha(files[0].content) })
     assert.deepEqual(checkContracts({ root, files }), { ok: true, problems: [] })
 
+    // A recorded hash that no longer matches the file is reported, and a CRLF record is still read
+    const recordPath = join(root, 'contracts.generation.json')
+    const goodRecord = readFileSync(recordPath, 'utf8')
+    writeFileSync(recordPath, goodRecord.replace(sha(files[0].content), 'f'.repeat(64)))
+    const staleHash = checkContracts({ root, files })
+    assert.deepEqual(staleHash.problems.map(p => `${p.state} ${p.path}`), ['stale contracts.generation.json'])
+    assert.match(staleHash.problems[0].detail, /src\/index\.ts.*nextspark prepare/)
+    writeFileSync(recordPath, goodRecord.replace(/\n/g, '\r\n'))
+    assert.deepEqual(checkContracts({ root, files }), { ok: true, problems: [] })
+    writeFileSync(recordPath, goodRecord)
+
     // Nothing changed: nothing is touched
     // Whole seconds: a fractional millisecond does not survive utimes/stat on every filesystem
     const past = new Date(Math.floor((Date.now() - 60_000) / 1000) * 1000)
