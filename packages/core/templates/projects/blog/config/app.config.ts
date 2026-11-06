@@ -178,13 +178,6 @@ export const APP_CONFIG_OVERRIDES = {
         icon: 'User',
         enabled: true,
       },
-      {
-        id: 'export',
-        labelKey: 'blog.export',
-        href: '/dashboard/settings/export',
-        icon: 'Download',
-        enabled: true,
-      },
     ],
   },
 

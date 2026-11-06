@@ -1,8 +1,7 @@
 {
   "common": {
     "blog": {
-      "viewBlog": "Ver Blog",
-      "export": "Exportar Posts"
+      "viewBlog": "Ver Blog"
     }
   },
   "blog": {
@@ -75,13 +74,6 @@
       "profileUpdated": "Perfil actualizado exitosamente"
     },
 
-    "export": "Exportar Posts",
-    "import": "Importar Posts",
-    "exportDescription": "Descarga todos tus posts como archivo JSON",
-    "importDescription": "Sube un archivo JSON para importar posts",
-    "exportSuccess": "Posts exportados exitosamente",
-    "importSuccess": "Posts importados exitosamente",
-    "importError": "Error al importar posts",
 
     "quickActions": {
       "writePost": "Escribir un nuevo post"
