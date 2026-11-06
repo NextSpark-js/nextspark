@@ -1,21 +1,4 @@
 {
-  "product": "Produto",
-  "company": "Empresa",
-  "legal": "Legal",
   "resources": "Recursos",
-  "features": "Recursos",
-  "pricing": "Precos",
-  "support": "Suporte",
-  "docs": "Documentacao",
-  "about": "Sobre",
-  "blog": "Blog",
-  "careers": "Carreiras",
-  "contact": "Contato",
-  "privacy": "Politica de Privacidade",
-  "terms": "Termos de Servico",
-  "cookies": "Politica de Cookies",
-  "gdpr": "LGPD",
-  "helpCenter": "Central de Ajuda",
-  "status": "Status",
-  "changelog": "Changelog"
+  "docs": "Documentacao"
 }

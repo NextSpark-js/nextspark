@@ -1,23 +1,5 @@
 {
-  "product": "Produit",
-  "features": "Fonctionnalités",
-  "pricing": "Tarifs",
-  "support": "Support",
   "docs": "Documentation",
-  "company": "Entreprise",
-  "about": "À propos",
-  "blog": "Blog",
-  "careers": "Carrières",
-  "contact": "Contact",
-  "legal": "Mentions légales",
-  "privacy": "Confidentialité",
-  "terms": "Conditions",
-  "cookies": "Cookies",
-  "gdpr": "RGPD",
   "resources": "Ressources",
-  "helpCenter": "Centre d'aide",
-  "status": "Statut",
-  "changelog": "Journal des modifications",
-  "copyright": "Tous droits réservés",
   "cookieSettings": "Paramètres des cookies"
 }

@@ -1,23 +1,5 @@
 {
-  "product": "Produkt",
-  "features": "Funktionen",
-  "pricing": "Preise",
-  "support": "Support",
   "docs": "Dokumentation",
-  "company": "Unternehmen",
-  "about": "Ueber uns",
-  "blog": "Blog",
-  "careers": "Karriere",
-  "contact": "Kontakt",
-  "legal": "Rechtliches",
-  "privacy": "Datenschutz",
-  "terms": "Nutzungsbedingungen",
-  "cookies": "Cookies",
-  "gdpr": "DSGVO",
   "resources": "Ressourcen",
-  "helpCenter": "Hilfezentrum",
-  "status": "Status",
-  "changelog": "Changelog",
-  "copyright": "Alle Rechte vorbehalten",
   "cookieSettings": "Cookie-Einstellungen"
 }
