@@ -14,13 +14,6 @@ pnpm dev
 
 ## Funcionalidades
 
-### Export/Import JSON
-
-El theme incluye funcionalidad de exportación e importación de posts en formato JSON:
-
-- **Export**: Botón en la lista de posts que descarga todos los posts como `posts-{fecha}.json`
-- **Import**: Dialog que permite cargar un archivo JSON con posts
-
 ### Permisos
 
 Los permisos están configurados en `permissions.config.ts`:
@@ -34,10 +27,8 @@ Los permisos están configurados en `permissions.config.ts`:
 
 ```
 components/
-├── ExportPostsButton.tsx    # Botón de exportación
-├── ImportPostsDialog.tsx    # Modal de importación
-├── PostsToolbar.tsx         # Toolbar con ambos botones
-└── index.ts                 # Exports
+├── editor/                  # Editor de contenido e imagen destacada
+└── public/                  # Componentes del blog público
 ```
 
 ### Templates Override
