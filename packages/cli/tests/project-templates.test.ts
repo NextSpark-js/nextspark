@@ -145,8 +145,28 @@ test('block components take `sel` from lib/block-selectors, not from lib/selecto
   assert.deepEqual(offenders.map(file => path.relative(TEMPLATES, file)), [])
 })
 
+// The value, not the formatting: spacing, a trailing comma, quotes and `as const` do not matter
+const SCOPE_GROUPS = /\bproviders\s*:\s*\{[^{}]*?\bscope\s*:\s*(['"])groups\1(?![\w$])[^{}]*\}/
+
+test("the providers.scope 'groups' check reads the value, not the formatting (#410)", () => {
+  for (const ok of [
+    "providers: { scope: 'groups' },",
+    "providers: { scope: 'groups' as const },",
+    "providers:{scope:'groups'},",
+    'providers: {\n    scope: "groups",\n  },',
+    "providers: { scope: 'groups' as const, other: 1 },",
+  ]) assert.match(ok, SCOPE_GROUPS, ok)
+  for (const bad of ["providers: { scope: 'root' },", "providers: { scope: 'root' as const },", 'providers: {},', "providers: { scope: 'groupsX' },", "scope: 'groups'", "providers: { other: 'groups' },"]) {
+    assert.doesNotMatch(bad, SCOPE_GROUPS, bad)
+  }
+})
+
 test("every template a new project is copied from declares providers.scope 'groups' (#362)", () => {
   for (const name of NAMES) {
-    assert.match(fs.readFileSync(path.join(TEMPLATES, 'projects', name, 'config/app.config.ts'), 'utf8'), /^\s*providers: \{ scope: 'groups' \},$/m, name)
+    const config = fs.readFileSync(path.join(TEMPLATES, 'projects', name, 'config/app.config.ts'), 'utf8')
+    assert.match(config, SCOPE_GROUPS, name)
+    // In memory: the same file with another scope, or without one, no longer passes
+    assert.doesNotMatch(config.replace(/'groups'/, "'root'"), SCOPE_GROUPS, `${name} with scope 'root'`)
+    assert.doesNotMatch(config.replace(/\bscope: 'groups'/, ''), SCOPE_GROUPS, `${name} without a scope`)
   }
 })
