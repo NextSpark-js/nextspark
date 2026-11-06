@@ -2,12 +2,15 @@
  * TeamService.purgeDeleted against a real PostgreSQL (#314): the retention bound of
  * make_interval(secs => $1::float8 * 86400), checked below and above.
  *
- * Runs only when TEST_PG_URL points to a DISPOSABLE database (it creates a TEMP table, nothing persists):
- *   TEST_PG_URL=postgres://postgres@127.0.0.1:55914/postgres pnpm exec jest tests/jest/lib/services/team-purge.pg.test.ts
+ * It starts a throwaway cluster with the helper of the other suites (support/throwaway-postgres, #402), which waits for a
+ * loaded machine and fails with the server's own log when it cannot start. TEST_PG_URL, when set, points to a DISPOSABLE
+ * database to use instead (the suite creates a TEMP table, nothing persists). It is skipped only when there is neither
+ * a URL nor initdb and pg_ctl on the PATH, and says so (#410).
  */
 import { Client } from 'pg'
+import { HAS_POSTGRES, startCluster, type ThrowawayCluster } from '../../../support/throwaway-postgres'
 
-const url = process.env.TEST_PG_URL
+const externalUrl = process.env.TEST_PG_URL
 let client: Client
 
 jest.mock('@/core/lib/db', () => ({
@@ -24,15 +27,20 @@ jest.mock('@/core/lib/scheduled-actions/scheduler', () => ({ scheduleAction: jes
 
 import { TeamService } from '@/core/lib/services/team.service'
 
-const describePg = url ? describe : describe.skip
+const available = Boolean(externalUrl) || HAS_POSTGRES
+if (!available) console.warn('team-purge.pg: skipped, TEST_PG_URL is not set and initdb or pg_ctl is not on the PATH')
+const describePg = available ? describe : describe.skip
 
 describePg('TeamService.purgeDeleted (real PostgreSQL)', () => {
+  let cluster: ThrowawayCluster | undefined
   beforeAll(async () => {
+    const url = externalUrl ?? `postgresql://owner@127.0.0.1:${(cluster = await startCluster('team-purge-pg')).port}/postgres?sslmode=disable`
     client = new Client({ connectionString: url })
     await client.connect()
-  })
+  }, 120000)
   afterAll(async () => {
-    await client.end()
+    await client?.end()
+    cluster?.stop()
   })
   beforeEach(async () => {
     await client.query('DROP TABLE IF EXISTS pg_temp.teams')
