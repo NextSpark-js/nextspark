@@ -25,6 +25,21 @@ const placeholders = (text: string) => [...text.matchAll(/\{(\w+)[,}]|<(\w+)>/g)
 
 const ENGLISH = flat(en.auth)
 
+// Texts a visitor reads that are written in the source: a visible attribute with a literal, or a literal after `?`, `:`, `||`
+// or `??` that starts like a sentence. Values that are not translatable (a masked password, an example email) are allowed.
+const NOT_TRANSLATABLE = new Set(['name@example.com', 'email@example.com'])
+function fixedTexts(source: string): string[] {
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const attributes = [...code.matchAll(/\b(?:placeholder|aria-label|title|alt|label)=(?:"([^"]*)"|'([^']*)'|\{\s*(?:'([^']*)'|"([^"]*)"|`([^`$]*)`)\s*\})/g)]
+  const expressions = [...code.matchAll(/(?:\?\?|\|\||\?|:)\s*(?:'([A-Z][a-z][^']*)'|"([A-Z][a-z][^"]*)"|`([A-Z][a-z][^`$]*)`)/g)]
+  return [...attributes, ...expressions]
+    .filter(m => {
+      const value = m.slice(1).find(group => group !== undefined) ?? ''
+      return /[A-Za-z]/.test(value) && !NOT_TRANSLATABLE.has(value)
+    })
+    .map(m => m[0])
+}
+
 describe.each(Object.keys(LOCALES))('%s auth messages', locale => {
   const messages = flat(LOCALES[locale].auth)
 
@@ -63,6 +78,42 @@ describe('the keys the auth pages read', () => {
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/^\s*\/\/.*$/gm, '')
     expect([...source.matchAll(/>\s*[A-Za-z][^<{]*</g)].map(m => m[0].trim())).toEqual([])
+  })
+
+  // #408: nor in a visible attribute, nor in a ternary or a fallback
+  test.each([...READERS.slice(0, 4).map(([file]) => file), 'src/components/auth/forms/LoginForm.tsx', 'src/components/auth/forms/SignupForm.tsx'])(
+    '%s has no fixed text in attributes or expressions',
+    file => {
+      expect(fixedTexts(readFileSync(path.join(__dirname, '../../..', file), 'utf8'))).toEqual([])
+    },
+  )
+
+  test('fixedTexts catches a fixed placeholder, a ternary and a fallback, and lets non-translatable values through', () => {
+    expect(fixedTexts('<Input placeholder="Enter your email" />')).toEqual(['placeholder="Enter your email"'])
+    expect(fixedTexts("<Input aria-label={'Email address'} title='Your email' />")).toHaveLength(2)
+    expect(fixedTexts("<h2>{sent ? 'Reset Password' : t('x')}</h2>")).toEqual(["? 'Reset Password'"])
+    expect(fixedTexts("{sent ? t('x') : 'Reset Password'}")).toEqual([": 'Reset Password'"])
+    expect(fixedTexts("setMessage(error || 'Unknown error'); name ?? `Guest user`")).toHaveLength(2)
+    expect(fixedTexts('<Input placeholder="••••••••" /><Input placeholder="name@example.com" /><a title={t("x")} />')).toEqual([])
+    expect(fixedTexts("fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } })")).toEqual([])
+  })
+
+  test('the success message of forgot-password is one message with a tag, not two concatenated texts', () => {
+    const source = readFileSync(path.join(__dirname, '../../..', 'src/routes/(auth)/forgot-password/page.tsx'), 'utf8')
+    expect(source).toContain("t.rich('forgotPassword.success.description'")
+    expect(source).not.toMatch(/t\('forgotPassword\.success\.description'\)/)
+    for (const locale of Object.keys(LOCALES)) {
+      expect(flat(LOCALES[locale].auth)['forgotPassword.success.description']).toContain('<email>{address}</email>')
+    }
+  })
+
+  // #408: German and Portuguese were written without their diacritics
+  test.each([
+    ['de', /Bestaetig|pruef|Pruef|fuer\b|ueberpruef|Ueberpruef|Zurueck|zurueck|Druecken|ungueltig|Ungueltig|spaeter|muessen|Mueller|Grossbuch|Oeffnen|laeuft|laueft/],
+    ['pt', /\b(?:nao|Nao|Voce|Ja|ja|opcoes|invalid[oa]s?|Usuario|autenticacao|informacoes|comecar|condicoes|verificacao|necessario|botao|faca|endereco|recuperacao|conexao|maiuscula|minuscula|numero|pagina|Ultimo|Joao)\b/],
+  ] as Array<[string, RegExp]>)('%s auth messages are written with their diacritics', (locale, unaccented) => {
+    const messages = flat(LOCALES[locale].auth)
+    expect(Object.entries(messages).filter(([, text]) => unaccented.test(text)).map(([key]) => key)).toEqual([])
   })
 
   test('the metadata of the pages names keys the catalog holds', () => {

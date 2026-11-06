@@ -144,15 +144,15 @@ function getErrorCodeFromMessage(message: string): AuthErrorCode {
 
 function buildLoginSchema(t: (key: string, options?: any) => string) {
   return z.object({
-    email: z.string().email({ message: t('login.errors.invalidEmail', { defaultValue: 'Invalid email' }) }),
-    password: z.string().min(6, t('login.errors.passwordTooShort', { defaultValue: 'Password must be at least 6 characters' })),
+    email: z.string().email({ message: t('login.errors.invalidEmail') }),
+    password: z.string().min(6, t('login.errors.passwordTooShort')),
   })
 }
 
 type LoginFormData = z.infer<ReturnType<typeof buildLoginSchema>>
 
 function buildOtpEmailSchema(t: (key: string, options?: any) => string) {
-  return z.string().trim().email({ message: t('login.errors.invalidEmail', { defaultValue: 'Invalid email' }) })
+  return z.string().trim().email({ message: t('login.errors.invalidEmail') })
 }
 
 function buildOtpCodeSchema(t: (key: string, options?: any) => string, length: number) {
@@ -580,7 +580,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
                     className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] inline-flex items-center"
                                         data-cy={sel('auth.login.showEmail')}
                   >
-                    {t('login.form.loginWithEmail', { defaultValue: 'Sign in with Email' })}
+                    {t('login.form.loginWithEmail')}
                   </button>
                 </LastUsedBadge>
               ) : (
@@ -591,7 +591,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
                   className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] inline-flex items-center"
                                     data-cy={sel('auth.login.showEmail')}
                 >
-                  {t('login.form.loginWithEmail', { defaultValue: 'Sign in with Email' })}
+                  {t('login.form.loginWithEmail')}
                 </button>
               )}
             </div>
@@ -803,7 +803,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
                         className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
                         data-cy={sel('auth.login.hideEmail')}
                       >
-                        {t('login.form.backToGoogle', { defaultValue: 'Back to main options' })}
+                        {t('login.form.backToGoogle')}
                       </button>
                     </div>
                   )}
@@ -967,7 +967,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
                       className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
                                           data-cy={sel('auth.login.hideEmail')}
                     >
-                      {t('login.form.backToGoogle', { defaultValue: 'Back to main options' })}
+                      {t('login.form.backToGoogle')}
                     </button>
                   </div>
                 )}

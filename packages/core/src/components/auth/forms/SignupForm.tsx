@@ -125,7 +125,7 @@ export function SignupForm() {
           } else {
             setError(result.error || t('signup.errors.failedToCreate'))
           }
-          setStatusMessage(t('signup.messages.createError', { error: result.error || 'Unknown error' }))
+          setStatusMessage(t('signup.messages.createError', { error: result.error || t('signup.errors.unknown') }))
           return
         }
 
