@@ -1,12 +1,15 @@
 /**
  * Recurring registration against a real PostgreSQL (#348): concurrent cold starts leave one row.
  *
- * Runs only when TEST_PG_URL points to a DISPOSABLE database (it works in its own schema, dropped at the end):
- *   TEST_PG_URL=postgres://postgres@127.0.0.1:55914/postgres pnpm exec jest tests/jest/lib/scheduled-actions/scheduler-recurring.pg.test.ts
+ * It starts a throwaway cluster with the helper of the other suites (support/throwaway-postgres, #402), which waits for a
+ * loaded machine and fails with the server's own log when it cannot start. TEST_PG_URL, when set, points to a DISPOSABLE
+ * database to use instead (the suite works in its own schema, dropped at the end). It is skipped only when there is neither
+ * a URL nor initdb and pg_ctl on the PATH, and says so (#410).
  */
 import { Pool, type PoolClient } from 'pg'
+import { HAS_POSTGRES, startCluster, type ThrowawayCluster } from '../../../support/throwaway-postgres'
 
-const url = process.env.TEST_PG_URL
+const externalUrl = process.env.TEST_PG_URL
 let pool: Pool
 
 jest.mock('@/core/lib/db', () => ({
@@ -36,10 +39,14 @@ jest.mock('@/core/lib/config/config-sync', () => ({ APP_CONFIG_MERGED: { schedul
 
 import { scheduleAction, scheduleRecurringAction } from '@/core/lib/scheduled-actions/scheduler'
 
-const describePg = url ? describe : describe.skip
+const available = Boolean(externalUrl) || HAS_POSTGRES
+if (!available) console.warn('scheduler-recurring.pg: skipped, TEST_PG_URL is not set and initdb or pg_ctl is not on the PATH')
+const describePg = available ? describe : describe.skip
 
 describePg('scheduleRecurringAction (real PostgreSQL)', () => {
+  let cluster: ThrowawayCluster | undefined
   beforeAll(async () => {
+    const url = externalUrl ?? `postgresql://owner@127.0.0.1:${(cluster = await startCluster('scheduler-recurring-pg')).port}/postgres?sslmode=disable`
     pool = new Pool({ connectionString: url, max: 20, options: '-c search_path=t348,public' })
     await pool.query('DROP SCHEMA IF EXISTS t348 CASCADE')
     await pool.query('CREATE SCHEMA t348')
@@ -48,10 +55,11 @@ describePg('scheduleRecurringAction (real PostgreSQL)', () => {
       payload jsonb DEFAULT '{}'::jsonb, "scheduledAt" timestamptz NOT NULL, "recurringInterval" text,
       "recurrenceType" text, "lockGroup" text, "maxRetries" int NOT NULL DEFAULT 3,
       "createdAt" timestamptz NOT NULL DEFAULT now(), "updatedAt" timestamptz NOT NULL DEFAULT now())`)
-  })
+  }, 120000)
   afterAll(async () => {
-    await pool.query('DROP SCHEMA IF EXISTS t348 CASCADE')
-    await pool.end()
+    await pool?.query('DROP SCHEMA IF EXISTS t348 CASCADE').catch(() => {})
+    await pool?.end()
+    cluster?.stop()
   })
   beforeEach(async () => {
     await pool.query('TRUNCATE t348.scheduled_actions')

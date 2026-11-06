@@ -49,7 +49,11 @@ jobs:
           node-version: ${{ matrix.node }}
 
       - name: Test core (Jest)
-        run: pnpm --filter @nextsparkjs/core test
+        # initdb and pg_ctl are not on the PATH of ubuntu-24.04; the suites that start a throwaway cluster skip
+        # themselves without them, so the step fails if the image no longer has them (same as tests.yml).
+        run: |
+          test -x /usr/lib/postgresql/16/bin/initdb || { echo "::error::PostgreSQL 16 binaries not found at /usr/lib/postgresql/16/bin"; exit 1; }
+          PATH="$PATH:/usr/lib/postgresql/16/bin" pnpm --filter @nextsparkjs/core test
         env:
           npm_config_registry: http://127.0.0.1:9
 
