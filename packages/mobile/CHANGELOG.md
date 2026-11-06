@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.201] - 2026-11-06
+
+### Changed
+
+- No changes in `@nextsparkjs/mobile`; the version follows the other packages. The contracts it reads change with core: see core's upgrade note on `packages/contracts`.
+
 ## [0.1.0-beta.200] - 2026-11-04
 
 ### Upgrading from 0.1.0-beta.199
