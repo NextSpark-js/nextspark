@@ -70,12 +70,12 @@ function getErrorMessageFromCode(
 
   if (context === 'otp') {
     const lower = (error.message || '').toLowerCase()
-    if (lower.includes('expired')) return t('login.errors.otpExpired', { defaultValue: error.message })
+    if (lower.includes('expired')) return t('login.errors.otpExpired')
     if (lower.includes('too many') || lower.includes('rate') || lower.includes('attempts')) {
-      return t('login.errors.otpTooMany', { defaultValue: error.message })
+      return t('login.errors.otpTooMany')
     }
     if (lower.includes('invalid') || lower.includes('otp') || lower.includes('code')) {
-      return t('login.errors.otpInvalid', { defaultValue: error.message })
+      return t('login.errors.otpInvalid')
     }
     return error.message || t('login.messages.otpVerifyFailed')
   }
@@ -86,21 +86,21 @@ function getErrorMessageFromCode(
 
   switch (errorCode) {
     case 'INVALID_CREDENTIALS':
-      return t(`${baseKey}.invalidCredentials`, { provider, defaultValue: error.message })
+      return t(`${baseKey}.invalidCredentials`, { provider })
     case 'USER_NOT_FOUND':
-      return t(`${baseKey}.userNotFound`, { provider, defaultValue: error.message })
+      return t(`${baseKey}.userNotFound`, { provider })
     case 'EMAIL_NOT_VERIFIED':
-      return t(`${baseKey}.emailNotVerified`, { provider, defaultValue: error.message })
+      return t(`${baseKey}.emailNotVerified`, { provider })
     case 'ACCOUNT_LOCKED':
-      return t(`${baseKey}.accountLocked`, { provider, defaultValue: error.message })
+      return t(`${baseKey}.accountLocked`, { provider })
     case 'RATE_LIMITED':
-      return t(`${baseKey}.rateLimited`, { provider, defaultValue: error.message })
+      return t(`${baseKey}.rateLimited`, { provider })
     case 'OAUTH_ERROR':
-      return t(`${baseKey}.oauthError`, { provider, defaultValue: error.message })
+      return t(`${baseKey}.oauthError`, { provider })
     case 'NETWORK_ERROR':
-      return t(`${baseKey}.networkError`, { provider, defaultValue: error.message })
+      return t(`${baseKey}.networkError`, { provider })
     case 'SERVER_ERROR':
-      return t(`${baseKey}.serverError`, { provider, defaultValue: error.message })
+      return t(`${baseKey}.serverError`, { provider })
     default:
       return error.message || (provider
         ? t('login.messages.socialSignInFailed', { provider })
@@ -160,10 +160,7 @@ function buildOtpCodeSchema(t: (key: string, options?: any) => string, length: n
     .string()
     .trim()
     .regex(new RegExp(`^\\d{${length}}$`), {
-      message: t('login.errors.otpInvalidCode', {
-        length,
-        defaultValue: `Enter the ${length}-digit code`,
-      }),
+      message: t('login.errors.otpInvalidCode', { length }),
     })
 }
 

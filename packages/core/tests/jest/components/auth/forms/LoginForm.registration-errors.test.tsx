@@ -176,8 +176,8 @@ describe('LoginForm — registration-policy codes', () => {
     fireEvent.change(byCy('auth.login.otpCodeInput')!, { target: { value: '123456' } })
     fireEvent.click(byCy('auth.login.otpSubmit')!)
 
-    // The translator stub answers t(key, { defaultValue }) with the default value
-    await waitFor(() => expect(byCy('auth.login.errorAlert')).toHaveTextContent('Invalid OTP'))
+    // The message of the catalog's key (next-intl has no defaultValue)
+    await waitFor(() => expect(byCy('auth.login.errorAlert')).toHaveTextContent('login.errors.otpInvalid'))
     expect(byCy('auth.login.errorAlert')).not.toHaveTextContent('registrationErrors')
   })
 })
