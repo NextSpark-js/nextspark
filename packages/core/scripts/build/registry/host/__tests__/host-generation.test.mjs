@@ -299,6 +299,53 @@ test('--check: not prepared, up to date, then each way a host goes stale, missin
   }
 })
 
+test('--check: a record that disagrees with the files names the entry, or the whole record when nothing else is wrong', async () => {
+  const host = tempHost(SOURCE)
+  const states = async () => (await checkHost(host.config)).problems.map(problem => `${problem.state} ${problem.path ?? ''}`.trim())
+  try {
+    await prepareHost(host.config)
+    const good = read(host.hostRoot, GENERATION_FILE)
+    const record = JSON.parse(good)
+    const set = value => write(host.hostRoot, GENERATION_FILE, typeof value === 'string' ? value : `${JSON.stringify(value, null, 2)}\n`)
+    const page = 'src/app/about/page.tsx'
+
+    // A file equal to what prepare generates, with an outdated hash or no entry: named, one notice per file
+    set({ ...record, files: { ...record.files, [page]: 'f'.repeat(64) } })
+    let checked = await checkHost(host.config)
+    assert.deepEqual(checked.problems.map(p => `${p.state} ${p.path}`), [`stale ${GENERATION_FILE}`])
+    assert.match(checked.problems[0].detail, /records an outdated hash for src\/app\/about\/page\.tsx; run nextspark prepare/)
+    const { [page]: _dropped, ...withoutPage } = record.files
+    set({ ...record, files: withoutPage })
+    checked = await checkHost(host.config)
+    assert.deepEqual(checked.problems.map(p => p.detail), [`does not record ${page}; run nextspark prepare to refresh the record`])
+
+    // The whole record, only when nothing else is wrong: an entry of a file that is gone, another generator, another order
+    const variants = {
+      'an entry of a file that is gone': { ...record, files: { ...record.files, 'src/app/gone/page.tsx': record.files[page] } },
+      'another generator': { ...record, generator: 'something else' },
+      'another order of the keys': { ...record, files: Object.fromEntries(Object.entries(record.files).reverse()) },
+    }
+    for (const [name, variant] of Object.entries(variants)) {
+      set(variant)
+      checked = await checkHost(host.config)
+      assert.deepEqual(checked.problems.map(p => `${p.state} ${p.path}`), [`stale ${GENERATION_FILE}`], name)
+      assert.match(checked.problems[0].detail, /is out of date; run nextspark prepare/, name)
+    }
+    // ... and not on top of another problem
+    set(variants['another generator'])
+    unlinkSync(join(host.hostRoot, page))
+    assert.deepEqual(await states(), [`missing ${page}`])
+
+    // prepare rewrites the record; a correct one with CRLF line ends passes
+    await prepareHost(host.config)
+    assert.equal(read(host.hostRoot, GENERATION_FILE), good)
+    set(good.replace(/\n/g, '\r\n'))
+    assert.deepEqual(await checkHost(host.config), { ok: true, problems: [] })
+  } finally {
+    host.cleanup()
+  }
+})
+
 test('an interrupted publication is visible to --check and completed by the next prepare', async () => {
   const host = tempHost(SOURCE)
   try {
