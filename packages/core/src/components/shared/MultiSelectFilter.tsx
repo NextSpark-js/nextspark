@@ -9,6 +9,7 @@ import {
 } from '../ui/popover'
 import { ChevronDown, Check, X } from 'lucide-react'
 import { useState } from 'react'
+import { useCommonText } from '../../lib/i18n/common-text'
 
 // ============================================================================
 // Types
@@ -71,6 +72,8 @@ export function MultiSelectFilter({
   'data-cy': dataCy = 'multi-select-filter',
 }: MultiSelectFilterProps) {
   const [open, setOpen] = useState(false)
+  const removeItemText = useCommonText('a11y', 'removeItem', 'Remove {name}')
+  const clearFilterText = useCommonText('a11y', 'clearFilter', 'Clear {name} filter')
 
   const selectedOptions = options.filter((opt) => values.includes(opt.value))
   const hasSelection = selectedOptions.length > 0
@@ -173,7 +176,7 @@ export function MultiSelectFilter({
                 type="button"
                 onClick={(e) => handleRemove(option.value, e)}
                 className="hover:bg-primary/20 rounded-sm p-0.5 transition-colors"
-                aria-label={`Remove ${option.label}`}
+                aria-label={removeItemText.replace('{name}', option.label)}
                 data-cy={`${dataCy}-remove-${option.value}`}
               >
                 <X className="h-3 w-3" />
@@ -190,7 +193,7 @@ export function MultiSelectFilter({
               'text-xs text-muted-foreground hover:text-foreground',
               'px-1.5 py-1 transition-colors'
             )}
-            aria-label={`Clear ${label} filter`}
+            aria-label={clearFilterText.replace('{name}', label)}
             data-cy={`${dataCy}-clear-all`}
           >
             {clearLabel}

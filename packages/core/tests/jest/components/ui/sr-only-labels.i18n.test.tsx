@@ -13,6 +13,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { Pagination, PaginationEllipsis, PaginationNext, PaginationPrevious } from '@/core/components/ui/pagination'
 import { Breadcrumb, BreadcrumbEllipsis } from '@/core/components/ui/breadcrumb'
+import { MultiSelectFilter } from '@/core/components/shared/MultiSelectFilter'
 import { DoubleRange } from '@/core/components/ui/double-range'
 import { SearchInput } from '@/core/components/superadmin/filters/SearchInput'
 import { PaginationControls } from '@/core/components/superadmin/filters/PaginationControls'
@@ -44,8 +45,8 @@ const cases: Array<[string, () => React.ReactElement, string[], string[]]> = [
         <PaginationEllipsis />
       </Pagination>
     ),
-    [a11y.pagination, a11y.goToPreviousPage, a11y.goToNextPage, a11y.morePages],
-    ['Pagination', 'Go to previous page', 'Go to next page', 'More pages'],
+    [a11y.pagination, a11y.goToPreviousPage, a11y.goToNextPage, a11y.morePages, es.common.buttons.previous, es.common.buttons.next],
+    ['Pagination', 'Go to previous page', 'Go to next page', 'More pages', 'Previous', 'Next'],
   ],
   [
     'Breadcrumb',
@@ -76,6 +77,12 @@ const cases: Array<[string, () => React.ReactElement, string[], string[]]> = [
     ['First page', 'Previous page', 'Next page', 'Last page'],
   ],
   [
+    'MultiSelectFilter',
+    () => <MultiSelectFilter label="Color" options={[{ value: 'r', label: 'Red' }]} values={['r']} onChange={() => {}} />,
+    [a11y.removeItem.replace('{name}', 'Red'), a11y.clearFilter.replace('{name}', 'Color')],
+    ['Remove Red', 'Clear Color filter'],
+  ],
+  [
     'DashboardAuthSkeleton',
     () => <DashboardAuthSkeleton />,
     [a11y.loading],
@@ -99,6 +106,37 @@ describe.each(cases)('%s', (_name, build, spanish, english) => {
   })
 })
 
+describe('what the consumer sets wins over the locale', () => {
+  test('moreLabel names BreadcrumbEllipsis and PaginationEllipsis', () => {
+    messagesInScope = { common: es.common }
+    render(
+      <>
+        <BreadcrumbEllipsis moreLabel="Custom crumbs" />
+        <PaginationEllipsis moreLabel="Custom pages" />
+      </>
+    )
+    expect(screen.queryAllByText('Custom crumbs')).toHaveLength(1)
+    expect(screen.queryAllByText('Custom pages')).toHaveLength(1)
+    expect(screen.queryAllByText(es.common.a11y.more)).toHaveLength(0)
+    expect(screen.queryAllByText(es.common.a11y.morePages)).toHaveLength(0)
+  })
+
+  test('the aria-label of the consumer replaces the one of Breadcrumb, Pagination, PaginationPrevious and PaginationNext', () => {
+    messagesInScope = { common: es.common }
+    const { container } = render(
+      <>
+        <Breadcrumb aria-label="Mine crumbs" />
+        <Pagination aria-label="Mine pages">
+          <PaginationPrevious href="#" aria-label="Mine back" />
+          <PaginationNext href="#" aria-label="Mine forth" />
+        </Pagination>
+      </>
+    )
+    const labels = [...container.querySelectorAll('[aria-label]')].map((e) => e.getAttribute('aria-label'))
+    expect(labels).toEqual(['Mine crumbs', 'Mine pages', 'Mine back', 'Mine forth'])
+  })
+})
+
 describe('the new keys', () => {
   test('exist in the six catalogs with a translation', async () => {
     for (const locale of ['de', 'en', 'es', 'fr', 'it', 'pt']) {
@@ -110,27 +148,34 @@ describe('the new keys', () => {
   })
 })
 
-describe('sr-only texts in src/components', () => {
-  // A fixed English word in a `sr-only` element is announced in English whatever the locale.
+describe('texts only a screen reader announces in src/components', () => {
+  // A fixed English word in a `sr-only` element or in `aria-label="..."` is announced in English whatever the locale.
   const root = path.resolve(__dirname, '../../../../src/components')
   const walk = (dir: string): string[] =>
     fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
       const p = path.join(dir, e.name)
       return e.isDirectory() ? walk(p) : /\.tsx$/.test(e.name) ? [p] : []
     })
-  // path (relative to src/components) -> reason it may stay fixed
-  const allowed: Record<string, string> = {}
+  // path (relative to src/components) -> [text that may stay fixed, reason]
+  const allowed: Record<string, Array<[string, string]>> = {
+    'superadmin/layouts/SuperadminSidebar.tsx': [['Exit Super Admin', 'the superadmin sidebar stays English until it is translated as a whole']],
+    'docs/superadmin-docs-sidebar.tsx': [['Admin documentation navigation', 'the superadmin sidebar stays English until it is translated as a whole']],
+  }
+  // `[^>{]*` and `\s*` run over line breaks: the text may sit on a line of its own
+  const fixedText = [/sr-only[^>{]*>\s*[A-Z][a-z]/g, /aria-label="[A-Z][a-z]/g]
 
   test('none is a fixed English text', () => {
     const offenders = walk(root).flatMap((file) => {
       const rel = path.relative(root, file)
-      if (rel in allowed) return []
-      return fs
-        .readFileSync(file, 'utf8')
-        .split('\n')
-        .map((line, i) => ({ line, i }))
-        .filter(({ line }) => /sr-only[^>{]*>\s*[A-Z][a-z]/.test(line))
-        .map(({ line, i }) => `${rel}:${i + 1}: ${line.trim()}`)
+      const source = fs.readFileSync(file, 'utf8')
+      return fixedText.flatMap((re) =>
+        [...source.matchAll(re)].flatMap((m) => {
+          const end = source.indexOf('\n', m.index! + m[0].length)
+          const found = source.slice(m.index, end < 0 ? undefined : end)
+          if ((allowed[rel] ?? []).some(([text]) => found.includes(text))) return []
+          return `${rel}:${source.slice(0, m.index).split('\n').length}: ${found.replace(/\s+/g, ' ')}`
+        })
+      )
     })
     expect(offenders).toEqual([])
   })

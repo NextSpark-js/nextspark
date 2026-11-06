@@ -80,7 +80,7 @@ export function MobileTopBar({ prefetch }: MobileTopBarProps = {}) {
             <div
               className={`h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-semibold border-2 border-border ${getAvatarColor(user.email)} before:content-[attr(data-initials)]`}
               role="img"
-              aria-label={`Avatar de ${user.firstName || user.email}`}
+              aria-label={t('a11y.avatarForName', { name: user.firstName || user.email })}
               data-initials={getUserInitials(user)}
             />
           )}

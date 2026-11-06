@@ -122,6 +122,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
   const actionsText = useCommonText('a11y', 'actions', 'Actions')
   const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu')
   const selectAllText = useCommonText('a11y', 'selectAll', 'Select all')
+  const selectRowText = useCommonText('a11y', 'selectRow', 'Select row {n}')
   const firstPageText = useCommonText('a11y', 'firstPage', 'First page')
   const previousPageText = useCommonText('a11y', 'previousPage', 'Previous page')
   const nextPageText = useCommonText('a11y', 'nextPage', 'Next page')
@@ -693,7 +694,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                               e.stopPropagation()
                               toggleOne(item.id, rowIndex, e.shiftKey)
                             }}
-                            aria-label={`Select row ${rowIndex + 1}`}
+                            aria-label={selectRowText.replace('{n}', String(rowIndex + 1))}
                             data-cy={sel('entities.list.table.row.checkbox', { slug, id: item.id })}
                           />
                         </TableCell>

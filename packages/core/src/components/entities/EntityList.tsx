@@ -118,6 +118,7 @@ export function EntityList({
   const actionsText = useCommonText('a11y', 'actions', 'Actions')
   const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu')
   const selectAllRowsText = useCommonText('a11y', 'selectAllRows', 'Select all rows')
+  const selectRowText = useCommonText('a11y', 'selectRow', 'Select row {n}')
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -408,7 +409,7 @@ export function EntityList({
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={(checked: boolean | 'indeterminate') => handleRowSelect(itemId, !!checked)}
-                          aria-label={`Select row ${itemId}`}
+                          aria-label={selectRowText.replace('{n}', String(itemId))}
                         />
                       </TableCell>
                     )}

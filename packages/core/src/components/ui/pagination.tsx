@@ -77,6 +77,7 @@ const PaginationPrevious = ({
   ...props
 }: React.ComponentProps<typeof PaginationLink>) => {
   const label = useCommonText('a11y', 'goToPreviousPage', 'Go to previous page')
+  const text = useCommonText('buttons', 'previous', 'Previous')
   return (
     <PaginationLink
       aria-label={label}
@@ -85,7 +86,7 @@ const PaginationPrevious = ({
       {...props}
     >
       <ChevronLeftIcon className="h-4 w-4" />
-      <span>Previous</span>
+      <span>{text}</span>
     </PaginationLink>
   )
 }
@@ -96,6 +97,7 @@ const PaginationNext = ({
   ...props
 }: React.ComponentProps<typeof PaginationLink>) => {
   const label = useCommonText('a11y', 'goToNextPage', 'Go to next page')
+  const text = useCommonText('buttons', 'next', 'Next')
   return (
     <PaginationLink
       aria-label={label}
@@ -103,7 +105,7 @@ const PaginationNext = ({
       className={cn("gap-1 pr-2.5", className)}
       {...props}
     >
-      <span>Next</span>
+      <span>{text}</span>
       <ChevronRightIcon className="h-4 w-4" />
     </PaginationLink>
   )
