@@ -519,7 +519,20 @@ test('publishing: only files the record owns are replaced or deleted, a foreign 
     writeFileSync(recordPath, goodRecord.replace(sha(files[0].content), 'f'.repeat(64)))
     const staleHash = checkContracts({ root, files })
     assert.deepEqual(staleHash.problems.map(p => `${p.state} ${p.path}`), ['stale contracts.generation.json'])
-    assert.match(staleHash.problems[0].detail, /src\/index\.ts.*nextspark prepare/)
+    assert.match(staleHash.problems[0].detail, /nextspark prepare/)
+    // An entry of a file that is gone, another generator and another order of the keys are out of date too
+    const record = JSON.parse(goodRecord)
+    const variants = {
+      'an entry of a file that is gone': { ...record, files: { ...record.files, 'src/gone.ts': sha(files[0].content) } },
+      'another generator': { ...record, generator: 'something else' },
+      'another order of the keys': { ...record, files: Object.fromEntries(Object.entries(record.files).reverse()) },
+    }
+    for (const [name, variant] of Object.entries(variants)) {
+      writeFileSync(recordPath, `${JSON.stringify(variant, null, 2)}\n`)
+      const outdated = checkContracts({ root, files })
+      assert.deepEqual(outdated.problems.map(p => `${p.state} ${p.path}`), ['stale contracts.generation.json'], name)
+      assert.match(outdated.problems[0].detail, /out of date; run nextspark prepare/, name)
+    }
     writeFileSync(recordPath, goodRecord.replace(/\n/g, '\r\n'))
     assert.deepEqual(checkContracts({ root, files }), { ok: true, problems: [] })
     writeFileSync(recordPath, goodRecord)
