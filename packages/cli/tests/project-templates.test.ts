@@ -145,8 +145,9 @@ test('block components take `sel` from lib/block-selectors, not from lib/selecto
   assert.deepEqual(offenders.map(file => path.relative(TEMPLATES, file)), [])
 })
 
-// The value, not the formatting: spacing, a trailing comma, quotes and `as const` do not matter
+// The value, not the formatting: spacing, a trailing comma, quotes and `as const` do not matter. Line comments do not count.
 const SCOPE_GROUPS = /\bproviders\s*:\s*\{[^{}]*?\bscope\s*:\s*(['"])groups\1(?![\w$])[^{}]*\}/
+const declaresGroups = (source: string) => SCOPE_GROUPS.test(source.replace(/(^|\s)\/\/.*$/gm, '$1'))
 
 test("the providers.scope 'groups' check reads the value, not the formatting (#410)", () => {
   for (const ok of [
@@ -155,18 +156,27 @@ test("the providers.scope 'groups' check reads the value, not the formatting (#4
     "providers:{scope:'groups'},",
     'providers: {\n    scope: "groups",\n  },',
     "providers: { scope: 'groups' as const, other: 1 },",
-  ]) assert.match(ok, SCOPE_GROUPS, ok)
-  for (const bad of ["providers: { scope: 'root' },", "providers: { scope: 'root' as const },", 'providers: {},', "providers: { scope: 'groupsX' },", "scope: 'groups'", "providers: { other: 'groups' },"]) {
-    assert.doesNotMatch(bad, SCOPE_GROUPS, bad)
-  }
+    "providers: { scope: 'groups' }, // the groups",
+  ]) assert.ok(declaresGroups(ok), ok)
+  for (const bad of [
+    "providers: { scope: 'root' },",
+    "providers: { scope: 'root' as const },",
+    'providers: {},',
+    "providers: { scope: 'groupsX' },",
+    "scope: 'groups'",
+    "providers: { other: 'groups' },",
+    'providers: {\n    scope: "root",\n  },',
+    "// providers: { scope: 'groups' },\nproviders: { scope: 'root' },",
+  ]) assert.ok(!declaresGroups(bad), bad)
 })
 
 test("every template a new project is copied from declares providers.scope 'groups' (#362)", () => {
   for (const name of NAMES) {
     const config = fs.readFileSync(path.join(TEMPLATES, 'projects', name, 'config/app.config.ts'), 'utf8')
-    assert.match(config, SCOPE_GROUPS, name)
-    // In memory: the same file with another scope, or without one, no longer passes
-    assert.doesNotMatch(config.replace(/'groups'/, "'root'"), SCOPE_GROUPS, `${name} with scope 'root'`)
-    assert.doesNotMatch(config.replace(/\bscope: 'groups'/, ''), SCOPE_GROUPS, `${name} without a scope`)
+    assert.ok(declaresGroups(config), name)
+    // In memory, whatever the formatting: the same file with another scope, without one, or with the line only commented out
+    assert.ok(!declaresGroups(config.replace(/(\bscope\s*:\s*)(['"])groups\2/, "$1'root'")), `${name} with scope 'root'`)
+    assert.ok(!declaresGroups(config.replace(/\bscope\s*:\s*(['"])groups\1(\s+as\s+const)?\s*,?/, '')), `${name} without a scope`)
+    assert.ok(!declaresGroups(config.replace(/^(.*\bscope\s*:\s*['"]groups['"].*)$/m, '// $1')), `${name} with the scope commented out`)
   }
 })
