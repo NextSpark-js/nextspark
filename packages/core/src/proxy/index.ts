@@ -573,8 +573,11 @@ async function handle(request: NextRequest, authenticatedPaths: readonly string[
     return { response: null, session, injectIdentity: isProtectedRoute }
   }
 
+  // The hint is written first: `response.cookies.set` rewrites every
+  // Set-Cookie from its own map, which would drop the ones the hook adds to the
+  // headers afterwards (#409).
   const finishCoreResponse = (response: NextResponse): NextResponse =>
-    syncSessionHint(request, mergeThemeHeaders(response, themeResponse))
+    mergeThemeHeaders(syncSessionHint(request, response), themeResponse)
 
   // Rewriting a protected original route to a public destination must not
   // discard the original route's boundary. Direct theme responses are also

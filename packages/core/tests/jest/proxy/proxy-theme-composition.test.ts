@@ -473,6 +473,62 @@ describe('project-hook proxy composition (#204)', () => {
     expect(cookies).toContain('nextspark.signed_in=1')
   })
 
+  describe('cookies of the hook on a response the core ends (#409)', () => {
+    const hookWith = (set: (r: NextResponse) => void) =>
+      mockExecuteThemeMiddleware.mockImplementation(async () => {
+        const response = NextResponse.next()
+        set(response)
+        return response
+      })
+
+    test('keeps the hook cookie when the hint is cleared on a core redirect', async () => {
+      hookWith((r) => r.cookies.set('locale', 'es', { path: '/' }))
+
+      const response = await proxy(request('/dashboard', { cookie: 'nextspark.signed_in=1' }))
+      const cookies = responseCookies(response)
+
+      expect(response.status).toBe(307)
+      expect(cookies).toHaveLength(2)
+      expect(cookies.some((c) => c.startsWith('locale=es'))).toBe(true)
+      expect(cookies.some((c) => c.startsWith('nextspark.signed_in=;') && c.includes('Max-Age=0'))).toBe(true)
+    })
+
+    test('keeps the hook cookie when the hint is added on a core redirect', async () => {
+      hookWith((r) => r.cookies.set('locale', 'es', { path: '/' }))
+      mockedGetSession.mockResolvedValue(memberSession)
+
+      const response = await proxy(request('/superadmin', { cookie: 'better-auth.session_token=abc.def' }))
+      const cookies = responseCookies(response)
+
+      expect(response.status).toBe(307)
+      expect(cookies.some((c) => c.startsWith('locale=es'))).toBe(true)
+      expect(cookies.some((c) => c.startsWith('nextspark.signed_in=1'))).toBe(true)
+    })
+
+    test('keeps every cookie of the hook with its attributes', async () => {
+      hookWith((r) => {
+        r.cookies.set('a', '1', { path: '/x', httpOnly: true, sameSite: 'strict', maxAge: 60 })
+        r.cookies.set('b', '2', { path: '/', secure: true, sameSite: 'none', domain: 'example.com', partitioned: true })
+      })
+
+      const response = await proxy(request('/dashboard', { cookie: 'nextspark.signed_in=1' }))
+      const cookies = responseCookies(response)
+      const a = cookies.find((c) => c.startsWith('a=1')) ?? ''
+      const b = cookies.find((c) => c.startsWith('b=2')) ?? ''
+
+      expect(cookies).toHaveLength(3)
+      expect(a).toMatch(/Path=\/x/)
+      expect(a).toMatch(/Max-Age=60/)
+      expect(a).toMatch(/HttpOnly/)
+      expect(a).toMatch(/SameSite=strict/i)
+      expect(b).toMatch(/Domain=example\.com/)
+      expect(b).toMatch(/Secure/)
+      expect(b).toMatch(/SameSite=none/i)
+      expect(b).toMatch(/Partitioned/)
+      expect(cookies.some((c) => c.startsWith('nextspark.signed_in=;'))).toBe(true)
+    })
+  })
+
   test('fails closed on external rewrites without forwarding identity', async () => {
     mockExecuteThemeMiddleware.mockResolvedValue(NextResponse.rewrite('https://outside.example/private'))
 
